@@ -297,6 +297,42 @@
     text-align: center;
   }
 
+  /* Dashboard section */
+  .dashboard-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  @media (max-width: 700px) { .dashboard-section { grid-template-columns: 1fr; } }
+
+  .dash-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+  }
+  .dash-card h3 { font-size: 0.8rem; color: var(--fg2); margin-bottom: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* Donut chart */
+  .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .donut-svg { flex-shrink: 0; }
+  .donut-legend { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { color: var(--fg2); white-space: nowrap; }
+  .legend-val { color: var(--fg); font-weight: 600; margin-left: auto; padding-left: 8px; }
+
+  /* P&L card */
+  .pnl-rows { display: flex; flex-direction: column; gap: 8px; }
+  .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg3); }
+  .pnl-label { font-size: 0.8rem; color: var(--fg2); }
+  .pnl-val { font-size: 0.95rem; font-weight: 700; }
+  .pnl-positive { color: var(--green); }
+  .pnl-negative { color: var(--red); }
+  .pnl-neutral { color: var(--fg2); }
+  .pnl-total { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
+
   .summary-card .label { font-size: 0.75rem; color: var(--fg2); margin-bottom: 6px; }
   .summary-card .value { font-size: 1.3rem; font-weight: 700; }
 
@@ -508,6 +544,20 @@
 
   <div class="summary-grid" id="summaryGrid"></div>
 
+  <div class="dashboard-section">
+    <div class="dash-card">
+      <h3>📊 Portfolio Allocation</h3>
+      <div class="donut-wrap">
+        <svg class="donut-svg" width="140" height="140" viewBox="0 0 140 140" id="donutChart"></svg>
+        <div class="donut-legend" id="donutLegend"></div>
+      </div>
+    </div>
+    <div class="dash-card">
+      <h3>💰 Profit / Loss</h3>
+      <div class="pnl-rows" id="pnlRows"></div>
+    </div>
+  </div>
+
   <div class="table-wrapper">
     <table id="portfolioTable">
       <thead>
@@ -580,7 +630,7 @@ const COIN_NAMES = {
   VTHO:'VeThor', VET:'VeChain', DOGE:'Dogecoin', ENS:'ENS Domains',
   ONDO:'Ondo Finance', STRK:'Starknet', NIGHT:'Night', MON:'Monad',
   CRO:'Cronos', XDC:'XDC Network', KAVA:'Kava', GRAM:'Telegram TON',
-  PONS:'Pons', AVAIL:'Avail', PYTH:'Pyth Network', JUP:'Jupiter',
+  PONS:'Pons', AVAIL:'Avail', PYTH:'Pyth Network', JUP:'Jupiter DEX',
   RENDER:'Render', QNT:'Quant', OP:'Optimism', WLD:'Worldcoin',
   DOT:'Polkadot', BNB:'BNB Chain', ETH:'Ethereum'
 };
@@ -726,6 +776,7 @@ async function fetchLivePrices() {
     renderHeader();
     renderSummary();
     renderTable();
+    renderDashboard();
     updateLiveIndicator();
   } catch(e) {
     setLiveStatus('error');
@@ -904,8 +955,14 @@ function renderTable() {
           </div>
         </div>
       </td>
-      <td style="font-variant-numeric:tabular-nums">${fmt(c.qty, c.qty < 1 ? 6 : c.qty < 10 ? 4 : 2)}</td>
-      <td style="color:var(--fg2)">$${fmt(c.basePrice, c.basePrice < 0.01 ? 5 : c.basePrice < 1 ? 4 : 2)}</td>
+      <td>
+        <input type="number" class="editable-input" value="${fmt(c.qty, c.qty < 1 ? 6 : c.qty < 10 ? 4 : 2).replace(/,/g,'')}" step="any"
+          onchange="updateQty('${c.sym}', this.value)" title="Click to edit quantity" style="color:var(--fg)">
+      </td>
+      <td>
+        <input type="number" class="editable-input" value="${c.basePrice}" step="any"
+          onchange="updateBasePrice('${c.sym}', this.value)" title="Click to edit base price" style="color:var(--fg2)">
+      </td>
       <td>
         <input type="number" class="editable-input" value="${c.currentPrice}" step="any"
           onchange="updatePrice('${c.sym}', this.value)"
@@ -937,12 +994,29 @@ function updatePrice(sym, val) {
     renderHeader();
     renderSummary();
     renderTable();
+    renderDashboard();
   }
 }
 
 function updateNote(sym, val) {
   const coin = portfolio.find(c => c.sym === sym);
   if (coin) { coin.notes = val; savePortfolio(); }
+}
+
+function updateQty(sym, val) {
+  const coin = portfolio.find(c => c.sym === sym);
+  if (coin) {
+    const n = parseFloat(val);
+    if (n >= 0) { coin.qty = n; savePortfolio(); renderHeader(); renderSummary(); renderTable(); renderDashboard(); }
+  }
+}
+
+function updateBasePrice(sym, val) {
+  const coin = portfolio.find(c => c.sym === sym);
+  if (coin) {
+    const n = parseFloat(val);
+    if (n > 0) { coin.basePrice = n; savePortfolio(); renderTable(); renderDashboard(); }
+  }
 }
 
 function sortTable(col) {
@@ -975,6 +1049,7 @@ function applyUpdate() {
   renderHeader();
   renderSummary();
   renderTable();
+  renderDashboard();
 }
 
 function exportData() {
@@ -998,6 +1073,90 @@ function toggleTheme() {
   root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
 }
 
+const CAT_COLORS = {
+  layer1:'#3b82f6', layer2:'#8b5cf6', defi:'#10b981',
+  ai:'#f59e0b', meme:'#ef4444', other:'#6b7280', btc:'#f7931a'
+};
+const CAT_LABELS = {
+  layer1:'Layer 1', layer2:'Layer 2', defi:'DeFi',
+  ai:'AI/Web3', meme:'Meme', other:'Other', btc:'Bitcoin'
+};
+
+function renderDashboard() {
+  // ── Donut chart ──
+  const catTotals = { btc: 0 };
+  portfolio.forEach(c => {
+    const val = c.qty * c.currentPrice;
+    if (c.sym === 'BTC') catTotals.btc = (catTotals.btc||0) + val;
+    else { const cat = c.cat||'other'; catTotals[cat] = (catTotals[cat]||0) + val; }
+  });
+  const totalVal = Object.values(catTotals).reduce((a,b)=>a+b,0);
+  const entries = Object.entries(catTotals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+
+  const cx=70, cy=70, r=54, inner=34;
+  let startAngle = -Math.PI/2;
+  let paths = '';
+  entries.forEach(([cat, val]) => {
+    const angle = (val/totalVal)*Math.PI*2;
+    const endAngle = startAngle + angle;
+    const x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
+    const x2=cx+r*Math.cos(endAngle),   y2=cy+r*Math.sin(endAngle);
+    const ix1=cx+inner*Math.cos(startAngle), iy1=cy+inner*Math.sin(startAngle);
+    const ix2=cx+inner*Math.cos(endAngle),   iy2=cy+inner*Math.sin(endAngle);
+    const large = angle > Math.PI ? 1 : 0;
+    const color = CAT_COLORS[cat]||'#6b7280';
+    paths += `<path d="M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${inner},${inner} 0 ${large},0 ${ix1},${iy1} Z" fill="${color}" opacity="0.9"/>`;
+    startAngle = endAngle;
+  });
+  const pct = totalVal > 0 ? ((catTotals.btc||0)/totalVal*100).toFixed(0) : 0;
+  document.getElementById('donutChart').innerHTML = paths +
+    `<text x="70" y="66" text-anchor="middle" font-size="18" font-weight="700" fill="var(--btc)">${pct}%</text>
+     <text x="70" y="82" text-anchor="middle" font-size="9" fill="var(--fg2)">BTC</text>`;
+
+  document.getElementById('donutLegend').innerHTML = entries.map(([cat, val]) =>
+    `<div class="legend-item">
+      <span class="legend-dot" style="background:${CAT_COLORS[cat]||'#6b7280'}"></span>
+      <span class="legend-label">${CAT_LABELS[cat]||cat}</span>
+      <span class="legend-val">$${val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</span>
+    </div>`
+  ).join('');
+
+  // ── P&L ──
+  let totalBase = 0, totalCurrent = 0;
+  const catPnl = {};
+  portfolio.forEach(c => {
+    const base = c.qty * c.basePrice;
+    const cur  = c.qty * c.currentPrice;
+    totalBase    += base;
+    totalCurrent += cur;
+    const cat = c.sym==='BTC' ? 'btc' : (c.cat||'other');
+    catPnl[cat] = catPnl[cat] || {base:0, cur:0};
+    catPnl[cat].base += base;
+    catPnl[cat].cur  += cur;
+  });
+  const totalPnl = totalCurrent - totalBase;
+  const totalPnlPct = totalBase > 0 ? (totalPnl/totalBase*100) : 0;
+
+  const rows = Object.entries(catPnl).sort((a,b)=>(b[1].cur-b[1].base)-(a[1].cur-a[1].base)).map(([cat,{base,cur}])=>{
+    const pnl = cur - base;
+    const pnlPct = base > 0 ? (pnl/base*100) : 0;
+    const cls = pnl > 0 ? 'pnl-positive' : pnl < 0 ? 'pnl-negative' : 'pnl-neutral';
+    const sign = pnl >= 0 ? '+' : '';
+    return `<div class="pnl-row">
+      <span class="pnl-label"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};margin-right:6px;vertical-align:middle"></span>${CAT_LABELS[cat]||cat}</span>
+      <span class="pnl-val ${cls}">${sign}$${Math.abs(pnl).toFixed(0)} (${sign}${pnlPct.toFixed(1)}%)</span>
+    </div>`;
+  }).join('');
+
+  const totalCls = totalPnl >= 0 ? 'pnl-positive' : 'pnl-negative';
+  const totalSign = totalPnl >= 0 ? '+' : '';
+  document.getElementById('pnlRows').innerHTML = rows +
+    `<div class="pnl-row pnl-total">
+      <span class="pnl-label" style="font-weight:700;color:var(--accent)">📊 TOTAL P&L</span>
+      <span class="pnl-val ${totalCls}" style="font-size:1.05rem">${totalSign}$${Math.abs(totalPnl).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')} (${totalSign}${totalPnlPct.toFixed(1)}%)</span>
+    </div>`;
+}
+
 function refreshPrices() {
   const btn = document.getElementById('refreshBtn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Fetching…'; }
@@ -1014,6 +1173,7 @@ initPortfolio();
 renderHeader();
 renderSummary();
 renderTable();
+renderDashboard();
 
 // Auto-fetch live prices on load
 fetchLivePrices();
