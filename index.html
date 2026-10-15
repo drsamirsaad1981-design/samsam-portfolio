@@ -648,7 +648,7 @@ const BASE_PORTFOLIO = [
   { sym:'ICP',     qty:100.0992,       basePrice:2.92,     walletValue:292.08,  cat:'layer1' },
   { sym:'KSM',     qty:55.0249,        basePrice:4.32,     walletValue:237.64,  cat:'layer1' },
   { sym:'GRAM',    qty:175.61415739,   basePrice:1.34,     walletValue:234.85,  cat:'layer1' },
-  { sym:'NIGHT',   qty:5070.913,       basePrice:0.04,     walletValue:211.81,  cat:'other' },
+  { sym:'NIGHT',   qty:5070.913,       basePrice:0.04,     walletValue:211.81,  cat:'layer1' },
   { sym:'BNB',     qty:0.007984,       basePrice:719.76,   walletValue:5.75,    cat:'layer1' },
   { sym:'ARB',     qty:1357.31744632,  basePrice:0.18,     walletValue:237.97,  cat:'layer2' },
   { sym:'ETH',     qty:0.01536665,     basePrice:2365.35,  walletValue:36.35,   cat:'layer1' },
@@ -657,13 +657,13 @@ const BASE_PORTFOLIO = [
   { sym:'OP',      qty:1821.06661,     basePrice:0.13,     walletValue:236.74,  cat:'layer2' },
   { sym:'WLD',     qty:468.384,        basePrice:0.47,     walletValue:221.44,  cat:'ai' },
   { sym:'SOL',     qty:2.54645,        basePrice:102.72,   walletValue:261.57,  cat:'layer1' },
-  { sym:'PYTH',    qty:2716.5478,      basePrice:0.09,     walletValue:234.48,  cat:'defi' },
+  { sym:'PYTH',    qty:2716.5478,      basePrice:0.09,     walletValue:234.48,  cat:'infra' },
   { sym:'JUP',     qty:741.3147,       basePrice:0.30,     walletValue:221.81,  cat:'defi' },
   { sym:'RENDER',  qty:114.21513,      basePrice:1.86,     walletValue:212.33,  cat:'ai' },
-  { sym:'QNT',     qty:1.1941,         basePrice:197.89,   walletValue:236.29,  cat:'layer1' },
+  { sym:'QNT',     qty:1.1941,         basePrice:197.89,   walletValue:236.29,  cat:'infra' },
   { sym:'HBAR',    qty:3008.57776002,  basePrice:0.08,     walletValue:244.95,  cat:'layer1' },
   { sym:'DOGE',    qty:2769.22,        basePrice:0.08,     walletValue:221.64,  cat:'meme' },
-  { sym:'MON',     qty:9997.756,       basePrice:0.02,     walletValue:226.71,  cat:'other' },
+  { sym:'MON',     qty:9997.756,       basePrice:0.02,     walletValue:226.71,  cat:'layer1' },
   { sym:'CRO',     qty:4026.12027,     basePrice:0.06,     walletValue:228.32,  cat:'layer1' },
   { sym:'XDC',     qty:6782.0469,      basePrice:0.03,     walletValue:229.83,  cat:'layer1' },
   { sym:'DOT',     qty:206.15344,      basePrice:1.09,     walletValue:225.42,  cat:'layer1' },
@@ -671,14 +671,14 @@ const BASE_PORTFOLIO = [
   { sym:'ENS',     qty:40.1195,        basePrice:5.48,     walletValue:219.70,  cat:'defi' },
   { sym:'STRK',    qty:2925.91713,     basePrice:0.08,     walletValue:223.75,  cat:'layer2' },
   { sym:'ONDO',    qty:486.7884,       basePrice:0.43,     walletValue:210.47,  cat:'defi' },
-  { sym:'AVAIL',   qty:84648.668,      basePrice:0.002697, walletValue:228.25,  cat:'layer1' },
+  { sym:'AVAIL',   qty:84648.668,      basePrice:0.002697, walletValue:228.25,  cat:'infra' },
   { sym:'KAVA',    qty:3038.5596496,   basePrice:0.07,     walletValue:208.62,  cat:'defi' },
-  { sym:'PONS',    qty:754.086,        basePrice:0.30,     walletValue:229.21,  cat:'other' },
+  { sym:'PONS',    qty:754.086,        basePrice:0.30,     walletValue:229.21,  cat:'meme' },
   { sym:'MNT',     qty:452.20116,      basePrice:0.52,     walletValue:233.45,  cat:'layer2' },
-  { sym:'FLR',     qty:35446.2233,     basePrice:0.00656,  walletValue:232.53,  cat:'layer1' },
+  { sym:'FLR',     qty:35446.2233,     basePrice:0.00656,  walletValue:232.53,  cat:'infra' },
   { sym:'KAS',     qty:6299.895937,    basePrice:0.04,     walletValue:225.09,  cat:'layer1' },
   { sym:'POL',     qty:2414.1327,      basePrice:0.09521,  walletValue:229.84,  cat:'layer2' },
-  { sym:'XPL',     qty:2799.7096,      basePrice:0.08,     walletValue:217.27,  cat:'other' },
+  { sym:'XPL',     qty:2799.7096,      basePrice:0.08,     walletValue:217.27,  cat:'infra' },
   { sym:'VTHO',    qty:332670.856,     basePrice:0.000618, walletValue:205.72,  cat:'layer1' },
   { sym:'VET',     qty:30476.0844,     basePrice:0.006703, walletValue:204.30,  cat:'layer1' },
 ];
@@ -961,8 +961,8 @@ function toggleTheme() {
   root.setAttribute('data-theme',current==='dark'?'light':'dark');
 }
 
-const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#f59e0b',meme:'#ef4444',other:'#6b7280',btc:'#f7931a'};
-const CAT_LABELS={layer1:'Layer 1',layer2:'Layer 2',defi:'DeFi',ai:'AI/Web3',meme:'Meme',other:'Other',btc:'Bitcoin'};
+const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#f59e0b',meme:'#ef4444',infra:'#06b6d4',other:'#6b7280',btc:'#f7931a'};
+const CAT_LABELS={layer1:'Layer 1',layer2:'Layer 2',defi:'DeFi',ai:'AI & Web3',meme:'Meme',infra:'Infrastructure',other:'Other',btc:'Bitcoin'};
 
 function renderDashboard() {
   const catTotals={btc:0};
