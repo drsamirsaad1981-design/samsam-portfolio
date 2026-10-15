@@ -543,7 +543,7 @@
     <button class="btn btn-primary" onclick="openUpdateModal()">📝 Manual Update</button>
     <button class="btn btn-secondary" onclick="exportData()">💾 Export CSV</button>
     <button class="btn btn-secondary" onclick="toggleTheme()">🌙 Theme</button>
-    <button class="btn btn-secondary" onclick="if(confirm('Reset all data to baseline Oct 15 prices?')){resetToBaseline();savePortfolio();renderHeader();renderSummary();renderTable();renderDashboard();}" style="color:var(--red);border-color:var(--red)">🔄 Reset</button>
+    <button class="btn btn-secondary" onclick="localStorage.removeItem(STORAGE_KEY);resetToBaseline();savePortfolio();renderHeader();renderSummary();renderTable();renderDashboard();" style="color:var(--red);border-color:var(--red)">🔄 Reset</button>
     <select class="btn btn-secondary" id="filterAction" onchange="renderTable()" style="cursor:pointer">
       <option value="">All Coins</option>
       <option value="convert">🔴 Convert to BTC</option>
@@ -830,15 +830,14 @@ const LIVE_PRICES_OCT15 = {
   NIGHT:0.04244, MON:0.02344, PONS:0.3498, XPL:0.08513,
 };
 
-const DATA_VERSION = 3; // bump when BASE_PORTFOLIO changes
+const STORAGE_KEY = 'samsam_pf_v3'; // new key = fresh start, ignores old data
 
 function initPortfolio() {
   try {
-    const saved = localStorage.getItem('samsam_portfolio');
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const data = JSON.parse(saved);
-      // If old data version or coin count mismatch → reset
-      if (data.version !== DATA_VERSION || !data.coins || data.coins.length !== BASE_PORTFOLIO.length) {
+      if (!data.coins || data.coins.length !== BASE_PORTFOLIO.length) {
         resetToBaseline();
         return;
       }
@@ -863,7 +862,7 @@ function resetToBaseline() {
 
 function savePortfolio() {
   try {
-    localStorage.setItem('samsam_portfolio', JSON.stringify({ version: DATA_VERSION, coins: portfolio, btcPrice, lastSave: new Date().toISOString() }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, btcPrice, lastSave: new Date().toISOString() }));
   } catch(e) {}
 }
 
