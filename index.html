@@ -483,33 +483,36 @@
   .btn-live:disabled { opacity: 0.5; cursor: not-allowed; }
 
   @media (max-width: 640px) {
+    html { font-size: 16px; }
     .header-top { flex-direction: column; align-items: flex-start; }
-    .summary-grid { grid-template-columns: 1fr 1fr; }
-    h1 { font-size: 1.2rem !important; }
-    .stat-card { padding: 10px 12px; min-width: 100px; }
-    .stat-value { font-size: 1.1rem !important; }
-    .stat-label { font-size: 0.72rem; }
-    .btn { padding: 9px 14px; font-size: 0.9rem; }
+    .summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .title-group h1 { font-size: 1.25rem; }
+    .title-group p { font-size: 0.85rem; }
+    .header-stats { gap: 10px; }
+    .stat-card { padding: 12px; min-width: 110px; flex: 1; }
+    .stat-value { font-size: 1.15rem; }
+    .stat-label { font-size: 0.75rem; }
+    .btn { padding: 10px 14px; font-size: 0.92rem; }
+    .search-box { font-size: 0.92rem; padding: 10px 14px; }
     .controls { gap: 8px; }
-    .summary-card { padding: 12px 10px; }
-    .summary-card .section-val { font-size: 1rem !important; }
-    .summary-card .section-lbl { font-size: 0.72rem !important; }
-    /* Dashboard mobile */
-    .dash-card { padding: 16px 14px; }
-    .dash-card h3 { font-size: 1rem !important; margin-bottom: 14px; }
-    .legend-item { font-size: 0.92rem !important; gap: 10px; }
-    .legend-dot { width: 12px !important; height: 12px !important; }
-    .legend-val { font-size: 0.92rem !important; }
-    .pnl-label { font-size: 0.92rem !important; }
-    .pnl-val { font-size: 1.05rem !important; }
-    .pnl-row { padding: 12px 12px; }
+    .summary-card { padding: 14px 10px; }
+    /* Dashboard */
+    .dash-card { padding: 18px 14px; }
+    .dash-card h3 { font-size: 1rem; margin-bottom: 16px; }
+    .legend-item { font-size: 0.95rem; gap: 10px; }
+    .legend-dot { width: 13px; height: 13px; }
+    .legend-val { font-size: 0.95rem; }
+    .pnl-label { font-size: 0.95rem; }
+    .pnl-val { font-size: 1.1rem; }
+    .pnl-row { padding: 12px 14px; }
     /* Table */
-    td { font-size: 0.88rem !important; padding: 10px 10px !important; }
-    th { font-size: 0.78rem !important; padding: 10px 10px !important; }
-    .coin-name { font-size: 0.9rem !important; }
-    .coin-fullname { font-size: 0.75rem !important; }
-    .coin-icon { width: 32px !important; height: 32px !important; font-size: 12px !important; }
-    .editable-input { font-size: 0.88rem !important; padding: 4px 6px !important; min-width: 60px !important; }
+    td { font-size: 0.9rem; padding: 12px 10px; }
+    th { font-size: 0.8rem; padding: 11px 10px; }
+    .coin-name { font-size: 0.95rem; font-weight: 700; }
+    .coin-fullname { font-size: 0.78rem; }
+    .coin-icon { width: 34px; height: 34px; font-size: 13px; }
+    .editable-input { font-size: 0.9rem; padding: 5px 7px; min-width: 65px; }
+    .perf-badge, .action-badge { font-size: 0.82rem; padding: 4px 8px; }
   }
 </style>
 
@@ -760,7 +763,7 @@ const COINGECKO_IDS = {
   OP:       'optimism',
   WLD:      'worldcoin-wld',
   PYTH:     'pyth-network',
-  JUP:      'jupiter',
+  JUP:      'jupiter-exchange-solana',
   RENDER:   'render-token',
   QNT:      'quant-network',
   HBAR:     'hedera-hashgraph',
