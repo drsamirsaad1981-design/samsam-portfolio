@@ -482,9 +482,34 @@
   .btn-live:hover { opacity: 0.88; }
   .btn-live:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  @media (max-width: 600px) {
+  @media (max-width: 640px) {
     .header-top { flex-direction: column; align-items: flex-start; }
     .summary-grid { grid-template-columns: 1fr 1fr; }
+    h1 { font-size: 1.2rem !important; }
+    .stat-card { padding: 10px 12px; min-width: 100px; }
+    .stat-value { font-size: 1.1rem !important; }
+    .stat-label { font-size: 0.72rem; }
+    .btn { padding: 9px 14px; font-size: 0.9rem; }
+    .controls { gap: 8px; }
+    .summary-card { padding: 12px 10px; }
+    .summary-card .section-val { font-size: 1rem !important; }
+    .summary-card .section-lbl { font-size: 0.72rem !important; }
+    /* Dashboard mobile */
+    .dash-card { padding: 16px 14px; }
+    .dash-card h3 { font-size: 1rem !important; margin-bottom: 14px; }
+    .legend-item { font-size: 0.92rem !important; gap: 10px; }
+    .legend-dot { width: 12px !important; height: 12px !important; }
+    .legend-val { font-size: 0.92rem !important; }
+    .pnl-label { font-size: 0.92rem !important; }
+    .pnl-val { font-size: 1.05rem !important; }
+    .pnl-row { padding: 12px 12px; }
+    /* Table */
+    td { font-size: 0.88rem !important; padding: 10px 10px !important; }
+    th { font-size: 0.78rem !important; padding: 10px 10px !important; }
+    .coin-name { font-size: 0.9rem !important; }
+    .coin-fullname { font-size: 0.75rem !important; }
+    .coin-icon { width: 32px !important; height: 32px !important; font-size: 12px !important; }
+    .editable-input { font-size: 0.88rem !important; padding: 4px 6px !important; min-width: 60px !important; }
   }
 </style>
 
@@ -1201,6 +1226,9 @@ function refreshPrices() {
 document.getElementById('searchBox').addEventListener('input', renderTable);
 document.getElementById('updateModal').addEventListener('click', e => { if(e.target === e.currentTarget) closeModal(); });
 document.getElementById('currentDate').textContent = '📅 ' + new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}) + ' — Baseline: Oct 15, 2026';
+
+// Clear ALL old storage keys on first load of new version
+['samsam_portfolio', 'samsam_pf_v1', 'samsam_pf_v2'].forEach(k => localStorage.removeItem(k));
 
 initPortfolio();
 renderHeader();
