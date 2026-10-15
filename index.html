@@ -525,6 +525,7 @@
   <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
 </footer>
 
+<!-- JS from here -->
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -539,7 +540,6 @@ const COIN_COLORS = {
   RENDER:'#e74c3c', QNT:'#1a1a2e', OP:'#ff0420', WLD:'#191c1f',
   DOT:'#e6007a', BNB:'#f3ba2f', ETH:'#627eea'
 };
-
 const COIN_NAMES = {
   BTC:'Bitcoin', SOL:'Solana', NEAR:'NEAR Protocol', TAO:'Bittensor',
   ICP:'Internet Computer', AVAX:'Avalanche', LINK:'Chainlink', HBAR:'Hedera',
@@ -551,4 +551,464 @@ const COIN_NAMES = {
   CRO:'Cronos', XDC:'XDC Network', KAVA:'Kava', GRAM:'Telegram TON',
   PONS:'Pons', AVAIL:'Avail', PYTH:'Pyth Network', JUP:'Jupiter DEX',
   RENDER:'Render', QNT:'Quant', OP:'Optimism', WLD:'Worldcoin',
-  DOT
+  DOT:'Polkadot', BNB:'BNB Chain', ETH:'Ethereum',
+  ETH_ARB:'ETH (Arbitrum)', ETH_BASE:'ETH (Base)', ETH_OP:'ETH (Optimism)',
+  ETH_ETH:'ETH (Ethereum)', ETH_RH:'ETH (RH)'
+};
+
+const BASE_PORTFOLIO = [
+  { sym:'BTC',     qty:0.01304141,     basePrice:81162.52, walletValue:1058.47, cat:'btc' },
+  { sym:'TAO',     qty:1.0985,         basePrice:262.02,   walletValue:287.83,  cat:'ai' },
+  { sym:'SUI',     qty:251.508,        basePrice:0.99,     walletValue:249.46,  cat:'layer1' },
+  { sym:'NEAR',    qty:60.15788,       basePrice:4.71,     walletValue:283.31,  cat:'layer1' },
+  { sym:'SEI',     qty:4558.676078,    basePrice:0.06,     walletValue:268.26,  cat:'layer1' },
+  { sym:'ATOM',    qty:160.129651,     basePrice:1.67,     walletValue:267.65,  cat:'layer1' },
+  { sym:'APT',     qty:300.11318601,   basePrice:0.78,     walletValue:233.48,  cat:'layer1' },
+  { sym:'AVAX',    qty:26.4655,        basePrice:9.60,     walletValue:254.08,  cat:'layer1' },
+  { sym:'ICP',     qty:100.0992,       basePrice:2.92,     walletValue:292.08,  cat:'layer1' },
+  { sym:'KSM',     qty:55.0249,        basePrice:4.32,     walletValue:237.64,  cat:'layer1' },
+  { sym:'GRAM',    qty:175.61415739,   basePrice:1.34,     walletValue:234.85,  cat:'layer1' },
+  { sym:'NIGHT',   qty:5070.913,       basePrice:0.04,     walletValue:211.81,  cat:'other' },
+  { sym:'BNB',     qty:0.007984,       basePrice:719.76,   walletValue:5.75,    cat:'layer1' },
+  { sym:'ARB',     qty:1357.31744632,  basePrice:0.18,     walletValue:237.97,  cat:'layer2' },
+  { sym:'ETH_ARB', qty:0.00136281,     basePrice:2365.35,  walletValue:3.22,    cat:'layer1' },
+  { sym:'MOVR',    qty:174.83465,      basePrice:1.36,     walletValue:237.70,  cat:'layer2' },
+  { sym:'GLMR',    qty:21170.5602,     basePrice:0.01051,  walletValue:222.67,  cat:'layer2' },
+  { sym:'ETH_BASE',qty:0.00195,        basePrice:2365.35,  walletValue:4.61,    cat:'layer1' },
+  { sym:'OP',      qty:1821.06661,     basePrice:0.13,     walletValue:236.74,  cat:'layer2' },
+  { sym:'WLD',     qty:468.384,        basePrice:0.47,     walletValue:221.44,  cat:'ai' },
+  { sym:'ETH_OP',  qty:0.00163063,     basePrice:2365.35,  walletValue:3.86,    cat:'layer1' },
+  { sym:'SOL',     qty:2.54645,        basePrice:102.72,   walletValue:261.57,  cat:'layer1' },
+  { sym:'PYTH',    qty:2716.5478,      basePrice:0.09,     walletValue:234.48,  cat:'defi' },
+  { sym:'JUP',     qty:741.3147,       basePrice:0.30,     walletValue:221.81,  cat:'defi' },
+  { sym:'RENDER',  qty:114.21513,      basePrice:1.86,     walletValue:212.33,  cat:'ai' },
+  { sym:'QNT',     qty:1.1941,         basePrice:197.89,   walletValue:236.29,  cat:'layer1' },
+  { sym:'HBAR',    qty:3008.57776002,  basePrice:0.08,     walletValue:244.95,  cat:'layer1' },
+  { sym:'DOGE',    qty:2769.22,        basePrice:0.08,     walletValue:221.64,  cat:'meme' },
+  { sym:'MON',     qty:9997.756,       basePrice:0.02,     walletValue:226.71,  cat:'other' },
+  { sym:'CRO',     qty:4026.12027,     basePrice:0.06,     walletValue:228.32,  cat:'layer1' },
+  { sym:'XDC',     qty:6782.0469,      basePrice:0.03,     walletValue:229.83,  cat:'layer1' },
+  { sym:'DOT',     qty:206.15344,      basePrice:1.09,     walletValue:225.42,  cat:'layer1' },
+  { sym:'LINK',    qty:20.3474,        basePrice:12.08,    walletValue:245.76,  cat:'defi' },
+  { sym:'ENS',     qty:40.1195,        basePrice:5.48,     walletValue:219.70,  cat:'defi' },
+  { sym:'STRK',    qty:2925.91713,     basePrice:0.08,     walletValue:223.75,  cat:'layer2' },
+  { sym:'ONDO',    qty:486.7884,       basePrice:0.43,     walletValue:210.47,  cat:'defi' },
+  { sym:'AVAIL',   qty:84648.668,      basePrice:0.002697, walletValue:228.25,  cat:'layer1' },
+  { sym:'ETH_ETH', qty:0.00929127,     basePrice:2365.35,  walletValue:21.98,   cat:'layer1' },
+  { sym:'KAVA',    qty:3038.5596496,   basePrice:0.07,     walletValue:208.62,  cat:'defi' },
+  { sym:'ETH_RH',  qty:0.00113194,     basePrice:2365.35,  walletValue:2.68,    cat:'layer1' },
+  { sym:'PONS',    qty:754.086,        basePrice:0.30,     walletValue:229.21,  cat:'other' },
+  { sym:'MNT',     qty:452.20116,      basePrice:0.52,     walletValue:233.45,  cat:'layer2' },
+  { sym:'FLR',     qty:35446.2233,     basePrice:0.00656,  walletValue:232.53,  cat:'layer1' },
+  { sym:'KAS',     qty:6299.895937,    basePrice:0.04,     walletValue:225.09,  cat:'layer1' },
+  { sym:'POL',     qty:2414.1327,      basePrice:0.09521,  walletValue:229.84,  cat:'layer2' },
+  { sym:'XPL',     qty:2799.7096,      basePrice:0.08,     walletValue:217.27,  cat:'other' },
+  { sym:'VTHO',    qty:332670.856,     basePrice:0.000618, walletValue:205.72,  cat:'layer1' },
+  { sym:'VET',     qty:30476.0844,     basePrice:0.006703, walletValue:204.30,  cat:'layer1' },
+];
+
+let portfolio = [];
+let btcPrice = 82363;
+let sortCol = 'currentValue';
+let sortDir = -1;
+let liveStatus = 'idle';
+let lastFetchTime = null;
+
+const COINGECKO_IDS = {
+  BTC:'bitcoin', ETH:'ethereum',
+  ETH_ARB:'ethereum', ETH_BASE:'ethereum', ETH_OP:'ethereum', ETH_ETH:'ethereum', ETH_RH:'ethereum',
+  SOL:'solana', BNB:'binancecoin', TAO:'bittensor', SUI:'sui', NEAR:'near',
+  SEI:'sei-network', ATOM:'cosmos', APT:'aptos', AVAX:'avalanche-2',
+  ICP:'internet-computer', KSM:'kusama', GRAM:'the-open-network',
+  NIGHT:null, ARB:'arbitrum', MOVR:'moonriver', GLMR:'moonbeam',
+  OP:'optimism', WLD:'worldcoin-wld', PYTH:'pyth-network',
+  JUP:'jupiter-exchange-solana', RENDER:'render-token', QNT:'quant-network',
+  HBAR:'hedera-hashgraph', DOGE:'dogecoin', MON:null,
+  CRO:'crypto-com-chain', XDC:'xdce-crowd-sale', DOT:'polkadot',
+  LINK:'chainlink', ENS:'ethereum-name-service', STRK:'starknet',
+  ONDO:'ondo-finance', AVAIL:'avail', KAVA:'kava', PONS:null,
+  MNT:'mantle', FLR:'flare-networks', KAS:'kaspa',
+  POL:'polygon-ecosystem-token', XPL:null, VTHO:'vethor-token', VET:'vechain',
+};
+
+const LIVE_PRICES_OCT15 = {
+  BTC:82363.28, ETH_ARB:2444.58, ETH_BASE:2444.58, ETH_OP:2444.58, ETH_ETH:2444.58, ETH_RH:2444.58,
+  SOL:105.81, BNB:718.42, TAO:276.21, SUI:0.8207, NEAR:5.252, SEI:0.06197,
+  ATOM:1.739, APT:0.8207, AVAX:9.964, ICP:3.074, KSM:4.488, GRAM:1.372,
+  ARB:0.1922, MOVR:1.399, GLMR:0.01038, OP:0.1413, WLD:0.5023,
+  PYTH:0.09368, JUP:0.3089, RENDER:1.996, QNT:209.46, HBAR:0.08369,
+  DOGE:0.08112, CRO:0.05825, XDC:0.03393, DOT:1.125, LINK:12.50,
+  ENS:5.733, STRK:0.09143, ONDO:0.4600, AVAIL:0.002632, KAVA:0.069,
+  MNT:0.5295, FLR:0.006713, KAS:0.03612, POL:0.09554, VTHO:0.0006441,
+  VET:0.00705, NIGHT:0.04244, MON:0.02344, PONS:0.3498, XPL:0.08513,
+};
+
+const STORAGE_KEY = 'samsam_pf_v3';
+
+function initPortfolio() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (!data.coins || data.coins.length !== BASE_PORTFOLIO.length) { resetToBaseline(); return; }
+      portfolio = data.coins;
+      btcPrice = data.btcPrice || 82363.28;
+    } else { resetToBaseline(); }
+  } catch(e) { resetToBaseline(); }
+}
+
+function resetToBaseline() {
+  portfolio = BASE_PORTFOLIO.map(c => ({
+    ...c,
+    currentPrice: LIVE_PRICES_OCT15[c.sym] || c.basePrice,
+    notes: '', action: 'hold', lastUpdate: '2026-10-15'
+  }));
+  btcPrice = LIVE_PRICES_OCT15.BTC || 82363;
+}
+
+function savePortfolio() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, btcPrice, lastSave: new Date().toISOString() })); } catch(e) {}
+}
+
+function resetApp() {
+  localStorage.removeItem(STORAGE_KEY);
+  resetToBaseline();
+  savePortfolio();
+  renderAll();
+}
+
+function calcStats() {
+  const btcEntry = portfolio.find(c => c.sym === 'BTC');
+  const btcQty = btcEntry ? btcEntry.qty : 0.01304141;
+  const altTotal = portfolio.filter(c => c.sym !== 'BTC').reduce((s,c) => s + c.qty * c.currentPrice, 0);
+  const btcValue = btcQty * btcPrice;
+  return { btcQty, btcValue, altTotal, total: btcValue + altTotal };
+}
+
+function getPerf(coin) {
+  const btcPerfPct = ((btcPrice / 81162) - 1) * 100;
+  const coinPerfPct = ((coin.currentPrice / coin.basePrice) - 1) * 100;
+  return coinPerfPct - btcPerfPct;
+}
+
+function getAction(sym, perf) {
+  if (sym === 'BTC') return 'hold';
+  if (perf < -20) return 'convert';
+  if (perf > 15) return 'reinforce';
+  return 'hold';
+}
+
+function fmt(n, dec) {
+  return parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+function renderHeader() {
+  const { btcQty, altTotal, total } = calcStats();
+  document.getElementById('totalBtc').textContent = btcQty.toFixed(8);
+  document.getElementById('totalUsd').textContent = '$' + total.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  document.getElementById('altUsd').textContent = '$' + altTotal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  document.getElementById('btcPriceDisplay').textContent = '$' + btcPrice.toLocaleString();
+  const pct = (btcQty * 100).toFixed(3);
+  document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
+  document.getElementById('progressPct').textContent = pct + '% complete';
+}
+
+function renderSummary() {
+  const cats = { layer1:'Layer 1', layer2:'Layer 2', defi:'DeFi', ai:'AI / Web3', meme:'Meme', other:'Other', btc:'Bitcoin' };
+  const catTotals = {};
+  portfolio.forEach(c => {
+    const cat = c.cat || 'other';
+    catTotals[cat] = (catTotals[cat] || 0) + c.qty * c.currentPrice;
+  });
+  const grid = document.getElementById('summaryGrid');
+  grid.innerHTML = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])
+    .map(([k,v]) => `<div class="summary-card">
+      <div class="label">${cats[k]||k}</div>
+      <div class="value">$${v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+    </div>`).join('');
+}
+
+function getFilteredSorted() {
+  const filter = document.getElementById('filterAction') ? document.getElementById('filterAction').value : '';
+  const search = document.getElementById('searchBox') ? document.getElementById('searchBox').value.toLowerCase() : '';
+  let rows = portfolio.filter(c => {
+    if (search && !c.sym.toLowerCase().includes(search) && !(COIN_NAMES[c.sym]||'').toLowerCase().includes(search)) return false;
+    if (filter) { const perf=getPerf(c); const action=getAction(c.sym,perf); if(action!==filter) return false; }
+    return true;
+  });
+  rows.sort((a,b) => {
+    let av, bv;
+    switch(sortCol) {
+      case 'qty': av=a.qty; bv=b.qty; break;
+      case 'basePrice': av=a.basePrice; bv=b.basePrice; break;
+      case 'currentPrice': av=a.currentPrice; bv=b.currentPrice; break;
+      case 'baseValue': av=a.qty*a.basePrice; bv=b.qty*b.basePrice; break;
+      case 'currentValue': av=a.qty*a.currentPrice; bv=b.qty*b.currentPrice; break;
+      case 'pnl': av=a.qty*(a.currentPrice-a.basePrice); bv=b.qty*(b.currentPrice-b.basePrice); break;
+      case 'perf': av=getPerf(a); bv=getPerf(b); break;
+      case 'name': av=a.sym; bv=b.sym; return sortDir*av.localeCompare(bv);
+      default: av=a.qty*a.currentPrice; bv=b.qty*b.currentPrice;
+    }
+    return sortDir*(bv-av);
+  });
+  return rows;
+}
+
+function renderTableAndStack() {
+  const rows = getFilteredSorted();
+
+  // Desktop table
+  const tbody = document.getElementById('tableBody');
+  if (tbody) {
+    let html = '';
+    rows.forEach((c,i) => {
+      const perf=getPerf(c); const action=getAction(c.sym,perf);
+      const baseVal=c.qty*c.basePrice; const curVal=c.qty*c.currentPrice;
+      const color=COIN_COLORS[c.sym]||'#6b7280';
+      const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
+      const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
+      const actionLabel=action==='convert'?'🔴 Convert→BTC':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';
+      const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
+      const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
+      html += `<tr>
+        <td style="color:var(--fg2);font-size:0.75rem">${i+1}</td>
+        <td style="text-align:left"><div style="display:flex;align-items:center;gap:8px">
+          <div style="width:32px;height:32px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;flex-shrink:0">${c.sym.slice(0,2)}</div>
+          <div><div style="font-weight:700;font-size:0.85rem">${c.sym}</div><div style="font-size:0.72rem;color:var(--fg2)">${COIN_NAMES[c.sym]||''}</div></div>
+        </div></td>
+        <td><input type="number" class="editable-input" value="${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}" step="any" onchange="updateQty('${c.sym}',this.value)"></td>
+        <td><input type="number" class="editable-input" value="${c.basePrice}" step="any" onchange="updateBasePrice('${c.sym}',this.value)" style="color:var(--fg2)"></td>
+        <td><input type="number" class="editable-input" value="${c.currentPrice}" step="any" onchange="updatePrice('${c.sym}',this.value)"></td>
+        <td style="color:var(--fg2)">$${fmt(baseVal,2)}</td>
+        <td style="font-weight:700">$${fmt(curVal,2)}</td>
+        <td><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${pnlSign}$${Math.abs(pnl).toFixed(2)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
+        <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
+        <td><span class="action-badge action-${action}">${actionLabel}</span></td>
+        <td><input type="text" class="editable-input" value="${c.notes||''}" placeholder="Note..." onchange="updateNote('${c.sym}',this.value)" style="min-width:80px"></td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+  }
+
+  // Mobile card stack
+  const stack = document.getElementById('coinsStack');
+  if (stack) {
+    stack.innerHTML = rows.map((c,i) => {
+      const perf=getPerf(c); const action=getAction(c.sym,perf);
+      const baseVal=c.qty*c.basePrice; const curVal=c.qty*c.currentPrice;
+      const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
+      const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
+      const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
+      const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
+      const actionLabel=action==='convert'?'🔴 Convert':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';
+      const color=COIN_COLORS[c.sym]||'#6b7280';
+      return `<div class="coin-card">
+        <div class="coin-card-header">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#fff;flex-shrink:0">${c.sym.slice(0,2)}</div>
+            <div>
+              <div style="font-weight:700;font-size:0.95rem">${c.sym}</div>
+              <div style="font-size:0.72rem;color:var(--fg2)">${COIN_NAMES[c.sym]||''}</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;font-size:1rem">$${fmt(curVal,2)}</div>
+            <div class="${pnlCls}" style="font-size:0.78rem">${pnlSign}$${Math.abs(pnl).toFixed(2)} (${pnlSign}${pnlPct.toFixed(1)}%)</div>
+          </div>
+        </div>
+        <div class="coin-card-body">
+          <div class="coin-metric"><label>Qty</label><val>${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}</val></div>
+          <div class="coin-metric"><label>Base</label><val>$${c.basePrice}</val></div>
+          <div class="coin-metric"><label>Current</label><val>$${c.currentPrice}</val></div>
+          <div class="coin-metric"><label>Cost Basis</label><val>$${fmt(baseVal,0)}</val></div>
+          <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
+          <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
+        </div>
+        <div class="coin-card-footer" style="color:var(--fg2);font-size:0.75rem">
+          <span>#${i+1}</span>
+          <span style="color:var(--fg2)">${c.lastUpdate||'Oct 15, 2026'}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function updatePrice(sym, val) {
+  const coin=portfolio.find(c=>c.sym===sym);
+  if(coin){coin.currentPrice=parseFloat(val)||coin.currentPrice;coin.lastUpdate=new Date().toISOString().slice(0,10);savePortfolio();renderAll();}
+}
+function updateNote(sym, val) {
+  const coin=portfolio.find(c=>c.sym===sym);
+  if(coin){coin.notes=val;savePortfolio();}
+}
+function updateQty(sym, val) {
+  const coin=portfolio.find(c=>c.sym===sym);
+  if(coin){const n=parseFloat(val);if(n>=0){coin.qty=n;savePortfolio();renderAll();}}
+}
+function updateBasePrice(sym, val) {
+  const coin=portfolio.find(c=>c.sym===sym);
+  if(coin){const n=parseFloat(val);if(n>0){coin.basePrice=n;savePortfolio();renderTableAndStack();renderDashboard();}}
+}
+function sortTable(col) {
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}
+  renderTableAndStack();
+}
+
+function openUpdateModal() {
+  document.getElementById('modalBtcPrice').value = btcPrice;
+  document.getElementById('modalDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('updateModal').classList.add('active');
+}
+function closeModal() { document.getElementById('updateModal').classList.remove('active'); }
+function applyUpdate() {
+  const newBtc=parseFloat(document.getElementById('modalBtcPrice').value);
+  if(newBtc>0)btcPrice=newBtc;
+  closeModal();savePortfolio();renderAll();
+}
+
+function exportData() {
+  const rows=[['Coin','Qty','Base Price','Current Price','Cost Basis','Current Value','P&L','P&L%','vs BTC','Signal']];
+  portfolio.forEach(c=>{
+    const perf=getPerf(c);const action=getAction(c.sym,perf);
+    const baseVal=c.qty*c.basePrice;const curVal=c.qty*c.currentPrice;const pnl=curVal-baseVal;
+    rows.push([c.sym,c.qty,c.basePrice,c.currentPrice,baseVal.toFixed(2),curVal.toFixed(2),pnl.toFixed(2),(baseVal>0?pnl/baseVal*100:0).toFixed(1)+'%',perf.toFixed(1)+'%',action]);
+  });
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='samsam-portfolio.csv';a.click();
+}
+
+function toggleTheme() {
+  const root=document.documentElement;
+  const current=root.getAttribute('data-theme')||'dark';
+  root.setAttribute('data-theme',current==='dark'?'light':'dark');
+}
+
+const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#f59e0b',meme:'#ef4444',other:'#6b7280',btc:'#f7931a'};
+const CAT_LABELS={layer1:'Layer 1',layer2:'Layer 2',defi:'DeFi',ai:'AI/Web3',meme:'Meme',other:'Other',btc:'Bitcoin'};
+
+function renderDashboard() {
+  const catTotals={btc:0};
+  portfolio.forEach(c=>{
+    const val=c.qty*c.currentPrice;
+    const cat=c.sym==='BTC'?'btc':(c.cat||'other');
+    catTotals[cat]=(catTotals[cat]||0)+val;
+  });
+  const totalVal=Object.values(catTotals).reduce((a,b)=>a+b,0);
+  const entries=Object.entries(catTotals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+
+  const cx=70,cy=70,r=54,inner=34;
+  let startAngle=-Math.PI/2,paths='';
+  entries.forEach(([cat,val])=>{
+    const angle=(val/totalVal)*Math.PI*2;const endAngle=startAngle+angle;
+    const x1=cx+r*Math.cos(startAngle),y1=cy+r*Math.sin(startAngle);
+    const x2=cx+r*Math.cos(endAngle),y2=cy+r*Math.sin(endAngle);
+    const ix1=cx+inner*Math.cos(startAngle),iy1=cy+inner*Math.sin(startAngle);
+    const ix2=cx+inner*Math.cos(endAngle),iy2=cy+inner*Math.sin(endAngle);
+    const large=angle>Math.PI?1:0;
+    paths+=`<path d="M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${inner},${inner} 0 ${large},0 ${ix1},${iy1} Z" fill="${CAT_COLORS[cat]||'#6b7280'}" opacity="0.9"/>`;
+    startAngle=endAngle;
+  });
+  const pct=totalVal>0?((catTotals.btc||0)/totalVal*100).toFixed(0):0;
+  document.getElementById('donutChart').innerHTML=paths+
+    `<text x="70" y="66" text-anchor="middle" font-size="18" font-weight="700" fill="var(--btc)">${pct}%</text>
+     <text x="70" y="82" text-anchor="middle" font-size="9" fill="var(--fg2)">BTC</text>`;
+  document.getElementById('donutLegend').innerHTML=entries.map(([cat,val])=>
+    `<div class="legend-item"><span class="legend-dot" style="background:${CAT_COLORS[cat]||'#6b7280'}"></span>
+     <span class="legend-label">${CAT_LABELS[cat]||cat}</span>
+     <span class="legend-val">$${val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</span></div>`
+  ).join('');
+
+  // P&L
+  let totalBase=0,totalCurrent=0;
+  const catPnl={};
+  portfolio.forEach(c=>{
+    const base=c.qty*c.basePrice,cur=c.qty*c.currentPrice;
+    totalBase+=base;totalCurrent+=cur;
+    const cat=c.sym==='BTC'?'btc':(c.cat||'other');
+    catPnl[cat]=catPnl[cat]||{base:0,cur:0};
+    catPnl[cat].base+=base;catPnl[cat].cur+=cur;
+  });
+  const totalPnl=totalCurrent-totalBase;
+  const totalPnlPct=totalBase>0?(totalPnl/totalBase*100):0;
+  const totalCls=totalPnl>=0?'pnl-positive':'pnl-negative';
+  const totalSign=totalPnl>=0?'+':'';
+
+  const pnlRowsHtml=Object.entries(catPnl).sort((a,b)=>(b[1].cur-b[1].base)-(a[1].cur-a[1].base)).map(([cat,{base,cur}])=>{
+    const pnl=cur-base,pnlPct=base>0?(pnl/base*100):0;
+    const cls=pnl>0?'pnl-positive':pnl<0?'pnl-negative':'';
+    const sign=pnl>=0?'+':'';
+    return `<div class="pnl-row">
+      <span class="pnl-label"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};margin-right:6px;vertical-align:middle"></span>${CAT_LABELS[cat]||cat}</span>
+      <span class="pnl-val ${cls}">${sign}$${Math.abs(pnl).toFixed(0)} (${sign}${pnlPct.toFixed(1)}%)</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('pnlRows').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:0.68rem;color:var(--fg2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Cost Basis</div>
+        <div style="font-size:0.95rem;font-weight:700">$${totalBase.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:0.68rem;color:var(--fg2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Current</div>
+        <div style="font-size:0.95rem;font-weight:700">$${totalCurrent.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+      </div>
+    </div>
+    <div class="pnl-row pnl-total" style="margin-bottom:10px">
+      <span class="pnl-label" style="font-weight:700;color:var(--accent)">📈 Unrealized P&L</span>
+      <div style="text-align:right">
+        <div class="pnl-val ${totalCls}" style="font-size:1.05rem">${totalSign}$${Math.abs(totalPnl).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+        <div class="${totalCls}" style="font-size:0.75rem;opacity:0.85">${totalSign}${totalPnlPct.toFixed(2)}%</div>
+      </div>
+    </div>
+    ${pnlRowsHtml}`;
+}
+
+async function fetchLivePrices() {
+  setLiveStatus('loading');
+  const ids=[...new Set(Object.values(COINGECKO_IDS).filter(Boolean))];
+  const url=`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd`;
+  try {
+    const res=await fetch(url);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    portfolio.forEach(c=>{
+      const cgId=COINGECKO_IDS[c.sym];
+      if(cgId&&data[cgId]&&data[cgId].usd){c.currentPrice=data[cgId].usd;c.lastUpdate=new Date().toISOString().slice(0,10);}
+    });
+    if(data['bitcoin']&&data['bitcoin'].usd)btcPrice=data['bitcoin'].usd;
+    lastFetchTime=new Date();
+    setLiveStatus('ok');
+    savePortfolio();renderAll();
+  } catch(e){setLiveStatus('error');updateLiveIndicator();}
+}
+
+function setLiveStatus(s){liveStatus=s;updateLiveIndicator();}
+function updateLiveIndicator(){
+  const el=document.getElementById('liveIndicator');if(!el)return;
+  if(liveStatus==='loading')el.innerHTML='<span class="live-dot loading"></span> Fetching live prices…';
+  else if(liveStatus==='ok'){const t=lastFetchTime?lastFetchTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'';el.innerHTML=`<span class="live-dot ok"></span> Live · Updated ${t}`;}
+  else if(liveStatus==='error')el.innerHTML='<span class="live-dot error"></span> Fetch failed — using saved prices';
+  else el.innerHTML='<span class="live-dot"></span> Prices from last session';
+}
+
+function refreshPrices(){
+  const btn=document.getElementById('refreshBtn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Fetching…';}
+  fetchLivePrices().finally(()=>{if(btn){btn.disabled=false;btn.textContent='🔄 Refresh';}});
+}
+
+function renderAll(){renderHeader();renderSummary();renderTableAndStack();renderDashboard();}
+
+document.getElementById('searchBox').addEventListener('input',renderTableAndStack);
+document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+' — Baseline: Oct 15, 2026';
+
+['samsam_portfolio','samsam_pf_v1','samsam_pf_v2'].forEach(k=>localStorage.removeItem(k));
+initPortfolio();
+renderAll();
+fetchLivePrices();
+</script>
+</body>
+</html>
