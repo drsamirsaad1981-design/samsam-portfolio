@@ -308,16 +308,20 @@
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 14px;
+    padding: 20px;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
   }
-  .dash-card h3 { font-size: 0.8rem; color: var(--fg2); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .dash-card h3 { font-size: 0.75rem; color: var(--fg2); margin-bottom: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+  .dash-card .donut-wrap, .dash-card .pnl-rows { flex: 1; }
 
-  .donut-wrap { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center; }
-  .donut-legend { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 220px; }
-  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; }
-  .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .legend-label { color: var(--fg2); }
-  .legend-val { color: var(--fg); font-weight: 600; margin-left: auto; }
+  .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 160px; }
+  .legend-item { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+  .legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { color: var(--fg2); flex: 1; }
+  .legend-val { color: var(--fg); font-weight: 700; font-size: 0.9rem; }
 
   .pnl-rows { display: flex; flex-direction: column; gap: 6px; }
   .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg3); font-size: 0.82rem; }
@@ -466,7 +470,7 @@
   <div class="dash-card">
     <h3>📊 Allocation</h3>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="130" height="130" viewBox="0 0 140 140" id="donutChart"></svg>
+      <svg class="donut-svg" width="200" height="200" viewBox="0 0 140 140" id="donutChart"></svg>
       <div class="donut-legend" id="donutLegend"></div>
     </div>
   </div>
