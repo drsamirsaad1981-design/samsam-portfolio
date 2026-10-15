@@ -540,6 +540,29 @@ const COIN_COLORS = {
   RENDER:'#e74c3c', QNT:'#1a1a2e', OP:'#ff0420', WLD:'#191c1f',
   DOT:'#e6007a', BNB:'#f3ba2f', ETH:'#627eea'
 };
+
+// Real coin icons from cryptocurrency-icons (jsdelivr CDN)
+const _CDN = 'https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/';
+const COIN_ICONS = {
+  BTC:'btc', ETH:'eth', SOL:'sol', BNB:'bnb', NEAR:'near', TAO:null,
+  ICP:'icp', AVAX:'avax', LINK:'link', HBAR:'hbar', ATOM:'atom',
+  SEI:null, APT:'apt', KSM:'ksm', ARB:'arb', MOVR:'movr', GLMR:'glmr',
+  MNT:null, FLR:null, KAS:null, POL:'matic', XPL:null,
+  VTHO:'vtho', VET:'vet', DOGE:'doge', ENS:'ens', ONDO:null,
+  STRK:null, NIGHT:null, MON:null, CRO:'cro', XDC:null,
+  KAVA:'kava', GRAM:null, PONS:null, AVAIL:null, PYTH:null,
+  JUP:null, RENDER:null, QNT:'qnt', OP:'op', WLD:null,
+  SUI:'sui', DOT:'dot', ONDO:null, XPL:null
+};
+function getCoinIcon(sym, size=32) {
+  const id = COIN_ICONS[sym];
+  const color = COIN_COLORS[sym] || '#6b7280';
+  const letter = sym.slice(0,2);
+  if (id) {
+    return `<img src="${_CDN}${id}.svg" width="${size}" height="${size}" style="border-radius:50%;flex-shrink:0" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><div style="display:none;width:${size}px;height:${size}px;border-radius:50%;background:${color};align-items:center;justify-content:center;font-size:${size*0.35}px;font-weight:700;color:#fff;flex-shrink:0">${letter}</div>`;
+  }
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:${size*0.35}px;font-weight:700;color:#fff;flex-shrink:0">${letter}</div>`;
+}
 const COIN_NAMES = {
   BTC:'Bitcoin', SOL:'Solana', NEAR:'NEAR Protocol', TAO:'Bittensor',
   ICP:'Internet Computer', AVAX:'Avalanche', LINK:'Chainlink', HBAR:'Hedera',
@@ -767,7 +790,7 @@ function renderTableAndStack() {
       html += `<tr>
         <td style="color:var(--fg2);font-size:0.75rem">${i+1}</td>
         <td style="text-align:left"><div style="display:flex;align-items:center;gap:8px">
-          <div style="width:32px;height:32px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;flex-shrink:0">${c.sym.slice(0,2)}</div>
+          ${getCoinIcon(c.sym,32)}
           <div><div style="font-weight:700;font-size:0.85rem">${c.sym}</div><div style="font-size:0.72rem;color:var(--fg2)">${COIN_NAMES[c.sym]||''}</div></div>
         </div></td>
         <td><input type="number" class="editable-input" value="${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}" step="any" onchange="updateQty('${c.sym}',this.value)"></td>
@@ -799,7 +822,7 @@ function renderTableAndStack() {
       return `<div class="coin-card">
         <div class="coin-card-header">
           <div style="display:flex;align-items:center;gap:10px">
-            <div style="width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:#fff;flex-shrink:0">${c.sym.slice(0,2)}</div>
+            ${getCoinIcon(c.sym,36)}
             <div>
               <div style="font-weight:700;font-size:0.95rem">${c.sym}</div>
               <div style="font-size:0.72rem;color:var(--fg2)">${COIN_NAMES[c.sym]||''}</div>
