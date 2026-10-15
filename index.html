@@ -299,20 +299,16 @@
 
   /* Dashboard section */
   .dashboard-section {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 14px;
     margin: 14px 0;
   }
-  @media (max-width: 700px) {
-    .dashboard-section { grid-template-columns: 1fr; }
-    .dash-card { padding: 16px 14px; }
-    .dash-card h3 { font-size: 0.95rem; margin-bottom: 12px; }
-    .legend-item { font-size: 0.9rem; }
-    .legend-dot { width: 12px; height: 12px; }
-    .pnl-label { font-size: 0.9rem; }
-    .pnl-val { font-size: 1.05rem; }
-    .donut-svg { width: 160px !important; height: 160px !important; }
+  @media (min-width: 900px) {
+    .dashboard-section {
+      flex-direction: row;
+    }
+    .dash-card { flex: 1; }
   }
 
   .dash-card {
