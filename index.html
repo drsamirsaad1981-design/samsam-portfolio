@@ -284,16 +284,16 @@
 
   .summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-    margin: 16px 0;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 14px 0;
   }
 
   .summary-card {
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 16px;
+    padding: 14px 12px;
     text-align: center;
   }
 
@@ -301,10 +301,19 @@
   .dashboard-section {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin: 16px 0;
+    gap: 14px;
+    margin: 14px 0;
   }
-  @media (max-width: 700px) { .dashboard-section { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) {
+    .dashboard-section { grid-template-columns: 1fr; }
+    .dash-card { padding: 16px 14px; }
+    .dash-card h3 { font-size: 0.95rem; margin-bottom: 12px; }
+    .legend-item { font-size: 0.9rem; }
+    .legend-dot { width: 12px; height: 12px; }
+    .pnl-label { font-size: 0.9rem; }
+    .pnl-val { font-size: 1.05rem; }
+    .donut-svg { width: 160px !important; height: 160px !important; }
+  }
 
   .dash-card {
     background: var(--bg2);
@@ -312,22 +321,22 @@
     border-radius: 14px;
     padding: 18px;
   }
-  .dash-card h3 { font-size: 0.8rem; color: var(--fg2); margin-bottom: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .dash-card h3 { font-size: 0.85rem; color: var(--fg2); margin-bottom: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
 
   /* Donut chart */
   .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
   .donut-svg { flex-shrink: 0; }
-  .donut-legend { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .legend-label { color: var(--fg2); white-space: nowrap; }
   .legend-val { color: var(--fg); font-weight: 600; margin-left: auto; padding-left: 8px; }
 
   /* P&L card */
   .pnl-rows { display: flex; flex-direction: column; gap: 8px; }
-  .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg3); }
-  .pnl-label { font-size: 0.8rem; color: var(--fg2); }
-  .pnl-val { font-size: 0.95rem; font-weight: 700; }
+  .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 8px; background: var(--bg3); }
+  .pnl-label { font-size: 0.85rem; color: var(--fg2); }
+  .pnl-val { font-size: 1rem; font-weight: 700; }
   .pnl-positive { color: var(--green); }
   .pnl-negative { color: var(--red); }
   .pnl-neutral { color: var(--fg2); }
@@ -534,6 +543,7 @@
     <button class="btn btn-primary" onclick="openUpdateModal()">📝 Manual Update</button>
     <button class="btn btn-secondary" onclick="exportData()">💾 Export CSV</button>
     <button class="btn btn-secondary" onclick="toggleTheme()">🌙 Theme</button>
+    <button class="btn btn-secondary" onclick="if(confirm('Reset all data to baseline Oct 15 prices?')){resetToBaseline();savePortfolio();renderHeader();renderSummary();renderTable();renderDashboard();}" style="color:var(--red);border-color:var(--red)">🔄 Reset</button>
     <select class="btn btn-secondary" id="filterAction" onchange="renderTable()" style="cursor:pointer">
       <option value="">All Coins</option>
       <option value="convert">🔴 Convert to BTC</option>
@@ -820,11 +830,18 @@ const LIVE_PRICES_OCT15 = {
   NIGHT:0.04244, MON:0.02344, PONS:0.3498, XPL:0.08513,
 };
 
+const DATA_VERSION = 3; // bump when BASE_PORTFOLIO changes
+
 function initPortfolio() {
   try {
     const saved = localStorage.getItem('samsam_portfolio');
     if (saved) {
       const data = JSON.parse(saved);
+      // If old data version or coin count mismatch → reset
+      if (data.version !== DATA_VERSION || !data.coins || data.coins.length !== BASE_PORTFOLIO.length) {
+        resetToBaseline();
+        return;
+      }
       portfolio = data.coins;
       btcPrice = data.btcPrice || 82363.28;
     } else {
@@ -846,7 +863,7 @@ function resetToBaseline() {
 
 function savePortfolio() {
   try {
-    localStorage.setItem('samsam_portfolio', JSON.stringify({ coins: portfolio, btcPrice, lastSave: new Date().toISOString() }));
+    localStorage.setItem('samsam_portfolio', JSON.stringify({ version: DATA_VERSION, coins: portfolio, btcPrice, lastSave: new Date().toISOString() }));
   } catch(e) {}
 }
 
@@ -958,7 +975,7 @@ function renderTable() {
         </div>
       </td>
       <td>
-        <input type="number" class="editable-input" value="${fmt(c.qty, c.qty < 1 ? 6 : c.qty < 10 ? 4 : 2).replace(/,/g,'')}" step="any"
+        <input type="number" class="editable-input" value="${c.qty < 1 ? c.qty.toFixed(6) : c.qty < 10 ? c.qty.toFixed(4) : c.qty.toFixed(2)}" step="any"
           onchange="updateQty('${c.sym}', this.value)" title="Click to edit quantity" style="color:var(--fg)">
       </td>
       <td>
