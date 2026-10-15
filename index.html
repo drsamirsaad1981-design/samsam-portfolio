@@ -167,7 +167,7 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 900px;
+    min-width: 1020px;
   }
 
   thead {
@@ -567,8 +567,9 @@
           <th onclick="sortTable('qty')">Qty</th>
           <th onclick="sortTable('basePrice')">Base Price</th>
           <th onclick="sortTable('currentPrice')">Current Price</th>
-          <th onclick="sortTable('baseValue')">Base Value</th>
+          <th onclick="sortTable('baseValue')">Cost Basis</th>
           <th onclick="sortTable('currentValue')">Current Value</th>
+          <th onclick="sortTable('pnl')">P&L</th>
           <th onclick="sortTable('perf')">Perf vs BTC</th>
           <th onclick="sortTable('action')">Signal</th>
           <th>Notes</th>
@@ -804,19 +805,19 @@ function updateLiveIndicator() {
   }
 }
 
-// Live prices fetched Oct 15, 2026 — used as starting currentPrice
+// Live prices from CoinMarketCap — precise update Oct 15, 2026 by سمسم
 const LIVE_PRICES_OCT15 = {
-  BTC:81220.94, ETH_ARB:2369.43, ETH_BASE:2369.43, ETH_OP:2369.43, ETH_ETH:2369.43, ETH_RH:2369.43,
-  SOL:102.65, BNB:718.42, TAO:259.64, SUI:0.9935, NEAR:4.64, SEI:0.05904,
-  ATOM:1.70, APT:0.7717, AVAX:10.02, ICP:3.09, KSM:4.35, GRAM:1.35,
-  ARB:0.1819, MOVR:1.54, GLMR:0.009390, OP:0.1398, WLD:0.4766,
-  PYTH:0.08716, JUP:0.2982, RENDER:1.85, QNT:200.45, HBAR:0.08150,
-  DOGE:0.07996, CRO:0.05875, XDC:0.03433, DOT:1.10, LINK:12.10,
-  ENS:5.63, STRK:0.07673, ONDO:0.4323, AVAIL:0.002702, KAVA:0.06861,
-  MNT:0.5349, FLR:0.006872, KAS:0.03536, POL:0.09339, VTHO:0.0006876,
-  VET:0.007039,
+  BTC:82363.28, ETH_ARB:2444.58, ETH_BASE:2444.58, ETH_OP:2444.58, ETH_ETH:2444.58, ETH_RH:2444.58,
+  SOL:105.81, BNB:718.42, TAO:276.21, SUI:0.8207, NEAR:5.252, SEI:0.06197,
+  ATOM:1.739, APT:0.8207, AVAX:9.964, ICP:3.074, KSM:4.488, GRAM:1.372,
+  ARB:0.1922, MOVR:1.399, GLMR:0.01038, OP:0.1413, WLD:0.5023,
+  PYTH:0.09368, JUP:0.3089, RENDER:1.996, QNT:209.46, HBAR:0.08369,
+  DOGE:0.08112, CRO:0.05825, XDC:0.03393, DOT:1.125, LINK:12.50,
+  ENS:5.733, STRK:0.09143, ONDO:0.4600, AVAIL:0.002632, KAVA:0.069,
+  MNT:0.5295, FLR:0.006713, KAS:0.03612, POL:0.09515, VTHO:0.0006441,
+  VET:0.00705,
   // No CoinGecko data — keep baseline price:
-  NIGHT:0.04, MON:0.02, PONS:0.30, XPL:0.08,
+  NIGHT:0.04244, MON:0.02344, PONS:0.3498, XPL:0.08513,
 };
 
 function initPortfolio() {
@@ -825,7 +826,7 @@ function initPortfolio() {
     if (saved) {
       const data = JSON.parse(saved);
       portfolio = data.coins;
-      btcPrice = data.btcPrice || 81162;
+      btcPrice = data.btcPrice || 82363.28;
     } else {
       resetToBaseline();
     }
@@ -920,6 +921,7 @@ function renderTable() {
       case 'currentPrice': av = a.currentPrice; bv = b.currentPrice; break;
       case 'baseValue': av = a.qty * a.basePrice; bv = b.qty * b.basePrice; break;
       case 'currentValue': av = a.qty * a.currentPrice; bv = b.qty * b.currentPrice; break;
+      case 'pnl': av = a.qty*(a.currentPrice-a.basePrice); bv = b.qty*(b.currentPrice-b.basePrice); break;
       case 'perf': av = getPerf(a); bv = getPerf(b); break;
       case 'name': av = a.sym; bv = b.sym; return sortDir * av.localeCompare(bv);
       default: av = a.qty * a.currentPrice; bv = b.qty * b.currentPrice;
@@ -970,6 +972,7 @@ function renderTable() {
       </td>
       <td style="color:var(--fg2)">$${fmt(baseVal, 2)}</td>
       <td style="font-weight:700">$${fmt(curVal, 2)}</td>
+      <td>${(() => { const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0; const cls=pnl>=0?'pnl-positive':'pnl-negative'; const sign=pnl>=0?'+':''; return `<span class="${cls}" style="font-size:0.82rem;font-weight:600">${sign}$${Math.abs(pnl).toFixed(2)}<br><span style="font-size:0.72rem;opacity:0.8">${sign}${pnlPct.toFixed(1)}%</span></span>`; })()}</td>
       <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
       <td><span class="action-badge ${actionClass}">${actionLabel}</span></td>
       <td>
@@ -1150,11 +1153,25 @@ function renderDashboard() {
 
   const totalCls = totalPnl >= 0 ? 'pnl-positive' : 'pnl-negative';
   const totalSign = totalPnl >= 0 ? '+' : '';
-  document.getElementById('pnlRows').innerHTML = rows +
-    `<div class="pnl-row pnl-total">
-      <span class="pnl-label" style="font-weight:700;color:var(--accent)">📊 TOTAL P&L</span>
-      <span class="pnl-val ${totalCls}" style="font-size:1.05rem">${totalSign}$${Math.abs(totalPnl).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')} (${totalSign}${totalPnlPct.toFixed(1)}%)</span>
+  const summaryBlock = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--fg2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Cost Basis</div>
+        <div style="font-size:1rem;font-weight:700;color:var(--fg)">$${totalBase.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--fg2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Current Value</div>
+        <div style="font-size:1rem;font-weight:700;color:var(--fg)">$${totalCurrent.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+      </div>
+    </div>
+    <div class="pnl-row pnl-total" style="margin-bottom:10px">
+      <span class="pnl-label" style="font-weight:700;color:var(--accent)">📈 Unrealized P&L</span>
+      <div style="text-align:right">
+        <div class="pnl-val ${totalCls}" style="font-size:1.1rem">${totalSign}$${Math.abs(totalPnl).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+        <div class="${totalCls}" style="font-size:0.78rem;opacity:0.85">${totalSign}${totalPnlPct.toFixed(2)}%</div>
+      </div>
     </div>`;
+  document.getElementById('pnlRows').innerHTML = summaryBlock + rows;
 }
 
 function refreshPrices() {
