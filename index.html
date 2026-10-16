@@ -411,6 +411,8 @@
   .buy-preview span { font-weight:700; color:var(--accent); }
   .sell-profit { color:#22c55e; font-weight:700; }
   .sell-loss   { color:#ef4444; font-weight:700; }
+  .btn-remove { background:transparent; color:#6b7280; border:1px solid #4b5563; border-radius:4px; padding:2px 6px; font-size:0.7rem; cursor:pointer; line-height:1.6; }
+  .btn-remove:hover { background:#ef4444; color:#fff; border-color:#ef4444; }
 
   footer { text-align: center; padding: 16px 0 8px; font-size: 0.7rem; color: var(--fg2); border-top: 1px solid var(--border); margin-top: 12px; }
 
@@ -607,6 +609,18 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="removeModal">
+  <div class="modal" style="max-width:360px">
+    <h2 style="color:#ef4444">✕ Remove Coin</h2>
+    <p style="font-size:0.88rem;margin:10px 0 6px">Remove <strong id="rmSym" style="color:var(--accent)"></strong> from your active portfolio?</p>
+    <p style="font-size:0.78rem;color:var(--fg2);line-height:1.5">The coin will be hidden from your portfolio view. All historical buy/sell records are preserved and the coin can be restored later.</p>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" onclick="confirmRemove()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">✕ Remove</button>
+      <button class="btn btn-secondary" onclick="closeRemove()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <footer>
   <p>🔒 Local storage | Baseline: Oct 15, 2026</p>
   <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
@@ -756,6 +770,7 @@ const BASE_PORTFOLIO = [
 ];
 
 let portfolio = [];
+let archivedCoins = [];
 let btcPrice = 82363;
 let sortCol = 'currentValue';
 let sortDir = -1;
@@ -798,8 +813,9 @@ function initPortfolio() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const data = JSON.parse(saved);
-      if (!data.coins || data.coins.length !== BASE_PORTFOLIO.length) { resetToBaseline(); return; }
+      if (!data.coins || data.coins.length === 0) { resetToBaseline(); return; }
       portfolio = data.coins;
+      archivedCoins = data.archived || [];
       btcPrice = data.btcPrice || 82363.28;
     } else { resetToBaseline(); }
   } catch(e) { resetToBaseline(); }
@@ -815,7 +831,7 @@ function resetToBaseline() {
 }
 
 function savePortfolio() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, btcPrice, lastSave: new Date().toISOString() })); } catch(e) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, archived: archivedCoins, btcPrice, lastSave: new Date().toISOString() })); } catch(e) {}
 }
 
 function resetApp() {
@@ -934,9 +950,10 @@ function renderTableAndStack() {
         <td><span class="action-badge action-${action}">${actionLabel}</span></td>
         <td><input type="text" class="editable-input" value="${c.notes||''}" placeholder="Note..." onchange="updateNote('${c.sym}',this.value)" style="min-width:80px"></td>
         <td style="text-align:center">
-          <div style="display:inline-flex;gap:3px">
+          <div style="display:inline-flex;gap:3px;flex-wrap:wrap;justify-content:center">
             <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
             <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
+            <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove from portfolio">✕</button>
           </div>
         </td>
       </tr>`;
@@ -1131,6 +1148,32 @@ function applySell() {
   closeSell();
 }
 document.getElementById('sellModal').addEventListener('click', function(e){ if(e.target===this) closeSell(); });
+
+// ── Remove Coin ───────────────────────────────────────
+let _rmSym = null;
+function removeCoin(sym) {
+  _rmSym = sym;
+  document.getElementById('rmSym').textContent = sym;
+  document.getElementById('removeModal').classList.add('active');
+}
+function closeRemove() {
+  document.getElementById('removeModal').classList.remove('active');
+  _rmSym = null;
+}
+function confirmRemove() {
+  if(!_rmSym) return;
+  const idx = portfolio.findIndex(c => c.sym === _rmSym);
+  if(idx === -1) { closeRemove(); return; }
+  // Archive the coin with timestamp — history preserved
+  const archived = { ...portfolio[idx], removedAt: new Date().toISOString() };
+  archivedCoins.push(archived);
+  // Remove from active portfolio
+  portfolio.splice(idx, 1);
+  savePortfolio();
+  renderAll();
+  closeRemove();
+}
+document.getElementById('removeModal').addEventListener('click', function(e){ if(e.target===this) closeRemove(); });
 
 function sortTable(col) {
   if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}
