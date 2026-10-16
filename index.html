@@ -476,6 +476,7 @@
   <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin...">
   <div class="control-row">
     <button class="btn btn-primary" onclick="openUpdateModal()">📝 Update</button>
+    <button class="btn btn-primary" onclick="openAddCoin()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">➕ Add Coin</button>
     <button class="btn btn-secondary" onclick="exportData()">💾 CSV</button>
     <button class="btn btn-secondary" onclick="toggleTheme()">🌙 Theme</button>
   </div>
@@ -605,6 +606,55 @@
     <div style="display:flex;gap:8px;margin-top:14px;">
       <button class="btn btn-primary" id="smConfirmBtn" onclick="applySell()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">✅ Confirm Sell</button>
       <button class="btn btn-secondary" onclick="closeSell()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addCoinModal">
+  <div class="modal" style="max-width:440px">
+    <h2 style="color:#a78bfa">➕ Add New Coin</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Symbol <span style="color:#ef4444">*</span></label>
+        <input type="text" class="form-input" id="acSym" placeholder="e.g. XRP" oninput="this.value=this.value.toUpperCase().trim()">
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Full Name</label>
+        <input type="text" class="form-input" id="acName" placeholder="e.g. Ripple">
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Quantity <span style="color:#ef4444">*</span></label>
+        <input type="number" class="form-input" id="acQty" placeholder="0.00" step="any" oninput="previewAddCoin()">
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Avg Buy Price (USD) <span style="color:#ef4444">*</span></label>
+        <input type="number" class="form-input" id="acPrice" placeholder="0.00" step="any" oninput="previewAddCoin()">
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="acCat">
+          <option value="layer1">Layer 1</option>
+          <option value="layer2">Layer 2</option>
+          <option value="defi">DeFi</option>
+          <option value="ai">AI & Web3</option>
+          <option value="infra">Infrastructure</option>
+          <option value="meme">Meme</option>
+          <option value="btc">Bitcoin</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">CoinGecko ID <span style="color:var(--fg2);font-weight:400">(optional)</span></label>
+        <input type="text" class="form-input" id="acCgId" placeholder="e.g. ripple">
+      </div>
+    </div>
+    <div class="buy-preview" id="acPreview" style="display:none;margin-top:12px">
+      Cost Basis: <span>$<span id="acCostBasis"></span></span>
+    </div>
+    <div id="acError" style="color:#ef4444;font-size:0.8rem;margin-top:8px;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-primary" onclick="applyAddCoin()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">➕ Add to Portfolio</button>
+      <button class="btn btn-secondary" onclick="closeAddCoin()">Cancel</button>
     </div>
   </div>
 </div>
@@ -1191,6 +1241,68 @@ function confirmRemove() {
   closeRemove();
 }
 document.getElementById('removeModal').addEventListener('click', function(e){ if(e.target===this) closeRemove(); });
+
+// ── Add New Coin ──────────────────────────────────────
+function openAddCoin() {
+  ['acSym','acName','acQty','acPrice','acCgId'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('acCat').value = 'layer1';
+  document.getElementById('acPreview').style.display = 'none';
+  document.getElementById('acError').style.display = 'none';
+  document.getElementById('addCoinModal').classList.add('active');
+  document.getElementById('acSym').focus();
+}
+function closeAddCoin() {
+  document.getElementById('addCoinModal').classList.remove('active');
+}
+function previewAddCoin() {
+  const qty   = parseFloat(document.getElementById('acQty').value);
+  const price = parseFloat(document.getElementById('acPrice').value);
+  if(qty > 0 && price > 0) {
+    document.getElementById('acCostBasis').textContent = (qty * price).toFixed(2);
+    document.getElementById('acPreview').style.display = 'block';
+  } else {
+    document.getElementById('acPreview').style.display = 'none';
+  }
+}
+function applyAddCoin() {
+  const sym   = document.getElementById('acSym').value.trim().toUpperCase();
+  const qty   = parseFloat(document.getElementById('acQty').value);
+  const price = parseFloat(document.getElementById('acPrice').value);
+  const errEl = document.getElementById('acError');
+  errEl.style.display = 'none';
+  // Validation
+  if(!sym)              { errEl.textContent='Symbol is required.'; errEl.style.display='block'; return; }
+  if(!qty || qty <= 0)  { errEl.textContent='Enter a valid quantity.'; errEl.style.display='block'; return; }
+  if(!price || price<=0){ errEl.textContent='Enter a valid buy price.'; errEl.style.display='block'; return; }
+  if(portfolio.find(c => c.sym === sym)) {
+    errEl.textContent = sym + ' already exists in your portfolio. Use "+ Buy" to add more.';
+    errEl.style.display = 'block'; return;
+  }
+  // Remove from archive if previously removed
+  const removedIdx = archivedCoins.findIndex(c => c.sym === sym);
+  if(removedIdx !== -1) archivedCoins.splice(removedIdx, 1);
+  saveArchive();
+  // Build new coin object
+  const cgId = document.getElementById('acCgId').value.trim().toLowerCase() || null;
+  const name = document.getElementById('acName').value.trim() || sym;
+  const cat  = document.getElementById('acCat').value;
+  const newCoin = {
+    sym, qty, basePrice: price, walletValue: qty * price, cat,
+    currentPrice: price, notes: '', action: 'hold',
+    lastUpdate: new Date().toISOString().slice(0,10)
+  };
+  // Register CoinGecko ID if provided
+  if(cgId) COINGECKO_IDS[sym] = cgId;
+  // Register name
+  COIN_NAMES[sym] = name;
+  portfolio.push(newCoin);
+  savePortfolio();
+  renderAll();
+  closeAddCoin();
+  // Auto-fetch live price if cgId given
+  if(cgId) fetchLivePrices();
+}
+document.getElementById('addCoinModal').addEventListener('click', function(e){ if(e.target===this) closeAddCoin(); });
 
 function sortTable(col) {
   if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}
