@@ -806,37 +806,53 @@ const LIVE_PRICES_OCT15 = {
 };
 
 const STORAGE_KEY = 'samsam_pf_v4';
+const ARCHIVE_KEY = 'samsam_archived_v1'; // separate key — never cleared by Reset
 ['samsam_portfolio','samsam_pf_v1','samsam_pf_v2','samsam_pf_v3'].forEach(k=>localStorage.removeItem(k));
 
+function loadArchive() {
+  try { archivedCoins = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); } catch(e) { archivedCoins = []; }
+}
+function saveArchive() {
+  try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archivedCoins)); } catch(e) {}
+}
+function getRemovedSyms() {
+  return new Set(archivedCoins.map(c => c.sym));
+}
+
 function initPortfolio() {
+  loadArchive(); // always load archive first — independent of main reset
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const data = JSON.parse(saved);
       if (!data.coins || data.coins.length === 0) { resetToBaseline(); return; }
-      portfolio = data.coins;
-      archivedCoins = data.archived || [];
+      // filter out any removed coins that may have been re-saved before fix
+      const removed = getRemovedSyms();
+      portfolio = data.coins.filter(c => !removed.has(c.sym));
       btcPrice = data.btcPrice || 82363.28;
     } else { resetToBaseline(); }
   } catch(e) { resetToBaseline(); }
 }
 
 function resetToBaseline() {
-  portfolio = BASE_PORTFOLIO.map(c => ({
-    ...c,
-    currentPrice: LIVE_PRICES_OCT15[c.sym] || c.basePrice,
-    notes: '', action: 'hold', lastUpdate: '2026-10-15'
-  }));
+  const removed = getRemovedSyms(); // respect removals even during reset
+  portfolio = BASE_PORTFOLIO
+    .filter(c => !removed.has(c.sym))
+    .map(c => ({
+      ...c,
+      currentPrice: LIVE_PRICES_OCT15[c.sym] || c.basePrice,
+      notes: '', action: 'hold', lastUpdate: '2026-10-15'
+    }));
   btcPrice = LIVE_PRICES_OCT15.BTC || 82363;
 }
 
 function savePortfolio() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, archived: archivedCoins, btcPrice, lastSave: new Date().toISOString() })); } catch(e) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, btcPrice, lastSave: new Date().toISOString() })); } catch(e) {}
 }
 
 function resetApp() {
-  localStorage.removeItem(STORAGE_KEY);
-  resetToBaseline();
+  localStorage.removeItem(STORAGE_KEY); // clears prices/qty/notes — NOT archive
+  resetToBaseline();                     // rebuilds from BASE minus removed coins
   savePortfolio();
   renderAll();
 }
@@ -1164,9 +1180,10 @@ function confirmRemove() {
   if(!_rmSym) return;
   const idx = portfolio.findIndex(c => c.sym === _rmSym);
   if(idx === -1) { closeRemove(); return; }
-  // Archive the coin with timestamp — history preserved
+  // Archive with timestamp in SEPARATE key — survives Reset
   const archived = { ...portfolio[idx], removedAt: new Date().toISOString() };
   archivedCoins.push(archived);
+  saveArchive(); // independent of savePortfolio — never touched by resetApp
   // Remove from active portfolio
   portfolio.splice(idx, 1);
   savePortfolio();
