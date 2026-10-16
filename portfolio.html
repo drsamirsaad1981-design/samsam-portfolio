@@ -141,21 +141,24 @@
 
   .control-row {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
     width: 100%;
   }
 
   .btn {
-    padding: 10px 14px;
+    padding: 8px 10px;
     border-radius: 8px;
     border: none;
     cursor: pointer;
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 600;
     transition: all 0.2s;
     text-align: center;
     flex: 1;
+    min-width: 56px;
+    white-space: nowrap;
   }
 
   .btn-primary { background: var(--accent); color: #000; }
@@ -165,8 +168,8 @@
   .btn-danger { background: var(--red); color: #fff; }
 
   .search-box {
-    width: auto; max-width: 260px;
-    padding: 10px 14px;
+    width: 100%;
+    padding: 9px 12px;
     border-radius: 8px;
     border: 1px solid var(--border);
     background: var(--bg2);
@@ -264,8 +267,8 @@
     .header-stats { display: flex; gap: 12px; grid-template-columns: none; }
     .controls { flex-direction: row; flex-wrap: wrap; align-items: center; }
     .control-row { width: auto; flex: 1; }
-    .search-box { flex: 1; min-width: 140px; max-width: 100%; }
-    .btn { flex: unset; }
+    .search-box { width: auto; max-width: 260px; flex: 1; min-width: 140px; }
+    .btn { flex: unset; font-size: 0.82rem; padding: 10px 14px; }
   }
 
   /* Toggle button active state */
@@ -574,11 +577,11 @@
   <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin...">
   <div class="control-row">
     <button class="btn btn-secondary" onclick="exportData()">💾 CSV</button>
-    <button class="btn btn-secondary" onclick="openAddCoin()">➕ Add Coin</button>
+    <button class="btn btn-secondary" onclick="openAddCoin()">➕ Add</button>
     <button class="btn btn-secondary" id="viewToggleBtn" onclick="toggleView()">📋 Table</button>
-    <button class="btn btn-secondary" onclick="toggleTheme()">🌙 Theme</button>
-    <a href="./accumulation.html" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap">🎯 Accumulation</a>
-    <button class="btn btn-secondary" onclick="openAnalysis()" style="white-space:nowrap">🤖 Analysis</button>
+    <button class="btn btn-secondary" onclick="toggleTheme()">🌙</button>
+    <a href="./accumulation.html" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">🎯 Accum</a>
+    <button class="btn btn-secondary" onclick="openAnalysis()">🤖 AI</button>
   </div>
   <div class="control-row">
     <select class="btn btn-secondary" id="filterAction" onchange="renderTableAndStack()" style="cursor:pointer; flex:2;">
