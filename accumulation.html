@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
+/* Always dark by default — matches portfolio */
 :root {
   --bg: #0a0e1a;
   --bg2: #111827;
@@ -28,13 +29,7 @@
   --purple: #8b5cf6;
   color-scheme: dark;
 }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg: #f0f4f8; --bg2: #ffffff; --bg3: #e8edf5;
-    --border: #cbd5e1; --fg: #1e293b; --fg2: #64748b;
-    color-scheme: light;
-  }
-}
+/* Only go light if user explicitly chose light in portfolio */
 :root[data-theme="light"] {
   --bg: #f0f4f8; --bg2: #ffffff; --bg3: #e8edf5;
   --border: #cbd5e1; --fg: #1e293b; --fg2: #64748b;
@@ -348,8 +343,12 @@ window.addEventListener('DOMContentLoaded', () => {
 function loadTheme() {
   try {
     const t = localStorage.getItem(THEME_KEY);
-    if (t) document.documentElement.setAttribute('data-theme', t);
-  } catch(e) {}
+    // Only apply if explicitly set; default stays dark
+    if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.setAttribute('data-theme', 'dark');
+  } catch(e) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
 }
 function toggleTheme() {
   const cur = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -362,10 +361,33 @@ function toggleTheme() {
 function loadPortfolio() {
   try {
     const saved = localStorage.getItem(PORTFOLIO_KEY);
-    if (!saved) { portfolioCoins = []; return; }
+    if (!saved) {
+      portfolioCoins = [];
+      showPortfolioWarning();
+      return;
+    }
     const data = JSON.parse(saved);
     portfolioCoins = data.coins || [];
-  } catch(e) { portfolioCoins = []; }
+    hidePortfolioWarning();
+  } catch(e) {
+    portfolioCoins = [];
+    showPortfolioWarning();
+  }
+}
+
+function showPortfolioWarning() {
+  let w = document.getElementById('portfolioWarn');
+  if (!w) {
+    w = document.createElement('div');
+    w.id = 'portfolioWarn';
+    w.style.cssText = 'background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:10px 14px;font-size:0.82rem;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:8px;';
+    w.innerHTML = '⚠️ <span>Portfolio data not found. Open <a href="./portfolio.html" style="color:var(--accent);font-weight:700">Portfolio</a> first to load prices, then come back here and tap 🔄 Sync.</span>';
+    document.querySelector('.toolbar').before(w);
+  }
+}
+function hidePortfolioWarning() {
+  const w = document.getElementById('portfolioWarn');
+  if (w) w.remove();
 }
 
 function getPortfolioCoin(sym) {
