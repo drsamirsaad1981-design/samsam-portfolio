@@ -505,6 +505,8 @@
   .btn-analysis:hover { opacity:0.88; }
   .btn-analysis:disabled { opacity:0.5; cursor:not-allowed; }
   .btn-analysis-full { width:100%; padding:10px 20px; font-size:0.9rem; letter-spacing:0.3px; border-radius:10px; }
+  .btn-accum { background:linear-gradient(135deg,#059669,#10b981); color:#fff; border:none; border-radius:10px; padding:10px 20px; font-size:0.85rem; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:opacity .2s; flex:1; justify-content:center; }
+  .btn-accum:hover { opacity:.88; }
 
   footer { text-align: center; padding: 16px 0 8px; font-size: 0.7rem; color: var(--fg2); border-top: 1px solid var(--border); margin-top: 12px; }
 
@@ -576,8 +578,9 @@
     <button class="btn btn-secondary" id="viewToggleBtn" onclick="toggleView()">📋 Table</button>
     <button class="btn btn-secondary" onclick="toggleTheme()">🌙 Theme</button>
   </div>
-  <div class="control-row">
-    <button class="btn-analysis btn-analysis-full" onclick="openAnalysis()">🤖 Analysis Report — Claude AI</button>
+  <div class="control-row" style="gap:8px">
+    <a href="./accumulation.html" class="btn-accum">🎯 Accumulation Plan</a>
+    <button class="btn-analysis" onclick="openAnalysis()" style="flex:1;padding:10px 14px;font-size:0.85rem;border-radius:10px">🤖 Analysis Report</button>
   </div>
   <div class="control-row">
     <select class="btn btn-secondary" id="filterAction" onchange="renderTableAndStack()" style="cursor:pointer; flex:2;">

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Accumulation Plan — سمسم 2030</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0e1a">
+<link rel="icon" type="image/jpeg" href="./icon.jpg">
+<link rel="apple-touch-icon" href="./icon.jpg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
+
+<style>
+:root {
+  --bg: #0a0e1a;
+  --bg2: #111827;
+  --bg3: #1a2235;
+  --border: #1e2d45;
+  --fg: #e2e8f0;
+  --fg2: #94a3b8;
+  --accent: #f59e0b;
+  --accent2: #fbbf24;
+  --green: #10b981;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f0f4f8; --bg2: #ffffff; --bg3: #e8edf5;
+    --border: #cbd5e1; --fg: #1e293b; --fg2: #64748b;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f0f4f8; --bg2: #ffffff; --bg3: #e8edf5;
+  --border: #cbd5e1; --fg: #1e293b; --fg2: #64748b;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', 'Cairo', sans-serif;
+  background: var(--bg); color: var(--fg);
+  padding: 12px max(16px, env(safe-area-inset-left,0px));
+  padding-right: max(16px, env(safe-area-inset-right,0px));
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.page-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.back-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--fg2); border-radius: 8px; padding: 6px 14px;
+  font-size: 0.8rem; cursor: pointer; font-family: inherit;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  transition: border-color .2s, color .2s;
+}
+.back-btn:hover { border-color: var(--accent); color: var(--accent); }
+.page-title { font-size: 1.2rem; font-weight: 700; flex: 1; }
+.page-title span { color: var(--accent); }
+.save-status {
+  font-size: 0.75rem; color: var(--fg2);
+  display: flex; align-items: center; gap: 5px;
+  transition: color .3s;
+}
+.save-status.saving { color: var(--accent); }
+.save-status.saved { color: var(--green); }
+.save-status.error { color: var(--red); }
+
+/* ── Dashboard Cards ── */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px; margin-bottom: 20px;
+}
+.dash-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px;
+}
+.dash-card .label { font-size: 0.7rem; color: var(--fg2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.dash-card .value { font-size: 1.15rem; font-weight: 700; }
+.dash-card .sub { font-size: 0.72rem; color: var(--fg2); margin-top: 3px; }
+.dash-card.accent-card { border-color: rgba(245,158,11,.3); background: rgba(245,158,11,.05); }
+.dash-card.green-card { border-color: rgba(16,185,129,.3); background: rgba(16,185,129,.05); }
+.dash-card.red-card { border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.05); }
+.dash-card.purple-card { border-color: rgba(139,92,246,.3); background: rgba(139,92,246,.05); }
+
+/* Overall progress bar */
+.overall-progress { margin-bottom: 20px; }
+.overall-progress .prog-header {
+  display: flex; justify-content: space-between;
+  font-size: 0.8rem; color: var(--fg2); margin-bottom: 6px;
+}
+.prog-bar-wrap { background: var(--bg3); border-radius: 999px; height: 10px; overflow: hidden; }
+.prog-bar-fill { height: 100%; border-radius: 999px; transition: width .5s ease;
+  background: linear-gradient(90deg, var(--green), var(--accent)); }
+
+/* ── Toolbar ── */
+.toolbar {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  align-items: center; margin-bottom: 14px;
+}
+.btn {
+  border: 1px solid var(--border); background: var(--bg3);
+  color: var(--fg); border-radius: 8px; padding: 7px 14px;
+  font-size: 0.8rem; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: border-color .2s, color .2s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary {
+  background: linear-gradient(135deg,#10b981,#059669);
+  border: none; color: #fff; font-weight: 600;
+}
+.btn-primary:hover { opacity: .88; color: #fff; }
+.search-box {
+  flex: 1; min-width: 160px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--fg); font-family: inherit; font-size: 0.85rem;
+  padding: 7px 12px; outline: none;
+}
+.search-box:focus { border-color: var(--accent); }
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; min-width: 800px; }
+thead { background: linear-gradient(135deg,#1a2235,#0f172a); position: sticky; top: 0; z-index: 2; }
+th {
+  padding: 10px 12px; text-align: left;
+  font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--fg2); white-space: nowrap;
+}
+td { padding: 10px 12px; font-size: 0.82rem; border-top: 1px solid var(--border); vertical-align: middle; }
+tr:hover td { background: rgba(255,255,255,.02); }
+.coin-cell { display: flex; align-items: center; gap: 8px; }
+.coin-logo { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--bg3); flex-shrink: 0; }
+.coin-sym { font-weight: 700; font-size: 0.88rem; }
+.coin-name { font-size: 0.72rem; color: var(--fg2); }
+
+/* Progress bar in table */
+.mini-prog { background: var(--bg3); border-radius: 999px; height: 6px; overflow: hidden; min-width: 80px; }
+.mini-prog-fill { height: 100%; border-radius: 999px; transition: width .4s; }
+.prog-label { font-size: 0.72rem; color: var(--fg2); margin-top: 2px; }
+
+/* Inline editable target */
+.target-input {
+  background: transparent; border: 1px solid transparent;
+  color: var(--fg); font-family: inherit; font-size: 0.82rem;
+  padding: 3px 6px; border-radius: 6px; width: 110px;
+  text-align: right; transition: border-color .2s, background .2s;
+}
+.target-input:focus { outline: none; border-color: var(--accent); background: var(--bg3); }
+.target-input:hover { border-color: var(--border); }
+
+/* Delete row btn */
+.del-btn {
+  background: none; border: none; color: var(--fg2);
+  cursor: pointer; font-size: 0.9rem; padding: 2px 6px;
+  border-radius: 4px; transition: color .2s;
+}
+.del-btn:hover { color: var(--red); }
+
+.no-price { color: var(--accent); font-size: 0.72rem; }
+.completed-row td { opacity: .75; }
+.completed-badge {
+  font-size: 0.65rem; background: rgba(16,185,129,.15);
+  color: var(--green); border-radius: 999px; padding: 1px 7px;
+  font-weight: 700; margin-left: 4px;
+}
+
+/* ── Add coin modal ── */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); z-index: 100;
+  align-items: center; justify-content: center; padding: 16px;
+}
+.overlay.active { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 22px; max-width: 420px; width: 100%;
+}
+.modal h3 { font-size: 1rem; margin-bottom: 14px; }
+.form-row { margin-bottom: 10px; }
+.form-label { display: block; font-size: 0.75rem; color: var(--fg2); margin-bottom: 4px; }
+.form-input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  color: var(--fg); border-radius: 8px; padding: 8px 12px;
+  font-family: inherit; font-size: 0.88rem; outline: none;
+}
+.form-input:focus { border-color: var(--accent); }
+.modal-btns { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+.coin-search-list {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  max-height: 160px; overflow-y: auto; margin-top: 4px;
+}
+.coin-search-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; cursor: pointer; font-size: 0.85rem;
+}
+.coin-search-item:hover { background: rgba(245,158,11,.1); }
+.coin-search-item img { width: 22px; height: 22px; border-radius: 50%; }
+
+/* ── Responsive ── */
+@media(max-width:600px) {
+  .dashboard { grid-template-columns: repeat(2,1fr); }
+  .page-title { font-size: 1rem; }
+  table { min-width: 640px; }
+  th, td { padding: 8px 8px; }
+  .target-input { width: 85px; }
+}
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center; padding: 48px 20px;
+  color: var(--fg2); font-size: 0.9rem;
+}
+.empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="page-header">
+  <a class="back-btn" href="./portfolio.html">← Portfolio</a>
+  <div class="page-title">🎯 Accumulation Plan — <span>Golden Triangle 2030</span></div>
+  <div class="save-status" id="saveStatus">✓ Ready</div>
+</div>
+
+<!-- Dashboard -->
+<div class="dashboard" id="dashboard">
+  <div class="dash-card accent-card">
+    <div class="label">Total Target Value</div>
+    <div class="value" id="dTotalTarget">—</div>
+    <div class="sub">At current prices</div>
+  </div>
+  <div class="dash-card">
+    <div class="label">Current Holdings</div>
+    <div class="value" id="dHoldings">—</div>
+    <div class="sub">In plan</div>
+  </div>
+  <div class="dash-card red-card">
+    <div class="label">Total Pending Cost</div>
+    <div class="value" id="dPending">—</div>
+    <div class="sub">To complete plan</div>
+  </div>
+  <div class="dash-card green-card">
+    <div class="label">Coins Completed</div>
+    <div class="value" id="dCompleted">—</div>
+    <div class="sub" id="dInProgress">— in progress</div>
+  </div>
+</div>
+
+<!-- Overall progress -->
+<div class="overall-progress">
+  <div class="prog-header">
+    <span>Overall Accumulation Progress</span>
+    <span id="overallPct">0%</span>
+  </div>
+  <div class="prog-bar-wrap">
+    <div class="prog-bar-fill" id="overallBar" style="width:0%"></div>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <button class="btn btn-primary" onclick="openAddModal()">➕ Add Coin to Plan</button>
+  <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin..." oninput="renderTable()">
+  <button class="btn" onclick="syncFromPortfolio()" title="Sync quantities from portfolio">🔄 Sync</button>
+  <button class="btn" onclick="toggleTheme()">🌙 Theme</button>
+</div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Coin</th>
+        <th>Target Qty</th>
+        <th>Actual Qty</th>
+        <th>Pending Qty</th>
+        <th>Current Price</th>
+        <th>Cost to Target</th>
+        <th>Progress</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="accTableBody"></tbody>
+  </table>
+</div>
+<div id="emptyState" class="empty-state" style="display:none">
+  <div class="icon">🎯</div>
+  <div>No coins in your accumulation plan yet.</div>
+  <div style="margin-top:6px;font-size:0.8rem">Click <strong>Add Coin to Plan</strong> to get started.</div>
+</div>
+
+<!-- Add Coin Modal -->
+<div class="overlay" id="addModal">
+  <div class="modal">
+    <h3>➕ Add Coin to Accumulation Plan</h3>
+    <div class="form-row">
+      <label class="form-label">Search Coin</label>
+      <input type="text" class="form-input" id="addSearch" placeholder="e.g. BTC, Ethereum..." oninput="filterAddList()">
+      <div class="coin-search-list" id="addList"></div>
+    </div>
+    <div id="addSelectedInfo" style="display:none;margin-bottom:10px;padding:10px;background:var(--bg3);border-radius:8px;font-size:0.85rem"></div>
+    <div class="form-row">
+      <label class="form-label">Target Quantity</label>
+      <input type="number" class="form-input" id="addTarget" placeholder="0.00" min="0" step="any">
+    </div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAddCoin()">Add to Plan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Storage Keys (same as main portfolio) ───────────────────────────────────
+const PORTFOLIO_KEY  = 'samsam_pf_v4';
+const ACCUM_KEY      = 'samsam_acc_v1';   // accumulation targets (independent)
+const THEME_KEY      = 'samsam_theme';
+
+// ─── State ──────────────────────────────────────────────────────────────────
+let portfolioCoins = [];   // loaded from portfolio localStorage
+let accumPlan = [];        // [{sym, name, logoUrl, cgId, targetQty, addedAt}]
+let selectedAddCoin = null;
+let saveTimer = null;
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadTheme();
+  loadPortfolio();
+  loadAccumPlan();
+  renderTable();
+  renderDashboard();
+});
+
+// ─── Theme ───────────────────────────────────────────────────────────────────
+function loadTheme() {
+  try {
+    const t = localStorage.getItem(THEME_KEY);
+    if (t) document.documentElement.setAttribute('data-theme', t);
+  } catch(e) {}
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+
+// ─── Load Portfolio Data ─────────────────────────────────────────────────────
+function loadPortfolio() {
+  try {
+    const saved = localStorage.getItem(PORTFOLIO_KEY);
+    if (!saved) { portfolioCoins = []; return; }
+    const data = JSON.parse(saved);
+    portfolioCoins = data.coins || [];
+  } catch(e) { portfolioCoins = []; }
+}
+
+function getPortfolioCoin(sym) {
+  return portfolioCoins.find(c => c.sym === sym.toUpperCase());
+}
+
+// ─── Load / Save Accumulation Plan ──────────────────────────────────────────
+function loadAccumPlan() {
+  try {
+    const saved = localStorage.getItem(ACCUM_KEY);
+    accumPlan = saved ? JSON.parse(saved) : [];
+  } catch(e) { accumPlan = []; }
+}
+
+function saveAccumPlan(immediate = false) {
+  const doSave = () => {
+    try {
+      localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan));
+      setSaveStatus('saved', '✓ Saved');
+      setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2000);
+    } catch(e) {
+      setSaveStatus('error', '✗ Save failed');
+    }
+  };
+  if (immediate) { doSave(); return; }
+  setSaveStatus('saving', '⏳ Saving…');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSave, 600);
+}
+
+function setSaveStatus(type, text) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = text;
+  el.className = 'save-status ' + (type !== 'ready' ? type : '');
+}
+
+// ─── Sync quantities from portfolio ─────────────────────────────────────────
+function syncFromPortfolio() {
+  loadPortfolio();
+  renderTable();
+  renderDashboard();
+  setSaveStatus('saved', '🔄 Synced');
+  setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2000);
+}
+
+// ─── Calculations ────────────────────────────────────────────────────────────
+function calcRow(entry) {
+  const pc = getPortfolioCoin(entry.sym);
+  const actualQty    = pc ? (pc.qty || 0) : 0;
+  const currentPrice = pc ? (pc.currentPrice || pc.basePrice || 0) : 0;
+  const targetQty    = entry.targetQty || 0;
+  const pendingQty   = Math.max(targetQty - actualQty, 0);
+  const costToTarget = pendingQty * currentPrice;
+  const progress     = targetQty > 0 ? Math.min(actualQty / targetQty * 100, 100) : 0;
+  const logoUrl      = (pc && pc.logoUrl) || entry.logoUrl || '';
+  const name         = (pc && pc.name) || entry.name || entry.sym;
+  return { actualQty, currentPrice, pendingQty, costToTarget, progress, logoUrl, name };
+}
+
+// ─── Render Table ────────────────────────────────────────────────────────────
+function renderTable() {
+  const q = (document.getElementById('searchBox').value || '').toLowerCase();
+  const rows = accumPlan.filter(e =>
+    !q || e.sym.toLowerCase().includes(q) || (e.name||'').toLowerCase().includes(q)
+  );
+
+  const tbody = document.getElementById('accTableBody');
+  const empty = document.getElementById('emptyState');
+
+  if (accumPlan.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = rows.map((entry, i) => {
+    const idx = accumPlan.indexOf(entry);
+    const r   = calcRow(entry);
+    const completed = r.progress >= 100;
+    const progColor = r.progress >= 100 ? '#10b981' : r.progress >= 50 ? '#f59e0b' : '#3b82f6';
+    const hasPrice  = r.currentPrice > 0;
+
+    return `<tr class="${completed ? 'completed-row' : ''}">
+      <td>
+        <div class="coin-cell">
+          <img class="coin-logo" src="${r.logoUrl || ''}" onerror="this.style.display='none'" alt="${entry.sym}">
+          <div>
+            <div class="coin-sym">${entry.sym}${completed ? '<span class="completed-badge">✓ Done</span>' : ''}</div>
+            <div class="coin-name">${r.name}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <input class="target-input" type="number" min="0" step="any"
+          value="${entry.targetQty || ''}"
+          placeholder="Set target"
+          oninput="updateTarget(${idx}, this.value)"
+          title="Edit target quantity">
+      </td>
+      <td>${fmtQty(r.actualQty)} <span style="font-size:.7rem;color:var(--fg2)">${entry.sym}</span></td>
+      <td style="color:${r.pendingQty > 0 ? 'var(--red)' : 'var(--green)'}">
+        ${r.pendingQty > 0 ? fmtQty(r.pendingQty) : '✓'}
+        ${r.pendingQty > 0 ? `<span style="font-size:.7rem;color:var(--fg2)"> ${entry.sym}</span>` : ''}
+      </td>
+      <td>${hasPrice ? '$' + fmtUSD(r.currentPrice) : '<span class="no-price">No price</span>'}</td>
+      <td>${hasPrice && r.pendingQty > 0 ? '<strong>$' + fmtUSD(r.costToTarget) + '</strong>' : (r.pendingQty === 0 ? '<span style="color:var(--green)">—</span>' : '<span class="no-price">N/A</span>')}</td>
+      <td style="min-width:100px">
+        <div class="mini-prog">
+          <div class="mini-prog-fill" style="width:${r.progress.toFixed(1)}%;background:${progColor}"></div>
+        </div>
+        <div class="prog-label">${r.progress.toFixed(1)}%</div>
+      </td>
+      <td>
+        <button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── Render Dashboard ────────────────────────────────────────────────────────
+function renderDashboard() {
+  let totalTargetVal = 0, holdingsVal = 0, pendingCost = 0;
+  let completed = 0, inProgress = 0;
+  let weightedActual = 0, weightedTarget = 0;
+
+  accumPlan.forEach(entry => {
+    const r = calcRow(entry);
+    const targetVal = (entry.targetQty || 0) * r.currentPrice;
+    totalTargetVal += targetVal;
+    holdingsVal    += r.actualQty * r.currentPrice;
+    pendingCost    += r.costToTarget;
+    weightedActual += r.actualQty * r.currentPrice;
+    weightedTarget += targetVal;
+    if (r.progress >= 100) completed++;
+    else if ((entry.targetQty||0) > 0) inProgress++;
+  });
+
+  const overallPct = weightedTarget > 0 ? Math.min(weightedActual / weightedTarget * 100, 100) : 0;
+
+  document.getElementById('dTotalTarget').textContent = '$' + fmtUSD(totalTargetVal);
+  document.getElementById('dHoldings').textContent    = '$' + fmtUSD(holdingsVal);
+  document.getElementById('dPending').textContent     = '$' + fmtUSD(pendingCost);
+  document.getElementById('dCompleted').textContent   = completed;
+  document.getElementById('dInProgress').textContent  = inProgress + ' in progress';
+  document.getElementById('overallPct').textContent   = overallPct.toFixed(1) + '%';
+  document.getElementById('overallBar').style.width   = overallPct.toFixed(1) + '%';
+}
+
+function renderAll() { renderTable(); renderDashboard(); }
+
+// ─── Update target quantity ──────────────────────────────────────────────────
+function updateTarget(idx, val) {
+  const n = parseFloat(val);
+  accumPlan[idx].targetQty = isNaN(n) || n < 0 ? 0 : n;
+  renderDashboard();
+  saveAccumPlan();
+}
+
+// ─── Remove coin from plan ───────────────────────────────────────────────────
+function removeCoin(idx) {
+  const sym = accumPlan[idx].sym;
+  if (!confirm(`Remove ${sym} from accumulation plan?\n(This does NOT affect your portfolio.)`) ) return;
+  accumPlan.splice(idx, 1);
+  renderAll();
+  saveAccumPlan(true);
+}
+
+// ─── Add Coin Modal ──────────────────────────────────────────────────────────
+function openAddModal() {
+  selectedAddCoin = null;
+  document.getElementById('addSearch').value = '';
+  document.getElementById('addTarget').value = '';
+  document.getElementById('addSelectedInfo').style.display = 'none';
+  filterAddList();
+  document.getElementById('addModal').classList.add('active');
+  setTimeout(() => document.getElementById('addSearch').focus(), 100);
+}
+
+function closeAddModal() {
+  document.getElementById('addModal').classList.remove('active');
+}
+
+// Build list of all available coins (portfolio + manual)
+function allAvailableCoins() {
+  // start with portfolio coins
+  const list = portfolioCoins.map(c => ({
+    sym: c.sym,
+    name: c.name || c.sym,
+    logoUrl: c.logoUrl || '',
+    cgId: c.cgId || '',
+    currentPrice: c.currentPrice || c.basePrice || 0,
+    qty: c.qty || 0,
+    fromPortfolio: true
+  }));
+  return list;
+}
+
+function filterAddList() {
+  const q = document.getElementById('addSearch').value.toLowerCase();
+  const coins = allAvailableCoins();
+  const already = new Set(accumPlan.map(e => e.sym));
+  const filtered = coins.filter(c =>
+    (!q || c.sym.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
+  );
+
+  document.getElementById('addList').innerHTML = filtered.length === 0
+    ? `<div style="padding:10px 12px;font-size:0.8rem;color:var(--fg2)">No coins found. Try a different search.</div>`
+    : filtered.map(c => `
+        <div class="coin-search-item ${already.has(c.sym) ? 'opacity-50' : ''}"
+             onclick="selectAddCoin('${c.sym}')">
+          <img src="${c.logoUrl}" onerror="this.style.display='none'" width="22" height="22"
+               style="border-radius:50%;background:var(--bg2)">
+          <div>
+            <strong>${c.sym}</strong>
+            <span style="color:var(--fg2);font-size:0.8rem"> — ${c.name}</span>
+            ${already.has(c.sym) ? '<span style="color:var(--accent);font-size:0.72rem"> (already in plan)</span>' : ''}
+          </div>
+        </div>`).join('');
+}
+
+function selectAddCoin(sym) {
+  const coins = allAvailableCoins();
+  selectedAddCoin = coins.find(c => c.sym === sym);
+  if (!selectedAddCoin) return;
+  document.getElementById('addSearch').value = sym;
+  document.getElementById('addSelectedInfo').style.display = '';
+  document.getElementById('addSelectedInfo').innerHTML =
+    `<strong>${sym}</strong> — ${selectedAddCoin.name}
+     <span style="color:var(--fg2);margin-left:8px">Current: $${fmtUSD(selectedAddCoin.currentPrice)}</span>
+     <span style="color:var(--fg2);margin-left:8px">Holding: ${fmtQty(selectedAddCoin.qty)} ${sym}</span>`;
+  document.getElementById('addList').innerHTML = '';
+  document.getElementById('addTarget').focus();
+}
+
+function confirmAddCoin() {
+  if (!selectedAddCoin) {
+    alert('Please select a coin first.'); return;
+  }
+  const sym = selectedAddCoin.sym;
+  const targetQty = parseFloat(document.getElementById('addTarget').value) || 0;
+
+  // Update existing or add new
+  const existing = accumPlan.find(e => e.sym === sym);
+  if (existing) {
+    existing.targetQty = targetQty;
+  } else {
+    accumPlan.push({
+      sym,
+      name: selectedAddCoin.name,
+      logoUrl: selectedAddCoin.logoUrl,
+      cgId: selectedAddCoin.cgId,
+      targetQty,
+      addedAt: new Date().toISOString()
+    });
+  }
+  closeAddModal();
+  renderAll();
+  saveAccumPlan(true);
+}
+
+// Close modal on overlay click
+document.getElementById('addModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('addModal')) closeAddModal();
+});
+
+// ─── Formatters ──────────────────────────────────────────────────────────────
+function fmtUSD(n) {
+  if (!n || isNaN(n)) return '0.00';
+  if (n < 0.001) return n.toFixed(6);
+  if (n < 1) return n.toFixed(4);
+  if (n < 10) return n.toFixed(3);
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtQty(n) {
+  if (!n || isNaN(n) || n === 0) return '0';
+  if (n < 0.0001) return n.toFixed(8);
+  if (n < 1) return n.toFixed(6);
+  if (n < 10) return n.toFixed(4);
+  if (n < 1000) return n.toFixed(2);
+  return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+// ─── Auto-sync when portfolio page updates storage ────────────────────────────
+window.addEventListener('storage', e => {
+  if (e.key === PORTFOLIO_KEY) {
+    loadPortfolio();
+    renderAll();
+  }
+});
+</script>
+</body>
+</html>
