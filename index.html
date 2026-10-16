@@ -740,9 +740,9 @@ const COIN_ICONS = {
   PONS:'https://assets.coingecko.com/coins/images/102174571/standard/jhitvkisdq8fhxvimdkpcw7y3dx5.?1784093932',
 };
 function getCoinIcon(sym, size=36) {
-  const url = COIN_ICONS[sym];
-  const color = COIN_COLORS[sym] || '#6b7280';
-  const letter = sym.slice(0,3);
+  // Check coin object for saved logoUrl (manually added coins)
+  const coin = portfolio.find(c => c.sym === sym);
+  const url = (coin && coin.logoUrl) || COIN_ICONS[sym];
   if (url) {
     return `<img src="${url}" width="${size}" height="${size}" data-sym="${sym}" data-size="${size}" style="border-radius:50%;flex-shrink:0;object-fit:cover" onerror="coinImgErr(this)">`;
   }
@@ -1289,18 +1289,43 @@ function applyAddCoin() {
   const newCoin = {
     sym, qty, basePrice: price, walletValue: qty * price, cat,
     currentPrice: price, notes: '', action: 'hold',
-    lastUpdate: new Date().toISOString().slice(0,10)
+    lastUpdate: new Date().toISOString().slice(0,10),
+    cgId: cgId || undefined  // persist CoinGecko ID on the coin itself
   };
-  // Register CoinGecko ID if provided
-  if(cgId) COINGECKO_IDS[sym] = cgId;
   // Register name
   COIN_NAMES[sym] = name;
   portfolio.push(newCoin);
   savePortfolio();
   renderAll();
   closeAddCoin();
-  // Auto-fetch live price if cgId given
-  if(cgId) fetchLivePrices();
+  // If cgId given: fetch logo + live price
+  if(cgId) {
+    fetchCoinLogoAndPrice(newCoin, cgId);
+  }
+}
+
+async function fetchCoinLogoAndPrice(coin, cgId) {
+  // Fetch logo from CoinGecko /coins/{id}
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/coins/${cgId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`);
+    if(res.ok) {
+      const data = await res.json();
+      // Save logo URL on the coin object (persisted)
+      if(data.image && data.image.small) {
+        coin.logoUrl = data.image.small;
+      }
+      // Also update live price if available
+      if(data.market_data && data.market_data.current_price && data.market_data.current_price.usd) {
+        coin.currentPrice = data.market_data.current_price.usd;
+        coin.lastUpdate = new Date().toISOString().slice(0,10);
+      }
+      savePortfolio();
+      renderAll();
+    }
+  } catch(e) {
+    // Fallback: still fetch prices via simple/price endpoint
+    fetchLivePrices();
+  }
 }
 document.getElementById('addCoinModal').addEventListener('click', function(e){ if(e.target===this) closeAddCoin(); });
 
@@ -1423,14 +1448,18 @@ function renderDashboard() {
 
 async function fetchLivePrices() {
   setLiveStatus('loading');
-  const ids=[...new Set(Object.values(COINGECKO_IDS).filter(Boolean))];
+  // Collect IDs from both the static map and per-coin cgId (manually added coins)
+  const idSet = new Set(Object.values(COINGECKO_IDS).filter(Boolean));
+  portfolio.forEach(c => { if(c.cgId) idSet.add(c.cgId); });
+  const ids = [...idSet];
   const url=`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd`;
   try {
     const res=await fetch(url);
     if(!res.ok)throw new Error('HTTP '+res.status);
     const data=await res.json();
     portfolio.forEach(c=>{
-      const cgId=COINGECKO_IDS[c.sym];
+      // Use per-coin cgId first, fall back to static map
+      const cgId = c.cgId || COINGECKO_IDS[c.sym];
       if(cgId&&data[cgId]&&data[cgId].usd){c.currentPrice=data[cgId].usd;c.lastUpdate=new Date().toISOString().slice(0,10);}
     });
     if(data['bitcoin']&&data['bitcoin'].usd)btcPrice=data['bitcoin'].usd;
