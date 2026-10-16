@@ -528,7 +528,6 @@
 
 <div class="live-bar">
   <div id="liveIndicator"><span class="live-dot"></span> Loading…</div>
-  <button class="btn-live" id="refreshBtn" onclick="refreshPrices()">🔄 Refresh</button>
 </div>
 
 <div class="controls">
@@ -571,8 +570,7 @@
         <th onclick="sortTable('pnl')">P&L</th>
         <th onclick="sortTable('perf')">Perf vs BTC</th>
         <th onclick="sortTable('action')">Signal</th>
-        <th>Notes</th>
-        <th>Add</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody id="tableBody"></tbody>
@@ -1228,13 +1226,16 @@ function renderTableAndStack() {
         <td><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${pnlSign}$${Math.abs(pnl).toFixed(2)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
         <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
         <td><span class="action-badge action-${action}">${actionLabel}</span></td>
-        <td><input type="text" class="editable-input" value="${c.notes||''}" placeholder="Note..." onchange="updateNote('${c.sym}',this.value)" style="min-width:80px"></td>
-        <td style="text-align:center">
-          <div style="display:inline-flex;gap:3px;flex-wrap:wrap;justify-content:center">
-            <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
-            <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
-            <button class="btn-history" onclick="openHistory('${c.sym}')" title="History">📋</button>
-            <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove from portfolio">✕</button>
+        <td style="text-align:center;white-space:nowrap">
+          <div style="display:inline-flex;flex-direction:column;gap:4px;align-items:center">
+            <div style="display:flex;gap:4px">
+              <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
+              <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
+            </div>
+            <div style="display:flex;gap:4px">
+              <button class="btn-history" onclick="openHistory('${c.sym}')" title="History">📋</button>
+              <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove">✕</button>
+            </div>
           </div>
         </td>
       </tr>`;
@@ -1277,11 +1278,11 @@ function renderTableAndStack() {
           <span>#${i+1}</span>
           <span style="color:var(--fg2)">${c.lastUpdate||'Oct 15, 2026'}</span>
         </div>
-        <div style="display:flex;gap:6px;padding:0 12px 10px;flex-wrap:wrap">
-          <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
-          <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
-          <button class="btn-history" onclick="openHistory('${c.sym}')" title="History">📋</button>
-          <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove">✕</button>
+        <div style="display:flex;gap:6px;padding:6px 12px 12px;justify-content:center">
+          <button class="btn-buy-more" style="flex:1;padding:5px 0;font-size:0.78rem" onclick="openBuyMore('${c.sym}')">+ Buy</button>
+          <button class="btn-sell" style="flex:1;padding:5px 0;font-size:0.78rem" onclick="openSell('${c.sym}')">− Sell</button>
+          <button class="btn-history" style="padding:5px 10px;font-size:0.78rem" onclick="openHistory('${c.sym}')" title="History">📋</button>
+          <button class="btn-remove" style="padding:5px 10px;font-size:0.78rem" onclick="removeCoin('${c.sym}')" title="Remove">✕</button>
         </div>
       </div>`;
     }).join('');
@@ -1829,9 +1830,7 @@ function updateLiveIndicator(){
 }
 
 function refreshPrices(){
-  const btn=document.getElementById('refreshBtn');
-  if(btn){btn.disabled=true;btn.textContent='⏳ Fetching…';}
-  fetchLivePrices().finally(()=>{if(btn){btn.disabled=false;btn.textContent='🔄 Refresh';}});
+  fetchLivePrices();
 }
 
 function renderAll(){renderHeader();renderSummary();renderTableAndStack();renderDashboard();}
@@ -1877,6 +1876,8 @@ initPortfolio();
 renderAll();      // render content first (fills both containers)
 initView();       // THEN apply view preference (shows/hides correct container)
 fetchLivePrices();
+// Auto-refresh live prices every 60 seconds
+setInterval(() => { fetchLivePrices(); }, 60000);
 </script>
 </body>
 </html>
