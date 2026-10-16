@@ -94,13 +94,9 @@
   }
 
   .btc-icon {
-    width: 40px; height: 40px;
-    background: radial-gradient(circle, #f7931a, #e8821a);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-    box-shadow: 0 0 15px rgba(247,147,26,0.4);
+    width: 44px; height: 44px;
     flex-shrink: 0;
+    filter: drop-shadow(0 0 8px rgba(247,147,26,0.5));
   }
 
   .title-group h1 {
@@ -318,9 +314,27 @@
     border-radius: 10px;
     padding: 10px;
     text-align: center;
+    cursor: pointer;
+    transition: border-color 0.18s, transform 0.15s;
+    user-select: none;
+  }
+  .summary-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .summary-card.cat-active {
+    border-color: var(--accent);
+    background: rgba(247,147,26,0.12);
+    box-shadow: 0 0 0 2px rgba(247,147,26,0.3);
   }
   .summary-card .label { font-size: 0.7rem; color: var(--fg2); margin-bottom: 4px; }
   .summary-card .value { font-size: 1rem; font-weight: 700; }
+  .btc-icon-fallback {
+    width: 44px; height: 44px;
+    background: radial-gradient(circle, #f7931a, #e8821a);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 0 15px rgba(247,147,26,0.4);
+    flex-shrink: 0;
+  }
 
   .dashboard-section {
     display: flex;
@@ -441,7 +455,7 @@
 <header>
   <div class="header-top">
     <div class="logo-area">
-      <div class="btc-icon">₿</div>
+      <img class="btc-icon" src="https://assets.coingecko.com/coins/images/1/large/bitcoin.png" alt="Bitcoin" onerror="this.style.cssText='width:44px;height:44px;background:radial-gradient(circle,#f7931a,#e8821a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0';this.outerHTML='<div class=\'btc-icon-fallback\'>₿</div>'">
       <div class="title-group">
         <h1>Samsam Portfolio 🎯</h1>
         <p>Accumulation Tracker → 1 BTC · Golden Triangle 2030</p>
@@ -489,9 +503,8 @@
 <div class="controls">
   <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin...">
   <div class="control-row">
-    <button class="btn btn-primary" onclick="openUpdateModal()">📝 Update</button>
-    <button class="btn btn-primary" onclick="openAddCoin()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">➕ Add Coin</button>
     <button class="btn btn-secondary" onclick="exportData()">💾 CSV</button>
+    <button class="btn btn-primary" onclick="openAddCoin()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">➕ Add Coin</button>
     <button class="btn btn-secondary" id="viewToggleBtn" onclick="toggleView()">📋 Table</button>
     <button class="btn btn-secondary" onclick="toggleTheme()">🌙 Theme</button>
   </div>
@@ -547,24 +560,6 @@
   </table>
 </div>
 
-<!-- Update Modal -->
-<div class="modal-overlay" id="updateModal">
-  <div class="modal">
-    <h2>📊 Daily Price Update</h2>
-    <div class="form-row">
-      <label class="form-label">BTC Current Price (USD)</label>
-      <input type="number" class="form-input" id="modalBtcPrice" placeholder="81162">
-    </div>
-    <div class="form-row">
-      <label class="form-label">Date</label>
-      <input type="date" class="form-input" id="modalDate">
-    </div>
-    <div style="display:flex;gap:8px;margin-top:14px;">
-      <button class="btn btn-primary" onclick="applyUpdate()">✅ Apply</button>
-      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <div class="modal-overlay" id="buyMoreModal">
   <div class="modal">
@@ -1005,6 +1000,14 @@ function renderHeader() {
   document.getElementById('progressPct').textContent = pct + '% complete';
 }
 
+let activeCatFilter = '';
+
+function setCatFilter(cat) {
+  activeCatFilter = (activeCatFilter === cat) ? '' : cat;
+  renderSummary();
+  renderTableAndStack();
+}
+
 function renderSummary() {
   const cats = { layer1:'Layer 1', layer2:'Layer 2', defi:'DeFi', ai:'AI / Web3', meme:'Meme', other:'Other', btc:'Bitcoin' };
   const catTotals = {};
@@ -1013,11 +1016,18 @@ function renderSummary() {
     catTotals[cat] = (catTotals[cat] || 0) + c.qty * c.currentPrice;
   });
   const grid = document.getElementById('summaryGrid');
-  grid.innerHTML = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])
-    .map(([k,v]) => `<div class="summary-card">
+  // "All" card first, then categories sorted by value
+  const allTotal = portfolio.reduce((s,c) => s + c.qty * c.currentPrice, 0);
+  const allCard = `<div class="summary-card${activeCatFilter===''?' cat-active':''}" onclick="setCatFilter('')">
+    <div class="label">🌐 All Coins</div>
+    <div class="value">$${allTotal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+  </div>`;
+  const catCards = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])
+    .map(([k,v]) => `<div class="summary-card${activeCatFilter===k?' cat-active':''}" onclick="setCatFilter('${k}')">
       <div class="label">${cats[k]||k}</div>
       <div class="value">$${v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
     </div>`).join('');
+  grid.innerHTML = allCard + catCards;
 }
 
 function getFilteredSorted() {
@@ -1026,6 +1036,7 @@ function getFilteredSorted() {
   let rows = portfolio.filter(c => {
     if (search && !c.sym.toLowerCase().includes(search) && !(COIN_NAMES[c.sym]||'').toLowerCase().includes(search)) return false;
     if (filter) { const perf=getPerf(c); const action=getAction(c.sym,perf); if(action!==filter) return false; }
+    if (activeCatFilter && (c.cat || 'other') !== activeCatFilter) return false;
     return true;
   });
   rows.sort((a,b) => {
@@ -1407,17 +1418,6 @@ function sortTable(col) {
   renderTableAndStack();
 }
 
-function openUpdateModal() {
-  document.getElementById('modalBtcPrice').value = btcPrice;
-  document.getElementById('modalDate').value = new Date().toISOString().slice(0,10);
-  document.getElementById('updateModal').classList.add('active');
-}
-function closeModal() { document.getElementById('updateModal').classList.remove('active'); }
-function applyUpdate() {
-  const newBtc=parseFloat(document.getElementById('modalBtcPrice').value);
-  if(newBtc>0)btcPrice=newBtc;
-  closeModal();savePortfolio();renderAll();
-}
 
 function exportData() {
   const rows=[['Coin','Qty','Base Price','Current Price','Cost Basis','Current Value','P&L','P&L%','vs BTC','Signal']];
