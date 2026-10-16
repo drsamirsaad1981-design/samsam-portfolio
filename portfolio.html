@@ -436,12 +436,31 @@
   .btn-buy-more:hover { background:#15803d; }
   .btn-sell { background:#dc2626; color:#fff; border:none; border-radius:4px; padding:2px 7px; font-size:0.7rem; cursor:pointer; white-space:nowrap; line-height:1.6; }
   .btn-sell:hover { background:#b91c1c; }
+  .btn-history { background:transparent; color:var(--fg2); border:1px solid var(--border); border-radius:4px; padding:2px 7px; font-size:0.7rem; cursor:pointer; white-space:nowrap; line-height:1.6; }
+  .btn-history:hover { border-color:var(--accent); color:var(--accent); }
   .buy-preview { background:var(--bg3); border-radius:8px; padding:10px 12px; font-size:0.82rem; margin-top:10px; line-height:1.7; }
   .buy-preview span { font-weight:700; color:var(--accent); }
   .sell-profit { color:#22c55e; font-weight:700; }
   .sell-loss   { color:#ef4444; font-weight:700; }
   .btn-remove { background:transparent; color:#6b7280; border:1px solid #4b5563; border-radius:4px; padding:2px 6px; font-size:0.7rem; cursor:pointer; line-height:1.6; }
   .btn-remove:hover { background:#ef4444; color:#fff; border-color:#ef4444; }
+
+  /* Transaction History Modal */
+  .tx-list { display:flex; flex-direction:column; gap:8px; max-height:420px; overflow-y:auto; padding-right:2px; }
+  .tx-row { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .tx-row.tx-buy  { border-left:3px solid #22c55e; }
+  .tx-row.tx-sell { border-left:3px solid #ef4444; }
+  .tx-type-badge { font-size:0.68rem; font-weight:700; padding:2px 7px; border-radius:4px; display:inline-block; margin-bottom:4px; }
+  .tx-buy  .tx-type-badge { background:rgba(34,197,94,0.15); color:#22c55e; }
+  .tx-sell .tx-type-badge { background:rgba(239,68,68,0.15); color:#ef4444; }
+  .tx-details { flex:1; font-size:0.8rem; line-height:1.7; }
+  .tx-details .tx-meta { font-size:0.72rem; color:var(--fg2); }
+  .tx-delete-btn { background:transparent; border:1px solid #4b5563; color:#6b7280; border-radius:6px; padding:4px 9px; font-size:0.72rem; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+  .tx-delete-btn:hover { background:#ef4444; color:#fff; border-color:#ef4444; }
+  .tx-summary { background:var(--bg3); border-radius:8px; padding:9px 12px; font-size:0.8rem; margin-bottom:10px; display:flex; flex-wrap:wrap; gap:10px; }
+  .tx-summary span { color:var(--fg2); }
+  .tx-summary strong { color:var(--fg); }
+  .tx-empty { text-align:center; color:var(--fg2); font-size:0.85rem; padding:32px 0; }
 
   /* CoinGecko link styling */
   .coin-cg-link { display:inline-flex; flex-shrink:0; border-radius:50%; text-decoration:none; }
@@ -691,6 +710,18 @@
   </div>
 </div>
 
+<!-- Transaction History Modal -->
+<div class="modal-overlay" id="historyModal">
+  <div class="modal" style="max-width:520px">
+    <h2>📋 Transaction History — <span id="histSym" style="color:var(--accent)"></span></h2>
+    <div class="tx-summary" id="histSummary"></div>
+    <div class="tx-list" id="histList"></div>
+    <div style="margin-top:14px">
+      <button class="btn btn-secondary" onclick="closeHistory()">✕ Close</button>
+    </div>
+  </div>
+</div>
+
 <footer>
   <p>🔒 Local storage | Baseline: Oct 15, 2026</p>
   <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
@@ -898,6 +929,7 @@ const LIVE_PRICES_OCT15 = {
 const STORAGE_KEY = 'samsam_pf_v4';
 const ARCHIVE_KEY = 'samsam_archived_v1'; // separate key — never cleared by Reset
 const CUSTOM_KEY  = 'samsam_custom_v1';   // manually added coins — survives Reset
+const TX_KEY      = 'samsam_tx_v1';       // transaction history — never cleared by Reset
 ['samsam_portfolio','samsam_pf_v1','samsam_pf_v2','samsam_pf_v3'].forEach(k=>localStorage.removeItem(k));
 
 function loadArchive() {
@@ -918,13 +950,58 @@ function loadCustomCoins() {
 function saveCustomCoins() {
   try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(customCoins)); } catch(e) {}
 }
+
+// ── Transaction History ───────────────────────────────
+// Each tx: { id, sym, type:'buy'|'sell', qty, price, total, date, note }
+let transactions = [];
+function loadTransactions() {
+  try { transactions = JSON.parse(localStorage.getItem(TX_KEY) || '[]'); } catch(e) { transactions = []; }
+}
+function saveTransactions() {
+  try { localStorage.setItem(TX_KEY, JSON.stringify(transactions)); } catch(e) {}
+}
+function addTransaction(sym, type, qty, price, note) {
+  const tx = {
+    id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    sym, type, qty, price, total: qty * price,
+    date: new Date().toISOString(),
+    note: note || ''
+  };
+  transactions.push(tx);
+  saveTransactions();
+  return tx;
+}
+function getTxForSym(sym) {
+  return transactions.filter(t => t.sym === sym).sort((a,b) => new Date(a.date)-new Date(b.date));
+}
+// Recalculate coin qty and avg cost from its transaction history
+function recalcFromTx(sym) {
+  const txs = getTxForSym(sym);
+  if(txs.length === 0) return null;
+  let qty = 0, totalCost = 0;
+  for(const t of txs) {
+    if(t.type === 'buy') {
+      totalCost += t.qty * t.price;
+      qty += t.qty;
+    } else if(t.type === 'sell') {
+      // reduce cost basis proportionally
+      if(qty > 0) totalCost = totalCost * (1 - t.qty / qty);
+      qty -= t.qty;
+      if(qty < 0) qty = 0;
+    }
+  }
+  const avgCost = qty > 0 ? totalCost / qty : 0;
+  return { qty, avgCost };
+}
+
 function getCustomSyms() {
   return new Set(customCoins.map(c => c.sym));
 }
 
 function initPortfolio() {
-  loadArchive();     // always load archive first
-  loadCustomCoins(); // load manually added coins
+  loadArchive();        // always load archive first
+  loadCustomCoins();    // load manually added coins
+  loadTransactions();   // load transaction history
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -1154,6 +1231,7 @@ function renderTableAndStack() {
           <div style="display:inline-flex;gap:3px;flex-wrap:wrap;justify-content:center">
             <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
             <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
+            <button class="btn-history" onclick="openHistory('${c.sym}')">📋</button>
             <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove from portfolio">✕</button>
           </div>
         </td>
@@ -1196,6 +1274,12 @@ function renderTableAndStack() {
         <div class="coin-card-footer" style="color:var(--fg2);font-size:0.75rem">
           <span>#${i+1}</span>
           <span style="color:var(--fg2)">${c.lastUpdate||'Oct 15, 2026'}</span>
+        </div>
+        <div style="display:flex;gap:6px;padding:0 12px 10px;flex-wrap:wrap">
+          <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
+          <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
+          <button class="btn-history" onclick="openHistory('${c.sym}')">📋 History</button>
+          <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove">✕</button>
         </div>
       </div>`;
     }).join('');
@@ -1270,6 +1354,8 @@ function applyBuyMore() {
   coin.qty       = totalQty;
   coin.basePrice = avgCost;
   coin.walletValue = totalQty * avgCost;
+  // Record transaction
+  addTransaction(_bmSym, 'buy', addQty, buyPrice);
   savePortfolio();
   renderAll();
   closeBuyMore();
@@ -1341,6 +1427,8 @@ function applySell() {
   // avg cost unchanged — only qty reduces
   coin.qty -= sellQty;
   coin.walletValue = coin.qty * coin.basePrice;
+  // Record transaction
+  addTransaction(_smSym, 'sell', sellQty, sellPrice);
   savePortfolio();
   renderAll();
   closeSell();
@@ -1376,6 +1464,107 @@ function confirmRemove() {
   closeRemove();
 }
 document.getElementById('removeModal').addEventListener('click', function(e){ if(e.target===this) closeRemove(); });
+
+// ── Transaction History ───────────────────────────────
+let _histSym = null;
+
+function openHistory(sym) {
+  _histSym = sym;
+  document.getElementById('histSym').textContent = sym;
+  renderHistory();
+  document.getElementById('historyModal').classList.add('active');
+}
+function closeHistory() {
+  document.getElementById('historyModal').classList.remove('active');
+  _histSym = null;
+}
+
+function renderHistory() {
+  const sym = _histSym;
+  const txs = getTxForSym(sym);
+  const coin = portfolio.find(c => c.sym === sym);
+  const fmtN = n => n < 1 ? n.toFixed(6) : n < 10 ? n.toFixed(4) : n.toFixed(2);
+  const fmtDate = d => {
+    const dt = new Date(d);
+    return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ' ' +
+           dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  };
+
+  // Summary bar
+  const sumEl = document.getElementById('histSummary');
+  const totalBuys  = txs.filter(t=>t.type==='buy').reduce((s,t)=>s+t.qty,0);
+  const totalSells = txs.filter(t=>t.type==='sell').reduce((s,t)=>s+t.qty,0);
+  const totalBuyVal= txs.filter(t=>t.type==='buy').reduce((s,t)=>s+t.total,0);
+  const totalSellVal=txs.filter(t=>t.type==='sell').reduce((s,t)=>s+t.total,0);
+  const curQty = coin ? coin.qty : 0;
+  const avgCost= coin ? coin.basePrice : 0;
+  sumEl.innerHTML = `
+    <div><span>Transactions</span> <strong>${txs.length}</strong></div>
+    <div><span>Total Bought</span> <strong style="color:#22c55e">${fmtN(totalBuys)} ${sym}</strong></div>
+    <div><span>Total Sold</span> <strong style="color:#ef4444">${fmtN(totalSells)} ${sym}</strong></div>
+    <div><span>Current Qty</span> <strong>${fmtN(curQty)} ${sym}</strong></div>
+    <div><span>Avg Cost</span> <strong>$${avgCost.toFixed(4)}</strong></div>
+    <div><span>Realized P&L</span> <strong style="color:${totalSellVal-totalSells*avgCost>=0?'#22c55e':'#ef4444'}">${totalSells>0?(totalSellVal>=0?'+':'')+'$'+(totalSellVal-totalSells*avgCost).toFixed(2):'—'}</strong></div>`;
+
+  // Transaction list
+  const listEl = document.getElementById('histList');
+  if(txs.length === 0) {
+    listEl.innerHTML = '<div class="tx-empty">No transactions recorded yet.<br><small>Future Buy/Sell operations will appear here.</small></div>';
+    return;
+  }
+  listEl.innerHTML = [...txs].reverse().map(t => {
+    const isBuy = t.type === 'buy';
+    const pnl = isBuy ? null : (t.price - avgCost) * t.qty;
+    const pnlStr = pnl !== null
+      ? `<div style="font-size:0.72rem;margin-top:2px;color:${pnl>=0?'#22c55e':'#ef4444'}">${pnl>=0?'Profit':'Loss'}: ${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</div>`
+      : '';
+    return `<div class="tx-row tx-${t.type}">
+      <div class="tx-details">
+        <span class="tx-type-badge">${isBuy?'🟢 BUY':'🔴 SELL'}</span>
+        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>$${t.total.toFixed(2)}</strong></div>
+        ${pnlStr}
+        <div class="tx-meta">${fmtDate(t.date)}${t.note?' · '+t.note:''}</div>
+      </div>
+      <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">🗑 Delete</button>
+    </div>`;
+  }).join('');
+}
+
+function deleteTx(txId) {
+  const tx = transactions.find(t => t.id === txId);
+  if(!tx) return;
+  const fmtN = n => n < 1 ? n.toFixed(6) : n < 10 ? n.toFixed(4) : n.toFixed(2);
+  const confirm = window.confirm(
+    `Delete this ${tx.type.toUpperCase()} transaction?\n\n` +
+    `${fmtN(tx.qty)} ${tx.sym} @ $${tx.price.toFixed(4)} = $${tx.total.toFixed(2)}\n` +
+    `Date: ${new Date(tx.date).toLocaleDateString()}\n\n` +
+    `Portfolio will be recalculated automatically.`
+  );
+  if(!confirm) return;
+
+  // Remove transaction
+  const idx = transactions.findIndex(t => t.id === txId);
+  transactions.splice(idx, 1);
+  saveTransactions();
+
+  // Recalculate coin from remaining transactions
+  const sym = tx.sym;
+  const coin = portfolio.find(c => c.sym === sym);
+  if(coin) {
+    const recalc = recalcFromTx(sym);
+    if(recalc && recalc.qty >= 0) {
+      coin.qty = Math.max(0, recalc.qty);
+      coin.basePrice = recalc.avgCost > 0 ? recalc.avgCost : coin.basePrice;
+      coin.walletValue = coin.qty * coin.basePrice;
+    }
+    savePortfolio();
+    renderAll();
+  }
+  // Re-render history modal
+  if(_histSym === sym) renderHistory();
+}
+
+document.getElementById('historyModal').addEventListener('click', function(e){ if(e.target===this) closeHistory(); });
 
 // ── Add New Coin ──────────────────────────────────────
 function openAddCoin() {
@@ -1435,6 +1624,10 @@ function applyAddCoin() {
   customCoins.push({ sym, qty, basePrice: price, walletValue: qty * price, cat, cgId: cgId || undefined, addedAt: new Date().toISOString() });
   saveCustomCoins();
   portfolio.push(newCoin);
+  // Record initial buy transaction (only if no prior tx exists for this sym)
+  if(getTxForSym(sym).length === 0) {
+    addTransaction(sym, 'buy', qty, price, 'Initial position');
+  }
   savePortfolio();
   renderAll();
   closeAddCoin();
