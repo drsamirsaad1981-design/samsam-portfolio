@@ -857,6 +857,7 @@ const LIVE_PRICES_OCT15 = {
 
 const STORAGE_KEY = 'samsam_pf_v4';
 const ARCHIVE_KEY = 'samsam_archived_v1'; // separate key — never cleared by Reset
+const CUSTOM_KEY  = 'samsam_custom_v1';   // manually added coins — survives Reset
 ['samsam_portfolio','samsam_pf_v1','samsam_pf_v2','samsam_pf_v3'].forEach(k=>localStorage.removeItem(k));
 
 function loadArchive() {
@@ -869,14 +870,26 @@ function getRemovedSyms() {
   return new Set(archivedCoins.map(c => c.sym));
 }
 
+// Custom coins: added manually by user — persist across Reset
+let customCoins = []; // array of coin objects (baseline snapshot, not live state)
+function loadCustomCoins() {
+  try { customCoins = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch(e) { customCoins = []; }
+}
+function saveCustomCoins() {
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(customCoins)); } catch(e) {}
+}
+function getCustomSyms() {
+  return new Set(customCoins.map(c => c.sym));
+}
+
 function initPortfolio() {
-  loadArchive(); // always load archive first — independent of main reset
+  loadArchive();     // always load archive first
+  loadCustomCoins(); // load manually added coins
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const data = JSON.parse(saved);
       if (!data.coins || data.coins.length === 0) { resetToBaseline(); return; }
-      // filter out any removed coins that may have been re-saved before fix
       const removed = getRemovedSyms();
       portfolio = data.coins.filter(c => !removed.has(c.sym));
       btcPrice = data.btcPrice || 82363.28;
@@ -885,14 +898,25 @@ function initPortfolio() {
 }
 
 function resetToBaseline() {
-  const removed = getRemovedSyms(); // respect removals even during reset
-  portfolio = BASE_PORTFOLIO
+  const removed = getRemovedSyms();
+  const customSyms = getCustomSyms();
+  // Base coins (excluding removed)
+  const baseCoins = BASE_PORTFOLIO
     .filter(c => !removed.has(c.sym))
     .map(c => ({
       ...c,
       currentPrice: LIVE_PRICES_OCT15[c.sym] || c.basePrice,
       notes: '', action: 'hold', lastUpdate: '2026-10-15'
     }));
+  // Custom coins (excluding removed), reset qty/price to their saved baseline
+  const addedCoins = customCoins
+    .filter(c => !removed.has(c.sym))
+    .map(c => ({
+      ...c,
+      currentPrice: c.basePrice, // will be updated by fetchLivePrices
+      notes: '', action: 'hold', lastUpdate: '2026-10-15'
+    }));
+  portfolio = [...baseCoins, ...addedCoins];
   btcPrice = LIVE_PRICES_OCT15.BTC || 82363;
 }
 
@@ -1234,6 +1258,9 @@ function confirmRemove() {
   const archived = { ...portfolio[idx], removedAt: new Date().toISOString() };
   archivedCoins.push(archived);
   saveArchive(); // independent of savePortfolio — never touched by resetApp
+  // Also remove from custom coins store if it was a manually added coin
+  const customIdx = customCoins.findIndex(c => c.sym === _rmSym);
+  if(customIdx !== -1) { customCoins.splice(customIdx, 1); saveCustomCoins(); }
   // Remove from active portfolio
   portfolio.splice(idx, 1);
   savePortfolio();
@@ -1294,6 +1321,11 @@ function applyAddCoin() {
   };
   // Register name
   COIN_NAMES[sym] = name;
+  // Save to custom coins store so it survives Reset
+  const existingCustomIdx = customCoins.findIndex(c => c.sym === sym);
+  if(existingCustomIdx !== -1) customCoins.splice(existingCustomIdx, 1);
+  customCoins.push({ sym, qty, basePrice: price, walletValue: qty * price, cat, cgId: cgId || undefined, addedAt: new Date().toISOString() });
+  saveCustomCoins();
   portfolio.push(newCoin);
   savePortfolio();
   renderAll();
