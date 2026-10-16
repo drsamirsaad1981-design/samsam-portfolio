@@ -364,9 +364,9 @@ tr:hover td { background: rgba(255,255,255,.02); }
   <div class="icon">🎯</div>
   <div>لا توجد عملات في خطة التراكم بعد.</div>
   <div class="hint">
-    <strong>⚠️ ملاحظة مهمة:</strong> البيانات تُحفظ محلياً على كل جهاز بشكل منفصل.<br>
-    إذا أضفت عملات على الكمبيوتر، ستحتاج لإعادة إضافتها هنا على الموبايل.<br><br>
-    اضغط <strong>➕ Add Coin to Plan</strong> لإضافة عملاتك وتحديد الأهداف.
+    ☁️ البيانات تُزامَن تلقائياً بين كل أجهزتك عبر الإنترنت.<br>
+    إذا أضفت عملات على الكمبيوتر، ستظهر هنا تلقائياً — فقط انتظر لحظة للتحميل.<br><br>
+    اضغط <strong>➕ Add Coin to Plan</strong> لإضافة أول عملة.
   </div>
 </div>
 
@@ -397,6 +397,104 @@ const PORTFOLIO_KEY  = 'samsam_pf_v4';
 const ACCUM_KEY      = 'samsam_acc_v1';   // accumulation targets (independent)
 const THEME_KEY      = 'samsam_theme';
 
+// ─── JSONbin Cloud Sync ───────────────────────────────────────────────────────
+const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
+const JSONBIN_BIN_KEY = 'samsam_acc_bin_id';  // localStorage key storing the bin ID
+let cloudSyncTimer = null;
+let isSyncing = false;
+
+async function getBinId() {
+  try { return localStorage.getItem(JSONBIN_BIN_KEY) || null; } catch(e) { return null; }
+}
+async function setBinId(id) {
+  try { localStorage.setItem(JSONBIN_BIN_KEY, id); } catch(e) {}
+}
+
+// Create a new bin (first time only)
+async function createBin(data) {
+  const res = await fetch('https://api.jsonbin.io/v3/b', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': JSONBIN_KEY,
+      'X-Bin-Name': 'samsam-accum-plan',
+      'X-Bin-Private': 'true'
+    },
+    body: JSON.stringify({ accumPlan: data })
+  });
+  if (!res.ok) throw new Error('Create bin failed: ' + res.status);
+  const json = await res.json();
+  return json.metadata.id;
+}
+
+// Upload current plan to cloud
+async function cloudSave() {
+  if (isSyncing) return;
+  isSyncing = true;
+  setSaveStatus('saving', '☁️ Saving…');
+  try {
+    let binId = await getBinId();
+    if (!binId) {
+      binId = await createBin(accumPlan);
+      await setBinId(binId);
+    } else {
+      const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': JSONBIN_KEY
+        },
+        body: JSON.stringify({ accumPlan })
+      });
+      if (!res.ok) throw new Error('Update failed: ' + res.status);
+    }
+    // also save locally
+    localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan));
+    setSaveStatus('saved', '☁️ Synced');
+    setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2500);
+  } catch(e) {
+    // fallback: save locally only
+    try { localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan)); } catch(_) {}
+    setSaveStatus('error', '✗ Cloud failed – saved locally');
+    setTimeout(() => setSaveStatus('ready', '✓ Ready'), 3000);
+  } finally {
+    isSyncing = false;
+  }
+}
+
+// Load plan from cloud (or fallback to localStorage)
+async function cloudLoad() {
+  setSaveStatus('saving', '☁️ Loading…');
+  try {
+    let binId = await getBinId();
+    if (!binId) {
+      // No bin yet — try localStorage
+      const local = localStorage.getItem(ACCUM_KEY);
+      accumPlan = local ? JSON.parse(local) : [];
+      setSaveStatus('ready', '✓ Ready');
+      return;
+    }
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    });
+    if (!res.ok) throw new Error('Load failed: ' + res.status);
+    const json = await res.json();
+    accumPlan = json.record.accumPlan || [];
+    // mirror to localStorage for offline fallback
+    try { localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan)); } catch(_) {}
+    setSaveStatus('saved', '☁️ Synced');
+    setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2000);
+  } catch(e) {
+    // Fallback to localStorage
+    try {
+      const local = localStorage.getItem(ACCUM_KEY);
+      accumPlan = local ? JSON.parse(local) : [];
+    } catch(_) { accumPlan = []; }
+    setSaveStatus('error', '✗ Cloud error – using local');
+    setTimeout(() => setSaveStatus('ready', '✓ Ready'), 3000);
+  }
+}
+
 // ─── State ──────────────────────────────────────────────────────────────────
 let portfolioCoins = [];   // loaded from portfolio localStorage
 let accumPlan = [];        // [{sym, name, logoUrl, cgId, targetQty, addedAt}]
@@ -415,10 +513,10 @@ function setView(v) {
 }
 
 // ─── Init ────────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   loadTheme();
   loadPortfolio();
-  loadAccumPlan();
+  await cloudLoad();
   setView(currentView);
   renderDashboard();
 });
@@ -479,7 +577,9 @@ function getPortfolioCoin(sym) {
 }
 
 // ─── Load / Save Accumulation Plan ──────────────────────────────────────────
+// cloudLoad() is used on init instead of loadAccumPlan()
 function loadAccumPlan() {
+  // kept for compatibility — cloudLoad() is called on init
   try {
     const saved = localStorage.getItem(ACCUM_KEY);
     accumPlan = saved ? JSON.parse(saved) : [];
@@ -487,19 +587,9 @@ function loadAccumPlan() {
 }
 
 function saveAccumPlan(immediate = false) {
-  const doSave = () => {
-    try {
-      localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan));
-      setSaveStatus('saved', '✓ Saved');
-      setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2000);
-    } catch(e) {
-      setSaveStatus('error', '✗ Save failed');
-    }
-  };
-  if (immediate) { doSave(); return; }
-  setSaveStatus('saving', '⏳ Saving…');
+  if (immediate) { cloudSave(); return; }
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(doSave, 600);
+  saveTimer = setTimeout(() => cloudSave(), 800);
 }
 
 function setSaveStatus(type, text) {
