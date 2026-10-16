@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>محفظة سمسم - Golden Triangle 2030</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="سمسم BTC">
+<meta name="theme-color" content="#0a0e1a">
+
+<!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
+<link rel="icon" type="image/jpeg" href="./icon.jpg">
+
+<!-- Apple Touch Icon (PNG via canvas — 180x180) -->
+<link rel="apple-touch-icon" href="./icon.jpg">
+
+<!-- PWA Manifest inline -->
+<link rel="manifest" href="./manifest.json">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
+
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg2: #111827;
+    --bg3: #1a2235;
+    --border: #1e2d45;
+    --fg: #e2e8f0;
+    --fg2: #94a3b8;
+    --accent: #f59e0b;
+    --accent2: #fbbf24;
+    --green: #10b981;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --btc: #f7931a;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f0f4f8;
+      --bg2: #ffffff;
+      --bg3: #e8edf5;
+      --border: #cbd5e1;
+      --fg: #1e293b;
+      --fg2: #64748b;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f0f4f8;
+    --bg2: #ffffff;
+    --bg3: #e8edf5;
+    --border: #cbd5e1;
+    --fg: #1e293b;
+    --fg2: #64748b;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Cairo', 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  header {
+    background: linear-gradient(135deg, #0a0e1a 0%, #1a1040 50%, #0a2040 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .header-top {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .btc-icon {
+    width: 40px; height: 40px;
+    background: radial-gradient(circle, #f7931a, #e8821a);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 0 15px rgba(247,147,26,0.4);
+    flex-shrink: 0;
+  }
+
+  .title-group h1 {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1.2;
+  }
+
+  .title-group p {
+    font-size: 0.75rem;
+    color: var(--fg2);
+  }
+
+  .header-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .stat-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .stat-label { font-size: 0.68rem; color: var(--fg2); margin-bottom: 2px; }
+  .stat-value { font-size: 0.95rem; font-weight: 700; word-break: break-all; }
+  .stat-btc { color: var(--btc); }
+  .stat-green { color: var(--green); }
+  .stat-blue { color: var(--blue); }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0;
+  }
+
+  .control-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .btn {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    text-align: center;
+    flex: 1;
+  }
+
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-secondary { background: var(--bg3); color: var(--fg); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-danger { background: var(--red); color: #fff; }
+
+  .search-box {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 0.85rem;
+  }
+
+  .search-box:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+  /* Mobile-first Stacked Card View for Portfolio Items */
+  .coins-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .coin-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .coin-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .coin-card-body {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    background: var(--bg3);
+    padding: 8px;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .coin-metric label {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--fg2);
+    margin-bottom: 2px;
+  }
+
+  .coin-metric val {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--fg);
+  }
+
+  .coin-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    gap: 8px;
+  }
+
+  .editable-input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 0.82rem;
+    text-align: center;
+    padding: 4px 6px;
+    border-radius: 6px;
+    width: 100%;
+  }
+  .editable-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+  /* Desktop Table Wrapper fallback for large screens */
+  .table-wrapper {
+    display: none;
+  }
+  @media(min-width: 900px) {
+    .table-wrapper { display: block; overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
+    .coins-stack { display: none; }
+    body { padding: 20px; max-width: 1400px; margin: 0 auto; }
+    .header-top { flex-direction: row; justify-content: space-between; align-items: center; }
+    .header-stats { display: flex; gap: 12px; grid-template-columns: none; }
+    .controls { flex-direction: row; flex-wrap: wrap; align-items: center; }
+    .control-row { width: auto; flex: 1; }
+    .search-box { flex: 1; min-width: 200px; }
+    .btn { flex: unset; }
+  }
+
+  .perf-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .perf-up { background: rgba(16,185,129,0.15); color: var(--green); }
+  .perf-down { background: rgba(239,68,68,0.15); color: var(--red); }
+  .perf-neutral { background: rgba(148,163,184,0.15); color: var(--fg2); }
+
+  .action-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .action-convert { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .action-hold { background: rgba(148,163,184,0.1); color: var(--fg2); border: 1px solid var(--border); }
+  .action-reinforce { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin: 12px 0;
+  }
+  @media(min-width: 600px) {
+    .summary-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .summary-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+  }
+  .summary-card .label { font-size: 0.7rem; color: var(--fg2); margin-bottom: 4px; }
+  .summary-card .value { font-size: 1rem; font-weight: 700; }
+
+  .dashboard-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 12px 0;
+  }
+  @media (min-width: 900px) {
+    .dashboard-section { flex-direction: row; }
+    .dash-card { flex: 1; }
+  }
+
+  .dash-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+  }
+  .dash-card h3 { font-size: 0.75rem; color: var(--fg2); margin-bottom: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+  .dash-card .donut-wrap, .dash-card .pnl-rows { flex: 1; }
+
+  .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 160px; }
+  .legend-item { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+  .legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { color: var(--fg2); flex: 1; }
+  .legend-val { color: var(--fg); font-weight: 700; font-size: 0.9rem; }
+
+  .pnl-rows { display: flex; flex-direction: column; gap: 6px; }
+  .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg3); font-size: 0.82rem; }
+  .pnl-label { color: var(--fg2); }
+  .pnl-val { font-weight: 700; }
+  .pnl-positive { color: var(--green); }
+  .pnl-negative { color: var(--red); }
+  .pnl-total { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
+
+  .dream-bar {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .dream-bar h3 { font-size: 0.8rem; color: var(--fg2); margin-bottom: 8px; }
+  .progress-track { background: var(--bg3); border-radius: 100px; height: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--btc), var(--accent)); transition: width 0.5s ease; }
+  .progress-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.72rem; }
+
+  .date-tag {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    color: var(--fg2);
+    text-align: center;
+  }
+
+  .live-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(245,158,11,0.06);
+    border: 1px solid rgba(245,158,11,0.15);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    font-size: 0.75rem;
+    color: var(--fg2);
+  }
+
+  #liveIndicator { display: flex; align-items: center; gap: 6px; flex: 1; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg2); flex-shrink: 0; }
+  .live-dot.ok { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .live-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
+  .live-dot.error { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .btn-live {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 20px; max-width: 420px; width: 100%; }
+  .modal h2 { margin-bottom: 12px; font-size: 1rem; }
+  .form-row { margin-bottom: 10px; }
+  .form-label { display: block; font-size: 0.75rem; color: var(--fg2); margin-bottom: 4px; }
+  .form-input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font-size: 0.85rem; }
+
+  .btn-buy-more { background:#16a34a; color:#fff; border:none; border-radius:4px; padding:2px 7px; font-size:0.7rem; cursor:pointer; white-space:nowrap; line-height:1.6; }
+  .btn-buy-more:hover { background:#15803d; }
+  .btn-sell { background:#dc2626; color:#fff; border:none; border-radius:4px; padding:2px 7px; font-size:0.7rem; cursor:pointer; white-space:nowrap; line-height:1.6; }
+  .btn-sell:hover { background:#b91c1c; }
+  .buy-preview { background:var(--bg3); border-radius:8px; padding:10px 12px; font-size:0.82rem; margin-top:10px; line-height:1.7; }
+  .buy-preview span { font-weight:700; color:var(--accent); }
+  .sell-profit { color:#22c55e; font-weight:700; }
+  .sell-loss   { color:#ef4444; font-weight:700; }
+  .btn-remove { background:transparent; color:#6b7280; border:1px solid #4b5563; border-radius:4px; padding:2px 6px; font-size:0.7rem; cursor:pointer; line-height:1.6; }
+  .btn-remove:hover { background:#ef4444; color:#fff; border-color:#ef4444; }
+
+  footer { text-align: center; padding: 16px 0 8px; font-size: 0.7rem; color: var(--fg2); border-top: 1px solid var(--border); margin-top: 12px; }
+
+  table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+  thead { background: linear-gradient(135deg, #1a2235, #0f172a); position: sticky; top: 0; z-index: 2; }
+  th { padding: 12px; font-size: 0.75rem; color: var(--fg2); text-align: center; border-bottom: 2px solid var(--border); cursor: pointer; }
+  td { padding: 10px 12px; font-size: 0.85rem; text-align: center; border-bottom: 1px solid rgba(30,45,69,0.5); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="logo-area">
+      <div class="btc-icon">₿</div>
+      <div class="title-group">
+        <h1>Samsam Portfolio 🎯</h1>
+        <p>Accumulation Tracker → 1 BTC · Golden Triangle 2030</p>
+      </div>
+    </div>
+    <div class="date-tag" id="currentDate">📅 Oct 15, 2026</div>
+  </div>
+
+  <div class="header-stats">
+    <div class="stat-card">
+      <div class="stat-label">BTC Accumulated</div>
+      <div class="stat-value stat-btc" id="totalBtc">0.01304141</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total USD</div>
+      <div class="stat-value stat-green" id="totalUsd">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Altcoins USD</div>
+      <div class="stat-value stat-blue" id="altUsd">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">BTC Price</div>
+      <div class="stat-value stat-btc" id="btcPriceDisplay">$81,162</div>
+    </div>
+  </div>
+</header>
+
+<div class="dream-bar">
+  <h3>🎯 Dream: 1 BTC — Current Progress</h3>
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill" style="width:1.304%"></div>
+  </div>
+  <div class="progress-labels">
+    <span style="color:var(--btc)" id="progressPct">1.304% مكتمل</span>
+    <span style="color:var(--fg2)">Target: 1.00000000 BTC ₿</span>
+  </div>
+</div>
+
+<div class="live-bar">
+  <div id="liveIndicator"><span class="live-dot"></span> Loading…</div>
+  <button class="btn-live" id="refreshBtn" onclick="refreshPrices()">🔄 Refresh</button>
+</div>
+
+<div class="controls">
+  <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin...">
+  <div class="control-row">
+    <button class="btn btn-primary" onclick="openUpdateModal()">📝 Update</button>
+    <button class="btn btn-primary" onclick="openAddCoin()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">➕ Add Coin</button>
+    <button class="btn btn-secondary" onclick="exportData()">💾 CSV</button>
+    <button class="btn btn-secondary" onclick="toggleTheme()">🌙 Theme</button>
+  </div>
+  <div class="control-row">
+    <select class="btn btn-secondary" id="filterAction" onchange="renderTableAndStack()" style="cursor:pointer; flex:2;">
+      <option value="">All Coins</option>
+      <option value="convert">🔴 Convert to BTC</option>
+      <option value="hold">⚪ Hold</option>
+      <option value="reinforce">🟢 Reinforce</option>
+    </select>
+    <button class="btn btn-secondary" onclick="resetApp()" style="color:var(--red);border-color:var(--red);flex:1;">🔄 Reset</button>
+  </div>
+</div>
+
+<div class="summary-grid" id="summaryGrid"></div>
+
+<div class="dashboard-section">
+  <div class="dash-card">
+    <h3>📊 Allocation</h3>
+    <div class="donut-wrap">
+      <svg class="donut-svg" width="200" height="200" viewBox="0 0 140 140" id="donutChart"></svg>
+      <div class="donut-legend" id="donutLegend"></div>
+    </div>
+  </div>
+  <div class="dash-card">
+    <h3>💰 Profit / Loss</h3>
+    <div class="pnl-rows" id="pnlRows"></div>
+  </div>
+</div>
+
+<!-- Mobile Vertical Card Stack View -->
+<div class="coins-stack" id="coinsStack"></div>
+
+<!-- Desktop Table View Fallback -->
+<div class="table-wrapper">
+  <table id="portfolioTable">
+    <thead>
+      <tr>
+        <th onclick="sortTable('rank')">#</th>
+        <th onclick="sortTable('name')" style="text-align:left">Coin</th>
+        <th onclick="sortTable('qty')">Qty</th>
+        <th onclick="sortTable('basePrice')">Base Price</th>
+        <th onclick="sortTable('currentPrice')">Current Price</th>
+        <th onclick="sortTable('baseValue')">Cost Basis</th>
+        <th onclick="sortTable('currentValue')">Current Value</th>
+        <th onclick="sortTable('pnl')">P&L</th>
+        <th onclick="sortTable('perf')">Perf vs BTC</th>
+        <th onclick="sortTable('action')">Signal</th>
+        <th>Notes</th>
+        <th>Add</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<!-- Update Modal -->
+<div class="modal-overlay" id="updateModal">
+  <div class="modal">
+    <h2>📊 Daily Price Update</h2>
+    <div class="form-row">
+      <label class="form-label">BTC Current Price (USD)</label>
+      <input type="number" class="form-input" id="modalBtcPrice" placeholder="81162">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Date</label>
+      <input type="date" class="form-input" id="modalDate">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-primary" onclick="applyUpdate()">✅ Apply</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="buyMoreModal">
+  <div class="modal">
+    <h2>➕ Buy More — <span id="bmSym" style="color:var(--accent)"></span></h2>
+    <div class="form-row">
+      <label class="form-label">New Quantity to Add</label>
+      <input type="number" class="form-input" id="bmQty" placeholder="0.00" step="any" oninput="previewBuy()">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Buy Price (USD)</label>
+      <input type="number" class="form-input" id="bmPrice" placeholder="0.00" step="any" oninput="previewBuy()">
+    </div>
+    <div class="buy-preview" id="bmPreview" style="display:none">
+      <div>Old: <span id="bmOldQty"></span> @ $<span id="bmOldPrice"></span></div>
+      <div>New: <span id="bmNewQtyAdd"></span> @ $<span id="bmBuyPrice"></span></div>
+      <div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">
+        Total Qty: <span id="bmTotalQty"></span><br>
+        New Avg Cost: <span>$<span id="bmAvgCost"></span></span><br>
+        New Cost Basis: <span>$<span id="bmCostBasis"></span></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-primary" onclick="applyBuyMore()">✅ Confirm Buy</button>
+      <button class="btn btn-secondary" onclick="closeBuyMore()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sellModal">
+  <div class="modal">
+    <h2>🔴 Sell — <span id="smSym" style="color:#ef4444"></span></h2>
+    <div class="form-row">
+      <label class="form-label">Available Balance: <strong id="smBalance" style="color:var(--accent)"></strong></label>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Quantity to Sell</label>
+      <input type="number" class="form-input" id="smQty" placeholder="0.00" step="any" oninput="previewSell()">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Sell Price (USD)</label>
+      <input type="number" class="form-input" id="smPrice" placeholder="0.00" step="any" oninput="previewSell()">
+    </div>
+    <div class="buy-preview" id="smPreview" style="display:none">
+      <div>Sell Qty: <span id="smSellQty"></span> × $<span id="smSellPrice"></span></div>
+      <div>Sell Value: <span>$<span id="smSellValue"></span></span></div>
+      <div>Avg Cost Basis: <span>$<span id="smCostBasis"></span></span></div>
+      <div id="smPnlRow" style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">
+        Realized P&L: <span id="smPnl"></span><br>
+        Remaining Qty: <span id="smRemQty"></span>
+      </div>
+      <div id="smErrRow" style="color:#ef4444;font-weight:600;display:none">⚠️ <span id="smErr"></span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-primary" id="smConfirmBtn" onclick="applySell()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">✅ Confirm Sell</button>
+      <button class="btn btn-secondary" onclick="closeSell()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addCoinModal">
+  <div class="modal" style="max-width:440px">
+    <h2 style="color:#a78bfa">➕ Add New Coin</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Symbol <span style="color:#ef4444">*</span></label>
+        <input type="text" class="form-input" id="acSym" placeholder="e.g. XRP" oninput="this.value=this.value.toUpperCase().trim()">
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Full Name</label>
+        <input type="text" class="form-input" id="acName" placeholder="e.g. Ripple">
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Quantity <span style="color:#ef4444">*</span></label>
+        <input type="number" class="form-input" id="acQty" placeholder="0.00" step="any" oninput="previewAddCoin()">
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Avg Buy Price (USD) <span style="color:#ef4444">*</span></label>
+        <input type="number" class="form-input" id="acPrice" placeholder="0.00" step="any" oninput="previewAddCoin()">
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="acCat">
+          <option value="layer1">Layer 1</option>
+          <option value="layer2">Layer 2</option>
+          <option value="defi">DeFi</option>
+          <option value="ai">AI & Web3</option>
+          <option value="infra">Infrastructure</option>
+          <option value="meme">Meme</option>
+          <option value="btc">Bitcoin</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-row" style="margin:0">
+        <label class="form-label">CoinGecko ID <span style="color:var(--fg2);font-weight:400">(optional)</span></label>
+        <input type="text" class="form-input" id="acCgId" placeholder="e.g. ripple">
+      </div>
+    </div>
+    <div class="buy-preview" id="acPreview" style="display:none;margin-top:12px">
+      Cost Basis: <span>$<span id="acCostBasis"></span></span>
+    </div>
+    <div id="acError" style="color:#ef4444;font-size:0.8rem;margin-top:8px;display:none"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-primary" onclick="applyAddCoin()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">➕ Add to Portfolio</button>
+      <button class="btn btn-secondary" onclick="closeAddCoin()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="removeModal">
+  <div class="modal" style="max-width:360px">
+    <h2 style="color:#ef4444">✕ Remove Coin</h2>
+    <p style="font-size:0.88rem;margin:10px 0 6px">Remove <strong id="rmSym" style="color:var(--accent)"></strong> from your active portfolio?</p>
+    <p style="font-size:0.78rem;color:var(--fg2);line-height:1.5">The coin will be hidden from your portfolio view. All historical buy/sell records are preserved and the coin can be restored later.</p>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" onclick="confirmRemove()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">✕ Remove</button>
+      <button class="btn btn-secondary" onclick="closeRemove()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>🔒 Local storage | Baseline: Oct 15, 2026</p>
+  <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
+</footer>
+
+<!-- JS from here -->
+<script>
+const COIN_COLORS = {
+  BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
+  ICP:'#29abe2', AVAX:'#e84142', LINK:'#2a5ada', HBAR:'#222222',
+  ATOM:'#2e3148', SEI:'#c4342d', APT:'#00c8a5', KSM:'#e6007a',
+  ARB:'#1b4add', MOVR:'#53cbc9', GLMR:'#e1147b', MNT:'#000',
+  FLR: 'https://assets.coingecko.com/coins/images/28624/standard/FLR-icon200x200.png?1696527609', KAS:'#49eacb', POL:'#8247e5', XPL:'#3b82f6',
+  VTHO: 'https://assets.coingecko.com/coins/images/5230/standard/VTHO_Circle_Crop__Reference_.png?1751980206', VET:'#15bdff', DOGE:'#c2a633', ENS:'#5284ff',
+  ONDO:'#3b82f6', STRK:'#ff4f00', NIGHT:'#1a1a2e', MON:'#8b5cf6',
+  CRO:'#002d74', XDC:'#f9a825', KAVA:'#ff564f', GRAM:'#0088cc',
+  PONS: 'https://assets.coingecko.com/coins/images/102174571/standard/jhitvkisdq8fhxvimdkpcw7y3dx5.?1784093932', AVAIL:'#4f46e5', PYTH:'#6b4ede', JUP:'#a855f7',
+  RENDER:'#e74c3c', QNT:'#1a1a2e', OP:'#ff0420', WLD:'#191c1f',
+  DOT:'#e6007a', BNB:'#f3ba2f', ETH:'#627eea'
+};
+
+// CoinGecko image URLs (thumb size ~50px, works cross-origin)
+const COIN_ICONS = {
+  BTC: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+  ETH: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+  SOL: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+  BNB: 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png',
+  NEAR:'https://assets.coingecko.com/coins/images/10365/large/near.jpg',
+  TAO: 'https://assets.coingecko.com/coins/images/28452/large/ARUsPeNQ_400x400.jpeg',
+  ICP: 'https://assets.coingecko.com/coins/images/14495/large/Internet_Computer_logo.png',
+  AVAX:'https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png',
+  LINK:'https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png',
+  HBAR:'https://assets.coingecko.com/coins/images/3688/large/hbar.png',
+  ATOM:'https://assets.coingecko.com/coins/images/1481/large/cosmos_hub.png',
+  SEI: 'https://assets.coingecko.com/coins/images/28205/large/Sei_Logo_-_Transparent.png',
+  APT: 'https://assets.coingecko.com/coins/images/26455/large/aptos_round.png',
+  SUI: 'https://assets.coingecko.com/coins/images/26375/large/sui_asset.jpeg',
+  KSM: 'https://assets.coingecko.com/coins/images/9568/large/m4zRhP5e_400x400.jpg',
+  ARB: 'https://assets.coingecko.com/coins/images/16547/large/photo_2023-03-29_21.47.00.jpeg',
+  MOVR:'https://assets.coingecko.com/coins/images/17984/large/9285.png',
+  GLMR:'https://assets.coingecko.com/coins/images/22459/large/glmr.png',
+  OP: 'https://assets.coingecko.com/coins/images/25244/standard/Token.png?1774456081',
+  WLD: 'https://assets.coingecko.com/coins/images/31069/large/worldcoin.jpeg',
+  PYTH: 'https://assets.coingecko.com/coins/images/31924/standard/pyth.png?1701245725',
+  JUP: 'https://assets.coingecko.com/coins/images/34188/large/jup.png',
+  RENDER:'https://assets.coingecko.com/coins/images/11636/large/rndr.png',
+  QNT: 'https://assets.coingecko.com/coins/images/3370/large/5ZOu7brX_400x400.jpg',
+  DOGE:'https://assets.coingecko.com/coins/images/5/large/dogecoin.png',
+  ENS: 'https://assets.coingecko.com/coins/images/19785/large/acatxTm8_400x400.jpg',
+  STRK:'https://assets.coingecko.com/coins/images/26433/large/starknet.png',
+  ONDO:'https://assets.coingecko.com/coins/images/26580/large/ONDO.png',
+  AVAIL: 'https://assets.coingecko.com/coins/images/37372/standard/avail-logo-200-200.png?1761925657',
+  KAVA:'https://assets.coingecko.com/coins/images/9761/large/kava.png',
+  MNT: 'https://assets.coingecko.com/coins/images/30980/standard/MNT_Token_Logo.png?1765516974',
+  FLR: 'https://assets.coingecko.com/coins/images/28624/standard/FLR-icon200x200.png?1696527609',
+  KAS: 'https://assets.coingecko.com/coins/images/25751/large/kaspa-icon-exchanges.png',
+  POL: 'https://assets.coingecko.com/coins/images/32440/standard/pol.png?1759114181',
+  VET: 'https://assets.coingecko.com/coins/images/1167/standard/VET.png?1742383283',
+  VTHO:'https://assets.coingecko.com/coins/images/5230/standard/VTHO_Circle_Crop__Reference_.png?1751980206',
+  CRO: 'https://assets.coingecko.com/coins/images/7310/large/cro_token_logo.png',
+  XDC: 'https://assets.coingecko.com/coins/images/2912/large/xdc-icon.png',
+  DOT: 'https://assets.coingecko.com/coins/images/12171/large/polkadot.png',
+  GRAM:'https://assets.coingecko.com/coins/images/17980/large/ton_symbol.png',
+  MON: 'https://assets.coingecko.com/coins/images/38927/standard/mon.png?1766029057',
+  NIGHT:'https://s2.coinmarketcap.com/static/img/coins/200x200/39064.png',
+  XPL: 'https://assets.coingecko.com/coins/images/66489/standard/Plasma-symbol-green-1.png?1755142558',
+  PONS:'https://assets.coingecko.com/coins/images/102174571/standard/jhitvkisdq8fhxvimdkpcw7y3dx5.?1784093932',
+};
+function getCoinIcon(sym, size=36) {
+  // Check coin object for saved logoUrl (manually added coins)
+  const coin = portfolio.find(c => c.sym === sym);
+  const url = (coin && coin.logoUrl) || COIN_ICONS[sym];
+  if (url) {
+    return `<img src="${url}" width="${size}" height="${size}" data-sym="${sym}" data-size="${size}" style="border-radius:50%;flex-shrink:0;object-fit:cover" onerror="coinImgErr(this)">`;
+  }
+  return coinFallback(sym, size);
+}
+function coinFallback(sym, size) {
+  const color = COIN_COLORS[sym] || '#6b7280';
+  const letter = sym.slice(0,3);
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.32)}px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-1px">${letter}</div>`;
+}
+function coinImgErr(el) {
+  const sym = el.getAttribute('data-sym');
+  const size = parseInt(el.getAttribute('data-size')) || 32;
+  el.outerHTML = coinFallback(sym, size);
+}
+const COIN_NAMES = {
+  BTC:'Bitcoin', SOL:'Solana', NEAR:'NEAR Protocol', TAO:'Bittensor',
+  ICP:'Internet Computer', AVAX:'Avalanche', LINK:'Chainlink', HBAR:'Hedera',
+  ATOM:'Cosmos', SEI:'Sei Network', APT:'Aptos', KSM:'Kusama',
+  ARB:'Arbitrum', MOVR:'Moonriver', GLMR:'Moonbeam', MNT:'Mantle',
+  FLR:'Flare', KAS:'Kaspa', POL:'Polygon', XPL:'Explorins',
+  VTHO:'VeThor', VET:'VeChain', DOGE:'Dogecoin', ENS:'ENS Domains',
+  ONDO:'Ondo Finance', STRK:'Starknet', NIGHT:'Midnight', MON:'Monad',
+  CRO:'Cronos', XDC:'XDC Network', KAVA:'Kava', GRAM:'Telegram TON',
+  PONS:'Pons', AVAIL:'Avail', PYTH:'Pyth Network', JUP:'Jupiter DEX',
+  RENDER:'Render', QNT:'Quant', OP:'Optimism', WLD:'Worldcoin',
+  DOT:'Polkadot', BNB:'BNB Chain', ETH:'Ethereum (All Networks)'
+};
+
+const BASE_PORTFOLIO = [
+  { sym:'BTC',     qty:0.01304,        basePrice:80980.29, walletValue:1056.09, cat:'btc' },
+  { sym:'TAO',     qty:1.0985,         basePrice:270.90,   walletValue:297.58,  cat:'ai' },
+  { sym:'SUI',     qty:251.50,         basePrice:1.0251,   walletValue:257.82,  cat:'layer1' },
+  { sym:'NEAR',    qty:60.15,          basePrice:4.745,    walletValue:285.49,  cat:'layer1' },
+  { sym:'SEI',     qty:4558.67,        basePrice:0.065,    walletValue:296.31,  cat:'layer1' },
+  { sym:'ATOM',    qty:160.12,         basePrice:1.721,    walletValue:275.64,  cat:'layer1' },
+  { sym:'APT',     qty:300.11,         basePrice:0.7965,   walletValue:239.04,  cat:'layer1' },
+  { sym:'AVAX',    qty:26.46,          basePrice:9.760,    walletValue:258.32,  cat:'layer1' },
+  { sym:'ICP',     qty:100.09,         basePrice:2.967,    walletValue:297.05,  cat:'layer1' },
+  { sym:'KSM',     qty:55.02,          basePrice:4.436,    walletValue:244.09,  cat:'layer1' },
+  { sym:'GRAM',    qty:175.61,         basePrice:1.350,    walletValue:237.14,  cat:'layer1' },
+  { sym:'NIGHT',   qty:5070.91,        basePrice:0.04333,  walletValue:219.72,  cat:'layer1' },
+  { sym:'BNB',     qty:0.007984,       basePrice:729.82,   walletValue:5.826,   cat:'layer1' },
+  { sym:'ARB',     qty:1357.31,        basePrice:0.1791,   walletValue:243.09,  cat:'layer2' },
+  { sym:'ETH',     qty:0.01536,        basePrice:2432.00,  walletValue:37.37,   cat:'layer1' },
+  { sym:'MOVR',    qty:174.83,         basePrice:1.374,    walletValue:240.27,  cat:'layer2' },
+  { sym:'GLMR',    qty:21170.56,       basePrice:0.0102,   walletValue:216.00,  cat:'layer2' },
+  { sym:'OP',      qty:1821.06,        basePrice:0.1344,   walletValue:244.93,  cat:'layer2' },
+  { sym:'WLD',     qty:468.38,         basePrice:0.4808,   walletValue:225.19,  cat:'ai' },
+  { sym:'SOL',     qty:2.546,          basePrice:104.58,   walletValue:266.30,  cat:'layer1' },
+  { sym:'PYTH',    qty:2716.54,        basePrice:0.08232,  walletValue:223.62,  cat:'infra' },
+  { sym:'JUP',     qty:741.31,         basePrice:0.3086,   walletValue:228.76,  cat:'defi' },
+  { sym:'RENDER',  qty:114.21,         basePrice:1.873,    walletValue:214.01,  cat:'ai' },
+  { sym:'QNT',     qty:1.194,          basePrice:205.15,   walletValue:244.96,  cat:'infra' },
+  { sym:'HBAR',    qty:3008.57,        basePrice:0.08415,  walletValue:253.20,  cat:'layer1' },
+  { sym:'DOGE',    qty:2769.22,        basePrice:0.0809,   walletValue:224.02,  cat:'meme' },
+  { sym:'MON',     qty:9997.75,        basePrice:0.02317,  walletValue:231.64,  cat:'layer1' },
+  { sym:'CRO',     qty:4026.12,        basePrice:0.05706,  walletValue:229.73,  cat:'layer1' },
+  { sym:'XDC',     qty:6782.04,        basePrice:0.03398,  walletValue:230.52,  cat:'layer1' },
+  { sym:'DOT',     qty:206.15,         basePrice:1.121,    walletValue:231.09,  cat:'layer1' },
+  { sym:'LINK',    qty:20.34,          basePrice:12.35,    walletValue:251.30,  cat:'defi' },
+  { sym:'ENS',     qty:40.11,          basePrice:5.660,    walletValue:227.09,  cat:'defi' },
+  { sym:'STRK',    qty:2925.91,        basePrice:0.07454,  walletValue:218.12,  cat:'layer2' },
+  { sym:'ONDO',    qty:486.78,         basePrice:0.4375,   walletValue:212.96,  cat:'defi' },
+  { sym:'AVAIL',   qty:84648.66,       basePrice:0.002647, walletValue:224.14,  cat:'infra' },
+  { sym:'KAVA',    qty:3038.55,        basePrice:0.06842,  walletValue:207.92,  cat:'defi' },
+  { sym:'PONS',    qty:754.08,         basePrice:0.2998,   walletValue:226.07,  cat:'defi' },
+  { sym:'MNT',     qty:452.20,         basePrice:0.5186,   walletValue:234.51,  cat:'layer2' },
+  { sym:'FLR',     qty:35446.22,       basePrice:0.00663,  walletValue:235.00,  cat:'infra' },
+  { sym:'KAS',     qty:6299.89,        basePrice:0.03635,  walletValue:229.00,  cat:'layer1' },
+  { sym:'POL',     qty:2414.1327,      basePrice:0.09521,  walletValue:229.84,  cat:'layer2' },
+  { sym:'XPL',     qty:2799.70,        basePrice:0.08056,  walletValue:225.57,  cat:'infra' },
+  { sym:'VTHO',    qty:332670.85,      basePrice:0.0006003,walletValue:199.70,  cat:'layer1' },
+  { sym:'VET',     qty:30476.08,       basePrice:0.006881, walletValue:209.73,  cat:'layer1' },
+];
+
+let portfolio = [];
+let archivedCoins = [];
+let btcPrice = 82363;
+let sortCol = 'currentValue';
+let sortDir = -1;
+let liveStatus = 'idle';
+let lastFetchTime = null;
+
+const COINGECKO_IDS = {
+  BTC:'bitcoin', ETH:'ethereum',
+  SOL:'solana', BNB:'binancecoin', TAO:'bittensor', SUI:'sui', NEAR:'near',
+  SEI:'sei-network', ATOM:'cosmos', APT:'aptos', AVAX:'avalanche-2',
+  ICP:'internet-computer', KSM:'kusama', GRAM:'the-open-network',
+  NIGHT:'midnight-3', ARB:'arbitrum', MOVR:'moonriver', GLMR:'moonbeam',
+  OP:'optimism', WLD:'worldcoin-wld', PYTH:'pyth-network',
+  JUP:'jupiter-exchange-solana', RENDER:'render-token', QNT:'quant-network',
+  HBAR:'hedera-hashgraph', DOGE:'dogecoin', MON:null,
+  CRO:'crypto-com-chain', XDC:'xdce-crowd-sale', DOT:'polkadot',
+  LINK:'chainlink', ENS:'ethereum-name-service', STRK:'starknet',
+  ONDO:'ondo-finance', AVAIL:'avail', KAVA:'kava', PONS:null,
+  MNT:'mantle', FLR:'flare-networks', KAS:'kaspa',
+  POL:'polygon-ecosystem-token', XPL:null, VTHO:'vethor-token', VET:'vechain',
+};
+
+const LIVE_PRICES_OCT15 = {
+  BTC:82363.28, ETH:2444.58,
+  SOL:105.81, BNB:718.42, TAO:276.21, SUI:0.8207, NEAR:5.252, SEI:0.06197,
+  ATOM:1.739, APT:0.8207, AVAX:9.964, ICP:3.074, KSM:4.488, GRAM:1.372,
+  ARB:0.1922, MOVR:1.399, GLMR:0.01038, OP:0.1413, WLD:0.5023,
+  PYTH:0.09368, JUP:0.3089, RENDER:1.996, QNT:209.46, HBAR:0.08369,
+  DOGE:0.08112, CRO:0.05825, XDC:0.03393, DOT:1.125, LINK:12.50,
+  ENS:5.733, STRK:0.09143, ONDO:0.4600, AVAIL:0.002632, KAVA:0.069,
+  MNT:0.5295, FLR:0.006713, KAS:0.03612, POL:0.09554, VTHO:0.0006441,
+  VET:0.00705, NIGHT:0.04419, MON:0.02344, PONS:0.3498, XPL:0.08513,
+};
+
+const STORAGE_KEY = 'samsam_pf_v4';
+const ARCHIVE_KEY = 'samsam_archived_v1'; // separate key — never cleared by Reset
+['samsam_portfolio','samsam_pf_v1','samsam_pf_v2','samsam_pf_v3'].forEach(k=>localStorage.removeItem(k));
+
+function loadArchive() {
+  try { archivedCoins = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); } catch(e) { archivedCoins = []; }
+}
+function saveArchive() {
+  try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archivedCoins)); } catch(e) {}
+}
+function getRemovedSyms() {
+  return new Set(archivedCoins.map(c => c.sym));
+}
+
+function initPortfolio() {
+  loadArchive(); // always load archive first — independent of main reset
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (!data.coins || data.coins.length === 0) { resetToBaseline(); return; }
+      // filter out any removed coins that may have been re-saved before fix
+      const removed = getRemovedSyms();
+      portfolio = data.coins.filter(c => !removed.has(c.sym));
+      btcPrice = data.btcPrice || 82363.28;
+    } else { resetToBaseline(); }
+  } catch(e) { resetToBaseline(); }
+}
+
+function resetToBaseline() {
+  const removed = getRemovedSyms(); // respect removals even during reset
+  portfolio = BASE_PORTFOLIO
+    .filter(c => !removed.has(c.sym))
+    .map(c => ({
+      ...c,
+      currentPrice: LIVE_PRICES_OCT15[c.sym] || c.basePrice,
+      notes: '', action: 'hold', lastUpdate: '2026-10-15'
+    }));
+  btcPrice = LIVE_PRICES_OCT15.BTC || 82363;
+}
+
+function savePortfolio() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, btcPrice, lastSave: new Date().toISOString() })); } catch(e) {}
+}
+
+function resetApp() {
+  localStorage.removeItem(STORAGE_KEY); // clears prices/qty/notes — NOT archive
+  resetToBaseline();                     // rebuilds from BASE minus removed coins
+  savePortfolio();
+  renderAll();
+}
+
+function calcStats() {
+  const btcEntry = portfolio.find(c => c.sym === 'BTC');
+  const btcQty = btcEntry ? btcEntry.qty : 0.01304141;
+  const altTotal = portfolio.filter(c => c.sym !== 'BTC').reduce((s,c) => s + c.qty * c.currentPrice, 0);
+  const btcValue = btcQty * btcPrice;
+  return { btcQty, btcValue, altTotal, total: btcValue + altTotal };
+}
+
+function getPerf(coin) {
+  const btcPerfPct = ((btcPrice / 81162) - 1) * 100;
+  const coinPerfPct = ((coin.currentPrice / coin.basePrice) - 1) * 100;
+  return coinPerfPct - btcPerfPct;
+}
+
+function getAction(sym, perf) {
+  if (sym === 'BTC') return 'hold';
+  if (perf < -20) return 'convert';
+  if (perf > 15) return 'reinforce';
+  return 'hold';
+}
+
+function fmt(n, dec) {
+  return parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+function renderHeader() {
+  const { btcQty, altTotal, total } = calcStats();
+  document.getElementById('totalBtc').textContent = btcQty.toFixed(8);
+  document.getElementById('totalUsd').textContent = '$' + total.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  document.getElementById('altUsd').textContent = '$' + altTotal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  document.getElementById('btcPriceDisplay').textContent = '$' + btcPrice.toLocaleString();
+  const pct = (btcQty * 100).toFixed(3);
+  document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
+  document.getElementById('progressPct').textContent = pct + '% complete';
+}
+
+function renderSummary() {
+  const cats = { layer1:'Layer 1', layer2:'Layer 2', defi:'DeFi', ai:'AI / Web3', meme:'Meme', other:'Other', btc:'Bitcoin' };
+  const catTotals = {};
+  portfolio.forEach(c => {
+    const cat = c.cat || 'other';
+    catTotals[cat] = (catTotals[cat] || 0) + c.qty * c.currentPrice;
+  });
+  const grid = document.getElementById('summaryGrid');
+  grid.innerHTML = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])
+    .map(([k,v]) => `<div class="summary-card">
+      <div class="label">${cats[k]||k}</div>
+      <div class="value">$${v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+    </div>`).join('');
+}
+
+function getFilteredSorted() {
+  const filter = document.getElementById('filterAction') ? document.getElementById('filterAction').value : '';
+  const search = document.getElementById('searchBox') ? document.getElementById('searchBox').value.toLowerCase() : '';
+  let rows = portfolio.filter(c => {
+    if (search && !c.sym.toLowerCase().includes(search) && !(COIN_NAMES[c.sym]||'').toLowerCase().includes(search)) return false;
+    if (filter) { const perf=getPerf(c); const action=getAction(c.sym,perf); if(action!==filter) return false; }
+    return true;
+  });
+  rows.sort((a,b) => {
+    let av, bv;
+    switch(sortCol) {
+      case 'qty': av=a.qty; bv=b.qty; break;
+      case 'basePrice': av=a.basePrice; bv=b.basePrice; break;
+      case 'currentPrice': av=a.currentPrice; bv=b.currentPrice; break;
+      case 'baseValue': av=a.qty*a.basePrice; bv=b.qty*b.basePrice; break;
+      case 'currentValue': av=a.qty*a.currentPrice; bv=b.qty*b.currentPrice; break;
+      case 'pnl': av=a.qty*(a.currentPrice-a.basePrice); bv=b.qty*(b.currentPrice-b.basePrice); break;
+      case 'perf': av=getPerf(a); bv=getPerf(b); break;
+      case 'name': av=a.sym; bv=b.sym; return sortDir*av.localeCompare(bv);
+      default: av=a.qty*a.currentPrice; bv=b.qty*b.currentPrice;
+    }
+    return sortDir*(bv-av);
+  });
+  return rows;
+}
+
+function renderTableAndStack() {
+  const rows = getFilteredSorted();
+
+  // Desktop table
+  const tbody = document.getElementById('tableBody');
+  if (tbody) {
+    let html = '';
+    rows.forEach((c,i) => {
+      const perf=getPerf(c); const action=getAction(c.sym,perf);
+      const baseVal=c.qty*c.basePrice; const curVal=c.qty*c.currentPrice;
+      const color=COIN_COLORS[c.sym]||'#6b7280';
+      const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
+      const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
+      const actionLabel=action==='convert'?'🔴 Convert→BTC':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';
+      const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
+      const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
+      html += `<tr>
+        <td style="color:var(--fg2);font-size:0.75rem">${i+1}</td>
+        <td style="text-align:left"><div style="display:flex;align-items:center;gap:8px">
+          ${getCoinIcon(c.sym,32)}
+          <div><div style="font-weight:700;font-size:0.85rem">${c.sym}</div><div style="font-size:0.72rem;color:var(--fg2)">${COIN_NAMES[c.sym]||''}</div></div>
+        </div></td>
+        <td><input type="number" class="editable-input" value="${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}" step="any" onchange="updateQty('${c.sym}',this.value)"></td>
+        <td><input type="number" class="editable-input" value="${c.basePrice}" step="any" onchange="updateBasePrice('${c.sym}',this.value)" style="color:var(--fg2)"></td>
+        <td><input type="number" class="editable-input" value="${c.currentPrice}" step="any" onchange="updatePrice('${c.sym}',this.value)"></td>
+        <td style="color:var(--fg2)">$${fmt(baseVal,2)}</td>
+        <td style="font-weight:700">$${fmt(curVal,2)}</td>
+        <td><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${pnlSign}$${Math.abs(pnl).toFixed(2)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
+        <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
+        <td><span class="action-badge action-${action}">${actionLabel}</span></td>
+        <td><input type="text" class="editable-input" value="${c.notes||''}" placeholder="Note..." onchange="updateNote('${c.sym}',this.value)" style="min-width:80px"></td>
+        <td style="text-align:center">
+          <div style="display:inline-flex;gap:3px;flex-wrap:wrap;justify-content:center">
+            <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
+            <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
+            <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove from portfolio">✕</button>
+          </div>
+        </td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+  }
+
+  // Mobile card stack
+  const stack = document.getElementById('coinsStack');
+  if (stack) {
+    stack.innerHTML = rows.map((c,i) => {
+      const perf=getPerf(c); const action=getAction(c.sym,perf);
+      const baseVal=c.qty*c.basePrice; const curVal=c.qty*c.currentPrice;
+      const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
+      const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
+      const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
+      const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
+      const actionLabel=action==='convert'?'🔴 Convert':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';
+      const color=COIN_COLORS[c.sym]||'#6b7280';
+      return `<div class="coin-card">
+        <div class="coin-card-header">
+          <div style="display:flex;align-items:center;gap:10px">
+            ${getCoinIcon(c.sym,36)}
+            <div>
+              <div style="font-weight:700;font-size:0.95rem">${c.sym}</div>
+              <div style="font-size:0.72rem;color:var(--fg2)">${COIN_NAMES[c.sym]||''}</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;font-size:1rem">$${fmt(curVal,2)}</div>
+            <div class="${pnlCls}" style="font-size:0.78rem">${pnlSign}$${Math.abs(pnl).toFixed(2)} (${pnlSign}${pnlPct.toFixed(1)}%)</div>
+          </div>
+        </div>
+        <div class="coin-card-body">
+          <div class="coin-metric"><label>Qty</label><val>${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}</val></div>
+          <div class="coin-metric"><label>Base</label><val>$${c.basePrice}</val></div>
+          <div class="coin-metric"><label>Current</label><val>$${c.currentPrice}</val></div>
+          <div class="coin-metric"><label>Cost Basis</label><val>$${fmt(baseVal,0)}</val></div>
+          <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
+          <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
+        </div>
+        <div class="coin-card-footer" style="color:var(--fg2);font-size:0.75rem">
+          <span>#${i+1}</span>
+          <span style="color:var(--fg2)">${c.lastUpdate||'Oct 15, 2026'}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function updatePrice(sym, val) {
+  const coin=portfolio.find(c=>c.sym===sym);
+  if(coin){coin.currentPrice=parseFloat(val)||coin.currentPrice;coin.lastUpdate=new Date().toISOString().slice(0,10);savePortfolio();renderAll();}
+}
+function updateNote(sym, val) {
+  const coin=portfolio.find(c=>c.sym===sym);
+  if(coin){coin.notes=val;savePortfolio();}
+}
+function updateQty(sym, val) {
+  const coin=portfolio.find(c=>c.sym===sym);
+  if(coin){const n=parseFloat(val);if(n>=0){coin.qty=n;savePortfolio();renderAll();}}
+}
+function updateBasePrice(sym, val) {
+  const coin=portfolio.find(c=>c.sym===sym);
+  if(coin){const n=parseFloat(val);if(n>0){coin.basePrice=n;savePortfolio();renderTableAndStack();renderDashboard();}}
+}
+
+// ── Buy More ──────────────────────────────────────────
+let _bmSym = null;
+function openBuyMore(sym) {
+  _bmSym = sym;
+  const coin = portfolio.find(c=>c.sym===sym);
+  if(!coin) return;
+  document.getElementById('bmSym').textContent = sym;
+  document.getElementById('bmQty').value = '';
+  document.getElementById('bmPrice').value = coin.currentPrice ? coin.currentPrice.toFixed(6) : '';
+  document.getElementById('bmPreview').style.display = 'none';
+  document.getElementById('buyMoreModal').classList.add('active');
+  document.getElementById('bmQty').focus();
+}
+function closeBuyMore() {
+  document.getElementById('buyMoreModal').classList.remove('active');
+  _bmSym = null;
+}
+function previewBuy() {
+  const coin = portfolio.find(c=>c.sym===_bmSym);
+  if(!coin) return;
+  const addQty   = parseFloat(document.getElementById('bmQty').value);
+  const buyPrice = parseFloat(document.getElementById('bmPrice').value);
+  if(!addQty || !buyPrice || addQty<=0 || buyPrice<=0) {
+    document.getElementById('bmPreview').style.display='none'; return;
+  }
+  const oldQty   = coin.qty;
+  const oldPrice = coin.basePrice;
+  const totalQty = oldQty + addQty;
+  const avgCost  = ((oldQty * oldPrice) + (addQty * buyPrice)) / totalQty;
+  const costBasis = totalQty * avgCost;
+  const fmtN = n => n<1 ? n.toFixed(6) : n<10 ? n.toFixed(4) : n.toFixed(2);
+  document.getElementById('bmOldQty').textContent   = fmtN(oldQty);
+  document.getElementById('bmOldPrice').textContent = oldPrice.toFixed(4);
+  document.getElementById('bmNewQtyAdd').textContent= fmtN(addQty);
+  document.getElementById('bmBuyPrice').textContent = buyPrice.toFixed(4);
+  document.getElementById('bmTotalQty').textContent = fmtN(totalQty);
+  document.getElementById('bmAvgCost').textContent  = avgCost.toFixed(6);
+  document.getElementById('bmCostBasis').textContent= costBasis.toFixed(2);
+  document.getElementById('bmPreview').style.display = 'block';
+}
+function applyBuyMore() {
+  const coin = portfolio.find(c=>c.sym===_bmSym);
+  if(!coin) return;
+  const addQty   = parseFloat(document.getElementById('bmQty').value);
+  const buyPrice = parseFloat(document.getElementById('bmPrice').value);
+  if(!addQty || !buyPrice || addQty<=0 || buyPrice<=0) { alert('Please enter valid quantity and price.'); return; }
+  const totalQty = coin.qty + addQty;
+  const avgCost  = ((coin.qty * coin.basePrice) + (addQty * buyPrice)) / totalQty;
+  coin.qty       = totalQty;
+  coin.basePrice = avgCost;
+  coin.walletValue = totalQty * avgCost;
+  savePortfolio();
+  renderAll();
+  closeBuyMore();
+}
+// close on overlay click
+document.getElementById('buyMoreModal').addEventListener('click', function(e){ if(e.target===this) closeBuyMore(); });
+
+// ── Sell ──────────────────────────────────────────────
+let _smSym = null;
+function openSell(sym) {
+  _smSym = sym;
+  const coin = portfolio.find(c=>c.sym===sym);
+  if(!coin) return;
+  const fmtN = n => n<1 ? n.toFixed(6) : n<10 ? n.toFixed(4) : n.toFixed(2);
+  document.getElementById('smSym').textContent = sym;
+  document.getElementById('smBalance').textContent = fmtN(coin.qty) + ' ' + sym;
+  document.getElementById('smQty').value = '';
+  document.getElementById('smPrice').value = coin.currentPrice ? coin.currentPrice.toFixed(6) : '';
+  document.getElementById('smPreview').style.display = 'none';
+  document.getElementById('smErrRow').style.display = 'none';
+  document.getElementById('smConfirmBtn').disabled = false;
+  document.getElementById('sellModal').classList.add('active');
+  document.getElementById('smQty').focus();
+}
+function closeSell() {
+  document.getElementById('sellModal').classList.remove('active');
+  _smSym = null;
+}
+function previewSell() {
+  const coin = portfolio.find(c=>c.sym===_smSym);
+  if(!coin) return;
+  const sellQty   = parseFloat(document.getElementById('smQty').value);
+  const sellPrice = parseFloat(document.getElementById('smPrice').value);
+  const fmtN = n => n<1 ? n.toFixed(6) : n<10 ? n.toFixed(4) : n.toFixed(2);
+  if(!sellQty || !sellPrice || sellQty<=0 || sellPrice<=0) {
+    document.getElementById('smPreview').style.display='none'; return;
+  }
+  document.getElementById('smPreview').style.display = 'block';
+  const sellValue = sellQty * sellPrice;
+  const costBasis = sellQty * coin.basePrice;
+  const pnl = sellValue - costBasis;
+  const remQty = coin.qty - sellQty;
+  // error: selling more than available
+  const isErr = sellQty > coin.qty;
+  document.getElementById('smSellQty').textContent   = fmtN(sellQty);
+  document.getElementById('smSellPrice').textContent = sellPrice.toFixed(4);
+  document.getElementById('smSellValue').textContent = sellValue.toFixed(2);
+  document.getElementById('smCostBasis').textContent = costBasis.toFixed(2);
+  document.getElementById('smPnlRow').style.display  = isErr ? 'none' : 'block';
+  document.getElementById('smErrRow').style.display  = isErr ? 'block' : 'none';
+  document.getElementById('smConfirmBtn').disabled   = isErr;
+  if(!isErr){
+    const pnlEl = document.getElementById('smPnl');
+    const sign = pnl>=0 ? '+' : '';
+    pnlEl.className = pnl>=0 ? 'sell-profit' : 'sell-loss';
+    pnlEl.textContent = sign + '$' + pnl.toFixed(2) + ' (' + sign + ((pnl/costBasis)*100).toFixed(1) + '%)';
+    document.getElementById('smRemQty').textContent = fmtN(remQty) + ' ' + _smSym;
+  } else {
+    document.getElementById('smErr').textContent = 'Cannot sell ' + fmtN(sellQty) + ' — balance is only ' + fmtN(coin.qty);
+  }
+}
+function applySell() {
+  const coin = portfolio.find(c=>c.sym===_smSym);
+  if(!coin) return;
+  const sellQty   = parseFloat(document.getElementById('smQty').value);
+  const sellPrice = parseFloat(document.getElementById('smPrice').value);
+  if(!sellQty || !sellPrice || sellQty<=0 || sellPrice<=0) return;
+  if(sellQty > coin.qty) { alert('⚠️ Cannot sell more than available balance!'); return; }
+  // avg cost unchanged — only qty reduces
+  coin.qty -= sellQty;
+  coin.walletValue = coin.qty * coin.basePrice;
+  savePortfolio();
+  renderAll();
+  closeSell();
+}
+document.getElementById('sellModal').addEventListener('click', function(e){ if(e.target===this) closeSell(); });
+
+// ── Remove Coin ───────────────────────────────────────
+let _rmSym = null;
+function removeCoin(sym) {
+  _rmSym = sym;
+  document.getElementById('rmSym').textContent = sym;
+  document.getElementById('removeModal').classList.add('active');
+}
+function closeRemove() {
+  document.getElementById('removeModal').classList.remove('active');
+  _rmSym = null;
+}
+function confirmRemove() {
+  if(!_rmSym) return;
+  const idx = portfolio.findIndex(c => c.sym === _rmSym);
+  if(idx === -1) { closeRemove(); return; }
+  // Archive with timestamp in SEPARATE key — survives Reset
+  const archived = { ...portfolio[idx], removedAt: new Date().toISOString() };
+  archivedCoins.push(archived);
+  saveArchive(); // independent of savePortfolio — never touched by resetApp
+  // Remove from active portfolio
+  portfolio.splice(idx, 1);
+  savePortfolio();
+  renderAll();
+  closeRemove();
+}
+document.getElementById('removeModal').addEventListener('click', function(e){ if(e.target===this) closeRemove(); });
+
+// ── Add New Coin ──────────────────────────────────────
+function openAddCoin() {
+  ['acSym','acName','acQty','acPrice','acCgId'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('acCat').value = 'layer1';
+  document.getElementById('acPreview').style.display = 'none';
+  document.getElementById('acError').style.display = 'none';
+  document.getElementById('addCoinModal').classList.add('active');
+  document.getElementById('acSym').focus();
+}
+function closeAddCoin() {
+  document.getElementById('addCoinModal').classList.remove('active');
+}
+function previewAddCoin() {
+  const qty   = parseFloat(document.getElementById('acQty').value);
+  const price = parseFloat(document.getElementById('acPrice').value);
+  if(qty > 0 && price > 0) {
+    document.getElementById('acCostBasis').textContent = (qty * price).toFixed(2);
+    document.getElementById('acPreview').style.display = 'block';
+  } else {
+    document.getElementById('acPreview').style.display = 'none';
+  }
+}
+function applyAddCoin() {
+  const sym   = document.getElementById('acSym').value.trim().toUpperCase();
+  const qty   = parseFloat(document.getElementById('acQty').value);
+  const price = parseFloat(document.getElementById('acPrice').value);
+  const errEl = document.getElementById('acError');
+  errEl.style.display = 'none';
+  // Validation
+  if(!sym)              { errEl.textContent='Symbol is required.'; errEl.style.display='block'; return; }
+  if(!qty || qty <= 0)  { errEl.textContent='Enter a valid quantity.'; errEl.style.display='block'; return; }
+  if(!price || price<=0){ errEl.textContent='Enter a valid buy price.'; errEl.style.display='block'; return; }
+  if(portfolio.find(c => c.sym === sym)) {
+    errEl.textContent = sym + ' already exists in your portfolio. Use "+ Buy" to add more.';
+    errEl.style.display = 'block'; return;
+  }
+  // Remove from archive if previously removed
+  const removedIdx = archivedCoins.findIndex(c => c.sym === sym);
+  if(removedIdx !== -1) archivedCoins.splice(removedIdx, 1);
+  saveArchive();
+  // Build new coin object
+  const cgId = document.getElementById('acCgId').value.trim().toLowerCase() || null;
+  const name = document.getElementById('acName').value.trim() || sym;
+  const cat  = document.getElementById('acCat').value;
+  const newCoin = {
+    sym, qty, basePrice: price, walletValue: qty * price, cat,
+    currentPrice: price, notes: '', action: 'hold',
+    lastUpdate: new Date().toISOString().slice(0,10),
+    cgId: cgId || undefined  // persist CoinGecko ID on the coin itself
+  };
+  // Register name
+  COIN_NAMES[sym] = name;
+  portfolio.push(newCoin);
+  savePortfolio();
+  renderAll();
+  closeAddCoin();
+  // If cgId given: fetch logo + live price
+  if(cgId) {
+    fetchCoinLogoAndPrice(newCoin, cgId);
+  }
+}
+
+async function fetchCoinLogoAndPrice(coin, cgId) {
+  // Fetch logo from CoinGecko /coins/{id}
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/coins/${cgId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`);
+    if(res.ok) {
+      const data = await res.json();
+      // Save logo URL on the coin object (persisted)
+      if(data.image && data.image.small) {
+        coin.logoUrl = data.image.small;
+      }
+      // Also update live price if available
+      if(data.market_data && data.market_data.current_price && data.market_data.current_price.usd) {
+        coin.currentPrice = data.market_data.current_price.usd;
+        coin.lastUpdate = new Date().toISOString().slice(0,10);
+      }
+      savePortfolio();
+      renderAll();
+    }
+  } catch(e) {
+    // Fallback: still fetch prices via simple/price endpoint
+    fetchLivePrices();
+  }
+}
+document.getElementById('addCoinModal').addEventListener('click', function(e){ if(e.target===this) closeAddCoin(); });
+
+function sortTable(col) {
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}
+  renderTableAndStack();
+}
+
+function openUpdateModal() {
+  document.getElementById('modalBtcPrice').value = btcPrice;
+  document.getElementById('modalDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('updateModal').classList.add('active');
+}
+function closeModal() { document.getElementById('updateModal').classList.remove('active'); }
+function applyUpdate() {
+  const newBtc=parseFloat(document.getElementById('modalBtcPrice').value);
+  if(newBtc>0)btcPrice=newBtc;
+  closeModal();savePortfolio();renderAll();
+}
+
+function exportData() {
+  const rows=[['Coin','Qty','Base Price','Current Price','Cost Basis','Current Value','P&L','P&L%','vs BTC','Signal']];
+  portfolio.forEach(c=>{
+    const perf=getPerf(c);const action=getAction(c.sym,perf);
+    const baseVal=c.qty*c.basePrice;const curVal=c.qty*c.currentPrice;const pnl=curVal-baseVal;
+    rows.push([c.sym,c.qty,c.basePrice,c.currentPrice,baseVal.toFixed(2),curVal.toFixed(2),pnl.toFixed(2),(baseVal>0?pnl/baseVal*100:0).toFixed(1)+'%',perf.toFixed(1)+'%',action]);
+  });
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='samsam-portfolio.csv';a.click();
+}
+
+function toggleTheme() {
+  const root=document.documentElement;
+  const current=root.getAttribute('data-theme')||'dark';
+  root.setAttribute('data-theme',current==='dark'?'light':'dark');
+}
+
+const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#f59e0b',meme:'#ef4444',infra:'#06b6d4',other:'#6b7280',btc:'#f7931a'};
+const CAT_LABELS={layer1:'Layer 1',layer2:'Layer 2',defi:'DeFi',ai:'AI & Web3',meme:'Meme',infra:'Infrastructure',other:'Other',btc:'Bitcoin'};
+
+function renderDashboard() {
+  const catTotals={btc:0};
+  portfolio.forEach(c=>{
+    const val=c.qty*c.currentPrice;
+    const cat=c.sym==='BTC'?'btc':(c.cat||'other');
+    catTotals[cat]=(catTotals[cat]||0)+val;
+  });
+  const totalVal=Object.values(catTotals).reduce((a,b)=>a+b,0);
+  const entries=Object.entries(catTotals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+
+  const cx=70,cy=70,r=54,inner=34;
+  let startAngle=-Math.PI/2,paths='';
+  entries.forEach(([cat,val])=>{
+    const angle=(val/totalVal)*Math.PI*2;const endAngle=startAngle+angle;
+    const x1=cx+r*Math.cos(startAngle),y1=cy+r*Math.sin(startAngle);
+    const x2=cx+r*Math.cos(endAngle),y2=cy+r*Math.sin(endAngle);
+    const ix1=cx+inner*Math.cos(startAngle),iy1=cy+inner*Math.sin(startAngle);
+    const ix2=cx+inner*Math.cos(endAngle),iy2=cy+inner*Math.sin(endAngle);
+    const large=angle>Math.PI?1:0;
+    paths+=`<path d="M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${inner},${inner} 0 ${large},0 ${ix1},${iy1} Z" fill="${CAT_COLORS[cat]||'#6b7280'}" opacity="0.9"/>`;
+    startAngle=endAngle;
+  });
+  const pct=totalVal>0?((catTotals.btc||0)/totalVal*100).toFixed(0):0;
+  document.getElementById('donutChart').innerHTML=paths+
+    `<text x="70" y="66" text-anchor="middle" font-size="18" font-weight="700" fill="var(--btc)">${pct}%</text>
+     <text x="70" y="82" text-anchor="middle" font-size="9" fill="var(--fg2)">BTC</text>`;
+  document.getElementById('donutLegend').innerHTML=entries.map(([cat,val])=>
+    `<div class="legend-item"><span class="legend-dot" style="background:${CAT_COLORS[cat]||'#6b7280'}"></span>
+     <span class="legend-label">${CAT_LABELS[cat]||cat}</span>
+     <span class="legend-val">$${val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</span></div>`
+  ).join('');
+
+  // P&L
+  let totalBase=0,totalCurrent=0;
+  const catPnl={};
+  portfolio.forEach(c=>{
+    const base=c.qty*c.basePrice,cur=c.qty*c.currentPrice;
+    totalBase+=base;totalCurrent+=cur;
+    const cat=c.sym==='BTC'?'btc':(c.cat||'other');
+    catPnl[cat]=catPnl[cat]||{base:0,cur:0};
+    catPnl[cat].base+=base;catPnl[cat].cur+=cur;
+  });
+  const totalPnl=totalCurrent-totalBase;
+  const totalPnlPct=totalBase>0?(totalPnl/totalBase*100):0;
+  const totalCls=totalPnl>=0?'pnl-positive':'pnl-negative';
+  const totalSign=totalPnl>=0?'+':'';
+
+  const pnlRowsHtml=Object.entries(catPnl).sort((a,b)=>(b[1].cur-b[1].base)-(a[1].cur-a[1].base)).map(([cat,{base,cur}])=>{
+    const pnl=cur-base,pnlPct=base>0?(pnl/base*100):0;
+    const cls=pnl>0?'pnl-positive':pnl<0?'pnl-negative':'';
+    const sign=pnl>=0?'+':'';
+    return `<div class="pnl-row">
+      <span class="pnl-label"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};margin-right:6px;vertical-align:middle"></span>${CAT_LABELS[cat]||cat}</span>
+      <span class="pnl-val ${cls}">${sign}$${Math.abs(pnl).toFixed(0)} (${sign}${pnlPct.toFixed(1)}%)</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('pnlRows').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:0.68rem;color:var(--fg2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Cost Basis</div>
+        <div style="font-size:0.95rem;font-weight:700">$${totalBase.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:0.68rem;color:var(--fg2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Current</div>
+        <div style="font-size:0.95rem;font-weight:700">$${totalCurrent.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+      </div>
+    </div>
+    <div class="pnl-row pnl-total" style="margin-bottom:10px">
+      <span class="pnl-label" style="font-weight:700;color:var(--accent)">📈 Unrealized P&L</span>
+      <div style="text-align:right">
+        <div class="pnl-val ${totalCls}" style="font-size:1.05rem">${totalSign}$${Math.abs(totalPnl).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+        <div class="${totalCls}" style="font-size:0.75rem;opacity:0.85">${totalSign}${totalPnlPct.toFixed(2)}%</div>
+      </div>
+    </div>
+    ${pnlRowsHtml}`;
+}
+
+async function fetchLivePrices() {
+  setLiveStatus('loading');
+  // Collect IDs from both the static map and per-coin cgId (manually added coins)
+  const idSet = new Set(Object.values(COINGECKO_IDS).filter(Boolean));
+  portfolio.forEach(c => { if(c.cgId) idSet.add(c.cgId); });
+  const ids = [...idSet];
+  const url=`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd`;
+  try {
+    const res=await fetch(url);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    portfolio.forEach(c=>{
+      // Use per-coin cgId first, fall back to static map
+      const cgId = c.cgId || COINGECKO_IDS[c.sym];
+      if(cgId&&data[cgId]&&data[cgId].usd){c.currentPrice=data[cgId].usd;c.lastUpdate=new Date().toISOString().slice(0,10);}
+    });
+    if(data['bitcoin']&&data['bitcoin'].usd)btcPrice=data['bitcoin'].usd;
+    lastFetchTime=new Date();
+    setLiveStatus('ok');
+    savePortfolio();renderAll();
+  } catch(e){setLiveStatus('error');updateLiveIndicator();}
+}
+
+function setLiveStatus(s){liveStatus=s;updateLiveIndicator();}
+function updateLiveIndicator(){
+  const el=document.getElementById('liveIndicator');if(!el)return;
+  if(liveStatus==='loading')el.innerHTML='<span class="live-dot loading"></span> Fetching live prices…';
+  else if(liveStatus==='ok'){const t=lastFetchTime?lastFetchTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'';el.innerHTML=`<span class="live-dot ok"></span> Live · Updated ${t}`;}
+  else if(liveStatus==='error')el.innerHTML='<span class="live-dot error"></span> Fetch failed — using saved prices';
+  else el.innerHTML='<span class="live-dot"></span> Prices from last session';
+}
+
+function refreshPrices(){
+  const btn=document.getElementById('refreshBtn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Fetching…';}
+  fetchLivePrices().finally(()=>{if(btn){btn.disabled=false;btn.textContent='🔄 Refresh';}});
+}
+
+function renderAll(){renderHeader();renderSummary();renderTableAndStack();renderDashboard();}
+
+document.getElementById('searchBox').addEventListener('input',renderTableAndStack);
+document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+' — Baseline: Oct 15, 2026';
+
+['samsam_portfolio','samsam_pf_v1','samsam_pf_v2'].forEach(k=>localStorage.removeItem(k));
+initPortfolio();
+renderAll();
+fetchLivePrices();
+</script>
+</body>
+</html>
