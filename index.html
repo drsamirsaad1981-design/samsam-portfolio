@@ -592,6 +592,11 @@
       <div class="stat-value stat-btc" id="btcPriceDisplay">$81,162</div>
       <div class="stat-sub" id="btcPriceSub">Live</div>
     </div>
+    <div class="stat-card" id="realizedCard" style="display:none">
+      <div class="stat-label">💰 Realized P&amp;L</div>
+      <div class="stat-value" id="realizedPnl">—</div>
+      <div class="stat-sub" id="realizedSub">from sells</div>
+    </div>
   </div>
 </header>
 
@@ -1125,6 +1130,49 @@ function recalcFromTx(sym) {
   return { qty, avgCost };
 }
 
+// ── Realized P&L ─────────────────────────────────────────────────────────────
+// Walk transactions chronologically per coin; track avg cost basis (FIFO-like).
+// Each sell contributes: (sellPrice - avgCostBasis) * qty
+function calcRealizedPnl() {
+  const syms = [...new Set(transactions.map(t => t.sym))];
+  let totalRealized = 0;
+  let sellCount = 0;
+  for(const sym of syms) {
+    const txs = getTxForSym(sym); // already sorted by date asc
+    let qty = 0, totalCost = 0;
+    for(const t of txs) {
+      if(t.type === 'buy') {
+        totalCost += t.qty * t.price;
+        qty += t.qty;
+      } else if(t.type === 'sell') {
+        const avgCost = qty > 0 ? totalCost / qty : 0;
+        const realized = (t.price - avgCost) * t.qty;
+        totalRealized += realized;
+        sellCount++;
+        // reduce cost basis proportionally
+        if(qty > 0) totalCost = totalCost * (1 - t.qty / qty);
+        qty = Math.max(0, qty - t.qty);
+      }
+    }
+  }
+  return { total: totalRealized, sellCount };
+}
+
+function updateRealizedCard() {
+  const card = document.getElementById('realizedCard');
+  const sells = transactions.filter(t => t.type === 'sell');
+  if(sells.length === 0) { if(card) card.style.display = 'none'; return; }
+  const { total, sellCount } = calcRealizedPnl();
+  const el = document.getElementById('realizedPnl');
+  const sub = document.getElementById('realizedSub');
+  if(!el || !sub) return;
+  const isPos = total >= 0;
+  el.textContent = (isPos ? '+' : '') + '$' + Math.abs(total).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  el.style.color = isPos ? 'var(--green)' : 'var(--red)';
+  sub.textContent = `${sellCount} sell${sellCount!==1?'s':''}`;
+  if(card) card.style.display = '';
+}
+
 function getCustomSyms() {
   return new Set(customCoins.map(c => c.sym));
 }
@@ -1248,6 +1296,9 @@ function renderHeader() {
   // Card 4: BTC Price
   document.getElementById('btcPriceDisplay').textContent = '$' + btcPrice.toLocaleString();
   document.getElementById('btcPriceSub').textContent = '🔴 Live';
+
+  // Card 5: Realized P&L (only shows if there are sells)
+  updateRealizedCard();
 
   const pct = (btcQty * 100).toFixed(3);
   document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
