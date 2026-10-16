@@ -922,6 +922,20 @@ function resetToBaseline() {
 
 function savePortfolio() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, btcPrice, lastSave: new Date().toISOString() })); } catch(e) {}
+  // Keep customCoins store in sync with current portfolio values (qty, basePrice, logoUrl)
+  // so Reset restores the LATEST values, not the original add values
+  let customChanged = false;
+  portfolio.forEach(c => {
+    const cc = customCoins.find(x => x.sym === c.sym);
+    if(cc) {
+      if(cc.qty !== c.qty || cc.basePrice !== c.basePrice || cc.logoUrl !== c.logoUrl) {
+        cc.qty = c.qty; cc.basePrice = c.basePrice; cc.walletValue = c.qty * c.basePrice;
+        if(c.logoUrl) cc.logoUrl = c.logoUrl;
+        customChanged = true;
+      }
+    }
+  });
+  if(customChanged) saveCustomCoins();
 }
 
 function resetApp() {
