@@ -300,12 +300,12 @@
 
   .summary-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
-    margin: 12px 0;
+    margin-top: 10px;
   }
-  @media(min-width: 600px) {
-    .summary-grid { grid-template-columns: repeat(3, 1fr); }
+  @media(max-width: 700px) {
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
   .summary-card {
@@ -516,6 +516,7 @@
       <option value="reinforce">🟢 Reinforce</option>
     </select>
   </div>
+  <div class="summary-grid" id="summaryGrid"></div>
 </div>
 
 <div class="dashboard-section">
@@ -531,8 +532,6 @@
     <div class="pnl-rows" id="pnlRows"></div>
   </div>
 </div>
-
-<div class="summary-grid" id="summaryGrid"></div>
 
 <!-- Mobile Vertical Card Stack View -->
 <div class="coins-stack" id="coinsStack"></div>
