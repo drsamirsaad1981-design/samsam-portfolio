@@ -403,6 +403,11 @@
   .form-label { display: block; font-size: 0.75rem; color: var(--fg2); margin-bottom: 4px; }
   .form-input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font-size: 0.85rem; }
 
+  .btn-buy-more { background: linear-gradient(135deg,#16a34a,#15803d); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:0.75rem; cursor:pointer; white-space:nowrap; }
+  .btn-buy-more:hover { opacity:0.85; }
+  .buy-preview { background:var(--bg3); border-radius:8px; padding:10px 12px; font-size:0.82rem; margin-top:10px; line-height:1.7; }
+  .buy-preview span { font-weight:700; color:var(--accent); }
+
   footer { text-align: center; padding: 16px 0 8px; font-size: 0.7rem; color: var(--fg2); border-top: 1px solid var(--border); margin-top: 12px; }
 
   table { width: 100%; border-collapse: collapse; min-width: 1000px; }
@@ -514,6 +519,7 @@
         <th onclick="sortTable('perf')">Perf vs BTC</th>
         <th onclick="sortTable('action')">Signal</th>
         <th>Notes</th>
+        <th>Add</th>
       </tr>
     </thead>
     <tbody id="tableBody"></tbody>
@@ -535,6 +541,33 @@
     <div style="display:flex;gap:8px;margin-top:14px;">
       <button class="btn btn-primary" onclick="applyUpdate()">✅ Apply</button>
       <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="buyMoreModal">
+  <div class="modal">
+    <h2>➕ Buy More — <span id="bmSym" style="color:var(--accent)"></span></h2>
+    <div class="form-row">
+      <label class="form-label">New Quantity to Add</label>
+      <input type="number" class="form-input" id="bmQty" placeholder="0.00" step="any" oninput="previewBuy()">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Buy Price (USD)</label>
+      <input type="number" class="form-input" id="bmPrice" placeholder="0.00" step="any" oninput="previewBuy()">
+    </div>
+    <div class="buy-preview" id="bmPreview" style="display:none">
+      <div>Old: <span id="bmOldQty"></span> @ $<span id="bmOldPrice"></span></div>
+      <div>New: <span id="bmNewQtyAdd"></span> @ $<span id="bmBuyPrice"></span></div>
+      <div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">
+        Total Qty: <span id="bmTotalQty"></span><br>
+        New Avg Cost: <span>$<span id="bmAvgCost"></span></span><br>
+        New Cost Basis: <span>$<span id="bmCostBasis"></span></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-primary" onclick="applyBuyMore()">✅ Confirm Buy</button>
+      <button class="btn btn-secondary" onclick="closeBuyMore()">Cancel</button>
     </div>
   </div>
 </div>
@@ -865,6 +898,7 @@ function renderTableAndStack() {
         <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
         <td><span class="action-badge action-${action}">${actionLabel}</span></td>
         <td><input type="text" class="editable-input" value="${c.notes||''}" placeholder="Note..." onchange="updateNote('${c.sym}',this.value)" style="min-width:80px"></td>
+        <td><button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">➕ Buy</button></td>
       </tr>`;
     });
     tbody.innerHTML = html;
@@ -929,6 +963,65 @@ function updateBasePrice(sym, val) {
   const coin=portfolio.find(c=>c.sym===sym);
   if(coin){const n=parseFloat(val);if(n>0){coin.basePrice=n;savePortfolio();renderTableAndStack();renderDashboard();}}
 }
+
+// ── Buy More ──────────────────────────────────────────
+let _bmSym = null;
+function openBuyMore(sym) {
+  _bmSym = sym;
+  const coin = portfolio.find(c=>c.sym===sym);
+  if(!coin) return;
+  document.getElementById('bmSym').textContent = sym;
+  document.getElementById('bmQty').value = '';
+  document.getElementById('bmPrice').value = coin.currentPrice ? coin.currentPrice.toFixed(6) : '';
+  document.getElementById('bmPreview').style.display = 'none';
+  document.getElementById('buyMoreModal').classList.add('active');
+  document.getElementById('bmQty').focus();
+}
+function closeBuyMore() {
+  document.getElementById('buyMoreModal').classList.remove('active');
+  _bmSym = null;
+}
+function previewBuy() {
+  const coin = portfolio.find(c=>c.sym===_bmSym);
+  if(!coin) return;
+  const addQty   = parseFloat(document.getElementById('bmQty').value);
+  const buyPrice = parseFloat(document.getElementById('bmPrice').value);
+  if(!addQty || !buyPrice || addQty<=0 || buyPrice<=0) {
+    document.getElementById('bmPreview').style.display='none'; return;
+  }
+  const oldQty   = coin.qty;
+  const oldPrice = coin.basePrice;
+  const totalQty = oldQty + addQty;
+  const avgCost  = ((oldQty * oldPrice) + (addQty * buyPrice)) / totalQty;
+  const costBasis = totalQty * avgCost;
+  const fmtN = n => n<1 ? n.toFixed(6) : n<10 ? n.toFixed(4) : n.toFixed(2);
+  document.getElementById('bmOldQty').textContent   = fmtN(oldQty);
+  document.getElementById('bmOldPrice').textContent = oldPrice.toFixed(4);
+  document.getElementById('bmNewQtyAdd').textContent= fmtN(addQty);
+  document.getElementById('bmBuyPrice').textContent = buyPrice.toFixed(4);
+  document.getElementById('bmTotalQty').textContent = fmtN(totalQty);
+  document.getElementById('bmAvgCost').textContent  = avgCost.toFixed(6);
+  document.getElementById('bmCostBasis').textContent= costBasis.toFixed(2);
+  document.getElementById('bmPreview').style.display = 'block';
+}
+function applyBuyMore() {
+  const coin = portfolio.find(c=>c.sym===_bmSym);
+  if(!coin) return;
+  const addQty   = parseFloat(document.getElementById('bmQty').value);
+  const buyPrice = parseFloat(document.getElementById('bmPrice').value);
+  if(!addQty || !buyPrice || addQty<=0 || buyPrice<=0) { alert('Please enter valid quantity and price.'); return; }
+  const totalQty = coin.qty + addQty;
+  const avgCost  = ((coin.qty * coin.basePrice) + (addQty * buyPrice)) / totalQty;
+  coin.qty       = totalQty;
+  coin.basePrice = avgCost;
+  coin.walletValue = totalQty * avgCost;
+  savePortfolio();
+  renderAll();
+  closeBuyMore();
+}
+// close on overlay click
+document.getElementById('buyMoreModal').addEventListener('click', function(e){ if(e.target===this) closeBuyMore(); });
+
 function sortTable(col) {
   if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}
   renderTableAndStack();
