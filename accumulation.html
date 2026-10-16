@@ -664,6 +664,8 @@ function renderTable() {
           value="${entry.targetQty || ''}"
           placeholder="Set target"
           oninput="updateTarget(${idx}, this.value)"
+          onblur="commitTarget(${idx}, this.value)"
+          onkeydown="if(event.key==='Enter'){this.blur()}"
           title="Edit target quantity">
       </td>
       <td>${fmtQty(r.actualQty)} <span style="font-size:.7rem;color:var(--fg2)">${entry.sym}</span></td>
@@ -758,7 +760,9 @@ function renderCards() {
         <input class="card-target-input" type="number" min="0" step="any"
           value="${entry.targetQty||''}"
           placeholder="Set target qty"
-          oninput="updateTarget(${idx}, this.value)">
+          oninput="updateTarget(${idx}, this.value)"
+          onblur="commitTarget(${idx}, this.value)"
+          onkeydown="if(event.key==='Enter'){this.blur()}">
         <span style="font-size:0.75rem;color:var(--fg2)">${entry.sym}</span>
       </div>
     </div>`;
@@ -804,7 +808,14 @@ function renderAll() {
 function updateTarget(idx, val) {
   const n = parseFloat(val);
   accumPlan[idx].targetQty = isNaN(n) || n < 0 ? 0 : n;
-  renderDashboard();
+  renderDashboard(); // update stats while typing (no re-render of table to keep focus)
+  saveAccumPlan();
+}
+
+function commitTarget(idx, val) {
+  const n = parseFloat(val);
+  accumPlan[idx].targetQty = isNaN(n) || n < 0 ? 0 : n;
+  renderAll(); // full re-render on blur/enter to update progress bars & cards
   saveAccumPlan();
 }
 
