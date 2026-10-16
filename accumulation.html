@@ -139,6 +139,10 @@ th {
   font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
   letter-spacing: .5px; color: var(--fg2); white-space: nowrap;
 }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--fg); }
+th.sort-asc::after  { content: ' ▲'; color: var(--accent); }
+th.sort-desc::after { content: ' ▼'; color: var(--accent); }
 td { padding: 10px 12px; font-size: 0.82rem; border-top: 1px solid var(--border); vertical-align: middle; }
 tr:hover td { background: rgba(255,255,255,.02); }
 .coin-cell { display: flex; align-items: center; gap: 8px; }
@@ -348,13 +352,13 @@ tr:hover td { background: rgba(255,255,255,.02); }
   <table>
     <thead>
       <tr>
-        <th>Coin</th>
-        <th>Target Qty</th>
-        <th>Actual Qty</th>
-        <th>Pending Qty</th>
-        <th>Current Price</th>
-        <th>Cost to Target</th>
-        <th>Progress</th>
+        <th class="sortable" onclick="setSort('name')">Coin</th>
+        <th class="sortable" onclick="setSort('targetQty')">Target Qty</th>
+        <th class="sortable" onclick="setSort('actualQty')">Actual Qty</th>
+        <th class="sortable" onclick="setSort('pendingQty')">Pending Qty</th>
+        <th class="sortable" onclick="setSort('currentPrice')">Current Price</th>
+        <th class="sortable" onclick="setSort('costToTarget')">Cost to Target</th>
+        <th class="sortable" onclick="setSort('progress')">Progress</th>
         <th></th>
       </tr>
     </thead>
@@ -582,11 +586,51 @@ function calcRow(entry) {
 }
 
 // ─── Render Table ────────────────────────────────────────────────────────────
+// ─── Sort state ──────────────────────────────────────────────────────────────
+let sortCol = null, sortDir = 1; // dir: 1=asc, -1=desc
+
+function setSort(col) {
+  if (sortCol === col) { sortDir *= -1; }
+  else { sortCol = col; sortDir = 1; }
+  // Update header classes
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+    if (th.textContent.trim().toLowerCase().replace(/ /g,'') === col.toLowerCase() ||
+        th.getAttribute('onclick') === `setSort('${col}')`) {
+      th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+    }
+  });
+  renderTable();
+}
+
+function getSortValue(entry, col) {
+  const r = calcRow(entry);
+  switch(col) {
+    case 'name':        return (entry.name || entry.sym || '').toLowerCase();
+    case 'targetQty':   return entry.targetQty || 0;
+    case 'actualQty':   return r.actualQty;
+    case 'pendingQty':  return r.pendingQty;
+    case 'currentPrice':return r.currentPrice;
+    case 'costToTarget':return r.costToTarget;
+    case 'progress':    return r.progress;
+    default:            return 0;
+  }
+}
+
 function renderTable() {
   const q = (document.getElementById('searchBox').value || '').toLowerCase();
-  const rows = accumPlan.filter(e =>
+  let rows = accumPlan.filter(e =>
     !q || e.sym.toLowerCase().includes(q) || (e.name||'').toLowerCase().includes(q)
   );
+  // Apply sort
+  if (sortCol) {
+    rows = [...rows].sort((a, b) => {
+      const va = getSortValue(a, sortCol), vb = getSortValue(b, sortCol);
+      if (va < vb) return -1 * sortDir;
+      if (va > vb) return  1 * sortDir;
+      return 0;
+    });
+  }
 
   const tbody = document.getElementById('accTableBody');
   const empty = document.getElementById('emptyState');
