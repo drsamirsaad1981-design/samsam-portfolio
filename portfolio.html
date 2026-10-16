@@ -1286,16 +1286,17 @@ function getFilteredSorted() {
   const filter = document.getElementById('filterAction') ? document.getElementById('filterAction').value : '';
   const search = document.getElementById('searchBox') ? document.getElementById('searchBox').value.toLowerCase() : '';
 
-  // Top Gainers / Top Losers: sort all coins by 24h perf (vs BTC baseline), no other filter
+  // Top Gainers / Top Losers: sort all coins by P&L % (currentPrice vs basePrice)
   if (filter === 'gainers' || filter === 'losers') {
     let rows = portfolio.filter(c => {
       if (search && !c.sym.toLowerCase().includes(search) && !(COIN_NAMES[c.sym]||'').toLowerCase().includes(search)) return false;
       if (activeCatFilter && (c.cat || 'other') !== activeCatFilter) return false;
       return true;
     });
-    // Sort by vs-BTC performance: gainers = highest first, losers = lowest first
+    // Sort by P&L%: gainers = highest profit first, losers = highest loss first
     rows.sort((a, b) => {
-      const pa = getPerf(a), pb = getPerf(b);
+      const pa = a.basePrice > 0 ? (a.currentPrice - a.basePrice) / a.basePrice * 100 : 0;
+      const pb = b.basePrice > 0 ? (b.currentPrice - b.basePrice) / b.basePrice * 100 : 0;
       return filter === 'gainers' ? pb - pa : pa - pb;
     });
     return rows;
