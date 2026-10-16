@@ -468,6 +468,29 @@
   .coin-cg-link { display:inline-flex; flex-shrink:0; border-radius:50%; text-decoration:none; }
   .coin-cg-link:hover { opacity: 0.75; }
 
+  /* ── Analysis Report Modal ───────────────────────── */
+  #analysisModal .modal { max-width:660px; max-height:88vh; display:flex; flex-direction:column; }
+  .analysis-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .analysis-lang-btn { background:var(--bg3); border:1px solid var(--border); color:var(--fg2); border-radius:6px; padding:4px 12px; font-size:0.75rem; cursor:pointer; font-family:inherit; }
+  .analysis-lang-btn.active { background:var(--accent); color:#000; border-color:var(--accent); font-weight:700; }
+  .analysis-lang-btn:hover:not(.active) { border-color:var(--accent); color:var(--accent); }
+  .analysis-body { flex:1; overflow-y:auto; padding-right:4px; }
+  .analysis-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:220px; gap:14px; color:var(--fg2); }
+  .analysis-spinner { width:42px; height:42px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.9s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .analysis-error { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:14px 16px; color:#f87171; font-size:0.85rem; line-height:1.6; }
+  .analysis-error a { color:var(--accent); text-decoration:underline; }
+  .analysis-content { font-size:0.85rem; line-height:1.8; }
+  .analysis-content h3 { font-size:0.95rem; font-weight:700; color:var(--accent); margin:16px 0 6px; border-bottom:1px solid var(--border); padding-bottom:4px; }
+  .analysis-content h3:first-child { margin-top:0; }
+  .analysis-content ul { margin:0 0 8px 0; padding:0; list-style:none; }
+  .analysis-content ul li { padding:2px 0 2px 16px; position:relative; }
+  .analysis-content ul li::before { content:'•'; position:absolute; left:4px; color:var(--accent); }
+  .analysis-meta { font-size:0.7rem; color:var(--fg2); margin-top:10px; padding-top:8px; border-top:1px solid var(--border); display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; }
+  .btn-analysis { background:linear-gradient(135deg,#7c3aed,#4f46e5); color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; transition:opacity .2s; }
+  .btn-analysis:hover { opacity:0.88; }
+  .btn-analysis:disabled { opacity:0.5; cursor:not-allowed; }
+
   footer { text-align: center; padding: 16px 0 8px; font-size: 0.7rem; color: var(--fg2); border-top: 1px solid var(--border); margin-top: 12px; }
 
   table { width: 100%; border-collapse: collapse; min-width: 1000px; }
@@ -537,6 +560,7 @@
     <button class="btn btn-secondary" onclick="openAddCoin()">➕ Add Coin</button>
     <button class="btn btn-secondary" id="viewToggleBtn" onclick="toggleView()">📋 Table</button>
     <button class="btn btn-secondary" onclick="toggleTheme()">🌙 Theme</button>
+    <button class="btn-analysis" onclick="openAnalysis()">🤖 Analysis Report</button>
   </div>
   <div class="control-row">
     <select class="btn btn-secondary" id="filterAction" onchange="renderTableAndStack()" style="cursor:pointer; flex:2;">
@@ -706,6 +730,25 @@
     <div style="display:flex;gap:8px;margin-top:16px;">
       <button class="btn btn-primary" onclick="confirmRemove()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">✕ Remove</button>
       <button class="btn btn-secondary" onclick="closeRemove()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Analysis Report Modal -->
+<div class="modal-overlay" id="analysisModal">
+  <div class="modal">
+    <h2>🤖 AI Analysis Report — <span style="color:var(--accent);font-size:0.85em">Claude AI</span></h2>
+    <div class="analysis-toolbar">
+      <button class="analysis-lang-btn active" id="langEnBtn" onclick="setAnalysisLang('en')">🇬🇧 English</button>
+      <button class="analysis-lang-btn" id="langArBtn" onclick="setAnalysisLang('ar')">🇸🇦 العربية</button>
+      <div style="flex:1"></div>
+      <button class="btn-analysis" id="regenBtn" onclick="runAnalysis()" style="font-size:0.75rem;padding:4px 10px">🔄 Regenerate</button>
+    </div>
+    <div class="analysis-body" id="analysisBody">
+      <!-- filled by JS -->
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="closeAnalysis()">✕ Close</button>
     </div>
   </div>
 </div>
@@ -1867,6 +1910,203 @@ function initView() {
   try { saved = localStorage.getItem(VIEW_KEY) || 'cards'; } catch(e) {}
   applyView(saved);
 }
+
+// ── Analysis Report ───────────────────────────────────
+// IMPORTANT: Replace this URL with YOUR deployed Cloudflare Worker URL after setup
+const ANALYSIS_WORKER_URL = 'https://samsam-analysis.YOUR-SUBDOMAIN.workers.dev/analyze';
+
+let analysisLang = 'en';
+let analysisRunning = false;
+
+function openAnalysis() {
+  document.getElementById('analysisModal').classList.add('active');
+  // Auto-run on first open if body is empty
+  const body = document.getElementById('analysisBody');
+  if (!body.innerHTML.trim()) {
+    runAnalysis();
+  }
+}
+
+function closeAnalysis() {
+  document.getElementById('analysisModal').classList.remove('active');
+}
+
+function setAnalysisLang(lang) {
+  analysisLang = lang;
+  document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
+  document.getElementById('langArBtn').classList.toggle('active', lang === 'ar');
+  // Re-run with new language if we already have a report
+  const body = document.getElementById('analysisBody');
+  if (body.innerHTML.trim() && !analysisRunning) {
+    runAnalysis();
+  }
+}
+
+function buildPortfolioPayload() {
+  // Compute per-coin stats using actual portfolio data
+  const coins = portfolio.map(c => {
+    const avgCost     = c.basePrice || 0;   // basePrice = avg cost basis
+    const currentVal  = c.qty * (c.currentPrice || c.basePrice);
+    const costBasis   = c.qty * avgCost;
+    return {
+      sym:          c.sym,
+      name:         COIN_NAMES[c.sym] || c.sym,
+      qty:          +c.qty.toFixed(8),
+      avgCost:      +avgCost.toFixed(8),
+      currentPrice: +(c.currentPrice || c.basePrice),
+      currentValue: +currentVal.toFixed(2),
+      costBasis:    +costBasis.toFixed(2),
+      pnlUsd:       +(currentVal - costBasis).toFixed(2),
+      pnlPct:       avgCost > 0 ? +((c.currentPrice - avgCost) / avgCost * 100).toFixed(2) : 0,
+      cat:          c.cat || 'other',
+    };
+  });
+
+  const { btcQty, btcValue, altTotal, total } = calcStats();
+  const totalCost   = coins.reduce((s, c) => s + c.costBasis, 0);
+  const totalPnl    = total - totalCost;
+  const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost * 100) : 0;
+  const lastUpdate  = lastFetchTime
+    ? lastFetchTime.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+    : 'Not yet fetched this session';
+
+  return {
+    coins,
+    stats: {
+      total:       +total.toFixed(2),
+      totalCost:   +totalCost.toFixed(2),
+      totalPnl:    +totalPnl.toFixed(2),
+      totalPnlPct: +totalPnlPct.toFixed(2),
+      btcQty:      +btcQty.toFixed(8),
+      btcValue:    +btcValue.toFixed(2),
+      altTotal:    +altTotal.toFixed(2),
+      btcPrice:    +btcPrice,
+      numCoins:    coins.length,
+      lastUpdate,
+    }
+  };
+}
+
+function renderAnalysisLoading() {
+  document.getElementById('analysisBody').innerHTML = `
+    <div class="analysis-loading">
+      <div class="analysis-spinner"></div>
+      <div style="font-size:0.85rem">Claude AI is analyzing your portfolio…</div>
+      <div style="font-size:0.72rem;opacity:0.6">This takes 5–15 seconds</div>
+    </div>`;
+}
+
+function renderAnalysisError(msg, detail) {
+  document.getElementById('analysisBody').innerHTML = `
+    <div class="analysis-error">
+      <strong>⚠️ ${msg}</strong>
+      ${detail ? `<div style="margin-top:6px;font-size:0.8rem;opacity:0.85">${detail}</div>` : ''}
+      <div style="margin-top:10px;font-size:0.78rem">
+        Click <strong>🔄 Regenerate</strong> to try again, or check the
+        <a href="https://github.com/drsamirsaad1981-design/samsam-portfolio#analysis-setup" target="_blank">setup guide</a>.
+      </div>
+    </div>`;
+}
+
+function renderAnalysisReport(text, meta) {
+  // Parse the 7 sections from Claude's response
+  const sections = text.split(/\n(?=\d+\.\s|[📊🥧🏆⚠️💰💡🎯])/);
+  let html = '<div class="analysis-content" dir="' + (analysisLang === 'ar' ? 'rtl' : 'ltr') + '">';
+
+  // Convert markdown-style bullets and headings to HTML
+  const formatted = text
+    .replace(/^(\d+\.\s+[^\n]+)/gm, '<h3>$1</h3>')
+    .replace(/^[•\-\*]\s+(.+)/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>(\n|$))+/gs, match => '<ul>' + match + '</ul>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n{2,}/g, '<br>');
+
+  html += formatted;
+  html += '</div>';
+  html += `<div class="analysis-meta">
+    <span>🤖 Generated by Claude AI (claude-opus-4-5)</span>
+    <span>🕐 ${meta.generatedAt}</span>
+    <span>📡 Prices: ${meta.lastUpdate}</span>
+    <span>💼 ${meta.numCoins} positions</span>
+  </div>`;
+
+  document.getElementById('analysisBody').innerHTML = html;
+}
+
+async function runAnalysis() {
+  if (analysisRunning) return;
+
+  // Check Worker URL is configured
+  if (ANALYSIS_WORKER_URL.includes('YOUR-SUBDOMAIN')) {
+    renderAnalysisError(
+      'Worker not configured yet',
+      'Replace <code>YOUR-SUBDOMAIN</code> in the code with your Cloudflare Worker URL. See setup instructions below.'
+    );
+    // Show setup instructions in the modal
+    document.getElementById('analysisBody').innerHTML += `
+      <div style="margin-top:16px;background:var(--bg3);border-radius:8px;padding:14px 16px;font-size:0.8rem;line-height:1.9;border:1px solid var(--border)">
+        <strong style="color:var(--accent);font-size:0.88rem">⚙️ One-Time Setup (5 minutes)</strong><br>
+        <ol style="margin:8px 0 0 16px;padding:0">
+          <li>Go to <a href="https://dash.cloudflare.com" target="_blank" style="color:var(--accent)">dash.cloudflare.com</a> → Workers &amp; Pages → Create</li>
+          <li>Paste the Worker code (see <code>worker.js</code> file shared below)</li>
+          <li>Deploy → copy the <code>.workers.dev</code> URL</li>
+          <li>In Worker Settings → Variables → add <strong>Secret: ANTHROPIC_API_KEY</strong></li>
+          <li>In <code>index.html</code> replace <code>YOUR-SUBDOMAIN</code> in <code>ANALYSIS_WORKER_URL</code></li>
+          <li>Push to GitHub → done ✅</li>
+        </ol>
+        <div style="margin-top:10px;color:var(--fg2)">Cost: Free tier (100,000 Worker requests/day + ~$0.01/report for Claude API)</div>
+      </div>`;
+    return;
+  }
+
+  analysisRunning = true;
+  document.getElementById('regenBtn').disabled = true;
+  renderAnalysisLoading();
+
+  try {
+    const portfolioData = buildPortfolioPayload();
+    const res = await fetch(ANALYSIS_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ portfolioData, language: analysisLang }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      renderAnalysisError(
+        'Analysis failed',
+        err.error || `Server returned ${res.status}. Please try again.`
+      );
+      return;
+    }
+
+    const data = await res.json();
+    if (!data.report) {
+      renderAnalysisError('Empty response from AI', 'Claude returned an empty report. Please try again.');
+      return;
+    }
+
+    renderAnalysisReport(data.report, {
+      generatedAt: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+      lastUpdate:  portfolioData.stats.lastUpdate,
+      numCoins:    portfolioData.stats.numCoins,
+    });
+
+  } catch (err) {
+    renderAnalysisError(
+      'Connection error',
+      'Could not reach the analysis service. Check your internet connection and try again.'
+    );
+  } finally {
+    analysisRunning = false;
+    document.getElementById('regenBtn').disabled = false;
+  }
+}
+
+// Close modal on overlay click
+document.getElementById('analysisModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAnalysis();
+});
 
 document.getElementById('searchBox').addEventListener('input',renderTableAndStack);
 document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+' — Baseline: Oct 15, 2026';
