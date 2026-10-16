@@ -577,10 +577,8 @@
     <button class="btn btn-secondary" onclick="openAddCoin()">➕ Add Coin</button>
     <button class="btn btn-secondary" id="viewToggleBtn" onclick="toggleView()">📋 Table</button>
     <button class="btn btn-secondary" onclick="toggleTheme()">🌙 Theme</button>
-  </div>
-  <div class="control-row" style="gap:8px">
-    <a href="./accumulation.html" class="btn-accum">🎯 Accumulation Plan</a>
-    <button class="btn-analysis" onclick="openAnalysis()" style="flex:1;padding:10px 14px;font-size:0.85rem;border-radius:10px">🤖 Analysis Report</button>
+    <a href="./accumulation.html" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap">🎯 Accumulation</a>
+    <button class="btn btn-secondary" onclick="openAnalysis()" style="white-space:nowrap">🤖 Analysis</button>
   </div>
   <div class="control-row">
     <select class="btn btn-secondary" id="filterAction" onchange="renderTableAndStack()" style="cursor:pointer; flex:2;">
