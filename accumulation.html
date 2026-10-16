@@ -578,15 +578,20 @@ function calcRow(entry) {
   const actualQty    = pc ? (pc.qty || 0) : 0;
   const currentPrice = pc ? (pc.currentPrice || pc.basePrice || 0) : 0;
   const targetQty    = entry.targetQty || 0;
-  const targetPrice  = entry.targetPrice || 0;
+  const targetPct    = entry.targetPct || 0;  // e.g. -20 means "buy 20% below current"
+  // Compute the absolute target price from the percentage offset
+  const targetPrice  = (targetPct !== 0 && currentPrice > 0)
+                         ? currentPrice * (1 + targetPct / 100) : 0;
   const pendingQty   = Math.max(targetQty - actualQty, 0);
   const costToTarget = pendingQty * currentPrice;
   const progress     = targetQty > 0 ? Math.min(actualQty / targetQty * 100, 100) : 0;
   const logoUrl      = (pc && pc.logoUrl) || entry.logoUrl || '';
   const name         = (pc && pc.name) || entry.name || entry.sym;
+  // priceDiff: how far current price is from target (negative = below target = good to buy)
   const priceDiff    = (targetPrice > 0 && currentPrice > 0)
                          ? (currentPrice - targetPrice) / targetPrice * 100 : null;
-  return { actualQty, currentPrice, targetPrice, pendingQty, costToTarget, progress, logoUrl, name, priceDiff };
+  const readyToBuy   = priceDiff !== null && priceDiff <= 0;
+  return { actualQty, currentPrice, targetPrice, targetPct, pendingQty, costToTarget, progress, logoUrl, name, priceDiff, readyToBuy };
 }
 
 // ─── Render Table ────────────────────────────────────────────────────────────
@@ -615,7 +620,7 @@ function getSortValue(entry, col) {
     case 'actualQty':   return r.actualQty;
     case 'pendingQty':  return r.pendingQty;
     case 'currentPrice':return r.currentPrice;
-    case 'targetPrice': return entry.targetPrice || 0;
+    case 'targetPrice': return r.targetPrice || 0;
     case 'costToTarget':return r.costToTarget;
     case 'progress':    return r.progress;
     default:            return 0;
@@ -679,16 +684,23 @@ function renderTable() {
         ${r.pendingQty > 0 ? `<span style="font-size:.7rem;color:var(--fg2)"> ${entry.sym}</span>` : ''}
       </td>
       <td>${hasPrice ? '$' + fmtUSD(r.currentPrice) : '<span class="no-price">No price</span>'}</td>
-      <td style="min-width:120px">
-        <input class="target-input" type="number" min="0" step="any"
-          value="${entry.targetPrice || ''}"
-          placeholder="$ buy at"
-          oninput="updateTargetPrice(${idx}, this.value)"
-          onblur="commitTargetPrice(${idx}, this.value)"
-          onkeydown="if(event.key==='Enter'){this.blur()}"
-          title="Set your target buy price for ${entry.sym}">
-        ${r.priceDiff !== null ? `<div style="font-size:0.68rem;margin-top:2px;color:${r.priceDiff <= 0 ? 'var(--green)' : 'var(--red)'}">
-          ${r.priceDiff <= 0 ? '🟢' : '🔴'} ${r.priceDiff > 0 ? '+' : ''}${r.priceDiff.toFixed(1)}% vs target
+      <td style="min-width:130px">
+        <div style="display:flex;align-items:center;gap:3px">
+          <input class="target-input" type="number" step="1"
+            value="${entry.targetPct || ''}"
+            placeholder="e.g. -20"
+            oninput="updateTargetPct(${idx}, this.value)"
+            onblur="commitTargetPct(${idx}, this.value)"
+            onkeydown="if(event.key==='Enter'){this.blur()}"
+            title="Enter % offset from current price (e.g. -20 = buy 20% below current)"
+            style="width:60px">
+          <span style="font-size:0.75rem;color:var(--fg2)">%</span>
+        </div>
+        ${r.targetPrice > 0 ? `<div style="font-size:0.7rem;margin-top:3px;color:var(--accent);font-weight:600">
+          🎯 $${fmtUSD(r.targetPrice)}
+        </div>` : ''}
+        ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">
+          ${r.readyToBuy ? '🟢 BUY NOW!' : `🔴 ${(r.priceDiff).toFixed(1)}% above`}
         </div>` : ''}
       </td>
       <td>${hasPrice && r.pendingQty > 0 ? '<strong>$' + fmtUSD(r.costToTarget) + '</strong>' : (r.pendingQty === 0 ? '<span style="color:var(--green)">—</span>' : '<span class="no-price">N/A</span>')}</td>
@@ -784,15 +796,20 @@ function renderCards() {
       </div>
       <div class="acc-card-target-row" style="margin-top:6px">
         <label>💰 Buy At:</label>
-        <input class="card-target-input" type="number" min="0" step="any"
-          value="${entry.targetPrice||''}"
-          placeholder="$ target price"
-          oninput="updateTargetPrice(${idx}, this.value)"
-          onblur="commitTargetPrice(${idx}, this.value)"
-          onkeydown="if(event.key==='Enter'){this.blur()}">
-        ${r.priceDiff !== null ? `<span style="font-size:0.72rem;color:${r.priceDiff<=0?'var(--green)':'var(--red)'}">
-          ${r.priceDiff<=0?'🟢':'🔴'} ${r.priceDiff>0?'+':''}${r.priceDiff.toFixed(1)}%
-        </span>` : ''}
+        <div style="display:flex;align-items:center;gap:4px">
+          <input class="card-target-input" type="number" step="1"
+            value="${entry.targetPct||''}"
+            placeholder="-20"
+            oninput="updateTargetPct(${idx}, this.value)"
+            onblur="commitTargetPct(${idx}, this.value)"
+            onkeydown="if(event.key==='Enter'){this.blur()}"
+            style="width:60px">
+          <span style="font-size:0.75rem;color:var(--fg2)">%</span>
+          ${r.targetPrice > 0 ? `<span style="font-size:0.75rem;color:var(--accent);font-weight:600">→ $${fmtUSD(r.targetPrice)}</span>` : ''}
+        </div>
+        ${r.priceDiff !== null ? `<div style="font-size:0.7rem;margin-top:3px;color:${r.readyToBuy?'var(--green)':'var(--red)'}">
+          ${r.readyToBuy ? '🟢 السعر وصل — اشتري!' : `🔴 السعر أعلى بـ ${r.priceDiff.toFixed(1)}%`}
+        </div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -848,17 +865,19 @@ function commitTarget(idx, val) {
   saveAccumPlan();
 }
 
-// ─── Update target buy price ─────────────────────────────────────────────────
-function updateTargetPrice(idx, val) {
+// ─── Update target buy % offset ──────────────────────────────────────────────
+// User enters e.g. -20 (meaning "I want to buy 20% below current price")
+// We store the % and compute the $ price live from current price in calcRow()
+function updateTargetPct(idx, val) {
   const n = parseFloat(val);
-  accumPlan[idx].targetPrice = isNaN(n) || n < 0 ? 0 : n;
+  accumPlan[idx].targetPct = isNaN(n) ? 0 : Math.max(-99, Math.min(n, 500));
   renderDashboard();
   saveAccumPlan();
 }
 
-function commitTargetPrice(idx, val) {
+function commitTargetPct(idx, val) {
   const n = parseFloat(val);
-  accumPlan[idx].targetPrice = isNaN(n) || n < 0 ? 0 : n;
+  accumPlan[idx].targetPct = isNaN(n) ? 0 : Math.max(-99, Math.min(n, 500));
   renderAll();
   saveAccumPlan();
 }
