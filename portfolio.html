@@ -2326,7 +2326,7 @@ function savePerfSnapshot(portfolioValue, btcPrice) {
   const snaps = loadPerfSnapshots();
   const now   = Date.now();
   // Only save once per 5 minutes
-  if (snaps.length && now - snaps[snaps.length - 1].t < 5 * 60 * 1000) return;
+  if (snaps.length && now - snaps[snaps.length - 1].t < 60 * 60 * 1000) return;
   snaps.push({ t: now, v: +portfolioValue.toFixed(2), b: +btcPrice });
   // Keep last 90 days of hourly snapshots = 2160 entries max
   if (snaps.length > 2160) snaps.splice(0, snaps.length - 2160);
