@@ -165,7 +165,7 @@
   .btn-danger { background: var(--red); color: #fff; }
 
   .search-box {
-    width: 100%;
+    width: auto; max-width: 260px;
     padding: 10px 14px;
     border-radius: 8px;
     border: 1px solid var(--border);
@@ -264,7 +264,7 @@
     .header-stats { display: flex; gap: 12px; grid-template-columns: none; }
     .controls { flex-direction: row; flex-wrap: wrap; align-items: center; }
     .control-row { width: auto; flex: 1; }
-    .search-box { flex: 1; min-width: 200px; }
+    .search-box { flex: 1; min-width: 140px; max-width: 100%; }
     .btn { flex: unset; }
   }
 
