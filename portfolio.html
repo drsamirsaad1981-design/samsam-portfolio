@@ -248,13 +248,19 @@
   }
   .editable-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
 
-  /* Desktop Table Wrapper fallback for large screens */
+  /* View toggle — controlled by JS, not media query */
   .table-wrapper {
     display: none;
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
   }
+  .table-wrapper.view-active { display: block; }
+  .coins-stack.view-active  { display: flex; }
+
+  /* Large screens: keep layout improvements regardless of view mode */
   @media(min-width: 900px) {
-    .table-wrapper { display: block; overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
-    .coins-stack { display: none; }
     body { padding: 20px; max-width: 1400px; margin: 0 auto; }
     .header-top { flex-direction: row; justify-content: space-between; align-items: center; }
     .header-stats { display: flex; gap: 12px; grid-template-columns: none; }
@@ -262,6 +268,13 @@
     .control-row { width: auto; flex: 1; }
     .search-box { flex: 1; min-width: 200px; }
     .btn { flex: unset; }
+  }
+
+  /* Toggle button active state */
+  .btn-toggle-active {
+    background: var(--accent) !important;
+    color: #000 !important;
+    border-color: var(--accent) !important;
   }
 
   .perf-badge {
@@ -478,6 +491,7 @@
     <button class="btn btn-primary" onclick="openUpdateModal()">📝 Update</button>
     <button class="btn btn-primary" onclick="openAddCoin()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">➕ Add Coin</button>
     <button class="btn btn-secondary" onclick="exportData()">💾 CSV</button>
+    <button class="btn btn-secondary" id="viewToggleBtn" onclick="toggleView()">📋 Table</button>
     <button class="btn btn-secondary" onclick="toggleTheme()">🌙 Theme</button>
   </div>
   <div class="control-row">
@@ -507,10 +521,10 @@
 </div>
 
 <!-- Mobile Vertical Card Stack View -->
-<div class="coins-stack" id="coinsStack"></div>
+<div class="coins-stack view-active" id="coinsStack"></div>
 
-<!-- Desktop Table View Fallback -->
-<div class="table-wrapper">
+<!-- Desktop Table View -->
+<div class="table-wrapper" id="portfolioTableWrapper">
   <table id="portfolioTable">
     <thead>
       <tr>
@@ -1567,11 +1581,45 @@ function refreshPrices(){
 
 function renderAll(){renderHeader();renderSummary();renderTableAndStack();renderDashboard();}
 
+// ── View Toggle (Cards ↔ Table) ───────────────────────
+const VIEW_KEY = 'samsam_view_pref';
+let currentView = 'cards'; // default: mobile cards
+
+function applyView(view) {
+  currentView = view;
+  const stack   = document.getElementById('coinsStack');
+  const table   = document.getElementById('portfolioTableWrapper');
+  const btn     = document.getElementById('viewToggleBtn');
+  if (view === 'table') {
+    stack.classList.remove('view-active');
+    table.classList.add('view-active');
+    btn.textContent = '🃏 Cards';
+    btn.classList.add('btn-toggle-active');
+  } else {
+    table.classList.remove('view-active');
+    stack.classList.add('view-active');
+    btn.textContent = '📋 Table';
+    btn.classList.remove('btn-toggle-active');
+  }
+  try { localStorage.setItem(VIEW_KEY, view); } catch(e) {}
+}
+
+function toggleView() {
+  applyView(currentView === 'cards' ? 'table' : 'cards');
+}
+
+function initView() {
+  let saved = 'cards';
+  try { saved = localStorage.getItem(VIEW_KEY) || 'cards'; } catch(e) {}
+  applyView(saved);
+}
+
 document.getElementById('searchBox').addEventListener('input',renderTableAndStack);
 document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+' — Baseline: Oct 15, 2026';
 
 ['samsam_portfolio','samsam_pf_v1','samsam_pf_v2'].forEach(k=>localStorage.removeItem(k));
 initPortfolio();
+initView();   // apply saved view preference BEFORE first render
 renderAll();
 fetchLivePrices();
 </script>
