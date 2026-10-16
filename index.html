@@ -521,6 +521,8 @@
   <div class="control-row">
     <select class="btn btn-secondary" id="filterAction" onchange="renderTableAndStack()" style="cursor:pointer; flex:2;">
       <option value="">All Coins</option>
+      <option value="gainers">🟢 Top Gainers</option>
+      <option value="losers">🔴 Top Losers</option>
       <option value="convert">🔴 Convert to BTC</option>
       <option value="hold">⚪ Hold</option>
       <option value="reinforce">🟢 Reinforce</option>
@@ -1077,6 +1079,22 @@ function renderSummary() {
 function getFilteredSorted() {
   const filter = document.getElementById('filterAction') ? document.getElementById('filterAction').value : '';
   const search = document.getElementById('searchBox') ? document.getElementById('searchBox').value.toLowerCase() : '';
+
+  // Top Gainers / Top Losers: sort all coins by 24h perf (vs BTC baseline), no other filter
+  if (filter === 'gainers' || filter === 'losers') {
+    let rows = portfolio.filter(c => {
+      if (search && !c.sym.toLowerCase().includes(search) && !(COIN_NAMES[c.sym]||'').toLowerCase().includes(search)) return false;
+      if (activeCatFilter && (c.cat || 'other') !== activeCatFilter) return false;
+      return true;
+    });
+    // Sort by vs-BTC performance: gainers = highest first, losers = lowest first
+    rows.sort((a, b) => {
+      const pa = getPerf(a), pb = getPerf(b);
+      return filter === 'gainers' ? pb - pa : pa - pb;
+    });
+    return rows;
+  }
+
   let rows = portfolio.filter(c => {
     if (search && !c.sym.toLowerCase().includes(search) && !(COIN_NAMES[c.sym]||'').toLowerCase().includes(search)) return false;
     if (filter) { const perf=getPerf(c); const action=getAction(c.sym,perf); if(action!==filter) return false; }
