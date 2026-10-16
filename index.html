@@ -403,6 +403,27 @@
   .progress-fill.accum-fill { background: linear-gradient(90deg, #10b981, #3b82f6); }
   .progress-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.72rem; }
 
+  /* Performance Chart */
+  .perf-chart-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .perf-chart-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px; flex-wrap: wrap; gap: 6px;
+  }
+  .perf-chart-title { font-size: 0.8rem; color: var(--fg2); }
+  .perf-chart-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+  .perf-stat { font-size: 0.72rem; display: flex; align-items: center; gap: 4px; }
+  .perf-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .perf-dot.portfolio { background: #3b82f6; }
+  .perf-dot.btc { background: #f7931a; }
+  .perf-chart-canvas { width: 100%; height: 90px; display: block; }
+  .perf-chart-no-data { text-align: center; color: var(--fg2); font-size: 0.72rem; padding: 20px 0; }
+
   .date-tag {
     background: var(--bg3);
     border: 1px solid var(--border);
@@ -570,6 +591,17 @@
     </div>
   </div>
 </header>
+
+<div class="perf-chart-wrap" id="perfChartWrap" style="display:none">
+  <div class="perf-chart-header">
+    <span class="perf-chart-title">📈 Portfolio Performance</span>
+    <div class="perf-chart-stats">
+      <span class="perf-stat"><span class="perf-dot portfolio"></span><span id="perfPortfolioLabel">Portfolio: —</span></span>
+      <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
+    </div>
+  </div>
+  <canvas class="perf-chart-canvas" id="perfChartCanvas" height="90"></canvas>
+</div>
 
 <div class="dream-bar" id="accumProgressBar" style="display:none">
   <h3>📊 Accumulation Plan — Overall Progress <a href="./accumulation.html" style="color:var(--accent);font-size:0.72rem;text-decoration:none;margin-left:6px">→ View Plan</a></h3>
@@ -1891,6 +1923,8 @@ async function fetchLivePrices() {
       const accPlan = JSON.parse(localStorage.getItem(ACCUM_KEY) || '[]');
       if (accPlan.length) renderAccumProgress(accPlan);
     } catch(_) {}
+    // Save performance snapshot and redraw chart
+    try { updatePerfChart(); } catch(_) {}
     // After prices, fetch missing logos for custom coins (sequential to avoid rate limits)
     fetchMissingLogos();
   } catch(e){setLiveStatus('error');updateLiveIndicator();}
@@ -2273,6 +2307,137 @@ async function loadAccumProgress() {
 
 // Load accumulation progress after prices are ready (slight delay)
 setTimeout(loadAccumProgress, 2000);
+
+// ─── Portfolio Performance Chart ─────────────────────────────────────────────
+const PERF_KEY = 'samsam_perf_v1';   // localStorage key for snapshots
+
+function loadPerfSnapshots() {
+  try { return JSON.parse(localStorage.getItem(PERF_KEY) || '[]'); } catch(_) { return []; }
+}
+
+function savePerfSnapshot(portfolioValue, btcPrice) {
+  const snaps = loadPerfSnapshots();
+  const now   = Date.now();
+  // Only save once per hour (avoid flooding storage)
+  if (snaps.length && now - snaps[snaps.length - 1].t < 60 * 60 * 1000) return;
+  snaps.push({ t: now, v: +portfolioValue.toFixed(2), b: +btcPrice });
+  // Keep last 90 days of hourly snapshots = 2160 entries max
+  if (snaps.length > 2160) snaps.splice(0, snaps.length - 2160);
+  try { localStorage.setItem(PERF_KEY, JSON.stringify(snaps)); } catch(_) {}
+}
+
+function drawPerfChart() {
+  const snaps = loadPerfSnapshots();
+  const wrap  = document.getElementById('perfChartWrap');
+  if (snaps.length < 2) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = '';
+  const canvas = document.getElementById('perfChartCanvas');
+  const W = canvas.offsetWidth || 300;
+  const H = 90;
+  canvas.width  = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  // Normalize both series to % change from first snapshot
+  const baseV = snaps[0].v;
+  const baseB = snaps[0].b;
+  const pctV  = snaps.map(s => (s.v - baseV) / baseV * 100);
+  const pctB  = snaps.map(s => (s.b - baseB) / baseB * 100);
+  const allPct = [...pctV, ...pctB];
+  const minP = Math.min(...allPct);
+  const maxP = Math.max(...allPct);
+  const range = maxP - minP || 1;
+
+  const pad = { top: 6, bottom: 18, left: 4, right: 40 };
+  const cW   = W - pad.left - pad.right;
+  const cH   = H - pad.top - pad.bottom;
+
+  function toX(i) { return pad.left + (i / (snaps.length - 1)) * cW; }
+  function toY(p) { return pad.top + (1 - (p - minP) / range) * cH; }
+
+  // Background
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  ctx.clearRect(0, 0, W, H);
+
+  // Zero line
+  const zeroY = toY(0);
+  ctx.beginPath();
+  ctx.setLineDash([3, 3]);
+  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+  ctx.lineWidth = 1;
+  ctx.moveTo(pad.left, zeroY);
+  ctx.lineTo(W - pad.right, zeroY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw a line series
+  function drawLine(data, color) {
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2;
+    ctx.lineJoin    = 'round';
+    data.forEach((p, i) => {
+      i === 0 ? ctx.moveTo(toX(i), toY(p)) : ctx.lineTo(toX(i), toY(p));
+    });
+    ctx.stroke();
+  }
+
+  drawLine(pctB, '#f7931a');   // BTC
+  drawLine(pctV, '#3b82f6');   // Portfolio
+
+  // End labels (right side)
+  const lastV = pctV[pctV.length - 1];
+  const lastB = pctB[pctB.length - 1];
+  ctx.font = `${10 * window.devicePixelRatio / window.devicePixelRatio}px Inter,sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillText((lastV >= 0 ? '+' : '') + lastV.toFixed(1) + '%', W - pad.right + 4, toY(lastV) + 4);
+  ctx.fillStyle = '#f7931a';
+  ctx.fillText((lastB >= 0 ? '+' : '') + lastB.toFixed(1) + '%', W - pad.right + 4, toY(lastB) + 4);
+
+  // Date labels
+  ctx.fillStyle = isDark ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.7)';
+  ctx.font = '9px Inter,sans-serif';
+  ctx.textAlign = 'left';
+  const firstDate = new Date(snaps[0].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const lastDate  = new Date(snaps[snaps.length - 1].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  ctx.fillText(firstDate, pad.left, H - 2);
+  ctx.textAlign = 'right';
+  ctx.fillText(lastDate, W - pad.right, H - 2);
+
+  // Update stat labels
+  const totalPnlPct = lastV;
+  const btcPct      = lastB;
+  const pnlSign     = totalPnlPct >= 0 ? '+' : '';
+  const { total, totalCost } = calcStats ? (() => {
+    const s = calcStats(); return { total: s.total, totalCost: portfolio.reduce((a,c)=>a+c.qty*(c.basePrice||0),0) };
+  })() : { total: 0, totalCost: 0 };
+  const pnlUsd = total - totalCost;
+  const pnlSign2 = pnlUsd >= 0 ? '+' : '';
+
+  document.getElementById('perfPortfolioLabel').textContent =
+    `All-time Profit: ${pnlSign2}$${Math.abs(pnlUsd).toFixed(2)} ${pnlSign}${totalPnlPct.toFixed(2)}%`;
+  document.getElementById('perfBtcLabel').textContent =
+    `BTC trend: ${btcPct >= 0 ? '+' : ''}${btcPct.toFixed(2)}%`;
+}
+
+function updatePerfChart() {
+  // Called after live prices load — save snapshot then redraw
+  const { total } = calcStats();
+  if (total > 0 && btcPrice > 0) {
+    savePerfSnapshot(total, btcPrice);
+    drawPerfChart();
+  }
+}
+
+// Draw chart after prices arrive (prices fire fetchLivePrices which calls renderAll)
+// We hook into it via a delayed check
+setTimeout(() => {
+  // Try draw immediately (if prices already loaded)
+  drawPerfChart();
+}, 3000);
 </script>
 </body>
 </html>
