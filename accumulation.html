@@ -357,6 +357,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
         <th class="sortable" onclick="setSort('actualQty')">Actual Qty</th>
         <th class="sortable" onclick="setSort('pendingQty')">Pending Qty</th>
         <th class="sortable" onclick="setSort('currentPrice')">Current Price</th>
+        <th onclick="setSort('targetPrice')" class="sortable">🎯 Buy At</th>
         <th class="sortable" onclick="setSort('costToTarget')">Cost to Target</th>
         <th class="sortable" onclick="setSort('progress')">Progress</th>
         <th></th>
@@ -577,12 +578,15 @@ function calcRow(entry) {
   const actualQty    = pc ? (pc.qty || 0) : 0;
   const currentPrice = pc ? (pc.currentPrice || pc.basePrice || 0) : 0;
   const targetQty    = entry.targetQty || 0;
+  const targetPrice  = entry.targetPrice || 0;
   const pendingQty   = Math.max(targetQty - actualQty, 0);
   const costToTarget = pendingQty * currentPrice;
   const progress     = targetQty > 0 ? Math.min(actualQty / targetQty * 100, 100) : 0;
   const logoUrl      = (pc && pc.logoUrl) || entry.logoUrl || '';
   const name         = (pc && pc.name) || entry.name || entry.sym;
-  return { actualQty, currentPrice, pendingQty, costToTarget, progress, logoUrl, name };
+  const priceDiff    = (targetPrice > 0 && currentPrice > 0)
+                         ? (currentPrice - targetPrice) / targetPrice * 100 : null;
+  return { actualQty, currentPrice, targetPrice, pendingQty, costToTarget, progress, logoUrl, name, priceDiff };
 }
 
 // ─── Render Table ────────────────────────────────────────────────────────────
@@ -611,6 +615,7 @@ function getSortValue(entry, col) {
     case 'actualQty':   return r.actualQty;
     case 'pendingQty':  return r.pendingQty;
     case 'currentPrice':return r.currentPrice;
+    case 'targetPrice': return entry.targetPrice || 0;
     case 'costToTarget':return r.costToTarget;
     case 'progress':    return r.progress;
     default:            return 0;
@@ -674,6 +679,18 @@ function renderTable() {
         ${r.pendingQty > 0 ? `<span style="font-size:.7rem;color:var(--fg2)"> ${entry.sym}</span>` : ''}
       </td>
       <td>${hasPrice ? '$' + fmtUSD(r.currentPrice) : '<span class="no-price">No price</span>'}</td>
+      <td style="min-width:120px">
+        <input class="target-input" type="number" min="0" step="any"
+          value="${entry.targetPrice || ''}"
+          placeholder="$ buy at"
+          oninput="updateTargetPrice(${idx}, this.value)"
+          onblur="commitTargetPrice(${idx}, this.value)"
+          onkeydown="if(event.key==='Enter'){this.blur()}"
+          title="Set your target buy price for ${entry.sym}">
+        ${r.priceDiff !== null ? `<div style="font-size:0.68rem;margin-top:2px;color:${r.priceDiff <= 0 ? 'var(--green)' : 'var(--red)'}">
+          ${r.priceDiff <= 0 ? '🟢' : '🔴'} ${r.priceDiff > 0 ? '+' : ''}${r.priceDiff.toFixed(1)}% vs target
+        </div>` : ''}
+      </td>
       <td>${hasPrice && r.pendingQty > 0 ? '<strong>$' + fmtUSD(r.costToTarget) + '</strong>' : (r.pendingQty === 0 ? '<span style="color:var(--green)">—</span>' : '<span class="no-price">N/A</span>')}</td>
       <td style="min-width:100px">
         <div class="mini-prog">
@@ -756,7 +773,7 @@ function renderCards() {
       </div>
 
       <div class="acc-card-target-row">
-        <label>🎯 Target:</label>
+        <label>🎯 Target Qty:</label>
         <input class="card-target-input" type="number" min="0" step="any"
           value="${entry.targetQty||''}"
           placeholder="Set target qty"
@@ -764,6 +781,18 @@ function renderCards() {
           onblur="commitTarget(${idx}, this.value)"
           onkeydown="if(event.key==='Enter'){this.blur()}">
         <span style="font-size:0.75rem;color:var(--fg2)">${entry.sym}</span>
+      </div>
+      <div class="acc-card-target-row" style="margin-top:6px">
+        <label>💰 Buy At:</label>
+        <input class="card-target-input" type="number" min="0" step="any"
+          value="${entry.targetPrice||''}"
+          placeholder="$ target price"
+          oninput="updateTargetPrice(${idx}, this.value)"
+          onblur="commitTargetPrice(${idx}, this.value)"
+          onkeydown="if(event.key==='Enter'){this.blur()}">
+        ${r.priceDiff !== null ? `<span style="font-size:0.72rem;color:${r.priceDiff<=0?'var(--green)':'var(--red)'}">
+          ${r.priceDiff<=0?'🟢':'🔴'} ${r.priceDiff>0?'+':''}${r.priceDiff.toFixed(1)}%
+        </span>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -816,6 +845,21 @@ function commitTarget(idx, val) {
   const n = parseFloat(val);
   accumPlan[idx].targetQty = isNaN(n) || n < 0 ? 0 : n;
   renderAll(); // full re-render on blur/enter to update progress bars & cards
+  saveAccumPlan();
+}
+
+// ─── Update target buy price ─────────────────────────────────────────────────
+function updateTargetPrice(idx, val) {
+  const n = parseFloat(val);
+  accumPlan[idx].targetPrice = isNaN(n) || n < 0 ? 0 : n;
+  renderDashboard();
+  saveAccumPlan();
+}
+
+function commitTargetPrice(idx, val) {
+  const n = parseFloat(val);
+  accumPlan[idx].targetPrice = isNaN(n) || n < 0 ? 0 : n;
+  renderAll();
   saveAccumPlan();
 }
 

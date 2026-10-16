@@ -676,6 +676,7 @@
         <th onclick="sortTable('pnl')">P&L</th>
         <th onclick="sortTable('perf')">Perf vs BTC</th>
         <th onclick="sortTable('action')">Signal</th>
+        <th>📝 Notes</th>
         <th>Actions</th>
       </tr>
     </thead>
@@ -850,6 +851,7 @@
 <footer>
   <p>🔒 Local storage | Baseline: Oct 15, 2026</p>
   <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
+  <p id="footerSyncTime" style="margin-top:4px;font-size:0.68rem;color:var(--fg2);opacity:0.75">☁️ Cloud: not synced yet</p>
   <div class="footer-copy">
     © 2026 Dr. Samir Saad &nbsp;·&nbsp;
     <a href="mailto:dr.samir.saad.1981@gmail.com">dr.samir.saad.1981@gmail.com</a>
@@ -1356,6 +1358,12 @@ function renderTableAndStack() {
         <td><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${pnlSign}$${Math.abs(pnl).toFixed(2)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
         <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
         <td><span class="action-badge action-${action}">${actionLabel}</span></td>
+        <td style="min-width:120px">
+          <input type="text" class="editable-input note-input" value="${(c.notes||'').replace(/"/g,'&quot;')}"
+            placeholder="📝 note…"
+            onchange="updateNote('${c.sym}',this.value)"
+            title="Add a note for ${c.sym}">
+        </td>
         <td style="text-align:center;white-space:nowrap">
           <div style="display:inline-flex;flex-direction:column;gap:4px;align-items:center">
             <div style="display:flex;gap:4px">
@@ -1403,6 +1411,12 @@ function renderTableAndStack() {
           <div class="coin-metric"><label>Cost Basis</label><val>$${fmt(baseVal,0)}</val></div>
           <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
           <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
+        </div>
+        <div style="padding:6px 12px 0">
+          <input type="text" class="editable-input note-input" value="${(c.notes||'').replace(/"/g,'&quot;')}"
+            placeholder="📝 Add a note…"
+            onchange="updateNote('${c.sym}',this.value)"
+            style="width:100%;font-size:0.8rem">
         </div>
         <div class="coin-card-footer" style="color:var(--fg2);font-size:0.75rem">
           <span>#${i+1}</span>
@@ -2293,6 +2307,20 @@ function renderAccumProgress(plan) {
   document.getElementById('accumProgressBar').style.display = '';
 }
 
+let lastCloudSync = null;
+
+function updateSyncFooter() {
+  const el = document.getElementById('footerSyncTime');
+  if (!el) return;
+  if (lastCloudSync) {
+    const t = lastCloudSync.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const d = lastCloudSync.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    el.textContent = `☁️ Cloud synced: ${d} at ${t}`;
+  } else {
+    el.textContent = '☁️ Cloud: not synced yet';
+  }
+}
+
 async function loadAccumProgress() {
   let plan = [];
   // Try cloud first
@@ -2304,6 +2332,8 @@ async function loadAccumProgress() {
       const json = await res.json();
       plan = json.record.accumPlan || [];
       try { localStorage.setItem(ACCUM_KEY, JSON.stringify(plan)); } catch(_) {}
+      lastCloudSync = new Date();
+      updateSyncFooter();
     }
   } catch(_) {}
   // Fallback to localStorage
