@@ -237,10 +237,11 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .acc-card-stat { background: var(--bg3); border-radius: 9px; padding: 8px 10px; }
 .acc-card-stat .lbl { font-size: 0.68rem; color: var(--fg2); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
 .acc-card-stat .val { font-size: 0.88rem; font-weight: 600; }
-.acc-card-target-row { display: flex; align-items: center; gap: 8px; }
-.acc-card-target-row label { font-size: 0.75rem; color: var(--fg2); white-space: nowrap; }
+.acc-card-target-row { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.acc-card-target-row label { font-size: 0.75rem; color: var(--fg2); white-space: nowrap; flex-shrink: 0; }
+.acc-card-target-row .sym-tag { font-size: 0.72rem; color: var(--fg2); white-space: nowrap; flex-shrink: 0; max-width: 52px; overflow: hidden; text-overflow: ellipsis; }
 .card-target-input {
-  flex: 1; background: var(--bg3); border: 1px solid var(--border);
+  flex: 1; min-width: 0; background: var(--bg3); border: 1px solid var(--border);
   color: var(--fg); border-radius: 7px; font-family: inherit;
   font-size: 0.85rem; padding: 5px 10px; outline: none;
   text-align: right;
@@ -785,14 +786,14 @@ function renderCards() {
       </div>
 
       <div class="acc-card-target-row">
-        <label>🎯 Target Qty:</label>
+        <label>🎯 Target:</label>
         <input class="card-target-input" type="number" min="0" step="any"
           value="${entry.targetQty||''}"
-          placeholder="Set target qty"
+          placeholder="Qty"
           oninput="updateTarget(${idx}, this.value)"
           onblur="commitTarget(${idx}, this.value)"
           onkeydown="if(event.key==='Enter'){this.blur()}">
-        <span style="font-size:0.75rem;color:var(--fg2)">${entry.sym}</span>
+        <span class="sym-tag">${entry.sym}</span>
       </div>
       <div class="acc-card-target-row" style="margin-top:6px">
         <label>💰 Buy At:</label>
