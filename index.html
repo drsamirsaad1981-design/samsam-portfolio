@@ -1515,7 +1515,30 @@ async function fetchLivePrices() {
     lastFetchTime=new Date();
     setLiveStatus('ok');
     savePortfolio();renderAll();
+    // After prices, fetch missing logos for custom coins (sequential to avoid rate limits)
+    fetchMissingLogos();
   } catch(e){setLiveStatus('error');updateLiveIndicator();}
+}
+
+async function fetchMissingLogos() {
+  // Find custom coins that have a cgId but no logoUrl yet
+  const missing = portfolio.filter(c => c.cgId && !c.logoUrl);
+  for(const coin of missing) {
+    try {
+      await new Promise(r => setTimeout(r, 800)); // 800ms delay between requests
+      const res = await fetch(`https://api.coingecko.com/api/v3/coins/${coin.cgId}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false`);
+      if(res.ok) {
+        const data = await res.json();
+        if(data.image && data.image.small) {
+          coin.logoUrl = data.image.small;
+          const cc = customCoins.find(c => c.sym === coin.sym);
+          if(cc) { cc.logoUrl = data.image.small; saveCustomCoins(); }
+          savePortfolio();
+          renderAll(); // re-render to show logo immediately
+        }
+      }
+    } catch(e) { /* skip, will retry next refresh */ }
+  }
 }
 
 function setLiveStatus(s){liveStatus=s;updateLiveIndicator();}
