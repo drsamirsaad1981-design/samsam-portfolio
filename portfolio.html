@@ -1345,6 +1345,9 @@ async function fetchCoinLogoAndPrice(coin, cgId) {
       // Save logo URL on the coin object (persisted)
       if(data.image && data.image.small) {
         coin.logoUrl = data.image.small;
+        // Also save logoUrl in customCoins store so it survives Reset
+        const cc = customCoins.find(c => c.sym === coin.sym);
+        if(cc) { cc.logoUrl = data.image.small; saveCustomCoins(); }
       }
       // Also update live price if available
       if(data.market_data && data.market_data.current_price && data.market_data.current_price.usd) {
