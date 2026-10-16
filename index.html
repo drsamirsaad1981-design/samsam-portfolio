@@ -400,6 +400,7 @@
   .dream-bar h3 { font-size: 0.8rem; color: var(--fg2); margin-bottom: 8px; }
   .progress-track { background: var(--bg3); border-radius: 100px; height: 10px; overflow: hidden; }
   .progress-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--btc), var(--accent)); transition: width 0.5s ease; }
+  .progress-fill.accum-fill { background: linear-gradient(90deg, #10b981, #3b82f6); }
   .progress-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.72rem; }
 
   .date-tag {
@@ -576,8 +577,19 @@
     <div class="progress-fill" id="progressFill" style="width:1.304%"></div>
   </div>
   <div class="progress-labels">
-    <span style="color:var(--btc)" id="progressPct">1.304% مكتمل</span>
+    <span style="color:var(--btc)" id="progressPct">1.304% complete</span>
     <span style="color:var(--fg2)">Target: 1.00000000 BTC ₿</span>
+  </div>
+</div>
+
+<div class="dream-bar" id="accumProgressBar" style="display:none">
+  <h3>📊 Accumulation Plan — Overall Progress <a href="./accumulation.html" style="color:var(--accent);font-size:0.72rem;text-decoration:none;margin-left:6px">→ View Plan</a></h3>
+  <div class="progress-track">
+    <div class="progress-fill accum-fill" id="accumFill" style="width:0%"></div>
+  </div>
+  <div class="progress-labels">
+    <span style="color:#10b981" id="accumPct">0% complete</span>
+    <span style="color:var(--fg2)" id="accumDetail">— / — targets met</span>
   </div>
 </div>
 
@@ -1874,6 +1886,11 @@ async function fetchLivePrices() {
     lastFetchTime=new Date();
     setLiveStatus('ok');
     savePortfolio();renderAll();
+    // Re-render accumulation progress with fresh prices
+    try {
+      const accPlan = JSON.parse(localStorage.getItem(ACCUM_KEY) || '[]');
+      if (accPlan.length) renderAccumProgress(accPlan);
+    } catch(_) {}
     // After prices, fetch missing logos for custom coins (sequential to avoid rate limits)
     fetchMissingLogos();
   } catch(e){setLiveStatus('error');updateLiveIndicator();}
@@ -2158,6 +2175,54 @@ initView();       // THEN apply view preference (shows/hides correct container)
 fetchLivePrices();
 // Auto-refresh live prices every 60 seconds
 setInterval(() => { fetchLivePrices(); }, 60000);
+
+// ─── Accumulation Progress on Main Page ──────────────────────────────────────
+const ACCUM_KEY      = 'samsam_acc_v1';
+const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
+const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
+
+function renderAccumProgress(plan) {
+  if (!plan || plan.length === 0) return;
+  let weightedActual = 0, weightedTarget = 0, completed = 0;
+  plan.forEach(entry => {
+    const coin = portfolio.find(c => c.sym && c.sym.toUpperCase() === (entry.sym||'').toUpperCase());
+    const actualQty   = coin ? (coin.qty || 0) : 0;
+    const targetQty   = entry.targetQty || 0;
+    const currentPrice = coin ? (coin.currentPrice || 0) : 0;
+    const targetVal   = targetQty * currentPrice;
+    weightedActual   += actualQty * currentPrice;
+    weightedTarget   += targetVal;
+    if (targetQty > 0 && actualQty >= targetQty) completed++;
+  });
+  const pct = weightedTarget > 0 ? Math.min(weightedActual / weightedTarget * 100, 100) : 0;
+  document.getElementById('accumFill').style.width  = pct.toFixed(1) + '%';
+  document.getElementById('accumPct').textContent   = pct.toFixed(1) + '% complete';
+  document.getElementById('accumDetail').textContent = completed + ' / ' + plan.length + ' targets met';
+  document.getElementById('accumProgressBar').style.display = '';
+}
+
+async function loadAccumProgress() {
+  let plan = [];
+  // Try cloud first
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      plan = json.record.accumPlan || [];
+      try { localStorage.setItem(ACCUM_KEY, JSON.stringify(plan)); } catch(_) {}
+    }
+  } catch(_) {}
+  // Fallback to localStorage
+  if (!plan.length) {
+    try { plan = JSON.parse(localStorage.getItem(ACCUM_KEY) || '[]'); } catch(_) { plan = []; }
+  }
+  renderAccumProgress(plan);
+}
+
+// Load accumulation progress after prices are ready (slight delay)
+setTimeout(loadAccumProgress, 2000);
 </script>
 </body>
 </html>
