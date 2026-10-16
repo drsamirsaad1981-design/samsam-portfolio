@@ -2024,6 +2024,37 @@ function buildPortfolioPayload() {
     ? lastFetchTime.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
     : 'Not yet fetched this session';
 
+  // Build accumulation plan summary
+  let accumPlanData = [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(ACCUM_KEY) || '[]');
+    accumPlanData = raw.map(entry => {
+      const coin = portfolio.find(c => c.sym && c.sym.toUpperCase() === (entry.sym||'').toUpperCase());
+      const actualQty    = coin ? (coin.qty || 0) : 0;
+      const targetQty    = entry.targetQty || 0;
+      const currentPrice = coin ? (coin.currentPrice || coin.basePrice || 0) : 0;
+      const progress     = targetQty > 0 ? Math.min(actualQty / targetQty * 100, 100) : 0;
+      const costToTarget = Math.max(targetQty - actualQty, 0) * currentPrice;
+      return {
+        sym:          entry.sym,
+        name:         entry.name || entry.sym,
+        targetQty:    +targetQty,
+        actualQty:    +actualQty.toFixed(8),
+        pendingQty:   +Math.max(targetQty - actualQty, 0).toFixed(8),
+        currentPrice: +currentPrice,
+        costToTarget: +costToTarget.toFixed(2),
+        progressPct:  +progress.toFixed(1),
+        met:          targetQty > 0 && actualQty >= targetQty,
+      };
+    });
+  } catch(_) {}
+
+  const accumMet     = accumPlanData.filter(e => e.met).length;
+  const accumTotal   = accumPlanData.length;
+  const accumWgtAct  = accumPlanData.reduce((s, e) => s + e.actualQty   * e.currentPrice, 0);
+  const accumWgtTgt  = accumPlanData.reduce((s, e) => s + e.targetQty   * e.currentPrice, 0);
+  const accumOverall = accumWgtTgt > 0 ? Math.min(accumWgtAct / accumWgtTgt * 100, 100) : 0;
+
   return {
     coins,
     stats: {
@@ -2037,6 +2068,13 @@ function buildPortfolioPayload() {
       btcPrice:    +btcPrice,
       numCoins:    coins.length,
       lastUpdate,
+    },
+    accumPlan: {
+      entries:        accumPlanData,
+      totalTargets:   accumTotal,
+      metTargets:     accumMet,
+      overallPct:     +accumOverall.toFixed(1),
+      totalCostToMeet:+accumPlanData.reduce((s,e)=>s+e.costToTarget,0).toFixed(2),
     }
   };
 }
@@ -2122,10 +2160,22 @@ async function runAnalysis() {
 
   try {
     const portfolioData = buildPortfolioPayload();
+
+    // Build accumulation context string for the AI prompt
+    let accumContext = '';
+    if (portfolioData.accumPlan && portfolioData.accumPlan.entries.length > 0) {
+      const ap = portfolioData.accumPlan;
+      accumContext  = `\n\nACCUMULATION PLAN (${ap.metTargets}/${ap.totalTargets} targets met, overall ${ap.overallPct}% complete, $${ap.totalCostToMeet} still needed):\n`;
+      accumContext += ap.entries.map(e =>
+        `- ${e.sym}: target ${e.targetQty}, actual ${e.actualQty}, pending ${e.pendingQty}, progress ${e.progressPct}%, cost to complete $${e.costToTarget}${e.met ? ' ✓ MET' : ''}`
+      ).join('\n');
+      accumContext += `\nWhen making Buy/Hold recommendations, factor in which coins are part of the accumulation plan and how close they are to their targets.`;
+    }
+
     const res = await fetch(ANALYSIS_WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ portfolioData, language: analysisLang }),
+      body: JSON.stringify({ portfolioData, language: analysisLang, accumContext }),
     });
 
     if (!res.ok) {
