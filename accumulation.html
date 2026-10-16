@@ -686,14 +686,14 @@ function renderTable() {
       <td>${hasPrice ? '$' + fmtUSD(r.currentPrice) : '<span class="no-price">No price</span>'}</td>
       <td style="min-width:130px">
         <div style="display:flex;align-items:center;gap:3px">
-          <input class="target-input" type="number" step="1"
+          <input class="target-input" type="text" inputmode="decimal"
             value="${entry.targetPct || ''}"
-            placeholder="e.g. -20"
+            placeholder="-20"
             oninput="updateTargetPct(${idx}, this.value)"
             onblur="commitTargetPct(${idx}, this.value)"
             onkeydown="if(event.key==='Enter'){this.blur()}"
             title="Enter % offset from current price (e.g. -20 = buy 20% below current)"
-            style="width:60px">
+            style="width:65px">
           <span style="font-size:0.75rem;color:var(--fg2)">%</span>
         </div>
         ${r.targetPrice > 0 ? `<div style="font-size:0.7rem;margin-top:3px;color:var(--accent);font-weight:600">
@@ -796,18 +796,26 @@ function renderCards() {
       </div>
       <div class="acc-card-target-row" style="margin-top:6px">
         <label>💰 Buy At:</label>
-        <div style="display:flex;align-items:center;gap:4px">
-          <input class="card-target-input" type="number" step="1"
-            value="${entry.targetPct||''}"
-            placeholder="-20"
-            oninput="updateTargetPct(${idx}, this.value)"
-            onblur="commitTargetPct(${idx}, this.value)"
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <button onclick="togglePctSign(${idx})"
+            style="background:var(--bg3);border:1px solid var(--border);color:var(--fg);
+                   border-radius:6px;padding:4px 10px;font-size:0.85rem;cursor:pointer;
+                   font-weight:700;min-width:36px"
+            title="Toggle positive/negative">
+            ${(entry.targetPct||0) >= 0 ? '+' : '−'}
+          </button>
+          <input class="card-target-input" type="text" inputmode="decimal"
+            id="pctInput_${idx}"
+            value="${entry.targetPct ? Math.abs(entry.targetPct) : ''}"
+            placeholder="20"
+            oninput="updateTargetPctAbs(${idx}, this.value)"
+            onblur="commitTargetPctAbs(${idx}, this.value)"
             onkeydown="if(event.key==='Enter'){this.blur()}"
-            style="width:60px">
+            style="width:55px;text-align:center">
           <span style="font-size:0.75rem;color:var(--fg2)">%</span>
-          ${r.targetPrice > 0 ? `<span style="font-size:0.75rem;color:var(--accent);font-weight:600">→ $${fmtUSD(r.targetPrice)}</span>` : ''}
+          ${r.targetPrice > 0 ? `<span style="font-size:0.78rem;color:var(--accent);font-weight:600">→ $${fmtUSD(r.targetPrice)}</span>` : ''}
         </div>
-        ${r.priceDiff !== null ? `<div style="font-size:0.7rem;margin-top:3px;color:${r.readyToBuy?'var(--green)':'var(--red)'}">
+        ${r.priceDiff !== null ? `<div style="font-size:0.7rem;margin-top:4px;color:${r.readyToBuy?'var(--green)':'var(--red)'}">
           ${r.readyToBuy ? '🟢 السعر وصل — اشتري!' : `🔴 السعر أعلى بـ ${r.priceDiff.toFixed(1)}%`}
         </div>` : ''}
       </div>
@@ -878,6 +886,36 @@ function updateTargetPct(idx, val) {
 function commitTargetPct(idx, val) {
   const n = parseFloat(val);
   accumPlan[idx].targetPct = isNaN(n) ? 0 : Math.max(-99, Math.min(n, 500));
+  renderAll();
+  saveAccumPlan();
+}
+
+// ─── Mobile helpers: +/− button + abs value input ────────────────────────────
+// The mobile keyboard has no minus key on numeric pad,
+// so we show a toggle button (+/−) and user types the absolute value.
+function togglePctSign(idx) {
+  const current = accumPlan[idx].targetPct || 0;
+  accumPlan[idx].targetPct = current === 0 ? 0 : -current;
+  renderAll();
+  saveAccumPlan();
+}
+
+function updateTargetPctAbs(idx, val) {
+  const abs = parseFloat(val);
+  if (isNaN(abs)) return;
+  const sign = (accumPlan[idx].targetPct || 0) >= 0 ? 1 : -1;
+  accumPlan[idx].targetPct = Math.max(-99, Math.min(sign * Math.abs(abs), 500));
+  renderDashboard();
+  saveAccumPlan();
+}
+
+function commitTargetPctAbs(idx, val) {
+  const abs = parseFloat(val);
+  if (isNaN(abs)) { accumPlan[idx].targetPct = 0; }
+  else {
+    const sign = (accumPlan[idx].targetPct || 0) >= 0 ? 1 : -1;
+    accumPlan[idx].targetPct = Math.max(-99, Math.min(sign * Math.abs(abs), 500));
+  }
   renderAll();
   saveAccumPlan();
 }
