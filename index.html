@@ -10,6 +10,18 @@
 <meta name="apple-mobile-web-app-title" content="سمسم BTC">
 <meta name="theme-color" content="#0a0e1a">
 
+<!-- Apply saved theme IMMEDIATELY before render to avoid flash -->
+<script>
+  (function(){
+    try {
+      var t = localStorage.getItem('samsam_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch(e) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 
@@ -1756,7 +1768,9 @@ function exportData() {
 function toggleTheme() {
   const root=document.documentElement;
   const current=root.getAttribute('data-theme')||'dark';
-  root.setAttribute('data-theme',current==='dark'?'light':'dark');
+  const next=current==='dark'?'light':'dark';
+  root.setAttribute('data-theme',next);
+  try { localStorage.setItem('samsam_theme', next); } catch(e) {}
 }
 
 const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#f59e0b',meme:'#ef4444',infra:'#06b6d4',other:'#6b7280',btc:'#f7931a'};
