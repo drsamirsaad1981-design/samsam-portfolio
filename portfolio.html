@@ -181,8 +181,9 @@
   .search-box:focus { outline: 2px solid var(--accent); border-color: transparent; }
 
   /* Mobile-first Stacked Card View for Portfolio Items */
+  /* Hidden by default — JS adds .view-active to show the chosen view */
   .coins-stack {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 10px;
     margin-bottom: 16px;
@@ -521,7 +522,7 @@
 </div>
 
 <!-- Mobile Vertical Card Stack View -->
-<div class="coins-stack view-active" id="coinsStack"></div>
+<div class="coins-stack" id="coinsStack"></div>
 
 <!-- Desktop Table View -->
 <div class="table-wrapper" id="portfolioTableWrapper">
@@ -1619,8 +1620,8 @@ document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDa
 
 ['samsam_portfolio','samsam_pf_v1','samsam_pf_v2'].forEach(k=>localStorage.removeItem(k));
 initPortfolio();
-initView();   // apply saved view preference BEFORE first render
-renderAll();
+renderAll();      // render content first (fills both containers)
+initView();       // THEN apply view preference (shows/hides correct container)
 fetchLivePrices();
 </script>
 </body>
