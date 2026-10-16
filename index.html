@@ -545,7 +545,10 @@
   .btn-accum { background:var(--bg3); color:var(--fg); border:1px solid var(--border); border-radius:10px; padding:10px 20px; font-size:0.85rem; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:border-color .2s, color .2s; flex:1; justify-content:center; }
   .btn-accum:hover { border-color:var(--accent); color:var(--accent); }
 
-  footer { text-align: center; padding: 16px 0 8px; font-size: 0.7rem; color: var(--fg2); border-top: 1px solid var(--border); margin-top: 12px; }
+  footer { text-align: center; padding: 20px 0 12px; font-size: 0.7rem; color: var(--fg2); border-top: 1px solid var(--border); margin-top: 12px; line-height: 1.8; }
+  footer .footer-copy { font-size: 0.68rem; color: var(--fg2); opacity: 0.7; margin-top: 8px; }
+  footer .footer-copy a { color: var(--accent); text-decoration: none; opacity: 0.85; }
+  footer .footer-copy a:hover { opacity: 1; }
 
   table { width: 100%; border-collapse: collapse; min-width: 1000px; }
   thead { background: linear-gradient(135deg, #1a2235, #0f172a); position: sticky; top: 0; z-index: 2; }
@@ -847,6 +850,10 @@
 <footer>
   <p>🔒 Local storage | Baseline: Oct 15, 2026</p>
   <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
+  <div class="footer-copy">
+    © 2026 Dr. Samir Saad &nbsp;·&nbsp;
+    <a href="mailto:dr.samir.saad.1981@gmail.com">dr.samir.saad.1981@gmail.com</a>
+  </div>
 </footer>
 
 <!-- JS from here -->
