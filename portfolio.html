@@ -899,8 +899,10 @@ function initPortfolio() {
 
 function resetToBaseline() {
   const removed = getRemovedSyms();
-  const customSyms = getCustomSyms();
-  // Base coins (excluding removed)
+  // Snapshot current portfolio values for custom coins BEFORE rebuilding
+  const currentPortfolioMap = {};
+  portfolio.forEach(c => { currentPortfolioMap[c.sym] = c; });
+  // Base coins reset to Oct-15 baseline
   const baseCoins = BASE_PORTFOLIO
     .filter(c => !removed.has(c.sym))
     .map(c => ({
@@ -908,14 +910,22 @@ function resetToBaseline() {
       currentPrice: LIVE_PRICES_OCT15[c.sym] || c.basePrice,
       notes: '', action: 'hold', lastUpdate: '2026-10-15'
     }));
-  // Custom coins (excluding removed), reset qty/price to their saved baseline
+  // Custom coins: keep CURRENT qty/basePrice/logoUrl — never reset them
   const addedCoins = customCoins
     .filter(c => !removed.has(c.sym))
-    .map(c => ({
-      ...c,
-      currentPrice: c.basePrice, // will be updated by fetchLivePrices
-      notes: '', action: 'hold', lastUpdate: '2026-10-15'
-    }));
+    .map(c => {
+      const live = currentPortfolioMap[c.sym]; // use live values if available
+      const qty       = live ? live.qty       : c.qty;
+      const basePrice = live ? live.basePrice : c.basePrice;
+      const logoUrl   = (live && live.logoUrl) ? live.logoUrl : c.logoUrl;
+      const cgId      = c.cgId;
+      return {
+        ...c, qty, basePrice, walletValue: qty * basePrice,
+        currentPrice: live ? live.currentPrice : basePrice,
+        logoUrl, cgId, notes: '', action: 'hold',
+        lastUpdate: live ? live.lastUpdate : new Date().toISOString().slice(0,10)
+      };
+    });
   portfolio = [...baseCoins, ...addedCoins];
   btcPrice = LIVE_PRICES_OCT15.BTC || 82363;
 }
