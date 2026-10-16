@@ -395,33 +395,9 @@ const THEME_KEY      = 'samsam_theme';
 
 // ─── JSONbin Cloud Sync ───────────────────────────────────────────────────────
 const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
-const JSONBIN_BIN_KEY = 'samsam_acc_bin_id';  // localStorage key storing the bin ID
+const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';  // fixed bin ID — shared across all devices
 let cloudSyncTimer = null;
 let isSyncing = false;
-
-async function getBinId() {
-  try { return localStorage.getItem(JSONBIN_BIN_KEY) || null; } catch(e) { return null; }
-}
-async function setBinId(id) {
-  try { localStorage.setItem(JSONBIN_BIN_KEY, id); } catch(e) {}
-}
-
-// Create a new bin (first time only)
-async function createBin(data) {
-  const res = await fetch('https://api.jsonbin.io/v3/b', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Master-Key': JSONBIN_KEY,
-      'X-Bin-Name': 'samsam-accum-plan',
-      'X-Bin-Private': 'true'
-    },
-    body: JSON.stringify({ accumPlan: data })
-  });
-  if (!res.ok) throw new Error('Create bin failed: ' + res.status);
-  const json = await res.json();
-  return json.metadata.id;
-}
 
 // Upload current plan to cloud
 async function cloudSave() {
@@ -429,27 +405,20 @@ async function cloudSave() {
   isSyncing = true;
   setSaveStatus('saving', '☁️ Saving…');
   try {
-    let binId = await getBinId();
-    if (!binId) {
-      binId = await createBin(accumPlan);
-      await setBinId(binId);
-    } else {
-      const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': JSONBIN_KEY
-        },
-        body: JSON.stringify({ accumPlan })
-      });
-      if (!res.ok) throw new Error('Update failed: ' + res.status);
-    }
-    // also save locally
-    localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan));
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_KEY
+      },
+      body: JSON.stringify({ accumPlan })
+    });
+    if (!res.ok) throw new Error('Update failed: ' + res.status);
+    // mirror locally for offline fallback
+    try { localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan)); } catch(_) {}
     setSaveStatus('saved', '☁️ Synced');
     setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2500);
   } catch(e) {
-    // fallback: save locally only
     try { localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan)); } catch(_) {}
     setSaveStatus('error', '✗ Cloud failed – saved locally');
     setTimeout(() => setSaveStatus('ready', '✓ Ready'), 3000);
@@ -458,30 +427,20 @@ async function cloudSave() {
   }
 }
 
-// Load plan from cloud (or fallback to localStorage)
+// Load plan from cloud (fallback to localStorage if offline)
 async function cloudLoad() {
   setSaveStatus('saving', '☁️ Loading…');
   try {
-    let binId = await getBinId();
-    if (!binId) {
-      // No bin yet — try localStorage
-      const local = localStorage.getItem(ACCUM_KEY);
-      accumPlan = local ? JSON.parse(local) : [];
-      setSaveStatus('ready', '✓ Ready');
-      return;
-    }
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
       headers: { 'X-Master-Key': JSONBIN_KEY }
     });
     if (!res.ok) throw new Error('Load failed: ' + res.status);
     const json = await res.json();
     accumPlan = json.record.accumPlan || [];
-    // mirror to localStorage for offline fallback
     try { localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan)); } catch(_) {}
     setSaveStatus('saved', '☁️ Synced');
     setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2000);
   } catch(e) {
-    // Fallback to localStorage
     try {
       const local = localStorage.getItem(ACCUM_KEY);
       accumPlan = local ? JSON.parse(local) : [];
