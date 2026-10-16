@@ -405,8 +405,12 @@
 
   .btn-buy-more { background: linear-gradient(135deg,#16a34a,#15803d); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:0.75rem; cursor:pointer; white-space:nowrap; }
   .btn-buy-more:hover { opacity:0.85; }
+  .btn-sell { background: linear-gradient(135deg,#dc2626,#b91c1c); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:0.75rem; cursor:pointer; white-space:nowrap; }
+  .btn-sell:hover { opacity:0.85; }
   .buy-preview { background:var(--bg3); border-radius:8px; padding:10px 12px; font-size:0.82rem; margin-top:10px; line-height:1.7; }
   .buy-preview span { font-weight:700; color:var(--accent); }
+  .sell-profit { color:#22c55e; font-weight:700; }
+  .sell-loss   { color:#ef4444; font-weight:700; }
 
   footer { text-align: center; padding: 16px 0 8px; font-size: 0.7rem; color: var(--fg2); border-top: 1px solid var(--border); margin-top: 12px; }
 
@@ -568,6 +572,37 @@
     <div style="display:flex;gap:8px;margin-top:14px;">
       <button class="btn btn-primary" onclick="applyBuyMore()">✅ Confirm Buy</button>
       <button class="btn btn-secondary" onclick="closeBuyMore()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sellModal">
+  <div class="modal">
+    <h2>🔴 Sell — <span id="smSym" style="color:#ef4444"></span></h2>
+    <div class="form-row">
+      <label class="form-label">Available Balance: <strong id="smBalance" style="color:var(--accent)"></strong></label>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Quantity to Sell</label>
+      <input type="number" class="form-input" id="smQty" placeholder="0.00" step="any" oninput="previewSell()">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Sell Price (USD)</label>
+      <input type="number" class="form-input" id="smPrice" placeholder="0.00" step="any" oninput="previewSell()">
+    </div>
+    <div class="buy-preview" id="smPreview" style="display:none">
+      <div>Sell Qty: <span id="smSellQty"></span> × $<span id="smSellPrice"></span></div>
+      <div>Sell Value: <span>$<span id="smSellValue"></span></span></div>
+      <div>Avg Cost Basis: <span>$<span id="smCostBasis"></span></span></div>
+      <div id="smPnlRow" style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">
+        Realized P&L: <span id="smPnl"></span><br>
+        Remaining Qty: <span id="smRemQty"></span>
+      </div>
+      <div id="smErrRow" style="color:#ef4444;font-weight:600;display:none">⚠️ <span id="smErr"></span></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn btn-primary" id="smConfirmBtn" onclick="applySell()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">✅ Confirm Sell</button>
+      <button class="btn btn-secondary" onclick="closeSell()">Cancel</button>
     </div>
   </div>
 </div>
@@ -898,7 +933,10 @@ function renderTableAndStack() {
         <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
         <td><span class="action-badge action-${action}">${actionLabel}</span></td>
         <td><input type="text" class="editable-input" value="${c.notes||''}" placeholder="Note..." onchange="updateNote('${c.sym}',this.value)" style="min-width:80px"></td>
-        <td><button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">➕ Buy</button></td>
+        <td style="white-space:nowrap;display:flex;gap:4px;padding:6px 4px">
+          <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">➕ Buy</button>
+          <button class="btn-sell" onclick="openSell('${c.sym}')">🔴 Sell</button>
+        </td>
       </tr>`;
     });
     tbody.innerHTML = html;
@@ -1021,6 +1059,76 @@ function applyBuyMore() {
 }
 // close on overlay click
 document.getElementById('buyMoreModal').addEventListener('click', function(e){ if(e.target===this) closeBuyMore(); });
+
+// ── Sell ──────────────────────────────────────────────
+let _smSym = null;
+function openSell(sym) {
+  _smSym = sym;
+  const coin = portfolio.find(c=>c.sym===sym);
+  if(!coin) return;
+  const fmtN = n => n<1 ? n.toFixed(6) : n<10 ? n.toFixed(4) : n.toFixed(2);
+  document.getElementById('smSym').textContent = sym;
+  document.getElementById('smBalance').textContent = fmtN(coin.qty) + ' ' + sym;
+  document.getElementById('smQty').value = '';
+  document.getElementById('smPrice').value = coin.currentPrice ? coin.currentPrice.toFixed(6) : '';
+  document.getElementById('smPreview').style.display = 'none';
+  document.getElementById('smErrRow').style.display = 'none';
+  document.getElementById('smConfirmBtn').disabled = false;
+  document.getElementById('sellModal').classList.add('active');
+  document.getElementById('smQty').focus();
+}
+function closeSell() {
+  document.getElementById('sellModal').classList.remove('active');
+  _smSym = null;
+}
+function previewSell() {
+  const coin = portfolio.find(c=>c.sym===_smSym);
+  if(!coin) return;
+  const sellQty   = parseFloat(document.getElementById('smQty').value);
+  const sellPrice = parseFloat(document.getElementById('smPrice').value);
+  const fmtN = n => n<1 ? n.toFixed(6) : n<10 ? n.toFixed(4) : n.toFixed(2);
+  if(!sellQty || !sellPrice || sellQty<=0 || sellPrice<=0) {
+    document.getElementById('smPreview').style.display='none'; return;
+  }
+  document.getElementById('smPreview').style.display = 'block';
+  const sellValue = sellQty * sellPrice;
+  const costBasis = sellQty * coin.basePrice;
+  const pnl = sellValue - costBasis;
+  const remQty = coin.qty - sellQty;
+  // error: selling more than available
+  const isErr = sellQty > coin.qty;
+  document.getElementById('smSellQty').textContent   = fmtN(sellQty);
+  document.getElementById('smSellPrice').textContent = sellPrice.toFixed(4);
+  document.getElementById('smSellValue').textContent = sellValue.toFixed(2);
+  document.getElementById('smCostBasis').textContent = costBasis.toFixed(2);
+  document.getElementById('smPnlRow').style.display  = isErr ? 'none' : 'block';
+  document.getElementById('smErrRow').style.display  = isErr ? 'block' : 'none';
+  document.getElementById('smConfirmBtn').disabled   = isErr;
+  if(!isErr){
+    const pnlEl = document.getElementById('smPnl');
+    const sign = pnl>=0 ? '+' : '';
+    pnlEl.className = pnl>=0 ? 'sell-profit' : 'sell-loss';
+    pnlEl.textContent = sign + '$' + pnl.toFixed(2) + ' (' + sign + ((pnl/costBasis)*100).toFixed(1) + '%)';
+    document.getElementById('smRemQty').textContent = fmtN(remQty) + ' ' + _smSym;
+  } else {
+    document.getElementById('smErr').textContent = 'Cannot sell ' + fmtN(sellQty) + ' — balance is only ' + fmtN(coin.qty);
+  }
+}
+function applySell() {
+  const coin = portfolio.find(c=>c.sym===_smSym);
+  if(!coin) return;
+  const sellQty   = parseFloat(document.getElementById('smQty').value);
+  const sellPrice = parseFloat(document.getElementById('smPrice').value);
+  if(!sellQty || !sellPrice || sellQty<=0 || sellPrice<=0) return;
+  if(sellQty > coin.qty) { alert('⚠️ Cannot sell more than available balance!'); return; }
+  // avg cost unchanged — only qty reduces
+  coin.qty -= sellQty;
+  coin.walletValue = coin.qty * coin.basePrice;
+  savePortfolio();
+  renderAll();
+  closeSell();
+}
+document.getElementById('sellModal').addEventListener('click', function(e){ if(e.target===this) closeSell(); });
 
 function sortTable(col) {
   if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}
