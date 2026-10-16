@@ -403,10 +403,10 @@
   .form-label { display: block; font-size: 0.75rem; color: var(--fg2); margin-bottom: 4px; }
   .form-input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font-size: 0.85rem; }
 
-  .btn-buy-more { background: linear-gradient(135deg,#16a34a,#15803d); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:0.75rem; cursor:pointer; white-space:nowrap; }
-  .btn-buy-more:hover { opacity:0.85; }
-  .btn-sell { background: linear-gradient(135deg,#dc2626,#b91c1c); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:0.75rem; cursor:pointer; white-space:nowrap; }
-  .btn-sell:hover { opacity:0.85; }
+  .btn-buy-more { background:#16a34a; color:#fff; border:none; border-radius:4px; padding:2px 7px; font-size:0.7rem; cursor:pointer; white-space:nowrap; line-height:1.6; }
+  .btn-buy-more:hover { background:#15803d; }
+  .btn-sell { background:#dc2626; color:#fff; border:none; border-radius:4px; padding:2px 7px; font-size:0.7rem; cursor:pointer; white-space:nowrap; line-height:1.6; }
+  .btn-sell:hover { background:#b91c1c; }
   .buy-preview { background:var(--bg3); border-radius:8px; padding:10px 12px; font-size:0.82rem; margin-top:10px; line-height:1.7; }
   .buy-preview span { font-weight:700; color:var(--accent); }
   .sell-profit { color:#22c55e; font-weight:700; }
@@ -933,9 +933,11 @@ function renderTableAndStack() {
         <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
         <td><span class="action-badge action-${action}">${actionLabel}</span></td>
         <td><input type="text" class="editable-input" value="${c.notes||''}" placeholder="Note..." onchange="updateNote('${c.sym}',this.value)" style="min-width:80px"></td>
-        <td style="white-space:nowrap;display:flex;gap:4px;padding:6px 4px">
-          <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">➕ Buy</button>
-          <button class="btn-sell" onclick="openSell('${c.sym}')">🔴 Sell</button>
+        <td style="text-align:center">
+          <div style="display:inline-flex;gap:3px">
+            <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
+            <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
+          </div>
         </td>
       </tr>`;
     });
