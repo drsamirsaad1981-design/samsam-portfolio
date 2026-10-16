@@ -204,6 +204,61 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .coin-search-item:hover { background: rgba(245,158,11,.1); }
 .coin-search-item img { width: 22px; height: 22px; border-radius: 50%; }
 
+/* ── Card view ── */
+.cards-wrap { display: none; flex-direction: column; gap: 12px; }
+.acc-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.acc-card.completed { border-color: rgba(16,185,129,.35); background: rgba(16,185,129,.04); }
+.acc-card-header {
+  display: flex; align-items: center; gap: 10px;
+}
+.acc-card-logo { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: var(--bg3); flex-shrink: 0; }
+.acc-card-title { flex: 1; }
+.acc-card-sym { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.acc-card-name { font-size: 0.75rem; color: var(--fg2); margin-top: 1px; }
+.acc-card-prog-bar { background: var(--bg3); border-radius: 999px; height: 8px; overflow: hidden; }
+.acc-card-prog-fill { height: 100%; border-radius: 999px; transition: width .4s; }
+.acc-card-pct { font-size: 0.75rem; color: var(--fg2); margin-top: 4px; text-align: right; }
+.acc-card-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px;
+}
+.acc-card-stat { background: var(--bg3); border-radius: 9px; padding: 8px 10px; }
+.acc-card-stat .lbl { font-size: 0.68rem; color: var(--fg2); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+.acc-card-stat .val { font-size: 0.88rem; font-weight: 600; }
+.acc-card-target-row { display: flex; align-items: center; gap: 8px; }
+.acc-card-target-row label { font-size: 0.75rem; color: var(--fg2); white-space: nowrap; }
+.card-target-input {
+  flex: 1; background: var(--bg3); border: 1px solid var(--border);
+  color: var(--fg); border-radius: 7px; font-family: inherit;
+  font-size: 0.85rem; padding: 5px 10px; outline: none;
+  text-align: right;
+}
+.card-target-input:focus { border-color: var(--accent); }
+.acc-card-footer { display: flex; justify-content: flex-end; }
+.card-del-btn {
+  background: none; border: 1px solid var(--border); color: var(--fg2);
+  border-radius: 7px; padding: 4px 12px; font-size: 0.75rem;
+  cursor: pointer; font-family: inherit;
+  transition: color .2s, border-color .2s;
+}
+.card-del-btn:hover { color: var(--red); border-color: var(--red); }
+
+/* View toggle */
+.view-toggle {
+  display: flex; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden;
+}
+.view-toggle button {
+  background: none; border: none; color: var(--fg2);
+  font-family: inherit; font-size: 0.78rem; padding: 6px 11px;
+  cursor: pointer; display: flex; align-items: center; gap: 4px;
+  transition: background .15s, color .15s;
+}
+.view-toggle button.active { background: var(--accent); color: #000; font-weight: 600; }
+
 /* ── Responsive ── */
 @media(max-width:600px) {
   .dashboard { grid-template-columns: repeat(2,1fr); }
@@ -215,10 +270,16 @@ tr:hover td { background: rgba(255,255,255,.02); }
 
 /* ── Empty state ── */
 .empty-state {
-  text-align: center; padding: 48px 20px;
+  text-align: center; padding: 40px 20px;
   color: var(--fg2); font-size: 0.9rem;
 }
 .empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
+.empty-state .hint {
+  margin-top: 12px; padding: 12px 16px;
+  background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25);
+  border-radius: 10px; font-size: 0.78rem; color: var(--fg2); text-align: left; line-height: 1.6;
+}
+.empty-state .hint strong { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -268,13 +329,17 @@ tr:hover td { background: rgba(255,255,255,.02); }
 <!-- Toolbar -->
 <div class="toolbar">
   <button class="btn btn-primary" onclick="openAddModal()">➕ Add Coin to Plan</button>
-  <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin..." oninput="renderTable()">
+  <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin..." oninput="renderAll()">
   <button class="btn" onclick="syncFromPortfolio()" title="Sync quantities from portfolio">🔄 Sync</button>
   <button class="btn" onclick="toggleTheme()">🌙 Theme</button>
+  <div class="view-toggle">
+    <button id="btnTable" onclick="setView('table')" title="Table view">📋 Table</button>
+    <button id="btnCards" onclick="setView('cards')" title="Cards view">🃏 Cards</button>
+  </div>
 </div>
 
-<!-- Table -->
-<div class="table-wrap">
+<!-- Table view -->
+<div id="tableView" class="table-wrap">
   <table>
     <thead>
       <tr>
@@ -291,10 +356,18 @@ tr:hover td { background: rgba(255,255,255,.02); }
     <tbody id="accTableBody"></tbody>
   </table>
 </div>
+
+<!-- Card view -->
+<div id="cardsView" class="cards-wrap" style="display:none"></div>
+
 <div id="emptyState" class="empty-state" style="display:none">
   <div class="icon">🎯</div>
-  <div>No coins in your accumulation plan yet.</div>
-  <div style="margin-top:6px;font-size:0.8rem">Click <strong>Add Coin to Plan</strong> to get started.</div>
+  <div>لا توجد عملات في خطة التراكم بعد.</div>
+  <div class="hint">
+    <strong>⚠️ ملاحظة مهمة:</strong> البيانات تُحفظ محلياً على كل جهاز بشكل منفصل.<br>
+    إذا أضفت عملات على الكمبيوتر، ستحتاج لإعادة إضافتها هنا على الموبايل.<br><br>
+    اضغط <strong>➕ Add Coin to Plan</strong> لإضافة عملاتك وتحديد الأهداف.
+  </div>
 </div>
 
 <!-- Add Coin Modal -->
@@ -329,13 +402,24 @@ let portfolioCoins = [];   // loaded from portfolio localStorage
 let accumPlan = [];        // [{sym, name, logoUrl, cgId, targetQty, addedAt}]
 let selectedAddCoin = null;
 let saveTimer = null;
+let currentView = window.innerWidth <= 600 ? 'cards' : 'table';
+
+// ─── View Toggle ─────────────────────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  document.getElementById('tableView').style.display = v === 'table' ? '' : 'none';
+  document.getElementById('cardsView').style.display = v === 'cards' ? 'flex' : 'none';
+  document.getElementById('btnTable').classList.toggle('active', v === 'table');
+  document.getElementById('btnCards').classList.toggle('active', v === 'cards');
+  renderAll();
+}
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   loadTheme();
   loadPortfolio();
   loadAccumPlan();
-  renderTable();
+  setView(currentView);
   renderDashboard();
 });
 
@@ -459,10 +543,10 @@ function renderTable() {
 
   if (accumPlan.length === 0) {
     tbody.innerHTML = '';
-    empty.style.display = '';
+    if (empty) empty.style.display = '';
     return;
   }
-  empty.style.display = 'none';
+  if (empty) empty.style.display = 'none';
 
   tbody.innerHTML = rows.map((entry, i) => {
     const idx = accumPlan.indexOf(entry);
@@ -508,6 +592,85 @@ function renderTable() {
   }).join('');
 }
 
+// ─── Render Cards ────────────────────────────────────────────────────────────
+function renderCards() {
+  const q = (document.getElementById('searchBox').value || '').toLowerCase();
+  const rows = accumPlan.filter(e =>
+    !q || e.sym.toLowerCase().includes(q) || (e.name||'').toLowerCase().includes(q)
+  );
+
+  const wrap = document.getElementById('cardsView');
+  const empty = document.getElementById('emptyState');
+
+  if (accumPlan.length === 0) {
+    wrap.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  wrap.innerHTML = rows.map((entry) => {
+    const idx = accumPlan.indexOf(entry);
+    const r   = calcRow(entry);
+    const completed = r.progress >= 100;
+    const progColor = completed ? '#10b981' : r.progress >= 50 ? '#f59e0b' : '#3b82f6';
+    const hasPrice  = r.currentPrice > 0;
+
+    return `<div class="acc-card${completed ? ' completed' : ''}">
+      <div class="acc-card-header">
+        <img class="acc-card-logo" src="${r.logoUrl||''}" onerror="this.style.display='none'" alt="${entry.sym}">
+        <div class="acc-card-title">
+          <div class="acc-card-sym">
+            ${entry.sym}
+            ${completed ? '<span class="completed-badge">✓ Done</span>' : ''}
+          </div>
+          <div class="acc-card-name">${r.name}</div>
+        </div>
+        <button class="card-del-btn" onclick="removeCoin(${idx})">✕ Remove</button>
+      </div>
+
+      <div>
+        <div class="acc-card-prog-bar">
+          <div class="acc-card-prog-fill" style="width:${r.progress.toFixed(1)}%;background:${progColor}"></div>
+        </div>
+        <div class="acc-card-pct">${r.progress.toFixed(1)}% complete</div>
+      </div>
+
+      <div class="acc-card-grid">
+        <div class="acc-card-stat">
+          <div class="lbl">Actual</div>
+          <div class="val">${fmtQty(r.actualQty)} <span style="font-size:.7em;color:var(--fg2)">${entry.sym}</span></div>
+        </div>
+        <div class="acc-card-stat">
+          <div class="lbl">Pending</div>
+          <div class="val" style="color:${r.pendingQty>0?'var(--red)':'var(--green)'}">
+            ${r.pendingQty > 0 ? fmtQty(r.pendingQty)+' '+entry.sym : '✓ Done'}
+          </div>
+        </div>
+        <div class="acc-card-stat">
+          <div class="lbl">Price</div>
+          <div class="val">${hasPrice ? '$'+fmtUSD(r.currentPrice) : '<span class="no-price">No price</span>'}</div>
+        </div>
+        <div class="acc-card-stat">
+          <div class="lbl">Cost to Target</div>
+          <div class="val" style="color:var(--accent)">
+            ${hasPrice && r.pendingQty > 0 ? '$'+fmtUSD(r.costToTarget) : (r.pendingQty===0?'—':'N/A')}
+          </div>
+        </div>
+      </div>
+
+      <div class="acc-card-target-row">
+        <label>🎯 Target:</label>
+        <input class="card-target-input" type="number" min="0" step="any"
+          value="${entry.targetQty||''}"
+          placeholder="Set target qty"
+          oninput="updateTarget(${idx}, this.value)">
+        <span style="font-size:0.75rem;color:var(--fg2)">${entry.sym}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 // ─── Render Dashboard ────────────────────────────────────────────────────────
 function renderDashboard() {
   let totalTargetVal = 0, holdingsVal = 0, pendingCost = 0;
@@ -537,7 +700,11 @@ function renderDashboard() {
   document.getElementById('overallBar').style.width   = overallPct.toFixed(1) + '%';
 }
 
-function renderAll() { renderTable(); renderDashboard(); }
+function renderAll() {
+  if (currentView === 'table') { renderTable(); }
+  else { renderCards(); }
+  renderDashboard();
+}
 
 // ─── Update target quantity ──────────────────────────────────────────────────
 function updateTarget(idx, val) {
