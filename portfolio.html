@@ -127,6 +127,7 @@
 
   .stat-label { font-size: 0.68rem; color: var(--fg2); margin-bottom: 2px; }
   .stat-value { font-size: 0.95rem; font-weight: 700; word-break: break-all; }
+  .stat-sub { font-size: 0.72rem; color: var(--fg2); margin-top: 3px; font-weight: 500; opacity: 0.8; }
   .stat-btc { color: var(--btc); }
   .stat-green { color: var(--green); }
   .stat-blue { color: var(--blue); }
@@ -472,19 +473,23 @@
   <div class="header-stats">
     <div class="stat-card">
       <div class="stat-label">BTC Accumulated</div>
-      <div class="stat-value stat-btc" id="totalBtc">0.01304141</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Total USD</div>
-      <div class="stat-value stat-green" id="totalUsd">—</div>
+      <div class="stat-value stat-btc" id="totalBtc">0.01304000</div>
+      <div class="stat-sub" id="totalBtcUsd">—</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Altcoins USD</div>
       <div class="stat-value stat-blue" id="altUsd">—</div>
+      <div class="stat-sub" id="altUsdBtc">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Portfolio</div>
+      <div class="stat-value stat-green" id="totalUsd">—</div>
+      <div class="stat-sub" id="totalUsdBtc">—</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">BTC Price</div>
       <div class="stat-value stat-btc" id="btcPriceDisplay">$81,162</div>
+      <div class="stat-sub" id="btcPriceSub">Live</div>
     </div>
   </div>
 </header>
@@ -1014,11 +1019,26 @@ function fmt(n, dec) {
 }
 
 function renderHeader() {
-  const { btcQty, altTotal, total } = calcStats();
-  document.getElementById('totalBtc').textContent = btcQty.toFixed(8);
-  document.getElementById('totalUsd').textContent = '$' + total.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  document.getElementById('altUsd').textContent = '$' + altTotal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const { btcQty, btcValue, altTotal, total } = calcStats();
+  const fmtUsd = n => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const fmtBtc = n => (btcPrice > 0 ? (n / btcPrice).toFixed(8) : '—') + ' BTC';
+
+  // Card 1: BTC Accumulated
+  document.getElementById('totalBtc').textContent = btcQty.toFixed(8) + ' BTC';
+  document.getElementById('totalBtcUsd').textContent = btcPrice > 0 ? '(' + fmtUsd(btcValue) + ')' : '—';
+
+  // Card 2: Altcoins USD
+  document.getElementById('altUsd').textContent = fmtUsd(altTotal);
+  document.getElementById('altUsdBtc').textContent = btcPrice > 0 ? '(' + fmtBtc(altTotal) + ')' : '—';
+
+  // Card 3: Total Portfolio
+  document.getElementById('totalUsd').textContent = fmtUsd(total);
+  document.getElementById('totalUsdBtc').textContent = btcPrice > 0 ? '(' + fmtBtc(total) + ')' : '—';
+
+  // Card 4: BTC Price
   document.getElementById('btcPriceDisplay').textContent = '$' + btcPrice.toLocaleString();
+  document.getElementById('btcPriceSub').textContent = '🔴 Live';
+
   const pct = (btcQty * 100).toFixed(3);
   document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
   document.getElementById('progressPct').textContent = pct + '% complete';
