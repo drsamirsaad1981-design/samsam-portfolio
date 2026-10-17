@@ -450,6 +450,7 @@ function mergeCustomCoins() {
 
 async function loadPortfolio() {
   // 1. Try localStorage first (instant — no network needed)
+  let fromStorage = false;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -459,17 +460,21 @@ async function loadPortfolio() {
       if (coins && coins.length > 0) {
         applyCoinsArray(coins);
         mergeCustomCoins();
-        return;
+        fromStorage = true;
       }
     }
   } catch(e) {}
 
-  // 2. Show static fallback immediately so page isn't blank while cloud fetch runs
-  applyBaseFallback();
-  mergeCustomCoins();
-  renderOverview(); // render now with static data
+  // 2. If no localStorage, use static fallback immediately
+  if (!fromStorage) {
+    applyBaseFallback();
+    mergeCustomCoins();
+  }
 
-  // 3. Try JSONbin cloud in background (3 s timeout) — update if better data found
+  // Render with whatever data we have now (localStorage or static fallback)
+  renderOverview();
+
+  // 3. Try JSONbin cloud in background (3 s timeout) — update if better data arrives
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
