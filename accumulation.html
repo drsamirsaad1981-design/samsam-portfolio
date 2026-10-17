@@ -598,6 +598,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   await cloudLoad();
   setView(currentView);
   renderDashboard();
+  // Apply default sort indicator on the Progress column header
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+    if (th.getAttribute('onclick') === "setSort('progress')") {
+      th.classList.add('sort-desc');
+    }
+  });
 });
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
@@ -710,7 +717,7 @@ function calcRow(entry) {
 
 // ─── Render Table ────────────────────────────────────────────────────────────
 // ─── Sort state ──────────────────────────────────────────────────────────────
-let sortCol = null, sortDir = 1; // dir: 1=asc, -1=desc
+let sortCol = 'progress', sortDir = -1; // default: highest progress first
 
 function setSort(col) {
   if (sortCol === col) { sortDir *= -1; }
