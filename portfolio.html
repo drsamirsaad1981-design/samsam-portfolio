@@ -1336,10 +1336,18 @@ function getPerf(coin) {
   return coinPerfPct - btcPerfPct;
 }
 
-function getAction(sym, perf) {
+function getCoinPct(coin) {
+  // Coin's own price change vs avg buy price (%)
+  if (!coin.basePrice || coin.basePrice <= 0) return 0;
+  return ((coin.currentPrice / coin.basePrice) - 1) * 100;
+}
+
+function getAction(sym, perf, coin) {
   if (sym === 'BTC') return 'hold';
-  if (perf < -20) return 'convert';
-  if (perf > 15) return 'reinforce';
+  // Signal based on coin's price change vs avg buy price
+  const pct = coin ? getCoinPct(coin) : perf;
+  if (pct < -20) return 'convert';         // below -20%: Sell / Convert to BTC
+  if (pct <= -5)  return 'reinforce';      // -5% to -20%: Reinforce
   return 'hold';
 }
 
@@ -1428,7 +1436,7 @@ function getFilteredSorted() {
 
   let rows = portfolio.filter(c => {
     if (search && !c.sym.toLowerCase().includes(search) && !(COIN_NAMES[c.sym]||'').toLowerCase().includes(search)) return false;
-    if (filter) { const perf=getPerf(c); const action=getAction(c.sym,perf); if(action!==filter) return false; }
+    if (filter) { const perf=getPerf(c); const action=getAction(c.sym,perf,c); if(action!==filter) return false; }
     if (activeCatFilter && (c.cat || 'other') !== activeCatFilter) return false;
     return true;
   });
@@ -1458,12 +1466,12 @@ function renderTableAndStack() {
   if (tbody) {
     let html = '';
     rows.forEach((c,i) => {
-      const perf=getPerf(c); const action=getAction(c.sym,perf);
+      const perf=getPerf(c); const action=getAction(c.sym,perf,c);
       const baseVal=c.qty*c.basePrice; const curVal=c.qty*c.currentPrice;
       const color=COIN_COLORS[c.sym]||'#6b7280';
       const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
       const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
-      const actionLabel=action==='convert'?'🔴 Convert→BTC':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';
+      const actionLabel=action==='convert'?'🔴 Sell / Convert to BTC':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';
       const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       html += `<tr>
@@ -1507,13 +1515,13 @@ function renderTableAndStack() {
   const stack = document.getElementById('coinsStack');
   if (stack) {
     stack.innerHTML = rows.map((c,i) => {
-      const perf=getPerf(c); const action=getAction(c.sym,perf);
+      const perf=getPerf(c); const action=getAction(c.sym,perf,c);
       const baseVal=c.qty*c.basePrice; const curVal=c.qty*c.currentPrice;
       const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
       const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
-      const actionLabel=action==='convert'?'🔴 Convert':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';
+      const actionLabel=action==='convert'?'🔴 Sell/Convert':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';
       const color=COIN_COLORS[c.sym]||'#6b7280';
       return `<div class="coin-card">
         <div class="coin-card-header">
@@ -1944,7 +1952,7 @@ function sortTable(col) {
 function exportData() {
   const rows=[['Coin','Qty','Avg. Buy Price','Current Price','Cost Basis','Holdings / Current Value','P&L','P&L%','vs BTC','Signal']];
   portfolio.forEach(c=>{
-    const perf=getPerf(c);const action=getAction(c.sym,perf);
+    const perf=getPerf(c);const action=getAction(c.sym,perf,c);
     const baseVal=c.qty*c.basePrice;const curVal=c.qty*c.currentPrice;const pnl=curVal-baseVal;
     rows.push([c.sym,c.qty,c.basePrice,c.currentPrice,baseVal.toFixed(2),curVal.toFixed(2),pnl.toFixed(2),(baseVal>0?pnl/baseVal*100:0).toFixed(1)+'%',perf.toFixed(1)+'%',action]);
   });
