@@ -624,19 +624,21 @@
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 20px;
-    min-height: 280px;
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
   }
-  .dash-card h3 { font-size: 0.75rem; color: var(--fg2); margin-bottom: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
-  .dash-card .donut-wrap, .dash-card .pnl-rows { flex: 1; }
+  .dash-card h3 { font-size: 0.75rem; color: var(--fg2); margin-bottom: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; flex-shrink: 0; }
+  .dash-card .donut-wrap { flex: 1; align-items: center; }
+  .dash-card .pnl-rows { flex: 1; }
 
   .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center; }
-  .donut-legend { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 160px; }
-  .legend-item { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
-  .legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .donut-legend { display: flex; flex-direction: column; gap: 6px; min-width: 180px; max-width: 260px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .legend-label { color: var(--fg2); flex: 1; }
-  .legend-val { color: var(--fg); font-weight: 700; font-size: 0.9rem; }
+  .legend-val { color: var(--fg); font-weight: 700; font-size: 0.82rem; white-space: nowrap; }
+  .legend-pct { color: var(--fg2); font-weight: 400; font-size: 0.72rem; margin-left: 3px; }
 
   .pnl-rows { display: flex; flex-direction: column; gap: 6px; }
   .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg3); font-size: 0.82rem; }
@@ -2221,7 +2223,7 @@ function toggleTheme() {
   try { localStorage.setItem('samsam_theme', next); } catch(e) {}
 }
 
-const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#f59e0b',meme:'#ef4444',infra:'#06b6d4',other:'#6b7280',btc:'#f7931a'};
+const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#22d3ee',meme:'#ef4444',infra:'#06b6d4',other:'#6b7280',btc:'#f7931a'};
 const CAT_LABELS={layer1:'Layer 1',layer2:'Layer 2',defi:'DeFi',ai:'AI & Web3',meme:'Meme',infra:'Infrastructure',other:'Other',btc:'Bitcoin'};
 
 function renderDashboard() {
@@ -2243,18 +2245,41 @@ function renderDashboard() {
     const ix1=cx+inner*Math.cos(startAngle),iy1=cy+inner*Math.sin(startAngle);
     const ix2=cx+inner*Math.cos(endAngle),iy2=cy+inner*Math.sin(endAngle);
     const large=angle>Math.PI?1:0;
-    paths+=`<path d="M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${inner},${inner} 0 ${large},0 ${ix1},${iy1} Z" fill="${CAT_COLORS[cat]||'#6b7280'}" opacity="0.9"/>`;
+    const pctSlice=(val/totalVal*100).toFixed(1);
+    const label=CAT_LABELS[cat]||cat;
+    const valFmt='$'+val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    paths+=`<path d="M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${inner},${inner} 0 ${large},0 ${ix1},${iy1} Z"
+      fill="${CAT_COLORS[cat]||'#6b7280'}" opacity="0.9" style="cursor:pointer;transition:opacity 0.15s"
+      onmouseenter="donutHover('${label}','${valFmt}','${pctSlice}','${CAT_COLORS[cat]||'#6b7280'}')"
+      onmouseleave="donutHoverReset()"/>`;
     startAngle=endAngle;
   });
-  const pct=totalVal>0?((catTotals.btc||0)/totalVal*100).toFixed(0):0;
-  document.getElementById('donutChart').innerHTML=paths+
-    `<text x="70" y="66" text-anchor="middle" font-size="18" font-weight="700" fill="var(--btc)">${pct}%</text>
-     <text x="70" y="82" text-anchor="middle" font-size="9" fill="var(--fg2)">BTC</text>`;
-  document.getElementById('donutLegend').innerHTML=entries.map(([cat,val])=>
-    `<div class="legend-item"><span class="legend-dot" style="background:${CAT_COLORS[cat]||'#6b7280'}"></span>
-     <span class="legend-label">${CAT_LABELS[cat]||cat}</span>
-     <span class="legend-val">$${val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</span></div>`
-  ).join('');
+  const totalFmt='$'+totalVal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  const svgEl=document.getElementById('donutChart');
+  svgEl.innerHTML=paths+
+    `<text id="donutCenter1" x="70" y="64" text-anchor="middle" font-size="13" font-weight="700" fill="var(--fg)">${totalFmt}</text>
+     <text id="donutCenter2" x="70" y="80" text-anchor="middle" font-size="8.5" fill="var(--fg2)">Total</text>`;
+  // Hover handlers
+  window.donutHover=function(label,val,pct,color){
+    document.getElementById('donutCenter1').textContent=pct+'%';
+    document.getElementById('donutCenter1').setAttribute('fill',color);
+    document.getElementById('donutCenter2').textContent=label;
+  };
+  window.donutHoverReset=function(){
+    document.getElementById('donutCenter1').textContent=totalFmt;
+    document.getElementById('donutCenter1').setAttribute('fill','var(--fg)');
+    document.getElementById('donutCenter2').textContent='Total';
+  };
+  // Legend with percentage
+  document.getElementById('donutLegend').innerHTML=entries.map(([cat,val])=>{
+    const pct=(val/totalVal*100).toFixed(1);
+    const valFmt='$'+val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    return `<div class="legend-item">
+      <span class="legend-dot" style="background:${CAT_COLORS[cat]||'#6b7280'}"></span>
+      <span class="legend-label">${CAT_LABELS[cat]||cat}</span>
+      <span class="legend-val">${valFmt} <span class="legend-pct">${pct}%</span></span>
+    </div>`;
+  }).join('');
 
   // P&L
   let totalBase=0,totalCurrent=0;
