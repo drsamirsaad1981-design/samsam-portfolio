@@ -685,18 +685,7 @@
   .progress-labels { display: flex; justify-content: space-between; margin-top: 7px; font-size: 0.75rem; font-weight: 500; }
 
   /* Performance Chart */
-  .perf-chart-wrap {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 12px;
-  }
-  .perf-chart-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 10px; flex-wrap: wrap; gap: 6px;
-  }
-  .perf-chart-title { font-size: 0.78rem; color: var(--fg2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .perf-chart-stats { align-items: center; }
   .perf-chart-stats { display: flex; gap: 12px; flex-wrap: wrap; }
   .perf-stat { font-size: 0.72rem; display: flex; align-items: center; gap: 4px; }
   .perf-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -916,21 +905,29 @@
   </div>
 </header>
 
-<div class="perf-chart-wrap" id="perfChartWrap">
-  <div class="perf-chart-header">
-    <span class="perf-chart-title">📈 Portfolio Performance <a href="./performance.html" style="font-size:0.72rem;color:var(--accent);text-decoration:none;margin-left:6px;font-weight:500">→ View Details</a></span>
-    <div class="perf-chart-stats">
-      <span class="perf-stat"><span class="perf-dot portfolio"></span><span id="perfPortfolioLabel">Portfolio: —</span></span>
-      <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
-      <span id="perfSyncIndicator" title="Auto-sync status" style="font-size:0.65rem;color:rgba(148,163,184,0.5);margin-left:6px;transition:opacity 0.5s">☁</span>
+<!-- ── Performance Card ── -->
+<a href="./performance.html" class="alloc-mini-card" id="perfChartWrap" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="alloc-mini-title" style="margin-bottom:0">📈 Portfolio Performance</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="perf-chart-stats">
+        <span class="perf-stat"><span class="perf-dot portfolio"></span><span id="perfPortfolioLabel">Portfolio: —</span></span>
+        <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
+        <span id="perfSyncIndicator" title="Auto-sync status" style="font-size:0.65rem;color:rgba(148,163,184,0.5);margin-left:4px;transition:opacity 0.5s">☁</span>
+      </div>
+      <span class="alloc-mini-arrow">›</span>
     </div>
   </div>
   <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
   <canvas class="perf-chart-canvas" id="perfChartCanvas" height="90"></canvas>
-</div>
+</a>
 
-<div class="dream-bar" id="accumProgressBar" style="display:none">
-  <h3>📊 Accumulation Plan — Overall Progress <a href="./accumulation.html" style="color:var(--accent);font-size:0.72rem;text-decoration:none;margin-left:6px">→ View Plan</a></h3>
+<!-- ── Accumulation Card ── -->
+<a href="./accumulation.html" class="alloc-mini-card" id="accumProgressBar" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="alloc-mini-title" style="margin-bottom:0">📊 Accumulation Plan — Overall Progress</div>
+    <span class="alloc-mini-arrow">›</span>
+  </div>
   <div class="progress-track">
     <div class="progress-fill accum-fill" id="accumFill" style="width:0%"></div>
   </div>
@@ -938,10 +935,10 @@
     <span style="color:#10b981" id="accumPct">0% complete</span>
     <span style="color:var(--fg2)" id="accumDetail">— / — targets met</span>
   </div>
-</div>
+</a>
 
 <!-- ── Allocation Mini Card ── -->
-<a href="./allocation.html" class="alloc-mini-card" id="allocMiniCard" style="display:none;text-decoration:none">
+<a href="./allocation.html" class="alloc-mini-card" id="allocMiniCard" style="text-decoration:none">
   <div class="alloc-mini-left">
     <div class="alloc-mini-title">📊 Portfolio Allocation</div>
     <div class="alloc-mini-cats" id="allocMiniCats"></div>
@@ -2812,7 +2809,7 @@ function renderAccumProgress(plan) {
   document.getElementById('accumFill').style.width  = pct.toFixed(1) + '%';
   document.getElementById('accumPct').textContent   = pct.toFixed(1) + '% complete';
   document.getElementById('accumDetail').textContent = completed + ' / ' + plan.length + ' targets met';
-  document.getElementById('accumProgressBar').style.display = '';
+  // card always visible (no display:none needed — it's an <a> block)
 }
 
 let lastCloudSync = null;
