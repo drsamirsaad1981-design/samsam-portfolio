@@ -312,10 +312,11 @@
      DESKTOP LAYOUT  (≥ 900 px)
      ═══════════════════════════════════════════════════ */
   @media(min-width: 900px) {
-    body { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+    body { padding: 24px 28px; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 
     /* ── Header ── */
     header {
+      display: block;
       background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: 16px;
@@ -323,6 +324,7 @@
       margin-bottom: 14px;
       box-sizing: border-box;
       width: 100%;
+      min-width: 0;
     }
 
     /* Header-top: logo left, date-tag right — same flex row, vertically centered */
@@ -348,10 +350,11 @@
     /* 4 stat cards — stretch to fill 100% of header interior */
     .header-stats {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
       gap: 14px;
       width: 100%;
       box-sizing: border-box;
+      min-width: 0;
     }
 
     /* Stat card: fill cell, center everything */
