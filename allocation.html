@@ -160,6 +160,27 @@ body {
 .alloc-bar-wrap { margin-top: 5px; height: 4px; background: var(--bar-bg); border-radius: 4px; overflow: hidden; width: 100%; }
 .alloc-bar { height: 100%; border-radius: 4px; transition: width .4s; }
 
+/* ── Coin table header ── */
+.coin-table-header {
+  display: grid;
+  grid-template-columns: 40px 1fr auto auto;
+  gap: 10px;
+  padding: 6px 14px 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--fg2);
+  text-transform: uppercase;
+}
+.cth-asset  { grid-column: 1 / 3; }
+.cth-holding { text-align: right; min-width: 60px; }
+.cth-alloc   { text-align: right; min-width: 70px; }
+
+@media (max-width: 500px) {
+  .coin-table-header { grid-template-columns: 36px 1fr auto; }
+  .cth-alloc { display: none; }
+}
+
 /* ── State sections ── */
 .section-overview { }
 .section-detail { display: none; }
@@ -223,6 +244,11 @@ body {
         <div style="font-size:0.88rem;font-weight:700" id="detailVal">—</div>
         <div style="font-size:0.72rem;color:var(--fg2)" id="detailPct">—</div>
       </div>
+    </div>
+    <div class="coin-table-header">
+      <div class="cth-asset">ASSET</div>
+      <div class="cth-holding">HOLDING</div>
+      <div class="cth-alloc">ALLOCATION</div>
     </div>
     <div class="coin-list" id="detailCoinList"></div>
   </div>
