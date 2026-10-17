@@ -176,14 +176,25 @@ body {
 .cth-holding { text-align: right; min-width: 60px; }
 .cth-alloc   { text-align: right; min-width: 70px; }
 
+/* ── Mobile: show all columns ── */
 @media (max-width: 500px) {
-  .coin-table-header { grid-template-columns: 36px 1fr auto; }
-  .cth-alloc { display: none; }
+  .coin-table-header { grid-template-columns: 36px 1fr auto auto; }
+  .cth-alloc { display: block; }
+  .coin-row { grid-template-columns: 36px 1fr auto auto; }
+  .coin-alloc { display: block; }
 }
 
-/* ── State sections ── */
-.section-overview { }
-.section-detail { display: none; }
+/* ── Detail section always visible ── */
+.section-detail { margin-top: 20px; }
+
+/* ── Selected category label ── */
+.detail-cat-label {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+.detail-cat-label-name { font-size: 0.9rem; font-weight: 700; }
+.detail-cat-label-meta { font-size: 0.8rem; color: var(--fg2); margin-left: auto; text-align: right; }
 
 /* ── Loading ── */
 .loading-msg { text-align: center; color: var(--fg2); font-size: 0.9rem; padding: 40px; }
@@ -191,8 +202,6 @@ body {
 @media (max-width: 500px) {
   .overview-panel { flex-direction: column; align-items: center; }
   .donut-wrap { width: 180px; height: 180px; }
-  .coin-row { grid-template-columns: 36px 1fr auto; }
-  .coin-alloc { display: none; }
 }
 </style>
 </head>
@@ -206,43 +215,37 @@ body {
 
 <div class="container">
 
-  <!-- ── Overview ── -->
-  <div class="section-overview" id="sectionOverview">
-
-    <div class="total-bar">
-      <div>
-        <div class="total-bar-label">Total Portfolio Value</div>
-        <div class="total-bar-val" id="totalValBar">—</div>
-      </div>
-      <div style="text-align:right">
-        <div class="total-bar-label">Coins</div>
-        <div class="total-bar-val" id="totalCoinsBar">—</div>
-      </div>
+  <!-- ── Always visible: totals + donut + legend ── -->
+  <div class="total-bar">
+    <div>
+      <div class="total-bar-label">Total Portfolio Value</div>
+      <div class="total-bar-val" id="totalValBar">—</div>
     </div>
-
-    <div class="overview-panel">
-      <div class="donut-wrap">
-        <svg id="donutSvg" viewBox="0 0 200 200"></svg>
-        <div class="donut-center">
-          <div class="donut-total" id="donutCenterVal">—</div>
-          <div class="donut-label" id="donutCenterLabel">Total</div>
-        </div>
-      </div>
-      <div class="legend-wrap" id="legendWrap"></div>
+    <div style="text-align:right">
+      <div class="total-bar-label">Coins</div>
+      <div class="total-bar-val" id="totalCoinsBar">—</div>
     </div>
-
   </div>
 
-  <!-- ── Category Detail ── -->
+  <div class="overview-panel">
+    <div class="donut-wrap">
+      <svg id="donutSvg" viewBox="0 0 200 200"></svg>
+      <div class="donut-center">
+        <div class="donut-total" id="donutCenterVal">—</div>
+        <div class="donut-label" id="donutCenterLabel">Total</div>
+      </div>
+    </div>
+    <div class="legend-wrap" id="legendWrap"></div>
+  </div>
+
+  <!-- ── Category Detail (always visible below donut) ── -->
   <div class="section-detail" id="sectionDetail">
-    <div class="detail-header">
-      <button class="detail-back" onclick="showOverview()">← All</button>
-      <div class="detail-cat-dot" id="detailDot"></div>
-      <div class="detail-title" id="detailTitle">—</div>
-      <div style="text-align:right">
-        <div style="font-size:0.75rem;color:var(--fg2)">Category</div>
-        <div style="font-size:0.88rem;font-weight:700" id="detailVal">—</div>
-        <div style="font-size:0.72rem;color:var(--fg2)" id="detailPct">—</div>
+    <div class="detail-cat-label">
+      <div class="detail-cat-dot" id="detailDot" style="width:12px;height:12px;border-radius:50%;flex-shrink:0"></div>
+      <div class="detail-cat-label-name" id="detailTitle">—</div>
+      <div class="detail-cat-label-meta">
+        <span id="detailVal" style="font-weight:700">—</span>
+        <span id="detailPct" style="color:var(--fg2);font-size:0.72rem;display:block">—</span>
       </div>
     </div>
     <div class="coin-table-header">
@@ -741,19 +744,10 @@ function selectCat(cat) {
     </div>`;
   }).join('');
 
-  // Show detail section on mobile/small
-  document.getElementById('sectionDetail').style.display = 'block';
-  // On wide screen keep overview visible too; on narrow scroll to detail
-  if (window.innerWidth < 600) {
-    document.getElementById('sectionOverview').style.display = 'none';
-    document.getElementById('sectionDetail').style.display   = 'block';
-  }
 }
 
 function showOverview() {
   selectedCat = null;
-  document.getElementById('sectionOverview').style.display = 'block';
-  document.getElementById('sectionDetail').style.display   = 'none';
   // Reset donut
   document.querySelectorAll('.donut-slice').forEach(s => {
     s.setAttribute('opacity','0.92'); s.style.transform='';
@@ -766,11 +760,7 @@ function showOverview() {
 
 // ── Wide screen: show both panels side by side ─────────────────────────────
 function setupLayout() {
-  if (window.innerWidth >= 600) {
-    // On wide: detail panel is a sidebar — always show overview
-    // Handled via CSS; detail panel floats below on narrow
-    document.getElementById('sectionDetail').style.display = 'none';
-  }
+  // Layout is always one-page: donut above, table below
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
