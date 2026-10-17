@@ -3510,6 +3510,8 @@ function openHoldingsView() {
   if (!overlay) return;
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  // Push #holdings to URL so refresh restores this view
+  if (location.hash !== '#holdings') history.pushState(null, '', '#holdings');
   // Sync theme icon
   const themeBtn = overlay.querySelector('.hov-theme-btn');
   if (themeBtn) {
@@ -3530,7 +3532,28 @@ function closeHoldingsView() {
   if (!overlay) return;
   overlay.style.display = 'none';
   document.body.style.overflow = '';
+  // Remove #holdings from URL
+  if (location.hash === '#holdings') history.pushState(null, '', location.pathname + location.search);
 }
+
+// Restore holdings view on page load / refresh if URL has #holdings
+window.addEventListener('DOMContentLoaded', function() {
+  if (location.hash === '#holdings') {
+    // Wait for portfolio data to load before opening
+    setTimeout(openHoldingsView, 500);
+  }
+});
+
+// Handle browser back button — close overlay instead of navigating away
+window.addEventListener('popstate', function() {
+  const overlay = document.getElementById('holdingsOverlay');
+  if (overlay && overlay.style.display === 'flex') {
+    overlay.style.display = 'none';
+    document.body.style.overflow = '';
+  } else if (location.hash === '#holdings') {
+    openHoldingsView();
+  }
+});
 
 let holdingsOverlayRange = '24h';
 
