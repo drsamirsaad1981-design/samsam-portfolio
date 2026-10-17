@@ -3328,8 +3328,8 @@ function drawHoldingsChart() {
   const cutoff  = holdingsRange === 'all' ? 0 : now - rangeMs[holdingsRange];
   let snaps = allSnaps.filter(s => s.t >= cutoff);
 
-  // Need at least 2 points to draw
-  if (snaps.length < 2) {
+  // Need at least 1 point — if only 1 snapshot duplicate it so chart renders as a flat baseline
+  if (snaps.length === 0) {
     if (noData) noData.style.display = '';
     canvas.style.display = 'none';
     // Still show current total
@@ -3338,6 +3338,7 @@ function drawHoldingsChart() {
     if (changeEl) { changeEl.textContent = ''; }
     return;
   }
+  if (snaps.length === 1) snaps = [snaps[0], snaps[0]];
   if (noData) noData.style.display = 'none';
   canvas.style.display = '';
 
