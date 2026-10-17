@@ -554,9 +554,42 @@
   thead { background: linear-gradient(135deg, #1a2235, #0f172a); position: sticky; top: 0; z-index: 2; }
   th { padding: 12px; font-size: 0.75rem; color: var(--fg2); text-align: center; border-bottom: 2px solid var(--border); cursor: pointer; }
   td { padding: 10px 12px; font-size: 0.85rem; text-align: center; border-bottom: 1px solid rgba(30,45,69,0.5); }
+
+  /* ── Print / PDF ── */
+  @media print {
+    :root { --bg:#fff; --bg2:#f8fafc; --bg3:#f1f5f9; --border:#e2e8f0; --fg:#0f172a; --fg2:#475569; --accent:#b45309; --green:#065f46; --red:#991b1b; color-scheme:light; }
+    body { background:#fff; color:#0f172a; font-size:11pt; }
+    .controls, .no-print, footer .footer-copy, #syncFooter { display:none !important; }
+    .stat-row { flex-wrap:wrap; gap:6px; }
+    .stat-card { border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; break-inside:avoid; }
+    .table-wrap { overflow:visible !important; }
+    table { min-width:0; width:100%; page-break-inside:auto; font-size:9pt; }
+    thead { background:#f1f5f9 !important; position:static !important; }
+    tr { page-break-inside:avoid; }
+    th, td { border:1px solid #e2e8f0 !important; padding:5px 7px !important; }
+    .coin-logo { width:18px !important; height:18px !important; }
+    .stack-view { display:none !important; }
+    .summary-cards { display:none !important; }
+    .dashboard-section { display:none !important; }
+    #pdfHeader { display:block !important; }
+    .page-header { background:#fff !important; border-bottom:2px solid #0f172a; padding:10px 0; margin-bottom:8px; }
+    .header-title { color:#0f172a !important; }
+  }
+  #pdfHeader { display:none; }
+  .pdf-header-inner { display:flex; justify-content:space-between; align-items:flex-end; padding:4px 0 10px; border-bottom:2px solid var(--border); margin-bottom:12px; }
+  .pdf-header-inner .ph-title { font-size:1.1rem; font-weight:700; color:var(--fg); }
+  .pdf-header-inner .ph-meta { font-size:0.75rem; color:var(--fg2); text-align:right; line-height:1.7; }
 </style>
 </head>
 <body>
+
+<!-- PDF-only header (hidden on screen, shown on print) -->
+<div id="pdfHeader">
+  <div class="pdf-header-inner">
+    <div class="ph-title">📊 سمسم Portfolio Report</div>
+    <div class="ph-meta" id="pdfMeta"></div>
+  </div>
+</div>
 
 <header>
   <div class="header-top">
@@ -641,6 +674,7 @@
   <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin...">
   <div class="control-row">
     <button class="btn btn-secondary" onclick="exportData()">💾 CSV</button>
+    <button class="btn btn-secondary" onclick="exportPdf()">📄 PDF</button>
     <button class="btn btn-secondary" onclick="openAddCoin()">➕ Add</button>
     <button class="btn btn-secondary" id="viewToggleBtn" onclick="toggleView()">📋 Table</button>
     <button class="btn btn-secondary" onclick="toggleTheme()">🌙</button>
@@ -1880,6 +1914,29 @@ function exportData() {
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='samsam-portfolio.csv';a.click();
+}
+
+function exportPdf() {
+  // Fill PDF header with live stats
+  const totalEl = document.getElementById('totalUsd');
+  const pnlEl   = document.getElementById('totalPnl') || document.getElementById('realizedPnl');
+  const total = totalEl ? totalEl.textContent : '—';
+  const now = new Date().toLocaleString('en-US', { dateStyle:'medium', timeStyle:'short' });
+  const coinCount = portfolio.length;
+  const meta = document.getElementById('pdfMeta');
+  if (meta) {
+    meta.innerHTML =
+      `Total Value: <strong>${total}</strong><br>` +
+      `Coins: ${coinCount} &nbsp;|&nbsp; BTC: $${btcPrice.toLocaleString()}<br>` +
+      `Generated: ${now}`;
+  }
+  // Switch to table view for print (more data visible)
+  const wasCards = currentView === 'cards';
+  if (wasCards) { currentView = 'table'; renderTableAndStack(); }
+  setTimeout(() => {
+    window.print();
+    if (wasCards) { currentView = 'cards'; renderTableAndStack(); }
+  }, 120);
 }
 
 function toggleTheme() {
