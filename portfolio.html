@@ -2710,10 +2710,13 @@ fetchLivePrices();
 // Auto-refresh live prices every 60 seconds
 setInterval(() => { fetchLivePrices(); }, 60000);
 
-// Pull cloud portfolio on load — if cloud has newer data, re-render silently
+// On load: push local data first (so this device's changes reach cloud),
+// then pull cloud if it's newer — handles the case where changes were made
+// before the sync code was deployed (or on a device that is now offline)
 setTimeout(async () => {
   try {
-    const updated = await pullPortfolioFromCloud();
+    await pushPortfolioToCloud();          // push local → cloud (only if local is newer)
+    const updated = await pullPortfolioFromCloud(); // pull cloud → local (only if cloud is newer)
     if (updated) { renderAll(); fetchLivePrices(); }
   } catch(_) {}
 }, 4000); // wait 4s so page feels responsive first
