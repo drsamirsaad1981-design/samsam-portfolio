@@ -397,7 +397,7 @@ body {
 <div class="sort-tabs">
   <div class="sort-tabs-inner">
     <button class="sort-tab active" id="tab-pnl"   onclick="setSort('pnl')"><span class="tab-arrow">↓ </span>$ P&amp;L</button>
-    <button class="sort-tab"        id="tab-pct"   onclick="setSort('pct')"><span class="tab-arrow">↓ </span>% P&amp;L</button>
+    <button class="sort-tab"        id="tab-pct"   onclick="setSort('pct')"><span class="tab-arrow">↑ </span>% P&amp;L</button>
     <button class="sort-tab"        id="tab-value" onclick="setSort('value')"><span class="tab-arrow">↓ </span>Value</button>
   </div>
 </div>
@@ -532,8 +532,10 @@ const FALLBACK_PRICES = {
 let portfolio = [];
 let livePrices = {};
 let sortMode    = 'pnl';
-let sortDir     = -1;   // -1 = descending (best first), +1 = ascending
+let sortDir     = -1;   // -1 = descending, +1 = ascending
 let lastTabClick = '';  // tracks which tab was last clicked
+// Default start direction per mode: pnl=desc (best profit first), pct=asc (worst loss first)
+const DEFAULT_DIR = { pnl: -1, pct: 1, value: -1, price: -1 };
 
 // ── Theme ──
 function loadTheme() {
@@ -697,8 +699,8 @@ function setSort(mode) {
   if (lastTabClick === mode) {
     sortDir = sortDir * -1;
   } else {
-    sortMode    = mode;
-    sortDir     = -1;
+    sortMode     = mode;
+    sortDir      = DEFAULT_DIR[mode] ?? -1;  // each mode has its own default direction
     lastTabClick = mode;
   }
 
