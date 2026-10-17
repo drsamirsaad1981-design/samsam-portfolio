@@ -254,6 +254,28 @@
     word-break: break-all;
   }
 
+  .coin-metric .metric-input {
+    display: block;
+    width: 100%;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--fg);
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    outline: none;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .coin-metric .metric-input:focus {
+    border-bottom-color: var(--accent);
+    background: rgba(180,83,9,.07);
+    border-radius: 3px;
+    padding: 1px 3px;
+  }
+
   .coin-card-footer {
     display: flex;
     align-items: center;
@@ -1506,9 +1528,9 @@ function renderTableAndStack() {
           </div>
         </div>
         <div class="coin-card-body">
-          <div class="coin-metric"><label>Qty</label><val>${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}</val></div>
+          <div class="coin-metric"><label>Qty ✏️</label><input class="metric-input" type="number" inputmode="decimal" step="any" value="${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}" onchange="updateQty('${c.sym}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div>
           <div class="coin-metric"><label>Cost Basis</label><val>$${fmt(baseVal,0)}</val></div>
-          <div class="coin-metric"><label>Avg Buy Price</label><val>$${c.basePrice}</val></div>
+          <div class="coin-metric"><label>Avg Buy Price ✏️</label><input class="metric-input" type="number" inputmode="decimal" step="any" value="${c.basePrice}" onchange="updateBasePrice('${c.sym}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div>
           <div class="coin-metric"><label>Current Value</label><val>$${fmt(curVal,0)}</val></div>
           <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
           <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
