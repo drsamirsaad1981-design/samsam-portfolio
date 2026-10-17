@@ -1379,13 +1379,20 @@ const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
 
 function loadArchive() {
   try { archivedCoins = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); } catch(e) { archivedCoins = []; }
+  // Migration: legacy entries (before removedPermanently flag was added) had no flag.
+  // All existing archive entries represent user-removed coins — mark them now.
+  let migrated = false;
+  archivedCoins.forEach(c => { if (c.removedPermanently === undefined) { c.removedPermanently = true; migrated = true; } });
+  if (migrated) { try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archivedCoins)); } catch(e) {} }
 }
 function saveArchive(skipCloudPush = false) {
   try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archivedCoins)); } catch(e) {}
   if (!skipCloudPush) pushPortfolioToCloud();
 }
 function getRemovedSyms() {
-  return new Set(archivedCoins.map(c => c.sym));
+  // Only coins explicitly removed by the user (removedPermanently=true) are filtered out.
+  // Historic archive entries (e.g. transaction snapshots) without this flag are NOT excluded.
+  return new Set(archivedCoins.filter(c => c.removedPermanently === true).map(c => c.sym));
 }
 
 // Custom coins: added manually by user — persist across Reset
@@ -1976,7 +1983,7 @@ function confirmRemove() {
   const idx = portfolio.findIndex(c => c.sym === _rmSym);
   if(idx === -1) { closeRemove(); return; }
   // Archive with timestamp in SEPARATE key — survives Reset
-  const archived = { ...portfolio[idx], removedAt: new Date().toISOString() };
+  const archived = { ...portfolio[idx], removedAt: new Date().toISOString(), removedPermanently: true };
   archivedCoins.push(archived);
   saveArchive(true); // skip cloud push — savePortfolio below handles it
   // Also remove from custom coins store if it was a manually added coin
