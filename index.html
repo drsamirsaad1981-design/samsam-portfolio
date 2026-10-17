@@ -748,7 +748,7 @@
         <th onclick="sortTable('basePrice')">Avg. Buy Price</th>
         <th onclick="sortTable('currentPrice')">Current Price</th>
         <th onclick="sortTable('baseValue')">Cost Basis</th>
-        <th onclick="sortTable('currentValue')">Current Value</th>
+        <th onclick="sortTable('currentValue')">Holdings / Current Value</th>
         <th onclick="sortTable('pnl')">P&L</th>
         <th onclick="sortTable('perf')">Perf vs BTC</th>
         <th onclick="sortTable('action')">Signal</th>
@@ -1531,7 +1531,7 @@ function renderTableAndStack() {
           <div class="coin-metric"><label>Qty ✏️</label><input class="metric-input" type="number" inputmode="decimal" step="any" value="${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}" onchange="updateQty('${c.sym}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div>
           <div class="coin-metric"><label>Cost Basis</label><val>$${fmt(baseVal,0)}</val></div>
           <div class="coin-metric"><label>Avg Buy Price ✏️</label><input class="metric-input" type="number" inputmode="decimal" step="any" value="${c.basePrice}" onchange="updateBasePrice('${c.sym}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div>
-          <div class="coin-metric"><label>Current Value</label><val>$${fmt(curVal,0)}</val></div>
+          <div class="coin-metric"><label>Holdings / Current Value</label><val>$${fmt(curVal,0)}</val></div>
           <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
           <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
         </div>
@@ -1942,7 +1942,7 @@ function sortTable(col) {
 
 
 function exportData() {
-  const rows=[['Coin','Qty','Avg. Buy Price','Current Price','Cost Basis','Current Value','P&L','P&L%','vs BTC','Signal']];
+  const rows=[['Coin','Qty','Avg. Buy Price','Current Price','Cost Basis','Holdings / Current Value','P&L','P&L%','vs BTC','Signal']];
   portfolio.forEach(c=>{
     const perf=getPerf(c);const action=getAction(c.sym,perf);
     const baseVal=c.qty*c.basePrice;const curVal=c.qty*c.currentPrice;const pnl=curVal-baseVal;
