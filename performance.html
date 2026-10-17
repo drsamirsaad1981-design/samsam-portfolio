@@ -520,8 +520,9 @@ const FALLBACK_PRICES = {
 // ── State ──
 let portfolio = [];
 let livePrices = {};
-let sortMode = 'pnl';
-let sortDir  = -1; // -1 = descending (default), +1 = ascending
+let sortMode    = 'pnl';
+let sortDir     = -1;   // -1 = descending (best first), +1 = ascending
+let lastTabClick = '';  // tracks which tab was last clicked
 
 // ── Theme ──
 function loadTheme() {
@@ -554,7 +555,7 @@ function loadPortfolio() {
   // seed livePrices from stored currentPrice
   portfolio.forEach(c => {
     livePrices[c.sym] = {
-      price: c.currentPrice || FALLBACK_PRICES[c.sym] || 0,
+      price: (c.currentPrice > 0 ? c.currentPrice : null) || FALLBACK_PRICES[c.sym] || 0,
       change24h: null
     };
   });
@@ -682,11 +683,12 @@ function coinIconHtml(c) {
 
 // ── Sort ──
 function setSort(mode) {
-  if (sortMode === mode) {
-    sortDir = sortDir * -1; // toggle direction on re-click
+  if (lastTabClick === mode) {
+    sortDir = sortDir * -1; // toggle only when clicking same tab twice
   } else {
-    sortMode = mode;
-    sortDir  = -1; // default: descending
+    sortMode    = mode;
+    sortDir     = -1; // reset to descending when switching tabs
+    lastTabClick = mode;
   }
   document.querySelectorAll('.sort-tab').forEach(t => t.classList.remove('active'));
   const btn = document.getElementById('tab-' + mode);
@@ -707,10 +709,10 @@ function render() {
 
   // Build computed rows
   const rows = portfolio.map(c => {
-    const currentPrice = livePrices[c.sym]?.price ?? c.currentPrice ?? FALLBACK_PRICES[c.sym] ?? 0;
+    const currentPrice = livePrices[c.sym]?.price || c.currentPrice || FALLBACK_PRICES[c.sym] || 0;
     const change24h    = livePrices[c.sym]?.change24h ?? null;
     const qty          = c.qty || 0;
-    const cost         = (c.basePrice || 0) * qty;
+    const cost         = (parseFloat(c.basePrice) || 0) * qty;
     const value        = currentPrice * qty;
     const pnl          = value - cost;
     const pct          = cost > 0 ? (pnl / cost * 100) : 0;
