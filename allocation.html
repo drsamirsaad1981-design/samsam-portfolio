@@ -142,13 +142,12 @@ body {
   align-items: center; gap: 10px;
 }
 .coin-logo {
-  width: 38px; height: 38px; border-radius: 50%;
-  object-fit: cover; background: var(--bar-bg);
+  width: 38px; height: 38px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: #fff; overflow: hidden;
-  flex-shrink: 0;
 }
-.coin-logo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.coin-logo a, .coin-logo img, .coin-logo div {
+  display: inline-flex; flex-shrink: 0;
+}
 .coin-info { min-width: 0; }
 .coin-sym { font-size: 0.9rem; font-weight: 700; }
 .coin-name { font-size: 0.68rem; color: var(--fg2); margin-top: 1px; }
@@ -257,62 +256,96 @@ const CAT_LABELS = {
 };
 
 const COIN_NAMES = {
-  BTC:'Bitcoin',ETH:'Ethereum',SOL:'Solana',BNB:'BNB',TAO:'Bittensor',SUI:'Sui',
-  NEAR:'NEAR Protocol',SEI:'Sei',ATOM:'Cosmos',APT:'Aptos',AVAX:'Avalanche',
-  ICP:'Internet Computer',KSM:'Kusama',GRAM:'Toncoin',NIGHT:'Midnight',
-  ARB:'Arbitrum',MOVR:'Moonriver',GLMR:'Moonbeam',OP:'Optimism',WLD:'Worldcoin',
-  PYTH:'Pyth Network',JUP:'Jupiter',RENDER:'Render',QNT:'Quant',HBAR:'Hedera',
-  DOGE:'Dogecoin',MON:'Monad',CRO:'Cronos',XDC:'XDC Network',DOT:'Polkadot',
-  LINK:'Chainlink',ENS:'ENS',STRK:'Starknet',ONDO:'Ondo',AVAIL:'Avail',
-  KAVA:'Kava',PONS:'Pons',MNT:'Mantle',FLR:'Flare',KAS:'Kaspa',
-  POL:'Polygon',XPL:'Plasma',VTHO:'VeThor',VET:'VeChain',
+  BTC:'Bitcoin', SOL:'Solana', NEAR:'NEAR Protocol', TAO:'Bittensor',
+  ICP:'Internet Computer', AVAX:'Avalanche', LINK:'Chainlink', HBAR:'Hedera',
+  ATOM:'Cosmos', SEI:'Sei Network', APT:'Aptos', KSM:'Kusama',
+  ARB:'Arbitrum', MOVR:'Moonriver', GLMR:'Moonbeam', MNT:'Mantle',
+  FLR:'Flare', KAS:'Kaspa', POL:'Polygon', XPL:'Plasma',
+  VTHO:'VeThor', VET:'VeChain', DOGE:'Dogecoin', ENS:'ENS Domains',
+  ONDO:'Ondo Finance', STRK:'Starknet', NIGHT:'Midnight', MON:'Monad',
+  CRO:'Cronos', XDC:'XDC Network', KAVA:'Kava', GRAM:'Telegram TON',
+  PONS:'Pons', AVAIL:'Avail', PYTH:'Pyth Network', JUP:'Jupiter DEX',
+  RENDER:'Render', QNT:'Quant', OP:'Optimism', WLD:'Worldcoin',
+  DOT:'Polkadot', BNB:'BNB Chain', ETH:'Ethereum', SUI:'Sui',
 };
 
-const COIN_LOGOS = {
-  BTC:'https://assets.coingecko.com/coins/images/1/standard/bitcoin.png',
-  ETH:'https://assets.coingecko.com/coins/images/279/standard/ethereum.png',
-  SOL:'https://assets.coingecko.com/coins/images/4128/standard/solana.png',
-  BNB:'https://assets.coingecko.com/coins/images/825/standard/bnb-icon2_2x.png',
-  TAO:'https://assets.coingecko.com/coins/images/28452/standard/ARUsPeNQ_400x400.jpeg',
-  SUI:'https://assets.coingecko.com/coins/images/26375/standard/sui-ocean-square.png',
-  NEAR:'https://assets.coingecko.com/coins/images/10365/standard/near.jpg',
-  SEI:'https://assets.coingecko.com/coins/images/28205/standard/Sei_Logo_-_Transparent.png',
-  ATOM:'https://assets.coingecko.com/coins/images/1481/standard/cosmos_hub.png',
-  APT:'https://assets.coingecko.com/coins/images/26455/standard/aptos_round.png',
-  AVAX:'https://assets.coingecko.com/coins/images/12559/standard/Avalanche_Circle_RedWhite_Trans.png',
-  ICP:'https://assets.coingecko.com/coins/images/14495/standard/Internet_Computer_logo.png',
-  KSM:'https://assets.coingecko.com/coins/images/9568/standard/m4zRhP5e_400x400.jpg',
-  GRAM:'https://assets.coingecko.com/coins/images/17980/standard/ton_symbol.png',
-  NIGHT:'https://assets.coingecko.com/coins/images/39078/standard/midnight.jpg',
-  ARB:'https://assets.coingecko.com/coins/images/16547/standard/photo_2023-03-29_21.47.00.jpeg',
-  MOVR:'https://assets.coingecko.com/coins/images/17984/standard/9285.png',
-  GLMR:'https://assets.coingecko.com/coins/images/22459/standard/glmr.png',
-  OP:'https://assets.coingecko.com/coins/images/25244/standard/Optimism.png',
-  WLD:'https://assets.coingecko.com/coins/images/31069/standard/worldcoin.jpeg',
-  PYTH:'https://assets.coingecko.com/coins/images/31924/standard/pyth.png',
-  JUP:'https://assets.coingecko.com/coins/images/34188/standard/jup.png',
-  RENDER:'https://assets.coingecko.com/coins/images/11636/standard/rndr.png',
-  QNT:'https://assets.coingecko.com/coins/images/3370/standard/5ZOu7brX_400x400.jpg',
-  HBAR:'https://assets.coingecko.com/coins/images/3688/standard/hbar.png',
-  DOGE:'https://assets.coingecko.com/coins/images/5/standard/dogecoin.png',
-  MON:'https://assets.coingecko.com/coins/images/38927/standard/mon.png',
-  CRO:'https://assets.coingecko.com/coins/images/7310/standard/cro_token_logo.png',
-  XDC:'https://assets.coingecko.com/coins/images/2912/standard/xdc-icon.png',
-  DOT:'https://assets.coingecko.com/coins/images/12171/standard/polkadot.png',
-  LINK:'https://assets.coingecko.com/coins/images/877/standard/chainlink-new-logo.png',
-  ENS:'https://assets.coingecko.com/coins/images/19785/standard/acatxTm8_400x400.jpg',
-  STRK:'https://assets.coingecko.com/coins/images/26433/standard/starknet.png',
-  ONDO:'https://assets.coingecko.com/coins/images/26580/standard/ONDO.png',
-  AVAIL:'https://assets.coingecko.com/coins/images/36223/standard/avail.jpg',
-  KAVA:'https://assets.coingecko.com/coins/images/9761/standard/kava.png',
-  PONS:'https://assets.coingecko.com/coins/images/28672/standard/PONS_Token.png',
-  MNT:'https://assets.coingecko.com/coins/images/30980/standard/token-logo.png',
-  FLR:'https://assets.coingecko.com/coins/images/28624/standard/FLR-icon.png',
-  KAS:'https://assets.coingecko.com/coins/images/25751/standard/kaspa-icon-exchanges.png',
-  POL:'https://assets.coingecko.com/coins/images/32440/standard/polygon.png',
-  XPL:'https://assets.coingecko.com/coins/images/13139/standard/plasma-finance.png',
-  VTHO:'https://assets.coingecko.com/coins/images/1316/standard/vtho.png',
-  VET:'https://assets.coingecko.com/coins/images/1167/standard/VET_Token_Icon.png',
+// Real coin icons — same URLs as index.html
+const COIN_ICONS = {
+  BTC: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+  ETH: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+  SOL: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+  BNB: 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png',
+  NEAR:'https://assets.coingecko.com/coins/images/10365/large/near.jpg',
+  TAO: 'https://assets.coingecko.com/coins/images/28452/large/ARUsPeNQ_400x400.jpeg',
+  ICP: 'https://assets.coingecko.com/coins/images/14495/large/Internet_Computer_logo.png',
+  AVAX:'https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png',
+  LINK:'https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png',
+  HBAR:'https://assets.coingecko.com/coins/images/3688/large/hbar.png',
+  ATOM:'https://assets.coingecko.com/coins/images/1481/large/cosmos_hub.png',
+  SEI: 'https://assets.coingecko.com/coins/images/28205/large/Sei_Logo_-_Transparent.png',
+  APT: 'https://assets.coingecko.com/coins/images/26455/large/aptos_round.png',
+  SUI: 'https://assets.coingecko.com/coins/images/26375/large/sui_asset.jpeg',
+  KSM: 'https://assets.coingecko.com/coins/images/9568/large/m4zRhP5e_400x400.jpg',
+  ARB: 'https://assets.coingecko.com/coins/images/16547/large/photo_2023-03-29_21.47.00.jpeg',
+  MOVR:'https://assets.coingecko.com/coins/images/17984/large/9285.png',
+  GLMR:'https://assets.coingecko.com/coins/images/22459/large/glmr.png',
+  OP:  'https://assets.coingecko.com/coins/images/25244/standard/Token.png?1774456081',
+  WLD: 'https://assets.coingecko.com/coins/images/31069/large/worldcoin.jpeg',
+  PYTH:'https://assets.coingecko.com/coins/images/31924/standard/pyth.png?1701245725',
+  JUP: 'https://assets.coingecko.com/coins/images/34188/large/jup.png',
+  RENDER:'https://assets.coingecko.com/coins/images/11636/large/rndr.png',
+  QNT: 'https://assets.coingecko.com/coins/images/3370/large/5ZOu7brX_400x400.jpg',
+  DOGE:'https://assets.coingecko.com/coins/images/5/large/dogecoin.png',
+  ENS: 'https://assets.coingecko.com/coins/images/19785/large/acatxTm8_400x400.jpg',
+  STRK:'https://assets.coingecko.com/coins/images/26433/large/starknet.png',
+  ONDO:'https://assets.coingecko.com/coins/images/26580/large/ONDO.png',
+  AVAIL:'https://assets.coingecko.com/coins/images/37372/standard/avail-logo-200-200.png?1761925657',
+  KAVA:'https://assets.coingecko.com/coins/images/9761/large/kava.png',
+  MNT: 'https://assets.coingecko.com/coins/images/30980/standard/MNT_Token_Logo.png?1765516974',
+  FLR: 'https://assets.coingecko.com/coins/images/28624/standard/FLR-icon200x200.png?1696527609',
+  KAS: 'https://assets.coingecko.com/coins/images/25751/large/kaspa-icon-exchanges.png',
+  POL: 'https://assets.coingecko.com/coins/images/32440/standard/pol.png?1759114181',
+  VET: 'https://assets.coingecko.com/coins/images/1167/standard/VET.png?1742383283',
+  VTHO:'https://assets.coingecko.com/coins/images/5230/standard/VTHO_Circle_Crop__Reference_.png?1751980206',
+  CRO: 'https://assets.coingecko.com/coins/images/7310/large/cro_token_logo.png',
+  XDC: 'https://assets.coingecko.com/coins/images/2912/large/xdc-icon.png',
+  DOT: 'https://assets.coingecko.com/coins/images/12171/large/polkadot.png',
+  GRAM:'https://assets.coingecko.com/coins/images/17980/large/ton_symbol.png',
+  MON: 'https://assets.coingecko.com/coins/images/38927/standard/mon.png?1766029057',
+  NIGHT:'https://s2.coinmarketcap.com/static/img/coins/200x200/39064.png',
+  XPL: 'https://assets.coingecko.com/coins/images/66489/standard/Plasma-symbol-green-1.png?1755142558',
+  PONS:'https://assets.coingecko.com/coins/images/102174571/standard/jhitvkisdq8fhxvimdkpcw7y3dx5.?1784093932',
+};
+
+// CoinGecko page IDs for links
+const COINGECKO_IDS = {
+  BTC:'bitcoin', ETH:'ethereum', SOL:'solana', BNB:'binancecoin',
+  TAO:'bittensor', SUI:'sui', NEAR:'near', SEI:'sei-network',
+  ATOM:'cosmos', APT:'aptos', AVAX:'avalanche-2', ICP:'internet-computer',
+  KSM:'kusama', GRAM:'the-open-network', NIGHT:null, ARB:'arbitrum',
+  MOVR:'moonriver', GLMR:'moonbeam', OP:'optimism', WLD:'worldcoin-wld',
+  PYTH:'pyth-network', JUP:'jupiter-exchange-solana', RENDER:'render-token',
+  QNT:'quant-network', HBAR:'hedera-hashgraph', DOGE:'dogecoin', MON:'monad',
+  CRO:'crypto-com-chain', XDC:'xdce-crowd-sale', DOT:'polkadot',
+  LINK:'chainlink', ENS:'ethereum-name-service', STRK:'starknet',
+  ONDO:'ondo-finance', AVAIL:'avail', KAVA:'kava', PONS:'pons-2',
+  MNT:'mantle', FLR:'flare-networks', KAS:'kaspa',
+  POL:'polygon-ecosystem-token', XPL:null, VTHO:'vethor-token', VET:'vechain',
+};
+
+// Coin color fallbacks
+const COIN_COLORS = {
+  BTC:'#f7931a', ETH:'#627eea', SOL:'#9945ff', BNB:'#f3ba2f',
+  NEAR:'#00c08b', TAO:'#6366f1', SUI:'#4da2ff', ICP:'#29abe2',
+  AVAX:'#e84142', LINK:'#2a5ada', HBAR:'#222222', ATOM:'#2e3148',
+  SEI:'#c4342d', APT:'#00c8a5', KSM:'#e6007a', ARB:'#1b4add',
+  MOVR:'#53cbc9', GLMR:'#e1147b', MNT:'#000', FLR:'#e8564f',
+  KAS:'#49eacb', POL:'#8247e5', XPL:'#3b82f6', VTHO:'#15bdff',
+  VET:'#15bdff', DOGE:'#c2a633', ENS:'#5284ff', ONDO:'#3b82f6',
+  STRK:'#ff4f00', NIGHT:'#1a1a2e', MON:'#8b5cf6', CRO:'#002d74',
+  XDC:'#f9a825', KAVA:'#ff564f', GRAM:'#0088cc', PONS:'#10b981',
+  AVAIL:'#4f46e5', PYTH:'#6b4ede', JUP:'#a855f7', RENDER:'#e74c3c',
+  QNT:'#1a1a2e', OP:'#ff0420', WLD:'#191c1f', DOT:'#e6007a',
 };
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -509,16 +542,34 @@ function fmtQty(v, sym) {
   return v.toPrecision(5) + ' ' + sym;
 }
 
-function colorForSym(sym) {
-  const colors = ['#3b82f6','#8b5cf6','#10b981','#e879f9','#f7931a','#06b6d4','#ef4444','#f59e0b','#ec4899'];
-  let h = 0; for (let i = 0; i < sym.length; i++) h = (h * 31 + sym.charCodeAt(i)) & 0xffff;
-  return colors[h % colors.length];
+function coinFallback(sym, size) {
+  const color = COIN_COLORS[sym] || '#6b7280';
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.32)}px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-1px">${sym.slice(0,3)}</div>`;
 }
-
-function logoEl(sym) {
-  const url = COIN_LOGOS[sym];
-  if (url) return `<img src="${url}" alt="${sym}" onerror="this.style.display='none';this.parentNode.textContent='${sym.slice(0,2)}'">`;
-  return sym.slice(0, 2);
+function coinImgErr(el) {
+  const sym = el.getAttribute('data-sym');
+  const size = parseInt(el.getAttribute('data-size')) || 36;
+  el.outerHTML = coinFallback(sym, size);
+}
+function getCoinGeckoUrl(sym) {
+  const id = COINGECKO_IDS[sym];
+  return id ? `https://www.coingecko.com/en/coins/${id}` : null;
+}
+function getCoinIconLinked(sym, size=36) {
+  const url  = COIN_ICONS[sym];
+  const cgUrl = getCoinGeckoUrl(sym);
+  const img = url
+    ? `<img src="${url}" width="${size}" height="${size}" data-sym="${sym}" data-size="${size}" style="border-radius:50%;object-fit:cover;flex-shrink:0" onerror="coinImgErr(this)">`
+    : coinFallback(sym, size);
+  if (!cgUrl) return img;
+  return `<a href="${cgUrl}" target="_blank" rel="noopener" title="Open ${sym} on CoinGecko" style="display:inline-flex;flex-shrink:0;border-radius:50%;text-decoration:none;transition:opacity .15s" onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">${img}</a>`;
+}
+function getCoinNameLinked(sym) {
+  const cgUrl = getCoinGeckoUrl(sym);
+  const name  = COIN_NAMES[sym] || '';
+  const inner = `<div style="font-weight:700;font-size:0.85rem;line-height:1.2">${sym}</div><div style="font-size:0.72rem;color:var(--fg2);line-height:1.3">${name}</div>`;
+  if (!cgUrl) return `<div>${inner}</div>`;
+  return `<a href="${cgUrl}" target="_blank" rel="noopener" title="Open ${sym} on CoinGecko" style="text-decoration:none;color:inherit;display:block;transition:opacity .15s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">${inner}</a>`;
 }
 
 // ── Build donut SVG ────────────────────────────────────────────────────────
@@ -639,13 +690,11 @@ function selectCat(cat) {
   // Coin rows
   document.getElementById('detailCoinList').innerHTML = coins.map(c => {
     const pct  = totalVal > 0 ? (c.val / totalVal * 100) : 0;
-    const barW = Math.min(pct * 4, 100); // scale bar
-    const name = COIN_NAMES[c.sym] || c.sym;
+    const barW = Math.min(pct * 4, 100);
     return `<div class="coin-row">
-      <div class="coin-logo" style="background:${colorForSym(c.sym)}">${logoEl(c.sym)}</div>
+      <div class="coin-logo">${getCoinIconLinked(c.sym, 36)}</div>
       <div class="coin-info">
-        <div class="coin-sym">${c.sym}</div>
-        <div class="coin-name">${name}</div>
+        ${getCoinNameLinked(c.sym)}
         <div class="coin-qty">${fmtQty(c.qty, c.sym)}</div>
       </div>
       <div class="coin-holdings">
