@@ -284,6 +284,62 @@
     gap: 8px;
   }
 
+  /* ── Desktop card grid ── */
+  @media(min-width: 900px) {
+    /* Switch stack from column to responsive grid */
+    .coins-stack.view-active {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      align-items: start;
+      gap: 14px;
+    }
+
+    /* Card itself: slightly more padding, consistent height feel */
+    .coin-card {
+      padding: 14px;
+      gap: 10px;
+      border-radius: 14px;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    .coin-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+
+    /* Header: bigger symbol & price on desktop */
+    .coin-card-header > div:first-child .coin-card-sym { font-size: 1.05rem; }
+    .coin-card-header > div:last-child > div:first-child { font-size: 1.1rem !important; }
+
+    /* Body: 3-column grid on desktop for tighter metric layout */
+    .coin-card-body {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      padding: 10px;
+    }
+
+    /* Metrics: slightly larger labels & values */
+    .coin-metric { padding: 8px 10px; border-radius: 8px; }
+    .coin-metric label { font-size: 0.62rem; }
+    .coin-metric val,
+    .coin-metric .metric-input { font-size: 0.9rem; }
+
+    /* Footer: keep rank + date on one line */
+    .coin-card-footer { font-size: 0.75rem; }
+
+    /* Action buttons: side-by-side, full-width row */
+    .coin-card-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .coin-card-actions button { flex: 1; padding: 7px 0; font-size: 0.8rem; }
+  }
+
+  @media(min-width: 1200px) {
+    .coins-stack.view-active {
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+  }
+
   .editable-input {
     background: var(--bg3);
     border: 1px solid var(--border);
@@ -1530,7 +1586,7 @@ function renderTableAndStack() {
         <div class="coin-card-header">
           <div style="display:flex;align-items:center;gap:10px">
             ${getCoinIconLinked(c.sym,36)}
-            ${(()=>{const u=getCoinGeckoUrl(c.sym);const name=COIN_NAMES[c.sym]||'';const inner=`<div style="font-weight:700;font-size:0.95rem">${c.sym}</div><div style="font-size:0.72rem;color:var(--fg2)">${name}</div>`;return u?`<a href="${u}" target="_blank" rel="noopener" title="Open ${c.sym} on CoinGecko" style="text-decoration:none;color:inherit;transition:opacity 0.15s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">${inner}</a>`:`<div>${inner}</div>`;})()}
+            ${(()=>{const u=getCoinGeckoUrl(c.sym);const name=COIN_NAMES[c.sym]||'';const inner=`<div class="coin-card-sym" style="font-weight:700;font-size:0.95rem">${c.sym}</div><div style="font-size:0.72rem;color:var(--fg2)">${name}</div>`;return u?`<a href="${u}" target="_blank" rel="noopener" title="Open ${c.sym} on CoinGecko" style="text-decoration:none;color:inherit;transition:opacity 0.15s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">${inner}</a>`:`<div>${inner}</div>`;})()}
           </div>
           <div>
             <div style="font-weight:700;font-size:1rem;white-space:nowrap">$${fmt(curVal,2)}</div>
@@ -1556,7 +1612,7 @@ function renderTableAndStack() {
           <span>#${i+1}</span>
           <span style="color:var(--fg2)">${c.lastUpdate||'Oct 15, 2026'}</span>
         </div>
-        <div style="display:flex;gap:6px;padding:6px 12px 12px;justify-content:center">
+        <div class="coin-card-actions" style="display:flex;gap:6px;padding:6px 0 2px">
           <button class="btn-buy-more" style="flex:1;padding:5px 0;font-size:0.78rem" onclick="openBuyMore('${c.sym}')">+ Buy</button>
           <button class="btn-sell" style="flex:1;padding:5px 0;font-size:0.78rem" onclick="openSell('${c.sym}')">− Sell</button>
           <button class="btn-history" style="padding:5px 10px;font-size:0.78rem" onclick="openHistory('${c.sym}')" title="History">📋</button>
