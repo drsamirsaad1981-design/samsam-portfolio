@@ -1605,10 +1605,12 @@ function fmt(n, dec) {
 function renderHeader() {
   const { btcQty, btcValue, altTotal, total } = calcStats();
   const fmtUsd = n => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  const fmtBtc = n => (btcPrice > 0 ? (n / btcPrice).toFixed(8) : '—') + ' BTC';
+  const fmtBtc = n => (btcPrice > 0 ? parseFloat((n / btcPrice).toFixed(8)).toString() : '—') + ' BTC';
 
-  // Card 1: BTC Accumulated
-  document.getElementById('totalBtc').textContent = btcQty.toFixed(8) + ' BTC';
+  // Card 1: BTC Accumulated — strip trailing zeros, max 8 decimals
+  const btcQtyStr = parseFloat(btcQty.toFixed(8)).toString();
+  document.getElementById('totalBtc').textContent = btcQtyStr + ' BTC';
+  const altBtcStr = btcPrice > 0 ? '(' + parseFloat((altTotal/btcPrice).toFixed(8)).toString() + ' BTC)' : '—';
   document.getElementById('totalBtcUsd').textContent = btcPrice > 0 ? '(' + fmtUsd(btcValue) + ')' : '—';
 
   // Card 2: Altcoins USD

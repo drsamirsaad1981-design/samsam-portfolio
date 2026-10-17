@@ -108,7 +108,7 @@ body {
 
 /* ── Summary ── */
 .summary {
-  padding: 14px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
 }
 .summary-cards {
   display: grid;
@@ -116,6 +116,7 @@ body {
   gap: 10px;
   max-width: 860px;
   margin: 0 auto;
+  width: 100%;
 }
 .sum-card {
   background: var(--card);
@@ -146,7 +147,7 @@ body {
 
 /* ── Sort tabs ── */
 .sort-tabs {
-  padding: 8px max(16px, env(safe-area-inset-right, 0px)) 4px max(16px, env(safe-area-inset-left, 0px));
+  padding: 14px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
   display: flex;
   gap: 6px;
 }
@@ -174,10 +175,12 @@ body {
   color: #fff;
   border-color: var(--accent);
 }
+.sort-tab .tab-arrow { display: none; }
+.sort-tab.active .tab-arrow { display: inline; }
 
 /* ── Column header ── */
 .col-header {
-  padding: 6px max(16px, env(safe-area-inset-right, 0px)) 6px max(16px, env(safe-area-inset-left, 0px));
+  padding: 8px max(16px, env(safe-area-inset-right, 0px)) 4px max(16px, env(safe-area-inset-left, 0px));
 }
 .col-header-inner {
   display: grid;
@@ -196,13 +199,14 @@ body {
 
 /* ── Coin list ── */
 .coin-list {
-  padding: 0 max(10px, env(safe-area-inset-right, 0px)) 32px max(10px, env(safe-area-inset-left, 0px));
+  padding: 0 max(16px, env(safe-area-inset-right, 0px)) 32px max(16px, env(safe-area-inset-left, 0px));
   display: flex;
   flex-direction: column;
   gap: 5px;
-  max-width: 880px;
+  max-width: 860px;
   margin: 0 auto;
   width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Coin row ── */
@@ -381,9 +385,9 @@ body {
 
 <div class="sort-tabs">
   <div class="sort-tabs-inner">
-    <button class="sort-tab active" id="tab-pnl"   onclick="setSort('pnl')">↓ P&amp;L</button>
-    <button class="sort-tab"        id="tab-pct"   onclick="setSort('pct')">↓ % P&amp;L</button>
-    <button class="sort-tab"        id="tab-value" onclick="setSort('value')">↓ Value</button>
+    <button class="sort-tab active" id="tab-pnl"   onclick="setSort('pnl')"><span class="tab-arrow">↓ </span>$ P&amp;L</button>
+    <button class="sort-tab"        id="tab-pct"   onclick="setSort('pct')"><span class="tab-arrow">↓ </span>% P&amp;L</button>
+    <button class="sort-tab"        id="tab-value" onclick="setSort('value')"><span class="tab-arrow">↓ </span>Value</button>
   </div>
 </div>
 
@@ -517,6 +521,7 @@ const FALLBACK_PRICES = {
 let portfolio = [];
 let livePrices = {};
 let sortMode = 'pnl';
+let sortDir  = -1; // -1 = descending (default), +1 = ascending
 
 // ── Theme ──
 function loadTheme() {
@@ -626,18 +631,20 @@ function fmtUSD(v) {
   return v < 0 ? '-' + str : str;
 }
 function fmtPrice(v) {
-  if (v >= 1000) return '$' + v.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
-  if (v >= 1)    return '$' + v.toFixed(2);
-  if (v >= 0.01) return '$' + v.toFixed(4);
+  if (v >= 10000) return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if (v >= 1000)  return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if (v >= 1)     return '$' + v.toFixed(2);
+  if (v >= 0.01)  return '$' + v.toFixed(4);
   return '$' + v.toFixed(6);
 }
 function fmtPct(v) {
   return (v >= 0 ? '+' : '-') + Math.abs(v).toFixed(2) + '%';
 }
 function fmtQty(qty, sym) {
-  if (qty >= 1000) return qty.toLocaleString('en-US', {maximumFractionDigits:0}) + ' ' + sym;
-  if (qty >= 1)    return qty.toFixed(2) + ' ' + sym;
-  return qty.toFixed(4) + ' ' + sym;
+  if (qty >= 1000) return qty.toLocaleString('en-US', {maximumFractionDigits:2}) + ' ' + sym;
+  if (qty >= 1)    return parseFloat(qty.toFixed(4)).toString() + ' ' + sym;
+  // For sub-1 quantities: strip trailing zeros, max 4 decimals
+  return parseFloat(qty.toFixed(4)).toString() + ' ' + sym;
 }
 
 // ── Coin icon helpers (same logic as index.html) ──
@@ -675,9 +682,18 @@ function coinIconHtml(c) {
 
 // ── Sort ──
 function setSort(mode) {
-  sortMode = mode;
+  if (sortMode === mode) {
+    sortDir = sortDir * -1; // toggle direction on re-click
+  } else {
+    sortMode = mode;
+    sortDir  = -1; // default: descending
+  }
   document.querySelectorAll('.sort-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-' + mode).classList.add('active');
+  const btn = document.getElementById('tab-' + mode);
+  btn.classList.add('active');
+  // update arrow on active button
+  const arrow = btn.querySelector('.tab-arrow');
+  if (arrow) arrow.textContent = (sortDir === -1 ? '↓ ' : '↑ ');
   render();
 }
 
@@ -701,11 +717,11 @@ function render() {
     return { c, currentPrice, change24h, cost, value, pnl, pct };
   });
 
-  // Sort — highest magnitude first regardless of sign
+  // Sort — direction controlled by sortDir (-1=desc, +1=asc)
   rows.sort((a, b) => {
-    if (sortMode === 'pnl')   return b.pnl   - a.pnl;
-    if (sortMode === 'pct')   return b.pct   - a.pct;
-    if (sortMode === 'value') return b.value - a.value;
+    if (sortMode === 'pnl')   return sortDir * (b.pnl   - a.pnl);
+    if (sortMode === 'pct')   return sortDir * (b.pct   - a.pct);
+    if (sortMode === 'value') return sortDir * (b.value - a.value);
     return 0;
   });
 
