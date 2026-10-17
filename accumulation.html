@@ -278,6 +278,46 @@ tr:hover td { background: rgba(255,255,255,.02); }
   .target-input { width: 85px; }
 }
 
+/* ── DCA Modal ── */
+.dca-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.dca-modal {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+  padding: 24px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,.4);
+}
+.dca-modal h3 { margin: 0 0 4px; font-size: 1.1rem; }
+.dca-modal .dca-sub { font-size: 0.8rem; color: var(--fg2); margin-bottom: 18px; }
+.dca-field { margin-bottom: 14px; }
+.dca-field label { display: block; font-size: 0.78rem; color: var(--fg2); margin-bottom: 5px; }
+.dca-field input {
+  width: 100%; box-sizing: border-box;
+  background: var(--bg3); border: 1px solid var(--border); color: var(--fg);
+  border-radius: 8px; padding: 8px 12px; font-size: 0.95rem; font-family: inherit; outline: none;
+}
+.dca-field input:focus { border-color: var(--accent); }
+.dca-result {
+  background: var(--bg3); border-radius: 10px; padding: 14px 16px; margin: 16px 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.dca-result-item .rlbl { font-size: 0.72rem; color: var(--fg2); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+.dca-result-item .rval { font-size: 0.95rem; font-weight: 700; color: var(--accent); }
+.dca-result-item.full { grid-column: 1/-1; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 2px; }
+.dca-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.btn-dca {
+  background: none; border: 1px solid var(--border); color: var(--fg2);
+  border-radius: 7px; padding: 5px 13px; font-size: 0.78rem; cursor: pointer; font-family: inherit;
+  transition: color .2s, border-color .2s;
+}
+.btn-dca:hover { color: var(--accent); border-color: var(--accent); }
+.card-dca-btn {
+  background: none; border: 1px solid var(--border); color: var(--accent);
+  border-radius: 7px; padding: 4px 10px; font-size: 0.72rem; cursor: pointer; font-family: inherit;
+  transition: background .15s;
+}
+.card-dca-btn:hover { background: rgba(245,158,11,.12); }
+
 /* ── Empty state ── */
 .empty-state {
   text-align: center; padding: 40px 20px;
@@ -293,6 +333,47 @@ tr:hover td { background: rgba(255,255,255,.02); }
 </style>
 </head>
 <body>
+
+<!-- DCA Calculator Modal -->
+<div class="dca-overlay" id="dcaOverlay" style="display:none" onclick="if(event.target===this)closeDcaModal()">
+  <div class="dca-modal">
+    <h3>🧮 DCA Calculator</h3>
+    <div class="dca-sub" id="dcaSub">Dollar-Cost Averaging plan</div>
+    <div class="dca-field">
+      <label>💵 Monthly Investment (USD)</label>
+      <input type="text" inputmode="decimal" id="dcaMonthly" placeholder="100" oninput="calcDca()">
+    </div>
+    <div class="dca-field">
+      <label>📅 Number of Months</label>
+      <input type="number" id="dcaMonths" placeholder="12" min="1" max="120" oninput="calcDca()">
+    </div>
+    <div class="dca-result" id="dcaResult" style="display:none">
+      <div class="dca-result-item">
+        <div class="rlbl">Coins / Month</div>
+        <div class="rval" id="dcaPerMonth">—</div>
+      </div>
+      <div class="dca-result-item">
+        <div class="rlbl">Total Coins</div>
+        <div class="rval" id="dcaTotalCoins">—</div>
+      </div>
+      <div class="dca-result-item">
+        <div class="rlbl">Total Invested</div>
+        <div class="rval" id="dcaTotalInvested">—</div>
+      </div>
+      <div class="dca-result-item">
+        <div class="rlbl">% of Target</div>
+        <div class="rval" id="dcaTargetPct">—</div>
+      </div>
+      <div class="dca-result-item full">
+        <div class="rlbl">Months to reach target</div>
+        <div class="rval" id="dcaMonthsToTarget">—</div>
+      </div>
+    </div>
+    <div class="dca-actions">
+      <button class="btn-dca" onclick="closeDcaModal()">Close</button>
+    </div>
+  </div>
+</div>
 
 <!-- Header -->
 <div class="page-header">
@@ -752,6 +833,7 @@ function renderCards() {
           </div>
           <div class="acc-card-name">${r.name}</div>
         </div>
+        <button class="card-dca-btn" onclick="openDcaModal(${idx})">🧮 DCA</button>
         <button class="card-del-btn" onclick="removeCoin(${idx})">✕ Remove</button>
       </div>
 
@@ -1044,6 +1126,67 @@ function fmtQty(n) {
   if (n < 1000) return n.toFixed(2);
   return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
 }
+
+// ─── DCA Calculator ───────────────────────────────────────────────────────────
+let dcaIdx = -1;
+
+function openDcaModal(idx) {
+  dcaIdx = idx;
+  const entry = accumPlan[idx];
+  const r = calcRow(entry);
+  document.getElementById('dcaSub').textContent =
+    `${entry.name || entry.sym} (${entry.sym}) — Current: $${fmtUSD(r.currentPrice)}`;
+  document.getElementById('dcaMonthly').value = '';
+  document.getElementById('dcaMonths').value = '12';
+  document.getElementById('dcaResult').style.display = 'none';
+  document.getElementById('dcaOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('dcaMonthly').focus(), 50);
+}
+
+function closeDcaModal() {
+  document.getElementById('dcaOverlay').style.display = 'none';
+  dcaIdx = -1;
+}
+
+function calcDca() {
+  if (dcaIdx < 0) return;
+  const entry = accumPlan[dcaIdx];
+  const r = calcRow(entry);
+  const monthly = parseFloat(document.getElementById('dcaMonthly').value);
+  const months  = parseInt(document.getElementById('dcaMonths').value);
+  const res = document.getElementById('dcaResult');
+
+  if (!monthly || monthly <= 0 || !months || months <= 0 || r.currentPrice <= 0) {
+    res.style.display = 'none';
+    return;
+  }
+
+  const price          = r.currentPrice;
+  const coinsPerMonth  = monthly / price;
+  const totalCoins     = coinsPerMonth * months;
+  const totalInvested  = monthly * months;
+  const targetQty      = entry.targetQty || 0;
+  const pendingQty     = r.pendingQty;
+  const pctOfTarget    = targetQty > 0 ? (totalCoins / pendingQty * 100) : null;
+  const monthsNeeded   = pendingQty > 0 && coinsPerMonth > 0
+    ? Math.ceil(pendingQty / coinsPerMonth) : null;
+
+  document.getElementById('dcaPerMonth').textContent    = fmtQty(coinsPerMonth) + ' ' + entry.sym;
+  document.getElementById('dcaTotalCoins').textContent  = fmtQty(totalCoins) + ' ' + entry.sym;
+  document.getElementById('dcaTotalInvested').textContent = '$' + fmtUSD(totalInvested);
+  document.getElementById('dcaTargetPct').textContent   =
+    pctOfTarget !== null ? pctOfTarget.toFixed(1) + '%' : '—';
+  document.getElementById('dcaMonthsToTarget').textContent =
+    monthsNeeded !== null
+      ? `${monthsNeeded} months (~${(monthsNeeded/12).toFixed(1)} yrs) at $${fmtUSD(monthly)}/mo`
+      : pendingQty <= 0 ? '✅ Target already reached!' : '—';
+
+  res.style.display = 'grid';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDcaModal();
+});
 
 // ─── Auto-sync when portfolio page updates storage ────────────────────────────
 window.addEventListener('storage', e => {
