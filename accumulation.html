@@ -841,9 +841,18 @@ function renderTable() {
 // ─── Render Cards ────────────────────────────────────────────────────────────
 function renderCards() {
   const q = (document.getElementById('searchBox').value || '').toLowerCase();
-  const rows = accumPlan.filter(e =>
+  let rows = accumPlan.filter(e =>
     !q || e.sym.toLowerCase().includes(q) || (e.name||'').toLowerCase().includes(q)
   );
+  // Apply same sort as table
+  if (sortCol) {
+    rows = [...rows].sort((a, b) => {
+      const va = getSortValue(a, sortCol), vb = getSortValue(b, sortCol);
+      if (va < vb) return -1 * sortDir;
+      if (va > vb) return  1 * sortDir;
+      return 0;
+    });
+  }
 
   const wrap = document.getElementById('cardsView');
   const empty = document.getElementById('emptyState');
