@@ -196,6 +196,17 @@ body {
 }
 .col-header-inner .ch-price,
 .col-header-inner .ch-pnl { text-align: right; }
+.col-header-inner .ch-price,
+.col-header-inner .ch-pnl {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+.col-header-inner .ch-price:hover,
+.col-header-inner .ch-pnl:hover { color: var(--accent); }
+.col-header-inner .ch-price.col-active,
+.col-header-inner .ch-pnl.col-active { color: var(--accent); }
+.ch-sort-arrow { margin-left: 2px; }
 
 /* ── Coin list ── */
 .coin-list {
@@ -394,8 +405,8 @@ body {
 <div class="col-header">
   <div class="col-header-inner">
     <span>Asset</span>
-    <span class="ch-price">Price</span>
-    <span class="ch-pnl">All-Time P&amp;L</span>
+    <span class="ch-price" id="col-price" onclick="setSort('price')">Price<span class="ch-sort-arrow" id="arrow-price"></span></span>
+    <span class="ch-pnl"   id="col-pnl"   onclick="setSort('pnl')"  >All-Time P&amp;L<span class="ch-sort-arrow" id="arrow-pnl"></span></span>
   </div>
 </div>
 
@@ -684,18 +695,42 @@ function coinIconHtml(c) {
 // ── Sort ──
 function setSort(mode) {
   if (lastTabClick === mode) {
-    sortDir = sortDir * -1; // toggle only when clicking same tab twice
+    sortDir = sortDir * -1;
   } else {
     sortMode    = mode;
-    sortDir     = -1; // reset to descending when switching tabs
+    sortDir     = -1;
     lastTabClick = mode;
   }
+
+  // ── Update pill tabs (pnl / pct / value) ──
   document.querySelectorAll('.sort-tab').forEach(t => t.classList.remove('active'));
-  const btn = document.getElementById('tab-' + mode);
-  btn.classList.add('active');
-  // update arrow on active button
-  const arrow = btn.querySelector('.tab-arrow');
-  if (arrow) arrow.textContent = (sortDir === -1 ? '↓ ' : '↑ ');
+  // pill tabs exist only for pnl/pct/value — price is column-header-only
+  const pillId = (mode === 'price') ? null : 'tab-' + mode;
+  if (pillId) {
+    const btn = document.getElementById(pillId);
+    if (btn) {
+      btn.classList.add('active');
+      const arrow = btn.querySelector('.tab-arrow');
+      if (arrow) arrow.textContent = (sortDir === -1 ? '↓ ' : '↑ ');
+    }
+  }
+
+  // ── Update column header highlights ──
+  ['col-price','col-pnl'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('col-active');
+  });
+  document.getElementById('arrow-price').textContent = '';
+  document.getElementById('arrow-pnl').textContent   = '';
+
+  if (mode === 'price') {
+    document.getElementById('col-price').classList.add('col-active');
+    document.getElementById('arrow-price').textContent = (sortDir === -1 ? ' ↓' : ' ↑');
+  } else if (mode === 'pnl') {
+    document.getElementById('col-pnl').classList.add('col-active');
+    document.getElementById('arrow-pnl').textContent = (sortDir === -1 ? ' ↓' : ' ↑');
+  }
+
   render();
 }
 
@@ -724,6 +759,7 @@ function render() {
     if (sortMode === 'pnl')   return sortDir * (b.pnl   - a.pnl);
     if (sortMode === 'pct')   return sortDir * (b.pct   - a.pct);
     if (sortMode === 'value') return sortDir * (b.value - a.value);
+    if (sortMode === 'price') return sortDir * (b.currentPrice - a.currentPrice);
     return 0;
   });
 
@@ -782,6 +818,9 @@ function render() {
 loadTheme();
 loadPortfolio();
 render();
+// Show initial sort indicator on column header (default: pnl descending)
+document.getElementById('col-pnl').classList.add('col-active');
+document.getElementById('arrow-pnl').textContent = ' ↓';
 
 setTimeout(async () => {
   await pullFromCloud();
