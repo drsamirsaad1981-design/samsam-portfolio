@@ -2935,8 +2935,21 @@ async function pushPortfolioToCloud() {
     // Stamp a fresh timestamp so the receiving device always sees this as newer
     const nowTs = new Date().toISOString();
 
+    // Use the same lastSave timestamp already written to localStorage by savePortfolio()
+    // so that pullPortfolioFromCloud()'s local-newer check works correctly.
+    // Fall back to nowTs only if localStorage doesn't have one yet.
+    const localSavedTs = pfData.lastSave || nowTs;
+    const pushTs = localSavedTs > nowTs ? localSavedTs : nowTs; // whichever is newer
+
+    // ── KEY FIX: set SYNC_KEY BEFORE the async GET/PUT so that any page
+    //    refresh that happens during the network round-trip won't cause
+    //    pullPortfolioFromCloud() to re-apply the old cloud data and blank
+    //    the portfolio.  The in-memory portfolio is already correct; we just
+    //    need the guard timestamp in place early. ──────────────────────────
+    try { localStorage.setItem(SYNC_KEY, pushTs); } catch(_) {}
+
     const portfolioData = {
-      lastSave: nowTs,
+      lastSave: pushTs,
       coins: pfData.coins,
       btcPrice: pfData.btcPrice,
       transactions: (() => { try { return JSON.parse(localStorage.getItem(TX_KEY) || '[]'); } catch(_) { return []; } })(),
@@ -2958,9 +2971,6 @@ async function pushPortfolioToCloud() {
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
       body: JSON.stringify({ accumPlan, perfSnaps, portfolioData })
     });
-
-    // Update our own last-pulled timestamp so we don't immediately re-pull our own push
-    try { localStorage.setItem(SYNC_KEY, nowTs); } catch(_) {}
   } catch(_) {}
 }
 
@@ -2982,6 +2992,16 @@ async function pullPortfolioFromCloud() {
     // This is the key fix: clock differences between devices don't matter anymore
     const lastPulled = (() => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch(_) { return ''; } })();
     if (lastPulled && cloudLastSave <= lastPulled) return false; // already have this version
+
+    // Extra safety: never overwrite local data that is newer than what the cloud has.
+    // This prevents a stale cloud read (between our push's GET and PUT) from blanking
+    // the portfolio after a page refresh.
+    const localRaw = (() => { try { return localStorage.getItem(STORAGE_KEY); } catch(_) { return null; } })();
+    if (localRaw) {
+      const localData = (() => { try { return JSON.parse(localRaw); } catch(_) { return null; } })();
+      const localLastSave = localData ? (localData.lastSave || '') : '';
+      if (localLastSave && localLastSave > cloudLastSave) return false; // local is newer — skip
+    }
 
     // Cloud has newer data — apply it
     try {
@@ -3053,7 +3073,10 @@ async function autoSyncPerf() {
     // Also check if cloud portfolio has data we haven't seen yet — apply directly (no extra fetch)
     const cloudLastSave = cloudPortfolio ? (cloudPortfolio.lastSave || '') : '';
     const lastPulled = (() => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch(_) { return ''; } })();
-    if (cloudPortfolio && cloudPortfolio.coins && cloudPortfolio.coins.length > 0 && cloudLastSave && cloudLastSave > lastPulled) {
+    // Extra safety: skip if local data is newer (prevents stale cloud read from blanking portfolio)
+    const _localRaw2 = (() => { try { return localStorage.getItem(STORAGE_KEY); } catch(_) { return null; } })();
+    const _localTs2  = _localRaw2 ? ((() => { try { return (JSON.parse(_localRaw2)||{}).lastSave||''; } catch(_){ return ''; } })()) : '';
+    if (cloudPortfolio && cloudPortfolio.coins && cloudPortfolio.coins.length > 0 && cloudLastSave && cloudLastSave > lastPulled && (!_localTs2 || cloudLastSave > _localTs2)) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: cloudPortfolio.coins, btcPrice: cloudPortfolio.btcPrice, lastSave: cloudLastSave }));
         if (cloudPortfolio.transactions)  localStorage.setItem(TX_KEY,      JSON.stringify(cloudPortfolio.transactions));
