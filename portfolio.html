@@ -659,7 +659,13 @@
     border-radius: 12px;
     padding: 14px;
     margin-bottom: 12px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
   }
+  .dream-bar:hover { border-color: var(--accent); background: var(--bg3); }
 
   /* Allocation Mini Card */
   .alloc-mini-card {
@@ -691,7 +697,13 @@
     border-radius: 12px;
     padding: 14px;
     margin-bottom: 12px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
   }
+  .perf-chart-wrap:hover { border-color: var(--accent); background: var(--bg3); }
   .perf-chart-header {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 10px; flex-wrap: wrap; gap: 6px;
@@ -913,21 +925,27 @@
   </div>
 </header>
 
-<div class="perf-chart-wrap" id="perfChartWrap">
+<a href="./performance.html" class="perf-chart-wrap" id="perfChartWrap" style="text-decoration:none">
   <div class="perf-chart-header">
-    <span class="perf-chart-title">📈 Portfolio Performance <a href="./performance.html" style="font-size:0.72rem;color:var(--accent);text-decoration:none;margin-left:6px;font-weight:500">→ View Details</a></span>
-    <div class="perf-chart-stats">
-      <span class="perf-stat"><span class="perf-dot portfolio"></span><span id="perfPortfolioLabel">Portfolio: —</span></span>
-      <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
-      <span id="perfSyncIndicator" title="Auto-sync status" style="font-size:0.65rem;color:rgba(148,163,184,0.5);margin-left:6px;transition:opacity 0.5s">☁</span>
+    <span class="perf-chart-title">📈 Portfolio Performance</span>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="perf-chart-stats">
+        <span class="perf-stat"><span class="perf-dot portfolio"></span><span id="perfPortfolioLabel">Portfolio: —</span></span>
+        <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
+        <span id="perfSyncIndicator" title="Auto-sync status" style="font-size:0.65rem;color:rgba(148,163,184,0.5);margin-left:6px;transition:opacity 0.5s">☁</span>
+      </div>
+      <span class="alloc-mini-arrow">›</span>
     </div>
   </div>
   <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
   <canvas class="perf-chart-canvas" id="perfChartCanvas" height="90"></canvas>
-</div>
+</a>
 
-<div class="dream-bar" id="accumProgressBar" style="display:none">
-  <h3>📊 Accumulation Plan — Overall Progress <a href="./accumulation.html" style="color:var(--accent);font-size:0.72rem;text-decoration:none;margin-left:6px">→ View Plan</a></h3>
+<a href="./accumulation.html" class="dream-bar" id="accumProgressBar" style="display:none;text-decoration:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <h3 style="margin:0">📊 Accumulation Plan — Overall Progress</h3>
+    <span class="alloc-mini-arrow">›</span>
+  </div>
   <div class="progress-track">
     <div class="progress-fill accum-fill" id="accumFill" style="width:0%"></div>
   </div>
@@ -935,7 +953,7 @@
     <span style="color:#10b981" id="accumPct">0% complete</span>
     <span style="color:var(--fg2)" id="accumDetail">— / — targets met</span>
   </div>
-</div>
+</a>
 
 <!-- ── Allocation Mini Card ── -->
 <a href="./allocation.html" class="alloc-mini-card" id="allocMiniCard" style="display:none;text-decoration:none">
@@ -949,16 +967,6 @@
   <div class="alloc-mini-arrow">›</div>
 </a>
 
-<div class="dream-bar">
-  <h3>🎯 Dream: 1 BTC — Current Progress</h3>
-  <div class="progress-track">
-    <div class="progress-fill" id="progressFill" style="width:1.304%"></div>
-  </div>
-  <div class="progress-labels">
-    <span style="color:var(--btc)" id="progressPct">1.304% complete</span>
-    <span style="color:var(--fg2)">Target: 1.00000000 BTC ₿</span>
-  </div>
-</div>
 
 <div class="live-bar">
   <div id="liveIndicator"><span class="live-dot"></span> Loading…</div>
@@ -974,8 +982,6 @@
     <button class="btn btn-secondary" onclick="toggleTheme()">🌙</button>
   </div>
   <div class="control-row">
-    <a href="./accumulation.html" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">🎯 Accumulation Plan</a>
-    <a href="./allocation.html" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">📊 Allocation</a>
     <button class="btn btn-secondary" onclick="openAnalysis()">🤖 AI Analysis</button>
   </div>
   <div class="control-row">
