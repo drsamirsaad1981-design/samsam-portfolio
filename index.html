@@ -905,23 +905,6 @@
   </div>
 </header>
 
-<!-- ── Performance Card ── -->
-<a href="./performance.html" class="alloc-mini-card" id="perfChartWrap" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:8px">
-  <div style="display:flex;justify-content:space-between;align-items:center">
-    <div class="alloc-mini-title" style="margin-bottom:0">📈 Portfolio Performance</div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="perf-chart-stats">
-        <span class="perf-stat"><span class="perf-dot portfolio"></span><span id="perfPortfolioLabel">Portfolio: —</span></span>
-        <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
-        <span id="perfSyncIndicator" title="Auto-sync status" style="font-size:0.65rem;color:rgba(148,163,184,0.5);margin-left:4px;transition:opacity 0.5s">☁</span>
-      </div>
-      <span class="alloc-mini-arrow">›</span>
-    </div>
-  </div>
-  <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
-  <canvas class="perf-chart-canvas" id="perfChartCanvas" height="90"></canvas>
-</a>
-
 <!-- ── Accumulation Card ── -->
 <a href="./accumulation.html" class="alloc-mini-card" id="accumProgressBar" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:8px">
   <div style="display:flex;justify-content:space-between;align-items:center">
@@ -947,6 +930,23 @@
     <svg id="allocMiniSvg" viewBox="0 0 60 60" width="60" height="60"></svg>
   </div>
   <div class="alloc-mini-arrow">›</div>
+</a>
+
+<!-- ── Performance Card ── -->
+<a href="./performance.html" class="alloc-mini-card" id="perfChartWrap" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="alloc-mini-title" style="margin-bottom:0">📈 Portfolio Performance</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="perf-chart-stats">
+        <span class="perf-stat"><span class="perf-dot portfolio"></span><span id="perfPortfolioLabel">Portfolio: —</span></span>
+        <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
+        <span id="perfSyncIndicator" title="Auto-sync status" style="font-size:0.65rem;color:rgba(148,163,184,0.5);margin-left:4px;transition:opacity 0.5s">☁</span>
+      </div>
+      <span class="alloc-mini-arrow">›</span>
+    </div>
+  </div>
+  <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
+  <canvas class="perf-chart-canvas" id="perfChartCanvas" height="90"></canvas>
 </a>
 
 
