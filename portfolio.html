@@ -399,10 +399,11 @@
       border-radius: 9px;
       white-space: nowrap;
     }
-    /* Filter dropdown matches button style */
+    /* Filter dropdown matches button style — width fits content */
     .controls select.btn {
       flex: 0 0 auto;
-      min-width: 150px;
+      width: auto;
+      min-width: 0;
       padding: 9px 12px;
     }
 
@@ -853,7 +854,7 @@
     <button class="btn btn-secondary" onclick="openAnalysis()">🤖 AI Analysis</button>
   </div>
   <div class="control-row">
-    <select class="btn btn-secondary" id="filterAction" onchange="sortCol='currentValue';sortDir=1;renderTableAndStack()" style="cursor:pointer; flex:2;">
+    <select class="btn btn-secondary" id="filterAction" onchange="sortCol='currentValue';sortDir=1;renderTableAndStack()" style="cursor:pointer;">
       <option value="">All Coins</option>
       <option value="gainers">🟢 Top Gainers</option>
       <option value="losers">🔴 Top Losers</option>
