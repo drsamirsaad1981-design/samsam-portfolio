@@ -647,7 +647,7 @@
   </div>
 </header>
 
-<div class="perf-chart-wrap" id="perfChartWrap" style="display:none">
+<div class="perf-chart-wrap" id="perfChartWrap">
   <div class="perf-chart-header">
     <span class="perf-chart-title">📈 Portfolio Performance</span>
     <div class="perf-chart-stats">
@@ -655,6 +655,7 @@
       <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
     </div>
   </div>
+  <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after 2+ price updates</div>
   <canvas class="perf-chart-canvas" id="perfChartCanvas" height="90"></canvas>
 </div>
 
@@ -2495,10 +2496,17 @@ function savePerfSnapshot(portfolioValue, btcPrice) {
 function drawPerfChart() {
   const snaps = loadPerfSnapshots();
   const wrap  = document.getElementById('perfChartWrap');
-  if (snaps.length < 2) { wrap.style.display = 'none'; return; }
-
-  wrap.style.display = '';
+  const noData = document.getElementById('perfNoData');
   const canvas = document.getElementById('perfChartCanvas');
+  // Always show the section; toggle no-data message vs chart
+  wrap.style.display = '';
+  if (snaps.length < 2) {
+    if (noData) noData.style.display = '';
+    canvas.style.display = 'none';
+    return;
+  }
+  if (noData) noData.style.display = 'none';
+  canvas.style.display = '';
   const W = canvas.offsetWidth || 300;
   const H = 90;
   canvas.width  = W * window.devicePixelRatio;
