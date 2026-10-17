@@ -347,19 +347,19 @@
       flex-shrink: 0;
     }
 
-    /* 4 stat cards — stretch to fill 100% of header interior */
+    /* 4 stat cards — flex row, equal width, fill full header */
     .header-stats {
-      display: grid;
-      grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+      display: flex;
+      flex-direction: row;
       gap: 14px;
       width: 100%;
       box-sizing: border-box;
-      min-width: 0;
     }
 
-    /* Stat card: fill cell, center everything */
+    /* Each card: equal flex, centered content */
     .stat-card {
-      width: 100%;
+      flex: 1 1 0;
+      min-width: 0;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
