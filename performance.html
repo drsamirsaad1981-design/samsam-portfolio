@@ -98,6 +98,14 @@ body {
   line-height: 1;
 }
 
+/* ── Page wrapper — cap width on desktop ── */
+.page-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  padding-left:  max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
 /* ── Summary ── */
 .summary {
   padding: 14px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
@@ -106,6 +114,8 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+  max-width: 860px;
+  margin: 0 auto;
 }
 .sum-card {
   background: var(--card);
@@ -140,6 +150,13 @@ body {
   display: flex;
   gap: 6px;
 }
+.sort-tabs-inner {
+  display: flex;
+  gap: 6px;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+}
 .sort-tab {
   font-size: 0.72rem;
   font-weight: 600;
@@ -161,6 +178,8 @@ body {
 /* ── Column header ── */
 .col-header {
   padding: 6px max(16px, env(safe-area-inset-right, 0px)) 6px max(16px, env(safe-area-inset-left, 0px));
+}
+.col-header-inner {
   display: grid;
   grid-template-columns: 1fr 100px 100px;
   gap: 0;
@@ -169,9 +188,11 @@ body {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  max-width: 860px;
+  margin: 0 auto;
 }
-.col-header .ch-price,
-.col-header .ch-pnl { text-align: right; }
+.col-header-inner .ch-price,
+.col-header-inner .ch-pnl { text-align: right; }
 
 /* ── Coin list ── */
 .coin-list {
@@ -179,6 +200,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  max-width: 880px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* ── Coin row ── */
@@ -291,6 +315,45 @@ body {
   color: var(--fg2);
   padding: 6px 16px 2px;
 }
+
+/* ── Desktop layout ── */
+@media (min-width: 768px) {
+  .header {
+    padding-left:  max(24px, env(safe-area-inset-left, 0px));
+    padding-right: max(24px, env(safe-area-inset-right, 0px));
+  }
+  .summary, .sort-tabs, .col-header, .sync-bar {
+    padding-left:  max(24px, env(safe-area-inset-left, 0px));
+    padding-right: max(24px, env(safe-area-inset-right, 0px));
+  }
+  .summary-cards, .coin-list {
+    max-width: 860px;
+    margin: 0 auto;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .col-header-inner {
+    grid-template-columns: 1fr 130px 130px;
+  }
+  .sum-value { font-size: 1.55rem; }
+  .sum-card  { padding: 18px 20px; }
+  .coin-row  {
+    padding: 14px 16px;
+    grid-template-columns: 1fr 130px 130px;
+    border-radius: 16px;
+  }
+  .coin-row:hover { opacity: 0.85; transition: opacity 0.15s; }
+  .coin-row img[data-sym], .coin-row div[style*="border-radius:50%"] { width: 40px !important; height: 40px !important; font-size: 12px !important; }
+  .a-sym  { font-size: 1rem; }
+  .a-name { font-size: 0.78rem; }
+  .a-qty  { font-size: 0.7rem; }
+  .p-val  { font-size: 0.95rem; }
+  .p-chg  { font-size: 0.74rem; }
+  .pnl-usd { font-size: 0.95rem; }
+  .pnl-pct { font-size: 0.74rem; }
+  .coin-list { gap: 7px; }
+  .sort-tab { font-size: 0.78rem; padding: 7px 18px; }
+}
 </style>
 </head>
 <body>
@@ -317,15 +380,19 @@ body {
 </div>
 
 <div class="sort-tabs">
-  <button class="sort-tab active" id="tab-pnl"   onclick="setSort('pnl')">↓ P&amp;L</button>
-  <button class="sort-tab"        id="tab-pct"   onclick="setSort('pct')">↓ % P&amp;L</button>
-  <button class="sort-tab"        id="tab-value" onclick="setSort('value')">↓ Value</button>
+  <div class="sort-tabs-inner">
+    <button class="sort-tab active" id="tab-pnl"   onclick="setSort('pnl')">↓ P&amp;L</button>
+    <button class="sort-tab"        id="tab-pct"   onclick="setSort('pct')">↓ % P&amp;L</button>
+    <button class="sort-tab"        id="tab-value" onclick="setSort('value')">↓ Value</button>
+  </div>
 </div>
 
 <div class="col-header">
-  <span>Asset</span>
-  <span class="ch-price">Price</span>
-  <span class="ch-pnl">All-Time P&amp;L</span>
+  <div class="col-header-inner">
+    <span>Asset</span>
+    <span class="ch-price">Price</span>
+    <span class="ch-pnl">All-Time P&amp;L</span>
+  </div>
 </div>
 
 <div id="coinList" class="coin-list">
@@ -431,7 +498,7 @@ const COINGECKO_IDS = {
   LINK:'chainlink', ENS:'ethereum-name-service', STRK:'starknet',
   ONDO:'ondo-finance', AVAIL:'avail', KAVA:'kava', MNT:'mantle',
   FLR:'flare-networks', KAS:'kaspa', POL:'polygon-ecosystem-token',
-  VTHO:'vethor-token', VET:'vechain', MON:null, PONS:null, XPL:null
+  VTHO:'vethor-token', VET:'vechain', MON:'monad-testnet', PONS:'pons-2', XPL:'plasma-finance'
 };
 
 const FALLBACK_PRICES = {
