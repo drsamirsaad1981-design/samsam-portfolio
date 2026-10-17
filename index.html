@@ -626,10 +626,10 @@
     padding: 20px;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
   }
   .dash-card h3 { font-size: 0.75rem; color: var(--fg2); margin-bottom: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; flex-shrink: 0; }
-  .dash-card .donut-wrap { flex: 1; align-items: center; }
+  /* ① Centre donut content vertically — no wasted top gap */
+  .dash-card .donut-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
   .dash-card .pnl-rows { flex: 1; }
 
   .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center; }
@@ -638,7 +638,8 @@
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .legend-label { color: var(--fg2); flex: 1; }
   .legend-val { color: var(--fg); font-weight: 700; font-size: 0.82rem; white-space: nowrap; }
-  .legend-pct { color: var(--fg2); font-weight: 400; font-size: 0.72rem; margin-left: 3px; }
+  /* ③ Brighter percentage text for easy reading */
+  .legend-pct { color: rgba(148,163,184,0.85); font-weight: 500; font-size: 0.75rem; margin-left: 3px; }
 
   .pnl-rows { display: flex; flex-direction: column; gap: 6px; }
   .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg3); font-size: 0.82rem; }
@@ -2223,7 +2224,7 @@ function toggleTheme() {
   try { localStorage.setItem('samsam_theme', next); } catch(e) {}
 }
 
-const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#22d3ee',meme:'#ef4444',infra:'#06b6d4',other:'#6b7280',btc:'#f7931a'};
+const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#e879f9',meme:'#ef4444',infra:'#06b6d4',other:'#6b7280',btc:'#f7931a'};
 const CAT_LABELS={layer1:'Layer 1',layer2:'Layer 2',defi:'DeFi',ai:'AI & Web3',meme:'Meme',infra:'Infrastructure',other:'Other',btc:'Bitcoin'};
 
 function renderDashboard() {
