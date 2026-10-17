@@ -745,7 +745,7 @@
         <th onclick="sortTable('rank')">#</th>
         <th onclick="sortTable('name')" style="text-align:left">Coin</th>
         <th onclick="sortTable('qty')">Qty</th>
-        <th onclick="sortTable('basePrice')">Base Price</th>
+        <th onclick="sortTable('basePrice')">Avg. Buy Price</th>
         <th onclick="sortTable('currentPrice')">Current Price</th>
         <th onclick="sortTable('baseValue')">Cost Basis</th>
         <th onclick="sortTable('currentValue')">Current Value</th>
@@ -1942,7 +1942,7 @@ function sortTable(col) {
 
 
 function exportData() {
-  const rows=[['Coin','Qty','Base Price','Current Price','Cost Basis','Current Value','P&L','P&L%','vs BTC','Signal']];
+  const rows=[['Coin','Qty','Avg. Buy Price','Current Price','Cost Basis','Current Value','P&L','P&L%','vs BTC','Signal']];
   portfolio.forEach(c=>{
     const perf=getPerf(c);const action=getAction(c.sym,perf);
     const baseVal=c.qty*c.basePrice;const curVal=c.qty*c.currentPrice;const pnl=curVal-baseVal;
