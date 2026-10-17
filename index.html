@@ -1649,9 +1649,6 @@ function renderHeader() {
   // Card 5: Realized P&L (only shows if there are sells)
   updateRealizedCard();
 
-  const pct = (btcQty * 100).toFixed(3);
-  document.getElementById('progressFill').style.width = Math.min(pct, 100) + '%';
-  document.getElementById('progressPct').textContent = pct + '% complete';
 }
 
 let activeCatFilter = '';
