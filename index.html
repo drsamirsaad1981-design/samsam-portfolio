@@ -694,6 +694,30 @@
   .perf-chart-canvas { width: 100%; height: 90px; display: block; }
   .perf-chart-no-data { text-align: center; color: var(--fg2); font-size: 0.72rem; padding: 20px 0; }
 
+  /* Holdings Chart Card */
+  .holdings-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px;
+    margin-bottom: 12px;
+  }
+  .holdings-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  .holdings-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg2); }
+  .holdings-total { font-size: 1.35rem; font-weight: 700; color: var(--fg); line-height: 1; }
+  .holdings-change { font-size: 0.75rem; font-weight: 600; margin-top: 3px; }
+  .holdings-change.pos { color: #10b981; }
+  .holdings-change.neg { color: #ef4444; }
+  .holdings-tabs { display: flex; gap: 4px; margin-bottom: 10px; margin-top: 10px; }
+  .holdings-tab {
+    font-size: 0.72rem; font-weight: 600; padding: 4px 10px;
+    border-radius: 20px; border: none; cursor: pointer;
+    background: transparent; color: var(--fg2);
+    transition: background .15s, color .15s;
+  }
+  .holdings-tab.active { background: var(--bg3); color: var(--fg); border: 1px solid var(--border); }
+  .holdings-canvas-wrap { position: relative; }
+  .holdings-canvas { width: 100%; height: 110px; display: block; }
+  .holdings-no-data { text-align: center; color: var(--fg2); font-size: 0.72rem; padding: 30px 0; }
+
   .date-tag {
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
@@ -919,6 +943,28 @@
     <span style="color:var(--fg2)" id="accumDetail">— / — targets met</span>
   </div>
 </a>
+
+<!-- ── Holdings Chart Card ── -->
+<div class="holdings-card" id="holdingsCard">
+  <div class="holdings-header">
+    <div>
+      <div class="holdings-title">💰 Holdings</div>
+      <div class="holdings-total" id="holdingsTotal">$—</div>
+      <div class="holdings-change" id="holdingsChange"></div>
+    </div>
+  </div>
+  <div class="holdings-tabs">
+    <button class="holdings-tab active" data-range="24h" onclick="setHoldingsRange('24h',this)">24h</button>
+    <button class="holdings-tab" data-range="7d"  onclick="setHoldingsRange('7d',this)">7d</button>
+    <button class="holdings-tab" data-range="30d" onclick="setHoldingsRange('30d',this)">30d</button>
+    <button class="holdings-tab" data-range="90d" onclick="setHoldingsRange('90d',this)">90d</button>
+    <button class="holdings-tab" data-range="all" onclick="setHoldingsRange('all',this)">All</button>
+  </div>
+  <div class="holdings-canvas-wrap">
+    <div class="holdings-no-data" id="holdingsNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
+    <canvas class="holdings-canvas" id="holdingsCanvas" height="110"></canvas>
+  </div>
+</div>
 
 <!-- ── Allocation Mini Card ── -->
 <a href="./allocation.html" class="alloc-mini-card" id="allocMiniCard" style="text-decoration:none">
@@ -2418,6 +2464,8 @@ async function fetchLivePrices() {
     } catch(_) {}
     // Save performance snapshot and redraw chart
     try { updatePerfChart(); } catch(_) {}
+    // Save holdings snapshot and redraw holdings chart
+    try { updateHoldingsChart(); } catch(_) {}
     // After prices, fetch missing logos for custom coins (sequential to avoid rate limits)
     fetchMissingLogos();
   } catch(e){setLiveStatus('error');updateLiveIndicator();}
@@ -3167,6 +3215,179 @@ function updatePerfChart() {
     drawPerfChart();
   }
 }
+
+// ── Holdings Chart ────────────────────────────────────────────────────────────
+const HOLDINGS_KEY = 'samsam_holdings_v1'; // { t: timestamp, v: portfolio USD value }
+let holdingsRange  = '24h';
+
+function saveHoldingsSnapshot(value) {
+  let snaps = [];
+  try { snaps = JSON.parse(localStorage.getItem(HOLDINGS_KEY) || '[]'); } catch(_) {}
+  const now = Date.now();
+  // Deduplicate: skip if last snap is within 4 minutes
+  if (snaps.length && now - snaps[snaps.length - 1].t < 4 * 60 * 1000) {
+    snaps[snaps.length - 1].v = value; // update in place
+  } else {
+    snaps.push({ t: now, v: value });
+  }
+  // Keep max 2000 points (≈ 5+ months at 5-min intervals)
+  if (snaps.length > 2000) snaps = snaps.slice(-2000);
+  try { localStorage.setItem(HOLDINGS_KEY, JSON.stringify(snaps)); } catch(_) {}
+}
+
+function loadHoldingsSnaps() {
+  try { return JSON.parse(localStorage.getItem(HOLDINGS_KEY) || '[]'); } catch(_) { return []; }
+}
+
+function setHoldingsRange(range, btn) {
+  holdingsRange = range;
+  document.querySelectorAll('.holdings-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  drawHoldingsChart();
+}
+
+function drawHoldingsChart() {
+  const allSnaps = loadHoldingsSnaps();
+  const canvas   = document.getElementById('holdingsCanvas');
+  const noData   = document.getElementById('holdingsNoData');
+  const totalEl  = document.getElementById('holdingsTotal');
+  const changeEl = document.getElementById('holdingsChange');
+  if (!canvas) return;
+
+  // Filter by range
+  const now = Date.now();
+  const rangeMs = { '24h': 86400000, '7d': 604800000, '30d': 2592000000, '90d': 7776000000, 'all': Infinity };
+  const cutoff  = holdingsRange === 'all' ? 0 : now - rangeMs[holdingsRange];
+  let snaps = allSnaps.filter(s => s.t >= cutoff);
+
+  // Need at least 2 points to draw
+  if (snaps.length < 2) {
+    if (noData) noData.style.display = '';
+    canvas.style.display = 'none';
+    // Still show current total
+    const { total } = calcStats ? calcStats() : { total: 0 };
+    if (total > 0) totalEl.textContent = '$' + total.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (changeEl) { changeEl.textContent = ''; }
+    return;
+  }
+  if (noData) noData.style.display = 'none';
+  canvas.style.display = '';
+
+  const first = snaps[0].v;
+  const last  = snaps[snaps.length - 1].v;
+  const delta = last - first;
+  const pct   = first > 0 ? (delta / first * 100) : 0;
+  const isPos = delta >= 0;
+  const color = isPos ? '#f43f5e' : '#3b82f6'; // red-pink when up (like screenshot), blue when down
+
+  // Update header
+  totalEl.textContent = '$' + last.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (changeEl) {
+    const sign = delta >= 0 ? '+' : '';
+    changeEl.textContent = `${sign}$${Math.abs(delta).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}  ${sign}${pct.toFixed(2)}%`;
+    changeEl.className = 'holdings-change ' + (isPos ? 'pos' : 'neg');
+  }
+
+  // Draw canvas
+  const dpr = window.devicePixelRatio || 1;
+  const W   = canvas.parentElement?.clientWidth || canvas.offsetWidth || 340;
+  const H   = 110;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const vals = snaps.map(s => s.v);
+  const minV = Math.min(...vals);
+  const maxV = Math.max(...vals);
+  const range = maxV - minV || 1;
+  const pad = { top: 8, bottom: 22, left: 0, right: 0 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  function toX(i) { return pad.left + (i / (snaps.length - 1)) * cW; }
+  function toY(v) { return pad.top + (1 - (v - minV) / range) * cH; }
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+  grad.addColorStop(0, isPos ? 'rgba(244,63,94,0.30)' : 'rgba(59,130,246,0.30)');
+  grad.addColorStop(1, isPos ? 'rgba(244,63,94,0.02)' : 'rgba(59,130,246,0.02)');
+
+  // Area path
+  ctx.beginPath();
+  snaps.forEach((s, i) => {
+    i === 0 ? ctx.moveTo(toX(i), toY(s.v)) : ctx.lineTo(toX(i), toY(s.v));
+  });
+  ctx.lineTo(toX(snaps.length - 1), H - pad.bottom);
+  ctx.lineTo(toX(0), H - pad.bottom);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  snaps.forEach((s, i) => {
+    i === 0 ? ctx.moveTo(toX(i), toY(s.v)) : ctx.lineTo(toX(i), toY(s.v));
+  });
+  ctx.stroke();
+
+  // Horizontal grid lines (like screenshot)
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const labelColor = isDark ? 'rgba(148,163,184,0.6)' : 'rgba(100,116,139,0.7)';
+  ctx.setLineDash([2, 4]);
+  ctx.strokeStyle = gridColor;
+  ctx.lineWidth = 1;
+  [0.25, 0.5, 0.75].forEach(t => {
+    const y = pad.top + t * cH;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+
+  // Right-side value labels (like screenshot: 11.00K, 10.90K etc)
+  ctx.font = `10px Inter,sans-serif`;
+  ctx.textAlign = 'right';
+  ctx.fillStyle = labelColor;
+  [0, 0.25, 0.5, 0.75, 1].forEach(t => {
+    const v = maxV - t * range;
+    const y = pad.top + t * cH;
+    const label = v >= 1000 ? (v / 1000).toFixed(1) + 'K' : v.toFixed(0);
+    ctx.fillText(label, W - 2, y + 4);
+  });
+
+  // Bottom date labels
+  ctx.textAlign = 'left';
+  ctx.fillStyle = labelColor;
+  ctx.font = '9px Inter,sans-serif';
+  const d1 = new Date(snaps[0].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const d2 = new Date(snaps[snaps.length - 1].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  ctx.fillText(d1, pad.left + 2, H - 4);
+  ctx.textAlign = 'right';
+  ctx.fillText(d2, W - 2, H - 4);
+}
+
+function updateHoldingsChart() {
+  const { total } = calcStats ? calcStats() : { total: 0 };
+  if (total > 0) {
+    saveHoldingsSnapshot(total);
+    drawHoldingsChart();
+  }
+}
+
+// ResizeObserver for holdings canvas
+(function initHoldingsChart() {
+  const wrap = document.getElementById('holdingsCard');
+  if (!wrap) return;
+  if (window.ResizeObserver) {
+    let ro_t;
+    const ro = new ResizeObserver(() => { clearTimeout(ro_t); ro_t = setTimeout(drawHoldingsChart, 50); });
+    ro.observe(wrap);
+  }
+  setTimeout(drawHoldingsChart, 3100);
+})();
 
 // Draw chart after layout is complete — use ResizeObserver for accurate width on all devices
 (function initPerfChart() {
