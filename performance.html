@@ -118,6 +118,77 @@ body {
   margin: 0 auto;
   width: 100%;
 }
+/* P/L Breakdown card — full width below the two summary cards */
+.pnl-breakdown-card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 18px 18px 16px;
+  box-shadow: var(--shadow);
+  grid-column: 1 / -1;
+}
+.pnl-bd-title {
+  font-size: 0.63rem;
+  color: var(--fg2);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 14px;
+}
+.pnl-bd-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.pnl-bd-stat {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: center;
+}
+.pnl-bd-stat-label {
+  font-size: 0.62rem;
+  color: var(--fg2);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
+}
+.pnl-bd-stat-val {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.pnl-bd-stat-pct {
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-top: 3px;
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.pnl-bd-rows { display: flex; flex-direction: column; gap: 6px; }
+.pnl-bd-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 11px;
+  border-radius: 9px;
+  background: var(--bg);
+  font-size: 0.83rem;
+}
+.pnl-bd-row-label { color: var(--fg2); font-size: 0.78rem; display: flex; align-items: center; gap: 6px; }
+.pnl-bd-row-val { font-weight: 700; text-align: right; }
+.pnl-bd-row-pct { font-size: 0.7rem; font-weight: 600; margin-top: 2px; }
+.pnl-bd-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+.pnl-realized-row {
+  background: rgba(245,158,11,0.07);
+  border: 1px solid rgba(245,158,11,0.18);
+}
 .sum-card {
   background: var(--card);
   border-radius: 16px;
@@ -401,6 +472,8 @@ body {
     padding-left: 0;
     padding-right: 0;
   }
+  .pnl-bd-totals { grid-template-columns: 1fr 1fr 1fr; }
+  .pnl-bd-stat-val { font-size: 1.1rem; }
   .col-header-inner {
     grid-template-columns: 1fr 130px 130px;
   }
@@ -459,6 +532,32 @@ body {
           points="0,30 20,25 40,28 55,20 70,22 85,15 100,18"/>
       </svg>
     </div>
+
+    <!-- ── P/L Breakdown card — full width ── -->
+    <div class="pnl-breakdown-card">
+      <div class="pnl-bd-title">💰 Profit / Loss Breakdown</div>
+      <div class="pnl-bd-totals">
+        <div class="pnl-bd-stat">
+          <div class="pnl-bd-stat-label">Unrealized</div>
+          <div class="pnl-bd-stat-val" id="bdUnrealized">—</div>
+          <div class="pnl-bd-stat-pct" id="bdUnrealizedPct">—</div>
+        </div>
+        <div class="pnl-bd-stat">
+          <div class="pnl-bd-stat-label">Realized</div>
+          <div class="pnl-bd-stat-val" id="bdRealized">—</div>
+          <div class="pnl-bd-stat-pct" id="bdRealizedNote" style="font-size:0.65rem;color:var(--fg2);background:none;padding:0">from sells</div>
+        </div>
+        <div class="pnl-bd-stat">
+          <div class="pnl-bd-stat-label">Total P&amp;L</div>
+          <div class="pnl-bd-stat-val" id="bdTotal">—</div>
+          <div class="pnl-bd-stat-pct" id="bdTotalPct">—</div>
+        </div>
+      </div>
+      <div class="pnl-bd-divider"></div>
+      <div class="pnl-bd-rows" id="pnlBdRows">
+        <div style="color:var(--fg2);font-size:0.8rem;text-align:center;padding:8px">Loading breakdown…</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -490,6 +589,7 @@ const STORAGE_KEY    = 'samsam_pf_v4';
 const ARCHIVE_KEY    = 'samsam_archived_v1';
 const CUSTOM_KEY     = 'samsam_custom_v1';
 const SYNC_KEY       = 'samsam_last_cloud_ts';
+const TX_KEY         = 'samsam_tx_v1';
 const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
 const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
 
@@ -762,6 +862,47 @@ function coinIconHtml(c) {
   return iconHtml;
 }
 
+// ── Category config (mirrors index.html) ──
+const CAT_COLORS = {
+  btc:'#f7931a', layer1:'#3b82f6', layer2:'#8b5cf6',
+  defi:'#10b981', ai:'#06b6d4', rwa:'#f59e0b',
+  infra:'#6366f1', gaming:'#ec4899', other:'#6b7280'
+};
+const CAT_LABELS = {
+  btc:'Bitcoin', layer1:'Layer 1', layer2:'Layer 2',
+  defi:'DeFi', ai:'AI', rwa:'RWA',
+  infra:'Infrastructure', gaming:'Gaming', other:'Other'
+};
+const COIN_CATS = {
+  BTC:'btc', ETH:'layer1', SOL:'layer1', BNB:'layer1', AVAX:'layer1',
+  NEAR:'layer1', ATOM:'layer1', APT:'layer1', SUI:'layer1', ICP:'layer1',
+  KSM:'layer1', DOT:'layer1', HBAR:'layer1', VET:'layer1', VTHO:'layer1',
+  CRO:'layer1', XDC:'layer1', KAVA:'layer1', GRAM:'layer1', KAS:'layer1',
+  MON:'layer1', DOGE:'layer1', FLR:'layer1', POL:'layer1', SEI:'layer1',
+  ARB:'layer2', OP:'layer2', STRK:'layer2', MNT:'layer2', MOVR:'layer2',
+  GLMR:'layer2', AVAIL:'layer2', XPL:'layer2',
+  LINK:'defi', JUP:'defi', ONDO:'rwa',
+  TAO:'ai', RENDER:'ai', WLD:'ai', NIGHT:'ai',
+  PYTH:'infra', QNT:'infra', ENS:'infra', PONS:'infra',
+};
+
+// ── Realized P&L from sell transactions ──
+function calcRealizedPnl() {
+  let transactions = [];
+  try { transactions = JSON.parse(localStorage.getItem(TX_KEY) || '[]'); } catch(_) {}
+  const sells = transactions.filter(t => t.type === 'sell' && t.qty > 0 && t.price > 0);
+  if (!sells.length) return { total: 0, count: 0 };
+
+  // FIFO-lite: use avg cost from portfolio as cost basis
+  let total = 0;
+  sells.forEach(t => {
+    const coin = portfolio.find(c => c.sym === t.sym);
+    const cost = coin ? (parseFloat(coin.basePrice) || 0) : (t.costBasis || 0);
+    total += (t.price - cost) * t.qty;
+  });
+  return { total, count: sells.length };
+}
+
 // ── Sort ──
 function setSort(mode) {
   if (lastTabClick === mode) {
@@ -849,6 +990,71 @@ function render() {
 
   document.getElementById('totalValue').textContent = fmtUSD(totalValue);
   document.getElementById('costBasis').textContent  = 'Cost: ' + fmtUSD(totalCost);
+
+  // ── P/L Breakdown card ──
+  const realized = calcRealizedPnl();
+  const unrealizedPct = totalCost > 0 ? (totalPnl / totalCost * 100) : 0;
+  const totalCombined = totalPnl + realized.total;
+  const totalCombinedPct = totalCost > 0 ? (totalCombined / totalCost * 100) : 0;
+
+  const bdUnrealized = document.getElementById('bdUnrealized');
+  bdUnrealized.textContent = fmtUSD(totalPnl);
+  bdUnrealized.className = 'pnl-bd-stat-val ' + (totalPnl >= 0 ? 'pos' : 'neg');
+
+  const bdUPct = document.getElementById('bdUnrealizedPct');
+  bdUPct.textContent = fmtPct(unrealizedPct);
+  bdUPct.className = 'pnl-bd-stat-pct ' + (totalPnl >= 0 ? 'pos' : 'neg');
+  bdUPct.style.background = totalPnl >= 0 ? 'var(--green-bg)' : 'var(--red-bg)';
+
+  const bdRealized = document.getElementById('bdRealized');
+  bdRealized.textContent = realized.count > 0 ? fmtUSD(realized.total) : '—';
+  bdRealized.className = 'pnl-bd-stat-val ' + (realized.total >= 0 ? 'pos' : 'neg');
+
+  const bdTotal = document.getElementById('bdTotal');
+  bdTotal.textContent = fmtUSD(totalCombined);
+  bdTotal.className = 'pnl-bd-stat-val ' + (totalCombined >= 0 ? 'pos' : 'neg');
+
+  const bdTPct = document.getElementById('bdTotalPct');
+  bdTPct.textContent = fmtPct(totalCombinedPct);
+  bdTPct.className = 'pnl-bd-stat-pct ' + (totalCombined >= 0 ? 'pos' : 'neg');
+  bdTPct.style.background = totalCombined >= 0 ? 'var(--green-bg)' : 'var(--red-bg)';
+
+  // Per-category breakdown
+  const catPnl = {};
+  rows.forEach(({ c, value, cost }) => {
+    const cat = COIN_CATS[c.sym] || 'other';
+    if (!catPnl[cat]) catPnl[cat] = { base: 0, cur: 0 };
+    catPnl[cat].base += cost;
+    catPnl[cat].cur  += value;
+  });
+
+  const catRows = Object.entries(catPnl)
+    .sort((a, b) => (b[1].cur - b[1].base) - (a[1].cur - a[1].base))
+    .map(([cat, { base, cur }]) => {
+      const pnl = cur - base;
+      const pct = base > 0 ? (pnl / base * 100) : 0;
+      const cls = pnl >= 0 ? 'pos' : 'neg';
+      const sign = pnl >= 0 ? '+' : '';
+      const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};flex-shrink:0"></span>`;
+      return `<div class="pnl-bd-row">
+        <span class="pnl-bd-row-label">${dot}${CAT_LABELS[cat]||cat}</span>
+        <div style="text-align:right">
+          <div class="pnl-bd-row-val ${cls}">${sign}${fmtUSD(pnl)}</div>
+          <div class="pnl-bd-row-pct ${cls}">${sign}${pct.toFixed(1)}%</div>
+        </div>
+      </div>`;
+    }).join('');
+
+  const realizedRow = realized.count > 0 ? `
+    <div class="pnl-bd-divider"></div>
+    <div class="pnl-bd-row pnl-realized-row">
+      <span class="pnl-bd-row-label">🏦 Realized (${realized.count} sells)</span>
+      <div style="text-align:right">
+        <div class="pnl-bd-row-val ${realized.total >= 0 ? 'pos' : 'neg'}">${fmtUSD(realized.total)}</div>
+      </div>
+    </div>` : '';
+
+  document.getElementById('pnlBdRows').innerHTML = catRows + realizedRow;
 
   // Row HTML
   const html = rows.map(({ c, currentPrice, change24h, pnl, pct }) => {

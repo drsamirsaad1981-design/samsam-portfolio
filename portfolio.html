@@ -1006,18 +1006,16 @@
 </div>
 
 <div class="dashboard-section">
-  <div class="dash-card">
+  <div class="dash-card" style="flex:1">
     <h3>📊 Allocation</h3>
     <div class="donut-wrap">
       <svg class="donut-svg" width="240" height="240" viewBox="0 0 160 160" id="donutChart"></svg>
       <div class="donut-legend" id="donutLegend"></div>
     </div>
   </div>
-  <div class="dash-card">
-    <h3>💰 Profit / Loss</h3>
-    <div class="pnl-rows" id="pnlRows"></div>
-  </div>
 </div>
+<!-- pnlRows kept hidden for JS compatibility -->
+<div id="pnlRows" style="display:none"></div>
 
 <div class="modal-overlay" id="buyMoreModal">
   <div class="modal">
