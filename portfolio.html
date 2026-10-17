@@ -3144,19 +3144,21 @@ function drawPerfChart() {
   const minP = Math.min(...allPct);
   const maxP = Math.max(...allPct);
 
-  // Round axis to clean grid values
+  // Round axis to clean grid values — handles any magnitude safely
   function niceStep(range) {
+    if (!range || !isFinite(range) || range <= 0) return 1;
     const raw = range / 4;
-    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    if (raw <= 0 || !isFinite(raw)) return 0.1;
+    const mag  = Math.pow(10, Math.floor(Math.log10(raw)));
     const norm = raw / mag;
     const step = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
     return step * mag;
   }
-  const dataRange = maxP - minP || 1;
-  const step  = niceStep(dataRange);
+  const dataRange = maxP - minP;
+  const step  = dataRange > 0 ? niceStep(dataRange) : 1;
   const axMin = Math.floor(minP / step) * step;
   const axMax = Math.ceil(maxP  / step) * step;
-  const axRange = axMax - axMin || 1;
+  const axRange = (axMax - axMin) || (step * 4);
 
   const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
   const labelColor = isDark ? 'rgba(148,163,184,0.65)' : 'rgba(100,116,139,0.7)';
@@ -3332,6 +3334,10 @@ function drawHoldingsChart() {
   }
 
   // Draw canvas
+  const isDark   = document.documentElement.getAttribute('data-theme') !== 'light';
+  const gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const labelColor = isDark ? 'rgba(148,163,184,0.6)'  : 'rgba(100,116,139,0.7)';
+
   const dpr = window.devicePixelRatio || 1;
   const W   = canvas.parentElement?.clientWidth || canvas.offsetWidth || 340;
   const H   = 110;
@@ -3340,29 +3346,68 @@ function drawHoldingsChart() {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const vals = snaps.map(s => s.v);
-  const minV = Math.min(...vals);
-  const maxV = Math.max(...vals);
-  const range = maxV - minV || 1;
-  const pad = { top: 8, bottom: 22, left: 0, right: 0 };
-  const cW = W - pad.left - pad.right;
-  const cH = H - pad.top - pad.bottom;
+  // Nice axis — same helper as perf chart
+  function hNiceStep(range) {
+    if (!range || !isFinite(range) || range <= 0) return 1;
+    const raw  = range / 4;
+    if (raw <= 0 || !isFinite(raw)) return 1;
+    const mag  = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw / mag;
+    const s    = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+    return s * mag;
+  }
+
+  const vals   = snaps.map(s => s.v);
+  const minV   = Math.min(...vals);
+  const maxV   = Math.max(...vals);
+  const hStep  = hNiceStep(maxV - minV);
+  const axMinH = Math.floor(minV / hStep) * hStep;
+  const axMaxH = Math.ceil(maxV  / hStep) * hStep;
+  const axRangeH = (axMaxH - axMinH) || hStep * 4;
+
+  // Measure label width for right padding
+  ctx.font = '10px Inter,sans-serif';
+  const sampleH  = axMaxH >= 1000 ? (axMaxH / 1000).toFixed(1) + 'K' : axMaxH.toFixed(0);
+  const labelW_h = ctx.measureText(sampleH).width + 10;
+
+  const pad = { top: 8, bottom: 20, left: 0, right: Math.max(labelW_h, 36) };
+  const cW  = W - pad.left - pad.right;
+  const cH  = H - pad.top - pad.bottom;
 
   function toX(i) { return pad.left + (i / (snaps.length - 1)) * cW; }
-  function toY(v) { return pad.top + (1 - (v - minV) / range) * cH; }
+  function toY(v) { return pad.top + (1 - (v - axMinH) / axRangeH) * cH; }
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid lines + Y-axis labels
+  const hTicks = [];
+  for (let v = axMinH; v <= axMaxH + 1e-6; v = +(v + hStep).toFixed(10)) hTicks.push(+v.toFixed(10));
+
+  ctx.font = '10px Inter,sans-serif';
+  ctx.textAlign = 'right';
+  hTicks.forEach(v => {
+    const y = toY(v);
+    ctx.beginPath();
+    ctx.setLineDash([2, 4]);
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    ctx.moveTo(0, y); ctx.lineTo(W - pad.right, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = labelColor;
+    const lbl = v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 2) + 'K' : v.toFixed(0);
+    ctx.fillText(lbl, W - 2, y + 3.5);
+  });
 
   // Gradient fill
   const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
-  grad.addColorStop(0, isPos ? 'rgba(244,63,94,0.30)' : 'rgba(59,130,246,0.30)');
+  grad.addColorStop(0, isPos ? 'rgba(244,63,94,0.28)' : 'rgba(59,130,246,0.28)');
   grad.addColorStop(1, isPos ? 'rgba(244,63,94,0.02)' : 'rgba(59,130,246,0.02)');
 
-  // Area path
   ctx.beginPath();
-  snaps.forEach((s, i) => {
-    i === 0 ? ctx.moveTo(toX(i), toY(s.v)) : ctx.lineTo(toX(i), toY(s.v));
-  });
-  ctx.lineTo(toX(snaps.length - 1), H - pad.bottom);
-  ctx.lineTo(toX(0), H - pad.bottom);
+  snaps.forEach((s, i) => i === 0 ? ctx.moveTo(toX(i), toY(s.v)) : ctx.lineTo(toX(i), toY(s.v)));
+  ctx.lineTo(toX(snaps.length - 1), toY(axMinH));
+  ctx.lineTo(toX(0), toY(axMinH));
   ctx.closePath();
   ctx.fillStyle = grad;
   ctx.fill();
@@ -3370,46 +3415,21 @@ function drawHoldingsChart() {
   // Line
   ctx.beginPath();
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.lineJoin = 'round';
-  snaps.forEach((s, i) => {
-    i === 0 ? ctx.moveTo(toX(i), toY(s.v)) : ctx.lineTo(toX(i), toY(s.v));
-  });
+  ctx.lineWidth   = 2;
+  ctx.lineJoin    = 'round';
+  ctx.lineCap     = 'round';
+  snaps.forEach((s, i) => i === 0 ? ctx.moveTo(toX(i), toY(s.v)) : ctx.lineTo(toX(i), toY(s.v)));
   ctx.stroke();
 
-  // Horizontal grid lines (like screenshot)
-  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-  const labelColor = isDark ? 'rgba(148,163,184,0.6)' : 'rgba(100,116,139,0.7)';
-  ctx.setLineDash([2, 4]);
-  ctx.strokeStyle = gridColor;
-  ctx.lineWidth = 1;
-  [0.25, 0.5, 0.75].forEach(t => {
-    const y = pad.top + t * cH;
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  });
-  ctx.setLineDash([]);
-
-  // Right-side value labels (like screenshot: 11.00K, 10.90K etc)
-  ctx.font = `10px Inter,sans-serif`;
-  ctx.textAlign = 'right';
-  ctx.fillStyle = labelColor;
-  [0, 0.25, 0.5, 0.75, 1].forEach(t => {
-    const v = maxV - t * range;
-    const y = pad.top + t * cH;
-    const label = v >= 1000 ? (v / 1000).toFixed(1) + 'K' : v.toFixed(0);
-    ctx.fillText(label, W - 2, y + 4);
-  });
-
   // Bottom date labels
-  ctx.textAlign = 'left';
-  ctx.fillStyle = labelColor;
   ctx.font = '9px Inter,sans-serif';
+  ctx.fillStyle = labelColor;
+  ctx.textAlign = 'left';
   const d1 = new Date(snaps[0].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const d2 = new Date(snaps[snaps.length - 1].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  ctx.fillText(d1, pad.left + 2, H - 4);
+  ctx.fillText(d1, pad.left + 2, H - 3);
   ctx.textAlign = 'right';
-  ctx.fillText(d2, W - 2, H - 4);
+  ctx.fillText(d2, W - pad.right, H - 3);
 }
 
 function updateHoldingsChart() {
