@@ -954,13 +954,14 @@
 </a>
 
 <!-- ── Holdings Chart Card ── -->
-<div class="holdings-card" id="holdingsCard">
+<div class="holdings-card" id="holdingsCard" onclick="openHoldingsView()" style="cursor:pointer">
   <div class="holdings-header">
     <div>
       <div class="holdings-title">💰 Holdings</div>
       <div class="holdings-total" id="holdingsTotal">$—</div>
       <div class="holdings-change" id="holdingsChange"></div>
     </div>
+    <div style="color:var(--fg2);font-size:1.1rem;align-self:center">›</div>
   </div>
   <div class="holdings-tabs">
     <button class="holdings-tab active" data-range="24h" onclick="setHoldingsRange('24h',this)">24h</button>
@@ -2460,7 +2461,7 @@ async function fetchLivePrices() {
   const idSet = new Set(Object.values(COINGECKO_IDS).filter(Boolean));
   portfolio.forEach(c => { if(c.cgId) idSet.add(c.cgId); });
   const ids = [...idSet];
-  const url=`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd`;
+  const url=`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd&include_24hr_change=true`;
   try {
     const res=await fetch(url);
     if(!res.ok)throw new Error('HTTP '+res.status);
@@ -2468,7 +2469,11 @@ async function fetchLivePrices() {
     portfolio.forEach(c=>{
       // Use per-coin cgId first, fall back to static map
       const cgId = c.cgId || COINGECKO_IDS[c.sym];
-      if(cgId&&data[cgId]&&data[cgId].usd){c.currentPrice=data[cgId].usd;c.lastUpdate=new Date().toISOString().slice(0,10);}
+      if(cgId&&data[cgId]&&data[cgId].usd){
+        c.currentPrice=data[cgId].usd;
+        c.lastUpdate=new Date().toISOString().slice(0,10);
+        if(data[cgId].usd_24h_change!=null) c.change24h=data[cgId].usd_24h_change;
+      }
     });
     if(data['bitcoin']&&data['bitcoin'].usd)btcPrice=data['bitcoin'].usd;
     lastFetchTime=new Date();
@@ -3498,6 +3503,234 @@ function updateHoldingsChart() {
   setTimeout(autoSyncPerf, 8000);
   setInterval(autoSyncPerf, 5 * 60 * 1000);
 })();
+
+/* ── Holdings Full View ── */
+function openHoldingsView() {
+  const overlay = document.getElementById('holdingsOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  drawHoldingsOverlayChart();
+  renderHoldingsAssetList();
+}
+
+function closeHoldingsView() {
+  const overlay = document.getElementById('holdingsOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+let holdingsOverlayRange = '24h';
+
+function setHoldingsOverlayRange(range, btn) {
+  holdingsOverlayRange = range;
+  document.querySelectorAll('.hov-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  drawHoldingsOverlayChart();
+}
+
+function drawHoldingsOverlayChart() {
+  const canvas = document.getElementById('hovCanvas');
+  if (!canvas) return;
+  const allSnaps = loadHoldingsSnaps();
+  const now = Date.now();
+  const rangeMs = { '24h': 86400000, '7d': 604800000, '30d': 2592000000, '90d': 7776000000, 'all': Infinity };
+  const cutoff = holdingsOverlayRange === 'all' ? 0 : now - rangeMs[holdingsOverlayRange];
+  let snaps = allSnaps.filter(s => s.t >= cutoff);
+  if (snaps.length === 0) { snaps = allSnaps.length ? [allSnaps[allSnaps.length-1]] : []; }
+  if (snaps.length === 1) snaps = [snaps[0], snaps[0]];
+
+  const totalEl  = document.getElementById('hovTotal');
+  const changeEl = document.getElementById('hovChange');
+
+  if (snaps.length === 0) {
+    if (totalEl) { const {total} = calcStats(); totalEl.textContent = total > 0 ? '$' + total.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '$—'; }
+    if (changeEl) changeEl.textContent = '';
+    canvas.style.display = 'none';
+    return;
+  }
+  canvas.style.display = '';
+
+  const first = snaps[0].v, last = snaps[snaps.length-1].v;
+  const delta = last - first, pct = first > 0 ? (delta/first*100) : 0;
+  const isPos = delta >= 0;
+
+  if (totalEl) totalEl.textContent = '$' + last.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  if (changeEl) {
+    const sign = delta >= 0 ? '+' : '';
+    changeEl.textContent = `${sign}$${Math.abs(delta).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}  (${sign}${pct.toFixed(2)}%)`;
+    changeEl.className = 'hov-change ' + (isPos ? 'pos' : 'neg');
+  }
+
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const lineColor = isPos ? '#f43f5e' : '#3b82f6';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const labelColor = isDark ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.8)';
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement?.clientWidth || 340;
+  const H = 200;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  function hNiceStep(range) {
+    if (!range || range <= 0) return 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(range/4)));
+    const n = (range/4)/mag;
+    return (n<1.5?1:n<3?2:n<7?5:10)*mag;
+  }
+
+  const vals = snaps.map(s=>s.v), minV=Math.min(...vals), maxV=Math.max(...vals);
+  const hStep = hNiceStep(maxV-minV);
+  const axMin = Math.floor(minV/hStep)*hStep, axMax = Math.ceil(maxV/hStep)*hStep;
+  const axRange = (axMax-axMin)||hStep*4;
+
+  ctx.font = '10px Inter,sans-serif';
+  const sample = axMax >= 1000 ? (axMax/1000).toFixed(1)+'K' : axMax.toFixed(0);
+  const lw = ctx.measureText(sample).width + 12;
+  const pad = { top:10, bottom:24, left:6, right: Math.max(lw,40) };
+  const cW = W-pad.left-pad.right, cH = H-pad.top-pad.bottom;
+  const toX = i => pad.left + (i/(snaps.length-1))*cW;
+  const toY = v => pad.top + (1-(v-axMin)/axRange)*cH;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Grid + labels
+  const hTicks = [];
+  for (let v=axMin; v<=axMax+1e-6; v=+(v+hStep).toFixed(10)) hTicks.push(+v.toFixed(10));
+  ctx.font = '10px Inter,sans-serif';
+  hTicks.forEach(v => {
+    const y = toY(v);
+    ctx.strokeStyle = gridColor; ctx.lineWidth = 1; ctx.setLineDash([3,4]);
+    ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(W-pad.right,y); ctx.stroke();
+    ctx.setLineDash([]);
+    const label = v>=1000 ? (v/1000).toFixed(1)+'K' : v.toFixed(0);
+    ctx.fillStyle = labelColor; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, W-2, y);
+  });
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0,pad.top,0,H-pad.bottom);
+  grad.addColorStop(0, isPos ? 'rgba(244,63,94,0.18)' : 'rgba(59,130,246,0.18)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath();
+  snaps.forEach((s,i) => i===0 ? ctx.moveTo(toX(i),toY(s.v)) : ctx.lineTo(toX(i),toY(s.v)));
+  ctx.lineTo(toX(snaps.length-1), H-pad.bottom);
+  ctx.lineTo(toX(0), H-pad.bottom);
+  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+
+  // Line
+  ctx.beginPath(); ctx.strokeStyle=lineColor; ctx.lineWidth=2.5;
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  snaps.forEach((s,i) => i===0 ? ctx.moveTo(toX(i),toY(s.v)) : ctx.lineTo(toX(i),toY(s.v)));
+  ctx.stroke();
+
+  // Date labels
+  ctx.font='10px Inter,sans-serif'; ctx.fillStyle=labelColor;
+  const d1=new Date(snaps[0].t).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  const d2=new Date(snaps[snaps.length-1].t).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.fillText(d1, pad.left+2, H-4);
+  ctx.textAlign='right';
+  ctx.fillText(d2, W-pad.right, H-4);
+}
+
+function renderHoldingsAssetList() {
+  const container = document.getElementById('hovAssetList');
+  if (!container || !portfolio) return;
+  const sorted = [...portfolio]
+    .map(c => ({ ...c, holdingVal: c.qty * c.currentPrice }))
+    .sort((a,b) => b.holdingVal - a.holdingVal);
+
+  container.innerHTML = sorted.map(c => {
+    const pct24 = c.change24h ?? 0;
+    const sign = pct24 >= 0 ? '+' : '';
+    const clr = pct24 >= 0 ? 'var(--green)' : 'var(--red)';
+    const arrow = pct24 >= 0 ? '▲' : '▼';
+    const priceStr = c.currentPrice >= 1000
+      ? '$' + c.currentPrice.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})
+      : '$' + c.currentPrice.toLocaleString('en-US', {minimumFractionDigits:c.currentPrice<0.01?6:c.currentPrice<1?4:2,maximumFractionDigits:c.currentPrice<0.01?6:c.currentPrice<1?4:2});
+    const holdVal = '$' + c.holdingVal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const holdQty = parseFloat(c.qty.toFixed(c.qty < 1 ? 6 : 4)).toString() + ' ' + c.sym;
+    const logoEl = getCoinIcon(c.sym, 36);
+    return `<div class="hov-asset-row">
+      <div class="hov-coin-icon">${logoEl}</div>
+      <div class="hov-asset-name">
+        <span class="hov-sym">${c.sym}</span>
+        <span class="hov-name">${c.name||c.sym}</span>
+      </div>
+      <div class="hov-asset-price">
+        <span class="hov-price">${priceStr}</span>
+        <span class="hov-pct" style="color:${clr}">${arrow} ${Math.abs(pct24).toFixed(2)}%</span>
+      </div>
+      <div class="hov-asset-holding">
+        <span class="hov-hval">${holdVal}</span>
+        <span class="hov-hqty">${holdQty}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
 </script>
+
+<!-- ── Holdings Full-Screen Overlay ── -->
+<div id="holdingsOverlay" style="display:none;position:fixed;inset:0;z-index:9999;flex-direction:column;overflow-y:auto;background:var(--bg)">
+  <style>
+    .hov-header { display:flex;align-items:center;padding:16px 16px 8px;gap:12px; }
+    .hov-back { background:none;border:none;color:var(--fg);font-size:1.4rem;cursor:pointer;padding:4px 8px 4px 0;line-height:1; }
+    .hov-title-block { flex:1; }
+    .hov-page-title { font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--fg2); }
+    .hov-total { font-size:2rem;font-weight:700;color:var(--fg);line-height:1.15;margin-top:2px; }
+    .hov-change { font-size:0.85rem;font-weight:600;margin-top:4px; }
+    .hov-change.pos { color:var(--green); }
+    .hov-change.neg { color:var(--red); }
+    .hov-chart-wrap { padding:0 0 4px;position:relative; }
+    .hov-canvas { width:100%;display:block; }
+    .hov-tabs { display:flex;gap:0;padding:0 16px;margin-bottom:16px; }
+    .hov-tab { flex:1;background:none;border:none;font-size:0.8rem;font-weight:600;color:var(--fg2);padding:8px 0;cursor:pointer;border-radius:20px;transition:background .15s,color .15s; }
+    .hov-tab.active { background:var(--bg3);color:var(--fg);border:1px solid var(--border); }
+    .hov-section-header { display:grid;grid-template-columns:2fr 1fr 1fr;padding:8px 16px;border-bottom:1px solid var(--border);font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--fg2); }
+    .hov-section-header span:not(:first-child) { text-align:right; }
+    .hov-asset-row { display:grid;grid-template-columns:40px 1fr 1fr 1fr;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .1s; }
+    .hov-asset-row:active { background:var(--bg3); }
+    .hov-coin-icon { width:36px;height:36px;position:relative; }
+    .hov-coin-logo { width:36px;height:36px;border-radius:50%;object-fit:cover; }
+    .hov-coin-initial { width:36px;height:36px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;color:var(--fg); }
+    .hov-asset-name { display:flex;flex-direction:column;gap:2px; }
+    .hov-sym { font-size:0.9rem;font-weight:700;color:var(--fg); }
+    .hov-name { font-size:0.72rem;color:var(--fg2); }
+    .hov-asset-price { display:flex;flex-direction:column;align-items:flex-end;gap:2px; }
+    .hov-price { font-size:0.85rem;font-weight:600;color:var(--fg); }
+    .hov-pct { font-size:0.72rem;font-weight:600; }
+    .hov-asset-holding { display:flex;flex-direction:column;align-items:flex-end;gap:2px; }
+    .hov-hval { font-size:0.85rem;font-weight:700;color:var(--fg); }
+    .hov-hqty { font-size:0.72rem;color:var(--fg2); }
+  </style>
+  <div class="hov-header">
+    <button class="hov-back" onclick="closeHoldingsView()">‹</button>
+    <div class="hov-title-block">
+      <div class="hov-page-title">💰 Holdings</div>
+      <div class="hov-total" id="hovTotal">$—</div>
+      <div class="hov-change" id="hovChange"></div>
+    </div>
+  </div>
+  <div class="hov-chart-wrap">
+    <canvas class="hov-canvas" id="hovCanvas" height="200"></canvas>
+  </div>
+  <div class="hov-tabs">
+    <button class="hov-tab active" onclick="setHoldingsOverlayRange('24h',this)">24h</button>
+    <button class="hov-tab" onclick="setHoldingsOverlayRange('7d',this)">7d</button>
+    <button class="hov-tab" onclick="setHoldingsOverlayRange('30d',this)">30d</button>
+    <button class="hov-tab" onclick="setHoldingsOverlayRange('90d',this)">90d</button>
+    <button class="hov-tab" onclick="setHoldingsOverlayRange('all',this)">All</button>
+  </div>
+  <div class="hov-section-header">
+    <span>Asset</span>
+    <span>Price</span>
+    <span>Holdings ▾</span>
+  </div>
+  <div id="hovAssetList"></div>
+</div>
 </body>
 </html>
