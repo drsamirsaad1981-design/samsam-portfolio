@@ -2400,6 +2400,18 @@ function renderDashboard() {
 function renderAllocMiniCard(catTotals, totalVal) {
   const card = document.getElementById('allocMiniCard');
   if (!card) return;
+  // If no data passed, compute from current portfolio directly
+  if (!catTotals || totalVal <= 0) {
+    const ct = {btc:0};
+    portfolio.forEach(c => {
+      const v = c.qty * c.currentPrice;
+      const cat = c.sym === 'BTC' ? 'btc' : (c.cat || 'other');
+      ct[cat] = (ct[cat]||0) + v;
+    });
+    const tv = Object.values(ct).reduce((a,b)=>a+b,0);
+    if (tv > 0) renderAllocMiniCard(ct, tv);
+    return;
+  }
   const entries = Object.entries(catTotals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
   if (!entries.length || totalVal <= 0) return;
   card.style.display = '';
@@ -2785,6 +2797,8 @@ document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDa
 initPortfolio();
 renderAll();      // render content first with local data (fills both containers)
 initView();       // THEN apply view preference (shows/hides correct container)
+// Force-update allocation mini card immediately after renderAll
+renderAllocMiniCard(null, 0);
 fetchLivePrices();
 // Auto-refresh live prices every 60 seconds
 setInterval(() => { fetchLivePrices(); }, 60000);
