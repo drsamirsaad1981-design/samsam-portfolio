@@ -1156,7 +1156,6 @@
   <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
   <p id="footerSyncTime" style="margin-top:4px;font-size:0.68rem;color:var(--fg2);opacity:0.75">☁️ Cloud: not synced yet</p>
   <p id="footerSyncStatus" style="margin-top:4px;font-size:0.7rem;min-height:1.2em;transition:opacity 0.5s"></p>
-  <p id="footerSyncDebug" style="margin-top:2px;font-size:0.62rem;color:var(--fg2);opacity:0.6;font-family:monospace"></p>
   <div class="footer-copy">
     © 2026 Dr. Samir Saad &nbsp;·&nbsp;
     <a href="mailto:dr.samir.saad.1981@gmail.com">dr.samir.saad.1981@gmail.com</a>
@@ -2730,25 +2729,14 @@ function showSyncStatus(msg, color) {
   el.style.opacity = '1';
   setTimeout(() => { el.style.opacity = '0'; }, 4000);
 }
-function showSyncDebug(msg) {
-  const el = document.getElementById('footerSyncDebug');
-  if (el) el.textContent = msg;
-}
 async function globalAutoSync() {
   try {
-    const lastPulled = (() => { try { return localStorage.getItem(SYNC_KEY) || 'none'; } catch(_) { return 'err'; } })();
-    showSyncDebug(`🔄 checking… last pull: ${lastPulled.slice(0,19).replace('T',' ') || 'none'}`);
     const updated = await pullPortfolioFromCloud();
     if (updated) {
       renderAll(); fetchLivePrices();
       showSyncStatus('☁️ Synced from cloud — portfolio updated', 'rgba(34,197,94,0.9)');
-    } else {
-      const lp = (() => { try { return localStorage.getItem(SYNC_KEY) || 'none'; } catch(_) { return 'err'; } })();
-      showSyncDebug(`✓ up to date — cloud: ${lp.slice(0,19).replace('T',' ')}`);
     }
-  } catch(e) {
-    showSyncDebug(`✗ sync error: ${e.message}`);
-  }
+  } catch(_) {}
 }
 setInterval(globalAutoSync, 60 * 1000); // every 60 seconds
 
@@ -2889,7 +2877,6 @@ async function pullPortfolioFromCloud() {
     // Compare cloud timestamp vs last timestamp WE pulled — not vs local lastSave
     // This is the key fix: clock differences between devices don't matter anymore
     const lastPulled = (() => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch(_) { return ''; } })();
-    showSyncDebug(`cloud: ${cloudLastSave.slice(0,19).replace('T',' ')} | pulled: ${lastPulled.slice(0,19).replace('T',' ') || 'never'}`);
     if (lastPulled && cloudLastSave <= lastPulled) return false; // already have this version
 
     // Cloud has newer data — apply it
