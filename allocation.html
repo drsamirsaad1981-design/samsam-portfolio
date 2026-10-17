@@ -679,6 +679,12 @@ function renderOverview() {
 
   buildDonut(entries, totalVal);
   buildLegend(entries, totalVal);
+
+  // Auto-select the largest category on first render
+  if (entries.length > 0) {
+    const topCat = entries[0][0];
+    setTimeout(() => selectCat(topCat), 0);
+  }
 }
 
 // ── Category detail ────────────────────────────────────────────────────────
