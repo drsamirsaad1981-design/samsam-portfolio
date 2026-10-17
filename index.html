@@ -721,7 +721,7 @@
     <button class="btn btn-secondary" onclick="openAnalysis()">🤖 AI Analysis</button>
   </div>
   <div class="control-row">
-    <select class="btn btn-secondary" id="filterAction" onchange="renderTableAndStack()" style="cursor:pointer; flex:2;">
+    <select class="btn btn-secondary" id="filterAction" onchange="sortCol='currentValue';sortDir=-1;renderTableAndStack()" style="cursor:pointer; flex:2;">
       <option value="">All Coins</option>
       <option value="gainers">🟢 Top Gainers</option>
       <option value="losers">🔴 Top Losers</option>
@@ -1388,6 +1388,9 @@ let activeCatFilter = '';
 
 function setCatFilter(cat) {
   activeCatFilter = (activeCatFilter === cat) ? '' : cat;
+  // Always reset to Holdings / Current Value descending on category change
+  sortCol = 'currentValue';
+  sortDir = -1;
   renderSummary();
   renderTableAndStack();
 }
