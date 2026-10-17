@@ -2507,6 +2507,8 @@ async function loadAccumProgress() {
 
 // Load accumulation progress after prices are ready (slight delay)
 setTimeout(loadAccumProgress, 2000);
+// Sync performance snapshots from cloud (slight offset to avoid concurrent PUT/GET)
+setTimeout(syncPerfSnapshotsFromCloud, 3000);
 
 // ─── Portfolio Performance Chart ─────────────────────────────────────────────
 const PERF_KEY = 'samsam_perf_v1';   // localStorage key for snapshots
@@ -2515,15 +2517,61 @@ function loadPerfSnapshots() {
   try { return JSON.parse(localStorage.getItem(PERF_KEY) || '[]'); } catch(_) { return []; }
 }
 
+function mergePerfSnaps(a, b) {
+  // Merge two arrays, deduplicate by timestamp, sort asc, cap at 2160
+  const map = new Map();
+  [...a, ...b].forEach(s => map.set(s.t, s));
+  const merged = [...map.values()].sort((x, y) => x.t - y.t);
+  if (merged.length > 2160) merged.splice(0, merged.length - 2160);
+  return merged;
+}
+
+async function syncPerfSnapshotsFromCloud() {
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const cloudSnaps = json.record.perfSnaps || [];
+      if (cloudSnaps.length) {
+        const local  = loadPerfSnapshots();
+        const merged = mergePerfSnaps(local, cloudSnaps);
+        try { localStorage.setItem(PERF_KEY, JSON.stringify(merged)); } catch(_) {}
+        drawPerfChart();
+      }
+    }
+  } catch(_) {}
+}
+
+async function pushPerfSnapsToCloud(snaps) {
+  try {
+    // Fetch current bin record first to preserve accumPlan
+    const getRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    });
+    if (!getRes.ok) return;
+    const cur = await getRes.json();
+    const accumPlan = cur.record.accumPlan || [];
+    await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
+      body: JSON.stringify({ accumPlan, perfSnaps: snaps })
+    });
+  } catch(_) {}
+}
+
 function savePerfSnapshot(portfolioValue, btcPrice) {
   const snaps = loadPerfSnapshots();
   const now   = Date.now();
-  // Only save once per 5 minutes
+  // Only save once per hour
   if (snaps.length && now - snaps[snaps.length - 1].t < 60 * 60 * 1000) return;
   snaps.push({ t: now, v: +portfolioValue.toFixed(2), b: +btcPrice });
   // Keep last 90 days of hourly snapshots = 2160 entries max
   if (snaps.length > 2160) snaps.splice(0, snaps.length - 2160);
   try { localStorage.setItem(PERF_KEY, JSON.stringify(snaps)); } catch(_) {}
+  // Push to cloud in background (no await — fire and forget)
+  pushPerfSnapsToCloud(snaps);
 }
 
 function drawPerfChart() {
