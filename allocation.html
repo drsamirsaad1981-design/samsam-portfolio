@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Portfolio Allocation</title>
+<link rel="icon" type="image/jpeg" href="./icon.jpg">
+<link rel="apple-touch-icon" href="./icon.jpg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* ── Tokens ── */
+:root {
+  --bg: #f5f5f7;
+  --card: #ffffff;
+  --fg: #1a1a1e;
+  --fg2: #6e6e73;
+  --border: rgba(0,0,0,0.08);
+  --accent: #3b82f6;
+  --header-bg: #ffffff;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --bar-bg: rgba(0,0,0,0.07);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0d0f; --card: #1c1c1e; --fg: #f5f5f7; --fg2: #8e8e93;
+    --border: rgba(255,255,255,0.08); --header-bg: #1c1c1e;
+    --shadow: 0 1px 3px rgba(0,0,0,0.30); --bar-bg: rgba(255,255,255,0.08);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0d0f; --card: #1c1c1e; --fg: #f5f5f7; --fg2: #8e8e93;
+  --border: rgba(255,255,255,0.08); --header-bg: #1c1c1e;
+  --shadow: 0 1px 3px rgba(0,0,0,0.30); --bar-bg: rgba(255,255,255,0.08);
+  color-scheme: dark;
+}
+
+/* ── Reset ── */
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg); color: var(--fg);
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* ── Header ── */
+.header {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 12px max(16px, env(safe-area-inset-right,0px)) 12px max(16px, env(safe-area-inset-left,0px));
+  display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 10;
+}
+.back-btn {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 7px 14px;
+  font-size: 0.82rem; font-weight: 600; color: var(--fg);
+  cursor: pointer; text-decoration: none;
+  transition: border-color .15s, color .15s;
+}
+.back-btn:hover { border-color: var(--accent); color: var(--accent); }
+.header-title {
+  font-size: 1rem; font-weight: 700; flex: 1; text-align: center;
+}
+.theme-btn {
+  background: none; border: none; font-size: 1.15rem;
+  cursor: pointer; color: var(--fg2); padding: 4px;
+}
+
+/* ── Main container ── */
+.container {
+  max-width: 860px; margin: 0 auto;
+  padding: 20px max(16px, env(safe-area-inset-right,0px)) 40px max(16px, env(safe-area-inset-left,0px));
+}
+
+/* ── Overview panel ── */
+.overview-panel {
+  background: var(--card); border-radius: 18px;
+  box-shadow: var(--shadow); padding: 20px;
+  display: flex; gap: 20px; align-items: center;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.donut-wrap {
+  position: relative; flex-shrink: 0;
+  width: 200px; height: 200px;
+}
+.donut-wrap svg { width: 100%; height: 100%; }
+.donut-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.donut-total { font-size: 1.15rem; font-weight: 700; }
+.donut-label { font-size: 0.72rem; color: var(--fg2); margin-top: 2px; }
+.legend-wrap { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 8px; }
+.legend-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 10px;
+  cursor: pointer; transition: background .15s;
+  border: 2px solid transparent;
+}
+.legend-item:hover { background: var(--bar-bg); }
+.legend-item.active { border-color: var(--accent); background: var(--bar-bg); }
+.legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.legend-name { flex: 1; font-size: 0.82rem; font-weight: 600; }
+.legend-nums { text-align: right; }
+.legend-val { font-size: 0.82rem; font-weight: 700; }
+.legend-pct { font-size: 0.72rem; color: var(--fg2); }
+
+/* ── Summary total bar ── */
+.total-bar {
+  background: var(--card); border-radius: 14px;
+  box-shadow: var(--shadow); padding: 14px 18px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+}
+.total-bar-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--fg2); font-weight: 700; }
+.total-bar-val { font-size: 1.1rem; font-weight: 700; }
+
+/* ── Category detail view ── */
+.detail-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px;
+}
+.detail-back {
+  background: none; border: none; color: var(--accent);
+  font-size: 0.9rem; font-weight: 600; cursor: pointer; padding: 0;
+}
+.detail-title { font-size: 1rem; font-weight: 700; flex: 1; }
+.detail-cat-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+/* ── Coin list ── */
+.coin-list { display: flex; flex-direction: column; gap: 8px; }
+.coin-row {
+  background: var(--card); border-radius: 14px;
+  box-shadow: var(--shadow); padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 40px 1fr auto auto;
+  align-items: center; gap: 10px;
+}
+.coin-logo {
+  width: 38px; height: 38px; border-radius: 50%;
+  object-fit: cover; background: var(--bar-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff; overflow: hidden;
+  flex-shrink: 0;
+}
+.coin-logo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.coin-info { min-width: 0; }
+.coin-sym { font-size: 0.9rem; font-weight: 700; }
+.coin-name { font-size: 0.68rem; color: var(--fg2); margin-top: 1px; }
+.coin-qty { font-size: 0.7rem; color: var(--fg2); margin-top: 2px; }
+.coin-holdings { text-align: right; }
+.coin-val { font-size: 0.88rem; font-weight: 700; }
+.coin-qty-sub { font-size: 0.68rem; color: var(--fg2); margin-top: 2px; }
+.coin-alloc { text-align: right; min-width: 70px; }
+.coin-pct { font-size: 0.88rem; font-weight: 700; }
+.alloc-bar-wrap { margin-top: 5px; height: 4px; background: var(--bar-bg); border-radius: 4px; overflow: hidden; width: 100%; }
+.alloc-bar { height: 100%; border-radius: 4px; transition: width .4s; }
+
+/* ── State sections ── */
+.section-overview { }
+.section-detail { display: none; }
+
+/* ── Loading ── */
+.loading-msg { text-align: center; color: var(--fg2); font-size: 0.9rem; padding: 40px; }
+
+@media (max-width: 500px) {
+  .overview-panel { flex-direction: column; align-items: center; }
+  .donut-wrap { width: 180px; height: 180px; }
+  .coin-row { grid-template-columns: 36px 1fr auto; }
+  .coin-alloc { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="back-btn" href="./index.html">← Back</a>
+  <div class="header-title">📊 Allocation</div>
+  <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+</div>
+
+<div class="container">
+
+  <!-- ── Overview ── -->
+  <div class="section-overview" id="sectionOverview">
+
+    <div class="total-bar">
+      <div>
+        <div class="total-bar-label">Total Portfolio Value</div>
+        <div class="total-bar-val" id="totalValBar">—</div>
+      </div>
+      <div style="text-align:right">
+        <div class="total-bar-label">Coins</div>
+        <div class="total-bar-val" id="totalCoinsBar">—</div>
+      </div>
+    </div>
+
+    <div class="overview-panel">
+      <div class="donut-wrap">
+        <svg id="donutSvg" viewBox="0 0 200 200"></svg>
+        <div class="donut-center">
+          <div class="donut-total" id="donutCenterVal">—</div>
+          <div class="donut-label" id="donutCenterLabel">Total</div>
+        </div>
+      </div>
+      <div class="legend-wrap" id="legendWrap"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Category Detail ── -->
+  <div class="section-detail" id="sectionDetail">
+    <div class="detail-header">
+      <button class="detail-back" onclick="showOverview()">← All</button>
+      <div class="detail-cat-dot" id="detailDot"></div>
+      <div class="detail-title" id="detailTitle">—</div>
+      <div style="text-align:right">
+        <div style="font-size:0.75rem;color:var(--fg2)">Category</div>
+        <div style="font-size:0.88rem;font-weight:700" id="detailVal">—</div>
+        <div style="font-size:0.72rem;color:var(--fg2)" id="detailPct">—</div>
+      </div>
+    </div>
+    <div class="coin-list" id="detailCoinList"></div>
+  </div>
+
+</div>
+
+<script>
+// ── Constants (mirror index.html) ──────────────────────────────────────────
+const STORAGE_KEY = 'samsam_pf_v4';
+const CUSTOM_KEY  = 'samsam_custom_v1';
+
+const CAT_COLORS = {
+  btc:    '#f7931a',
+  layer1: '#3b82f6',
+  layer2: '#8b5cf6',
+  defi:   '#10b981',
+  ai:     '#e879f9',
+  infra:  '#06b6d4',
+  meme:   '#ef4444',
+  other:  '#6b7280',
+};
+const CAT_LABELS = {
+  btc:    'Bitcoin',
+  layer1: 'Layer 1',
+  layer2: 'Layer 2',
+  defi:   'DeFi',
+  ai:     'AI & Web3',
+  infra:  'Infrastructure',
+  meme:   'Meme',
+  other:  'Other',
+};
+
+const COIN_NAMES = {
+  BTC:'Bitcoin',ETH:'Ethereum',SOL:'Solana',BNB:'BNB',TAO:'Bittensor',SUI:'Sui',
+  NEAR:'NEAR Protocol',SEI:'Sei',ATOM:'Cosmos',APT:'Aptos',AVAX:'Avalanche',
+  ICP:'Internet Computer',KSM:'Kusama',GRAM:'Toncoin',NIGHT:'Midnight',
+  ARB:'Arbitrum',MOVR:'Moonriver',GLMR:'Moonbeam',OP:'Optimism',WLD:'Worldcoin',
+  PYTH:'Pyth Network',JUP:'Jupiter',RENDER:'Render',QNT:'Quant',HBAR:'Hedera',
+  DOGE:'Dogecoin',MON:'Monad',CRO:'Cronos',XDC:'XDC Network',DOT:'Polkadot',
+  LINK:'Chainlink',ENS:'ENS',STRK:'Starknet',ONDO:'Ondo',AVAIL:'Avail',
+  KAVA:'Kava',PONS:'Pons',MNT:'Mantle',FLR:'Flare',KAS:'Kaspa',
+  POL:'Polygon',XPL:'Plasma',VTHO:'VeThor',VET:'VeChain',
+};
+
+const COIN_LOGOS = {
+  BTC:'https://assets.coingecko.com/coins/images/1/standard/bitcoin.png',
+  ETH:'https://assets.coingecko.com/coins/images/279/standard/ethereum.png',
+  SOL:'https://assets.coingecko.com/coins/images/4128/standard/solana.png',
+  BNB:'https://assets.coingecko.com/coins/images/825/standard/bnb-icon2_2x.png',
+  TAO:'https://assets.coingecko.com/coins/images/28452/standard/ARUsPeNQ_400x400.jpeg',
+  SUI:'https://assets.coingecko.com/coins/images/26375/standard/sui-ocean-square.png',
+  NEAR:'https://assets.coingecko.com/coins/images/10365/standard/near.jpg',
+  SEI:'https://assets.coingecko.com/coins/images/28205/standard/Sei_Logo_-_Transparent.png',
+  ATOM:'https://assets.coingecko.com/coins/images/1481/standard/cosmos_hub.png',
+  APT:'https://assets.coingecko.com/coins/images/26455/standard/aptos_round.png',
+  AVAX:'https://assets.coingecko.com/coins/images/12559/standard/Avalanche_Circle_RedWhite_Trans.png',
+  ICP:'https://assets.coingecko.com/coins/images/14495/standard/Internet_Computer_logo.png',
+  KSM:'https://assets.coingecko.com/coins/images/9568/standard/m4zRhP5e_400x400.jpg',
+  GRAM:'https://assets.coingecko.com/coins/images/17980/standard/ton_symbol.png',
+  NIGHT:'https://assets.coingecko.com/coins/images/39078/standard/midnight.jpg',
+  ARB:'https://assets.coingecko.com/coins/images/16547/standard/photo_2023-03-29_21.47.00.jpeg',
+  MOVR:'https://assets.coingecko.com/coins/images/17984/standard/9285.png',
+  GLMR:'https://assets.coingecko.com/coins/images/22459/standard/glmr.png',
+  OP:'https://assets.coingecko.com/coins/images/25244/standard/Optimism.png',
+  WLD:'https://assets.coingecko.com/coins/images/31069/standard/worldcoin.jpeg',
+  PYTH:'https://assets.coingecko.com/coins/images/31924/standard/pyth.png',
+  JUP:'https://assets.coingecko.com/coins/images/34188/standard/jup.png',
+  RENDER:'https://assets.coingecko.com/coins/images/11636/standard/rndr.png',
+  QNT:'https://assets.coingecko.com/coins/images/3370/standard/5ZOu7brX_400x400.jpg',
+  HBAR:'https://assets.coingecko.com/coins/images/3688/standard/hbar.png',
+  DOGE:'https://assets.coingecko.com/coins/images/5/standard/dogecoin.png',
+  MON:'https://assets.coingecko.com/coins/images/38927/standard/mon.png',
+  CRO:'https://assets.coingecko.com/coins/images/7310/standard/cro_token_logo.png',
+  XDC:'https://assets.coingecko.com/coins/images/2912/standard/xdc-icon.png',
+  DOT:'https://assets.coingecko.com/coins/images/12171/standard/polkadot.png',
+  LINK:'https://assets.coingecko.com/coins/images/877/standard/chainlink-new-logo.png',
+  ENS:'https://assets.coingecko.com/coins/images/19785/standard/acatxTm8_400x400.jpg',
+  STRK:'https://assets.coingecko.com/coins/images/26433/standard/starknet.png',
+  ONDO:'https://assets.coingecko.com/coins/images/26580/standard/ONDO.png',
+  AVAIL:'https://assets.coingecko.com/coins/images/36223/standard/avail.jpg',
+  KAVA:'https://assets.coingecko.com/coins/images/9761/standard/kava.png',
+  PONS:'https://assets.coingecko.com/coins/images/28672/standard/PONS_Token.png',
+  MNT:'https://assets.coingecko.com/coins/images/30980/standard/token-logo.png',
+  FLR:'https://assets.coingecko.com/coins/images/28624/standard/FLR-icon.png',
+  KAS:'https://assets.coingecko.com/coins/images/25751/standard/kaspa-icon-exchanges.png',
+  POL:'https://assets.coingecko.com/coins/images/32440/standard/polygon.png',
+  XPL:'https://assets.coingecko.com/coins/images/13139/standard/plasma-finance.png',
+  VTHO:'https://assets.coingecko.com/coins/images/1316/standard/vtho.png',
+  VET:'https://assets.coingecko.com/coins/images/1167/standard/VET_Token_Icon.png',
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let portfolio = [];
+let totalVal  = 0;
+let selectedCat = null;
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+function loadTheme() {
+  try {
+    const t = localStorage.getItem('samsam_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+    document.getElementById('themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
+  } catch(e) {}
+}
+function toggleTheme() {
+  try {
+    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('samsam_theme', next);
+    document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  } catch(e) {}
+}
+
+// ── Load portfolio from localStorage ──────────────────────────────────────
+function loadPortfolio() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (saved && saved.length > 0) {
+      portfolio = saved.map(c => ({
+        sym: c.sym,
+        qty: c.qty,
+        currentPrice: c.currentPrice || c.basePrice || 0,
+        basePrice: c.basePrice || 0,
+        cat: c.cat || 'other',
+        walletValue: c.qty * (c.currentPrice || c.basePrice || 0),
+      }));
+    }
+    // Merge custom coins
+    const custom = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
+    custom.forEach(cc => {
+      if (!portfolio.find(p => p.sym === cc.sym)) {
+        portfolio.push({
+          sym: cc.sym, qty: cc.qty,
+          currentPrice: cc.currentPrice || cc.basePrice || 0,
+          basePrice: cc.basePrice || 0,
+          cat: cc.cat || 'other',
+          walletValue: cc.qty * (cc.currentPrice || cc.basePrice || 0),
+        });
+      }
+    });
+  } catch(e) { portfolio = []; }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function fmtUSD(v) {
+  if (v >= 1000) return '$' + v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (v >= 1)    return '$' + v.toFixed(2);
+  return '$' + v.toPrecision(4);
+}
+function fmtQty(v, sym) {
+  if (v >= 1000000) return (v/1000000).toFixed(2) + 'M ' + sym;
+  if (v >= 1000)    return v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' ' + sym;
+  if (v >= 1)       return v.toFixed(4) + ' ' + sym;
+  return v.toPrecision(5) + ' ' + sym;
+}
+
+function colorForSym(sym) {
+  const colors = ['#3b82f6','#8b5cf6','#10b981','#e879f9','#f7931a','#06b6d4','#ef4444','#f59e0b','#ec4899'];
+  let h = 0; for (let i = 0; i < sym.length; i++) h = (h * 31 + sym.charCodeAt(i)) & 0xffff;
+  return colors[h % colors.length];
+}
+
+function logoEl(sym) {
+  const url = COIN_LOGOS[sym];
+  if (url) return `<img src="${url}" alt="${sym}" onerror="this.style.display='none';this.parentNode.textContent='${sym.slice(0,2)}'">`;
+  return sym.slice(0, 2);
+}
+
+// ── Build donut SVG ────────────────────────────────────────────────────────
+function buildDonut(entries, total) {
+  const cx = 100, cy = 100, rOuter = 88, rInner = 58;
+  let startAngle = -Math.PI / 2;
+  let paths = '';
+  entries.forEach(([cat, val]) => {
+    const angle = (val / total) * Math.PI * 2;
+    const endAngle = startAngle + angle;
+    const x1  = cx + rOuter * Math.cos(startAngle);
+    const y1  = cy + rOuter * Math.sin(startAngle);
+    const x2  = cx + rOuter * Math.cos(endAngle);
+    const y2  = cy + rOuter * Math.sin(endAngle);
+    const ix1 = cx + rInner * Math.cos(startAngle);
+    const iy1 = cy + rInner * Math.sin(startAngle);
+    const ix2 = cx + rInner * Math.cos(endAngle);
+    const iy2 = cy + rInner * Math.sin(endAngle);
+    const large = angle > Math.PI ? 1 : 0;
+    const color = CAT_COLORS[cat] || '#6b7280';
+    paths += `<path class="donut-slice" data-cat="${cat}"
+      d="M${ix1},${iy1} L${x1},${y1} A${rOuter},${rOuter} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${rInner},${rInner} 0 ${large},0 ${ix1},${iy1} Z"
+      fill="${color}" opacity="0.92"
+      style="cursor:pointer;transition:opacity .15s,transform .15s;transform-origin:${cx}px ${cy}px"
+      onclick="selectCat('${cat}')"
+      onmouseenter="hoverSlice(this,'${CAT_LABELS[cat]||cat}','${fmtUSD(val)}','${(val/total*100).toFixed(1)}','${color}')"
+      onmouseleave="hoverReset()"/>`;
+    startAngle = endAngle;
+  });
+  document.getElementById('donutSvg').innerHTML = paths;
+}
+
+function hoverSlice(el, label, val, pct, color) {
+  document.getElementById('donutCenterVal').textContent   = pct + '%';
+  document.getElementById('donutCenterVal').style.color   = color;
+  document.getElementById('donutCenterLabel').textContent = label;
+  el.setAttribute('opacity', '1');
+  el.style.transform = 'scale(1.03)';
+}
+function hoverReset() {
+  if (selectedCat) return; // keep highlight if a cat is selected
+  document.getElementById('donutCenterVal').textContent  = fmtUSD(totalVal);
+  document.getElementById('donutCenterVal').style.color  = '';
+  document.getElementById('donutCenterLabel').textContent = 'Total';
+  document.querySelectorAll('.donut-slice').forEach(s => {
+    s.setAttribute('opacity','0.92'); s.style.transform='';
+  });
+}
+
+// ── Legend ─────────────────────────────────────────────────────────────────
+function buildLegend(entries, total) {
+  document.getElementById('legendWrap').innerHTML = entries.map(([cat, val]) => {
+    const pct  = (val / total * 100).toFixed(1);
+    const color = CAT_COLORS[cat] || '#6b7280';
+    const label = CAT_LABELS[cat] || cat;
+    return `<div class="legend-item" id="leg-${cat}" onclick="selectCat('${cat}')">
+      <span class="legend-dot" style="background:${color}"></span>
+      <span class="legend-name">${label}</span>
+      <div class="legend-nums">
+        <div class="legend-val">${fmtUSD(val)}</div>
+        <div class="legend-pct">${pct}%</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Overview render ────────────────────────────────────────────────────────
+function renderOverview() {
+  const catTotals = {};
+  portfolio.forEach(c => {
+    const val = c.qty * c.currentPrice;
+    const cat = c.sym === 'BTC' ? 'btc' : (c.cat || 'other');
+    catTotals[cat] = (catTotals[cat] || 0) + val;
+  });
+  totalVal = Object.values(catTotals).reduce((a, b) => a + b, 0);
+  const entries = Object.entries(catTotals).filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1]);
+
+  document.getElementById('totalValBar').textContent   = fmtUSD(totalVal);
+  document.getElementById('totalCoinsBar').textContent = portfolio.length;
+  document.getElementById('donutCenterVal').textContent = fmtUSD(totalVal);
+
+  buildDonut(entries, totalVal);
+  buildLegend(entries, totalVal);
+}
+
+// ── Category detail ────────────────────────────────────────────────────────
+function selectCat(cat) {
+  selectedCat = cat;
+  const color  = CAT_COLORS[cat] || '#6b7280';
+  const label  = CAT_LABELS[cat] || cat;
+
+  // Highlight legend
+  document.querySelectorAll('.legend-item').forEach(el => el.classList.remove('active'));
+  const legEl = document.getElementById('leg-' + cat);
+  if (legEl) legEl.classList.add('active');
+
+  // Highlight donut slice
+  document.querySelectorAll('.donut-slice').forEach(s => {
+    const isActive = s.dataset.cat === cat;
+    s.setAttribute('opacity', isActive ? '1' : '0.35');
+    s.style.transform = isActive ? 'scale(1.04)' : '';
+  });
+
+  // Compute cat total
+  const coins = portfolio
+    .filter(c => (c.sym === 'BTC' ? 'btc' : (c.cat||'other')) === cat)
+    .map(c => ({ ...c, val: c.qty * c.currentPrice }))
+    .sort((a, b) => b.val - a.val);
+  const catTotal = coins.reduce((s, c) => s + c.val, 0);
+  const catPct   = totalVal > 0 ? (catTotal / totalVal * 100).toFixed(1) : '0.0';
+
+  // Header
+  document.getElementById('detailDot').style.background = color;
+  document.getElementById('detailTitle').textContent    = label;
+  document.getElementById('detailVal').textContent      = fmtUSD(catTotal);
+  document.getElementById('detailPct').textContent      = catPct + '% of portfolio';
+
+  // Coin rows
+  document.getElementById('detailCoinList').innerHTML = coins.map(c => {
+    const pct  = totalVal > 0 ? (c.val / totalVal * 100) : 0;
+    const barW = Math.min(pct * 4, 100); // scale bar
+    const name = COIN_NAMES[c.sym] || c.sym;
+    return `<div class="coin-row">
+      <div class="coin-logo" style="background:${colorForSym(c.sym)}">${logoEl(c.sym)}</div>
+      <div class="coin-info">
+        <div class="coin-sym">${c.sym}</div>
+        <div class="coin-name">${name}</div>
+        <div class="coin-qty">${fmtQty(c.qty, c.sym)}</div>
+      </div>
+      <div class="coin-holdings">
+        <div class="coin-val">${fmtUSD(c.val)}</div>
+      </div>
+      <div class="coin-alloc">
+        <div class="coin-pct">${pct.toFixed(2)}%</div>
+        <div class="alloc-bar-wrap">
+          <div class="alloc-bar" style="width:${barW}%;background:${color}"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Show detail section on mobile/small
+  document.getElementById('sectionDetail').style.display = 'block';
+  // On wide screen keep overview visible too; on narrow scroll to detail
+  if (window.innerWidth < 600) {
+    document.getElementById('sectionOverview').style.display = 'none';
+    document.getElementById('sectionDetail').style.display   = 'block';
+  }
+}
+
+function showOverview() {
+  selectedCat = null;
+  document.getElementById('sectionOverview').style.display = 'block';
+  document.getElementById('sectionDetail').style.display   = 'none';
+  // Reset donut
+  document.querySelectorAll('.donut-slice').forEach(s => {
+    s.setAttribute('opacity','0.92'); s.style.transform='';
+  });
+  document.querySelectorAll('.legend-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('donutCenterVal').textContent   = fmtUSD(totalVal);
+  document.getElementById('donutCenterVal').style.color   = '';
+  document.getElementById('donutCenterLabel').textContent = 'Total';
+}
+
+// ── Wide screen: show both panels side by side ─────────────────────────────
+function setupLayout() {
+  if (window.innerWidth >= 600) {
+    // On wide: detail panel is a sidebar — always show overview
+    // Handled via CSS; detail panel floats below on narrow
+    document.getElementById('sectionDetail').style.display = 'none';
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+loadTheme();
+loadPortfolio();
+setupLayout();
+if (portfolio.length > 0) {
+  renderOverview();
+} else {
+  document.getElementById('sectionOverview').innerHTML =
+    '<div class="loading-msg">⏳ No portfolio data found.<br>Open the main portfolio page first to load your data.</div>';
+}
+</script>
+</body>
+</html>

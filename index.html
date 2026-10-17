@@ -660,6 +660,24 @@
     padding: 14px;
     margin-bottom: 12px;
   }
+
+  /* Allocation Mini Card */
+  .alloc-mini-card {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px;
+    margin-bottom: 12px; cursor: pointer;
+    transition: border-color .15s, background .15s;
+    color: var(--fg);
+  }
+  .alloc-mini-card:hover { border-color: var(--accent); background: var(--bg3); }
+  .alloc-mini-left { flex: 1; min-width: 0; }
+  .alloc-mini-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg2); margin-bottom: 8px; }
+  .alloc-mini-cats { display: flex; flex-wrap: wrap; gap: 5px; }
+  .alloc-mini-cat { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; }
+  .alloc-mini-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .alloc-mini-donut { flex-shrink: 0; }
+  .alloc-mini-arrow { font-size: 1.3rem; color: var(--fg2); font-weight: 300; }
   .dream-bar h3 { font-size: 0.78rem; color: var(--fg2); margin-bottom: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
   .progress-track { background: var(--bg3); border-radius: 100px; height: 8px; overflow: hidden; margin-top: 2px; }
   .progress-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--btc), var(--accent)); transition: width 0.5s ease; }
@@ -919,6 +937,18 @@
   </div>
 </div>
 
+<!-- ── Allocation Mini Card ── -->
+<a href="./allocation.html" class="alloc-mini-card" id="allocMiniCard" style="display:none;text-decoration:none">
+  <div class="alloc-mini-left">
+    <div class="alloc-mini-title">📊 Portfolio Allocation</div>
+    <div class="alloc-mini-cats" id="allocMiniCats"></div>
+  </div>
+  <div class="alloc-mini-donut">
+    <svg id="allocMiniSvg" viewBox="0 0 60 60" width="60" height="60"></svg>
+  </div>
+  <div class="alloc-mini-arrow">›</div>
+</a>
+
 <div class="dream-bar">
   <h3>🎯 Dream: 1 BTC — Current Progress</h3>
   <div class="progress-track">
@@ -945,6 +975,7 @@
   </div>
   <div class="control-row">
     <a href="./accumulation.html" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">🎯 Accumulation Plan</a>
+    <a href="./allocation.html" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">📊 Allocation</a>
     <button class="btn btn-secondary" onclick="openAnalysis()">🤖 AI Analysis</button>
   </div>
   <div class="control-row">
@@ -2349,6 +2380,40 @@ function renderDashboard() {
       </div>
     </div>
     ${pnlRowsHtml}`;
+
+  // ── Render Allocation Mini Card ──────────────────────────────────────────
+  renderAllocMiniCard(catTotals, totalVal);
+}
+
+function renderAllocMiniCard(catTotals, totalVal) {
+  const card = document.getElementById('allocMiniCard');
+  if (!card) return;
+  const entries = Object.entries(catTotals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  if (!entries.length || totalVal <= 0) return;
+  card.style.display = 'flex';
+
+  // Mini donut
+  const cx=30,cy=30,rOuter=28,rInner=18;
+  let startAngle = -Math.PI/2, paths='';
+  entries.forEach(([cat,val])=>{
+    const angle=(val/totalVal)*Math.PI*2, endAngle=startAngle+angle;
+    const x1=cx+rOuter*Math.cos(startAngle),y1=cy+rOuter*Math.sin(startAngle);
+    const x2=cx+rOuter*Math.cos(endAngle),y2=cy+rOuter*Math.sin(endAngle);
+    const ix1=cx+rInner*Math.cos(startAngle),iy1=cy+rInner*Math.sin(startAngle);
+    const ix2=cx+rInner*Math.cos(endAngle),iy2=cy+rInner*Math.sin(endAngle);
+    const large=angle>Math.PI?1:0;
+    paths+=`<path d="M${ix1},${iy1} L${x1},${y1} A${rOuter},${rOuter} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${rInner},${rInner} 0 ${large},0 ${ix1},${iy1} Z" fill="${CAT_COLORS[cat]||'#6b7280'}" opacity="0.92"/>`;
+    startAngle=endAngle;
+  });
+  document.getElementById('allocMiniSvg').innerHTML=paths;
+
+  // Top 4 categories
+  document.getElementById('allocMiniCats').innerHTML=entries.slice(0,4).map(([cat,val])=>{
+    const pct=(val/totalVal*100).toFixed(1);
+    const color=CAT_COLORS[cat]||'#6b7280';
+    const label=CAT_LABELS[cat]||cat;
+    return `<div class="alloc-mini-cat"><span class="alloc-mini-dot" style="background:${color}"></span>${label} <span style="color:var(--fg2);font-weight:400">${pct}%</span></div>`;
+  }).join('');
 }
 
 async function fetchLivePrices() {
