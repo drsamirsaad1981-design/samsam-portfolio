@@ -691,8 +691,14 @@
   .perf-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .perf-dot.portfolio { background: #3b82f6; }
   .perf-dot.btc { background: #f7931a; }
-  .perf-chart-canvas { width: 100%; height: 90px; display: block; }
-  .perf-chart-no-data { text-align: center; color: var(--fg2); font-size: 0.72rem; padding: 20px 0; }
+  .perf-chart-canvas { width: 100%; height: 140px; display: block; }
+  .perf-chart-no-data { text-align: center; color: var(--fg2); font-size: 0.72rem; padding: 30px 0; }
+  .perf-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+  .perf-legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; }
+  .perf-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .perf-legend-val { font-weight: 700; }
+  .perf-legend-val.pos { color: #3b82f6; }
+  .perf-legend-val.neg { color: #ef4444; }
 
   /* Holdings Chart Card */
   .holdings-card {
@@ -979,20 +985,28 @@
 </a>
 
 <!-- ── Performance Card ── -->
-<a href="./performance.html" class="alloc-mini-card" id="perfChartWrap" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:8px">
+<a href="./performance.html" class="alloc-mini-card" id="perfChartWrap" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:6px">
   <div style="display:flex;justify-content:space-between;align-items:center">
     <div class="alloc-mini-title" style="margin-bottom:0">📈 Portfolio Performance</div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="perf-chart-stats">
-        <span class="perf-stat"><span class="perf-dot portfolio"></span><span id="perfPortfolioLabel">Portfolio: —</span></span>
-        <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
-        <span id="perfSyncIndicator" title="Auto-sync status" style="font-size:0.65rem;color:rgba(148,163,184,0.5);margin-left:4px;transition:opacity 0.5s">☁</span>
-      </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span id="perfSyncIndicator" title="Auto-sync status" style="font-size:0.65rem;color:rgba(148,163,184,0.5);transition:opacity 0.5s">☁</span>
       <span class="alloc-mini-arrow">›</span>
     </div>
   </div>
   <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
-  <canvas class="perf-chart-canvas" id="perfChartCanvas" height="90"></canvas>
+  <canvas class="perf-chart-canvas" id="perfChartCanvas" height="140"></canvas>
+  <div class="perf-legend">
+    <div class="perf-legend-item">
+      <span class="perf-legend-dot" style="background:#3b82f6"></span>
+      <span>All-time Profit:&nbsp;</span>
+      <span class="perf-legend-val" id="perfPortfolioLabel">—</span>
+    </div>
+    <div class="perf-legend-item">
+      <span class="perf-legend-dot" style="background:#f0a060"></span>
+      <span>BTC trend:&nbsp;</span>
+      <span class="perf-legend-val" id="perfBtcLabel">—</span>
+    </div>
+  </div>
 </a>
 
 
@@ -3113,9 +3127,9 @@ function drawPerfChart() {
   canvas.style.display = '';
   // If only 1 snapshot, duplicate it so chart renders as a flat baseline
   if (snaps.length === 1) snaps.push(snaps[0]);
-  // Use wrapper width for accurate measurement on all screen sizes
+
   const W = (wrap.clientWidth || canvas.parentElement?.clientWidth || canvas.offsetWidth || 600);
-  const H = 90;
+  const H = 140;
   canvas.width  = W * window.devicePixelRatio;
   canvas.height = H * window.devicePixelRatio;
   const ctx = canvas.getContext('2d');
@@ -3129,29 +3143,61 @@ function drawPerfChart() {
   const allPct = [...pctV, ...pctB];
   const minP = Math.min(...allPct);
   const maxP = Math.max(...allPct);
-  const range = maxP - minP || 1;
 
-  const pad = { top: 6, bottom: 18, left: 4, right: 40 };
-  const cW   = W - pad.left - pad.right;
-  const cH   = H - pad.top - pad.bottom;
+  // Round axis to clean grid values
+  function niceStep(range) {
+    const raw = range / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw / mag;
+    const step = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+    return step * mag;
+  }
+  const dataRange = maxP - minP || 1;
+  const step  = niceStep(dataRange);
+  const axMin = Math.floor(minP / step) * step;
+  const axMax = Math.ceil(maxP  / step) * step;
+  const axRange = axMax - axMin || 1;
+
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const labelColor = isDark ? 'rgba(148,163,184,0.65)' : 'rgba(100,116,139,0.7)';
+  const gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+
+  // Measure label width to set left padding
+  ctx.font = '10px Inter,sans-serif';
+  const sampleLabel = axMin.toFixed(1) + '%';
+  const labelW = ctx.measureText(sampleLabel).width + 10;
+
+  const pad = { top: 8, bottom: 20, left: 4, right: Math.max(labelW, 38) };
+  const cW  = W - pad.left - pad.right;
+  const cH  = H - pad.top - pad.bottom;
 
   function toX(i) { return pad.left + (i / (snaps.length - 1)) * cW; }
-  function toY(p) { return pad.top + (1 - (p - minP) / range) * cH; }
+  function toY(p) { return pad.top + (1 - (p - axMin) / axRange) * cH; }
 
-  // Background
-  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
   ctx.clearRect(0, 0, W, H);
 
-  // Zero line
-  const zeroY = toY(0);
-  ctx.beginPath();
-  ctx.setLineDash([3, 3]);
-  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-  ctx.lineWidth = 1;
-  ctx.moveTo(pad.left, zeroY);
-  ctx.lineTo(W - pad.right, zeroY);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  // Grid lines + Y-axis labels
+  const ticks = [];
+  for (let v = axMin; v <= axMax + 1e-9; v = +(v + step).toFixed(10)) ticks.push(+v.toFixed(10));
+
+  ctx.font = '10px Inter,sans-serif';
+  ctx.textAlign = 'right';
+  ticks.forEach(v => {
+    const y = toY(v);
+    // Grid line
+    ctx.beginPath();
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(W - pad.right, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Label
+    ctx.fillStyle = labelColor;
+    const label = (v >= 0 ? '' : '') + v.toFixed(1) + '%';
+    ctx.fillText(label, W - 2, y + 3.5);
+  });
 
   // Draw a line series
   function drawLine(data, color, dashed) {
@@ -3159,6 +3205,7 @@ function drawPerfChart() {
     ctx.strokeStyle = color;
     ctx.lineWidth   = 2;
     ctx.lineJoin    = 'round';
+    ctx.lineCap     = 'round';
     if (dashed) ctx.setLineDash([5, 3]);
     else ctx.setLineDash([]);
     data.forEach((p, i) => {
@@ -3168,43 +3215,39 @@ function drawPerfChart() {
     ctx.setLineDash([]);
   }
 
-  drawLine(pctV, '#3b82f6');        // Portfolio (solid blue)
-  drawLine(pctB, '#f7931a', true);  // BTC (dashed orange — always visible, even at 0%)
+  drawLine(pctB, '#f0a060');        // BTC (warm orange, behind)
+  drawLine(pctV, '#3b82f6');        // Portfolio (blue, in front)
 
-  // End labels (right side)
-  const lastV = pctV[pctV.length - 1];
-  const lastB = pctB[pctB.length - 1];
-  ctx.font = `${10 * window.devicePixelRatio / window.devicePixelRatio}px Inter,sans-serif`;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#3b82f6';
-  ctx.fillText((lastV >= 0 ? '+' : '') + lastV.toFixed(1) + '%', W - pad.right + 4, toY(lastV) + 4);
-  ctx.fillStyle = '#f7931a';
-  ctx.fillText((lastB >= 0 ? '+' : '') + lastB.toFixed(1) + '%', W - pad.right + 4, toY(lastB) + 4);
-
-  // Date labels
-  ctx.fillStyle = isDark ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.7)';
+  // Date labels bottom
+  ctx.fillStyle = labelColor;
   ctx.font = '9px Inter,sans-serif';
   ctx.textAlign = 'left';
   const firstDate = new Date(snaps[0].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const lastDate  = new Date(snaps[snaps.length - 1].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  ctx.fillText(firstDate, pad.left, H - 2);
+  ctx.fillText(firstDate, pad.left, H - 3);
   ctx.textAlign = 'right';
-  ctx.fillText(lastDate, W - pad.right, H - 2);
+  ctx.fillText(lastDate, W - pad.right, H - 3);
 
-  // Update stat labels
-  const totalPnlPct = lastV;
-  const btcPct      = lastB;
-  const pnlSign     = totalPnlPct >= 0 ? '+' : '';
-  const { total, totalCost } = calcStats ? (() => {
-    const s = calcStats(); return { total: s.total, totalCost: portfolio.reduce((a,c)=>a+c.qty*(c.basePrice||0),0) };
-  })() : { total: 0, totalCost: 0 };
-  const pnlUsd = total - totalCost;
-  const pnlSign2 = pnlUsd >= 0 ? '+' : '';
+  // Update legend labels below chart
+  const lastV = pctV[pctV.length - 1];
+  const lastB = pctB[pctB.length - 1];
+  const { total } = calcStats ? calcStats() : { total: 0 };
+  const totalCost = portfolio.reduce((a, c) => a + c.qty * (c.basePrice || 0), 0);
+  const pnlUsd  = total - totalCost;
+  const pnlSign = pnlUsd >= 0 ? '+' : '';
+  const pctSign = lastV >= 0 ? '+' : '';
+  const btcSign = lastB >= 0 ? '+' : '';
 
-  document.getElementById('perfPortfolioLabel').textContent =
-    `All-time Profit: ${pnlSign2}$${Math.abs(pnlUsd).toFixed(2)} ${pnlSign}${totalPnlPct.toFixed(2)}%`;
-  document.getElementById('perfBtcLabel').textContent =
-    `BTC trend: ${btcPct >= 0 ? '+' : ''}${btcPct.toFixed(2)}%`;
+  const portEl = document.getElementById('perfPortfolioLabel');
+  const btcEl  = document.getElementById('perfBtcLabel');
+  if (portEl) {
+    portEl.textContent = `${pnlSign}$${Math.abs(pnlUsd).toFixed(2)}  ${pctSign}${lastV.toFixed(2)}%`;
+    portEl.className   = 'perf-legend-val ' + (pnlUsd >= 0 ? 'pos' : 'neg');
+  }
+  if (btcEl) {
+    btcEl.textContent = `${btcSign}${lastB.toFixed(2)}%`;
+    btcEl.className   = 'perf-legend-val ' + (lastB >= 0 ? 'pos' : 'neg');
+  }
 }
 
 function updatePerfChart() {
