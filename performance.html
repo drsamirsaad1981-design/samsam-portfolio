@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Portfolio Performance</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #f5f5f7;
+  --card: #ffffff;
+  --fg: #1a1a1e;
+  --fg2: #6e6e73;
+  --border: rgba(0,0,0,0.08);
+  --green: #16a34a;
+  --red: #dc2626;
+  --green-bg: rgba(22,163,74,0.1);
+  --red-bg: rgba(220,38,38,0.1);
+  --accent: #3b82f6;
+  --header-bg: #ffffff;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0d0f;
+    --card: #1c1c1e;
+    --fg: #f5f5f7;
+    --fg2: #8e8e93;
+    --border: rgba(255,255,255,0.08);
+    --green: #22c55e;
+    --red: #f87171;
+    --green-bg: rgba(34,197,94,0.12);
+    --red-bg: rgba(248,113,113,0.12);
+    --header-bg: #1c1c1e;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0d0f;
+  --card: #1c1c1e;
+  --fg: #f5f5f7;
+  --fg2: #8e8e93;
+  --border: rgba(255,255,255,0.08);
+  --green: #22c55e;
+  --red: #f87171;
+  --green-bg: rgba(34,197,94,0.12);
+  --red-bg: rgba(248,113,113,0.12);
+  --header-bg: #1c1c1e;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Header ── */
+.header {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 500;
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.header-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  flex: 1;
+}
+.theme-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px;
+}
+
+/* ── Summary strip ── */
+.summary {
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+}
+.summary-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 640px;
+}
+.sum-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.sum-label {
+  font-size: 0.7rem;
+  color: var(--fg2);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.sum-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.sum-sub {
+  font-size: 0.8rem;
+  margin-top: 2px;
+  font-weight: 500;
+}
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+
+/* ── Column headers ── */
+.col-header {
+  padding: 4px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
+  display: grid;
+  grid-template-columns: 1fr 110px 110px;
+  gap: 0;
+  font-size: 0.68rem;
+  color: var(--fg2);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.col-header .c-price, .col-header .c-pnl { text-align: right; }
+
+/* ── List ── */
+.coin-list {
+  padding: 0 max(12px, env(safe-area-inset-right, 0px)) 32px max(12px, env(safe-area-inset-left, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 760px;
+}
+.coin-row {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 1fr 110px 110px;
+  align-items: center;
+  gap: 0;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s;
+}
+.coin-row:active { transform: scale(0.99); }
+
+/* Asset */
+.asset {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.coin-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: var(--bg);
+}
+.coin-icon-fallback {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: #fff;
+}
+.asset-text { min-width: 0; }
+.sym { font-size: 0.9rem; font-weight: 700; }
+.name {
+  font-size: 0.72rem;
+  color: var(--fg2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.qty-label {
+  font-size: 0.65rem;
+  color: var(--fg2);
+  margin-top: 1px;
+}
+
+/* Price */
+.c-price {
+  text-align: right;
+}
+.price-val { font-size: 0.88rem; font-weight: 600; }
+.price-chg {
+  font-size: 0.72rem;
+  font-weight: 500;
+  margin-top: 2px;
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+.price-chg.pos { background: var(--green-bg); color: var(--green); }
+.price-chg.neg { background: var(--red-bg); color: var(--red); }
+
+/* P&L */
+.c-pnl { text-align: right; }
+.pnl-usd { font-size: 0.88rem; font-weight: 700; }
+.pnl-pct {
+  font-size: 0.72rem;
+  font-weight: 500;
+  margin-top: 2px;
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+.pnl-pct.pos { background: var(--green-bg); color: var(--green); }
+.pnl-pct.neg { background: var(--red-bg); color: var(--red); }
+
+/* Loading / Error */
+.state-msg {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--fg2);
+}
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Sync status */
+.sync-bar {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--fg2);
+  padding: 4px 16px 0;
+}
+
+/* Sort tabs */
+.sort-tabs {
+  padding: 8px max(16px, env(safe-area-inset-right, 0px)) 4px max(16px, env(safe-area-inset-left, 0px));
+  display: flex;
+  gap: 6px;
+}
+.sort-tab {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg2);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.sort-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" onclick="history.back()">‹ Back</button>
+  <div class="header-title">Portfolio Performance</div>
+  <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme" id="themeBtn">🌙</button>
+</div>
+
+<div class="summary">
+  <div class="summary-cards">
+    <div class="sum-card">
+      <div class="sum-label">Total Value</div>
+      <div class="sum-value" id="totalValue">—</div>
+      <div class="sum-sub" id="costBasis" style="color:var(--fg2)">Cost: —</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">All-time P&amp;L</div>
+      <div class="sum-value" id="totalPnl">—</div>
+      <div class="sum-sub" id="totalPct">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="sort-tabs">
+  <button class="sort-tab active" id="tab-pnl" onclick="setSort('pnl')">P&amp;L ↓</button>
+  <button class="sort-tab" id="tab-pct" onclick="setSort('pct')">P&amp;L % ↓</button>
+  <button class="sort-tab" id="tab-value" onclick="setSort('value')">Value ↓</button>
+</div>
+
+<div class="col-header">
+  <span>Asset</span>
+  <span class="c-price">Price</span>
+  <span class="c-pnl">All-time P&amp;L</span>
+</div>
+
+<div id="coinList" class="coin-list">
+  <div class="state-msg">
+    <div class="spinner"></div>
+    Loading portfolio…
+  </div>
+</div>
+
+<div class="sync-bar" id="syncBar">⏳ Fetching live prices…</div>
+
+<script>
+// ── Constants (must match index.html) ──
+const STORAGE_KEY    = 'samsam_pf_v4';
+const ARCHIVE_KEY    = 'samsam_archived_v1';
+const CUSTOM_KEY     = 'samsam_custom_v1';
+const SYNC_KEY       = 'samsam_last_cloud_ts';
+const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
+const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
+
+const COIN_NAMES = {
+  BTC:'Bitcoin', SOL:'Solana', NEAR:'NEAR Protocol', TAO:'Bittensor',
+  ICP:'Internet Computer', AVAX:'Avalanche', LINK:'Chainlink', HBAR:'Hedera',
+  ATOM:'Cosmos', SEI:'Sei Network', APT:'Aptos', KSM:'Kusama',
+  ARB:'Arbitrum', MOVR:'Moonriver', GLMR:'Moonbeam', MNT:'Mantle',
+  FLR:'Flare', KAS:'Kaspa', POL:'Polygon', XPL:'Plasma',
+  VTHO:'VeThor', VET:'VeChain', DOGE:'Dogecoin', ENS:'ENS Domains',
+  ONDO:'Ondo Finance', STRK:'Starknet', NIGHT:'Midnight', MON:'Monad',
+  CRO:'Cronos', XDC:'XDC Network', KAVA:'Kava', GRAM:'TON / Gram',
+  PONS:'Pons', AVAIL:'Avail', PYTH:'Pyth Network', JUP:'Jupiter',
+  RENDER:'Render', QNT:'Quant', OP:'Optimism', WLD:'Worldcoin',
+  DOT:'Polkadot', BNB:'BNB Chain', ETH:'Ethereum', SUI:'Sui'
+};
+
+const COIN_COLORS = {
+  BTC:'#F7931A', ETH:'#627EEA', SOL:'#9945FF', BNB:'#F3BA2F',
+  TAO:'#333333', SUI:'#4DA2FF', NEAR:'#00C08B', SEI:'#9D50FF',
+  ATOM:'#2E3148', APT:'#00D1B2', AVAX:'#E84142', ICP:'#29ABE2',
+  KSM:'#E6007A', GRAM:'#27A7E7', ARB:'#28A0F0', MOVR:'#53CBC9',
+  GLMR:'#E1147B', OP:'#FF0420', WLD:'#191919', PYTH:'#E6DAFE',
+  JUP:'#C7F284', RENDER:'#1B6FEE', QNT:'#1A1F3D', HBAR:'#00BEBE',
+  DOGE:'#C3A634', MON:'#836EF9', CRO:'#002D74', XDC:'#F49800',
+  DOT:'#E6007A', LINK:'#375BD2', ENS:'#5284FF', STRK:'#EC796B',
+  ONDO:'#1A56DB', AVAIL:'#4F4FBF', KAVA:'#FF564F', PONS:'#6B5BFF',
+  MNT:'#000000', FLR:'#E62058', KAS:'#49EACB', POL:'#7B3FE4',
+  VTHO:'#11A8E0', VET:'#15BDFF', NIGHT:'#5B5EA6', XPL:'#8B5CF6',
+  SEI:'#9D50FF'
+};
+
+const COINGECKO_IDS = {
+  BTC:'bitcoin', ETH:'ethereum', SOL:'solana', BNB:'binancecoin',
+  TAO:'bittensor', SUI:'sui', NEAR:'near', SEI:'sei-network',
+  ATOM:'cosmos', APT:'aptos', AVAX:'avalanche-2', ICP:'internet-computer',
+  KSM:'kusama', GRAM:'the-open-network', NIGHT:'midnight-3', ARB:'arbitrum',
+  MOVR:'moonriver', GLMR:'moonbeam', OP:'optimism', WLD:'worldcoin-wld',
+  PYTH:'pyth-network', JUP:'jupiter-exchange-solana', RENDER:'render-token',
+  QNT:'quant-network', HBAR:'hedera-hashgraph', DOGE:'dogecoin',
+  CRO:'crypto-com-chain', XDC:'xdce-crowd-sale', DOT:'polkadot',
+  LINK:'chainlink', ENS:'ethereum-name-service', STRK:'starknet',
+  ONDO:'ondo-finance', AVAIL:'avail', KAVA:'kava', MNT:'mantle',
+  FLR:'flare-networks', KAS:'kaspa', POL:'polygon-ecosystem-token',
+  VTHO:'vethor-token', VET:'vechain', MON:null, PONS:'pons', XPL:null
+};
+
+const FALLBACK_PRICES = {
+  BTC:82363, ETH:2444, SOL:105.81, BNB:718.42, TAO:276.21, SUI:0.8207,
+  NEAR:5.252, SEI:0.06197, ATOM:1.739, APT:0.8207, AVAX:9.964, ICP:3.074,
+  KSM:4.488, GRAM:1.372, ARB:0.1922, MOVR:1.399, GLMR:0.01038, OP:0.1413,
+  WLD:0.5023, PYTH:0.09368, JUP:0.3089, RENDER:1.996, QNT:209.46,
+  HBAR:0.08369, DOGE:0.08112, CRO:0.05825, XDC:0.03393, DOT:1.125,
+  LINK:12.50, ENS:5.733, STRK:0.09143, ONDO:0.46, AVAIL:0.002632,
+  KAVA:0.069, MNT:0.5295, FLR:0.006713, KAS:0.03612, POL:0.09554,
+  VTHO:0.0006441, VET:0.00705, NIGHT:0.04419, MON:0.02344, PONS:0.3498,
+  XPL:0.08513
+};
+
+// ── State ──
+let portfolio = [];
+let livePrices = {}; // { sym: { price, change24h } }
+let sortMode = 'pnl'; // pnl | pct | value
+
+// ── Theme ──
+function loadTheme() {
+  const saved = localStorage.getItem('samsam_theme') || 'system';
+  if (saved === 'dark') document.documentElement.setAttribute('data-theme','dark');
+  else if (saved === 'light') document.documentElement.setAttribute('data-theme','light');
+  else document.documentElement.removeAttribute('data-theme');
+  document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
+}
+function toggleTheme() {
+  const cur = localStorage.getItem('samsam_theme') || 'system';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('samsam_theme', next);
+  loadTheme();
+}
+
+// ── Load portfolio from localStorage ──
+function loadPortfolio() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const pf = raw ? JSON.parse(raw) : null;
+    if (pf && pf.coins && pf.coins.length > 0) {
+      // Filter removed coins
+      let archived = [];
+      try { archived = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); } catch(_) {}
+      const removed = new Set(archived.filter(c => c.removedPermanently === true).map(c => c.sym));
+      portfolio = pf.coins.filter(c => !removed.has(c.sym));
+    }
+  } catch(_) {}
+
+  // Initialize livePrices with stored currentPrice + fallback
+  portfolio.forEach(c => {
+    livePrices[c.sym] = {
+      price: c.currentPrice || FALLBACK_PRICES[c.sym] || 0,
+      change24h: null
+    };
+  });
+}
+
+// ── Fetch live prices from CoinGecko ──
+async function fetchLivePrices() {
+  const ids = portfolio
+    .map(c => COINGECKO_IDS[c.sym])
+    .filter(Boolean);
+
+  if (ids.length === 0) return;
+
+  // batch in groups of 50
+  const chunks = [];
+  for (let i = 0; i < ids.length; i += 50) chunks.push(ids.slice(i, i+50));
+
+  for (const chunk of chunks) {
+    try {
+      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${chunk.join(',')}&vs_currencies=usd&include_24hr_change=true`;
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+
+      portfolio.forEach(c => {
+        const cgId = COINGECKO_IDS[c.sym];
+        if (cgId && data[cgId]) {
+          livePrices[c.sym] = {
+            price: data[cgId].usd,
+            change24h: data[cgId].usd_24h_change || null
+          };
+        }
+      });
+    } catch(_) {}
+  }
+
+  document.getElementById('syncBar').textContent = '✓ Live prices updated · ' + new Date().toLocaleTimeString();
+  render();
+}
+
+// ── Pull from cloud ──
+async function pullFromCloud() {
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    });
+    if (!res.ok) return;
+    const json = await res.json();
+    const cloudPf = json.record.portfolioData || null;
+    if (!cloudPf || !cloudPf.coins || cloudPf.coins.length === 0) return;
+
+    const cloudTs = cloudPf.lastSave || '';
+    if (!cloudTs) return;
+    const lastPulled = (() => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch(_){ return ''; } })();
+    if (lastPulled && cloudTs <= lastPulled) return;
+
+    // Apply cloud data
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        coins: cloudPf.coins,
+        btcPrice: cloudPf.btcPrice,
+        lastSave: cloudTs
+      }));
+      if (cloudPf.transactions)  localStorage.setItem('samsam_tx_v1', JSON.stringify(cloudPf.transactions));
+      if (cloudPf.customCoins)   localStorage.setItem(CUSTOM_KEY, JSON.stringify(cloudPf.customCoins));
+      if (cloudPf.archivedCoins) localStorage.setItem(ARCHIVE_KEY, JSON.stringify(cloudPf.archivedCoins));
+      localStorage.setItem(SYNC_KEY, cloudTs);
+    } catch(_) {}
+
+    loadPortfolio();
+    render();
+  } catch(_) {}
+}
+
+// ── Format helpers ──
+function fmt$(v) {
+  if (Math.abs(v) >= 1000) return '$' + v.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+  if (Math.abs(v) >= 1) return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  return '$' + v.toFixed(4);
+}
+function fmtPrice(v) {
+  if (v >= 1000) return '$' + v.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+  if (v >= 1) return '$' + v.toFixed(2);
+  if (v >= 0.01) return '$' + v.toFixed(4);
+  return '$' + v.toFixed(6);
+}
+function fmtPct(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
+function fmtQty(v, sym) {
+  if (v >= 1000) return v.toLocaleString('en-US', {maximumFractionDigits:0}) + ' ' + sym;
+  if (v >= 1) return v.toFixed(2) + ' ' + sym;
+  return v.toFixed(4) + ' ' + sym;
+}
+
+function coinIcon(c) {
+  const logoUrl = c.logoUrl;
+  const color = COIN_COLORS[c.sym] || '#888';
+  if (logoUrl) {
+    return `<img class="coin-icon" src="${logoUrl}" alt="${c.sym}" onerror="this.style.display='none';this.nextSibling.style.display='flex'">
+            <div class="coin-icon-fallback" style="background:${color};display:none">${c.sym.slice(0,3)}</div>`;
+  }
+  // Try CoinGecko icon
+  const cgId = COINGECKO_IDS[c.sym];
+  if (cgId) {
+    return `<img class="coin-icon" src="https://assets.coingecko.com/coins/images/small/${cgId}.png" alt="${c.sym}"
+              onerror="this.style.display='none';this.nextSibling.style.display='flex'">
+            <div class="coin-icon-fallback" style="background:${color};display:none">${c.sym.slice(0,3)}</div>`;
+  }
+  return `<div class="coin-icon-fallback" style="background:${color}">${c.sym.slice(0,3)}</div>`;
+}
+
+// ── Sort ──
+function setSort(mode) {
+  sortMode = mode;
+  document.querySelectorAll('.sort-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + mode).classList.add('active');
+  render();
+}
+
+// ── Render ──
+function render() {
+  if (portfolio.length === 0) {
+    document.getElementById('coinList').innerHTML = `<div class="state-msg">لا يوجد بيانات في المحفظة.<br>افتح الصفحة الرئيسية أولاً.</div>`;
+    return;
+  }
+
+  // Compute per-coin data
+  const rows = portfolio.map(c => {
+    const currentPrice = livePrices[c.sym]?.price || c.currentPrice || FALLBACK_PRICES[c.sym] || 0;
+    const change24h = livePrices[c.sym]?.change24h ?? null;
+    const basePrice = c.basePrice || 0;
+    const qty = c.qty || 0;
+    const cost = basePrice * qty;
+    const value = currentPrice * qty;
+    const pnl = value - cost;
+    const pct = cost > 0 ? (pnl / cost * 100) : 0;
+    return { c, currentPrice, change24h, cost, value, pnl, pct, qty };
+  });
+
+  // Sort
+  rows.sort((a, b) => {
+    if (sortMode === 'pnl')   return b.pnl - a.pnl;
+    if (sortMode === 'pct')   return b.pct - a.pct;
+    if (sortMode === 'value') return b.value - a.value;
+    return 0;
+  });
+
+  // Totals
+  const totalValue = rows.reduce((s, r) => s + r.value, 0);
+  const totalCost  = rows.reduce((s, r) => s + r.cost, 0);
+  const totalPnl   = totalValue - totalCost;
+  const totalPct   = totalCost > 0 ? (totalPnl / totalCost * 100) : 0;
+
+  document.getElementById('totalValue').textContent  = fmt$(totalValue);
+  document.getElementById('costBasis').textContent   = 'Cost: ' + fmt$(totalCost);
+  const pnlEl = document.getElementById('totalPnl');
+  pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + fmt$(totalPnl);
+  pnlEl.className = 'sum-value ' + (totalPnl >= 0 ? 'pos' : 'neg');
+  const pctEl = document.getElementById('totalPct');
+  pctEl.textContent = fmtPct(totalPct);
+  pctEl.className = 'sum-sub ' + (totalPct >= 0 ? 'pos' : 'neg');
+
+  // Rows
+  const html = rows.map(({ c, currentPrice, change24h, pnl, pct }) => {
+    const name = COIN_NAMES[c.sym] || c.sym;
+    const isPos = pnl >= 0;
+    const chgClass = (change24h === null) ? '' : (change24h >= 0 ? 'pos' : 'neg');
+    const chgHtml = change24h !== null
+      ? `<div class="price-chg ${chgClass}">${fmtPct(change24h)}</div>`
+      : '';
+
+    return `<div class="coin-row">
+      <div class="asset">
+        ${coinIcon(c)}
+        <div class="asset-text">
+          <div class="sym">${c.sym}</div>
+          <div class="name">${name}</div>
+          <div class="qty-label">${fmtQty(c.qty, c.sym)}</div>
+        </div>
+      </div>
+      <div class="c-price">
+        <div class="price-val">${fmtPrice(currentPrice)}</div>
+        ${chgHtml}
+      </div>
+      <div class="c-pnl">
+        <div class="pnl-usd ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : ''}${fmt$(pnl)}</div>
+        <div class="pnl-pct ${isPos ? 'pos' : 'neg'}">${fmtPct(pct)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('coinList').innerHTML = html;
+}
+
+// ── CoinGecko image fallback — use known logo URLs ──
+// Some coins have direct logos in main app via COIN_ICONS
+// We'll fetch them from the main app's COIN_ICONS data in localStorage or just rely on CoinGecko CDN
+
+// ── Init ──
+loadTheme();
+loadPortfolio();
+render(); // immediate render with cached prices
+
+// Pull from cloud first, then fetch live
+setTimeout(async () => {
+  await pullFromCloud();
+  await fetchLivePrices();
+}, 800);
+
+// Auto-refresh every 90 seconds
+setInterval(fetchLivePrices, 90 * 1000);
+</script>
+</body>
+</html>
