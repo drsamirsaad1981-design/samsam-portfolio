@@ -200,7 +200,6 @@
   .btn-primary:hover { background: var(--accent2); }
   .btn-secondary { background: var(--bg3); color: var(--fg); border: 1px solid var(--border); }
   .btn-secondary:hover { background: var(--border); }
-  .btn-danger { background: var(--red); color: #fff; }
 
   .search-box {
     width: 100%;
@@ -720,11 +719,6 @@
   .live-dot.error { background: var(--red); }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-  .btn-live {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
-  }
-
   .modal-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; padding: 16px;
   }
@@ -808,7 +802,6 @@
   .btn-analysis { background:var(--bg3); color:var(--fg); border:1px solid var(--border); border-radius:8px; padding:6px 14px; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; transition:border-color .2s, color .2s; }
   .btn-analysis:hover { border-color:var(--accent); color:var(--accent); }
   .btn-analysis:disabled { opacity:0.5; cursor:not-allowed; }
-  .btn-analysis-full { width:100%; padding:10px 20px; font-size:0.9rem; letter-spacing:0.3px; border-radius:10px; }
   .btn-accum { background:var(--bg3); color:var(--fg); border:1px solid var(--border); border-radius:10px; padding:10px 20px; font-size:0.85rem; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:border-color .2s, color .2s; flex:1; justify-content:center; }
   .btn-accum:hover { border-color:var(--accent); color:var(--accent); }
 
@@ -1373,7 +1366,8 @@ const ARCHIVE_KEY    = 'samsam_archived_v1'; // separate key — never cleared b
 const CUSTOM_KEY     = 'samsam_custom_v1';   // manually added coins — survives Reset
 const TX_KEY         = 'samsam_tx_v1';       // transaction history — never cleared by Reset
 const PERF_KEY       = 'samsam_perf_v1';     // performance chart snapshots
-const ACCUM_KEY      = 'samsam_acc_v1';
+const ACCUM_KEY      = 'samsam_acc_v1';      // accumulation plan
+const VIEW_KEY       = 'samsam_view_pref';   // cards/table view preference
 const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
 const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
 ['samsam_portfolio','samsam_pf_v1','samsam_pf_v2','samsam_pf_v3'].forEach(k=>localStorage.removeItem(k));
@@ -2416,14 +2410,9 @@ function updateLiveIndicator(){
   else el.innerHTML='<span class="live-dot"></span> Prices from last session';
 }
 
-function refreshPrices(){
-  fetchLivePrices();
-}
-
 function renderAll(){renderHeader();renderSummary();renderTableAndStack();renderDashboard();}
 
 // ── View Toggle (Cards ↔ Table) ───────────────────────
-const VIEW_KEY = 'samsam_view_pref';
 let currentView = 'cards'; // default: mobile cards
 
 function applyView(view) {
@@ -2713,7 +2702,6 @@ document.getElementById('analysisModal').addEventListener('click', function(e) {
 document.getElementById('searchBox').addEventListener('input',renderTableAndStack);
 document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+' — Baseline: Oct 15, 2026';
 
-['samsam_portfolio','samsam_pf_v1','samsam_pf_v2'].forEach(k=>localStorage.removeItem(k));
 initPortfolio();
 renderAll();      // render content first with local data (fills both containers)
 initView();       // THEN apply view preference (shows/hides correct container)
@@ -2827,26 +2815,6 @@ function mergePerfSnaps(a, b) {
   return merged;
 }
 
-async function syncPerfSnapshotsFromCloud() {
-  try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_KEY }
-    });
-    if (res.ok) {
-      const json = await res.json();
-      const cloudSnaps = json.record.perfSnaps || [];
-      if (cloudSnaps.length) {
-        const local  = loadPerfSnapshots();
-        const merged = mergePerfSnaps(local, cloudSnaps);
-        // SAFETY: only update local if merged has more or equal points
-        if (merged.length >= local.length) {
-          try { localStorage.setItem(PERF_KEY, JSON.stringify(merged)); } catch(_) {}
-        }
-        drawPerfChart();
-      }
-    }
-  } catch(_) {}
-}
 
 // ─── Cross-device Portfolio Sync ─────────────────────────────────────────────
 // Push local portfolio data to cloud (fire-and-forget after any save)
