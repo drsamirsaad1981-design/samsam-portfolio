@@ -677,7 +677,7 @@
       <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
     </div>
   </div>
-  <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after 2+ price updates</div>
+  <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
   <canvas class="perf-chart-canvas" id="perfChartCanvas" height="90"></canvas>
 </div>
 
@@ -2531,15 +2531,17 @@ function drawPerfChart() {
   const wrap  = document.getElementById('perfChartWrap');
   const noData = document.getElementById('perfNoData');
   const canvas = document.getElementById('perfChartCanvas');
-  // Always show the section; toggle no-data message vs chart
+  // Always show the section
   wrap.style.display = '';
-  if (snaps.length < 2) {
+  if (snaps.length < 1) {
     if (noData) noData.style.display = '';
     canvas.style.display = 'none';
     return;
   }
   if (noData) noData.style.display = 'none';
   canvas.style.display = '';
+  // If only 1 snapshot, duplicate it so chart renders as a flat baseline
+  if (snaps.length === 1) snaps.push(snaps[0]);
   const W = canvas.offsetWidth || 300;
   const H = 90;
   canvas.width  = W * window.devicePixelRatio;
