@@ -231,9 +231,9 @@ body {
 }
 .col-header-inner {
   display: grid;
-  grid-template-columns: 1fr 100px 100px;
+  grid-template-columns: 1fr 82px 90px;
   gap: 0;
-  font-size: 0.69rem;
+  font-size: 0.62rem;
   color: var(--fg2);
   font-weight: 700;
   letter-spacing: 0.07em;
@@ -242,18 +242,20 @@ body {
   margin: 0 auto;
 }
 .col-header-inner .ch-price,
-.col-header-inner .ch-pnl { text-align: right; }
-.col-header-inner .ch-price,
 .col-header-inner .ch-pnl {
+  text-align: right;
   cursor: pointer;
   user-select: none;
   transition: color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }
 .col-header-inner .ch-price:hover,
 .col-header-inner .ch-pnl:hover { color: var(--accent); }
 .col-header-inner .ch-price.col-active,
 .col-header-inner .ch-pnl.col-active { color: var(--accent); }
-.ch-sort-arrow { margin-left: 5px; letter-spacing: 0; }
+.ch-sort-arrow { margin-left: 4px; letter-spacing: 0; }
 
 /* ── Coin list ── */
 .coin-list {
@@ -273,7 +275,7 @@ body {
   border-radius: 14px;
   padding: 11px 13px;
   display: grid;
-  grid-template-columns: 1fr 100px 100px;
+  grid-template-columns: 1fr 82px 90px;
   align-items: center;
   gap: 0;
   box-shadow: var(--shadow);
