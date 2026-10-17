@@ -127,7 +127,7 @@ body {
   grid-column: 1 / -1;
 }
 .pnl-bd-title {
-  font-size: 0.63rem;
+  font-size: 0.72rem;
   color: var(--fg2);
   font-weight: 700;
   text-transform: uppercase;
@@ -143,43 +143,43 @@ body {
 .pnl-bd-stat {
   background: var(--bg);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   text-align: center;
 }
 .pnl-bd-stat-label {
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   color: var(--fg2);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 .pnl-bd-stat-val {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.1;
 }
 .pnl-bd-stat-pct {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  margin-top: 3px;
+  margin-top: 4px;
   display: inline-block;
-  padding: 2px 6px;
-  border-radius: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
 }
 .pnl-bd-rows { display: flex; flex-direction: column; gap: 6px; }
 .pnl-bd-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 11px;
-  border-radius: 9px;
+  padding: 11px 14px;
+  border-radius: 10px;
   background: var(--bg);
-  font-size: 0.83rem;
+  font-size: 0.92rem;
 }
-.pnl-bd-row-label { color: var(--fg2); font-size: 0.78rem; display: flex; align-items: center; gap: 6px; }
-.pnl-bd-row-val { font-weight: 700; text-align: right; }
-.pnl-bd-row-pct { font-size: 0.7rem; font-weight: 600; margin-top: 2px; }
+.pnl-bd-row-label { color: var(--fg2); font-size: 0.88rem; display: flex; align-items: center; gap: 8px; }
+.pnl-bd-row-val { font-weight: 700; text-align: right; font-size: 0.95rem; }
+.pnl-bd-row-pct { font-size: 0.78rem; font-weight: 600; margin-top: 2px; }
 .pnl-bd-divider {
   height: 1px;
   background: var(--border);
@@ -473,7 +473,12 @@ body {
     padding-right: 0;
   }
   .pnl-bd-totals { grid-template-columns: 1fr 1fr 1fr; }
-  .pnl-bd-stat-val { font-size: 1.1rem; }
+  .pnl-bd-stat-val { font-size: 1.45rem; }
+  .pnl-bd-stat-label { font-size: 0.78rem; }
+  .pnl-bd-stat-pct { font-size: 0.85rem; }
+  .pnl-bd-row { padding: 13px 16px; }
+  .pnl-bd-row-label { font-size: 0.95rem; }
+  .pnl-bd-row-val { font-size: 1rem; }
   .col-header-inner {
     grid-template-columns: 1fr 130px 130px;
   }
@@ -1035,7 +1040,7 @@ function render() {
       const pct = base > 0 ? (pnl / base * 100) : 0;
       const cls = pnl >= 0 ? 'pos' : 'neg';
       const sign = pnl >= 0 ? '+' : '';
-      const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};flex-shrink:0"></span>`;
+      const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};flex-shrink:0"></span>`;
       return `<div class="pnl-bd-row">
         <span class="pnl-bd-row-label">${dot}${CAT_LABELS[cat]||cat}</span>
         <div style="text-align:right">
