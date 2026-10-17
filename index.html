@@ -1368,6 +1368,7 @@ const TX_KEY         = 'samsam_tx_v1';       // transaction history — never cl
 const PERF_KEY       = 'samsam_perf_v1';     // performance chart snapshots
 const ACCUM_KEY      = 'samsam_acc_v1';      // accumulation plan
 const VIEW_KEY       = 'samsam_view_pref';   // cards/table view preference
+const SYNC_KEY       = 'samsam_last_cloud_ts'; // last cloud timestamp we successfully pulled
 const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
 const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
 ['samsam_portfolio','samsam_pf_v1','samsam_pf_v2','samsam_pf_v3'].forEach(k=>localStorage.removeItem(k));
@@ -2709,16 +2710,15 @@ fetchLivePrices();
 // Auto-refresh live prices every 60 seconds
 setInterval(() => { fetchLivePrices(); }, 60000);
 
-// On load: push local data first (so this device's changes reach cloud),
-// then pull cloud if it's newer — handles the case where changes were made
-// before the sync code was deployed (or on a device that is now offline)
+// On load: pull cloud data — if cloud is newer (different from our last pull), apply it.
+// No push on load: push happens whenever the user saves, so we never overwrite cloud
+// with stale data just because this device is opening the page.
 setTimeout(async () => {
   try {
-    await pushPortfolioToCloud();          // push local → cloud (only if local is newer)
-    const updated = await pullPortfolioFromCloud(); // pull cloud → local (only if cloud is newer)
+    const updated = await pullPortfolioFromCloud();
     if (updated) { renderAll(); fetchLivePrices(); showSyncStatus('☁️ Synced from cloud — portfolio updated', 'rgba(34,197,94,0.9)'); }
   } catch(_) {}
-}, 4000); // wait 4s so page feels responsive first
+}, 3000); // wait 3s so page feels responsive first
 
 // ─── Global portfolio sync — runs every 2 minutes regardless of active tab ───
 function showSyncStatus(msg, color) {
@@ -2738,7 +2738,7 @@ async function globalAutoSync() {
     }
   } catch(_) {}
 }
-setInterval(globalAutoSync, 2 * 60 * 1000); // every 2 minutes
+setInterval(globalAutoSync, 60 * 1000); // every 60 seconds
 
 // ─── Accumulation Progress on Main Page ──────────────────────────────────────
 function renderAccumProgress(plan) {
@@ -2817,9 +2817,29 @@ function mergePerfSnaps(a, b) {
 
 
 // ─── Cross-device Portfolio Sync ─────────────────────────────────────────────
-// Push local portfolio data to cloud (fire-and-forget after any save)
+// DESIGN: push always stamps a fresh ISO timestamp so the other device sees a newer cloud.
+//         pull compares cloud timestamp vs the last timestamp WE pulled (SYNC_KEY),
+//         NOT vs our local lastSave — this way clock skew between devices never breaks sync.
+
 async function pushPortfolioToCloud() {
   try {
+    // Build portfolioData payload from all localStorage stores
+    const pfRaw = localStorage.getItem(STORAGE_KEY);
+    const pfData = pfRaw ? JSON.parse(pfRaw) : null;
+    if (!pfData || !pfData.coins || pfData.coins.length === 0) return; // truly empty — nothing to push
+
+    // Stamp a fresh timestamp so the receiving device always sees this as newer
+    const nowTs = new Date().toISOString();
+
+    const portfolioData = {
+      lastSave: nowTs,
+      coins: pfData.coins,
+      btcPrice: pfData.btcPrice,
+      transactions: (() => { try { return JSON.parse(localStorage.getItem(TX_KEY) || '[]'); } catch(_) { return []; } })(),
+      customCoins:  (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch(_) { return []; } })(),
+      archivedCoins: (() => { try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); } catch(_) { return []; } })(),
+    };
+
     // Read current cloud record first (to preserve perfSnaps + accumPlan)
     const getRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
       headers: { 'X-Master-Key': JSONBIN_KEY }
@@ -2829,36 +2849,18 @@ async function pushPortfolioToCloud() {
     const accumPlan = cur.record.accumPlan || [];
     const perfSnaps = cur.record.perfSnaps || [];
 
-    // Build portfolioData payload from all 4 localStorage stores
-    const pfRaw = localStorage.getItem(STORAGE_KEY);
-    const pfData = pfRaw ? JSON.parse(pfRaw) : null;
-    if (!pfData || !pfData.coins || pfData.coins.length === 0) return; // nothing to push
-
-    // Compare timestamps — only push if local is newer (or cloud has no portfolio yet)
-    const cloudPortfolio = cur.record.portfolioData || null;
-    // Use 'now' as fallback if pfData.lastSave missing (legacy data or called from saveArchive/saveCustomCoins/saveTransactions)
-    const localLastSave  = pfData.lastSave || new Date().toISOString();
-    const cloudLastSave  = cloudPortfolio ? (cloudPortfolio.lastSave || '') : '';
-    if (cloudLastSave && cloudLastSave >= localLastSave) return; // cloud already up to date
-
-    const portfolioData = {
-      lastSave: localLastSave,
-      coins: pfData.coins,
-      btcPrice: pfData.btcPrice,
-      transactions: JSON.parse(localStorage.getItem(TX_KEY) || '[]'),
-      customCoins:  JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'),
-      archivedCoins: JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'),
-    };
-
     await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
       body: JSON.stringify({ accumPlan, perfSnaps, portfolioData })
     });
+
+    // Update our own last-pulled timestamp so we don't immediately re-pull our own push
+    try { localStorage.setItem(SYNC_KEY, nowTs); } catch(_) {}
   } catch(_) {}
 }
 
-// Pull cloud portfolio data if it is newer than local — returns true if applied
+// Pull cloud portfolio data if cloud has data we haven't seen yet — returns true if applied
 async function pullPortfolioFromCloud() {
   try {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
@@ -2869,14 +2871,15 @@ async function pullPortfolioFromCloud() {
     const cloudPortfolio = json.record.portfolioData || null;
     if (!cloudPortfolio || !cloudPortfolio.coins || cloudPortfolio.coins.length === 0) return false;
 
-    const pfRaw = localStorage.getItem(STORAGE_KEY);
-    const localLastSave  = pfRaw ? (JSON.parse(pfRaw).lastSave || '') : '';
-    const cloudLastSave  = cloudPortfolio.lastSave || '';
+    const cloudLastSave = cloudPortfolio.lastSave || '';
+    if (!cloudLastSave) return false;
 
-    // Only apply cloud data if it is strictly newer
-    if (!cloudLastSave || cloudLastSave <= localLastSave) return false;
+    // Compare cloud timestamp vs last timestamp WE pulled — not vs local lastSave
+    // This is the key fix: clock differences between devices don't matter anymore
+    const lastPulled = (() => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch(_) { return ''; } })();
+    if (lastPulled && cloudLastSave <= lastPulled) return false; // already have this version
 
-    // Apply cloud data to localStorage — will be picked up on next renderAll
+    // Cloud has newer data — apply it
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         coins: cloudPortfolio.coins,
@@ -2886,6 +2889,8 @@ async function pullPortfolioFromCloud() {
       if (cloudPortfolio.transactions)  localStorage.setItem(TX_KEY, JSON.stringify(cloudPortfolio.transactions));
       if (cloudPortfolio.customCoins)   localStorage.setItem(CUSTOM_KEY, JSON.stringify(cloudPortfolio.customCoins));
       if (cloudPortfolio.archivedCoins) localStorage.setItem(ARCHIVE_KEY, JSON.stringify(cloudPortfolio.archivedCoins));
+      // Record the timestamp we just pulled so next check knows we have this version
+      localStorage.setItem(SYNC_KEY, cloudLastSave);
     } catch(_) {}
 
     // Reload in-memory state from updated localStorage
@@ -2941,16 +2946,16 @@ async function autoSyncPerf() {
       setInd('☁✓', 'rgba(148,163,184,0.5)');  // in sync
     }
 
-    // Also check if cloud portfolio is newer than local — apply directly (no extra fetch)
-    const pfRaw = localStorage.getItem(STORAGE_KEY);
-    const localLastSave = pfRaw ? (JSON.parse(pfRaw).lastSave || '') : '';
+    // Also check if cloud portfolio has data we haven't seen yet — apply directly (no extra fetch)
     const cloudLastSave = cloudPortfolio ? (cloudPortfolio.lastSave || '') : '';
-    if (cloudPortfolio && cloudPortfolio.coins && cloudPortfolio.coins.length > 0 && cloudLastSave > localLastSave) {
+    const lastPulled = (() => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch(_) { return ''; } })();
+    if (cloudPortfolio && cloudPortfolio.coins && cloudPortfolio.coins.length > 0 && cloudLastSave && cloudLastSave > lastPulled) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: cloudPortfolio.coins, btcPrice: cloudPortfolio.btcPrice, lastSave: cloudLastSave }));
         if (cloudPortfolio.transactions)  localStorage.setItem(TX_KEY,      JSON.stringify(cloudPortfolio.transactions));
         if (cloudPortfolio.customCoins)   localStorage.setItem(CUSTOM_KEY,  JSON.stringify(cloudPortfolio.customCoins));
         if (cloudPortfolio.archivedCoins) localStorage.setItem(ARCHIVE_KEY, JSON.stringify(cloudPortfolio.archivedCoins));
+        localStorage.setItem(SYNC_KEY, cloudLastSave);
         loadArchive(); loadCustomCoins(); loadTransactions();
         portfolio = cloudPortfolio.coins.filter(c => !getRemovedSyms().has(c.sym));
         btcPrice  = cloudPortfolio.btcPrice || btcPrice;
