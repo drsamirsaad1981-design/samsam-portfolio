@@ -504,7 +504,7 @@
     .coins-stack.view-active {
       display: grid !important;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      align-items: start;
+      align-items: stretch;
       gap: 14px;
     }
     .coin-card {
@@ -512,6 +512,8 @@
       gap: 10px;
       border-radius: 14px;
       transition: box-shadow 0.15s, border-color 0.15s;
+      height: 100%;
+      box-sizing: border-box;
     }
     .coin-card:hover {
       border-color: var(--accent);
