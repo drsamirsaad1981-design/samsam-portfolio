@@ -166,20 +166,22 @@ body {
 }
 .sum-pct-badge {
   display: inline-block;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 6px;
-  margin-top: 5px;
+  padding: 3px 9px;
+  border-radius: 7px;
+  margin-top: 6px;
+  align-self: flex-start;   /* never stretches to card width */
+  max-width: fit-content;
 }
 .sum-pct-badge.pos { background: var(--green-bg); color: var(--green); }
 .sum-pct-badge.neg { background: var(--red-bg);   color: var(--red); }
-/* sparkline canvas inside card */
+/* sparkline — subtle watermark only, does not overlap text */
 .sum-sparkline {
   position: absolute;
   bottom: 0; right: 0;
-  width: 55%; height: 55%;
-  opacity: 0.07;
+  width: 50%; height: 45%;
+  opacity: 0.04;
   pointer-events: none;
 }
 .pos { color: var(--green); }
@@ -251,7 +253,7 @@ body {
 .col-header-inner .ch-pnl:hover { color: var(--accent); }
 .col-header-inner .ch-price.col-active,
 .col-header-inner .ch-pnl.col-active { color: var(--accent); }
-.ch-sort-arrow { margin-left: 2px; }
+.ch-sort-arrow { margin-left: 5px; letter-spacing: 0; }
 
 /* ── Coin list ── */
 .coin-list {
@@ -315,13 +317,14 @@ body {
 .asset-text { min-width: 0; }
 .a-sym  { font-size: 0.88rem; font-weight: 700; }
 .a-name {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--fg2);
+  opacity: 0.7;          /* more subdued — clearly below qty in hierarchy */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.a-qty  { font-size: 0.72rem; font-weight: 500; color: var(--fg); opacity: 0.65; margin-top: 2px; }
+.a-qty  { font-size: 0.73rem; font-weight: 600; color: var(--fg); opacity: 0.8; margin-top: 2px; }
 
 /* Price col */
 .c-price { text-align: right; }
