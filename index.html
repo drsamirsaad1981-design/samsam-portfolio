@@ -323,30 +323,32 @@
       margin-bottom: 14px;
     }
 
-    /* Header-top: logo left, date-tag right — aligned to card edges */
+    /* Header-top: logo left, date-tag right — same flex row, vertically centered */
     .header-top {
       flex-direction: row;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       margin-bottom: 18px;
     }
     .header-top h1 { font-size: 1.5rem; }
 
-    /* Date tag: top-right, aligned with card right edge */
+    /* Date tag: inline with logo row, no self-alignment overrides */
     .date-tag {
-      align-self: flex-start;
-      margin-top: 2px;
+      align-self: auto;
+      margin-top: 0;
       white-space: nowrap;
       font-size: 0.75rem;
       padding: 7px 14px;
       border-radius: 8px;
+      flex-shrink: 0;
     }
 
-    /* 4 stat cards — equal width, fill full row */
+    /* 4 stat cards — equal width, fill full row (100% of header card) */
     .header-stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 14px;
+      width: 100%;
     }
 
     /* Stat card: center everything, generous padding */
