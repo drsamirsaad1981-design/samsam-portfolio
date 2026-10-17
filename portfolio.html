@@ -623,24 +623,26 @@
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 16px 20px;
+    padding: 20px 24px;
     display: flex;
     flex-direction: column;
-    /* h3 stays at top; body content fills and centres itself */
   }
-  .dash-card h3 { font-size: 0.75rem; color: var(--fg2); margin-bottom: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; flex-shrink: 0; }
+  /* ① Larger, bolder card title */
+  .dash-card h3 { font-size: 0.88rem; color: var(--fg2); margin-bottom: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; flex-shrink: 0; }
   /* donut-wrap fills remaining space and centres SVG+legend inside it */
   .dash-card .donut-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
   .dash-card .pnl-rows { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 
-  .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center; }
-  .donut-legend { display: flex; flex-direction: column; gap: 6px; min-width: 180px; max-width: 260px; }
-  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .legend-label { color: var(--fg2); flex: 1; }
-  .legend-val { color: var(--fg); font-weight: 700; font-size: 0.82rem; white-space: nowrap; }
-  /* ③ Brighter percentage text for easy reading */
-  .legend-pct { color: rgba(148,163,184,0.85); font-weight: 500; font-size: 0.75rem; margin-left: 3px; }
+  /* ④ Gap between donut and legend, wrap on narrow */
+  .donut-wrap { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; justify-content: center; }
+  /* ③ Larger legend items */
+  .donut-legend { display: flex; flex-direction: column; gap: 10px; min-width: 190px; max-width: 280px; }
+  .legend-item { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { color: var(--fg2); flex: 1; font-size: 0.92rem; }
+  .legend-val { color: var(--fg); font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+  /* ③ Brighter, larger percentage */
+  .legend-pct { color: #94a3b8; font-weight: 600; font-size: 0.85rem; margin-left: 4px; }
 
   .pnl-rows { display: flex; flex-direction: column; gap: 6px; }
   .pnl-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg3); font-size: 0.82rem; }
@@ -993,7 +995,7 @@
   <div class="dash-card">
     <h3>📊 Allocation</h3>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="200" height="200" viewBox="0 0 140 140" id="donutChart"></svg>
+      <svg class="donut-svg" width="240" height="240" viewBox="0 0 160 160" id="donutChart"></svg>
       <div class="donut-legend" id="donutLegend"></div>
     </div>
   </div>
@@ -2238,7 +2240,8 @@ function renderDashboard() {
   const totalVal=Object.values(catTotals).reduce((a,b)=>a+b,0);
   const entries=Object.entries(catTotals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
 
-  const cx=70,cy=70,r=54,inner=34;
+  // ② Larger donut: viewBox 160×160, cx/cy=80, outer r=64, inner r=42
+  const cx=80,cy=80,r=64,inner=42;
   let startAngle=-Math.PI/2,paths='';
   entries.forEach(([cat,val])=>{
     const angle=(val/totalVal)*Math.PI*2;const endAngle=startAngle+angle;
@@ -2258,9 +2261,10 @@ function renderDashboard() {
   });
   const totalFmt='$'+totalVal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
   const svgEl=document.getElementById('donutChart');
+  // ② Larger centre text to match bigger donut
   svgEl.innerHTML=paths+
-    `<text id="donutCenter1" x="70" y="64" text-anchor="middle" font-size="13" font-weight="700" fill="var(--fg)">${totalFmt}</text>
-     <text id="donutCenter2" x="70" y="80" text-anchor="middle" font-size="8.5" fill="var(--fg2)">Total</text>`;
+    `<text id="donutCenter1" x="80" y="74" text-anchor="middle" font-size="16" font-weight="700" fill="var(--fg)">${totalFmt}</text>
+     <text id="donutCenter2" x="80" y="93" text-anchor="middle" font-size="11" fill="var(--fg2)">Total</text>`;
   // Hover handlers
   window.donutHover=function(label,val,pct,color){
     document.getElementById('donutCenter1').textContent=pct+'%';
