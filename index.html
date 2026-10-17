@@ -721,7 +721,7 @@
     <button class="btn btn-secondary" onclick="openAnalysis()">🤖 AI Analysis</button>
   </div>
   <div class="control-row">
-    <select class="btn btn-secondary" id="filterAction" onchange="sortCol='currentValue';sortDir=-1;renderTableAndStack()" style="cursor:pointer; flex:2;">
+    <select class="btn btn-secondary" id="filterAction" onchange="sortCol='currentValue';sortDir=1;renderTableAndStack()" style="cursor:pointer; flex:2;">
       <option value="">All Coins</option>
       <option value="gainers">🟢 Top Gainers</option>
       <option value="losers">🔴 Top Losers</option>
@@ -1101,7 +1101,7 @@ let portfolio = [];
 let archivedCoins = [];
 let btcPrice = 82363;
 let sortCol = 'currentValue';
-let sortDir = -1;
+let sortDir = 1;  // 1 = descending (highest first), -1 = ascending
 let liveStatus = 'idle';
 let lastFetchTime = null;
 
@@ -1390,7 +1390,7 @@ function setCatFilter(cat) {
   activeCatFilter = (activeCatFilter === cat) ? '' : cat;
   // Always reset to Holdings / Current Value descending on category change
   sortCol = 'currentValue';
-  sortDir = -1;
+  sortDir = 1;
   renderSummary();
   renderTableAndStack();
 }
@@ -1947,7 +1947,7 @@ async function fetchCoinLogoAndPrice(coin, cgId) {
 document.getElementById('addCoinModal').addEventListener('click', function(e){ if(e.target===this) closeAddCoin(); });
 
 function sortTable(col) {
-  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=-1;}
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=1;}
   renderTableAndStack();
 }
 
