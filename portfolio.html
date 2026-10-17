@@ -1380,8 +1380,9 @@ const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
 function loadArchive() {
   try { archivedCoins = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); } catch(e) { archivedCoins = []; }
 }
-function saveArchive() {
+function saveArchive(skipCloudPush = false) {
   try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archivedCoins)); } catch(e) {}
+  if (!skipCloudPush) pushPortfolioToCloud();
 }
 function getRemovedSyms() {
   return new Set(archivedCoins.map(c => c.sym));
@@ -1392,8 +1393,9 @@ let customCoins = []; // array of coin objects (baseline snapshot, not live stat
 function loadCustomCoins() {
   try { customCoins = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch(e) { customCoins = []; }
 }
-function saveCustomCoins() {
+function saveCustomCoins(skipCloudPush = false) {
   try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(customCoins)); } catch(e) {}
+  if (!skipCloudPush) pushPortfolioToCloud();
 }
 
 // ── Transaction History ───────────────────────────────
@@ -1404,6 +1406,7 @@ function loadTransactions() {
 }
 function saveTransactions() {
   try { localStorage.setItem(TX_KEY, JSON.stringify(transactions)); } catch(e) {}
+  pushPortfolioToCloud(); // sync transaction changes to cloud
 }
 function addTransaction(sym, type, qty, price, note) {
   const tx = {
@@ -1551,7 +1554,7 @@ function savePortfolio(pushToCloud = true) {
       }
     }
   });
-  if(customChanged) saveCustomCoins();
+  if(customChanged) saveCustomCoins(true); // true = skip cloud push (savePortfolio handles it below)
   // Push portfolio data to cloud immediately after any save (fire and forget)
   if (pushToCloud) pushPortfolioToCloud();
 }
@@ -1975,13 +1978,13 @@ function confirmRemove() {
   // Archive with timestamp in SEPARATE key — survives Reset
   const archived = { ...portfolio[idx], removedAt: new Date().toISOString() };
   archivedCoins.push(archived);
-  saveArchive(); // independent of savePortfolio — never touched by resetApp
+  saveArchive(true); // skip cloud push — savePortfolio below handles it
   // Also remove from custom coins store if it was a manually added coin
   const customIdx = customCoins.findIndex(c => c.sym === _rmSym);
-  if(customIdx !== -1) { customCoins.splice(customIdx, 1); saveCustomCoins(); }
+  if(customIdx !== -1) { customCoins.splice(customIdx, 1); saveCustomCoins(true); } // skip — savePortfolio below handles it
   // Remove from active portfolio
   portfolio.splice(idx, 1);
-  savePortfolio();
+  savePortfolio(); // single cloud push with all 4 stores fully updated
   renderAll();
   closeRemove();
 }
@@ -2067,7 +2070,7 @@ function deleteTx(txId) {
   // Remove transaction
   const idx = transactions.findIndex(t => t.id === txId);
   transactions.splice(idx, 1);
-  saveTransactions();
+  saveTransactions(); // will push to cloud
 
   // Recalculate coin from remaining transactions
   const sym = tx.sym;
@@ -2079,7 +2082,7 @@ function deleteTx(txId) {
       coin.basePrice = recalc.avgCost > 0 ? recalc.avgCost : coin.basePrice;
       coin.walletValue = coin.qty * coin.basePrice;
     }
-    savePortfolio();
+    savePortfolio(); // second push with updated portfolio (OK — timestamps differ, cloud gets latest)
     renderAll();
   }
   // Re-render history modal
@@ -2127,7 +2130,7 @@ function applyAddCoin() {
   // Remove from archive if previously removed
   const removedIdx = archivedCoins.findIndex(c => c.sym === sym);
   if(removedIdx !== -1) archivedCoins.splice(removedIdx, 1);
-  saveArchive();
+  saveArchive(true); // skip cloud push — savePortfolio below handles it
   // Build new coin object
   const cgId = document.getElementById('acCgId').value.trim().toLowerCase() || null;
   const name = document.getElementById('acName').value.trim() || sym;
@@ -2144,13 +2147,13 @@ function applyAddCoin() {
   const existingCustomIdx = customCoins.findIndex(c => c.sym === sym);
   if(existingCustomIdx !== -1) customCoins.splice(existingCustomIdx, 1);
   customCoins.push({ sym, qty, basePrice: price, walletValue: qty * price, cat, cgId: cgId || undefined, addedAt: new Date().toISOString() });
-  saveCustomCoins();
+  saveCustomCoins(true); // skip cloud push — savePortfolio below handles it
   portfolio.push(newCoin);
   // Record initial buy transaction (only if no prior tx exists for this sym)
   if(getTxForSym(sym).length === 0) {
-    addTransaction(sym, 'buy', qty, price, 'Initial position');
+    addTransaction(sym, 'buy', qty, price, 'Initial position'); // saveTransactions inside addTransaction will push
   }
-  savePortfolio();
+  savePortfolio(); // single definitive cloud push with all 4 stores fully updated
   renderAll();
   closeAddCoin();
   // If cgId given: fetch logo + live price
@@ -2362,7 +2365,7 @@ async function fetchLivePrices() {
     if(data['bitcoin']&&data['bitcoin'].usd)btcPrice=data['bitcoin'].usd;
     lastFetchTime=new Date();
     setLiveStatus('ok');
-    savePortfolio();renderAll();
+    savePortfolio(false);renderAll(); // false = no cloud push — prices only, no user data changed
     // Re-render accumulation progress with fresh prices
     try {
       const accPlan = JSON.parse(localStorage.getItem(ACCUM_KEY) || '[]');
@@ -2387,8 +2390,8 @@ async function fetchMissingLogos() {
         if(data.image && data.image.small) {
           coin.logoUrl = data.image.small;
           const cc = customCoins.find(c => c.sym === coin.sym);
-          if(cc) { cc.logoUrl = data.image.small; saveCustomCoins(); }
-          savePortfolio();
+          if(cc) { cc.logoUrl = data.image.small; saveCustomCoins(); } // saveCustomCoins triggers cloud push
+          savePortfolio(false); // false = cloud already pushed by saveCustomCoins above
           renderAll(); // re-render to show logo immediately
         }
       }
@@ -2837,7 +2840,8 @@ async function pushPortfolioToCloud() {
 
     // Compare timestamps — only push if local is newer (or cloud has no portfolio yet)
     const cloudPortfolio = cur.record.portfolioData || null;
-    const localLastSave  = pfData.lastSave || '';
+    // Use 'now' as fallback if pfData.lastSave missing (legacy data or called from saveArchive/saveCustomCoins/saveTransactions)
+    const localLastSave  = pfData.lastSave || new Date().toISOString();
     const cloudLastSave  = cloudPortfolio ? (cloudPortfolio.lastSave || '') : '';
     if (cloudLastSave && cloudLastSave >= localLastSave) return; // cloud already up to date
 
@@ -2941,13 +2945,22 @@ async function autoSyncPerf() {
       setInd('☁✓', 'rgba(148,163,184,0.5)');  // in sync
     }
 
-    // Also check if cloud portfolio is newer than local — pull and re-render if so
+    // Also check if cloud portfolio is newer than local — apply directly (no extra fetch)
     const pfRaw = localStorage.getItem(STORAGE_KEY);
     const localLastSave = pfRaw ? (JSON.parse(pfRaw).lastSave || '') : '';
     const cloudLastSave = cloudPortfolio ? (cloudPortfolio.lastSave || '') : '';
-    if (cloudPortfolio && cloudLastSave > localLastSave) {
-      const updated = await pullPortfolioFromCloud();
-      if (updated) { renderAll(); setInd('☁↓', 'rgba(59,130,246,0.9)'); }
+    if (cloudPortfolio && cloudPortfolio.coins && cloudPortfolio.coins.length > 0 && cloudLastSave > localLastSave) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: cloudPortfolio.coins, btcPrice: cloudPortfolio.btcPrice, lastSave: cloudLastSave }));
+        if (cloudPortfolio.transactions)  localStorage.setItem(TX_KEY,      JSON.stringify(cloudPortfolio.transactions));
+        if (cloudPortfolio.customCoins)   localStorage.setItem(CUSTOM_KEY,  JSON.stringify(cloudPortfolio.customCoins));
+        if (cloudPortfolio.archivedCoins) localStorage.setItem(ARCHIVE_KEY, JSON.stringify(cloudPortfolio.archivedCoins));
+        loadArchive(); loadCustomCoins(); loadTransactions();
+        portfolio = cloudPortfolio.coins.filter(c => !getRemovedSyms().has(c.sym));
+        btcPrice  = cloudPortfolio.btcPrice || btcPrice;
+        renderAll();
+        setInd('☁↓', 'rgba(59,130,246,0.9)');
+      } catch(_) {}
     }
 
     drawPerfChart();
