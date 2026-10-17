@@ -449,7 +449,7 @@ function mergeCustomCoins() {
 }
 
 async function loadPortfolio() {
-  // 1. Try localStorage first
+  // 1. Try localStorage first (instant — no network needed)
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -464,27 +464,31 @@ async function loadPortfolio() {
     }
   } catch(e) {}
 
-  // 2. Try JSONbin cloud
+  // 2. Show static fallback immediately so page isn't blank while cloud fetch runs
+  applyBaseFallback();
+  mergeCustomCoins();
+  renderOverview(); // render now with static data
+
+  // 3. Try JSONbin cloud in background (3 s timeout) — update if better data found
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
     const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_KEY }
+      headers: { 'X-Master-Key': JSONBIN_KEY },
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     if (res.ok) {
       const json = await res.json();
       const cloudPf = json.record && json.record.portfolioData;
       if (cloudPf && cloudPf.coins && cloudPf.coins.length > 0) {
-        // Save to localStorage for next time
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudPf.coins)); } catch(_) {}
         applyCoinsArray(cloudPf.coins);
         mergeCustomCoins();
-        return;
+        renderOverview(); // re-render with live cloud data
       }
     }
-  } catch(e) {}
-
-  // 3. Static BASE_PORTFOLIO + LIVE_PRICES_OCT15 fallback
-  applyBaseFallback();
-  mergeCustomCoins();
+  } catch(e) { /* timeout or network error — static fallback already rendered */ }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -686,18 +690,8 @@ function setupLayout() {
 // ── Init ───────────────────────────────────────────────────────────────────
 loadTheme();
 setupLayout();
-document.getElementById('sectionOverview').innerHTML =
-  '<div class="loading-msg">⏳ Loading portfolio data…</div>';
-
-(async () => {
-  await loadPortfolio();
-  if (portfolio.length > 0) {
-    renderOverview();
-  } else {
-    document.getElementById('sectionOverview').innerHTML =
-      '<div class="loading-msg">⚠️ Could not load portfolio data. Please try again.</div>';
-  }
-})();
+// loadPortfolio() renders immediately with static data, then updates from cloud
+loadPortfolio();
 </script>
 </body>
 </html>
