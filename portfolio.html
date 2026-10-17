@@ -959,10 +959,16 @@
 <a href="./allocation.html" class="alloc-mini-card" id="allocMiniCard" style="text-decoration:none">
   <div class="alloc-mini-left">
     <div class="alloc-mini-title">📊 Portfolio Allocation</div>
-    <div class="alloc-mini-cats" id="allocMiniCats"></div>
+    <div class="alloc-mini-cats" id="allocMiniCats">
+      <div class="alloc-mini-cat"><span class="alloc-mini-dot" style="background:#f7931a"></span>Bitcoin <span style="color:var(--fg2);font-weight:400">—%</span></div>
+      <div class="alloc-mini-cat"><span class="alloc-mini-dot" style="background:#3b82f6"></span>Layer 1 <span style="color:var(--fg2);font-weight:400">—%</span></div>
+      <div class="alloc-mini-cat"><span class="alloc-mini-dot" style="background:#8b5cf6"></span>Layer 2 <span style="color:var(--fg2);font-weight:400">—%</span></div>
+    </div>
   </div>
   <div class="alloc-mini-donut">
-    <svg id="allocMiniSvg" viewBox="0 0 60 60" width="60" height="60"></svg>
+    <svg id="allocMiniSvg" viewBox="0 0 60 60" width="60" height="60">
+      <circle cx="30" cy="30" r="23" fill="none" stroke="var(--bg3)" stroke-width="10"/>
+    </svg>
   </div>
   <div class="alloc-mini-arrow">›</div>
 </a>
