@@ -352,13 +352,19 @@
 
     /* Header-top: logo left, date-tag right — single flex row, vertically centered */
     .header-top {
+      display: flex;
       flex-direction: row;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 24px;
     }
     .header-top h1 { font-size: 1.5rem; }
-    .gt-badge { font-size: 0.7rem; padding: 3px 10px; }
+    .gt-badge {
+      font-size: 0.7rem;
+      padding: 3px 10px;
+      background: rgba(255,153,0,0.12);
+      border-color: rgba(255,153,0,0.35);
+    }
 
     /* Date tag: inline with logo row */
     .date-tag {
