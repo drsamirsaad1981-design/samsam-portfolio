@@ -868,27 +868,30 @@ function coinIconHtml(c) {
 }
 
 // ── Category config (mirrors index.html) ──
+// ── Categories — exact mirror of index.html ──
 const CAT_COLORS = {
-  btc:'#f7931a', layer1:'#3b82f6', layer2:'#8b5cf6',
-  defi:'#10b981', ai:'#06b6d4', rwa:'#f59e0b',
-  infra:'#6366f1', gaming:'#ec4899', other:'#6b7280'
+  layer1:'#3b82f6', layer2:'#8b5cf6', defi:'#10b981',
+  ai:'#e879f9', meme:'#ef4444', infra:'#06b6d4',
+  other:'#6b7280', btc:'#f7931a'
 };
 const CAT_LABELS = {
-  btc:'Bitcoin', layer1:'Layer 1', layer2:'Layer 2',
-  defi:'DeFi', ai:'AI', rwa:'RWA',
-  infra:'Infrastructure', gaming:'Gaming', other:'Other'
+  layer1:'Layer 1', layer2:'Layer 2', defi:'DeFi',
+  ai:'AI & Web3', meme:'Meme', infra:'Infrastructure',
+  other:'Other', btc:'Bitcoin'
 };
+// ── Exact cat values from index.html coin list ──
 const COIN_CATS = {
-  BTC:'btc', ETH:'layer1', SOL:'layer1', BNB:'layer1', AVAX:'layer1',
-  NEAR:'layer1', ATOM:'layer1', APT:'layer1', SUI:'layer1', ICP:'layer1',
-  KSM:'layer1', DOT:'layer1', HBAR:'layer1', VET:'layer1', VTHO:'layer1',
-  CRO:'layer1', XDC:'layer1', KAVA:'layer1', GRAM:'layer1', KAS:'layer1',
-  MON:'layer1', DOGE:'layer1', FLR:'layer1', POL:'layer1', SEI:'layer1',
-  ARB:'layer2', OP:'layer2', STRK:'layer2', MNT:'layer2', MOVR:'layer2',
-  GLMR:'layer2', AVAIL:'layer2', XPL:'layer2',
-  LINK:'defi', JUP:'defi', ONDO:'rwa',
-  TAO:'ai', RENDER:'ai', WLD:'ai', NIGHT:'ai',
-  PYTH:'infra', QNT:'infra', ENS:'infra', PONS:'infra',
+  BTC:'btc',
+  TAO:'ai', WLD:'ai', RENDER:'ai',
+  SUI:'layer1', NEAR:'layer1', SEI:'layer1', ATOM:'layer1', APT:'layer1',
+  AVAX:'layer1', ICP:'layer1', KSM:'layer1', GRAM:'layer1', NIGHT:'layer1',
+  BNB:'layer1', ETH:'layer1', SOL:'layer1', HBAR:'layer1', MON:'layer1',
+  CRO:'layer1', XDC:'layer1', DOT:'layer1', DOGE:'meme', KAS:'layer1',
+  VTHO:'layer1', VET:'layer1',
+  ARB:'layer2', MOVR:'layer2', GLMR:'layer2', OP:'layer2', STRK:'layer2',
+  MNT:'layer2', POL:'layer2',
+  JUP:'defi', LINK:'defi', ENS:'defi', ONDO:'defi', KAVA:'defi', PONS:'defi',
+  PYTH:'infra', QNT:'infra', AVAIL:'infra', FLR:'infra', XPL:'infra',
 };
 
 // ── Realized P&L from sell transactions ──
