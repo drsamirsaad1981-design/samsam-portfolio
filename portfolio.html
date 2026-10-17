@@ -322,28 +322,71 @@
       padding: 20px 24px;
       margin-bottom: 14px;
     }
+
+    /* Header-top: logo left, date-tag right — aligned to card edges */
     .header-top {
       flex-direction: row;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
     }
     .header-top h1 { font-size: 1.5rem; }
 
-    /* 4 stat cards in one row, equal width */
+    /* Date tag: top-right, aligned with card right edge */
+    .date-tag {
+      align-self: flex-start;
+      margin-top: 2px;
+      white-space: nowrap;
+      font-size: 0.75rem;
+      padding: 7px 14px;
+      border-radius: 8px;
+    }
+
+    /* 4 stat cards — equal width, fill full row */
     .header-stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      gap: 14px;
     }
+
+    /* Stat card: center everything, generous padding */
     .stat-card {
-      padding: 14px 16px;
-      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 18px 16px;
+      border-radius: 14px;
       text-align: center;
+      gap: 4px;
     }
-    .stat-label { font-size: 0.7rem; margin-bottom: 4px; }
-    .stat-value { font-size: 1.15rem; }
-    .stat-sub   { font-size: 0.75rem; margin-top: 5px; }
+
+    /* Label: small muted uppercase */
+    .stat-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--fg2);
+      margin-bottom: 6px;
+    }
+
+    /* Main value: large and bold */
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      word-break: break-all;
+    }
+
+    /* Sub value: smaller, muted */
+    .stat-sub {
+      font-size: 0.72rem;
+      color: var(--fg2);
+      opacity: 0.75;
+      margin-top: 6px;
+      font-weight: 500;
+    }
 
     /* ── Perf chart & progress bars ── */
     .perf-chart-wrap { border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; }
