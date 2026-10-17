@@ -284,62 +284,6 @@
     gap: 8px;
   }
 
-  /* ── Desktop card grid ── */
-  @media(min-width: 900px) {
-    /* Switch stack from column to responsive grid */
-    .coins-stack.view-active {
-      display: grid !important;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      align-items: start;
-      gap: 14px;
-    }
-
-    /* Card itself: slightly more padding, consistent height feel */
-    .coin-card {
-      padding: 14px;
-      gap: 10px;
-      border-radius: 14px;
-      transition: box-shadow 0.15s, border-color 0.15s;
-    }
-    .coin-card:hover {
-      border-color: var(--accent);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-    }
-
-    /* Header: bigger symbol & price on desktop */
-    .coin-card-header > div:first-child .coin-card-sym { font-size: 1.05rem; }
-    .coin-card-header > div:last-child > div:first-child { font-size: 1.1rem !important; }
-
-    /* Body: 3-column grid on desktop for tighter metric layout */
-    .coin-card-body {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 7px;
-      padding: 10px;
-    }
-
-    /* Metrics: slightly larger labels & values */
-    .coin-metric { padding: 8px 10px; border-radius: 8px; }
-    .coin-metric label { font-size: 0.62rem; }
-    .coin-metric val,
-    .coin-metric .metric-input { font-size: 0.9rem; }
-
-    /* Footer: keep rank + date on one line */
-    .coin-card-footer { font-size: 0.75rem; }
-
-    /* Action buttons: side-by-side, full-width row */
-    .coin-card-actions {
-      display: flex;
-      gap: 6px;
-    }
-    .coin-card-actions button { flex: 1; padding: 7px 0; font-size: 0.8rem; }
-  }
-
-  @media(min-width: 1200px) {
-    .coins-stack.view-active {
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    }
-  }
-
   .editable-input {
     background: var(--bg3);
     border: 1px solid var(--border);
@@ -364,15 +308,147 @@
   .table-wrapper.view-active { display: block; }
   .coins-stack.view-active  { display: flex; }
 
-  /* Large screens: keep layout improvements regardless of view mode */
+  /* ═══════════════════════════════════════════════════
+     DESKTOP LAYOUT  (≥ 900 px)
+     ═══════════════════════════════════════════════════ */
   @media(min-width: 900px) {
-    body { padding: 20px; max-width: 1400px; margin: 0 auto; }
-    .header-top { flex-direction: row; justify-content: space-between; align-items: center; }
-    .header-stats { display: flex; gap: 12px; grid-template-columns: none; }
-    .controls { flex-direction: row; flex-wrap: wrap; align-items: center; }
-    .control-row { width: auto; flex: 1; }
-    .search-box { width: auto; max-width: 260px; flex: 1; min-width: 140px; }
-    .btn { flex: unset; font-size: 0.82rem; padding: 10px 14px; }
+    body { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+
+    /* ── Header ── */
+    header {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 14px;
+    }
+    .header-top {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .header-top h1 { font-size: 1.5rem; }
+
+    /* 4 stat cards in one row, equal width */
+    .header-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .stat-card {
+      padding: 14px 16px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .stat-label { font-size: 0.7rem; margin-bottom: 4px; }
+    .stat-value { font-size: 1.15rem; }
+    .stat-sub   { font-size: 0.75rem; margin-top: 5px; }
+
+    /* ── Perf chart & progress bars ── */
+    .perf-chart-wrap { border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; }
+    .perf-chart-header { margin-bottom: 10px; }
+    .perf-chart-title { font-size: 0.88rem; }
+    .dream-bar { border-radius: 14px; padding: 14px 20px; margin-bottom: 10px; }
+
+    /* ── Controls toolbar — single clean row ── */
+    .controls {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 8px;
+      margin: 14px 0;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 14px;
+    }
+
+    /* Search takes up free space on the left */
+    .search-box {
+      width: auto;
+      flex: 1;
+      min-width: 160px;
+      max-width: 280px;
+      padding: 9px 14px;
+      font-size: 0.85rem;
+    }
+
+    /* Each control-row becomes an inline flex group, no wrapping */
+    .control-row {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 6px;
+      width: auto;
+      flex: 0 0 auto;
+    }
+
+    /* Divider between groups */
+    .control-row + .control-row {
+      padding-left: 8px;
+      border-left: 1px solid var(--border);
+      margin-left: 0;
+    }
+
+    /* Buttons in toolbar: compact, fixed width */
+    .controls .btn {
+      flex: 0 0 auto;
+      font-size: 0.8rem;
+      padding: 9px 14px;
+      border-radius: 9px;
+      white-space: nowrap;
+    }
+    /* Filter dropdown matches button style */
+    .controls select.btn {
+      flex: 0 0 auto;
+      min-width: 150px;
+      padding: 9px 12px;
+    }
+
+    /* ── Dashboard section (donut + PnL) ── */
+    .dashboard-section {
+      flex-direction: row;
+      gap: 16px;
+    }
+    .dash-card { flex: 1; border-radius: 14px; }
+
+    /* ── Card grid (already set above in its own block) ── */
+    .coins-stack.view-active {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      align-items: start;
+      gap: 14px;
+    }
+    .coin-card {
+      padding: 14px;
+      gap: 10px;
+      border-radius: 14px;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    .coin-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    .coin-card-header > div:last-child > div:first-child { font-size: 1.1rem !important; }
+    .coin-card-body {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      padding: 10px;
+    }
+    .coin-metric { padding: 8px 10px; border-radius: 8px; }
+    .coin-metric label { font-size: 0.62rem; }
+    .coin-metric val,
+    .coin-metric .metric-input { font-size: 0.9rem; }
+    .coin-card-footer { font-size: 0.75rem; }
+    .coin-card-actions button { flex: 1; padding: 7px 0; font-size: 0.8rem; }
+  }
+
+  @media(min-width: 1200px) {
+    .header-stats { grid-template-columns: repeat(5, 1fr); } /* show Realized P&L if visible */
+    .coins-stack.view-active {
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
   }
 
   /* Toggle button active state */
