@@ -215,29 +215,43 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
   }
+  .coin-card-header > div:first-child { flex: 1; min-width: 0; }
+  .coin-card-header > div:last-child  { flex-shrink: 0; text-align: right; }
 
   .coin-card-body {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 6px;
     background: var(--bg3);
-    padding: 8px;
+    padding: 10px;
     border-radius: 8px;
-    text-align: center;
+    text-align: left;
+  }
+
+  .coin-metric {
+    background: var(--bg2);
+    border-radius: 7px;
+    padding: 7px 10px;
   }
 
   .coin-metric label {
     display: block;
     font-size: 0.65rem;
     color: var(--fg2);
-    margin-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    margin-bottom: 3px;
   }
 
   .coin-metric val {
-    font-size: 0.82rem;
+    display: block;
+    font-size: 0.88rem;
     font-weight: 700;
     color: var(--fg);
+    word-break: break-all;
   }
 
   .coin-card-footer {
@@ -1484,16 +1498,17 @@ function renderTableAndStack() {
             ${getCoinIconLinked(c.sym,36)}
             ${(()=>{const u=getCoinGeckoUrl(c.sym);const name=COIN_NAMES[c.sym]||'';const inner=`<div style="font-weight:700;font-size:0.95rem">${c.sym}</div><div style="font-size:0.72rem;color:var(--fg2)">${name}</div>`;return u?`<a href="${u}" target="_blank" rel="noopener" title="Open ${c.sym} on CoinGecko" style="text-decoration:none;color:inherit;transition:opacity 0.15s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">${inner}</a>`:`<div>${inner}</div>`;})()}
           </div>
-          <div style="text-align:right">
-            <div style="font-weight:700;font-size:1rem">$${fmt(curVal,2)}</div>
-            <div class="${pnlCls}" style="font-size:0.78rem">${pnlSign}$${Math.abs(pnl).toFixed(2)} (${pnlSign}${pnlPct.toFixed(1)}%)</div>
+          <div>
+            <div style="font-weight:700;font-size:1rem;white-space:nowrap">$${fmt(curVal,2)}</div>
+            <div class="${pnlCls}" style="font-size:0.75rem;white-space:nowrap">${pnlSign}$${Math.abs(pnl).toFixed(2)} (${pnlSign}${pnlPct.toFixed(1)}%)</div>
+            <div style="font-size:0.7rem;color:var(--fg2);margin-top:2px">@ $${c.currentPrice}</div>
           </div>
         </div>
         <div class="coin-card-body">
           <div class="coin-metric"><label>Qty</label><val>${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}</val></div>
-          <div class="coin-metric"><label>Base</label><val>$${c.basePrice}</val></div>
-          <div class="coin-metric"><label>Current</label><val>$${c.currentPrice}</val></div>
           <div class="coin-metric"><label>Cost Basis</label><val>$${fmt(baseVal,0)}</val></div>
+          <div class="coin-metric"><label>Avg Buy Price</label><val>$${c.basePrice}</val></div>
+          <div class="coin-metric"><label>Current Value</label><val>$${fmt(curVal,0)}</val></div>
           <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
           <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
         </div>
@@ -2124,6 +2139,11 @@ function toggleView() {
 }
 
 function initView() {
+  // On mobile (<= 640px) always start with cards view regardless of saved pref
+  if (window.innerWidth <= 640) {
+    applyView('cards');
+    return;
+  }
   let saved = 'cards';
   try { saved = localStorage.getItem(VIEW_KEY) || 'cards'; } catch(e) {}
   applyView(saved);
