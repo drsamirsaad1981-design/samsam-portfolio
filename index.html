@@ -321,6 +321,8 @@
       border-radius: 16px;
       padding: 20px 24px;
       margin-bottom: 14px;
+      box-sizing: border-box;
+      width: 100%;
     }
 
     /* Header-top: logo left, date-tag right — same flex row, vertically centered */
@@ -332,7 +334,7 @@
     }
     .header-top h1 { font-size: 1.5rem; }
 
-    /* Date tag: inline with logo row, no self-alignment overrides */
+    /* Date tag: inline with logo row */
     .date-tag {
       align-self: auto;
       margin-top: 0;
@@ -343,16 +345,19 @@
       flex-shrink: 0;
     }
 
-    /* 4 stat cards — equal width, fill full row (100% of header card) */
+    /* 4 stat cards — stretch to fill 100% of header interior */
     .header-stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 14px;
       width: 100%;
+      box-sizing: border-box;
     }
 
-    /* Stat card: center everything, generous padding */
+    /* Stat card: fill cell, center everything */
     .stat-card {
+      width: 100%;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
       align-items: center;
