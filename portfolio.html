@@ -2814,7 +2814,8 @@ function drawPerfChart() {
   canvas.style.display = '';
   // If only 1 snapshot, duplicate it so chart renders as a flat baseline
   if (snaps.length === 1) snaps.push(snaps[0]);
-  const W = canvas.offsetWidth || 300;
+  // Use wrapper width for accurate measurement on all screen sizes
+  const W = (wrap.clientWidth || canvas.parentElement?.clientWidth || canvas.offsetWidth || 600);
   const H = 90;
   canvas.width  = W * window.devicePixelRatio;
   canvas.height = H * window.devicePixelRatio;
@@ -2916,12 +2917,22 @@ function updatePerfChart() {
   }
 }
 
-// Draw chart after prices arrive (prices fire fetchLivePrices which calls renderAll)
-// We hook into it via a delayed check
-setTimeout(() => {
-  // Try draw immediately (if prices already loaded)
-  drawPerfChart();
-}, 3000);
+// Draw chart after layout is complete — use ResizeObserver for accurate width on all devices
+(function initPerfChart() {
+  const wrap = document.getElementById('perfChartWrap');
+  if (!wrap) return;
+  // ResizeObserver redraws whenever the container changes width (desktop resize, orientation, etc.)
+  if (window.ResizeObserver) {
+    let roTimer;
+    const ro = new ResizeObserver(() => {
+      clearTimeout(roTimer);
+      roTimer = setTimeout(drawPerfChart, 50);
+    });
+    ro.observe(wrap);
+  }
+  // Initial draw after DOM & prices settle
+  setTimeout(drawPerfChart, 3000);
+})();
 </script>
 </body>
 </html>
