@@ -1005,16 +1005,9 @@
   </table>
 </div>
 
-<div class="dashboard-section">
-  <div class="dash-card" style="flex:1">
-    <h3>📊 Allocation</h3>
-    <div class="donut-wrap">
-      <svg class="donut-svg" width="240" height="240" viewBox="0 0 160 160" id="donutChart"></svg>
-      <div class="donut-legend" id="donutLegend"></div>
-    </div>
-  </div>
-</div>
-<!-- pnlRows kept hidden for JS compatibility -->
+<!-- donutChart + pnlRows kept hidden for JS compatibility -->
+<svg id="donutChart" style="display:none"></svg>
+<div id="donutLegend" style="display:none"></div>
 <div id="pnlRows" style="display:none"></div>
 
 <div class="modal-overlay" id="buyMoreModal">
