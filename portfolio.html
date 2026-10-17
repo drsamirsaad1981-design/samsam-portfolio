@@ -899,6 +899,7 @@
     <div class="perf-chart-stats">
       <span class="perf-stat"><span class="perf-dot portfolio"></span><span id="perfPortfolioLabel">Portfolio: —</span></span>
       <span class="perf-stat"><span class="perf-dot btc"></span><span id="perfBtcLabel">BTC trend: —</span></span>
+      <button id="perfSyncBtn" onclick="forceSyncPerfFromCloud()" title="Force sync from cloud" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(148,163,184,0.8);border-radius:6px;padding:2px 8px;font-size:0.7rem;cursor:pointer;margin-left:4px">↻ Sync</button>
     </div>
   </div>
   <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
@@ -2766,6 +2767,33 @@ async function syncPerfSnapshotsFromCloud() {
       }
     }
   } catch(_) {}
+}
+
+async function forceSyncPerfFromCloud() {
+  const btn = document.getElementById('perfSyncBtn');
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const cloudSnaps = json.record.perfSnaps || [];
+      if (cloudSnaps.length) {
+        // Replace local entirely with cloud data (don't merge — cloud has full history)
+        try { localStorage.setItem(PERF_KEY, JSON.stringify(cloudSnaps)); } catch(_) {}
+        drawPerfChart();
+        if (btn) { btn.textContent = '✓ Synced'; }
+      } else {
+        if (btn) { btn.textContent = '✗ Empty'; }
+      }
+    } else {
+      if (btn) { btn.textContent = '✗ Error'; }
+    }
+  } catch(_) {
+    if (btn) { btn.textContent = '✗ Error'; }
+  }
+  setTimeout(() => { if (btn) { btn.textContent = '↻ Sync'; btn.disabled = false; } }, 2500);
 }
 
 async function pushPerfSnapsToCloud(snaps) {
