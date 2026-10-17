@@ -2762,7 +2762,10 @@ async function syncPerfSnapshotsFromCloud() {
       if (cloudSnaps.length) {
         const local  = loadPerfSnapshots();
         const merged = mergePerfSnaps(local, cloudSnaps);
-        try { localStorage.setItem(PERF_KEY, JSON.stringify(merged)); } catch(_) {}
+        // SAFETY: only update local if merged has more or equal points
+        if (merged.length >= local.length) {
+          try { localStorage.setItem(PERF_KEY, JSON.stringify(merged)); } catch(_) {}
+        }
         drawPerfChart();
       }
     }
@@ -2782,16 +2785,26 @@ async function forceSyncPerfFromCloud() {
       const local = loadPerfSnapshots();
       // Merge local + cloud to get full history from all devices
       const merged = mergePerfSnaps(local, cloudSnaps);
-      try { localStorage.setItem(PERF_KEY, JSON.stringify(merged)); } catch(_) {}
-      // Push merged result back to cloud so all devices benefit
+
+      // SAFETY: always save best (most points) to local
+      const bestLocal = merged.length >= local.length ? merged : local;
+      try { localStorage.setItem(PERF_KEY, JSON.stringify(bestLocal)); } catch(_) {}
+
+      // SAFETY: only push to cloud if merged has MORE or EQUAL points than cloud
+      // This prevents a device with empty/stale localStorage from wiping cloud history
       const accumPlan = json.record.accumPlan || [];
-      await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
-        body: JSON.stringify({ accumPlan, perfSnaps: merged })
-      });
+      if (merged.length >= cloudSnaps.length) {
+        await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
+          body: JSON.stringify({ accumPlan, perfSnaps: merged })
+        });
+        if (btn) { btn.textContent = `✓ ${merged.length}pts`; }
+      } else {
+        // Cloud has more data — just pull it down, don't push back
+        if (btn) { btn.textContent = `↓ ${cloudSnaps.length}pts`; }
+      }
       drawPerfChart();
-      if (btn) { btn.textContent = `✓ ${merged.length}pts`; }
     } else {
       if (btn) { btn.textContent = '✗ Error'; }
     }
@@ -2803,17 +2816,21 @@ async function forceSyncPerfFromCloud() {
 
 async function pushPerfSnapsToCloud(snaps) {
   try {
-    // Fetch current bin record first to preserve accumPlan
+    // Fetch current bin record first to preserve accumPlan and merge snapshots
     const getRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
       headers: { 'X-Master-Key': JSONBIN_KEY }
     });
     if (!getRes.ok) return;
     const cur = await getRes.json();
     const accumPlan = cur.record.accumPlan || [];
+    const cloudSnaps = cur.record.perfSnaps || [];
+    // SAFETY: merge local with cloud before pushing — never overwrite cloud with fewer points
+    const merged = mergePerfSnaps(snaps, cloudSnaps);
+    if (merged.length < cloudSnaps.length) return; // cloud has more — skip push
     await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
-      body: JSON.stringify({ accumPlan, perfSnaps: snaps })
+      body: JSON.stringify({ accumPlan, perfSnaps: merged })
     });
   } catch(_) {}
 }
