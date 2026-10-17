@@ -120,34 +120,74 @@ body {
 }
 .sum-card {
   background: var(--card);
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: 16px;
+  padding: 18px 18px 16px;
   box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 110px;
+  position: relative;
+  overflow: hidden;
+}
+.sum-card-icon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 1.3rem;
+  opacity: 0.18;
+  line-height: 1;
+  pointer-events: none;
 }
 .sum-label {
-  font-size: 0.65rem;
+  font-size: 0.63rem;
   color: var(--fg2);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 6px;
+  letter-spacing: 0.07em;
+  margin-bottom: 0;
 }
 .sum-value {
-  font-size: 1.3rem;
+  font-size: 1.55rem;
   font-weight: 700;
   line-height: 1.1;
+  margin-top: 8px;
 }
 .sum-sub {
-  font-size: 0.78rem;
-  margin-top: 3px;
+  font-size: 0.82rem;
+  margin-top: 5px;
+  font-weight: 600;
+}
+.sum-sub-cost {
+  font-size: 0.79rem;
+  margin-top: 5px;
   font-weight: 500;
+  color: var(--fg2);
+}
+.sum-pct-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  margin-top: 5px;
+}
+.sum-pct-badge.pos { background: var(--green-bg); color: var(--green); }
+.sum-pct-badge.neg { background: var(--red-bg);   color: var(--red); }
+/* sparkline canvas inside card */
+.sum-sparkline {
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 55%; height: 55%;
+  opacity: 0.07;
+  pointer-events: none;
 }
 .pos { color: var(--green); }
 .neg { color: var(--red); }
 
 /* ── Sort tabs ── */
 .sort-tabs {
-  padding: 16px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+  padding: 22px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
   display: flex;
 }
 .sort-tabs-inner {
@@ -356,7 +396,9 @@ body {
     grid-template-columns: 1fr 130px 130px;
   }
   .sum-value { font-size: 1.55rem; }
-  .sum-card  { padding: 18px 20px; }
+  .sum-card  { padding: 20px 22px; min-height: 120px; }
+  .sum-value { font-size: 1.75rem; }
+  .sum-card-icon { font-size: 1.5rem; top: 16px; right: 16px; }
   .coin-row  {
     padding: 14px 16px;
     grid-template-columns: 1fr 130px 130px;
@@ -373,8 +415,8 @@ body {
   .pnl-pct { font-size: 0.74rem; }
   .coin-list { gap: 7px; }
   .sort-tab { font-size: 0.78rem; padding: 8px 16px; }
-  .col-header-inner { font-size: 0.72rem; }
-  .a-qty { font-size: 0.78rem; }
+  .col-header-inner { font-size: 0.74rem; }
+  .a-qty { font-size: 0.8rem; }
 }
 </style>
 </head>
@@ -389,14 +431,24 @@ body {
 <div class="summary">
   <div class="summary-cards">
     <div class="sum-card">
+      <span class="sum-card-icon">📈</span>
       <div class="sum-label">All-Time P&amp;L</div>
       <div class="sum-value" id="totalPnl">—</div>
-      <div class="sum-sub" id="totalPct">—</div>
+      <div id="totalPct" class="sum-pct-badge neg">—</div>
+      <svg class="sum-sparkline" viewBox="0 0 100 40" preserveAspectRatio="none">
+        <polyline fill="none" stroke="currentColor" stroke-width="3"
+          points="0,35 15,28 30,32 45,18 60,22 75,12 90,16 100,8"/>
+      </svg>
     </div>
     <div class="sum-card">
+      <span class="sum-card-icon">💼</span>
       <div class="sum-label">Total Value</div>
       <div class="sum-value" id="totalValue">—</div>
-      <div class="sum-sub" id="costBasis" style="color:var(--fg2)">Cost: —</div>
+      <div id="costBasis" class="sum-sub-cost">Cost: —</div>
+      <svg class="sum-sparkline" viewBox="0 0 100 40" preserveAspectRatio="none">
+        <polyline fill="none" stroke="currentColor" stroke-width="3"
+          points="0,30 20,25 40,28 55,20 70,22 85,15 100,18"/>
+      </svg>
     </div>
   </div>
 </div>
@@ -784,7 +836,7 @@ function render() {
 
   const pctEl = document.getElementById('totalPct');
   pctEl.textContent = fmtPct(totalPct);
-  pctEl.className = 'sum-sub ' + (totalPct >= 0 ? 'pos' : 'neg');
+  pctEl.className = 'sum-pct-badge ' + (totalPct >= 0 ? 'pos' : 'neg');
 
   document.getElementById('totalValue').textContent = fmtUSD(totalValue);
   document.getElementById('costBasis').textContent  = 'Cost: ' + fmtUSD(totalCost);
