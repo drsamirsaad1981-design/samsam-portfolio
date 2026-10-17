@@ -1162,10 +1162,7 @@
   <p>🔒 Local storage | Baseline: Oct 15, 2026</p>
   <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
   <p id="footerSyncTime" style="margin-top:4px;font-size:0.68rem;color:var(--fg2);opacity:0.75">☁️ Cloud: not synced yet</p>
-  <p style="margin-top:6px">
-    <button id="manualSyncBtn" onclick="manualSyncNow()" style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);color:rgba(147,197,253,0.9);border-radius:8px;padding:5px 14px;font-size:0.72rem;cursor:pointer;transition:all 0.2s">☁ Sync Now</button>
-    <span id="manualSyncStatus" style="font-size:0.68rem;color:rgba(148,163,184,0.6);margin-left:8px"></span>
-  </p>
+  <p id="footerSyncStatus" style="margin-top:4px;font-size:0.7rem;min-height:1.2em;transition:opacity 0.5s"></p>
   <div class="footer-copy">
     © 2026 Dr. Samir Saad &nbsp;·&nbsp;
     <a href="mailto:dr.samir.saad.1981@gmail.com">dr.samir.saad.1981@gmail.com</a>
@@ -2731,38 +2728,26 @@ setTimeout(async () => {
   try {
     await pushPortfolioToCloud();          // push local → cloud (only if local is newer)
     const updated = await pullPortfolioFromCloud(); // pull cloud → local (only if cloud is newer)
-    if (updated) { renderAll(); fetchLivePrices(); }
+    if (updated) { renderAll(); fetchLivePrices(); showSyncStatus('☁️ Synced from cloud — portfolio updated', 'rgba(34,197,94,0.9)'); }
   } catch(_) {}
 }, 4000); // wait 4s so page feels responsive first
 
-// ─── Manual sync button ───────────────────────────────────────────────────────
-async function manualSyncNow() {
-  const btn = document.getElementById('manualSyncBtn');
-  const status = document.getElementById('manualSyncStatus');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Syncing…'; }
-  if (status) status.textContent = '';
-  try {
-    await pushPortfolioToCloud();
-    const updated = await pullPortfolioFromCloud();
-    if (updated) {
-      renderAll(); fetchLivePrices();
-      if (status) status.textContent = '✅ Updated from cloud!';
-    } else {
-      if (status) status.textContent = '✓ Already up to date';
-    }
-  } catch(e) {
-    if (status) status.textContent = '❌ Sync failed';
-  }
-  if (btn) { btn.disabled = false; btn.textContent = '☁ Sync Now'; }
-  setTimeout(() => { if (status) status.textContent = ''; }, 5000);
-}
-
 // ─── Global portfolio sync — runs every 2 minutes regardless of active tab ───
-// This ensures desktop always sees mobile changes without needing perf chart open
+function showSyncStatus(msg, color) {
+  const el = document.getElementById('footerSyncStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color;
+  el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 4000);
+}
 async function globalAutoSync() {
   try {
     const updated = await pullPortfolioFromCloud();
-    if (updated) { renderAll(); fetchLivePrices(); }
+    if (updated) {
+      renderAll(); fetchLivePrices();
+      showSyncStatus('☁️ Synced from cloud — portfolio updated', 'rgba(34,197,94,0.9)');
+    }
   } catch(_) {}
 }
 setInterval(globalAutoSync, 2 * 60 * 1000); // every 2 minutes
@@ -3003,6 +2988,7 @@ async function autoSyncPerf() {
         btcPrice  = cloudPortfolio.btcPrice || btcPrice;
         renderAll();
         setInd('☁↓', 'rgba(59,130,246,0.9)');
+        showSyncStatus('☁️ Synced from cloud — portfolio updated', 'rgba(34,197,94,0.9)');
       } catch(_) {}
     }
 
