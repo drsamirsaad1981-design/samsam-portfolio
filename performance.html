@@ -200,6 +200,14 @@ body {
   gap: 9px;
   min-width: 0;
 }
+.asset-link {
+  text-decoration: none;
+  color: inherit;
+  border-radius: 10px;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.asset-link:active { opacity: 0.65; }
 .coin-icon {
   width: 34px;
   height: 34px;
@@ -594,12 +602,7 @@ function coinIconHtml(c) {
     iconHtml = coinFallback(sym);
   }
 
-  if (cgUrl) {
-    return `<a href="${cgUrl}" target="_blank" rel="noopener"
-      title="Open ${sym} on CoinGecko"
-      style="display:inline-flex;flex-shrink:0;border-radius:50%;text-decoration:none;transition:opacity 0.15s"
-      onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">${iconHtml}</a>`;
-  }
+  // No individual link on icon — the whole asset area is already linked
   return iconHtml;
 }
 
@@ -663,15 +666,19 @@ function render() {
     const chgHtml = change24h !== null
       ? `<div class="p-chg ${chgCls}">${fmtPct(change24h)}</div>` : '';
 
-    return `<div class="coin-row">
-      <div class="asset">
-        ${coinIconHtml(c)}
+    const cgUrl = getCoinGeckoUrl(c.sym, c.cgId);
+    const assetInner = `${coinIconHtml(c)}
         <div class="asset-text">
           <div class="a-sym">${c.sym}</div>
           <div class="a-name">${COIN_NAMES[c.sym] || c.sym}</div>
           <div class="a-qty">${fmtQty(c.qty, c.sym)}</div>
-        </div>
-      </div>
+        </div>`;
+    const assetEl = cgUrl
+      ? `<a href="${cgUrl}" target="_blank" rel="noopener" class="asset asset-link" title="Open ${c.sym} on CoinGecko">${assetInner}</a>`
+      : `<div class="asset">${assetInner}</div>`;
+
+    return `<div class="coin-row">
+      ${assetEl}
       <div class="c-price">
         <div class="p-val">${fmtPrice(currentPrice)}</div>
         ${chgHtml}
