@@ -2779,21 +2779,26 @@ async function forceSyncPerfFromCloud() {
     if (res.ok) {
       const json = await res.json();
       const cloudSnaps = json.record.perfSnaps || [];
-      if (cloudSnaps.length) {
-        // Replace local entirely with cloud data (don't merge — cloud has full history)
-        try { localStorage.setItem(PERF_KEY, JSON.stringify(cloudSnaps)); } catch(_) {}
-        drawPerfChart();
-        if (btn) { btn.textContent = '✓ Synced'; }
-      } else {
-        if (btn) { btn.textContent = '✗ Empty'; }
-      }
+      const local = loadPerfSnapshots();
+      // Merge local + cloud to get full history from all devices
+      const merged = mergePerfSnaps(local, cloudSnaps);
+      try { localStorage.setItem(PERF_KEY, JSON.stringify(merged)); } catch(_) {}
+      // Push merged result back to cloud so all devices benefit
+      const accumPlan = json.record.accumPlan || [];
+      await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
+        body: JSON.stringify({ accumPlan, perfSnaps: merged })
+      });
+      drawPerfChart();
+      if (btn) { btn.textContent = `✓ ${merged.length}pts`; }
     } else {
       if (btn) { btn.textContent = '✗ Error'; }
     }
   } catch(_) {
     if (btn) { btn.textContent = '✗ Error'; }
   }
-  setTimeout(() => { if (btn) { btn.textContent = '↻ Sync'; btn.disabled = false; } }, 2500);
+  setTimeout(() => { if (btn) { btn.textContent = '↻ Sync'; btn.disabled = false; } }, 3000);
 }
 
 async function pushPerfSnapsToCloud(snaps) {
