@@ -318,6 +318,39 @@ tr:hover td { background: rgba(255,255,255,.02); }
 }
 .card-dca-btn:hover { background: rgba(245,158,11,.12); }
 
+/* ── Price Alert ── */
+.alert-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.4);
+  color: var(--accent); border-radius: 999px; padding: 2px 8px;
+  font-size: 0.7rem; font-weight: 700; animation: pulse-alert 2s ease-in-out infinite;
+}
+@keyframes pulse-alert {
+  0%,100% { opacity: 1; }
+  50%      { opacity: .6; }
+}
+.alert-triggered {
+  background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.4);
+  color: var(--green);
+}
+.acc-card-alert-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px; overflow: hidden;
+}
+.acc-card-alert-row label {
+  font-size: 0.75rem; color: var(--fg2); white-space: nowrap; flex-shrink: 0;
+}
+.alert-input {
+  flex: 1; min-width: 0; background: var(--bg3); border: 1px solid var(--border);
+  color: var(--fg); border-radius: 7px; font-family: inherit;
+  font-size: 0.85rem; padding: 5px 10px; outline: none;
+}
+.alert-input:focus { border-color: var(--accent); }
+.alert-clear-btn {
+  background: none; border: none; color: var(--fg2); font-size: 0.9rem;
+  cursor: pointer; padding: 2px 4px; flex-shrink: 0; opacity: .7;
+}
+.alert-clear-btn:hover { color: var(--red); opacity: 1; }
+
 /* ── Empty state ── */
 .empty-state {
   text-align: center; padding: 40px 20px;
@@ -830,6 +863,12 @@ function renderCards() {
           <div class="acc-card-sym">
             ${entry.sym}
             ${completed ? '<span class="completed-badge">✓ Done</span>' : ''}
+            ${(()=>{
+              const ap = entry.alertPrice;
+              if (!ap || ap <= 0 || r.currentPrice <= 0) return '';
+              const hit = r.currentPrice <= ap;
+              return `<span class="alert-badge${hit?' alert-triggered':''}">🔔 $${fmtUSD(ap)}</span>`;
+            })()}
           </div>
           <div class="acc-card-name">${r.name}</div>
         </div>
@@ -902,6 +941,27 @@ function renderCards() {
           ${r.readyToBuy ? '🟢 BUY NOW!' : `🔴 ${r.priceDiff.toFixed(1)}% above target`}
         </div>` : ''}
       </div>
+
+      <div class="acc-card-alert-row">
+        <label>🔔 Alert:</label>
+        <input class="alert-input" type="text" inputmode="decimal"
+          value="${entry.alertPrice > 0 ? entry.alertPrice : ''}"
+          placeholder="Price $"
+          oninput="updateAlert(${idx}, this.value)"
+          onblur="commitAlert(${idx}, this.value)"
+          onkeydown="if(event.key==='Enter'){this.blur()}"
+          title="Alert when price drops to or below this value">
+        ${entry.alertPrice > 0 ? `<button class="alert-clear-btn" onclick="clearAlert(${idx})" title="Clear alert">✕</button>` : ''}
+        ${(()=>{
+          const ap = entry.alertPrice;
+          if (!ap || ap <= 0 || r.currentPrice <= 0) return '';
+          const hit = r.currentPrice <= ap;
+          const diff = ((r.currentPrice - ap) / ap * 100);
+          return hit
+            ? `<span style="font-size:0.7rem;color:var(--green);white-space:nowrap">✅ Hit!</span>`
+            : `<span style="font-size:0.7rem;color:var(--fg2);white-space:nowrap">${diff.toFixed(1)}% away</span>`;
+        })()}
+      </div>
     </div>`;
   }).join('');
 }
@@ -939,6 +999,8 @@ function renderAll() {
   if (currentView === 'table') { renderTable(); }
   else { renderCards(); }
   renderDashboard();
+  // Check price alerts on every full render (prices may have updated)
+  setTimeout(checkAllAlerts, 100);
 }
 
 // ─── Update target quantity ──────────────────────────────────────────────────
@@ -1187,6 +1249,53 @@ function calcDca() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeDcaModal();
 });
+
+// ─── Price Alerts ─────────────────────────────────────────────────────────────
+function updateAlert(idx, val) {
+  const n = parseFloat(val);
+  accumPlan[idx].alertPrice = isNaN(n) || n <= 0 ? 0 : n;
+  renderDashboard(); // live stats update only, keep focus
+}
+
+function commitAlert(idx, val) {
+  const n = parseFloat(val);
+  accumPlan[idx].alertPrice = isNaN(n) || n <= 0 ? 0 : n;
+  saveAccumPlan();
+  renderAll();
+  // Browser notification if supported and alert is triggered
+  if (accumPlan[idx].alertPrice > 0) checkAlertNotify(idx);
+}
+
+function clearAlert(idx) {
+  accumPlan[idx].alertPrice = 0;
+  saveAccumPlan();
+  renderAll();
+}
+
+function checkAlertNotify(idx) {
+  const entry = accumPlan[idx];
+  const r = calcRow(entry);
+  if (!entry.alertPrice || entry.alertPrice <= 0 || r.currentPrice <= 0) return;
+  if (r.currentPrice <= entry.alertPrice) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(`🔔 ${entry.sym} Alert!`, {
+        body: `Price $${fmtUSD(r.currentPrice)} reached your alert at $${fmtUSD(entry.alertPrice)}`,
+        icon: entry.logoUrl || ''
+      });
+    } else if ('Notification' in window && Notification.permission !== 'denied') {
+      Notification.requestPermission().then(p => {
+        if (p === 'granted') checkAlertNotify(idx);
+      });
+    }
+  }
+}
+
+// Check all alerts on every price refresh
+function checkAllAlerts() {
+  accumPlan.forEach((entry, idx) => {
+    if (entry.alertPrice > 0) checkAlertNotify(idx);
+  });
+}
 
 // ─── Auto-sync when portfolio page updates storage ────────────────────────────
 window.addEventListener('storage', e => {
