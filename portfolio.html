@@ -2407,8 +2407,8 @@ function renderAllocMiniCard(catTotals, totalVal) {
   });
   document.getElementById('allocMiniSvg').innerHTML=paths;
 
-  // Top 4 categories
-  document.getElementById('allocMiniCats').innerHTML=entries.slice(0,4).map(([cat,val])=>{
+  // All categories
+  document.getElementById('allocMiniCats').innerHTML=entries.map(([cat,val])=>{
     const pct=(val/totalVal*100).toFixed(1);
     const color=CAT_COLORS[cat]||'#6b7280';
     const label=CAT_LABELS[cat]||cat;
