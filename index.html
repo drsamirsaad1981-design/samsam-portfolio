@@ -2630,19 +2630,22 @@ function drawPerfChart() {
   ctx.setLineDash([]);
 
   // Draw a line series
-  function drawLine(data, color) {
+  function drawLine(data, color, dashed) {
     ctx.beginPath();
     ctx.strokeStyle = color;
     ctx.lineWidth   = 2;
     ctx.lineJoin    = 'round';
+    if (dashed) ctx.setLineDash([5, 3]);
+    else ctx.setLineDash([]);
     data.forEach((p, i) => {
       i === 0 ? ctx.moveTo(toX(i), toY(p)) : ctx.lineTo(toX(i), toY(p));
     });
     ctx.stroke();
+    ctx.setLineDash([]);
   }
 
-  drawLine(pctB, '#f7931a');   // BTC
-  drawLine(pctV, '#3b82f6');   // Portfolio
+  drawLine(pctV, '#3b82f6');        // Portfolio (solid blue)
+  drawLine(pctB, '#f7931a', true);  // BTC (dashed orange — always visible, even at 0%)
 
   // End labels (right side)
   const lastV = pctV[pctV.length - 1];
