@@ -1367,10 +1367,14 @@ const LIVE_PRICES_OCT15 = {
   VET:0.00705, NIGHT:0.04419, MON:0.02344, PONS:0.3498, XPL:0.08513,
 };
 
-const STORAGE_KEY = 'samsam_pf_v4';
-const ARCHIVE_KEY = 'samsam_archived_v1'; // separate key — never cleared by Reset
-const CUSTOM_KEY  = 'samsam_custom_v1';   // manually added coins — survives Reset
-const TX_KEY      = 'samsam_tx_v1';       // transaction history — never cleared by Reset
+const STORAGE_KEY    = 'samsam_pf_v4';
+const ARCHIVE_KEY    = 'samsam_archived_v1'; // separate key — never cleared by Reset
+const CUSTOM_KEY     = 'samsam_custom_v1';   // manually added coins — survives Reset
+const TX_KEY         = 'samsam_tx_v1';       // transaction history — never cleared by Reset
+const PERF_KEY       = 'samsam_perf_v1';     // performance chart snapshots
+const ACCUM_KEY      = 'samsam_acc_v1';
+const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
+const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
 ['samsam_portfolio','samsam_pf_v1','samsam_pf_v2','samsam_pf_v3'].forEach(k=>localStorage.removeItem(k));
 
 function loadArchive() {
@@ -1531,8 +1535,9 @@ function resetToBaseline() {
   btcPrice = LIVE_PRICES_OCT15.BTC || 82363;
 }
 
-function savePortfolio() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, btcPrice, lastSave: new Date().toISOString() })); } catch(e) {}
+function savePortfolio(pushToCloud = true) {
+  const lastSave = new Date().toISOString();
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, btcPrice, lastSave })); } catch(e) {}
   // Keep customCoins store in sync with current portfolio values (qty, basePrice, logoUrl)
   // so Reset restores the LATEST values, not the original add values
   let customChanged = false;
@@ -1547,6 +1552,8 @@ function savePortfolio() {
     }
   });
   if(customChanged) saveCustomCoins();
+  // Push portfolio data to cloud immediately after any save (fire and forget)
+  if (pushToCloud) pushPortfolioToCloud();
 }
 
 function resetApp() {
@@ -2697,17 +2704,21 @@ document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDa
 
 ['samsam_portfolio','samsam_pf_v1','samsam_pf_v2'].forEach(k=>localStorage.removeItem(k));
 initPortfolio();
-renderAll();      // render content first (fills both containers)
+renderAll();      // render content first with local data (fills both containers)
 initView();       // THEN apply view preference (shows/hides correct container)
 fetchLivePrices();
 // Auto-refresh live prices every 60 seconds
 setInterval(() => { fetchLivePrices(); }, 60000);
 
-// ─── Accumulation Progress on Main Page ──────────────────────────────────────
-const ACCUM_KEY      = 'samsam_acc_v1';
-const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
-const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
+// Pull cloud portfolio on load — if cloud has newer data, re-render silently
+setTimeout(async () => {
+  try {
+    const updated = await pullPortfolioFromCloud();
+    if (updated) { renderAll(); fetchLivePrices(); }
+  } catch(_) {}
+}, 4000); // wait 4s so page feels responsive first
 
+// ─── Accumulation Progress on Main Page ──────────────────────────────────────
 function renderAccumProgress(plan) {
   if (!plan || plan.length === 0) return;
   let weightedActual = 0, weightedTarget = 0, completed = 0;
@@ -2769,8 +2780,6 @@ setTimeout(loadAccumProgress, 2000);
 // (auto-sync handled inside initPerfChart via autoSyncPerf)
 
 // ─── Portfolio Performance Chart ─────────────────────────────────────────────
-const PERF_KEY = 'samsam_perf_v1';   // localStorage key for snapshots
-
 function loadPerfSnapshots() {
   try { return JSON.parse(localStorage.getItem(PERF_KEY) || '[]'); } catch(_) { return []; }
 }
@@ -2805,6 +2814,88 @@ async function syncPerfSnapshotsFromCloud() {
   } catch(_) {}
 }
 
+// ─── Cross-device Portfolio Sync ─────────────────────────────────────────────
+// Push local portfolio data to cloud (fire-and-forget after any save)
+async function pushPortfolioToCloud() {
+  try {
+    // Read current cloud record first (to preserve perfSnaps + accumPlan)
+    const getRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    });
+    if (!getRes.ok) return;
+    const cur = await getRes.json();
+    const accumPlan = cur.record.accumPlan || [];
+    const perfSnaps = cur.record.perfSnaps || [];
+
+    // Build portfolioData payload from all 4 localStorage stores
+    const pfRaw = localStorage.getItem(STORAGE_KEY);
+    const pfData = pfRaw ? JSON.parse(pfRaw) : null;
+    if (!pfData || !pfData.coins || pfData.coins.length === 0) return; // nothing to push
+
+    // Compare timestamps — only push if local is newer (or cloud has no portfolio yet)
+    const cloudPortfolio = cur.record.portfolioData || null;
+    const localLastSave  = pfData.lastSave || '';
+    const cloudLastSave  = cloudPortfolio ? (cloudPortfolio.lastSave || '') : '';
+    if (cloudLastSave && cloudLastSave >= localLastSave) return; // cloud already up to date
+
+    const portfolioData = {
+      lastSave: localLastSave,
+      coins: pfData.coins,
+      btcPrice: pfData.btcPrice,
+      transactions: JSON.parse(localStorage.getItem(TX_KEY) || '[]'),
+      customCoins:  JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'),
+      archivedCoins: JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'),
+    };
+
+    await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
+      body: JSON.stringify({ accumPlan, perfSnaps, portfolioData })
+    });
+  } catch(_) {}
+}
+
+// Pull cloud portfolio data if it is newer than local — returns true if applied
+async function pullPortfolioFromCloud() {
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_KEY }
+    });
+    if (!res.ok) return false;
+    const json = await res.json();
+    const cloudPortfolio = json.record.portfolioData || null;
+    if (!cloudPortfolio || !cloudPortfolio.coins || cloudPortfolio.coins.length === 0) return false;
+
+    const pfRaw = localStorage.getItem(STORAGE_KEY);
+    const localLastSave  = pfRaw ? (JSON.parse(pfRaw).lastSave || '') : '';
+    const cloudLastSave  = cloudPortfolio.lastSave || '';
+
+    // Only apply cloud data if it is strictly newer
+    if (!cloudLastSave || cloudLastSave <= localLastSave) return false;
+
+    // Apply cloud data to localStorage — will be picked up on next renderAll
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        coins: cloudPortfolio.coins,
+        btcPrice: cloudPortfolio.btcPrice,
+        lastSave: cloudLastSave
+      }));
+      if (cloudPortfolio.transactions)  localStorage.setItem(TX_KEY, JSON.stringify(cloudPortfolio.transactions));
+      if (cloudPortfolio.customCoins)   localStorage.setItem(CUSTOM_KEY, JSON.stringify(cloudPortfolio.customCoins));
+      if (cloudPortfolio.archivedCoins) localStorage.setItem(ARCHIVE_KEY, JSON.stringify(cloudPortfolio.archivedCoins));
+    } catch(_) {}
+
+    // Reload in-memory state from updated localStorage
+    loadArchive();
+    loadCustomCoins();
+    loadTransactions();
+    const removed = getRemovedSyms();
+    portfolio = cloudPortfolio.coins.filter(c => !removed.has(c.sym));
+    btcPrice  = cloudPortfolio.btcPrice || btcPrice;
+    return true; // caller should re-render
+  } catch(_) { return false; }
+}
+
 // Auto-sync: runs silently in background — no user action needed
 async function autoSyncPerf() {
   const ind = document.getElementById('perfSyncIndicator');
@@ -2831,18 +2922,29 @@ async function autoSyncPerf() {
     }
 
     // SAFETY: push to cloud only if merged is richer (never overwrite cloud with fewer points)
-    const accumPlan = json.record.accumPlan || [];
+    const accumPlan      = json.record.accumPlan || [];
+    const cloudPortfolio = json.record.portfolioData || null;
     if (merged.length > cloudSnaps.length) {
       await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
-        body: JSON.stringify({ accumPlan, perfSnaps: merged })
+        // Preserve portfolioData when updating perf snaps
+        body: JSON.stringify({ accumPlan, perfSnaps: merged, portfolioData: cloudPortfolio })
       });
       setInd('☁↑', 'rgba(34,197,94,0.7)');   // pushed
     } else if (cloudSnaps.length > local.length) {
       setInd('☁↓', 'rgba(59,130,246,0.7)');   // pulled
     } else {
       setInd('☁✓', 'rgba(148,163,184,0.5)');  // in sync
+    }
+
+    // Also check if cloud portfolio is newer than local — pull and re-render if so
+    const pfRaw = localStorage.getItem(STORAGE_KEY);
+    const localLastSave = pfRaw ? (JSON.parse(pfRaw).lastSave || '') : '';
+    const cloudLastSave = cloudPortfolio ? (cloudPortfolio.lastSave || '') : '';
+    if (cloudPortfolio && cloudLastSave > localLastSave) {
+      const updated = await pullPortfolioFromCloud();
+      if (updated) { renderAll(); setInd('☁↓', 'rgba(59,130,246,0.9)'); }
     }
 
     drawPerfChart();
@@ -2853,7 +2955,7 @@ async function autoSyncPerf() {
 
 async function pushPerfSnapsToCloud(snaps) {
   try {
-    // Fetch current bin record first to preserve accumPlan and merge snapshots
+    // Fetch current bin record first to preserve accumPlan, portfolioData and merge snapshots
     const getRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
       headers: { 'X-Master-Key': JSONBIN_KEY }
     });
@@ -2861,13 +2963,15 @@ async function pushPerfSnapsToCloud(snaps) {
     const cur = await getRes.json();
     const accumPlan = cur.record.accumPlan || [];
     const cloudSnaps = cur.record.perfSnaps || [];
+    const cloudPortfolio = cur.record.portfolioData || null;
     // SAFETY: merge local with cloud before pushing — never overwrite cloud with fewer points
     const merged = mergePerfSnaps(snaps, cloudSnaps);
     if (merged.length < cloudSnaps.length) return; // cloud has more — skip push
     await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
-      body: JSON.stringify({ accumPlan, perfSnaps: merged })
+      // Preserve portfolioData when pushing perf snaps
+      body: JSON.stringify({ accumPlan, perfSnaps: merged, portfolioData: cloudPortfolio })
     });
   } catch(_) {}
 }
