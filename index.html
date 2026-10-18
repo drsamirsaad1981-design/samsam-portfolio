@@ -12,6 +12,7 @@
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
 <script src="samsam-ui.js"></script>
+<script src="samsam-dropdown.js"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1362,6 +1363,7 @@ function coinFallback(sym, size) {
 function coinImgErr(el) {
   const sym = el.getAttribute('data-sym');
   const size = parseInt(el.getAttribute('data-size')) || 32;
+  if (!el.parentNode) return; // image was re-rendered away before it failed
   el.outerHTML = coinFallback(sym, size);
 }
 const COIN_NAMES = {
@@ -3195,7 +3197,7 @@ function closeHoldingsView() {
 }
 function openCoinTx(sym) {
   history.pushState({ hov: 'tx' }, '', '#holdings/' + encodeURIComponent(sym));
-  document.getElementById('htxType').value = 'all';
+  ensureHtxDropdowns(); htxTypeDD.setValue('all');
   applyHoldingsRoute();
 }
 // "Back to Holdings": step back if we came from the list, otherwise replace the URL.
@@ -3215,23 +3217,36 @@ window.addEventListener('popstate', applyHoldingsRoute);
 
 // ── Coin transactions & performance ─────────────────────────────────────────
 const BASELINE_DATE = '2026-10-15T00:00:00';
+// Custom dropdowns (samsam-dropdown.js): same dark component on mobile (bottom sheet) and desktop (popover)
+let htxTypeDD = null, htxCoinDD = null;
+function ensureHtxDropdowns() {
+  if (htxTypeDD) return;
+  htxTypeDD = SamsamDropdown.create(document.getElementById('htxTypeDD'), {
+    options: [{ value: 'all', label: 'All Types' }, { value: 'buy', label: 'Buy' }, { value: 'sell', label: 'Sell' }, { value: 'transfer', label: 'Transfer' }],
+    value: 'all', ariaLabel: 'Transaction type', title: 'Transaction type', minWidth: 180,
+    onChange: () => renderCoinTx(),
+  });
+  htxCoinDD = SamsamDropdown.create(document.getElementById('htxCoinDD'), {
+    options: [], searchable: true, searchPlaceholder: 'Search coin or name…', ariaLabel: 'Coin', title: 'Select coin', minWidth: 280,
+    onChange: v => selectCoinTx(v),
+  });
+}
 function renderCoinTx() {
   if (!coinTxSym) return;
   const sym = coinTxSym;
   const st = window.Samsam && Samsam.isReady() ? Samsam.getState() : null;
   const listEl = document.getElementById('htxList');
-  // Coin selector: every coin you hold, largest first (the current coin is always listed)
+  // Coin selector (searchable): every coin you hold, largest first; current coin always listed
+  ensureHtxDropdowns();
   const coins = [...portfolio].sort((a, b) => b.qty * b.currentPrice - a.qty * a.currentPrice);
-  const sel = document.getElementById('htxCoin');
   const opts = coins.map(c => c.sym);
   if (!opts.includes(sym)) opts.unshift(sym);
-  const optsKey = opts.join(',');
-  if (sel.dataset.key !== optsKey) {
-    sel.innerHTML = opts.map(s => `<option value="${s}">${s}</option>`).join('');
-    sel.dataset.key = optsKey;
+  const optsKey = opts.join(',') + '|' + coins.map(c => c.logoUrl ? 1 : 0).join('');
+  if (htxCoinDD._key !== optsKey) {
+    htxCoinDD._key = optsKey;
+    htxCoinDD.setOptions(opts.map(s => ({ value: s, label: s, sub: COIN_NAMES[s] || '', icon: getCoinIcon(s, 20) })));
   }
-  sel.value = sym;
-  document.getElementById('htxCoinIcon').innerHTML = getCoinIcon(sym, 20);
+  htxCoinDD.setValue(sym);
   if (!st) { listEl.innerHTML = '<div class="htx-empty">Loading…</div>'; return; }
 
   const coin = portfolio.find(c => c.sym === sym);
@@ -3284,7 +3299,7 @@ function renderCoinTx() {
       entries.push({ kind: 'adjust', label: 'Edit', note: (t.note || 'Manual edit') + (parts.length ? ' · ' + parts.join(', ') : ''), date: t.date, order: t.createdAt || '' });
     }
   });
-  const type = document.getElementById('htxType').value;
+  const type = htxTypeDD.value;
   const shown = entries.filter(e => type === 'all' || e.kind === type)
     .sort((a, b) => (b.date + b.order).localeCompare(a.date + a.order));
   if (!shown.length) {
@@ -3564,13 +3579,6 @@ function renderHoldingsAssetList() {
     .htx-tab:hover { color:var(--fg); }
     .htx-tab.active { color:var(--fg); border-bottom-color:#3b82f6; cursor:default; }
     .htx-filters { display:flex; gap:10px; padding:14px 16px; flex-wrap:wrap; }
-    .htx-select { position:relative; display:inline-flex; align-items:center; gap:6px; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:0 30px 0 12px; height:38px; }
-    .htx-select::after { content:''; position:absolute; right:12px; top:50%; width:6px; height:6px; border-right:2px solid var(--fg2); border-bottom:2px solid var(--fg2); transform:translateY(-70%) rotate(45deg); pointer-events:none; }
-    .htx-select select { appearance:none; -webkit-appearance:none; background:transparent; border:none; color:var(--fg); font:inherit; font-size:0.88rem; font-weight:600; padding:0; height:100%; cursor:pointer; outline:none; }
-    .htx-select select option { color:#0f172a; }
-    .htx-select:focus-within { border-color:#3b82f6; }
-    .htx-coin-icon { display:inline-flex; width:20px; height:20px; }
-    .htx-coin-icon img, .htx-coin-icon > div { width:20px !important; height:20px !important; font-size:0.55rem !important; }
     .htx-cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 16px 6px; }
     .htx-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:14px; min-width:0; }
     .htx-label { font-size:0.78rem; color:var(--fg2); font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:5px; }
@@ -3664,18 +3672,8 @@ function renderHoldingsAssetList() {
       <span class="htx-tab active" role="tab" aria-selected="true">Transactions</span>
     </div>
     <div class="htx-filters">
-      <label class="htx-select">
-        <select id="htxType" onchange="renderCoinTx()" aria-label="Transaction type">
-          <option value="all">All Types</option>
-          <option value="buy">Buy</option>
-          <option value="sell">Sell</option>
-          <option value="transfer">Transfer</option>
-        </select>
-      </label>
-      <label class="htx-select htx-coin-select">
-        <span class="htx-coin-icon" id="htxCoinIcon"></span>
-        <select id="htxCoin" onchange="selectCoinTx(this.value)" aria-label="Coin"></select>
-      </label>
+      <div id="htxTypeDD"></div>
+      <div id="htxCoinDD"></div>
     </div>
     <div class="htx-cards">
       <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub" id="htxHoldings24">—</div></div>
