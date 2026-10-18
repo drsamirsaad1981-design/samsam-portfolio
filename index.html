@@ -1511,7 +1511,7 @@ function applyCloudState(d) {
   try { drawPerfChart(); } catch(_) {}
   try { drawHoldingsChart(); } catch(_) {}
   const ov = document.getElementById('holdingsOverlay');
-  if (ov && ov.style.display === 'flex') { try { drawHoldingsOverlayChart(); renderHoldingsAssetList(); } catch(_) {} }
+  if (ov && ov.style.display === 'flex') { try { if (coinTxSym) renderCoinTx(); else { drawHoldingsOverlayChart(); renderHoldingsAssetList(); } } catch(_) {} }
   lastCloudSync = new Date(); updateSyncFooter();
   takeSnapshotsIfDue();
   // Coins that arrived from the cloud without a live price on this device (e.g. a coin
@@ -3141,49 +3141,172 @@ function updateHoldingsChart() {
 })();
 
 /* ── Holdings Full View ── */
+// URL routes: #holdings → list, #holdings/BTC → BTC transactions. Refresh and the
+// browser/phone Back button always land on the right screen.
+let coinTxSym = null;
+function holdingsRoute() {
+  const m = location.hash.match(/^#holdings(?:\/([^/?#]+))?$/);
+  return m ? { open: true, sym: m[1] ? decodeURIComponent(m[1]).toUpperCase() : null } : { open: false, sym: null };
+}
+function showHoldingsOverlay() {
+  const overlay = document.getElementById('holdingsOverlay');
+  if (!overlay) return null;
+  if (overlay.style.display !== 'flex') {
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    // Reset range tabs to 24h when the overlay opens
+    overlay.querySelectorAll('.hov-tab').forEach(b => b.classList.remove('active'));
+    const first = overlay.querySelector('.hov-tab');
+    if (first) first.classList.add('active');
+    holdingsOverlayRange = '24h';
+  }
+  return overlay;
+}
+function applyHoldingsRoute() {
+  const r = holdingsRoute();
+  const overlay = document.getElementById('holdingsOverlay');
+  if (!overlay) return;
+  if (!r.open) {
+    overlay.style.display = 'none'; overlay.removeAttribute('data-view');
+    document.body.style.overflow = ''; coinTxSym = null; return;
+  }
+  showHoldingsOverlay();
+  if (r.sym) {
+    coinTxSym = r.sym;
+    overlay.setAttribute('data-view', 'tx');
+    document.getElementById('hovNavTitle').textContent = r.sym + ' Transactions';
+    renderCoinTx();
+  } else {
+    coinTxSym = null;
+    overlay.removeAttribute('data-view');
+    document.getElementById('hovNavTitle').textContent = '💰 Holdings';
+    drawHoldingsOverlayChart();
+    renderHoldingsAssetList();
+  }
+  overlay.scrollTop = 0;
+}
 function openHoldingsView() {
-  const overlay = document.getElementById('holdingsOverlay');
-  if (!overlay) return;
-  overlay.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  // Push #holdings to URL so refresh restores this view
-  if (location.hash !== '#holdings') history.pushState(null, '', '#holdings');
-  // Reset tabs to 24h
-  overlay.querySelectorAll('.hov-tab').forEach(b => b.classList.remove('active'));
-  const first = overlay.querySelector('.hov-tab');
-  if (first) first.classList.add('active');
-  holdingsOverlayRange = '24h';
-  drawHoldingsOverlayChart();
-  renderHoldingsAssetList();
+  if (location.hash !== '#holdings') history.pushState({ hov: 'list' }, '', '#holdings');
+  applyHoldingsRoute();
 }
-
 function closeHoldingsView() {
-  const overlay = document.getElementById('holdingsOverlay');
-  if (!overlay) return;
-  overlay.style.display = 'none';
-  document.body.style.overflow = '';
-  // Remove #holdings from URL
-  if (location.hash === '#holdings') history.pushState(null, '', location.pathname + location.search);
+  history.pushState(null, '', location.pathname + location.search);
+  applyHoldingsRoute();
 }
+function openCoinTx(sym) {
+  history.pushState({ hov: 'tx' }, '', '#holdings/' + encodeURIComponent(sym));
+  document.getElementById('htxType').value = 'all';
+  applyHoldingsRoute();
+}
+// "Back to Holdings": step back if we came from the list, otherwise replace the URL.
+function closeCoinTx() {
+  if (history.state && history.state.hov === 'tx') history.back();
+  else { history.replaceState({ hov: 'list' }, '', '#holdings'); applyHoldingsRoute(); }
+}
+function selectCoinTx(sym) {
+  history.replaceState({ hov: 'tx' }, '', '#holdings/' + encodeURIComponent(sym));
+  applyHoldingsRoute();
+}
+function hovBack() { if (coinTxSym) closeCoinTx(); else closeHoldingsView(); }
 
-// Restore holdings view on page load / refresh if URL has #holdings
-window.addEventListener('DOMContentLoaded', function() {
-  if (location.hash === '#holdings') {
-    // Wait for portfolio data to load before opening
-    setTimeout(openHoldingsView, 500);
-  }
-});
+// Restore the right screen on load / refresh, and follow the Back button
+window.addEventListener('DOMContentLoaded', function() { if (holdingsRoute().open) setTimeout(applyHoldingsRoute, 300); });
+window.addEventListener('popstate', applyHoldingsRoute);
 
-// Handle browser back button — close overlay instead of navigating away
-window.addEventListener('popstate', function() {
-  const overlay = document.getElementById('holdingsOverlay');
-  if (overlay && overlay.style.display === 'flex') {
-    overlay.style.display = 'none';
-    document.body.style.overflow = '';
-  } else if (location.hash === '#holdings') {
-    openHoldingsView();
+// ── Coin transactions & performance ─────────────────────────────────────────
+const BASELINE_DATE = '2026-10-15T00:00:00';
+function renderCoinTx() {
+  if (!coinTxSym) return;
+  const sym = coinTxSym;
+  const st = window.Samsam && Samsam.isReady() ? Samsam.getState() : null;
+  const listEl = document.getElementById('htxList');
+  // Coin selector: every coin you hold, largest first (the current coin is always listed)
+  const coins = [...portfolio].sort((a, b) => b.qty * b.currentPrice - a.qty * a.currentPrice);
+  const sel = document.getElementById('htxCoin');
+  const opts = coins.map(c => c.sym);
+  if (!opts.includes(sym)) opts.unshift(sym);
+  const optsKey = opts.join(',');
+  if (sel.dataset.key !== optsKey) {
+    sel.innerHTML = opts.map(s => `<option value="${s}">${s}</option>`).join('');
+    sel.dataset.key = optsKey;
   }
-});
+  sel.value = sym;
+  document.getElementById('htxCoinIcon').innerHTML = getCoinIcon(sym, 20);
+  if (!st) { listEl.innerHTML = '<div class="htx-empty">Loading…</div>'; return; }
+
+  const coin = portfolio.find(c => c.sym === sym);
+  const doc = st.coins.find(c => c.sym === sym);
+  const usd = (n, d = 2) => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const priceFmt = n => usd(n, n >= 1000 ? 2 : n >= 1 ? 4 : n >= 0.01 ? 6 : 8).replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
+  const qtyFmt = n => parseFloat(Number(n).toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
+
+  // ── Summary cards ──
+  const qty = coin ? coin.qty : 0, avg = coin ? coin.basePrice : 0, price = coin ? coin.currentPrice : 0;
+  const value = qty * price, cost = qty * avg;
+  const perTx = realizedState.perTx || {};
+  const coinTxs = transactions.filter(t => t.sym === sym);
+  const realized = coinTxs.filter(t => t.type === 'sell').reduce((s, t) => s + ((perTx[t.id] && perTx[t.id].realized) || 0), 0);
+  const profit = (value - cost) + realized;
+  const profitPct = cost > 0 ? profit / cost * 100 : 0;
+  const ch = coin && coin.change24h != null ? coin.change24h : null;
+  const arrow = n => n >= 0 ? '▲ ' : '▼ ';
+  document.getElementById('htxHoldings').textContent = usd(value);
+  const h24 = document.getElementById('htxHoldings24');
+  h24.textContent = ch == null ? '—' : arrow(ch) + Math.abs(ch).toFixed(2) + '% (24h)';
+  h24.className = 'htx-sub ' + (ch == null ? 'htx-muted' : ch >= 0 ? 'htx-pos' : 'htx-neg');
+  const pEl = document.getElementById('htxProfit');
+  pEl.textContent = (profit >= 0 ? '+' : '-') + usd(Math.abs(profit));
+  pEl.className = 'htx-value ' + (profit >= 0 ? 'htx-pos' : 'htx-neg');
+  const ppEl = document.getElementById('htxProfitPct');
+  ppEl.textContent = arrow(profit) + Math.abs(profitPct).toFixed(2) + '%' + (realized ? ` · realized ${realized >= 0 ? '+' : '-'}${usd(Math.abs(realized))}` : '');
+  ppEl.className = 'htx-sub ' + (profit >= 0 ? 'htx-pos' : 'htx-neg');
+  document.getElementById('htxAvg').textContent = avg > 0 ? priceFmt(avg) : '—';
+  document.getElementById('htxCost').textContent = usd(cost);
+
+  // ── History: opening position + every recorded transaction, newest first ──
+  const entries = [];
+  const open = doc && doc.opening;
+  if (open && open.qty > 0) {
+    const isBase = BASE_PORTFOLIO.some(b => b.sym === sym);
+    entries.push({ kind: 'buy', label: 'Buy', note: isBase ? 'Opening position (Oct-15 baseline)' : 'Opening position',
+      date: isBase ? BASELINE_DATE : (doc.addedAt || BASELINE_DATE), qty: open.qty, usd: open.qty * open.avg, order: '' });
+  }
+  coinTxs.forEach(t => {
+    if (t.type === 'buy' || t.type === 'sell') {
+      const r = perTx[t.id];
+      entries.push({ kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty, usd: t.total ?? t.qty * t.price,
+        note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (t.type === 'sell' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
+        date: t.date, order: t.createdAt || '' });
+    } else if (t.type === 'adjust') {
+      const parts = [];
+      if (t.setQty != null) parts.push('qty → ' + qtyFmt(t.setQty) + ' ' + sym);
+      if (t.setAvg != null) parts.push('avg → ' + priceFmt(+t.setAvg));
+      entries.push({ kind: 'adjust', label: 'Edit', note: (t.note || 'Manual edit') + (parts.length ? ' · ' + parts.join(', ') : ''), date: t.date, order: t.createdAt || '' });
+    }
+  });
+  const type = document.getElementById('htxType').value;
+  const shown = entries.filter(e => type === 'all' || e.kind === type)
+    .sort((a, b) => (b.date + b.order).localeCompare(a.date + a.order));
+  if (!shown.length) {
+    listEl.innerHTML = `<div class="htx-empty">${type === 'transfer' ? 'No transfers recorded for ' + sym + '.<br><small>This app records Buy and Sell transactions.</small>'
+      : 'No ' + (type === 'all' ? '' : type + ' ') + 'transactions for ' + sym + ' yet.'}</div>`;
+    return;
+  }
+  const icon = getCoinIcon(sym, 30);
+  let lastDay = '', html = '';
+  shown.forEach(e => {
+    const day = new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (day !== lastDay) { html += `<div class="htx-date">${day}</div>`; lastDay = day; }
+    const amt = e.kind === 'adjust' ? '' :
+      `<div class="htx-row-qty ${e.kind === 'buy' ? 'htx-pos' : 'htx-neg'}">${e.kind === 'buy' ? '+' : '-'}${qtyFmt(e.qty)} ${sym}</div><div class="htx-row-usd">${usd(e.usd)}</div>`;
+    html += `<div class="htx-row">
+      <span class="htx-row-icon">${icon}</span>
+      <div class="htx-row-main"><div class="htx-row-type">${e.label}</div><div class="htx-row-note">${String(e.note).replace(/</g, '&lt;')}</div></div>
+      <div class="htx-row-amt">${amt}</div>
+    </div>`;
+  });
+  listEl.innerHTML = html;
+}
 
 let holdingsOverlayRange = '24h';
 
@@ -3332,9 +3455,10 @@ function renderHoldingsAssetList() {
         <span class="hov-price">${priceStr}</span>
         <span class="hov-pct" style="color:${clr}">${arrow} ${Math.abs(pct24).toFixed(2)}%</span>
       </div>
-      <div class="hov-asset-holding">
+      <div class="hov-asset-holding htx-open" role="button" tabindex="0" title="View ${c.sym} transactions"
+           onclick="openCoinTx('${c.sym}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCoinTx('${c.sym}')}">
         <span class="hov-hval">${holdVal}</span>
-        <span class="hov-hqty">${holdQty}</span>
+        <span class="hov-hqty">${holdQty}<span class="htx-chev">›</span></span>
       </div>
     </div>`;
   }).join('');
@@ -3422,6 +3546,54 @@ function renderHoldingsAssetList() {
     }
     .hov-asset-name { display:flex;flex-direction:column;gap:1px; min-width:0; }
     .hov-sym  { font-size:0.88rem;font-weight:700;color:var(--fg); }
+    /* Tap the holdings amount → coin transactions */
+    .hov-asset-holding.htx-open { cursor:pointer; border-radius:8px; padding:4px 6px; margin:-4px -6px; transition:background .15s; -webkit-tap-highlight-color:transparent; }
+    @media (hover:hover) { .hov-asset-holding.htx-open:hover { background:var(--bg3); } .hov-asset-holding.htx-open:hover .hov-hqty { color:#60a5fa; } }
+    .hov-asset-holding.htx-open:active { background:var(--bg3); }
+    .hov-asset-holding.htx-open:focus-visible { outline:2px solid #3b82f6; outline-offset:2px; }
+    .hov-hqty .htx-chev { opacity:.5; margin-left:3px; }
+
+    /* ── Coin transactions view ── */
+    #hovTxView { display:none; padding:0 0 calc(80px + env(safe-area-inset-bottom,0px)); }
+    #holdingsOverlay[data-view="tx"] #hovTxView { display:block; }
+    #holdingsOverlay[data-view="tx"] .hov-hero, #holdingsOverlay[data-view="tx"] .hov-chart-wrap,
+    #holdingsOverlay[data-view="tx"] .hov-tabs, #holdingsOverlay[data-view="tx"] .hov-list-header,
+    #holdingsOverlay[data-view="tx"] #hovAssetList { display:none; }
+    .htx-tabs { display:flex; gap:22px; padding:10px 16px 0; border-bottom:1px solid var(--border); }
+    .htx-tab { background:none; border:none; border-bottom:2px solid transparent; padding:10px 0 12px; font:inherit; font-size:0.95rem; font-weight:600; color:var(--fg2); cursor:pointer; }
+    .htx-tab:hover { color:var(--fg); }
+    .htx-tab.active { color:var(--fg); border-bottom-color:#3b82f6; cursor:default; }
+    .htx-filters { display:flex; gap:10px; padding:14px 16px; flex-wrap:wrap; }
+    .htx-select { position:relative; display:inline-flex; align-items:center; gap:6px; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:0 30px 0 12px; height:38px; }
+    .htx-select::after { content:''; position:absolute; right:12px; top:50%; width:6px; height:6px; border-right:2px solid var(--fg2); border-bottom:2px solid var(--fg2); transform:translateY(-70%) rotate(45deg); pointer-events:none; }
+    .htx-select select { appearance:none; -webkit-appearance:none; background:transparent; border:none; color:var(--fg); font:inherit; font-size:0.88rem; font-weight:600; padding:0; height:100%; cursor:pointer; outline:none; }
+    .htx-select select option { color:#0f172a; }
+    .htx-select:focus-within { border-color:#3b82f6; }
+    .htx-coin-icon { display:inline-flex; width:20px; height:20px; }
+    .htx-coin-icon img, .htx-coin-icon > div { width:20px !important; height:20px !important; font-size:0.55rem !important; }
+    .htx-cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 16px 6px; }
+    .htx-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:14px; min-width:0; }
+    .htx-label { font-size:0.78rem; color:var(--fg2); font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:5px; }
+    .htx-info { cursor:help; opacity:.7; font-size:0.85rem; }
+    .htx-value { font-size:1.25rem; font-weight:800; color:var(--fg); letter-spacing:-0.01em; overflow-wrap:anywhere; }
+    .htx-sub { font-size:0.8rem; font-weight:700; margin-top:4px; }
+    .htx-pos { color:var(--green); } .htx-neg { color:var(--red); } .htx-muted { color:var(--fg2); font-weight:500; }
+    .htx-list { padding:4px 0 0; }
+    .htx-date { padding:16px 16px 6px; font-size:0.8rem; color:var(--fg2); font-weight:600; }
+    .htx-row { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border); }
+    .htx-row-icon { width:30px; height:30px; flex-shrink:0; display:inline-flex; }
+    .htx-row-icon img, .htx-row-icon > div { width:30px !important; height:30px !important; }
+    .htx-row-main { flex:1; min-width:0; }
+    .htx-row-type { font-weight:700; font-size:0.92rem; color:var(--fg); }
+    .htx-row-note { font-size:0.72rem; color:var(--fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .htx-row-amt { text-align:right; flex-shrink:0; }
+    .htx-row-qty { font-weight:700; font-size:0.9rem; }
+    .htx-row-usd { font-size:0.8rem; color:var(--fg2); margin-top:2px; }
+    .htx-empty { padding:36px 16px; text-align:center; color:var(--fg2); font-size:0.88rem; }
+    @media (min-width: 900px) {
+      #hovTxView { max-width:860px; margin:0 auto; width:100%; }
+      .htx-cards { grid-template-columns:repeat(4, 1fr); }
+    }
     .hov-cg-link { text-decoration:none; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .hov-cg-link .hov-sym, .hov-cg-link .hov-name { text-decoration: underline transparent; text-underline-offset: 3px; transition: color .15s, text-decoration-color .15s; }
     @media (hover:hover) {
@@ -3443,13 +3615,13 @@ function renderHoldingsAssetList() {
 
   <!-- Nav bar -->
   <div class="hov-navbar">
-    <button class="hov-back-btn" onclick="closeHoldingsView()">
+    <button class="hov-back-btn" onclick="hovBack()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="15 18 9 12 15 6"/>
       </svg>
       Back
     </button>
-    <span class="hov-nav-title">💰 Holdings</span>
+    <span class="hov-nav-title" id="hovNavTitle">💰 Holdings</span>
     <button type="button" class="ss-theme-btn" data-theme-toggle></button>
   </div>
 
@@ -3484,6 +3656,35 @@ function renderHoldingsAssetList() {
 
   <!-- Asset rows -->
   <div id="hovAssetList"></div>
+
+  <!-- Coin Transactions & Performance view (opened by tapping a coin's holdings) -->
+  <div id="hovTxView">
+    <div class="htx-tabs" role="tablist">
+      <button type="button" class="htx-tab" onclick="closeCoinTx()">‹ Back to Holdings</button>
+      <span class="htx-tab active" role="tab" aria-selected="true">Transactions</span>
+    </div>
+    <div class="htx-filters">
+      <label class="htx-select">
+        <select id="htxType" onchange="renderCoinTx()" aria-label="Transaction type">
+          <option value="all">All Types</option>
+          <option value="buy">Buy</option>
+          <option value="sell">Sell</option>
+          <option value="transfer">Transfer</option>
+        </select>
+      </label>
+      <label class="htx-select htx-coin-select">
+        <span class="htx-coin-icon" id="htxCoinIcon"></span>
+        <select id="htxCoin" onchange="selectCoinTx(this.value)" aria-label="Coin"></select>
+      </label>
+    </div>
+    <div class="htx-cards">
+      <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub" id="htxHoldings24">—</div></div>
+      <div class="htx-card"><div class="htx-label">All-Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
+      <div class="htx-card"><div class="htx-label">Avg. Buy Price</div><div class="htx-value" id="htxAvg">—</div></div>
+      <div class="htx-card"><div class="htx-label">Cost Basis <span class="htx-info" title="Total amount invested in your current holdings (quantity × average buy price)">ⓘ</span></div><div class="htx-value" id="htxCost">—</div></div>
+    </div>
+    <div id="htxList" class="htx-list"></div>
+  </div>
 </div>
 </body>
 </html>

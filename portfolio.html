@@ -3318,13 +3318,16 @@ function renderHoldingsAssetList() {
       : '$' + c.currentPrice.toLocaleString('en-US', {minimumFractionDigits:c.currentPrice<0.01?6:c.currentPrice<1?4:2,maximumFractionDigits:c.currentPrice<0.01?6:c.currentPrice<1?4:2});
     const holdVal = '$' + c.holdingVal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
     const holdQty = parseFloat(c.qty.toFixed(c.qty < 1 ? 6 : 4)).toString() + ' ' + c.sym;
-    const logoEl = getCoinIcon(c.sym, 36);
+    // Symbol + name (and logo) open the coin on CoinGecko, like the main table
+    const cgUrl = getCoinGeckoUrl(c.sym);
+    const coinName = COIN_NAMES[c.sym] || c.name || c.sym;
+    const nameInner = `<span class="hov-sym">${c.sym}</span><span class="hov-name">${coinName}</span>`;
+    const nameEl = cgUrl
+      ? `<a class="hov-asset-name hov-cg-link" href="${cgUrl}" target="_blank" rel="noopener noreferrer" title="Open ${coinName} on CoinGecko">${nameInner}</a>`
+      : `<div class="hov-asset-name">${nameInner}</div>`;
     return `<div class="hov-asset-row">
-      <div class="hov-coin-icon">${logoEl}</div>
-      <div class="hov-asset-name">
-        <span class="hov-sym">${c.sym}</span>
-        <span class="hov-name">${c.name||c.sym}</span>
-      </div>
+      <div class="hov-coin-icon">${getCoinIconLinked(c.sym, 36)}</div>
+      ${nameEl}
       <div class="hov-asset-price">
         <span class="hov-price">${priceStr}</span>
         <span class="hov-pct" style="color:${clr}">${arrow} ${Math.abs(pct24).toFixed(2)}%</span>
@@ -3419,6 +3422,16 @@ function renderHoldingsAssetList() {
     }
     .hov-asset-name { display:flex;flex-direction:column;gap:1px; min-width:0; }
     .hov-sym  { font-size:0.88rem;font-weight:700;color:var(--fg); }
+    .hov-cg-link { text-decoration:none; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .hov-cg-link .hov-sym, .hov-cg-link .hov-name { text-decoration: underline transparent; text-underline-offset: 3px; transition: color .15s, text-decoration-color .15s; }
+    @media (hover:hover) {
+      .hov-cg-link:hover .hov-sym { color:#60a5fa; text-decoration-color: currentColor; }
+      .hov-cg-link:hover .hov-name { color:#60a5fa; }
+    }
+    .hov-cg-link:active .hov-sym, .hov-cg-link:active .hov-name { color:#60a5fa; }
+    .hov-cg-link:focus-visible { outline:2px solid #3b82f6; outline-offset:2px; border-radius:4px; }
+    [data-theme="light"] .hov-cg-link:hover .hov-sym, [data-theme="light"] .hov-cg-link:hover .hov-name,
+    [data-theme="light"] .hov-cg-link:active .hov-sym, [data-theme="light"] .hov-cg-link:active .hov-name { color:#2563eb; }
     .hov-name { font-size:0.7rem;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
     .hov-asset-price { display:flex;flex-direction:column;align-items:flex-end;gap:2px; }
     .hov-price { font-size:0.82rem;font-weight:600;color:var(--fg); }
