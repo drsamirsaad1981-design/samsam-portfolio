@@ -418,17 +418,17 @@ function injectUi() {
   const css = document.createElement('style');
   css.textContent = `
   #samsamGate{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;padding:16px;background:var(--bg,#0b0f17);color:var(--fg,#e5e7eb);font-family:inherit}
-  #samsamGate .card{max-width:420px;width:100%;background:var(--bg2,#111827);border:1px solid var(--border,#1f2937);border-radius:16px;padding:24px;text-align:center}
+  #samsamGate .card{max-width:420px;width:100%;background:var(--bg2,var(--card,#111827));border:1px solid var(--border,#1f2937);border-radius:16px;padding:24px;text-align:center}
   #samsamGate h2{margin:0 0 8px;font-size:1.25rem} #samsamGate p{margin:8px 0;color:var(--fg2,#9ca3af);font-size:.9rem;line-height:1.5}
   .samsam-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:10px;border:1px solid var(--border,#374151);background:var(--bg3,#1f2937);color:var(--fg,#e5e7eb);font:inherit;font-weight:600;cursor:pointer}
   .samsam-btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
   .samsam-btn[disabled]{opacity:.6;cursor:default}
-  #samsamSyncPill{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:99990;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;font:600 12px/1.2 system-ui,-apple-system,sans-serif;background:var(--bg2,#111827);color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;max-width:calc(100vw - 24px)}
+  #samsamSyncPill{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:99990;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;font:600 12px/1.2 system-ui,-apple-system,sans-serif;background:var(--bg2,var(--card,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;max-width:calc(100vw - 24px)}
   #samsamSyncPill[data-s=error]{border-color:#ef4444}
-  #samsamSyncMenu{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:calc(max(12px,env(safe-area-inset-bottom)) + 44px);z-index:99991;display:none;width:min(300px,calc(100vw - 24px));background:var(--bg2,#111827);color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:12px;padding:12px;font:13px/1.45 system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  #samsamSyncMenu{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:calc(max(12px,env(safe-area-inset-bottom)) + 44px);z-index:99991;display:none;width:min(300px,calc(100vw - 24px));background:var(--bg2,var(--card,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:12px;padding:12px;font:13px/1.45 system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   #samsamSyncMenu .row{display:flex;gap:8px;margin-top:10px} #samsamSyncMenu .samsam-btn{flex:1;min-height:38px;padding:8px;font-size:12px}
   #samsamSyncMenu .muted{color:var(--fg2,#9ca3af);font-size:12px} #samsamSyncMenu .err{color:#ef4444;font-size:12px;margin-top:6px;word-break:break-word}
-  #samsamSetup{display:none;margin:12px auto;max-width:760px;background:var(--bg2,#111827);border:1px solid #2563eb;border-radius:14px;padding:18px;color:var(--fg,#e5e7eb)}
+  #samsamSetup{display:none;margin:12px auto;max-width:760px;background:var(--bg2,var(--card,#111827));border:1px solid #2563eb;border-radius:14px;padding:18px;color:var(--fg,#e5e7eb)}
   #samsamSetup h3{margin:0 0 6px;font-size:1.05rem} #samsamSetup p{margin:6px 0;color:var(--fg2,#9ca3af);font-size:.88rem;line-height:1.5}
   #samsamSetup .opts{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px} #samsamSetup .opts .samsam-btn{flex:1 1 200px}
   #samsamSetup .msg{margin-top:10px;font-size:.85rem}
