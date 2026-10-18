@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610181549"></script>
-<script src="samsam-dropdown.js?v=202610181549"></script>
-<script src="samsam-chart.js?v=202610181549"></script>
+<script src="samsam-ui.js?v=202610181651"></script>
+<script src="samsam-dropdown.js?v=202610181651"></script>
+<script src="samsam-chart.js?v=202610181651"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1217,7 +1217,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610181549"></script>
+<script type="module" src="samsam-cloud.js?v=202610181651"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -3002,6 +3002,46 @@ function saveAddTx() {
   if (coinTxSym === atxSym && htxTypeDD && htxTypeDD.value !== 'all' && !(htxTypeDD.value === 'transfer' && atxType.startsWith('transfer')) && htxTypeDD.value !== atxType) { htxTypeDD.setValue('all'); renderCoinTx(); }
 }
 
+// ── Edit opening position ─────────────────────────────────────────────────────
+function openEditOpening() {
+  if (!coinTxSym || !requireCloud()) return;
+  const doc = Samsam.getState().coins.find(c => c.sym === coinTxSym);
+  const o = (doc && doc.opening) || { qty: 0, avg: 0 };
+  const isBase = BASE_PORTFOLIO.some(b => b.sym === coinTxSym);
+  document.getElementById('eopCoin').innerHTML = getCoinIcon(coinTxSym, 24) + `<span>${coinTxSym}</span><small>${COIN_NAMES[coinTxSym] || ''}</small>`;
+  document.getElementById('eopQty').value = fmtInput(o.qty);
+  document.getElementById('eopAvg').value = fmtInput(o.avg);
+  document.getElementById('eopDate').value = (o.date || (isBase ? BASELINE_DATE : (doc && doc.addedAt) || BASELINE_DATE)).slice(0, 10);
+  document.getElementById('eopErr').textContent = '';
+  previewEditOpening();
+  document.getElementById('eopBackdrop').classList.add('show'); document.body.classList.add('atx-open');
+}
+function closeEditOpening() { document.getElementById('eopBackdrop').classList.remove('show'); document.body.classList.remove('atx-open'); }
+function readEditOpening() {
+  const qty = parseFloat(document.getElementById('eopQty').value), avg = parseFloat(document.getElementById('eopAvg').value);
+  if (!(qty >= 0) || !(avg >= 0)) return { err: 'Enter a quantity and price (0 or more).' };
+  const txs = transactions.filter(t => t.sym === coinTxSym);
+  const r = Samsam.core.replay({ qty, avg }, txs);
+  return { qty, avg, r };
+}
+function previewEditOpening() {
+  const x = readEditOpening(), pv = document.getElementById('eopPreview');
+  if (x.err) { pv.innerHTML = ''; return; }
+  const usd = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const q = n => parseFloat(n.toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
+  const p = n => '$' + (+n).toLocaleString('en-US', { maximumFractionDigits: n >= 1 ? 4 : 8 });
+  pv.innerHTML = `Opening cost: <b>${usd(x.qty * x.avg)}</b><br>After all transactions: <b>${q(x.r.qty)} ${coinTxSym}</b> · avg buy <b>${p(x.r.avg)}</b> · cost basis <b>${usd(x.r.qty * x.r.avg)}</b>` +
+    (transactions.some(t => t.sym === coinTxSym && t.type === 'adjust') ? '<br><span style="color:#f59e0b">⚠️ This coin also has manual “Edit” rows; they override the result above. Delete them if they are no longer needed.</span>' : '');
+}
+function saveEditOpening() {
+  const x = readEditOpening();
+  if (x.err) { document.getElementById('eopErr').textContent = x.err; return; }
+  const d = document.getElementById('eopDate').value;
+  cloudWrite(Samsam.updateCoin(coinTxSym, { opening: { qty: x.qty, avg: x.avg, ...(d ? { date: d + 'T00:00:00' } : {}) } }));
+  closeEditOpening();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('eopBackdrop').classList.contains('show')) closeEditOpening(); });
+
 // Custom dropdowns (samsam-dropdown.js): same dark component on mobile (bottom sheet) and desktop (popover)
 let htxTypeDD = null, htxCoinDD = null;
 function ensureHtxDropdowns() {
@@ -3069,18 +3109,19 @@ function renderCoinTx() {
   const open = doc && doc.opening;
   if (open && open.qty > 0) {
     const isBase = BASE_PORTFOLIO.some(b => b.sym === sym);
-    entries.push({ kind: 'buy', label: 'Buy', note: isBase ? 'Opening position (Oct-15 baseline)' : 'Opening position',
-      date: isBase ? BASELINE_DATE : (doc.addedAt || BASELINE_DATE), qty: open.qty, usd: open.qty * open.avg, order: '' });
+    const oDate = open.date || (isBase ? BASELINE_DATE : (doc.addedAt || BASELINE_DATE));
+    entries.push({ kind: 'buy', label: 'Buy', opening: true, note: (isBase && !open.date ? 'Opening position (Oct-15 baseline)' : 'Opening position') + ' · @ ' + priceFmt(open.avg),
+      date: oDate, qty: open.qty, usd: open.qty * open.avg, order: '' });
   }
   coinTxs.forEach(t => {
     if (t.type === 'buy' || t.type === 'sell') {
       const r = perTx[t.id];
-      entries.push({ kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty, usd: t.total ?? t.qty * t.price,
+      entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty, usd: t.total ?? t.qty * t.price,
         note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (t.type === 'sell' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' || t.type === 'transfer_out') {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
-      entries.push({ kind: t.type, label: isIn ? 'Transfer In' : 'Transfer Out',
+      entries.push({ id: t.id, kind: t.type, label: isIn ? 'Transfer In' : 'Transfer Out',
         qty: isIn ? t.qty - fee : t.qty + fee, usd: isIn ? t.qty * t.price : (t.qty + fee) * (price || 0),
         note: [t.note, isIn && t.price ? '@ ' + priceFmt(t.price) : '', fee ? 'fee ' + qtyFmt(fee) + ' ' + sym : ''].filter(Boolean).join(' · '),
         date: t.date, order: t.createdAt || '' });
@@ -3088,7 +3129,7 @@ function renderCoinTx() {
       const parts = [];
       if (t.setQty != null) parts.push('qty → ' + qtyFmt(t.setQty) + ' ' + sym);
       if (t.setAvg != null) parts.push('avg → ' + priceFmt(+t.setAvg));
-      entries.push({ kind: 'adjust', label: 'Edit', note: (t.note || 'Manual edit') + (parts.length ? ' · ' + parts.join(', ') : ''), date: t.date, order: t.createdAt || '' });
+      entries.push({ id: t.id, kind: 'adjust', label: 'Edit', note: (t.note || 'Manual edit') + (parts.length ? ' · ' + parts.join(', ') : ''), date: t.date, order: t.createdAt || '' });
     }
   });
   const type = htxTypeDD.value;
@@ -3112,6 +3153,9 @@ function renderCoinTx() {
       <span class="htx-row-icon">${icon}</span>
       <div class="htx-row-main"><div class="htx-row-type"><span class="htx-dot htx-dot-${e.kind}"></span>${e.label}</div><div class="htx-row-note">${String(e.note).replace(/</g, '&lt;')}</div></div>
       <div class="htx-row-amt">${amt}</div>
+      <div class="htx-row-act">${e.opening
+        ? `<button type="button" class="htx-act" onclick="openEditOpening()" title="Edit opening position" aria-label="Edit opening position">✏️</button>`
+        : `<button type="button" class="htx-act" onclick="deleteTx('${e.id}')" title="Delete" aria-label="Delete this ${e.label}">🗑</button>`}</div>
     </div>`;
   });
   listEl.innerHTML = html;
@@ -3341,6 +3385,10 @@ function renderHoldingsAssetList() {
     .htx-row-type { font-weight:700; font-size:0.92rem; color:var(--fg); }
     .htx-row-note { font-size:0.72rem; color:var(--fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .htx-row-amt { text-align:right; flex-shrink:0; }
+    .htx-row-act { flex-shrink:0; margin-left:4px; }
+    .htx-act { width:34px; height:34px; border-radius:9px; border:1px solid var(--border); background:transparent; cursor:pointer; font-size:.9rem;
+      opacity:.75; display:inline-flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+    .htx-act:hover, .htx-act:focus-visible { opacity:1; border-color:var(--fg2); }
     .htx-row-qty { font-weight:700; font-size:0.9rem; }
     .htx-row-usd { font-size:0.8rem; color:var(--fg2); margin-top:2px; }
     .htx-in { color:#3b82f6; } .htx-out { color:#f59e0b; }
@@ -3516,6 +3564,21 @@ function renderHoldingsAssetList() {
   </div><!-- /.hov-container -->
 
 </div>
+<!-- Edit opening position -->
+<div class="atx-backdrop" id="eopBackdrop" onclick="if(event.target===this)closeEditOpening()">
+  <form class="atx-modal" onsubmit="event.preventDefault();saveEditOpening()" role="dialog" aria-modal="true" aria-labelledby="eopTitle" novalidate style="--atx-c:#2563eb">
+    <div class="atx-head"><h3 id="eopTitle">Edit opening position</h3><button type="button" class="atx-x" onclick="closeEditOpening()" aria-label="Close">×</button></div>
+    <div class="atx-coin" id="eopCoin"></div>
+    <label class="atx-field"><span>Opening quantity</span><input type="number" inputmode="decimal" step="any" min="0" id="eopQty" oninput="previewEditOpening()"></label>
+    <label class="atx-field"><span>Average buy price (USD)</span><input type="number" inputmode="decimal" step="any" min="0" id="eopAvg" oninput="previewEditOpening()"></label>
+    <label class="atx-field"><span>Date</span><input type="date" id="eopDate"></label>
+    <div class="atx-hint">The position you held before the first transaction in this list. All buys, sells and transfers after it are recalculated from these numbers.</div>
+    <div class="atx-preview" id="eopPreview"></div>
+    <div class="atx-err" id="eopErr" role="alert"></div>
+    <button type="submit" class="atx-save">Save opening position</button>
+  </form>
+</div>
+
 <!-- Add Transaction form (shared by the main table/cards and the coin Transactions screen) -->
   <div class="atx-backdrop" id="atxBackdrop" onclick="if(event.target===this)closeAddTx()">
     <form class="atx-modal" id="atxForm" onsubmit="event.preventDefault();saveAddTx()" role="dialog" aria-modal="true" aria-labelledby="atxTitle" novalidate>
