@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610181651"></script>
-<script src="samsam-dropdown.js?v=202610181651"></script>
-<script src="samsam-chart.js?v=202610181651"></script>
+<script src="samsam-ui.js?v=202610181717"></script>
+<script src="samsam-dropdown.js?v=202610181717"></script>
+<script src="samsam-chart.js?v=202610181717"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -307,6 +307,7 @@
     word-break: break-all;
   }
 
+  td.ro-num { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
   .coin-metric .metric-input {
     display: block;
     width: 100%;
@@ -1217,7 +1218,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610181651"></script>
+<script type="module" src="samsam-cloud.js?v=202610181717"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -1714,8 +1715,8 @@ function renderTableAndStack() {
           ${getCoinIconLinked(c.sym,32)}
           ${getCoinNameLinked(c.sym)}
         </div></td>
-        <td><input type="number" class="editable-input" value="${fmtInput(c.qty)}" step="any" onchange="updateQty('${c.sym}',this.value)"></td>
-        <td><input type="number" class="editable-input" value="${fmtInput(c.basePrice)}" step="any" onchange="updateBasePrice('${c.sym}',this.value)" style="color:var(--fg2)"></td>
+        <td class="ro-num" title="Changes only through Buy / Sell / Transfer">${fmtQtyRO(c.qty)}</td>
+        <td class="ro-num" style="color:var(--fg2)" title="Calculated from Buy / Sell / Transfer">${fmtAvgRO(c.basePrice)}</td>
         <td><input type="number" class="editable-input" value="${fmtInput(c.currentPrice)}" step="any" onchange="updatePrice('${c.sym}',this.value)"></td>
         <td style="color:var(--fg2)">$${fmt(baseVal,2)}</td>
         <td style="font-weight:700">$${fmt(curVal,2)}</td>
@@ -1772,9 +1773,9 @@ function renderTableAndStack() {
           </div>
         </div>
         <div class="coin-card-body">
-          <div class="coin-metric"><label>Qty ✏️</label><input class="metric-input" type="number" inputmode="decimal" step="any" value="${fmtInput(c.qty)}" onchange="updateQty('${c.sym}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div>
+          <div class="coin-metric"><label>Qty</label><val>${fmtQtyRO(c.qty)}</val></div>
           <div class="coin-metric"><label>Cost Basis</label><val>$${fmt(baseVal,0)}</val></div>
-          <div class="coin-metric"><label>Avg Buy Price ✏️</label><input class="metric-input" type="number" inputmode="decimal" step="any" value="${fmtInput(c.basePrice)}" onchange="updateBasePrice('${c.sym}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div>
+          <div class="coin-metric"><label>Avg Buy Price</label><val>${fmtAvgRO(c.basePrice)}</val></div>
           <div class="coin-metric"><label>Holdings / Current Value</label><val>$${fmt(curVal,0)}</val></div>
           <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
           <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
@@ -1812,24 +1813,11 @@ function updateNote(sym, val) {
   const coin = portfolio.find(c=>c.sym===sym);
   if (coin && (coin.notes||'') !== val) cloudWrite(Samsam.updateCoin(sym, { notes: val }));
 }
-// Inline quantity / average-price edits are recorded as ledger corrections ("adjust"),
-// so they sync, appear in History, and survive later transaction deletions.
-function updateQty(sym, val) {
-  if (!requireCloud()) return;
-  const coin = portfolio.find(c=>c.sym===sym);
-  const n = parseFloat(val);
-  if (!coin || !(n >= 0)) { renderTableAndStack(); return; }
-  if (fmtInput(n) === fmtInput(coin.qty)) return;
-  cloudWrite(Samsam.adjust(sym, { setQty: n }, 'Quantity edited'));
-}
-function updateBasePrice(sym, val) {
-  if (!requireCloud()) return;
-  const coin = portfolio.find(c=>c.sym===sym);
-  const n = parseFloat(val);
-  if (!coin || !(n > 0)) { renderTableAndStack(); return; }
-  if (fmtInput(n) === fmtInput(coin.basePrice)) return;
-  cloudWrite(Samsam.adjust(sym, { setAvg: n }, 'Avg buy price edited'));
-}
+// Quantity and average buy price are NOT editable: they are calculated only from the
+// ledger (opening position + Buy / Sell / Transfer In / Transfer Out), so every number
+// can be traced to a transaction.
+const fmtQtyRO = n => parseFloat((+n || 0).toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
+const fmtAvgRO = n => { n = +n || 0; return '$' + n.toLocaleString('en-US', { minimumFractionDigits: n >= 1 ? 2 : 0, maximumFractionDigits: n >= 1000 ? 2 : n >= 1 ? 4 : 8 }); };
 
 // ── Buy / Sell / Transfer In / Transfer Out ──────────
 // Every action opens the same Add Transaction form (see openAddTx).
@@ -2014,6 +2002,9 @@ function applyAddCoin() {
     errEl.style.display = 'block'; return;
   }
   if (!requireCloud()) return;
+  // Re-adding a removed coin records a normal Buy; warn if a balance was still left in its history
+  const prev = Samsam.getState().archivedCoins.find(c => c.sym === sym);
+  if (prev && prev.qty > 1e-12 && !confirm(`${sym} still had ${fmtQtyRO(prev.qty)} ${sym} when it was removed.\nThis Buy will be added to that balance (new total ${fmtQtyRO(prev.qty + qty)}).\n\nContinue?`)) return;
   const cgId = document.getElementById('acCgId').value.trim().toLowerCase() || null;
   const name = document.getElementById('acName').value.trim() || sym;
   const cat  = document.getElementById('acCat').value;

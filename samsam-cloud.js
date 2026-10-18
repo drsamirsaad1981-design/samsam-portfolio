@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610181651';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610181651';
+import * as Core from './samsam-core.js?v=202610181717';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610181717';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -284,10 +284,8 @@ const API = {
         addedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }), { merge: true });
       const id = Core.newId('tx_');
-      // A coin with earlier history (removed then re-added) is pinned to the entered position;
-      // a brand-new coin gets an ordinary opening buy.
-      if (hasHistory || (existing && existing.opening && existing.opening.qty > 0)) b.set(ref('txs', id), txDoc(sym, 'adjust', 0, 0, note || 'Re-added coin', { setQty: qty, setAvg: price }));
-      else b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || 'Initial position'));
+      // Every new or re-added coin starts with an ordinary Buy (no manual corrections).
+      b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position')));
     }, `Add ${sym}`);
   },
   removeCoin(sym) { return API.updateCoin(sym, { removed: true, removedAt: new Date().toISOString() }); },
