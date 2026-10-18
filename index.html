@@ -793,6 +793,8 @@
   .tx-type-badge { font-size:0.68rem; font-weight:700; padding:2px 7px; border-radius:4px; display:inline-block; margin-bottom:4px; }
   .tx-buy  .tx-type-badge { background:rgba(34,197,94,0.15); color:#22c55e; }
   .tx-sell .tx-type-badge { background:rgba(239,68,68,0.15); color:#ef4444; }
+  .tx-row.tx-adjust { border-left:3px solid #f59e0b; }
+  .tx-adjust .tx-type-badge { background:rgba(245,158,11,0.15); color:#f59e0b; }
   .tx-details { flex:1; font-size:0.8rem; line-height:1.7; }
   .tx-details .tx-meta { font-size:0.72rem; color:var(--fg2); }
   .tx-delete-btn { background:transparent; border:1px solid #4b5563; color:#6b7280; border-radius:6px; padding:4px 9px; font-size:0.72rem; cursor:pointer; white-space:nowrap; flex-shrink:0; }
@@ -1236,6 +1238,8 @@
 </footer>
 
 <!-- JS from here -->
+<!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
+<script type="module" src="samsam-cloud.js"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -1434,117 +1438,70 @@ const LIVE_PRICES_OCT15 = {
   VET:0.00705, NIGHT:0.04419, MON:0.02344, PONS:0.3498, XPL:0.08513,
 };
 
-const STORAGE_KEY    = 'samsam_pf_v4';
-const ARCHIVE_KEY    = 'samsam_archived_v1'; // separate key — never cleared by Reset
-const CUSTOM_KEY     = 'samsam_custom_v1';   // manually added coins — survives Reset
-const TX_KEY         = 'samsam_tx_v1';       // transaction history — never cleared by Reset
-const PERF_KEY       = 'samsam_perf_v1';     // performance chart snapshots
-const ACCUM_KEY      = 'samsam_acc_v1';      // accumulation plan
-const VIEW_KEY       = 'samsam_view_pref';   // cards/table view preference
-const SYNC_KEY       = 'samsam_last_cloud_ts'; // last cloud timestamp we successfully pulled
-const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
-const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
-['samsam_portfolio','samsam_pf_v1','samsam_pf_v2','samsam_pf_v3'].forEach(k=>localStorage.removeItem(k));
+const ACCUM_KEY      = 'samsam_acc_v1';      // legacy key (read only during one-time import)
+const VIEW_KEY       = 'samsam_view_pref';   // cards/table view preference (per device)
 
-function loadArchive() {
-  try { archivedCoins = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); } catch(e) { archivedCoins = []; }
-  // Migration: legacy entries (before removedPermanently flag was added) had no flag.
-  // All existing archive entries represent user-removed coins — mark them now.
-  let migrated = false;
-  archivedCoins.forEach(c => { if (c.removedPermanently === undefined) { c.removedPermanently = true; migrated = true; } });
-  if (migrated) { try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archivedCoins)); } catch(e) {} }
-}
-function saveArchive(skipCloudPush = false) {
-  try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archivedCoins)); } catch(e) {}
-  if (!skipCloudPush) pushPortfolioToCloud();
-}
-function getRemovedSyms() {
-  // Only coins explicitly removed by the user (removedPermanently=true) are filtered out.
-  // Historic archive entries (e.g. transaction snapshots) without this flag are NOT excluded.
-  return new Set(archivedCoins.filter(c => c.removedPermanently === true).map(c => c.sym));
-}
-
-// Custom coins: added manually by user — persist across Reset
-let customCoins = []; // array of coin objects (baseline snapshot, not live state)
-function loadCustomCoins() {
-  try { customCoins = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch(e) { customCoins = []; }
-}
-function saveCustomCoins(skipCloudPush = false) {
-  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(customCoins)); } catch(e) {}
-  if (!skipCloudPush) pushPortfolioToCloud();
-}
-
-// ── Transaction History ───────────────────────────────
-// Each tx: { id, sym, type:'buy'|'sell', qty, price, total, date, note }
+// ─── Data layer ──────────────────────────────────────────────────────────────
+// All portfolio data lives in the cloud (samsam-cloud.js → Firebase Firestore).
+// Holdings are DERIVED from each coin's opening position + its transaction ledger
+// (samsam-core.js), so every device computes identical numbers and every change
+// is saved and synced automatically. Nothing here writes portfolio data to localStorage.
 let transactions = [];
-function loadTransactions() {
-  try { transactions = JSON.parse(localStorage.getItem(TX_KEY) || '[]'); } catch(e) { transactions = []; }
+let customCoins = [];
+let accumPlanState = [];
+let realizedState = { total: 0, sellCount: 0, perTx: {} };
+let perfSnapsState = [];
+let holdingsSnapsState = [];
+let cloudReady = false;
+
+function whenSamsam(cb) {
+  if (window.Samsam) cb(window.Samsam);
+  else window.addEventListener('samsam-ready', () => cb(window.Samsam), { once: true });
 }
-function saveTransactions() {
-  try { localStorage.setItem(TX_KEY, JSON.stringify(transactions)); } catch(e) {}
-  pushPortfolioToCloud(); // sync transaction changes to cloud
+function cloudWrite(promise) {
+  // Errors are shown by the sync pill; keep a console trace for debugging.
+  if (promise && promise.catch) promise.catch(e => console.error('[Portfolio] save failed', e));
+  return promise;
+}
+function requireCloud() {
+  if (!window.Samsam || !Samsam.isReady()) { alert('Your portfolio is still loading from the cloud. Please try again in a moment.'); return false; }
+  return true;
+}
+function applyCloudState(d) {
+  portfolio      = d.portfolio;
+  portfolio.forEach(c => { if (c.name && c.name !== c.sym && !COIN_NAMES[c.sym]) COIN_NAMES[c.sym] = c.name; });
+  transactions   = d.transactions;
+  archivedCoins  = d.archivedCoins;
+  customCoins    = d.customCoins;
+  accumPlanState = d.accumPlan;
+  realizedState  = d.realized;
+  perfSnapsState = d.perfSnaps;
+  holdingsSnapsState = d.holdingsSnaps;
+  btcPrice       = d.btcPrice || btcPrice;
+  cloudReady = true;
+  renderAll();
+  if (_histSym) renderHistory();
+  try { renderAccumProgress(accumPlanState); } catch(_) {}
+  try { drawPerfChart(); } catch(_) {}
+  try { drawHoldingsChart(); } catch(_) {}
+  const ov = document.getElementById('holdingsOverlay');
+  if (ov && ov.style.display === 'flex') { try { drawHoldingsOverlayChart(); renderHoldingsAssetList(); } catch(_) {} }
+  lastCloudSync = new Date(); updateSyncFooter();
+  takeSnapshotsIfDue();
+}
+
+function getRemovedSyms() { return new Set(archivedCoins.map(c => c.sym)); }
+
+function getTxForSym(sym) {
+  return transactions.filter(t => t.sym === sym).sort(Samsam.core.compareTx);
 }
 function addTransaction(sym, type, qty, price, note) {
-  const tx = {
-    id: Date.now() + '_' + Math.random().toString(36).slice(2,7),
-    sym, type, qty, price, total: qty * price,
-    date: new Date().toISOString(),
-    note: note || ''
-  };
-  transactions.push(tx);
-  saveTransactions();
-  return tx;
-}
-function getTxForSym(sym) {
-  return transactions.filter(t => t.sym === sym).sort((a,b) => new Date(a.date)-new Date(b.date));
-}
-// Recalculate coin qty and avg cost from its transaction history
-function recalcFromTx(sym) {
-  const txs = getTxForSym(sym);
-  if(txs.length === 0) return null;
-  let qty = 0, totalCost = 0;
-  for(const t of txs) {
-    if(t.type === 'buy') {
-      totalCost += t.qty * t.price;
-      qty += t.qty;
-    } else if(t.type === 'sell') {
-      // reduce cost basis proportionally
-      if(qty > 0) totalCost = totalCost * (1 - t.qty / qty);
-      qty -= t.qty;
-      if(qty < 0) qty = 0;
-    }
-  }
-  const avgCost = qty > 0 ? totalCost / qty : 0;
-  return { qty, avgCost };
+  return cloudWrite(Samsam.addTx(sym, type, qty, price, note));
 }
 
 // ── Realized P&L ─────────────────────────────────────────────────────────────
-// Walk transactions chronologically per coin; track avg cost basis (FIFO-like).
-// Each sell contributes: (sellPrice - avgCostBasis) * qty
-function calcRealizedPnl() {
-  const syms = [...new Set(transactions.map(t => t.sym))];
-  let totalRealized = 0;
-  let sellCount = 0;
-  for(const sym of syms) {
-    const txs = getTxForSym(sym); // already sorted by date asc
-    let qty = 0, totalCost = 0;
-    for(const t of txs) {
-      if(t.type === 'buy') {
-        totalCost += t.qty * t.price;
-        qty += t.qty;
-      } else if(t.type === 'sell') {
-        const avgCost = qty > 0 ? totalCost / qty : 0;
-        const realized = (t.price - avgCost) * t.qty;
-        totalRealized += realized;
-        sellCount++;
-        // reduce cost basis proportionally
-        if(qty > 0) totalCost = totalCost * (1 - t.qty / qty);
-        qty = Math.max(0, qty - t.qty);
-      }
-    }
-  }
-  return { total: totalRealized, sellCount };
-}
+// Average-cost method, replayed from each coin's opening position (samsam-core.js).
+function calcRealizedPnl() { return { total: realizedState.total, sellCount: realizedState.sellCount }; }
 
 function updateRealizedCard() {
   const card = document.getElementById('realizedCard');
@@ -1565,86 +1522,17 @@ function getCustomSyms() {
   return new Set(customCoins.map(c => c.sym));
 }
 
-function initPortfolio() {
-  loadArchive();        // always load archive first
-  loadCustomCoins();    // load manually added coins
-  loadTransactions();   // load transaction history
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const data = JSON.parse(saved);
-      if (!data.coins || data.coins.length === 0) { resetToBaseline(); return; }
-      const removed = getRemovedSyms();
-      portfolio = data.coins.filter(c => !removed.has(c.sym));
-      btcPrice = data.btcPrice || 82363.28;
-    } else { resetToBaseline(); }
-  } catch(e) { resetToBaseline(); }
-}
-
-function resetToBaseline() {
-  const removed = getRemovedSyms();
-  // Snapshot current portfolio values for custom coins BEFORE rebuilding
-  const currentPortfolioMap = {};
-  portfolio.forEach(c => { currentPortfolioMap[c.sym] = c; });
-  // Base coins reset to Oct-15 baseline
-  const baseCoins = BASE_PORTFOLIO
-    .filter(c => !removed.has(c.sym))
-    .map(c => ({
-      ...c,
-      currentPrice: LIVE_PRICES_OCT15[c.sym] || c.basePrice,
-      notes: '', action: 'hold', lastUpdate: '2026-10-15'
-    }));
-  // Custom coins: keep CURRENT qty/basePrice/logoUrl — never reset them
-  const addedCoins = customCoins
-    .filter(c => !removed.has(c.sym))
-    .map(c => {
-      const live = currentPortfolioMap[c.sym]; // use live values if available
-      const qty       = live ? live.qty       : c.qty;
-      const basePrice = live ? live.basePrice : c.basePrice;
-      const logoUrl   = (live && live.logoUrl) ? live.logoUrl : c.logoUrl;
-      const cgId      = c.cgId;
-      return {
-        ...c, qty, basePrice, walletValue: qty * basePrice,
-        currentPrice: live ? live.currentPrice : basePrice,
-        logoUrl, cgId, notes: '', action: 'hold',
-        lastUpdate: live ? live.lastUpdate : new Date().toISOString().slice(0,10)
-      };
-    });
-  portfolio = [...baseCoins, ...addedCoins];
-  btcPrice = LIVE_PRICES_OCT15.BTC || 82363;
-}
-
-function savePortfolio(pushToCloud = true) {
-  const lastSave = new Date().toISOString();
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: portfolio, btcPrice, lastSave })); } catch(e) {}
-  // Keep customCoins store in sync with current portfolio values (qty, basePrice, logoUrl)
-  // so Reset restores the LATEST values, not the original add values
-  let customChanged = false;
-  portfolio.forEach(c => {
-    const cc = customCoins.find(x => x.sym === c.sym);
-    if(cc) {
-      if(cc.qty !== c.qty || cc.basePrice !== c.basePrice || cc.logoUrl !== c.logoUrl) {
-        cc.qty = c.qty; cc.basePrice = c.basePrice; cc.walletValue = c.qty * c.basePrice;
-        if(c.logoUrl) cc.logoUrl = c.logoUrl;
-        customChanged = true;
-      }
-    }
-  });
-  if(customChanged) saveCustomCoins(true); // true = skip cloud push (savePortfolio handles it below)
-  // Push portfolio data to cloud immediately after any save (fire and forget)
-  if (pushToCloud) pushPortfolioToCloud();
-}
-
+// Reset: pins every Oct-15 baseline coin back to its baseline quantity and average price.
+// Recorded as ledger corrections, so it syncs to every device and history is preserved.
 function resetApp() {
-  localStorage.removeItem(STORAGE_KEY); // clears prices/qty/notes — NOT archive
-  resetToBaseline();                     // rebuilds from BASE minus removed coins
-  savePortfolio();
-  renderAll();
+  if (!requireCloud()) return;
+  if (!confirm('Reset all baseline coins to their Oct-15 quantities and prices? Your transaction history is kept.')) return;
+  cloudWrite(Samsam.resetToBaseline(BASE_PORTFOLIO));
 }
 
 function calcStats() {
   const btcEntry = portfolio.find(c => c.sym === 'BTC');
-  const btcQty = btcEntry ? btcEntry.qty : 0.01304141;
+  const btcQty = btcEntry ? btcEntry.qty : 0;
   const altTotal = portfolio.filter(c => c.sym !== 'BTC').reduce((s,c) => s + c.qty * c.currentPrice, 0);
   const btcValue = btcQty * btcPrice;
   return { btcQty, btcValue, altTotal, total: btcValue + altTotal };
@@ -1670,6 +1558,9 @@ function getAction(sym, perf, coin) {
   if (pct <= -5)  return 'reinforce';      // -5% to -20%: Reinforce
   return 'hold';
 }
+
+// Full-precision value for editable inputs (no rounding → editing never loses digits)
+function fmtInput(n) { n = Number(n) || 0; return parseFloat(n.toPrecision(12)).toString(); }
 
 function fmt(n, dec) {
   return parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -1802,9 +1693,9 @@ function renderTableAndStack() {
           ${getCoinIconLinked(c.sym,32)}
           ${getCoinNameLinked(c.sym)}
         </div></td>
-        <td><input type="number" class="editable-input" value="${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}" step="any" onchange="updateQty('${c.sym}',this.value)"></td>
-        <td><input type="number" class="editable-input" value="${c.basePrice}" step="any" onchange="updateBasePrice('${c.sym}',this.value)" style="color:var(--fg2)"></td>
-        <td><input type="number" class="editable-input" value="${c.currentPrice}" step="any" onchange="updatePrice('${c.sym}',this.value)"></td>
+        <td><input type="number" class="editable-input" value="${fmtInput(c.qty)}" step="any" onchange="updateQty('${c.sym}',this.value)"></td>
+        <td><input type="number" class="editable-input" value="${fmtInput(c.basePrice)}" step="any" onchange="updateBasePrice('${c.sym}',this.value)" style="color:var(--fg2)"></td>
+        <td><input type="number" class="editable-input" value="${fmtInput(c.currentPrice)}" step="any" onchange="updatePrice('${c.sym}',this.value)"></td>
         <td style="color:var(--fg2)">$${fmt(baseVal,2)}</td>
         <td style="font-weight:700">$${fmt(curVal,2)}</td>
         <td><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${pnlSign}$${Math.abs(pnl).toFixed(2)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
@@ -1858,9 +1749,9 @@ function renderTableAndStack() {
           </div>
         </div>
         <div class="coin-card-body">
-          <div class="coin-metric"><label>Qty ✏️</label><input class="metric-input" type="number" inputmode="decimal" step="any" value="${c.qty<1?c.qty.toFixed(6):c.qty<10?c.qty.toFixed(4):c.qty.toFixed(2)}" onchange="updateQty('${c.sym}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div>
+          <div class="coin-metric"><label>Qty ✏️</label><input class="metric-input" type="number" inputmode="decimal" step="any" value="${fmtInput(c.qty)}" onchange="updateQty('${c.sym}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div>
           <div class="coin-metric"><label>Cost Basis</label><val>$${fmt(baseVal,0)}</val></div>
-          <div class="coin-metric"><label>Avg Buy Price ✏️</label><input class="metric-input" type="number" inputmode="decimal" step="any" value="${c.basePrice}" onchange="updateBasePrice('${c.sym}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div>
+          <div class="coin-metric"><label>Avg Buy Price ✏️</label><input class="metric-input" type="number" inputmode="decimal" step="any" value="${fmtInput(c.basePrice)}" onchange="updateBasePrice('${c.sym}',this.value)" onkeydown="if(event.key==='Enter')this.blur()"></div>
           <div class="coin-metric"><label>Holdings / Current Value</label><val>$${fmt(curVal,0)}</val></div>
           <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
           <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
@@ -1886,21 +1777,33 @@ function renderTableAndStack() {
   }
 }
 
+// Manual price override: device-local (live prices replace it on the next refresh).
 function updatePrice(sym, val) {
-  const coin=portfolio.find(c=>c.sym===sym);
-  if(coin){coin.currentPrice=parseFloat(val)||coin.currentPrice;coin.lastUpdate=new Date().toISOString().slice(0,10);savePortfolio();renderAll();}
+  const n = parseFloat(val);
+  if (n > 0) Samsam.setManualPrice(sym, n);
 }
 function updateNote(sym, val) {
-  const coin=portfolio.find(c=>c.sym===sym);
-  if(coin){coin.notes=val;savePortfolio();}
+  if (!requireCloud()) return;
+  const coin = portfolio.find(c=>c.sym===sym);
+  if (coin && (coin.notes||'') !== val) cloudWrite(Samsam.updateCoin(sym, { notes: val }));
 }
+// Inline quantity / average-price edits are recorded as ledger corrections ("adjust"),
+// so they sync, appear in History, and survive later transaction deletions.
 function updateQty(sym, val) {
-  const coin=portfolio.find(c=>c.sym===sym);
-  if(coin){const n=parseFloat(val);if(n>=0){coin.qty=n;savePortfolio();renderAll();}}
+  if (!requireCloud()) return;
+  const coin = portfolio.find(c=>c.sym===sym);
+  const n = parseFloat(val);
+  if (!coin || !(n >= 0)) { renderTableAndStack(); return; }
+  if (fmtInput(n) === fmtInput(coin.qty)) return;
+  cloudWrite(Samsam.adjust(sym, { setQty: n }, 'Quantity edited'));
 }
 function updateBasePrice(sym, val) {
-  const coin=portfolio.find(c=>c.sym===sym);
-  if(coin){const n=parseFloat(val);if(n>0){coin.basePrice=n;savePortfolio();renderTableAndStack();renderDashboard();}}
+  if (!requireCloud()) return;
+  const coin = portfolio.find(c=>c.sym===sym);
+  const n = parseFloat(val);
+  if (!coin || !(n > 0)) { renderTableAndStack(); return; }
+  if (fmtInput(n) === fmtInput(coin.basePrice)) return;
+  cloudWrite(Samsam.adjust(sym, { setAvg: n }, 'Avg buy price edited'));
 }
 
 // ── Buy More ──────────────────────────────────────────
@@ -1949,15 +1852,9 @@ function applyBuyMore() {
   const addQty   = parseFloat(document.getElementById('bmQty').value);
   const buyPrice = parseFloat(document.getElementById('bmPrice').value);
   if(!addQty || !buyPrice || addQty<=0 || buyPrice<=0) { alert('Please enter valid quantity and price.'); return; }
-  const totalQty = coin.qty + addQty;
-  const avgCost  = ((coin.qty * coin.basePrice) + (addQty * buyPrice)) / totalQty;
-  coin.qty       = totalQty;
-  coin.basePrice = avgCost;
-  coin.walletValue = totalQty * avgCost;
-  // Record transaction
+  if (!requireCloud()) return;
+  // The ledger recalculates qty and average cost on every device.
   addTransaction(_bmSym, 'buy', addQty, buyPrice);
-  savePortfolio();
-  renderAll();
   closeBuyMore();
 }
 // close on overlay click
@@ -2023,14 +1920,10 @@ function applySell() {
   const sellQty   = parseFloat(document.getElementById('smQty').value);
   const sellPrice = parseFloat(document.getElementById('smPrice').value);
   if(!sellQty || !sellPrice || sellQty<=0 || sellPrice<=0) return;
-  if(sellQty > coin.qty) { alert('⚠️ Cannot sell more than available balance!'); return; }
-  // avg cost unchanged — only qty reduces
-  coin.qty -= sellQty;
-  coin.walletValue = coin.qty * coin.basePrice;
-  // Record transaction
-  addTransaction(_smSym, 'sell', sellQty, sellPrice);
-  savePortfolio();
-  renderAll();
+  if(sellQty > coin.qty * (1 + 1e-12)) { alert('⚠️ Cannot sell more than available balance!'); return; }
+  if (!requireCloud()) return;
+  // avg cost unchanged — only qty reduces (computed by the ledger)
+  addTransaction(_smSym, 'sell', Math.min(sellQty, coin.qty), sellPrice);
   closeSell();
 }
 document.getElementById('sellModal').addEventListener('click', function(e){ if(e.target===this) closeSell(); });
@@ -2048,19 +1941,9 @@ function closeRemove() {
 }
 function confirmRemove() {
   if(!_rmSym) return;
-  const idx = portfolio.findIndex(c => c.sym === _rmSym);
-  if(idx === -1) { closeRemove(); return; }
-  // Archive with timestamp in SEPARATE key — survives Reset
-  const archived = { ...portfolio[idx], removedAt: new Date().toISOString(), removedPermanently: true };
-  archivedCoins.push(archived);
-  saveArchive(true); // skip cloud push — savePortfolio below handles it
-  // Also remove from custom coins store if it was a manually added coin
-  const customIdx = customCoins.findIndex(c => c.sym === _rmSym);
-  if(customIdx !== -1) { customCoins.splice(customIdx, 1); saveCustomCoins(true); } // skip — savePortfolio below handles it
-  // Remove from active portfolio
-  portfolio.splice(idx, 1);
-  savePortfolio(); // single cloud push with all 4 stores fully updated
-  renderAll();
+  if (!requireCloud()) return;
+  // Hidden on every device; its transaction history is kept and it can be re-added later.
+  cloudWrite(Samsam.removeCoin(_rmSym));
   closeRemove();
 }
 document.getElementById('removeModal').addEventListener('click', function(e){ if(e.target===this) closeRemove(); });
@@ -2081,6 +1964,7 @@ function closeHistory() {
 
 function renderHistory() {
   const sym = _histSym;
+  if (!sym) return;
   const txs = getTxForSym(sym);
   const coin = portfolio.find(c => c.sym === sym);
   const fmtN = n => n < 1 ? n.toFixed(6) : n < 10 ? n.toFixed(4) : n.toFixed(2);
@@ -2089,13 +1973,14 @@ function renderHistory() {
     return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ' ' +
            dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   };
+  const perTx = realizedState.perTx || {};
 
-  // Summary bar
+  // Summary bar — realized P&L uses the average cost at the time of each sale
   const sumEl = document.getElementById('histSummary');
+  const sells = txs.filter(t=>t.type==='sell');
   const totalBuys  = txs.filter(t=>t.type==='buy').reduce((s,t)=>s+t.qty,0);
-  const totalSells = txs.filter(t=>t.type==='sell').reduce((s,t)=>s+t.qty,0);
-  const totalBuyVal= txs.filter(t=>t.type==='buy').reduce((s,t)=>s+t.total,0);
-  const totalSellVal=txs.filter(t=>t.type==='sell').reduce((s,t)=>s+t.total,0);
+  const totalSells = sells.reduce((s,t)=>s+t.qty,0);
+  const realized   = sells.reduce((s,t)=>s+((perTx[t.id]&&perTx[t.id].realized)||0),0);
   const curQty = coin ? coin.qty : 0;
   const avgCost= coin ? coin.basePrice : 0;
   sumEl.innerHTML = `
@@ -2104,7 +1989,7 @@ function renderHistory() {
     <div><span>Total Sold</span> <strong style="color:#ef4444">${fmtN(totalSells)} ${sym}</strong></div>
     <div><span>Current Qty</span> <strong>${fmtN(curQty)} ${sym}</strong></div>
     <div><span>Avg Cost</span> <strong>$${avgCost.toFixed(4)}</strong></div>
-    <div><span>Realized P&L</span> <strong style="color:${totalSellVal-totalSells*avgCost>=0?'#22c55e':'#ef4444'}">${totalSells>0?(totalSellVal>=0?'+':'')+'$'+(totalSellVal-totalSells*avgCost).toFixed(2):'—'}</strong></div>`;
+    <div><span>Realized P&L</span> <strong style="color:${realized>=0?'#22c55e':'#ef4444'}">${sells.length?(realized>=0?'+':'-')+'$'+Math.abs(realized).toFixed(2):'—'}</strong></div>`;
 
   // Transaction list
   const listEl = document.getElementById('histList');
@@ -2113,17 +1998,27 @@ function renderHistory() {
     return;
   }
   listEl.innerHTML = [...txs].reverse().map(t => {
+    const meta = `<div class="tx-meta">${fmtDate(t.date)}${t.note?' · '+String(t.note).replace(/</g,'&lt;'):''}</div>`;
+    if (t.type === 'adjust') {
+      const parts = [];
+      if (t.setQty != null) parts.push(`Qty set to <strong>${fmtN(+t.setQty)} ${t.sym}</strong>`);
+      if (t.setAvg != null) parts.push(`Avg price set to <strong>$${(+t.setAvg).toFixed(4)}</strong>`);
+      return `<div class="tx-row tx-adjust">
+        <div class="tx-details"><span class="tx-type-badge">✏️ EDIT</span><div>${parts.join(' · ')}</div>${meta}</div>
+        <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">🗑 Delete</button>
+      </div>`;
+    }
     const isBuy = t.type === 'buy';
-    const pnl = isBuy ? null : (t.price - avgCost) * t.qty;
-    const pnlStr = pnl !== null
-      ? `<div style="font-size:0.72rem;margin-top:2px;color:${pnl>=0?'#22c55e':'#ef4444'}">${pnl>=0?'Profit':'Loss'}: ${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</div>`
+    const pnl = isBuy ? null : (perTx[t.id] ? perTx[t.id].realized : null);
+    const pnlStr = pnl !== null && pnl !== undefined
+      ? `<div style="font-size:0.72rem;margin-top:2px;color:${pnl>=0?'#22c55e':'#ef4444'}">${pnl>=0?'Profit':'Loss'}: ${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}</div>`
       : '';
     return `<div class="tx-row tx-${t.type}">
       <div class="tx-details">
         <span class="tx-type-badge">${isBuy?'🟢 BUY':'🔴 SELL'}</span>
-        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>$${t.total.toFixed(2)}</strong></div>
+        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>$${(t.total ?? t.qty*t.price).toFixed(2)}</strong></div>
         ${pnlStr}
-        <div class="tx-meta">${fmtDate(t.date)}${t.note?' · '+t.note:''}</div>
+        ${meta}
       </div>
       <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">🗑 Delete</button>
     </div>`;
@@ -2133,35 +2028,18 @@ function renderHistory() {
 function deleteTx(txId) {
   const tx = transactions.find(t => t.id === txId);
   if(!tx) return;
+  if (!requireCloud()) return;
   const fmtN = n => n < 1 ? n.toFixed(6) : n < 10 ? n.toFixed(4) : n.toFixed(2);
-  const confirm = window.confirm(
-    `Delete this ${tx.type.toUpperCase()} transaction?\n\n` +
-    `${fmtN(tx.qty)} ${tx.sym} @ $${tx.price.toFixed(4)} = $${tx.total.toFixed(2)}\n` +
-    `Date: ${new Date(tx.date).toLocaleDateString()}\n\n` +
-    `Portfolio will be recalculated automatically.`
+  const what = tx.type === 'adjust'
+    ? `this manual edit of ${tx.sym}`
+    : `this ${tx.type.toUpperCase()} transaction?\n\n${fmtN(tx.qty)} ${tx.sym} @ $${tx.price.toFixed(4)} = $${(tx.total ?? tx.qty*tx.price).toFixed(2)}`;
+  const ok = window.confirm(
+    `Delete ${what}\nDate: ${new Date(tx.date).toLocaleDateString()}\n\n` +
+    `Holdings and average cost will be recalculated automatically on all devices.`
   );
-  if(!confirm) return;
-
-  // Remove transaction
-  const idx = transactions.findIndex(t => t.id === txId);
-  transactions.splice(idx, 1);
-  saveTransactions(); // will push to cloud
-
-  // Recalculate coin from remaining transactions
-  const sym = tx.sym;
-  const coin = portfolio.find(c => c.sym === sym);
-  if(coin) {
-    const recalc = recalcFromTx(sym);
-    if(recalc && recalc.qty >= 0) {
-      coin.qty = Math.max(0, recalc.qty);
-      coin.basePrice = recalc.avgCost > 0 ? recalc.avgCost : coin.basePrice;
-      coin.walletValue = coin.qty * coin.basePrice;
-    }
-    savePortfolio(); // second push with updated portfolio (OK — timestamps differ, cloud gets latest)
-    renderAll();
-  }
-  // Re-render history modal
-  if(_histSym === sym) renderHistory();
+  if(!ok) return;
+  // Holdings are re-derived from the remaining ledger (including the opening position).
+  cloudWrite(Samsam.deleteTx(txId));
 }
 
 document.getElementById('historyModal').addEventListener('click', function(e){ if(e.target===this) closeHistory(); });
@@ -2202,64 +2080,32 @@ function applyAddCoin() {
     errEl.textContent = sym + ' already exists in your portfolio. Use "+ Buy" to add more.';
     errEl.style.display = 'block'; return;
   }
-  // Remove from archive if previously removed
-  const removedIdx = archivedCoins.findIndex(c => c.sym === sym);
-  if(removedIdx !== -1) archivedCoins.splice(removedIdx, 1);
-  saveArchive(true); // skip cloud push — savePortfolio below handles it
-  // Build new coin object
+  if (!requireCloud()) return;
   const cgId = document.getElementById('acCgId').value.trim().toLowerCase() || null;
   const name = document.getElementById('acName').value.trim() || sym;
   const cat  = document.getElementById('acCat').value;
-  const newCoin = {
-    sym, qty, basePrice: price, walletValue: qty * price, cat,
-    currentPrice: price, notes: '', action: 'hold',
-    lastUpdate: new Date().toISOString().slice(0,10),
-    cgId: cgId || undefined  // persist CoinGecko ID on the coin itself
-  };
-  // Register name
   COIN_NAMES[sym] = name;
-  // Save to custom coins store so it survives Reset
-  const existingCustomIdx = customCoins.findIndex(c => c.sym === sym);
-  if(existingCustomIdx !== -1) customCoins.splice(existingCustomIdx, 1);
-  customCoins.push({ sym, qty, basePrice: price, walletValue: qty * price, cat, cgId: cgId || undefined, addedAt: new Date().toISOString() });
-  saveCustomCoins(true); // skip cloud push — savePortfolio below handles it
-  portfolio.push(newCoin);
-  // Record initial buy transaction (only if no prior tx exists for this sym)
-  if(getTxForSym(sym).length === 0) {
-    addTransaction(sym, 'buy', qty, price, 'Initial position'); // saveTransactions inside addTransaction will push
-  }
-  savePortfolio(); // single definitive cloud push with all 4 stores fully updated
-  renderAll();
+  // One atomic cloud write: coin settings + its opening buy (or, for a coin that was
+  // removed earlier, a correction that sets exactly the entered position).
+  cloudWrite(Samsam.addCoin({ sym, name, cat, cgId }, { qty, price }));
+  Samsam.setManualPrice(sym, price);
   closeAddCoin();
-  // If cgId given: fetch logo + live price
-  if(cgId) {
-    fetchCoinLogoAndPrice(newCoin, cgId);
-  }
+  if(cgId) fetchCoinLogoAndPrice({ sym }, cgId);
 }
 
 async function fetchCoinLogoAndPrice(coin, cgId) {
-  // Fetch logo from CoinGecko /coins/{id}
+  // Fetch logo + live price from CoinGecko /coins/{id}
   try {
     const res = await fetch(`https://api.coingecko.com/api/v3/coins/${cgId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`);
     if(res.ok) {
       const data = await res.json();
-      // Save logo URL on the coin object (persisted)
-      if(data.image && data.image.small) {
-        coin.logoUrl = data.image.small;
-        // Also save logoUrl in customCoins store so it survives Reset
-        const cc = customCoins.find(c => c.sym === coin.sym);
-        if(cc) { cc.logoUrl = data.image.small; saveCustomCoins(); }
+      if(data.image && data.image.small) cloudWrite(Samsam.updateCoin(coin.sym, { logoUrl: data.image.small }));
+      const md = data.market_data;
+      if(md && md.current_price && md.current_price.usd) {
+        Samsam.updatePrices({ [coin.sym]: { usd: md.current_price.usd, ch24: md.price_change_percentage_24h ?? null } });
       }
-      // Also update live price if available
-      if(data.market_data && data.market_data.current_price && data.market_data.current_price.usd) {
-        coin.currentPrice = data.market_data.current_price.usd;
-        coin.lastUpdate = new Date().toISOString().slice(0,10);
-      }
-      savePortfolio();
-      renderAll();
     }
   } catch(e) {
-    // Fallback: still fetch prices via simple/price endpoint
     fetchLivePrices();
   }
 }
@@ -2455,6 +2301,7 @@ function renderAllocMiniCard(catTotals, totalVal) {
   }).join('');
 }
 
+let snapshotDue = false;
 async function fetchLivePrices() {
   setLiveStatus('loading');
   // Collect IDs from both the static map and per-coin cgId (manually added coins)
@@ -2466,35 +2313,35 @@ async function fetchLivePrices() {
     const res=await fetch(url);
     if(!res.ok)throw new Error('HTTP '+res.status);
     const data=await res.json();
-    portfolio.forEach(c=>{
-      // Use per-coin cgId first, fall back to static map
-      const cgId = c.cgId || COINGECKO_IDS[c.sym];
-      if(cgId&&data[cgId]&&data[cgId].usd){
-        c.currentPrice=data[cgId].usd;
-        c.lastUpdate=new Date().toISOString().slice(0,10);
-        if(data[cgId].usd_24h_change!=null) c.change24h=data[cgId].usd_24h_change;
-      }
+    // Prices are market data, cached per device — they never overwrite portfolio data.
+    const map = {};
+    const syms = new Set([...Object.keys(COINGECKO_IDS), ...portfolio.map(c => c.sym)]);
+    syms.forEach(sym => {
+      const coin = portfolio.find(c => c.sym === sym);
+      const cgId = (coin && coin.cgId) || COINGECKO_IDS[sym];
+      if (cgId && data[cgId] && data[cgId].usd) map[sym] = { usd: data[cgId].usd, ch24: data[cgId].usd_24h_change ?? null };
     });
-    if(data['bitcoin']&&data['bitcoin'].usd)btcPrice=data['bitcoin'].usd;
+    if (data['bitcoin'] && data['bitcoin'].usd) { btcPrice = data['bitcoin'].usd; map.BTC = map.BTC || { usd: btcPrice, ch24: data['bitcoin'].usd_24h_change ?? null }; }
     lastFetchTime=new Date();
     setLiveStatus('ok');
-    savePortfolio(false);renderAll(); // false = no cloud push — prices only, no user data changed
-    // Re-render accumulation progress with fresh prices
-    try {
-      const accPlan = JSON.parse(localStorage.getItem(ACCUM_KEY) || '[]');
-      if (accPlan.length) renderAccumProgress(accPlan);
-    } catch(_) {}
-    // Save performance snapshot and redraw chart
-    try { updatePerfChart(); } catch(_) {}
-    // Save holdings snapshot and redraw holdings chart
-    try { updateHoldingsChart(); } catch(_) {}
-    // After prices, fetch missing logos for custom coins (sequential to avoid rate limits)
+    snapshotDue = true;
+    whenSamsam(S => S.updatePrices(map)); // re-renders every view via applyCloudState
     fetchMissingLogos();
   } catch(e){setLiveStatus('error');updateLiveIndicator();}
 }
 
+// Chart points are saved once the cloud portfolio and fresh prices are both available.
+function takeSnapshotsIfDue() {
+  if (!snapshotDue || !cloudReady) return;
+  snapshotDue = false;
+  try { updatePerfChart(); } catch(_) {}
+  try { updateHoldingsChart(); } catch(_) {}
+}
+
+let _logoFetching = false;
 async function fetchMissingLogos() {
-  // Find custom coins that have a cgId but no logoUrl yet
+  if (_logoFetching || !cloudReady) return;
+  _logoFetching = true;
   const missing = portfolio.filter(c => c.cgId && !c.logoUrl);
   for(const coin of missing) {
     try {
@@ -2502,16 +2349,11 @@ async function fetchMissingLogos() {
       const res = await fetch(`https://api.coingecko.com/api/v3/coins/${coin.cgId}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false`);
       if(res.ok) {
         const data = await res.json();
-        if(data.image && data.image.small) {
-          coin.logoUrl = data.image.small;
-          const cc = customCoins.find(c => c.sym === coin.sym);
-          if(cc) { cc.logoUrl = data.image.small; saveCustomCoins(); } // saveCustomCoins triggers cloud push
-          savePortfolio(false); // false = cloud already pushed by saveCustomCoins above
-          renderAll(); // re-render to show logo immediately
-        }
+        if(data.image && data.image.small) cloudWrite(Samsam.updateCoin(coin.sym, { logoUrl: data.image.small }));
       }
     } catch(e) { /* skip, will retry next refresh */ }
   }
+  _logoFetching = false;
 }
 
 function setLiveStatus(s){liveStatus=s;updateLiveIndicator();}
@@ -2624,7 +2466,7 @@ function buildPortfolioPayload() {
   // Build accumulation plan summary
   let accumPlanData = [];
   try {
-    const raw = JSON.parse(localStorage.getItem(ACCUM_KEY) || '[]');
+    const raw = accumPlanState || [];
     accumPlanData = raw.map(entry => {
       const coin = portfolio.find(c => c.sym && c.sym.toUpperCase() === (entry.sym||'').toUpperCase());
       const actualQty    = coin ? (coin.qty || 0) : 0;
@@ -2815,24 +2657,17 @@ document.getElementById('analysisModal').addEventListener('click', function(e) {
 document.getElementById('searchBox').addEventListener('input',renderTableAndStack);
 document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+' — Baseline: Oct 15, 2026';
 
-initPortfolio();
-renderAll();      // render content first with local data (fills both containers)
-initView();       // THEN apply view preference (shows/hides correct container)
+// Baseline + fallback prices let the store show sensible prices before the first live fetch.
+whenSamsam(S => {
+  S.configure({ basePortfolio: BASE_PORTFOLIO, fallbackPrices: LIVE_PRICES_OCT15, coinNames: COIN_NAMES, setupPage: true });
+  S.onChange(applyCloudState);
+});
+renderAll();      // empty shell until the cloud portfolio arrives (normally < 1 s, instant from the offline cache)
+initView();       // apply view preference (shows/hides correct container)
 fetchLivePrices();
 // Auto-refresh live prices every 60 seconds
 setInterval(() => { fetchLivePrices(); }, 60000);
 
-// On load: pull cloud data — if cloud is newer (different from our last pull), apply it.
-// No push on load: push happens whenever the user saves, so we never overwrite cloud
-// with stale data just because this device is opening the page.
-setTimeout(async () => {
-  try {
-    const updated = await pullPortfolioFromCloud();
-    if (updated) { renderAll(); fetchLivePrices(); showSyncStatus('☁️ Synced from cloud — portfolio updated', 'rgba(34,197,94,0.9)'); }
-  } catch(_) {}
-}, 3000); // wait 3s so page feels responsive first
-
-// ─── Global portfolio sync — runs every 2 minutes regardless of active tab ───
 function showSyncStatus(msg, color) {
   const el = document.getElementById('footerSyncStatus');
   if (!el) return;
@@ -2841,16 +2676,6 @@ function showSyncStatus(msg, color) {
   el.style.opacity = '1';
   setTimeout(() => { el.style.opacity = '0'; }, 4000);
 }
-async function globalAutoSync() {
-  try {
-    const updated = await pullPortfolioFromCloud();
-    if (updated) {
-      renderAll(); fetchLivePrices();
-      showSyncStatus('☁️ Synced from cloud — portfolio updated', 'rgba(34,197,94,0.9)');
-    }
-  } catch(_) {}
-}
-setInterval(globalAutoSync, 60 * 1000); // every 60 seconds
 
 // ─── Accumulation Progress on Main Page ──────────────────────────────────────
 function renderAccumProgress(plan) {
@@ -2887,259 +2712,12 @@ function updateSyncFooter() {
   }
 }
 
-async function loadAccumProgress() {
-  let plan = [];
-  // Try cloud first
-  try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_KEY }
-    });
-    if (res.ok) {
-      const json = await res.json();
-      plan = json.record.accumPlan || [];
-      try { localStorage.setItem(ACCUM_KEY, JSON.stringify(plan)); } catch(_) {}
-      lastCloudSync = new Date();
-      updateSyncFooter();
-    }
-  } catch(_) {}
-  // Fallback to localStorage
-  if (!plan.length) {
-    try { plan = JSON.parse(localStorage.getItem(ACCUM_KEY) || '[]'); } catch(_) { plan = []; }
-  }
-  renderAccumProgress(plan);
-}
-
-// Load accumulation progress after prices are ready (slight delay)
-setTimeout(loadAccumProgress, 2000);
-// (auto-sync handled inside initPerfChart via autoSyncPerf)
-
 // ─── Portfolio Performance Chart ─────────────────────────────────────────────
-function loadPerfSnapshots() {
-  try { return JSON.parse(localStorage.getItem(PERF_KEY) || '[]'); } catch(_) { return []; }
-}
+function loadPerfSnapshots() { return perfSnapsState; }
 
-function mergePerfSnaps(a, b) {
-  // Merge two arrays, deduplicate by timestamp, sort asc, cap at 2160
-  const map = new Map();
-  [...a, ...b].forEach(s => map.set(s.t, s));
-  const merged = [...map.values()].sort((x, y) => x.t - y.t);
-  if (merged.length > 2160) merged.splice(0, merged.length - 2160);
-  return merged;
-}
-
-
-// ─── Cross-device Portfolio Sync ─────────────────────────────────────────────
-// DESIGN: push always stamps a fresh ISO timestamp so the other device sees a newer cloud.
-//         pull compares cloud timestamp vs the last timestamp WE pulled (SYNC_KEY),
-//         NOT vs our local lastSave — this way clock skew between devices never breaks sync.
-
-async function pushPortfolioToCloud() {
-  try {
-    // Build portfolioData payload from all localStorage stores
-    const pfRaw = localStorage.getItem(STORAGE_KEY);
-    const pfData = pfRaw ? JSON.parse(pfRaw) : null;
-    if (!pfData || !pfData.coins || pfData.coins.length === 0) return; // truly empty — nothing to push
-
-    // Stamp a fresh timestamp so the receiving device always sees this as newer
-    const nowTs = new Date().toISOString();
-
-    // Use the same lastSave timestamp already written to localStorage by savePortfolio()
-    // so that pullPortfolioFromCloud()'s local-newer check works correctly.
-    // Fall back to nowTs only if localStorage doesn't have one yet.
-    const localSavedTs = pfData.lastSave || nowTs;
-    const pushTs = localSavedTs > nowTs ? localSavedTs : nowTs; // whichever is newer
-
-    // ── KEY FIX: set SYNC_KEY BEFORE the async GET/PUT so that any page
-    //    refresh that happens during the network round-trip won't cause
-    //    pullPortfolioFromCloud() to re-apply the old cloud data and blank
-    //    the portfolio.  The in-memory portfolio is already correct; we just
-    //    need the guard timestamp in place early. ──────────────────────────
-    try { localStorage.setItem(SYNC_KEY, pushTs); } catch(_) {}
-
-    const portfolioData = {
-      lastSave: pushTs,
-      coins: pfData.coins,
-      btcPrice: pfData.btcPrice,
-      transactions: (() => { try { return JSON.parse(localStorage.getItem(TX_KEY) || '[]'); } catch(_) { return []; } })(),
-      customCoins:  (() => { try { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); } catch(_) { return []; } })(),
-      archivedCoins: (() => { try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); } catch(_) { return []; } })(),
-    };
-
-    // Read current cloud record first (to preserve perfSnaps + accumPlan)
-    const getRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_KEY }
-    });
-    if (!getRes.ok) return;
-    const cur = await getRes.json();
-    const accumPlan = cur.record.accumPlan || [];
-    const perfSnaps = cur.record.perfSnaps || [];
-
-    await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
-      body: JSON.stringify({ accumPlan, perfSnaps, portfolioData })
-    });
-  } catch(_) {}
-}
-
-// Pull cloud portfolio data if cloud has data we haven't seen yet — returns true if applied
-async function pullPortfolioFromCloud() {
-  try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_KEY }
-    });
-    if (!res.ok) return false;
-    const json = await res.json();
-    const cloudPortfolio = json.record.portfolioData || null;
-    if (!cloudPortfolio || !cloudPortfolio.coins || cloudPortfolio.coins.length === 0) return false;
-
-    const cloudLastSave = cloudPortfolio.lastSave || '';
-    if (!cloudLastSave) return false;
-
-    // Compare cloud timestamp vs last timestamp WE pulled — not vs local lastSave
-    // This is the key fix: clock differences between devices don't matter anymore
-    const lastPulled = (() => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch(_) { return ''; } })();
-    if (lastPulled && cloudLastSave <= lastPulled) return false; // already have this version
-
-    // Extra safety: never overwrite local data that is newer than what the cloud has.
-    // This prevents a stale cloud read (between our push's GET and PUT) from blanking
-    // the portfolio after a page refresh.
-    const localRaw = (() => { try { return localStorage.getItem(STORAGE_KEY); } catch(_) { return null; } })();
-    if (localRaw) {
-      const localData = (() => { try { return JSON.parse(localRaw); } catch(_) { return null; } })();
-      const localLastSave = localData ? (localData.lastSave || '') : '';
-      if (localLastSave && localLastSave > cloudLastSave) return false; // local is newer — skip
-    }
-
-    // Cloud has newer data — apply it
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        coins: cloudPortfolio.coins,
-        btcPrice: cloudPortfolio.btcPrice,
-        lastSave: cloudLastSave
-      }));
-      if (cloudPortfolio.transactions)  localStorage.setItem(TX_KEY, JSON.stringify(cloudPortfolio.transactions));
-      if (cloudPortfolio.customCoins)   localStorage.setItem(CUSTOM_KEY, JSON.stringify(cloudPortfolio.customCoins));
-      if (cloudPortfolio.archivedCoins) localStorage.setItem(ARCHIVE_KEY, JSON.stringify(cloudPortfolio.archivedCoins));
-      // Record the timestamp we just pulled so next check knows we have this version
-      localStorage.setItem(SYNC_KEY, cloudLastSave);
-    } catch(_) {}
-
-    // Reload in-memory state from updated localStorage
-    loadArchive();
-    loadCustomCoins();
-    loadTransactions();
-    const removed = getRemovedSyms();
-    portfolio = cloudPortfolio.coins.filter(c => !removed.has(c.sym));
-    btcPrice  = cloudPortfolio.btcPrice || btcPrice;
-    return true; // caller should re-render
-  } catch(_) { return false; }
-}
-
-// Auto-sync: runs silently in background — no user action needed
-async function autoSyncPerf() {
-  const ind = document.getElementById('perfSyncIndicator');
-  const setInd = (txt, color) => {
-    if (!ind) return;
-    ind.textContent = txt;
-    ind.style.color = color;
-    ind.style.opacity = '1';
-    setTimeout(() => { ind.style.opacity = '0.35'; }, 3000);
-  };
-  try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_KEY }
-    });
-    if (!res.ok) { setInd('☁✗', 'rgba(239,68,68,0.6)'); return; }
-    const json = await res.json();
-    const cloudSnaps = json.record.perfSnaps || [];
-    const local = loadPerfSnapshots();
-    const merged = mergePerfSnaps(local, cloudSnaps);
-
-    // SAFETY: update local only if merged is richer
-    if (merged.length >= local.length) {
-      try { localStorage.setItem(PERF_KEY, JSON.stringify(merged)); } catch(_) {}
-    }
-
-    // SAFETY: push to cloud only if merged is richer (never overwrite cloud with fewer points)
-    const accumPlan      = json.record.accumPlan || [];
-    const cloudPortfolio = json.record.portfolioData || null;
-    if (merged.length > cloudSnaps.length) {
-      await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
-        // Preserve portfolioData when updating perf snaps
-        body: JSON.stringify({ accumPlan, perfSnaps: merged, portfolioData: cloudPortfolio })
-      });
-      setInd('☁↑', 'rgba(34,197,94,0.7)');   // pushed
-    } else if (cloudSnaps.length > local.length) {
-      setInd('☁↓', 'rgba(59,130,246,0.7)');   // pulled
-    } else {
-      setInd('☁✓', 'rgba(148,163,184,0.5)');  // in sync
-    }
-
-    // Also check if cloud portfolio has data we haven't seen yet — apply directly (no extra fetch)
-    const cloudLastSave = cloudPortfolio ? (cloudPortfolio.lastSave || '') : '';
-    const lastPulled = (() => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch(_) { return ''; } })();
-    // Extra safety: skip if local data is newer (prevents stale cloud read from blanking portfolio)
-    const _localRaw2 = (() => { try { return localStorage.getItem(STORAGE_KEY); } catch(_) { return null; } })();
-    const _localTs2  = _localRaw2 ? ((() => { try { return (JSON.parse(_localRaw2)||{}).lastSave||''; } catch(_){ return ''; } })()) : '';
-    if (cloudPortfolio && cloudPortfolio.coins && cloudPortfolio.coins.length > 0 && cloudLastSave && cloudLastSave > lastPulled && (!_localTs2 || cloudLastSave > _localTs2)) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: cloudPortfolio.coins, btcPrice: cloudPortfolio.btcPrice, lastSave: cloudLastSave }));
-        if (cloudPortfolio.transactions)  localStorage.setItem(TX_KEY,      JSON.stringify(cloudPortfolio.transactions));
-        if (cloudPortfolio.customCoins)   localStorage.setItem(CUSTOM_KEY,  JSON.stringify(cloudPortfolio.customCoins));
-        if (cloudPortfolio.archivedCoins) localStorage.setItem(ARCHIVE_KEY, JSON.stringify(cloudPortfolio.archivedCoins));
-        localStorage.setItem(SYNC_KEY, cloudLastSave);
-        loadArchive(); loadCustomCoins(); loadTransactions();
-        portfolio = cloudPortfolio.coins.filter(c => !getRemovedSyms().has(c.sym));
-        btcPrice  = cloudPortfolio.btcPrice || btcPrice;
-        renderAll();
-        setInd('☁↓', 'rgba(59,130,246,0.9)');
-        showSyncStatus('☁️ Synced from cloud — portfolio updated', 'rgba(34,197,94,0.9)');
-      } catch(_) {}
-    }
-
-    drawPerfChart();
-  } catch(_) {
-    setInd('☁✗', 'rgba(239,68,68,0.5)');
-  }
-}
-
-async function pushPerfSnapsToCloud(snaps) {
-  try {
-    // Fetch current bin record first to preserve accumPlan, portfolioData and merge snapshots
-    const getRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_KEY }
-    });
-    if (!getRes.ok) return;
-    const cur = await getRes.json();
-    const accumPlan = cur.record.accumPlan || [];
-    const cloudSnaps = cur.record.perfSnaps || [];
-    const cloudPortfolio = cur.record.portfolioData || null;
-    // SAFETY: merge local with cloud before pushing — never overwrite cloud with fewer points
-    const merged = mergePerfSnaps(snaps, cloudSnaps);
-    if (merged.length < cloudSnaps.length) return; // cloud has more — skip push
-    await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
-      // Preserve portfolioData when pushing perf snaps
-      body: JSON.stringify({ accumPlan, perfSnaps: merged, portfolioData: cloudPortfolio })
-    });
-  } catch(_) {}
-}
-
+// Performance points: at most one per hour, stored in the cloud (merged across devices).
 function savePerfSnapshot(portfolioValue, btcPrice) {
-  const snaps = loadPerfSnapshots();
-  const now   = Date.now();
-  // Only save once per hour
-  if (snaps.length && now - snaps[snaps.length - 1].t < 60 * 60 * 1000) return;
-  snaps.push({ t: now, v: +portfolioValue.toFixed(2), b: +btcPrice });
-  // Keep last 90 days of hourly snapshots = 2160 entries max
-  if (snaps.length > 2160) snaps.splice(0, snaps.length - 2160);
-  try { localStorage.setItem(PERF_KEY, JSON.stringify(snaps)); } catch(_) {}
-  // Push to cloud in background (no await — fire and forget)
-  pushPerfSnapsToCloud(snaps);
+  cloudWrite(Samsam.recordSnapshot('perf', Date.now(), portfolioValue, btcPrice));
 }
 
 function drawPerfChart() {
@@ -3293,27 +2871,14 @@ function updatePerfChart() {
 }
 
 // ── Holdings Chart ────────────────────────────────────────────────────────────
-const HOLDINGS_KEY = 'samsam_holdings_v1'; // { t: timestamp, v: portfolio USD value }
 let holdingsRange  = '24h';
 
+// Holdings points: one per 5 minutes, stored in the cloud (merged across devices).
 function saveHoldingsSnapshot(value) {
-  let snaps = [];
-  try { snaps = JSON.parse(localStorage.getItem(HOLDINGS_KEY) || '[]'); } catch(_) {}
-  const now = Date.now();
-  // Deduplicate: skip if last snap is within 4 minutes
-  if (snaps.length && now - snaps[snaps.length - 1].t < 4 * 60 * 1000) {
-    snaps[snaps.length - 1].v = value; // update in place
-  } else {
-    snaps.push({ t: now, v: value });
-  }
-  // Keep max 2000 points (≈ 5+ months at 5-min intervals)
-  if (snaps.length > 2000) snaps = snaps.slice(-2000);
-  try { localStorage.setItem(HOLDINGS_KEY, JSON.stringify(snaps)); } catch(_) {}
+  cloudWrite(Samsam.recordSnapshot('holdings', Date.now(), value));
 }
 
-function loadHoldingsSnaps() {
-  try { return JSON.parse(localStorage.getItem(HOLDINGS_KEY) || '[]'); } catch(_) { return []; }
-}
+function loadHoldingsSnaps() { return holdingsSnapsState; }
 
 function setHoldingsRange(range, btn) {
   holdingsRange = range;
@@ -3499,9 +3064,7 @@ function updateHoldingsChart() {
   }
   // Initial draw after DOM & prices settle
   setTimeout(drawPerfChart, 3000);
-  // Auto-sync on load (after 8s to let prices load first), then every 5 minutes
-  setTimeout(autoSyncPerf, 8000);
-  setInterval(autoSyncPerf, 5 * 60 * 1000);
+  // (cloud sync is live — no polling needed)
 })();
 
 /* ── Holdings Full View ── */

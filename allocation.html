@@ -258,10 +258,9 @@ body {
 
 </div>
 
+<script type="module" src="samsam-cloud.js"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
-const STORAGE_KEY = 'samsam_pf_v4';
-const CUSTOM_KEY  = 'samsam_custom_v1';
 
 const CAT_COLORS = {
   btc:    '#f7931a',
@@ -400,162 +399,18 @@ function toggleTheme() {
   } catch(e) {}
 }
 
-// ── Static fallback data (mirrors index.html) ─────────────────────────────
-const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
-const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
-
-const BASE_PORTFOLIO = [
-  { sym:'BTC',  qty:0.01304,    basePrice:80980.29, cat:'btc' },
-  { sym:'TAO',  qty:1.0985,     basePrice:270.90,   cat:'ai' },
-  { sym:'SUI',  qty:251.50,     basePrice:1.0251,   cat:'layer1' },
-  { sym:'NEAR', qty:60.15,      basePrice:4.745,    cat:'layer1' },
-  { sym:'SEI',  qty:4558.67,    basePrice:0.065,    cat:'layer1' },
-  { sym:'ATOM', qty:160.12,     basePrice:1.721,    cat:'layer1' },
-  { sym:'APT',  qty:300.11,     basePrice:0.7965,   cat:'layer1' },
-  { sym:'AVAX', qty:26.46,      basePrice:9.760,    cat:'layer1' },
-  { sym:'ICP',  qty:100.09,     basePrice:2.967,    cat:'layer1' },
-  { sym:'KSM',  qty:55.02,      basePrice:4.436,    cat:'layer1' },
-  { sym:'GRAM', qty:175.61,     basePrice:1.350,    cat:'layer1' },
-  { sym:'NIGHT',qty:5070.91,    basePrice:0.04333,  cat:'layer1' },
-  { sym:'BNB',  qty:0.007984,   basePrice:729.82,   cat:'layer1' },
-  { sym:'ARB',  qty:1357.31,    basePrice:0.1791,   cat:'layer2' },
-  { sym:'ETH',  qty:0.01536,    basePrice:2432.00,  cat:'layer1' },
-  { sym:'MOVR', qty:174.83,     basePrice:1.374,    cat:'layer2' },
-  { sym:'GLMR', qty:21170.56,   basePrice:0.0102,   cat:'layer2' },
-  { sym:'OP',   qty:1821.06,    basePrice:0.1344,   cat:'layer2' },
-  { sym:'WLD',  qty:468.38,     basePrice:0.4808,   cat:'ai' },
-  { sym:'SOL',  qty:2.546,      basePrice:104.58,   cat:'layer1' },
-  { sym:'PYTH', qty:2716.54,    basePrice:0.08232,  cat:'infra' },
-  { sym:'JUP',  qty:741.31,     basePrice:0.3086,   cat:'defi' },
-  { sym:'RENDER',qty:114.21,    basePrice:1.873,    cat:'ai' },
-  { sym:'QNT',  qty:1.194,      basePrice:205.15,   cat:'infra' },
-  { sym:'HBAR', qty:3008.57,    basePrice:0.08415,  cat:'layer1' },
-  { sym:'DOGE', qty:2769.22,    basePrice:0.0809,   cat:'meme' },
-  { sym:'MON',  qty:9997.75,    basePrice:0.02317,  cat:'layer1' },
-  { sym:'CRO',  qty:4026.12,    basePrice:0.05706,  cat:'layer1' },
-  { sym:'XDC',  qty:6782.04,    basePrice:0.03398,  cat:'layer1' },
-  { sym:'DOT',  qty:206.15,     basePrice:1.121,    cat:'layer1' },
-  { sym:'LINK', qty:20.34,      basePrice:12.35,    cat:'defi' },
-  { sym:'ENS',  qty:40.11,      basePrice:5.660,    cat:'defi' },
-  { sym:'STRK', qty:2925.91,    basePrice:0.07454,  cat:'layer2' },
-  { sym:'ONDO', qty:486.78,     basePrice:0.4375,   cat:'defi' },
-  { sym:'AVAIL',qty:84648.66,   basePrice:0.002647, cat:'infra' },
-  { sym:'KAVA', qty:3038.55,    basePrice:0.06842,  cat:'defi' },
-  { sym:'PONS', qty:754.08,     basePrice:0.2998,   cat:'defi' },
-  { sym:'MNT',  qty:452.20,     basePrice:0.5186,   cat:'layer2' },
-  { sym:'FLR',  qty:35446.22,   basePrice:0.00663,  cat:'infra' },
-  { sym:'KAS',  qty:6299.89,    basePrice:0.03635,  cat:'layer1' },
-  { sym:'POL',  qty:2414.1327,  basePrice:0.09521,  cat:'layer2' },
-  { sym:'XPL',  qty:2799.70,    basePrice:0.08056,  cat:'infra' },
-  { sym:'VTHO', qty:332670.85,  basePrice:0.0006003,cat:'layer1' },
-  { sym:'VET',  qty:30476.08,   basePrice:0.006881, cat:'layer1' },
-];
-
-const LIVE_PRICES_OCT15 = {
-  BTC:82363.28, ETH:2444.58,
-  SOL:105.81, BNB:718.42, TAO:276.21, SUI:0.8207, NEAR:5.252, SEI:0.06197,
-  ATOM:1.739, APT:0.8207, AVAX:9.964, ICP:3.074, KSM:4.488, GRAM:1.372,
-  ARB:0.1922, MOVR:1.399, GLMR:0.01038, OP:0.1413, WLD:0.5023,
-  PYTH:0.09368, JUP:0.3089, RENDER:1.996, QNT:209.46, HBAR:0.08369,
-  DOGE:0.08112, CRO:0.05825, XDC:0.03393, DOT:1.125, LINK:12.50,
-  ENS:5.733, STRK:0.09143, ONDO:0.4600, AVAIL:0.002632, KAVA:0.069,
-  MNT:0.5295, FLR:0.006713, KAS:0.03612, POL:0.09554, VTHO:0.0006441,
-  VET:0.00705, NIGHT:0.04419, MON:0.02344, PONS:0.3498, XPL:0.08513,
-};
-
-// ── Load portfolio: localStorage → JSONbin → BASE_PORTFOLIO fallback ───────
-function applyCoinsArray(coins) {
-  portfolio = coins.map(c => {
-    const price = c.currentPrice || c.basePrice || 0;
-    return {
-      sym: c.sym,
-      qty: c.qty,
-      currentPrice: price,
-      basePrice: c.basePrice || price,
-      cat: c.cat || 'other',
-      walletValue: c.qty * price,
-    };
+// ── Load portfolio from the cloud (samsam-cloud.js → Firebase) ─────────────
+// Same derived holdings as the main page, updated live from any device.
+function loadPortfolio() {
+  const subscribe = S => S.onChange(d => {
+    portfolio = d.portfolio.map(c => ({
+      sym: c.sym, qty: c.qty, currentPrice: c.currentPrice, basePrice: c.basePrice,
+      cat: c.cat || 'other', walletValue: c.qty * c.currentPrice,
+    }));
+    renderOverview();
   });
-}
-
-function applyBaseFallback() {
-  portfolio = BASE_PORTFOLIO.map(c => {
-    const price = LIVE_PRICES_OCT15[c.sym] || c.basePrice || 0;
-    return {
-      sym: c.sym,
-      qty: c.qty,
-      currentPrice: price,
-      basePrice: c.basePrice,
-      cat: c.cat || 'other',
-      walletValue: c.qty * price,
-    };
-  });
-}
-
-function mergeCustomCoins() {
-  try {
-    const custom = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
-    custom.forEach(cc => {
-      if (!portfolio.find(p => p.sym === cc.sym)) {
-        const price = cc.currentPrice || cc.basePrice || 0;
-        portfolio.push({
-          sym: cc.sym, qty: cc.qty,
-          currentPrice: price,
-          basePrice: cc.basePrice || price,
-          cat: cc.cat || 'other',
-          walletValue: cc.qty * price,
-        });
-      }
-    });
-  } catch(e) {}
-}
-
-async function loadPortfolio() {
-  // 1. Try localStorage first (instant — no network needed)
-  let fromStorage = false;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const saved = JSON.parse(raw);
-      // localStorage may store {coins:[...]} object or plain array
-      const coins = Array.isArray(saved) ? saved : (saved && saved.coins ? saved.coins : null);
-      if (coins && coins.length > 0) {
-        applyCoinsArray(coins);
-        mergeCustomCoins();
-        fromStorage = true;
-      }
-    }
-  } catch(e) {}
-
-  // 2. If no localStorage, use static fallback immediately
-  if (!fromStorage) {
-    applyBaseFallback();
-    mergeCustomCoins();
-  }
-
-  // Render with whatever data we have now (localStorage or static fallback)
-  renderOverview();
-
-  // 3. Try JSONbin cloud in background (3 s timeout) — update if better data arrives
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_KEY },
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    if (res.ok) {
-      const json = await res.json();
-      const cloudPf = json.record && json.record.portfolioData;
-      if (cloudPf && cloudPf.coins && cloudPf.coins.length > 0) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudPf.coins)); } catch(_) {}
-        applyCoinsArray(cloudPf.coins);
-        mergeCustomCoins();
-        renderOverview(); // re-render with live cloud data
-      }
-    }
-  } catch(e) { /* timeout or network error — static fallback already rendered */ }
+  if (window.Samsam) subscribe(window.Samsam);
+  else window.addEventListener('samsam-ready', () => subscribe(window.Samsam), { once: true });
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -766,7 +621,7 @@ function setupLayout() {
 // ── Init ───────────────────────────────────────────────────────────────────
 loadTheme();
 setupLayout();
-// loadPortfolio() renders immediately with static data, then updates from cloud
+// Renders as soon as the cloud portfolio arrives, then live on every change
 loadPortfolio();
 </script>
 </body>

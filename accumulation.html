@@ -511,66 +511,28 @@ tr:hover td { background: rgba(255,255,255,.02); }
   </div>
 </div>
 
+<script type="module" src="samsam-cloud.js"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
-const PORTFOLIO_KEY  = 'samsam_pf_v4';
-const ACCUM_KEY      = 'samsam_acc_v1';   // accumulation targets (independent)
 const THEME_KEY      = 'samsam_theme';
 
-// ─── JSONbin Cloud Sync ───────────────────────────────────────────────────────
-const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
-const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';  // fixed bin ID — shared across all devices
-let cloudSyncTimer = null;
-let isSyncing = false;
-
-// Upload current plan to cloud
+// ─── Cloud data (samsam-cloud.js → Firebase) ────────────────────────────────
+// Targets are stored one document per coin, so edits on two devices merge instead of
+// overwriting each other, and saving targets never touches portfolio data.
+function whenSamsam(cb) {
+  if (window.Samsam) cb(window.Samsam);
+  else window.addEventListener('samsam-ready', () => cb(window.Samsam), { once: true });
+}
+let cloudReady = false;
 async function cloudSave() {
-  if (isSyncing) return;
-  isSyncing = true;
+  if (!window.Samsam || !Samsam.isReady()) { setSaveStatus('error', '✗ Still loading — not saved'); return; }
   setSaveStatus('saving', '☁️ Saving…');
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': JSONBIN_KEY
-      },
-      body: JSON.stringify({ accumPlan })
-    });
-    if (!res.ok) throw new Error('Update failed: ' + res.status);
-    // mirror locally for offline fallback
-    try { localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan)); } catch(_) {}
+    await Samsam.saveAccumPlan(accumPlan);
     setSaveStatus('saved', '☁️ Synced');
     setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2500);
   } catch(e) {
-    try { localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan)); } catch(_) {}
-    setSaveStatus('error', '✗ Cloud failed – saved locally');
-    setTimeout(() => setSaveStatus('ready', '✓ Ready'), 3000);
-  } finally {
-    isSyncing = false;
-  }
-}
-
-// Load plan from cloud (fallback to localStorage if offline)
-async function cloudLoad() {
-  setSaveStatus('saving', '☁️ Loading…');
-  try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_KEY }
-    });
-    if (!res.ok) throw new Error('Load failed: ' + res.status);
-    const json = await res.json();
-    accumPlan = json.record.accumPlan || [];
-    try { localStorage.setItem(ACCUM_KEY, JSON.stringify(accumPlan)); } catch(_) {}
-    setSaveStatus('saved', '☁️ Synced');
-    setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2000);
-  } catch(e) {
-    try {
-      const local = localStorage.getItem(ACCUM_KEY);
-      accumPlan = local ? JSON.parse(local) : [];
-    } catch(_) { accumPlan = []; }
-    setSaveStatus('error', '✗ Cloud error – using local');
-    setTimeout(() => setSaveStatus('ready', '✓ Ready'), 3000);
+    setSaveStatus('error', '✗ Not saved — see sync status');
   }
 }
 
@@ -592,12 +554,10 @@ function setView(v) {
 }
 
 // ─── Init ────────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
   loadTheme();
-  loadPortfolio();
-  await cloudLoad();
+  setSaveStatus('saving', '☁️ Loading…');
   setView(currentView);
-  renderDashboard();
   // Apply default sort indicator on the Progress column header
   document.querySelectorAll('th.sortable').forEach(th => {
     th.classList.remove('sort-asc','sort-desc');
@@ -605,6 +565,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       th.classList.add('sort-desc');
     }
   });
+  whenSamsam(S => S.onChange(d => {
+    portfolioCoins = d.portfolio;
+    // Don't replace the plan while a save of local edits is still debouncing.
+    if (!saveTimer) accumPlan = d.accumPlan.map(e => ({ ...e }));
+    if (!cloudReady) { cloudReady = true; setSaveStatus('ready', '✓ Ready'); }
+    renderAll();
+    try { checkAllAlerts(); } catch(_) {}
+  }));
 });
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
@@ -625,71 +593,28 @@ function toggleTheme() {
   try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
 }
 
-// ─── Load Portfolio Data ─────────────────────────────────────────────────────
-function loadPortfolio() {
-  try {
-    const saved = localStorage.getItem(PORTFOLIO_KEY);
-    if (!saved) {
-      portfolioCoins = [];
-      showPortfolioWarning();
-      return;
-    }
-    const data = JSON.parse(saved);
-    portfolioCoins = data.coins || [];
-    hidePortfolioWarning();
-  } catch(e) {
-    portfolioCoins = [];
-    showPortfolioWarning();
-  }
-}
-
-function showPortfolioWarning() {
-  let w = document.getElementById('portfolioWarn');
-  if (!w) {
-    w = document.createElement('div');
-    w.id = 'portfolioWarn';
-    w.style.cssText = 'background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:10px 14px;font-size:0.82rem;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:8px;';
-    w.innerHTML = '⚠️ <span>Portfolio data not found. Open <a href="./portfolio.html" style="color:var(--accent);font-weight:700">Portfolio</a> first to load prices, then come back here and tap 🔄 Sync.</span>';
-    document.querySelector('.toolbar').before(w);
-  }
-}
-function hidePortfolioWarning() {
-  const w = document.getElementById('portfolioWarn');
-  if (w) w.remove();
-}
-
 function getPortfolioCoin(sym) {
   return portfolioCoins.find(c => c.sym === sym.toUpperCase());
 }
 
-// ─── Load / Save Accumulation Plan ──────────────────────────────────────────
-// cloudLoad() is used on init instead of loadAccumPlan()
-function loadAccumPlan() {
-  // kept for compatibility — cloudLoad() is called on init
-  try {
-    const saved = localStorage.getItem(ACCUM_KEY);
-    accumPlan = saved ? JSON.parse(saved) : [];
-  } catch(e) { accumPlan = []; }
-}
-
+// ─── Save Accumulation Plan ─────────────────────────────────────────────────
 function saveAccumPlan(immediate = false) {
-  if (immediate) { cloudSave(); return; }
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => cloudSave(), 800);
+  if (immediate) { saveTimer = null; cloudSave(); return; }
+  saveTimer = setTimeout(() => { saveTimer = null; cloudSave(); }, 800);
 }
 
 function setSaveStatus(type, text) {
   const el = document.getElementById('saveStatus');
+  if (!el) return;
   el.textContent = text;
   el.className = 'save-status ' + (type !== 'ready' ? type : '');
 }
 
-// ─── Sync quantities from portfolio ─────────────────────────────────────────
+// Holdings update live from the cloud; this button just re-renders.
 function syncFromPortfolio() {
-  loadPortfolio();
-  renderTable();
-  renderDashboard();
-  setSaveStatus('saved', '🔄 Synced');
+  renderAll();
+  setSaveStatus('saved', '🔄 Up to date');
   setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2000);
 }
 
@@ -1312,13 +1237,6 @@ function checkAllAlerts() {
   });
 }
 
-// ─── Auto-sync when portfolio page updates storage ────────────────────────────
-window.addEventListener('storage', e => {
-  if (e.key === PORTFOLIO_KEY) {
-    loadPortfolio();
-    renderAll();
-  }
-});
 </script>
 </body>
 </html>

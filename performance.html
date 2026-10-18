@@ -588,15 +588,9 @@ body {
 
 <div class="sync-bar" id="syncBar">⏳ Fetching live prices…</div>
 
+<script type="module" src="samsam-cloud.js"></script>
 <script>
 // ── Constants ──
-const STORAGE_KEY    = 'samsam_pf_v4';
-const ARCHIVE_KEY    = 'samsam_archived_v1';
-const CUSTOM_KEY     = 'samsam_custom_v1';
-const SYNC_KEY       = 'samsam_last_cloud_ts';
-const TX_KEY         = 'samsam_tx_v1';
-const JSONBIN_KEY    = '$2a$10$iD6tdNAkv3OznNRENg5qBe/X.ws/2jnYh.ZH4MMfpYmcfrYoijfi6';
-const JSONBIN_BIN_ID = '6ad27752ac6210605a383e8f';
 
 const COIN_NAMES = {
   BTC:'Bitcoin', SOL:'Solana', NEAR:'NEAR Protocol', TAO:'Bittensor',
@@ -725,31 +719,28 @@ function toggleTheme() {
   loadTheme();
 }
 
-// ── Load portfolio ──
+// ── Load portfolio from the cloud (samsam-cloud.js → Firebase), live ──
 function loadPortfolio() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const pf = raw ? JSON.parse(raw) : null;
-    if (pf && pf.coins && pf.coins.length > 0) {
-      let archived = [];
-      try { archived = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); } catch(_) {}
-      const removed = new Set(archived.filter(c => c.removedPermanently === true).map(c => c.sym));
-      portfolio = pf.coins.filter(c => !removed.has(c.sym));
-    }
-  } catch(_) {}
-
-  // seed livePrices from stored currentPrice
-  portfolio.forEach(c => {
-    livePrices[c.sym] = {
-      price: (c.currentPrice > 0 ? c.currentPrice : null) || FALLBACK_PRICES[c.sym] || 0,
-      change24h: null
-    };
+  const subscribe = S => S.onChange(d => {
+    portfolio = d.portfolio;
+    portfolio.forEach(c => {
+      const prev = livePrices[c.sym];
+      livePrices[c.sym] = {
+        price: c.currentPrice > 0 ? c.currentPrice : (FALLBACK_PRICES[c.sym] || 0),
+        change24h: c.change24h ?? (prev ? prev.change24h : null),
+      };
+    });
+    render();
+    if (!pricesFetchedOnce) { pricesFetchedOnce = true; fetchLivePrices(); }
   });
+  if (window.Samsam) subscribe(window.Samsam);
+  else window.addEventListener('samsam-ready', () => subscribe(window.Samsam), { once: true });
 }
+let pricesFetchedOnce = false;
 
 // ── Fetch live prices ──
 async function fetchLivePrices() {
-  const ids = portfolio.map(c => COINGECKO_IDS[c.sym]).filter(Boolean);
+  const ids = [...new Set(portfolio.map(c => c.cgId || COINGECKO_IDS[c.sym]).filter(Boolean))];
   if (!ids.length) return;
 
   // batch up to 50 per call
@@ -760,50 +751,24 @@ async function fetchLivePrices() {
       const res = await fetch(url);
       if (!res.ok) continue;
       const data = await res.json();
+      const shared = {};
       portfolio.forEach(c => {
-        const cgId = COINGECKO_IDS[c.sym];
-        if (cgId && data[cgId]) {
+        const cgId = c.cgId || COINGECKO_IDS[c.sym];
+        if (cgId && data[cgId] && data[cgId].usd) {
           livePrices[c.sym] = {
             price: data[cgId].usd,
             change24h: data[cgId].usd_24h_change ?? null
           };
+          shared[c.sym] = { usd: data[cgId].usd, ch24: data[cgId].usd_24h_change ?? null };
         }
       });
+      if (window.Samsam) Samsam.updatePrices(shared);
     } catch(_) {}
   }
 
   document.getElementById('syncBar').textContent =
     '✓ Live prices updated · ' + new Date().toLocaleTimeString();
   render();
-}
-
-// ── Pull from cloud ──
-async function pullFromCloud() {
-  try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_KEY }
-    });
-    if (!res.ok) return;
-    const json = await res.json();
-    const cloudPf = json.record.portfolioData || null;
-    if (!cloudPf || !cloudPf.coins || !cloudPf.coins.length) return;
-
-    const cloudTs = cloudPf.lastSave || '';
-    if (!cloudTs) return;
-    const lastPulled = (() => { try { return localStorage.getItem(SYNC_KEY) || ''; } catch(_){ return ''; } })();
-    if (lastPulled && cloudTs <= lastPulled) return;
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: cloudPf.coins, btcPrice: cloudPf.btcPrice, lastSave: cloudTs }));
-      if (cloudPf.transactions)  localStorage.setItem('samsam_tx_v1', JSON.stringify(cloudPf.transactions));
-      if (cloudPf.customCoins)   localStorage.setItem(CUSTOM_KEY, JSON.stringify(cloudPf.customCoins));
-      if (cloudPf.archivedCoins) localStorage.setItem(ARCHIVE_KEY, JSON.stringify(cloudPf.archivedCoins));
-      localStorage.setItem(SYNC_KEY, cloudTs);
-    } catch(_) {}
-
-    loadPortfolio();
-    render();
-  } catch(_) {}
 }
 
 // ── Format helpers ──
@@ -894,21 +859,11 @@ const COIN_CATS = {
   PYTH:'infra', QNT:'infra', AVAIL:'infra', FLR:'infra', XPL:'infra',
 };
 
-// ── Realized P&L from sell transactions ──
+// ── Realized P&L — same ledger calculation as the main page (samsam-core.js) ──
 function calcRealizedPnl() {
-  let transactions = [];
-  try { transactions = JSON.parse(localStorage.getItem(TX_KEY) || '[]'); } catch(_) {}
-  const sells = transactions.filter(t => t.type === 'sell' && t.qty > 0 && t.price > 0);
-  if (!sells.length) return { total: 0, count: 0 };
-
-  // FIFO-lite: use avg cost from portfolio as cost basis
-  let total = 0;
-  sells.forEach(t => {
-    const coin = portfolio.find(c => c.sym === t.sym);
-    const cost = coin ? (parseFloat(coin.basePrice) || 0) : (t.costBasis || 0);
-    total += (t.price - cost) * t.qty;
-  });
-  return { total, count: sells.length };
+  const st = window.Samsam && Samsam.isReady() ? Samsam.getState() : null;
+  if (!st) return { total: 0, count: 0 };
+  return { total: st.realized.total, count: st.realized.sellCount };
 }
 
 // ── Sort ──
@@ -1106,10 +1061,6 @@ render();
 document.getElementById('col-pnl').classList.add('col-active');
 document.getElementById('arrow-pnl').textContent = ' ↓';
 
-setTimeout(async () => {
-  await pullFromCloud();
-  await fetchLivePrices();
-}, 800);
 
 setInterval(fetchLivePrices, 90 * 1000);
 </script>
