@@ -23,9 +23,10 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
         allow create: if isOwner(userId)
           && request.resource.data.sym is string
-          && request.resource.data.type in ['buy', 'sell', 'adjust']
+          && request.resource.data.type in ['buy', 'sell', 'adjust', 'transfer_in', 'transfer_out']
           && request.resource.data.qty is number && request.resource.data.qty >= 0
-          && request.resource.data.price is number && request.resource.data.price >= 0;
+          && request.resource.data.price is number && request.resource.data.price >= 0
+          && (!('fee' in request.resource.data) || (request.resource.data.fee is number && request.resource.data.fee >= 0));
         // Re-uploading the identical transaction (e.g. a retried import) is allowed.
         allow update: if isOwner(userId) && request.resource.data == resource.data;
       }

@@ -199,6 +199,7 @@ function txDoc(sym, type, qty, price, note, extra = {}) {
     date: extra.date || now, createdAt: now, note: note || '', device: deviceId,
     ...(extra.setQty != null ? { setQty: Number(extra.setQty) } : {}),
     ...(extra.setAvg != null ? { setAvg: Number(extra.setAvg) } : {}),
+    ...(extra.fee > 0 ? { fee: Number(extra.fee) } : {}),
   });
 }
 
@@ -321,7 +322,7 @@ function readLegacy() {
 
 // Converts the old app's data (localStorage or an old JSON backup) into cloud documents.
 export function buildImport(legacy, opts = {}) {
-  const txs = (legacy.transactions || []).filter(t => t && t.sym && (t.type === 'buy' || t.type === 'sell' || t.type === 'adjust'))
+  const txs = (legacy.transactions || []).filter(t => t && t.sym && ['buy', 'sell', 'adjust', 'transfer_in', 'transfer_out'].includes(t.type))
     .map(t => clean({ ...t, id: safeId(t.id || Core.newId('tx_')), qty: +t.qty || 0, price: +t.price || 0,
       total: t.total != null ? +t.total : (+t.qty || 0) * (+t.price || 0), date: t.date || new Date(0).toISOString(),
       createdAt: t.createdAt || t.date || new Date(0).toISOString(), note: t.note || '' }));

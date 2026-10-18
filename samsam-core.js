@@ -10,6 +10,10 @@
 //     'buy'    qty, price         → avg = (qty*avg + q*p) / (qty+q)
 //     'sell'   qty, price         → qty -= q, avg unchanged, realised P&L = (p-avg)*q
 //     'adjust' setQty?, setAvg?   → manual correction (inline edits, re-adding a coin)
+//     'transfer_in'  qty, price, fee → coins arrive from outside: qty += q − fee,
+//                                      cost += q × price (fee raises the average), no P&L
+//     'transfer_out' qty, fee        → coins leave: qty −= q + fee, avg unchanged, no P&L
+//   fee is in coin units (network fee).
 
 export const EPS = 1e-12;
 
@@ -37,6 +41,17 @@ export function applyTx(pos, t) {
     sellQty = Math.min(q, Math.max(qty, 0));
     realized = (p - avg) * sellQty;
     qty = Math.max(0, qty - q);
+    if (qty < EPS) qty = 0;
+  } else if (t.type === 'transfer_in') {
+    const f = Math.max(0, num(t.fee)), net = q - f;
+    if (net > 0) {
+      const nq = qty + net;
+      avg = nq > EPS ? (qty * avg + q * p) / nq : 0;
+      qty = nq;
+    }
+  } else if (t.type === 'transfer_out') {
+    const f = Math.max(0, num(t.fee));
+    qty = Math.max(0, qty - q - f);
     if (qty < EPS) qty = 0;
   } else if (t.type === 'adjust') {
     if (t.setQty !== undefined && t.setQty !== null) qty = Math.max(0, num(t.setQty, qty));
@@ -134,6 +149,14 @@ export function deriveOpening(current, txs) {
       qty = pq; avg = Math.max(0, pa);
     } else if (t.type === 'sell') {
       qty = qty + q;
+    } else if (t.type === 'transfer_out') {
+      qty = qty + q + Math.max(0, num(t.fee));
+    } else if (t.type === 'transfer_in') {
+      const net = q - Math.max(0, num(t.fee)), pq = qty - net;
+      if (pq <= 1e-9 * Math.max(1, net)) { if (pq < -1e-9 * Math.max(1, net)) ok = false; qty = 0; avg = 0; continue; }
+      const pa = (qty * avg - q * p) / pq;
+      if (!(pa >= -1e-9)) ok = false;
+      qty = pq; avg = Math.max(0, pa);
     }
   }
   const opening = { qty: Math.max(0, qty), avg: Math.max(0, avg) };
