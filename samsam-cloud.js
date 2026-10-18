@@ -432,7 +432,9 @@ function injectUi() {
   #samsamSetup h3{margin:0 0 6px;font-size:1.05rem} #samsamSetup p{margin:6px 0;color:var(--fg2,#9ca3af);font-size:.88rem;line-height:1.5}
   #samsamSetup .opts{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px} #samsamSetup .opts .samsam-btn{flex:1 1 200px}
   #samsamSetup .msg{margin-top:10px;font-size:.85rem}
-  @media print{#samsamSyncPill,#samsamSyncMenu,#samsamGate{display:none!important}}`;
+  /* Empty space at the end of every page, so the floating Synced badge never covers the last row */
+  body::after{content:"";display:block;height:calc(72px + env(safe-area-inset-bottom,0px))}
+  @media print{#samsamSyncPill,#samsamSyncMenu,#samsamGate{display:none!important} body::after{display:none}}`;
   document.head.appendChild(css);
   const gate = document.createElement('div'); gate.id = 'samsamGate';
   gate.innerHTML = `<div class="card"><h2>💼 Samsam Portfolio</h2><div id="samsamGateBody"></div></div>`;

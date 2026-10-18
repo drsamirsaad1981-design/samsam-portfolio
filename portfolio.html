@@ -3313,6 +3313,15 @@ function setHoldingsOverlayRange(range, btn) {
   drawHoldingsOverlayChart();
 }
 
+// Redraw the Holdings chart when its card changes width (rotation, window resize)
+(function () {
+  const wrap = document.querySelector('#holdingsOverlay .hov-chart-wrap');
+  if (!wrap || !window.ResizeObserver) return;
+  let t; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => {
+    const ov = document.getElementById('holdingsOverlay');
+    if (ov && ov.style.display === 'flex' && !coinTxSym) drawHoldingsOverlayChart();
+  }, 60); }).observe(wrap);
+})();
 function drawHoldingsOverlayChart() {
   const canvas = document.getElementById('hovCanvas');
   if (!canvas) return;
@@ -3341,13 +3350,13 @@ function drawHoldingsOverlayChart() {
 
   if (totalEl) totalEl.textContent = '$' + last.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
   if (changeEl) {
-    const sign = delta >= 0 ? '+' : '';
-    changeEl.textContent = `${sign}$${Math.abs(delta).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}  (${sign}${pct.toFixed(2)}%)`;
+    const sign = delta >= 0 ? '+' : '-';
+    changeEl.textContent = `${sign}$${Math.abs(delta).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}  (${sign}${Math.abs(pct).toFixed(2)}%)`;
     changeEl.className = 'hov-change ' + (isPos ? 'pos' : 'neg');
   }
 
   const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  const lineColor = isPos ? '#f43f5e' : '#3b82f6';
+  const lineColor = isPos ? '#22c55e' : '#f43f5e'; // green when up, red when down
   const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const labelColor = isDark ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.8)';
 
@@ -3464,12 +3473,25 @@ function renderHoldingsAssetList() {
 <!-- ── Holdings Full-Screen Overlay ── -->
 <div id="holdingsOverlay" style="display:none;position:fixed;inset:0;z-index:9999;flex-direction:column;overflow-y:auto;background:var(--bg)">
   <style>
+    /* ── Same design tokens as Allocation / Performance ── */
+    #holdingsOverlay {
+      --bg: #0d0d0f; --card: #1c1c1e; --bg2: #1c1c1e; --bg3: #2c2c2e; --fg: #f5f5f7; --fg2: #8e8e93;
+      --border: rgba(255,255,255,0.08); --header-bg: #1c1c1e; --shadow: 0 1px 3px rgba(0,0,0,0.30); --accent: #3b82f6;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    [data-theme="light"] #holdingsOverlay {
+      --bg: #f5f5f7; --card: #ffffff; --bg2: #ffffff; --bg3: #f2f2f7; --fg: #1a1a1e; --fg2: #6e6e73;
+      --border: rgba(0,0,0,0.08); --header-bg: #ffffff; --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .hov-container { max-width: 860px; width: 100%; margin: 0 auto;
+      padding: 20px max(16px, env(safe-area-inset-right,0px)) 40px max(16px, env(safe-area-inset-left,0px)); }
     /* ── Nav bar ── */
     .hov-navbar {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 14px 8px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 12px max(16px, env(safe-area-inset-right,0px)) 12px max(16px, env(safe-area-inset-left,0px));
+      padding-top: max(12px, env(safe-area-inset-top,0px));
       border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; background: var(--bg); z-index: 10;
+      position: sticky; top: 0; background: var(--header-bg); z-index: 10;
     }
     .hov-back-btn {
       display: flex; align-items: center; gap: 6px;
@@ -3644,6 +3666,35 @@ function renderHoldingsAssetList() {
     .hov-asset-holding { display:flex;flex-direction:column;align-items:flex-end;gap:2px; }
     .hov-hval { font-size:0.82rem;font-weight:700;color:var(--fg); }
     .hov-hqty { font-size:0.7rem;color:var(--fg2); }
+
+    /* ══ Card layout — matches Allocation / Performance ══════════════════════ */
+    .hov-back-btn { background: var(--card); border: 1px solid var(--border); color: var(--fg); }
+    .hov-back-btn:hover { background: var(--card); border-color: var(--accent); color: var(--accent); }
+    .hov-nav-title { flex: 1; text-align: center; font-size: 1rem; }
+    /* Value + chart + range tabs = one card; asset list = one card */
+    .hov-card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px; }
+    .hov-hero { padding: 18px 18px 4px; }
+    .hov-chart-wrap { padding: 8px 10px 0; }
+    .hov-tabs { padding: 10px 14px 14px; border-bottom: none; }
+    .hov-tab.active { background: var(--bg3); border-color: transparent; }
+    .hov-list-header { background: transparent; padding: 14px 18px 10px; border-bottom: 1px solid var(--border); }
+    .hov-asset-row { padding: 12px 18px; }
+    #hovAssetList .hov-asset-row:last-child { border-bottom: none; }
+    @media (hover:hover) { .hov-asset-row:hover { background: var(--bg3); } }
+    #holdingsOverlay[data-view="tx"] .hov-card { display: none; }
+    /* Coin Transactions view inside the same column */
+    #hovTxView { padding-top: 0; }
+    .htx-tabs { padding: 0; margin-bottom: 4px; }
+    .htx-filters { padding: 14px 0; }
+    .htx-cards { padding: 0 0 6px; }
+    .htx-card { background: var(--card); border: none; border-radius: 16px; box-shadow: var(--shadow); }
+    .htx-list { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); margin-top: 14px; overflow: hidden; padding: 0; }
+    .htx-list:empty { display: none; }
+    .htx-date { padding: 14px 18px 4px; }
+    .htx-row { padding: 12px 18px; }
+    .htx-list .htx-row:last-child { border-bottom: none; }
+    .htx-empty { background: var(--card); border-radius: 18px; }
+    @media (min-width: 900px) { #hovTxView { max-width: none; } }
   </style>
 
   <!-- Nav bar -->
@@ -3658,7 +3709,9 @@ function renderHoldingsAssetList() {
     <button type="button" class="ss-theme-btn" data-theme-toggle></button>
   </div>
 
-  <!-- Hero total -->
+  <div class="hov-container">
+  <!-- Hero total + chart + range tabs: one card -->
+  <div class="hov-card hov-value-card">
   <div class="hov-hero">
     <div class="hov-page-label">Portfolio Value</div>
     <div class="hov-total" id="hovTotal">$—</div>
@@ -3678,8 +3731,10 @@ function renderHoldingsAssetList() {
     <button class="hov-tab" onclick="setHoldingsOverlayRange('90d',this)">90d</button>
     <button class="hov-tab" onclick="setHoldingsOverlayRange('all',this)">All</button>
   </div>
+  </div>
 
-  <!-- List header -->
+  <!-- Asset list: one card -->
+  <div class="hov-card hov-list-card">
   <div class="hov-list-header">
     <span></span>
     <span>Asset</span>
@@ -3689,6 +3744,7 @@ function renderHoldingsAssetList() {
 
   <!-- Asset rows -->
   <div id="hovAssetList"></div>
+  </div>
 
   <!-- Coin Transactions & Performance view (opened by tapping a coin's holdings) -->
   <div id="hovTxView">
@@ -3711,6 +3767,7 @@ function renderHoldingsAssetList() {
       <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
     </button>
   </div>
+  </div><!-- /.hov-container -->
 
 </div>
 <!-- Add Transaction form (shared by the main table/cards and the coin Transactions screen) -->

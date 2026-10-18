@@ -13,6 +13,7 @@
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
 <script src="samsam-ui.js"></script>
 <script src="samsam-dropdown.js"></script>
+<script src="samsam-chart.js"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1204,7 +1205,7 @@
 </div>
 
 <footer>
-  <p>🔒 Local storage | Baseline: Oct 15, 2026</p>
+  <p>☁️ Cloud sync (Firebase) | Baseline: Oct 15, 2026</p>
   <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
   <p id="footerSyncTime" style="margin-top:4px;font-size:0.68rem;color:var(--fg2);opacity:0.75">☁️ Cloud: not synced yet</p>
   <p id="footerSyncStatus" style="margin-top:4px;font-size:0.7rem;min-height:1.2em;transition:opacity 0.5s"></p>
@@ -2666,107 +2667,15 @@ function drawPerfChart() {
   // If only 1 snapshot, duplicate it so chart renders as a flat baseline
   if (snaps.length === 1) snaps.push(snaps[0]);
 
-  const W = (wrap.clientWidth || canvas.parentElement?.clientWidth || canvas.offsetWidth || 600);
-  const H = 140;
-  canvas.width  = W * window.devicePixelRatio;
-  canvas.height = H * window.devicePixelRatio;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-  // Normalize both series to % change from first snapshot
+  // Normalize both series to % change from the first snapshot
   const baseV = snaps[0].v;
   const baseB = snaps[0].b;
   const pctV  = snaps.map(s => (s.v - baseV) / baseV * 100);
-  const pctB  = snaps.map(s => (s.b - baseB) / baseB * 100);
-  const allPct = [...pctV, ...pctB];
-  const minP = Math.min(...allPct);
-  const maxP = Math.max(...allPct);
-
-  // Round axis to clean grid values — handles any magnitude safely
-  function niceStep(range) {
-    if (!range || !isFinite(range) || range <= 0) return 1;
-    const raw = range / 4;
-    if (raw <= 0 || !isFinite(raw)) return 0.1;
-    const mag  = Math.pow(10, Math.floor(Math.log10(raw)));
-    const norm = raw / mag;
-    const step = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
-    return step * mag;
-  }
-  const dataRange = maxP - minP;
-  const step  = dataRange > 0 ? niceStep(dataRange) : 1;
-  const axMin = Math.floor(minP / step) * step;
-  const axMax = Math.ceil(maxP  / step) * step;
-  const axRange = (axMax - axMin) || (step * 4);
-
-  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  const labelColor = isDark ? 'rgba(148,163,184,0.65)' : 'rgba(100,116,139,0.7)';
-  const gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
-
-  // Measure label width to set left padding
-  ctx.font = '10px Inter,sans-serif';
-  const sampleLabel = axMin.toFixed(1) + '%';
-  const labelW = ctx.measureText(sampleLabel).width + 10;
-
-  const pad = { top: 8, bottom: 20, left: 4, right: Math.max(labelW, 38) };
-  const cW  = W - pad.left - pad.right;
-  const cH  = H - pad.top - pad.bottom;
-
-  function toX(i) { return pad.left + (i / (snaps.length - 1)) * cW; }
-  function toY(p) { return pad.top + (1 - (p - axMin) / axRange) * cH; }
-
-  ctx.clearRect(0, 0, W, H);
-
-  // Grid lines + Y-axis labels
-  const ticks = [];
-  for (let v = axMin; v <= axMax + 1e-9; v = +(v + step).toFixed(10)) ticks.push(+v.toFixed(10));
-
-  ctx.font = '10px Inter,sans-serif';
-  ctx.textAlign = 'right';
-  ticks.forEach(v => {
-    const y = toY(v);
-    // Grid line
-    ctx.beginPath();
-    ctx.setLineDash([3, 4]);
-    ctx.strokeStyle = gridColor;
-    ctx.lineWidth = 1;
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(W - pad.right, y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // Label
-    ctx.fillStyle = labelColor;
-    const label = (v >= 0 ? '' : '') + v.toFixed(1) + '%';
-    ctx.fillText(label, W - 2, y + 3.5);
-  });
-
-  // Draw a line series
-  function drawLine(data, color, dashed) {
-    ctx.beginPath();
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = 2;
-    ctx.lineJoin    = 'round';
-    ctx.lineCap     = 'round';
-    if (dashed) ctx.setLineDash([5, 3]);
-    else ctx.setLineDash([]);
-    data.forEach((p, i) => {
-      i === 0 ? ctx.moveTo(toX(i), toY(p)) : ctx.lineTo(toX(i), toY(p));
-    });
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  drawLine(pctB, '#f0a060');        // BTC (warm orange, behind)
-  drawLine(pctV, '#3b82f6');        // Portfolio (blue, in front)
-
-  // Date labels bottom
-  ctx.fillStyle = labelColor;
-  ctx.font = '9px Inter,sans-serif';
-  ctx.textAlign = 'left';
-  const firstDate = new Date(snaps[0].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  const lastDate  = new Date(snaps[snaps.length - 1].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  ctx.fillText(firstDate, pad.left, H - 3);
-  ctx.textAlign = 'right';
-  ctx.fillText(lastDate, W - pad.right, H - 3);
+  const pctB  = snaps.map(s => baseB ? (s.b - baseB) / baseB * 100 : 0);
+  SamsamChart.draw(canvas, { height: 160, format: 'pct', series: [
+    { points: snaps.map((s, i) => ({ t: s.t, v: pctB[i] })), color: '#f0a060', width: 2 },            // BTC
+    { points: snaps.map((s, i) => ({ t: s.t, v: pctV[i] })), color: '#3b82f6', width: 2.4, fill: true }, // Portfolio
+  ] });
 
   // Update legend labels below chart
   const lastV = pctV[pctV.length - 1];
@@ -2849,113 +2758,17 @@ function drawHoldingsChart() {
   const delta = last - first;
   const pct   = first > 0 ? (delta / first * 100) : 0;
   const isPos = delta >= 0;
-  const color = isPos ? '#f43f5e' : '#3b82f6'; // red-pink when up (like screenshot), blue when down
+  const color = isPos ? '#22c55e' : '#f43f5e'; // green when up, red when down
 
   // Update header
   totalEl.textContent = '$' + last.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   if (changeEl) {
-    const sign = delta >= 0 ? '+' : '';
-    changeEl.textContent = `${sign}$${Math.abs(delta).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}  ${sign}${pct.toFixed(2)}%`;
+    const sign = delta >= 0 ? '+' : '-';
+    changeEl.textContent = `${sign}$${Math.abs(delta).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}  (${sign}${Math.abs(pct).toFixed(2)}%)`;
     changeEl.className = 'holdings-change ' + (isPos ? 'pos' : 'neg');
   }
 
-  // Draw canvas
-  const isDark   = document.documentElement.getAttribute('data-theme') !== 'light';
-  const gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-  const labelColor = isDark ? 'rgba(148,163,184,0.6)'  : 'rgba(100,116,139,0.7)';
-
-  const dpr = window.devicePixelRatio || 1;
-  const W   = canvas.parentElement?.clientWidth || canvas.offsetWidth || 340;
-  const H   = 110;
-  canvas.width  = W * dpr;
-  canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  // Nice axis — same helper as perf chart
-  function hNiceStep(range) {
-    if (!range || !isFinite(range) || range <= 0) return 1;
-    const raw  = range / 4;
-    if (raw <= 0 || !isFinite(raw)) return 1;
-    const mag  = Math.pow(10, Math.floor(Math.log10(raw)));
-    const norm = raw / mag;
-    const s    = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
-    return s * mag;
-  }
-
-  const vals   = snaps.map(s => s.v);
-  const minV   = Math.min(...vals);
-  const maxV   = Math.max(...vals);
-  const hStep  = hNiceStep(maxV - minV);
-  const axMinH = Math.floor(minV / hStep) * hStep;
-  const axMaxH = Math.ceil(maxV  / hStep) * hStep;
-  const axRangeH = (axMaxH - axMinH) || hStep * 4;
-
-  // Measure label width for right padding
-  ctx.font = '10px Inter,sans-serif';
-  const sampleH  = axMaxH >= 1000 ? (axMaxH / 1000).toFixed(1) + 'K' : axMaxH.toFixed(0);
-  const labelW_h = ctx.measureText(sampleH).width + 10;
-
-  const pad = { top: 8, bottom: 20, left: 0, right: Math.max(labelW_h, 36) };
-  const cW  = W - pad.left - pad.right;
-  const cH  = H - pad.top - pad.bottom;
-
-  function toX(i) { return pad.left + (i / (snaps.length - 1)) * cW; }
-  function toY(v) { return pad.top + (1 - (v - axMinH) / axRangeH) * cH; }
-
-  ctx.clearRect(0, 0, W, H);
-
-  // Grid lines + Y-axis labels
-  const hTicks = [];
-  for (let v = axMinH; v <= axMaxH + 1e-6; v = +(v + hStep).toFixed(10)) hTicks.push(+v.toFixed(10));
-
-  ctx.font = '10px Inter,sans-serif';
-  ctx.textAlign = 'right';
-  hTicks.forEach(v => {
-    const y = toY(v);
-    ctx.beginPath();
-    ctx.setLineDash([2, 4]);
-    ctx.strokeStyle = gridColor;
-    ctx.lineWidth = 1;
-    ctx.moveTo(0, y); ctx.lineTo(W - pad.right, y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = labelColor;
-    const lbl = v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 2) + 'K' : v.toFixed(0);
-    ctx.fillText(lbl, W - 2, y + 3.5);
-  });
-
-  // Gradient fill
-  const grad = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
-  grad.addColorStop(0, isPos ? 'rgba(244,63,94,0.28)' : 'rgba(59,130,246,0.28)');
-  grad.addColorStop(1, isPos ? 'rgba(244,63,94,0.02)' : 'rgba(59,130,246,0.02)');
-
-  ctx.beginPath();
-  snaps.forEach((s, i) => i === 0 ? ctx.moveTo(toX(i), toY(s.v)) : ctx.lineTo(toX(i), toY(s.v)));
-  ctx.lineTo(toX(snaps.length - 1), toY(axMinH));
-  ctx.lineTo(toX(0), toY(axMinH));
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Line
-  ctx.beginPath();
-  ctx.strokeStyle = color;
-  ctx.lineWidth   = 2;
-  ctx.lineJoin    = 'round';
-  ctx.lineCap     = 'round';
-  snaps.forEach((s, i) => i === 0 ? ctx.moveTo(toX(i), toY(s.v)) : ctx.lineTo(toX(i), toY(s.v)));
-  ctx.stroke();
-
-  // Bottom date labels
-  ctx.font = '9px Inter,sans-serif';
-  ctx.fillStyle = labelColor;
-  ctx.textAlign = 'left';
-  const d1 = new Date(snaps[0].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  const d2 = new Date(snaps[snaps.length - 1].t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  ctx.fillText(d1, pad.left + 2, H - 3);
-  ctx.textAlign = 'right';
-  ctx.fillText(d2, W - pad.right, H - 3);
+  SamsamChart.draw(canvas, { height: 120, format: 'usd', series: [{ points: snaps, color, width: 2.2, fill: true }] });
 }
 
 function updateHoldingsChart() {
@@ -3355,78 +3168,8 @@ function drawHoldingsOverlayChart() {
     changeEl.className = 'hov-change ' + (isPos ? 'pos' : 'neg');
   }
 
-  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
   const lineColor = isPos ? '#22c55e' : '#f43f5e'; // green when up, red when down
-  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-  const labelColor = isDark ? 'rgba(148,163,184,0.7)' : 'rgba(100,116,139,0.8)';
-
-  const dpr = window.devicePixelRatio || 1;
-  const W = canvas.parentElement?.clientWidth || 340;
-  const H = 200;
-  canvas.width = W * dpr; canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  function hNiceStep(range) {
-    if (!range || range <= 0) return 1;
-    const mag = Math.pow(10, Math.floor(Math.log10(range/4)));
-    const n = (range/4)/mag;
-    return (n<1.5?1:n<3?2:n<7?5:10)*mag;
-  }
-
-  const vals = snaps.map(s=>s.v), minV=Math.min(...vals), maxV=Math.max(...vals);
-  const hStep = hNiceStep(maxV-minV);
-  const axMin = Math.floor(minV/hStep)*hStep, axMax = Math.ceil(maxV/hStep)*hStep;
-  const axRange = (axMax-axMin)||hStep*4;
-
-  ctx.font = '10px Inter,sans-serif';
-  const sample = axMax >= 1000 ? (axMax/1000).toFixed(1)+'K' : axMax.toFixed(0);
-  const lw = ctx.measureText(sample).width + 12;
-  const pad = { top:10, bottom:24, left:6, right: Math.max(lw,40) };
-  const cW = W-pad.left-pad.right, cH = H-pad.top-pad.bottom;
-  const toX = i => pad.left + (i/(snaps.length-1))*cW;
-  const toY = v => pad.top + (1-(v-axMin)/axRange)*cH;
-
-  ctx.clearRect(0,0,W,H);
-
-  // Grid + labels
-  const hTicks = [];
-  for (let v=axMin; v<=axMax+1e-6; v=+(v+hStep).toFixed(10)) hTicks.push(+v.toFixed(10));
-  ctx.font = '10px Inter,sans-serif';
-  hTicks.forEach(v => {
-    const y = toY(v);
-    ctx.strokeStyle = gridColor; ctx.lineWidth = 1; ctx.setLineDash([3,4]);
-    ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(W-pad.right,y); ctx.stroke();
-    ctx.setLineDash([]);
-    const label = v>=1000 ? (v/1000).toFixed(1)+'K' : v.toFixed(0);
-    ctx.fillStyle = labelColor; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    ctx.fillText(label, W-2, y);
-  });
-
-  // Gradient fill
-  const grad = ctx.createLinearGradient(0,pad.top,0,H-pad.bottom);
-  grad.addColorStop(0, isPos ? 'rgba(244,63,94,0.18)' : 'rgba(59,130,246,0.18)');
-  grad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.beginPath();
-  snaps.forEach((s,i) => i===0 ? ctx.moveTo(toX(i),toY(s.v)) : ctx.lineTo(toX(i),toY(s.v)));
-  ctx.lineTo(toX(snaps.length-1), H-pad.bottom);
-  ctx.lineTo(toX(0), H-pad.bottom);
-  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
-
-  // Line
-  ctx.beginPath(); ctx.strokeStyle=lineColor; ctx.lineWidth=2.5;
-  ctx.lineJoin='round'; ctx.lineCap='round';
-  snaps.forEach((s,i) => i===0 ? ctx.moveTo(toX(i),toY(s.v)) : ctx.lineTo(toX(i),toY(s.v)));
-  ctx.stroke();
-
-  // Date labels
-  ctx.font='10px Inter,sans-serif'; ctx.fillStyle=labelColor;
-  const d1=new Date(snaps[0].t).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-  const d2=new Date(snaps[snaps.length-1].t).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-  ctx.fillText(d1, pad.left+2, H-4);
-  ctx.textAlign='right';
-  ctx.fillText(d2, W-pad.right, H-4);
+  SamsamChart.draw(canvas, { height: 210, format: 'usd', series: [{ points: snaps, color: lineColor, width: 2.6, fill: true }] });
 }
 
 function renderHoldingsAssetList() {
@@ -3682,6 +3425,10 @@ function renderHoldingsAssetList() {
     #hovAssetList .hov-asset-row:last-child { border-bottom: none; }
     @media (hover:hover) { .hov-asset-row:hover { background: var(--bg3); } }
     #holdingsOverlay[data-view="tx"] .hov-card { display: none; }
+    /* "ASSET" sits over the coin icons (spans the icon + name columns, left-aligned) */
+    .hov-list-header .hov-h-asset { grid-column: 1 / 3; text-align: left !important; }
+    /* room at the bottom so the floating Synced badge never covers the last row */
+    .hov-container { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
     /* Coin Transactions view inside the same column */
     #hovTxView { padding-top: 0; }
     .htx-tabs { padding: 0; margin-bottom: 4px; }
@@ -3736,8 +3483,7 @@ function renderHoldingsAssetList() {
   <!-- Asset list: one card -->
   <div class="hov-card hov-list-card">
   <div class="hov-list-header">
-    <span></span>
-    <span>Asset</span>
+    <span class="hov-h-asset">Asset</span>
     <span>Price</span>
     <span>Holdings ▾</span>
   </div>
