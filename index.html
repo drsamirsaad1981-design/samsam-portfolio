@@ -798,6 +798,15 @@
   .btn-buy-more:hover { background:#15803d; }
   .btn-sell { background:#dc2626; color:#fff; border:none; border-radius:4px; padding:2px 7px; font-size:0.7rem; cursor:pointer; white-space:nowrap; line-height:1.6; }
   .btn-sell:hover { background:#b91c1c; }
+  .btn-tin, .btn-tout { color:#fff; border:none; border-radius:4px; padding:2px 7px; font-size:0.7rem; cursor:pointer; white-space:nowrap; line-height:1.6; }
+  .btn-tin { background:#2563eb; } .btn-tin:hover { background:#1d4ed8; }
+  .btn-tout { background:#d97706; } .btn-tout:hover { background:#b45309; }
+  .act-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .act-grid button { width:100%; }
+  /* Card actions: Buy / Sell / Transfer In / Transfer Out, then History / Remove */
+  .card-act { display:grid !important; grid-template-columns:1fr 1fr; gap:6px; padding:6px 0 2px; }
+  .card-act button { padding:7px 4px !important; font-size:0.78rem !important; border-radius:6px; font-weight:600; }
+  .card-act .btn-history, .card-act .btn-remove { padding:5px 4px !important; font-size:0.74rem !important; }
   .btn-history { background:transparent; color:var(--fg2); border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:0.7rem; cursor:pointer; white-space:nowrap; line-height:1.6; position:relative; }
   .btn-history:hover { border-color:var(--accent); color:var(--accent); }
   .btn-history:hover::after { content:'History'; position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%); background:#1e293b; color:#f1f5f9; font-size:0.65rem; font-weight:600; padding:3px 7px; border-radius:5px; white-space:nowrap; pointer-events:none; z-index:99; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
@@ -1101,64 +1110,6 @@
 <svg id="donutChart" style="display:none"></svg>
 <div id="donutLegend" style="display:none"></div>
 <div id="pnlRows" style="display:none"></div>
-
-<div class="modal-overlay" id="buyMoreModal">
-  <div class="modal">
-    <h2>➕ Buy More — <span id="bmSym" style="color:var(--accent)"></span></h2>
-    <div class="form-row">
-      <label class="form-label">New Quantity to Add</label>
-      <input type="number" class="form-input" id="bmQty" placeholder="0.00" step="any" oninput="previewBuy()">
-    </div>
-    <div class="form-row">
-      <label class="form-label">Buy Price (USD)</label>
-      <input type="number" class="form-input" id="bmPrice" placeholder="0.00" step="any" oninput="previewBuy()">
-    </div>
-    <div class="buy-preview" id="bmPreview" style="display:none">
-      <div>Old: <span id="bmOldQty"></span> @ $<span id="bmOldPrice"></span></div>
-      <div>New: <span id="bmNewQtyAdd"></span> @ $<span id="bmBuyPrice"></span></div>
-      <div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">
-        Total Qty: <span id="bmTotalQty"></span><br>
-        New Avg Cost: <span>$<span id="bmAvgCost"></span></span><br>
-        New Cost Basis: <span>$<span id="bmCostBasis"></span></span>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:14px;">
-      <button class="btn btn-primary" onclick="applyBuyMore()">✅ Confirm Buy</button>
-      <button class="btn btn-secondary" onclick="closeBuyMore()">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="sellModal">
-  <div class="modal">
-    <h2>🔴 Sell — <span id="smSym" style="color:#ef4444"></span></h2>
-    <div class="form-row">
-      <label class="form-label">Available Balance: <strong id="smBalance" style="color:var(--accent)"></strong></label>
-    </div>
-    <div class="form-row">
-      <label class="form-label">Quantity to Sell</label>
-      <input type="number" class="form-input" id="smQty" placeholder="0.00" step="any" oninput="previewSell()">
-    </div>
-    <div class="form-row">
-      <label class="form-label">Sell Price (USD)</label>
-      <input type="number" class="form-input" id="smPrice" placeholder="0.00" step="any" oninput="previewSell()">
-    </div>
-    <div class="buy-preview" id="smPreview" style="display:none">
-      <div>Sell Qty: <span id="smSellQty"></span> × $<span id="smSellPrice"></span></div>
-      <div>Sell Value: <span>$<span id="smSellValue"></span></span></div>
-      <div>Avg Cost Basis: <span>$<span id="smCostBasis"></span></span></div>
-      <div id="smPnlRow" style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px">
-        Realized P&L: <span id="smPnl"></span><br>
-        Remaining Qty: <span id="smRemQty"></span>
-      </div>
-      <div id="smErrRow" style="color:#ef4444;font-weight:600;display:none">⚠️ <span id="smErr"></span></div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:14px;">
-      <button class="btn btn-primary" id="smConfirmBtn" onclick="applySell()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">✅ Confirm Sell</button>
-      <button class="btn btn-secondary" onclick="closeSell()">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <div class="modal-overlay" id="addCoinModal">
   <div class="modal" style="max-width:440px">
@@ -1778,9 +1729,11 @@ function renderTableAndStack() {
         </td>
         <td style="text-align:center;white-space:nowrap">
           <div style="display:inline-flex;flex-direction:column;gap:4px;align-items:center">
-            <div style="display:flex;gap:4px">
-              <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
-              <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
+            <div class="act-grid">
+              <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')" title="Buy ${c.sym}">+ Buy</button>
+              <button class="btn-sell" onclick="openSell('${c.sym}')" title="Sell ${c.sym}">− Sell</button>
+              <button class="btn-tin" onclick="openTransferIn('${c.sym}')" title="Transfer In ${c.sym}">↓ In</button>
+              <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="Transfer Out ${c.sym}">↑ Out</button>
             </div>
             <div style="display:flex;gap:4px">
               <button class="btn-history" onclick="openHistory('${c.sym}')" title="History">📋</button>
@@ -1835,11 +1788,13 @@ function renderTableAndStack() {
           <span>#${i+1}</span>
           <span style="color:var(--fg2)">${c.lastUpdate||'Oct 15, 2026'}</span>
         </div>
-        <div class="coin-card-actions" style="display:flex;gap:6px;padding:6px 0 2px">
-          <button class="btn-buy-more" style="flex:1;padding:5px 0;font-size:0.78rem" onclick="openBuyMore('${c.sym}')">+ Buy</button>
-          <button class="btn-sell" style="flex:1;padding:5px 0;font-size:0.78rem" onclick="openSell('${c.sym}')">− Sell</button>
-          <button class="btn-history" style="padding:5px 10px;font-size:0.78rem" onclick="openHistory('${c.sym}')" title="History">📋</button>
-          <button class="btn-remove" style="padding:5px 10px;font-size:0.78rem" onclick="removeCoin('${c.sym}')" title="Remove">✕</button>
+        <div class="coin-card-actions card-act">
+          <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
+          <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
+          <button class="btn-tin" onclick="openTransferIn('${c.sym}')" title="Transfer In">↓ Transfer In</button>
+          <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="Transfer Out">↑ Transfer Out</button>
+          <button class="btn-history" onclick="openHistory('${c.sym}')" title="History">📋 History</button>
+          <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove">✕ Remove</button>
         </div>
       </div>`;
     }).join('');
@@ -1875,127 +1830,12 @@ function updateBasePrice(sym, val) {
   cloudWrite(Samsam.adjust(sym, { setAvg: n }, 'Avg buy price edited'));
 }
 
-// ── Buy More ──────────────────────────────────────────
-let _bmSym = null;
-function openBuyMore(sym) {
-  _bmSym = sym;
-  const coin = portfolio.find(c=>c.sym===sym);
-  if(!coin) return;
-  document.getElementById('bmSym').textContent = sym;
-  document.getElementById('bmQty').value = '';
-  document.getElementById('bmPrice').value = coin.currentPrice ? coin.currentPrice.toFixed(6) : '';
-  document.getElementById('bmPreview').style.display = 'none';
-  document.getElementById('buyMoreModal').classList.add('active');
-  document.getElementById('bmQty').focus();
-}
-function closeBuyMore() {
-  document.getElementById('buyMoreModal').classList.remove('active');
-  _bmSym = null;
-}
-function previewBuy() {
-  const coin = portfolio.find(c=>c.sym===_bmSym);
-  if(!coin) return;
-  const addQty   = parseFloat(document.getElementById('bmQty').value);
-  const buyPrice = parseFloat(document.getElementById('bmPrice').value);
-  if(!addQty || !buyPrice || addQty<=0 || buyPrice<=0) {
-    document.getElementById('bmPreview').style.display='none'; return;
-  }
-  const oldQty   = coin.qty;
-  const oldPrice = coin.basePrice;
-  const totalQty = oldQty + addQty;
-  const avgCost  = ((oldQty * oldPrice) + (addQty * buyPrice)) / totalQty;
-  const costBasis = totalQty * avgCost;
-  const fmtN = n => n<1 ? n.toFixed(6) : n<10 ? n.toFixed(4) : n.toFixed(2);
-  document.getElementById('bmOldQty').textContent   = fmtN(oldQty);
-  document.getElementById('bmOldPrice').textContent = oldPrice.toFixed(4);
-  document.getElementById('bmNewQtyAdd').textContent= fmtN(addQty);
-  document.getElementById('bmBuyPrice').textContent = buyPrice.toFixed(4);
-  document.getElementById('bmTotalQty').textContent = fmtN(totalQty);
-  document.getElementById('bmAvgCost').textContent  = avgCost.toFixed(6);
-  document.getElementById('bmCostBasis').textContent= costBasis.toFixed(2);
-  document.getElementById('bmPreview').style.display = 'block';
-}
-function applyBuyMore() {
-  const coin = portfolio.find(c=>c.sym===_bmSym);
-  if(!coin) return;
-  const addQty   = parseFloat(document.getElementById('bmQty').value);
-  const buyPrice = parseFloat(document.getElementById('bmPrice').value);
-  if(!addQty || !buyPrice || addQty<=0 || buyPrice<=0) { alert('Please enter valid quantity and price.'); return; }
-  if (!requireCloud()) return;
-  // The ledger recalculates qty and average cost on every device.
-  addTransaction(_bmSym, 'buy', addQty, buyPrice);
-  closeBuyMore();
-}
-// close on overlay click
-document.getElementById('buyMoreModal').addEventListener('click', function(e){ if(e.target===this) closeBuyMore(); });
-
-// ── Sell ──────────────────────────────────────────────
-let _smSym = null;
-function openSell(sym) {
-  _smSym = sym;
-  const coin = portfolio.find(c=>c.sym===sym);
-  if(!coin) return;
-  const fmtN = n => n<1 ? n.toFixed(6) : n<10 ? n.toFixed(4) : n.toFixed(2);
-  document.getElementById('smSym').textContent = sym;
-  document.getElementById('smBalance').textContent = fmtN(coin.qty) + ' ' + sym;
-  document.getElementById('smQty').value = '';
-  document.getElementById('smPrice').value = coin.currentPrice ? coin.currentPrice.toFixed(6) : '';
-  document.getElementById('smPreview').style.display = 'none';
-  document.getElementById('smErrRow').style.display = 'none';
-  document.getElementById('smConfirmBtn').disabled = false;
-  document.getElementById('sellModal').classList.add('active');
-  document.getElementById('smQty').focus();
-}
-function closeSell() {
-  document.getElementById('sellModal').classList.remove('active');
-  _smSym = null;
-}
-function previewSell() {
-  const coin = portfolio.find(c=>c.sym===_smSym);
-  if(!coin) return;
-  const sellQty   = parseFloat(document.getElementById('smQty').value);
-  const sellPrice = parseFloat(document.getElementById('smPrice').value);
-  const fmtN = n => n<1 ? n.toFixed(6) : n<10 ? n.toFixed(4) : n.toFixed(2);
-  if(!sellQty || !sellPrice || sellQty<=0 || sellPrice<=0) {
-    document.getElementById('smPreview').style.display='none'; return;
-  }
-  document.getElementById('smPreview').style.display = 'block';
-  const sellValue = sellQty * sellPrice;
-  const costBasis = sellQty * coin.basePrice;
-  const pnl = sellValue - costBasis;
-  const remQty = coin.qty - sellQty;
-  // error: selling more than available
-  const isErr = sellQty > coin.qty;
-  document.getElementById('smSellQty').textContent   = fmtN(sellQty);
-  document.getElementById('smSellPrice').textContent = sellPrice.toFixed(4);
-  document.getElementById('smSellValue').textContent = sellValue.toFixed(2);
-  document.getElementById('smCostBasis').textContent = costBasis.toFixed(2);
-  document.getElementById('smPnlRow').style.display  = isErr ? 'none' : 'block';
-  document.getElementById('smErrRow').style.display  = isErr ? 'block' : 'none';
-  document.getElementById('smConfirmBtn').disabled   = isErr;
-  if(!isErr){
-    const pnlEl = document.getElementById('smPnl');
-    const sign = pnl>=0 ? '+' : '';
-    pnlEl.className = pnl>=0 ? 'sell-profit' : 'sell-loss';
-    pnlEl.textContent = sign + '$' + pnl.toFixed(2) + ' (' + sign + ((pnl/costBasis)*100).toFixed(1) + '%)';
-    document.getElementById('smRemQty').textContent = fmtN(remQty) + ' ' + _smSym;
-  } else {
-    document.getElementById('smErr').textContent = 'Cannot sell ' + fmtN(sellQty) + ' — balance is only ' + fmtN(coin.qty);
-  }
-}
-function applySell() {
-  const coin = portfolio.find(c=>c.sym===_smSym);
-  if(!coin) return;
-  const sellQty   = parseFloat(document.getElementById('smQty').value);
-  const sellPrice = parseFloat(document.getElementById('smPrice').value);
-  if(!sellQty || !sellPrice || sellQty<=0 || sellPrice<=0) return;
-  if(sellQty > coin.qty * (1 + 1e-12)) { alert('⚠️ Cannot sell more than available balance!'); return; }
-  if (!requireCloud()) return;
-  // avg cost unchanged — only qty reduces (computed by the ledger)
-  addTransaction(_smSym, 'sell', Math.min(sellQty, coin.qty), sellPrice);
-  closeSell();
-}
-document.getElementById('sellModal').addEventListener('click', function(e){ if(e.target===this) closeSell(); });
+// ── Buy / Sell / Transfer In / Transfer Out ──────────
+// Every action opens the same Add Transaction form (see openAddTx).
+function openBuyMore(sym) { openAddTx('buy', sym); }
+function openSell(sym) { openAddTx('sell', sym); }
+function openTransferIn(sym) { openAddTx('transfer_in', sym); }
+function openTransferOut(sym) { openAddTx('transfer_out', sym); }
 
 // ── Remove Coin ───────────────────────────────────────
 let _rmSym = null;
@@ -3242,12 +3082,13 @@ const ATX = {
   transfer_out: { color: '#d97706', qty: 'Quantity transferred out', price: '', priceReq: false, fee: true,
                   hint: 'Coins leaving this portfolio (e.g. to another wallet you don’t track). Average buy price is unchanged and no profit/loss is recorded. The fee is also deducted.' },
 };
-let atxType = 'buy', atxSaving = false;
+let atxType = 'buy', atxSaving = false, atxSym = null;
 function localDateTimeValue(d) { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
-function openAddTx(type) {
-  if (!coinTxSym || !requireCloud()) return;
-  const coin = portfolio.find(c => c.sym === coinTxSym);
-  document.getElementById('atxCoin').innerHTML = getCoinIcon(coinTxSym, 24) + `<span>${coinTxSym}</span><small>${COIN_NAMES[coinTxSym] || ''}${coin ? ' · holding ' + parseFloat(coin.qty.toFixed(8)) : ''}</small>`;
+function openAddTx(type, sym) {
+  atxSym = sym || coinTxSym;
+  if (!atxSym || !requireCloud()) return;
+  const coin = portfolio.find(c => c.sym === atxSym);
+  document.getElementById('atxCoin').innerHTML = getCoinIcon(atxSym, 24) + `<span>${atxSym}</span><small>${COIN_NAMES[atxSym] || ''}${coin ? ' · holding ' + parseFloat(coin.qty.toFixed(8)) : ''}</small>`;
   ['atxQty', 'atxFee', 'atxNote'].forEach(id => { const el = document.getElementById(id); el.value = ''; el.classList.remove('bad'); });
   document.getElementById('atxDate').value = localDateTimeValue(new Date());
   document.getElementById('atxDate').max = localDateTimeValue(new Date(Date.now() + 60e3));
@@ -3266,10 +3107,10 @@ function setAddTxType(t) {
   document.getElementById('atxPriceRow').style.display = cfg.price ? '' : 'none';
   document.getElementById('atxPriceLabel').textContent = cfg.price;
   document.getElementById('atxFeeRow').style.display = cfg.fee ? '' : 'none';
-  document.getElementById('atxFeeUnit').textContent = `(in ${coinTxSym}, optional)`;
+  document.getElementById('atxFeeUnit').textContent = `(in ${atxSym}, optional)`;
   document.getElementById('atxHint').textContent = cfg.hint;
   document.getElementById('atxSave').textContent = 'Add ' + { buy: 'Buy', sell: 'Sell', transfer_in: 'Transfer In', transfer_out: 'Transfer Out' }[t];
-  const coin = portfolio.find(c => c.sym === coinTxSym);
+  const coin = portfolio.find(c => c.sym === atxSym);
   const pr = document.getElementById('atxPrice');
   if (cfg.price && !pr.dataset.touched) pr.value = coin && coin.currentPrice ? fmtInput(coin.currentPrice) : '';
   previewAddTx();
@@ -3298,9 +3139,9 @@ function readAddTx() {
   // Simulate the ledger with this transaction at its date
   let after = null;
   if (!Object.keys(errs).length) {
-    const st = Samsam.getState(), doc = st.coins.find(c => c.sym === coinTxSym);
-    const t = { id: '__new__', sym: coinTxSym, type: atxType, qty, price, fee, date: date.toISOString(), createdAt: new Date().toISOString() };
-    const all = transactions.filter(x => x.sym === coinTxSym).concat([t]).sort(Samsam.core.compareTx);
+    const st = Samsam.getState(), doc = st.coins.find(c => c.sym === atxSym);
+    const t = { id: '__new__', sym: atxSym, type: atxType, qty, price, fee, date: date.toISOString(), createdAt: new Date().toISOString() };
+    const all = transactions.filter(x => x.sym === atxSym).concat([t]).sort(Samsam.core.compareTx);
     let pos = { qty: doc && doc.opening ? doc.opening.qty : 0, avg: doc && doc.opening ? doc.opening.avg : 0 }, short = false;
     for (const x of all) {
       const need = x.type === 'sell' ? x.qty : x.type === 'transfer_out' ? x.qty + (+x.fee || 0) : 0;
@@ -3323,9 +3164,9 @@ function previewAddTx() {
   const lines = [];
   if (atxType === 'buy') lines.push(`Total cost: <b>${usd(r.qty * r.price)}</b>`);
   if (atxType === 'sell') lines.push(`Proceeds: <b>${usd(r.qty * r.price)}</b>` + (r.after.realized != null ? ` · ${r.after.realized >= 0 ? 'profit' : 'loss'} <b>${usd(Math.abs(r.after.realized))}</b>` : ''));
-  if (atxType === 'transfer_in') lines.push(`Received after fee: <b>${q(r.qty - r.fee)} ${coinTxSym}</b> · cost added <b>${usd(r.qty * r.price)}</b>`);
-  if (atxType === 'transfer_out') lines.push(`Leaves portfolio incl. fee: <b>${q(r.qty + r.fee)} ${coinTxSym}</b>`);
-  lines.push(`Holdings after: <b>${q(r.after.qty)} ${coinTxSym}</b> · avg buy <b>${usd(r.after.avg)}</b>`);
+  if (atxType === 'transfer_in') lines.push(`Received after fee: <b>${q(r.qty - r.fee)} ${atxSym}</b> · cost added <b>${usd(r.qty * r.price)}</b>`);
+  if (atxType === 'transfer_out') lines.push(`Leaves portfolio incl. fee: <b>${q(r.qty + r.fee)} ${atxSym}</b>`);
+  lines.push(`Holdings after: <b>${q(r.after.qty)} ${atxSym}</b> · avg buy <b>${usd(r.after.avg)}</b>`);
   if (r.after.short === 'later') lines.push('<span style="color:#f59e0b">⚠️ A later sell/transfer would then exceed your holdings.</span>');
   pv.innerHTML = lines.join('<br>');
 }
@@ -3341,11 +3182,11 @@ function saveAddTx() {
   atxSaving = true; document.getElementById('atxSave').disabled = true;
   const note = document.getElementById('atxNote').value.trim();
   // Saved instantly on this device and synced to the cloud; every screen recalculates from the ledger.
-  cloudWrite(Samsam.addTx(coinTxSym, atxType, r.qty, r.price, note, { date: r.date.toISOString(), fee: r.fee }));
+  cloudWrite(Samsam.addTx(atxSym, atxType, r.qty, r.price, note, { date: r.date.toISOString(), fee: r.fee }));
   setTimeout(() => { atxSaving = false; document.getElementById('atxSave').disabled = false; }, 400);
   const pr = document.getElementById('atxPrice'); delete pr.dataset.touched;
   closeAddTx();
-  if (htxTypeDD && htxTypeDD.value !== 'all' && !(htxTypeDD.value === 'transfer' && atxType.startsWith('transfer')) && htxTypeDD.value !== atxType) { htxTypeDD.setValue('all'); renderCoinTx(); }
+  if (coinTxSym === atxSym && htxTypeDD && htxTypeDD.value !== 'all' && !(htxTypeDD.value === 'transfer' && atxType.startsWith('transfer')) && htxTypeDD.value !== atxType) { htxTypeDD.setValue('all'); renderCoinTx(); }
 }
 
 // Custom dropdowns (samsam-dropdown.js): same dark component on mobile (bottom sheet) and desktop (popover)
@@ -3871,7 +3712,8 @@ function renderHoldingsAssetList() {
     </button>
   </div>
 
-  <!-- Add Transaction form -->
+</div>
+<!-- Add Transaction form (shared by the main table/cards and the coin Transactions screen) -->
   <div class="atx-backdrop" id="atxBackdrop" onclick="if(event.target===this)closeAddTx()">
     <form class="atx-modal" id="atxForm" onsubmit="event.preventDefault();saveAddTx()" role="dialog" aria-modal="true" aria-labelledby="atxTitle" novalidate>
       <div class="atx-head">
@@ -3901,6 +3743,5 @@ function renderHoldingsAssetList() {
       <button type="submit" class="atx-save" id="atxSave">Add Transaction</button>
     </form>
   </div>
-</div>
 </body>
 </html>

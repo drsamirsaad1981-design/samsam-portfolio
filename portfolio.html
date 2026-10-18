@@ -817,8 +817,10 @@
   .tx-type-badge { font-size:0.68rem; font-weight:700; padding:2px 7px; border-radius:4px; display:inline-block; margin-bottom:4px; }
   .tx-buy  .tx-type-badge { background:rgba(34,197,94,0.15); color:#22c55e; }
   .tx-sell .tx-type-badge { background:rgba(239,68,68,0.15); color:#ef4444; }
-  .tx-row.tx-adjust { border-left:3px solid #f59e0b; }
-  .tx-adjust .tx-type-badge { background:rgba(245,158,11,0.15); color:#f59e0b; }
+  .tx-row.tx-adjust { border-left:3px solid #94a3b8; }
+  .tx-row.tx-tin { border-left:3px solid #3b82f6; } .tx-row.tx-tout { border-left:3px solid #f59e0b; }
+  .tx-tin .tx-type-badge { background:rgba(59,130,246,0.15); color:#3b82f6; } .tx-tout .tx-type-badge { background:rgba(245,158,11,0.15); color:#f59e0b; }
+  .tx-adjust .tx-type-badge { background:rgba(148,163,184,0.15); color:#94a3b8; }
   .tx-details { flex:1; font-size:0.8rem; line-height:1.7; }
   .tx-details .tx-meta { font-size:0.72rem; color:var(--fg2); }
   .tx-delete-btn { background:transparent; border:1px solid #4b5563; color:#6b7280; border-radius:6px; padding:4px 9px; font-size:0.72rem; cursor:pointer; white-space:nowrap; flex-shrink:0; }
@@ -2066,6 +2068,14 @@ function renderHistory() {
   }
   listEl.innerHTML = [...txs].reverse().map(t => {
     const meta = `<div class="tx-meta">${fmtDate(t.date)}${t.note?' · '+String(t.note).replace(/</g,'&lt;'):''}</div>`;
+    if (t.type === 'transfer_in' || t.type === 'transfer_out') {
+      const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
+      return `<div class="tx-row tx-${isIn ? 'tin' : 'tout'}">
+        <div class="tx-details"><span class="tx-type-badge">${isIn ? '🔵 TRANSFER IN' : '🟠 TRANSFER OUT'}</span>
+          <div><strong>${isIn ? '+' : '-'}${fmtN(isIn ? t.qty - fee : t.qty + fee)} ${t.sym}</strong>${isIn ? ` @ <strong>$${t.price.toFixed(4)}</strong>` : ''}${fee ? ` · fee ${fmtN(fee)} ${t.sym}` : ''}</div>${meta}</div>
+        <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">🗑 Delete</button>
+      </div>`;
+    }
     if (t.type === 'adjust') {
       const parts = [];
       if (t.setQty != null) parts.push(`Qty set to <strong>${fmtN(+t.setQty)} ${t.sym}</strong>`);
@@ -2099,7 +2109,7 @@ function deleteTx(txId) {
   const fmtN = n => n < 1 ? n.toFixed(6) : n < 10 ? n.toFixed(4) : n.toFixed(2);
   const what = tx.type === 'adjust'
     ? `this manual edit of ${tx.sym}`
-    : `this ${tx.type.toUpperCase()} transaction?\n\n${fmtN(tx.qty)} ${tx.sym} @ $${tx.price.toFixed(4)} = $${(tx.total ?? tx.qty*tx.price).toFixed(2)}`;
+    : `this ${tx.type.replace('_', ' ').toUpperCase()} transaction?\n\n${fmtN(tx.qty)} ${tx.sym}` + (tx.type === 'transfer_out' ? '' : ` @ $${tx.price.toFixed(4)} = $${(tx.qty*tx.price).toFixed(2)}`);
   // Warn if a later sale would then exceed the remaining holdings.
   let oversell = '';
   try {
@@ -2108,7 +2118,11 @@ function deleteTx(txId) {
     const rest = getTxForSym(tx.sym).filter(t => t.id !== txId);
     const r = Samsam.core.replay(c ? c.opening : { qty: 0, avg: 0 }, rest);
     let q = c ? c.opening.qty : 0; let bad = false;
-    for (const t of rest) { if (t.type === 'buy') q += t.qty; else if (t.type === 'adjust' && t.setQty != null) q = +t.setQty; else if (t.type === 'sell') { if (t.qty > q * (1 + 1e-9)) bad = true; q = Math.max(0, q - t.qty); } }
+    for (const t of rest) {
+      const need = t.type === 'sell' ? t.qty : t.type === 'transfer_out' ? t.qty + (+t.fee || 0) : 0;
+      if (need > q * (1 + 1e-9)) bad = true;
+      q = Samsam.core.applyTx({ qty: q, avg: 0 }, t).qty;
+    }
     if (bad) oversell = `\n\n⚠️ A later SELL would then be larger than your holdings; ${tx.sym} quantity will become ${fmtN(r.qty)}.`;
   } catch(_) {}
   const ok = window.confirm(
@@ -3217,12 +3231,130 @@ window.addEventListener('popstate', applyHoldingsRoute);
 
 // ── Coin transactions & performance ─────────────────────────────────────────
 const BASELINE_DATE = '2026-10-15T00:00:00';
+// ── Add Transaction form (Buy / Sell / Transfer In / Transfer Out) ─────────────
+const ATX = {
+  buy:          { color: '#16a34a', qty: 'Quantity bought',      price: 'Price per coin (USD)', priceReq: true,  fee: false,
+                  hint: 'Raises your holdings and updates the average buy price.' },
+  sell:         { color: '#dc2626', qty: 'Quantity sold',        price: 'Sell price per coin (USD)', priceReq: true, fee: false,
+                  hint: 'Lowers your holdings at the current average cost and records realized profit/loss.' },
+  transfer_in:  { color: '#2563eb', qty: 'Quantity transferred in', price: 'Cost / value per coin at transfer (USD)', priceReq: true, fee: true,
+                  hint: 'Coins arriving from outside this portfolio. The cost per coin goes into your average buy price (use your original purchase price, or 0 for mined/free coins). The fee is deducted from the amount received.' },
+  transfer_out: { color: '#d97706', qty: 'Quantity transferred out', price: '', priceReq: false, fee: true,
+                  hint: 'Coins leaving this portfolio (e.g. to another wallet you don’t track). Average buy price is unchanged and no profit/loss is recorded. The fee is also deducted.' },
+};
+let atxType = 'buy', atxSaving = false;
+function localDateTimeValue(d) { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+function openAddTx(type) {
+  if (!coinTxSym || !requireCloud()) return;
+  const coin = portfolio.find(c => c.sym === coinTxSym);
+  document.getElementById('atxCoin').innerHTML = getCoinIcon(coinTxSym, 24) + `<span>${coinTxSym}</span><small>${COIN_NAMES[coinTxSym] || ''}${coin ? ' · holding ' + parseFloat(coin.qty.toFixed(8)) : ''}</small>`;
+  ['atxQty', 'atxFee', 'atxNote'].forEach(id => { const el = document.getElementById(id); el.value = ''; el.classList.remove('bad'); });
+  document.getElementById('atxDate').value = localDateTimeValue(new Date());
+  document.getElementById('atxDate').max = localDateTimeValue(new Date(Date.now() + 60e3));
+  delete document.getElementById('atxPrice').dataset.touched;
+  setAddTxType(type || 'buy');
+  document.getElementById('atxBackdrop').classList.add('show');
+  document.body.classList.add('atx-open');
+  setTimeout(() => document.getElementById('atxQty').focus(), 50);
+}
+function closeAddTx() { document.getElementById('atxBackdrop').classList.remove('show'); document.body.classList.remove('atx-open'); }
+function setAddTxType(t) {
+  atxType = t; const cfg = ATX[t];
+  document.querySelectorAll('.atx-types button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.t === t)));
+  const form = document.getElementById('atxForm'); form.style.setProperty('--atx-c', cfg.color);
+  document.getElementById('atxQtyLabel').textContent = cfg.qty;
+  document.getElementById('atxPriceRow').style.display = cfg.price ? '' : 'none';
+  document.getElementById('atxPriceLabel').textContent = cfg.price;
+  document.getElementById('atxFeeRow').style.display = cfg.fee ? '' : 'none';
+  document.getElementById('atxFeeUnit').textContent = `(in ${coinTxSym}, optional)`;
+  document.getElementById('atxHint').textContent = cfg.hint;
+  document.getElementById('atxSave').textContent = 'Add ' + { buy: 'Buy', sell: 'Sell', transfer_in: 'Transfer In', transfer_out: 'Transfer Out' }[t];
+  const coin = portfolio.find(c => c.sym === coinTxSym);
+  const pr = document.getElementById('atxPrice');
+  if (cfg.price && !pr.dataset.touched) pr.value = coin && coin.currentPrice ? fmtInput(coin.currentPrice) : '';
+  previewAddTx();
+}
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.atx-types button'); if (b) setAddTxType(b.dataset.t); });
+document.addEventListener('input', e => { if (e.target && e.target.id === 'atxPrice') e.target.dataset.touched = '1'; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('atxBackdrop').classList.contains('show')) closeAddTx(); });
+
+// Validate + preview the result using the same ledger maths as the rest of the app.
+function readAddTx() {
+  const cfg = ATX[atxType], v = id => document.getElementById(id).value.trim();
+  const qty = parseFloat(v('atxQty')), price = cfg.price ? parseFloat(v('atxPrice')) : 0, fee = cfg.fee ? (parseFloat(v('atxFee')) || 0) : 0;
+  // The picker has minute precision: if the chosen time is this minute (the default), use the exact
+  // current time so the new entry sorts after anything recorded earlier in the same minute.
+  const dateStr = v('atxDate');
+  let date = dateStr ? new Date(dateStr) : new Date();
+  if (!isNaN(date.getTime()) && Math.floor(date.getTime() / 60e3) >= Math.floor(Date.now() / 60e3)) date = new Date();
+  const errs = {};
+  if (!(qty > 0)) errs.atxQty = 'Enter a quantity greater than 0.';
+  if (cfg.priceReq && !(price >= 0 && v('atxPrice') !== '')) errs.atxPrice = 'Enter a price (0 is allowed for free/mined coins).';
+  if ((atxType === 'buy' || atxType === 'sell') && !(price > 0)) errs.atxPrice = 'Enter a price greater than 0.';
+  if (fee < 0) errs.atxFee = 'Fee cannot be negative.';
+  if (atxType === 'transfer_in' && qty > 0 && fee >= qty) errs.atxFee = 'Fee must be smaller than the amount transferred in.';
+  if (isNaN(date.getTime())) errs.atxDate = 'Enter a valid date.';
+  else if (dateStr && new Date(dateStr).getTime() > Date.now() + 60e3) errs.atxDate = 'Date cannot be in the future.';
+  // Simulate the ledger with this transaction at its date
+  let after = null;
+  if (!Object.keys(errs).length) {
+    const st = Samsam.getState(), doc = st.coins.find(c => c.sym === coinTxSym);
+    const t = { id: '__new__', sym: coinTxSym, type: atxType, qty, price, fee, date: date.toISOString(), createdAt: new Date().toISOString() };
+    const all = transactions.filter(x => x.sym === coinTxSym).concat([t]).sort(Samsam.core.compareTx);
+    let pos = { qty: doc && doc.opening ? doc.opening.qty : 0, avg: doc && doc.opening ? doc.opening.avg : 0 }, short = false;
+    for (const x of all) {
+      const need = x.type === 'sell' ? x.qty : x.type === 'transfer_out' ? x.qty + (+x.fee || 0) : 0;
+      if (need > pos.qty * (1 + 1e-9) + 1e-12 && (x.id === '__new__' || x.type !== 'adjust')) short = x.id === '__new__' ? 'new' : (short || 'later');
+      const r = Samsam.core.applyTx(pos, x); pos = { qty: r.qty, avg: r.avg };
+      if (x.id === '__new__') t._realized = r.realized;
+    }
+    if (short === 'new') errs.atxQty = (atxType === 'sell' ? 'You can’t sell' : 'You can’t transfer out') + ' more than you held on that date.';
+    after = { qty: pos.qty, avg: pos.avg, realized: t._realized, short };
+  }
+  return { qty, price, fee, date, errs, after };
+}
+function previewAddTx() {
+  const r = readAddTx(), pv = document.getElementById('atxPreview');
+  ['atxQty', 'atxPrice', 'atxFee', 'atxDate'].forEach(id => document.getElementById(id).classList.toggle('bad', !!r.errs[id] && document.getElementById(id).value !== ''));
+  document.getElementById('atxErr').textContent = '';
+  if (!r.after) { pv.innerHTML = ''; return; }
+  const usd = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const q = n => parseFloat(n.toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
+  const lines = [];
+  if (atxType === 'buy') lines.push(`Total cost: <b>${usd(r.qty * r.price)}</b>`);
+  if (atxType === 'sell') lines.push(`Proceeds: <b>${usd(r.qty * r.price)}</b>` + (r.after.realized != null ? ` · ${r.after.realized >= 0 ? 'profit' : 'loss'} <b>${usd(Math.abs(r.after.realized))}</b>` : ''));
+  if (atxType === 'transfer_in') lines.push(`Received after fee: <b>${q(r.qty - r.fee)} ${coinTxSym}</b> · cost added <b>${usd(r.qty * r.price)}</b>`);
+  if (atxType === 'transfer_out') lines.push(`Leaves portfolio incl. fee: <b>${q(r.qty + r.fee)} ${coinTxSym}</b>`);
+  lines.push(`Holdings after: <b>${q(r.after.qty)} ${coinTxSym}</b> · avg buy <b>${usd(r.after.avg)}</b>`);
+  if (r.after.short === 'later') lines.push('<span style="color:#f59e0b">⚠️ A later sell/transfer would then exceed your holdings.</span>');
+  pv.innerHTML = lines.join('<br>');
+}
+function saveAddTx() {
+  if (atxSaving) return;
+  const r = readAddTx();
+  const firstErr = Object.keys(r.errs)[0];
+  if (firstErr) {
+    document.getElementById('atxErr').textContent = r.errs[firstErr];
+    Object.keys(r.errs).forEach(id => document.getElementById(id).classList.add('bad'));
+    document.getElementById(firstErr).focus(); return;
+  }
+  atxSaving = true; document.getElementById('atxSave').disabled = true;
+  const note = document.getElementById('atxNote').value.trim();
+  // Saved instantly on this device and synced to the cloud; every screen recalculates from the ledger.
+  cloudWrite(Samsam.addTx(coinTxSym, atxType, r.qty, r.price, note, { date: r.date.toISOString(), fee: r.fee }));
+  setTimeout(() => { atxSaving = false; document.getElementById('atxSave').disabled = false; }, 400);
+  const pr = document.getElementById('atxPrice'); delete pr.dataset.touched;
+  closeAddTx();
+  if (htxTypeDD && htxTypeDD.value !== 'all' && !(htxTypeDD.value === 'transfer' && atxType.startsWith('transfer')) && htxTypeDD.value !== atxType) { htxTypeDD.setValue('all'); renderCoinTx(); }
+}
+
 // Custom dropdowns (samsam-dropdown.js): same dark component on mobile (bottom sheet) and desktop (popover)
 let htxTypeDD = null, htxCoinDD = null;
 function ensureHtxDropdowns() {
   if (htxTypeDD) return;
   htxTypeDD = SamsamDropdown.create(document.getElementById('htxTypeDD'), {
-    options: [{ value: 'all', label: 'All Types' }, { value: 'buy', label: 'Buy' }, { value: 'sell', label: 'Sell' }, { value: 'transfer', label: 'Transfer' }],
+    options: [{ value: 'all', label: 'All Types' }, { value: 'buy', label: 'Buy' }, { value: 'sell', label: 'Sell' },
+      { value: 'transfer', label: 'Transfers (In + Out)' }, { value: 'transfer_in', label: 'Transfer In' }, { value: 'transfer_out', label: 'Transfer Out' }],
     value: 'all', ariaLabel: 'Transaction type', title: 'Transaction type', minWidth: 180,
     onChange: () => renderCoinTx(),
   });
@@ -3292,6 +3424,12 @@ function renderCoinTx() {
       entries.push({ kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty, usd: t.total ?? t.qty * t.price,
         note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (t.type === 'sell' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
+    } else if (t.type === 'transfer_in' || t.type === 'transfer_out') {
+      const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
+      entries.push({ kind: t.type, label: isIn ? 'Transfer In' : 'Transfer Out',
+        qty: isIn ? t.qty - fee : t.qty + fee, usd: isIn ? t.qty * t.price : (t.qty + fee) * (price || 0),
+        note: [t.note, isIn && t.price ? '@ ' + priceFmt(t.price) : '', fee ? 'fee ' + qtyFmt(fee) + ' ' + sym : ''].filter(Boolean).join(' · '),
+        date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'adjust') {
       const parts = [];
       if (t.setQty != null) parts.push('qty → ' + qtyFmt(t.setQty) + ' ' + sym);
@@ -3300,11 +3438,11 @@ function renderCoinTx() {
     }
   });
   const type = htxTypeDD.value;
-  const shown = entries.filter(e => type === 'all' || e.kind === type)
+  const shown = entries.filter(e => type === 'all' || e.kind === type || (type === 'transfer' && e.kind.startsWith('transfer')))
     .sort((a, b) => (b.date + b.order).localeCompare(a.date + a.order));
   if (!shown.length) {
-    listEl.innerHTML = `<div class="htx-empty">${type === 'transfer' ? 'No transfers recorded for ' + sym + '.<br><small>This app records Buy and Sell transactions.</small>'
-      : 'No ' + (type === 'all' ? '' : type + ' ') + 'transactions for ' + sym + ' yet.'}</div>`;
+    const tName = { all: '', buy: 'buy ', sell: 'sell ', transfer: 'transfer ', transfer_in: 'Transfer In ', transfer_out: 'Transfer Out ' }[type] || '';
+    listEl.innerHTML = `<div class="htx-empty">No ${tName}transactions for ${sym} yet.<br><small>Tap + to add one.</small></div>`;
     return;
   }
   const icon = getCoinIcon(sym, 30);
@@ -3312,11 +3450,13 @@ function renderCoinTx() {
   shown.forEach(e => {
     const day = new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     if (day !== lastDay) { html += `<div class="htx-date">${day}</div>`; lastDay = day; }
+    const plus = e.kind === 'buy' || e.kind === 'transfer_in';
+    const qCls = { buy: 'htx-pos', sell: 'htx-neg', transfer_in: 'htx-in', transfer_out: 'htx-out' }[e.kind];
     const amt = e.kind === 'adjust' ? '' :
-      `<div class="htx-row-qty ${e.kind === 'buy' ? 'htx-pos' : 'htx-neg'}">${e.kind === 'buy' ? '+' : '-'}${qtyFmt(e.qty)} ${sym}</div><div class="htx-row-usd">${usd(e.usd)}</div>`;
+      `<div class="htx-row-qty ${qCls}">${plus ? '+' : '-'}${qtyFmt(e.qty)} ${sym}</div><div class="htx-row-usd">${usd(e.usd)}</div>`;
     html += `<div class="htx-row">
       <span class="htx-row-icon">${icon}</span>
-      <div class="htx-row-main"><div class="htx-row-type">${e.label}</div><div class="htx-row-note">${String(e.note).replace(/</g, '&lt;')}</div></div>
+      <div class="htx-row-main"><div class="htx-row-type"><span class="htx-dot htx-dot-${e.kind}"></span>${e.label}</div><div class="htx-row-note">${String(e.note).replace(/</g, '&lt;')}</div></div>
       <div class="htx-row-amt">${amt}</div>
     </div>`;
   });
@@ -3597,6 +3737,50 @@ function renderHoldingsAssetList() {
     .htx-row-amt { text-align:right; flex-shrink:0; }
     .htx-row-qty { font-weight:700; font-size:0.9rem; }
     .htx-row-usd { font-size:0.8rem; color:var(--fg2); margin-top:2px; }
+    .htx-in { color:#3b82f6; } .htx-out { color:#f59e0b; }
+    [data-theme="light"] .htx-in { color:#2563eb; } [data-theme="light"] .htx-out { color:#d97706; }
+    .htx-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; vertical-align:1px; }
+    .htx-dot-buy { background:#22c55e; } .htx-dot-sell { background:#ef4444; } .htx-dot-transfer_in { background:#3b82f6; }
+    .htx-dot-transfer_out { background:#f59e0b; } .htx-dot-adjust { background:#94a3b8; }
+    .htx-fab { position:fixed; right:max(16px, env(safe-area-inset-right,0px)); bottom:calc(64px + env(safe-area-inset-bottom,0px)); z-index:10001;
+      width:56px; height:56px; border-radius:50%; border:none; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 8px 22px rgba(37,99,235,.45); cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .12s, background .15s; }
+    .htx-fab:hover { background:#1d4ed8; } .htx-fab:active { transform:scale(.94); }
+    .htx-fab:focus-visible { outline:3px solid #93c5fd; outline-offset:3px; }
+    /* Add Transaction form: bottom sheet on mobile, centred dialog on desktop */
+    .atx-backdrop { position:fixed; inset:0; z-index:100040; background:rgba(2,6,23,.6); display:none; align-items:flex-end; justify-content:center; }
+    .atx-backdrop.show { display:flex; }
+    body.atx-open #samsamSyncPill, body.atx-open #samsamSyncMenu { display:none !important; }
+    .atx-modal { width:100%; max-width:480px; max-height:92vh; overflow-y:auto; background:#1e293b; color:#f1f5f9; border:1px solid #334155;
+      border-radius:18px 18px 0 0; padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px)); box-shadow:0 -10px 40px rgba(0,0,0,.4); }
+    [data-theme="light"] .atx-modal { background:#fff; color:#0f172a; border-color:#e2e8f0; }
+    @media (min-width: 601px) { .atx-backdrop { align-items:center; } .atx-modal { border-radius:16px; } }
+    .atx-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .atx-head h3 { margin:0; font-size:1.05rem; }
+    .atx-x { background:none; border:none; color:inherit; font-size:1.5rem; line-height:1; opacity:.7; cursor:pointer; padding:2px 6px; }
+    .atx-types { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; background:rgba(148,163,184,.12); padding:4px; border-radius:12px; margin-bottom:12px; }
+    .atx-types button { border:none; background:transparent; color:inherit; font:inherit; font-size:.8rem; font-weight:700; padding:9px 4px; border-radius:9px;
+      cursor:pointer; white-space:nowrap; display:flex; align-items:center; justify-content:center; opacity:.75; }
+    .atx-types button .htx-dot { margin-right:5px; }
+    .atx-types button[aria-checked="true"] { opacity:1; background:#334155; box-shadow:inset 0 0 0 1px var(--atx-c,#64748b); }
+    [data-theme="light"] .atx-types button[aria-checked="true"] { background:#fff; }
+    @media (max-width: 380px) { .atx-types button { font-size:.72rem; padding:9px 2px; } }
+    .atx-coin { display:flex; align-items:center; gap:8px; font-weight:700; margin:2px 0 10px; }
+    .atx-coin small { font-weight:500; color:#94a3b8; }
+    .atx-field { display:block; margin-bottom:10px; font-size:.8rem; font-weight:600; color:#cbd5e1; }
+    [data-theme="light"] .atx-field { color:#475569; }
+    .atx-field small { font-weight:500; color:#94a3b8; }
+    .atx-field input { display:block; width:100%; margin-top:5px; height:44px; padding:0 12px; border-radius:10px; border:1px solid #334155;
+      background:rgba(255,255,255,.05); color:inherit; font:inherit; font-size:1rem; color-scheme:dark; }
+    [data-theme="light"] .atx-field input { background:#f8fafc; border-color:#e2e8f0; color-scheme:light; }
+    .atx-field input:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.2); }
+    .atx-field input.bad { border-color:#ef4444; }
+    .atx-hint { font-size:.75rem; color:#94a3b8; margin:-2px 0 8px; line-height:1.45; }
+    .atx-preview { font-size:.82rem; background:rgba(148,163,184,.1); border-radius:10px; padding:10px 12px; margin-bottom:10px; line-height:1.6; }
+    .atx-preview:empty { display:none; }
+    .atx-err { color:#ef4444; font-size:.82rem; min-height:0; margin-bottom:8px; } .atx-err:empty { display:none; }
+    .atx-save { width:100%; height:48px; border:none; border-radius:12px; color:#fff; font:inherit; font-weight:800; font-size:1rem; cursor:pointer; background:var(--atx-c,#2563eb); }
+    .atx-save:disabled { opacity:.5; cursor:default; }
     .htx-empty { padding:36px 16px; text-align:center; color:var(--fg2); font-size:0.88rem; }
     @media (min-width: 900px) {
       #hovTxView { max-width:860px; margin:0 auto; width:100%; }
@@ -3682,6 +3866,40 @@ function renderHoldingsAssetList() {
       <div class="htx-card"><div class="htx-label">Cost Basis <span class="htx-info" title="Total amount invested in your current holdings (quantity × average buy price)">ⓘ</span></div><div class="htx-value" id="htxCost">—</div></div>
     </div>
     <div id="htxList" class="htx-list"></div>
+    <button type="button" class="htx-fab" onclick="openAddTx()" aria-label="Add transaction" title="Add transaction">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </div>
+
+  <!-- Add Transaction form -->
+  <div class="atx-backdrop" id="atxBackdrop" onclick="if(event.target===this)closeAddTx()">
+    <form class="atx-modal" id="atxForm" onsubmit="event.preventDefault();saveAddTx()" role="dialog" aria-modal="true" aria-labelledby="atxTitle" novalidate>
+      <div class="atx-head">
+        <h3 id="atxTitle">Add Transaction</h3>
+        <button type="button" class="atx-x" onclick="closeAddTx()" aria-label="Close">×</button>
+      </div>
+      <div class="atx-types" role="radiogroup" aria-label="Transaction type">
+        <button type="button" data-t="buy" role="radio"><span class="htx-dot htx-dot-buy"></span>Buy</button>
+        <button type="button" data-t="sell" role="radio"><span class="htx-dot htx-dot-sell"></span>Sell</button>
+        <button type="button" data-t="transfer_in" role="radio"><span class="htx-dot htx-dot-transfer_in"></span>Transfer In</button>
+        <button type="button" data-t="transfer_out" role="radio"><span class="htx-dot htx-dot-transfer_out"></span>Transfer Out</button>
+      </div>
+      <div class="atx-coin" id="atxCoin"></div>
+      <label class="atx-field"><span id="atxQtyLabel">Quantity</span>
+        <input type="number" inputmode="decimal" step="any" min="0" id="atxQty" placeholder="0.00" oninput="previewAddTx()"></label>
+      <label class="atx-field" id="atxPriceRow"><span id="atxPriceLabel">Price per coin (USD)</span>
+        <input type="number" inputmode="decimal" step="any" min="0" id="atxPrice" placeholder="0.00" oninput="previewAddTx()"></label>
+      <label class="atx-field" id="atxFeeRow"><span>Transfer fee <small id="atxFeeUnit">(in coin, optional)</small></span>
+        <input type="number" inputmode="decimal" step="any" min="0" id="atxFee" placeholder="0" oninput="previewAddTx()"></label>
+      <label class="atx-field"><span>Date &amp; time</span>
+        <input type="datetime-local" id="atxDate" oninput="previewAddTx()"></label>
+      <label class="atx-field"><span>Note <small>(optional)</small></span>
+        <input type="text" id="atxNote" maxlength="120" placeholder="e.g. from Binance, to cold wallet"></label>
+      <div class="atx-hint" id="atxHint"></div>
+      <div class="atx-preview" id="atxPreview"></div>
+      <div class="atx-err" id="atxErr" role="alert"></div>
+      <button type="submit" class="atx-save" id="atxSave">Add Transaction</button>
+    </form>
   </div>
 </div>
 </body>
