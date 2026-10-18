@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Recover Data — سمسم Portfolio</title>
+<link rel="icon" type="image/jpeg" href="./icon.jpg">
+<script src="samsam-ui.js?v=202610181549"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root { --bg:#f5f5f7; --card:#fff; --fg:#1a1a1e; --fg2:#6e6e73; --border:rgba(0,0,0,.08); --accent:#3b82f6; --header-bg:#fff;
+  --shadow:0 1px 3px rgba(0,0,0,.08); --green:#16a34a; --red:#dc2626; --amber:#d97706; color-scheme:light; }
+:root[data-theme="dark"] { --bg:#0d0d0f; --card:#1c1c1e; --fg:#f5f5f7; --fg2:#8e8e93; --border:rgba(255,255,255,.08); --header-bg:#1c1c1e;
+  --shadow:0 1px 3px rgba(0,0,0,.3); --green:#22c55e; --red:#f87171; --amber:#f59e0b; color-scheme:dark; }
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--fg); min-height:100vh; }
+.header { background:var(--header-bg); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px)); position:sticky; top:0; z-index:10; }
+.back-btn { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:7px 14px; font-size:.82rem; font-weight:600; color:var(--fg); text-decoration:none; }
+.header-title { flex:1; text-align:center; font-weight:700; }
+.container { max-width:860px; margin:0 auto; padding:20px max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px)); }
+.card { background:var(--card); border-radius:16px; box-shadow:var(--shadow); padding:16px; margin-bottom:16px; }
+h2 { font-size:1rem; margin-bottom:6px; } p, li { font-size:.86rem; line-height:1.55; color:var(--fg2); } ul { padding-left:18px; }
+.src-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; background:rgba(148,163,184,.12); padding:4px; border-radius:12px; margin:10px 0 12px; }
+.src-tabs button { border:none; background:transparent; color:var(--fg); font:inherit; font-size:.82rem; font-weight:700; padding:9px 4px; border-radius:9px; cursor:pointer; opacity:.7; }
+.src-tabs button[aria-pressed="true"] { background:var(--card); opacity:1; box-shadow:var(--shadow); }
+.field { display:block; font-size:.8rem; font-weight:600; margin-bottom:10px; }
+.field input { display:block; width:100%; margin-top:5px; height:42px; padding:0 12px; border-radius:10px; border:1px solid var(--border); background:transparent; color:inherit; font:inherit; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:42px; padding:0 16px; border-radius:10px; border:1px solid var(--border);
+  background:var(--card); color:var(--fg); font:inherit; font-weight:700; font-size:.88rem; cursor:pointer; }
+.btn.primary { background:#2563eb; border-color:#2563eb; color:#fff; } .btn:disabled { opacity:.5; cursor:default; }
+.row-btns { display:flex; gap:8px; flex-wrap:wrap; }
+.msg { font-size:.85rem; margin-top:8px; } .msg.err { color:var(--red); } .msg.ok { color:var(--green); }
+.meta { font-size:.82rem; color:var(--fg2); margin-bottom:10px; }
+table { width:100%; border-collapse:collapse; font-size:.82rem; font-variant-numeric:tabular-nums; }
+th { text-align:right; font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; color:var(--fg2); padding:6px 6px; border-bottom:1px solid var(--border); }
+th:first-child, th:nth-child(2), td:first-child, td:nth-child(2) { text-align:left; }
+td { padding:8px 6px; border-bottom:1px solid var(--border); text-align:right; vertical-align:top; }
+tr.diff td { background:rgba(245,158,11,.07); } tr:last-child td { border-bottom:none; }
+.small { font-size:.72rem; color:var(--fg2); display:block; }
+.up { color:var(--green); font-weight:700; } .down { color:var(--red); font-weight:700; } .same { color:var(--fg2); }
+.tablewrap { overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 -4px; }
+input[type=checkbox] { width:18px; height:18px; accent-color:#2563eb; }
+.sum { position:sticky; bottom:0; background:var(--card); border-top:1px solid var(--border); padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));
+  display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap; box-shadow:0 -6px 20px rgba(0,0,0,.15); }
+.sum .txt { font-size:.85rem; font-weight:600; }
+.hidden { display:none !important; }
+#samsamSyncPill { bottom: calc(84px + env(safe-area-inset-bottom,0px)) !important; }
+body:not(.show-all) tr.same-row { display:none; }
+.pill { display:inline-block; font-size:.68rem; font-weight:700; padding:2px 7px; border-radius:999px; background:rgba(148,163,184,.18); color:var(--fg2); }
+.pill.buy { background:rgba(34,197,94,.15); color:var(--green); } .pill.sell { background:rgba(239,68,68,.15); color:var(--red); }
+.pill.tin { background:rgba(59,130,246,.15); color:#3b82f6; } .pill.tout { background:rgba(245,158,11,.15); color:var(--amber); }
+</style>
+</head>
+<body>
+<div class="header">
+  <a class="back-btn" href="./index.html">← Back</a>
+  <div class="header-title">🛟 Recover Data</div>
+  <button type="button" class="ss-theme-btn" data-theme-toggle></button>
+</div>
+
+<div class="container">
+  <div class="card">
+    <h2>Find changes that didn't reach the cloud</h2>
+    <p>Pick a source. This page compares it with your cloud portfolio coin by coin and lists any transactions the cloud is missing.
+      <strong>Nothing changes until you press “Restore selected”</strong>, and a backup of the cloud is downloaded first.</p>
+    <div class="src-tabs" role="group" aria-label="Source">
+      <button type="button" data-src="device" aria-pressed="true">This device</button>
+      <button type="button" data-src="jsonbin" aria-pressed="false">Old cloud (JSONBin)</button>
+      <button type="button" data-src="file" aria-pressed="false">Backup file</button>
+    </div>
+    <div id="srcDevice">
+      <p>Data this browser saved with the previous version of the app (it is never deleted). Run this on <strong>each</strong> phone and computer you used.</p>
+      <div class="row-btns" style="margin-top:10px"><button class="btn primary" id="loadDevice">Compare this device</button></div>
+    </div>
+    <div id="srcJsonbin" class="hidden">
+      <p>The old app saved to JSONBin. Paste your JSONBin <strong>Master Key</strong> (JSONBin dashboard → API Keys). It is used once, only in this browser, and is not saved.</p>
+      <label class="field" style="margin-top:10px">Bin ID <input id="binId" value="6ad27752ac6210605a383e8f" autocomplete="off" spellcheck="false"></label>
+      <label class="field">Master Key <input id="binKey" type="password" autocomplete="off" spellcheck="false" placeholder="$2a$10$…"></label>
+      <div class="row-btns"><button class="btn primary" id="loadBin">Compare old cloud</button></div>
+    </div>
+    <div id="srcFile" class="hidden">
+      <p>A <code>samsam-device-backup-…json</code> or <code>samsam-backup-…json</code> file, or a JSON export from JSONBin.</p>
+      <label class="btn" style="margin-top:10px;position:relative">📄 Choose file<input type="file" id="fileIn" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
+    </div>
+    <div class="msg" id="srcMsg"></div>
+  </div>
+
+  <div id="results" class="hidden">
+    <div class="card">
+      <h2>Missing transactions</h2>
+      <div class="meta" id="txMeta"></div>
+      <div class="tablewrap"><table id="txTable"></table></div>
+    </div>
+    <div class="card">
+      <h2>Coin balances</h2>
+      <div class="meta">Rows in amber differ from the cloud. Tick a coin to set it to the source's quantity and average price
+        (recorded as an “Edit” in its history, so it can be undone). “After” shows the result of your selection.</div>
+      <div class="row-btns" style="margin-bottom:10px">
+        <button class="btn" id="selDiff">Select all different</button><button class="btn" id="selNone">Clear</button>
+        <button class="btn" id="showAll">Show unchanged coins</button>
+      </div>
+      <div class="tablewrap"><table id="coinTable"></table></div>
+    </div>
+    <div class="card" id="accCard">
+      <h2>Accumulation targets</h2>
+      <div class="tablewrap"><table id="accTable"></table></div>
+    </div>
+  </div>
+</div>
+
+<div class="sum hidden" id="sumBar">
+  <span class="txt" id="sumTxt"></span>
+  <button class="btn primary" id="applyBtn">Restore selected</button>
+</div>
+
+<script type="module" src="samsam-cloud.js?v=202610181549"></script>
+<script>
+const $ = id => document.getElementById(id);
+const LEG = { pf:'samsam_pf_v4', tx:'samsam_tx_v1', custom:'samsam_custom_v1', archived:'samsam_archived_v1', acc:'samsam_acc_v1' };
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (_) { return d; } };
+const safeId = s => String(s).replace(/[\/#\[\]?*]/g, '_').slice(0, 300) || 'x';
+const fq = n => (n == null || isNaN(n)) ? '—' : parseFloat((+n).toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
+const fp = n => (n == null || isNaN(n)) ? '—' : '$' + (+n).toLocaleString('en-US', { maximumFractionDigits: n >= 100 ? 2 : n >= 1 ? 4 : 8 });
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+let src = null, plan = null;
+
+function whenReady(cb) {
+  const go = () => { if (Samsam.isReady()) cb(); else { const off = Samsam.onChange(() => { off(); cb(); }); } };
+  if (window.Samsam) go(); else window.addEventListener('samsam-ready', go, { once: true });
+}
+function msg(t, cls) { const m = $('srcMsg'); m.className = 'msg ' + (cls || ''); m.innerHTML = t; }
+
+// ── sources → one normalised shape ───────────────────────────────────────────
+function normalise(raw, label) {
+  const pf = raw.portfolioData || raw.legacy || raw;
+  const coinsArr = Array.isArray(pf.coins) ? pf.coins : (pf.coins && pf.coins.coins) || [];
+  const removed = new Set((pf.archivedCoins || []).filter(c => c && c.removedPermanently !== false).map(c => c.sym));
+  const activeSyms = new Set(coinsArr.map(c => c.sym));
+  removed.forEach(s => { if (activeSyms.has(s)) removed.delete(s); });
+  return { label, savedAt: pf.lastSave || raw.exportedAt || null,
+    coins: coinsArr.filter(c => c && c.sym), transactions: (pf.transactions || []).filter(t => t && t.sym && t.id),
+    removed, accumPlan: raw.accumPlan || pf.accumPlan || [] };
+}
+function fromDevice() {
+  const pf = lsGet(LEG.pf, null);
+  if (!pf) return null;
+  return normalise({ coins: Array.isArray(pf) ? pf : pf.coins || [], lastSave: pf.lastSave, transactions: lsGet(LEG.tx, []),
+    archivedCoins: lsGet(LEG.archived, []), accumPlan: lsGet(LEG.acc, []) }, 'This device');
+}
+
+// ── compare ──────────────────────────────────────────────────────────────────
+function compare() {
+  const st = Samsam.getState(), core = Samsam.core;
+  const cloudIds = new Set(st.transactions.map(t => t.id));
+  const near = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
+  const dup = t => st.transactions.some(c => c.sym === t.sym && c.type === t.type && near(+c.qty, +t.qty) && near(+c.price || 0, +t.price || 0)
+    && Math.abs(Date.parse(c.date) - Date.parse(t.date)) < 120e3);
+  const missing = src.transactions.filter(t => !cloudIds.has(safeId(t.id)) && !dup(t))
+    .map(t => ({ ...t, id: safeId(t.id), _on: true })).sort(core.compareTx);
+  const cloudBy = new Map(st.portfolio.map(c => [c.sym, c]));
+  const cloudRemoved = new Set(st.archivedCoins.map(c => c.sym));
+  const syms = [...new Set([...src.coins.map(c => c.sym), ...missing.map(t => t.sym)])];
+  const rows = syms.map(sym => {
+    const s = src.coins.find(c => c.sym === sym), c = cloudBy.get(sym);
+    const sQty = s ? +s.qty || 0 : null, sAvg = s ? +s.basePrice || 0 : null;
+    const cQty = c ? c.qty : 0, cAvg = c ? c.basePrice : 0;
+    const differs = s && !src.removed.has(sym) && (!c || !near(sQty, cQty) || !near(sAvg, cAvg));
+    return { sym, src: s, sQty, sAvg, cQty, cAvg, inCloud: !!c, cloudRemoved: cloudRemoved.has(sym), srcRemoved: src.removed.has(sym), differs, _on: !!differs };
+  }).sort((a, b) => (b.differs - a.differs) || a.sym.localeCompare(b.sym));
+  const accBy = new Map(st.accumPlan.map(a => [a.sym, a]));
+  const acc = (src.accumPlan || []).filter(a => a && a.sym).map(a => {
+    const c = accBy.get(a.sym);
+    return { a, c, differs: !c || +c.targetQty !== +a.targetQty || +(c.targetPct || 0) !== +(a.targetPct || 0) || +(c.alertPrice || 0) !== +(a.alertPrice || 0), _on: !c };
+  }).filter(x => x.differs);
+  plan = { missing, rows, acc };
+  render();
+}
+
+// "After" = cloud ledger + selected missing txs, then the pin (if ticked)
+function after(row) {
+  const st = Samsam.getState(), core = Samsam.core;
+  if (row._on && row.src) return { qty: row.sQty, avg: row.sAvg };
+  const doc = st.coins.find(c => c.sym === row.sym);
+  const txs = st.transactions.filter(t => t.sym === row.sym).concat(plan.missing.filter(t => t._on && t.sym === row.sym));
+  const r = core.replay(doc ? doc.opening : { qty: 0, avg: 0 }, txs);
+  return { qty: r.qty, avg: r.avg };
+}
+function cmp(a, b) { return Math.abs(a - b) < 1e-9 * Math.max(1, Math.abs(a)) ? 'same' : (a > b ? 'up' : 'down'); }
+const pillOf = t => ({ buy: ['buy', 'BUY'], sell: ['sell', 'SELL'], transfer_in: ['tin', 'IN'], transfer_out: ['tout', 'OUT'], adjust: ['', 'EDIT'] }[t] || ['', t]);
+
+function render() {
+  $('results').classList.remove('hidden'); $('sumBar').classList.remove('hidden');
+  const when = src.savedAt ? new Date(src.savedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'unknown';
+  $('txMeta').innerHTML = `Source: <strong>${esc(src.label)}</strong> · last saved ${when} · ${src.coins.length} coins, ${src.transactions.length} transactions.<br>` +
+    (plan.missing.length ? `<strong>${plan.missing.length}</strong> transaction(s) are in the source but not in the cloud:` : '✅ No missing transactions.');
+  $('txTable').innerHTML = plan.missing.length ? `<tr><th></th><th>Coin / type</th><th>Qty</th><th>Price</th><th>Date</th></tr>` + plan.missing.map((t, i) => {
+    const [cls, lab] = pillOf(t.type);
+    return `<tr><td><input type="checkbox" data-tx="${i}" ${t._on ? 'checked' : ''}></td>
+      <td><strong>${esc(t.sym)}</strong> <span class="pill ${cls}">${lab}</span><span class="small">${esc(t.note || '')}</span></td>
+      <td>${t.type === 'adjust' ? (t.setQty != null ? '→ ' + fq(t.setQty) : '') : fq(t.qty)}</td><td>${t.type === 'adjust' ? (t.setAvg != null ? '→ ' + fp(t.setAvg) : '') : fp(t.price)}</td>
+      <td>${new Date(t.date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td></tr>`;
+  }).join('') : '';
+  const nDiff = plan.rows.filter(r => r.differs).length;
+  $('coinTable').innerHTML = (nDiff ? '' : `<tr><td colspan="5" style="text-align:left;color:var(--fg2)">✅ All coin balances match the cloud.</td></tr>`) + `<tr><th></th><th>Coin</th><th>Cloud now</th><th>Source</th><th>After</th></tr>` + plan.rows.map((r, i) => {
+    const a = after(r);
+    const note = r.srcRemoved ? '<span class="small">removed in source</span>' : !r.inCloud ? `<span class="small">${r.cloudRemoved ? 'removed in cloud' : 'not in cloud'}</span>` : '';
+    return `<tr class="${r.differs ? 'diff' : (r._on ? '' : 'same-row')}"><td>${r.src && !r.srcRemoved ? `<input type="checkbox" data-coin="${i}" ${r._on ? 'checked' : ''}>` : ''}</td>
+      <td><strong>${esc(r.sym)}</strong>${note}</td>
+      <td>${fq(r.cQty)}<span class="small">avg ${fp(r.cAvg)}</span></td>
+      <td>${r.src ? fq(r.sQty) + `<span class="small">avg ${fp(r.sAvg)}</span>` : '—'}</td>
+      <td><span class="${cmp(a.qty, r.cQty)}">${fq(a.qty)}</span><span class="small">avg ${fp(a.avg)}</span></td></tr>`;
+  }).join('');
+  $('accCard').classList.toggle('hidden', !plan.acc.length);
+  $('accTable').innerHTML = `<tr><th></th><th>Coin</th><th>Cloud target</th><th>Source target</th></tr>` + plan.acc.map((x, i) =>
+    `<tr class="diff"><td><input type="checkbox" data-acc="${i}" ${x._on ? 'checked' : ''}></td><td><strong>${esc(x.a.sym)}</strong></td>
+     <td>${x.c ? fq(x.c.targetQty) : '—'}</td><td>${fq(x.a.targetQty)}</td></tr>`).join('');
+  const nTx = plan.missing.filter(t => t._on).length, nCoin = plan.rows.filter(r => r._on && r.src && !r.srcRemoved).length, nAcc = plan.acc.filter(x => x._on).length;
+  $('sumTxt').textContent = `${nTx} transaction(s), ${nCoin} coin balance(s), ${nAcc} target(s) selected`;
+  $('applyBtn').disabled = !(nTx || nCoin || nAcc);
+}
+document.addEventListener('change', e => {
+  const t = e.target; if (!plan || t.type !== 'checkbox') return;
+  if (t.dataset.tx != null) plan.missing[+t.dataset.tx]._on = t.checked;
+  if (t.dataset.coin != null) plan.rows[+t.dataset.coin]._on = t.checked;
+  if (t.dataset.acc != null) plan.acc[+t.dataset.acc]._on = t.checked;
+  render();
+});
+$('selDiff').onclick = () => { plan.rows.forEach(r => r._on = !!r.differs); render(); };
+$('selNone').onclick = () => { plan.rows.forEach(r => r._on = false); render(); };
+$('showAll').onclick = () => { const on = document.body.classList.toggle('show-all'); $('showAll').textContent = on ? 'Hide unchanged coins' : 'Show unchanged coins'; };
+
+// ── apply ────────────────────────────────────────────────────────────────────
+$('applyBtn').onclick = async () => {
+  const txs = plan.missing.filter(t => t._on).map(({ _on, ...t }) => t);
+  const pinRows = plan.rows.filter(r => r._on && r.src && !r.srcRemoved);
+  const accSel = plan.acc.filter(x => x._on).map(x => { const { updatedAt, order, ...a } = x.a; return a; });
+  const needCoin = new Set([...pinRows.filter(r => !r.inCloud).map(r => r.sym), ...txs.map(t => t.sym).filter(s => !plan.rows.find(r => r.sym === s && r.inCloud))]);
+  if (!confirm(`Restore ${txs.length} transaction(s), ${pinRows.length} coin balance(s) and ${accSel.length} target(s) from “${src.label}”?\n\nA backup of your current cloud data downloads first.`)) return;
+  $('applyBtn').disabled = true;
+  try {
+    Samsam.downloadBackup();
+    await Samsam.restore({
+      txs, accum: accSel,
+      coins: [...needCoin].map(sym => { const s = src.coins.find(c => c.sym === sym) || { sym }; return { sym, name: s.name, cat: s.cat, cgId: s.cgId, logoUrl: s.logoUrl }; }),
+      pins: pinRows.map(r => ({ sym: r.sym, qty: r.sQty, avg: r.sAvg, note: 'Recovered from ' + src.label })),
+    });
+    msg(`✅ Restored. Every page and device now shows the recovered data. <a href="index.html">Back to portfolio</a>`, 'ok');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(compare, 800);
+  } catch (e) { msg('⚠️ ' + (e && e.message || e), 'err'); $('applyBtn').disabled = false; }
+};
+
+// ── source pickers ───────────────────────────────────────────────────────────
+document.querySelectorAll('.src-tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.src-tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  $('srcDevice').classList.toggle('hidden', b.dataset.src !== 'device');
+  $('srcJsonbin').classList.toggle('hidden', b.dataset.src !== 'jsonbin');
+  $('srcFile').classList.toggle('hidden', b.dataset.src !== 'file');
+  msg('');
+});
+$('loadDevice').onclick = () => whenReady(() => {
+  const s = fromDevice();
+  if (!s) { msg('This browser has no data saved by the previous version of the app. Try your other device, the old cloud or a backup file.', 'err'); return; }
+  src = s; msg(''); compare();
+});
+$('loadBin').onclick = () => whenReady(async () => {
+  const id = $('binId').value.trim(), key = $('binKey').value.trim();
+  if (!id || !key) { msg('Enter the Bin ID and Master Key.', 'err'); return; }
+  msg('Loading…');
+  try {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(id)}/latest`, { headers: { 'X-Master-Key': key } });
+    if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Key not accepted by JSONBin (check it, or use the newest key).' : 'JSONBin answered ' + r.status);
+    const j = await r.json(); $('binKey').value = '';
+    const rec = j.record || j;
+    if (!rec.portfolioData) throw new Error('This bin has no portfolio data.');
+    src = normalise(rec, 'Old cloud (JSONBin)'); msg(''); compare();
+  } catch (e) { msg('⚠️ ' + e.message, 'err'); }
+});
+$('fileIn').onchange = () => whenReady(async () => {
+  const f = $('fileIn').files[0]; if (!f) return;
+  try {
+    const j = JSON.parse(await f.text());
+    const rec = j.record || j;
+    const s = normalise(rec, 'File ' + f.name);
+    if (!s.coins.length) throw new Error('No portfolio found in this file.');
+    src = s; msg(''); compare();
+  } catch (e) { msg('⚠️ ' + e.message, 'err'); }
+});
+</script>
+</body>
+</html>

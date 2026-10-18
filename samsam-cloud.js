@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610181534';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610181534';
+import * as Core from './samsam-core.js?v=202610181549';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610181549';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -235,6 +235,37 @@ const API = {
     return API.addTx(sym, 'adjust', 0, 0, note || 'Manual edit', { setQty, setAvg });
   },
   deleteTx(id) { return commit((b, ref) => b.delete(ref('txs', safeId(id))), 'Delete transaction'); },
+
+  // Recovery: in ONE atomic write, restore missing transactions (keeping their original ids, so
+  // nothing is duplicated), re-create/un-remove coins, pin chosen coins to recovered qty/avg, and
+  // add/update accumulation targets. Used by recover.html.
+  restore({ txs = [], coins = [], pins = [], accum = [] } = {}) {
+    const now = new Date().toISOString();
+    return commit((b, ref) => {
+      for (const c of coins) {
+        const cur = S.coins.get(c.sym);
+        b.set(ref('coins', safeId(c.sym)), clean({
+          sym: c.sym, name: c.name || (cur && cur.name) || c.sym, cat: c.cat || (cur && cur.cat) || 'other',
+          cgId: c.cgId || (cur && cur.cgId) || null, logoUrl: c.logoUrl || (cur && cur.logoUrl) || null,
+          isCustom: cur ? !!cur.isCustom : true, removed: false, removedAt: null,
+          opening: cur && cur.opening ? cur.opening : { qty: 0, avg: 0 },
+          order: cur && cur.order != null ? cur.order : 3000, updatedAt: now,
+        }), { merge: true });
+      }
+      for (const t of txs) {
+        const { id, ...d } = t;
+        b.set(ref('txs', safeId(id)), clean({ ...d, qty: +d.qty || 0, price: +d.price || 0,
+          total: d.total != null ? +d.total : (+d.qty || 0) * (+d.price || 0), note: d.note || '',
+          date: d.date || now, createdAt: d.createdAt || d.date || now }));
+      }
+      // Pins are written last-in-time so they win over everything before them.
+      pins.forEach((pn, i) => {
+        b.set(ref('txs', Core.newId('tx_')), txDoc(pn.sym, 'adjust', 0, 0, pn.note || 'Recovered from backup',
+          { setQty: pn.qty, setAvg: pn.avg, date: new Date(Date.now() + i).toISOString() }));
+      });
+      for (const a of accum) b.set(ref('accum', safeId(a.sym)), clean({ ...a, updatedAt: now }));
+    }, 'Restore data');
+  },
 
   // coins
   updateCoin(sym, fields) {
@@ -507,6 +538,7 @@ function renderStatus() {
       <div class="muted">Last confirmed by server: ${t}</div>
       <div class="muted">Device: ${deviceId.slice(-6)}</div>
       ${S.lastError ? `<div class="err">⚠️ ${S.lastError.label}: ${S.lastError.message}</div>` : ''}
+      ${S.user && allLoaded() ? '<div class="row"><a class="samsam-btn" href="recover.html" style="text-decoration:none">🛟 Recover data</a></div>' : ''}
       <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk">⬇ Backup</button>' : ''}
       ${S.user ? '<button class="samsam-btn" id="samsamOut">Sign out</button>' : '<button class="samsam-btn primary" id="samsamIn">Sign in</button>'}</div>
       ${S.lastError ? '<div class="row"><button class="samsam-btn" id="samsamClr">Dismiss error</button><button class="samsam-btn" id="samsamReload">Reload</button></div>' : ''}`;
