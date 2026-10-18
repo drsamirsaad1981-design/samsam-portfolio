@@ -49,8 +49,9 @@
   }
 
   // Live status dot. state: 'ok' (green), 'loading' (amber pulse), 'error' (red), 'idle' (grey)
-  function liveDot(state) {
-    return '<span class="ss-live" data-state="' + (state || 'ok') + '" aria-hidden="true"></span>';
+  // pulse=true adds a soft expanding ring (used where the dot marks a live feed, e.g. the BTC ticker)
+  function liveDot(state, pulse) {
+    return '<span class="ss-live' + (pulse ? ' ss-pulse' : '') + '" data-state="' + (state || 'ok') + '" aria-hidden="true"></span>';
   }
 
   // Apply the saved theme immediately (this file runs in <head>, before the page paints).
@@ -77,7 +78,9 @@
     '.ss-live-label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}' +
     '.ss-date-label{display:inline-flex;align-items:center;gap:6px}' +
     '@keyframes ssLivePulse{0%,100%{opacity:1}50%{opacity:.35}}' +
-    '@media (prefers-reduced-motion:reduce){.ss-live[data-state=loading]{animation:none}}' +
+    '.ss-live.ss-pulse[data-state=ok]{animation:ssLiveRing 2s ease-out infinite}' +
+    '@keyframes ssLiveRing{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}' +
+    '@media (prefers-reduced-motion:reduce){.ss-live[data-state=loading],.ss-live.ss-pulse{animation:none}}' +
     '@media print{.ss-theme-btn{display:none!important}}';
   (document.head || document.documentElement).appendChild(css);
 
