@@ -1418,13 +1418,16 @@ const COINGECKO_IDS = {
   NIGHT:'midnight-3', ARB:'arbitrum', MOVR:'moonriver', GLMR:'moonbeam',
   OP:'optimism', WLD:'worldcoin-wld', PYTH:'pyth-network',
   JUP:'jupiter-exchange-solana', RENDER:'render-token', QNT:'quant-network',
-  HBAR:'hedera-hashgraph', DOGE:'dogecoin', MON:null,
+  HBAR:'hedera-hashgraph', DOGE:'dogecoin', MON:'monad',
   CRO:'crypto-com-chain', XDC:'xdce-crowd-sale', DOT:'polkadot',
   LINK:'chainlink', ENS:'ethereum-name-service', STRK:'starknet',
-  ONDO:'ondo-finance', AVAIL:'avail', KAVA:'kava', PONS:'pons',
+  ONDO:'ondo-finance', AVAIL:'avail', KAVA:'kava', PONS:'pons-2',
   MNT:'mantle', FLR:'flare-networks', KAS:'kaspa',
-  POL:'polygon-ecosystem-token', XPL:null, VTHO:'vethor-token', VET:'vechain',
+  POL:'polygon-ecosystem-token', XPL:'plasma', VTHO:'vethor-token', VET:'vechain',
 };
+
+// Alternative CoinGecko ids tried when the main id returns no price.
+const ALT_CG_IDS = { PONS: ['pons'] };
 
 const LIVE_PRICES_OCT15 = {
   BTC:82363.28, ETH:2444.58,
@@ -1488,6 +1491,16 @@ function applyCloudState(d) {
   if (ov && ov.style.display === 'flex') { try { drawHoldingsOverlayChart(); renderHoldingsAssetList(); } catch(_) {} }
   lastCloudSync = new Date(); updateSyncFooter();
   takeSnapshotsIfDue();
+  // Coins that arrived from the cloud without a live price on this device (e.g. a coin
+  // added on another device) get priced right away instead of on the next 60 s refresh.
+  const prices = Samsam.getPrices();
+  applyCloudState._tried = applyCloudState._tried || new Set();
+  const unpriced = portfolio.filter(c => (c.cgId || COINGECKO_IDS[c.sym]) && !(prices[c.sym] && prices[c.sym].usd > 0) && !applyCloudState._tried.has(c.sym));
+  if (unpriced.length) {
+    unpriced.forEach(c => applyCloudState._tried.add(c.sym)); // once per coin per visit — no request loop
+    clearTimeout(applyCloudState._pt);
+    applyCloudState._pt = setTimeout(fetchLivePrices, 300);
+  }
 }
 
 function getRemovedSyms() { return new Set(archivedCoins.map(c => c.sym)); }
@@ -1777,10 +1790,10 @@ function renderTableAndStack() {
   }
 }
 
-// Manual price override: device-local (live prices replace it on the next refresh).
+// Manual price: synced via the cloud; live market prices (when available) take precedence.
 function updatePrice(sym, val) {
   const n = parseFloat(val);
-  if (n > 0) Samsam.setManualPrice(sym, n);
+  if (n > 0 && requireCloud()) cloudWrite(Samsam.setManualPrice(sym, n));
 }
 function updateNote(sym, val) {
   if (!requireCloud()) return;
@@ -2033,8 +2046,19 @@ function deleteTx(txId) {
   const what = tx.type === 'adjust'
     ? `this manual edit of ${tx.sym}`
     : `this ${tx.type.toUpperCase()} transaction?\n\n${fmtN(tx.qty)} ${tx.sym} @ $${tx.price.toFixed(4)} = $${(tx.total ?? tx.qty*tx.price).toFixed(2)}`;
+  // Warn if a later sale would then exceed the remaining holdings.
+  let oversell = '';
+  try {
+    const st = Samsam.getState();
+    const c = st.coins.find(x => x.sym === tx.sym);
+    const rest = getTxForSym(tx.sym).filter(t => t.id !== txId);
+    const r = Samsam.core.replay(c ? c.opening : { qty: 0, avg: 0 }, rest);
+    let q = c ? c.opening.qty : 0; let bad = false;
+    for (const t of rest) { if (t.type === 'buy') q += t.qty; else if (t.type === 'adjust' && t.setQty != null) q = +t.setQty; else if (t.type === 'sell') { if (t.qty > q * (1 + 1e-9)) bad = true; q = Math.max(0, q - t.qty); } }
+    if (bad) oversell = `\n\n⚠️ A later SELL would then be larger than your holdings; ${tx.sym} quantity will become ${fmtN(r.qty)}.`;
+  } catch(_) {}
   const ok = window.confirm(
-    `Delete ${what}\nDate: ${new Date(tx.date).toLocaleDateString()}\n\n` +
+    `Delete ${what}\nDate: ${new Date(tx.date).toLocaleDateString()}${oversell}\n\n` +
     `Holdings and average cost will be recalculated automatically on all devices.`
   );
   if(!ok) return;
@@ -2088,7 +2112,6 @@ function applyAddCoin() {
   // One atomic cloud write: coin settings + its opening buy (or, for a coin that was
   // removed earlier, a correction that sets exactly the entered position).
   cloudWrite(Samsam.addCoin({ sym, name, cat, cgId }, { qty, price }));
-  Samsam.setManualPrice(sym, price);
   closeAddCoin();
   if(cgId) fetchCoinLogoAndPrice({ sym }, cgId);
 }
@@ -2307,6 +2330,7 @@ async function fetchLivePrices() {
   // Collect IDs from both the static map and per-coin cgId (manually added coins)
   const idSet = new Set(Object.values(COINGECKO_IDS).filter(Boolean));
   portfolio.forEach(c => { if(c.cgId) idSet.add(c.cgId); });
+  Object.values(ALT_CG_IDS).flat().forEach(i => idSet.add(i));
   const ids = [...idSet];
   const url=`https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd&include_24hr_change=true`;
   try {
@@ -2319,7 +2343,8 @@ async function fetchLivePrices() {
     syms.forEach(sym => {
       const coin = portfolio.find(c => c.sym === sym);
       const cgId = (coin && coin.cgId) || COINGECKO_IDS[sym];
-      if (cgId && data[cgId] && data[cgId].usd) map[sym] = { usd: data[cgId].usd, ch24: data[cgId].usd_24h_change ?? null };
+      const hit = [cgId, ...(ALT_CG_IDS[sym] || [])].find(i => i && data[i] && data[i].usd);
+      if (hit) map[sym] = { usd: data[hit].usd, ch24: data[hit].usd_24h_change ?? null };
     });
     if (data['bitcoin'] && data['bitcoin'].usd) { btcPrice = data['bitcoin'].usd; map.BTC = map.BTC || { usd: btcPrice, ch24: data['bitcoin'].usd_24h_change ?? null }; }
     lastFetchTime=new Date();

@@ -216,7 +216,13 @@ const API = {
     for (const [sym, p] of Object.entries(map || {})) if (p && p.usd > 0) S.prices[sym] = { usd: p.usd, ch24: p.ch24 ?? null, t };
     ls.set(PRICE_KEY, S.prices); emit();
   },
-  setManualPrice(sym, usd) { if (usd > 0) { S.prices[sym] = { ...(S.prices[sym] || {}), usd, t: Date.now() }; ls.set(PRICE_KEY, S.prices); emit(); } },
+  // Manual price (for coins without a live feed): saved on the coin in the cloud so every
+  // device shows the same value. A live market price, when available, takes precedence.
+  setManualPrice(sym, usd) {
+    if (!(usd > 0)) return Promise.resolve();
+    if (S.prices[sym]) { delete S.prices[sym]; ls.set(PRICE_KEY, S.prices); }
+    return API.updateCoin(sym, { lastPrice: usd });
+  },
   getPrices() { return S.prices; },
 
   // ledger
@@ -241,7 +247,7 @@ const API = {
     return commit((b, ref) => {
       b.set(ref('coins', safeId(sym)), clean({
         sym, name: coin.name || sym, cat: coin.cat || 'other', cgId: coin.cgId || null, logoUrl: coin.logoUrl || null,
-        notes: coin.notes || '', isCustom: true, removed: false, removedAt: null, order,
+        notes: coin.notes || '', isCustom: true, removed: false, removedAt: null, order, lastPrice: price || null,
         opening: existing && existing.opening ? existing.opening : { qty: 0, avg: 0 },
         addedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }), { merge: true });
@@ -482,7 +488,7 @@ function renderStatus() {
   else if (!S.user) { s = 'offline'; label = 'Signed out'; }
   else if (S.lastError) { s = 'error'; label = 'Sync problem — tap'; }
   else if (!allLoaded()) { s = 'saving'; label = 'Loading…'; }
-  else if (!navigator.onLine) { s = 'offline'; label = S.pending ? `Offline · ${S.pending} change${S.pending > 1 ? 's' : ''} waiting` : 'Offline · saved on device'; }
+  else if (!navigator.onLine || (S.pending && S.fromCache)) { s = 'offline'; label = S.pending ? `Offline · ${S.pending} change${S.pending > 1 ? 's' : ''} waiting` : 'Offline · saved on device'; }
   else if (S.pending) { s = 'saving'; label = 'Saving…'; }
   else if (S.fromCache) { s = 'saving'; label = 'Syncing…'; }
   else { s = 'synced'; label = 'Synced'; }
