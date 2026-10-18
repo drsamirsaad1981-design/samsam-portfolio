@@ -15,5 +15,5 @@ export const FIREBASE_CONFIG = {
 
 // Google accounts allowed to open the portfolio (must match firestore.rules).
 export const ALLOWED_EMAILS = [
-  'PASTE_YOUR_GOOGLE_EMAIL',
+  'dr.samir.saad.1981@gmail.com',
 ];
