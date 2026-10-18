@@ -10,17 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="سمسم BTC">
 <meta name="theme-color" content="#0a0e1a">
 
-<!-- Apply saved theme IMMEDIATELY before render to avoid flash -->
-<script>
-  (function(){
-    try {
-      var t = localStorage.getItem('samsam_theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', t);
-    } catch(e) {
-      document.documentElement.setAttribute('data-theme', 'dark');
-    }
-  })();
-</script>
+<!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
+<script src="samsam-ui.js"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -90,6 +81,14 @@
     border-radius: 16px;
     padding: 16px;
     margin-bottom: 12px;
+    position: relative;
+  }
+  /* Theme toggle: top-right corner of the header (same spot on every page) */
+  .header-theme-btn { position: absolute; top: 14px; right: 14px; z-index: 2; }
+  .logo-area { padding-right: 46px; }
+  @media (min-width: 900px) {
+    .logo-area { padding-right: 0; }
+    .header-top { padding-right: 50px; }
   }
 
   .header-top {
@@ -753,10 +752,6 @@
   }
 
   #liveIndicator { display: flex; align-items: center; gap: 6px; flex: 1; }
-  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg2); flex-shrink: 0; }
-  .live-dot.ok { background: var(--green); box-shadow: 0 0 5px var(--green); }
-  .live-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
-  .live-dot.error { background: var(--red); }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
   .modal-overlay {
@@ -894,6 +889,7 @@
 </div>
 
 <header>
+  <button type="button" class="ss-theme-btn header-theme-btn" data-theme-toggle></button>
   <div class="header-top">
     <div class="logo-area">
       <img class="btc-icon" src="https://assets.coingecko.com/coins/images/1/large/bitcoin.png" alt="Bitcoin" onerror="this.style.cssText='width:44px;height:44px;background:radial-gradient(circle,#f7931a,#e8821a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0';this.outerHTML='<div class=\'btc-icon-fallback\'>₿</div>'">
@@ -906,8 +902,8 @@
       </div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:stretch;gap:4px">
-      <div class="date-tag" id="currentDate" style="text-align:left;white-space:nowrap">📅 Oct 15, 2026</div>
-      <div id="liveIndicator" class="date-tag" style="display:flex;align-items:center;gap:5px;justify-content:flex-start"><span class="live-dot"></span> Loading…</div>
+      <div class="date-tag ss-date-label" id="currentDate" style="text-align:left;white-space:nowrap"></div>
+      <div id="liveIndicator" class="date-tag" style="display:flex;align-items:center;gap:5px;justify-content:flex-start"><span class="ss-live" data-state="loading"></span> Loading…</div>
     </div>
   </div>
 
@@ -1024,7 +1020,6 @@
     <button class="btn btn-secondary" onclick="exportPdf()">📄 PDF</button>
     <button class="btn btn-secondary" onclick="openAddCoin()">➕ Add</button>
     <button class="btn btn-secondary" id="viewToggleBtn" onclick="toggleView()">📋 Table</button>
-    <button class="btn btn-secondary" onclick="toggleTheme()">🌙</button>
   </div>
   <div class="control-row">
     <a href="./accumulation.html" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">🎯 Accumulation Plan</a>
@@ -1600,7 +1595,7 @@ function renderHeader() {
 
   // Card 4: BTC Price
   document.getElementById('btcPriceDisplay').textContent = '$' + btcPrice.toLocaleString();
-  document.getElementById('btcPriceSub').textContent = '🔴 Live';
+  document.getElementById('btcPriceSub').innerHTML = '<span class="ss-live-label">' + SamsamUI.liveDot(liveStatus === 'error' ? 'error' : 'ok') + 'Live</span>';
 
   // Card 5: Realized P&L (only shows if there are sells)
   updateRealizedCard();
@@ -2176,13 +2171,8 @@ function exportPdf() {
   }, 120);
 }
 
-function toggleTheme() {
-  const root=document.documentElement;
-  const current=root.getAttribute('data-theme')||'dark';
-  const next=current==='dark'?'light':'dark';
-  root.setAttribute('data-theme',next);
-  try { localStorage.setItem('samsam_theme', next); } catch(e) {}
-}
+// Theme switching lives in samsam-ui.js (shared by every page).
+function toggleTheme() { SamsamUI.toggleTheme(); }
 
 const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#e879f9',meme:'#ef4444',infra:'#06b6d4',other:'#6b7280',btc:'#f7931a'};
 const CAT_LABELS={layer1:'Layer 1',layer2:'Layer 2',defi:'DeFi',ai:'AI & Web3',meme:'Meme',infra:'Infrastructure',other:'Other',btc:'Bitcoin'};
@@ -2384,10 +2374,10 @@ async function fetchMissingLogos() {
 function setLiveStatus(s){liveStatus=s;updateLiveIndicator();}
 function updateLiveIndicator(){
   const el=document.getElementById('liveIndicator');if(!el)return;
-  if(liveStatus==='loading')el.innerHTML='<span class="live-dot loading"></span> Fetching live prices…';
-  else if(liveStatus==='ok'){const t=lastFetchTime?lastFetchTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'';el.innerHTML=`<span class="live-dot ok"></span> Live · Updated ${t}`;}
-  else if(liveStatus==='error')el.innerHTML='<span class="live-dot error"></span> Fetch failed — using saved prices';
-  else el.innerHTML='<span class="live-dot"></span> Prices from last session';
+  if(liveStatus==='loading')el.innerHTML=SamsamUI.liveDot('loading')+' Fetching live prices…';
+  else if(liveStatus==='ok'){const t=lastFetchTime?lastFetchTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'';el.innerHTML=SamsamUI.liveDot('ok')+` Live · Updated ${t}`;}
+  else if(liveStatus==='error')el.innerHTML=SamsamUI.liveDot('error')+' Fetch failed — using saved prices';
+  else el.innerHTML=SamsamUI.liveDot('idle')+' Prices from last session';
 }
 
 function renderAll(){renderHeader();renderSummary();renderTableAndStack();renderDashboard();}
@@ -2680,7 +2670,7 @@ document.getElementById('analysisModal').addEventListener('click', function(e) {
 });
 
 document.getElementById('searchBox').addEventListener('input',renderTableAndStack);
-document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+' — Baseline: Oct 15, 2026';
+document.getElementById('currentDate').innerHTML=SamsamUI.icon('calendar')+'<span>'+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+' — Baseline: Oct 15, 2026</span>';
 
 // Baseline + fallback prices let the store show sensible prices before the first live fetch.
 whenSamsam(S => {
@@ -3100,12 +3090,6 @@ function openHoldingsView() {
   document.body.style.overflow = 'hidden';
   // Push #holdings to URL so refresh restores this view
   if (location.hash !== '#holdings') history.pushState(null, '', '#holdings');
-  // Sync theme icon
-  const themeBtn = overlay.querySelector('.hov-theme-btn');
-  if (themeBtn) {
-    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-    themeBtn.textContent = isDark ? '☀️' : '🌙';
-  }
   // Reset tabs to 24h
   overlay.querySelectorAll('.hov-tab').forEach(b => b.classList.remove('active'));
   const first = overlay.querySelector('.hov-tab');
@@ -3317,13 +3301,6 @@ function renderHoldingsAssetList() {
     .hov-back-btn:hover { background: var(--border); }
     .hov-back-btn svg { width:14px;height:14px;flex-shrink:0; }
     .hov-nav-title { font-size:0.92rem;font-weight:700;color:var(--fg); }
-    .hov-theme-btn {
-      background: var(--bg3); border: 1px solid var(--border);
-      border-radius: 10px; padding: 7px 10px;
-      color: var(--fg2); font-size: 0.88rem; cursor: pointer;
-      transition: background .15s;
-    }
-    .hov-theme-btn:hover { background: var(--border); }
 
     /* ── Hero total ── */
     .hov-hero { padding: 18px 16px 4px; }
@@ -3402,7 +3379,7 @@ function renderHoldingsAssetList() {
       Back
     </button>
     <span class="hov-nav-title">💰 Holdings</span>
-    <button class="hov-theme-btn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    <button type="button" class="ss-theme-btn" data-theme-toggle></button>
   </div>
 
   <!-- Hero total -->

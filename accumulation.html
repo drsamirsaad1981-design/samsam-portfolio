@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#0a0e1a">
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
+<script src="samsam-ui.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -377,7 +378,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
       <input type="text" inputmode="decimal" id="dcaMonthly" placeholder="100" oninput="calcDca()">
     </div>
     <div class="dca-field">
-      <label>📅 Number of Months</label>
+      <label class="ss-date-label" data-icon="calendar">Number of Months</label>
       <input type="number" id="dcaMonths" placeholder="12" min="1" max="120" oninput="calcDca()">
     </div>
     <div class="dca-result" id="dcaResult" style="display:none">
@@ -413,6 +414,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
   <a class="back-btn" href="./index.html">← Back</a>
   <div class="page-title">🎯 <span id="pageSubtitle">Accumulation Plan</span></div>
   <div class="save-status" id="saveStatus">✓ Ready</div>
+  <button type="button" class="ss-theme-btn" data-theme-toggle></button>
 </div>
 
 <!-- Dashboard -->
@@ -454,7 +456,6 @@ tr:hover td { background: rgba(255,255,255,.02); }
 <div class="toolbar">
   <button class="btn btn-primary" onclick="openAddModal()">➕ Add Coin to Plan</button>
   <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin..." oninput="renderAll()">
-  <button class="btn" onclick="toggleTheme()">🌙 Theme</button>
   <div class="view-toggle">
     <button id="btnTable" onclick="setView('table')" title="Table view">📋 Table</button>
     <button id="btnCards" onclick="setView('cards')" title="Cards view">🃏 Cards</button>
@@ -576,22 +577,9 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
-function loadTheme() {
-  try {
-    const t = localStorage.getItem(THEME_KEY);
-    // Only apply if explicitly set; default stays dark
-    if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
-    else document.documentElement.setAttribute('data-theme', 'dark');
-  } catch(e) {
-    document.documentElement.setAttribute('data-theme', 'dark');
-  }
-}
-function toggleTheme() {
-  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-  const next = cur === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
-}
+// Theme is handled by samsam-ui.js (shared by every page).
+function loadTheme() { SamsamUI.refresh(); }
+function toggleTheme() { SamsamUI.toggleTheme(); }
 
 function getPortfolioCoin(sym) {
   return portfolioCoins.find(c => c.sym === sym.toUpperCase());

@@ -6,6 +6,7 @@
 <title>Portfolio Allocation</title>
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
+<script src="samsam-ui.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -63,10 +64,6 @@ body {
 .back-btn:hover { border-color: var(--accent); color: var(--accent); }
 .header-title {
   font-size: 1rem; font-weight: 700; flex: 1; text-align: center;
-}
-.theme-btn {
-  background: none; border: none; font-size: 1.15rem;
-  cursor: pointer; color: var(--fg2); padding: 4px;
 }
 
 /* ── Main container ── */
@@ -210,7 +207,7 @@ body {
 <div class="header">
   <a class="back-btn" href="./index.html">← Back</a>
   <div class="header-title">📊 Allocation</div>
-  <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  <button type="button" class="ss-theme-btn" data-theme-toggle id="themeBtn"></button>
 </div>
 
 <div class="container">
@@ -382,22 +379,9 @@ let totalVal  = 0;
 let selectedCat = null;
 
 // ── Theme ──────────────────────────────────────────────────────────────────
-function loadTheme() {
-  try {
-    const t = localStorage.getItem('samsam_theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', t);
-    document.getElementById('themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
-  } catch(e) {}
-}
-function toggleTheme() {
-  try {
-    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-    const next = cur === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('samsam_theme', next);
-    document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
-  } catch(e) {}
-}
+// Theme is handled by samsam-ui.js (shared by every page).
+function loadTheme() { SamsamUI.refresh(); }
+function toggleTheme() { SamsamUI.toggleTheme(); }
 
 // ── Load portfolio from the cloud (samsam-cloud.js → Firebase) ─────────────
 // Same derived holdings as the main page, updated live from any device.

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<script src="samsam-ui.js"></script>
 <title>Portfolio Performance</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
@@ -88,14 +89,6 @@ body {
   font-weight: 700;
   flex: 1;
   text-align: center;
-}
-.theme-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2rem;
-  padding: 4px;
-  line-height: 1;
 }
 
 /* ── Page wrapper — cap width on desktop ── */
@@ -512,7 +505,7 @@ body {
 <div class="header">
   <button class="back-btn" onclick="history.back()">‹ Back</button>
   <div class="header-title">Portfolio Performance</div>
-  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+  <button type="button" class="ss-theme-btn" data-theme-toggle id="themeBtn"></button>
 </div>
 
 <div class="summary">
@@ -586,7 +579,7 @@ body {
   <div class="state-msg"><div class="spinner"></div>Loading portfolio…</div>
 </div>
 
-<div class="sync-bar" id="syncBar">⏳ Fetching live prices…</div>
+<div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
 <script type="module" src="samsam-cloud.js"></script>
 <script>
@@ -704,20 +697,9 @@ let lastTabClick = '';  // tracks which tab was last clicked
 // Default start direction per mode: pnl=desc (best profit first), pct=asc (worst loss first)
 const DEFAULT_DIR = { pnl: -1, pct: 1, value: -1, price: -1 };
 
-// ── Theme ──
-function loadTheme() {
-  const saved = localStorage.getItem('samsam_theme') || 'system';
-  if (saved === 'dark')  document.documentElement.setAttribute('data-theme','dark');
-  else if (saved === 'light') document.documentElement.setAttribute('data-theme','light');
-  else document.documentElement.removeAttribute('data-theme');
-  document.getElementById('themeBtn').textContent = saved === 'dark' ? '☀️' : '🌙';
-}
-function toggleTheme() {
-  const cur = localStorage.getItem('samsam_theme') || 'system';
-  const next = cur === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('samsam_theme', next);
-  loadTheme();
-}
+// ── Theme — handled by samsam-ui.js (shared by every page) ──
+function loadTheme() { SamsamUI.refresh(); }
+function toggleTheme() { SamsamUI.toggleTheme(); }
 
 // ── Load portfolio from the cloud (samsam-cloud.js → Firebase), live ──
 function loadPortfolio() {
@@ -744,6 +726,7 @@ async function fetchLivePrices() {
   if (!ids.length) return;
 
   // batch up to 50 per call
+  let gotAny = false;
   for (let i = 0; i < ids.length; i += 50) {
     const chunk = ids.slice(i, i+50).join(',');
     try {
@@ -763,11 +746,15 @@ async function fetchLivePrices() {
         }
       });
       if (window.Samsam) Samsam.updatePrices(shared);
+      gotAny = true;
     } catch(_) {}
   }
 
-  document.getElementById('syncBar').textContent =
-    '✓ Live prices updated · ' + new Date().toLocaleTimeString();
+  // Same Live indicator as the main page (green = live prices, red = fetch failed)
+  document.getElementById('syncBar').innerHTML = gotAny
+    ? '<span class="ss-live-label">' + SamsamUI.liveDot('ok') + 'Live · Updated ' +
+      new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + '</span>'
+    : '<span class="ss-live-label">' + SamsamUI.liveDot('error') + 'Fetch failed — using saved prices</span>';
   render();
 }
 
