@@ -163,6 +163,35 @@
   .stat-value { font-size: 1rem; font-weight: 700; word-break: break-all; }
   .stat-sub { font-size: 0.72rem; color: var(--fg2); margin-top: 3px; font-weight: 500; opacity: 0.85; }
   .stat-btc { color: var(--btc); }
+  .stat-pos { color: var(--green); }
+  .stat-neg { color: var(--red); }
+
+  /* ── Live BTC ticker ── */
+  .btc-ticker {
+    position: relative; overflow: hidden; margin-top: 12px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px; height: 38px; display: flex; align-items: center;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  }
+  [data-theme="light"] header { background: var(--bg2); }
+  [data-theme="light"] .btc-ticker { background: rgba(15,23,42,0.03); border-color: rgba(15,23,42,0.08); }
+  .btc-ticker-track {
+    display: flex; flex-shrink: 0; width: max-content; white-space: nowrap;
+    animation: btcTickerScroll 38s linear infinite; will-change: transform;
+  }
+  .btc-ticker:hover .btc-ticker-track, .btc-ticker:active .btc-ticker-track { animation-play-state: paused; }
+  .btc-ticker-group { display: inline-flex; align-items: center; gap: 22px; padding-right: 22px; }
+  .bt-item { display: inline-flex; align-items: center; gap: 7px; font-size: 0.8rem; color: var(--fg2); font-variant-numeric: tabular-nums; }
+  .bt-item strong { color: var(--fg); font-weight: 700; }
+  .bt-live { color: var(--fg); font-weight: 700; letter-spacing: .04em; font-size: 0.72rem; text-transform: uppercase; }
+  .bt-sep { width: 4px; height: 4px; border-radius: 50%; background: var(--fg2); opacity: .35; }
+  .bt-up { color: var(--green); font-weight: 700; } .bt-down { color: var(--red); font-weight: 700; }
+  @keyframes btcTickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) {
+    .btc-ticker-track { animation: none; }
+    .btc-ticker { -webkit-mask-image: none; mask-image: none; overflow-x: auto; }
+  }
   .stat-green { color: var(--green); }
   .stat-blue { color: var(--blue); }
 
@@ -534,7 +563,6 @@
   }
 
   @media(min-width: 1200px) {
-    .header-stats { grid-template-columns: repeat(5, 1fr); } /* show Realized P&L if visible */
     .coins-stack.view-active {
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     }
@@ -909,30 +937,30 @@
 
   <div class="header-stats">
     <div class="stat-card">
-      <div class="stat-label">BTC Accumulated</div>
-      <div class="stat-value stat-btc" id="totalBtc">0.01304000</div>
-      <div class="stat-sub" id="totalBtcUsd">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Altcoins USD</div>
-      <div class="stat-value stat-blue" id="altUsd">—</div>
-      <div class="stat-sub" id="altUsdBtc">—</div>
-    </div>
-    <div class="stat-card">
       <div class="stat-label">Total Portfolio</div>
       <div class="stat-value stat-green" id="totalUsd">—</div>
       <div class="stat-sub" id="totalUsdBtc">—</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">BTC Price</div>
-      <div class="stat-value stat-btc" id="btcPriceDisplay">$81,162</div>
-      <div class="stat-sub" id="btcPriceSub">Live</div>
+      <div class="stat-label">Total P&amp;L</div>
+      <div class="stat-value" id="totalPnlCard">—</div>
+      <div class="stat-sub" id="totalPnlSub">—</div>
     </div>
-    <div class="stat-card" id="realizedCard" style="display:none">
-      <div class="stat-label">💰 Realized P&amp;L</div>
-      <div class="stat-value" id="realizedPnl">—</div>
-      <div class="stat-sub" id="realizedSub">from sells</div>
+    <div class="stat-card">
+      <div class="stat-label">BTC Accumulated</div>
+      <div class="stat-value stat-btc" id="totalBtc">—</div>
+      <div class="stat-sub" id="totalBtcUsd">—</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">Altcoins Accumulated</div>
+      <div class="stat-value stat-blue" id="altUsd">—</div>
+      <div class="stat-sub" id="altUsdBtc">—</div>
+    </div>
+  </div>
+
+  <!-- Live BTC ticker (scrolls gently; pauses on hover/touch; static if reduced motion) -->
+  <div class="btc-ticker" id="btcTicker" aria-live="polite">
+    <div class="btc-ticker-track" id="btcTickerTrack"></div>
   </div>
 </header>
 
@@ -1511,21 +1539,6 @@ function addTransaction(sym, type, qty, price, note) {
 // Average-cost method, replayed from each coin's opening position (samsam-core.js).
 function calcRealizedPnl() { return { total: realizedState.total, sellCount: realizedState.sellCount }; }
 
-function updateRealizedCard() {
-  const card = document.getElementById('realizedCard');
-  const sells = transactions.filter(t => t.type === 'sell');
-  if(sells.length === 0) { if(card) card.style.display = 'none'; return; }
-  const { total, sellCount } = calcRealizedPnl();
-  const el = document.getElementById('realizedPnl');
-  const sub = document.getElementById('realizedSub');
-  if(!el || !sub) return;
-  const isPos = total >= 0;
-  el.textContent = (isPos ? '+' : '') + '$' + Math.abs(total).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  el.style.color = isPos ? 'var(--green)' : 'var(--red)';
-  sub.textContent = `${sellCount} sell${sellCount!==1?'s':''}`;
-  if(card) card.style.display = '';
-}
-
 function getCustomSyms() {
   return new Set(customCoins.map(c => c.sym));
 }
@@ -1576,30 +1589,74 @@ function fmt(n, dec) {
 
 function renderHeader() {
   const { btcQty, btcValue, altTotal, total } = calcStats();
-  const fmtUsd = n => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const fmtUsd = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const fmtBtc = n => (btcPrice > 0 ? parseFloat((n / btcPrice).toFixed(8)).toString() : '—') + ' BTC';
 
-  // Card 1: BTC Accumulated — strip trailing zeros, max 8 decimals
-  const btcQtyStr = parseFloat(btcQty.toFixed(8)).toString();
-  document.getElementById('totalBtc').textContent = btcQtyStr + ' BTC';
-  const altBtcStr = btcPrice > 0 ? '(' + parseFloat((altTotal/btcPrice).toFixed(8)).toString() + ' BTC)' : '—';
-  document.getElementById('totalBtcUsd').textContent = btcPrice > 0 ? '(' + fmtUsd(btcValue) + ')' : '—';
-
-  // Card 2: Altcoins USD
-  document.getElementById('altUsd').textContent = fmtUsd(altTotal);
-  document.getElementById('altUsdBtc').textContent = btcPrice > 0 ? '(' + fmtBtc(altTotal) + ')' : '—';
-
-  // Card 3: Total Portfolio
+  // Card 1: Total Portfolio
   document.getElementById('totalUsd').textContent = fmtUsd(total);
   document.getElementById('totalUsdBtc').textContent = btcPrice > 0 ? '(' + fmtBtc(total) + ')' : '—';
 
-  // Card 4: BTC Price
-  document.getElementById('btcPriceDisplay').textContent = '$' + btcPrice.toLocaleString();
-  document.getElementById('btcPriceSub').innerHTML = '<span class="ss-live-label">' + SamsamUI.liveDot(liveStatus === 'error' ? 'error' : 'ok') + 'Live</span>';
+  // Card 2: Total P&L = unrealized (value − cost basis) + realized from sells.
+  // Same definition as "Total P&L" on the Performance page.
+  const cost = portfolio.reduce((s, c) => s + c.qty * c.basePrice, 0);
+  const realized = realizedState.total || 0;
+  const pnl = (total - cost) + realized;
+  const pct = cost > 0 ? pnl / cost * 100 : 0;
+  const sign = pnl >= 0 ? '+' : '-';
+  const pnlEl = document.getElementById('totalPnlCard');
+  pnlEl.textContent = sign + '$' + Math.abs(pnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'stat-pos' : 'stat-neg');
+  const subEl = document.getElementById('totalPnlSub');
+  subEl.textContent = '(' + (pct >= 0 ? '+' : '-') + Math.abs(pct).toFixed(2) + '%)';
+  subEl.classList.toggle('stat-pos', pnl >= 0); subEl.classList.toggle('stat-neg', pnl < 0);
+  pnlEl.parentElement.title = 'Unrealized ' + fmtUsd(total - cost) +
+    (realizedState.sellCount ? ' + realized ' + fmtUsd(realized) + ' from ' + realizedState.sellCount + ' sell' + (realizedState.sellCount > 1 ? 's' : '') : '');
 
-  // Card 5: Realized P&L (only shows if there are sells)
-  updateRealizedCard();
+  // Card 3: BTC Accumulated — strip trailing zeros, max 8 decimals
+  document.getElementById('totalBtc').textContent = parseFloat(btcQty.toFixed(8)).toString() + ' BTC';
+  document.getElementById('totalBtcUsd').textContent = btcPrice > 0 ? '(' + fmtUsd(btcValue) + ')' : '—';
 
+  // Card 4: Altcoins Accumulated
+  document.getElementById('altUsd').textContent = fmtUsd(altTotal);
+  document.getElementById('altUsdBtc').textContent = btcPrice > 0 ? '(' + fmtBtc(altTotal) + ')' : '—';
+
+  renderBtcTicker();
+}
+
+// ── Live BTC ticker ──────────────────────────────────────────────────────────
+let btcTicker = { price: 0, ch24: null, high24: null, low24: null, t: 0 };
+async function fetchBtcTicker() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = (await r.json())[0];
+    if (d && d.current_price) {
+      btcTicker = { price: d.current_price, ch24: d.price_change_percentage_24h, high24: d.high_24h, low24: d.low_24h, t: Date.now() };
+      renderBtcTicker();
+    }
+  } catch (e) { /* keep the price from the regular price refresh */ }
+}
+let _tickerKey = '';
+function renderBtcTicker() {
+  const track = document.getElementById('btcTickerTrack');
+  if (!track) return;
+  const live = liveStatus !== 'error';
+  const price = btcTicker.price > 0 && Date.now() - btcTicker.t < 5 * 60e3 ? btcTicker.price : btcPrice;
+  const btcCoin = portfolio.find(c => c.sym === 'BTC');
+  const ch = btcTicker.ch24 != null ? btcTicker.ch24 : (btcCoin && btcCoin.change24h != null ? btcCoin.change24h : null);
+  const usd = n => '$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: n >= 1000 ? 0 : 2 });
+  const parts = [
+    `<span class="bt-item">${SamsamUI.liveDot(live ? 'ok' : 'error', true)}<span class="bt-live">${live ? 'Live' : 'Offline'}</span></span>`,
+    `<span class="bt-item">BTC / USD <strong>${price > 0 ? usd(price) : '—'}</strong></span>`,
+  ];
+  if (ch != null) parts.push(`<span class="bt-item"><span class="${ch >= 0 ? 'bt-up' : 'bt-down'}">${ch >= 0 ? '▲ +' : '▼ '}${ch.toFixed(2)}%</span> 24h</span>`);
+  if (btcTicker.high24) parts.push(`<span class="bt-item">24h High <strong>${usd(btcTicker.high24)}</strong></span>`);
+  if (btcTicker.low24) parts.push(`<span class="bt-item">24h Low <strong>${usd(btcTicker.low24)}</strong></span>`);
+  const group = parts.join('<span class="bt-sep"></span>') + '<span class="bt-sep"></span>';
+  if (group === _tickerKey) return; // unchanged → don't restart the animation
+  _tickerKey = group;
+  // Two identical copies → seamless loop (animation moves exactly one copy's width)
+  track.innerHTML = `<div class="btc-ticker-group">${group}</div><div class="btc-ticker-group" aria-hidden="true">${group}</div>`;
 }
 
 let activeCatFilter = '';
@@ -2340,6 +2397,7 @@ async function fetchLivePrices() {
     lastFetchTime=new Date();
     setLiveStatus('ok');
     snapshotDue = true;
+    fetchBtcTicker();
     whenSamsam(S => S.updatePrices(map)); // re-renders every view via applyCloudState
     fetchMissingLogos();
   } catch(e){setLiveStatus('error');updateLiveIndicator();}
