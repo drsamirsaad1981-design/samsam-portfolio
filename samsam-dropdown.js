@@ -7,7 +7,7 @@
 //
 // Usage:
 //   const dd = SamsamDropdown.create(hostEl, {
-//     options: [{ value, label, sub?, icon? (html) }], value, searchable, searchPlaceholder,
+//     options: [{ value, label, sub?, icon? (html) }], value, searchable, searchPlaceholder, maxHeight (desktop list, px),
 //     ariaLabel, title (sheet title on mobile), onChange(value) });
 //   dd.setOptions([...]); dd.setValue(v); dd.value; dd.open(); dd.close();
 (function () {
@@ -131,17 +131,24 @@
       var r = btn.getBoundingClientRect(), w = Math.max(r.width, opts.minWidth || 220);
       var left = Math.min(r.left, window.innerWidth - w - 8);
       var below = window.innerHeight - r.bottom - 12, above = r.top - 12;
-      var h = Math.min(panel.scrollHeight, 360);
+      var cap = opts.maxHeight || 280;
+      list.style.maxHeight = cap + 'px';
+      var chrome = panel.scrollHeight - list.offsetHeight;          // search box etc.
+      var h = Math.min(panel.scrollHeight, cap + chrome);
       panel.style.width = w + 'px'; panel.style.left = Math.max(8, left) + 'px';
-      if (below < h && above > below) { panel.style.top = ''; panel.style.bottom = (window.innerHeight - r.top + 6) + 'px'; }
+      var up = below < h && above > below;
+      if (up) { panel.style.top = ''; panel.style.bottom = (window.innerHeight - r.top + 6) + 'px'; }
       else { panel.style.bottom = ''; panel.style.top = (r.bottom + 6) + 'px'; }
+      // Fit the list to the space actually available; anything beyond scrolls
+      var room = (up ? above : below) - chrome - 6;
+      list.style.maxHeight = Math.max(120, Math.min(cap, room)) + 'px';
     }
     function open() {
       if (openOne && openOne !== api) openOne.close();
       openOne = api;
       var sheet = isSheet();
       panel.classList.toggle('sheet', sheet);
-      panel.style.top = panel.style.bottom = panel.style.left = panel.style.width = '';
+      panel.style.top = panel.style.bottom = panel.style.left = panel.style.width = ''; list.style.maxHeight = '';
       if (search) search.value = '';
       renderList();
       panel.classList.add('show'); backdrop.classList.toggle('show', sheet);
