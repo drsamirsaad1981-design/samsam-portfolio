@@ -10,9 +10,9 @@
 <meta name="theme-color" content="#0a0e1a">
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610192054"></script>
-<script src="samsam-labels.js?v=202610192054"></script>
-<script src="samsam-taxonomy.js?v=202610192054"></script>
+<script src="samsam-ui.js?v=202610192104"></script>
+<script src="samsam-labels.js?v=202610192104"></script>
+<script src="samsam-taxonomy.js?v=202610192104"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -368,6 +368,42 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .empty-state .hint strong { color: var(--accent); }
 /* Card labels styled like the table headers (same words from samsam-labels.js, same caps) */
 .acc-card-target-row label, .acc-card-alert-row label, .acc-card-pct { text-transform: uppercase; letter-spacing: .4px; font-size: 0.68rem; font-weight: 600; }
+/* ── Coin cards: same design as the main page (Cards view) ── */
+:root { --card-solid: #1e293b; --metric-bg: #0f172a; --label: #a3b1c6; }
+:root[data-theme="light"] { --card-solid: #ffffff; --metric-bg: #f1f5f9; --label: #475569; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --card-solid: #ffffff; --metric-bg: #f1f5f9; --label: #475569; } }
+#cardsView.view-active { display: grid !important; grid-template-columns: 1fr; gap: 20px; align-items: stretch; }
+@media (min-width: 640px) { #cardsView.view-active { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); } }
+.coin-card { background: var(--card-solid); border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; height: 100%; box-sizing: border-box; transition: box-shadow .15s, border-color .15s; }
+.coin-card:hover { border-color: var(--accent); box-shadow: 0 4px 20px rgba(0,0,0,.25); }
+.coin-card.acc-card, .coin-card.acc-card.completed { background: var(--card-solid); padding: 16px; gap: 12px; }
+.coin-card.completed { border-color: rgba(16,185,129,.45); }
+.coin-card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.coin-card-header > div:first-child { flex: 1; min-width: 0; }
+.coin-card-header > div:last-child { flex-shrink: 0; text-align: right; }
+.acc-coin-icon { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--bg3); }
+.acc-coin-fb { display: flex; align-items: center; justify-content: center; font-size: .62rem; font-weight: 800; color: var(--fg); }
+.card-cat-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: -4px; }
+.cat-tag { display: inline-flex; align-items: center; border: 1px solid color-mix(in srgb, var(--cat-c) 45%, transparent); background: color-mix(in srgb, var(--cat-c) 14%, transparent); color: var(--cat-c); font-size: 0.66rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.coin-card-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.coin-metric { background: var(--metric-bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 3px; }
+.coin-metric label { display: block; color: var(--label); font-weight: 600; font-size: 0.66rem; line-height: 1.25; text-transform: uppercase; letter-spacing: .05em; }
+.coin-metric val { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(0.82rem, 0.9vw + 0.45rem, 1rem); font-weight: 700; color: var(--fg); font-variant-numeric: tabular-nums; }
+.coin-metric val small { font-size: .7em; color: var(--fg2); font-weight: 600; }
+.acc-settings { display: flex; flex-direction: column; gap: 8px; background: var(--metric-bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 11px; }
+.acc-set-row { display: grid; grid-template-columns: 118px 1fr; align-items: center; column-gap: 8px; row-gap: 3px; }
+.acc-set-row > label { color: var(--label); font-weight: 600; font-size: 0.66rem; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+.acc-set-ctl { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.acc-set-ctl .card-target-input { flex: 1; min-width: 0; height: 32px; }
+.acc-set-note { grid-column: 2; font-size: 0.7rem; }
+.acc-sign { background: var(--bg3); border: 1px solid var(--border); color: var(--fg); border-radius: 7px; height: 32px; min-width: 32px; font-weight: 800; cursor: pointer; }
+.coin-card-footer { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--label); margin-top: auto; }
+.card-act { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 36px; gap: 8px; }
+.card-act button { height: 36px; padding: 0 6px; font-size: 0.8rem; font-weight: 600; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; cursor: pointer; font-family: inherit; }
+.card-act .btn-history { color: var(--fg); background: var(--metric-bg); border: 1px solid var(--border); }
+.card-act .btn-history:hover { border-color: var(--accent); color: var(--accent); }
+.card-act .btn-remove { color: #f87171; background: var(--metric-bg); border: 1px solid rgba(248,113,113,.45); }
+.card-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
 </style>
 </head>
 <body>
@@ -516,7 +552,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610192054"></script>
+<script type="module" src="samsam-cloud.js?v=202610192104"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -552,7 +588,8 @@ let currentView = window.innerWidth <= 600 ? 'cards' : 'table';
 function setView(v) {
   currentView = v;
   document.getElementById('tableView').style.display = v === 'table' ? '' : 'none';
-  document.getElementById('cardsView').style.display = v === 'cards' ? 'flex' : 'none';
+  document.getElementById('cardsView').style.display = v === 'cards' ? '' : 'none';
+  document.getElementById('cardsView').classList.toggle('view-active', v === 'cards');
   document.getElementById('btnTable').classList.toggle('active', v === 'table');
   document.getElementById('btnCards').classList.toggle('active', v === 'cards');
   renderAll();
@@ -781,118 +818,80 @@ function renderCards() {
   }
   empty.style.display = 'none';
 
-  wrap.innerHTML = rows.map((entry) => {
+  const L = SAMSAM_LABELS, T = window.SamsamTaxonomy;
+  wrap.innerHTML = rows.map((entry, i) => {
     const idx = accumPlan.indexOf(entry);
     const r   = calcRow(entry);
     const completed = r.progress >= 100;
     const progColor = completed ? '#10b981' : r.progress >= 50 ? '#f59e0b' : '#3b82f6';
     const hasPrice  = r.currentPrice > 0;
-
-    return `<div class="acc-card${completed ? ' completed' : ''}">
-      <div class="acc-card-header">
-        <img class="acc-card-logo" src="${r.logoUrl||''}" onerror="this.style.display='none'" alt="${entry.sym}">
-        <div class="acc-card-title">
-          <div class="acc-card-sym">
-            ${entry.sym}
-            ${completed ? '<span class="completed-badge">✓ Done</span>' : ''}
-            ${(()=>{
-              const ap = entry.alertPrice;
-              if (!ap || ap <= 0 || r.currentPrice <= 0) return '';
-              const hit = r.currentPrice <= ap;
-              return `<span class="alert-badge${hit?' alert-triggered':''}">🔔 $${fmtUSD(ap)}</span>`;
-            })()}
-          </div>
-          <div class="acc-card-name">${r.name}</div>
-        </div>
-        <button class="card-dca-btn" onclick="openDcaModal(${idx})">🧮 DCA</button>
-        <button class="card-del-btn" onclick="removeCoin(${idx})">✕ Remove</button>
-      </div>
-
-      <div>
-        <div class="acc-card-prog-bar">
-          <div class="acc-card-prog-fill" style="width:${r.progress.toFixed(1)}%;background:${progColor}"></div>
-        </div>
-        <div class="acc-card-pct">${SAMSAM_LABELS.PROGRESS}: ${r.progress.toFixed(1)}%</div>
-      </div>
-
-      <div class="acc-card-grid">
-        <div class="acc-card-stat">
-          <div class="lbl">${SAMSAM_LABELS.ACTUAL_AMOUNT}</div>
-          <div class="val">${fmtQty(r.actualQty)} <span style="font-size:.7em;color:var(--fg2)">${entry.sym}</span></div>
-        </div>
-        <div class="acc-card-stat">
-          <div class="lbl">${SAMSAM_LABELS.PENDING_AMOUNT}</div>
-          <div class="val" style="color:${r.pendingQty>0?'var(--red)':'var(--green)'}">
-            ${r.pendingQty > 0 ? fmtQty(r.pendingQty)+' '+entry.sym : '✓ Done'}
+    const holdVal   = r.actualQty * r.currentPrice;
+    const cat = T ? T.categoryOf(entry.sym) : 'other';
+    const ap = entry.alertPrice;
+    const alertHit = ap > 0 && hasPrice && r.currentPrice <= ap;
+    const icon = r.logoUrl
+      ? `<img class="acc-coin-icon" src="${r.logoUrl}" alt="${entry.sym}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'acc-coin-icon acc-coin-fb',textContent:'${entry.sym.slice(0,3)}'}))">`
+      : `<div class="acc-coin-icon acc-coin-fb">${entry.sym.slice(0,3)}</div>`;
+    const metric = (label, val, extra = '') => `<div class="coin-metric"><label>${label}</label><val ${extra}>${val}</val></div>`;
+    return `<div class="coin-card acc-card${completed ? ' completed' : ''}">
+      <div class="coin-card-header">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+          ${icon}
+          <div style="min-width:0">
+            <div class="coin-card-sym" style="font-weight:700;font-size:0.95rem;display:flex;align-items:center;gap:6px">${entry.sym}${completed ? '<span class="completed-badge">✓ Done</span>' : ''}</div>
+            <div style="font-size:0.72rem;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name || ''}</div>
           </div>
         </div>
-        <div class="acc-card-stat">
-          <div class="lbl">${SAMSAM_LABELS.CURRENT_PRICE}</div>
-          <div class="val">${hasPrice ? SamsamFmt.price(r.currentPrice) : '<span class="no-price">No price</span>'}</div>
+        <div>
+          <div style="font-weight:700;font-size:1.1rem;white-space:nowrap">${hasPrice ? SamsamFmt.usd(holdVal) : '—'}</div>
+          <div style="font-size:0.75rem;white-space:nowrap;color:${progColor};font-weight:600">${L.PROGRESS} ${r.progress.toFixed(1)}%</div>
+          <div style="font-size:0.7rem;color:var(--fg2);margin-top:2px">${hasPrice ? '@ ' + SamsamFmt.price(r.currentPrice) : '<span class="no-price">No price</span>'}</div>
         </div>
-        <div class="acc-card-stat">
-          <div class="lbl">${SAMSAM_LABELS.COST_TO_TARGET}</div>
-          <div class="val" style="color:var(--accent)">
-            ${hasPrice && r.pendingQty > 0 ? SamsamFmt.usd(r.costToTarget) : (r.pendingQty===0?'—':'N/A')}
+      </div>
+      <div class="card-cat-row">${T ? `<span class="cat-tag" style="--cat-c:${T.color(cat)}">${T.label(cat)}</span>` : ''}${ap > 0 ? `<span class="alert-badge${alertHit ? ' alert-triggered' : ''}">🔔 ${SamsamFmt.price(ap)}</span>` : ''}</div>
+      <div class="acc-card-prog-bar"><div class="acc-card-prog-fill" style="width:${Math.min(r.progress,100).toFixed(1)}%;background:${progColor}"></div></div>
+      <div class="coin-card-body">
+        ${metric(L.TARGET_AMOUNT, `${fmtQty(entry.targetQty || 0)} <small>${entry.sym}</small>`)}
+        ${metric(L.ACTUAL_AMOUNT, `${fmtQty(r.actualQty)} <small>${entry.sym}</small>`)}
+        ${metric(L.PENDING_AMOUNT, r.pendingQty > 0 ? `${fmtQty(r.pendingQty)} <small>${entry.sym}</small>` : '✓ Done', `style="color:${r.pendingQty > 0 ? 'var(--red)' : 'var(--green)'}"`)}
+        ${metric(L.CURRENT_PRICE, hasPrice ? SamsamFmt.price(r.currentPrice) : '<span class="no-price">No price</span>')}
+        ${metric(L.COST_TO_TARGET, hasPrice && r.pendingQty > 0 ? SamsamFmt.usd(r.costToTarget) : (r.pendingQty === 0 ? '—' : 'N/A'), 'style="color:var(--accent)"')}
+        ${metric(L.BUY_AT, r.targetPrice > 0 ? SamsamFmt.price(r.targetPrice) : '—',
+           r.priceDiff !== null ? `title="${r.readyToBuy ? 'BUY NOW' : r.priceDiff.toFixed(1) + '% above target'}" style="color:${r.readyToBuy ? 'var(--green)' : 'var(--fg)'}"` : '')}
+      </div>
+      <div class="acc-settings">
+        <div class="acc-set-row">
+          <label>🎯 ${L.TARGET_AMOUNT}</label>
+          <div class="acc-set-ctl">
+            <input class="card-target-input" type="number" min="0" step="any" value="${entry.targetQty||''}" placeholder="Amount"
+              oninput="updateTarget(${idx}, this.value)" onblur="commitTarget(${idx}, this.value)" onkeydown="if(event.key==='Enter'){this.blur()}">
+            <span class="sym-tag">${entry.sym}</span>
           </div>
         </div>
-      </div>
-
-      <div class="acc-card-target-row">
-        <label>🎯 ${SAMSAM_LABELS.TARGET_AMOUNT}:</label>
-        <input class="card-target-input" type="number" min="0" step="any"
-          value="${entry.targetQty||''}"
-          placeholder="Amount"
-          oninput="updateTarget(${idx}, this.value)"
-          onblur="commitTarget(${idx}, this.value)"
-          onkeydown="if(event.key==='Enter'){this.blur()}">
-        <span class="sym-tag">${entry.sym}</span>
-      </div>
-      <div class="acc-card-target-row" style="margin-top:6px">
-        <label>💰 ${SAMSAM_LABELS.BUY_AT}:</label>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <button onclick="togglePctSign(${idx})"
-            style="background:var(--bg3);border:1px solid var(--border);color:var(--fg);
-                   border-radius:6px;padding:4px 10px;font-size:0.85rem;cursor:pointer;
-                   font-weight:700;min-width:36px"
-            title="Toggle positive/negative">
-            ${(entry.targetPct||0) >= 0 ? '+' : '−'}
-          </button>
-          <input class="card-target-input" type="text" inputmode="decimal"
-            id="pctInput_${idx}"
-            value="${entry.targetPct ? Math.abs(entry.targetPct) : ''}"
-            placeholder="20"
-            oninput="updateTargetPctAbs(${idx}, this.value)"
-            onblur="commitTargetPctAbs(${idx}, this.value)"
-            onkeydown="if(event.key==='Enter'){this.blur()}"
-            style="width:55px;text-align:center">
-          <span style="font-size:0.75rem;color:var(--fg2)">%</span>
-          ${r.targetPrice > 0 ? `<span style="font-size:0.78rem;color:var(--accent);font-weight:600">→ ${SamsamFmt.price(r.targetPrice)}</span>` : ''}
+        <div class="acc-set-row">
+          <label>💰 ${L.BUY_AT}</label>
+          <div class="acc-set-ctl">
+            <button type="button" class="acc-sign" onclick="togglePctSign(${idx})" title="Toggle positive/negative">${(entry.targetPct||0) >= 0 ? '+' : '−'}</button>
+            <input class="card-target-input" type="text" inputmode="decimal" id="pctInput_${idx}" value="${entry.targetPct ? Math.abs(entry.targetPct) : ''}" placeholder="20"
+              oninput="updateTargetPctAbs(${idx}, this.value)" onblur="commitTargetPctAbs(${idx}, this.value)" onkeydown="if(event.key==='Enter'){this.blur()}" style="text-align:center">
+            <span class="sym-tag">%</span>
+          </div>
+          ${r.priceDiff !== null ? `<div class="acc-set-note" style="color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${r.readyToBuy ? '🟢 BUY NOW!' : `🔴 ${r.priceDiff.toFixed(1)}% above target`}</div>` : ''}
         </div>
-        ${r.priceDiff !== null ? `<div style="font-size:0.7rem;margin-top:4px;color:${r.readyToBuy?'var(--green)':'var(--red)'}">
-          ${r.readyToBuy ? '🟢 BUY NOW!' : `🔴 ${r.priceDiff.toFixed(1)}% above target`}
-        </div>` : ''}
+        <div class="acc-set-row">
+          <label>🔔 ${L.PRICE_ALERT}</label>
+          <div class="acc-set-ctl">
+            <input class="card-target-input" type="text" inputmode="decimal" value="${ap > 0 ? ap : ''}" placeholder="Price $"
+              oninput="updateAlert(${idx}, this.value)" onblur="commitAlert(${idx}, this.value)" onkeydown="if(event.key==='Enter'){this.blur()}" title="Alert when price drops to or below this value">
+            ${ap > 0 ? `<button class="alert-clear-btn" onclick="clearAlert(${idx})" title="Clear alert">✕</button>` : ''}
+          </div>
+          ${ap > 0 && hasPrice ? `<div class="acc-set-note" style="color:${alertHit ? 'var(--green)' : 'var(--fg2)'}">${alertHit ? '✅ Hit!' : ((r.currentPrice - ap) / ap * 100).toFixed(1) + '% away'}</div>` : ''}
+        </div>
       </div>
-
-      <div class="acc-card-alert-row">
-        <label>🔔 ${SAMSAM_LABELS.PRICE_ALERT}:</label>
-        <input class="alert-input" type="text" inputmode="decimal"
-          value="${entry.alertPrice > 0 ? entry.alertPrice : ''}"
-          placeholder="Price $"
-          oninput="updateAlert(${idx}, this.value)"
-          onblur="commitAlert(${idx}, this.value)"
-          onkeydown="if(event.key==='Enter'){this.blur()}"
-          title="Alert when price drops to or below this value">
-        ${entry.alertPrice > 0 ? `<button class="alert-clear-btn" onclick="clearAlert(${idx})" title="Clear alert">✕</button>` : ''}
-        ${(()=>{
-          const ap = entry.alertPrice;
-          if (!ap || ap <= 0 || r.currentPrice <= 0) return '';
-          const hit = r.currentPrice <= ap;
-          const diff = ((r.currentPrice - ap) / ap * 100);
-          return hit
-            ? `<span style="font-size:0.7rem;color:var(--green);white-space:nowrap">✅ Hit!</span>`
-            : `<span style="font-size:0.7rem;color:var(--fg2);white-space:nowrap">${diff.toFixed(1)}% away</span>`;
-        })()}
+      <div class="coin-card-footer"><span>#${i + 1}</span><span>${entry.addedAt && /^\d{4}-/.test(entry.addedAt) ? entry.addedAt.slice(0, 10) : ''}</span></div>
+      <div class="card-act">
+        <button class="btn-history" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">🧮 DCA</button>
+        <button class="btn-remove" onclick="removeCoin(${idx})" title="Remove ${entry.sym} from plan">✕ Remove</button>
       </div>
     </div>`;
   }).join('');

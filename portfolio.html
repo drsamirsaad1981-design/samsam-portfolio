@@ -11,11 +11,11 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610192040"></script>
-<script src="samsam-labels.js?v=202610192040"></script>
-<script src="samsam-taxonomy.js?v=202610192040"></script>
-<script src="samsam-dropdown.js?v=202610192040"></script>
-<script src="samsam-chart.js?v=202610192040"></script>
+<script src="samsam-ui.js?v=202610192054"></script>
+<script src="samsam-labels.js?v=202610192054"></script>
+<script src="samsam-taxonomy.js?v=202610192054"></script>
+<script src="samsam-dropdown.js?v=202610192054"></script>
+<script src="samsam-chart.js?v=202610192054"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1331,7 +1331,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610192040"></script>
+<script type="module" src="samsam-cloud.js?v=202610192054"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -1764,14 +1764,15 @@ function renderSummary() {
   portfolio.forEach(c => { const k = c.cat || 'other'; catTotals[k] = (catTotals[k] || 0) + c.qty * c.currentPrice; });
   const allTotal = portfolio.reduce((s, c) => s + c.qty * c.currentPrice, 0);
   const dot = color => `<span class="cp-dot" style="background:${color}"></span>`;
+  const ORDER = ['layer1', 'layer2', 'ai', 'layer0', 'oracle', 'defi', 'meme', 'launchpad', 'web3'];
+  const keys = ORDER.concat(T.list.map(c => c.key).filter(k => !ORDER.includes(k) && (k !== 'other' || catTotals.other)));
   const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(allTotal), icon: '<span class="cp-globe">🌐</span>' }]
-    .concat(Object.entries(catTotals).sort((a, b) => b[1] - a[1])
-      .map(([k, v]) => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(v), icon: dot(T.color(k)) })));
+    .concat(keys.map(k => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(catTotals[k] || 0), icon: dot(T.color(k)) })));
   const grid = document.getElementById('summaryGrid');
   if (!catPickerDD) {
     grid.innerHTML = '<div class="cat-picker" id="catPicker"><div id="catPickerDD"></div></div>';
     catPickerDD = SamsamDropdown.create(document.getElementById('catPickerDD'), {
-      options, value: 'all', ariaLabel: 'Category', title: 'Choose a category', minWidth: 260,
+      options, value: 'all', ariaLabel: 'Category', title: 'Choose a category', minWidth: 260, maxHeight: 360,
       onChange: v => setCatFilter(v === 'all' ? '' : v, true),
     });
     const btn = catPickerDD.button;
@@ -1902,7 +1903,7 @@ function renderTableAndStack() {
           <div>
             <div style="font-weight:700;font-size:1rem;white-space:nowrap">${SamsamFmt.usd(curVal)}</div>
             <div class="${pnlCls}" style="font-size:0.75rem;white-space:nowrap">${SamsamFmt.usdSigned(pnl)} (${pnlSign}${pnlPct.toFixed(1)}%)</div>
-            <div style="font-size:0.7rem;color:var(--fg2);margin-top:2px">@ $${c.currentPrice}</div>
+            <div style="font-size:0.7rem;color:var(--fg2);margin-top:2px">@ ${SamsamFmt.price(c.currentPrice)}</div>
           </div>
         </div>
         <div class="card-cat-row">${catTag(c.cat)}</div>
@@ -2078,7 +2079,7 @@ function deleteTx(txId) {
   const fmtN = n => n < 1 ? n.toFixed(6) : n < 10 ? n.toFixed(4) : n.toFixed(2);
   const what = tx.type === 'adjust'
     ? `this manual edit of ${tx.sym}`
-    : `this ${tx.type.replace('_', ' ').toUpperCase()} transaction?\n\n${fmtN(tx.qty)} ${tx.sym}` + (tx.type === 'transfer_out' ? '' : ` @ $${tx.price.toFixed(4)} = ${SamsamFmt.usd(tx.qty*tx.price)}`);
+    : `this ${tx.type.replace('_', ' ').toUpperCase()} transaction?\n\n${fmtN(tx.qty)} ${tx.sym}` + (tx.type === 'transfer_out' ? '' : ` @ ${SamsamFmt.price(tx.price)} = ${SamsamFmt.usd(tx.qty*tx.price)}`);
   // Warn if a later sale would then exceed the remaining holdings.
   let oversell = '';
   try {
