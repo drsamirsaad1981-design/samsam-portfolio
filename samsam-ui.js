@@ -107,6 +107,15 @@
   window.SamsamFmt = {
     usd: function (n) { n = +n || 0; var a = Math.abs(n); if (a > 0 && a < 0.005) return (n < 0 ? '-' : '') + '<$0.01'; return (n < 0 && a >= 0.005 ? '-' : '') + '$' + usdFmt.format(a); },
     usdSigned: function (n) { n = +n || 0; return (n >= 0 ? '+' : '-') + window.SamsamFmt.usd(Math.abs(n)); },
+    // Unit price / average price, one rule everywhere:
+    // >= $10 → 2 decimals ($82,577.00) · $0.01–$10 → 4 decimals ($4.7450, $1.0188) · < $0.01 → 4 significant digits ($0.0006003)
+    price: function (n) {
+      n = +n || 0; var a = Math.abs(n), s = n < 0 ? '-' : '';
+      if (a === 0) return '$0.00';
+      if (a >= 10) return s + '$' + usdFmt.format(a);
+      if (a >= 0.01) return s + '$' + a.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+      return s + '$' + a.toPrecision(4).replace(/(\.\d*?[1-9])0+$/, '$1');
+    },
     num2: function (n) { return usdFmt.format(+n || 0); },
   };
   window.SamsamUI = { icons: ICONS, icon: function (n) { return ICONS[n] || ''; }, liveDot: liveDot,

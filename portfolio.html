@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610191534"></script>
-<script src="samsam-dropdown.js?v=202610191534"></script>
-<script src="samsam-chart.js?v=202610191534"></script>
+<script src="samsam-ui.js?v=202610191550"></script>
+<script src="samsam-dropdown.js?v=202610191550"></script>
+<script src="samsam-chart.js?v=202610191550"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -973,6 +973,25 @@
   .summary-card { background: var(--card-solid); }
   .summary-card .label { color: var(--label); font-weight: 600; }
   .summary-card .value { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+  /* ── Table view polish ── */
+  .view-seg { display: inline-flex; gap: 0; }
+  .view-seg .btn { border-radius: 0; }
+  .view-seg .btn:first-child { border-radius: 10px 0 0 10px; }
+  .view-seg .btn:last-child { border-radius: 0 10px 10px 0; margin-left: -1px; }
+  #portfolioTable th.num-r, #portfolioTable td.num-r { text-align: right; font-variant-numeric: tabular-nums; }
+  #portfolioTable td.num-r { white-space: nowrap; }
+  #portfolioTable td, #portfolioTable th { padding-left: 8px; padding-right: 8px; }
+  #portfolioTable .perf-badge, #portfolioTable .action-badge { white-space: nowrap; }
+  .price-cell { position: relative; display: inline-block; }
+  .price-edit { position: absolute; right: calc(100% + 4px); top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 0.72rem; padding: 2px; opacity: 0; transition: opacity .15s; }
+  #portfolioTable tr:hover .price-edit, .price-edit:focus-visible { opacity: .7; }
+  .price-edit:hover { opacity: 1 !important; }
+  .row-act { grid-template-columns: 1fr 1fr; grid-auto-rows: 28px; gap: 5px; width: 150px; margin: 0 auto; }
+  .row-act button { height: 28px; padding: 0 6px !important; font-size: 0.74rem !important; font-weight: 600; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap; line-height: 1; width: 100%; }
+  .row-act .btn-history { color: var(--fg); background: var(--metric-bg); border: 1px solid var(--border); }
+  .row-act .btn-remove { color: #f87171; background: var(--metric-bg); border: 1px solid rgba(248,113,113,.45); }
+  .row-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+  .row-act .btn-history::after, .row-act .btn-history::before { display: none; }
 </style>
 </head>
 <body>
@@ -1131,7 +1150,10 @@
     <button class="btn btn-secondary" onclick="exportData()">💾 CSV</button>
     <button class="btn btn-secondary" onclick="exportPdf()">📄 PDF</button>
     <button class="btn btn-secondary" onclick="openAddCoin()">➕ Add</button>
-    <button class="btn btn-secondary" id="viewToggleBtn" onclick="toggleView()">📋 Table</button>
+    <div class="view-seg" id="viewToggleBtn" role="group" aria-label="View">
+      <button type="button" class="btn btn-secondary" data-view="table" onclick="applyView('table')">📋 Table</button>
+      <button type="button" class="btn btn-secondary" data-view="cards" onclick="applyView('cards')">🃏 Cards</button>
+    </div>
   </div>
   <div class="control-row">
     <a href="./accumulation.html" class="btn btn-secondary" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">🎯 Accumulation Plan</a>
@@ -1140,7 +1162,7 @@
   </div>
   <div class="control-row">
     <select class="btn btn-secondary" id="filterAction" onchange="sortCol='currentValue';sortDir=1;renderTableAndStack()" style="cursor:pointer;">
-      <option value="">All Coins</option>
+      <option value="">⚡ All signals</option>
       <option value="gainers">🟢 Top Gainers</option>
       <option value="losers">🔴 Top Losers</option>
       <option value="convert">🔴 Sell / Convert to BTC</option>
@@ -1162,12 +1184,12 @@
       <tr>
         <th onclick="sortTable('rank')">#</th>
         <th onclick="sortTable('name')" style="text-align:left">Coin</th>
-        <th onclick="sortTable('qty')">Qty</th>
-        <th onclick="sortTable('basePrice')">Avg. Buy Price</th>
-        <th onclick="sortTable('currentPrice')">Current Price</th>
-        <th onclick="sortTable('baseValue')">Cost Basis</th>
-        <th onclick="sortTable('currentValue')">Holdings / Current Value</th>
-        <th onclick="sortTable('pnl')">P&L</th>
+        <th class="num-r" onclick="sortTable('qty')">Qty</th>
+        <th class="num-r" onclick="sortTable('basePrice')">Avg. Buy Price</th>
+        <th class="num-r" onclick="sortTable('currentPrice')">Current Price</th>
+        <th class="num-r" onclick="sortTable('baseValue')">Cost Basis</th>
+        <th class="num-r" onclick="sortTable('currentValue')">Holdings / Current Value</th>
+        <th class="num-r" onclick="sortTable('pnl')">P&L</th>
         <th onclick="sortTable('perf')">Perf vs BTC</th>
         <th onclick="sortTable('action')">Signal</th>
         <th>📝 Notes</th>
@@ -1288,7 +1310,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610191534"></script>
+<script type="module" src="samsam-cloud.js?v=202610191550"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -1785,12 +1807,12 @@ function renderTableAndStack() {
           ${getCoinIconLinked(c.sym,32)}
           ${getCoinNameLinked(c.sym)}
         </div></td>
-        <td class="ro-num" title="Changes only through Buy / Sell / Transfer">${fmtQtyRO(c.qty)}</td>
-        <td class="ro-num" style="color:var(--fg2)" title="Calculated from Buy / Sell / Transfer">${fmtAvgRO(c.basePrice)}</td>
-        <td><input type="number" class="editable-input" value="${fmtInput(c.currentPrice)}" step="any" onchange="updatePrice('${c.sym}',this.value)"></td>
-        <td style="color:var(--fg2)">${SamsamFmt.usd(baseVal)}</td>
-        <td style="font-weight:700">${SamsamFmt.usd(curVal)}</td>
-        <td><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${pnlSign}${SamsamFmt.usd(Math.abs(pnl))}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
+        <td class="ro-num num-r" title="Changes only through Buy / Sell / Transfer">${fmtQtyRO(c.qty)}</td>
+        <td class="ro-num num-r" style="color:var(--fg2)" title="Calculated from Buy / Sell / Transfer">${fmtAvgRO(c.basePrice)}</td>
+        <td class="ro-num num-r"><span class="price-cell">${fmtPriceRO(c.currentPrice)}<button type="button" class="price-edit" onclick="promptPrice('${c.sym}')" title="Set a manual price (only used when there is no live market price)">✏️</button></span></td>
+        <td class="ro-num num-r" style="color:var(--fg2)">${SamsamFmt.usd(baseVal)}</td>
+        <td class="ro-num num-r" style="font-weight:700">${SamsamFmt.usd(curVal)}</td>
+        <td class="num-r"><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${SamsamFmt.usdSigned(pnl)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
         <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
         <td><span class="action-badge action-${action}">${actionLabel}</span></td>
         <td style="min-width:120px">
@@ -1800,17 +1822,13 @@ function renderTableAndStack() {
             title="Add a note for ${c.sym}">
         </td>
         <td style="text-align:center;white-space:nowrap">
-          <div style="display:inline-flex;flex-direction:column;gap:4px;align-items:center">
-            <div class="act-grid">
-              <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')" title="Buy ${c.sym}">+ Buy</button>
-              <button class="btn-sell" onclick="openSell('${c.sym}')" title="Sell ${c.sym}">− Sell</button>
-              <button class="btn-tin" onclick="openTransferIn('${c.sym}')" title="Transfer In ${c.sym}">↓ In</button>
-              <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="Transfer Out ${c.sym}">↑ Out</button>
-            </div>
-            <div style="display:flex;gap:4px">
-              <button class="btn-history" onclick="openHistory('${c.sym}')" title="History">📋</button>
-              <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove">✕</button>
-            </div>
+          <div class="act-grid row-act">
+            <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')" title="Buy ${c.sym}">+ Buy</button>
+            <button class="btn-sell" onclick="openSell('${c.sym}')" title="Sell ${c.sym}">− Sell</button>
+            <button class="btn-tin" onclick="openTransferIn('${c.sym}')" title="Transfer In ${c.sym}">↓ In</button>
+            <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="Transfer Out ${c.sym}">↑ Out</button>
+            <button class="btn-history" onclick="openHistory('${c.sym}')" title="History of ${c.sym}">📋 History</button>
+            <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove ${c.sym}">✕ Remove</button>
           </div>
         </td>
       </tr>`;
@@ -1838,7 +1856,7 @@ function renderTableAndStack() {
           </div>
           <div>
             <div style="font-weight:700;font-size:1rem;white-space:nowrap">${SamsamFmt.usd(curVal)}</div>
-            <div class="${pnlCls}" style="font-size:0.75rem;white-space:nowrap">${pnlSign}${SamsamFmt.usd(Math.abs(pnl))} (${pnlSign}${pnlPct.toFixed(1)}%)</div>
+            <div class="${pnlCls}" style="font-size:0.75rem;white-space:nowrap">${SamsamFmt.usdSigned(pnl)} (${pnlSign}${pnlPct.toFixed(1)}%)</div>
             <div style="font-size:0.7rem;color:var(--fg2);margin-top:2px">@ $${c.currentPrice}</div>
           </div>
         </div>
@@ -1874,6 +1892,11 @@ function renderTableAndStack() {
 }
 
 // Manual price: synced via the cloud; live market prices (when available) take precedence.
+function promptPrice(sym) {
+  const c = portfolio.find(x => x.sym === sym); if (!c) return;
+  const v = prompt(`Manual price for ${sym} (USD).\nOnly used when there is no live market price.`, c.currentPrice || '');
+  if (v != null && v !== '') updatePrice(sym, v.replace(/[$,\s]/g, ''));
+}
 function updatePrice(sym, val) {
   const n = parseFloat(val);
   if (n > 0 && requireCloud()) cloudWrite(Samsam.setManualPrice(sym, n));
@@ -1887,6 +1910,7 @@ function updateNote(sym, val) {
 // ledger (opening position + Buy / Sell / Transfer In / Transfer Out), so every number
 // can be traced to a transaction.
 const fmtQtyRO = n => parseFloat((+n || 0).toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
+const fmtPriceRO = n => { n = +n || 0; return n >= 1 ? SamsamFmt.usd(n) : '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: n >= 0.01 ? 4 : 8 }); };
 const fmtAvgRO = n => { n = +n || 0; return '$' + n.toLocaleString('en-US', { minimumFractionDigits: n >= 1 ? 2 : 0, maximumFractionDigits: n >= 1000 ? 2 : n >= 1 ? 4 : 8 }); };
 
 // ── Buy / Sell / Transfer In / Transfer Out ──────────
@@ -2230,7 +2254,7 @@ function renderDashboard() {
     const sign=pnl>=0?'+':'';
     return `<div class="pnl-row">
       <span class="pnl-label"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};margin-right:6px;vertical-align:middle"></span>${CAT_LABELS[cat]||cat}</span>
-      <span class="pnl-val ${cls}">${sign}${SamsamFmt.usd(Math.abs(pnl))} (${sign}${pnlPct.toFixed(1)}%)</span>
+      <span class="pnl-val ${cls}">${SamsamFmt.usdSigned(pnl)} (${sign}${pnlPct.toFixed(1)}%)</span>
     </div>`;
   }).join('');
 
@@ -2248,7 +2272,7 @@ function renderDashboard() {
     <div class="pnl-row pnl-total" style="margin-bottom:10px">
       <span class="pnl-label" style="font-weight:700;color:var(--accent)">📈 Unrealized P&L</span>
       <div style="text-align:right">
-        <div class="pnl-val ${totalCls}" style="font-size:1.05rem">${totalSign}${SamsamFmt.usd(Math.abs(totalPnl))}</div>
+        <div class="pnl-val ${totalCls}" style="font-size:1.05rem">${SamsamFmt.usdSigned(totalPnl)}</div>
         <div class="${totalCls}" style="font-size:0.75rem;opacity:0.85">${totalSign}${totalPnlPct.toFixed(2)}%</div>
       </div>
     </div>
@@ -2366,17 +2390,13 @@ function applyView(view) {
   const stack   = document.getElementById('coinsStack');
   const table   = document.getElementById('portfolioTableWrapper');
   const btn     = document.getElementById('viewToggleBtn');
-  if (view === 'table') {
-    stack.classList.remove('view-active');
-    table.classList.add('view-active');
-    btn.textContent = '🃏 Cards';
-    btn.classList.add('btn-toggle-active');
-  } else {
-    table.classList.remove('view-active');
-    stack.classList.add('view-active');
-    btn.textContent = '📋 Table';
-    btn.classList.remove('btn-toggle-active');
-  }
+  stack.classList.toggle('view-active', view !== 'table');
+  table.classList.toggle('view-active', view === 'table');
+  // Light up the button of the view that is actually on screen
+  btn.querySelectorAll('button').forEach(b => {
+    const on = b.dataset.view === (view === 'table' ? 'table' : 'cards');
+    b.classList.toggle('btn-toggle-active', on); b.setAttribute('aria-pressed', String(on));
+  });
   try { localStorage.setItem(VIEW_KEY, view); } catch(e) {}
 }
 

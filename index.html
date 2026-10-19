@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610191550"></script>
-<script src="samsam-dropdown.js?v=202610191550"></script>
-<script src="samsam-chart.js?v=202610191550"></script>
+<script src="samsam-ui.js?v=202610191612"></script>
+<script src="samsam-dropdown.js?v=202610191612"></script>
+<script src="samsam-chart.js?v=202610191612"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -366,6 +366,7 @@
     overflow-x: auto;
     border-radius: 12px;
     border: 1px solid var(--border);
+    margin-top: 16px;
     margin-bottom: 20px;
   }
   .table-wrapper.view-active { display: block; }
@@ -616,8 +617,9 @@
   .summary-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    margin-top: 10px;
+    gap: 12px;
+    margin: 16px 0;
+    padding-top: 2px;   /* room for the 1px hover lift + active glow */
   }
   @media(max-width: 700px) {
     .summary-grid { grid-template-columns: repeat(2, 1fr); }
@@ -978,7 +980,7 @@
   .view-seg .btn { border-radius: 0; }
   .view-seg .btn:first-child { border-radius: 10px 0 0 10px; }
   .view-seg .btn:last-child { border-radius: 0 10px 10px 0; margin-left: -1px; }
-  #portfolioTable th.num-r, #portfolioTable td.num-r { text-align: right; font-variant-numeric: tabular-nums; }
+  #portfolioTable th.num-r, #portfolioTable td.num-r { text-align: center; font-variant-numeric: tabular-nums; }
   #portfolioTable td.num-r { white-space: nowrap; }
   #portfolioTable td, #portfolioTable th { padding-left: 8px; padding-right: 8px; }
   #portfolioTable .perf-badge, #portfolioTable .action-badge { white-space: nowrap; }
@@ -1310,7 +1312,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610191550"></script>
+<script type="module" src="samsam-cloud.js?v=202610191612"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -1910,8 +1912,8 @@ function updateNote(sym, val) {
 // ledger (opening position + Buy / Sell / Transfer In / Transfer Out), so every number
 // can be traced to a transaction.
 const fmtQtyRO = n => parseFloat((+n || 0).toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
-const fmtPriceRO = n => { n = +n || 0; return n >= 1 ? SamsamFmt.usd(n) : '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: n >= 0.01 ? 4 : 8 }); };
-const fmtAvgRO = n => { n = +n || 0; return '$' + n.toLocaleString('en-US', { minimumFractionDigits: n >= 1 ? 2 : 0, maximumFractionDigits: n >= 1000 ? 2 : n >= 1 ? 4 : 8 }); };
+const fmtPriceRO = n => SamsamFmt.price(n);
+const fmtAvgRO = n => SamsamFmt.price(n);
 
 // ── Buy / Sell / Transfer In / Transfer Out ──────────
 // Every action opens the same Add Transaction form (see openAddTx).
@@ -3182,7 +3184,7 @@ function renderCoinTx() {
   const coin = portfolio.find(c => c.sym === sym);
   const doc = st.coins.find(c => c.sym === sym);
   const usd = (n, d = 2) => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
-  const priceFmt = n => usd(n, n >= 1000 ? 2 : n >= 1 ? 4 : n >= 0.01 ? 6 : 8).replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
+  const priceFmt = n => SamsamFmt.price(n);
   const qtyFmt = n => parseFloat(Number(n).toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
 
   // ── Summary cards ──

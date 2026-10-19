@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610191550"></script>
-<script src="samsam-chart.js?v=202610191550"></script>
+<script src="samsam-ui.js?v=202610191612"></script>
+<script src="samsam-chart.js?v=202610191612"></script>
 <title>Portfolio Performance</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
@@ -615,7 +615,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610191550"></script>
+<script type="module" src="samsam-cloud.js?v=202610191612"></script>
 <script>
 // ── Constants ──
 
@@ -840,6 +840,9 @@ function fmtUSD(v) {
   return SamsamFmt.usd(v);   // shared app-wide format: $10,660.13
 }
 function fmtPrice(v) {
+  return SamsamFmt.price(v);   // shared rule: >=$10 2 dp, $0.01–$10 4 dp, <$0.01 4 significant
+}
+function fmtPriceOld(v) {
   if (v >= 10000) return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
   if (v >= 1000)  return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
   if (v >= 1)     return SamsamFmt.usd(v);
