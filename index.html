@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610200006"></script>
-<script src="samsam-labels.js?v=202610200006"></script>
-<script src="samsam-taxonomy.js?v=202610200006"></script>
-<script src="samsam-coins.js?v=202610200006"></script>
-<script src="samsam-dropdown.js?v=202610200006"></script>
-<script src="samsam-chart.js?v=202610200006"></script>
+<script src="samsam-ui.js?v=202610200013"></script>
+<script src="samsam-labels.js?v=202610200013"></script>
+<script src="samsam-taxonomy.js?v=202610200013"></script>
+<script src="samsam-coins.js?v=202610200013"></script>
+<script src="samsam-dropdown.js?v=202610200013"></script>
+<script src="samsam-chart.js?v=202610200013"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -97,13 +97,14 @@
     margin-bottom: 12px;
     position: relative;
   }
-  /* Theme toggle: top-right corner of the header (same spot on every page) */
-  .header-theme-btn { position: absolute; top: 14px; right: 14px; z-index: 2; }
-  /* Room for the two corner buttons (cloud status + theme): 36 + 8 + 36 + 14 */
+  /* Cloud status + theme buttons: top-right corner on phones; on desktop they sit at the end of the
+     header row, vertically centred with the date / Live badges */
+  .hdr-btns { position: absolute; top: 14px; right: 14px; z-index: 2; display: flex; align-items: center; gap: 8px; }
   .logo-area { padding-right: 96px; }
   @media (min-width: 900px) {
     .logo-area { padding-right: 0; }
-    .header-top { padding-right: 100px; }
+    .hdr-btns { position: static; align-self: center; margin-left: 12px; padding-right: 2px; }
+    .header-top > div:nth-last-child(2) { margin-left: auto; }
   }
 
   .header-top {
@@ -176,7 +177,7 @@
 
   .stat-label { font-size: 0.7rem; color: var(--fg2); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
   .stat-value { font-size: 1rem; font-weight: 700; word-break: break-all; }
-  .stat-sub { font-size: 0.72rem; color: var(--fg2); margin-top: 3px; font-weight: 500; opacity: 0.85; }
+  .stat-sub { font-size: 0.74rem; color: var(--label, #a3b1c6); margin-top: 4px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .stat-btc { color: var(--btc); }
   .stat-pos { color: var(--green); }
   .stat-neg { color: var(--red); }
@@ -203,6 +204,10 @@
   .bt-sep { width: 4px; height: 4px; border-radius: 50%; background: var(--fg2); opacity: .35; }
   .bt-up { color: var(--green); font-weight: 700; } .bt-down { color: var(--red); font-weight: 700; }
   @keyframes btcTickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .btc-ticker.static { justify-content: center; -webkit-mask-image: none; mask-image: none; }
+  .btc-ticker.static .btc-ticker-track { animation: none; transform: none; width: auto; }
+  .btc-ticker.static .btc-ticker-group[aria-hidden] { display: none; }
+  .btc-ticker.static .btc-ticker-group { padding: 0 14px; }
   @media (prefers-reduced-motion: reduce) {
     .btc-ticker-track { animation: none; }
     .btc-ticker { -webkit-mask-image: none; mask-image: none; overflow-x: auto; }
@@ -464,14 +469,8 @@
       word-break: break-all;
     }
 
-    /* Sub value: smaller, muted */
-    .stat-sub {
-      font-size: 0.72rem;
-      color: var(--fg2);
-      opacity: 0.8;
-      margin-top: 5px;
-      font-weight: 500;
-    }
+    /* Sub value: smaller, but bright enough to read on the dark cards */
+    .stat-sub { font-size: 0.76rem; margin-top: 5px; }
 
     /* ── Perf chart & progress bars ── */
     .perf-chart-wrap { border-radius: 14px; padding: 18px 22px; margin-bottom: 14px; }
@@ -1099,7 +1098,6 @@
 </div>
 
 <header>
-  <button type="button" class="ss-theme-btn header-theme-btn" data-theme-toggle></button>
   <div class="header-top">
     <div class="logo-area">
       <img class="btc-icon" src="https://assets.coingecko.com/coins/images/1/large/bitcoin.png" alt="Bitcoin" onerror="this.style.cssText='width:44px;height:44px;background:radial-gradient(circle,#f7931a,#e8821a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0';this.outerHTML='<div class=\'btc-icon-fallback\'>₿</div>'">
@@ -1115,6 +1113,7 @@
       <div class="date-tag ss-date-label" id="currentDate" style="text-align:left;white-space:nowrap"></div>
       <div id="liveIndicator" class="date-tag" style="display:flex;align-items:center;gap:5px;justify-content:flex-start"><span class="ss-live" data-state="loading"></span> Loading…</div>
     </div>
+    <div class="hdr-btns"><button type="button" class="ss-theme-btn" data-theme-toggle></button></div>
   </div>
 
   <div class="header-stats">
@@ -1398,7 +1397,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610200006"></script>
+<script type="module" src="samsam-cloud.js?v=202610200013"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1714,7 +1713,21 @@ function renderBtcTicker() {
   _tickerKey = group;
   // Two identical copies → seamless loop (animation moves exactly one copy's width)
   track.innerHTML = `<div class="btc-ticker-group">${group}</div><div class="btc-ticker-group" aria-hidden="true">${group}</div>`;
+  fitBtcTicker();
 }
+// Fits on screen → show it once, still (nothing repeated or cut). Too long → scroll, with each copy at least as
+// wide as the bar so the same value is never visible twice at the same time.
+function fitBtcTicker() {
+  const bar = document.getElementById('btcTicker'), track = document.getElementById('btcTickerTrack');
+  if (!bar || !track || !track.firstElementChild) return;
+  const groups = track.querySelectorAll('.btc-ticker-group');
+  groups.forEach(g => g.style.minWidth = '');
+  bar.classList.remove('static');
+  const fits = groups[0].scrollWidth <= bar.clientWidth - 8;
+  bar.classList.toggle('static', fits);
+  if (!fits) groups.forEach(g => g.style.minWidth = bar.clientWidth + 'px');
+}
+if (window.ResizeObserver) document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('btcTicker'); if (b) { let t; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(fitBtcTicker, 80); }).observe(b); } });
 
 let activeCatFilter = '';
 
