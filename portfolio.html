@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610200101"></script>
-<script src="samsam-labels.js?v=202610200101"></script>
-<script src="samsam-taxonomy.js?v=202610200101"></script>
-<script src="samsam-coins.js?v=202610200101"></script>
-<script src="samsam-dropdown.js?v=202610200101"></script>
-<script src="samsam-chart.js?v=202610200101"></script>
+<script src="samsam-ui.js?v=202610200113"></script>
+<script src="samsam-labels.js?v=202610200113"></script>
+<script src="samsam-taxonomy.js?v=202610200113"></script>
+<script src="samsam-coins.js?v=202610200113"></script>
+<script src="samsam-dropdown.js?v=202610200113"></script>
+<script src="samsam-chart.js?v=202610200113"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1409,7 +1409,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610200101"></script>
+<script type="module" src="samsam-cloud.js?v=202610200113"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3660,7 +3660,7 @@ function renderHoldingsAssetList() {
     .htx-fab:focus-visible { outline:3px solid #93c5fd; outline-offset:3px; }
     .htx-filters { align-items:center; }
     .htx-add-btn { margin-left:auto; display:inline-flex; align-items:center; gap:7px; height:38px; padding:0 16px; border:none; border-radius:10px;
-      background:#2563eb; color:#fff; font:inherit; font-size:.88rem; font-weight:700; cursor:pointer; white-space:nowrap; box-shadow:0 4px 12px rgba(37,99,235,.35);
+      background:#2563eb; color:#fff; font:inherit; font-size:.88rem; font-weight:700; cursor:pointer; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,.25);
       -webkit-tap-highlight-color:transparent; transition:background .15s, transform .12s; }
     .htx-add-btn:hover { background:#1d4ed8; } .htx-add-btn:active { transform:scale(.97); }
     .htx-add-btn:focus-visible { outline:3px solid #93c5fd; outline-offset:2px; }
