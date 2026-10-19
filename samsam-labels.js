@@ -19,6 +19,7 @@
     ALL_TYPES: 'All Types',
     HISTORY: 'History',
     REMOVE: 'Remove',
+    ADD_COIN: 'Add New Coin',
     // Accumulation Plan (table and cards use the same words)
     TARGET_AMOUNT: 'Target Amount',
     ACTUAL_AMOUNT: 'Actual Amount',

@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610192301"></script>
-<script src="samsam-labels.js?v=202610192301"></script>
-<script src="samsam-taxonomy.js?v=202610192301"></script>
-<script src="samsam-coins.js?v=202610192301"></script>
-<script src="samsam-dropdown.js?v=202610192301"></script>
-<script src="samsam-chart.js?v=202610192301"></script>
+<script src="samsam-ui.js?v=202610192305"></script>
+<script src="samsam-labels.js?v=202610192305"></script>
+<script src="samsam-taxonomy.js?v=202610192305"></script>
+<script src="samsam-coins.js?v=202610192305"></script>
+<script src="samsam-dropdown.js?v=202610192305"></script>
+<script src="samsam-chart.js?v=202610192305"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1213,7 +1213,7 @@
     <button type="button" class="btn btn-secondary" data-view="cards" onclick="applyView('cards')">🃏 Cards</button>
   </div>
   <div class="tb-actions">
-    <button class="btn btn-secondary tb-mobile-only" onclick="openAddCoin()">➕ Add</button>
+    <button class="btn btn-secondary tb-mobile-only" onclick="openAddCoin()" title="Add a new coin to your portfolio">➕ <span data-label="ADD_COIN">Add New Coin</span></button>
     <button class="btn btn-secondary tb-mobile-only" onclick="openAnalysis()">🤖 AI Analysis</button>
     <button class="btn btn-secondary" onclick="exportData()">💾 CSV</button>
     <button class="btn btn-secondary" onclick="exportPdf()">📄 PDF</button>
@@ -1227,7 +1227,7 @@
   <div class="search-input-wrapper"><input type="search" class="search-box" id="searchBox" placeholder="🔍 Search coin..." autocomplete="off" aria-label="Search coin"></div>
   <div class="controls-right-group">
     <div class="signal-filter-select" id="signalDD"></div>
-    <button class="btn btn-secondary tb-desktop-only" onclick="openAddCoin()">➕ Add</button>
+    <button class="btn btn-secondary tb-desktop-only" onclick="openAddCoin()" title="Add a new coin to your portfolio">➕ <span data-label="ADD_COIN">Add New Coin</span></button>
     <button class="btn btn-secondary tb-desktop-only" onclick="openAnalysis()">🤖 AI Analysis</button>
   </div>
   <input type="hidden" id="filterAction" value="">
@@ -1366,7 +1366,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610192301"></script>
+<script type="module" src="samsam-cloud.js?v=202610192305"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
