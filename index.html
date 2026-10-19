@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610191500"></script>
-<script src="samsam-dropdown.js?v=202610191500"></script>
-<script src="samsam-chart.js?v=202610191500"></script>
+<script src="samsam-ui.js?v=202610191510"></script>
+<script src="samsam-dropdown.js?v=202610191510"></script>
+<script src="samsam-chart.js?v=202610191510"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -761,6 +761,8 @@
     border-radius: 12px; padding: 14px;
     margin-bottom: 12px;
   }
+  .holdings-card { transition: border-color .2s ease-in-out, background .2s ease-in-out; }
+  .holdings-card:hover { border-color: var(--accent); background: var(--bg3); }
   .holdings-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
   .holdings-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg2); }
   .holdings-total { font-size: 1.35rem; font-weight: 700; color: var(--fg); line-height: 1; }
@@ -1027,7 +1029,7 @@
     </div>
     <div style="color:var(--fg2);font-size:1.1rem;align-self:center">›</div>
   </div>
-  <div class="holdings-tabs" onclick="event.stopPropagation()">
+  <div class="holdings-tabs" onclick="event.stopPropagation();event.preventDefault()">
     <button class="holdings-tab active" data-range="24h" onclick="setHoldingsRange('24h',this)">24h</button>
     <button class="holdings-tab" data-range="7d"  onclick="setHoldingsRange('7d',this)">7d</button>
     <button class="holdings-tab" data-range="30d" onclick="setHoldingsRange('30d',this)">30d</button>
@@ -1061,6 +1063,13 @@
       <span class="alloc-mini-arrow">›</span>
     </div>
   </div>
+  <div class="holdings-tabs" onclick="event.stopPropagation();event.preventDefault()">
+    <button class="holdings-tab active" data-range="24h" onclick="setHoldingsRange('24h',this)">24h</button>
+    <button class="holdings-tab" data-range="7d"  onclick="setHoldingsRange('7d',this)">7d</button>
+    <button class="holdings-tab" data-range="30d" onclick="setHoldingsRange('30d',this)">30d</button>
+    <button class="holdings-tab" data-range="90d" onclick="setHoldingsRange('90d',this)">90d</button>
+    <button class="holdings-tab" data-range="all" onclick="setHoldingsRange('all',this)">All</button>
+  </div>
   <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
   <canvas class="perf-chart-canvas" id="perfChartCanvas" height="140"></canvas>
   <div class="perf-legend">
@@ -1070,8 +1079,13 @@
       <span class="perf-legend-val" id="perfPortfolioLabel">—</span>
     </div>
     <div class="perf-legend-item">
+      <span class="perf-legend-dot" style="background:#3b82f6"></span>
+      <span>Portfolio <span class="perf-range-lbl">24h</span>:&nbsp;</span>
+      <span class="perf-legend-val" id="perfPortfolioPct">—</span>
+    </div>
+    <div class="perf-legend-item">
       <span class="perf-legend-dot" style="background:#f0a060"></span>
-      <span>BTC trend:&nbsp;</span>
+      <span>BTC <span class="perf-range-lbl">24h</span>:&nbsp;</span>
       <span class="perf-legend-val" id="perfBtcLabel">—</span>
     </div>
   </div>
@@ -1243,7 +1257,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610191500"></script>
+<script type="module" src="samsam-cloud.js?v=202610191510"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -2667,6 +2681,10 @@ function withLiveTotal(snaps) {
   return [...snaps, { t: Math.max(now, lastT + 1), v: total }];
 }
 
+// X-axis rule shared by every chart: 24h → hours (06:00, 12:00…), longer ranges → dates (18 Oct…)
+const RANGE_MS = { '24h': 864e5, '7d': 6048e5, '30d': 2592e6, '90d': 7776e6, all: Infinity };
+function timeModeFor(range) { return range === '24h' ? 'hours' : 'days'; }
+
 // Same chart height in both chart cards so the three-card row lines up
 function TRIO_CHART_H() { return window.innerWidth >= 1024 ? 170 : 140; }
 
@@ -2679,7 +2697,10 @@ function savePerfSnapshot(portfolioValue, btcPrice) {
 }
 
 function drawPerfChart() {
-  const snaps = loadPerfSnapshots();
+  const allPerf = loadPerfSnapshots();
+  const cutoff = holdingsRange === 'all' ? 0 : Date.now() - RANGE_MS[holdingsRange];
+  let snaps = allPerf.filter(s => s.t >= cutoff);
+  if (!snaps.length && allPerf.length) snaps = [allPerf[allPerf.length - 1]];
   const wrap  = document.getElementById('perfChartWrap');
   const noData = document.getElementById('perfNoData');
   const canvas = document.getElementById('perfChartCanvas');
@@ -2693,14 +2714,14 @@ function drawPerfChart() {
   if (noData) noData.style.display = 'none';
   canvas.style.display = '';
   // If only 1 snapshot, duplicate it so chart renders as a flat baseline
-  if (snaps.length === 1) snaps.push(snaps[0]);
+  if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
 
   // Normalize both series to % change from the first snapshot
   const baseV = snaps[0].v;
   const baseB = snaps[0].b;
   const pctV  = snaps.map(s => (s.v - baseV) / baseV * 100);
   const pctB  = snaps.map(s => baseB ? (s.b - baseB) / baseB * 100 : 0);
-  SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'pct', series: [
+  SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'pct', timeMode: timeModeFor(holdingsRange), series: [
     { points: snaps.map((s, i) => ({ t: s.t, v: pctB[i] })), color: '#f0a060', width: 2 },            // BTC
     { points: snaps.map((s, i) => ({ t: s.t, v: pctV[i] })), color: '#3b82f6', width: 2.4, fill: true }, // Portfolio
   ] });
@@ -2711,16 +2732,19 @@ function drawPerfChart() {
   const { total } = calcStats ? calcStats() : { total: 0 };
   const totalCost = portfolio.reduce((a, c) => a + c.qty * (c.basePrice || 0), 0);
   const pnlUsd  = total - totalCost;
-  const pnlSign = pnlUsd >= 0 ? '+' : '';
+  const pnlSign = pnlUsd >= 0 ? '+' : '-';
   const pctSign = lastV >= 0 ? '+' : '';
   const btcSign = lastB >= 0 ? '+' : '';
 
   const portEl = document.getElementById('perfPortfolioLabel');
   const btcEl  = document.getElementById('perfBtcLabel');
   if (portEl) {
-    portEl.textContent = `${pnlSign}${SamsamFmt.usd(Math.abs(pnlUsd))}  ${pctSign}${lastV.toFixed(2)}%`;
+    portEl.textContent = `${pnlSign}${SamsamFmt.usd(Math.abs(pnlUsd))}`;
     portEl.className   = 'perf-legend-val ' + (pnlUsd >= 0 ? 'pos' : 'neg');
   }
+  const pctEl = document.getElementById('perfPortfolioPct');
+  if (pctEl) { pctEl.textContent = `${pctSign}${lastV.toFixed(2)}%`; pctEl.className = 'perf-legend-val ' + (lastV >= 0 ? 'pos' : 'neg'); }
+  document.querySelectorAll('.perf-range-lbl').forEach(e => e.textContent = holdingsRange === 'all' ? 'All' : holdingsRange);
   if (btcEl) {
     btcEl.textContent = `${btcSign}${lastB.toFixed(2)}%`;
     btcEl.className   = 'perf-legend-val ' + (lastB >= 0 ? 'pos' : 'neg');
@@ -2747,10 +2771,10 @@ function saveHoldingsSnapshot(value) {
 function loadHoldingsSnaps() { return holdingsSnapsState; }
 
 function setHoldingsRange(range, btn) {
-  holdingsRange = range;
-  document.querySelectorAll('.holdings-tab').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  holdingsRange = range;   // one range for both main-page chart cards
+  document.querySelectorAll('.holdings-tab').forEach(b => b.classList.toggle('active', b.dataset.range === range));
   drawHoldingsChart();
+  try { drawPerfChart(); } catch (_) {}
 }
 
 function drawHoldingsChart() {
@@ -2797,7 +2821,7 @@ function drawHoldingsChart() {
     changeEl.className = 'holdings-change ' + (isPos ? 'pos' : 'neg');
   }
 
-  SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'usd', series: [{ points: snaps, color, width: 2.2, fill: true }] });
+  SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'usd', timeMode: timeModeFor(holdingsRange), series: [{ points: snaps, color, width: 2.2, fill: true }] });
 }
 
 function updateHoldingsChart() {
@@ -3243,7 +3267,7 @@ function drawHoldingsOverlayChart() {
   }
 
   const lineColor = isPos ? '#22c55e' : '#f43f5e'; // green when up, red when down
-  SamsamChart.draw(canvas, { height: 210, format: 'usd', series: [{ points: snaps, color: lineColor, width: 2.6, fill: true }] });
+  SamsamChart.draw(canvas, { height: 210, format: 'usd', timeMode: timeModeFor(holdingsOverlayRange), series: [{ points: snaps, color: lineColor, width: 2.6, fill: true }] });
 }
 
 function renderHoldingsAssetList() {

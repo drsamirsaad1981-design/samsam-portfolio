@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610191500"></script>
-<script src="samsam-chart.js?v=202610191500"></script>
+<script src="samsam-ui.js?v=202610191510"></script>
+<script src="samsam-chart.js?v=202610191510"></script>
 <title>Portfolio Performance</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
@@ -615,7 +615,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610191500"></script>
+<script type="module" src="samsam-cloud.js?v=202610191510"></script>
 <script>
 // ── Constants ──
 
@@ -748,7 +748,7 @@ function drawPerfFull() {
   const pV = snaps.map(s => ({ t: s.t, v: v0 ? (s.v - v0) / v0 * 100 : 0 }));
   const pB = snaps.map(s => ({ t: s.t, v: b0 ? (s.b - b0) / b0 * 100 : 0 }));
   const h = window.innerWidth >= 900 ? 320 : window.innerWidth >= 600 ? 260 : 220;
-  SamsamChart.draw(canvas, { height: h, format: 'pct', series: [
+  SamsamChart.draw(canvas, { height: h, format: 'pct', timeMode: perfRange === '24h' ? 'hours' : 'days', series: [
     { points: pB, color: '#f0a060', width: 2 },
     { points: pV, color: '#3b82f6', width: 2.6, fill: true },
   ] });

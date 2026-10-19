@@ -32,13 +32,14 @@
   var H = 3600e3, D = 24 * H;
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var dayMon = function (t) { var d = new Date(t); return d.getDate() + ' ' + MON[d.getMonth()]; };
-  function timeTicks(t0, t1, maxTicks) {
+  // mode: 'hours' | 'days' forces the label style (set from the selected range); otherwise by span.
+  function timeTicks(t0, t1, maxTicks, mode) {
     var span = t1 - t0, out = [];
     var hhmm = function (t) { var d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
     if (!(span > 0)) return { ticks: [t0], fmt: function (t) { return dayMon(t) + ' ' + hhmm(t); } };
-    if (span <= 1.6 * D) {
-      var steps = [1, 2, 3, 4, 6, 12].map(function (h) { return h * H; });
-      var st = steps.find(function (s) { return span / s <= maxTicks; }) || 12 * H;
+    if (mode === 'hours' || (mode !== 'days' && span <= 1.6 * D)) {
+      var steps = [1, 2, 3, 4, 6, 12, 24].map(function (h) { return h * H; });
+      var st = steps.find(function (s) { return span / s <= maxTicks; }) || 24 * H;
       var d0 = new Date(t0); d0.setMinutes(0, 0, 0);
       var start = d0.getTime(); while ((new Date(start).getHours() * H) % st !== 0 || start < t0) start += H;
       for (var t = start; t <= t1; t += st) out.push(t);
@@ -47,6 +48,7 @@
     var dayStep = [1, 2, 3, 7, 14, 30, 60, 90].find(function (n) { return span / (n * D) <= maxTicks; }) || 180;
     var s0 = new Date(t0); s0.setHours(0, 0, 0, 0); var tt = s0.getTime(); if (tt < t0) tt += D;
     for (; tt <= t1; tt += dayStep * D) out.push(tt);
+    if (out.length < 2) out = span > 0 ? [t0, t1] : [t1];   // less than a day of data: still label with dates
     var withYear = span > 300 * D;
     return { ticks: out, fmt: function (t) { var d = new Date(t); return withYear ? MON[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2) : dayMon(t); } };
   }
@@ -116,14 +118,18 @@
     });
     // X labels (time)
     var maxTicks = Math.max(2, Math.floor(cW / 70));
-    var tt = timeTicks(t0, t1, maxTicks);
+    var tt = timeTicks(t0, t1, maxTicks, o.timeMode);
     ctx.textBaseline = 'alphabetic'; ctx.fillStyle = label;
+    var drawn = [];
     tt.ticks.forEach(function (t) {
       var x = toX(t, 0, 1), txt = tt.fmt(t), w = ctx.measureText(txt).width;
+      if (drawn.indexOf(txt) >= 0) return;   // never print the same label twice
+      drawn.push(txt);
       ctx.textAlign = 'center';
       x = Math.min(Math.max(x, pad.left + w / 2), W - pad.right - w / 2);
       ctx.fillText(txt, x, Hh - 5);
     });
+    canvas.dataset.xLabels = drawn.join('|');
     // series
     series.forEach(function (s) {
       var n = s.points.length;
