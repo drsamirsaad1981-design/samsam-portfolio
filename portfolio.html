@@ -11,9 +11,10 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610191612"></script>
-<script src="samsam-dropdown.js?v=202610191612"></script>
-<script src="samsam-chart.js?v=202610191612"></script>
+<script src="samsam-ui.js?v=202610191820"></script>
+<script src="samsam-labels.js?v=202610191820"></script>
+<script src="samsam-dropdown.js?v=202610191820"></script>
+<script src="samsam-chart.js?v=202610191820"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -960,7 +961,8 @@
   .coin-card { background: var(--card-solid); padding: 16px; gap: 12px; height: 100%; box-sizing: border-box; }
   .coin-card-body { background: transparent; padding: 0; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .coin-metric { background: var(--metric-bg); border: 1px solid var(--border); padding: 9px 11px; min-width: 0; }
-  .coin-metric label { color: var(--label); font-weight: 600; font-size: 0.66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .coin-metric { display: flex; flex-direction: column; justify-content: space-between; gap: 3px; }
+  .coin-metric label { color: var(--label); font-weight: 600; font-size: 0.66rem; line-height: 1.25; margin-bottom: 0; }
   .coin-metric val { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; font-size: clamp(0.82rem, 0.9vw + 0.45rem, 1rem); font-variant-numeric: tabular-nums; }
   .coin-metric .perf-badge, .coin-metric .action-badge { white-space: nowrap; }
   .coin-card-footer { color: var(--label) !important; margin-top: auto; }
@@ -1186,13 +1188,13 @@
       <tr>
         <th onclick="sortTable('rank')">#</th>
         <th onclick="sortTable('name')" style="text-align:left">Coin</th>
-        <th class="num-r" onclick="sortTable('qty')">Qty</th>
-        <th class="num-r" onclick="sortTable('basePrice')">Avg. Buy Price</th>
-        <th class="num-r" onclick="sortTable('currentPrice')">Current Price</th>
-        <th class="num-r" onclick="sortTable('baseValue')">Cost Basis</th>
-        <th class="num-r" onclick="sortTable('currentValue')">Holdings / Current Value</th>
+        <th class="num-r" onclick="sortTable('qty')"><span data-label="AMOUNT">Amount</span></th>
+        <th class="num-r" onclick="sortTable('basePrice')"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span></th>
+        <th class="num-r" onclick="sortTable('currentPrice')"><span data-label="CURRENT_PRICE">Current Price</span></th>
+        <th class="num-r" onclick="sortTable('baseValue')"><span data-label="COST_BASIS">Cost Basis</span></th>
+        <th class="num-r" onclick="sortTable('currentValue')"><span data-label="HOLDINGS_VALUE">Holdings / Current Value</span></th>
         <th class="num-r" onclick="sortTable('pnl')">P&L</th>
-        <th onclick="sortTable('perf')">Perf vs BTC</th>
+        <th onclick="sortTable('perf')"><span data-label="PORTFOLIO_VS_BTC">Portfolio vs BTC</span></th>
         <th onclick="sortTable('action')">Signal</th>
         <th>📝 Notes</th>
         <th>Actions</th>
@@ -1220,11 +1222,11 @@
         <input type="text" class="form-input" id="acName" placeholder="e.g. Ripple">
       </div>
       <div class="form-row" style="margin:0">
-        <label class="form-label">Quantity <span style="color:#ef4444">*</span></label>
+        <label class="form-label"><span data-label="AMOUNT">Amount</span> <span style="color:#ef4444">*</span></label>
         <input type="number" class="form-input" id="acQty" placeholder="0.00" step="any" oninput="previewAddCoin()">
       </div>
       <div class="form-row" style="margin:0">
-        <label class="form-label">Avg Buy Price (USD) <span style="color:#ef4444">*</span></label>
+        <label class="form-label"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span> (USD) <span style="color:#ef4444">*</span></label>
         <input type="number" class="form-input" id="acPrice" placeholder="0.00" step="any" oninput="previewAddCoin()">
       </div>
       <div class="form-row" style="margin:0">
@@ -1312,7 +1314,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610191612"></script>
+<script type="module" src="samsam-cloud.js?v=202610191820"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -1700,7 +1702,7 @@ function renderBtcTicker() {
     `<span class="bt-item">${SamsamUI.liveDot(live ? 'ok' : 'error', true)}<span class="bt-live">${live ? 'Live' : 'Offline'}</span></span>`,
     `<span class="bt-item">BTC / USD <strong>${price > 0 ? usd(price) : '—'}</strong></span>`,
   ];
-  if (ch != null) parts.push(`<span class="bt-item"><span class="${ch >= 0 ? 'bt-up' : 'bt-down'}">${ch >= 0 ? '▲ +' : '▼ '}${ch.toFixed(2)}%</span> 24h</span>`);
+  if (ch != null) parts.push(`<span class="bt-item"><span class="${ch >= 0 ? 'bt-up' : 'bt-down'}">${ch >= 0 ? '▲ +' : '▼ -'}${Math.abs(ch).toFixed(2)}%</span> 24h</span>`);
   if (btcTicker.high24) parts.push(`<span class="bt-item">24h High <strong>${usd(btcTicker.high24)}</strong></span>`);
   if (btcTicker.low24) parts.push(`<span class="bt-item">24h Low <strong>${usd(btcTicker.low24)}</strong></span>`);
   const group = parts.join('<span class="bt-sep"></span>') + '<span class="bt-sep"></span>';
@@ -1827,8 +1829,8 @@ function renderTableAndStack() {
           <div class="act-grid row-act">
             <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')" title="Buy ${c.sym}">+ Buy</button>
             <button class="btn-sell" onclick="openSell('${c.sym}')" title="Sell ${c.sym}">− Sell</button>
-            <button class="btn-tin" onclick="openTransferIn('${c.sym}')" title="Transfer In ${c.sym}">↓ In</button>
-            <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="Transfer Out ${c.sym}">↑ Out</button>
+            <button class="btn-tin" onclick="openTransferIn('${c.sym}')" title="${SAMSAM_LABELS.TRANSFER_IN} ${c.sym}">↓ In</button>
+            <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="${SAMSAM_LABELS.TRANSFER_OUT} ${c.sym}">↑ Out</button>
             <button class="btn-history" onclick="openHistory('${c.sym}')" title="History of ${c.sym}">📋 History</button>
             <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove ${c.sym}">✕ Remove</button>
           </div>
@@ -1863,12 +1865,12 @@ function renderTableAndStack() {
           </div>
         </div>
         <div class="coin-card-body">
-          <div class="coin-metric"><label>Qty</label><val title="${fmtQtyRO(c.qty)}">${fmtQtyRO(c.qty)}</val></div>
-          <div class="coin-metric"><label>Cost Basis</label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
-          <div class="coin-metric"><label>Avg Buy Price</label><val title="${fmtAvgRO(c.basePrice)}">${fmtAvgRO(c.basePrice)}</val></div>
-          <div class="coin-metric"><label>Current Value</label><val title="${SamsamFmt.usd(curVal)}">${SamsamFmt.usd(curVal)}</val></div>
-          <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
-          <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.AMOUNT}</label><val title="${fmtQtyRO(c.qty)}">${fmtQtyRO(c.qty)}</val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.COST_BASIS}</label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.AVG_BUY_PRICE}</label><val title="${fmtAvgRO(c.basePrice)}">${fmtAvgRO(c.basePrice)}</val></div>
+          <div class="coin-metric"><label title="${SAMSAM_LABELS.HOLDINGS_VALUE}">${SAMSAM_LABELS.HOLDINGS_VALUE}</label><val title="${SamsamFmt.usd(curVal)}">${SamsamFmt.usd(curVal)}</val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.PORTFOLIO_VS_BTC}</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.SIGNAL}</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
         </div>
         <div style="padding:6px 12px 0">
           <input type="text" class="editable-input note-input" value="${(c.notes||'').replace(/"/g,'&quot;')}"
@@ -1883,8 +1885,8 @@ function renderTableAndStack() {
         <div class="coin-card-actions card-act">
           <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
           <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
-          <button class="btn-tin" onclick="openTransferIn('${c.sym}')" title="Transfer In">↓ Transfer In</button>
-          <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="Transfer Out">↑ Transfer Out</button>
+          <button class="btn-tin" onclick="openTransferIn('${c.sym}')" title="${SAMSAM_LABELS.TRANSFER_IN}">↓ ${SAMSAM_LABELS.TRANSFER_IN}</button>
+          <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="${SAMSAM_LABELS.TRANSFER_OUT}">↑ ${SAMSAM_LABELS.TRANSFER_OUT}</button>
           <button class="btn-history" onclick="openHistory('${c.sym}')" title="History">📋 History</button>
           <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove">✕ Remove</button>
         </div>
@@ -1981,8 +1983,8 @@ function renderHistory() {
     <div><span>Transactions</span> <strong>${txs.length}</strong></div>
     <div><span>Total Bought</span> <strong style="color:#22c55e">${fmtN(totalBuys)} ${sym}</strong></div>
     <div><span>Total Sold</span> <strong style="color:#ef4444">${fmtN(totalSells)} ${sym}</strong></div>
-    <div><span>Current Qty</span> <strong>${fmtN(curQty)} ${sym}</strong></div>
-    <div><span>Avg Cost</span> <strong>$${avgCost.toFixed(4)}</strong></div>
+    <div><span>${SAMSAM_LABELS.AMOUNT}</span> <strong>${fmtN(curQty)} ${sym}</strong></div>
+    <div><span>${SAMSAM_LABELS.AVG_BUY_PRICE}</span> <strong>${SamsamFmt.price(avgCost)}</strong></div>
     <div><span>Realized P&L</span> <strong style="color:${realized>=0?'#22c55e':'#ef4444'}">${sells.length?(realized>=0?'+':'-')+SamsamFmt.usd(Math.abs(realized)):'—'}</strong></div>`;
 
   // Transaction list
@@ -2137,7 +2139,7 @@ function sortTable(col) {
 
 
 function exportData() {
-  const rows=[['Coin','Qty','Avg. Buy Price','Current Price','Cost Basis','Holdings / Current Value','P&L','P&L%','vs BTC','Signal']];
+  const L=SAMSAM_LABELS; const rows=[['Coin',L.AMOUNT,L.AVG_BUY_PRICE,L.CURRENT_PRICE,L.COST_BASIS,L.HOLDINGS_VALUE,L.PNL,L.PNL+'%',L.PORTFOLIO_VS_BTC,L.SIGNAL]];
   portfolio.forEach(c=>{
     const perf=getPerf(c);const action=getAction(c.sym,perf,c);
     const baseVal=c.qty*c.basePrice;const curVal=c.qty*c.currentPrice;const pnl=curVal-baseVal;
@@ -2992,13 +2994,13 @@ window.addEventListener('popstate', applyHoldingsRoute);
 const BASELINE_DATE = '2026-10-15T00:00:00';
 // ── Add Transaction form (Buy / Sell / Transfer In / Transfer Out) ─────────────
 const ATX = {
-  buy:          { color: '#16a34a', qty: 'Quantity bought',      price: 'Price per coin (USD)', priceReq: true,  fee: false,
+  buy:          { color: '#16a34a', qty: 'Amount bought',      price: 'Price per coin (USD)', priceReq: true,  fee: false,
                   hint: 'Raises your holdings and updates the average buy price.' },
-  sell:         { color: '#dc2626', qty: 'Quantity sold',        price: 'Sell price per coin (USD)', priceReq: true, fee: false,
+  sell:         { color: '#dc2626', qty: 'Amount sold',        price: 'Sell price per coin (USD)', priceReq: true, fee: false,
                   hint: 'Lowers your holdings at the current average cost and records realized profit/loss.' },
-  transfer_in:  { color: '#2563eb', qty: 'Quantity transferred in', price: 'Cost / value per coin at transfer (USD)', priceReq: true, fee: true,
+  transfer_in:  { color: '#2563eb', qty: 'Amount transferred in', price: 'Cost / value per coin at transfer (USD)', priceReq: true, fee: true,
                   hint: 'Coins arriving from outside this portfolio. The cost per coin goes into your average buy price (use your original purchase price, or 0 for mined/free coins). The fee is deducted from the amount received.' },
-  transfer_out: { color: '#d97706', qty: 'Quantity transferred out', price: '', priceReq: false, fee: true,
+  transfer_out: { color: '#d97706', qty: 'Amount transferred out', price: '', priceReq: false, fee: true,
                   hint: 'Coins leaving this portfolio (e.g. to another wallet you don’t track). Average buy price is unchanged and no profit/loss is recorded. The fee is also deducted.' },
 };
 let atxType = 'buy', atxSaving = false, atxSym = null;
@@ -3028,7 +3030,7 @@ function setAddTxType(t) {
   document.getElementById('atxFeeRow').style.display = cfg.fee ? '' : 'none';
   document.getElementById('atxFeeUnit').textContent = `(in ${atxSym}, optional)`;
   document.getElementById('atxHint').textContent = cfg.hint;
-  document.getElementById('atxSave').textContent = 'Add ' + { buy: 'Buy', sell: 'Sell', transfer_in: 'Transfer In', transfer_out: 'Transfer Out' }[t];
+  const LB = SAMSAM_LABELS; document.getElementById('atxSave').textContent = 'Add ' + { buy: LB.BUY, sell: LB.SELL, transfer_in: LB.TRANSFER_IN, transfer_out: LB.TRANSFER_OUT }[t];
   const coin = portfolio.find(c => c.sym === atxSym);
   const pr = document.getElementById('atxPrice');
   if (cfg.price && !pr.dataset.touched) pr.value = coin && coin.currentPrice ? fmtInput(coin.currentPrice) : '';
@@ -3085,7 +3087,7 @@ function previewAddTx() {
   if (atxType === 'sell') lines.push(`Proceeds: <b>${usd(r.qty * r.price)}</b>` + (r.after.realized != null ? ` · ${r.after.realized >= 0 ? 'profit' : 'loss'} <b>${usd(Math.abs(r.after.realized))}</b>` : ''));
   if (atxType === 'transfer_in') lines.push(`Received after fee: <b>${q(r.qty - r.fee)} ${atxSym}</b> · cost added <b>${usd(r.qty * r.price)}</b>`);
   if (atxType === 'transfer_out') lines.push(`Leaves portfolio incl. fee: <b>${q(r.qty + r.fee)} ${atxSym}</b>`);
-  lines.push(`Holdings after: <b>${q(r.after.qty)} ${atxSym}</b> · avg buy <b>${usd(r.after.avg)}</b>`);
+  lines.push(`Holdings after: <b>${q(r.after.qty)} ${atxSym}</b> · ${SAMSAM_LABELS.AVG_BUY_PRICE} <b>${SamsamFmt.price(r.after.avg)}</b>`);
   if (r.after.short === 'later') lines.push('<span style="color:#f59e0b">⚠️ A later sell/transfer would then exceed your holdings.</span>');
   pv.innerHTML = lines.join('<br>');
 }
@@ -3136,7 +3138,7 @@ function previewEditOpening() {
   const usd = n => SamsamFmt.usd(n);
   const q = n => parseFloat(n.toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
   const p = n => '$' + (+n).toLocaleString('en-US', { maximumFractionDigits: n >= 1 ? 4 : 8 });
-  pv.innerHTML = `Opening cost: <b>${usd(x.qty * x.avg)}</b><br>After all transactions: <b>${q(x.r.qty)} ${coinTxSym}</b> · avg buy <b>${p(x.r.avg)}</b> · cost basis <b>${usd(x.r.qty * x.r.avg)}</b>` +
+  pv.innerHTML = `Opening cost: <b>${usd(x.qty * x.avg)}</b><br>After all transactions: <b>${q(x.r.qty)} ${coinTxSym}</b> · ${SAMSAM_LABELS.AVG_BUY_PRICE} <b>${SamsamFmt.price(x.r.avg)}</b> · ${SAMSAM_LABELS.COST_BASIS} <b>${usd(x.r.qty * x.r.avg)}</b>` +
     (transactions.some(t => t.sym === coinTxSym && t.type === 'adjust') ? '<br><span style="color:#f59e0b">⚠️ This coin also has manual “Edit” rows; they override the result above. Delete them if they are no longer needed.</span>' : '');
 }
 function saveEditOpening() {
@@ -3153,8 +3155,8 @@ let htxTypeDD = null, htxCoinDD = null;
 function ensureHtxDropdowns() {
   if (htxTypeDD) return;
   htxTypeDD = SamsamDropdown.create(document.getElementById('htxTypeDD'), {
-    options: [{ value: 'all', label: 'All Types' }, { value: 'buy', label: 'Buy' }, { value: 'sell', label: 'Sell' },
-      { value: 'transfer', label: 'Transfers (In + Out)' }, { value: 'transfer_in', label: 'Transfer In' }, { value: 'transfer_out', label: 'Transfer Out' }],
+    options: [{ value: 'all', label: SAMSAM_LABELS.ALL_TYPES }, { value: 'buy', label: SAMSAM_LABELS.BUY }, { value: 'sell', label: SAMSAM_LABELS.SELL },
+      { value: 'transfer_in', label: SAMSAM_LABELS.TRANSFER_IN }, { value: 'transfer_out', label: SAMSAM_LABELS.TRANSFER_OUT }],
     value: 'all', ariaLabel: 'Transaction type', title: 'Transaction type', minWidth: 180,
     onChange: () => renderCoinTx(),
   });
@@ -3196,7 +3198,7 @@ function renderCoinTx() {
   const profit = (value - cost) + realized;
   const profitPct = cost > 0 ? profit / cost * 100 : 0;
   const ch = coin && coin.change24h != null ? coin.change24h : null;
-  const arrow = n => n >= 0 ? '▲ ' : '▼ ';
+  const arrow = n => n >= 0 ? '▲ +' : '▼ -';   // arrow plus explicit sign: ▲ +2.45% / ▼ -1.30%
   document.getElementById('htxHoldings').textContent = usd(value);
   const h24 = document.getElementById('htxHoldings24');
   h24.textContent = ch == null ? '—' : arrow(ch) + Math.abs(ch).toFixed(2) + '% (24h)';
@@ -3227,7 +3229,7 @@ function renderCoinTx() {
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' || t.type === 'transfer_out') {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
-      entries.push({ id: t.id, kind: t.type, label: isIn ? 'Transfer In' : 'Transfer Out',
+      entries.push({ id: t.id, kind: t.type, label: isIn ? SAMSAM_LABELS.TRANSFER_IN : SAMSAM_LABELS.TRANSFER_OUT,
         qty: isIn ? t.qty - fee : t.qty + fee, usd: isIn ? t.qty * t.price : (t.qty + fee) * (price || 0),
         note: [t.note, isIn && t.price ? '@ ' + priceFmt(t.price) : '', fee ? 'fee ' + qtyFmt(fee) + ' ' + sym : ''].filter(Boolean).join(' · '),
         date: t.date, order: t.createdAt || '' });
@@ -3242,7 +3244,7 @@ function renderCoinTx() {
   const shown = entries.filter(e => type === 'all' || e.kind === type || (type === 'transfer' && e.kind.startsWith('transfer')))
     .sort((a, b) => (b.date + b.order).localeCompare(a.date + a.order));
   if (!shown.length) {
-    const tName = { all: '', buy: 'buy ', sell: 'sell ', transfer: 'transfer ', transfer_in: 'Transfer In ', transfer_out: 'Transfer Out ' }[type] || '';
+    const tName = { all: '', buy: 'Buy ', sell: 'Sell ', transfer_in: SAMSAM_LABELS.TRANSFER_IN + ' ', transfer_out: SAMSAM_LABELS.TRANSFER_OUT + ' ' }[type] || '';
     listEl.innerHTML = `<div class="htx-empty">No ${tName}transactions for ${sym} yet.<br><small>Tap + to add one.</small></div>`;
     return;
   }
@@ -3352,7 +3354,7 @@ function renderHoldingsAssetList() {
       ${nameEl}
       <div class="hov-asset-price">
         <span class="hov-price">${priceStr}</span>
-        <span class="hov-pct" style="color:${clr}">${arrow} ${Math.abs(pct24).toFixed(2)}%</span>
+        <span class="hov-pct" style="color:${clr}">${arrow} ${pct24 >= 0 ? '+' : '-'}${Math.abs(pct24).toFixed(2)}%</span>
       </div>
       <div class="hov-asset-holding htx-open" role="button" tabindex="0" title="View ${c.sym} transactions"
            onclick="openCoinTx('${c.sym}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCoinTx('${c.sym}')}">
@@ -3660,8 +3662,8 @@ function renderHoldingsAssetList() {
     <div class="htx-cards">
       <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub" id="htxHoldings24">—</div></div>
       <div class="htx-card"><div class="htx-label">All-Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
-      <div class="htx-card"><div class="htx-label">Avg. Buy Price</div><div class="htx-value" id="htxAvg">—</div></div>
-      <div class="htx-card"><div class="htx-label">Cost Basis <span class="htx-info" title="Total amount invested in your current holdings (quantity × average buy price)">ⓘ</span></div><div class="htx-value" id="htxCost">—</div></div>
+      <div class="htx-card"><div class="htx-label" data-label="AVG_BUY_PRICE">Avg. Buy Price</div><div class="htx-value" id="htxAvg">—</div></div>
+      <div class="htx-card"><div class="htx-label"><span data-label="COST_BASIS">Cost Basis</span> <span class="htx-info" title="Total amount invested in your current holdings (amount × average buy price)">ⓘ</span></div><div class="htx-value" id="htxCost">—</div></div>
     </div>
     <div id="htxList" class="htx-list"></div>
     <button type="button" class="htx-fab" onclick="openAddTx()" aria-label="Add transaction" title="Add transaction">
@@ -3676,8 +3678,8 @@ function renderHoldingsAssetList() {
   <form class="atx-modal" onsubmit="event.preventDefault();saveEditOpening()" role="dialog" aria-modal="true" aria-labelledby="eopTitle" novalidate style="--atx-c:#2563eb">
     <div class="atx-head"><h3 id="eopTitle">Edit opening position</h3><button type="button" class="atx-x" onclick="closeEditOpening()" aria-label="Close">×</button></div>
     <div class="atx-coin" id="eopCoin"></div>
-    <label class="atx-field"><span>Opening quantity</span><input type="number" inputmode="decimal" step="any" min="0" id="eopQty" oninput="previewEditOpening()"></label>
-    <label class="atx-field"><span>Average buy price (USD)</span><input type="number" inputmode="decimal" step="any" min="0" id="eopAvg" oninput="previewEditOpening()"></label>
+    <label class="atx-field"><span>Opening amount</span><input type="number" inputmode="decimal" step="any" min="0" id="eopQty" oninput="previewEditOpening()"></label>
+    <label class="atx-field"><span>Opening <span data-label="AVG_BUY_PRICE">Avg. Buy Price</span> (USD)</span><input type="number" inputmode="decimal" step="any" min="0" id="eopAvg" oninput="previewEditOpening()"></label>
     <label class="atx-field"><span>Date</span><input type="date" id="eopDate"></label>
     <div class="atx-hint">The position you held before the first transaction in this list. All buys, sells and transfers after it are recalculated from these numbers.</div>
     <div class="atx-preview" id="eopPreview"></div>
@@ -3700,7 +3702,7 @@ function renderHoldingsAssetList() {
         <button type="button" data-t="transfer_out" role="radio"><span class="htx-dot htx-dot-transfer_out"></span>Transfer Out</button>
       </div>
       <div class="atx-coin" id="atxCoin"></div>
-      <label class="atx-field"><span id="atxQtyLabel">Quantity</span>
+      <label class="atx-field"><span id="atxQtyLabel">Amount</span>
         <input type="number" inputmode="decimal" step="any" min="0" id="atxQty" placeholder="0.00" oninput="previewAddTx()"></label>
       <label class="atx-field" id="atxPriceRow"><span id="atxPriceLabel">Price per coin (USD)</span>
         <input type="number" inputmode="decimal" step="any" min="0" id="atxPrice" placeholder="0.00" oninput="previewAddTx()"></label>

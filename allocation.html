@@ -6,8 +6,9 @@
 <title>Portfolio Allocation</title>
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610191820"></script>
-<script src="samsam-labels.js?v=202610191820"></script>
+<script src="samsam-ui.js?v=202610191919"></script>
+<script src="samsam-labels.js?v=202610191919"></script>
+<script src="samsam-taxonomy.js?v=202610191919"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -256,30 +257,12 @@ body {
 
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610191820"></script>
+<script type="module" src="samsam-cloud.js?v=202610191919"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
 
-const CAT_COLORS = {
-  btc:    '#f7931a',
-  layer1: '#3b82f6',
-  layer2: '#8b5cf6',
-  defi:   '#10b981',
-  ai:     '#e879f9',
-  infra:  '#06b6d4',
-  meme:   '#ef4444',
-  other:  '#6b7280',
-};
-const CAT_LABELS = {
-  btc:    'Bitcoin',
-  layer1: 'Layer 1',
-  layer2: 'Layer 2',
-  defi:   'DeFi',
-  ai:     'AI & Web3',
-  infra:  'Infrastructure',
-  meme:   'Meme',
-  other:  'Other',
-};
+const CAT_COLORS = SamsamTaxonomy.colors;   // shared taxonomy (samsam-taxonomy.js)
+const CAT_LABELS = SamsamTaxonomy.labels;
 
 const COIN_NAMES = {
   BTC:'Bitcoin', SOL:'Solana', NEAR:'NEAR Protocol', TAO:'Bittensor',
@@ -508,7 +491,7 @@ function renderOverview() {
   const catTotals = {};
   portfolio.forEach(c => {
     const val = c.qty * c.currentPrice;
-    const cat = c.sym === 'BTC' ? 'btc' : (c.cat || 'other');
+    const cat = c.cat || 'other';
     catTotals[cat] = (catTotals[cat] || 0) + val;
   });
   totalVal = Object.values(catTotals).reduce((a, b) => a + b, 0);
@@ -548,7 +531,7 @@ function selectCat(cat) {
 
   // Compute cat total
   const coins = portfolio
-    .filter(c => (c.sym === 'BTC' ? 'btc' : (c.cat||'other')) === cat)
+    .filter(c => (c.cat||'other') === cat)
     .map(c => ({ ...c, val: c.qty * c.currentPrice }))
     .sort((a, b) => b.val - a.val);
   const catTotal = coins.reduce((s, c) => s + c.val, 0);

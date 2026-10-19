@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610191820"></script>
-<script src="samsam-labels.js?v=202610191820"></script>
-<script src="samsam-chart.js?v=202610191820"></script>
+<script src="samsam-ui.js?v=202610191919"></script>
+<script src="samsam-labels.js?v=202610191919"></script>
+<script src="samsam-taxonomy.js?v=202610191919"></script>
+<script src="samsam-chart.js?v=202610191919"></script>
 <title>Portfolio Performance</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
@@ -616,7 +617,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610191820"></script>
+<script type="module" src="samsam-cloud.js?v=202610191919"></script>
 <script>
 // ── Constants ──
 
@@ -895,30 +896,8 @@ function coinIconHtml(c) {
 
 // ── Category config (mirrors index.html) ──
 // ── Categories — exact mirror of index.html ──
-const CAT_COLORS = {
-  layer1:'#3b82f6', layer2:'#8b5cf6', defi:'#10b981',
-  ai:'#e879f9', meme:'#ef4444', infra:'#06b6d4',
-  other:'#6b7280', btc:'#f7931a'
-};
-const CAT_LABELS = {
-  layer1:'Layer 1', layer2:'Layer 2', defi:'DeFi',
-  ai:'AI & Web3', meme:'Meme', infra:'Infrastructure',
-  other:'Other', btc:'Bitcoin'
-};
-// ── Exact cat values from index.html coin list ──
-const COIN_CATS = {
-  BTC:'btc',
-  TAO:'ai', WLD:'ai', RENDER:'ai',
-  SUI:'layer1', NEAR:'layer1', SEI:'layer1', ATOM:'layer1', APT:'layer1',
-  AVAX:'layer1', ICP:'layer1', KSM:'layer1', GRAM:'layer1', NIGHT:'layer1',
-  BNB:'layer1', ETH:'layer1', SOL:'layer1', HBAR:'layer1', MON:'layer1',
-  CRO:'layer1', XDC:'layer1', DOT:'layer1', DOGE:'meme', KAS:'layer1',
-  VTHO:'layer1', VET:'layer1',
-  ARB:'layer2', MOVR:'layer2', GLMR:'layer2', OP:'layer2', STRK:'layer2',
-  MNT:'layer2', POL:'layer2',
-  JUP:'defi', LINK:'defi', ENS:'defi', ONDO:'defi', KAVA:'defi', PONS:'defi',
-  PYTH:'infra', QNT:'infra', AVAIL:'infra', FLR:'infra', XPL:'infra',
-};
+const CAT_COLORS = SamsamTaxonomy.colors;   // shared taxonomy (samsam-taxonomy.js)
+const CAT_LABELS = SamsamTaxonomy.labels;
 
 // ── Realized P&L — same ledger calculation as the main page (samsam-core.js) ──
 function calcRealizedPnl() {
@@ -1046,7 +1025,7 @@ function render() {
   // Per-category breakdown
   const catPnl = {};
   rows.forEach(({ c, value, cost }) => {
-    const cat = COIN_CATS[c.sym] || 'other';
+    const cat = c.cat || SamsamTaxonomy.categoryOf(c.sym);
     if (!catPnl[cat]) catPnl[cat] = { base: 0, cur: 0 };
     catPnl[cat].base += cost;
     catPnl[cat].cur  += value;

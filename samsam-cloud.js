@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610191820';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610191820';
+import * as Core from './samsam-core.js?v=202610191919';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610191919';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -57,10 +57,12 @@ const allLoaded = () => Object.values(S.loaded).every(Boolean);
 function derive() {
   const coins = [...S.coins.values()];
   const txs = [...S.txs.values()].sort(Core.compareTx);
-  const portfolio = Core.derivePortfolio(coins, txs, S.prices, S.opts.fallbackPrices);
+  const T = window.SamsamTaxonomy;
+  const catOf = (sym, cat) => T ? T.categoryOf(sym, cat) : (cat || 'other');
+  const portfolio = Core.derivePortfolio(coins, txs, S.prices, S.opts.fallbackPrices).map(p => ({ ...p, cat: catOf(p.sym, p.cat) }));
   const removed = coins.filter(c => c.removed).map(c => {
     const r = Core.replay(c.opening, txs.filter(t => t.sym === c.sym));
-    return { sym: c.sym, qty: r.qty, basePrice: r.avg, cat: c.cat, cgId: c.cgId, logoUrl: c.logoUrl,
+    return { sym: c.sym, qty: r.qty, basePrice: r.avg, cat: catOf(c.sym, c.cat), cgId: c.cgId, logoUrl: c.logoUrl,
       removedAt: c.removedAt || '', removedPermanently: true };
   });
   const realized = Core.realizedPnl(coins, txs);
@@ -72,7 +74,7 @@ function derive() {
     : (portfolio.find(c => c.sym === 'BTC') || {}).currentPrice || S.opts.fallbackPrices.BTC || 0;
   S.derived = {
     portfolio, transactions: txs, coins, archivedCoins: removed,
-    customCoins: coins.filter(c => c.isCustom && !c.removed).map(c => ({ sym: c.sym, cat: c.cat, cgId: c.cgId, logoUrl: c.logoUrl })),
+    customCoins: coins.filter(c => c.isCustom && !c.removed).map(c => ({ sym: c.sym, cat: catOf(c.sym, c.cat), cgId: c.cgId, logoUrl: c.logoUrl })),
     accumPlan, perfSnaps: snaps.perf, holdingsSnaps: snaps.holdings, realized, btcPrice: btc,
     needsSetup: allLoaded() && !(S.meta && S.meta.state === 'done') && S.coins.size === 0,
   };
@@ -88,7 +90,19 @@ function isEditing() {
   return (a.tagName === 'INPUT' && a.type !== 'button' && a.type !== 'checkbox') || a.tagName === 'TEXTAREA' || a.isContentEditable;
 }
 let emitTimer = null, waitingForBlur = false;
+// Keep each coin's saved category in the cloud in step with samsam-taxonomy.js (one write, only when something differs).
+let catSyncDone = false;
+function syncCategories() {
+  const T = window.SamsamTaxonomy;
+  if (catSyncDone || !T || !S.user || !allLoaded()) return;
+  catSyncDone = true;
+  const fix = [...S.coins.values()].filter(c => c.sym && T.categoryOf(c.sym, c.cat) !== c.cat);
+  if (!fix.length) return;
+  commit((b, ref) => { for (const c of fix) b.set(ref('coins', safeId(c.sym)), { cat: T.categoryOf(c.sym, c.cat), updatedAt: new Date().toISOString() }, { merge: true }); },
+    `Update categories (${fix.length} coins)`).catch(() => { catSyncDone = false; });
+}
 function emit() {
+  setTimeout(syncCategories, 0);
   if (emitTimer) return;
   emitTimer = setTimeout(() => {
     emitTimer = null;

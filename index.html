@@ -11,10 +11,11 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610191820"></script>
-<script src="samsam-labels.js?v=202610191820"></script>
-<script src="samsam-dropdown.js?v=202610191820"></script>
-<script src="samsam-chart.js?v=202610191820"></script>
+<script src="samsam-ui.js?v=202610191919"></script>
+<script src="samsam-labels.js?v=202610191919"></script>
+<script src="samsam-taxonomy.js?v=202610191919"></script>
+<script src="samsam-dropdown.js?v=202610191919"></script>
+<script src="samsam-chart.js?v=202610191919"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -996,6 +997,13 @@
   .row-act .btn-remove { color: #f87171; background: var(--metric-bg); border: 1px solid rgba(248,113,113,.45); }
   .row-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
   .row-act .btn-history::after, .row-act .btn-history::before { display: none; }
+  /* ── Category tags + filter-card dots (colours from samsam-taxonomy.js) ── */
+  .cat-tag { display: inline-flex; align-items: center; max-width: 100%; border: 1px solid color-mix(in srgb, var(--cat-c) 45%, transparent); background: color-mix(in srgb, var(--cat-c) 14%, transparent); color: var(--cat-c); font: inherit; font-size: 0.62rem; font-weight: 700; letter-spacing: .02em; padding: 2px 7px; border-radius: 999px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; line-height: 1.3; }
+  .card-cat-row { display: flex; margin-top: -4px; }
+  .card-cat-row .cat-tag { font-size: 0.66rem; padding: 3px 9px; }
+  .cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transparent); }
+  .summary-card .cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--cat-c); margin-right: 6px; vertical-align: 0; }
+  .summary-card { border-top: 2px solid var(--cat-c, var(--border)); }
 </style>
 </head>
 <body>
@@ -1232,14 +1240,7 @@
       <div class="form-row" style="margin:0">
         <label class="form-label">Category</label>
         <select class="form-input" id="acCat">
-          <option value="layer1">Layer 1</option>
-          <option value="layer2">Layer 2</option>
-          <option value="defi">DeFi</option>
-          <option value="ai">AI & Web3</option>
-          <option value="infra">Infrastructure</option>
-          <option value="meme">Meme</option>
-          <option value="btc">Bitcoin</option>
-          <option value="other">Other</option>
+          <!-- filled from samsam-taxonomy.js -->
         </select>
       </div>
       <div class="form-row" style="margin:0">
@@ -1314,7 +1315,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610191820"></script>
+<script type="module" src="samsam-cloud.js?v=202610191919"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -1397,6 +1398,11 @@ function getCoinIconLinked(sym, size=36) {
   const icon = getCoinIcon(sym, size);
   if (!url) return icon;
   return `<a href="${url}" target="_blank" rel="noopener" title="Open ${sym} on CoinGecko" style="display:inline-flex;flex-shrink:0;border-radius:50%;text-decoration:none;transition:opacity 0.15s" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">${icon}</a>`;
+}
+// Category tag (colour + label from samsam-taxonomy.js); click filters by that category
+function catTag(cat) {
+  const k = cat || 'other';
+  return `<button type="button" class="cat-tag" style="--cat-c:${SamsamTaxonomy.color(k)}" onclick="event.stopPropagation();setCatFilter('${k}')" title="Show only ${SamsamTaxonomy.label(k)}">${SamsamTaxonomy.label(k)}</button>`;
 }
 function getCoinNameLinked(sym) {
   const url = getCoinGeckoUrl(sym);
@@ -1724,7 +1730,7 @@ function setCatFilter(cat) {
 }
 
 function renderSummary() {
-  const cats = { layer1:'Layer 1', layer2:'Layer 2', defi:'DeFi', ai:'AI / Web3', meme:'Meme', other:'Other', btc:'Bitcoin' };
+  const cats = SamsamTaxonomy.labels;
   const catTotals = {};
   portfolio.forEach(c => {
     const cat = c.cat || 'other';
@@ -1738,8 +1744,8 @@ function renderSummary() {
     <div class="value">${SamsamFmt.usd(allTotal)}</div>
   </div>`;
   const catCards = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])
-    .map(([k,v]) => `<div class="summary-card${activeCatFilter===k?' cat-active':''}" onclick="setCatFilter('${k}')">
-      <div class="label">${cats[k]||k}</div>
+    .map(([k,v]) => `<div class="summary-card${activeCatFilter===k?' cat-active':''}" onclick="setCatFilter('${k}')" style="--cat-c:${SamsamTaxonomy.color(k)}">
+      <div class="label"><span class="cat-dot"></span>${cats[k]||k}</div>
       <div class="value">${SamsamFmt.usd(v)}</div>
     </div>`).join('');
   grid.innerHTML = allCard + catCards;
@@ -1809,7 +1815,7 @@ function renderTableAndStack() {
         <td style="color:var(--fg2);font-size:0.75rem">${i+1}</td>
         <td style="text-align:left"><div style="display:flex;align-items:center;gap:8px">
           ${getCoinIconLinked(c.sym,32)}
-          ${getCoinNameLinked(c.sym)}
+          <div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0">${getCoinNameLinked(c.sym)}${catTag(c.cat)}</div>
         </div></td>
         <td class="ro-num num-r" title="Changes only through Buy / Sell / Transfer">${fmtQtyRO(c.qty)}</td>
         <td class="ro-num num-r" style="color:var(--fg2)" title="Calculated from Buy / Sell / Transfer">${fmtAvgRO(c.basePrice)}</td>
@@ -1864,6 +1870,7 @@ function renderTableAndStack() {
             <div style="font-size:0.7rem;color:var(--fg2);margin-top:2px">@ $${c.currentPrice}</div>
           </div>
         </div>
+        <div class="card-cat-row">${catTag(c.cat)}</div>
         <div class="coin-card-body">
           <div class="coin-metric"><label>${SAMSAM_LABELS.AMOUNT}</label><val title="${fmtQtyRO(c.qty)}">${fmtQtyRO(c.qty)}</val></div>
           <div class="coin-metric"><label>${SAMSAM_LABELS.COST_BASIS}</label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
@@ -2066,7 +2073,9 @@ document.getElementById('historyModal').addEventListener('click', function(e){ i
 // ── Add New Coin ──────────────────────────────────────
 function openAddCoin() {
   ['acSym','acName','acQty','acPrice','acCgId'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('acCat').value = 'layer1';
+  const catSel = document.getElementById('acCat');
+  if (!catSel.options.length) catSel.innerHTML = SamsamTaxonomy.list.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+  catSel.value = 'layer1';
   document.getElementById('acPreview').style.display = 'none';
   document.getElementById('acError').style.display = 'none';
   document.getElementById('addCoinModal').classList.add('active');
@@ -2177,14 +2186,14 @@ function exportPdf() {
 // Theme switching lives in samsam-ui.js (shared by every page).
 function toggleTheme() { SamsamUI.toggleTheme(); }
 
-const CAT_COLORS={layer1:'#3b82f6',layer2:'#8b5cf6',defi:'#10b981',ai:'#e879f9',meme:'#ef4444',infra:'#06b6d4',other:'#6b7280',btc:'#f7931a'};
-const CAT_LABELS={layer1:'Layer 1',layer2:'Layer 2',defi:'DeFi',ai:'AI & Web3',meme:'Meme',infra:'Infrastructure',other:'Other',btc:'Bitcoin'};
+const CAT_COLORS=SamsamTaxonomy.colors;
+const CAT_LABELS=SamsamTaxonomy.labels;
 
 function renderDashboard() {
   const catTotals={btc:0};
   portfolio.forEach(c=>{
     const val=c.qty*c.currentPrice;
-    const cat=c.sym==='BTC'?'btc':(c.cat||'other');
+    const cat=c.cat||'other';
     catTotals[cat]=(catTotals[cat]||0)+val;
   });
   const totalVal=Object.values(catTotals).reduce((a,b)=>a+b,0);
@@ -2243,7 +2252,7 @@ function renderDashboard() {
   portfolio.forEach(c=>{
     const base=c.qty*c.basePrice,cur=c.qty*c.currentPrice;
     totalBase+=base;totalCurrent+=cur;
-    const cat=c.sym==='BTC'?'btc':(c.cat||'other');
+    const cat=c.cat||'other';
     catPnl[cat]=catPnl[cat]||{base:0,cur:0};
     catPnl[cat].base+=base;catPnl[cat].cur+=cur;
   });
