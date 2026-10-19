@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610191426"></script>
-<script src="samsam-dropdown.js?v=202610191426"></script>
-<script src="samsam-chart.js?v=202610191426"></script>
+<script src="samsam-ui.js?v=202610191442"></script>
+<script src="samsam-dropdown.js?v=202610191442"></script>
+<script src="samsam-chart.js?v=202610191442"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -733,6 +733,28 @@
   .perf-legend-val.pos { color: #3b82f6; }
   .perf-legend-val.neg { color: #ef4444; }
 
+  /* ── Main trio: identical size, padding and radius for the three cards ── */
+  .main-trio { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; align-items: stretch; }
+  .main-trio > .holdings-card, .main-trio > .alloc-mini-card {
+    margin: 0; padding: 20px; border-radius: 16px; min-width: 0; box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 10px;
+    position: relative;
+  }
+  .main-trio .holdings-tabs { margin: 0; }
+  .main-trio .holdings-header { margin: 0; }
+  /* Allocation: title on top, donut centred, categories below — fills the same height */
+  .main-trio #allocMiniCard .alloc-mini-left { display: contents; }
+  .main-trio #allocMiniCard .alloc-mini-title { order: 0; margin: 0; padding-right: 20px; }
+  .main-trio #allocMiniCard .alloc-mini-donut { order: 1; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 120px; }
+  .main-trio #allocMiniCard .alloc-mini-donut svg { width: 120px; height: 120px; }
+  .main-trio #allocMiniCard .alloc-mini-cats { order: 2; justify-content: center; }
+  .main-trio #allocMiniCard > .alloc-mini-arrow { position: absolute; top: 14px; right: 18px; }
+  .main-trio .perf-legend { margin-top: 0; }
+  @media (min-width: 1024px) {
+    .main-trio { grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    .main-trio #allocMiniCard .alloc-mini-donut svg { width: 150px; height: 150px; }
+  }
+
   /* Holdings Chart Card */
   .holdings-card {
     background: var(--bg2); border: 1px solid var(--border);
@@ -993,6 +1015,8 @@
   </div>
 </a>
 
+<!-- ── Main trio: Holdings · Allocation · Performance — one equal grid ── -->
+<div class="main-trio" id="mainTrio">
 <!-- ── Holdings Chart Card ── -->
 <div class="holdings-card" id="holdingsCard" onclick="openHoldingsView()" style="cursor:pointer">
   <div class="holdings-header">
@@ -1052,6 +1076,7 @@
     </div>
   </div>
 </a>
+</div><!-- /main-trio -->
 
 
 
@@ -1218,7 +1243,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610191426"></script>
+<script type="module" src="samsam-cloud.js?v=202610191442"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -2633,6 +2658,9 @@ function updateSyncFooter() {
   }
 }
 
+// Same chart height in both chart cards so the three-card row lines up
+function TRIO_CHART_H() { return window.innerWidth >= 1024 ? 170 : 140; }
+
 // ─── Portfolio Performance Chart ─────────────────────────────────────────────
 function loadPerfSnapshots() { return perfSnapsState; }
 
@@ -2663,7 +2691,7 @@ function drawPerfChart() {
   const baseB = snaps[0].b;
   const pctV  = snaps.map(s => (s.v - baseV) / baseV * 100);
   const pctB  = snaps.map(s => baseB ? (s.b - baseB) / baseB * 100 : 0);
-  SamsamChart.draw(canvas, { height: 160, format: 'pct', series: [
+  SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'pct', series: [
     { points: snaps.map((s, i) => ({ t: s.t, v: pctB[i] })), color: '#f0a060', width: 2 },            // BTC
     { points: snaps.map((s, i) => ({ t: s.t, v: pctV[i] })), color: '#3b82f6', width: 2.4, fill: true }, // Portfolio
   ] });
@@ -2759,7 +2787,7 @@ function drawHoldingsChart() {
     changeEl.className = 'holdings-change ' + (isPos ? 'pos' : 'neg');
   }
 
-  SamsamChart.draw(canvas, { height: 120, format: 'usd', series: [{ points: snaps, color, width: 2.2, fill: true }] });
+  SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'usd', series: [{ points: snaps, color, width: 2.2, fill: true }] });
 }
 
 function updateHoldingsChart() {
