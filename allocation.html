@@ -6,7 +6,7 @@
 <title>Portfolio Allocation</title>
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610191442"></script>
+<script src="samsam-ui.js?v=202610191500"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -255,7 +255,7 @@ body {
 
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610191442"></script>
+<script type="module" src="samsam-cloud.js?v=202610191500"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
 
@@ -399,9 +399,7 @@ function loadPortfolio() {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function fmtUSD(v) {
-  if (v >= 1000) return '$' + v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  if (v >= 1)    return '$' + v.toFixed(2);
-  return '$' + v.toPrecision(4);
+  return SamsamFmt.usd(v);   // shared app-wide format: $10,660.13
 }
 function fmtQty(v, sym) {
   if (v >= 1000000) return (v/1000000).toFixed(2) + 'M ' + sym;

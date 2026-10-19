@@ -101,6 +101,14 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
   window.addEventListener('storage', function (e) { if (e.key === KEY) applyTheme(saved()); });
 
+  // One USD formatter for every money amount in the app: thousands separators + exactly 2 decimals.
+  // (Unit prices of sub-$1 coins keep extra decimals elsewhere — $0.0004 can't be shown as $0.00.)
+  var usdFmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  window.SamsamFmt = {
+    usd: function (n) { n = +n || 0; var a = Math.abs(n); if (a > 0 && a < 0.005) return (n < 0 ? '-' : '') + '<$0.01'; return (n < 0 && a >= 0.005 ? '-' : '') + '$' + usdFmt.format(a); },
+    usdSigned: function (n) { n = +n || 0; return (n >= 0 ? '+' : '-') + window.SamsamFmt.usd(Math.abs(n)); },
+    num2: function (n) { return usdFmt.format(+n || 0); },
+  };
   window.SamsamUI = { icons: ICONS, icon: function (n) { return ICONS[n] || ''; }, liveDot: liveDot,
     toggleTheme: toggleTheme, applyTheme: applyTheme, currentTheme: current, refresh: init };
 })();

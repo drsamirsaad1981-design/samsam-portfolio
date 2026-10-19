@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610191442"></script>
-<script src="samsam-chart.js?v=202610191442"></script>
+<script src="samsam-ui.js?v=202610191500"></script>
+<script src="samsam-chart.js?v=202610191500"></script>
 <title>Portfolio Performance</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
@@ -615,7 +615,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610191442"></script>
+<script type="module" src="samsam-cloud.js?v=202610191500"></script>
 <script>
 // ── Constants ──
 
@@ -837,18 +837,12 @@ async function fetchLivePrices() {
 // ── Format helpers ──
 // Always English number formatting — no RTL weirdness
 function fmtUSD(v) {
-  const abs = Math.abs(v);
-  let str;
-  if (abs >= 1000)      str = '$' + abs.toLocaleString('en-US', {maximumFractionDigits:0});
-  else if (abs >= 1)    str = '$' + abs.toFixed(2);
-  else if (abs >= 0.01) str = '$' + abs.toFixed(4);
-  else                  str = '$' + abs.toFixed(6);
-  return v < 0 ? '-' + str : str;
+  return SamsamFmt.usd(v);   // shared app-wide format: $10,660.13
 }
 function fmtPrice(v) {
   if (v >= 10000) return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
   if (v >= 1000)  return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-  if (v >= 1)     return '$' + v.toFixed(2);
+  if (v >= 1)     return SamsamFmt.usd(v);
   if (v >= 0.01)  return '$' + v.toFixed(4);
   return '$' + v.toFixed(6);
 }

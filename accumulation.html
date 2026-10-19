@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#0a0e1a">
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610191442"></script>
+<script src="samsam-ui.js?v=202610191500"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -512,7 +512,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610191442"></script>
+<script type="module" src="samsam-cloud.js?v=202610191500"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -737,7 +737,7 @@ function renderTable() {
           ${r.readyToBuy ? '🟢 BUY NOW!' : `🔴 ${(r.priceDiff).toFixed(1)}% above`}
         </div>` : ''}
       </td>
-      <td>${hasPrice && r.pendingQty > 0 ? '<strong>$' + fmtUSD(r.costToTarget) + '</strong>' : (r.pendingQty === 0 ? '<span style="color:var(--green)">—</span>' : '<span class="no-price">N/A</span>')}</td>
+      <td>${hasPrice && r.pendingQty > 0 ? '<strong>' + SamsamFmt.usd(r.costToTarget) + '</strong>' : (r.pendingQty === 0 ? '<span style="color:var(--green)">—</span>' : '<span class="no-price">N/A</span>')}</td>
       <td style="min-width:100px">
         <div class="mini-prog">
           <div class="mini-prog-fill" style="width:${r.progress.toFixed(1)}%;background:${progColor}"></div>
@@ -829,7 +829,7 @@ function renderCards() {
         <div class="acc-card-stat">
           <div class="lbl">Cost to Target</div>
           <div class="val" style="color:var(--accent)">
-            ${hasPrice && r.pendingQty > 0 ? '$'+fmtUSD(r.costToTarget) : (r.pendingQty===0?'—':'N/A')}
+            ${hasPrice && r.pendingQty > 0 ? SamsamFmt.usd(r.costToTarget) : (r.pendingQty===0?'—':'N/A')}
           </div>
         </div>
       </div>
@@ -914,9 +914,9 @@ function renderDashboard() {
 
   const overallPct = weightedTarget > 0 ? Math.min(weightedActual / weightedTarget * 100, 100) : 0;
 
-  document.getElementById('dTotalTarget').textContent = '$' + fmtUSD(totalTargetVal);
-  document.getElementById('dHoldings').textContent    = '$' + fmtUSD(holdingsVal);
-  document.getElementById('dPending').textContent     = '$' + fmtUSD(pendingCost);
+  document.getElementById('dTotalTarget').textContent = SamsamFmt.usd(totalTargetVal);
+  document.getElementById('dHoldings').textContent    = SamsamFmt.usd(holdingsVal);
+  document.getElementById('dPending').textContent     = SamsamFmt.usd(pendingCost);
   document.getElementById('dCompleted').textContent   = completed;
   document.getElementById('dInProgress').textContent  = inProgress + ' in progress';
   document.getElementById('overallPct').textContent   = overallPct.toFixed(1) + '%';
@@ -1105,8 +1105,7 @@ function fmtUSD(n) {
   if (!n || isNaN(n)) return '0.00';
   if (n < 0.001) return n.toFixed(6);
   if (n < 1) return n.toFixed(4);
-  if (n < 10) return n.toFixed(3);
-  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return SamsamFmt.num2(n);   // >= $1: shared format, 2 decimals
 }
 function fmtQty(n) {
   if (!n || isNaN(n) || n === 0) return '0';
@@ -1163,12 +1162,12 @@ function calcDca() {
 
   document.getElementById('dcaPerMonth').textContent    = fmtQty(coinsPerMonth) + ' ' + entry.sym;
   document.getElementById('dcaTotalCoins').textContent  = fmtQty(totalCoins) + ' ' + entry.sym;
-  document.getElementById('dcaTotalInvested').textContent = '$' + fmtUSD(totalInvested);
+  document.getElementById('dcaTotalInvested').textContent = SamsamFmt.usd(totalInvested);
   document.getElementById('dcaTargetPct').textContent   =
     pctOfTarget !== null ? pctOfTarget.toFixed(1) + '%' : '—';
   document.getElementById('dcaMonthsToTarget').textContent =
     monthsNeeded !== null
-      ? `${monthsNeeded} months (~${(monthsNeeded/12).toFixed(1)} yrs) at $${fmtUSD(monthly)}/mo`
+      ? `${monthsNeeded} months (~${(monthsNeeded/12).toFixed(1)} yrs) at ${SamsamFmt.usd(monthly)}/mo`
       : pendingQty <= 0 ? '✅ Target already reached!' : '—';
 
   res.style.display = 'grid';

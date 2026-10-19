@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610191442"></script>
-<script src="samsam-dropdown.js?v=202610191442"></script>
-<script src="samsam-chart.js?v=202610191442"></script>
+<script src="samsam-ui.js?v=202610191500"></script>
+<script src="samsam-dropdown.js?v=202610191500"></script>
+<script src="samsam-chart.js?v=202610191500"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1027,7 +1027,7 @@
     </div>
     <div style="color:var(--fg2);font-size:1.1rem;align-self:center">›</div>
   </div>
-  <div class="holdings-tabs">
+  <div class="holdings-tabs" onclick="event.stopPropagation()">
     <button class="holdings-tab active" data-range="24h" onclick="setHoldingsRange('24h',this)">24h</button>
     <button class="holdings-tab" data-range="7d"  onclick="setHoldingsRange('7d',this)">7d</button>
     <button class="holdings-tab" data-range="30d" onclick="setHoldingsRange('30d',this)">30d</button>
@@ -1243,7 +1243,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610191442"></script>
+<script type="module" src="samsam-cloud.js?v=202610191500"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -1571,7 +1571,7 @@ function fmt(n, dec) {
 
 function renderHeader() {
   const { btcQty, btcValue, altTotal, total } = calcStats();
-  const fmtUsd = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const fmtUsd = n => SamsamFmt.usd(n);
   const fmtBtc = n => (btcPrice > 0 ? parseFloat((n / btcPrice).toFixed(8)).toString() : '—') + ' BTC';
 
   // Card 1: Total Portfolio
@@ -1586,7 +1586,7 @@ function renderHeader() {
   const pct = cost > 0 ? pnl / cost * 100 : 0;
   const sign = pnl >= 0 ? '+' : '-';
   const pnlEl = document.getElementById('totalPnlCard');
-  pnlEl.textContent = sign + '$' + Math.abs(pnl).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  pnlEl.textContent = sign + SamsamFmt.usd(Math.abs(pnl));
   pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'stat-pos' : 'stat-neg');
   const subEl = document.getElementById('totalPnlSub');
   subEl.textContent = '(' + (pct >= 0 ? '+' : '-') + Math.abs(pct).toFixed(2) + '%)';
@@ -1626,7 +1626,7 @@ function renderBtcTicker() {
   const price = btcTicker.price > 0 && Date.now() - btcTicker.t < 5 * 60e3 ? btcTicker.price : btcPrice;
   const btcCoin = portfolio.find(c => c.sym === 'BTC');
   const ch = btcTicker.ch24 != null ? btcTicker.ch24 : (btcCoin && btcCoin.change24h != null ? btcCoin.change24h : null);
-  const usd = n => '$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: n >= 1000 ? 0 : 2 });
+  const usd = n => SamsamFmt.usd(n);
   const parts = [
     `<span class="bt-item">${SamsamUI.liveDot(live ? 'ok' : 'error', true)}<span class="bt-live">${live ? 'Live' : 'Offline'}</span></span>`,
     `<span class="bt-item">BTC / USD <strong>${price > 0 ? usd(price) : '—'}</strong></span>`,
@@ -1664,12 +1664,12 @@ function renderSummary() {
   const allTotal = portfolio.reduce((s,c) => s + c.qty * c.currentPrice, 0);
   const allCard = `<div class="summary-card${activeCatFilter===''?' cat-active':''}" onclick="setCatFilter('')">
     <div class="label">🌐 All Coins</div>
-    <div class="value">$${allTotal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+    <div class="value">${SamsamFmt.usd(allTotal)}</div>
   </div>`;
   const catCards = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])
     .map(([k,v]) => `<div class="summary-card${activeCatFilter===k?' cat-active':''}" onclick="setCatFilter('${k}')">
       <div class="label">${cats[k]||k}</div>
-      <div class="value">$${v.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+      <div class="value">${SamsamFmt.usd(v)}</div>
     </div>`).join('');
   grid.innerHTML = allCard + catCards;
 }
@@ -1743,9 +1743,9 @@ function renderTableAndStack() {
         <td class="ro-num" title="Changes only through Buy / Sell / Transfer">${fmtQtyRO(c.qty)}</td>
         <td class="ro-num" style="color:var(--fg2)" title="Calculated from Buy / Sell / Transfer">${fmtAvgRO(c.basePrice)}</td>
         <td><input type="number" class="editable-input" value="${fmtInput(c.currentPrice)}" step="any" onchange="updatePrice('${c.sym}',this.value)"></td>
-        <td style="color:var(--fg2)">$${fmt(baseVal,2)}</td>
-        <td style="font-weight:700">$${fmt(curVal,2)}</td>
-        <td><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${pnlSign}$${Math.abs(pnl).toFixed(2)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
+        <td style="color:var(--fg2)">${SamsamFmt.usd(baseVal)}</td>
+        <td style="font-weight:700">${SamsamFmt.usd(curVal)}</td>
+        <td><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${pnlSign}${SamsamFmt.usd(Math.abs(pnl))}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
         <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
         <td><span class="action-badge action-${action}">${actionLabel}</span></td>
         <td style="min-width:120px">
@@ -1792,16 +1792,16 @@ function renderTableAndStack() {
             ${(()=>{const u=getCoinGeckoUrl(c.sym);const name=COIN_NAMES[c.sym]||'';const inner=`<div class="coin-card-sym" style="font-weight:700;font-size:0.95rem">${c.sym}</div><div style="font-size:0.72rem;color:var(--fg2)">${name}</div>`;return u?`<a href="${u}" target="_blank" rel="noopener" title="Open ${c.sym} on CoinGecko" style="text-decoration:none;color:inherit;transition:opacity 0.15s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">${inner}</a>`:`<div>${inner}</div>`;})()}
           </div>
           <div>
-            <div style="font-weight:700;font-size:1rem;white-space:nowrap">$${fmt(curVal,2)}</div>
-            <div class="${pnlCls}" style="font-size:0.75rem;white-space:nowrap">${pnlSign}$${Math.abs(pnl).toFixed(2)} (${pnlSign}${pnlPct.toFixed(1)}%)</div>
+            <div style="font-weight:700;font-size:1rem;white-space:nowrap">${SamsamFmt.usd(curVal)}</div>
+            <div class="${pnlCls}" style="font-size:0.75rem;white-space:nowrap">${pnlSign}${SamsamFmt.usd(Math.abs(pnl))} (${pnlSign}${pnlPct.toFixed(1)}%)</div>
             <div style="font-size:0.7rem;color:var(--fg2);margin-top:2px">@ $${c.currentPrice}</div>
           </div>
         </div>
         <div class="coin-card-body">
           <div class="coin-metric"><label>Qty</label><val>${fmtQtyRO(c.qty)}</val></div>
-          <div class="coin-metric"><label>Cost Basis</label><val>$${fmt(baseVal,0)}</val></div>
+          <div class="coin-metric"><label>Cost Basis</label><val>${SamsamFmt.usd(baseVal)}</val></div>
           <div class="coin-metric"><label>Avg Buy Price</label><val>${fmtAvgRO(c.basePrice)}</val></div>
-          <div class="coin-metric"><label>Holdings / Current Value</label><val>$${fmt(curVal,0)}</val></div>
+          <div class="coin-metric"><label>Holdings / Current Value</label><val>${SamsamFmt.usd(curVal)}</val></div>
           <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
           <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
         </div>
@@ -1912,7 +1912,7 @@ function renderHistory() {
     <div><span>Total Sold</span> <strong style="color:#ef4444">${fmtN(totalSells)} ${sym}</strong></div>
     <div><span>Current Qty</span> <strong>${fmtN(curQty)} ${sym}</strong></div>
     <div><span>Avg Cost</span> <strong>$${avgCost.toFixed(4)}</strong></div>
-    <div><span>Realized P&L</span> <strong style="color:${realized>=0?'#22c55e':'#ef4444'}">${sells.length?(realized>=0?'+':'-')+'$'+Math.abs(realized).toFixed(2):'—'}</strong></div>`;
+    <div><span>Realized P&L</span> <strong style="color:${realized>=0?'#22c55e':'#ef4444'}">${sells.length?(realized>=0?'+':'-')+SamsamFmt.usd(Math.abs(realized)):'—'}</strong></div>`;
 
   // Transaction list
   const listEl = document.getElementById('histList');
@@ -1942,12 +1942,12 @@ function renderHistory() {
     const isBuy = t.type === 'buy';
     const pnl = isBuy ? null : (perTx[t.id] ? perTx[t.id].realized : null);
     const pnlStr = pnl !== null && pnl !== undefined
-      ? `<div style="font-size:0.72rem;margin-top:2px;color:${pnl>=0?'#22c55e':'#ef4444'}">${pnl>=0?'Profit':'Loss'}: ${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}</div>`
+      ? `<div style="font-size:0.72rem;margin-top:2px;color:${pnl>=0?'#22c55e':'#ef4444'}">${pnl>=0?'Profit':'Loss'}: ${pnl>=0?'+':'-'}${SamsamFmt.usd(Math.abs(pnl))}</div>`
       : '';
     return `<div class="tx-row tx-${t.type}">
       <div class="tx-details">
         <span class="tx-type-badge">${isBuy?'🟢 BUY':'🔴 SELL'}</span>
-        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>$${(t.total ?? t.qty*t.price).toFixed(2)}</strong></div>
+        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>${SamsamFmt.usd(t.total ?? t.qty*t.price)}</strong></div>
         ${pnlStr}
         ${meta}
       </div>
@@ -1963,7 +1963,7 @@ function deleteTx(txId) {
   const fmtN = n => n < 1 ? n.toFixed(6) : n < 10 ? n.toFixed(4) : n.toFixed(2);
   const what = tx.type === 'adjust'
     ? `this manual edit of ${tx.sym}`
-    : `this ${tx.type.replace('_', ' ').toUpperCase()} transaction?\n\n${fmtN(tx.qty)} ${tx.sym}` + (tx.type === 'transfer_out' ? '' : ` @ $${tx.price.toFixed(4)} = $${(tx.qty*tx.price).toFixed(2)}`);
+    : `this ${tx.type.replace('_', ' ').toUpperCase()} transaction?\n\n${fmtN(tx.qty)} ${tx.sym}` + (tx.type === 'transfer_out' ? '' : ` @ $${tx.price.toFixed(4)} = ${SamsamFmt.usd(tx.qty*tx.price)}`);
   // Warn if a later sale would then exceed the remaining holdings.
   let oversell = '';
   try {
@@ -2089,7 +2089,7 @@ function exportPdf() {
   if (meta) {
     meta.innerHTML =
       `Total Value: <strong>${total}</strong><br>` +
-      `Coins: ${coinCount} &nbsp;|&nbsp; BTC: $${btcPrice.toLocaleString()}<br>` +
+      `Coins: ${coinCount} &nbsp;|&nbsp; BTC: ${SamsamFmt.usd(btcPrice)}<br>` +
       `Generated: ${now}`;
   }
   // Switch to table view for print (more data visible)
@@ -2129,14 +2129,14 @@ function renderDashboard() {
     const large=angle>Math.PI?1:0;
     const pctSlice=(val/totalVal*100).toFixed(1);
     const label=CAT_LABELS[cat]||cat;
-    const valFmt='$'+val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    const valFmt=SamsamFmt.usd(val);
     paths+=`<path d="M${ix1},${iy1} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${inner},${inner} 0 ${large},0 ${ix1},${iy1} Z"
       fill="${CAT_COLORS[cat]||'#6b7280'}" opacity="0.9" style="cursor:pointer;transition:opacity 0.15s"
       onmouseenter="donutHover('${label}','${valFmt}','${pctSlice}','${CAT_COLORS[cat]||'#6b7280'}')"
       onmouseleave="donutHoverReset()"/>`;
     startAngle=endAngle;
   });
-  const totalFmt='$'+totalVal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  const totalFmt=SamsamFmt.usd(totalVal);
   const svgEl=document.getElementById('donutChart');
   // ② Larger centre text to match bigger donut
   svgEl.innerHTML=paths+
@@ -2156,7 +2156,7 @@ function renderDashboard() {
   // Legend with percentage
   document.getElementById('donutLegend').innerHTML=entries.map(([cat,val])=>{
     const pct=(val/totalVal*100).toFixed(1);
-    const valFmt='$'+val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    const valFmt=SamsamFmt.usd(val);
     return `<div class="legend-item">
       <span class="legend-dot" style="background:${CAT_COLORS[cat]||'#6b7280'}"></span>
       <span class="legend-label">${CAT_LABELS[cat]||cat}</span>
@@ -2185,7 +2185,7 @@ function renderDashboard() {
     const sign=pnl>=0?'+':'';
     return `<div class="pnl-row">
       <span class="pnl-label"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};margin-right:6px;vertical-align:middle"></span>${CAT_LABELS[cat]||cat}</span>
-      <span class="pnl-val ${cls}">${sign}$${Math.abs(pnl).toFixed(0)} (${sign}${pnlPct.toFixed(1)}%)</span>
+      <span class="pnl-val ${cls}">${sign}${SamsamFmt.usd(Math.abs(pnl))} (${sign}${pnlPct.toFixed(1)}%)</span>
     </div>`;
   }).join('');
 
@@ -2193,17 +2193,17 @@ function renderDashboard() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
       <div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
         <div style="font-size:0.68rem;color:var(--fg2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Cost Basis</div>
-        <div style="font-size:0.95rem;font-weight:700">$${totalBase.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+        <div style="font-size:0.95rem;font-weight:700">${SamsamFmt.usd(totalBase)}</div>
       </div>
       <div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
         <div style="font-size:0.68rem;color:var(--fg2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Current</div>
-        <div style="font-size:0.95rem;font-weight:700">$${totalCurrent.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+        <div style="font-size:0.95rem;font-weight:700">${SamsamFmt.usd(totalCurrent)}</div>
       </div>
     </div>
     <div class="pnl-row pnl-total" style="margin-bottom:10px">
       <span class="pnl-label" style="font-weight:700;color:var(--accent)">📈 Unrealized P&L</span>
       <div style="text-align:right">
-        <div class="pnl-val ${totalCls}" style="font-size:1.05rem">${totalSign}$${Math.abs(totalPnl).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</div>
+        <div class="pnl-val ${totalCls}" style="font-size:1.05rem">${totalSign}${SamsamFmt.usd(Math.abs(totalPnl))}</div>
         <div class="${totalCls}" style="font-size:0.75rem;opacity:0.85">${totalSign}${totalPnlPct.toFixed(2)}%</div>
       </div>
     </div>
@@ -2658,6 +2658,15 @@ function updateSyncFooter() {
   }
 }
 
+// Holdings header/chart end on the live portfolio total, so it always equals the TOTAL PORTFOLIO card
+function withLiveTotal(snaps) {
+  if (!snaps.length) return snaps;
+  const { total } = calcStats();
+  if (!(total > 0)) return snaps;
+  const lastT = snaps[snaps.length - 1].t, now = Date.now();
+  return [...snaps, { t: Math.max(now, lastT + 1), v: total }];
+}
+
 // Same chart height in both chart cards so the three-card row lines up
 function TRIO_CHART_H() { return window.innerWidth >= 1024 ? 170 : 140; }
 
@@ -2709,7 +2718,7 @@ function drawPerfChart() {
   const portEl = document.getElementById('perfPortfolioLabel');
   const btcEl  = document.getElementById('perfBtcLabel');
   if (portEl) {
-    portEl.textContent = `${pnlSign}$${Math.abs(pnlUsd).toFixed(2)}  ${pctSign}${lastV.toFixed(2)}%`;
+    portEl.textContent = `${pnlSign}${SamsamFmt.usd(Math.abs(pnlUsd))}  ${pctSign}${lastV.toFixed(2)}%`;
     portEl.className   = 'perf-legend-val ' + (pnlUsd >= 0 ? 'pos' : 'neg');
   }
   if (btcEl) {
@@ -2764,10 +2773,11 @@ function drawHoldingsChart() {
     canvas.style.display = 'none';
     // Still show current total
     const { total } = calcStats ? calcStats() : { total: 0 };
-    if (total > 0) totalEl.textContent = '$' + total.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (total > 0) totalEl.textContent = SamsamFmt.usd(total);
     if (changeEl) { changeEl.textContent = ''; }
     return;
   }
+  snaps = withLiveTotal(snaps);
   if (snaps.length === 1) snaps = [snaps[0], snaps[0]];
   if (noData) noData.style.display = 'none';
   canvas.style.display = '';
@@ -2780,10 +2790,10 @@ function drawHoldingsChart() {
   const color = isPos ? '#22c55e' : '#f43f5e'; // green when up, red when down
 
   // Update header
-  totalEl.textContent = '$' + last.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  totalEl.textContent = SamsamFmt.usd(last);
   if (changeEl) {
     const sign = delta >= 0 ? '+' : '-';
-    changeEl.textContent = `${sign}$${Math.abs(delta).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}  (${sign}${Math.abs(pct).toFixed(2)}%)`;
+    changeEl.textContent = `${sign}${SamsamFmt.usd(Math.abs(delta))}  (${sign}${Math.abs(pct).toFixed(2)}%)`;
     changeEl.className = 'holdings-change ' + (isPos ? 'pos' : 'neg');
   }
 
@@ -2991,7 +3001,7 @@ function previewAddTx() {
   ['atxQty', 'atxPrice', 'atxFee', 'atxDate'].forEach(id => document.getElementById(id).classList.toggle('bad', !!r.errs[id] && document.getElementById(id).value !== ''));
   document.getElementById('atxErr').textContent = '';
   if (!r.after) { pv.innerHTML = ''; return; }
-  const usd = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const usd = n => SamsamFmt.usd(n);
   const q = n => parseFloat(n.toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
   const lines = [];
   if (atxType === 'buy') lines.push(`Total cost: <b>${usd(r.qty * r.price)}</b>`);
@@ -3046,7 +3056,7 @@ function readEditOpening() {
 function previewEditOpening() {
   const x = readEditOpening(), pv = document.getElementById('eopPreview');
   if (x.err) { pv.innerHTML = ''; return; }
-  const usd = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const usd = n => SamsamFmt.usd(n);
   const q = n => parseFloat(n.toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
   const p = n => '$' + (+n).toLocaleString('en-US', { maximumFractionDigits: n >= 1 ? 4 : 8 });
   pv.innerHTML = `Opening cost: <b>${usd(x.qty * x.avg)}</b><br>After all transactions: <b>${q(x.r.qty)} ${coinTxSym}</b> · avg buy <b>${p(x.r.avg)}</b> · cost basis <b>${usd(x.r.qty * x.r.avg)}</b>` +
@@ -3207,13 +3217,14 @@ function drawHoldingsOverlayChart() {
   const cutoff = holdingsOverlayRange === 'all' ? 0 : now - rangeMs[holdingsOverlayRange];
   let snaps = allSnaps.filter(s => s.t >= cutoff);
   if (snaps.length === 0) { snaps = allSnaps.length ? [allSnaps[allSnaps.length-1]] : []; }
+  snaps = withLiveTotal(snaps);
   if (snaps.length === 1) snaps = [snaps[0], snaps[0]];
 
   const totalEl  = document.getElementById('hovTotal');
   const changeEl = document.getElementById('hovChange');
 
   if (snaps.length === 0) {
-    if (totalEl) { const {total} = calcStats(); totalEl.textContent = total > 0 ? '$' + total.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '$—'; }
+    if (totalEl) { const {total} = calcStats(); totalEl.textContent = total > 0 ? SamsamFmt.usd(total) : '$—'; }
     if (changeEl) changeEl.textContent = '';
     canvas.style.display = 'none';
     return;
@@ -3224,10 +3235,10 @@ function drawHoldingsOverlayChart() {
   const delta = last - first, pct = first > 0 ? (delta/first*100) : 0;
   const isPos = delta >= 0;
 
-  if (totalEl) totalEl.textContent = '$' + last.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  if (totalEl) totalEl.textContent = SamsamFmt.usd(last);
   if (changeEl) {
     const sign = delta >= 0 ? '+' : '-';
-    changeEl.textContent = `${sign}$${Math.abs(delta).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}  (${sign}${Math.abs(pct).toFixed(2)}%)`;
+    changeEl.textContent = `${sign}${SamsamFmt.usd(Math.abs(delta))}  (${sign}${Math.abs(pct).toFixed(2)}%)`;
     changeEl.className = 'hov-change ' + (isPos ? 'pos' : 'neg');
   }
 
@@ -3250,7 +3261,7 @@ function renderHoldingsAssetList() {
     const priceStr = c.currentPrice >= 1000
       ? '$' + c.currentPrice.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})
       : '$' + c.currentPrice.toLocaleString('en-US', {minimumFractionDigits:c.currentPrice<0.01?6:c.currentPrice<1?4:2,maximumFractionDigits:c.currentPrice<0.01?6:c.currentPrice<1?4:2});
-    const holdVal = '$' + c.holdingVal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const holdVal = SamsamFmt.usd(c.holdingVal);
     const holdQty = parseFloat(c.qty.toFixed(c.qty < 1 ? 6 : 4)).toString() + ' ' + c.sym;
     // Symbol + name (and logo) open the coin on CoinGecko, like the main table
     const cgUrl = getCoinGeckoUrl(c.sym);
