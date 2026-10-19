@@ -10,9 +10,9 @@
 <meta name="theme-color" content="#0a0e1a">
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610191919"></script>
-<script src="samsam-labels.js?v=202610191919"></script>
-<script src="samsam-taxonomy.js?v=202610191919"></script>
+<script src="samsam-ui.js?v=202610191946"></script>
+<script src="samsam-labels.js?v=202610191946"></script>
+<script src="samsam-taxonomy.js?v=202610191946"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -366,6 +366,8 @@ tr:hover td { background: rgba(255,255,255,.02); }
   border-radius: 10px; font-size: 0.78rem; color: var(--fg2); text-align: left; line-height: 1.6;
 }
 .empty-state .hint strong { color: var(--accent); }
+/* Card labels styled like the table headers (same words from samsam-labels.js, same caps) */
+.acc-card-target-row label, .acc-card-alert-row label, .acc-card-pct { text-transform: uppercase; letter-spacing: .4px; font-size: 0.68rem; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -470,13 +472,13 @@ tr:hover td { background: rgba(255,255,255,.02); }
     <thead>
       <tr>
         <th class="sortable" onclick="setSort('name')">Coin</th>
-        <th class="sortable" onclick="setSort('targetQty')">Target Amount</th>
-        <th class="sortable" onclick="setSort('actualQty')">Actual Amount</th>
-        <th class="sortable" onclick="setSort('pendingQty')">Pending Amount</th>
-        <th class="sortable" onclick="setSort('currentPrice')">Current Price</th>
-        <th onclick="setSort('targetPrice')" class="sortable">🎯 Buy At</th>
-        <th class="sortable" onclick="setSort('costToTarget')">Cost to Target</th>
-        <th class="sortable" onclick="setSort('progress')">Progress</th>
+        <th class="sortable" onclick="setSort('targetQty')"><span data-label="TARGET_AMOUNT">Target Amount</span></th>
+        <th class="sortable" onclick="setSort('actualQty')"><span data-label="ACTUAL_AMOUNT">Actual Amount</span></th>
+        <th class="sortable" onclick="setSort('pendingQty')"><span data-label="PENDING_AMOUNT">Pending Amount</span></th>
+        <th class="sortable" onclick="setSort('currentPrice')"><span data-label="CURRENT_PRICE">Current Price</span></th>
+        <th onclick="setSort('targetPrice')" class="sortable">💰 <span data-label="BUY_AT">Buy At</span></th>
+        <th class="sortable" onclick="setSort('costToTarget')"><span data-label="COST_TO_TARGET">Cost to Target</span></th>
+        <th class="sortable" onclick="setSort('progress')"><span data-label="PROGRESS">Progress</span></th>
         <th></th>
       </tr>
     </thead>
@@ -514,7 +516,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610191919"></script>
+<script type="module" src="samsam-cloud.js?v=202610191946"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -719,7 +721,7 @@ function renderTable() {
         ${r.pendingQty > 0 ? fmtQty(r.pendingQty) : '✓'}
         ${r.pendingQty > 0 ? `<span style="font-size:.7rem;color:var(--fg2)"> ${entry.sym}</span>` : ''}
       </td>
-      <td>${hasPrice ? '$' + fmtUSD(r.currentPrice) : '<span class="no-price">No price</span>'}</td>
+      <td>${hasPrice ? SamsamFmt.price(r.currentPrice) : '<span class="no-price">No price</span>'}</td>
       <td style="min-width:130px">
         <div style="display:flex;align-items:center;gap:3px">
           <input class="target-input" type="text" inputmode="decimal"
@@ -733,10 +735,10 @@ function renderTable() {
           <span style="font-size:0.75rem;color:var(--fg2)">%</span>
         </div>
         ${r.targetPrice > 0 ? `<div style="font-size:0.7rem;margin-top:3px;color:var(--accent);font-weight:600">
-          🎯 $${fmtUSD(r.targetPrice)}
+          🎯 ${SamsamFmt.price(r.targetPrice)}
         </div>` : ''}
         ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">
-          ${r.readyToBuy ? '🟢 BUY NOW!' : `🔴 ${(r.priceDiff).toFixed(1)}% above`}
+          ${r.readyToBuy ? '🟢 BUY NOW!' : `🔴 ${(r.priceDiff).toFixed(1)}% above target`}
         </div>` : ''}
       </td>
       <td>${hasPrice && r.pendingQty > 0 ? '<strong>' + SamsamFmt.usd(r.costToTarget) + '</strong>' : (r.pendingQty === 0 ? '<span style="color:var(--green)">—</span>' : '<span class="no-price">N/A</span>')}</td>
@@ -810,26 +812,26 @@ function renderCards() {
         <div class="acc-card-prog-bar">
           <div class="acc-card-prog-fill" style="width:${r.progress.toFixed(1)}%;background:${progColor}"></div>
         </div>
-        <div class="acc-card-pct">${r.progress.toFixed(1)}% complete</div>
+        <div class="acc-card-pct">${SAMSAM_LABELS.PROGRESS}: ${r.progress.toFixed(1)}%</div>
       </div>
 
       <div class="acc-card-grid">
         <div class="acc-card-stat">
-          <div class="lbl">Actual</div>
+          <div class="lbl">${SAMSAM_LABELS.ACTUAL_AMOUNT}</div>
           <div class="val">${fmtQty(r.actualQty)} <span style="font-size:.7em;color:var(--fg2)">${entry.sym}</span></div>
         </div>
         <div class="acc-card-stat">
-          <div class="lbl">Pending</div>
+          <div class="lbl">${SAMSAM_LABELS.PENDING_AMOUNT}</div>
           <div class="val" style="color:${r.pendingQty>0?'var(--red)':'var(--green)'}">
             ${r.pendingQty > 0 ? fmtQty(r.pendingQty)+' '+entry.sym : '✓ Done'}
           </div>
         </div>
         <div class="acc-card-stat">
-          <div class="lbl">Price</div>
-          <div class="val">${hasPrice ? '$'+fmtUSD(r.currentPrice) : '<span class="no-price">No price</span>'}</div>
+          <div class="lbl">${SAMSAM_LABELS.CURRENT_PRICE}</div>
+          <div class="val">${hasPrice ? SamsamFmt.price(r.currentPrice) : '<span class="no-price">No price</span>'}</div>
         </div>
         <div class="acc-card-stat">
-          <div class="lbl">Cost to Target</div>
+          <div class="lbl">${SAMSAM_LABELS.COST_TO_TARGET}</div>
           <div class="val" style="color:var(--accent)">
             ${hasPrice && r.pendingQty > 0 ? SamsamFmt.usd(r.costToTarget) : (r.pendingQty===0?'—':'N/A')}
           </div>
@@ -837,7 +839,7 @@ function renderCards() {
       </div>
 
       <div class="acc-card-target-row">
-        <label>🎯 Target:</label>
+        <label>🎯 ${SAMSAM_LABELS.TARGET_AMOUNT}:</label>
         <input class="card-target-input" type="number" min="0" step="any"
           value="${entry.targetQty||''}"
           placeholder="Amount"
@@ -847,7 +849,7 @@ function renderCards() {
         <span class="sym-tag">${entry.sym}</span>
       </div>
       <div class="acc-card-target-row" style="margin-top:6px">
-        <label>💰 Buy At:</label>
+        <label>💰 ${SAMSAM_LABELS.BUY_AT}:</label>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <button onclick="togglePctSign(${idx})"
             style="background:var(--bg3);border:1px solid var(--border);color:var(--fg);
@@ -865,7 +867,7 @@ function renderCards() {
             onkeydown="if(event.key==='Enter'){this.blur()}"
             style="width:55px;text-align:center">
           <span style="font-size:0.75rem;color:var(--fg2)">%</span>
-          ${r.targetPrice > 0 ? `<span style="font-size:0.78rem;color:var(--accent);font-weight:600">→ $${fmtUSD(r.targetPrice)}</span>` : ''}
+          ${r.targetPrice > 0 ? `<span style="font-size:0.78rem;color:var(--accent);font-weight:600">→ ${SamsamFmt.price(r.targetPrice)}</span>` : ''}
         </div>
         ${r.priceDiff !== null ? `<div style="font-size:0.7rem;margin-top:4px;color:${r.readyToBuy?'var(--green)':'var(--red)'}">
           ${r.readyToBuy ? '🟢 BUY NOW!' : `🔴 ${r.priceDiff.toFixed(1)}% above target`}
@@ -873,7 +875,7 @@ function renderCards() {
       </div>
 
       <div class="acc-card-alert-row">
-        <label>🔔 Alert:</label>
+        <label>🔔 ${SAMSAM_LABELS.PRICE_ALERT}:</label>
         <input class="alert-input" type="text" inputmode="decimal"
           value="${entry.alertPrice > 0 ? entry.alertPrice : ''}"
           placeholder="Price $"

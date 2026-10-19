@@ -19,6 +19,14 @@
     ALL_TYPES: 'All Types',
     HISTORY: 'History',
     REMOVE: 'Remove',
+    // Accumulation Plan (table and cards use the same words)
+    TARGET_AMOUNT: 'Target Amount',
+    ACTUAL_AMOUNT: 'Actual Amount',
+    PENDING_AMOUNT: 'Pending Amount',
+    BUY_AT: 'Buy At',
+    COST_TO_TARGET: 'Cost to Target',
+    PROGRESS: 'Progress',
+    PRICE_ALERT: 'Price Alert',
   };
   window.SAMSAM_LABELS = Object.freeze(L);
   function apply(root) {
