@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610200013"></script>
-<script src="samsam-labels.js?v=202610200013"></script>
-<script src="samsam-taxonomy.js?v=202610200013"></script>
-<script src="samsam-coins.js?v=202610200013"></script>
-<script src="samsam-dropdown.js?v=202610200013"></script>
-<script src="samsam-chart.js?v=202610200013"></script>
+<script src="samsam-ui.js?v=202610200032"></script>
+<script src="samsam-labels.js?v=202610200032"></script>
+<script src="samsam-taxonomy.js?v=202610200032"></script>
+<script src="samsam-coins.js?v=202610200032"></script>
+<script src="samsam-dropdown.js?v=202610200032"></script>
+<script src="samsam-chart.js?v=202610200032"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -208,6 +208,18 @@
   .btc-ticker.static .btc-ticker-track { animation: none; transform: none; width: auto; }
   .btc-ticker.static .btc-ticker-group[aria-hidden] { display: none; }
   .btc-ticker.static .btc-ticker-group { padding: 0 14px; }
+  /* Desktop (≥768px): always one still line — the loop copy is for the phone marquee only */
+  @media (min-width: 768px) {
+    .btc-ticker { justify-content: center; overflow: hidden; white-space: nowrap; -webkit-mask-image: none; mask-image: none; }
+    .btc-ticker .btc-ticker-track { animation: none !important; transform: none !important; width: auto; }
+    .btc-ticker .btc-ticker-group[aria-hidden] { display: none !important; }
+    .btc-ticker .btc-ticker-group { padding: 0 14px; min-width: 0 !important; gap: 24px; }
+    .btc-ticker .btc-ticker-group > .bt-sep:last-child { display: none; }
+  }
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .btc-ticker .btc-ticker-group { gap: 12px; }
+    .bt-item { font-size: .74rem; gap: 5px; }
+  }
   @media (prefers-reduced-motion: reduce) {
     .btc-ticker-track { animation: none; }
     .btc-ticker { -webkit-mask-image: none; mask-image: none; overflow-x: auto; }
@@ -1397,7 +1409,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610200013"></script>
+<script type="module" src="samsam-cloud.js?v=202610200032"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1723,7 +1735,7 @@ function fitBtcTicker() {
   const groups = track.querySelectorAll('.btc-ticker-group');
   groups.forEach(g => g.style.minWidth = '');
   bar.classList.remove('static');
-  const fits = groups[0].scrollWidth <= bar.clientWidth - 8;
+  const fits = window.innerWidth >= 768 || groups[0].scrollWidth <= bar.clientWidth - 8;   // desktop: always one still line
   bar.classList.toggle('static', fits);
   if (!fits) groups.forEach(g => g.style.minWidth = bar.clientWidth + 'px');
 }
