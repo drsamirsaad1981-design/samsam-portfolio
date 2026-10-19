@@ -10,9 +10,10 @@
 <meta name="theme-color" content="#0a0e1a">
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610192104"></script>
-<script src="samsam-labels.js?v=202610192104"></script>
-<script src="samsam-taxonomy.js?v=202610192104"></script>
+<script src="samsam-ui.js?v=202610192113"></script>
+<script src="samsam-labels.js?v=202610192113"></script>
+<script src="samsam-taxonomy.js?v=202610192113"></script>
+<script src="samsam-coins.js?v=202610192113"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -552,7 +553,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610192104"></script>
+<script type="module" src="samsam-cloud.js?v=202610192113"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -622,6 +623,11 @@ window.addEventListener('DOMContentLoaded', () => {
 function loadTheme() { SamsamUI.refresh(); }
 function toggleTheme() { SamsamUI.toggleTheme(); }
 
+// Logo / CoinGecko id for a plan entry: the portfolio coin first, then what was saved with the entry
+function coinOpts(entry, r) {
+  const pc = getPortfolioCoin(entry.sym) || {};
+  return { logoUrl: pc.logoUrl || entry.logoUrl || '', cgId: pc.cgId || entry.cgId || '' };
+}
 function getPortfolioCoin(sym) {
   return portfolioCoins.find(c => c.sym === sym.toUpperCase());
 }
@@ -737,11 +743,8 @@ function renderTable() {
     return `<tr class="${completed ? 'completed-row' : ''}">
       <td>
         <div class="coin-cell">
-          <img class="coin-logo" src="${r.logoUrl || ''}" onerror="this.style.display='none'" alt="${entry.sym}">
-          <div>
-            <div class="coin-sym">${entry.sym}${completed ? '<span class="completed-badge">✓ Done</span>' : ''}</div>
-            <div class="coin-name">${r.name}</div>
-          </div>
+          ${SamsamCoins.iconLinked(entry.sym, 32, coinOpts(entry, r))}
+          ${SamsamCoins.nameLinked(entry.sym, { ...coinOpts(entry, r), name: r.name, badge: completed ? '<span class="completed-badge">✓ Done</span>' : '' })}
         </div>
       </td>
       <td>
@@ -829,18 +832,13 @@ function renderCards() {
     const cat = T ? T.categoryOf(entry.sym) : 'other';
     const ap = entry.alertPrice;
     const alertHit = ap > 0 && hasPrice && r.currentPrice <= ap;
-    const icon = r.logoUrl
-      ? `<img class="acc-coin-icon" src="${r.logoUrl}" alt="${entry.sym}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'acc-coin-icon acc-coin-fb',textContent:'${entry.sym.slice(0,3)}'}))">`
-      : `<div class="acc-coin-icon acc-coin-fb">${entry.sym.slice(0,3)}</div>`;
+    const icon = SamsamCoins.iconLinked(entry.sym, 36, coinOpts(entry, r));
     const metric = (label, val, extra = '') => `<div class="coin-metric"><label>${label}</label><val ${extra}>${val}</val></div>`;
     return `<div class="coin-card acc-card${completed ? ' completed' : ''}">
       <div class="coin-card-header">
         <div style="display:flex;align-items:center;gap:10px;min-width:0">
           ${icon}
-          <div style="min-width:0">
-            <div class="coin-card-sym" style="font-weight:700;font-size:0.95rem;display:flex;align-items:center;gap:6px">${entry.sym}${completed ? '<span class="completed-badge">✓ Done</span>' : ''}</div>
-            <div style="font-size:0.72rem;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name || ''}</div>
-          </div>
+          ${SamsamCoins.nameLinked(entry.sym, { ...coinOpts(entry, r), name: r.name, symSize: '0.95rem', badge: completed ? '<span class="completed-badge">✓ Done</span>' : '' })}
         </div>
         <div>
           <div style="font-weight:700;font-size:1.1rem;white-space:nowrap">${hasPrice ? SamsamFmt.usd(holdVal) : '—'}</div>
