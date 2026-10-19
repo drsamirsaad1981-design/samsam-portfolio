@@ -10,7 +10,8 @@
 <meta name="theme-color" content="#0a0e1a">
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610191612"></script>
+<script src="samsam-ui.js?v=202610191820"></script>
+<script src="samsam-labels.js?v=202610191820"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -468,9 +469,9 @@ tr:hover td { background: rgba(255,255,255,.02); }
     <thead>
       <tr>
         <th class="sortable" onclick="setSort('name')">Coin</th>
-        <th class="sortable" onclick="setSort('targetQty')">Target Qty</th>
-        <th class="sortable" onclick="setSort('actualQty')">Actual Qty</th>
-        <th class="sortable" onclick="setSort('pendingQty')">Pending Qty</th>
+        <th class="sortable" onclick="setSort('targetQty')">Target Amount</th>
+        <th class="sortable" onclick="setSort('actualQty')">Actual Amount</th>
+        <th class="sortable" onclick="setSort('pendingQty')">Pending Amount</th>
         <th class="sortable" onclick="setSort('currentPrice')">Current Price</th>
         <th onclick="setSort('targetPrice')" class="sortable">🎯 Buy At</th>
         <th class="sortable" onclick="setSort('costToTarget')">Cost to Target</th>
@@ -502,7 +503,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
     </div>
     <div id="addSelectedInfo" style="display:none;margin-bottom:10px;padding:10px;background:var(--bg3);border-radius:8px;font-size:0.85rem"></div>
     <div class="form-row">
-      <label class="form-label">Target Quantity</label>
+      <label class="form-label">Target Amount</label>
       <input type="number" class="form-input" id="addTarget" placeholder="0.00" min="0" step="any">
     </div>
     <div class="modal-btns">
@@ -512,7 +513,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610191612"></script>
+<script type="module" src="samsam-cloud.js?v=202610191820"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -838,7 +839,7 @@ function renderCards() {
         <label>🎯 Target:</label>
         <input class="card-target-input" type="number" min="0" step="any"
           value="${entry.targetQty||''}"
-          placeholder="Qty"
+          placeholder="Amount"
           oninput="updateTarget(${idx}, this.value)"
           onblur="commitTarget(${idx}, this.value)"
           onkeydown="if(event.key==='Enter'){this.blur()}">

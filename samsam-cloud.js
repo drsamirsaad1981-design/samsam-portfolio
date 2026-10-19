@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610191612';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610191612';
+import * as Core from './samsam-core.js?v=202610191820';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610191820';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -566,7 +566,7 @@ function renderSetup(d) {
   const when = L.lastSave ? new Date(L.lastSave).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'unknown';
   el.innerHTML = `<h3>☁️ Set up your cloud portfolio (one time)</h3>
     <p>The cloud is empty. Choose where your real data is. Do this on the device that has your <strong>most up-to-date</strong> portfolio — all other devices will then load it automatically.</p>
-    ${hasLocal ? `<p><strong>This device has:</strong> ${L.coins.length} coins, ${L.transactions.length} transactions, ${L.accumPlan.length} accumulation targets, cost basis $${cost.toLocaleString('en-US', { maximumFractionDigits: 2 })}, last saved ${when}.</p>` : '<p>This device has no saved portfolio.</p>'}
+    ${hasLocal ? `<p><strong>This device has:</strong> ${L.coins.length} coins, ${L.transactions.length} transactions, ${L.accumPlan.length} accumulation targets, Cost Basis $${cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, last saved ${when}.</p>` : '<p>This device has no saved portfolio.</p>'}
     <div class="opts">
       ${hasLocal ? '<button class="samsam-btn primary" id="samsamImpLocal">⬆ Upload this device\'s data</button>' : ''}
       <label class="samsam-btn" style="position:relative">📄 Import a backup file<input type="file" accept="application/json,.json" id="samsamImpFile" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
