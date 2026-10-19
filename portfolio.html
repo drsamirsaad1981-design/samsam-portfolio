@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610192139"></script>
-<script src="samsam-labels.js?v=202610192139"></script>
-<script src="samsam-taxonomy.js?v=202610192139"></script>
-<script src="samsam-coins.js?v=202610192139"></script>
-<script src="samsam-dropdown.js?v=202610192139"></script>
-<script src="samsam-chart.js?v=202610192139"></script>
+<script src="samsam-ui.js?v=202610192150"></script>
+<script src="samsam-labels.js?v=202610192150"></script>
+<script src="samsam-taxonomy.js?v=202610192150"></script>
+<script src="samsam-coins.js?v=202610192150"></script>
+<script src="samsam-dropdown.js?v=202610192150"></script>
+<script src="samsam-chart.js?v=202610192150"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1255,6 +1255,10 @@
         <input type="number" class="form-input" id="acPrice" placeholder="0.00" step="any" oninput="previewAddCoin()">
       </div>
       <div class="form-row" style="margin:0">
+        <label class="form-label">Buying fee (USD, optional)</label>
+        <input type="number" class="form-input" id="acFeeUsd" placeholder="0.00" step="any" min="0" oninput="previewAddCoin()">
+      </div>
+      <div class="form-row" style="margin:0">
         <label class="form-label">Category</label>
         <select class="form-input" id="acCat">
           <!-- filled from samsam-taxonomy.js -->
@@ -1332,7 +1336,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610192139"></script>
+<script type="module" src="samsam-cloud.js?v=202610192150"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1979,7 +1983,7 @@ function renderHistory() {
     return `<div class="tx-row tx-${t.type}">
       <div class="tx-details">
         <span class="tx-type-badge">${isBuy?'🟢 BUY':'🔴 SELL'}</span>
-        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>${SamsamFmt.usd(t.total ?? t.qty*t.price)}</strong></div>
+        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>${SamsamFmt.usd((t.total ?? t.qty*t.price) + (isBuy ? (+t.feeUsd || 0) : 0))}</strong>${isBuy && +t.feeUsd ? ` <small>(incl. fee ${SamsamFmt.usd(+t.feeUsd)})</small>` : ''}</div>
         ${pnlStr}
         ${meta}
       </div>
@@ -2024,7 +2028,7 @@ document.getElementById('historyModal').addEventListener('click', function(e){ i
 
 // ── Add New Coin ──────────────────────────────────────
 function openAddCoin() {
-  ['acSym','acName','acQty','acPrice','acCgId'].forEach(id => document.getElementById(id).value = '');
+  ['acSym','acName','acQty','acPrice','acFeeUsd','acCgId'].forEach(id => document.getElementById(id).value = '');
   const catSel = document.getElementById('acCat');
   if (!catSel.options.length) catSel.innerHTML = SamsamTaxonomy.list.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
   catSel.value = 'layer1';
@@ -2040,7 +2044,7 @@ function previewAddCoin() {
   const qty   = parseFloat(document.getElementById('acQty').value);
   const price = parseFloat(document.getElementById('acPrice').value);
   if(qty > 0 && price > 0) {
-    document.getElementById('acCostBasis').textContent = (qty * price).toFixed(2);
+    document.getElementById('acCostBasis').textContent = (qty * price + Math.max(0, parseFloat(document.getElementById('acFeeUsd').value) || 0)).toFixed(2);
     document.getElementById('acPreview').style.display = 'block';
   } else {
     document.getElementById('acPreview').style.display = 'none';
@@ -2070,7 +2074,8 @@ function applyAddCoin() {
   COIN_NAMES[sym] = name;
   // One atomic cloud write: coin settings + its opening buy (or, for a coin that was
   // removed earlier, a correction that sets exactly the entered position).
-  cloudWrite(Samsam.addCoin({ sym, name, cat, cgId }, { qty, price }));
+  const feeUsd = Math.max(0, parseFloat(document.getElementById('acFeeUsd').value) || 0);
+  cloudWrite(Samsam.addCoin({ sym, name, cat, cgId }, { qty, price, feeUsd }));
   closeAddCoin();
   if(cgId) fetchCoinLogoAndPrice({ sym }, cgId);
 }
@@ -2989,6 +2994,7 @@ function setAddTxType(t) {
   document.getElementById('atxPriceRow').style.display = cfg.price ? '' : 'none';
   document.getElementById('atxPriceLabel').textContent = cfg.price;
   document.getElementById('atxFeeRow').style.display = cfg.fee ? '' : 'none';
+  document.getElementById('atxFeeUsdRow').style.display = t === 'buy' ? '' : 'none';
   document.getElementById('atxFeeUnit').textContent = `(in ${atxSym}, optional)`;
   document.getElementById('atxHint').textContent = cfg.hint;
   const LB = SAMSAM_LABELS; document.getElementById('atxSave').textContent = 'Add ' + { buy: LB.BUY, sell: LB.SELL, transfer_in: LB.TRANSFER_IN, transfer_out: LB.TRANSFER_OUT }[t];
@@ -3005,6 +3011,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.g
 function readAddTx() {
   const cfg = ATX[atxType], v = id => document.getElementById(id).value.trim();
   const qty = parseFloat(v('atxQty')), price = cfg.price ? parseFloat(v('atxPrice')) : 0, fee = cfg.fee ? (parseFloat(v('atxFee')) || 0) : 0;
+  const feeUsd = atxType === 'buy' ? (parseFloat(v('atxFeeUsd')) || 0) : 0;
   // The picker has minute precision: if the chosen time is this minute (the default), use the exact
   // current time so the new entry sorts after anything recorded earlier in the same minute.
   const dateStr = v('atxDate');
@@ -3015,6 +3022,7 @@ function readAddTx() {
   if (cfg.priceReq && !(price >= 0 && v('atxPrice') !== '')) errs.atxPrice = 'Enter a price (0 is allowed for free/mined coins).';
   if ((atxType === 'buy' || atxType === 'sell') && !(price > 0)) errs.atxPrice = 'Enter a price greater than 0.';
   if (fee < 0) errs.atxFee = 'Fee cannot be negative.';
+  if (feeUsd < 0) errs.atxFeeUsd = 'Fee cannot be negative.';
   if (atxType === 'transfer_in' && qty > 0 && fee >= qty) errs.atxFee = 'Fee must be smaller than the amount transferred in.';
   if (isNaN(date.getTime())) errs.atxDate = 'Enter a valid date.';
   else if (dateStr && new Date(dateStr).getTime() > Date.now() + 60e3) errs.atxDate = 'Date cannot be in the future.';
@@ -3022,7 +3030,7 @@ function readAddTx() {
   let after = null;
   if (!Object.keys(errs).length) {
     const st = Samsam.getState(), doc = st.coins.find(c => c.sym === atxSym);
-    const t = { id: '__new__', sym: atxSym, type: atxType, qty, price, fee, date: date.toISOString(), createdAt: new Date().toISOString() };
+    const t = { id: '__new__', sym: atxSym, type: atxType, qty, price, fee, feeUsd, date: date.toISOString(), createdAt: new Date().toISOString() };
     const all = transactions.filter(x => x.sym === atxSym).concat([t]).sort(Samsam.core.compareTx);
     let pos = { qty: doc && doc.opening ? doc.opening.qty : 0, avg: doc && doc.opening ? doc.opening.avg : 0 }, short = false;
     for (const x of all) {
@@ -3034,17 +3042,17 @@ function readAddTx() {
     if (short === 'new') errs.atxQty = (atxType === 'sell' ? 'You can’t sell' : 'You can’t transfer out') + ' more than you held on that date.';
     after = { qty: pos.qty, avg: pos.avg, realized: t._realized, short };
   }
-  return { qty, price, fee, date, errs, after };
+  return { qty, price, fee, feeUsd, date, errs, after };
 }
 function previewAddTx() {
   const r = readAddTx(), pv = document.getElementById('atxPreview');
-  ['atxQty', 'atxPrice', 'atxFee', 'atxDate'].forEach(id => document.getElementById(id).classList.toggle('bad', !!r.errs[id] && document.getElementById(id).value !== ''));
+  ['atxQty', 'atxPrice', 'atxFee', 'atxFeeUsd', 'atxDate'].forEach(id => document.getElementById(id).classList.toggle('bad', !!r.errs[id] && document.getElementById(id).value !== ''));
   document.getElementById('atxErr').textContent = '';
   if (!r.after) { pv.innerHTML = ''; return; }
   const usd = n => SamsamFmt.usd(n);
   const q = n => parseFloat(n.toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
   const lines = [];
-  if (atxType === 'buy') lines.push(`Total cost: <b>${usd(r.qty * r.price)}</b>`);
+  if (atxType === 'buy') lines.push(`Total cost: <b>${usd(r.qty * r.price + r.feeUsd)}</b>` + (r.feeUsd > 0 ? ` <small>(${usd(r.qty * r.price)} + fee ${usd(r.feeUsd)})</small>` : ''));
   if (atxType === 'sell') lines.push(`Proceeds: <b>${usd(r.qty * r.price)}</b>` + (r.after.realized != null ? ` · ${r.after.realized >= 0 ? 'profit' : 'loss'} <b>${usd(Math.abs(r.after.realized))}</b>` : ''));
   if (atxType === 'transfer_in') lines.push(`Received after fee: <b>${q(r.qty - r.fee)} ${atxSym}</b> · cost added <b>${usd(r.qty * r.price)}</b>`);
   if (atxType === 'transfer_out') lines.push(`Leaves portfolio incl. fee: <b>${q(r.qty + r.fee)} ${atxSym}</b>`);
@@ -3064,9 +3072,10 @@ function saveAddTx() {
   atxSaving = true; document.getElementById('atxSave').disabled = true;
   const note = document.getElementById('atxNote').value.trim();
   // Saved instantly on this device and synced to the cloud; every screen recalculates from the ledger.
-  cloudWrite(Samsam.addTx(atxSym, atxType, r.qty, r.price, note, { date: r.date.toISOString(), fee: r.fee }));
+  cloudWrite(Samsam.addTx(atxSym, atxType, r.qty, r.price, note, { date: r.date.toISOString(), fee: r.fee, feeUsd: r.feeUsd }));
   setTimeout(() => { atxSaving = false; document.getElementById('atxSave').disabled = false; }, 400);
   const pr = document.getElementById('atxPrice'); delete pr.dataset.touched;
+  document.getElementById('atxFeeUsd').value = '';
   closeAddTx();
   if (coinTxSym === atxSym && htxTypeDD && htxTypeDD.value !== 'all' && !(htxTypeDD.value === 'transfer' && atxType.startsWith('transfer')) && htxTypeDD.value !== atxType) { htxTypeDD.setValue('all'); renderCoinTx(); }
 }
@@ -3125,6 +3134,19 @@ function ensureHtxDropdowns() {
     options: [], searchable: true, searchPlaceholder: 'Search coin or name…', ariaLabel: 'Coin', title: 'Select coin', minWidth: 280,
     onChange: v => selectCoinTx(v),
   });
+}
+// ⓘ popovers: tap to open on touch screens, tap outside / Esc to close; keep inside the screen
+document.addEventListener('click', e => {
+  const tip = e.target.closest && e.target.closest('.info-tip');
+  document.querySelectorAll('.info-tip.open').forEach(t => { if (t !== tip) t.classList.remove('open'); });
+  if (tip && !e.target.closest('.info-pop')) { tip.classList.toggle('open'); fitInfoPop(tip); }
+});
+document.addEventListener('mouseover', e => { const tip = e.target.closest && e.target.closest('.info-tip'); if (tip) fitInfoPop(tip); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.info-tip.open').forEach(t => t.classList.remove('open')); });
+function fitInfoPop(tip) {
+  const pop = tip.querySelector('.info-pop'); if (!pop) return;
+  pop.classList.remove('edge-r');
+  requestAnimationFrame(() => { const r = pop.getBoundingClientRect(); if (r.right > innerWidth - 8 || r.left < 8) pop.classList.toggle('edge-r', r.right > innerWidth - 8); });
 }
 function renderCoinTx() {
   if (!coinTxSym) return;
@@ -3185,8 +3207,9 @@ function renderCoinTx() {
   coinTxs.forEach(t => {
     if (t.type === 'buy' || t.type === 'sell') {
       const r = perTx[t.id];
-      entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty, usd: t.total ?? t.qty * t.price,
-        note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (t.type === 'sell' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
+      const feeU = t.type === 'buy' ? (+t.feeUsd || 0) : 0;
+      entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty, usd: (t.total ?? t.qty * t.price) + feeU,
+        note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (t.type === 'sell' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' || t.type === 'transfer_out') {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
@@ -3492,6 +3515,19 @@ function renderHoldingsAssetList() {
     .htx-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:14px; min-width:0; }
     .htx-label { font-size:0.78rem; color:var(--fg2); font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:5px; }
     .htx-info { cursor:help; opacity:.7; font-size:0.85rem; }
+    .info-tip { position: relative; background: none; border: none; padding: 0 2px; margin: 0; color: inherit; font: inherit; font-size: .85rem; cursor: help; opacity: .75; vertical-align: 0; text-transform: none; letter-spacing: 0; }
+    .info-tip:hover, .info-tip:focus-visible, .info-tip.open { opacity: 1; }
+    .info-pop { display: none; position: absolute; z-index: 50; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: min(300px, 82vw);
+      background: #ffffff; color: #64748b; border-radius: 14px; padding: 16px 18px; box-shadow: 0 16px 40px rgba(0,0,0,.35); text-align: center;
+      font-size: .85rem; font-weight: 500; line-height: 1.45; white-space: normal; cursor: default; }
+    .info-pop b { display: block; color: #0f172a; font-size: 1.05rem; font-weight: 800; margin-bottom: 6px; }
+    .info-pop em { font-style: normal; color: #0f172a; }
+    .info-pop .info-formula { display: block; margin-top: 10px; }
+    .info-pop small { display: block; margin-top: 8px; font-size: .75rem; color: #94a3b8; }
+    [data-theme="dark"] .info-pop { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+    [data-theme="dark"] .info-pop b, [data-theme="dark"] .info-pop em { color: #f1f5f9; }
+    .info-tip:hover .info-pop, .info-tip:focus-visible .info-pop, .info-tip.open .info-pop { display: block; }
+    .info-pop.edge-r { left: auto; right: -12px; transform: none; }
     .htx-value { font-size:1.25rem; font-weight:800; color:var(--fg); letter-spacing:-0.01em; overflow-wrap:anywhere; }
     .htx-sub { font-size:0.8rem; font-weight:700; margin-top:4px; }
     .htx-pos { color:var(--green); } .htx-neg { color:var(--red); } .htx-muted { color:var(--fg2); font-weight:500; }
@@ -3679,7 +3715,7 @@ function renderHoldingsAssetList() {
       <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub" id="htxHoldings24">—</div></div>
       <div class="htx-card"><div class="htx-label">All-Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
       <div class="htx-card"><div class="htx-label" data-label="AVG_BUY_PRICE">Avg. Buy Price</div><div class="htx-value" id="htxAvg">—</div></div>
-      <div class="htx-card"><div class="htx-label"><span data-label="COST_BASIS">Cost Basis</span> <span class="htx-info" title="Total amount invested in your current holdings (amount × average buy price)">ⓘ</span></div><div class="htx-value" id="htxCost">—</div></div>
+      <div class="htx-card"><div class="htx-label"><span data-label="COST_BASIS">Cost Basis</span> <button type="button" class="info-tip" aria-label="How Cost Basis is calculated"><span aria-hidden="true">ⓘ</span><span class="info-pop" role="tooltip"><b>Cost Basis</b><span>We use the <em>Average Cost Basis (ACB)</em> method for calculation:</span><span class="info-formula"><em>Cost Basis</em> = Sum(Buy Price × Buy Amount) + Sum(Buying Fees)</span><small>Sells and transfers out reduce it in proportion, at the average buy price.</small></span></button></div><div class="htx-value" id="htxCost">—</div></div>
     </div>
     <div id="htxList" class="htx-list"></div>
     <button type="button" class="htx-fab" onclick="openAddTx()" aria-label="Add transaction" title="Add transaction">
@@ -3722,6 +3758,8 @@ function renderHoldingsAssetList() {
         <input type="number" inputmode="decimal" step="any" min="0" id="atxQty" placeholder="0.00" oninput="previewAddTx()"></label>
       <label class="atx-field" id="atxPriceRow"><span id="atxPriceLabel">Price per coin (USD)</span>
         <input type="number" inputmode="decimal" step="any" min="0" id="atxPrice" placeholder="0.00" oninput="previewAddTx()"></label>
+      <label class="atx-field" id="atxFeeUsdRow"><span>Buying fee <small>(USD, optional — added to Cost Basis)</small></span>
+        <input type="number" inputmode="decimal" step="any" min="0" id="atxFeeUsd" placeholder="0.00" oninput="previewAddTx()"></label>
       <label class="atx-field" id="atxFeeRow"><span>Transfer fee <small id="atxFeeUnit">(in coin, optional)</small></span>
         <input type="number" inputmode="decimal" step="any" min="0" id="atxFee" placeholder="0" oninput="previewAddTx()"></label>
       <label class="atx-field"><span>Date &amp; time</span>

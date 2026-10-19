@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610192150';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610192150';
+import * as Core from './samsam-core.js?v=202610192236';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610192236';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -478,6 +478,7 @@ function injectUi() {
   #samsamSetup .msg{margin-top:10px;font-size:.85rem}
   /* Empty space at the end of every page, so the floating Synced badge never covers the last row */
   body::after{content:"";display:block;height:calc(72px + env(safe-area-inset-bottom,0px))}
+  @media (max-width:700px){#samsamSyncPill{bottom:calc(20px + env(safe-area-inset-bottom,0px))} body::after{height:calc(110px + env(safe-area-inset-bottom,0px))}}
   @media print{#samsamSyncPill,#samsamSyncMenu,#samsamGate{display:none!important} body::after{display:none}}`;
   document.head.appendChild(css);
   const gate = document.createElement('div'); gate.id = 'samsamGate';
