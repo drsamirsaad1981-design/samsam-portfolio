@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610192123"></script>
-<script src="samsam-labels.js?v=202610192123"></script>
-<script src="samsam-taxonomy.js?v=202610192123"></script>
-<script src="samsam-coins.js?v=202610192123"></script>
-<script src="samsam-dropdown.js?v=202610192123"></script>
-<script src="samsam-chart.js?v=202610192123"></script>
+<script src="samsam-ui.js?v=202610192129"></script>
+<script src="samsam-labels.js?v=202610192129"></script>
+<script src="samsam-taxonomy.js?v=202610192129"></script>
+<script src="samsam-coins.js?v=202610192129"></script>
+<script src="samsam-dropdown.js?v=202610192129"></script>
+<script src="samsam-chart.js?v=202610192129"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1332,7 +1332,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610192123"></script>
+<script type="module" src="samsam-cloud.js?v=202610192129"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3288,21 +3288,34 @@ function drawHoldingsOverlayChart() {
   SamsamChart.draw(canvas, { height: 210, format: 'usd', timeMode: timeModeFor(holdingsOverlayRange), series: [{ points: snaps, color: lineColor, width: 2.6, fill: true }] });
 }
 
+// Holdings screen: sort by Asset (A→Z), Price or Holdings value; tap the same column again to reverse
+let hovSort = { key: 'holdings', dir: -1 };
+try { const v = JSON.parse(localStorage.getItem('samsam_hov_sort') || 'null'); if (v && ['asset', 'price', 'holdings'].includes(v.key)) hovSort = v; } catch (_) {}
+function setHovSort(key) {
+  hovSort = hovSort.key === key ? { key, dir: -hovSort.dir } : { key, dir: key === 'asset' ? 1 : -1 };
+  try { localStorage.setItem('samsam_hov_sort', JSON.stringify(hovSort)); } catch (_) {}
+  renderHoldingsAssetList();
+}
 function renderHoldingsAssetList() {
   const container = document.getElementById('hovAssetList');
   if (!container || !portfolio) return;
+  const val = c => hovSort.key === 'asset' ? c.sym : hovSort.key === 'price' ? (c.currentPrice || 0) : c.holdingVal;
   const sorted = [...portfolio]
     .map(c => ({ ...c, holdingVal: c.qty * c.currentPrice }))
-    .sort((a,b) => b.holdingVal - a.holdingVal);
+    .sort((a, b) => { const x = val(a), y = val(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * hovSort.dir || b.holdingVal - a.holdingVal; });
+  document.querySelectorAll('.hov-list-header .hov-sort').forEach(b => {
+    const on = b.dataset.sort === hovSort.key;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-sort', on ? (hovSort.dir > 0 ? 'ascending' : 'descending') : 'none');
+    b.querySelector('i').textContent = on ? (hovSort.dir > 0 ? ' ▲' : ' ▼') : '';
+  });
 
   container.innerHTML = sorted.map(c => {
     const pct24 = c.change24h ?? 0;
     const sign = pct24 >= 0 ? '+' : '';
     const clr = pct24 >= 0 ? 'var(--green)' : 'var(--red)';
     const arrow = pct24 >= 0 ? '▲' : '▼';
-    const priceStr = c.currentPrice >= 1000
-      ? '$' + c.currentPrice.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2})
-      : '$' + c.currentPrice.toLocaleString('en-US', {minimumFractionDigits:c.currentPrice<0.01?6:c.currentPrice<1?4:2,maximumFractionDigits:c.currentPrice<0.01?6:c.currentPrice<1?4:2});
+    const priceStr = SamsamFmt.price(c.currentPrice);
     const holdVal = SamsamFmt.usd(c.holdingVal);
     const holdQty = parseFloat(c.qty.toFixed(c.qty < 1 ? 6 : 4)).toString() + ' ' + c.sym;
     // Symbol + name (and logo) open the coin on CoinGecko, like the main table
@@ -3404,6 +3417,10 @@ function renderHoldingsAssetList() {
       background: var(--bg2);
     }
     .hov-list-header span:not(:first-child) { text-align:right; }
+    .hov-sort { all: unset; cursor: pointer; text-align: right; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; -webkit-tap-highlight-color: transparent; border-radius: 4px; transition: color .15s; }
+    .hov-sort:hover, .hov-sort.active { color: var(--fg); }
+    .hov-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .hov-sort i { font-style: normal; font-size: .9em; color: var(--accent); }
 
     /* ── Asset rows ── */
     .hov-asset-row {
@@ -3603,9 +3620,9 @@ function renderHoldingsAssetList() {
   <!-- Asset list: one card -->
   <div class="hov-card hov-list-card">
   <div class="hov-list-header">
-    <span class="hov-h-asset">Asset</span>
-    <span>Price</span>
-    <span>Holdings ▾</span>
+    <button type="button" class="hov-h-asset hov-sort" data-sort="asset" onclick="setHovSort('asset')">Asset<i></i></button>
+    <button type="button" class="hov-sort" data-sort="price" onclick="setHovSort('price')">Price<i></i></button>
+    <button type="button" class="hov-sort" data-sort="holdings" onclick="setHovSort('holdings')">Holdings<i></i></button>
   </div>
 
   <!-- Asset rows -->

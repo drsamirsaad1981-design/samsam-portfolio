@@ -186,7 +186,9 @@
     "XPL": "plasma",
   };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-  function cgUrl(sym, cgId) { var id = cgId || CG_IDS[sym]; return id ? 'https://www.coingecko.com/en/coins/' + id : null; }
+  // CoinGecko page slug when it differs from the price-API id (checked against coingecko.com)
+  var PAGE_SLUGS = { PONS: 'pons' };
+  function cgUrl(sym, cgId) { var id = PAGE_SLUGS[sym] || cgId || CG_IDS[sym]; return id ? 'https://www.coingecko.com/en/coins/' + id : null; }
   function fallback(sym, size) {
     size = size || 36; var color = COLORS[sym] || '#6b7280';
     if (/^https?:/.test(color)) color = '#6b7280';
