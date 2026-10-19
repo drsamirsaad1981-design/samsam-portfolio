@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610192319"></script>
-<script src="samsam-labels.js?v=202610192319"></script>
-<script src="samsam-taxonomy.js?v=202610192319"></script>
-<script src="samsam-coins.js?v=202610192319"></script>
-<script src="samsam-dropdown.js?v=202610192319"></script>
-<script src="samsam-chart.js?v=202610192319"></script>
+<script src="samsam-ui.js?v=202610192336"></script>
+<script src="samsam-labels.js?v=202610192336"></script>
+<script src="samsam-taxonomy.js?v=202610192336"></script>
+<script src="samsam-coins.js?v=202610192336"></script>
+<script src="samsam-dropdown.js?v=202610192336"></script>
+<script src="samsam-chart.js?v=202610192336"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1055,28 +1055,33 @@
   }
   .summary-grid { margin-bottom: 0 !important; }
 
-  /* ── Mobile: compact controls so the first coin card shows sooner ── */
+  /* ── Mobile: same arrangement as desktop, compact ──
+     Row 1: CSV · PDF (left) | Table · Cards (right)
+     Row 2: Search (left) | Signals · 🤖 AI · ➕ Add (right, icon buttons) */
   @media (max-width: 767px) {
-    .controls.toolbar2 { background: transparent; border: none; padding: 0; margin: 10px 0 8px; gap: 6px; }
-    .toolbar2 .view-seg { padding: 2px; gap: 2px; border-radius: 9px; }
-    .toolbar2 .view-seg .btn { padding: 7px 10px; font-size: .8rem; }
-    .toolbar2 .tb-actions { gap: 6px; }
-    .toolbar2 .tb-actions .btn { padding: 7px 8px; font-size: .78rem; border-radius: 9px; }
+    .controls.toolbar2 { flex-direction: row; align-items: center; justify-content: space-between; background: transparent; border: none; padding: 0; margin: 10px 0 8px; gap: 6px; }
+    .toolbar2 .tb-actions { order: 1; display: flex; gap: 6px; flex: 0 0 auto; }
+    .toolbar2 .tb-actions .btn { flex: 0 0 auto; padding: 7px 10px; font-size: .78rem; border-radius: 9px; }
+    .toolbar2 .view-seg { order: 2; width: auto; flex: 0 0 auto; padding: 2px; gap: 2px; border-radius: 9px; }
+    .toolbar2 .view-seg .btn { padding: 7px 10px; font-size: .78rem; }
+    .tb-mobile-only { display: none !important; }
+    .tb-desktop-only { display: inline-flex !important; align-items: center; justify-content: center; }
     #summaryGrid { margin-top: 8px !important; }
     .cat-picker .sdd-btn { min-height: 0; padding: 9px 14px; row-gap: 0; border-radius: 12px; }
     .cat-picker .cp-kicker { font-size: .6rem; }
     .cat-picker .sdd-label { font-size: .95rem; }
     .cat-picker .cp-val { font-size: 1.1rem; }
-    /* Search (60%) and Signals (40%) on one line */
-    .search-signal-bar { flex-direction: row; align-items: center; gap: 8px; margin: 8px 0 12px; }
-    .search-signal-bar .search-input-wrapper { flex: 1.4; min-width: 0; }
-    .search-signal-bar .controls-right-group { flex: 1; min-width: 0; width: auto; flex-direction: row; }
-    .search-signal-bar .signal-filter-select { width: 100%; min-width: 0; }
-    .search-signal-bar .search-box, .search-signal-bar .signal-filter-select .sdd-btn { height: 40px; font-size: .84rem; border-radius: 10px; }
+    .search-signal-bar { flex-direction: row; align-items: center; gap: 6px; margin: 8px 0 12px; }
+    .search-signal-bar .search-input-wrapper { flex: 1; min-width: 0; }
+    .search-signal-bar .controls-right-group { flex: 0 1 auto; min-width: 0; width: auto; flex-direction: row; gap: 6px; }
+    .search-signal-bar .signal-filter-select { width: 124px; min-width: 0; }
+    .search-signal-bar .search-box, .search-signal-bar .signal-filter-select .sdd-btn, .search-signal-bar .controls-right-group .btn { height: 40px; font-size: .82rem; border-radius: 10px; }
     .search-signal-bar .search-box { padding: 0 10px; }
-    .search-signal-bar .signal-filter-select .sdd-btn { padding: 0 8px; gap: 5px; }
+    .search-signal-bar .signal-filter-select .sdd-btn { padding: 0 8px; gap: 4px; }
     .search-signal-bar .signal-filter-select .sdd-label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-    .search-signal-bar .signal-filter-select .sdd-ico { width: 16px; }
+    .search-signal-bar .signal-filter-select .sdd-ico { width: 14px; }
+    .search-signal-bar .controls-right-group .btn { width: 40px; min-width: 40px; max-width: 40px; padding: 0; font-size: 1rem; }
+    .search-signal-bar .controls-right-group .btn .btn-txt { display: none; }
   }
 </style>
 </head>
@@ -1251,8 +1256,8 @@
   <div class="search-input-wrapper"><input type="search" class="search-box" id="searchBox" placeholder="🔍 Search coin..." autocomplete="off" aria-label="Search coin"></div>
   <div class="controls-right-group">
     <div class="signal-filter-select" id="signalDD"></div>
-    <button class="btn btn-secondary tb-desktop-only" onclick="openAnalysis()">🤖 AI Analysis</button>
-    <button class="btn btn-secondary tb-desktop-only" onclick="openAddCoin()" title="Add a new coin to your portfolio">➕ <span data-label="ADD_COIN">Add New Coin</span></button>
+    <button class="btn btn-secondary tb-desktop-only tb-ai" onclick="openAnalysis()" title="AI Analysis" aria-label="AI Analysis">🤖<span class="btn-txt"> AI Analysis</span></button>
+    <button class="btn btn-secondary tb-desktop-only tb-add" onclick="openAddCoin()" title="Add a new coin to your portfolio" aria-label="Add New Coin">➕<span class="btn-txt"> <span data-label="ADD_COIN">Add New Coin</span></span></button>
   </div>
   <input type="hidden" id="filterAction" value="">
 </div>
@@ -1390,7 +1395,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610192319"></script>
+<script type="module" src="samsam-cloud.js?v=202610192336"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 

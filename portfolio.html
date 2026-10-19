@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610192309"></script>
-<script src="samsam-labels.js?v=202610192309"></script>
-<script src="samsam-taxonomy.js?v=202610192309"></script>
-<script src="samsam-coins.js?v=202610192309"></script>
-<script src="samsam-dropdown.js?v=202610192309"></script>
-<script src="samsam-chart.js?v=202610192309"></script>
+<script src="samsam-ui.js?v=202610192319"></script>
+<script src="samsam-labels.js?v=202610192319"></script>
+<script src="samsam-taxonomy.js?v=202610192319"></script>
+<script src="samsam-coins.js?v=202610192319"></script>
+<script src="samsam-dropdown.js?v=202610192319"></script>
+<script src="samsam-chart.js?v=202610192319"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1054,6 +1054,30 @@
     .search-signal-bar .signal-filter-select { width: 240px; }
   }
   .summary-grid { margin-bottom: 0 !important; }
+
+  /* ── Mobile: compact controls so the first coin card shows sooner ── */
+  @media (max-width: 767px) {
+    .controls.toolbar2 { background: transparent; border: none; padding: 0; margin: 10px 0 8px; gap: 6px; }
+    .toolbar2 .view-seg { padding: 2px; gap: 2px; border-radius: 9px; }
+    .toolbar2 .view-seg .btn { padding: 7px 10px; font-size: .8rem; }
+    .toolbar2 .tb-actions { gap: 6px; }
+    .toolbar2 .tb-actions .btn { padding: 7px 8px; font-size: .78rem; border-radius: 9px; }
+    #summaryGrid { margin-top: 8px !important; }
+    .cat-picker .sdd-btn { min-height: 0; padding: 9px 14px; row-gap: 0; border-radius: 12px; }
+    .cat-picker .cp-kicker { font-size: .6rem; }
+    .cat-picker .sdd-label { font-size: .95rem; }
+    .cat-picker .cp-val { font-size: 1.1rem; }
+    /* Search (60%) and Signals (40%) on one line */
+    .search-signal-bar { flex-direction: row; align-items: center; gap: 8px; margin: 8px 0 12px; }
+    .search-signal-bar .search-input-wrapper { flex: 1.4; min-width: 0; }
+    .search-signal-bar .controls-right-group { flex: 1; min-width: 0; width: auto; flex-direction: row; }
+    .search-signal-bar .signal-filter-select { width: 100%; min-width: 0; }
+    .search-signal-bar .search-box, .search-signal-bar .signal-filter-select .sdd-btn { height: 40px; font-size: .84rem; border-radius: 10px; }
+    .search-signal-bar .search-box { padding: 0 10px; }
+    .search-signal-bar .signal-filter-select .sdd-btn { padding: 0 8px; gap: 5px; }
+    .search-signal-bar .signal-filter-select .sdd-label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .search-signal-bar .signal-filter-select .sdd-ico { width: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -1214,7 +1238,7 @@
   </div>
   <div class="tb-actions">
     <button class="btn btn-secondary tb-mobile-only" onclick="openAnalysis()">🤖 AI Analysis</button>
-    <button class="btn btn-secondary tb-mobile-only" onclick="openAddCoin()" title="Add a new coin to your portfolio">➕ <span data-label="ADD_COIN">Add New Coin</span></button>
+    <button class="btn btn-secondary tb-mobile-only" onclick="openAddCoin()" title="Add a new coin to your portfolio">➕ Add</button>
     <button class="btn btn-secondary" onclick="exportData()">💾 CSV</button>
     <button class="btn btn-secondary" onclick="exportPdf()">📄 PDF</button>
   </div>
@@ -1366,7 +1390,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610192309"></script>
+<script type="module" src="samsam-cloud.js?v=202610192319"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
