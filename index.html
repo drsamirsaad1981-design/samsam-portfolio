@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610192336"></script>
-<script src="samsam-labels.js?v=202610192336"></script>
-<script src="samsam-taxonomy.js?v=202610192336"></script>
-<script src="samsam-coins.js?v=202610192336"></script>
-<script src="samsam-dropdown.js?v=202610192336"></script>
-<script src="samsam-chart.js?v=202610192336"></script>
+<script src="samsam-ui.js?v=202610192345"></script>
+<script src="samsam-labels.js?v=202610192345"></script>
+<script src="samsam-taxonomy.js?v=202610192345"></script>
+<script src="samsam-coins.js?v=202610192345"></script>
+<script src="samsam-dropdown.js?v=202610192345"></script>
+<script src="samsam-chart.js?v=202610192345"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1071,16 +1071,18 @@
     .cat-picker .cp-kicker { font-size: .6rem; }
     .cat-picker .sdd-label { font-size: .95rem; }
     .cat-picker .cp-val { font-size: 1.1rem; }
-    .search-signal-bar { flex-direction: row; align-items: center; gap: 6px; margin: 8px 0 12px; }
+    .search-signal-bar { flex-direction: row; align-items: center; gap: 6px; margin: 8px 0 8px; }
+    #coinsStack.view-active, #portfolioTableWrapper.view-active { margin-top: 0 !important; }
     .search-signal-bar .search-input-wrapper { flex: 1; min-width: 0; }
     .search-signal-bar .controls-right-group { flex: 0 1 auto; min-width: 0; width: auto; flex-direction: row; gap: 6px; }
     .search-signal-bar .signal-filter-select { width: 124px; min-width: 0; }
-    .search-signal-bar .search-box, .search-signal-bar .signal-filter-select .sdd-btn, .search-signal-bar .controls-right-group .btn { height: 40px; font-size: .82rem; border-radius: 10px; }
+    .search-signal-bar .search-box, .search-signal-bar .signal-filter-select .sdd-btn, .search-signal-bar .controls-right-group .btn { height: 44px; font-size: .82rem; border-radius: 12px; }
     .search-signal-bar .search-box { padding: 0 10px; }
     .search-signal-bar .signal-filter-select .sdd-btn { padding: 0 8px; gap: 4px; }
     .search-signal-bar .signal-filter-select .sdd-label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     .search-signal-bar .signal-filter-select .sdd-ico { width: 14px; }
-    .search-signal-bar .controls-right-group .btn { width: 40px; min-width: 40px; max-width: 40px; padding: 0; font-size: 1rem; }
+    /* icon buttons: 44×44 touch target */
+    .search-signal-bar .controls-right-group .btn { width: 44px; min-width: 44px; max-width: 44px; min-height: 44px; padding: 0; font-size: 1.05rem; display: inline-flex; align-items: center; justify-content: center; }
     .search-signal-bar .controls-right-group .btn .btn-txt { display: none; }
   }
 </style>
@@ -1395,7 +1397,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610192336"></script>
+<script type="module" src="samsam-cloud.js?v=202610192345"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
