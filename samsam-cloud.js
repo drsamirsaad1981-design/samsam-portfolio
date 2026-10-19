@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610192139';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610192139';
+import * as Core from './samsam-core.js?v=202610192150';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610192150';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -214,6 +214,7 @@ function txDoc(sym, type, qty, price, note, extra = {}) {
     ...(extra.setQty != null ? { setQty: Number(extra.setQty) } : {}),
     ...(extra.setAvg != null ? { setAvg: Number(extra.setAvg) } : {}),
     ...(extra.fee > 0 ? { fee: Number(extra.fee) } : {}),
+    ...(extra.feeUsd > 0 ? { feeUsd: Number(extra.feeUsd) } : {}),
   });
 }
 
@@ -285,7 +286,7 @@ const API = {
   updateCoin(sym, fields) {
     return commit((b, ref, fs) => b.set(ref('coins', safeId(sym)), clean({ ...fields, updatedAt: new Date().toISOString() }), { merge: true }), `Update ${sym}`);
   },
-  addCoin(coin, { qty, price, note } = {}) {
+  addCoin(coin, { qty, price, note, feeUsd } = {}) {
     const sym = coin.sym;
     const existing = S.coins.get(sym);
     const hasHistory = [...S.txs.values()].some(t => t.sym === sym);
@@ -299,7 +300,7 @@ const API = {
       }), { merge: true });
       const id = Core.newId('tx_');
       // Every new or re-added coin starts with an ordinary Buy (no manual corrections).
-      b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position')));
+      b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position'), { feeUsd }));
     }, `Add ${sym}`);
   },
   removeCoin(sym) { return API.updateCoin(sym, { removed: true, removedAt: new Date().toISOString() }); },

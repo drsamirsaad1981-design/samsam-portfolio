@@ -33,8 +33,9 @@ export function applyTx(pos, t) {
   const q = num(t.qty), p = num(t.price);
   if (t.type === 'buy') {
     if (q > 0) {
-      const nq = qty + q;
-      avg = nq > EPS ? (qty * avg + q * p) / nq : 0;
+      // Average Cost Basis: cost = Σ(buy price × buy amount) + Σ(buying fees in USD)
+      const nq = qty + q, feeUsd = Math.max(0, num(t.feeUsd));
+      avg = nq > EPS ? (qty * avg + q * p + feeUsd) / nq : 0;
       qty = nq;
     }
   } else if (t.type === 'sell') {

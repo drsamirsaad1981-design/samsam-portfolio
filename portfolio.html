@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610192135"></script>
-<script src="samsam-labels.js?v=202610192135"></script>
-<script src="samsam-taxonomy.js?v=202610192135"></script>
-<script src="samsam-coins.js?v=202610192135"></script>
-<script src="samsam-dropdown.js?v=202610192135"></script>
-<script src="samsam-chart.js?v=202610192135"></script>
+<script src="samsam-ui.js?v=202610192139"></script>
+<script src="samsam-labels.js?v=202610192139"></script>
+<script src="samsam-taxonomy.js?v=202610192139"></script>
+<script src="samsam-coins.js?v=202610192139"></script>
+<script src="samsam-dropdown.js?v=202610192139"></script>
+<script src="samsam-chart.js?v=202610192139"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1332,7 +1332,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610192135"></script>
+<script type="module" src="samsam-cloud.js?v=202610192139"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3294,11 +3294,43 @@ function setHovSort(key) {
   try { localStorage.setItem('samsam_hov_sort', JSON.stringify(hovSort)); } catch (_) {}
   renderHoldingsAssetList();
 }
+// Holdings screen category filter — same single card + dropdown/bottom sheet as the main page
+let hovCat = '', hovCatDD = null;
+function setHovCat(cat) {
+  if (cat === hovCat) return;
+  hovCat = cat; renderHoldingsAssetList();
+  if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches))
+    document.querySelectorAll('#hovAssetList .hov-asset-row').forEach((el, i) => { el.style.animationDelay = Math.min(i, 12) * 30 + 'ms'; el.classList.add('slide-up'); });
+}
+function renderHovCatPicker() {
+  const host = document.getElementById('hovCatHost'), T = SamsamTaxonomy;
+  if (!host || !window.SamsamDropdown) return;
+  const totals = {}; let all = 0;
+  portfolio.forEach(c => { const v = c.qty * c.currentPrice, k = c.cat || 'other'; totals[k] = (totals[k] || 0) + v; all += v; });
+  const ORDER = ['layer1', 'layer2', 'ai', 'layer0', 'oracle', 'defi', 'meme', 'launchpad', 'web3'];
+  const keys = ORDER.concat(totals.other ? ['other'] : []);
+  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(all), icon: '<span class="cp-globe">🌐</span>' }]
+    .concat(keys.map(k => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(totals[k] || 0), icon: `<span class="cp-dot" style="background:${T.color(k)}"></span>` })));
+  if (!hovCatDD) {
+    host.innerHTML = '<div class="cat-picker" id="hovCatPicker"><div id="hovCatDD"></div></div>';
+    hovCatDD = SamsamDropdown.create(document.getElementById('hovCatDD'), {
+      options, value: 'all', ariaLabel: 'Category', title: 'Choose a category', minWidth: 260, maxHeight: 360,
+      onChange: v => setHovCat(v === 'all' ? '' : v),
+    });
+    hovCatDD.button.insertAdjacentHTML('afterbegin', '<span class="cp-kicker">Category</span>');
+    hovCatDD.button.querySelector('.sdd-chev').insertAdjacentHTML('beforebegin', '<span class="cp-val" id="hovCatVal"></span>');
+  }
+  const cur = hovCat || 'all';
+  hovCatDD.setOptions(options); hovCatDD.setValue(cur);
+  document.getElementById('hovCatVal').textContent = (options.find(o => o.value === cur) || options[0]).sub;
+  document.getElementById('hovCatPicker').style.setProperty('--cat-c', cur === 'all' ? 'var(--accent)' : T.color(cur));
+}
 function renderHoldingsAssetList() {
   const container = document.getElementById('hovAssetList');
   if (!container || !portfolio) return;
+  renderHovCatPicker();
   const val = c => hovSort.key === 'asset' ? c.sym : hovSort.key === 'price' ? (c.currentPrice || 0) : c.holdingVal;
-  const sorted = [...portfolio]
+  const sorted = portfolio.filter(c => !hovCat || (c.cat || 'other') === hovCat)
     .map(c => ({ ...c, holdingVal: c.qty * c.currentPrice }))
     .sort((a, b) => { const x = val(a), y = val(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * hovSort.dir || b.holdingVal - a.holdingVal; });
   document.querySelectorAll('.hov-list-header .hov-sort').forEach(b => {
@@ -3551,6 +3583,10 @@ function renderHoldingsAssetList() {
     .hov-nav-title { flex: 1; text-align: center; font-size: 1rem; }
     /* Value + chart + range tabs = one card; asset list = one card */
     .hov-card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px; }
+    .hov-cat { margin-bottom: 14px; }
+    .hov-cat .cat-picker .sdd-btn { background: var(--card); border-color: var(--border); border-left-color: var(--cat-c); border-radius: 18px; box-shadow: var(--shadow); }
+    .hov-cat .cat-picker .cp-kicker { color: var(--fg2); }
+    #holdingsOverlay[data-view="tx"] .hov-cat { display: none; }
     .hov-hero { padding: 18px 18px 4px; }
     .hov-chart-wrap { padding: 8px 10px 0; }
     .hov-tabs { padding: 10px 14px 14px; border-bottom: none; }
@@ -3615,6 +3651,8 @@ function renderHoldingsAssetList() {
   </div>
   </div>
 
+  <!-- Category card (same component as the main page) -->
+  <div class="hov-cat" id="hovCatHost"></div>
   <!-- Asset list: one card -->
   <div class="hov-card hov-list-card">
   <div class="hov-list-header">
