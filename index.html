@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610192355"></script>
-<script src="samsam-labels.js?v=202610192355"></script>
-<script src="samsam-taxonomy.js?v=202610192355"></script>
-<script src="samsam-coins.js?v=202610192355"></script>
-<script src="samsam-dropdown.js?v=202610192355"></script>
-<script src="samsam-chart.js?v=202610192355"></script>
+<script src="samsam-ui.js?v=202610200006"></script>
+<script src="samsam-labels.js?v=202610200006"></script>
+<script src="samsam-taxonomy.js?v=202610200006"></script>
+<script src="samsam-coins.js?v=202610200006"></script>
+<script src="samsam-dropdown.js?v=202610200006"></script>
+<script src="samsam-chart.js?v=202610200006"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -99,10 +99,11 @@
   }
   /* Theme toggle: top-right corner of the header (same spot on every page) */
   .header-theme-btn { position: absolute; top: 14px; right: 14px; z-index: 2; }
-  .logo-area { padding-right: 46px; }
+  /* Room for the two corner buttons (cloud status + theme): 36 + 8 + 36 + 14 */
+  .logo-area { padding-right: 96px; }
   @media (min-width: 900px) {
     .logo-area { padding-right: 0; }
-    .header-top { padding-right: 50px; }
+    .header-top { padding-right: 100px; }
   }
 
   .header-top {
@@ -1397,7 +1398,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610192355"></script>
+<script type="module" src="samsam-cloud.js?v=202610200006"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
