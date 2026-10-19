@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610192345';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610192345';
+import * as Core from './samsam-core.js?v=202610192355';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610192355';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -467,9 +467,16 @@ function injectUi() {
   .samsam-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:10px;border:1px solid var(--border,#374151);background:var(--bg3,#1f2937);color:var(--fg,#e5e7eb);font:inherit;font-weight:600;cursor:pointer}
   .samsam-btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
   .samsam-btn[disabled]{opacity:.6;cursor:default}
-  #samsamSyncPill{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:99990;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;font:600 12px/1.2 system-ui,-apple-system,sans-serif;background:var(--bg2,var(--card,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;max-width:calc(100vw - 24px)}
+  #samsamSyncPill{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:99990;transition:padding .2s,gap .2s,opacity .2s;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;font:600 12px/1.2 system-ui,-apple-system,sans-serif;background:var(--bg2,var(--card,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;max-width:calc(100vw - 24px)}
   #samsamSyncPill[data-s=error]{border-color:#ef4444}
-  #samsamSyncMenu{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:calc(max(12px,env(safe-area-inset-bottom)) + 44px);z-index:99991;display:none;width:min(300px,calc(100vw - 24px));background:var(--bg2,var(--card,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:12px;padding:12px;font:13px/1.45 system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  /* When everything is synced the floating badge steps aside (it would sit over the numbers);
+     the status lives in the page header instead. It comes back while saving, offline or on an error. */
+  #samsamSyncPill.mini{display:none}
+  .ss-sync-hdr{position:relative;gap:0}
+  .ss-sync-hdr .ss-cloud{font-size:15px;line-height:1}
+  .ss-sync-hdr .ss-live{position:absolute;right:5px;bottom:5px;width:8px;height:8px;box-shadow:0 0 0 2px var(--bg2,var(--card,#111827))}
+  @media print{.ss-sync-hdr{display:none!important}}
+  #samsamSyncMenu{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(max(16px,env(safe-area-inset-bottom)) + 44px);z-index:99991;display:none;width:min(300px,calc(100vw - 24px));background:var(--bg2,var(--card,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:12px;padding:12px;font:13px/1.45 system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   #samsamSyncMenu .row{display:flex;gap:8px;margin-top:10px} #samsamSyncMenu .samsam-btn{flex:1;min-height:38px;padding:8px;font-size:12px}
   #samsamSyncMenu .muted{color:var(--fg2,#9ca3af);font-size:12px} #samsamSyncMenu .err{color:#ef4444;font-size:12px;margin-top:6px;word-break:break-word}
   #samsamSetup{display:none;margin:12px auto;max-width:760px;background:var(--bg2,var(--card,#111827));border:1px solid #2563eb;border-radius:14px;padding:18px;color:var(--fg,#e5e7eb)}
@@ -478,7 +485,7 @@ function injectUi() {
   #samsamSetup .msg{margin-top:10px;font-size:.85rem}
   /* Empty space at the end of every page, so the floating Synced badge never covers the last row */
   body::after{content:"";display:block;height:calc(72px + env(safe-area-inset-bottom,0px))}
-  @media (max-width:700px){#samsamSyncPill{bottom:calc(20px + env(safe-area-inset-bottom,0px))} body::after{height:calc(110px + env(safe-area-inset-bottom,0px))}}
+  @media (max-width:700px){body::after{height:calc(96px + env(safe-area-inset-bottom,0px))}}
   @media print{#samsamSyncPill,#samsamSyncMenu,#samsamGate{display:none!important} body::after{display:none}}`;
   document.head.appendChild(css);
   const gate = document.createElement('div'); gate.id = 'samsamGate';
@@ -486,7 +493,27 @@ function injectUi() {
   const pill = document.createElement('button'); pill.id = 'samsamSyncPill'; pill.type = 'button';
   pill.innerHTML = `<span class="ss-live" id="samsamSyncDot" data-state="loading"></span><span id="samsamSyncText">Connecting…</span>`;
   const menu = document.createElement('div'); menu.id = 'samsamSyncMenu';
-  pill.addEventListener('click', e => { e.stopPropagation(); menu.style.display = menu.style.display === 'block' ? 'none' : 'block'; renderStatus(); });
+  const openMenu = (e, anchor) => {
+    e.stopPropagation();
+    const show = menu.style.display !== 'block';
+    menu.style.display = show ? 'block' : 'none';
+    if (show && anchor) {           // opened from the header: drop down under the button
+      const r = anchor.getBoundingClientRect();
+      menu.style.top = (r.bottom + 8) + 'px'; menu.style.bottom = 'auto'; menu.style.right = Math.max(8, innerWidth - r.right) + 'px';
+    } else if (show) { menu.style.top = ''; menu.style.bottom = ''; menu.style.right = ''; }
+    renderStatus();
+  };
+  pill.addEventListener('click', e => openMenu(e, null));
+  // Cloud status button next to every theme button (page headers + Holdings screen)
+  document.querySelectorAll('[data-theme-toggle]').forEach(t => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'ss-theme-btn ss-sync-hdr';
+    b.innerHTML = '<span class="ss-cloud" aria-hidden="true">☁️</span><span class="ss-live" data-state="loading"></span>';
+    b.addEventListener('click', e => openMenu(e, b));
+    t.parentNode.insertBefore(b, t);
+    // Theme button pinned to a corner (main page header): pin the cloud button just to its left
+    const cs = getComputedStyle(t);
+    if (cs.position === 'absolute') Object.assign(b.style, { position: 'absolute', top: cs.top, right: (parseFloat(cs.right) + t.offsetWidth + 8) + 'px', zIndex: cs.zIndex });
+  });
   document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.style.display = 'none'; });
   document.body.append(gate, pill, menu);
 }
@@ -542,6 +569,15 @@ function renderStatus() {
   else if (S.fromCache) { s = 'saving'; label = 'Syncing…'; }
   else { s = 'synced'; label = 'Synced'; }
   pill.dataset.s = s; txt.textContent = '☁️ ' + label;
+  pill.title = '☁️ ' + label; pill.setAttribute('aria-label', 'Cloud sync: ' + label);
+  // Stay expanded while anything needs attention; collapse to the dot a moment after "Synced"
+  clearTimeout(pill._miniT);
+  if (s === 'synced') pill._miniT = setTimeout(() => pill.classList.add('mini'), 2500);
+  else pill.classList.remove('mini');
+  document.querySelectorAll('.ss-sync-hdr').forEach(b => {
+    b.title = '☁️ ' + label; b.setAttribute('aria-label', 'Cloud sync: ' + label);
+    const d = b.querySelector('.ss-live'); if (d) d.dataset.state = { synced: 'ok', saving: 'loading', offline: 'idle', error: 'error' }[s] || 'idle';
+  });
   // Same shared status dot as the Live indicator (samsam-ui.js)
   const dot = document.getElementById('samsamSyncDot');
   if (dot) dot.dataset.state = { synced: 'ok', saving: 'loading', offline: 'idle', error: 'error' }[s] || 'idle';
