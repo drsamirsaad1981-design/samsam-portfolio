@@ -2,14 +2,17 @@
 <html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Portfolio Allocation</title>
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610200136"></script>
-<script src="samsam-labels.js?v=202610200136"></script>
-<script src="samsam-taxonomy.js?v=202610200136"></script>
-<script src="samsam-coins.js?v=202610200136"></script>
+<script src="samsam-ui.js?v=202610200235"></script>
+<script src="samsam-vault.js?v=202610200235"></script>
+<script src="samsam-labels.js?v=202610200235"></script>
+<script src="samsam-taxonomy.js?v=202610200235"></script>
+<script src="samsam-coins.js?v=202610200235"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -258,7 +261,7 @@ body {
 
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610200136"></script>
+<script type="module" src="samsam-cloud.js?v=202610200235"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
 
@@ -308,7 +311,8 @@ function fmtQty(v, sym) {
   if (v >= 1000000) return (v/1000000).toFixed(2) + 'M ' + sym;
   if (v >= 1000)    return v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' ' + sym;
   if (v >= 1)       return v.toFixed(4) + ' ' + sym;
-  return v.toPrecision(5) + ' ' + sym;
+  if (!(v > 0)) return '0 ' + sym;
+  return v.toFixed(Math.min(18, 4 - Math.floor(Math.log10(v)))).replace(/(\.\d*?[1-9])0+$/, '$1') + ' ' + sym;   // no 1e-8 notation
 }
 
 function coinFallback(sym, size) {

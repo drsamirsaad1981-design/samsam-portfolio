@@ -11,18 +11,28 @@ service cloud.firestore {
         && request.auth.token.email in ['dr.samir.saad.1981@gmail.com'];
     }
 
+    // Server-side input checks (the app cleans input too; these stop anything that bypasses the app).
+    function okText(d, f, max) { return !(f in d) || d[f] == null || (d[f] is string && d[f].size() <= max); }
+    function okSym(s) { return s is string && s.matches('^[A-Z0-9._-]{1,20}$'); }
+
     match /users/{userId} {
       // Coin settings, accumulation targets, chart snapshots, setup record.
       match /{coll}/{docId} {
         allow read: if isOwner(userId);
-        allow write: if isOwner(userId) && coll in ['coins', 'accum', 'snaps', 'meta'];
+        allow delete: if isOwner(userId) && coll in ['coins', 'accum', 'snaps', 'meta'];
+        allow create, update: if isOwner(userId) && coll in ['coins', 'accum', 'snaps', 'meta']
+          && (coll != 'coins' || (okSym(request.resource.data.sym)
+                && okText(request.resource.data, 'name', 80) && okText(request.resource.data, 'notes', 1000)
+                && okText(request.resource.data, 'cgId', 100) && okText(request.resource.data, 'logoUrl', 500)))
+          && (coll != 'accum' || (okSym(request.resource.data.sym) && okText(request.resource.data, 'name', 80)));
       }
       // Transactions are an immutable ledger: they can be added or deleted, never rewritten.
       match /txs/{txId} {
         allow read: if isOwner(userId);
         allow delete: if isOwner(userId);
         allow create: if isOwner(userId)
-          && request.resource.data.sym is string
+          && okSym(request.resource.data.sym)
+          && okText(request.resource.data, 'note', 1000)
           && request.resource.data.type in ['buy', 'sell', 'adjust', 'transfer_in', 'transfer_out']
           && request.resource.data.qty is number && request.resource.data.qty >= 0
           && request.resource.data.price is number && request.resource.data.price >= 0

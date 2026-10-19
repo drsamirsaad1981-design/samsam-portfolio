@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610200133"></script>
-<script src="samsam-labels.js?v=202610200133"></script>
-<script src="samsam-taxonomy.js?v=202610200133"></script>
-<script src="samsam-coins.js?v=202610200133"></script>
-<script src="samsam-dropdown.js?v=202610200133"></script>
-<script src="samsam-chart.js?v=202610200133"></script>
+<script src="samsam-ui.js?v=202610200136"></script>
+<script src="samsam-labels.js?v=202610200136"></script>
+<script src="samsam-taxonomy.js?v=202610200136"></script>
+<script src="samsam-coins.js?v=202610200136"></script>
+<script src="samsam-dropdown.js?v=202610200136"></script>
+<script src="samsam-chart.js?v=202610200136"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -970,14 +970,22 @@
     body { max-width: none !important; padding: 0 !important; }
     .main-trio, #accumProgressBar, .btc-ticker, .search-signal-bar, #summaryGrid, .coins-stack, .hdr-btns, #samsamSyncPill, #samsamSyncMenu, .price-edit { display:none !important; }
     #portfolioTableWrapper { display:block !important; overflow:visible !important; border:none !important; margin:0 !important; }
-    #portfolioTable { width:100% !important; min-width:0 !important; table-layout:auto; font-size:8pt; }
+    #portfolioTable { width:100% !important; min-width:0 !important; table-layout:fixed; font-size:8pt; }
+    #portfolioTable th:nth-child(1) { width:3%; }  #portfolioTable th:nth-child(2) { width:12%; }
+    #portfolioTable th:nth-child(3), #portfolioTable th:nth-child(4), #portfolioTable th:nth-child(5) { width:9%; }
+    #portfolioTable th:nth-child(6) { width:8%; }  #portfolioTable th:nth-child(7), #portfolioTable th:nth-child(8) { width:10%; }
+    #portfolioTable th:nth-child(9) { width:9%; }  #portfolioTable th:nth-child(10) { width:11%; }  #portfolioTable th:nth-child(11) { width:10%; }
+    #portfolioTable td.num-r { font-size:7.5pt; }
+    #portfolioTable .action-badge, #portfolioTable .perf-badge { white-space:normal !important; display:inline-block; line-height:1.25; text-align:center; }
+    #portfolioTable th { font-size:7pt; overflow-wrap:anywhere; }
+    #portfolioTable td { overflow:hidden; }
     #portfolioTable th, #portfolioTable td { padding:4px 5px !important; white-space:normal !important; }
     #portfolioTable td.num-r { white-space:nowrap !important; }
     #portfolioTable th:last-child, #portfolioTable td:last-child { display:none !important; }   /* Actions column */
     #portfolioTable td .editable-input { border:none !important; background:none !important; padding:0 !important; min-width:0 !important; width:100% !important; font-size:8pt; }
     #portfolioTable td[style*="min-width"] { min-width:0 !important; }
     #portfolioTable img { width:18px !important; height:18px !important; }
-    #portfolioTable .cat-tag { font-size:6.5pt; padding:1px 5px; }
+    #portfolioTable .cat-tag { font-size:6.5pt; padding:1px 5px; white-space:normal !important; max-width:100%; display:inline-block; line-height:1.2; }
     #portfolioTable .perf-badge, #portfolioTable .action-badge { font-size:7.5pt; padding:2px 5px; }
   }
   #pdfHeader { display:none; }
@@ -1425,7 +1433,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610200133"></script>
+<script type="module" src="samsam-cloud.js?v=202610200136"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 

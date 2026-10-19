@@ -114,7 +114,9 @@
       if (a === 0) return '$0.00';
       if (a >= 10) return s + '$' + usdFmt.format(a);
       if (a >= 0.01) return s + '$' + a.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-      return s + '$' + a.toPrecision(4).replace(/(\.\d*?[1-9])0+$/, '$1');
+      // 4 significant digits written out in full (never 1.000e-8), up to 18 decimals
+      var d = Math.min(18, 3 - Math.floor(Math.log10(a)));
+      return s + '$' + a.toFixed(d).replace(/(\.\d*?[1-9])0+$/, '$1');
     },
     num2: function (n) { return usdFmt.format(+n || 0); },
   };

@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610200136';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610200136';
+import * as Core from './samsam-core.js?v=202610200235';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610200235';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -35,8 +35,47 @@ const deviceId = (() => {
   if (!id) { id = Core.newId('dev_'); try { localStorage.setItem(DEVICE_KEY, id); } catch (_) {} }
   return id;
 })();
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clean = obj => JSON.parse(JSON.stringify(obj)); // Firestore rejects `undefined`
 const safeId = s => String(s).replace(/[\/#\[\]?*]/g, '_').slice(0, 300) || 'x';
+
+// ── input hygiene (XSS / injection) ─────────────────────────────────────────
+// Every document is cleaned when it is READ from the cloud and before it is WRITTEN, so a value
+// typed on any device (or edited in the console) can never carry markup or script into a page.
+const TX_TYPES = ['buy', 'sell', 'adjust', 'transfer_in', 'transfer_out'];
+export const Clean = {
+  sym: v => String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9._-]/g, '').slice(0, 20),
+  label: (v, max = 80) => String(v == null ? '' : v).replace(/[<>"'`\\]/g, '').replace(/\s+/g, ' ').trim().slice(0, max),
+  text: (v, max = 1000) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').slice(0, max),
+  cgId: v => (typeof v === 'string' && /^[a-z0-9][a-z0-9-]{0,99}$/.test(v)) ? v : null,
+  url: v => (typeof v === 'string' && /^https:\/\/[^\s"'<>`\\]{1,500}$/.test(v)) ? v : null,
+  key: v => (typeof v === 'string' && /^[a-z0-9_-]{1,30}$/.test(v)) ? v : undefined,
+  num: v => { const n = Number(v); return Number.isFinite(n) ? n : 0; },
+};
+function cleanCoin(c) {
+  const o = { ...c, sym: Clean.sym(c.sym || c.id) };
+  if ('name' in o) o.name = Clean.label(o.name) || o.sym;
+  if ('notes' in o) o.notes = Clean.text(o.notes, 500);
+  if ('cgId' in o) o.cgId = Clean.cgId(o.cgId);
+  if ('logoUrl' in o) o.logoUrl = Clean.url(o.logoUrl);
+  if ('cat' in o) o.cat = Clean.key(o.cat) || 'other';
+  if (o.opening) o.opening = { qty: Clean.num(o.opening.qty), avg: Clean.num(o.opening.avg) };
+  return o;
+}
+function cleanTx(t) {
+  const o = { ...t, sym: Clean.sym(t.sym), note: Clean.text(t.note, 500), qty: Clean.num(t.qty), price: Clean.num(t.price) };
+  if (!TX_TYPES.includes(o.type)) o.type = 'adjust';
+  return o;
+}
+function cleanAccum(a) {
+  const o = { ...a, sym: Clean.sym(a.sym || a.id) };
+  for (const k of ['name']) if (k in o) o.name = Clean.label(o.name);
+  for (const k of ['note', 'notes']) if (k in o) o[k] = Clean.text(o[k], 500);
+  if ('cgId' in o) o.cgId = Clean.cgId(o.cgId);
+  if ('logoUrl' in o) o.logoUrl = Clean.url(o.logoUrl);
+  if ('cat' in o) o.cat = Clean.key(o.cat) || 'other';
+  return o;
+}
 
 // ── state ───────────────────────────────────────────────────────────────────
 const S = {
@@ -101,8 +140,18 @@ function syncCategories() {
   commit((b, ref) => { for (const c of fix) b.set(ref('coins', safeId(c.sym)), { cat: T.categoryOf(c.sym, c.cat), updatedAt: new Date().toISOString() }, { merge: true }); },
     `Update categories (${fix.length} coins)`).catch(() => { catSyncDone = false; });
 }
+// At-rest encryption: once the cloud holds the portfolio, the old app's plain-text copy on this device
+// is moved into the encrypted device vault (samsam-vault.js) and the plain copy is deleted.
+let sealDone = false;
+function sealLegacy() {
+  if (sealDone || !window.SamsamVault || !SamsamVault.available || !allLoaded() || !(S.meta && S.meta.state === 'done')) return;
+  sealDone = true;
+  SamsamVault.sealKeys(Object.values(LEGACY)).then(n => { if (n) console.info(`[Samsam] encrypted ${n} item(s) of old local data`); })
+    .catch(e => { sealDone = false; console.warn('[Samsam] could not encrypt local data', e); });
+}
 function emit() {
   setTimeout(syncCategories, 0);
+  setTimeout(sealLegacy, 0);
   if (emitTimer) return;
   emitTimer = setTimeout(() => {
     emitTimer = null;
@@ -168,14 +217,14 @@ function listen() {
   const opt = { includeMetadataChanges: true };
   const onErr = what => e => { setError(e, `Could not load ${what}`); };
   const track = snap => { S.fromCache = snap.metadata.fromCache; if (!snap.metadata.fromCache && !snap.metadata.hasPendingWrites) S.lastSyncedAt = new Date(); };
-  const coll = (name, map, key) => fs.onSnapshot(fs.collection(db, ...userPath(name)), opt, snap => {
+  const coll = (name, map, key, fix) => fs.onSnapshot(fs.collection(db, ...userPath(name)), opt, snap => {
     track(snap);
-    map.clear(); snap.forEach(d => map.set(d.id, { ...d.data(), id: d.id }));
+    map.clear(); snap.forEach(d => { try { map.set(d.id, fix({ ...d.data(), id: d.id })); } catch (e) { console.warn('[Samsam] skipped unreadable', name, d.id, e); } });
     S.loaded[key] = true; emit();
   }, onErr(name));
-  S.unsub.push(coll('coins', S.coins, 'coins'));
-  S.unsub.push(coll('txs', S.txs, 'txs'));
-  S.unsub.push(coll('accum', S.accum, 'accum'));
+  S.unsub.push(coll('coins', S.coins, 'coins', cleanCoin));
+  S.unsub.push(coll('txs', S.txs, 'txs', cleanTx));
+  S.unsub.push(coll('accum', S.accum, 'accum', cleanAccum));
   const cutoff = Core.dayId(Date.now() - 120 * 86400e3);
   S.unsub.push(fs.onSnapshot(
     fs.query(fs.collection(db, ...userPath('snaps')), fs.where(fs.documentId(), '>=', cutoff)), opt, snap => {
@@ -195,11 +244,16 @@ function requireUser() {
   if (!allLoaded()) throw new Error('Still loading your portfolio — try again in a moment');
 }
 function commit(build, label) {
-  requireUser();
-  const { db, fs } = fb;
-  const batch = fs.writeBatch(db);
-  const ref = (...p) => fs.doc(db, ...userPath(...p));
-  build(batch, ref, fs);
+  // Bad input or "not signed in" never throws into the page: it becomes a rejected promise
+  // and a visible red status ("Sync problem — tap" shows the reason).
+  let batch;
+  try {
+    requireUser();
+    const { db, fs } = fb;
+    batch = fs.writeBatch(db);
+    const ref = (...p) => fs.doc(db, ...userPath(...p));
+    build(batch, ref, fs);
+  } catch (e) { setError(e, label); return Promise.reject(e); }
   S.pending++; renderStatus();
   return batch.commit().then(() => {
     S.pending--; S.lastSyncedAt = new Date(); if (S.lastError && S.lastError.label === label) S.lastError = null; renderStatus();
@@ -208,6 +262,11 @@ function commit(build, label) {
 
 function txDoc(sym, type, qty, price, note, extra = {}) {
   const now = new Date().toISOString();
+  const raw = String(sym == null ? '' : sym).trim().toUpperCase();
+  sym = Clean.sym(raw); note = Clean.text(note, 500);
+  if (!sym || sym !== raw) throw new Error('Invalid coin symbol (letters, digits, . _ - only)');
+  if (!TX_TYPES.includes(type)) throw new Error('Invalid transaction type');
+  if (!(Number(qty) >= 0) || !(Number(price) >= 0) || !Number.isFinite(Number(qty)) || !Number.isFinite(Number(price))) throw new Error('Amount and price must be positive numbers');
   return clean({
     sym, type, qty: Number(qty) || 0, price: Number(price) || 0, total: (Number(qty) || 0) * (Number(price) || 0),
     date: extra.date || now, createdAt: now, note: note || '', device: deviceId,
@@ -284,10 +343,19 @@ const API = {
 
   // coins
   updateCoin(sym, fields) {
+    fields = { ...fields };
+    if ('name' in fields) fields.name = Clean.label(fields.name);
+    if ('notes' in fields) fields.notes = Clean.text(fields.notes, 500);
+    if ('cgId' in fields) fields.cgId = Clean.cgId(fields.cgId);
+    if ('logoUrl' in fields) fields.logoUrl = Clean.url(fields.logoUrl);
+    if ('lastPrice' in fields && !(Number(fields.lastPrice) > 0 && Number.isFinite(Number(fields.lastPrice)))) delete fields.lastPrice;
     return commit((b, ref, fs) => b.set(ref('coins', safeId(sym)), clean({ ...fields, updatedAt: new Date().toISOString() }), { merge: true }), `Update ${sym}`);
   },
   addCoin(coin, { qty, price, note, feeUsd } = {}) {
+    const rawSym = String(coin.sym == null ? '' : coin.sym).trim().toUpperCase();
+    coin = cleanCoin({ ...coin, cat: coin.cat || 'other' });
     const sym = coin.sym;
+    if (!sym || sym !== rawSym) { const e = new Error('Invalid coin symbol (letters, digits, . _ - only)'); setError(e, 'Add coin'); return Promise.reject(e); }
     const existing = S.coins.get(sym);
     const hasHistory = [...S.txs.values()].some(t => t.sym === sym);
     const order = existing && existing.order != null ? existing.order : Math.max(-1, ...[...S.coins.values()].map(c => c.order ?? 0)) + 1;
@@ -309,7 +377,8 @@ const API = {
   saveAccumPlan(plan) {
     const next = new Map((plan || []).map((e, i) => [e.sym, { ...e, order: i }]));
     return commit((b, ref) => {
-      for (const [sym, e] of next) {
+      for (const [sym0, e0] of next) {
+        const e = cleanAccum(e0), sym = e.sym; if (!sym) continue;
         const cur = S.accum.get(sym);
         const { id, updatedAt, ...curData } = cur || {};
         if (!cur || JSON.stringify(clean(curData)) !== JSON.stringify(clean(e))) b.set(ref('accum', safeId(sym)), clean({ ...e, updatedAt: new Date().toISOString() }));
@@ -345,9 +414,10 @@ const API = {
   },
 
   // account
-  signIn: () => signIn(), signOut: () => fb && fb.au.signOut(fb.auth),
+  signIn: () => signIn(), signOut: () => signOutAndClear(),
   user: () => S.user,
-  downloadBackup: () => downloadBackup(),
+  downloadBackup: (o) => downloadBackup(o),
+  readBackupFile: f => readBackupFile(f),
 };
 window.Samsam = API;
 window.dispatchEvent(new Event('samsam-ready'));
@@ -440,20 +510,51 @@ async function runImport(legacy, source) {
   return imp;
 }
 
+// Signing out removes this device's offline copy of the portfolio (Firestore's IndexedDB cache),
+// so nothing readable is left behind on a shared or lost device. Signing in again reloads it from the cloud.
+async function signOutAndClear() {
+  if (!fb) return;
+  try { await fb.au.signOut(fb.auth); } catch (e) { setError(e, 'Sign out'); return; }
+  try { await fb.fs.terminate(fb.db); await fb.fs.clearIndexedDbPersistence(fb.db); } catch (e) { console.warn('[Samsam] could not clear offline cache', e); }
+  location.reload();
+}
+
 function downloadJson(obj, name) {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 function stamp() { return new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-'); }
-function downloadBackup() {
+function backupObject() {
   const d = API.getState();
-  downloadJson({ app: 'samsam-portfolio', kind: 'cloud-backup', exportedAt: new Date().toISOString(),
+  return { app: 'samsam-portfolio', kind: 'cloud-backup', exportedAt: new Date().toISOString(),
     coins: d.coins, transactions: d.transactions, accumPlan: d.accumPlan, perfSnaps: d.perfSnaps, holdingsSnaps: d.holdingsSnaps,
     // legacy-compatible view, so a backup can always be re-imported
     legacy: { coins: d.portfolio.map(c => ({ ...c })), transactions: d.transactions, archivedCoins: d.archivedCoins,
-      customCoins: d.customCoins, accumPlan: d.accumPlan, perfSnaps: d.perfSnaps, holdingsSnaps: d.holdingsSnaps } },
-  `samsam-backup-${stamp()}.json`);
+      customCoins: d.customCoins, accumPlan: d.accumPlan, perfSnaps: d.perfSnaps, holdingsSnaps: d.holdingsSnaps } };
+}
+// Encrypted backup (AES-256-GCM, key from your password). Resolves true when a file was downloaded,
+// false when the person cancelled. opts: { title, text, data (object to back up instead of the cloud), name }
+async function downloadEncrypted(obj, name, opts = {}) {
+  const V = window.SamsamVault;
+  if (!V || !V.available) throw new Error('Encryption is not available in this browser.');
+  const pw = await V.askPassword({ mode: 'set', title: opts.title, text: opts.text });
+  if (!pw) return false;
+  downloadJson(await V.encryptBackup(obj, pw), name);
+  return true;
+}
+function downloadBackup(opts = {}) {
+  return downloadEncrypted(backupObject(), `samsam-backup-${stamp()}.enc.json`, opts);
+}
+// Opens a backup file chosen by the person: plain JSON, or an encrypted backup (asks for its password).
+async function readBackupFile(file) {
+  const j = JSON.parse(await file.text());
+  if (window.SamsamVault && SamsamVault.isEncrypted(j)) {
+    const pw = await SamsamVault.askPassword({ mode: 'enter' });
+    if (!pw) return null;
+    return SamsamVault.decryptBackup(j, pw);
+  }
+  return j;
 }
 
 // ── UI: sign-in gate, status pill, setup panel ──────────────────────────────
@@ -522,7 +623,7 @@ function showGate(kind) {
   const g = document.getElementById('samsamGate'), body = document.getElementById('samsamGateBody');
   if (!g) return;
   if (kind === 'config') body.innerHTML = `<p>Cloud sync isn't configured yet.</p><p>Add your Firebase settings to <code>firebase-config.js</code> and publish again.</p>`;
-  else if (kind === 'denied') body.innerHTML = `<p><strong>${S.denied}</strong> isn't allowed to open this portfolio.</p><button class="samsam-btn primary" id="samsamSignInBtn">Sign in with another Google account</button>`;
+  else if (kind === 'denied') body.innerHTML = `<p><strong>${esc(S.denied)}</strong> isn't allowed to open this portfolio.</p><button class="samsam-btn primary" id="samsamSignInBtn">Sign in with another Google account</button>`;
   else body.innerHTML = `<p>Sign in to load your portfolio. Your data is stored privately in the cloud and stays the same on every device.</p><button class="samsam-btn primary" id="samsamSignInBtn">Sign in with Google</button><p id="samsamGateErr" style="color:#ef4444"></p>`;
   const b = document.getElementById('samsamSignInBtn'); if (b) b.onclick = () => signIn();
   g.style.display = 'flex';
@@ -543,6 +644,9 @@ async function signIn() {
 
 function friendly(e) {
   const c = (e && e.code) || '';
+  if (!navigator.onLine) return 'You are offline. Changes are kept on this device and sent when the connection returns.';
+  if (/resource-exhausted|quota/.test(c)) return 'The cloud is busy (quota reached). Your change is kept — try again later.';
+  if (/unauthenticated/.test(c)) return 'Your sign-in expired. Sign in again.';
   if (/permission-denied/.test(c)) return 'Permission denied — this account is not allowed by the database rules.';
   if (/unauthorized-domain/.test(c)) return 'This website address is not in Firebase → Authentication → Authorized domains.';
   if (/network|unavailable/.test(c)) return 'No connection to the cloud right now.';
@@ -584,16 +688,16 @@ function renderStatus() {
   if (menu && menu.style.display === 'block') {
     const t = S.lastSyncedAt ? S.lastSyncedAt.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
     menu.innerHTML = `<div><strong>Cloud sync</strong></div>
-      <div class="muted">${S.user ? 'Signed in as ' + (S.user.email || '') : 'Not signed in'}</div>
+      <div class="muted">${S.user ? 'Signed in as ' + esc(S.user.email || '') : 'Not signed in'}</div>
       <div class="muted">Last confirmed by server: ${t}</div>
       <div class="muted">Device: ${deviceId.slice(-6)}</div>
-      ${S.lastError ? `<div class="err">⚠️ ${S.lastError.label}: ${S.lastError.message}</div>` : ''}
+      ${S.lastError ? `<div class="err">⚠️ ${esc(S.lastError.label)}: ${esc(S.lastError.message)}</div>` : ''}
       ${S.user && allLoaded() ? '<div class="row"><a class="samsam-btn" href="recover.html" style="text-decoration:none">🛟 Recover data</a></div>' : ''}
-      <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk">⬇ Backup</button>' : ''}
+      <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk" title="Download an encrypted backup (AES-256)">🔐 Backup</button>' : ''}
       ${S.user ? '<button class="samsam-btn" id="samsamOut">Sign out</button>' : '<button class="samsam-btn primary" id="samsamIn">Sign in</button>'}</div>
       ${S.lastError ? '<div class="row"><button class="samsam-btn" id="samsamClr">Dismiss error</button><button class="samsam-btn" id="samsamReload">Reload</button></div>' : ''}`;
     const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
-    on('samsamBk', downloadBackup); on('samsamOut', () => API.signOut()); on('samsamIn', signIn);
+    on('samsamBk', () => { menu.style.display = 'none'; downloadBackup().catch(e => setError(e, 'Backup')); }); on('samsamOut', () => API.signOut()); on('samsamIn', signIn);
     on('samsamClr', () => { S.lastError = null; renderStatus(); }); on('samsamReload', () => location.reload());
   }
 }
@@ -624,15 +728,18 @@ function renderSetup(d) {
       <label class="samsam-btn" style="position:relative">📄 Import a backup file<input type="file" accept="application/json,.json" id="samsamImpFile" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
       ${S.opts.basePortfolio ? '<button class="samsam-btn" id="samsamImpBase">Start from Oct-15 baseline</button>' : ''}
     </div>
-    <p class="muted" style="font-size:.8rem">Before uploading, a backup file of this device's data is downloaded automatically.</p>
+    <p class="muted" style="font-size:.8rem">Before uploading, an encrypted backup file of this device's data is downloaded first.</p>
     <div class="msg" id="samsamSetupMsg"></div>`;
   el.style.display = 'block';
-  const msg = t => { const m = document.getElementById('samsamSetupMsg'); if (m) m.innerHTML = t; };
+  const msg = t => { const m = document.getElementById('samsamSetupMsg'); if (m) m.textContent = t; };
   const go = async (legacy, source, backupFirst) => {
     el.dataset.busy = '1';
     el.querySelectorAll('button,input').forEach(b => b.disabled = true);
     try {
-      if (backupFirst) downloadJson({ app: 'samsam-portfolio', kind: 'device-backup', exportedAt: new Date().toISOString(), legacy }, `samsam-device-backup-${stamp()}.json`);
+      if (backupFirst && !(await downloadEncrypted({ app: 'samsam-portfolio', kind: 'device-backup', exportedAt: new Date().toISOString(), legacy },
+        `samsam-device-backup-${stamp()}.enc.json`, { title: '🔐 Backup before upload', text: 'A copy of this device\'s data is saved first, encrypted. Choose a password (8+ characters) — you need it only to open that file.' }))) {
+        delete el.dataset.busy; el.querySelectorAll('button,input').forEach(b => b.disabled = false); msg(''); return;
+      }
       msg('Uploading…');
       const r = await runImport(legacy, source);
       msg(`✅ Done — ${r.coins.length} coins and ${r.txs.length} transactions are now in the cloud.` + (r.adjusted.length ? ` (${r.adjusted.length} coin(s) had manual edits; an “Imported” correction keeps their figures exactly as before.)` : ''));
@@ -647,7 +754,8 @@ function renderSetup(d) {
   const bf = document.getElementById('samsamImpFile'); if (bf) bf.onchange = async () => {
     const f = bf.files && bf.files[0]; if (!f) return;
     try {
-      const j = JSON.parse(await f.text());
+      let j; try { j = await readBackupFile(f); } finally { bf.value = ''; }
+      if (!j) return;
       const legacy = j.legacy || (j.portfolioData ? { ...j.portfolioData, accumPlan: j.accumPlan, perfSnaps: j.perfSnaps } : j);
       if (!legacy || !Array.isArray(legacy.coins)) throw new Error('This file is not a Samsam portfolio backup.');
       if (!confirm(`Import ${legacy.coins.length} coins and ${(legacy.transactions || []).length} transactions from “${f.name}”?`)) return;

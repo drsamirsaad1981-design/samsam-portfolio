@@ -2,12 +2,15 @@
 <html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610200136"></script>
-<script src="samsam-labels.js?v=202610200136"></script>
-<script src="samsam-taxonomy.js?v=202610200136"></script>
-<script src="samsam-coins.js?v=202610200136"></script>
-<script src="samsam-chart.js?v=202610200136"></script>
+<script src="samsam-ui.js?v=202610200235"></script>
+<script src="samsam-vault.js?v=202610200235"></script>
+<script src="samsam-labels.js?v=202610200235"></script>
+<script src="samsam-taxonomy.js?v=202610200235"></script>
+<script src="samsam-coins.js?v=202610200235"></script>
+<script src="samsam-chart.js?v=202610200235"></script>
 <title>Portfolio Performance</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
@@ -618,7 +621,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610200136"></script>
+<script type="module" src="samsam-cloud.js?v=202610200235"></script>
 <script>
 // ── Constants ──
 
@@ -1017,7 +1020,19 @@ document.getElementById('col-pnl').classList.add('col-active');
 document.getElementById('arrow-pnl').textContent = ' ↓';
 
 
-setInterval(fetchLivePrices, 90 * 1000);
+// Live prices: refresh every 90s while the page is visible. Hidden tabs (phone locked, other tab) don't
+// poll — no wasted battery, data or CoinGecko rate limit — and catch up as soon as they are visible / online again.
+let _priceTimer = null, _lastPricePoll = Date.now();
+function _pollPrices() { if (document.hidden || !navigator.onLine) return; _lastPricePoll = Date.now(); fetchLivePrices(); }
+function _startPricePolling() { clearInterval(_priceTimer); _priceTimer = setInterval(_pollPrices, 90000); }
+_startPricePolling();
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { clearInterval(_priceTimer); _priceTimer = null; return; }
+  if (Date.now() - _lastPricePoll > 90000) _pollPrices();
+  _startPricePolling();
+});
+window.addEventListener('online', () => _pollPrices());
+window.addEventListener('offline', () => { if (typeof setLiveStatus === 'function') setLiveStatus('offline'); });
 </script>
 </body>
 </html>

@@ -188,7 +188,10 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   // CoinGecko page slug when it differs from the price-API id (checked against coingecko.com)
   var PAGE_SLUGS = { PONS: 'pons' };
-  function cgUrl(sym, cgId) { var id = PAGE_SLUGS[sym] || cgId || CG_IDS[sym]; return id ? 'https://www.coingecko.com/en/coins/' + id : null; }
+  function cgUrl(sym, cgId) {
+    if (cgId && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cgId)) cgId = null;   // only plain CoinGecko slugs
+    var id = PAGE_SLUGS[sym] || cgId || CG_IDS[sym]; return id ? 'https://www.coingecko.com/en/coins/' + encodeURIComponent(id) : null;
+  }
   function fallback(sym, size) {
     size = size || 36; var color = COLORS[sym] || '#6b7280';
     if (/^https?:/.test(color)) color = '#6b7280';
@@ -197,7 +200,7 @@
   // opts: { logoUrl, cgId } from the coin record when known
   function icon(sym, size, opts) {
     size = size || 36; opts = opts || {};
-    var url = opts.logoUrl || ICONS[sym];
+    var url = (opts.logoUrl && /^https:\/\//.test(opts.logoUrl) ? opts.logoUrl : null) || ICONS[sym];
     if (!url) return fallback(sym, size);
     return '<img src="' + esc(url) + '" width="' + size + '" height="' + size + '" alt="' + esc(sym) + '" data-sym="' + esc(sym) + '" data-size="' + size + '" style="border-radius:50%;flex-shrink:0;object-fit:cover" onerror="SamsamCoins.imgErr(this)">';
   }
@@ -215,5 +218,5 @@
     var u = cgUrl(sym, opts.cgId);
     return u ? '<a href="' + u + '" ' + LINK.replace('text-decoration:none', 'display:block;min-width:0;text-decoration:none') + ' title="Open ' + esc(sym) + ' on CoinGecko">' + inner + '</a>' : '<div style="min-width:0">' + inner + '</div>';
   }
-  window.SamsamCoins = { COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { esc: esc, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();
