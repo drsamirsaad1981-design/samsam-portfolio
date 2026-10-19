@@ -11,9 +11,9 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610191510"></script>
-<script src="samsam-dropdown.js?v=202610191510"></script>
-<script src="samsam-chart.js?v=202610191510"></script>
+<script src="samsam-ui.js?v=202610191534"></script>
+<script src="samsam-dropdown.js?v=202610191534"></script>
+<script src="samsam-chart.js?v=202610191534"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -40,6 +40,9 @@
     --red: #ef4444;
     --blue: #3b82f6;
     --btc: #f7931a;
+    --card-solid: #1e293b;   /* solid card surface (no see-through) */
+    --metric-bg: #0f172a;    /* metric tiles: darker than the card for contrast */
+    --label: #a3b1c6;        /* small uppercase labels: readable grey */
     color-scheme: dark;
   }
   @media (prefers-color-scheme: light) {
@@ -50,6 +53,9 @@
       --border: #cbd5e1;
       --fg: #1e293b;
       --fg2: #64748b;
+      --card-solid: #ffffff;
+      --metric-bg: #f1f5f9;
+      --label: #475569;
       color-scheme: light;
     }
   }
@@ -60,6 +66,9 @@
     --border: #cbd5e1;
     --fg: #1e293b;
     --fg2: #64748b;
+    --card-solid: #ffffff;
+    --metric-bg: #f1f5f9;
+    --label: #475569;
     color-scheme: light;
   }
 
@@ -942,6 +951,28 @@
   .pdf-header-inner { display:flex; justify-content:space-between; align-items:flex-end; padding:4px 0 10px; border-bottom:2px solid var(--border); margin-bottom:12px; }
   .pdf-header-inner .ph-title { font-size:1.1rem; font-weight:700; color:var(--fg); }
   .pdf-header-inner .ph-meta { font-size:0.75rem; color:var(--fg2); text-align:right; line-height:1.7; }
+
+  /* ── Coin cards grid: no wrapping numbers, solid contrast, aligned actions ── */
+  .coins-stack.view-active { gap: 20px; }
+  @media (min-width: 640px) { .coins-stack.view-active { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-items: stretch; gap: 20px; } }
+  .coin-card { background: var(--card-solid); padding: 16px; gap: 12px; height: 100%; box-sizing: border-box; }
+  .coin-card-body { background: transparent; padding: 0; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .coin-metric { background: var(--metric-bg); border: 1px solid var(--border); padding: 9px 11px; min-width: 0; }
+  .coin-metric label { color: var(--label); font-weight: 600; font-size: 0.66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .coin-metric val { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; word-break: normal; font-size: clamp(0.82rem, 0.9vw + 0.45rem, 1rem); font-variant-numeric: tabular-nums; }
+  .coin-metric .perf-badge, .coin-metric .action-badge { white-space: nowrap; }
+  .coin-card-footer { color: var(--label) !important; margin-top: auto; }
+  .card-act { grid-template-columns: 1fr 1fr; grid-auto-rows: 36px; gap: 8px; padding: 0; margin-top: 4px; }
+  .card-act button { height: 36px; padding: 0 6px !important; font-size: 0.8rem !important; border-radius: 8px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; line-height: 1; }
+  .card-act .btn-history, .card-act .btn-remove { padding: 0 6px !important; font-size: 0.8rem !important; border-radius: 8px; background: var(--metric-bg); }
+  .card-act .btn-history { color: var(--fg); border: 1px solid var(--border); }
+  .card-act .btn-remove { color: #f87171; border: 1px solid rgba(248,113,113,.45); }
+  .card-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+  .card-act .btn-history::after, .card-act .btn-history::before { display: none; }
+  /* Category cards (All Coins, Layer 1…): solid surface, readable labels */
+  .summary-card { background: var(--card-solid); }
+  .summary-card .label { color: var(--label); font-weight: 600; }
+  .summary-card .value { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -1257,7 +1288,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610191510"></script>
+<script type="module" src="samsam-cloud.js?v=202610191534"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -1812,10 +1843,10 @@ function renderTableAndStack() {
           </div>
         </div>
         <div class="coin-card-body">
-          <div class="coin-metric"><label>Qty</label><val>${fmtQtyRO(c.qty)}</val></div>
-          <div class="coin-metric"><label>Cost Basis</label><val>${SamsamFmt.usd(baseVal)}</val></div>
-          <div class="coin-metric"><label>Avg Buy Price</label><val>${fmtAvgRO(c.basePrice)}</val></div>
-          <div class="coin-metric"><label>Holdings / Current Value</label><val>${SamsamFmt.usd(curVal)}</val></div>
+          <div class="coin-metric"><label>Qty</label><val title="${fmtQtyRO(c.qty)}">${fmtQtyRO(c.qty)}</val></div>
+          <div class="coin-metric"><label>Cost Basis</label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
+          <div class="coin-metric"><label>Avg Buy Price</label><val title="${fmtAvgRO(c.basePrice)}">${fmtAvgRO(c.basePrice)}</val></div>
+          <div class="coin-metric"><label>Current Value</label><val title="${SamsamFmt.usd(curVal)}">${SamsamFmt.usd(curVal)}</val></div>
           <div class="coin-metric"><label>vs BTC</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
           <div class="coin-metric"><label>Signal</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
         </div>
@@ -1825,7 +1856,7 @@ function renderTableAndStack() {
             onchange="updateNote('${c.sym}',this.value)"
             style="width:100%;font-size:0.8rem">
         </div>
-        <div class="coin-card-footer" style="color:var(--fg2);font-size:0.75rem">
+        <div class="coin-card-footer" style="font-size:0.75rem">
           <span>#${i+1}</span>
           <span style="color:var(--fg2)">${c.lastUpdate||'Oct 15, 2026'}</span>
         </div>
