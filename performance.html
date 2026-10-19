@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610181717"></script>
+<script src="samsam-ui.js?v=202610191426"></script>
+<script src="samsam-chart.js?v=202610191426"></script>
 <title>Portfolio Performance</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
@@ -112,6 +113,20 @@ body {
   width: 100%;
 }
 /* P/L Breakdown card — full width below the two summary cards */
+.perf-chart-card { background: var(--card); border-radius: 16px; padding: 16px 14px 14px; box-shadow: var(--shadow); grid-column: 1 / -1; min-width: 0; }
+.pcc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; padding: 0 4px; }
+.pcc-tabs { display: flex; gap: 2px; background: rgba(128,128,128,.12); border-radius: 9px; padding: 3px; }
+.pcc-tabs button { border: none; background: transparent; color: var(--fg2); font: inherit; font-size: .74rem; font-weight: 700; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
+.pcc-tabs button[aria-pressed="true"] { background: var(--card); color: var(--fg); box-shadow: var(--shadow); }
+.pcc-canvas-wrap { width: 100%; min-width: 0; }
+.pcc-canvas-wrap canvas { display: block; }
+.pcc-empty { padding: 40px 10px; text-align: center; color: var(--fg2); font-size: .85rem; }
+.pcc-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; padding: 0 4px; font-size: .8rem; color: var(--fg2); font-weight: 600; }
+.pcc-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.pcc-legend b { font-weight: 800; }
+.pcc-legend b.pos { color: var(--green); } .pcc-legend b.neg { color: var(--red); }
+.pcc-vs { margin-left: auto; }
+@media (min-width: 700px) { .perf-chart-card { padding: 18px 18px 16px; } }
 .pnl-breakdown-card {
   background: var(--card);
   border-radius: 16px;
@@ -531,6 +546,25 @@ body {
       </svg>
     </div>
 
+    <!-- ── Performance chart — same data + renderer as the main-page card, full width ── -->
+    <div class="perf-chart-card" id="perfChartCard">
+      <div class="pcc-head">
+        <div class="pnl-bd-title" style="margin:0">📈 Portfolio vs BTC</div>
+        <div class="pcc-tabs" role="tablist" aria-label="Chart range">
+          <button type="button" data-r="24h">24h</button><button type="button" data-r="7d">7d</button>
+          <button type="button" data-r="30d">30d</button><button type="button" data-r="90d">90d</button>
+          <button type="button" data-r="all" aria-pressed="true">All</button>
+        </div>
+      </div>
+      <div class="pcc-canvas-wrap"><canvas id="perfFullCanvas"></canvas></div>
+      <div class="pcc-empty" id="perfFullEmpty" hidden>⏳ Collecting data… the chart fills in as hourly snapshots are recorded.</div>
+      <div class="pcc-legend">
+        <span><i style="background:#3b82f6"></i>Portfolio <b id="pccPort">—</b></span>
+        <span><i style="background:#f0a060"></i>BTC <b id="pccBtc">—</b></span>
+        <span class="pcc-vs" id="pccVs"></span>
+      </div>
+    </div>
+
     <!-- ── P/L Breakdown card — full width ── -->
     <div class="pnl-breakdown-card">
       <div class="pnl-bd-title">💰 Profit / Loss Breakdown</div>
@@ -581,7 +615,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610181717"></script>
+<script type="module" src="samsam-cloud.js?v=202610191426"></script>
 <script>
 // ── Constants ──
 
@@ -697,6 +731,46 @@ let lastTabClick = '';  // tracks which tab was last clicked
 // Default start direction per mode: pnl=desc (best profit first), pct=asc (worst loss first)
 const DEFAULT_DIR = { pnl: -1, pct: 1, value: -1, price: -1 };
 
+// ── Full-width Portfolio vs BTC chart (same data + logic as the main-page card) ──
+let perfSnaps = [], perfRange = 'all';
+const PERF_RANGE_MS = { '24h': 864e5, '7d': 6048e5, '30d': 2592e6, '90d': 7776e6, all: Infinity };
+function drawPerfFull() {
+  const canvas = document.getElementById('perfFullCanvas'), empty = document.getElementById('perfFullEmpty');
+  if (!canvas || !window.SamsamChart) return;
+  const cutoff = perfRange === 'all' ? 0 : Date.now() - PERF_RANGE_MS[perfRange];
+  let snaps = perfSnaps.filter(s => s.t >= cutoff);
+  if (!snaps.length && perfSnaps.length) snaps = [perfSnaps[perfSnaps.length - 1]];
+  if (!snaps.length) { canvas.style.display = 'none'; empty.hidden = false; return; }
+  canvas.style.display = ''; empty.hidden = true;
+  if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
+  // % change from the first point in range — portfolio value vs BTC price
+  const v0 = snaps[0].v, b0 = snaps[0].b;
+  const pV = snaps.map(s => ({ t: s.t, v: v0 ? (s.v - v0) / v0 * 100 : 0 }));
+  const pB = snaps.map(s => ({ t: s.t, v: b0 ? (s.b - b0) / b0 * 100 : 0 }));
+  const h = window.innerWidth >= 900 ? 320 : window.innerWidth >= 600 ? 260 : 220;
+  SamsamChart.draw(canvas, { height: h, format: 'pct', series: [
+    { points: pB, color: '#f0a060', width: 2 },
+    { points: pV, color: '#3b82f6', width: 2.6, fill: true },
+  ] });
+  const lv = pV[pV.length - 1].v, lb = pB[pB.length - 1].v;
+  const f = (n, el) => { el.textContent = (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; el.className = n >= 0 ? 'pos' : 'neg'; };
+  f(lv, document.getElementById('pccPort')); f(lb, document.getElementById('pccBtc'));
+  const diff = lv - lb;
+  document.getElementById('pccVs').textContent = (diff >= 0 ? 'Beating BTC by ' : 'Behind BTC by ') + Math.abs(diff).toFixed(2) + ' pts';
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('.pcc-tabs button'); if (!b) return;
+  perfRange = b.dataset.r;
+  document.querySelectorAll('.pcc-tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  drawPerfFull();
+});
+(function () {
+  let t; const redraw = () => { clearTimeout(t); t = setTimeout(drawPerfFull, 60); };
+  window.addEventListener('resize', redraw);
+  window.addEventListener('samsam-theme', redraw);
+  if (window.ResizeObserver) document.addEventListener('DOMContentLoaded', () => { const w = document.querySelector('.pcc-canvas-wrap'); if (w) new ResizeObserver(redraw).observe(w); });
+})();
+
 // ── Theme — handled by samsam-ui.js (shared by every page) ──
 function loadTheme() { SamsamUI.refresh(); }
 function toggleTheme() { SamsamUI.toggleTheme(); }
@@ -705,6 +779,8 @@ function toggleTheme() { SamsamUI.toggleTheme(); }
 function loadPortfolio() {
   const subscribe = S => S.onChange(d => {
     portfolio = d.portfolio;
+    perfSnaps = d.perfSnaps || [];
+    drawPerfFull();
     portfolio.forEach(c => {
       const prev = livePrices[c.sym];
       livePrices[c.sym] = {
