@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610200032"></script>
-<script src="samsam-labels.js?v=202610200032"></script>
-<script src="samsam-taxonomy.js?v=202610200032"></script>
-<script src="samsam-coins.js?v=202610200032"></script>
-<script src="samsam-dropdown.js?v=202610200032"></script>
-<script src="samsam-chart.js?v=202610200032"></script>
+<script src="samsam-ui.js?v=202610200051"></script>
+<script src="samsam-labels.js?v=202610200051"></script>
+<script src="samsam-taxonomy.js?v=202610200051"></script>
+<script src="samsam-coins.js?v=202610200051"></script>
+<script src="samsam-dropdown.js?v=202610200051"></script>
+<script src="samsam-chart.js?v=202610200051"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1409,7 +1409,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610200032"></script>
+<script type="module" src="samsam-cloud.js?v=202610200051"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3231,7 +3231,7 @@ function ensureHtxDropdowns() {
     onChange: () => renderCoinTx(),
   });
   htxCoinDD = SamsamDropdown.create(document.getElementById('htxCoinDD'), {
-    options: [], searchable: true, searchPlaceholder: 'Search coin or name…', ariaLabel: 'Coin', title: 'Select coin', minWidth: 280,
+    options: [], searchable: true, searchPlaceholder: 'Search coin...', ariaLabel: 'Coin', title: 'Select coin', minWidth: 200,
     onChange: v => selectCoinTx(v),
   });
 }
@@ -3261,7 +3261,7 @@ function renderCoinTx() {
   const optsKey = opts.join(',') + '|' + coins.map(c => c.logoUrl ? 1 : 0).join('');
   if (htxCoinDD._key !== optsKey) {
     htxCoinDD._key = optsKey;
-    htxCoinDD.setOptions(opts.map(s => ({ value: s, label: s, sub: COIN_NAMES[s] || '', icon: getCoinIcon(s, 20) })));
+    htxCoinDD.setOptions(opts.map(s => ({ value: s, label: s, icon: getCoinIcon(s, 20) })));
   }
   htxCoinDD.setValue(sym);
   if (!st) { listEl.innerHTML = '<div class="htx-empty">Loading…</div>'; return; }
@@ -3656,6 +3656,20 @@ function renderHoldingsAssetList() {
       box-shadow:0 8px 22px rgba(37,99,235,.45); cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .12s, background .15s; }
     .htx-fab:hover { background:#1d4ed8; } .htx-fab:active { transform:scale(.94); }
     .htx-fab:focus-visible { outline:3px solid #93c5fd; outline-offset:3px; }
+    .htx-filters { align-items:center; }
+    .htx-add-btn { margin-left:auto; display:inline-flex; align-items:center; gap:7px; height:38px; padding:0 16px; border:none; border-radius:10px;
+      background:#2563eb; color:#fff; font:inherit; font-size:.88rem; font-weight:700; cursor:pointer; white-space:nowrap; box-shadow:0 4px 12px rgba(37,99,235,.35);
+      -webkit-tap-highlight-color:transparent; transition:background .15s, transform .12s; }
+    .htx-add-btn:hover { background:#1d4ed8; } .htx-add-btn:active { transform:scale(.97); }
+    .htx-add-btn:focus-visible { outline:3px solid #93c5fd; outline-offset:2px; }
+    /* Phones: one row — type, coin, Add (the word "Transaction" drops on the narrowest screens) */
+    @media (max-width: 600px) {
+      .htx-filters { flex-wrap:nowrap; gap:8px; }
+      .htx-filters > div { min-width:0; flex:0 1 auto; }
+      .htx-filters .sdd-btn { padding:0 10px; gap:6px; font-size:.84rem; max-width:100%; }
+      .htx-add-btn { flex:0 0 auto; padding:0 12px; font-size:.84rem; gap:5px; }
+    }
+    @media (max-width: 370px) { .htx-add-btn .lbl-long { display:none; } }
     /* Add Transaction form: bottom sheet on mobile, centred dialog on desktop */
     .atx-backdrop { position:fixed; inset:0; z-index:100040; background:rgba(2,6,23,.6); display:none; align-items:flex-end; justify-content:center; }
     .atx-backdrop.show { display:flex; }
@@ -3803,13 +3817,11 @@ function renderHoldingsAssetList() {
 
   <!-- Coin Transactions & Performance view (opened by tapping a coin's holdings) -->
   <div id="hovTxView">
-    <div class="htx-tabs" role="tablist">
-      <button type="button" class="htx-tab" onclick="closeCoinTx()">‹ Back to Holdings</button>
-      <span class="htx-tab active" role="tab" aria-selected="true">Transactions</span>
-    </div>
     <div class="htx-filters">
       <div id="htxTypeDD"></div>
       <div id="htxCoinDD"></div>
+      <button type="button" class="htx-add-btn" id="htxAddBtn" onclick="openAddTx()" title="Add a Buy, Sell or Transfer for this coin">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add<span class="lbl-long"> Transaction</span></span></button>
     </div>
     <div class="htx-cards">
       <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub" id="htxHoldings24">—</div></div>
@@ -3818,9 +3830,6 @@ function renderHoldingsAssetList() {
       <div class="htx-card"><div class="htx-label"><span data-label="COST_BASIS">Cost Basis</span> <button type="button" class="info-tip" aria-label="How Cost Basis is calculated"><span aria-hidden="true">ⓘ</span><span class="info-pop" role="tooltip"><b>Cost Basis</b><span>We use the <em>Average Cost Basis (ACB)</em> method for calculation:</span><span class="info-formula"><em>Cost Basis</em> = Sum(Buy Price × Buy Amount) + Sum(Buying Fees)</span><small>Sells and transfers out reduce it in proportion, at the average buy price.</small></span></button></div><div class="htx-value" id="htxCost">—</div></div>
     </div>
     <div id="htxList" class="htx-list"></div>
-    <button type="button" class="htx-fab" onclick="openAddTx()" aria-label="Add transaction" title="Add transaction">
-      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-    </button>
   </div>
   </div><!-- /.hov-container -->
 

@@ -11,12 +11,12 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610200051"></script>
-<script src="samsam-labels.js?v=202610200051"></script>
-<script src="samsam-taxonomy.js?v=202610200051"></script>
-<script src="samsam-coins.js?v=202610200051"></script>
-<script src="samsam-dropdown.js?v=202610200051"></script>
-<script src="samsam-chart.js?v=202610200051"></script>
+<script src="samsam-ui.js?v=202610200101"></script>
+<script src="samsam-labels.js?v=202610200101"></script>
+<script src="samsam-taxonomy.js?v=202610200101"></script>
+<script src="samsam-coins.js?v=202610200101"></script>
+<script src="samsam-dropdown.js?v=202610200101"></script>
+<script src="samsam-chart.js?v=202610200101"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1409,7 +1409,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610200051"></script>
+<script type="module" src="samsam-cloud.js?v=202610200101"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3611,8 +3611,9 @@ function renderHoldingsAssetList() {
     .htx-tab:hover { color:var(--fg); }
     .htx-tab.active { color:var(--fg); border-bottom-color:#3b82f6; cursor:default; }
     .htx-filters { display:flex; gap:10px; padding:14px 16px; flex-wrap:wrap; }
-    .htx-cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 16px 6px; }
-    .htx-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:14px; min-width:0; }
+    .htx-cards { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; padding:0 16px 6px; }
+    .htx-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:14px; min-width:0; overflow-wrap:anywhere; }
+    .htx-card .htx-value { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .htx-label { font-size:0.78rem; color:var(--fg2); font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:5px; }
     .htx-info { cursor:help; opacity:.7; font-size:0.85rem; }
     .info-tip { position: relative; background: none; border: none; padding: 0 2px; margin: 0; color: inherit; font: inherit; font-size: .85rem; cursor: help; opacity: .75; vertical-align: 0; text-transform: none; letter-spacing: 0; }
@@ -3639,6 +3640,7 @@ function renderHoldingsAssetList() {
     .htx-row-main { flex:1; min-width:0; }
     .htx-row-type { font-weight:700; font-size:0.92rem; color:var(--fg); }
     .htx-row-note { font-size:0.72rem; color:var(--fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    @media (max-width: 600px) { .htx-row-note { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; overflow-wrap:anywhere; } .htx-row-main { min-width:0; flex:1 1 auto; } }
     .htx-row-amt { text-align:right; flex-shrink:0; }
     .htx-row-act { flex-shrink:0; margin-left:4px; }
     .htx-act { width:34px; height:34px; border-radius:9px; border:1px solid var(--border); background:transparent; cursor:pointer; font-size:.9rem;
@@ -3669,7 +3671,7 @@ function renderHoldingsAssetList() {
       .htx-filters .sdd-btn { padding:0 10px; gap:6px; font-size:.84rem; max-width:100%; }
       .htx-add-btn { flex:0 0 auto; padding:0 12px; font-size:.84rem; gap:5px; }
     }
-    @media (max-width: 370px) { .htx-add-btn .lbl-long { display:none; } }
+    @media (max-width: 600px) { .htx-add-btn .lbl-long { display:none; } }
     /* Add Transaction form: bottom sheet on mobile, centred dialog on desktop */
     .atx-backdrop { position:fixed; inset:0; z-index:100040; background:rgba(2,6,23,.6); display:none; align-items:flex-end; justify-content:center; }
     .atx-backdrop.show { display:flex; }
@@ -3707,7 +3709,8 @@ function renderHoldingsAssetList() {
     .htx-empty { padding:36px 16px; text-align:center; color:var(--fg2); font-size:0.88rem; }
     @media (min-width: 900px) {
       #hovTxView { max-width:860px; margin:0 auto; width:100%; }
-      .htx-cards { grid-template-columns:repeat(4, 1fr); }
+      /* 4 equal columns that never grow with long values (a wide value can't push a card out of view) */
+      .htx-cards { grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; }
     }
     .hov-cg-link { text-decoration:none; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .hov-cg-link .hov-sym, .hov-cg-link .hov-name { text-decoration: underline transparent; text-underline-offset: 3px; transition: color .15s, text-decoration-color .15s; }
