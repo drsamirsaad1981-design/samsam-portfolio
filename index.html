@@ -11,11 +11,11 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610192033"></script>
-<script src="samsam-labels.js?v=202610192033"></script>
-<script src="samsam-taxonomy.js?v=202610192033"></script>
-<script src="samsam-dropdown.js?v=202610192033"></script>
-<script src="samsam-chart.js?v=202610192033"></script>
+<script src="samsam-ui.js?v=202610192040"></script>
+<script src="samsam-labels.js?v=202610192040"></script>
+<script src="samsam-taxonomy.js?v=202610192040"></script>
+<script src="samsam-dropdown.js?v=202610192040"></script>
+<script src="samsam-chart.js?v=202610192040"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1002,6 +1002,22 @@
   .card-cat-row { display: flex; margin-top: -4px; }
   .card-cat-row .cat-tag { font-size: 0.66rem; padding: 3px 9px; }
   .cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transparent); }
+  /* ── Single active-category card (opens a dropdown on desktop / bottom sheet on mobile) ── */
+  .cat-picker { position: relative; }
+  .cat-picker .sdd { display: block; }
+  .cat-picker .sdd-btn { width: 100%; height: auto; min-height: 76px; padding: 14px 18px; border-radius: 14px; background: var(--card-solid); border: 1px solid var(--border); border-left: 4px solid var(--cat-c); display: grid; grid-template-columns: auto 1fr auto auto; grid-template-rows: auto auto; column-gap: 10px; row-gap: 2px; text-align: left; align-items: center; }
+  .cat-picker .cp-kicker { grid-column: 1 / 3; grid-row: 1; font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--label); }
+  .cat-picker .sdd-ico { grid-column: 1; grid-row: 2; width: 14px; height: 14px; }
+  .cat-picker .sdd-label { grid-column: 2; grid-row: 2; font-size: 1.02rem; font-weight: 800; color: var(--fg); white-space: normal; line-height: 1.25; min-width: 0; }
+  .cat-picker .cp-val { grid-column: 3; grid-row: 1 / 3; font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cat-picker .sdd-chev { grid-column: 4; grid-row: 1 / 3; width: 20px; height: 20px; }
+  .cat-picker .sdd-btn:hover { border-color: var(--cat-c); }
+  .cp-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+  .cp-globe { font-size: 14px; line-height: 1; }
+  #summaryGrid { display: block; }
+  @media (max-width: 420px) { .cat-picker .cp-val { font-size: 1.1rem; } .cat-picker .sdd-btn { padding: 12px 14px; } }
+  @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-up { animation: slideUpFade .35s ease-out both; }
   .summary-card .cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--cat-c); margin-right: 6px; vertical-align: 0; }
   .summary-card { border-top: 2px solid var(--cat-c, var(--border)); }
 </style>
@@ -1315,7 +1331,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610192033"></script>
+<script type="module" src="samsam-cloud.js?v=202610192040"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -1720,35 +1736,54 @@ function renderBtcTicker() {
 
 let activeCatFilter = '';
 
-function setCatFilter(cat) {
-  activeCatFilter = (activeCatFilter === cat) ? '' : cat;
+function setCatFilter(cat, exact) {
+  const before = activeCatFilter;
+  activeCatFilter = exact ? cat : ((activeCatFilter === cat) ? '' : cat);
   // Always reset to Holdings / Current Value descending on category change
   sortCol = 'currentValue';
   sortDir = 1;
   renderSummary();
   renderTableAndStack();
+  if (before !== activeCatFilter) animateCoinList();
+}
+// New category → the coin list slides up and fades in (cards and table rows, lightly staggered)
+function animateCoinList() {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const items = [...document.querySelectorAll('#coinsStack.view-active > .coin-card, #portfolioTableWrapper.view-active #tableBody > tr')];
+  items.forEach((el, i) => {
+    el.classList.remove('slide-up'); void el.offsetWidth;
+    el.style.animationDelay = Math.min(i, 12) * 30 + 'ms';
+    el.classList.add('slide-up');
+  });
 }
 
+let catPickerDD = null;
 function renderSummary() {
-  const cats = SamsamTaxonomy.labels;
+  const T = SamsamTaxonomy;
   const catTotals = {};
-  portfolio.forEach(c => {
-    const cat = c.cat || 'other';
-    catTotals[cat] = (catTotals[cat] || 0) + c.qty * c.currentPrice;
-  });
+  portfolio.forEach(c => { const k = c.cat || 'other'; catTotals[k] = (catTotals[k] || 0) + c.qty * c.currentPrice; });
+  const allTotal = portfolio.reduce((s, c) => s + c.qty * c.currentPrice, 0);
+  const dot = color => `<span class="cp-dot" style="background:${color}"></span>`;
+  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(allTotal), icon: '<span class="cp-globe">🌐</span>' }]
+    .concat(Object.entries(catTotals).sort((a, b) => b[1] - a[1])
+      .map(([k, v]) => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(v), icon: dot(T.color(k)) })));
   const grid = document.getElementById('summaryGrid');
-  // "All" card first, then categories sorted by value
-  const allTotal = portfolio.reduce((s,c) => s + c.qty * c.currentPrice, 0);
-  const allCard = `<div class="summary-card${activeCatFilter===''?' cat-active':''}" onclick="setCatFilter('')">
-    <div class="label">🌐 All Coins</div>
-    <div class="value">${SamsamFmt.usd(allTotal)}</div>
-  </div>`;
-  const catCards = Object.entries(catTotals).sort((a,b)=>b[1]-a[1])
-    .map(([k,v]) => `<div class="summary-card${activeCatFilter===k?' cat-active':''}" onclick="setCatFilter('${k}')" style="--cat-c:${SamsamTaxonomy.color(k)}">
-      <div class="label"><span class="cat-dot"></span>${cats[k]||k}</div>
-      <div class="value">${SamsamFmt.usd(v)}</div>
-    </div>`).join('');
-  grid.innerHTML = allCard + catCards;
+  if (!catPickerDD) {
+    grid.innerHTML = '<div class="cat-picker" id="catPicker"><div id="catPickerDD"></div></div>';
+    catPickerDD = SamsamDropdown.create(document.getElementById('catPickerDD'), {
+      options, value: 'all', ariaLabel: 'Category', title: 'Choose a category', minWidth: 260,
+      onChange: v => setCatFilter(v === 'all' ? '' : v, true),
+    });
+    const btn = catPickerDD.button;
+    btn.insertAdjacentHTML('afterbegin', '<span class="cp-kicker">Category</span>');
+    btn.querySelector('.sdd-chev').insertAdjacentHTML('beforebegin', '<span class="cp-val" id="catPickerVal"></span>');
+  }
+  const cur = activeCatFilter || 'all';
+  catPickerDD.setOptions(options);
+  catPickerDD.setValue(cur);
+  const sel = options.find(o => o.value === cur) || options[0];
+  document.getElementById('catPickerVal').textContent = sel.sub;
+  document.getElementById('catPicker').style.setProperty('--cat-c', cur === 'all' ? 'var(--accent)' : T.color(cur));
 }
 
 function getFilteredSorted() {

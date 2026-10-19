@@ -11,11 +11,11 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610191946"></script>
-<script src="samsam-labels.js?v=202610191946"></script>
-<script src="samsam-taxonomy.js?v=202610191946"></script>
-<script src="samsam-dropdown.js?v=202610191946"></script>
-<script src="samsam-chart.js?v=202610191946"></script>
+<script src="samsam-ui.js?v=202610192033"></script>
+<script src="samsam-labels.js?v=202610192033"></script>
+<script src="samsam-taxonomy.js?v=202610192033"></script>
+<script src="samsam-dropdown.js?v=202610192033"></script>
+<script src="samsam-chart.js?v=202610192033"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1315,7 +1315,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610191946"></script>
+<script type="module" src="samsam-cloud.js?v=202610192033"></script>
 <script>
 const COIN_COLORS = {
   BTC:'#f7931a', SOL:'#9945ff', NEAR:'#00c08b', TAO:'#6366f1',
@@ -2012,8 +2012,8 @@ function renderHistory() {
     }
     if (t.type === 'adjust') {
       const parts = [];
-      if (t.setQty != null) parts.push(`Qty set to <strong>${fmtN(+t.setQty)} ${t.sym}</strong>`);
-      if (t.setAvg != null) parts.push(`Avg price set to <strong>$${(+t.setAvg).toFixed(4)}</strong>`);
+      if (t.setQty != null) parts.push(`${SAMSAM_LABELS.AMOUNT} set to <strong>${fmtN(+t.setQty)} ${t.sym}</strong>`);
+      if (t.setAvg != null) parts.push(`${SAMSAM_LABELS.AVG_BUY_PRICE} set to <strong>${SamsamFmt.price(+t.setAvg)}</strong>`);
       return `<div class="tx-row tx-adjust">
         <div class="tx-details"><span class="tx-type-badge">✏️ EDIT</span><div>${parts.join(' · ')}</div>${meta}</div>
         <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">🗑 Delete</button>
@@ -3244,8 +3244,8 @@ function renderCoinTx() {
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'adjust') {
       const parts = [];
-      if (t.setQty != null) parts.push('qty → ' + qtyFmt(t.setQty) + ' ' + sym);
-      if (t.setAvg != null) parts.push('avg → ' + priceFmt(+t.setAvg));
+      if (t.setQty != null) parts.push(SAMSAM_LABELS.AMOUNT + ' → ' + qtyFmt(t.setQty) + ' ' + sym);
+      if (t.setAvg != null) parts.push(SAMSAM_LABELS.AVG_BUY_PRICE + ' → ' + priceFmt(+t.setAvg));
       entries.push({ id: t.id, kind: 'adjust', label: 'Edit', note: (t.note || 'Manual edit') + (parts.length ? ' · ' + parts.join(', ') : ''), date: t.date, order: t.createdAt || '' });
     }
   });
