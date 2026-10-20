@@ -16,12 +16,12 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610201930"></script>
-<script src="samsam-vault.js?v=202610201930"></script>
-<script src="samsam-labels.js?v=202610201930"></script>
-<script src="samsam-taxonomy.js?v=202610201930"></script>
-<script src="samsam-coins.js?v=202610201930"></script>
-<script src="samsam-dropdown.js?v=202610201930"></script>
+<script src="samsam-ui.js?v=202610202104"></script>
+<script src="samsam-vault.js?v=202610202104"></script>
+<script src="samsam-labels.js?v=202610202104"></script>
+<script src="samsam-taxonomy.js?v=202610202104"></script>
+<script src="samsam-coins.js?v=202610202104"></script>
+<script src="samsam-dropdown.js?v=202610202104"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -144,6 +144,22 @@ body {
 
 /* ── Table ── */
 .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+/* Computer (≥ 1024px): table / cards in a contained box with a slim scrollbar and sticky table headers
+   (same as the main page). Phones scroll the page normally. */
+@media (min-width: 1024px) {
+  #tableView, #cardsView.view-active { max-height: max(420px, calc(100vh - 150px)); overflow: auto; scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+  #cardsView.view-active { grid-template-columns: repeat(auto-fill, minmax(max(280px, calc((100% - 48px) / 4)), 1fr)) !important; /* 3–4 per row */ gap: 16px !important; padding: 2px 8px 6px 2px; }
+  #tableView thead th { position: sticky; top: 0; z-index: 3; background: var(--bg3, #1a2235); box-shadow: inset 0 -1px 0 var(--border); }
+  #tableView::-webkit-scrollbar, #cardsView.view-active::-webkit-scrollbar { width: 6px; height: 6px; }
+  #tableView::-webkit-scrollbar-thumb, #cardsView.view-active::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  #tableView::-webkit-scrollbar-track, #cardsView.view-active::-webkit-scrollbar-track { background: transparent; }
+  [data-theme="light"] #tableView, [data-theme="light"] #cardsView.view-active { scrollbar-color: #cbd5e1 transparent; }
+  [data-theme="light"] #tableView::-webkit-scrollbar-thumb, [data-theme="light"] #cardsView.view-active::-webkit-scrollbar-thumb { background: #cbd5e1; }
+}
+@media print { #tableView, #cardsView { max-height: none !important; overflow: visible !important; } }
+.view-enter { animation: viewEnter .28s ease both; }
+@keyframes viewEnter { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .view-enter { animation: none; } }
 table { width: 100%; border-collapse: collapse; min-width: 800px; }
 thead { background: linear-gradient(135deg,#1a2235,#0f172a); position: sticky; top: 0; z-index: 2; }
 th {
@@ -407,8 +423,8 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .acc-set-note { grid-column: 2; font-size: 0.7rem; }
 .acc-sign { background: var(--bg3); border: 1px solid var(--border); color: var(--fg); border-radius: 7px; height: 32px; min-width: 32px; font-weight: 800; cursor: pointer; }
 .coin-card-footer { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--label); margin-top: auto; }
-.card-act { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 36px; gap: 8px; }
-.card-act button { height: 36px; padding: 0 6px; font-size: 0.8rem; font-weight: 600; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; cursor: pointer; font-family: inherit; }
+.card-act { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 40px; gap: 8px; }   /* same 40px buttons as the main page */
+.card-act button { height: 40px; padding: 0 6px; font-size: 0.8rem; font-weight: 600; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; cursor: pointer; font-family: inherit; }
 .card-act .btn-history { color: var(--fg); background: var(--metric-bg); border: 1px solid var(--border); }
 .card-act .btn-history:hover { border-color: var(--accent); color: var(--accent); }
 .card-act .btn-remove { color: #f87171; background: var(--metric-bg); border: 1px solid rgba(248,113,113,.45); }
@@ -602,7 +618,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610201930"></script>
+<script type="module" src="samsam-cloud.js?v=202610202104"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -636,7 +652,13 @@ let currentView = window.innerWidth <= 600 ? 'cards' : 'table';
 
 // ─── View Toggle ─────────────────────────────────────────────────────────────
 function setView(v) {
+  const changed = currentView !== v;
   currentView = v;
+  if (changed) {   // gentle slide-in of the view you switched to (same as the main page)
+    const shown = document.getElementById(v === 'table' ? 'tableView' : 'cardsView');
+    shown.classList.remove('view-enter'); void shown.offsetWidth; shown.classList.add('view-enter');
+    shown.addEventListener('animationend', () => shown.classList.remove('view-enter'), { once: true });
+  }
   document.getElementById('tableView').style.display = v === 'table' ? '' : 'none';
   document.getElementById('cardsView').style.display = v === 'cards' ? '' : 'none';
   document.getElementById('cardsView').classList.toggle('view-active', v === 'cards');

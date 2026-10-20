@@ -173,6 +173,78 @@
       setTimeout(function () { (inp || (o.danger && no) || ok).focus(); if (inp) inp.select(); }, 0);
     });
   }
+  // ── Action menu ("⋯" on coin cards / table rows) ──
+  //    Desktop: small popover under the button · Phone (≤ 600px): bottom sheet with a dimmed backdrop.
+  //    CPMenu.open(anchorButton, title, items) — items: { label, icon, onClick | href, danger, divider }
+  var menuCss = false, menuOpen = null;
+  function closeMenu(refocus) {
+    if (!menuOpen) return;
+    var m = menuOpen; menuOpen = null;
+    document.removeEventListener('keydown', m.key, true); window.removeEventListener('resize', m.close); window.removeEventListener('scroll', m.onScroll, true);
+    m.el.remove(); m.back.remove(); m.anchor.setAttribute('aria-expanded', 'false');
+    if (refocus) try { m.anchor.focus(); } catch (_) {}
+  }
+  function openMenu(anchor, title, items) {
+    if (menuOpen && menuOpen.anchor === anchor) { closeMenu(true); return; }
+    closeMenu(false);
+    if (!menuCss) {
+      menuCss = true;
+      var st = document.createElement('style');
+      st.textContent = '.cpm-back{position:fixed;inset:0;z-index:100140;background:transparent}.cpm-back.sheet{background:rgba(2,6,23,.6);animation:cpFade .15s ease}' +
+        '.cpm{position:fixed;z-index:100141;min-width:220px;max-width:calc(100vw - 16px);background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#334155);border-radius:12px;box-shadow:0 18px 40px rgba(0,0,0,.45);padding:6px;animation:cpPop .14s ease}' +
+        '.cpm.sheet{left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto;max-width:none;border-radius:18px 18px 0 0;padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));animation:cpSheet .2s ease}' +
+        '.cpm-title{display:none;padding:10px 8px 6px;font-weight:700;font-size:.95rem}.cpm.sheet .cpm-title{display:block}' +
+        '.cpm.sheet::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:#475569;margin:2px auto 4px}' +
+        '.cpm-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;border-radius:8px;background:none;color:inherit;font:inherit;font-size:.9rem;font-weight:600;text-align:left;text-decoration:none;cursor:pointer;box-sizing:border-box}' +
+        '.cpm.sheet .cpm-item{min-height:48px;font-size:1rem}.cpm-item:hover,.cpm-item:focus-visible{background:rgba(59,130,246,.14);outline:none}' +
+        '.cpm-item .cpm-ic{width:22px;text-align:center;flex-shrink:0}.cpm-item .cpm-ext{margin-left:auto;color:var(--fg2,#94a3b8);font-size:.8rem}' +
+        '.cpm-item.danger{color:#f87171}.cpm-item.danger:hover{background:rgba(239,68,68,.14)}.cpm-div{height:1px;margin:4px 6px;background:var(--border,#334155)}' +
+        '@keyframes cpSheet{from{transform:translateY(100%)}}@keyframes cpFade{from{opacity:0}}@keyframes cpPop{from{transform:scale(.96);opacity:0}}@media (prefers-reduced-motion:reduce){.cpm,.cpm.sheet,.cpm-back{animation:none}}';
+      document.head.appendChild(st);
+    }
+    var sheet = window.matchMedia('(max-width: 600px)').matches;
+    var back = document.createElement('div'); back.className = 'cpm-back' + (sheet ? ' sheet' : '');
+    var el = document.createElement('div'); el.className = 'cpm' + (sheet ? ' sheet' : ''); el.setAttribute('role', 'menu'); el.setAttribute('aria-label', title || 'Actions');
+    var t = document.createElement('div'); t.className = 'cpm-title'; t.textContent = title || ''; el.appendChild(t);
+    var focusables = [];
+    items.forEach(function (it) {
+      if (it.divider) { var d = document.createElement('div'); d.className = 'cpm-div'; el.appendChild(d); return; }
+      var b = document.createElement(it.href ? 'a' : 'button');
+      b.className = 'cpm-item' + (it.danger ? ' danger' : ''); b.setAttribute('role', 'menuitem'); b.tabIndex = -1;
+      if (it.href) { b.href = it.href; b.target = '_blank'; b.rel = 'noopener noreferrer'; } else b.type = 'button';
+      var ic = document.createElement('span'); ic.className = 'cpm-ic'; ic.setAttribute('aria-hidden', 'true'); ic.textContent = it.icon || '';
+      var lb = document.createElement('span'); lb.textContent = it.label;
+      b.append(ic, lb);
+      if (it.href) { var x = document.createElement('span'); x.className = 'cpm-ext'; x.textContent = '↗'; x.setAttribute('aria-hidden', 'true'); b.appendChild(x); }
+      b.addEventListener('click', function (e) { if (!it.href) e.preventDefault(); closeMenu(false); if (it.onClick) it.onClick(); });
+      el.appendChild(b); focusables.push(b);
+    });
+    document.body.append(back, el);
+    if (!sheet) {
+      var r = anchor.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+      var left = Math.min(Math.max(8, r.right - w), innerWidth - w - 8);
+      var top = r.bottom + 6; if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+      el.style.left = left + 'px'; el.style.top = top + 'px';
+    }
+    anchor.setAttribute('aria-expanded', 'true');
+    var idx = 0;
+    var move = function (i) { idx = (i + focusables.length) % focusables.length; focusables[idx].focus(); };
+    var key = function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); move(idx + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); move(idx - 1); }
+      else if (e.key === 'Home') { e.preventDefault(); move(0); }
+      else if (e.key === 'End') { e.preventDefault(); move(focusables.length - 1); }
+      else if (e.key === 'Tab') closeMenu(false);
+    };
+    var onScroll = function (e) { if (!el.contains(e.target)) closeMenu(false); };
+    menuOpen = { el: el, back: back, anchor: anchor, key: key, close: function () { closeMenu(false); }, onScroll: onScroll };
+    back.addEventListener('click', function () { closeMenu(false); });
+    document.addEventListener('keydown', key, true); window.addEventListener('resize', menuOpen.close);
+    if (!sheet) window.addEventListener('scroll', onScroll, true);
+    setTimeout(function () { if (focusables[0]) focusables[0].focus(); }, 0);
+  }
+  window.CPMenu = { open: openMenu, close: function () { closeMenu(false); } };
   window.CPDialog = {
     alert: function (m, o) { return dialog('alert', m, o); },
     confirm: function (m, o) { return dialog('confirm', m, o); },
