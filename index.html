@@ -13,13 +13,13 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610201351"></script>
-<script src="samsam-vault.js?v=202610201351"></script>
-<script src="samsam-labels.js?v=202610201351"></script>
-<script src="samsam-taxonomy.js?v=202610201351"></script>
-<script src="samsam-coins.js?v=202610201351"></script>
-<script src="samsam-dropdown.js?v=202610201351"></script>
-<script src="samsam-chart.js?v=202610201351"></script>
+<script src="samsam-ui.js?v=202610201410"></script>
+<script src="samsam-vault.js?v=202610201410"></script>
+<script src="samsam-labels.js?v=202610201410"></script>
+<script src="samsam-taxonomy.js?v=202610201410"></script>
+<script src="samsam-coins.js?v=202610201410"></script>
+<script src="samsam-dropdown.js?v=202610201410"></script>
+<script src="samsam-chart.js?v=202610201410"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1014,6 +1014,17 @@
   .card-act .btn-remove { color: #f87171; border: 1px solid rgba(248,113,113,.45); }
   .card-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
   .card-act .btn-history::after, .card-act .btn-history::before { display: none; }
+  /* Add coin: CoinGecko search list */
+  .ac-find { position: relative; }
+  .ac-suggest { position: absolute; left: 0; right: 0; top: 100%; z-index: 30; margin: 4px 0 0; padding: 4px; list-style: none; max-height: 300px; overflow-y: auto;
+    background: var(--card-solid, var(--bg2)); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 14px 34px rgba(0,0,0,.35); }
+  .ac-suggest [role=option] { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; min-height: 44px; box-sizing: border-box; }
+  .ac-suggest [role=option][aria-selected=true], .ac-suggest [role=option]:hover { background: rgba(59,130,246,.16); }
+  .ac-suggest img, .ac-noimg { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; background: var(--metric-bg); }
+  .ac-sym { font-weight: 700; } .ac-name { color: var(--fg2); font-size: .85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac-rank { margin-left: auto; color: var(--fg2); font-size: .75rem; font-variant-numeric: tabular-nums; }
+  .ac-msg { padding: 10px; color: var(--fg2); font-size: .82rem; }
+  .ac-linked { margin-top: 6px; font-size: .78rem; color: #34d399; line-height: 1.4; }
   /* Liquidation Map (CoinGlass, new tab): full width under the action buttons */
   .btn-liq { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 600; white-space: nowrap; line-height: 1;
     color: #fb923c; background: var(--metric-bg); border: 1px solid rgba(251,146,60,.45); border-radius: 8px; height: 36px; font-size: 0.8rem; -webkit-tap-highlight-color: transparent; }
@@ -1346,9 +1357,13 @@
   <div class="modal" style="max-width:440px">
     <h2 style="color:#a78bfa">➕ Add New Coin</h2>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-      <div class="form-row" style="margin:0">
-        <label class="form-label">Symbol <span style="color:#ef4444">*</span></label>
-        <input type="text" class="form-input" id="acSym" placeholder="e.g. XRP" oninput="this.value=this.value.toUpperCase().trim()">
+      <div class="form-row ac-find" style="margin:0;grid-column:1 / -1">
+        <label class="form-label" for="acSym">Coin <span style="color:#ef4444">*</span> <span style="color:var(--fg2);font-weight:400">— search by symbol or name</span></label>
+        <input type="text" class="form-input" id="acSym" placeholder="e.g. XRP or Ripple" autocomplete="off" spellcheck="false"
+          role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acSuggest"
+          oninput="this.value=this.value.toUpperCase().replace(/\s+/g,' ').trimStart(); acSearchInput()" onkeydown="acSearchKey(event)">
+        <ul class="ac-suggest" id="acSuggest" role="listbox" hidden></ul>
+        <div class="ac-linked" id="acLinked" hidden></div>
       </div>
       <div class="form-row" style="margin:0">
         <label class="form-label">Full Name</label>
@@ -1373,7 +1388,7 @@
         </select>
       </div>
       <div class="form-row" style="margin:0">
-        <label class="form-label">CoinGecko ID <span style="color:var(--fg2);font-weight:400">(optional)</span></label>
+        <label class="form-label">CoinGecko ID <span style="color:var(--fg2);font-weight:400">(filled by search)</span></label>
         <input type="text" class="form-input" id="acCgId" placeholder="e.g. ripple">
       </div>
     </div>
@@ -1444,7 +1459,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610201351"></script>
+<script type="module" src="samsam-cloud.js?v=202610201410"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2151,8 +2166,101 @@ function deleteTx(txId) {
 document.getElementById('historyModal').addEventListener('click', function(e){ if(e.target===this) closeHistory(); });
 
 // ── Add New Coin ──────────────────────────────────────
+// ── Add coin: CoinGecko search ────────────────────────────────────────────────
+// Picking a result links the coin to CoinGecko (id → live price, logo, CoinGecko link), fills its
+// name and suggests a category. The Liquidation Map link only needs the symbol.
+let acResults = [], acActive = -1, acTimer = null, acSeq = 0, acLogo = null;
+const CG_CAT_RULES = [   // CoinGecko category names → our taxonomy (first match wins)
+  [/meme/i, 'meme'], [/oracle|middleware|data availability/i, 'oracle'], [/launchpad/i, 'launchpad'],
+  [/layer 2|layer-2|rollup|zk|optimistic/i, 'layer2'], [/layer 0|interoperab|cross-chain|bridge/i, 'layer0'],
+  [/artificial intelligence|\bai\b|depin|machine learning/i, 'ai'],
+  [/gaming|metaverse|web3|nft|play to earn|name service/i, 'web3'],
+  [/decentralized finance|defi|real world asset|\brwa\b|exchange|lending|yield|stablecoin/i, 'defi'],
+  [/layer 1|smart contract platform/i, 'layer1'],
+];
+function acCategoryFrom(cats) {
+  const list = (cats || []).filter(Boolean).join(' | ');
+  for (const [re, key] of CG_CAT_RULES) if (re.test(list)) return key;
+  return null;
+}
+function acSearchInput() {
+  acLink(null);
+  const q = document.getElementById('acSym').value.trim();
+  clearTimeout(acTimer);
+  if (q.length < 2) { acShow([]); return; }
+  acTimer = setTimeout(() => acSearch(q), 280);
+}
+async function acSearch(q) {
+  const seq = ++acSeq, box = document.getElementById('acSuggest');
+  box.hidden = false; box.innerHTML = '<li class="ac-msg">Searching CoinGecko…</li>';
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/search?query=' + encodeURIComponent(q));
+    if (!r.ok) throw new Error(r.status === 429 ? 'CoinGecko is busy — wait a few seconds and type again.' : 'CoinGecko answered ' + r.status);
+    const j = await r.json(); if (seq !== acSeq) return;
+    const Q = q.toUpperCase();
+    const coins = (j.coins || []).filter(c => c && c.id && c.symbol)
+      .map(c => ({ id: String(c.id), sym: String(c.symbol).toUpperCase(), name: String(c.name || c.symbol), rank: c.market_cap_rank || null, thumb: c.large || c.thumb || null }))
+      .sort((a, b) => (b.sym === Q) - (a.sym === Q) || (a.rank || 1e9) - (b.rank || 1e9)).slice(0, 8);
+    acShow(coins, coins.length ? '' : 'No coin found. Check the spelling, or fill the CoinGecko ID by hand.');
+  } catch (e) {
+    if (seq === acSeq) acShow([], navigator.onLine ? (e.message || 'Search failed') : 'You are offline — search needs internet.');
+  }
+}
+function acShow(list, msg) {
+  acResults = list; acActive = list.length ? 0 : -1;
+  const box = document.getElementById('acSuggest'), inp = document.getElementById('acSym'), E = SamsamCoins.esc;
+  if (!list.length && !msg) { box.hidden = true; box.innerHTML = ''; inp.setAttribute('aria-expanded', 'false'); return; }
+  box.innerHTML = list.map((c, i) => `<li role="option" id="acOpt${i}" data-i="${i}" aria-selected="${i === acActive}">
+      ${c.thumb && /^https:\/\//.test(c.thumb) ? `<img src="${E(c.thumb)}" alt="" width="24" height="24" loading="lazy">` : '<span class="ac-noimg"></span>'}
+      <span class="ac-sym">${E(c.sym)}</span><span class="ac-name">${E(c.name)}</span>${c.rank ? `<span class="ac-rank">#${c.rank}</span>` : ''}</li>`).join('')
+    + (msg ? `<li class="ac-msg">${E(msg)}</li>` : '');
+  box.hidden = false; inp.setAttribute('aria-expanded', String(!!list.length));
+  if (acActive >= 0) inp.setAttribute('aria-activedescendant', 'acOpt' + acActive); else inp.removeAttribute('aria-activedescendant');
+}
+function acSearchKey(e) {
+  const box = document.getElementById('acSuggest');
+  if (box.hidden || !acResults.length) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault(); acActive = (acActive + (e.key === 'ArrowDown' ? 1 : -1) + acResults.length) % acResults.length;
+    box.querySelectorAll('[role=option]').forEach((li, i) => li.setAttribute('aria-selected', String(i === acActive)));
+    document.getElementById('acSym').setAttribute('aria-activedescendant', 'acOpt' + acActive);
+  } else if (e.key === 'Enter') { e.preventDefault(); acPick(acActive); }
+  else if (e.key === 'Escape') { e.stopPropagation(); acShow([]); }
+}
+async function acPick(i) {
+  const c = acResults[i]; if (!c) return;
+  document.getElementById('acSym').value = c.sym;
+  document.getElementById('acName').value = c.name;
+  document.getElementById('acCgId').value = c.id;
+  acLogo = c.thumb && /^https:\/\//.test(c.thumb) ? c.thumb : null;
+  acShow([]); acLink(c);
+  document.getElementById('acQty').focus();
+  // Category suggestion from CoinGecko's own categories (you can still change it)
+  try {
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(c.id)}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`);
+    if (!r.ok || document.getElementById('acCgId').value !== c.id) return;
+    const d = await r.json();
+    const key = SamsamTaxonomy.categoryOf(c.sym, null) !== 'other' ? SamsamTaxonomy.categoryOf(c.sym, null) : acCategoryFrom(d.categories);
+    if (key) document.getElementById('acCat').value = key;
+    const usd = d.market_data && d.market_data.current_price && d.market_data.current_price.usd;
+    if (usd > 0) { const el = document.getElementById('acLinkedPrice'); if (el) el.textContent = ' · now ' + SamsamFmt.price(usd); }
+  } catch (_) { /* category stays as chosen */ }
+}
+function acLink(c) {
+  const el = document.getElementById('acLinked'), E = SamsamCoins.esc;
+  if (!c) { el.hidden = true; el.innerHTML = ''; acLogo = null; document.getElementById('acCgId').value = ''; return; }
+  el.innerHTML = `✓ Linked to CoinGecko: <strong>${E(c.name)}</strong> (${E(c.id)})<span id="acLinkedPrice"></span> — live price, logo, CoinGecko link and Liquidation Map ready`;
+  el.hidden = false;
+}
+document.addEventListener('click', e => {
+  const li = e.target.closest && e.target.closest('#acSuggest [role=option]');
+  if (li) { acPick(+li.dataset.i); return; }
+  if (!e.target.closest || !e.target.closest('.ac-find')) acShow([]);
+});
+
 function openAddCoin() {
   ['acSym','acName','acQty','acPrice','acFeeUsd','acCgId'].forEach(id => document.getElementById(id).value = '');
+  acShow([]); acLink(null);
   const catSel = document.getElementById('acCat');
   if (!catSel.options.length) catSel.innerHTML = SamsamTaxonomy.list.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
   catSel.value = 'layer1';
@@ -2182,6 +2290,7 @@ function applyAddCoin() {
   errEl.style.display = 'none';
   // Validation
   if(!sym)              { errEl.textContent='Symbol is required.'; errEl.style.display='block'; return; }
+  if(!/^[A-Z0-9._-]{1,20}$/.test(sym)) { errEl.textContent='Pick the coin from the search list (or type only its symbol, e.g. XRP).'; errEl.style.display='block'; return; }
   if(!qty || qty <= 0)  { errEl.textContent='Enter a valid quantity.'; errEl.style.display='block'; return; }
   if(!price || price<=0){ errEl.textContent='Enter a valid buy price.'; errEl.style.display='block'; return; }
   if(portfolio.find(c => c.sym === sym)) {
@@ -2193,13 +2302,15 @@ function applyAddCoin() {
   const prev = Samsam.getState().archivedCoins.find(c => c.sym === sym);
   if (prev && prev.qty > 1e-12 && !confirm(`${sym} still had ${fmtQtyRO(prev.qty)} ${sym} when it was removed.\nThis Buy will be added to that balance (new total ${fmtQtyRO(prev.qty + qty)}).\n\nContinue?`)) return;
   const cgId = document.getElementById('acCgId').value.trim().toLowerCase() || null;
+  if (cgId && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cgId)) { errEl.textContent = 'CoinGecko ID looks wrong — pick the coin from the search list.'; errEl.style.display = 'block'; return; }
+  if (!cgId && !SamsamCoins.CG_IDS[sym] && !confirm(`${sym} is not linked to CoinGecko, so it will have no live price, logo or CoinGecko link.\n\nTip: type its name in the Coin box and pick it from the list.\n\nAdd it anyway?`)) return;
   const name = document.getElementById('acName').value.trim() || sym;
   const cat  = document.getElementById('acCat').value;
   COIN_NAMES[sym] = name;
   // One atomic cloud write: coin settings + its opening buy (or, for a coin that was
   // removed earlier, a correction that sets exactly the entered position).
   const feeUsd = Math.max(0, parseFloat(document.getElementById('acFeeUsd').value) || 0);
-  cloudWrite(Samsam.addCoin({ sym, name, cat, cgId }, { qty, price, feeUsd }));
+  cloudWrite(Samsam.addCoin({ sym, name, cat, cgId, logoUrl: acLogo }, { qty, price, feeUsd }));
   closeAddCoin();
   if(cgId) fetchCoinLogoAndPrice({ sym }, cgId);
 }
