@@ -5,9 +5,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Cute Portfolio</title>
-<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
-<link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png">
-<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
+<link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=2">
 <link rel="manifest" href="./manifest.json">
 <meta name="application-name" content="Cute Portfolio">
 <meta name="apple-mobile-web-app-title" content="Cute Portfolio">
@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610201901"></script>
-<script src="samsam-vault.js?v=202610201901"></script>
-<script src="samsam-labels.js?v=202610201901"></script>
-<script src="samsam-taxonomy.js?v=202610201901"></script>
-<script src="samsam-coins.js?v=202610201901"></script>
-<script src="samsam-dropdown.js?v=202610201901"></script>
-<script src="samsam-chart.js?v=202610201901"></script>
+<script src="samsam-ui.js?v=202610201930"></script>
+<script src="samsam-vault.js?v=202610201930"></script>
+<script src="samsam-labels.js?v=202610201930"></script>
+<script src="samsam-taxonomy.js?v=202610201930"></script>
+<script src="samsam-coins.js?v=202610201930"></script>
+<script src="samsam-dropdown.js?v=202610201930"></script>
+<script src="samsam-chart.js?v=202610201930"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1035,6 +1035,13 @@
   .ac-cmc-check { padding: 0 12px; color: #60a5fa; font-size: .8rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
   .ac-cmc-check[hidden] { display: none; }
   @media (max-width: 420px) { .ac-cmc-pre { display: none; } #addCoinModal .ac-cmc .form-input { padding-left: 12px; } }
+  /* Coin logos everywhere (cards, table, Holdings, dialogs, dropdowns): never a dark disc behind a
+     transparent logo — no background, no pseudo-elements, round clip, whole logo visible */
+  img[data-sym], .atx-coin img, .sdd-ico img, .ac-suggest img, .htx-row-icon img, .hov-coin-icon img { background: transparent !important; object-fit: contain !important; }
+  .atx-coin, .sdd-ico, .htx-row-icon, .hov-coin-icon, .modal-coin-icon-wrapper { background: transparent !important; }
+  .atx-coin::before, .atx-coin::after, .sdd-ico::before, .sdd-ico::after, .htx-row-icon::before, .htx-row-icon::after,
+  .hov-coin-icon::before, .hov-coin-icon::after, .modal-coin-icon-wrapper::before, .modal-coin-icon-wrapper::after { content: none !important; display: none !important; }
+  .htx-row-icon, .hov-coin-icon, .sdd-ico { border-radius: 50%; overflow: hidden; }
   /* Add coin form: labels on one line, equal fields, equal buttons */
   #addCoinModal .form-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #addCoinModal .form-input { width: 100%; box-sizing: border-box; height: 46px; }
@@ -1048,7 +1055,8 @@
     background: var(--card-solid, var(--bg2)); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 14px 34px rgba(0,0,0,.35); }
   .ac-suggest [role=option] { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; min-height: 44px; box-sizing: border-box; }
   .ac-suggest [role=option][aria-selected=true], .ac-suggest [role=option]:hover { background: rgba(59,130,246,.16); }
-  .ac-suggest img, .ac-noimg { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; background: var(--metric-bg); }
+  .ac-suggest img, .ac-noimg { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; background: transparent; }
+  .ac-noimg { background: var(--metric-bg); }   /* grey disc only when a coin has no logo */
   .ac-sym { font-weight: 700; } .ac-name { color: var(--fg2); font-size: .85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ac-rank { margin-left: auto; color: var(--fg2); font-size: .75rem; font-variant-numeric: tabular-nums; }
   .ac-msg { padding: 10px; color: var(--fg2); font-size: .82rem; }
@@ -1545,7 +1553,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610201901"></script>
+<script type="module" src="samsam-cloud.js?v=202610201930"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1560,7 +1568,7 @@ function getCoinIcon(sym, size=36) {
   const coin = portfolio.find(c => c.sym === sym);
   const url = (coin && coin.logoUrl) || COIN_ICONS[sym];
   if (url) {
-    return `<img src="${url}" width="${size}" height="${size}" data-sym="${sym}" data-size="${size}" style="border-radius:50%;flex-shrink:0;object-fit:cover" onerror="coinImgErr(this)">`;
+    return `<img src="${url}" width="${size}" height="${size}" data-sym="${sym}" data-size="${size}" style="border-radius:50%;flex-shrink:0;object-fit:contain;background:transparent" onerror="coinImgErr(this)">`;
   }
   return coinFallback(sym, size);
 }

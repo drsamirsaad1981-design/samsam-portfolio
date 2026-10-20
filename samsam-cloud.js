@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610201901';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610201901';
+import * as Core from './samsam-core.js?v=202610201930';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610201930';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -614,7 +614,7 @@ function injectUi() {
   @media print{#samsamSyncPill,#samsamSyncMenu,#samsamGate{display:none!important} body::after{display:none}}`;
   document.head.appendChild(css);
   const gate = document.createElement('div'); gate.id = 'samsamGate';
-  gate.innerHTML = `<div class="card"><img src="./icon-192.png" alt="" width="64" height="64" style="border-radius:16px;margin:0 auto 10px;display:block"><h2>Cute Portfolio</h2><div id="samsamGateBody"></div></div>`;
+  gate.innerHTML = `<div class="card"><img src="./icon-192.png?v=2" alt="" width="64" height="64" style="border-radius:16px;margin:0 auto 10px;display:block"><h2>Cute Portfolio</h2><div id="samsamGateBody"></div></div>`;
   const pill = document.createElement('button'); pill.id = 'samsamSyncPill'; pill.type = 'button';
   pill.innerHTML = `<span class="ss-live" id="samsamSyncDot" data-state="loading"></span><span id="samsamSyncText">Connecting…</span>`;
   const menu = document.createElement('div'); menu.id = 'samsamSyncMenu';

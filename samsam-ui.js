@@ -150,7 +150,7 @@
       var back = document.activeElement;
       var w = document.createElement('div'); w.id = 'cpDialog';
       w.innerHTML = '<div class="cpd" role="' + (kind === 'alert' ? 'alertdialog' : 'dialog') + '" aria-modal="true" aria-labelledby="cpdT" aria-describedby="cpdM">' +
-        '<div class="cpd-head"><img src="./icon-192.png" alt=""><h3 id="cpdT"></h3></div><p id="cpdM"></p>' +
+        '<div class="cpd-head"><img src="./icon-192.png?v=2" alt=""><h3 id="cpdT"></h3></div><p id="cpdM"></p>' +
         (kind === 'prompt' ? '<input id="cpdI" autocomplete="off">' : '') +
         '<div class="cpd-btns' + (kind === 'alert' ? ' one' : '') + '">' + (kind === 'alert' ? '' : '<button type="button" class="cpd-no"></button>') + '<button type="button" class="cpd-ok"></button></div></div>';
       w.querySelector('#cpdT').textContent = o.title || 'Cute Portfolio';

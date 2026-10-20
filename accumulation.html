@@ -5,9 +5,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Accumulation Plan — Cute Portfolio</title>
-<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
-<link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png">
-<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
+<link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=2">
 <link rel="manifest" href="./manifest.json">
 <meta name="application-name" content="Cute Portfolio">
 <meta name="apple-mobile-web-app-title" content="Cute Portfolio">
@@ -16,12 +16,12 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610201901"></script>
-<script src="samsam-vault.js?v=202610201901"></script>
-<script src="samsam-labels.js?v=202610201901"></script>
-<script src="samsam-taxonomy.js?v=202610201901"></script>
-<script src="samsam-coins.js?v=202610201901"></script>
-<script src="samsam-dropdown.js?v=202610201901"></script>
+<script src="samsam-ui.js?v=202610201930"></script>
+<script src="samsam-vault.js?v=202610201930"></script>
+<script src="samsam-labels.js?v=202610201930"></script>
+<script src="samsam-taxonomy.js?v=202610201930"></script>
+<script src="samsam-coins.js?v=202610201930"></script>
+<script src="samsam-dropdown.js?v=202610201930"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -602,7 +602,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610201901"></script>
+<script type="module" src="samsam-cloud.js?v=202610201930"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1302,7 +1302,7 @@ function checkAlertNotify(idx) {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(`🔔 ${entry.sym} price alert — Cute Portfolio`, {
         body: `Price $${fmtUSD(r.currentPrice)} reached your alert at $${fmtUSD(entry.alertPrice)}`,
-        icon: entry.logoUrl || './icon-192.png', badge: './icon-192.png', tag: 'cp-alert-' + entry.sym
+        icon: entry.logoUrl || './icon-192.png?v=2', badge: './icon-192.png?v=2', tag: 'cp-alert-' + entry.sym
       });
     } else if ('Notification' in window && Notification.permission !== 'denied') {
       Notification.requestPermission().then(p => {

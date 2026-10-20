@@ -228,7 +228,7 @@
     size = size || 36; opts = opts || {};
     var url = (opts.logoUrl && /^https:\/\//.test(opts.logoUrl) ? opts.logoUrl : null) || ICONS[sym];
     if (!url) return fallback(sym, size);
-    return '<img src="' + esc(url) + '" width="' + size + '" height="' + size + '" alt="' + esc(sym) + '" data-sym="' + esc(sym) + '" data-size="' + size + '" style="border-radius:50%;flex-shrink:0;object-fit:cover" onerror="SamsamCoins.imgErr(this)">';
+    return '<img src="' + esc(url) + '" width="' + size + '" height="' + size + '" alt="' + esc(sym) + '" data-sym="' + esc(sym) + '" data-size="' + size + '" style="border-radius:50%;flex-shrink:0;object-fit:contain;background:transparent" onerror="SamsamCoins.imgErr(this)">';
   }
   function imgErr(el) { if (!el.parentNode) return; el.outerHTML = fallback(el.getAttribute('data-sym'), parseInt(el.getAttribute('data-size')) || 36); }
   var LINK = 'target="_blank" rel="noopener" style="text-decoration:none;color:inherit;transition:opacity .15s" onmouseover="this.style.opacity=\'0.7\'" onmouseout="this.style.opacity=\'1\'"';
