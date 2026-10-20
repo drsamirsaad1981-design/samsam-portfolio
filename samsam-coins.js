@@ -221,5 +221,51 @@
   // CoinGlass liquidation heatmap for a coin (opens in a new tab). Symbol differs on CoinGlass for a few coins.
   var LIQ_SYMS = { GRAM: 'TON' };
   function liqMapUrl(sym) { var s = LIQ_SYMS[sym] || String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); return 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(s); }
-  window.SamsamCoins = { esc: esc, liqMapUrl: liqMapUrl, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  // CoinCodex price prediction. CoinCodex uses its own page names (checked against its API, Oct 2026);
+  // a coin added later stores its CoinCodex name as coin.ccSlug (looked up when it is added).
+  var CC_SLUGS = {
+    BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binance-coin', TAO: 'bittensor', SUI: 'sui', NEAR: 'near-protocol',
+    SEI: 'sei', ATOM: 'cosmos', APT: 'aptos', AVAX: 'avalanche', ICP: 'internet-computer', KSM: 'kusama', GRAM: 'toncoin',
+    ARB: 'arbitrum', MOVR: 'moonriver', GLMR: 'moonbeam', OP: 'optimism', WLD: 'worldcoin-org', PYTH: 'pyth-network',
+    JUP: 'jupiter-coin', RENDER: 'render-token', QNT: 'quant-network', HBAR: 'hedera-hashgraph', DOGE: 'dogecoin',
+    MON: 'monad-xyz', CRO: 'cronos', XDC: 'xdc-network', DOT: 'polkadot', LINK: 'chainlink', ENS: 'ethereum-name-service',
+    STRK: 'starknet', ONDO: 'ondo-finance', AVAIL: 'avail-network', KAVA: 'kava', PONS: 'pons', MNT: 'mantle',
+    FLR: 'spark-token', KAS: 'kaspa', POL: 'polygon-ecosystem-token', VTHO: 'vethor-token', VET: 'vechain-token',
+    NIGHT: 'midnight-network', XPL: 'xpl-token', XRP: 'ripple',
+  };
+  var SLUG_RE = /^[a-z0-9][a-z0-9-]{0,99}$/;
+  function ccSlug(sym, opts) {
+    opts = opts || {}; var s = String(sym || '').toUpperCase();
+    if (opts.ccSlug && SLUG_RE.test(opts.ccSlug)) return opts.ccSlug;
+    return CC_SLUGS[s] || null;
+  }
+  // Direct page when the CoinCodex name is known; otherwise a search that always finds the right page.
+  function predictionUrl(sym, opts) {
+    opts = opts || {}; var slug = ccSlug(sym, opts);
+    if (slug) return 'https://coincodex.com/crypto/' + encodeURIComponent(slug) + '/price-prediction/';
+    var name = opts.name && opts.name !== sym ? opts.name + ' ' : '';
+    return 'https://www.google.com/search?q=' + encodeURIComponent('site:coincodex.com ' + name + String(sym || '').toUpperCase() + ' price prediction');
+  }
+  // Look up a coin's CoinCodex page name (used when a coin is added). Matches the ticker AND the CoinGecko id
+  // or the name — CoinCodex reuses tickers for different coins. Resolves null when unsure (search fallback).
+  function findCcSlug(sym, opts) {
+    opts = opts || {}; var S = String(sym || '').toUpperCase();
+    if (CC_SLUGS[S]) return Promise.resolve(CC_SLUGS[S]);
+    var guesses = [opts.cgId, String(opts.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')].filter(function (g) { return g && SLUG_RE.test(g); });
+    var base = 'https://coincodex.com/api/v1/assets/get_asset_list?';
+    var get = function (q) { return fetch(base + q).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); };
+    return Promise.all([guesses.length ? get('select_byslug=' + guesses.map(encodeURIComponent).join(',')) : null, get('select_bysymbol=' + encodeURIComponent(S))])
+      .then(function (res) {
+        var list = [];
+        res.forEach(function (j) { var a = j && (j.data || j.assets || j.result || j); if (Array.isArray(a)) list = list.concat(a); else if (a && typeof a === 'object') Object.keys(a).forEach(function (k) { if (a[k] && a[k].slug) list.push(a[k]); }); });
+        var ok = list.filter(function (x) {
+          var ds = String(x.display_symbol || x.symbol || '').toUpperCase();
+          return x && x.slug && SLUG_RE.test(x.slug) && ds === S && !x.not_trading_anymore;
+        });
+        var named = ok.filter(function (x) { return guesses.indexOf(x.slug) >= 0 || (opts.name && String(x.name || '').toLowerCase() === String(opts.name).toLowerCase()); });
+        var pick = named.sort(function (a, b) { return (+b.market_cap_usd || 0) - (+a.market_cap_usd || 0); })[0];
+        return pick ? pick.slug : null;
+      }).catch(function () { return null; });
+  }
+  window.SamsamCoins = { esc: esc, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

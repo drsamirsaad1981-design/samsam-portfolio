@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610201410';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610201410';
+import * as Core from './samsam-core.js?v=202610201436';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610201436';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -57,6 +57,7 @@ function cleanCoin(c) {
   if ('name' in o) o.name = Clean.label(o.name) || o.sym;
   if ('notes' in o) o.notes = Clean.text(o.notes, 500);
   if ('cgId' in o) o.cgId = Clean.cgId(o.cgId);
+  if ('ccSlug' in o) o.ccSlug = Clean.cgId(o.ccSlug);
   if ('logoUrl' in o) o.logoUrl = Clean.url(o.logoUrl);
   if ('cat' in o) o.cat = Clean.key(o.cat) || 'other';
   if (o.opening) o.opening = { qty: Clean.num(o.opening.qty), avg: Clean.num(o.opening.avg) };
@@ -347,6 +348,7 @@ const API = {
     if ('name' in fields) fields.name = Clean.label(fields.name);
     if ('notes' in fields) fields.notes = Clean.text(fields.notes, 500);
     if ('cgId' in fields) fields.cgId = Clean.cgId(fields.cgId);
+    if ('ccSlug' in fields) fields.ccSlug = Clean.cgId(fields.ccSlug);
     if ('logoUrl' in fields) fields.logoUrl = Clean.url(fields.logoUrl);
     if ('lastPrice' in fields && !(Number(fields.lastPrice) > 0 && Number.isFinite(Number(fields.lastPrice)))) delete fields.lastPrice;
     return commit((b, ref, fs) => b.set(ref('coins', safeId(sym)), clean({ ...fields, updatedAt: new Date().toISOString() }), { merge: true }), `Update ${sym}`);

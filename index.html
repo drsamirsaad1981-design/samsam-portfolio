@@ -13,13 +13,13 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610201410"></script>
-<script src="samsam-vault.js?v=202610201410"></script>
-<script src="samsam-labels.js?v=202610201410"></script>
-<script src="samsam-taxonomy.js?v=202610201410"></script>
-<script src="samsam-coins.js?v=202610201410"></script>
-<script src="samsam-dropdown.js?v=202610201410"></script>
-<script src="samsam-chart.js?v=202610201410"></script>
+<script src="samsam-ui.js?v=202610201436"></script>
+<script src="samsam-vault.js?v=202610201436"></script>
+<script src="samsam-labels.js?v=202610201436"></script>
+<script src="samsam-taxonomy.js?v=202610201436"></script>
+<script src="samsam-coins.js?v=202610201436"></script>
+<script src="samsam-dropdown.js?v=202610201436"></script>
+<script src="samsam-chart.js?v=202610201436"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1025,14 +1025,18 @@
   .ac-rank { margin-left: auto; color: var(--fg2); font-size: .75rem; font-variant-numeric: tabular-nums; }
   .ac-msg { padding: 10px; color: var(--fg2); font-size: .82rem; }
   .ac-linked { margin-top: 6px; font-size: .78rem; color: #34d399; line-height: 1.4; }
-  /* Liquidation Map (CoinGlass, new tab): full width under the action buttons */
-  .btn-liq { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 600; white-space: nowrap; line-height: 1;
+  /* Liquidation Map (CoinGlass) + Price Prediction (CoinCodex), new tab: one row under the action buttons */
+  .btn-liq, .btn-pred { display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 600; white-space: nowrap; line-height: 1;
     color: #fb923c; background: var(--metric-bg); border: 1px solid rgba(251,146,60,.45); border-radius: 8px; height: 36px; font-size: 0.8rem; -webkit-tap-highlight-color: transparent; }
   .btn-liq:hover { background: #f97316; color: #fff; border-color: #f97316; }
+  .btn-pred { color: #a78bfa; border-color: rgba(167,139,250,.45); }
+  .btn-pred:hover { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
   .btn-liq:focus-visible { outline: 3px solid rgba(251,146,60,.5); outline-offset: 2px; }
-  .row-act .btn-liq { height: 28px; font-size: 0.74rem; border-radius: 6px; }
-  .htx-liq { display: inline-flex; margin: 2px 0 10px; height: 34px; padding: 0 14px; font-size: 0.8rem; }
-  @media print { .btn-liq, .htx-liq { display: none !important; } }
+  .btn-pred:focus-visible { outline: 3px solid rgba(167,139,250,.5); outline-offset: 2px; }
+  .row-act .btn-liq, .row-act .btn-pred { height: 28px; font-size: 0.74rem; border-radius: 6px; }
+  .htx-links { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 10px; }
+  .htx-liq { display: inline-flex; height: 34px; padding: 0 14px; font-size: 0.8rem; }
+  @media print { .btn-liq, .btn-pred, .htx-links { display: none !important; } }
   /* Category cards (All Coins, Layer 1…): solid surface, readable labels */
   .summary-card { background: var(--card-solid); }
   .summary-card .label { color: var(--label); font-weight: 600; }
@@ -1459,7 +1463,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610201410"></script>
+<script type="module" src="samsam-cloud.js?v=202610201436"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1932,7 +1936,8 @@ function renderTableAndStack() {
             <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="${SAMSAM_LABELS.TRANSFER_OUT} ${c.sym}">↑ Out</button>
             <button class="btn-history" onclick="openHistory('${c.sym}')" title="History of ${c.sym}">📋 History</button>
             <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove ${c.sym}">✕ Remove</button>
-            <a class="btn-liq" href="${SamsamCoins.liqMapUrl(c.sym)}" target="_blank" rel="noopener noreferrer" title="Open the ${c.sym} liquidation heatmap on CoinGlass (new tab)">🔥 Liq Map ↗</a>
+            <a class="btn-liq" href="${SamsamCoins.liqMapUrl(c.sym)}" target="_blank" rel="noopener noreferrer" title="Open the ${c.sym} liquidation heatmap on CoinGlass (new tab)">🔥 Liq Map</a>
+            <a class="btn-pred" href="${SamsamCoins.predictionUrl(c.sym, c)}" target="_blank" rel="noopener noreferrer" title="Open the ${c.sym} price prediction on CoinCodex (new tab)">🔮 Predict</a>
           </div>
         </td>
       </tr>`;
@@ -1990,7 +1995,8 @@ function renderTableAndStack() {
           <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="${SAMSAM_LABELS.TRANSFER_OUT}">↑ ${SAMSAM_LABELS.TRANSFER_OUT}</button>
           <button class="btn-history" onclick="openHistory('${c.sym}')" title="History">📋 History</button>
           <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove">✕ Remove</button>
-          <a class="btn-liq" href="${SamsamCoins.liqMapUrl(c.sym)}" target="_blank" rel="noopener noreferrer" title="Open the ${c.sym} liquidation heatmap on CoinGlass (new tab)">🔥 Liquidation Map <span aria-hidden="true">↗</span></a>
+          <a class="btn-liq" href="${SamsamCoins.liqMapUrl(c.sym)}" target="_blank" rel="noopener noreferrer" title="Open the ${c.sym} liquidation heatmap on CoinGlass (new tab)">🔥 Liq Map <span aria-hidden="true">↗</span></a>
+          <a class="btn-pred" href="${SamsamCoins.predictionUrl(c.sym, c)}" target="_blank" rel="noopener noreferrer" title="Open the ${c.sym} price prediction on CoinCodex (new tab)">🔮 Price Prediction <span aria-hidden="true">↗</span></a>
         </div>
       </div>`;
     }).join('');
@@ -2249,7 +2255,7 @@ async function acPick(i) {
 function acLink(c) {
   const el = document.getElementById('acLinked'), E = SamsamCoins.esc;
   if (!c) { el.hidden = true; el.innerHTML = ''; acLogo = null; document.getElementById('acCgId').value = ''; return; }
-  el.innerHTML = `✓ Linked to CoinGecko: <strong>${E(c.name)}</strong> (${E(c.id)})<span id="acLinkedPrice"></span> — live price, logo, CoinGecko link and Liquidation Map ready`;
+  el.innerHTML = `✓ Linked to CoinGecko: <strong>${E(c.name)}</strong> (${E(c.id)})<span id="acLinkedPrice"></span> — live price, logo, CoinGecko link, Liquidation Map and Price Prediction ready`;
   el.hidden = false;
 }
 document.addEventListener('click', e => {
@@ -2311,8 +2317,21 @@ function applyAddCoin() {
   // removed earlier, a correction that sets exactly the entered position).
   const feeUsd = Math.max(0, parseFloat(document.getElementById('acFeeUsd').value) || 0);
   cloudWrite(Samsam.addCoin({ sym, name, cat, cgId, logoUrl: acLogo }, { qty, price, feeUsd }));
+  linkCoinCodex(sym, { cgId, name });
   closeAddCoin();
   if(cgId) fetchCoinLogoAndPrice({ sym }, cgId);
+}
+
+// Price Prediction: find the coin's CoinCodex page once and keep it on the coin (all devices use it).
+// If CoinCodex can't be reached, the button opens a search that finds the page instead.
+function linkCoinCodex(sym, opts) {
+  if (SamsamCoins.CC_SLUGS[sym]) return;
+  SamsamCoins.findCcSlug(sym, opts).then(slug => { if (slug) cloudWrite(Samsam.updateCoin(sym, { ccSlug: slug })); });
+}
+let _ccTried = false;
+function linkMissingCoinCodex() {   // coins added before this feature, or on a device that couldn't reach CoinCodex
+  if (_ccTried || !cloudReady) return; _ccTried = true;
+  portfolio.filter(c => !SamsamCoins.CC_SLUGS[c.sym] && !c.ccSlug).forEach((c, i) => setTimeout(() => linkCoinCodex(c.sym, { cgId: c.cgId, name: c.name || COIN_NAMES[c.sym] }), 1500 * i));
 }
 
 async function fetchCoinLogoAndPrice(coin, cgId) {
@@ -2551,7 +2570,7 @@ async function fetchLivePrices() {
     snapshotDue = true;
     fetchBtcTicker();
     whenSamsam(S => S.updatePrices(map)); // re-renders every view via applyCloudState
-    fetchMissingLogos();
+    fetchMissingLogos(); linkMissingCoinCodex();
   } catch(e){setLiveStatus(navigator.onLine?'error':'offline');updateLiveIndicator();}
 }
 
@@ -3421,6 +3440,8 @@ function renderCoinTx() {
   const listEl = document.getElementById('htxList');
   const liq = document.getElementById('htxLiqLink');
   if (liq) { liq.href = SamsamCoins.liqMapUrl(sym); liq.title = `Open the ${sym} liquidation heatmap on CoinGlass (new tab)`; }
+  const pred = document.getElementById('htxPredLink');
+  if (pred) { pred.href = SamsamCoins.predictionUrl(sym, portfolio.find(c => c.sym === sym) || {}); pred.title = `Open the ${sym} price prediction on CoinCodex (new tab)`; }
   // Coin selector (searchable): every coin you hold, largest first; current coin always listed
   ensureHtxDropdowns();
   const coins = [...portfolio].sort((a, b) => b.qty * b.currentPrice - a.qty * a.currentPrice);
@@ -3994,7 +4015,10 @@ function renderHoldingsAssetList() {
       <button type="button" class="htx-add-btn" id="htxAddBtn" onclick="openAddTx()" title="Add a Buy, Sell or Transfer for this coin">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add<span class="lbl-long"> Transaction</span></span></button>
     </div>
-    <a class="btn-liq htx-liq" id="htxLiqLink" href="#" target="_blank" rel="noopener noreferrer">🔥 Liquidation Map on CoinGlass <span aria-hidden="true">↗</span></a>
+    <div class="htx-links">
+      <a class="btn-liq htx-liq" id="htxLiqLink" href="#" target="_blank" rel="noopener noreferrer">🔥 Liquidation Map <span aria-hidden="true">↗</span></a>
+      <a class="btn-pred htx-liq" id="htxPredLink" href="#" target="_blank" rel="noopener noreferrer">🔮 Price Prediction <span aria-hidden="true">↗</span></a>
+    </div>
     <div class="htx-cards">
       <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub" id="htxHoldings24">—</div></div>
       <div class="htx-card"><div class="htx-label">All-Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
