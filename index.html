@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610202358"></script>
-<script src="samsam-vault.js?v=202610202358"></script>
-<script src="samsam-labels.js?v=202610202358"></script>
-<script src="samsam-taxonomy.js?v=202610202358"></script>
-<script src="samsam-coins.js?v=202610202358"></script>
-<script src="samsam-dropdown.js?v=202610202358"></script>
-<script src="samsam-chart.js?v=202610202358"></script>
+<script src="samsam-ui.js?v=202610210024"></script>
+<script src="samsam-vault.js?v=202610210024"></script>
+<script src="samsam-labels.js?v=202610210024"></script>
+<script src="samsam-taxonomy.js?v=202610210024"></script>
+<script src="samsam-coins.js?v=202610210024"></script>
+<script src="samsam-dropdown.js?v=202610210024"></script>
+<script src="samsam-chart.js?v=202610210024"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -783,8 +783,8 @@
   .main-trio .perf-legend { margin-top: 0; }
   @media (min-width: 1024px) {
     .main-trio { grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-    /* Desktop order: Performance (left) · Allocation (middle) · Holdings (right) */
-    #perfChartWrap { order: 1; } #allocMiniCard { order: 2; } #holdingsCard { order: 3; }
+    /* Order: Holdings · Performance · Allocation (same on phones) */
+    #holdingsCard { order: 1; } #perfChartWrap { order: 2; } #allocMiniCard { order: 3; }
     .main-trio #allocMiniCard .alloc-mini-donut svg { width: 150px; height: 150px; }
   }
 
@@ -1309,20 +1309,6 @@
 <!-- Best / worst performer of the last 24h — right under the totals, seen in the first seconds (follows the Category filter) -->
 <div class="movers-wrap" id="moversCard" aria-live="polite"></div>
 
-<!-- ── Accumulation Card ── -->
-<a href="./accumulation.html" class="alloc-mini-card" id="accumProgressBar" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:8px">
-  <div style="display:flex;justify-content:space-between;align-items:center">
-    <div class="alloc-mini-title" style="margin-bottom:0">📊 Accumulation Plan — Overall Progress</div>
-    <span class="alloc-mini-arrow">›</span>
-  </div>
-  <div class="progress-track">
-    <div class="progress-fill accum-fill" id="accumFill" style="width:0%"></div>
-  </div>
-  <div class="progress-labels">
-    <span style="color:#10b981" id="accumPct">0% complete</span>
-    <span style="color:var(--fg2)" id="accumDetail">— / — targets met</span>
-  </div>
-</a>
 
 <!-- ── Main trio: Holdings · Allocation · Performance — one equal grid ── -->
 <div class="main-trio" id="mainTrio">
@@ -1348,18 +1334,6 @@
     <canvas class="holdings-canvas" id="holdingsCanvas" height="110"></canvas>
   </div>
 </div>
-
-<!-- ── Allocation Mini Card ── -->
-<a href="./allocation.html" class="alloc-mini-card" id="allocMiniCard" style="text-decoration:none">
-  <div class="alloc-mini-left">
-    <div class="alloc-mini-title">📊 Portfolio Allocation</div>
-    <div class="alloc-mini-cats" id="allocMiniCats"></div>
-  </div>
-  <div class="alloc-mini-donut">
-    <svg id="allocMiniSvg" viewBox="0 0 60 60" width="60" height="60"></svg>
-  </div>
-  <div class="alloc-mini-arrow">›</div>
-</a>
 
 <!-- ── Performance Card ── -->
 <a href="./performance.html" class="alloc-mini-card" id="perfChartWrap" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:6px">
@@ -1397,7 +1371,34 @@
     </div>
   </div>
 </a>
+<!-- ── Allocation Mini Card ── -->
+<a href="./allocation.html" class="alloc-mini-card" id="allocMiniCard" style="text-decoration:none">
+  <div class="alloc-mini-left">
+    <div class="alloc-mini-title">📊 Portfolio Allocation</div>
+    <div class="alloc-mini-cats" id="allocMiniCats"></div>
+  </div>
+  <div class="alloc-mini-donut">
+    <svg id="allocMiniSvg" viewBox="0 0 60 60" width="60" height="60"></svg>
+  </div>
+  <div class="alloc-mini-arrow">›</div>
+</a>
+
 </div><!-- /main-trio -->
+
+<!-- ── Accumulation Card ── -->
+<a href="./accumulation.html" class="alloc-mini-card" id="accumProgressBar" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="alloc-mini-title" style="margin-bottom:0">📊 Accumulation Plan — Overall Progress</div>
+    <span class="alloc-mini-arrow">›</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill accum-fill" id="accumFill" style="width:0%"></div>
+  </div>
+  <div class="progress-labels">
+    <span style="color:#10b981" id="accumPct">0% complete</span>
+    <span style="color:var(--fg2)" id="accumDetail">— / — targets met</span>
+  </div>
+</a>
 
 
 
@@ -1597,7 +1598,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610202358"></script>
+<script type="module" src="samsam-cloud.js?v=202610210024"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
