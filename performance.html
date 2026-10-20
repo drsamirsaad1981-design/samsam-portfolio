@@ -5,12 +5,12 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610202243"></script>
-<script src="samsam-vault.js?v=202610202243"></script>
-<script src="samsam-labels.js?v=202610202243"></script>
-<script src="samsam-taxonomy.js?v=202610202243"></script>
-<script src="samsam-coins.js?v=202610202243"></script>
-<script src="samsam-chart.js?v=202610202243"></script>
+<script src="samsam-ui.js?v=202610202358"></script>
+<script src="samsam-vault.js?v=202610202358"></script>
+<script src="samsam-labels.js?v=202610202358"></script>
+<script src="samsam-taxonomy.js?v=202610202358"></script>
+<script src="samsam-coins.js?v=202610202358"></script>
+<script src="samsam-chart.js?v=202610202358"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -43,7 +43,7 @@
     --bg: #0d0d0f;
     --card: #1c1c1e;
     --fg: #f5f5f7;
-    --fg2: #8e8e93;
+    --fg2: #94a3b8;
     --border: rgba(255,255,255,0.08);
     --green: #22c55e;
     --red: #f87171;
@@ -58,7 +58,7 @@
   --bg: #0d0d0f;
   --card: #1c1c1e;
   --fg: #f5f5f7;
-  --fg2: #8e8e93;
+  --fg2: #94a3b8;
   --border: rgba(255,255,255,0.08);
   --green: #22c55e;
   --red: #f87171;
@@ -130,9 +130,13 @@ body {
 /* P/L Breakdown card — full width below the two summary cards */
 .movers-perf { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-width: 0; }
 .movers-block { min-width: 0; }
-.movers-head { font-size: .78rem; font-weight: 700; color: var(--fg); margin: 2px 4px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.movers-head span { font-weight: 500; color: var(--fg2); margin-left: 6px; }
-.movers-perf .mv-card { background: var(--card); border: none; box-shadow: var(--shadow); }
+.movers-perf .mv-card { background: var(--card); border: none; box-shadow: var(--shadow); height: 100%; align-content: start; }
+/* Computer: everything on one 1200px-wide grid — totals, Since purchase / VS Bitcoin, chart, breakdown and list share the same edges */
+@media (min-width: 1024px) {
+  .page-inner, .summary-cards, .coin-list, .sort-tabs-inner, .col-header-inner { max-width: 1200px !important; }
+  .summary-cards { gap: 20px; }
+  .movers-perf { gap: 20px; }
+}
 @media (max-width: 700px) { .movers-perf { grid-template-columns: 1fr; } }
 .perf-chart-card { background: var(--card); border-radius: 16px; padding: 16px 14px 14px; box-shadow: var(--shadow); grid-column: 1 / -1; min-width: 0; }
 .pcc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; padding: 0 4px; }
@@ -591,8 +595,8 @@ body {
 
     <!-- ── Best / worst performer: since purchase, and vs BTC (Golden Triangle) ── -->
     <div class="movers-perf" id="moversPerf" aria-live="polite">
-      <div class="movers-block"><div class="movers-head">🏆 Since purchase <span>All-time P&amp;L</span></div><div id="moversPnl"></div></div>
-      <div class="movers-block"><div class="movers-head">₿ Versus BTC <span>coin return minus BTC's since Oct 15</span></div><div id="moversBtc"></div></div>
+      <div class="movers-block" id="moversPnl"></div>
+      <div class="movers-block" id="moversBtc"></div>
     </div>
 
     <!-- ── Performance chart — same data + renderer as the main-page card, full width ── -->
@@ -664,7 +668,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610202243"></script>
+<script type="module" src="samsam-cloud.js?v=202610202358"></script>
 <script>
 // ── Constants ──
 
@@ -918,15 +922,17 @@ function renderPerfMovers(rows, totalValue) {
   const pnlRows = rows.filter(r => r.cost > 0).map(r => ({ sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: r.pct, pnl: r.pnl }));
   const m1 = C.pickMovers(pnlRows, totalValue);
   const half1 = (label, r) => r ? { label, row: r, pct: r.score, text: money(r.pnl), text2: `• ${C.signedPct(r.score)}`, onClickJs: open(r.sym) } : { label };
-  document.getElementById('moversPnl').innerHTML = m1 ? C.moversCard({ best: half1('Best Performer', m1.best), worst: half1('Worst Performer', m1.worst) })
-    : C.moversCard({ empty: 'Appears once prices load.' });
+  const head1 = { title: '🏆 Since purchase', badge: 'All-time P&L' };
+  document.getElementById('moversPnl').innerHTML = m1 ? C.moversCard({ head: head1, best: half1('Best Performer', m1.best), worst: half1('Worst Performer', m1.worst) })
+    : C.moversCard({ head: head1, empty: 'Appears once prices load.' });
   const btc = (portfolio.find(c => c.sym === 'BTC') || {}).currentPrice || (livePrices.BTC && livePrices.BTC.price) || 0;
   const btcPct = btc > 0 ? (btc / BTC_BASE_PRICE - 1) * 100 : null;
   const vsRows = btcPct == null ? [] : rows.filter(r => r.cost > 0 && r.c.sym !== 'BTC').map(r => ({ sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: r.pct - btcPct, own: r.pct }));
   const m2 = C.pickMovers(vsRows, totalValue);
-  const half2 = (label, r) => r ? { label, row: r, pct: r.score, text: C.signedPct(r.score, 1), text2: 'vs BTC', sub: `coin ${C.signedPct(r.own, 1)} · BTC ${C.signedPct(btcPct, 1)}`, onClickJs: open(r.sym) } : { label };
-  document.getElementById('moversBtc').innerHTML = m2 ? C.moversCard({ best: half2('Best vs BTC', m2.best), worst: half2('Worst vs BTC', m2.worst) })
-    : C.moversCard({ empty: 'Appears once the BTC price loads.' });
+  const half2 = (label, r) => r ? { label, row: r, pct: r.score, text: C.signedPct(r.score, 1), text2: 'vs BTC', split: [['Coin', C.signedPct(r.own, 1)], ['BTC', C.signedPct(btcPct, 1)]], onClickJs: open(r.sym) } : { label };
+  const head2 = { title: '₿ VS Bitcoin', badge: 'Since Oct 15' };
+  document.getElementById('moversBtc').innerHTML = m2 ? C.moversCard({ head: head2, best: half2('Best', m2.best), worst: half2('Worst', m2.worst) })
+    : C.moversCard({ head: head2, empty: 'Appears once the BTC price loads.' });
 }
 
 function render() {

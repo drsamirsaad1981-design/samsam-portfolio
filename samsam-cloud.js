@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610202243';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610202243';
+import * as Core from './samsam-core.js?v=202610202358';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610202358';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -700,9 +700,10 @@ function renderStatus() {
   pill.dataset.s = s; txt.textContent = '☁️ ' + label;
   pill.title = '☁️ ' + label; pill.setAttribute('aria-label', 'Cloud sync: ' + label);
   // Stay expanded while anything needs attention; collapse to the dot a moment after "Synced"
+  // The floating badge only appears when something needs attention (offline with waiting changes, or an error).
+  // Connecting / saving / synced show on the ☁️ button in the page header instead — nothing floats over the page.
   clearTimeout(pill._miniT);
-  if (s === 'synced') pill._miniT = setTimeout(() => pill.classList.add('mini'), 2500);
-  else pill.classList.remove('mini');
+  pill.classList.toggle('mini', !(s === 'offline' || s === 'error'));
   document.querySelectorAll('.ss-sync-hdr').forEach(b => {
     b.title = '☁️ ' + label; b.setAttribute('aria-label', 'Cloud sync: ' + label);
     const d = b.querySelector('.ss-live'); if (d) d.dataset.state = { synced: 'ok', saving: 'loading', offline: 'idle', error: 'error' }[s] || 'idle';

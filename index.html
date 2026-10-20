@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610202243"></script>
-<script src="samsam-vault.js?v=202610202243"></script>
-<script src="samsam-labels.js?v=202610202243"></script>
-<script src="samsam-taxonomy.js?v=202610202243"></script>
-<script src="samsam-coins.js?v=202610202243"></script>
-<script src="samsam-dropdown.js?v=202610202243"></script>
-<script src="samsam-chart.js?v=202610202243"></script>
+<script src="samsam-ui.js?v=202610202358"></script>
+<script src="samsam-vault.js?v=202610202358"></script>
+<script src="samsam-labels.js?v=202610202358"></script>
+<script src="samsam-taxonomy.js?v=202610202358"></script>
+<script src="samsam-coins.js?v=202610202358"></script>
+<script src="samsam-dropdown.js?v=202610202358"></script>
+<script src="samsam-chart.js?v=202610202358"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1306,6 +1306,9 @@
   </div>
 </header>
 
+<!-- Best / worst performer of the last 24h — right under the totals, seen in the first seconds (follows the Category filter) -->
+<div class="movers-wrap" id="moversCard" aria-live="polite"></div>
+
 <!-- ── Accumulation Card ── -->
 <a href="./accumulation.html" class="alloc-mini-card" id="accumProgressBar" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:8px">
   <div style="display:flex;justify-content:space-between;align-items:center">
@@ -1413,8 +1416,6 @@
 </div>
 
 <div class="summary-grid" id="summaryGrid"></div>
-<!-- Best / worst performer of the last 24h, for the category chosen above -->
-<div class="movers-wrap" id="moversCard" aria-live="polite"></div>
 
 <!-- Search + signal filter, right above the coin list -->
 <div class="search-signal-bar no-print">
@@ -1596,7 +1597,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610202243"></script>
+<script type="module" src="samsam-cloud.js?v=202610202358"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1624,8 +1625,9 @@ function getCoinIconLinked(sym, size=36) {
 // Category tag (colour + label from samsam-taxonomy.js); click filters by that category
 function catTag(cat, sym) {
   const k = cat || 'other', L = SamsamTaxonomy.label(k);
-  const tag = `<button type="button" class="cat-tag" style="--cat-c:${SamsamTaxonomy.color(k)}" onclick="event.stopPropagation();setCatFilter('${k}')" title="Show only ${L}">${L}</button>`;
-  if (!sym) return tag;
+  if (!sym) return `<button type="button" class="cat-tag" style="--cat-c:${SamsamTaxonomy.color(k)}" onclick="event.stopPropagation();setCatFilter('${k}')" title="Show only ${L}">${L}</button>`;
+  // On coin cards / rows the whole tag (and its ✏️) opens "Change category" — easy to tap on a phone
+  const tag = `<button type="button" class="cat-tag" style="--cat-c:${SamsamTaxonomy.color(k)}" onclick="event.stopPropagation();openCatEdit('${sym}')" title="${L} — tap to change the category of ${sym}" aria-label="Category ${L} — change for ${sym}">${L}</button>`;
   return `<span class="category-badge-editable">${tag}<button type="button" class="cat-edit" onclick="event.stopPropagation();openCatEdit('${sym}')" title="Change the category of ${sym}" aria-label="Change the category of ${sym}"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></span>`;
 }
 // ── Category choice (Add coin + Change category): built-in list, your own categories, and "Other"
@@ -2100,10 +2102,10 @@ function renderMovers() {
   const rows = portfolio.filter(c => !activeCatFilter || (c.cat || 'other') === activeCatFilter)
     .map(c => ({ sym: c.sym, logoUrl: c.logoUrl, value: c.qty * c.currentPrice, score: typeof c.change24h === 'number' ? c.change24h : NaN }));
   const m = C.pickMovers(rows, total);
-  const scope = activeCatFilter ? ' · ' + T.label(activeCatFilter) : '';
-  if (!m) { host.innerHTML = C.moversCard({ empty: activeCatFilter ? `No 24h price changes yet for ${T.label(activeCatFilter)}.` : 'Best and worst performer appear once live prices load.' }); return; }
-  const half = (label, r) => r && { label, row: r, pct: r.score, text: C.signedPct(r.score) + ' (24h)', onClickJs: `openCoinFromMovers('${r.sym}')` };
-  host.innerHTML = C.moversCard({ best: half('Best Performer' + scope, m.best), worst: half('Worst Performer' + scope, m.worst) || { label: 'Worst Performer' + scope } });
+  const head = { title: "Today's movers", badge: '24h · ' + (activeCatFilter ? T.label(activeCatFilter) : 'All Coins') };
+  if (!m) { host.innerHTML = C.moversCard({ head, empty: activeCatFilter ? `No 24h price changes yet for ${T.label(activeCatFilter)}.` : 'Best and worst performer appear once live prices load.' }); return; }
+  const half = (label, r) => r && { label, row: r, pct: r.score, text: C.signedPct(r.score), onClickJs: `openCoinFromMovers('${r.sym}')` };
+  host.innerHTML = C.moversCard({ head, best: half('Best Performer', m.best), worst: half('Worst Performer', m.worst) || { label: 'Worst Performer' } });
 }
 function openCoinFromMovers(sym) { openHoldingsView(); openCoinTx(sym); }   // Back → Holdings list → page
 
@@ -3912,7 +3914,7 @@ function renderHoldingsAssetList() {
   <style>
     /* ── Same design tokens as Allocation / Performance ── */
     #holdingsOverlay {
-      --bg: #0d0d0f; --card: #1c1c1e; --bg2: #1c1c1e; --bg3: #2c2c2e; --fg: #f5f5f7; --fg2: #8e8e93;
+      --bg: #0d0d0f; --card: #1c1c1e; --bg2: #1c1c1e; --bg3: #2c2c2e; --fg: #f5f5f7; --fg2: #94a3b8;
       --border: rgba(255,255,255,0.08); --header-bg: #1c1c1e; --shadow: 0 1px 3px rgba(0,0,0,0.30); --accent: #3b82f6;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }

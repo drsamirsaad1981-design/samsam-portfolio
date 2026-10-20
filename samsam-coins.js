@@ -316,6 +316,11 @@
       '.mv-val{display:block;font-weight:700;font-size:1rem;line-height:1.35;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}.mv-val svg{display:inline-block;vertical-align:1px;margin-right:6px}.mv-val .mv-t1,.mv-val .mv-t2{white-space:nowrap}.mv-val .mv-t2{opacity:.92}.mv-val.up{color:#34d399}.mv-val.down{color:#f87171}.mv-val.flat{color:var(--fg2,#94a3b8)}' +
       '.mv-sub{font-size:.76rem;color:var(--fg2,#94a3b8);line-height:1.35;font-variant-numeric:tabular-nums}' +
       '.mv-empty{grid-column:1/-1;padding:6px 16px;color:var(--fg2,#94a3b8);font-size:.85rem}' +
+      '.mv-head{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 16px 10px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--label,var(--fg2,#94a3b8))}' +
+      '.mv-badge{font-size:.66rem;font-weight:700;letter-spacing:.02em;text-transform:none;padding:2px 8px;border-radius:999px;background:rgba(148,163,184,.14);color:#cbd5e1}' +
+      '[data-theme=light] .mv-badge{color:#475569;background:#f1f5f9}' +
+      '.btc-compare-subtext{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:.75rem;color:#94a3b8;margin-top:4px;border-top:1px solid rgba(148,163,184,.14);padding-top:6px;font-variant-numeric:tabular-nums}' +
+      '.btc-compare-subtext b{font-weight:600;color:#cbd5e1}[data-theme=light] .btc-compare-subtext{color:#64748b}[data-theme=light] .btc-compare-subtext b{color:#334155}' +
       '@media (max-width:420px){.mv-half{padding:4px 10px}.mv-coin{gap:8px}.mv-coin .mv-sym{font-size:1.08rem}.mv-val{font-size:.92rem}}';
     document.head.appendChild(st);
   }
@@ -327,17 +332,19 @@
   function moverHalf(h) {
     if (!h.row) return '<div class="mv-half" aria-disabled="true"><div class="mv-label">' + esc(h.label) + '</div><div class="mv-sub">—</div></div>';
     var dir = h.pct > 0.005 ? 'up' : h.pct < -0.005 ? 'down' : 'flat';
-    var name = h.label + ': ' + h.row.sym + ' ' + h.text + (h.text2 ? ' ' + h.text2 : '') + (h.sub ? ', ' + h.sub : '');
+    var name = h.label + ': ' + h.row.sym + ' ' + h.text + (h.text2 ? ' ' + h.text2 : '') + (h.sub ? ', ' + h.sub : '') + (h.split ? ', ' + h.split.map(function (x) { return x[0] + ' ' + x[1]; }).join(', ') : '');
     return '<button type="button" class="mv-half" onclick="' + esc(h.onClickJs || '') + '" title="' + esc(name) + '" aria-label="' + esc(name) + '">' +
       '<span class="mv-label">' + esc(h.label) + '</span>' +
       '<span class="mv-coin">' + icon(h.row.sym, 30, { logoUrl: h.row.logoUrl }) + '<span class="mv-sym">' + esc(h.row.sym) + '</span></span>' +
-      '<span class="mv-val ' + dir + '">' + arrow(dir) + '<span class="mv-t1">' + esc(h.text) + '</span>' + (h.text2 ? ' <span class="mv-t2">' + esc(h.text2) + '</span>' : '') + '</span>' + (h.sub ? '<span class="mv-sub">' + esc(h.sub) + '</span>' : '') + '</button>';
+      '<span class="mv-val ' + dir + '">' + arrow(dir) + '<span class="mv-t1">' + esc(h.text) + '</span>' + (h.text2 ? ' <span class="mv-t2">' + esc(h.text2) + '</span>' : '') + '</span>' + (h.sub ? '<span class="mv-sub">' + esc(h.sub) + '</span>' : '') +
+      (h.split ? '<span class="btc-compare-subtext">' + h.split.map(function (x) { return '<span>' + esc(x[0]) + ': <b>' + esc(x[1]) + '</b></span>'; }).join('<span aria-hidden="true">|</span>') + '</span>' : '') + '</button>';
   }
   // pair: { best: half, worst: half, empty: 'message' }
   function moversCard(pair) {
     moversCss();
-    if (pair.empty) return '<div class="mv-card"><div class="mv-empty">' + esc(pair.empty) + '</div></div>';
-    return '<div class="mv-card">' + moverHalf(pair.best) + '<div class="mv-sep" aria-hidden="true"></div>' + moverHalf(pair.worst) + '</div>';
+    var head = pair.head ? '<div class="mv-head"><span>' + esc(pair.head.title) + '</span>' + (pair.head.badge ? '<span class="mv-badge">' + esc(pair.head.badge) + '</span>' : '') + '</div>' : '';
+    if (pair.empty) return '<div class="mv-card">' + head + '<div class="mv-empty">' + esc(pair.empty) + '</div></div>';
+    return '<div class="mv-card">' + head + moverHalf(pair.best) + '<div class="mv-sep" aria-hidden="true"></div>' + moverHalf(pair.worst) + '</div>';
   }
   function signedPct(p, d) { d = d == null ? 2 : d; return (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p).toFixed(d) + '%'; }
   window.SamsamCoins = { esc: esc, pickMovers: pickMovers, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
