@@ -5,14 +5,21 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Portfolio Allocation</title>
-<link rel="icon" type="image/jpeg" href="./icon.jpg">
-<link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610201805"></script>
-<script src="samsam-vault.js?v=202610201805"></script>
-<script src="samsam-labels.js?v=202610201805"></script>
-<script src="samsam-taxonomy.js?v=202610201805"></script>
-<script src="samsam-coins.js?v=202610201805"></script>
+<title>Allocation — Cute Portfolio</title>
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="manifest" href="./manifest.json">
+<meta name="application-name" content="Cute Portfolio">
+<meta name="apple-mobile-web-app-title" content="Cute Portfolio">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0e1a">
+<script src="samsam-ui.js?v=202610201901"></script>
+<script src="samsam-vault.js?v=202610201901"></script>
+<script src="samsam-labels.js?v=202610201901"></script>
+<script src="samsam-taxonomy.js?v=202610201901"></script>
+<script src="samsam-coins.js?v=202610201901"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -209,6 +216,28 @@ body {
 </style>
 </head>
 <body>
+<div id="cpSplash" role="status" aria-live="polite" aria-label="Loading Cute Portfolio" style="position:fixed;inset:0;z-index:100200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0e1a;color:#e5e7eb;font-family:Inter,system-ui,-apple-system,sans-serif;transition:opacity .35s ease,visibility .35s">
+  <svg class="cp-splash-mark" viewBox="0 0 512 512" width="84" height="84" aria-hidden="true"><rect width="512" height="512" rx="113" fill="#121831"/><g fill="none" stroke-width="64"><path d="M260.4,106.1 A150,150 0 0 1 320.0,391.7" stroke="#f7931a"/><path d="M302.2,398.6 A150,150 0 0 1 106.5,292.9" stroke="#a78bfa"/><path d="M104.4,273.7 A150,150 0 0 1 242.9,106.6" stroke="#2dd4bf"/></g><path d="M256,300 C222,265 208,230 238,213 C248,208 254,212 256,218 C258,212 264,208 274,213 C304,230 290,265 256,300 Z" fill="#fbbf24"/></svg>
+  <div style="font-weight:700;font-size:1.25rem;letter-spacing:.01em">Cute Portfolio</div>
+  <div class="cp-splash-bar" aria-hidden="true"><span></span></div>
+  <div id="cpSplashMsg" style="font-size:.82rem;color:#94a3b8;min-height:1.2em">Loading your portfolio…</div>
+</div>
+<style>
+  [data-theme="light"] #cpSplash { background:#f8fafc !important; color:#0f172a !important; }
+  #cpSplash.hide { opacity:0; visibility:hidden; pointer-events:none; }
+  .cp-splash-mark { animation: cpPulse 1.6s ease-in-out infinite; filter: drop-shadow(0 10px 24px rgba(247,147,26,.18)); }
+  .cp-splash-bar { width:140px; height:4px; border-radius:4px; background:rgba(148,163,184,.2); overflow:hidden; }
+  .cp-splash-bar span { display:block; width:40%; height:100%; border-radius:4px; background:linear-gradient(90deg,#f7931a,#a78bfa); animation: cpSlide 1.1s ease-in-out infinite; }
+  @keyframes cpPulse { 0%,100% { transform:scale(1) } 50% { transform:scale(1.06) } }
+  @keyframes cpSlide { 0% { transform:translateX(-110%) } 100% { transform:translateX(260%) } }
+  @media (prefers-reduced-motion: reduce) { .cp-splash-mark, .cp-splash-bar span { animation:none } }
+  @media print { #cpSplash { display:none !important } }
+</style>
+<script>
+  // Splash: shown until the portfolio is loaded (or the sign-in screen is needed). Never longer than 15 s.
+  window.CPSplash = { hide: function () { var s = document.getElementById('cpSplash'); if (s && !s.classList.contains('hide')) { s.classList.add('hide'); setTimeout(function () { s.style.display = 'none'; }, 400); } } };
+  setTimeout(function () { window.CPSplash.hide(); }, 15000);
+</script>
 
 <div class="header">
   <a class="back-btn" href="./index.html">← Back</a>
@@ -261,7 +290,7 @@ body {
 
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610201805"></script>
+<script type="module" src="samsam-cloud.js?v=202610201901"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
 

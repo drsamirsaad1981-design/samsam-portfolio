@@ -115,7 +115,7 @@
   function isEncrypted(j) { return !!(j && j.kind === 'encrypted-backup' && j.cipher && j.kdf && j.data); }
   function decryptBackup(j, password) {
     need();
-    if (!isEncrypted(j)) return Promise.reject(new Error('This file is not an encrypted Samsam backup.'));
+    if (!isEncrypted(j)) return Promise.reject(new Error('This file is not an encrypted Cute Portfolio backup.'));
     if (j.kdf.name !== 'PBKDF2' || j.cipher.name !== 'AES-GCM' || !(j.kdf.iterations >= 100000)) return Promise.reject(new Error('Unsupported backup format.'));
     return passKey(password || '', unb64(j.kdf.salt), j.kdf.iterations)
       .then(function (k) { return open(k, { iv: j.cipher.iv, ct: j.data }, FILE_AAD); })

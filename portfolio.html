@@ -13,13 +13,13 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610201532"></script>
-<script src="samsam-vault.js?v=202610201532"></script>
-<script src="samsam-labels.js?v=202610201532"></script>
-<script src="samsam-taxonomy.js?v=202610201532"></script>
-<script src="samsam-coins.js?v=202610201532"></script>
-<script src="samsam-dropdown.js?v=202610201532"></script>
-<script src="samsam-chart.js?v=202610201532"></script>
+<script src="samsam-ui.js?v=202610201805"></script>
+<script src="samsam-vault.js?v=202610201805"></script>
+<script src="samsam-labels.js?v=202610201805"></script>
+<script src="samsam-taxonomy.js?v=202610201805"></script>
+<script src="samsam-coins.js?v=202610201805"></script>
+<script src="samsam-dropdown.js?v=202610201805"></script>
+<script src="samsam-chart.js?v=202610201805"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1026,6 +1026,13 @@
   .cat-reset { display: block; margin-top: 10px; padding: 0; border: none; background: none; color: #60a5fa; font: inherit; font-size: .82rem; cursor: pointer; }
   .cat-reset[hidden], .cat-custom[hidden] { display: none; }
   #catEditModal .form-input { width: 100%; box-sizing: border-box; height: 46px; }
+  .ac-cmc { display: flex; align-items: center; gap: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--bg3, var(--metric-bg)); overflow: hidden; height: 46px; }
+  .ac-cmc:focus-within { border-color: #3b82f6; }
+  .ac-cmc-pre { padding: 0 2px 0 12px; color: var(--fg2); font-size: .78rem; white-space: nowrap; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #addCoinModal .ac-cmc .form-input { border: none; background: transparent; height: 44px; padding-left: 2px; min-width: 70px; flex: 1; box-shadow: none; }
+  .ac-cmc-check { padding: 0 12px; color: #60a5fa; font-size: .8rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .ac-cmc-check[hidden] { display: none; }
+  @media (max-width: 420px) { .ac-cmc-pre { display: none; } #addCoinModal .ac-cmc .form-input { padding-left: 12px; } }
   /* Add coin form: labels on one line, equal fields, equal buttons */
   #addCoinModal .form-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #addCoinModal .form-input { width: 100%; box-sizing: border-box; height: 46px; }
@@ -1431,6 +1438,11 @@
         <input type="text" class="form-input" id="acCgId" placeholder="Auto" autocomplete="off" spellcheck="false">
       </div>
       <div class="form-row" style="margin:0;grid-column:1 / -1">
+        <label class="form-label" for="acCmc">CoinMarketCap page</label>
+        <div class="ac-cmc"><span class="ac-cmc-pre">coinmarketcap.com/currencies/</span><input type="text" class="form-input" id="acCmc" placeholder="auto" autocomplete="off" spellcheck="false"
+          oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'');acCmcCheck()"><a id="acCmcCheck" class="ac-cmc-check" href="#" target="_blank" rel="noopener noreferrer" hidden>Check ↗</a></div>
+      </div>
+      <div class="form-row" style="margin:0;grid-column:1 / -1">
         <label class="form-label" for="acCat">Category</label>
         <select class="form-input" id="acCat" onchange="syncCatCustom(this,'acCatCustomBox')">
           <!-- filled from samsam-taxonomy.js -->
@@ -1509,7 +1521,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610201532"></script>
+<script type="module" src="samsam-cloud.js?v=202610201805"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1532,7 +1544,7 @@ function getCoinIconLinked(sym, size=36) {
   const url = getCoinGeckoUrl(sym);
   const icon = getCoinIcon(sym, size);
   if (!url) return icon;
-  return `<a href="${url}" target="_blank" rel="noopener" title="Open ${sym} on CoinGecko" style="display:inline-flex;flex-shrink:0;border-radius:50%;text-decoration:none;transition:opacity 0.15s" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">${icon}</a>`;
+  return `<a href="${url}" target="_blank" rel="noopener" title="Open ${sym} on CoinMarketCap" style="display:inline-flex;flex-shrink:0;border-radius:50%;text-decoration:none;transition:opacity 0.15s" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">${icon}</a>`;
 }
 // Category tag (colour + label from samsam-taxonomy.js); click filters by that category
 function catTag(cat, sym) {
@@ -1599,7 +1611,7 @@ function getCoinNameLinked(sym) {
   const symHtml = `<div style="font-weight:700;font-size:0.85rem">${sym}</div>`;
   const nameHtml = `<div style="font-size:0.72rem;color:var(--fg2)">${name}</div>`;
   if (!url) return `<div>${symHtml}${nameHtml}</div>`;
-  return `<a href="${url}" target="_blank" rel="noopener" title="Open ${sym} on CoinGecko" style="text-decoration:none;color:inherit;display:block;transition:opacity 0.15s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">${symHtml}${nameHtml}</a>`;
+  return `<a href="${url}" target="_blank" rel="noopener" title="Open ${sym} on CoinMarketCap" style="text-decoration:none;color:inherit;display:block;transition:opacity 0.15s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">${symHtml}${nameHtml}</a>`;
 }
 function coinFallback(sym, size) {
   const color = COIN_COLORS[sym] || '#6b7280';
@@ -2060,7 +2072,7 @@ function renderTableAndStack() {
         <div class="coin-card-header">
           <div style="display:flex;align-items:center;gap:10px">
             ${getCoinIconLinked(c.sym,36)}
-            ${(()=>{const u=getCoinGeckoUrl(c.sym);const name=COIN_NAMES[c.sym]||'';const inner=`<div class="coin-card-sym" style="font-weight:700;font-size:0.95rem">${c.sym}</div><div style="font-size:0.72rem;color:var(--fg2)">${name}</div>`;return u?`<a href="${u}" target="_blank" rel="noopener" title="Open ${c.sym} on CoinGecko" style="text-decoration:none;color:inherit;transition:opacity 0.15s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">${inner}</a>`:`<div>${inner}</div>`;})()}
+            ${(()=>{const u=getCoinGeckoUrl(c.sym);const name=COIN_NAMES[c.sym]||'';const inner=`<div class="coin-card-sym" style="font-weight:700;font-size:0.95rem">${c.sym}</div><div style="font-size:0.72rem;color:var(--fg2)">${name}</div>`;return u?`<a href="${u}" target="_blank" rel="noopener" title="Open ${c.sym} on CoinMarketCap" style="text-decoration:none;color:inherit;transition:opacity 0.15s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">${inner}</a>`:`<div>${inner}</div>`;})()}
           </div>
           <div>
             <div style="font-weight:700;font-size:1rem;white-space:nowrap">${SamsamFmt.usd(curVal)}</div>
@@ -2339,6 +2351,8 @@ async function acPick(i) {
   document.getElementById('acCgId').value = c.id;
   acLogo = c.thumb && /^https:\/\//.test(c.thumb) ? c.thumb : null;
   acShow([]); acLink(c);
+  // CoinMarketCap page: known list, else named after the coin (tap "Check ↗" to confirm, edit if needed)
+  document.getElementById('acCmc').value = SamsamCoins.CMC_SLUGS[c.sym] || SamsamCoins.cmcGuess(c.name) || ''; acCmcCheck();
   document.getElementById('acQty').focus();
   // Category suggestion from CoinGecko's own categories (you can still change it)
   try {
@@ -2351,10 +2365,14 @@ async function acPick(i) {
     if (usd > 0) { const el = document.getElementById('acLinkedPrice'); if (el) el.textContent = ' · now ' + SamsamFmt.price(usd); }
   } catch (_) { /* category stays as chosen */ }
 }
+function acCmcCheck() {
+  const v = document.getElementById('acCmc').value, a = document.getElementById('acCmcCheck');
+  a.hidden = !v; if (v) a.href = 'https://coinmarketcap.com/currencies/' + encodeURIComponent(v) + '/';
+}
 function acLink(c) {
   const el = document.getElementById('acLinked'), E = SamsamCoins.esc;
-  if (!c) { el.hidden = true; el.innerHTML = ''; acLogo = null; document.getElementById('acCgId').value = ''; return; }
-  el.innerHTML = `✓ Linked to CoinGecko: <strong>${E(c.name)}</strong> (${E(c.id)})<span id="acLinkedPrice"></span> — live price, logo, CoinGecko link, Liquidation Map and Price Prediction ready`;
+  if (!c) { el.hidden = true; el.innerHTML = ''; acLogo = null; document.getElementById('acCgId').value = ''; document.getElementById('acCmc').value = ''; acCmcCheck(); return; }
+  el.innerHTML = `✓ Linked to CoinGecko: <strong>${E(c.name)}</strong> (${E(c.id)})<span id="acLinkedPrice"></span> — live price, logo, CoinMarketCap link, Liquidation Map and Price Prediction ready`;
   el.hidden = false;
 }
 document.addEventListener('click', e => {
@@ -2408,7 +2426,9 @@ function applyAddCoin() {
   if (prev && prev.qty > 1e-12 && !confirm(`${sym} still had ${fmtQtyRO(prev.qty)} ${sym} when it was removed.\nThis Buy will be added to that balance (new total ${fmtQtyRO(prev.qty + qty)}).\n\nContinue?`)) return;
   const cgId = document.getElementById('acCgId').value.trim().toLowerCase() || null;
   if (cgId && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cgId)) { errEl.textContent = 'CoinGecko ID looks wrong — pick the coin from the search list.'; errEl.style.display = 'block'; return; }
-  if (!cgId && !SamsamCoins.CG_IDS[sym] && !confirm(`${sym} is not linked to CoinGecko, so it will have no live price, logo or CoinGecko link.\n\nTip: type its name in the Coin box and pick it from the list.\n\nAdd it anyway?`)) return;
+  const cmcSlug = document.getElementById('acCmc').value.trim() || null;
+  if (cmcSlug && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cmcSlug)) { errEl.textContent = 'CoinMarketCap page: use lowercase letters, digits and dashes only.'; errEl.style.display = 'block'; return; }
+  if (!cgId && !SamsamCoins.CG_IDS[sym] && !confirm(`${sym} is not linked to CoinGecko, so it will have no live price or logo.\n\nTip: type its name in the Coin box and pick it from the list.\n\nAdd it anyway?`)) return;
   const name = document.getElementById('acName').value.trim() || sym;
   const catCh = readCatChoice(document.getElementById('acCat'), 'acCatCustom'), cat = catCh.key;
   COIN_NAMES[sym] = name;
@@ -2416,7 +2436,8 @@ function applyAddCoin() {
   // removed earlier, a correction that sets exactly the entered position).
   const feeUsd = Math.max(0, parseFloat(document.getElementById('acFeeUsd').value) || 0);
   if (catCh.label) SamsamTaxonomy.register(cat, catCh.label);
-  cloudWrite(Samsam.addCoin({ sym, name, cat, catLabel: catCh.label, catLocked: true, cgId, logoUrl: acLogo }, { qty, price, feeUsd }));
+  SamsamCoins.registerCoin(sym, { cmcSlug, name });
+  cloudWrite(Samsam.addCoin({ sym, name, cat, catLabel: catCh.label, catLocked: true, cgId, cmcSlug, logoUrl: acLogo }, { qty, price, feeUsd }));
   linkCoinCodex(sym, { cgId, name });
   closeAddCoin();
   if(cgId) fetchCoinLogoAndPrice({ sym }, cgId);
@@ -3760,12 +3781,12 @@ function renderHoldingsAssetList() {
     const priceStr = SamsamFmt.price(c.currentPrice);
     const holdVal = SamsamFmt.usd(c.holdingVal);
     const holdQty = parseFloat(c.qty.toFixed(c.qty < 1 ? 6 : 4)).toString() + ' ' + c.sym;
-    // Symbol + name (and logo) open the coin on CoinGecko, like the main table
+    // Symbol + name (and logo) open the coin on CoinMarketCap, like the main table
     const cgUrl = getCoinGeckoUrl(c.sym);
     const coinName = COIN_NAMES[c.sym] || c.name || c.sym;
     const nameInner = `<span class="hov-sym">${c.sym}</span><span class="hov-name">${coinName}</span>`;
     const nameEl = cgUrl
-      ? `<a class="hov-asset-name hov-cg-link" href="${cgUrl}" target="_blank" rel="noopener noreferrer" title="Open ${coinName} on CoinGecko">${nameInner}</a>`
+      ? `<a class="hov-asset-name hov-cg-link" href="${cgUrl}" target="_blank" rel="noopener noreferrer" title="Open ${coinName} on CoinMarketCap">${nameInner}</a>`
       : `<div class="hov-asset-name">${nameInner}</div>`;
     return `<div class="hov-asset-row">
       <div class="hov-coin-icon">${getCoinIconLinked(c.sym, 36)}</div>

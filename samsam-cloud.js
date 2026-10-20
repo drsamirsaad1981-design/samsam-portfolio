@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610201805';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610201805';
+import * as Core from './samsam-core.js?v=202610201901';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610201901';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -172,6 +172,7 @@ function emit() {
     renderStatus();
     renderSetup(d);
     for (const cb of S.listeners) { try { cb(d); } catch (e) { console.error('[Samsam] render error', e); } }
+    if (window.CPSplash) requestAnimationFrame(() => CPSplash.hide());   // first full render done → open the app
   }, 30);
 }
 
@@ -567,7 +568,7 @@ async function downloadEncrypted(obj, name, opts = {}) {
   return true;
 }
 function downloadBackup(opts = {}) {
-  return downloadEncrypted(backupObject(), `samsam-backup-${stamp()}.enc.json`, opts);
+  return downloadEncrypted(backupObject(), `cute-portfolio-backup-${stamp()}.enc.json`, opts);
 }
 // Opens a backup file chosen by the person: plain JSON, or an encrypted backup (asks for its password).
 async function readBackupFile(file) {
@@ -613,7 +614,7 @@ function injectUi() {
   @media print{#samsamSyncPill,#samsamSyncMenu,#samsamGate{display:none!important} body::after{display:none}}`;
   document.head.appendChild(css);
   const gate = document.createElement('div'); gate.id = 'samsamGate';
-  gate.innerHTML = `<div class="card"><h2>💼 Samsam Portfolio</h2><div id="samsamGateBody"></div></div>`;
+  gate.innerHTML = `<div class="card"><img src="./icon-192.png" alt="" width="64" height="64" style="border-radius:16px;margin:0 auto 10px;display:block"><h2>Cute Portfolio</h2><div id="samsamGateBody"></div></div>`;
   const pill = document.createElement('button'); pill.id = 'samsamSyncPill'; pill.type = 'button';
   pill.innerHTML = `<span class="ss-live" id="samsamSyncDot" data-state="loading"></span><span id="samsamSyncText">Connecting…</span>`;
   const menu = document.createElement('div'); menu.id = 'samsamSyncMenu';
@@ -644,6 +645,7 @@ function injectUi() {
 
 function showGate(kind) {
   const g = document.getElementById('samsamGate'), body = document.getElementById('samsamGateBody');
+  if (window.CPSplash) CPSplash.hide();
   if (!g) return;
   if (kind === 'config') body.innerHTML = `<p>Cloud sync isn't configured yet.</p><p>Add your Firebase settings to <code>firebase-config.js</code> and publish again.</p>`;
   else if (kind === 'denied') body.innerHTML = `<p><strong>${esc(S.denied)}</strong> isn't allowed to open this portfolio.</p><button class="samsam-btn primary" id="samsamSignInBtn">Sign in with another Google account</button>`;
@@ -760,7 +762,7 @@ function renderSetup(d) {
     el.querySelectorAll('button,input').forEach(b => b.disabled = true);
     try {
       if (backupFirst && !(await downloadEncrypted({ app: 'samsam-portfolio', kind: 'device-backup', exportedAt: new Date().toISOString(), legacy },
-        `samsam-device-backup-${stamp()}.enc.json`, { title: '🔐 Backup before upload', text: 'A copy of this device\'s data is saved first, encrypted. Choose a password (8+ characters) — you need it only to open that file.' }))) {
+        `cute-portfolio-device-backup-${stamp()}.enc.json`, { title: '🔐 Backup before upload', text: 'A copy of this device\'s data is saved first, encrypted. Choose a password (8+ characters) — you need it only to open that file.' }))) {
         delete el.dataset.busy; el.querySelectorAll('button,input').forEach(b => b.disabled = false); msg(''); return;
       }
       msg('Uploading…');
@@ -770,8 +772,8 @@ function renderSetup(d) {
     } catch (e) { delete el.dataset.busy; msg('⚠️ ' + friendly(e)); el.querySelectorAll('button,input').forEach(b => b.disabled = false); }
   };
   const bl = document.getElementById('samsamImpLocal'); if (bl) bl.onclick = () => go(L, 'device:' + deviceId, true);
-  const bb = document.getElementById('samsamImpBase'); if (bb) bb.onclick = () => {
-    if (!confirm('Start from the Oct-15 baseline? Use this only if no device has your real data.')) return;
+  const bb = document.getElementById('samsamImpBase'); if (bb) bb.onclick = async () => {
+    if (!(await CPDialog.confirm('Use this only if no device has your real data.', { title: 'Start from the Oct-15 baseline?', okText: 'Start' }))) return;
     go({ coins: S.opts.basePortfolio.map(c => ({ ...c, currentPrice: (S.opts.fallbackPrices || {})[c.sym] || c.basePrice })), transactions: [] }, 'baseline', false);
   };
   const bf = document.getElementById('samsamImpFile'); if (bf) bf.onchange = async () => {
@@ -780,8 +782,8 @@ function renderSetup(d) {
       let j; try { j = await readBackupFile(f); } finally { bf.value = ''; }
       if (!j) return;
       const legacy = j.legacy || (j.portfolioData ? { ...j.portfolioData, accumPlan: j.accumPlan, perfSnaps: j.perfSnaps } : j);
-      if (!legacy || !Array.isArray(legacy.coins)) throw new Error('This file is not a Samsam portfolio backup.');
-      if (!confirm(`Import ${legacy.coins.length} coins and ${(legacy.transactions || []).length} transactions from “${f.name}”?`)) return;
+      if (!legacy || !Array.isArray(legacy.coins)) throw new Error('This file is not a Cute Portfolio backup.');
+      if (!(await CPDialog.confirm(`${legacy.coins.length} coins and ${(legacy.transactions || []).length} transactions from “${f.name}”.`, { title: 'Import this backup?', okText: 'Import' }))) return;
       go(legacy, 'file:' + f.name, false);
     } catch (e) { msg('⚠️ ' + friendly(e)); }
   };

@@ -120,6 +120,64 @@
     },
     num2: function (n) { return usdFmt.format(+n || 0); },
   };
+  // ── In-app dialogs (replace the browser's alert / confirm / prompt, which show the website address
+  //    "…github.io says" as their title). Same look on every page; titled "Cute Portfolio".
+  //    CPDialog.alert(msg, opts) · CPDialog.confirm(msg, opts) → true/false · CPDialog.prompt(msg, opts) → text/null
+  //    opts: { title, okText, cancelText, danger, value, placeholder, inputMode }
+  var dlgCss = false;
+  function dialog(kind, msg, o) {
+    o = o || {};
+    if (typeof window.__cpAutoAnswer === 'function') {   // automated tests only
+      return Promise.resolve(window.__cpAutoAnswer(kind, String(msg), o));
+    }
+    if (!dlgCss) {
+      dlgCss = true;
+      var st = document.createElement('style');
+      st.textContent = '#cpDialog{position:fixed;inset:0;z-index:100150;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.62);animation:cpFade .15s ease}' +
+        '#cpDialog .cpd{width:min(400px,100%);background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#334155);border-radius:16px;padding:20px;box-shadow:0 22px 50px rgba(0,0,0,.45);font-family:inherit;animation:cpPop .18s ease}' +
+        '#cpDialog .cpd-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}#cpDialog .cpd-head img{width:28px;height:28px;border-radius:8px}' +
+        '#cpDialog h3{margin:0;font-size:1rem;font-weight:700}#cpDialog p{margin:0;white-space:pre-line;line-height:1.5;font-size:.9rem;color:var(--fg2,#cbd5e1)}' +
+        '#cpDialog input{width:100%;box-sizing:border-box;height:44px;margin-top:12px;padding:0 12px;border-radius:10px;border:1px solid var(--border,#334155);background:var(--bg3,#1f2937);color:inherit;font:inherit}' +
+        '#cpDialog input:focus{outline:none;border-color:#3b82f6}#cpDialog .cpd-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}#cpDialog .cpd-btns.one{grid-template-columns:1fr}' +
+        '#cpDialog button{height:44px;border-radius:10px;border:1px solid var(--border,#334155);background:var(--metric-bg,#1f2937);color:var(--fg,#e5e7eb);font:inherit;font-weight:700;cursor:pointer}' +
+        '#cpDialog .cpd-ok{background:linear-gradient(135deg,#7c3aed,#6d28d9);border-color:#6d28d9;color:#fff}#cpDialog .cpd-ok.danger{background:#dc2626;border-color:#dc2626}' +
+        '#cpDialog button:focus-visible{outline:3px solid #a78bfa;outline-offset:2px}' +
+        '@keyframes cpFade{from{opacity:0}}@keyframes cpPop{from{transform:scale(.96);opacity:0}}@media (prefers-reduced-motion:reduce){#cpDialog,#cpDialog .cpd{animation:none}}';
+      document.head.appendChild(st);
+    }
+    return new Promise(function (resolve) {
+      var prev = document.getElementById('cpDialog'); if (prev) prev.remove();
+      var back = document.activeElement;
+      var w = document.createElement('div'); w.id = 'cpDialog';
+      w.innerHTML = '<div class="cpd" role="' + (kind === 'alert' ? 'alertdialog' : 'dialog') + '" aria-modal="true" aria-labelledby="cpdT" aria-describedby="cpdM">' +
+        '<div class="cpd-head"><img src="./icon-192.png" alt=""><h3 id="cpdT"></h3></div><p id="cpdM"></p>' +
+        (kind === 'prompt' ? '<input id="cpdI" autocomplete="off">' : '') +
+        '<div class="cpd-btns' + (kind === 'alert' ? ' one' : '') + '">' + (kind === 'alert' ? '' : '<button type="button" class="cpd-no"></button>') + '<button type="button" class="cpd-ok"></button></div></div>';
+      w.querySelector('#cpdT').textContent = o.title || 'Cute Portfolio';
+      w.querySelector('#cpdM').textContent = String(msg);
+      var ok = w.querySelector('.cpd-ok'), no = w.querySelector('.cpd-no'), inp = w.querySelector('#cpdI');
+      ok.textContent = o.okText || 'OK'; if (o.danger) ok.classList.add('danger');
+      if (no) no.textContent = o.cancelText || 'Cancel';
+      if (inp) { inp.value = o.value == null ? '' : String(o.value); if (o.placeholder) inp.placeholder = o.placeholder; if (o.inputMode) inp.inputMode = o.inputMode; }
+      var done = function (v) { document.removeEventListener('keydown', key, true); w.remove(); try { back && back.focus && back.focus(); } catch (_) {} resolve(v); };
+      var yes = function () { done(kind === 'prompt' ? inp.value : true); }, cancel = function () { done(kind === 'prompt' ? null : kind === 'alert' ? undefined : false); };
+      var key = function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
+        else if (e.key === 'Enter' && (kind === 'prompt' || document.activeElement === ok || document.activeElement === document.body)) { e.preventDefault(); yes(); }
+        else if (e.key === 'Tab') { var f = [inp, no, ok].filter(Boolean), i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); }
+      };
+      ok.onclick = yes; if (no) no.onclick = cancel;
+      w.addEventListener('click', function (e) { if (e.target === w) cancel(); });
+      document.addEventListener('keydown', key, true);
+      document.body.appendChild(w);
+      setTimeout(function () { (inp || (o.danger && no) || ok).focus(); if (inp) inp.select(); }, 0);
+    });
+  }
+  window.CPDialog = {
+    alert: function (m, o) { return dialog('alert', m, o); },
+    confirm: function (m, o) { return dialog('confirm', m, o); },
+    prompt: function (m, o) { return dialog('prompt', m, o); },
+  };
   window.SamsamUI = { icons: ICONS, icon: function (n) { return ICONS[n] || ''; }, liveDot: liveDot,
     toggleTheme: toggleTheme, applyTheme: applyTheme, currentTheme: current, refresh: init };
 })();
