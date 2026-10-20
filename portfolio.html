@@ -13,13 +13,13 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610201503"></script>
-<script src="samsam-vault.js?v=202610201503"></script>
-<script src="samsam-labels.js?v=202610201503"></script>
-<script src="samsam-taxonomy.js?v=202610201503"></script>
-<script src="samsam-coins.js?v=202610201503"></script>
-<script src="samsam-dropdown.js?v=202610201503"></script>
-<script src="samsam-chart.js?v=202610201503"></script>
+<script src="samsam-ui.js?v=202610201532"></script>
+<script src="samsam-vault.js?v=202610201532"></script>
+<script src="samsam-labels.js?v=202610201532"></script>
+<script src="samsam-taxonomy.js?v=202610201532"></script>
+<script src="samsam-coins.js?v=202610201532"></script>
+<script src="samsam-dropdown.js?v=202610201532"></script>
+<script src="samsam-chart.js?v=202610201532"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1014,6 +1014,18 @@
   .card-act .btn-remove { color: #f87171; border: 1px solid rgba(248,113,113,.45); }
   .card-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
   .card-act .btn-history::after, .card-act .btn-history::before { display: none; }
+  /* Category: tag + small edit button (cards and table) */
+  .category-badge-editable { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+  .cat-edit { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; flex-shrink: 0;
+    border-radius: 7px; border: 1px solid var(--border); background: var(--metric-bg); color: var(--fg2); cursor: pointer; transition: opacity .2s, color .15s, border-color .15s; }
+  .cat-edit:hover { opacity: .8; color: var(--fg); border-color: var(--fg2); }
+  .cat-edit:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+  @media (pointer: coarse) { .cat-edit { width: 28px; height: 28px; } }
+  @media print { .cat-edit { display: none !important; } }
+  .cat-custom-hint { font-size: .75rem; color: var(--fg2); margin-top: 5px; }
+  .cat-reset { display: block; margin-top: 10px; padding: 0; border: none; background: none; color: #60a5fa; font: inherit; font-size: .82rem; cursor: pointer; }
+  .cat-reset[hidden], .cat-custom[hidden] { display: none; }
+  #catEditModal .form-input { width: 100%; box-sizing: border-box; height: 46px; }
   /* Add coin form: labels on one line, equal fields, equal buttons */
   #addCoinModal .form-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #addCoinModal .form-input { width: 100%; box-sizing: border-box; height: 46px; }
@@ -1364,6 +1376,28 @@
 <div id="donutLegend" style="display:none"></div>
 <div id="pnlRows" style="display:none"></div>
 
+<div class="modal-overlay" id="catEditModal" onclick="if(event.target===this)closeCatEdit()">
+  <div class="modal" style="max-width:380px" role="dialog" aria-modal="true" aria-labelledby="ceTitle">
+    <h2 id="ceTitle" style="color:#a78bfa">Category</h2>
+    <div class="form-row" style="margin:12px 0 0">
+      <label class="form-label" for="ceCat">Category</label>
+      <select class="form-input" id="ceCat" onchange="syncCatCustom(this,'ceCustomBox')"></select>
+    </div>
+    <div class="form-row cat-custom" id="ceCustomBox" hidden style="margin:10px 0 0">
+      <label class="form-label" for="ceCustom">New category name</label>
+      <input type="text" class="form-input" id="ceCustom" maxlength="40" placeholder="Enter Custom Category..." autocomplete="off"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();saveCatEdit()}">
+      <div class="cat-custom-hint">Saved for this coin and added to the category filters.</div>
+    </div>
+    <button type="button" class="cat-reset" id="ceReset" hidden onclick="saveCatEdit(true)"></button>
+    <div id="ceError" style="color:#ef4444;font-size:0.8rem;margin-top:8px"></div>
+    <div class="ac-btns">
+      <button class="btn btn-primary" onclick="saveCatEdit()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff">Save</button>
+      <button class="btn btn-secondary" onclick="closeCatEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="addCoinModal">
   <div class="modal" style="max-width:440px">
     <h2 style="color:#a78bfa">➕ Add New Coin</h2>
@@ -1398,9 +1432,14 @@
       </div>
       <div class="form-row" style="margin:0;grid-column:1 / -1">
         <label class="form-label" for="acCat">Category</label>
-        <select class="form-input" id="acCat">
+        <select class="form-input" id="acCat" onchange="syncCatCustom(this,'acCatCustomBox')">
           <!-- filled from samsam-taxonomy.js -->
         </select>
+      </div>
+      <div class="form-row cat-custom" id="acCatCustomBox" hidden style="margin:0;grid-column:1 / -1">
+        <label class="form-label" for="acCatCustom">New category name</label>
+        <input type="text" class="form-input" id="acCatCustom" maxlength="40" placeholder="Enter Custom Category..." autocomplete="off">
+        <div class="cat-custom-hint">Saved for this coin and added to the category filters.</div>
       </div>
     </div>
     <div class="buy-preview" id="acPreview" style="display:none;margin-top:12px">
@@ -1470,7 +1509,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610201503"></script>
+<script type="module" src="samsam-cloud.js?v=202610201532"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1496,9 +1535,63 @@ function getCoinIconLinked(sym, size=36) {
   return `<a href="${url}" target="_blank" rel="noopener" title="Open ${sym} on CoinGecko" style="display:inline-flex;flex-shrink:0;border-radius:50%;text-decoration:none;transition:opacity 0.15s" onmouseover="this.style.opacity='0.75'" onmouseout="this.style.opacity='1'">${icon}</a>`;
 }
 // Category tag (colour + label from samsam-taxonomy.js); click filters by that category
-function catTag(cat) {
-  const k = cat || 'other';
-  return `<button type="button" class="cat-tag" style="--cat-c:${SamsamTaxonomy.color(k)}" onclick="event.stopPropagation();setCatFilter('${k}')" title="Show only ${SamsamTaxonomy.label(k)}">${SamsamTaxonomy.label(k)}</button>`;
+function catTag(cat, sym) {
+  const k = cat || 'other', L = SamsamTaxonomy.label(k);
+  const tag = `<button type="button" class="cat-tag" style="--cat-c:${SamsamTaxonomy.color(k)}" onclick="event.stopPropagation();setCatFilter('${k}')" title="Show only ${L}">${L}</button>`;
+  if (!sym) return tag;
+  return `<span class="category-badge-editable">${tag}<button type="button" class="cat-edit" onclick="event.stopPropagation();openCatEdit('${sym}')" title="Change the category of ${sym}" aria-label="Change the category of ${sym}"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></span>`;
+}
+// ── Category choice (Add coin + Change category): built-in list, your own categories, and "Other"
+//    which opens a box to type a new category name. One helper for both forms. ──
+function fillCatSelect(sel, current) {
+  const T = SamsamTaxonomy, E = SamsamCoins.esc;
+  const builtIn = T.list.filter(c => c.key !== 'other'), mine = T.customs();
+  sel.innerHTML = builtIn.map(c => `<option value="${c.key}">${E(c.label)}</option>`).join('')
+    + (mine.length ? `<optgroup label="Your categories">${mine.map(c => `<option value="${c.key}">${E(c.label)}</option>`).join('')}</optgroup>` : '')
+    + '<option value="other">Other — type a new category…</option>';
+  sel.value = current && [...sel.options].some(o => o.value === current) ? current : (current ? 'other' : 'layer1');
+}
+function syncCatCustom(sel, boxId) {
+  const box = document.getElementById(boxId); if (!box) return;
+  const show = sel.value === 'other';
+  box.hidden = !show;
+  if (show) setTimeout(() => box.querySelector('input').focus(), 0);
+}
+// → { key, label } for the chosen category; a typed name becomes your own category (same name = same category)
+function readCatChoice(sel, inputId) {
+  if (sel.value !== 'other') return { key: sel.value, label: null };
+  const name = (document.getElementById(inputId).value || '').replace(/\s+/g, ' ').trim();
+  if (!name) return { key: 'other', label: null };
+  return { key: SamsamTaxonomy.customKey(name), label: name };
+}
+let catEditSym = null;
+function openCatEdit(sym) {
+  const c = portfolio.find(x => x.sym === sym); if (!c) return;
+  catEditSym = sym;
+  const T = SamsamTaxonomy, def = T.defaultOf(sym);
+  document.getElementById('ceTitle').textContent = `Category — ${sym}`;
+  const sel = document.getElementById('ceCat');
+  fillCatSelect(sel, c.cat || 'other');
+  document.getElementById('ceCustom').value = '';
+  syncCatCustom(sel, 'ceCustomBox');
+  const reset = document.getElementById('ceReset');
+  reset.hidden = !(c.catLocked && def);
+  if (def) reset.textContent = `↺ Use default (${T.label(def)})`;
+  document.getElementById('ceError').textContent = '';
+  document.getElementById('catEditModal').classList.add('active');
+  setTimeout(() => sel.focus(), 0);
+}
+function closeCatEdit() { document.getElementById('catEditModal').classList.remove('active'); catEditSym = null; }
+function saveCatEdit(useDefault) {
+  if (!catEditSym || !requireCloud()) return;
+  const sym = catEditSym;
+  let p;
+  if (useDefault) p = Samsam.setCategory(sym, null);
+  else {
+    const ch = readCatChoice(document.getElementById('ceCat'), 'ceCustom');
+    p = Samsam.setCategory(sym, ch.key, ch.label);
+  }
+  p.then(() => closeCatEdit(), e => { document.getElementById('ceError').textContent = '⚠️ ' + ((e && e.message) || e); });
 }
 function getCoinNameLinked(sym) {
   const url = getCoinGeckoUrl(sym);
@@ -1832,8 +1925,7 @@ function renderSummary() {
   portfolio.forEach(c => { const k = c.cat || 'other'; catTotals[k] = (catTotals[k] || 0) + c.qty * c.currentPrice; });
   const allTotal = portfolio.reduce((s, c) => s + c.qty * c.currentPrice, 0);
   const dot = color => `<span class="cp-dot" style="background:${color}"></span>`;
-  const ORDER = ['layer1', 'layer2', 'ai', 'layer0', 'oracle', 'defi', 'meme', 'launchpad', 'web3'];
-  const keys = ORDER.concat(T.list.map(c => c.key).filter(k => !ORDER.includes(k) && (k !== 'other' || catTotals.other)));
+  const keys = T.pickerKeys(catTotals);
   const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(allTotal), icon: '<span class="cp-globe">🌐</span>' }]
     .concat(keys.map(k => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(catTotals[k] || 0), icon: dot(T.color(k)) })));
   const grid = document.getElementById('summaryGrid');
@@ -1919,7 +2011,7 @@ function renderTableAndStack() {
         <td style="color:var(--fg2);font-size:0.75rem">${i+1}</td>
         <td style="text-align:left"><div style="display:flex;align-items:center;gap:8px">
           ${getCoinIconLinked(c.sym,32)}
-          <div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0">${getCoinNameLinked(c.sym)}${catTag(c.cat)}</div>
+          <div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0">${getCoinNameLinked(c.sym)}${catTag(c.cat, c.sym)}</div>
         </div></td>
         <td class="ro-num num-r" title="Changes only through Buy / Sell / Transfer">${fmtQtyRO(c.qty)}</td>
         <td class="ro-num num-r" style="color:var(--fg2)" title="Calculated from Buy / Sell / Transfer">${fmtAvgRO(c.basePrice)}</td>
@@ -1976,7 +2068,7 @@ function renderTableAndStack() {
             <div style="font-size:0.7rem;color:var(--fg2);margin-top:2px">@ ${SamsamFmt.price(c.currentPrice)}</div>
           </div>
         </div>
-        <div class="card-cat-row">${catTag(c.cat)}</div>
+        <div class="card-cat-row">${catTag(c.cat, c.sym)}</div>
         <div class="coin-card-body">
           <div class="coin-metric"><label>${SAMSAM_LABELS.AMOUNT}</label><val title="${fmtQtyRO(c.qty)}">${fmtQtyRO(c.qty)}</val></div>
           <div class="coin-metric"><label>${SAMSAM_LABELS.COST_BASIS}</label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
@@ -2254,7 +2346,7 @@ async function acPick(i) {
     if (!r.ok || document.getElementById('acCgId').value !== c.id) return;
     const d = await r.json();
     const key = SamsamTaxonomy.categoryOf(c.sym, null) !== 'other' ? SamsamTaxonomy.categoryOf(c.sym, null) : acCategoryFrom(d.categories);
-    if (key) document.getElementById('acCat').value = key;
+    if (key) { document.getElementById('acCat').value = key; syncCatCustom(document.getElementById('acCat'), 'acCatCustomBox'); }
     const usd = d.market_data && d.market_data.current_price && d.market_data.current_price.usd;
     if (usd > 0) { const el = document.getElementById('acLinkedPrice'); if (el) el.textContent = ' · now ' + SamsamFmt.price(usd); }
   } catch (_) { /* category stays as chosen */ }
@@ -2275,8 +2367,8 @@ function openAddCoin() {
   ['acSym','acName','acQty','acPrice','acFeeUsd','acCgId'].forEach(id => document.getElementById(id).value = '');
   acShow([]); acLink(null);
   const catSel = document.getElementById('acCat');
-  if (!catSel.options.length) catSel.innerHTML = SamsamTaxonomy.list.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
-  catSel.value = 'layer1';
+  fillCatSelect(catSel, 'layer1');
+  document.getElementById('acCatCustom').value = ''; syncCatCustom(catSel, 'acCatCustomBox');
   document.getElementById('acPreview').style.display = 'none';
   document.getElementById('acError').style.display = 'none';
   document.getElementById('addCoinModal').classList.add('active');
@@ -2318,12 +2410,13 @@ function applyAddCoin() {
   if (cgId && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cgId)) { errEl.textContent = 'CoinGecko ID looks wrong — pick the coin from the search list.'; errEl.style.display = 'block'; return; }
   if (!cgId && !SamsamCoins.CG_IDS[sym] && !confirm(`${sym} is not linked to CoinGecko, so it will have no live price, logo or CoinGecko link.\n\nTip: type its name in the Coin box and pick it from the list.\n\nAdd it anyway?`)) return;
   const name = document.getElementById('acName').value.trim() || sym;
-  const cat  = document.getElementById('acCat').value;
+  const catCh = readCatChoice(document.getElementById('acCat'), 'acCatCustom'), cat = catCh.key;
   COIN_NAMES[sym] = name;
   // One atomic cloud write: coin settings + its opening buy (or, for a coin that was
   // removed earlier, a correction that sets exactly the entered position).
   const feeUsd = Math.max(0, parseFloat(document.getElementById('acFeeUsd').value) || 0);
-  cloudWrite(Samsam.addCoin({ sym, name, cat, cgId, logoUrl: acLogo }, { qty, price, feeUsd }));
+  if (catCh.label) SamsamTaxonomy.register(cat, catCh.label);
+  cloudWrite(Samsam.addCoin({ sym, name, cat, catLabel: catCh.label, catLocked: true, cgId, logoUrl: acLogo }, { qty, price, feeUsd }));
   linkCoinCodex(sym, { cgId, name });
   closeAddCoin();
   if(cgId) fetchCoinLogoAndPrice({ sym }, cgId);
@@ -3434,6 +3527,7 @@ document.addEventListener('click', e => {
   if (tip && !e.target.closest('.info-pop')) { tip.classList.toggle('open'); fitInfoPop(tip); }
 });
 document.addEventListener('mouseover', e => { const tip = e.target.closest && e.target.closest('.info-tip'); if (tip) fitInfoPop(tip); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('catEditModal').classList.contains('active')) closeCatEdit(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.info-tip.open').forEach(t => t.classList.remove('open')); });
 function fitInfoPop(tip) {
   const pop = tip.querySelector('.info-pop'); if (!pop) return;
@@ -3626,8 +3720,7 @@ function renderHovCatPicker() {
   if (!host || !window.SamsamDropdown) return;
   const totals = {}; let all = 0;
   portfolio.forEach(c => { const v = c.qty * c.currentPrice, k = c.cat || 'other'; totals[k] = (totals[k] || 0) + v; all += v; });
-  const ORDER = ['layer1', 'layer2', 'ai', 'layer0', 'oracle', 'defi', 'meme', 'launchpad', 'web3'];
-  const keys = ORDER.concat(totals.other ? ['other'] : []);
+  const keys = T.pickerKeys(totals);
   const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(all), icon: '<span class="cp-globe">🌐</span>' }]
     .concat(keys.map(k => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(totals[k] || 0), icon: `<span class="cp-dot" style="background:${T.color(k)}"></span>` })));
   if (!hovCatDD) {

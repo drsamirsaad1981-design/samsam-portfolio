@@ -104,6 +104,7 @@ export function derivePortfolio(coins, txs, prices = {}, fallbackPrices = {}) {
         catLabel: c.catLabel || undefined,
         cgId: c.cgId || undefined,
         ccSlug: c.ccSlug || undefined,
+        cmcSlug: c.cmcSlug || undefined,
         logoUrl: c.logoUrl || undefined,
         notes: c.notes || '',
         isCustom: !!c.isCustom,

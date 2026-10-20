@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610201532';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610201532';
+import * as Core from './samsam-core.js?v=202610201805';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610201805';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -58,6 +58,7 @@ function cleanCoin(c) {
   if ('notes' in o) o.notes = Clean.text(o.notes, 500);
   if ('cgId' in o) o.cgId = Clean.cgId(o.cgId);
   if ('ccSlug' in o) o.ccSlug = Clean.cgId(o.ccSlug);
+  if ('cmcSlug' in o) o.cmcSlug = Clean.cgId(o.cmcSlug);
   if ('logoUrl' in o) o.logoUrl = Clean.url(o.logoUrl);
   if ('cat' in o) o.cat = Clean.key(o.cat) || 'other';
   if ('catLabel' in o) o.catLabel = Clean.label(o.catLabel, 40) || null;
@@ -102,6 +103,8 @@ function derive() {
   const T = window.SamsamTaxonomy;
   // your own categories (named on any device) become real categories on every page
   if (T && T.register) for (const c of coins) if (c.catLabel && T.isCustom(c.cat)) T.register(c.cat, c.catLabel);
+  // each coin's CoinMarketCap page (saved when it was added) for every link on every page
+  if (window.SamsamCoins && SamsamCoins.registerCoin) for (const c of coins) SamsamCoins.registerCoin(c.sym, { cmcSlug: c.cmcSlug, name: c.name });
   const catOf = (sym, cat, locked) => T ? T.categoryOf(sym, cat, locked) : (cat || 'other');
   const portfolio = Core.derivePortfolio(coins, txs, S.prices, S.opts.fallbackPrices).map(p => ({ ...p, cat: catOf(p.sym, p.cat, p.catLocked) }));
   const removed = coins.filter(c => c.removed).map(c => {
@@ -356,6 +359,7 @@ const API = {
     if ('notes' in fields) fields.notes = Clean.text(fields.notes, 500);
     if ('cgId' in fields) fields.cgId = Clean.cgId(fields.cgId);
     if ('ccSlug' in fields) fields.ccSlug = Clean.cgId(fields.ccSlug);
+    if ('cmcSlug' in fields) fields.cmcSlug = Clean.cgId(fields.cmcSlug);
     if ('logoUrl' in fields) fields.logoUrl = Clean.url(fields.logoUrl);
     if ('lastPrice' in fields && !(Number(fields.lastPrice) > 0 && Number.isFinite(Number(fields.lastPrice)))) delete fields.lastPrice;
     return commit((b, ref, fs) => b.set(ref('coins', safeId(sym)), clean({ ...fields, updatedAt: new Date().toISOString() }), { merge: true }), `Update ${sym}`);
@@ -371,7 +375,7 @@ const API = {
     return commit((b, ref) => {
       b.set(ref('coins', safeId(sym)), clean({
         sym, name: coin.name || sym, cat: coin.cat || 'other', catLocked: coin.catLocked === true, catLabel: coin.catLabel || null,
-        cgId: coin.cgId || null, logoUrl: coin.logoUrl || null,
+        cgId: coin.cgId || null, cmcSlug: coin.cmcSlug || null, logoUrl: coin.logoUrl || null,
         notes: coin.notes || '', isCustom: true, removed: false, removedAt: null, order, lastPrice: price || null,
         opening: existing && existing.opening ? existing.opening : { qty: 0, avg: 0 },
         addedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),

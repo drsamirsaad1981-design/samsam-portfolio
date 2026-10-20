@@ -188,10 +188,36 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   // CoinGecko page slug when it differs from the price-API id (checked against coingecko.com)
   var PAGE_SLUGS = { PONS: 'pons' };
-  function cgUrl(sym, cgId) {
+  function coingeckoUrl(sym, cgId) {
     if (cgId && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cgId)) cgId = null;   // only plain CoinGecko slugs
     var id = PAGE_SLUGS[sym] || cgId || CG_IDS[sym]; return id ? 'https://www.coingecko.com/en/coins/' + encodeURIComponent(id) : null;
   }
+  // ── Coin pages open on CoinMarketCap (prices still come from CoinGecko's free feed) ──
+  // CoinMarketCap page names, each checked on coinmarketcap.com (Oct 2026).
+  var CMC_SLUGS = {
+    BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'bnb', TAO: 'bittensor', SUI: 'sui', NEAR: 'near-protocol', SEI: 'sei',
+    ATOM: 'cosmos', APT: 'aptos', AVAX: 'avalanche', ICP: 'internet-computer', KSM: 'kusama', GRAM: 'toncoin', ARB: 'arbitrum',
+    MOVR: 'moonriver', GLMR: 'moonbeam', OP: 'optimism-ethereum', WLD: 'worldcoin-org', PYTH: 'pyth-network', JUP: 'jupiter-ag',
+    RENDER: 'render', QNT: 'quant', HBAR: 'hedera', DOGE: 'dogecoin', MON: 'monad', CRO: 'cronos', XDC: 'xdc-network',
+    DOT: 'polkadot-new', LINK: 'chainlink', ENS: 'ethereum-name-service', STRK: 'starknet-token', ONDO: 'ondo-finance',
+    AVAIL: 'avail', KAVA: 'kava', PONS: 'pons', MNT: 'mantle', FLR: 'flare', KAS: 'kaspa', POL: 'polygon-ecosystem-token',
+    VTHO: 'vethor-token', VET: 'vechain', NIGHT: 'midnight-network', XPL: 'plasma-xpl', XRP: 'xrp',
+  };
+  var META = {};   // per coin, from the cloud: { cmcSlug, name }
+  function registerCoin(sym, m) { sym = String(sym || '').toUpperCase(); if (sym) META[sym] = { cmcSlug: m && m.cmcSlug, name: m && m.name }; }
+  // CoinMarketCap names most pages after the coin's name: "NEAR Protocol" → near-protocol
+  function cmcGuess(name) {
+    return String(name || '').toLowerCase().replace(/\([^)]*\)/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || null;
+  }
+  function cmcSlug(sym, opts) {
+    opts = opts || {}; var S = String(sym || '').toUpperCase(), m = META[S] || {};
+    var ok = function (x) { return x && /^[a-z0-9][a-z0-9-]{0,99}$/.test(x) ? x : null; };
+    return ok(opts.cmcSlug) || ok(m.cmcSlug) || CMC_SLUGS[S] || ok(cmcGuess(opts.name || m.name || NAMES[S]));
+  }
+  function cmcUrl(sym, opts) { var s = cmcSlug(sym, opts); return s ? 'https://coinmarketcap.com/currencies/' + encodeURIComponent(s) + '/' : null; }
+  // Every "open this coin" link in the app (name, symbol, logo) — kept under its old name so all pages follow.
+  function cgUrl(sym, cgId, opts) { return cmcUrl(sym, opts) || coingeckoUrl(sym, cgId); }
   function fallback(sym, size) {
     size = size || 36; var color = COLORS[sym] || '#6b7280';
     if (/^https?:/.test(color)) color = '#6b7280';
@@ -208,7 +234,7 @@
   var LINK = 'target="_blank" rel="noopener" style="text-decoration:none;color:inherit;transition:opacity .15s" onmouseover="this.style.opacity=\'0.7\'" onmouseout="this.style.opacity=\'1\'"';
   function iconLinked(sym, size, opts) {
     var u = cgUrl(sym, opts && opts.cgId), i = icon(sym, size, opts);
-    return u ? '<a href="' + u + '" ' + LINK.replace('text-decoration:none', 'display:inline-flex;flex-shrink:0;border-radius:50%;text-decoration:none') + ' title="Open ' + esc(sym) + ' on CoinGecko">' + i + '</a>' : i;
+    return u ? '<a href="' + u + '" ' + LINK.replace('text-decoration:none', 'display:inline-flex;flex-shrink:0;border-radius:50%;text-decoration:none') + ' title="Open ' + esc(sym) + ' on CoinMarketCap">' + i + '</a>' : i;
   }
   // Symbol (bold) + name, linked to CoinGecko — same look as the main page
   function nameLinked(sym, opts) {
@@ -216,7 +242,7 @@
     var name = opts.name || NAMES[sym] || '';
     var inner = '<div class="coin-sym" style="font-weight:700;font-size:' + (opts.symSize || '0.85rem') + ';line-height:1.2">' + esc(sym) + (opts.badge || '') + '</div><div style="font-size:0.72rem;color:var(--fg2);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(name) + '</div>';
     var u = cgUrl(sym, opts.cgId);
-    return u ? '<a href="' + u + '" ' + LINK.replace('text-decoration:none', 'display:block;min-width:0;text-decoration:none') + ' title="Open ' + esc(sym) + ' on CoinGecko">' + inner + '</a>' : '<div style="min-width:0">' + inner + '</div>';
+    return u ? '<a href="' + u + '" ' + LINK.replace('text-decoration:none', 'display:block;min-width:0;text-decoration:none') + ' title="Open ' + esc(sym) + ' on CoinMarketCap">' + inner + '</a>' : '<div style="min-width:0">' + inner + '</div>';
   }
   // CoinGlass liquidation heatmap for a coin (opens in a new tab). Symbol differs on CoinGlass for a few coins.
   var LIQ_SYMS = { GRAM: 'TON' };
@@ -267,5 +293,5 @@
         return pick ? pick.slug : null;
       }).catch(function () { return null; });
   }
-  window.SamsamCoins = { esc: esc, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { esc: esc, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

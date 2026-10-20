@@ -8,11 +8,11 @@
 <title>Portfolio Allocation</title>
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610201532"></script>
-<script src="samsam-vault.js?v=202610201532"></script>
-<script src="samsam-labels.js?v=202610201532"></script>
-<script src="samsam-taxonomy.js?v=202610201532"></script>
-<script src="samsam-coins.js?v=202610201532"></script>
+<script src="samsam-ui.js?v=202610201805"></script>
+<script src="samsam-vault.js?v=202610201805"></script>
+<script src="samsam-labels.js?v=202610201805"></script>
+<script src="samsam-taxonomy.js?v=202610201805"></script>
+<script src="samsam-coins.js?v=202610201805"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -261,7 +261,7 @@ body {
 
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610201532"></script>
+<script type="module" src="samsam-cloud.js?v=202610201805"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
 
@@ -332,14 +332,14 @@ function getCoinIconLinked(sym, size=36) {
     ? `<img src="${url}" width="${size}" height="${size}" data-sym="${sym}" data-size="${size}" style="border-radius:50%;object-fit:cover;flex-shrink:0" onerror="coinImgErr(this)">`
     : coinFallback(sym, size);
   if (!cgUrl) return img;
-  return `<a href="${cgUrl}" target="_blank" rel="noopener" title="Open ${sym} on CoinGecko" style="display:inline-flex;flex-shrink:0;border-radius:50%;text-decoration:none;transition:opacity .15s" onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">${img}</a>`;
+  return `<a href="${cgUrl}" target="_blank" rel="noopener" title="Open ${sym} on CoinMarketCap" style="display:inline-flex;flex-shrink:0;border-radius:50%;text-decoration:none;transition:opacity .15s" onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">${img}</a>`;
 }
 function getCoinNameLinked(sym) {
   const cgUrl = getCoinGeckoUrl(sym);
   const name  = COIN_NAMES[sym] || '';
   const inner = `<div style="font-weight:700;font-size:0.85rem;line-height:1.2">${sym}</div><div style="font-size:0.72rem;color:var(--fg2);line-height:1.3">${name}</div>`;
   if (!cgUrl) return `<div>${inner}</div>`;
-  return `<a href="${cgUrl}" target="_blank" rel="noopener" title="Open ${sym} on CoinGecko" style="text-decoration:none;color:inherit;display:block;transition:opacity .15s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">${inner}</a>`;
+  return `<a href="${cgUrl}" target="_blank" rel="noopener" title="Open ${sym} on CoinMarketCap" style="text-decoration:none;color:inherit;display:block;transition:opacity .15s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">${inner}</a>`;
 }
 
 // ── Build donut SVG ────────────────────────────────────────────────────────
