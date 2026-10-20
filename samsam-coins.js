@@ -293,5 +293,52 @@
         return pick ? pick.slug : null;
       }).catch(function () { return null; });
   }
-  window.SamsamCoins = { esc: esc, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  // ── Best / worst performer cards (main page: 24h · Performance: since purchase and vs BTC) ──
+  // rows: [{ sym, value, score, ... }] — coins worth < $1 or < 0.1% of the whole portfolio are left out
+  // (a 30-cent coin up 40% is not your best performer). Returns { best, worst } or null when nothing qualifies.
+  function pickMovers(rows, portfolioTotal) {
+    var min = Math.max(1, (portfolioTotal || 0) * 0.001);
+    var ok = (rows || []).filter(function (r) { return r && r.value >= min && typeof r.score === 'number' && isFinite(r.score); });
+    if (!ok.length) return null;
+    ok.sort(function (a, b) { return b.score - a.score; });
+    return { best: ok[0], worst: ok.length > 1 ? ok[ok.length - 1] : null, count: ok.length };
+  }
+  var mvCss = false;
+  function moversCss() {
+    if (mvCss) return; mvCss = true;
+    var st = document.createElement('style');
+    st.textContent = '.mv-card{display:grid;grid-template-columns:1fr 1px 1fr;align-items:stretch;background:var(--card-solid,var(--bg2,#111827));border:1px solid var(--border,#334155);border-radius:16px;padding:14px 4px;box-sizing:border-box}' +
+      '.mv-sep{background:var(--border,#334155);margin:6px 0}' +
+      '.mv-half{display:flex;flex-direction:column;gap:6px;min-width:0;padding:4px 16px;border:none;background:none;color:inherit;font:inherit;text-align:left;border-radius:12px;cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent}' +
+      '.mv-half:hover{background:rgba(148,163,184,.08)}.mv-half:focus-visible{outline:2px solid #a78bfa;outline-offset:-2px}.mv-half[aria-disabled=true]{cursor:default;background:none}' +
+      '.mv-label{font-size:.78rem;color:var(--label,var(--fg2,#94a3b8));font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.mv-coin{display:flex;align-items:center;gap:10px;min-width:0}.mv-coin .mv-sym{font-size:1.25rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.mv-val{display:block;font-weight:700;font-size:1rem;line-height:1.35;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}.mv-val svg{display:inline-block;vertical-align:1px;margin-right:6px}.mv-val .mv-t1,.mv-val .mv-t2{white-space:nowrap}.mv-val .mv-t2{opacity:.92}.mv-val.up{color:#34d399}.mv-val.down{color:#f87171}.mv-val.flat{color:var(--fg2,#94a3b8)}' +
+      '.mv-sub{font-size:.76rem;color:var(--fg2,#94a3b8);line-height:1.35;font-variant-numeric:tabular-nums}' +
+      '.mv-empty{grid-column:1/-1;padding:6px 16px;color:var(--fg2,#94a3b8);font-size:.85rem}' +
+      '@media (max-width:420px){.mv-half{padding:4px 10px}.mv-coin{gap:8px}.mv-coin .mv-sym{font-size:1.08rem}.mv-val{font-size:.92rem}}';
+    document.head.appendChild(st);
+  }
+  function arrow(dir) {
+    if (dir === 'flat') return '';
+    return '<svg width="11" height="9" viewBox="0 0 11 9" aria-hidden="true"><path d="' + (dir === 'up' ? 'M5.5 0L11 9H0z' : 'M5.5 9L0 0h11z') + '" fill="currentColor"/></svg>';
+  }
+  // half: { label, row: {sym, logoUrl, cgId}, pct (number, signed), text (main value), sub (optional), onClickJs (string) }
+  function moverHalf(h) {
+    if (!h.row) return '<div class="mv-half" aria-disabled="true"><div class="mv-label">' + esc(h.label) + '</div><div class="mv-sub">—</div></div>';
+    var dir = h.pct > 0.005 ? 'up' : h.pct < -0.005 ? 'down' : 'flat';
+    var name = h.label + ': ' + h.row.sym + ' ' + h.text + (h.text2 ? ' ' + h.text2 : '') + (h.sub ? ', ' + h.sub : '');
+    return '<button type="button" class="mv-half" onclick="' + esc(h.onClickJs || '') + '" title="' + esc(name) + '" aria-label="' + esc(name) + '">' +
+      '<span class="mv-label">' + esc(h.label) + '</span>' +
+      '<span class="mv-coin">' + icon(h.row.sym, 30, { logoUrl: h.row.logoUrl }) + '<span class="mv-sym">' + esc(h.row.sym) + '</span></span>' +
+      '<span class="mv-val ' + dir + '">' + arrow(dir) + '<span class="mv-t1">' + esc(h.text) + '</span>' + (h.text2 ? ' <span class="mv-t2">' + esc(h.text2) + '</span>' : '') + '</span>' + (h.sub ? '<span class="mv-sub">' + esc(h.sub) + '</span>' : '') + '</button>';
+  }
+  // pair: { best: half, worst: half, empty: 'message' }
+  function moversCard(pair) {
+    moversCss();
+    if (pair.empty) return '<div class="mv-card"><div class="mv-empty">' + esc(pair.empty) + '</div></div>';
+    return '<div class="mv-card">' + moverHalf(pair.best) + '<div class="mv-sep" aria-hidden="true"></div>' + moverHalf(pair.worst) + '</div>';
+  }
+  function signedPct(p, d) { d = d == null ? 2 : d; return (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p).toFixed(d) + '%'; }
+  window.SamsamCoins = { esc: esc, pickMovers: pickMovers, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

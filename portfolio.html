@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610201930"></script>
-<script src="samsam-vault.js?v=202610201930"></script>
-<script src="samsam-labels.js?v=202610201930"></script>
-<script src="samsam-taxonomy.js?v=202610201930"></script>
-<script src="samsam-coins.js?v=202610201930"></script>
-<script src="samsam-dropdown.js?v=202610201930"></script>
-<script src="samsam-chart.js?v=202610201930"></script>
+<script src="samsam-ui.js?v=202610202104"></script>
+<script src="samsam-vault.js?v=202610202104"></script>
+<script src="samsam-labels.js?v=202610202104"></script>
+<script src="samsam-taxonomy.js?v=202610202104"></script>
+<script src="samsam-coins.js?v=202610202104"></script>
+<script src="samsam-dropdown.js?v=202610202104"></script>
+<script src="samsam-chart.js?v=202610202104"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1016,6 +1016,44 @@
   .card-act .btn-remove { color: #f87171; border: 1px solid rgba(248,113,113,.45); }
   .card-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
   .card-act .btn-history::after, .card-act .btn-history::before { display: none; }
+  /* Computer (≥ 1024px): table / cards live in a contained box with its own slim scrollbar, so the page
+     stays one screen tall; table headers stay on top while scrolling. Phones scroll the page normally. */
+  @media (min-width: 1024px) {
+    #portfolioTableWrapper.view-active, #coinsStack.view-active {
+      max-height: max(420px, calc(100vh - 150px)); overflow: auto; overscroll-behavior: auto;
+      scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+    #coinsStack.view-active { grid-template-columns: repeat(auto-fill, minmax(max(280px, calc((100% - 48px) / 4)), 1fr)) !important; /* 3–4 per row */ gap: 16px !important; padding: 2px 8px 6px 2px; }
+    #portfolioTableWrapper thead th { position: sticky; top: 0; z-index: 3; background: var(--bg3); box-shadow: inset 0 -1px 0 var(--border); }
+    #portfolioTableWrapper.view-active::-webkit-scrollbar, #coinsStack.view-active::-webkit-scrollbar { width: 6px; height: 6px; }
+    #portfolioTableWrapper.view-active::-webkit-scrollbar-thumb, #coinsStack.view-active::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    #portfolioTableWrapper.view-active::-webkit-scrollbar-track, #coinsStack.view-active::-webkit-scrollbar-track { background: transparent; }
+    [data-theme="light"] #portfolioTableWrapper.view-active, [data-theme="light"] #coinsStack.view-active { scrollbar-color: #cbd5e1 transparent; }
+    [data-theme="light"] #portfolioTableWrapper.view-active::-webkit-scrollbar-thumb, [data-theme="light"] #coinsStack.view-active::-webkit-scrollbar-thumb { background: #cbd5e1; }
+  }
+  @media print { #portfolioTableWrapper, #coinsStack { max-height: none !important; overflow: visible !important; } }
+  /* Switching Table ↔ Cards: the chosen view slides in gently */
+  .view-enter { animation: viewEnter .28s ease both; }
+  @keyframes viewEnter { from { opacity: 0; transform: translateY(8px); } }
+  @media (prefers-reduced-motion: reduce) { .view-enter { animation: none; } }
+  /* Actions: + Buy · − Sell · ⋯ (the rest is in the ⋯ menu) */
+  .act3 { display: grid !important; grid-template-columns: 1fr 1fr 44px; gap: 8px; }
+  .card-act.act3 { grid-auto-rows: 40px; margin-top: 2px; }
+  .card-act.act3 button { height: 40px; font-size: 0.86rem !important; }
+  .row-act.act3 { grid-template-columns: 1fr 1fr 32px; grid-auto-rows: 32px; gap: 5px; width: 150px; margin: 0 auto; }
+  #portfolioTable .category-badge-editable .cat-tag { max-width: 118px; }
+  /* Computer: slightly tighter cells so the whole table fits the screen width (no sideways scrolling) */
+  @media (min-width: 1024px) {
+    #portfolioTable th, #portfolioTable td { padding-left: 6px !important; padding-right: 6px !important; }
+    #portfolioTable td:nth-child(11) { min-width: 92px !important; }
+    #portfolioTable td .note-input { max-width: 100%; }
+    #portfolioTable .category-badge-editable .cat-tag { max-width: 100px; display: inline-block; }
+  }
+  .row-act.act3 button { height: 32px; font-size: 0.78rem !important; }
+  .btn-more { display: flex; align-items: center; justify-content: center; padding: 0 !important; border-radius: 8px; border: 1px solid var(--border); background: var(--metric-bg);
+    color: var(--fg); font-size: 1.15rem !important; font-weight: 800; line-height: 1; letter-spacing: 1px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .btn-more:hover, .btn-more[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+  .btn-more:focus-visible { outline: 3px solid rgba(167,139,250,.5); outline-offset: 2px; }
+  @media print { .btn-more { display: none !important; } }
   /* Category: tag + small edit button (cards and table) */
   .category-badge-editable { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
   .cat-edit { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; flex-shrink: 0;
@@ -1553,7 +1591,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610201930"></script>
+<script type="module" src="samsam-cloud.js?v=202610202104"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1607,6 +1645,20 @@ function readCatChoice(sel, inputId) {
   const name = (document.getElementById(inputId).value || '').replace(/\s+/g, ' ').trim();
   if (!name) return { key: 'other', label: null };
   return { key: SamsamTaxonomy.customKey(name), label: name };
+}
+// "⋯" on a coin card / table row: the less-used actions, in one menu (bottom sheet on phones)
+function openCoinMenu(btn, sym) {
+  const c = portfolio.find(x => x.sym === sym) || { sym };
+  CPMenu.open(btn, `${sym} — more actions`, [
+    { icon: '↓', label: SAMSAM_LABELS.TRANSFER_IN, onClick: () => openTransferIn(sym) },
+    { icon: '↑', label: SAMSAM_LABELS.TRANSFER_OUT, onClick: () => openTransferOut(sym) },
+    { icon: '📋', label: 'History', onClick: () => openHistory(sym) },
+    { divider: true },
+    { icon: '🔥', label: 'Liquidation Map', href: SamsamCoins.liqMapUrl(sym) },
+    { icon: '🔮', label: 'Price Prediction', href: SamsamCoins.predictionUrl(sym, c) },
+    { divider: true },
+    { icon: '✕', label: 'Remove', danger: true, onClick: () => removeCoin(sym) },
+  ]);
 }
 let catEditSym = null;
 function openCatEdit(sym) {
@@ -2048,7 +2100,7 @@ function renderTableAndStack() {
       const color=COIN_COLORS[c.sym]||'#6b7280';
       const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
       const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
-      const actionLabel=action==='convert'?'🔴 Sell / Convert to BTC':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';
+      const actionLabel=action==='convert'?'🔴 Sell/Convert':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';   // same short label as the cards
       const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       html += `<tr>
@@ -2072,15 +2124,10 @@ function renderTableAndStack() {
             title="Add a note for ${c.sym}">
         </td>
         <td style="text-align:center;white-space:nowrap">
-          <div class="act-grid row-act">
+          <div class="row-act act3">
             <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')" title="Buy ${c.sym}">+ Buy</button>
             <button class="btn-sell" onclick="openSell('${c.sym}')" title="Sell ${c.sym}">− Sell</button>
-            <button class="btn-tin" onclick="openTransferIn('${c.sym}')" title="${SAMSAM_LABELS.TRANSFER_IN} ${c.sym}">↓ In</button>
-            <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="${SAMSAM_LABELS.TRANSFER_OUT} ${c.sym}">↑ Out</button>
-            <button class="btn-history" onclick="openHistory('${c.sym}')" title="History of ${c.sym}">📋 History</button>
-            <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove ${c.sym}">✕ Remove</button>
-            <a class="btn-liq" href="${SamsamCoins.liqMapUrl(c.sym)}" target="_blank" rel="noopener noreferrer" title="Open the ${c.sym} liquidation heatmap on CoinGlass (new tab)">🔥 Liq Map</a>
-            <a class="btn-pred" href="${SamsamCoins.predictionUrl(c.sym, c)}" target="_blank" rel="noopener noreferrer" title="Open the ${c.sym} price prediction on CoinCodex (new tab)">🔮 Predict</a>
+            <button type="button" class="btn-more" onclick="event.stopPropagation();openCoinMenu(this,'${c.sym}')" aria-haspopup="menu" aria-expanded="false" title="More actions for ${c.sym}" aria-label="More actions for ${c.sym}">⋯</button>
           </div>
         </td>
       </tr>`;
@@ -2131,15 +2178,10 @@ function renderTableAndStack() {
           <span>#${i+1}</span>
           <span style="color:var(--fg2)">${c.lastUpdate||'Oct 15, 2026'}</span>
         </div>
-        <div class="coin-card-actions card-act">
+        <div class="coin-card-actions card-act act3">
           <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
           <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
-          <button class="btn-tin" onclick="openTransferIn('${c.sym}')" title="${SAMSAM_LABELS.TRANSFER_IN}">↓ ${SAMSAM_LABELS.TRANSFER_IN}</button>
-          <button class="btn-tout" onclick="openTransferOut('${c.sym}')" title="${SAMSAM_LABELS.TRANSFER_OUT}">↑ ${SAMSAM_LABELS.TRANSFER_OUT}</button>
-          <button class="btn-history" onclick="openHistory('${c.sym}')" title="History">📋 History</button>
-          <button class="btn-remove" onclick="removeCoin('${c.sym}')" title="Remove">✕ Remove</button>
-          <a class="btn-liq" href="${SamsamCoins.liqMapUrl(c.sym)}" target="_blank" rel="noopener noreferrer" title="Open the ${c.sym} liquidation heatmap on CoinGlass (new tab)">🔥 Liq Map <span aria-hidden="true">↗</span></a>
-          <a class="btn-pred" href="${SamsamCoins.predictionUrl(c.sym, c)}" target="_blank" rel="noopener noreferrer" title="Open the ${c.sym} price prediction on CoinCodex (new tab)">🔮 Price Prediction <span aria-hidden="true">↗</span></a>
+          <button type="button" class="btn-more" onclick="event.stopPropagation();openCoinMenu(this,'${c.sym}')" aria-haspopup="menu" aria-expanded="false" title="More actions for ${c.sym}" aria-label="More actions for ${c.sym}">⋯</button>
         </div>
       </div>`;
     }).join('');
@@ -2770,9 +2812,15 @@ function renderAll(){renderHeader();renderSummary();renderTableAndStack();render
 let currentView = 'cards'; // default: mobile cards
 
 function applyView(view) {
+  const changed = currentView !== view;
   currentView = view;
   const stack   = document.getElementById('coinsStack');
   const table   = document.getElementById('portfolioTableWrapper');
+  if (changed) {   // gentle slide-in of the view you switched to
+    const shown = view === 'table' ? table : stack;
+    shown.classList.remove('view-enter'); void shown.offsetWidth; shown.classList.add('view-enter');
+    shown.addEventListener('animationend', () => shown.classList.remove('view-enter'), { once: true });
+  }
   const btn     = document.getElementById('viewToggleBtn');
   stack.classList.toggle('view-active', view !== 'table');
   table.classList.toggle('view-active', view === 'table');
