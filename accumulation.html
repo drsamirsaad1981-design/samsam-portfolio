@@ -12,12 +12,12 @@
 <meta name="theme-color" content="#0a0e1a">
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
 <link rel="apple-touch-icon" href="./icon.jpg">
-<script src="samsam-ui.js?v=202610201503"></script>
-<script src="samsam-vault.js?v=202610201503"></script>
-<script src="samsam-labels.js?v=202610201503"></script>
-<script src="samsam-taxonomy.js?v=202610201503"></script>
-<script src="samsam-coins.js?v=202610201503"></script>
-<script src="samsam-dropdown.js?v=202610201503"></script>
+<script src="samsam-ui.js?v=202610201532"></script>
+<script src="samsam-vault.js?v=202610201532"></script>
+<script src="samsam-labels.js?v=202610201532"></script>
+<script src="samsam-taxonomy.js?v=202610201532"></script>
+<script src="samsam-coins.js?v=202610201532"></script>
+<script src="samsam-dropdown.js?v=202610201532"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -576,7 +576,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610201503"></script>
+<script type="module" src="samsam-cloud.js?v=202610201532"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -653,7 +653,8 @@ function coinOpts(entry, r) {
 }
 // ─── Category filter: one active-category card, same component as the main page ──
 let activeCatFilter = '', catPickerDD = null;
-const catOfEntry = e => (window.SamsamTaxonomy ? SamsamTaxonomy.categoryOf(e.sym, (getPortfolioCoin(e.sym) || {}).cat) : 'other');
+// The portfolio coin's category already includes your own choice (Change category); fall back to the default list
+const catOfEntry = e => (getPortfolioCoin(e.sym) || {}).cat || (window.SamsamTaxonomy ? SamsamTaxonomy.categoryOf(e.sym) : 'other');
 const inCat = e => !activeCatFilter || catOfEntry(e) === activeCatFilter;
 function setCatFilter(cat, exact) {
   const before = activeCatFilter;
@@ -675,8 +676,7 @@ function renderCatPicker() {
   // Value per category = what you already hold of the plan's coins (Actual Amount × Current Price)
   const totals = {}; let all = 0;
   accumPlan.forEach(e => { const r = calcRow(e), v = r.actualQty * r.currentPrice, k = catOfEntry(e); totals[k] = (totals[k] || 0) + v; all += v; });
-  const ORDER = ['layer1', 'layer2', 'ai', 'layer0', 'oracle', 'defi', 'meme', 'launchpad', 'web3'];
-  const keys = ORDER.concat(totals.other ? ['other'] : []);
+  const keys = T.pickerKeys(totals);
   const dot = c => `<span class="cp-dot" style="background:${c}"></span>`;
   const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(all), icon: '<span class="cp-globe">🌐</span>' }]
     .concat(keys.map(k => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(totals[k] || 0), icon: dot(T.color(k)) })));
@@ -896,7 +896,7 @@ function renderCards() {
     const progColor = completed ? '#10b981' : r.progress >= 50 ? '#f59e0b' : '#3b82f6';
     const hasPrice  = r.currentPrice > 0;
     const holdVal   = r.actualQty * r.currentPrice;
-    const cat = T ? T.categoryOf(entry.sym) : 'other';
+    const cat = catOfEntry(entry);
     const ap = entry.alertPrice;
     const alertHit = ap > 0 && hasPrice && r.currentPrice <= ap;
     const icon = SamsamCoins.iconLinked(entry.sym, 36, coinOpts(entry, r));

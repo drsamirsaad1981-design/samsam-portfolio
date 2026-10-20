@@ -13,13 +13,13 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610201436"></script>
-<script src="samsam-vault.js?v=202610201436"></script>
-<script src="samsam-labels.js?v=202610201436"></script>
-<script src="samsam-taxonomy.js?v=202610201436"></script>
-<script src="samsam-coins.js?v=202610201436"></script>
-<script src="samsam-dropdown.js?v=202610201436"></script>
-<script src="samsam-chart.js?v=202610201436"></script>
+<script src="samsam-ui.js?v=202610201503"></script>
+<script src="samsam-vault.js?v=202610201503"></script>
+<script src="samsam-labels.js?v=202610201503"></script>
+<script src="samsam-taxonomy.js?v=202610201503"></script>
+<script src="samsam-coins.js?v=202610201503"></script>
+<script src="samsam-dropdown.js?v=202610201503"></script>
+<script src="samsam-chart.js?v=202610201503"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1014,6 +1014,13 @@
   .card-act .btn-remove { color: #f87171; border: 1px solid rgba(248,113,113,.45); }
   .card-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
   .card-act .btn-history::after, .card-act .btn-history::before { display: none; }
+  /* Add coin form: labels on one line, equal fields, equal buttons */
+  #addCoinModal .form-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #addCoinModal .form-input { width: 100%; box-sizing: border-box; height: 46px; }
+  #addCoinModal select.form-input { text-overflow: ellipsis; }
+  #addCoinModal .ac-find .form-label { white-space: normal; }
+  .ac-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .ac-btns .btn { height: 46px; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; font-size: .92rem; font-weight: 700; border-radius: 10px; }
   /* Add coin: CoinGecko search list */
   .ac-find { position: relative; }
   .ac-suggest { position: absolute; left: 0; right: 0; top: 100%; z-index: 30; margin: 4px 0 0; padding: 4px; list-style: none; max-height: 300px; overflow-y: auto;
@@ -1369,39 +1376,39 @@
         <ul class="ac-suggest" id="acSuggest" role="listbox" hidden></ul>
         <div class="ac-linked" id="acLinked" hidden></div>
       </div>
-      <div class="form-row" style="margin:0">
-        <label class="form-label">Full Name</label>
-        <input type="text" class="form-input" id="acName" placeholder="e.g. Ripple">
+      <div class="form-row" style="margin:0;grid-column:1 / -1">
+        <label class="form-label" for="acName">Full Name</label>
+        <input type="text" class="form-input" id="acName" placeholder="Filled by search">
       </div>
       <div class="form-row" style="margin:0">
-        <label class="form-label"><span data-label="AMOUNT">Amount</span> <span style="color:#ef4444">*</span></label>
-        <input type="number" class="form-input" id="acQty" placeholder="0.00" step="any" oninput="previewAddCoin()">
+        <label class="form-label" for="acQty"><span data-label="AMOUNT">Amount</span> <span style="color:#ef4444">*</span></label>
+        <input type="number" class="form-input" id="acQty" placeholder="0.00" step="any" inputmode="decimal" oninput="previewAddCoin()">
       </div>
       <div class="form-row" style="margin:0">
-        <label class="form-label"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span> (USD) <span style="color:#ef4444">*</span></label>
-        <input type="number" class="form-input" id="acPrice" placeholder="0.00" step="any" oninput="previewAddCoin()">
+        <label class="form-label" for="acPrice"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span> <span style="color:#ef4444">*</span></label>
+        <input type="number" class="form-input" id="acPrice" placeholder="USD" step="any" inputmode="decimal" oninput="previewAddCoin()">
       </div>
       <div class="form-row" style="margin:0">
-        <label class="form-label">Buying fee (USD, optional)</label>
-        <input type="number" class="form-input" id="acFeeUsd" placeholder="0.00" step="any" min="0" oninput="previewAddCoin()">
+        <label class="form-label" for="acFeeUsd">Fee (USD)</label>
+        <input type="number" class="form-input" id="acFeeUsd" placeholder="Optional" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()">
       </div>
       <div class="form-row" style="margin:0">
-        <label class="form-label">Category</label>
+        <label class="form-label" for="acCgId">CoinGecko ID</label>
+        <input type="text" class="form-input" id="acCgId" placeholder="Auto" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="form-row" style="margin:0;grid-column:1 / -1">
+        <label class="form-label" for="acCat">Category</label>
         <select class="form-input" id="acCat">
           <!-- filled from samsam-taxonomy.js -->
         </select>
-      </div>
-      <div class="form-row" style="margin:0">
-        <label class="form-label">CoinGecko ID <span style="color:var(--fg2);font-weight:400">(filled by search)</span></label>
-        <input type="text" class="form-input" id="acCgId" placeholder="e.g. ripple">
       </div>
     </div>
     <div class="buy-preview" id="acPreview" style="display:none;margin-top:12px">
       Cost Basis: <span>$<span id="acCostBasis"></span></span>
     </div>
     <div id="acError" style="color:#ef4444;font-size:0.8rem;margin-top:8px;display:none"></div>
-    <div style="display:flex;gap:8px;margin-top:14px;">
-      <button class="btn btn-primary" onclick="applyAddCoin()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">➕ Add to Portfolio</button>
+    <div class="ac-btns">
+      <button class="btn btn-primary" onclick="applyAddCoin()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff">➕ Add to Portfolio</button>
       <button class="btn btn-secondary" onclick="closeAddCoin()">Cancel</button>
     </div>
   </div>
@@ -1463,7 +1470,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610201436"></script>
+<script type="module" src="samsam-cloud.js?v=202610201503"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 

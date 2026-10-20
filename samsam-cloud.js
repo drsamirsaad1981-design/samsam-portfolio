@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610201503';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610201503';
+import * as Core from './samsam-core.js?v=202610201532';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610201532';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -60,6 +60,8 @@ function cleanCoin(c) {
   if ('ccSlug' in o) o.ccSlug = Clean.cgId(o.ccSlug);
   if ('logoUrl' in o) o.logoUrl = Clean.url(o.logoUrl);
   if ('cat' in o) o.cat = Clean.key(o.cat) || 'other';
+  if ('catLabel' in o) o.catLabel = Clean.label(o.catLabel, 40) || null;
+  if ('catLocked' in o) o.catLocked = o.catLocked === true;
   if (o.opening) o.opening = { qty: Clean.num(o.opening.qty), avg: Clean.num(o.opening.avg) };
   return o;
 }
@@ -98,11 +100,13 @@ function derive() {
   const coins = [...S.coins.values()];
   const txs = [...S.txs.values()].sort(Core.compareTx);
   const T = window.SamsamTaxonomy;
-  const catOf = (sym, cat) => T ? T.categoryOf(sym, cat) : (cat || 'other');
-  const portfolio = Core.derivePortfolio(coins, txs, S.prices, S.opts.fallbackPrices).map(p => ({ ...p, cat: catOf(p.sym, p.cat) }));
+  // your own categories (named on any device) become real categories on every page
+  if (T && T.register) for (const c of coins) if (c.catLabel && T.isCustom(c.cat)) T.register(c.cat, c.catLabel);
+  const catOf = (sym, cat, locked) => T ? T.categoryOf(sym, cat, locked) : (cat || 'other');
+  const portfolio = Core.derivePortfolio(coins, txs, S.prices, S.opts.fallbackPrices).map(p => ({ ...p, cat: catOf(p.sym, p.cat, p.catLocked) }));
   const removed = coins.filter(c => c.removed).map(c => {
     const r = Core.replay(c.opening, txs.filter(t => t.sym === c.sym));
-    return { sym: c.sym, qty: r.qty, basePrice: r.avg, cat: catOf(c.sym, c.cat), cgId: c.cgId, logoUrl: c.logoUrl,
+    return { sym: c.sym, qty: r.qty, basePrice: r.avg, cat: catOf(c.sym, c.cat, c.catLocked), cgId: c.cgId, logoUrl: c.logoUrl,
       removedAt: c.removedAt || '', removedPermanently: true };
   });
   const realized = Core.realizedPnl(coins, txs);
@@ -114,7 +118,7 @@ function derive() {
     : (portfolio.find(c => c.sym === 'BTC') || {}).currentPrice || S.opts.fallbackPrices.BTC || 0;
   S.derived = {
     portfolio, transactions: txs, coins, archivedCoins: removed,
-    customCoins: coins.filter(c => c.isCustom && !c.removed).map(c => ({ sym: c.sym, cat: catOf(c.sym, c.cat), cgId: c.cgId, logoUrl: c.logoUrl })),
+    customCoins: coins.filter(c => c.isCustom && !c.removed).map(c => ({ sym: c.sym, cat: catOf(c.sym, c.cat, c.catLocked), cgId: c.cgId, logoUrl: c.logoUrl })),
     accumPlan, perfSnaps: snaps.perf, holdingsSnaps: snaps.holdings, realized, btcPrice: btc,
     needsSetup: allLoaded() && !(S.meta && S.meta.state === 'done') && S.coins.size === 0,
   };
@@ -136,7 +140,7 @@ function syncCategories() {
   const T = window.SamsamTaxonomy;
   if (catSyncDone || !T || !S.user || !allLoaded()) return;
   catSyncDone = true;
-  const fix = [...S.coins.values()].filter(c => c.sym && T.categoryOf(c.sym, c.cat) !== c.cat);
+  const fix = [...S.coins.values()].filter(c => c.sym && !c.catLocked && T.categoryOf(c.sym, c.cat) !== c.cat);
   if (!fix.length) return;
   commit((b, ref) => { for (const c of fix) b.set(ref('coins', safeId(c.sym)), { cat: T.categoryOf(c.sym, c.cat), updatedAt: new Date().toISOString() }, { merge: true }); },
     `Update categories (${fix.length} coins)`).catch(() => { catSyncDone = false; });
@@ -346,6 +350,9 @@ const API = {
   updateCoin(sym, fields) {
     fields = { ...fields };
     if ('name' in fields) fields.name = Clean.label(fields.name);
+    if ('cat' in fields) fields.cat = Clean.key(fields.cat) || 'other';
+    if ('catLabel' in fields) fields.catLabel = Clean.label(fields.catLabel, 40) || null;
+    if ('catLocked' in fields) fields.catLocked = fields.catLocked === true;
     if ('notes' in fields) fields.notes = Clean.text(fields.notes, 500);
     if ('cgId' in fields) fields.cgId = Clean.cgId(fields.cgId);
     if ('ccSlug' in fields) fields.ccSlug = Clean.cgId(fields.ccSlug);
@@ -363,7 +370,8 @@ const API = {
     const order = existing && existing.order != null ? existing.order : Math.max(-1, ...[...S.coins.values()].map(c => c.order ?? 0)) + 1;
     return commit((b, ref) => {
       b.set(ref('coins', safeId(sym)), clean({
-        sym, name: coin.name || sym, cat: coin.cat || 'other', cgId: coin.cgId || null, logoUrl: coin.logoUrl || null,
+        sym, name: coin.name || sym, cat: coin.cat || 'other', catLocked: coin.catLocked === true, catLabel: coin.catLabel || null,
+        cgId: coin.cgId || null, logoUrl: coin.logoUrl || null,
         notes: coin.notes || '', isCustom: true, removed: false, removedAt: null, order, lastPrice: price || null,
         opening: existing && existing.opening ? existing.opening : { qty: 0, avg: 0 },
         addedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
@@ -372,6 +380,15 @@ const API = {
       // Every new or re-added coin starts with an ordinary Buy (no manual corrections).
       b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position'), { feeUsd }));
     }, `Add ${sym}`);
+  },
+  // Your choice of category for a coin (built-in key, or a name of your own → 'x-…' key + label).
+  // Locked, so it is never reset to the default list; pass null to go back to the default.
+  setCategory(sym, key, label) {
+    const T = window.SamsamTaxonomy;
+    if (key == null) return API.updateCoin(sym, { cat: T ? (T.defaultOf(sym) || 'other') : 'other', catLocked: false, catLabel: null });
+    if (T && T.isCustom(key)) { if (!Clean.label(label, 40)) return Promise.reject(new Error('Type a name for the category')); T.register(key, label); }
+    else if (!(T && T.labels[key])) return Promise.reject(new Error('Unknown category'));
+    return API.updateCoin(sym, { cat: key, catLocked: true, catLabel: T && T.isCustom(key) ? Clean.label(label, 40) : null });
   },
   removeCoin(sym) { return API.updateCoin(sym, { removed: true, removedAt: new Date().toISOString() }); },
 
