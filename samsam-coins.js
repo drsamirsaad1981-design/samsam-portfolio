@@ -218,5 +218,8 @@
     var u = cgUrl(sym, opts.cgId);
     return u ? '<a href="' + u + '" ' + LINK.replace('text-decoration:none', 'display:block;min-width:0;text-decoration:none') + ' title="Open ' + esc(sym) + ' on CoinGecko">' + inner + '</a>' : '<div style="min-width:0">' + inner + '</div>';
   }
-  window.SamsamCoins = { esc: esc, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  // CoinGlass liquidation heatmap for a coin (opens in a new tab). Symbol differs on CoinGlass for a few coins.
+  var LIQ_SYMS = { GRAM: 'TON' };
+  function liqMapUrl(sym) { var s = LIQ_SYMS[sym] || String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); return 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(s); }
+  window.SamsamCoins = { esc: esc, liqMapUrl: liqMapUrl, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

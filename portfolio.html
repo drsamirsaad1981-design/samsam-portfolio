@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>محفظة سمسم - Golden Triangle 2030</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
@@ -11,12 +13,13 @@
 <meta name="theme-color" content="#0a0e1a">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610200136"></script>
-<script src="samsam-labels.js?v=202610200136"></script>
-<script src="samsam-taxonomy.js?v=202610200136"></script>
-<script src="samsam-coins.js?v=202610200136"></script>
-<script src="samsam-dropdown.js?v=202610200136"></script>
-<script src="samsam-chart.js?v=202610200136"></script>
+<script src="samsam-ui.js?v=202610200235"></script>
+<script src="samsam-vault.js?v=202610200235"></script>
+<script src="samsam-labels.js?v=202610200235"></script>
+<script src="samsam-taxonomy.js?v=202610200235"></script>
+<script src="samsam-coins.js?v=202610200235"></script>
+<script src="samsam-dropdown.js?v=202610200235"></script>
+<script src="samsam-chart.js?v=202610200235"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 <link rel="icon" type="image/jpeg" href="./icon.jpg">
@@ -1433,7 +1436,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610200136"></script>
+<script type="module" src="samsam-cloud.js?v=202610200235"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2216,16 +2219,22 @@ function sortTable(col) {
 
 
 function exportData() {
-  const L=SAMSAM_LABELS; const rows=[['Coin',L.AMOUNT,L.AVG_BUY_PRICE,L.CURRENT_PRICE,L.COST_BASIS,L.HOLDINGS_VALUE,L.PNL,L.PNL+'%',L.PORTFOLIO_VS_BTC,L.SIGNAL]];
-  portfolio.forEach(c=>{
-    const perf=getPerf(c);const action=getAction(c.sym,perf,c);
-    const baseVal=c.qty*c.basePrice;const curVal=c.qty*c.currentPrice;const pnl=curVal-baseVal;
-    rows.push([c.sym,c.qty,c.basePrice,c.currentPrice,baseVal.toFixed(2),curVal.toFixed(2),pnl.toFixed(2),(baseVal>0?pnl/baseVal*100:0).toFixed(1)+'%',perf.toFixed(1)+'%',action]);
+  // CSV = exactly what the table shows (same rows, same order, same figures), plus name, category and notes.
+  // Every cell is quoted; text that a spreadsheet could run as a formula (= + - @) is prefixed with ' .
+  const L = SAMSAM_LABELS, T = window.SamsamTaxonomy;
+  const cell = v => { let s = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(s) && !/^-?\d/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+  const rows = [['#', 'Coin', 'Name', 'Category', L.AMOUNT, L.AVG_BUY_PRICE, L.CURRENT_PRICE, L.COST_BASIS, L.HOLDINGS_VALUE, L.PNL, L.PNL + ' %', L.PORTFOLIO_VS_BTC + ' %', L.SIGNAL, 'Notes']];
+  getFilteredSorted().forEach((c, i) => {
+    const perf = getPerf(c), action = getAction(c.sym, perf, c);
+    const baseVal = c.qty * c.basePrice, curVal = c.qty * c.currentPrice, pnl = curVal - baseVal;
+    rows.push([i + 1, c.sym, COIN_NAMES[c.sym] || c.name || c.sym, T ? T.label(c.cat) : (c.cat || ''), c.qty, c.basePrice, c.currentPrice,
+      baseVal.toFixed(2), curVal.toFixed(2), pnl.toFixed(2), (baseVal > 0 ? pnl / baseVal * 100 : 0).toFixed(2), perf.toFixed(2), action === 'convert' ? 'Sell / Convert to BTC' : action === 'reinforce' ? 'Reinforce' : 'Hold', c.notes || '']);
   });
-  const csv=rows.map(r=>r.join(',')).join('\n');
-  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download='samsam-portfolio.csv';a.click();
+  const csv = rows.map(r => r.map(cell).join(',')).join('\r\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'samsam-portfolio-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
 }
 
 function exportPdf() {
@@ -2422,7 +2431,7 @@ async function fetchLivePrices() {
     fetchBtcTicker();
     whenSamsam(S => S.updatePrices(map)); // re-renders every view via applyCloudState
     fetchMissingLogos();
-  } catch(e){setLiveStatus('error');updateLiveIndicator();}
+  } catch(e){setLiveStatus(navigator.onLine?'error':'offline');updateLiveIndicator();}
 }
 
 // Chart points are saved once the cloud portfolio and fresh prices are both available.
@@ -2457,6 +2466,7 @@ function updateLiveIndicator(){
   if(liveStatus==='loading')el.innerHTML=SamsamUI.liveDot('loading')+' Fetching live prices…';
   else if(liveStatus==='ok'){const t=lastFetchTime?lastFetchTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'';el.innerHTML=SamsamUI.liveDot('ok')+` Live · Updated ${t}`;}
   else if(liveStatus==='error')el.innerHTML=SamsamUI.liveDot('error')+' Fetch failed — using saved prices';
+  else if(liveStatus==='offline')el.innerHTML=SamsamUI.liveDot('idle')+' Offline — showing last saved prices';
   else el.innerHTML=SamsamUI.liveDot('idle')+' Prices from last session';
 }
 
@@ -2625,7 +2635,7 @@ function renderAnalysisError(msg, detail) {
       ${detail ? `<div style="margin-top:6px;font-size:0.8rem;opacity:0.85">${detail}</div>` : ''}
       <div style="margin-top:10px;font-size:0.78rem">
         Click <strong>🔄 Regenerate</strong> to try again, or check the
-        <a href="https://github.com/drsamirsaad1981-design/samsam-portfolio#analysis-setup" target="_blank">setup guide</a>.
+        <a href="https://github.com/drsamirsaad1981-design/samsam-portfolio#analysis-setup" target="_blank" rel="noopener noreferrer">setup guide</a>.
       </div>
     </div>`;
 }
@@ -2672,7 +2682,7 @@ async function runAnalysis() {
       <div style="margin-top:16px;background:var(--bg3);border-radius:8px;padding:14px 16px;font-size:0.8rem;line-height:1.9;border:1px solid var(--border)">
         <strong style="color:var(--accent);font-size:0.88rem">⚙️ One-Time Setup (5 minutes)</strong><br>
         <ol style="margin:8px 0 0 16px;padding:0">
-          <li>Go to <a href="https://dash.cloudflare.com" target="_blank" style="color:var(--accent)">dash.cloudflare.com</a> → Workers &amp; Pages → Create</li>
+          <li>Go to <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">dash.cloudflare.com</a> → Workers &amp; Pages → Create</li>
           <li>Paste the Worker code (see <code>worker.js</code> file shared below)</li>
           <li>Deploy → copy the <code>.workers.dev</code> URL</li>
           <li>In Worker Settings → Variables → add <strong>Secret: ANTHROPIC_API_KEY</strong></li>
@@ -2770,7 +2780,19 @@ renderAll();      // empty shell until the cloud portfolio arrives (normally < 1
 initView();       // apply view preference (shows/hides correct container)
 fetchLivePrices();
 // Auto-refresh live prices every 60 seconds
-setInterval(() => { fetchLivePrices(); }, 60000);
+// Live prices: refresh every 60s while the page is visible. Hidden tabs (phone locked, other tab) don't
+// poll — no wasted battery, data or CoinGecko rate limit — and catch up as soon as they are visible / online again.
+let _priceTimer = null, _lastPricePoll = Date.now();
+function _pollPrices() { if (document.hidden || !navigator.onLine) return; _lastPricePoll = Date.now(); fetchLivePrices(); }
+function _startPricePolling() { clearInterval(_priceTimer); _priceTimer = setInterval(_pollPrices, 60000); }
+_startPricePolling();
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { clearInterval(_priceTimer); _priceTimer = null; return; }
+  if (Date.now() - _lastPricePoll > 60000) _pollPrices();
+  _startPricePolling();
+});
+window.addEventListener('online', () => _pollPrices());
+window.addEventListener('offline', () => { if (typeof setLiveStatus === 'function') setLiveStatus('offline'); });
 
 function showSyncStatus(msg, color) {
   const el = document.getElementById('footerSyncStatus');
