@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610211331"></script>
-<script src="samsam-vault.js?v=202610211331"></script>
-<script src="samsam-labels.js?v=202610211331"></script>
-<script src="samsam-taxonomy.js?v=202610211331"></script>
-<script src="samsam-coins.js?v=202610211331"></script>
-<script src="samsam-dropdown.js?v=202610211331"></script>
-<script src="samsam-chart.js?v=202610211331"></script>
+<script src="samsam-ui.js?v=202610212239"></script>
+<script src="samsam-vault.js?v=202610212239"></script>
+<script src="samsam-labels.js?v=202610212239"></script>
+<script src="samsam-taxonomy.js?v=202610212239"></script>
+<script src="samsam-coins.js?v=202610212239"></script>
+<script src="samsam-dropdown.js?v=202610212239"></script>
+<script src="samsam-chart.js?v=202610212239"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1286,8 +1286,8 @@
       <div class="stat-value stat-green" id="totalUsd">—</div>
       <div class="stat-sub" id="totalUsdBtc">—</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Total P&amp;L</div>
+    <div class="stat-card" id="allTimeCard">
+      <div class="stat-label">All-Time Profit<i class="cp-profit-i" aria-hidden="true">i</i></div>
       <div class="stat-value" id="totalPnlCard">—</div>
       <div class="stat-sub" id="totalPnlSub">—</div>
     </div>
@@ -1601,7 +1601,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610211331"></script>
+<script type="module" src="samsam-cloud.js?v=202610212239"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1888,6 +1888,13 @@ function calcStats() {
   return { btcQty, btcValue, altTotal, total: btcValue + altTotal };
 }
 
+// All-Time Profit for the whole portfolio — the header card, the chart legend and the details sheet all read this.
+let htxProfitData = null;   // the coin page's All-Time Profit, read when its card is tapped
+function allTimeProfitData() {
+  return CPProfit.calc({ value: calcStats().total, cost: portfolio.reduce((s, c) => s + c.qty * (c.basePrice || 0), 0),
+    realized: realizedState.total || 0, sellCount: realizedState.sellCount || 0, sellFees: realizedState.sellFees || 0 });
+}
+
 function getPerf(coin) {
   const btcPerfPct = ((btcPrice / 81162) - 1) * 100;
   const coinPerfPct = ((coin.currentPrice / coin.basePrice) - 1) * 100;
@@ -1925,12 +1932,9 @@ function renderHeader() {
   document.getElementById('totalUsd').textContent = fmtUsd(total);
   document.getElementById('totalUsdBtc').textContent = btcPrice > 0 ? '(' + fmtBtc(total) + ')' : '—';
 
-  // Card 2: Total P&L = unrealized (value − cost basis) + realized from sells.
-  // Same definition as "Total P&L" on the Performance page.
-  const cost = portfolio.reduce((s, c) => s + c.qty * c.basePrice, 0);
-  const realized = realizedState.total || 0;
-  const pnl = (total - cost) + realized;
-  const pct = cost > 0 ? pnl / cost * 100 : 0;
+  // Card 2: All-Time Profit = Realized + Unrealized — one definition on every page (CPProfit.calc in samsam-ui.js).
+  const ap = allTimeProfitData();
+  const pnl = ap.total, pct = ap.pct, cost = ap.cost, realized = ap.realized;
   const sign = pnl >= 0 ? '+' : '-';
   const pnlEl = document.getElementById('totalPnlCard');
   pnlEl.textContent = sign + SamsamFmt.usd(Math.abs(pnl));
@@ -1938,8 +1942,8 @@ function renderHeader() {
   const subEl = document.getElementById('totalPnlSub');
   subEl.textContent = '(' + (pct >= 0 ? '+' : '-') + Math.abs(pct).toFixed(2) + '%)';
   subEl.classList.toggle('stat-pos', pnl >= 0); subEl.classList.toggle('stat-neg', pnl < 0);
-  pnlEl.parentElement.title = 'Unrealized ' + fmtUsd(total - cost) +
-    (realizedState.sellCount ? ' + realized ' + fmtUsd(realized) + ' from ' + realizedState.sellCount + ' sell' + (realizedState.sellCount > 1 ? 's' : '') : '');
+  pnlEl.parentElement.title = 'Tap for details — Realized ' + fmtUsd(realized) + ' + Unrealized ' + fmtUsd(ap.unrealized);
+  CPProfit.bind(pnlEl.parentElement, allTimeProfitData, { scope: 'Whole portfolio' });
 
   // Card 3: BTC Accumulated — strip trailing zeros, max 8 decimals
   document.getElementById('totalBtc').textContent = parseFloat(btcQty.toFixed(8)).toString() + ' BTC';
@@ -2340,7 +2344,7 @@ function renderHistory() {
     return `<div class="tx-row tx-${t.type}">
       <div class="tx-details">
         <span class="tx-type-badge">${isBuy?'🟢 BUY':'🔴 SELL'}</span>
-        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>${SamsamFmt.usd((t.total ?? t.qty*t.price) + (isBuy ? (+t.feeUsd || 0) : 0))}</strong>${isBuy && +t.feeUsd ? ` <small>(incl. fee ${SamsamFmt.usd(+t.feeUsd)})</small>` : ''}</div>
+        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>${SamsamFmt.usd((t.total ?? t.qty*t.price) + (isBuy ? 1 : -1) * (+t.feeUsd || 0))}</strong>${+t.feeUsd ? ` <small>(${isBuy ? 'incl.' : 'after'} fee ${SamsamFmt.usd(+t.feeUsd)})</small>` : ''}</div>
         ${pnlStr}
         ${meta}
       </div>
@@ -2603,7 +2607,6 @@ function exportData() {
 function exportPdf() {
   // Fill PDF header with live stats
   const totalEl = document.getElementById('totalUsd');
-  const pnlEl   = document.getElementById('totalPnl') || document.getElementById('realizedPnl');
   const total = totalEl ? totalEl.textContent : '—';
   const now = new Date().toLocaleString('en-US', { dateStyle:'medium', timeStyle:'short' });
   const coinCount = portfolio.length;
@@ -2611,6 +2614,7 @@ function exportPdf() {
   if (meta) {
     meta.innerHTML =
       `Total Value: <strong>${total}</strong><br>` +
+      `All-Time Profit: <strong>${SamsamFmt.usdSigned(allTimeProfitData().total)}</strong> (${allTimeProfitData().pct.toFixed(2)}%)<br>` +
       `Coins: ${coinCount} &nbsp;|&nbsp; BTC: ${SamsamFmt.usd(btcPrice)}<br>` +
       `Generated: ${now}`;
   }
@@ -3264,9 +3268,7 @@ function drawPerfChart() {
   // Update legend labels below chart
   const lastV = pctV[pctV.length - 1];
   const lastB = pctB[pctB.length - 1];
-  const { total } = calcStats ? calcStats() : { total: 0 };
-  const totalCost = portfolio.reduce((a, c) => a + c.qty * (c.basePrice || 0), 0);
-  const pnlUsd  = total - totalCost;
+  const pnlUsd  = allTimeProfitData().total;   // All-Time Profit = Realized + Unrealized
   const pnlSign = pnlUsd >= 0 ? '+' : '-';
   const pctSign = lastV >= 0 ? '+' : '';
   const btcSign = lastB >= 0 ? '+' : '';
@@ -3508,7 +3510,10 @@ function setAddTxType(t) {
   document.getElementById('atxPriceRow').style.display = cfg.price ? '' : 'none';
   document.getElementById('atxPriceLabel').textContent = cfg.price;
   document.getElementById('atxFeeRow').style.display = cfg.fee ? '' : 'none';
-  document.getElementById('atxFeeUsdRow').style.display = t === 'buy' ? '' : 'none';
+  document.getElementById('atxFeeUsdRow').style.display = (t === 'buy' || t === 'sell') ? '' : 'none';
+  document.getElementById('atxFeeUsdLabel').innerHTML = t === 'sell'
+    ? 'Selling fee <small>(USD, optional — subtracted from Realized Profit)</small>'
+    : 'Buying fee <small>(USD, optional — added to Cost Basis)</small>';
   document.getElementById('atxFeeUnit').textContent = `(in ${atxSym}, optional)`;
   document.getElementById('atxHint').textContent = cfg.hint;
   const LB = SAMSAM_LABELS; document.getElementById('atxSave').textContent = 'Add ' + { buy: LB.BUY, sell: LB.SELL, transfer_in: LB.TRANSFER_IN, transfer_out: LB.TRANSFER_OUT }[t];
@@ -3525,7 +3530,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.g
 function readAddTx() {
   const cfg = ATX[atxType], v = id => document.getElementById(id).value.trim();
   const qty = parseFloat(v('atxQty')), price = cfg.price ? parseFloat(v('atxPrice')) : 0, fee = cfg.fee ? (parseFloat(v('atxFee')) || 0) : 0;
-  const feeUsd = atxType === 'buy' ? (parseFloat(v('atxFeeUsd')) || 0) : 0;
+  const feeUsd = (atxType === 'buy' || atxType === 'sell') ? (parseFloat(v('atxFeeUsd')) || 0) : 0;
   // The picker has minute precision: if the chosen time is this minute (the default), use the exact
   // current time so the new entry sorts after anything recorded earlier in the same minute.
   const dateStr = v('atxDate');
@@ -3567,7 +3572,7 @@ function previewAddTx() {
   const q = n => parseFloat(n.toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
   const lines = [];
   if (atxType === 'buy') lines.push(`Total cost: <b>${usd(r.qty * r.price + r.feeUsd)}</b>` + (r.feeUsd > 0 ? ` <small>(${usd(r.qty * r.price)} + fee ${usd(r.feeUsd)})</small>` : ''));
-  if (atxType === 'sell') lines.push(`Proceeds: <b>${usd(r.qty * r.price)}</b>` + (r.after.realized != null ? ` · ${r.after.realized >= 0 ? 'profit' : 'loss'} <b>${usd(Math.abs(r.after.realized))}</b>` : ''));
+  if (atxType === 'sell') lines.push(`Proceeds: <b>${usd(r.qty * r.price - r.feeUsd)}</b>` + (r.feeUsd > 0 ? ` <small>(${usd(r.qty * r.price)} − fee ${usd(r.feeUsd)})</small>` : '') + (r.after.realized != null ? ` · ${r.after.realized >= 0 ? 'profit' : 'loss'} <b>${usd(Math.abs(r.after.realized))}</b>` : ''));
   if (atxType === 'transfer_in') lines.push(`Received after fee: <b>${q(r.qty - r.fee)} ${atxSym}</b> · cost added <b>${usd(r.qty * r.price)}</b>`);
   if (atxType === 'transfer_out') lines.push(`Leaves portfolio incl. fee: <b>${q(r.qty + r.fee)} ${atxSym}</b>`);
   lines.push(`Holdings after: <b>${q(r.after.qty)} ${atxSym}</b> · ${SAMSAM_LABELS.AVG_BUY_PRICE} <b>${SamsamFmt.price(r.after.avg)}</b>`);
@@ -3696,9 +3701,13 @@ function renderCoinTx() {
   const value = qty * price, cost = qty * avg;
   const perTx = realizedState.perTx || {};
   const coinTxs = transactions.filter(t => t.sym === sym);
-  const realized = coinTxs.filter(t => t.type === 'sell').reduce((s, t) => s + ((perTx[t.id] && perTx[t.id].realized) || 0), 0);
-  const profit = (value - cost) + realized;
-  const profitPct = cost > 0 ? profit / cost * 100 : 0;
+  const coinSells = coinTxs.filter(t => t.type === 'sell');
+  // All-Time Profit for this coin — same CPProfit.calc as the header card and the Performance page
+  const ap = CPProfit.calc({ value, cost,
+    realized: coinSells.reduce((s, t) => s + ((perTx[t.id] && perTx[t.id].realized) || 0), 0),
+    sellCount: coinSells.length, sellFees: coinSells.reduce((s, t) => s + (+t.feeUsd || 0), 0) });
+  htxProfitData = ap;
+  const realized = ap.realized, profit = ap.total, profitPct = ap.pct;
   const ch = coin && coin.change24h != null ? coin.change24h : null;
   const arrow = n => n >= 0 ? '▲ +' : '▼ -';   // arrow plus explicit sign: ▲ +2.45% / ▼ -1.30%
   document.getElementById('htxHoldings').textContent = usd(value);
@@ -3706,6 +3715,7 @@ function renderCoinTx() {
   h24.textContent = ch == null ? '—' : arrow(ch) + Math.abs(ch).toFixed(2) + '% (24h)';
   h24.className = 'htx-sub ' + (ch == null ? 'htx-muted' : ch >= 0 ? 'htx-pos' : 'htx-neg');
   const pEl = document.getElementById('htxProfit');
+  CPProfit.bind(pEl.parentElement, () => htxProfitData, () => ({ scope: coinTxSym }));
   pEl.textContent = (profit >= 0 ? '+' : '-') + usd(Math.abs(profit));
   pEl.className = 'htx-value ' + (profit >= 0 ? 'htx-pos' : 'htx-neg');
   const ppEl = document.getElementById('htxProfitPct');
@@ -3726,8 +3736,8 @@ function renderCoinTx() {
   coinTxs.forEach(t => {
     if (t.type === 'buy' || t.type === 'sell') {
       const r = perTx[t.id];
-      const feeU = t.type === 'buy' ? (+t.feeUsd || 0) : 0;
-      entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty, usd: (t.total ?? t.qty * t.price) + feeU,
+      const feeU = +t.feeUsd || 0;   // buy: added to the cost · sell: taken off the proceeds
+      entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty, usd: (t.total ?? t.qty * t.price) + (t.type === 'buy' ? feeU : -feeU),
         note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (t.type === 'sell' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' || t.type === 'transfer_out') {
@@ -4253,7 +4263,7 @@ function renderHoldingsAssetList() {
     </div>
     <div class="htx-cards">
       <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub" id="htxHoldings24">—</div></div>
-      <div class="htx-card"><div class="htx-label">All-Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
+      <div class="htx-card"><div class="htx-label">All-Time Profit<i class="cp-profit-i" aria-hidden="true">i</i></div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
       <div class="htx-card"><div class="htx-label" data-label="AVG_BUY_PRICE">Avg. Buy Price</div><div class="htx-value" id="htxAvg">—</div></div>
       <div class="htx-card"><div class="htx-label"><span data-label="COST_BASIS">Cost Basis</span> <button type="button" class="info-tip" aria-label="How Cost Basis is calculated"><span aria-hidden="true">ⓘ</span><span class="info-pop" role="tooltip"><b>Cost Basis</b><span>We use the <em>Average Cost Basis (ACB)</em> method for calculation:</span><span class="info-formula"><em>Cost Basis</em> = Sum(Buy Price × Buy Amount) + Sum(Buying Fees)</span><small>Sells and transfers out reduce it in proportion, at the average buy price.</small></span></button></div><div class="htx-value" id="htxCost">—</div></div>
     </div>
@@ -4295,7 +4305,7 @@ function renderHoldingsAssetList() {
         <input type="number" inputmode="decimal" step="any" min="0" id="atxQty" placeholder="0.00" oninput="previewAddTx()"></label>
       <label class="atx-field" id="atxPriceRow"><span id="atxPriceLabel">Price per coin (USD)</span>
         <input type="number" inputmode="decimal" step="any" min="0" id="atxPrice" placeholder="0.00" oninput="previewAddTx()"></label>
-      <label class="atx-field" id="atxFeeUsdRow"><span>Buying fee <small>(USD, optional — added to Cost Basis)</small></span>
+      <label class="atx-field" id="atxFeeUsdRow"><span id="atxFeeUsdLabel">Buying fee <small>(USD, optional — added to Cost Basis)</small></span>
         <input type="number" inputmode="decimal" step="any" min="0" id="atxFeeUsd" placeholder="0.00" oninput="previewAddTx()"></label>
       <label class="atx-field" id="atxFeeRow"><span>Transfer fee <small id="atxFeeUnit">(in coin, optional)</small></span>
         <input type="number" inputmode="decimal" step="any" min="0" id="atxFee" placeholder="0" oninput="previewAddTx()"></label>

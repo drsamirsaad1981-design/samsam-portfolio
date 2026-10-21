@@ -8,7 +8,7 @@
 //
 //   tx.type:
 //     'buy'    qty, price         → avg = (qty*avg + q*p) / (qty+q)
-//     'sell'   qty, price         → qty -= q, avg unchanged, realised P&L = (p-avg)*q
+//     'sell'   qty, price, feeUsd? → qty -= q, avg unchanged, realised P&L = (p-avg)*q − feeUsd
 //     'adjust' setQty?, setAvg?   → manual correction (inline edits, re-adding a coin)
 //     'transfer_in'  qty, price, fee → coins arrive from outside: qty += q − fee,
 //                                      cost += q × price (fee raises the average), no P&L
@@ -29,7 +29,7 @@ export function compareTx(a, b) {
 
 // Apply one transaction to a position. Returns {qty, avg, realized, sellQty}.
 export function applyTx(pos, t) {
-  let qty = pos.qty, avg = pos.avg, realized = 0, sellQty = 0;
+  let qty = pos.qty, avg = pos.avg, realized = 0, sellQty = 0, sellFee = 0;
   const q = num(t.qty), p = num(t.price);
   if (t.type === 'buy') {
     if (q > 0) {
@@ -39,8 +39,10 @@ export function applyTx(pos, t) {
       qty = nq;
     }
   } else if (t.type === 'sell') {
+    // Realized = (Sell Price − Avg Buy Price) × Amount Sold − Selling Fee (USD)
     sellQty = Math.min(q, Math.max(qty, 0));
-    realized = (p - avg) * sellQty;
+    sellFee = Math.max(0, num(t.feeUsd));
+    realized = (p - avg) * sellQty - sellFee;
     qty = Math.max(0, qty - q);
     if (qty < EPS) qty = 0;
   } else if (t.type === 'transfer_in') {
@@ -58,23 +60,23 @@ export function applyTx(pos, t) {
     if (t.setQty !== undefined && t.setQty !== null) qty = Math.max(0, num(t.setQty, qty));
     if (t.setAvg !== undefined && t.setAvg !== null) avg = Math.max(0, num(t.setAvg, avg));
   }
-  return { qty, avg, realized, sellQty };
+  return { qty, avg, realized, sellQty, sellFee };
 }
 
 // Replay a coin's ledger from its opening position.
 export function replay(opening, txs) {
   let pos = { qty: Math.max(0, num(opening && opening.qty)), avg: Math.max(0, num(opening && opening.avg)) };
-  let realized = 0, sellCount = 0;
+  let realized = 0, sellCount = 0, sellFees = 0;
   const perTx = {}; // id → { realized, avgBefore, qtyAfter }
   const sorted = [...(txs || [])].sort(compareTx);
   for (const t of sorted) {
     const avgBefore = pos.avg;
     const r = applyTx(pos, t);
     pos = { qty: r.qty, avg: r.avg };
-    if (t.type === 'sell') { realized += r.realized; sellCount++; }
+    if (t.type === 'sell') { realized += r.realized; sellCount++; sellFees += r.sellFee; }
     perTx[t.id] = { realized: t.type === 'sell' ? r.realized : null, avgBefore, qtyAfter: pos.qty };
   }
-  return { qty: pos.qty, avg: pos.avg, realized, sellCount, perTx };
+  return { qty: pos.qty, avg: pos.avg, realized, sellCount, sellFees, perTx };
 }
 
 export function groupTxBySym(txs) {
@@ -123,14 +125,15 @@ export function derivePortfolio(coins, txs, prices = {}, fallbackPrices = {}) {
 export function realizedPnl(coins, txs) {
   const bySym = groupTxBySym(txs);
   const openBySym = new Map((coins || []).map(c => [c.sym, c.opening]));
-  let total = 0, sellCount = 0;
-  const perTx = {};
+  let total = 0, sellCount = 0, sellFees = 0;
+  const perTx = {}, bySymTotal = {};
   for (const [sym, list] of bySym) {
     const r = replay(openBySym.get(sym) || { qty: 0, avg: 0 }, list);
-    total += r.realized; sellCount += r.sellCount;
+    total += r.realized; sellCount += r.sellCount; sellFees += r.sellFees;
+    bySymTotal[sym] = { realized: r.realized, sellCount: r.sellCount, sellFees: r.sellFees };
     Object.assign(perTx, r.perTx);
   }
-  return { total, sellCount, perTx };
+  return { total, sellCount, sellFees, perTx, bySym: bySymTotal };
 }
 
 // ── Migration helper ────────────────────────────────────────────────────────

@@ -246,6 +246,110 @@
     if (!sheet) window.addEventListener('scroll', onScroll, true);
     setTimeout(function () { if (focusables[0]) focusables[0].focus(); }, 0);
   }
+
+  // ── All-Time Profit — ONE definition for every page ──────────────────────────
+  //    CPProfit.calc({ value, cost, realized, sellCount, sellFees }) → the numbers every card shows
+  //    CPProfit.open(data, { title, scope }) → details sheet (phone: bottom sheet · desktop: centered panel)
+  //    The formulas in "How is it calculated?" are the ones samsam-core.js applies to the ledger.
+  function profitCalc(o) {
+    o = o || {};
+    var value = +o.value || 0, cost = +o.cost || 0, realized = +o.realized || 0;
+    var unrealized = value - cost, total = realized + unrealized;
+    return { value: value, cost: cost, realized: realized, unrealized: unrealized, total: total,
+      pct: cost > 0 ? total / cost * 100 : 0, sellCount: +o.sellCount || 0, sellFees: +o.sellFees || 0 };
+  }
+  var profCss = false, profOpen = null;
+  function profClose() {
+    if (!profOpen) return; var p = profOpen; profOpen = null;
+    document.removeEventListener('keydown', p.key, true); p.el.remove();
+    try { p.back && p.back.focus && p.back.focus(); } catch (_) {}
+  }
+  function profOpenFn(d, o) {
+    o = o || {}; d = d && 'total' in d ? d : profitCalc(d);
+    profClose();
+    if (!profCss) {
+      profCss = true;
+      var st = document.createElement('style');
+      st.textContent = '#cpProfit{position:fixed;inset:0;z-index:100145;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.62);animation:cpFade .15s ease}' +
+        '#cpProfit .cpp{width:min(440px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#334155);border-radius:18px;padding:18px 18px 16px;box-shadow:0 22px 50px rgba(0,0,0,.45);font-family:inherit;box-sizing:border-box;animation:cpPop .18s ease}' +
+        '#cpProfit.sheet{align-items:flex-end;padding:0}#cpProfit.sheet .cpp{width:100%;max-height:88vh;border-radius:20px 20px 0 0;padding:10px 16px calc(16px + env(safe-area-inset-bottom,0px));animation:cpSheet .2s ease}' +
+        '#cpProfit.sheet .cpp::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:#475569;margin:0 auto 10px}' +
+        '.cpp-head{display:flex;align-items:center;gap:10px}.cpp-head img{width:26px;height:26px}.cpp-head h3{margin:0;font-size:1rem;font-weight:700;flex:1}' +
+        '.cpp-scope{font-size:.75rem;color:var(--fg2,#94a3b8);font-weight:600}' +
+        '.cpp-x{width:34px;height:34px;border-radius:10px;border:1px solid var(--border,#334155);background:none;color:inherit;font-size:1.1rem;line-height:1;cursor:pointer}' +
+        '.cpp-hero{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 14px}.cpp-big{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}' +
+        '.cpp-badge{font-size:.85rem;font-weight:700;padding:4px 10px;border-radius:999px}' +
+        '.cpp-pos{color:#22c55e}.cpp-neg{color:#ef4444}.cpp-badge.cpp-pos{background:rgba(34,197,94,.14)}.cpp-badge.cpp-neg{background:rgba(239,68,68,.14)}' +
+        '.cpp-rows{display:grid;gap:8px}.cpp-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:12px;background:var(--bg3,rgba(148,163,184,.08))}' +
+        '.cpp-row b{display:block;font-size:.9rem}.cpp-row small{display:block;font-size:.74rem;color:#94a3b8;margin-top:2px}.cpp-row .v{font-weight:700;font-size:1rem;white-space:nowrap;font-variant-numeric:tabular-nums}' +
+        '.cpp-sum{margin:10px 2px 0;font-size:.78rem;color:#94a3b8;text-align:center;font-variant-numeric:tabular-nums}' +
+        '.cpp-how{margin-top:14px;border:1px solid var(--border,#334155);border-radius:12px;padding:0 14px}.cpp-how summary{cursor:pointer;padding:12px 0;font-weight:700;font-size:.9rem;list-style:none}' +
+        '.cpp-how summary::-webkit-details-marker{display:none}.cpp-how summary::after{content:"▾";float:right;color:#94a3b8;transition:transform .15s}.cpp-how[open] summary::after{transform:rotate(180deg)}' +
+        '.cpp-f{margin:0 0 10px;font-size:.8rem;line-height:1.5}.cpp-f code{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.76rem;background:var(--bg3,rgba(148,163,184,.1));border-radius:8px;padding:7px 9px;margin-top:3px;white-space:normal;color:var(--fg,#e5e7eb)}' +
+        '.cpp-f span{color:#94a3b8}.cpp-note{font-size:.74rem;color:#94a3b8;margin:4px 0 12px;line-height:1.45}' +
+        '@keyframes cpSheet{from{transform:translateY(100%)}}@keyframes cpFade{from{opacity:0}}@keyframes cpPop{from{transform:scale(.96);opacity:0}}' +
+        '@media (prefers-reduced-motion:reduce){#cpProfit,#cpProfit .cpp{animation:none}}';
+      document.head.appendChild(st);
+    }
+    var F = window.SamsamFmt, sg = function (n) { return F.usdSigned(n); }, cls = function (n) { return n >= 0 ? 'cpp-pos' : 'cpp-neg'; };
+    var esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    var sheet = window.matchMedia('(max-width: 600px)').matches;
+    var w = document.createElement('div'); w.id = 'cpProfit'; if (sheet) w.className = 'sheet';
+    var sells = d.sellCount ? d.sellCount + ' sell' + (d.sellCount > 1 ? 's' : '') : 'No sells yet';
+    var realSub = sells + (d.sellFees > 0 ? ' · after ' + F.usd(d.sellFees) + ' selling fees' : '');
+    w.innerHTML = '<div class="cpp" role="dialog" aria-modal="true" aria-labelledby="cppT">' +
+      '<div class="cpp-head"><img src="./logo-mark.svg?v=1" alt=""><h3 id="cppT">' + esc(o.title || 'All-Time Profit') + (o.scope ? ' <span class="cpp-scope">· ' + esc(o.scope) + '</span>' : '') + '</h3>' +
+      '<button type="button" class="cpp-x" aria-label="Close">×</button></div>' +
+      '<div class="cpp-hero"><span class="cpp-big ' + cls(d.total) + '" id="cppTotal">' + sg(d.total) + '</span>' +
+      '<span class="cpp-badge ' + cls(d.total) + '" id="cppPct">' + (d.total >= 0 ? '▲ ' : '▼ ') + Math.abs(d.pct).toFixed(2) + '%</span></div>' +
+      '<div class="cpp-rows">' +
+      '<div class="cpp-row"><div><b>Realized Profit</b><small>' + esc(realSub) + '</small></div><span class="v ' + cls(d.realized) + '" id="cppRealized">' + (d.sellCount ? sg(d.realized) : '$0.00') + '</span></div>' +
+      '<div class="cpp-row"><div><b>Unrealized Profit</b><small>Coins you still hold, at today’s price</small></div><span class="v ' + cls(d.unrealized) + '" id="cppUnrealized">' + sg(d.unrealized) + '</span></div>' +
+      '<div class="cpp-row"><div><b>Cost Basis</b><small>What the coins you hold cost (fees included)</small></div><span class="v" id="cppCost">' + F.usd(d.cost) + '</span></div>' +
+      '</div>' +
+      '<div class="cpp-sum" id="cppCheck">' + sg(d.realized) + ' realized ' + (d.unrealized >= 0 ? '+' : '−') + ' ' + F.usd(Math.abs(d.unrealized)) + ' unrealized = ' + sg(d.total) + '</div>' +
+      '<details class="cpp-how"' + (o.howOpen ? ' open' : '') + '><summary>How is it calculated?</summary>' +
+      '<p class="cpp-f"><b>All-Time Profit</b><code>Realized Profit + Unrealized Profit</code></p>' +
+      '<p class="cpp-f"><b>Realized Profit</b> <span>(added up over every sell)</span><code>(Sell Price − Avg Buy Price) × Amount Sold − Selling Fee</code></p>' +
+      '<p class="cpp-f"><b>Unrealized Profit</b><code>(Current Price − Avg Buy Price) × Amount Held</code></p>' +
+      '<p class="cpp-f"><b>Cost Basis</b><code>Avg Buy Price × Amount Held</code></p>' +
+      '<p class="cpp-f"><b>Avg Buy Price</b> <span>(updated on every buy)</span><code>(Amount Held × Avg Buy Price + Buy Price × Amount Bought + Buying Fee) ÷ (Amount Held + Amount Bought)</code></p>' +
+      '<p class="cpp-f"><b>%</b><code>All-Time Profit ÷ Cost Basis × 100</code></p>' +
+      '<p class="cpp-note">Sells don’t change the Avg Buy Price. Transfers in add coins at the price you enter; transfers out and network fees only lower the amount held.</p>' +
+      '</details></div>';
+    var back = document.activeElement;
+    var key = function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); profClose(); }
+      else if (e.key === 'Tab') {
+        var f = Array.prototype.slice.call(w.querySelectorAll('button,summary')), i = f.indexOf(document.activeElement);
+        e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1) + f.length) % f.length].focus();
+      }
+    };
+    profOpen = { el: w, key: key, back: back };
+    w.addEventListener('click', function (e) { if (e.target === w) profClose(); });
+    w.querySelector('.cpp-x').onclick = profClose;
+    document.addEventListener('keydown', key, true);
+    document.body.appendChild(w);
+    setTimeout(function () { var x = w.querySelector('.cpp-x'); if (x) x.focus(); }, 0);
+    return w;
+  }
+  // Make any card open the sheet on click / Enter / Space. getData() is read at the moment of the tap.
+  function profBind(el, getData, opts) {
+    if (!el || el.dataset.cpProfit) return; el.dataset.cpProfit = '1';
+    el.setAttribute('role', 'button'); el.tabIndex = 0; el.classList.add('cp-profit-tap');
+    if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', 'All-Time Profit — show details');
+    var go = function () { var o = typeof opts === 'function' ? opts() : (opts || {}); profOpenFn(getData(), o); };
+    el.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a,button:not(.cp-profit-tap)')) return; go(); });
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  }
+  if (!document.getElementById('cpProfitTapCss')) {
+    var tc = document.createElement('style'); tc.id = 'cpProfitTapCss';
+    tc.textContent = '.cp-profit-tap{cursor:pointer;position:relative;transition:border-color .15s,transform .1s}.cp-profit-tap:hover{border-color:rgba(124,58,237,.55)!important}' +
+      '.cp-profit-tap:active{transform:scale(.985)}.cp-profit-tap:focus-visible{outline:3px solid #a78bfa;outline-offset:2px}' +
+      '.cp-profit-i{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:5px;border-radius:50%;border:1px solid currentColor;font-size:.6rem;font-weight:800;font-style:normal;opacity:.65;vertical-align:1px;text-transform:none}';
+    (document.head || document.documentElement).appendChild(tc);
+  }
+  window.CPProfit = { calc: profitCalc, open: profOpenFn, bind: profBind, close: profClose };
   window.CPMenu = { open: openMenu, close: function () { closeMenu(false); } };
   window.CPDialog = {
     alert: function (m, o) { return dialog('alert', m, o); },

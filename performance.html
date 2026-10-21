@@ -5,12 +5,12 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610211331"></script>
-<script src="samsam-vault.js?v=202610211331"></script>
-<script src="samsam-labels.js?v=202610211331"></script>
-<script src="samsam-taxonomy.js?v=202610211331"></script>
-<script src="samsam-coins.js?v=202610211331"></script>
-<script src="samsam-chart.js?v=202610211331"></script>
+<script src="samsam-ui.js?v=202610212239"></script>
+<script src="samsam-vault.js?v=202610212239"></script>
+<script src="samsam-labels.js?v=202610212239"></script>
+<script src="samsam-taxonomy.js?v=202610212239"></script>
+<script src="samsam-coins.js?v=202610212239"></script>
+<script src="samsam-chart.js?v=202610212239"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -572,9 +572,9 @@ body {
 
 <div class="summary">
   <div class="summary-cards">
-    <div class="sum-card">
+    <div class="sum-card" id="allTimeCard">
       <span class="sum-card-icon">📈</span>
-      <div class="sum-label">All-Time P&amp;L</div>
+      <div class="sum-label">All-Time Profit<i class="cp-profit-i" aria-hidden="true">i</i></div>
       <div class="sum-value" id="totalPnl">—</div>
       <div id="totalPct" class="sum-pct-badge neg">—</div>
       <svg class="sum-sparkline" viewBox="0 0 100 40" preserveAspectRatio="none">
@@ -633,7 +633,7 @@ body {
           <div class="pnl-bd-stat-pct" id="bdRealizedNote" style="font-size:0.65rem;color:var(--fg2);background:none;padding:0">from sells</div>
         </div>
         <div class="pnl-bd-stat">
-          <div class="pnl-bd-stat-label">Total P&amp;L</div>
+          <div class="pnl-bd-stat-label">All-Time Profit</div>
           <div class="pnl-bd-stat-val" id="bdTotal">—</div>
           <div class="pnl-bd-stat-pct" id="bdTotalPct">—</div>
         </div>
@@ -658,7 +658,7 @@ body {
   <div class="col-header-inner">
     <span>Asset</span>
     <span class="ch-price" id="col-price" onclick="setSort('price')">Price<span class="ch-sort-arrow" id="arrow-price"></span></span>
-    <span class="ch-pnl"   id="col-pnl"   onclick="setSort('pnl')"  >All-Time P&amp;L<span class="ch-sort-arrow" id="arrow-pnl"></span></span>
+    <span class="ch-pnl"   id="col-pnl"   onclick="setSort('pnl')"  >All-Time Profit<span class="ch-sort-arrow" id="arrow-pnl"></span></span>
   </div>
 </div>
 
@@ -668,7 +668,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610211331"></script>
+<script type="module" src="samsam-cloud.js?v=202610212239"></script>
 <script>
 // ── Constants ──
 
@@ -867,9 +867,10 @@ const CAT_LABELS = SamsamTaxonomy.labels;
 // ── Realized P&L — same ledger calculation as the main page (samsam-core.js) ──
 function calcRealizedPnl() {
   const st = window.Samsam && Samsam.isReady() ? Samsam.getState() : null;
-  if (!st) return { total: 0, count: 0 };
-  return { total: st.realized.total, count: st.realized.sellCount };
+  if (!st) return { total: 0, count: 0, sellFees: 0, bySym: {} };
+  return { total: st.realized.total, count: st.realized.sellCount, sellFees: st.realized.sellFees || 0, bySym: st.realized.bySym || {} };
 }
+let allTimeData = null;   // the All-Time Profit card's numbers, read when the card is tapped
 
 // ── Sort ──
 function setSort(mode) {
@@ -922,12 +923,13 @@ function renderPerfMovers(rows, totalValue) {
   const pnlRows = rows.filter(r => r.cost > 0).map(r => ({ sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: r.pct, pnl: r.pnl }));
   const m1 = C.pickMovers(pnlRows, totalValue);
   const half1 = (label, r) => r ? { label, row: r, pct: r.score, text: money(r.pnl), text2: `• ${C.signedPct(r.score)}`, onClickJs: open(r.sym) } : { label };
-  const head1 = { title: '🏆 Since purchase', badge: 'All-time P&L' };
+  const head1 = { title: '🏆 Since purchase', badge: 'All-Time Profit' };
   document.getElementById('moversPnl').innerHTML = m1 ? C.moversCard({ head: head1, best: half1('Best Performer', m1.best), worst: half1('Worst Performer', m1.worst) })
     : C.moversCard({ head: head1, empty: 'Appears once prices load.' });
   const btc = (portfolio.find(c => c.sym === 'BTC') || {}).currentPrice || (livePrices.BTC && livePrices.BTC.price) || 0;
   const btcPct = btc > 0 ? (btc / BTC_BASE_PRICE - 1) * 100 : null;
-  const vsRows = btcPct == null ? [] : rows.filter(r => r.cost > 0 && r.c.sym !== 'BTC').map(r => ({ sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: r.pct - btcPct, own: r.pct }));
+  const vsRows = btcPct == null ? [] : rows.filter(r => r.cost > 0 && r.c.sym !== 'BTC').map(r => { const own = r.ap.unrealized / r.cost * 100;   // price move vs your avg buy price (sells left out)
+    return { sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: own - btcPct, own }; });
   const m2 = C.pickMovers(vsRows, totalValue);
   const half2 = (label, r) => r ? { label, row: r, pct: r.score, text: C.signedPct(r.score, 1), text2: 'vs BTC', split: [['Coin', C.signedPct(r.own, 1)], ['BTC', C.signedPct(btcPct, 1)]], onClickJs: open(r.sym) } : { label };
   const head2 = { title: 'VS Bitcoin', badge: 'Since Oct 15', logo: './logo-mark.svg?v=1' };
@@ -942,16 +944,19 @@ function render() {
     return;
   }
 
-  // Build computed rows
+  // Build computed rows — per coin All-Time Profit = its realized (sells) + unrealized (value − cost)
+  const realized = calcRealizedPnl();
   const rows = portfolio.map(c => {
     const currentPrice = livePrices[c.sym]?.price || c.currentPrice || FALLBACK_PRICES[c.sym] || 0;
     const change24h    = livePrices[c.sym]?.change24h ?? null;
     const qty          = c.qty || 0;
     const cost         = (parseFloat(c.basePrice) || 0) * qty;
     const value        = currentPrice * qty;
-    const pnl          = value - cost;
-    const pct          = cost > 0 ? (pnl / cost * 100) : 0;
-    return { c, currentPrice, change24h, cost, value, pnl, pct };
+    const rs           = realized.bySym[c.sym] || {};
+    const ap           = CPProfit.calc({ value, cost, realized: rs.realized, sellCount: rs.sellCount, sellFees: rs.sellFees });
+    const pnl          = ap.total;
+    const pct          = ap.pct;
+    return { c, currentPrice, change24h, cost, value, pnl, pct, ap };
   });
 
   // Sort — direction controlled by sortDir (-1=desc, +1=asc)
@@ -966,8 +971,13 @@ function render() {
   // Totals
   const totalValue = rows.reduce((s, r) => s + r.value, 0);
   const totalCost  = rows.reduce((s, r) => s + r.cost,  0);
-  const totalPnl   = totalValue - totalCost;
-  const totalPct   = totalCost > 0 ? (totalPnl / totalCost * 100) : 0;
+  // All-Time Profit = Realized + Unrealized — same CPProfit.calc as the main page
+  allTimeData = CPProfit.calc({ value: totalValue, cost: totalCost, realized: realized.total, sellCount: realized.count, sellFees: realized.sellFees });
+  const totalPnl   = allTimeData.total;
+  const totalPct   = allTimeData.pct;
+  const unrealized = allTimeData.unrealized;
+  CPProfit.bind(document.getElementById('allTimeCard'), () => allTimeData, { scope: 'Whole portfolio' });
+  CPProfit.bind(document.getElementById('bdTotal').parentElement, () => allTimeData, { scope: 'Whole portfolio' });
 
   const pnlEl = document.getElementById('totalPnl');
   pnlEl.textContent = fmtUSD(totalPnl);
@@ -983,19 +993,18 @@ function render() {
   renderPerfMovers(rows, totalValue);
 
   // ── P/L Breakdown card ──
-  const realized = calcRealizedPnl();
-  const unrealizedPct = totalCost > 0 ? (totalPnl / totalCost * 100) : 0;
-  const totalCombined = totalPnl + realized.total;
-  const totalCombinedPct = totalCost > 0 ? (totalCombined / totalCost * 100) : 0;
+  const unrealizedPct = totalCost > 0 ? (unrealized / totalCost * 100) : 0;
+  const totalCombined = totalPnl;
+  const totalCombinedPct = totalPct;
 
   const bdUnrealized = document.getElementById('bdUnrealized');
-  bdUnrealized.textContent = fmtUSD(totalPnl);
-  bdUnrealized.className = 'pnl-bd-stat-val ' + (totalPnl >= 0 ? 'pos' : 'neg');
+  bdUnrealized.textContent = fmtUSD(unrealized);
+  bdUnrealized.className = 'pnl-bd-stat-val ' + (unrealized >= 0 ? 'pos' : 'neg');
 
   const bdUPct = document.getElementById('bdUnrealizedPct');
   bdUPct.textContent = fmtPct(unrealizedPct);
-  bdUPct.className = 'pnl-bd-stat-pct ' + (totalPnl >= 0 ? 'pos' : 'neg');
-  bdUPct.style.background = totalPnl >= 0 ? 'var(--green-bg)' : 'var(--red-bg)';
+  bdUPct.className = 'pnl-bd-stat-pct ' + (unrealized >= 0 ? 'pos' : 'neg');
+  bdUPct.style.background = unrealized >= 0 ? 'var(--green-bg)' : 'var(--red-bg)';
 
   const bdRealized = document.getElementById('bdRealized');
   bdRealized.textContent = realized.count > 0 ? fmtUSD(realized.total) : '—';
