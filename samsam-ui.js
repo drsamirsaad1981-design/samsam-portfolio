@@ -251,6 +251,10 @@
   //    CPProfit.calc({ value, cost, realized, sellCount, sellFees }) → the numbers every card shows
   //    CPProfit.open(data, { title, scope }) → details sheet (phone: bottom sheet · desktop: centered panel)
   //    The formulas in "How is it calculated?" are the ones samsam-core.js applies to the ledger.
+  // The round "open" button (›) used on every tappable card. small = 26px for compact cards.
+  function goHtml(small) {
+    return '<span class="card-go' + (small ? ' sm' : '') + '" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>';
+  }
   function profitCalc(o) {
     o = o || {};
     var value = +o.value || 0, cost = +o.cost || 0, realized = +o.realized || 0;
@@ -336,7 +340,8 @@
   // Make any card open the sheet on click / Enter / Space. getData() is read at the moment of the tap.
   function profBind(el, getData, opts) {
     if (!el || el.dataset.cpProfit) return; el.dataset.cpProfit = '1';
-    el.setAttribute('role', 'button'); el.tabIndex = 0; el.classList.add('cp-profit-tap');
+    el.setAttribute('role', 'button'); el.tabIndex = 0; el.classList.add('cp-profit-tap', 'card-tap');
+    if (!el.querySelector(':scope > .card-go')) el.insertAdjacentHTML('beforeend', goHtml(true));
     if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', 'All-Time Profit — show details');
     var go = function () { var o = typeof opts === 'function' ? opts() : (opts || {}); profOpenFn(getData(), o); };
     el.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a,button:not(.cp-profit-tap)')) return; go(); });
@@ -344,9 +349,22 @@
   }
   if (!document.getElementById('cpProfitTapCss')) {
     var tc = document.createElement('style'); tc.id = 'cpProfitTapCss';
-    tc.textContent = '.cp-profit-tap{cursor:pointer;position:relative;transition:border-color .15s,transform .1s}.cp-profit-tap:hover{border-color:rgba(124,58,237,.55)!important}' +
-      '.cp-profit-tap:active{transform:scale(.985)}.cp-profit-tap:focus-visible{outline:3px solid #a78bfa;outline-offset:2px}' +
-      '.cp-profit-i{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;margin-left:5px;border-radius:50%;border:1px solid currentColor;font-size:.6rem;font-weight:800;font-style:normal;opacity:.65;vertical-align:1px;text-transform:none}';
+    tc.textContent =
+      // ── one "open" button for every tappable card: same circle, same corner, on every page ──
+      '.card-tap{position:relative;cursor:pointer;transition:border-color .2s,background .2s,transform .12s;-webkit-tap-highlight-color:transparent}' +
+      '.card-go{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-sizing:border-box;' +
+        'background:rgba(124,58,237,.14);color:#a78bfa;border:1px solid rgba(124,58,237,.28);transition:background .18s,color .18s,border-color .18s;pointer-events:none;z-index:1}' +
+      '.card-go.sm{top:10px;right:10px;width:26px;height:26px}.card-go.sm svg{width:13px;height:13px}.card-go svg{transition:transform .18s}' +
+      '.card-tap:focus-visible .card-go,.card-tap:active .card-go{background:#7c3aed;border-color:#7c3aed;color:#fff}' +
+      '@media (hover:hover){.card-tap:hover .card-go{background:#7c3aed;border-color:#7c3aed;color:#fff}.card-tap:hover .card-go svg{transform:translateX(2px)}.cp-profit-tap:hover{border-color:rgba(124,58,237,.55)!important}}' +
+      '.card-tap:active{transform:scale(.985)}.card-tap:focus-visible{outline:3px solid #a78bfa;outline-offset:2px}' +
+      '[data-theme="light"] .card-go{background:rgba(124,58,237,.10);color:#6d28d9}' +
+      '.cp-profit-tap .sum-label,.cp-profit-tap .htx-label{padding-right:30px}.cp-profit-tap .sum-card-icon{display:none}' +
+      // compact centred cards (header stats, P/L breakdown): smaller button level with the label, label kept centred
+      '.stat-card.cp-profit-tap .card-go,.pnl-bd-stat.cp-profit-tap .card-go{top:7px;right:7px;width:22px;height:22px}.stat-card.cp-profit-tap .card-go svg,.pnl-bd-stat.cp-profit-tap .card-go svg{width:12px;height:12px}' +
+      '.cp-profit-tap .stat-label,.cp-profit-tap .pnl-bd-stat-label{padding-left:24px;padding-right:24px}' +
+      '@media (prefers-reduced-motion:reduce){.card-tap:active{transform:none}.card-tap:hover .card-go svg{transform:none}}' +
+      '@media print{.card-go,.mv-go,.ext-go{display:none!important}}';
     (document.head || document.documentElement).appendChild(tc);
   }
   window.CPProfit = { calc: profitCalc, open: profOpenFn, bind: profBind, close: profClose };
@@ -356,6 +374,6 @@
     confirm: function (m, o) { return dialog('confirm', m, o); },
     prompt: function (m, o) { return dialog('prompt', m, o); },
   };
-  window.SamsamUI = { icons: ICONS, icon: function (n) { return ICONS[n] || ''; }, liveDot: liveDot,
+  window.SamsamUI = { goHtml: goHtml, icons: ICONS, icon: function (n) { return ICONS[n] || ''; }, liveDot: liveDot,
     toggleTheme: toggleTheme, applyTheme: applyTheme, currentTheme: current, refresh: init };
 })();

@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610212255"></script>
-<script src="samsam-vault.js?v=202610212255"></script>
-<script src="samsam-labels.js?v=202610212255"></script>
-<script src="samsam-taxonomy.js?v=202610212255"></script>
-<script src="samsam-coins.js?v=202610212255"></script>
-<script src="samsam-dropdown.js?v=202610212255"></script>
-<script src="samsam-chart.js?v=202610212255"></script>
+<script src="samsam-ui.js?v=202610212307"></script>
+<script src="samsam-vault.js?v=202610212307"></script>
+<script src="samsam-labels.js?v=202610212307"></script>
+<script src="samsam-taxonomy.js?v=202610212307"></script>
+<script src="samsam-coins.js?v=202610212307"></script>
+<script src="samsam-dropdown.js?v=202610212307"></script>
+<script src="samsam-chart.js?v=202610212307"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -780,24 +780,8 @@
   .main-trio #allocMiniCard .alloc-mini-donut { order: 1; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 120px; }
   .main-trio #allocMiniCard .alloc-mini-donut svg { width: 120px; height: 120px; }
   .main-trio #allocMiniCard .alloc-mini-cats { order: 2; justify-content: center; }
-  /* ── One "open" button for every summary card: same circle, same corner ── */
-  .card-tap { position: relative; }
-  .card-go { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    background: rgba(124,58,237,.14); color: #a78bfa; border: 1px solid rgba(124,58,237,.28);
-    transition: background .18s, color .18s, transform .18s, border-color .18s; pointer-events: none; }
-  .card-go svg { transition: transform .18s; }
+  /* One "open" button for every card (.card-tap / .card-go): shared CSS lives in samsam-ui.js */
   .card-tap .holdings-title, .card-tap .alloc-mini-title { padding-right: 44px; }
-  .card-tap:focus-visible .card-go, .card-tap:active .card-go { background: #7c3aed; border-color: #7c3aed; color: #fff; }
-  @media (hover: hover) {   /* phones keep :hover "stuck" after a tap — only real mouse pointers get the hover look */
-    .card-tap:hover .card-go { background: #7c3aed; border-color: #7c3aed; color: #fff; }
-    .card-tap:hover .card-go svg { transform: translateX(2px); }
-  }
-  .card-tap:active { transform: scale(.985); }
-  .card-tap:focus-visible { outline: 3px solid #a78bfa; outline-offset: 2px; }
-  .card-tap { transition: border-color .2s, background .2s, transform .12s; }
-  [data-theme="light"] .card-go { background: rgba(124,58,237,.10); color: #6d28d9; }
-  @media (prefers-reduced-motion: reduce) { .card-tap:active { transform: none; } .card-tap:hover .card-go svg { transform: none; } }
   .main-trio .perf-legend { margin-top: 0; }
   @media (min-width: 1024px) {
     .main-trio { grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
@@ -1304,7 +1288,7 @@
       <div class="stat-sub" id="totalUsdBtc">—</div>
     </div>
     <div class="stat-card" id="allTimeCard">
-      <div class="stat-label">All-Time Profit<i class="cp-profit-i" aria-hidden="true">i</i></div>
+      <div class="stat-label">All-Time Profit</div>
       <div class="stat-value" id="totalPnlCard">—</div>
       <div class="stat-sub" id="totalPnlSub">—</div>
     </div>
@@ -1615,7 +1599,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610212255"></script>
+<script type="module" src="samsam-cloud.js?v=202610212307"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -4277,7 +4261,7 @@ function renderHoldingsAssetList() {
     </div>
     <div class="htx-cards">
       <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub" id="htxHoldings24">—</div></div>
-      <div class="htx-card"><div class="htx-label">All-Time Profit<i class="cp-profit-i" aria-hidden="true">i</i></div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
+      <div class="htx-card"><div class="htx-label">All-Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
       <div class="htx-card"><div class="htx-label" data-label="AVG_BUY_PRICE">Avg. Buy Price</div><div class="htx-value" id="htxAvg">—</div></div>
       <div class="htx-card"><div class="htx-label"><span data-label="COST_BASIS">Cost Basis</span> <button type="button" class="info-tip" aria-label="How Cost Basis is calculated"><span aria-hidden="true">ⓘ</span><span class="info-pop" role="tooltip"><b>Cost Basis</b><span>We use the <em>Average Cost Basis (ACB)</em> method for calculation:</span><span class="info-formula"><em>Cost Basis</em> = Sum(Buy Price × Buy Amount) + Sum(Buying Fees)</span><small>Sells and transfers out reduce it in proportion, at the average buy price.</small></span></button></div><div class="htx-value" id="htxCost">—</div></div>
     </div>

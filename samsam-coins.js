@@ -323,6 +323,9 @@
       '.btc-compare-subtext{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:.75rem;color:#94a3b8;margin-top:4px;border-top:1px solid rgba(148,163,184,.14);padding-top:6px;font-variant-numeric:tabular-nums}' +
       '@container (max-width: 190px){.btc-compare-subtext .bcs-sep{display:none}.btc-compare-subtext{flex-direction:column;align-items:flex-start;gap:2px}}' +
       '.mv-half{container-type:inline-size}' +
+      // small › on each tappable row (opens the coin) — grey, purple on hover
+      '.mv-go{margin-left:auto;flex-shrink:0;display:flex;color:var(--fg2,#94a3b8);opacity:.7;transition:color .15s,opacity .15s,transform .15s}' +
+      '@media (hover:hover){.mv-half:hover .mv-go{color:#a78bfa;opacity:1;transform:translateX(2px)}}.mv-half:active .mv-go,.mv-half:focus-visible .mv-go{color:#a78bfa;opacity:1}' +
       '.btc-compare-subtext b{font-weight:600;color:#cbd5e1}[data-theme=light] .btc-compare-subtext{color:#64748b}[data-theme=light] .btc-compare-subtext b{color:#334155}' +
       '@media (max-width:420px){.mv-half{padding:4px 10px}.mv-coin{gap:8px}.mv-coin .mv-sym{font-size:1.08rem}.mv-val{font-size:.92rem}}';
     document.head.appendChild(st);
@@ -338,7 +341,8 @@
     var name = h.label + ': ' + h.row.sym + ' ' + h.text + (h.text2 ? ' ' + h.text2 : '') + (h.sub ? ', ' + h.sub : '') + (h.split ? ', ' + h.split.map(function (x) { return x[0] + ' ' + x[1]; }).join(', ') : '');
     return '<button type="button" class="mv-half" onclick="' + esc(h.onClickJs || '') + '" title="' + esc(name) + '" aria-label="' + esc(name) + '">' +
       '<span class="mv-label">' + esc(h.label) + '</span>' +
-      '<span class="mv-coin">' + icon(h.row.sym, 30, { logoUrl: h.row.logoUrl }) + '<span class="mv-sym">' + esc(h.row.sym) + '</span></span>' +
+      '<span class="mv-coin">' + icon(h.row.sym, 30, { logoUrl: h.row.logoUrl }) + '<span class="mv-sym">' + esc(h.row.sym) + '</span>' +
+        (h.onClickJs ? '<span class="mv-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>' : '') + '</span>' +
       '<span class="mv-val ' + dir + '">' + arrow(dir) + '<span class="mv-t1">' + esc(h.text) + '</span>' + (h.text2 ? ' <span class="mv-t2">' + esc(h.text2) + '</span>' : '') + '</span>' + (h.sub ? '<span class="mv-sub">' + esc(h.sub) + '</span>' : '') +
       (h.split ? '<span class="btc-compare-subtext">' + h.split.map(function (x) { return '<span class="bcs-i">' + esc(x[0]) + ': <b>' + esc(x[1]) + '</b></span>'; }).join('<span class="bcs-sep" aria-hidden="true">|</span>') + '</span>' : '') + '</button>';
   }
