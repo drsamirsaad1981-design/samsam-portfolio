@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610210024"></script>
-<script src="samsam-vault.js?v=202610210024"></script>
-<script src="samsam-labels.js?v=202610210024"></script>
-<script src="samsam-taxonomy.js?v=202610210024"></script>
-<script src="samsam-coins.js?v=202610210024"></script>
-<script src="samsam-dropdown.js?v=202610210024"></script>
-<script src="samsam-chart.js?v=202610210024"></script>
+<script src="samsam-ui.js?v=202610210033"></script>
+<script src="samsam-vault.js?v=202610210033"></script>
+<script src="samsam-labels.js?v=202610210033"></script>
+<script src="samsam-taxonomy.js?v=202610210033"></script>
+<script src="samsam-coins.js?v=202610210033"></script>
+<script src="samsam-dropdown.js?v=202610210033"></script>
+<script src="samsam-chart.js?v=202610210033"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -783,8 +783,8 @@
   .main-trio .perf-legend { margin-top: 0; }
   @media (min-width: 1024px) {
     .main-trio { grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-    /* Order: Holdings · Performance · Allocation (same on phones) */
-    #holdingsCard { order: 1; } #perfChartWrap { order: 2; } #allocMiniCard { order: 3; }
+    /* Computer: Allocation (left) · Performance (middle) · Holdings (right). Phones keep Holdings · Performance · Allocation */
+    #allocMiniCard { order: 1; } #perfChartWrap { order: 2; } #holdingsCard { order: 3; }
     .main-trio #allocMiniCard .alloc-mini-donut svg { width: 150px; height: 150px; }
   }
 
@@ -1598,7 +1598,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610210024"></script>
+<script type="module" src="samsam-cloud.js?v=202610210033"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 

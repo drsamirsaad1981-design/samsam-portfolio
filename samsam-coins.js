@@ -310,16 +310,19 @@
     st.textContent = '.mv-card{display:grid;grid-template-columns:1fr 1px 1fr;align-items:stretch;background:var(--card-solid,var(--bg2,#111827));border:1px solid var(--border,#334155);border-radius:16px;padding:14px 4px;box-sizing:border-box}' +
       '.mv-sep{background:var(--border,#334155);margin:6px 0}' +
       '.mv-half{display:flex;flex-direction:column;gap:6px;min-width:0;padding:4px 16px;border:none;background:none;color:inherit;font:inherit;text-align:left;border-radius:12px;cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent}' +
-      '.mv-half:hover{background:rgba(148,163,184,.08)}.mv-half:focus-visible{outline:2px solid #a78bfa;outline-offset:-2px}.mv-half[aria-disabled=true]{cursor:default;background:none}' +
+      '@media (hover:hover){.mv-half:hover{background:rgba(148,163,184,.08)}}.mv-half:active{background:rgba(148,163,184,.1)}.mv-half:focus-visible{outline:2px solid #a78bfa;outline-offset:-2px}.mv-half[aria-disabled=true]{cursor:default;background:none}' +
       '.mv-label{font-size:.78rem;color:var(--label,var(--fg2,#94a3b8));font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
       '.mv-coin{display:flex;align-items:center;gap:10px;min-width:0}.mv-coin .mv-sym{font-size:1.25rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
       '.mv-val{display:block;font-weight:700;font-size:1rem;line-height:1.35;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}.mv-val svg{display:inline-block;vertical-align:1px;margin-right:6px}.mv-val .mv-t1,.mv-val .mv-t2{white-space:nowrap}.mv-val .mv-t2{opacity:.92}.mv-val.up{color:#34d399}.mv-val.down{color:#f87171}.mv-val.flat{color:var(--fg2,#94a3b8)}' +
       '.mv-sub{font-size:.76rem;color:var(--fg2,#94a3b8);line-height:1.35;font-variant-numeric:tabular-nums}' +
       '.mv-empty{grid-column:1/-1;padding:6px 16px;color:var(--fg2,#94a3b8);font-size:.85rem}' +
       '.mv-head{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 16px 10px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--label,var(--fg2,#94a3b8))}' +
+      '.mv-logo{width:18px;height:18px;border-radius:5px;flex-shrink:0}' +
       '.mv-badge{font-size:.66rem;font-weight:700;letter-spacing:.02em;text-transform:none;padding:2px 8px;border-radius:999px;background:rgba(148,163,184,.14);color:#cbd5e1}' +
       '[data-theme=light] .mv-badge{color:#475569;background:#f1f5f9}' +
-      '.btc-compare-subtext{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:.75rem;color:#94a3b8;margin-top:4px;border-top:1px solid rgba(148,163,184,.14);padding-top:6px;font-variant-numeric:tabular-nums}' +
+      '.btc-compare-subtext{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:.75rem;color:#94a3b8;margin-top:4px;border-top:1px solid rgba(148,163,184,.14);padding-top:6px;font-variant-numeric:tabular-nums}' +
+      '@container (max-width: 190px){.btc-compare-subtext .bcs-sep{display:none}.btc-compare-subtext{flex-direction:column;align-items:flex-start;gap:2px}}' +
+      '.mv-half{container-type:inline-size}' +
       '.btc-compare-subtext b{font-weight:600;color:#cbd5e1}[data-theme=light] .btc-compare-subtext{color:#64748b}[data-theme=light] .btc-compare-subtext b{color:#334155}' +
       '@media (max-width:420px){.mv-half{padding:4px 10px}.mv-coin{gap:8px}.mv-coin .mv-sym{font-size:1.08rem}.mv-val{font-size:.92rem}}';
     document.head.appendChild(st);
@@ -337,12 +340,12 @@
       '<span class="mv-label">' + esc(h.label) + '</span>' +
       '<span class="mv-coin">' + icon(h.row.sym, 30, { logoUrl: h.row.logoUrl }) + '<span class="mv-sym">' + esc(h.row.sym) + '</span></span>' +
       '<span class="mv-val ' + dir + '">' + arrow(dir) + '<span class="mv-t1">' + esc(h.text) + '</span>' + (h.text2 ? ' <span class="mv-t2">' + esc(h.text2) + '</span>' : '') + '</span>' + (h.sub ? '<span class="mv-sub">' + esc(h.sub) + '</span>' : '') +
-      (h.split ? '<span class="btc-compare-subtext">' + h.split.map(function (x) { return '<span>' + esc(x[0]) + ': <b>' + esc(x[1]) + '</b></span>'; }).join('<span aria-hidden="true">|</span>') + '</span>' : '') + '</button>';
+      (h.split ? '<span class="btc-compare-subtext">' + h.split.map(function (x) { return '<span class="bcs-i">' + esc(x[0]) + ': <b>' + esc(x[1]) + '</b></span>'; }).join('<span class="bcs-sep" aria-hidden="true">|</span>') + '</span>' : '') + '</button>';
   }
   // pair: { best: half, worst: half, empty: 'message' }
   function moversCard(pair) {
     moversCss();
-    var head = pair.head ? '<div class="mv-head"><span>' + esc(pair.head.title) + '</span>' + (pair.head.badge ? '<span class="mv-badge">' + esc(pair.head.badge) + '</span>' : '') + '</div>' : '';
+    var head = pair.head ? '<div class="mv-head">' + (pair.head.logo ? '<img class="mv-logo" src="' + esc(pair.head.logo) + '" alt="" width="18" height="18">' : '') + '<span>' + esc(pair.head.title) + '</span>' + (pair.head.badge ? '<span class="mv-badge">' + esc(pair.head.badge) + '</span>' : '') + '</div>' : '';
     if (pair.empty) return '<div class="mv-card">' + head + '<div class="mv-empty">' + esc(pair.empty) + '</div></div>';
     return '<div class="mv-card">' + head + moverHalf(pair.best) + '<div class="mv-sep" aria-hidden="true"></div>' + moverHalf(pair.worst) + '</div>';
   }
