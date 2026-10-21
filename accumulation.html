@@ -16,12 +16,12 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610220034"></script>
-<script src="samsam-vault.js?v=202610220034"></script>
-<script src="samsam-labels.js?v=202610220034"></script>
-<script src="samsam-taxonomy.js?v=202610220034"></script>
-<script src="samsam-coins.js?v=202610220034"></script>
-<script src="samsam-dropdown.js?v=202610220034"></script>
+<script src="samsam-ui.js?v=202610220141"></script>
+<script src="samsam-vault.js?v=202610220141"></script>
+<script src="samsam-labels.js?v=202610220141"></script>
+<script src="samsam-taxonomy.js?v=202610220141"></script>
+<script src="samsam-coins.js?v=202610220141"></script>
+<script src="samsam-dropdown.js?v=202610220141"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -57,20 +57,12 @@ body {
   min-height: 100vh;
 }
 
-/* ── Header ── */
-.page-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 0 12px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 16px; flex-wrap: wrap;
-}
-/* Back button: shared .cp-back (samsam-ui.js) */
-.page-title { font-size: 1.2rem; font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.page-title span { color: var(--accent); }
+/* Header + Back: shared .cp-head / .cp-back (samsam-ui.js). This page's body has its own side padding, so the bar reaches the edges with negative margins. */
+.cp-head { margin: -12px calc(-1 * max(16px, env(safe-area-inset-right,0px))) 16px calc(-1 * max(16px, env(safe-area-inset-left,0px))); }
 @media(max-width:600px) {
-  .page-header { flex-wrap: nowrap; align-items: center; }
-  .page-title { font-size: 1rem; }
   .save-status { font-size: 0.7rem; white-space: nowrap; }
+  .save-status .ss-t { display: none; }   /* phone header: icon only */
+  .save-status .ss-i { font-size: 0.95rem; }
 }
 .save-status {
   font-size: 0.75rem; color: var(--fg2);
@@ -508,12 +500,11 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 </div>
 
 <!-- Header -->
-<div class="page-header">
-  <a class="cp-back" href="./index.html" data-back aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></a>
-  <div class="page-title">🎯 <span id="pageSubtitle">Accumulation Plan</span></div>
-  <div class="save-status" id="saveStatus">✓ Ready</div>
-  <button type="button" class="ss-theme-btn" data-theme-toggle></button>
-</div>
+<header class="cp-head">
+  <div class="cp-head-l"><a class="cp-back" href="./index.html" data-back aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></a></div>
+  <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true">🎯</span><span class="t" id="pageSubtitle">Accumulation</span></h1>
+  <div class="cp-head-r"><div class="save-status" id="saveStatus" role="status" title="✓ Ready" aria-label="✓ Ready"><span class="ss-i">✓</span><span class="ss-t">Ready</span></div></div>
+</header>
 
 <!-- Dashboard -->
 <div class="dashboard" id="dashboard">
@@ -611,7 +602,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610220034"></script>
+<script type="module" src="samsam-cloud.js?v=202610220141"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -750,7 +741,12 @@ function saveAccumPlan(immediate = false) {
 function setSaveStatus(type, text) {
   const el = document.getElementById('saveStatus');
   if (!el) return;
-  el.textContent = text;
+  // icon + words; on a phone only the icon shows in the header (the full text stays as its tooltip / label)
+  const m = String(text).match(/^(\S+)\s+(.*)$/) || [null, '', String(text)];
+  el.innerHTML = '';
+  const i = document.createElement('span'); i.className = 'ss-i'; i.textContent = m[1];
+  const t = document.createElement('span'); t.className = 'ss-t'; t.textContent = m[2];
+  el.append(i, t); el.title = text; el.setAttribute('aria-label', text);
   el.className = 'save-status ' + (type !== 'ready' ? type : '');
 }
 

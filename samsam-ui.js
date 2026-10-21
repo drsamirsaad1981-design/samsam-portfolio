@@ -95,7 +95,21 @@
     '.cp-back:active{transform:scale(.96)}.cp-back:active .cp-back-ic{background:#7c3aed;color:#fff}' +
     '.cp-back:focus-visible{outline:2px solid #a78bfa;outline-offset:2px}' +
     '@media (prefers-reduced-motion:reduce){.cp-back:active{transform:none}.cp-back:hover .cp-back-ic svg{transform:none}}' +
-    '@media print{.ss-theme-btn,.cp-back{display:none!important}}';
+    // Page header — one bar for every inner page: Back on the left, title centred, page status on the right.
+    // Frosted, sticky, respects the notch. (Theme + cloud live only on the main page.)
+    '.cp-head{position:sticky;top:0;z-index:60;display:grid;grid-template-columns:1fr minmax(0,auto) 1fr;align-items:center;column-gap:10px;box-sizing:border-box;min-height:60px;' +
+      'padding:max(10px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));' +
+      'background:color-mix(in srgb,var(--header-bg,var(--bg,#0b0f17)) 80%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(16px);backdrop-filter:saturate(1.6) blur(16px);' +
+      'border-bottom:1px solid var(--border,rgba(148,163,184,.2));transition:box-shadow .2s}' +
+    '.cp-head.scrolled{box-shadow:0 6px 18px rgba(2,6,23,.12)}' +
+    // 1fr | title | 1fr: the title is exactly centred whenever it fits, and only slides over when space runs out
+    '.cp-head-l{justify-self:start;display:flex;align-items:center}' +
+    '.cp-head-r{justify-self:end;display:flex;align-items:center;justify-content:flex-end;gap:8px}' +
+    '.cp-head-title{margin:0;display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;font:inherit;font-size:1.02rem;font-weight:800;letter-spacing:-.01em;line-height:1.2;color:var(--fg,inherit);white-space:nowrap}' +
+    '.cp-head-title .t{overflow:hidden;text-overflow:ellipsis}.cp-head-ic{font-size:1.1rem;line-height:1;flex-shrink:0}' +
+    '@media (min-width:768px){.cp-head{padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}}' +
+    '@media (max-width:380px){.cp-head-title{font-size:.95rem}.cp-head{column-gap:8px}}' +
+    '@media print{.ss-theme-btn,.cp-back,.cp-head{display:none!important}}';
   (document.head || document.documentElement).appendChild(css);
 
   // Wire up buttons once the page exists; keep tabs in sync when the theme changes elsewhere.
@@ -112,6 +126,15 @@
     }
     paintButtons();
   }
+  // Header gets a soft shadow once the page scrolls under it
+  // (the page itself, or a full-screen view that scrolls on its own such as Holdings)
+  document.addEventListener('scroll', function (e) {
+    var box = e.target === document ? document.scrollingElement : e.target;
+    if (!box || !box.querySelectorAll) return;
+    var h = box.querySelectorAll('.cp-head'); if (!h.length) return;
+    var y = box.scrollTop > 4;
+    for (var i = 0; i < h.length; i++) if (h[i].classList.contains('scrolled') !== y) h[i].classList.toggle('scrolled', y);
+  }, { capture: true, passive: true });
   // Back: return to the page you came from inside the app (keeps its scroll and filters);
   // opened directly (bookmark, new tab)? then go to the link's own target (the main page).
   document.addEventListener('click', function (e) {

@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610220034"></script>
-<script src="samsam-vault.js?v=202610220034"></script>
-<script src="samsam-labels.js?v=202610220034"></script>
-<script src="samsam-taxonomy.js?v=202610220034"></script>
-<script src="samsam-coins.js?v=202610220034"></script>
-<script src="samsam-dropdown.js?v=202610220034"></script>
-<script src="samsam-chart.js?v=202610220034"></script>
+<script src="samsam-ui.js?v=202610220141"></script>
+<script src="samsam-vault.js?v=202610220141"></script>
+<script src="samsam-labels.js?v=202610220141"></script>
+<script src="samsam-taxonomy.js?v=202610220141"></script>
+<script src="samsam-coins.js?v=202610220141"></script>
+<script src="samsam-dropdown.js?v=202610220141"></script>
+<script src="samsam-chart.js?v=202610220141"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1595,7 +1595,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610220034"></script>
+<script type="module" src="samsam-cloud.js?v=202610220141"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3427,12 +3427,12 @@ function applyHoldingsRoute() {
   if (r.sym) {
     coinTxSym = r.sym;
     overlay.setAttribute('data-view', 'tx');
-    document.getElementById('hovNavTitle').textContent = r.sym + ' Transactions';
+    document.getElementById('hovNavTitle').textContent = r.sym + ' Transactions'; document.getElementById('hovNavIcon').textContent = '🧾';
     renderCoinTx();
   } else {
     coinTxSym = null;
     overlay.removeAttribute('data-view');
-    document.getElementById('hovNavTitle').textContent = '💰 Holdings';
+    document.getElementById('hovNavTitle').textContent = 'Holdings'; document.getElementById('hovNavIcon').textContent = '💰';
     drawHoldingsOverlayChart();
     renderHoldingsAssetList();
   }
@@ -3953,16 +3953,7 @@ window.addEventListener('resize', () => { clearTimeout(_hovFitT); _hovFitT = set
     }
     .hov-container { max-width: 860px; width: 100%; margin: 0 auto;
       padding: 20px max(16px, env(safe-area-inset-right,0px)) 40px max(16px, env(safe-area-inset-left,0px)); }
-    /* ── Nav bar ── */
-    .hov-navbar {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 12px max(16px, env(safe-area-inset-right,0px)) 12px max(16px, env(safe-area-inset-left,0px));
-      padding-top: max(12px, env(safe-area-inset-top,0px));
-      border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; background: var(--header-bg); z-index: 10;
-    }
-    /* Back button: shared .cp-back (samsam-ui.js) */
-    .hov-nav-title { font-size:0.92rem;font-weight:700;color:var(--fg); }
+    /* Nav bar: shared .cp-head (samsam-ui.js) */
 
     /* ── Hero total ── */
     .hov-hero { padding: 18px 16px 4px; }
@@ -4176,7 +4167,6 @@ window.addEventListener('resize', () => { clearTimeout(_hovFitT); _hovFitT = set
     .hov-hqty { font-size:0.7rem;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-variant-numeric:tabular-nums; }
 
     /* ══ Card layout — matches Allocation / Performance ══════════════════════ */
-    .hov-nav-title { flex: 1; text-align: center; font-size: 1rem; }
     /* Value + chart + range tabs = one card; asset list = one card */
     .hov-card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px; }
     .hov-cat { margin-bottom: 14px; }
@@ -4214,11 +4204,11 @@ window.addEventListener('resize', () => { clearTimeout(_hovFitT); _hovFitT = set
   </style>
 
   <!-- Nav bar -->
-  <div class="hov-navbar">
-    <button type="button" class="cp-back hov-back-btn" onclick="hovBack()" aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></button>
-    <span class="hov-nav-title" id="hovNavTitle">💰 Holdings</span>
-    <button type="button" class="ss-theme-btn" data-theme-toggle></button>
-  </div>
+  <header class="cp-head hov-navbar">
+    <div class="cp-head-l"><button type="button" class="cp-back hov-back-btn" onclick="hovBack()" aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></button></div>
+    <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" id="hovNavIcon">💰</span><span class="t" id="hovNavTitle">Holdings</span></h1>
+    <div class="cp-head-r"></div>
+  </header>
 
   <div class="hov-container">
   <!-- Hero total + chart + range tabs: one card -->
