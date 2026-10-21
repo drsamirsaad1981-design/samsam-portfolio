@@ -231,6 +231,15 @@
     return '<img src="' + esc(url) + '" width="' + size + '" height="' + size + '" alt="' + esc(sym) + '" data-sym="' + esc(sym) + '" data-size="' + size + '" style="border-radius:50%;flex-shrink:0;object-fit:contain;background:transparent" onerror="SamsamCoins.imgErr(this)">';
   }
   function imgErr(el) { if (!el.parentNode) return; el.outerHTML = fallback(el.getAttribute('data-sym'), parseInt(el.getAttribute('data-size')) || 36); }
+  // ↗ next to a coin's symbol = opens CoinMarketCap in a new tab (outside the app). Same mark on every page.
+  var EXT = '<span class="ext-go" aria-hidden="true">↗</span>';
+  (function extCss() {
+    if (document.getElementById('extGoCss')) return;
+    var st = document.createElement('style'); st.id = 'extGoCss';
+    st.textContent = '.ext-go{display:inline-block;margin-left:5px;font-size:.72em;font-weight:700;color:var(--fg2,#94a3b8);opacity:.75;vertical-align:1px;transition:color .15s,opacity .15s,transform .15s;text-decoration:none}' +
+      '@media (hover:hover){.ext-link:hover .ext-go,a:hover>.ext-go,a:hover .coin-sym .ext-go{color:#a78bfa;opacity:1;transform:translate(1px,-1px)}}@media print{.ext-go{display:none!important}}';
+    (document.head || document.documentElement).appendChild(st);
+  })();
   var LINK = 'target="_blank" rel="noopener" style="text-decoration:none;color:inherit;transition:opacity .15s" onmouseover="this.style.opacity=\'0.7\'" onmouseout="this.style.opacity=\'1\'"';
   function iconLinked(sym, size, opts) {
     var u = cgUrl(sym, opts && opts.cgId), i = icon(sym, size, opts);
@@ -240,9 +249,9 @@
   function nameLinked(sym, opts) {
     opts = opts || {};
     var name = opts.name || NAMES[sym] || '';
-    var inner = '<div class="coin-sym" style="font-weight:700;font-size:' + (opts.symSize || '0.85rem') + ';line-height:1.2">' + esc(sym) + (opts.badge || '') + '</div><div style="font-size:0.72rem;color:var(--fg2);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(name) + '</div>';
+    var inner = '<div class="coin-sym" style="font-weight:700;font-size:' + (opts.symSize || '0.85rem') + ';line-height:1.2">' + esc(sym) + (cgUrl(sym, opts.cgId) ? EXT : '') + (opts.badge || '') + '</div><div style="font-size:0.72rem;color:var(--fg2);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(name) + '</div>';
     var u = cgUrl(sym, opts.cgId);
-    return u ? '<a href="' + u + '" ' + LINK.replace('text-decoration:none', 'display:block;min-width:0;text-decoration:none') + ' title="Open ' + esc(sym) + ' on CoinMarketCap">' + inner + '</a>' : '<div style="min-width:0">' + inner + '</div>';
+    return u ? '<a class="ext-link" href="' + u + '" ' + LINK.replace('text-decoration:none', 'display:block;min-width:0;text-decoration:none') + ' title="Open ' + esc(sym) + ' on CoinMarketCap">' + inner + '</a>' : '<div style="min-width:0">' + inner + '</div>';
   }
   // CoinGlass liquidation heatmap for a coin (opens in a new tab). Symbol differs on CoinGlass for a few coins.
   var LIQ_SYMS = { GRAM: 'TON' };
@@ -354,5 +363,5 @@
     return '<div class="mv-card">' + head + moverHalf(pair.best) + '<div class="mv-sep" aria-hidden="true"></div>' + moverHalf(pair.worst) + '</div>';
   }
   function signedPct(p, d) { d = d == null ? 2 : d; return (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p).toFixed(d) + '%'; }
-  window.SamsamCoins = { esc: esc, pickMovers: pickMovers, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { EXT: EXT, esc: esc, pickMovers: pickMovers, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

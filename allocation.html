@@ -15,11 +15,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a0e1a">
-<script src="samsam-ui.js?v=202610212307"></script>
-<script src="samsam-vault.js?v=202610212307"></script>
-<script src="samsam-labels.js?v=202610212307"></script>
-<script src="samsam-taxonomy.js?v=202610212307"></script>
-<script src="samsam-coins.js?v=202610212307"></script>
+<script src="samsam-ui.js?v=202610212327"></script>
+<script src="samsam-vault.js?v=202610212327"></script>
+<script src="samsam-labels.js?v=202610212327"></script>
+<script src="samsam-taxonomy.js?v=202610212327"></script>
+<script src="samsam-coins.js?v=202610212327"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -290,7 +290,7 @@ body {
 
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610212307"></script>
+<script type="module" src="samsam-cloud.js?v=202610212327"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
 
@@ -366,9 +366,9 @@ function getCoinIconLinked(sym, size=36) {
 function getCoinNameLinked(sym) {
   const cgUrl = getCoinGeckoUrl(sym);
   const name  = COIN_NAMES[sym] || '';
-  const inner = `<div style="font-weight:700;font-size:0.85rem;line-height:1.2">${sym}</div><div style="font-size:0.72rem;color:var(--fg2);line-height:1.3">${name}</div>`;
+  const inner = `<div style="font-weight:700;font-size:0.85rem;line-height:1.2">${sym}${cgUrl ? SamsamCoins.EXT : ''}</div><div style="font-size:0.72rem;color:var(--fg2);line-height:1.3">${name}</div>`;
   if (!cgUrl) return `<div>${inner}</div>`;
-  return `<a href="${cgUrl}" target="_blank" rel="noopener" title="Open ${sym} on CoinMarketCap" style="text-decoration:none;color:inherit;display:block;transition:opacity .15s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">${inner}</a>`;
+  return `<a class="ext-link" href="${cgUrl}" target="_blank" rel="noopener" title="Open ${sym} on CoinMarketCap" style="text-decoration:none;color:inherit;display:block;transition:opacity .15s" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">${inner}</a>`;
 }
 
 // ── Build donut SVG ────────────────────────────────────────────────────────
