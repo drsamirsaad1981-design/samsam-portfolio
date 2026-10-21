@@ -83,7 +83,19 @@
     '.ss-live.ss-pulse[data-state=ok]{animation:ssLiveRing 2s ease-out infinite}' +
     '@keyframes ssLiveRing{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}' +
     '@media (prefers-reduced-motion:reduce){.ss-live[data-state=loading],.ss-live.ss-pulse{animation:none}}' +
-    '@media print{.ss-theme-btn{display:none!important}}';
+    // Back button — one look on every page: same height and corners as the theme button, a purple chevron chip
+    '.cp-back{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px 0 5px;box-sizing:border-box;flex-shrink:0;border-radius:10px;' +
+      'border:1px solid var(--border,rgba(148,163,184,.35));background:var(--bg3,var(--card,transparent));color:var(--fg,currentColor);' +
+      'font:inherit;font-size:.86rem;font-weight:700;letter-spacing:.01em;line-height:1;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;' +
+      'transition:background .15s,border-color .15s,color .15s,transform .12s}' +
+    '.cp-back-ic{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:rgba(124,58,237,.16);color:#a78bfa;transition:background .15s,color .15s}' +
+    '.cp-back-ic svg{transition:transform .15s}' +
+    '[data-theme=light] .cp-back-ic{background:rgba(124,58,237,.10);color:#6d28d9}' +
+    '@media (hover:hover){.cp-back:hover{border-color:rgba(124,58,237,.5)}.cp-back:hover .cp-back-ic{background:#7c3aed;color:#fff}.cp-back:hover .cp-back-ic svg{transform:translateX(-2px)}}' +
+    '.cp-back:active{transform:scale(.96)}.cp-back:active .cp-back-ic{background:#7c3aed;color:#fff}' +
+    '.cp-back:focus-visible{outline:2px solid #a78bfa;outline-offset:2px}' +
+    '@media (prefers-reduced-motion:reduce){.cp-back:active{transform:none}.cp-back:hover .cp-back-ic svg{transform:none}}' +
+    '@media print{.ss-theme-btn,.cp-back{display:none!important}}';
   (document.head || document.documentElement).appendChild(css);
 
   // Wire up buttons once the page exists; keep tabs in sync when the theme changes elsewhere.
@@ -100,6 +112,14 @@
     }
     paintButtons();
   }
+  // Back: return to the page you came from inside the app (keeps its scroll and filters);
+  // opened directly (bookmark, new tab)? then go to the link's own target (the main page).
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('a.cp-back[data-back]');
+    if (!b || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    var same = false; try { same = !!document.referrer && new URL(document.referrer).origin === location.origin && new URL(document.referrer).pathname !== location.pathname; } catch (_) {}
+    if (same && history.length > 1) { e.preventDefault(); history.back(); }
+  });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
   window.addEventListener('storage', function (e) { if (e.key === KEY) applyTheme(saved()); });
 
@@ -239,7 +259,10 @@
       else if (e.key === 'End') { e.preventDefault(); move(focusables.length - 1); }
       else if (e.key === 'Tab') closeMenu(false);
     };
-    var onScroll = function (e) { if (!el.contains(e.target)) closeMenu(false); };
+    // Scrolling the page closes the popover — but not a scroll still finishing from just before the tap
+    // (scroll events arrive a frame late, and momentum scrolling on touch screens keeps going briefly).
+    var openedAt = Date.now();
+    var onScroll = function (e) { if (Date.now() - openedAt > 250 && !el.contains(e.target)) closeMenu(false); };
     menuOpen = { el: el, back: back, anchor: anchor, key: key, close: function () { closeMenu(false); }, onScroll: onScroll };
     back.addEventListener('click', function () { closeMenu(false); });
     document.addEventListener('keydown', key, true); window.addEventListener('resize', menuOpen.close);

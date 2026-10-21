@@ -16,12 +16,12 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610220001"></script>
-<script src="samsam-vault.js?v=202610220001"></script>
-<script src="samsam-labels.js?v=202610220001"></script>
-<script src="samsam-taxonomy.js?v=202610220001"></script>
-<script src="samsam-coins.js?v=202610220001"></script>
-<script src="samsam-dropdown.js?v=202610220001"></script>
+<script src="samsam-ui.js?v=202610220034"></script>
+<script src="samsam-vault.js?v=202610220034"></script>
+<script src="samsam-labels.js?v=202610220034"></script>
+<script src="samsam-taxonomy.js?v=202610220034"></script>
+<script src="samsam-coins.js?v=202610220034"></script>
+<script src="samsam-dropdown.js?v=202610220034"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -64,14 +64,7 @@ body {
   border-bottom: 1px solid var(--border);
   margin-bottom: 16px; flex-wrap: wrap;
 }
-.back-btn {
-  background: var(--bg3); border: 1px solid var(--border);
-  color: var(--fg2); border-radius: 8px; padding: 6px 14px;
-  font-size: 0.8rem; cursor: pointer; font-family: inherit;
-  text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-  transition: border-color .2s, color .2s;
-}
-.back-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* Back button: shared .cp-back (samsam-ui.js) */
 .page-title { font-size: 1.2rem; font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .page-title span { color: var(--accent); }
 @media(max-width:600px) {
@@ -516,7 +509,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 
 <!-- Header -->
 <div class="page-header">
-  <a class="back-btn" href="./index.html">← Back</a>
+  <a class="cp-back" href="./index.html" data-back aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></a>
   <div class="page-title">🎯 <span id="pageSubtitle">Accumulation Plan</span></div>
   <div class="save-status" id="saveStatus">✓ Ready</div>
   <button type="button" class="ss-theme-btn" data-theme-toggle></button>
@@ -618,7 +611,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610220001"></script>
+<script type="module" src="samsam-cloud.js?v=202610220034"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
