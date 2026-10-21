@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610210033"></script>
-<script src="samsam-vault.js?v=202610210033"></script>
-<script src="samsam-labels.js?v=202610210033"></script>
-<script src="samsam-taxonomy.js?v=202610210033"></script>
-<script src="samsam-coins.js?v=202610210033"></script>
-<script src="samsam-dropdown.js?v=202610210033"></script>
-<script src="samsam-chart.js?v=202610210033"></script>
+<script src="samsam-ui.js?v=202610211257"></script>
+<script src="samsam-vault.js?v=202610211257"></script>
+<script src="samsam-labels.js?v=202610211257"></script>
+<script src="samsam-taxonomy.js?v=202610211257"></script>
+<script src="samsam-coins.js?v=202610211257"></script>
+<script src="samsam-dropdown.js?v=202610211257"></script>
+<script src="samsam-chart.js?v=202610211257"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -130,6 +130,7 @@
     flex-shrink: 0;
     filter: drop-shadow(0 0 8px rgba(247,147,26,0.5));
   }
+  .btc-icon.app-logo { border-radius: 12px; filter: drop-shadow(0 4px 12px rgba(167,139,250,.28)); }
 
   .title-row {
     display: flex;
@@ -1261,7 +1262,7 @@
 <header>
   <div class="header-top">
     <div class="logo-area">
-      <img class="btc-icon" src="https://assets.coingecko.com/coins/images/1/large/bitcoin.png" alt="Bitcoin" onerror="this.style.cssText='width:44px;height:44px;background:radial-gradient(circle,#f7931a,#e8821a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0';this.outerHTML='<div class=\'btc-icon-fallback\'>₿</div>'">
+      <img class="btc-icon app-logo" src="./icon-192.png?v=2" alt="Cute Portfolio" width="44" height="44">
       <div class="title-group">
         <div class="title-row">
           <h1>Portfolio 🎯</h1>
@@ -1598,7 +1599,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610210033"></script>
+<script type="module" src="samsam-cloud.js?v=202610211257"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 

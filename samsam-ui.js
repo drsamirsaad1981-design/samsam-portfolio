@@ -135,7 +135,7 @@
       var st = document.createElement('style');
       st.textContent = '#cpDialog{position:fixed;inset:0;z-index:100150;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.62);animation:cpFade .15s ease}' +
         '#cpDialog .cpd{width:min(400px,100%);background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#334155);border-radius:16px;padding:20px;box-shadow:0 22px 50px rgba(0,0,0,.45);font-family:inherit;animation:cpPop .18s ease}' +
-        '#cpDialog .cpd-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}#cpDialog .cpd-head img{width:28px;height:28px;border-radius:8px}' +
+        '#cpDialog .cpd-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}#cpDialog .cpd-head img{width:28px;height:28px}' +
         '#cpDialog h3{margin:0;font-size:1rem;font-weight:700}#cpDialog p{margin:0;white-space:pre-line;line-height:1.5;font-size:.9rem;color:var(--fg2,#cbd5e1)}' +
         '#cpDialog input{width:100%;box-sizing:border-box;height:44px;margin-top:12px;padding:0 12px;border-radius:10px;border:1px solid var(--border,#334155);background:var(--bg3,#1f2937);color:inherit;font:inherit}' +
         '#cpDialog input:focus{outline:none;border-color:#3b82f6}#cpDialog .cpd-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}#cpDialog .cpd-btns.one{grid-template-columns:1fr}' +
@@ -150,7 +150,7 @@
       var back = document.activeElement;
       var w = document.createElement('div'); w.id = 'cpDialog';
       w.innerHTML = '<div class="cpd" role="' + (kind === 'alert' ? 'alertdialog' : 'dialog') + '" aria-modal="true" aria-labelledby="cpdT" aria-describedby="cpdM">' +
-        '<div class="cpd-head"><img src="./icon-192.png?v=2" alt=""><h3 id="cpdT"></h3></div><p id="cpdM"></p>' +
+        '<div class="cpd-head"><img src="./logo-mark.svg?v=1" alt=""><h3 id="cpdT"></h3></div><p id="cpdM"></p>' +
         (kind === 'prompt' ? '<input id="cpdI" autocomplete="off">' : '') +
         '<div class="cpd-btns' + (kind === 'alert' ? ' one' : '') + '">' + (kind === 'alert' ? '' : '<button type="button" class="cpd-no"></button>') + '<button type="button" class="cpd-ok"></button></div></div>';
       w.querySelector('#cpdT').textContent = o.title || 'Cute Portfolio';
