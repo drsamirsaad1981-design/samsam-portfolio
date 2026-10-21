@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610220141';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610220141';
+import * as Core from './samsam-core.js?v=202610220246';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610220246';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -97,6 +97,22 @@ let fb = null; // { auth, db, fs (firestore fns), au (auth fns) }
 const allLoaded = () => Object.values(S.loaded).every(Boolean);
 
 // ── derived view (what pages render) ────────────────────────────────────────
+// ── Baseline ─────────────────────────────────────────────────────────────────
+// The day the app compares your coins with Bitcoin. Its BTC price ("BTC reference price") drives
+// Portfolio vs BTC, the Hold / Reinforce / Sell signals and VS Bitcoin on Performance.
+// Saved per user in users/{uid}/meta/info.baseline, so every page and device uses the same one.
+export const DEFAULT_BASELINE = Object.freeze({ date: '2026-10-15', btcPrice: 81162 });
+function cleanBaseline(b) {
+  if (!b || typeof b !== 'object') return null;
+  const date = String(b.date || ''), p = Number(b.btcPrice);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(Date.parse(date + 'T00:00:00Z')) || !(p > 0 && p < 1e8)) return null;
+  return { date, btcPrice: p, setAt: typeof b.setAt === 'string' ? b.setAt.slice(0, 40) : '', source: b.source === 'manual' ? 'manual' : 'coingecko' };
+}
+function currentBaseline() {
+  const b = cleanBaseline(S.meta && S.meta.baseline);
+  return b ? { ...b, isDefault: false } : { ...DEFAULT_BASELINE, setAt: '', source: 'default', isDefault: true };
+}
+
 function derive() {
   const coins = [...S.coins.values()];
   const txs = [...S.txs.values()].sort(Core.compareTx);
@@ -122,7 +138,7 @@ function derive() {
   S.derived = {
     portfolio, transactions: txs, coins, archivedCoins: removed,
     customCoins: coins.filter(c => c.isCustom && !c.removed).map(c => ({ sym: c.sym, cat: catOf(c.sym, c.cat, c.catLocked), cgId: c.cgId, logoUrl: c.logoUrl })),
-    accumPlan, perfSnaps: snaps.perf, holdingsSnaps: snaps.holdings, realized, btcPrice: btc,
+    accumPlan, perfSnaps: snaps.perf, holdingsSnaps: snaps.holdings, realized, btcPrice: btc, baseline: currentBaseline(),
     needsSetup: allLoaded() && !(S.meta && S.meta.state === 'done') && S.coins.size === 0,
   };
   return S.derived;
@@ -293,6 +309,25 @@ const API = {
   isReady() { return !!S.user && allLoaded(); },
   core: Core,
   configure(opts) { Object.assign(S.opts, opts || {}); if (allLoaded()) emit(); },
+  getBaseline() { return currentBaseline(); },
+  // Change the baseline (date + BTC price on that date). Only the comparison with BTC changes —
+  // holdings, transactions and profit stay exactly as they are.
+  setBaseline({ date, btcPrice, source } = {}) {
+    const b = cleanBaseline({ date, btcPrice, source, setAt: new Date().toISOString() });
+    if (!b) { const e = new Error('Pick a valid date and a BTC price above 0.'); setError(e, 'Baseline'); return Promise.reject(e); }
+    if (Date.parse(b.date + 'T00:00:00Z') > Date.now()) { const e = new Error('The baseline date cannot be in the future.'); setError(e, 'Baseline'); return Promise.reject(e); }
+    return commit((bt, ref) => bt.set(ref('meta', 'info'), { baseline: b }, { merge: true }), 'Baseline');
+  },
+  // BTC closing price on a day (CoinGecko daily history, 00:00 UTC). Resolves to a number, or rejects.
+  async fetchBtcPriceOn(date) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ''));
+    if (!m) throw new Error('Invalid date');
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/bitcoin/history?date=${m[3]}-${m[2]}-${m[1]}&localization=false`);
+    if (!r.ok) throw new Error('Price service unavailable (' + r.status + ')');
+    const j = await r.json(), p = j && j.market_data && j.market_data.current_price && Number(j.market_data.current_price.usd);
+    if (!(p > 0)) throw new Error('No BTC price for that day');
+    return Math.round(p * 100) / 100;
+  },
 
   // prices are per-device market data, not portfolio data
   updatePrices(map) {
@@ -432,7 +467,7 @@ const API = {
     return commit((b, ref) => {
       for (const c of base || []) {
         if (!S.coins.has(c.sym) || S.coins.get(c.sym).removed) continue;
-        b.set(ref('txs', Core.newId('tx_')), txDoc(c.sym, 'adjust', 0, 0, 'Reset to Oct-15 baseline', { setQty: c.qty, setAvg: c.basePrice, date: now }));
+        b.set(ref('txs', Core.newId('tx_')), txDoc(c.sym, 'adjust', 0, 0, 'Reset to Oct-15 starting portfolio', { setQty: c.qty, setAvg: c.basePrice, date: now }));
       }
     }, 'Reset portfolio');
   },
@@ -752,7 +787,7 @@ function renderSetup(d) {
     <div class="opts">
       ${hasLocal ? '<button class="samsam-btn primary" id="samsamImpLocal">⬆ Upload this device\'s data</button>' : ''}
       <label class="samsam-btn" style="position:relative">📄 Import a backup file<input type="file" accept="application/json,.json" id="samsamImpFile" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
-      ${S.opts.basePortfolio ? '<button class="samsam-btn" id="samsamImpBase">Start from Oct-15 baseline</button>' : ''}
+      ${S.opts.basePortfolio ? '<button class="samsam-btn" id="samsamImpBase">Start from the Oct-15 starting portfolio</button>' : ''}
     </div>
     <p class="muted" style="font-size:.8rem">Before uploading, an encrypted backup file of this device's data is downloaded first.</p>
     <div class="msg" id="samsamSetupMsg"></div>`;
@@ -774,7 +809,7 @@ function renderSetup(d) {
   };
   const bl = document.getElementById('samsamImpLocal'); if (bl) bl.onclick = () => go(L, 'device:' + deviceId, true);
   const bb = document.getElementById('samsamImpBase'); if (bb) bb.onclick = async () => {
-    if (!(await CPDialog.confirm('Use this only if no device has your real data.', { title: 'Start from the Oct-15 baseline?', okText: 'Start' }))) return;
+    if (!(await CPDialog.confirm('Use this only if no device has your real data.', { title: 'Start from the Oct-15 starting portfolio?', okText: 'Start' }))) return;
     go({ coins: S.opts.basePortfolio.map(c => ({ ...c, currentPrice: (S.opts.fallbackPrices || {})[c.sym] || c.basePrice })), transactions: [] }, 'baseline', false);
   };
   const bf = document.getElementById('samsamImpFile'); if (bf) bf.onchange = async () => {

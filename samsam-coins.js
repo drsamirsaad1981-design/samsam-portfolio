@@ -358,7 +358,8 @@
   // pair: { best: half, worst: half, empty: 'message' }
   function moversCard(pair) {
     moversCss();
-    var head = pair.head ? '<div class="mv-head">' + (pair.head.logo ? '<img class="mv-logo" src="' + esc(pair.head.logo) + '" alt="" width="18" height="18">' : '') + '<span>' + esc(pair.head.title) + '</span>' + (pair.head.badge ? '<span class="mv-badge">' + esc(pair.head.badge) + '</span>' : '') + '</div>' : '';
+    var head = pair.head ? '<div class="mv-head">' + (pair.head.logo ? '<img class="mv-logo" src="' + esc(pair.head.logo) + '" alt="" width="18" height="18">' : '') + '<span>' + esc(pair.head.title) + '</span>' + (pair.head.badge ? '<span class="mv-badge">' + esc(pair.head.badge) + '</span>' : '') +
+      (pair.head.hint ? '<button type="button" class="cp-hint" data-hint="' + esc(pair.head.hint) + '"></button>' : '') + '</div>' : '';
     if (pair.empty) return '<div class="mv-card">' + head + '<div class="mv-empty">' + esc(pair.empty) + '</div></div>';
     return '<div class="mv-card">' + head + moverHalf(pair.best) + '<div class="mv-sep" aria-hidden="true"></div>' + moverHalf(pair.worst) + '</div>';
   }
