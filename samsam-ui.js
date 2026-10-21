@@ -364,7 +364,12 @@
       '.stat-card.cp-profit-tap .card-go,.pnl-bd-stat.cp-profit-tap .card-go{top:7px;right:7px;width:22px;height:22px}.stat-card.cp-profit-tap .card-go svg,.pnl-bd-stat.cp-profit-tap .card-go svg{width:12px;height:12px}' +
       '.cp-profit-tap .stat-label,.cp-profit-tap .pnl-bd-stat-label{padding-left:24px;padding-right:24px}' +
       '@media (prefers-reduced-motion:reduce){.card-tap:active{transform:none}.card-tap:hover .card-go svg{transform:none}}' +
-      '@media print{.card-go,.mv-go,.ext-go{display:none!important}}';
+      // ✎ next to a value you can change — always visible (not only on hover), same on every page and in cards and tables
+      '.val-edit{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:4px;padding:3px;border:none;border-radius:6px;background:none;color:var(--fg2,#94a3b8);opacity:.75;cursor:pointer;line-height:0;-webkit-tap-highlight-color:transparent;transition:opacity .15s,color .15s,background .15s}' +
+      '.val-edit .ss-pencil{width:13px;height:13px}.val-edit:active{background:rgba(124,58,237,.14)}.val-edit:focus-visible{outline:2px solid #a78bfa;outline-offset:1px;opacity:1}' +
+      '@media (hover:hover){.val-edit:hover{opacity:1;color:#a78bfa}}' +
+      '.val-cell{display:inline-flex;align-items:center;gap:0;white-space:nowrap}' +
+      '@media print{.card-go,.mv-go,.ext-go,.val-edit{display:none!important}}';
     (document.head || document.documentElement).appendChild(tc);
   }
   window.CPProfit = { calc: profitCalc, open: profOpenFn, bind: profBind, close: profClose };

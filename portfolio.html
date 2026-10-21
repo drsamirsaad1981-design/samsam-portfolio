@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610212327"></script>
-<script src="samsam-vault.js?v=202610212327"></script>
-<script src="samsam-labels.js?v=202610212327"></script>
-<script src="samsam-taxonomy.js?v=202610212327"></script>
-<script src="samsam-coins.js?v=202610212327"></script>
-<script src="samsam-dropdown.js?v=202610212327"></script>
-<script src="samsam-chart.js?v=202610212327"></script>
+<script src="samsam-ui.js?v=202610212346"></script>
+<script src="samsam-vault.js?v=202610212346"></script>
+<script src="samsam-labels.js?v=202610212346"></script>
+<script src="samsam-taxonomy.js?v=202610212346"></script>
+<script src="samsam-coins.js?v=202610212346"></script>
+<script src="samsam-dropdown.js?v=202610212346"></script>
+<script src="samsam-chart.js?v=202610212346"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1599,7 +1599,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610212327"></script>
+<script type="module" src="samsam-cloud.js?v=202610212346"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3896,7 +3896,14 @@ function renderHoldingsAssetList() {
     const arrow = pct24 >= 0 ? '▲' : '▼';
     const priceStr = SamsamFmt.price(c.currentPrice);
     const holdVal = SamsamFmt.usd(c.holdingVal);
-    const holdQty = parseFloat(c.qty.toFixed(c.qty < 1 ? 6 : 4)).toString() + ' ' + c.sym;
+    // amount (the coin is already named on the row, so no symbol here): fewer decimals as the number grows,
+    // K / M from 10,000 so it always fits on one line on a phone — 0.009564 · 1.0985 · 9,997.75 · 84.65K · 1.25M
+    // (full amount with the symbol in the tooltip)
+    const q = Number(c.qty) || 0;
+    const holdQty = (q >= 1e6 ? +(q / 1e6).toFixed(2) + 'M'
+      : q >= 1e4 ? +(q / 1e3).toFixed(2) + 'K'
+      : q.toLocaleString('en-US', { maximumFractionDigits: q < 1 ? 6 : q < 1000 ? 4 : 2 }));
+    const holdQtyFull = q.toLocaleString('en-US', { maximumFractionDigits: 8 }) + ' ' + c.sym;
     // Symbol + name (and logo) open the coin on CoinMarketCap, like the main table
     const cgUrl = getCoinGeckoUrl(c.sym);
     const coinName = COIN_NAMES[c.sym] || c.name || c.sym;
@@ -3913,12 +3920,26 @@ function renderHoldingsAssetList() {
       </div>
       <div class="hov-asset-holding htx-open" role="button" tabindex="0" title="View ${c.sym} transactions"
            onclick="openCoinTx('${c.sym}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCoinTx('${c.sym}')}">
-        <span class="hov-hval">${holdVal}</span>
-        <span class="hov-hqty">${holdQty}<span class="htx-chev">›</span></span>
+        <span class="hov-hold-txt"><span class="hov-hval">${holdVal}</span><span class="hov-hqty" title="${holdQtyFull}" aria-label="${holdQtyFull}">${holdQty}</span></span>
+        <span class="hov-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
       </div>
     </div>`;
   }).join('');
+  fitHovCols();
 }
+// Price and Holdings columns take exactly the width their widest number needs (same for the header and every row),
+// so long values never run into each other; the coin name gets the rest and shortens with "…" if it must.
+function fitHovCols() {
+  const ov = document.getElementById('holdingsOverlay'), list = document.getElementById('hovAssetList');
+  if (!ov || !list || !list.offsetParent || !list.firstElementChild) return;
+  const w = sel => Math.max(0, ...[...list.querySelectorAll(sel)].map(e => e.scrollWidth));
+  const head = k => { const b = document.querySelector(`.hov-list-header .hov-sort[data-sort="${k}"]`); return b ? b.scrollWidth : 0; };
+  const GO = 20;   // the › and its gap
+  ov.style.setProperty('--hov-pw', Math.ceil(Math.max(w('.hov-price'), w('.hov-pct'), head('price')) + 1) + 'px');
+  ov.style.setProperty('--hov-hw', Math.ceil(Math.max(w('.hov-hval'), w('.hov-hqty') , head('holdings') - GO) + GO + 1) + 'px');
+}
+let _hovFitT = 0;
+window.addEventListener('resize', () => { clearTimeout(_hovFitT); _hovFitT = setTimeout(fitHovCols, 120); });
 </script>
 
 <!-- ── Holdings Full-Screen Overlay ── -->
@@ -3985,10 +4006,15 @@ function renderHoldingsAssetList() {
     }
     .hov-tab:hover:not(.active) { color:var(--fg); }
 
+    /* ── Asset list: header and rows share one column layout ── */
+    /* --hov-pw / --hov-hw are measured from the widest price / holding (fitHovCols); the name column takes the rest */
+    #holdingsOverlay { --hov-icon: 44px; --hov-gap: 8px;
+      --hov-cols: var(--hov-icon) minmax(0,1fr) var(--hov-pw, minmax(0,1.15fr)) var(--hov-hw, minmax(0,1.3fr)); }
+    @media (max-width: 400px) { #holdingsOverlay { --hov-icon: 40px; --hov-gap: 6px; } }
     /* ── Asset list header ── */
     .hov-list-header {
-      display: grid; grid-template-columns: 44px 1fr 1fr 1fr;
-      align-items: center; gap: 8px;
+      display: grid; grid-template-columns: var(--hov-cols);
+      align-items: center; gap: var(--hov-gap);
       padding: 8px 16px;
       font-size: 0.67rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.06em; color: var(--fg2);
@@ -4003,8 +4029,8 @@ function renderHoldingsAssetList() {
 
     /* ── Asset rows ── */
     .hov-asset-row {
-      display: grid; grid-template-columns: 44px 1fr 1fr 1fr;
-      align-items: center; gap: 8px;
+      display: grid; grid-template-columns: var(--hov-cols);
+      align-items: center; gap: var(--hov-gap);
       padding: 12px 16px; border-bottom: 1px solid var(--border);
       transition: background .1s; cursor: default;
     }
@@ -4018,13 +4044,15 @@ function renderHoldingsAssetList() {
       font-weight:700;font-size:0.82rem;color:var(--fg);
     }
     .hov-asset-name { display:flex;flex-direction:column;gap:1px; min-width:0; }
-    .hov-sym  { font-size:0.88rem;font-weight:700;color:var(--fg); }
+    .hov-sym  { font-size:0.88rem;font-weight:700;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }   /* ↗ stays beside the symbol */
     /* Tap the holdings amount → coin transactions */
     .hov-asset-holding.htx-open { cursor:pointer; border-radius:8px; padding:4px 6px; margin:-4px -6px; transition:background .15s; -webkit-tap-highlight-color:transparent; }
-    @media (hover:hover) { .hov-asset-holding.htx-open:hover { background:var(--bg3); } .hov-asset-holding.htx-open:hover .hov-hqty { color:#60a5fa; } }
+    @media (hover:hover) { .hov-asset-holding.htx-open:hover { background:var(--bg3); } .hov-asset-holding.htx-open:hover .hov-go { color:#a78bfa; opacity:1; transform:translateX(2px); } }
     .hov-asset-holding.htx-open:active { background:var(--bg3); }
     .hov-asset-holding.htx-open:focus-visible { outline:2px solid #3b82f6; outline-offset:2px; }
-    .hov-hqty .htx-chev { opacity:.5; margin-left:3px; }
+    /* the same small › as the best/worst rows: grey, purple on hover/press, always level with the two lines */
+    .hov-go { display:flex; flex-shrink:0; color:var(--fg2); opacity:.7; transition:color .15s, opacity .15s, transform .15s; }
+    .hov-asset-holding.htx-open:active .hov-go, .hov-asset-holding.htx-open:focus-visible .hov-go { color:#a78bfa; opacity:1; }
 
     /* ── Coin transactions view ── */
     #hovTxView { display:none; padding:0 0 calc(80px + env(safe-area-inset-bottom,0px)); }
@@ -4155,9 +4183,10 @@ function renderHoldingsAssetList() {
     .hov-asset-price { display:flex;flex-direction:column;align-items:flex-end;gap:2px; }
     .hov-price { font-size:0.82rem;font-weight:600;color:var(--fg); }
     .hov-pct  { font-size:0.7rem;font-weight:600; }
-    .hov-asset-holding { display:flex;flex-direction:column;align-items:flex-end;gap:2px; }
-    .hov-hval { font-size:0.82rem;font-weight:700;color:var(--fg); }
-    .hov-hqty { font-size:0.7rem;color:var(--fg2); }
+    .hov-asset-holding { display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0; }
+    .hov-hold-txt { display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0; }
+    .hov-hval { font-size:0.82rem;font-weight:700;color:var(--fg);white-space:nowrap;font-variant-numeric:tabular-nums; }
+    .hov-hqty { font-size:0.7rem;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-variant-numeric:tabular-nums; }
 
     /* ══ Card layout — matches Allocation / Performance ══════════════════════ */
     .hov-back-btn { background: var(--card); border: 1px solid var(--border); color: var(--fg); }
@@ -4180,6 +4209,8 @@ function renderHoldingsAssetList() {
     #holdingsOverlay[data-view="tx"] .hov-card { display: none; }
     /* "ASSET" sits over the coin icons (spans the icon + name columns, left-aligned) */
     .hov-list-header .hov-h-asset { grid-column: 1 / 3; text-align: left !important; }
+    /* "HOLDINGS" lines up with the numbers, not with the › beside them */
+    .hov-list-header .hov-sort[data-sort="holdings"] { padding-right: 20px; }
     /* room at the bottom so the floating Synced badge never covers the last row */
     .hov-container { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
     /* Coin Transactions view inside the same column */

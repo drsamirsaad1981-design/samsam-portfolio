@@ -16,12 +16,12 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610212346"></script>
-<script src="samsam-vault.js?v=202610212346"></script>
-<script src="samsam-labels.js?v=202610212346"></script>
-<script src="samsam-taxonomy.js?v=202610212346"></script>
-<script src="samsam-coins.js?v=202610212346"></script>
-<script src="samsam-dropdown.js?v=202610212346"></script>
+<script src="samsam-ui.js?v=202610220001"></script>
+<script src="samsam-vault.js?v=202610220001"></script>
+<script src="samsam-labels.js?v=202610220001"></script>
+<script src="samsam-taxonomy.js?v=202610220001"></script>
+<script src="samsam-coins.js?v=202610220001"></script>
+<script src="samsam-dropdown.js?v=202610220001"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -618,7 +618,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610212346"></script>
+<script type="module" src="samsam-cloud.js?v=202610220001"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -863,13 +863,7 @@ function renderTable() {
         </div>
       </td>
       <td>
-        <input class="target-input" type="number" min="0" step="any"
-          value="${entry.targetQty || ''}"
-          placeholder="Set target"
-          oninput="updateTarget(${idx}, this.value)"
-          onblur="commitTarget(${idx}, this.value)"
-          onkeydown="if(event.key==='Enter'){this.blur()}"
-          title="Edit target quantity">
+        <span class="val-cell">${entry.targetQty > 0 ? fmtQty(entry.targetQty) + `<span style="font-size:.7rem;color:var(--fg2);margin-left:4px">${entry.sym}</span>` : '<span class="no-price">Set target</span>'}<button type="button" class="val-edit" onclick="promptTarget(${idx})" title="Change the target amount" aria-label="Change the target amount for ${entry.sym}">${SamsamUI.icon('pencil')}</button></span>
       </td>
       <td>${fmtQty(r.actualQty)} <span style="font-size:.7rem;color:var(--fg2)">${entry.sym}</span></td>
       <td style="color:${r.pendingQty > 0 ? 'var(--red)' : 'var(--green)'}">
@@ -878,17 +872,7 @@ function renderTable() {
       </td>
       <td>${hasPrice ? SamsamFmt.price(r.currentPrice) : '<span class="no-price">No price</span>'}</td>
       <td style="min-width:130px">
-        <div style="display:flex;align-items:center;gap:3px">
-          <input class="target-input" type="text" inputmode="decimal"
-            value="${entry.targetPct || ''}"
-            placeholder="-20"
-            oninput="updateTargetPct(${idx}, this.value)"
-            onblur="commitTargetPct(${idx}, this.value)"
-            onkeydown="if(event.key==='Enter'){this.blur()}"
-            title="Enter % offset from current price (e.g. -20 = buy 20% below current)"
-            style="width:65px">
-          <span style="font-size:0.75rem;color:var(--fg2)">%</span>
-        </div>
+        <span class="val-cell">${entry.targetPct ? (entry.targetPct > 0 ? '+' : '−') + Math.abs(entry.targetPct) + '%' : '<span class="no-price">Set %</span>'}<button type="button" class="val-edit" onclick="promptTargetPct(${idx})" title="Change the buy-at % (e.g. -20 = buy 20% below the current price)" aria-label="Change the buy-at percent for ${entry.sym}">${SamsamUI.icon('pencil')}</button></span>
         ${r.targetPrice > 0 ? `<div style="font-size:0.7rem;margin-top:3px;color:var(--accent);font-weight:600">
           🎯 ${SamsamFmt.price(r.targetPrice)}
         </div>` : ''}
@@ -1061,6 +1045,25 @@ function commitTarget(idx, val) {
   accumPlan[idx].targetQty = isNaN(n) || n < 0 ? 0 : n;
   renderAll(); // full re-render on blur/enter to update progress bars & cards
   saveAccumPlan();
+}
+
+// Table: value + ✎ (same as the main page); tapping ✎ asks for the new value in the app's own dialog.
+async function promptTarget(idx) {
+  const e = accumPlan[idx]; if (!e) return;
+  const v = await CPDialog.prompt(`How many ${e.sym} do you want to hold in total?`, { title: `Target amount — ${e.sym}`, value: e.targetQty || '', inputMode: 'decimal', placeholder: 'e.g. 500', okText: 'Save' });
+  if (v == null) return;
+  const n = parseFloat(String(v).replace(/[,\s]/g, ''));
+  if (String(v).trim() !== '' && !(n >= 0)) { CPDialog.alert('Enter a number (0 or more).', { title: 'Target amount' }); return; }
+  commitTarget(idx, String(v).trim() === '' ? '0' : String(n));
+}
+async function promptTargetPct(idx) {
+  const e = accumPlan[idx]; if (!e) return;
+  const v = await CPDialog.prompt('Buy when the price is this % away from today\'s price.\n-20 = 20% below · 10 = 10% above · empty = none', { title: `Buy at % — ${e.sym}`, value: e.targetPct || '', placeholder: '-20', okText: 'Save' });
+  if (v == null) return;
+  const t = String(v).replace(/[%\s]/g, '').replace('−', '-');
+  const n = parseFloat(t);
+  if (t !== '' && isNaN(n)) { CPDialog.alert('Enter a percent such as -20 or 10.', { title: 'Buy at %' }); return; }
+  commitTargetPct(idx, t === '' ? '0' : String(n));
 }
 
 // ─── Update target buy % offset ──────────────────────────────────────────────
