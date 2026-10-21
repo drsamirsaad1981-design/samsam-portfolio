@@ -18,13 +18,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610211309"></script>
-<script src="samsam-vault.js?v=202610211309"></script>
-<script src="samsam-labels.js?v=202610211309"></script>
-<script src="samsam-taxonomy.js?v=202610211309"></script>
-<script src="samsam-coins.js?v=202610211309"></script>
-<script src="samsam-dropdown.js?v=202610211309"></script>
-<script src="samsam-chart.js?v=202610211309"></script>
+<script src="samsam-ui.js?v=202610211331"></script>
+<script src="samsam-vault.js?v=202610211331"></script>
+<script src="samsam-labels.js?v=202610211331"></script>
+<script src="samsam-taxonomy.js?v=202610211331"></script>
+<script src="samsam-coins.js?v=202610211331"></script>
+<script src="samsam-dropdown.js?v=202610211331"></script>
+<script src="samsam-chart.js?v=202610211331"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -884,6 +884,8 @@
   .tx-row.tx-buy  { border-left:3px solid #22c55e; }
   .tx-row.tx-sell { border-left:3px solid #ef4444; }
   .tx-type-badge { font-size:0.68rem; font-weight:700; padding:2px 7px; border-radius:4px; display:inline-block; margin-bottom:4px; }
+  .tx-type-badge .ss-pencil { width:11px; height:11px; vertical-align:-1px; margin-right:2px; }
+  .price-edit .ss-pencil { width:12px; height:12px; }
   .tx-buy  .tx-type-badge { background:rgba(34,197,94,0.15); color:#22c55e; }
   .tx-sell .tx-type-badge { background:rgba(239,68,68,0.15); color:#ef4444; }
   .tx-row.tx-adjust { border-left:3px solid #94a3b8; }
@@ -1060,9 +1062,9 @@
   @media print { .btn-more { display: none !important; } }
   /* Category: tag + small edit button (cards and table) */
   .category-badge-editable { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
-  .cat-edit { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; flex-shrink: 0;
+  .cat-edit { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; flex-shrink: 0; border: none !important; background: none !important;
     border-radius: 7px; border: 1px solid var(--border); background: var(--metric-bg); color: var(--fg2); cursor: pointer; transition: opacity .2s, color .15s, border-color .15s; }
-  .cat-edit:hover { opacity: .8; color: var(--fg); border-color: var(--fg2); }
+  .cat-edit:hover { color: var(--accent); }
   .cat-edit:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
   @media (pointer: coarse) { .cat-edit { width: 28px; height: 28px; } }
   @media print { .cat-edit { display: none !important; } }
@@ -1129,7 +1131,7 @@
   #portfolioTable td, #portfolioTable th { padding-left: 8px; padding-right: 8px; }
   #portfolioTable .perf-badge, #portfolioTable .action-badge { white-space: nowrap; }
   .price-cell { position: relative; display: inline-block; }
-  .price-edit { position: absolute; right: calc(100% + 4px); top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 0.72rem; padding: 2px; opacity: 0; transition: opacity .15s; }
+  .price-edit { position: absolute; right: calc(100% + 4px); top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 2px; opacity: 0; transition: opacity .15s; color: var(--fg2); display: inline-flex; }
   #portfolioTable tr:hover .price-edit, .price-edit:focus-visible { opacity: .7; }
   .price-edit:hover { opacity: 1 !important; }
   .row-act { grid-template-columns: 1fr 1fr; grid-auto-rows: 28px; gap: 5px; width: 150px; margin: 0 auto; }
@@ -1599,7 +1601,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610211309"></script>
+<script type="module" src="samsam-cloud.js?v=202610211331"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1628,9 +1630,9 @@ function getCoinIconLinked(sym, size=36) {
 function catTag(cat, sym) {
   const k = cat || 'other', L = SamsamTaxonomy.label(k);
   if (!sym) return `<button type="button" class="cat-tag" style="--cat-c:${SamsamTaxonomy.color(k)}" onclick="event.stopPropagation();setCatFilter('${k}')" title="Show only ${L}">${L}</button>`;
-  // On coin cards / rows the whole tag (and its ✏️) opens "Change category" — easy to tap on a phone
+  // On coin cards / rows the whole tag (and its pencil) opens "Change category" — easy to tap on a phone
   const tag = `<button type="button" class="cat-tag" style="--cat-c:${SamsamTaxonomy.color(k)}" onclick="event.stopPropagation();openCatEdit('${sym}')" title="${L} — tap to change the category of ${sym}" aria-label="Category ${L} — change for ${sym}">${L}</button>`;
-  return `<span class="category-badge-editable">${tag}<button type="button" class="cat-edit" onclick="event.stopPropagation();openCatEdit('${sym}')" title="Change the category of ${sym}" aria-label="Change the category of ${sym}"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></span>`;
+  return `<span class="category-badge-editable">${tag}<button type="button" class="cat-edit" onclick="event.stopPropagation();openCatEdit('${sym}')" title="Change the category of ${sym}" aria-label="Change the category of ${sym}">${SamsamUI.icon('pencil')}</button></span>`;
 }
 // ── Category choice (Add coin + Change category): built-in list, your own categories, and "Other"
 //    which opens a box to type a new category name. One helper for both forms. ──
@@ -2136,7 +2138,7 @@ function renderTableAndStack() {
         </div></td>
         <td class="ro-num num-r" title="Changes only through Buy / Sell / Transfer">${fmtQtyRO(c.qty)}</td>
         <td class="ro-num num-r" style="color:var(--fg2)" title="Calculated from Buy / Sell / Transfer">${fmtAvgRO(c.basePrice)}</td>
-        <td class="ro-num num-r"><span class="price-cell">${fmtPriceRO(c.currentPrice)}<button type="button" class="price-edit" onclick="promptPrice('${c.sym}')" title="Set a manual price (only used when there is no live market price)">✏️</button></span></td>
+        <td class="ro-num num-r"><span class="price-cell">${fmtPriceRO(c.currentPrice)}<button type="button" class="price-edit" onclick="promptPrice('${c.sym}')" title="Set a manual price (only used when there is no live market price)" aria-label="Set a manual price">${SamsamUI.icon('pencil')}</button></span></td>
         <td class="ro-num num-r" style="color:var(--fg2)">${SamsamFmt.usd(baseVal)}</td>
         <td class="ro-num num-r" style="font-weight:700">${SamsamFmt.usd(curVal)}</td>
         <td class="num-r"><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${SamsamFmt.usdSigned(pnl)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
@@ -2326,7 +2328,7 @@ function renderHistory() {
       if (t.setQty != null) parts.push(`${SAMSAM_LABELS.AMOUNT} set to <strong>${fmtN(+t.setQty)} ${t.sym}</strong>`);
       if (t.setAvg != null) parts.push(`${SAMSAM_LABELS.AVG_BUY_PRICE} set to <strong>${SamsamFmt.price(+t.setAvg)}</strong>`);
       return `<div class="tx-row tx-adjust">
-        <div class="tx-details"><span class="tx-type-badge">✏️ EDIT</span><div>${parts.join(' · ')}</div>${meta}</div>
+        <div class="tx-details"><span class="tx-type-badge">${SamsamUI.icon('pencil')} EDIT</span><div>${parts.join(' · ')}</div>${meta}</div>
         <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">🗑 Delete</button>
       </div>`;
     }
@@ -3763,7 +3765,7 @@ function renderCoinTx() {
       <div class="htx-row-main"><div class="htx-row-type"><span class="htx-dot htx-dot-${e.kind}"></span>${e.label}</div><div class="htx-row-note">${String(e.note).replace(/</g, '&lt;')}</div></div>
       <div class="htx-row-amt">${amt}</div>
       <div class="htx-row-act">${e.opening
-        ? `<button type="button" class="htx-act" onclick="openEditOpening()" title="Edit opening position" aria-label="Edit opening position">✏️</button>`
+        ? `<button type="button" class="htx-act htx-edit" onclick="openEditOpening()" title="Edit opening position" aria-label="Edit opening position">${SamsamUI.icon('pencil')}</button>`
         : `<button type="button" class="htx-act" onclick="deleteTx('${e.id}')" title="Delete" aria-label="Delete this ${e.label}">🗑</button>`}</div>
     </div>`;
   });
@@ -4059,6 +4061,9 @@ function renderHoldingsAssetList() {
     @media (max-width: 600px) { .htx-row-note { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; overflow-wrap:anywhere; } .htx-row-main { min-width:0; flex:1 1 auto; } }
     .htx-row-amt { text-align:right; flex-shrink:0; }
     .htx-row-act { flex-shrink:0; margin-left:4px; }
+    .htx-act.htx-edit { border:none; background:none; color:var(--fg2); display:inline-flex; align-items:center; justify-content:center; }
+    .htx-act.htx-edit .ss-pencil { width:17px; height:17px; }
+    .htx-act.htx-edit:hover, .htx-act.htx-edit:focus-visible { color:var(--accent); }
     .htx-act { width:34px; height:34px; border-radius:9px; border:1px solid var(--border); background:transparent; cursor:pointer; font-size:.9rem;
       opacity:.75; display:inline-flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
     .htx-act:hover, .htx-act:focus-visible { opacity:1; border-color:var(--fg2); }
