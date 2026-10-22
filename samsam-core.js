@@ -166,24 +166,20 @@ export function profitSeries(coins, txs, times) {
   return { cost, realized: realizedArr };
 }
 
-// Chart lines from the saved points {t, v (portfolio value), b (BTC price)} — time-weighted, so money you add or
-// take out never looks like a gain or a loss:
-//   step return r_i = (Profit_i − Profit_{i−1}) ÷ Value_{i−1}        (Profit as in profitSeries)
-//   Portfolio %_i   = (1 + r_1) × (1 + r_2) × … × (1 + r_i) − 1
-//   BTC %_i         = BTC_i ÷ BTC_0 − 1                                (same window)
-export function perfChartSeries(snaps, coins, txs) {
-  const pts = (snaps || []).filter(s => s && s.v > 0);
-  if (!pts.length) return { port: [], btc: [], profit: [], cost: [], gained: 0, first: null, last: null };
+// Chart lines ("Performance, cumulative") from the saved points {t, v (portfolio value), b (BTC price)}:
+//   Blue  — All-Time Profit % at each point = Profit(t) ÷ Cost Basis(t)
+//           Profit(t) = holdings value + selling proceeds − buying costs − fees  (= Value − Cost Basis + Realized)
+//   Orange — BTC trend = BTC price ÷ BTC reference price (baseline date) − 1
+// Both are measured from the start of holding, so the range tabs only zoom in; the last point is "now".
+export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0 } = {}) {
+  const pts = (snaps || []).filter(s => s && s.v > 0).sort((a, b) => a.t - b.t);
+  if (!pts.length) return { port: [], btc: [], profit: [], cost: [], first: null, last: null };
   const { cost, realized } = profitSeries(coins, txs, pts.map(s => s.t));
   const profit = pts.map((s, i) => s.v - cost[i] + realized[i]);
-  let g = 1;
-  const port = pts.map((s, i) => {
-    if (i > 0 && pts[i - 1].v > 0) g *= 1 + (profit[i] - profit[i - 1]) / pts[i - 1].v;
-    return { t: s.t, v: (g - 1) * 100 };
-  });
-  const b0 = pts[0].b;
-  const btc = pts.map(s => ({ t: s.t, v: b0 > 0 && s.b > 0 ? (s.b / b0 - 1) * 100 : 0 }));
-  return { port, btc, profit, cost, gained: profit[profit.length - 1] - profit[0], first: pts[0], last: pts[pts.length - 1] };
+  const port = pts.map((s, i) => ({ t: s.t, v: cost[i] > 0 ? profit[i] / cost[i] * 100 : 0 }));
+  const ref = baselineBtc > 0 ? baselineBtc : pts[0].b;
+  const btc = pts.map(s => ({ t: s.t, v: ref > 0 && s.b > 0 ? (s.b / ref - 1) * 100 : 0 }));
+  return { port, btc, profit, cost, first: pts[0], last: pts[pts.length - 1] };
 }
 
 // ── Migration helper ────────────────────────────────────────────────────────

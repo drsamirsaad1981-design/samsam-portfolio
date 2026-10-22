@@ -5,13 +5,13 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610230156"></script>
-<script src="samsam-hints.js?v=202610230156"></script>
-<script src="samsam-vault.js?v=202610230156"></script>
-<script src="samsam-labels.js?v=202610230156"></script>
-<script src="samsam-taxonomy.js?v=202610230156"></script>
-<script src="samsam-coins.js?v=202610230156"></script>
-<script src="samsam-chart.js?v=202610230156"></script>
+<script src="samsam-ui.js?v=202610230219"></script>
+<script src="samsam-hints.js?v=202610230219"></script>
+<script src="samsam-vault.js?v=202610230219"></script>
+<script src="samsam-labels.js?v=202610230219"></script>
+<script src="samsam-taxonomy.js?v=202610230219"></script>
+<script src="samsam-coins.js?v=202610230219"></script>
+<script src="samsam-chart.js?v=202610230219"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -597,8 +597,8 @@ body {
       <div class="pcc-canvas-wrap"><canvas id="perfFullCanvas"></canvas></div>
       <div class="pcc-empty" id="perfFullEmpty" hidden>⏳ Collecting data… the chart fills in as hourly snapshots are recorded.</div>
       <div class="pcc-legend">
-        <span><i style="background:#3b82f6"></i>Profit <b id="pccPort">—</b></span>
-        <span><i style="background:#f0a060"></i>BTC <b id="pccBtc">—</b></span>
+        <span><i style="background:#3b82f6"></i>All-Time Profit <b id="pccPortUsd">—</b> <b id="pccPort">—</b></span>
+        <span><i style="background:#f0a060"></i>BTC trend <b id="pccBtc">—</b></span>
         <span class="pcc-vs" id="pccVs"></span>
       </div>
     </div>
@@ -653,7 +653,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610230156"></script>
+<script type="module" src="samsam-cloud.js?v=202610230219"></script>
 <script>
 // ── Constants ──
 
@@ -699,18 +699,23 @@ function drawPerfFull() {
   if (!snaps.length) { canvas.style.display = 'none'; empty.hidden = false; return; }
   canvas.style.display = ''; empty.hidden = true;
   if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
-  // Profit vs BTC, time-weighted: money you add or take out never shows as a gain (samsam-core.js → perfChartSeries)
-  const st = Samsam.getState();
-  const ser = Samsam.core.perfChartSeries(snaps, st.coins, st.transactions);
-  const pV = ser.port, pB = ser.btc;
+  // Performance (cumulative): All-Time Profit % at every point vs BTC trend since the baseline (samsam-core.js → perfChartSeries).
+  // The line ends on "now" so it finishes exactly on the All-Time Profit card's numbers.
+  const st = Samsam.getState(), bl = baselineNow();
+  const ap = allTimeData || CPProfit.calc({ value: st.portfolio.reduce((a, c) => a + c.qty * (c.currentPrice || 0), 0),
+    cost: st.portfolio.reduce((a, c) => a + c.qty * (c.basePrice || 0), 0), realized: st.realized.total });
+  const live = { t: Date.now(), v: st.portfolio.reduce((a, c) => a + c.qty * (c.currentPrice || 0), 0), b: st.btcPrice };
+  const pts = live.v > 0 && live.b > 0 && live.t > snaps[snaps.length - 1].t ? snaps.concat([live]) : snaps;
+  const ser = Samsam.core.perfChartSeries(pts, st.coins, st.transactions, { baselineBtc: bl.btcPrice });
   const h = window.innerWidth >= 900 ? 320 : window.innerWidth >= 600 ? 260 : 220;
   SamsamChart.draw(canvas, { height: h, format: 'pct', timeMode: perfRange === '24h' ? 'hours' : 'days', series: [
-    { points: pB, color: '#f0a060', width: 2 },
-    { points: pV, color: '#3b82f6', width: 2.6, fill: true },
+    { points: ser.btc, color: '#f0a060', width: 2 },
+    { points: ser.port, color: '#3b82f6', width: 2.6, fill: true },
   ] });
-  const lv = pV[pV.length - 1].v, lb = pB[pB.length - 1].v;
-  const f = (n, el) => { el.textContent = (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; el.className = n >= 0 ? 'pos' : 'neg'; };
+  const lv = ap.pct, lb = bl.btcPrice > 0 && st.btcPrice > 0 ? (st.btcPrice / bl.btcPrice - 1) * 100 : 0;
+  const f = (n, el) => { el.textContent = (n >= 0 ? '▲ ' : '▼ ') + Math.abs(n).toFixed(2) + '%'; el.className = n >= 0 ? 'pos' : 'neg'; };
   f(lv, document.getElementById('pccPort')); f(lb, document.getElementById('pccBtc'));
+  const u = document.getElementById('pccPortUsd'); u.textContent = (ap.total >= 0 ? '+' : '−') + fmtUSD(Math.abs(ap.total)); u.className = ap.total >= 0 ? 'pos' : 'neg';
   const diff = lv - lb;
   document.getElementById('pccVs').textContent = (diff >= 0 ? 'Beating BTC by ' : 'Behind BTC by ') + Math.abs(diff).toFixed(2) + ' pts';
 }
@@ -965,6 +970,7 @@ function render() {
   const totalPct   = allTimeData.pct;
   const unrealized = allTimeData.unrealized;
   CPProfit.bind(document.getElementById('allTimeCard'), () => allTimeData, { scope: 'Whole portfolio' });
+  try { drawPerfFull(); } catch (_) {}   // chart legend = these same card numbers
   CPProfit.bind(document.getElementById('bdTotal').parentElement, () => allTimeData, { scope: 'Whole portfolio' });
 
   const pnlEl = document.getElementById('totalPnl');

@@ -33,15 +33,16 @@
       actions: function () { return typeof window.openBaselineEdit === 'function' ? [{ label: 'Change date', primary: true, onClick: window.openBaselineEdit }] : []; },
     },
     perfChart: {
-      title: 'Portfolio vs BTC chart',
+      title: 'Performance (cumulative)',
       body: function () {
-        return '<p>Compares how your <b>profit</b> grew with how <b>Bitcoin\'s price</b> moved over the same period.</p>' +
-          '<p>Money you add or take out (buys, new coins, sells, transfers) <b>never shows as a gain or a loss</b>, so a big buy doesn\'t make the line jump.</p>' +
-          '<div class="cph-f"><b>Profit at each point</b><code>Portfolio Value − Cost Basis + Realized Profit</code></div>' +
-          '<div class="cph-f"><b>Step return</b><code>(Profit now − Profit at the previous point) ÷ Portfolio Value at the previous point</code></div>' +
-          '<div class="cph-f"><b>Blue line (Profit %)</b><code>(1 + step return₁) × (1 + step return₂) × … − 1</code></div>' +
-          '<div class="cph-f"><b>Orange line (BTC %)</b><code>BTC Price now ÷ BTC Price at the start of the period − 1</code></div>' +
-          '<p>Points are saved about once an hour while the app is open. A manual correction of an amount or average price shows as a step at that moment.</p>';
+        var b = baseline();
+        return '<p><b>Blue — All-Time Profit %</b>: your total profit on the coins in your portfolio, at every point in time.</p>' +
+          '<div class="cph-f"><b>All-Time Profit</b><code>Holdings × latest price + selling proceeds − buying costs − fees</code></div>' +
+          '<div class="cph-f"><b>%</b><code>All-Time Profit ÷ Cost Basis × 100</code></div>' +
+          '<p><b>Orange — BTC trend</b>: how Bitcoin\'s price moved over your holding time, from the baseline date (' + esc(fmtDay(b.date)) + ', ' + esc(money(b.btcPrice)) + ').</p>' +
+          '<div class="cph-f"><b>BTC trend</b><code>BTC price ÷ BTC reference price − 1</code></div>' +
+          '<p>Both lines are measured from the start, so 24h / 7d / 30d / 90d only zoom in. The last point is right now and matches the All-Time Profit card.</p>' +
+          '<p>Buying more doesn\'t count as profit, but it does add to Cost Basis, so the % can step a little at that moment. A manual correction of an amount or average price can also show as a step.</p>';
       },
     },
   };

@@ -18,14 +18,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610220246"></script>
-<script src="samsam-hints.js?v=202610220246"></script>
-<script src="samsam-vault.js?v=202610220246"></script>
-<script src="samsam-labels.js?v=202610220246"></script>
-<script src="samsam-taxonomy.js?v=202610220246"></script>
-<script src="samsam-coins.js?v=202610220246"></script>
-<script src="samsam-dropdown.js?v=202610220246"></script>
-<script src="samsam-chart.js?v=202610220246"></script>
+<script src="samsam-ui.js?v=202610230156"></script>
+<script src="samsam-hints.js?v=202610230156"></script>
+<script src="samsam-vault.js?v=202610230156"></script>
+<script src="samsam-labels.js?v=202610230156"></script>
+<script src="samsam-taxonomy.js?v=202610230156"></script>
+<script src="samsam-coins.js?v=202610230156"></script>
+<script src="samsam-dropdown.js?v=202610230156"></script>
+<script src="samsam-chart.js?v=202610230156"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1298,19 +1298,19 @@
   <canvas class="perf-chart-canvas" id="perfChartCanvas" height="140"></canvas>
   <div class="perf-legend">
     <div class="perf-legend-item">
-      <span class="perf-legend-dot" style="background:#3b82f6"></span>
-      <span>All-time Profit:&nbsp;</span>
+      <span>All-Time Profit:&nbsp;</span>
       <span class="perf-legend-val" id="perfPortfolioLabel">—</span>
     </div>
     <div class="perf-legend-item">
       <span class="perf-legend-dot" style="background:#3b82f6"></span>
-      <span>Portfolio <span class="perf-range-lbl">24h</span>:&nbsp;</span>
+      <span>Profit <span class="perf-range-lbl">24h</span>:&nbsp;</span>
       <span class="perf-legend-val" id="perfPortfolioPct">—</span>
     </div>
     <div class="perf-legend-item">
       <span class="perf-legend-dot" style="background:#f0a060"></span>
       <span>BTC <span class="perf-range-lbl">24h</span>:&nbsp;</span>
       <span class="perf-legend-val" id="perfBtcLabel">—</span>
+      <button type="button" class="cp-hint" data-hint="perfChart" aria-label="How is this chart calculated?"></button>
     </div>
   </div>
 </a>
@@ -1541,7 +1541,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610220246"></script>
+<script type="module" src="samsam-cloud.js?v=202610230156"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3207,11 +3207,10 @@ function drawPerfChart() {
   // If only 1 snapshot, duplicate it so chart renders as a flat baseline
   if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
 
-  // Normalize both series to % change from the first snapshot
-  const baseV = snaps[0].v;
-  const baseB = snaps[0].b;
-  const pctV  = snaps.map(s => (s.v - baseV) / baseV * 100);
-  const pctB  = snaps.map(s => baseB ? (s.b - baseB) / baseB * 100 : 0);
+  // Profit vs BTC, time-weighted: money you add or take out never shows as a gain (samsam-core.js → perfChartSeries)
+  const st = Samsam.getState();
+  const ser = Samsam.core.perfChartSeries(snaps, st.coins, st.transactions);
+  const pctV = ser.port.map(p => p.v), pctB = ser.btc.map(p => p.v);
   SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'pct', timeMode: timeModeFor(holdingsRange), series: [
     { points: snaps.map((s, i) => ({ t: s.t, v: pctB[i] })), color: '#f0a060', width: 2 },            // BTC
     { points: snaps.map((s, i) => ({ t: s.t, v: pctV[i] })), color: '#3b82f6', width: 2.4, fill: true }, // Portfolio
@@ -3232,7 +3231,8 @@ function drawPerfChart() {
     portEl.className   = 'perf-legend-val ' + (pnlUsd >= 0 ? 'pos' : 'neg');
   }
   const pctEl = document.getElementById('perfPortfolioPct');
-  if (pctEl) { pctEl.textContent = `${pctSign}${lastV.toFixed(2)}%`; pctEl.className = 'perf-legend-val ' + (lastV >= 0 ? 'pos' : 'neg'); }
+  if (pctEl) { pctEl.textContent = `${pctSign}${lastV.toFixed(2)}%`; pctEl.className = 'perf-legend-val ' + (lastV >= 0 ? 'pos' : 'neg');
+    pctEl.title = `Profit made in this period: ${ser.gained >= 0 ? '+' : '-'}${SamsamFmt.usd(Math.abs(ser.gained))}`; }
   document.querySelectorAll('.perf-range-lbl').forEach(e => e.textContent = holdingsRange === 'all' ? 'All' : holdingsRange);
   if (btcEl) {
     btcEl.textContent = `${btcSign}${lastB.toFixed(2)}%`;
