@@ -5,13 +5,13 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610220246"></script>
-<script src="samsam-hints.js?v=202610220246"></script>
-<script src="samsam-vault.js?v=202610220246"></script>
-<script src="samsam-labels.js?v=202610220246"></script>
-<script src="samsam-taxonomy.js?v=202610220246"></script>
-<script src="samsam-coins.js?v=202610220246"></script>
-<script src="samsam-chart.js?v=202610220246"></script>
+<script src="samsam-ui.js?v=202610230156"></script>
+<script src="samsam-hints.js?v=202610230156"></script>
+<script src="samsam-vault.js?v=202610230156"></script>
+<script src="samsam-labels.js?v=202610230156"></script>
+<script src="samsam-taxonomy.js?v=202610230156"></script>
+<script src="samsam-coins.js?v=202610230156"></script>
+<script src="samsam-chart.js?v=202610230156"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -587,7 +587,7 @@ body {
     <!-- ── Performance chart — same data + renderer as the main-page card, full width ── -->
     <div class="perf-chart-card" id="perfChartCard">
       <div class="pcc-head">
-        <div class="pnl-bd-title" style="margin:0">📈 Portfolio vs BTC</div>
+        <div class="pnl-bd-title" style="margin:0">📈 Portfolio vs BTC<button type="button" class="cp-hint" data-hint="perfChart" aria-label="How is this chart calculated?"></button></div>
         <div class="pcc-tabs" role="tablist" aria-label="Chart range">
           <button type="button" data-r="24h">24h</button><button type="button" data-r="7d">7d</button>
           <button type="button" data-r="30d">30d</button><button type="button" data-r="90d">90d</button>
@@ -597,7 +597,7 @@ body {
       <div class="pcc-canvas-wrap"><canvas id="perfFullCanvas"></canvas></div>
       <div class="pcc-empty" id="perfFullEmpty" hidden>⏳ Collecting data… the chart fills in as hourly snapshots are recorded.</div>
       <div class="pcc-legend">
-        <span><i style="background:#3b82f6"></i>Portfolio <b id="pccPort">—</b></span>
+        <span><i style="background:#3b82f6"></i>Profit <b id="pccPort">—</b></span>
         <span><i style="background:#f0a060"></i>BTC <b id="pccBtc">—</b></span>
         <span class="pcc-vs" id="pccVs"></span>
       </div>
@@ -653,7 +653,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610220246"></script>
+<script type="module" src="samsam-cloud.js?v=202610230156"></script>
 <script>
 // ── Constants ──
 
@@ -699,10 +699,10 @@ function drawPerfFull() {
   if (!snaps.length) { canvas.style.display = 'none'; empty.hidden = false; return; }
   canvas.style.display = ''; empty.hidden = true;
   if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
-  // % change from the first point in range — portfolio value vs BTC price
-  const v0 = snaps[0].v, b0 = snaps[0].b;
-  const pV = snaps.map(s => ({ t: s.t, v: v0 ? (s.v - v0) / v0 * 100 : 0 }));
-  const pB = snaps.map(s => ({ t: s.t, v: b0 ? (s.b - b0) / b0 * 100 : 0 }));
+  // Profit vs BTC, time-weighted: money you add or take out never shows as a gain (samsam-core.js → perfChartSeries)
+  const st = Samsam.getState();
+  const ser = Samsam.core.perfChartSeries(snaps, st.coins, st.transactions);
+  const pV = ser.port, pB = ser.btc;
   const h = window.innerWidth >= 900 ? 320 : window.innerWidth >= 600 ? 260 : 220;
   SamsamChart.draw(canvas, { height: h, format: 'pct', timeMode: perfRange === '24h' ? 'hours' : 'days', series: [
     { points: pB, color: '#f0a060', width: 2 },

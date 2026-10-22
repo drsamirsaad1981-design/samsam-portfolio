@@ -32,6 +32,18 @@
       },
       actions: function () { return typeof window.openBaselineEdit === 'function' ? [{ label: 'Change date', primary: true, onClick: window.openBaselineEdit }] : []; },
     },
+    perfChart: {
+      title: 'Portfolio vs BTC chart',
+      body: function () {
+        return '<p>Compares how your <b>profit</b> grew with how <b>Bitcoin\'s price</b> moved over the same period.</p>' +
+          '<p>Money you add or take out (buys, new coins, sells, transfers) <b>never shows as a gain or a loss</b>, so a big buy doesn\'t make the line jump.</p>' +
+          '<div class="cph-f"><b>Profit at each point</b><code>Portfolio Value − Cost Basis + Realized Profit</code></div>' +
+          '<div class="cph-f"><b>Step return</b><code>(Profit now − Profit at the previous point) ÷ Portfolio Value at the previous point</code></div>' +
+          '<div class="cph-f"><b>Blue line (Profit %)</b><code>(1 + step return₁) × (1 + step return₂) × … − 1</code></div>' +
+          '<div class="cph-f"><b>Orange line (BTC %)</b><code>BTC Price now ÷ BTC Price at the start of the period − 1</code></div>' +
+          '<p>Points are saved about once an hour while the app is open. A manual correction of an amount or average price shows as a step at that moment.</p>';
+      },
+    },
   };
 
   // ── The panel ────────────────────────────────────────────────────────────────

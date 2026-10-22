@@ -18,13 +18,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610220141"></script>
-<script src="samsam-vault.js?v=202610220141"></script>
-<script src="samsam-labels.js?v=202610220141"></script>
-<script src="samsam-taxonomy.js?v=202610220141"></script>
-<script src="samsam-coins.js?v=202610220141"></script>
-<script src="samsam-dropdown.js?v=202610220141"></script>
-<script src="samsam-chart.js?v=202610220141"></script>
+<script src="samsam-ui.js?v=202610220246"></script>
+<script src="samsam-hints.js?v=202610220246"></script>
+<script src="samsam-vault.js?v=202610220246"></script>
+<script src="samsam-labels.js?v=202610220246"></script>
+<script src="samsam-taxonomy.js?v=202610220246"></script>
+<script src="samsam-coins.js?v=202610220246"></script>
+<script src="samsam-dropdown.js?v=202610220246"></script>
+<script src="samsam-chart.js?v=202610220246"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -94,7 +95,7 @@
     overflow-x: hidden;
   }
 
-  header {
+  header.app-head {
     background: linear-gradient(135deg, #0a0e1a 0%, #1a1040 50%, #0a2040 100%);
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -102,70 +103,29 @@
     margin-bottom: 12px;
     position: relative;
   }
-  /* Cloud status + theme buttons: top-right corner on phones; on desktop they sit at the end of the
-     header row, vertically centred with the date / Live badges */
-  .hdr-btns { position: absolute; top: 14px; right: 14px; z-index: 2; display: flex; align-items: center; gap: 8px; }
-  .logo-area { padding-right: 96px; }
-  @media (min-width: 900px) {
-    .logo-area { padding-right: 0; }
-    .hdr-btns { position: static; align-self: center; margin-left: 12px; padding-right: 2px; }
-    .header-top > div:nth-last-child(2) { margin-left: auto; }
-  }
-
-  .header-top {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-
-  .logo-area {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+  /* ── Brand header: logo + "Cute Portfolio" + Live on the left, cloud + theme on the right ── */
+  .header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .hdr-btns { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .brand-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .brand-name { margin: 0; font-size: 1.45rem; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; color: var(--fg); white-space: nowrap; }
+  .brand-cute { background: linear-gradient(95deg, #f7931a 0%, #c084fc 55%, #2dd4bf 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+  .brand-live { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; font-weight: 600; color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* one quiet line: today · Baseline (ⓘ explains it, ✎ changes it) */
+  .head-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; margin: 0 0 14px; padding: 8px 12px; border-radius: 12px;
+    background: rgba(148,163,184,0.07); border: 1px solid var(--border); font-size: 0.76rem; color: var(--fg2); }
+  .hm-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .hm-item b { color: var(--fg); font-weight: 700; }
+  @media (max-width: 480px) { .lv-upd { display: none; } }   /* phone: "Live · 02:24 AM" */
+  .hm-baseline .cp-hint { margin-left: 0; } .hm-baseline .val-edit { margin-left: -2px; }
+  @media (max-width: 380px) { .brand-name { font-size: 1.25rem; } .brand .app-logo { width: 44px; height: 44px; } }
 
   .btc-icon {
     width: 44px; height: 44px;
     flex-shrink: 0;
     filter: drop-shadow(0 0 8px rgba(247,147,26,0.5));
   }
-  .btc-icon.app-logo { border-radius: 0; filter: drop-shadow(0 3px 10px rgba(247,147,26,.22)); }
-
-  .title-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .title-group h1 {
-    font-size: 1.2rem;
-    font-weight: 900;
-    color: var(--accent);
-    line-height: 1.2;
-  }
-
-  .gt-badge {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    color: var(--btc);
-    background: rgba(247,147,26,0.12);
-    border: 1px solid rgba(247,147,26,0.3);
-    border-radius: 20px;
-    padding: 2px 8px;
-    white-space: nowrap;
-    text-transform: uppercase;
-  }
-
-  .title-group p {
-    font-size: 0.75rem;
-    color: var(--fg2);
-    margin-top: 2px;
-  }
+  .btc-icon.app-logo { width: 52px; height: 52px; border-radius: 0; filter: drop-shadow(0 4px 14px rgba(167,139,250,.28)); }
 
   .header-stats {
     display: grid;
@@ -196,7 +156,7 @@
     -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
             mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
   }
-  [data-theme="light"] header { background: var(--bg2); }
+  [data-theme="light"] header.app-head { background: var(--bg2); }
   [data-theme="light"] .btc-ticker { background: rgba(15,23,42,0.03); border-color: rgba(15,23,42,0.08); }
   .btc-ticker-track {
     display: flex; flex-shrink: 0; width: max-content; white-space: nowrap;
@@ -406,7 +366,7 @@
     body { padding: 24px 28px; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 
     /* ── Header ── */
-    header {
+    header.app-head {
       display: block;
       background: var(--bg2);
       border: 1px solid var(--border);
@@ -418,21 +378,10 @@
       min-width: 0;
     }
 
-    /* Header-top: logo left, date-tag right — single flex row, vertically centered */
-    .header-top {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-    }
-    .header-top h1 { font-size: 1.5rem; }
-    .gt-badge {
-      font-size: 0.7rem;
-      padding: 3px 10px;
-      background: rgba(255,153,0,0.12);
-      border-color: rgba(255,153,0,0.35);
-    }
+    .header-top { margin-bottom: 16px; }
+    .brand-name { font-size: 1.75rem; }
+    .btc-icon.app-logo { width: 56px; height: 56px; }
+    .head-meta { margin-bottom: 18px; font-size: 0.8rem; }
 
     /* Date tag: inline with logo row */
     .date-tag {
@@ -1258,23 +1207,20 @@
   </div>
 </div>
 
-<header>
+<header class="app-head" id="appHead">
   <div class="header-top">
-    <div class="logo-area">
-      <img class="btc-icon app-logo" src="./logo-mark.svg?v=1" alt="Cute Portfolio" width="44" height="44">
-      <div class="title-group">
-        <div class="title-row">
-          <h1>Portfolio 🎯</h1>
-          <span class="gt-badge">Golden Triangle 2030</span>
-        </div>
-        <p>Mining + Trading + Accumulation</p>
+    <div class="brand">
+      <img class="btc-icon app-logo" src="./logo-mark.svg?v=1" alt="" width="52" height="52">
+      <div class="brand-text">
+        <h1 class="brand-name"><span class="brand-cute">Cute</span> Portfolio</h1>
+        <div id="liveIndicator" class="brand-live"><span class="ss-live" data-state="loading"></span> Loading…</div>
       </div>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:stretch;gap:4px">
-      <div class="date-tag ss-date-label" id="currentDate" style="text-align:left;white-space:nowrap"></div>
-      <div id="liveIndicator" class="date-tag" style="display:flex;align-items:center;gap:5px;justify-content:flex-start"><span class="ss-live" data-state="loading"></span> Loading…</div>
-    </div>
     <div class="hdr-btns"><button type="button" class="ss-theme-btn" data-theme-toggle></button></div>
+  </div>
+  <div class="head-meta">
+    <span class="hm-item ss-date-label" id="currentDate"></span>
+    <span class="hm-item hm-baseline"><span class="hm-k">Baseline</span> <b id="baselineLabel">Oct 15, 2026</b><button type="button" class="cp-hint" data-hint="baseline" aria-label="What is the baseline?"></button><button type="button" class="val-edit" onclick="openBaselineEdit()" title="Change the baseline date" aria-label="Change the baseline date"></button></span>
   </div>
 
   <div class="header-stats">
@@ -1583,7 +1529,7 @@
 </div>
 
 <footer>
-  <p>☁️ Cloud sync (Firebase) | Baseline: Oct 15, 2026</p>
+  <p>☁️ Cloud sync (Firebase) | Baseline: <span id="footerBaseline">Oct 15, 2026</span></p>
   <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
   <p id="footerSyncTime" style="margin-top:4px;font-size:0.68rem;color:var(--fg2);opacity:0.75">☁️ Cloud: not synced yet</p>
   <p id="footerSyncStatus" style="margin-top:4px;font-size:0.7rem;min-height:1.2em;transition:opacity 0.5s"></p>
@@ -1595,7 +1541,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610220141"></script>
+<script type="module" src="samsam-cloud.js?v=202610220246"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1765,6 +1711,14 @@ const BASE_PORTFOLIO = [
 let portfolio = [];
 let archivedCoins = [];
 let btcPrice = 82363;
+// Baseline (date + BTC price that day) — a cloud setting; Portfolio vs BTC compares against it. See samsam-hints.js → baseline.
+let baselineState = { date: '2026-10-15', btcPrice: 81162, isDefault: true };
+const fmtBaselineDay = iso => { const d = new Date(iso + 'T00:00:00'); return isNaN(d) ? iso : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
+function renderBaselineLabel() {
+  const t = fmtBaselineDay(baselineState.date);
+  const a = document.getElementById('baselineLabel'); if (a) a.textContent = t;
+  const f = document.getElementById('footerBaseline'); if (f) f.textContent = t;
+}
 let sortCol = 'currentValue';
 let sortDir = 1;  // 1 = descending (highest first), -1 = ascending
 let liveStatus = 'idle';
@@ -1827,6 +1781,7 @@ function applyCloudState(d) {
   perfSnapsState = d.perfSnaps;
   holdingsSnapsState = d.holdingsSnaps;
   btcPrice       = d.btcPrice || btcPrice;
+  if (d.baseline) { baselineState = d.baseline; renderBaselineLabel(); }
   cloudReady = true;
   renderAll();
   if (_histSym) renderHistory();
@@ -1866,11 +1821,11 @@ function getCustomSyms() {
   return new Set(customCoins.map(c => c.sym));
 }
 
-// Reset: pins every Oct-15 baseline coin back to its baseline quantity and average price.
+// Reset: pins every Oct-15 starting coin back to its starting quantity and average price.
 // Recorded as ledger corrections, so it syncs to every device and history is preserved.
 async function resetApp() {
   if (!requireCloud()) return;
-  if (!(await CPDialog.confirm('Reset all baseline coins to their Oct-15 quantities and prices? Your transaction history is kept.', { title: 'Reset portfolio', okText: 'Reset', danger: true }))) return;
+  if (!(await CPDialog.confirm('Reset all starting coins to their Oct-15 quantities and prices? Your transaction history is kept.', { title: 'Reset portfolio', okText: 'Reset', danger: true }))) return;
   cloudWrite(Samsam.resetToBaseline(BASE_PORTFOLIO));
 }
 
@@ -1890,7 +1845,7 @@ function allTimeProfitData() {
 }
 
 function getPerf(coin) {
-  const btcPerfPct = ((btcPrice / 81162) - 1) * 100;
+  const btcPerfPct = ((btcPrice / baselineState.btcPrice) - 1) * 100;   // BTC since the baseline date
   const coinPerfPct = ((coin.currentPrice / coin.basePrice) - 1) * 100;
   return coinPerfPct - btcPerfPct;
 }
@@ -1938,6 +1893,7 @@ function renderHeader() {
   subEl.classList.toggle('stat-pos', pnl >= 0); subEl.classList.toggle('stat-neg', pnl < 0);
   pnlEl.parentElement.title = 'Tap for details — Realized ' + fmtUsd(realized) + ' + Unrealized ' + fmtUsd(ap.unrealized);
   CPProfit.bind(pnlEl.parentElement, allTimeProfitData, { scope: 'Whole portfolio' });
+  try { renderMiniBar(); } catch (_) {}
 
   // Card 3: BTC Accumulated — strip trailing zeros, max 8 decimals
   document.getElementById('totalBtc').textContent = parseFloat(btcQty.toFixed(8)).toString() + ' BTC';
@@ -2825,7 +2781,7 @@ function setLiveStatus(s){liveStatus=s;updateLiveIndicator();}
 function updateLiveIndicator(){
   const el=document.getElementById('liveIndicator');if(!el)return;
   if(liveStatus==='loading')el.innerHTML=SamsamUI.liveDot('loading')+' Fetching live prices…';
-  else if(liveStatus==='ok'){const t=lastFetchTime?lastFetchTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'';el.innerHTML=SamsamUI.liveDot('ok')+` Live · Updated ${t}`;}
+  else if(liveStatus==='ok'){const t=lastFetchTime?lastFetchTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'';el.innerHTML=SamsamUI.liveDot('ok')+` Live · <span class="lv-upd">Updated </span>${t}`;}
   else if(liveStatus==='error')el.innerHTML=SamsamUI.liveDot('error')+' Fetch failed — using saved prices';
   else if(liveStatus==='offline')el.innerHTML=SamsamUI.liveDot('idle')+' Offline — showing last saved prices';
   else el.innerHTML=SamsamUI.liveDot('idle')+' Prices from last session';
@@ -3136,7 +3092,9 @@ document.getElementById('searchBox').addEventListener('input',renderTableAndStac
     onChange: v => { document.getElementById('filterAction').value = v; sortCol = 'currentValue'; sortDir = 1; renderTableAndStack(); animateCoinList(); },
   });
 })();
-document.getElementById('currentDate').innerHTML=SamsamUI.icon('calendar')+'<span>'+new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})+' — Baseline: Oct 15, 2026</span>';
+document.getElementById('currentDate').innerHTML=SamsamUI.icon('calendar')+'<span>'+new Date().toLocaleDateString('en-US',{year:'numeric',month:(innerWidth<=480?'short':'long'),day:'numeric'})+'</span>';
+document.querySelector('.hm-baseline .val-edit').innerHTML = SamsamUI.icon('pencil');
+renderBaselineLabel();
 
 // Baseline + fallback prices let the store show sensible prices before the first live fetch.
 whenSamsam(S => {
@@ -3724,7 +3682,7 @@ function renderCoinTx() {
   if (open && open.qty > 0) {
     const isBase = BASE_PORTFOLIO.some(b => b.sym === sym);
     const oDate = open.date || (isBase ? BASELINE_DATE : (doc.addedAt || BASELINE_DATE));
-    entries.push({ kind: 'buy', label: 'Buy', opening: true, note: (isBase && !open.date ? 'Opening position (Oct-15 baseline)' : 'Opening position') + ' · @ ' + priceFmt(open.avg),
+    entries.push({ kind: 'buy', label: 'Buy', opening: true, note: (isBase && !open.date ? 'Opening position (Oct-15 start)' : 'Opening position') + ' · @ ' + priceFmt(open.avg),
       date: oDate, qty: open.qty, usd: open.qty * open.avg, order: '' });
   }
   coinTxs.forEach(t => {
@@ -3936,6 +3894,149 @@ function fitHovCols() {
 }
 let _hovFitT = 0;
 window.addEventListener('resize', () => { clearTimeout(_hovFitT); _hovFitT = setTimeout(fitHovCols, 120); });
+</script>
+
+<!-- ── Compact bar: appears once the main header scrolls away (logo · name · total) ── -->
+<div class="mini-bar" id="miniBar" aria-hidden="true">
+  <button type="button" class="mini-in" onclick="window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })" tabindex="-1" aria-label="Back to top">
+    <img src="./logo-mark.svg?v=1" alt="" width="28" height="28">
+    <span class="mini-name"><span class="brand-cute">Cute</span> Portfolio</span>
+    <span class="mini-vals"><span class="mini-total" id="miniTotal">—</span><span class="mini-pnl" id="miniPnl"></span></span>
+  </button>
+</div>
+<style>
+  .mini-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 70; pointer-events: none; opacity: 0; transform: translateY(-100%);
+    transition: transform .22s ease, opacity .22s ease; padding-top: env(safe-area-inset-top, 0px);
+    background: color-mix(in srgb, var(--bg2) 82%, transparent); -webkit-backdrop-filter: saturate(1.6) blur(16px); backdrop-filter: saturate(1.6) blur(16px);
+    border-bottom: 1px solid var(--border); box-shadow: 0 6px 18px rgba(2,6,23,.14); }
+  .mini-bar.show { opacity: 1; transform: none; pointer-events: auto; }
+  .mini-in { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 1400px; margin: 0 auto; box-sizing: border-box;
+    padding: 9px max(16px, env(safe-area-inset-right,0px)) 9px max(16px, env(safe-area-inset-left,0px)); border: none; background: none; color: var(--fg); font: inherit; cursor: pointer; text-align: left; }
+  .mini-in img { flex-shrink: 0; }
+  .mini-name { font-weight: 900; font-size: 1rem; letter-spacing: -0.01em; white-space: nowrap; }
+  .mini-vals { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .mini-total { font-weight: 800; font-size: .98rem; }
+  .mini-pnl { font-size: .72rem; font-weight: 700; }
+  .mini-pnl.pos { color: var(--green); } .mini-pnl.neg { color: var(--red); }
+  @media (max-width: 360px) { .mini-name { font-size: .92rem; } }
+  @media (prefers-reduced-motion: reduce) { .mini-bar { transition: none; } }
+  @media print { .mini-bar, .bl-overlay { display: none !important; } }
+
+  /* ── Baseline editor ── */
+  .bl-overlay { position: fixed; inset: 0; z-index: 100148; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(2,6,23,.62); }
+  .bl-overlay.show { display: flex; }
+  .bl-card { width: min(420px, 100%); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; background: var(--card-solid, var(--bg2)); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 18px; padding: 18px; box-shadow: 0 22px 50px rgba(0,0,0,.45); }
+  .bl-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; } .bl-head h3 { flex: 1; margin: 0; font-size: 1.02rem; font-weight: 800; }
+  .bl-x { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--border); background: none; color: inherit; font-size: 1.1rem; cursor: pointer; }
+  .bl-lead { margin: 0 0 14px; font-size: .84rem; color: var(--fg2); line-height: 1.5; }
+  .bl-field { display: block; margin-bottom: 12px; } .bl-field > span { display: block; font-size: .74rem; font-weight: 700; color: var(--fg2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+  .bl-field input { width: 100%; box-sizing: border-box; height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-size: 1rem; }
+  .bl-field input:focus { outline: none; border-color: #7c3aed; }
+  .bl-src { display: block; margin-top: 5px; font-size: .74rem; color: var(--fg2); min-height: 1.2em; } .bl-src.err { color: var(--red); }
+  .bl-prev { border-radius: 12px; background: rgba(148,163,184,.08); border: 1px solid var(--border); padding: 10px 12px; font-size: .82rem; line-height: 1.55; margin-bottom: 4px; }
+  .bl-prev b { font-variant-numeric: tabular-nums; } .bl-prev .bl-same { color: var(--fg2); }
+  .bl-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .bl-acts button { height: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-weight: 800; cursor: pointer; }
+  .bl-acts .bl-save { background: linear-gradient(135deg,#7c3aed,#6d28d9); border-color: #6d28d9; color: #fff; } .bl-acts .bl-save:disabled { opacity: .5; cursor: default; }
+  .bl-reset { display: block; margin: 10px auto 0; border: none; background: none; color: #a78bfa; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
+</style>
+<div class="bl-overlay" id="blModal" role="dialog" aria-modal="true" aria-labelledby="blTitle">
+  <div class="bl-card">
+    <div class="bl-head"><img src="./logo-mark.svg?v=1" alt="" width="26" height="26"><h3 id="blTitle">Baseline date</h3><button type="button" class="cp-hint" data-hint="baseline"></button><button type="button" class="bl-x" onclick="closeBaselineEdit()" aria-label="Close">×</button></div>
+    <p class="bl-lead">The day your coins are compared with Bitcoin. Pick a date and the app looks up BTC's price on that day.</p>
+    <label class="bl-field"><span>Date</span><input type="date" id="blDate" onchange="blDateChanged()"></label>
+    <label class="bl-field"><span>BTC price on that day (USD)</span><input type="text" inputmode="decimal" id="blPrice" oninput="blPriceTyped()" autocomplete="off"><small class="bl-src" id="blSrc"></small></label>
+    <div class="bl-prev" id="blPrev" aria-live="polite"></div>
+    <div class="bl-acts"><button type="button" onclick="closeBaselineEdit()">Cancel</button><button type="button" class="bl-save" id="blSave" onclick="saveBaselineEdit()">Save</button></div>
+    <button type="button" class="bl-reset" id="blReset" onclick="blUseDefault()">Use the original baseline (Oct 15, 2026)</button>
+  </div>
+</div>
+<script>
+// ── Compact bar ──
+(function () {
+  const bar = document.getElementById('miniBar'), head = document.getElementById('appHead');
+  if (!bar || !head || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(([e]) => { const on = !e.isIntersecting && e.boundingClientRect.top < 0; bar.classList.toggle('show', on); bar.setAttribute('aria-hidden', on ? 'false' : 'true'); bar.querySelector('button').tabIndex = on ? 0 : -1; },
+    { threshold: 0, rootMargin: '-40px 0px 0px 0px' }).observe(head);
+})();
+function renderMiniBar() {
+  const t = document.getElementById('miniTotal'), p = document.getElementById('miniPnl'); if (!t) return;
+  t.textContent = document.getElementById('totalUsd').textContent;
+  const ap = allTimeProfitData();
+  p.textContent = (ap.total >= 0 ? '+' : '−') + SamsamFmt.usd(Math.abs(ap.total)) + ' · ' + (ap.pct >= 0 ? '+' : '−') + Math.abs(ap.pct).toFixed(2) + '%';
+  p.className = 'mini-pnl ' + (ap.total >= 0 ? 'pos' : 'neg'); p.title = 'All-Time Profit';
+}
+
+// ── Baseline editor ──
+const BL_DEFAULT = { date: '2026-10-15', btcPrice: 81162 };
+let blFetchSeq = 0, blSource = 'coingecko';
+function openBaselineEdit() {
+  if (!requireCloud()) return;
+  const d = document.getElementById('blDate'), p = document.getElementById('blPrice');
+  d.max = new Date().toISOString().slice(0, 10);
+  d.value = baselineState.date; p.value = fmtInput(baselineState.btcPrice); blSource = baselineState.source === 'manual' ? 'manual' : 'coingecko';
+  document.getElementById('blSrc').textContent = baselineState.isDefault ? 'Original baseline' : (blSource === 'manual' ? 'Entered by hand' : 'From CoinGecko (daily price, 00:00 UTC)');
+  document.getElementById('blSrc').className = 'bl-src';
+  document.getElementById('blReset').style.display = baselineState.isDefault ? 'none' : '';
+  document.getElementById('blModal').classList.add('show');
+  blPreview(); setTimeout(() => d.focus(), 30);
+  document.addEventListener('keydown', blKey, true);
+}
+function closeBaselineEdit() { document.getElementById('blModal').classList.remove('show'); document.removeEventListener('keydown', blKey, true); blFetchSeq++; }
+function blKey(e) { if (e.key === 'Escape' && !document.querySelector('.cph')) { e.preventDefault(); closeBaselineEdit(); } }
+document.getElementById('blModal').addEventListener('click', e => { if (e.target.id === 'blModal') closeBaselineEdit(); });
+async function blDateChanged() {
+  const date = document.getElementById('blDate').value, src = document.getElementById('blSrc');
+  if (!date) return blPreview();
+  if (date === BL_DEFAULT.date) { document.getElementById('blPrice').value = fmtInput(BL_DEFAULT.btcPrice); blSource = 'coingecko'; src.textContent = 'Original baseline'; src.className = 'bl-src'; return blPreview(); }
+  const seq = ++blFetchSeq; src.textContent = 'Looking up BTC price on ' + fmtBaselineDay(date) + '…'; src.className = 'bl-src';
+  blPreview(true);
+  try {
+    const price = await Samsam.fetchBtcPriceOn(date);
+    if (seq !== blFetchSeq) return;
+    document.getElementById('blPrice').value = fmtInput(price); blSource = 'coingecko';
+    src.textContent = 'From CoinGecko (daily price, 00:00 UTC) — you can change it';
+  } catch (e) {
+    if (seq !== blFetchSeq) return;
+    src.textContent = 'Couldn’t look it up (' + (e && e.message || 'network') + ') — type the price yourself'; src.className = 'bl-src err';
+    document.getElementById('blPrice').value = ''; blSource = 'manual'; document.getElementById('blPrice').focus();
+  }
+  blPreview();
+}
+function blPriceTyped() { blSource = 'manual'; blFetchSeq++; const s = document.getElementById('blSrc'); s.textContent = 'Entered by hand'; s.className = 'bl-src'; blPreview(); }
+function blUseDefault() { document.getElementById('blDate').value = BL_DEFAULT.date; blDateChanged(); }
+function blRead() {
+  const date = document.getElementById('blDate').value;
+  const price = parseFloat(String(document.getElementById('blPrice').value).replace(/[$,\s]/g, ''));
+  return { date, price, ok: /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= new Date().toISOString().slice(0, 10) && price > 0 };
+}
+// Before saving, show exactly what changes: the BTC reference price, how far every coin's Portfolio vs BTC moves.
+function blPreview(loading) {
+  const r = blRead(), el = document.getElementById('blPrev'), save = document.getElementById('blSave');
+  const same = r.ok && r.date === baselineState.date && Math.abs(r.price - baselineState.btcPrice) < 0.005;
+  save.disabled = !r.ok || same || !!loading;
+  if (loading) { el.innerHTML = '<span class="bl-same">Looking up the price…</span>'; return; }
+  if (!r.ok) { el.innerHTML = '<span class="bl-same">Pick a date (not in the future) and a BTC price above 0.</span>'; return; }
+  if (same) { el.innerHTML = '<span class="bl-same">This is the baseline you have now.</span>'; return; }
+  const oldB = baselineState.btcPrice, now = btcPrice || 0;
+  const shift = now > 0 ? ((now / oldB) - (now / r.price)) * 100 : 0;   // Portfolio vs BTC = coin % − BTC %; only the BTC part moves
+  const usd = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  el.innerHTML = `BTC reference price: <b>${usd(oldB)}</b> → <b>${usd(r.price)}</b><br>` +
+    (now > 0 ? `BTC since then: <b>${SamsamCoins.signedPct((now / oldB - 1) * 100, 1)}</b> → <b>${SamsamCoins.signedPct((now / r.price - 1) * 100, 1)}</b><br>` +
+      `Every coin's <b>Portfolio vs BTC</b> moves by <b>${shift >= 0 ? '+' : '−'}${Math.abs(shift).toFixed(1)} pts</b>.<br>` : '') +
+    `<span class="bl-same">Holdings, transactions, All-Time Profit and signals stay the same.</span>`;
+}
+async function saveBaselineEdit() {
+  const r = blRead(); if (!r.ok) return;
+  const btn = document.getElementById('blSave'); btn.disabled = true;
+  // Saved on this device at once and synced to the cloud (offline too); only a refused value keeps the dialog open.
+  let failed = null;
+  cloudWrite(Samsam.setBaseline({ date: r.date, btcPrice: r.price, source: blSource })).catch(e => { failed = e; });
+  await new Promise(res => setTimeout(res, 0));
+  if (!failed) { closeBaselineEdit(); return; }
+  const s = document.getElementById('blSrc'); s.textContent = 'Not saved: ' + (failed.message || failed); s.className = 'bl-src err'; btn.disabled = false;
+}
 </script>
 
 <!-- ── Holdings Full-Screen Overlay ── -->

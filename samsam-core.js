@@ -136,6 +136,56 @@ export function realizedPnl(coins, txs) {
   return { total, sellCount, sellFees, perTx, bySym: bySymTotal };
 }
 
+// ── Profit over time (for the Portfolio vs BTC charts) ─────────────────────────
+// For each moment t: Cost Basis(t) and Realized(t) from the ledger up to t — the same maths as the
+// All-Time Profit card. With the saved portfolio value V(t):  Profit(t) = V(t) − Cost Basis(t) + Realized(t).
+// Money you add (a buy, a new coin, a transfer in) raises V and Cost Basis by the same amount, so it never
+// shows up as profit. Coins removed from the portfolio stop counting from the moment they were removed.
+export function profitSeries(coins, txs, times) {
+  const ts = (times || []).map(Number);
+  const order = ts.map((t, i) => i).sort((a, b) => ts[a] - ts[b]);
+  const list = [...(txs || [])].sort(compareTx);
+  const pos = new Map(), removedAt = new Map();
+  for (const c of coins || []) {
+    pos.set(c.sym, { qty: Math.max(0, num(c.opening && c.opening.qty)), avg: Math.max(0, num(c.opening && c.opening.avg)) });
+    if (c.removed && c.removedAt) { const r = Date.parse(c.removedAt); if (r) removedAt.set(c.sym, r); }
+  }
+  const cost = new Array(ts.length).fill(0), realizedArr = new Array(ts.length).fill(0);
+  let k = 0, realized = 0;
+  for (const i of order) {
+    const t = ts[i];
+    while (k < list.length && Date.parse(list[k].date) <= t) {
+      const x = list[k++], p = pos.get(x.sym) || { qty: 0, avg: 0 };
+      const r = applyTx(p, x); pos.set(x.sym, { qty: r.qty, avg: r.avg });
+      if (x.type === 'sell') realized += r.realized;
+    }
+    let c = 0;
+    for (const [sym, p] of pos) { const rm = removedAt.get(sym); if (!(rm && rm <= t)) c += p.qty * p.avg; }
+    cost[i] = c; realizedArr[i] = realized;
+  }
+  return { cost, realized: realizedArr };
+}
+
+// Chart lines from the saved points {t, v (portfolio value), b (BTC price)} — time-weighted, so money you add or
+// take out never looks like a gain or a loss:
+//   step return r_i = (Profit_i − Profit_{i−1}) ÷ Value_{i−1}        (Profit as in profitSeries)
+//   Portfolio %_i   = (1 + r_1) × (1 + r_2) × … × (1 + r_i) − 1
+//   BTC %_i         = BTC_i ÷ BTC_0 − 1                                (same window)
+export function perfChartSeries(snaps, coins, txs) {
+  const pts = (snaps || []).filter(s => s && s.v > 0);
+  if (!pts.length) return { port: [], btc: [], profit: [], cost: [], gained: 0, first: null, last: null };
+  const { cost, realized } = profitSeries(coins, txs, pts.map(s => s.t));
+  const profit = pts.map((s, i) => s.v - cost[i] + realized[i]);
+  let g = 1;
+  const port = pts.map((s, i) => {
+    if (i > 0 && pts[i - 1].v > 0) g *= 1 + (profit[i] - profit[i - 1]) / pts[i - 1].v;
+    return { t: s.t, v: (g - 1) * 100 };
+  });
+  const b0 = pts[0].b;
+  const btc = pts.map(s => ({ t: s.t, v: b0 > 0 && s.b > 0 ? (s.b / b0 - 1) * 100 : 0 }));
+  return { port, btc, profit, cost, gained: profit[profit.length - 1] - profit[0], first: pts[0], last: pts[pts.length - 1] };
+}
+
 // ── Migration helper ────────────────────────────────────────────────────────
 // Given a coin's CURRENT saved position and its transaction history, work out the
 // opening position that, replayed forward, reproduces the current one. The old app
