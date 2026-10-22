@@ -137,49 +137,81 @@ export function realizedPnl(coins, txs) {
 }
 
 // ── Profit over time (for the Portfolio vs BTC charts) ─────────────────────────
-// For each moment t: Cost Basis(t) and Realized(t) from the ledger up to t — the same maths as the
-// All-Time Profit card. With the saved portfolio value V(t):  Profit(t) = V(t) − Cost Basis(t) + Realized(t).
-// Money you add (a buy, a new coin, a transfer in) raises V and Cost Basis by the same amount, so it never
-// shows up as profit. Coins removed from the portfolio stop counting from the moment they were removed.
-export function profitSeries(coins, txs, times) {
+// Walks the ledger in time order. At each moment t:
+//   Cost Basis(t), Realized(t)       — same maths as the All-Time Profit card
+//   Net invested N(t) = Cost Basis(t) − Realized(t)  = buying costs + fees − selling proceeds
+//   BTC benchmark: every change in N (a buy, a sell, a transfer, a coin removed) is treated as buying or selling
+//   BTC at that moment's price instead — "what if this money had gone into Bitcoin".
+// Coins removed from the portfolio stop counting from the moment they were removed.
+export function profitSeries(coins, txs, times, { btcAt = null, startBtc = 0 } = {}) {
   const ts = (times || []).map(Number);
   const order = ts.map((t, i) => i).sort((a, b) => ts[a] - ts[b]);
-  const list = [...(txs || [])].sort(compareTx);
   const pos = new Map(), removedAt = new Map();
   for (const c of coins || []) {
     pos.set(c.sym, { qty: Math.max(0, num(c.opening && c.opening.qty)), avg: Math.max(0, num(c.opening && c.opening.avg)) });
     if (c.removed && c.removedAt) { const r = Date.parse(c.removedAt); if (r) removedAt.set(c.sym, r); }
   }
-  const cost = new Array(ts.length).fill(0), realizedArr = new Array(ts.length).fill(0);
-  let k = 0, realized = 0;
-  for (const i of order) {
-    const t = ts[i];
-    while (k < list.length && Date.parse(list[k].date) <= t) {
-      const x = list[k++], p = pos.get(x.sym) || { qty: 0, avg: 0 };
+  // one time line: transactions, removals, and the moments we need numbers for
+  const ev = [];
+  for (const x of [...(txs || [])].sort(compareTx)) ev.push({ t: Date.parse(x.date) || 0, k: 0, x });
+  for (const [sym, t] of removedAt) ev.push({ t, k: 1, sym });
+  order.forEach(i => ev.push({ t: ts[i], k: 2, i }));
+  ev.sort((a, b) => a.t - b.t || a.k - b.k);
+  const gone = new Set();
+  let realized = 0;
+  const costNow = () => { let c = 0; for (const [sym, p] of pos) if (!gone.has(sym)) c += p.qty * p.avg; return c; };
+  const price = t => { const b = btcAt ? btcAt(t) : 0; return b > 0 ? b : startBtc; };
+  let N = costNow(), shadow = startBtc > 0 ? N / startBtc : 0;   // what you held at the start, bought as BTC on the start day
+  const cost = new Array(ts.length).fill(0), realizedArr = new Array(ts.length).fill(0), invested = new Array(ts.length).fill(0), btcQty = new Array(ts.length).fill(0);
+  for (const e of ev) {
+    if (e.k === 0) {
+      const x = e.x, p = pos.get(x.sym) || { qty: 0, avg: 0 };
       const r = applyTx(p, x); pos.set(x.sym, { qty: r.qty, avg: r.avg });
       if (x.type === 'sell') realized += r.realized;
+    } else if (e.k === 1) gone.add(e.sym);
+    if (e.k !== 2) {
+      const n2 = costNow() - realized, dN = n2 - N; N = n2;
+      const bp = e.k === 0 && e.x.sym === 'BTC' && num(e.x.price) > 0 ? num(e.x.price) : price(e.t);
+      if (dN && bp > 0) shadow += dN / bp;
+      continue;
     }
-    let c = 0;
-    for (const [sym, p] of pos) { const rm = removedAt.get(sym); if (!(rm && rm <= t)) c += p.qty * p.avg; }
-    cost[i] = c; realizedArr[i] = realized;
+    cost[e.i] = costNow(); realizedArr[e.i] = realized; invested[e.i] = N; btcQty[e.i] = shadow;
   }
-  return { cost, realized: realizedArr };
+  return { cost, realized: realizedArr, invested, btcQty };
 }
 
 // Chart lines ("Performance, cumulative") from the saved points {t, v (portfolio value), b (BTC price)}:
-//   Blue  — All-Time Profit % at each point = Profit(t) ÷ Cost Basis(t)
-//           Profit(t) = holdings value + selling proceeds − buying costs − fees  (= Value − Cost Basis + Realized)
-//   Orange — BTC trend = BTC price ÷ BTC reference price (baseline date) − 1
-// Both are measured from the start of holding, so the range tabs only zoom in; the last point is "now".
+//   Blue   — All-Time Profit %   = (Value − Net invested) ÷ Cost Basis
+//            (Value − Net invested = holdings × price + selling proceeds − buying costs − fees)
+//   Orange — BTC trend %         = (BTC benchmark value − Net invested) ÷ Cost Basis
+//            the same money, bought and sold as BTC at the same moments — so both lines move on the same scale.
+// The range tabs only zoom in; the last point is "now".
 export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0 } = {}) {
   const pts = (snaps || []).filter(s => s && s.v > 0).sort((a, b) => a.t - b.t);
   if (!pts.length) return { port: [], btc: [], profit: [], cost: [], first: null, last: null };
-  const { cost, realized } = profitSeries(coins, txs, pts.map(s => s.t));
+  const withB = pts.filter(s => s.b > 0);
+  const btcAt = t => {   // BTC price at time t from the nearest saved point
+    if (!withB.length) return 0;
+    let lo = 0, hi = withB.length - 1;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (withB[m].t < t) lo = m + 1; else hi = m; }
+    const a = withB[Math.max(0, lo - 1)], b = withB[lo];
+    return Math.abs(a.t - t) <= Math.abs(b.t - t) ? a.b : b.b;
+  };
+  const startBtc = baselineBtc > 0 ? baselineBtc : (withB[0] ? withB[0].b : 0);
+  const { cost, realized, invested, btcQty } = profitSeries(coins, txs, pts.map(s => s.t), { btcAt, startBtc });
   const profit = pts.map((s, i) => s.v - cost[i] + realized[i]);
   const port = pts.map((s, i) => ({ t: s.t, v: cost[i] > 0 ? profit[i] / cost[i] * 100 : 0 }));
-  const ref = baselineBtc > 0 ? baselineBtc : pts[0].b;
-  const btc = pts.map(s => ({ t: s.t, v: ref > 0 && s.b > 0 ? (s.b / ref - 1) * 100 : 0 }));
-  return { port, btc, profit, cost, first: pts[0], last: pts[pts.length - 1] };
+  const btcProfit = pts.map((s, i) => (s.b > 0 ? btcQty[i] * s.b : invested[i]) - invested[i]);
+  const btc = pts.map((s, i) => ({ t: s.t, v: cost[i] > 0 ? btcProfit[i] / cost[i] * 100 : 0 }));
+  // A single saved point taken while prices were still loading (one coin missing or at a stale price) shows as a lone
+  // spike that the next point undoes. Leave such isolated outliers out so the scale follows the real trend.
+  const keep = port.map((p, i) => {
+    if (i === 0 || i === port.length - 1) return true;
+    const a = port[i - 1].v, b = port[i + 1].v, d1 = p.v - a, d2 = p.v - b;
+    return !(Math.abs(b - a) < 3 && Math.abs(d1) > 10 && Math.abs(d2) > 10 && Math.sign(d1) === Math.sign(d2));
+  });
+  const f = arr => arr.filter((_, i) => keep[i]);
+  return { port: f(port), btc: f(btc), profit: f(profit), btcProfit: f(btcProfit), cost: f(cost), dropped: keep.filter(k => !k).length, first: pts[0], last: pts[pts.length - 1] };
 }
 
 // ── Migration helper ────────────────────────────────────────────────────────

@@ -26,7 +26,7 @@
           '<p>It sets the <b>BTC reference price</b>, which is BTC\'s price on that date: <b>' + esc(money(b.btcPrice)) + '</b>' +
           (b.source === 'manual' ? ' (entered by hand)' : '') + '.</p>' +
           '<p>Changing the date changes this price, and with it:</p>' +
-          '<ul><li><b>Portfolio vs BTC</b> on every coin (cards, table, sorting and CSV)</li><li>the <b>VS Bitcoin</b> best / worst on Performance</li></ul>' +
+          '<ul><li><b>Portfolio vs BTC</b> on every coin (cards, table, sorting and CSV)</li><li>the <b>VS Bitcoin</b> best / worst on Performance</li><li>where the <b>BTC trend</b> line on the charts starts</li></ul>' +
           '<div class="cph-f"><b>Portfolio vs BTC</b><code>(Current Price ÷ Avg Buy Price − 1) − (BTC Price ÷ BTC Reference Price − 1)</code></div>' +
           '<p class="cph-ok">Your holdings, transactions, All-Time Profit and the Hold / Reinforce / Sell signals <b>don\'t change</b>.</p>';
       },
@@ -39,10 +39,12 @@
         return '<p><b>Blue — All-Time Profit %</b>: your total profit on the coins in your portfolio, at every point in time.</p>' +
           '<div class="cph-f"><b>All-Time Profit</b><code>Holdings × latest price + selling proceeds − buying costs − fees</code></div>' +
           '<div class="cph-f"><b>%</b><code>All-Time Profit ÷ Cost Basis × 100</code></div>' +
-          '<p><b>Orange — BTC trend</b>: how Bitcoin\'s price moved over your holding time, from the baseline date (' + esc(fmtDay(b.date)) + ', ' + esc(money(b.btcPrice)) + ').</p>' +
-          '<div class="cph-f"><b>BTC trend</b><code>BTC price ÷ BTC reference price − 1</code></div>' +
+          '<p><b>Orange — BTC trend</b>: the same money in Bitcoin. Every buy, sell and transfer you made is replayed as buying or selling BTC at that moment\'s price (what you held on the baseline date, ' + esc(fmtDay(b.date)) + ', at ' + esc(money(b.btcPrice)) + ').</p>' +
+          '<div class="cph-f"><b>BTC trend</b><code>(BTC bought with the same money × BTC price now − net invested) ÷ Cost Basis × 100</code></div>' +
+          '<div class="cph-f"><b>Net invested</b><code>buying costs + fees − selling proceeds</code></div>' +
+          '<p>So both lines use the same money and the same scale: the gap between them is how much better or worse your coins did than Bitcoin.</p>' +
           '<p>Both lines are measured from the start, so 24h / 7d / 30d / 90d only zoom in. The last point is right now and matches the All-Time Profit card.</p>' +
-          '<p>Buying more doesn\'t count as profit, but it does add to Cost Basis, so the % can step a little at that moment. A manual correction of an amount or average price can also show as a step.</p>';
+          '<p>Buying more doesn\'t count as profit, but it does add to Cost Basis, so both % can step a little at that moment. A single point saved while prices were still loading is left out.</p>';
       },
     },
   };
