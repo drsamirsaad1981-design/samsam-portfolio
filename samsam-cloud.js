@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610231501';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610231501';
+import * as Core from './samsam-core.js?v=202610231537';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610231537';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -753,7 +753,7 @@ function renderStatus() {
       <div class="muted">Last confirmed by server: ${t}</div>
       <div class="muted">Device: ${deviceId.slice(-6)}</div>
       ${S.lastError ? `<div class="err">⚠️ ${esc(S.lastError.label)}: ${esc(S.lastError.message)}</div>` : ''}
-      ${S.user && allLoaded() ? '<div class="row"><a class="samsam-btn" href="recover.html" style="text-decoration:none">🛟 Recover data</a><button type="button" class="cp-hint" data-hint="recover" aria-label="About Recover data"></button></div>' : ''}
+      ${S.user && allLoaded() ? '<div class="row"><a class="samsam-btn" href="recover.html" style="text-decoration:none">🛟 Recover Data</a><button type="button" class="cp-hint" data-hint="recover" aria-label="About Recover data"></button></div>' : ''}
       <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk" title="Download an encrypted backup (AES-256)">🔐 Backup</button><button type="button" class="cp-hint" data-hint="backup" aria-label="About the encrypted backup"></button>' : ''}
       ${S.user ? '<button class="samsam-btn" id="samsamOut">Sign out</button>' : '<button class="samsam-btn primary" id="samsamIn">Sign in</button>'}</div>
       ${S.lastError ? '<div class="row"><button class="samsam-btn" id="samsamClr">Dismiss error</button><button class="samsam-btn" id="samsamReload">Reload</button></div>' : ''}`;

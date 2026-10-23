@@ -16,13 +16,13 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610231501"></script>
-<script src="samsam-hints.js?v=202610231501"></script>
-<script src="samsam-vault.js?v=202610231501"></script>
-<script src="samsam-labels.js?v=202610231501"></script>
-<script src="samsam-taxonomy.js?v=202610231501"></script>
-<script src="samsam-coins.js?v=202610231501"></script>
-<script src="samsam-dropdown.js?v=202610231501"></script>
+<script src="samsam-ui.js?v=202610231537"></script>
+<script src="samsam-hints.js?v=202610231537"></script>
+<script src="samsam-vault.js?v=202610231537"></script>
+<script src="samsam-labels.js?v=202610231537"></script>
+<script src="samsam-taxonomy.js?v=202610231537"></script>
+<script src="samsam-coins.js?v=202610231537"></script>
+<script src="samsam-dropdown.js?v=202610231537"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -84,7 +84,7 @@ body {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 12px; padding: 14px 16px;
 }
-.dash-card .label { font-size: 0.7rem; color: var(--fg2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;
+.dash-card .label { font-size: 0.7rem; color: var(--fg2); text-transform: none; letter-spacing: .01em; margin-bottom: 6px;
   display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; }   /* ⓘ sits at the right, on the first line */
 .dash-card .label .cp-hint { margin: -3px -4px 0 0; }
 .dash-card .value { font-size: 1.15rem; font-weight: 700; }
@@ -152,8 +152,8 @@ table { width: 100%; border-collapse: collapse; min-width: 800px; }
 thead { background: linear-gradient(135deg,#1a2235,#0f172a); position: sticky; top: 0; z-index: 2; }
 th {
   padding: 10px 12px; text-align: left;
-  font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
-  letter-spacing: .5px; color: var(--fg2); white-space: nowrap;
+  font-size: 0.72rem; font-weight: 600; text-transform: none;
+  letter-spacing: .01em; color: var(--fg2); white-space: nowrap;
 }
 th.sortable { cursor: pointer; user-select: none; }
 th.sortable:hover { color: var(--fg); }
@@ -251,7 +251,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
   display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px;
 }
 .acc-card-stat { background: var(--bg3); border-radius: 9px; padding: 8px 10px; }
-.acc-card-stat .lbl { font-size: 0.68rem; color: var(--fg2); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+.acc-card-stat .lbl { font-size: 0.68rem; color: var(--fg2); text-transform: none; letter-spacing: .01em; margin-bottom: 3px; }
 .acc-card-stat .val { font-size: 0.88rem; font-weight: 600; }
 .acc-card-target-row { display: flex; align-items: center; gap: 8px; overflow: hidden; }
 .acc-card-target-row label { font-size: 0.75rem; color: var(--fg2); white-space: nowrap; flex-shrink: 0; }
@@ -310,7 +310,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
   background: var(--bg3); border-radius: 10px; padding: 14px 16px; margin: 16px 0;
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
 }
-.dca-result-item .rlbl { font-size: 0.72rem; color: var(--fg2); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+.dca-result-item .rlbl { font-size: 0.72rem; color: var(--fg2); text-transform: none; letter-spacing: .01em; margin-bottom: 3px; }
 .dca-result-item .rval { font-size: 0.95rem; font-weight: 700; color: var(--accent); }
 .dca-result-item.full { grid-column: 1/-1; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 2px; }
 .dca-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
@@ -373,7 +373,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
 }
 .empty-state .hint strong { color: var(--accent); }
 /* Card labels styled like the table headers (same words from samsam-labels.js, same caps) */
-.acc-card-target-row label, .acc-card-alert-row label, .acc-card-pct { text-transform: uppercase; letter-spacing: .4px; font-size: 0.68rem; font-weight: 600; }
+.acc-card-target-row label, .acc-card-alert-row label, .acc-card-pct { text-transform: none; letter-spacing: .01em; font-size: 0.68rem; font-weight: 600; }
 /* ── Coin cards: same design as the main page (Cards view) ── */
 :root { --card-solid: #1e293b; --metric-bg: #0f172a; --label: #a3b1c6; }
 :root[data-theme="light"] { --card-solid: #ffffff; --metric-bg: #f1f5f9; --label: #475569; }
@@ -393,12 +393,12 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .cat-tag { display: inline-flex; align-items: center; border: 1px solid color-mix(in srgb, var(--cat-c) 45%, transparent); background: color-mix(in srgb, var(--cat-c) 14%, transparent); color: var(--cat-c); font-size: 0.66rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
 .coin-card-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .coin-metric { background: var(--metric-bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 3px; }
-.coin-metric label { display: block; color: var(--label); font-weight: 600; font-size: 0.66rem; line-height: 1.25; text-transform: uppercase; letter-spacing: .05em; }
+.coin-metric label { display: block; color: var(--label); font-weight: 600; font-size: 0.66rem; line-height: 1.25; text-transform: none; letter-spacing: .01em; }
 .coin-metric val { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(0.82rem, 0.9vw + 0.45rem, 1rem); font-weight: 700; color: var(--fg); font-variant-numeric: tabular-nums; }
 .coin-metric val small { font-size: .7em; color: var(--fg2); font-weight: 600; }
 .acc-settings { display: flex; flex-direction: column; gap: 8px; background: var(--metric-bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 11px; }
 .acc-set-row { display: grid; grid-template-columns: 118px 1fr; align-items: center; column-gap: 8px; row-gap: 3px; }
-.acc-set-row > label { color: var(--label); font-weight: 600; font-size: 0.66rem; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+.acc-set-row > label { color: var(--label); font-weight: 600; font-size: 0.66rem; text-transform: none; letter-spacing: .01em; white-space: nowrap; }
 .acc-set-ctl { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .acc-set-ctl .card-target-input { flex: 1; min-width: 0; height: 32px; }
 .acc-set-note { grid-column: 2; font-size: 0.7rem; }
@@ -415,7 +415,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .cat-picker { position: relative; }
 .cat-picker .sdd { display: block; }
 .cat-picker .sdd-btn { width: 100%; height: auto; min-height: 76px; padding: 14px 18px; border-radius: 14px; background: var(--card-solid); border: 1px solid var(--border); border-left: 4px solid var(--cat-c); display: grid; grid-template-columns: auto 1fr auto auto; grid-template-rows: auto auto; column-gap: 10px; row-gap: 2px; text-align: left; align-items: center; }
-.cat-picker .cp-kicker { grid-column: 1 / 3; grid-row: 1; font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--label); }
+.cat-picker .cp-kicker { grid-column: 1 / 3; grid-row: 1; font-size: .66rem; font-weight: 700; letter-spacing: .01em; text-transform: none; color: var(--label); }
 .cat-picker .sdd-ico { grid-column: 1; grid-row: 2; width: 14px; height: 14px; }
 .cat-picker .sdd-label { grid-column: 2; grid-row: 2; font-size: 1.02rem; font-weight: 800; color: var(--fg); white-space: normal; line-height: 1.25; min-width: 0; }
 .cat-picker .cp-val { grid-column: 3; grid-row: 1 / 3; font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -598,7 +598,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610231501"></script>
+<script type="module" src="samsam-cloud.js?v=202610231537"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';

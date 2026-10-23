@@ -5,13 +5,13 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610231501"></script>
-<script src="samsam-hints.js?v=202610231501"></script>
-<script src="samsam-vault.js?v=202610231501"></script>
-<script src="samsam-labels.js?v=202610231501"></script>
-<script src="samsam-taxonomy.js?v=202610231501"></script>
-<script src="samsam-coins.js?v=202610231501"></script>
-<script src="samsam-chart.js?v=202610231501"></script>
+<script src="samsam-ui.js?v=202610231537"></script>
+<script src="samsam-hints.js?v=202610231537"></script>
+<script src="samsam-vault.js?v=202610231537"></script>
+<script src="samsam-labels.js?v=202610231537"></script>
+<script src="samsam-taxonomy.js?v=202610231537"></script>
+<script src="samsam-coins.js?v=202610231537"></script>
+<script src="samsam-chart.js?v=202610231537"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -105,7 +105,7 @@ body {
 .movers-perf { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-width: 0; }
 .movers-block { min-width: 0; }
 .movers-perf .mv-card { background: var(--card); border: none; box-shadow: var(--shadow); height: 100%; align-content: start; }
-/* Computer: everything on one 1200px-wide grid — totals, Since purchase / VS Bitcoin, chart, breakdown and list share the same edges */
+/* Computer: everything on one 1200px-wide grid — totals, Since Purchase / VS Bitcoin, chart, breakdown and list share the same edges */
 @media (min-width: 1024px) {
   .page-inner, .summary-cards, .coin-list, .sort-tabs-inner, .col-header-inner { max-width: 1200px !important; }
   .summary-cards { gap: 20px; }
@@ -137,8 +137,8 @@ body {
   font-size: 0.72rem;
   color: var(--fg2);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
+  text-transform: none;
+  letter-spacing: .01em;
   margin-bottom: 14px;
 }
 .pnl-bd-totals {
@@ -157,8 +157,8 @@ body {
   font-size: 0.72rem;
   color: var(--fg2);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  letter-spacing: .01em;
   margin-bottom: 6px;
 }
 .pnl-bd-stat-val {
@@ -230,8 +230,8 @@ body {
   font-size: 0.63rem;
   color: var(--fg2);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
+  text-transform: none;
+  letter-spacing: .01em;
   margin-bottom: 0;
 }
 .sum-value {
@@ -324,8 +324,8 @@ body {
   font-size: 0.62rem;
   color: var(--fg2);
   font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  letter-spacing: .01em;
+  text-transform: none;
   max-width: 860px;
   margin: 0 auto;
 }
@@ -598,7 +598,7 @@ body {
       <div class="pcc-empty" id="perfFullEmpty" hidden>⏳ Collecting data… the chart fills in as hourly snapshots are recorded.</div>
       <div class="pcc-legend">
         <span><i style="background:#3b82f6"></i>All-Time Profit <b id="pccPortUsd">—</b> <b id="pccPort">—</b></span>
-        <span><i style="background:#f0a060"></i>BTC trend <b id="pccBtc">—</b></span>
+        <span><i style="background:#f0a060"></i>BTC Trend <b id="pccBtc">—</b></span>
         <span class="pcc-vs" id="pccVs"></span>
       </div>
     </div>
@@ -653,7 +653,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610231501"></script>
+<script type="module" src="samsam-cloud.js?v=202610231537"></script>
 <script>
 // ── Constants ──
 
@@ -699,7 +699,7 @@ function drawPerfFull() {
   if (!snaps.length) { canvas.style.display = 'none'; empty.hidden = false; return; }
   canvas.style.display = ''; empty.hidden = true;
   if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
-  // Performance (cumulative): All-Time Profit % at every point vs BTC trend since the baseline (samsam-core.js → perfChartSeries).
+  // Performance (cumulative): All-Time Profit % at every point vs BTC Trend since the baseline (samsam-core.js → perfChartSeries).
   // The line ends on "now" so it finishes exactly on the All-Time Profit card's numbers.
   const st = Samsam.getState(), bl = baselineNow();
   const ap = allTimeData || CPProfit.calc({ value: st.portfolio.reduce((a, c) => a + c.qty * (c.currentPrice || 0), 0),
@@ -919,7 +919,7 @@ function renderPerfMovers(rows, totalValue) {
   const pnlRows = rows.filter(r => r.cost > 0).map(r => ({ sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: r.pct, pnl: r.pnl }));
   const m1 = C.pickMovers(pnlRows, totalValue);
   const half1 = (label, r) => r ? { label, row: r, pct: r.score, text: money(r.pnl), text2: `• ${C.signedPct(r.score)}`, onClickJs: open(r.sym) } : { label };
-  const head1 = { title: '🏆 Since purchase', badge: 'All-Time Profit', hint: 'sincePurchase' };
+  const head1 = { title: '🏆 Since Purchase', badge: 'All-Time Profit', hint: 'sincePurchase' };
   document.getElementById('moversPnl').innerHTML = m1 ? C.moversCard({ head: head1, best: half1('Best Performer', m1.best), worst: half1('Worst Performer', m1.worst) })
     : C.moversCard({ head: head1, empty: 'Appears once prices load.' });
   // VS Bitcoin: each coin against the same money in Bitcoin (samsam-core.js → vsBtcByCoin) — same numbers as the main page
@@ -974,9 +974,9 @@ function render() {
   const totalPnl   = allTimeData.total;
   const totalPct   = allTimeData.pct;
   const unrealized = allTimeData.unrealized;
-  CPProfit.bind(document.getElementById('allTimeCard'), () => allTimeData, { scope: 'Whole portfolio' });
+  CPProfit.bind(document.getElementById('allTimeCard'), () => allTimeData, { scope: 'Whole Portfolio' });
   try { drawPerfFull(); } catch (_) {}   // chart legend = these same card numbers
-  CPProfit.bind(document.getElementById('bdTotal').parentElement, () => allTimeData, { scope: 'Whole portfolio' });
+  CPProfit.bind(document.getElementById('bdTotal').parentElement, () => allTimeData, { scope: 'Whole Portfolio' });
 
   const pnlEl = document.getElementById('totalPnl');
   pnlEl.textContent = fmtUSD(totalPnl);

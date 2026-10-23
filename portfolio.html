@@ -18,14 +18,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610231356"></script>
-<script src="samsam-hints.js?v=202610231356"></script>
-<script src="samsam-vault.js?v=202610231356"></script>
-<script src="samsam-labels.js?v=202610231356"></script>
-<script src="samsam-taxonomy.js?v=202610231356"></script>
-<script src="samsam-coins.js?v=202610231356"></script>
-<script src="samsam-dropdown.js?v=202610231356"></script>
-<script src="samsam-chart.js?v=202610231356"></script>
+<script src="samsam-ui.js?v=202610231501"></script>
+<script src="samsam-hints.js?v=202610231501"></script>
+<script src="samsam-vault.js?v=202610231501"></script>
+<script src="samsam-labels.js?v=202610231501"></script>
+<script src="samsam-taxonomy.js?v=202610231501"></script>
+<script src="samsam-coins.js?v=202610231501"></script>
+<script src="samsam-dropdown.js?v=202610231501"></script>
+<script src="samsam-chart.js?v=202610231501"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -51,7 +51,7 @@
     --btc: #f7931a;
     --card-solid: #1e293b;   /* solid card surface (no see-through) */
     --metric-bg: #0f172a;    /* metric tiles: darker than the card for contrast */
-    --label: #a3b1c6;        /* small uppercase labels: readable grey */
+    --label: #a3b1c6;        /* small labels: readable grey */
     color-scheme: dark;
   }
   @media (prefers-color-scheme: light) {
@@ -141,7 +141,7 @@
     text-align: center;
   }
 
-  .stat-label { font-size: 0.7rem; color: var(--fg2); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-label { font-size: 0.7rem; color: var(--fg2); margin-bottom: 3px; text-transform: none; letter-spacing: .01em; }
   .stat-value { font-size: 1rem; font-weight: 700; word-break: break-all; }
   .stat-sub { font-size: 0.74rem; color: var(--label, #a3b1c6); margin-top: 4px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .stat-btc { color: var(--btc); }
@@ -166,7 +166,7 @@
   .btc-ticker-group { display: inline-flex; align-items: center; gap: 22px; padding-right: 22px; }
   .bt-item { display: inline-flex; align-items: center; gap: 7px; font-size: 0.8rem; color: var(--fg2); font-variant-numeric: tabular-nums; }
   .bt-item strong { color: var(--fg); font-weight: 700; }
-  .bt-live { color: var(--fg); font-weight: 700; letter-spacing: .04em; font-size: 0.72rem; text-transform: uppercase; }
+  .bt-live { color: var(--fg); font-weight: 700; letter-spacing: .01em; font-size: 0.72rem; text-transform: none; }
   .bt-sep { width: 4px; height: 4px; border-radius: 50%; background: var(--fg2); opacity: .35; }
   .bt-up { color: var(--green); font-weight: 700; } .bt-down { color: var(--red); font-weight: 700; }
   @keyframes btcTickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -290,8 +290,8 @@
     display: block;
     font-size: 0.67rem;
     color: var(--fg2);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    text-transform: none;
+    letter-spacing: .01em;
     margin-bottom: 3px;
   }
 
@@ -418,11 +418,11 @@
       gap: 4px;
     }
 
-    /* Label: small muted uppercase */
+    /* Label: small muted, Title Case */
     .stat-label {
       font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      text-transform: none;
+      letter-spacing: .01em;
       color: var(--fg2);
       margin-bottom: 6px;
     }
@@ -611,7 +611,7 @@
     background: rgba(247,147,26,0.12);
     box-shadow: 0 0 0 2px rgba(247,147,26,0.3);
   }
-  .summary-card .label { font-size: 0.68rem; color: var(--fg2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .summary-card .label { font-size: 0.68rem; color: var(--fg2); margin-bottom: 4px; text-transform: none; letter-spacing: .01em; }
   .summary-card .value { font-size: 1.05rem; font-weight: 700; }
   .btc-icon-fallback {
     width: 44px; height: 44px;
@@ -643,7 +643,7 @@
     flex-direction: column;
   }
   /* Section card title — consistent across all dash-cards */
-  .dash-card h3 { font-size: 0.78rem; color: var(--fg2); margin-bottom: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; flex-shrink: 0; }
+  .dash-card h3 { font-size: 0.78rem; color: var(--fg2); margin-bottom: 18px; font-weight: 700; text-transform: none; letter-spacing: .01em; flex-shrink: 0; }
   /* donut-wrap fills remaining space and centres SVG+legend inside it */
   .dash-card .donut-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
   .dash-card .pnl-rows { flex: 1; display: flex; flex-direction: column; justify-content: center; }
@@ -686,13 +686,13 @@
   }
   .alloc-mini-card:hover { border-color: var(--accent); background: var(--bg3); }
   .alloc-mini-left { flex: 1; min-width: 0; }
-  .alloc-mini-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg2); margin-bottom: 8px; }
+  .alloc-mini-title { font-size: 0.78rem; font-weight: 700; text-transform: none; letter-spacing: .01em; color: var(--fg2); margin-bottom: 8px; }
   .alloc-mini-cats { display: flex; flex-wrap: wrap; gap: 5px; }
   .alloc-mini-cat { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; }
   .alloc-mini-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .alloc-mini-donut { flex-shrink: 0; }
   .alloc-mini-arrow { font-size: 1.3rem; color: var(--fg2); font-weight: 300; }
-  .dream-bar h3 { font-size: 0.78rem; color: var(--fg2); margin-bottom: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .dream-bar h3 { font-size: 0.78rem; color: var(--fg2); margin-bottom: 10px; font-weight: 700; text-transform: none; letter-spacing: .01em; }
   .progress-track { background: var(--bg3); border-radius: 100px; height: 8px; overflow: hidden; margin-top: 2px; }
   .progress-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--btc), var(--accent)); transition: width 0.5s ease; }
   .progress-fill.accum-fill { background: linear-gradient(90deg, var(--green), var(--blue)); }
@@ -751,7 +751,7 @@
   .holdings-change-row { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
   .holdings-change-row .cp-hint { margin-left: 2px; }
   .holdings-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
-  .holdings-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg2); }
+  .holdings-title { font-size: 0.78rem; font-weight: 700; text-transform: none; letter-spacing: .01em; color: var(--fg2); }
   .holdings-total { font-size: 1.35rem; font-weight: 700; color: var(--fg); line-height: 1; }
   .holdings-change { font-size: 0.75rem; font-weight: 600; margin-top: 3px; }
   .holdings-change.pos { color: #10b981; }
@@ -803,7 +803,7 @@
   .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 22px; max-width: 420px; width: 100%; }
   .modal h2 { margin-bottom: 14px; font-size: 1rem; font-weight: 700; }
   .form-row { margin-bottom: 12px; }
-  .form-label { display: block; font-size: 0.72rem; color: var(--fg2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+  .form-label { display: block; font-size: 0.72rem; color: var(--fg2); margin-bottom: 5px; text-transform: none; letter-spacing: .01em; font-weight: 600; }
   .form-input { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font-size: 0.88rem; font-family: inherit; outline: none; }
   .form-input:focus { border-color: var(--accent); }
 
@@ -903,7 +903,7 @@
 
   table { width: 100%; border-collapse: collapse; min-width: 1000px; }
   thead { background: var(--bg3); position: sticky; top: 0; z-index: 2; }
-  th { padding: 11px 12px; font-size: 0.7rem; color: var(--fg2); text-align: center; border-bottom: 2px solid var(--border); cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+  th { padding: 11px 12px; font-size: 0.7rem; color: var(--fg2); text-align: center; border-bottom: 2px solid var(--border); cursor: pointer; text-transform: none; letter-spacing: .01em; font-weight: 700; }
   td { padding: 10px 12px; font-size: 0.88rem; text-align: center; border-bottom: 1px solid var(--border); }
 
   /* ── Print / PDF ── */
@@ -1095,7 +1095,7 @@
   .cat-picker { position: relative; }
   .cat-picker .sdd { display: block; }
   .cat-picker .sdd-btn { width: 100%; height: auto; min-height: 76px; padding: 14px 18px; border-radius: 14px; background: var(--card-solid); border: 1px solid var(--border); border-left: 4px solid var(--cat-c); display: grid; grid-template-columns: auto 1fr auto auto; grid-template-rows: auto auto; column-gap: 10px; row-gap: 2px; text-align: left; align-items: center; }
-  .cat-picker .cp-kicker { grid-column: 1 / 3; grid-row: 1; font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--label); }
+  .cat-picker .cp-kicker { grid-column: 1 / 3; grid-row: 1; font-size: .66rem; font-weight: 700; letter-spacing: .01em; text-transform: none; color: var(--label); }
   .cat-picker .sdd-ico { grid-column: 1; grid-row: 2; width: 14px; height: 14px; }
   .cat-picker .sdd-label { grid-column: 2; grid-row: 2; font-size: 1.02rem; font-weight: 800; color: var(--fg); white-space: normal; line-height: 1.25; min-width: 0; }
   .cat-picker .cp-val { grid-column: 3; grid-row: 1 / 3; font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -1301,7 +1301,7 @@
     </div>
     <div class="perf-legend-item">
       <span class="perf-legend-dot" style="background:#f0a060"></span>
-      <span>BTC trend:&nbsp;</span>
+      <span>BTC Trend:&nbsp;</span>
       <span class="perf-legend-val" id="perfBtcLabel">—</span>
       <button type="button" class="cp-hint" data-hint="perfChart" aria-label="How is this chart calculated?"></button>
     </div>
@@ -1423,7 +1423,7 @@
     <h2 style="color:#a78bfa">➕ Add New Coin</h2>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
       <div class="form-row ac-find" style="margin:0;grid-column:1 / -1">
-        <label class="form-label" for="acSym">Coin <span style="color:#ef4444">*</span> <span style="color:var(--fg2);font-weight:400">— search by symbol or name</span></label>
+        <label class="form-label" for="acSym">Coin <span style="color:#ef4444">*</span> <span class="form-sub" style="color:var(--fg2);font-weight:400">— search by symbol or name</span></label>
         <input type="text" class="form-input" id="acSym" placeholder="e.g. XRP or Ripple" autocomplete="off" spellcheck="false"
           role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acSuggest"
           oninput="this.value=this.value.toUpperCase().replace(/\s+/g,' ').trimStart(); acSearchInput()" onkeydown="acSearchKey(event)">
@@ -1451,7 +1451,7 @@
         <input type="text" class="form-input" id="acCgId" placeholder="Auto" autocomplete="off" spellcheck="false">
       </div>
       <div class="form-row" style="margin:0;grid-column:1 / -1">
-        <label class="form-label" for="acCmc">CoinMarketCap page</label>
+        <label class="form-label" for="acCmc">CoinMarketCap Page</label>
         <div class="ac-cmc"><span class="ac-cmc-pre">coinmarketcap.com/currencies/</span><input type="text" class="form-input" id="acCmc" placeholder="auto" autocomplete="off" spellcheck="false"
           oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'');acCmcCheck()"><a id="acCmcCheck" class="ac-cmc-check" href="#" target="_blank" rel="noopener noreferrer" hidden>Check ↗</a></div>
       </div>
@@ -1534,7 +1534,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610231356"></script>
+<script type="module" src="samsam-cloud.js?v=202610231501"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1895,7 +1895,7 @@ function renderHeader() {
   subEl.textContent = '(' + (pct >= 0 ? '+' : '-') + Math.abs(pct).toFixed(2) + '%)';
   subEl.classList.toggle('stat-pos', pnl >= 0); subEl.classList.toggle('stat-neg', pnl < 0);
   pnlEl.parentElement.title = 'Tap for details — Realized ' + fmtUsd(realized) + ' + Unrealized ' + fmtUsd(ap.unrealized);
-  CPProfit.bind(pnlEl.parentElement, allTimeProfitData, { scope: 'Whole portfolio' });
+  CPProfit.bind(pnlEl.parentElement, allTimeProfitData, { scope: 'Whole Portfolio' });
   try { renderMiniBar(); } catch (_) {}
 
   // Card 3: BTC Accumulated — strip trailing zeros, max 8 decimals
@@ -2063,7 +2063,7 @@ function renderMovers() {
   const rows = portfolio.filter(c => !activeCatFilter || (c.cat || 'other') === activeCatFilter)
     .map(c => ({ sym: c.sym, logoUrl: c.logoUrl, value: c.qty * c.currentPrice, score: typeof c.change24h === 'number' ? c.change24h : NaN }));
   const m = C.pickMovers(rows, total);
-  const head = { title: "Today's movers", badge: '24h · ' + (activeCatFilter ? T.label(activeCatFilter) : 'All Coins'), hint: 'movers24h' };
+  const head = { title: "Today's Movers", badge: '24h · ' + (activeCatFilter ? T.label(activeCatFilter) : 'All Coins'), hint: 'movers24h' };
   if (!m) { host.innerHTML = C.moversCard({ head, empty: activeCatFilter ? `No 24h price changes yet for ${T.label(activeCatFilter)}.` : 'Best and worst performer appear once live prices load.' }); return; }
   const half = (label, r) => r && { label, row: r, pct: r.score, text: C.signedPct(r.score), onClickJs: `openCoinFromMovers('${r.sym}')` };
   host.innerHTML = C.moversCard({ head, best: half('Best Performer', m.best), worst: half('Worst Performer', m.worst) || { label: 'Worst Performer' } });
@@ -2670,11 +2670,11 @@ function renderDashboard() {
   document.getElementById('pnlRows').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
       <div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
-        <div style="font-size:0.68rem;color:var(--fg2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Cost Basis</div>
+        <div style="font-size:0.68rem;color:var(--fg2);margin-bottom:4px;text-transform: none;letter-spacing: .01em">Cost Basis</div>
         <div style="font-size:0.95rem;font-weight:700">${SamsamFmt.usd(totalBase)}</div>
       </div>
       <div style="background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
-        <div style="font-size:0.68rem;color:var(--fg2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Current</div>
+        <div style="font-size:0.68rem;color:var(--fg2);margin-bottom:4px;text-transform: none;letter-spacing: .01em">Current</div>
         <div style="font-size:0.95rem;font-weight:700">${SamsamFmt.usd(totalCurrent)}</div>
       </div>
     </div>
@@ -3231,7 +3231,7 @@ function drawPerfChart() {
   // If only 1 snapshot, duplicate it so chart renders as a flat baseline
   if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
 
-  // Performance (cumulative): All-Time Profit % at every point vs BTC trend since the baseline (samsam-core.js → perfChartSeries).
+  // Performance (cumulative): All-Time Profit % at every point vs BTC Trend since the baseline (samsam-core.js → perfChartSeries).
   // The line ends on "now" so it finishes exactly on the numbers of the All-Time Profit card.
   const st = Samsam.getState(), ap = allTimeProfitData();
   const live = { t: Date.now(), v: calcStats().total, b: btcPrice };
@@ -3243,7 +3243,7 @@ function drawPerfChart() {
   const ser = { port: full.port.filter(inR), btc: full.btc.filter(inR) };
   if (ser.port.length < 2) { ser.port = full.port.slice(-2); ser.btc = full.btc.slice(-2); }
   SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'pct', timeMode: timeModeFor(holdingsRange), series: [
-    { points: ser.btc, color: '#f0a060', width: 2 },                         // BTC trend
+    { points: ser.btc, color: '#f0a060', width: 2 },                         // BTC Trend
     { points: ser.port, color: '#3b82f6', width: 2.4, fill: true },          // All-Time Profit %
   ] });
   const tri = n => (n >= 0 ? '▲ ' : '▼ ') + Math.abs(n).toFixed(2) + '%';
@@ -3924,7 +3924,7 @@ function renderHoldingsAssetList() {
   .bl-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; } .bl-head h3 { flex: 1; margin: 0; font-size: 1.02rem; font-weight: 800; }
   .bl-x { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--border); background: none; color: inherit; font-size: 1.1rem; cursor: pointer; }
   .bl-lead { margin: 0 0 14px; font-size: .84rem; color: var(--fg2); line-height: 1.5; }
-  .bl-field { display: block; margin-bottom: 12px; } .bl-field > span { display: block; font-size: .74rem; font-weight: 700; color: var(--fg2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+  .bl-field { display: block; margin-bottom: 12px; } .bl-field > span { display: block; font-size: .74rem; font-weight: 700; color: var(--fg2); text-transform: none; letter-spacing: .01em; margin-bottom: 5px; }
   .bl-field input { width: 100%; box-sizing: border-box; height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-size: 1rem; }
   .bl-field input:focus { outline: none; border-color: #7c3aed; }
   .bl-src { display: block; margin-top: 5px; font-size: .74rem; color: var(--fg2); min-height: 1.2em; } .bl-src.err { color: var(--red); }
@@ -3940,10 +3940,10 @@ function renderHoldingsAssetList() {
 </style>
 <div class="bl-overlay" id="blModal" role="dialog" aria-modal="true" aria-labelledby="blTitle">
   <div class="bl-card">
-    <div class="bl-head"><img src="./logo-mark.svg?v=1" alt="" width="26" height="26"><h3 id="blTitle">Baseline date</h3><button type="button" class="cp-hint" data-hint="baseline"></button><button type="button" class="bl-x" onclick="closeBaselineEdit()" aria-label="Close">×</button></div>
+    <div class="bl-head"><img src="./logo-mark.svg?v=1" alt="" width="26" height="26"><h3 id="blTitle">Baseline Date</h3><button type="button" class="cp-hint" data-hint="baseline"></button><button type="button" class="bl-x" onclick="closeBaselineEdit()" aria-label="Close">×</button></div>
     <p class="bl-lead">The day your coins are compared with Bitcoin. Pick a date: the app looks up BTC's daily price, or use the price you actually paid for your BTC that day.</p>
     <label class="bl-field"><span>Date</span><input type="date" id="blDate" onchange="blDateChanged()"></label>
-    <label class="bl-field"><span>BTC price on that day (USD)</span><input type="text" inputmode="decimal" id="blPrice" oninput="blPriceTyped()" autocomplete="off"><small class="bl-src" id="blSrc"></small></label>
+    <label class="bl-field"><span>BTC Price on That Day (USD)</span><input type="text" inputmode="decimal" id="blPrice" oninput="blPriceTyped()" autocomplete="off"><small class="bl-src" id="blSrc"></small></label>
     <button type="button" class="bl-mine" id="blMine" onclick="blUseMine()" hidden></button>
     <div class="bl-prev" id="blPrev" aria-live="polite"></div>
     <div class="bl-acts"><button type="button" onclick="closeBaselineEdit()">Cancel</button><button type="button" class="bl-save" id="blSave" onclick="saveBaselineEdit()">Save</button></div>
@@ -4087,7 +4087,7 @@ async function saveBaselineEdit() {
 
     /* ── Hero total ── */
     .hov-hero { padding: 18px 16px 4px; }
-    .hov-page-label { font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--fg2); }
+    .hov-page-label { font-size:0.7rem;font-weight:700;text-transform: none;letter-spacing: .01em;color:var(--fg2); }
     .hov-total { font-size:2.2rem;font-weight:700;color:var(--fg);line-height:1.15;margin-top:4px; }
     .hov-change { font-size:0.82rem;font-weight:600;margin-top:4px; }
     .hov-change.pos { color:var(--green); }
@@ -4123,8 +4123,8 @@ async function saveBaselineEdit() {
       display: grid; grid-template-columns: var(--hov-cols);
       align-items: center; gap: var(--hov-gap);
       padding: 8px 16px;
-      font-size: 0.67rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.06em; color: var(--fg2);
+      font-size: 0.67rem; font-weight: 700; text-transform: none;
+      letter-spacing: .01em; color: var(--fg2);
       border-bottom: 1px solid var(--border);
       background: var(--bg2);
     }

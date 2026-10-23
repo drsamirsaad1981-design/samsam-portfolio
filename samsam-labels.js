@@ -7,7 +7,7 @@
     AMOUNT: 'Amount',
     AVG_BUY_PRICE: 'Avg. Buy Price',
     CURRENT_PRICE: 'Current Price',
-    PORTFOLIO_VS_BTC: 'Portfolio vs BTC',      // shown in capitals where the design uses uppercase labels
+    PORTFOLIO_VS_BTC: 'Portfolio vs BTC',      // labels are Title Case everywhere
     COST_BASIS: 'Cost Basis',
     HOLDINGS_VALUE: 'Holdings / Current Value',
     PNL: 'P&L',

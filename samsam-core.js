@@ -187,7 +187,7 @@ export function profitSeries(coins, txs, times, { btcAt = null, startBtc = 0 } =
 // Chart lines ("Performance, cumulative") from the saved points {t, v (portfolio value), b (BTC price)}:
 //   Blue   — All-Time Profit %   = (Value − Net invested) ÷ Cost Basis
 //            (Value − Net invested = holdings × price + selling proceeds − buying costs − fees)
-//   Orange — BTC trend %         = (BTC benchmark value − Net invested) ÷ Cost Basis
+//   Orange — BTC Trend %         = (BTC benchmark value − Net invested) ÷ Cost Basis
 //            the same money, bought and sold as BTC at the same moments — so both lines move on the same scale.
 // The range tabs only zoom in; the last point is "now".
 export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0 } = {}) {

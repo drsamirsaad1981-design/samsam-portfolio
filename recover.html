@@ -15,12 +15,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a0e1a">
-<script src="samsam-ui.js?v=202610231501"></script>
-<script src="samsam-hints.js?v=202610231501"></script>
-<script src="samsam-vault.js?v=202610231501"></script>
-<script src="samsam-labels.js?v=202610231501"></script>
-<script src="samsam-taxonomy.js?v=202610231501"></script>
-<script src="samsam-coins.js?v=202610231501"></script>
+<script src="samsam-ui.js?v=202610231537"></script>
+<script src="samsam-hints.js?v=202610231537"></script>
+<script src="samsam-vault.js?v=202610231537"></script>
+<script src="samsam-labels.js?v=202610231537"></script>
+<script src="samsam-taxonomy.js?v=202610231537"></script>
+<script src="samsam-coins.js?v=202610231537"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root { --bg:#f5f5f7; --card:#fff; --fg:#1a1a1e; --fg2:#6e6e73; --border:rgba(0,0,0,.08); --accent:#3b82f6; --header-bg:#fff;
@@ -45,7 +45,7 @@ h2 { font-size:1rem; margin-bottom:6px; } p, li { font-size:.86rem; line-height:
 .msg { font-size:.85rem; margin-top:8px; } .msg.err { color:var(--red); } .msg.ok { color:var(--green); }
 .meta { font-size:.82rem; color:var(--fg2); margin-bottom:10px; }
 table { width:100%; border-collapse:collapse; font-size:.82rem; font-variant-numeric:tabular-nums; }
-th { text-align:right; font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; color:var(--fg2); padding:6px 6px; border-bottom:1px solid var(--border); }
+th { text-align:right; font-size:.68rem; text-transform: none; letter-spacing: .01em; color:var(--fg2); padding:6px 6px; border-bottom:1px solid var(--border); }
 th:first-child, th:nth-child(2), td:first-child, td:nth-child(2) { text-align:left; }
 td { padding:8px 6px; border-bottom:1px solid var(--border); text-align:right; vertical-align:top; }
 tr.diff td { background:rgba(245,158,11,.07); } tr:last-child td { border-bottom:none; }
@@ -95,7 +95,7 @@ body:not(.show-all) tr.same-row { display:none; }
 
 <div class="container">
   <div class="card">
-    <h2>Find changes that didn't reach the cloud</h2>
+    <h2>Find Changes That Didn't Reach the Cloud</h2>
     <p>Pick a source. This page compares it with your cloud portfolio coin by coin and lists any transactions the cloud is missing.
       <strong>Nothing changes until you press “Restore selected”</strong>, and a backup of the cloud is downloaded first.</p>
     <div class="src-tabs" role="group" aria-label="Source">
@@ -148,7 +148,7 @@ body:not(.show-all) tr.same-row { display:none; }
   <button class="btn primary" id="applyBtn">Restore selected</button>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610231501"></script>
+<script type="module" src="samsam-cloud.js?v=202610231537"></script>
 <script>
 const $ = id => document.getElementById(id);
 const LEG = { pf:'samsam_pf_v4', tx:'samsam_tx_v1', custom:'samsam_custom_v1', archived:'samsam_archived_v1', acc:'samsam_acc_v1' };
