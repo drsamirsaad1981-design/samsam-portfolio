@@ -161,18 +161,22 @@ export function profitSeries(coins, txs, times, { btcAt = null, startBtc = 0 } =
   let realized = 0;
   const costNow = () => { let c = 0; for (const [sym, p] of pos) if (!gone.has(sym)) c += p.qty * p.avg; return c; };
   const price = t => { const b = btcAt ? btcAt(t) : 0; return b > 0 ? b : startBtc; };
-  let N = costNow(), shadow = startBtc > 0 ? N / startBtc : 0;   // what you held at the start, bought as BTC on the start day
+  // What you held at the start: your BTC is BTC; every other coin's cost is counted as BTC bought on the start day.
+  let N = costNow(), shadow = 0;
+  for (const [sym, p] of pos) shadow += sym === 'BTC' ? p.qty : (startBtc > 0 ? p.qty * p.avg / startBtc : 0);
   const cost = new Array(ts.length).fill(0), realizedArr = new Array(ts.length).fill(0), invested = new Array(ts.length).fill(0), btcQty = new Array(ts.length).fill(0);
   for (const e of ev) {
     if (e.k === 0) {
       const x = e.x, p = pos.get(x.sym) || { qty: 0, avg: 0 };
+      if (x.sym === 'BTC') e.btcBefore = p.qty;
       const r = applyTx(p, x); pos.set(x.sym, { qty: r.qty, avg: r.avg });
       if (x.type === 'sell') realized += r.realized;
     } else if (e.k === 1) gone.add(e.sym);
     if (e.k !== 2) {
       const n2 = costNow() - realized, dN = n2 - N; N = n2;
-      const bp = e.k === 0 && e.x.sym === 'BTC' && num(e.x.price) > 0 ? num(e.x.price) : price(e.t);
-      if (dN && bp > 0) shadow += dN / bp;
+      if (e.k === 0 && e.x.sym === 'BTC') shadow += (pos.get('BTC') || { qty: 0 }).qty - (e.btcBefore || 0);   // real BTC moved
+      else if (e.k === 1 && e.sym === 'BTC') shadow -= (pos.get('BTC') || { qty: 0 }).qty;
+      else { const bp = price(e.t); if (dN && bp > 0) shadow += dN / bp; }
       continue;
     }
     cost[e.i] = costNow(); realizedArr[e.i] = realized; invested[e.i] = N; btcQty[e.i] = shadow;
@@ -190,13 +194,7 @@ export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0 } = {}) {
   const pts = (snaps || []).filter(s => s && s.v > 0).sort((a, b) => a.t - b.t);
   if (!pts.length) return { port: [], btc: [], profit: [], cost: [], first: null, last: null };
   const withB = pts.filter(s => s.b > 0);
-  const btcAt = t => {   // BTC price at time t from the nearest saved point
-    if (!withB.length) return 0;
-    let lo = 0, hi = withB.length - 1;
-    while (lo < hi) { const m = (lo + hi) >> 1; if (withB[m].t < t) lo = m + 1; else hi = m; }
-    const a = withB[Math.max(0, lo - 1)], b = withB[lo];
-    return Math.abs(a.t - t) <= Math.abs(b.t - t) ? a.b : b.b;
-  };
+  const btcAt = btcPriceLookup(pts);
   const startBtc = baselineBtc > 0 ? baselineBtc : (withB[0] ? withB[0].b : 0);
   const { cost, realized, invested, btcQty } = profitSeries(coins, txs, pts.map(s => s.t), { btcAt, startBtc });
   const profit = pts.map((s, i) => s.v - cost[i] + realized[i]);
@@ -212,6 +210,49 @@ export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0 } = {}) {
   });
   const f = arr => arr.filter((_, i) => keep[i]);
   return { port: f(port), btc: f(btc), profit: f(profit), btcProfit: f(btcProfit), cost: f(cost), dropped: keep.filter(k => !k).length, first: pts[0], last: pts[pts.length - 1] };
+}
+
+// ── Portfolio vs BTC, per coin ────────────────────────────────────────────────
+// "Did this coin do better than the same money in Bitcoin?"
+//   Every buy of the coin is replayed as buying BTC for the same dollars at that moment; every sell as selling BTC
+//   for the same proceeds. Coins you already held on the baseline date count as BTC bought on that day at the
+//   BTC reference price. Your BTC itself is compared with itself, so BTC always shows 0.
+//   Portfolio vs BTC % = (coin value now − value of that BTC now) ÷ Cost Basis × 100
+//   (= the coin's All-Time Profit % minus the same money's profit % in BTC)
+export function vsBtcByCoin(coins, txs, { prices = {}, btcNow = 0, btcAt = null, baselineBtc = 0 } = {}) {
+  const out = {};
+  const bySym = groupTxBySym(txs);
+  for (const c of coins || []) {
+    if (!c || !c.sym || c.removed) continue;
+    let pos = { qty: Math.max(0, num(c.opening && c.opening.qty)), avg: Math.max(0, num(c.opening && c.opening.avg)) };
+    let realized = 0, shadow = c.sym === 'BTC' ? pos.qty : (baselineBtc > 0 ? pos.qty * pos.avg / baselineBtc : 0);
+    let N = pos.qty * pos.avg;
+    for (const x of [...(bySym.get(c.sym) || [])].sort(compareTx)) {
+      const before = pos.qty, r = applyTx(pos, x); pos = { qty: r.qty, avg: r.avg };
+      if (x.type === 'sell') realized += r.realized;
+      const n2 = pos.qty * pos.avg - realized, dN = n2 - N; N = n2;
+      if (c.sym === 'BTC') { shadow += pos.qty - before; continue; }
+      const t = Date.parse(x.date) || 0, bp = (btcAt && btcAt(t)) || baselineBtc;
+      if (dN && bp > 0) shadow += dN / bp;
+    }
+    const cost = pos.qty * pos.avg, price = num(prices[c.sym]), value = pos.qty * price;
+    if (!(cost > 0) || !(price > 0) || !(btcNow > 0)) { out[c.sym] = null; continue; }
+    const coinProfit = value - cost + realized, btcProfit = shadow * btcNow - N;
+    const coinPct = coinProfit / cost * 100, btcPct = btcProfit / cost * 100;
+    out[c.sym] = { pct: coinPct - btcPct, coinPct, btcPct };
+  }
+  return out;
+}
+// Nearest saved BTC price to a moment (from the chart points), for replaying buys as BTC.
+export function btcPriceLookup(snaps) {
+  const w = (snaps || []).filter(s => s && s.b > 0).sort((a, b) => a.t - b.t);
+  return t => {
+    if (!w.length) return 0;
+    let lo = 0, hi = w.length - 1;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (w[m].t < t) lo = m + 1; else hi = m; }
+    const a = w[Math.max(0, lo - 1)], b = w[lo];
+    return Math.abs(a.t - t) <= Math.abs(b.t - t) ? a.b : b.b;
+  };
 }
 
 // ── Migration helper ────────────────────────────────────────────────────────

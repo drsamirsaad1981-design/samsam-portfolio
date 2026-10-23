@@ -25,12 +25,25 @@
         return '<p>The day your coins are compared with Bitcoin.</p>' +
           '<p>It sets the <b>BTC reference price</b>, which is BTC\'s price on that date: <b>' + esc(money(b.btcPrice)) + '</b>' +
           (b.source === 'manual' ? ' (entered by hand)' : '') + '.</p>' +
-          '<p>Changing the date changes this price, and with it:</p>' +
-          '<ul><li><b>Portfolio vs BTC</b> on every coin (cards, table, sorting and CSV)</li><li>the <b>VS Bitcoin</b> best / worst on Performance</li><li>where the <b>BTC trend</b> line on the charts starts</li></ul>' +
-          '<div class="cph-f"><b>Portfolio vs BTC</b><code>(Current Price ÷ Avg Buy Price − 1) − (BTC Price ÷ BTC Reference Price − 1)</code></div>' +
+          '<p>It is used for the coins you <b>already held</b> on that date (your opening positions): when they are compared with Bitcoin, that money counts as BTC bought on the baseline date at this price. Your own BTC is always compared with itself.</p>' +
+          '<p>Changing it changes:</p>' +
+          '<ul><li><b>Portfolio vs BTC</b> for those coins (cards, table, sorting and CSV)</li><li>the <b>VS Bitcoin</b> best / worst on Performance</li><li>the <b>BTC trend</b> line on the charts</li></ul>' +
+          '<p>Coins you bought later are compared with BTC at the moment you bought them, so the baseline doesn\'t affect them.</p>' +
           '<p class="cph-ok">Your holdings, transactions, All-Time Profit and the Hold / Reinforce / Sell signals <b>don\'t change</b>.</p>';
       },
       actions: function () { return typeof window.openBaselineEdit === 'function' ? [{ label: 'Change date', primary: true, onClick: window.openBaselineEdit }] : []; },
+    },
+    vsBtc: {
+      title: 'Portfolio vs BTC',
+      body: function () {
+        var b = baseline();
+        return '<p>Did this coin do better than <b>the same money in Bitcoin</b>?</p>' +
+          '<p>Every time you bought the coin, the app pretends you bought BTC with the same dollars at that moment\'s BTC price; every sell, that you sold BTC for the same dollars. Coins you already held on the baseline date (' + esc(fmtDay(b.date)) + ') count as BTC bought that day at ' + esc(money(b.btcPrice)) + '.</p>' +
+          '<div class="cph-f"><b>Coin %</b><code>Coin\'s All-Time Profit ÷ Cost Basis × 100</code></div>' +
+          '<div class="cph-f"><b>Same money in BTC %</b><code>(that BTC × BTC price now − net invested) ÷ Cost Basis × 100</code></div>' +
+          '<div class="cph-f"><b>Portfolio vs BTC</b><code>Coin % − Same money in BTC %</code></div>' +
+          '<p>Your BTC is compared with itself, so it always shows 0.</p>';
+      },
     },
     perfChart: {
       title: 'Performance (cumulative)',
