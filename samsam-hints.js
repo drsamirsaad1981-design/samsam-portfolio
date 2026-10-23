@@ -34,6 +34,48 @@
       },
       actions: function () { return typeof window.openBaselineEdit === 'function' ? [{ label: 'Change date', primary: true, onClick: window.openBaselineEdit }] : []; },
     },
+    // ── main page ──
+    totalPortfolio: { title: 'Total Portfolio', body: function () { return '<p>What all your coins are worth right now.</p>' +
+      '<div class="cph-f"><b>Total Portfolio</b><code>Σ (Amount × Current Price) for every coin</code></div>' +
+      '<p>In brackets: the same value in BTC (÷ BTC price).</p>'; } },
+    btcAccum: { title: 'BTC Accumulated', body: function () { return '<p>How much Bitcoin you hold.</p><div class="cph-f"><b>Below it</b><code>BTC Amount × BTC price</code></div>'; } },
+    altAccum: { title: 'Altcoins Accumulated', body: function () { return '<p>What all your coins except Bitcoin are worth.</p>' +
+      '<div class="cph-f"><b>Altcoins</b><code>Σ (Amount × Current Price), every coin except BTC</code></div><p>In brackets: the same value in BTC.</p>'; } },
+    movers24h: { title: "Today's movers", body: function () { return '<p>The coin that went up the most and the one that went down the most in the <b>last 24 hours</b> (price change from CoinGecko).</p>' +
+      '<p>Coins worth less than $1 or less than 0.1% of your portfolio are left out, so a tiny holding can\'t win. It follows the category you picked.</p>'; } },
+    avgBuy: { title: 'Avg. Buy Price', body: function () { return '<p>The average price you paid per coin, buying fees included. It changes on every buy; sells don\'t change it.</p>' +
+      '<div class="cph-f"><b>After a buy</b><code>(Amount held × Avg Buy Price + Buy Price × Amount Bought + Buying Fee) ÷ (Amount held + Amount Bought)</code></div>'; } },
+    costBasis: { title: 'Cost Basis', body: function () { return '<p>What the coins you hold now cost you (fees included).</p><div class="cph-f"><b>Cost Basis</b><code>Avg Buy Price × Amount held</code></div>'; } },
+    signal: { title: 'Signal', body: function () { return '<p>A simple reminder based on the price now compared with your <b>Avg. Buy Price</b>:</p>' +
+      '<ul><li><b>⚪ Hold</b> — above −5%</li><li><b>🟢 Reinforce</b> — between −5% and −20%: cheaper than you paid, a chance to add</li><li><b>🔴 Sell / Convert</b> — below −20%: consider moving it into BTC</li></ul>' +
+      '<div class="cph-f"><b>Change</b><code>(Current Price ÷ Avg Buy Price − 1) × 100</code></div><p>BTC is always Hold. It is a reminder, not advice.</p>'; } },
+    manualPrice: { title: 'Manual price (✎)', body: function () { return '<p>Set a price by hand for a coin the live price service doesn\'t cover. It is used <b>only when there is no live market price</b>; as soon as a live price arrives, that one is used.</p>'; } },
+    holdingsChange: { title: 'Holdings change', body: function () { return '<p>How much your holdings moved in the period you picked — split into what <b>prices</b> did and the <b>money you added or took out</b>.</p>' +
+      '<div class="cph-f"><b>From prices (the number and %)</b><code>All-Time Profit at the end − All-Time Profit at the start</code></div>' +
+      '<div class="cph-f"><b>Added / taken out</b><code>(buys + fees − sells) in the period</code></div>' +
+      '<p>Value change = from prices + added. Green / red follows the price part only. The chart line itself is the value, so a buy shows as a step up.</p>'; } },
+    external: { title: 'Links that leave the app (↗)', body: function () { return '<p>Anything marked <b>↗</b> opens another website in a new tab: <b>CoinMarketCap</b> (coin page), <b>CoinGlass</b> (liquidation heatmap) and <b>CoinCodex</b> (price prediction). Their numbers are theirs, not calculated by this app.</p>'; } },
+    // ── Performance / Allocation ──
+    sincePurchase: { title: 'Since purchase', body: function () { return '<p>Your best and worst coin by <b>All-Time Profit %</b> — sells included.</p>' +
+      '<div class="cph-f"><b>%</b><code>Coin\'s All-Time Profit ÷ its Cost Basis × 100</code></div><p>Coins worth less than $1 or less than 0.1% of your portfolio are left out.</p>'; } },
+    allocation: { title: 'Allocation', body: function () { return '<p>How your money is spread across categories.</p><div class="cph-f"><b>Share</b><code>Category value ÷ Total Portfolio × 100</code></div><p>Category value = Σ (Amount × Current Price) of its coins.</p>'; } },
+    // ── Accumulation plan ──
+    targetAmount: { title: 'Target Amount', body: function () { return '<p>How many coins you want to hold <b>in total</b> — not how many more to buy.</p>'; } },
+    pendingAmount: { title: 'Pending Amount', body: function () { return '<div class="cph-f"><b>Pending</b><code>Target Amount − Amount held (0 when the target is reached)</code></div>'; } },
+    costToTarget: { title: 'Cost to Target', body: function () { return '<p>What the pending amount would cost at today\'s price.</p><div class="cph-f"><b>Cost to Target</b><code>Pending Amount × Current Price</code></div>'; } },
+    coinProgress: { title: 'Progress', body: function () { return '<div class="cph-f"><b>Progress</b><code>Amount held ÷ Target Amount × 100, capped at 100%</code></div><p>Anything above the target still shows in your holdings; it just doesn\'t count past 100%.</p>'; } },
+    buyAt: { title: 'Buy at %', body: function () { return '<p>A buy target relative to the price <b>on the day you set it</b>. That price is saved as the <b>base</b>, so the target stays fixed until you change the % — it doesn\'t move with the market.</p>' +
+      '<div class="cph-f"><b>Target price</b><code>Base price × (1 + Buy at % ÷ 100)</code></div>' +
+      '<ul><li>−10% from a $100 base → buy at <b>$90</b>: <b>BUY NOW</b> when the price is at or below $90</li><li>+10% → buy at <b>$110</b> (a breakout): <b>BUY NOW</b> at or above $110</li></ul><p>Changing the % saves today\'s price as the new base.</p>'; } },
+    priceAlert: { title: 'Price Alert', body: function () { return '<p>A price you want to hear about. When the current price is <b>at or below</b> it, the coin shows <b>Hit</b> and — if you allowed notifications — your device gets one.</p>'; } },
+    overallProgress: { title: 'Overall Progress', body: function () { return '<p>How far you are with the whole plan.</p>' +
+      '<div class="cph-f"><b>Overall Progress</b><code>Average of every coin\'s Progress (each capped at 100%)</code></div>' +
+      '<p>Only coins with a target count. A coin above its target counts as 100%: the extra never makes up for coins still below target.</p>'; } },
+    planTotals: { title: 'Plan totals', body: function () { return '<ul><li><b>Total Target Value</b> = Σ Target Amount × Current Price</li><li><b>Current Holdings</b> = Σ Amount held × Current Price (amounts above target included)</li>' +
+      '<li><b>Total Pending Cost</b> = Σ Cost to Target</li><li><b>Coins Completed</b> = coins at or above their target</li></ul>'; } },
+    // ── cloud menu ──
+    recover: { title: 'Recover data', body: function () { return '<p>Compares another copy of your portfolio — data the older app version left on this device, your old JSONBin, or a backup file — with the cloud, coin by coin, and lists the transactions the cloud is missing. You choose what to add; nothing is replaced.</p>'; } },
+    backup: { title: 'Encrypted backup', body: function () { return '<p>Downloads your whole portfolio as a file locked with a password you choose (AES-256). Keep the password safe: <b>it can\'t be recovered</b>, and without it the file can\'t be opened.</p>'; } },
     vsBtc: {
       title: 'Portfolio vs BTC',
       body: function () {

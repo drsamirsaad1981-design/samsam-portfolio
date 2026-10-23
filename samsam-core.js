@@ -255,6 +255,17 @@ export function btcPriceLookup(snaps) {
   };
 }
 
+// ── Accumulation plan: Overall Progress ──────────────────────────────────────
+// Average of each coin's own completion, capped at 100%: a coin past its target counts as 100% and its extra
+// amount never makes up for coins still below target. Only coins with a target above 0 count.
+//   rows: [{ actual, target }]  →  { pct, counted, completed }
+export function overallProgress(rows) {
+  const valid = (rows || []).filter(r => num(r && r.target) > 0);
+  if (!valid.length) return { pct: 0, counted: 0, completed: 0 };
+  const each = valid.map(r => Math.min(Math.max(num(r.actual), 0) / num(r.target), 1));
+  return { pct: each.reduce((a, b) => a + b, 0) / valid.length * 100, counted: valid.length, completed: each.filter(x => x >= 1).length };
+}
+
 // ── Migration helper ────────────────────────────────────────────────────────
 // Given a coin's CURRENT saved position and its transaction history, work out the
 // opening position that, replayed forward, reproduces the current one. The old app

@@ -16,13 +16,13 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610231133"></script>
-<script src="samsam-hints.js?v=202610231133"></script>
-<script src="samsam-vault.js?v=202610231133"></script>
-<script src="samsam-labels.js?v=202610231133"></script>
-<script src="samsam-taxonomy.js?v=202610231133"></script>
-<script src="samsam-coins.js?v=202610231133"></script>
-<script src="samsam-dropdown.js?v=202610231133"></script>
+<script src="samsam-ui.js?v=202610231240"></script>
+<script src="samsam-hints.js?v=202610231240"></script>
+<script src="samsam-vault.js?v=202610231240"></script>
+<script src="samsam-labels.js?v=202610231240"></script>
+<script src="samsam-taxonomy.js?v=202610231240"></script>
+<script src="samsam-coins.js?v=202610231240"></script>
+<script src="samsam-dropdown.js?v=202610231240"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -84,7 +84,9 @@ body {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 12px; padding: 14px 16px;
 }
-.dash-card .label { font-size: 0.7rem; color: var(--fg2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.dash-card .label { font-size: 0.7rem; color: var(--fg2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; }   /* ⓘ sits at the right, on the first line */
+.dash-card .label .cp-hint { margin: -3px -4px 0 0; }
 .dash-card .value { font-size: 1.15rem; font-weight: 700; }
 .dash-card .sub { font-size: 0.72rem; color: var(--fg2); margin-top: 3px; }
 .dash-card.accent-card { border-color: rgba(245,158,11,.3); background: rgba(245,158,11,.05); }
@@ -510,22 +512,22 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 <!-- Dashboard -->
 <div class="dashboard" id="dashboard">
   <div class="dash-card accent-card">
-    <div class="label">Total Target Value</div>
+    <div class="label">Total Target Value<button type="button" class="cp-hint" data-hint="planTotals" aria-label="About the plan totals"></button></div>
     <div class="value" id="dTotalTarget">—</div>
     <div class="sub">At current prices</div>
   </div>
   <div class="dash-card">
-    <div class="label">Current Holdings</div>
+    <div class="label">Current Holdings<button type="button" class="cp-hint" data-hint="planTotals" aria-label="About the plan totals"></button></div>
     <div class="value" id="dHoldings">—</div>
     <div class="sub">In plan</div>
   </div>
   <div class="dash-card red-card">
-    <div class="label">Total Pending Cost</div>
+    <div class="label">Total Pending Cost<button type="button" class="cp-hint" data-hint="planTotals" aria-label="About the plan totals"></button></div>
     <div class="value" id="dPending">—</div>
     <div class="sub">To complete plan</div>
   </div>
   <div class="dash-card green-card">
-    <div class="label">Coins Completed</div>
+    <div class="label">Coins Completed<button type="button" class="cp-hint" data-hint="planTotals" aria-label="About the plan totals"></button></div>
     <div class="value" id="dCompleted">—</div>
     <div class="sub" id="dInProgress">— in progress</div>
   </div>
@@ -534,7 +536,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 <!-- Overall progress -->
 <div class="overall-progress">
   <div class="prog-header">
-    <span>Overall Accumulation Progress</span>
+    <span>Overall Accumulation Progress<button type="button" class="cp-hint" data-hint="overallProgress" aria-label="About Overall Progress"></button></span>
     <span id="overallPct">0%</span>
   </div>
   <div class="prog-bar-wrap">
@@ -559,13 +561,13 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
     <thead>
       <tr>
         <th class="sortable" onclick="setSort('name')">Coin</th>
-        <th class="sortable" onclick="setSort('targetQty')"><span data-label="TARGET_AMOUNT">Target Amount</span></th>
+        <th class="sortable" onclick="setSort('targetQty')"><span data-label="TARGET_AMOUNT">Target Amount</span><button type="button" class="cp-hint" data-hint="targetAmount" aria-label="About Target Amount"></button></th>
         <th class="sortable" onclick="setSort('actualQty')"><span data-label="ACTUAL_AMOUNT">Actual Amount</span></th>
-        <th class="sortable" onclick="setSort('pendingQty')"><span data-label="PENDING_AMOUNT">Pending Amount</span></th>
+        <th class="sortable" onclick="setSort('pendingQty')"><span data-label="PENDING_AMOUNT">Pending Amount</span><button type="button" class="cp-hint" data-hint="pendingAmount" aria-label="About Pending Amount"></button></th>
         <th class="sortable" onclick="setSort('currentPrice')"><span data-label="CURRENT_PRICE">Current Price</span></th>
-        <th onclick="setSort('targetPrice')" class="sortable">💰 <span data-label="BUY_AT">Buy At</span></th>
-        <th class="sortable" onclick="setSort('costToTarget')"><span data-label="COST_TO_TARGET">Cost to Target</span></th>
-        <th class="sortable" onclick="setSort('progress')"><span data-label="PROGRESS">Progress</span></th>
+        <th onclick="setSort('targetPrice')" class="sortable">💰 <span data-label="BUY_AT">Buy At</span><button type="button" class="cp-hint" data-hint="buyAt" aria-label="About Buy at %"></button></th>
+        <th class="sortable" onclick="setSort('costToTarget')"><span data-label="COST_TO_TARGET">Cost to Target</span><button type="button" class="cp-hint" data-hint="costToTarget" aria-label="About Cost to Target"></button></th>
+        <th class="sortable" onclick="setSort('progress')"><span data-label="PROGRESS">Progress</span><button type="button" class="cp-hint" data-hint="coinProgress" aria-label="About Progress"></button></th>
         <th></th>
       </tr>
     </thead>
@@ -603,7 +605,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610231133"></script>
+<script type="module" src="samsam-cloud.js?v=202610231240"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -766,8 +768,10 @@ function calcRow(entry) {
   const targetQty    = entry.targetQty || 0;
   const targetPct    = entry.targetPct || 0;  // e.g. -20 means "buy 20% below current"
   // Compute the absolute target price from the percentage offset
-  const targetPrice  = (targetPct !== 0 && currentPrice > 0)
-                         ? currentPrice * (1 + targetPct / 100) : 0;
+  // Buy at % is measured from a FIXED base price — the coin's price when you set the % (saved with the plan),
+  // so the target stays put until you change it: base $100 and −10% → target $90.
+  const targetBase   = entry.targetBase > 0 ? entry.targetBase : 0;
+  const targetPrice  = (targetPct !== 0 && targetBase > 0) ? targetBase * (1 + targetPct / 100) : 0;
   const pendingQty   = Math.max(targetQty - actualQty, 0);
   const costToTarget = pendingQty * currentPrice;
   const progress     = targetQty > 0 ? Math.min(actualQty / targetQty * 100, 100) : 0;
@@ -776,8 +780,9 @@ function calcRow(entry) {
   // priceDiff: how far current price is from target (negative = below target = good to buy)
   const priceDiff    = (targetPrice > 0 && currentPrice > 0)
                          ? (currentPrice - targetPrice) / targetPrice * 100 : null;
-  const readyToBuy   = priceDiff !== null && priceDiff <= 0;
-  return { actualQty, currentPrice, targetPrice, targetPct, pendingQty, costToTarget, progress, logoUrl, name, priceDiff, readyToBuy };
+  // below the base (−%): buy when the price falls to the target · above the base (+%): buy when it rises to it
+  const readyToBuy   = priceDiff !== null && (targetPct < 0 ? priceDiff <= 0 : priceDiff >= 0);
+  return { actualQty, currentPrice, targetPrice, targetPct, targetBase, targetBaseAt: entry.targetBaseAt || '', pendingQty, costToTarget, progress, logoUrl, name, priceDiff, readyToBuy };
 }
 
 // ─── Render Table ────────────────────────────────────────────────────────────
@@ -864,11 +869,9 @@ function renderTable() {
       <td style="min-width:130px">
         <span class="val-cell">${entry.targetPct ? (entry.targetPct > 0 ? '+' : '−') + Math.abs(entry.targetPct) + '%' : '<span class="no-price">Set %</span>'}<button type="button" class="val-edit" onclick="promptTargetPct(${idx})" title="Change the buy-at % (e.g. -20 = buy 20% below the current price)" aria-label="Change the buy-at percent for ${entry.sym}">${SamsamUI.icon('pencil')}</button></span>
         ${r.targetPrice > 0 ? `<div style="font-size:0.7rem;margin-top:3px;color:var(--accent);font-weight:600">
-          🎯 ${SamsamFmt.price(r.targetPrice)}
+          🎯 ${SamsamFmt.price(r.targetPrice)} <span style="color:var(--fg2);font-weight:500">of ${SamsamFmt.price(r.targetBase)}${baseDay(r)}</span>
         </div>` : ''}
-        ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">
-          ${r.readyToBuy ? '🟢 BUY NOW!' : `🔴 ${(r.priceDiff).toFixed(1)}% above target`}
-        </div>` : ''}
+        ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}
       </td>
       <td>${hasPrice && r.pendingQty > 0 ? '<strong>' + SamsamFmt.usd(r.costToTarget) + '</strong>' : (r.pendingQty === 0 ? '<span style="color:var(--green)">—</span>' : '<span class="no-price">N/A</span>')}</td>
       <td style="min-width:100px">
@@ -922,7 +925,8 @@ function renderCards() {
     const ap = entry.alertPrice;
     const alertHit = ap > 0 && hasPrice && r.currentPrice <= ap;
     const icon = SamsamCoins.iconLinked(entry.sym, 36, coinOpts(entry, r));
-    const metric = (label, val, extra = '') => `<div class="coin-metric"><label>${label}</label><val ${extra}>${val}</val></div>`;
+    const HINT = { [L.PENDING_AMOUNT]: 'pendingAmount', [L.COST_TO_TARGET]: 'costToTarget', [L.BUY_AT]: 'buyAt', [L.TARGET_AMOUNT]: 'targetAmount' };
+    const metric = (label, val, extra = '') => `<div class="coin-metric"><label>${label}${HINT[label] ? `<button type="button" class="cp-hint" data-hint="${HINT[label]}" aria-label="About ${label}"></button>` : ''}</label><val ${extra}>${val}</val></div>`;
     return `<div class="coin-card acc-card${completed ? ' completed' : ''}">
       <div class="coin-card-header">
         <div style="display:flex;align-items:center;gap:10px;min-width:0">
@@ -944,7 +948,7 @@ function renderCards() {
         ${metric(L.CURRENT_PRICE, hasPrice ? SamsamFmt.price(r.currentPrice) : '<span class="no-price">No price</span>')}
         ${metric(L.COST_TO_TARGET, hasPrice && r.pendingQty > 0 ? SamsamFmt.usd(r.costToTarget) : (r.pendingQty === 0 ? '—' : 'N/A'), 'style="color:var(--accent)"')}
         ${metric(L.BUY_AT, r.targetPrice > 0 ? SamsamFmt.price(r.targetPrice) : '—',
-           r.priceDiff !== null ? `title="${r.readyToBuy ? 'BUY NOW' : r.priceDiff.toFixed(1) + '% above target'}" style="color:${r.readyToBuy ? 'var(--green)' : 'var(--fg)'}"` : '')}
+           r.priceDiff !== null ? `title="${buyAtStatus(r).replace(/<[^>]+>/g, '')} · base ${SamsamFmt.price(r.targetBase)}${baseDay(r)}" style="color:${r.readyToBuy ? 'var(--green)' : 'var(--fg)'}"` : '')}
       </div>
       <div class="acc-settings">
         <div class="acc-set-row">
@@ -956,17 +960,18 @@ function renderCards() {
           </div>
         </div>
         <div class="acc-set-row">
-          <label>💰 ${L.BUY_AT}</label>
+          <label>💰 ${L.BUY_AT}<button type="button" class="cp-hint" data-hint="buyAt" aria-label="About Buy at %"></button></label>
           <div class="acc-set-ctl">
             <button type="button" class="acc-sign" onclick="togglePctSign(${idx})" title="Toggle positive/negative">${(entry.targetPct||0) >= 0 ? '+' : '−'}</button>
             <input class="card-target-input" type="text" inputmode="decimal" id="pctInput_${idx}" value="${entry.targetPct ? Math.abs(entry.targetPct) : ''}" placeholder="20"
               oninput="updateTargetPctAbs(${idx}, this.value)" onblur="commitTargetPctAbs(${idx}, this.value)" onkeydown="if(event.key==='Enter'){this.blur()}" style="text-align:center">
             <span class="sym-tag">%</span>
           </div>
-          ${r.priceDiff !== null ? `<div class="acc-set-note" style="color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${r.readyToBuy ? '🟢 BUY NOW!' : `🔴 ${r.priceDiff.toFixed(1)}% above target`}</div>` : ''}
+          ${r.targetPrice > 0 ? `<div class="acc-set-note" style="color:var(--fg2)">🎯 ${SamsamFmt.price(r.targetPrice)} = ${SamsamFmt.price(r.targetBase)}${baseDay(r)} ${r.targetPct > 0 ? '+' : '−'} ${Math.abs(r.targetPct)}%</div>` : ''}
+          ${r.priceDiff !== null ? `<div class="acc-set-note" style="color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}
         </div>
         <div class="acc-set-row">
-          <label>🔔 ${L.PRICE_ALERT}</label>
+          <label>🔔 ${L.PRICE_ALERT}<button type="button" class="cp-hint" data-hint="priceAlert" aria-label="About Price Alert"></button></label>
           <div class="acc-set-ctl">
             <input class="card-target-input" type="text" inputmode="decimal" value="${ap > 0 ? ap : ''}" placeholder="Price $"
               oninput="updateAlert(${idx}, this.value)" onblur="commitAlert(${idx}, this.value)" onkeydown="if(event.key==='Enter'){this.blur()}" title="Alert when price drops to or below this value">
@@ -1002,7 +1007,8 @@ function renderDashboard() {
     else if ((entry.targetQty||0) > 0) inProgress++;
   });
 
-  const overallPct = weightedTarget > 0 ? Math.min(weightedActual / weightedTarget * 100, 100) : 0;
+  // Overall Progress = average of each coin's completion, each capped at 100% (samsam-core.js → overallProgress)
+  const overallPct = Samsam.core.overallProgress(accumPlan.map(e => ({ actual: calcRow(e).actualQty, target: e.targetQty || 0 }))).pct;
 
   document.getElementById('dTotalTarget').textContent = SamsamFmt.usd(totalTargetVal);
   document.getElementById('dHoldings').textContent    = SamsamFmt.usd(holdingsVal);
@@ -1014,6 +1020,7 @@ function renderDashboard() {
 }
 
 function renderAll() {
+  try { ensureBuyAtBases(); } catch (_) {}
   renderCatPicker();
   if (currentView === 'table') { renderTable(); }
   else { renderCards(); }
@@ -1048,7 +1055,7 @@ async function promptTarget(idx) {
 }
 async function promptTargetPct(idx) {
   const e = accumPlan[idx]; if (!e) return;
-  const v = await CPDialog.prompt('Buy when the price is this % away from today\'s price.\n-20 = 20% below · 10 = 10% above · empty = none', { title: `Buy at % — ${e.sym}`, value: e.targetPct || '', placeholder: '-20', okText: 'Save' });
+  const v = await CPDialog.prompt('Buy when the price is this % away from today\'s price. Today\'s price is saved as the base, so the target stays fixed until you change it.\n-20 = 20% below · 10 = 10% above · empty = none', { title: `Buy at % — ${e.sym}`, value: e.targetPct || '', placeholder: '-20', okText: 'Save' });
   if (v == null) return;
   const t = String(v).replace(/[%\s]/g, '').replace('−', '-');
   const n = parseFloat(t);
@@ -1056,19 +1063,47 @@ async function promptTargetPct(idx) {
   commitTargetPct(idx, t === '' ? '0' : String(n));
 }
 
+// Every change of Buy at % goes through here: it records the coin's price at that moment as the base.
+const baseDay = r => r.targetBaseAt ? ' (' + new Date(r.targetBaseAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ')' : '';
+function buyAtStatus(r) {
+  if (r.readyToBuy) return '🟢 BUY NOW!';
+  const away = Math.abs(r.priceDiff).toFixed(1);
+  return r.targetPct < 0 ? `🔴 ${away}% above target` : `🔴 ${away}% below target`;
+}
+function setBuyAtPct(idx, pct) {
+  const e = accumPlan[idx]; if (!e) return;
+  pct = isNaN(pct) ? 0 : Math.max(-99, Math.min(pct, 500));
+  const before = e.targetPct || 0;
+  e.targetPct = pct;
+  if (!pct) { delete e.targetBase; delete e.targetBaseAt; return; }
+  if (pct !== before || !(e.targetBase > 0)) {
+    const pc = getPortfolioCoin(e.sym), price = pc && pc.currentPrice > 0 ? pc.currentPrice : 0;
+    if (price > 0) { e.targetBase = price; e.targetBaseAt = new Date().toISOString(); }
+  }
+}
+// Plans saved before the base existed: give each % target today's price as its base, once, and save it.
+function ensureBuyAtBases() {
+  let changed = false;
+  accumPlan.forEach(e => {
+    if (e.targetPct && !(e.targetBase > 0)) {
+      const pc = getPortfolioCoin(e.sym);
+      if (pc && pc.currentPrice > 0) { e.targetBase = pc.currentPrice; e.targetBaseAt = new Date().toISOString(); changed = true; }
+    }
+  });
+  if (changed) saveAccumPlan();
+}
+
 // ─── Update target buy % offset ──────────────────────────────────────────────
 // User enters e.g. -20 (meaning "I want to buy 20% below current price")
 // We store the % and compute the $ price live from current price in calcRow()
 function updateTargetPct(idx, val) {
-  const n = parseFloat(val);
-  accumPlan[idx].targetPct = isNaN(n) ? 0 : Math.max(-99, Math.min(n, 500));
+  setBuyAtPct(idx, parseFloat(val));
   renderDashboard();
   saveAccumPlan();
 }
 
 function commitTargetPct(idx, val) {
-  const n = parseFloat(val);
-  accumPlan[idx].targetPct = isNaN(n) ? 0 : Math.max(-99, Math.min(n, 500));
+  setBuyAtPct(idx, parseFloat(val));
   renderAll();
   saveAccumPlan();
 }
@@ -1078,7 +1113,7 @@ function commitTargetPct(idx, val) {
 // so we show a toggle button (+/−) and user types the absolute value.
 function togglePctSign(idx) {
   const current = accumPlan[idx].targetPct || 0;
-  accumPlan[idx].targetPct = current === 0 ? 0 : -current;
+  setBuyAtPct(idx, current === 0 ? 0 : -current);
   renderAll();
   saveAccumPlan();
 }
@@ -1087,17 +1122,17 @@ function updateTargetPctAbs(idx, val) {
   const abs = parseFloat(val);
   if (isNaN(abs)) return;
   const sign = (accumPlan[idx].targetPct || 0) >= 0 ? 1 : -1;
-  accumPlan[idx].targetPct = Math.max(-99, Math.min(sign * Math.abs(abs), 500));
+  setBuyAtPct(idx, sign * Math.abs(abs));
   renderDashboard();
   saveAccumPlan();
 }
 
 function commitTargetPctAbs(idx, val) {
   const abs = parseFloat(val);
-  if (isNaN(abs)) { accumPlan[idx].targetPct = 0; }
+  if (isNaN(abs)) { setBuyAtPct(idx, 0); }
   else {
     const sign = (accumPlan[idx].targetPct || 0) >= 0 ? 1 : -1;
-    accumPlan[idx].targetPct = Math.max(-99, Math.min(sign * Math.abs(abs), 500));
+    setBuyAtPct(idx, sign * Math.abs(abs));
   }
   renderAll();
   saveAccumPlan();

@@ -18,14 +18,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610231133"></script>
-<script src="samsam-hints.js?v=202610231133"></script>
-<script src="samsam-vault.js?v=202610231133"></script>
-<script src="samsam-labels.js?v=202610231133"></script>
-<script src="samsam-taxonomy.js?v=202610231133"></script>
-<script src="samsam-coins.js?v=202610231133"></script>
-<script src="samsam-dropdown.js?v=202610231133"></script>
-<script src="samsam-chart.js?v=202610231133"></script>
+<script src="samsam-ui.js?v=202610231240"></script>
+<script src="samsam-hints.js?v=202610231240"></script>
+<script src="samsam-vault.js?v=202610231240"></script>
+<script src="samsam-labels.js?v=202610231240"></script>
+<script src="samsam-taxonomy.js?v=202610231240"></script>
+<script src="samsam-coins.js?v=202610231240"></script>
+<script src="samsam-dropdown.js?v=202610231240"></script>
+<script src="samsam-chart.js?v=202610231240"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -748,6 +748,8 @@
   }
   .holdings-card { transition: border-color .2s ease-in-out, background .2s ease-in-out; }
   .holdings-card:hover { border-color: var(--accent); background: var(--bg3); }
+  .holdings-change-row { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+  .holdings-change-row .cp-hint { margin-left: 2px; }
   .holdings-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
   .holdings-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--fg2); }
   .holdings-total { font-size: 1.35rem; font-weight: 700; color: var(--fg); line-height: 1; }
@@ -1226,7 +1228,7 @@
 
   <div class="header-stats">
     <div class="stat-card">
-      <div class="stat-label">Total Portfolio</div>
+      <div class="stat-label">Total Portfolio<button type="button" class="cp-hint" data-hint="totalPortfolio" aria-label="About Total Portfolio"></button></div>
       <div class="stat-value stat-green" id="totalUsd">—</div>
       <div class="stat-sub" id="totalUsdBtc">—</div>
     </div>
@@ -1236,12 +1238,12 @@
       <div class="stat-sub" id="totalPnlSub">—</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">BTC Accumulated</div>
+      <div class="stat-label">BTC Accumulated<button type="button" class="cp-hint" data-hint="btcAccum" aria-label="About BTC Accumulated"></button></div>
       <div class="stat-value stat-btc" id="totalBtc">—</div>
       <div class="stat-sub" id="totalBtcUsd">—</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Altcoins Accumulated</div>
+      <div class="stat-label">Altcoins Accumulated<button type="button" class="cp-hint" data-hint="altAccum" aria-label="About Altcoins Accumulated"></button></div>
       <div class="stat-value stat-blue" id="altUsd">—</div>
       <div class="stat-sub" id="altUsdBtc">—</div>
     </div>
@@ -1265,7 +1267,7 @@
     <div>
       <div class="holdings-title">💰 Holdings</div>
       <div class="holdings-total" id="holdingsTotal">$—</div>
-      <div class="holdings-change" id="holdingsChange"></div>
+      <div class="holdings-change-row"><span class="holdings-change" id="holdingsChange"></span><button type="button" class="cp-hint" data-hint="holdingsChange" aria-label="About the holdings change"></button></div>
     </div>
     <span class="card-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
   </div>
@@ -1381,13 +1383,13 @@
         <th onclick="sortTable('rank')">#</th>
         <th onclick="sortTable('name')" style="text-align:left">Coin</th>
         <th class="num-r" onclick="sortTable('qty')"><span data-label="AMOUNT">Amount</span></th>
-        <th class="num-r" onclick="sortTable('basePrice')"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span></th>
-        <th class="num-r" onclick="sortTable('currentPrice')"><span data-label="CURRENT_PRICE">Current Price</span></th>
-        <th class="num-r" onclick="sortTable('baseValue')"><span data-label="COST_BASIS">Cost Basis</span></th>
+        <th class="num-r" onclick="sortTable('basePrice')"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></th>
+        <th class="num-r" onclick="sortTable('currentPrice')"><span data-label="CURRENT_PRICE">Current Price</span><button type="button" class="cp-hint" data-hint="manualPrice" aria-label="About the manual price"></button></th>
+        <th class="num-r" onclick="sortTable('baseValue')"><span data-label="COST_BASIS">Cost Basis</span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></th>
         <th class="num-r" onclick="sortTable('currentValue')"><span data-label="HOLDINGS_VALUE">Holdings / Current Value</span></th>
         <th class="num-r" onclick="sortTable('pnl')">P&L</th>
-        <th onclick="sortTable('perf')"><span data-label="PORTFOLIO_VS_BTC">Portfolio vs BTC</span></th>
-        <th onclick="sortTable('action')">Signal</th>
+        <th onclick="sortTable('perf')"><span data-label="PORTFOLIO_VS_BTC">Portfolio vs BTC</span><button type="button" class="cp-hint" data-hint="vsBtc" aria-label="About Portfolio vs BTC"></button></th>
+        <th onclick="sortTable('action')">Signal<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button></th>
         <th>📝 Notes</th>
         <th>Actions</th>
       </tr>
@@ -1539,7 +1541,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610231133"></script>
+<script type="module" src="samsam-cloud.js?v=202610231240"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2068,7 +2070,7 @@ function renderMovers() {
   const rows = portfolio.filter(c => !activeCatFilter || (c.cat || 'other') === activeCatFilter)
     .map(c => ({ sym: c.sym, logoUrl: c.logoUrl, value: c.qty * c.currentPrice, score: typeof c.change24h === 'number' ? c.change24h : NaN }));
   const m = C.pickMovers(rows, total);
-  const head = { title: "Today's movers", badge: '24h · ' + (activeCatFilter ? T.label(activeCatFilter) : 'All Coins') };
+  const head = { title: "Today's movers", badge: '24h · ' + (activeCatFilter ? T.label(activeCatFilter) : 'All Coins'), hint: 'movers24h' };
   if (!m) { host.innerHTML = C.moversCard({ head, empty: activeCatFilter ? `No 24h price changes yet for ${T.label(activeCatFilter)}.` : 'Best and worst performer appear once live prices load.' }); return; }
   const half = (label, r) => r && { label, row: r, pct: r.score, text: C.signedPct(r.score), onClickJs: `openCoinFromMovers('${r.sym}')` };
   host.innerHTML = C.moversCard({ head, best: half('Best Performer', m.best), worst: half('Worst Performer', m.worst) || { label: 'Worst Performer' } });
@@ -2151,11 +2153,11 @@ function renderTableAndStack() {
         <div class="card-cat-row">${catTag(c.cat, c.sym)}</div>
         <div class="coin-card-body">
           <div class="coin-metric"><label>${SAMSAM_LABELS.AMOUNT}</label><val title="${fmtQtyRO(c.qty)}">${fmtQtyRO(c.qty)}</val></div>
-          <div class="coin-metric"><label>${SAMSAM_LABELS.COST_BASIS}</label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
-          <div class="coin-metric"><label>${SAMSAM_LABELS.AVG_BUY_PRICE}</label><val title="${fmtAvgRO(c.basePrice)}">${fmtAvgRO(c.basePrice)}</val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.COST_BASIS}<button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.AVG_BUY_PRICE}<button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></label><val title="${fmtAvgRO(c.basePrice)}">${fmtAvgRO(c.basePrice)}</val></div>
           <div class="coin-metric"><label title="${SAMSAM_LABELS.HOLDINGS_VALUE}">${SAMSAM_LABELS.HOLDINGS_VALUE}</label><val title="${SamsamFmt.usd(curVal)}">${SamsamFmt.usd(curVal)}</val></div>
-          <div class="coin-metric"><label>${SAMSAM_LABELS.PORTFOLIO_VS_BTC}</label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
-          <div class="coin-metric"><label>${SAMSAM_LABELS.SIGNAL}</label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.PORTFOLIO_VS_BTC}<button type="button" class="cp-hint" data-hint="vsBtc" aria-label="About Portfolio vs BTC"></button></label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.SIGNAL}<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button></label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
         </div>
         <div style="padding:6px 12px 0">
           <input type="text" class="editable-input note-input" value="${(c.notes||'').replace(/"/g,'&quot;')}"
@@ -3150,7 +3152,11 @@ function renderAccumProgress(plan) {
     weightedTarget   += targetVal;
     if (targetQty > 0 && actualQty >= targetQty) completed++;
   });
-  const pct = weightedTarget > 0 ? Math.min(weightedActual / weightedTarget * 100, 100) : 0;
+  // Overall Progress = average of each coin's completion, each capped at 100% — same as the Accumulation page
+  const pct = Samsam.core.overallProgress(plan.map(entry => {
+    const coin = portfolio.find(c => c.sym && c.sym.toUpperCase() === (entry.sym || '').toUpperCase());
+    return { actual: coin ? (coin.qty || 0) : 0, target: entry.targetQty || 0 };
+  })).pct;
   document.getElementById('accumFill').style.width  = pct.toFixed(1) + '%';
   document.getElementById('accumPct').textContent   = pct.toFixed(1) + '% complete';
   document.getElementById('accumDetail').textContent = completed + ' / ' + plan.length + ' targets met';
@@ -4355,7 +4361,7 @@ async function saveBaselineEdit() {
   <div class="hov-hero">
     <div class="hov-page-label">Portfolio Value</div>
     <div class="hov-total" id="hovTotal">$—</div>
-    <div class="hov-change" id="hovChange"></div>
+    <div class="holdings-change-row"><span class="hov-change" id="hovChange"></span><button type="button" class="cp-hint" data-hint="holdingsChange" aria-label="About the holdings change"></button></div>
   </div>
 
   <!-- Chart -->
@@ -4398,12 +4404,13 @@ async function saveBaselineEdit() {
     <div class="htx-links">
       <a class="btn-liq htx-liq" id="htxLiqLink" href="#" target="_blank" rel="noopener noreferrer">🔥 Liquidation Map <span aria-hidden="true">↗</span></a>
       <a class="btn-pred htx-liq" id="htxPredLink" href="#" target="_blank" rel="noopener noreferrer">🔮 Price Prediction <span aria-hidden="true">↗</span></a>
+      <button type="button" class="cp-hint" data-hint="external" aria-label="About links that leave the app"></button>
     </div>
     <div class="htx-cards">
       <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub" id="htxHoldings24">—</div></div>
       <div class="htx-card"><div class="htx-label">All-Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
-      <div class="htx-card"><div class="htx-label" data-label="AVG_BUY_PRICE">Avg. Buy Price</div><div class="htx-value" id="htxAvg">—</div></div>
-      <div class="htx-card"><div class="htx-label"><span data-label="COST_BASIS">Cost Basis</span> <button type="button" class="info-tip" aria-label="How Cost Basis is calculated"><span aria-hidden="true">ⓘ</span><span class="info-pop" role="tooltip"><b>Cost Basis</b><span>We use the <em>Average Cost Basis (ACB)</em> method for calculation:</span><span class="info-formula"><em>Cost Basis</em> = Sum(Buy Price × Buy Amount) + Sum(Buying Fees)</span><small>Sells and transfers out reduce it in proportion, at the average buy price.</small></span></button></div><div class="htx-value" id="htxCost">—</div></div>
+      <div class="htx-card"><div class="htx-label"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></div><div class="htx-value" id="htxAvg">—</div></div>
+      <div class="htx-card"><div class="htx-label"><span data-label="COST_BASIS">Cost Basis</span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></div><div class="htx-value" id="htxCost">—</div></div>
     </div>
     <div id="htxList" class="htx-list"></div>
   </div>
