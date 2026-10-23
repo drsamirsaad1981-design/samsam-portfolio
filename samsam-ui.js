@@ -83,6 +83,20 @@
     '.ss-live.ss-pulse[data-state=ok]{animation:ssLiveRing 2s ease-out infinite}' +
     '@keyframes ssLiveRing{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}' +
     '@media (prefers-reduced-motion:reduce){.ss-live[data-state=loading],.ss-live.ss-pulse{animation:none}}' +
+    // ➕ Add — one button on every page (main toolbar, Holdings, a coin's Transactions, Accumulation):
+    // brand-violet gradient, the + in a soft chip (like Back's chevron), lifts on hover, presses in on tap.
+    // .sm = 36px (page header, next to Back) · .cp-add-iconly = square icon button (phone toolbar)
+    '.cp-add{display:inline-flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;height:40px;padding:0 16px 0 6px;flex-shrink:0;border:none;border-radius:12px;' +
+      'background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 55%,#6d28d9 100%);color:#fff;font:inherit;font-size:.88rem;font-weight:700;letter-spacing:.01em;line-height:1;white-space:nowrap;' +
+      'cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 14px rgba(124,58,237,.32),inset 0 1px 0 rgba(255,255,255,.18);transition:transform .12s,box-shadow .2s,filter .2s}' +
+    '.cp-add-ic{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;flex-shrink:0;border-radius:9px;background:rgba(255,255,255,.2);transition:transform .25s}' +
+    '@media (hover:hover){.cp-add:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 8px 22px rgba(124,58,237,.42),inset 0 1px 0 rgba(255,255,255,.22)}.cp-add:hover .cp-add-ic{transform:rotate(90deg)}}' +
+    '.cp-add:active{transform:scale(.96);box-shadow:0 2px 8px rgba(124,58,237,.3)}' +
+    '.cp-add:focus-visible{outline:2px solid #c4b5fd;outline-offset:2px}' +
+    '[data-theme=light] .cp-add{box-shadow:0 4px 12px rgba(124,58,237,.25),inset 0 1px 0 rgba(255,255,255,.22)}' +
+    '.cp-add.sm{height:36px;padding:0 13px 0 4px;gap:7px;font-size:.84rem;border-radius:10px}.cp-add.sm .cp-add-ic{width:28px;height:28px;border-radius:8px}' +
+    '.cp-add.cp-add-iconly{padding:0;gap:0;width:44px}.cp-add.cp-add-iconly .cp-add-ic{background:transparent;width:auto;height:auto}.cp-add.cp-add-iconly .cp-add-ic svg{width:20px;height:20px}' +
+    '@media (prefers-reduced-motion:reduce){.cp-add,.cp-add-ic{transition:none}.cp-add:hover,.cp-add:active{transform:none}.cp-add:hover .cp-add-ic{transform:none}}' +
     // Table · Cards switch — one look on every page that has both views (main page, Accumulation).
     // Compact under 768px, roomier above; the view on screen is lit (.btn-toggle-active).
     '.cp-vseg{display:inline-grid;grid-template-columns:1fr 1fr;flex:0 0 auto;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:2px;gap:2px}' +

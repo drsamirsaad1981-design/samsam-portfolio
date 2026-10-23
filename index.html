@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610232035"></script>
-<script src="samsam-hints.js?v=202610232035"></script>
-<script src="samsam-vault.js?v=202610232035"></script>
-<script src="samsam-labels.js?v=202610232035"></script>
-<script src="samsam-taxonomy.js?v=202610232035"></script>
-<script src="samsam-coins.js?v=202610232035"></script>
-<script src="samsam-dropdown.js?v=202610232035"></script>
-<script src="samsam-add.js?v=202610232035"></script>
-<script src="samsam-chart.js?v=202610232035"></script>
+<script src="samsam-ui.js?v=202610232102"></script>
+<script src="samsam-hints.js?v=202610232102"></script>
+<script src="samsam-vault.js?v=202610232102"></script>
+<script src="samsam-labels.js?v=202610232102"></script>
+<script src="samsam-taxonomy.js?v=202610232102"></script>
+<script src="samsam-coins.js?v=202610232102"></script>
+<script src="samsam-dropdown.js?v=202610232102"></script>
+<script src="samsam-add.js?v=202610232102"></script>
+<script src="samsam-chart.js?v=202610232102"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1146,7 +1146,12 @@
     /* icon buttons: 44×44 touch target */
     .search-signal-bar .controls-right-group .btn { width: 44px; min-width: 44px; max-width: 44px; min-height: 44px; padding: 0; font-size: 1.05rem; display: inline-flex; align-items: center; justify-content: center; }
     .search-signal-bar .controls-right-group .btn .btn-txt { display: none; }
+    /* ➕ Add: same 44×44 square, the + alone (shared .cp-add look) */
+    .search-signal-bar .cp-add { width: 44px; min-width: 44px; height: 44px; padding: 0; gap: 0; border-radius: 12px; }
+    .search-signal-bar .cp-add .btn-txt { display: none; }
+    .search-signal-bar .cp-add .cp-add-ic { background: transparent; } .search-signal-bar .cp-add .cp-add-ic svg { width: 20px; height: 20px; }
   }
+  .search-signal-bar .cp-add { height: 44px; border-radius: 12px; }
 </style>
 </head>
 <body>
@@ -1338,7 +1343,7 @@
   <div class="controls-right-group">
     <div class="signal-filter-select" id="signalDD"></div>
     <button class="btn btn-secondary tb-desktop-only tb-ai" onclick="openAnalysis()" title="AI Analysis" aria-label="AI Analysis">🤖<span class="btn-txt"> AI Analysis</span></button>
-    <button class="btn btn-secondary tb-desktop-only tb-add" onclick="openAddCoin()" title="Add a new coin to your portfolio" aria-label="Add New Coin">➕<span class="btn-txt"> <span data-label="ADD_COIN">Add New Coin</span></span></button>
+    <button type="button" class="cp-add tb-desktop-only tb-add" onclick="openAddCoin()" title="Add a new coin, or a Buy for a coin you hold" aria-label="Add New Coin"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="btn-txt"><span data-label="ADD_COIN">Add New Coin</span></span></button>
   </div>
   <input type="hidden" id="filterAction" value="">
 </div>
@@ -1452,7 +1457,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610232035"></script>
+<script type="module" src="samsam-cloud.js?v=202610232102"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3821,21 +3826,17 @@ async function saveBaselineEdit() {
     .htx-fab:hover { background:#1d4ed8; } .htx-fab:active { transform:scale(.94); }
     .htx-fab:focus-visible { outline:3px solid #93c5fd; outline-offset:3px; }
     .htx-filters { align-items:center; }
-    .htx-add-btn { margin-left:auto; display:inline-flex; align-items:center; gap:7px; height:38px; padding:0 16px; border:none; border-radius:10px;
-      background:#2563eb; color:#fff; font:inherit; font-size:.88rem; font-weight:700; cursor:pointer; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,.25);
-      -webkit-tap-highlight-color:transparent; transition:background .15s, transform .12s; }
-    .htx-add-btn:hover { background:#1d4ed8; } .htx-add-btn:active { transform:scale(.97); }
-    .htx-add-btn:focus-visible { outline:3px solid #93c5fd; outline-offset:2px; }
+    /* Add Transaction: shared ➕ .cp-add look (samsam-ui.js), pushed to the right of the filters */
+    .htx-add-btn { margin-left:auto; }
     /* Phones: one row — type, coin, Add (the word "Transaction" drops on the narrowest screens) */
     @media (max-width: 600px) {
       .htx-filters { flex-wrap:nowrap; gap:8px; }
       .htx-filters > div { min-width:0; flex:0 1 auto; }
       .htx-filters .sdd-btn { padding:0 10px; gap:6px; font-size:.84rem; max-width:100%; }
-      .htx-add-btn { flex:0 0 auto; padding:0 12px; font-size:.84rem; gap:5px; }
+      .htx-add-btn { flex:0 0 auto; padding:0 13px 0 5px; font-size:.84rem; gap:6px; }
     }
     @media (max-width: 600px) { .htx-add-btn .lbl-long { display:none; } }
     /* ➕ Add in the Holdings header (the coin's Transactions screen has its own Add Transaction) */
-    .hov-add-btn { margin-left:0; height:36px; padding:0 14px; font-size:.86rem; }
     #holdingsOverlay[data-view="tx"] .hov-add-btn { display:none; }
     /* Add Transaction form + .atx-* dialog styles: shared samsam-add.js (Edit opening uses them too) */
     .htx-empty { padding:36px 16px; text-align:center; color:var(--fg2); font-size:0.88rem; }
@@ -3905,8 +3906,7 @@ async function saveBaselineEdit() {
   <header class="cp-head hov-navbar">
     <div class="cp-head-l"><button type="button" class="cp-back hov-back-btn" onclick="hovBack()" aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></button></div>
     <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" id="hovNavIcon">💰</span><span class="t" id="hovNavTitle">Holdings</span></h1>
-    <div class="cp-head-r"><button type="button" class="htx-add-btn hov-add-btn" id="hovAddBtn" onclick="openAddCoin()" title="Add a new coin, or a Buy for a coin you hold">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button></div>
+    <div class="cp-head-r"><button type="button" class="cp-add sm hov-add-btn" id="hovAddBtn" onclick="openAddCoin()" title="Add a new coin, or a Buy for a coin you hold"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add</span></button></div>
   </header>
 
   <div class="hov-container">
@@ -3951,8 +3951,7 @@ async function saveBaselineEdit() {
     <div class="htx-filters">
       <div id="htxTypeDD"></div>
       <div id="htxCoinDD"></div>
-      <button type="button" class="htx-add-btn" id="htxAddBtn" onclick="openAddTx()" title="Add a Buy, Sell or Transfer for this coin">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add<span class="lbl-long"> Transaction</span></span></button>
+      <button type="button" class="cp-add htx-add-btn" id="htxAddBtn" onclick="openAddTx()" title="Add a Buy, Sell or Transfer for this coin"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="lbl-long"> Transaction</span></span></button>
     </div>
     <div class="htx-links">
       <a class="btn-liq htx-liq" id="htxLiqLink" href="#" target="_blank" rel="noopener noreferrer">🔥 Liquidation Map <span aria-hidden="true">↗</span></a>

@@ -16,14 +16,14 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610232035"></script>
-<script src="samsam-hints.js?v=202610232035"></script>
-<script src="samsam-vault.js?v=202610232035"></script>
-<script src="samsam-labels.js?v=202610232035"></script>
-<script src="samsam-taxonomy.js?v=202610232035"></script>
-<script src="samsam-coins.js?v=202610232035"></script>
-<script src="samsam-dropdown.js?v=202610232035"></script>
-<script src="samsam-add.js?v=202610232035"></script>
+<script src="samsam-ui.js?v=202610232102"></script>
+<script src="samsam-hints.js?v=202610232102"></script>
+<script src="samsam-vault.js?v=202610232102"></script>
+<script src="samsam-labels.js?v=202610232102"></script>
+<script src="samsam-taxonomy.js?v=202610232102"></script>
+<script src="samsam-coins.js?v=202610232102"></script>
+<script src="samsam-dropdown.js?v=202610232102"></script>
+<script src="samsam-add.js?v=202610232102"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -286,6 +286,7 @@ tr:hover td { background: rgba(255,255,255,.02); }
 @media (max-width: 767px) {   /* Add (left) · Table/Cards (right), search on its own row underneath */
   .toolbar .search-box { order: 3; flex: 1 1 100%; }
 }
+@media (max-width: 420px) { .toolbar .cp-add .lbl-long { display: none; } }   /* "Add to Plan" so it fits beside Table · Cards */
 
 /* ── Responsive ── */
 @media(max-width:600px) {
@@ -551,7 +552,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 
 <!-- Toolbar -->
 <div class="toolbar">
-  <button class="btn btn-primary" onclick="openAddModal()">➕ Add Coin to Plan</button>
+  <button type="button" class="cp-add" onclick="openAddModal()" title="Add any coin to your plan — even one you don't own yet"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="lbl-long"> Coin</span> to Plan</span></button>
   <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin..." oninput="renderAll()">
   <div class="view-toggle cp-vseg" role="group" aria-label="View">
     <button type="button" id="btnTable" data-view="table" onclick="setView('table')">📋 Table</button>
@@ -610,7 +611,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610232035"></script>
+<script type="module" src="samsam-cloud.js?v=202610232102"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
