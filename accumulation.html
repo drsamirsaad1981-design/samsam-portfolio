@@ -16,13 +16,13 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610231356"></script>
-<script src="samsam-hints.js?v=202610231356"></script>
-<script src="samsam-vault.js?v=202610231356"></script>
-<script src="samsam-labels.js?v=202610231356"></script>
-<script src="samsam-taxonomy.js?v=202610231356"></script>
-<script src="samsam-coins.js?v=202610231356"></script>
-<script src="samsam-dropdown.js?v=202610231356"></script>
+<script src="samsam-ui.js?v=202610231501"></script>
+<script src="samsam-hints.js?v=202610231501"></script>
+<script src="samsam-vault.js?v=202610231501"></script>
+<script src="samsam-labels.js?v=202610231501"></script>
+<script src="samsam-taxonomy.js?v=202610231501"></script>
+<script src="samsam-coins.js?v=202610231501"></script>
+<script src="samsam-dropdown.js?v=202610231501"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -272,18 +272,11 @@ tr:hover td { background: rgba(255,255,255,.02); }
 }
 .card-del-btn:hover { color: var(--red); border-color: var(--red); }
 
-/* View toggle */
-.view-toggle {
-  display: flex; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 8px; overflow: hidden;
+/* Table · Cards switch: shared .cp-vseg (samsam-ui.js), always at the far right like the main page */
+.toolbar .view-toggle { margin-left: auto; }
+@media (max-width: 767px) {   /* Add (left) · Table/Cards (right), search on its own row underneath */
+  .toolbar .search-box { order: 3; flex: 1 1 100%; }
 }
-.view-toggle button {
-  background: none; border: none; color: var(--fg2);
-  font-family: inherit; font-size: 0.78rem; padding: 6px 11px;
-  cursor: pointer; display: flex; align-items: center; gap: 4px;
-  transition: background .15s, color .15s;
-}
-.view-toggle button.active { background: var(--accent); color: #000; font-weight: 600; }
 
 /* ── Responsive ── */
 @media(max-width:600px) {
@@ -548,9 +541,9 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 <div class="toolbar">
   <button class="btn btn-primary" onclick="openAddModal()">➕ Add Coin to Plan</button>
   <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin..." oninput="renderAll()">
-  <div class="view-toggle">
-    <button id="btnTable" onclick="setView('table')" title="Table view">📋 Table</button>
-    <button id="btnCards" onclick="setView('cards')" title="Cards view">🃏 Cards</button>
+  <div class="view-toggle cp-vseg" role="group" aria-label="View">
+    <button type="button" id="btnTable" data-view="table" onclick="setView('table')">📋 Table</button>
+    <button type="button" id="btnCards" data-view="cards" onclick="setView('cards')">🃏 Cards</button>
   </div>
 </div>
 <div class="summary-grid" id="summaryGrid"></div>
@@ -605,7 +598,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610231356"></script>
+<script type="module" src="samsam-cloud.js?v=202610231501"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -649,8 +642,10 @@ function setView(v) {
   document.getElementById('tableView').style.display = v === 'table' ? '' : 'none';
   document.getElementById('cardsView').style.display = v === 'cards' ? '' : 'none';
   document.getElementById('cardsView').classList.toggle('view-active', v === 'cards');
-  document.getElementById('btnTable').classList.toggle('active', v === 'table');
-  document.getElementById('btnCards').classList.toggle('active', v === 'cards');
+  [['btnTable', 'table'], ['btnCards', 'cards']].forEach(([id, k]) => {
+    const b = document.getElementById(id), on = v === k;
+    b.classList.toggle('active', on); b.classList.toggle('btn-toggle-active', on); b.setAttribute('aria-pressed', String(on));
+  });
   renderAll();
 }
 

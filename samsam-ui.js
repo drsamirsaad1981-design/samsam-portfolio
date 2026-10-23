@@ -83,6 +83,15 @@
     '.ss-live.ss-pulse[data-state=ok]{animation:ssLiveRing 2s ease-out infinite}' +
     '@keyframes ssLiveRing{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}' +
     '@media (prefers-reduced-motion:reduce){.ss-live[data-state=loading],.ss-live.ss-pulse{animation:none}}' +
+    // Table · Cards switch — one look on every page that has both views (main page, Accumulation).
+    // Compact under 768px, roomier above; the view on screen is lit (.btn-toggle-active).
+    '.cp-vseg{display:inline-grid;grid-template-columns:1fr 1fr;flex:0 0 auto;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:2px;gap:2px}' +
+    '.cp-vseg>button{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:7px 10px;border-radius:7px;' +
+      'font:inherit;font-size:.78rem;font-weight:600;line-height:1.2;white-space:nowrap;color:var(--fg);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}' +
+    '@media (hover:hover){.cp-vseg>button:not(.btn-toggle-active):hover{background:var(--border)}}' +
+    '.cp-vseg>button.btn-toggle-active{background:var(--accent);color:#000;box-shadow:0 1px 3px rgba(0,0,0,.25)}' +
+    '.cp-vseg>button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}' +
+    '@media (min-width:768px){.cp-vseg{min-width:240px;border-radius:10px;padding:3px;gap:3px}.cp-vseg>button{padding:9px 12px;font-size:.82rem;border-radius:8px}}' +
     // Back button — one look on every page: same height and corners as the theme button, a purple chevron chip
     '.cp-back{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px 0 5px;box-sizing:border-box;flex-shrink:0;border-radius:10px;' +
       'border:1px solid var(--border,rgba(148,163,184,.35));background:var(--bg3,var(--card,transparent));color:var(--fg,currentColor);' +

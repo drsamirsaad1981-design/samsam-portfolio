@@ -18,14 +18,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610231356"></script>
-<script src="samsam-hints.js?v=202610231356"></script>
-<script src="samsam-vault.js?v=202610231356"></script>
-<script src="samsam-labels.js?v=202610231356"></script>
-<script src="samsam-taxonomy.js?v=202610231356"></script>
-<script src="samsam-coins.js?v=202610231356"></script>
-<script src="samsam-dropdown.js?v=202610231356"></script>
-<script src="samsam-chart.js?v=202610231356"></script>
+<script src="samsam-ui.js?v=202610231501"></script>
+<script src="samsam-hints.js?v=202610231501"></script>
+<script src="samsam-vault.js?v=202610231501"></script>
+<script src="samsam-labels.js?v=202610231501"></script>
+<script src="samsam-taxonomy.js?v=202610231501"></script>
+<script src="samsam-coins.js?v=202610231501"></script>
+<script src="samsam-dropdown.js?v=202610231501"></script>
+<script src="samsam-chart.js?v=202610231501"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1074,10 +1074,7 @@
   .summary-card .label { color: var(--label); font-weight: 600; }
   .summary-card .value { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
   /* ── Table view polish ── */
-  .view-seg { display: inline-flex; gap: 0; }
-  .view-seg .btn { border-radius: 0; }
-  .view-seg .btn:first-child { border-radius: 10px 0 0 10px; }
-  .view-seg .btn:last-child { border-radius: 0 10px 10px 0; margin-left: -1px; }
+  /* Table · Cards switch: shared .cp-vseg (samsam-ui.js) */
   #portfolioTable th.num-r, #portfolioTable td.num-r { text-align: center; font-variant-numeric: tabular-nums; }
   #portfolioTable td.num-r { white-space: nowrap; }
   #portfolioTable td, #portfolioTable th { padding-left: 8px; padding-right: 8px; }
@@ -1115,9 +1112,6 @@
 
   /* ── Toolbar (view switch + actions) and Search & Signal bar ── */
   .controls.toolbar2 { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 10px; }
-  .toolbar2 .view-seg { display: grid; grid-template-columns: 1fr 1fr; width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px; }
-  .toolbar2 .view-seg .btn { border: none; background: transparent; border-radius: 8px !important; margin: 0 !important; padding: 9px 12px; font-size: .82rem; }
-  .toolbar2 .view-seg .btn.btn-toggle-active { background: var(--accent) !important; color: #000 !important; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
   .toolbar2 .tb-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .toolbar2 .tb-actions .btn { padding: 10px 12px; font-size: .82rem; border-radius: 10px; margin: 0; }
   .tb-desktop-only { display: none !important; }
@@ -1126,7 +1120,7 @@
     .controls.toolbar2 { flex-direction: row; align-items: center; justify-content: space-between; padding: 10px 14px; }
     .toolbar2 .tb-actions { order: 1; display: flex; flex: 0 1 auto; gap: 8px; }
     .toolbar2 .tb-actions .btn { flex: 0 0 auto; }
-    .toolbar2 .view-seg { order: 2; width: auto; min-width: 240px; flex: 0 0 auto; }
+    .toolbar2 .view-seg { order: 2; }
     .tb-mobile-only { display: none !important; }
     .tb-desktop-only { display: inline-flex !important; align-items: center; justify-content: center; }
   }
@@ -1153,8 +1147,7 @@
     .controls.toolbar2 { flex-direction: row; align-items: center; justify-content: space-between; background: transparent; border: none; padding: 0; margin: 10px 0 8px; gap: 6px; }
     .toolbar2 .tb-actions { order: 1; display: flex; gap: 6px; flex: 0 0 auto; }
     .toolbar2 .tb-actions .btn { flex: 0 0 auto; padding: 7px 10px; font-size: .78rem; border-radius: 9px; }
-    .toolbar2 .view-seg { order: 2; width: auto; flex: 0 0 auto; padding: 2px; gap: 2px; border-radius: 9px; }
-    .toolbar2 .view-seg .btn { padding: 7px 10px; font-size: .78rem; }
+    .toolbar2 .view-seg { order: 2; }
     .tb-mobile-only { display: none !important; }
     .tb-desktop-only { display: inline-flex !important; align-items: center; justify-content: center; }
     #summaryGrid { margin-top: 8px !important; }
@@ -1347,9 +1340,9 @@
 
 <!-- Toolbar: view switch + actions (Accumulation Plan and Allocation open from their cards above) -->
 <div class="controls toolbar2">
-  <div class="view-seg" id="viewToggleBtn" role="group" aria-label="View">
-    <button type="button" class="btn btn-secondary" data-view="table" onclick="applyView('table')">📋 Table</button>
-    <button type="button" class="btn btn-secondary" data-view="cards" onclick="applyView('cards')">🃏 Cards</button>
+  <div class="view-seg cp-vseg" id="viewToggleBtn" role="group" aria-label="View">
+    <button type="button" data-view="table" onclick="applyView('table')">📋 Table</button>
+    <button type="button" data-view="cards" onclick="applyView('cards')">🃏 Cards</button>
   </div>
   <div class="tb-actions">
     <button class="btn btn-secondary tb-mobile-only" onclick="openAnalysis()">🤖 AI Analysis</button>
@@ -1541,7 +1534,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610231356"></script>
+<script type="module" src="samsam-cloud.js?v=202610231501"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
