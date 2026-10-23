@@ -106,6 +106,7 @@
   };
 
   // ── The panel ────────────────────────────────────────────────────────────────
+  // It always opens above everything else — including windows that have their own ⓘ (Baseline editor, dialogs).
   var css = false, open = null;
   function addCss() {
     if (css) return; css = true;
@@ -116,8 +117,8 @@
       '.cp-hint svg{width:15px;height:15px}.cp-hint:active,.cp-hint[aria-expanded=true]{color:#a78bfa;opacity:1;background:rgba(124,58,237,.14)}' +
       '@media (hover:hover){.cp-hint:hover{color:#a78bfa;opacity:1}}.cp-hint:focus-visible{outline:2px solid #a78bfa;outline-offset:1px;opacity:1}' +
       // the panel
-      '.cph-back{position:fixed;inset:0;z-index:100146;background:transparent}.cph-back.sheet{background:rgba(2,6,23,.55);animation:cphFade .15s ease}' +
-      '.cph{position:fixed;z-index:100147;width:min(340px,calc(100vw - 16px));box-sizing:border-box;background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#334155);border-radius:14px;padding:14px 16px;box-shadow:0 18px 40px rgba(0,0,0,.4);font-size:.86rem;line-height:1.5;animation:cphPop .15s ease}' +
+      '.cph-back{position:fixed;inset:0;z-index:100190;background:transparent}.cph-back.sheet{background:rgba(2,6,23,.55);animation:cphFade .15s ease}' +
+      '.cph{position:fixed;z-index:100191;width:min(340px,calc(100vw - 16px));box-sizing:border-box;background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#334155);border-radius:14px;padding:14px 16px;box-shadow:0 18px 40px rgba(0,0,0,.4);font-size:.86rem;line-height:1.5;animation:cphPop .15s ease}' +
       '.cph.sheet{left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto;max-height:80vh;overflow:auto;border-radius:18px 18px 0 0;padding:10px 18px calc(16px + env(safe-area-inset-bottom,0px));animation:cphSheet .2s ease}' +
       '.cph.sheet::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:#475569;margin:0 auto 10px}' +
       '.cph-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}.cph-h h3{flex:1;margin:0;font-size:.98rem;font-weight:800}' +
