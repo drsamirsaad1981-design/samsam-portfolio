@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610232035"></script>
-<script src="samsam-hints.js?v=202610232035"></script>
-<script src="samsam-vault.js?v=202610232035"></script>
-<script src="samsam-labels.js?v=202610232035"></script>
-<script src="samsam-taxonomy.js?v=202610232035"></script>
-<script src="samsam-coins.js?v=202610232035"></script>
-<script src="samsam-dropdown.js?v=202610232035"></script>
-<script src="samsam-add.js?v=202610232035"></script>
-<script src="samsam-chart.js?v=202610232035"></script>
+<script src="samsam-ui.js?v=202610232102"></script>
+<script src="samsam-hints.js?v=202610232102"></script>
+<script src="samsam-vault.js?v=202610232102"></script>
+<script src="samsam-labels.js?v=202610232102"></script>
+<script src="samsam-taxonomy.js?v=202610232102"></script>
+<script src="samsam-coins.js?v=202610232102"></script>
+<script src="samsam-dropdown.js?v=202610232102"></script>
+<script src="samsam-add.js?v=202610232102"></script>
+<script src="samsam-chart.js?v=202610232102"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -905,6 +905,23 @@
   table { width: 100%; border-collapse: collapse; min-width: 1000px; }
   thead { background: var(--bg3); position: sticky; top: 0; z-index: 2; }
   th { padding: 11px 12px; font-size: 0.7rem; color: var(--fg2); text-align: center; border-bottom: 2px solid var(--border); cursor: pointer; text-transform: none; letter-spacing: .01em; font-weight: 700; }
+  /* Main table header: every label the same way — up to two balanced lines, ⓘ beside it (never dropped below),
+     the sorted column lit with ▲/▼, one row height */
+  #portfolioTable thead th { vertical-align: middle; height: 54px; padding-top: 8px; padding-bottom: 8px; font-size: .74rem; line-height: 1.25;
+    color: var(--label, var(--fg2)); border-bottom: 1px solid var(--border); user-select: none; -webkit-user-select: none; transition: color .15s, background .15s; }
+  #portfolioTable thead th:not([data-sort]) { cursor: default; }
+  @media (hover: hover) { #portfolioTable thead th[data-sort]:hover { color: var(--fg); } }
+  #portfolioTable thead th.sorted { color: var(--fg); box-shadow: inset 0 -2px 0 var(--accent); }
+  #portfolioTable thead th[data-sort] { position: relative; }
+  #portfolioTable .th-in { display: inline-flex; align-items: center; justify-content: center; max-width: 100%; vertical-align: middle; }
+  #portfolioTable th.th-left .th-in { justify-content: flex-start; }
+  #portfolioTable .th-l { min-width: 0; white-space: nowrap; }
+  #portfolioTable .th-l.th-2 { white-space: normal; text-wrap: balance; max-width: 7.6em; }   /* the one long label: two even lines */
+  /* ▲/▼ sits in the cell's corner so it never pushes the label onto another line */
+  #portfolioTable .th-sort { position: absolute; right: 3px; bottom: 5px; font-style: normal; font-size: .58rem; line-height: 1; color: var(--accent); }
+  #portfolioTable .th-sort:empty { display: none; }
+  #portfolioTable .th-in .cp-hint { width: 20px; height: 20px; margin-left: 2px; }
+  @media print { #portfolioTable .th-sort, #portfolioTable .th-in .cp-hint { display: none !important; } }
   td { padding: 10px 12px; font-size: 0.88rem; text-align: center; border-bottom: 1px solid var(--border); }
 
   /* ── Print / PDF ── */
@@ -1356,18 +1373,18 @@
   <table id="portfolioTable">
     <thead>
       <tr>
-        <th onclick="sortTable('rank')">#</th>
-        <th onclick="sortTable('name')" style="text-align:left">Coin</th>
-        <th class="num-r" onclick="sortTable('qty')"><span data-label="AMOUNT">Amount</span></th>
-        <th class="num-r" onclick="sortTable('basePrice')"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></th>
-        <th class="num-r" onclick="sortTable('currentPrice')"><span data-label="CURRENT_PRICE">Current Price</span><button type="button" class="cp-hint" data-hint="manualPrice" aria-label="About the manual price"></button></th>
-        <th class="num-r" onclick="sortTable('baseValue')"><span data-label="COST_BASIS">Cost Basis</span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></th>
-        <th class="num-r" onclick="sortTable('currentValue')"><span data-label="HOLDINGS_VALUE">Holdings / Current Value</span></th>
-        <th class="num-r" onclick="sortTable('pnl')">P&L</th>
-        <th onclick="sortTable('perf')"><span data-label="PORTFOLIO_VS_BTC">Portfolio vs BTC</span><button type="button" class="cp-hint" data-hint="vsBtc" aria-label="About Portfolio vs BTC"></button></th>
-        <th onclick="sortTable('action')">Signal<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button></th>
-        <th>📝 Notes</th>
-        <th>Actions</th>
+        <th data-sort="rank" onclick="sortTable('rank')"><span class="th-in"><span class="th-l">#<i class="th-sort" aria-hidden="true"></i></span></span></th>
+        <th class="th-left" data-sort="name" onclick="sortTable('name')" style="text-align:left"><span class="th-in"><span class="th-l">Coin<i class="th-sort" aria-hidden="true"></i></span></span></th>
+        <th class="num-r" data-sort="qty" onclick="sortTable('qty')"><span class="th-in"><span class="th-l"><span data-label="AMOUNT">Amount</span><i class="th-sort" aria-hidden="true"></i></span></span></th>
+        <th class="num-r" data-sort="basePrice" onclick="sortTable('basePrice')"><span class="th-in"><span class="th-l th-2"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></span></th>
+        <th class="num-r" data-sort="currentPrice" onclick="sortTable('currentPrice')"><span class="th-in"><span class="th-l"><span data-label="CURRENT_PRICE">Current Price</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="manualPrice" aria-label="About the manual price"></button></span></th>
+        <th class="num-r" data-sort="baseValue" onclick="sortTable('baseValue')"><span class="th-in"><span class="th-l th-2"><span data-label="COST_BASIS">Cost Basis</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></span></th>
+        <th class="num-r" data-sort="currentValue" onclick="sortTable('currentValue')"><span class="th-in"><span class="th-l th-2"><span data-label="HOLDINGS_VALUE">Holdings / Current Value</span><i class="th-sort" aria-hidden="true"></i></span></span></th>
+        <th class="num-r" data-sort="pnl" onclick="sortTable('pnl')"><span class="th-in"><span class="th-l">P&amp;L<i class="th-sort" aria-hidden="true"></i></span></span></th>
+        <th data-sort="perf" onclick="sortTable('perf')"><span class="th-in"><span class="th-l th-2"><span data-label="PORTFOLIO_VS_BTC">Portfolio vs BTC</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="vsBtc" aria-label="About Portfolio vs BTC"></button></span></th>
+        <th data-sort="action" onclick="sortTable('action')"><span class="th-in"><span class="th-l">Signal<i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button></span></th>
+        <th><span class="th-in"><span class="th-l">Notes<i class="th-sort" aria-hidden="true"></i></span></span></th>
+        <th><span class="th-in"><span class="th-l">Actions<i class="th-sort" aria-hidden="true"></i></span></span></th>
       </tr>
     </thead>
     <tbody id="tableBody"></tbody>
@@ -1457,7 +1474,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610232035"></script>
+<script type="module" src="samsam-cloud.js?v=202610232102"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1971,9 +1988,19 @@ function renderMovers() {
 }
 function openCoinFromMovers(sym) { openHoldingsView(); openCoinTx(sym); }   // Back → Holdings list → page
 
+// The sorted column is lit with ▲ (A→Z / lowest first) or ▼ (highest first)
+function markSortedHeader() {
+  document.querySelectorAll('#portfolioTable thead th[data-sort]').forEach(th => {
+    const on = th.dataset.sort === sortCol, asc = th.dataset.sort === 'name' ? sortDir > 0 : sortDir < 0;
+    th.classList.toggle('sorted', on);
+    th.setAttribute('aria-sort', on ? (asc ? 'ascending' : 'descending') : 'none');
+    th.querySelector('.th-sort').textContent = on ? (asc ? '▲' : '▼') : '';
+  });
+}
 function renderTableAndStack() {
   renderMovers();
   const rows = getFilteredSorted();
+  markSortedHeader();
 
   // Desktop table
   const tbody = document.getElementById('tableBody');
