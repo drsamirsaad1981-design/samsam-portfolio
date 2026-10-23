@@ -16,13 +16,14 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610231615"></script>
-<script src="samsam-hints.js?v=202610231615"></script>
-<script src="samsam-vault.js?v=202610231615"></script>
-<script src="samsam-labels.js?v=202610231615"></script>
-<script src="samsam-taxonomy.js?v=202610231615"></script>
-<script src="samsam-coins.js?v=202610231615"></script>
-<script src="samsam-dropdown.js?v=202610231615"></script>
+<script src="samsam-ui.js?v=202610232035"></script>
+<script src="samsam-hints.js?v=202610232035"></script>
+<script src="samsam-vault.js?v=202610232035"></script>
+<script src="samsam-labels.js?v=202610232035"></script>
+<script src="samsam-taxonomy.js?v=202610232035"></script>
+<script src="samsam-coins.js?v=202610232035"></script>
+<script src="samsam-dropdown.js?v=202610232035"></script>
+<script src="samsam-add.js?v=202610232035"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -228,6 +229,14 @@ tr:hover td { background: rgba(255,255,255,.02); }
 }
 .coin-search-item:hover { background: rgba(245,158,11,.1); }
 .coin-search-item img { width: 22px; height: 22px; border-radius: 50%; }
+.coin-search-item.opacity-50 { opacity: .5; }
+.csl-head { padding: 7px 12px 4px; font-size: .7rem; font-weight: 700; color: var(--fg2); letter-spacing: .01em; }
+.csl-tag { margin-left: auto; font-size: .68rem; font-weight: 700; color: #a78bfa; white-space: nowrap; }
+.csl-msg { padding: 8px 12px; font-size: .8rem; color: var(--fg2); }
+/* A coin in the plan that you don't hold yet: priced live on its own until your first Buy */
+.not-owned-badge { font-size: 0.65rem; background: rgba(167,139,250,.15); color: #a78bfa; border-radius: 999px; padding: 1px 7px; font-weight: 700; margin-left: 4px; white-space: nowrap; }
+.row-buy { background: none; border: 1px solid rgba(34,197,94,.45); color: var(--green); cursor: pointer; font: inherit; font-size: .74rem; font-weight: 700; padding: 3px 9px; border-radius: 7px; white-space: nowrap; margin-right: 4px; }
+.row-buy:hover { background: #16a34a; color: #fff; border-color: #16a34a; }
 
 /* ── Card view ── */
 .cards-wrap { display: none; flex-direction: column; gap: 12px; }
@@ -410,6 +419,9 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .card-act .btn-history:hover { border-color: var(--accent); color: var(--accent); }
 .card-act .btn-remove { color: #f87171; background: var(--metric-bg); border: 1px solid rgba(248,113,113,.45); }
 .card-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+.card-act { grid-template-columns: 1fr 1fr 1fr; }
+.card-act .btn-buy { color: #fff; background: #16a34a; border: 1px solid #16a34a; }
+.card-act .btn-buy:hover { background: #15803d; border-color: #15803d; }
 /* ── Category card (same as main page) ── */
 .summary-grid { margin: 0 0 16px; }
 .cat-picker { position: relative; }
@@ -598,7 +610,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610231615"></script>
+<script type="module" src="samsam-cloud.js?v=202610232035"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -665,7 +677,7 @@ window.addEventListener('DOMContentLoaded', () => {
     portfolioCoins = d.portfolio;
     // Don't replace the plan while a save of local edits is still debouncing.
     if (!saveTimer) accumPlan = d.accumPlan.map(e => ({ ...e }));
-    if (!cloudReady) { cloudReady = true; setSaveStatus('ready', '✓ Ready'); }
+    if (!cloudReady) { cloudReady = true; setSaveStatus('ready', '✓ Ready'); startPlanPrices(); }
     renderAll();
     try { checkAllAlerts(); } catch(_) {}
   }));
@@ -679,12 +691,12 @@ function toggleTheme() { SamsamUI.toggleTheme(); }
 // Logo / CoinGecko id for a plan entry: the portfolio coin first, then what was saved with the entry
 function coinOpts(entry, r) {
   const pc = getPortfolioCoin(entry.sym) || {};
-  return { logoUrl: pc.logoUrl || entry.logoUrl || '', cgId: pc.cgId || entry.cgId || '' };
+  return { logoUrl: pc.logoUrl || entry.logoUrl || '', cgId: pc.cgId || planCgId(entry) };
 }
 // ─── Category filter: one active-category card, same component as the main page ──
 let activeCatFilter = '', catPickerDD = null;
 // The portfolio coin's category already includes your own choice (Change category); fall back to the default list
-const catOfEntry = e => (getPortfolioCoin(e.sym) || {}).cat || (window.SamsamTaxonomy ? SamsamTaxonomy.categoryOf(e.sym) : 'other');
+const catOfEntry = e => (getPortfolioCoin(e.sym) || {}).cat || e.cat || (window.SamsamTaxonomy ? SamsamTaxonomy.categoryOf(e.sym) : 'other');
 const inCat = e => !activeCatFilter || catOfEntry(e) === activeCatFilter;
 function setCatFilter(cat, exact) {
   const before = activeCatFilter;
@@ -729,6 +741,40 @@ function getPortfolioCoin(sym) {
   return portfolioCoins.find(c => c.sym === sym.toUpperCase());
 }
 
+// ─── Coins in the plan that you don't hold (yet) ────────────────────────────
+// A plan can hold any coin. One you don't own has no portfolio price, so the page fetches its live price
+// from CoinGecko itself (same price store as the main page) — Cost to Target is right from day one, and the
+// price is already there when your first Buy adds the coin to the portfolio.
+function planCgId(e) {
+  const arch = window.Samsam && Samsam.isReady && Samsam.isReady() ? (Samsam.getState().archivedCoins || []).find(c => c.sym === e.sym) : null;
+  return e.cgId || (arch && arch.cgId) || (SamsamCoins.CG_IDS || {})[e.sym] || '';
+}
+function planPrice(entry, pc) {
+  if (pc && (pc.currentPrice || pc.basePrice)) return pc.currentPrice || pc.basePrice;
+  const p = window.Samsam && Samsam.getPrices ? Samsam.getPrices()[entry.sym] : null;
+  return p && p.usd > 0 ? p.usd : 0;
+}
+let _planPriceT = 0;
+async function fetchPlanOnlyPrices() {
+  const need = accumPlan.filter(e => !getPortfolioCoin(e.sym)).map(e => [e.sym, planCgId(e)]).filter(x => x[1]);
+  if (!need.length) return;
+  try {
+    const ids = [...new Set(need.map(x => x[1]))];
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + ids.map(encodeURIComponent).join(',') + '&vs_currencies=usd&include_24hr_change=true');
+    if (!r.ok) return;
+    const d = await r.json(), map = {};
+    need.forEach(([sym, id]) => { if (d[id] && d[id].usd > 0) map[sym] = { usd: d[id].usd, ch24: d[id].usd_24h_change ?? null }; });
+    if (Object.keys(map).length) Samsam.updatePrices(map);   // → onChange → renderAll
+  } catch (_) { /* next refresh */ }
+}
+function startPlanPrices() { if (_planPriceT) return; fetchPlanOnlyPrices(); _planPriceT = setInterval(fetchPlanOnlyPrices, 120e3); }
+// ➕ Buy: Add Transaction for a coin you hold, otherwise Add Coin ready with this coin (shared forms, samsam-add.js)
+function buyPlanCoin(idx) {
+  const e = accumPlan[idx]; if (!e) return;
+  const o = coinOpts(e, calcRow(e));
+  CPAdd.buy(e.sym, { name: e.name || e.sym, cgId: o.cgId, logoUrl: o.logoUrl, cat: catOfEntry(e) });
+}
+
 // ─── Save Accumulation Plan ─────────────────────────────────────────────────
 function saveAccumPlan(immediate = false) {
   clearTimeout(saveTimer);
@@ -759,7 +805,8 @@ function syncFromPortfolio() {
 function calcRow(entry) {
   const pc = getPortfolioCoin(entry.sym);
   const actualQty    = pc ? (pc.qty || 0) : 0;
-  const currentPrice = pc ? (pc.currentPrice || pc.basePrice || 0) : 0;
+  const currentPrice = planPrice(entry, pc);
+  const notOwned     = !pc || !(pc.qty > 0);
   const targetQty    = entry.targetQty || 0;
   const targetPct    = entry.targetPct || 0;  // e.g. -20 means "buy 20% below current"
   // Compute the absolute target price from the percentage offset
@@ -777,7 +824,7 @@ function calcRow(entry) {
                          ? (currentPrice - targetPrice) / targetPrice * 100 : null;
   // below the base (−%): buy when the price falls to the target · above the base (+%): buy when it rises to it
   const readyToBuy   = priceDiff !== null && (targetPct < 0 ? priceDiff <= 0 : priceDiff >= 0);
-  return { actualQty, currentPrice, targetPrice, targetPct, targetBase, targetBaseAt: entry.targetBaseAt || '', pendingQty, costToTarget, progress, logoUrl, name, priceDiff, readyToBuy };
+  return { notOwned, actualQty, currentPrice, targetPrice, targetPct, targetBase, targetBaseAt: entry.targetBaseAt || '', pendingQty, costToTarget, progress, logoUrl, name, priceDiff, readyToBuy };
 }
 
 // ─── Render Table ────────────────────────────────────────────────────────────
@@ -849,7 +896,7 @@ function renderTable() {
       <td>
         <div class="coin-cell">
           ${SamsamCoins.iconLinked(entry.sym, 32, coinOpts(entry, r))}
-          ${SamsamCoins.nameLinked(entry.sym, { ...coinOpts(entry, r), name: r.name, badge: completed ? '<span class="completed-badge">✓ Done</span>' : '' })}
+          ${SamsamCoins.nameLinked(entry.sym, { ...coinOpts(entry, r), name: r.name, badge: completed ? '<span class="completed-badge">✓ Done</span>' : r.notOwned ? '<span class="not-owned-badge">Not Owned Yet</span>' : '' })}
         </div>
       </td>
       <td>
@@ -876,7 +923,7 @@ function renderTable() {
         <div class="prog-label">${r.progress.toFixed(1)}%</div>
       </td>
       <td>
-        <button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan">✕</button>
+        <span style="white-space:nowrap"><button type="button" class="row-buy" onclick="buyPlanCoin(${idx})" title="${r.notOwned ? 'Add ' + entry.sym + ' to your portfolio' : 'Add a Buy for ' + entry.sym}">➕ Buy</button><button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan">✕</button></span>
       </td>
     </tr>`;
   }).join('');
@@ -926,7 +973,7 @@ function renderCards() {
       <div class="coin-card-header">
         <div style="display:flex;align-items:center;gap:10px;min-width:0">
           ${icon}
-          ${SamsamCoins.nameLinked(entry.sym, { ...coinOpts(entry, r), name: r.name, symSize: '0.95rem', badge: completed ? '<span class="completed-badge">✓ Done</span>' : '' })}
+          ${SamsamCoins.nameLinked(entry.sym, { ...coinOpts(entry, r), name: r.name, symSize: '0.95rem', badge: completed ? '<span class="completed-badge">✓ Done</span>' : r.notOwned ? '<span class="not-owned-badge">Not Owned Yet</span>' : '' })}
         </div>
         <div>
           <div style="font-weight:700;font-size:1.1rem;white-space:nowrap">${hasPrice ? SamsamFmt.usd(holdVal) : '—'}</div>
@@ -977,6 +1024,7 @@ function renderCards() {
       </div>
       <div class="coin-card-footer"><span>#${i + 1}</span><span title="Last price update${entry.addedAt && /^\d{4}-/.test(entry.addedAt) ? ' · added to plan ' + entry.addedAt.slice(0, 10) : ''}">${(getPortfolioCoin(entry.sym) || {}).lastUpdate || (entry.addedAt && /^\d{4}-/.test(entry.addedAt) ? entry.addedAt.slice(0, 10) : '')}</span></div>
       <div class="card-act">
+        <button class="btn-buy" onclick="buyPlanCoin(${idx})" title="${r.notOwned ? 'Add ' + entry.sym + ' to your portfolio' : 'Add a Buy for ' + entry.sym}">➕ Buy</button>
         <button class="btn-history" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">🧮 DCA</button>
         <button class="btn-remove" onclick="removeCoin(${idx})" title="Remove ${entry.sym} from plan">✕ Remove</button>
       </div>
@@ -1148,6 +1196,7 @@ function openAddModal() {
   document.getElementById('addSearch').value = '';
   document.getElementById('addTarget').value = '';
   document.getElementById('addSelectedInfo').style.display = 'none';
+  addCg = []; addCgMsg = '';
   filterAddList();
   document.getElementById('addModal').classList.add('active');
   setTimeout(() => document.getElementById('addSearch').focus(), 100);
@@ -1157,54 +1206,80 @@ function closeAddModal() {
   document.getElementById('addModal').classList.remove('active');
 }
 
-// Build list of all available coins (portfolio + manual)
+// The coins you hold (with your amount)
 function allAvailableCoins() {
-  // start with portfolio coins
-  const list = portfolioCoins.map(c => ({
-    sym: c.sym,
-    name: c.name || c.sym,
-    logoUrl: c.logoUrl || '',
-    cgId: c.cgId || '',
-    currentPrice: c.currentPrice || c.basePrice || 0,
-    qty: c.qty || 0,
-    fromPortfolio: true
+  return portfolioCoins.map(c => ({
+    sym: c.sym, name: c.name || c.sym, logoUrl: c.logoUrl || '', cgId: c.cgId || '',
+    currentPrice: c.currentPrice || c.basePrice || 0, qty: c.qty || 0, fromPortfolio: true
   }));
-  return list;
 }
-
+// …and any other coin, from a CoinGecko search (you don't need to own a coin to plan it)
+let addCg = [], addCgMsg = '', addCgSeq = 0, addCgTimer = null;
 function filterAddList() {
-  const q = document.getElementById('addSearch').value.toLowerCase();
-  const coins = allAvailableCoins();
-  const already = new Set(accumPlan.map(e => e.sym));
-  const filtered = coins.filter(c =>
-    (!q || c.sym.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
-  );
-
-  document.getElementById('addList').innerHTML = filtered.length === 0
-    ? `<div style="padding:10px 12px;font-size:0.8rem;color:var(--fg2)">No coins found. Try a different search.</div>`
-    : filtered.map(c => `
-        <div class="coin-search-item ${already.has(c.sym) ? 'opacity-50' : ''}"
-             onclick="selectAddCoin('${c.sym}')">
-          <img src="${c.logoUrl}" onerror="this.style.display='none'" width="22" height="22"
-               style="border-radius:50%;background:var(--bg2)">
-          <div>
-            <strong>${c.sym}</strong>
-            <span style="color:var(--fg2);font-size:0.8rem"> — ${c.name}</span>
+  const q = document.getElementById('addSearch').value.trim();
+  clearTimeout(addCgTimer); addCg = []; addCgMsg = '';
+  if (q.length >= 2) {
+    addCgMsg = 'Searching CoinGecko…';
+    addCgTimer = setTimeout(async () => {
+      const seq = ++addCgSeq;
+      try {
+        const list = await CPAdd.search(q); if (seq !== addCgSeq) return;
+        addCg = list.filter(c => !getPortfolioCoin(c.sym));
+        addCgMsg = addCg.length ? '' : (list.length ? '' : 'No other coin found on CoinGecko.');
+      } catch (e) { if (seq !== addCgSeq) return; addCgMsg = navigator.onLine ? (e.message || 'Search failed') : 'You are offline — search needs internet.'; }
+      renderAddList();
+    }, 300);
+  }
+  renderAddList();
+}
+function renderAddList() {
+  const q = document.getElementById('addSearch').value.trim().toLowerCase();
+  const E = SamsamCoins.esc, already = new Set(accumPlan.map(e => e.sym));
+  const mine = allAvailableCoins().filter(c => !q || c.sym.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
+  const item = (c, onclick, tag) => `
+        <div class="coin-search-item ${already.has(c.sym) ? 'opacity-50' : ''}" onclick="${onclick}">
+          ${c.logoUrl && /^https:\/\//.test(c.logoUrl) ? `<img src="${E(c.logoUrl)}" onerror="this.style.display='none'" width="22" height="22" style="border-radius:50%;background:var(--bg2)" alt="">` : '<span style="width:22px;height:22px;border-radius:50%;background:var(--bg2);flex-shrink:0"></span>'}
+          <div style="min-width:0">
+            <strong>${E(c.sym)}</strong>
+            <span style="color:var(--fg2);font-size:0.8rem"> — ${E(c.name)}</span>
             ${already.has(c.sym) ? '<span style="color:var(--accent);font-size:0.72rem"> (already in plan)</span>' : ''}
-          </div>
-        </div>`).join('');
+          </div>${tag || ''}
+        </div>`;
+  let html = '';
+  if (mine.length) html += (addCg.length ? '<div class="csl-head">Your Coins</div>' : '') + mine.map(c => item(c, `selectAddCoin('${E(c.sym)}')`)).join('');
+  if (addCg.length) html += '<div class="csl-head">Other Coins · CoinGecko</div>' + addCg.map((c, i) => item({ sym: c.sym, name: c.name, logoUrl: c.thumb || '' }, `selectAddCg(${i})`, '<span class="csl-tag">Not Owned</span>')).join('');
+  if (addCgMsg) html += `<div class="csl-msg">${E(addCgMsg)}</div>`;
+  if (!html) html = `<div class="csl-msg">${q.length >= 2 ? 'No coins found. Try a different search.' : 'Type a coin name or symbol — any coin, even one you don\'t own yet.'}</div>`;
+  document.getElementById('addList').innerHTML = html;
 }
 
 function selectAddCoin(sym) {
-  const coins = allAvailableCoins();
-  selectedAddCoin = coins.find(c => c.sym === sym);
+  selectedAddCoin = allAvailableCoins().find(c => c.sym === sym);
   if (!selectedAddCoin) return;
-  document.getElementById('addSearch').value = sym;
-  document.getElementById('addSelectedInfo').style.display = '';
-  document.getElementById('addSelectedInfo').innerHTML =
-    `<strong>${sym}</strong> — ${selectedAddCoin.name}
-     <span style="color:var(--fg2);margin-left:8px">Current: $${fmtUSD(selectedAddCoin.currentPrice)}</span>
-     <span style="color:var(--fg2);margin-left:8px">Holding: ${fmtQty(selectedAddCoin.qty)} ${sym}</span>`;
+  showAddSelected();
+}
+async function selectAddCg(i) {
+  const c = addCg[i]; if (!c) return;
+  selectedAddCoin = { sym: c.sym, name: c.name, logoUrl: c.thumb && /^https:\/\//.test(c.thumb) ? c.thumb : '', cgId: c.id, currentPrice: 0, qty: 0, fromPortfolio: false, cat: null };
+  showAddSelected();
+  try {   // today's price + a category suggestion, like Add Coin on the main page
+    const d = await CPAdd.coinInfo(c.id);
+    if (!selectedAddCoin || selectedAddCoin.cgId !== c.id) return;
+    selectedAddCoin.currentPrice = d.usd || 0; selectedAddCoin.ch24 = d.ch24;
+    const known = SamsamTaxonomy.categoryOf(c.sym, null);
+    selectedAddCoin.cat = known !== 'other' ? known : CPAdd.categoryFrom(d.categories);
+    if (d.logo) selectedAddCoin.logoUrl = d.logo;
+    showAddSelected();
+  } catch (_) { /* the page fetches its price after it's added */ }
+}
+function showAddSelected() {
+  const c = selectedAddCoin, E = SamsamCoins.esc, box = document.getElementById('addSelectedInfo');
+  document.getElementById('addSearch').value = c.sym;
+  box.style.display = '';
+  box.innerHTML = `<strong>${E(c.sym)}</strong> — ${E(c.name)}
+     <span style="color:var(--fg2);margin-left:8px">Current: ${c.currentPrice > 0 ? '$' + fmtUSD(c.currentPrice) : '…'}</span>` +
+    (c.fromPortfolio ? `<span style="color:var(--fg2);margin-left:8px">Holding: ${fmtQty(c.qty)} ${E(c.sym)}</span>`
+      : `<div style="color:#a78bfa;font-size:.78rem;margin-top:4px">Not in your portfolio yet — the plan tracks its live price, and <b>➕ Buy</b> on its card adds it to your portfolio.</div>`);
   document.getElementById('addList').innerHTML = '';
   document.getElementById('addTarget').focus();
 }
@@ -1213,7 +1288,7 @@ function confirmAddCoin() {
   if (!selectedAddCoin) {
     CPDialog.alert('Please select a coin first.'); return;
   }
-  const sym = selectedAddCoin.sym;
+  const c = selectedAddCoin, sym = c.sym;
   const targetQty = parseFloat(document.getElementById('addTarget').value) || 0;
 
   // Update existing or add new
@@ -1221,18 +1296,15 @@ function confirmAddCoin() {
   if (existing) {
     existing.targetQty = targetQty;
   } else {
-    accumPlan.push({
-      sym,
-      name: selectedAddCoin.name,
-      logoUrl: selectedAddCoin.logoUrl,
-      cgId: selectedAddCoin.cgId,
-      targetQty,
-      addedAt: new Date().toISOString()
-    });
+    const entry = { sym, name: c.name, logoUrl: c.logoUrl, cgId: c.cgId, targetQty, addedAt: new Date().toISOString() };
+    if (!c.fromPortfolio && c.cat) entry.cat = c.cat;
+    accumPlan.push(entry);
   }
+  if (!c.fromPortfolio && c.currentPrice > 0) Samsam.updatePrices({ [sym]: { usd: c.currentPrice, ch24: c.ch24 ?? null } });
   closeAddModal();
   renderAll();
   saveAccumPlan(true);
+  if (!c.fromPortfolio) fetchPlanOnlyPrices();
 }
 
 // Close modal on overlay click
