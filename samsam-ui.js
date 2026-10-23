@@ -416,7 +416,7 @@
       '[data-theme="light"] .card-go{background:rgba(124,58,237,.10);color:#6d28d9}' +
       '.cp-profit-tap .sum-label,.cp-profit-tap .htx-label{padding-right:30px}.cp-profit-tap .sum-card-icon{display:none}' +
       // compact centred cards (header stats, P/L breakdown): smaller button level with the label, label kept centred
-      '.stat-card.cp-profit-tap .card-go,.pnl-bd-stat.cp-profit-tap .card-go{top:7px;right:7px;width:22px;height:22px}.stat-card.cp-profit-tap .card-go svg,.pnl-bd-stat.cp-profit-tap .card-go svg{width:12px;height:12px}' +
+      '.stat-card.cp-profit-tap .card-go,.pnl-bd-stat.cp-profit-tap .card-go{top:5px;right:7px;width:22px;height:22px}.stat-card.cp-profit-tap .card-go svg,.pnl-bd-stat.cp-profit-tap .card-go svg{width:12px;height:12px}' +
       '.cp-profit-tap .stat-label,.cp-profit-tap .pnl-bd-stat-label{padding-left:24px;padding-right:24px}' +
       '@media (prefers-reduced-motion:reduce){.card-tap:active{transform:none}.card-tap:hover .card-go svg{transform:none}}' +
       // ✎ next to a value you can change — always visible (not only on hover), same on every page and in cards and tables
