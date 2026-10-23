@@ -18,14 +18,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610230236"></script>
-<script src="samsam-hints.js?v=202610230236"></script>
-<script src="samsam-vault.js?v=202610230236"></script>
-<script src="samsam-labels.js?v=202610230236"></script>
-<script src="samsam-taxonomy.js?v=202610230236"></script>
-<script src="samsam-coins.js?v=202610230236"></script>
-<script src="samsam-dropdown.js?v=202610230236"></script>
-<script src="samsam-chart.js?v=202610230236"></script>
+<script src="samsam-ui.js?v=202610230309"></script>
+<script src="samsam-hints.js?v=202610230309"></script>
+<script src="samsam-vault.js?v=202610230309"></script>
+<script src="samsam-labels.js?v=202610230309"></script>
+<script src="samsam-taxonomy.js?v=202610230309"></script>
+<script src="samsam-coins.js?v=202610230309"></script>
+<script src="samsam-dropdown.js?v=202610230309"></script>
+<script src="samsam-chart.js?v=202610230309"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1539,7 +1539,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610230236"></script>
+<script type="module" src="samsam-cloud.js?v=202610230309"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1842,10 +1842,20 @@ function allTimeProfitData() {
     realized: realizedState.total || 0, sellCount: realizedState.sellCount || 0, sellFees: realizedState.sellFees || 0 });
 }
 
+// Portfolio vs BTC per coin — "did this coin beat the same money in Bitcoin?" (samsam-core.js → vsBtcByCoin).
+// Worked out once per refresh for all coins; BTC itself is always 0.
+let vsBtcCache = null, vsBtcKey = '';
+function vsBtcMap() {
+  const st = window.Samsam && Samsam.isReady() ? Samsam.getState() : null; if (!st) return {};
+  const key = [st.transactions.length, st.coins.length, btcPrice, baselineState.btcPrice, perfSnapsState.length, portfolio.map(c => c.currentPrice).join(',')].join('|');
+  if (vsBtcCache && key === vsBtcKey) return vsBtcCache;
+  const prices = {}; portfolio.forEach(c => { prices[c.sym] = c.sym === 'BTC' ? btcPrice : c.currentPrice; });
+  vsBtcKey = key;
+  return (vsBtcCache = Samsam.core.vsBtcByCoin(st.coins, st.transactions, { prices, btcNow: btcPrice, btcAt: Samsam.core.btcPriceLookup(perfSnapsState), baselineBtc: baselineState.btcPrice }));
+}
 function getPerf(coin) {
-  const btcPerfPct = ((btcPrice / baselineState.btcPrice) - 1) * 100;   // BTC since the baseline date
-  const coinPerfPct = ((coin.currentPrice / coin.basePrice) - 1) * 100;
-  return coinPerfPct - btcPerfPct;
+  const r = vsBtcMap()[coin.sym];
+  return r ? r.pct : 0;
 }
 
 function getCoinPct(coin) {
@@ -3162,6 +3172,23 @@ function updateSyncFooter() {
 }
 
 // Holdings header/chart end on the live portfolio total, so it always equals the TOTAL PORTFOLIO card
+// Holdings change in a range, split honestly: what prices did vs money you added or took out.
+//   From prices = Profit(end) − Profit(start)     (Profit = Value − Cost Basis + Realized, from the ledger)
+//   Added       = Net invested(end) − Net invested(start)   (buys + fees − sells)
+// Value change = From prices + Added. The green/red and the % follow the price part only.
+function holdingsChangeText(snaps) {
+  const a = snaps[0], z = snaps[snaps.length - 1];
+  if (!(window.Samsam && Samsam.isReady())) { const d = z.v - a.v, p = a.v > 0 ? d / a.v * 100 : 0; return { text: `${d >= 0 ? '+' : '−'}${SamsamFmt.usd(Math.abs(d))}  (${d >= 0 ? '+' : '−'}${Math.abs(p).toFixed(2)}%)`, up: d >= 0, title: '' }; }
+  const st = Samsam.getState();
+  const s = Samsam.core.profitSeries(st.coins, st.transactions, [a.t, z.t]);
+  const gain = (z.v - s.cost[1] + s.realized[1]) - (a.v - s.cost[0] + s.realized[0]);
+  const added = (s.cost[1] - s.realized[1]) - (s.cost[0] - s.realized[0]);
+  const pct = a.v > 0 ? gain / a.v * 100 : 0, sg = n => n >= 0 ? '+' : '−';
+  let text = `${sg(gain)}${SamsamFmt.usd(Math.abs(gain))}  (${sg(pct)}${Math.abs(pct).toFixed(2)}%)`;
+  if (Math.abs(added) >= 1) text += ` · ${added > 0 ? '+' : '−'}${SamsamFmt.usd(Math.abs(added))} ${added > 0 ? 'added' : 'taken out'}`;
+  return { text, up: gain >= 0, title: `Value change ${sg(z.v - a.v)}${SamsamFmt.usd(Math.abs(z.v - a.v))} = ${sg(gain)}${SamsamFmt.usd(Math.abs(gain))} from prices, ${added >= 0 ? '+' : '−'}${SamsamFmt.usd(Math.abs(added))} ${added >= 0 ? 'added' : 'taken out'}` };
+}
+
 function withLiveTotal(snaps) {
   if (!snaps.length) return snaps;
   const { total } = calcStats();
@@ -3283,20 +3310,13 @@ function drawHoldingsChart() {
   if (noData) noData.style.display = 'none';
   canvas.style.display = '';
 
-  const first = snaps[0].v;
   const last  = snaps[snaps.length - 1].v;
-  const delta = last - first;
-  const pct   = first > 0 ? (delta / first * 100) : 0;
-  const isPos = delta >= 0;
-  const color = isPos ? '#22c55e' : '#f43f5e'; // green when up, red when down
+  const hc = holdingsChangeText(snaps), isPos = hc.up;
+  const color = isPos ? '#22c55e' : '#f43f5e'; // green when prices took it up, red when down
 
   // Update header
   totalEl.textContent = SamsamFmt.usd(last);
-  if (changeEl) {
-    const sign = delta >= 0 ? '+' : '-';
-    changeEl.textContent = `${sign}${SamsamFmt.usd(Math.abs(delta))}  (${sign}${Math.abs(pct).toFixed(2)}%)`;
-    changeEl.className = 'holdings-change ' + (isPos ? 'pos' : 'neg');
-  }
+  if (changeEl) { changeEl.textContent = hc.text; changeEl.title = hc.title; changeEl.className = 'holdings-change ' + (isPos ? 'pos' : 'neg'); }
 
   SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'usd', timeMode: timeModeFor(holdingsRange), series: [{ points: snaps, color, width: 2.2, fill: true }] });
 }
@@ -3763,16 +3783,11 @@ function drawHoldingsOverlayChart() {
   }
   canvas.style.display = '';
 
-  const first = snaps[0].v, last = snaps[snaps.length-1].v;
-  const delta = last - first, pct = first > 0 ? (delta/first*100) : 0;
-  const isPos = delta >= 0;
+  const last = snaps[snaps.length-1].v;
+  const hc = holdingsChangeText(snaps), isPos = hc.up;
 
   if (totalEl) totalEl.textContent = SamsamFmt.usd(last);
-  if (changeEl) {
-    const sign = delta >= 0 ? '+' : '-';
-    changeEl.textContent = `${sign}${SamsamFmt.usd(Math.abs(delta))}  (${sign}${Math.abs(pct).toFixed(2)}%)`;
-    changeEl.className = 'hov-change ' + (isPos ? 'pos' : 'neg');
-  }
+  if (changeEl) { changeEl.textContent = hc.text; changeEl.title = hc.title; changeEl.className = 'hov-change ' + (isPos ? 'pos' : 'neg'); }
 
   const lineColor = isPos ? '#22c55e' : '#f43f5e'; // green when up, red when down
   SamsamChart.draw(canvas, { height: 210, format: 'usd', timeMode: timeModeFor(holdingsOverlayRange), series: [{ points: snaps, color: lineColor, width: 2.6, fill: true }] });
@@ -4007,12 +4022,18 @@ function blPreview(loading) {
   if (loading) { el.innerHTML = '<span class="bl-same">Looking up the price…</span>'; return; }
   if (!r.ok) { el.innerHTML = '<span class="bl-same">Pick a date (not in the future) and a BTC price above 0.</span>'; return; }
   if (same) { el.innerHTML = '<span class="bl-same">This is the baseline you have now.</span>'; return; }
-  const oldB = baselineState.btcPrice, now = btcPrice || 0;
-  const shift = now > 0 ? ((now / oldB) - (now / r.price)) * 100 : 0;   // Portfolio vs BTC = coin % − BTC %; only the BTC part moves
+  const oldB = baselineState.btcPrice;
   const usd = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  el.innerHTML = `BTC reference price: <b>${usd(oldB)}</b> → <b>${usd(r.price)}</b><br>` +
-    (now > 0 ? `BTC since then: <b>${SamsamCoins.signedPct((now / oldB - 1) * 100, 1)}</b> → <b>${SamsamCoins.signedPct((now / r.price - 1) * 100, 1)}</b><br>` +
-      `Every coin's <b>Portfolio vs BTC</b> moves by <b>${shift >= 0 ? '+' : '−'}${Math.abs(shift).toFixed(1)} pts</b>.<br>` : '') +
+  // Exactly which coins move, and by how much: recompute Portfolio vs BTC with the new reference price
+  let moved = '';
+  try {
+    const st = Samsam.getState(), prices = {}; portfolio.forEach(c => { prices[c.sym] = c.sym === 'BTC' ? btcPrice : c.currentPrice; });
+    const o = { prices, btcNow: btcPrice, btcAt: Samsam.core.btcPriceLookup(perfSnapsState) };
+    const a = Samsam.core.vsBtcByCoin(st.coins, st.transactions, { ...o, baselineBtc: oldB }), b = Samsam.core.vsBtcByCoin(st.coins, st.transactions, { ...o, baselineBtc: r.price });
+    const d = Object.keys(b).filter(k => a[k] && b[k] && Math.abs(b[k].pct - a[k].pct) >= 0.05).map(k => b[k].pct - a[k].pct);
+    moved = d.length ? `<b>Portfolio vs BTC</b> changes for <b>${d.length}</b> coin${d.length > 1 ? 's' : ''} you held on that date (about ${d[0] >= 0 ? '+' : '−'}${Math.abs(d.reduce((x, y) => x + y, 0) / d.length).toFixed(1)} pts).<br>` : 'No coin\'s Portfolio vs BTC changes.<br>';
+  } catch (_) {}
+  el.innerHTML = `BTC reference price: <b>${usd(oldB)}</b> → <b>${usd(r.price)}</b><br>` + moved +
     `<span class="bl-same">Holdings, transactions, All-Time Profit and signals stay the same.</span>`;
 }
 async function saveBaselineEdit() {

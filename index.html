@@ -18,14 +18,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610230309"></script>
-<script src="samsam-hints.js?v=202610230309"></script>
-<script src="samsam-vault.js?v=202610230309"></script>
-<script src="samsam-labels.js?v=202610230309"></script>
-<script src="samsam-taxonomy.js?v=202610230309"></script>
-<script src="samsam-coins.js?v=202610230309"></script>
-<script src="samsam-dropdown.js?v=202610230309"></script>
-<script src="samsam-chart.js?v=202610230309"></script>
+<script src="samsam-ui.js?v=202610231133"></script>
+<script src="samsam-hints.js?v=202610231133"></script>
+<script src="samsam-vault.js?v=202610231133"></script>
+<script src="samsam-labels.js?v=202610231133"></script>
+<script src="samsam-taxonomy.js?v=202610231133"></script>
+<script src="samsam-coins.js?v=202610231133"></script>
+<script src="samsam-dropdown.js?v=202610231133"></script>
+<script src="samsam-chart.js?v=202610231133"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1539,7 +1539,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610230309"></script>
+<script type="module" src="samsam-cloud.js?v=202610231133"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3942,14 +3942,18 @@ window.addEventListener('resize', () => { clearTimeout(_hovFitT); _hovFitT = set
   .bl-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
   .bl-acts button { height: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-weight: 800; cursor: pointer; }
   .bl-acts .bl-save { background: linear-gradient(135deg,#7c3aed,#6d28d9); border-color: #6d28d9; color: #fff; } .bl-acts .bl-save:disabled { opacity: .5; cursor: default; }
+  .bl-mine { display: flex; align-items: center; gap: 8px; width: 100%; margin: -4px 0 12px; padding: 9px 12px; border-radius: 10px; border: 1px dashed rgba(167,139,250,.55);
+    background: rgba(124,58,237,.08); color: var(--fg); font: inherit; font-size: .82rem; font-weight: 700; text-align: left; cursor: pointer; }
+  .bl-mine b { color: #a78bfa; font-variant-numeric: tabular-nums; } .bl-mine[aria-pressed=true] { border-style: solid; background: rgba(124,58,237,.16); }
   .bl-reset { display: block; margin: 10px auto 0; border: none; background: none; color: #a78bfa; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
 </style>
 <div class="bl-overlay" id="blModal" role="dialog" aria-modal="true" aria-labelledby="blTitle">
   <div class="bl-card">
     <div class="bl-head"><img src="./logo-mark.svg?v=1" alt="" width="26" height="26"><h3 id="blTitle">Baseline date</h3><button type="button" class="cp-hint" data-hint="baseline"></button><button type="button" class="bl-x" onclick="closeBaselineEdit()" aria-label="Close">×</button></div>
-    <p class="bl-lead">The day your coins are compared with Bitcoin. Pick a date and the app looks up BTC's price on that day.</p>
+    <p class="bl-lead">The day your coins are compared with Bitcoin. Pick a date: the app looks up BTC's daily price, or use the price you actually paid for your BTC that day.</p>
     <label class="bl-field"><span>Date</span><input type="date" id="blDate" onchange="blDateChanged()"></label>
     <label class="bl-field"><span>BTC price on that day (USD)</span><input type="text" inputmode="decimal" id="blPrice" oninput="blPriceTyped()" autocomplete="off"><small class="bl-src" id="blSrc"></small></label>
+    <button type="button" class="bl-mine" id="blMine" onclick="blUseMine()" hidden></button>
     <div class="bl-prev" id="blPrev" aria-live="polite"></div>
     <div class="bl-acts"><button type="button" onclick="closeBaselineEdit()">Cancel</button><button type="button" class="bl-save" id="blSave" onclick="saveBaselineEdit()">Save</button></div>
     <button type="button" class="bl-reset" id="blReset" onclick="blUseDefault()">Use the original baseline (Oct 15, 2026)</button>
@@ -4009,6 +4013,30 @@ async function blDateChanged() {
 }
 function blPriceTyped() { blSource = 'manual'; blFetchSeq++; const s = document.getElementById('blSrc'); s.textContent = 'Entered by hand'; s.className = 'bl-src'; blPreview(); }
 function blUseDefault() { document.getElementById('blDate').value = BL_DEFAULT.date; blDateChanged(); }
+// Your own BTC price on that day: the average price of the BTC you held at the end of the chosen date
+// (opening position + buys up to that day). A market's daily price is an average of the whole day; what you
+// actually paid at a given hour and minute can be higher or lower — this lets you use your real price.
+function blMyBtcPrice(date) {
+  const st = Samsam.getState(), doc = st.coins.find(c => c.sym === 'BTC');
+  if (!doc || !date) return null;
+  const end = date + 'T23:59:59.999Z';
+  const r = Samsam.core.replay(doc.opening, st.transactions.filter(t => t.sym === 'BTC' && String(t.date) <= end));
+  return r.qty > 0 && r.avg > 0 ? Math.round(r.avg * 100) / 100 : null;
+}
+function blRenderMine() {
+  const b = document.getElementById('blMine'), d = document.getElementById('blDate').value, p = blMyBtcPrice(d);
+  if (!p) { b.hidden = true; return; }
+  b.hidden = false; b.dataset.price = p;
+  b.innerHTML = `Use my BTC buy price on that day: <b>$${p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>`;
+  const cur = parseFloat(String(document.getElementById('blPrice').value).replace(/[$,\s]/g, ''));
+  b.setAttribute('aria-pressed', String(Math.abs(cur - p) < 0.005));
+}
+function blUseMine() {
+  const p = Number(document.getElementById('blMine').dataset.price); if (!(p > 0)) return;
+  blFetchSeq++; document.getElementById('blPrice').value = fmtInput(p); blSource = 'manual';
+  const s = document.getElementById('blSrc'); s.textContent = 'Your own BTC average buy price on that day'; s.className = 'bl-src';
+  blPreview();
+}
 function blRead() {
   const date = document.getElementById('blDate').value;
   const price = parseFloat(String(document.getElementById('blPrice').value).replace(/[$,\s]/g, ''));
@@ -4016,6 +4044,7 @@ function blRead() {
 }
 // Before saving, show exactly what changes: the BTC reference price, how far every coin's Portfolio vs BTC moves.
 function blPreview(loading) {
+  try { blRenderMine(); } catch (_) {}
   const r = blRead(), el = document.getElementById('blPrev'), save = document.getElementById('blSave');
   const same = r.ok && r.date === baselineState.date && Math.abs(r.price - baselineState.btcPrice) < 0.005;
   save.disabled = !r.ok || same || !!loading;
