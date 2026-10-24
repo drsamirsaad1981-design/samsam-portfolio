@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610241913"></script>
-<script src="samsam-hints.js?v=202610241913"></script>
-<script src="samsam-vault.js?v=202610241913"></script>
-<script src="samsam-labels.js?v=202610241913"></script>
-<script src="samsam-taxonomy.js?v=202610241913"></script>
-<script src="samsam-coins.js?v=202610241913"></script>
-<script src="samsam-dropdown.js?v=202610241913"></script>
-<script src="samsam-add.js?v=202610241913"></script>
-<script src="samsam-chart.js?v=202610241913"></script>
+<script src="samsam-ui.js?v=202610242110"></script>
+<script src="samsam-hints.js?v=202610242110"></script>
+<script src="samsam-vault.js?v=202610242110"></script>
+<script src="samsam-labels.js?v=202610242110"></script>
+<script src="samsam-taxonomy.js?v=202610242110"></script>
+<script src="samsam-coins.js?v=202610242110"></script>
+<script src="samsam-dropdown.js?v=202610242110"></script>
+<script src="samsam-add.js?v=202610242110"></script>
+<script src="samsam-chart.js?v=202610242110"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -712,6 +712,9 @@
   .perf-legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; }
   .perf-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .perf-legend-val { font-weight: 700; }
+  /* Beating / Behind BTC — the same line as the Performance page chart */
+  .perf-legend-item.perf-vs { display: block; width: 100%; color: var(--fg2); }
+  .perf-vs b { font-weight: 800; } .perf-vs b.up { color: var(--green); } .perf-vs b.down { color: var(--red); }
   .perf-legend-val.pos { color: #3b82f6; }
   .perf-legend-val.neg { color: #ef4444; }
   .perf-legend-val.up { color: var(--green); } .perf-legend-val.down { color: var(--red); }
@@ -1304,6 +1307,7 @@
       <span class="perf-legend-val" id="perfBtcLabel">—</span>
       <button type="button" class="cp-hint" data-hint="perfChart" aria-label="How is this chart calculated?"></button>
     </div>
+    <div class="perf-legend-item perf-vs" id="perfVsLabel"></div>
   </div>
 </a>
 <!-- ── Allocation Mini Card ── -->
@@ -1451,7 +1455,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610241913"></script>
+<script type="module" src="samsam-cloud.js?v=202610242110"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2959,6 +2963,9 @@ function drawPerfChart() {
   setV('perfPortfolioLabel', (ap.total >= 0 ? '+' : '−') + SamsamFmt.usd(Math.abs(ap.total)), ap.total);
   setV('perfPortfolioPct', tri(ap.pct), ap.total);
   setV('perfBtcLabel', tri(btcTrend), btcTrend);
+  // All-Time Profit % − BTC Trend %, in percentage points (same as the Performance page)
+  const diff = ap.pct - btcTrend, vs = document.getElementById('perfVsLabel');
+  if (vs) vs.innerHTML = (diff >= 0 ? 'Beating BTC by ' : 'Behind BTC by ') + `<b class="${diff >= 0 ? 'up' : 'down'}">${Math.abs(diff).toFixed(2)} pts</b>`;
 }
 
 function updatePerfChart() {

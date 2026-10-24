@@ -1,0 +1,45 @@
+# Hourly price history for the charts (tools/update-prices.mjs). Results live on the `prices` branch as one commit
+# (replaced each hour, so the branch never grows); the app reads them from raw.githubusercontent.com.
+name: Price history
+on:
+  schedule:
+    - cron: '7 * * * *'          # every hour at :07
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['tools/update-prices.mjs', 'tools/extra-price-ids.json', '.github/workflows/prices.yml', 'samsam-coins.js']
+permissions:
+  contents: write
+concurrency:
+  group: price-history
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Open the prices branch
+        run: |
+          if git ls-remote --exit-code --heads origin prices >/dev/null; then
+            git fetch -q --depth=1 origin prices
+            git worktree add -q -B prices out FETCH_HEAD
+          else
+            git worktree add -q --detach out HEAD
+            cd out && git checkout -q --orphan prices && git rm -rfq . && git clean -fdq
+          fi
+      - name: Update prices
+        run: node tools/update-prices.mjs out
+      - name: Save (one commit, replaced each hour)
+        run: |
+          cd out
+          git config user.name "price-history-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          printf 'Hourly USD prices for the Cute Portfolio charts — written by .github/workflows/prices.yml on main. Do not edit.\n' > README.md
+          git add -A
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          if git rev-parse -q --verify HEAD >/dev/null; then git commit -q --amend -m "Prices $(date -u +%FT%H:%MZ)"; else git commit -q -m "Prices $(date -u +%FT%H:%MZ)"; fi
+          git push -q -f origin prices
