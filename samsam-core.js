@@ -320,6 +320,48 @@ export function flattenSnaps(snapDocs) {
   return { perf: perf.slice(-2160), holdings: holdings.slice(-4000) };
 }
 
+// ── Chart history rebuilt from the ledger and real historical prices (like CoinMarketCap) ─────────────
+// Value at each moment t = Σ (amount of each coin held at t, replayed from its opening + transactions)
+//                          × (that coin's market price at t, from its hourly price history).
+// series: { SYM: [[t, usd], …] sorted by t } — the price at t is the last one at or before t (the first one if t is
+// earlier). A coin with no history is valued at `fallback[SYM]` (its manual / last price).
+// A coin removed the old way (no closing transfer) stops counting when it was removed.
+// Returns points shaped like recorded chart points: { t, v } plus b = BTC price at t (for the BTC benchmark).
+export function priceAt(list, t) {
+  if (!list || !list.length) return 0;
+  let lo = 0, hi = list.length - 1;
+  if (t <= list[0][0]) return list[0][1];
+  if (t >= list[hi][0]) return list[hi][1];
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (list[m][0] <= t) lo = m; else hi = m; }
+  return list[lo][1];
+}
+export function historyPoints(coins, txs, series, times, fallback = {}) {
+  const pos = new Map(), removedAt = new Map();
+  for (const c of coins || []) {
+    pos.set(c.sym, { qty: Math.max(0, num(c.opening && c.opening.qty)), avg: Math.max(0, num(c.opening && c.opening.avg)) });
+    if (c.removed && c.removedAt) { const r = Date.parse(c.removedAt); if (r) removedAt.set(c.sym, r); }
+  }
+  const sorted = [...(txs || [])].sort(compareTx);
+  const ts = [...(times || [])].map(Number).sort((a, b) => a - b);
+  const out = [];
+  let k = 0;
+  for (const t of ts) {
+    while (k < sorted.length && (Date.parse(sorted[k].date) || 0) <= t) {
+      const x = sorted[k++], p = pos.get(x.sym) || { qty: 0, avg: 0 };
+      const r = applyTx(p, x); pos.set(x.sym, { qty: r.qty, avg: r.avg });
+    }
+    let v = 0;
+    for (const [sym, p] of pos) {
+      if (!(p.qty > 0)) continue;
+      const ra = removedAt.get(sym); if (ra && t >= ra) continue;
+      const px = series[sym] && series[sym].length ? priceAt(series[sym], t) : num(fallback[sym]);
+      v += p.qty * px;
+    }
+    out.push({ t, v, b: priceAt(series.BTC, t) });
+  }
+  return out;
+}
+
 export function newId(prefix) {
   const r = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
     : Math.random().toString(36).slice(2, 14);

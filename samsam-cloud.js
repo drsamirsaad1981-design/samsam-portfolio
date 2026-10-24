@@ -14,8 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610241650';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610241650';
+import * as Core from './samsam-core.js?v=202610241802';
+import * as Hist from './samsam-history.js?v=202610241802';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610241802';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -113,6 +114,37 @@ function currentBaseline() {
   return b ? { ...b, isDefault: false } : { ...DEFAULT_BASELINE, setAt: '', source: 'default', isDefault: true };
 }
 
+// Chart history: rebuilt from the ledger × real hourly prices (samsam-history.js → CoinGecko), from the first day your
+// portfolio has (the Oct-15 starting positions / your first transaction) up to the last hour with prices. Recorded
+// points are used after that hour, and for everything until the price history has arrived.
+const START_DAY = Date.parse(DEFAULT_BASELINE.date + 'T00:00:00Z');
+function chartHistory(coins, txs, portfolio, snaps) {
+  if (!coins.length) return null;
+  const C = window.SamsamCoins || {}, ids = C.CG_IDS || {};
+  const firstTx = txs.length ? Math.min(...txs.map(t => Date.parse(t.date) || Infinity)) : Infinity;
+  const hasOpening = coins.some(c => c.opening && c.opening.qty > 0);
+  let start = Math.min(hasOpening ? START_DAY : Infinity, firstTx);
+  if (!isFinite(start)) return null;
+  start = Math.max(start, Date.now() - 89 * 864e5);
+  const needs = [{ sym: 'BTC', id: 'bitcoin' }];
+  for (const c of coins) if (c.sym !== 'BTC') needs.push({ sym: c.sym, id: c.cgId || ids[c.sym] || null });
+  Hist.ensure(needs, start, () => { if (allLoaded()) emit(); });
+  if (!Hist.covers(needs, start)) return null;
+  const until = Hist.coveredUntil(needs);
+  if (!(until > start)) return null;
+  const fallback = {};
+  for (const c of coins) fallback[c.sym] = Number(c.lastPrice) || 0;
+  for (const p of portfolio) if (p.currentPrice > 0) fallback[p.sym] = p.currentPrice;
+  const times = [];
+  for (let t = Math.ceil(start / Core.HOUR) * Core.HOUR; t <= until; t += Core.HOUR) times.push(t);
+  if (times[times.length - 1] !== until) times.push(until);
+  const pts = Core.historyPoints(coins, txs, Hist.series(needs), times, fallback).filter(p => p.v > 0);
+  return {
+    perf: pts.concat(snaps.perf.filter(s => s.t > until)),
+    holdings: pts.map(p => ({ t: p.t, v: p.v })).concat(snaps.holdings.filter(s => s.t > until)),
+  };
+}
+
 function derive() {
   const coins = [...S.coins.values()];
   const txs = [...S.txs.values()].sort(Core.compareTx);
@@ -132,7 +164,10 @@ function derive() {
   const accumPlan = [...S.accum.values()]
     .sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9) || String(a.sym).localeCompare(String(b.sym)))
     .map(({ order, updatedAt, ...e }) => e);
-  const snaps = Core.flattenSnaps([...S.snapDocs.values()]);
+  const recorded = Core.flattenSnaps([...S.snapDocs.values()]);
+  let hist = null;
+  try { hist = chartHistory(coins, txs, portfolio, recorded); } catch (e) { console.warn('[Samsam] chart history', e); }
+  const snaps = hist || recorded;
   const btc = S.prices.BTC && S.prices.BTC.usd > 0 ? S.prices.BTC.usd
     : (portfolio.find(c => c.sym === 'BTC') || {}).currentPrice || S.opts.fallbackPrices.BTC || 0;
   S.derived = {
