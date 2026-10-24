@@ -322,7 +322,13 @@
       $('acCmc').value = p.cmcSlug || SamsamCoins.CMC_SLUGS[$('acSym').value] || SamsamCoins.cmcGuess(p.name || '') || ''; acCmcCheck();
     }
     setOpen($('addCoinModal'), true);
-    setTimeout(function () { (p && p.sym ? $('acQty') : $('acSym')).focus(); }, 50);
+    setTimeout(function () { focusFirst('acForm', p && p.sym ? 'acQty' : 'acSym'); }, 50);
+  }
+  // put the cursor in the first field — unless you've already started typing somewhere in the form
+  function focusFirst(formId, fieldId) {
+    var f = $(formId), a = document.activeElement;
+    if (f && a && f.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return;
+    $(fieldId).focus();
   }
   function closeAddCoin() { var m = $('addCoinModal'); if (m) setOpen(m, false); }
   function previewAddCoin() {
@@ -402,7 +408,7 @@
     delete $('atxPrice').dataset.touched; delete $('atxDate').dataset.touched;
     setAddTxType(type || 'buy');
     setOpen($('atxBackdrop'), true);
-    setTimeout(function () { $('atxQty').focus(); }, 50);
+    setTimeout(function () { focusFirst('atxForm', 'atxQty'); }, 50);
   }
   function closeAddTx() { var m = $('atxBackdrop'); if (m) setOpen(m, false); }
   function setAddTxType(t) {

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610241802';
-import * as Hist from './samsam-history.js?v=202610241802';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610241802';
+import * as Core from './samsam-core.js?v=202610241913';
+import * as Hist from './samsam-history.js?v=202610241913';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610241913';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -126,8 +126,17 @@ function chartHistory(coins, txs, portfolio, snaps) {
   let start = Math.min(hasOpening ? START_DAY : Infinity, firstTx);
   if (!isFinite(start)) return null;
   start = Math.max(start, Date.now() - 89 * 864e5);
+  // only coins actually held at some moment since the start (a coin removed earlier, or never bought, needs no history)
+  const bySym = Core.groupTxBySym(txs);
+  const heldInWindow = c => {
+    const list = bySym.get(c.sym) || [];
+    if (c.removed && c.removedAt && Date.parse(c.removedAt) < start) return false;
+    const before = list.filter(t => (Date.parse(t.date) || 0) < start);
+    if (Core.replay(c.opening, before).qty > 0) return true;
+    return list.some(t => (Date.parse(t.date) || 0) >= start && (t.type === 'buy' || t.type === 'transfer_in' || t.type === 'adjust'));
+  };
   const needs = [{ sym: 'BTC', id: 'bitcoin' }];
-  for (const c of coins) if (c.sym !== 'BTC') needs.push({ sym: c.sym, id: c.cgId || ids[c.sym] || null });
+  for (const c of coins) if (c.sym !== 'BTC' && heldInWindow(c)) needs.push({ sym: c.sym, id: c.cgId || ids[c.sym] || null });
   Hist.ensure(needs, start, () => { if (allLoaded()) emit(); });
   if (!Hist.covers(needs, start)) return null;
   const until = Hist.coveredUntil(needs);

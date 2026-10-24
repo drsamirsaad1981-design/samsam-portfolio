@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610241802"></script>
-<script src="samsam-hints.js?v=202610241802"></script>
-<script src="samsam-vault.js?v=202610241802"></script>
-<script src="samsam-labels.js?v=202610241802"></script>
-<script src="samsam-taxonomy.js?v=202610241802"></script>
-<script src="samsam-coins.js?v=202610241802"></script>
-<script src="samsam-dropdown.js?v=202610241802"></script>
-<script src="samsam-add.js?v=202610241802"></script>
-<script src="samsam-chart.js?v=202610241802"></script>
+<script src="samsam-ui.js?v=202610241913"></script>
+<script src="samsam-hints.js?v=202610241913"></script>
+<script src="samsam-vault.js?v=202610241913"></script>
+<script src="samsam-labels.js?v=202610241913"></script>
+<script src="samsam-taxonomy.js?v=202610241913"></script>
+<script src="samsam-coins.js?v=202610241913"></script>
+<script src="samsam-dropdown.js?v=202610241913"></script>
+<script src="samsam-add.js?v=202610241913"></script>
+<script src="samsam-chart.js?v=202610241913"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1272,7 +1272,7 @@
   </div>
   <div class="holdings-canvas-wrap">
     <div class="holdings-no-data" id="holdingsNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
-    <canvas class="holdings-canvas" id="holdingsCanvas" height="110"></canvas>
+    <canvas class="holdings-canvas" id="holdingsCanvas" height="110"></canvas><div class="hist-note" data-hist-note hidden></div>
   </div>
 </div>
 
@@ -1290,7 +1290,7 @@
     <button class="holdings-tab" data-range="all" onclick="setHoldingsRange('all',this)">All</button>
   </div>
   <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
-  <canvas class="perf-chart-canvas" id="perfChartCanvas" height="140"></canvas>
+  <canvas class="perf-chart-canvas" id="perfChartCanvas" height="140"></canvas><div class="hist-note" data-hist-note hidden></div>
   <div class="perf-legend">
     <div class="perf-legend-item">
       <span class="perf-legend-dot" style="background:#3b82f6"></span>
@@ -1451,7 +1451,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610241802"></script>
+<script type="module" src="samsam-cloud.js?v=202610241913"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3899,7 +3899,7 @@ async function saveBaselineEdit() {
 
   <!-- Chart -->
   <div class="hov-chart-wrap">
-    <canvas class="hov-canvas" id="hovCanvas" height="200"></canvas>
+    <canvas class="hov-canvas" id="hovCanvas" height="200"></canvas><div class="hist-note" data-hist-note hidden></div>
   </div>
 
   <!-- Range tabs -->

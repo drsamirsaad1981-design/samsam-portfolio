@@ -83,6 +83,10 @@
     '.ss-live.ss-pulse[data-state=ok]{animation:ssLiveRing 2s ease-out infinite}' +
     '@keyframes ssLiveRing{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}' +
     '@media (prefers-reduced-motion:reduce){.ss-live[data-state=loading],.ss-live.ss-pulse{animation:none}}' +
+    // Under every chart while its real price history is still downloading (samsam-history.js)
+    '.hist-note{margin:6px 2px 0;font-size:.74rem;font-weight:600;color:var(--fg2,#94a3b8);display:flex;align-items:center;gap:6px;line-height:1.35}.hist-note[hidden]{display:none}' +
+    '.hist-note::before{content:"";width:10px;height:10px;flex-shrink:0;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:histSpin .9s linear infinite}' +
+    '@keyframes histSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.hist-note::before{animation:none}}' +
     // ➕ Add — one button on every page (main toolbar, Holdings, a coin's Transactions, Accumulation):
     // brand-violet gradient, the + in a soft chip (like Back's chevron), lifts on hover, presses in on tap.
     // .sm = 36px (page header, next to Back) · .cp-add-iconly = square icon button (phone toolbar)
@@ -172,6 +176,12 @@
   // One USD formatter for every money amount in the app: thousands separators + exactly 2 decimals.
   // (Unit prices of sub-$1 coins keep extra decimals elsewhere — $0.0004 can't be shown as $0.00.)
   var usdFmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Charts: "Building from real prices… 7 / 20 coins" while samsam-history.js downloads the price history
+  window.addEventListener('samsam-history', function (e) {
+    var d = e.detail || {}, busy = !!d.building && d.total > 0 && d.done < d.total;   // the hourly refresh of the last 2 days stays silent
+    var txt = busy ? 'Building charts from real prices… ' + d.done + ' / ' + d.total + ' coins' + (d.waiting ? ' · CoinGecko is busy, waiting a moment' : '') : '';
+    document.querySelectorAll('[data-hist-note]').forEach(function (n) { n.hidden = !busy; n.textContent = txt; });
+  });
   window.SamsamFmt = {
     usd: function (n) { n = +n || 0; var a = Math.abs(n); if (a > 0 && a < 0.005) return (n < 0 ? '-' : '') + '<$0.01'; return (n < 0 && a >= 0.005 ? '-' : '') + '$' + usdFmt.format(a); },
     usdSigned: function (n) { n = +n || 0; return (n >= 0 ? '+' : '-') + window.SamsamFmt.usd(Math.abs(n)); },

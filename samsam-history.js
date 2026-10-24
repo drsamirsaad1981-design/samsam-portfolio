@@ -3,12 +3,15 @@
 //
 // • One request per coin for the whole period (hourly points up to 90 days), then only the last 2 days on refresh.
 // • Kept on this device (localStorage) — prices are market data, not portfolio data, so nothing goes to the cloud.
-// • Requests go one at a time with a pause between them; if CoinGecko says "too many requests" (429) we wait and
-//   try again, so the free API is never flooded. Until a coin's history arrives the charts use the recorded points.
+// • Requests go one at a time, about 6 s apart — under CoinGecko's free limit (~10–30 a minute, shared per IP).
+//   If CoinGecko still refuses (429, or a refused request the browser only sees as a network error) we wait longer
+//   and try again; a coin is only given up on when CoinGecko says it doesn't know it.
+// • Until every coin's history has arrived the charts use the recorded points, and a line under the charts shows the
+//   progress (window event 'samsam-history' → { done, total, waiting }).
 
 const KEY = 'samsam_hist_v1';
 const DAY = 864e5, HOUR = 36e5;
-const GAP_MS = 2500, RETRY_MS = 65e3, REFRESH_MS = 50 * 60e3;
+const GAP_MS = 6000, REFRESH_MS = 50 * 60e3, BACKOFF = [20e3, 45e3, 90e3, 120e3];
 
 const ls = {
   get(k, d = null) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (_) { return d; } },
@@ -18,7 +21,10 @@ const ls = {
 // cache: { [cgId]: { from: ms (oldest moment covered), at: ms (last fetch), pts: [[t, usd], …] } }
 let cache = ls.get(KEY, {}) || {};
 const failed = new Set();   // ids CoinGecko doesn't know (or that kept failing) this session — valued at their own price instead
-let queue = [], running = false, onUpdate = () => {}, status = { pending: 0, failed: 0, last: '' };
+let queue = [], running = false, onUpdate = () => {}, status = { pending: 0, failed: 0, last: '', total: 0, done: 0, waiting: false };
+function progress() {
+  try { window.dispatchEvent(new CustomEvent('samsam-history', { detail: { done: status.done, total: status.total, waiting: status.waiting, pending: status.pending, building: queue.some(j => j.full) } })); } catch (_) {}
+}
 
 function save() {
   if (ls.set(KEY, cache)) return;
@@ -40,9 +46,11 @@ function merge(old, add) {
 
 async function fetchChart(id, days) {
   const url = `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}/market_chart?vs_currency=usd&days=${days}`;
-  const r = await fetch(url);
-  if (r.status === 429) { const e = new Error('rate'); e.rate = true; throw e; }
-  if (!r.ok) throw new Error('HTTP ' + r.status);
+  let r;
+  try { r = await fetch(url); }
+  catch (_) { const e = new Error('network'); e.retry = true; throw e; }   // a refused 429 often has no CORS header → looks like this
+  if (r.status === 429 || r.status >= 500) { const e = new Error('rate'); e.retry = true; throw e; }
+  if (!r.ok) throw new Error('HTTP ' + r.status);                          // 404: CoinGecko doesn't know this id
   const j = await r.json();
   return (j.prices || []).filter(p => Array.isArray(p) && p[0] > 0 && p[1] > 0).map(p => [Math.round(p[0]), +p[1]]);
 }
@@ -60,13 +68,15 @@ async function work() {
         if (job.full) c.from = job.from; else c.from = Math.min(c.from, job.from);
         c.at = Date.now();
         cache[job.id] = c; save();
-        queue.shift(); status.pending = queue.length; status.last = job.id;
+        queue.shift(); status.pending = queue.length; status.last = job.id; status.done++; status.waiting = false; progress();
         if (!queue.length) onUpdate();   // redraw once everything asked for has arrived
       } catch (e) {
-        if (e.rate && (job.tries = (job.tries || 0) + 1) <= 4) { await sleep(RETRY_MS); continue; }
-        queue.shift(); status.pending = queue.length; status.failed++;
-        if (!navigator.onLine) { queue = []; status.pending = 0; break; }   // offline: try again next time
-        failed.add(job.id); if (!queue.length) onUpdate();                   // unknown id: value that coin at its own price
+        if (!navigator.onLine) { queue = []; status.pending = 0; status.waiting = false; progress(); break; }   // offline: next time
+        job.tries = (job.tries || 0) + 1;
+        if (e.retry && job.tries <= BACKOFF.length) { status.waiting = true; progress(); await sleep(window.__histBackoff != null ? window.__histBackoff : BACKOFF[job.tries - 1]); continue; }
+        queue.shift(); status.pending = queue.length; status.failed++; status.done++; status.waiting = false; progress();
+        if (job.full) failed.add(job.id);   // unknown id (or kept failing): that coin is valued at its own price
+        if (!queue.length) onUpdate();
       }
       if (queue.length) await sleep(window.__histGap != null ? window.__histGap : GAP_MS);
     }
@@ -90,8 +100,10 @@ export function ensure(needs, from, onChange) {
       queue.push({ id, days: 2, from: c.from, full: false });
     }
   }
+  if (queue.length && !running) { status.total = queue.length; status.done = 0; }
+  else if (queue.length) status.total = status.done + queue.length;
   status.pending = queue.length;
-  if (queue.length) work();
+  if (queue.length) { progress(); work(); }
 }
 
 // { SYM: [[t, usd], …] } for the coins asked for (only those with history)
