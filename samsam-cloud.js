@@ -14,8 +14,8 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610241322';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610241322';
+import * as Core from './samsam-core.js?v=202610241650';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610241650';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -406,7 +406,15 @@ const API = {
     const sym = coin.sym;
     if (!sym || sym !== rawSym) { const e = new Error('Invalid coin symbol (letters, digits, . _ - only)'); setError(e, 'Add coin'); return Promise.reject(e); }
     const existing = S.coins.get(sym);
-    const hasHistory = [...S.txs.values()].some(t => t.sym === sym);
+    const own = [...S.txs.values()].filter(t => t.sym === sym);
+    const hasHistory = own.length > 0;
+    // A coin removed earlier (before removal recorded its balance leaving): close the old position at the
+    // moment it was removed, so adding it again starts from zero — past sells and their Realized profit stay.
+    const left = existing && existing.removed ? Core.replay(existing.opening, own).qty : 0;
+    // dated when it was removed — never before its own last transaction, so it always closes everything before it
+    const lastT = Math.max(0, ...own.map(t => Date.parse(t.date) || 0));
+    const remT = existing && existing.removedAt && Date.parse(existing.removedAt) ? Date.parse(existing.removedAt) : Date.now() - 1000;
+    const removedAt = new Date(Math.min(Date.now() - 1, Math.max(remT, lastT + 1))).toISOString();
     const order = existing && existing.order != null ? existing.order : Math.max(-1, ...[...S.coins.values()].map(c => c.order ?? 0)) + 1;
     return commit((b, ref) => {
       b.set(ref('coins', safeId(sym)), clean({
@@ -416,6 +424,7 @@ const API = {
         opening: existing && existing.opening ? existing.opening : { qty: 0, avg: 0 },
         addedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       }), { merge: true });
+      if (left > 1e-12) b.set(ref('txs', Core.newId('tx_')), txDoc(sym, 'transfer_out', left, 0, 'Removed from portfolio', { date: removedAt }));
       const id = Core.newId('tx_');
       // Every new or re-added coin starts with an ordinary Buy (no manual corrections).
       b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position'), { feeUsd }));
@@ -430,7 +439,19 @@ const API = {
     else if (!(T && T.labels[key])) return Promise.reject(new Error('Unknown category'));
     return API.updateCoin(sym, { cat: key, catLocked: true, catLabel: T && T.isCustom(key) ? Clean.label(label, 40) : null });
   },
-  removeCoin(sym) { return API.updateCoin(sym, { removed: true, removedAt: new Date().toISOString() }); },
+  // Remove a coin: what you still hold leaves the portfolio at its average cost (a Transfer Out, "Removed from
+  // portfolio" — no profit or loss), so totals, charts and the BTC comparison stay right, and adding the coin again
+  // later starts from zero. Past buys / sells (and their Realized profit) stay in the history.
+  removeCoin(sym) {
+    sym = Clean.sym(String(sym || '').toUpperCase());
+    const c = S.coins.get(sym); if (!c) return Promise.resolve();
+    const left = Core.replay(c.opening, [...S.txs.values()].filter(t => t.sym === sym)).qty;
+    const now = new Date().toISOString();
+    return commit((b, ref) => {
+      b.set(ref('coins', safeId(sym)), clean({ removed: true, removedAt: now, updatedAt: now }), { merge: true });
+      if (left > 1e-12) b.set(ref('txs', Core.newId('tx_')), txDoc(sym, 'transfer_out', left, 0, 'Removed from portfolio', { date: now }));
+    }, `Remove ${sym}`);
+  },
 
   // accumulation targets — one document per coin, so edits on two devices merge
   saveAccumPlan(plan) {

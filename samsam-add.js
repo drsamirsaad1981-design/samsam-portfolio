@@ -346,9 +346,7 @@
       write(Samsam.addTx(sym, 'buy', qty, price, '', { date: new Date().toISOString(), fee: 0, feeUsd: feeUsd }));
       closeAddCoin(); emit('tx', { sym: sym, type: 'buy' }); return;
     }
-    // Re-adding a removed coin records a normal Buy; warn if a balance was still left in its history
-    var prev = (state().archivedCoins || []).find(function (c) { return c.sym === sym; });
-    if (prev && prev.qty > 1e-12 && !(await CPDialog.confirm(sym + ' still had ' + fmtQty(prev.qty) + ' ' + sym + ' when it was removed.\nThis Buy will be added to that balance (new total ' + fmtQty(prev.qty + qty) + ').', { title: 'Re-add ' + sym + '?', okText: 'Continue' }))) return;
+    // A coin you removed earlier starts again from zero (Samsam.addCoin closes the old position); its past history stays
     var cgId = $('acCgId').value.trim().toLowerCase() || null;
     if (cgId && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cgId)) return acErr('CoinGecko ID looks wrong — pick the coin from the search list.');
     var cmcSlug = $('acCmc').value.trim() || null;
@@ -401,7 +399,7 @@
     ['atxQty', 'atxFee', 'atxNote'].forEach(function (id) { var el = $(id); el.value = ''; el.classList.remove('bad'); });
     $('atxDate').value = localDateTimeValue(new Date());
     $('atxDate').max = localDateTimeValue(new Date(Date.now() + 60e3));
-    delete $('atxPrice').dataset.touched;
+    delete $('atxPrice').dataset.touched; delete $('atxDate').dataset.touched;
     setAddTxType(type || 'buy');
     setOpen($('atxBackdrop'), true);
     setTimeout(function () { $('atxQty').focus(); }, 50);
@@ -426,7 +424,7 @@
     previewAddTx();
   }
   document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.atx-types button'); if (b && b.closest('#atxForm')) setAddTxType(b.dataset.t); });
-  document.addEventListener('input', function (e) { if (e.target && e.target.id === 'atxPrice') e.target.dataset.touched = '1'; });
+  document.addEventListener('input', function (e) { if (e.target && (e.target.id === 'atxPrice' || e.target.id === 'atxDate')) e.target.dataset.touched = '1'; });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
     if ($('atxBackdrop') && $('atxBackdrop').classList.contains('show')) closeAddTx();
@@ -438,9 +436,10 @@
     var cfg = ATX[atxType], v = function (id) { return $(id).value.trim(); };
     var qty = parseFloat(v('atxQty')), price = cfg.price ? parseFloat(v('atxPrice')) : 0, fee = cfg.fee ? (parseFloat(v('atxFee')) || 0) : 0;
     var feeUsd = (atxType === 'buy' || atxType === 'sell') ? (parseFloat(v('atxFeeUsd')) || 0) : 0;
-    // The picker has minute precision: this minute (the default) → the exact current time, so the entry sorts last
-    var dateStr = v('atxDate');
-    var date = dateStr ? new Date(dateStr) : new Date();
+    // Date left as it was → the exact moment you save (even if the minute changed while the form was open), so the entry
+    // always comes after what you just recorded. A date you picked (minute precision) → that minute, or "now" if it's this one.
+    var dateStr = v('atxDate'), picked = !!$('atxDate').dataset.touched;
+    var date = picked && dateStr ? new Date(dateStr) : new Date();
     if (!isNaN(date.getTime()) && Math.floor(date.getTime() / 60e3) >= Math.floor(Date.now() / 60e3)) date = new Date();
     var errs = {};
     if (!(qty > 0)) errs.atxQty = 'Enter a quantity greater than 0.';

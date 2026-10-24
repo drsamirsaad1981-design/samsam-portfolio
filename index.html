@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610241322"></script>
-<script src="samsam-hints.js?v=202610241322"></script>
-<script src="samsam-vault.js?v=202610241322"></script>
-<script src="samsam-labels.js?v=202610241322"></script>
-<script src="samsam-taxonomy.js?v=202610241322"></script>
-<script src="samsam-coins.js?v=202610241322"></script>
-<script src="samsam-dropdown.js?v=202610241322"></script>
-<script src="samsam-add.js?v=202610241322"></script>
-<script src="samsam-chart.js?v=202610241322"></script>
+<script src="samsam-ui.js?v=202610241650"></script>
+<script src="samsam-hints.js?v=202610241650"></script>
+<script src="samsam-vault.js?v=202610241650"></script>
+<script src="samsam-labels.js?v=202610241650"></script>
+<script src="samsam-taxonomy.js?v=202610241650"></script>
+<script src="samsam-coins.js?v=202610241650"></script>
+<script src="samsam-dropdown.js?v=202610241650"></script>
+<script src="samsam-add.js?v=202610241650"></script>
+<script src="samsam-chart.js?v=202610241650"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1399,7 +1399,7 @@
   <div class="modal" style="max-width:360px">
     <h2 style="color:#ef4444">✕ Remove Coin</h2>
     <p style="font-size:0.88rem;margin:10px 0 6px">Remove <strong id="rmSym" style="color:var(--accent)"></strong> from your active portfolio?</p>
-    <p style="font-size:0.78rem;color:var(--fg2);line-height:1.5">The coin will be hidden from your portfolio view. All historical buy/sell records are preserved and the coin can be restored later.</p>
+    <p id="rmInfo" style="font-size:0.78rem;color:var(--fg2);line-height:1.55"></p>
     <div style="display:flex;gap:8px;margin-top:16px;">
       <button class="btn btn-primary" onclick="confirmRemove()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">✕ Remove</button>
       <button class="btn btn-secondary" onclick="closeRemove()">Cancel</button>
@@ -1451,7 +1451,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610241322"></script>
+<script type="module" src="samsam-cloud.js?v=202610241650"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2083,6 +2083,10 @@ let _rmSym = null;
 function removeCoin(sym) {
   _rmSym = sym;
   document.getElementById('rmSym').textContent = sym;
+  const c = portfolio.find(x => x.sym === sym), q = c ? c.qty : 0;
+  document.getElementById('rmInfo').innerHTML = (q > 1e-12
+    ? `You still hold <b>${fmtQtyRO(q)} ${sym}</b> (${SamsamFmt.usd(q * (c.currentPrice || 0))}). They leave the portfolio at their average cost — recorded as a <b>Transfer Out</b>, no profit or loss. <span style="color:#f59e0b">Sold them? Record a <b>Sell</b> instead so the profit counts.</span><br>`
+    : '') + `Past buys and sells (and their Realized profit) stay in the history. Adding ${sym} again later starts from zero.`;
   document.getElementById('removeModal').classList.add('active');
 }
 function closeRemove() {
@@ -2092,7 +2096,7 @@ function closeRemove() {
 function confirmRemove() {
   if(!_rmSym) return;
   if (!requireCloud()) return;
-  // Hidden on every device; its transaction history is kept and it can be re-added later.
+  // Removed on every device: what's left leaves at cost (Transfer Out); history and Realized profit stay; re-adding starts from zero.
   cloudWrite(Samsam.removeCoin(_rmSym));
   closeRemove();
 }
