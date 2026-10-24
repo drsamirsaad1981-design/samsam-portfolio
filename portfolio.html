@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610232102"></script>
-<script src="samsam-hints.js?v=202610232102"></script>
-<script src="samsam-vault.js?v=202610232102"></script>
-<script src="samsam-labels.js?v=202610232102"></script>
-<script src="samsam-taxonomy.js?v=202610232102"></script>
-<script src="samsam-coins.js?v=202610232102"></script>
-<script src="samsam-dropdown.js?v=202610232102"></script>
-<script src="samsam-add.js?v=202610232102"></script>
-<script src="samsam-chart.js?v=202610232102"></script>
+<script src="samsam-ui.js?v=202610232120"></script>
+<script src="samsam-hints.js?v=202610232120"></script>
+<script src="samsam-vault.js?v=202610232120"></script>
+<script src="samsam-labels.js?v=202610232120"></script>
+<script src="samsam-taxonomy.js?v=202610232120"></script>
+<script src="samsam-coins.js?v=202610232120"></script>
+<script src="samsam-dropdown.js?v=202610232120"></script>
+<script src="samsam-add.js?v=202610232120"></script>
+<script src="samsam-chart.js?v=202610232120"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1041,7 +1041,6 @@
   .cat-custom-hint { font-size: .75rem; color: var(--fg2); margin-top: 5px; }
   .cat-reset { display: block; margin-top: 10px; padding: 0; border: none; background: none; color: #60a5fa; font: inherit; font-size: .82rem; cursor: pointer; }
   .cat-reset[hidden], .cat-custom[hidden] { display: none; }
-  #catEditModal .form-input { width: 100%; box-sizing: border-box; height: 46px; }
   /* Add Coin / Add Transaction forms: shared samsam-add.js */
   /* Coin logos everywhere (cards, table, Holdings, dialogs, dropdowns): never a dark disc behind a
      transparent logo — no background, no pseudo-elements, round clip, whole logo visible */
@@ -1396,28 +1395,6 @@
 <div id="donutLegend" style="display:none"></div>
 <div id="pnlRows" style="display:none"></div>
 
-<div class="modal-overlay" id="catEditModal" onclick="if(event.target===this)closeCatEdit()">
-  <div class="modal" style="max-width:380px" role="dialog" aria-modal="true" aria-labelledby="ceTitle">
-    <h2 id="ceTitle" style="color:#a78bfa">Category</h2>
-    <div class="form-row" style="margin:12px 0 0">
-      <label class="form-label" for="ceCat">Category</label>
-      <select class="form-input" id="ceCat" onchange="syncCatCustom(this,'ceCustomBox')"></select>
-    </div>
-    <div class="form-row cat-custom" id="ceCustomBox" hidden style="margin:10px 0 0">
-      <label class="form-label" for="ceCustom">New category name</label>
-      <input type="text" class="form-input" id="ceCustom" maxlength="40" placeholder="Enter Custom Category..." autocomplete="off"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();saveCatEdit()}">
-      <div class="cat-custom-hint">Saved for this coin and added to the category filters.</div>
-    </div>
-    <button type="button" class="cat-reset" id="ceReset" hidden onclick="saveCatEdit(true)"></button>
-    <div id="ceError" style="color:#ef4444;font-size:0.8rem;margin-top:8px"></div>
-    <div class="ac-btns">
-      <button class="btn btn-primary" onclick="saveCatEdit()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff">Save</button>
-      <button class="btn btn-secondary" onclick="closeCatEdit()">Cancel</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="removeModal">
   <div class="modal" style="max-width:360px">
     <h2 style="color:#ef4444">✕ Remove Coin</h2>
@@ -1474,7 +1451,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610232102"></script>
+<script type="module" src="samsam-cloud.js?v=202610232120"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1522,35 +1499,7 @@ function openCoinMenu(btn, sym) {
     { icon: '✕', label: 'Remove', danger: true, onClick: () => removeCoin(sym) },
   ]);
 }
-let catEditSym = null;
-function openCatEdit(sym) {
-  const c = portfolio.find(x => x.sym === sym); if (!c) return;
-  catEditSym = sym;
-  const T = SamsamTaxonomy, def = T.defaultOf(sym);
-  document.getElementById('ceTitle').textContent = `Category — ${sym}`;
-  const sel = document.getElementById('ceCat');
-  fillCatSelect(sel, c.cat || 'other');
-  document.getElementById('ceCustom').value = '';
-  syncCatCustom(sel, 'ceCustomBox');
-  const reset = document.getElementById('ceReset');
-  reset.hidden = !(c.catLocked && def);
-  if (def) reset.textContent = `↺ Use default (${T.label(def)})`;
-  document.getElementById('ceError').textContent = '';
-  document.getElementById('catEditModal').classList.add('active');
-  setTimeout(() => sel.focus(), 0);
-}
-function closeCatEdit() { document.getElementById('catEditModal').classList.remove('active'); catEditSym = null; }
-function saveCatEdit(useDefault) {
-  if (!catEditSym || !requireCloud()) return;
-  const sym = catEditSym;
-  let p;
-  if (useDefault) p = Samsam.setCategory(sym, null);
-  else {
-    const ch = readCatChoice(document.getElementById('ceCat'), 'ceCustom');
-    p = Samsam.setCategory(sym, ch.key, ch.label);
-  }
-  p.then(() => closeCatEdit(), e => { document.getElementById('ceError').textContent = '⚠️ ' + ((e && e.message) || e); });
-}
+// Change category: the shared dialog in samsam-add.js (openCatEdit / saveCatEdit / closeCatEdit) — same on Accumulation
 function getCoinNameLinked(sym) {
   const url = getCoinGeckoUrl(sym);
   const name = COIN_NAMES[sym] || '';
@@ -3249,7 +3198,6 @@ document.addEventListener('click', e => {
   if (tip && !e.target.closest('.info-pop')) { tip.classList.toggle('open'); fitInfoPop(tip); }
 });
 document.addEventListener('mouseover', e => { const tip = e.target.closest && e.target.closest('.info-tip'); if (tip) fitInfoPop(tip); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('catEditModal').classList.contains('active')) closeCatEdit(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.info-tip.open').forEach(t => t.classList.remove('open')); });
 function fitInfoPop(tip) {
   const pop = tip.querySelector('.info-pop'); if (!pop) return;

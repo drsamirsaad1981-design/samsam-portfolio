@@ -16,14 +16,14 @@
 <meta name="theme-color" content="#0a0e1a">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610232120"></script>
-<script src="samsam-hints.js?v=202610232120"></script>
-<script src="samsam-vault.js?v=202610232120"></script>
-<script src="samsam-labels.js?v=202610232120"></script>
-<script src="samsam-taxonomy.js?v=202610232120"></script>
-<script src="samsam-coins.js?v=202610232120"></script>
-<script src="samsam-dropdown.js?v=202610232120"></script>
-<script src="samsam-add.js?v=202610232120"></script>
+<script src="samsam-ui.js?v=202610241322"></script>
+<script src="samsam-hints.js?v=202610241322"></script>
+<script src="samsam-vault.js?v=202610241322"></script>
+<script src="samsam-labels.js?v=202610241322"></script>
+<script src="samsam-taxonomy.js?v=202610241322"></script>
+<script src="samsam-coins.js?v=202610241322"></script>
+<script src="samsam-dropdown.js?v=202610241322"></script>
+<script src="samsam-add.js?v=202610241322"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -438,6 +438,15 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .cp-globe { font-size: 14px; line-height: 1; }
 @media (max-width: 420px) { .cat-picker .cp-val { font-size: 1.1rem; } .cat-picker .sdd-btn { padding: 12px 14px; } }
 button.cat-tag { font-family: inherit; cursor: pointer; }
+/* Category tag + ✎ on a plan coin: opens Change category (same dialog and look as the main page) */
+.category-badge-editable { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+.cat-edit { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; flex-shrink: 0; border: none; background: none;
+  border-radius: 7px; color: var(--fg2); cursor: pointer; transition: color .15s; }
+.cat-edit:hover { color: var(--accent); }
+.cat-edit:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+@media (pointer: coarse) { .cat-edit { width: 28px; height: 28px; } }
+.coin-cell .category-badge-editable { margin-top: 4px; }
+.coin-cell .category-badge-editable .cat-tag { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
 button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transparent); }
 @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 .slide-up { animation: slideUpFade .35s ease-out both; }
@@ -611,7 +620,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610232120"></script>
+<script type="module" src="samsam-cloud.js?v=202610241322"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -678,6 +687,7 @@ window.addEventListener('DOMContentLoaded', () => {
     portfolioCoins = d.portfolio;
     // Don't replace the plan while a save of local edits is still debouncing.
     if (!saveTimer) accumPlan = d.accumPlan.map(e => ({ ...e }));
+    if (window.SamsamTaxonomy) accumPlan.forEach(e => { if (e.catLabel && SamsamTaxonomy.isCustom(e.cat)) SamsamTaxonomy.register(e.cat, e.catLabel); });
     if (!cloudReady) { cloudReady = true; setSaveStatus('ready', '✓ Ready'); startPlanPrices(); }
     renderAll();
     try { checkAllAlerts(); } catch(_) {}
@@ -769,11 +779,25 @@ async function fetchPlanOnlyPrices() {
   } catch (_) { /* next refresh */ }
 }
 function startPlanPrices() { if (_planPriceT) return; fetchPlanOnlyPrices(); _planPriceT = setInterval(fetchPlanOnlyPrices, 120e3); }
+// Category tag + ✎: both open Change category. A coin you hold → saved on the coin (main page and every other page
+// follow); one you don't hold yet → saved with the plan, and Add Coin starts from it on your first Buy.
+function catBadge(entry, idx) {
+  const T = window.SamsamTaxonomy; if (!T) return '';
+  const k = catOfEntry(entry), L = SamsamCoins.esc(T.label(k)), sym = entry.sym;
+  return `<span class="category-badge-editable"><button type="button" class="cat-tag" style="--cat-c:${T.color(k)}" onclick="editPlanCat(${idx})" title="${L} — tap to change the category of ${sym}" aria-label="Category ${L} — change for ${sym}">${L}</button>` +
+    `<button type="button" class="cat-edit" onclick="editPlanCat(${idx})" title="Change the category of ${sym}" aria-label="Change the category of ${sym}">${SamsamUI.icon('pencil')}</button></span>`;
+}
+function editPlanCat(idx) {
+  const e = accumPlan[idx]; if (!e) return;
+  CPAdd.editCategory(e.sym, { current: catOfEntry(e), catLabel: e.catLabel, name: e.name, logoUrl: coinOpts(e).logoUrl,
+    onSave: (key, label) => { e.cat = key; if (label) e.catLabel = label; else delete e.catLabel; renderAll(); saveAccumPlan(true); } });
+}
+
 // ➕ Buy: Add Transaction for a coin you hold, otherwise Add Coin ready with this coin (shared forms, samsam-add.js)
 function buyPlanCoin(idx) {
   const e = accumPlan[idx]; if (!e) return;
   const o = coinOpts(e, calcRow(e));
-  CPAdd.buy(e.sym, { name: e.name || e.sym, cgId: o.cgId, logoUrl: o.logoUrl, cat: catOfEntry(e) });
+  CPAdd.buy(e.sym, { name: e.name || e.sym, cgId: o.cgId, logoUrl: o.logoUrl, cat: catOfEntry(e), catLabel: e.catLabel });
 }
 
 // ─── Save Accumulation Plan ─────────────────────────────────────────────────
@@ -897,7 +921,10 @@ function renderTable() {
       <td>
         <div class="coin-cell">
           ${SamsamCoins.iconLinked(entry.sym, 32, coinOpts(entry, r))}
-          ${SamsamCoins.nameLinked(entry.sym, { ...coinOpts(entry, r), name: r.name, badge: completed ? '<span class="completed-badge">✓ Done</span>' : r.notOwned ? '<span class="not-owned-badge">Not Owned Yet</span>' : '' })}
+          <div style="min-width:0">
+            ${SamsamCoins.nameLinked(entry.sym, { ...coinOpts(entry, r), name: r.name, badge: completed ? '<span class="completed-badge">✓ Done</span>' : r.notOwned ? '<span class="not-owned-badge">Not Owned Yet</span>' : '' })}
+            ${catBadge(entry, idx)}
+          </div>
         </div>
       </td>
       <td>
@@ -982,7 +1009,7 @@ function renderCards() {
           <div style="font-size:0.7rem;color:var(--fg2);margin-top:2px">${hasPrice ? '@ ' + SamsamFmt.price(r.currentPrice) : '<span class="no-price">No price</span>'}</div>
         </div>
       </div>
-      <div class="card-cat-row">${T ? `<button type="button" class="cat-tag" style="--cat-c:${T.color(cat)}" onclick="setCatFilter('${cat}')" title="Show only ${T.label(cat)}">${T.label(cat)}</button>` : ''}${ap > 0 ? `<span class="alert-badge${alertHit ? ' alert-triggered' : ''}">🔔 ${SamsamFmt.price(ap)}</span>` : ''}</div>
+      <div class="card-cat-row">${catBadge(entry, idx)}${ap > 0 ? `<span class="alert-badge${alertHit ? ' alert-triggered' : ''}">🔔 ${SamsamFmt.price(ap)}</span>` : ''}</div>
       <div class="acc-card-prog-bar"><div class="acc-card-prog-fill" style="width:${Math.min(r.progress,100).toFixed(1)}%;background:${progColor}"></div></div>
       <div class="coin-card-body">
         ${metric(L.TARGET_AMOUNT, `${fmtQty(entry.targetQty || 0)} <small>${entry.sym}</small>`)}

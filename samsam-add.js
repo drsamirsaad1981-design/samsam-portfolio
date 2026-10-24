@@ -6,7 +6,9 @@
    CPAdd.openTx(type, sym)    Buy / Sell / Transfer In / Transfer Out for a coin you hold
    CPAdd.buy(sym, prefill?)   the right one of the two: Add Transaction (Buy) if you hold the coin, else Add Coin
    CPAdd.search(query)        CoinGecko coin search → [{ id, sym, name, rank, thumb }]
-   CPAdd.on('coin' | 'tx', fn)  called after a save, with { sym, ... }
+   CPAdd.editCategory(sym, { current, catLabel, onSave(key, label) })  Change category — a coin you hold is saved on the coin
+                              (every page); one you don't hold yet calls onSave (the plan keeps it)
+   CPAdd.on('coin' | 'tx' | 'cat', fn)  called after a save, with { sym, ... }
    CPAdd.defaultTxSym         () => symbol used by openTx() when none is given (the main page sets it to the open coin)
 
    The old global names (openAddCoin, applyAddCoin, openAddTx, saveAddTx, …) still work. */
@@ -18,7 +20,7 @@
   function state() { return window.Samsam && Samsam.isReady && Samsam.isReady() ? Samsam.getState() : null; }
   function portfolio() { var s = state(); return s ? s.portfolio : []; }
   function held(sym) { return portfolio().find(function (c) { return c.sym === sym; }) || null; }
-  var hooks = { coin: [], tx: [] };
+  var hooks = { coin: [], tx: [], cat: [] };
   function emit(k, d) { hooks[k].forEach(function (f) { try { f(d); } catch (e) { console.error('[Add]', e); } }); }
   function write(p) { if (p && p.catch) p.catch(function (e) { console.error('[Add] save failed', e); }); return p; }
   function requireCloud() {
@@ -91,7 +93,9 @@
     '.atx-field .ac-cmc input{border:none;background:transparent;margin:0;height:42px;padding-left:2px;min-width:70px;flex:1;box-shadow:none}' +
     '.ac-cmc-check{padding:0 12px;color:#60a5fa;font-size:.8rem;font-weight:600;text-decoration:none;white-space:nowrap}.ac-cmc-check[hidden]{display:none}' +
     '@media (max-width:420px){.ac-cmc-pre{display:none}.atx-field .ac-cmc input{padding-left:12px}}' +
-    '.cat-custom[hidden]{display:none}.cat-custom-hint{font-size:.75rem;color:#94a3b8;margin-top:5px;font-weight:500}';
+    '.cat-custom[hidden]{display:none}.cat-custom-hint{font-size:.75rem;color:#94a3b8;margin-top:5px;font-weight:500}' +
+    '#catEditModal .atx-modal{max-width:420px;--atx-c:#7c3aed}' +
+    '.cat-reset{display:block;margin:0 0 10px;padding:0;border:none;background:none;color:#60a5fa;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer}.cat-reset[hidden]{display:none}';
 
   var HTML_COIN =
     '<div class="atx-backdrop" id="addCoinModal" onclick="if(event.target===this)closeAddCoin()">' +
@@ -140,15 +144,29 @@
       '<button type="submit" class="atx-save" id="atxSave">Add Transaction</button>' +
     '</form></div>';
 
+  var HTML_CAT =
+    '<div class="atx-backdrop" id="catEditModal" onclick="if(event.target===this)closeCatEdit()">' +
+    '<form class="atx-modal" id="ceForm" onsubmit="event.preventDefault();saveCatEdit()" role="dialog" aria-modal="true" aria-labelledby="ceTitle" novalidate>' +
+      '<div class="atx-head"><h3 id="ceTitle">Category</h3><button type="button" class="atx-x" onclick="closeCatEdit()" aria-label="Close">×</button></div>' +
+      '<div class="atx-coin" id="ceCoin"></div>' +
+      '<label class="atx-field"><span>Category</span><select id="ceCat" onchange="syncCatCustom(this,\'ceCustomBox\')"></select></label>' +
+      '<div class="atx-field cat-custom" id="ceCustomBox" hidden><label for="ceCustom">New Category Name</label>' +
+        '<input type="text" id="ceCustom" maxlength="40" placeholder="Enter Custom Category..." autocomplete="off"><div class="cat-custom-hint">Saved for this coin and added to the category filters.</div></div>' +
+      '<button type="button" class="cat-reset" id="ceReset" hidden onclick="saveCatEdit(true)"></button>' +
+      '<div class="atx-err" id="ceError" role="alert"></div>' +
+      '<button type="submit" class="atx-save btn-primary" id="ceSave">Save</button>' +
+    '</form></div>';
+
   function mount() {
     if (!document.getElementById('cpAddCss')) { var s = document.createElement('style'); s.id = 'cpAddCss'; s.textContent = CSS; document.head.appendChild(s); }
     if (!document.body) return false;
     if (!$('addCoinModal')) document.body.insertAdjacentHTML('beforeend', HTML_COIN);
     if (!$('atxBackdrop')) document.body.insertAdjacentHTML('beforeend', HTML_TX);
+    if (!$('catEditModal')) document.body.insertAdjacentHTML('beforeend', HTML_CAT);
     return true;
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
-  function anyOpen() { return !!document.querySelector('#addCoinModal.show, #atxBackdrop.show'); }
+  function anyOpen() { return !!document.querySelector('#addCoinModal.show, #atxBackdrop.show, #catEditModal.show'); }
   function setOpen(el, on) { el.classList.toggle('show', on); document.body.classList.toggle('atx-open', on || anyOpen()); }
 
   // ── Category choice (Add Coin + Change category): built-in list, your own categories, and "Other" ──
@@ -167,7 +185,8 @@
     if (show) setTimeout(function () { box.querySelector('input').focus(); }, 0);
   }
   function readCatChoice(sel, inputId) {
-    if (sel.value !== 'other') return { key: sel.value, label: null };
+    // one of your own categories picked from the list keeps its name (so every device shows it)
+    if (sel.value !== 'other') return { key: sel.value, label: SamsamTaxonomy.isCustom(sel.value) ? SamsamTaxonomy.label(sel.value) : null };
     var name = ($(inputId).value || '').replace(/\s+/g, ' ').trim();
     if (!name) return { key: 'other', label: null };
     return { key: SamsamTaxonomy.customKey(name), label: name };
@@ -289,7 +308,8 @@
     var p = prefill && typeof prefill === 'object' ? prefill : null;
     var catSel = $('acCat');
     fillCatSelect(catSel, (p && p.cat) || 'layer1');
-    $('acCatCustom').value = ''; syncCatCustom(catSel, 'acCatCustomBox');
+    $('acCatCustom').value = p && p.catLabel && SamsamTaxonomy.isCustom(p.cat) && catSel.value === 'other' ? p.catLabel : '';
+    syncCatCustom(catSel, 'acCatCustomBox');
     $('acPreview').innerHTML = ''; $('acError').textContent = '';
     if (p && p.sym) {   // coming from a plan / a coin you picked elsewhere: already linked, just add the amount
       $('acSym').value = String(p.sym).toUpperCase(); $('acName').value = p.name || '';
@@ -410,6 +430,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
     if ($('atxBackdrop') && $('atxBackdrop').classList.contains('show')) closeAddTx();
+    else if ($('catEditModal') && $('catEditModal').classList.contains('show')) closeCatEdit();
     else if ($('addCoinModal') && $('addCoinModal').classList.contains('show') && ($('acSuggest').hidden)) closeAddCoin();
   });
   // Validate + preview the result using the same ledger maths as the rest of the app
@@ -480,6 +501,44 @@
     emit('tx', { sym: sym, type: type });
   }
 
+  // ── Change category ──
+  var ceSym = null, ceOpts = {};
+  function openCatEdit(sym, opts) {
+    if (!mount()) return;
+    sym = String(sym || '').toUpperCase(); ceOpts = opts || {};
+    var c = held(sym); if (!c && !ceOpts.onSave) return;
+    ceSym = sym;
+    var T = SamsamTaxonomy, def = T.defaultOf(sym), cur = c ? (c.cat || 'other') : (ceOpts.current || def || 'other');
+    if (!c && ceOpts.catLabel && T.isCustom(cur)) T.register(cur, ceOpts.catLabel);
+    $('ceTitle').textContent = 'Category — ' + sym;
+    $('ceCoin').innerHTML = icon(sym, 24, ceOpts.logoUrl) + '<span>' + E(sym) + '</span><small>' + E(coinName(sym) || ceOpts.name || '') + (c ? '' : ' · not owned yet — saved with your plan') + '</small>';
+    var sel = $('ceCat');
+    fillCatSelect(sel, cur);
+    $('ceCustom').value = ''; syncCatCustom(sel, 'ceCustomBox');
+    var reset = $('ceReset');
+    reset.hidden = !(def && (c ? c.catLocked : cur !== def));
+    if (def) reset.textContent = '↺ Use default (' + T.label(def) + ')';
+    $('ceError').textContent = '';
+    setOpen($('catEditModal'), true);
+    setTimeout(function () { sel.focus(); }, 0);
+  }
+  function closeCatEdit() { var m = $('catEditModal'); if (m) setOpen(m, false); ceSym = null; }
+  function saveCatEdit(useDefault) {
+    if (!ceSym) return;
+    var sym = ceSym, c = held(sym), T = SamsamTaxonomy, p, ch;
+    if (c) {   // saved on the coin → every page shows the new category
+      if (!requireCloud()) return;
+      if (useDefault) p = Samsam.setCategory(sym, null);
+      else { ch = readCatChoice($('ceCat'), 'ceCustom'); p = Samsam.setCategory(sym, ch.key, ch.label); }
+    } else {   // not owned yet: the plan keeps it (and Add Coin starts from it on your first Buy)
+      ch = useDefault ? { key: T.defaultOf(sym) || 'other', label: null } : readCatChoice($('ceCat'), 'ceCustom');
+      if (T.isCustom(ch.key) && !ch.label) { $('ceError').textContent = '⚠️ Type a name for the category'; return; }
+      if (ch.label) { ch.label = ch.label.slice(0, 40); T.register(ch.key, ch.label); }
+      p = Promise.resolve(ceOpts.onSave(ch.key, ch.label));
+    }
+    p.then(function () { closeCatEdit(); emit('cat', { sym: sym }); }, function (e) { $('ceError').textContent = '⚠️ ' + ((e && e.message) || e); });
+  }
+
   // Buy a coin: Add Transaction if you hold it, otherwise Add Coin ready with what we know about it
   function buy(sym, prefill) {
     sym = String(sym || '').toUpperCase(); if (!sym) return;
@@ -488,7 +547,7 @@
   }
 
   var API = {
-    openCoin: openAddCoin, closeCoin: closeAddCoin, openTx: openAddTx, closeTx: closeAddTx, buy: buy,
+    openCoin: openAddCoin, closeCoin: closeAddCoin, openTx: openAddTx, closeTx: closeAddTx, buy: buy, editCategory: openCatEdit,
     search: search, coinInfo: coinInfo, categoryFrom: categoryFrom, linkCodex: linkCodex, fetchLogoAndPrice: fetchLogoAndPrice,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
     on: function (k, fn) { if (hooks[k]) hooks[k].push(fn); }, defaultTxSym: null
@@ -498,7 +557,8 @@
   var G = { openAddCoin: function () { openAddCoin(); }, closeAddCoin: closeAddCoin, previewAddCoin: previewAddCoin, applyAddCoin: applyAddCoin,
     acSearchInput: acSearchInput, acSearchKey: acSearchKey, acPick: acPick, acCmcCheck: acCmcCheck,
     openAddTx: openAddTx, closeAddTx: closeAddTx, setAddTxType: setAddTxType, readAddTx: readAddTx, previewAddTx: previewAddTx, saveAddTx: saveAddTx,
-    fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice };
+    fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
+    openCatEdit: function (sym) { openCatEdit(sym); }, closeCatEdit: closeCatEdit, saveCatEdit: saveCatEdit };
   Object.keys(G).forEach(function (k) { window[k] = G[k]; });
   Object.defineProperty(window, 'atxSym', { get: function () { return atxSym; }, configurable: true });
 })();
