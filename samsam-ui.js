@@ -185,20 +185,30 @@
     var st = document.createElement('style'); st.id = 'cpThemeCss';
     var D = 'html:root[data-theme="dark"]:not([data-theme-lock])';
     st.textContent =
-      D + '{--bg-app:#0e0d21;--bg-app-gradient:linear-gradient(180deg,#12102b 0%,#0a0918 100%);' +
-        '--bg-card:#171533;--bg-card-secondary:#1e1b40;--border-card:rgba(255,255,255,.07);' +
+      // Midnight Indigo — the main header's gradient (navy → deep indigo → midnight blue, 135°) behind every page.
+      // Cards are see-through like the header's own cards, so the flow of colour shows through everywhere;
+      // windows, menus and sticky headers stay solid so text never mixes with what's behind them.
+      D + '{--mi-navy:#0a0e1a;--mi-indigo:#1a1040;--mi-blue:#0a2040;' +
+        '--bg-app:#0e0d21;--bg-app-gradient:linear-gradient(135deg,#0a0e1a 0%,#1a1040 50%,#0a2040 100%);' +
+        '--bg-card:#161339;--bg-card-secondary:#1e1b40;--border-card:rgba(255,255,255,.08);' +
         '--accent-primary:#7c3aed;--accent-glow:rgba(124,58,237,.35);' +
-        '--bg:#0e0d21;--bg2:#171533;--bg3:#1e1b40;--card:#171533;--card-solid:#171533;--metric-bg:#110f28;' +
-        '--border:rgba(255,255,255,.07);--header-bg:#171533;background:#0a0918}' +
-      'html[data-theme="dark"] body{background:#0a0918 var(--bg-app-gradient) no-repeat;background-size:100% 100%;min-height:100vh}' +
-      // the Holdings / Transactions screen sets its own colours — same palette
-      'html[data-theme="dark"] #holdingsOverlay{--bg:#0e0d21;--bg2:#171533;--bg3:#1e1b40;--card:#171533;--border:rgba(255,255,255,.07);' +
-        '--header-bg:#171533;background:#0a0918 var(--bg-app-gradient) no-repeat !important;background-attachment:local !important}' +
+        '--bg:#0e0d21;--bg2:rgba(255,255,255,.045);--card:rgba(255,255,255,.045);--bg3:rgba(255,255,255,.07);' +
+        '--card-solid:#161339;--metric-bg:rgba(4,6,22,.38);--border:rgba(255,255,255,.08);--header-bg:rgba(13,14,38,.72);background:#0a0e1a}' +
+      // the gradient stays put while the page scrolls (a fixed layer behind everything — works on phones too)
+      'html[data-theme="dark"] body{background:transparent;min-height:100vh}' +
+      'html[data-theme="dark"] body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--bg-app-gradient)}' +
+      // Holdings / Transactions screen: same gradient, fixed behind its scrolling content
+      'html[data-theme="dark"] #holdingsOverlay{--bg:#0e0d21;--bg2:rgba(255,255,255,.045);--card:rgba(255,255,255,.045);--bg3:rgba(255,255,255,.07);' +
+        '--border:rgba(255,255,255,.08);--header-bg:rgba(13,14,38,.72);background:#0a0e1a var(--bg-app-gradient) no-repeat !important;background-attachment:scroll !important}' +
+      // solid where something sits on top of other content
+      'html[data-theme="dark"] .modal,html[data-theme="dark"] #samsamSyncPill,html[data-theme="dark"] #samsamSyncMenu,' +
+        'html[data-theme="dark"] .sum{background:var(--card-solid) !important}' +
+      'html[data-theme="dark"] thead,html[data-theme="dark"] thead th{background:#141238 !important}' +
       // loading screen
-      'html[data-theme="dark"] #cpSplash{background:#0a0918 var(--bg-app-gradient) !important}';
+      'html[data-theme="dark"] #cpSplash{background:#0a0e1a var(--bg-app-gradient) !important}';
     (document.head || document.documentElement).appendChild(st);
     var m = document.querySelector('meta[name="theme-color"]');
-    function bar() { if (m) m.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'light' ? '#f0f4f8' : '#12102b'); }
+    function bar() { if (m) m.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'light' ? '#f0f4f8' : '#0d0f22'); }
     bar(); window.addEventListener('samsam-theme', bar);
   })();
   // Charts: "Building from real prices… 7 / 20 coins" while samsam-history.js downloads the price history

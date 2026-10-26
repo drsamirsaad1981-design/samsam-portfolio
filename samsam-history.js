@@ -68,7 +68,9 @@ let shared = {}, sharedIndex = null, sharedAt = 0, sharedLoading = null, lastAsk
 async function getJson(url) { const r = await fetch(url, { cache: 'no-cache' }); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
 async function loadShared(ids) {
   try {
-    sharedIndex = (await getJson(SHARED + 'index.json?h=' + Math.floor(Date.now() / 6e5))).coins || {};
+    const idx = await getJson(SHARED + 'index.json?h=' + Math.floor(Date.now() / 6e5));
+    sharedIndex = idx.coins || {};
+    for (const id of idx.unknown || []) failed.add(id);   // CoinGecko doesn't know these ids — never asked again
   } catch (_) { sharedIndex = sharedIndex || {}; }   // no shared files yet (or offline): CoinGecko directly
   sharedAt = Date.now();
   const todo = ids.filter(id => sharedIndex[id] && !(shared[id] && shared[id].t1 >= sharedIndex[id][1]));
@@ -121,7 +123,7 @@ function best(id) {
 const failed = new Set();   // ids CoinGecko doesn't know (or that kept failing) this session — valued at their own price instead
 let queue = [], running = false, onUpdate = () => {}, status = { pending: 0, failed: 0, last: '', total: 0, done: 0, waiting: false };
 function progress() {
-  try { window.dispatchEvent(new CustomEvent('samsam-history', { detail: { done: status.done, total: status.total, waiting: status.waiting, pending: status.pending, building: queue.some(j => j.full) } })); } catch (_) {}
+  try { window.dispatchEvent(new CustomEvent('samsam-history', { detail: { done: status.done, total: status.total, waiting: status.waiting, pending: status.pending, building: queue.some(j => j.full && required(j.id)) } })); } catch (_) {}
 }
 
 function merge(old, add) {
@@ -217,17 +219,32 @@ export function series(needs) {
   return out;
 }
 // The moment up to which every asked coin has prices (the charts use recorded points after it)
+// Which coins the charts wait for: with shared files, only the coins they list (they arrive in a second) — a coin that
+// has to come from CoinGecko directly is valued at its own price until its history arrives, so one slow or unknown
+// coin never holds back the whole chart. Without shared files, every coin.
+function required(id) {
+  if (!id || failed.has(id)) return false;
+  const any = sharedIndex && Object.keys(sharedIndex).length;
+  return any ? !!sharedIndex[id] : true;
+}
+// The moment up to which the coins the charts wait for have prices (the charts use recorded points after it)
 export function coveredUntil(needs) {
   let until = Infinity;
   for (const { id } of needs) {
-    if (!id || failed.has(id)) continue;
-    const b = best(id); if (!b) return 0;
-    until = Math.min(until, b.last);
+    const b = id && best(id);
+    if (!b) { if (required(id)) return 0; continue; }
+    if (required(id)) until = Math.min(until, b.last);
   }
   return until === Infinity ? 0 : until;
 }
 export function covers(needs, from) {
-  return needs.every(({ id }) => { if (!id || failed.has(id)) return true; const b = best(id); return !!b && b.from <= from + HOUR; });
+  if (sharedIndex === null) return false;
+  return needs.every(({ id }) => { if (!required(id)) return true; const b = best(id); return !!b && b.from <= from + HOUR; });
+}
+// First of a coin's CoinGecko ids that the shared files have (else the first one CoinGecko isn't known to refuse)
+export function pick(ids) {
+  const list = ids.filter(Boolean);
+  return list.find(id => sharedIndex && sharedIndex[id]) || list.find(id => !failed.has(id)) || list[0] || null;
 }
 export function getStatus() { return { ...status }; }
 export function clear() { cache = {}; db().then(d => d.transaction(STORE, 'readwrite').objectStore(STORE).clear()).catch(() => {}); }

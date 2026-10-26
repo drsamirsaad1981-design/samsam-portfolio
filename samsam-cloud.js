@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610261933';
-import * as Hist from './samsam-history.js?v=202610261933';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610261933';
+import * as Core from './samsam-core.js?v=202610262051';
+import * as Hist from './samsam-history.js?v=202610262051';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610262051';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -138,7 +138,8 @@ function chartHistory(coins, txs, portfolio, snaps) {
     return list.some(t => (Date.parse(t.date) || 0) >= start && (t.type === 'buy' || t.type === 'transfer_in' || t.type === 'adjust'));
   };
   const needs = [{ sym: 'BTC', id: 'bitcoin' }];
-  for (const c of coins) if (c.sym !== 'BTC' && heldInWindow(c)) needs.push({ sym: c.sym, id: c.cgId || ids[c.sym] || null });
+  const alt = C.CG_ALT || {};
+  for (const c of coins) if (c.sym !== 'BTC' && heldInWindow(c)) needs.push({ sym: c.sym, id: Hist.pick([c.cgId, ids[c.sym], ...(alt[c.sym] || [])]) });
   Hist.ensure(needs, start, () => { if (allLoaded()) emit(); });
   if (!Hist.covers(needs, start)) return null;
   const until = Hist.coveredUntil(needs);
