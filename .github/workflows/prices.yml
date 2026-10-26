@@ -3,7 +3,7 @@
 name: Price history
 on:
   schedule:
-    - cron: '7 * * * *'          # every hour at :07
+    - cron: '7,37 * * * *'       # twice an hour — GitHub sometimes runs scheduled jobs late or skips one
   workflow_dispatch:
   push:
     branches: [main]

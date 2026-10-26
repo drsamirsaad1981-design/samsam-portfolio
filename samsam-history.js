@@ -83,6 +83,30 @@ async function loadShared(ids) {
     }));
   }
 }
+// The newest hours for coins whose shared file is behind (GitHub sometimes runs the hourly job late): one CoinGecko
+// request for all of them — the last 7 days, hourly (markets + sparkline) — at most every 50 minutes.
+let recentAt = 0, recentBusy = false;
+async function fillRecent(ids) {
+  if (recentBusy || Date.now() - recentAt < REFRESH_MS) return;
+  recentBusy = true;
+  try {
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids.slice(0, 250).map(encodeURIComponent).join(',')}&sparkline=true&per_page=250&page=1`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const rows = await r.json();
+    recentAt = Date.now();
+    for (const row of rows || []) {
+      const sp = (row.sparkline_in_7d && row.sparkline_in_7d.price) || [], end = Date.parse(row.last_updated) || Date.now();
+      const pts = sp.map((v, j) => [end - (sp.length - 1 - j) * HOUR, +v]).filter(p => p[1] > 0);
+      if (row.current_price > 0) pts.push([end, +row.current_price]);
+      if (!pts.length || !ids.includes(row.id)) continue;
+      cache[row.id] = { from: pts[0][0], at: recentAt, pts };
+      saveOne(row.id);
+    }
+    onUpdate();
+  } catch (_) { recentAt = Date.now() - REFRESH_MS + 5 * 60e3; }   // busy / offline: try again in 5 minutes
+  finally { recentBusy = false; }
+}
+
 // prices for one coin: the shared file, plus anything newer fetched directly
 function best(id) {
   const sh = shared[id], c = cache[id];
@@ -159,7 +183,7 @@ export function ensure(needs, from, onChange) {
     if (first) return;   // don't start asking CoinGecko before we know what the shared files have
   }
   if (sharedIndex === null || !cacheReady) return;   // wait for the shared files' list and this device's saved prices
-  const now = Date.now(), want = new Set(), loadingNow = !!sharedLoading;
+  const now = Date.now(), want = new Set(), loadingNow = !!sharedLoading, stale = [];
   for (const { id } of needs) {
     if (!id || failed.has(id) || want.has(id) || queue.some(j => j.id === id)) continue;
     want.add(id);
@@ -167,9 +191,9 @@ export function ensure(needs, from, onChange) {
     const sh = shared[id];
     const c = cache[id];
     if (sh && sh.t0 <= from + HOUR) {
-      // the shared file covers it; only if the hourly job has stopped for a while do we fill the newest hours ourselves
+      // the shared file covers it; if the job is a few hours behind, the newest hours come from one request for all such coins
       const newest = Math.max(sh.t1, c && c.pts.length ? c.pts[c.pts.length - 1][0] : 0);
-      if (now - newest > 3 * HOUR && !(c && now - c.at < REFRESH_MS)) queue.push({ id, days: Math.min(90, Math.max(2, Math.ceil((now - newest) / DAY) + 1)), from: sh.t0, full: false });
+      if (now - newest > 2 * HOUR) stale.push(id);
       continue;
     }
     if (!c || !(c.from <= from + HOUR) || !c.pts.length) {
@@ -179,6 +203,7 @@ export function ensure(needs, from, onChange) {
       queue.push({ id, days: 2, from: c.from, full: false });
     }
   }
+  if (stale.length) fillRecent(stale);
   if (queue.length && !running) { status.total = queue.length; status.done = 0; }
   else if (queue.length) status.total = status.done + queue.length;
   status.pending = queue.length;

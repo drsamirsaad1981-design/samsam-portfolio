@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610242110';
-import * as Hist from './samsam-history.js?v=202610242110';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610242110';
+import * as Core from './samsam-core.js?v=202610261752';
+import * as Hist from './samsam-history.js?v=202610261752';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610261752';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -123,7 +123,9 @@ function chartHistory(coins, txs, portfolio, snaps) {
   const C = window.SamsamCoins || {}, ids = C.CG_IDS || {};
   const firstTx = txs.length ? Math.min(...txs.map(t => Date.parse(t.date) || Infinity)) : Infinity;
   const hasOpening = coins.some(c => c.opening && c.opening.qty > 0);
-  let start = Math.min(hasOpening ? START_DAY : Infinity, firstTx);
+  // A portfolio with a starting position (the Oct-15 portfolio) charts from that day, like CoinMarketCap — older
+  // transactions are already part of that day's amounts. Without one, from the first transaction.
+  let start = hasOpening ? START_DAY : firstTx;
   if (!isFinite(start)) return null;
   start = Math.max(start, Date.now() - 89 * 864e5);
   // only coins actually held at some moment since the start (a coin removed earlier, or never bought, needs no history)
