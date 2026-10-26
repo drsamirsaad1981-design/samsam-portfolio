@@ -316,7 +316,7 @@
   function moversCss() {
     if (mvCss) return; mvCss = true;
     var st = document.createElement('style');
-    st.textContent = '.mv-card{display:grid;grid-template-columns:1fr 1px 1fr;align-items:stretch;background:var(--card-solid,var(--bg2,#111827));border:1px solid var(--border,#334155);border-radius:16px;padding:14px 4px;box-sizing:border-box}' +
+    st.textContent = '.mv-card{display:grid;grid-template-columns:1fr 1px 1fr;align-items:stretch;background:var(--bg2,#111827);border:1px solid var(--border,#334155);border-radius:16px;padding:14px 4px;box-sizing:border-box}' +
       '.mv-sep{background:var(--border,#334155);margin:6px 0}' +
       '.mv-half{display:flex;flex-direction:column;gap:6px;min-width:0;padding:4px 16px;border:none;background:none;color:inherit;font:inherit;text-align:left;border-radius:12px;cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent}' +
       '@media (hover:hover){.mv-half:hover{background:rgba(148,163,184,.08)}}.mv-half:active{background:rgba(148,163,184,.1)}.mv-half:focus-visible{outline:2px solid #a78bfa;outline-offset:-2px}.mv-half[aria-disabled=true]{cursor:default;background:none}' +
@@ -325,7 +325,7 @@
       '.mv-val{display:block;font-weight:700;font-size:1rem;line-height:1.35;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}.mv-val svg{display:inline-block;vertical-align:1px;margin-right:6px}.mv-val .mv-t1,.mv-val .mv-t2{white-space:nowrap}.mv-val .mv-t2{opacity:.92}.mv-val.up{color:#34d399}.mv-val.down{color:#f87171}.mv-val.flat{color:var(--fg2,#94a3b8)}' +
       '.mv-sub{font-size:.76rem;color:var(--fg2,#94a3b8);line-height:1.35;font-variant-numeric:tabular-nums}' +
       '.mv-empty{grid-column:1/-1;padding:6px 16px;color:var(--fg2,#94a3b8);font-size:.85rem}' +
-      '.mv-head{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 16px 10px;font-size:.72rem;font-weight:700;letter-spacing: .01em;text-transform: none;color:var(--label,var(--fg2,#94a3b8))}' +
+      '.mv-head{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 16px 10px;font-size:.78rem;font-weight:700;letter-spacing: .01em;text-transform: none;color:var(--label,var(--fg2,#94a3b8))}' +
       '.mv-logo{width:18px;height:18px;flex-shrink:0}' +
       '.mv-badge{font-size:.66rem;font-weight:700;letter-spacing:.02em;text-transform:none;padding:2px 8px;border-radius:999px;background:rgba(148,163,184,.14);color:#cbd5e1}' +
       '[data-theme=light] .mv-badge{color:#475569;background:#f1f5f9}' +
