@@ -13,20 +13,20 @@
 <meta name="apple-mobile-web-app-title" content="Cute Portfolio">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0a0e1a">
+<meta name="theme-color" content="#12102b">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610261752"></script>
-<script src="samsam-hints.js?v=202610261752"></script>
-<script src="samsam-vault.js?v=202610261752"></script>
-<script src="samsam-labels.js?v=202610261752"></script>
-<script src="samsam-taxonomy.js?v=202610261752"></script>
-<script src="samsam-coins.js?v=202610261752"></script>
-<script src="samsam-dropdown.js?v=202610261752"></script>
-<script src="samsam-add.js?v=202610261752"></script>
-<script src="samsam-chart.js?v=202610261752"></script>
+<script src="samsam-ui.js?v=202610261933"></script>
+<script src="samsam-hints.js?v=202610261933"></script>
+<script src="samsam-vault.js?v=202610261933"></script>
+<script src="samsam-labels.js?v=202610261933"></script>
+<script src="samsam-taxonomy.js?v=202610261933"></script>
+<script src="samsam-coins.js?v=202610261933"></script>
+<script src="samsam-dropdown.js?v=202610261933"></script>
+<script src="samsam-add.js?v=202610261933"></script>
+<script src="samsam-chart.js?v=202610261933"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -826,8 +826,8 @@
   .card-act .btn-history, .card-act .btn-remove { padding:5px 4px !important; font-size:0.74rem !important; }
   .btn-history { background:transparent; color:var(--fg2); border:1px solid var(--border); border-radius:4px; padding:2px 6px; font-size:0.7rem; cursor:pointer; white-space:nowrap; line-height:1.6; position:relative; }
   .btn-history:hover { border-color:var(--accent); color:var(--accent); }
-  .btn-history:hover::after { content:'History'; position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%); background:#1e293b; color:#f1f5f9; font-size:0.65rem; font-weight:600; padding:3px 7px; border-radius:5px; white-space:nowrap; pointer-events:none; z-index:99; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
-  .btn-history:hover::before { content:''; position:absolute; bottom:calc(100% + 1px); left:50%; transform:translateX(-50%); border:4px solid transparent; border-top-color:#1e293b; pointer-events:none; z-index:99; }
+  .btn-history:hover::after { content:'History'; position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%); background:var(--bg-card-secondary,#1e293b); color:#f1f5f9; font-size:0.65rem; font-weight:600; padding:3px 7px; border-radius:5px; white-space:nowrap; pointer-events:none; z-index:99; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+  .btn-history:hover::before { content:''; position:absolute; bottom:calc(100% + 1px); left:50%; transform:translateX(-50%); border:4px solid transparent; border-top-color:var(--bg-card-secondary,#1e293b); pointer-events:none; z-index:99; }
   .buy-preview { background:var(--bg3); border-radius:8px; padding:10px 12px; font-size:0.82rem; margin-top:10px; line-height:1.7; }
   .buy-preview span { font-weight:700; color:var(--accent); }
   .sell-profit { color:#22c55e; font-weight:700; }
@@ -1455,7 +1455,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610261752"></script>
+<script type="module" src="samsam-cloud.js?v=202610261933"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3775,7 +3775,7 @@ async function saveBaselineEdit() {
     .info-pop em { font-style: normal; color: #0f172a; }
     .info-pop .info-formula { display: block; margin-top: 10px; }
     .info-pop small { display: block; margin-top: 8px; font-size: .75rem; color: #94a3b8; }
-    [data-theme="dark"] .info-pop { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+    [data-theme="dark"] .info-pop { background: var(--bg-card, #1e293b); color: #94a3b8; border: 1px solid var(--border-card, #334155); }
     [data-theme="dark"] .info-pop b, [data-theme="dark"] .info-pop em { color: #f1f5f9; }
     .info-tip:hover .info-pop, .info-tip:focus-visible .info-pop, .info-tip.open .info-pop { display: block; }
     .info-pop.edge-r { left: auto; right: -12px; transform: none; }

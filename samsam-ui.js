@@ -176,6 +176,31 @@
   // One USD formatter for every money amount in the app: thousands separators + exactly 2 decimals.
   // (Unit prices of sub-$1 coins keep extra decimals elsewhere — $0.0004 can't be shown as $0.00.)
   var usdFmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // ── Dark mode: ONE palette for every page and window (the deep navy / midnight violet of the main header) ──
+  // Every page's own colour names (--bg, --bg2, --bg3, --card, --card-solid, --metric-bg, --border, --header-bg) are set
+  // from these tokens, so Main, Holdings / Transactions, Performance, Allocation, Accumulation, Recover and every
+  // window look like one app. Light mode is unchanged.
+  (function darkTheme() {
+    if (document.getElementById('cpThemeCss')) return;
+    var st = document.createElement('style'); st.id = 'cpThemeCss';
+    var D = 'html:root[data-theme="dark"]:not([data-theme-lock])';
+    st.textContent =
+      D + '{--bg-app:#0e0d21;--bg-app-gradient:linear-gradient(180deg,#12102b 0%,#0a0918 100%);' +
+        '--bg-card:#171533;--bg-card-secondary:#1e1b40;--border-card:rgba(255,255,255,.07);' +
+        '--accent-primary:#7c3aed;--accent-glow:rgba(124,58,237,.35);' +
+        '--bg:#0e0d21;--bg2:#171533;--bg3:#1e1b40;--card:#171533;--card-solid:#171533;--metric-bg:#110f28;' +
+        '--border:rgba(255,255,255,.07);--header-bg:#171533;background:#0a0918}' +
+      'html[data-theme="dark"] body{background:#0a0918 var(--bg-app-gradient) no-repeat;background-size:100% 100%;min-height:100vh}' +
+      // the Holdings / Transactions screen sets its own colours — same palette
+      'html[data-theme="dark"] #holdingsOverlay{--bg:#0e0d21;--bg2:#171533;--bg3:#1e1b40;--card:#171533;--border:rgba(255,255,255,.07);' +
+        '--header-bg:#171533;background:#0a0918 var(--bg-app-gradient) no-repeat !important;background-attachment:local !important}' +
+      // loading screen
+      'html[data-theme="dark"] #cpSplash{background:#0a0918 var(--bg-app-gradient) !important}';
+    (document.head || document.documentElement).appendChild(st);
+    var m = document.querySelector('meta[name="theme-color"]');
+    function bar() { if (m) m.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'light' ? '#f0f4f8' : '#12102b'); }
+    bar(); window.addEventListener('samsam-theme', bar);
+  })();
   // Charts: "Building from real prices… 7 / 20 coins" while samsam-history.js downloads the price history
   window.addEventListener('samsam-history', function (e) {
     var d = e.detail || {}, busy = !!d.building && d.total > 0 && d.done < d.total;   // the hourly refresh of the last 2 days stays silent

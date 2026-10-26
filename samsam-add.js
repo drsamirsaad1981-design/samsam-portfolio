@@ -37,7 +37,7 @@
     '.atx-backdrop{position:fixed;inset:0;z-index:100040;background:rgba(2,6,23,.6);display:none;align-items:flex-end;justify-content:center}' +
     '.atx-backdrop.show{display:flex}' +
     'body.atx-open #samsamSyncPill,body.atx-open #samsamSyncMenu{display:none!important}' +
-    '.atx-modal{width:100%;max-width:480px;max-height:92vh;overflow-y:auto;box-sizing:border-box;background:#1e293b;color:#f1f5f9;border:1px solid #334155;text-align:left;' +
+    '.atx-modal{width:100%;max-width:480px;max-height:92vh;overflow-y:auto;box-sizing:border-box;background:var(--bg-card,#1e293b);color:#f1f5f9;border:1px solid var(--border-card,#334155);text-align:left;' +
       'border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.4);font-family:inherit}' +
     '[data-theme="light"] .atx-modal{background:#fff;color:#0f172a;border-color:#e2e8f0}' +
     '@media (min-width:601px){.atx-backdrop{align-items:center}.atx-modal{border-radius:16px}}' +
@@ -46,7 +46,7 @@
     '.atx-x{background:none;border:none;color:inherit;font-size:1.5rem;line-height:1;opacity:.7;cursor:pointer;padding:2px 6px}' +
     '.atx-types{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:rgba(148,163,184,.12);padding:4px;border-radius:12px;margin-bottom:12px}' +
     '.atx-types button{border:none;background:transparent;color:inherit;font:inherit;font-size:.8rem;font-weight:700;padding:9px 4px;border-radius:9px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;justify-content:center;opacity:.75}' +
-    '.atx-types button[aria-checked="true"]{opacity:1;background:#334155;box-shadow:inset 0 0 0 1px var(--atx-c,#64748b)}' +
+    '.atx-types button[aria-checked="true"]{opacity:1;background:var(--bg-card-secondary,#334155);box-shadow:inset 0 0 0 1px var(--atx-c,#64748b)}' +
     '[data-theme="light"] .atx-types button[aria-checked="true"]{background:#fff}' +
     '@media (max-width:380px){.atx-types button{font-size:.72rem;padding:9px 2px}}' +
     '.htx-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}.atx-types button .htx-dot{margin-right:5px}' +
@@ -58,7 +58,7 @@
     '.atx-field small{font-weight:500;color:#94a3b8}' +
     '.atx-field input,.atx-field select{display:block;width:100%;box-sizing:border-box;margin-top:5px;height:44px;padding:0 12px;border-radius:10px;border:1px solid #334155;' +
       'background:rgba(255,255,255,.05);color:inherit;font:inherit;font-size:1rem;color-scheme:dark}' +
-    '.atx-field select option,.atx-field select optgroup{background:#1e293b;color:#f1f5f9}' +
+    '.atx-field select option,.atx-field select optgroup{background:var(--bg-card,#1e293b);color:#f1f5f9}' +
     '[data-theme="light"] .atx-field input,[data-theme="light"] .atx-field select{background:#f8fafc;border-color:#e2e8f0;color-scheme:light}' +
     '[data-theme="light"] .atx-field select option,[data-theme="light"] .atx-field select optgroup{background:#fff;color:#0f172a}' +
     '.atx-field input:focus,.atx-field select:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.2)}' +
@@ -73,7 +73,7 @@
     '#addCoinModal .atx-modal{--atx-c:#7c3aed}' +
     '.ac-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:10px}.ac-grid .ac-full{grid-column:1/-1}' +
     '.ac-find{position:relative}' +
-    '.ac-suggest{position:absolute;left:0;right:0;top:100%;z-index:30;margin:4px 0 0;padding:4px;list-style:none;max-height:300px;overflow-y:auto;background:#0f172a;border:1px solid #334155;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.4)}' +
+    '.ac-suggest{position:absolute;left:0;right:0;top:100%;z-index:30;margin:4px 0 0;padding:4px;list-style:none;max-height:300px;overflow-y:auto;background:var(--bg-app,#0f172a);border:1px solid var(--border-card,#334155);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.4)}' +
     '[data-theme="light"] .ac-suggest{background:#fff;border-color:#e2e8f0}' +
     '.ac-suggest[hidden]{display:none}' +
     '.ac-suggest [role=option]{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;min-width:0;font-weight:500}' +

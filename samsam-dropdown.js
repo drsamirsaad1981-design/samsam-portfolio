@@ -25,7 +25,7 @@
     '.sdd-ico img,.sdd-ico>div{width:20px!important;height:20px!important;font-size:.5rem!important}',
     '.sdd-ico[hidden]{display:none}',
     // panel (shared by popover + sheet)
-    '.sdd-panel{position:fixed;z-index:100050;display:none;flex-direction:column;background:#1e293b;color:#f1f5f9;',
+    '.sdd-panel{position:fixed;z-index:100050;display:none;flex-direction:column;background:var(--bg-card,#1e293b);color:#f1f5f9;',
     '  border:1px solid #334155;border-radius:12px;box-shadow:0 18px 40px rgba(0,0,0,.45);overflow:hidden}',
     '[data-theme=light] .sdd-panel{background:#fff;color:#0f172a;border-color:#e2e8f0;box-shadow:0 18px 40px rgba(15,23,42,.18)}',
     '.sdd-panel.show{display:flex}',
