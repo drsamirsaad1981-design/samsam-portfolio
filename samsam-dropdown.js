@@ -7,7 +7,7 @@
 //
 // Usage:
 //   const dd = SamsamDropdown.create(hostEl, {
-//     options: [{ value, label, sub?, icon? (html) }], value, searchable, searchPlaceholder, maxHeight (desktop list, px),
+//     options: [{ value, label, sub?, subTone? ('pos' | 'neg' → green / red), icon? (html) }], value, searchable, searchPlaceholder, maxHeight (desktop list, px),
 //     ariaLabel, title (sheet title on mobile), onChange(value) });
 //   dd.setOptions([...]); dd.setValue(v); dd.value; dd.open(); dd.close();
 (function () {
@@ -46,6 +46,7 @@
     '.sdd-opt .sdd-check{width:16px;height:16px;margin-left:8px;flex-shrink:0;visibility:hidden}',
     '.sdd-opt[aria-selected=true] .sdd-check{visibility:visible}',
     '.sdd-opt .sdd-sub + .sdd-check{margin-left:8px}',
+    '.sdd-opt .sdd-sub.pos{color:#22c55e;font-weight:700}.sdd-opt .sdd-sub.neg{color:#ef4444;font-weight:700}',
     '.sdd-opt:not(:has(.sdd-sub)) .sdd-check{margin-left:auto}',
     '.sdd-empty{padding:16px;text-align:center;color:#94a3b8;font-size:.85rem}',
     // mobile bottom sheet
@@ -110,7 +111,7 @@
         var sel = String(o.value) === String(state.value);
         return '<li class="sdd-opt" role="option" id="' + id + '-' + i + '" data-i="' + i + '" aria-selected="' + sel + '">' +
           (o.icon ? '<span class="sdd-ico">' + o.icon + '</span>' : '') + '<span>' + esc(o.label) + '</span>' +
-          (o.sub ? '<span class="sdd-sub">' + esc(o.sub) + '</span>' : '') + CHECK + '</li>';
+          (o.sub ? '<span class="sdd-sub' + (o.subTone === 'pos' || o.subTone === 'neg' ? ' ' + o.subTone : '') + '">' + esc(o.sub) + '</span>' : '') + CHECK + '</li>';
       }).join('');
       var si = -1; state.filtered.forEach(function (o, i) { if (String(o.value) === String(state.value)) si = i; });
       setActive(q ? 0 : Math.max(si, 0), true);
