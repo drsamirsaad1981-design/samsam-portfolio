@@ -56,7 +56,7 @@
       '<p>Value change = from prices + added. Green / red follows the price part only. The chart line itself is the value, so a buy shows as a step up.</p>'; } },
     external: { title: 'Links That Leave the App (↗)', body: function () { return '<p>Anything marked <b>↗</b> opens another website in a new tab: <b>CoinMarketCap</b> (coin page), <b>CoinGlass</b> (liquidation heatmap) and <b>CoinCodex</b> (price prediction). Their numbers are theirs, not calculated by this app.</p>'; } },
     // ── Performance / Allocation ──
-    sincePurchase: { title: 'Top & Bottom · USD', body: function () { return '<p>Your best and worst coin by <b>All-Time Profit in dollars</b> — sells included. The % under it is that profit against the coin\'s cost.</p>' +
+    sincePurchase: { title: 'Top Performers · USD', body: function () { return '<p>Your best and worst coin by <b>All-Time Profit in dollars</b> — sells included. The % under it is that profit against the coin\'s cost.</p>' +
       '<div class="cph-f"><b>$</b><code>Coin\'s Realized + Unrealized profit</code></div><div class="cph-f"><b>%</b><code>Coin\'s All-Time Profit ÷ its Cost Basis × 100</code></div><p>Switch to <b>vs BTC</b> to rank every coin against the same money in Bitcoin instead. Coins worth less than $1 or less than 0.1% of your portfolio are left out.</p>'; } },
     allocation: { title: 'Allocation', body: function () { return '<p>How your money is spread across categories.</p><div class="cph-f"><b>Share</b><code>Category value ÷ Total Portfolio × 100</code></div><p>Category value = Σ (Amount × Current Price) of its coins.</p>'; } },
     // ── Accumulation plan ──
@@ -83,8 +83,8 @@
         return '<p>Did this coin do better than <b>the same money in Bitcoin</b>?</p>' +
           '<p>Every time you bought the coin, the app pretends you bought BTC with the same dollars at that moment\'s BTC price; every sell, that you sold BTC for the same dollars. Coins you already held on the baseline date (' + esc(fmtDay(b.date)) + ') count as BTC bought that day at ' + esc(money(b.btcPrice)) + '.</p>' +
           '<div class="cph-f"><b>Coin %</b><code>Coin\'s All-Time Profit ÷ Cost Basis × 100</code></div>' +
-          '<div class="cph-f"><b>Same money in BTC %</b><code>(that BTC × BTC price now − net invested) ÷ Cost Basis × 100</code></div>' +
-          '<div class="cph-f"><b>Portfolio vs BTC</b><code>Coin % − Same money in BTC %</code></div>' +
+          '<div class="cph-f"><b>BTC Benchmark %</b><code>(that BTC × BTC price now − net invested) ÷ Cost Basis × 100 — what the same money made in Bitcoin</code></div>' +
+          '<div class="cph-f"><b>Portfolio vs BTC</b><code>Coin % − BTC Benchmark %</code></div>' +
           '<p>Your BTC is compared with itself, so it always shows 0.</p>';
       },
     },
