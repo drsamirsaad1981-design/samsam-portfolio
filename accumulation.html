@@ -16,14 +16,14 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610292308"></script>
-<script src="samsam-hints.js?v=202610292308"></script>
-<script src="samsam-vault.js?v=202610292308"></script>
-<script src="samsam-labels.js?v=202610292308"></script>
-<script src="samsam-taxonomy.js?v=202610292308"></script>
-<script src="samsam-coins.js?v=202610292308"></script>
-<script src="samsam-dropdown.js?v=202610292308"></script>
-<script src="samsam-add.js?v=202610292308"></script>
+<script src="samsam-ui.js?v=202610300134"></script>
+<script src="samsam-hints.js?v=202610300134"></script>
+<script src="samsam-vault.js?v=202610300134"></script>
+<script src="samsam-labels.js?v=202610300134"></script>
+<script src="samsam-taxonomy.js?v=202610300134"></script>
+<script src="samsam-coins.js?v=202610300134"></script>
+<script src="samsam-dropdown.js?v=202610300134"></script>
+<script src="samsam-add.js?v=202610300134"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -577,7 +577,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
       <tr>
         <th class="sortable" onclick="setSort('name')">Coin</th>
         <th class="sortable" onclick="setSort('targetQty')"><span data-label="TARGET_AMOUNT">Target Amount</span><button type="button" class="cp-hint" data-hint="targetAmount" aria-label="About Target Amount"></button></th>
-        <th class="sortable" onclick="setSort('actualQty')"><span data-label="ACTUAL_AMOUNT">Actual Amount</span></th>
+        <th class="sortable" onclick="setSort('holdVal')">Holdings</th>
         <th class="sortable" onclick="setSort('pendingQty')"><span data-label="PENDING_AMOUNT">Pending Amount</span><button type="button" class="cp-hint" data-hint="pendingAmount" aria-label="About Pending Amount"></button></th>
         <th onclick="setSort('targetPrice')" class="sortable">💰 <span data-label="BUY_AT">Buy At</span><button type="button" class="cp-hint" data-hint="buyAt" aria-label="About Buy at %"></button></th>
         <th class="sortable" onclick="setSort('costToTarget')"><span data-label="COST_TO_TARGET">Cost to Target</span><button type="button" class="cp-hint" data-hint="costToTarget" aria-label="About Cost to Target"></button></th>
@@ -619,7 +619,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610292308"></script>
+<script type="module" src="samsam-cloud.js?v=202610300134"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -885,6 +885,7 @@ function getSortValue(entry, col) {
     case 'name':        return (entry.name || entry.sym || '').toLowerCase();
     case 'targetQty':   return entry.targetQty || 0;
     case 'actualQty':   return r.actualQty;
+    case 'holdVal':     return r.actualQty * r.currentPrice;
     case 'pendingQty':  return r.pendingQty;
     case 'currentPrice':return r.currentPrice;
     case 'targetPrice': return r.targetPrice || 0;
@@ -935,7 +936,7 @@ function renderTable() {
       <td>
         <span class="val-cell">${entry.targetQty > 0 ? fmtQty(entry.targetQty) + `<span style="font-size:.7rem;color:var(--fg2);margin-left:4px">${entry.sym}</span>` : '<span class="no-price">Set target</span>'}<button type="button" class="val-edit" onclick="promptTarget(${idx})" title="Change the target amount" aria-label="Change the target amount for ${entry.sym}">${SamsamUI.icon('pencil')}</button></span>
       </td>
-      <td>${fmtQty(r.actualQty)} <span style="font-size:.7rem;color:var(--fg2)">${entry.sym}</span></td>
+      <td>${SamsamCoins.holdCell(entry.sym, r.actualQty * r.currentPrice, r.actualQty, { align: 'left', noValue: !(r.currentPrice > 0) })}</td>
       <td style="color:${r.pendingQty > 0 ? 'var(--red)' : 'var(--green)'}">
         ${r.pendingQty > 0 ? fmtQty(r.pendingQty) : '✓'}
         ${r.pendingQty > 0 ? `<span style="font-size:.7rem;color:var(--fg2)"> ${entry.sym}</span>` : ''}
