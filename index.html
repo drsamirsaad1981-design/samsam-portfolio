@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610291930"></script>
-<script src="samsam-hints.js?v=202610291930"></script>
-<script src="samsam-vault.js?v=202610291930"></script>
-<script src="samsam-labels.js?v=202610291930"></script>
-<script src="samsam-taxonomy.js?v=202610291930"></script>
-<script src="samsam-coins.js?v=202610291930"></script>
-<script src="samsam-dropdown.js?v=202610291930"></script>
-<script src="samsam-add.js?v=202610291930"></script>
-<script src="samsam-chart.js?v=202610291930"></script>
+<script src="samsam-ui.js?v=202610291948"></script>
+<script src="samsam-hints.js?v=202610291948"></script>
+<script src="samsam-vault.js?v=202610291948"></script>
+<script src="samsam-labels.js?v=202610291948"></script>
+<script src="samsam-taxonomy.js?v=202610291948"></script>
+<script src="samsam-coins.js?v=202610291948"></script>
+<script src="samsam-dropdown.js?v=202610291948"></script>
+<script src="samsam-add.js?v=202610291948"></script>
+<script src="samsam-chart.js?v=202610291948"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1455,7 +1455,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610291930"></script>
+<script type="module" src="samsam-cloud.js?v=202610291948"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3132,17 +3132,24 @@ function openCoinTx(sym) {
 }
 // "Back to Holdings": step back if we came from the list, otherwise replace the URL.
 function closeCoinTx() {
-  if (history.state && history.state.hov === 'tx') history.back();
+  if (history.state && (history.state.hov === 'tx' || history.state.ret)) history.back();   // ret: came from Allocation / Performance → back there
   else { history.replaceState({ hov: 'list' }, '', '#holdings'); applyHoldingsRoute(); }
 }
 function selectCoinTx(sym) {
-  history.replaceState({ hov: 'tx' }, '', '#holdings/' + encodeURIComponent(sym));
+  history.replaceState(Object.assign({}, history.state, { hov: 'tx' }), '', '#holdings/' + encodeURIComponent(sym));   // keeps "ret"
   applyHoldingsRoute();
 }
 function hovBack() { if (coinTxSym) closeCoinTx(); else closeHoldingsView(); }
 
 // Restore the right screen on load / refresh, and follow the Back button
-window.addEventListener('DOMContentLoaded', function() { if (holdingsRoute().open) setTimeout(applyHoldingsRoute, 300); });
+window.addEventListener('DOMContentLoaded', function() {
+  // Opened from another page (SamsamUI.openCoin) → Back on this screen returns to that page
+  try { const r = JSON.parse(sessionStorage.getItem('cpReturn') || 'null'); sessionStorage.removeItem('cpReturn');
+    const route = holdingsRoute();
+    if (r && route.sym === r.sym && Date.now() - r.t < 60000 && history.length > 1) history.replaceState({ hov: 'tx', ret: 1 }, '', location.hash);
+  } catch (_) {}
+  if (holdingsRoute().open) setTimeout(applyHoldingsRoute, 300);
+});
 window.addEventListener('popstate', applyHoldingsRoute);
 
 // ── Coin transactions & performance ─────────────────────────────────────────

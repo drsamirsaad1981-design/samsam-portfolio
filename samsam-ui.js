@@ -493,6 +493,11 @@
     confirm: function (m, o) { return dialog('confirm', m, o); },
     prompt: function (m, o) { return dialog('prompt', m, o); },
   };
-  window.SamsamUI = { goHtml: goHtml, icons: ICONS, icon: function (n) { return ICONS[n] || ''; }, liveDot: liveDot,
+  // Open a coin's Transactions screen (main page) from another page; its Back comes back here.
+  function openCoin(sym) {
+    try { sessionStorage.setItem('cpReturn', JSON.stringify({ sym: String(sym).toUpperCase(), t: Date.now() })); } catch (_) {}
+    location.href = 'index.html#holdings/' + encodeURIComponent(sym);
+  }
+  window.SamsamUI = { goHtml: goHtml, openCoin: openCoin, icons: ICONS, icon: function (n) { return ICONS[n] || ''; }, liveDot: liveDot,
     toggleTheme: toggleTheme, applyTheme: applyTheme, currentTheme: current, refresh: init };
 })();
