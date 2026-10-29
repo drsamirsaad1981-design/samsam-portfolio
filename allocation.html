@@ -15,13 +15,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202610292125"></script>
-<script src="samsam-hints.js?v=202610292125"></script>
-<script src="samsam-vault.js?v=202610292125"></script>
-<script src="samsam-labels.js?v=202610292125"></script>
-<script src="samsam-taxonomy.js?v=202610292125"></script>
-<script src="samsam-coins.js?v=202610292125"></script>
-<script src="samsam-dropdown.js?v=202610292125"></script>
+<script src="samsam-ui.js?v=202610292308"></script>
+<script src="samsam-hints.js?v=202610292308"></script>
+<script src="samsam-vault.js?v=202610292308"></script>
+<script src="samsam-labels.js?v=202610292308"></script>
+<script src="samsam-taxonomy.js?v=202610292308"></script>
+<script src="samsam-coins.js?v=202610292308"></script>
+<script src="samsam-dropdown.js?v=202610292308"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -144,7 +144,7 @@ body {
 .coin-info { min-width: 0; }
 .coin-sym { font-size: .95rem; font-weight: 800; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .coin-sym a { color: inherit; text-decoration: none; }
-.coin-qty { font-size: .74rem; color: var(--fg2); margin-top: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coin-qty { font-size: .72rem; color: var(--fg2); margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .coin-right { text-align: right; min-width: 96px; font-variant-numeric: tabular-nums; }
 .coin-val { font-size: .95rem; font-weight: 800; line-height: 1.2; white-space: nowrap; }
 .coin-share { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 4px; }
@@ -235,7 +235,7 @@ body {
 
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610292125"></script>
+<script type="module" src="samsam-cloud.js?v=202610292308"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
 
@@ -269,7 +269,7 @@ function loadPortfolio() {
   const subscribe = S => S.onChange(d => {
     portfolio = d.portfolio.map(c => ({
       sym: c.sym, qty: c.qty, currentPrice: c.currentPrice, basePrice: c.basePrice,
-      cat: c.cat || 'other', walletValue: c.qty * c.currentPrice, logoUrl: c.logoUrl, cgId: c.cgId,
+      cat: c.cat || 'other', walletValue: c.qty * c.currentPrice, logoUrl: c.logoUrl, cgId: c.cgId, change24h: c.change24h,
     }));
     renderOverview();
   });
@@ -433,12 +433,10 @@ function selectCat(cat) {
     const sym = c.sym;
     return `<div class="coin-row" data-sym="${c.sym}" role="link" tabindex="0" aria-label="${c.sym} — open transactions" onclick="openCoin('${c.sym}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCoin('${c.sym}')}">
       <div class="coin-logo">${SamsamCoins.icon(c.sym, 36, { logoUrl: c.logoUrl })}</div>
-      <div class="coin-info">
-        <div class="coin-sym">${sym}</div>
-        <div class="coin-qty">${fmtQty(c.qty, c.sym)}</div>
-      </div>
+      <div class="coin-info">${SamsamCoins.assetText(c.sym, { price: c.currentPrice, change24h: c.change24h, link: false })}</div>
       <div class="coin-right">
         <div class="coin-val">${fmtUSD(c.val)}</div>
+        <div class="coin-qty">${fmtQty(c.qty, c.sym)}</div>
         <div class="coin-share"><span class="coin-pct">${pct.toFixed(2)}%</span><span class="alloc-bar-wrap"><span class="alloc-bar" style="display:block;width:${barW}%;background:${color}"></span></span></div>
       </div>
       <span class="coin-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>

@@ -5,14 +5,14 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610292125"></script>
-<script src="samsam-hints.js?v=202610292125"></script>
-<script src="samsam-vault.js?v=202610292125"></script>
-<script src="samsam-labels.js?v=202610292125"></script>
-<script src="samsam-taxonomy.js?v=202610292125"></script>
-<script src="samsam-dropdown.js?v=202610292125"></script>
-<script src="samsam-coins.js?v=202610292125"></script>
-<script src="samsam-chart.js?v=202610292125"></script>
+<script src="samsam-ui.js?v=202610292308"></script>
+<script src="samsam-hints.js?v=202610292308"></script>
+<script src="samsam-vault.js?v=202610292308"></script>
+<script src="samsam-labels.js?v=202610292308"></script>
+<script src="samsam-taxonomy.js?v=202610292308"></script>
+<script src="samsam-dropdown.js?v=202610292308"></script>
+<script src="samsam-coins.js?v=202610292308"></script>
+<script src="samsam-chart.js?v=202610292308"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -685,7 +685,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610292125"></script>
+<script type="module" src="samsam-cloud.js?v=202610292308"></script>
 <script>
 // ── Constants ──
 
@@ -1080,18 +1080,9 @@ function render() {
   const listRows = perfCat ? rows.filter(r => catOfRow(r) === perfCat) : rows;
   const html = listRows.map(({ c, currentPrice, change24h, value, pnl, pct }) => {
     const isPos  = pnl >= 0;
-    const chgHtml = change24h !== null
-      ? `<span class="a-chg"><span class="a-dot">•</span> <span class="${change24h >= 0 ? 'pos' : 'neg'}">${fmtPct(change24h)}</span></span>` : '';
 
-    const cgUrl = getCoinGeckoUrl(c.sym, c.cgId);
-    const assetInner = `${coinIconHtml(c)}
-        <div class="asset-text">
-          <div class="a-sym">${c.sym}${cgUrl ? SamsamCoins.EXT : ''}</div>
-          <div class="a-line"><span>${fmtPrice(currentPrice)}</span>${chgHtml}</div>
-        </div>`;
-    const assetEl = cgUrl
-      ? `<a href="${cgUrl}" target="_blank" rel="noopener" class="asset asset-link ext-link" title="Open ${c.sym} on CoinMarketCap">${assetInner}</a>`
-      : `<div class="asset">${assetInner}</div>`;
+    // Asset: shared column (samsam-coins.js) — logo · symbol ↗ / price • 24h, the same on every page
+    const assetEl = SamsamCoins.assetCell(c.sym, { price: currentPrice, change24h, logoUrl: c.logoUrl, cgId: c.cgId, name: COIN_NAMES[c.sym] });
 
     return `<div class="coin-row">
       ${assetEl}

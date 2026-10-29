@@ -253,6 +253,42 @@
     var u = cgUrl(sym, opts.cgId);
     return u ? '<a class="ext-link" href="' + u + '" ' + LINK.replace('text-decoration:none', 'display:block;min-width:0;text-decoration:none') + ' title="Open ' + esc(sym) + ' on CoinMarketCap">' + inner + '</a>' : '<div style="min-width:0">' + inner + '</div>';
   }
+  // ── One Asset column for every page (same as Performance) ──
+  //   logo · SYMBOL ↗            (logo + symbol open CoinMarketCap unless link:false; full name on hover)
+  //          $price • ±24h%       (o.after = extra HTML after it, e.g. a ✏️; o.below = a line under it, e.g. a category tag)
+  // assetText = the text part alone (for layouts that keep the logo in its own column); assetCell = logo + text.
+  var astCss = false;
+  function assetCss() {
+    if (astCss || document.getElementById('astCss')) return; astCss = true;
+    var st = document.createElement('style'); st.id = 'astCss';
+    st.textContent = '.ast{display:flex;align-items:center;gap:10px;min-width:0}.ast-ic{display:inline-flex;flex-shrink:0;border-radius:50%}' +
+      '.ast-t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;max-width:100%}.ast-top{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;max-width:100%}' +
+      '.ast-sym{display:inline-block;font-size:.92rem;font-weight:800;line-height:1.2;color:var(--fg,inherit);text-decoration:none;white-space:nowrap;max-width:100%}' +
+      'a.ast-sym{text-decoration:underline transparent;text-underline-offset:3px;transition:color .15s,text-decoration-color .15s}a.ast-sym:active{color:#60a5fa}@media (hover:hover){a.ast-sym:hover{color:#60a5fa;text-decoration-color:currentColor}}[data-theme=light] a.ast-sym:hover,[data-theme=light] a.ast-sym:active{color:#2563eb}' +
+      '.ast-line{display:flex;flex-wrap:wrap;align-items:center;column-gap:4px;row-gap:1px;font-size:.72rem;font-weight:600;color:var(--fg2,#94a3b8);font-variant-numeric:tabular-nums;line-height:1.3;text-align:left}' +
+      '.ast-chg{display:inline-flex;align-items:center;white-space:nowrap}.ast-dot{opacity:.6;margin-right:3px}.ast-chg .up{color:var(--green,#22c55e);font-weight:700}.ast-chg .down{color:var(--red,#ef4444);font-weight:700}' +
+      '.ast-line .val-cell{display:inline-flex;align-items:center}';
+    document.head.appendChild(st);
+  }
+  function assetText(sym, o) {
+    o = o || {}; assetCss();
+    var u = o.link === false ? null : cgUrl(sym, o.cgId), name = o.name || NAMES[sym] || '';
+    var title = esc(name ? name + ' (' + sym + ')' : sym) + (u ? ' — open on CoinMarketCap' : '');
+    var symHtml = u ? '<a class="ast-sym ext-link" href="' + u + '" target="_blank" rel="noopener" title="' + title + '">' + esc(sym) + EXT + '</a>'
+                    : '<span class="ast-sym" title="' + title + '">' + esc(sym) + '</span>';
+    var p = +o.price || 0, ch = typeof o.change24h === 'number' && isFinite(o.change24h) ? o.change24h : null;
+    var priceHtml = p > 0 ? '<span class="ast-price">' + (window.SamsamFmt ? SamsamFmt.price(p) : '$' + p) + '</span>' : '<span class="ast-price">—</span>';
+    var chg = ch === null ? '' : '<span class="ast-dot">•</span><span class="' + (ch >= 0 ? 'up' : 'down') + '">' + signedPct(ch, 2) + '</span>';
+    // the % (and a ✏️) stay together: on a narrow row they drop under the price as one piece
+    var tail = chg ? '<span class="ast-chg">' + chg + (o.after || '') + '</span>' : (o.after || '');
+    return '<div class="ast-t"><div class="ast-top">' + symHtml + (o.badge || '') + '</div><div class="ast-line">' + priceHtml + tail + '</div>' + (o.below || '') + '</div>';
+  }
+  function assetIcon(sym, o) {
+    o = o || {}; assetCss();
+    var size = o.size || 34;
+    return o.link === false ? '<span class="ast-ic">' + icon(sym, size, o) + '</span>' : '<span class="ast-ic">' + iconLinked(sym, size, o) + '</span>';
+  }
+  function assetCell(sym, o) { return '<div class="ast">' + assetIcon(sym, o) + assetText(sym, o) + '</div>'; }
   // CoinGlass liquidation heatmap for a coin (opens in a new tab). Symbol differs on CoinGlass for a few coins.
   var LIQ_SYMS = { GRAM: 'TON' };
   function liqMapUrl(sym) { var s = LIQ_SYMS[sym] || String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); return 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(s); }
@@ -366,5 +402,5 @@
   function signedPct(p, d) { d = d == null ? 2 : d; return (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p).toFixed(d) + '%'; }
   // other CoinGecko ids a coin is also listed under (the first one may lack price history)
   var CG_ALT = { PONS: ['pons'] };
-  window.SamsamCoins = { CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();
