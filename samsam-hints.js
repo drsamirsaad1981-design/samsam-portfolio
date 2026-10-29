@@ -56,8 +56,8 @@
       '<p>Value change = from prices + added. Green / red follows the price part only. The chart line itself is the value, so a buy shows as a step up.</p>'; } },
     external: { title: 'Links That Leave the App (↗)', body: function () { return '<p>Anything marked <b>↗</b> opens another website in a new tab: <b>CoinMarketCap</b> (coin page), <b>CoinGlass</b> (liquidation heatmap) and <b>CoinCodex</b> (price prediction). Their numbers are theirs, not calculated by this app.</p>'; } },
     // ── Performance / Allocation ──
-    sincePurchase: { title: 'Since Purchase', body: function () { return '<p>Your best and worst coin by <b>All-Time Profit %</b> — sells included.</p>' +
-      '<div class="cph-f"><b>%</b><code>Coin\'s All-Time Profit ÷ its Cost Basis × 100</code></div><p>Coins worth less than $1 or less than 0.1% of your portfolio are left out.</p>'; } },
+    sincePurchase: { title: 'Top & Bottom · USD', body: function () { return '<p>Your best and worst coin by <b>All-Time Profit in dollars</b> — sells included. The % under it is that profit against the coin\'s cost.</p>' +
+      '<div class="cph-f"><b>$</b><code>Coin\'s Realized + Unrealized profit</code></div><div class="cph-f"><b>%</b><code>Coin\'s All-Time Profit ÷ its Cost Basis × 100</code></div><p>Switch to <b>vs BTC</b> to rank every coin against the same money in Bitcoin instead. Coins worth less than $1 or less than 0.1% of your portfolio are left out.</p>'; } },
     allocation: { title: 'Allocation', body: function () { return '<p>How your money is spread across categories.</p><div class="cph-f"><b>Share</b><code>Category value ÷ Total Portfolio × 100</code></div><p>Category value = Σ (Amount × Current Price) of its coins.</p>'; } },
     // ── Accumulation plan ──
     targetAmount: { title: 'Target Amount', body: function () { return '<p>How many coins you want to hold <b>in total</b> — not how many more to buy.</p>'; } },

@@ -5,14 +5,14 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610292026"></script>
-<script src="samsam-hints.js?v=202610292026"></script>
-<script src="samsam-vault.js?v=202610292026"></script>
-<script src="samsam-labels.js?v=202610292026"></script>
-<script src="samsam-taxonomy.js?v=202610292026"></script>
-<script src="samsam-dropdown.js?v=202610292026"></script>
-<script src="samsam-coins.js?v=202610292026"></script>
-<script src="samsam-chart.js?v=202610292026"></script>
+<script src="samsam-ui.js?v=202610292106"></script>
+<script src="samsam-hints.js?v=202610292106"></script>
+<script src="samsam-vault.js?v=202610292106"></script>
+<script src="samsam-labels.js?v=202610292106"></script>
+<script src="samsam-taxonomy.js?v=202610292106"></script>
+<script src="samsam-dropdown.js?v=202610292106"></script>
+<script src="samsam-coins.js?v=202610292106"></script>
+<script src="samsam-chart.js?v=202610292106"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -103,7 +103,10 @@ body {
   width: 100%;
 }
 /* P/L Breakdown card — full width below the two summary cards */
-.movers-perf { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-width: 0; }
+.movers-perf { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr; gap: 10px; min-width: 0; }
+.mv-seg { margin-left: auto; display: inline-flex; flex-shrink: 0; background: rgba(148,163,184,.14); border-radius: 9px; padding: 2px; gap: 2px; }
+.mv-seg button { border: none; background: transparent; color: var(--fg2); font: inherit; font-size: .72rem; font-weight: 800; padding: 5px 10px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+.mv-seg button[aria-pressed="true"] { background: var(--accent); color: #fff; box-shadow: 0 1px 4px rgba(59,130,246,.35); }
 .movers-block { min-width: 0; }
 .movers-perf .mv-card { background: var(--card); border: none; box-shadow: var(--shadow); height: 100%; align-content: start; }
 /* Computer: everything on one 1200px-wide grid — totals, Since Purchase / VS Bitcoin, chart, breakdown and list share the same edges */
@@ -144,7 +147,7 @@ body {
 }
 .pnl-bd-totals {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));   /* never wider than the screen */
+  grid-template-columns: repeat(2, minmax(0, 1fr));   /* Unrealized | Realized — never wider than the screen */
   gap: 8px;
   margin-bottom: 14px;
 }
@@ -171,10 +174,6 @@ body {
 /* three numbers side by side on a phone: a bit smaller, and a very long amount wraps instead of widening the page */
 @media (max-width: 420px) {
   .pnl-bd-stat-val { font-size: 1.1rem; overflow-wrap: anywhere; }
-  /* phone: Unrealized | Realized on one row, All-Time Profit (their sum, tappable) full width under them */
-  .pnl-bd-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .pnl-bd-totals > .pnl-bd-stat:nth-child(3) { grid-column: 1 / -1; }
-  .pnl-bd-totals > .pnl-bd-stat:nth-child(3) .pnl-bd-stat-val { font-size: 1.35rem; }
 }
 .pnl-bd-stat-pct {
   font-size: 0.8rem;
@@ -526,7 +525,7 @@ body {
     padding-left: 0;
     padding-right: 0;
   }
-  .pnl-bd-totals { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pnl-bd-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pnl-bd-stat-val { font-size: 1.45rem; }
   .pnl-bd-stat-label { font-size: 0.78rem; }
   .pnl-bd-stat-pct { font-size: 0.85rem; }
@@ -614,8 +613,7 @@ body {
 
     <!-- ── Best / worst performer: since purchase, and vs BTC (Golden Triangle) ── -->
     <div class="movers-perf" id="moversPerf" aria-live="polite">
-      <div class="movers-block" id="moversPnl"></div>
-      <div class="movers-block" id="moversBtc"></div>
+      <div class="movers-block" id="moversOne"></div>
     </div>
 
     <!-- ── Performance chart — same data + renderer as the main-page card, full width ── -->
@@ -653,11 +651,6 @@ body {
           <div class="pnl-bd-stat-val" id="bdRealized">—</div>
           <div class="pnl-bd-stat-pct" id="bdRealizedNote" style="font-size:0.65rem;color:var(--fg2);background:none;padding:0">from sells</div>
         </div>
-        <div class="pnl-bd-stat">
-          <div class="pnl-bd-stat-label">All-Time Profit</div>
-          <div class="pnl-bd-stat-val" id="bdTotal">—</div>
-          <div class="pnl-bd-stat-pct" id="bdTotalPct">—</div>
-        </div>
       </div>
     </div>
   </div>
@@ -690,7 +683,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610292026"></script>
+<script type="module" src="samsam-cloud.js?v=202610292106"></script>
 <script>
 // ── Constants ──
 
@@ -971,26 +964,40 @@ const sortKey = () => sortMode === 'value' ? 'value' : (pnlUnit === 'pct' ? 'pct
 // ── Best / worst performer: since purchase ($ · %) and vs BTC; tiny holdings left out ──
 // BTC reference price = BTC on the baseline date (a cloud setting, changed on the main page) — same as "Portfolio vs BTC" there.
 function baselineNow() { try { if (window.Samsam && Samsam.getBaseline) return Samsam.getBaseline(); } catch (_) {} return { date: '2026-10-15', btcPrice: 81162 }; }
+// One card, two rankings — each computed on its own over every coin (tiny holdings left out):
+//   USD    → All-Time Profit in $ (sells included)
+//   vs BTC → coin's profit % minus what the same dollars, put into BTC at each buy/sell, would have made (samsam-core.js → vsBtcByCoin)
+let moverMode = (() => { try { return localStorage.getItem('perfMoverMode') === 'btc' ? 'btc' : 'usd'; } catch (_) { return 'usd'; } })();
+let moverData = null;
+function setMoverMode(m) {
+  moverMode = m === 'btc' ? 'btc' : 'usd';
+  try { localStorage.setItem('perfMoverMode', moverMode); } catch (_) {}
+  if (moverData) renderPerfMovers(moverData.rows, moverData.totalValue);
+}
 function renderPerfMovers(rows, totalValue) {
+  moverData = { rows, totalValue };
   const C = SamsamCoins, money = v => (v >= 0 ? '+' : '−') + fmtUSD(Math.abs(v));
   const open = sym => `SamsamUI.openCoin('${sym}')`;
-  const pnlRows = rows.filter(r => r.cost > 0).map(r => ({ sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: r.pct, pnl: r.pnl }));
-  const m1 = C.pickMovers(pnlRows, totalValue);
-  const half1 = (label, r) => r ? { label, row: r, pct: r.score, text: money(r.pnl), text2: `• ${C.signedPct(r.score)}`, onClickJs: open(r.sym) } : { label };
-  const head1 = { title: '🏆 Since Purchase', badge: 'All-Time Profit', hint: 'sincePurchase' };
-  document.getElementById('moversPnl').innerHTML = m1 ? C.moversCard({ head: head1, best: half1('Best Performer', m1.best), worst: half1('Worst Performer', m1.worst) })
-    : C.moversCard({ head: head1, empty: 'Appears once prices load.' });
-  // VS Bitcoin: each coin against the same money in Bitcoin (samsam-core.js → vsBtcByCoin) — same numbers as the main page
+  const seg = `<span class="mv-seg" role="group" aria-label="Rank by"><button type="button" id="mvUsd" aria-pressed="${moverMode === 'usd'}" onclick="setMoverMode('usd')">USD</button><button type="button" id="mvBtc" aria-pressed="${moverMode === 'btc'}" onclick="setMoverMode('btc')">vs BTC</button></span>`;
+  const head = { title: 'Top & Bottom Performers', hint: moverMode === 'btc' ? 'vsBtc' : 'sincePurchase', extra: seg };
+  const host = document.getElementById('moversOne');
+  if (moverMode === 'usd') {
+    const usdRows = rows.filter(r => r.cost > 0).map(r => ({ sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: r.pnl, pct: r.pct }));
+    const m = C.pickMovers(usdRows, totalValue);
+    const half = (label, r) => r ? { label, row: r, pct: r.score, text: money(r.score), text2: `• ${C.signedPct(r.pct)}`, onClickJs: open(r.sym) } : { label };
+    host.innerHTML = m ? C.moversCard({ head, best: half('Best Performer', m.best), worst: half('Worst Performer', m.worst) })
+      : C.moversCard({ head, empty: 'Appears once prices load.' });
+    return;
+  }
   const btc = (livePrices.BTC && livePrices.BTC.price) || (portfolio.find(c => c.sym === 'BTC') || {}).currentPrice || 0;
   const bl = baselineNow(), st = window.Samsam && Samsam.isReady() ? Samsam.getState() : null;
   const prices = {}; rows.forEach(r => { prices[r.c.sym] = r.currentPrice; });
   const vs = st && btc > 0 ? Samsam.core.vsBtcByCoin(st.coins, st.transactions, { prices, btcNow: btc, btcAt: Samsam.core.btcPriceLookup(st.perfSnaps), baselineBtc: bl.btcPrice }) : {};
   const vsRows = rows.filter(r => r.cost > 0 && r.c.sym !== 'BTC' && vs[r.c.sym]).map(r => ({ sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: vs[r.c.sym].pct, own: vs[r.c.sym].coinPct, btcSame: vs[r.c.sym].btcPct }));
-  const m2 = C.pickMovers(vsRows, totalValue);
-  const half2 = (label, r) => r ? { label, row: r, pct: r.score, text: C.signedPct(r.score, 1), text2: 'vs BTC', split: [['Coin', C.signedPct(r.own, 1)], ['Same $ in BTC', C.signedPct(r.btcSame, 1)]], onClickJs: open(r.sym) } : { label };
-  const head2 = { title: 'VS Bitcoin', badge: 'Same money in BTC', logo: './logo-mark.svg?v=1', hint: 'vsBtc' };
-  document.getElementById('moversBtc').innerHTML = m2 ? C.moversCard({ head: head2, best: half2('Best', m2.best), worst: half2('Worst', m2.worst) })
-    : C.moversCard({ head: head2, empty: 'Appears once the BTC price loads.' });
+  const m = C.pickMovers(vsRows, totalValue);
+  const half = (label, r) => r ? { label, row: r, pct: r.score, text: C.signedPct(r.score, 1), text2: 'vs BTC', split: [['Coin', C.signedPct(r.own, 1)], ['Same $ in BTC', C.signedPct(r.btcSame, 1)]], onClickJs: open(r.sym) } : { label };
+  host.innerHTML = m ? C.moversCard({ head, best: half('Best Performer', m.best), worst: half('Worst Performer', m.worst) })
+    : C.moversCard({ head, empty: 'Appears once the BTC price loads.' });
 }
 
 function render() {
@@ -1050,8 +1057,6 @@ function render() {
   const scopeRealized = catScopeData ? { total: catScopeData.agg.realized, count: catScopeData.agg.sellCount } : realized;
   const scopeUnreal = scope.unrealized;
   const unrealizedPct = scopeCost > 0 ? (scopeUnreal / scopeCost * 100) : 0;
-  const totalCombined = scope.total;
-  const totalCombinedPct = scope.pct;
 
   const bdUnrealized = document.getElementById('bdUnrealized');
   bdUnrealized.textContent = fmtUSD(scopeUnreal);
@@ -1066,16 +1071,7 @@ function render() {
   bdRealized.textContent = scopeRealized.count > 0 ? fmtUSD(scopeRealized.total) : '—';
   bdRealized.className = 'pnl-bd-stat-val ' + (scopeRealized.total >= 0 ? 'pos' : 'neg');
   document.getElementById('bdRealizedNote').textContent = scopeRealized.count > 0 ? `from ${scopeRealized.count} sell${scopeRealized.count === 1 ? '' : 's'}` : 'from sells';
-  CPProfit.bind(document.getElementById('bdTotal').parentElement, () => (catScopeData ? catScopeData.ap : allTimeData), () => ({ scope: catScopeData ? catScopeData.label : 'Whole Portfolio' }));
-
-  const bdTotal = document.getElementById('bdTotal');
-  bdTotal.textContent = fmtUSD(totalCombined);
-  bdTotal.className = 'pnl-bd-stat-val ' + (totalCombined >= 0 ? 'pos' : 'neg');
-
-  const bdTPct = document.getElementById('bdTotalPct');
-  bdTPct.textContent = fmtPct(totalCombinedPct);
-  bdTPct.className = 'pnl-bd-stat-pct ' + (totalCombined >= 0 ? 'pos' : 'neg');
-  bdTPct.style.background = totalCombined >= 0 ? 'var(--green-bg)' : 'var(--red-bg)';
+  // (All-Time Profit = the Category card above and the header card — not repeated here)
 
 
   // Row HTML — the coins of the category picked above (all coins when "All Coins")
