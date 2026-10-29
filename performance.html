@@ -5,14 +5,14 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610291948"></script>
-<script src="samsam-hints.js?v=202610291948"></script>
-<script src="samsam-vault.js?v=202610291948"></script>
-<script src="samsam-labels.js?v=202610291948"></script>
-<script src="samsam-taxonomy.js?v=202610291948"></script>
-<script src="samsam-dropdown.js?v=202610291948"></script>
-<script src="samsam-coins.js?v=202610291948"></script>
-<script src="samsam-chart.js?v=202610291948"></script>
+<script src="samsam-ui.js?v=202610292026"></script>
+<script src="samsam-hints.js?v=202610292026"></script>
+<script src="samsam-vault.js?v=202610292026"></script>
+<script src="samsam-labels.js?v=202610292026"></script>
+<script src="samsam-taxonomy.js?v=202610292026"></script>
+<script src="samsam-dropdown.js?v=202610292026"></script>
+<script src="samsam-coins.js?v=202610292026"></script>
+<script src="samsam-chart.js?v=202610292026"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -328,6 +328,17 @@ body {
 }
 .sort-tab .tab-arrow { display: none; }
 .sort-tab.active .tab-arrow { display: inline; }
+/* P&L group: P&L (tap again = flip ↓/↑) + $ / % switch */
+.sort-group { flex: 1.6; display: flex; align-items: center; gap: 4px; border-radius: 9px; padding-right: 3px; transition: background .18s; }
+.sort-group .sort-tab { flex: 1; }
+.sort-group.active { background: var(--accent); box-shadow: 0 1px 4px rgba(59,130,246,0.35); }
+.sort-group.active .sort-tab.active { background: transparent; box-shadow: none; }
+.pnl-unit { display: inline-flex; flex-shrink: 0; background: rgba(148,163,184,.14); border-radius: 7px; padding: 2px; gap: 2px; }
+.pnl-unit button { border: none; background: transparent; color: var(--fg2); font: inherit; font-size: .72rem; font-weight: 800; min-width: 26px; padding: 4px 6px; border-radius: 5px; cursor: pointer; }
+.pnl-unit button[aria-pressed="true"] { background: var(--card-solid, #fff); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.sort-group.active .pnl-unit { background: rgba(255,255,255,.18); }
+.sort-group.active .pnl-unit button { color: rgba(255,255,255,.8); }
+.sort-group.active .pnl-unit button[aria-pressed="true"] { background: #fff; color: #1e3a8a; }
 
 /* ── Column header ── */
 .col-header {
@@ -335,9 +346,9 @@ body {
 }
 .col-header-inner {
   display: grid;
-  grid-template-columns: 1fr 82px 90px;
-  gap: 0;
-  padding-left: 10px;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 8px;
+  padding: 0 13px;
   font-size: 0.62rem;
   color: var(--fg2);
   font-weight: 700;
@@ -346,7 +357,8 @@ body {
   max-width: 860px;
   margin: 0 auto;
 }
-.col-header-inner .ch-price,
+.col-header-inner .ch-value { text-align: center; }
+.col-header-inner .ch-value,
 .col-header-inner .ch-pnl {
   text-align: right;
   cursor: pointer;
@@ -356,17 +368,15 @@ body {
   overflow: hidden;
   text-overflow: clip;
 }
-.col-header-inner .ch-price {
-  padding-right: 10px;
-}
+.col-header-inner .ch-value { text-align: center; }
 /* "All-Time Profit" is longer than the old "All-Time P&L": let it wrap to two lines in the narrow phone column */
 @media (max-width: 600px) {
   .col-header-inner { align-items: end; }
   .col-header-inner .ch-pnl { white-space: normal; line-height: 1.25; overflow: visible; }
 }
-.col-header-inner .ch-price:hover,
+.col-header-inner .ch-value:hover,
 .col-header-inner .ch-pnl:hover { color: var(--accent); }
-.col-header-inner .ch-price.col-active,
+.col-header-inner .ch-value.col-active,
 .col-header-inner .ch-pnl.col-active { color: var(--accent); }
 .ch-sort-arrow { margin-left: 4px; letter-spacing: 0; }
 
@@ -388,9 +398,9 @@ body {
   border-radius: 14px;
   padding: 11px 13px;
   display: grid;
-  grid-template-columns: 1fr 82px 90px;
+  grid-template-columns: 1.2fr 1fr 1fr;   /* Asset (+ price) | Holdings / Value | All-Time Profit */
   align-items: center;
-  gap: 0;
+  gap: 8px;
   box-shadow: var(--shadow);
 }
 
@@ -441,6 +451,14 @@ body {
   text-overflow: ellipsis;
 }
 .a-qty  { font-size: 0.73rem; font-weight: 600; color: var(--fg); opacity: 0.8; margin-top: 2px; }
+.a-line { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 4px; margin-top: 3px; font-size: .7rem; font-weight: 600; color: var(--fg2); font-variant-numeric: tabular-nums; line-height: 1.3; }
+.a-line .a-dot { opacity: .6; }
+.a-line .a-chg { white-space: nowrap; }
+.a-line .pos, .a-line .neg { font-weight: 700; }
+/* Holdings / Value col */
+.c-hold { text-align: center; min-width: 0; font-variant-numeric: tabular-nums; }
+.h-val  { font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
+.h-qty  { font-size: 0.7rem; font-weight: 600; color: var(--fg2); margin-top: 3px; overflow-wrap: anywhere; line-height: 1.3; }
 
 /* Price col */
 .c-price { text-align: right; padding-right: 10px; }
@@ -457,7 +475,8 @@ body {
 .p-chg.neg { background: var(--red-bg);   color: var(--red);   }
 
 /* P&L col */
-.c-pnl    { text-align: right; }
+.c-pnl    { text-align: right; min-width: 0; font-variant-numeric: tabular-nums; }
+.pnl-usd  { white-space: nowrap; }
 .pnl-usd  { font-size: 0.85rem; font-weight: 700; }
 .pnl-pct  {
   font-size: 0.68rem;
@@ -514,16 +533,14 @@ body {
   .pnl-bd-row { padding: 13px 16px; }
   .pnl-bd-row-label { font-size: 0.95rem; font-weight: 700; }
   .pnl-bd-row-val { font-size: 1rem; }
-  .col-header-inner {
-    grid-template-columns: 1fr 130px 130px;
-  }
+  .col-header-inner { grid-template-columns: 1.2fr 1fr 1fr; padding: 0 16px; }
   .sum-value { font-size: 1.55rem; }
   .sum-card  { padding: 20px 22px; min-height: 120px; }
   .sum-value { font-size: 1.75rem; }
   .sum-card-icon { font-size: 1.5rem; top: 16px; right: 16px; }
   .coin-row  {
     padding: 14px 16px;
-    grid-template-columns: 1fr 130px 130px;
+    grid-template-columns: 1.2fr 1fr 1fr;
     border-radius: 16px;
   }
   .coin-row:hover { opacity: 0.85; transition: opacity 0.15s; }
@@ -531,7 +548,7 @@ body {
   .a-sym  { font-size: 1rem; }
   .a-name { font-size: 0.78rem; }
   .a-qty  { font-size: 0.7rem; }
-  .p-val  { font-size: 0.95rem; }
+  .h-val  { font-size: 0.95rem; } .h-qty { font-size: .78rem; } .a-line { font-size: .78rem; }
   .p-chg  { font-size: 0.74rem; }
   .pnl-usd { font-size: 0.95rem; }
   .pnl-pct { font-size: 0.74rem; }
@@ -648,16 +665,21 @@ body {
 
 <div class="sort-tabs">
   <div class="sort-tabs-inner">
-    <button class="sort-tab active" id="tab-pnl"   onclick="setSort('pnl')"><span class="tab-arrow">↓ </span>$ P&amp;L</button>
-    <button class="sort-tab"        id="tab-pct"   onclick="setSort('pct')"><span class="tab-arrow">↑ </span>% P&amp;L</button>
-    <button class="sort-tab"        id="tab-value" onclick="setSort('value')"><span class="tab-arrow">↓ </span>Value</button>
+    <div class="sort-group active" id="grp-pnl">
+      <button class="sort-tab active" id="tab-pnl" onclick="setSort('pnl')" aria-label="Sort by All-Time Profit (tap again to flip)"><span class="tab-arrow">↓ </span>P&amp;L</button>
+      <span class="pnl-unit" role="group" aria-label="Profit in dollars or percent">
+        <button type="button" id="unit-usd" aria-pressed="true" onclick="setPnlUnit('usd')">$</button>
+        <button type="button" id="unit-pct" aria-pressed="false" onclick="setPnlUnit('pct')">%</button>
+      </span>
+    </div>
+    <button class="sort-tab" id="tab-value" onclick="setSort('value')" aria-label="Sort by value (tap again to flip)"><span class="tab-arrow">↓ </span>Value</button>
   </div>
 </div>
 
 <div class="col-header">
   <div class="col-header-inner">
     <span>Asset</span>
-    <span class="ch-price" id="col-price" onclick="setSort('price')">Price<span class="ch-sort-arrow" id="arrow-price"></span></span>
+    <span class="ch-value" id="col-value" onclick="setSort('value')">Holdings / Value<span class="ch-sort-arrow" id="arrow-value"></span></span>
     <span class="ch-pnl"   id="col-pnl"   onclick="setSort('pnl')"  >All-Time Profit<span class="ch-sort-arrow" id="arrow-pnl"></span></span>
   </div>
 </div>
@@ -668,7 +690,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610291948"></script>
+<script type="module" src="samsam-cloud.js?v=202610292026"></script>
 <script>
 // ── Constants ──
 
@@ -698,9 +720,10 @@ let portfolio = [];
 let livePrices = {};
 let sortMode    = 'pnl';
 let sortDir     = -1;   // -1 = descending, +1 = ascending
-let lastTabClick = '';  // tracks which tab was last clicked
+let lastTabClick = 'pnl';  // the active sort (tapping it again flips ↓ / ↑)
 // Default start direction per mode: pnl=desc (best profit first), pct=asc (worst loss first)
-const DEFAULT_DIR = { pnl: -1, pct: 1, value: -1, price: -1 };
+const DEFAULT_DIR = { pnl: -1, value: -1 };
+let pnlUnit = 'usd';   // P&L sorts by $ or by %
 
 // ── Full-width Portfolio vs BTC chart (same data + logic as the main-page card) ──
 let perfSnaps = [], perfRange = 'all';
@@ -895,8 +918,8 @@ function renderPerfCat(rows, realized) {
   const calc = a => CPProfit.calc(a);
   const money = v => (v >= 0 ? '+' : '−') + fmtUSD(Math.abs(v)).replace(/^[-−]/, '');
   const sub = ap => `${money(ap.total)} · ${ap.pct >= 0 ? '+' : '−'}${Math.abs(ap.pct).toFixed(1)}%`;
-  const key = (k, ap) => sortMode === 'pct' ? ap.pct : sortMode === 'value' ? agg[k].value : ap.total;
-  const cats = Object.keys(agg).map(k => ({ k, ap: calc(agg[k]) })).sort((a, b) => sortDir * (key(b.k, b.ap) - key(a.k, a.ap)));
+  const key = (k, ap) => sortKey() === 'pct' ? ap.pct : sortKey() === 'value' ? agg[k].value : ap.total;
+  const cats = Object.keys(agg).map(k => ({ k, ap: calc(agg[k]) })).sort((a, b) => -sortDir * (key(b.k, b.ap) - key(a.k, a.ap)));
   if (perfCat && !agg[perfCat]) perfCat = '';
   const all = allTimeData;
   const options = [{ value: 'all', label: 'All Coins', sub: sub(all), subTone: all.total >= 0 ? 'pos' : 'neg', icon: '<span class="cp-globe">🌐</span>' }]
@@ -915,47 +938,34 @@ function renderPerfCat(rows, realized) {
   return perfCat ? { ap, label: T.label(perfCat), agg: agg[perfCat] } : null;
 }
 
-// ── Sort ──
+// ── Sort: P&L (by $ or %) and Value — tapping the active one flips ↓ / ↑ ──
 function setSort(mode) {
-  if (lastTabClick === mode) {
-    sortDir = sortDir * -1;
-  } else {
-    sortMode     = mode;
-    sortDir      = DEFAULT_DIR[mode] ?? -1;  // each mode has its own default direction
-    lastTabClick = mode;
-  }
-
-  // ── Update pill tabs (pnl / pct / value) ──
-  document.querySelectorAll('.sort-tab').forEach(t => t.classList.remove('active'));
-  // pill tabs exist only for pnl/pct/value — price is column-header-only
-  const pillId = (mode === 'price') ? null : 'tab-' + mode;
-  if (pillId) {
-    const btn = document.getElementById(pillId);
-    if (btn) {
-      btn.classList.add('active');
-      const arrow = btn.querySelector('.tab-arrow');
-      if (arrow) arrow.textContent = (sortDir === -1 ? '↓ ' : '↑ ');
-    }
-  }
-
-  // ── Update column header highlights ──
-  ['col-price','col-pnl'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove('col-active');
-  });
-  document.getElementById('arrow-price').textContent = '';
-  document.getElementById('arrow-pnl').textContent   = '';
-
-  if (mode === 'price') {
-    document.getElementById('col-price').classList.add('col-active');
-    document.getElementById('arrow-price').textContent = (sortDir === -1 ? ' ↓' : ' ↑');
-  } else if (mode === 'pnl') {
-    document.getElementById('col-pnl').classList.add('col-active');
-    document.getElementById('arrow-pnl').textContent = (sortDir === -1 ? ' ↓' : ' ↑');
-  }
-
-  render();
+  if (mode === 'pct') { pnlUnit = 'pct'; mode = 'pnl'; }
+  if (lastTabClick === mode) sortDir = sortDir * -1;
+  else { sortMode = mode; sortDir = DEFAULT_DIR[mode] ?? -1; lastTabClick = mode; }
+  paintSort(); render();
 }
+// $ / % inside P&L: switches what P&L sorts by (keeps the direction when P&L is already on)
+function setPnlUnit(u) {
+  pnlUnit = u;
+  if (sortMode !== 'pnl') { sortMode = 'pnl'; sortDir = DEFAULT_DIR.pnl; lastTabClick = 'pnl'; }
+  paintSort(); render();
+}
+function paintSort() {
+  const arrow = sortDir === -1 ? '↓ ' : '↑ ', pnlOn = sortMode === 'pnl';
+  document.getElementById('grp-pnl').classList.toggle('active', pnlOn);
+  document.getElementById('tab-pnl').classList.toggle('active', pnlOn);
+  document.getElementById('tab-value').classList.toggle('active', !pnlOn);
+  document.querySelector('#tab-pnl .tab-arrow').textContent = arrow;
+  document.querySelector('#tab-value .tab-arrow').textContent = arrow;
+  document.getElementById('unit-usd').setAttribute('aria-pressed', String(pnlUnit === 'usd'));
+  document.getElementById('unit-pct').setAttribute('aria-pressed', String(pnlUnit === 'pct'));
+  document.getElementById('col-pnl').classList.toggle('col-active', pnlOn);
+  document.getElementById('col-value').classList.toggle('col-active', !pnlOn);
+  document.getElementById('arrow-pnl').textContent = pnlOn ? ' ' + arrow.trim() : '';
+  document.getElementById('arrow-value').textContent = pnlOn ? '' : ' ' + arrow.trim();
+}
+const sortKey = () => sortMode === 'value' ? 'value' : (pnlUnit === 'pct' ? 'pct' : 'pnl');
 
 // ── Render ──
 // ── Best / worst performer: since purchase ($ · %) and vs BTC; tiny holdings left out ──
@@ -1006,13 +1016,8 @@ function render() {
   });
 
   // Sort — direction controlled by sortDir (-1=desc, +1=asc)
-  rows.sort((a, b) => {
-    if (sortMode === 'pnl')   return sortDir * (b.pnl   - a.pnl);
-    if (sortMode === 'pct')   return sortDir * (b.pct   - a.pct);
-    if (sortMode === 'value') return sortDir * (b.value - a.value);
-    if (sortMode === 'price') return sortDir * (b.currentPrice - a.currentPrice);
-    return 0;
-  });
+  const k = sortKey();
+  rows.sort((a, b) => -sortDir * (b[k] - a[k]));   // ↓ (-1) = biggest first, ↑ = smallest first
 
   // Totals
   const totalValue = rows.reduce((s, r) => s + r.value, 0);
@@ -1075,18 +1080,16 @@ function render() {
 
   // Row HTML — the coins of the category picked above (all coins when "All Coins")
   const listRows = perfCat ? rows.filter(r => catOfRow(r) === perfCat) : rows;
-  const html = listRows.map(({ c, currentPrice, change24h, pnl, pct }) => {
+  const html = listRows.map(({ c, currentPrice, change24h, value, pnl, pct }) => {
     const isPos  = pnl >= 0;
-    const chgCls = change24h === null ? '' : (change24h >= 0 ? 'pos' : 'neg');
     const chgHtml = change24h !== null
-      ? `<div class="p-chg ${chgCls}">${fmtPct(change24h)}</div>` : '';
+      ? `<span class="a-chg"><span class="a-dot">•</span> <span class="${change24h >= 0 ? 'pos' : 'neg'}">${fmtPct(change24h)}</span></span>` : '';
 
     const cgUrl = getCoinGeckoUrl(c.sym, c.cgId);
     const assetInner = `${coinIconHtml(c)}
         <div class="asset-text">
           <div class="a-sym">${c.sym}${cgUrl ? SamsamCoins.EXT : ''}</div>
-          <div class="a-name">${COIN_NAMES[c.sym] || c.sym}</div>
-          <div class="a-qty">${fmtQty(c.qty, c.sym)}</div>
+          <div class="a-line"><span>${fmtPrice(currentPrice)}</span>${chgHtml}</div>
         </div>`;
     const assetEl = cgUrl
       ? `<a href="${cgUrl}" target="_blank" rel="noopener" class="asset asset-link ext-link" title="Open ${c.sym} on CoinMarketCap">${assetInner}</a>`
@@ -1094,9 +1097,9 @@ function render() {
 
     return `<div class="coin-row">
       ${assetEl}
-      <div class="c-price">
-        <div class="p-val">${fmtPrice(currentPrice)}</div>
-        ${chgHtml}
+      <div class="c-hold">
+        <div class="h-val">${fmtUSD(value)}</div>
+        <div class="h-qty">${fmtQty(c.qty, c.sym)}</div>
       </div>
       <div class="c-pnl">
         <div class="pnl-usd ${isPos ? 'pos' : 'neg'}">${fmtUSD(pnl)}</div>
