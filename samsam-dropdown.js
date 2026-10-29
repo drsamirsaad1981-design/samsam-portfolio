@@ -38,7 +38,7 @@
     '.sdd-search input::placeholder{color:#94a3b8}',
     '.sdd-list{list-style:none;margin:0;padding:4px;overflow-y:auto;overscroll-behavior:contain;max-height:280px}',
     '.sdd-opt{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600}',
-    '.sdd-opt .sdd-sub{font-weight:500;font-size:.78rem;color:#94a3b8;margin-left:auto;padding-left:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.sdd-opt .sdd-sub{font-weight:500;font-size:.78rem;color:#94a3b8;margin-left:auto;padding-left:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;max-width:62%}',
     '.sdd-opt.active{background:rgba(59,130,246,.16)}',
     '[data-theme=light] .sdd-opt.active{background:#eff6ff}',
     '.sdd-opt[aria-selected=true]{color:#60a5fa}',
