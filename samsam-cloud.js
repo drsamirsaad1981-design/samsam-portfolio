@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610301741';
-import * as Hist from './samsam-history.js?v=202610301741';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610301741';
+import * as Core from './samsam-core.js?v=202610302022';
+import * as Hist from './samsam-history.js?v=202610302022';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610302022';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -86,8 +86,8 @@ function cleanAccum(a) {
 const S = {
   configured: !!(FIREBASE_CONFIG && FIREBASE_CONFIG.projectId && !/PASTE/i.test(FIREBASE_CONFIG.apiKey || 'PASTE')),
   user: null, authResolved: false, denied: null,
-  coins: new Map(), txs: new Map(), accum: new Map(), snapDocs: new Map(), meta: null,
-  loaded: { coins: false, txs: false, accum: false, snaps: false, meta: false },
+  coins: new Map(), txs: new Map(), accum: new Map(), snapDocs: new Map(), meta: null, catCfg: null,
+  loaded: { coins: false, txs: false, accum: false, snaps: false, meta: false, cats: false },
   fromCache: true, pending: 0, lastError: null, lastSyncedAt: null,
   prices: ls.get(PRICE_KEY, {}) || {},
   opts: { fallbackPrices: {}, basePortfolio: null, coinNames: {}, setupPage: false },
@@ -161,6 +161,8 @@ function derive() {
   const coins = [...S.coins.values()];
   const txs = [...S.txs.values()].sort(Core.compareTx);
   const T = window.SamsamTaxonomy;
+  // your category settings (names, colours, your own and deleted categories) first, then the coins' own categories
+  if (T && T.applySettings) T.applySettings(S.catCfg);
   // your own categories (named on any device) become real categories on every page
   if (T && T.register) for (const c of coins) if (c.catLabel && T.isCustom(c.cat)) T.register(c.cat, c.catLabel);
   // each coin's CoinMarketCap page (saved when it was added) for every link on every page
@@ -271,7 +273,7 @@ function emailAllowed(user) {
 function onUser(user) {
   S.authResolved = true;
   S.unsub.forEach(u => { try { u(); } catch (_) {} }); S.unsub = [];
-  S.coins.clear(); S.txs.clear(); S.accum.clear(); S.snapDocs.clear(); S.meta = null;
+  S.coins.clear(); S.txs.clear(); S.accum.clear(); S.snapDocs.clear(); S.meta = null; S.catCfg = null;
   Object.keys(S.loaded).forEach(k => S.loaded[k] = false);
   S.user = null; S.denied = null;
   if (!user) { showGate('signin'); renderStatus(); return; }
@@ -303,6 +305,9 @@ function listen() {
       track(snap); S.snapDocs.clear(); snap.forEach(d => S.snapDocs.set(d.id, { ...d.data(), id: d.id }));
       S.loaded.snaps = true; emit();
     }, onErr('chart history')));
+  S.unsub.push(fs.onSnapshot(fs.doc(db, ...userPath('meta', 'categories')), opt, snap => {
+    track(snap); S.catCfg = snap.exists() ? snap.data() : null; S.loaded.cats = true; emit();
+  }, e => { S.loaded.cats = true; emit(); onErr('categories')(e); }));   // never hold the app back over the settings
   S.unsub.push(fs.onSnapshot(fs.doc(db, ...userPath('meta', 'info')), opt, snap => {
     track(snap); S.meta = snap.exists() ? snap.data() : null; S.loaded.meta = true; emit();
   }, onErr('settings')));
@@ -476,6 +481,54 @@ const API = {
       // Every new or re-added coin starts with an ordinary Buy (no manual corrections).
       b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position'), { feeUsd }));
     }, `Add ${sym}`);
+  },
+  // ── Manage Categories: one settings doc (users/{uid}/meta/categories) every page and device applies ──
+  categorySettings() { const T = window.SamsamTaxonomy; return T ? T.settings() : { labels: {}, colors: {}, customs: {}, removed: [] }; },
+  // change(cfg) edits a copy of the settings; extra(b, ref) adds more writes to the same batch
+  editCategories(change, label = 'Categories', extra) {
+    const T = window.SamsamTaxonomy; if (!T) return Promise.reject(new Error('Categories not loaded'));
+    const cfg = T.settings(); change(cfg);
+    const out = { labels: {}, colors: {}, customs: {}, removed: [...new Set(cfg.removed || [])].filter(k => T.isCustom(k)).slice(0, 200), updatedAt: new Date().toISOString() };
+    for (const [k, v] of Object.entries(cfg.labels || {})) { const l = Clean.label(v, 40); if (l && T.defaultLabel(k) && l !== T.defaultLabel(k)) out.labels[Clean.key(k)] = l; }
+    for (const [k, v] of Object.entries(cfg.colors || {})) if (/^#[0-9a-f]{6}$/i.test(v)) out.colors[Clean.key(k)] = v.toLowerCase();
+    for (const [k, v] of Object.entries(cfg.customs || {})) { const l = Clean.label(v, 40); if (l && T.isCustom(k) && !out.removed.includes(k)) out.customs[k] = l; }
+    S.catCfg = out;   // this device at once (names / colours / lists), the cloud copy follows
+    T.applySettings(out); for (const c of S.coins.values()) if (c.catLabel && T.isCustom(c.cat)) T.register(c.cat, c.catLabel);
+    emit();
+    return commit((b, ref) => { b.set(ref('meta', 'categories'), out); if (extra) extra(b, ref); }, label);
+  },
+  renameCategory(key, name) {
+    const T = window.SamsamTaxonomy, l = Clean.label(name, 40);
+    if (!l) return Promise.reject(new Error('Type a name for the category'));
+    const clash = Object.entries(T.labels).find(([k, v]) => k !== key && String(v).toLowerCase() === l.toLowerCase());
+    if (clash) return Promise.reject(new Error(`"${l}" is already a category`));
+    return API.editCategories(cfg => { if (T.isCustom(key)) cfg.customs[key] = l; else if (l === T.defaultLabel(key)) delete cfg.labels[key]; else cfg.labels[key] = l; }, 'Rename category');
+  },
+  recolorCategory(key, color) {
+    if (!/^#[0-9a-f]{6}$/i.test(String(color || ''))) return Promise.reject(new Error('Pick a colour'));
+    const T = window.SamsamTaxonomy;
+    return API.editCategories(cfg => { if (!T.isCustom(key) && color.toLowerCase() === T.defaultColor(key)) delete cfg.colors[key]; else cfg.colors[key] = color.toLowerCase(); }, 'Category colour');
+  },
+  // A new category of your own (empty until you move coins into it). Resolves to its key.
+  createCategory(name, color) {
+    const T = window.SamsamTaxonomy, l = Clean.label(name, 40);
+    if (!l) return Promise.reject(new Error('Type a name for the category'));
+    if (Object.values(T.labels).some(v => String(v).toLowerCase() === l.toLowerCase())) return Promise.reject(new Error(`"${l}" is already a category`));
+    const key = T.customKey(l);
+    return API.editCategories(cfg => { cfg.customs[key] = l; cfg.removed = (cfg.removed || []).filter(k => k !== key); if (color) cfg.colors[key] = color; }, 'New category').then(() => key);
+  },
+  // Built-in: back to its original name and colour. Yours: deleted — its coins go back to their default category.
+  resetCategory(key) {
+    return API.editCategories(cfg => { delete cfg.labels[key]; delete cfg.colors[key]; }, 'Reset category');
+  },
+  deleteCategory(key) {
+    const T = window.SamsamTaxonomy;
+    if (!T.isCustom(key)) return Promise.reject(new Error('Built-in categories can be renamed, not deleted'));
+    const coins = [...S.coins.values()].filter(c => c.cat === key);
+    return API.editCategories(cfg => { delete cfg.customs[key]; delete cfg.colors[key]; cfg.removed = [...(cfg.removed || []), key]; }, 'Delete category', (b, ref) => {
+      const now = new Date().toISOString();
+      for (const c of coins) b.set(ref('coins', safeId(c.sym)), { cat: T.defaultOf(c.sym) || 'other', catLocked: false, catLabel: null, updatedAt: now }, { merge: true });
+    });
   },
   // Your choice of category for a coin (built-in key, or a name of your own → 'x-…' key + label).
   // Locked, so it is never reset to the default list; pass null to go back to the default.

@@ -94,7 +94,25 @@
     '.ac-cmc-check{padding:0 12px;color:#60a5fa;font-size:.8rem;font-weight:600;text-decoration:none;white-space:nowrap}.ac-cmc-check[hidden]{display:none}' +
     '@media (max-width:420px){.ac-cmc-pre{display:none}.atx-field .ac-cmc input{padding-left:12px}}' +
     '.cat-custom[hidden]{display:none}.cat-custom-hint{font-size:.75rem;color:#94a3b8;margin-top:5px;font-weight:500}' +
-    '#catEditModal .atx-modal{max-width:420px;--atx-c:#7c3aed}' +
+    '#catEditModal .atx-modal,#catMgrModal .atx-modal{max-width:440px;--atx-c:#7c3aed}' +
+    // Change category: a dark list (not the phone's white system picker) — colour dot, name, ✓
+    '.ce-list{display:flex;flex-direction:column;gap:2px;max-height:min(52vh,420px);overflow-y:auto;margin:0 0 10px;padding:4px;border:1px solid var(--border-card,#334155);border-radius:12px;background:rgba(255,255,255,.03)}' +
+    '.ce-opt{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:8px 12px;border:none;border-radius:9px;background:none;color:inherit;font:inherit;font-size:.92rem;font-weight:600;text-align:left;cursor:pointer}' +
+    '.ce-opt:hover{background:rgba(148,163,184,.1)}.ce-opt[aria-checked="true"]{background:rgba(124,58,237,.18);color:#c4b5fd}' +
+    '.ce-opt .ce-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}.ce-opt .ce-name{flex:1;min-width:0}.ce-opt .ce-ck{visibility:hidden;font-weight:800}.ce-opt[aria-checked="true"] .ce-ck{visibility:visible}' +
+    '.ce-group{font-size:.7rem;font-weight:700;color:#94a3b8;padding:8px 12px 2px}' +
+    '.ce-new{color:#a78bfa}[data-theme="light"] .ce-opt[aria-checked="true"]{background:#ede9fe;color:#5b21b6}' +
+    '.ce-manage{display:inline-flex;align-items:center;gap:6px;margin:0 0 12px;padding:0;border:none;background:none;color:#a78bfa;font:inherit;font-size:.84rem;font-weight:700;cursor:pointer}' +
+    '#ceCat{display:none}' +
+    // Manage Categories
+    '.cm-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border-card,#334155)}' +
+    '.cm-dot{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.18);cursor:pointer;padding:0}' +
+    '.cm-name{font-weight:700;font-size:.92rem;min-width:0;overflow-wrap:anywhere}.cm-sub{font-size:.72rem;color:#94a3b8;font-weight:600;margin-top:2px}' +
+    '.cm-acts{display:flex;gap:4px}.cm-acts button{height:32px;min-width:32px;padding:0 8px;border:1px solid var(--border-card,#334155);border-radius:8px;background:rgba(255,255,255,.04);color:inherit;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}' +
+    '.cm-acts .cm-del{color:#f87171;border-color:rgba(248,113,113,.4)}' +
+    '.cm-pal{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;padding:6px 0 4px}.cm-pal[hidden]{display:none}' +
+    '.cm-pal button{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}.cm-pal button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px #7c3aed}' +
+    '.cm-group{font-size:.72rem;font-weight:800;color:#94a3b8;margin:14px 0 2px}.cm-note{font-size:.76rem;color:#94a3b8;margin:4px 0 12px;line-height:1.45}' +
     '.cat-reset{display:block;margin:0 0 10px;padding:0;border:none;background:none;color:#60a5fa;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer}.cat-reset[hidden]{display:none}';
 
   var HTML_COIN =
@@ -144,12 +162,24 @@
       '<button type="submit" class="atx-save" id="atxSave">Add Transaction</button>' +
     '</form></div>';
 
+  var HTML_MGR =
+    '<div class="atx-backdrop" id="catMgrModal" onclick="if(event.target===this)closeCatManager()">' +
+    '<div class="atx-modal" role="dialog" aria-modal="true" aria-labelledby="cmTitle">' +
+      '<div class="atx-head"><h3 id="cmTitle">✏️ Manage Categories</h3><button type="button" class="atx-x" onclick="closeCatManager()" aria-label="Close">×</button></div>' +
+      '<div class="cm-note">Changes apply everywhere at once — every page, filter, chart and device.</div>' +
+      '<div id="cmList"></div>' +
+      '<div class="atx-err" id="cmError" role="alert"></div>' +
+      '<button type="button" class="atx-save" onclick="cmNew()">➕ New Category</button>' +
+    '</div></div>';
+
   var HTML_CAT =
     '<div class="atx-backdrop" id="catEditModal" onclick="if(event.target===this)closeCatEdit()">' +
     '<form class="atx-modal" id="ceForm" onsubmit="event.preventDefault();saveCatEdit()" role="dialog" aria-modal="true" aria-labelledby="ceTitle" novalidate>' +
       '<div class="atx-head"><h3 id="ceTitle">Category</h3><button type="button" class="atx-x" onclick="closeCatEdit()" aria-label="Close">×</button></div>' +
       '<div class="atx-coin" id="ceCoin"></div>' +
-      '<label class="atx-field"><span>Category</span><select id="ceCat" onchange="syncCatCustom(this,\'ceCustomBox\')"></select></label>' +
+      '<div class="atx-field"><span>Category</span><select id="ceCat" onchange="syncCatCustom(this,\'ceCustomBox\');ceDrawList()" aria-hidden="true" tabindex="-1"></select>' +
+        '<div class="ce-list" id="ceList" role="radiogroup" aria-label="Category"></div></div>' +
+      '<button type="button" class="ce-manage" onclick="openCatManager()">✏️ Manage Categories <small style="color:#94a3b8;font-weight:600">— rename, colour, add, delete</small></button>' +
       '<div class="atx-field cat-custom" id="ceCustomBox" hidden><label for="ceCustom">New Category Name</label>' +
         '<input type="text" id="ceCustom" maxlength="40" placeholder="Enter Custom Category..." autocomplete="off"><div class="cat-custom-hint">Saved for this coin and added to the category filters.</div></div>' +
       '<button type="button" class="cat-reset" id="ceReset" hidden onclick="saveCatEdit(true)"></button>' +
@@ -163,10 +193,11 @@
     if (!$('addCoinModal')) document.body.insertAdjacentHTML('beforeend', HTML_COIN);
     if (!$('atxBackdrop')) document.body.insertAdjacentHTML('beforeend', HTML_TX);
     if (!$('catEditModal')) document.body.insertAdjacentHTML('beforeend', HTML_CAT);
+    if (!$('catMgrModal')) document.body.insertAdjacentHTML('beforeend', HTML_MGR);
     return true;
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
-  function anyOpen() { return !!document.querySelector('#addCoinModal.show, #atxBackdrop.show, #catEditModal.show'); }
+  function anyOpen() { return !!document.querySelector('#addCoinModal.show, #atxBackdrop.show, #catEditModal.show, #catMgrModal.show'); }
   function setOpen(el, on) { el.classList.toggle('show', on); document.body.classList.toggle('atx-open', on || anyOpen()); }
 
   // ── Category choice (Add Coin + Change category): built-in list, your own categories, and "Other" ──
@@ -434,6 +465,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
     if ($('atxBackdrop') && $('atxBackdrop').classList.contains('show')) closeAddTx();
+    else if ($('catMgrModal') && $('catMgrModal').classList.contains('show')) closeCatManager();
     else if ($('catEditModal') && $('catEditModal').classList.contains('show')) closeCatEdit();
     else if ($('addCoinModal') && $('addCoinModal').classList.contains('show') && ($('acSuggest').hidden)) closeAddCoin();
   });
@@ -519,13 +551,94 @@
     $('ceCoin').innerHTML = icon(sym, 24, ceOpts.logoUrl) + '<span>' + E(sym) + '</span><small>' + E(coinName(sym) || ceOpts.name || '') + (c ? '' : ' · not owned yet — saved with your plan') + '</small>';
     var sel = $('ceCat');
     fillCatSelect(sel, cur);
-    $('ceCustom').value = ''; syncCatCustom(sel, 'ceCustomBox');
+    $('ceCustom').value = ''; syncCatCustom(sel, 'ceCustomBox'); ceDrawList();
     var reset = $('ceReset');
     reset.hidden = !(def && (c ? c.catLocked : cur !== def));
     if (def) reset.textContent = '↺ Use default (' + T.label(def) + ')';
     $('ceError').textContent = '';
     setOpen($('catEditModal'), true);
-    setTimeout(function () { sel.focus(); }, 0);
+    setTimeout(function () { var on = document.querySelector('#ceList .ce-opt[aria-checked="true"]'); if (on) { on.focus(); on.scrollIntoView({ block: 'nearest' }); } }, 0);
+  }
+  // The dark list mirrors the (hidden) select: same options, same value
+  function ceDrawList() {
+    var sel = $('ceCat'), list = $('ceList'); if (!sel || !list) return;
+    var T = SamsamTaxonomy, html = '', lastGroup = null;
+    [].forEach.call(sel.options, function (o) {
+      var g = o.parentNode && o.parentNode.tagName === 'OPTGROUP' ? o.parentNode.label : null;
+      if (g !== lastGroup && g) html += '<div class="ce-group">' + E(g) + '</div>';
+      lastGroup = g;
+      var isNew = o.value === 'other';
+      html += '<button type="button" role="radio" class="ce-opt' + (isNew ? ' ce-new' : '') + '" data-v="' + E(o.value) + '" aria-checked="' + (sel.value === o.value) + '" onclick="cePick(this.dataset.v)">' +
+        (isNew ? '<span class="ce-dot" style="background:none;text-align:center;line-height:12px">＋</span><span class="ce-name">New category…</span>'
+               : '<span class="ce-dot" style="background:' + T.color(o.value) + '"></span><span class="ce-name">' + E(o.textContent) + '</span>') +
+        '<span class="ce-ck">✓</span></button>';
+    });
+    list.innerHTML = html;
+  }
+  function cePick(v) { var sel = $('ceCat'); sel.value = v; syncCatCustom(sel, 'ceCustomBox'); ceDrawList(); }
+
+  // ── Manage Categories: rename, colour, add, delete (saved once in the cloud → every page and device) ──
+  var cmOpenPal = null;
+  function openCatManager() {
+    if (!mount()) return;
+    if (!window.Samsam || !Samsam.renameCategory) return;
+    $('cmError').textContent = ''; cmOpenPal = null; cmDraw();
+    setOpen($('catMgrModal'), true);
+  }
+  function closeCatManager() {
+    var m = $('catMgrModal'); if (m) setOpen(m, false);
+    if ($('catEditModal') && $('catEditModal').classList.contains('show')) { var v = $('ceCat').value; fillCatSelect($('ceCat'), v); syncCatCustom($('ceCat'), 'ceCustomBox'); ceDrawList(); }
+  }
+  function cmCounts() {
+    var n = {}, T = SamsamTaxonomy, st = Samsam.getState ? Samsam.getState() : null;
+    (st ? st.portfolio : []).forEach(function (c) { var k = c.cat || 'other'; n[k] = (n[k] || 0) + 1; });
+    return n;
+  }
+  function cmDraw() {
+    var T = SamsamTaxonomy, n = cmCounts(), list = $('cmList'); if (!list) return;
+    var row = function (key, label, color, custom) {
+      var changed = !custom && (label !== T.defaultLabel(key) || color !== T.defaultColor(key));
+      var sub = (n[key] || 0) + ' coin' + ((n[key] || 0) === 1 ? '' : 's') + (changed ? ' · was “' + E(T.defaultLabel(key)) + '”' : '');
+      var pal = T.PALETTE.filter(function (c, i, a) { return a.indexOf(c) === i; }).map(function (c) {
+        return '<button type="button" style="background:' + c + '" aria-label="Colour ' + c + '" aria-pressed="' + (c === color) + '" onclick="cmColor(\'' + key + '\',\'' + c + '\')"></button>'; }).join('');
+      return '<div class="cm-row" data-k="' + key + '">' +
+        '<button type="button" class="cm-dot" style="background:' + color + '" title="Change colour" aria-label="Change the colour of ' + E(label) + '" onclick="cmPal(\'' + key + '\')"></button>' +
+        '<div><div class="cm-name">' + E(label) + '</div><div class="cm-sub">' + sub + '</div></div>' +
+        '<div class="cm-acts"><button type="button" class="cm-ren" title="Rename" aria-label="Rename ' + E(label) + '" onclick="cmRename(\'' + key + '\')">✏️</button>' +
+          (custom ? '<button type="button" class="cm-del" title="Delete" aria-label="Delete ' + E(label) + '" onclick="cmDelete(\'' + key + '\')">🗑</button>'
+                  : (changed ? '<button type="button" class="cm-reset" title="Back to the original name and colour" aria-label="Reset ' + E(label) + '" onclick="cmReset(\'' + key + '\')">↺</button>' : '')) + '</div>' +
+        '<div class="cm-pal"' + (cmOpenPal === key ? '' : ' hidden') + '>' + pal + '</div></div>';
+    };
+    var mine = T.customs();
+    list.innerHTML = '<div class="cm-group">Built-in</div>' +
+      T.list.filter(function (c) { return c.key !== 'other'; }).map(function (c) { return row(c.key, c.label, c.color, false); }).join('') +
+      '<div class="cm-group">Your Categories</div>' +
+      (mine.length ? mine.map(function (c) { return row(c.key, c.label, c.color, true); }).join('') : '<div class="cm-note">None yet — tap ➕ New Category.</div>');
+  }
+  function cmDone(p) {
+    $('cmError').textContent = '';
+    return Promise.resolve(p).then(function () { cmDraw(); emit('cat', {}); }, function (e) { $('cmError').textContent = '⚠️ ' + ((e && e.message) || e); });
+  }
+  function cmPal(key) { cmOpenPal = cmOpenPal === key ? null : key; cmDraw(); }
+  function cmColor(key, c) { cmOpenPal = null; if (!requireCloud()) return; cmDone(Samsam.recolorCategory(key, c)); }
+  function cmRename(key) {
+    if (!requireCloud()) return;
+    var T = SamsamTaxonomy, cur = T.label(key);
+    var ask = window.CPDialog ? CPDialog.prompt('New name for this category — every coin in it, every filter and chart follow.', { title: '✏️ Rename “' + cur + '”', value: cur, okText: 'Save' }) : Promise.resolve(window.prompt('New name', cur));
+    ask.then(function (v) { if (v == null) return; v = String(v).trim(); if (!v || v === cur) return; cmDone(Samsam.renameCategory(key, v)); });
+  }
+  function cmReset(key) { if (!requireCloud()) return; cmDone(Samsam.resetCategory(key)); }
+  function cmDelete(key) {
+    if (!requireCloud()) return;
+    var T = SamsamTaxonomy, n = cmCounts()[key] || 0, name = T.label(key);
+    var msg = n ? 'Its ' + n + ' coin' + (n === 1 ? '' : 's') + ' go back to their default category.' : 'It has no coins.';
+    var ask = window.CPDialog ? CPDialog.confirm(msg, { title: '🗑 Delete “' + name + '”?', okText: 'Delete', danger: true }) : Promise.resolve(window.confirm(msg));
+    ask.then(function (ok) { if (ok) cmDone(Samsam.deleteCategory(key)); });
+  }
+  function cmNew() {
+    if (!requireCloud()) return;
+    var ask = window.CPDialog ? CPDialog.prompt('Name of the new category. Move coins into it with Change Category.', { title: '➕ New Category', value: '', okText: 'Create' }) : Promise.resolve(window.prompt('New category'));
+    ask.then(function (v) { if (v == null) return; v = String(v).trim(); if (!v) return; cmDone(Samsam.createCategory(v)); });
   }
   function closeCatEdit() { var m = $('catEditModal'); if (m) setOpen(m, false); ceSym = null; }
   function saveCatEdit(useDefault) {
@@ -552,7 +665,7 @@
   }
 
   var API = {
-    openCoin: openAddCoin, closeCoin: closeAddCoin, openTx: openAddTx, closeTx: closeAddTx, buy: buy, editCategory: openCatEdit,
+    openCoin: openAddCoin, closeCoin: closeAddCoin, openTx: openAddTx, closeTx: closeAddTx, buy: buy, editCategory: openCatEdit, manageCategories: openCatManager,
     search: search, coinInfo: coinInfo, categoryFrom: categoryFrom, linkCodex: linkCodex, fetchLogoAndPrice: fetchLogoAndPrice,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
     on: function (k, fn) { if (hooks[k]) hooks[k].push(fn); }, defaultTxSym: null
@@ -563,7 +676,9 @@
     acSearchInput: acSearchInput, acSearchKey: acSearchKey, acPick: acPick, acCmcCheck: acCmcCheck,
     openAddTx: openAddTx, closeAddTx: closeAddTx, setAddTxType: setAddTxType, readAddTx: readAddTx, previewAddTx: previewAddTx, saveAddTx: saveAddTx,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
-    openCatEdit: function (sym) { openCatEdit(sym); }, closeCatEdit: closeCatEdit, saveCatEdit: saveCatEdit };
+    openCatEdit: function (sym) { openCatEdit(sym); }, closeCatEdit: closeCatEdit, saveCatEdit: saveCatEdit,
+    ceDrawList: ceDrawList, cePick: cePick, openCatManager: openCatManager, closeCatManager: closeCatManager,
+    cmPal: cmPal, cmColor: cmColor, cmRename: cmRename, cmReset: cmReset, cmDelete: cmDelete, cmNew: cmNew };
   Object.keys(G).forEach(function (k) { window[k] = G[k]; });
   Object.defineProperty(window, 'atxSym', { get: function () { return atxSym; }, configurable: true });
 })();
