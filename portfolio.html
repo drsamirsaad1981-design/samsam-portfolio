@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610302022"></script>
-<script src="samsam-hints.js?v=202610302022"></script>
-<script src="samsam-vault.js?v=202610302022"></script>
-<script src="samsam-labels.js?v=202610302022"></script>
-<script src="samsam-taxonomy.js?v=202610302022"></script>
-<script src="samsam-coins.js?v=202610302022"></script>
-<script src="samsam-dropdown.js?v=202610302022"></script>
-<script src="samsam-add.js?v=202610302022"></script>
-<script src="samsam-chart.js?v=202610302022"></script>
+<script src="samsam-ui.js?v=202610302309"></script>
+<script src="samsam-hints.js?v=202610302309"></script>
+<script src="samsam-vault.js?v=202610302309"></script>
+<script src="samsam-labels.js?v=202610302309"></script>
+<script src="samsam-taxonomy.js?v=202610302309"></script>
+<script src="samsam-coins.js?v=202610302309"></script>
+<script src="samsam-dropdown.js?v=202610302309"></script>
+<script src="samsam-add.js?v=202610302309"></script>
+<script src="samsam-chart.js?v=202610302309"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1462,7 +1462,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610302022"></script>
+<script type="module" src="samsam-cloud.js?v=202610302309"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3521,6 +3521,11 @@ function renderHoldingsAssetList() {
   .bl-field { display: block; margin-bottom: 12px; } .bl-field > span { display: block; font-size: .74rem; font-weight: 700; color: var(--fg2); text-transform: none; letter-spacing: .01em; margin-bottom: 5px; }
   .bl-field input { width: 100%; box-sizing: border-box; height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-size: 1rem; }
   .bl-field input:focus { outline: none; border-color: #7c3aed; }
+  .bl-field > .sg-num, .sg-num { display: flex; align-items: center; height: 44px; margin: 0; font-size: 1rem; color: var(--fg); border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); }
+  .sg-num:focus-within { border-color: #7c3aed; }
+  .sg-num b { padding: 0 2px 0 14px; font-size: 1.1rem; font-weight: 800; color: #f87171; }
+  .sg-num i { padding: 0 14px 0 4px; font-style: normal; font-weight: 700; color: var(--fg2); }
+  .bl-field .sg-num input { border: none; background: transparent; height: 42px; padding: 0 4px; flex: 1; min-width: 0; }
   .bl-src { display: block; margin-top: 5px; font-size: .74rem; color: var(--fg2); min-height: 1.2em; } .bl-src.err { color: var(--red); }
   .bl-prev { border-radius: 12px; background: rgba(148,163,184,.08); border: 1px solid var(--border); padding: 10px 12px; font-size: .82rem; line-height: 1.55; margin-bottom: 4px; }
   .bl-prev b { font-variant-numeric: tabular-nums; } .bl-prev .bl-same { color: var(--fg2); }
@@ -3548,8 +3553,10 @@ function renderHoldingsAssetList() {
   <div class="bl-card">
     <div class="bl-head"><span style="font-size:1.3rem">⚡</span><h3 id="sgTitle">Signal Thresholds</h3><button type="button" class="cp-hint" data-hint="signal"></button><button type="button" class="bl-x" onclick="closeSignalEdit()" aria-label="Close">×</button></div>
     <p class="bl-lead">When a coin's price is below your Avg. Buy Price by these amounts, its Signal changes. Same on every page and device.</p>
-    <label class="bl-field"><span>🟢 Reinforce — at or below (%)</span><input type="text" inputmode="decimal" id="sgReinforce" oninput="sgPreview()" autocomplete="off"></label>
-    <label class="bl-field"><span>🔴 Sell / Convert to BTC — below (%)</span><input type="text" inputmode="decimal" id="sgSell" oninput="sgPreview()" autocomplete="off"></label>
+    <label class="bl-field"><span>🟢 Reinforce — when the price is this much below your Avg. Buy Price (or more)</span>
+      <span class="sg-num"><b aria-hidden="true">−</b><input type="text" inputmode="decimal" id="sgReinforce" placeholder="5" oninput="sgPreview()" autocomplete="off" aria-label="Reinforce: percent below your Avg. Buy Price"><i aria-hidden="true">%</i></span></label>
+    <label class="bl-field"><span>🔴 Sell / Convert to BTC — when it is more than this much below</span>
+      <span class="sg-num"><b aria-hidden="true">−</b><input type="text" inputmode="decimal" id="sgSell" placeholder="20" oninput="sgPreview()" autocomplete="off" aria-label="Sell / Convert: percent below your Avg. Buy Price"><i aria-hidden="true">%</i></span></label>
     <div class="bl-prev" id="sgPrev" aria-live="polite"></div>
     <div class="bl-acts"><button type="button" onclick="closeSignalEdit()">Cancel</button><button type="button" class="bl-save" id="sgSave" onclick="saveSignalEdit()">Save</button></div>
     <button type="button" class="bl-reset" id="sgReset" onclick="sgUseDefault()">Use the defaults (−5% / −20%)</button>
@@ -3557,16 +3564,22 @@ function renderHoldingsAssetList() {
 </div>
 <script>
 // ── Signal thresholds editor ──
-function sgNum(id) { const v = String(document.getElementById(id).value).replace(/[%\s]/g, '').replace('−', '-'); return v === '' || v === '-' ? NaN : Number(v); }
+// The fields hold how far BELOW your Avg. Buy Price (the − is printed in front), so the phone's number pad is enough:
+// 8 → −8%. A "-8" typed or pasted means the same; a comma works as the decimal point.
+function sgNum(id) {
+  const v = String(document.getElementById(id).value).replace(/[%\s+]/g, '').replace(/[−–-]/g, '').replace(',', '.');
+  return v === '' || !/^\d*\.?\d*$/.test(v) || v === '.' ? NaN : -Number(v);
+}
 function sgRead() {
   const r = sgNum('sgReinforce'), x = sgNum('sgSell');
-  const ok = Number.isFinite(r) && Number.isFinite(x) && r <= 100 && r >= -99 && x >= -99.9 && x < r;
+  const ok = Number.isFinite(r) && Number.isFinite(x) && r <= 0 && r >= -99 && x >= -99.9 && x < r;
   return { reinforce: r, sell: x, ok };
 }
+const sgShow = n => String(Math.abs(n));
 function openSignalEdit() {
   if (!requireCloud()) return;
   const r = Samsam.getSignalRules();
-  document.getElementById('sgReinforce').value = r.reinforce; document.getElementById('sgSell').value = r.sell;
+  document.getElementById('sgReinforce').value = sgShow(r.reinforce); document.getElementById('sgSell').value = sgShow(r.sell);
   document.getElementById('sgReset').style.display = r.isDefault ? 'none' : '';
   document.getElementById('sgModal').classList.add('show'); sgPreview();
   setTimeout(() => document.getElementById('sgReinforce').focus(), 30);
@@ -3575,12 +3588,12 @@ function openSignalEdit() {
 function closeSignalEdit() { document.getElementById('sgModal').classList.remove('show'); document.removeEventListener('keydown', sgKey, true); }
 function sgKey(e) { if (e.key === 'Escape' && !document.querySelector('.cph')) { e.preventDefault(); closeSignalEdit(); } }
 document.getElementById('sgModal').addEventListener('click', e => { if (e.target.id === 'sgModal') closeSignalEdit(); });
-function sgUseDefault() { document.getElementById('sgReinforce').value = -5; document.getElementById('sgSell').value = -20; sgPreview(); }
+function sgUseDefault() { document.getElementById('sgReinforce').value = 5; document.getElementById('sgSell').value = 20; sgPreview(); }
 // live preview: how many of your coins land in each Signal with these numbers
 function sgPreview() {
   const v = sgRead(), box = document.getElementById('sgPrev'), save = document.getElementById('sgSave');
   save.disabled = !v.ok;
-  if (!v.ok) { box.innerHTML = '<span style="color:#f87171">⚠️ Sell / Convert must be lower than Reinforce (e.g. −5 and −20).</span>'; return; }
+  if (!v.ok) { box.innerHTML = '<span style="color:#f87171">⚠️ Sell / Convert must be further below than Reinforce (e.g. 5 and 20), up to 99.</span>'; return; }
   const n = { hold: 0, reinforce: 0, convert: 0 };
   portfolio.forEach(c => { if (c.sym === 'BTC') { n.hold++; return; } const p = getCoinPct(c); n[p < v.sell ? 'convert' : p <= v.reinforce ? 'reinforce' : 'hold']++; });
   const f = x => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x) + '%';
