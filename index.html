@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610301542"></script>
-<script src="samsam-hints.js?v=202610301542"></script>
-<script src="samsam-vault.js?v=202610301542"></script>
-<script src="samsam-labels.js?v=202610301542"></script>
-<script src="samsam-taxonomy.js?v=202610301542"></script>
-<script src="samsam-coins.js?v=202610301542"></script>
-<script src="samsam-dropdown.js?v=202610301542"></script>
-<script src="samsam-add.js?v=202610301542"></script>
-<script src="samsam-chart.js?v=202610301542"></script>
+<script src="samsam-ui.js?v=202610301741"></script>
+<script src="samsam-hints.js?v=202610301741"></script>
+<script src="samsam-vault.js?v=202610301741"></script>
+<script src="samsam-labels.js?v=202610301741"></script>
+<script src="samsam-taxonomy.js?v=202610301741"></script>
+<script src="samsam-coins.js?v=202610301741"></script>
+<script src="samsam-dropdown.js?v=202610301741"></script>
+<script src="samsam-add.js?v=202610301741"></script>
+<script src="samsam-chart.js?v=202610301741"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -905,7 +905,7 @@
   footer .footer-copy a { color: var(--accent); text-decoration: none; opacity: 0.85; }
   footer .footer-copy a:hover { opacity: 1; }
 
-  table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+  table { width: 100%; border-collapse: collapse; min-width: 920px;   /* 7 columns: fits a 1024px screen without sideways scrolling */ }
   thead { background: var(--bg3); position: sticky; top: 0; z-index: 2; }
   th { padding: 11px 12px; font-size: 0.7rem; color: var(--fg2); text-align: center; border-bottom: 2px solid var(--border); cursor: pointer; text-transform: none; letter-spacing: .01em; font-weight: 700; }
   /* Main table header: every label the same way — up to two balanced lines, ⓘ beside it (never dropped below),
@@ -952,10 +952,9 @@
     .main-trio, #accumProgressBar, .btc-ticker, .search-signal-bar, #summaryGrid, .coins-stack, .hdr-btns, #samsamSyncPill, #samsamSyncMenu, .price-edit { display:none !important; }
     #portfolioTableWrapper { display:block !important; overflow:visible !important; border:none !important; margin:0 !important; }
     #portfolioTable { width:100% !important; min-width:0 !important; table-layout:fixed; font-size:8pt; }
-    #portfolioTable th:nth-child(1) { width:3%; }  #portfolioTable th:nth-child(2) { width:17%; }
-    #portfolioTable th:nth-child(3), #portfolioTable th:nth-child(4) { width:10%; }
-    #portfolioTable th:nth-child(5), #portfolioTable th:nth-child(6) { width:12%; }
-    #portfolioTable th:nth-child(7) { width:10%; }  #portfolioTable th:nth-child(8) { width:13%; }  #portfolioTable th:nth-child(9) { width:13%; }
+    #portfolioTable th:nth-child(1) { width:24%; }  #portfolioTable th:nth-child(2) { width:16%; }
+    #portfolioTable th:nth-child(3), #portfolioTable th:nth-child(4) { width:13%; }
+    #portfolioTable th:nth-child(5) { width:14%; }  #portfolioTable th:nth-child(6) { width:12%; }  #portfolioTable th:nth-child(7) { width:8%; }
     #portfolioTable td.num-r { font-size:7.5pt; }
     #portfolioTable .action-badge, #portfolioTable .perf-badge { white-space:normal !important; display:inline-block; line-height:1.25; text-align:center; }
     #portfolioTable th { font-size:7pt; overflow-wrap:anywhere; }
@@ -1019,14 +1018,24 @@
   .card-act.act3 { grid-auto-rows: 40px; margin-top: 2px; }
   .card-act.act3 button { height: 40px; font-size: 0.86rem !important; }
   .row-act.act3 { grid-template-columns: 1fr 1fr 32px; grid-auto-rows: 32px; gap: 5px; width: 150px; margin: 0 auto; }
-  #portfolioTable .category-badge-editable .cat-tag { max-width: 118px; }
+  #portfolioTable .category-badge-editable .cat-tag { max-width: 170px; }
+  @media (max-width: 1279px) { #portfolioTable .category-badge-editable .cat-tag { max-width: 116px !important; } }
+  .note-dot { border: none; background: none; padding: 0 2px; margin-left: 2px; font-size: .8rem; line-height: 1; cursor: pointer; opacity: .9; }
+  .note-dot:hover { opacity: 1; transform: scale(1.1); }
+  /* Card: P&L stands out top-right; body = 2 × 2 (Holdings · Avg. Buy Price · Cost Basis · Signal); Buy / Sell / ⋯ at the bottom */
+  .coin-card .card-pnl { text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .coin-card .card-pnl-usd { font-size: 1.1rem; font-weight: 800; white-space: nowrap; line-height: 1.2; }
+  .coin-card .card-pnl-pct { font-size: .8rem; font-weight: 700; white-space: nowrap; margin-top: 2px; }
+  .coin-card .card-stats-grid { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px; }
+  .coin-card .card-stats-grid .coin-metric val .hold { align-items: flex-start; }
+  .coin-card .card-actions-footer { margin-top: 8px; }
   #portfolioTable .ast-t { gap: 1px; } #portfolioTable .ast-line { line-height: 1.25; }   /* Asset column: symbol / price • 24h / category, kept compact */
   /* Computer: slightly tighter cells so the whole table fits the screen width (no sideways scrolling) */
   @media (min-width: 1024px) {
     #portfolioTable th, #portfolioTable td { padding-left: 6px !important; padding-right: 6px !important; }
-    #portfolioTable td:nth-child(9) { min-width: 92px !important; }   /* Notes */
     #portfolioTable td .note-input { max-width: 100%; }
-    #portfolioTable .category-badge-editable .cat-tag { max-width: 100px; display: inline-block; }
+    #portfolioTable .category-badge-editable .cat-tag { max-width: 170px; display: inline-block; }
+    #portfolioTableWrapper thead th { position: sticky !important; }
   }
   .row-act.act3 button { height: 32px; font-size: 0.78rem !important; }
   .btn-more { display: flex; align-items: center; justify-content: center; padding: 0 !important; border-radius: 8px; border: 1px solid var(--border); background: var(--metric-bg);
@@ -1377,15 +1386,12 @@
   <table id="portfolioTable">
     <thead>
       <tr>
-        <th data-sort="rank" onclick="sortTable('rank')"><span class="th-in"><span class="th-l">#<i class="th-sort" aria-hidden="true"></i></span></span></th>
         <th class="th-left" data-sort="name" onclick="sortTable('name')" style="text-align:left"><span class="th-in"><span class="th-l">Asset<i class="th-sort" aria-hidden="true"></i></span></span></th>
+        <th class="num-r" data-sort="currentValue" onclick="sortTable('currentValue')"><span class="th-in"><span class="th-l"><span>Holdings</span><i class="th-sort" aria-hidden="true"></i></span></span></th>
         <th class="num-r" data-sort="basePrice" onclick="sortTable('basePrice')"><span class="th-in"><span class="th-l th-2"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></span></th>
         <th class="num-r" data-sort="baseValue" onclick="sortTable('baseValue')"><span class="th-in"><span class="th-l th-2"><span data-label="COST_BASIS">Cost Basis</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></span></th>
-        <th class="num-r" data-sort="currentValue" onclick="sortTable('currentValue')"><span class="th-in"><span class="th-l"><span>Holdings</span><i class="th-sort" aria-hidden="true"></i></span></span></th>
         <th class="num-r" data-sort="pnl" onclick="sortTable('pnl')"><span class="th-in"><span class="th-l">P&amp;L<i class="th-sort" aria-hidden="true"></i></span></span></th>
-        <th data-sort="perf" onclick="sortTable('perf')"><span class="th-in"><span class="th-l th-2"><span data-label="PORTFOLIO_VS_BTC">Portfolio vs BTC</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="vsBtc" aria-label="About Portfolio vs BTC"></button></span></th>
         <th data-sort="action" onclick="sortTable('action')"><span class="th-in"><span class="th-l">Signal<i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button></span></th>
-        <th><span class="th-in"><span class="th-l">Notes<i class="th-sort" aria-hidden="true"></i></span></span></th>
         <th><span class="th-in"><span class="th-l">Actions<i class="th-sort" aria-hidden="true"></i></span></span></th>
       </tr>
     </thead>
@@ -1454,7 +1460,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610301542"></script>
+<script type="module" src="samsam-cloud.js?v=202610301741"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1489,12 +1495,28 @@ function catTag(cat, sym) {
 }
 // Category choice (fillCatSelect / syncCatCustom / readCatChoice): shared samsam-add.js
 // "⋯" on a coin card / table row: the less-used actions, in one menu (bottom sheet on phones)
+// Asset cell for the table and the cards: logo · symbol ↗ (📝 when there's a note) / price • 24h ✏️ / category
+function assetHtml(c, below) {
+  const esc = SamsamCoins.esc, note = (c.notes || '').trim();
+  const noteBtn = note ? `<button type="button" class="note-dot" onclick="event.stopPropagation();editNote('${c.sym}')" title="${esc(note)}" aria-label="Note for ${c.sym}: ${esc(note)}">📝</button>` : '';
+  return SamsamCoins.assetCell(c.sym, { price: c.currentPrice, change24h: c.change24h, logoUrl: c.logoUrl, cgId: c.cgId, size: 36, badge: noteBtn,
+    after: `<button type="button" class="val-edit price-edit" onclick="promptPrice('${c.sym}')" title="Set a manual price (only used when there is no live market price)" aria-label="Set a manual price for ${c.sym}">${SamsamUI.icon('pencil')}</button>`, below });
+}
+// Notes live in the ⋯ menu (📝 next to the symbol shows there is one; tap it to read or edit)
+async function editNote(sym) {
+  if (!requireCloud()) return;
+  const c = portfolio.find(x => x.sym === sym); if (!c) return;
+  const v = await CPDialog.prompt(`A private note for ${sym}. Leave it empty to remove it.`, { title: `📝 Note — ${sym}`, value: c.notes || '', okText: 'Save' });
+  if (v === null || v === undefined) return;
+  updateNote(sym, String(v).trim());
+}
 function openCoinMenu(btn, sym) {
   const c = portfolio.find(x => x.sym === sym) || { sym };
   CPMenu.open(btn, `${sym} — more actions`, [
     { icon: '↓', label: SAMSAM_LABELS.TRANSFER_IN, onClick: () => openTransferIn(sym) },
     { icon: '↑', label: SAMSAM_LABELS.TRANSFER_OUT, onClick: () => openTransferOut(sym) },
     { icon: '📋', label: 'History', onClick: () => openHistory(sym) },
+    { icon: '📝', label: (c.notes || '').trim() ? 'Edit Note' : 'Add Note', onClick: () => editNote(sym) },
     { divider: true },
     { icon: '🔥', label: 'Liquidation Map', href: SamsamCoins.liqMapUrl(sym) },
     { icon: '🔮', label: 'Price Prediction', href: SamsamCoins.predictionUrl(sym, c) },
@@ -1968,20 +1990,12 @@ function renderTableAndStack() {
       const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       html += `<tr>
-        <td style="color:var(--fg2);font-size:0.75rem">${i+1}</td>
-        <td style="text-align:left">${SamsamCoins.assetCell(c.sym, { price: c.currentPrice, change24h: c.change24h, logoUrl: c.logoUrl, cgId: c.cgId, size: 36, after: `<button type="button" class="val-edit price-edit" onclick="promptPrice('${c.sym}')" title="Set a manual price (only used when there is no live market price)" aria-label="Set a manual price for ${c.sym}">${SamsamUI.icon('pencil')}</button>`, below: catTag(c.cat, c.sym) })}</td>
+        <td style="text-align:left">${assetHtml(c, catTag(c.cat, c.sym))}</td>
+        <td class="ro-num num-r" title="Amount changes only through Buy / Sell / Transfer">${SamsamCoins.holdCell(c.sym, curVal, c.qty)}</td>
         <td class="ro-num num-r" style="color:var(--fg2)" title="Calculated from Buy / Sell / Transfer">${fmtAvgRO(c.basePrice)}</td>
         <td class="ro-num num-r" style="color:var(--fg2)">${SamsamFmt.usd(baseVal)}</td>
-        <td class="ro-num num-r" title="Amount changes only through Buy / Sell / Transfer">${SamsamCoins.holdCell(c.sym, curVal, c.qty)}</td>
         <td class="num-r"><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${SamsamFmt.usdSigned(pnl)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
-        <td><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></td>
         <td><span class="action-badge action-${action}">${actionLabel}</span></td>
-        <td style="min-width:120px">
-          <input type="text" class="editable-input note-input" value="${(c.notes||'').replace(/"/g,'&quot;')}"
-            placeholder="📝 note…"
-            onchange="updateNote('${c.sym}',this.value)"
-            title="Add a note for ${c.sym}">
-        </td>
         <td style="text-align:center;white-space:nowrap">
           <div class="row-act act3">
             <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')" title="Buy ${c.sym}">+ Buy</button>
@@ -2008,32 +2022,19 @@ function renderTableAndStack() {
       const color=COIN_COLORS[c.sym]||'#6b7280';
       return `<div class="coin-card">
         <div class="coin-card-header">
-          ${SamsamCoins.assetCell(c.sym, { price: c.currentPrice, change24h: c.change24h, logoUrl: c.logoUrl, cgId: c.cgId, size: 36, after: `<button type="button" class="val-edit price-edit" onclick="promptPrice('${c.sym}')" title="Set a manual price (only used when there is no live market price)" aria-label="Set a manual price for ${c.sym}">${SamsamUI.icon('pencil')}</button>` })}
-          <div>
-            <div style="font-weight:700;font-size:1rem;white-space:nowrap">${SamsamFmt.usd(curVal)}</div>
-            <div class="${pnlCls}" style="font-size:0.75rem;white-space:nowrap">${SamsamFmt.usdSigned(pnl)} (${pnlSign}${pnlPct.toFixed(1)}%)</div>
+          ${assetHtml(c, catTag(c.cat, c.sym))}
+          <div class="card-pnl ${pnlCls}" title="P&amp;L = Holdings − Cost Basis">
+            <div class="card-pnl-usd">${SamsamFmt.usdSigned(pnl)}</div>
+            <div class="card-pnl-pct">(${pnlSign}${pnlPct.toFixed(1)}%)</div>
           </div>
         </div>
-        <div class="card-cat-row">${catTag(c.cat, c.sym)}</div>
-        <div class="coin-card-body">
-          <div class="coin-metric"><label>${SAMSAM_LABELS.AMOUNT}</label><val title="${fmtQtyRO(c.qty)}">${fmtQtyRO(c.qty)}</val></div>
-          <div class="coin-metric"><label>${SAMSAM_LABELS.COST_BASIS}<button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
+        <div class="coin-card-body card-stats-grid">
+          <div class="coin-metric"><label>Holdings</label><val>${SamsamCoins.holdCell(c.sym, curVal, c.qty, { align: 'left' })}</val></div>
           <div class="coin-metric"><label>${SAMSAM_LABELS.AVG_BUY_PRICE}<button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></label><val title="${fmtAvgRO(c.basePrice)}">${fmtAvgRO(c.basePrice)}</val></div>
-          <div class="coin-metric"><label title="${SAMSAM_LABELS.HOLDINGS_VALUE}">${SAMSAM_LABELS.HOLDINGS_VALUE}</label><val title="${SamsamFmt.usd(curVal)}">${SamsamFmt.usd(curVal)}</val></div>
-          <div class="coin-metric"><label>${SAMSAM_LABELS.PORTFOLIO_VS_BTC}<button type="button" class="cp-hint" data-hint="vsBtc" aria-label="About Portfolio vs BTC"></button></label><val><span class="perf-badge ${perfClass}">${perfIcon} ${perfSign}${perf.toFixed(1)}%</span></val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.COST_BASIS}<button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
           <div class="coin-metric"><label>${SAMSAM_LABELS.SIGNAL}<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button></label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
         </div>
-        <div style="padding:6px 12px 0">
-          <input type="text" class="editable-input note-input" value="${(c.notes||'').replace(/"/g,'&quot;')}"
-            placeholder="📝 Add a note…"
-            onchange="updateNote('${c.sym}',this.value)"
-            style="width:100%;font-size:0.8rem">
-        </div>
-        <div class="coin-card-footer" style="font-size:0.75rem">
-          <span>#${i+1}</span>
-          <span style="color:var(--fg2)">${c.lastUpdate||'Oct 15, 2026'}</span>
-        </div>
-        <div class="coin-card-actions card-act act3">
+        <div class="coin-card-actions card-act act3 card-actions-footer">
           <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
           <button class="btn-sell" onclick="openSell('${c.sym}')">− Sell</button>
           <button type="button" class="btn-more" onclick="event.stopPropagation();openCoinMenu(this,'${c.sym}')" aria-haspopup="menu" aria-expanded="false" title="More actions for ${c.sym}" aria-label="More actions for ${c.sym}">⋯</button>
