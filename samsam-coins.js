@@ -274,9 +274,10 @@
   }
   function assetText(sym, o) {
     o = o || {}; assetCss();
-    var u = o.link === false ? null : cgUrl(sym, o.cgId), name = o.name || NAMES[sym] || '';
+    // ↗ on every page; o.link:false only unlinks the logo
+    var u = o.symLink === false ? null : cgUrl(sym, o.cgId), name = o.name || NAMES[sym] || '';
     var title = esc(name ? name + ' (' + sym + ')' : sym) + (u ? ' — open on CoinMarketCap' : '');
-    var symHtml = u ? '<a class="ast-sym ext-link" href="' + u + '" target="_blank" rel="noopener" title="' + title + '">' + esc(sym) + EXT + '</a>'
+    var symHtml = u ? '<a class="ast-sym ext-link" href="' + u + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="' + title + '">' + esc(sym) + EXT + '</a>'
                     : '<span class="ast-sym" title="' + title + '">' + esc(sym) + '</span>';
     var p = +o.price || 0, ch = typeof o.change24h === 'number' && isFinite(o.change24h) ? o.change24h : null;
     var priceHtml = p > 0 ? '<span class="ast-price">' + (window.SamsamFmt ? SamsamFmt.price(p) : '$' + p) + '</span>' : '<span class="ast-price">—</span>';
@@ -287,7 +288,7 @@
   }
   function assetIcon(sym, o) {
     o = o || {}; assetCss();
-    var size = o.size || 34;
+    var size = o.size || 36;   // one logo size on every page
     return o.link === false ? '<span class="ast-ic">' + icon(sym, size, o) + '</span>' : '<span class="ast-ic">' + iconLinked(sym, size, o) + '</span>';
   }
   // ── One Holdings column for every page: value (bold) over the full amount + symbol ──

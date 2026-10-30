@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610292308"></script>
-<script src="samsam-hints.js?v=202610292308"></script>
-<script src="samsam-vault.js?v=202610292308"></script>
-<script src="samsam-labels.js?v=202610292308"></script>
-<script src="samsam-taxonomy.js?v=202610292308"></script>
-<script src="samsam-coins.js?v=202610292308"></script>
-<script src="samsam-dropdown.js?v=202610292308"></script>
-<script src="samsam-add.js?v=202610292308"></script>
-<script src="samsam-chart.js?v=202610292308"></script>
+<script src="samsam-ui.js?v=202610300134"></script>
+<script src="samsam-hints.js?v=202610300134"></script>
+<script src="samsam-vault.js?v=202610300134"></script>
+<script src="samsam-labels.js?v=202610300134"></script>
+<script src="samsam-taxonomy.js?v=202610300134"></script>
+<script src="samsam-coins.js?v=202610300134"></script>
+<script src="samsam-dropdown.js?v=202610300134"></script>
+<script src="samsam-add.js?v=202610300134"></script>
+<script src="samsam-chart.js?v=202610300134"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1378,7 +1378,7 @@
     <thead>
       <tr>
         <th data-sort="rank" onclick="sortTable('rank')"><span class="th-in"><span class="th-l">#<i class="th-sort" aria-hidden="true"></i></span></span></th>
-        <th class="th-left" data-sort="name" onclick="sortTable('name')" style="text-align:left"><span class="th-in"><span class="th-l">Coin<i class="th-sort" aria-hidden="true"></i></span></span></th>
+        <th class="th-left" data-sort="name" onclick="sortTable('name')" style="text-align:left"><span class="th-in"><span class="th-l">Asset<i class="th-sort" aria-hidden="true"></i></span></span></th>
         <th class="num-r" data-sort="basePrice" onclick="sortTable('basePrice')"><span class="th-in"><span class="th-l th-2"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></span></th>
         <th class="num-r" data-sort="baseValue" onclick="sortTable('baseValue')"><span class="th-in"><span class="th-l th-2"><span data-label="COST_BASIS">Cost Basis</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></span></th>
         <th class="num-r" data-sort="currentValue" onclick="sortTable('currentValue')"><span class="th-in"><span class="th-l"><span>Holdings</span><i class="th-sort" aria-hidden="true"></i></span></span></th>
@@ -1454,7 +1454,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610292308"></script>
+<script type="module" src="samsam-cloud.js?v=202610300134"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1969,7 +1969,7 @@ function renderTableAndStack() {
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       html += `<tr>
         <td style="color:var(--fg2);font-size:0.75rem">${i+1}</td>
-        <td style="text-align:left">${SamsamCoins.assetCell(c.sym, { price: c.currentPrice, change24h: c.change24h, logoUrl: c.logoUrl, cgId: c.cgId, size: 32, after: `<button type="button" class="val-edit price-edit" onclick="promptPrice('${c.sym}')" title="Set a manual price (only used when there is no live market price)" aria-label="Set a manual price for ${c.sym}">${SamsamUI.icon('pencil')}</button>`, below: catTag(c.cat, c.sym) })}</td>
+        <td style="text-align:left">${SamsamCoins.assetCell(c.sym, { price: c.currentPrice, change24h: c.change24h, logoUrl: c.logoUrl, cgId: c.cgId, size: 36, after: `<button type="button" class="val-edit price-edit" onclick="promptPrice('${c.sym}')" title="Set a manual price (only used when there is no live market price)" aria-label="Set a manual price for ${c.sym}">${SamsamUI.icon('pencil')}</button>`, below: catTag(c.cat, c.sym) })}</td>
         <td class="ro-num num-r" style="color:var(--fg2)" title="Calculated from Buy / Sell / Transfer">${fmtAvgRO(c.basePrice)}</td>
         <td class="ro-num num-r" style="color:var(--fg2)">${SamsamFmt.usd(baseVal)}</td>
         <td class="ro-num num-r" title="Amount changes only through Buy / Sell / Transfer">${SamsamCoins.holdCell(c.sym, curVal, c.qty)}</td>
@@ -3379,7 +3379,7 @@ function drawHoldingsOverlayChart() {
 
 // Holdings screen: sort by Asset (A→Z), Price or Holdings value; tap the same column again to reverse
 let hovSort = { key: 'holdings', dir: -1 };
-try { const v = JSON.parse(localStorage.getItem('samsam_hov_sort') || 'null'); if (v && ['asset', 'price', 'holdings'].includes(v.key)) hovSort = v; } catch (_) {}
+try { const v = JSON.parse(localStorage.getItem('samsam_hov_sort') || 'null'); if (v && ['asset', 'holdings'].includes(v.key)) hovSort = v; } catch (_) {}
 function setHovSort(key) {
   hovSort = hovSort.key === key ? { key, dir: -hovSort.dir } : { key, dir: key === 'asset' ? 1 : -1 };
   try { localStorage.setItem('samsam_hov_sort', JSON.stringify(hovSort)); } catch (_) {}
@@ -3917,7 +3917,7 @@ async function saveBaselineEdit() {
   <!-- Asset list: one card -->
   <div class="hov-card hov-list-card">
   <div class="hov-list-header">
-    <span class="hov-h-asset"><button type="button" class="hov-sort" data-sort="asset" onclick="setHovSort('asset')">Asset<i></i></button><span class="hov-h-dot">·</span><button type="button" class="hov-sort" data-sort="price" onclick="setHovSort('price')">Price<i></i></button></span>
+    <span class="hov-h-asset"><button type="button" class="hov-sort" data-sort="asset" onclick="setHovSort('asset')">Asset<i></i></button></span>
     <button type="button" class="hov-sort" data-sort="holdings" onclick="setHovSort('holdings')">Holdings<i></i></button>
   </div>
 

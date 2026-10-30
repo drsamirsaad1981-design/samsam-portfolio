@@ -15,13 +15,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202610300134"></script>
-<script src="samsam-hints.js?v=202610300134"></script>
-<script src="samsam-vault.js?v=202610300134"></script>
-<script src="samsam-labels.js?v=202610300134"></script>
-<script src="samsam-taxonomy.js?v=202610300134"></script>
-<script src="samsam-coins.js?v=202610300134"></script>
-<script src="samsam-dropdown.js?v=202610300134"></script>
+<script src="samsam-ui.js?v=202610301349"></script>
+<script src="samsam-hints.js?v=202610301349"></script>
+<script src="samsam-vault.js?v=202610301349"></script>
+<script src="samsam-labels.js?v=202610301349"></script>
+<script src="samsam-taxonomy.js?v=202610301349"></script>
+<script src="samsam-coins.js?v=202610301349"></script>
+<script src="samsam-dropdown.js?v=202610301349"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -235,7 +235,7 @@ body {
 
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610300134"></script>
+<script type="module" src="samsam-cloud.js?v=202610301349"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
 
@@ -433,7 +433,7 @@ function selectCat(cat) {
     const sym = c.sym;
     return `<div class="coin-row" data-sym="${c.sym}" role="link" tabindex="0" aria-label="${c.sym} — open transactions" onclick="openCoin('${c.sym}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCoin('${c.sym}')}">
       <div class="coin-logo">${SamsamCoins.icon(c.sym, 36, { logoUrl: c.logoUrl })}</div>
-      <div class="coin-info">${SamsamCoins.assetText(c.sym, { price: c.currentPrice, change24h: c.change24h, link: false })}</div>
+      <div class="coin-info">${SamsamCoins.assetText(c.sym, { price: c.currentPrice, change24h: c.change24h, cgId: c.cgId })}</div>
       <div class="coin-right">
         ${SamsamCoins.holdCell(c.sym, c.val, c.qty, { below: `<div class="coin-share"><span class="coin-pct">${pct.toFixed(2)}%</span><span class="alloc-bar-wrap"><span class="alloc-bar" style="display:block;width:${barW}%;background:${color}"></span></span></div>` })}
       </div>

@@ -16,14 +16,14 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610300134"></script>
-<script src="samsam-hints.js?v=202610300134"></script>
-<script src="samsam-vault.js?v=202610300134"></script>
-<script src="samsam-labels.js?v=202610300134"></script>
-<script src="samsam-taxonomy.js?v=202610300134"></script>
-<script src="samsam-coins.js?v=202610300134"></script>
-<script src="samsam-dropdown.js?v=202610300134"></script>
-<script src="samsam-add.js?v=202610300134"></script>
+<script src="samsam-ui.js?v=202610301349"></script>
+<script src="samsam-hints.js?v=202610301349"></script>
+<script src="samsam-vault.js?v=202610301349"></script>
+<script src="samsam-labels.js?v=202610301349"></script>
+<script src="samsam-taxonomy.js?v=202610301349"></script>
+<script src="samsam-coins.js?v=202610301349"></script>
+<script src="samsam-dropdown.js?v=202610301349"></script>
+<script src="samsam-add.js?v=202610301349"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -575,7 +575,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   <table>
     <thead>
       <tr>
-        <th class="sortable" onclick="setSort('name')">Coin</th>
+        <th class="sortable" onclick="setSort('name')">Asset</th>
         <th class="sortable" onclick="setSort('targetQty')"><span data-label="TARGET_AMOUNT">Target Amount</span><button type="button" class="cp-hint" data-hint="targetAmount" aria-label="About Target Amount"></button></th>
         <th class="sortable" onclick="setSort('holdVal')">Holdings</th>
         <th class="sortable" onclick="setSort('pendingQty')"><span data-label="PENDING_AMOUNT">Pending Amount</span><button type="button" class="cp-hint" data-hint="pendingAmount" aria-label="About Pending Amount"></button></th>
@@ -619,7 +619,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610300134"></script>
+<script type="module" src="samsam-cloud.js?v=202610301349"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -930,7 +930,7 @@ function renderTable() {
     return `<tr class="${completed ? 'completed-row' : ''}">
       <td>
         <div class="coin-cell">
-          ${planAsset(entry, r, { size: 32, badge: completed ? '<span class="completed-badge">✓ Done</span>' : r.notOwned ? '<span class="not-owned-badge">Not Owned Yet</span>' : '', below: catBadge(entry, idx) })}
+          ${planAsset(entry, r, { size: 36, badge: completed ? '<span class="completed-badge">✓ Done</span>' : r.notOwned ? '<span class="not-owned-badge">Not Owned Yet</span>' : '', below: catBadge(entry, idx) })}
         </div>
       </td>
       <td>
