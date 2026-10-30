@@ -15,13 +15,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202610301349"></script>
-<script src="samsam-hints.js?v=202610301349"></script>
-<script src="samsam-vault.js?v=202610301349"></script>
-<script src="samsam-labels.js?v=202610301349"></script>
-<script src="samsam-taxonomy.js?v=202610301349"></script>
-<script src="samsam-coins.js?v=202610301349"></script>
-<script src="samsam-dropdown.js?v=202610301349"></script>
+<script src="samsam-ui.js?v=202610301542"></script>
+<script src="samsam-hints.js?v=202610301542"></script>
+<script src="samsam-vault.js?v=202610301542"></script>
+<script src="samsam-labels.js?v=202610301542"></script>
+<script src="samsam-taxonomy.js?v=202610301542"></script>
+<script src="samsam-coins.js?v=202610301542"></script>
+<script src="samsam-dropdown.js?v=202610301542"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -145,11 +145,15 @@ body {
 .coin-sym { font-size: .95rem; font-weight: 800; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .coin-sym a { color: inherit; text-decoration: none; }
 .coin-qty { font-size: .72rem; color: var(--fg2); margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.coin-right { text-align: right; min-width: 96px; font-variant-numeric: tabular-nums; }
+.coin-right { text-align: right; width: 136px; font-variant-numeric: tabular-nums; }   /* one width on every row, so the bars line up */
+.coin-right .hold { align-items: stretch; }
+@media (max-width: 380px) { .coin-right { width: 118px; } .coin-row { column-gap: 10px; padding: 12px 12px; } }
+@media (max-width: 340px) { .coin-right { width: 104px; } .coin-row { column-gap: 8px; padding: 12px 10px; } .coin-row .ast-sym { font-size: .84rem; } .coin-row .hold-qty { font-size: .66rem; } }
+.coin-right .hold-val, .coin-right .hold-qty { text-align: right; }
 .coin-val { font-size: .95rem; font-weight: 800; line-height: 1.2; white-space: nowrap; }
-.coin-share { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 4px; }
-.coin-pct { font-size: .74rem; font-weight: 700; color: var(--fg2); white-space: nowrap; }
-.alloc-bar-wrap { height: 4px; width: 48px; background: var(--bar-bg); border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+.coin-share { display: flex; align-items: center; gap: 8px; margin-top: 5px; }   /* [bar ────── ] 17.55% */
+.coin-pct { font-size: .74rem; font-weight: 700; color: var(--fg); white-space: nowrap; min-width: 46px; text-align: right; }
+.alloc-bar-wrap { height: 5px; flex: 1; min-width: 0; background: var(--bar-bg); border-radius: 4px; overflow: hidden; }
 .alloc-bar { height: 100%; border-radius: 4px; transition: width .4s; }
 .coin-table-header {
   display: flex; justify-content: space-between; gap: 10px;
@@ -208,7 +212,7 @@ body {
       <div class="total-bar-val" id="totalValBar">—</div>
     </div>
     <div style="text-align:right">
-      <div class="total-bar-label">Coins</div>
+      <div class="total-bar-label">Assets</div>
       <div class="total-bar-val" id="totalCoinsBar">—</div>
     </div>
   </div>
@@ -228,14 +232,14 @@ body {
   <div class="section-detail" id="sectionDetail">
     <div class="coin-table-header">
       <div class="cth-asset">Asset</div>
-      <div class="cth-alloc">Holdings · Allocation</div>
+      <div class="cth-alloc">Allocation</div>
     </div>
     <div class="coin-list" id="detailCoinList"></div>
   </div>
 
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610301349"></script>
+<script type="module" src="samsam-cloud.js?v=202610301542"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
 
@@ -420,7 +424,7 @@ function selectCat(cat) {
   // Category card
   if (allocDD) allocDD.setValue(cat || 'all');
   const val = document.getElementById('allocCatVal');
-  if (val) val.innerHTML = `<b>${fmtUSD(catTotal)}</b><small>${cat ? catPct + '% of portfolio' : coins.length + ' coins'}</small>`;
+  if (val) val.innerHTML = `<b>${fmtUSD(catTotal)}</b><small>${cat ? catPct + '% of portfolio' : coins.length + (coins.length === 1 ? ' asset' : ' assets')}</small>`;
   const pick = document.getElementById('allocCatPicker');
   if (pick) pick.style.setProperty('--cat-c', cat ? (CAT_COLORS[cat] || '#6b7280') : 'var(--accent)');
 
@@ -435,7 +439,7 @@ function selectCat(cat) {
       <div class="coin-logo">${SamsamCoins.icon(c.sym, 36, { logoUrl: c.logoUrl })}</div>
       <div class="coin-info">${SamsamCoins.assetText(c.sym, { price: c.currentPrice, change24h: c.change24h, cgId: c.cgId })}</div>
       <div class="coin-right">
-        ${SamsamCoins.holdCell(c.sym, c.val, c.qty, { below: `<div class="coin-share"><span class="coin-pct">${pct.toFixed(2)}%</span><span class="alloc-bar-wrap"><span class="alloc-bar" style="display:block;width:${barW}%;background:${color}"></span></span></div>` })}
+        ${SamsamCoins.holdCell(c.sym, c.val, c.qty, { below: `<div class="coin-share"><span class="alloc-bar-wrap"><span class="alloc-bar" style="display:block;width:${barW}%;background:${color}"></span></span><span class="coin-pct">${pct.toFixed(2)}%</span></div>` })}
       </div>
       <span class="coin-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
     </div>`;
