@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610302022';
-import * as Hist from './samsam-history.js?v=202610302022';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610302022';
+import * as Core from './samsam-core.js?v=202610302309';
+import * as Hist from './samsam-history.js?v=202610302309';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610302309';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -108,6 +108,19 @@ function cleanBaseline(b) {
   const date = String(b.date || ''), p = Number(b.btcPrice);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(Date.parse(date + 'T00:00:00Z')) || !(p > 0 && p < 1e8)) return null;
   return { date, btcPrice: p, setAt: typeof b.setAt === 'string' ? b.setAt.slice(0, 40) : '', source: b.source === 'manual' ? 'manual' : 'coingecko' };
+}
+// ── Signal thresholds (Hold / Reinforce / Sell), saved in users/{uid}/meta/info.signal ──
+//   change ≤ reinforce → Reinforce · change < sell → Sell / Convert · otherwise Hold   (change = price vs Avg. Buy Price, %)
+export const DEFAULT_SIGNAL = Object.freeze({ reinforce: -5, sell: -20 });
+function cleanSignal(s) {
+  if (!s || typeof s !== 'object') return null;
+  const r = Number(s.reinforce), x = Number(s.sell);
+  if (!Number.isFinite(r) || !Number.isFinite(x) || r > 100 || r < -99 || x < -99.9 || x >= r) return null;
+  return { reinforce: Math.round(r * 100) / 100, sell: Math.round(x * 100) / 100 };
+}
+function currentSignal() {
+  const s = cleanSignal(S.meta && S.meta.signal);
+  return s ? { ...s, isDefault: false } : { ...DEFAULT_SIGNAL, isDefault: true };
 }
 function currentBaseline() {
   const b = cleanBaseline(S.meta && S.meta.baseline);
@@ -362,6 +375,14 @@ const API = {
   core: Core,
   configure(opts) { Object.assign(S.opts, opts || {}); if (allLoaded()) emit(); },
   getBaseline() { return currentBaseline(); },
+  getSignalRules() { return currentSignal(); },
+  signalOf(pct, sym) { const r = currentSignal(); if (sym === 'BTC') return 'hold'; return pct < r.sell ? 'convert' : pct <= r.reinforce ? 'reinforce' : 'hold'; },
+  // null → back to the defaults (−5% / −20%)
+  setSignalRules(rules) {
+    const s = rules == null ? null : cleanSignal(rules);
+    if (rules != null && !s) { const e = new Error('Sell / Convert must be lower than Reinforce (between −99% and +100%).'); setError(e, 'Signal'); return Promise.reject(e); }
+    return commit((bt, ref, fs) => bt.set(ref('meta', 'info'), { signal: s ? { ...s, setAt: new Date().toISOString() } : null }, { merge: true }), 'Signal');
+  },
   // Change the baseline (date + BTC price on that date). Only the comparison with BTC changes —
   // holdings, transactions and profit stay exactly as they are.
   setBaseline({ date, btcPrice, source } = {}) {

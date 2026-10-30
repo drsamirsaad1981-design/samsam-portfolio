@@ -46,9 +46,13 @@
     avgBuy: { title: 'Avg. Buy Price', body: function () { return '<p>The average price you paid per coin, buying fees included. It changes on every buy; sells don\'t change it.</p>' +
       '<div class="cph-f"><b>After a buy</b><code>(Amount held × Avg Buy Price + Buy Price × Amount Bought + Buying Fee) ÷ (Amount held + Amount Bought)</code></div>'; } },
     costBasis: { title: 'Cost Basis', body: function () { return '<p>What the coins you hold now cost you (fees included).</p><div class="cph-f"><b>Cost Basis</b><code>Avg Buy Price × Amount held</code></div>'; } },
-    signal: { title: 'Signal', body: function () { return '<p>A simple reminder based on the price now compared with your <b>Avg. Buy Price</b>:</p>' +
-      '<ul><li><b>⚪ Hold</b> — above −5%</li><li><b>🟢 Reinforce</b> — between −5% and −20%: cheaper than you paid, a chance to add</li><li><b>🔴 Sell / Convert</b> — below −20%: consider moving it into BTC</li></ul>' +
-      '<div class="cph-f"><b>Change</b><code>(Current Price ÷ Avg Buy Price − 1) × 100</code></div><p>BTC is always Hold. It is a reminder, not advice.</p>'; } },
+    signal: { title: 'Signal', body: function () {
+      var r = window.Samsam && Samsam.getSignalRules ? Samsam.getSignalRules() : { reinforce: -5, sell: -20, isDefault: true };
+      var p = function (n) { return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + '%'; };
+      return '<p>A simple reminder based on the price now compared with your <b>Avg. Buy Price</b>:</p>' +
+      '<ul><li><b>⚪ Hold</b> — above ' + p(r.reinforce) + '</li><li><b>🟢 Reinforce</b> — from ' + p(r.reinforce) + ' down to ' + p(r.sell) + ': cheaper than you paid, a chance to add</li><li><b>🔴 Sell / Convert</b> — below ' + p(r.sell) + ': consider moving it into BTC</li></ul>' +
+      '<div class="cph-f"><b>Change</b><code>(Current Price ÷ Avg Buy Price − 1) × 100</code></div><p>BTC is always Hold. It is a reminder, not advice.' + (r.isDefault ? '' : ' <b>Your own thresholds.</b>') + '</p>' +
+      (typeof window.openSignalEdit === 'function' ? '<p><button type="button" class="sg-hint-btn" onclick="CPHint.close();openSignalEdit()">✏️ Change the thresholds</button></p>' : ''); } },
     manualPrice: { title: 'Manual Price (✎)', body: function () { return '<p>Set a price by hand for a coin the live price service doesn\'t cover. It is used <b>only when there is no live market price</b>; as soon as a live price arrives, that one is used.</p>'; } },
     holdingsChange: { title: 'Holdings Change', body: function () { return '<p>How much your holdings moved in the period you picked — split into what <b>prices</b> did and the <b>money you added or took out</b>.</p>' +
       '<div class="cph-f"><b>From prices (the number and %)</b><code>All-Time Profit at the end − All-Time Profit at the start</code></div>' +

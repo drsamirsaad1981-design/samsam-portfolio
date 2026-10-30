@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610301741"></script>
-<script src="samsam-hints.js?v=202610301741"></script>
-<script src="samsam-vault.js?v=202610301741"></script>
-<script src="samsam-labels.js?v=202610301741"></script>
-<script src="samsam-taxonomy.js?v=202610301741"></script>
-<script src="samsam-coins.js?v=202610301741"></script>
-<script src="samsam-dropdown.js?v=202610301741"></script>
-<script src="samsam-add.js?v=202610301741"></script>
-<script src="samsam-chart.js?v=202610301741"></script>
+<script src="samsam-ui.js?v=202610302022"></script>
+<script src="samsam-hints.js?v=202610302022"></script>
+<script src="samsam-vault.js?v=202610302022"></script>
+<script src="samsam-labels.js?v=202610302022"></script>
+<script src="samsam-taxonomy.js?v=202610302022"></script>
+<script src="samsam-coins.js?v=202610302022"></script>
+<script src="samsam-dropdown.js?v=202610302022"></script>
+<script src="samsam-add.js?v=202610302022"></script>
+<script src="samsam-chart.js?v=202610302022"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1020,6 +1020,8 @@
   .row-act.act3 { grid-template-columns: 1fr 1fr 32px; grid-auto-rows: 32px; gap: 5px; width: 150px; margin: 0 auto; }
   #portfolioTable .category-badge-editable .cat-tag { max-width: 170px; }
   @media (max-width: 1279px) { #portfolioTable .category-badge-editable .cat-tag { max-width: 116px !important; } }
+  .sg-hint-btn { border: 1px solid rgba(167,139,250,.45); background: rgba(124,58,237,.14); color: #c4b5fd; font: inherit; font-weight: 700; font-size: .84rem; padding: 7px 12px; border-radius: 10px; cursor: pointer; }
+  #portfolioTable th .sg-edit { margin-left: 2px; }
   .note-dot { border: none; background: none; padding: 0 2px; margin-left: 2px; font-size: .8rem; line-height: 1; cursor: pointer; opacity: .9; }
   .note-dot:hover { opacity: 1; transform: scale(1.1); }
   /* Card: P&L stands out top-right; body = 2 × 2 (Holdings · Avg. Buy Price · Cost Basis · Signal); Buy / Sell / ⋯ at the bottom */
@@ -1391,7 +1393,7 @@
         <th class="num-r" data-sort="basePrice" onclick="sortTable('basePrice')"><span class="th-in"><span class="th-l th-2"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></span></th>
         <th class="num-r" data-sort="baseValue" onclick="sortTable('baseValue')"><span class="th-in"><span class="th-l th-2"><span data-label="COST_BASIS">Cost Basis</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></span></th>
         <th class="num-r" data-sort="pnl" onclick="sortTable('pnl')"><span class="th-in"><span class="th-l">P&amp;L<i class="th-sort" aria-hidden="true"></i></span></span></th>
-        <th data-sort="action" onclick="sortTable('action')"><span class="th-in"><span class="th-l">Signal<i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button></span></th>
+        <th data-sort="action" onclick="sortTable('action')"><span class="th-in"><span class="th-l">Signal<i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button><button type="button" class="val-edit sg-edit" onclick="event.stopPropagation();openSignalEdit()" title="Change the Signal thresholds" aria-label="Change the Signal thresholds"></button></span></th>
         <th><span class="th-in"><span class="th-l">Actions<i class="th-sort" aria-hidden="true"></i></span></span></th>
       </tr>
     </thead>
@@ -1460,7 +1462,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610301741"></script>
+<script type="module" src="samsam-cloud.js?v=202610302022"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1753,10 +1755,11 @@ function getCoinPct(coin) {
 
 function getAction(sym, perf, coin) {
   if (sym === 'BTC') return 'hold';
-  // Signal based on coin's price change vs avg buy price
+  // Signal from the coin's price vs its Avg. Buy Price, with your thresholds (Signal ✏️ — defaults −5% / −20%)
   const pct = coin ? getCoinPct(coin) : perf;
-  if (pct < -20) return 'convert';         // below -20%: Sell / Convert to BTC
-  if (pct <= -5)  return 'reinforce';      // -5% to -20%: Reinforce
+  const r = window.Samsam && Samsam.getSignalRules ? Samsam.getSignalRules() : { reinforce: -5, sell: -20 };
+  if (pct < r.sell) return 'convert';          // below Sell: Sell / Convert to BTC
+  if (pct <= r.reinforce) return 'reinforce';  // Reinforce .. Sell: Reinforce
   return 'hold';
 }
 
@@ -2795,14 +2798,19 @@ document.getElementById('searchBox').addEventListener('input',renderTableAndStac
     { value: '', label: 'All signals', icon: '⚡' }, { value: 'gainers', label: 'Top Gainers', icon: '🟢' },
     { value: 'losers', label: 'Top Losers', icon: '🔴' }, { value: 'convert', label: 'Sell / Convert to BTC', icon: '🔴' },
     { value: 'hold', label: 'Hold', icon: '⚪' }, { value: 'reinforce', label: 'Reinforce', icon: '🟢' },
+    { value: '__rules', label: 'Signal Thresholds', sub: 'Reinforce · Sell %', icon: '✏️' },
   ];
   window.signalDD = SamsamDropdown.create(host, {
     options: opts, value: '', ariaLabel: 'Signal filter', title: 'Filter by signal', minWidth: 220,
-    onChange: v => { document.getElementById('filterAction').value = v; sortCol = 'currentValue'; sortDir = 1; renderTableAndStack(); animateCoinList(); },
+    onChange: v => {
+      if (v === '__rules') { window.signalDD.setValue(document.getElementById('filterAction').value || ''); openSignalEdit(); return; }   // not a filter
+      document.getElementById('filterAction').value = v; sortCol = 'currentValue'; sortDir = 1; renderTableAndStack(); animateCoinList();
+    },
   });
 })();
 document.getElementById('currentDate').innerHTML=SamsamUI.icon('calendar')+'<span>'+new Date().toLocaleDateString('en-US',{year:'numeric',month:(innerWidth<=480?'short':'long'),day:'numeric'})+'</span>';
 document.querySelector('.hm-baseline .val-edit').innerHTML = SamsamUI.icon('pencil');
+document.querySelectorAll('.sg-edit').forEach(b => { b.innerHTML = SamsamUI.icon('pencil'); });
 renderBaselineLabel();
 
 // Baseline + fallback prices let the store show sensible prices before the first live fetch.
@@ -3536,7 +3544,55 @@ function renderHoldingsAssetList() {
     <button type="button" class="bl-reset" id="blReset" onclick="blUseDefault()">Use the original baseline (Oct 15, 2026)</button>
   </div>
 </div>
+<div class="bl-overlay" id="sgModal" role="dialog" aria-modal="true" aria-labelledby="sgTitle">
+  <div class="bl-card">
+    <div class="bl-head"><span style="font-size:1.3rem">⚡</span><h3 id="sgTitle">Signal Thresholds</h3><button type="button" class="cp-hint" data-hint="signal"></button><button type="button" class="bl-x" onclick="closeSignalEdit()" aria-label="Close">×</button></div>
+    <p class="bl-lead">When a coin's price is below your Avg. Buy Price by these amounts, its Signal changes. Same on every page and device.</p>
+    <label class="bl-field"><span>🟢 Reinforce — at or below (%)</span><input type="text" inputmode="decimal" id="sgReinforce" oninput="sgPreview()" autocomplete="off"></label>
+    <label class="bl-field"><span>🔴 Sell / Convert to BTC — below (%)</span><input type="text" inputmode="decimal" id="sgSell" oninput="sgPreview()" autocomplete="off"></label>
+    <div class="bl-prev" id="sgPrev" aria-live="polite"></div>
+    <div class="bl-acts"><button type="button" onclick="closeSignalEdit()">Cancel</button><button type="button" class="bl-save" id="sgSave" onclick="saveSignalEdit()">Save</button></div>
+    <button type="button" class="bl-reset" id="sgReset" onclick="sgUseDefault()">Use the defaults (−5% / −20%)</button>
+  </div>
+</div>
 <script>
+// ── Signal thresholds editor ──
+function sgNum(id) { const v = String(document.getElementById(id).value).replace(/[%\s]/g, '').replace('−', '-'); return v === '' || v === '-' ? NaN : Number(v); }
+function sgRead() {
+  const r = sgNum('sgReinforce'), x = sgNum('sgSell');
+  const ok = Number.isFinite(r) && Number.isFinite(x) && r <= 100 && r >= -99 && x >= -99.9 && x < r;
+  return { reinforce: r, sell: x, ok };
+}
+function openSignalEdit() {
+  if (!requireCloud()) return;
+  const r = Samsam.getSignalRules();
+  document.getElementById('sgReinforce').value = r.reinforce; document.getElementById('sgSell').value = r.sell;
+  document.getElementById('sgReset').style.display = r.isDefault ? 'none' : '';
+  document.getElementById('sgModal').classList.add('show'); sgPreview();
+  setTimeout(() => document.getElementById('sgReinforce').focus(), 30);
+  document.addEventListener('keydown', sgKey, true);
+}
+function closeSignalEdit() { document.getElementById('sgModal').classList.remove('show'); document.removeEventListener('keydown', sgKey, true); }
+function sgKey(e) { if (e.key === 'Escape' && !document.querySelector('.cph')) { e.preventDefault(); closeSignalEdit(); } }
+document.getElementById('sgModal').addEventListener('click', e => { if (e.target.id === 'sgModal') closeSignalEdit(); });
+function sgUseDefault() { document.getElementById('sgReinforce').value = -5; document.getElementById('sgSell').value = -20; sgPreview(); }
+// live preview: how many of your coins land in each Signal with these numbers
+function sgPreview() {
+  const v = sgRead(), box = document.getElementById('sgPrev'), save = document.getElementById('sgSave');
+  save.disabled = !v.ok;
+  if (!v.ok) { box.innerHTML = '<span style="color:#f87171">⚠️ Sell / Convert must be lower than Reinforce (e.g. −5 and −20).</span>'; return; }
+  const n = { hold: 0, reinforce: 0, convert: 0 };
+  portfolio.forEach(c => { if (c.sym === 'BTC') { n.hold++; return; } const p = getCoinPct(c); n[p < v.sell ? 'convert' : p <= v.reinforce ? 'reinforce' : 'hold']++; });
+  const f = x => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x) + '%';
+  box.innerHTML = `<div>⚪ Hold: above ${f(v.reinforce)} — <b>${n.hold}</b> coins</div><div>🟢 Reinforce: ${f(v.reinforce)} to ${f(v.sell)} — <b>${n.reinforce}</b> coins</div><div>🔴 Sell / Convert: below ${f(v.sell)} — <b>${n.convert}</b> coins</div>`;
+}
+async function saveSignalEdit() {
+  const v = sgRead(); if (!v.ok) return;
+  const btn = document.getElementById('sgSave'); btn.disabled = true;
+  try { await Samsam.setSignalRules(v.reinforce === -5 && v.sell === -20 ? null : { reinforce: v.reinforce, sell: v.sell }); closeSignalEdit(); }
+  catch (e) { document.getElementById('sgPrev').innerHTML = '<span style="color:#f87171">⚠️ ' + SamsamCoins.esc((e && e.message) || e) + '</span>'; }
+  finally { btn.disabled = false; }
+}
 // ── Compact bar ──
 (function () {
   const bar = document.getElementById('miniBar'), head = document.getElementById('appHead');
