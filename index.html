@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610302336"></script>
-<script src="samsam-hints.js?v=202610302336"></script>
-<script src="samsam-vault.js?v=202610302336"></script>
-<script src="samsam-labels.js?v=202610302336"></script>
-<script src="samsam-taxonomy.js?v=202610302336"></script>
-<script src="samsam-coins.js?v=202610302336"></script>
-<script src="samsam-dropdown.js?v=202610302336"></script>
-<script src="samsam-add.js?v=202610302336"></script>
-<script src="samsam-chart.js?v=202610302336"></script>
+<script src="samsam-ui.js?v=202610310116"></script>
+<script src="samsam-hints.js?v=202610310116"></script>
+<script src="samsam-vault.js?v=202610310116"></script>
+<script src="samsam-labels.js?v=202610310116"></script>
+<script src="samsam-taxonomy.js?v=202610310116"></script>
+<script src="samsam-coins.js?v=202610310116"></script>
+<script src="samsam-dropdown.js?v=202610310116"></script>
+<script src="samsam-add.js?v=202610310116"></script>
+<script src="samsam-chart.js?v=202610310116"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1067,7 +1067,7 @@
   .ac-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
   .ac-btns .btn { height: 46px; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; font-size: .92rem; font-weight: 700; border-radius: 10px; }
   /* Liquidation Map (CoinGlass) + Price Prediction (CoinCodex), new tab: one row under the action buttons */
-  .btn-liq, .btn-pred { display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 600; white-space: nowrap; line-height: 1;
+  .btn-liq, .btn-pred, .btn-cmc { display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 600; white-space: nowrap; line-height: 1;
     color: #fb923c; background: var(--metric-bg); border: 1px solid rgba(251,146,60,.45); border-radius: 8px; height: 36px; font-size: 0.8rem; -webkit-tap-highlight-color: transparent; }
   .btn-liq:hover { background: #f97316; color: #fff; border-color: #f97316; }
   .btn-pred { color: #a78bfa; border-color: rgba(167,139,250,.45); }
@@ -1077,6 +1077,26 @@
   .row-act .btn-liq, .row-act .btn-pred { height: 28px; font-size: 0.74rem; border-radius: 6px; }
   .htx-links { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 10px; }
   .htx-liq { display: inline-flex; height: 34px; padding: 0 14px; font-size: 0.8rem; }
+  /* Coin page: three links on one line (short names, full name on hover) + ⓘ */
+  .quick-links-row { flex-wrap: nowrap; align-items: center; }
+  .quick-links-row .htx-liq { flex: 1 1 0; min-width: 0; padding: 0 8px; }
+  .quick-links-row .cp-hint { flex-shrink: 0; }
+  .btn-cmc { color: #60a5fa; border-color: rgba(96,165,250,.45); }
+  .btn-cmc:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+  .btn-cmc:focus-visible { outline: 3px solid rgba(96,165,250,.5); outline-offset: 2px; }
+  /* Signal line under the cards + Asset Strategy & Notes */
+  .htx-signal { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin: 4px 0 12px; padding: 10px 14px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); font-size: .86rem; font-weight: 600; color: var(--fg2); }
+  .htx-signal:empty { display: none; }
+  .htx-h24 { font-size: .8rem; font-weight: 700; letter-spacing: 0; white-space: nowrap; }
+  .htx-card #htxHoldings { white-space: normal; overflow: visible; }
+  .htx-signal .action-badge { font-size: .82rem; }
+  .htx-signal .htx-sig-why { flex: 1; min-width: 150px; }
+  .asset-note-box { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 0 0 16px; box-shadow: var(--shadow); }
+  .asset-note-box label { display: block; font-size: .82rem; font-weight: 700; color: var(--fg2); margin-bottom: 8px; }
+  .asset-note-box textarea { width: 100%; box-sizing: border-box; min-height: 74px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-size: .92rem; line-height: 1.45; }
+  .asset-note-box textarea:focus { outline: none; border-color: #7c3aed; }
+  .htx-note-st { font-size: .74rem; color: var(--fg2); margin-top: 5px; min-height: 1em; text-align: right; }
+  @media (max-width: 380px) { .quick-links-row { gap: 6px; } .quick-links-row .htx-liq { padding: 0 5px; font-size: .74rem; gap: 4px; } }
   @media print { .btn-liq, .btn-pred, .htx-links { display: none !important; } }
   /* Category cards (All Coins, Layer 1…): solid surface, readable labels */
   .summary-card { background: var(--card-solid); }
@@ -1462,7 +1482,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610302336"></script>
+<script type="module" src="samsam-cloud.js?v=202610310116"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3139,7 +3159,7 @@ function closeCoinTx() {
   else { history.replaceState({ hov: 'list' }, '', '#holdings'); applyHoldingsRoute(); }
 }
 function selectCoinTx(sym) {
-  history.replaceState(Object.assign({}, history.state, { hov: 'tx' }), '', '#holdings/' + encodeURIComponent(sym));   // keeps "ret"
+  history.replaceState(history.state, '', '#holdings/' + encodeURIComponent(sym));   // same history entry (keeps "ret"; a page opened straight on a coin still goes Back to Holdings)
   applyHoldingsRoute();
 }
 function hovBack() { if (coinTxSym) closeCoinTx(); else closeHoldingsView(); }
@@ -3225,6 +3245,21 @@ function fitInfoPop(tip) {
   pop.classList.remove('edge-r');
   requestAnimationFrame(() => { const r = pop.getBoundingClientRect(); if (r.right > innerWidth - 8 || r.left < 8) pop.classList.toggle('edge-r', r.right > innerWidth - 8); });
 }
+let htxNoteTimer = null;
+function htxNoteTyped() {
+  const st = document.getElementById('htxNoteSt'); st.textContent = 'Typing…';
+  clearTimeout(htxNoteTimer); htxNoteTimer = setTimeout(htxNoteSave, 1000);
+}
+async function htxNoteSave() {
+  clearTimeout(htxNoteTimer);
+  const el = document.getElementById('htxNote'), st = document.getElementById('htxNoteSt'), sym = el.dataset.sym;
+  const coin = portfolio.find(c => c.sym === sym); if (!coin || !requireCloud()) return;
+  const v = el.value.replace(/\s+$/, '');
+  if ((coin.notes || '') === v) { if (st.textContent === 'Typing…') st.textContent = 'Saved ✓'; return; }
+  st.textContent = 'Saving…';
+  try { await Samsam.updateCoin(sym, { notes: v }); if (el.dataset.sym === sym) st.textContent = 'Saved ✓'; }
+  catch (e) { st.textContent = '⚠️ Not saved — ' + ((e && e.message) || e); }
+}
 function renderCoinTx() {
   if (!coinTxSym) return;
   const sym = coinTxSym;
@@ -3234,6 +3269,8 @@ function renderCoinTx() {
   if (liq) { liq.href = SamsamCoins.liqMapUrl(sym); liq.title = `Open the ${sym} liquidation heatmap on CoinGlass (new tab)`; }
   const pred = document.getElementById('htxPredLink');
   if (pred) { pred.href = SamsamCoins.predictionUrl(sym, portfolio.find(c => c.sym === sym) || {}); pred.title = `Open the ${sym} price prediction on CoinCodex (new tab)`; }
+  const cmc = document.getElementById('htxCmcLink'), cmcUrl = getCoinGeckoUrl(sym);
+  if (cmc) { cmc.hidden = !cmcUrl; if (cmcUrl) { cmc.href = cmcUrl; cmc.title = `Open ${sym} on CoinMarketCap (new tab)`; } }
   // Coin selector (searchable): every coin you hold, largest first; current coin always listed
   ensureHtxDropdowns();
   const coins = [...portfolio].sort((a, b) => b.qty * b.currentPrice - a.qty * a.currentPrice);
@@ -3267,10 +3304,25 @@ function renderCoinTx() {
   const realized = ap.realized, profit = ap.total, profitPct = ap.pct;
   const ch = coin && coin.change24h != null ? coin.change24h : null;
   const arrow = n => n >= 0 ? '▲ +' : '▼ -';   // arrow plus explicit sign: ▲ +2.45% / ▼ -1.30%
-  document.getElementById('htxHoldings').textContent = usd(value);
+  // Holdings: value • 24h change, the amount under it (same as the main page)
+  document.getElementById('htxHoldings').innerHTML = SamsamCoins.esc(usd(value)) + (ch == null ? '' : ` <span class="htx-h24 ${ch >= 0 ? 'htx-pos' : 'htx-neg'}" title="24h change">• ${ch >= 0 ? '+' : '−'}${Math.abs(ch).toFixed(2)}%</span>`);
   const h24 = document.getElementById('htxHoldings24');
-  h24.textContent = ch == null ? '—' : arrow(ch) + Math.abs(ch).toFixed(2) + '% (24h)';
-  h24.className = 'htx-sub ' + (ch == null ? 'htx-muted' : ch >= 0 ? 'htx-pos' : 'htx-neg');
+  h24.textContent = qtyFmt(qty) + ' ' + sym; h24.className = 'htx-sub htx-muted';
+  // Signal (your thresholds) + why
+  const sigEl = document.getElementById('htxSignal');
+  if (coin) {
+    const act = getAction(sym, 0, coin), pct = getCoinPct(coin);
+    const lab = act === 'convert' ? '🔴 Sell / Convert' : act === 'reinforce' ? '🟢 Reinforce' : '⚪ Hold';
+    const why = sym === 'BTC' ? 'BTC is always Hold' : `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}% vs your Avg. Buy Price`;
+    sigEl.innerHTML = `<span>Signal</span><span class="action-badge action-${act}">${lab}</span><span class="htx-sig-why">${why}</span>` +
+      `<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button><button type="button" class="val-edit" onclick="openSignalEdit()" title="Change the Signal thresholds" aria-label="Change the Signal thresholds">${SamsamUI.icon('pencil')}</button>`;
+  } else sigEl.innerHTML = '';
+  // Asset Strategy & Notes: the coin's note (same one as ⋯ → Note and the 📝) — never overwritten while you type
+  const nEl = document.getElementById('htxNote');
+  if (nEl && (document.activeElement !== nEl || nEl.dataset.sym !== sym)) {
+    if (nEl.dataset.sym !== sym) { clearTimeout(htxNoteTimer); document.getElementById('htxNoteSt').textContent = ''; }
+    nEl.dataset.sym = sym; nEl.value = (coin && coin.notes) || ''; nEl.disabled = !coin;
+  }
   const pEl = document.getElementById('htxProfit');
   CPProfit.bind(pEl.parentElement, () => htxProfitData, () => ({ scope: coinTxSym }));
   pEl.textContent = (profit >= 0 ? '+' : '-') + usd(Math.abs(profit));
@@ -4006,16 +4058,23 @@ async function saveBaselineEdit() {
       <div id="htxCoinDD"></div>
       <button type="button" class="cp-add htx-add-btn" id="htxAddBtn" onclick="openAddTx()" title="Add a Buy, Sell or Transfer for this coin"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="lbl-long"> Transaction</span></span></button>
     </div>
-    <div class="htx-links">
-      <a class="btn-liq htx-liq" id="htxLiqLink" href="#" target="_blank" rel="noopener noreferrer">🔥 Liquidation Map <span aria-hidden="true">↗</span></a>
-      <a class="btn-pred htx-liq" id="htxPredLink" href="#" target="_blank" rel="noopener noreferrer">🔮 Price Prediction <span aria-hidden="true">↗</span></a>
+    <div class="htx-links quick-links-row">
+      <a class="btn-liq htx-liq" id="htxLiqLink" href="#" target="_blank" rel="noopener noreferrer">🔥 Liq Map <span aria-hidden="true">↗</span></a>
+      <a class="btn-pred htx-liq" id="htxPredLink" href="#" target="_blank" rel="noopener noreferrer">🔮 Prediction <span aria-hidden="true">↗</span></a>
+      <a class="btn-cmc htx-liq" id="htxCmcLink" href="#" target="_blank" rel="noopener noreferrer">📊 CMC <span aria-hidden="true">↗</span></a>
       <button type="button" class="cp-hint" data-hint="external" aria-label="About links that leave the app"></button>
     </div>
     <div class="htx-cards">
-      <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub" id="htxHoldings24">—</div></div>
-      <div class="htx-card"><div class="htx-label">All-Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
+      <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub htx-muted" id="htxHoldings24">—</div></div>
       <div class="htx-card"><div class="htx-label"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></div><div class="htx-value" id="htxAvg">—</div></div>
       <div class="htx-card"><div class="htx-label"><span data-label="COST_BASIS">Cost Basis</span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></div><div class="htx-value" id="htxCost">—</div></div>
+      <div class="htx-card"><div class="htx-label">All-Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
+    </div>
+    <div class="htx-signal" id="htxSignal"></div>
+    <div class="asset-note-box">
+      <label for="htxNote">📝 Asset Strategy &amp; Notes</label>
+      <textarea id="htxNote" rows="3" maxlength="1000" placeholder="Your plan for this coin — targets, why you bought or sold…" oninput="htxNoteTyped()" onblur="htxNoteSave()"></textarea>
+      <div class="htx-note-st" id="htxNoteSt" aria-live="polite"></div>
     </div>
     <div id="htxList" class="htx-list"></div>
   </div>

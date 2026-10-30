@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610302336';
-import * as Hist from './samsam-history.js?v=202610302336';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610302336';
+import * as Core from './samsam-core.js?v=202610310116';
+import * as Hist from './samsam-history.js?v=202610310116';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610310116';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -56,7 +56,7 @@ export const Clean = {
 function cleanCoin(c) {
   const o = { ...c, sym: Clean.sym(c.sym || c.id) };
   if ('name' in o) o.name = Clean.label(o.name) || o.sym;
-  if ('notes' in o) o.notes = Clean.text(o.notes, 500);
+  if ('notes' in o) o.notes = Clean.text(o.notes, 1000);
   if ('cgId' in o) o.cgId = Clean.cgId(o.cgId);
   if ('ccSlug' in o) o.ccSlug = Clean.cgId(o.ccSlug);
   if ('cmcSlug' in o) o.cmcSlug = Clean.cgId(o.cmcSlug);
@@ -465,7 +465,7 @@ const API = {
     if ('cat' in fields) fields.cat = Clean.key(fields.cat) || 'other';
     if ('catLabel' in fields) fields.catLabel = Clean.label(fields.catLabel, 40) || null;
     if ('catLocked' in fields) fields.catLocked = fields.catLocked === true;
-    if ('notes' in fields) fields.notes = Clean.text(fields.notes, 500);
+    if ('notes' in fields) fields.notes = Clean.text(fields.notes, 1000);   // Asset Strategy & Notes
     if ('cgId' in fields) fields.cgId = Clean.cgId(fields.cgId);
     if ('ccSlug' in fields) fields.ccSlug = Clean.cgId(fields.ccSlug);
     if ('cmcSlug' in fields) fields.cmcSlug = Clean.cgId(fields.cmcSlug);
