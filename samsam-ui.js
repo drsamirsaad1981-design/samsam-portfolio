@@ -493,6 +493,86 @@
     confirm: function (m, o) { return dialog('confirm', m, o); },
     prompt: function (m, o) { return dialog('prompt', m, o); },
   };
+  // ── Bottom navigation: Home · Holdings · Performance · Allocation · Accumulation (every main page) ──
+  // Phones / tablets: a bar at the bottom (labels hide on ≤ 360px screens, except the open page).
+  // Computer: the same bar floats as a small dock at the bottom centre. The open page has a violet pill.
+  var NAV = [
+    { k: 'home', label: 'Home', href: 'index.html', ic: '<path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/>' },
+    { k: 'holdings', label: 'Holdings', href: 'index.html#holdings', ic: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M16 14.5h2"/><path d="M6 6V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/>' },
+    { k: 'performance', label: 'Performance', href: 'performance.html', ic: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>' },
+    { k: 'allocation', label: 'Allocation', href: 'allocation.html', ic: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>' },
+    { k: 'accumulation', label: 'Accumulation', href: 'accumulation.html', ic: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>' },
+  ];
+  function navPage() {
+    var f = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+    if (f === '' || f === 'index.html' || f === 'portfolio.html') {
+      var ov = document.getElementById('holdingsOverlay');
+      return (ov && ov.style.display === 'flex') || /^#holdings/.test(location.hash) ? 'holdings' : 'home';
+    }
+    var m = /^(performance|allocation|accumulation)\.html$/.exec(f);
+    return m ? m[1] : null;
+  }
+  function navCss() {
+    if (document.getElementById('cpNavCss')) return;
+    var st = document.createElement('style'); st.id = 'cpNavCss';
+    st.textContent =
+      '.cp-bnav{position:fixed;left:0;right:0;bottom:0;z-index:10010;display:flex;justify-content:space-around;align-items:stretch;gap:2px;box-sizing:border-box;' +
+        'height:calc(62px + env(safe-area-inset-bottom,0px));padding:6px max(6px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(6px,env(safe-area-inset-left,0px));' +
+        'background:rgba(13,14,38,.92);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid rgba(255,255,255,.08);font-family:inherit}' +
+      '[data-theme="light"] .cp-bnav{background:rgba(255,255,255,.94);border-top-color:#e2e8f0}' +
+      '.cp-bnav a{flex:1 1 0;min-width:48px;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:14px;text-decoration:none;color:#94a3b8;font-size:11px;font-weight:600;line-height:1.1;-webkit-tap-highlight-color:transparent;transition:color .15s,background .15s}' +
+      '.cp-bnav a svg{width:24px;height:24px;flex-shrink:0}' +
+      '.cp-bnav a span{white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}' +
+      '.cp-bnav a[aria-current="page"]{color:#c4b5fd;background:rgba(124,58,237,.2)}' +
+      '[data-theme="light"] .cp-bnav a{color:#64748b}[data-theme="light"] .cp-bnav a[aria-current="page"]{color:#6d28d9;background:#ede9fe}' +
+      '@media (hover:hover){.cp-bnav a:hover{color:#e2e8f0}[data-theme="light"] .cp-bnav a:hover{color:#0f172a}}' +
+      '.cp-bnav a:focus-visible{outline:2px solid #a78bfa;outline-offset:-2px}' +
+      '@media (max-width:360px){.cp-bnav a:not([aria-current="page"]) span{display:none}.cp-bnav a[aria-current="page"]{flex-grow:1.6}}' +
+      // computer: a floating dock at the bottom centre
+      '@media (min-width:1024px){.cp-bnav{left:50%;right:auto;bottom:14px;transform:translateX(-50%);width:auto;height:auto;padding:6px;gap:4px;border:1px solid rgba(255,255,255,.1);border-radius:20px;box-shadow:0 12px 32px rgba(0,0,0,.35)}' +
+        '.cp-bnav a{flex:0 0 auto;flex-direction:row;gap:8px;min-height:40px;padding:0 16px;font-size:.84rem}.cp-bnav a svg{width:20px;height:20px}' +
+        '[data-theme="light"] .cp-bnav{border-color:#e2e8f0;box-shadow:0 12px 32px rgba(15,23,42,.12)}}' +
+      // room under the content; the bar replaces the page Back buttons (inner screens keep theirs)
+      'body.has-bnav{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px)) !important}' +
+      'body.has-bnav #holdingsOverlay{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +
+      'body.has-bnav a.cp-back[data-back]{visibility:hidden}' +
+      'body.has-bnav #holdingsOverlay:not([data-view="tx"]) .hov-back-btn{visibility:hidden}' +
+      // older pop-ups sit above the bar
+      '.modal-overlay,.overlay,.dca-overlay{z-index:100030 !important}' +
+      '@media print{.cp-bnav{display:none !important}body.has-bnav{padding-bottom:0 !important}}';
+    document.head.appendChild(st);
+  }
+  function navPaint() {
+    var bar = document.getElementById('cpBnav'); if (!bar) return;
+    var cur = navPage();
+    [].forEach.call(bar.querySelectorAll('a'), function (a) { if (a.dataset.k === cur) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  }
+  function navGo(e, k) {
+    var here = navPage(), onIndex = here === 'home' || here === 'holdings';
+    if (!onIndex || e.metaKey || e.ctrlKey || e.shiftKey) return;   // other pages: a normal link
+    if (k === 'holdings' && typeof window.openHoldingsView === 'function') {
+      e.preventDefault();
+      var ov = document.getElementById('holdingsOverlay'); if ((ov && ov.getAttribute('data-view') === 'tx') || here !== 'holdings') { history.pushState({ hov: 'list' }, '', '#holdings'); if (window.applyHoldingsRoute) window.applyHoldingsRoute(); }
+      setTimeout(navPaint, 0);
+    } else if (k === 'home' && here === 'holdings' && typeof window.closeHoldingsView === 'function') {
+      e.preventDefault(); window.closeHoldingsView(); setTimeout(navPaint, 0);
+    } else if (k === 'home') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  }
+  function navMount() {
+    if (!navPage() || document.getElementById('cpBnav') || !document.body) return;
+    navCss();
+    var html = '<nav class="cp-bnav" id="cpBnav" aria-label="Main">' + NAV.map(function (n) {
+      return '<a href="./' + n.href + '" data-k="' + n.k + '" title="' + n.label + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + n.ic + '</svg><span>' + n.label + '</span></a>';
+    }).join('') + '</nav>';
+    document.body.insertAdjacentHTML('beforeend', html);
+    document.body.classList.add('has-bnav');
+    document.getElementById('cpBnav').addEventListener('click', function (e) { var a = e.target.closest('a[data-k]'); if (a) navGo(e, a.dataset.k); });
+    navPaint();
+    window.addEventListener('hashchange', navPaint); window.addEventListener('popstate', function () { setTimeout(navPaint, 0); });
+    var ov = document.getElementById('holdingsOverlay');
+    if (ov && window.MutationObserver) new MutationObserver(navPaint).observe(ov, { attributes: true, attributeFilter: ['style'] });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', navMount); else navMount();
   // Open a coin's Transactions screen (main page) from another page; its Back comes back here.
   function openCoin(sym) {
     try { sessionStorage.setItem('cpReturn', JSON.stringify({ sym: String(sym).toUpperCase(), t: Date.now() })); } catch (_) {}

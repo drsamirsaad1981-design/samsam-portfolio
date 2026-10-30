@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610310116"></script>
-<script src="samsam-hints.js?v=202610310116"></script>
-<script src="samsam-vault.js?v=202610310116"></script>
-<script src="samsam-labels.js?v=202610310116"></script>
-<script src="samsam-taxonomy.js?v=202610310116"></script>
-<script src="samsam-coins.js?v=202610310116"></script>
-<script src="samsam-dropdown.js?v=202610310116"></script>
-<script src="samsam-add.js?v=202610310116"></script>
-<script src="samsam-chart.js?v=202610310116"></script>
+<script src="samsam-ui.js?v=202610310242"></script>
+<script src="samsam-hints.js?v=202610310242"></script>
+<script src="samsam-vault.js?v=202610310242"></script>
+<script src="samsam-labels.js?v=202610310242"></script>
+<script src="samsam-taxonomy.js?v=202610310242"></script>
+<script src="samsam-coins.js?v=202610310242"></script>
+<script src="samsam-dropdown.js?v=202610310242"></script>
+<script src="samsam-add.js?v=202610310242"></script>
+<script src="samsam-chart.js?v=202610310242"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1482,7 +1482,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610310116"></script>
+<script type="module" src="samsam-cloud.js?v=202610310242"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2243,6 +2243,7 @@ async function deleteTx(txId) {
 }
 
 document.getElementById('historyModal').addEventListener('click', function(e){ if(e.target===this) closeHistory(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('historyModal').classList.contains('active') && !document.querySelector('.cph')) closeHistory(); });
 
 // ── Add New Coin / Add Transaction: the shared forms in samsam-add.js (same on every page) ──
 CPAdd.defaultTxSym = () => coinTxSym;                 // "+ Add" on a coin's Transactions screen → that coin
