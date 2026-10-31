@@ -16,14 +16,14 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610311750"></script>
-<script src="samsam-hints.js?v=202610311750"></script>
-<script src="samsam-vault.js?v=202610311750"></script>
-<script src="samsam-labels.js?v=202610311750"></script>
-<script src="samsam-taxonomy.js?v=202610311750"></script>
-<script src="samsam-coins.js?v=202610311750"></script>
-<script src="samsam-dropdown.js?v=202610311750"></script>
-<script src="samsam-add.js?v=202610311750"></script>
+<script src="samsam-ui.js?v=202610311949"></script>
+<script src="samsam-hints.js?v=202610311949"></script>
+<script src="samsam-vault.js?v=202610311949"></script>
+<script src="samsam-labels.js?v=202610311949"></script>
+<script src="samsam-taxonomy.js?v=202610311949"></script>
+<script src="samsam-coins.js?v=202610311949"></script>
+<script src="samsam-dropdown.js?v=202610311949"></script>
+<script src="samsam-add.js?v=202610311949"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -64,7 +64,7 @@ body {
 @media(max-width:600px) {
   .save-status { font-size: 0.7rem; white-space: nowrap; }
   .save-status .ss-t { display: none; }   /* phone header: icon only */
-  .save-status .ss-i { font-size: 0.95rem; }
+  .save-status .ss-i { font-size: 0.95rem; display: inline-flex; }
 }
 .save-status {
   font-size: 0.75rem; color: var(--fg2);
@@ -125,10 +125,10 @@ body {
 }
 .btn-primary:hover { opacity: .88; color: #fff; }
 .search-box {
-  flex: 1; min-width: 160px; background: var(--bg2);
+  flex: 1; min-width: 160px; background: var(--bg2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.6-3.6'/%3E%3C/svg%3E") no-repeat 12px center / 16px;
   border: 1px solid var(--border); border-radius: 8px;
   color: var(--fg); font-family: inherit; font-size: 0.85rem;
-  padding: 7px 12px; outline: none;
+  padding: 7px 12px 7px 36px; outline: none;
 }
 .search-box:focus { border-color: var(--accent); }
 
@@ -480,10 +480,10 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 <!-- DCA Calculator Modal -->
 <div class="dca-overlay" id="dcaOverlay" style="display:none" onclick="if(event.target===this)closeDcaModal()">
   <div class="dca-modal">
-    <h3>🧮 DCA Calculator</h3>
+    <h3><span data-ic="calc"></span>DCA Calculator</h3>
     <div class="dca-sub" id="dcaSub">Dollar-Cost Averaging plan</div>
     <div class="dca-field">
-      <label>💵 Monthly Investment (USD)</label>
+      <label><span data-ic="cash"></span>Monthly Investment (USD)</label>
       <input type="text" inputmode="decimal" id="dcaMonthly" placeholder="100" oninput="calcDca()">
     </div>
     <div class="dca-field">
@@ -521,8 +521,8 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 <!-- Header -->
 <header class="cp-head">
   <div class="cp-head-l"><a class="cp-back" href="./index.html" data-back aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></a></div>
-  <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" data-nav-ic="accumulation">🎯</span><span class="t" id="pageSubtitle">Accumulation Plan</span></h1>
-  <div class="cp-head-r"><div class="save-status idle" id="saveStatus" role="status" title="✓ Ready" aria-label="✓ Ready"><span class="ss-i">✓</span><span class="ss-t">Ready</span></div></div>
+  <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" data-nav-ic="accumulation"></span><span class="t" id="pageSubtitle">Accumulation Plan</span></h1>
+  <div class="cp-head-r"><div class="save-status idle" id="saveStatus" role="status" title="Ready" aria-label="Ready"><span class="ss-i"></span><span class="ss-t">Ready</span></div></div>
 </header>
 
 <!-- Dashboard -->
@@ -563,10 +563,10 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 <!-- Toolbar -->
 <div class="toolbar">
   <button type="button" class="cp-add" onclick="openAddModal()" title="Add any coin to your plan — even one you don't own yet"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="lbl-long"> Coin</span> to Plan</span></button>
-  <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search coin..." oninput="renderAll()">
+  <input type="text" class="search-box" id="searchBox" placeholder="Search coin..." oninput="renderAll()">
   <div class="view-toggle cp-vseg" role="group" aria-label="View">
-    <button type="button" id="btnTable" data-view="table" onclick="setView('table')">📋 Table</button>
-    <button type="button" id="btnCards" data-view="cards" onclick="setView('cards')">🃏 Cards</button>
+    <button type="button" id="btnTable" data-view="table" onclick="setView('table')"><span data-ic="table"></span>Table</button>
+    <button type="button" id="btnCards" data-view="cards" onclick="setView('cards')"><span data-ic="cards"></span>Cards</button>
   </div>
 </div>
 <div class="summary-grid" id="summaryGrid"></div>
@@ -580,7 +580,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
         <th class="sortable" onclick="setSort('targetQty')"><span data-label="TARGET_AMOUNT">Target Amount</span><button type="button" class="cp-hint" data-hint="targetAmount" aria-label="About Target Amount"></button></th>
         <th class="sortable" onclick="setSort('holdVal')">Holdings</th>
         <th class="sortable" onclick="setSort('pendingQty')"><span data-label="PENDING_AMOUNT">Pending Amount</span><button type="button" class="cp-hint" data-hint="pendingAmount" aria-label="About Pending Amount"></button></th>
-        <th onclick="setSort('targetPrice')" class="sortable">💰 <span data-label="BUY_AT">Buy At</span><button type="button" class="cp-hint" data-hint="buyAt" aria-label="About Buy at %"></button></th>
+        <th onclick="setSort('targetPrice')" class="sortable"><span data-ic="coins"></span><span data-label="BUY_AT">Buy At</span><button type="button" class="cp-hint" data-hint="buyAt" aria-label="About Buy at %"></button></th>
         <th class="sortable" onclick="setSort('costToTarget')"><span data-label="COST_TO_TARGET">Cost to Target</span><button type="button" class="cp-hint" data-hint="costToTarget" aria-label="About Cost to Target"></button></th>
         <th class="sortable" onclick="setSort('progress')"><span data-label="PROGRESS">Progress</span><button type="button" class="cp-hint" data-hint="coinProgress" aria-label="About Progress"></button></th>
         <th></th>
@@ -594,15 +594,15 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 <div id="cardsView" class="cards-wrap" style="display:none"></div>
 
 <div id="emptyState" class="empty-state" style="display:none">
-  <div class="icon">🎯</div>
+  <div class="icon" data-ic="accumulation" data-ic-solo data-ic-size="40"></div>
   <div>No coins in your accumulation plan yet.</div>
-  <div style="margin-top:6px;font-size:0.8rem">Click <strong>➕ Add Coin to Plan</strong> to get started.</div>
+  <div style="margin-top:6px;font-size:0.8rem">Click <strong><span data-ic="plus"></span>Add Coin to Plan</strong> to get started.</div>
 </div>
 
 <!-- Add Coin Modal -->
 <div class="overlay" id="addModal">
   <div class="modal">
-    <h3>➕ Add Coin to Accumulation Plan</h3>
+    <h3><span data-ic="plus"></span>Add Coin to Accumulation Plan</h3>
     <div class="form-row">
       <label class="form-label">Search Coin</label>
       <input type="text" class="form-input" id="addSearch" placeholder="e.g. BTC, Ethereum..." oninput="filterAddList()">
@@ -620,7 +620,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610311750"></script>
+<script type="module" src="samsam-cloud.js?v=202610311949"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -634,14 +634,14 @@ function whenSamsam(cb) {
 }
 let cloudReady = false;
 async function cloudSave() {
-  if (!window.Samsam || !Samsam.isReady()) { setSaveStatus('error', '✗ Still loading — not saved'); return; }
-  setSaveStatus('saving', '☁️ Saving…');
+  if (!window.Samsam || !Samsam.isReady()) { setSaveStatus('error', 'Still loading — not saved'); return; }
+  setSaveStatus('saving', 'Saving…');
   try {
     await Samsam.saveAccumPlan(accumPlan);
-    setSaveStatus('saved', '☁️ Synced');
-    setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2500);
+    setSaveStatus('saved', 'Synced');
+    setTimeout(() => setSaveStatus('ready', 'Ready'), 2500);
   } catch(e) {
-    setSaveStatus('error', '✗ Not saved — see sync status');
+    setSaveStatus('error', 'Not saved — see sync status');
   }
 }
 
@@ -674,7 +674,7 @@ function setView(v) {
 // ─── Init ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   loadTheme();
-  setSaveStatus('saving', '☁️ Loading…');
+  setSaveStatus('saving', 'Loading…');
   setView(currentView);
   // Apply default sort indicator on the Progress column header
   document.querySelectorAll('th.sortable').forEach(th => {
@@ -688,7 +688,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Don't replace the plan while a save of local edits is still debouncing.
     if (!saveTimer) accumPlan = d.accumPlan.map(e => ({ ...e }));
     if (window.SamsamTaxonomy) accumPlan.forEach(e => { if (e.catLabel && SamsamTaxonomy.isCustom(e.cat)) SamsamTaxonomy.register(e.cat, e.catLabel); });
-    if (!cloudReady) { cloudReady = true; setSaveStatus('ready', '✓ Ready'); startPlanPrices(); }
+    if (!cloudReady) { cloudReady = true; setSaveStatus('ready', 'Ready'); startPlanPrices(); }
     renderAll();
     try { checkAllAlerts(); } catch(_) {}
   }));
@@ -741,7 +741,7 @@ function renderCatPicker() {
   accumPlan.forEach(e => { const r = calcRow(e), v = r.actualQty * r.currentPrice, k = catOfEntry(e); totals[k] = (totals[k] || 0) + v; all += v; });
   const keys = T.pickerKeys(totals);
   const dot = c => `<span class="cp-dot" style="background:${c}"></span>`;
-  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(all), icon: '<span class="cp-globe">🌐</span>' }]
+  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(all), icon: '<span class="cp-globe">' + SamsamUI.ic('globe', { solo: true }) + '</span>' }]
     .concat(keys.map(k => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(totals[k] || 0), icon: dot(T.color(k)) })));
   if (!catPickerDD) {
     host.innerHTML = '<div class="cat-picker" id="catPicker"><div id="catPickerDD"></div></div>';
@@ -817,14 +817,14 @@ function saveAccumPlan(immediate = false) {
   saveTimer = setTimeout(() => { saveTimer = null; cloudSave(); }, 800);
 }
 
-function setSaveStatus(type, text) {
+function setSaveStatus(type, text, icon) {
   const el = document.getElementById('saveStatus');
   if (!el) return;
   // icon + words; on a phone only the icon shows in the header (the full text stays as its tooltip / label)
-  const m = String(text).match(/^(\S+)\s+(.*)$/) || [null, '', String(text)];
+  icon = icon || { saving: 'cloud', saved: 'cloud', error: 'x' }[type] || 'check';
   el.innerHTML = '';
-  const i = document.createElement('span'); i.className = 'ss-i'; i.textContent = m[1];
-  const t = document.createElement('span'); t.className = 'ss-t'; t.textContent = m[2];
+  const i = document.createElement('span'); i.className = 'ss-i'; i.innerHTML = SamsamUI.ic(icon, { solo: true });
+  const t = document.createElement('span'); t.className = 'ss-t'; t.textContent = text;
   el.append(i, t); el.title = text; el.setAttribute('aria-label', text);
   el.className = 'save-status ' + (type !== 'ready' ? type : 'idle');
 }
@@ -832,8 +832,8 @@ function setSaveStatus(type, text) {
 // Holdings update live from the cloud; this button just re-renders.
 function syncFromPortfolio() {
   renderAll();
-  setSaveStatus('saved', '🔄 Up to date');
-  setTimeout(() => setSaveStatus('ready', '✓ Ready'), 2000);
+  setSaveStatus('saved', 'Up to date', 'refresh');
+  setTimeout(() => setSaveStatus('ready', 'Ready'), 2000);
 }
 
 // ─── Calculations ────────────────────────────────────────────────────────────
@@ -931,7 +931,7 @@ function renderTable() {
     return `<tr class="${completed ? 'completed-row' : ''}">
       <td>
         <div class="coin-cell">
-          ${planAsset(entry, r, { size: 36, badge: completed ? '<span class="completed-badge">✓ Done</span>' : r.notOwned ? '<span class="not-owned-badge">Not Owned Yet</span>' : '', below: catBadge(entry, idx) })}
+          ${planAsset(entry, r, { size: 36, badge: completed ? '<span class="completed-badge">' + SamsamUI.ic('check') + 'Done</span>' : r.notOwned ? '<span class="not-owned-badge">Not Owned Yet</span>' : '', below: catBadge(entry, idx) })}
         </div>
       </td>
       <td>
@@ -939,13 +939,13 @@ function renderTable() {
       </td>
       <td>${SamsamCoins.holdCell(entry.sym, r.actualQty * r.currentPrice, r.actualQty, { align: 'left', noValue: !(r.currentPrice > 0) })}</td>
       <td style="color:${r.pendingQty > 0 ? 'var(--red)' : 'var(--green)'}">
-        ${r.pendingQty > 0 ? fmtQty(r.pendingQty) : '✓'}
+        ${r.pendingQty > 0 ? fmtQty(r.pendingQty) : SamsamUI.ic('check', { solo: true })}
         ${r.pendingQty > 0 ? `<span style="font-size:.7rem;color:var(--fg2)"> ${entry.sym}</span>` : ''}
       </td>
       <td style="min-width:130px">
         <span class="val-cell">${entry.targetPct ? (entry.targetPct > 0 ? '+' : '−') + Math.abs(entry.targetPct) + '%' : '<span class="no-price">Set %</span>'}<button type="button" class="val-edit" onclick="promptTargetPct(${idx})" title="Change the buy-at % (e.g. -20 = buy 20% below the current price)" aria-label="Change the buy-at percent for ${entry.sym}">${SamsamUI.icon('pencil')}</button></span>
         ${r.targetPrice > 0 ? `<div style="font-size:0.7rem;margin-top:3px;color:var(--accent);font-weight:600">
-          🎯 ${SamsamFmt.price(r.targetPrice)} <span style="color:var(--fg2);font-weight:500">of ${SamsamFmt.price(r.targetBase)}${baseDay(r)}</span>
+          ${SamsamUI.ic('accumulation')}${SamsamFmt.price(r.targetPrice)} <span style="color:var(--fg2);font-weight:500">of ${SamsamFmt.price(r.targetBase)}${baseDay(r)}</span>
         </div>` : ''}
         ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}
       </td>
@@ -957,7 +957,7 @@ function renderTable() {
         <div class="prog-label">${r.progress.toFixed(1)}%</div>
       </td>
       <td>
-        <span style="white-space:nowrap"><button type="button" class="row-buy" onclick="buyPlanCoin(${idx})" title="${r.notOwned ? 'Add ' + entry.sym + ' to your portfolio' : 'Add a Buy for ' + entry.sym}">➕ Buy</button><button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan">✕</button></span>
+        <span style="white-space:nowrap"><button type="button" class="row-buy" onclick="buyPlanCoin(${idx})" title="${r.notOwned ? 'Add ' + entry.sym + ' to your portfolio' : 'Add a Buy for ' + entry.sym}">${SamsamUI.ic('plus')}Buy</button><button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan" aria-label="Remove from plan">${SamsamUI.ic('trash', { solo: true })}</button></span>
       </td>
     </tr>`;
   }).join('');
@@ -1004,19 +1004,19 @@ function renderCards() {
     const metric = (label, val, extra = '') => `<div class="coin-metric"><label>${label}${HINT[label] ? `<button type="button" class="cp-hint" data-hint="${HINT[label]}" aria-label="About ${label}"></button>` : ''}</label><val ${extra}>${val}</val></div>`;
     return `<div class="coin-card acc-card${completed ? ' completed' : ''}">
       <div class="coin-card-header">
-        ${planAsset(entry, r, { size: 36, badge: completed ? '<span class="completed-badge">✓ Done</span>' : r.notOwned ? '<span class="not-owned-badge">Not Owned Yet</span>' : '' })}
+        ${planAsset(entry, r, { size: 36, badge: completed ? '<span class="completed-badge">' + SamsamUI.ic('check') + 'Done</span>' : r.notOwned ? '<span class="not-owned-badge">Not Owned Yet</span>' : '' })}
         <div>
           <div style="font-weight:700;font-size:1.1rem;white-space:nowrap">${hasPrice ? SamsamFmt.usd(holdVal) : '—'}</div>
           <div style="font-size:0.75rem;white-space:nowrap;color:${progColor};font-weight:600">${L.PROGRESS} ${r.progress.toFixed(1)}%</div>
           ${hasPrice ? '' : '<div style="font-size:0.7rem;margin-top:2px"><span class="no-price">No price</span></div>'}
         </div>
       </div>
-      <div class="card-cat-row">${catBadge(entry, idx)}${ap > 0 ? `<span class="alert-badge${alertHit ? ' alert-triggered' : ''}">🔔 ${SamsamFmt.price(ap)}</span>` : ''}</div>
+      <div class="card-cat-row">${catBadge(entry, idx)}${ap > 0 ? `<span class="alert-badge${alertHit ? ' alert-triggered' : ''}">${SamsamUI.ic('bell')}${SamsamFmt.price(ap)}</span>` : ''}</div>
       <div class="acc-card-prog-bar"><div class="acc-card-prog-fill" style="width:${Math.min(r.progress,100).toFixed(1)}%;background:${progColor}"></div></div>
       <div class="coin-card-body">
         ${metric(L.TARGET_AMOUNT, `${fmtQty(entry.targetQty || 0)} <small>${entry.sym}</small>`)}
         ${metric(L.ACTUAL_AMOUNT, `${fmtQty(r.actualQty)} <small>${entry.sym}</small>`)}
-        ${metric(L.PENDING_AMOUNT, r.pendingQty > 0 ? `${fmtQty(r.pendingQty)} <small>${entry.sym}</small>` : '✓ Done', `style="color:${r.pendingQty > 0 ? 'var(--red)' : 'var(--green)'}"`)}
+        ${metric(L.PENDING_AMOUNT, r.pendingQty > 0 ? `${fmtQty(r.pendingQty)} <small>${entry.sym}</small>` : SamsamUI.ic('check') + 'Done', `style="color:${r.pendingQty > 0 ? 'var(--red)' : 'var(--green)'}"`)}
         ${metric(L.CURRENT_PRICE, hasPrice ? SamsamFmt.price(r.currentPrice) : '<span class="no-price">No price</span>')}
         ${metric(L.COST_TO_TARGET, hasPrice && r.pendingQty > 0 ? SamsamFmt.usd(r.costToTarget) : (r.pendingQty === 0 ? '—' : 'N/A'), 'style="color:var(--accent)"')}
         ${metric(L.BUY_AT, r.targetPrice > 0 ? SamsamFmt.price(r.targetPrice) : '—',
@@ -1024,7 +1024,7 @@ function renderCards() {
       </div>
       <div class="acc-settings">
         <div class="acc-set-row">
-          <label>🎯 ${L.TARGET_AMOUNT}</label>
+          <label>${SamsamUI.ic('accumulation')}${L.TARGET_AMOUNT}</label>
           <div class="acc-set-ctl">
             <input class="card-target-input" type="number" min="0" step="any" value="${entry.targetQty||''}" placeholder="Amount"
               oninput="updateTarget(${idx}, this.value)" onblur="commitTarget(${idx}, this.value)" onkeydown="if(event.key==='Enter'){this.blur()}">
@@ -1032,31 +1032,31 @@ function renderCards() {
           </div>
         </div>
         <div class="acc-set-row">
-          <label>💰 ${L.BUY_AT}<button type="button" class="cp-hint" data-hint="buyAt" aria-label="About Buy at %"></button></label>
+          <label>${SamsamUI.ic('coins')}${L.BUY_AT}<button type="button" class="cp-hint" data-hint="buyAt" aria-label="About Buy at %"></button></label>
           <div class="acc-set-ctl">
             <button type="button" class="acc-sign" onclick="togglePctSign(${idx})" title="Toggle positive/negative">${(entry.targetPct||0) >= 0 ? '+' : '−'}</button>
             <input class="card-target-input" type="text" inputmode="decimal" id="pctInput_${idx}" value="${entry.targetPct ? Math.abs(entry.targetPct) : ''}" placeholder="20"
               oninput="updateTargetPctAbs(${idx}, this.value)" onblur="commitTargetPctAbs(${idx}, this.value)" onkeydown="if(event.key==='Enter'){this.blur()}" style="text-align:center">
             <span class="sym-tag">%</span>
           </div>
-          ${r.targetPrice > 0 ? `<div class="acc-set-note" style="color:var(--fg2)">🎯 ${SamsamFmt.price(r.targetPrice)} = ${SamsamFmt.price(r.targetBase)}${baseDay(r)} ${r.targetPct > 0 ? '+' : '−'} ${Math.abs(r.targetPct)}%</div>` : ''}
+          ${r.targetPrice > 0 ? `<div class="acc-set-note" style="color:var(--fg2)">${SamsamUI.ic('accumulation')}${SamsamFmt.price(r.targetPrice)} = ${SamsamFmt.price(r.targetBase)}${baseDay(r)} ${r.targetPct > 0 ? '+' : '−'} ${Math.abs(r.targetPct)}%</div>` : ''}
           ${r.priceDiff !== null ? `<div class="acc-set-note" style="color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}
         </div>
         <div class="acc-set-row">
-          <label>🔔 ${L.PRICE_ALERT}<button type="button" class="cp-hint" data-hint="priceAlert" aria-label="About Price Alert"></button></label>
+          <label>${SamsamUI.ic('bell')}${L.PRICE_ALERT}<button type="button" class="cp-hint" data-hint="priceAlert" aria-label="About Price Alert"></button></label>
           <div class="acc-set-ctl">
             <input class="card-target-input" type="text" inputmode="decimal" value="${ap > 0 ? ap : ''}" placeholder="Price $"
               oninput="updateAlert(${idx}, this.value)" onblur="commitAlert(${idx}, this.value)" onkeydown="if(event.key==='Enter'){this.blur()}" title="Alert when price drops to or below this value">
-            ${ap > 0 ? `<button class="alert-clear-btn" onclick="clearAlert(${idx})" title="Clear alert">✕</button>` : ''}
+            ${ap > 0 ? `<button class="alert-clear-btn" onclick="clearAlert(${idx})" title="Clear alert" aria-label="Clear alert">${SamsamUI.ic('x', { solo: true })}</button>` : ''}
           </div>
-          ${ap > 0 && hasPrice ? `<div class="acc-set-note" style="color:${alertHit ? 'var(--green)' : 'var(--fg2)'}">${alertHit ? '✅ Hit!' : ((r.currentPrice - ap) / ap * 100).toFixed(1) + '% away'}</div>` : ''}
+          ${ap > 0 && hasPrice ? `<div class="acc-set-note" style="color:${alertHit ? 'var(--green)' : 'var(--fg2)'}">${alertHit ? SamsamUI.ic('checkCircle') + 'Hit!' : ((r.currentPrice - ap) / ap * 100).toFixed(1) + '% away'}</div>` : ''}
         </div>
       </div>
       <div class="coin-card-footer"><span>#${i + 1}</span><span title="Last price update${entry.addedAt && /^\d{4}-/.test(entry.addedAt) ? ' · added to plan ' + entry.addedAt.slice(0, 10) : ''}">${(getPortfolioCoin(entry.sym) || {}).lastUpdate || (entry.addedAt && /^\d{4}-/.test(entry.addedAt) ? entry.addedAt.slice(0, 10) : '')}</span></div>
       <div class="card-act">
-        <button class="btn-buy" onclick="buyPlanCoin(${idx})" title="${r.notOwned ? 'Add ' + entry.sym + ' to your portfolio' : 'Add a Buy for ' + entry.sym}">➕ Buy</button>
-        <button class="btn-history" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">🧮 DCA</button>
-        <button class="btn-remove" onclick="removeCoin(${idx})" title="Remove ${entry.sym} from plan">✕ Remove</button>
+        <button class="btn-buy" onclick="buyPlanCoin(${idx})" title="${r.notOwned ? 'Add ' + entry.sym + ' to your portfolio' : 'Add a Buy for ' + entry.sym}">${SamsamUI.ic('plus')}Buy</button>
+        <button class="btn-history" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">${SamsamUI.ic('calc')}DCA</button>
+        <button class="btn-remove" onclick="removeCoin(${idx})" title="Remove ${entry.sym} from plan">${SamsamUI.ic('trash')}Remove</button>
       </div>
     </div>`;
   }).join('');
@@ -1139,9 +1139,9 @@ async function promptTargetPct(idx) {
 // Every change of Buy at % goes through here: it records the coin's price at that moment as the base.
 const baseDay = r => r.targetBaseAt ? ' (' + new Date(r.targetBaseAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ')' : '';
 function buyAtStatus(r) {
-  if (r.readyToBuy) return '🟢 BUY NOW!';
+  if (r.readyToBuy) return SamsamUI.dot('green') + 'BUY NOW!';
   const away = Math.abs(r.priceDiff).toFixed(1);
-  return r.targetPct < 0 ? `🔴 ${away}% above target` : `🔴 ${away}% below target`;
+  return SamsamUI.dot('red') + (r.targetPct < 0 ? `${away}% above target` : `${away}% below target`);
 }
 function setBuyAtPct(idx, pct) {
   const e = accumPlan[idx]; if (!e) return;
@@ -1309,7 +1309,7 @@ function showAddSelected() {
   box.innerHTML = `<strong>${E(c.sym)}</strong> — ${E(c.name)}
      <span style="color:var(--fg2);margin-left:8px">Current: ${c.currentPrice > 0 ? '$' + fmtUSD(c.currentPrice) : '…'}</span>` +
     (c.fromPortfolio ? `<span style="color:var(--fg2);margin-left:8px">Holding: ${fmtQty(c.qty)} ${E(c.sym)}</span>`
-      : `<div style="color:#a78bfa;font-size:.78rem;margin-top:4px">Not in your portfolio yet — the plan tracks its live price, and <b>➕ Buy</b> on its card adds it to your portfolio.</div>`);
+      : `<div style="color:#a78bfa;font-size:.78rem;margin-top:4px">Not in your portfolio yet — the plan tracks its live price, and <b>${SamsamUI.ic('plus')}Buy</b> on its card adds it to your portfolio.</div>`);
   document.getElementById('addList').innerHTML = '';
   document.getElementById('addTarget').focus();
 }
@@ -1410,7 +1410,7 @@ function calcDca() {
   document.getElementById('dcaMonthsToTarget').textContent =
     monthsNeeded !== null
       ? `${monthsNeeded} months (~${(monthsNeeded/12).toFixed(1)} yrs) at ${SamsamFmt.usd(monthly)}/mo`
-      : pendingQty <= 0 ? '✅ Target already reached!' : '—';
+      : pendingQty <= 0 ? 'Target already reached!' : '—';
 
   res.style.display = 'grid';
 }
@@ -1447,7 +1447,7 @@ function checkAlertNotify(idx) {
   if (!entry.alertPrice || entry.alertPrice <= 0 || r.currentPrice <= 0) return;
   if (r.currentPrice <= entry.alertPrice) {
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(`🔔 ${entry.sym} price alert — Cute Portfolio`, {
+      new Notification(`${entry.sym} price alert — Cute Portfolio`, {
         body: `Price $${fmtUSD(r.currentPrice)} reached your alert at $${fmtUSD(entry.alertPrice)}`,
         icon: entry.logoUrl || './icon-192.png?v=2', badge: './icon-192.png?v=2', tag: 'cp-alert-' + entry.sym
       });

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610311750';
-import * as Hist from './samsam-history.js?v=202610311750';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610311750';
+import * as Core from './samsam-core.js?v=202610311949';
+import * as Hist from './samsam-history.js?v=202610311949';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610311949';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -36,6 +36,7 @@ const deviceId = (() => {
   if (!id) { id = Core.newId('dev_'); try { localStorage.setItem(DEVICE_KEY, id); } catch (_) {} }
   return id;
 })();
+const UIc = (n, o) => (window.SamsamUI && SamsamUI.ic ? SamsamUI.ic(n, o) : '');
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clean = obj => JSON.parse(JSON.stringify(obj)); // Firestore rejects `undefined`
 const safeId = s => String(s).replace(/[\/#\[\]?*]/g, '_').slice(0, 300) || 'x';
@@ -789,7 +790,7 @@ function injectUi() {
      the status lives in the page header instead. It comes back while saving, offline or on an error. */
   #samsamSyncPill.mini{display:none}
   .ss-sync-hdr{position:relative;gap:0}
-  .ss-sync-hdr .ss-cloud{font-size:15px;line-height:1}
+  .ss-sync-hdr .ss-cloud{display:inline-flex;line-height:0}
   .ss-sync-hdr .ss-live{position:absolute;right:5px;bottom:5px;width:8px;height:8px;box-shadow:0 0 0 2px var(--bg2,var(--card,#111827))}
   @media print{.ss-sync-hdr{display:none!important}}
   #samsamSyncMenu{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(max(16px,env(safe-area-inset-bottom)) + 44px);z-index:99991;display:none;width:min(300px,calc(100vw - 24px));background:var(--bg2,var(--card,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:12px;padding:12px;font:13px/1.45 system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)}
@@ -823,7 +824,7 @@ function injectUi() {
   // Cloud status button next to every theme button (page headers + Holdings screen)
   document.querySelectorAll('[data-theme-toggle]').forEach(t => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'ss-theme-btn ss-sync-hdr';
-    b.innerHTML = '<span class="ss-cloud" aria-hidden="true">☁️</span><span class="ss-live" data-state="loading"></span>';
+    b.innerHTML = '<span class="ss-cloud" aria-hidden="true">' + UIc('cloud', { solo: true, size: 18 }) + '</span><span class="ss-live" data-state="loading"></span>';
     b.addEventListener('click', e => openMenu(e, b));
     t.parentNode.insertBefore(b, t);
     // Theme button pinned to a corner (main page header): pin the cloud button just to its left
@@ -888,15 +889,15 @@ function renderStatus() {
   else if (S.pending) { s = 'saving'; label = 'Saving…'; }
   else if (S.fromCache) { s = 'saving'; label = 'Syncing…'; }
   else { s = 'synced'; label = 'Synced'; }
-  pill.dataset.s = s; txt.textContent = '☁️ ' + label;
-  pill.title = '☁️ ' + label; pill.setAttribute('aria-label', 'Cloud sync: ' + label);
+  pill.dataset.s = s; txt.innerHTML = UIc('cloud') + esc(label);
+  pill.title = 'Cloud sync: ' + label; pill.setAttribute('aria-label', 'Cloud sync: ' + label);
   // Stay expanded while anything needs attention; collapse to the dot a moment after "Synced"
   // The floating badge only appears when something needs attention (offline with waiting changes, or an error).
   // Connecting / saving / synced show on the ☁️ button in the page header instead — nothing floats over the page.
   clearTimeout(pill._miniT);
   pill.classList.toggle('mini', !(s === 'offline' || s === 'error'));
   document.querySelectorAll('.ss-sync-hdr').forEach(b => {
-    b.title = '☁️ ' + label; b.setAttribute('aria-label', 'Cloud sync: ' + label);
+    b.title = 'Cloud sync: ' + label; b.setAttribute('aria-label', 'Cloud sync: ' + label);
     const d = b.querySelector('.ss-live'); if (d) d.dataset.state = { synced: 'ok', saving: 'loading', offline: 'idle', error: 'error' }[s] || 'idle';
   });
   // Same shared status dot as the Live indicator (samsam-ui.js)
@@ -908,9 +909,9 @@ function renderStatus() {
       <div class="muted">${S.user ? 'Signed in as ' + esc(S.user.email || '') : 'Not signed in'}</div>
       <div class="muted">Last confirmed by server: ${t}</div>
       <div class="muted">Device: ${deviceId.slice(-6)}</div>
-      ${S.lastError ? `<div class="err">⚠️ ${esc(S.lastError.label)}: ${esc(S.lastError.message)}</div>` : ''}
-      ${S.user && allLoaded() ? '<div class="row"><a class="samsam-btn" href="recover.html" style="text-decoration:none">🛟 Recover Data</a><button type="button" class="cp-hint" data-hint="recover" aria-label="About Recover data"></button></div>' : ''}
-      <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk" title="Download an encrypted backup (AES-256)">🔐 Backup</button><button type="button" class="cp-hint" data-hint="backup" aria-label="About the encrypted backup"></button>' : ''}
+      ${S.lastError ? `<div class="err">${UIc('alert')}${esc(S.lastError.label)}: ${esc(S.lastError.message)}</div>` : ''}
+      ${S.user && allLoaded() ? '<div class="row"><a class="samsam-btn" href="recover.html" style="text-decoration:none">' + UIc('lifebuoy') + 'Recover Data</a><button type="button" class="cp-hint" data-hint="recover" aria-label="About Recover data"></button></div>' : ''}
+      <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk" title="Download an encrypted backup (AES-256)">' + UIc('lock') + 'Backup</button><button type="button" class="cp-hint" data-hint="backup" aria-label="About the encrypted backup"></button>' : ''}
       ${S.user ? '<button class="samsam-btn" id="samsamOut">Sign out</button>' : '<button class="samsam-btn primary" id="samsamIn">Sign in</button>'}</div>
       ${S.lastError ? '<div class="row"><button class="samsam-btn" id="samsamClr">Dismiss error</button><button class="samsam-btn" id="samsamReload">Reload</button></div>' : ''}`;
     const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
@@ -929,7 +930,7 @@ function renderSetup(d) {
     host.insertBefore(el, host.firstChild);
   }
   if (!S.opts.setupPage) {
-    el.innerHTML = `<h3>☁️ One-time setup needed</h3><p>Your cloud portfolio is empty. Open the main <a href="index.html" style="color:#60a5fa">Portfolio page</a> to import your data.</p>`;
+    el.innerHTML = `<h3>${UIc('cloud')}One-time setup needed</h3><p>Your cloud portfolio is empty. Open the main <a href="index.html" style="color:#60a5fa">Portfolio page</a> to import your data.</p>`;
     el.style.display = 'block'; return;
   }
   if (el.dataset.busy) return;
@@ -937,31 +938,31 @@ function renderSetup(d) {
   const hasLocal = L.coins.length > 0;
   const cost = L.coins.reduce((s, c) => s + (+c.qty || 0) * (+c.basePrice || 0), 0);
   const when = L.lastSave ? new Date(L.lastSave).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'unknown';
-  el.innerHTML = `<h3>☁️ Set up your cloud portfolio (one time)</h3>
+  el.innerHTML = `<h3>${UIc('cloud')}Set up your cloud portfolio (one time)</h3>
     <p>The cloud is empty. Choose where your real data is. Do this on the device that has your <strong>most up-to-date</strong> portfolio — all other devices will then load it automatically.</p>
     ${hasLocal ? `<p><strong>This device has:</strong> ${L.coins.length} coins, ${L.transactions.length} transactions, ${L.accumPlan.length} accumulation targets, Cost Basis $${cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, last saved ${when}.</p>` : '<p>This device has no saved portfolio.</p>'}
     <div class="opts">
-      ${hasLocal ? '<button class="samsam-btn primary" id="samsamImpLocal">⬆ Upload this device\'s data</button>' : ''}
-      <label class="samsam-btn" style="position:relative">📄 Import a backup file<input type="file" accept="application/json,.json" id="samsamImpFile" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
+      ${hasLocal ? '<button class="samsam-btn primary" id="samsamImpLocal">' + UIc('upload') + 'Upload this device\'s data</button>' : ''}
+      <label class="samsam-btn" style="position:relative">${UIc('file')}Import a backup file<input type="file" accept="application/json,.json" id="samsamImpFile" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
       ${S.opts.basePortfolio ? '<button class="samsam-btn" id="samsamImpBase">Start from the Oct-15 starting portfolio</button>' : ''}
     </div>
     <p class="muted" style="font-size:.8rem">Before uploading, an encrypted backup file of this device's data is downloaded first.</p>
     <div class="msg" id="samsamSetupMsg"></div>`;
   el.style.display = 'block';
-  const msg = t => { const m = document.getElementById('samsamSetupMsg'); if (m) m.textContent = t; };
+  const msg = t => { const m = document.getElementById('samsamSetupMsg'); if (m) m.innerHTML = t; };
   const go = async (legacy, source, backupFirst) => {
     el.dataset.busy = '1';
     el.querySelectorAll('button,input').forEach(b => b.disabled = true);
     try {
       if (backupFirst && !(await downloadEncrypted({ app: 'samsam-portfolio', kind: 'device-backup', exportedAt: new Date().toISOString(), legacy },
-        `cute-portfolio-device-backup-${stamp()}.enc.json`, { title: '🔐 Backup before upload', text: 'A copy of this device\'s data is saved first, encrypted. Choose a password (8+ characters) — you need it only to open that file.' }))) {
+        `cute-portfolio-device-backup-${stamp()}.enc.json`, { title: 'Backup before upload', icon: 'lock', text: 'A copy of this device\'s data is saved first, encrypted. Choose a password (8+ characters) — you need it only to open that file.' }))) {
         delete el.dataset.busy; el.querySelectorAll('button,input').forEach(b => b.disabled = false); msg(''); return;
       }
       msg('Uploading…');
       const r = await runImport(legacy, source);
-      msg(`✅ Done — ${r.coins.length} coins and ${r.txs.length} transactions are now in the cloud.` + (r.adjusted.length ? ` (${r.adjusted.length} coin(s) had manual edits; an “Imported” correction keeps their figures exactly as before.)` : ''));
+      msg(`${UIc('checkCircle')}Done — ${r.coins.length} coins and ${r.txs.length} transactions are now in the cloud.` + (r.adjusted.length ? ` (${r.adjusted.length} coin(s) had manual edits; an “Imported” correction keeps their figures exactly as before.)` : ''));
       delete el.dataset.busy;
-    } catch (e) { delete el.dataset.busy; msg('⚠️ ' + friendly(e)); el.querySelectorAll('button,input').forEach(b => b.disabled = false); }
+    } catch (e) { delete el.dataset.busy; msg(UIc('alert') + esc(friendly(e))); el.querySelectorAll('button,input').forEach(b => b.disabled = false); }
   };
   const bl = document.getElementById('samsamImpLocal'); if (bl) bl.onclick = () => go(L, 'device:' + deviceId, true);
   const bb = document.getElementById('samsamImpBase'); if (bb) bb.onclick = async () => {
@@ -977,7 +978,7 @@ function renderSetup(d) {
       if (!legacy || !Array.isArray(legacy.coins)) throw new Error('This file is not a Cute Portfolio backup.');
       if (!(await CPDialog.confirm(`${legacy.coins.length} coins and ${(legacy.transactions || []).length} transactions from “${f.name}”.`, { title: 'Import this backup?', okText: 'Import' }))) return;
       go(legacy, 'file:' + f.name, false);
-    } catch (e) { msg('⚠️ ' + friendly(e)); }
+    } catch (e) { msg(UIc('alert') + esc(friendly(e))); }
   };
 }
 

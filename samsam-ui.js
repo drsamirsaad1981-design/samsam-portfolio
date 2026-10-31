@@ -20,6 +20,75 @@
     sun: svg('<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/>'),
   };
 
+  // ── One line-icon set for the whole app (replaces emoji, which look different on every phone) ──
+  // HTML:  <span data-ic="bell"></span> Text      (filled in automatically, also for HTML added later)
+  // JS:    SamsamUI.ic('bell') + ' Text'          → inline SVG, 1.1em, follows the text colour
+  //        SamsamUI.ic('x', { solo: true })       → icon-only button (no gap after it)
+  //        SamsamUI.dot('green')                  → small status dot (red · green · grey · blue · orange)
+  // Coin logos are NOT icons — they stay images.
+  var IC = {
+    alert: '<path d="M10.3 3.9 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    activity: '<path d="M22 12h-4l-3 8L9 4l-3 8H2"/>',
+    arrowDown: '<path d="M12 4v16M6 14l6 6 6-6"/>',
+    arrowUp: '<path d="M12 20V4M6 10l6-6 6 6"/>',
+    bar: '<path d="M3 20h18M6 20v-7M11 20V5M16 20v-10"/>',
+    bell: '<path d="M6 9a6 6 0 0 1 12 0c0 6.5 2.5 8.5 2.5 8.5h-17S6 15.5 6 9"/><path d="M10.2 20.5a2 2 0 0 0 3.6 0"/>',
+    bot: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4.5M9.5 13.5v1.5M14.5 13.5v1.5M2 14h2M20 14h2"/><circle cx="12" cy="3.5" r="1"/>',
+    briefcase: '<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M8.5 7V5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2M3 12.5h18"/>',
+    cards: '<rect x="3" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.8"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.8"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.8"/>',
+    calc: '<rect x="4.5" y="2.5" width="15" height="19" rx="2.5"/><path d="M8 6.5h8"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5h.01M8.5 18h.01M12 18h.01M15.5 18h.01" stroke-width="2.6"/>',
+    cash: '<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.01M18 12h.01" stroke-width="2.6"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    checkCircle: '<circle cx="12" cy="12" r="9"/><path d="m8 12.2 2.8 2.8L16.2 9.5"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>',
+    cloud: '<path d="M7 18.5h10.5a4.2 4.2 0 0 0 .7-8.35A6.2 6.2 0 0 0 6.3 9.7 4.4 4.4 0 0 0 7 18.5z"/>',
+    coins: '<circle cx="9" cy="9" r="6"/><path d="M18.2 10.3a6 6 0 1 1-7.9 7.9"/><path d="M9 6.5v5M7 8h3"/>',
+    download: '<path d="M12 3.5v11.5M7 10l5 5 5-5M5 20.5h14"/>',
+    ext: '<path d="M7 17 17 7M8.5 7H17v8.5"/>',
+    file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+    flame: '<path d="M12 21.5c3.9 0 6.8-2.7 6.8-6.6 0-3.3-2.1-5.6-3.8-7.6-.4 2.1-1.4 3.4-2.8 3.8.4-3.4-1-6.3-3.8-8.6.2 3.4-1.6 5.4-2.9 7.3C4.4 11.2 5.2 12.9 5.2 15c0 3.8 2.9 6.5 6.8 6.5z"/>',
+    gauge: '<path d="M4 19a9 9 0 1 1 16 0"/><path d="m12 14 4-5"/><circle cx="12" cy="14.5" r="1.2" fill="currentColor"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/>',
+    history: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5M12 7.5V12l3.2 2"/>',
+    hourglass: '<path d="M6 2.5h12M6 21.5h12M7.5 2.5v3.5L12 12l4.5-6V2.5M7.5 21.5V18L12 12l4.5 6v3.5"/>',
+    lifebuoy: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.8"/><path d="m5.6 5.6 3.7 3.7M14.7 14.7l3.7 3.7M18.4 5.6l-3.7 3.7M9.3 14.7l-3.7 3.7"/>',
+    lock: '<rect x="4.5" y="10.5" width="15" height="10.5" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>',
+    note: '<path d="M15.5 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><path d="M15.5 3v4.5H20M8 12h8M8 16h5"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    receipt: '<path d="M5.5 3v18l2.2-1.4L10 21l2-1.4 2 1.4 2.3-1.4 2.2 1.4V3l-2.2 1.4L14 3l-2 1.4L10 3 7.7 4.4z"/><path d="M9 9h6M9 13h6"/>',
+    refresh: '<path d="M20.5 12a8.5 8.5 0 0 1-14.8 5.7L3.5 15.5"/><path d="M3.5 12a8.5 8.5 0 0 1 14.8-5.7l2.2 2.2"/><path d="M20.5 3.5v5h-5M3.5 20.5v-5h5"/>',
+    reset: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
+    sliders: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1.5 14h5M9.5 8h5M17.5 16h5"/>',
+    sparkles: '<path d="m11 3 1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="m18.5 14.5.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
+    star: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/>',
+    table: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 10h18M3 15h18M9.5 10v10"/>',
+    trash: '<path d="M3.5 6h17M8.5 6V4.5a1.5 1.5 0 0 1 1.5-1.5h4a1.5 1.5 0 0 1 1.5 1.5V6M18.5 6l-.9 13.1a2 2 0 0 1-2 1.9H8.4a2 2 0 0 1-2-1.9L5.5 6M10 10.5v6M14 10.5v6"/>',
+    triangle: '<path d="M12 3.5 21.5 20h-19z"/>',
+    upload: '<path d="M12 20.5V9M7 14l5-5 5 5M5 3.5h14"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    zap: '<path d="M13 2.5 4 13.5h7.5l-1 8 9-11h-7.5z"/>',
+  };
+  function ic(name, o) {
+    o = typeof o === 'number' ? { size: o } : (o || {});
+    var b = IC[name];
+    if (!b) { var n = NAV.filter(function (x) { return x.k === name; })[0]; b = n && n.ic; }   // page icons: home · holdings · performance · allocation · accumulation
+    if (!b && name === 'pencil') b = '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>';
+    if (!b) return '';
+    var sz = o.size ? ' width="' + o.size + '" height="' + o.size + '" style="width:' + o.size + 'px;height:' + o.size + 'px"' : '';
+    return '<svg class="ss-ic' + (o.solo ? ' solo' : '') + (o.cls ? ' ' + o.cls : '') + '" viewBox="0 0 24 24"' + sz + ' fill="none" stroke="currentColor" stroke-width="' + (o.sw || 2) +
+      '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + b + '</svg>';
+  }
+  function dot(c) { return '<span class="ss-dot" data-c="' + (c || 'grey') + '" aria-hidden="true"></span>'; }
+  function fillIcons(root) {
+    var els = (root || document).querySelectorAll('[data-ic]:not([data-ic-done])');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i]; el.setAttribute('data-ic-done', '');
+      var s = el.getAttribute('data-ic-size');
+      el.innerHTML = ic(el.getAttribute('data-ic'), { size: s ? +s : 0, solo: el.hasAttribute('data-ic-solo') });
+    }
+  }
+
   function saved() {
     try { return localStorage.getItem(KEY) === 'light' ? 'light' : 'dark'; } catch (e) { return 'dark'; }
   }
@@ -63,6 +132,13 @@
   css.id = 'samsam-ui-css';
   css.textContent =
     '.ss-icon{display:inline-block;width:1.15em;height:1.15em;flex-shrink:0;vertical-align:-0.2em}' +
+    '.ss-ic{display:inline-block;width:1.1em;height:1.1em;flex-shrink:0;vertical-align:-0.18em;margin-right:.4em}.ss-ic.solo{margin-right:0}' +
+    '[data-ic]{display:inline-flex;vertical-align:-0.18em;line-height:0}[data-ic] .ss-ic{vertical-align:0}' +
+    '.ss-dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;flex-shrink:0;vertical-align:.05em;margin-right:.45em;background:#94a3b8}' +
+    '.ss-dot[data-c=red]{background:#ef4444}.ss-dot[data-c=green]{background:#22c55e}.ss-dot[data-c=blue]{background:#3b82f6}.ss-dot[data-c=orange]{background:#f97316}' +
+    '.ss-search{position:relative}.ss-search .ss-search-ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--fg2,#94a3b8);pointer-events:none;z-index:1}.ss-search input{padding-left:36px!important}' +
+    '.ext-mark{opacity:.65;margin-left:-2px}' +
+    '[data-theme=light] .ss-dot[data-c=green]{background:#16a34a}[data-theme=light] .ss-dot[data-c=red]{background:#dc2626}' +
     // Theme toggle — one size and style on every page
     '.ss-theme-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;min-width:36px;padding:0;' +
       'border-radius:10px;border:1px solid var(--border,rgba(148,163,184,.35));background:var(--bg3,var(--card,transparent));' +
@@ -150,6 +226,15 @@
     for (var j = 0; j < tagged.length; j++) {
       var el = tagged[j];
       if (!el.__ssIcon && ICONS[el.getAttribute('data-icon')]) { el.__ssIcon = true; el.insertAdjacentHTML('afterbegin', ICONS[el.getAttribute('data-icon')]); }
+    }
+    fillIcons();
+    // icons in HTML added later (rendered lists, dialogs, menus) — filled before the next paint
+    if (!init.__mo && window.MutationObserver) {
+      init.__mo = true; var queued = false;
+      new MutationObserver(function () {
+        if (queued) return; queued = true;
+        (window.queueMicrotask || setTimeout)(function () { queued = false; fillIcons(); });
+      }).observe(document.body, { childList: true, subtree: true });
     }
     paintButtons();
   }
@@ -267,6 +352,7 @@
         (kind === 'prompt' ? '<input id="cpdI" autocomplete="off">' : '') +
         '<div class="cpd-btns' + (kind === 'alert' ? ' one' : '') + '">' + (kind === 'alert' ? '' : '<button type="button" class="cpd-no"></button>') + '<button type="button" class="cpd-ok"></button></div></div>';
       w.querySelector('#cpdT').textContent = o.title || 'Cute Portfolio';
+      if (o.icon) w.querySelector('#cpdT').insertAdjacentHTML('afterbegin', ic(o.icon));
       w.querySelector('#cpdM').textContent = String(msg);
       var ok = w.querySelector('.cpd-ok'), no = w.querySelector('.cpd-no'), inp = w.querySelector('#cpdI');
       ok.textContent = o.okText || 'OK'; if (o.danger) ok.classList.add('danger');
@@ -310,7 +396,7 @@
         '.cpm.sheet::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:#475569;margin:2px auto 4px}' +
         '.cpm-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;border-radius:8px;background:none;color:inherit;font:inherit;font-size:.9rem;font-weight:600;text-align:left;text-decoration:none;cursor:pointer;box-sizing:border-box}' +
         '.cpm.sheet .cpm-item{min-height:48px;font-size:1rem}.cpm-item:hover,.cpm-item:focus-visible{background:rgba(59,130,246,.14);outline:none}' +
-        '.cpm-item .cpm-ic{width:22px;text-align:center;flex-shrink:0}.cpm-item .cpm-ext{margin-left:auto;color:var(--fg2,#94a3b8);font-size:.8rem}' +
+        '.cpm-item .cpm-ic{width:22px;display:inline-flex;justify-content:center;flex-shrink:0;color:var(--fg2,#94a3b8)}.cpm-item.danger .cpm-ic{color:inherit}.cpm-item .cpm-ext{display:inline-flex}.cpm-item .cpm-ext{margin-left:auto;color:var(--fg2,#94a3b8);font-size:.8rem}' +
         '.cpm-item.danger{color:#f87171}.cpm-item.danger:hover{background:rgba(239,68,68,.14)}.cpm-div{height:1px;margin:4px 6px;background:var(--border,#334155)}' +
         '@keyframes cpSheet{from{transform:translateY(100%)}}@keyframes cpFade{from{opacity:0}}@keyframes cpPop{from{transform:scale(.96);opacity:0}}@media (prefers-reduced-motion:reduce){.cpm,.cpm.sheet,.cpm-back{animation:none}}';
       document.head.appendChild(st);
@@ -325,10 +411,10 @@
       var b = document.createElement(it.href ? 'a' : 'button');
       b.className = 'cpm-item' + (it.danger ? ' danger' : ''); b.setAttribute('role', 'menuitem'); b.tabIndex = -1;
       if (it.href) { b.href = it.href; b.target = '_blank'; b.rel = 'noopener noreferrer'; } else b.type = 'button';
-      var ic = document.createElement('span'); ic.className = 'cpm-ic'; ic.setAttribute('aria-hidden', 'true'); ic.textContent = it.icon || '';
+      var ic = document.createElement('span'); ic.className = 'cpm-ic'; ic.setAttribute('aria-hidden', 'true'); if (IC[it.icon] || it.icon === 'pencil') ic.innerHTML = window.SamsamUI.ic(it.icon, { solo: true, size: 18 }); else ic.textContent = it.icon || '';
       var lb = document.createElement('span'); lb.textContent = it.label;
       b.append(ic, lb);
-      if (it.href) { var x = document.createElement('span'); x.className = 'cpm-ext'; x.textContent = '↗'; x.setAttribute('aria-hidden', 'true'); b.appendChild(x); }
+      if (it.href) { var x = document.createElement('span'); x.className = 'cpm-ext'; x.innerHTML = window.SamsamUI.ic('ext', { solo: true, size: 14 }); x.setAttribute('aria-hidden', 'true'); b.appendChild(x); }
       b.addEventListener('click', function (e) { if (!it.href) e.preventDefault(); closeMenu(false); if (it.onClick) it.onClick(); });
       el.appendChild(b); focusables.push(b);
     });
@@ -569,9 +655,10 @@
     if (k === 'holdings' && typeof window.openHoldingsView === 'function') {
       e.preventDefault();
       var ov = document.getElementById('holdingsOverlay'); if ((ov && ov.getAttribute('data-view') === 'tx') || here !== 'holdings') { history.pushState({ hov: 'list' }, '', '#holdings'); if (window.applyHoldingsRoute) window.applyHoldingsRoute(); }
+      else if (ov) ov.scrollTo({ top: 0, behavior: 'smooth' });   // already on Holdings: back to its top
       setTimeout(navPaint, 0);
     } else if (k === 'home' && here === 'holdings' && typeof window.closeHoldingsView === 'function') {
-      e.preventDefault(); window.closeHoldingsView(); setTimeout(navPaint, 0);
+      e.preventDefault(); window.closeHoldingsView(); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (_) { window.scrollTo(0, 0); } setTimeout(navPaint, 0);
     } else if (k === 'home') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   }
   function navMount() {
@@ -607,6 +694,6 @@
     try { sessionStorage.setItem('cpReturn', JSON.stringify({ sym: String(sym).toUpperCase(), t: Date.now() })); } catch (_) {}
     location.href = 'index.html#holdings/' + encodeURIComponent(sym);
   }
-  window.SamsamUI = { goHtml: goHtml, openCoin: openCoin, navIcon: navIconSvg, navPaint: navPaint, inShell: IN_SHELL, icons: ICONS, icon: function (n) { return ICONS[n] || ''; }, liveDot: liveDot,
+  window.SamsamUI = { goHtml: goHtml, openCoin: openCoin, navIcon: navIconSvg, navPaint: navPaint, inShell: IN_SHELL, icons: ICONS, icon: function (n) { return ICONS[n] || ic(n, { solo: true }); }, ic: ic, dot: dot, fillIcons: fillIcons, liveDot: liveDot,
     toggleTheme: toggleTheme, applyTheme: applyTheme, currentTheme: current, refresh: init };
 })();

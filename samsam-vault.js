@@ -140,7 +140,7 @@
       }
       var wrap = document.createElement('div'); wrap.id = 'ssPw';
       var f = document.createElement('form'); f.autocomplete = 'off';
-      var h = document.createElement('h3'); h.textContent = o.title || (confirm2 ? '🔐 Encrypt backup' : '🔐 Backup password');
+      var h = document.createElement('h3'); h.textContent = o.title || (confirm2 ? 'Encrypt backup' : 'Backup password'); if (window.SamsamUI && SamsamUI.ic) h.insertAdjacentHTML('afterbegin', SamsamUI.ic(o.icon || 'lock'));
       var p = document.createElement('p'); p.textContent = o.text || (confirm2 ? 'Choose a password (8+ characters). You will need it to restore this file — it cannot be recovered.' : 'Enter the password used when this backup was made.');
       var a = document.createElement('input'); a.type = 'password'; a.placeholder = 'Password'; a.id = 'ssPwA'; a.autocomplete = confirm2 ? 'new-password' : 'current-password';
       var b = document.createElement('input'); b.type = 'password'; b.placeholder = 'Repeat password'; b.id = 'ssPwB'; b.autocomplete = 'new-password';

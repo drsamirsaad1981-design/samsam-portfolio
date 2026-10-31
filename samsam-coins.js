@@ -232,7 +232,7 @@
   }
   function imgErr(el) { if (!el.parentNode) return; el.outerHTML = fallback(el.getAttribute('data-sym'), parseInt(el.getAttribute('data-size')) || 36); }
   // ↗ next to a coin's symbol = opens CoinMarketCap in a new tab (outside the app). Same mark on every page.
-  var EXT = '<span class="ext-go" aria-hidden="true">↗</span>';
+  var EXT = '<span class="ext-go" aria-hidden="true">' + (window.SamsamUI && SamsamUI.ic ? SamsamUI.ic('ext', { solo: true, sw: 2.4 }) : '↗') + '</span>';
   (function extCss() {
     if (document.getElementById('extGoCss')) return;
     var st = document.createElement('style'); st.id = 'extGoCss';

@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610311750"></script>
-<script src="samsam-hints.js?v=202610311750"></script>
-<script src="samsam-vault.js?v=202610311750"></script>
-<script src="samsam-labels.js?v=202610311750"></script>
-<script src="samsam-taxonomy.js?v=202610311750"></script>
-<script src="samsam-coins.js?v=202610311750"></script>
-<script src="samsam-dropdown.js?v=202610311750"></script>
-<script src="samsam-add.js?v=202610311750"></script>
-<script src="samsam-chart.js?v=202610311750"></script>
+<script src="samsam-ui.js?v=202610311949"></script>
+<script src="samsam-hints.js?v=202610311949"></script>
+<script src="samsam-vault.js?v=202610311949"></script>
+<script src="samsam-labels.js?v=202610311949"></script>
+<script src="samsam-taxonomy.js?v=202610311949"></script>
+<script src="samsam-coins.js?v=202610311949"></script>
+<script src="samsam-dropdown.js?v=202610311949"></script>
+<script src="samsam-add.js?v=202610311949"></script>
+<script src="samsam-chart.js?v=202610311949"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1232,7 +1232,7 @@
 <!-- PDF-only header (hidden on screen, shown on print) -->
 <div id="pdfHeader">
   <div class="pdf-header-inner">
-    <div class="ph-title">📊 Cute Portfolio Report</div>
+    <div class="ph-title"><span data-ic="bar"></span>Cute Portfolio Report</div>
     <div class="ph-meta" id="pdfMeta"></div>
   </div>
 </div>
@@ -1306,7 +1306,7 @@
     <button class="holdings-tab" data-range="all" onclick="setHoldingsRange('all',this)">All</button>
   </div>
   <div class="holdings-canvas-wrap">
-    <div class="holdings-no-data" id="holdingsNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
+    <div class="holdings-no-data" id="holdingsNoData" style="display:none"><span data-ic="hourglass"></span>Collecting data… chart appears after first price update</div>
     <canvas class="holdings-canvas" id="holdingsCanvas" height="110"></canvas><div class="hist-note" data-hist-note hidden></div>
   </div>
 </div>
@@ -1324,7 +1324,7 @@
     <button class="holdings-tab" data-range="90d" onclick="setHoldingsRange('90d',this)">90d</button>
     <button class="holdings-tab" data-range="all" onclick="setHoldingsRange('all',this)">All</button>
   </div>
-  <div class="perf-chart-no-data" id="perfNoData" style="display:none">⏳ Collecting data… chart appears after first price update</div>
+  <div class="perf-chart-no-data" id="perfNoData" style="display:none"><span data-ic="hourglass"></span>Collecting data… chart appears after first price update</div>
   <canvas class="perf-chart-canvas" id="perfChartCanvas" height="140"></canvas><div class="hist-note" data-hist-note hidden></div>
   <div class="perf-legend">
     <div class="perf-legend-item">
@@ -1375,14 +1375,14 @@
 <!-- Toolbar: view switch + actions (Accumulation Plan and Allocation open from their cards above) -->
 <div class="controls toolbar2">
   <div class="view-seg cp-vseg" id="viewToggleBtn" role="group" aria-label="View">
-    <button type="button" data-view="table" onclick="applyView('table')">📋 Table</button>
-    <button type="button" data-view="cards" onclick="applyView('cards')">🃏 Cards</button>
+    <button type="button" data-view="table" onclick="applyView('table')"><span data-ic="table"></span>Table</button>
+    <button type="button" data-view="cards" onclick="applyView('cards')"><span data-ic="cards"></span>Cards</button>
   </div>
   <div class="tb-actions">
-    <button class="btn btn-secondary tb-mobile-only" onclick="openAnalysis()">🤖 AI Analysis</button>
-    <button class="btn btn-secondary tb-mobile-only" onclick="openAddCoin()" title="Add a new coin to your portfolio">➕ Add</button>
-    <button class="btn btn-secondary" onclick="exportData()">💾 CSV</button>
-    <button class="btn btn-secondary" onclick="exportPdf()">📄 PDF</button>
+    <button class="btn btn-secondary tb-mobile-only" onclick="openAnalysis()"><span data-ic="bot"></span>AI Analysis</button>
+    <button class="btn btn-secondary tb-mobile-only" onclick="openAddCoin()" title="Add a new coin to your portfolio"><span data-ic="plus"></span>Add</button>
+    <button class="btn btn-secondary" onclick="exportData()"><span data-ic="download"></span>CSV</button>
+    <button class="btn btn-secondary" onclick="exportPdf()"><span data-ic="file"></span>PDF</button>
   </div>
 </div>
 
@@ -1390,10 +1390,10 @@
 
 <!-- Search + signal filter, right above the coin list -->
 <div class="search-signal-bar no-print">
-  <div class="search-input-wrapper"><input type="search" class="search-box" id="searchBox" placeholder="🔍 Search coin..." autocomplete="off" aria-label="Search coin"></div>
+  <div class="search-input-wrapper ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo></span><input type="search" class="search-box" id="searchBox" placeholder="Search coin..." autocomplete="off" aria-label="Search coin"></div>
   <div class="controls-right-group">
     <div class="signal-filter-select" id="signalDD"></div>
-    <button class="btn btn-secondary tb-desktop-only tb-ai" onclick="openAnalysis()" title="AI Analysis" aria-label="AI Analysis">🤖<span class="btn-txt"> AI Analysis</span></button>
+    <button class="btn btn-secondary tb-desktop-only tb-ai" onclick="openAnalysis()" title="AI Analysis" aria-label="AI Analysis"><span data-ic="bot" data-ic-solo></span><span class="btn-txt"> AI Analysis</span></button>
     <button type="button" class="cp-add tb-desktop-only tb-add" onclick="openAddCoin()" title="Add a new coin, or a Buy for a coin you hold" aria-label="Add New Coin"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="btn-txt"><span data-label="ADD_COIN">Add New Coin</span></span></button>
   </div>
   <input type="hidden" id="filterAction" value="">
@@ -1427,11 +1427,11 @@
 
 <div class="modal-overlay" id="removeModal">
   <div class="modal" style="max-width:360px">
-    <h2 style="color:#ef4444">✕ Remove Coin</h2>
+    <h2 style="color:#ef4444"><span data-ic="trash"></span>Remove Coin</h2>
     <p style="font-size:0.88rem;margin:10px 0 6px">Remove <strong id="rmSym" style="color:var(--accent)"></strong> from your active portfolio?</p>
     <p id="rmInfo" style="font-size:0.78rem;color:var(--fg2);line-height:1.55"></p>
     <div style="display:flex;gap:8px;margin-top:16px;">
-      <button class="btn btn-primary" onclick="confirmRemove()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">✕ Remove</button>
+      <button class="btn btn-primary" onclick="confirmRemove()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)"><span data-ic="trash"></span>Remove</button>
       <button class="btn btn-secondary" onclick="closeRemove()">Cancel</button>
     </div>
   </div>
@@ -1440,18 +1440,18 @@
 <!-- Analysis Report Modal -->
 <div class="modal-overlay" id="analysisModal">
   <div class="modal">
-    <h2>🤖 AI Analysis Report — <span style="color:var(--accent);font-size:0.85em">Claude AI</span></h2>
+    <h2><span data-ic="bot"></span>AI Analysis Report — <span style="color:var(--accent);font-size:0.85em">Claude AI</span></h2>
     <div class="analysis-toolbar">
-      <button class="analysis-lang-btn active" id="langEnBtn" onclick="setAnalysisLang('en')">🇬🇧 English</button>
-      <button class="analysis-lang-btn" id="langArBtn" onclick="setAnalysisLang('ar')">🇸🇦 العربية</button>
+      <button class="analysis-lang-btn active" id="langEnBtn" onclick="setAnalysisLang('en')"><span data-ic="globe"></span>English</button>
+      <button class="analysis-lang-btn" id="langArBtn" onclick="setAnalysisLang('ar')"><span data-ic="globe"></span>العربية</button>
       <div style="flex:1"></div>
-      <button class="btn-analysis" id="regenBtn" onclick="runAnalysis()" style="font-size:0.75rem;padding:4px 10px">🔄 Regenerate</button>
+      <button class="btn-analysis" id="regenBtn" onclick="runAnalysis()" style="font-size:0.75rem;padding:4px 10px"><span data-ic="refresh"></span>Regenerate</button>
     </div>
     <div class="analysis-body" id="analysisBody">
       <!-- filled by JS -->
     </div>
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-secondary" onclick="closeAnalysis()">✕ Close</button>
+      <button class="btn btn-secondary" onclick="closeAnalysis()"><span data-ic="x"></span>Close</button>
     </div>
   </div>
 </div>
@@ -1459,19 +1459,19 @@
 <!-- Transaction History Modal -->
 <div class="modal-overlay" id="historyModal">
   <div class="modal" style="max-width:520px">
-    <h2>📋 Transaction History — <span id="histSym" style="color:var(--accent)"></span></h2>
+    <h2><span data-ic="history"></span>Transaction History — <span id="histSym" style="color:var(--accent)"></span></h2>
     <div class="tx-summary" id="histSummary"></div>
     <div class="tx-list" id="histList"></div>
     <div style="margin-top:14px">
-      <button class="btn btn-secondary" onclick="closeHistory()">✕ Close</button>
+      <button class="btn btn-secondary" onclick="closeHistory()"><span data-ic="x"></span>Close</button>
     </div>
   </div>
 </div>
 
 <footer>
-  <p>☁️ Cloud sync (Firebase) | Baseline: <span id="footerBaseline">Oct 15, 2026</span></p>
-  <p style="margin-top:2px;color:var(--accent)">⛏️ Golden Triangle: Mining + Trading + Accumulation</p>
-  <p id="footerSyncTime" style="margin-top:4px;font-size:0.68rem;color:var(--fg2);opacity:0.75">☁️ Cloud: not synced yet</p>
+  <p><span data-ic="cloud"></span>Cloud sync (Firebase) | Baseline: <span id="footerBaseline">Oct 15, 2026</span></p>
+  <p style="margin-top:2px;color:var(--accent)"><span data-ic="triangle"></span>Golden Triangle: Mining + Trading + Accumulation</p>
+  <p id="footerSyncTime" style="margin-top:4px;font-size:0.68rem;color:var(--fg2);opacity:0.75"><span data-ic="cloud"></span>Cloud: not synced yet</p>
   <p id="footerSyncStatus" style="margin-top:4px;font-size:0.7rem;min-height:1.2em;transition:opacity 0.5s"></p>
   <div class="footer-copy">
     © 2026 Dr. Samir Saad &nbsp;·&nbsp;
@@ -1481,7 +1481,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610311750"></script>
+<script type="module" src="samsam-cloud.js?v=202610311949"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1519,7 +1519,7 @@ function catTag(cat, sym) {
 // Asset cell for the table and the cards: logo · symbol ↗ (📝 when there's a note) / price • 24h ✏️ / category
 function assetHtml(c, below) {
   const esc = SamsamCoins.esc, note = (c.notes || '').trim();
-  const noteBtn = note ? `<button type="button" class="note-dot" onclick="event.stopPropagation();editNote('${c.sym}')" title="${esc(note)}" aria-label="Note for ${c.sym}: ${esc(note)}">📝</button>` : '';
+  const noteBtn = note ? `<button type="button" class="note-dot" onclick="event.stopPropagation();editNote('${c.sym}')" title="${esc(note)}" aria-label="Note for ${c.sym}: ${esc(note)}">${SamsamUI.ic('note', { solo: true })}</button>` : '';
   return SamsamCoins.assetCell(c.sym, { price: c.currentPrice, change24h: c.change24h, logoUrl: c.logoUrl, cgId: c.cgId, size: 36, badge: noteBtn,
     after: `<button type="button" class="val-edit price-edit" onclick="promptPrice('${c.sym}')" title="Set a manual price (only used when there is no live market price)" aria-label="Set a manual price for ${c.sym}">${SamsamUI.icon('pencil')}</button>`, below });
 }
@@ -1527,22 +1527,22 @@ function assetHtml(c, below) {
 async function editNote(sym) {
   if (!requireCloud()) return;
   const c = portfolio.find(x => x.sym === sym); if (!c) return;
-  const v = await CPDialog.prompt(`A private note for ${sym}. Leave it empty to remove it.`, { title: `📝 Note — ${sym}`, value: c.notes || '', okText: 'Save' });
+  const v = await CPDialog.prompt(`A private note for ${sym}. Leave it empty to remove it.`, { title: `Note — ${sym}`, icon: 'note', value: c.notes || '', okText: 'Save' });
   if (v === null || v === undefined) return;
   updateNote(sym, String(v).trim());
 }
 function openCoinMenu(btn, sym) {
   const c = portfolio.find(x => x.sym === sym) || { sym };
   CPMenu.open(btn, `${sym} — more actions`, [
-    { icon: '↓', label: SAMSAM_LABELS.TRANSFER_IN, onClick: () => openTransferIn(sym) },
-    { icon: '↑', label: SAMSAM_LABELS.TRANSFER_OUT, onClick: () => openTransferOut(sym) },
-    { icon: '📋', label: 'History', onClick: () => openHistory(sym) },
-    { icon: '📝', label: (c.notes || '').trim() ? 'Edit Note' : 'Add Note', onClick: () => editNote(sym) },
+    { icon: 'arrowDown', label: SAMSAM_LABELS.TRANSFER_IN, onClick: () => openTransferIn(sym) },
+    { icon: 'arrowUp', label: SAMSAM_LABELS.TRANSFER_OUT, onClick: () => openTransferOut(sym) },
+    { icon: 'history', label: 'History', onClick: () => openHistory(sym) },
+    { icon: 'note', label: (c.notes || '').trim() ? 'Edit Note' : 'Add Note', onClick: () => editNote(sym) },
     { divider: true },
-    { icon: '🔥', label: 'Liquidation Map', href: SamsamCoins.liqMapUrl(sym) },
-    { icon: '🔮', label: 'Price Prediction', href: SamsamCoins.predictionUrl(sym, c) },
+    { icon: 'flame', label: 'Liquidation Map', href: SamsamCoins.liqMapUrl(sym) },
+    { icon: 'sparkles', label: 'Price Prediction', href: SamsamCoins.predictionUrl(sym, c) },
     { divider: true },
-    { icon: '✕', label: 'Remove', danger: true, onClick: () => removeCoin(sym) },
+    { icon: 'trash', label: 'Remove', danger: true, onClick: () => removeCoin(sym) },
   ]);
 }
 // Change category: the shared dialog in samsam-add.js (openCatEdit / saveCatEdit / closeCatEdit) — same on Accumulation
@@ -1904,9 +1904,9 @@ function renderSummary() {
   const allTotal = portfolio.reduce((s, c) => s + c.qty * c.currentPrice, 0);
   const dot = color => `<span class="cp-dot" style="background:${color}"></span>`;
   const keys = T.pickerKeys(catTotals);
-  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(allTotal), icon: '<span class="cp-globe">🌐</span>' }]
+  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(allTotal), icon: '<span class="cp-globe">' + SamsamUI.ic('globe', { solo: true }) + '</span>' }]
     .concat(keys.map(k => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(catTotals[k] || 0), icon: dot(T.color(k)) })))
-    .concat([{ value: '__manage', label: 'Manage Categories', sub: 'rename · colour · add', icon: '<span class="cp-globe">✏️</span>' }]);
+    .concat([{ value: '__manage', label: 'Manage Categories', sub: 'rename · colour · add', icon: '<span class="cp-globe">' + SamsamUI.ic('pencil', { solo: true }) + '</span>' }]);
   const grid = document.getElementById('summaryGrid');
   if (!catPickerDD) {
     grid.innerHTML = '<div class="cat-picker" id="catPicker"><div id="catPickerDD"></div></div>';
@@ -2012,7 +2012,7 @@ function renderTableAndStack() {
       const color=COIN_COLORS[c.sym]||'#6b7280';
       const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
       const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
-      const actionLabel=action==='convert'?'🔴 Sell/Convert':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';   // same short label as the cards
+      const actionLabel=action==='convert'?SamsamUI.dot('red')+'Sell/Convert':action==='reinforce'?SamsamUI.dot('green')+'Reinforce':SamsamUI.dot('grey')+'Hold';   // same short label as the cards
       const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       html += `<tr>
@@ -2044,7 +2044,7 @@ function renderTableAndStack() {
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
       const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
-      const actionLabel=action==='convert'?'🔴 Sell/Convert':action==='reinforce'?'🟢 Reinforce':'⚪ Hold';
+      const actionLabel=action==='convert'?SamsamUI.dot('red')+'Sell/Convert':action==='reinforce'?SamsamUI.dot('green')+'Reinforce':SamsamUI.dot('grey')+'Hold';
       const color=COIN_COLORS[c.sym]||'#6b7280';
       return `<div class="coin-card">
         <div class="coin-card-header">
@@ -2177,9 +2177,9 @@ function renderHistory() {
     if (t.type === 'transfer_in' || t.type === 'transfer_out') {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
       return `<div class="tx-row tx-${isIn ? 'tin' : 'tout'}">
-        <div class="tx-details"><span class="tx-type-badge">${isIn ? '🔵 TRANSFER IN' : '🟠 TRANSFER OUT'}</span>
+        <div class="tx-details"><span class="tx-type-badge">${isIn ? SamsamUI.dot('blue') + 'TRANSFER IN' : SamsamUI.dot('orange') + 'TRANSFER OUT'}</span>
           <div><strong>${isIn ? '+' : '-'}${fmtN(isIn ? t.qty - fee : t.qty + fee)} ${t.sym}</strong>${isIn ? ` @ <strong>$${t.price.toFixed(4)}</strong>` : ''}${fee ? ` · fee ${fmtN(fee)} ${t.sym}` : ''}</div>${meta}</div>
-        <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">🗑 Delete</button>
+        <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button>
       </div>`;
     }
     if (t.type === 'adjust') {
@@ -2188,7 +2188,7 @@ function renderHistory() {
       if (t.setAvg != null) parts.push(`${SAMSAM_LABELS.AVG_BUY_PRICE} set to <strong>${SamsamFmt.price(+t.setAvg)}</strong>`);
       return `<div class="tx-row tx-adjust">
         <div class="tx-details"><span class="tx-type-badge">${SamsamUI.icon('pencil')} EDIT</span><div>${parts.join(' · ')}</div>${meta}</div>
-        <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">🗑 Delete</button>
+        <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button>
       </div>`;
     }
     const isBuy = t.type === 'buy';
@@ -2198,12 +2198,12 @@ function renderHistory() {
       : '';
     return `<div class="tx-row tx-${t.type}">
       <div class="tx-details">
-        <span class="tx-type-badge">${isBuy?'🟢 BUY':'🔴 SELL'}</span>
+        <span class="tx-type-badge">${isBuy?SamsamUI.dot('green')+'BUY':SamsamUI.dot('red')+'SELL'}</span>
         <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>${SamsamFmt.usd((t.total ?? t.qty*t.price) + (isBuy ? 1 : -1) * (+t.feeUsd || 0))}</strong>${+t.feeUsd ? ` <small>(${isBuy ? 'incl.' : 'after'} fee ${SamsamFmt.usd(+t.feeUsd)})</small>` : ''}</div>
         ${pnlStr}
         ${meta}
       </div>
-      <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">🗑 Delete</button>
+      <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button>
     </div>`;
   }).join('');
 }
@@ -2229,7 +2229,7 @@ async function deleteTx(txId) {
       if (need > q * (1 + 1e-9)) bad = true;
       q = Samsam.core.applyTx({ qty: q, avg: 0 }, t).qty;
     }
-    if (bad) oversell = `\n\n⚠️ A later SELL would then be larger than your holdings; ${tx.sym} quantity will become ${fmtN(r.qty)}.`;
+    if (bad) oversell = `\n\nNote: a later SELL would then be larger than your holdings; ${tx.sym} quantity will become ${fmtN(r.qty)}.`;
   } catch(_) {}
   const ok = await CPDialog.confirm(
     `${what}\nDate: ${new Date(tx.date).toLocaleDateString()}${oversell}\n\n` +
@@ -2408,7 +2408,7 @@ function renderDashboard() {
       </div>
     </div>
     <div class="pnl-row pnl-total" style="margin-bottom:10px">
-      <span class="pnl-label" style="font-weight:700;color:var(--accent)">📈 Unrealized P&L</span>
+      <span class="pnl-label" style="font-weight:700;color:var(--accent)">${SamsamUI.ic('performance')}Unrealized P&L</span>
       <div style="text-align:right">
         <div class="pnl-val ${totalCls}" style="font-size:1.05rem">${SamsamFmt.usdSigned(totalPnl)}</div>
         <div class="${totalCls}" style="font-size:0.75rem;opacity:0.85">${totalSign}${totalPnlPct.toFixed(2)}%</div>
@@ -2686,10 +2686,10 @@ function renderAnalysisLoading() {
 function renderAnalysisError(msg, detail) {
   document.getElementById('analysisBody').innerHTML = `
     <div class="analysis-error">
-      <strong>⚠️ ${msg}</strong>
+      <strong>${SamsamUI.ic('alert')}${msg}</strong>
       ${detail ? `<div style="margin-top:6px;font-size:0.8rem;opacity:0.85">${detail}</div>` : ''}
       <div style="margin-top:10px;font-size:0.78rem">
-        Click <strong>🔄 Regenerate</strong> to try again, or check the
+        Click <strong>${SamsamUI.ic('refresh')}Regenerate</strong> to try again, or check the
         <a href="https://github.com/drsamirsaad1981-design/samsam-portfolio#analysis-setup" target="_blank" rel="noopener noreferrer">setup guide</a>.
       </div>
     </div>`;
@@ -2714,10 +2714,10 @@ function renderAnalysisReport(text, meta) {
   html += formatted;
   html += '</div>';
   html += `<div class="analysis-meta">
-    <span>🤖 Generated by Claude AI (claude-opus-4-5)</span>
-    <span>🕐 ${meta.generatedAt}</span>
-    <span>📡 Prices: ${meta.lastUpdate}</span>
-    <span>💼 ${meta.numCoins} positions</span>
+    <span>${SamsamUI.ic('bot')}Generated by Claude AI (claude-opus-4-5)</span>
+    <span>${SamsamUI.ic('clock')}${meta.generatedAt}</span>
+    <span>${SamsamUI.ic('activity')}Prices: ${meta.lastUpdate}</span>
+    <span>${SamsamUI.ic('briefcase')}${meta.numCoins} positions</span>
   </div>`;
 
   document.getElementById('analysisBody').innerHTML = html;
@@ -2735,14 +2735,14 @@ async function runAnalysis() {
     // Show setup instructions in the modal
     document.getElementById('analysisBody').innerHTML += `
       <div style="margin-top:16px;background:var(--bg3);border-radius:8px;padding:14px 16px;font-size:0.8rem;line-height:1.9;border:1px solid var(--border)">
-        <strong style="color:var(--accent);font-size:0.88rem">⚙️ One-Time Setup (5 minutes)</strong><br>
+        <strong style="color:var(--accent);font-size:0.88rem">${SamsamUI.ic('sliders')}One-Time Setup (5 minutes)</strong><br>
         <ol style="margin:8px 0 0 16px;padding:0">
           <li>Go to <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">dash.cloudflare.com</a> → Workers &amp; Pages → Create</li>
           <li>Paste the Worker code (see <code>worker.js</code> file shared below)</li>
           <li>Deploy → copy the <code>.workers.dev</code> URL</li>
           <li>In Worker Settings → Variables → add <strong>Secret: ANTHROPIC_API_KEY</strong></li>
           <li>In <code>index.html</code> replace <code>YOUR-SUBDOMAIN</code> in <code>ANALYSIS_WORKER_URL</code></li>
-          <li>Push to GitHub → done ✅</li>
+          <li>Push to GitHub → done ${SamsamUI.ic('checkCircle')}</li>
         </ol>
         <div style="margin-top:10px;color:var(--fg2)">Cost: Free tier (100,000 Worker requests/day + ~$0.01/report for Claude API)</div>
       </div>`;
@@ -2815,10 +2815,10 @@ document.getElementById('searchBox').addEventListener('input',renderTableAndStac
 (function () {
   const host = document.getElementById('signalDD'); if (!host || !window.SamsamDropdown) return;
   const opts = [
-    { value: '', label: 'All signals', icon: '⚡' }, { value: 'gainers', label: 'Top Gainers', icon: '🟢' },
-    { value: 'losers', label: 'Top Losers', icon: '🔴' }, { value: 'convert', label: 'Sell / Convert to BTC', icon: '🔴' },
-    { value: 'hold', label: 'Hold', icon: '⚪' }, { value: 'reinforce', label: 'Reinforce', icon: '🟢' },
-    { value: '__rules', label: 'Signal Thresholds', sub: 'Reinforce · Sell %', icon: '✏️' },
+    { value: '', label: 'All signals', icon: SamsamUI.ic('zap', { solo: true }) }, { value: 'gainers', label: 'Top Gainers', icon: SamsamUI.dot('green') },
+    { value: 'losers', label: 'Top Losers', icon: SamsamUI.dot('red') }, { value: 'convert', label: 'Sell / Convert to BTC', icon: SamsamUI.dot('red') },
+    { value: 'hold', label: 'Hold', icon: SamsamUI.dot('grey') }, { value: 'reinforce', label: 'Reinforce', icon: SamsamUI.dot('green') },
+    { value: '__rules', label: 'Signal Thresholds', sub: 'Reinforce · Sell %', icon: SamsamUI.ic('pencil', { solo: true }) },
   ];
   window.signalDD = SamsamDropdown.create(host, {
     options: opts, value: '', ariaLabel: 'Signal filter', title: 'Filter by signal', minWidth: 220,
@@ -2898,9 +2898,9 @@ function updateSyncFooter() {
   if (lastCloudSync) {
     const t = lastCloudSync.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const d = lastCloudSync.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    el.textContent = `☁️ Cloud synced: ${d} at ${t}`;
+    el.innerHTML = SamsamUI.ic('cloud') + `Cloud synced: ${d} at ${t}`;
   } else {
-    el.textContent = '☁️ Cloud: not synced yet';
+    el.innerHTML = SamsamUI.ic('cloud') + 'Cloud: not synced yet';
   }
 }
 
@@ -3126,7 +3126,7 @@ function applyHoldingsRoute() {
   if (r.sym) {
     coinTxSym = r.sym;
     overlay.setAttribute('data-view', 'tx');
-    document.getElementById('hovNavTitle').textContent = r.sym + ' Transactions'; document.getElementById('hovNavIcon').innerHTML = '🧾';
+    document.getElementById('hovNavTitle').textContent = r.sym + ' Transactions'; document.getElementById('hovNavIcon').innerHTML = SamsamUI.ic('receipt', { solo: true, size: 22, sw: 1.9, cls: 'nav-ic' });
     renderCoinTx();
   } else {
     coinTxSym = null;
@@ -3203,7 +3203,7 @@ function previewEditOpening() {
   const q = n => parseFloat(n.toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
   const p = n => '$' + (+n).toLocaleString('en-US', { maximumFractionDigits: n >= 1 ? 4 : 8 });
   pv.innerHTML = `Opening cost: <b>${usd(x.qty * x.avg)}</b><br>After all transactions: <b>${q(x.r.qty)} ${coinTxSym}</b> · ${SAMSAM_LABELS.AVG_BUY_PRICE} <b>${SamsamFmt.price(x.r.avg)}</b> · ${SAMSAM_LABELS.COST_BASIS} <b>${usd(x.r.qty * x.r.avg)}</b>` +
-    (transactions.some(t => t.sym === coinTxSym && t.type === 'adjust') ? '<br><span style="color:#f59e0b">⚠️ This coin also has manual “Edit” rows; they override the result above. Delete them if they are no longer needed.</span>' : '');
+    (transactions.some(t => t.sym === coinTxSym && t.type === 'adjust') ? '<br><span style="color:#f59e0b">' + SamsamUI.ic('alert') + 'This coin also has manual “Edit” rows; they override the result above. Delete them if they are no longer needed.</span>' : '');
 }
 function saveEditOpening() {
   const x = readEditOpening();
@@ -3252,10 +3252,10 @@ async function htxNoteSave() {
   const el = document.getElementById('htxNote'), st = document.getElementById('htxNoteSt'), sym = el.dataset.sym;
   const coin = portfolio.find(c => c.sym === sym); if (!coin || !requireCloud()) return;
   const v = el.value.replace(/\s+$/, '');
-  if ((coin.notes || '') === v) { if (st.textContent === 'Typing…') st.textContent = 'Saved ✓'; return; }
+  if ((coin.notes || '') === v) { if (st.textContent === 'Typing…') st.innerHTML = SamsamUI.ic('check') + 'Saved'; return; }
   st.textContent = 'Saving…';
-  try { await Samsam.updateCoin(sym, { notes: v }); if (el.dataset.sym === sym) st.textContent = 'Saved ✓'; }
-  catch (e) { st.textContent = '⚠️ Not saved — ' + ((e && e.message) || e); }
+  try { await Samsam.updateCoin(sym, { notes: v }); if (el.dataset.sym === sym) st.innerHTML = SamsamUI.ic('check') + 'Saved'; }
+  catch (e) { st.innerHTML = SamsamUI.ic('alert') + 'Not saved — ' + SamsamCoins.esc((e && e.message) || e); }
 }
 function renderCoinTx() {
   if (!coinTxSym) return;
@@ -3309,7 +3309,7 @@ function renderCoinTx() {
   const sigEl = document.getElementById('htxSignal');
   if (coin) {
     const act = getAction(sym, 0, coin), pct = getCoinPct(coin);
-    const lab = act === 'convert' ? '🔴 Sell / Convert' : act === 'reinforce' ? '🟢 Reinforce' : '⚪ Hold';
+    const lab = act === 'convert' ? SamsamUI.dot('red') + 'Sell / Convert' : act === 'reinforce' ? SamsamUI.dot('green') + 'Reinforce' : SamsamUI.dot('grey') + 'Hold';
     const why = sym === 'BTC' ? 'BTC is always Hold' : `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}% vs your Avg. Buy Price`;
     sigEl.innerHTML = `<span>Signal</span><span class="action-badge action-${act}">${lab}</span><span class="htx-sig-why">${why}</span>` +
       `<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button><button type="button" class="val-edit" onclick="openSignalEdit()" title="Change the Signal thresholds" aria-label="Change the Signal thresholds">${SamsamUI.icon('pencil')}</button>`;
@@ -3382,7 +3382,7 @@ function renderCoinTx() {
       <div class="htx-row-amt">${amt}</div>
       <div class="htx-row-act">${e.opening
         ? `<button type="button" class="htx-act htx-edit" onclick="openEditOpening()" title="Edit opening position" aria-label="Edit opening position">${SamsamUI.icon('pencil')}</button>`
-        : `<button type="button" class="htx-act" onclick="deleteTx('${e.id}')" title="Delete" aria-label="Delete this ${e.label}">🗑</button>`}</div>
+        : `<button type="button" class="htx-act" onclick="deleteTx('${e.id}')" title="Delete" aria-label="Delete this ${e.label}">${SamsamUI.ic('trash', { solo: true })}</button>`}</div>
     </div>`;
   });
   listEl.innerHTML = html;
@@ -3461,7 +3461,7 @@ function renderHovCatPicker() {
   const totals = {}; let all = 0;
   portfolio.forEach(c => { const v = c.qty * c.currentPrice, k = c.cat || 'other'; totals[k] = (totals[k] || 0) + v; all += v; });
   const keys = T.pickerKeys(totals);
-  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(all), icon: '<span class="cp-globe">🌐</span>' }]
+  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(all), icon: '<span class="cp-globe">' + SamsamUI.ic('globe', { solo: true }) + '</span>' }]
     .concat(keys.map(k => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(totals[k] || 0), icon: `<span class="cp-dot" style="background:${T.color(k)}"></span>` })));
   if (!hovCatDD) {
     host.innerHTML = '<div class="cat-picker" id="hovCatPicker"><div id="hovCatDD"></div></div>';
@@ -3600,11 +3600,11 @@ function renderHoldingsAssetList() {
 </div>
 <div class="bl-overlay" id="sgModal" role="dialog" aria-modal="true" aria-labelledby="sgTitle">
   <div class="bl-card">
-    <div class="bl-head"><span style="font-size:1.3rem">⚡</span><h3 id="sgTitle">Signal Thresholds</h3><button type="button" class="cp-hint" data-hint="signal"></button><button type="button" class="bl-x" onclick="closeSignalEdit()" aria-label="Close">×</button></div>
+    <div class="bl-head"><span style="color:var(--accent)" data-ic="zap" data-ic-solo data-ic-size="22"></span><h3 id="sgTitle">Signal Thresholds</h3><button type="button" class="cp-hint" data-hint="signal"></button><button type="button" class="bl-x" onclick="closeSignalEdit()" aria-label="Close">×</button></div>
     <p class="bl-lead">When a coin's price is below your Avg. Buy Price by these amounts, its Signal changes. Same on every page and device.</p>
-    <label class="bl-field"><span>🟢 Reinforce — when the price is this much below your Avg. Buy Price (or more)</span>
+    <label class="bl-field"><span><span class="ss-dot" data-c="green"></span>Reinforce — when the price is this much below your Avg. Buy Price (or more)</span>
       <span class="sg-num"><b aria-hidden="true">−</b><input type="text" inputmode="decimal" id="sgReinforce" placeholder="5" oninput="sgPreview()" autocomplete="off" aria-label="Reinforce: percent below your Avg. Buy Price"><i aria-hidden="true">%</i></span></label>
-    <label class="bl-field"><span>🔴 Sell / Convert to BTC — when it is more than this much below</span>
+    <label class="bl-field"><span><span class="ss-dot" data-c="red"></span>Sell / Convert to BTC — when it is more than this much below</span>
       <span class="sg-num"><b aria-hidden="true">−</b><input type="text" inputmode="decimal" id="sgSell" placeholder="20" oninput="sgPreview()" autocomplete="off" aria-label="Sell / Convert: percent below your Avg. Buy Price"><i aria-hidden="true">%</i></span></label>
     <div class="bl-prev" id="sgPrev" aria-live="polite"></div>
     <div class="bl-acts"><button type="button" onclick="closeSignalEdit()">Cancel</button><button type="button" class="bl-save" id="sgSave" onclick="saveSignalEdit()">Save</button></div>
@@ -3659,10 +3659,16 @@ function renderHoldingsAssetList() {
     cur: 'home', frames,
     go(k) {
       if (k === 'holdings') { if (typeof openHoldingsView === 'function') openHoldingsView(); return; }
+      const same = shell.cur === (VIEWS[k] ? k : 'home') && !/^#holdings/.test(location.hash);   // tapped the tab you're on
       const hash = VIEWS[k] ? '#' + k : '';
       if (location.hash !== hash) history.pushState(VIEWS[k] ? { view: k } : null, '', hash || location.pathname + location.search);
       if (typeof applyHoldingsRoute === 'function') applyHoldingsRoute();   // leaving Holdings / a coin: close it
       route();
+      // a tab opened from the bar (or a card) always starts at the top; tapping the open tab again scrolls up smoothly.
+      // (Back from a coin's Transactions uses history instead, so that tab comes back exactly where you left it.)
+      const w = VIEWS[k] ? frames[k] && frames[k].contentWindow : window;
+      const smooth = same && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      try { if (w) w.scrollTo({ top: 0, left: 0, behavior: smooth ? 'smooth' : 'instant' }); } catch (_) { try { w.scrollTo(0, 0); } catch (__) {} }
     },
     // a coin's Transactions over the current tab; its Back returns to that tab (as it was)
     openCoin(sym) {
@@ -3722,17 +3728,17 @@ function sgUseDefault() { document.getElementById('sgReinforce').value = 5; docu
 function sgPreview() {
   const v = sgRead(), box = document.getElementById('sgPrev'), save = document.getElementById('sgSave');
   save.disabled = !v.ok;
-  if (!v.ok) { box.innerHTML = '<span style="color:#f87171">⚠️ Sell / Convert must be further below than Reinforce (e.g. 5 and 20), up to 99.</span>'; return; }
+  if (!v.ok) { box.innerHTML = '<span style="color:#f87171">' + SamsamUI.ic('alert') + 'Sell / Convert must be further below than Reinforce (e.g. 5 and 20), up to 99.</span>'; return; }
   const n = { hold: 0, reinforce: 0, convert: 0 };
   portfolio.forEach(c => { if (c.sym === 'BTC') { n.hold++; return; } const p = getCoinPct(c); n[p < v.sell ? 'convert' : p <= v.reinforce ? 'reinforce' : 'hold']++; });
   const f = x => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x) + '%';
-  box.innerHTML = `<div>⚪ Hold: above ${f(v.reinforce)} — <b>${n.hold}</b> coins</div><div>🟢 Reinforce: ${f(v.reinforce)} to ${f(v.sell)} — <b>${n.reinforce}</b> coins</div><div>🔴 Sell / Convert: below ${f(v.sell)} — <b>${n.convert}</b> coins</div>`;
+  box.innerHTML = `<div>${SamsamUI.dot('grey')}Hold: above ${f(v.reinforce)} — <b>${n.hold}</b> coins</div><div>${SamsamUI.dot('green')}Reinforce: ${f(v.reinforce)} to ${f(v.sell)} — <b>${n.reinforce}</b> coins</div><div>${SamsamUI.dot('red')}Sell / Convert: below ${f(v.sell)} — <b>${n.convert}</b> coins</div>`;
 }
 async function saveSignalEdit() {
   const v = sgRead(); if (!v.ok) return;
   const btn = document.getElementById('sgSave'); btn.disabled = true;
   try { await Samsam.setSignalRules(v.reinforce === -5 && v.sell === -20 ? null : { reinforce: v.reinforce, sell: v.sell }); closeSignalEdit(); }
-  catch (e) { document.getElementById('sgPrev').innerHTML = '<span style="color:#f87171">⚠️ ' + SamsamCoins.esc((e && e.message) || e) + '</span>'; }
+  catch (e) { document.getElementById('sgPrev').innerHTML = '<span style="color:#f87171">' + SamsamUI.ic('alert') + SamsamCoins.esc((e && e.message) || e) + '</span>'; }
   finally { btn.disabled = false; }
 }
 // ── Compact bar ──
@@ -4087,7 +4093,7 @@ async function saveBaselineEdit() {
   <!-- Nav bar -->
   <header class="cp-head hov-navbar">
     <div class="cp-head-l"><button type="button" class="cp-back hov-back-btn" onclick="hovBack()" aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></button></div>
-    <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" id="hovNavIcon" data-nav-ic="holdings">💰</span><span class="t" id="hovNavTitle">Holdings</span></h1>
+    <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" id="hovNavIcon" data-nav-ic="holdings"></span><span class="t" id="hovNavTitle">Holdings</span></h1>
     <div class="cp-head-r"><button type="button" class="cp-add sm hov-add-btn" id="hovAddBtn" onclick="openAddCoin()" title="Add a new coin, or a Buy for a coin you hold"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add</span></button></div>
   </header>
 
@@ -4136,9 +4142,9 @@ async function saveBaselineEdit() {
       <button type="button" class="cp-add htx-add-btn" id="htxAddBtn" onclick="openAddTx()" title="Add a Buy, Sell or Transfer for this coin"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="lbl-long"> Transaction</span></span></button>
     </div>
     <div class="htx-links quick-links-row">
-      <a class="btn-liq htx-liq" id="htxLiqLink" href="#" target="_blank" rel="noopener noreferrer">🔥 Liq Map <span aria-hidden="true">↗</span></a>
-      <a class="btn-pred htx-liq" id="htxPredLink" href="#" target="_blank" rel="noopener noreferrer">🔮 Prediction <span aria-hidden="true">↗</span></a>
-      <a class="btn-cmc htx-liq" id="htxCmcLink" href="#" target="_blank" rel="noopener noreferrer">📊 CMC <span aria-hidden="true">↗</span></a>
+      <a class="btn-liq htx-liq" id="htxLiqLink" href="#" target="_blank" rel="noopener noreferrer"><span data-ic="flame" data-ic-solo></span>Liq.Map<span class="ext-mark" data-ic="ext" data-ic-solo data-ic-size="12"></span></a>
+      <a class="btn-pred htx-liq" id="htxPredLink" href="#" target="_blank" rel="noopener noreferrer"><span data-ic="sparkles" data-ic-solo></span>Prediction<span class="ext-mark" data-ic="ext" data-ic-solo data-ic-size="12"></span></a>
+      <a class="btn-cmc htx-liq" id="htxCmcLink" href="#" target="_blank" rel="noopener noreferrer"><span data-ic="bar" data-ic-solo></span>CMC<span class="ext-mark" data-ic="ext" data-ic-solo data-ic-size="12"></span></a>
       <button type="button" class="cp-hint" data-hint="external" aria-label="About links that leave the app"></button>
     </div>
     <div class="htx-cards">
@@ -4149,7 +4155,7 @@ async function saveBaselineEdit() {
     </div>
     <div class="htx-signal" id="htxSignal"></div>
     <div class="asset-note-box">
-      <label for="htxNote">📝 Asset Strategy &amp; Notes</label>
+      <label for="htxNote"><span data-ic="note"></span>Asset Strategy &amp; Notes</label>
       <textarea id="htxNote" rows="3" maxlength="1000" placeholder="Your plan for this coin — targets, why you bought or sold…" oninput="htxNoteTyped()" onblur="htxNoteSave()"></textarea>
       <div class="htx-note-st" id="htxNoteSt" aria-live="polite"></div>
     </div>

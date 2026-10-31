@@ -26,7 +26,7 @@
           '<p>It sets the <b>BTC reference price</b>, which is BTC\'s price on that date: <b>' + esc(money(b.btcPrice)) + '</b>' +
           (b.source === 'manual' ? ' (entered by hand)' : '') + '.</p>' +
           '<p>It is used for the coins you <b>already held</b> on that date (your opening positions): when they are compared with Bitcoin, that money counts as BTC bought on the baseline date at this price. Your own BTC is always compared with itself.</p>' +
-          '<p>The price can be the market\'s daily price (looked up automatically) or <b>the price you actually paid</b> for your BTC that day — a daily price is an average of the whole day, while a buy at a given hour can be higher or lower. The ✎ editor offers your own price.</p>' +
+          '<p>The price can be the market\'s daily price (looked up automatically) or <b>the price you actually paid</b> for your BTC that day — a daily price is an average of the whole day, while a buy at a given hour can be higher or lower. The ' + SamsamUI.ic('pencil') + 'editor offers your own price.</p>' +
           '<p>Changing it changes:</p>' +
           '<ul><li><b>Portfolio vs BTC</b> for those coins (cards, table, sorting and CSV)</li><li>the <b>VS Bitcoin</b> best / worst on Performance</li><li>the <b>BTC Trend</b> line on the charts</li></ul>' +
           '<p>Coins you bought later are compared with BTC at the moment you bought them, so the baseline doesn\'t affect them.</p>' +
@@ -50,15 +50,15 @@
       var r = window.Samsam && Samsam.getSignalRules ? Samsam.getSignalRules() : { reinforce: -5, sell: -20, isDefault: true };
       var p = function (n) { return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n) + '%'; };
       return '<p>A simple reminder based on the price now compared with your <b>Avg. Buy Price</b>:</p>' +
-      '<ul><li><b>⚪ Hold</b> — above ' + p(r.reinforce) + '</li><li><b>🟢 Reinforce</b> — from ' + p(r.reinforce) + ' down to ' + p(r.sell) + ': cheaper than you paid, a chance to add</li><li><b>🔴 Sell / Convert</b> — below ' + p(r.sell) + ': consider moving it into BTC</li></ul>' +
+      '<ul><li><b>' + SamsamUI.dot('grey') + 'Hold</b> — above ' + p(r.reinforce) + '</li><li><b>' + SamsamUI.dot('green') + 'Reinforce</b> — from ' + p(r.reinforce) + ' down to ' + p(r.sell) + ': cheaper than you paid, a chance to add</li><li><b>' + SamsamUI.dot('red') + 'Sell / Convert</b> — below ' + p(r.sell) + ': consider moving it into BTC</li></ul>' +
       '<div class="cph-f"><b>Change</b><code>(Current Price ÷ Avg Buy Price − 1) × 100</code></div><p>BTC is always Hold. It is a reminder, not advice.' + (r.isDefault ? '' : ' <b>Your own thresholds.</b>') + '</p>' +
-      (typeof window.openSignalEdit === 'function' ? '<p><button type="button" class="sg-hint-btn" onclick="CPHint.close();openSignalEdit()">✏️ Change the thresholds</button></p>' : ''); } },
-    manualPrice: { title: 'Manual Price (✎)', body: function () { return '<p>Set a price by hand for a coin the live price service doesn\'t cover. It is used <b>only when there is no live market price</b>; as soon as a live price arrives, that one is used.</p>'; } },
+      (typeof window.openSignalEdit === 'function' ? '<p><button type="button" class="sg-hint-btn" onclick="CPHint.close();openSignalEdit()">' + SamsamUI.ic('pencil') + 'Change the thresholds</button></p>' : ''); } },
+    manualPrice: { title: 'Manual Price', body: function () { return '<p>Set a price by hand for a coin the live price service doesn\'t cover. It is used <b>only when there is no live market price</b>; as soon as a live price arrives, that one is used.</p>'; } },
     holdingsChange: { title: 'Holdings Change', body: function () { return '<p>How much your holdings moved in the period you picked — split into what <b>prices</b> did and the <b>money you added or took out</b>.</p>' +
       '<div class="cph-f"><b>From prices (the number and %)</b><code>All-Time Profit at the end − All-Time Profit at the start</code></div>' +
       '<div class="cph-f"><b>Added / taken out</b><code>(buys + fees − sells) in the period</code></div>' +
       '<p>Value change = from prices + added. Green / red follows the price part only. The chart line itself is the value, so a buy shows as a step up.</p>'; } },
-    external: { title: 'Links That Leave the App (↗)', body: function () { return '<p>Anything marked <b>↗</b> opens another website in a new tab: <b>CoinMarketCap</b> (coin page), <b>CoinGlass</b> (liquidation heatmap) and <b>CoinCodex</b> (price prediction). Their numbers are theirs, not calculated by this app.</p>'; } },
+    external: { title: 'Links That Leave the App', body: function () { return '<p>Anything marked ' + SamsamUI.ic('ext', { solo: true }) + ' opens another website in a new tab: <b>CoinMarketCap</b> (coin page), <b>CoinGlass</b> (liquidation heatmap) and <b>CoinCodex</b> (price prediction). Their numbers are theirs, not calculated by this app.</p>'; } },
     // ── Performance / Allocation ──
     sincePurchase: { title: 'Top Performers · USD', body: function () { return '<p>Your best and worst coin by <b>All-Time Profit in dollars</b> — sells included. The % under it is that profit against the coin\'s cost.</p>' +
       '<div class="cph-f"><b>$</b><code>Coin\'s Realized + Unrealized profit</code></div><div class="cph-f"><b>%</b><code>Coin\'s All-Time Profit ÷ its Cost Basis × 100</code></div><p>Switch to <b>vs BTC</b> to rank every coin against the same money in Bitcoin instead. Coins worth less than $1 or less than 0.1% of your portfolio are left out.</p>'; } },

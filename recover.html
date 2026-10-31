@@ -15,12 +15,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202610311750"></script>
-<script src="samsam-hints.js?v=202610311750"></script>
-<script src="samsam-vault.js?v=202610311750"></script>
-<script src="samsam-labels.js?v=202610311750"></script>
-<script src="samsam-taxonomy.js?v=202610311750"></script>
-<script src="samsam-coins.js?v=202610311750"></script>
+<script src="samsam-ui.js?v=202610311949"></script>
+<script src="samsam-hints.js?v=202610311949"></script>
+<script src="samsam-vault.js?v=202610311949"></script>
+<script src="samsam-labels.js?v=202610311949"></script>
+<script src="samsam-taxonomy.js?v=202610311949"></script>
+<script src="samsam-coins.js?v=202610311949"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root { --bg:#f5f5f7; --card:#fff; --fg:#1a1a1e; --fg2:#6e6e73; --border:rgba(0,0,0,.08); --accent:#3b82f6; --header-bg:#fff;
@@ -89,7 +89,7 @@ body:not(.show-all) tr.same-row { display:none; }
 </script>
 <header class="cp-head">
   <div class="cp-head-l"><a class="cp-back" href="./index.html" data-back aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></a></div>
-  <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true">🛟</span><span class="t">Recover Data</span></h1>
+  <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" data-ic="lifebuoy" data-ic-solo data-ic-size="22"></span><span class="t">Recover Data</span></h1>
   <div class="cp-head-r"></div>
 </header>
 
@@ -115,7 +115,7 @@ body:not(.show-all) tr.same-row { display:none; }
     </div>
     <div id="srcFile" class="hidden">
       <p>A <code>cute-portfolio-backup-…enc.json</code> encrypted backup (asks for its password), an older <code>samsam-backup-…</code> / <code>samsam-device-backup-…</code> file, or a JSON export from JSONBin.</p>
-      <label class="btn" style="margin-top:10px;position:relative">📄 Choose file<input type="file" id="fileIn" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
+      <label class="btn" style="margin-top:10px;position:relative"><span data-ic="file"></span>Choose file<input type="file" id="fileIn" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
     </div>
     <div class="msg" id="srcMsg"></div>
   </div>
@@ -148,7 +148,7 @@ body:not(.show-all) tr.same-row { display:none; }
   <button class="btn primary" id="applyBtn">Restore selected</button>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610311750"></script>
+<script type="module" src="samsam-cloud.js?v=202610311949"></script>
 <script>
 const $ = id => document.getElementById(id);
 const LEG = { pf:'samsam_pf_v4', tx:'samsam_tx_v1', custom:'samsam_custom_v1', archived:'samsam_archived_v1', acc:'samsam_acc_v1' };
@@ -230,7 +230,7 @@ function render() {
   $('results').classList.remove('hidden'); $('sumBar').classList.remove('hidden');
   const when = src.savedAt ? new Date(src.savedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'unknown';
   $('txMeta').innerHTML = `Source: <strong>${esc(src.label)}</strong> · last saved ${when} · ${src.coins.length} coins, ${src.transactions.length} transactions.<br>` +
-    (plan.missing.length ? `<strong>${plan.missing.length}</strong> transaction(s) are in the source but not in the cloud:` : '✅ No missing transactions.');
+    (plan.missing.length ? `<strong>${plan.missing.length}</strong> transaction(s) are in the source but not in the cloud:` : SamsamUI.ic('checkCircle') + 'No missing transactions.');
   $('txTable').innerHTML = plan.missing.length ? `<tr><th></th><th>Coin / type</th><th>Amount</th><th>Price</th><th>Date</th></tr>` + plan.missing.map((t, i) => {
     const [cls, lab] = pillOf(t.type);
     return `<tr><td><input type="checkbox" data-tx="${i}" ${t._on ? 'checked' : ''}></td>
@@ -239,7 +239,7 @@ function render() {
       <td>${new Date(t.date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td></tr>`;
   }).join('') : '';
   const nDiff = plan.rows.filter(r => r.differs).length;
-  $('coinTable').innerHTML = (nDiff ? '' : `<tr><td colspan="5" style="text-align:left;color:var(--fg2)">✅ All coin balances match the cloud.</td></tr>`) + `<tr><th></th><th>Coin</th><th>Cloud now</th><th>Source</th><th>After</th></tr>` + plan.rows.map((r, i) => {
+  $('coinTable').innerHTML = (nDiff ? '' : `<tr><td colspan="5" style="text-align:left;color:var(--fg2)">${SamsamUI.ic('checkCircle')}All coin balances match the cloud.</td></tr>`) + `<tr><th></th><th>Coin</th><th>Cloud now</th><th>Source</th><th>After</th></tr>` + plan.rows.map((r, i) => {
     const a = after(r);
     const note = r.srcRemoved ? '<span class="small">removed in source</span>' : !r.inCloud ? `<span class="small">${r.cloudRemoved ? 'removed in cloud' : 'not in cloud'}</span>` : '';
     return `<tr class="${r.differs ? 'diff' : (r._on ? '' : 'same-row')}"><td>${r.src && !r.srcRemoved ? `<input type="checkbox" data-coin="${i}" ${r._on ? 'checked' : ''}>` : ''}</td>
@@ -276,17 +276,17 @@ $('applyBtn').onclick = async () => {
   if (!(await CPDialog.confirm(`${txs.length} transaction(s), ${pinRows.length} coin balance(s) and ${accSel.length} target(s) from “${src.label}”.\n\nAn encrypted backup of your current cloud data downloads first.`, { title: 'Restore selected?', okText: 'Restore' }))) return;
   $('applyBtn').disabled = true;
   try {
-    const saved = await Samsam.downloadBackup({ title: '🔐 Safety backup first', text: 'Your current cloud data is saved to an encrypted file before anything changes. Choose a password (8+ characters).' });
+    const saved = await Samsam.downloadBackup({ title: 'Safety backup first', icon: 'lock', text: 'Your current cloud data is saved to an encrypted file before anything changes. Choose a password (8+ characters).' });
     if (!saved) { $('applyBtn').disabled = false; msg('Restore cancelled — nothing was changed.'); return; }
     await Samsam.restore({
       txs, accum: accSel,
       coins: [...needCoin].map(sym => { const s = src.coins.find(c => c.sym === sym) || { sym }; return { sym, name: s.name, cat: s.cat, cgId: s.cgId, logoUrl: s.logoUrl }; }),
       pins: pinRows.map(r => ({ sym: r.sym, qty: r.sQty, avg: r.sAvg, note: 'Recovered from ' + src.label })),
     });
-    msg(`✅ Restored. Every page and device now shows the recovered data. <a href="index.html">Back to portfolio</a>`, 'ok');
+    msg(`${SamsamUI.ic('checkCircle')}Restored. Every page and device now shows the recovered data. <a href="index.html">Back to portfolio</a>`, 'ok');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(compare, 800);
-  } catch (e) { msg('⚠️ ' + esc(e && e.message || e), 'err'); $('applyBtn').disabled = false; }
+  } catch (e) { msg(SamsamUI.ic('alert') + esc(e && e.message || e), 'err'); $('applyBtn').disabled = false; }
 };
 
 // ── source pickers ───────────────────────────────────────────────────────────
@@ -313,7 +313,7 @@ $('loadBin').onclick = () => whenReady(async () => {
     const rec = j.record || j;
     if (!rec.portfolioData) throw new Error('This bin has no portfolio data.');
     src = normalise(rec, 'Old cloud (JSONBin)'); msg(''); compare();
-  } catch (e) { msg('⚠️ ' + esc(e.message), 'err'); }
+  } catch (e) { msg(SamsamUI.ic('alert') + esc(e.message), 'err'); }
 });
 $('fileIn').onchange = () => whenReady(async () => {
   const f = $('fileIn').files[0]; if (!f) return;
@@ -324,7 +324,7 @@ $('fileIn').onchange = () => whenReady(async () => {
     const s = normalise(rec, 'File ' + f.name);
     if (!s.coins.length) throw new Error('No portfolio found in this file.');
     src = s; msg(''); compare();
-  } catch (e) { msg('⚠️ ' + esc(e.message), 'err'); }
+  } catch (e) { msg(SamsamUI.ic('alert') + esc(e.message), 'err'); }
 });
 </script>
 </body>

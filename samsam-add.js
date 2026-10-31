@@ -118,7 +118,7 @@
   var HTML_COIN =
     '<div class="atx-backdrop" id="addCoinModal" onclick="if(event.target===this)closeAddCoin()">' +
     '<form class="atx-modal" id="acForm" onsubmit="event.preventDefault();applyAddCoin()" role="dialog" aria-modal="true" aria-labelledby="acTitle" novalidate>' +
-      '<div class="atx-head"><h3 id="acTitle">➕ Add New Coin</h3><button type="button" class="atx-x" onclick="closeAddCoin()" aria-label="Close">×</button></div>' +
+      '<div class="atx-head"><h3 id="acTitle">' + SamsamUI.ic('plus') + 'Add New Coin</h3><button type="button" class="atx-x" onclick="closeAddCoin()" aria-label="Close">×</button></div>' +
       '<div class="ac-grid">' +
         '<div class="atx-field ac-find ac-full"><label for="acSym">Coin <span style="color:#ef4444">*</span> <small class="form-sub">— search by symbol or name</small></label>' +
           '<input type="text" id="acSym" placeholder="e.g. XRP or Ripple" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acSuggest"' +
@@ -131,14 +131,14 @@
         '<label class="atx-field"><span>CoinGecko ID</span><input type="text" id="acCgId" placeholder="Auto" autocomplete="off" spellcheck="false"></label>' +
         '<div class="atx-field ac-full"><label for="acCmc">CoinMarketCap Page</label><div class="ac-cmc"><span class="ac-cmc-pre">coinmarketcap.com/currencies/</span>' +
           '<input type="text" id="acCmc" placeholder="auto" autocomplete="off" spellcheck="false" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,\'\');acCmcCheck()">' +
-          '<a id="acCmcCheck" class="ac-cmc-check" href="#" target="_blank" rel="noopener noreferrer" hidden>Check ↗</a></div></div>' +
+          '<a id="acCmcCheck" class="ac-cmc-check" href="#" target="_blank" rel="noopener noreferrer" hidden>Check' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</a></div></div>' +
         '<label class="atx-field ac-full"><span>Category</span><select id="acCat" onchange="syncCatCustom(this,\'acCatCustomBox\')"></select></label>' +
         '<div class="atx-field ac-full cat-custom" id="acCatCustomBox" hidden><label for="acCatCustom">New Category Name</label>' +
           '<input type="text" id="acCatCustom" maxlength="40" placeholder="Enter Custom Category..." autocomplete="off"><div class="cat-custom-hint">Saved for this coin and added to the category filters.</div></div>' +
       '</div>' +
       '<div class="atx-preview" id="acPreview"></div>' +
       '<div class="atx-err" id="acError" role="alert"></div>' +
-      '<button type="submit" class="atx-save" id="acSave">➕ Add to Portfolio</button>' +
+      '<button type="submit" class="atx-save" id="acSave">' + SamsamUI.ic('plus') + 'Add to Portfolio</button>' +
     '</form></div>';
 
   var HTML_TX =
@@ -165,11 +165,11 @@
   var HTML_MGR =
     '<div class="atx-backdrop" id="catMgrModal" onclick="if(event.target===this)closeCatManager()">' +
     '<div class="atx-modal" role="dialog" aria-modal="true" aria-labelledby="cmTitle">' +
-      '<div class="atx-head"><h3 id="cmTitle">✏️ Manage Categories</h3><button type="button" class="atx-x" onclick="closeCatManager()" aria-label="Close">×</button></div>' +
+      '<div class="atx-head"><h3 id="cmTitle">' + SamsamUI.ic('pencil') + 'Manage Categories</h3><button type="button" class="atx-x" onclick="closeCatManager()" aria-label="Close">×</button></div>' +
       '<div class="cm-note">Changes apply everywhere at once — every page, filter, chart and device.</div>' +
       '<div id="cmList"></div>' +
       '<div class="atx-err" id="cmError" role="alert"></div>' +
-      '<button type="button" class="atx-save" onclick="cmNew()">➕ New Category</button>' +
+      '<button type="button" class="atx-save" onclick="cmNew()">' + SamsamUI.ic('plus') + 'New Category</button>' +
     '</div></div>';
 
   var HTML_CAT =
@@ -179,7 +179,7 @@
       '<div class="atx-coin" id="ceCoin"></div>' +
       '<div class="atx-field"><span>Category</span><select id="ceCat" onchange="syncCatCustom(this,\'ceCustomBox\');ceDrawList()" aria-hidden="true" tabindex="-1"></select>' +
         '<div class="ce-list" id="ceList" role="radiogroup" aria-label="Category"></div></div>' +
-      '<button type="button" class="ce-manage" onclick="openCatManager()">✏️ Manage Categories <small style="color:#94a3b8;font-weight:600">— rename, colour, add, delete</small></button>' +
+      '<button type="button" class="ce-manage" onclick="openCatManager()">' + SamsamUI.ic('pencil') + 'Manage Categories <small style="color:#94a3b8;font-weight:600">— rename, colour, add, delete</small></button>' +
       '<div class="atx-field cat-custom" id="ceCustomBox" hidden><label for="ceCustom">New Category Name</label>' +
         '<input type="text" id="ceCustom" maxlength="40" placeholder="Enter Custom Category..." autocomplete="off"><div class="cat-custom-hint">Saved for this coin and added to the category filters.</div></div>' +
       '<button type="button" class="cat-reset" id="ceReset" hidden onclick="saveCatEdit(true)"></button>' +
@@ -322,8 +322,8 @@
     var own = held(c.sym);
     el.classList.toggle('own', !!own);
     el.innerHTML = own
-      ? '★ <strong>' + E(c.sym) + '</strong> is already in your portfolio — saving adds this as a <strong>Buy</strong>.'
-      : '✓ Linked to CoinGecko: <strong>' + E(c.name) + '</strong> (' + E(c.id) + ')<span id="acLinkedPrice"></span> — live price, logo, CoinMarketCap link, Liquidation Map and Price Prediction ready';
+      ? SamsamUI.ic('star') + '<strong>' + E(c.sym) + '</strong> is already in your portfolio — saving adds this as a <strong>Buy</strong>.'
+      : SamsamUI.ic('check') + 'Linked to CoinGecko: <strong>' + E(c.name) + '</strong> (' + E(c.id) + ')<span id="acLinkedPrice"></span> — live price, logo, CoinMarketCap link, Liquidation Map and Price Prediction ready';
     el.hidden = false;
   }
   document.addEventListener('click', function (e) {
@@ -516,7 +516,7 @@
     if (atxType === 'transfer_in') lines.push('Received after fee: <b>' + q(r.qty - r.fee) + ' ' + atxSym + '</b> · cost added <b>' + usd(r.qty * r.price) + '</b>');
     if (atxType === 'transfer_out') lines.push('Leaves portfolio incl. fee: <b>' + q(r.qty + r.fee) + ' ' + atxSym + '</b>');
     lines.push('Holdings after: <b>' + q(r.after.qty) + ' ' + atxSym + '</b> · ' + ((window.SAMSAM_LABELS && SAMSAM_LABELS.AVG_BUY_PRICE) || 'Avg. Buy Price') + ' <b>' + SamsamFmt.price(r.after.avg) + '</b>');
-    if (r.after.short === 'later') lines.push('<span style="color:#f59e0b">⚠️ A later sell/transfer would then exceed your holdings.</span>');
+    if (r.after.short === 'later') lines.push('<span style="color:#f59e0b">' + SamsamUI.ic('alert') + 'A later sell/transfer would then exceed your holdings.</span>');
     pv.innerHTML = lines.join('<br>');
   }
   function saveAddTx() {
@@ -554,7 +554,7 @@
     $('ceCustom').value = ''; syncCatCustom(sel, 'ceCustomBox'); ceDrawList();
     var reset = $('ceReset');
     reset.hidden = !(def && (c ? c.catLocked : cur !== def));
-    if (def) reset.textContent = '↺ Use default (' + T.label(def) + ')';
+    if (def) reset.innerHTML = SamsamUI.ic('reset') + 'Use default (' + E(T.label(def)) + ')';
     $('ceError').textContent = '';
     setOpen($('catEditModal'), true);
     setTimeout(function () { var on = document.querySelector('#ceList .ce-opt[aria-checked="true"]'); if (on) { on.focus(); on.scrollIntoView({ block: 'nearest' }); } }, 0);
@@ -571,7 +571,7 @@
       html += '<button type="button" role="radio" class="ce-opt' + (isNew ? ' ce-new' : '') + '" data-v="' + E(o.value) + '" aria-checked="' + (sel.value === o.value) + '" onclick="cePick(this.dataset.v)">' +
         (isNew ? '<span class="ce-dot" style="background:none;text-align:center;line-height:12px">＋</span><span class="ce-name">New category…</span>'
                : '<span class="ce-dot" style="background:' + T.color(o.value) + '"></span><span class="ce-name">' + E(o.textContent) + '</span>') +
-        '<span class="ce-ck">✓</span></button>';
+        '<span class="ce-ck">' + SamsamUI.ic('check', { solo: true }) + '</span></button>';
     });
     list.innerHTML = html;
   }
@@ -604,27 +604,27 @@
       return '<div class="cm-row" data-k="' + key + '">' +
         '<button type="button" class="cm-dot" style="background:' + color + '" title="Change colour" aria-label="Change the colour of ' + E(label) + '" onclick="cmPal(\'' + key + '\')"></button>' +
         '<div><div class="cm-name">' + E(label) + '</div><div class="cm-sub">' + sub + '</div></div>' +
-        '<div class="cm-acts"><button type="button" class="cm-ren" title="Rename" aria-label="Rename ' + E(label) + '" onclick="cmRename(\'' + key + '\')">✏️</button>' +
-          (custom ? '<button type="button" class="cm-del" title="Delete" aria-label="Delete ' + E(label) + '" onclick="cmDelete(\'' + key + '\')">🗑</button>'
-                  : (changed ? '<button type="button" class="cm-reset" title="Back to the original name and colour" aria-label="Reset ' + E(label) + '" onclick="cmReset(\'' + key + '\')">↺</button>' : '')) + '</div>' +
+        '<div class="cm-acts"><button type="button" class="cm-ren" title="Rename" aria-label="Rename ' + E(label) + '" onclick="cmRename(\'' + key + '\')">' + SamsamUI.ic('pencil', { solo: true }) + '</button>' +
+          (custom ? '<button type="button" class="cm-del" title="Delete" aria-label="Delete ' + E(label) + '" onclick="cmDelete(\'' + key + '\')">' + SamsamUI.ic('trash', { solo: true }) + '</button>'
+                  : (changed ? '<button type="button" class="cm-reset" title="Back to the original name and colour" aria-label="Reset ' + E(label) + '" onclick="cmReset(\'' + key + '\')">' + SamsamUI.ic('reset', { solo: true }) + '</button>' : '')) + '</div>' +
         '<div class="cm-pal"' + (cmOpenPal === key ? '' : ' hidden') + '>' + pal + '</div></div>';
     };
     var mine = T.customs();
     list.innerHTML = '<div class="cm-group">Built-in</div>' +
       T.list.filter(function (c) { return c.key !== 'other'; }).map(function (c) { return row(c.key, c.label, c.color, false); }).join('') +
       '<div class="cm-group">Your Categories</div>' +
-      (mine.length ? mine.map(function (c) { return row(c.key, c.label, c.color, true); }).join('') : '<div class="cm-note">None yet — tap ➕ New Category.</div>');
+      (mine.length ? mine.map(function (c) { return row(c.key, c.label, c.color, true); }).join('') : '<div class="cm-note">None yet — tap ' + SamsamUI.ic('plus') + 'New Category.</div>');
   }
   function cmDone(p) {
     $('cmError').textContent = '';
-    return Promise.resolve(p).then(function () { cmDraw(); emit('cat', {}); }, function (e) { $('cmError').textContent = '⚠️ ' + ((e && e.message) || e); });
+    return Promise.resolve(p).then(function () { cmDraw(); emit('cat', {}); }, function (e) { $('cmError').innerHTML = SamsamUI.ic('alert') + E((e && e.message) || e); });
   }
   function cmPal(key) { cmOpenPal = cmOpenPal === key ? null : key; cmDraw(); }
   function cmColor(key, c) { cmOpenPal = null; if (!requireCloud()) return; cmDone(Samsam.recolorCategory(key, c)); }
   function cmRename(key) {
     if (!requireCloud()) return;
     var T = SamsamTaxonomy, cur = T.label(key);
-    var ask = window.CPDialog ? CPDialog.prompt('New name for this category — every coin in it, every filter and chart follow.', { title: '✏️ Rename “' + cur + '”', value: cur, okText: 'Save' }) : Promise.resolve(window.prompt('New name', cur));
+    var ask = window.CPDialog ? CPDialog.prompt('New name for this category — every coin in it, every filter and chart follow.', { title: 'Rename “' + cur + '”', icon: 'pencil', value: cur, okText: 'Save' }) : Promise.resolve(window.prompt('New name', cur));
     ask.then(function (v) { if (v == null) return; v = String(v).trim(); if (!v || v === cur) return; cmDone(Samsam.renameCategory(key, v)); });
   }
   function cmReset(key) { if (!requireCloud()) return; cmDone(Samsam.resetCategory(key)); }
@@ -632,12 +632,12 @@
     if (!requireCloud()) return;
     var T = SamsamTaxonomy, n = cmCounts()[key] || 0, name = T.label(key);
     var msg = n ? 'Its ' + n + ' coin' + (n === 1 ? '' : 's') + ' go back to their default category.' : 'It has no coins.';
-    var ask = window.CPDialog ? CPDialog.confirm(msg, { title: '🗑 Delete “' + name + '”?', okText: 'Delete', danger: true }) : Promise.resolve(window.confirm(msg));
+    var ask = window.CPDialog ? CPDialog.confirm(msg, { title: 'Delete “' + name + '”?', icon: 'trash', okText: 'Delete', danger: true }) : Promise.resolve(window.confirm(msg));
     ask.then(function (ok) { if (ok) cmDone(Samsam.deleteCategory(key)); });
   }
   function cmNew() {
     if (!requireCloud()) return;
-    var ask = window.CPDialog ? CPDialog.prompt('Name of the new category. Move coins into it with Change Category.', { title: '➕ New Category', value: '', okText: 'Create' }) : Promise.resolve(window.prompt('New category'));
+    var ask = window.CPDialog ? CPDialog.prompt('Name of the new category. Move coins into it with Change Category.', { title: 'New Category', icon: 'plus', value: '', okText: 'Create' }) : Promise.resolve(window.prompt('New category'));
     ask.then(function (v) { if (v == null) return; v = String(v).trim(); if (!v) return; cmDone(Samsam.createCategory(v)); });
   }
   function closeCatEdit() { var m = $('catEditModal'); if (m) setOpen(m, false); ceSym = null; }
@@ -650,11 +650,11 @@
       else { ch = readCatChoice($('ceCat'), 'ceCustom'); p = Samsam.setCategory(sym, ch.key, ch.label); }
     } else {   // not owned yet: the plan keeps it (and Add Coin starts from it on your first Buy)
       ch = useDefault ? { key: T.defaultOf(sym) || 'other', label: null } : readCatChoice($('ceCat'), 'ceCustom');
-      if (T.isCustom(ch.key) && !ch.label) { $('ceError').textContent = '⚠️ Type a name for the category'; return; }
+      if (T.isCustom(ch.key) && !ch.label) { $('ceError').innerHTML = SamsamUI.ic('alert') + 'Type a name for the category'; return; }
       if (ch.label) { ch.label = ch.label.slice(0, 40); T.register(ch.key, ch.label); }
       p = Promise.resolve(ceOpts.onSave(ch.key, ch.label));
     }
-    p.then(function () { closeCatEdit(); emit('cat', { sym: sym }); }, function (e) { $('ceError').textContent = '⚠️ ' + ((e && e.message) || e); });
+    p.then(function () { closeCatEdit(); emit('cat', { sym: sym }); }, function (e) { $('ceError').innerHTML = SamsamUI.ic('alert') + E((e && e.message) || e); });
   }
 
   // Buy a coin: Add Transaction if you hold it, otherwise Add Coin ready with what we know about it
