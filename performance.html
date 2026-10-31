@@ -5,14 +5,14 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610311718"></script>
-<script src="samsam-hints.js?v=202610311718"></script>
-<script src="samsam-vault.js?v=202610311718"></script>
-<script src="samsam-labels.js?v=202610311718"></script>
-<script src="samsam-taxonomy.js?v=202610311718"></script>
-<script src="samsam-dropdown.js?v=202610311718"></script>
-<script src="samsam-coins.js?v=202610311718"></script>
-<script src="samsam-chart.js?v=202610311718"></script>
+<script src="samsam-ui.js?v=202610311750"></script>
+<script src="samsam-hints.js?v=202610311750"></script>
+<script src="samsam-vault.js?v=202610311750"></script>
+<script src="samsam-labels.js?v=202610311750"></script>
+<script src="samsam-taxonomy.js?v=202610311750"></script>
+<script src="samsam-dropdown.js?v=202610311750"></script>
+<script src="samsam-coins.js?v=202610311750"></script>
+<script src="samsam-chart.js?v=202610311750"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -590,16 +590,6 @@ body {
 
 <div class="summary">
   <div class="summary-cards">
-    <div class="sum-card" id="allTimeCard">
-      <span class="sum-card-icon">📈</span>
-      <div class="sum-label">All-Time Profit</div>
-      <div class="sum-value" id="totalPnl">—</div>
-      <div id="totalPct" class="sum-pct-badge neg">—</div>
-      <svg class="sum-sparkline" viewBox="0 0 100 40" preserveAspectRatio="none">
-        <polyline fill="none" stroke="currentColor" stroke-width="3"
-          points="0,35 15,28 30,32 45,18 60,22 75,12 90,16 100,8"/>
-      </svg>
-    </div>
     <div class="sum-card">
       <span class="sum-card-icon">💼</span>
       <div class="sum-label">Total Value</div>
@@ -608,6 +598,16 @@ body {
       <svg class="sum-sparkline" viewBox="0 0 100 40" preserveAspectRatio="none">
         <polyline fill="none" stroke="currentColor" stroke-width="3"
           points="0,30 20,25 40,28 55,20 70,22 85,15 100,18"/>
+      </svg>
+    </div>
+    <div class="sum-card" id="allTimeCard">
+      <span class="sum-card-icon">📈</span>
+      <div class="sum-label">All-Time Profit</div>
+      <div class="sum-value" id="totalPnl">—</div>
+      <div id="totalPct" class="sum-pct-badge neg">—</div>
+      <svg class="sum-sparkline" viewBox="0 0 100 40" preserveAspectRatio="none">
+        <polyline fill="none" stroke="currentColor" stroke-width="3"
+          points="0,35 15,28 30,32 45,18 60,22 75,12 90,16 100,8"/>
       </svg>
     </div>
 
@@ -682,7 +682,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610311718"></script>
+<script type="module" src="samsam-cloud.js?v=202610311750"></script>
 <script>
 // ── Constants ──
 
