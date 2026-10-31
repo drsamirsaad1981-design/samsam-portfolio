@@ -16,14 +16,14 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610312143"></script>
-<script src="samsam-hints.js?v=202610312143"></script>
-<script src="samsam-vault.js?v=202610312143"></script>
-<script src="samsam-labels.js?v=202610312143"></script>
-<script src="samsam-taxonomy.js?v=202610312143"></script>
-<script src="samsam-coins.js?v=202610312143"></script>
-<script src="samsam-dropdown.js?v=202610312143"></script>
-<script src="samsam-add.js?v=202610312143"></script>
+<script src="samsam-ui.js?v=202610312340"></script>
+<script src="samsam-hints.js?v=202610312340"></script>
+<script src="samsam-vault.js?v=202610312340"></script>
+<script src="samsam-labels.js?v=202610312340"></script>
+<script src="samsam-taxonomy.js?v=202610312340"></script>
+<script src="samsam-coins.js?v=202610312340"></script>
+<script src="samsam-dropdown.js?v=202610312340"></script>
+<script src="samsam-add.js?v=202610312340"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -147,6 +147,10 @@ body {
   [data-theme="light"] #tableView::-webkit-scrollbar-thumb, [data-theme="light"] #cardsView.view-active::-webkit-scrollbar-thumb { background: #cbd5e1; }
 }
 @media print { #tableView, #cardsView { max-height: none !important; overflow: visible !important; } }
+/* Computer: same 1200px content width as every page (the header bar still spans the screen) */
+@media (min-width: 1024px) {
+  .dashboard, .overall-progress, .toolbar, .summary-grid, #tableView, #cardsView, .empty-state, .cp-foot { max-width: 1200px; margin-left: auto !important; margin-right: auto !important; }
+}
 .view-enter { animation: viewEnter .28s ease both; }
 @keyframes viewEnter { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { .view-enter { animation: none; } }
@@ -620,7 +624,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610312143"></script>
+<script type="module" src="samsam-cloud.js?v=202610312340"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';

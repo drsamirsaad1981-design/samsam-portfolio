@@ -138,6 +138,10 @@
     '.ss-dot[data-c=red]{background:#ef4444}.ss-dot[data-c=green]{background:#22c55e}.ss-dot[data-c=blue]{background:#3b82f6}.ss-dot[data-c=orange]{background:#f97316}' +
     '.ss-search{position:relative}.ss-search .ss-search-ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--fg2,#94a3b8);pointer-events:none;z-index:1}.ss-search input{padding-left:36px!important}' +
     '.ext-mark{opacity:.65;margin-left:-2px}' +
+    '.cp-foot{max-width:1200px;margin:28px auto 0;padding:16px 16px 10px;border-top:1px solid var(--border,rgba(148,163,184,.2));text-align:center;font-size:.72rem;line-height:1.8;color:var(--fg2,#94a3b8);box-sizing:border-box}' +
+    '.cp-foot p{margin:0}.cp-foot .cpf-sep{margin:0 8px;opacity:.6}.cp-foot b{font-weight:600;color:var(--fg,inherit)}.cp-foot .ss-ic{margin-right:.35em}' +
+    '.cp-foot .cpf-msg{min-height:0;font-size:.7rem;transition:opacity .5s}.cp-foot .cpf-msg:empty{display:none}.cp-foot .cpf-copy{margin-top:2px;opacity:.75}.cp-foot a{color:inherit;text-decoration:none}.cp-foot a:hover{color:var(--accent,#a78bfa)}' +
+    '@media print{.cp-foot .cpf-copy{display:none}}' +
     '[data-theme=light] .ss-dot[data-c=green]{background:#16a34a}[data-theme=light] .ss-dot[data-c=red]{background:#dc2626}' +
     // Theme toggle — one size and style on every page
     '.ss-theme-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;min-width:36px;padding:0;' +
@@ -661,8 +665,98 @@
       e.preventDefault(); window.closeHoldingsView(); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (_) { window.scrollTo(0, 0); } setTimeout(navPaint, 0);
     } else if (k === 'home') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   }
+  // ── One footer on every page: sync status · baseline / © line. Fills <footer id="cpFoot"> or adds one at the end. ──
+  function footMount() {
+    if (/[?&]shell=1\b/.test(location.search) === false && window.parent !== window) return;   // (not inside foreign frames)
+    var f = document.getElementById('cpFoot');
+    if (!f) { f = document.createElement('footer'); f.id = 'cpFoot'; document.body.appendChild(f); }
+    f.className = 'cp-foot';
+    f.innerHTML = '<p class="cpf-sync"><span id="cpfSync">' + ic('cloud') + 'Cloud: connecting…</span><span class="cpf-sep" aria-hidden="true">·</span><span>Baseline <b id="footerBaseline">—</b></span></p>' +
+      '<p id="footerSyncStatus" class="cpf-msg" aria-live="polite"></p>' +
+      '<p class="cpf-copy">© ' + new Date().getFullYear() + ' Dr. Samir Saad<span class="cpf-sep" aria-hidden="true">·</span><a href="mailto:dr.samir.saad.1981@gmail.com">dr.samir.saad.1981@gmail.com</a></p>';
+    var paint = function () {
+      var S = window.Samsam; if (!S || !S.getState) return;
+      try {
+        var t = S.syncedAt && S.syncedAt(), st = S.isReady && S.isReady() ? S.getState() : null;
+        document.getElementById('cpfSync').innerHTML = ic('cloud') + (t ? 'Synced ' + t.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Cloud: not synced yet');
+        var b = st && st.baseline && st.baseline.date;
+        if (b) { var d = new Date(b + 'T00:00:00'); document.getElementById('footerBaseline').textContent = isNaN(d) ? b : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+      } catch (_) {}
+    };
+    var hooked = false, tries = 0;
+    (function hook() {
+      if (window.Samsam && window.Samsam.onChange) { if (!hooked) { hooked = true; window.Samsam.onChange(paint); paint(); setInterval(paint, 30000); } return; }
+      if (++tries < 120) setTimeout(hook, 500);
+    })();
+  }
+  // ── AI Analysis: one floating button on every main page. Drag it anywhere; it settles on the nearest side and
+  //    remembers where you left it (this device). Tap → the AI report opens right here (inside the app), or the
+  //    main page opens with it when a page was opened on its own.
+  function aiFab() {
+    if (document.getElementById('cpAiFab')) return;
+    var KEYP = 'samsam_aifab_pos', M = 12, b = document.createElement('button');
+    b.type = 'button'; b.id = 'cpAiFab'; b.className = 'cp-aifab'; b.title = 'AI Analysis (drag to move)'; b.setAttribute('aria-label', 'AI Analysis');
+    b.innerHTML = ic('bot', { solo: true, size: 24, sw: 1.9 });
+    if (!document.getElementById('cpAiFabCss')) {
+      var st = document.createElement('style'); st.id = 'cpAiFabCss';
+      st.textContent = '.cp-aifab{position:fixed;z-index:10020;left:-999px;top:-999px;width:52px;height:52px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;color:#fff;' +
+        'background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 8px 22px rgba(109,40,217,.45),0 2px 6px rgba(0,0,0,.28);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;transition:left .22s ease,top .22s ease,transform .15s,box-shadow .15s}' +
+        '.cp-aifab.drag{transition:none;cursor:grabbing;transform:scale(1.08);box-shadow:0 14px 30px rgba(109,40,217,.55),0 4px 10px rgba(0,0,0,.3)}.cp-aifab:active{transform:scale(.96)}.cp-aifab.drag:active{transform:scale(1.08)}' +
+        '.cp-aifab:focus-visible{outline:3px solid #c4b5fd;outline-offset:3px}.cp-aifab svg{pointer-events:none}@media (prefers-reduced-motion:reduce){.cp-aifab{transition:none}}@media print{.cp-aifab{display:none!important}}';
+      document.head.appendChild(st);
+    }
+    document.body.appendChild(b);
+    var pos = { side: 'r', y: 0.82 };
+    try { var sv = JSON.parse(localStorage.getItem(KEYP)); if (sv && (sv.side === 'l' || sv.side === 'r') && sv.y >= 0 && sv.y <= 1) pos = sv; } catch (_) {}
+    function box() {   // where the button may sit: below the top edge, above the bottom bar
+      var s = b.offsetWidth || 52, bar = document.getElementById('cpBnav'), r = bar && bar.getBoundingClientRect();
+      var bottom = (r && r.height && r.top < innerHeight ? r.top : innerHeight) - s - M;
+      return { s: s, top: M + 56, bottom: Math.max(M + 56, bottom), right: innerWidth - s - M };
+    }
+    function place(p) { var k = box(); b.style.top = Math.round(k.top + p.y * (k.bottom - k.top)) + 'px'; b.style.left = (p.side === 'l' ? M : k.right) + 'px'; }
+    place(pos);
+    window.addEventListener('resize', function () { place(pos); });
+    var drag = null;
+    b.addEventListener('pointerdown', function (e) {
+      if (e.button) return;
+      var r = b.getBoundingClientRect(); drag = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, moved: false };
+      try { b.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    b.addEventListener('pointermove', function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!drag.moved && Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) < 8) return;
+      drag.moved = true; b.classList.add('drag');
+      var k = box();
+      b.style.left = Math.min(Math.max(M, e.clientX - drag.dx), k.right) + 'px';
+      b.style.top = Math.min(Math.max(k.top, e.clientY - drag.dy), k.bottom) + 'px';
+    });
+    function end(e) {
+      if (!drag || (e && e.pointerId !== drag.id)) return;
+      var moved = drag.moved; drag = null; b.classList.remove('drag');
+      if (!moved) return;
+      var k = box(), r = b.getBoundingClientRect();
+      pos = { side: r.left + k.s / 2 < innerWidth / 2 ? 'l' : 'r', y: k.bottom > k.top ? Math.min(1, Math.max(0, (r.top - k.top) / (k.bottom - k.top))) : 0 };
+      try { localStorage.setItem(KEYP, JSON.stringify(pos)); } catch (_) {}
+      place(pos); b.__noClick = true; setTimeout(function () { b.__noClick = false; }, 0);
+    }
+    b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
+    b.addEventListener('click', function (e) {
+      if (b.__noClick) { e.preventDefault(); return; }
+      if (typeof window.openAnalysis === 'function') window.openAnalysis();
+      else location.href = 'index.html#ai';
+    });
+    b.addEventListener('keydown', function (e) {   // keyboard: arrows move it too
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      if (e.key === 'ArrowLeft') pos.side = 'l'; else if (e.key === 'ArrowRight') pos.side = 'r';
+      else pos.y = Math.min(1, Math.max(0, pos.y + (e.key === 'ArrowUp' ? -0.08 : 0.08)));
+      try { localStorage.setItem(KEYP, JSON.stringify(pos)); } catch (_) {}
+      place(pos);
+    });
+  }
   function navMount() {
     navTitleIcons();
+    footMount();
     if (IN_SHELL) {   // the shell shows the bar; links back to the main page stay inside the app
       navCss(); document.body.classList.add('in-shell');
       document.addEventListener('click', function (e) {
@@ -683,6 +777,7 @@
     document.body.classList.add('has-bnav');
     document.getElementById('cpBnav').addEventListener('click', function (e) { var a = e.target.closest('a[data-k]'); if (a) navGo(e, a.dataset.k); });
     navPaint();
+    aiFab();
     window.addEventListener('hashchange', navPaint); window.addEventListener('popstate', function () { setTimeout(navPaint, 0); });
     var ov = document.getElementById('holdingsOverlay');
     if (ov && window.MutationObserver) new MutationObserver(navPaint).observe(ov, { attributes: true, attributeFilter: ['style'] });

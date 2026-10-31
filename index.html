@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610312143"></script>
-<script src="samsam-hints.js?v=202610312143"></script>
-<script src="samsam-vault.js?v=202610312143"></script>
-<script src="samsam-labels.js?v=202610312143"></script>
-<script src="samsam-taxonomy.js?v=202610312143"></script>
-<script src="samsam-coins.js?v=202610312143"></script>
-<script src="samsam-dropdown.js?v=202610312143"></script>
-<script src="samsam-add.js?v=202610312143"></script>
-<script src="samsam-chart.js?v=202610312143"></script>
+<script src="samsam-ui.js?v=202610312340"></script>
+<script src="samsam-hints.js?v=202610312340"></script>
+<script src="samsam-vault.js?v=202610312340"></script>
+<script src="samsam-labels.js?v=202610312340"></script>
+<script src="samsam-taxonomy.js?v=202610312340"></script>
+<script src="samsam-coins.js?v=202610312340"></script>
+<script src="samsam-dropdown.js?v=202610312340"></script>
+<script src="samsam-add.js?v=202610312340"></script>
+<script src="samsam-chart.js?v=202610312340"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -364,7 +364,7 @@
      DESKTOP LAYOUT  (≥ 900 px)
      ═══════════════════════════════════════════════════ */
   @media(min-width: 900px) {
-    body { padding: 24px 28px; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    body { padding: 24px 28px; max-width: 1256px; /* one 1200px content width on every page (computer) */ margin: 0 auto; width: 100%; box-sizing: border-box; }
 
     /* ── Header ── */
     header.app-head {
@@ -862,6 +862,7 @@
   .coin-cg-link:hover { opacity: 0.75; }
 
   /* ── Analysis Report Modal ───────────────────────── */
+  #analysisModal { z-index: 100120; }   /* opened by the floating AI button over any tab / Holdings */
   #analysisModal .modal { max-width:700px; max-height:88vh; display:flex; flex-direction:column; }
   .analysis-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
   .analysis-lang-btn { background:var(--bg3); border:1px solid var(--border); color:var(--fg2); border-radius:6px; padding:4px 12px; font-size:0.75rem; cursor:pointer; font-family:inherit; }
@@ -900,10 +901,7 @@
   .btn-accum { background:var(--bg3); color:var(--fg); border:1px solid var(--border); border-radius:10px; padding:10px 20px; font-size:0.85rem; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:border-color .2s, color .2s; flex:1; justify-content:center; }
   .btn-accum:hover { border-color:var(--accent); color:var(--accent); }
 
-  footer { text-align: center; padding: 24px 0 16px; font-size: 0.73rem; color: var(--fg2); border-top: 1px solid var(--border); margin-top: 16px; line-height: 2; }
-  footer .footer-copy { font-size: 0.7rem; color: var(--fg2); opacity: 0.65; margin-top: 10px; }
-  footer .footer-copy a { color: var(--accent); text-decoration: none; opacity: 0.85; }
-  footer .footer-copy a:hover { opacity: 1; }
+  /* footer: shared .cp-foot (samsam-ui.js) */
 
   table { width: 100%; border-collapse: collapse; min-width: 920px;   /* 7 columns: fits a 1024px screen without sideways scrolling */ }
   thead { background: var(--bg3); position: sticky; top: 0; z-index: 2; }
@@ -931,7 +929,7 @@
   @media print {
     :root { --bg:#fff; --bg2:#f8fafc; --bg3:#f1f5f9; --border:#e2e8f0; --fg:#0f172a; --fg2:#475569; --accent:#b45309; --green:#065f46; --red:#991b1b; color-scheme:light; }
     body { background:#fff; color:#0f172a; font-size:11pt; }
-    .controls, .no-print, footer .footer-copy, #syncFooter { display:none !important; }
+    .controls, .no-print, #syncFooter { display:none !important; }
     .stat-row { flex-wrap:wrap; gap:6px; }
     .stat-card { border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; break-inside:avoid; }
     .table-wrap { overflow:visible !important; }
@@ -1379,7 +1377,6 @@
     <button type="button" data-view="cards" onclick="applyView('cards')"><span data-ic="cards"></span>Cards</button>
   </div>
   <div class="tb-actions">
-    <button class="btn btn-secondary tb-mobile-only" onclick="openAnalysis()"><span data-ic="bot"></span>AI Analysis</button>
     <button class="btn btn-secondary tb-mobile-only" onclick="openAddCoin()" title="Add a new coin to your portfolio"><span data-ic="plus"></span>Add</button>
     <button class="btn btn-secondary" onclick="exportData()"><span data-ic="download"></span>CSV</button>
     <button class="btn btn-secondary" onclick="exportPdf()"><span data-ic="file"></span>PDF</button>
@@ -1393,7 +1390,7 @@
   <div class="search-input-wrapper ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo></span><input type="search" class="search-box" id="searchBox" placeholder="Search coin..." autocomplete="off" aria-label="Search coin"></div>
   <div class="controls-right-group">
     <div class="signal-filter-select" id="signalDD"></div>
-    <button class="btn btn-secondary tb-desktop-only tb-ai" onclick="openAnalysis()" title="AI Analysis" aria-label="AI Analysis"><span data-ic="bot" data-ic-solo></span><span class="btn-txt"> AI Analysis</span></button>
+    
     <button type="button" class="cp-add tb-desktop-only tb-add" onclick="openAddCoin()" title="Add a new coin, or a Buy for a coin you hold" aria-label="Add New Coin"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="btn-txt"><span data-label="ADD_COIN">Add New Coin</span></span></button>
   </div>
   <input type="hidden" id="filterAction" value="">
@@ -1468,20 +1465,11 @@
   </div>
 </div>
 
-<footer>
-  <p><span data-ic="cloud"></span>Cloud sync (Firebase) | Baseline: <span id="footerBaseline">Oct 15, 2026</span></p>
-  <p style="margin-top:2px;color:var(--accent)"><span data-ic="triangle"></span>Golden Triangle: Mining + Trading + Accumulation</p>
-  <p id="footerSyncTime" style="margin-top:4px;font-size:0.68rem;color:var(--fg2);opacity:0.75"><span data-ic="cloud"></span>Cloud: not synced yet</p>
-  <p id="footerSyncStatus" style="margin-top:4px;font-size:0.7rem;min-height:1.2em;transition:opacity 0.5s"></p>
-  <div class="footer-copy">
-    © 2026 Dr. Samir Saad &nbsp;·&nbsp;
-    <a href="mailto:dr.samir.saad.1981@gmail.com">dr.samir.saad.1981@gmail.com</a>
-  </div>
-</footer>
+<footer id="cpFoot"></footer><!-- shared footer: samsam-ui.js -->
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610312143"></script>
+<script type="module" src="samsam-cloud.js?v=202610312340"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3552,7 +3540,7 @@ function renderHoldingsAssetList() {
     background: color-mix(in srgb, var(--bg2) 82%, transparent); -webkit-backdrop-filter: saturate(1.6) blur(16px); backdrop-filter: saturate(1.6) blur(16px);
     border-bottom: 1px solid var(--border); box-shadow: 0 6px 18px rgba(2,6,23,.14); }
   .mini-bar.show { opacity: 1; transform: none; pointer-events: auto; }
-  .mini-in { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 1400px; margin: 0 auto; box-sizing: border-box;
+  .mini-in { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 1232px; margin: 0 auto; box-sizing: border-box;
     padding: 9px max(16px, env(safe-area-inset-right,0px)) 9px max(16px, env(safe-area-inset-left,0px)); border: none; background: none; color: var(--fg); font: inherit; cursor: pointer; text-align: left; }
   .mini-in img { flex-shrink: 0; }
   .mini-name { font-weight: 900; font-size: 1rem; letter-spacing: -0.01em; white-space: nowrap; }
@@ -3697,6 +3685,11 @@ function renderHoldingsAssetList() {
     e.preventDefault(); shell.go(m[1]);
   });
   route();
+  // index.html#ai (the floating AI button on a page opened on its own) → open the AI report once the data is in
+  if (location.hash === '#ai') {
+    history.replaceState(null, '', location.pathname + location.search);
+    whenSamsam(S => { const go = () => S.isReady() ? openAnalysis() : setTimeout(go, 300); go(); });
+  }
   // once the main page has your data, warm up the other tabs
   let warmed = false;
   whenSamsam(S => S.onChange(() => { if (warmed || !S.isReady()) return; warmed = true; setTimeout(() => shell.preload(), 1200); }));
@@ -3878,6 +3871,7 @@ async function saveBaselineEdit() {
     }
     .hov-container { max-width: 860px; width: 100%; margin: 0 auto;
       padding: 20px max(16px, env(safe-area-inset-right,0px)) 40px max(16px, env(safe-area-inset-left,0px)); }
+    @media (min-width: 1024px) { .hov-container { max-width: 1232px; } }   /* same 1200px content width as every page */
     /* Nav bar: shared .cp-head (samsam-ui.js) */
 
     /* ── Hero total ── */
@@ -4034,7 +4028,7 @@ async function saveBaselineEdit() {
     /* Add Transaction form + .atx-* dialog styles: shared samsam-add.js (Edit opening uses them too) */
     .htx-empty { padding:36px 16px; text-align:center; color:var(--fg2); font-size:0.88rem; }
     @media (min-width: 900px) {
-      #hovTxView { max-width:860px; margin:0 auto; width:100%; }
+      #hovTxView { max-width:none; margin:0 auto; width:100%; }
       /* 4 equal columns that never grow with long values (a wide value can't push a card out of view) */
       .htx-cards { grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; }
     }

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610312143';
-import * as Hist from './samsam-history.js?v=202610312143';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610312143';
+import * as Core from './samsam-core.js?v=202610312340';
+import * as Hist from './samsam-history.js?v=202610312340';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610312340';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -385,6 +385,7 @@ const API = {
   // reading
   onChange(cb) { S.listeners.add(cb); if (S.derived && allLoaded()) setTimeout(() => cb(S.derived), 0); return () => S.listeners.delete(cb); },
   getState() { return S.derived || derive(); },
+  syncedAt() { return S.lastSyncedAt; },   // last moment the server confirmed everything (shared footer)
   isReady() { return !!S.user && allLoaded(); },
   core: Core,
   configure(opts) { Object.assign(S.opts, opts || {}); if (allLoaded()) emit(); },
@@ -803,6 +804,8 @@ function injectUi() {
   /* Empty space at the end of every page, so the floating Synced badge never covers the last row */
   body::after{content:"";display:block;height:calc(72px + env(safe-area-inset-bottom,0px))}
   @media (max-width:700px){body::after{height:calc(96px + env(safe-area-inset-bottom,0px))}}
+  /* pages with the bottom bar already keep room for it (the badge only shows on a problem) — just a small gap under the footer */
+  body.has-bnav::after,body.in-shell::after{height:12px!important}
   @media print{#samsamSyncPill,#samsamSyncMenu,#samsamGate{display:none!important} body::after{display:none}}`;
   document.head.appendChild(css);
   const gate = document.createElement('div'); gate.id = 'samsamGate';
