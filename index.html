@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610310254"></script>
-<script src="samsam-hints.js?v=202610310254"></script>
-<script src="samsam-vault.js?v=202610310254"></script>
-<script src="samsam-labels.js?v=202610310254"></script>
-<script src="samsam-taxonomy.js?v=202610310254"></script>
-<script src="samsam-coins.js?v=202610310254"></script>
-<script src="samsam-dropdown.js?v=202610310254"></script>
-<script src="samsam-add.js?v=202610310254"></script>
-<script src="samsam-chart.js?v=202610310254"></script>
+<script src="samsam-ui.js?v=202610311443"></script>
+<script src="samsam-hints.js?v=202610311443"></script>
+<script src="samsam-vault.js?v=202610311443"></script>
+<script src="samsam-labels.js?v=202610311443"></script>
+<script src="samsam-taxonomy.js?v=202610311443"></script>
+<script src="samsam-coins.js?v=202610311443"></script>
+<script src="samsam-dropdown.js?v=202610311443"></script>
+<script src="samsam-add.js?v=202610311443"></script>
+<script src="samsam-chart.js?v=202610311443"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1482,7 +1482,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610310254"></script>
+<script type="module" src="samsam-cloud.js?v=202610311443"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3130,12 +3130,12 @@ function applyHoldingsRoute() {
   if (r.sym) {
     coinTxSym = r.sym;
     overlay.setAttribute('data-view', 'tx');
-    document.getElementById('hovNavTitle').textContent = r.sym + ' Transactions'; document.getElementById('hovNavIcon').textContent = '🧾';
+    document.getElementById('hovNavTitle').textContent = r.sym + ' Transactions'; document.getElementById('hovNavIcon').innerHTML = '🧾';
     renderCoinTx();
   } else {
     coinTxSym = null;
     overlay.removeAttribute('data-view');
-    document.getElementById('hovNavTitle').textContent = 'Holdings'; document.getElementById('hovNavIcon').textContent = '💰';
+    document.getElementById('hovNavTitle').textContent = 'Holdings'; document.getElementById('hovNavIcon').innerHTML = SamsamUI.navIcon('holdings');
     drawHoldingsOverlayChart();
     renderHoldingsAssetList();
   }
@@ -3615,6 +3615,86 @@ function renderHoldingsAssetList() {
     <button type="button" class="bl-reset" id="sgReset" onclick="sgUseDefault()">Use the defaults (−5% / −20%)</button>
   </div>
 </div>
+<!-- ── App shell: Performance / Allocation / Plan stay open in frames, so switching tabs is instant ── -->
+<div id="cpViews"></div>
+<style>
+  #cpViews { position: fixed; left: 0; right: 0; top: 0; bottom: calc(62px + env(safe-area-inset-bottom, 0px)); z-index: 9000; visibility: hidden; pointer-events: none; background: #0a0e1a; }
+  #cpViews.on { visibility: visible; pointer-events: auto; }
+  #cpViews iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; visibility: hidden; background: transparent; }
+  #cpViews iframe.on { visibility: visible; }
+  [data-theme="light"] #cpViews { background: #f8fafc; }
+  html.view-open, html.view-open body { overflow: hidden !important; }
+  @media (min-width: 1024px) { #cpViews { bottom: 0; } }
+  @media print { #cpViews { display: none !important; } }
+</style>
+<script>
+(function () {
+  const VIEWS = { performance: 'performance.html', allocation: 'allocation.html', accumulation: 'accumulation.html' };
+  const TITLES = { home: 'Cute Portfolio', performance: 'Performance — Cute Portfolio', allocation: 'Allocation — Cute Portfolio', accumulation: 'Accumulation Plan — Cute Portfolio' };
+  const box = document.getElementById('cpViews'), frames = {};
+  const baseTitle = document.title;
+  function frame(k) {
+    if (frames[k]) return frames[k];
+    const f = document.createElement('iframe');
+    f.src = VIEWS[k] + '?shell=1'; f.title = TITLES[k]; f.dataset.view = k;
+    box.appendChild(f); frames[k] = f; return f;
+  }
+  function show(k) {
+    shell.cur = VIEWS[k] ? k : 'home';
+    if (VIEWS[shell.cur]) frame(shell.cur);
+    Object.keys(frames).forEach(n => frames[n].classList.toggle('on', n === shell.cur));
+    box.classList.toggle('on', !!VIEWS[shell.cur]);
+    document.documentElement.classList.toggle('view-open', !!VIEWS[shell.cur]);
+    document.title = VIEWS[shell.cur] ? TITLES[shell.cur] : baseTitle;
+    if (window.SamsamUI && SamsamUI.navPaint) SamsamUI.navPaint();
+  }
+  function route() {
+    const m = /^#(performance|allocation|accumulation)$/.exec(location.hash);
+    if (m) return show(m[1]);
+    if (/^#holdings/.test(location.hash)) {   // Holdings opens on top; the tab you came from stays underneath
+      const ret = history.state && history.state.ret;
+      if (VIEWS[ret]) show(ret);
+      else if (window.SamsamUI && SamsamUI.navPaint) SamsamUI.navPaint();
+      return;
+    }
+    show('home');
+  }
+  const shell = window.cpShell = {
+    cur: 'home', frames,
+    go(k) {
+      if (k === 'holdings') { if (typeof openHoldingsView === 'function') openHoldingsView(); return; }
+      const hash = VIEWS[k] ? '#' + k : '';
+      if (location.hash !== hash) history.pushState(VIEWS[k] ? { view: k } : null, '', hash || location.pathname + location.search);
+      if (typeof applyHoldingsRoute === 'function') applyHoldingsRoute();   // leaving Holdings / a coin: close it
+      route();
+    },
+    // a coin's Transactions over the current tab; its Back returns to that tab (as it was)
+    openCoin(sym) {
+      history.pushState({ hov: 'tx', ret: shell.cur }, '', '#holdings/' + encodeURIComponent(sym));
+      if (typeof ensureHtxDropdowns === 'function') { ensureHtxDropdowns(); htxTypeDD.setValue('all'); }
+      applyHoldingsRoute(); if (window.SamsamUI) SamsamUI.navPaint();
+    },
+    // open the other tabs quietly in the background, one after another
+    preload() { Object.keys(VIEWS).forEach((k, i) => setTimeout(() => frame(k), i * 1500)); },
+  };
+  window.addEventListener('popstate', route);
+  // closing Holdings (Home on the bar, its Back) shows whatever is under it
+  const closeHV = window.closeHoldingsView;
+  window.closeHoldingsView = function () { closeHV(); route(); };
+  // main-page cards that link to a page open it inside the app
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.target === '_blank' || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    const m = /(?:^|\/)(performance|allocation|accumulation)\.html$/.exec(a.getAttribute('href') || '');
+    if (!m) return;
+    e.preventDefault(); shell.go(m[1]);
+  });
+  route();
+  // once the main page has your data, warm up the other tabs
+  let warmed = false;
+  whenSamsam(S => S.onChange(() => { if (warmed || !S.isReady()) return; warmed = true; setTimeout(() => shell.preload(), 1200); }));
+})();
+</script>
 <script>
 // ── Signal thresholds editor ──
 // The fields hold how far BELOW your Avg. Buy Price (the − is printed in front), so the phone's number pad is enough:
@@ -4011,7 +4091,7 @@ async function saveBaselineEdit() {
   <!-- Nav bar -->
   <header class="cp-head hov-navbar">
     <div class="cp-head-l"><button type="button" class="cp-back hov-back-btn" onclick="hovBack()" aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></button></div>
-    <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" id="hovNavIcon">💰</span><span class="t" id="hovNavTitle">Holdings</span></h1>
+    <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" id="hovNavIcon" data-nav-ic="holdings">💰</span><span class="t" id="hovNavTitle">Holdings</span></h1>
     <div class="cp-head-r"><button type="button" class="cp-add sm hov-add-btn" id="hovAddBtn" onclick="openAddCoin()" title="Add a new coin, or a Buy for a coin you hold"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add</span></button></div>
   </header>
 

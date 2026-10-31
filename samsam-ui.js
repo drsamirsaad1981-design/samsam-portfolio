@@ -501,13 +501,24 @@
     { k: 'holdings', label: 'Holdings', href: 'index.html#holdings', ic: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M16 14.5h2"/><path d="M6 6V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/>' },
     { k: 'performance', label: 'Performance', href: 'performance.html', ic: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>' },
     { k: 'allocation', label: 'Allocation', href: 'allocation.html', ic: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>' },
-    { k: 'accumulation', label: 'Accumulation', href: 'accumulation.html', ic: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>' },
+    { k: 'accumulation', label: 'Plan', title: 'Accumulation Plan', href: 'accumulation.html', ic: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>' },
   ];
+  // Inside the app shell (index.html keeps Performance / Allocation / Plan open in frames → instant switching)
+  var IN_SHELL = (function () { try { return window.parent !== window && /[?&]shell=1\b/.test(location.search) && !!window.parent.cpShell; } catch (_) { return false; } })();
+  function navIconSvg(k, size) {
+    var n = NAV.filter(function (x) { return x.k === k; })[0]; if (!n) return '';
+    return '<svg class="nav-ic" viewBox="0 0 24 24" width="' + (size || 22) + '" height="' + (size || 22) + '" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + n.ic + '</svg>';
+  }
+  // page titles use the same line icons as the bar (one icon per page, everywhere)
+  function navTitleIcons() {
+    [].forEach.call(document.querySelectorAll('[data-nav-ic]'), function (el) { if (!el.querySelector('svg')) el.innerHTML = navIconSvg(el.getAttribute('data-nav-ic'), 22); });
+  }
   function navPage() {
     var f = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
     if (f === '' || f === 'index.html' || f === 'portfolio.html') {
       var ov = document.getElementById('holdingsOverlay');
-      return (ov && ov.style.display === 'flex') || /^#holdings/.test(location.hash) ? 'holdings' : 'home';
+      if ((ov && ov.style.display === 'flex') || /^#holdings/.test(location.hash)) return 'holdings';
+      return window.cpShell && window.cpShell.cur ? window.cpShell.cur : 'home';
     }
     var m = /^(performance|allocation|accumulation)\.html$/.exec(f);
     return m ? m[1] : null;
@@ -535,7 +546,10 @@
       // room under the content; the bar replaces the page Back buttons (inner screens keep theirs)
       'body.has-bnav{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px)) !important}' +
       'body.has-bnav #holdingsOverlay{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +
-      'body.has-bnav a.cp-back[data-back]{visibility:hidden}' +
+      'body.has-bnav a.cp-back[data-back],body.in-shell a.cp-back[data-back]{visibility:hidden}' +
+      'body.in-shell #cpSplash{display:none !important}' +
+      '@media (min-width:1024px){body.in-shell{padding-bottom:84px !important}}' +
+      '.cp-head-ic .nav-ic{display:block;color:#a78bfa}[data-theme="light"] .cp-head-ic .nav-ic{color:#7c3aed}' +
       'body.has-bnav #holdingsOverlay:not([data-view="tx"]) .hov-back-btn{visibility:hidden}' +
       // older pop-ups sit above the bar
       '.modal-overlay,.overlay,.dca-overlay{z-index:100030 !important}' +
@@ -548,8 +562,10 @@
     [].forEach.call(bar.querySelectorAll('a'), function (a) { if (a.dataset.k === cur) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   }
   function navGo(e, k) {
-    var here = navPage(), onIndex = here === 'home' || here === 'holdings';
-    if (!onIndex || e.metaKey || e.ctrlKey || e.shiftKey) return;   // other pages: a normal link
+    var here = navPage(), onIndex = !!window.cpShell;
+    if (!onIndex || e.metaKey || e.ctrlKey || e.shiftKey) return;   // a page opened on its own: a normal link
+    if (k === 'performance' || k === 'allocation' || k === 'accumulation') { e.preventDefault(); window.cpShell.go(k); setTimeout(navPaint, 0); return; }
+    if (k === 'home' && window.cpShell.cur !== 'home' && here !== 'holdings') { e.preventDefault(); window.cpShell.go('home'); setTimeout(navPaint, 0); return; }
     if (k === 'holdings' && typeof window.openHoldingsView === 'function') {
       e.preventDefault();
       var ov = document.getElementById('holdingsOverlay'); if ((ov && ov.getAttribute('data-view') === 'tx') || here !== 'holdings') { history.pushState({ hov: 'list' }, '', '#holdings'); if (window.applyHoldingsRoute) window.applyHoldingsRoute(); }
@@ -559,10 +575,22 @@
     } else if (k === 'home') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   }
   function navMount() {
+    navTitleIcons();
+    if (IN_SHELL) {   // the shell shows the bar; links back to the main page stay inside the app
+      navCss(); document.body.classList.add('in-shell');
+      document.addEventListener('click', function (e) {
+        var a = e.target.closest && e.target.closest('a[href]'); if (!a || a.target === '_blank' || e.defaultPrevented) return;
+        var m = /(?:^|\/)(index|performance|allocation|accumulation)\.html(#[\w\/-]*)?$/.exec(a.getAttribute('href') || ''); if (!m) return;
+        e.preventDefault();
+        var k = m[1] === 'index' ? (/^#holdings/.test(m[2] || '') ? 'holdings' : 'home') : m[1];
+        window.parent.cpShell.go(k);
+      }, true);
+      return;
+    }
     if (!navPage() || document.getElementById('cpBnav') || !document.body) return;
     navCss();
     var html = '<nav class="cp-bnav" id="cpBnav" aria-label="Main">' + NAV.map(function (n) {
-      return '<a href="./' + n.href + '" data-k="' + n.k + '" title="' + n.label + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + n.ic + '</svg><span>' + n.label + '</span></a>';
+      return '<a href="./' + n.href + '" data-k="' + n.k + '" title="' + (n.title || n.label) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + n.ic + '</svg><span>' + n.label + '</span></a>';
     }).join('') + '</nav>';
     document.body.insertAdjacentHTML('beforeend', html);
     document.body.classList.add('has-bnav');
@@ -575,9 +603,10 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', navMount); else navMount();
   // Open a coin's Transactions screen (main page) from another page; its Back comes back here.
   function openCoin(sym) {
+    if (IN_SHELL) { window.parent.cpShell.openCoin(sym); return; }
     try { sessionStorage.setItem('cpReturn', JSON.stringify({ sym: String(sym).toUpperCase(), t: Date.now() })); } catch (_) {}
     location.href = 'index.html#holdings/' + encodeURIComponent(sym);
   }
-  window.SamsamUI = { goHtml: goHtml, openCoin: openCoin, icons: ICONS, icon: function (n) { return ICONS[n] || ''; }, liveDot: liveDot,
+  window.SamsamUI = { goHtml: goHtml, openCoin: openCoin, navIcon: navIconSvg, navPaint: navPaint, inShell: IN_SHELL, icons: ICONS, icon: function (n) { return ICONS[n] || ''; }, liveDot: liveDot,
     toggleTheme: toggleTheme, applyTheme: applyTheme, currentTheme: current, refresh: init };
 })();
