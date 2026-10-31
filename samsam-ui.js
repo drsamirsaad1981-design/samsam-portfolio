@@ -290,7 +290,8 @@
       'html[data-theme="dark"] #holdingsOverlay{--bg:#0e0d21;--bg2:rgba(255,255,255,.045);--card:rgba(255,255,255,.045);--bg3:rgba(255,255,255,.07);' +
         '--border:rgba(255,255,255,.08);--header-bg:rgba(13,14,38,.72);background:#0a0e1a var(--bg-app-gradient) no-repeat !important;background-attachment:scroll !important}' +
       // solid where something sits on top of other content
-      'html[data-theme="dark"] .modal,html[data-theme="dark"] #samsamSyncPill,html[data-theme="dark"] #samsamSyncMenu,' +
+      'html[data-theme="dark"] .modal,html[data-theme="dark"] .dca-modal{background:#171533 !important;opacity:1}' +
+      'html[data-theme="dark"] #samsamSyncPill,html[data-theme="dark"] #samsamSyncMenu,' +
         'html[data-theme="dark"] .sum{background:var(--card-solid) !important}' +
       'html[data-theme="dark"] thead,html[data-theme="dark"] thead th{background:#141238 !important}' +
       // loading screen
@@ -699,9 +700,17 @@
     b.innerHTML = ic('bot', { solo: true, size: 24, sw: 1.9 });
     if (!document.getElementById('cpAiFabCss')) {
       var st = document.createElement('style'); st.id = 'cpAiFabCss';
-      st.textContent = '.cp-aifab{position:fixed;z-index:10020;left:-999px;top:-999px;width:52px;height:52px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;color:#fff;' +
-        'background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 8px 22px rgba(109,40,217,.45),0 2px 6px rgba(0,0,0,.28);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;transition:left .22s ease,top .22s ease,transform .15s,box-shadow .15s}' +
-        '.cp-aifab.drag{transition:none;cursor:grabbing;transform:scale(1.08);box-shadow:0 14px 30px rgba(109,40,217,.55),0 4px 10px rgba(0,0,0,.3)}.cp-aifab:active{transform:scale(.96)}.cp-aifab.drag:active{transform:scale(1.08)}' +
+      st.textContent = '.cp-aifab{position:fixed;z-index:10020;left:-999px;top:-999px;width:52px;height:52px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;' +
+        // dark glass that blends into the navy app, faint violet rim
+        'color:#c4b5fd;background:rgba(23,21,51,.75);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-color:rgba(124,58,237,.25);box-shadow:0 8px 32px rgba(0,0,0,.37);' +
+        'cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;transition:left .22s ease,top .22s ease,transform .15s,background .15s,border-color .15s,opacity .18s}' +
+        '.cp-aifab:hover,.cp-aifab:active,.cp-aifab.drag{background:rgba(124,58,237,.25);border-color:rgba(124,58,237,.5)}' +
+        // light theme: frosted white glass, violet icon
+        'html:not([data-theme="dark"]) .cp-aifab{color:#6d28d9;background:rgba(255,255,255,.72);border-color:rgba(124,58,237,.28);box-shadow:0 8px 24px rgba(15,23,42,.16)}' +
+        'html:not([data-theme="dark"]) .cp-aifab:hover,html:not([data-theme="dark"]) .cp-aifab:active,html:not([data-theme="dark"]) .cp-aifab.drag{background:rgba(237,233,254,.85);border-color:rgba(124,58,237,.5)}' +
+        // a window is open (in any tab) — slip away under its dimmed backdrop
+        '.cp-aifab.under{opacity:0;pointer-events:none;transform:scale(.85)}' +
+        '.cp-aifab.drag{transition:none;cursor:grabbing;transform:scale(1.08)}.cp-aifab:active{transform:scale(.96)}.cp-aifab.drag:active{transform:scale(1.08)}' +
         '.cp-aifab:focus-visible{outline:3px solid #c4b5fd;outline-offset:3px}.cp-aifab svg{pointer-events:none}@media (prefers-reduced-motion:reduce){.cp-aifab{transition:none}}@media print{.cp-aifab{display:none!important}}';
       document.head.appendChild(st);
     }
@@ -745,6 +754,29 @@
       if (typeof window.openAnalysis === 'function') window.openAnalysis();
       else location.href = 'index.html#ai';
     });
+    // Windows opened inside a tab live in that tab's frame, which a z-index can't lift above this button,
+    // so watch for an open window/backdrop in this page or a visible tab and step aside while it's open.
+    var BACKS = '.dca-overlay,.overlay.active,.modal-overlay.active,.bl-overlay,.atx-backdrop,.sdd-backdrop,.cph-back.sheet,.cpm-back.sheet,#cpDialog,#cpProfit,#ssPw,#samsamGate,[aria-modal="true"]';
+    function shown(el) {
+      if (!el.getClientRects().length) return false;
+      var cs = el.ownerDocument.defaultView.getComputedStyle(el);
+      return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > 0.05;
+    }
+    function docs() {
+      var out = [document];
+      Array.prototype.forEach.call(document.querySelectorAll('iframe'), function (f) {
+        try {
+          var r = f.getBoundingClientRect(), cs = getComputedStyle(f);
+          if (r.width && r.height && cs.visibility !== 'hidden' && cs.display !== 'none' && f.contentDocument) out.push(f.contentDocument);
+        } catch (_) {}
+      });
+      return out;
+    }
+    function covered() {
+      return docs().some(function (d) { return Array.prototype.some.call(d.querySelectorAll(BACKS), shown); });
+    }
+    function sync() { var u = covered(); if (u !== b.classList.contains('under')) b.classList.toggle('under', u); }
+    setInterval(sync, 300); sync();
     b.addEventListener('keydown', function (e) {   // keyboard: arrows move it too
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       e.preventDefault();
