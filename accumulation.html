@@ -16,14 +16,14 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611010012"></script>
-<script src="samsam-hints.js?v=202611010012"></script>
-<script src="samsam-vault.js?v=202611010012"></script>
-<script src="samsam-labels.js?v=202611010012"></script>
-<script src="samsam-taxonomy.js?v=202611010012"></script>
-<script src="samsam-coins.js?v=202611010012"></script>
-<script src="samsam-dropdown.js?v=202611010012"></script>
-<script src="samsam-add.js?v=202611010012"></script>
+<script src="samsam-ui.js?v=202611010038"></script>
+<script src="samsam-hints.js?v=202611010038"></script>
+<script src="samsam-vault.js?v=202611010038"></script>
+<script src="samsam-labels.js?v=202611010038"></script>
+<script src="samsam-taxonomy.js?v=202611010038"></script>
+<script src="samsam-coins.js?v=202611010038"></script>
+<script src="samsam-dropdown.js?v=202611010038"></script>
+<script src="samsam-add.js?v=202611010038"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -243,6 +243,8 @@ tr:hover td { background: rgba(255,255,255,.02); }
 .not-owned-badge { font-size: 0.65rem; background: rgba(167,139,250,.15); color: #a78bfa; border-radius: 999px; padding: 1px 7px; font-weight: 700; margin-left: 4px; white-space: nowrap; }
 .row-buy { background: none; border: 1px solid rgba(34,197,94,.45); color: var(--green); cursor: pointer; font: inherit; font-size: .74rem; font-weight: 700; padding: 3px 9px; border-radius: 7px; white-space: nowrap; margin-right: 4px; }
 .row-buy:hover { background: #16a34a; color: #fff; border-color: #16a34a; }
+.row-dca { background: none; border: 1px solid rgba(245,158,11,.45); color: var(--accent); cursor: pointer; font: inherit; font-size: .74rem; font-weight: 700; padding: 3px 9px; border-radius: 7px; white-space: nowrap; margin-right: 4px; }
+.row-dca:hover { background: rgba(245,158,11,.14); border-color: var(--accent); }
 
 /* ── Card view ── */
 .cards-wrap { display: none; flex-direction: column; gap: 12px; }
@@ -630,7 +632,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611010012"></script>
+<script type="module" src="samsam-cloud.js?v=202611010038"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -967,7 +969,7 @@ function renderTable() {
         <div class="prog-label">${r.progress.toFixed(1)}%</div>
       </td>
       <td>
-        <span style="white-space:nowrap"><button type="button" class="row-buy" onclick="buyPlanCoin(${idx})" title="${r.notOwned ? 'Add ' + entry.sym + ' to your portfolio' : 'Add a Buy for ' + entry.sym}">${SamsamUI.ic('plus')}Buy</button><button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan" aria-label="Remove from plan">${SamsamUI.ic('trash', { solo: true })}</button></span>
+        <span style="white-space:nowrap"><button type="button" class="row-buy" onclick="buyPlanCoin(${idx})" title="${r.notOwned ? 'Add ' + entry.sym + ' to your portfolio' : 'Add a Buy for ' + entry.sym}">${SamsamUI.ic('plus')}Buy</button><button type="button" class="row-dca" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">${SamsamUI.ic('calc')}DCA</button><button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan" aria-label="Remove from plan">${SamsamUI.ic('trash', { solo: true })}</button></span>
       </td>
     </tr>`;
   }).join('');
