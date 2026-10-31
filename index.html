@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610311443"></script>
-<script src="samsam-hints.js?v=202610311443"></script>
-<script src="samsam-vault.js?v=202610311443"></script>
-<script src="samsam-labels.js?v=202610311443"></script>
-<script src="samsam-taxonomy.js?v=202610311443"></script>
-<script src="samsam-coins.js?v=202610311443"></script>
-<script src="samsam-dropdown.js?v=202610311443"></script>
-<script src="samsam-add.js?v=202610311443"></script>
-<script src="samsam-chart.js?v=202610311443"></script>
+<script src="samsam-ui.js?v=202610311718"></script>
+<script src="samsam-hints.js?v=202610311718"></script>
+<script src="samsam-vault.js?v=202610311718"></script>
+<script src="samsam-labels.js?v=202610311718"></script>
+<script src="samsam-taxonomy.js?v=202610311718"></script>
+<script src="samsam-coins.js?v=202610311718"></script>
+<script src="samsam-dropdown.js?v=202610311718"></script>
+<script src="samsam-add.js?v=202610311718"></script>
+<script src="samsam-chart.js?v=202610311718"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -712,9 +712,6 @@
   .perf-legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; }
   .perf-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .perf-legend-val { font-weight: 700; }
-  /* Beating / Behind BTC — the same line as the Performance page chart */
-  .perf-legend-item.perf-vs { display: block; width: 100%; color: var(--fg2); }
-  .perf-vs b { font-weight: 800; } .perf-vs b.up { color: var(--green); } .perf-vs b.down { color: var(--red); }
   .perf-legend-val.pos { color: #3b82f6; }
   .perf-legend-val.neg { color: #ef4444; }
   .perf-legend-val.up { color: var(--green); } .perf-legend-val.down { color: var(--red); }
@@ -755,6 +752,9 @@
   .holdings-change-row { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
   .holdings-change-row .cp-hint { margin-left: 2px; }
   .holdings-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  /* card titles use the bottom bar's line icons */
+  .card-ic { display: inline-flex; vertical-align: -3px; margin-right: 6px; color: #a78bfa; }
+  [data-theme="light"] .card-ic { color: #7c3aed; }
   .holdings-title { font-size: 0.78rem; font-weight: 700; text-transform: none; letter-spacing: .01em; color: var(--fg2); }
   .holdings-total { font-size: 1.35rem; font-weight: 700; color: var(--fg); line-height: 1; }
   .holdings-change { font-size: 0.75rem; font-weight: 600; margin-top: 3px; }
@@ -1292,7 +1292,7 @@
 <div class="holdings-card card-tap" id="holdingsCard" onclick="openHoldingsView()" role="link" tabindex="0" aria-label="Holdings — open details" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();openHoldingsView()}" style="cursor:pointer">
   <div class="holdings-header">
     <div>
-      <div class="holdings-title">💰 Holdings</div>
+      <div class="holdings-title"><span class="card-ic" data-nav-ic="holdings" data-nav-size="16" aria-hidden="true"></span>Holdings</div>
       <div class="holdings-total" id="holdingsTotal">$—</div>
       <div class="holdings-change-row"><span class="holdings-change" id="holdingsChange"></span><button type="button" class="cp-hint" data-hint="holdingsChange" aria-label="About the holdings change"></button></div>
     </div>
@@ -1314,7 +1314,7 @@
 <!-- ── Performance Card ── -->
 <a href="./performance.html" class="alloc-mini-card card-tap" id="perfChartWrap" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:6px">
   <div style="display:flex;justify-content:space-between;align-items:center">
-    <div class="alloc-mini-title" style="margin-bottom:0">📈 Portfolio Performance</div>
+    <div class="alloc-mini-title" style="margin-bottom:0"><span class="card-ic" data-nav-ic="performance" data-nav-size="16" aria-hidden="true"></span>Portfolio Performance</div>
     <span class="card-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
   </div>
   <div class="holdings-tabs" onclick="event.stopPropagation();event.preventDefault()">
@@ -1339,13 +1339,12 @@
       <span class="perf-legend-val" id="perfBtcLabel">—</span>
       <button type="button" class="cp-hint" data-hint="perfChart" aria-label="How is this chart calculated?"></button>
     </div>
-    <div class="perf-legend-item perf-vs" id="perfVsLabel"></div>
   </div>
 </a>
 <!-- ── Allocation Mini Card ── -->
 <a href="./allocation.html" class="alloc-mini-card card-tap" id="allocMiniCard" style="text-decoration:none">
   <div class="alloc-mini-left">
-    <div class="alloc-mini-title">📊 Portfolio Allocation</div>
+    <div class="alloc-mini-title"><span class="card-ic" data-nav-ic="allocation" data-nav-size="16" aria-hidden="true"></span>Portfolio Allocation</div>
     <div class="alloc-mini-cats" id="allocMiniCats"></div>
   </div>
   <div class="alloc-mini-donut">
@@ -1359,7 +1358,7 @@
 <!-- ── Accumulation Card ── -->
 <a href="./accumulation.html" class="alloc-mini-card card-tap" id="accumProgressBar" style="text-decoration:none;flex-direction:column;align-items:stretch;gap:8px">
   <div style="display:flex;justify-content:space-between;align-items:center">
-    <div class="alloc-mini-title" style="margin-bottom:0">📊 Accumulation Plan — Overall Progress</div>
+    <div class="alloc-mini-title" style="margin-bottom:0"><span class="card-ic" data-nav-ic="accumulation" data-nav-size="16" aria-hidden="true"></span>Accumulation Plan</div>
     <span class="card-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
   </div>
   <div class="progress-track">
@@ -1482,7 +1481,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610311443"></script>
+<script type="module" src="samsam-cloud.js?v=202610311718"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2987,9 +2986,6 @@ function drawPerfChart() {
   setV('perfPortfolioLabel', (ap.total >= 0 ? '+' : '−') + SamsamFmt.usd(Math.abs(ap.total)), ap.total);
   setV('perfPortfolioPct', tri(ap.pct), ap.total);
   setV('perfBtcLabel', tri(btcTrend), btcTrend);
-  // All-Time Profit % − BTC Trend %, in percentage points (same as the Performance page)
-  const diff = ap.pct - btcTrend, vs = document.getElementById('perfVsLabel');
-  if (vs) vs.innerHTML = (diff >= 0 ? 'Beating BTC by ' : 'Behind BTC by ') + `<b class="${diff >= 0 ? 'up' : 'down'}">${Math.abs(diff).toFixed(2)} pts</b>`;
 }
 
 function updatePerfChart() {

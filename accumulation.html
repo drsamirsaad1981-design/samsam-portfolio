@@ -16,14 +16,14 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202610311443"></script>
-<script src="samsam-hints.js?v=202610311443"></script>
-<script src="samsam-vault.js?v=202610311443"></script>
-<script src="samsam-labels.js?v=202610311443"></script>
-<script src="samsam-taxonomy.js?v=202610311443"></script>
-<script src="samsam-coins.js?v=202610311443"></script>
-<script src="samsam-dropdown.js?v=202610311443"></script>
-<script src="samsam-add.js?v=202610311443"></script>
+<script src="samsam-ui.js?v=202610311718"></script>
+<script src="samsam-hints.js?v=202610311718"></script>
+<script src="samsam-vault.js?v=202610311718"></script>
+<script src="samsam-labels.js?v=202610311718"></script>
+<script src="samsam-taxonomy.js?v=202610311718"></script>
+<script src="samsam-coins.js?v=202610311718"></script>
+<script src="samsam-dropdown.js?v=202610311718"></script>
+<script src="samsam-add.js?v=202610311718"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -74,6 +74,7 @@ body {
 .save-status.saving { color: var(--accent); }
 .save-status.saved { color: var(--green); }
 .save-status.error { color: var(--red); }
+.save-status.idle { visibility: hidden; }   /* only shows while saving / loading, just after, or on an error */
 
 /* ── Dashboard Cards ── */
 .dashboard {
@@ -521,7 +522,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 <header class="cp-head">
   <div class="cp-head-l"><a class="cp-back" href="./index.html" data-back aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></a></div>
   <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" data-nav-ic="accumulation">🎯</span><span class="t" id="pageSubtitle">Accumulation Plan</span></h1>
-  <div class="cp-head-r"><div class="save-status" id="saveStatus" role="status" title="✓ Ready" aria-label="✓ Ready"><span class="ss-i">✓</span><span class="ss-t">Ready</span></div></div>
+  <div class="cp-head-r"><div class="save-status idle" id="saveStatus" role="status" title="✓ Ready" aria-label="✓ Ready"><span class="ss-i">✓</span><span class="ss-t">Ready</span></div></div>
 </header>
 
 <!-- Dashboard -->
@@ -619,7 +620,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202610311443"></script>
+<script type="module" src="samsam-cloud.js?v=202610311718"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -825,7 +826,7 @@ function setSaveStatus(type, text) {
   const i = document.createElement('span'); i.className = 'ss-i'; i.textContent = m[1];
   const t = document.createElement('span'); t.className = 'ss-t'; t.textContent = m[2];
   el.append(i, t); el.title = text; el.setAttribute('aria-label', text);
-  el.className = 'save-status ' + (type !== 'ready' ? type : '');
+  el.className = 'save-status ' + (type !== 'ready' ? type : 'idle');
 }
 
 // Holdings update live from the cloud; this button just re-renders.

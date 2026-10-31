@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202610311443';
-import * as Hist from './samsam-history.js?v=202610311443';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610311443';
+import * as Core from './samsam-core.js?v=202610311718';
+import * as Hist from './samsam-history.js?v=202610311718';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202610311718';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -235,6 +235,19 @@ function sealLegacy() {
   SamsamVault.sealKeys(Object.values(LEGACY)).then(n => { if (n) console.info(`[Samsam] encrypted ${n} item(s) of old local data`); })
     .catch(e => { sealDone = false; console.warn('[Samsam] could not encrypt local data', e); });
 }
+// ── One price feed for every open page ──
+// Live prices are saved on the device; when any open page (another tab, or a tab of the app shell)
+// saves fresher ones, every other page takes them at once — the same Total Value everywhere.
+function mergePrices(into, from) {
+  let changed = false;
+  for (const [sym, p] of Object.entries(from || {}))
+    if (p && p.usd > 0 && (!into[sym] || (p.t || 0) > (into[sym].t || 0))) { into[sym] = p; changed = true; }
+  return changed;
+}
+window.addEventListener('storage', e => {
+  if (e.key !== PRICE_KEY || !e.newValue) return;
+  try { if (mergePrices(S.prices, JSON.parse(e.newValue))) emit(); } catch (_) {}
+});
 function emit() {
   setTimeout(syncCategories, 0);
   setTimeout(sealLegacy, 0);
@@ -406,6 +419,7 @@ const API = {
   updatePrices(map) {
     const t = Date.now();
     for (const [sym, p] of Object.entries(map || {})) if (p && p.usd > 0) S.prices[sym] = { usd: p.usd, ch24: p.ch24 ?? null, t };
+    mergePrices(S.prices, ls.get(PRICE_KEY, {}));   // keep anything fresher another tab saved meanwhile
     ls.set(PRICE_KEY, S.prices); emit();
   },
   // Manual price (for coins without a live feed): saved on the coin in the cloud so every

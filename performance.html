@@ -5,14 +5,14 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610311443"></script>
-<script src="samsam-hints.js?v=202610311443"></script>
-<script src="samsam-vault.js?v=202610311443"></script>
-<script src="samsam-labels.js?v=202610311443"></script>
-<script src="samsam-taxonomy.js?v=202610311443"></script>
-<script src="samsam-dropdown.js?v=202610311443"></script>
-<script src="samsam-coins.js?v=202610311443"></script>
-<script src="samsam-chart.js?v=202610311443"></script>
+<script src="samsam-ui.js?v=202610311718"></script>
+<script src="samsam-hints.js?v=202610311718"></script>
+<script src="samsam-vault.js?v=202610311718"></script>
+<script src="samsam-labels.js?v=202610311718"></script>
+<script src="samsam-taxonomy.js?v=202610311718"></script>
+<script src="samsam-dropdown.js?v=202610311718"></script>
+<script src="samsam-coins.js?v=202610311718"></script>
+<script src="samsam-chart.js?v=202610311718"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -130,7 +130,6 @@ body {
 .pcc-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
 .pcc-legend b { font-weight: 800; }
 .pcc-legend b.pos { color: var(--green); } .pcc-legend b.neg { color: var(--red); }
-.pcc-vs { margin-left: auto; }
 @media (min-width: 700px) { .perf-chart-card { padding: 18px 18px 16px; } }
 .pnl-breakdown-card {
   background: var(--card);
@@ -632,7 +631,6 @@ body {
       <div class="pcc-legend">
         <span><i style="background:#3b82f6"></i>All-Time Profit <b id="pccPortUsd">—</b> <b id="pccPort">—</b></span>
         <span><i style="background:#f0a060"></i>BTC Trend <b id="pccBtc">—</b></span>
-        <span class="pcc-vs" id="pccVs"></span>
       </div>
     </div>
 
@@ -684,7 +682,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610311443"></script>
+<script type="module" src="samsam-cloud.js?v=202610311718"></script>
 <script>
 // ── Constants ──
 
@@ -753,8 +751,6 @@ function drawPerfFull() {
   const f = (n, el) => { el.textContent = (n >= 0 ? '▲ ' : '▼ ') + Math.abs(n).toFixed(2) + '%'; el.className = n >= 0 ? 'pos' : 'neg'; };
   f(lv, document.getElementById('pccPort')); f(lb, document.getElementById('pccBtc'));
   const u = document.getElementById('pccPortUsd'); u.textContent = (ap.total >= 0 ? '+' : '−') + fmtUSD(Math.abs(ap.total)); u.className = ap.total >= 0 ? 'pos' : 'neg';
-  const diff = lv - lb;
-  document.getElementById('pccVs').innerHTML = (diff >= 0 ? 'Beating BTC by ' : 'Behind BTC by ') + `<b class="${diff >= 0 ? 'pos' : 'neg'}">${Math.abs(diff).toFixed(2)} pts</b>`;
 }
 document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('.pcc-tabs button'); if (!b) return;
@@ -787,6 +783,7 @@ function loadPortfolio() {
       };
     });
     render();
+    if (SamsamUI.inShell) shellLive();
     if (!pricesFetchedOnce) { pricesFetchedOnce = true; fetchLivePrices(); }
   });
   if (window.Samsam) subscribe(window.Samsam);
@@ -795,8 +792,15 @@ function loadPortfolio() {
 let pricesFetchedOnce = false;
 
 // ── Fetch live prices ──
+// Inside the app the main page fetches prices once for every tab (they arrive through Samsam → onChange)
+function shellLive() {
+  const el = document.getElementById('syncBar'); if (!el || !window.Samsam) return;
+  const t = Object.values(Samsam.getPrices() || {}).reduce((m, p) => Math.max(m, p.t || 0), 0);
+  if (t) el.innerHTML = '<span class="ss-live-label">' + SamsamUI.liveDot('ok') + 'Live · Updated ' + new Date(t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + '</span>';
+}
 async function fetchLivePrices() {
-  const ids = [...new Set(portfolio.map(c => c.cgId || COINGECKO_IDS[c.sym]).filter(Boolean))];
+  if (window.SamsamUI && SamsamUI.inShell) { shellLive(); return; }
+  const ids =[...new Set(portfolio.map(c => c.cgId || COINGECKO_IDS[c.sym]).filter(Boolean))];
   if (!ids.length) return;
 
   // batch up to 50 per call

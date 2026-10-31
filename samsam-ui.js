@@ -511,7 +511,7 @@
   }
   // page titles use the same line icons as the bar (one icon per page, everywhere)
   function navTitleIcons() {
-    [].forEach.call(document.querySelectorAll('[data-nav-ic]'), function (el) { if (!el.querySelector('svg')) el.innerHTML = navIconSvg(el.getAttribute('data-nav-ic'), 22); });
+    [].forEach.call(document.querySelectorAll('[data-nav-ic]'), function (el) { if (!el.querySelector('svg')) el.innerHTML = navIconSvg(el.getAttribute('data-nav-ic'), +el.getAttribute('data-nav-size') || 22); });
   }
   function navPage() {
     var f = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
