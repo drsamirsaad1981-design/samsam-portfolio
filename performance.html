@@ -5,14 +5,14 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202610311949"></script>
-<script src="samsam-hints.js?v=202610311949"></script>
-<script src="samsam-vault.js?v=202610311949"></script>
-<script src="samsam-labels.js?v=202610311949"></script>
-<script src="samsam-taxonomy.js?v=202610311949"></script>
-<script src="samsam-dropdown.js?v=202610311949"></script>
-<script src="samsam-coins.js?v=202610311949"></script>
-<script src="samsam-chart.js?v=202610311949"></script>
+<script src="samsam-ui.js?v=202610312143"></script>
+<script src="samsam-hints.js?v=202610312143"></script>
+<script src="samsam-vault.js?v=202610312143"></script>
+<script src="samsam-labels.js?v=202610312143"></script>
+<script src="samsam-taxonomy.js?v=202610312143"></script>
+<script src="samsam-dropdown.js?v=202610312143"></script>
+<script src="samsam-coins.js?v=202610312143"></script>
+<script src="samsam-chart.js?v=202610312143"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -369,7 +369,7 @@ body {
   text-overflow: clip;
 }
 .col-header-inner .ch-value { text-align: center; }
-/* "All-Time Profit" is longer than the old "All-Time P&L": let it wrap to two lines in the narrow phone column */
+/* "All Time Profit" is longer than the old "P&L": let it wrap to two lines in the narrow phone column */
 @media (max-width: 600px) {
   .col-header-inner { align-items: end; }
   .col-header-inner .ch-pnl { white-space: normal; line-height: 1.25; overflow: visible; }
@@ -398,7 +398,7 @@ body {
   border-radius: 14px;
   padding: 11px 13px;
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;   /* Asset (+ price) | Holdings / Value | All-Time Profit */
+  grid-template-columns: 1.2fr 1fr 1fr;   /* Asset (+ price) | Holdings / Value | All Time Profit */
   align-items: center;
   gap: 8px;
   box-shadow: var(--shadow);
@@ -602,7 +602,7 @@ body {
     </div>
     <div class="sum-card" id="allTimeCard">
       <span class="sum-card-icon" data-ic="performance" data-ic-solo data-ic-size="22"></span>
-      <div class="sum-label">All-Time Profit</div>
+      <div class="sum-label">All Time Profit</div>
       <div class="sum-value" id="totalPnl">—</div>
       <div id="totalPct" class="sum-pct-badge neg">—</div>
       <svg class="sum-sparkline" viewBox="0 0 100 40" preserveAspectRatio="none">
@@ -629,14 +629,14 @@ body {
       <div class="pcc-canvas-wrap"><canvas id="perfFullCanvas"></canvas></div><div class="hist-note" data-hist-note hidden></div>
       <div class="pcc-empty" id="perfFullEmpty" hidden><span data-ic="hourglass"></span>Collecting data… the chart fills in as hourly snapshots are recorded.</div>
       <div class="pcc-legend">
-        <span><i style="background:#3b82f6"></i>All-Time Profit <b id="pccPortUsd">—</b> <b id="pccPort">—</b></span>
+        <span><i style="background:#3b82f6"></i>All Time Profit <b id="pccPortUsd">—</b> <b id="pccPort">—</b></span>
         <span><i style="background:#f0a060"></i>BTC Trend <b id="pccBtc">—</b></span>
       </div>
     </div>
 
     <!-- ── P/L Breakdown card — full width ── -->
     <div class="pnl-breakdown-card">
-      <div class="pnl-bd-title"><span data-ic="coins"></span>Profit / Loss Breakdown</div>
+      <div class="pnl-bd-title"><span data-ic="coins"></span>All Time Profit Breakdown</div>
       <!-- Category: one card (same as the main page) — pick one to see its profit and its coins below -->
       <div class="cat-picker" id="perfCatPicker"><div id="perfCatDD"></div></div>
       <div class="pnl-bd-totals">
@@ -658,7 +658,7 @@ body {
 <div class="sort-tabs">
   <div class="sort-tabs-inner">
     <div class="sort-group active" id="grp-pnl">
-      <button class="sort-tab active" id="tab-pnl" onclick="setSort('pnl')" aria-label="Sort by All-Time Profit (tap again to flip)"><span class="tab-arrow">↓ </span>P&amp;L</button>
+      <button class="sort-tab active" id="tab-pnl" onclick="setSort('pnl')" aria-label="Sort by All Time Profit (tap again to flip)"><span class="tab-arrow">↓ </span>All Time Profit</button>
       <span class="pnl-unit" role="group" aria-label="Profit in dollars or percent">
         <button type="button" id="unit-usd" aria-pressed="true" onclick="setPnlUnit('usd')">$</button>
         <button type="button" id="unit-pct" aria-pressed="false" onclick="setPnlUnit('pct')">%</button>
@@ -672,7 +672,7 @@ body {
   <div class="col-header-inner">
     <span>Asset</span>
     <span class="ch-value" id="col-value" onclick="setSort('value')">Holdings<span class="ch-sort-arrow" id="arrow-value"></span></span>
-    <span class="ch-pnl"   id="col-pnl"   onclick="setSort('pnl')"  >All-Time Profit<span class="ch-sort-arrow" id="arrow-pnl"></span></span>
+    <span class="ch-pnl"   id="col-pnl"   onclick="setSort('pnl')"  >All Time Profit<span class="ch-sort-arrow" id="arrow-pnl"></span></span>
   </div>
 </div>
 
@@ -682,7 +682,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202610311949"></script>
+<script type="module" src="samsam-cloud.js?v=202610312143"></script>
 <script>
 // ── Constants ──
 
@@ -729,8 +729,8 @@ function drawPerfFull() {
   if (!snaps.length) { canvas.style.display = 'none'; empty.hidden = false; return; }
   canvas.style.display = ''; empty.hidden = true;
   if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
-  // Performance (cumulative): All-Time Profit % at every point vs BTC Trend since the baseline (samsam-core.js → perfChartSeries).
-  // The line ends on "now" so it finishes exactly on the All-Time Profit card's numbers.
+  // Performance (cumulative): All Time Profit % at every point vs BTC Trend since the baseline (samsam-core.js → perfChartSeries).
+  // The line ends on "now" so it finishes exactly on the All Time Profit card's numbers.
   const st = Samsam.getState(), bl = baselineNow();
   const ap = allTimeData || CPProfit.calc({ value: st.portfolio.reduce((a, c) => a + c.qty * (c.currentPrice || 0), 0),
     cost: st.portfolio.reduce((a, c) => a + c.qty * (c.basePrice || 0), 0), realized: st.realized.total });
@@ -901,14 +901,14 @@ function calcRealizedPnl() {
   if (!st) return { total: 0, count: 0, sellFees: 0, bySym: {} };
   return { total: st.realized.total, count: st.realized.sellCount, sellFees: st.realized.sellFees || 0, bySym: st.realized.bySym || {} };
 }
-let allTimeData = null;   // the All-Time Profit card's numbers, read when the card is tapped
+let allTimeData = null;   // the All Time Profit card's numbers, read when the card is tapped
 // ── Category card: All Coins or one category — its profit in the three totals, its coins in the list below ──
 let perfCat = '', perfCatDD = null, catScopeData = null;
 const catOfRow = r => r.c.cat || SamsamTaxonomy.categoryOf(r.c.sym);
 function renderPerfCat(rows, realized) {
   const T = window.SamsamTaxonomy, host = document.getElementById('perfCatDD');
   if (!T || !window.SamsamDropdown || !host) return;
-  // All-Time Profit per category = Realized (its sells) + Unrealized (value − cost) — same maths as each coin's row
+  // All Time Profit per category = Realized (its sells) + Unrealized (value − cost) — same maths as each coin's row
   const agg = {};
   rows.forEach(r => { const k = catOfRow(r), a = agg[k] || (agg[k] = { value: 0, cost: 0, realized: 0, sellCount: 0, sellFees: 0 });
     const rs = realized.bySym[r.c.sym] || {};
@@ -970,7 +970,7 @@ const sortKey = () => sortMode === 'value' ? 'value' : (pnlUnit === 'pct' ? 'pct
 // BTC reference price = BTC on the baseline date (a cloud setting, changed on the main page) — same as "Portfolio vs BTC" there.
 function baselineNow() { try { if (window.Samsam && Samsam.getBaseline) return Samsam.getBaseline(); } catch (_) {} return { date: '2026-10-15', btcPrice: 81162 }; }
 // One card, two rankings — each computed on its own over every coin (tiny holdings left out):
-//   USD    → All-Time Profit in $ (sells included)
+//   USD    → All Time Profit in $ (sells included)
 //   vs BTC → coin's profit % minus what the same dollars, put into BTC at each buy/sell, would have made (samsam-core.js → vsBtcByCoin)
 let moverMode = (() => { try { return localStorage.getItem('perfMoverMode') === 'btc' ? 'btc' : 'usd'; } catch (_) { return 'usd'; } })();
 let moverData = null;
@@ -1012,7 +1012,7 @@ function render() {
     return;
   }
 
-  // Build computed rows — per coin All-Time Profit = its realized (sells) + unrealized (value − cost)
+  // Build computed rows — per coin All Time Profit = its realized (sells) + unrealized (value − cost)
   const realized = calcRealizedPnl();
   const rows = portfolio.map(c => {
     const currentPrice = livePrices[c.sym]?.price || c.currentPrice || FALLBACK_PRICES[c.sym] || 0;
@@ -1034,7 +1034,7 @@ function render() {
   // Totals
   const totalValue = rows.reduce((s, r) => s + r.value, 0);
   const totalCost  = rows.reduce((s, r) => s + r.cost,  0);
-  // All-Time Profit = Realized + Unrealized — same CPProfit.calc as the main page
+  // All Time Profit = Realized + Unrealized — same CPProfit.calc as the main page
   allTimeData = CPProfit.calc({ value: totalValue, cost: totalCost, realized: realized.total, sellCount: realized.count, sellFees: realized.sellFees });
   const totalPnl   = allTimeData.total;
   const totalPct   = allTimeData.pct;
@@ -1076,7 +1076,7 @@ function render() {
   bdRealized.textContent = scopeRealized.count > 0 ? fmtUSD(scopeRealized.total) : '—';
   bdRealized.className = 'pnl-bd-stat-val ' + (scopeRealized.total >= 0 ? 'pos' : 'neg');
   document.getElementById('bdRealizedNote').textContent = scopeRealized.count > 0 ? `from ${scopeRealized.count} sell${scopeRealized.count === 1 ? '' : 's'}` : 'from sells';
-  // (All-Time Profit = the Category card above and the header card — not repeated here)
+  // (All Time Profit = the Category card above and the header card — not repeated here)
 
 
   // Row HTML — the coins of the category picked above (all coins when "All Coins")

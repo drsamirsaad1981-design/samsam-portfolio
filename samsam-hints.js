@@ -30,7 +30,7 @@
           '<p>Changing it changes:</p>' +
           '<ul><li><b>Portfolio vs BTC</b> for those coins (cards, table, sorting and CSV)</li><li>the <b>VS Bitcoin</b> best / worst on Performance</li><li>the <b>BTC Trend</b> line on the charts</li></ul>' +
           '<p>Coins you bought later are compared with BTC at the moment you bought them, so the baseline doesn\'t affect them.</p>' +
-          '<p class="cph-ok">Your holdings, transactions, All-Time Profit and the Hold / Reinforce / Sell signals <b>don\'t change</b>.</p>';
+          '<p class="cph-ok">Your holdings, transactions, All Time Profit and the Hold / Reinforce / Sell signals <b>don\'t change</b>.</p>';
       },
       actions: function () { return typeof window.openBaselineEdit === 'function' ? [{ label: 'Change date', primary: true, onClick: window.openBaselineEdit }] : []; },
     },
@@ -55,13 +55,13 @@
       (typeof window.openSignalEdit === 'function' ? '<p><button type="button" class="sg-hint-btn" onclick="CPHint.close();openSignalEdit()">' + SamsamUI.ic('pencil') + 'Change the thresholds</button></p>' : ''); } },
     manualPrice: { title: 'Manual Price', body: function () { return '<p>Set a price by hand for a coin the live price service doesn\'t cover. It is used <b>only when there is no live market price</b>; as soon as a live price arrives, that one is used.</p>'; } },
     holdingsChange: { title: 'Holdings Change', body: function () { return '<p>How much your holdings moved in the period you picked — split into what <b>prices</b> did and the <b>money you added or took out</b>.</p>' +
-      '<div class="cph-f"><b>From prices (the number and %)</b><code>All-Time Profit at the end − All-Time Profit at the start</code></div>' +
+      '<div class="cph-f"><b>From prices (the number and %)</b><code>All Time Profit at the end − All Time Profit at the start</code></div>' +
       '<div class="cph-f"><b>Added / taken out</b><code>(buys + fees − sells) in the period</code></div>' +
       '<p>Value change = from prices + added. Green / red follows the price part only. The chart line itself is the value, so a buy shows as a step up.</p>'; } },
     external: { title: 'Links That Leave the App', body: function () { return '<p>Anything marked ' + SamsamUI.ic('ext', { solo: true }) + ' opens another website in a new tab: <b>CoinMarketCap</b> (coin page), <b>CoinGlass</b> (liquidation heatmap) and <b>CoinCodex</b> (price prediction). Their numbers are theirs, not calculated by this app.</p>'; } },
     // ── Performance / Allocation ──
-    sincePurchase: { title: 'Top Performers · USD', body: function () { return '<p>Your best and worst coin by <b>All-Time Profit in dollars</b> — sells included. The % under it is that profit against the coin\'s cost.</p>' +
-      '<div class="cph-f"><b>$</b><code>Coin\'s Realized + Unrealized profit</code></div><div class="cph-f"><b>%</b><code>Coin\'s All-Time Profit ÷ its Cost Basis × 100</code></div><p>Switch to <b>vs BTC</b> to rank every coin against the same money in Bitcoin instead. Coins worth less than $1 or less than 0.1% of your portfolio are left out.</p>'; } },
+    sincePurchase: { title: 'Top Performers · USD', body: function () { return '<p>Your best and worst coin by <b>All Time Profit in dollars</b> — sells included. The % under it is that profit against the coin\'s cost.</p>' +
+      '<div class="cph-f"><b>$</b><code>Coin\'s Realized + Unrealized profit</code></div><div class="cph-f"><b>%</b><code>Coin\'s All Time Profit ÷ its Cost Basis × 100</code></div><p>Switch to <b>vs BTC</b> to rank every coin against the same money in Bitcoin instead. Coins worth less than $1 or less than 0.1% of your portfolio are left out.</p>'; } },
     allocation: { title: 'Allocation', body: function () { return '<p>How your money is spread across categories.</p><div class="cph-f"><b>Share</b><code>Category value ÷ Total Portfolio × 100</code></div><p>Category value = Σ (Amount × Current Price) of its coins.</p>'; } },
     // ── Accumulation plan ──
     targetAmount: { title: 'Target Amount', body: function () { return '<p>How many coins you want to hold <b>in total</b> — not how many more to buy.</p>'; } },
@@ -86,7 +86,7 @@
         var b = baseline();
         return '<p>Did this coin do better than <b>the same money in Bitcoin</b>?</p>' +
           '<p>Every time you bought the coin, the app pretends you bought BTC with the same dollars at that moment\'s BTC price; every sell, that you sold BTC for the same dollars. Coins you already held on the baseline date (' + esc(fmtDay(b.date)) + ') count as BTC bought that day at ' + esc(money(b.btcPrice)) + '.</p>' +
-          '<div class="cph-f"><b>Coin %</b><code>Coin\'s All-Time Profit ÷ Cost Basis × 100</code></div>' +
+          '<div class="cph-f"><b>Coin %</b><code>Coin\'s All Time Profit ÷ Cost Basis × 100</code></div>' +
           '<div class="cph-f"><b>BTC Benchmark %</b><code>(that BTC × BTC price now − net invested) ÷ Cost Basis × 100 — what the same money made in Bitcoin</code></div>' +
           '<div class="cph-f"><b>Portfolio vs BTC</b><code>Coin % − BTC Benchmark %</code></div>' +
           '<p>Your BTC is compared with itself, so it always shows 0.</p>';
@@ -96,14 +96,14 @@
       title: 'Performance (cumulative)',
       body: function () {
         var b = baseline();
-        return '<p><b>Blue — All-Time Profit %</b>: your total profit on the coins in your portfolio, at every point in time.</p>' +
-          '<div class="cph-f"><b>All-Time Profit</b><code>Holdings × latest price + selling proceeds − buying costs − fees</code></div>' +
-          '<div class="cph-f"><b>%</b><code>All-Time Profit ÷ Cost Basis × 100</code></div>' +
+        return '<p><b>Blue — All Time Profit %</b>: your total profit on the coins in your portfolio, at every point in time.</p>' +
+          '<div class="cph-f"><b>All Time Profit</b><code>Holdings × latest price + selling proceeds − buying costs − fees</code></div>' +
+          '<div class="cph-f"><b>%</b><code>All Time Profit ÷ Cost Basis × 100</code></div>' +
           '<p><b>Orange — BTC Trend</b>: the same money in Bitcoin. Every buy, sell and transfer you made is replayed as buying or selling BTC at that moment\'s price (what you held on the baseline date, ' + esc(fmtDay(b.date)) + ', at ' + esc(money(b.btcPrice)) + ').</p>' +
           '<div class="cph-f"><b>BTC Trend</b><code>(BTC bought with the same money × BTC price now − net invested) ÷ Cost Basis × 100</code></div>' +
           '<div class="cph-f"><b>Net invested</b><code>buying costs + fees − selling proceeds</code></div>' +
           '<p>So both lines use the same money and the same scale: the gap between them is how much better or worse your coins did than Bitcoin.</p>' +
-          '<p>Both lines are measured from the start, so 24h / 7d / 30d / 90d only zoom in. The last point is right now and matches the All-Time Profit card.</p>' +
+          '<p>Both lines are measured from the start, so 24h / 7d / 30d / 90d only zoom in. The last point is right now and matches the All Time Profit card.</p>' +
           '<p>Buying more doesn\'t count as profit, but it does add to Cost Basis, so both % can step a little at that moment. A single point saved while prices were still loading is left out.</p>';
       },
     },

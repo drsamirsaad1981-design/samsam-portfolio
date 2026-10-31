@@ -138,7 +138,7 @@ export function realizedPnl(coins, txs) {
 
 // ── Profit over time (for the Portfolio vs BTC charts) ─────────────────────────
 // Walks the ledger in time order. At each moment t:
-//   Cost Basis(t), Realized(t)       — same maths as the All-Time Profit card
+//   Cost Basis(t), Realized(t)       — same maths as the All Time Profit card
 //   Net invested N(t) = Cost Basis(t) − Realized(t)  = buying costs + fees − selling proceeds
 //   BTC benchmark: every change in N (a buy, a sell, a transfer, a coin removed) is treated as buying or selling
 //   BTC at that moment's price instead — "what if this money had gone into Bitcoin".
@@ -185,7 +185,7 @@ export function profitSeries(coins, txs, times, { btcAt = null, startBtc = 0 } =
 }
 
 // Chart lines ("Performance, cumulative") from the saved points {t, v (portfolio value), b (BTC price)}:
-//   Blue   — All-Time Profit %   = (Value − Net invested) ÷ Cost Basis
+//   Blue   — All Time Profit %   = (Value − Net invested) ÷ Cost Basis
 //            (Value − Net invested = holdings × price + selling proceeds − buying costs − fees)
 //   Orange — BTC Trend %         = (BTC benchmark value − Net invested) ÷ Cost Basis
 //            the same money, bought and sold as BTC at the same moments — so both lines move on the same scale.
@@ -218,7 +218,7 @@ export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0 } = {}) {
 //   for the same proceeds. Coins you already held on the baseline date count as BTC bought on that day at the
 //   BTC reference price. Your BTC itself is compared with itself, so BTC always shows 0.
 //   Portfolio vs BTC % = (coin value now − value of that BTC now) ÷ Cost Basis × 100
-//   (= the coin's All-Time Profit % minus the same money's profit % in BTC)
+//   (= the coin's All Time Profit % minus the same money's profit % in BTC)
 export function vsBtcByCoin(coins, txs, { prices = {}, btcNow = 0, btcAt = null, baselineBtc = 0 } = {}) {
   const out = {};
   const bySym = groupTxBySym(txs);

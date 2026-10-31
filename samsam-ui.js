@@ -447,7 +447,7 @@
     setTimeout(function () { if (focusables[0]) focusables[0].focus(); }, 0);
   }
 
-  // ── All-Time Profit — ONE definition for every page ──────────────────────────
+  // ── All Time Profit — ONE definition for every page ──────────────────────────
   //    CPProfit.calc({ value, cost, realized, sellCount, sellFees }) → the numbers every card shows
   //    CPProfit.open(data, { title, scope }) → details sheet (phone: bottom sheet · desktop: centered panel)
   //    The formulas in "How is it calculated?" are the ones samsam-core.js applies to the ledger.
@@ -502,7 +502,7 @@
     var sells = d.sellCount ? d.sellCount + ' sell' + (d.sellCount > 1 ? 's' : '') : 'No sells yet';
     var realSub = sells + (d.sellFees > 0 ? ' · after ' + F.usd(d.sellFees) + ' selling fees' : '');
     w.innerHTML = '<div class="cpp" role="dialog" aria-modal="true" aria-labelledby="cppT">' +
-      '<div class="cpp-head"><img src="./logo-mark.svg?v=1" alt=""><h3 id="cppT">' + esc(o.title || 'All-Time Profit') + (o.scope ? ' <span class="cpp-scope">· ' + esc(o.scope) + '</span>' : '') + '</h3>' +
+      '<div class="cpp-head"><img src="./logo-mark.svg?v=1" alt=""><h3 id="cppT">' + esc(o.title || 'All Time Profit') + (o.scope ? ' <span class="cpp-scope">· ' + esc(o.scope) + '</span>' : '') + '</h3>' +
       '<button type="button" class="cpp-x" aria-label="Close">×</button></div>' +
       '<div class="cpp-hero"><span class="cpp-big ' + cls(d.total) + '" id="cppTotal">' + sg(d.total) + '</span>' +
       '<span class="cpp-badge ' + cls(d.total) + '" id="cppPct">' + (d.total >= 0 ? '▲ ' : '▼ ') + Math.abs(d.pct).toFixed(2) + '%</span></div>' +
@@ -513,12 +513,12 @@
       '</div>' +
       '<div class="cpp-sum" id="cppCheck">' + sg(d.realized) + ' realized ' + (d.unrealized >= 0 ? '+' : '−') + ' ' + F.usd(Math.abs(d.unrealized)) + ' unrealized = ' + sg(d.total) + '</div>' +
       '<details class="cpp-how"' + (o.howOpen ? ' open' : '') + '><summary>How is it calculated?</summary>' +
-      '<p class="cpp-f"><b>All-Time Profit</b><code>Realized Profit + Unrealized Profit</code></p>' +
+      '<p class="cpp-f"><b>All Time Profit</b><code>Realized Profit + Unrealized Profit</code></p>' +
       '<p class="cpp-f"><b>Realized Profit</b> <span>(added up over every sell)</span><code>(Sell Price − Avg Buy Price) × Amount Sold − Selling Fee</code></p>' +
       '<p class="cpp-f"><b>Unrealized Profit</b><code>(Current Price − Avg Buy Price) × Amount Held</code></p>' +
       '<p class="cpp-f"><b>Cost Basis</b><code>Avg Buy Price × Amount Held</code></p>' +
       '<p class="cpp-f"><b>Avg Buy Price</b> <span>(updated on every buy)</span><code>(Amount Held × Avg Buy Price + Buy Price × Amount Bought + Buying Fee) ÷ (Amount Held + Amount Bought)</code></p>' +
-      '<p class="cpp-f"><b>%</b><code>All-Time Profit ÷ Cost Basis × 100</code></p>' +
+      '<p class="cpp-f"><b>%</b><code>All Time Profit ÷ Cost Basis × 100</code></p>' +
       '<p class="cpp-note">Sells don’t change the Avg Buy Price. Transfers in add coins at the price you enter; transfers out and network fees only lower the amount held.</p>' +
       '</details></div>';
     var back = document.activeElement;
@@ -542,7 +542,7 @@
     if (!el || el.dataset.cpProfit) return; el.dataset.cpProfit = '1';
     el.setAttribute('role', 'button'); el.tabIndex = 0; el.classList.add('cp-profit-tap', 'card-tap');
     if (!el.querySelector(':scope > .card-go')) el.insertAdjacentHTML('beforeend', goHtml(true));
-    if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', 'All-Time Profit — show details');
+    if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', 'All Time Profit — show details');
     var go = function () { var o = typeof opts === 'function' ? opts() : (opts || {}); profOpenFn(getData(), o); };
     el.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a,button:not(.cp-profit-tap)')) return; go(); });
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });

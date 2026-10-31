@@ -18,15 +18,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202610311949"></script>
-<script src="samsam-hints.js?v=202610311949"></script>
-<script src="samsam-vault.js?v=202610311949"></script>
-<script src="samsam-labels.js?v=202610311949"></script>
-<script src="samsam-taxonomy.js?v=202610311949"></script>
-<script src="samsam-coins.js?v=202610311949"></script>
-<script src="samsam-dropdown.js?v=202610311949"></script>
-<script src="samsam-add.js?v=202610311949"></script>
-<script src="samsam-chart.js?v=202610311949"></script>
+<script src="samsam-ui.js?v=202610312143"></script>
+<script src="samsam-hints.js?v=202610312143"></script>
+<script src="samsam-vault.js?v=202610312143"></script>
+<script src="samsam-labels.js?v=202610312143"></script>
+<script src="samsam-taxonomy.js?v=202610312143"></script>
+<script src="samsam-coins.js?v=202610312143"></script>
+<script src="samsam-dropdown.js?v=202610312143"></script>
+<script src="samsam-add.js?v=202610312143"></script>
+<script src="samsam-chart.js?v=202610312143"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1260,7 +1260,7 @@
       <div class="stat-sub" id="totalUsdBtc">—</div>
     </div>
     <div class="stat-card" id="allTimeCard">
-      <div class="stat-label">All-Time Profit</div>
+      <div class="stat-label">All Time Profit</div>
       <div class="stat-value" id="totalPnlCard">—</div>
       <div class="stat-sub" id="totalPnlSub">—</div>
     </div>
@@ -1329,7 +1329,7 @@
   <div class="perf-legend">
     <div class="perf-legend-item">
       <span class="perf-legend-dot" style="background:#3b82f6"></span>
-      <span>All-Time Profit:&nbsp;</span>
+      <span>All Time Profit:&nbsp;</span>
       <span class="perf-legend-val" id="perfPortfolioLabel">—</span>
       <span class="perf-legend-val" id="perfPortfolioPct">—</span>
     </div>
@@ -1411,7 +1411,7 @@
         <th class="num-r" data-sort="currentValue" onclick="sortTable('currentValue')"><span class="th-in"><span class="th-l"><span>Holdings</span><i class="th-sort" aria-hidden="true"></i></span></span></th>
         <th class="num-r" data-sort="basePrice" onclick="sortTable('basePrice')"><span class="th-in"><span class="th-l th-2"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></span></th>
         <th class="num-r" data-sort="baseValue" onclick="sortTable('baseValue')"><span class="th-in"><span class="th-l th-2"><span data-label="COST_BASIS">Cost Basis</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></span></th>
-        <th class="num-r" data-sort="pnl" onclick="sortTable('pnl')"><span class="th-in"><span class="th-l">P&amp;L<i class="th-sort" aria-hidden="true"></i></span></span></th>
+        <th class="num-r" data-sort="pnl" onclick="sortTable('pnl')"><span class="th-in"><span class="th-l th-2"><span>All Time Profit</span><i class="th-sort" aria-hidden="true"></i></span></span></th>
         <th data-sort="action" onclick="sortTable('action')"><span class="th-in"><span class="th-l">Signal<i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button><button type="button" class="val-edit sg-edit" onclick="event.stopPropagation();openSignalEdit()" title="Change the Signal thresholds" aria-label="Change the Signal thresholds"></button></span></th>
         <th><span class="th-in"><span class="th-l">Actions<i class="th-sort" aria-hidden="true"></i></span></span></th>
       </tr>
@@ -1481,7 +1481,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202610311949"></script>
+<script type="module" src="samsam-cloud.js?v=202610312143"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1722,6 +1722,11 @@ function addTransaction(sym, type, qty, price, note) {
 // ── Realized P&L ─────────────────────────────────────────────────────────────
 // Average-cost method, replayed from each coin's opening position (samsam-core.js).
 function calcRealizedPnl() { return { total: realizedState.total, sellCount: realizedState.sellCount }; }
+// One coin's All Time Profit = its sells (realized) + what it holds now (value − cost) — the same number as on Performance and the coin's page
+function coinProfit(c) {
+  const rs = (realizedState.bySym || {})[c.sym] || {};
+  return CPProfit.calc({ value: c.qty * c.currentPrice, cost: c.qty * c.basePrice, realized: rs.realized, sellCount: rs.sellCount, sellFees: rs.sellFees });
+}
 
 function getCustomSyms() {
   return new Set(customCoins.map(c => c.sym));
@@ -1743,8 +1748,8 @@ function calcStats() {
   return { btcQty, btcValue, altTotal, total: btcValue + altTotal };
 }
 
-// All-Time Profit for the whole portfolio — the header card, the chart legend and the details sheet all read this.
-let htxProfitData = null;   // the coin page's All-Time Profit, read when its card is tapped
+// All Time Profit for the whole portfolio — the header card, the chart legend and the details sheet all read this.
+let htxProfitData = null;   // the coin page's All Time Profit, read when its card is tapped
 function allTimeProfitData() {
   return CPProfit.calc({ value: calcStats().total, cost: portfolio.reduce((s, c) => s + c.qty * (c.basePrice || 0), 0),
     realized: realizedState.total || 0, sellCount: realizedState.sellCount || 0, sellFees: realizedState.sellFees || 0 });
@@ -1798,7 +1803,7 @@ function renderHeader() {
   document.getElementById('totalUsd').textContent = fmtUsd(total);
   document.getElementById('totalUsdBtc').textContent = btcPrice > 0 ? '(' + fmtBtc(total) + ')' : '—';
 
-  // Card 2: All-Time Profit = Realized + Unrealized — one definition on every page (CPProfit.calc in samsam-ui.js).
+  // Card 2: All Time Profit = Realized + Unrealized — one definition on every page (CPProfit.calc in samsam-ui.js).
   const ap = allTimeProfitData();
   const pnl = ap.total, pct = ap.pct, cost = ap.cost, realized = ap.realized;
   const sign = pnl >= 0 ? '+' : '-';
@@ -1963,7 +1968,7 @@ function getFilteredSorted() {
       case 'currentPrice': av=a.currentPrice; bv=b.currentPrice; break;
       case 'baseValue': av=a.qty*a.basePrice; bv=b.qty*b.basePrice; break;
       case 'currentValue': av=a.qty*a.currentPrice; bv=b.qty*b.currentPrice; break;
-      case 'pnl': av=a.qty*(a.currentPrice-a.basePrice); bv=b.qty*(b.currentPrice-b.basePrice); break;
+      case 'pnl': av=coinProfit(a).total; bv=coinProfit(b).total; break;
       case 'perf': av=getPerf(a); bv=getPerf(b); break;
       case 'name': av=a.sym; bv=b.sym; return sortDir*av.localeCompare(bv);
       default: av=a.qty*a.currentPrice; bv=b.qty*b.currentPrice;
@@ -2013,7 +2018,7 @@ function renderTableAndStack() {
       const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
       const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
       const actionLabel=action==='convert'?SamsamUI.dot('red')+'Sell/Convert':action==='reinforce'?SamsamUI.dot('green')+'Reinforce':SamsamUI.dot('grey')+'Hold';   // same short label as the cards
-      const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
+      const ap=coinProfit(c); const pnl=ap.total; const pnlPct=ap.pct;
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       html += `<tr>
         <td style="text-align:left">${assetHtml(c, catTag(c.cat, c.sym))}</td>
@@ -2040,7 +2045,7 @@ function renderTableAndStack() {
     stack.innerHTML = rows.map((c,i) => {
       const perf=getPerf(c); const action=getAction(c.sym,perf,c);
       const baseVal=c.qty*c.basePrice; const curVal=c.qty*c.currentPrice;
-      const pnl=curVal-baseVal; const pnlPct=baseVal>0?(pnl/baseVal*100):0;
+      const ap=coinProfit(c); const pnl=ap.total; const pnlPct=ap.pct;
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
       const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
@@ -2049,7 +2054,7 @@ function renderTableAndStack() {
       return `<div class="coin-card">
         <div class="coin-card-header">
           ${assetHtml(c, catTag(c.cat, c.sym))}
-          <div class="card-pnl ${pnlCls}" title="P&amp;L = Holdings − Cost Basis">
+          <div class="card-pnl ${pnlCls}" title="All Time Profit = sells (realized) + Holdings − Cost Basis">
             <div class="card-pnl-usd">${SamsamFmt.usdSigned(pnl)}</div>
             <div class="card-pnl-pct">(${pnlSign}${pnlPct.toFixed(1)}%)</div>
           </div>
@@ -2164,7 +2169,7 @@ function renderHistory() {
     <div><span>Total Sold</span> <strong style="color:#ef4444">${fmtN(totalSells)} ${sym}</strong></div>
     <div><span>${SAMSAM_LABELS.AMOUNT}</span> <strong>${fmtN(curQty)} ${sym}</strong></div>
     <div><span>${SAMSAM_LABELS.AVG_BUY_PRICE}</span> <strong>${SamsamFmt.price(avgCost)}</strong></div>
-    <div><span>Realized P&L</span> <strong style="color:${realized>=0?'#22c55e':'#ef4444'}">${sells.length?(realized>=0?'+':'-')+SamsamFmt.usd(Math.abs(realized)):'—'}</strong></div>`;
+    <div><span>Realized Profit</span> <strong style="color:${realized>=0?'#22c55e':'#ef4444'}">${sells.length?(realized>=0?'+':'-')+SamsamFmt.usd(Math.abs(realized)):'—'}</strong></div>`;
 
   // Transaction list
   const listEl = document.getElementById('histList');
@@ -2275,9 +2280,9 @@ function exportData() {
   const rows = [['#', 'Coin', 'Name', 'Category', L.AMOUNT, L.AVG_BUY_PRICE, L.CURRENT_PRICE, L.COST_BASIS, L.HOLDINGS_VALUE, L.PNL, L.PNL + ' %', L.PORTFOLIO_VS_BTC + ' %', L.SIGNAL, 'Notes']];
   getFilteredSorted().forEach((c, i) => {
     const perf = getPerf(c), action = getAction(c.sym, perf, c);
-    const baseVal = c.qty * c.basePrice, curVal = c.qty * c.currentPrice, pnl = curVal - baseVal;
+    const baseVal = c.qty * c.basePrice, curVal = c.qty * c.currentPrice, ap = coinProfit(c), pnl = ap.total;
     rows.push([i + 1, c.sym, COIN_NAMES[c.sym] || c.name || c.sym, T ? T.label(c.cat) : (c.cat || ''), c.qty, c.basePrice, c.currentPrice,
-      baseVal.toFixed(2), curVal.toFixed(2), pnl.toFixed(2), (baseVal > 0 ? pnl / baseVal * 100 : 0).toFixed(2), perf.toFixed(2), action === 'convert' ? 'Sell / Convert to BTC' : action === 'reinforce' ? 'Reinforce' : 'Hold', c.notes || '']);
+      baseVal.toFixed(2), curVal.toFixed(2), pnl.toFixed(2), ap.pct.toFixed(2), perf.toFixed(2), action === 'convert' ? 'Sell / Convert to BTC' : action === 'reinforce' ? 'Reinforce' : 'Hold', c.notes || '']);
   });
   const csv = rows.map(r => r.map(cell).join(',')).join('\r\n');
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
@@ -2296,7 +2301,7 @@ function exportPdf() {
   if (meta) {
     meta.innerHTML =
       `Total Value: <strong>${total}</strong><br>` +
-      `All-Time Profit: <strong>${SamsamFmt.usdSigned(allTimeProfitData().total)}</strong> (${allTimeProfitData().pct.toFixed(2)}%)<br>` +
+      `All Time Profit: <strong>${SamsamFmt.usdSigned(allTimeProfitData().total)}</strong> (${allTimeProfitData().pct.toFixed(2)}%)<br>` +
       `Coins: ${coinCount} &nbsp;|&nbsp; BTC: ${SamsamFmt.usd(btcPrice)}<br>` +
       `Generated: ${now}`;
   }
@@ -2408,7 +2413,7 @@ function renderDashboard() {
       </div>
     </div>
     <div class="pnl-row pnl-total" style="margin-bottom:10px">
-      <span class="pnl-label" style="font-weight:700;color:var(--accent)">${SamsamUI.ic('performance')}Unrealized P&L</span>
+      <span class="pnl-label" style="font-weight:700;color:var(--accent)">${SamsamUI.ic('performance')}Unrealized Profit</span>
       <div style="text-align:right">
         <div class="pnl-val ${totalCls}" style="font-size:1.05rem">${SamsamFmt.usdSigned(totalPnl)}</div>
         <div class="${totalCls}" style="font-size:0.75rem;opacity:0.85">${totalSign}${totalPnlPct.toFixed(2)}%</div>
@@ -2965,8 +2970,8 @@ function drawPerfChart() {
   // If only 1 snapshot, duplicate it so chart renders as a flat baseline
   if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
 
-  // Performance (cumulative): All-Time Profit % at every point vs BTC Trend since the baseline (samsam-core.js → perfChartSeries).
-  // The line ends on "now" so it finishes exactly on the numbers of the All-Time Profit card.
+  // Performance (cumulative): All Time Profit % at every point vs BTC Trend since the baseline (samsam-core.js → perfChartSeries).
+  // The line ends on "now" so it finishes exactly on the numbers of the All Time Profit card.
   const st = Samsam.getState(), ap = allTimeProfitData();
   const live = { t: Date.now(), v: calcStats().total, b: btcPrice };
   // computed over the whole history (the BTC benchmark needs every buy/sell), then cut to the range shown
@@ -2978,7 +2983,7 @@ function drawPerfChart() {
   if (ser.port.length < 2) { ser.port = full.port.slice(-2); ser.btc = full.btc.slice(-2); }
   SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'pct', timeMode: timeModeFor(holdingsRange), series: [
     { points: ser.btc, color: '#f0a060', width: 2 },                         // BTC Trend
-    { points: ser.port, color: '#3b82f6', width: 2.4, fill: true },          // All-Time Profit %
+    { points: ser.port, color: '#3b82f6', width: 2.4, fill: true },          // All Time Profit %
   ] });
   const tri = n => (n >= 0 ? '▲ ' : '▼ ') + Math.abs(n).toFixed(2) + '%';
   const btcTrend = ser.btc.length ? ser.btc[ser.btc.length - 1].v : 0;   // BTC benchmark now (same money, in BTC)
@@ -3293,7 +3298,7 @@ function renderCoinTx() {
   const perTx = realizedState.perTx || {};
   const coinTxs = transactions.filter(t => t.sym === sym);
   const coinSells = coinTxs.filter(t => t.type === 'sell');
-  // All-Time Profit for this coin — same CPProfit.calc as the header card and the Performance page
+  // All Time Profit for this coin — same CPProfit.calc as the header card and the Performance page
   const ap = CPProfit.calc({ value, cost,
     realized: coinSells.reduce((s, t) => s + ((perTx[t.id] && perTx[t.id].realized) || 0), 0),
     sellCount: coinSells.length, sellFees: coinSells.reduce((s, t) => s + (+t.feeUsd || 0), 0) });
@@ -3753,7 +3758,7 @@ function renderMiniBar() {
   t.textContent = document.getElementById('totalUsd').textContent;
   const ap = allTimeProfitData();
   p.textContent = (ap.total >= 0 ? '+' : '−') + SamsamFmt.usd(Math.abs(ap.total)) + ' · ' + (ap.pct >= 0 ? '+' : '−') + Math.abs(ap.pct).toFixed(2) + '%';
-  p.className = 'mini-pnl ' + (ap.total >= 0 ? 'pos' : 'neg'); p.title = 'All-Time Profit';
+  p.className = 'mini-pnl ' + (ap.total >= 0 ? 'pos' : 'neg'); p.title = 'All Time Profit';
 }
 
 // ── Baseline editor ──
@@ -3844,7 +3849,7 @@ function blPreview(loading) {
     moved = d.length ? `<b>Portfolio vs BTC</b> changes for <b>${d.length}</b> coin${d.length > 1 ? 's' : ''} you held on that date (about ${d[0] >= 0 ? '+' : '−'}${Math.abs(d.reduce((x, y) => x + y, 0) / d.length).toFixed(1)} pts).<br>` : 'No coin\'s Portfolio vs BTC changes.<br>';
   } catch (_) {}
   el.innerHTML = `BTC reference price: <b>${usd(oldB)}</b> → <b>${usd(r.price)}</b><br>` + moved +
-    `<span class="bl-same">Holdings, transactions, All-Time Profit and signals stay the same.</span>`;
+    `<span class="bl-same">Holdings, transactions, All Time Profit and signals stay the same.</span>`;
 }
 async function saveBaselineEdit() {
   const r = blRead(); if (!r.ok) return;
@@ -4151,7 +4156,7 @@ async function saveBaselineEdit() {
       <div class="htx-card"><div class="htx-label">Holdings</div><div class="htx-value" id="htxHoldings">—</div><div class="htx-sub htx-muted" id="htxHoldings24">—</div></div>
       <div class="htx-card"><div class="htx-label"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></div><div class="htx-value" id="htxAvg">—</div></div>
       <div class="htx-card"><div class="htx-label"><span data-label="COST_BASIS">Cost Basis</span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></div><div class="htx-value" id="htxCost">—</div></div>
-      <div class="htx-card"><div class="htx-label">All-Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
+      <div class="htx-card"><div class="htx-label">All Time Profit</div><div class="htx-value" id="htxProfit">—</div><div class="htx-sub" id="htxProfitPct">—</div></div>
     </div>
     <div class="htx-signal" id="htxSignal"></div>
     <div class="asset-note-box">

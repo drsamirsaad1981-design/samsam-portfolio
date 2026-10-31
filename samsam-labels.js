@@ -10,7 +10,7 @@
     PORTFOLIO_VS_BTC: 'Portfolio vs BTC',      // labels are Title Case everywhere
     COST_BASIS: 'Cost Basis',
     HOLDINGS_VALUE: 'Holdings / Current Value',
-    PNL: 'P&L',
+    PNL: 'All Time Profit',
     SIGNAL: 'Signal',
     BUY: 'Buy',
     SELL: 'Sell',
