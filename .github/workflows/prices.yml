@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['tools/update-prices.mjs', 'tools/extra-price-ids.json', '.github/workflows/prices.yml', 'samsam-coins.js']
+    paths: ['tools/update-prices.mjs', 'tools/update-market.mjs', 'tools/extra-price-ids.json', '.github/workflows/prices.yml', 'samsam-coins.js']
 permissions:
   contents: write
 concurrency:
@@ -31,6 +31,9 @@ jobs:
             git worktree add -q --detach out HEAD
             cd out && git checkout -q --orphan prices && git rm -rfq . && git clean -fdq
           fi
+      - name: Market snapshot (Market Hub + Home card)
+        run: node tools/update-market.mjs out
+        continue-on-error: true
       - name: Update prices
         run: node tools/update-prices.mjs out
       - name: Save (one commit, replaced each hour)

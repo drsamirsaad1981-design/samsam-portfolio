@@ -5,13 +5,23 @@
 //   SamsamMarket.byIds(ids)      → the same rows for any CoinGecko ids (your watchlist)
 //   SamsamMarket.altSeason(rows) → { value 0–100, label, n } — share of the top-50 coins (no stablecoins /
 //                                   wrapped / staked) that beat BTC over 30 days
-// Everything is cached for a few minutes in this browser (shared by the Home card and the Market tab), so the
-// free CoinGecko limit is never hit and the page opens instantly with the last numbers.
+// Everything is cached for a few minutes in this browser (shared by the Home card and the Market tab).
+// Behind that sits a market snapshot saved by GitHub every ~30 minutes (tools/update-market.mjs → prices branch,
+// read from raw.githubusercontent.com — no limit). CoinGecko's free API is only a live top-up: when it is busy
+// (free limit) or unreachable, the app waits a couple of minutes before asking again and quietly shows the newest
+// numbers it has (snapshot or last live answer) with their time — never an error while there are numbers to show.
 (function () {
   if (window.SamsamMarket) return;
   var CG = 'https://api.coingecko.com/api/v3';
   var TTL = { global: 3 * 60e3, top: 3 * 60e3, ids: 3 * 60e3, fng: 30 * 60e3 };
   var mem = {}, inflight = {};
+  var SNAP = window.__marketSnap || (function () {
+    var m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname), repo = location.pathname.split('/')[1];
+    return 'https://raw.githubusercontent.com/' + (m ? m[1] : 'drsamirsaad1981-design') + '/' + (m && repo ? repo : 'samsam-portfolio') + '/prices/m/market.json';
+  })();
+  var COOL = 2 * 60e3;   // after CoinGecko says no, wait this long before asking it again (all pages share it)
+  function coolUntil() { try { return +localStorage.getItem('samsam_mkt_cool') || 0; } catch (_) { return 0; } }
+  function cool() { try { localStorage.setItem('samsam_mkt_cool', String(Date.now() + COOL)); } catch (_) {} }
   function get(k) {
     if (mem[k]) return mem[k];
     try { var v = JSON.parse(localStorage.getItem('samsam_mkt_' + k)); if (v && v.t) return (mem[k] = v); } catch (_) {}
@@ -22,25 +32,53 @@
     try { localStorage.setItem('samsam_mkt_' + k, JSON.stringify(v)); } catch (_) {}
     return v;
   }
-  // cached(key, ttl, loader, force): fresh cache → it; otherwise load (one request at a time per key);
-  // on failure fall back to the last numbers we had, marked stale.
-  function cached(k, ttl, load, force) {
+  // cached(key, ttl, loader, force, backup): fresh cache → it; otherwise load (one request at a time per key);
+  // on failure: the newest of the last numbers we had and backup() (the GitHub snapshot), marked stale.
+  function cached(k, ttl, load, force, backup) {
     var c = get(k);
     if (c && !force && Date.now() - c.t < ttl) return Promise.resolve({ data: c.data, t: c.t, stale: false });
     if (inflight[k]) return inflight[k];
     var p = load().then(function (d) { var v = put(k, d); return { data: v.data, t: v.t, stale: false }; }, function (e) {
-      if (c) return { data: c.data, t: c.t, stale: true, error: e };
-      throw e;
+      return Promise.resolve(backup ? backup().catch(function () { return null; }) : null).then(function (b) {
+        var best = c && (!b || c.t >= b.t) ? c : b;
+        if (best) return { data: best.data, t: best.t, stale: true, error: e, source: best === c ? 'cache' : 'snapshot' };
+        throw e;
+      });
     });
     inflight[k] = p; p.then(function () { delete inflight[k]; }, function () { delete inflight[k]; });
     return p;
   }
   function json(url) {
     return fetch(url).then(function (r) {
-      if (r.status === 429) { var e = new Error('CoinGecko is busy (free limit) — showing the last numbers, retrying soon.'); e.rate = true; throw e; }
+      if (r.status === 429) { var e = new Error('CoinGecko is busy (free limit).'); e.rate = true; throw e; }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
-    }, function () { throw new Error(navigator.onLine === false ? 'You are offline.' : 'Network error.'); });
+    }, function () {
+      // CoinGecko's "too many requests" answer has no CORS header, so the browser reports it as a network error
+      var e = new Error(navigator.onLine === false ? 'You are offline.' : 'CoinGecko is busy (free limit).'); e.rate = navigator.onLine !== false; throw e;
+    });
+  }
+  // a live CoinGecko call — skipped while cooling down after a refusal (the snapshot / last numbers are used)
+  function live(url) {
+    if (Date.now() < coolUntil()) { var e = new Error('CoinGecko is busy (free limit).'); e.rate = true; e.cooling = true; return Promise.reject(e); }
+    return json(url).catch(function (e) { cool(); throw e; });
+  }
+  // the GitHub snapshot (every ~30 min); kept 5 minutes in memory
+  var snapMem = null;
+  function snapshot() {
+    if (snapMem && Date.now() - snapMem.at < 5 * 60e3) return snapMem.p;
+    var p = fetch(SNAP, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) { if (!j || !j.updated) throw new Error('No snapshot'); j.t = Date.parse(j.updated) || 0; return j; });
+    snapMem = { at: Date.now(), p: p }; p.catch(function () { snapMem = null; });
+    return p;
+  }
+  function snapPart(name) {
+    return function () {
+      return snapshot().then(function (j) {
+        var v = j[name]; if (!v || (Array.isArray(v) && !v.length)) return null;
+        return { data: v, t: Date.parse((j.parts && j.parts[name]) || j.updated) || j.t };
+      });
+    };
   }
   function row(c) {
     var sp = (c.sparkline_in_7d && c.sparkline_in_7d.price) || [];
@@ -59,13 +97,13 @@
   var API = {
     global: function (force) {
       return cached('global', TTL.global, function () {
-        return json(CG + '/global').then(function (j) {
+        return live(CG + '/global').then(function (j) {
           var d = j && j.data; if (!d || !d.total_market_cap) throw new Error('No market data');
           var p = d.market_cap_percentage || {};
           return { mcap: d.total_market_cap.usd, vol: (d.total_volume || {}).usd, mcapCh24: d.market_cap_change_percentage_24h_usd,
             dom: { btc: p.btc || 0, eth: p.eth || 0, usdt: p.usdt || 0 }, coins: d.active_cryptocurrencies || null };
         });
-      }, force);
+      }, force, snapPart('global'));
     },
     fng: function (force) {
       return cached('fng', TTL.fng, function () {
@@ -73,22 +111,39 @@
           var a = (j && j.data) || []; if (!a.length) throw new Error('No Fear & Greed data');
           return { value: +a[0].value, label: a[0].value_classification, prev: a[1] ? +a[1].value : null };
         });
-      }, force);
+      }, force, snapPart('fng'));
     },
     top: function (force) {
       return cached('top', TTL.top, function () {
-        return json(MK + '&order=market_cap_desc&per_page=100&page=1').then(function (a) { return (a || []).map(row); });
-      }, force);
+        return live(MK + '&order=market_cap_desc&per_page=100&page=1').then(function (a) { return (a || []).map(row); });
+      }, force, snapPart('top'));
     },
     byIds: function (ids, force) {
       ids = (ids || []).filter(Boolean).slice(0, 200); if (!ids.length) return Promise.resolve({ data: [], t: Date.now(), stale: false });
       var key = 'ids_' + ids.slice().sort().join(',').slice(0, 300);
       return cached(key, TTL.ids, function () {
-        return json(MK + '&ids=' + ids.map(encodeURIComponent).join('%2C') + '&per_page=250&page=1').then(function (a) { return (a || []).map(row); });
-      }, force);
+        return live(MK + '&ids=' + ids.map(encodeURIComponent).join('%2C') + '&per_page=250&page=1').then(function (a) { return (a || []).map(row); });
+      }, force, function () {   // watched coins that are in the Top 100 (snapshot or last list) still get numbers
+        var c = get('top');
+        return snapPart('top')().catch(function () { return null; }).then(function (s) {
+          var src = c && (!s || c.t >= s.t) ? c : s; if (!src) return null;
+          var rows = src.data.filter(function (r) { return ids.indexOf(r.id) >= 0; });
+          return rows.length ? { data: rows, t: src.t } : null;
+        });
+      });
     },
+    // first paint: whatever this browser has, else the GitHub snapshot — no CoinGecko call
+    peek: function () {
+      var g = get('global'), f = get('fng'), t = get('top');
+      if (g && f && t) return Promise.resolve({ global: g.data, fng: f.data, top: t.data, t: Math.min(g.t, t.t) });
+      return snapshot().then(function (j) {
+        var pick = function (c, n) { var s = j[n], st = Date.parse((j.parts && j.parts[n]) || j.updated) || j.t; return c && (!s || c.t >= st) ? c.data : s; };
+        return { global: pick(g, 'global'), fng: pick(f, 'fng'), top: pick(t, 'top'), t: j.t };
+      }, function () { return { global: g && g.data, fng: f && f.data, top: t && t.data, t: t ? t.t : 0 }; });
+    },
+    // the user typed it, so it goes even while cooling down (a refusal still starts the cool-down)
     search: function (q) {
-      return json(CG + '/search?query=' + encodeURIComponent(q)).then(function (j) {
+      return json(CG + '/search?query=' + encodeURIComponent(q)).catch(function (e) { if (e.rate) cool(); throw e; }).then(function (j) {
         return ((j && j.coins) || []).slice(0, 12).map(function (c) { return { id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, rank: c.market_cap_rank, img: c.large || c.thumb || '' }; });
       });
     },

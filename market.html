@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611020142"></script>
-<script src="samsam-hints.js?v=202611020142"></script>
-<script src="samsam-vault.js?v=202611020142"></script>
-<script src="samsam-labels.js?v=202611020142"></script>
-<script src="samsam-taxonomy.js?v=202611020142"></script>
-<script src="samsam-coins.js?v=202611020142"></script>
-<script src="samsam-dropdown.js?v=202611020142"></script>
-<script src="samsam-add.js?v=202611020142"></script>
-<script src="samsam-market.js?v=202611020142"></script>
+<script src="samsam-ui.js?v=202611020218"></script>
+<script src="samsam-hints.js?v=202611020218"></script>
+<script src="samsam-vault.js?v=202611020218"></script>
+<script src="samsam-labels.js?v=202611020218"></script>
+<script src="samsam-taxonomy.js?v=202611020218"></script>
+<script src="samsam-coins.js?v=202611020218"></script>
+<script src="samsam-dropdown.js?v=202611020218"></script>
+<script src="samsam-add.js?v=202611020218"></script>
+<script src="samsam-market.js?v=202611020218"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -48,6 +48,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .72rem; color: var(--fg2); margin: 0 2px 12px; min-height: 30px; }
 .mk-status .msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mk-status .msg.warn { color: #f59e0b; white-space: normal; }
+.mk-status .msg.quiet { white-space: normal; }
 .mk-refresh { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--card); color: var(--fg); font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; flex-shrink: 0; }
 .mk-refresh:hover { border-color: var(--accent); }
 .mk-refresh.busy svg { animation: mkSpin 1s linear infinite; }
@@ -133,6 +134,25 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 [data-theme="light"] .mk-add { color: #6d28d9; }
 .mk-add:hover { background: #7c3aed; color: #fff; border-color: #7c3aed; }
 .mk-add .t { display: none; }
+/* actions column: + on top, the ⌄ that opens Liq.Map / Prediction / CMC under it */
+.mk-act { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.mk-x { width: 34px; height: 20px; border: 0; border-radius: 7px; background: none; color: var(--fg2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; -webkit-tap-highlight-color: transparent; }
+.mk-x:hover { background: var(--bg3); color: var(--fg); }
+.mk-x svg { transition: transform .2s; }
+.mk-x[aria-expanded="true"] { color: #a78bfa; } [data-theme="light"] .mk-x[aria-expanded="true"] { color: #6d28d9; }
+.mk-x[aria-expanded="true"] svg { transform: rotate(180deg); }
+.mk-row.open { border-bottom: 0; }
+/* the three links — same look as the coin's Transactions page */
+.mk-links { display: flex; gap: 8px; padding: 2px 4px 12px; border-bottom: 1px solid var(--border); animation: mkIn .18s ease-out; }
+@keyframes mkIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.mk-links a { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 8px; border-radius: 8px; text-decoration: none; font-size: .8rem; font-weight: 600; white-space: nowrap; line-height: 1; background: var(--bg3); border: 1px solid; -webkit-tap-highlight-color: transparent; }
+.mk-links a .ss-ic { margin: 0; }
+.mk-links .ext { opacity: .75; display: inline-flex; }
+.mk-links .l-liq { color: #fb923c; border-color: rgba(251,146,60,.45); } .mk-links .l-liq:hover { background: #f97316; color: #fff; border-color: #f97316; }
+.mk-links .l-pred { color: #a78bfa; border-color: rgba(167,139,250,.45); } .mk-links .l-pred:hover { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
+.mk-links .l-cmc { color: #60a5fa; border-color: rgba(96,165,250,.45); } .mk-links .l-cmc:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+[data-theme="light"] .mk-links .l-liq { color: #ea580c; } [data-theme="light"] .mk-links .l-pred { color: #7c3aed; } [data-theme="light"] .mk-links .l-cmc { color: #2563eb; }
+@media (max-width: 380px) { .mk-links { gap: 6px; } .mk-links a { padding: 0 5px; font-size: .74rem; gap: 4px; } }
 .mk-empty { text-align: center; color: var(--fg2); font-size: .86rem; padding: 28px 12px; line-height: 1.6; }
 .mk-skel { height: 62px; border-bottom: 1px solid var(--border); background: linear-gradient(90deg, transparent, rgba(148,163,184,.08), transparent); background-size: 200% 100%; animation: mkSk 1.2s infinite; }
 @keyframes mkSk { from { background-position: 200% 0; } to { background-position: -200% 0; } }
@@ -140,12 +160,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-more .mk-row { grid-template-columns: 30px minmax(0,1fr) 36px; }
 /* computer: a full table */
 @media (min-width: 760px) {
-  .mk-head, .mk-row { grid-template-columns: 34px 44px minmax(0,1fr) 130px 92px 120px 92px; column-gap: 12px; }
+  .mk-head, .mk-row { grid-template-columns: 34px 44px minmax(0,1fr) 130px 92px 120px 124px; column-gap: 12px; }
+  .mk-act { flex-direction: row; justify-content: flex-end; gap: 4px; }
+  .mk-x { width: 30px; height: 34px; }
+  .mk-links { padding: 0 6px 12px calc(34px + 44px + 24px + 6px); }
+  .mk-links a { flex: 0 1 170px; }
   .mk-head .c-rank, .mk-head .c-ch, .mk-head .c-price, .mk-row .mk-rank, .mk-row .mk-ch, .mk-price { display: block; }
   .mk-sr .mk-r2 { display: none; }
   /* columns: ☆ · # · Asset · Price · 24h · 7d · Add */
   .mk-row > .mk-price, .mk-head > .c-price { order: 4; } .mk-row > .mk-ch, .mk-head > .c-ch { order: 5; }
-  .mk-row > .mk-sp, .mk-head > .c-sp { order: 6; } .mk-row > .mk-add, .mk-head > :last-child { order: 7; }
+  .mk-row > .mk-sp, .mk-head > .c-sp { order: 6; } .mk-row > .mk-act, .mk-head > :last-child { order: 7; }
   .mk-head > .c-price, .mk-head > .c-ch { display: flex; }
   .mk-pc { display: none; }
   .mk-head .c-pc { display: none; }
@@ -242,7 +266,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       </div>
       <button type="button" class="mk-custom" onclick="addCustom()"><span data-ic="plus"></span>Add Custom Coin</button>
     </div>
-    <div class="mk-hint" id="mkHint" hidden>Type a coin name or symbol — any coin on CoinGecko can be followed or added.</div>
+    <div class="mk-hint" id="mkHint" hidden>Type a coin name or symbol — any coin listed on CoinGecko can be followed or added.</div>
     <div class="mk-head" role="row">
       <span></span>
       <button type="button" class="c-rank" data-s="rank" onclick="setSort('rank')">#</button>
@@ -256,12 +280,12 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     <div id="mkRows"></div>
     <div id="mkMore" class="mk-more"></div>
   </section>
-  <p class="mk-src">Market data: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> · Fear &amp; Greed: <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">alternative.me</a> · Altcoin Season is worked out here from the top 50 coins (no stablecoins / wrapped / staked) vs BTC over 30 days.</p>
+  <p class="mk-src">Market data: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> (live, plus a snapshot saved every ~30 min) · Coin pages: CoinMarketCap · Fear &amp; Greed: <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">alternative.me</a> · Altcoin Season is worked out here from the top 50 coins (no stablecoins / wrapped / staked) vs BTC over 30 days.</p>
 </main>
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611020142"></script>
+<script type="module" src="samsam-cloud.js?v=202611020218"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -327,23 +351,48 @@ function logo(c) {
     ? `<img src="${E(c.img)}" alt="" width="36" height="36" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'mk-fb',textContent:'${E(c.sym.slice(0, 3))}'}))">`
     : `<span class="mk-fb">${E(c.sym.slice(0, 3))}</span>`;
 }
-function cgUrl(c) { return 'https://www.coingecko.com/en/coins/' + encodeURIComponent(c.id); }
+// Links — the same pages as everywhere else in the app (CoinMarketCap for the coin, CoinGlass, CoinCodex).
+// A coin you hold uses its saved pages; another coin uses the app's known pages only when it is the same coin
+// (same CoinGecko id — tickers are reused by different coins), otherwise a page name worked out from its name.
+function known(c) { const S = c.sym; return SamsamCoins.CG_IDS[S] === c.id; }
+function cmcLink(c) {
+  const h = heldCoin(c);
+  if (h) return SamsamCoins.cgUrl(h.sym, h.cgId, { cmcSlug: h.cmcSlug, name: h.name });
+  return known(c) ? SamsamCoins.cmcUrl(c.sym) : SamsamCoins.cmcUrl('', { name: c.name }) || SamsamCoins.coingeckoUrl(c.sym, c.id);
+}
+function predLink(c) {
+  const h = heldCoin(c);
+  if (h) return SamsamCoins.predictionUrl(h.sym, h);
+  return SamsamCoins.predictionUrl(known(c) ? c.sym : '', { name: c.name + (known(c) ? '' : ' ' + c.sym) });
+}
+const CHEV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+let openId = null;   // the row whose links are open (one at a time)
+function linksHtml(c) {
+  const x = `<span class="ext">${ic('ext', { solo: true, size: 12 })}</span>`;
+  return `<div class="mk-links" id="mkl-${E(c.id)}">
+    <a class="l-liq" href="${E(SamsamCoins.liqMapUrl(c.sym))}" target="_blank" rel="noopener noreferrer" title="Open the ${E(c.sym)} liquidation heatmap on CoinGlass (new tab)">${ic('flame', { solo: true, size: 15 })}Liq.Map${x}</a>
+    <a class="l-pred" href="${E(predLink(c))}" target="_blank" rel="noopener noreferrer" title="Open the ${E(c.sym)} price prediction on CoinCodex (new tab)">${ic('sparkles', { solo: true, size: 15 })}Prediction${x}</a>
+    <a class="l-cmc" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap (new tab)">${ic('bar', { solo: true, size: 15 })}CMC${x}</a>
+  </div>`;
+}
+function toggleLinks(id) { openId = openId === id ? null : id; render(); }
 function rowHtml(c) {
   const held = heldCoin(c), plan = inPlan(c), w = isWatched(c.id);
   const badge = (held ? `<span class="mk-own" title="In your portfolio">${ic('briefcase', { solo: true, size: 11, sw: 2.4 })}<span class="t">In portfolio</span></span>` : '')
     + (plan && !held ? `<span class="mk-own plan" title="In your Accumulation Plan">${ic('check', { solo: true, size: 11, sw: 2.8 })}<span class="t">In plan</span></span>` : '');
   const sub = (c.mcap ? M.fmtBig(c.mcap) + ' · ' : '') + E(c.name);   // market cap first: always visible on a phone
   const short = c.price >= 1000 ? '$' + Math.round(c.price).toLocaleString('en-US') : c.price != null ? SamsamFmt.price(c.price) : '—';
-  return `<div class="mk-row" data-id="${E(c.id)}">
+  const open = openId === c.id;
+  return `<div class="mk-row${open ? ' open' : ''}" data-id="${E(c.id)}">
     <span class="mk-sr"><button type="button" class="mk-star" aria-pressed="${w}" onclick="toggleWatch('${E(c.id)}')" title="${w ? 'Remove from' : 'Add to'} Watchlist" aria-label="${w ? 'Remove ' + E(c.sym) + ' from' : 'Add ' + E(c.sym) + ' to'} Watchlist">${ic('star', { solo: true, size: 18 })}</button><span class="mk-r2">${c.rank ? '#' + c.rank : ''}</span></span>
     <span class="mk-rank">${c.rank || '—'}</span>
-    <a class="mk-asset" href="${cgUrl(c)}" target="_blank" rel="noopener" onclick="return assetClick(event,'${E(c.id)}')" title="${held ? 'Open ' + E(c.sym) + ' in your portfolio' : 'Open ' + E(c.sym) + ' on CoinGecko'}">${logo(c)}<span class="mk-names"><b>${E(c.sym)}${badge}</b><small>${sub}</small></span></a>
+    <a class="mk-asset" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap">${logo(c)}<span class="mk-names"><b>${E(c.sym)}${badge}</b><small>${sub}</small></span></a>
     <span class="mk-sp">${M.spark(c.spark, 112, 34)}</span>
     <span class="mk-pc"><b>${short}</b><span class="${cls(c.ch24)}">${pct(c.ch24)}</span></span>
     <span class="mk-price">${c.price != null ? SamsamFmt.price(c.price) : '—'}</span>
     <span class="mk-ch ${cls(c.ch24)}">${pct(c.ch24)}</span>
-    <button type="button" class="mk-add" onclick="openAddMenu(this,'${E(c.id)}')" aria-label="Add ${E(c.sym)}" title="Add ${E(c.sym)} to your portfolio or plan">${ic('plus', { solo: true, size: 16, sw: 2.4 })}<span class="t">Add</span></button>
-  </div>`;
+    <span class="mk-act"><button type="button" class="mk-add" onclick="openAddMenu(this,'${E(c.id)}')" aria-label="Add ${E(c.sym)}" title="Add ${E(c.sym)} to your portfolio or plan">${ic('plus', { solo: true, size: 16, sw: 2.4 })}<span class="t">Add</span></button><button type="button" class="mk-x" onclick="toggleLinks('${E(c.id)}')" aria-expanded="${open}" aria-controls="mkl-${E(c.id)}" aria-label="${E(c.sym)} links: Liquidation Map, Prediction, CoinMarketCap" title="Liq.Map · Prediction · CMC">${CHEV}</button></span>
+  </div>${open ? linksHtml(c) : ''}`;
 }
 function render() {
   const box = document.getElementById('mkRows');
@@ -354,7 +403,7 @@ function render() {
   if (!rows.length) {
     box.innerHTML = mode === 'watch' && !watchlist().length
       ? `<div class="mk-empty">${ic('star')}Your Watchlist is empty.<br>Tap the star next to any coin to follow it here, or use <b>Add Custom Coin</b> for coins outside the Top 100.</div>`
-      : `<div class="mk-empty">No coin matches${query ? ' “' + E(query) + '”' : ''}${filter !== 'all' ? ' with this filter' : ''}.</div>`;
+      : `<div class="mk-empty">No coin in the ${mode === 'top' ? 'Top 100' : 'Watchlist'} matches${query ? ' “' + E(query) + '”' : ''}${filter !== 'all' ? ' with this filter' : ''}.${query.length >= 2 ? ' See “More on CoinGecko” below.' : ''}</div>`;
   } else box.innerHTML = rows.map(rowHtml).join('');
   renderMore();
 }
@@ -372,9 +421,9 @@ function onSearch() {
         const list = await M.search(query); if (seq !== searchSeq) return;
         const shown = new Set(topRows.map(r => r.id).concat(watchlist().map(w => w.id)));   // already in the lists above
         moreRows = list.filter(c => !shown.has(c.id)); moreMsg = list.length ? '' : 'No coin found on CoinGecko.';
-      } catch (e) { if (seq !== searchSeq) return; moreMsg = e.message || 'Search failed'; }
+      } catch (e) { if (seq !== searchSeq) return; moreMsg = e.rate ? 'CoinGecko search is busy right now (free limit) — try again in a minute.' : (e.message === 'You are offline.' ? 'You are offline.' : 'Search failed — try again.'); }
       renderMore();
-    }, 400);
+    }, 700);
   }
   document.getElementById('mkHint').hidden = !(document.activeElement === document.getElementById('mkSearch') && !query && customHint);
   render();
@@ -386,7 +435,7 @@ function renderMore() {
     const w = isWatched(c.id);
     return `<div class="mk-row" data-id="${E(c.id)}">
       <button type="button" class="mk-star" aria-pressed="${w}" onclick="toggleWatch('${E(c.id)}')" aria-label="${w ? 'Remove ' + E(c.sym) + ' from' : 'Add ' + E(c.sym) + ' to'} Watchlist" title="${w ? 'Remove from' : 'Add to'} Watchlist">${ic('star', { solo: true, size: 18 })}</button>
-      <a class="mk-asset" href="${cgUrl(c)}" target="_blank" rel="noopener">${logo(c)}<span class="mk-names"><b>${E(c.sym)}</b><small>${c.rank ? '#' + c.rank + ' · ' : ''}${E(c.name)}</small></span></a>
+      <a class="mk-asset" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap">${logo(c)}<span class="mk-names"><b>${E(c.sym)}</b><small>${c.rank ? '#' + c.rank + ' · ' : ''}${E(c.name)}</small></span></a>
       <button type="button" class="mk-add" onclick="openAddMenu(this,'${E(c.id)}')" aria-label="Add ${E(c.sym)}">${ic('plus', { solo: true, size: 16, sw: 2.4 })}<span class="t">Add</span></button>
     </div>`;
   }).join('');
@@ -427,11 +476,6 @@ async function toggleWatch(id) {
   try { await Samsam.saveWatchlist(list); toast(i >= 0 ? `${E(c.sym)} removed from Watchlist` : `${ic('star')}${E(c.sym)} added to Watchlist`); if (mode === 'watch') loadWatch(false); }
   catch (e) { toast('Could not save the Watchlist: ' + E(e.message || e)); }
 }
-function assetClick(e, id) {
-  const c = findCoin(id), h = c && heldCoin(c);
-  if (h && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); SamsamUI.openCoin(h.sym); return false; }
-  return true;
-}
 function goPlan() { if (SamsamUI.inShell) window.parent.cpShell.go('accumulation'); else location.href = 'accumulation.html'; }
 function openAddMenu(btn, id) {
   const c = findCoin(id); if (!c) return;
@@ -441,7 +485,7 @@ function openAddMenu(btn, id) {
     p ? { icon: 'accumulation', label: 'In your Plan — open it', onClick: goPlan } : { icon: 'accumulation', label: 'Add to Plan', onClick: () => addToPlan(c) },
     { icon: 'star', label: w ? 'Remove from Watchlist' : 'Add to Watchlist', onClick: () => toggleWatch(id) },
     { divider: true },
-    { icon: 'globe', label: 'Open on CoinGecko', href: cgUrl(c) },
+    { icon: 'bar', label: 'Open on CoinMarketCap', href: cmcLink(c) },
   ]);
 }
 function addToPortfolio(c) {
@@ -462,30 +506,53 @@ async function addToPlan(c) {
 }
 
 // ── loading ──
+// "Updated 3 min ago"; when the numbers aren't live (CoinGecko busy) it says so calmly; amber only when they
+// are old (over 90 minutes) or there are none at all.
+let paused = false;
+function ago(t) {
+  const m = Math.max(0, Math.round((Date.now() - t) / 60e3));
+  return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 48 * 60 ? Math.round(m / 60) + ' h ago' : new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 function status() {
   const el = document.getElementById('mkMsg');
-  el.className = 'msg' + (warn ? ' warn' : '');
-  el.innerHTML = warn ? ic('alert') + E(warn) : lastT ? ic('clock') + 'Updated ' + new Date(lastT).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Loading market data…';
+  const old = lastT && Date.now() - lastT > 90 * 60e3;
+  el.className = 'msg' + (warn || old ? ' warn' : paused ? ' quiet' : '');
+  el.innerHTML = warn ? ic('alert') + E(warn)
+    : lastT ? ic(old ? 'alert' : 'clock') + 'Updated ' + ago(lastT) + (paused ? ' · live prices resume shortly' : '')
+    : 'Loading market data…';
+  el.title = paused ? 'CoinGecko’s free limit is busy — showing the newest saved numbers.' : '';
 }
+setInterval(() => { if (lastT && onScreen()) status(); }, 30e3);
 async function loadWatch(force) {
   const ids = watchlist().map(w => w.id);
   if (!ids.length) { watchRows = []; render(); return; }
-  try { const r = await M.byIds(ids, force); watchRows = r.data; if (r.stale && r.error) warn = r.error.message; }
-  catch (e) { warn = e.message; }
+  try { const r = await M.byIds(ids, force); watchRows = r.data; if (r.stale) paused = true; }
+  catch (e) { if (!watchRows.length) paused = true; }
   status(); render();
 }
 let busy = false;
 async function refreshAll(force) {
   if (busy) return; busy = true;
   const btn = document.getElementById('mkRefresh'); btn.classList.add('busy'); warn = '';
-  const take = r => { if (r.stale && r.error) warn = r.error.message; lastT = Math.max(lastT, r.t); return r.data; };
-  const jobs = [
-    M.global(force).then(r => paintGlobal(take(r))).catch(e => { warn = e.message; }),
-    M.fng(force).then(r => paintFng(take(r))).catch(e => { warn = warn || e.message; }),
-    M.top(force).then(r => { topRows = take(r); paintAlt(M.altSeason(topRows)); render(); }).catch(e => { warn = e.message; render(); }),
-  ];
-  if (mode === 'watch') jobs.push(loadWatch(force));
-  await Promise.all(jobs);
+  // first open: the newest numbers this browser or GitHub has, on screen at once
+  if (!topRows.length) {
+    try {
+      const p = await M.peek();
+      if (p.global) paintGlobal(p.global); if (p.fng) paintFng(p.fng);
+      if (p.top && p.top.length) { topRows = p.top; paintAlt(M.altSeason(topRows)); lastT = p.t || lastT; }
+      render(); status(); if (window.CPSplash) CPSplash.hide();
+    } catch (_) {}
+  }
+  let newest = 0, stale = false, failed = 0;
+  const take = r => { if (r.stale) stale = true; newest = Math.max(newest, r.t); return r.data; };
+  // one after the other, not all at once (kinder to the free limit)
+  await M.top(force).then(r => { topRows = take(r); paintAlt(M.altSeason(topRows)); render(); }).catch(() => { failed++; });
+  await M.global(force).then(r => paintGlobal(take(r))).catch(() => { failed++; });
+  await M.fng(force).then(r => paintFng(take(r))).catch(() => {});
+  if (newest) lastT = newest;
+  paused = stale || failed > 0;
+  if (!topRows.length && !lastT) warn = 'Market data isn’t reachable right now — trying again in a few minutes.';
+  if (mode === 'watch') await loadWatch(force);
   busy = false; btn.classList.remove('busy'); status(); render();
   if (window.CPSplash) CPSplash.hide();
 }
