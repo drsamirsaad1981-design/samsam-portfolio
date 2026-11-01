@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Market Hub — Cute Portfolio</title>
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
+<link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png?v=2">
+<link rel="manifest" href="./manifest.json">
+<meta name="application-name" content="Cute Portfolio">
+<meta name="apple-mobile-web-app-title" content="Cute Portfolio">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d0f22">
+<script src="samsam-ui.js?v=202611020142"></script>
+<script src="samsam-hints.js?v=202611020142"></script>
+<script src="samsam-vault.js?v=202611020142"></script>
+<script src="samsam-labels.js?v=202611020142"></script>
+<script src="samsam-taxonomy.js?v=202611020142"></script>
+<script src="samsam-coins.js?v=202611020142"></script>
+<script src="samsam-dropdown.js?v=202611020142"></script>
+<script src="samsam-add.js?v=202611020142"></script>
+<script src="samsam-market.js?v=202611020142"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #f5f5f7; --card: #ffffff; --card-solid: #ffffff; --bg3: #f1f5f9;
+  --fg: #1a1a1e; --fg2: #6e6e73; --border: rgba(0,0,0,0.08);
+  --accent: #7c3aed; --shadow: 0 1px 3px rgba(0,0,0,0.08); --bar-bg: rgba(0,0,0,0.07);
+  --green: #16a34a; --red: #dc2626;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0d0d0f; --card: #1c1c1e; --card-solid: #1c1c1e; --bg3: #26262a; --fg: #f5f5f7; --fg2: #94a3b8; --border: rgba(255,255,255,0.08); --shadow: 0 1px 3px rgba(0,0,0,.3); --bar-bg: rgba(255,255,255,.08); --green: #22c55e; --red: #f87171; --accent: #a78bfa; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0d0d0f; --card: #1c1c1e; --bg3: #26262a; --fg: #f5f5f7; --fg2: #94a3b8; --border: rgba(255,255,255,0.08); --shadow: 0 1px 3px rgba(0,0,0,.3); --bar-bg: rgba(255,255,255,.08); --green: #22c55e; --red: #f87171; --accent: #a78bfa; color-scheme: dark; }
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--fg); min-height: 100vh; padding-bottom: env(safe-area-inset-bottom, 16px); }
+.container { max-width: 860px; margin: 0 auto; padding: 16px max(16px, env(safe-area-inset-right,0px)) 32px max(16px, env(safe-area-inset-left,0px)); }
+@media (min-width: 1024px) { .container { max-width: 1232px; } }
+.up { color: var(--green); } .down { color: var(--red); }
+
+/* status line */
+.mk-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .72rem; color: var(--fg2); margin: 0 2px 12px; min-height: 30px; }
+.mk-status .msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mk-status .msg.warn { color: #f59e0b; white-space: normal; }
+.mk-refresh { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--card); color: var(--fg); font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+.mk-refresh:hover { border-color: var(--accent); }
+.mk-refresh.busy svg { animation: mkSpin 1s linear infinite; }
+@keyframes mkSpin { to { transform: rotate(360deg); } }
+
+/* ── 2×2 overview cards (4 across on a computer) ── */
+.mk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+@media (min-width: 1024px) { .mk-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; } }
+.mk-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 14px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mk-k { display: flex; align-items: center; font-size: .72rem; font-weight: 700; color: var(--fg2); line-height: 1.2; }
+.mk-k .ss-ic { color: #a78bfa; } [data-theme="light"] .mk-k .ss-ic { color: #7c3aed; }
+.mk-v { font-size: 1.32rem; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk-v small { font-size: .74rem; font-weight: 700; color: var(--fg2); margin-left: 2px; }
+.mk-sub { font-size: .72rem; color: var(--fg2); font-variant-numeric: tabular-nums; line-height: 1.35; }
+.mk-sub b { font-weight: 700; }
+.mk-tag { font-size: .76rem; font-weight: 800; }
+.mk-gauge { position: relative; height: 8px; border-radius: 6px; margin: 6px 0 2px; }
+.mk-gauge.fng { background: linear-gradient(90deg, #ef4444 0%, #f97316 25%, #eab308 50%, #84cc16 72%, #22c55e 100%); }
+.mk-gauge.alt { background: linear-gradient(90deg, #f7931a 0%, #f7931a 25%, #94a3b8 50%, #3b82f6 75%, #3b82f6 100%); }
+.mk-gauge i { position: absolute; top: 50%; width: 16px; height: 16px; margin-left: -8px; transform: translateY(-50%); border-radius: 50%; background: #fff; border: 3px solid #1e1b4b; box-shadow: 0 1px 4px rgba(0,0,0,.35); transition: left .5s; }
+.mk-gauge-l { display: flex; justify-content: space-between; font-size: .62rem; font-weight: 700; color: var(--fg2); }
+.mk-dom { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin: 6px 0 4px; background: var(--bar-bg); }
+.mk-dom span { height: 100%; transition: width .5s; }
+.mk-dom-l { display: grid; grid-template-columns: repeat(3, auto); justify-content: space-between; gap: 4px; font-size: .7rem; font-variant-numeric: tabular-nums; }
+.mk-dom-l b { display: block; font-size: .86rem; font-weight: 800; }
+.mk-dom-l span { color: var(--fg2); font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+.mk-dom-l span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+@media (max-width: 380px) { .mk-v { font-size: 1.14rem; } .mk-card { padding: 12px; } }
+
+/* ── Watchlist card ── */
+.mk-list { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 12px; }
+.mk-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--bg3); margin-bottom: 10px; }
+.mk-tabs button { flex: 1; height: 36px; border: 0; border-radius: 9px; background: none; color: var(--fg2); font: inherit; font-size: .84rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.mk-tabs button[aria-selected="true"] { background: var(--card-solid, var(--card)); color: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.18); }
+.mk-tabs .n { margin-left: 6px; font-size: .7rem; padding: 1px 7px; border-radius: 9px; background: rgba(124,58,237,.18); color: #a78bfa; }
+[data-theme="light"] .mk-tabs .n { color: #6d28d9; }
+.mk-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.mk-tools .ss-search { flex: 1 1 220px; min-width: 0; }
+.mk-tools input { width: 100%; height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-size: .9rem; padding: 0 12px; outline: none; }
+.mk-tools input:focus { border-color: var(--accent); }
+.mk-chips { display: inline-flex; gap: 4px; }
+.mk-chip { height: 32px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--border); background: none; color: var(--fg2); font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; }
+.mk-chip[aria-pressed="true"] { color: #fff; background: #7c3aed; border-color: #7c3aed; }
+.mk-custom { height: 32px; padding: 0 12px; border-radius: 9px; border: 1px dashed rgba(124,58,237,.6); background: none; color: #a78bfa; font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; margin-left: auto; }
+[data-theme="light"] .mk-custom { color: #6d28d9; }
+.mk-custom:hover { background: rgba(124,58,237,.12); }
+.mk-hint { font-size: .74rem; color: var(--fg2); margin: 0 2px 8px; }
+
+/* rows: phone = ☆ · asset · 7d · price/24h · + */
+.mk-head, .mk-row { display: grid; grid-template-columns: 30px minmax(0,1fr) 46px 86px 34px; align-items: center; column-gap: 7px; }
+.mk-sr { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.mk-sr .mk-r2 { font-size: .6rem; font-weight: 700; color: var(--fg2); font-variant-numeric: tabular-nums; line-height: 1; }
+.mk-head { padding: 6px 6px; font-size: .66rem; font-weight: 700; color: var(--fg2); border-bottom: 1px solid var(--border); }
+.mk-head button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 2px 0; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.mk-head button[aria-sort] { color: var(--fg); }
+.mk-head .r { justify-content: flex-end; text-align: right; }
+.mk-head .c-rank, .mk-head .c-ch, .mk-head .c-price, .mk-row .mk-rank, .mk-row .mk-ch { display: none; }
+.mk-head button[aria-sort]::after { content: attr(data-arrow); font-size: .9em; }
+.mk-row { padding: 10px 4px; border-bottom: 1px solid var(--border); min-height: 62px; }
+.mk-row:last-child { border-bottom: 0; }
+.mk-star { width: 30px; height: 30px; border-radius: 8px; border: 0; background: none; color: var(--fg2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.mk-star[aria-pressed="true"] { color: #f59e0b; }
+.mk-star[aria-pressed="true"] svg { fill: currentColor; }
+.mk-star:hover { background: var(--bg3); }
+.mk-asset { display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
+.mk-asset img, .mk-asset .mk-fb { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; object-fit: cover; background: var(--bg3); }
+.mk-fb { display: inline-flex; align-items: center; justify-content: center; font-size: .66rem; font-weight: 800; color: #fff; background: #6b7280 !important; }
+.mk-names { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mk-names b { font-size: .92rem; font-weight: 800; display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.mk-names small { font-size: .7rem; color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.mk-own { display: inline-flex; align-items: center; gap: 3px; font-size: .58rem; font-weight: 800; padding: 1px 6px; border-radius: 6px; color: #16a34a; background: rgba(34,197,94,.14); letter-spacing: .01em; }
+.mk-own.plan { color: #b45309; background: rgba(245,158,11,.16); }
+[data-theme="dark"] .mk-own { color: #4ade80; } [data-theme="dark"] .mk-own.plan { color: #fbbf24; }
+.mk-sp { display: flex; justify-content: center; }
+.mk-sp svg { width: 46px; height: 24px; }
+.mk-own .ss-ic { margin: 0; }
+@media (max-width: 759px) { .mk-own { padding: 2px 4px; display: inline-flex; } .mk-own .t { display: none; } .mk-asset { gap: 8px; } }
+.mk-pc { text-align: right; font-variant-numeric: tabular-nums; min-width: 0; }
+.mk-pc b { display: block; font-size: .86rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk-pc span { font-size: .74rem; font-weight: 700; }
+.mk-price { display: none; }
+.mk-add { width: 34px; height: 34px; border-radius: 10px; border: 1px solid rgba(124,58,237,.45); background: rgba(124,58,237,.1); color: #a78bfa; font: inherit; font-weight: 800; font-size: .78rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+[data-theme="light"] .mk-add { color: #6d28d9; }
+.mk-add:hover { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+.mk-add .t { display: none; }
+.mk-empty { text-align: center; color: var(--fg2); font-size: .86rem; padding: 28px 12px; line-height: 1.6; }
+.mk-skel { height: 62px; border-bottom: 1px solid var(--border); background: linear-gradient(90deg, transparent, rgba(148,163,184,.08), transparent); background-size: 200% 100%; animation: mkSk 1.2s infinite; }
+@keyframes mkSk { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.mk-sec { font-size: .72rem; font-weight: 800; color: var(--fg2); margin: 14px 6px 4px; display: flex; align-items: center; }
+.mk-more .mk-row { grid-template-columns: 30px minmax(0,1fr) 36px; }
+/* computer: a full table */
+@media (min-width: 760px) {
+  .mk-head, .mk-row { grid-template-columns: 34px 44px minmax(0,1fr) 130px 92px 120px 92px; column-gap: 12px; }
+  .mk-head .c-rank, .mk-head .c-ch, .mk-head .c-price, .mk-row .mk-rank, .mk-row .mk-ch, .mk-price { display: block; }
+  .mk-sr .mk-r2 { display: none; }
+  /* columns: ☆ · # · Asset · Price · 24h · 7d · Add */
+  .mk-row > .mk-price, .mk-head > .c-price { order: 4; } .mk-row > .mk-ch, .mk-head > .c-ch { order: 5; }
+  .mk-row > .mk-sp, .mk-head > .c-sp { order: 6; } .mk-row > .mk-add, .mk-head > :last-child { order: 7; }
+  .mk-head > .c-price, .mk-head > .c-ch { display: flex; }
+  .mk-pc { display: none; }
+  .mk-head .c-pc { display: none; }
+  .mk-rank { font-size: .8rem; font-weight: 700; color: var(--fg2); font-variant-numeric: tabular-nums; }
+  .mk-price { text-align: right; font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .mk-ch { text-align: right; font-size: .84rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .mk-sp svg { width: 112px; height: 34px; }
+  .mk-add { width: auto; padding: 0 12px; justify-self: end; }
+  .mk-add .t { display: inline; margin-left: 4px; }
+  .mk-more .mk-row { grid-template-columns: 34px minmax(0,1fr) 92px; }
+  .mk-list { padding: 16px; }
+}
+.mk-toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom,0px)); transform: translate(-50%, 20px); opacity: 0; z-index: 100300; background: #1e1b4b; color: #fff; border: 1px solid rgba(167,139,250,.4); border-radius: 12px; padding: 10px 14px; font-size: .84rem; font-weight: 600; box-shadow: 0 12px 30px rgba(0,0,0,.35); transition: opacity .2s, transform .2s; pointer-events: none; max-width: calc(100vw - 32px); display: flex; align-items: center; gap: 10px; }
+.mk-toast.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.mk-toast button { background: none; border: 0; color: #c4b5fd; font: inherit; font-weight: 800; cursor: pointer; padding: 0; white-space: nowrap; }
+.mk-src { font-size: .66rem; color: var(--fg2); text-align: center; margin-top: 12px; }
+.mk-src a { color: inherit; }
+</style>
+</head>
+<body>
+<div id="cpSplash" role="status" aria-live="polite" aria-label="Loading Cute Portfolio" style="position:fixed;inset:0;z-index:100200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0e1a;color:#e5e7eb;font-family:Inter,system-ui,-apple-system,sans-serif;transition:opacity .35s ease,visibility .35s">
+  <svg class="cp-splash-mark" viewBox="0 0 512 512" width="84" height="84" aria-hidden="true"><g fill="none" stroke-width="64"><path d="M260.4,106.1 A150,150 0 0 1 320.0,391.7" stroke="#f7931a"/><path d="M302.2,398.6 A150,150 0 0 1 106.5,292.9" stroke="#a78bfa"/><path d="M104.4,273.7 A150,150 0 0 1 242.9,106.6" stroke="#2dd4bf"/></g><path d="M256,300 C222,265 208,230 238,213 C248,208 254,212 256,218 C258,212 264,208 274,213 C304,230 290,265 256,300 Z" fill="#fbbf24"/></svg>
+  <div style="font-weight:700;font-size:1.25rem;letter-spacing:.01em">Cute Portfolio</div>
+  <div id="cpSplashMsg" style="font-size:.82rem;color:#94a3b8;min-height:1.2em">Loading the market…</div>
+</div>
+<style>
+  [data-theme="light"] #cpSplash { background:#f8fafc !important; color:#0f172a !important; }
+  #cpSplash.hide { opacity:0; visibility:hidden; pointer-events:none; }
+  @media print { #cpSplash { display:none !important } }
+</style>
+<script>
+  // The market doesn't need your portfolio to show: the splash goes as soon as the first numbers are on screen.
+  window.CPSplash = { hide: function () { var s = document.getElementById('cpSplash'); if (s && !s.classList.contains('hide')) { s.classList.add('hide'); setTimeout(function () { s.style.display = 'none'; }, 400); } } };
+  setTimeout(function () { window.CPSplash.hide(); }, 6000);
+</script>
+
+<header class="cp-head">
+  <div class="cp-head-l"><a class="cp-back" href="./index.html" data-back aria-label="Back"><span class="cp-back-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span><span class="cp-back-t">Back</span></a></div>
+  <h1 class="cp-head-title"><span class="cp-head-ic" aria-hidden="true" data-nav-ic="market"></span><span class="t">Market Hub</span></h1>
+  <div class="cp-head-r"></div>
+</header>
+
+<main class="container">
+  <div class="mk-status">
+    <span class="msg" id="mkMsg" aria-live="polite">Loading market data…</span>
+    <button type="button" class="mk-refresh" id="mkRefresh" onclick="refreshAll(true)" title="Refresh market data"><span data-ic="refresh"></span>Refresh</button>
+  </div>
+
+  <section class="mk-grid" aria-label="Market overview">
+    <div class="mk-card" id="cardMcap">
+      <div class="mk-k"><span data-ic="globe"></span>Total Market Cap</div>
+      <div class="mk-v" id="mcapV">—</div>
+      <div class="mk-sub"><span class="mk-tag" id="mcapCh">—</span> <span>24h</span></div>
+      <div class="mk-sub">Volume 24h <b id="volV">—</b></div>
+    </div>
+    <div class="mk-card" id="cardFng">
+      <div class="mk-k"><span data-ic="gauge"></span>Fear &amp; Greed</div>
+      <div class="mk-v" id="fngV">—<small>/100</small></div>
+      <div class="mk-tag" id="fngL">—</div>
+      <div class="mk-gauge fng" role="img" id="fngG" aria-label="Fear and Greed gauge"><i style="left:50%"></i></div>
+      <div class="mk-gauge-l"><span>Fear</span><span id="fngPrev"></span><span>Greed</span></div>
+    </div>
+    <div class="mk-card" id="cardAlt">
+      <div class="mk-k"><span data-ic="activity"></span>Altcoin Season</div>
+      <div class="mk-v" id="altV">—<small>/100</small></div>
+      <div class="mk-tag" id="altL">—</div>
+      <div class="mk-gauge alt" role="img" id="altG" aria-label="Altcoin season gauge"><i style="left:50%"></i></div>
+      <div class="mk-gauge-l"><span>Bitcoin</span><span>Altcoin</span></div>
+      <div class="mk-sub" id="altN">Top 50 vs BTC · 30d</div>
+    </div>
+    <div class="mk-card" id="cardDom">
+      <div class="mk-k"><span data-ic="bar"></span>Market Dominance</div>
+      <div class="mk-dom" id="domBar" role="img" aria-label="Market dominance"><span style="background:#f7931a;width:0"></span><span style="background:#8b5cf6;width:0"></span><span style="background:#26a17b;width:0"></span></div>
+      <div class="mk-dom-l">
+        <div><span style="--c:#f7931a">BTC</span><b id="domBtc">—</b></div>
+        <div><span style="--c:#8b5cf6">ETH</span><b id="domEth">—</b></div>
+        <div><span style="--c:#26a17b">USDT</span><b id="domUsdt">—</b></div>
+      </div>
+      <div class="mk-sub">Others <b id="domOth">—</b></div>
+    </div>
+  </section>
+
+  <section class="mk-list" aria-label="Market watchlist">
+    <div class="mk-tabs" role="tablist">
+      <button type="button" role="tab" id="tabTop" aria-selected="true" onclick="setMode('top')"><span data-ic="bar"></span>Top 100</button>
+      <button type="button" role="tab" id="tabWatch" aria-selected="false" onclick="setMode('watch')"><span data-ic="star"></span>Watchlist<span class="n" id="watchN">0</span></button>
+    </div>
+    <div class="mk-tools">
+      <div class="ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo data-ic-size="16"></span><input type="search" id="mkSearch" placeholder="Search coin…" autocomplete="off" oninput="onSearch()" aria-label="Search coin"></div>
+      <div class="mk-chips" role="group" aria-label="Filter">
+        <button type="button" class="mk-chip" data-f="all" aria-pressed="true" onclick="setFilter('all')">All</button>
+        <button type="button" class="mk-chip" data-f="gain" aria-pressed="false" onclick="setFilter('gain')">Gainers</button>
+        <button type="button" class="mk-chip" data-f="lose" aria-pressed="false" onclick="setFilter('lose')">Losers</button>
+      </div>
+      <button type="button" class="mk-custom" onclick="addCustom()"><span data-ic="plus"></span>Add Custom Coin</button>
+    </div>
+    <div class="mk-hint" id="mkHint" hidden>Type a coin name or symbol — any coin on CoinGecko can be followed or added.</div>
+    <div class="mk-head" role="row">
+      <span></span>
+      <button type="button" class="c-rank" data-s="rank" onclick="setSort('rank')">#</button>
+      <button type="button" class="c-asset" data-s="mcap" onclick="setSort('mcap')">Asset · Market Cap</button>
+      <button type="button" class="r c-sp" data-s="spark" disabled style="cursor:default;justify-content:center">7d</button>
+      <button type="button" class="r c-pc" data-s="ch24" onclick="setSort('ch24')">Price · 24h</button>
+      <button type="button" class="r c-price" data-s="price" onclick="setSort('price')">Price</button>
+      <button type="button" class="r c-ch" data-s="ch24" onclick="setSort('ch24')">24h</button>
+      <span></span>
+    </div>
+    <div id="mkRows"></div>
+    <div id="mkMore" class="mk-more"></div>
+  </section>
+  <p class="mk-src">Market data: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> · Fear &amp; Greed: <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">alternative.me</a> · Altcoin Season is worked out here from the top 50 coins (no stablecoins / wrapped / staked) vs BTC over 30 days.</p>
+</main>
+<footer id="cpFoot"></footer>
+<div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
+
+<script type="module" src="samsam-cloud.js?v=202611020142"></script>
+<script>
+const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
+let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
+let topRows = [], watchRows = [], lastT = 0, warn = '';
+let state = null;   // your portfolio (from the cloud), for "In portfolio" / "In plan" and the watchlist
+let searchSeq = 0, searchTimer = null, moreRows = [], moreMsg = '';
+
+// ── your data ──
+function watchlist() { return state && state.watchlist ? state.watchlist : []; }
+function isWatched(id) { return watchlist().some(w => w.id === id); }
+function heldCoin(c) { const p = (state && state.portfolio) || []; return p.find(x => x.cgId && x.cgId === c.id) || p.find(x => x.sym === c.sym && !x.cgId) || null; }
+function inPlan(c) { return ((state && state.accumPlan) || []).some(e => (e.cgId && e.cgId === c.id) || e.sym === c.sym); }
+
+// ── overview cards ──
+function pct(v, d = 2) { return v == null || isNaN(v) ? '—' : (v >= 0 ? '+' : '') + (+v).toFixed(d) + '%'; }
+function cls(v) { return v == null ? '' : v >= 0 ? 'up' : 'down'; }
+function paintGlobal(g) {
+  if (!g) return;
+  document.getElementById('mcapV').textContent = M.fmtBig(g.mcap);
+  const ch = document.getElementById('mcapCh'); ch.textContent = (g.mcapCh24 >= 0 ? '▲ ' : '▼ ') + pct(Math.abs(g.mcapCh24)).replace('+', ''); ch.className = 'mk-tag ' + cls(g.mcapCh24);
+  document.getElementById('volV').textContent = M.fmtBig(g.vol);
+  const d = g.dom, bar = document.getElementById('domBar').children;
+  bar[0].style.width = d.btc + '%'; bar[1].style.width = d.eth + '%'; bar[2].style.width = d.usdt + '%';
+  document.getElementById('domBtc').textContent = d.btc.toFixed(1) + '%';
+  document.getElementById('domEth').textContent = d.eth.toFixed(1) + '%';
+  document.getElementById('domUsdt').textContent = d.usdt.toFixed(1) + '%';
+  document.getElementById('domOth').textContent = Math.max(0, 100 - d.btc - d.eth - d.usdt).toFixed(1) + '%';
+  document.getElementById('domBar').setAttribute('aria-label', `Dominance: BTC ${d.btc.toFixed(1)}%, ETH ${d.eth.toFixed(1)}%, USDT ${d.usdt.toFixed(1)}%`);
+}
+function paintFng(f) {
+  if (!f) return;
+  const c = M.fngColor(f.value);
+  document.getElementById('fngV').innerHTML = f.value + '<small>/100</small>';
+  const l = document.getElementById('fngL'); l.textContent = f.label; l.style.color = c;
+  document.querySelector('#fngG i').style.left = Math.max(2, Math.min(98, f.value)) + '%';
+  document.getElementById('fngG').setAttribute('aria-label', `Fear and Greed ${f.value} of 100: ${f.label}`);
+  document.getElementById('fngPrev').textContent = f.prev != null ? 'Yesterday ' + f.prev : '';
+}
+function paintAlt(a) {
+  if (!a) { document.getElementById('altL').textContent = 'Waiting for data'; return; }
+  document.getElementById('altV').innerHTML = a.value + '<small>/100</small>';
+  const l = document.getElementById('altL'); l.textContent = a.label; l.style.color = a.value >= 75 ? '#3b82f6' : a.value <= 25 ? '#f7931a' : 'var(--fg2)';
+  document.querySelector('#altG i').style.left = Math.max(2, Math.min(98, a.value)) + '%';
+  document.getElementById('altG').setAttribute('aria-label', `Altcoin season ${a.value} of 100: ${a.label}`);
+  document.getElementById('altN').innerHTML = `<b>${a.beat}/${a.n}</b> top coins beat BTC · 30d`;
+}
+
+// ── list ──
+function rowsNow() {
+  let rows = mode === 'top' ? topRows.slice() : watchRows.slice();
+  if (mode === 'watch') {   // coins CoinGecko didn't return (yet) still show, from what was saved
+    const have = new Set(rows.map(r => r.id));
+    watchlist().forEach(w => { if (!have.has(w.id)) rows.push({ id: w.id, sym: w.sym, name: w.name, img: w.img, rank: null, price: null, ch24: null, mcap: null, spark: [] }); });
+  }
+  if (query) { const q = query.toLowerCase(); rows = rows.filter(r => r.sym.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)); }
+  if (filter === 'gain') rows = rows.filter(r => r.ch24 > 0); else if (filter === 'lose') rows = rows.filter(r => r.ch24 < 0);
+  const k = sortKey, v = r => k === 'rank' ? (r.rank || 1e9) : (r[k] == null ? -1e18 : r[k]);
+  rows.sort((a, b) => k === 'rank' ? (v(a) - v(b)) * sortDir : (v(b) - v(a)) * sortDir);
+  return rows;
+}
+function logo(c) {
+  return c.img && /^https:\/\//.test(c.img)
+    ? `<img src="${E(c.img)}" alt="" width="36" height="36" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'mk-fb',textContent:'${E(c.sym.slice(0, 3))}'}))">`
+    : `<span class="mk-fb">${E(c.sym.slice(0, 3))}</span>`;
+}
+function cgUrl(c) { return 'https://www.coingecko.com/en/coins/' + encodeURIComponent(c.id); }
+function rowHtml(c) {
+  const held = heldCoin(c), plan = inPlan(c), w = isWatched(c.id);
+  const badge = (held ? `<span class="mk-own" title="In your portfolio">${ic('briefcase', { solo: true, size: 11, sw: 2.4 })}<span class="t">In portfolio</span></span>` : '')
+    + (plan && !held ? `<span class="mk-own plan" title="In your Accumulation Plan">${ic('check', { solo: true, size: 11, sw: 2.8 })}<span class="t">In plan</span></span>` : '');
+  const sub = (c.mcap ? M.fmtBig(c.mcap) + ' · ' : '') + E(c.name);   // market cap first: always visible on a phone
+  const short = c.price >= 1000 ? '$' + Math.round(c.price).toLocaleString('en-US') : c.price != null ? SamsamFmt.price(c.price) : '—';
+  return `<div class="mk-row" data-id="${E(c.id)}">
+    <span class="mk-sr"><button type="button" class="mk-star" aria-pressed="${w}" onclick="toggleWatch('${E(c.id)}')" title="${w ? 'Remove from' : 'Add to'} Watchlist" aria-label="${w ? 'Remove ' + E(c.sym) + ' from' : 'Add ' + E(c.sym) + ' to'} Watchlist">${ic('star', { solo: true, size: 18 })}</button><span class="mk-r2">${c.rank ? '#' + c.rank : ''}</span></span>
+    <span class="mk-rank">${c.rank || '—'}</span>
+    <a class="mk-asset" href="${cgUrl(c)}" target="_blank" rel="noopener" onclick="return assetClick(event,'${E(c.id)}')" title="${held ? 'Open ' + E(c.sym) + ' in your portfolio' : 'Open ' + E(c.sym) + ' on CoinGecko'}">${logo(c)}<span class="mk-names"><b>${E(c.sym)}${badge}</b><small>${sub}</small></span></a>
+    <span class="mk-sp">${M.spark(c.spark, 112, 34)}</span>
+    <span class="mk-pc"><b>${short}</b><span class="${cls(c.ch24)}">${pct(c.ch24)}</span></span>
+    <span class="mk-price">${c.price != null ? SamsamFmt.price(c.price) : '—'}</span>
+    <span class="mk-ch ${cls(c.ch24)}">${pct(c.ch24)}</span>
+    <button type="button" class="mk-add" onclick="openAddMenu(this,'${E(c.id)}')" aria-label="Add ${E(c.sym)}" title="Add ${E(c.sym)} to your portfolio or plan">${ic('plus', { solo: true, size: 16, sw: 2.4 })}<span class="t">Add</span></button>
+  </div>`;
+}
+function render() {
+  const box = document.getElementById('mkRows');
+  document.getElementById('watchN').textContent = watchlist().length;
+  document.querySelectorAll('.mk-head [data-s]').forEach(b => { if (b.dataset.s === sortKey) { b.setAttribute('aria-sort', sortDir === 1 ? (sortKey === 'rank' ? 'ascending' : 'descending') : (sortKey === 'rank' ? 'descending' : 'ascending')); b.dataset.arrow = sortDir === 1 ? '↓' : '↑'; } else b.removeAttribute('aria-sort'); });
+  if (mode === 'top' && !topRows.length) { box.innerHTML = warn ? `<div class="mk-empty">${E(warn)}</div>` : '<div class="mk-skel"></div>'.repeat(8); renderMore(); return; }
+  const rows = rowsNow();
+  if (!rows.length) {
+    box.innerHTML = mode === 'watch' && !watchlist().length
+      ? `<div class="mk-empty">${ic('star')}Your Watchlist is empty.<br>Tap the star next to any coin to follow it here, or use <b>Add Custom Coin</b> for coins outside the Top 100.</div>`
+      : `<div class="mk-empty">No coin matches${query ? ' “' + E(query) + '”' : ''}${filter !== 'all' ? ' with this filter' : ''}.</div>`;
+  } else box.innerHTML = rows.map(rowHtml).join('');
+  renderMore();
+}
+function findCoin(id) { return topRows.find(r => r.id === id) || watchRows.find(r => r.id === id) || moreRows.find(r => r.id === id) || watchlist().find(w => w.id === id) || null; }
+
+// ── search: filters the list; 2+ letters also look the coin up on CoinGecko (any coin) ──
+function onSearch() {
+  query = document.getElementById('mkSearch').value.trim();
+  clearTimeout(searchTimer); moreRows = []; moreMsg = '';
+  if (query.length >= 2) {
+    moreMsg = 'Searching CoinGecko…';
+    const seq = ++searchSeq;
+    searchTimer = setTimeout(async () => {
+      try {
+        const list = await M.search(query); if (seq !== searchSeq) return;
+        const shown = new Set(topRows.map(r => r.id).concat(watchlist().map(w => w.id)));   // already in the lists above
+        moreRows = list.filter(c => !shown.has(c.id)); moreMsg = list.length ? '' : 'No coin found on CoinGecko.';
+      } catch (e) { if (seq !== searchSeq) return; moreMsg = e.message || 'Search failed'; }
+      renderMore();
+    }, 400);
+  }
+  document.getElementById('mkHint').hidden = !(document.activeElement === document.getElementById('mkSearch') && !query && customHint);
+  render();
+}
+function renderMore() {
+  const box = document.getElementById('mkMore');
+  if (query.length < 2) { box.innerHTML = ''; return; }
+  const items = moreRows.map(c => {
+    const w = isWatched(c.id);
+    return `<div class="mk-row" data-id="${E(c.id)}">
+      <button type="button" class="mk-star" aria-pressed="${w}" onclick="toggleWatch('${E(c.id)}')" aria-label="${w ? 'Remove ' + E(c.sym) + ' from' : 'Add ' + E(c.sym) + ' to'} Watchlist" title="${w ? 'Remove from' : 'Add to'} Watchlist">${ic('star', { solo: true, size: 18 })}</button>
+      <a class="mk-asset" href="${cgUrl(c)}" target="_blank" rel="noopener">${logo(c)}<span class="mk-names"><b>${E(c.sym)}</b><small>${c.rank ? '#' + c.rank + ' · ' : ''}${E(c.name)}</small></span></a>
+      <button type="button" class="mk-add" onclick="openAddMenu(this,'${E(c.id)}')" aria-label="Add ${E(c.sym)}">${ic('plus', { solo: true, size: 16, sw: 2.4 })}<span class="t">Add</span></button>
+    </div>`;
+  }).join('');
+  box.innerHTML = (items || moreMsg) ? `<div class="mk-sec">${ic('globe')}More on CoinGecko</div>${items}${moreMsg ? `<div class="mk-empty" style="padding:14px">${E(moreMsg)}</div>` : ''}` : '';
+}
+let customHint = false;
+function addCustom() {
+  const s = document.getElementById('mkSearch'); customHint = true;
+  s.focus(); s.select(); document.getElementById('mkHint').hidden = false;
+  s.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+document.addEventListener('focusout', e => { if (e.target.id === 'mkSearch') setTimeout(() => { document.getElementById('mkHint').hidden = true; customHint = false; }, 200); });
+
+// ── controls ──
+function setMode(m) {
+  mode = m;
+  document.getElementById('tabTop').setAttribute('aria-selected', m === 'top');
+  document.getElementById('tabWatch').setAttribute('aria-selected', m === 'watch');
+  if (m === 'watch') loadWatch(false); else render();
+}
+function setFilter(f) { filter = f; document.querySelectorAll('.mk-chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === f)); render(); }
+function setSort(k) { if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } render(); }
+
+// ── actions ──
+function toast(msg, action) {
+  const t = document.getElementById('mkToast');
+  t.innerHTML = `<span>${msg}</span>` + (action ? `<button type="button">${E(action.label)}</button>` : '');
+  if (action) t.querySelector('button').onclick = () => { t.classList.remove('on'); action.run(); };
+  t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), action ? 5000 : 2600);
+}
+function ready() { return window.Samsam && Samsam.isReady && Samsam.isReady(); }
+async function toggleWatch(id) {
+  if (!ready()) { CPDialog.alert('Sign in to keep a Watchlist — it syncs to all your devices.'); return; }
+  const c = findCoin(id); if (!c) return;
+  const list = watchlist().slice(), i = list.findIndex(w => w.id === id);
+  if (i >= 0) list.splice(i, 1); else list.unshift({ id: c.id, sym: c.sym, name: c.name, img: c.img });
+  state = { ...state, watchlist: list }; render();   // instant; the cloud confirms
+  try { await Samsam.saveWatchlist(list); toast(i >= 0 ? `${E(c.sym)} removed from Watchlist` : `${ic('star')}${E(c.sym)} added to Watchlist`); if (mode === 'watch') loadWatch(false); }
+  catch (e) { toast('Could not save the Watchlist: ' + E(e.message || e)); }
+}
+function assetClick(e, id) {
+  const c = findCoin(id), h = c && heldCoin(c);
+  if (h && !(e.metaKey || e.ctrlKey)) { e.preventDefault(); SamsamUI.openCoin(h.sym); return false; }
+  return true;
+}
+function goPlan() { if (SamsamUI.inShell) window.parent.cpShell.go('accumulation'); else location.href = 'accumulation.html'; }
+function openAddMenu(btn, id) {
+  const c = findCoin(id); if (!c) return;
+  const h = heldCoin(c), p = inPlan(c), w = isWatched(id);
+  CPMenu.open(btn, `${c.sym} — ${c.name}`, [
+    { icon: 'plus', label: h ? `Buy more ${c.sym}` : 'Add to Portfolio', onClick: () => addToPortfolio(c) },
+    p ? { icon: 'accumulation', label: 'In your Plan — open it', onClick: goPlan } : { icon: 'accumulation', label: 'Add to Plan', onClick: () => addToPlan(c) },
+    { icon: 'star', label: w ? 'Remove from Watchlist' : 'Add to Watchlist', onClick: () => toggleWatch(id) },
+    { divider: true },
+    { icon: 'globe', label: 'Open on CoinGecko', href: cgUrl(c) },
+  ]);
+}
+function addToPortfolio(c) {
+  if (!ready()) { CPDialog.alert('Sign in first to add coins to your portfolio.'); return; }
+  const h = heldCoin(c);
+  CPAdd.buy(h ? h.sym : c.sym, { name: c.name, cgId: c.id, logoUrl: c.img });
+}
+async function addToPlan(c) {
+  if (!ready()) { CPDialog.alert('Sign in first to add coins to your plan.'); return; }
+  const plan = (Samsam.getState().accumPlan || []).slice();
+  if (!plan.some(e => e.sym === c.sym)) plan.push({ sym: c.sym, name: c.name, logoUrl: c.img, cgId: c.id, targetQty: 0, addedAt: new Date().toISOString() });
+  try {
+    if (c.price > 0) Samsam.updatePrices({ [c.sym]: { usd: c.price, ch24: c.ch24 ?? null } });
+    await Samsam.saveAccumPlan(plan);
+    toast(`${ic('check')}${E(c.sym)} added to your Plan`, { label: 'Set target', run: goPlan });
+    render();
+  } catch (e) { toast('Could not add to Plan: ' + E(e.message || e)); }
+}
+
+// ── loading ──
+function status() {
+  const el = document.getElementById('mkMsg');
+  el.className = 'msg' + (warn ? ' warn' : '');
+  el.innerHTML = warn ? ic('alert') + E(warn) : lastT ? ic('clock') + 'Updated ' + new Date(lastT).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Loading market data…';
+}
+async function loadWatch(force) {
+  const ids = watchlist().map(w => w.id);
+  if (!ids.length) { watchRows = []; render(); return; }
+  try { const r = await M.byIds(ids, force); watchRows = r.data; if (r.stale && r.error) warn = r.error.message; }
+  catch (e) { warn = e.message; }
+  status(); render();
+}
+let busy = false;
+async function refreshAll(force) {
+  if (busy) return; busy = true;
+  const btn = document.getElementById('mkRefresh'); btn.classList.add('busy'); warn = '';
+  const take = r => { if (r.stale && r.error) warn = r.error.message; lastT = Math.max(lastT, r.t); return r.data; };
+  const jobs = [
+    M.global(force).then(r => paintGlobal(take(r))).catch(e => { warn = e.message; }),
+    M.fng(force).then(r => paintFng(take(r))).catch(e => { warn = warn || e.message; }),
+    M.top(force).then(r => { topRows = take(r); paintAlt(M.altSeason(topRows)); render(); }).catch(e => { warn = e.message; render(); }),
+  ];
+  if (mode === 'watch') jobs.push(loadWatch(force));
+  await Promise.all(jobs);
+  busy = false; btn.classList.remove('busy'); status(); render();
+  if (window.CPSplash) CPSplash.hide();
+}
+// keep it fresh while you look at it (every 3 minutes, only when this tab is on screen)
+function onScreen() { if (document.hidden) return false; try { const f = window.frameElement; return !f || getComputedStyle(f).visibility !== 'hidden'; } catch (_) { return true; } }
+setInterval(() => { if (onScreen()) refreshAll(false); }, 3 * 60e3);
+document.addEventListener('visibilitychange', () => { if (onScreen() && Date.now() - lastT > 3 * 60e3) refreshAll(false); });
+
+// your portfolio / plan / watchlist, live from the cloud
+function hookCloud(S) { S.onChange(d => { const before = JSON.stringify(watchlist()); state = d; render(); if (mode === 'watch' && JSON.stringify(watchlist()) !== before) loadWatch(false); }); }
+if (window.Samsam) hookCloud(window.Samsam); else window.addEventListener('samsam-ready', () => hookCloud(window.Samsam), { once: true });
+SamsamUI.refresh();
+render(); refreshAll(false);
+</script>
+</body>
+</html>

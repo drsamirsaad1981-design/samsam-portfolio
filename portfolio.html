@@ -18,15 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611010012"></script>
-<script src="samsam-hints.js?v=202611010012"></script>
-<script src="samsam-vault.js?v=202611010012"></script>
-<script src="samsam-labels.js?v=202611010012"></script>
-<script src="samsam-taxonomy.js?v=202611010012"></script>
-<script src="samsam-coins.js?v=202611010012"></script>
-<script src="samsam-dropdown.js?v=202611010012"></script>
-<script src="samsam-add.js?v=202611010012"></script>
-<script src="samsam-chart.js?v=202611010012"></script>
+<script src="samsam-ui.js?v=202611010038"></script>
+<script src="samsam-hints.js?v=202611010038"></script>
+<script src="samsam-vault.js?v=202611010038"></script>
+<script src="samsam-labels.js?v=202611010038"></script>
+<script src="samsam-taxonomy.js?v=202611010038"></script>
+<script src="samsam-coins.js?v=202611010038"></script>
+<script src="samsam-dropdown.js?v=202611010038"></script>
+<script src="samsam-add.js?v=202611010038"></script>
+<script src="samsam-chart.js?v=202611010038"></script>
+<script src="samsam-market.js?v=202611010038"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1280,6 +1281,54 @@
   </div>
 </header>
 
+<!-- Crypto Market Overview → Market Hub tab -->
+<a href="./market.html" class="alloc-mini-card card-tap mkt-card" id="marketCard" aria-label="Crypto Market Overview — explore the market">
+  <div class="mkt-top">
+    <div class="alloc-mini-title" style="margin-bottom:0"><span class="card-ic" data-nav-ic="market" data-nav-size="16" aria-hidden="true"></span>Crypto Market Overview</div>
+    <span class="mkt-go">Explore Market<span data-ic="ext" data-ic-solo data-ic-size="13"></span></span>
+  </div>
+  <div class="mkt-stats">
+    <div class="mkt-s"><small>Market Cap</small><b id="mktCap">—</b><span id="mktCapCh">&nbsp;</span></div>
+    <div class="mkt-s"><small>Fear &amp; Greed</small><b id="mktFng">—</b><span id="mktFngL">&nbsp;</span></div>
+    <div class="mkt-s"><small>BTC Dominance</small><b id="mktDom">—</b><span id="mktEth">&nbsp;</span></div>
+  </div>
+</a>
+<style>
+  .mkt-card, .mkt-card * { text-decoration: none !important; }
+  .mkt-card { flex-direction: column; align-items: stretch; gap: 10px; margin: 12px 0; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, rgba(124,58,237,.10), rgba(59,130,246,.06) 60%, transparent), var(--bg2);
+    border-color: rgba(124,58,237,.28); box-shadow: 0 10px 26px rgba(15,23,42,.10); }
+  [data-theme="dark"] .mkt-card { box-shadow: 0 12px 30px rgba(0,0,0,.30); }
+  .mkt-card:hover { border-color: #7c3aed; }
+  .mkt-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .mkt-go { display: inline-flex; align-items: center; gap: 4px; font-size: .74rem; font-weight: 800; color: #7c3aed; white-space: nowrap; padding: 5px 10px; border-radius: 9px; background: rgba(124,58,237,.12); }
+  [data-theme="dark"] .mkt-go { color: #c4b5fd; background: rgba(124,58,237,.22); }
+  .mkt-stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+  .mkt-s { min-width: 0; display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
+  .mkt-s small { font-size: .66rem; font-weight: 700; color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mkt-s b { font-size: 1.02rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mkt-s span { font-size: .7rem; font-weight: 700; color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mkt-s .up { color: #16a34a; } .mkt-s .down { color: #dc2626; }
+  [data-theme="dark"] .mkt-s .up { color: #22c55e; } [data-theme="dark"] .mkt-s .down { color: #f87171; }
+  @media (min-width: 1024px) { .mkt-s b { font-size: 1.2rem; } .mkt-stats { gap: 16px; } }
+  @media print { .mkt-card { display: none !important; } }
+</style>
+<script>
+(function () {
+  const M = window.SamsamMarket; if (!M) return;
+  const $ = id => document.getElementById(id);
+  function paint() {
+    M.global().then(r => {
+      const g = r.data; $('mktCap').textContent = M.fmtBig(g.mcap);
+      const c = $('mktCapCh'); c.textContent = (g.mcapCh24 >= 0 ? '▲ ' : '▼ ') + Math.abs(g.mcapCh24 || 0).toFixed(2) + '% 24h'; c.className = g.mcapCh24 >= 0 ? 'up' : 'down';
+      $('mktDom').textContent = g.dom.btc.toFixed(1) + '%'; $('mktEth').textContent = 'ETH ' + g.dom.eth.toFixed(1) + '%';
+    }).catch(() => {});
+    M.fng().then(r => { const f = r.data; $('mktFng').textContent = f.value; const l = $('mktFngL'); l.textContent = f.label; l.style.color = M.fngColor(f.value); }).catch(() => {});
+  }
+  paint(); setInterval(() => { if (!document.hidden) paint(); }, 3 * 60e3);
+})();
+</script>
+
 <!-- Best / worst performer of the last 24h — right under the totals, seen in the first seconds (follows the Category filter) -->
 <div class="movers-wrap" id="moversCard" aria-live="polite"></div>
 
@@ -1469,7 +1518,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611010012"></script>
+<script type="module" src="samsam-cloud.js?v=202611010038"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3618,8 +3667,8 @@ function renderHoldingsAssetList() {
 </style>
 <script>
 (function () {
-  const VIEWS = { performance: 'performance.html', allocation: 'allocation.html', accumulation: 'accumulation.html' };
-  const TITLES = { home: 'Cute Portfolio', performance: 'Performance — Cute Portfolio', allocation: 'Allocation — Cute Portfolio', accumulation: 'Accumulation Plan — Cute Portfolio' };
+  const VIEWS = { performance: 'performance.html', allocation: 'allocation.html', accumulation: 'accumulation.html', market: 'market.html' };
+  const TITLES = { home: 'Cute Portfolio', performance: 'Performance — Cute Portfolio', allocation: 'Allocation — Cute Portfolio', accumulation: 'Accumulation Plan — Cute Portfolio', market: 'Market Hub — Cute Portfolio' };
   const box = document.getElementById('cpViews'), frames = {};
   const baseTitle = document.title;
   function frame(k) {
@@ -3638,7 +3687,7 @@ function renderHoldingsAssetList() {
     if (window.SamsamUI && SamsamUI.navPaint) SamsamUI.navPaint();
   }
   function route() {
-    const m = /^#(performance|allocation|accumulation)$/.exec(location.hash);
+    const m = /^#(performance|allocation|accumulation|market)$/.exec(location.hash);
     if (m) return show(m[1]);
     if (/^#holdings/.test(location.hash)) {   // Holdings opens on top; the tab you came from stays underneath
       const ret = history.state && history.state.ret;
@@ -3680,7 +3729,7 @@ function renderHoldingsAssetList() {
   document.addEventListener('click', e => {
     const a = e.target.closest && e.target.closest('a[href]');
     if (!a || a.target === '_blank' || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey) return;
-    const m = /(?:^|\/)(performance|allocation|accumulation)\.html$/.exec(a.getAttribute('href') || '');
+    const m = /(?:^|\/)(performance|allocation|accumulation|market)\.html$/.exec(a.getAttribute('href') || '');
     if (!m) return;
     e.preventDefault(); shell.go(m[1]);
   });

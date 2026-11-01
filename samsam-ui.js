@@ -416,7 +416,7 @@
       var b = document.createElement(it.href ? 'a' : 'button');
       b.className = 'cpm-item' + (it.danger ? ' danger' : ''); b.setAttribute('role', 'menuitem'); b.tabIndex = -1;
       if (it.href) { b.href = it.href; b.target = '_blank'; b.rel = 'noopener noreferrer'; } else b.type = 'button';
-      var ic = document.createElement('span'); ic.className = 'cpm-ic'; ic.setAttribute('aria-hidden', 'true'); if (IC[it.icon] || it.icon === 'pencil') ic.innerHTML = window.SamsamUI.ic(it.icon, { solo: true, size: 18 }); else ic.textContent = it.icon || '';
+      var ic = document.createElement('span'); ic.className = 'cpm-ic'; ic.setAttribute('aria-hidden', 'true'); if (IC[it.icon] || it.icon === 'pencil') ic.innerHTML = window.SamsamUI.ic(it.icon, { solo: true, size: 18 }); else if (navIconSvg(it.icon)) ic.innerHTML = navIconSvg(it.icon, 18); else ic.textContent = it.icon || '';
       var lb = document.createElement('span'); lb.textContent = it.label;
       b.append(ic, lb);
       if (it.href) { var x = document.createElement('span'); x.className = 'cpm-ext'; x.innerHTML = window.SamsamUI.ic('ext', { solo: true, size: 14 }); x.setAttribute('aria-hidden', 'true'); b.appendChild(x); }
@@ -593,6 +593,7 @@
     { k: 'performance', label: 'Performance', href: 'performance.html', ic: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>' },
     { k: 'allocation', label: 'Allocation', href: 'allocation.html', ic: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>' },
     { k: 'accumulation', label: 'Plan', title: 'Accumulation Plan', href: 'accumulation.html', ic: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>' },
+    { k: 'market', label: 'Market', title: 'Market Hub', href: 'market.html', ic: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/>' },
   ];
   // Inside the app shell (index.html keeps Performance / Allocation / Plan open in frames → instant switching)
   var IN_SHELL = (function () { try { return window.parent !== window && /[?&]shell=1\b/.test(location.search) && !!window.parent.cpShell; } catch (_) { return false; } })();
@@ -611,7 +612,7 @@
       if ((ov && ov.style.display === 'flex') || /^#holdings/.test(location.hash)) return 'holdings';
       return window.cpShell && window.cpShell.cur ? window.cpShell.cur : 'home';
     }
-    var m = /^(performance|allocation|accumulation)\.html$/.exec(f);
+    var m = /^(performance|allocation|accumulation|market)\.html$/.exec(f);
     return m ? m[1] : null;
   }
   function navCss() {
@@ -629,6 +630,8 @@
       '[data-theme="light"] .cp-bnav a{color:#64748b}[data-theme="light"] .cp-bnav a[aria-current="page"]{color:#6d28d9;background:#ede9fe}' +
       '@media (hover:hover){.cp-bnav a:hover{color:#e2e8f0}[data-theme="light"] .cp-bnav a:hover{color:#0f172a}}' +
       '.cp-bnav a:focus-visible{outline:2px solid #a78bfa;outline-offset:-2px}' +
+      // six tabs on a phone: a little tighter so every label fits
+      '@media (max-width:480px){.cp-bnav{gap:0;padding-left:max(4px,env(safe-area-inset-left,0px));padding-right:max(4px,env(safe-area-inset-right,0px))}.cp-bnav a{min-width:0;font-size:10px;letter-spacing:-.01em;border-radius:12px}}' +
       '@media (max-width:360px){.cp-bnav a:not([aria-current="page"]) span{display:none}.cp-bnav a[aria-current="page"]{flex-grow:1.6}}' +
       // computer: a floating dock at the bottom centre
       '@media (min-width:1024px){.cp-bnav{left:50%;right:auto;bottom:14px;transform:translateX(-50%);width:auto;height:auto;padding:6px;gap:4px;border:1px solid rgba(255,255,255,.1);border-radius:20px;box-shadow:0 12px 32px rgba(0,0,0,.35)}' +
@@ -655,7 +658,7 @@
   function navGo(e, k) {
     var here = navPage(), onIndex = !!window.cpShell;
     if (!onIndex || e.metaKey || e.ctrlKey || e.shiftKey) return;   // a page opened on its own: a normal link
-    if (k === 'performance' || k === 'allocation' || k === 'accumulation') { e.preventDefault(); window.cpShell.go(k); setTimeout(navPaint, 0); return; }
+    if (k === 'performance' || k === 'allocation' || k === 'accumulation' || k === 'market') { e.preventDefault(); window.cpShell.go(k); setTimeout(navPaint, 0); return; }
     if (k === 'home' && window.cpShell.cur !== 'home' && here !== 'holdings') { e.preventDefault(); window.cpShell.go('home'); setTimeout(navPaint, 0); return; }
     if (k === 'holdings' && typeof window.openHoldingsView === 'function') {
       e.preventDefault();
@@ -793,7 +796,7 @@
       navCss(); document.body.classList.add('in-shell');
       document.addEventListener('click', function (e) {
         var a = e.target.closest && e.target.closest('a[href]'); if (!a || a.target === '_blank' || e.defaultPrevented) return;
-        var m = /(?:^|\/)(index|performance|allocation|accumulation)\.html(#[\w\/-]*)?$/.exec(a.getAttribute('href') || ''); if (!m) return;
+        var m = /(?:^|\/)(index|performance|allocation|accumulation|market)\.html(#[\w\/-]*)?$/.exec(a.getAttribute('href') || ''); if (!m) return;
         e.preventDefault();
         var k = m[1] === 'index' ? (/^#holdings/.test(m[2] || '') ? 'holdings' : 'home') : m[1];
         window.parent.cpShell.go(k);

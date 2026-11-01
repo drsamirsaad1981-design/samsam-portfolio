@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611010038';
-import * as Hist from './samsam-history.js?v=202611010038';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611010038';
+import * as Core from './samsam-core.js?v=202611020142';
+import * as Hist from './samsam-history.js?v=202611020142';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611020142';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -119,6 +119,21 @@ function cleanSignal(s) {
   if (!Number.isFinite(r) || !Number.isFinite(x) || r > 100 || r < -99 || x < -99.9 || x >= r) return null;
   return { reinforce: Math.round(r * 100) / 100, sell: Math.round(x * 100) / 100 };
 }
+// ── Market Hub watchlist (coins you follow, not own), saved in users/{uid}/meta/info.watch ──
+function cleanWatch(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set(), out = [];
+  for (const w of list) {
+    if (!w || typeof w !== 'object') continue;
+    const id = String(w.id || '').toLowerCase().slice(0, 100);
+    if (!/^[a-z0-9][a-z0-9._-]*$/.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    const img = typeof w.img === 'string' && /^https:\/\//.test(w.img) ? w.img.slice(0, 500) : '';
+    out.push({ id, sym: String(w.sym || '').toUpperCase().replace(/[^A-Z0-9._-]/g, '').slice(0, 20), name: String(w.name || '').slice(0, 80), img });
+    if (out.length >= 200) break;
+  }
+  return out;
+}
 function currentSignal() {
   const s = cleanSignal(S.meta && S.meta.signal);
   return s ? { ...s, isDefault: false } : { ...DEFAULT_SIGNAL, isDefault: true };
@@ -202,6 +217,7 @@ function derive() {
     portfolio, transactions: txs, coins, archivedCoins: removed,
     customCoins: coins.filter(c => c.isCustom && !c.removed).map(c => ({ sym: c.sym, cat: catOf(c.sym, c.cat, c.catLocked), cgId: c.cgId, logoUrl: c.logoUrl })),
     accumPlan, perfSnaps: snaps.perf, holdingsSnaps: snaps.holdings, realized, btcPrice: btc, baseline: currentBaseline(),
+    watchlist: cleanWatch(S.meta && S.meta.watch),
     needsSetup: allLoaded() && !(S.meta && S.meta.state === 'done') && S.coins.size === 0,
   };
   return S.derived;
@@ -391,6 +407,11 @@ const API = {
   configure(opts) { Object.assign(S.opts, opts || {}); if (allLoaded()) emit(); },
   getBaseline() { return currentBaseline(); },
   getSignalRules() { return currentSignal(); },
+  getWatchlist() { return cleanWatch(S.meta && S.meta.watch); },
+  saveWatchlist(list) {
+    const w = cleanWatch(list);
+    return commit((bt, ref) => bt.set(ref('meta', 'info'), { watch: w }, { merge: true }), 'Watchlist');
+  },
   signalOf(pct, sym) { const r = currentSignal(); if (sym === 'BTC') return 'hold'; return pct < r.sell ? 'convert' : pct <= r.reinforce ? 'reinforce' : 'hold'; },
   // null → back to the defaults (−5% / −20%)
   setSignalRules(rules) {
