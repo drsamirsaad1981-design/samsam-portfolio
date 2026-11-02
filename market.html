@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611021035"></script>
-<script src="samsam-hints.js?v=202611021035"></script>
-<script src="samsam-vault.js?v=202611021035"></script>
-<script src="samsam-labels.js?v=202611021035"></script>
-<script src="samsam-taxonomy.js?v=202611021035"></script>
-<script src="samsam-coins.js?v=202611021035"></script>
-<script src="samsam-dropdown.js?v=202611021035"></script>
-<script src="samsam-add.js?v=202611021035"></script>
-<script src="samsam-market.js?v=202611021035"></script>
+<script src="samsam-ui.js?v=202611021048"></script>
+<script src="samsam-hints.js?v=202611021048"></script>
+<script src="samsam-vault.js?v=202611021048"></script>
+<script src="samsam-labels.js?v=202611021048"></script>
+<script src="samsam-taxonomy.js?v=202611021048"></script>
+<script src="samsam-coins.js?v=202611021048"></script>
+<script src="samsam-dropdown.js?v=202611021048"></script>
+<script src="samsam-add.js?v=202611021048"></script>
+<script src="samsam-market.js?v=202611021048"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -127,6 +127,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-custom { height: 32px; padding: 0 12px; border-radius: 9px; border: 1px dashed rgba(124,58,237,.6); background: none; color: #a78bfa; font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; margin-left: auto; }
 [data-theme="light"] .mk-custom { color: #6d28d9; }
 .mk-custom:hover { background: rgba(124,58,237,.12); }
+.mk-note { display: flex; align-items: center; gap: 6px; font-size: .72rem; color: var(--fg2); margin: -2px 2px 10px; flex-wrap: wrap; }
+.mk-note[hidden] { display: none; }
+.mk-note button { background: none; border: 0; padding: 0; color: #a78bfa; font: inherit; font-weight: 800; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+[data-theme="light"] .mk-note button { color: #6d28d9; }
 .mk-hint { font-size: .74rem; color: var(--fg2); margin: 0 2px 8px; }
 
 /* rows: phone = #☆ · Market Cap · Price / 24h with the 7d chart · + ⌄  (the 7d column only on a computer) */
@@ -348,6 +352,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       <button type="button" role="tab" id="tabTop" aria-selected="true" onclick="setMode('top')"><span data-ic="bar"></span>Top 100</button>
       <button type="button" role="tab" id="tabWatch" aria-selected="false" onclick="setMode('watch')"><span data-ic="star"></span>Watchlist<span class="n" id="watchN">0</span></button>
     </div>
+    <div class="mk-note" id="mkStable" role="note"></div>
     <div class="mk-tools">
       <div class="ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo data-ic-size="16"></span><input type="search" id="mkSearch" placeholder="Search coin…" autocomplete="off" oninput="onSearch()" aria-label="Search coin"></div>
       <div class="mk-chips" role="group" aria-label="Filter">
@@ -355,7 +360,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
         <button type="button" class="mk-chip" data-f="gain" aria-pressed="false" onclick="setFilter('gain')">Gainers</button>
         <button type="button" class="mk-chip" data-f="lose" aria-pressed="false" onclick="setFilter('lose')">Losers</button>
       </div>
-      <div class="mk-per" role="group" aria-label="Period on a phone"><button type="button" data-p="24h" onclick="setPer('24h')">24h</button><button type="button" data-p="7d" onclick="setPer('7d')">7d</button></div>
+      <div class="mk-per" role="group" aria-label="Period on a phone"><button type="button" data-p="24h" onclick="setPer('24h')">24h %</button><button type="button" data-p="7d" onclick="setPer('7d')">7d %</button></div>
       <button type="button" class="mk-custom" onclick="addCustom()"><span data-ic="plus"></span>Add Custom Coin</button>
     </div>
     <div class="mk-hint" id="mkHint" hidden>Type a coin name or symbol — any coin listed on CoinGecko can be followed or added.</div>
@@ -364,7 +369,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       <button type="button" class="c-rank" data-s="rank" onclick="setSort('rank')">#</button>
       <button type="button" class="c-asset" data-s="mcap" onclick="setSort('mcap')"><span class="t-m">Market Cap</span><span class="t-d">Asset</span></button>
       <button type="button" class="r c-sp" data-s="spark" disabled style="cursor:default;justify-content:center">7d</button>
-      <button type="button" class="r c-pc" data-s="chP" onclick="setSort('chP')"><span>Price / <span id="perL">24h</span></span></button>
+      <button type="button" class="r c-pc" data-s="chP" onclick="setSort('chP')"><span>Price / <span id="perL">24h %</span></span></button>
       <button type="button" class="r c-price" data-s="price" onclick="setSort('price')">Price</button>
       <button type="button" class="r c-ch" data-s="ch24" onclick="setSort('ch24')">24h %</button>
       <button type="button" class="r c-ch7" data-s="ch7" onclick="setSort('ch7')">7d %</button>
@@ -378,7 +383,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611021035"></script>
+<script type="module" src="samsam-cloud.js?v=202611021048"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -452,12 +457,23 @@ const PHONE = matchMedia('(max-width: 759px)');
 let per = '24h'; try { if (localStorage.getItem('samsam_mkt_per') === '7d') per = '7d'; } catch (_) {}
 function chKey() { return PHONE.matches && per === '7d' ? 'ch7' : 'ch24'; }
 function setPer(p) { per = p; try { localStorage.setItem('samsam_mkt_per', p); } catch (_) {} paintPer(); render(); }
-function paintPer() { document.querySelectorAll('.mk-per button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === per)); document.getElementById('perL').textContent = per; }
+function paintPer() { document.querySelectorAll('.mk-per button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === per)); document.getElementById('perL').textContent = per + ' %'; }
 PHONE.addEventListener('change', () => render());
 // every row gets a 7-day % (older saved rows: from the 7-day line)
 function fix(rows) { (rows || []).forEach(r => { if (r.ch7 == null) r.ch7 = M.ch7(r); }); return rows; }
+let showStable = false; try { showStable = localStorage.getItem('samsam_mkt_stable') === '1'; } catch (_) {}
+function toggleStable() { showStable = !showStable; try { localStorage.setItem('samsam_mkt_stable', showStable ? '1' : '0'); } catch (_) {} render(); }
+function paintStableNote() {
+  const el = document.getElementById('mkStable'); if (!el) return;
+  el.hidden = mode !== 'top';
+  const hid = topRows.filter(r => M.isStable(r)).slice(0, 4).map(r => r.sym);
+  el.innerHTML = showStable
+    ? `${ic('check', { solo: true, size: 13 })}<span>Stablecoins shown</span><button type="button" onclick="toggleStable()">Hide</button>`
+    : `${ic('coins', { solo: true, size: 13 })}<span>Stablecoins hidden${hid.length ? ' (' + hid.map(E).join(', ') + '…)' : ''}</span><button type="button" onclick="toggleStable()">Show</button>`;
+}
 function rowsNow() {
-  let rows = mode === 'top' ? topRows.slice() : watchRows.slice();
+  // Top 100: stablecoins left out (unless you show them), so it's 100 coins that move; ranks stay the real ones
+  let rows = mode === 'top' ? topRows.filter(r => showStable || !M.isStable(r)).slice(0, 100) : watchRows.slice();
   if (mode === 'watch') {   // coins CoinGecko didn't return (yet) still show, from what was saved
     const have = new Set(rows.map(r => r.id));
     watchlist().forEach(w => { if (!have.has(w.id)) rows.push({ id: w.id, sym: w.sym, name: w.name, img: w.img, rank: null, price: null, ch24: null, mcap: null, spark: [] }); });
@@ -539,6 +555,7 @@ function rowHtml(c) {
 function render() {
   const box = document.getElementById('mkRows');
   document.getElementById('watchN').textContent = watchlist().length;
+  paintStableNote();
   document.querySelectorAll('.mk-head [data-s]').forEach(b => { if (b.dataset.s === sortKey) { b.setAttribute('aria-sort', sortDir === 1 ? (sortKey === 'rank' ? 'ascending' : 'descending') : (sortKey === 'rank' ? 'descending' : 'ascending')); b.dataset.arrow = sortDir === 1 ? '↓' : '↑'; } else b.removeAttribute('aria-sort'); });
   if (mode === 'top' && !topRows.length) { box.innerHTML = warn ? `<div class="mk-empty">${E(warn)}</div>` : '<div class="mk-skel"></div>'.repeat(8); renderMore(); return; }
   const rows = rowsNow();
@@ -569,7 +586,7 @@ function onSearch() {
     searchTimer = setTimeout(async () => {
       try {
         const list = await M.search(query); if (seq !== searchSeq) return;
-        const shown = new Set(topRows.map(r => r.id).concat(watchlist().map(w => w.id)));   // already in the lists above
+        const shown = new Set(topRows.filter(r => showStable || !M.isStable(r)).slice(0, 100).map(r => r.id).concat(watchlist().map(w => w.id)));   // already in the lists above
         moreRows = list.filter(c => !shown.has(c.id)); moreMsg = list.length ? '' : 'No coin found on CoinGecko.';
       } catch (e) { if (seq !== searchSeq) return; moreMsg = e.rate ? 'CoinGecko search is busy right now (free limit) — try again in a minute.' : (e.message === 'You are offline.' ? 'You are offline.' : 'Search failed — try again.'); }
       renderMore();

@@ -77,7 +77,8 @@ async function main() {
   // 150 coins: the first 100 are the list; Altcoin Season needs the top 100 *after* leaving out stablecoins etc.
   const top = await get(`${API}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=150&page=1&sparkline=true&price_change_percentage=24h%2C7d%2C30d`);
   let all = [];
-  if (Array.isArray(top) && top.length) { all = top.map(row); snap.top = all.slice(0, 100); snap.parts.top = now; log('top', top.length); } else log('top: no answer, kept the last one');
+  // all 150 kept: the page shows 100 without stablecoins
+  if (Array.isArray(top) && top.length) { all = top.map(row); snap.top = all; snap.parts.top = now; log('top', top.length); } else log('top: no answer, kept the last one');
 
   await sleep(4000);
   const g = await get(`${API}/global`);

@@ -1,7 +1,7 @@
 // samsam-market.js — Market Hub data (no API keys): CoinGecko public API + alternative.me Fear & Greed.
 //   SamsamMarket.global()        → { mcap, mcapCh24, vol, dom: { btc, eth, usdt }, coins, t }
 //   SamsamMarket.fng()           → { value, label, prev, t }
-//   SamsamMarket.top()           → top 100 coins by market cap (price, 24h %, 30d %, 7d + 24h sparklines)
+//   SamsamMarket.top()           → top 150 coins by market cap (the page shows 100 without stablecoins) (price, 24h %, 30d %, 7d + 24h sparklines)
 //   SamsamMarket.byIds(ids)      → the same rows for any CoinGecko ids (your watchlist)
 //   SamsamMarket.altSeason(rows) → { value 0–100, label, n } — share of the top-50 coins (no stablecoins /
 //                                   wrapped / staked) that beat BTC over 30 days
@@ -119,7 +119,8 @@
     },
     top: function (force) {
       return cached('top', TTL.top, function () {
-        return live(MK + '&order=market_cap_desc&per_page=100&page=1').then(function (a) { return (a || []).map(row); });
+        // 150, so the list still has 100 coins after the stablecoins are left out
+        return live(MK + '&order=market_cap_desc&per_page=150&page=1').then(function (a) { return (a || []).map(row); });
       }, force, snapPart('top'));
     },
     byIds: function (ids, force) {
@@ -156,12 +157,18 @@
         return ((j && j.coins) || []).slice(0, 12).map(function (c) { return { id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, rank: c.market_cap_rank, img: c.large || c.thumb || '' }; });
       });
     },
+    // stablecoins: pegged to the dollar (or euro) or to gold — they don't move like crypto
+    isStable: function (c) {
+      var s = String(c.sym || '').toUpperCase(), n = (c.name || '').toLowerCase();
+      if (/^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD)$/.test(s)) return true;
+      return /stablecoin|\busd\b|dollar|tether gold|pax gold|\beuro\b/.test(n) && !/wrapped|staked/.test(n);
+    },
     // not counted: stablecoins, wrapped / bridged / staked copies, exchange-backed USD tokens, BTC itself
     isExcluded: function (c) {
       var s = c.sym, n = (c.name || '').toLowerCase(), id = c.id || '';
       if (id === 'bitcoin') return true;
-      if (/^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD)$/.test(s)) return true;
-      if (/wrapped|bridged|staked|restaked|liquid staking|binance-peg|\busd\b|dollar|tether gold|pax gold/.test(n)) return true;
+      if (API.isStable(c)) return true;
+      if (/wrapped|bridged|staked|restaked|liquid staking|binance-peg/.test(n)) return true;
       if (/^(W|ST|WST|CB|R|WE|M|B|J|S|O)?(BTC|ETH|SOL|BNB)$/.test(s) && !/^(BTC|ETH|SOL|BNB)$/.test(s)) return true;   // wBTC, stETH, cbBTC, rETH, weETH, mSOL, JitoSOL…
       if (/staked-|wrapped-|-staked|bridged-|-bridged/.test(id)) return true;
       return false;
