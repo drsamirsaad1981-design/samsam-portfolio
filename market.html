@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611030152"></script>
-<script src="samsam-hints.js?v=202611030152"></script>
-<script src="samsam-vault.js?v=202611030152"></script>
-<script src="samsam-labels.js?v=202611030152"></script>
-<script src="samsam-taxonomy.js?v=202611030152"></script>
-<script src="samsam-coins.js?v=202611030152"></script>
-<script src="samsam-dropdown.js?v=202611030152"></script>
-<script src="samsam-add.js?v=202611030152"></script>
-<script src="samsam-market.js?v=202611030152"></script>
+<script src="samsam-ui.js?v=202611030229"></script>
+<script src="samsam-hints.js?v=202611030229"></script>
+<script src="samsam-vault.js?v=202611030229"></script>
+<script src="samsam-labels.js?v=202611030229"></script>
+<script src="samsam-taxonomy.js?v=202611030229"></script>
+<script src="samsam-coins.js?v=202611030229"></script>
+<script src="samsam-dropdown.js?v=202611030229"></script>
+<script src="samsam-add.js?v=202611030229"></script>
+<script src="samsam-market.js?v=202611030229"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -45,17 +45,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .up { color: var(--green); } .down { color: var(--red); }
 
 /* status line */
-.mk-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .72rem; color: var(--fg2); margin: 0 2px 12px; min-height: 30px; }
-.mk-status .msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mk-status { display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-size: .72rem; font-weight: 600; color: var(--fg2); margin: -2px 2px 8px; min-height: 18px; }
+.mk-status .msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-flex; align-items: center; gap: 7px; font-variant-numeric: tabular-nums; }
+.mk-status .msg .ss-live { margin: 0; }
+.mk-status.pull .msg { color: var(--fg); }
 .mk-status .msg.warn { color: #f59e0b; white-space: normal; }
 .mk-status .msg.quiet { white-space: normal; }
-.mk-refresh { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--card); color: var(--fg); font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; flex-shrink: 0; }
-.mk-refresh:hover { border-color: var(--accent); }
-.mk-refresh.busy svg { animation: mkSpin 1s linear infinite; }
 @keyframes mkSpin { to { transform: rotate(360deg); } }
 
 /* ── 2×2 overview cards (4 across on a computer) ── */
-.mk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.mk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
 @media (min-width: 1024px) { .mk-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; } }
 .mk-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 14px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .mk-k { display: flex; align-items: center; font-size: .72rem; font-weight: 700; color: var(--fg2); line-height: 1.2; }
@@ -65,6 +64,11 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-sub { font-size: .72rem; color: var(--fg2); font-variant-numeric: tabular-nums; line-height: 1.35; }
 .mk-sub b { font-weight: 700; }
 .mk-tag { font-size: .76rem; font-weight: 800; }
+.mk-vrow { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 8px; row-gap: 2px; }
+.mk-vrow .mk-v { font-size: 1.6rem; }
+.mk-vrow .mk-tag { font-size: .74rem; }
+.mk-altg { margin: auto 0; padding: 6px 0; }   /* the gauge sits in the middle of the free space */
+.mk-li b.up { color: var(--green); } .mk-li b.down { color: var(--red); }
 .mk-gauge { position: relative; height: 8px; border-radius: 6px; margin: 6px 0 2px; }
 .mk-gauge.fng { background: linear-gradient(90deg, #ef4444 0%, #f97316 25%, #eab308 50%, #84cc16 72%, #22c55e 100%); }
 .mk-gauge.alt { background: linear-gradient(90deg, #f7931a 0%, #f7931a 25%, #94a3b8 50%, #3b82f6 75%, #3b82f6 100%); }
@@ -103,9 +107,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 /* phone / tablet: donut on top, the four values in a 2×2 grid under it (a side legend doesn't fit a half-width card) */
 @media (max-width: 1023px) {
   .mk-domw { flex-direction: column; gap: 8px; }
-  .mk-leg { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; }
-  .mk-leg div { flex-direction: column; align-items: flex-start; gap: 1px; }
-  .mk-leg b { font-size: .86rem; padding-left: 13px; }
+  .mk-leg { width: 100%; gap: 4px; }
+  .mk-leg div { font-size: .74rem; }
+  .mk-leg b { font-size: .78rem; }
+}
+@media (max-width: 759px) {
+  .mk-card { padding: 12px; }
+  .mk-li { font-size: .7rem; gap: 4px; }
+  .mk-li b { overflow: visible; flex-shrink: 0; }
+  .mk-vrow .mk-v { font-size: 1.75rem; }
+  .mk-donut { width: 58px; height: 58px; }
 }
 @media (min-width: 1024px) { .mk-donut { width: 76px; height: 76px; } .mk-leg div { font-size: .78rem; } }
 @media (max-width: 380px) { .mk-v { font-size: 1.14rem; } .mk-card { padding: 12px; } .mk-donut { width: 56px; height: 56px; } }
@@ -305,8 +316,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 
 <main class="container">
   <div class="mk-status">
-    <span class="msg" id="mkMsg" aria-live="polite">Loading market data…</span>
-    <button type="button" class="mk-refresh" id="mkRefresh" onclick="refreshAll(true)" title="Refresh market data"><span data-ic="refresh"></span>Refresh</button>
+    <span class="msg" id="mkMsg" aria-live="polite">Loading…</span>
   </div>
 
   <section class="mk-grid" aria-label="Market overview">
@@ -338,10 +348,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     </div>
     <div class="mk-card" id="cardAlt">
       <div class="mk-k"><span data-ic="activity"></span>Altcoin Season</div>
-      <div class="mk-v" id="altV">—<small>/100</small></div>
-      <div class="mk-tag" id="altL">—</div>
-      <div class="mk-gauge alt" role="img" id="altG" aria-label="Altcoin season gauge"><i style="left:50%"></i></div>
-      <div class="mk-gauge-l"><span>Bitcoin</span><span>Altcoin</span></div>
+      <div class="mk-vrow"><div class="mk-v" id="altV">—<small>/100</small></div><div class="mk-tag" id="altL">—</div></div>
+      <div class="mk-altg"><div class="mk-gauge alt" role="img" id="altG" aria-label="Altcoin season gauge"><i style="left:50%"></i></div>
+      <div class="mk-gauge-l"><span>Bitcoin</span><span>Altcoin</span></div></div>
       <div class="mk-foot">
         <div class="mk-li" id="altN">Top coins vs BTC</div>
         <div class="mk-li" id="altB">BTC <b>—</b></div>
@@ -365,7 +374,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
         </div>
       </div>
       <div class="mk-foot">
-        <div class="mk-li">Active coins <b id="domCoins">—</b></div>
+        <div class="mk-li" id="liEthBtc" title="1 ETH in BTC — rising means ETH is beating Bitcoin">ETH / BTC <span><b>—</b></span></div>
       </div>
     </div>
   </section>
@@ -406,7 +415,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611030152"></script>
+<script type="module" src="samsam-cloud.js?v=202611030229"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -434,11 +443,10 @@ function paintGlobal(g) {
   const parts = [d.btc, d.eth, d.usdt, oth], rings = document.querySelectorAll('#domBar circle');
   let at = 0;
   parts.forEach((v, i) => { const r = rings[i + 1]; r.setAttribute('stroke-dasharray', `${Math.max(0, v - 0.6).toFixed(2)} ${(100 - Math.max(0, v - 0.6)).toFixed(2)}`); r.setAttribute('stroke-dashoffset', (-at).toFixed(2)); at += v; });
-  document.getElementById('domBtc').textContent = d.btc.toFixed(1) + '%';
-  document.getElementById('domEth').textContent = d.eth.toFixed(1) + '%';
-  document.getElementById('domUsdt').textContent = d.usdt.toFixed(1) + '%';
-  document.getElementById('domOth').textContent = oth.toFixed(1) + '%';
-  document.getElementById('domCoins').textContent = g.coins ? (+g.coins).toLocaleString('en-US') : '—';
+  document.getElementById('domBtc').textContent = d.btc.toFixed(2) + '%';
+  document.getElementById('domEth').textContent = d.eth.toFixed(2) + '%';
+  document.getElementById('domUsdt').textContent = d.usdt.toFixed(2) + '%';
+  document.getElementById('domOth').textContent = oth.toFixed(2) + '%';
   document.getElementById('domBar').setAttribute('aria-label', `Dominance: BTC ${d.btc.toFixed(1)}%, ETH ${d.eth.toFixed(1)}%, USDT ${d.usdt.toFixed(1)}%, others ${oth.toFixed(1)}%`);
 }
 // BTC / ETH price lines on the market-cap card (from the list)
@@ -447,6 +455,13 @@ function paintMajors() {
     const c = topRows.find(r => r.id === id); if (!c) return;
     document.getElementById(el).innerHTML = `${sym} <span><b>${c.price >= 1000 ? '$' + Math.round(c.price).toLocaleString('en-US') : SamsamFmt.price(c.price)}</b><span class="ch ${cls(c.ch24)}">${pct(c.ch24)}</span></span>`;
   });
+  // ETH / BTC on the dominance card: price ratio and how it moved in 24 h
+  const b = topRows.find(r => r.id === 'bitcoin'), e = topRows.find(r => r.id === 'ethereum');
+  if (b && e && b.price > 0) {
+    const ch = b.ch24 != null && e.ch24 != null ? ((1 + e.ch24 / 100) / (1 + b.ch24 / 100) - 1) * 100 : null;
+    document.getElementById('liEthBtc').innerHTML = `ETH / BTC <b class="${cls(ch)}">${(e.price / b.price).toFixed(5)}</b>`;
+    document.getElementById('liEthBtc').title = '1 ETH in BTC' + (ch == null ? '' : ` — ${pct(ch)} in 24 h (green: ETH beating Bitcoin)`);
+  }
 }
 function paintFng(f) {
   if (!f) return;
@@ -467,8 +482,9 @@ function paintAlt(a) {
   document.querySelector('#altG i').style.left = Math.max(2, Math.min(98, a.value)) + '%';
   document.getElementById('altG').setAttribute('aria-label', `Altcoin season ${a.value} of 100: ${a.label}`);
   const per = a.period || '30d', b = a.btc90 != null ? a.btc90 : a.btc30;
-  document.getElementById('altN').innerHTML = `Beat BTC · ${per} <b>${a.beat}/${a.n}</b>`;
-  document.getElementById('altB').innerHTML = `BTC ${per} <b class="${cls(b)}">${b == null ? '—' : pct(b, 1)}</b>`;
+  const P = per.toUpperCase();
+  document.getElementById('altN').innerHTML = `Beat BTC (${P}) <b>${a.beat}/${a.n}</b>`;
+  document.getElementById('altB').innerHTML = `BTC (${P} %) <b class="${cls(b)}">${b == null ? '—' : pct(b, 2)}</b>`;
   document.getElementById('cardAlt').title = per === '90d' ? 'Top 100 coins (no stablecoins / wrapped / staked) vs BTC over 90 days — the CoinMarketCap method.' : 'Top 50 coins vs BTC over 30 days (the 90-day number is still being prepared).';
 }
 let alt90 = null;   // CMC-style number from the GitHub snapshot; until it's ready, the 30-day one from the list
@@ -712,13 +728,16 @@ function ago(t) {
 function status() {
   const el = document.getElementById('mkMsg');
   const old = lastT && Date.now() - lastT > 90 * 60e3;
-  el.className = 'msg' + (warn || old ? ' warn' : paused ? ' quiet' : '');
+  el.className = 'msg' + (warn || old ? ' warn' : '');
+  // updates itself — one short line: green dot = live, amber = the newest saved numbers (CoinGecko busy)
   el.innerHTML = warn ? ic('alert') + E(warn)
-    : lastT ? ic(old ? 'alert' : 'clock') + 'Updated ' + ago(lastT) + (paused ? ' · live prices resume shortly' : '')
-    : 'Loading market data…';
+    : busy && !lastT ? SamsamUI.liveDot('loading') + 'Loading…'
+    : lastT ? SamsamUI.liveDot(old ? 'error' : paused ? 'loading' : 'ok', !paused && !old) + (paused || old ? 'Saved · ' : 'Live · ') + ago(lastT)
+    : 'Loading…';
   el.title = paused ? 'CoinGecko’s free limit is busy — showing the newest saved numbers.' : '';
 }
-setInterval(() => { if (lastT && onScreen()) status(); }, 30e3);
+// every 20 s: refresh the "x min ago"; back on this tab after 3+ minutes → fresh numbers at once
+setInterval(() => { if (!onScreen()) return; if (lastT && Date.now() - lastT > 3 * 60e3 && !busy) refreshAll(false); else if (lastT) status(); }, 20e3);
 // A watched coin CoinGecko didn't answer for (outside the Top 150 while its free limit is busy) still shows a price:
 // the one your portfolio / plan already has, or the last one this browser saw for it.
 let watchSeen = {}; try { watchSeen = JSON.parse(localStorage.getItem('samsam_watch_rows') || '{}') || {}; } catch (_) {}
@@ -751,7 +770,7 @@ async function loadWatch(force) {
 let busy = false;
 async function refreshAll(force) {
   if (busy) return; busy = true;
-  const btn = document.getElementById('mkRefresh'); btn.classList.add('busy'); warn = '';
+  warn = '';
   // first open: the newest numbers this browser or GitHub has, on screen at once
   if (!topRows.length) {
     try {
@@ -772,13 +791,20 @@ async function refreshAll(force) {
   paused = stale || failed > 0;
   if (!topRows.length && !lastT) warn = 'Market data isn’t reachable right now — trying again in a few minutes.';
   if (mode === 'watch') await loadWatch(force);
-  busy = false; btn.classList.remove('busy'); status(); render();
+  busy = false; status(); render();
   if (window.CPSplash) CPSplash.hide();
 }
 // keep it fresh while you look at it (every 3 minutes, only when this tab is on screen)
 function onScreen() { if (document.hidden) return false; try { const f = window.frameElement; return !f || getComputedStyle(f).visibility !== 'hidden'; } catch (_) { return true; } }
 setInterval(() => { if (onScreen()) refreshAll(false); }, 3 * 60e3);
 document.addEventListener('visibilitychange', () => { if (onScreen() && Date.now() - lastT > 3 * 60e3) refreshAll(false); });
+// pull down at the top of the page → fresh numbers now
+(function pull() {
+  let y0 = null;
+  addEventListener('touchstart', e => { y0 = scrollY <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null; }, { passive: true });
+  addEventListener('touchmove', e => { if (y0 != null) document.querySelector('.mk-status').classList.toggle('pull', e.touches[0].clientY - y0 > 70); }, { passive: true });
+  addEventListener('touchend', () => { const s = document.querySelector('.mk-status'); if (s.classList.contains('pull')) { s.classList.remove('pull'); refreshAll(true); } y0 = null; });
+})();
 
 // your portfolio / plan / watchlist, live from the cloud
 window.addEventListener('samsam-links', () => render());   // checked page names arrived → links now open the right pages
