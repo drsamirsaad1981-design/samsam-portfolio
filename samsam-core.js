@@ -27,7 +27,7 @@ export function compareTx(a, b) {
   return 0;
 }
 
-// Apply one transaction to a position. Returns {qty, avg, realized, sellQty}.
+// Apply one transaction to a position. Returns {qty, avg, realized, sellQty, sellFee}.
 export function applyTx(pos, t) {
   let qty = pos.qty, avg = pos.avg, realized = 0, sellQty = 0, sellFee = 0;
   const q = num(t.qty), p = num(t.price);
@@ -66,17 +66,17 @@ export function applyTx(pos, t) {
 // Replay a coin's ledger from its opening position.
 export function replay(opening, txs) {
   let pos = { qty: Math.max(0, num(opening && opening.qty)), avg: Math.max(0, num(opening && opening.avg)) };
-  let realized = 0, sellCount = 0, sellFees = 0;
+  let realized = 0, sellCount = 0, sellFees = 0, soldCost = 0;   // soldCost = what the sold coins had cost (Σ amount sold × avg then)
   const perTx = {}; // id → { realized, avgBefore, qtyAfter }
   const sorted = [...(txs || [])].sort(compareTx);
   for (const t of sorted) {
     const avgBefore = pos.avg;
     const r = applyTx(pos, t);
     pos = { qty: r.qty, avg: r.avg };
-    if (t.type === 'sell') { realized += r.realized; sellCount++; sellFees += r.sellFee; }
+    if (t.type === 'sell') { realized += r.realized; sellCount++; sellFees += r.sellFee; soldCost += r.sellQty * avgBefore; }
     perTx[t.id] = { realized: t.type === 'sell' ? r.realized : null, avgBefore, qtyAfter: pos.qty };
   }
-  return { qty: pos.qty, avg: pos.avg, realized, sellCount, sellFees, perTx };
+  return { qty: pos.qty, avg: pos.avg, realized, sellCount, sellFees, soldCost, perTx };
 }
 
 export function groupTxBySym(txs) {
@@ -125,15 +125,15 @@ export function derivePortfolio(coins, txs, prices = {}, fallbackPrices = {}) {
 export function realizedPnl(coins, txs) {
   const bySym = groupTxBySym(txs);
   const openBySym = new Map((coins || []).map(c => [c.sym, c.opening]));
-  let total = 0, sellCount = 0, sellFees = 0;
+  let total = 0, sellCount = 0, sellFees = 0, soldCost = 0;
   const perTx = {}, bySymTotal = {};
   for (const [sym, list] of bySym) {
     const r = replay(openBySym.get(sym) || { qty: 0, avg: 0 }, list);
-    total += r.realized; sellCount += r.sellCount; sellFees += r.sellFees;
-    bySymTotal[sym] = { realized: r.realized, sellCount: r.sellCount, sellFees: r.sellFees };
+    total += r.realized; sellCount += r.sellCount; sellFees += r.sellFees; soldCost += r.soldCost;
+    bySymTotal[sym] = { realized: r.realized, sellCount: r.sellCount, sellFees: r.sellFees, soldCost: r.soldCost };
     Object.assign(perTx, r.perTx);
   }
-  return { total, sellCount, sellFees, perTx, bySym: bySymTotal };
+  return { total, sellCount, sellFees, soldCost, perTx, bySym: bySymTotal };
 }
 
 // ── Profit over time (for the Portfolio vs BTC charts) ─────────────────────────

@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611021048"></script>
-<script src="samsam-hints.js?v=202611021048"></script>
-<script src="samsam-vault.js?v=202611021048"></script>
-<script src="samsam-labels.js?v=202611021048"></script>
-<script src="samsam-taxonomy.js?v=202611021048"></script>
-<script src="samsam-coins.js?v=202611021048"></script>
-<script src="samsam-dropdown.js?v=202611021048"></script>
-<script src="samsam-add.js?v=202611021048"></script>
-<script src="samsam-chart.js?v=202611021048"></script>
-<script src="samsam-market.js?v=202611021048"></script>
+<script src="samsam-ui.js?v=202611021141"></script>
+<script src="samsam-hints.js?v=202611021141"></script>
+<script src="samsam-vault.js?v=202611021141"></script>
+<script src="samsam-labels.js?v=202611021141"></script>
+<script src="samsam-taxonomy.js?v=202611021141"></script>
+<script src="samsam-coins.js?v=202611021141"></script>
+<script src="samsam-dropdown.js?v=202611021141"></script>
+<script src="samsam-add.js?v=202611021141"></script>
+<script src="samsam-chart.js?v=202611021141"></script>
+<script src="samsam-market.js?v=202611021141"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -594,6 +594,7 @@
   }
   .action-convert { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
   .action-hold { background: rgba(148,163,184,0.08); color: var(--fg2); border: 1px solid var(--border); }
+  .action-soldout { background: rgba(148,163,184,0.10); color: var(--fg2); border: 1px dashed rgba(148,163,184,0.45); }
   .action-reinforce { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid rgba(16,185,129,0.25); }
 
   .summary-grid {
@@ -1265,22 +1266,22 @@
   <div class="header-stats">
     <div class="stat-card">
       <div class="stat-label">Total Portfolio<button type="button" class="cp-hint" data-hint="totalPortfolio" aria-label="About Total Portfolio"></button></div>
-      <div class="stat-value stat-green" id="totalUsd">—</div>
+      <div class="stat-value stat-green" id="totalUsd">$—.——</div>
       <div class="stat-sub" id="totalUsdBtc">—</div>
     </div>
     <div class="stat-card" id="allTimeCard">
       <div class="stat-label">All Time Profit</div>
-      <div class="stat-value" id="totalPnlCard">—</div>
+      <div class="stat-value" id="totalPnlCard">$—.——</div>
       <div class="stat-sub" id="totalPnlSub">—</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">BTC Accumulated<button type="button" class="cp-hint" data-hint="btcAccum" aria-label="About BTC Accumulated"></button></div>
-      <div class="stat-value stat-btc" id="totalBtc">—</div>
+      <div class="stat-value stat-btc" id="totalBtc">—.—— BTC</div>
       <div class="stat-sub" id="totalBtcUsd">—</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Altcoins Accumulated<button type="button" class="cp-hint" data-hint="altAccum" aria-label="About Altcoins Accumulated"></button></div>
-      <div class="stat-value stat-blue" id="altUsd">—</div>
+      <div class="stat-value stat-blue" id="altUsd">$—.——</div>
       <div class="stat-sub" id="altUsdBtc">—</div>
     </div>
   </div>
@@ -1480,7 +1481,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611021048"></script>
+<script type="module" src="samsam-cloud.js?v=202611021141"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1724,7 +1725,7 @@ function calcRealizedPnl() { return { total: realizedState.total, sellCount: rea
 // One coin's All Time Profit = its sells (realized) + what it holds now (value − cost) — the same number as on Performance and the coin's page
 function coinProfit(c) {
   const rs = (realizedState.bySym || {})[c.sym] || {};
-  return CPProfit.calc({ value: c.qty * c.currentPrice, cost: c.qty * c.basePrice, realized: rs.realized, sellCount: rs.sellCount, sellFees: rs.sellFees });
+  return CPProfit.calc({ value: c.qty * c.currentPrice, cost: c.qty * c.basePrice, realized: rs.realized, sellCount: rs.sellCount, sellFees: rs.sellFees, soldCost: rs.soldCost });
 }
 
 function getCustomSyms() {
@@ -1751,7 +1752,7 @@ function calcStats() {
 let htxProfitData = null;   // the coin page's All Time Profit, read when its card is tapped
 function allTimeProfitData() {
   return CPProfit.calc({ value: calcStats().total, cost: portfolio.reduce((s, c) => s + c.qty * (c.basePrice || 0), 0),
-    realized: realizedState.total || 0, sellCount: realizedState.sellCount || 0, sellFees: realizedState.sellFees || 0 });
+    realized: realizedState.total || 0, sellCount: realizedState.sellCount || 0, sellFees: realizedState.sellFees || 0, soldCost: realizedState.soldCost || 0 });
 }
 
 // Portfolio vs BTC per coin — "did this coin beat the same money in Bitcoin?" (samsam-core.js → vsBtcByCoin).
@@ -1776,7 +1777,20 @@ function getCoinPct(coin) {
   return ((coin.currentPrice / coin.basePrice) - 1) * 100;
 }
 
+// A coin you no longer hold (everything sold or sent out): no Avg. Buy Price to compare with, nothing to sell
+const isSoldOut = c => !!c && !(c.qty > 1e-12);
+// One label per Signal everywhere (table, cards, coin page, CSV): short for the badges, long for exports
+function signalLabel(action, long) {
+  if (action === 'soldout') return long ? 'Sold out' : SamsamUI.dot('grey') + 'Sold out';
+  if (action === 'convert') return long ? 'Sell / Convert to BTC' : SamsamUI.dot('red') + (long === false ? 'Sell / Convert' : 'Sell/Convert');
+  if (action === 'reinforce') return long ? 'Reinforce' : SamsamUI.dot('green') + 'Reinforce';
+  return long ? 'Hold' : SamsamUI.dot('grey') + 'Hold';
+}
+// Avg. Buy Price as shown: "—" once the coin is sold out (the old average means nothing then)
+const avgShown = c => isSoldOut(c) ? '—' : SamsamFmt.price(c.basePrice);
+
 function getAction(sym, perf, coin) {
+  if (isSoldOut(coin)) return 'soldout';
   if (sym === 'BTC') return 'hold';
   // Signal from the coin's price vs its Avg. Buy Price, with your thresholds (Signal ✏️ — defaults −5% / −20%)
   const pct = coin ? getCoinPct(coin) : perf;
@@ -1793,7 +1807,16 @@ function fmt(n, dec) {
   return parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
+// Until the first data arrives from the cloud, the totals show a placeholder — never a wrong "$0.00"
+const HEAD_WAIT = '$—.——';
+function headerWaiting() { return !(window.Samsam && Samsam.isReady && Samsam.isReady()) && !portfolio.length; }
 function renderHeader() {
+  if (headerWaiting()) {
+    ['totalUsd', 'totalPnlCard', 'altUsd'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = HEAD_WAIT; });
+    ['totalUsdBtc', 'totalPnlSub', 'totalBtcUsd', 'altUsdBtc'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = '—'; });
+    const b = document.getElementById('totalBtc'); if (b) b.textContent = '—.—— BTC';
+    return;
+  }
   const { btcQty, btcValue, altTotal, total } = calcStats();
   const fmtUsd = n => SamsamFmt.usd(n);
   const fmtBtc = n => (btcPrice > 0 ? parseFloat((n / btcPrice).toFixed(8)).toString() : '—') + ' BTC';
@@ -2034,13 +2057,13 @@ function renderTableAndStack() {
       const color=COIN_COLORS[c.sym]||'#6b7280';
       const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
       const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
-      const actionLabel=action==='convert'?SamsamUI.dot('red')+'Sell/Convert':action==='reinforce'?SamsamUI.dot('green')+'Reinforce':SamsamUI.dot('grey')+'Hold';   // same short label as the cards
+      const actionLabel=signalLabel(action);   // same short label as the cards
       const ap=coinProfit(c); const pnl=ap.total; const pnlPct=ap.pct;
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       html += `<tr>
         <td style="text-align:left">${assetHtml(c, catTag(c.cat, c.sym))}</td>
         <td class="ro-num num-r" title="Amount changes only through Buy / Sell / Transfer">${SamsamCoins.holdCell(c.sym, curVal, c.qty)}</td>
-        <td class="ro-num num-r" style="color:var(--fg2)" title="Calculated from Buy / Sell / Transfer">${fmtAvgRO(c.basePrice)}</td>
+        <td class="ro-num num-r" style="color:var(--fg2)" title="${isSoldOut(c) ? 'Sold out — no coins held' : 'Calculated from Buy / Sell / Transfer'}">${avgShown(c)}</td>
         <td class="ro-num num-r" style="color:var(--fg2)">${SamsamFmt.usd(baseVal)}</td>
         <td class="num-r"><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${SamsamFmt.usdSigned(pnl)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
         <td><span class="action-badge action-${action}">${actionLabel}</span></td>
@@ -2066,7 +2089,7 @@ function renderTableAndStack() {
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       const perfClass=perf>2?'perf-up':perf<-2?'perf-down':'perf-neutral';
       const perfSign=perf>0?'+':''; const perfIcon=perf>2?'▲':perf<-2?'▼':'—';
-      const actionLabel=action==='convert'?SamsamUI.dot('red')+'Sell/Convert':action==='reinforce'?SamsamUI.dot('green')+'Reinforce':SamsamUI.dot('grey')+'Hold';
+      const actionLabel=signalLabel(action);
       const color=COIN_COLORS[c.sym]||'#6b7280';
       return `<div class="coin-card">
         <div class="coin-card-header">
@@ -2078,7 +2101,7 @@ function renderTableAndStack() {
         </div>
         <div class="coin-card-body card-stats-grid">
           <div class="coin-metric"><label>Holdings</label><val>${SamsamCoins.holdCell(c.sym, curVal, c.qty, { align: 'left' })}</val></div>
-          <div class="coin-metric"><label>${SAMSAM_LABELS.AVG_BUY_PRICE}<button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></label><val title="${fmtAvgRO(c.basePrice)}">${fmtAvgRO(c.basePrice)}</val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.AVG_BUY_PRICE}<button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></label><val title="${avgShown(c)}">${avgShown(c)}</val></div>
           <div class="coin-metric"><label>${SAMSAM_LABELS.COST_BASIS}<button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
           <div class="coin-metric"><label>${SAMSAM_LABELS.SIGNAL}<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button></label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
         </div>
@@ -2298,8 +2321,8 @@ function exportData() {
   getFilteredSorted().forEach((c, i) => {
     const perf = getPerf(c), action = getAction(c.sym, perf, c);
     const baseVal = c.qty * c.basePrice, curVal = c.qty * c.currentPrice, ap = coinProfit(c), pnl = ap.total;
-    rows.push([i + 1, c.sym, COIN_NAMES[c.sym] || c.name || c.sym, T ? T.label(c.cat) : (c.cat || ''), c.qty, c.basePrice, c.currentPrice,
-      baseVal.toFixed(2), curVal.toFixed(2), pnl.toFixed(2), ap.pct.toFixed(2), perf.toFixed(2), action === 'convert' ? 'Sell / Convert to BTC' : action === 'reinforce' ? 'Reinforce' : 'Hold', c.notes || '']);
+    rows.push([i + 1, c.sym, COIN_NAMES[c.sym] || c.name || c.sym, T ? T.label(c.cat) : (c.cat || ''), c.qty, isSoldOut(c) ? '' : c.basePrice, c.currentPrice,
+      baseVal.toFixed(2), curVal.toFixed(2), pnl.toFixed(2), ap.pct.toFixed(2), perf.toFixed(2), signalLabel(action, true), c.notes || '']);
   });
   const csv = rows.map(r => r.map(cell).join(',')).join('\r\n');
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
@@ -2751,8 +2774,8 @@ function renderAnalysisReport(text, meta) {
   const sections = text.split(/\n(?=\d+\.\s|[📊🥧🏆⚠️💰💡🎯])/);
   let html = '<div class="analysis-content" dir="' + (analysisLang === 'ar' ? 'rtl' : 'ltr') + '">';
 
-  // Convert markdown to HTML
-  const formatted = text
+  // Convert markdown to HTML — the AI's text is escaped first, so it can never put markup or script on the page
+  const formatted = SamsamCoins.esc(String(text || ''))
     .replace(/^---+$/gm, '')                                               // remove horizontal rules
     .replace(/^#{1,3}\s*(.+)/gm, '<h3>$1</h3>')                          // ## headings
     .replace(/^(\d+\.\s+[📊🥧🏆⚠️💰💡🎯]?\s*[^\n]+)/gm, '<h3>$1</h3>') // numbered sections
@@ -2765,7 +2788,7 @@ function renderAnalysisReport(text, meta) {
   html += formatted;
   html += '</div>';
   html += `<div class="analysis-meta">
-    <span>${SamsamUI.ic('bot')}Generated by Claude AI (claude-opus-4-5)</span>
+    <span>${SamsamUI.ic('bot')}Generated by Claude AI${meta.model ? ' (' + SamsamCoins.esc(meta.model) + ')' : ''}</span>${meta.left != null ? `<span>${SamsamUI.ic('clock')}${meta.left} report${meta.left === 1 ? '' : 's'} left today</span>` : ''}
     <span>${SamsamUI.ic('clock')}${meta.generatedAt}</span>
     <span>${SamsamUI.ic('activity')}Prices: ${meta.lastUpdate}</span>
     <span>${SamsamUI.ic('briefcase')}${meta.numCoins} positions</span>
@@ -2822,17 +2845,22 @@ async function runAnalysis() {
     // It travels in the same free-text context the Worker already adds to the prompt, so the Worker needs no change.
     accumContext += await marketContext();
 
+    // Proof of sign-in: the Worker verifies this Firebase ID token and counts reports per account per day
+    let idToken = null;
+    try { idToken = window.Samsam && Samsam.idToken ? await Samsam.idToken() : null; } catch (_) {}
+    if (!idToken) { renderAnalysisError('Sign in first', 'The AI report is only for signed-in accounts. Sign in, then try again.'); return; }
+
     const res = await fetch(ANALYSIS_WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ portfolioData, language: analysisLang, accumContext }),
+      body: JSON.stringify({ portfolioData, language: analysisLang, accumContext, idToken }),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       renderAnalysisError(
-        'Analysis failed',
-        err.error || `Server returned ${res.status}. Please try again.`
+        res.status === 429 ? 'Daily limit reached' : res.status === 401 || res.status === 403 ? 'Not allowed' : 'Analysis failed',
+        SamsamCoins.esc(err.error || `Server returned ${res.status}. Please try again.`)
       );
       return;
     }
@@ -2844,6 +2872,8 @@ async function runAnalysis() {
     }
 
     renderAnalysisReport(data.report, {
+      model:       typeof data.model === 'string' ? data.model : '',
+      left:        Number.isFinite(data.remaining) ? data.remaining : null,
       generatedAt: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
       lastUpdate:  portfolioData.stats.lastUpdate,
       numCoins:    portfolioData.stats.numCoins,
@@ -3351,7 +3381,8 @@ function renderCoinTx() {
   // All Time Profit for this coin — same CPProfit.calc as the header card and the Performance page
   const ap = CPProfit.calc({ value, cost,
     realized: coinSells.reduce((s, t) => s + ((perTx[t.id] && perTx[t.id].realized) || 0), 0),
-    sellCount: coinSells.length, sellFees: coinSells.reduce((s, t) => s + (+t.feeUsd || 0), 0) });
+    sellCount: coinSells.length, sellFees: coinSells.reduce((s, t) => s + (+t.feeUsd || 0), 0),
+    soldCost: ((realizedState.bySym || {})[sym] || {}).soldCost || 0 });
   htxProfitData = ap;
   const realized = ap.realized, profit = ap.total, profitPct = ap.pct;
   const ch = coin && coin.change24h != null ? coin.change24h : null;
@@ -3364,8 +3395,8 @@ function renderCoinTx() {
   const sigEl = document.getElementById('htxSignal');
   if (coin) {
     const act = getAction(sym, 0, coin), pct = getCoinPct(coin);
-    const lab = act === 'convert' ? SamsamUI.dot('red') + 'Sell / Convert' : act === 'reinforce' ? SamsamUI.dot('green') + 'Reinforce' : SamsamUI.dot('grey') + 'Hold';
-    const why = sym === 'BTC' ? 'BTC is always Hold' : `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}% vs your Avg. Buy Price`;
+    const lab = signalLabel(act, false);
+    const why = act === 'soldout' ? 'You hold none of this coin now' : sym === 'BTC' ? 'BTC is always Hold' : `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}% vs your Avg. Buy Price`;
     sigEl.innerHTML = `<span>Signal</span><span class="action-badge action-${act}">${lab}</span><span class="htx-sig-why">${why}</span>` +
       `<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button><button type="button" class="val-edit" onclick="openSignalEdit()" title="Change the Signal thresholds" aria-label="Change the Signal thresholds">${SamsamUI.icon('pencil')}</button>`;
   } else sigEl.innerHTML = '';
@@ -3382,7 +3413,7 @@ function renderCoinTx() {
   const ppEl = document.getElementById('htxProfitPct');
   ppEl.textContent = arrow(profit) + Math.abs(profitPct).toFixed(2) + '%' + (realized ? ` · realized ${realized >= 0 ? '+' : '-'}${usd(Math.abs(realized))}` : '');
   ppEl.className = 'htx-sub ' + (profit >= 0 ? 'htx-pos' : 'htx-neg');
-  document.getElementById('htxAvg').textContent = avg > 0 ? priceFmt(avg) : '—';
+  document.getElementById('htxAvg').textContent = avg > 0 && !isSoldOut(coin) ? priceFmt(avg) : '—';
   document.getElementById('htxCost').textContent = usd(cost);
 
   // ── History: opening position + every recorded transaction, newest first ──
@@ -3790,7 +3821,7 @@ function sgPreview() {
   save.disabled = !v.ok;
   if (!v.ok) { box.innerHTML = '<span style="color:#f87171">' + SamsamUI.ic('alert') + 'Sell / Convert must be further below than Reinforce (e.g. 5 and 20), up to 99.</span>'; return; }
   const n = { hold: 0, reinforce: 0, convert: 0 };
-  portfolio.forEach(c => { if (c.sym === 'BTC') { n.hold++; return; } const p = getCoinPct(c); n[p < v.sell ? 'convert' : p <= v.reinforce ? 'reinforce' : 'hold']++; });
+  portfolio.forEach(c => { if (isSoldOut(c)) return; if (c.sym === 'BTC') { n.hold++; return; } const p = getCoinPct(c); n[p < v.sell ? 'convert' : p <= v.reinforce ? 'reinforce' : 'hold']++; });
   const f = x => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x) + '%';
   box.innerHTML = `<div>${SamsamUI.dot('grey')}Hold: above ${f(v.reinforce)} — <b>${n.hold}</b> coins</div><div>${SamsamUI.dot('green')}Reinforce: ${f(v.reinforce)} to ${f(v.sell)} — <b>${n.reinforce}</b> coins</div><div>${SamsamUI.dot('red')}Sell / Convert: below ${f(v.sell)} — <b>${n.convert}</b> coins</div>`;
 }

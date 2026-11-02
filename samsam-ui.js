@@ -4,6 +4,17 @@
 //   • icons (calendar, sun, moon) as inline SVG — identical on every device, unlike emoji;
 //     add data-icon="calendar" to any element to prefix it with that icon
 // Load it in <head> WITHOUT defer/async: <script src="samsam-ui.js"></script>
+
+// Clickjacking guard: the app may run inside a frame only of its own (the tab shell loads its pages in iframes).
+// Inside any other site's frame the page stays hidden and tries to open itself as the top page instead.
+(function () {
+  var framed = false;
+  try { framed = window.top !== window.self && window.top.location.origin !== window.location.origin; }
+  catch (_) { framed = true; }   // reading a foreign top page throws → a foreign site framed us
+  if (!framed) return;
+  document.documentElement.style.setProperty('display', 'none', 'important');
+  try { window.top.location.href = window.location.href; } catch (_) {}
+})();
 (function () {
   var KEY = 'samsam_theme';
   var svg = function (body) {
@@ -462,10 +473,12 @@
   }
   function profitCalc(o) {
     o = o || {};
-    var value = +o.value || 0, cost = +o.cost || 0, realized = +o.realized || 0;
+    var value = +o.value || 0, cost = +o.cost || 0, realized = +o.realized || 0, soldCost = Math.max(0, +o.soldCost || 0);
     var unrealized = value - cost, total = realized + unrealized;
-    return { value: value, cost: cost, realized: realized, unrealized: unrealized, total: total,
-      pct: cost > 0 ? total / cost * 100 : 0, sellCount: +o.sellCount || 0, sellFees: +o.sellFees || 0 };
+    // % = All Time Profit ÷ everything invested (Cost Basis of the coins held + what the coins already sold had cost)
+    var invested = cost + soldCost;
+    return { value: value, cost: cost, realized: realized, unrealized: unrealized, total: total, invested: invested, soldCost: soldCost,
+      pct: invested > 0 ? total / invested * 100 : 0, sellCount: +o.sellCount || 0, sellFees: +o.sellFees || 0 };
   }
   var profCss = false, profOpen = null;
   function profClose() {
@@ -523,7 +536,7 @@
       '<p class="cpp-f"><b>Unrealized Profit</b><code>(Current Price − Avg Buy Price) × Amount Held</code></p>' +
       '<p class="cpp-f"><b>Cost Basis</b><code>Avg Buy Price × Amount Held</code></p>' +
       '<p class="cpp-f"><b>Avg Buy Price</b> <span>(updated on every buy)</span><code>(Amount Held × Avg Buy Price + Buy Price × Amount Bought + Buying Fee) ÷ (Amount Held + Amount Bought)</code></p>' +
-      '<p class="cpp-f"><b>%</b><code>All Time Profit ÷ Cost Basis × 100</code></p>' +
+      '<p class="cpp-f"><b>%</b> <span>(on everything invested — coins held and coins already sold)</span><code>All Time Profit ÷ (Cost Basis + Cost of Coins Sold) × 100</code></p>' +
       '<p class="cpp-note">Sells don’t change the Avg Buy Price. Transfers in add coins at the price you enter; transfers out and network fees only lower the amount held.</p>' +
       '</details></div>';
     var back = document.activeElement;
