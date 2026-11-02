@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611030100"></script>
-<script src="samsam-hints.js?v=202611030100"></script>
-<script src="samsam-vault.js?v=202611030100"></script>
-<script src="samsam-labels.js?v=202611030100"></script>
-<script src="samsam-taxonomy.js?v=202611030100"></script>
-<script src="samsam-coins.js?v=202611030100"></script>
-<script src="samsam-dropdown.js?v=202611030100"></script>
-<script src="samsam-add.js?v=202611030100"></script>
-<script src="samsam-chart.js?v=202611030100"></script>
-<script src="samsam-market.js?v=202611030100"></script>
+<script src="samsam-ui.js?v=202611030152"></script>
+<script src="samsam-hints.js?v=202611030152"></script>
+<script src="samsam-vault.js?v=202611030152"></script>
+<script src="samsam-labels.js?v=202611030152"></script>
+<script src="samsam-taxonomy.js?v=202611030152"></script>
+<script src="samsam-coins.js?v=202611030152"></script>
+<script src="samsam-dropdown.js?v=202611030152"></script>
+<script src="samsam-add.js?v=202611030152"></script>
+<script src="samsam-chart.js?v=202611030152"></script>
+<script src="samsam-market.js?v=202611030152"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -166,9 +166,12 @@
   }
   .btc-ticker:hover .btc-ticker-track, .btc-ticker:active .btc-ticker-track { animation-play-state: paused; }
   .btc-ticker-group { display: inline-flex; align-items: center; gap: 22px; padding-right: 22px; }
-  .bt-item { display: inline-flex; align-items: center; gap: 7px; font-size: 0.8rem; color: var(--fg2); font-variant-numeric: tabular-nums; }
+  .bt-item { display: inline-flex; align-items: baseline; gap: 6px; font-size: 0.8rem; font-weight: 500; line-height: 1; color: var(--fg2); font-variant-numeric: tabular-nums; letter-spacing: .005em; }
+  .bt-item > .ss-live, .bt-item .ss-ic { align-self: center; }
   .bt-item strong { color: var(--fg); font-weight: 700; }
-  .bt-live { color: var(--fg); font-weight: 700; letter-spacing: .01em; font-size: 0.72rem; text-transform: none; }
+  .bt-up, .bt-down, .bt-tag { font-weight: 700; }
+  .bt-of { color: var(--fg2); font-weight: 500; margin-left: 1px; }
+  .bt-live { color: var(--fg); font-weight: 700; letter-spacing: .01em; font-size: 0.8rem; text-transform: none; }
   .bt-sep { width: 4px; height: 4px; border-radius: 50%; background: var(--fg2); opacity: .35; }
   .bt-up { color: var(--green); font-weight: 700; } .bt-down { color: var(--red); font-weight: 700; }
   a.bt-mkt { text-decoration: none; color: var(--fg2); border-radius: 6px; -webkit-tap-highlight-color: transparent; }
@@ -187,16 +190,8 @@
     .btc-ticker.static .btc-ticker-track { animation: none !important; transform: none !important; width: auto; }
     .btc-ticker.static .btc-ticker-group[aria-hidden] { display: none !important; }
     .btc-ticker.static .btc-ticker-group { padding: 0 14px; min-width: 0 !important; }
-    /* a computer: one still line — no dots between items, a bit tighter (the market numbers joined the line) */
-    .btc-ticker .btc-ticker-group { gap: 16px; }
-    .btc-ticker .bt-sep { display: none; }
-    .btc-ticker .bt-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }   /* the green dot says it */
-    .bt-item { font-size: .78rem; gap: 6px; }
+    /* a computer: same items, same look as the phone (one still line when it fits) */
     .btc-ticker.static .btc-ticker-group > .bt-sep:last-child { display: none; }
-  }
-  @media (min-width: 768px) and (max-width: 1023px) {
-    .btc-ticker .btc-ticker-group { gap: 12px; }
-    .bt-item { font-size: .74rem; gap: 5px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .btc-ticker-track { animation: none; }
@@ -1482,7 +1477,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611030100"></script>
+<script type="module" src="samsam-cloud.js?v=202611030152"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1888,16 +1883,14 @@ function renderBtcTicker() {
     `<span class="bt-item">BTC / USD <strong>${price > 0 ? usd(price) : '—'}</strong></span>`,
   ];
   if (ch != null) parts.push(`<span class="bt-item"><span class="${ch >= 0 ? 'bt-up' : 'bt-down'}">${ch >= 0 ? '▲ +' : '▼ -'}${Math.abs(ch).toFixed(2)}%</span> 24h</span>`);
-  if (btcTicker.high24) parts.push(`<span class="bt-item">High <strong>${usd(btcTicker.high24)}</strong></span>`);
-  if (btcTicker.low24) parts.push(`<span class="bt-item">Low <strong>${usd(btcTicker.low24)}</strong></span>`);
   // the market (same numbers as the Market tab) — any of these opens the Market tab
   const M = window.SamsamMarket, tm = tickerMkt || {}, g = tm.g, f = tm.f, a = tm.alt;
   if (M && (g || f)) {
     const go = (inner, label) => `<a class="bt-item bt-mkt" href="./market.html" title="Open the Market tab" aria-label="${label} — open the Market tab">${inner}</a>`;
-    if (g) parts.push(go(`${SamsamUI.ic('globe', { solo: true, size: 13 })}Market <strong>${M.fmtBig(g.mcap)}</strong><span class="${g.mcapCh24 >= 0 ? 'bt-up' : 'bt-down'}">${g.mcapCh24 >= 0 ? '▲' : '▼'} ${Math.abs(g.mcapCh24 || 0).toFixed(2)}%</span>`, 'Total market cap'));
-    if (f) parts.push(go(`F&amp;G <strong style="color:${M.fngColor(f.value)}">${f.value}</strong><span style="color:${M.fngColor(f.value)};font-weight:700">${SamsamCoins.esc(f.label)}</span>`, 'Fear and Greed'));
-    if (g) parts.push(go(`BTC Dom <strong>${g.dom.btc.toFixed(1)}%</strong>`, 'Bitcoin dominance'));
-    if (a) parts.push(go(`Altseason <strong>${a.value}</strong>`, 'Altcoin Season'));
+    if (g) parts.push(go(`Market Cap <strong>${M.fmtBig(g.mcap)}</strong><span class="${g.mcapCh24 >= 0 ? 'bt-up' : 'bt-down'}">${g.mcapCh24 >= 0 ? '▲ +' : '▼ -'}${Math.abs(g.mcapCh24 || 0).toFixed(2)}%</span>`, 'Total market cap'));
+    if (f) parts.push(go(`Fear &amp; Greed <strong style="color:${M.fngColor(f.value)}">${f.value}</strong><span class="bt-tag" style="color:${M.fngColor(f.value)}">${SamsamCoins.esc(f.label)}</span>`, 'Fear and Greed'));
+    if (g) parts.push(go(`BTC Dominance <strong>${g.dom.btc.toFixed(1)}%</strong>`, 'Bitcoin dominance'));
+    if (a) parts.push(go(`Altcoin Season <strong>${a.value}<span class="bt-of">/100</span></strong>`, 'Altcoin Season'));
     parts.push(go(`<span class="bt-explore">Explore ↗</span>`, 'Explore the market'));
   }
   const group = parts.join('<span class="bt-sep"></span>') + '<span class="bt-sep"></span>';
@@ -1917,7 +1910,10 @@ function fitBtcTicker() {
   bar.classList.remove('static');
   const fits = groups[0].scrollWidth <= bar.clientWidth - 8;   // fits → one still line; too long (now with the market) → scrolls
   bar.classList.toggle('static', fits);
-  if (!fits) groups.forEach(g => g.style.minWidth = bar.clientWidth + 'px');
+  // + room for one more item, so a value leaving on the left is gone before its copy comes in on the right
+  if (!fits) groups.forEach(g => g.style.minWidth = (bar.clientWidth + 200) + 'px');
+  // same speed whatever the length (≈45 px a second) — easy to read while it moves
+  track.style.animationDuration = fits ? '' : Math.max(20, Math.round(groups[0].getBoundingClientRect().width / 45)) + 's';
 }
 if (window.ResizeObserver) document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('btcTicker'); if (b) { let t; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(fitBtcTicker, 80); }).observe(b); } });
 
