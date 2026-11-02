@@ -719,12 +719,18 @@
     document.body.appendChild(b);
     var pos = { side: 'r', y: 0.82 };
     try { var sv = JSON.parse(localStorage.getItem(KEYP)); if (sv && (sv.side === 'l' || sv.side === 'r') && sv.y >= 0 && sv.y <= 1) pos = sv; } catch (_) {}
-    // a computer keeps it well inside the window, away from the scrollbar; a phone keeps it close to the edge
-    function edge() { return innerWidth >= 1024 ? 40 : M; }
+    // a computer: right beside the page content (1200px wide, centred), never out by the scrollbar on a wide
+    // screen; a phone: close to the screen edge
+    var CONTENT = 1200, GAP = 24;
     function box() {   // where the button may sit: below the top edge, above the bottom bar
       var s = b.offsetWidth || 48, bar = document.getElementById('cpBnav'), r = bar && bar.getBoundingClientRect();
       var bottom = (r && r.height && r.top < innerHeight ? r.top : innerHeight) - s - M;
-      return { s: s, top: M + 56, bottom: Math.max(M + 56, bottom), left: edge(), right: innerWidth - s - edge() };
+      var left = M, right = innerWidth - s - M;
+      if (innerWidth >= 1024) {
+        var half = Math.min(CONTENT, innerWidth - 32) / 2, mid = innerWidth / 2;
+        left = Math.max(40, Math.round(mid - half - GAP - s)); right = Math.min(innerWidth - s - 40, Math.round(mid + half + GAP));
+      }
+      return { s: s, top: M + 56, bottom: Math.max(M + 56, bottom), left: left, right: right };
     }
     function place(p) { var k = box(); b.style.top = Math.round(k.top + p.y * (k.bottom - k.top)) + 'px'; b.style.left = (p.side === 'l' ? k.left : k.right) + 'px'; }
     place(pos);

@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611020819"></script>
-<script src="samsam-hints.js?v=202611020819"></script>
-<script src="samsam-vault.js?v=202611020819"></script>
-<script src="samsam-labels.js?v=202611020819"></script>
-<script src="samsam-taxonomy.js?v=202611020819"></script>
-<script src="samsam-coins.js?v=202611020819"></script>
-<script src="samsam-dropdown.js?v=202611020819"></script>
-<script src="samsam-add.js?v=202611020819"></script>
-<script src="samsam-market.js?v=202611020819"></script>
+<script src="samsam-ui.js?v=202611020943"></script>
+<script src="samsam-hints.js?v=202611020943"></script>
+<script src="samsam-vault.js?v=202611020943"></script>
+<script src="samsam-labels.js?v=202611020943"></script>
+<script src="samsam-taxonomy.js?v=202611020943"></script>
+<script src="samsam-coins.js?v=202611020943"></script>
+<script src="samsam-dropdown.js?v=202611020943"></script>
+<script src="samsam-add.js?v=202611020943"></script>
+<script src="samsam-market.js?v=202611020943"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -203,7 +203,11 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-more .mk-row { grid-template-columns: 36px minmax(0,1fr) 40px; }
 /* computer: a full table */
 @media (min-width: 760px) {
-  .mk-head, .mk-row { grid-template-columns: 34px 44px minmax(0,1fr) 130px 92px 120px 124px; column-gap: 12px; }
+  /* columns spread evenly over the width: ☆ · # · Asset · Price · 24h · 7d · Add ⌄ */
+  .mk-head, .mk-row { grid-template-columns: 34px 40px minmax(220px,2fr) minmax(110px,1fr) minmax(80px,.8fr) minmax(130px,1.1fr) 124px; column-gap: 16px; }
+  .mk-sp { justify-content: center; }
+  .mk-row .mk-rank { text-align: center; } .mk-head > .c-rank { justify-content: center; }
+  .mk-head > .c-sp { justify-content: center; }
   .mk-act { flex-direction: row; justify-content: flex-end; gap: 8px; }
   .mk-head .t-d { display: inline; } .mk-head .t-m { display: none; } .mk-head .c-hash { visibility: hidden; pointer-events: none; }
   .mk-names small { display: block; } .mk-names small .nm, .mk-names small .nm.cut { display: inline; } .mk-names small .nm i { display: inline; font-style: normal; }
@@ -211,7 +215,6 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   .mk-row { padding: 10px 6px; }
   .mk-add { height: 34px; }
   .mk-links { padding: 0 6px 12px calc(34px + 44px + 24px + 6px); }
-  .mk-sp svg { max-width: none; }
   .mk-links a { flex: 0 1 170px; }
   .mk-head .c-rank, .mk-head .c-ch, .mk-head .c-price, .mk-row .mk-rank, .mk-row .mk-ch, .mk-price { display: block; }
   .mk-sr .mk-r2 { display: none; }
@@ -224,7 +227,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   .mk-rank { font-size: .8rem; font-weight: 700; color: var(--fg2); font-variant-numeric: tabular-nums; }
   .mk-price { text-align: right; font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
   .mk-ch { text-align: right; font-size: .84rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .mk-sp svg { width: 112px; height: 34px; }
+  .mk-sp svg { width: 100%; max-width: 150px; height: 34px; }
   .mk-add { width: auto; padding: 0 12px; justify-self: end; }
   .mk-add .t { display: inline; margin-left: 4px; }
   .mk-more .mk-row { grid-template-columns: 34px minmax(0,1fr) 92px; }
@@ -360,7 +363,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611020819"></script>
+<script type="module" src="samsam-cloud.js?v=202611020943"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
