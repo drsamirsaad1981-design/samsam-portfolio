@@ -142,23 +142,33 @@ async function links(top) {
   if (known) for (const [sym, id] of Object.entries(known.CG_IDS || {})) if (id && !want.has(id)) want.set(id, { sym, name: (known.NAMES || {})[sym] || '', mcap: 0 });
   const bySym = new Map();
   for (const [id, w] of want) { const s = String(w.sym || '').toUpperCase(); if (s) (bySym.get(s) || bySym.set(s, []).get(s)).push([id, w]); }
-  const syms = [...bySym.keys()], cc = { ...out.cc };
   const mc = x => +(x.market_cap_usd || x.last_market_cap_usd || x.marketcap_usd || 0);
+  const syms = [...bySym.keys()], cc = {};
+  const norm = x => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\b(token|coin|network|protocol|the)\b/g, '').replace(/[^a-z0-9]/g, '');
+  const slugOf = x => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  // the same coin = same ticker AND (CoinCodex page named like its CoinGecko id, or the same name) — never just a ticker
+  const sameCoin = (x, S, id, nm) => x && /^[a-z0-9][a-z0-9-]{0,99}$/.test(x.slug || '') && !x.not_trading_anymore
+    && String(x.display_symbol || x.symbol || '').toUpperCase() === S
+    && (x.slug === id || (nm && norm(x.name) === nm) || near(norm(x.name), nm));
+  // "Hyperliquid" ~ "Hyperliquid HYPE" — one name starts the other and covers most of it (never "Pi" ~ "Pi Trump")
+  const near = (a, b) => { const [s, l] = a.length < b.length ? [a, b] : [b, a]; return s.length >= 5 && l.startsWith(s) && s.length / l.length >= 0.6; };
+  const ccRows = async q => { const j = await get(`${CC_API}?${q}&limit=1000`, 2); return Array.isArray(j && j.data) ? j.data : []; };
   let found = 0;
-  for (let i = 0; i < syms.length; i += 8) {   // CoinCodex answers at most 100 rows a call — small groups
-    const j = await get(`${CC_API}?select_bysymbol=${syms.slice(i, i + 8).map(encodeURIComponent).join(',')}&limit=1000`, 2);
-    const list = Array.isArray(j && j.data) ? j.data : [];
-    for (const [id, w] of syms.slice(i, i + 8).flatMap(s => bySym.get(s))) {
-      const S = String(w.sym).toUpperCase(), nm = String(w.name || '').toLowerCase();
-      const same = list.filter(x => x && /^[a-z0-9][a-z0-9-]{0,99}$/.test(x.slug || '') && String(x.display_symbol || x.symbol || '').toUpperCase() === S && !x.not_trading_anymore);
-      const pick = same.find(x => x.slug === id) || same.find(x => String(x.name || '').toLowerCase() === nm)
-        || (w.mcap > 0 ? same.filter(x => mc(x) > 0 && Math.abs(Math.log(mc(x) / w.mcap)) < Math.log(3)).sort((a, b) => mc(b) - mc(a))[0] : null)
-        || (same.length === 1 ? same[0] : null);
-      if (pick) { cc[id] = pick.slug; found++; }
+  for (let i = 0; i < syms.length; i += 8) {
+    const group = syms.slice(i, i + 8).flatMap(s => bySym.get(s));
+    // by ticker, plus pages named after the CoinGecko id / the name (CoinCodex lists some coins under another ticker case)
+    const guesses = [...new Set(group.flatMap(([id, w]) => [id, slugOf(w.name)]).filter(g => /^[a-z0-9][a-z0-9-]{0,99}$/.test(g)))];
+    const list = (await ccRows('select_bysymbol=' + syms.slice(i, i + 8).map(encodeURIComponent).join(','))).concat(await ccRows('select_byslug=' + guesses.map(encodeURIComponent).join(',')));
+    for (const [id, w] of group) {
+      const S = String(w.sym).toUpperCase(), nm = norm(w.name);
+      const ok = list.filter(x => sameCoin(x, S, id, nm)).sort((a, b) => (b.slug === id) - (a.slug === id) || mc(b) - mc(a));
+      if (ok[0]) { cc[id] = ok[0].slug; found++; }
     }
     await sleep(700);
   }
-  out.cc = cc; log('links: CoinCodex', found, 'of', want.size);
+  if (found < 30 && out.cc && Object.keys(out.cc).length) { log('links: CoinCodex looks down, kept the last list'); }
+  else out.cc = cc;
+  log('links: CoinCodex', found, 'of', want.size);
   // perpetual futures: OKX + Hyperliquid (Binance / Bybit refuse GitHub's US servers)
   const fut = new Set();
   const okx = await get('https://www.okx.com/api/v5/public/instruments?instType=SWAP', 2);

@@ -34,11 +34,12 @@ jobs:
           const st = async u => { if (/google\.com/.test(u)) return 'GOOGLE'; for (let i = 0; i < 3; i++) { try { const r = await fetch(u, { redirect: 'manual', headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36', accept: 'text/html' } }); if (r.status !== 429) return r.status; } catch (e) {} await new Promise(r => setTimeout(r, 3000)); } return 'ERR'; };
           let bad = 0;
           for (const [k, sym, a, b] of rows) {
-            const [x, y] = [await st(a), await st(b)];
-            const okA = x === 200, okB = y === 200;
+            const [x, y] = [await st(a), /coincodex/.test(b) ? 200 : await st(b)];   // CoinCodex refuses robots (403): its names are listed below instead
+            const okA = x === 200 || x === 301, okB = y === 200;
             if (!okA || !okB) { bad++; console.log('BAD', k, sym, okA ? '' : `CMC ${x} ${a}`, okB ? '' : `PRED ${y} ${b}`); }
             await new Promise(r => setTimeout(r, 400));
           }
           console.log('checked', rows.length, 'coins, broken', bad);
+          for (const c of top) console.log('CC', c.sym, '|', c.name, '→', links.cc[c.id] || (known(c) && C.CC_SLUGS[c.sym]) || '(none: search)');
           JS
           node probe.mjs
