@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611020943"></script>
-<script src="samsam-hints.js?v=202611020943"></script>
-<script src="samsam-vault.js?v=202611020943"></script>
-<script src="samsam-labels.js?v=202611020943"></script>
-<script src="samsam-taxonomy.js?v=202611020943"></script>
-<script src="samsam-coins.js?v=202611020943"></script>
-<script src="samsam-dropdown.js?v=202611020943"></script>
-<script src="samsam-add.js?v=202611020943"></script>
-<script src="samsam-market.js?v=202611020943"></script>
+<script src="samsam-ui.js?v=202611021002"></script>
+<script src="samsam-hints.js?v=202611021002"></script>
+<script src="samsam-vault.js?v=202611021002"></script>
+<script src="samsam-labels.js?v=202611021002"></script>
+<script src="samsam-taxonomy.js?v=202611021002"></script>
+<script src="samsam-coins.js?v=202611021002"></script>
+<script src="samsam-dropdown.js?v=202611021002"></script>
+<script src="samsam-add.js?v=202611021002"></script>
+<script src="samsam-market.js?v=202611021002"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -204,18 +204,19 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 /* computer: a full table */
 @media (min-width: 760px) {
   /* columns spread evenly over the width: ☆ · # · Asset · Price · 24h · 7d · Add ⌄ */
-  .mk-head, .mk-row { grid-template-columns: 34px 40px minmax(220px,2fr) minmax(110px,1fr) minmax(80px,.8fr) minmax(130px,1.1fr) 124px; column-gap: 16px; }
+  .mk-head, .mk-row { grid-template-columns: 34px 40px minmax(220px,1.5fr) minmax(110px,1fr) minmax(90px,.8fr) minmax(150px,1.1fr) 116px; column-gap: 16px; }
   .mk-sp { justify-content: center; }
   .mk-row .mk-rank { text-align: center; } .mk-head > .c-rank { justify-content: center; }
   .mk-head > .c-sp { justify-content: center; }
-  .mk-act { flex-direction: row; justify-content: flex-end; gap: 8px; }
+  .mk-act { flex-direction: row; justify-content: center; gap: 8px; }
   .mk-head .t-d { display: inline; } .mk-head .t-m { display: none; } .mk-head .c-hash { visibility: hidden; pointer-events: none; }
   .mk-names small { display: block; } .mk-names small .nm, .mk-names small .nm.cut { display: inline; } .mk-names small .nm i { display: inline; font-style: normal; }
   .mk-row > .mk-sp, .mk-head > .c-sp { display: flex; }
   .mk-row { padding: 10px 6px; }
   .mk-add { height: 34px; }
-  .mk-links { padding: 0 6px 12px calc(34px + 44px + 24px + 6px); }
-  .mk-links a { flex: 0 1 170px; }
+  /* the three links span exactly from the coin column to the end of the 7d column (row padding 6 + ☆ 34 + # 40 + gaps) */
+  .mk-links { padding: 0 calc(6px + 116px + 16px) 12px calc(6px + 34px + 16px + 40px + 16px); gap: 12px; }
+  .mk-links a { flex: 1 1 0; }
   .mk-head .c-rank, .mk-head .c-ch, .mk-head .c-price, .mk-row .mk-rank, .mk-row .mk-ch, .mk-price { display: block; }
   .mk-sr .mk-r2 { display: none; }
   /* columns: ☆ · # · Asset · Price · 24h · 7d · Add */
@@ -227,7 +228,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   .mk-rank { font-size: .8rem; font-weight: 700; color: var(--fg2); font-variant-numeric: tabular-nums; }
   .mk-price { text-align: right; font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
   .mk-ch { text-align: right; font-size: .84rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .mk-sp svg { width: 100%; max-width: 150px; height: 34px; }
+  .mk-sp svg { width: 100%; max-width: none; height: 34px; }   /* fills the 7d column, so its edge lines up with the links */
   .mk-add { width: auto; padding: 0 12px; justify-self: end; }
   .mk-add .t { display: inline; margin-left: 4px; }
   .mk-more .mk-row { grid-template-columns: 34px minmax(0,1fr) 92px; }
@@ -363,7 +364,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611020943"></script>
+<script type="module" src="samsam-cloud.js?v=202611021002"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
