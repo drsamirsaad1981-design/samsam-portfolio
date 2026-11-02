@@ -1,4 +1,4 @@
-# temporary: opens every CoinMarketCap / CoinCodex link the app builds and lists the broken ones (deleted after use)
+# temporary: raw CoinCodex rows for a few tickers (deleted after use)
 name: Probe link sources
 on:
   push:
@@ -7,39 +7,13 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
       - run: |
-          git fetch -q --depth=1 origin prices && git show FETCH_HEAD:m/links.json > links.json && git show FETCH_HEAD:m/market.json > market.json
-          cat > probe.mjs <<'JS'
-          import fs from 'node:fs'; import vm from 'node:vm';
-          const L = fs.readFileSync('links.json', 'utf8');
-          const ctx = { window: {}, document: { getElementById: () => true, createElement: () => ({}), head: { appendChild() {} } },
-            localStorage: { getItem: k => k === 'samsam_links' ? JSON.stringify({ t: Date.now(), data: JSON.parse(L) }) : null, setItem() {} } };
-          vm.runInNewContext(fs.readFileSync('samsam-coins.js', 'utf8'), ctx);
-          const mctx = { window: {}, location: { hostname: '', pathname: '/' }, localStorage: { getItem() { return null; }, setItem() {} }, navigator: {}, fetch() {} };
-          vm.runInNewContext(fs.readFileSync('samsam-market.js', 'utf8'), mctx);
-          const C = ctx.window.SamsamCoins, M = mctx.window.SamsamMarket, links = JSON.parse(L);
-          const top = JSON.parse(fs.readFileSync('market.json', 'utf8')).top.filter(c => !M.isStable(c)).slice(0, 100);
-          const known = c => C.CG_IDS[c.sym] === c.id || C.CC_SLUGS[c.sym] === c.id;
-          const rows = [];
-          for (const c of top) {
-            const cmc = links.cmc[c.sym] || known(c) ? C.cmcUrl(c.sym, { name: known(c) ? undefined : c.name, mcap: c.mcap }) : C.coingeckoUrl(c.sym, c.id);
-            rows.push(['top', c.sym, cmc, C.predictionUrl(known(c) ? c.sym : '', { cgId: c.id, name: c.name })]);
-          }
-          for (const [sym, id] of Object.entries(C.CG_IDS)) rows.push(['yours', sym, C.cmcUrl(sym, {}), C.predictionUrl(sym, { cgId: id })]);
-          const st = async u => { if (/google\.com/.test(u)) return 'GOOGLE'; for (let i = 0; i < 3; i++) { try { const r = await fetch(u, { redirect: 'manual', headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36', accept: 'text/html' } }); if (r.status !== 429) return r.status; } catch (e) {} await new Promise(r => setTimeout(r, 3000)); } return 'ERR'; };
-          let bad = 0;
-          for (const [k, sym, a, b] of rows) {
-            const [x, y] = [await st(a), /coincodex/.test(b) ? 200 : await st(b)];   // CoinCodex refuses robots (403): its names are listed below instead
-            const okA = x === 200 || x === 301, okB = y === 200;
-            if (!okA || !okB) { bad++; console.log('BAD', k, sym, okA ? '' : `CMC ${x} ${a}`, okB ? '' : `PRED ${y} ${b}`); }
-            await new Promise(r => setTimeout(r, 400));
-          }
-          console.log('checked', rows.length, 'coins, broken', bad);
-          for (const c of top) console.log('CC', c.sym, '|', c.name, '→', links.cc[c.id] || (known(c) && C.CC_SLUGS[c.sym]) || '(none: search)');
-          JS
-          node probe.mjs
+          curl -s 'https://coincodex.com/api/v1/assets/get_asset_list?select_bysymbol=PUMP,PI,HYPE,TAO,WLD&limit=1000' | python3 -c "
+          import json,sys; j=json.load(sys.stdin); d=j.get('data') or []
+          print('rows',len(d)); print('keys', sorted(d[0].keys())[:60] if d else None)
+          for x in d: print({k:x.get(k) for k in ('slug','symbol','display_symbol','name','shortname','market_cap_usd','last_market_cap_usd','not_trading_anymore')})"
+          curl -s 'https://coincodex.com/api/v1/assets/get_asset_list?select_byslug=pump-fun,pi-network,hyperliquid,bittensor,worldcoin-org&limit=1000' | python3 -c "
+          import json,sys; j=json.load(sys.stdin); d=j.get('data') or []
+          print('byslug rows',len(d))
+          for x in d: print({k:x.get(k) for k in ('slug','symbol','display_symbol','name','shortname','market_cap_usd','last_market_cap_usd','not_trading_anymore')})"
