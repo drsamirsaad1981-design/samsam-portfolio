@@ -1,7 +1,7 @@
 // samsam-market.js — Market Hub data (no API keys): CoinGecko public API + alternative.me Fear & Greed.
 //   SamsamMarket.global()        → { mcap, mcapCh24, vol, dom: { btc, eth, usdt }, coins, t }
 //   SamsamMarket.fng()           → { value, label, prev, t }
-//   SamsamMarket.top()           → top 100 coins by market cap (price, 24h %, 30d %, 7d sparkline)
+//   SamsamMarket.top()           → top 100 coins by market cap (price, 24h %, 30d %, 7d + 24h sparklines)
 //   SamsamMarket.byIds(ids)      → the same rows for any CoinGecko ids (your watchlist)
 //   SamsamMarket.altSeason(rows) → { value 0–100, label, n } — share of the top-50 coins (no stablecoins /
 //                                   wrapped / staked) that beat BTC over 30 days
@@ -15,6 +15,8 @@
   var CG = 'https://api.coingecko.com/api/v3';
   var TTL = { global: 3 * 60e3, top: 3 * 60e3, ids: 3 * 60e3, fng: 30 * 60e3 };
   var mem = {}, inflight = {};
+  // the last 24 hours of a coin (hourly); older saved rows only have the 7-day line → its last day (~7 points)
+  function day(c) { return c.spark24 && c.spark24.length > 1 ? c.spark24 : (c.spark || []).slice(-7); }
   var SNAP = window.__marketSnap || (function () {
     var m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname), repo = location.pathname.split('/')[1];
     return 'https://raw.githubusercontent.com/' + (m ? m[1] : 'drsamirsaad1981-design') + '/' + (m && repo ? repo : 'samsam-portfolio') + '/prices/m/market.json';
@@ -86,11 +88,12 @@
     var step = Math.max(1, Math.floor(sp.length / 42)), s = [];
     for (var i = 0; i < sp.length; i += step) s.push(+(+sp[i]).toPrecision(6));
     if (sp.length && (sp.length - 1) % step) s.push(+(+sp[sp.length - 1]).toPrecision(6));
+    var d1 = sp.slice(-25).map(function (v) { return +(+v).toPrecision(6); });   // last 24 hours, hourly (phone chart)
     return {
       id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name || '', img: c.image || '', rank: c.market_cap_rank || null,
       price: c.current_price, mcap: c.market_cap, vol: c.total_volume,
       ch24: c.price_change_percentage_24h_in_currency != null ? c.price_change_percentage_24h_in_currency : c.price_change_percentage_24h,
-      ch30: c.price_change_percentage_30d_in_currency, spark: s
+      ch30: c.price_change_percentage_30d_in_currency, spark: s, spark24: d1
     };
   }
   var MK = CG + '/coins/markets?vs_currency=usd&sparkline=true&price_change_percentage=24h%2C30d';
@@ -166,6 +169,7 @@
       var v = Math.round(beat / alts.length * 100);
       return { value: v, n: alts.length, beat: beat, btc30: btc.ch30, label: v >= 75 ? 'Altcoin Season' : v <= 25 ? 'Bitcoin Season' : v >= 50 ? 'Leaning Altcoins' : 'Leaning Bitcoin' };
     },
+    day: day,
     fngColor: function (v) { return v < 25 ? '#ef4444' : v < 45 ? '#f97316' : v <= 55 ? '#eab308' : v <= 75 ? '#84cc16' : '#22c55e'; },
     fmtBig: function (v) {
       if (!(v > 0)) return '—';

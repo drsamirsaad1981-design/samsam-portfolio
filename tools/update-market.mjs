@@ -6,7 +6,7 @@
 //   node tools/update-market.mjs <dir>     <dir> = a checkout of the prices branch (writes <dir>/m/market.json)
 //
 // market.json: { updated, global: { mcap, vol, mcapCh24, dom: { btc, eth, usdt }, coins }, fng: { value, label, prev },
-//                top: [ { id, sym, name, img, rank, price, mcap, vol, ch24, ch30, spark: [~42 points] } ×100 ] }
+//                top: [ { id, sym, name, img, rank, price, mcap, vol, ch24, ch30, spark: [~42 points, 7d], spark24: [25, hourly] } ×100 ] }
 // Any part that fails keeps the value from the last snapshot.
 
 import fs from 'node:fs';
@@ -37,11 +37,12 @@ function row(c) {
   const step = Math.max(1, Math.floor(sp.length / 42)), s = [];
   for (let i = 0; i < sp.length; i += step) s.push(+(+sp[i]).toPrecision(6));
   if (sp.length && (sp.length - 1) % step) s.push(+(+sp[sp.length - 1]).toPrecision(6));
+  const d1 = sp.slice(-25).map(v => +(+v).toPrecision(6));   // last 24 hours, hourly
   return {
     id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name || '', img: c.image || '', rank: c.market_cap_rank || null,
     price: c.current_price, mcap: c.market_cap, vol: c.total_volume,
     ch24: c.price_change_percentage_24h_in_currency != null ? c.price_change_percentage_24h_in_currency : c.price_change_percentage_24h,
-    ch30: c.price_change_percentage_30d_in_currency, spark: s,
+    ch30: c.price_change_percentage_30d_in_currency, spark: s, spark24: d1,
   };
 }
 

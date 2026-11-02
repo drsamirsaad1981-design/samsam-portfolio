@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611020304"></script>
-<script src="samsam-hints.js?v=202611020304"></script>
-<script src="samsam-vault.js?v=202611020304"></script>
-<script src="samsam-labels.js?v=202611020304"></script>
-<script src="samsam-taxonomy.js?v=202611020304"></script>
-<script src="samsam-coins.js?v=202611020304"></script>
-<script src="samsam-dropdown.js?v=202611020304"></script>
-<script src="samsam-add.js?v=202611020304"></script>
-<script src="samsam-market.js?v=202611020304"></script>
+<script src="samsam-ui.js?v=202611020312"></script>
+<script src="samsam-hints.js?v=202611020312"></script>
+<script src="samsam-vault.js?v=202611020312"></script>
+<script src="samsam-labels.js?v=202611020312"></script>
+<script src="samsam-taxonomy.js?v=202611020312"></script>
+<script src="samsam-coins.js?v=202611020312"></script>
+<script src="samsam-dropdown.js?v=202611020312"></script>
+<script src="samsam-add.js?v=202611020312"></script>
+<script src="samsam-market.js?v=202611020312"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -103,7 +103,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-sr { display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .mk-sr .mk-r2 { font-size: .6rem; font-weight: 700; color: var(--fg2); font-variant-numeric: tabular-nums; line-height: 1; }
 .mk-head { padding: 8px 8px; font-size: 12px; font-weight: 600; color: var(--fg2); border-bottom: 1px solid var(--border); }
-.mk-head .c-hash { text-align: center; }
+.mk-head .c-hash { justify-content: center; width: 100%; }
 .mk-head .t-d { display: none; }
 .mk-head button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 2px 0; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .mk-head button[aria-sort] { color: var(--fg); }
@@ -173,7 +173,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 @media (min-width: 760px) {
   .mk-head, .mk-row { grid-template-columns: 34px 44px minmax(0,1fr) 130px 92px 120px 124px; column-gap: 12px; }
   .mk-act { flex-direction: row; justify-content: flex-end; gap: 8px; }
-  .mk-head .t-d { display: inline; } .mk-head .t-m { display: none; } .mk-head .c-hash { visibility: hidden; }
+  .mk-head .t-d { display: inline; } .mk-head .t-m { display: none; } .mk-head .c-hash { visibility: hidden; pointer-events: none; }
   .mk-names small { display: block; } .mk-names small .nm, .mk-names small .nm.cut { display: inline; } .mk-names small .nm i { display: inline; font-style: normal; }
   .mk-row > .mk-sp, .mk-head > .c-sp { display: flex; }
   .mk-row { padding: 10px 6px; }
@@ -284,11 +284,11 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     </div>
     <div class="mk-hint" id="mkHint" hidden>Type a coin name or symbol — any coin listed on CoinGecko can be followed or added.</div>
     <div class="mk-head" role="row">
-      <span class="c-hash">#</span>
+      <button type="button" class="c-hash" data-s="rank" onclick="setSort('rank')" aria-label="Sort by rank">#</button>
       <button type="button" class="c-rank" data-s="rank" onclick="setSort('rank')">#</button>
       <button type="button" class="c-asset" data-s="mcap" onclick="setSort('mcap')"><span class="t-m">Market Cap</span><span class="t-d">Asset · Market Cap</span></button>
       <button type="button" class="r c-sp" data-s="spark" disabled style="cursor:default;justify-content:center">7d</button>
-      <button type="button" class="r c-pc" data-s="ch24" onclick="setSort('ch24')">Price / 24h · 7d</button>
+      <button type="button" class="r c-pc" data-s="ch24" onclick="setSort('ch24')">Price / 24h</button>
       <button type="button" class="r c-price" data-s="price" onclick="setSort('price')">Price</button>
       <button type="button" class="r c-ch" data-s="ch24" onclick="setSort('ch24')">24h</button>
       <span></span>
@@ -301,7 +301,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611020304"></script>
+<script type="module" src="samsam-cloud.js?v=202611020312"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -410,7 +410,7 @@ function rowHtml(c) {
     <span class="mk-rank">${c.rank || '—'}</span>
     <a class="mk-asset" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap">${logo(c)}<span class="mk-names"><b>${E(c.sym)}${badge}</b><small>${sub}</small></span></a>
     <span class="mk-sp">${M.spark(c.spark, 112, 34)}</span>
-    <span class="mk-pc"><b>${short}</b><span class="mk-pc2">${M.spark(c.spark, 56, 20)}<span class="${cls(c.ch24)}">${pct(c.ch24)}</span></span></span>
+    <span class="mk-pc"><b>${short}</b><span class="mk-pc2" title="Last 24 hours">${M.spark(M.day(c), 56, 20)}<span class="${cls(c.ch24)}">${pct(c.ch24)}</span></span></span>
     <span class="mk-price">${c.price != null ? SamsamFmt.price(c.price) : '—'}</span>
     <span class="mk-ch ${cls(c.ch24)}">${pct(c.ch24)}</span>
     <span class="mk-act"><button type="button" class="mk-add" onclick="openAddMenu(this,'${E(c.id)}')" aria-label="Add ${E(c.sym)}" title="Add ${E(c.sym)} to your portfolio or plan">${ic('plus', { solo: true, size: 16, sw: 2.4 })}<span class="t">Add</span></button><button type="button" class="mk-x" onclick="toggleLinks('${E(c.id)}')" aria-expanded="${open}" aria-controls="mkl-${E(c.id)}" aria-label="${E(c.sym)} links: Liquidation Map, Prediction, CoinMarketCap" title="Liq.Map · Prediction · CMC">${CHEV}</button></span>
