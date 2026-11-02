@@ -15,13 +15,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611022231"></script>
-<script src="samsam-hints.js?v=202611022231"></script>
-<script src="samsam-vault.js?v=202611022231"></script>
-<script src="samsam-labels.js?v=202611022231"></script>
-<script src="samsam-taxonomy.js?v=202611022231"></script>
-<script src="samsam-coins.js?v=202611022231"></script>
-<script src="samsam-dropdown.js?v=202611022231"></script>
+<script src="samsam-ui.js?v=202611030100"></script>
+<script src="samsam-hints.js?v=202611030100"></script>
+<script src="samsam-vault.js?v=202611030100"></script>
+<script src="samsam-labels.js?v=202611030100"></script>
+<script src="samsam-taxonomy.js?v=202611030100"></script>
+<script src="samsam-coins.js?v=202611030100"></script>
+<script src="samsam-dropdown.js?v=202611030100"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* ── Tokens ── */
@@ -66,7 +66,7 @@ body {
 /* ── Main container ── */
 .container {
   max-width: 860px; margin: 0 auto;
-  padding: 20px max(16px, env(safe-area-inset-right,0px)) 40px max(16px, env(safe-area-inset-left,0px));
+  padding: 20px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 40px max(var(--gut, 16px), env(safe-area-inset-left,0px));
 }
 @media (min-width: 1024px) { .container { max-width: 1232px; } }   /* same 1200px content width as every page */
 
@@ -172,6 +172,13 @@ body {
 @media (max-width: 500px) {
   .donut-wrap { width: 180px; height: 180px; }
 }
+/* ── phone: more room for the content, like CoinMarketCap — 8px sides, coin lists edge to edge with dividers ── */
+@media (max-width: 759px) {
+  :root { --gut: 8px; }
+  .coin-list { gap: 0; margin: 0 -4px; }
+  .coin-row { background: none !important; box-shadow: none; border-radius: 0; border: 0; border-bottom: 1px solid var(--border); padding: 12px 8px; }
+  .coin-row:last-child { border-bottom: 0; }
+}
 </style>
 </head>
 <body>
@@ -240,7 +247,7 @@ body {
 
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611022231"></script>
+<script type="module" src="samsam-cloud.js?v=202611030100"></script>
 <script>
 // ── Constants (mirror index.html) ──────────────────────────────────────────
 

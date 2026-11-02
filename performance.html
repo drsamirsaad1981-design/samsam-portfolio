@@ -5,14 +5,14 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202611022231"></script>
-<script src="samsam-hints.js?v=202611022231"></script>
-<script src="samsam-vault.js?v=202611022231"></script>
-<script src="samsam-labels.js?v=202611022231"></script>
-<script src="samsam-taxonomy.js?v=202611022231"></script>
-<script src="samsam-dropdown.js?v=202611022231"></script>
-<script src="samsam-coins.js?v=202611022231"></script>
-<script src="samsam-chart.js?v=202611022231"></script>
+<script src="samsam-ui.js?v=202611030100"></script>
+<script src="samsam-hints.js?v=202611030100"></script>
+<script src="samsam-vault.js?v=202611030100"></script>
+<script src="samsam-labels.js?v=202611030100"></script>
+<script src="samsam-taxonomy.js?v=202611030100"></script>
+<script src="samsam-dropdown.js?v=202611030100"></script>
+<script src="samsam-coins.js?v=202611030100"></script>
+<script src="samsam-chart.js?v=202611030100"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -86,13 +86,13 @@ body {
 .page-inner {
   max-width: 860px;
   margin: 0 auto;
-  padding-left:  max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-left:  max(var(--gut, 16px), env(safe-area-inset-left,0px));
+  padding-right: max(var(--gut, 16px), env(safe-area-inset-right,0px));
 }
 
 /* ── Summary ── */
 .summary {
-  padding: 16px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  padding: 16px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 12px max(var(--gut, 16px), env(safe-area-inset-left,0px));
 }
 .summary-cards {
   display: grid;
@@ -293,7 +293,7 @@ body {
 
 /* ── Sort tabs ── */
 .sort-tabs {
-  padding: 22px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+  padding: 22px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 10px max(var(--gut, 16px), env(safe-area-inset-left,0px));
   display: flex;
 }
 .sort-tabs-inner {
@@ -342,7 +342,7 @@ body {
 
 /* ── Column header ── */
 .col-header {
-  padding: 8px max(16px, env(safe-area-inset-right, 0px)) 4px max(16px, env(safe-area-inset-left, 0px));
+  padding: 8px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 4px max(var(--gut, 16px), env(safe-area-inset-left,0px));
 }
 .col-header-inner {
   display: grid;
@@ -382,7 +382,7 @@ body {
 
 /* ── Coin list ── */
 .coin-list {
-  padding: 0 max(16px, env(safe-area-inset-right, 0px)) 32px max(16px, env(safe-area-inset-left, 0px));
+  padding: 0 max(var(--gut, 16px), env(safe-area-inset-right,0px)) 32px max(var(--gut, 16px), env(safe-area-inset-left,0px));
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -556,6 +556,16 @@ body {
   .col-header-inner { font-size: 0.74rem; }
   .a-qty { font-size: 0.8rem; }
 }
+/* ── phone: more room for the content, like CoinMarketCap — 8px sides, coin lists edge to edge with dividers ── */
+@media (max-width: 759px) {
+  :root { --gut: 8px; }
+  .coin-list { gap: 0; padding-left: max(4px, env(safe-area-inset-left,0px)); padding-right: max(4px, env(safe-area-inset-right,0px)); }
+  .coin-row { background: none; box-shadow: none; border-radius: 0; border-bottom: 1px solid var(--border); padding: 12px 8px; }
+  .coin-row:last-child { border-bottom: 0; }
+  .sum-card { padding: 14px 12px 12px; }
+  .sum-value { font-size: clamp(1rem, 4.8vw, 1.55rem); white-space: nowrap; }
+  .pnl-bd-stat-val { font-size: clamp(.95rem, 4.6vw, 1.45rem); white-space: nowrap; }
+}
 </style>
 </head>
 <body>
@@ -682,7 +692,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202611022231"></script>
+<script type="module" src="samsam-cloud.js?v=202611030100"></script>
 <script>
 // ── Constants ──
 

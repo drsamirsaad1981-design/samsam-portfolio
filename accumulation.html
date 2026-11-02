@@ -16,14 +16,14 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611022231"></script>
-<script src="samsam-hints.js?v=202611022231"></script>
-<script src="samsam-vault.js?v=202611022231"></script>
-<script src="samsam-labels.js?v=202611022231"></script>
-<script src="samsam-taxonomy.js?v=202611022231"></script>
-<script src="samsam-coins.js?v=202611022231"></script>
-<script src="samsam-dropdown.js?v=202611022231"></script>
-<script src="samsam-add.js?v=202611022231"></script>
+<script src="samsam-ui.js?v=202611030100"></script>
+<script src="samsam-hints.js?v=202611030100"></script>
+<script src="samsam-vault.js?v=202611030100"></script>
+<script src="samsam-labels.js?v=202611030100"></script>
+<script src="samsam-taxonomy.js?v=202611030100"></script>
+<script src="samsam-coins.js?v=202611030100"></script>
+<script src="samsam-dropdown.js?v=202611030100"></script>
+<script src="samsam-add.js?v=202611030100"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -54,13 +54,13 @@
 body {
   font-family: 'Inter', 'Cairo', sans-serif;
   background: var(--bg); color: var(--fg);
-  padding: 12px max(16px, env(safe-area-inset-left,0px));
-  padding-right: max(16px, env(safe-area-inset-right,0px));
+  padding: 12px max(var(--gut, 16px), env(safe-area-inset-left,0px));
+  padding-right: max(var(--gut, 16px), env(safe-area-inset-right,0px));
   min-height: 100vh;
 }
 
 /* Header + Back: shared .cp-head / .cp-back (samsam-ui.js). This page's body has its own side padding, so the bar reaches the edges with negative margins. */
-.cp-head { margin: -12px calc(-1 * max(16px, env(safe-area-inset-right,0px))) 16px calc(-1 * max(16px, env(safe-area-inset-left,0px))); }
+.cp-head { margin: -12px calc(-1 * max(var(--gut, 16px), env(safe-area-inset-right,0px))) 16px calc(-1 * max(var(--gut, 16px), env(safe-area-inset-left,0px))); }
 @media(max-width:600px) {
   .save-status { font-size: 0.7rem; white-space: nowrap; }
   .save-status .ss-t { display: none; }   /* phone header: icon only */
@@ -463,6 +463,11 @@ button.cat-tag { font-family: inherit; cursor: pointer; }
 button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transparent); }
 @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 .slide-up { animation: slideUpFade .35s ease-out both; }
+/* ── phone: more room for the content, like CoinMarketCap — 8px sides, coin lists edge to edge with dividers ── */
+@media (max-width: 759px) {
+  :root { --gut: 8px; }
+  .coin-card, .coin-card.acc-card, .coin-card.acc-card.completed { padding: 12px; }
+}
 </style>
 </head>
 <body>
@@ -632,7 +637,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611022231"></script>
+<script type="module" src="samsam-cloud.js?v=202611030100"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';

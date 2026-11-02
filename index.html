@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611022231"></script>
-<script src="samsam-hints.js?v=202611022231"></script>
-<script src="samsam-vault.js?v=202611022231"></script>
-<script src="samsam-labels.js?v=202611022231"></script>
-<script src="samsam-taxonomy.js?v=202611022231"></script>
-<script src="samsam-coins.js?v=202611022231"></script>
-<script src="samsam-dropdown.js?v=202611022231"></script>
-<script src="samsam-add.js?v=202611022231"></script>
-<script src="samsam-chart.js?v=202611022231"></script>
-<script src="samsam-market.js?v=202611022231"></script>
+<script src="samsam-ui.js?v=202611030100"></script>
+<script src="samsam-hints.js?v=202611030100"></script>
+<script src="samsam-vault.js?v=202611030100"></script>
+<script src="samsam-labels.js?v=202611030100"></script>
+<script src="samsam-taxonomy.js?v=202611030100"></script>
+<script src="samsam-coins.js?v=202611030100"></script>
+<script src="samsam-dropdown.js?v=202611030100"></script>
+<script src="samsam-add.js?v=202611030100"></script>
+<script src="samsam-chart.js?v=202611030100"></script>
+<script src="samsam-market.js?v=202611030100"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1482,7 +1482,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611022231"></script>
+<script type="module" src="samsam-cloud.js?v=202611030100"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3642,7 +3642,7 @@ function renderHoldingsAssetList() {
     border-bottom: 1px solid var(--border); box-shadow: 0 6px 18px rgba(2,6,23,.14); }
   .mini-bar.show { opacity: 1; transform: none; pointer-events: auto; }
   .mini-in { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 1232px; margin: 0 auto; box-sizing: border-box;
-    padding: 9px max(16px, env(safe-area-inset-right,0px)) 9px max(16px, env(safe-area-inset-left,0px)); border: none; background: none; color: var(--fg); font: inherit; cursor: pointer; text-align: left; }
+    padding: 9px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 9px max(var(--gut, 16px), env(safe-area-inset-left,0px)); border: none; background: none; color: var(--fg); font: inherit; cursor: pointer; text-align: left; }
   .mini-in img { flex-shrink: 0; }
   .mini-name { font-weight: 900; font-size: 1rem; letter-spacing: -0.01em; white-space: nowrap; }
   .mini-vals { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; font-variant-numeric: tabular-nums; }
@@ -3971,7 +3971,7 @@ async function saveBaselineEdit() {
       --border: rgba(0,0,0,0.08); --header-bg: #ffffff; --shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
     .hov-container { max-width: 860px; width: 100%; margin: 0 auto;
-      padding: 20px max(16px, env(safe-area-inset-right,0px)) 40px max(16px, env(safe-area-inset-left,0px)); }
+      padding: 20px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 40px max(var(--gut, 16px), env(safe-area-inset-left,0px)); }
     @media (min-width: 1024px) { .hov-container { max-width: 1232px; } }   /* same 1200px content width as every page */
     /* Nav bar: shared .cp-head (samsam-ui.js) */
 
@@ -4188,7 +4188,18 @@ async function saveBaselineEdit() {
     .htx-list .htx-row:last-child { border-bottom: none; }
     .htx-empty { background: var(--card); border-radius: 18px; }
     @media (min-width: 900px) { #hovTxView { max-width: none; } }
-  </style>
+  
+    /* ── phone: more room for the content, like CoinMarketCap — 8px sides, coin lists edge to edge with dividers ── */
+    @media (max-width: 759px) {
+      :root { --gut: 8px; }
+      body { padding-left: max(8px, env(safe-area-inset-left,0px)); padding-right: max(8px, env(safe-area-inset-right,0px)); }
+      .coin-card { padding: 12px; }
+      .hov-list-card { background: none; box-shadow: none; border-radius: 0; margin-left: -4px; margin-right: -4px; overflow: visible; }
+      .hov-list-header { padding: 10px 8px 8px; }
+      .hov-asset-row { padding: 12px 8px; }
+      .hov-hero { padding: 16px 12px 4px; }
+    }
+</style>
 
   <!-- Nav bar -->
   <header class="cp-head hov-navbar">
