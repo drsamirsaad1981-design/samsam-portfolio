@@ -320,6 +320,24 @@ export function flattenSnaps(snapDocs) {
   return { perf: perf.slice(-2160), holdings: holdings.slice(-4000) };
 }
 
+// A saved chart point that jumps away from both of its neighbours while they agree with each other is a bad
+// reading (e.g. saved by a device that had no live price yet for some coin) — not a market move. Real moves and
+// money added / taken out show as steps, which this keeps. `endValue` (the live total) stands in as the last
+// point's right-hand neighbour.
+export function dropSpikes(points, endValue, jump = 0.05) {
+  const pts = points || [], out = [];
+  const off = (a, b) => (b > 0 ? Math.abs(a / b - 1) : 0);
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i], prev = out[out.length - 1];
+    const nextV = i + 1 < pts.length ? pts[i + 1].v : num(endValue);
+    // away from both neighbours, on the same side, and the neighbours much closer to each other than to it
+    if (prev && prev.v > 0 && nextV > 0 && p.v > 0 && off(p.v, prev.v) > jump && off(p.v, nextV) > jump &&
+        Math.sign(p.v - prev.v) === Math.sign(p.v - nextV) && Math.abs(nextV - prev.v) < Math.abs(p.v - prev.v) / 2) continue;
+    out.push(p);
+  }
+  return out;
+}
+
 // ── Chart history rebuilt from the ledger and real historical prices (like CoinMarketCap) ─────────────
 // Value at each moment t = Σ (amount of each coin held at t, replayed from its opening + transactions)
 //                          × (that coin's market price at t, from its hourly price history).

@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611021818"></script>
-<script src="samsam-hints.js?v=202611021818"></script>
-<script src="samsam-vault.js?v=202611021818"></script>
-<script src="samsam-labels.js?v=202611021818"></script>
-<script src="samsam-taxonomy.js?v=202611021818"></script>
-<script src="samsam-coins.js?v=202611021818"></script>
-<script src="samsam-dropdown.js?v=202611021818"></script>
-<script src="samsam-add.js?v=202611021818"></script>
-<script src="samsam-chart.js?v=202611021818"></script>
-<script src="samsam-market.js?v=202611021818"></script>
+<script src="samsam-ui.js?v=202611022024"></script>
+<script src="samsam-hints.js?v=202611022024"></script>
+<script src="samsam-vault.js?v=202611022024"></script>
+<script src="samsam-labels.js?v=202611022024"></script>
+<script src="samsam-taxonomy.js?v=202611022024"></script>
+<script src="samsam-coins.js?v=202611022024"></script>
+<script src="samsam-dropdown.js?v=202611022024"></script>
+<script src="samsam-add.js?v=202611022024"></script>
+<script src="samsam-chart.js?v=202611022024"></script>
+<script src="samsam-market.js?v=202611022024"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1481,7 +1481,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611021818"></script>
+<script type="module" src="samsam-cloud.js?v=202611022024"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1809,7 +1809,7 @@ function fmt(n, dec) {
 
 // Until the first data arrives from the cloud, the totals show a placeholder — never a wrong "$0.00"
 const HEAD_WAIT = '$—.——';
-function headerWaiting() { return !(window.Samsam && Samsam.isReady && Samsam.isReady()) && !portfolio.length; }
+function headerWaiting() { return !portfolio.length && (!cloudReady || !(window.Samsam && Samsam.isReady && Samsam.isReady())); }   // no $0 until this page has the cloud portfolio
 function renderHeader() {
   if (headerWaiting()) {
     ['totalUsd', 'totalPnlCard', 'altUsd'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = HEAD_WAIT; });

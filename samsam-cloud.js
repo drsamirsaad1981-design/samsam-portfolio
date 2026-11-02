@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611021818';
-import * as Hist from './samsam-history.js?v=202611021818';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611021818';
+import * as Core from './samsam-core.js?v=202611022024';
+import * as Hist from './samsam-history.js?v=202611022024';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611022024';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -186,6 +186,21 @@ function chartHistory(coins, txs, portfolio, snaps) {
   };
 }
 
+// Chart points are saved only when (almost) the whole portfolio is valued at live prices fetched in the last
+// 15 minutes. A device that has just opened (a new browser, a phone back from sleep) values coins it has no live
+// price for yet at their last saved / average price — that total must not become a point on everyone's chart.
+function livePricesFresh() {
+  const pf = (S.derived && S.derived.portfolio) || [], now = Date.now(), ids = (window.SamsamCoins && SamsamCoins.CG_IDS) || {};
+  let total = 0, stale = 0;
+  for (const c of pf) {
+    const val = c.qty > 0 ? c.qty * (c.currentPrice || 0) : 0; if (!(val > 0)) continue;
+    total += val;
+    const p = S.prices[c.sym], priceable = c.sym === 'BTC' || c.cgId || ids[c.sym];
+    if (priceable && !(p && p.usd > 0 && now - (p.t || 0) < 15 * 60e3)) stale += val;
+  }
+  return total > 0 && stale / total < 0.01;
+}
+
 function derive() {
   const coins = [...S.coins.values()];
   const txs = [...S.txs.values()].sort(Core.compareTx);
@@ -210,8 +225,10 @@ function derive() {
   const recorded = Core.flattenSnaps([...S.snapDocs.values()]);
   let hist = null;
   try { hist = chartHistory(coins, txs, portfolio, recorded); } catch (e) { console.warn('[Samsam] chart history', e); }
-  const snaps = hist || recorded;
-  const btc = S.prices.BTC && S.prices.BTC.usd > 0 ? S.prices.BTC.usd
+  const snaps0 = hist || recorded;
+  const liveTotal = portfolio.reduce((s, c) => s + (c.qty > 0 ? c.qty * (c.currentPrice || 0) : 0), 0);
+  const snaps = { perf: Core.dropSpikes(snaps0.perf, liveTotal), holdings: Core.dropSpikes(snaps0.holdings, liveTotal) };
+  const btc =S.prices.BTC && S.prices.BTC.usd > 0 ? S.prices.BTC.usd
     : (portfolio.find(c => c.sym === 'BTC') || {}).currentPrice || S.opts.fallbackPrices.BTC || 0;
   S.derived = {
     portfolio, transactions: txs, coins, archivedCoins: removed,
@@ -629,7 +646,8 @@ const API = {
   _snapWritten: new Set(),
   recordSnapshot(kind, t, v, b) {
     if (!API.isReady() || !(v > 0)) return Promise.resolve();
-    const size = kind === 'perf' ? Core.HOUR : Core.FIVE_MIN;
+    if (!livePricesFresh()) return Promise.resolve();   // a device still on old / fallback prices must not save a point
+    const size =kind === 'perf' ? Core.HOUR : Core.FIVE_MIN;
     const key = String(Core.bucket(t, size)), field = kind === 'perf' ? 'p' : 'h';
     const memo = field + key;
     const day = S.snapDocs.get(Core.dayId(t));
