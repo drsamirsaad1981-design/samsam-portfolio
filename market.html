@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611021002"></script>
-<script src="samsam-hints.js?v=202611021002"></script>
-<script src="samsam-vault.js?v=202611021002"></script>
-<script src="samsam-labels.js?v=202611021002"></script>
-<script src="samsam-taxonomy.js?v=202611021002"></script>
-<script src="samsam-coins.js?v=202611021002"></script>
-<script src="samsam-dropdown.js?v=202611021002"></script>
-<script src="samsam-add.js?v=202611021002"></script>
-<script src="samsam-market.js?v=202611021002"></script>
+<script src="samsam-ui.js?v=202611021035"></script>
+<script src="samsam-hints.js?v=202611021035"></script>
+<script src="samsam-vault.js?v=202611021035"></script>
+<script src="samsam-labels.js?v=202611021035"></script>
+<script src="samsam-taxonomy.js?v=202611021035"></script>
+<script src="samsam-coins.js?v=202611021035"></script>
+<script src="samsam-dropdown.js?v=202611021035"></script>
+<script src="samsam-add.js?v=202611021035"></script>
+<script src="samsam-market.js?v=202611021035"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -140,7 +140,13 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-head button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 2px 0; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .mk-head button[aria-sort] { color: var(--fg); }
 .mk-head .r { justify-content: flex-end; text-align: right; }
-.mk-head .c-rank, .mk-head .c-ch, .mk-head .c-price, .mk-row .mk-rank, .mk-row .mk-ch { display: none; }
+.mk-head .c-rank, .mk-head .c-ch, .mk-head .c-ch7, .mk-head .c-price, .mk-row .mk-rank, .mk-row .mk-ch, .mk-row .mk-ch7, .mk-asset .mk-ap { display: none; }
+/* phone: one period for the whole list — 24h or 7d (the chart and the % always match) */
+.mk-per { display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; border: 1px solid var(--border); margin-left: auto; }
+.mk-per button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: none; color: var(--fg2); font: inherit; font-size: .74rem; font-weight: 800; cursor: pointer; }
+.mk-per button[aria-pressed="true"] { background: #7c3aed; color: #fff; }
+.mk-lsum { width: 100%; display: flex; justify-content: center; gap: 14px; font-size: .74rem; font-weight: 700; color: var(--fg2); font-variant-numeric: tabular-nums; margin-bottom: 2px; }
+.mk-lsum b { font-weight: 800; }
 .mk-head button[aria-sort]::after { content: attr(data-arrow); font-size: .9em; }
 .mk-row { padding: 12px 8px; border-bottom: 1px solid var(--border); min-height: 62px; }
 .mk-row:last-child { border-bottom: 0; }
@@ -186,7 +192,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-x[aria-expanded="true"] svg { transform: rotate(180deg); }
 .mk-row.open { border-bottom: 0; }
 /* the three links — same look as the coin's Transactions page */
-.mk-links { display: flex; gap: 8px; padding: 2px 4px 12px; border-bottom: 1px solid var(--border); animation: mkIn .18s ease-out; }
+.mk-links { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 4px 12px; border-bottom: 1px solid var(--border); animation: mkIn .18s ease-out; }
 @keyframes mkIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .mk-links a { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 8px; border-radius: 8px; text-decoration: none; font-size: .8rem; font-weight: 600; white-space: nowrap; line-height: 1; background: var(--bg3); border: 1px solid; -webkit-tap-highlight-color: transparent; }
 .mk-links a .ss-ic { margin: 0; }
@@ -203,8 +209,15 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-more .mk-row { grid-template-columns: 36px minmax(0,1fr) 40px; }
 /* computer: a full table */
 @media (min-width: 760px) {
-  /* columns spread evenly over the width: ☆ · # · Asset · Price · 24h · 7d · Add ⌄ */
-  .mk-head, .mk-row { grid-template-columns: 34px 40px minmax(220px,1.5fr) minmax(110px,1fr) minmax(90px,.8fr) minmax(150px,1.1fr) 116px; column-gap: 16px; }
+  /* ☆ · # · Asset (logo, name, market cap — price on the right) · 24h % · 7d % · 7d chart · Add ⌄ */
+  .mk-head, .mk-row { grid-template-columns: 34px 40px minmax(300px,2.2fr) minmax(84px,.7fr) minmax(84px,.7fr) minmax(150px,1.2fr) 116px; column-gap: 16px; }
+  .mk-head > *, #mkRows .mk-row > * { grid-row: 1; }
+  .mk-head > .c-hash, #mkRows .mk-row > .mk-sr { grid-column: 1; } .mk-head > .c-rank, #mkRows .mk-row > .mk-rank { grid-column: 2; }
+  .mk-head > .c-asset, .mk-head > .c-price, #mkRows .mk-row > .mk-asset { grid-column: 3; } .mk-head > .c-price { justify-self: end; }
+  .mk-head > .c-ch, #mkRows .mk-row > .mk-ch { grid-column: 4; } .mk-head > .c-ch7, #mkRows .mk-row > .mk-ch7 { grid-column: 5; }
+  .mk-head > .c-sp, #mkRows .mk-row > .mk-sp { grid-column: 6; } .mk-head > :last-child, #mkRows .mk-row > .mk-act { grid-column: 7; }
+  .mk-asset .mk-ap { display: block; margin-left: auto; padding-left: 12px; text-align: right; font-size: .92rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mk-names { flex: 1 1 auto; }
   .mk-sp { justify-content: center; }
   .mk-row .mk-rank { text-align: center; } .mk-head > .c-rank { justify-content: center; }
   .mk-head > .c-sp { justify-content: center; }
@@ -217,17 +230,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   /* the three links span exactly from the coin column to the end of the 7d column (row padding 6 + ☆ 34 + # 40 + gaps) */
   .mk-links { padding: 0 calc(6px + 116px + 16px) 12px calc(6px + 34px + 16px + 40px + 16px); gap: 12px; }
   .mk-links a { flex: 1 1 0; }
-  .mk-head .c-rank, .mk-head .c-ch, .mk-head .c-price, .mk-row .mk-rank, .mk-row .mk-ch, .mk-price { display: block; }
+  .mk-head .c-rank, .mk-row .mk-rank, .mk-row .mk-ch, .mk-row .mk-ch7 { display: block; }
   .mk-sr .mk-r2 { display: none; }
-  /* columns: ☆ · # · Asset · Price · 24h · 7d · Add */
-  .mk-row > .mk-price, .mk-head > .c-price { order: 4; } .mk-row > .mk-ch, .mk-head > .c-ch { order: 5; }
-  .mk-row > .mk-sp, .mk-head > .c-sp { order: 6; } .mk-row > .mk-act, .mk-head > :last-child { order: 7; }
-  .mk-head > .c-price, .mk-head > .c-ch { display: flex; }
+  .mk-head > .c-price, .mk-head > .c-ch, .mk-head > .c-ch7 { display: flex; }
+  .mk-per { display: none; }
+  .mk-lsum { display: none; }
   .mk-pc { display: none; }
   .mk-head .c-pc { display: none; }
   .mk-rank { font-size: .8rem; font-weight: 700; color: var(--fg2); font-variant-numeric: tabular-nums; }
   .mk-price { text-align: right; font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .mk-ch { text-align: right; font-size: .84rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .mk-ch, .mk-ch7 { text-align: right; font-size: .86rem; font-weight: 800; font-variant-numeric: tabular-nums; }
   .mk-sp svg { width: 100%; max-width: none; height: 34px; }   /* fills the 7d column, so its edge lines up with the links */
   .mk-add { width: auto; padding: 0 12px; justify-self: end; }
   .mk-add .t { display: inline; margin-left: 4px; }
@@ -343,17 +355,19 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
         <button type="button" class="mk-chip" data-f="gain" aria-pressed="false" onclick="setFilter('gain')">Gainers</button>
         <button type="button" class="mk-chip" data-f="lose" aria-pressed="false" onclick="setFilter('lose')">Losers</button>
       </div>
+      <div class="mk-per" role="group" aria-label="Period on a phone"><button type="button" data-p="24h" onclick="setPer('24h')">24h</button><button type="button" data-p="7d" onclick="setPer('7d')">7d</button></div>
       <button type="button" class="mk-custom" onclick="addCustom()"><span data-ic="plus"></span>Add Custom Coin</button>
     </div>
     <div class="mk-hint" id="mkHint" hidden>Type a coin name or symbol — any coin listed on CoinGecko can be followed or added.</div>
     <div class="mk-head" role="row">
       <button type="button" class="c-hash" data-s="rank" onclick="setSort('rank')" aria-label="Sort by rank">#</button>
       <button type="button" class="c-rank" data-s="rank" onclick="setSort('rank')">#</button>
-      <button type="button" class="c-asset" data-s="mcap" onclick="setSort('mcap')"><span class="t-m">Market Cap</span><span class="t-d">Asset · Market Cap</span></button>
+      <button type="button" class="c-asset" data-s="mcap" onclick="setSort('mcap')"><span class="t-m">Market Cap</span><span class="t-d">Asset</span></button>
       <button type="button" class="r c-sp" data-s="spark" disabled style="cursor:default;justify-content:center">7d</button>
-      <button type="button" class="r c-pc" data-s="ch24" onclick="setSort('ch24')">Price / 24h</button>
+      <button type="button" class="r c-pc" data-s="chP" onclick="setSort('chP')"><span>Price / <span id="perL">24h</span></span></button>
       <button type="button" class="r c-price" data-s="price" onclick="setSort('price')">Price</button>
-      <button type="button" class="r c-ch" data-s="ch24" onclick="setSort('ch24')">24h</button>
+      <button type="button" class="r c-ch" data-s="ch24" onclick="setSort('ch24')">24h %</button>
+      <button type="button" class="r c-ch7" data-s="ch7" onclick="setSort('ch7')">7d %</button>
       <span></span>
     </div>
     <div id="mkRows"></div>
@@ -364,7 +378,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611021002"></script>
+<script type="module" src="samsam-cloud.js?v=202611021035"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -433,6 +447,15 @@ let alt90 = null;   // CMC-style number from the GitHub snapshot; until it's rea
 function paintAltNow() { paintAlt(alt90 || M.altSeason(topRows)); }
 
 // ── list ──
+// phone: one period for the whole list (24h or 7d), remembered; a computer shows both columns
+const PHONE = matchMedia('(max-width: 759px)');
+let per = '24h'; try { if (localStorage.getItem('samsam_mkt_per') === '7d') per = '7d'; } catch (_) {}
+function chKey() { return PHONE.matches && per === '7d' ? 'ch7' : 'ch24'; }
+function setPer(p) { per = p; try { localStorage.setItem('samsam_mkt_per', p); } catch (_) {} paintPer(); render(); }
+function paintPer() { document.querySelectorAll('.mk-per button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === per)); document.getElementById('perL').textContent = per; }
+PHONE.addEventListener('change', () => render());
+// every row gets a 7-day % (older saved rows: from the 7-day line)
+function fix(rows) { (rows || []).forEach(r => { if (r.ch7 == null) r.ch7 = M.ch7(r); }); return rows; }
 function rowsNow() {
   let rows = mode === 'top' ? topRows.slice() : watchRows.slice();
   if (mode === 'watch') {   // coins CoinGecko didn't return (yet) still show, from what was saved
@@ -440,8 +463,9 @@ function rowsNow() {
     watchlist().forEach(w => { if (!have.has(w.id)) rows.push({ id: w.id, sym: w.sym, name: w.name, img: w.img, rank: null, price: null, ch24: null, mcap: null, spark: [] }); });
   }
   if (query) { const q = query.toLowerCase(); rows = rows.filter(r => r.sym.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)); }
-  if (filter === 'gain') rows = rows.filter(r => r.ch24 > 0); else if (filter === 'lose') rows = rows.filter(r => r.ch24 < 0);
-  const k = sortKey, v = r => k === 'rank' ? (r.rank || 1e9) : (r[k] == null ? -1e18 : r[k]);
+  const fk = chKey();
+  if (filter === 'gain') rows = rows.filter(r => r[fk] > 0); else if (filter === 'lose') rows = rows.filter(r => r[fk] < 0);
+  const k = sortKey === 'chP' ? fk : sortKey, v = r => k === 'rank' ? (r.rank || 1e9) : (r[k] == null ? -1e18 : r[k]);
   rows.sort((a, b) => k === 'rank' ? (v(a) - v(b)) * sortDir : (v(b) - v(a)) * sortDir);
   return rows;
 }
@@ -481,6 +505,7 @@ let openId = null;   // the row whose links are open (one at a time)
 function linksHtml(c) {
   const x = `<span class="ext">${ic('ext', { solo: true, size: 12 })}</span>`;
   return `<div class="mk-links" id="mkl-${E(c.id)}">
+    <div class="mk-lsum"><span>24h <b class="${cls(c.ch24)}">${pct(c.ch24)}</b></span><span>7d <b class="${cls(c.ch7)}">${pct(c.ch7)}</b></span></div>
     <a class="l-liq" href="${E(SamsamCoins.liqMapUrl(c.sym))}" target="_blank" rel="noopener noreferrer" title="Open the ${E(c.sym)} liquidation heatmap on CoinGlass (new tab)">${ic('flame', { solo: true, size: 15 })}Liq.Map${x}</a>
     <a class="l-pred" href="${E(predLink(c))}" target="_blank" rel="noopener noreferrer" title="Open the ${E(c.sym)} price prediction on CoinCodex (new tab)">${ic('sparkles', { solo: true, size: 15 })}Prediction${x}</a>
     <a class="l-cmc" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap (new tab)">${ic('bar', { solo: true, size: 15 })}CMC${x}</a>
@@ -499,15 +524,15 @@ function rowHtml(c) {
   // phone: the market cap alone (always whole); computer: market cap · name
   const sub = c.mcap ? `<span class="mc">${mcapShort(c.mcap)}</span><span class="nm"><i> · </i>${E(c.name)}</span>` : `<span class="mc">${E(c.name)}</span>`;
   const short = c.price >= 1000 ? '$' + Math.round(c.price).toLocaleString('en-US') : c.price != null ? SamsamFmt.price(c.price) : '—';
-  const open = openId === c.id;
+  const open = openId === c.id, wk = chKey() === 'ch7', pv = wk ? c.ch7 : c.ch24;
   return `<div class="mk-row${open ? ' open' : ''}" data-id="${E(c.id)}">
     <span class="mk-sr"><button type="button" class="mk-star" aria-pressed="${w}" onclick="toggleWatch('${E(c.id)}')" title="${w ? 'Remove from' : 'Add to'} Watchlist" aria-label="${w ? 'Remove ' + E(c.sym) + ' from' : 'Add ' + E(c.sym) + ' to'} Watchlist">${ic('star', { solo: true, size: 18 })}</button><span class="mk-r2">${c.rank ? '#' + c.rank : ''}</span></span>
     <span class="mk-rank">${c.rank || '—'}</span>
-    <a class="mk-asset" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap">${logo(c)}<span class="mk-names"><b>${E(c.sym)}${badge}</b><small>${sub}</small></span></a>
+    <a class="mk-asset" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap">${logo(c)}<span class="mk-names"><b>${E(c.sym)}${badge}</b><small>${sub}</small></span><span class="mk-ap">${c.price != null ? SamsamFmt.price(c.price) : '—'}</span></a>
     <span class="mk-sp">${M.spark(c.spark, 112, 34)}</span>
-    <span class="mk-pc"><b>${short}</b><span class="mk-pc2" title="Last 24 hours">${M.spark(M.day(c), 56, 20)}<span class="${cls(c.ch24)}">${pct(c.ch24)}</span></span></span>
-    <span class="mk-price">${c.price != null ? SamsamFmt.price(c.price) : '—'}</span>
+    <span class="mk-pc"><b>${short}</b><span class="mk-pc2" title="${wk ? 'Last 7 days' : 'Last 24 hours'}">${M.spark(wk ? c.spark : M.day(c), 56, 20)}<span class="${cls(pv)}">${pct(pv)}</span></span></span>
     <span class="mk-ch ${cls(c.ch24)}">${pct(c.ch24)}</span>
+    <span class="mk-ch7 ${cls(c.ch7)}">${pct(c.ch7)}</span>
     <span class="mk-act"><button type="button" class="mk-add" onclick="openAddMenu(this,'${E(c.id)}')" aria-label="Add ${E(c.sym)}" title="Add ${E(c.sym)} to your portfolio or plan">${ic('plus', { solo: true, size: 16, sw: 2.4 })}<span class="t">Add</span></button><button type="button" class="mk-x" onclick="toggleLinks('${E(c.id)}')" aria-expanded="${open}" aria-controls="mkl-${E(c.id)}" aria-label="${E(c.sym)} links: Liquidation Map, Prediction, CoinMarketCap" title="Liq.Map · Prediction · CMC">${CHEV}</button></span>
   </div>${open ? linksHtml(c) : ''}`;
 }
@@ -649,7 +674,7 @@ setInterval(() => { if (lastT && onScreen()) status(); }, 30e3);
 async function loadWatch(force) {
   const ids = watchlist().map(w => w.id);
   if (!ids.length) { watchRows = []; render(); return; }
-  try { const r = await M.byIds(ids, force); watchRows = r.data; if (r.stale) paused = true; }
+  try { const r = await M.byIds(ids, force); watchRows = fix(r.data); if (r.stale) paused = true; }
   catch (e) { if (!watchRows.length) paused = true; }
   status(); render();
 }
@@ -662,7 +687,7 @@ async function refreshAll(force) {
     try {
       const p = await M.peek();
       if (p.global) paintGlobal(p.global); if (p.fng) paintFng(p.fng);
-      if (p.top && p.top.length) { topRows = p.top; paintAltNow(); paintMajors(); lastT = p.t || lastT; }
+      if (p.top && p.top.length) { topRows = fix(p.top); paintAltNow(); paintMajors(); lastT = p.t || lastT; }
       render(); status(); if (window.CPSplash) CPSplash.hide();
     } catch (_) {}
   }
@@ -670,7 +695,7 @@ async function refreshAll(force) {
   let newest = 0, stale = false, failed = 0;
   const take = r => { if (r.stale) stale = true; newest = Math.max(newest, r.t); return r.data; };
   // one after the other, not all at once (kinder to the free limit)
-  await M.top(force).then(r => { topRows = take(r); paintAltNow(); paintMajors(); render(); }).catch(() => { failed++; });
+  await M.top(force).then(r => { topRows = fix(take(r)); paintAltNow(); paintMajors(); render(); }).catch(() => { failed++; });
   await M.global(force).then(r => paintGlobal(take(r))).catch(() => { failed++; });
   await M.fng(force).then(r => paintFng(take(r))).catch(() => {});
   if (newest) lastT = newest;
@@ -689,7 +714,7 @@ document.addEventListener('visibilitychange', () => { if (onScreen() && Date.now
 function hookCloud(S) { S.onChange(d => { const before = JSON.stringify(watchlist()); state = d; render(); if (mode === 'watch' && JSON.stringify(watchlist()) !== before) loadWatch(false); }); }
 if (window.Samsam) hookCloud(window.Samsam); else window.addEventListener('samsam-ready', () => hookCloud(window.Samsam), { once: true });
 SamsamUI.refresh();
-render(); refreshAll(false);
+paintPer(); render(); refreshAll(false);
 </script>
 </body>
 </html>

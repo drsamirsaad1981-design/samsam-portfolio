@@ -62,6 +62,7 @@ function row(c) {
     id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name || '', img: c.image || '', rank: c.market_cap_rank || null,
     price: c.current_price, mcap: c.market_cap, vol: c.total_volume,
     ch24: c.price_change_percentage_24h_in_currency != null ? c.price_change_percentage_24h_in_currency : c.price_change_percentage_24h,
+    ch7: c.price_change_percentage_7d_in_currency != null ? c.price_change_percentage_7d_in_currency : null,
     ch30: c.price_change_percentage_30d_in_currency, spark: s, spark24: d1,
   };
 }
@@ -74,7 +75,7 @@ async function main() {
   const now = snap.updated;
 
   // 150 coins: the first 100 are the list; Altcoin Season needs the top 100 *after* leaving out stablecoins etc.
-  const top = await get(`${API}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=150&page=1&sparkline=true&price_change_percentage=24h%2C30d`);
+  const top = await get(`${API}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=150&page=1&sparkline=true&price_change_percentage=24h%2C7d%2C30d`);
   let all = [];
   if (Array.isArray(top) && top.length) { all = top.map(row); snap.top = all.slice(0, 100); snap.parts.top = now; log('top', top.length); } else log('top: no answer, kept the last one');
 

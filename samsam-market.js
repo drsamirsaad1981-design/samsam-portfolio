@@ -93,10 +93,11 @@
       id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name || '', img: c.image || '', rank: c.market_cap_rank || null,
       price: c.current_price, mcap: c.market_cap, vol: c.total_volume,
       ch24: c.price_change_percentage_24h_in_currency != null ? c.price_change_percentage_24h_in_currency : c.price_change_percentage_24h,
+      ch7: c.price_change_percentage_7d_in_currency != null ? c.price_change_percentage_7d_in_currency : null,
       ch30: c.price_change_percentage_30d_in_currency, spark: s, spark24: d1
     };
   }
-  var MK = CG + '/coins/markets?vs_currency=usd&sparkline=true&price_change_percentage=24h%2C30d';
+  var MK = CG + '/coins/markets?vs_currency=usd&sparkline=true&price_change_percentage=24h%2C7d%2C30d';
   var API = {
     global: function (force) {
       return cached('global', TTL.global, function () {
@@ -175,6 +176,8 @@
       return { value: v, n: alts.length, beat: beat, btc30: btc.ch30, label: v >= 75 ? 'Altcoin Season' : v <= 25 ? 'Bitcoin Season' : v >= 50 ? 'Leaning Altcoins' : 'Leaning Bitcoin' };
     },
     day: day,
+    // 7-day change; older saved rows don't have it → from the 7-day line
+    ch7: function (c) { if (c.ch7 != null) return c.ch7; var s = c.spark || []; return s.length > 1 && s[0] > 0 ? (s[s.length - 1] / s[0] - 1) * 100 : null; },
     fngColor: function (v) { return v < 25 ? '#ef4444' : v < 45 ? '#f97316' : v <= 55 ? '#eab308' : v <= 75 ? '#84cc16' : '#22c55e'; },
     fmtBig: function (v) {
       if (!(v > 0)) return '—';
