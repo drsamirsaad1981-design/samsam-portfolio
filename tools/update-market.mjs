@@ -7,8 +7,9 @@
 //
 // Altcoin Season the CoinMarketCap way: the top 100 coins (no stablecoins / wrapped / staked — the same rule as the app,
 // read from samsam-market.js) vs BTC over 90 days. CoinGecko's free API has no 90-day change, so this keeps one price
-// a day per coin in m/hist.json (filled once from CoinGecko's 90-day history, a few dozen coins per run, then one
-// price a day from the markets call). Until most coins have 90 days, alt.ready is false and the app uses its 30-day number.
+// a day per coin in m/hist.json, filled once from Binance's public market-data mirror (daily candles, no key, generous
+// limits — used only when its price matches CoinGecko's, so a reused ticker can't slip in), else from CoinGecko's
+// 90-day history (slow: its free limit allows only a few calls a minute); then one price a day from the markets call. Until most coins have 90 days, alt.ready is false and the app uses its 30-day number.
 //
 // market.json: { updated, global: { mcap, vol, mcapCh24, dom: { btc, eth, usdt }, coins }, fng: { value, label, prev, week },
 //                alt: { value, label, beat, n, btc90, period: '90d', ready, have },
@@ -26,6 +27,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const DAY = 864e5, KEEP_DAYS = 100, PERIOD = 90;
 const histBudget = Date.now() + (process.env.CG_FAST ? 20e3 : 4 * 60e3);   // history filling: at most ~4 minutes a run (the job has 20)
 const API = process.env.CG_API || 'https://api.coingecko.com/api/v3';
+const BN = process.env.BN_API || 'https://data-api.binance.vision/api/v3';
 const FNG = process.env.FNG_API || 'https://api.alternative.me/fng/?limit=2';
 const sleep = ms => new Promise(r => setTimeout(r, process.env.CG_FAST ? Math.min(ms, 50) : ms));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), '[market]', ...a);
@@ -111,16 +113,41 @@ async function altSeason(all) {
   const ids = [btc, ...alts].map(c => c.id);
   const put = (id, day, v) => { if (!(v > 0)) return; const h = hist[id] || (hist[id] = { d: {} }); h.d[day] = +(+v).toPrecision(8); };
   for (const c of [btc, ...alts]) put(c.id, today, c.price);                       // today's price for everyone
-  // coins without 90 days yet: one history call each, paced, within the time budget (the rest next run)
-  const need = ids.filter(id => !(hist[id] && hist[id].full));
+  // coins without 90 days yet — 1) Binance daily candles (fast)
+  const byId = Object.fromEntries([btc, ...alts].map(c => [c.id, c]));
+  let need = ids.filter(id => !(hist[id] && hist[id].full));
   log('alt season:', need.length, 'coins still need their 90-day history');
+  let bn = 0;
+  for (const id of need) {
+    const c = byId[id], pair = c.sym.replace(/[^A-Z0-9]/g, '') + 'USDT';
+    try {
+      const r = await fetch(`${BN}/klines?symbol=${pair}&interval=1d&limit=${PERIOD + 3}`);
+      if (r.ok) {
+        const k = await r.json();
+        const last = k.length && +k[k.length - 1][4];
+        // same coin (price within 5% of CoinGecko's) and at least 90 days of candles
+        if (last > 0 && c.price > 0 && Math.abs(last / c.price - 1) <= 0.05 && k.length >= PERIOD) {
+          for (const row of k) { const day = Math.floor(row[0] / DAY); if (day < today) put(id, day, +row[4]); }   // daily close
+          hist[id].full = true; hist[id].src = 'binance'; bn++;
+        }
+      }
+    } catch (_) {}
+    await sleep(120);
+  }
+  // 2) CoinGecko for the rest, paced for its free limit; a refusal waits a minute once, then the rest is next run
+  need = ids.filter(id => !(hist[id] && hist[id].full));
+  log('alt season:', bn, 'from Binance,', need.length, 'left for CoinGecko');
+  let waited = false;
   for (const id of need) {
     if (Date.now() > histBudget) { log('alt season: out of time — the rest next run'); break; }
     let r; try { r = await fetch(`${API}/coins/${id}/market_chart?vs_currency=usd&days=${PERIOD + 2}&interval=daily`, { headers: { accept: 'application/json' } }); } catch (_) { r = null; }
-    if (!r || r.status === 429) { log('alt season: CoinGecko busy — the rest next run'); break; }
+    if (!r || r.status === 429) {
+      if (waited || Date.now() + 60e3 > histBudget) { log('alt season: CoinGecko busy — the rest next run'); break; }
+      waited = true; await sleep(60e3); continue;
+    }
     if (r.ok) { const j = await r.json(); for (const [t, v] of (j.prices || [])) if (Math.floor(t / DAY) < today) put(id, Math.floor(t / DAY), v); }
     (hist[id] || (hist[id] = { d: {} })).full = true;                                  // a 404 also counts — don't ask again
-    await sleep(6500);
+    await sleep(13e3);
   }
   // keep 100 days, only coins still in the top list
   for (const id of Object.keys(hist)) {
