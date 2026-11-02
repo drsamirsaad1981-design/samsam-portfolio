@@ -357,6 +357,7 @@
     STRK: 'starknet', ONDO: 'ondo-finance', AVAIL: 'avail-network', KAVA: 'kava', PONS: 'pons', MNT: 'mantle',
     FLR: 'spark-token', KAS: 'kaspa', POL: 'polygon-ecosystem-token', VTHO: 'vethor-token', VET: 'vechain-token',
     NIGHT: 'midnight-network', XPL: 'xpl-token', XRP: 'ripple',
+    PI: 'pi-network',   // CoinCodex lists Pi Network under the ticker IOU
   };
   var SLUG_RE = /^[a-z0-9][a-z0-9-]{0,99}$/;
   function ccSlug(sym, opts) {
