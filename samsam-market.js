@@ -162,6 +162,7 @@
       var s = String(c.sym || '').toUpperCase(), n = (c.name || '').toLowerCase();
       if (/^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD)$/.test(s)) return true;
       if (/stablecoin|\busd\b|dollar|tether gold|pax gold|\beuro\b/.test(n) && !/wrapped|staked/.test(n)) return true;
+      if (/\bgold\b/.test(n) && API.flat(c, 0.08)) return true;   // gold tokens (Kinesis Gold…) follow gold, not crypto
       // tied to a currency by its ticker (EURSAFO, EURQ, GBPT, XSGD, CHFX…)
       if (/^(EUR|GBP|CHF|JPY|SGD|AUD|CAD|TRY|BRL|MXN|XSGD|XCHF|XAU)[A-Z0-9]{0,4}$|^[A-Z]{0,4}(EUR|GBP|CHF|SGD)$/.test(s) && API.flat(c, 0.03)) return true;
       // anything whose price hardly moved all week (< 1.5% from low to high) is pegged — no real crypto is that still

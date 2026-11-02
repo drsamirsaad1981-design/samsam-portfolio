@@ -143,18 +143,20 @@ async function links(top) {
   const bySym = new Map();
   for (const [id, w] of want) { const s = String(w.sym || '').toUpperCase(); if (s) (bySym.get(s) || bySym.set(s, []).get(s)).push([id, w]); }
   const syms = [...bySym.keys()], cc = { ...out.cc };
+  const mc = x => +(x.market_cap_usd || x.last_market_cap_usd || x.marketcap_usd || 0);
   let found = 0;
-  for (let i = 0; i < syms.length; i += 40) {
-    const j = await get(`${CC_API}?select_bysymbol=${syms.slice(i, i + 40).map(encodeURIComponent).join(',')}`, 2);
+  for (let i = 0; i < syms.length; i += 8) {   // CoinCodex answers at most 100 rows a call — small groups
+    const j = await get(`${CC_API}?select_bysymbol=${syms.slice(i, i + 8).map(encodeURIComponent).join(',')}&limit=1000`, 2);
     const list = Array.isArray(j && j.data) ? j.data : [];
-    for (const [id, w] of syms.slice(i, i + 40).flatMap(s => bySym.get(s))) {
+    for (const [id, w] of syms.slice(i, i + 8).flatMap(s => bySym.get(s))) {
       const S = String(w.sym).toUpperCase(), nm = String(w.name || '').toLowerCase();
       const same = list.filter(x => x && /^[a-z0-9][a-z0-9-]{0,99}$/.test(x.slug || '') && String(x.display_symbol || x.symbol || '').toUpperCase() === S && !x.not_trading_anymore);
       const pick = same.find(x => x.slug === id) || same.find(x => String(x.name || '').toLowerCase() === nm)
-        || (w.mcap > 0 ? same.filter(x => +x.market_cap_usd > 0 && Math.abs(Math.log(+x.market_cap_usd / w.mcap)) < Math.log(3)).sort((a, b) => b.market_cap_usd - a.market_cap_usd)[0] : null);
+        || (w.mcap > 0 ? same.filter(x => mc(x) > 0 && Math.abs(Math.log(mc(x) / w.mcap)) < Math.log(3)).sort((a, b) => mc(b) - mc(a))[0] : null)
+        || (same.length === 1 ? same[0] : null);
       if (pick) { cc[id] = pick.slug; found++; }
     }
-    await sleep(1200);
+    await sleep(700);
   }
   out.cc = cc; log('links: CoinCodex', found, 'of', want.size);
   // perpetual futures: OKX + Hyperliquid (Binance / Bybit refuse GitHub's US servers)
