@@ -101,6 +101,72 @@ async function main() {
   if (!snap.top.length && !snap.global) { log('nothing to save yet'); return; }
   fs.writeFileSync(FILE, JSON.stringify(snap));
   log('wrote', FILE);
+  try { await links(snap.top); } catch (e) { log('links:', e.message); }
+}
+
+// ── Links that open the right page for every coin (m/links.json) ──
+//   cmc: { SYM: [[slug, name, marketCap], …] }  CoinMarketCap's own page names, top ~1500 coins (tickers are reused,
+//        so the app picks by name / market cap)
+//   cc:  { coingeckoId: slug }                   CoinCodex (Prediction) page for the Top 150 + the app's known coins
+//   fut: [SYM, …]                                coins with perpetual futures (OKX or Hyperliquid) — CoinGlass has a
+//        Liquidation Map only for those
+// Any part that fails keeps the last one.
+const CMC_LIST = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?sortBy=market_cap&sortType=desc&convert=USD&cryptoType=all&tagType=all&audited=false';
+const CC_API = process.env.CC_API || 'https://coincodex.com/api/v1/assets/get_asset_list';
+async function links(top) {
+  const FILE_L = path.join(OUT, 'links.json');
+  let old = {}; try { old = JSON.parse(fs.readFileSync(FILE_L, 'utf8')); } catch (_) {}
+  const out = { updated: new Date().toISOString(), cmc: old.cmc || {}, cc: old.cc || {}, fut: old.fut || [] };
+  // CoinMarketCap: 3 pages of 500
+  const cmc = {};
+  let got = 0;
+  for (let start = 1; start <= 1001; start += 500) {
+    const j = await get(`${CMC_LIST}&start=${start}&limit=500`, 2);
+    const list = (j && j.data && j.data.cryptoCurrencyList) || [];
+    for (const c of list) {
+      const sym = String(c.symbol || '').toUpperCase(), slug = String(c.slug || '');
+      if (!sym || !/^[a-z0-9][a-z0-9-]{0,99}$/.test(slug)) continue;
+      const q = (c.quotes || []).find(x => x.name === 'USD') || (c.quotes || [])[0] || {};
+      (cmc[sym] = cmc[sym] || []).push([slug, c.name || '', Math.round(+q.marketCap || 0)]);
+      got++;
+    }
+    if (list.length < 500) break;
+    await sleep(1500);
+  }
+  if (got > 300) { out.cmc = cmc; log('links: CoinMarketCap', got); } else log('links: CoinMarketCap no answer, kept the last one');
+  // CoinCodex: by ticker, in groups; the page is the one with the same CoinGecko id / name (else the biggest)
+  const known = (() => { try { const ctx = { window: {}, document: { getElementById: () => true, createElement: () => ({}), head: { appendChild() {} } }, localStorage: { getItem() { return null; }, setItem() {} } };
+    vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'samsam-coins.js'), 'utf8'), ctx); return ctx.window.SamsamCoins; } catch (e) { log('links: samsam-coins', e.message); return null; } })();
+  const want = new Map();   // cgId → { sym, name, mcap }
+  for (const c of top || []) want.set(c.id, { sym: c.sym, name: c.name, mcap: c.mcap });
+  if (known) for (const [sym, id] of Object.entries(known.CG_IDS || {})) if (id && !want.has(id)) want.set(id, { sym, name: (known.NAMES || {})[sym] || '', mcap: 0 });
+  const bySym = new Map();
+  for (const [id, w] of want) { const s = String(w.sym || '').toUpperCase(); if (s) (bySym.get(s) || bySym.set(s, []).get(s)).push([id, w]); }
+  const syms = [...bySym.keys()], cc = { ...out.cc };
+  let found = 0;
+  for (let i = 0; i < syms.length; i += 40) {
+    const j = await get(`${CC_API}?select_bysymbol=${syms.slice(i, i + 40).map(encodeURIComponent).join(',')}`, 2);
+    const list = Array.isArray(j && j.data) ? j.data : [];
+    for (const [id, w] of syms.slice(i, i + 40).flatMap(s => bySym.get(s))) {
+      const S = String(w.sym).toUpperCase(), nm = String(w.name || '').toLowerCase();
+      const same = list.filter(x => x && /^[a-z0-9][a-z0-9-]{0,99}$/.test(x.slug || '') && String(x.display_symbol || x.symbol || '').toUpperCase() === S && !x.not_trading_anymore);
+      const pick = same.find(x => x.slug === id) || same.find(x => String(x.name || '').toLowerCase() === nm)
+        || (w.mcap > 0 ? same.filter(x => +x.market_cap_usd > 0 && Math.abs(Math.log(+x.market_cap_usd / w.mcap)) < Math.log(3)).sort((a, b) => b.market_cap_usd - a.market_cap_usd)[0] : null);
+      if (pick) { cc[id] = pick.slug; found++; }
+    }
+    await sleep(1200);
+  }
+  out.cc = cc; log('links: CoinCodex', found, 'of', want.size);
+  // perpetual futures: OKX + Hyperliquid (Binance / Bybit refuse GitHub's US servers)
+  const fut = new Set();
+  const okx = await get('https://www.okx.com/api/v5/public/instruments?instType=SWAP', 2);
+  for (const x of (okx && okx.data) || []) { const m = /^([A-Z0-9]+)-USDT?$/.exec(x.instFamily || ''); if (m && x.state === 'live') fut.add(m[1]); }
+  let hl = null;
+  try { const r = await fetch('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"type":"meta"}' }); if (r.ok) hl = await r.json(); } catch (_) {}
+  for (const x of (hl && hl.universe) || []) if (!x.isDelisted && x.name) fut.add(String(x.name).replace(/^k(?=[A-Z])/, '').toUpperCase());
+  if (fut.size > 100) { out.fut = [...fut].sort(); log('links: futures', fut.size); } else log('links: futures no answer, kept the last one');
+  fs.writeFileSync(FILE_L, JSON.stringify(out));
+  log('wrote', FILE_L);
 }
 // ── Altcoin Season, 90 days, top 100 (no stablecoins / wrapped / staked) ──
 async function altSeason(all) {

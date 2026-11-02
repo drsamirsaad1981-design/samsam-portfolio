@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611021818"></script>
-<script src="samsam-hints.js?v=202611021818"></script>
-<script src="samsam-vault.js?v=202611021818"></script>
-<script src="samsam-labels.js?v=202611021818"></script>
-<script src="samsam-taxonomy.js?v=202611021818"></script>
-<script src="samsam-coins.js?v=202611021818"></script>
-<script src="samsam-dropdown.js?v=202611021818"></script>
-<script src="samsam-add.js?v=202611021818"></script>
-<script src="samsam-chart.js?v=202611021818"></script>
-<script src="samsam-market.js?v=202611021818"></script>
+<script src="samsam-ui.js?v=202611022024"></script>
+<script src="samsam-hints.js?v=202611022024"></script>
+<script src="samsam-vault.js?v=202611022024"></script>
+<script src="samsam-labels.js?v=202611022024"></script>
+<script src="samsam-taxonomy.js?v=202611022024"></script>
+<script src="samsam-coins.js?v=202611022024"></script>
+<script src="samsam-dropdown.js?v=202611022024"></script>
+<script src="samsam-add.js?v=202611022024"></script>
+<script src="samsam-chart.js?v=202611022024"></script>
+<script src="samsam-market.js?v=202611022024"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1080,6 +1080,7 @@
   .btn-liq, .btn-pred, .btn-cmc { display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 600; white-space: nowrap; line-height: 1;
     color: #fb923c; background: var(--metric-bg); border: 1px solid rgba(251,146,60,.45); border-radius: 8px; height: 36px; font-size: 0.8rem; -webkit-tap-highlight-color: transparent; }
   .btn-liq:hover { background: #f97316; color: #fff; border-color: #f97316; }
+  .btn-liq.off, .btn-liq.off:hover { color: var(--fg2); background: var(--bg3); border-color: var(--border); border-style: dashed; cursor: default; opacity: .85; }
   .btn-pred { color: #a78bfa; border-color: rgba(167,139,250,.45); }
   .btn-pred:hover { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
   .btn-liq:focus-visible { outline: 3px solid rgba(251,146,60,.5); outline-offset: 2px; }
@@ -1481,7 +1482,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611021818"></script>
+<script type="module" src="samsam-cloud.js?v=202611022024"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1539,7 +1540,7 @@ function openCoinMenu(btn, sym) {
     { icon: 'history', label: 'History', onClick: () => openHistory(sym) },
     { icon: 'note', label: (c.notes || '').trim() ? 'Edit Note' : 'Add Note', onClick: () => editNote(sym) },
     { divider: true },
-    { icon: 'flame', label: 'Liquidation Map', href: SamsamCoins.liqMapUrl(sym) },
+    SamsamCoins.hasFutures(sym) === false ? null : { icon: 'flame', label: 'Liquidation Map', href: SamsamCoins.liqMapUrl(sym) },
     { icon: 'sparkles', label: 'Price Prediction', href: SamsamCoins.predictionUrl(sym, c) },
     { divider: true },
     { icon: 'trash', label: 'Remove', danger: true, onClick: () => removeCoin(sym) },
@@ -1710,6 +1711,8 @@ function applyCloudState(d) {
   }
 }
 
+// checked CoinMarketCap / CoinCodex page names and the futures list arrived (samsam-coins.js) → links point to the right pages
+window.addEventListener('samsam-links', () => { if (!cloudReady) return; try { renderAll(); if (coinTxSym) renderCoinTx(); } catch (_) {} });
 function getRemovedSyms() { return new Set(archivedCoins.map(c => c.sym)); }
 
 function getTxForSym(sym) {
@@ -3348,7 +3351,12 @@ function renderCoinTx() {
   const st = window.Samsam && Samsam.isReady() ? Samsam.getState() : null;
   const listEl = document.getElementById('htxList');
   const liq = document.getElementById('htxLiqLink');
-  if (liq) { liq.href = SamsamCoins.liqMapUrl(sym); liq.title = `Open the ${sym} liquidation heatmap on CoinGlass (new tab)`; }
+  if (liq) {   // CoinGlass maps only coins with futures — the others get a plain note instead of an empty page
+    const noFut = SamsamCoins.hasFutures(sym) === false;
+    liq.classList.toggle('off', noFut);
+    if (noFut) { liq.removeAttribute('href'); liq.title = `${sym} has no futures market, so CoinGlass has no liquidation map for it`; liq.innerHTML = SamsamUI.ic('flame', { solo: true }) + 'No futures'; }
+    else { liq.href = SamsamCoins.liqMapUrl(sym); liq.title = `Open the ${sym} liquidation heatmap on CoinGlass (new tab)`; liq.innerHTML = SamsamUI.ic('flame', { solo: true }) + 'Liq.Map' + '<span class="ext-mark">' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</span>'; }
+  }
   const pred = document.getElementById('htxPredLink');
   if (pred) { pred.href = SamsamCoins.predictionUrl(sym, portfolio.find(c => c.sym === sym) || {}); pred.title = `Open the ${sym} price prediction on CoinCodex (new tab)`; }
   const cmc = document.getElementById('htxCmcLink'), cmcUrl = getCoinGeckoUrl(sym);

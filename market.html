@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611022024"></script>
-<script src="samsam-hints.js?v=202611022024"></script>
-<script src="samsam-vault.js?v=202611022024"></script>
-<script src="samsam-labels.js?v=202611022024"></script>
-<script src="samsam-taxonomy.js?v=202611022024"></script>
-<script src="samsam-coins.js?v=202611022024"></script>
-<script src="samsam-dropdown.js?v=202611022024"></script>
-<script src="samsam-add.js?v=202611022024"></script>
-<script src="samsam-market.js?v=202611022024"></script>
+<script src="samsam-ui.js?v=202611022057"></script>
+<script src="samsam-hints.js?v=202611022057"></script>
+<script src="samsam-vault.js?v=202611022057"></script>
+<script src="samsam-labels.js?v=202611022057"></script>
+<script src="samsam-taxonomy.js?v=202611022057"></script>
+<script src="samsam-coins.js?v=202611022057"></script>
+<script src="samsam-dropdown.js?v=202611022057"></script>
+<script src="samsam-add.js?v=202611022057"></script>
+<script src="samsam-market.js?v=202611022057"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -198,12 +198,13 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 /* the three links — same look as the coin's Transactions page */
 .mk-links { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 4px 12px; border-bottom: 1px solid var(--border); animation: mkIn .18s ease-out; }
 @keyframes mkIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-.mk-links a { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 8px; border-radius: 8px; text-decoration: none; font-size: .8rem; font-weight: 600; white-space: nowrap; line-height: 1; background: var(--bg3); border: 1px solid; -webkit-tap-highlight-color: transparent; }
+.mk-links a, .mk-links .off { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 8px; border-radius: 8px; text-decoration: none; font-size: .8rem; font-weight: 600; white-space: nowrap; line-height: 1; background: var(--bg3); border: 1px solid; -webkit-tap-highlight-color: transparent; }
 .mk-links a .ss-ic { margin: 0; }
 .mk-links .ext { opacity: .75; display: inline-flex; }
 .mk-links .l-liq { color: #fb923c; border-color: rgba(251,146,60,.45); } .mk-links .l-liq:hover { background: #f97316; color: #fff; border-color: #f97316; }
 .mk-links .l-pred { color: #a78bfa; border-color: rgba(167,139,250,.45); } .mk-links .l-pred:hover { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
 .mk-links .l-cmc { color: #60a5fa; border-color: rgba(96,165,250,.45); } .mk-links .l-cmc:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.mk-links .l-liq.off, [data-theme="light"] .mk-links .l-liq.off { color: var(--fg2); border-color: var(--border); border-style: dashed; opacity: .85; cursor: default; }
 [data-theme="light"] .mk-links .l-liq { color: #ea580c; } [data-theme="light"] .mk-links .l-pred { color: #7c3aed; } [data-theme="light"] .mk-links .l-cmc { color: #2563eb; }
 @media (max-width: 380px) { .mk-links { gap: 6px; } .mk-links a { padding: 0 5px; font-size: .74rem; gap: 4px; } }
 .mk-empty { text-align: center; color: var(--fg2); font-size: .86rem; padding: 28px 12px; line-height: 1.6; }
@@ -233,7 +234,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   .mk-add { height: 34px; }
   /* the three links span exactly from the coin column to the end of the 7d column (row padding 6 + ☆ 34 + # 40 + gaps) */
   .mk-links { padding: 0 calc(6px + 116px + 16px) 12px calc(6px + 34px + 16px + 40px + 16px); gap: 12px; }
-  .mk-links a { flex: 1 1 0; }
+  .mk-links a, .mk-links .off { flex: 1 1 0; }
   .mk-head .c-rank, .mk-row .mk-rank, .mk-row .mk-ch, .mk-row .mk-ch7 { display: block; }
   .mk-sr .mk-r2 { display: none; }
   .mk-head > .c-price, .mk-head > .c-ch, .mk-head > .c-ch7 { display: flex; }
@@ -383,7 +384,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611022024"></script>
+<script type="module" src="samsam-cloud.js?v=202611022057"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -497,20 +498,28 @@ function known(c) { const S = c.sym; return SamsamCoins.CG_IDS[S] === c.id || Sa
 // CoinCodex page names found for coins you don't hold (looked up once, kept in this browser)
 let ccCache = {}; try { ccCache = JSON.parse(localStorage.getItem('samsam_cc') || '{}') || {}; } catch (_) {}
 function ccSave() { try { localStorage.setItem('samsam_cc', JSON.stringify(ccCache)); } catch (_) {} }
+// CoinMarketCap: its own page name from the list GitHub checks (same ticker + name / market cap); a coin CoinMarketCap
+// doesn't list opens on CoinGecko by its exact id instead of a guessed page that may not exist.
 function cmcLink(c) {
-  const h = heldCoin(c);
-  if (h) return SamsamCoins.cgUrl(h.sym, h.cgId, { cmcSlug: h.cmcSlug, name: h.name });
-  return known(c) ? SamsamCoins.cmcUrl(c.sym) : SamsamCoins.cmcUrl('', { name: c.name }) || SamsamCoins.coingeckoUrl(c.sym, c.id);
+  const h = heldCoin(c), L = SamsamCoins.links();
+  if (h) return SamsamCoins.cgUrl(h.sym, h.cgId, { cmcSlug: h.cmcSlug, name: h.name, mcap: c.mcap });
+  if (L && L.cmc && !L.cmc[String(c.sym || '').toUpperCase()] && !known(c)) return SamsamCoins.coingeckoUrl(c.sym, c.id) || SamsamCoins.cmcUrl('', { name: c.name });
+  return SamsamCoins.cmcUrl(c.sym, { name: known(c) ? undefined : c.name, mcap: c.mcap }) || SamsamCoins.coingeckoUrl(c.sym, c.id);
 }
 function predLink(c) {
   const h = heldCoin(c);
-  if (h) return SamsamCoins.predictionUrl(h.sym, h);
+  if (h) return SamsamCoins.predictionUrl(h.sym, { ...h, cgId: h.cgId || c.id });
   if (ccCache[c.id]) return SamsamCoins.predictionUrl(c.sym, { ccSlug: ccCache[c.id] });
-  return SamsamCoins.predictionUrl(known(c) ? c.sym : '', { name: c.name + (known(c) ? '' : ' ' + c.sym) });
+  return SamsamCoins.predictionUrl(known(c) ? c.sym : '', { cgId: c.id, name: c.name + (known(c) ? '' : ' ' + c.sym) });
+}
+// CoinGlass has a liquidation map only for coins with futures — the others get a plain "No futures" note
+function liqHtml(c, x) {
+  if (SamsamCoins.hasFutures(c.sym) === false) return `<span class="l-liq off" title="${E(c.sym)} has no futures market, so CoinGlass has no liquidation map for it">${ic('flame', { solo: true, size: 15 })}No futures</span>`;
+  return `<a class="l-liq" href="${E(SamsamCoins.liqMapUrl(c.sym))}" target="_blank" rel="noopener noreferrer" title="Open the ${E(c.sym)} liquidation heatmap on CoinGlass (new tab)">${ic('flame', { solo: true, size: 15 })}Liq.Map${x}</a>`;
 }
 // opening a coin's links: find its CoinCodex page if we don't know it yet, so Prediction opens the page itself
 function resolveCc(c) {
-  if (heldCoin(c) || c.id in ccCache || (known(c) && SamsamCoins.ccSlug(c.sym))) return;
+  if (heldCoin(c) || c.id in ccCache || (known(c) && SamsamCoins.ccSlug(c.sym)) || SamsamCoins.ccSlug('', { cgId: c.id })) return;
   SamsamCoins.findCcSlug(c.sym, { cgId: c.id, name: c.name }).then(slug => {
     ccCache[c.id] = slug || ''; ccSave();
     const a = document.querySelector(`#mkl-${CSS.escape(c.id)} .l-pred`); if (a && slug) a.href = predLink(c);
@@ -522,7 +531,7 @@ function linksHtml(c) {
   const x = `<span class="ext">${ic('ext', { solo: true, size: 12 })}</span>`;
   return `<div class="mk-links" id="mkl-${E(c.id)}">
     <div class="mk-lsum"><span>24h <b class="${cls(c.ch24)}">${pct(c.ch24)}</b></span><span>7d <b class="${cls(c.ch7)}">${pct(c.ch7)}</b></span></div>
-    <a class="l-liq" href="${E(SamsamCoins.liqMapUrl(c.sym))}" target="_blank" rel="noopener noreferrer" title="Open the ${E(c.sym)} liquidation heatmap on CoinGlass (new tab)">${ic('flame', { solo: true, size: 15 })}Liq.Map${x}</a>
+    ${liqHtml(c, x)}
     <a class="l-pred" href="${E(predLink(c))}" target="_blank" rel="noopener noreferrer" title="Open the ${E(c.sym)} price prediction on CoinCodex (new tab)">${ic('sparkles', { solo: true, size: 15 })}Prediction${x}</a>
     <a class="l-cmc" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap (new tab)">${ic('bar', { solo: true, size: 15 })}CMC${x}</a>
   </div>`;
@@ -688,11 +697,33 @@ function status() {
   el.title = paused ? 'CoinGecko’s free limit is busy — showing the newest saved numbers.' : '';
 }
 setInterval(() => { if (lastT && onScreen()) status(); }, 30e3);
+// A watched coin CoinGecko didn't answer for (outside the Top 150 while its free limit is busy) still shows a price:
+// the one your portfolio / plan already has, or the last one this browser saw for it.
+let watchSeen = {}; try { watchSeen = JSON.parse(localStorage.getItem('samsam_watch_rows') || '{}') || {}; } catch (_) {}
+function withOwnPrices(rows) {
+  const have = new Map((rows || []).map(r => [r.id, r]));
+  for (const r of rows || []) if (r.price > 0) watchSeen[r.id] = { ...r, t: Date.now() };
+  try { localStorage.setItem('samsam_watch_rows', JSON.stringify(watchSeen)); } catch (_) {}
+  const prices = window.Samsam && Samsam.getPrices ? Samsam.getPrices() : {};
+  const pf = (state && state.portfolio) || [], plan = (state && state.accumPlan) || [];
+  return watchlist().map(w => {
+    if (have.has(w.id)) return have.get(w.id);
+    const sym = String(w.sym || '').toUpperCase();
+    const own = pf.find(x => x.cgId === w.id) || pf.find(x => x.sym === sym && !x.cgId);
+    const pl = plan.find(e => e.cgId === w.id) || plan.find(e => e.sym === sym);
+    const pr = prices[(own && own.sym) || (pl && pl.sym) || sym];
+    const seen = watchSeen[w.id];
+    const price = own && own.currentPrice > 0 ? own.currentPrice : pr && pr.usd > 0 ? pr.usd : seen ? seen.price : null;
+    const ch24 = own && own.change24h != null ? own.change24h : pr && pr.ch24 != null ? pr.ch24 : seen ? seen.ch24 : null;
+    return { ...(seen || {}), id: w.id, sym: w.sym, name: w.name, img: w.img || (seen && seen.img) || '', price, ch24, ch7: seen ? seen.ch7 : null, spark: seen ? seen.spark : [], own: true };
+  });
+}
 async function loadWatch(force) {
   const ids = watchlist().map(w => w.id);
   if (!ids.length) { watchRows = []; render(); return; }
   try { const r = await M.byIds(ids, force); watchRows = fix(r.data); if (r.stale) paused = true; }
   catch (e) { if (!watchRows.length) paused = true; }
+  watchRows = withOwnPrices(watchRows);
   status(); render();
 }
 let busy = false;
@@ -728,6 +759,7 @@ setInterval(() => { if (onScreen()) refreshAll(false); }, 3 * 60e3);
 document.addEventListener('visibilitychange', () => { if (onScreen() && Date.now() - lastT > 3 * 60e3) refreshAll(false); });
 
 // your portfolio / plan / watchlist, live from the cloud
+window.addEventListener('samsam-links', () => render());   // checked page names arrived → links now open the right pages
 function hookCloud(S) { S.onChange(d => { const before = JSON.stringify(watchlist()); state = d; render(); if (mode === 'watch' && JSON.stringify(watchlist()) !== before) loadWatch(false); }); }
 if (window.Samsam) hookCloud(window.Samsam); else window.addEventListener('samsam-ready', () => hookCloud(window.Samsam), { once: true });
 SamsamUI.refresh();

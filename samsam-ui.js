@@ -422,7 +422,7 @@
     var el = document.createElement('div'); el.className = 'cpm' + (sheet ? ' sheet' : ''); el.setAttribute('role', 'menu'); el.setAttribute('aria-label', title || 'Actions');
     var t = document.createElement('div'); t.className = 'cpm-title'; t.textContent = title || ''; el.appendChild(t);
     var focusables = [];
-    items.forEach(function (it) {
+    (items || []).filter(Boolean).forEach(function (it) {   // a null item = hidden for this coin
       if (it.divider) { var d = document.createElement('div'); d.className = 'cpm-div'; el.appendChild(d); return; }
       var b = document.createElement(it.href ? 'a' : 'button');
       b.className = 'cpm-item' + (it.danger ? ' danger' : ''); b.setAttribute('role', 'menuitem'); b.tabIndex = -1;

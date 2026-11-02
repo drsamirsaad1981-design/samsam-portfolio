@@ -210,11 +210,49 @@
     return String(name || '').toLowerCase().replace(/\([^)]*\)/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || null;
   }
+  // ── Page names checked every half hour by GitHub (tools/update-market.mjs → prices/m/links.json):
+  //    CoinMarketCap's own page names (top ~1500), CoinCodex pages, and which coins have futures (Liq.Map).
+  //    Kept in this browser; until it arrives the links use the names below / a guess, as before.
+  var LINKS = null;
+  (function loadLinks() {
+    try { var c = JSON.parse(localStorage.getItem('samsam_links') || 'null'); if (c && c.data && c.data.cmc) { LINKS = c.data; if (Date.now() - c.t < 6 * 3600e3) return; } } catch (_) {}
+    if (typeof fetch !== 'function' || typeof location === 'undefined') return;
+    var m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname || ''), repo = (location.pathname || '/').split('/')[1];
+    var url = window.__linksUrl || 'https://raw.githubusercontent.com/' + (m ? m[1] : 'drsamirsaad1981-design') + '/' + (m && repo ? repo : 'samsam-portfolio') + '/prices/m/links.json';
+    fetch(url, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !j.cmc) return;
+      LINKS = j; try { localStorage.setItem('samsam_links', JSON.stringify({ t: Date.now(), data: j })); } catch (_) {}
+      try { window.dispatchEvent(new Event('samsam-links')); } catch (_) {}
+    }).catch(function () {});
+  })();
+  // CoinMarketCap page from the checked list: same ticker, then the same name, else the closest market cap, else the biggest
+  function cmcFromList(S, name, mcap) {
+    var list = LINKS && LINKS.cmc && LINKS.cmc[S]; if (!list || !list.length) return null;
+    if (list.length === 1) return list[0][0];
+    var n = String(name || '').toLowerCase().trim();
+    var byName = n && list.filter(function (x) { return String(x[1]).toLowerCase() === n; })[0]; if (byName) return byName[0];
+    if (mcap > 0) return list.slice().sort(function (a, b) { return Math.abs(Math.log((a[2] || 1) / mcap)) - Math.abs(Math.log((b[2] || 1) / mcap)); })[0][0];
+    return list[0][0];
+  }
   function cmcSlug(sym, opts) {
     opts = opts || {}; var S = String(sym || '').toUpperCase(), m = META[S] || {};
     var ok = function (x) { return x && /^[a-z0-9][a-z0-9-]{0,99}$/.test(x) ? x : null; };
-    return ok(opts.cmcSlug) || ok(m.cmcSlug) || CMC_SLUGS[S] || ok(cmcGuess(opts.name || m.name || NAMES[S]));
+    if (ok(opts.cmcSlug) && !S) return opts.cmcSlug;
+    var name = opts.name || m.name || NAMES[S];
+    var list = S && LINKS && LINKS.cmc && LINKS.cmc[S];
+    // a page name saved with the coin (often a guess typed when it was added) is kept only if CoinMarketCap has it
+    var saved = ok(opts.cmcSlug) || ok(m.cmcSlug);
+    if (saved && (!list || list.some(function (x) { return x[0] === saved; }))) return saved;
+    if (CMC_SLUGS[S]) return CMC_SLUGS[S];   // checked by hand
+    return (S && cmcFromList(S, name, +opts.mcap || 0)) || CMC_SLUGS[S] || saved || ok(cmcGuess(name));
   }
+  // null = not known yet (list not loaded), true / false = has / has no perpetual futures (CoinGlass maps only those)
+  function hasFutures(sym) {
+    if (!LINKS || !LINKS.fut || !LINKS.fut.length) return null;
+    var s = LIQ_SYMS[String(sym || '').toUpperCase()] || String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return LINKS.fut.indexOf(s) >= 0;
+  }
+  function ccFromList(cgId) { return cgId && LINKS && LINKS.cc && LINKS.cc[cgId] || null; }
   function cmcUrl(sym, opts) { var s = cmcSlug(sym, opts); return s ? 'https://coinmarketcap.com/currencies/' + encodeURIComponent(s) + '/' : null; }
   // Every "open this coin" link in the app (name, symbol, logo) — kept under its old name so all pages follow.
   function cgUrl(sym, cgId, opts) { return cmcUrl(sym, opts) || coingeckoUrl(sym, cgId); }
@@ -324,7 +362,7 @@
   function ccSlug(sym, opts) {
     opts = opts || {}; var s = String(sym || '').toUpperCase();
     if (opts.ccSlug && SLUG_RE.test(opts.ccSlug)) return opts.ccSlug;
-    return CC_SLUGS[s] || null;
+    return CC_SLUGS[s] || ccFromList(opts.cgId || CG_IDS[s]) || null;
   }
   // Direct page when the CoinCodex name is known; otherwise a search that always finds the right page.
   function predictionUrl(sym, opts) {
@@ -418,5 +456,5 @@
   function signedPct(p, d) { d = d == null ? 2 : d; return (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p).toFixed(d) + '%'; }
   // other CoinGecko ids a coin is also listed under (the first one may lack price history)
   var CG_ALT = { PONS: ['pons'] };
-  window.SamsamCoins = { holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();
