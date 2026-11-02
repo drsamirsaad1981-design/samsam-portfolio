@@ -110,9 +110,9 @@
     },
     fng: function (force) {
       return cached('fng', TTL.fng, function () {
-        return json('https://api.alternative.me/fng/?limit=2').then(function (j) {
+        return json('https://api.alternative.me/fng/?limit=8').then(function (j) {
           var a = (j && j.data) || []; if (!a.length) throw new Error('No Fear & Greed data');
-          return { value: +a[0].value, label: a[0].value_classification, prev: a[1] ? +a[1].value : null };
+          return { value: +a[0].value, label: a[0].value_classification, prev: a[1] ? +a[1].value : null, week: a[7] ? +a[7].value : null };
         });
       }, force, snapPart('fng'));
     },
@@ -134,6 +134,11 @@
           return rows.length ? { data: rows, t: src.t } : null;
         });
       });
+    },
+    // Altcoin Season the CoinMarketCap way (top 100 vs BTC, 90 days), worked out by GitHub with each snapshot.
+    // Resolves null while its 90-day history is still filling — the page then uses altSeason(rows) (30 days).
+    alt90: function () {
+      return snapshot().then(function (j) { var a = j.alt; return a && a.ready && a.value != null ? a : null; }, function () { return null; });
     },
     // first paint: whatever this browser has, else the GitHub snapshot — no CoinGecko call
     peek: function () {

@@ -700,17 +700,16 @@
     if (document.getElementById('cpAiFab')) return;
     var KEYP = 'samsam_aifab_pos', M = 12, b = document.createElement('button');
     b.type = 'button'; b.id = 'cpAiFab'; b.className = 'cp-aifab'; b.title = 'AI Analysis (drag to move)'; b.setAttribute('aria-label', 'AI Analysis');
-    b.innerHTML = ic('bot', { solo: true, size: 24, sw: 1.9 });
+    b.innerHTML = ic('bot', { solo: true, size: 30, sw: 1.9 });
     if (!document.getElementById('cpAiFabCss')) {
       var st = document.createElement('style'); st.id = 'cpAiFabCss';
-      st.textContent = '.cp-aifab{position:fixed;z-index:10020;left:-999px;top:-999px;width:52px;height:52px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;' +
-        // dark glass that blends into the navy app, faint violet rim
-        'color:#c4b5fd;background:rgba(23,21,51,.75);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-color:rgba(124,58,237,.25);box-shadow:0 8px 32px rgba(0,0,0,.37);' +
-        'cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;transition:left .22s ease,top .22s ease,transform .15s,background .15s,border-color .15s,opacity .18s}' +
-        '.cp-aifab:hover,.cp-aifab:active,.cp-aifab.drag{background:rgba(124,58,237,.25);border-color:rgba(124,58,237,.5)}' +
-        // light theme: frosted white glass, violet icon
-        'html:not([data-theme="dark"]) .cp-aifab{color:#6d28d9;background:rgba(255,255,255,.72);border-color:rgba(124,58,237,.28);box-shadow:0 8px 24px rgba(15,23,42,.16)}' +
-        'html:not([data-theme="dark"]) .cp-aifab:hover,html:not([data-theme="dark"]) .cp-aifab:active,html:not([data-theme="dark"]) .cp-aifab.drag{background:rgba(237,233,254,.85);border-color:rgba(124,58,237,.5)}' +
+      st.textContent = '.cp-aifab{position:fixed;z-index:10020;left:-999px;top:-999px;width:48px;height:48px;padding:0;border:0;border-radius:50%;background:none;display:flex;align-items:center;justify-content:center;' +
+        // just the icon, floating (like CoinMarketCap / Binance): violet with a soft glow so it reads on any background
+        'color:#b9a2ff;filter:drop-shadow(0 0 7px rgba(167,139,250,.55)) drop-shadow(0 3px 8px rgba(0,0,0,.5));' +
+        'cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;transition:left .22s ease,top .22s ease,transform .15s,color .15s,filter .15s,opacity .18s}' +
+        '.cp-aifab:hover,.cp-aifab:active,.cp-aifab.drag{color:#ddd3ff;filter:drop-shadow(0 0 10px rgba(167,139,250,.85)) drop-shadow(0 3px 8px rgba(0,0,0,.5))}' +
+        'html:not([data-theme="dark"]) .cp-aifab{color:#7c3aed;filter:drop-shadow(0 0 6px rgba(124,58,237,.35)) drop-shadow(0 2px 5px rgba(15,23,42,.22))}' +
+        'html:not([data-theme="dark"]) .cp-aifab:hover,html:not([data-theme="dark"]) .cp-aifab:active,html:not([data-theme="dark"]) .cp-aifab.drag{color:#5b21b6;filter:drop-shadow(0 0 9px rgba(124,58,237,.55)) drop-shadow(0 2px 5px rgba(15,23,42,.22))}' +
         // a window is open (in any tab) — slip away under its dimmed backdrop
         '.cp-aifab.under{opacity:0;pointer-events:none;transform:scale(.85)}' +
         '.cp-aifab.drag{transition:none;cursor:grabbing;transform:scale(1.08)}.cp-aifab:active{transform:scale(.96)}.cp-aifab.drag:active{transform:scale(1.08)}' +
@@ -720,12 +719,14 @@
     document.body.appendChild(b);
     var pos = { side: 'r', y: 0.82 };
     try { var sv = JSON.parse(localStorage.getItem(KEYP)); if (sv && (sv.side === 'l' || sv.side === 'r') && sv.y >= 0 && sv.y <= 1) pos = sv; } catch (_) {}
+    // a computer keeps it well inside the window, away from the scrollbar; a phone keeps it close to the edge
+    function edge() { return innerWidth >= 1024 ? 40 : M; }
     function box() {   // where the button may sit: below the top edge, above the bottom bar
-      var s = b.offsetWidth || 52, bar = document.getElementById('cpBnav'), r = bar && bar.getBoundingClientRect();
+      var s = b.offsetWidth || 48, bar = document.getElementById('cpBnav'), r = bar && bar.getBoundingClientRect();
       var bottom = (r && r.height && r.top < innerHeight ? r.top : innerHeight) - s - M;
-      return { s: s, top: M + 56, bottom: Math.max(M + 56, bottom), right: innerWidth - s - M };
+      return { s: s, top: M + 56, bottom: Math.max(M + 56, bottom), left: edge(), right: innerWidth - s - edge() };
     }
-    function place(p) { var k = box(); b.style.top = Math.round(k.top + p.y * (k.bottom - k.top)) + 'px'; b.style.left = (p.side === 'l' ? M : k.right) + 'px'; }
+    function place(p) { var k = box(); b.style.top = Math.round(k.top + p.y * (k.bottom - k.top)) + 'px'; b.style.left = (p.side === 'l' ? k.left : k.right) + 'px'; }
     place(pos);
     window.addEventListener('resize', function () { place(pos); });
     var drag = null;

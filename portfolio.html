@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611020304"></script>
-<script src="samsam-hints.js?v=202611020304"></script>
-<script src="samsam-vault.js?v=202611020304"></script>
-<script src="samsam-labels.js?v=202611020304"></script>
-<script src="samsam-taxonomy.js?v=202611020304"></script>
-<script src="samsam-coins.js?v=202611020304"></script>
-<script src="samsam-dropdown.js?v=202611020304"></script>
-<script src="samsam-add.js?v=202611020304"></script>
-<script src="samsam-chart.js?v=202611020304"></script>
-<script src="samsam-market.js?v=202611020304"></script>
+<script src="samsam-ui.js?v=202611020312"></script>
+<script src="samsam-hints.js?v=202611020312"></script>
+<script src="samsam-vault.js?v=202611020312"></script>
+<script src="samsam-labels.js?v=202611020312"></script>
+<script src="samsam-taxonomy.js?v=202611020312"></script>
+<script src="samsam-coins.js?v=202611020312"></script>
+<script src="samsam-dropdown.js?v=202611020312"></script>
+<script src="samsam-add.js?v=202611020312"></script>
+<script src="samsam-chart.js?v=202611020312"></script>
+<script src="samsam-market.js?v=202611020312"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1518,7 +1518,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611020304"></script>
+<script type="module" src="samsam-cloud.js?v=202611020312"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2716,11 +2716,40 @@ function buildPortfolioPayload() {
   };
 }
 
+// Market summary for the AI report: cached / snapshot numbers (no extra CoinGecko calls), at most ~4 seconds.
+async function marketContext() {
+  const M = window.SamsamMarket; if (!M) return '';
+  const quiet = p => Promise.race([p.then(r => r && 'data' in r ? r.data : r, () => null), new Promise(r => setTimeout(() => r(null), 4000))]);
+  const [g, f, top, a90] = await Promise.all([quiet(M.global()), quiet(M.fng()), quiet(M.top()), quiet(M.alt90())]);
+  if (!g && !f && !top) return '';
+  const pc = v => v == null || isNaN(v) ? 'n/a' : (v >= 0 ? '+' : '') + (+v).toFixed(2) + '%';
+  const usd = v => v >= 1000 ? '$' + Math.round(v).toLocaleString('en-US') : '$' + (+v).toPrecision(4);
+  const L = ['', '', 'MARKET OVERVIEW (live crypto market, same data as the app\'s Market tab):'];
+  if (g) {
+    L.push(`- Total market cap ${M.fmtBig(g.mcap)} (${pc(g.mcapCh24)} in 24h), 24h volume ${M.fmtBig(g.vol)}`);
+    L.push(`- Dominance: BTC ${g.dom.btc.toFixed(1)}%, ETH ${g.dom.eth.toFixed(1)}%, USDT ${g.dom.usdt.toFixed(1)}%, others ${Math.max(0, 100 - g.dom.btc - g.dom.eth - g.dom.usdt).toFixed(1)}%`);
+  }
+  if (f) L.push(`- Fear & Greed: ${f.value}/100 (${f.label})${f.prev != null ? `, yesterday ${f.prev}` : ''}${f.week != null ? `, a week ago ${f.week}` : ''}`);
+  const alt = a90 || (top && M.altSeason(top));
+  if (alt) L.push(`- Altcoin Season: ${alt.value}/100 (${alt.label}) — ${alt.beat}/${alt.n} top coins beat BTC over ${alt.period || '30d'}`);
+  if (top && top.length) {
+    const by = id => top.find(r => r.id === id);
+    [['bitcoin', 'BTC'], ['ethereum', 'ETH']].forEach(([id, s]) => { const c = by(id); if (c && c.price) L.push(`- ${s} ${usd(c.price)} (${pc(c.ch24)} 24h${c.ch30 != null ? `, ${pc(c.ch30)} 30d` : ''})`); });
+    const ok = top.filter(r => r.ch24 != null && !M.isExcluded(r)).sort((a, b) => b.ch24 - a.ch24);
+    if (ok.length >= 10) {
+      L.push(`- Top 24h gainers (top 100): ${ok.slice(0, 5).map(r => `${r.sym} ${pc(r.ch24)}`).join(', ')}`);
+      L.push(`- Top 24h losers (top 100): ${ok.slice(-5).reverse().map(r => `${r.sym} ${pc(r.ch24)}`).join(', ')}`);
+    }
+  }
+  L.push('Begin the report with a short section titled "Market Overview" (in the report language) that reads these market conditions — trend, sentiment, BTC vs altcoins — and what they mean for this portfolio right now. Then continue with the usual portfolio analysis, and take the market conditions into account in the recommendations.');
+  return L.join('\n');
+}
+
 function renderAnalysisLoading() {
   document.getElementById('analysisBody').innerHTML = `
     <div class="analysis-loading">
       <div class="analysis-spinner"></div>
-      <div style="font-size:0.85rem">Claude AI is analyzing your portfolio…</div>
+      <div style="font-size:0.85rem">Claude AI is reading the market and analyzing your portfolio…</div>
       <div style="font-size:0.72rem;opacity:0.6">This takes 5–15 seconds</div>
     </div>`;
 }
@@ -2808,6 +2837,10 @@ async function runAnalysis() {
       ).join('\n');
       accumContext += `\nWhen making Buy/Hold recommendations, factor in which coins are part of the accumulation plan and how close they are to their targets.`;
     }
+
+    // The market right now (same numbers as the Market tab) — the report opens with a Market Overview.
+    // It travels in the same free-text context the Worker already adds to the prompt, so the Worker needs no change.
+    accumContext += await marketContext();
 
     const res = await fetch(ANALYSIS_WORKER_URL, {
       method: 'POST',

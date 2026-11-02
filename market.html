@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611020312"></script>
-<script src="samsam-hints.js?v=202611020312"></script>
-<script src="samsam-vault.js?v=202611020312"></script>
-<script src="samsam-labels.js?v=202611020312"></script>
-<script src="samsam-taxonomy.js?v=202611020312"></script>
-<script src="samsam-coins.js?v=202611020312"></script>
-<script src="samsam-dropdown.js?v=202611020312"></script>
-<script src="samsam-add.js?v=202611020312"></script>
-<script src="samsam-market.js?v=202611020312"></script>
+<script src="samsam-ui.js?v=202611020819"></script>
+<script src="samsam-hints.js?v=202611020819"></script>
+<script src="samsam-vault.js?v=202611020819"></script>
+<script src="samsam-labels.js?v=202611020819"></script>
+<script src="samsam-taxonomy.js?v=202611020819"></script>
+<script src="samsam-coins.js?v=202611020819"></script>
+<script src="samsam-dropdown.js?v=202611020819"></script>
+<script src="samsam-add.js?v=202611020819"></script>
+<script src="samsam-market.js?v=202611020819"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -76,7 +76,39 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-dom-l b { display: block; font-size: .86rem; font-weight: 800; }
 .mk-dom-l span { color: var(--fg2); font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
 .mk-dom-l span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
-@media (max-width: 380px) { .mk-v { font-size: 1.14rem; } .mk-card { padding: 12px; } }
+/* cards fill their space: footers sit at the bottom, all four the same height */
+.mk-foot { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
+.mk-li { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: .72rem; color: var(--fg2); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 0; }
+.mk-li b { color: var(--fg); font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.mk-li .ch { font-weight: 700; margin-left: 4px; }
+.mk-pill { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; font-size: .72rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.mk-pill.up { background: rgba(34,197,94,.14); } .mk-pill.down { background: rgba(239,68,68,.14); }
+.mk-pill small { font-weight: 700; color: var(--fg2); }
+/* Fear & Greed: half-circle gauge with the number inside */
+.mk-semi { position: relative; width: 100%; max-width: 150px; margin: 2px auto 0; }
+.mk-semi svg { display: block; width: 100%; height: auto; overflow: visible; }
+.mk-semi .num { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; line-height: 1; }
+.mk-semi .num b { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mk-semi .num small { display: block; font-size: .7rem; font-weight: 800; margin-top: 3px; }
+.mk-knob { transition: cx .5s, cy .5s; }
+/* Dominance: donut + legend */
+.mk-domw { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.mk-donut { width: 64px; height: 64px; flex-shrink: 0; transform: rotate(-90deg); }
+.mk-donut circle { fill: none; stroke-width: 7; transition: stroke-dasharray .5s, stroke-dashoffset .5s; }
+.mk-leg { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.mk-leg div { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: .72rem; font-variant-numeric: tabular-nums; }
+.mk-leg span { color: var(--fg2); font-weight: 700; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.mk-leg span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.mk-leg b { font-weight: 800; }
+/* phone / tablet: donut on top, the four values in a 2×2 grid under it (a side legend doesn't fit a half-width card) */
+@media (max-width: 1023px) {
+  .mk-domw { flex-direction: column; gap: 8px; }
+  .mk-leg { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; }
+  .mk-leg div { flex-direction: column; align-items: flex-start; gap: 1px; }
+  .mk-leg b { font-size: .86rem; padding-left: 13px; }
+}
+@media (min-width: 1024px) { .mk-donut { width: 76px; height: 76px; } .mk-leg div { font-size: .78rem; } }
+@media (max-width: 380px) { .mk-v { font-size: 1.14rem; } .mk-card { padding: 12px; } .mk-donut { width: 56px; height: 56px; } }
 
 /* ── Watchlist card ── */
 .mk-list { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 12px; }
@@ -238,15 +270,28 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     <div class="mk-card" id="cardMcap">
       <div class="mk-k"><span data-ic="globe"></span>Total Market Cap</div>
       <div class="mk-v" id="mcapV">—</div>
-      <div class="mk-sub"><span class="mk-tag" id="mcapCh">—</span> <span>24h</span></div>
-      <div class="mk-sub">Volume 24h <b id="volV">—</b></div>
+      <span class="mk-pill" id="mcapCh">—</span>
+      <div class="mk-foot">
+        <div class="mk-li">Volume 24h <b id="volV">—</b></div>
+        <div class="mk-li" id="liBtc">BTC <span><b>—</b></span></div>
+        <div class="mk-li" id="liEth">ETH <span><b>—</b></span></div>
+      </div>
     </div>
     <div class="mk-card" id="cardFng">
       <div class="mk-k"><span data-ic="gauge"></span>Fear &amp; Greed</div>
-      <div class="mk-v" id="fngV">—<small>/100</small></div>
-      <div class="mk-tag" id="fngL">—</div>
-      <div class="mk-gauge fng" role="img" id="fngG" aria-label="Fear and Greed gauge"><i style="left:50%"></i></div>
-      <div class="mk-gauge-l"><span>Fear</span><span id="fngPrev"></span><span>Greed</span></div>
+      <div class="mk-semi" role="img" id="fngG" aria-label="Fear and Greed gauge">
+        <svg viewBox="0 0 120 66" aria-hidden="true">
+          <g fill="none" stroke-width="9" stroke-linecap="butt">
+            <path d="M8.0 60.0 A52 52 0 0 1 22.3 24.2" stroke="#ef4444"/><path d="M24.2 22.3 A52 52 0 0 1 50.6 8.9" stroke="#f97316"/><path d="M53.2 8.5 A52 52 0 0 1 66.8 8.5" stroke="#eab308"/><path d="M69.4 8.9 A52 52 0 0 1 95.8 22.3" stroke="#84cc16"/><path d="M97.7 24.2 A52 52 0 0 1 112.0 60.0" stroke="#22c55e"/>
+          </g>
+          <circle class="mk-knob" id="fngKnob" cx="60" cy="8" r="6" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+        </svg>
+        <div class="num"><b id="fngV">—</b><small id="fngL">—</small></div>
+      </div>
+      <div class="mk-foot">
+        <div class="mk-li">Yesterday <b id="fngPrev">—</b></div>
+        <div class="mk-li">Last week <b id="fngWeek">—</b></div>
+      </div>
     </div>
     <div class="mk-card" id="cardAlt">
       <div class="mk-k"><span data-ic="activity"></span>Altcoin Season</div>
@@ -254,17 +299,31 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       <div class="mk-tag" id="altL">—</div>
       <div class="mk-gauge alt" role="img" id="altG" aria-label="Altcoin season gauge"><i style="left:50%"></i></div>
       <div class="mk-gauge-l"><span>Bitcoin</span><span>Altcoin</span></div>
-      <div class="mk-sub" id="altN">Top 50 vs BTC · 30d</div>
+      <div class="mk-foot">
+        <div class="mk-li" id="altN">Top coins vs BTC</div>
+        <div class="mk-li" id="altB">BTC <b>—</b></div>
+      </div>
     </div>
     <div class="mk-card" id="cardDom">
       <div class="mk-k"><span data-ic="bar"></span>Market Dominance</div>
-      <div class="mk-dom" id="domBar" role="img" aria-label="Market dominance"><span style="background:#f7931a;width:0"></span><span style="background:#8b5cf6;width:0"></span><span style="background:#26a17b;width:0"></span></div>
-      <div class="mk-dom-l">
-        <div><span style="--c:#f7931a">BTC</span><b id="domBtc">—</b></div>
-        <div><span style="--c:#8b5cf6">ETH</span><b id="domEth">—</b></div>
-        <div><span style="--c:#26a17b">USDT</span><b id="domUsdt">—</b></div>
+      <div class="mk-domw">
+        <svg class="mk-donut" id="domBar" viewBox="0 0 40 40" role="img" aria-label="Market dominance">
+          <circle cx="20" cy="20" r="15.9155" stroke="var(--bar-bg)"/>
+          <circle cx="20" cy="20" r="15.9155" stroke="#f7931a" stroke-dasharray="0 100"/>
+          <circle cx="20" cy="20" r="15.9155" stroke="#8b5cf6" stroke-dasharray="0 100"/>
+          <circle cx="20" cy="20" r="15.9155" stroke="#26a17b" stroke-dasharray="0 100"/>
+          <circle cx="20" cy="20" r="15.9155" stroke="#64748b" stroke-dasharray="0 100"/>
+        </svg>
+        <div class="mk-leg">
+          <div><span style="--c:#f7931a">BTC</span><b id="domBtc">—</b></div>
+          <div><span style="--c:#8b5cf6">ETH</span><b id="domEth">—</b></div>
+          <div><span style="--c:#26a17b">USDT</span><b id="domUsdt">—</b></div>
+          <div><span style="--c:#64748b">Others</span><b id="domOth">—</b></div>
+        </div>
       </div>
-      <div class="mk-sub">Others <b id="domOth">—</b></div>
+      <div class="mk-foot">
+        <div class="mk-li">Active coins <b id="domCoins">—</b></div>
+      </div>
     </div>
   </section>
 
@@ -301,7 +360,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611020312"></script>
+<script type="module" src="samsam-cloud.js?v=202611020819"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -321,33 +380,53 @@ function cls(v) { return v == null ? '' : v >= 0 ? 'up' : 'down'; }
 function paintGlobal(g) {
   if (!g) return;
   document.getElementById('mcapV').textContent = M.fmtBig(g.mcap);
-  const ch = document.getElementById('mcapCh'); ch.textContent = (g.mcapCh24 >= 0 ? '▲ ' : '▼ ') + pct(Math.abs(g.mcapCh24)).replace('+', ''); ch.className = 'mk-tag ' + cls(g.mcapCh24);
+  const ch = document.getElementById('mcapCh');
+  ch.innerHTML = (g.mcapCh24 >= 0 ? '▲ ' : '▼ ') + Math.abs(g.mcapCh24 || 0).toFixed(2) + '% <small>24h</small>'; ch.className = 'mk-pill ' + cls(g.mcapCh24);
   document.getElementById('volV').textContent = M.fmtBig(g.vol);
-  const d = g.dom, bar = document.getElementById('domBar').children;
-  bar[0].style.width = d.btc + '%'; bar[1].style.width = d.eth + '%'; bar[2].style.width = d.usdt + '%';
+  const d = g.dom, oth = Math.max(0, 100 - d.btc - d.eth - d.usdt);
+  // donut: each ring piece starts where the previous one ended (circumference = 100)
+  const parts = [d.btc, d.eth, d.usdt, oth], rings = document.querySelectorAll('#domBar circle');
+  let at = 0;
+  parts.forEach((v, i) => { const r = rings[i + 1]; r.setAttribute('stroke-dasharray', `${Math.max(0, v - 0.6).toFixed(2)} ${(100 - Math.max(0, v - 0.6)).toFixed(2)}`); r.setAttribute('stroke-dashoffset', (-at).toFixed(2)); at += v; });
   document.getElementById('domBtc').textContent = d.btc.toFixed(1) + '%';
   document.getElementById('domEth').textContent = d.eth.toFixed(1) + '%';
   document.getElementById('domUsdt').textContent = d.usdt.toFixed(1) + '%';
-  document.getElementById('domOth').textContent = Math.max(0, 100 - d.btc - d.eth - d.usdt).toFixed(1) + '%';
-  document.getElementById('domBar').setAttribute('aria-label', `Dominance: BTC ${d.btc.toFixed(1)}%, ETH ${d.eth.toFixed(1)}%, USDT ${d.usdt.toFixed(1)}%`);
+  document.getElementById('domOth').textContent = oth.toFixed(1) + '%';
+  document.getElementById('domCoins').textContent = g.coins ? (+g.coins).toLocaleString('en-US') : '—';
+  document.getElementById('domBar').setAttribute('aria-label', `Dominance: BTC ${d.btc.toFixed(1)}%, ETH ${d.eth.toFixed(1)}%, USDT ${d.usdt.toFixed(1)}%, others ${oth.toFixed(1)}%`);
+}
+// BTC / ETH price lines on the market-cap card (from the list)
+function paintMajors() {
+  [['bitcoin', 'liBtc', 'BTC'], ['ethereum', 'liEth', 'ETH']].forEach(([id, el, sym]) => {
+    const c = topRows.find(r => r.id === id); if (!c) return;
+    document.getElementById(el).innerHTML = `${sym} <span><b>${c.price >= 1000 ? '$' + Math.round(c.price).toLocaleString('en-US') : SamsamFmt.price(c.price)}</b><span class="ch ${cls(c.ch24)}">${pct(c.ch24)}</span></span>`;
+  });
 }
 function paintFng(f) {
   if (!f) return;
-  const c = M.fngColor(f.value);
-  document.getElementById('fngV').innerHTML = f.value + '<small>/100</small>';
+  const c = M.fngColor(f.value), th = Math.PI * (1 - Math.max(0, Math.min(100, f.value)) / 100);
+  document.getElementById('fngV').textContent = f.value;
   const l = document.getElementById('fngL'); l.textContent = f.label; l.style.color = c;
-  document.querySelector('#fngG i').style.left = Math.max(2, Math.min(98, f.value)) + '%';
+  const k = document.getElementById('fngKnob'); k.setAttribute('cx', (60 + 52 * Math.cos(th)).toFixed(1)); k.setAttribute('cy', (60 - 52 * Math.sin(th)).toFixed(1));
   document.getElementById('fngG').setAttribute('aria-label', `Fear and Greed ${f.value} of 100: ${f.label}`);
-  document.getElementById('fngPrev').textContent = f.prev != null ? 'Yesterday ' + f.prev : '';
+  const tag = v => v == null ? '—' : `<span style="color:${M.fngColor(v)}">${v}</span>`;
+  document.getElementById('fngPrev').innerHTML = tag(f.prev);
+  document.getElementById('fngWeek').innerHTML = tag(f.week);
 }
+// a: { value, label, beat, n, period ('90d' from GitHub, else '30d' worked out here), btc90 | btc30 }
 function paintAlt(a) {
   if (!a) { document.getElementById('altL').textContent = 'Waiting for data'; return; }
   document.getElementById('altV').innerHTML = a.value + '<small>/100</small>';
   const l = document.getElementById('altL'); l.textContent = a.label; l.style.color = a.value >= 75 ? '#3b82f6' : a.value <= 25 ? '#f7931a' : 'var(--fg2)';
   document.querySelector('#altG i').style.left = Math.max(2, Math.min(98, a.value)) + '%';
   document.getElementById('altG').setAttribute('aria-label', `Altcoin season ${a.value} of 100: ${a.label}`);
-  document.getElementById('altN').innerHTML = `<b>${a.beat}/${a.n}</b> top coins beat BTC · 30d`;
+  const per = a.period || '30d', b = a.btc90 != null ? a.btc90 : a.btc30;
+  document.getElementById('altN').innerHTML = `Beat BTC · ${per} <b>${a.beat}/${a.n}</b>`;
+  document.getElementById('altB').innerHTML = `BTC ${per} <b class="${cls(b)}">${b == null ? '—' : pct(b, 1)}</b>`;
+  document.getElementById('cardAlt').title = per === '90d' ? 'Top 100 coins (no stablecoins / wrapped / staked) vs BTC over 90 days — the CoinMarketCap method.' : 'Top 50 coins vs BTC over 30 days (the 90-day number is still being prepared).';
 }
+let alt90 = null;   // CMC-style number from the GitHub snapshot; until it's ready, the 30-day one from the list
+function paintAltNow() { paintAlt(alt90 || M.altSeason(topRows)); }
 
 // ── list ──
 function rowsNow() {
@@ -370,7 +449,10 @@ function logo(c) {
 // Links — the same pages as everywhere else in the app (CoinMarketCap for the coin, CoinGlass, CoinCodex).
 // A coin you hold uses its saved pages; another coin uses the app's known pages only when it is the same coin
 // (same CoinGecko id — tickers are reused by different coins), otherwise a page name worked out from its name.
-function known(c) { const S = c.sym; return SamsamCoins.CG_IDS[S] === c.id; }
+function known(c) { const S = c.sym; return SamsamCoins.CG_IDS[S] === c.id || SamsamCoins.CC_SLUGS[S] === c.id; }
+// CoinCodex page names found for coins you don't hold (looked up once, kept in this browser)
+let ccCache = {}; try { ccCache = JSON.parse(localStorage.getItem('samsam_cc') || '{}') || {}; } catch (_) {}
+function ccSave() { try { localStorage.setItem('samsam_cc', JSON.stringify(ccCache)); } catch (_) {} }
 function cmcLink(c) {
   const h = heldCoin(c);
   if (h) return SamsamCoins.cgUrl(h.sym, h.cgId, { cmcSlug: h.cmcSlug, name: h.name });
@@ -379,7 +461,16 @@ function cmcLink(c) {
 function predLink(c) {
   const h = heldCoin(c);
   if (h) return SamsamCoins.predictionUrl(h.sym, h);
+  if (ccCache[c.id]) return SamsamCoins.predictionUrl(c.sym, { ccSlug: ccCache[c.id] });
   return SamsamCoins.predictionUrl(known(c) ? c.sym : '', { name: c.name + (known(c) ? '' : ' ' + c.sym) });
+}
+// opening a coin's links: find its CoinCodex page if we don't know it yet, so Prediction opens the page itself
+function resolveCc(c) {
+  if (heldCoin(c) || c.id in ccCache || (known(c) && SamsamCoins.ccSlug(c.sym))) return;
+  SamsamCoins.findCcSlug(c.sym, { cgId: c.id, name: c.name }).then(slug => {
+    ccCache[c.id] = slug || ''; ccSave();
+    const a = document.querySelector(`#mkl-${CSS.escape(c.id)} .l-pred`); if (a && slug) a.href = predLink(c);
+  });
 }
 const CHEV = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
 let openId = null;   // the row whose links are open (one at a time)
@@ -391,7 +482,7 @@ function linksHtml(c) {
     <a class="l-cmc" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap (new tab)">${ic('bar', { solo: true, size: 15 })}CMC${x}</a>
   </div>`;
 }
-function toggleLinks(id) { openId = openId === id ? null : id; render(); }
+function toggleLinks(id) { openId = openId === id ? null : id; render(); const c = openId && findCoin(openId); if (c) resolveCc(c); }
 function mcapShort(v) {   // $1.57T · $750B · $42.1B · $8.25M — 3 figures, fits the phone column
   if (!(v > 0)) return '—';
   const [d, u] = v >= 1e12 ? [1e12, 'T'] : v >= 1e9 ? [1e9, 'B'] : v >= 1e6 ? [1e6, 'M'] : [1e3, 'K'];
@@ -567,14 +658,15 @@ async function refreshAll(force) {
     try {
       const p = await M.peek();
       if (p.global) paintGlobal(p.global); if (p.fng) paintFng(p.fng);
-      if (p.top && p.top.length) { topRows = p.top; paintAlt(M.altSeason(topRows)); lastT = p.t || lastT; }
+      if (p.top && p.top.length) { topRows = p.top; paintAltNow(); paintMajors(); lastT = p.t || lastT; }
       render(); status(); if (window.CPSplash) CPSplash.hide();
     } catch (_) {}
   }
+  M.alt90().then(a => { alt90 = a; paintAltNow(); });
   let newest = 0, stale = false, failed = 0;
   const take = r => { if (r.stale) stale = true; newest = Math.max(newest, r.t); return r.data; };
   // one after the other, not all at once (kinder to the free limit)
-  await M.top(force).then(r => { topRows = take(r); paintAlt(M.altSeason(topRows)); render(); }).catch(() => { failed++; });
+  await M.top(force).then(r => { topRows = take(r); paintAltNow(); paintMajors(); render(); }).catch(() => { failed++; });
   await M.global(force).then(r => paintGlobal(take(r))).catch(() => { failed++; });
   await M.fng(force).then(r => paintFng(take(r))).catch(() => {});
   if (newest) lastT = newest;
