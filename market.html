@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611022114"></script>
-<script src="samsam-hints.js?v=202611022114"></script>
-<script src="samsam-vault.js?v=202611022114"></script>
-<script src="samsam-labels.js?v=202611022114"></script>
-<script src="samsam-taxonomy.js?v=202611022114"></script>
-<script src="samsam-coins.js?v=202611022114"></script>
-<script src="samsam-dropdown.js?v=202611022114"></script>
-<script src="samsam-add.js?v=202611022114"></script>
-<script src="samsam-market.js?v=202611022114"></script>
+<script src="samsam-ui.js?v=202611022231"></script>
+<script src="samsam-hints.js?v=202611022231"></script>
+<script src="samsam-vault.js?v=202611022231"></script>
+<script src="samsam-labels.js?v=202611022231"></script>
+<script src="samsam-taxonomy.js?v=202611022231"></script>
+<script src="samsam-coins.js?v=202611022231"></script>
+<script src="samsam-dropdown.js?v=202611022231"></script>
+<script src="samsam-add.js?v=202611022231"></script>
+<script src="samsam-market.js?v=202611022231"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -213,6 +213,28 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-sec { font-size: .72rem; font-weight: 800; color: var(--fg2); margin: 14px 6px 4px; display: flex; align-items: center; }
 .mk-more .mk-row { grid-template-columns: 36px minmax(0,1fr) 40px; }
 /* computer: a full table */
+/* ── phone: the list runs edge to edge like CoinMarketCap (no card around it), one + per row,
+      and a tap on the price opens Liq.Map · Prediction · CMC — so the coin column gets the width ── */
+@media (max-width: 759px) {
+  .mk-list { background: none; border: 0; box-shadow: none; border-radius: 0; padding: 0; margin: 0 -10px; }
+  .mk-list > .mk-tabs, .mk-list > .mk-tools, .mk-list > .mk-note, .mk-list > .mk-hint, .mk-list > .mk-src { margin-left: 6px; margin-right: 6px; }
+  .mk-head, .mk-row { grid-template-columns: 26px minmax(0,1fr) 112px 32px; column-gap: 6px; }
+  .mk-pc2 { gap: 4px; flex-wrap: nowrap; } .mk-pc2 svg { width: 46px; }
+  .mk-head { padding: 8px 6px; }
+  .mk-row { padding: 11px 6px; min-height: 60px; }
+  .mk-star { width: 26px; height: 26px; }
+  .mk-star svg { width: 16px; height: 16px; }
+  .mk-asset { gap: 10px; }
+  .mk-asset img, .mk-asset .mk-fb { width: 34px; height: 34px; }
+  .mk-x { display: none; }
+  .mk-act { gap: 0; }
+  .mk-pc { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 8px; }
+  .mk-pc:active { background: var(--bg3); }
+  .mk-caret { display: inline-flex; color: var(--fg2); opacity: .7; margin-left: -2px; transition: transform .2s; }
+  .mk-row.open .mk-caret { transform: rotate(180deg); color: #a78bfa; opacity: 1; }
+  .mk-links { padding: 2px 6px 12px; }
+}
+@media (min-width: 760px) { .mk-caret { display: none; } }
 @media (min-width: 760px) {
   /* ☆ · # · Asset (logo, name, market cap — price on the right) · 24h % · 7d % · 7d chart · Add ⌄ */
   .mk-head, .mk-row { grid-template-columns: 34px 40px minmax(300px,2.2fr) minmax(84px,.7fr) minmax(84px,.7fr) minmax(150px,1.2fr) 116px; column-gap: 16px; }
@@ -384,7 +406,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611022114"></script>
+<script type="module" src="samsam-cloud.js?v=202611022231"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -555,7 +577,7 @@ function rowHtml(c) {
     <span class="mk-rank">${c.rank || '—'}</span>
     <a class="mk-asset" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap">${logo(c)}<span class="mk-names"><b>${E(c.sym)}${badge}</b><small>${sub}</small></span><span class="mk-ap">${c.price != null ? SamsamFmt.price(c.price) : '—'}</span></a>
     <span class="mk-sp">${M.spark(c.spark, 112, 34)}</span>
-    <span class="mk-pc"><b>${short}</b><span class="mk-pc2" title="${wk ? 'Last 7 days' : 'Last 24 hours'}">${M.spark(wk ? c.spark : M.day(c), 56, 20)}<span class="${cls(pv)}">${pct(pv)}</span></span></span>
+    <span class="mk-pc" role="button" tabindex="0" onclick="toggleLinks('${E(c.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleLinks('${E(c.id)}')}" aria-expanded="${open}" aria-label="${E(c.sym)} — show Liq.Map, Prediction and CoinMarketCap"><b>${short}</b><span class="mk-pc2" title="${wk ? 'Last 7 days' : 'Last 24 hours'}">${M.spark(wk ? c.spark : M.day(c), 56, 20)}<span class="${cls(pv)}">${pct(pv)}</span><span class="mk-caret" aria-hidden="true">${CHEV.replace('width="18" height="18"', 'width="13" height="13"')}</span></span></span>
     <span class="mk-ch ${cls(c.ch24)}">${pct(c.ch24)}</span>
     <span class="mk-ch7 ${cls(c.ch7)}">${pct(c.ch7)}</span>
     <span class="mk-act"><button type="button" class="mk-add" onclick="openAddMenu(this,'${E(c.id)}')" aria-label="Add ${E(c.sym)}" title="Add ${E(c.sym)} to your portfolio or plan">${ic('plus', { solo: true, size: 16, sw: 2.4 })}<span class="t">Add</span></button><button type="button" class="mk-x" onclick="toggleLinks('${E(c.id)}')" aria-expanded="${open}" aria-controls="mkl-${E(c.id)}" aria-label="${E(c.sym)} links: Liquidation Map, Prediction, CoinMarketCap" title="Liq.Map · Prediction · CMC">${CHEV}</button></span>
