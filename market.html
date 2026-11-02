@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611020246"></script>
-<script src="samsam-hints.js?v=202611020246"></script>
-<script src="samsam-vault.js?v=202611020246"></script>
-<script src="samsam-labels.js?v=202611020246"></script>
-<script src="samsam-taxonomy.js?v=202611020246"></script>
-<script src="samsam-coins.js?v=202611020246"></script>
-<script src="samsam-dropdown.js?v=202611020246"></script>
-<script src="samsam-add.js?v=202611020246"></script>
-<script src="samsam-market.js?v=202611020246"></script>
+<script src="samsam-ui.js?v=202611020304"></script>
+<script src="samsam-hints.js?v=202611020304"></script>
+<script src="samsam-vault.js?v=202611020304"></script>
+<script src="samsam-labels.js?v=202611020304"></script>
+<script src="samsam-taxonomy.js?v=202611020304"></script>
+<script src="samsam-coins.js?v=202611020304"></script>
+<script src="samsam-dropdown.js?v=202611020304"></script>
+<script src="samsam-add.js?v=202611020304"></script>
+<script src="samsam-market.js?v=202611020304"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root {
@@ -97,8 +97,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-custom:hover { background: rgba(124,58,237,.12); }
 .mk-hint { font-size: .74rem; color: var(--fg2); margin: 0 2px 8px; }
 
-/* rows: phone = #☆ · Market Cap · 7d · Price / 24h · + ⌄ */
-.mk-head, .mk-row { display: grid; grid-template-columns: 36px minmax(0,1.5fr) minmax(0,1fr) minmax(0,1.2fr) 40px; align-items: center; column-gap: 6px; }
+/* rows: phone = #☆ · Market Cap · Price / 24h with the 7d chart · + ⌄  (the 7d column only on a computer) */
+.mk-head, .mk-row { display: grid; grid-template-columns: 36px minmax(0,1fr) 114px 40px; align-items: center; column-gap: 6px; }
+.mk-row > .mk-sp, .mk-head > .c-sp { display: none; }
 .mk-sr { display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .mk-sr .mk-r2 { font-size: .6rem; font-weight: 700; color: var(--fg2); font-variant-numeric: tabular-nums; line-height: 1; }
 .mk-head { padding: 8px 8px; font-size: 12px; font-weight: 600; color: var(--fg2); border-bottom: 1px solid var(--border); }
@@ -121,7 +122,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-names { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .mk-names b { font-size: .92rem; font-weight: 800; display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
 .mk-names small { font-size: 11px; color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-.mk-names small .nm { display: none; }   /* phone: market cap only, always whole */
+/* phone: symbol / market cap / name on three short lines; the name only when it fits whole — never "…" */
+.mk-names small { display: flex; flex-direction: column; gap: 1px; }
+.mk-names small .nm { overflow: hidden; white-space: nowrap; } .mk-names small .nm i { display: none; }
+.mk-names small .nm.cut { display: none; }
 .mk-own { display: inline-flex; align-items: center; gap: 3px; font-size: .58rem; font-weight: 800; padding: 1px 6px; border-radius: 6px; color: #16a34a; background: rgba(34,197,94,.14); letter-spacing: .01em; }
 .mk-own.plan { color: #b45309; background: rgba(245,158,11,.16); }
 [data-theme="dark"] .mk-own { color: #4ade80; } [data-theme="dark"] .mk-own.plan { color: #fbbf24; }
@@ -132,6 +136,8 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-pc { text-align: right; font-variant-numeric: tabular-nums; min-width: 0; }
 .mk-pc b { display: block; font-size: .86rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mk-pc span { font-size: .74rem; font-weight: 700; }
+.mk-pc2 { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 3px; }
+.mk-pc2 svg { width: 56px; height: 20px; flex-shrink: 0; }
 .mk-price { display: none; }
 .mk-add { width: 32px; height: 32px; border-radius: 10px; border: 1px solid rgba(124,58,237,.45); background: rgba(124,58,237,.1); color: #a78bfa; font: inherit; font-weight: 800; font-size: .78rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 [data-theme="light"] .mk-add { color: #6d28d9; }
@@ -168,7 +174,8 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   .mk-head, .mk-row { grid-template-columns: 34px 44px minmax(0,1fr) 130px 92px 120px 124px; column-gap: 12px; }
   .mk-act { flex-direction: row; justify-content: flex-end; gap: 8px; }
   .mk-head .t-d { display: inline; } .mk-head .t-m { display: none; } .mk-head .c-hash { visibility: hidden; }
-  .mk-names small .nm { display: inline; }
+  .mk-names small { display: block; } .mk-names small .nm, .mk-names small .nm.cut { display: inline; } .mk-names small .nm i { display: inline; font-style: normal; }
+  .mk-row > .mk-sp, .mk-head > .c-sp { display: flex; }
   .mk-row { padding: 10px 6px; }
   .mk-add { height: 34px; }
   .mk-links { padding: 0 6px 12px calc(34px + 44px + 24px + 6px); }
@@ -281,7 +288,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       <button type="button" class="c-rank" data-s="rank" onclick="setSort('rank')">#</button>
       <button type="button" class="c-asset" data-s="mcap" onclick="setSort('mcap')"><span class="t-m">Market Cap</span><span class="t-d">Asset · Market Cap</span></button>
       <button type="button" class="r c-sp" data-s="spark" disabled style="cursor:default;justify-content:center">7d</button>
-      <button type="button" class="r c-pc" data-s="ch24" onclick="setSort('ch24')">Price / 24h</button>
+      <button type="button" class="r c-pc" data-s="ch24" onclick="setSort('ch24')">Price / 24h · 7d</button>
       <button type="button" class="r c-price" data-s="price" onclick="setSort('price')">Price</button>
       <button type="button" class="r c-ch" data-s="ch24" onclick="setSort('ch24')">24h</button>
       <span></span>
@@ -294,7 +301,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611020246"></script>
+<script type="module" src="samsam-cloud.js?v=202611020304"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -395,7 +402,7 @@ function rowHtml(c) {
   const badge = (held ? `<span class="mk-own" title="In your portfolio">${ic('briefcase', { solo: true, size: 11, sw: 2.4 })}<span class="t">In portfolio</span></span>` : '')
     + (plan && !held ? `<span class="mk-own plan" title="In your Accumulation Plan">${ic('check', { solo: true, size: 11, sw: 2.8 })}<span class="t">In plan</span></span>` : '');
   // phone: the market cap alone (always whole); computer: market cap · name
-  const sub = c.mcap ? `<span class="mc">${mcapShort(c.mcap)}</span><span class="nm"> · ${E(c.name)}</span>` : `<span class="mc">${E(c.name)}</span>`;
+  const sub = c.mcap ? `<span class="mc">${mcapShort(c.mcap)}</span><span class="nm"><i> · </i>${E(c.name)}</span>` : `<span class="mc">${E(c.name)}</span>`;
   const short = c.price >= 1000 ? '$' + Math.round(c.price).toLocaleString('en-US') : c.price != null ? SamsamFmt.price(c.price) : '—';
   const open = openId === c.id;
   return `<div class="mk-row${open ? ' open' : ''}" data-id="${E(c.id)}">
@@ -403,7 +410,7 @@ function rowHtml(c) {
     <span class="mk-rank">${c.rank || '—'}</span>
     <a class="mk-asset" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap">${logo(c)}<span class="mk-names"><b>${E(c.sym)}${badge}</b><small>${sub}</small></span></a>
     <span class="mk-sp">${M.spark(c.spark, 112, 34)}</span>
-    <span class="mk-pc"><b>${short}</b><span class="${cls(c.ch24)}">${pct(c.ch24)}</span></span>
+    <span class="mk-pc"><b>${short}</b><span class="mk-pc2">${M.spark(c.spark, 56, 20)}<span class="${cls(c.ch24)}">${pct(c.ch24)}</span></span></span>
     <span class="mk-price">${c.price != null ? SamsamFmt.price(c.price) : '—'}</span>
     <span class="mk-ch ${cls(c.ch24)}">${pct(c.ch24)}</span>
     <span class="mk-act"><button type="button" class="mk-add" onclick="openAddMenu(this,'${E(c.id)}')" aria-label="Add ${E(c.sym)}" title="Add ${E(c.sym)} to your portfolio or plan">${ic('plus', { solo: true, size: 16, sw: 2.4 })}<span class="t">Add</span></button><button type="button" class="mk-x" onclick="toggleLinks('${E(c.id)}')" aria-expanded="${open}" aria-controls="mkl-${E(c.id)}" aria-label="${E(c.sym)} links: Liquidation Map, Prediction, CoinMarketCap" title="Liq.Map · Prediction · CMC">${CHEV}</button></span>
@@ -419,9 +426,17 @@ function render() {
     box.innerHTML = mode === 'watch' && !watchlist().length
       ? `<div class="mk-empty">${ic('star')}Your Watchlist is empty.<br>Tap the star next to any coin to follow it here, or use <b>Add Custom Coin</b> for coins outside the Top 100.</div>`
       : `<div class="mk-empty">No coin in the ${mode === 'top' ? 'Top 100' : 'Watchlist'} matches${query ? ' “' + E(query) + '”' : ''}${filter !== 'all' ? ' with this filter' : ''}.${query.length >= 2 ? ' See “More on CoinGecko” below.' : ''}</div>`;
-  } else box.innerHTML = rows.map(rowHtml).join('');
+  } else { box.innerHTML = rows.map(rowHtml).join(''); fitNames(); }
   renderMore();
 }
+// phone: the coin's name under its market cap when it fits whole, otherwise left out — no cut-off names
+function fitNames() {
+  const names = [...document.querySelectorAll('#mkRows .mk-names small .nm')];
+  names.forEach(n => n.classList.remove('cut'));
+  const over = names.filter(n => n.scrollWidth > n.clientWidth + 1);   // read all first, then write (one layout)
+  over.forEach(n => n.classList.add('cut'));
+}
+let fitT; addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(fitNames, 150); });
 function findCoin(id) { return topRows.find(r => r.id === id) || watchRows.find(r => r.id === id) || moreRows.find(r => r.id === id) || watchlist().find(w => w.id === id) || null; }
 
 // ── search: filters the list; 2+ letters also look the coin up on CoinGecko (any coin) ──
