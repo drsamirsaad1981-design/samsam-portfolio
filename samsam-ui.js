@@ -709,6 +709,15 @@
   // ── AI Analysis: one floating button on every main page. Drag it anywhere; it settles on the nearest side and
   //    remembers where you left it (this device). Tap → the AI report opens right here (inside the app), or the
   //    main page opens with it when a page was opened on its own.
+  // fade the AI button while a page scrolls — the button lives in the app frame, the other tabs scroll inside it
+  function fabScrolling(b) {
+    if (!b || b.classList.contains('drag')) return;
+    b.classList.add('scrolling'); clearTimeout(b.__scrollT);
+    b.__scrollT = setTimeout(function () { b.classList.remove('scrolling'); }, 450);
+  }
+  if (IN_SHELL) window.addEventListener('scroll', function () {
+    try { var pb = window.parent.document.getElementById('cpAiFab'); if (pb) window.parent.SamsamUI && window.parent.SamsamUI.fabScrolling ? window.parent.SamsamUI.fabScrolling(pb) : fabScrolling(pb); } catch (_) {}
+  }, { passive: true, capture: true });
   function aiFab() {
     if (document.getElementById('cpAiFab')) return;
     var KEYP = 'samsam_aifab_pos', M = 12, b = document.createElement('button');
@@ -750,12 +759,7 @@
     function place(p) { var k = box(); b.style.top = Math.round(k.top + p.y * (k.bottom - k.top)) + 'px'; b.style.left = (p.side === 'l' ? k.left : k.right) + 'px'; }
     place(pos);
     window.addEventListener('resize', function () { place(pos); });
-    var scrollT = null;
-    window.addEventListener('scroll', function () {
-      if (b.classList.contains('drag')) return;
-      b.classList.add('scrolling'); clearTimeout(scrollT);
-      scrollT = setTimeout(function () { b.classList.remove('scrolling'); }, 450);
-    }, { passive: true, capture: true });
+    window.addEventListener('scroll', function () { fabScrolling(b); }, { passive: true, capture: true });
     var drag = null;
     b.addEventListener('pointerdown', function (e) {
       if (e.button) return;
@@ -852,6 +856,6 @@
     try { sessionStorage.setItem('cpReturn', JSON.stringify({ sym: String(sym).toUpperCase(), t: Date.now() })); } catch (_) {}
     location.href = 'index.html#holdings/' + encodeURIComponent(sym);
   }
-  window.SamsamUI = { goHtml: goHtml, openCoin: openCoin, navIcon: navIconSvg, navPaint: navPaint, inShell: IN_SHELL, icons: ICONS, icon: function (n) { return ICONS[n] || ic(n, { solo: true }); }, ic: ic, dot: dot, fillIcons: fillIcons, liveDot: liveDot,
+  window.SamsamUI = { fabScrolling: fabScrolling, goHtml: goHtml, openCoin: openCoin, navIcon: navIconSvg, navPaint: navPaint, inShell: IN_SHELL, icons: ICONS, icon: function (n) { return ICONS[n] || ic(n, { solo: true }); }, ic: ic, dot: dot, fillIcons: fillIcons, liveDot: liveDot,
     toggleTheme: toggleTheme, applyTheme: applyTheme, currentTheme: current, refresh: init };
 })();
