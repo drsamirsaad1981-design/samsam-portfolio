@@ -725,6 +725,8 @@
         'html:not([data-theme="dark"]) .cp-aifab:hover,html:not([data-theme="dark"]) .cp-aifab:active,html:not([data-theme="dark"]) .cp-aifab.drag{color:#5b21b6;filter:drop-shadow(0 0 9px rgba(124,58,237,.55)) drop-shadow(0 2px 5px rgba(15,23,42,.22))}' +
         // a window is open (in any tab) — slip away under its dimmed backdrop
         '.cp-aifab.under{opacity:0;pointer-events:none;transform:scale(.85)}' +
+        // the page is scrolling — fade out so nothing under it is hidden; back as soon as the page stops
+        '.cp-aifab.scrolling{opacity:0;pointer-events:none;transform:scale(.9);transition:opacity .15s,transform .15s}' +
         '.cp-aifab.drag{transition:none;cursor:grabbing;transform:scale(1.08)}.cp-aifab:active{transform:scale(.96)}.cp-aifab.drag:active{transform:scale(1.08)}' +
         '.cp-aifab:focus-visible{outline:3px solid #c4b5fd;outline-offset:3px}.cp-aifab svg{pointer-events:none}@media (prefers-reduced-motion:reduce){.cp-aifab{transition:none}}@media print{.cp-aifab{display:none!important}}';
       document.head.appendChild(st);
@@ -748,6 +750,12 @@
     function place(p) { var k = box(); b.style.top = Math.round(k.top + p.y * (k.bottom - k.top)) + 'px'; b.style.left = (p.side === 'l' ? k.left : k.right) + 'px'; }
     place(pos);
     window.addEventListener('resize', function () { place(pos); });
+    var scrollT = null;
+    window.addEventListener('scroll', function () {
+      if (b.classList.contains('drag')) return;
+      b.classList.add('scrolling'); clearTimeout(scrollT);
+      scrollT = setTimeout(function () { b.classList.remove('scrolling'); }, 450);
+    }, { passive: true, capture: true });
     var drag = null;
     b.addEventListener('pointerdown', function (e) {
       if (e.button) return;
