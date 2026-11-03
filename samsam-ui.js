@@ -230,6 +230,13 @@
     '.cp-head-title .t{overflow:hidden;text-overflow:ellipsis}.cp-head-ic{font-size:1.1rem;line-height:1;flex-shrink:0}' +
     '@media (min-width:768px){.cp-head{padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}}' +
     '@media (max-width:380px){.cp-head-title{font-size:.95rem}.cp-head{column-gap:8px}}' +
+    // App logo + name on the left of every page header (shown where the bottom bar replaces Back)
+    '.cp-brand{display:none;align-items:center;gap:8px;min-width:0;text-decoration:none;color:var(--fg,inherit);border-radius:10px;padding:2px 6px 2px 2px;-webkit-tap-highlight-color:transparent;transition:transform .15s,background .15s}' +
+    '.cp-brand img{width:28px;height:28px;flex-shrink:0;display:block}' +
+    '.cp-brand-n{display:none;font-size:1rem;font-weight:900;letter-spacing:-.02em;white-space:nowrap}' +
+    '.cp-brand-c{background:linear-gradient(95deg,#f7931a 0%,#c084fc 55%,#2dd4bf 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;margin-right:.25em}' +
+    '@media (min-width:700px){.cp-brand-n{display:inline}}' +
+    '@media (hover:hover){.cp-brand:hover{background:rgba(124,58,237,.10)}}.cp-brand:active{transform:scale(.95)}.cp-brand:focus-visible{outline:2px solid #a78bfa;outline-offset:2px}' +
     '@media print{.ss-theme-btn,.cp-back,.cp-head{display:none!important}}';
   (document.head || document.documentElement).appendChild(css);
 
@@ -656,11 +663,14 @@
       // room under the content; the bar replaces the page Back buttons (inner screens keep theirs)
       'body.has-bnav{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px)) !important}' +
       'body.has-bnav #holdingsOverlay{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +
-      'body.has-bnav a.cp-back[data-back],body.in-shell a.cp-back[data-back]{visibility:hidden}' +
+      // the bar replaces the page Back buttons → the app's logo + name sit there instead (tap → Home)
+      'body.has-bnav a.cp-back[data-back],body.in-shell a.cp-back[data-back]{display:none}' +
+      'body.has-bnav .cp-brand,body.in-shell .cp-brand{display:inline-flex}' +
+      'body.has-bnav #holdingsOverlay[data-view="tx"] .cp-brand{display:none}' +
       'body.in-shell #cpSplash{display:none !important}' +
       '@media (min-width:1024px){body.in-shell{padding-bottom:84px !important}}' +
       '.cp-head-ic .nav-ic{display:block;color:#a78bfa}[data-theme="light"] .cp-head-ic .nav-ic{color:#7c3aed}' +
-      'body.has-bnav #holdingsOverlay:not([data-view="tx"]) .hov-back-btn{visibility:hidden}' +
+      'body.has-bnav #holdingsOverlay:not([data-view="tx"]) .hov-back-btn{display:none}' +
       // older pop-ups sit above the bar
       '.modal-overlay,.overlay,.dca-overlay{z-index:100030 !important}' +
       '@media print{.cp-bnav{display:none !important}body.has-bnav{padding-bottom:0 !important}}';
@@ -670,6 +680,14 @@
     var bar = document.getElementById('cpBnav'); if (!bar) return;
     var cur = navPage();
     [].forEach.call(bar.querySelectorAll('a'), function (a) { if (a.dataset.k === cur) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  }
+  // App logo + "Cute Portfolio" at the left of each page header → Home
+  function brandMount() {
+    [].forEach.call(document.querySelectorAll('.cp-head-l'), function (l) {
+      if (l.querySelector('.cp-brand')) return;
+      l.insertAdjacentHTML('afterbegin', '<a class="cp-brand" href="./index.html" title="Home" aria-label="Cute Portfolio — Home"><img src="./logo-mark.svg?v=1" alt="" width="28" height="28"><span class="cp-brand-n"><span class="cp-brand-c">Cute</span>Portfolio</span></a>');
+    });
+    if (!IN_SHELL) document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a.cp-brand'); if (a) navGo(e, 'home'); });
   }
   function navGo(e, k) {
     var here = navPage(), onIndex = !!window.cpShell;
@@ -827,6 +845,7 @@
   function navMount() {
     navTitleIcons();
     footMount();
+    brandMount();
     if (IN_SHELL) {   // the shell shows the bar; links back to the main page stay inside the app
       navCss(); document.body.classList.add('in-shell');
       document.addEventListener('click', function (e) {

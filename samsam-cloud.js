@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611032304';
-import * as Hist from './samsam-history.js?v=202611032304';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611032304';
+import * as Core from './samsam-core.js?v=202611032345';
+import * as Hist from './samsam-history.js?v=202611032345';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611032345';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -558,7 +558,7 @@ const API = {
       }, `Sell ${sym} → ${ss}`).then(() => sellId);
     }
     return commit((b, ref) => b.set(ref('txs', sellId), txDoc(sym, 'sell', qty, price, note, extra)), `Save sell ${sym}`)
-      .then(() => API.addCoin({ sym: ss, name: stable.name || ss, cat: stable.cat || 'other', cgId: stable.cgId || null, logoUrl: stable.logoUrl || null }, { qty: cash, price: 1, note: bnote, link: sellId }))
+      .then(() => API.addCoin({ sym: ss, name: stable.name || ss, cat: stable.cat || 'other', cgId: stable.cgId || null, cmcSlug: stable.cmcSlug || null, logoUrl: stable.logoUrl || null }, { qty: cash, price: 1, note: bnote, link: sellId }))
       .then(() => sellId);
   },
 

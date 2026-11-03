@@ -436,7 +436,7 @@
   var atxType = 'buy', atxSaving = false, atxSym = null;
   function localDateTimeValue(d) { var p = function (n) { return String(n).padStart(2, '0'); }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
   // ── Sell → stablecoin: the money from a sell stays in the portfolio as USDT / USDC (or a stablecoin you hold) ──
-  var CASH_KEY = 'samsam_sell_to', CASH_INFO = { USDT: { name: 'Tether', cgId: 'tether' }, USDC: { name: 'USDC', cgId: 'usd-coin' } };
+  var CASH_KEY = 'samsam_sell_to', CASH_INFO = { USDT: { name: 'Tether', cgId: 'tether', cmcSlug: 'tether' }, USDC: { name: 'USDC', cgId: 'usd-coin', cmcSlug: 'usd-coin' } };
   function isStableCoin(c) {
     if (window.SamsamMarket && SamsamMarket.isStable) return SamsamMarket.isStable({ sym: c.sym, name: c.name || '' });
     return /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD)$/.test(c.sym);
@@ -568,7 +568,7 @@
     if (type === 'sell' && $('atxCashRow').style.display !== 'none') { try { localStorage.setItem(CASH_KEY, JSON.stringify({ on: !!cs, sym: $('atxCashSym').value })); } catch (_) {} }
     if (cs && Samsam.sellToStable) {
       var sc = held(cs), info = CASH_INFO[cs] || {};
-      write(Samsam.sellToStable(sym, r.qty, r.price, note, extra, { sym: cs, name: (sc && sc.name) || info.name || cs, cgId: (sc && sc.cgId) || info.cgId || null, cat: (sc && sc.cat) || 'other', logoUrl: (sc && sc.logoUrl) || null }));
+      write(Samsam.sellToStable(sym, r.qty, r.price, note, extra, { sym: cs, name: (sc && sc.name) || info.name || cs, cgId: (sc && sc.cgId) || info.cgId || null, cmcSlug: info.cmcSlug || null, cat: (sc && sc.cat) || 'other', logoUrl: (sc && sc.logoUrl) || null }));
     } else write(Samsam.addTx(sym, type, r.qty, r.price, note, extra));
     setTimeout(function () { atxSaving = false; $('atxSave').disabled = false; }, 400);
     delete $('atxPrice').dataset.touched;
