@@ -249,6 +249,9 @@
     '.cp-big.compact .cp-head-title{font-size:1rem;font-weight:800;color:var(--fg,inherit)}' +
     '.cp-big.compact .cp-head-title .cp-head-ic svg,.cp-big.compact .cp-head-title .cp-head-ic .nav-ic{width:20px!important;height:20px!important}' +
     '.cp-big.compact .cp-brand-txt{gap:0}' +
+    '.cp-big .cp-head-r .ss-theme-btn{transition:width .2s,height .2s,min-width .2s}' +
+    '.cp-big.compact .cp-head-r .ss-theme-btn{width:32px;height:32px;min-width:32px}' +
+    '#holdingsOverlay[data-view="tx"] .cp-big .cp-head-r .ss-theme-btn{display:none}' +
     '@media (min-width:768px){.cp-brand-n{font-size:1.75rem}.cp-brand-logo img{width:56px;height:56px}.cp-big .cp-head-title{font-size:.9rem}}' +
     '@media (max-width:380px){.cp-brand-n{font-size:1.25rem}.cp-brand-logo img{width:44px;height:44px}.cp-big .cp-head-l{gap:10px}}' +
     '@media (hover:hover){.cp-brand-n:hover{opacity:.85}}' +
@@ -266,6 +269,7 @@
 
   // Wire up buttons once the page exists; keep tabs in sync when the theme changes elsewhere.
   function init() {
+    brandMount();   // first: it adds the theme button that is wired just below
     var btns = document.querySelectorAll('[data-theme-toggle]');
     for (var i = 0; i < btns.length; i++) {
       if (!btns[i].__ssBound) { btns[i].__ssBound = true; btns[i].addEventListener('click', toggleTheme); }
@@ -708,6 +712,53 @@
     var cur = navPage();
     [].forEach.call(bar.querySelectorAll('a'), function (a) { if (a.dataset.k === cur) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   }
+  // ── Holdings: a floating, see-through Add button (frosted glass, violet +) above the bottom bar, the AI button just above it ──
+  function addFab() {
+    var ov = document.getElementById('holdingsOverlay'); if (!ov || document.getElementById('hovAddBtn')) return;
+    if (!document.getElementById('cpAddFabCss')) {
+      var st = document.createElement('style'); st.id = 'cpAddFabCss';
+      st.textContent = '.cp-addfab{position:fixed;z-index:10019;display:none;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;width:52px;height:52px;padding:0;border-radius:26px;' +
+        'border:1px solid rgba(167,139,250,.45);background:rgba(124,58,237,.10);-webkit-backdrop-filter:blur(14px) saturate(1.6);backdrop-filter:blur(14px) saturate(1.6);' +
+        'color:#c4b5fd;font:inherit;font-size:.9rem;font-weight:800;cursor:pointer;box-shadow:0 6px 20px rgba(2,6,23,.22);-webkit-tap-highlight-color:transparent;' +
+        'transition:opacity .18s,transform .15s,background .15s,color .15s}' +
+        'html:not([data-theme="dark"]) .cp-addfab{color:#7c3aed;background:rgba(255,255,255,.45);border-color:rgba(124,58,237,.35);box-shadow:0 6px 18px rgba(15,23,42,.12)}' +
+        '.cp-addfab.on{display:inline-flex}.cp-addfab svg{width:24px;height:24px;flex-shrink:0}.cp-addfab .t{display:none}' +
+        '@media (hover:hover){.cp-addfab:hover{background:rgba(124,58,237,.22)}}' +
+        '.cp-addfab:active,html:not([data-theme="dark"]) .cp-addfab:active{background:#7c3aed;color:#fff;border-color:#7c3aed;transform:scale(.95)}' +
+        '.cp-addfab:focus-visible{outline:3px solid #c4b5fd;outline-offset:3px}' +
+        '.cp-addfab.scrolling{opacity:0;pointer-events:none;transform:scale(.9);transition:opacity .15s,transform .15s}' +
+        '.cp-addfab.under{opacity:0;pointer-events:none}' +
+        '@media (min-width:1024px){.cp-addfab{width:auto;padding:0 18px 0 14px}.cp-addfab .t{display:inline}}' +
+        // the AI button over it gets the same glass, so the two read as one pair
+        '.cp-aifab.paired{background:rgba(124,58,237,.10);border:1px solid rgba(167,139,250,.45);-webkit-backdrop-filter:blur(14px) saturate(1.6);backdrop-filter:blur(14px) saturate(1.6)}' +
+        'html:not([data-theme="dark"]) .cp-aifab.paired{background:rgba(255,255,255,.45);border-color:rgba(124,58,237,.35)}' +
+        '@media print{.cp-addfab{display:none!important}}';
+      document.head.appendChild(st);
+    }
+    var b = document.createElement('button'); b.type = 'button'; b.id = 'hovAddBtn'; b.className = 'cp-addfab hov-add-btn';
+    b.title = 'Add a new coin, or a Buy for a coin you hold'; b.setAttribute('aria-label', 'Add a coin or a Buy');
+    b.innerHTML = ic('plus', { solo: true, sw: 2.6 }) + '<span class="t">Add</span>';
+    b.addEventListener('click', function () { if (window.openAddCoin) window.openAddCoin(); });
+    document.body.appendChild(b);
+    function place() {
+      var on = ov.style.display !== 'none' && getComputedStyle(ov).display !== 'none' && ov.getAttribute('data-view') !== 'tx';
+      b.classList.toggle('on', on);
+      var ai = document.getElementById('cpAiFab'); if (ai) ai.classList.toggle('paired', on);
+      if (on) {
+        var bar = document.getElementById('cpBnav'), r = bar && bar.getBoundingClientRect();
+        var bottom = (r && r.height && r.top < innerHeight ? innerHeight - r.top : 0) + 14;
+        b.style.bottom = bottom + 'px';
+        var right = 12;   // phone: by the screen edge · computer: right beside the page content, like the AI button
+        if (innerWidth >= 1024) right = Math.max(40, Math.round(innerWidth / 2 - Math.min(1200, innerWidth - 32) / 2 - 24 - 48));
+        b.style.right = right + 'px';
+      }
+      if (window.SamsamUI && SamsamUI.fabPlace) SamsamUI.fabPlace();
+    }
+    new MutationObserver(place).observe(ov, { attributes: true, attributeFilter: ['style', 'data-view'] });
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', function () { if (b.classList.contains('on')) fabScrolling(b); }, { passive: true, capture: true });
+    addFab.place = place; setTimeout(place, 0);
+  }
   // Pages with the bottom bar get the main page's header: logo + "Cute Portfolio" (→ Home), and the page's icon + name under it
   function brandMount() {
     if (!IN_SHELL && !navPage()) return;   // pages without the bar (Recover…) keep Back + centred title
@@ -718,6 +769,13 @@
       l.insertAdjacentHTML('beforeend', '<a class="cp-brand-logo" href="./index.html" title="Home" aria-label="Cute Portfolio — Home"><img src="./logo-mark.svg?v=1" alt="" width="52" height="52"></a>' +
         '<div class="cp-brand-txt"><a class="cp-brand-n" href="./index.html" title="Home" tabindex="-1" aria-hidden="true"><span class="cp-brand-c">Cute</span> Portfolio</a></div>');
       l.querySelector('.cp-brand-txt').appendChild(t);   // the page's own title (ids kept) moves under the name
+      // cloud + light/dark on the right, the same two buttons as the main page (cloud added by samsam-cloud.js)
+      var r = h.querySelector('.cp-head-r');
+      if (r && !r.querySelector('[data-theme-toggle]')) {
+        var tb = document.createElement('button'); tb.type = 'button'; tb.className = 'ss-theme-btn'; tb.setAttribute('data-theme-toggle', '');
+        r.appendChild(tb);
+        if (window.__ssCloudBtn) window.__ssCloudBtn(tb);
+      }
     });
     if (!IN_SHELL) document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a.cp-brand-logo,a.cp-brand-n'); if (a) navGo(e, 'home'); });
   }
@@ -807,10 +865,13 @@
         var half = Math.min(CONTENT, innerWidth - 32) / 2, mid = innerWidth / 2;
         left = Math.max(40, Math.round(mid - half - GAP - s)); right = Math.min(innerWidth - s - 40, Math.round(mid + half + GAP));
       }
+      var add = document.getElementById('hovAddBtn');   // Holdings: stay above the floating Add button
+      if (add && add.classList.contains('on') && pos.side === 'r') bottom = Math.min(bottom, add.getBoundingClientRect().top - s - 10);
       return { s: s, top: M + 56, bottom: Math.max(M + 56, bottom), left: left, right: right };
     }
     function place(p) { var k = box(); b.style.top = Math.round(k.top + p.y * (k.bottom - k.top)) + 'px'; b.style.left = (p.side === 'l' ? k.left : k.right) + 'px'; }
     place(pos);
+    window.SamsamUI && (window.SamsamUI.fabPlace = function () { if (!drag) place(pos); });
     window.addEventListener('resize', function () { place(pos); });
     window.addEventListener('scroll', function () { fabScrolling(b); }, { passive: true, capture: true });
     var drag = null;
@@ -877,7 +938,7 @@
   function navMount() {
     navTitleIcons();
     footMount();
-    brandMount();
+    addFab();
     if (IN_SHELL) {   // the shell shows the bar; links back to the main page stay inside the app
       navCss(); document.body.classList.add('in-shell');
       document.addEventListener('click', function (e) {

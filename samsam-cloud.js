@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611040050';
-import * as Hist from './samsam-history.js?v=202611040050';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611040050';
+import * as Core from './samsam-core.js?v=202611040150';
+import * as Hist from './samsam-history.js?v=202611040150';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611040150';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -947,7 +947,9 @@ function injectUi() {
   };
   pill.addEventListener('click', e => openMenu(e, null));
   // Cloud status button next to every theme button (page headers + Holdings screen)
-  document.querySelectorAll('[data-theme-toggle]').forEach(t => {
+  // (also for theme buttons added later — samsam-ui.js puts one in every page header)
+  const addCloud = t => {
+    if (t.__ssCloud) return; t.__ssCloud = true;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'ss-theme-btn ss-sync-hdr';
     b.innerHTML = '<span class="ss-cloud" aria-hidden="true">' + UIc('cloud', { solo: true, size: 18 }) + '</span><span class="ss-live" data-state="loading"></span>';
     b.addEventListener('click', e => openMenu(e, b));
@@ -955,7 +957,10 @@ function injectUi() {
     // Theme button pinned to a corner (main page header): pin the cloud button just to its left
     const cs = getComputedStyle(t);
     if (cs.position === 'absolute') Object.assign(b.style, { position: 'absolute', top: cs.top, right: (parseFloat(cs.right) + t.offsetWidth + 8) + 'px', zIndex: cs.zIndex });
-  });
+    renderStatus();
+  };
+  document.querySelectorAll('[data-theme-toggle]').forEach(addCloud);
+  window.__ssCloudBtn = addCloud;
   document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.style.display = 'none'; });
   document.body.append(gate, pill, menu);
 }
