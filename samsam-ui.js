@@ -230,13 +230,37 @@
     '.cp-head-title .t{overflow:hidden;text-overflow:ellipsis}.cp-head-ic{font-size:1.1rem;line-height:1;flex-shrink:0}' +
     '@media (min-width:768px){.cp-head{padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}}' +
     '@media (max-width:380px){.cp-head-title{font-size:.95rem}.cp-head{column-gap:8px}}' +
-    // App logo + name on the left of every page header (shown where the bottom bar replaces Back)
-    '.cp-brand{display:none;align-items:center;gap:8px;min-width:0;text-decoration:none;color:var(--fg,inherit);border-radius:10px;padding:2px 6px 2px 2px;-webkit-tap-highlight-color:transparent;transition:transform .15s,background .15s}' +
-    '.cp-brand img{width:28px;height:28px;flex-shrink:0;display:block}' +
-    '.cp-brand-n{display:none;font-size:1rem;font-weight:900;letter-spacing:-.02em;white-space:nowrap}' +
-    '.cp-brand-c{background:linear-gradient(95deg,#f7931a 0%,#c084fc 55%,#2dd4bf 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;margin-right:.25em}' +
-    '@media (min-width:700px){.cp-brand-n{display:inline}}' +
-    '@media (hover:hover){.cp-brand:hover{background:rgba(124,58,237,.10)}}.cp-brand:active{transform:scale(.95)}.cp-brand:focus-visible{outline:2px solid #a78bfa;outline-offset:2px}' +
+    // Big header (pages with the bottom bar): the main page's look — logo + "Cute Portfolio", and under it, where the main page
+    // shows "Live", this page's icon + name. Scrolled down it folds into one slim line (small logo + page name).
+    '.cp-head.cp-big{flex-shrink:0;grid-template-columns:minmax(0,1fr) auto;min-height:0;transition:box-shadow .2s,padding .2s}' +
+    '.cp-big .cp-head-l{min-width:0;gap:12px}' +
+    '.cp-brand-logo{display:block;flex-shrink:0;border-radius:14px;-webkit-tap-highlight-color:transparent;transition:transform .15s}.cp-brand-logo:active{transform:scale(.94)}' +
+    '.cp-brand-logo:focus-visible,.cp-brand-n:focus-visible{outline:2px solid #a78bfa;outline-offset:2px}' +
+    '.cp-brand-logo img{display:block;width:52px;height:52px;transition:width .2s,height .2s}' +
+    '.cp-brand-txt{display:flex;flex-direction:column;gap:3px;min-width:0}' +
+    '.cp-brand-n{display:block;font-size:1.45rem;font-weight:900;letter-spacing:-.02em;line-height:1.1;color:var(--fg,inherit);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;' +
+      'max-height:2em;transition:max-height .2s,opacity .2s,font-size .2s}' +
+    '.cp-brand-c{background:linear-gradient(95deg,#f7931a 0%,#c084fc 55%,#2dd4bf 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}' +
+    '.cp-big .cp-head-title{justify-content:flex-start;gap:6px;font-size:.84rem;font-weight:700;letter-spacing:0;color:var(--fg2,#94a3b8);transition:font-size .2s}' +
+    '.cp-big .cp-head-title .cp-head-ic{font-size:1rem}.cp-big .cp-head-title .cp-head-ic svg,.cp-big .cp-head-title .cp-head-ic .nav-ic{width:16px!important;height:16px!important}' +
+    // folded (scrolled): one line — small logo · page name in full colour
+    '.cp-big.compact .cp-brand-logo img{width:32px;height:32px}' +
+    '.cp-big.compact .cp-brand-n{max-height:0;opacity:0;pointer-events:none}' +
+    '.cp-big.compact .cp-head-title{font-size:1rem;font-weight:800;color:var(--fg,inherit)}' +
+    '.cp-big.compact .cp-head-title .cp-head-ic svg,.cp-big.compact .cp-head-title .cp-head-ic .nav-ic{width:20px!important;height:20px!important}' +
+    '.cp-big.compact .cp-brand-txt{gap:0}' +
+    '@media (min-width:768px){.cp-brand-n{font-size:1.75rem}.cp-brand-logo img{width:56px;height:56px}.cp-big .cp-head-title{font-size:.9rem}}' +
+    '@media (max-width:380px){.cp-brand-n{font-size:1.25rem}.cp-brand-logo img{width:44px;height:44px}.cp-big .cp-head-l{gap:10px}}' +
+    '@media (hover:hover){.cp-brand-n:hover{opacity:.85}}' +
+    // inside a coin (Holdings): Back + the coin, no big logo
+    '#holdingsOverlay[data-view="tx"] .cp-brand-logo,#holdingsOverlay[data-view="tx"] .cp-brand-n{display:none}' +
+    '#holdingsOverlay[data-view="tx"] .cp-big .cp-head-title{font-size:1.02rem;font-weight:800;letter-spacing:-.01em;color:var(--fg,inherit);justify-content:center}' +
+    '#holdingsOverlay[data-view="tx"] .cp-big .cp-head-title .cp-head-ic svg,#holdingsOverlay[data-view="tx"] .cp-big .cp-head-title .cp-head-ic .nav-ic{width:22px!important;height:22px!important}' +
+    // …laid out exactly like the inner pages: Back | title centred | right (the left box steps aside so its parts join the grid)
+    '#holdingsOverlay[data-view="tx"] .cp-head.cp-big{grid-template-columns:1fr minmax(0,auto) 1fr}' +
+    '#holdingsOverlay[data-view="tx"] .cp-big .cp-head-l{display:contents}' +
+    '#holdingsOverlay[data-view="tx"] .cp-big .cp-back{justify-self:start}' +
+    '#holdingsOverlay[data-view="tx"] .cp-big .cp-brand-txt{justify-self:center;min-width:0;max-width:100%}' +
     '@media print{.ss-theme-btn,.cp-back,.cp-head{display:none!important}}';
   (document.head || document.documentElement).appendChild(css);
 
@@ -269,8 +293,13 @@
     var box = e.target === document ? document.scrollingElement : e.target;
     if (!box || !box.querySelectorAll) return;
     var h = box.querySelectorAll('.cp-head'); if (!h.length) return;
-    var y = box.scrollTop > 4;
-    for (var i = 0; i < h.length; i++) if (h[i].classList.contains('scrolled') !== y) h[i].classList.toggle('scrolled', y);
+    var top = box.scrollTop, y = top > 4;
+    for (var i = 0; i < h.length; i++) {
+      if (h[i].classList.contains('scrolled') !== y) h[i].classList.toggle('scrolled', y);
+      // big header folds after 48px and opens again only near the top (no flicker while it changes size)
+      var c = h[i].classList.contains('compact');
+      if (!c && top > 48) h[i].classList.add('compact'); else if (c && top < 4) h[i].classList.remove('compact');
+    }
   }, { capture: true, passive: true });
   // Back: return to the page you came from inside the app (keeps its scroll and filters);
   // opened directly (bookmark, new tab)? then go to the link's own target (the main page).
@@ -665,8 +694,6 @@
       'body.has-bnav #holdingsOverlay{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +
       // the bar replaces the page Back buttons → the app's logo + name sit there instead (tap → Home)
       'body.has-bnav a.cp-back[data-back],body.in-shell a.cp-back[data-back]{display:none}' +
-      'body.has-bnav .cp-brand,body.in-shell .cp-brand{display:inline-flex}' +
-      'body.has-bnav #holdingsOverlay[data-view="tx"] .cp-brand{display:none}' +
       'body.in-shell #cpSplash{display:none !important}' +
       '@media (min-width:1024px){body.in-shell{padding-bottom:84px !important}}' +
       '.cp-head-ic .nav-ic{display:block;color:#a78bfa}[data-theme="light"] .cp-head-ic .nav-ic{color:#7c3aed}' +
@@ -681,13 +708,18 @@
     var cur = navPage();
     [].forEach.call(bar.querySelectorAll('a'), function (a) { if (a.dataset.k === cur) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   }
-  // App logo + "Cute Portfolio" at the left of each page header → Home
+  // Pages with the bottom bar get the main page's header: logo + "Cute Portfolio" (→ Home), and the page's icon + name under it
   function brandMount() {
-    [].forEach.call(document.querySelectorAll('.cp-head-l'), function (l) {
-      if (l.querySelector('.cp-brand')) return;
-      l.insertAdjacentHTML('afterbegin', '<a class="cp-brand" href="./index.html" title="Home" aria-label="Cute Portfolio — Home"><img src="./logo-mark.svg?v=1" alt="" width="28" height="28"><span class="cp-brand-n"><span class="cp-brand-c">Cute</span>Portfolio</span></a>');
+    if (!IN_SHELL && !navPage()) return;   // pages without the bar (Recover…) keep Back + centred title
+    [].forEach.call(document.querySelectorAll('.cp-head'), function (h) {
+      var l = h.querySelector('.cp-head-l'), t = h.querySelector('.cp-head-title');
+      if (!l || !t || l.querySelector('.cp-brand-txt')) return;
+      h.classList.add('cp-big');
+      l.insertAdjacentHTML('beforeend', '<a class="cp-brand-logo" href="./index.html" title="Home" aria-label="Cute Portfolio — Home"><img src="./logo-mark.svg?v=1" alt="" width="52" height="52"></a>' +
+        '<div class="cp-brand-txt"><a class="cp-brand-n" href="./index.html" title="Home" tabindex="-1" aria-hidden="true"><span class="cp-brand-c">Cute</span> Portfolio</a></div>');
+      l.querySelector('.cp-brand-txt').appendChild(t);   // the page's own title (ids kept) moves under the name
     });
-    if (!IN_SHELL) document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a.cp-brand'); if (a) navGo(e, 'home'); });
+    if (!IN_SHELL) document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a.cp-brand-logo,a.cp-brand-n'); if (a) navGo(e, 'home'); });
   }
   function navGo(e, k) {
     var here = navPage(), onIndex = !!window.cpShell;
