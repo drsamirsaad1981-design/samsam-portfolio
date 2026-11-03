@@ -16,16 +16,16 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611031809"></script>
-<script src="samsam-hints.js?v=202611031809"></script>
-<script src="samsam-vault.js?v=202611031809"></script>
-<script src="samsam-labels.js?v=202611031809"></script>
-<script src="samsam-taxonomy.js?v=202611031809"></script>
-<script src="samsam-coins.js?v=202611031809"></script>
-<script src="samsam-dropdown.js?v=202611031809"></script>
-<script src="samsam-market.js?v=202611031809"></script>
-<script src="samsam-exit.js?v=202611031809"></script>
-<script src="samsam-add.js?v=202611031809"></script>
+<script src="samsam-ui.js?v=202611032304"></script>
+<script src="samsam-hints.js?v=202611032304"></script>
+<script src="samsam-vault.js?v=202611032304"></script>
+<script src="samsam-labels.js?v=202611032304"></script>
+<script src="samsam-taxonomy.js?v=202611032304"></script>
+<script src="samsam-coins.js?v=202611032304"></script>
+<script src="samsam-dropdown.js?v=202611032304"></script>
+<script src="samsam-market.js?v=202611032304"></script>
+<script src="samsam-exit.js?v=202611032304"></script>
+<script src="samsam-add.js?v=202611032304"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -471,9 +471,9 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   :root { --gut: 8px; }
   .coin-card, .coin-card.acc-card, .coin-card.acc-card.completed { padding: 12px; }
 }
-/* ── Plan: 🎯 Accumulation | 🚪 Exit Strategy (same switch as Market Hub's Top 100 / Watchlist) ── */
+/* ── Plan: Accumulation | Exit Strategy (same switch as Market Hub's Top 100 / Watchlist) ── */
 .xs-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--bg3); margin: 0 0 14px; max-width: 520px; }
-.xs-tabs button { flex: 1; height: 38px; border: 0; border-radius: 9px; background: none; color: var(--fg2); font: inherit; font-size: .86rem; font-weight: 700; cursor: pointer; }
+.xs-tabs button { display: inline-flex; align-items: center; justify-content: center; flex: 1; height: 38px; border: 0; border-radius: 9px; background: none; color: var(--fg2); font: inherit; font-size: .86rem; font-weight: 700; cursor: pointer; }
 .xs-tabs button[aria-selected="true"] { background: var(--card-solid); color: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.18); }
 .xs-tabs button:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
 /* Exit Strategy — built from the page's own colours, so light and dark both work */
@@ -569,6 +569,61 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 .xk-foot b { color: var(--fg); font-variant-numeric: tabular-nums; } .xk-foot b.up { color: var(--green); } .xk-foot b.down { color: var(--red); }
 .xk-foot small { font-weight: 600; }
 @media (max-width: 759px) { .xs-card { padding: 12px; } }
+.xs-badge { display: inline-flex; align-items: center; }
+.xs-badge .ss-ic { width: 1.05em; height: 1.05em; margin-right: .3em; }
+.xs-title { display: inline-flex; align-items: center; }
+.xs-title .ss-ic { color: #a78bfa; } [data-theme="light"] .xs-title .ss-ic { color: #7c3aed; }
+.xs-btn { display: inline-flex; align-items: center; justify-content: center; }
+.xs-link { display: inline-flex; align-items: center; }
+.xs-warn { display: flex; align-items: center; }
+/* toolbar: Add · count …… Steps · Table/Cards */
+.xs-bar { flex-wrap: nowrap; }
+.xs-bar .xs-count { margin-right: auto; }
+.xs-steps { height: 34px; font-variant-numeric: tabular-nums; }
+@media (max-width: 759px) { .xs-bar .xs-count { display: none; } .xs-bar .cp-add { margin-right: auto; } }
+@media (max-width: 420px) { .xs-bar .xs-long, .xs-view .xs-vl { display: none; } .xs-view .ss-ic { margin-right: 0; } }
+/* default steps panel */
+.xd-card { margin-bottom: 12px; }
+.xd-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.xd-col { display: grid; gap: 8px; background: var(--bg3); border-radius: 10px; padding: 9px; }
+.xd-n { font-size: .8rem; font-weight: 800; }
+.xd-card .xm-edit-btns { margin-top: 10px; flex-wrap: wrap; }
+/* step: follows the average (×2) or a price you set (lock) */
+.xt-nm { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.xt-auto, .xt-lock { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 6px; font-size: .66rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.xt-auto { color: #a78bfa; background: rgba(167,139,250,.14); } [data-theme="light"] .xt-auto { color: #6d28d9; }
+.xt-lock { border: 1px solid var(--border); background: var(--card-solid); color: var(--fg2); font-family: inherit; cursor: pointer; }
+.xt-lock:hover { color: #a78bfa; border-color: #a78bfa; }
+.xt-auto .ss-ic, .xt-lock .ss-ic { width: 12px; height: 12px; margin-right: 3px; }
+.xk-card.flash { animation: xkFlash 1.6s ease; }
+@keyframes xkFlash { 0%, 40% { box-shadow: 0 0 0 3px #a78bfa; } 100% { box-shadow: 0 0 0 0 transparent; } }
+/* table view */
+.xv-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--border); background: var(--card-solid); -webkit-overflow-scrolling: touch; }
+table.xv { width: 100%; min-width: 780px; border-collapse: separate; border-spacing: 0; }
+table.xv thead { position: static; background: var(--bg3); }
+table.xv th { padding: 9px 10px; font-size: .68rem; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; color: var(--fg2); text-align: left; white-space: nowrap; border: 0; }
+table.xv td { padding: 9px 10px; font-size: .8rem; border-top: 1px solid var(--border); vertical-align: middle; white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.xv .num { text-align: right; }
+table.xv td small { display: block; font-size: .66rem; color: var(--fg2); font-weight: 600; margin-top: 2px; }
+table.xv tbody tr { cursor: pointer; transition: background .15s; }
+table.xv tbody tr:hover, table.xv tbody tr:focus-visible { background: color-mix(in srgb, #a78bfa 8%, transparent); outline: none; }
+table.xv th:first-child, table.xv td:first-child { position: sticky; left: 0; z-index: 1; background: var(--card-solid); }
+table.xv th:first-child { background: var(--bg3); }
+.xv-coin > div { display: flex; align-items: center; gap: 8px; }
+.xv-coin span b { display: block; font-size: .84rem; }
+.xv-coin small { margin-top: 0 !important; }
+.xv-tp { --c: var(--fg2); }
+.xv-tp.done { --c: var(--green); } .xv-tp.hit { --c: #f59e0b; } .xv-tp.part { --c: var(--green); }
+.xv-p { display: flex; align-items: center; gap: 5px; }
+.xv-p b { color: var(--fg); }
+.xv-tp.hit .xv-p b { color: #f59e0b; } .xv-tp.done .xv-p b { color: var(--green); }
+.xv-st { color: var(--c); width: 14px; height: 14px; margin-right: 0; }
+.xv-lock { width: 12px; height: 12px; margin: 0; color: var(--fg2); }
+.xv-tp small { color: var(--c) !important; }
+table.xv tfoot td { background: var(--bg3); font-weight: 800; border-top: 1px solid var(--border); }
+table.xv tfoot td:first-child { background: var(--bg3); }
+.xv-leg { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.xv-leg span { display: inline-flex; align-items: center; white-space: nowrap; } .xv-leg .ss-ic { margin-right: 4px; }
 </style>
 </head>
 <body>
@@ -645,8 +700,8 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 
 <!-- Plan / Exit switch -->
 <div class="xs-tabs" role="tablist" aria-label="Plan">
-  <button type="button" role="tab" id="tabAccum" aria-selected="true" onclick="setPlanTab('accum')">🎯 Accumulation</button>
-  <button type="button" role="tab" id="tabExit" aria-selected="false" onclick="setPlanTab('exit')">🚪 Exit Strategy</button>
+  <button type="button" role="tab" id="tabAccum" aria-selected="true" onclick="setPlanTab('accum')"><span data-ic="target"></span>Accumulation</button>
+  <button type="button" role="tab" id="tabExit" aria-selected="false" onclick="setPlanTab('exit')"><span data-ic="exit"></span>Exit Strategy</button>
 </div>
 <div id="exitPane" hidden></div>
 <div id="accPane">
@@ -746,7 +801,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611031809"></script>
+<script type="module" src="samsam-cloud.js?v=202611032304"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';

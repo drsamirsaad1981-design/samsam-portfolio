@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611031809';
-import * as Hist from './samsam-history.js?v=202611031809';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611031809';
+import * as Core from './samsam-core.js?v=202611032304';
+import * as Hist from './samsam-history.js?v=202611032304';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611032304';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -154,8 +154,11 @@ function cleanExitPlan(list) {
     if (!e || typeof e !== 'object') continue;
     const sym = String(e.sym || '').toUpperCase().replace(/[^A-Z0-9._-]/g, '').slice(0, 20);
     if (!sym || seen.has(sym)) continue; seen.add(sym);
-    const tps = (Array.isArray(e.tps) ? e.tps : []).slice(0, 3).map(t => ({ price: numIn(t && t.price, 0, 1e12) || 0, pct: numIn(t && t.pct, 0, 100) ?? 0 }));
-    while (tps.length < 3) tps.push({ price: 0, pct: [25, 50, 25][tps.length] });
+    // lock: true = a price you typed (fixed) · false = follows your average buy price × the step's multiplier ·
+    // null = saved before this choice existed (the page decides from the price)
+    const tps = (Array.isArray(e.tps) ? e.tps : []).slice(0, 3).map(t => ({ price: numIn(t && t.price, 0, 1e12) || 0, pct: numIn(t && t.pct, 0, 100) ?? 0,
+      lock: t && t.lock === true ? true : t && t.lock === false ? false : null }));
+    while (tps.length < 3) tps.push({ price: 0, pct: [25, 50, 25][tps.length], lock: false });
     const cg = String(e.cgId || '').toLowerCase();
     out.push({ sym, cgId: /^[a-z0-9][a-z0-9._-]{0,99}$/.test(cg) ? cg : '', baseQty: numIn(e.baseQty, 0, 1e15) || 0,
       startedAt: typeof e.startedAt === 'string' && !isNaN(Date.parse(e.startedAt)) ? e.startedAt.slice(0, 40) : new Date(0).toISOString(),
@@ -164,9 +167,18 @@ function cleanExitPlan(list) {
   }
   return out;
 }
+//   exitSteps:   your default steps — multipliers of the average buy price and the % sold at each (new coins, Auto)
+export const DEFAULT_EXIT_STEPS = Object.freeze({ mults: [2, 3, 5], pcts: [25, 50, 25] });
+function cleanExitSteps(v) {
+  const d = DEFAULT_EXIT_STEPS; if (!v || typeof v !== 'object') return { mults: [...d.mults], pcts: [...d.pcts], isDefault: true };
+  const mults = [0, 1, 2].map(i => numIn(Array.isArray(v.mults) ? v.mults[i] : null, 1.01, 10000) ?? d.mults[i]);
+  let pcts = [0, 1, 2].map(i => numIn(Array.isArray(v.pcts) ? v.pcts[i] : null, 0, 100) ?? d.pcts[i]);
+  if (Math.abs(pcts.reduce((a, b) => a + b, 0) - 100) > 0.05) pcts = [...d.pcts];
+  return { mults, pcts, isDefault: false };
+}
 function currentExit() {
   const m = S.meta || {};
-  return { tab: m.exitTab === 'exit' ? 'exit' : 'accum', targets: cleanExitTargets(m.exitTargets), plan: cleanExitPlan(m.exitPlan) };
+  return { tab: m.exitTab === 'exit' ? 'exit' : 'accum', targets: cleanExitTargets(m.exitTargets), plan: cleanExitPlan(m.exitPlan), steps: cleanExitSteps(m.exitSteps) };
 }
 function currentSignal() {
   const s = cleanSignal(S.meta && S.meta.signal);
@@ -446,6 +458,7 @@ function txDoc(sym, type, qty, price, note, extra = {}) {
     ...(extra.setAvg != null ? { setAvg: Number(extra.setAvg) } : {}),
     ...(extra.fee > 0 ? { fee: Number(extra.fee) } : {}),
     ...(extra.feeUsd > 0 ? { feeUsd: Number(extra.feeUsd) } : {}),
+    ...(extra.link ? { link: Clean.text(extra.link, 60) } : {}),   // a stablecoin Buy made from a Sell → that Sell's id
   });
 }
 
@@ -461,12 +474,13 @@ const API = {
   getSignalRules() { return currentSignal(); },
   getWatchlist() { return cleanWatch(S.meta && S.meta.watch); },
   getExit() { return currentExit(); },
-  // any of { tab, targets (null → defaults), plan } — each saved as its own field, so edits on two devices don't clash
+  // any of { tab, targets (null → defaults), plan, steps (null → defaults) } — each saved as its own field, so edits on two devices don't clash
   saveExit(part = {}) {
     const d = {};
     if (part.tab) d.exitTab = part.tab === 'exit' ? 'exit' : 'accum';
     if ('targets' in part) { if (part.targets == null) d.exitTargets = null; else { const { isDefault, ...t } = cleanExitTargets(part.targets); d.exitTargets = t; } }
     if (part.plan) d.exitPlan = cleanExitPlan(part.plan);
+    if ('steps' in part) { if (part.steps == null) d.exitSteps = null; else { const { isDefault, ...v } = cleanExitSteps(part.steps); d.exitSteps = v; } }
     if (!Object.keys(d).length) return Promise.resolve();
     return commit((bt, ref) => bt.set(ref('meta', 'info'), d, { merge: true }), 'Exit plan');
   },
@@ -525,6 +539,28 @@ const API = {
     return API.addTx(sym, 'adjust', 0, 0, note || 'Manual edit', { setQty, setAvg });
   },
   deleteTx(id) { return commit((b, ref) => b.delete(ref('txs', safeId(id))), 'Delete transaction'); },
+  deleteTxs(ids) { return commit((b, ref) => (ids || []).forEach(id => b.delete(ref('txs', safeId(id)))), 'Delete transactions'); },
+  // A Sell whose money stays in the portfolio: the Sell + a Buy of the stablecoin for what you got (sell value − fee),
+  // in ONE write. The Buy is priced at $1, so it adds exactly that much cash and no profit is counted twice.
+  // A stablecoin you don't hold yet is added first (Add Coin), then gets the Buy.
+  sellToStable(sym, qty, price, note, extra = {}, stable = {}) {
+    const ss = Clean.sym(String(stable.sym || '').toUpperCase());
+    const cash = Math.max(0, (Number(qty) || 0) * (Number(price) || 0) - (Number(extra.feeUsd) || 0));
+    if (!ss || ss === Clean.sym(String(sym).toUpperCase()) || !(cash > 0)) return API.addTx(sym, 'sell', qty, price, note, extra);
+    const sellId = Core.newId('tx_'), when = Date.parse(extra.date) || Date.now();
+    const bdate = new Date(when + 1).toISOString();
+    const bnote = 'From selling ' + (+Number(qty).toPrecision(8)) + ' ' + sym;
+    const cur = S.coins.get(ss);
+    if (cur && !cur.removed) {
+      return commit((b, ref) => {
+        b.set(ref('txs', sellId), txDoc(sym, 'sell', qty, price, note, extra));
+        b.set(ref('txs', Core.newId('tx_')), txDoc(ss, 'buy', cash, 1, bnote, { date: bdate, link: sellId }));
+      }, `Sell ${sym} → ${ss}`).then(() => sellId);
+    }
+    return commit((b, ref) => b.set(ref('txs', sellId), txDoc(sym, 'sell', qty, price, note, extra)), `Save sell ${sym}`)
+      .then(() => API.addCoin({ sym: ss, name: stable.name || ss, cat: stable.cat || 'other', cgId: stable.cgId || null, logoUrl: stable.logoUrl || null }, { qty: cash, price: 1, note: bnote, link: sellId }))
+      .then(() => sellId);
+  },
 
   // Recovery: in ONE atomic write, restore missing transactions (keeping their original ids, so
   // nothing is duplicated), re-create/un-remove coins, pin chosen coins to recovered qty/avg, and
@@ -572,7 +608,7 @@ const API = {
     if ('lastPrice' in fields && !(Number(fields.lastPrice) > 0 && Number.isFinite(Number(fields.lastPrice)))) delete fields.lastPrice;
     return commit((b, ref, fs) => b.set(ref('coins', safeId(sym)), clean({ ...fields, updatedAt: new Date().toISOString() }), { merge: true }), `Update ${sym}`);
   },
-  addCoin(coin, { qty, price, note, feeUsd } = {}) {
+  addCoin(coin, { qty, price, note, feeUsd, link } = {}) {
     const rawSym = String(coin.sym == null ? '' : coin.sym).trim().toUpperCase();
     coin = cleanCoin({ ...coin, cat: coin.cat || 'other' });
     const sym = coin.sym;
@@ -599,7 +635,7 @@ const API = {
       if (left > 1e-12) b.set(ref('txs', Core.newId('tx_')), txDoc(sym, 'transfer_out', left, 0, 'Removed from portfolio', { date: removedAt }));
       const id = Core.newId('tx_');
       // Every new or re-added coin starts with an ordinary Buy (no manual corrections).
-      b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position'), { feeUsd }));
+      b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position'), { feeUsd, link }));
     }, `Add ${sym}`);
   },
   // ── Manage Categories: one settings doc (users/{uid}/meta/categories) every page and device applies ──
