@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611030229';
-import * as Hist from './samsam-history.js?v=202611030229';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611030229';
+import * as Core from './samsam-core.js?v=202611031302';
+import * as Hist from './samsam-history.js?v=202611031302';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611031302';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -134,6 +134,40 @@ function cleanWatch(list) {
   }
   return out;
 }
+// ── Exit Strategy (Plan page): saved in users/{uid}/meta/info → exitTab, exitTargets, exitPlan ──
+//   exitTargets: your macro levels — BTC.D at or under btcD, USDT.D inside usdtHi…usdtLo, ETH/BTC at or over ethBtc
+//   exitPlan:    [{ sym, cgId?, baseQty, startedAt, moonbag, tps: [{ price, pct }] ×3 }]
+//                baseQty = the amount the plan sells from (fixed when the coin was added, so selling TP1 never
+//                shrinks TP2 / TP3); sells recorded after startedAt fill the steps in order.
+export const DEFAULT_EXIT_TARGETS = Object.freeze({ btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085 });
+const numIn = (v, lo, hi) => { const n = Number(v); return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
+function cleanExitTargets(t) {
+  const d = DEFAULT_EXIT_TARGETS; if (!t || typeof t !== 'object') return { ...d, isDefault: true };
+  let hi = numIn(t.usdtHi, 0.01, 50) ?? d.usdtHi, lo = numIn(t.usdtLo, 0, 50) ?? d.usdtLo;
+  if (lo > hi) [lo, hi] = [hi, lo];
+  return { btcD: numIn(t.btcD, 1, 100) ?? d.btcD, usdtHi: hi, usdtLo: lo, ethBtc: numIn(t.ethBtc, 0.0001, 10) ?? d.ethBtc, isDefault: false };
+}
+function cleanExitPlan(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set(), out = [];
+  for (const e of list) {
+    if (!e || typeof e !== 'object') continue;
+    const sym = String(e.sym || '').toUpperCase().replace(/[^A-Z0-9._-]/g, '').slice(0, 20);
+    if (!sym || seen.has(sym)) continue; seen.add(sym);
+    const tps = (Array.isArray(e.tps) ? e.tps : []).slice(0, 3).map(t => ({ price: numIn(t && t.price, 0, 1e12) || 0, pct: numIn(t && t.pct, 0, 100) ?? 0 }));
+    while (tps.length < 3) tps.push({ price: 0, pct: [25, 50, 25][tps.length] });
+    const cg = String(e.cgId || '').toLowerCase();
+    out.push({ sym, cgId: /^[a-z0-9][a-z0-9._-]{0,99}$/.test(cg) ? cg : '', baseQty: numIn(e.baseQty, 0, 1e15) || 0,
+      startedAt: typeof e.startedAt === 'string' && !isNaN(Date.parse(e.startedAt)) ? e.startedAt.slice(0, 40) : new Date(0).toISOString(),
+      moonbag: e.moonbag !== false, tps });
+    if (out.length >= 100) break;
+  }
+  return out;
+}
+function currentExit() {
+  const m = S.meta || {};
+  return { tab: m.exitTab === 'exit' ? 'exit' : 'accum', targets: cleanExitTargets(m.exitTargets), plan: cleanExitPlan(m.exitPlan) };
+}
 function currentSignal() {
   const s = cleanSignal(S.meta && S.meta.signal);
   return s ? { ...s, isDefault: false } : { ...DEFAULT_SIGNAL, isDefault: true };
@@ -235,6 +269,7 @@ function derive() {
     customCoins: coins.filter(c => c.isCustom && !c.removed).map(c => ({ sym: c.sym, cat: catOf(c.sym, c.cat, c.catLocked), cgId: c.cgId, logoUrl: c.logoUrl })),
     accumPlan, perfSnaps: snaps.perf, holdingsSnaps: snaps.holdings, realized, btcPrice: btc, baseline: currentBaseline(),
     watchlist: cleanWatch(S.meta && S.meta.watch),
+    exit: currentExit(),
     needsSetup: allLoaded() && !(S.meta && S.meta.state === 'done') && S.coins.size === 0,
   };
   return S.derived;
@@ -425,6 +460,16 @@ const API = {
   getBaseline() { return currentBaseline(); },
   getSignalRules() { return currentSignal(); },
   getWatchlist() { return cleanWatch(S.meta && S.meta.watch); },
+  getExit() { return currentExit(); },
+  // any of { tab, targets (null → defaults), plan } — each saved as its own field, so edits on two devices don't clash
+  saveExit(part = {}) {
+    const d = {};
+    if (part.tab) d.exitTab = part.tab === 'exit' ? 'exit' : 'accum';
+    if ('targets' in part) { if (part.targets == null) d.exitTargets = null; else { const { isDefault, ...t } = cleanExitTargets(part.targets); d.exitTargets = t; } }
+    if (part.plan) d.exitPlan = cleanExitPlan(part.plan);
+    if (!Object.keys(d).length) return Promise.resolve();
+    return commit((bt, ref) => bt.set(ref('meta', 'info'), d, { merge: true }), 'Exit plan');
+  },
   saveWatchlist(list) {
     const w = cleanWatch(list);
     return commit((bt, ref) => bt.set(ref('meta', 'info'), { watch: w }, { merge: true }), 'Watchlist');
