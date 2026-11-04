@@ -16,16 +16,16 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611042208"></script>
-<script src="samsam-hints.js?v=202611042208"></script>
-<script src="samsam-vault.js?v=202611042208"></script>
-<script src="samsam-labels.js?v=202611042208"></script>
-<script src="samsam-taxonomy.js?v=202611042208"></script>
-<script src="samsam-coins.js?v=202611042208"></script>
-<script src="samsam-dropdown.js?v=202611042208"></script>
-<script src="samsam-market.js?v=202611042208"></script>
-<script src="samsam-exit.js?v=202611042208"></script>
-<script src="samsam-add.js?v=202611042208"></script>
+<script src="samsam-ui.js?v=202611042234"></script>
+<script src="samsam-hints.js?v=202611042234"></script>
+<script src="samsam-vault.js?v=202611042234"></script>
+<script src="samsam-labels.js?v=202611042234"></script>
+<script src="samsam-taxonomy.js?v=202611042234"></script>
+<script src="samsam-coins.js?v=202611042234"></script>
+<script src="samsam-dropdown.js?v=202611042234"></script>
+<script src="samsam-market.js?v=202611042234"></script>
+<script src="samsam-exit.js?v=202611042234"></script>
+<script src="samsam-add.js?v=202611042234"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -159,6 +159,10 @@ body {
 @media (prefers-reduced-motion: reduce) { .view-enter { animation: none; } }
 table { width: 100%; border-collapse: collapse; min-width: 800px; }
 thead { background: var(--bg3, #1a2235); position: sticky; top: 0; z-index: 2; }
+/* Asset column stays put while the table scrolls sideways (like Exit Strategy) — frosted so it matches the page in both themes */
+#tableView table tbody td:first-child { position: sticky; left: 0; z-index: 1; background: rgba(240,244,248,.98); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset -1px 0 0 var(--border); }
+html[data-theme="dark"] #tableView table tbody td:first-child { background: rgba(17,15,44,.97); }
+#tableView table thead tr th:first-child { position: sticky; left: 0; z-index: 4; background: var(--bg3); box-shadow: inset -1px 0 0 var(--border); }
 th {
   padding: 10px 12px; text-align: left;
   font-size: 0.72rem; font-weight: 600; text-transform: none;
@@ -802,7 +806,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611042208"></script>
+<script type="module" src="samsam-cloud.js?v=202611042234"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';

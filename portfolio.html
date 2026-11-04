@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611042150"></script>
-<script src="samsam-hints.js?v=202611042150"></script>
-<script src="samsam-vault.js?v=202611042150"></script>
-<script src="samsam-labels.js?v=202611042150"></script>
-<script src="samsam-taxonomy.js?v=202611042150"></script>
-<script src="samsam-coins.js?v=202611042150"></script>
-<script src="samsam-dropdown.js?v=202611042150"></script>
-<script src="samsam-add.js?v=202611042150"></script>
-<script src="samsam-chart.js?v=202611042150"></script>
-<script src="samsam-market.js?v=202611042150"></script>
+<script src="samsam-ui.js?v=202611042208"></script>
+<script src="samsam-hints.js?v=202611042208"></script>
+<script src="samsam-vault.js?v=202611042208"></script>
+<script src="samsam-labels.js?v=202611042208"></script>
+<script src="samsam-taxonomy.js?v=202611042208"></script>
+<script src="samsam-coins.js?v=202611042208"></script>
+<script src="samsam-dropdown.js?v=202611042208"></script>
+<script src="samsam-add.js?v=202611042208"></script>
+<script src="samsam-chart.js?v=202611042208"></script>
+<script src="samsam-market.js?v=202611042208"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -914,6 +914,10 @@
 
   table { width: 100%; border-collapse: collapse; min-width: 920px;   /* 7 columns: fits a 1024px screen without sideways scrolling */ }
   thead { background: var(--bg3); position: sticky; top: 0; z-index: 2; }
+  /* Asset column stays put while the table scrolls sideways (like Exit Strategy) — frosted so it matches the page in both themes */
+  #portfolioTable tbody td:first-child { position: sticky; left: 0; z-index: 1; background: rgba(240,244,248,.98); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset -1px 0 0 var(--border); }
+  html[data-theme="dark"] #portfolioTable tbody td:first-child { background: rgba(17,15,44,.97); }
+  #portfolioTable thead tr th:first-child { position: sticky; left: 0; z-index: 4; background: var(--bg3); box-shadow: inset -1px 0 0 var(--border); }
   th { padding: 11px 12px; font-size: 0.7rem; color: var(--fg2); text-align: center; border-bottom: 2px solid var(--border); cursor: pointer; text-transform: none; letter-spacing: .01em; font-weight: 700; }
   /* Main table header: every label the same way — up to two balanced lines, ⓘ beside it (never dropped below),
      the sorted column lit with ▲/▼, one row height */
@@ -1479,7 +1483,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611042150"></script>
+<script type="module" src="samsam-cloud.js?v=202611042208"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
