@@ -199,7 +199,7 @@
     var d = stepsDraft || cfgNow(), sum = d.pcts.reduce(function (a, b) { return a + (+b || 0); }, 0);
     var col = function (i) {
       return '<div class="xd-col"><div class="xd-n">TP' + (i + 1) + '</div>' +
-        '<label class="xm-f"><span>× avg buy</span><input type="number" inputmode="decimal" step="any" min="1.01" data-st="m" data-k="' + i + '" value="' + d.mults[i] + '"></label>' +
+        '<label class="xm-f"><span>× average buy price</span><input type="number" inputmode="decimal" step="any" min="1.01" data-st="m" data-k="' + i + '" value="' + d.mults[i] + '"></label>' +
         '<label class="xm-f"><span>Sell %</span><input type="number" inputmode="decimal" step="any" min="0" max="100" data-st="p" data-k="' + i + '" value="' + d.pcts[i] + '"></label></div>';
     };
     return '<div class="xs-card xd-card"><div class="xs-head"><div class="xs-title">' + IC('sliders') + 'Default Steps</div><button type="button" class="xs-link" data-act="steps-close">Close</button></div>' +
@@ -231,7 +231,7 @@
     var held = r.held < r.base - r.sold - 1e-9 ? '<div class="xs-warn">' + IC('alert') + 'You now hold ' + SamsamCoins.fmtAmount(r.held) + ' ' + sym + ' — less than the plan still sells.</div>' : '';
     return '<article class="xs-card xk-card' + (flashSym === e.sym ? ' flash' : '') + '" data-sym="' + sym + '" id="xk-' + sym + '">' +
       '<div class="xk-head">' + asset + '<button type="button" class="xs-x" data-act="remove" data-i="' + idx + '" aria-label="Remove ' + sym + ' from the exit plan" title="Remove from the exit plan">' + IC('x', { solo: true, size: 14 }) + '</button></div>' +
-      '<div class="xk-info"><span>Plan amount <b>' + SamsamCoins.fmtAmount(r.base) + '</b></span><span>Avg buy <b>' + (r.avg > 0 ? F().price(r.avg) : '—') + '</b></span>' + (r.bought > 0 ? '<span title="Bought after the coin joined the plan — added to the plan amount">Bought since <b>+' + SamsamCoins.fmtAmount(r.bought) + '</b></span>' : '') + (r.sold > 0 ? '<span>Sold since <b>' + SamsamCoins.fmtAmount(r.sold) + '</b></span>' : '') + '</div>' +
+      '<div class="xk-info"><span>Plan amount <b>' + SamsamCoins.fmtAmount(r.base) + '</b></span><span>Average buy price <b>' + (r.avg > 0 ? F().price(r.avg) : '—') + '</b></span>' + (r.bought > 0 ? '<span title="Bought after the coin joined the plan — added to the plan amount">Bought since <b>+' + SamsamCoins.fmtAmount(r.bought) + '</b></span>' : '') + (r.sold > 0 ? '<span>Sold since <b>' + SamsamCoins.fmtAmount(r.sold) + '</b></span>' : '') + '</div>' +
       '<div class="xk-opts"><label class="xk-moon"><input type="checkbox" data-act="moon" data-i="' + idx + '"' + (e.moonbag ? ' checked' : '') + '><span>Reserve 10% Moonbag</span></label>' +
       '<button type="button" class="xs-btn" data-act="quick" data-i="' + idx + '"' + (r.avg > 0 ? (auto ? ' disabled title="Already following ' + cfg.mults.map(multTxt).join(' · ') + ' your average buy price"' : ' title="Follow your average buy price again: ' + cfg.mults.map(multTxt).join(' · ') + ', ' + cfg.pcts.join(' / ') + ' %"') : ' disabled title="No average buy price for this coin"') + '>' +
         IC('link') + 'Auto ' + cfg.mults.map(multTxt).join(' · ') + '</button></div>' +
@@ -262,10 +262,10 @@
         '<td class="num"><b>' + F().usd(r.cash) + '</b></td>' +
         '<td class="num"><b class="' + (r.profit >= 0 ? 'up' : 'down') + '">' + F().usdSigned(r.profit) + '</b>' + (r.profitPct != null ? '<small>' + (r.profitPct >= 0 ? '+' : '') + r.profitPct.toFixed(1) + '%</small>' : '') + '</td></tr>';
     }).join('');
-    return '<div class="xv-wrap"><table class="xv"><thead><tr><th>Coin</th><th class="num">Plan</th><th class="num">Avg buy</th>' +
-      cfg.mults.map(function (m, i) { return '<th>TP' + (i + 1) + '</th>'; }).join('') +
-      '<th class="num">Cash-out</th><th class="num">Net profit</th></tr></thead><tbody>' + rows + '</tbody>' +
-      '<tfoot><tr><td colspan="6">Total · ' + plan.length + ' coin' + (plan.length === 1 ? '' : 's') + '</td><td class="num"><b>' + F().usd(tc) + '</b></td>' +
+    return '<div class="xv-wrap"><table class="xv"><thead><tr><th>Asset</th><th class="num">Plan amount</th><th class="num">Average buy price</th>' +
+      cfg.mults.map(function (m, i) { return '<th>Take profit ' + (i + 1) + '</th>'; }).join('') +
+      '<th class="num">Cash out</th><th class="num">Net profit</th></tr></thead><tbody>' + rows + '</tbody>' +
+      '<tfoot><tr><td colspan="6">Total · ' + plan.length + ' asset' + (plan.length === 1 ? '' : 's') + '</td><td class="num"><b>' + F().usd(tc) + '</b></td>' +
       '<td class="num"><b class="' + (tp >= 0 ? 'up' : 'down') + '">' + F().usdSigned(tp) + '</b>' + (cost > 0 ? '<small>' + (tp >= 0 ? '+' : '') + (tp / cost * 100).toFixed(1) + '%</small>' : '') + '</td></tr></tfoot></table></div>' +
       '<div class="xs-note xv-leg"><span>' + IC('checkCircle') + 'Done</span><span>' + IC('target') + 'Target hit</span><span>' + IC('hourglass') + 'Waiting</span><span>' + IC('lock') + 'Price you set</span><span>· Tap a row to edit</span></div>';
   }
