@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611040348';
-import * as Hist from './samsam-history.js?v=202611040348';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611040348';
+import * as Core from './samsam-core.js?v=202611041003';
+import * as Hist from './samsam-history.js?v=202611041003';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611041003';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -137,7 +137,7 @@ function cleanWatch(list) {
 // ── Exit Strategy (Plan page): saved in users/{uid}/meta/info → exitTab, exitTargets, exitPlan ──
 //   exitTargets: your macro levels — BTC.D at or under btcD, USDT.D inside usdtHi…usdtLo, ETH/BTC at or over ethBtc
 //   exitPlan:    [{ sym, cgId?, baseQty, startedAt, moonbag, tps: [{ price, pct }] ×3 }]
-//                baseQty = the amount the plan sells from (fixed when the coin was added, so selling TP1 never
+//                baseQty = the amount held when the coin was added (buys recorded after startedAt add to it; selling TP1 never
 //                shrinks TP2 / TP3); sells recorded after startedAt fill the steps in order.
 export const DEFAULT_EXIT_TARGETS = Object.freeze({ btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085 });
 const numIn = (v, lo, hi) => { const n = Number(v); return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };

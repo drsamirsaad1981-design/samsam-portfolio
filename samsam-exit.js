@@ -72,11 +72,16 @@
     // entry: { sym, baseQty, startedAt, moonbag, tps }, coin: { qty, basePrice, currentPrice }, txs: all transactions, cfg: default steps
     coin: function (entry, coin, txs, cfg) {
       coin = coin || {}; cfg = cfgOf(cfg);
-      var base = +entry.baseQty || 0, price = +coin.currentPrice || 0, avg = +coin.basePrice || 0;
-      var moon = entry.moonbag ? base * MOON : 0, sellable = base - moon;
+      var price = +coin.currentPrice || 0, avg = +coin.basePrice || 0;
       var since = Date.parse(entry.startedAt) || 0;
-      var sold = (txs || []).filter(function (x) { return x.sym === entry.sym && x.type === 'sell' && (Date.parse(x.createdAt || x.date) || 0) >= since; })   // recorded after the coin joined the plan
-        .reduce(function (s, x) { return s + (+x.qty || 0); }, 0);
+      var after = function (types) {   // recorded after the coin joined the plan
+        return (txs || []).filter(function (x) { return x.sym === entry.sym && types.indexOf(x.type) >= 0 && (Date.parse(x.createdAt || x.date) || 0) >= since; })
+          .reduce(function (s, x) { return s + (+x.qty || 0); }, 0);
+      };
+      var sold = after(['sell']), bought = after(['buy', 'transfer_in']);
+      // buying more after the coin joined the plan raises the plan amount; selling fills the steps (never shrinks them)
+      var base = (+entry.baseQty || 0) + bought;
+      var moon = entry.moonbag ? base * MOON : 0, sellable = base - moon;
       var left = sold, pctSum = 0, cash = 0, profit = 0, cost = 0, done = 0;
       var steps = (entry.tps || []).map(function (tp, i) {
         var linked = calc.linked(tp, i, avg), tpPrice = calc.stepPrice(tp, i, avg, cfg);
@@ -93,7 +98,7 @@
           toSell: Math.max(0, qty - filled), cash: qty * tpPrice, progress: tpPrice > 0 && price > 0 ? Math.min(100, price / tpPrice * 100) : 0,
           away: tpPrice > 0 && price > 0 ? (tpPrice / price - 1) * 100 : null };
       });
-      return { base: base, moon: moon, sellable: sellable, sold: sold, steps: steps, pctSum: pctSum, cash: cash, profit: profit,
+      return { base: base, bought: bought, moon: moon, sellable: sellable, sold: sold, steps: steps, pctSum: pctSum, cash: cash, profit: profit,
         profitPct: cost > 0 ? profit / cost * 100 : null, done: done, price: price, avg: avg, held: +coin.qty || 0 };
     },
     // the three steps from your average buy price (your default multipliers and %)
@@ -226,7 +231,7 @@
     var held = r.held < r.base - r.sold - 1e-9 ? '<div class="xs-warn">' + IC('alert') + 'You now hold ' + SamsamCoins.fmtAmount(r.held) + ' ' + sym + ' — less than the plan still sells.</div>' : '';
     return '<article class="xs-card xk-card' + (flashSym === e.sym ? ' flash' : '') + '" data-sym="' + sym + '" id="xk-' + sym + '">' +
       '<div class="xk-head">' + asset + '<button type="button" class="xs-x" data-act="remove" data-i="' + idx + '" aria-label="Remove ' + sym + ' from the exit plan" title="Remove from the exit plan">' + IC('x', { solo: true, size: 14 }) + '</button></div>' +
-      '<div class="xk-info"><span>Plan amount <b>' + SamsamCoins.fmtAmount(r.base) + '</b></span><span>Avg buy <b>' + (r.avg > 0 ? F().price(r.avg) : '—') + '</b></span>' + (r.sold > 0 ? '<span>Sold since <b>' + SamsamCoins.fmtAmount(r.sold) + '</b></span>' : '') + '</div>' +
+      '<div class="xk-info"><span>Plan amount <b>' + SamsamCoins.fmtAmount(r.base) + '</b></span><span>Avg buy <b>' + (r.avg > 0 ? F().price(r.avg) : '—') + '</b></span>' + (r.bought > 0 ? '<span title="Bought after the coin joined the plan — added to the plan amount">Bought since <b>+' + SamsamCoins.fmtAmount(r.bought) + '</b></span>' : '') + (r.sold > 0 ? '<span>Sold since <b>' + SamsamCoins.fmtAmount(r.sold) + '</b></span>' : '') + '</div>' +
       '<div class="xk-opts"><label class="xk-moon"><input type="checkbox" data-act="moon" data-i="' + idx + '"' + (e.moonbag ? ' checked' : '') + '><span>Reserve 10% Moonbag</span></label>' +
       '<button type="button" class="xs-btn" data-act="quick" data-i="' + idx + '"' + (r.avg > 0 ? (auto ? ' disabled title="Already following ' + cfg.mults.map(multTxt).join(' · ') + ' your average buy price"' : ' title="Follow your average buy price again: ' + cfg.mults.map(multTxt).join(' · ') + ', ' + cfg.pcts.join(' / ') + ' %"') : ' disabled title="No average buy price for this coin"') + '>' +
         IC('link') + 'Auto ' + cfg.mults.map(multTxt).join(' · ') + '</button></div>' +
