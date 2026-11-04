@@ -356,7 +356,7 @@
     MON: 'monad-xyz', CRO: 'cronos', XDC: 'xdc-network', DOT: 'polkadot', LINK: 'chainlink', ENS: 'ethereum-name-service',
     STRK: 'starknet', ONDO: 'ondo-finance', AVAIL: 'avail-network', KAVA: 'kava', PONS: 'pons', MNT: 'mantle',
     FLR: 'spark-token', KAS: 'kaspa', POL: 'polygon-ecosystem-token', VTHO: 'vethor-token', VET: 'vechain-token',
-    NIGHT: 'midnight-network', XPL: 'xpl-token', XRP: 'ripple',
+    NIGHT: 'midnight-network', XPL: 'xpl-token', XRP: 'ripple', USDT: 'tether', USDC: 'usd-coin',
     PI: 'pi-network',   // CoinCodex lists Pi Network under the ticker IOU
   };
   var SLUG_RE = /^[a-z0-9][a-z0-9-]{0,99}$/;
