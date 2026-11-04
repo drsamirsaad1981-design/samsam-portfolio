@@ -731,9 +731,6 @@
         '.cp-addfab.scrolling{opacity:0;pointer-events:none;transform:scale(.9);transition:opacity .15s,transform .15s}' +
         '.cp-addfab.under{opacity:0;pointer-events:none}' +
         '@media (min-width:1024px){.cp-addfab{width:auto;padding:0 18px 0 14px}.cp-addfab .t{display:inline}}' +
-        // the AI button over it gets the same glass, so the two read as one pair
-        '.cp-aifab.paired{background:rgba(124,58,237,.10);border:1px solid rgba(167,139,250,.45);-webkit-backdrop-filter:blur(14px) saturate(1.6);backdrop-filter:blur(14px) saturate(1.6)}' +
-        'html:not([data-theme="dark"]) .cp-aifab.paired{background:rgba(255,255,255,.45);border-color:rgba(124,58,237,.35)}' +
         '@media print{.cp-addfab{display:none!important}}';
       document.head.appendChild(st);
     }
@@ -745,7 +742,6 @@
     function place() {
       var on = ov.style.display !== 'none' && getComputedStyle(ov).display !== 'none' && ov.getAttribute('data-view') !== 'tx';
       b.classList.toggle('on', on);
-      var ai = document.getElementById('cpAiFab'); if (ai) ai.classList.toggle('paired', on);
       if (on) {
         var bar = document.getElementById('cpBnav'), r = bar && bar.getBoundingClientRect();
         var bottom = (r && r.height && r.top < innerHeight ? innerHeight - r.top : 0) + 14;
