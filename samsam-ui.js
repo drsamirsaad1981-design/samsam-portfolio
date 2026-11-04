@@ -651,10 +651,12 @@
     { k: 'accumulation', label: 'Plan', title: 'Accumulation Plan', href: 'accumulation.html', ic: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>' },
     { k: 'market', label: 'Market', title: 'Market Hub', href: 'market.html', ic: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/>' },
   ];
+  var LOGO_MARK = '<path d="M267.77,106.46 A150.0,150.0 0 0 1 318.20,392.49" stroke="#f7931a" stroke-width="64.0" stroke-linecap="butt" fill="none"/><path d="M296.09,400.54 A150.0,150.0 0 0 1 110.78,293.56" stroke="#a78bfa" stroke-width="64.0" stroke-linecap="butt" fill="none"/><path d="M106.69,270.38 A150.0,150.0 0 0 1 244.23,106.46" stroke="#2dd4bf" stroke-width="64.0" stroke-linecap="butt" fill="none"/><path d="M256.0,300.8 C182.4,257.9 216.3,200.3 256.0,234.2 C295.7,200.3 329.6,257.9 256.0,300.8 Z" fill="#fbbf24"/>';   // same drawing as logo-mark.svg
   // Inside the app shell (index.html keeps Performance / Allocation / Plan open in frames → instant switching)
   var IN_SHELL = (function () { try { return window.parent !== window && /[?&]shell=1\b/.test(location.search) && !!window.parent.cpShell; } catch (_) { return false; } })();
   function navIconSvg(k, size) {
     var n = NAV.filter(function (x) { return x.k === k; })[0]; if (!n) return '';
+    if (k === 'home') return '<svg class="nav-ic nav-logo" viewBox="66 66 380 380" width="' + (size || 22) + '" height="' + (size || 22) + '" aria-hidden="true">' + LOGO_MARK + '</svg>';   // Home = the app's own logo, in its colours
     return '<svg class="nav-ic" viewBox="0 0 24 24" width="' + (size || 22) + '" height="' + (size || 22) + '" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + n.ic + '</svg>';
   }
   // page titles use the same line icons as the bar (one icon per page, everywhere)
@@ -953,7 +955,7 @@
     if (!navPage() || document.getElementById('cpBnav') || !document.body) return;
     navCss();
     var html = '<nav class="cp-bnav" id="cpBnav" aria-label="Main">' + NAV.map(function (n) {
-      return '<a href="./' + n.href + '" data-k="' + n.k + '" title="' + (n.title || n.label) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + n.ic + '</svg><span>' + n.label + '</span></a>';
+      return '<a href="./' + n.href + '" data-k="' + n.k + '" title="' + (n.title || n.label) + '">' + (n.k === 'home' ? navIconSvg('home').replace(/ width="\d+" height="\d+"/, '') : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + n.ic + '</svg>') + '<span>' + n.label + '</span></a>';
     }).join('') + '</nav>';
     document.body.insertAdjacentHTML('beforeend', html);
     document.body.classList.add('has-bnav');
