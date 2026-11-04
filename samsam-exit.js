@@ -289,10 +289,10 @@
     root.innerHTML = '<div class="xs-top">' + macroHtml() + cashHtml() + '</div>' +
       '<div class="xs-bar"><button type="button" class="cp-add" data-act="pick"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="xs-long"> to Exit Plan</span></span></button>' +
       '<span class="xs-count">' + plan.length + ' coin' + (plan.length === 1 ? '' : 's') + '</span>' +
-      '<button type="button" class="xs-btn xs-steps" data-act="steps" aria-expanded="' + stepsOpen + '" title="Your default steps">' + IC('sliders') + cfg.mults.map(multTxt).join(' ') + '</button>' +
+      '<button type="button" class="xs-btn xs-steps" data-act="steps" aria-expanded="' + stepsOpen + '" title="Your default steps: ' + cfg.mults.map(multTxt).join(' · ') + '" aria-label="Your default steps ' + cfg.mults.map(multTxt).join(' ') + '">' + IC('sliders') + '<span class="xs-stx">' + cfg.mults.map(multTxt).join(' ') + '</span></button>' +
       '<div class="cp-vseg xs-view" role="group" aria-label="View">' +
-        '<button type="button" data-act="view" data-v="table" class="' + (v === 'table' ? 'btn-toggle-active' : '') + '" aria-pressed="' + (v === 'table') + '">' + IC('table') + '<span class="xs-vl">Table</span></button>' +
-        '<button type="button" data-act="view" data-v="cards" class="' + (v === 'cards' ? 'btn-toggle-active' : '') + '" aria-pressed="' + (v === 'cards') + '">' + IC('cards') + '<span class="xs-vl">Cards</span></button></div></div>' +
+        '<button type="button" data-act="view" data-v="table" class="' + (v === 'table' ? 'btn-toggle-active' : '') + '" aria-pressed="' + (v === 'table') + '">' + IC('table') + 'Table</button>' +
+        '<button type="button" data-act="view" data-v="cards" class="' + (v === 'cards' ? 'btn-toggle-active' : '') + '" aria-pressed="' + (v === 'cards') + '">' + IC('cards') + 'Cards</button></div></div>' +
       stepsHtml() + pickHtml() +
       (!plan.length ? '<div class="xs-empty">No coins in your exit plan yet.<br>Tap <b>Add to Exit Plan</b> and choose the coins you want to take profit on.</div>'
         : v === 'table' ? tableHtml(plan) : '<div class="xk-grid">' + plan.map(coinHtml).join('') + '</div>') +
