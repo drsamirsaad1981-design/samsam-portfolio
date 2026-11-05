@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611060050"></script>
-<script src="samsam-hints.js?v=202611060050"></script>
-<script src="samsam-vault.js?v=202611060050"></script>
-<script src="samsam-labels.js?v=202611060050"></script>
-<script src="samsam-taxonomy.js?v=202611060050"></script>
-<script src="samsam-coins.js?v=202611060050"></script>
-<script src="samsam-dropdown.js?v=202611060050"></script>
-<script src="samsam-add.js?v=202611060050"></script>
-<script src="samsam-market.js?v=202611060050"></script>
+<script src="samsam-ui.js?v=202611060114"></script>
+<script src="samsam-hints.js?v=202611060114"></script>
+<script src="samsam-vault.js?v=202611060114"></script>
+<script src="samsam-labels.js?v=202611060114"></script>
+<script src="samsam-taxonomy.js?v=202611060114"></script>
+<script src="samsam-coins.js?v=202611060114"></script>
+<script src="samsam-dropdown.js?v=202611060114"></script>
+<script src="samsam-add.js?v=202611060114"></script>
+<script src="samsam-market.js?v=202611060114"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -67,7 +67,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-vrow { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 8px; row-gap: 2px; }
 .mk-vrow .mk-v { font-size: 1.6rem; }
 .mk-vrow .mk-tag { font-size: .74rem; }
-.mk-altg { margin: auto 0; padding: 6px 0; }   /* the gauge sits in the middle of the free space */
+.mk-altg { margin: auto 0; padding: 6px 0; }
+.mk-altnote { font-size: .7rem; line-height: 1.35; color: var(--fg2); }   /* what the number means: coins beating BTC · season from 75 */
+.mk-altnote b { color: var(--fg); font-weight: 700; }   /* the gauge sits in the middle of the free space */
 .mk-li b.up { color: var(--green); } .mk-li b.down { color: var(--red); }
 .mk-gauge { position: relative; height: 8px; border-radius: 6px; margin: 6px 0 2px; }
 .mk-gauge.fng { background: linear-gradient(90deg, #ef4444 0%, #f97316 25%, #eab308 50%, #84cc16 72%, #22c55e 100%); }
@@ -352,11 +354,12 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     <div class="mk-card" id="cardAlt">
       <div class="mk-k"><span data-ic="activity"></span>Altcoin Season</div>
       <div class="mk-vrow"><div class="mk-v" id="altV">—<small>/100</small></div><div class="mk-tag" id="altL">—</div></div>
+      <div class="mk-altnote" id="altNote">Altcoin Season starts at 75.</div>
       <div class="mk-altg"><div class="mk-gauge alt" role="img" id="altG" aria-label="Altcoin season gauge"><i style="left:50%"></i></div>
       <div class="mk-gauge-l"><span>Bitcoin</span><span>Altcoin</span></div></div>
       <div class="mk-foot">
-        <div class="mk-li" id="altN">Top coins vs BTC</div>
-        <div class="mk-li" id="altB">BTC <b>—</b></div>
+        <div class="mk-li" id="altN">Beating BTC <b>—</b></div>
+        <div class="mk-li" id="altB">BTC (90 days) <b>—</b></div>
       </div>
     </div>
     <div class="mk-card" id="cardDom">
@@ -414,12 +417,12 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     <div id="mkRows"></div>
     <div id="mkMore" class="mk-more"></div>
   </section>
-  <p class="mk-src">Market data: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> (live, plus a snapshot saved every ~30 min) · Coin pages: CoinMarketCap · Fear &amp; Greed: <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">alternative.me</a> · Altcoin Season is worked out here from the top 50 coins (no stablecoins / wrapped / staked) vs BTC over 30 days.</p>
+  <p class="mk-src">Market data: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> (live, plus a snapshot saved every ~30 min) · Coin pages: CoinMarketCap · Fear &amp; Greed: <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">alternative.me</a> · Altcoin Season: the top 100 coins (no stablecoins / wrapped / staked) vs BTC over the last 90 days, the CoinMarketCap method — worked out with each snapshot.</p>
 </main>
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611060050"></script>
+<script type="module" src="samsam-cloud.js?v=202611060114"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -486,9 +489,11 @@ function paintAlt(a) {
   document.querySelector('#altG i').style.left = Math.max(2, Math.min(98, a.value)) + '%';
   document.getElementById('altG').setAttribute('aria-label', `Altcoin season ${a.value} of 100: ${a.label}`);
   const per = a.period || '30d', b = a.btc90 != null ? a.btc90 : a.btc30;
-  const P = per.toUpperCase();
-  document.getElementById('altN').innerHTML = `Beat BTC (${P}) <b>${a.beat}/${a.n}</b>`;
-  document.getElementById('altB').innerHTML = `BTC (${P} %) <b class="${cls(b)}">${b == null ? '—' : pct(b, 2)}</b>`;
+  const days = per === '90d' ? '90 days' : '30 days';
+  // no repeat of the big number: the note says what it means, the rows give the count and BTC's own move
+  document.getElementById('altNote').innerHTML = `Share of the top ${per === '90d' ? 100 : 50} coins that beat BTC over the last ${days}. Altcoin Season starts at <b>75</b>.`;
+  document.getElementById('altN').innerHTML = `Beating BTC <b>${a.beat} of ${a.n}</b>`;
+  document.getElementById('altB').innerHTML = `BTC (${days}) <b class="${cls(b)}">${b == null ? '—' : pct(b, 2)}</b>`;
   document.getElementById('cardAlt').title = per === '90d' ? 'Top 100 coins (no stablecoins / wrapped / staked) vs BTC over 90 days — the CoinMarketCap method.' : 'Top 50 coins vs BTC over 30 days (the 90-day number is still being prepared).';
 }
 let alt90 = null;   // CMC-style number from the GitHub snapshot; until it's ready, the 30-day one from the list

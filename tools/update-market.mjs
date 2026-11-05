@@ -195,7 +195,8 @@ async function altSeason(all) {
   for (const c of [btc, ...alts]) put(c.id, today, c.price);                       // today's price for everyone
   // coins without 90 days yet — 1) Binance daily candles (fast)
   const byId = Object.fromEntries([btc, ...alts].map(c => [c.id, c]));
-  let need = ids.filter(id => !(hist[id] && hist[id].full));
+  // (Binance coins saved before the daily-open fix are read once more, so every coin is priced at the same hour as BTC)
+  let need = ids.filter(id => !(hist[id] && hist[id].full && (hist[id].src !== 'binance' || hist[id].open)));
   log('alt season:', need.length, 'coins still need their 90-day history');
   let bn = 0;
   for (const id of need) {
@@ -207,15 +208,15 @@ async function altSeason(all) {
         const last = k.length && +k[k.length - 1][4];
         // same coin (price within 5% of CoinGecko's) and at least 90 days of candles
         if (last > 0 && c.price > 0 && Math.abs(last / c.price - 1) <= 0.05 && k.length >= PERIOD) {
-          for (const row of k) { const day = Math.floor(row[0] / DAY); if (day < today) put(id, day, +row[4]); }   // daily close
-          hist[id].full = true; hist[id].src = 'binance'; bn++;
+          for (const row of k) { const day = Math.floor(row[0] / DAY); if (day < today) put(id, day, +row[1]); }   // the day's opening price (00:00 UTC) — the same moment as CoinGecko's daily point (the close is the next day's)
+          hist[id].full = true; hist[id].src = 'binance'; hist[id].open = true; bn++;
         }
       }
     } catch (_) {}
     await sleep(120);
   }
   // 2) CoinGecko for the rest, paced for its free limit; a refusal waits a minute once, then the rest is next run
-  need = ids.filter(id => !(hist[id] && hist[id].full));
+  need = ids.filter(id => !(hist[id] && hist[id].full && (hist[id].src !== 'binance' || hist[id].open)));
   log('alt season:', bn, 'from Binance,', need.length, 'left for CoinGecko');
   let waited = false;
   for (const id of need) {
@@ -226,7 +227,7 @@ async function altSeason(all) {
       waited = true; await sleep(60e3); continue;
     }
     if (r.ok) { const j = await r.json(); for (const [t, v] of (j.prices || [])) if (Math.floor(t / DAY) < today) put(id, Math.floor(t / DAY), v); }
-    (hist[id] || (hist[id] = { d: {} })).full = true;                                  // a 404 also counts — don't ask again
+    { const h = hist[id] || (hist[id] = { d: {} }); h.full = true; h.src = 'coingecko'; }   // a 404 also counts — don't ask again
     await sleep(13e3);
   }
   // keep 100 days, only coins still in the top list
