@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611051250"></script>
-<script src="samsam-hints.js?v=202611051250"></script>
-<script src="samsam-vault.js?v=202611051250"></script>
-<script src="samsam-labels.js?v=202611051250"></script>
-<script src="samsam-taxonomy.js?v=202611051250"></script>
-<script src="samsam-coins.js?v=202611051250"></script>
-<script src="samsam-dropdown.js?v=202611051250"></script>
-<script src="samsam-add.js?v=202611051250"></script>
-<script src="samsam-chart.js?v=202611051250"></script>
-<script src="samsam-market.js?v=202611051250"></script>
+<script src="samsam-ui.js?v=202611060021"></script>
+<script src="samsam-hints.js?v=202611060021"></script>
+<script src="samsam-vault.js?v=202611060021"></script>
+<script src="samsam-labels.js?v=202611060021"></script>
+<script src="samsam-taxonomy.js?v=202611060021"></script>
+<script src="samsam-coins.js?v=202611060021"></script>
+<script src="samsam-dropdown.js?v=202611060021"></script>
+<script src="samsam-add.js?v=202611060021"></script>
+<script src="samsam-chart.js?v=202611060021"></script>
+<script src="samsam-market.js?v=202611060021"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1486,7 +1486,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611051250"></script>
+<script type="module" src="samsam-cloud.js?v=202611060021"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3589,7 +3589,7 @@ function setHovMode(m, quiet) {
   hovMode = m === 'alloc' ? 'alloc' : 'assets';
   try { localStorage.setItem('samsam_hov_mode', hovMode); } catch (_) {}
   paintHovMode();
-  if (!quiet) renderHoldingsAssetList();
+  if (!quiet) { renderHoldingsAssetList(); if (hovMode === 'assets' && typeof drawHoldingsOverlayChart === 'function') drawHoldingsOverlayChart(); }   // the chart was hidden → draw it at its real size
 }
 function paintHovMode() {
   const ov = document.getElementById('holdingsOverlay'); if (ov) ov.setAttribute('data-mode', hovMode);
@@ -4244,7 +4244,8 @@ async function saveBaselineEdit() {
     @media (min-width: 900px) { #hovTxView { max-width: none; } }
   
     /* ── Assets | Allocation switch + donut (Allocation used to be its own page) ── */
-    .hov-mode { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 14px 0 12px; }
+    .hov-mode { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 2px 0 14px; }
+    #holdingsOverlay[data-mode="alloc"] .hov-value-card { display: none; }   /* Allocation: the donut instead of the total + chart */
     .hov-mode .cp-vseg { min-width: 260px; }
     .hov-mode-ic svg { width: 16px; height: 16px; display: block; }
     .hov-mode .cp-vseg > button.btn-toggle-active .nav-ic { color: currentColor; }
@@ -4283,7 +4284,12 @@ async function saveBaselineEdit() {
   </header>
 
   <div class="hov-container">
-  <!-- Hero total + chart + range tabs: one card -->
+  <!-- Assets | Allocation at the top: Assets = total + chart + list · Allocation = donut + each coin's share -->
+  <div class="hov-mode"><div class="cp-vseg" id="hovModeSeg" role="group" aria-label="Show">
+    <button type="button" data-m="assets" onclick="setHovMode('assets')"><span class="hov-mode-ic" data-nav-ic="holdings" data-nav-size="16" aria-hidden="true"></span>Assets</button>
+    <button type="button" data-m="alloc" onclick="setHovMode('alloc')"><span class="hov-mode-ic" data-nav-ic="allocation" data-nav-size="16" aria-hidden="true"></span>Allocation</button>
+  </div><button type="button" class="cp-hint" data-hint="allocation" aria-label="About Allocation"></button></div>
+  <!-- Hero total + chart + range tabs: one card (Assets only) -->
   <div class="hov-card hov-value-card">
   <div class="hov-hero">
     <div class="hov-hero-top"><div class="hov-page-label">Portfolio Value</div>
@@ -4307,11 +4313,6 @@ async function saveBaselineEdit() {
   </div>
   </div>
 
-  <!-- Assets | Allocation (Allocation = the donut + each coin's share of the portfolio) -->
-  <div class="hov-mode"><div class="cp-vseg" id="hovModeSeg" role="group" aria-label="Show">
-    <button type="button" data-m="assets" onclick="setHovMode('assets')"><span class="hov-mode-ic" data-nav-ic="holdings" data-nav-size="16" aria-hidden="true"></span>Assets</button>
-    <button type="button" data-m="alloc" onclick="setHovMode('alloc')"><span class="hov-mode-ic" data-nav-ic="allocation" data-nav-size="16" aria-hidden="true"></span>Allocation</button>
-  </div><button type="button" class="cp-hint" data-hint="allocation" aria-label="About Allocation"></button></div>
   <div class="hov-card hov-alloc-card" id="hovAllocCard">
     <div class="donut-wrap">
       <svg id="hovDonut" viewBox="0 0 200 200" role="img" aria-label="Portfolio allocation by category"></svg>
