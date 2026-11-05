@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611042253"></script>
-<script src="samsam-hints.js?v=202611042253"></script>
-<script src="samsam-vault.js?v=202611042253"></script>
-<script src="samsam-labels.js?v=202611042253"></script>
-<script src="samsam-taxonomy.js?v=202611042253"></script>
-<script src="samsam-coins.js?v=202611042253"></script>
-<script src="samsam-dropdown.js?v=202611042253"></script>
-<script src="samsam-add.js?v=202611042253"></script>
-<script src="samsam-chart.js?v=202611042253"></script>
-<script src="samsam-market.js?v=202611042253"></script>
+<script src="samsam-ui.js?v=202611042302"></script>
+<script src="samsam-hints.js?v=202611042302"></script>
+<script src="samsam-vault.js?v=202611042302"></script>
+<script src="samsam-labels.js?v=202611042302"></script>
+<script src="samsam-taxonomy.js?v=202611042302"></script>
+<script src="samsam-coins.js?v=202611042302"></script>
+<script src="samsam-dropdown.js?v=202611042302"></script>
+<script src="samsam-add.js?v=202611042302"></script>
+<script src="samsam-chart.js?v=202611042302"></script>
+<script src="samsam-market.js?v=202611042302"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -916,11 +916,11 @@
   thead { background: var(--bg3); position: sticky; top: 0; z-index: 2; }
   /* Asset column stays put while the table scrolls sideways (like Exit Strategy) — frosted so it matches the page in both themes */
   #portfolioTable tbody td { background-color: rgb(240,244,248); }   /* every cell one colour, so the fixed Asset column matches the rest of the row */
-  #portfolioTable tbody td:first-child { position: sticky; left: 0; z-index: 1; box-shadow: inset -1px 0 0 var(--border); }
+  #portfolioTable tbody td:first-child { position: sticky; left: 0; z-index: 1; }
   html[data-theme="dark"] #portfolioTable tbody td { background-color: rgb(18,16,46); }
   @media (hover: hover) { #portfolioTable tbody tr:hover td { background-image: linear-gradient(rgba(124,58,237,.05), rgba(124,58,237,.05)); } }
   #portfolioTable thead tr th { background-color: var(--bg3); }   /* the whole header row one colour, the fixed Asset title included */
-  #portfolioTable thead tr th:first-child { position: sticky; left: 0; z-index: 4; background: var(--bg3); box-shadow: inset -1px 0 0 var(--border); }
+  #portfolioTable thead tr th:first-child { position: sticky; left: 0; z-index: 4; background: var(--bg3); }
   th { padding: 11px 12px; font-size: 0.7rem; color: var(--fg2); text-align: center; border-bottom: 2px solid var(--border); cursor: pointer; text-transform: none; letter-spacing: .01em; font-weight: 700; }
   /* Main table header: every label the same way — up to two balanced lines, ⓘ beside it (never dropped below),
      the sorted column lit with ▲/▼, one row height */
@@ -1486,7 +1486,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611042253"></script>
+<script type="module" src="samsam-cloud.js?v=202611042302"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3987,6 +3987,7 @@ async function saveBaselineEdit() {
 
     /* ── Hero total ── */
     .hov-hero { padding: 18px 16px 4px; }
+    .hov-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -6px -4px 0 0; }   /* Portfolio Value · Add (top right of the card) */
     .hov-page-label { font-size:0.7rem;font-weight:700;text-transform: none;letter-spacing: .01em;color:var(--fg2); }
     .hov-total { font-size:2.2rem;font-weight:700;color:var(--fg);line-height:1.15;margin-top:4px; }
     .hov-change { font-size:0.82rem;font-weight:600;margin-top:4px; }
@@ -4222,7 +4223,8 @@ async function saveBaselineEdit() {
   <!-- Hero total + chart + range tabs: one card -->
   <div class="hov-card hov-value-card">
   <div class="hov-hero">
-    <div class="hov-page-label">Portfolio Value</div>
+    <div class="hov-hero-top"><div class="hov-page-label">Portfolio Value</div>
+      <button type="button" id="hovAddBtn" class="cp-add sm hov-add-btn" onclick="openAddCoin()" title="Add a new coin, or a Buy for a coin you hold" aria-label="Add a coin or a Buy"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add</span></button></div>
     <div class="hov-total" id="hovTotal">$—</div>
     <div class="holdings-change-row"><span class="hov-change" id="hovChange"></span><button type="button" class="cp-hint" data-hint="holdingsChange" aria-label="About the holdings change"></button></div>
   </div>
