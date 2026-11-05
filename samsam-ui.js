@@ -640,16 +640,17 @@
     confirm: function (m, o) { return dialog('confirm', m, o); },
     prompt: function (m, o) { return dialog('prompt', m, o); },
   };
-  // ── Bottom navigation: Home · Holdings · Performance · Allocation · Accumulation (every main page) ──
+  // ── Bottom navigation: Market · Plan · Home · Holdings · Performance (every main page) — Home in the middle.
+  //    Allocation lives inside Holdings now (Assets | Allocation switch); its entry stays only for the icon. ──
   // Phones / tablets: a bar at the bottom (labels hide on ≤ 360px screens, except the open page).
   // Computer: the same bar floats as a small dock at the bottom centre. The open page has a violet pill.
   var NAV = [
+    { k: 'market', label: 'Market', title: 'Market Hub', href: 'market.html', ic: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/>' },
+    { k: 'accumulation', label: 'Plan', title: 'Accumulation Plan', href: 'accumulation.html', ic: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>' },
     { k: 'home', label: 'Home', href: 'index.html', ic: '<path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/>' },
     { k: 'holdings', label: 'Holdings', href: 'index.html#holdings', ic: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M16 14.5h2"/><path d="M6 6V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/>' },
     { k: 'performance', label: 'Performance', href: 'performance.html', ic: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>' },
-    { k: 'allocation', label: 'Allocation', href: 'allocation.html', ic: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>' },
-    { k: 'accumulation', label: 'Plan', title: 'Accumulation Plan', href: 'accumulation.html', ic: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>' },
-    { k: 'market', label: 'Market', title: 'Market Hub', href: 'market.html', ic: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/>' },
+    { k: 'allocation', bar: false, label: 'Allocation', href: 'allocation.html', ic: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>' },
   ];
   var LOGO_MARK = '<path d="M267.77,106.46 A150.0,150.0 0 0 1 318.20,392.49" stroke="#f7931a" stroke-width="64.0" stroke-linecap="butt" fill="none"/><path d="M296.09,400.54 A150.0,150.0 0 0 1 110.78,293.56" stroke="#a78bfa" stroke-width="64.0" stroke-linecap="butt" fill="none"/><path d="M106.69,270.38 A150.0,150.0 0 0 1 244.23,106.46" stroke="#2dd4bf" stroke-width="64.0" stroke-linecap="butt" fill="none"/><path d="M256.0,300.8 C182.4,257.9 216.3,200.3 256.0,234.2 C295.7,200.3 329.6,257.9 256.0,300.8 Z" fill="#fbbf24"/>';   // same drawing as logo-mark.svg
   // Inside the app shell (index.html keeps Performance / Allocation / Plan open in frames → instant switching)
@@ -688,12 +689,12 @@
       '[data-theme="light"] .cp-bnav a{color:#64748b}[data-theme="light"] .cp-bnav a[aria-current="page"]{color:#6d28d9;background:#ede9fe}' +
       '@media (hover:hover){.cp-bnav a:hover{color:#e2e8f0}[data-theme="light"] .cp-bnav a:hover{color:#0f172a}}' +
       '.cp-bnav a:focus-visible{outline:2px solid #a78bfa;outline-offset:-2px}' +
-      // six tabs on a phone: a little tighter so every label fits
+      // five tabs on a phone: a little tighter so every label fits
       '@media (max-width:480px){.cp-bnav{gap:0;padding-left:max(4px,env(safe-area-inset-left,0px));padding-right:max(4px,env(safe-area-inset-right,0px))}.cp-bnav a{min-width:0;font-size:10px;letter-spacing:-.01em;border-radius:12px}}' +
       '@media (max-width:360px){.cp-bnav a:not([aria-current="page"]) span{display:none}.cp-bnav a[aria-current="page"]{flex-grow:1.6}}' +
       // computer: a floating dock at the bottom centre
       '@media (min-width:1024px){.cp-bnav{left:50%;right:auto;bottom:14px;transform:translateX(-50%);width:auto;height:auto;padding:6px;gap:4px;border:1px solid rgba(255,255,255,.1);border-radius:20px;box-shadow:0 12px 32px rgba(0,0,0,.35)}' +
-        '.cp-bnav a{flex:0 0 auto;flex-direction:row;gap:8px;min-height:40px;padding:0 16px;font-size:.84rem}.cp-bnav a svg{width:20px;height:20px}' +
+        '.cp-bnav a{flex:1 1 0;width:140px;flex-direction:row;gap:8px;min-height:40px;padding:0 12px;font-size:.84rem}.cp-bnav a svg{width:20px;height:20px}' +
         '[data-theme="light"] .cp-bnav{border-color:#e2e8f0;box-shadow:0 12px 32px rgba(15,23,42,.12)}}' +
       // room under the content; the bar replaces the page Back buttons (inner screens keep theirs)
       'body.has-bnav{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px)) !important}' +
@@ -904,7 +905,7 @@
     }
     if (!navPage() || document.getElementById('cpBnav') || !document.body) return;
     navCss();
-    var html = '<nav class="cp-bnav" id="cpBnav" aria-label="Main">' + NAV.map(function (n) {
+    var html = '<nav class="cp-bnav" id="cpBnav" aria-label="Main">' + NAV.filter(function (n) { return n.bar !== false; }).map(function (n) {
       return '<a href="./' + n.href + '" data-k="' + n.k + '" title="' + (n.title || n.label) + '">' + (n.k === 'home' ? navIconSvg('home').replace(/ width="\d+" height="\d+"/, '') : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + n.ic + '</svg>') + '<span>' + n.label + '</span></a>';
     }).join('') + '</nav>';
     document.body.insertAdjacentHTML('beforeend', html);
