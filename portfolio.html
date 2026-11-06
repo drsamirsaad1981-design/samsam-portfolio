@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611062253"></script>
-<script src="samsam-hints.js?v=202611062253"></script>
-<script src="samsam-vault.js?v=202611062253"></script>
-<script src="samsam-labels.js?v=202611062253"></script>
-<script src="samsam-taxonomy.js?v=202611062253"></script>
-<script src="samsam-coins.js?v=202611062253"></script>
-<script src="samsam-dropdown.js?v=202611062253"></script>
-<script src="samsam-add.js?v=202611062253"></script>
-<script src="samsam-chart.js?v=202611062253"></script>
-<script src="samsam-market.js?v=202611062253"></script>
+<script src="samsam-ui.js?v=202611062320"></script>
+<script src="samsam-hints.js?v=202611062320"></script>
+<script src="samsam-vault.js?v=202611062320"></script>
+<script src="samsam-labels.js?v=202611062320"></script>
+<script src="samsam-taxonomy.js?v=202611062320"></script>
+<script src="samsam-coins.js?v=202611062320"></script>
+<script src="samsam-dropdown.js?v=202611062320"></script>
+<script src="samsam-add.js?v=202611062320"></script>
+<script src="samsam-chart.js?v=202611062320"></script>
+<script src="samsam-market.js?v=202611062320"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1008,6 +1008,15 @@
     .summary-cards { display:none !important; }
     .dashboard-section { display:none !important; }
     #pdfHeader { display:block !important; }
+    body:not(.ai-print) #pdfSummary { display:block !important; }
+    /* a white page whatever the app's theme (the dark theme's gradient and table colours stay on screen) */
+    html, html[data-theme] body { background:#fff !important; }
+    html[data-theme] body::before { display:none !important; }
+    html[data-theme="dark"] #portfolioTable tbody td { background-color:#fff !important; }
+    html[data-theme="dark"] thead, html[data-theme="dark"] thead th { background:#f1f5f9 !important; }
+    /* the app's header (logo, Portfolio tabs, cards) — the PDF's first page has these numbers */
+    body:not(.ai-print) #appHead, body:not(.ai-print) .cp-ptabs-host, body:not(.ai-print) #cpBnav { display:none !important; }
+    #portfolioTableWrapper { break-before:page; }
     .page-header { background:#fff !important; border-bottom:2px solid #0f172a; padding:10px 0; margin-bottom:8px; }
     .header-title { color:#0f172a !important; }
     /* PDF of the table: landscape, the whole table on the page (no sideways scroll box), no on-screen controls */
@@ -1033,6 +1042,33 @@
     #portfolioTable .perf-badge, #portfolioTable .action-badge { font-size:7.5pt; padding:2px 5px; }
   }
   #pdfHeader { display:none; }
+  #pdfSummary { display:none; }
+  #pdfSummary.ps-drawing { display:block !important; position:fixed; left:-20000px; top:0; width:1040px; visibility:hidden; }
+  #pdfSummary { color:#0f172a; font-size:9.5pt; }
+  #pdfSummary .ps-tiles { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:10px; }
+  #pdfSummary .ps-tile { border:1px solid #e2e8f0; border-radius:8px; padding:7px 10px; display:flex; flex-direction:column; gap:1px; }
+  #pdfSummary .ps-tile span { font-size:7.5pt; color:#64748b; } #pdfSummary .ps-tile b { font-size:13pt; } #pdfSummary .ps-tile i { font-style:normal; font-size:8.5pt; font-weight:700; }
+  #pdfSummary .up { color:#047857; } #pdfSummary .down { color:#b91c1c; }
+  #pdfSummary .ps-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+  #pdfSummary .ps-card { border:1px solid #e2e8f0; border-radius:10px; padding:8px 10px; break-inside:avoid; min-width:0; }
+  #pdfSummary .ps-h { font-weight:800; font-size:10pt; margin-bottom:4px; display:flex; align-items:baseline; gap:6px; flex-wrap:wrap; }
+  #pdfSummary .ps-h em { font-style:normal; font-weight:600; font-size:8pt; color:#64748b; }
+  #pdfSummary .ps-chg { margin-left:auto; font-size:8.5pt; font-weight:700; }
+  #pdfSummary .ps-cw { width:100%; } #pdfSummary canvas { display:block; max-width:100%; }
+  #pdfSummary .ps-none { color:#64748b; font-size:9pt; padding:30px 0; text-align:center; }
+  #pdfSummary .ps-leg { display:flex; gap:14px; font-size:8pt; color:#475569; margin-top:3px; } #pdfSummary .ps-leg i { display:inline-block; width:10px; height:3px; border-radius:2px; vertical-align:middle; margin-right:4px; }
+  #pdfSummary .ps-alloc { grid-column:1 / -1; }
+  #pdfSummary .ps-plan { grid-column:1 / -1; }
+  #pdfSummary .ps-ab { display:flex; gap:16px; align-items:center; }
+  #pdfSummary .ps-donut { position:relative; width:140px; height:140px; flex:none; }
+  #pdfSummary .ps-dc { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; } #pdfSummary .ps-dc b { font-size:14pt; } #pdfSummary .ps-dc span { font-size:7pt; color:#64748b; }
+  #pdfSummary .ps-legend { flex:1; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:3px 18px; }
+  #pdfSummary .ps-li { display:flex; align-items:center; gap:6px; font-size:8.5pt; min-width:0; }
+  #pdfSummary .ps-dot { width:9px; height:9px; border-radius:3px; flex:none; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #pdfSummary .ps-cat { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } #pdfSummary .ps-usd { color:#64748b; min-width:70px; text-align:right; }
+  #pdfSummary .ps-bar { height:9px; border-radius:6px; background:#e2e8f0; overflow:hidden; } #pdfSummary .ps-bar i { display:block; height:100%; background:#10b981; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #pdfSummary .ps-pl { display:flex; justify-content:space-between; font-size:8.5pt; margin-top:4px; } #pdfSummary .ps-pl b { color:#047857; } #pdfSummary .ps-pl span { color:#64748b; }
+  #pdfSummary path { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .pdf-header-inner { display:flex; justify-content:space-between; align-items:flex-end; padding:4px 0 10px; border-bottom:2px solid var(--border); margin-bottom:12px; }
   .pdf-header-inner .ph-title { font-size:1.1rem; font-weight:700; color:var(--fg); }
   .pdf-header-inner .ph-meta { font-size:0.75rem; color:var(--fg2); text-align:right; line-height:1.7; }
@@ -1301,6 +1337,7 @@
     <div class="ph-meta" id="pdfMeta"></div>
   </div>
 </div>
+<div id="pdfSummary" aria-hidden="true"></div>
 
 <header class="app-head" id="appHead">
   <div class="header-top">
@@ -1540,7 +1577,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611062253"></script>
+<script type="module" src="samsam-cloud.js?v=202611062320"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2398,6 +2435,57 @@ function exportData() {
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
 }
 
+// The PDF's first page: the key numbers, the Holdings and Performance charts (same range as the cards, light colours),
+// the allocation donut with every category, and the Accumulation Plan — then the table on the next pages.
+function pdfSummary() {
+  const box = document.getElementById('pdfSummary'); if (!box) return;
+  const esc = SamsamCoins.esc, usd = v => SamsamFmt.usd(v), ap = allTimeProfitData(), total = calcStats().total;
+  const RANGE = { '24h': 'Last 24 hours', '7d': 'Last 7 days', '30d': 'Last 30 days', '90d': 'Last 90 days', all: 'All time' }[holdingsRange] || '';
+  const cats = {}; portfolio.forEach(c => { const k = c.cat || 'other', v = c.qty * c.currentPrice; if (v > 0) cats[k] = (cats[k] || 0) + v; });
+  const catSum = Object.values(cats).reduce((a, b) => a + b, 0), entries = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  // donut
+  let a0 = -Math.PI / 2, paths = '';
+  const cx = 70, cy = 70, R = 66, r = 42;
+  entries.forEach(([k, v]) => {
+    const ang = v / catSum * Math.PI * 2, a1 = a0 + Math.min(ang, Math.PI * 2 - 1e-4), L = ang > Math.PI ? 1 : 0, P = (rr, a) => `${(cx + rr * Math.cos(a)).toFixed(2)},${(cy + rr * Math.sin(a)).toFixed(2)}`;
+    paths += `<path d="M${P(r, a0)} L${P(R, a0)} A${R},${R} 0 ${L},1 ${P(R, a1)} L${P(r, a1)} A${r},${r} 0 ${L},0 ${P(r, a0)} Z" fill="${CAT_COLORS[k] || '#6b7280'}"/>`;
+    a0 += ang;
+  });
+  const legend = entries.map(([k, v]) => `<div class="ps-li"><span class="ps-dot" style="background:${CAT_COLORS[k] || '#6b7280'}"></span><span class="ps-cat">${esc(CAT_LABELS[k] || k)}</span><b>${(v / catSum * 100).toFixed(1)}%</b><span class="ps-usd">${usd(v)}</span></div>`).join('');
+  // accumulation plan
+  const plan = accumPlanState || [];
+  const prog = plan.length ? Samsam.core.overallProgress(plan.map(e => { const c = portfolio.find(x => x.sym && x.sym.toUpperCase() === (e.sym || '').toUpperCase()); return { actual: c ? c.qty || 0 : 0, target: e.targetQty || 0 }; })).pct : null;
+  const met = plan.filter(e => { const c = portfolio.find(x => x.sym && x.sym.toUpperCase() === (e.sym || '').toUpperCase()); return e.targetQty > 0 && c && c.qty >= e.targetQty; }).length;
+  const cls = n => n >= 0 ? 'up' : 'down', sg = n => (n >= 0 ? '+' : '−');
+  box.innerHTML = `
+    <div class="ps-tiles">
+      <div class="ps-tile"><span>Total Value</span><b>${usd(total)}</b></div>
+      <div class="ps-tile"><span>All Time Profit</span><b class="${cls(ap.total)}">${sg(ap.total)}${usd(Math.abs(ap.total))}</b><i class="${cls(ap.total)}">${sg(ap.pct)}${Math.abs(ap.pct).toFixed(2)}%</i></div>
+      <div class="ps-tile" id="psBtc"><span>BTC Trend (same money in BTC)</span><b>—</b></div>
+      <div class="ps-tile"><span>Coins</span><b>${portfolio.filter(c => c.qty > 0).length}</b></div>
+      <div class="ps-tile"><span>BTC Price</span><b>${usd(btcPrice)}</b></div>
+    </div>
+    <div class="ps-row">
+      <div class="ps-card"><div class="ps-h">Holdings value <em>${RANGE}</em><span class="ps-chg" id="psHchg"></span></div><div class="ps-cw"><canvas id="psHold"></canvas></div><div class="ps-none" id="psHoldNone" hidden>No history yet</div></div>
+      <div class="ps-card"><div class="ps-h">Performance vs BTC <em>${RANGE}</em></div><div class="ps-cw"><canvas id="psPerf"></canvas></div><div class="ps-none" id="psPerfNone" hidden>No history yet</div>
+        <div class="ps-leg"><span><i style="background:#3b82f6"></i>All Time Profit %</span><span><i style="background:#f0a060"></i>BTC Trend %</span></div></div>
+    </div>
+    <div class="ps-row">
+      <div class="ps-card ps-alloc"><div class="ps-h">Portfolio Allocation</div>
+        <div class="ps-ab"><div class="ps-donut"><svg viewBox="0 0 140 140" width="140" height="140">${paths}</svg><div class="ps-dc"><b>${entries.length}</b><span>categories</span></div></div><div class="ps-legend">${legend || '—'}</div></div></div>
+      ${prog != null ? `<div class="ps-card ps-plan"><div class="ps-h">Accumulation Plan</div><div class="ps-bar"><i style="width:${Math.min(100, prog).toFixed(1)}%"></i></div><div class="ps-pl"><b>${prog.toFixed(1)}% complete</b><span>${met} / ${plan.length} targets met</span></div></div>` : ''}
+    </div>`;
+  // the two charts, drawn in light colours at the PDF's size: laid out off-screen just long enough to draw
+  box.classList.add('ps-drawing');
+  const h = drawHoldingsChart({ canvas: document.getElementById('psHold'), height: 190 });
+  if (!h) { document.getElementById('psHold').hidden = true; document.getElementById('psHoldNone').hidden = false; }
+  else { const e = document.getElementById('psHchg'); e.textContent = h.text; e.className = 'ps-chg ' + (h.up ? 'up' : 'down'); }
+  let pf = null; try { pf = drawPerfChart({ canvas: document.getElementById('psPerf'), height: 190 }); } catch (_) {}
+  if (!pf) { document.getElementById('psPerf').hidden = true; document.getElementById('psPerfNone').hidden = false; }
+  else { const b = document.querySelector('#psBtc b'); b.textContent = sg(pf.btcTrend) + Math.abs(pf.btcTrend).toFixed(2) + '%'; b.className = cls(pf.btcTrend); }
+  box.classList.remove('ps-drawing');
+}
+
 function exportPdf() {
   // Fill PDF header with live stats
   const totalEl = document.getElementById('totalUsd');
@@ -2412,6 +2500,7 @@ function exportPdf() {
       `Coins: ${coinCount} &nbsp;|&nbsp; BTC: ${SamsamFmt.usd(btcPrice)}<br>` +
       `Generated: ${now}`;
   }
+  pdfSummary();
   // The PDF is the table (more data visible): show it for printing, then go back to the view you had
   const wasCards = currentView === 'cards';
   if (wasCards) applyView('table');
@@ -3416,16 +3505,17 @@ function savePerfSnapshot(portfolioValue, btcPrice) {
   cloudWrite(Samsam.recordSnapshot('perf', Date.now(), portfolioValue, btcPrice));
 }
 
-function drawPerfChart() {
+function drawPerfChart(pc) {   // pc: { canvas, height } — the PDF's copy (light colours, no page updates)
   const allPerf = loadPerfSnapshots();
   const cutoff = holdingsRange === 'all' ? 0 : Date.now() - RANGE_MS[holdingsRange];
   let snaps = allPerf.filter(s => s.t >= cutoff);
   if (!snaps.length && allPerf.length) snaps = [allPerf[allPerf.length - 1]];
-  const wrap  = document.getElementById('perfChartWrap');
-  const noData = document.getElementById('perfNoData');
-  const canvas = document.getElementById('perfChartCanvas');
+  if (pc && snaps.length < 1) return null;
+  const wrap  = pc ? null : document.getElementById('perfChartWrap');
+  const noData = pc ? null : document.getElementById('perfNoData');
+  const canvas = pc ? pc.canvas : document.getElementById('perfChartCanvas');
   // Always show the section
-  wrap.style.display = '';
+  if (wrap) wrap.style.display = '';
   if (snaps.length < 1) {
     if (noData) noData.style.display = '';
     canvas.style.display = 'none';
@@ -3447,12 +3537,13 @@ function drawPerfChart() {
   const t0 = snaps[0].t, inR = p => p.t >= t0;
   const ser = { port: full.port.filter(inR), btc: full.btc.filter(inR) };
   if (ser.port.length < 2) { ser.port = full.port.slice(-2); ser.btc = full.btc.slice(-2); }
-  SamsamChart.draw(canvas, { height: TRIO_CHART_H(), format: 'pct', timeMode: timeModeFor(holdingsRange), series: [
+  SamsamChart.draw(canvas, { height: pc ? pc.height : TRIO_CHART_H(), format: 'pct', timeMode: timeModeFor(holdingsRange), theme: pc ? 'light' : undefined, series: [
     { points: ser.btc, color: '#f0a060', width: 2 },                         // BTC Trend
     { points: ser.port, color: '#3b82f6', width: 2.4, fill: true },          // All Time Profit %
   ] });
   const tri = n => (n >= 0 ? '▲ ' : '▼ ') + Math.abs(n).toFixed(2) + '%';
   const btcTrend = ser.btc.length ? ser.btc[ser.btc.length - 1].v : 0;   // BTC benchmark now (same money, in BTC)
+  if (pc) return { btcTrend, ap };
   const setV = (id, text, n) => { const e = document.getElementById(id); if (e) { e.textContent = text; e.className = 'perf-legend-val ' + (n >= 0 ? 'up' : 'down'); } };
   setV('perfPortfolioLabel', (ap.total >= 0 ? '+' : '−') + SamsamFmt.usd(Math.abs(ap.total)), ap.total);
   setV('perfPortfolioPct', tri(ap.pct), ap.total);
@@ -3485,9 +3576,9 @@ function setHoldingsRange(range, btn) {
   try { drawPerfChart(); } catch (_) {}
 }
 
-function drawHoldingsChart() {
+function drawHoldingsChart(pc) {   // pc: { canvas, height } — the PDF's copy (light colours, no page updates)
   const allSnaps = loadHoldingsSnaps();
-  const canvas   = document.getElementById('holdingsCanvas');
+  const canvas   = pc ? pc.canvas : document.getElementById('holdingsCanvas');
   const noData   = document.getElementById('holdingsNoData');
   const totalEl  = document.getElementById('holdingsTotal');
   const changeEl = document.getElementById('holdingsChange');
@@ -3499,6 +3590,7 @@ function drawHoldingsChart() {
   const cutoff  = holdingsRange === 'all' ? 0 : now - rangeMs[holdingsRange];
   let snaps = allSnaps.filter(s => s.t >= cutoff);
 
+  if (pc && !snaps.length) return null;
   // Need at least 1 point — if only 1 snapshot duplicate it so chart renders as a flat baseline
   if (snaps.length === 0) {
     if (noData) noData.style.display = '';
@@ -3517,6 +3609,7 @@ function drawHoldingsChart() {
   const last  = snaps[snaps.length - 1].v;
   const hc = holdingsChangeText(snaps), isPos = hc.up;
   const color = isPos ? '#22c55e' : '#f43f5e'; // green when prices took it up, red when down
+  if (pc) { SamsamChart.draw(canvas, { height: pc.height, format: 'usd', timeMode: timeModeFor(holdingsRange), theme: 'light', series: [{ points: snaps, color: isPos ? '#16a34a' : '#e11d48', width: 2.2, fill: true }] }); return hc; }
 
   // Update header
   totalEl.textContent = SamsamFmt.usd(last);

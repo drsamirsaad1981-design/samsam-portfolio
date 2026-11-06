@@ -94,7 +94,7 @@
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(Hh * dpr);
     canvas.style.width = W + 'px'; canvas.style.height = Hh + 'px';
     var ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, Hh);
-    var dark = document.documentElement.getAttribute('data-theme') !== 'light';
+    var dark = o.theme ? o.theme !== 'light' : document.documentElement.getAttribute('data-theme') !== 'light';   // o.theme: draw for a light page (PDF) whatever the app's theme
     var grid = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
     var label = dark ? 'rgba(148,163,184,0.75)' : 'rgba(100,116,139,0.85)';
     var series = (o.series || []).filter(function (s) { return s.points && s.points.length; });
