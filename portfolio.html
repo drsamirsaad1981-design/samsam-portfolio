@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611062320"></script>
-<script src="samsam-hints.js?v=202611062320"></script>
-<script src="samsam-vault.js?v=202611062320"></script>
-<script src="samsam-labels.js?v=202611062320"></script>
-<script src="samsam-taxonomy.js?v=202611062320"></script>
-<script src="samsam-coins.js?v=202611062320"></script>
-<script src="samsam-dropdown.js?v=202611062320"></script>
-<script src="samsam-add.js?v=202611062320"></script>
-<script src="samsam-chart.js?v=202611062320"></script>
-<script src="samsam-market.js?v=202611062320"></script>
+<script src="samsam-ui.js?v=202611062348"></script>
+<script src="samsam-hints.js?v=202611062348"></script>
+<script src="samsam-vault.js?v=202611062348"></script>
+<script src="samsam-labels.js?v=202611062348"></script>
+<script src="samsam-taxonomy.js?v=202611062348"></script>
+<script src="samsam-coins.js?v=202611062348"></script>
+<script src="samsam-dropdown.js?v=202611062348"></script>
+<script src="samsam-add.js?v=202611062348"></script>
+<script src="samsam-chart.js?v=202611062348"></script>
+<script src="samsam-market.js?v=202611062348"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1402,11 +1402,11 @@
     <span class="card-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
   </div>
   <div class="holdings-tabs" onclick="event.stopPropagation();event.preventDefault()">
-    <button class="holdings-tab active" data-range="24h" onclick="setHoldingsRange('24h',this)">24h</button>
+    <button class="holdings-tab" data-range="24h" onclick="setHoldingsRange('24h',this)">24h</button>
     <button class="holdings-tab" data-range="7d"  onclick="setHoldingsRange('7d',this)">7d</button>
     <button class="holdings-tab" data-range="30d" onclick="setHoldingsRange('30d',this)">30d</button>
     <button class="holdings-tab" data-range="90d" onclick="setHoldingsRange('90d',this)">90d</button>
-    <button class="holdings-tab" data-range="all" onclick="setHoldingsRange('all',this)">All</button>
+    <button class="holdings-tab active" data-range="all" onclick="setHoldingsRange('all',this)">All</button>
   </div>
   <div class="holdings-canvas-wrap">
     <div class="holdings-no-data" id="holdingsNoData" style="display:none"><span data-ic="hourglass"></span>Collecting data… chart appears after first price update</div>
@@ -1421,11 +1421,11 @@
     <span class="card-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
   </div>
   <div class="holdings-tabs" onclick="event.stopPropagation();event.preventDefault()">
-    <button class="holdings-tab active" data-range="24h" onclick="setHoldingsRange('24h',this)">24h</button>
+    <button class="holdings-tab" data-range="24h" onclick="setHoldingsRange('24h',this)">24h</button>
     <button class="holdings-tab" data-range="7d"  onclick="setHoldingsRange('7d',this)">7d</button>
     <button class="holdings-tab" data-range="30d" onclick="setHoldingsRange('30d',this)">30d</button>
     <button class="holdings-tab" data-range="90d" onclick="setHoldingsRange('90d',this)">90d</button>
-    <button class="holdings-tab" data-range="all" onclick="setHoldingsRange('all',this)">All</button>
+    <button class="holdings-tab active" data-range="all" onclick="setHoldingsRange('all',this)">All</button>
   </div>
   <div class="perf-chart-no-data" id="perfNoData" style="display:none"><span data-ic="hourglass"></span>Collecting data… chart appears after first price update</div>
   <canvas class="perf-chart-canvas" id="perfChartCanvas" height="140"></canvas><div class="hist-note" data-hist-note hidden></div>
@@ -1577,7 +1577,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611062320"></script>
+<script type="module" src="samsam-cloud.js?v=202611062348"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3560,7 +3560,7 @@ function updatePerfChart() {
 }
 
 // ── Holdings Chart ────────────────────────────────────────────────────────────
-let holdingsRange  = '24h';
+let holdingsRange  = 'all';   // the main page's charts open on All (the whole history)
 
 // Holdings points: one per 5 minutes, stored in the cloud (merged across devices).
 function saveHoldingsSnapshot(value) {
