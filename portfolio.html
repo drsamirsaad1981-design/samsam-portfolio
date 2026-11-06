@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611062201"></script>
-<script src="samsam-hints.js?v=202611062201"></script>
-<script src="samsam-vault.js?v=202611062201"></script>
-<script src="samsam-labels.js?v=202611062201"></script>
-<script src="samsam-taxonomy.js?v=202611062201"></script>
-<script src="samsam-coins.js?v=202611062201"></script>
-<script src="samsam-dropdown.js?v=202611062201"></script>
-<script src="samsam-add.js?v=202611062201"></script>
-<script src="samsam-chart.js?v=202611062201"></script>
-<script src="samsam-market.js?v=202611062201"></script>
+<script src="samsam-ui.js?v=202611062217"></script>
+<script src="samsam-hints.js?v=202611062217"></script>
+<script src="samsam-vault.js?v=202611062217"></script>
+<script src="samsam-labels.js?v=202611062217"></script>
+<script src="samsam-taxonomy.js?v=202611062217"></script>
+<script src="samsam-coins.js?v=202611062217"></script>
+<script src="samsam-dropdown.js?v=202611062217"></script>
+<script src="samsam-add.js?v=202611062217"></script>
+<script src="samsam-chart.js?v=202611062217"></script>
+<script src="samsam-market.js?v=202611062217"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -911,6 +911,25 @@
   .ai-rec .ai-t { flex:1 1 100%; }
   .analysis-meta { display:flex; flex-direction:column; gap:4px; }
   #analysisModal .btn.ai-out:disabled { opacity:0.45; cursor:not-allowed; }
+  .ai-start { display:flex; flex-direction:column; gap:10px; }
+  #analysisModal.ai-at-start #aiFreeBtn, #analysisModal.ai-at-start #regenBtn { display:none; }
+  @media (max-width:480px) { #regenBtn .ai-lbl { display:none; } }
+  .ai-opt { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:13px 14px; display:flex; flex-direction:column; gap:10px; }
+  .ai-opt:first-child { border-color:color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  .ai-opt-h { display:flex; gap:10px; align-items:flex-start; }
+  .ai-opt-h b { display:block; font-size:0.95rem; color:var(--fg); }
+  .ai-opt-h span:not(.ai-ic) { display:block; font-size:0.8rem; color:var(--fg2); margin-top:2px; line-height:1.45; }
+  .ai-steps { list-style:none; margin:0; padding:0; counter-reset:st; display:flex; flex-direction:column; gap:10px; }
+  .ai-steps li { counter-increment:st; position:relative; padding-inline-start:30px; display:flex; flex-direction:column; align-items:flex-start; gap:7px; font-size:0.84rem; color:var(--fg); }
+  .ai-steps li::before { content:counter(st); position:absolute; inset-inline-start:0; top:0; width:21px; height:21px; border-radius:50%; background:var(--accent); color:#fff; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .ai-steps .btn-analysis, .ai-opt .ai-quick, .ai-paste .btn-analysis { display:inline-flex; align-items:center; gap:6px; }
+  .ai-opt .ai-quick { align-self:flex-start; }
+  #analysisModal .btn-analysis.done { color:var(--green); border-color:var(--green); }
+  .ai-paste { display:flex; flex-direction:column; gap:8px; font-size:0.85rem; }
+  .ai-paste textarea { width:100%; box-sizing:border-box; min-height:180px; resize:vertical; background:var(--bg3); color:var(--fg); border:1px solid var(--border); border-radius:10px; padding:10px; font:inherit; font-size:0.85rem; }
+  .ai-paste textarea:focus { outline:none; border-color:var(--accent); }
+  .ai-paste-b { display:flex; gap:8px; flex-wrap:wrap; }
+  .ai-paste-err { color:var(--red); font-size:0.8rem; }
   #analysisModal .btn.ai-out.done { color:var(--green); border-color:var(--green); }
   #aiPrintRoot { display:none; }
   @page aireport { size: A4 portrait; margin: 14mm; }
@@ -1491,7 +1510,8 @@
       <button class="analysis-lang-btn active" id="langEnBtn" onclick="setAnalysisLang('en')"><span data-ic="globe"></span>English</button>
       <button class="analysis-lang-btn" id="langArBtn" onclick="setAnalysisLang('ar')"><span data-ic="globe"></span>العربية</button>
       <div style="flex:1"></div>
-      <button class="btn-analysis" id="regenBtn" onclick="runAnalysis()" style="font-size:0.75rem;padding:4px 10px"><span data-ic="refresh"></span>Regenerate</button>
+      <button class="btn-analysis" id="aiFreeBtn" onclick="renderAiStart()" style="font-size:0.75rem;padding:4px 10px" title="Free: make the report in the Claude app, then paste it here"><span data-ic="sparkles"></span>Free</button>
+      <button class="btn-analysis" id="regenBtn" onclick="runAnalysis()" style="font-size:0.75rem;padding:4px 10px" title="Write the report here again (uses your API credit)" aria-label="Regenerate"><span data-ic="refresh"></span><span class="ai-lbl">Regenerate</span></button>
     </div>
     <div class="analysis-body" id="analysisBody">
       <!-- filled by JS -->
@@ -1520,7 +1540,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611062201"></script>
+<script type="module" src="samsam-cloud.js?v=202611062217"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2661,11 +2681,9 @@ let analysisRunning = false;
 
 function openAnalysis() {
   document.getElementById('analysisModal').classList.add('active');
-  // Auto-run on first open if body is empty
-  const body = document.getElementById('analysisBody');
-  if (!body.innerHTML.trim()) {
-    runAnalysis();
-  }
+  // No report yet: the start screen (quick report with API credit, or free with the Claude app) — nothing is spent until you choose
+  if (!aiLast && !analysisRunning) renderAiStart();
+  aiPrepApp();
 }
 
 function closeAnalysis() {
@@ -2676,11 +2694,10 @@ function setAnalysisLang(lang) {
   analysisLang = lang;
   document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
   document.getElementById('langArBtn').classList.toggle('active', lang === 'ar');
-  // Re-run with new language if we already have a report
-  const body = document.getElementById('analysisBody');
-  if (body.innerHTML.trim() && !analysisRunning) {
-    runAnalysis();
-  }
+  aiPrepApp();
+  if (analysisRunning) return;
+  // a report written here (API) is written again in the new language; otherwise back to the start screen
+  if (aiLast && aiLast.src === 'api') runAnalysis(); else renderAiStart();
 }
 
 function buildPortfolioPayload() {
@@ -2850,6 +2867,7 @@ function aiLayout(lang) {
 }
 
 function renderAnalysisLoading() {
+  aiAtStart(false);
   aiLast = null; aiOutButtons(false);
   document.getElementById('analysisBody').innerHTML = `
     <div class="analysis-loading">
@@ -2860,6 +2878,7 @@ function renderAnalysisLoading() {
 }
 
 function renderAnalysisError(msg, detail) {
+  aiAtStart(false);
   aiLast = null; aiOutButtons(false);
   document.getElementById('analysisBody').innerHTML = `
     <div class="analysis-error">
@@ -2944,6 +2963,7 @@ function aiReportHtml(text, lang) {
 
 // The last report, for Copy / PDF
 let aiLast = null;
+function aiAtStart(on) { document.getElementById('analysisModal').classList.toggle('ai-at-start', on); }
 function aiOutButtons(on) { ['aiCopyBtn', 'aiPdfBtn'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = !on; }); }
 function aiTitle() {
   const ar = aiLast && aiLast.lang === 'ar';
@@ -2984,7 +3004,7 @@ function pdfAnalysis() {
 
 function renderAnalysisReport(text, meta) {
   const lang = meta.lang || analysisLang;
-  aiLast = { text, lang, meta }; aiOutButtons(true);
+  aiLast = { text, lang, meta, src: meta.src || 'api' }; aiOutButtons(true); aiAtStart(false);
   let html = '<div class="analysis-content" dir="' + (lang === 'ar' ? 'rtl' : 'ltr') + '" lang="' + lang + '">' + aiReportHtml(text, lang) + '</div>';
   html += `<div class="analysis-meta">
     <span>${SamsamUI.ic('bot')}Generated by Claude AI${meta.model ? ' (' + SamsamCoins.esc(meta.model) + ')' : ''}</span>${meta.left != null ? `<span>${SamsamUI.ic('clock')}${meta.left} report${meta.left === 1 ? '' : 's'} left today</span>` : ''}
@@ -3020,6 +3040,122 @@ function enrichPayload(pd) {
   return pd;
 }
 
+// Everything the report is written from — the same for the quick report (Worker) and the Claude app
+async function aiRequestParts(lang) {
+  const portfolioData = buildPortfolioPayload();
+  let accumContext = '';
+  if (portfolioData.accumPlan && portfolioData.accumPlan.entries.length > 0) {
+    const ap = portfolioData.accumPlan;
+    accumContext  = `\n\nACCUMULATION PLAN (${ap.metTargets}/${ap.totalTargets} targets met, overall ${ap.overallPct}% complete, $${ap.totalCostToMeet} still needed):\n`;
+    accumContext += ap.entries.map(e =>
+      `- ${e.sym}: target ${e.targetQty}, actual ${e.actualQty}, pending ${e.pendingQty}, progress ${e.progressPct}%, cost to complete $${e.costToTarget}${e.met ? ' ✓ MET' : ''}`
+    ).join('\n');
+    accumContext += `\nWhen making Buy/Hold recommendations, factor in which coins are part of the accumulation plan and how close they are to their targets.`;
+  }
+  // The market right now (same numbers as the Market Hub); it travels in the free-text context the Worker adds to the prompt
+  accumContext += await marketContext();
+  enrichPayload(portfolioData);
+  accumContext += aiLayout(lang);
+  return { portfolioData, accumContext };
+}
+
+// ── Free: the Claude app ──
+// The whole prompt (the same instructions the Worker gives Claude + your data) is copied; you paste it in the Claude app,
+// copy its reply and paste it back here, where it shows as the same cards (Copy / PDF too). No API credit is used.
+function aiAppSystem(lang) {
+  const L = lang === 'ar'
+    ? 'Write the whole report in Arabic (Modern Standard Arabic, clear and direct). Keep coin tickers, numbers and $ amounts in Latin characters.'
+    : 'Write the whole report in clear, direct English.';
+  return ['You are a seasoned crypto portfolio analyst writing a private report for the portfolio owner.',
+    'Base every statement on the data provided. Do not invent prices, news or numbers. Be specific: name coins, amounts and percentages.',
+    'This is analysis, not financial advice; do not promise returns. Keep it practical and concise.', L,
+    'Format: plain text with markdown bold (**…**) and "- " bullets only. No tables, no code blocks, no HTML. Reply with the report only — no introduction before it and no questions after it.',
+    'Use exactly these numbered section headings, each on its own line, in this order:',
+    '1. 📊 Market Overview', '2. 🥧 Portfolio Overview & Allocation', '3. 🏆 Best & Worst Performers', '4. ⚠️ Risks & Concentration',
+    '5. 💰 Accumulation Plan Progress', '6. 💡 Recommendations (Buy / Hold / Reduce, per coin where it matters)', '7. 🎯 Action Plan for the Next 30 Days'].join('\n');
+}
+let aiApp = null;   // { lang, text, t } — prepared when the report opens, so the copy happens right on your tap
+async function aiPrepApp(force) {
+  const lang = analysisLang;
+  if (!force && aiApp && aiApp.lang === lang && Date.now() - aiApp.t < 10 * 60e3) return aiApp;
+  if (!(window.Samsam && Samsam.isReady && Samsam.isReady())) return null;
+  try {
+    const { portfolioData, accumContext } = await aiRequestParts(lang);
+    const text = `${aiAppSystem(lang)}\n\n---\n\nPORTFOLIO DATA (JSON, USD, ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC):\n${JSON.stringify(portfolioData)}${accumContext}\n\nWrite the report now${lang === 'ar' ? ' (in Arabic)' : ''}.`;
+    aiApp = { lang, text, t: Date.now() };
+    return aiApp;
+  } catch (_) { return null; }
+}
+async function aiCopyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (_) {}
+  try { const t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;opacity:0;top:0'; document.body.appendChild(t); t.select(); const ok = document.execCommand('copy'); t.remove(); return ok; } catch (_) { return false; }
+}
+function aiFlash(id, txt, ok) {
+  const b = document.getElementById(id); if (!b) return; const l = b.querySelector('span:last-child'), was = b.dataset.lbl || (b.dataset.lbl = l.textContent);
+  l.textContent = txt; b.classList.toggle('done', !!ok); clearTimeout(b._t); b._t = setTimeout(() => { l.textContent = was; b.classList.remove('done'); }, 2600);
+}
+async function aiCopyForApp() {
+  const ready = aiApp && aiApp.lang === analysisLang && Date.now() - aiApp.t < 10 * 60e3;
+  if (!ready) {
+    aiFlash('aiAppCopy', 'Preparing…');
+    const a = await aiPrepApp(true);
+    if (!a) { aiFlash('aiAppCopy', 'Not ready — try again'); return; }
+  }
+  const ok = await aiCopyText(aiApp.text);
+  if (!ok) { aiFlash('aiAppCopy', 'Tap again to copy'); return; }
+  aiFlash('aiAppCopy', 'Copied — paste it in Claude', true);
+  document.getElementById('aiStep2')?.classList.add('on');
+  try { window.open('https://claude.ai/new', '_blank', 'noopener'); } catch (_) {}
+}
+function renderAiStart() {
+  if (analysisRunning) return;
+  aiLast = null; aiOutButtons(false); aiAtStart(true);
+  const ar = analysisLang === 'ar';
+  document.getElementById('analysisBody').innerHTML = `
+    <div class="ai-start">
+      <div class="ai-opt">
+        <div class="ai-opt-h"><span class="ai-ic">${SamsamUI.ic('sparkles', { solo: true, size: 16 })}</span><div><b>Free with the Claude app</b><span>The same report, written in your Claude app — no API credit used. Report language: ${ar ? 'العربية' : 'English'}.</span></div></div>
+        <ol class="ai-steps">
+          <li id="aiStep1"><span>Copy your portfolio + market data, then paste it in a new Claude chat.</span>
+            <button class="btn-analysis" id="aiAppCopy" onclick="aiCopyForApp()"><span data-ic="file"></span><span>Copy for Claude</span></button></li>
+          <li id="aiStep2"><span>When Claude has written it, copy its reply (the copy button under it) and paste it here.</span>
+            <button class="btn-analysis" id="aiAppPaste" onclick="aiPasteReport()"><span data-ic="download"></span><span>Paste report</span></button></li>
+        </ol>
+      </div>
+      <div class="ai-opt">
+        <div class="ai-opt-h"><span class="ai-ic">${SamsamUI.ic('bot', { solo: true, size: 16 })}</span><div><b>Quick report here</b><span>Written in about 20 seconds with one tap — uses your Anthropic API credit (about $0.07–0.13 a report).</span></div></div>
+        <button class="btn-analysis ai-quick" onclick="runAnalysis()"><span data-ic="refresh"></span><span>Create report</span></button>
+      </div>
+    </div>`;
+  SamsamUI.paintIcons ? SamsamUI.paintIcons(document.getElementById('analysisBody')) : aiPaintIcons();
+}
+function aiPaintIcons() { document.querySelectorAll('#analysisBody [data-ic]').forEach(e => { if (!e.firstChild) e.innerHTML = SamsamUI.ic(e.dataset.ic, { solo: true, size: 14 }); }); }
+async function aiPasteReport() {
+  let t = '';
+  try { t = await navigator.clipboard.readText(); } catch (_) {}
+  if (t && /(^|\n)\s*(#+\s*)?\**\s*[1-7]\s*[.)]/.test(t) && t.length > 200) return aiShowPasted(t);
+  // the browser didn't hand over the clipboard (or it isn't a report): a box to paste into
+  aiAtStart(true);
+  document.getElementById('analysisBody').innerHTML = `
+    <div class="ai-paste">
+      <label for="aiPasteTxt">Paste Claude's reply here:</label>
+      <textarea id="aiPasteTxt" rows="9" placeholder="Long-press → Paste" dir="auto"></textarea>
+      <div class="ai-paste-b"><button class="btn-analysis" onclick="aiShowPasted(document.getElementById('aiPasteTxt').value)"><span data-ic="checkCircle"></span><span>Show report</span></button>
+        <button class="btn-analysis" onclick="renderAiStart()"><span data-ic="x"></span><span>Back</span></button></div>
+      <div class="ai-paste-err" id="aiPasteErr" hidden>That doesn't look like the report — paste Claude's whole reply.</div>
+    </div>`;
+  aiPaintIcons();
+  document.getElementById('aiPasteTxt').focus();
+}
+function aiShowPasted(t) {
+  t = String(t || '').trim();
+  if (t.length < 120) { const e = document.getElementById('aiPasteErr'); if (e) e.hidden = false; return; }
+  const lang = (t.match(/[\u0600-\u06FF]/g) || []).length > 80 ? 'ar' : 'en';
+  const pd = (() => { try { return buildPortfolioPayload(); } catch (_) { return { stats: {} }; } })();
+  renderAnalysisReport(t.slice(0, 40000), { lang, src: 'app', model: 'Claude app', left: null,
+    generatedAt: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }), lastUpdate: pd.stats.lastUpdate || '—', numCoins: pd.stats.numCoins || 0 });
+}
+
 async function runAnalysis() {
   if (analysisRunning) return;
 
@@ -3051,25 +3187,8 @@ async function runAnalysis() {
   renderAnalysisLoading();
 
   try {
-    const portfolioData = buildPortfolioPayload();
-
-    // Build accumulation context string for the AI prompt
-    let accumContext = '';
-    if (portfolioData.accumPlan && portfolioData.accumPlan.entries.length > 0) {
-      const ap = portfolioData.accumPlan;
-      accumContext  = `\n\nACCUMULATION PLAN (${ap.metTargets}/${ap.totalTargets} targets met, overall ${ap.overallPct}% complete, $${ap.totalCostToMeet} still needed):\n`;
-      accumContext += ap.entries.map(e =>
-        `- ${e.sym}: target ${e.targetQty}, actual ${e.actualQty}, pending ${e.pendingQty}, progress ${e.progressPct}%, cost to complete $${e.costToTarget}${e.met ? ' ✓ MET' : ''}`
-      ).join('\n');
-      accumContext += `\nWhen making Buy/Hold recommendations, factor in which coins are part of the accumulation plan and how close they are to their targets.`;
-    }
-
-    // The market right now (same numbers as the Market tab) — the report opens with a Market Overview.
-    // It travels in the same free-text context the Worker already adds to the prompt, so the Worker needs no change.
     const lang = analysisLang;
-    accumContext += await marketContext();
-    enrichPayload(portfolioData);
-    accumContext += aiLayout(lang);
+    const { portfolioData, accumContext } = await aiRequestParts(lang);
 
     // Proof of sign-in: the Worker verifies this Firebase ID token and counts reports per account per day
     let idToken = null;
@@ -3098,7 +3217,7 @@ async function runAnalysis() {
     }
 
     renderAnalysisReport(data.report, {
-      lang,
+      lang, src: 'api',
       model:       typeof data.model === 'string' ? data.model : '',
       left:        Number.isFinite(data.remaining) ? data.remaining : null,
       generatedAt: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
