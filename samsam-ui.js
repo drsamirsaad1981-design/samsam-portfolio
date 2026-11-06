@@ -640,16 +640,17 @@
     confirm: function (m, o) { return dialog('confirm', m, o); },
     prompt: function (m, o) { return dialog('prompt', m, o); },
   };
-  // ── Bottom navigation: Market · Plan · Home · Holdings · Performance (every main page) — Home in the middle.
-  //    Allocation lives inside Holdings now (Assets | Allocation switch); its entry stays only for the icon. ──
+  // ── Bottom navigation: Portfolio · Plan · Market Hub (every main page). Portfolio (the app's logo) holds four tabs —
+  //    Overview · Holdings · Performance · Allocation (SamsamUI.ptabs) — and opens on the one you used last.
+  //    Holdings / Performance / Allocation keep entries here for their icons only. ──
   // Phones / tablets: a bar at the bottom (labels hide on ≤ 360px screens, except the open page).
   // Computer: the same bar floats as a small dock at the bottom centre. The open page has a violet pill.
   var NAV = [
-    { k: 'market', label: 'Market', title: 'Market Hub', href: 'market.html', ic: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/>' },
+    { k: 'home', label: 'Portfolio', title: 'Portfolio', href: 'index.html', ic: '<path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/>' },
     { k: 'accumulation', label: 'Plan', title: 'Accumulation Plan', href: 'accumulation.html', ic: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>' },
-    { k: 'home', label: 'Home', href: 'index.html', ic: '<path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/>' },
-    { k: 'holdings', label: 'Holdings', href: 'index.html#holdings', ic: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M16 14.5h2"/><path d="M6 6V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/>' },
-    { k: 'performance', label: 'Performance', href: 'performance.html', ic: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>' },
+    { k: 'market', label: 'Market Hub', title: 'Market Hub', href: 'market.html', ic: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/>' },
+    { k: 'holdings', bar: false, label: 'Holdings', href: 'index.html#holdings', ic: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M16 14.5h2"/><path d="M6 6V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/>' },
+    { k: 'performance', bar: false, label: 'Performance', href: 'performance.html', ic: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>' },
     { k: 'allocation', bar: false, label: 'Allocation', href: 'allocation.html', ic: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>' },
   ];
   var LOGO_MARK = '<path d="M267.77,106.46 A150.0,150.0 0 0 1 318.20,392.49" stroke="#f7931a" stroke-width="64.0" stroke-linecap="butt" fill="none"/><path d="M296.09,400.54 A150.0,150.0 0 0 1 110.78,293.56" stroke="#a78bfa" stroke-width="64.0" stroke-linecap="butt" fill="none"/><path d="M106.69,270.38 A150.0,150.0 0 0 1 244.23,106.46" stroke="#2dd4bf" stroke-width="64.0" stroke-linecap="butt" fill="none"/><path d="M256.0,300.8 C182.4,257.9 216.3,200.3 256.0,234.2 C295.7,200.3 329.6,257.9 256.0,300.8 Z" fill="#fbbf24"/>';   // same drawing as logo-mark.svg
@@ -689,9 +690,8 @@
       '[data-theme="light"] .cp-bnav a{color:#64748b}[data-theme="light"] .cp-bnav a[aria-current="page"]{color:#6d28d9;background:#ede9fe}' +
       '@media (hover:hover){.cp-bnav a:hover{color:#e2e8f0}[data-theme="light"] .cp-bnav a:hover{color:#0f172a}}' +
       '.cp-bnav a:focus-visible{outline:2px solid #a78bfa;outline-offset:-2px}' +
-      // five tabs on a phone: a little tighter so every label fits
+      // three tabs: every label fits on any phone
       '@media (max-width:480px){.cp-bnav{gap:0;padding-left:max(4px,env(safe-area-inset-left,0px));padding-right:max(4px,env(safe-area-inset-right,0px))}.cp-bnav a{min-width:0;font-size:10px;letter-spacing:-.01em;border-radius:12px}}' +
-      '@media (max-width:360px){.cp-bnav a:not([aria-current="page"]) span{display:none}.cp-bnav a[aria-current="page"]{flex-grow:1.6}}' +
       // computer: a floating dock at the bottom centre
       '@media (min-width:1024px){.cp-bnav{left:50%;right:auto;bottom:14px;transform:translateX(-50%);width:auto;height:auto;padding:6px;gap:4px;border:1px solid rgba(255,255,255,.1);border-radius:20px;box-shadow:0 12px 32px rgba(0,0,0,.35)}' +
         '.cp-bnav a{flex:1 1 0;width:140px;flex-direction:row;gap:8px;min-height:40px;padding:0 12px;font-size:.84rem}.cp-bnav a svg{width:20px;height:20px}' +
@@ -712,7 +712,7 @@
   }
   function navPaint() {
     var bar = document.getElementById('cpBnav'); if (!bar) return;
-    var cur = navPage(); if (cur === 'altseason') cur = 'market';   // Altcoin Season is part of Market
+    var cur = navPage(); if (cur === 'altseason') cur = 'market'; if (cur === 'holdings' || cur === 'performance' || cur === 'allocation') cur = 'home';   // Altcoin Season is part of Market; Holdings / Performance / Allocation are Portfolio tabs
     [].forEach.call(bar.querySelectorAll('a'), function (a) { if (a.dataset.k === cur) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   }
   // Pages with the bottom bar get the main page's header: logo + "Cute Portfolio" (→ Home), and the page's icon + name under it
@@ -737,9 +737,23 @@
   }
   function navGo(e, k) {
     var here = navPage(), onIndex = !!window.cpShell;
-    if (!onIndex || e.metaKey || e.ctrlKey || e.shiftKey) return;   // a page opened on its own: a normal link
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+    if (!onIndex) {   // a page opened on its own: normal links, except Portfolio → the tab you used last (or the top of this one)
+      if (k === 'home') { e.preventDefault(); if (here === 'performance') window.scrollTo({ top: 0, behavior: 'smooth' }); else ptabGo(ptabLast()); }
+      return;
+    }
     if (k === 'performance' || k === 'allocation' || k === 'accumulation' || k === 'market' || k === 'altseason') { e.preventDefault(); window.cpShell.go(k); setTimeout(navPaint, 0); return; }
-    if (k === 'home' && window.cpShell.cur !== 'home' && here !== 'holdings') { e.preventDefault(); window.cpShell.go('home'); setTimeout(navPaint, 0); return; }
+    if (k === 'home') {   // Portfolio: already in it → back to the top of the tab you're on; otherwise the tab you used last
+      e.preventDefault();
+      if (here === 'home' || here === 'holdings' || here === 'performance') {
+        var ovl = document.getElementById('holdingsOverlay');
+        if (here === 'holdings' && ovl && ovl.getAttribute('data-view') === 'tx') { ptabGo(ptabCur()); }
+        else if (here === 'holdings' && ovl) ovl.scrollTo({ top: 0, behavior: 'smooth' });
+        else if (here === 'performance') { try { window.cpShell.frames.performance.contentWindow.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) {} }
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else ptabGo(ptabLast());
+      setTimeout(navPaint, 0); return;
+    }
     if (k === 'holdings' && typeof window.openHoldingsView === 'function') {
       e.preventDefault();
       var ov = document.getElementById('holdingsOverlay'); if ((ov && ov.getAttribute('data-view') === 'tx') || here !== 'holdings') { history.pushState({ hov: 'list' }, '', '#holdings'); if (window.applyHoldingsRoute) window.applyHoldingsRoute(); }
@@ -748,6 +762,57 @@
     } else if (k === 'home' && here === 'holdings' && typeof window.closeHoldingsView === 'function') {
       e.preventDefault(); window.closeHoldingsView(); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (_) { window.scrollTo(0, 0); } setTimeout(navPaint, 0);
     } else if (k === 'home') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  }
+  // ── Portfolio tabs: Overview · Holdings · Performance · Allocation — one row at the top of each of the four ──
+  var PTABS = [['overview', 'Overview', 'home'], ['holdings', 'Holdings', 'holdings'], ['performance', 'Performance', 'performance'], ['allocation', 'Allocation', 'allocation']];
+  function ptabLast() { try { var v = localStorage.getItem('samsam_pf_tab'); return PTABS.some(function (t) { return t[0] === v; }) ? v : 'overview'; } catch (_) { return 'overview'; } }
+  function ptabCur() {
+    var here = navPage(), ov = document.getElementById('holdingsOverlay');
+    if (here === 'holdings') return ov && ov.getAttribute('data-mode') === 'alloc' ? 'allocation' : 'holdings';
+    return here === 'performance' ? 'performance' : here === 'home' ? 'overview' : ptabLast();
+  }
+  function ptabGo(t) {
+    try { localStorage.setItem('samsam_pf_tab', t); } catch (_) {}
+    var S = window.cpShell || (IN_SHELL ? window.parent.cpShell : null);
+    if (S) {
+      var w = window.cpShell ? window : window.parent;
+      if (t === 'overview') S.go('home');
+      else if (t === 'performance') S.go('performance');
+      else { if (w.setHovMode) w.setHovMode(t === 'allocation' ? 'alloc' : 'assets', true); S.go('holdings'); }
+      return;
+    }
+    // a page opened on its own (not inside the app)
+    try { if (t === 'holdings' || t === 'allocation') localStorage.setItem('samsam_hov_mode', t === 'allocation' ? 'alloc' : 'assets'); } catch (_) {}
+    location.href = t === 'performance' ? './performance.html' : t === 'overview' ? './index.html' : './index.html#holdings';
+  }
+  function ptabsCss() {
+    if (document.getElementById('cpPtabsCss')) return;
+    var st = document.createElement('style'); st.id = 'cpPtabsCss';
+    st.textContent = '.cp-ptabs{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:3px;border-radius:12px;background:var(--bg3,#f1f5f9);border:1px solid var(--border,rgba(0,0,0,.08));box-sizing:border-box;width:100%;max-width:640px;margin:0 auto}' +
+      '.cp-ptabs button{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:6px 4px;border-radius:9px;font:700 .78rem/1.1 Inter,system-ui,sans-serif;color:var(--fg2,#64748b);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}' +
+      '.cp-ptabs button svg{width:16px;height:16px;flex-shrink:0}' +
+      '.cp-ptabs button[aria-selected="true"],:root .cp-ptabs button[aria-selected="true"]{background:#7c3aed;color:#fff;box-shadow:0 1px 4px rgba(124,58,237,.35)}' +   // the app's violet on every page (some pages' accent is orange or blue)
+      '@media (hover:hover){.cp-ptabs button[aria-selected="false"]:hover{background:var(--border,rgba(0,0,0,.08));color:var(--fg,#0f172a)}}' +
+      '.cp-ptabs button:focus-visible{outline:2px solid var(--accent,#7c3aed);outline-offset:1px}' +
+      '@media (max-width:440px){.cp-ptabs button svg{display:none}.cp-ptabs button{font-size:.74rem;letter-spacing:-.01em}}' +
+      '.cp-ptabs-host{margin:10px 0 12px}';
+    document.head.appendChild(st);
+  }
+  // fill every <div data-ptabs="overview|holdings|performance|allocation"> (or update one: ptabs(el, current))
+  function ptabs(el, cur) {
+    ptabsCss();
+    var list = el ? [el] : [].slice.call(document.querySelectorAll('[data-ptabs]'));
+    list.forEach(function (h) {
+      var c = cur || h.getAttribute('data-ptabs');
+      if (!h.querySelector('.cp-ptabs')) {
+        h.innerHTML = '<nav class="cp-ptabs" role="tablist" aria-label="Portfolio">' + PTABS.map(function (t) {
+          return '<button type="button" role="tab" data-t="' + t[0] + '" aria-selected="false">' + navIconSvg(t[2], 16) + '<span>' + t[1] + '</span></button>';
+        }).join('') + '</nav>';
+        h.querySelector('.cp-ptabs').addEventListener('click', function (e) { var b = e.target.closest('button[data-t]'); if (b && b.getAttribute('aria-selected') !== 'true') ptabGo(b.dataset.t); });
+      }
+      h.setAttribute('data-ptabs', c);
+      [].forEach.call(h.querySelectorAll('button[data-t]'), function (b) { b.setAttribute('aria-selected', String(b.dataset.t === c)); b.tabIndex = b.dataset.t === c ? 0 : -1; });
+    });
   }
   // ── One footer on every page: sync status · baseline / © line. Fills <footer id="cpFoot"> or adds one at the end. ──
   function footMount() {
@@ -892,6 +957,7 @@
   function navMount() {
     navTitleIcons();
     footMount();
+    ptabs();
     if (IN_SHELL) {   // the shell shows the bar; links back to the main page stay inside the app
       navCss(); document.body.classList.add('in-shell');
       document.addEventListener('click', function (e) {
@@ -924,6 +990,6 @@
     try { sessionStorage.setItem('cpReturn', JSON.stringify({ sym: String(sym).toUpperCase(), t: Date.now() })); } catch (_) {}
     location.href = 'index.html#holdings/' + encodeURIComponent(sym);
   }
-  window.SamsamUI = { fabScrolling: fabScrolling, goHtml: goHtml, openCoin: openCoin, navIcon: navIconSvg, navPaint: navPaint, inShell: IN_SHELL, icons: ICONS, icon: function (n) { return ICONS[n] || ic(n, { solo: true }); }, ic: ic, dot: dot, fillIcons: fillIcons, liveDot: liveDot,
+  window.SamsamUI = { ptabs: ptabs, ptabGo: ptabGo, fabScrolling: fabScrolling, goHtml: goHtml, openCoin: openCoin, navIcon: navIconSvg, navPaint: navPaint, inShell: IN_SHELL, icons: ICONS, icon: function (n) { return ICONS[n] || ic(n, { solo: true }); }, ic: ic, dot: dot, fillIcons: fillIcons, liveDot: liveDot,
     toggleTheme: toggleTheme, applyTheme: applyTheme, currentTheme: current, refresh: init };
 })();

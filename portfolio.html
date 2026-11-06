@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611061446"></script>
-<script src="samsam-hints.js?v=202611061446"></script>
-<script src="samsam-vault.js?v=202611061446"></script>
-<script src="samsam-labels.js?v=202611061446"></script>
-<script src="samsam-taxonomy.js?v=202611061446"></script>
-<script src="samsam-coins.js?v=202611061446"></script>
-<script src="samsam-dropdown.js?v=202611061446"></script>
-<script src="samsam-add.js?v=202611061446"></script>
-<script src="samsam-chart.js?v=202611061446"></script>
-<script src="samsam-market.js?v=202611061446"></script>
+<script src="samsam-ui.js?v=202611061521"></script>
+<script src="samsam-hints.js?v=202611061521"></script>
+<script src="samsam-vault.js?v=202611061521"></script>
+<script src="samsam-labels.js?v=202611061521"></script>
+<script src="samsam-taxonomy.js?v=202611061521"></script>
+<script src="samsam-coins.js?v=202611061521"></script>
+<script src="samsam-dropdown.js?v=202611061521"></script>
+<script src="samsam-add.js?v=202611061521"></script>
+<script src="samsam-chart.js?v=202611061521"></script>
+<script src="samsam-market.js?v=202611061521"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1263,6 +1263,7 @@
     </div>
     <div class="hdr-btns"><button type="button" class="ss-theme-btn" data-theme-toggle></button></div>
   </div>
+  <div class="cp-ptabs-host" data-ptabs="overview"></div>
   <div class="head-meta">
     <span class="hm-item ss-date-label" id="currentDate"></span>
     <span class="hm-item hm-baseline"><span class="hm-k">Baseline</span> <b id="baselineLabel">Oct 15, 2026</b><button type="button" class="cp-hint" data-hint="baseline" aria-label="What is the baseline?"></button><button type="button" class="val-edit" onclick="openBaselineEdit()" title="Change the baseline date" aria-label="Change the baseline date"></button></span>
@@ -1486,7 +1487,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611061446"></script>
+<script type="module" src="samsam-cloud.js?v=202611061521"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3595,6 +3596,12 @@ function paintHovMode() {
   const ov = document.getElementById('holdingsOverlay'); if (ov) ov.setAttribute('data-mode', hovMode);
   document.querySelectorAll('#hovModeSeg > button').forEach(b => { const on = b.dataset.m === hovMode; b.classList.toggle('btn-toggle-active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
   const h = document.querySelector('.hov-list-header .hov-h-lbl'); if (h) h.textContent = hovMode === 'alloc' ? 'Allocation' : 'Holdings';
+  const tabs = document.getElementById('hovPtabs'); if (tabs && window.SamsamUI && SamsamUI.ptabs) SamsamUI.ptabs(tabs, hovMode === 'alloc' ? 'allocation' : 'holdings');
+  if (ov && ov.getAttribute('data-view') !== 'tx') {   // the screen's title follows the tab
+    const t = document.getElementById('hovNavTitle'), ic = document.getElementById('hovNavIcon');
+    if (t) t.textContent = hovMode === 'alloc' ? 'Allocation' : 'Holdings';
+    if (ic && window.SamsamUI) ic.innerHTML = SamsamUI.navIcon(hovMode === 'alloc' ? 'allocation' : 'holdings');
+  }
 }
 function renderHovDonut() {
   const svg = document.getElementById('hovDonut'); if (!svg || hovMode !== 'alloc') return;
@@ -4244,14 +4251,14 @@ async function saveBaselineEdit() {
     @media (min-width: 900px) { #hovTxView { max-width: none; } }
   
     /* ── Assets | Allocation switch + donut (Allocation used to be its own page) ── */
-    .hov-mode { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 2px 0 14px; }
+    .hov-ptabs { margin: 2px 0 14px; }
     #holdingsOverlay[data-mode="alloc"] .hov-value-card { display: none; }   /* Allocation: the donut instead of the total + chart */
     .hov-mode .cp-vseg { min-width: 260px; }
     .hov-mode-ic svg { width: 16px; height: 16px; display: block; }
     .hov-mode .cp-vseg > button.btn-toggle-active .nav-ic { color: currentColor; }
     .hov-alloc-card { display: none; padding: 20px; margin-bottom: 14px; justify-content: center; }
     #holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-alloc-card { display: flex; }
-    #holdingsOverlay[data-view="tx"] .hov-mode { display: none; }
+    #holdingsOverlay[data-view="tx"] .hov-ptabs { display: none; }
     .hov-alloc-card .donut-wrap { position: relative; width: 230px; height: 230px; flex-shrink: 0; }
     .hov-alloc-card .donut-wrap svg { width: 100%; height: 100%; display: block; }
     .hov-alloc-card .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; text-align: center; }
@@ -4284,11 +4291,8 @@ async function saveBaselineEdit() {
   </header>
 
   <div class="hov-container">
-  <!-- Assets | Allocation at the top: Assets = total + chart + list · Allocation = donut + each coin's share -->
-  <div class="hov-mode"><div class="cp-vseg" id="hovModeSeg" role="group" aria-label="Show">
-    <button type="button" data-m="assets" onclick="setHovMode('assets')"><span class="hov-mode-ic" data-nav-ic="holdings" data-nav-size="16" aria-hidden="true"></span>Assets</button>
-    <button type="button" data-m="alloc" onclick="setHovMode('alloc')"><span class="hov-mode-ic" data-nav-ic="allocation" data-nav-size="16" aria-hidden="true"></span>Allocation</button>
-  </div><button type="button" class="cp-hint" data-hint="allocation" aria-label="About Allocation"></button></div>
+  <!-- Portfolio tabs: Overview · Holdings · Performance · Allocation (Holdings and Allocation are this screen) -->
+  <div class="cp-ptabs-host hov-ptabs" id="hovPtabs" data-ptabs="holdings"></div>
   <!-- Hero total + chart + range tabs: one card (Assets only) -->
   <div class="hov-card hov-value-card">
   <div class="hov-hero">
