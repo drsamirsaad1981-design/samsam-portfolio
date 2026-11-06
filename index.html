@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611062253"></script>
-<script src="samsam-hints.js?v=202611062253"></script>
-<script src="samsam-vault.js?v=202611062253"></script>
-<script src="samsam-labels.js?v=202611062253"></script>
-<script src="samsam-taxonomy.js?v=202611062253"></script>
-<script src="samsam-coins.js?v=202611062253"></script>
-<script src="samsam-dropdown.js?v=202611062253"></script>
-<script src="samsam-add.js?v=202611062253"></script>
-<script src="samsam-chart.js?v=202611062253"></script>
-<script src="samsam-market.js?v=202611062253"></script>
+<script src="samsam-ui.js?v=202611062320"></script>
+<script src="samsam-hints.js?v=202611062320"></script>
+<script src="samsam-vault.js?v=202611062320"></script>
+<script src="samsam-labels.js?v=202611062320"></script>
+<script src="samsam-taxonomy.js?v=202611062320"></script>
+<script src="samsam-coins.js?v=202611062320"></script>
+<script src="samsam-dropdown.js?v=202611062320"></script>
+<script src="samsam-add.js?v=202611062320"></script>
+<script src="samsam-chart.js?v=202611062320"></script>
+<script src="samsam-market.js?v=202611062320"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1540,7 +1540,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611062253"></script>
+<script type="module" src="samsam-cloud.js?v=202611062320"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2785,7 +2785,7 @@ function buildPortfolioPayload() {
 
 // Market data for the AI report: cached / snapshot numbers (no extra CoinGecko calls), at most ~4 seconds.
 // Live overview + the trends GitHub saves (m/alt.json: dominance, ETH/BTC, breadth; m/etf.json: ETF flows).
-async function marketContext() {
+async function marketContext(lang) {
   const M = window.SamsamMarket; if (!M) return '';
   const wait = p => Promise.race([Promise.resolve(p).then(r => r, () => null), new Promise(r => setTimeout(() => r(null), 4000))]);
   const quiet = p => wait(Promise.resolve(p).then(r => r && 'data' in r ? r.data : r));
@@ -2798,7 +2798,7 @@ async function marketContext() {
   // a saved daily series ([day, value], day = days since 1970): its value `days` days before today
   const back = (ser, days) => { if (!ap || !Array.isArray(ser)) return null; const d = ap.today - days; let v = null; ser.forEach(p => { if (p[0] <= d) v = p[1]; }); return v; };
   const last = ser => Array.isArray(ser) && ser.length ? ser[ser.length - 1][1] : null;
-  const L = ['', '', 'MARKET DATA (the live crypto market — the same numbers as the app\'s Market Hub):'];
+  const L = ['', '', lang === 'ar' ? 'بيانات السوق (السوق الحي — نفس أرقام Market Hub في التطبيق؛ البيانات بالإنجليزية كما هي):' : 'MARKET DATA (the live crypto market — the same numbers as the app\'s Market Hub):'];
   if (g) L.push(`- Total market cap ${M.fmtBig(g.mcap)} (${pc(g.mcapCh24)} in 24h), 24h volume ${M.fmtBig(g.vol)}`);
   if (top && top.length) {
     const by = id => top.find(r => r.id === id);
@@ -2852,6 +2852,18 @@ function aiLayout(lang) {
         val: 'Value & profit', vs: 'vs BTC', all: 'Allocation', bs: 'BTC share', best: 'Best', worst: 'Worst', risk: 'Concentration, Weak coins, Stablecoins…',
         pr: 'Progress', cl: 'Closest to target', need: 'Still needed', nx: 'Next buy', buy: 'Buy', hold: 'Hold', red: 'Reduce', wk: 'Week' };
   const b = s => `**${s}:**`;
+  if (ar) return ['', '', 'شكل التقرير — التزم به تمامًا (يفصّل الأقسام السبعة المطلوبة):',
+    '- في البداية سطر **الخلاصة** ثم 3 نقاط بالضبط تبدأ بـ "- ": مرحلة السوق، حالة المحفظة، أهم خطوة واحدة. بعدها الأقسام السبعة.',
+    '- كل عنوان قسم في سطر وحده بالشكل "N. <إيموجي> <العنوان>" حيث N من 1 إلى 7 والعنوان بالعربية. لا يبدأ أي سطر آخر برقم بعده نقطة.',
+    '- داخل الأقسام نقاط "- " فقط: فكرة واحدة في كل نقطة، جملتان قصيرتان على الأكثر، ودائمًا بالأرقام الحقيقية. كل نقطة تبدأ بعنوان صغير عريض ثم نقطتين، مثل "- **العنوان:** النص".',
+    `- 1 السوق — نقطة لكل بند وبهذا الترتيب: ${b(T.btc)} خلال 7 و30 و90 يومًا · ${b(T.dom)} الآن مقارنة بقبل 7 و30 يومًا، صاعدة أم هابطة وماذا يعني ذلك · ${b(T.eb)} النسبة واتجاهها · ${b(T.liq)} اتجاه سيطرة USDT وحجم التداول · ${b(T.etf)} لـ BTC وETH، دخول أم خروج خلال آخر 5 أيام تداول · ${b(T.fng)} مؤشر Fear & Greed الآن مقارنة بقبل أسبوع · ${b(T.alt)} قيمة المؤشر وعدد العملات الكبرى التي تفوقت على BTC خلال 7 و30 و90 يومًا. آخر نقطة ${b(T.ver)} مرحلة السوق في جملة واحدة وماذا تعني لهذه المحفظة.`,
+    `- 2 المحفظة — ${b(T.val)} · ${b(T.vs)} كم عملة تفوقت على وضع المبلغ نفسه في BTC (vsBtcPct) وأكبر الفروق · ${b(T.all)} كل فئة ونسبتها · ${b(T.bs)}.`,
+    `- 3 الأفضل والأسوأ — ${b(T.best)} و${b(T.worst)}: حتى 3 عملات لكل منهما مع تغيّر 24 ساعة و7 أيام ومنذ الشراء.`,
+    `- 4 المخاطر — نقطة لكل خطر بعنوان عريض خاص به (${T.risk}) مع الأرقام.`,
+    `- 5 خطة التجميع — ${b(T.pr)} · ${b(T.cl)} · ${b(T.need)} بالدولار · ${b(T.nx)}.`,
+    `- 6 التوصيات — نقطة لكل عملة مهمة، تبدأ بـ BTC، و10 عملات على الأكثر: "- **SYM — ${T.buy}:** السبب"، باستخدام كلمة واحدة فقط من: ${T.buy} / ${T.hold} / ${T.red}. لكل عملة إشارة من التطبيق (signal)؛ اذكر متى تختلف معها ولماذا.`,
+    `- 7 خطة العمل — 4 نقاط من "- **${T.wk} 1:** …" إلى "**${T.wk} 4:**"، كل منها خطوة عملية بمبلغ أو مستوى سعر عند الحاجة.`,
+    '- اجعل التقرير كله في حدود 900 كلمة تقريبًا.'].join('\n');
   return ['', '', 'REPORT LAYOUT — follow it exactly (it details the 7 sections above):',
     `- First a line ${'**' + T.sum + '**'} and exactly 3 "- " bullets: the market phase, the state of the portfolio, the single most important action. Then the 7 sections.`,
     '- Each section heading on its own line as "N. <emoji> <title>" with N = 1 to 7' + (ar ? ' and the title in Arabic' : '') + '. No other line may start with a number followed by a dot.',
@@ -3044,7 +3056,14 @@ function enrichPayload(pd) {
 async function aiRequestParts(lang) {
   const portfolioData = buildPortfolioPayload();
   let accumContext = '';
-  if (portfolioData.accumPlan && portfolioData.accumPlan.entries.length > 0) {
+  if (portfolioData.accumPlan && portfolioData.accumPlan.entries.length > 0 && lang === 'ar') {
+    const ap = portfolioData.accumPlan;
+    accumContext  = `\n\nخطة التجميع (تحقق ${ap.metTargets} من ${ap.totalTargets} أهداف، الإنجاز الكلي ${ap.overallPct}%، المتبقي $${ap.totalCostToMeet}):\n`;
+    accumContext += ap.entries.map(e =>
+      `- ${e.sym}: الهدف ${e.targetQty}، المتوفر ${e.actualQty}، المتبقي ${e.pendingQty}، التقدّم ${e.progressPct}%، تكلفة الإكمال $${e.costToTarget}${e.met ? ' ✓ تحقق' : ''}`
+    ).join('\n');
+    accumContext += `\nعند التوصية بالشراء أو الاحتفاظ، خذ في الاعتبار العملات الموجودة في خطة التجميع ومدى قربها من أهدافها.`;
+  } else if (portfolioData.accumPlan && portfolioData.accumPlan.entries.length > 0) {
     const ap = portfolioData.accumPlan;
     accumContext  = `\n\nACCUMULATION PLAN (${ap.metTargets}/${ap.totalTargets} targets met, overall ${ap.overallPct}% complete, $${ap.totalCostToMeet} still needed):\n`;
     accumContext += ap.entries.map(e =>
@@ -3053,7 +3072,7 @@ async function aiRequestParts(lang) {
     accumContext += `\nWhen making Buy/Hold recommendations, factor in which coins are part of the accumulation plan and how close they are to their targets.`;
   }
   // The market right now (same numbers as the Market Hub); it travels in the free-text context the Worker adds to the prompt
-  accumContext += await marketContext();
+  accumContext += await marketContext(lang);
   enrichPayload(portfolioData);
   accumContext += aiLayout(lang);
   return { portfolioData, accumContext };
@@ -3063,6 +3082,14 @@ async function aiRequestParts(lang) {
 // The whole prompt (the same instructions the Worker gives Claude + your data) is copied; you paste it in the Claude app,
 // copy its reply and paste it back here, where it shows as the same cards (Copy / PDF too). No API credit is used.
 function aiAppSystem(lang) {
+  if (lang === 'ar') return ['أنت محلل محترف لمحافظ العملات الرقمية، تكتب تقريرًا خاصًا لصاحب المحفظة.',
+    'اعتمد في كل جملة على البيانات المرفقة فقط. لا تخترع أسعارًا أو أخبارًا أو أرقامًا. كن محددًا: اذكر العملات والمبالغ والنسب.',
+    'هذا تحليل وليس نصيحة مالية؛ لا تَعِد بأرباح. اجعله عمليًا ومختصرًا.',
+    'اكتب التقرير كله بالعربية الفصحى الواضحة والمباشرة، واترك رموز العملات والأرقام ومبالغ $ بالحروف اللاتينية.',
+    'التنسيق: نص عادي مع خط عريض (**…**) ونقاط تبدأ بـ "- " فقط. بدون جداول أو كود أو HTML. اكتب التقرير فقط، بدون مقدمة قبله ولا أسئلة بعده.',
+    'استخدم عناوين الأقسام المرقّمة هذه بالضبط، كل عنوان في سطر وحده، وبالترتيب نفسه:',
+    '1. 📊 نظرة على السوق', '2. 🥧 المحفظة والتوزيع', '3. 🏆 الأفضل والأسوأ أداءً', '4. ⚠️ المخاطر والتركّز',
+    '5. 💰 خطة التجميع', '6. 💡 التوصيات (شراء / احتفاظ / تقليل لكل عملة مهمة)', '7. 🎯 خطة العمل للـ 30 يومًا القادمة'].join('\n');
   const L = lang === 'ar'
     ? 'Write the whole report in Arabic (Modern Standard Arabic, clear and direct). Keep coin tickers, numbers and $ amounts in Latin characters.'
     : 'Write the whole report in clear, direct English.';
@@ -3081,7 +3108,10 @@ async function aiPrepApp(force) {
   if (!(window.Samsam && Samsam.isReady && Samsam.isReady())) return null;
   try {
     const { portfolioData, accumContext } = await aiRequestParts(lang);
-    const text = `${aiAppSystem(lang)}\n\n---\n\nPORTFOLIO DATA (JSON, USD, ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC):\n${JSON.stringify(portfolioData)}${accumContext}\n\nWrite the report now${lang === 'ar' ? ' (in Arabic)' : ''}.`;
+    const at = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+    const text = lang === 'ar'
+      ? `${aiAppSystem(lang)}\n\n---\n\nبيانات المحفظة (JSON، بالدولار، ${at}):\n${JSON.stringify(portfolioData)}${accumContext}\n\nاكتب التقرير الآن بالعربية.`
+      : `${aiAppSystem(lang)}\n\n---\n\nPORTFOLIO DATA (JSON, USD, ${at}):\n${JSON.stringify(portfolioData)}${accumContext}\n\nWrite the report now.`;
     aiApp = { lang, text, t: Date.now() };
     return aiApp;
   } catch (_) { return null; }
@@ -3095,15 +3125,16 @@ function aiFlash(id, txt, ok) {
   l.textContent = txt; b.classList.toggle('done', !!ok); clearTimeout(b._t); b._t = setTimeout(() => { l.textContent = was; b.classList.remove('done'); }, 2600);
 }
 async function aiCopyForApp() {
+  const ar = analysisLang === 'ar';
   const ready = aiApp && aiApp.lang === analysisLang && Date.now() - aiApp.t < 10 * 60e3;
   if (!ready) {
-    aiFlash('aiAppCopy', 'Preparing…');
+    aiFlash('aiAppCopy', ar ? 'جارٍ التجهيز…' : 'Preparing…');
     const a = await aiPrepApp(true);
-    if (!a) { aiFlash('aiAppCopy', 'Not ready — try again'); return; }
+    if (!a) { aiFlash('aiAppCopy', ar ? 'غير جاهز — حاول مرة أخرى' : 'Not ready — try again'); return; }
   }
   const ok = await aiCopyText(aiApp.text);
-  if (!ok) { aiFlash('aiAppCopy', 'Tap again to copy'); return; }
-  aiFlash('aiAppCopy', 'Copied — paste it in Claude', true);
+  if (!ok) { aiFlash('aiAppCopy', ar ? 'اضغط مرة أخرى للنسخ' : 'Tap again to copy'); return; }
+  aiFlash('aiAppCopy', ar ? 'تم النسخ — الصقه في Claude' : 'Copied — paste it in Claude', true);
   document.getElementById('aiStep2')?.classList.add('on');
   try { window.open('https://claude.ai/new', '_blank', 'noopener'); } catch (_) {}
 }
@@ -3111,23 +3142,31 @@ function renderAiStart() {
   if (analysisRunning) return;
   aiLast = null; aiOutButtons(false); aiAtStart(true);
   const ar = analysisLang === 'ar';
+  const T = ar ? { free: 'مجانًا مع تطبيق Claude', freeD: 'نفس التقرير، يكتبه Claude في تطبيقك — بدون أي خصم من رصيد الـ API. لغة التقرير: العربية.',
+      s1: 'انسخ بيانات محفظتك والسوق، ثم الصقها في محادثة جديدة مع Claude.', b1: 'نسخ لـ Claude',
+      s2: 'بعد أن يكتب Claude التقرير، انسخ رده (زر النسخ أسفله) والصقه هنا.', b2: 'لصق التقرير',
+      q: 'تقرير سريع هنا', qD: 'يُكتب في حوالي 20 ثانية بضغطة واحدة — يُخصم من رصيد Anthropic API (حوالي <bdi dir="ltr">$0.07–0.13</bdi> للتقرير).', qb: 'إنشاء التقرير' }
+    : { free: 'Free with the Claude app', freeD: 'The same report, written in your Claude app — no API credit used. Report language: English.',
+      s1: 'Copy your portfolio + market data, then paste it in a new Claude chat.', b1: 'Copy for Claude',
+      s2: 'When Claude has written it, copy its reply (the copy button under it) and paste it here.', b2: 'Paste report',
+      q: 'Quick report here', qD: 'Written in about 20 seconds with one tap — uses your Anthropic API credit (about $0.07–0.13 a report).', qb: 'Create report' };
   document.getElementById('analysisBody').innerHTML = `
-    <div class="ai-start">
+    <div class="ai-start" dir="${ar ? 'rtl' : 'ltr'}" lang="${ar ? 'ar' : 'en'}">
       <div class="ai-opt">
-        <div class="ai-opt-h"><span class="ai-ic">${SamsamUI.ic('sparkles', { solo: true, size: 16 })}</span><div><b>Free with the Claude app</b><span>The same report, written in your Claude app — no API credit used. Report language: ${ar ? 'العربية' : 'English'}.</span></div></div>
+        <div class="ai-opt-h"><span class="ai-ic">${SamsamUI.ic('sparkles', { solo: true, size: 16 })}</span><div><b>${T.free}</b><span>${T.freeD}</span></div></div>
         <ol class="ai-steps">
-          <li id="aiStep1"><span>Copy your portfolio + market data, then paste it in a new Claude chat.</span>
-            <button class="btn-analysis" id="aiAppCopy" onclick="aiCopyForApp()"><span data-ic="file"></span><span>Copy for Claude</span></button></li>
-          <li id="aiStep2"><span>When Claude has written it, copy its reply (the copy button under it) and paste it here.</span>
-            <button class="btn-analysis" id="aiAppPaste" onclick="aiPasteReport()"><span data-ic="download"></span><span>Paste report</span></button></li>
+          <li id="aiStep1"><span>${T.s1}</span>
+            <button class="btn-analysis" id="aiAppCopy" onclick="aiCopyForApp()"><span data-ic="file"></span><span>${T.b1}</span></button></li>
+          <li id="aiStep2"><span>${T.s2}</span>
+            <button class="btn-analysis" id="aiAppPaste" onclick="aiPasteReport()"><span data-ic="download"></span><span>${T.b2}</span></button></li>
         </ol>
       </div>
       <div class="ai-opt">
-        <div class="ai-opt-h"><span class="ai-ic">${SamsamUI.ic('bot', { solo: true, size: 16 })}</span><div><b>Quick report here</b><span>Written in about 20 seconds with one tap — uses your Anthropic API credit (about $0.07–0.13 a report).</span></div></div>
-        <button class="btn-analysis ai-quick" onclick="runAnalysis()"><span data-ic="refresh"></span><span>Create report</span></button>
+        <div class="ai-opt-h"><span class="ai-ic">${SamsamUI.ic('bot', { solo: true, size: 16 })}</span><div><b>${T.q}</b><span>${T.qD}</span></div></div>
+        <button class="btn-analysis ai-quick" onclick="runAnalysis()"><span data-ic="refresh"></span><span>${T.qb}</span></button>
       </div>
     </div>`;
-  SamsamUI.paintIcons ? SamsamUI.paintIcons(document.getElementById('analysisBody')) : aiPaintIcons();
+  aiPaintIcons();
 }
 function aiPaintIcons() { document.querySelectorAll('#analysisBody [data-ic]').forEach(e => { if (!e.firstChild) e.innerHTML = SamsamUI.ic(e.dataset.ic, { solo: true, size: 14 }); }); }
 async function aiPasteReport() {
@@ -3136,13 +3175,14 @@ async function aiPasteReport() {
   if (t && /(^|\n)\s*(#+\s*)?\**\s*[1-7]\s*[.)]/.test(t) && t.length > 200) return aiShowPasted(t);
   // the browser didn't hand over the clipboard (or it isn't a report): a box to paste into
   aiAtStart(true);
+  const ar = analysisLang === 'ar';
   document.getElementById('analysisBody').innerHTML = `
-    <div class="ai-paste">
-      <label for="aiPasteTxt">Paste Claude's reply here:</label>
-      <textarea id="aiPasteTxt" rows="9" placeholder="Long-press → Paste" dir="auto"></textarea>
-      <div class="ai-paste-b"><button class="btn-analysis" onclick="aiShowPasted(document.getElementById('aiPasteTxt').value)"><span data-ic="checkCircle"></span><span>Show report</span></button>
-        <button class="btn-analysis" onclick="renderAiStart()"><span data-ic="x"></span><span>Back</span></button></div>
-      <div class="ai-paste-err" id="aiPasteErr" hidden>That doesn't look like the report — paste Claude's whole reply.</div>
+    <div class="ai-paste" dir="${ar ? 'rtl' : 'ltr'}">
+      <label for="aiPasteTxt">${ar ? 'الصق رد Claude هنا:' : "Paste Claude's reply here:"}</label>
+      <textarea id="aiPasteTxt" rows="9" placeholder="${ar ? 'اضغط مطولًا ثم لصق' : 'Long-press → Paste'}" dir="auto"></textarea>
+      <div class="ai-paste-b"><button class="btn-analysis" onclick="aiShowPasted(document.getElementById('aiPasteTxt').value)"><span data-ic="checkCircle"></span><span>${ar ? 'عرض التقرير' : 'Show report'}</span></button>
+        <button class="btn-analysis" onclick="renderAiStart()"><span data-ic="x"></span><span>${ar ? 'رجوع' : 'Back'}</span></button></div>
+      <div class="ai-paste-err" id="aiPasteErr" hidden>${ar ? 'هذا لا يبدو كالتقرير — الصق رد Claude كاملًا.' : "That doesn't look like the report — paste Claude's whole reply."}</div>
     </div>`;
   aiPaintIcons();
   document.getElementById('aiPasteTxt').focus();
