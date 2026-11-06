@@ -262,7 +262,20 @@ async function altSeason(all, glob) {
     for (const k of Object.keys(hist[id].d)) if (+k < today - KEEP_DAYS) delete hist[id].d[k];
   }
   fs.writeFileSync(HIST, JSON.stringify(hist));
-  try { altPage(hist, btc, alts, extras, mineSym, today, glob, all); } catch (e) { log('alt page:', e.message); }
+  // USDT's real market cap, day by day (its supply grows, so it can't be estimated from its price): one CoinGecko call a day
+  const CAPS = path.join(OUT, 'caps.json');
+  let caps = {}; try { caps = JSON.parse(fs.readFileSync(CAPS, 'utf8')); } catch (_) {}
+  if (!caps.tether || caps.tether.at !== today) {
+    try {
+      const r = await fetch(`${API}/coins/tether/market_chart?vs_currency=usd&days=365&interval=daily`, { headers: { accept: 'application/json' } });
+      if (r.ok) {
+        const j = await r.json(), d = {};
+        for (const [t, v] of (j.market_caps || [])) if (v > 0) d[Math.floor(t / DAY)] = Math.round(v);
+        if (Object.keys(d).length > 30) { caps.tether = { at: today, d }; fs.writeFileSync(CAPS, JSON.stringify(caps)); log('usdt caps:', Object.keys(d).length, 'days'); }
+      } else log('usdt caps: HTTP', r.status);
+    } catch (e) { log('usdt caps:', e.message); }
+  }
+  try { altPage(hist, btc, alts, extras, mineSym, today, glob, all, (caps.tether || {}).d || {}); } catch (e) { log('alt page:', e.message); }
   // change over 90 days: today's price vs the price 90 days ago (a day either side if that day is missing)
   const ch = id => chg(hist, id, today, PERIOD);
   const b90 = ch('bitcoin');
@@ -288,7 +301,7 @@ function chg(hist, id, day, per) {
 //   mine: { id: [7d, 30d, 90d] } the app's own coins outside the top 100 }
 // A past day is worked out with today's top 100 (CoinMarketCap uses each day's own list), so old days can differ a little.
 const ALT_FILE = path.join(OUT, 'alt.json');
-function altPage(hist, btc, alts, extras, mineSym, today, glob, all) {
+function altPage(hist, btc, alts, extras, mineSym, today, glob, all, usdtCap) {
   let old = {}; try { old = JSON.parse(fs.readFileSync(ALT_FILE, 'utf8')); } catch (_) {}
   const r2 = v => v == null ? null : Math.round(v * 100) / 100;
   const at = (day, per) => {
@@ -308,29 +321,34 @@ function altPage(hist, btc, alts, extras, mineSym, today, glob, all) {
     const e = hist.ethereum && hist.ethereum.d[day], b = hist.bitcoin && hist.bitcoin.d[day];
     if (e > 0 && b > 0) ethbtc.push([day, +(e / b).toPrecision(5)]);
   }
-  // BTC Dominance before we started saving it: estimated from prices — each coin's market cap today scaled by its price
-  // that day (supply taken as today's), the rest of the market (stablecoins, smaller coins) held at today's size.
-  // Matches the real figure today; further back it is an estimate (supply changes, new coins).
-  const domEst = [];
+  // BTC and USDT Dominance before we started saving them: estimated — each coin's market cap today scaled by its price
+  // that day (supply taken as today's), USDT's real market cap that day (CoinGecko), the rest of the market (other
+  // stablecoins, smaller coins) held at today's size. Pinned to today's real figures; further back it is an estimate.
+  const domEst = [], usdtEst = [];
   if (glob && glob.mcap > 0 && btc && btc.mcap > 0) {
     const caps = all.filter(c => c.mcap > 0 && c.price > 0 && hist[c.id]);
-    const rest = glob.mcap - caps.reduce((s, c) => s + c.mcap, 0);
+    const usdtNow = (all.find(c => c.id === 'tether') || {}).mcap || 0;
+    const rest = glob.mcap - caps.reduce((s, c) => s + c.mcap, 0) - usdtNow;
     const p = (c, day) => { const d = hist[c.id].d; return d[day] || d[day - 1] || d[day + 1] || null; };
+    const uc = day => usdtCap[day] || usdtCap[day - 1] || usdtCap[day + 1] || null;
     for (let day = today - 365; day <= today; day++) {
       const pb = p(btc, day); if (!pb) continue;
-      const b = btc.mcap * pb / btc.price;
-      const tot = rest + caps.reduce((s, c) => { const v = p(c, day); return s + (v ? c.mcap * v / c.price : c.mcap); }, 0);
-      if (tot > 0) domEst.push([day, r2(b / tot * 100)]);
+      const b = btc.mcap * pb / btc.price, u = day === today ? usdtNow : uc(day);
+      const tot = rest + (u || usdtNow) + caps.reduce((s, c) => { const v = p(c, day); return s + (v ? c.mcap * v / c.price : c.mcap); }, 0);
+      if (!(tot > 0)) continue;
+      domEst.push([day, b / tot * 100]);
+      if (u && usdtNow) usdtEst.push([day, u / tot * 100]);
     }
-    const last = domEst[domEst.length - 1], real = glob.dom && glob.dom.btc;
-    if (last && real > 0) { const k = real / last[1]; domEst.forEach(r => { r[1] = r2(r[1] * k); }); }   // pinned to today's real figure
+    const pin = (arr, real) => { const last = arr[arr.length - 1], k = last && real > 0 ? real / last[1] : 1; arr.forEach(r => { r[1] = r2(r[1] * k); }); };   // pinned to today's real figure
+    pin(domEst, glob.dom && glob.dom.btc); pin(usdtEst, glob.dom && glob.dom.usdt);
   }
-  const dom = old.dom || {};
+  const dom = old.dom || {}, domUsdt = old.domUsdt || {};
   if (glob && glob.dom && glob.dom.btc > 0) dom[today] = r2(glob.dom.btc);
-  for (const k of Object.keys(dom)) if (+k < today - 400) delete dom[k];
+  if (glob && glob.dom && glob.dom.usdt > 0) domUsdt[today] = r2(glob.dom.usdt);
+  for (const o of [dom, domUsdt]) for (const k of Object.keys(o)) if (+k < today - 400) delete o[k];
   const three = id => [7, 30, PERIOD].map(p => r2(chg(hist, id, today, p)));
   const page = {
-    updated: new Date().toISOString(), today, idx, live, ethbtc, dom, domEst,
+    updated: new Date().toISOString(), today, idx, live, ethbtc, dom, domEst, domUsdt, usdtEst,
     breadth: { 7: at(today, 7), 30: at(today, 30), 90: now },
     btc: three('bitcoin'),
     coins: alts.map(c => ({ id: c.id, sym: c.sym, name: c.name, img: c.img, rank: c.rank, p: three(c.id) })),

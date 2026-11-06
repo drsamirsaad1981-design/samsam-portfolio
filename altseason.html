@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611061327"></script>
-<script src="samsam-hints.js?v=202611061327"></script>
-<script src="samsam-vault.js?v=202611061327"></script>
-<script src="samsam-labels.js?v=202611061327"></script>
-<script src="samsam-taxonomy.js?v=202611061327"></script>
-<script src="samsam-coins.js?v=202611061327"></script>
-<script src="samsam-dropdown.js?v=202611061327"></script>
-<script src="samsam-add.js?v=202611061327"></script>
-<script src="samsam-market.js?v=202611061327"></script>
+<script src="samsam-ui.js?v=202611061343"></script>
+<script src="samsam-hints.js?v=202611061343"></script>
+<script src="samsam-vault.js?v=202611061343"></script>
+<script src="samsam-labels.js?v=202611061343"></script>
+<script src="samsam-taxonomy.js?v=202611061343"></script>
+<script src="samsam-coins.js?v=202611061343"></script>
+<script src="samsam-dropdown.js?v=202611061343"></script>
+<script src="samsam-add.js?v=202611061343"></script>
+<script src="samsam-market.js?v=202611061343"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }
@@ -248,6 +248,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       <span><span class="sw solid" style="--c:#a78bfa"></span>Altcoin Season Index</span>
       <label><input type="checkbox" id="asOvEth" checked> <span class="sw" style="--c:#22c55e"></span>ETH / BTC</label>
       <label id="asOvDomL" hidden><input type="checkbox" id="asOvDom"> <span class="sw" style="--c:#f7931a"></span>BTC Dominance</label>
+      <label id="asOvUsdtL" hidden><input type="checkbox" id="asOvUsdt"> <span class="sw" style="--c:#2dd4bf"></span>USDT Dominance</label>
     </div>
     <p class="as-note" id="asNote">Past days are worked out with today's top 100 coins (CoinMarketCap uses each day's own list), so older days can differ a little. From now on every day is saved with that day's list.</p>
   </section>
@@ -281,7 +282,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   <p class="as-src">Prices: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> and Binance (daily, 00:00 UTC), saved by GitHub with each market snapshot. The index follows the CoinMarketCap method. "vs BTC" = how the coin did against holding BTC over the same days.</p>
 </main>
 
-<script type="module" src="samsam-cloud.js?v=202611061327"></script>
+<script type="module" src="samsam-cloud.js?v=202611061343"></script>
 <script>
 const M = SamsamMarket, C = SamsamCoins, DAY = 864e5;
 let data = null, state = null, range = 365, per = 2, perYou = 2, filter = 'all', query = '', showAll = false, open = null;
@@ -326,10 +327,11 @@ function paintHero(S) {
     `<div class="as-stat"><div class="k">BTC (90 days)</div><div class="n sm ${cls(now.b)}">${pct(now.b)}</div><div class="s">${now.n} coins</div></div>`;
 }
 
-// BTC Dominance by day: saved figures where we have them, before that the estimate worked out from prices (marked)
-function domSeries() {
-  const m = new Map((data.domEst || []).map(r => [r[0], [r[0], r[1], true]]));
-  Object.entries(data.dom || {}).forEach(([d, v]) => m.set(+d, [+d, v, false]));
+// BTC / USDT Dominance by day: saved figures where we have them, before that the estimate (marked)
+function domSeries(kind) {
+  const est = kind === 'usdt' ? data.usdtEst : data.domEst, saved = kind === 'usdt' ? data.domUsdt : data.dom;
+  const m = new Map((est || []).map(r => [r[0], [r[0], r[1], true]]));
+  Object.entries(saved || {}).forEach(([d, v]) => m.set(+d, [+d, v, false]));
   return [...m.values()].sort((a, b) => a[0] - b[0]);
 }
 // ── 2. history chart (inline SVG: index 0–100 on the left; ETH / BTC or BTC Dominance scaled on the right) ──
@@ -343,7 +345,8 @@ function paintChart(S) {
   // overlay: ETH/BTC (whole history) or BTC Dominance (saved from the first day of this page)
   const ov = [];
   if ($('asOvEth').checked) ov.push({ k: 'ETH / BTC', c: '#22c55e', pts: (data.ethbtc || []).filter(r => r[0] >= x0 && r[0] <= x1), f: v => v.toFixed(5) });
-  if ($('asOvDom').checked) ov.push({ k: 'BTC Dominance', c: '#f7931a', pts: domSeries().filter(r => r[0] >= x0 && r[0] <= x1), f: v => v.toFixed(2) + '%' });
+  if ($('asOvDom').checked) ov.push({ k: 'BTC Dominance', c: '#f7931a', pts: domSeries('btc').filter(r => r[0] >= x0 && r[0] <= x1), f: v => v.toFixed(2) + '%' });
+  if ($('asOvUsdt').checked) ov.push({ k: 'USDT Dominance', c: '#2dd4bf', pts: domSeries('usdt').filter(r => r[0] >= x0 && r[0] <= x1), f: v => v.toFixed(2) + '%' });
   let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Altcoin Season Index, last ${range} days"><defs>
     <linearGradient id="asLine" x1="0" y1="${Y(100)}" x2="0" y2="${Y(0)}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3b82f6"/><stop offset=".5" stop-color="#a78bfa"/><stop offset="1" stop-color="#f7931a"/></linearGradient>
     <linearGradient id="asFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a78bfa" stop-opacity=".22"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></linearGradient></defs>`;
@@ -519,10 +522,11 @@ function paint() {
   const S = series();
   paintHero(S); paintTiles(S); paintBreadth(); paintYou(); paintRows();
   if (open === 'hist') paintChart(S);
-  $('asOvDomL').hidden = domSeries().length < 2;
+  $('asOvDomL').hidden = domSeries('btc').length < 2;
+  $('asOvUsdtL').hidden = domSeries('usdt').length < 2;
   const est = (data.domEst || []).length, first = Object.keys(data.dom || {}).map(Number).sort((a, b) => a - b)[0];
   $('asNote').textContent = "Past days are worked out with today's top 100 coins (CoinMarketCap uses each day's own list), so older days can differ a little. From now on every day is saved with that day's list." +
-    (est && first ? ` BTC Dominance before ${dayStr(first, true)} is estimated from prices (the real figure is saved every day since).` : '');
+    (est && first ? ` BTC and USDT Dominance before ${dayStr(first, true)} are estimated from prices and USDT's market cap (the real figures are saved every day since).` : '');
   $('asUpd').textContent = 'Updated ' + ago(Date.parse(data.updated));
   if (window.CPSplash) CPSplash.hide();
 }
@@ -541,6 +545,7 @@ $('asMore').addEventListener('click', () => { showAll = true; paintRows(); });
 $('asOvEth').addEventListener('change', () => paintChart(series()));
 { const k = open; open = null; if (k) setOpen(k, false); }   // the card you had open last time
 $('asOvDom').addEventListener('change', () => paintChart(series()));
+$('asOvUsdt').addEventListener('change', () => paintChart(series()));
 $('asBack').addEventListener('click', () => { if (SamsamUI.inShell) window.parent.cpShell.go('market'); else location.href = './market.html'; });
 let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => data && open === 'hist' && paintChart(series()), 150); });
 
