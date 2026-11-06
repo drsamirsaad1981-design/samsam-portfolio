@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611061658"></script>
-<script src="samsam-hints.js?v=202611061658"></script>
-<script src="samsam-vault.js?v=202611061658"></script>
-<script src="samsam-labels.js?v=202611061658"></script>
-<script src="samsam-taxonomy.js?v=202611061658"></script>
-<script src="samsam-coins.js?v=202611061658"></script>
-<script src="samsam-dropdown.js?v=202611061658"></script>
-<script src="samsam-add.js?v=202611061658"></script>
-<script src="samsam-chart.js?v=202611061658"></script>
-<script src="samsam-market.js?v=202611061658"></script>
+<script src="samsam-ui.js?v=202611061741"></script>
+<script src="samsam-hints.js?v=202611061741"></script>
+<script src="samsam-vault.js?v=202611061741"></script>
+<script src="samsam-labels.js?v=202611061741"></script>
+<script src="samsam-taxonomy.js?v=202611061741"></script>
+<script src="samsam-coins.js?v=202611061741"></script>
+<script src="samsam-dropdown.js?v=202611061741"></script>
+<script src="samsam-add.js?v=202611061741"></script>
+<script src="samsam-chart.js?v=202611061741"></script>
+<script src="samsam-market.js?v=202611061741"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1084,7 +1084,7 @@
   .btn-liq, .btn-pred, .btn-cmc { display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 600; white-space: nowrap; line-height: 1;
     color: #fb923c; background: var(--metric-bg); border: 1px solid rgba(251,146,60,.45); border-radius: 8px; height: 36px; font-size: 0.8rem; -webkit-tap-highlight-color: transparent; }
   .btn-liq:hover { background: #f97316; color: #fff; border-color: #f97316; }
-  .btn-liq.off, .btn-liq.off:hover { color: var(--fg2); background: var(--bg3); border-color: var(--border); border-style: dashed; cursor: default; opacity: .85; }
+  .btn-liq.off, .btn-liq.off:hover, .btn-pred.off, .btn-pred.off:hover { color: var(--fg2); background: var(--bg3); border-color: var(--border); border-style: dashed; cursor: default; opacity: .85; }
   .btn-pred { color: #a78bfa; border-color: rgba(167,139,250,.45); }
   .btn-pred:hover { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
   .btn-liq:focus-visible { outline: 3px solid rgba(251,146,60,.5); outline-offset: 2px; }
@@ -1487,7 +1487,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611061658"></script>
+<script type="module" src="samsam-cloud.js?v=202611061741"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1546,7 +1546,7 @@ function openCoinMenu(btn, sym) {
     { icon: 'note', label: (c.notes || '').trim() ? 'Edit Note' : 'Add Note', onClick: () => editNote(sym) },
     { divider: true },
     SamsamCoins.hasFutures(sym) === false ? null : { icon: 'flame', label: 'Liquidation Map', href: SamsamCoins.liqMapUrl(sym) },
-    { icon: 'sparkles', label: 'Price Prediction', href: SamsamCoins.predictionUrl(sym, c) },
+    SamsamCoins.ccSlug(sym, c) ? { icon: 'sparkles', label: 'Price Prediction', href: SamsamCoins.predictionUrl(sym, c) } : null,   // only a CoinCodex page we know — never a web search
     { divider: true },
     { icon: 'trash', label: 'Remove', danger: true, onClick: () => removeCoin(sym) },
   ]);
@@ -3369,9 +3369,14 @@ function renderCoinTx() {
     else { liq.href = SamsamCoins.liqMapUrl(sym); liq.title = `Open the ${sym} liquidation heatmap on CoinGlass (new tab)`; liq.innerHTML = SamsamUI.ic('flame', { solo: true }) + 'Liq.Map' + '<span class="ext-mark">' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</span>'; }
   }
   const pred = document.getElementById('htxPredLink');
-  if (pred) { pred.href = SamsamCoins.predictionUrl(sym, portfolio.find(c => c.sym === sym) || {}); pred.title = `Open the ${sym} price prediction on CoinCodex (new tab)`; }
-  const cmc = document.getElementById('htxCmcLink'), cmcUrl = getCoinGeckoUrl(sym);
-  if (cmc) { cmc.hidden = !cmcUrl; if (cmcUrl) { cmc.href = cmcUrl; cmc.title = `Open ${sym} on CoinMarketCap (new tab)`; } }
+  if (pred) {   // a CoinCodex page we know is the right one; otherwise a plain "No prediction" note (never a web search)
+    const pc = portfolio.find(c => c.sym === sym) || {}, ok = !!SamsamCoins.ccSlug(sym, pc);
+    pred.classList.toggle('off', !ok);
+    if (ok) { pred.href = SamsamCoins.predictionUrl(sym, pc); pred.title = `Open the ${sym} price prediction on CoinCodex (new tab)`; pred.innerHTML = SamsamUI.ic('sparkles', { solo: true }) + 'Prediction<span class="ext-mark">' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</span>'; }
+    else { pred.removeAttribute('href'); pred.title = `CoinCodex has no price prediction page for ${sym}`; pred.innerHTML = SamsamUI.ic('sparkles', { solo: true }) + 'No prediction'; }
+  }
+  const cmc = document.getElementById('htxCmcLink'), cmcUrl = getCoinGeckoUrl(sym), cg = /coingecko\.com/.test(cmcUrl || '');
+  if (cmc) { cmc.hidden = !cmcUrl; if (cmcUrl) { cmc.href = cmcUrl; cmc.title = cg ? `${sym} isn't listed on CoinMarketCap — open it on CoinGecko (new tab)` : `Open ${sym} on CoinMarketCap (new tab)`; cmc.innerHTML = SamsamUI.ic('bar', { solo: true }) + (cg ? 'CoinGecko' : 'CMC') + '<span class="ext-mark">' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</span>'; } }
   // Coin selector (searchable): every coin you hold, largest first; current coin always listed
   ensureHtxDropdowns();
   const coins = [...portfolio].sort((a, b) => b.qty * b.currentPrice - a.qty * a.currentPrice);

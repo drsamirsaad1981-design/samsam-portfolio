@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611061741"></script>
-<script src="samsam-hints.js?v=202611061741"></script>
-<script src="samsam-vault.js?v=202611061741"></script>
-<script src="samsam-labels.js?v=202611061741"></script>
-<script src="samsam-taxonomy.js?v=202611061741"></script>
-<script src="samsam-coins.js?v=202611061741"></script>
-<script src="samsam-dropdown.js?v=202611061741"></script>
-<script src="samsam-add.js?v=202611061741"></script>
-<script src="samsam-market.js?v=202611061741"></script>
+<script src="samsam-ui.js?v=202611061824"></script>
+<script src="samsam-hints.js?v=202611061824"></script>
+<script src="samsam-vault.js?v=202611061824"></script>
+<script src="samsam-labels.js?v=202611061824"></script>
+<script src="samsam-taxonomy.js?v=202611061824"></script>
+<script src="samsam-coins.js?v=202611061824"></script>
+<script src="samsam-dropdown.js?v=202611061824"></script>
+<script src="samsam-add.js?v=202611061824"></script>
+<script src="samsam-market.js?v=202611061824"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -269,7 +269,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-links .l-liq { color: #fb923c; border-color: rgba(251,146,60,.45); } .mk-links .l-liq:hover { background: #f97316; color: #fff; border-color: #f97316; }
 .mk-links .l-pred { color: #a78bfa; border-color: rgba(167,139,250,.45); } .mk-links .l-pred:hover { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
 .mk-links .l-cmc { color: #60a5fa; border-color: rgba(96,165,250,.45); } .mk-links .l-cmc:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-.mk-links .l-liq.off, [data-theme="light"] .mk-links .l-liq.off { color: var(--fg2); border-color: var(--border); border-style: dashed; opacity: .85; cursor: default; }
+.mk-links .l-liq.off, [data-theme="light"] .mk-links .l-liq.off, .mk-links .l-pred.off, [data-theme="light"] .mk-links .l-pred.off { color: var(--fg2); border-color: var(--border); border-style: dashed; opacity: .85; cursor: default; }
 [data-theme="light"] .mk-links .l-liq { color: #ea580c; } [data-theme="light"] .mk-links .l-pred { color: #7c3aed; } [data-theme="light"] .mk-links .l-cmc { color: #2563eb; }
 @media (max-width: 380px) { .mk-links { gap: 6px; } .mk-links a { padding: 0 5px; font-size: .74rem; gap: 4px; } }
 .mk-empty { text-align: center; color: var(--fg2); font-size: .86rem; padding: 28px 12px; line-height: 1.6; }
@@ -489,7 +489,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611061741"></script>
+<script type="module" src="samsam-cloud.js?v=202611061824"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -747,6 +747,19 @@ function cmcLink(c) {
   if (L && L.cmc && !L.cmc[String(c.sym || '').toUpperCase()] && !known(c)) return SamsamCoins.coingeckoUrl(c.sym, c.id) || SamsamCoins.cmcUrl('', { name: c.name });
   return SamsamCoins.cmcUrl(c.sym, { name: known(c) ? undefined : c.name, mcap: c.mcap }) || SamsamCoins.coingeckoUrl(c.sym, c.id);
 }
+// a CoinCodex page we know is the right one (else no Prediction link — never a web search)
+function predSlug(c) {
+  const h = heldCoin(c);
+  if (h) return SamsamCoins.ccSlug(h.sym, { ...h, cgId: h.cgId || c.id });
+  if (ccCache[c.id]) return ccCache[c.id];
+  return SamsamCoins.ccSlug(known(c) ? c.sym : '', { cgId: c.id });
+}
+function predHtml(c, x) {
+  return predSlug(c) ? `<a class="l-pred" href="${E(predLink(c))}" target="_blank" rel="noopener noreferrer" title="Open the ${E(c.sym)} price prediction on CoinCodex (new tab)">${ic('sparkles', { solo: true, size: 15 })}Prediction${x}</a>`
+    : `<span class="l-pred off" title="CoinCodex has no price prediction page for ${E(c.sym)}">${ic('sparkles', { solo: true, size: 15 })}No prediction</span>`;
+}
+// CoinMarketCap's page, or CoinGecko's when CoinMarketCap doesn't list the coin — the button says which
+function cmcIsCg(c) { const u = cmcLink(c) || ''; return /coingecko\.com/.test(u); }
 function predLink(c) {
   const h = heldCoin(c);
   if (h) return SamsamCoins.predictionUrl(h.sym, { ...h, cgId: h.cgId || c.id });
@@ -763,7 +776,7 @@ function resolveCc(c) {
   if (heldCoin(c) || c.id in ccCache || (known(c) && SamsamCoins.ccSlug(c.sym)) || SamsamCoins.ccSlug('', { cgId: c.id })) return;
   SamsamCoins.findCcSlug(c.sym, { cgId: c.id, name: c.name }).then(slug => {
     ccCache[c.id] = slug || ''; ccSave();
-    const a = document.querySelector(`#mkl-${CSS.escape(c.id)} .l-pred`); if (a && slug) a.href = predLink(c);
+    const a = document.querySelector(`#mkl-${CSS.escape(c.id)} .l-pred`); if (a && slug) a.outerHTML = predHtml(c, `<span class="ext">${ic('ext', { solo: true, size: 12 })}</span>`);
   });
 }
 const CHEV = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
@@ -773,8 +786,8 @@ function linksHtml(c) {
   return `<div class="mk-links" id="mkl-${E(c.id)}">
     <div class="mk-lsum"><span>24h <b class="${cls(c.ch24)}">${pct(c.ch24)}</b></span><span>7d <b class="${cls(c.ch7)}">${pct(c.ch7)}</b></span></div>
     ${liqHtml(c, x)}
-    <a class="l-pred" href="${E(predLink(c))}" target="_blank" rel="noopener noreferrer" title="Open the ${E(c.sym)} price prediction on CoinCodex (new tab)">${ic('sparkles', { solo: true, size: 15 })}Prediction${x}</a>
-    <a class="l-cmc" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="Open ${E(c.sym)} on CoinMarketCap (new tab)">${ic('bar', { solo: true, size: 15 })}CMC${x}</a>
+    ${predHtml(c, x)}
+    <a class="l-cmc" href="${E(cmcLink(c))}" target="_blank" rel="noopener noreferrer" title="${cmcIsCg(c) ? `${E(c.sym)} isn't listed on CoinMarketCap — open it on CoinGecko` : `Open ${E(c.sym)} on CoinMarketCap`} (new tab)">${ic('bar', { solo: true, size: 15 })}${cmcIsCg(c) ? 'CoinGecko' : 'CMC'}${x}</a>
   </div>`;
 }
 function toggleLinks(id) { openId = openId === id ? null : id; render(); const c = openId && findCoin(openId); if (c) resolveCc(c); }
@@ -837,7 +850,7 @@ function fitNames() {
   over.forEach(n => n.classList.add('cut'));
 }
 let fitT; addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(fitNames, 150); });
-function findCoin(id) { return (mode === 'pf' && pfAll().find(r => r.id === id)) || topRows.find(r => r.id === id) || pfExtra.find(r => r.id === id) || watchRows.find(r => r.id === id) || moreRows.find(r => r.id === id) || watchlist().find(w => w.id === id) || null; }
+function findCoin(id) { return (mode === 'pf' && pfAll().find(r => r.id === id)) || topRows.find(r => r.id === id) || bigRows.find(r => r.id === id) || pfExtra.find(r => r.id === id) || watchRows.find(r => r.id === id) || moreRows.find(r => r.id === id) || watchlist().find(w => w.id === id) || null; }
 
 // ── search: filters the list; 2+ letters also look the coin up on CoinGecko (any coin) ──
 function onSearch() {

@@ -78,13 +78,13 @@ async function main() {
   // 150 coins: the first 100 are the list; Altcoin Season needs the top 100 *after* leaving out stablecoins etc.
   const MK = p => `${API}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${p}&sparkline=true&price_change_percentage=24h%2C7d%2C30d`;
   const top = await get(MK(1));
-  let all = [];
+  let all = [], big = [];
   // the first 150 go in market.json (the page shows 100 without stablecoins; Altcoin Season needs the top 100 after
   // leaving stablecoins out); coins 101–500 go in m/top500.json, read only when the list is set to Top 200…500
   if (Array.isArray(top) && top.length) { const rows = top.map(row); all = rows.slice(0, 150); snap.top = all; snap.parts.top = now; log('top', top.length);
     await sleep(4000);
     const p2 = await get(MK(2));
-    const big = rows.concat(Array.isArray(p2) ? p2.map(row) : []).slice(100);
+    big = rows.concat(Array.isArray(p2) ? p2.map(row) : []).slice(100);
     if (Array.isArray(p2) && p2.length) { fs.writeFileSync(path.join(OUT, 'top500.json'), JSON.stringify({ updated: now, from: 101, top: big })); log('top500', big.length); }
     else log('top500: page 2 no answer, kept the last one');
   } else log('top: no answer, kept the last one');
@@ -110,7 +110,7 @@ async function main() {
   if (!snap.top.length && !snap.global) { log('nothing to save yet'); return; }
   fs.writeFileSync(FILE, JSON.stringify(snap));
   log('wrote', FILE);
-  try { await links(snap.top); } catch (e) { log('links:', e.message); }
+  try { await links(snap.top.concat(big.filter(r => !snap.top.some(t => t.id === r.id)))); } catch (e) { log('links:', e.message); }
 }
 
 // ── Links that open the right page for every coin (m/links.json) ──
@@ -125,11 +125,12 @@ const CC_API = process.env.CC_API || 'https://coincodex.com/api/v1/assets/get_as
 async function links(top) {
   const FILE_L = path.join(OUT, 'links.json');
   let old = {}; try { old = JSON.parse(fs.readFileSync(FILE_L, 'utf8')); } catch (_) {}
-  const out = { updated: new Date().toISOString(), cmc: old.cmc || {}, cc: old.cc || {}, fut: old.fut || [] };
+  const out = { updated: new Date().toISOString(), cmc: old.cmc || {}, cc: old.cc || {}, fut: old.fut || [], ccDay: old.ccDay || 0, ccMiss: old.ccMiss || {} };
+  const today = Math.floor(Date.now() / 864e5), fullCc = out.ccDay !== today;   // the whole list once a day; in between only coins not looked up today
   // CoinMarketCap: 3 pages of 500
   const cmc = {};
   let got = 0;
-  for (let start = 1; start <= 1001; start += 500) {
+  for (let start = 1; start <= 4501; start += 500) {   // 5,000 coins: CoinMarketCap puts coins with an unchecked supply far down its list
     const j = await get(`${CMC_LIST}&start=${start}&limit=500`, 2);
     const list = (j && j.data && j.data.cryptoCurrencyList) || [];
     for (const c of list) {
@@ -142,13 +143,14 @@ async function links(top) {
     if (list.length < 500) break;
     await sleep(1500);
   }
-  if (got > 300) { out.cmc = cmc; log('links: CoinMarketCap', got); } else log('links: CoinMarketCap no answer, kept the last one');
+  if (got > 1000) { out.cmc = cmc; log('links: CoinMarketCap', got); } else log('links: CoinMarketCap no answer, kept the last one');
   // CoinCodex: by ticker, in groups; the page is the one with the same CoinGecko id / name (else the biggest)
   const known = (() => { try { const ctx = { window: {}, document: { getElementById: () => true, createElement: () => ({}), head: { appendChild() {} } }, localStorage: { getItem() { return null; }, setItem() {} } };
     vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'samsam-coins.js'), 'utf8'), ctx); return ctx.window.SamsamCoins; } catch (e) { log('links: samsam-coins', e.message); return null; } })();
   const want = new Map();   // cgId → { sym, name, mcap }
   for (const c of top || []) want.set(c.id, { sym: c.sym, name: c.name, mcap: c.mcap });
   if (known) for (const [sym, id] of Object.entries(known.CG_IDS || {})) if (id && !want.has(id)) want.set(id, { sym, name: (known.NAMES || {})[sym] || '', mcap: 0 });
+  if (!fullCc) for (const id of [...want.keys()]) if (out.cc[id] || out.ccMiss[id] === today) want.delete(id);
   const bySym = new Map();
   for (const [id, w] of want) { const s = String(w.sym || '').toUpperCase(); if (s) (bySym.get(s) || bySym.set(s, []).get(s)).push([id, w]); }
   const mc = x => +(x.market_cap_usd || x.last_market_cap_usd || x.marketcap_usd || 0);
@@ -175,9 +177,12 @@ async function links(top) {
     }
     await sleep(700);
   }
-  if (found < 30 && out.cc && Object.keys(out.cc).length) { log('links: CoinCodex looks down, kept the last list'); }
-  else out.cc = cc;
-  log('links: CoinCodex', found, 'of', want.size);
+  if (fullCc) {
+    if (found < 30 && out.cc && Object.keys(out.cc).length) log('links: CoinCodex looks down, kept the last list');
+    else { out.cc = cc; out.ccDay = today; out.ccMiss = {}; }
+  } else Object.assign(out.cc, cc);
+  for (const id of want.keys()) if (!cc[id]) out.ccMiss[id] = today;   // no page — not asked again until tomorrow
+  log('links: CoinCodex', found, 'of', want.size, fullCc ? '(daily pass)' : '(new coins)');
   // perpetual futures: OKX + Hyperliquid (Binance / Bybit refuse GitHub's US servers)
   const fut = new Set();
   const okx = await get('https://www.okx.com/api/v5/public/instruments?instType=SWAP', 2);
