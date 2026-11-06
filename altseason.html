@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611061243"></script>
-<script src="samsam-hints.js?v=202611061243"></script>
-<script src="samsam-vault.js?v=202611061243"></script>
-<script src="samsam-labels.js?v=202611061243"></script>
-<script src="samsam-taxonomy.js?v=202611061243"></script>
-<script src="samsam-coins.js?v=202611061243"></script>
-<script src="samsam-dropdown.js?v=202611061243"></script>
-<script src="samsam-add.js?v=202611061243"></script>
-<script src="samsam-market.js?v=202611061243"></script>
+<script src="samsam-ui.js?v=202611061252"></script>
+<script src="samsam-hints.js?v=202611061252"></script>
+<script src="samsam-vault.js?v=202611061252"></script>
+<script src="samsam-labels.js?v=202611061252"></script>
+<script src="samsam-taxonomy.js?v=202611061252"></script>
+<script src="samsam-coins.js?v=202611061252"></script>
+<script src="samsam-dropdown.js?v=202611061252"></script>
+<script src="samsam-add.js?v=202611061252"></script>
+<script src="samsam-market.js?v=202611061252"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }
@@ -125,6 +125,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .as-tip .d { color: var(--fg2); font-weight: 700; font-size: .68rem; }
 .as-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 10px; font-size: .72rem; font-weight: 700; color: var(--fg2); }
 .as-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+[hidden] { display: none !important; }
 .as-legend label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .as-legend input { accent-color: #a78bfa; width: 15px; height: 15px; }
 .as-legend .sw { width: 16px; height: 0; border-top: 2px dashed var(--c); }
@@ -280,7 +281,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   <p class="as-src">Prices: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> and Binance (daily, 00:00 UTC), saved by GitHub with each market snapshot. The index follows the CoinMarketCap method. "vs BTC" = how the coin did against holding BTC over the same days.</p>
 </main>
 
-<script type="module" src="samsam-cloud.js?v=202611061243"></script>
+<script type="module" src="samsam-cloud.js?v=202611061252"></script>
 <script>
 const M = SamsamMarket, C = SamsamCoins, DAY = 864e5;
 let data = null, state = null, range = 365, per = 2, perYou = 2, filter = 'all', query = '', showAll = false, open = null;
@@ -325,6 +326,12 @@ function paintHero(S) {
     `<div class="as-stat"><div class="k">BTC (90 days)</div><div class="n sm ${cls(now.b)}">${pct(now.b)}</div><div class="s">${now.n} coins</div></div>`;
 }
 
+// BTC Dominance by day: saved figures where we have them, before that the estimate worked out from prices (marked)
+function domSeries() {
+  const m = new Map((data.domEst || []).map(r => [r[0], [r[0], r[1], true]]));
+  Object.entries(data.dom || {}).forEach(([d, v]) => m.set(+d, [+d, v, false]));
+  return [...m.values()].sort((a, b) => a[0] - b[0]);
+}
 // ── 2. history chart (inline SVG: index 0–100 on the left; ETH / BTC or BTC Dominance scaled on the right) ──
 function paintChart(S) {
   const box = $('asChart');
@@ -336,7 +343,7 @@ function paintChart(S) {
   // overlay: ETH/BTC (whole history) or BTC Dominance (saved from the first day of this page)
   const ov = [];
   if ($('asOvEth').checked) ov.push({ k: 'ETH / BTC', c: '#22c55e', pts: (data.ethbtc || []).filter(r => r[0] >= x0 && r[0] <= x1), f: v => v.toFixed(5) });
-  if ($('asOvDom').checked) ov.push({ k: 'BTC Dominance', c: '#f7931a', pts: Object.entries(data.dom || {}).map(([d, v]) => [+d, v]).filter(r => r[0] >= x0 && r[0] <= x1).sort((a, b) => a[0] - b[0]), f: v => v.toFixed(2) + '%' });
+  if ($('asOvDom').checked) ov.push({ k: 'BTC Dominance', c: '#f7931a', pts: domSeries().filter(r => r[0] >= x0 && r[0] <= x1), f: v => v.toFixed(2) + '%' });
   let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Altcoin Season Index, last ${range} days"><defs>
     <linearGradient id="asLine" x1="0" y1="${Y(100)}" x2="0" y2="${Y(0)}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3b82f6"/><stop offset=".5" stop-color="#a78bfa"/><stop offset="1" stop-color="#f7931a"/></linearGradient>
     <linearGradient id="asFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a78bfa" stop-opacity=".22"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></linearGradient></defs>`;
@@ -367,7 +374,7 @@ function paintChart(S) {
     const cx = X(best.d), cy = Y(best.v);
     cross.style.display = ''; cross.querySelector('line').setAttribute('x1', cx); cross.querySelector('line').setAttribute('x2', cx);
     const c = cross.querySelector('circle'); c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('stroke', best.v >= 50 ? '#3b82f6' : '#f7931a');
-    const ovs = ov.map(o => { const q = o.pts.find(r => r[0] === best.d); return q ? `<div>${o.k} <b style="color:${o.c}">${o.f(q[1])}</b></div>` : ''; }).join('');
+    const ovs = ov.map(o => { const q = o.pts.find(r => r[0] === best.d); return q ? `<div>${o.k} <b style="color:${o.c}">${o.f(q[1])}</b>${q[2] ? ' <span class="d">estimated</span>' : ''}</div>` : ''; }).join('');
     tip.innerHTML = `<div class="d">${dayStr(best.d, true)}</div><div><b class="${side(best.v)}">${best.v}</b> · ${label(best.v)}</div><div>BTC (90 days) <b class="${cls(best.b)}">${pct(best.b)}</b></div>${ovs}`;
     tip.style.display = 'block';
     const left = cx * r.width / W, tw = tip.offsetWidth;
@@ -512,7 +519,10 @@ function paint() {
   const S = series();
   paintHero(S); paintTiles(S); paintBreadth(); paintYou(); paintRows();
   if (open === 'hist') paintChart(S);
-  $('asOvDomL').hidden = Object.keys(data.dom || {}).length < 7;   // BTC Dominance is saved day by day from the first run of this page
+  $('asOvDomL').hidden = domSeries().length < 2;
+  const est = (data.domEst || []).length, first = Object.keys(data.dom || {}).map(Number).sort((a, b) => a - b)[0];
+  $('asNote').textContent = "Past days are worked out with today's top 100 coins (CoinMarketCap uses each day's own list), so older days can differ a little. From now on every day is saved with that day's list." +
+    (est && first ? ` BTC Dominance before ${dayStr(first, true)} is estimated from prices (the real figure is saved every day since).` : '');
   $('asUpd').textContent = 'Updated ' + ago(Date.parse(data.updated));
   if (window.CPSplash) CPSplash.hide();
 }

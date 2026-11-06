@@ -262,7 +262,7 @@ async function altSeason(all, glob) {
     for (const k of Object.keys(hist[id].d)) if (+k < today - KEEP_DAYS) delete hist[id].d[k];
   }
   fs.writeFileSync(HIST, JSON.stringify(hist));
-  try { altPage(hist, btc, alts, extras, mineSym, today, glob); } catch (e) { log('alt page:', e.message); }
+  try { altPage(hist, btc, alts, extras, mineSym, today, glob, all); } catch (e) { log('alt page:', e.message); }
   // change over 90 days: today's price vs the price 90 days ago (a day either side if that day is missing)
   const ch = id => chg(hist, id, today, PERIOD);
   const b90 = ch('bitcoin');
@@ -288,7 +288,7 @@ function chg(hist, id, day, per) {
 //   mine: { id: [7d, 30d, 90d] } the app's own coins outside the top 100 }
 // A past day is worked out with today's top 100 (CoinMarketCap uses each day's own list), so old days can differ a little.
 const ALT_FILE = path.join(OUT, 'alt.json');
-function altPage(hist, btc, alts, extras, mineSym, today, glob) {
+function altPage(hist, btc, alts, extras, mineSym, today, glob, all) {
   let old = {}; try { old = JSON.parse(fs.readFileSync(ALT_FILE, 'utf8')); } catch (_) {}
   const r2 = v => v == null ? null : Math.round(v * 100) / 100;
   const at = (day, per) => {
@@ -308,12 +308,29 @@ function altPage(hist, btc, alts, extras, mineSym, today, glob) {
     const e = hist.ethereum && hist.ethereum.d[day], b = hist.bitcoin && hist.bitcoin.d[day];
     if (e > 0 && b > 0) ethbtc.push([day, +(e / b).toPrecision(5)]);
   }
+  // BTC Dominance before we started saving it: estimated from prices — each coin's market cap today scaled by its price
+  // that day (supply taken as today's), the rest of the market (stablecoins, smaller coins) held at today's size.
+  // Matches the real figure today; further back it is an estimate (supply changes, new coins).
+  const domEst = [];
+  if (glob && glob.mcap > 0 && btc && btc.mcap > 0) {
+    const caps = all.filter(c => c.mcap > 0 && c.price > 0 && hist[c.id]);
+    const rest = glob.mcap - caps.reduce((s, c) => s + c.mcap, 0);
+    const p = (c, day) => { const d = hist[c.id].d; return d[day] || d[day - 1] || d[day + 1] || null; };
+    for (let day = today - 365; day <= today; day++) {
+      const pb = p(btc, day); if (!pb) continue;
+      const b = btc.mcap * pb / btc.price;
+      const tot = rest + caps.reduce((s, c) => { const v = p(c, day); return s + (v ? c.mcap * v / c.price : c.mcap); }, 0);
+      if (tot > 0) domEst.push([day, r2(b / tot * 100)]);
+    }
+    const last = domEst[domEst.length - 1], real = glob.dom && glob.dom.btc;
+    if (last && real > 0) { const k = real / last[1]; domEst.forEach(r => { r[1] = r2(r[1] * k); }); }   // pinned to today's real figure
+  }
   const dom = old.dom || {};
   if (glob && glob.dom && glob.dom.btc > 0) dom[today] = r2(glob.dom.btc);
   for (const k of Object.keys(dom)) if (+k < today - 400) delete dom[k];
   const three = id => [7, 30, PERIOD].map(p => r2(chg(hist, id, today, p)));
   const page = {
-    updated: new Date().toISOString(), today, idx, live, ethbtc, dom,
+    updated: new Date().toISOString(), today, idx, live, ethbtc, dom, domEst,
     breadth: { 7: at(today, 7), 30: at(today, 30), 90: now },
     btc: three('bitcoin'),
     coins: alts.map(c => ({ id: c.id, sym: c.sym, name: c.name, img: c.img, rank: c.rank, p: three(c.id) })),
