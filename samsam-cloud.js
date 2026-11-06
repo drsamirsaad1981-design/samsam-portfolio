@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611070135';
-import * as Hist from './samsam-history.js?v=202611070135';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611070135';
+import * as Core from './samsam-core.js?v=202611070235';
+import * as Hist from './samsam-history.js?v=202611070235';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611070235';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -179,6 +179,19 @@ function cleanExitSteps(v) {
 function currentExit() {
   const m = S.meta || {};
   return { tab: m.exitTab === 'exit' ? 'exit' : 'accum', targets: cleanExitTargets(m.exitTargets), plan: cleanExitPlan(m.exitPlan), steps: cleanExitSteps(m.exitSteps) };
+}
+// ── Telegram alerts settings, saved in users/{uid}/meta/info.alerts (read by tools/alerts.mjs on GitHub every 30 min) ──
+export const DEFAULT_ALERTS = Object.freeze({ lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
+  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true });
+function cleanAlerts(a) {
+  const d = DEFAULT_ALERTS, out = { ...d };
+  if (!a || typeof a !== 'object') return { ...out, isDefault: true };
+  for (const k of Object.keys(d)) if (typeof d[k] === 'boolean' && typeof a[k] === 'boolean') out[k] = a[k];
+  out.lang = a.lang === 'ar' ? 'ar' : 'en';
+  out.briefTime = typeof a.briefTime === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(a.briefTime) ? a.briefTime : d.briefTime;
+  out.movePct = numIn(a.movePct, 1, 50) ?? d.movePct;
+  out.etfMin = numIn(a.etfMin, 50, 10000) ?? d.etfMin;
+  return { ...out, isDefault: false };
 }
 function currentSignal() {
   const s = cleanSignal(S.meta && S.meta.signal);
@@ -474,6 +487,8 @@ const API = {
   getSignalRules() { return currentSignal(); },
   getWatchlist() { return cleanWatch(S.meta && S.meta.watch); },
   getExit() { return currentExit(); },
+  getAlerts() { return cleanAlerts(S.meta && S.meta.alerts); },
+  openAlerts() { openAlertsSheet(); },
   // any of { tab, targets (null → defaults), plan, steps (null → defaults) } — each saved as its own field, so edits on two devices don't clash
   saveExit(part = {}) {
     const d = {};
@@ -483,6 +498,10 @@ const API = {
     if ('steps' in part) { if (part.steps == null) d.exitSteps = null; else { const { isDefault, ...v } = cleanExitSteps(part.steps); d.exitSteps = v; } }
     if (!Object.keys(d).length) return Promise.resolve();
     return commit((bt, ref) => bt.set(ref('meta', 'info'), d, { merge: true }), 'Exit plan');
+  },
+  setAlerts(a) {
+    const { isDefault, ...c } = cleanAlerts(a);
+    return commit((bt, ref) => bt.set(ref('meta', 'info'), { alerts: { ...c, setAt: new Date().toISOString() } }, { merge: true }), 'Alerts');
   },
   saveWatchlist(list) {
     const w = cleanWatch(list);
@@ -928,6 +947,30 @@ function injectUi() {
   @media (max-width:700px){body::after{height:calc(96px + env(safe-area-inset-bottom,0px))}}
   /* pages with the bottom bar already keep room for it (the badge only shows on a problem) — just a small gap under the footer */
   body.has-bnav::after,body.in-shell::after{height:12px!important}
+  #cpAlerts{position:fixed;inset:0;z-index:99995;background:rgba(2,6,23,.55);display:flex;align-items:flex-end;justify-content:center;padding:0}
+  @media (min-width:640px){#cpAlerts{align-items:center;padding:16px}}
+  #cpAlerts .al-box{width:min(460px,100%);max-height:92vh;overflow:auto;background:var(--bg2,#111827);color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font:14px/1.45 system-ui,-apple-system,'Inter',sans-serif;box-shadow:0 -10px 40px rgba(0,0,0,.35)}
+  @media (min-width:640px){#cpAlerts .al-box{border-radius:18px}}
+  #cpAlerts .al-h{display:flex;align-items:center;gap:10px;margin-bottom:4px} #cpAlerts .al-h b{font-size:1.05rem;flex:1}
+  #cpAlerts .al-ic{width:32px;height:32px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(124,58,237,.16);color:#a78bfa}
+  [data-theme="light"] #cpAlerts .al-ic{color:#6d28d9;background:rgba(124,58,237,.1)}
+  #cpAlerts .al-x{background:none;border:0;color:var(--fg2,#9ca3af);cursor:pointer;padding:6px;line-height:0}
+  #cpAlerts .al-sub{color:var(--fg2,#9ca3af);font-size:12.5px;margin:0 0 12px}
+  #cpAlerts .al-sec{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--fg2,#9ca3af);margin:14px 0 6px}
+  #cpAlerts .al-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg3,#1f2937);border:1px solid var(--border,#374151);border-radius:12px;padding:4px}
+  #cpAlerts .al-seg button{border:0;border-radius:9px;padding:9px;font:inherit;font-weight:700;background:none;color:var(--fg2,#9ca3af);cursor:pointer}
+  #cpAlerts .al-seg button[aria-pressed="true"]{background:#7c3aed;color:#fff}
+  #cpAlerts .al-row{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:1px solid var(--border,#374151)}
+  #cpAlerts .al-row:first-of-type{border-top:0}
+  #cpAlerts .al-t{flex:1;min-width:0} #cpAlerts .al-t b{display:block;font-size:13.5px} #cpAlerts .al-t span{display:block;font-size:12px;color:var(--fg2,#9ca3af)}
+  #cpAlerts select{background:var(--bg3,#1f2937);color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:8px;padding:5px 6px;font:inherit;font-size:12.5px}
+  #cpAlerts .al-sw{position:relative;width:42px;height:24px;flex:none} #cpAlerts .al-sw input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;z-index:1}
+  #cpAlerts .al-sw i{position:absolute;inset:0;border-radius:12px;background:var(--border,#374151);transition:background .15s} #cpAlerts .al-sw i::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s}
+  #cpAlerts .al-sw input:checked + i{background:#7c3aed} #cpAlerts .al-sw input:checked + i::after{transform:translateX(18px)}
+  #cpAlerts .al-sw input:focus-visible + i{outline:2px solid #a78bfa;outline-offset:2px}
+  #cpAlerts .al-foot{display:flex;gap:8px;margin-top:14px} #cpAlerts .al-foot .samsam-btn{flex:1;min-height:42px}
+  #cpAlerts .al-note{font-size:12px;color:var(--fg2,#9ca3af);margin-top:10px;line-height:1.5} #cpAlerts .al-msg{font-size:12.5px;margin-top:8px;min-height:1em}
+  #cpAlerts .al-msg.ok{color:#22c55e} #cpAlerts .al-msg.err{color:#ef4444}
   @media print{#samsamSyncPill,#samsamSyncMenu,#samsamGate{display:none!important} body::after{display:none}}`;
   document.head.appendChild(css);
   const gate = document.createElement('div'); gate.id = 'samsamGate';
@@ -1040,6 +1083,7 @@ function renderStatus() {
       <div class="muted">Last confirmed by server: ${t}</div>
       <div class="muted">Device: ${deviceId.slice(-6)}</div>
       ${S.lastError ? `<div class="err">${UIc('alert')}${esc(S.lastError.label)}: ${esc(S.lastError.message)}</div>` : ''}
+      ${S.user && allLoaded() ? '<div class="row"><button class="samsam-btn" id="samsamAlerts" title="Telegram alerts: language, which alerts, thresholds">' + UIc('bell') + 'Telegram alerts</button></div>' : ''}
       ${S.user && allLoaded() ? '<div class="row"><a class="samsam-btn" href="recover.html" style="text-decoration:none">' + UIc('lifebuoy') + 'Recover Data</a><button type="button" class="cp-hint" data-hint="recover" aria-label="About Recover data"></button></div>' : ''}
       <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk" title="Download an encrypted backup (AES-256)">' + UIc('lock') + 'Backup</button><button type="button" class="cp-hint" data-hint="backup" aria-label="About the encrypted backup"></button>' : ''}
       ${S.user ? '<button class="samsam-btn" id="samsamOut">Sign out</button>' : '<button class="samsam-btn primary" id="samsamIn">Sign in</button>'}</div>
@@ -1047,7 +1091,58 @@ function renderStatus() {
     const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
     on('samsamBk', () => { menu.style.display = 'none'; downloadBackup().catch(e => setError(e, 'Backup')); }); on('samsamOut', () => API.signOut()); on('samsamIn', signIn);
     on('samsamClr', () => { S.lastError = null; renderStatus(); }); on('samsamReload', () => location.reload());
+    on('samsamAlerts', () => { menu.style.display = 'none'; openAlertsSheet(); });
   }
+}
+
+// ── Telegram alerts sheet (from the cloud menu, on every page) ──
+function openAlertsSheet() {
+  if (!S.user || !allLoaded()) return;
+  document.getElementById('cpAlerts')?.remove();
+  const a = cleanAlerts(S.meta && S.meta.alerts), back = document.activeElement;
+  const sw = (k, title, sub, extra = '') => `<div class="al-row"><div class="al-t"><b>${title}</b><span>${sub}</span></div>${extra}<label class="al-sw"><input type="checkbox" data-k="${k}" ${a[k] ? 'checked' : ''} aria-label="${esc(title)}"><i></i></label></div>`;
+  const sel = (k, opts, fmt) => `<select data-k="${k}" aria-label="${k}">${opts.map(v => `<option value="${v}" ${String(a[k]) === String(v) ? 'selected' : ''}>${fmt(v)}</option>`).join('')}</select>`;
+  const times = []; for (let h = 5; h <= 11; h++) for (const m of ['00', '30']) times.push(String(h).padStart(2, '0') + ':' + m);
+  const el = document.createElement('div'); el.id = 'cpAlerts'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Telegram alerts');
+  el.innerHTML = `<div class="al-box">
+    <div class="al-h"><span class="al-ic">${UIc('bell', { solo: true, size: 18 })}</span><b>Telegram alerts</b><button type="button" class="al-x" aria-label="Close">${UIc('x', { solo: true, size: 18 })}</button></div>
+    <p class="al-sub">Sent by your bot. GitHub checks every 30 minutes, after the market update.</p>
+    <div class="al-sec">Language</div>
+    <div class="al-seg" role="group" aria-label="Language"><button type="button" data-lang="en" aria-pressed="${a.lang === 'en'}">English</button><button type="button" data-lang="ar" aria-pressed="${a.lang === 'ar'}">العربية</button></div>
+    <div class="al-sec">Reports</div>
+    ${sw('brief', 'Morning brief', 'Your portfolio, movers and the market, every day', sel('briefTime', times, v => v))}
+    ${sw('weekly', 'Weekly report', 'Friday morning: the week vs BTC')}
+    <div class="al-sec">Alerts</div>
+    ${sw('moves', 'Big moves', 'BTC or your portfolio moves this much', sel('movePct', [3, 5, 8, 10, 15], v => '±' + v + '%'))}
+    ${sw('signals', 'Signal changes', 'A coin turns Reinforce, Hold or Sell / Convert')}
+    ${sw('plan', 'Plan targets', 'A coin reaches its Accumulation Plan target')}
+    ${sw('tp', 'Take-profit levels', 'A coin reaches TP1 / TP2 / TP3 of your exit plan')}
+    ${sw('macro', 'Exit levels', 'BTC dominance, USDT dominance, ETH/BTC at your exit targets')}
+    ${sw('sentiment', 'Market extremes', 'Extreme Fear / Greed, Altcoin / Bitcoin Season')}
+    ${sw('etf', 'Big ETF days', 'BTC or ETH spot ETFs move at least', sel('etfMin', [250, 500, 1000, 2000], v => v >= 1000 ? '$' + v / 1000 + 'B' : '$' + v + 'M'))}
+    ${sw('health', 'Data warnings', 'A price or market source stops updating')}
+    <div class="al-sec">Quiet</div>
+    ${sw('quiet', 'Quiet hours 00:00–07:00', 'Alerts wait until morning, except very big moves (2× your %)')}
+    <div class="al-foot"><button type="button" class="samsam-btn" data-act="cancel">Cancel</button><button type="button" class="samsam-btn primary" data-act="save">Save</button></div>
+    <div class="al-msg" role="status"></div>
+    <div class="al-note">Times are Riyadh time. Each alert comes once; it can come again only after the condition went away.</div>
+  </div>`;
+  document.body.appendChild(el);
+  const close = () => { el.remove(); document.removeEventListener('keydown', key, true); try { back && back.focus && back.focus(); } catch (_) {} };
+  const key = e => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+  document.addEventListener('keydown', key, true);
+  el.addEventListener('click', e => { if (e.target === el) close(); });
+  el.querySelector('.al-x').onclick = close; el.querySelector('[data-act=cancel]').onclick = close;
+  el.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => el.querySelectorAll('[data-lang]').forEach(x => x.setAttribute('aria-pressed', String(x === b))));
+  el.querySelector('[data-act=save]').onclick = async () => {
+    const v = { lang: el.querySelector('[data-lang][aria-pressed="true"]').dataset.lang };
+    el.querySelectorAll('input[data-k]').forEach(i => { v[i.dataset.k] = i.checked; });
+    el.querySelectorAll('select[data-k]').forEach(s => { v[s.dataset.k] = s.dataset.k === 'briefTime' ? s.value : +s.value; });
+    const msg = el.querySelector('.al-msg'); msg.className = 'al-msg'; msg.textContent = 'Saving…';
+    try { await API.setAlerts(v); msg.className = 'al-msg ok'; msg.textContent = 'Saved — the next check uses these settings.'; setTimeout(close, 900); }
+    catch (e) { msg.className = 'al-msg err'; msg.textContent = 'Not saved: ' + (e && e.message || e); }
+  };
+  setTimeout(() => el.querySelector('[data-lang][aria-pressed="true"]').focus(), 30);
 }
 
 // Setup panel (only on the main page): shown once, when the cloud is empty.

@@ -105,3 +105,4 @@ ai_out_test.py
 ai_free_test.py
 pdf_home_test.py
 alerts_test.py
+alerts_ui_test.py
