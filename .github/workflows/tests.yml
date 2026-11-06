@@ -20,7 +20,7 @@ permissions:
 jobs:
   suite:
     name: Tests ${{ matrix.shard }}/4
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # Playwright 1.56 supports up to 24.04
     timeout-minutes: 90
     strategy:
       fail-fast: false
