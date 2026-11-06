@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611062043"></script>
-<script src="samsam-hints.js?v=202611062043"></script>
-<script src="samsam-vault.js?v=202611062043"></script>
-<script src="samsam-labels.js?v=202611062043"></script>
-<script src="samsam-taxonomy.js?v=202611062043"></script>
-<script src="samsam-coins.js?v=202611062043"></script>
-<script src="samsam-dropdown.js?v=202611062043"></script>
-<script src="samsam-add.js?v=202611062043"></script>
-<script src="samsam-chart.js?v=202611062043"></script>
-<script src="samsam-market.js?v=202611062043"></script>
+<script src="samsam-ui.js?v=202611062201"></script>
+<script src="samsam-hints.js?v=202611062201"></script>
+<script src="samsam-vault.js?v=202611062201"></script>
+<script src="samsam-labels.js?v=202611062201"></script>
+<script src="samsam-taxonomy.js?v=202611062201"></script>
+<script src="samsam-coins.js?v=202611062201"></script>
+<script src="samsam-dropdown.js?v=202611062201"></script>
+<script src="samsam-add.js?v=202611062201"></script>
+<script src="samsam-chart.js?v=202611062201"></script>
+<script src="samsam-market.js?v=202611062201"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -910,6 +910,21 @@
   .ai-reduce { color:var(--red); background:rgba(239,68,68,0.13); }
   .ai-rec .ai-t { flex:1 1 100%; }
   .analysis-meta { display:flex; flex-direction:column; gap:4px; }
+  #analysisModal .btn.ai-out:disabled { opacity:0.45; cursor:not-allowed; }
+  #analysisModal .btn.ai-out.done { color:var(--green); border-color:var(--green); }
+  #aiPrintRoot { display:none; }
+  @page aireport { size: A4 portrait; margin: 14mm; }
+  @media print {
+    body.ai-print > *:not(#aiPrintRoot) { display:none !important; }
+    body.ai-print { background:#fff !important; color:#0f172a !important; max-width:none !important; padding:0 !important; margin:0 !important; }
+    #aiPrintRoot { display:block !important; page:aireport; }
+    #aiPrintRoot .ai-print-head { display:block; margin:0 0 12px; padding-bottom:8px; border-bottom:2px solid #7c3aed; }
+    #aiPrintRoot .ai-print-head b { font-size:16pt; color:#0f172a; } #aiPrintRoot .ai-print-head span { display:block; font-size:9pt; color:#475569; margin-top:2px; }
+    #aiPrintRoot .analysis-content { --fg:#0f172a; --fg2:#475569; --bg3:#f8fafc; --border:#e2e8f0; --accent:#7c3aed; --green:#047857; --red:#b91c1c; font-size:10.5pt; color:#0f172a; }
+    #aiPrintRoot .ai-sec { break-inside:avoid-page; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    #aiPrintRoot .ai-sec h3 { break-after:avoid; }
+    #aiPrintRoot .analysis-meta { color:#475569; }
+  }
   @media(max-width:600px){
     #analysisModal { align-items:center; justify-content:center; padding:8px; }
     #analysisModal .modal { margin:0; width:100%; max-height:92vh; border-radius:14px; }
@@ -1482,6 +1497,8 @@
       <!-- filled by JS -->
     </div>
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary ai-out" id="aiCopyBtn" onclick="copyAnalysis()" disabled title="Copy the report as text — paste it into Claude or your notes"><span data-ic="file"></span><span>Copy</span></button>
+      <button class="btn btn-secondary ai-out" id="aiPdfBtn" onclick="pdfAnalysis()" disabled title="Save the report as a PDF (Print → Save as PDF)"><span data-ic="download"></span><span>PDF</span></button>
       <button class="btn btn-secondary" onclick="closeAnalysis()"><span data-ic="x"></span>Close</button>
     </div>
   </div>
@@ -1503,7 +1520,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611062043"></script>
+<script type="module" src="samsam-cloud.js?v=202611062201"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2833,6 +2850,7 @@ function aiLayout(lang) {
 }
 
 function renderAnalysisLoading() {
+  aiLast = null; aiOutButtons(false);
   document.getElementById('analysisBody').innerHTML = `
     <div class="analysis-loading">
       <div class="analysis-spinner"></div>
@@ -2842,6 +2860,7 @@ function renderAnalysisLoading() {
 }
 
 function renderAnalysisError(msg, detail) {
+  aiLast = null; aiOutButtons(false);
   document.getElementById('analysisBody').innerHTML = `
     <div class="analysis-error">
       <strong>${SamsamUI.ic('alert')}${msg}</strong>
@@ -2923,8 +2942,49 @@ function aiReportHtml(text, lang) {
   return html;
 }
 
+// The last report, for Copy / PDF
+let aiLast = null;
+function aiOutButtons(on) { ['aiCopyBtn', 'aiPdfBtn'].forEach(id => { const b = document.getElementById(id); if (b) b.disabled = !on; }); }
+function aiTitle() {
+  const ar = aiLast && aiLast.lang === 'ar';
+  return (ar ? 'تقرير الذكاء الاصطناعي — Cute Portfolio' : 'Cute Portfolio — AI Analysis Report');
+}
+function aiSubtitle() { const m = aiLast.meta; return `${m.generatedAt}${m.model ? ' · Claude (' + m.model + ')' : ''} · ${m.numCoins} positions · prices ${m.lastUpdate}`; }
+// Copy: the report as plain text (bold marks kept), with a title line — ready to paste into Claude or a note
+async function copyAnalysis() {
+  if (!aiLast) return;
+  const text = `${aiTitle()}\n${aiSubtitle()}\n\n${String(aiLast.text).trim()}\n`;
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch (_) {
+    try { const t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;opacity:0;top:0'; document.body.appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); } catch (_) {}
+  }
+  const b = document.getElementById('aiCopyBtn'), l = b.querySelector('span:last-child');
+  l.textContent = ok ? 'Copied' : 'Copy failed'; b.classList.toggle('done', ok);
+  clearTimeout(b._t); b._t = setTimeout(() => { l.textContent = 'Copy'; b.classList.remove('done'); }, 2200);
+}
+// PDF: print only the report (white page, every card), the browser's "Save as PDF"; the file is named after the date
+function pdfAnalysis() {
+  if (!aiLast) return;
+  document.getElementById('aiPrintRoot')?.remove();
+  const root = document.createElement('div'); root.id = 'aiPrintRoot';
+  const dir = aiLast.lang === 'ar' ? 'rtl' : 'ltr';
+  root.innerHTML = `<div class="ai-print-head" dir="${dir}"><b>${SamsamCoins.esc(aiTitle())}</b><span>${SamsamCoins.esc(aiSubtitle())}</span></div>` +
+    document.getElementById('analysisBody').innerHTML;
+  document.body.appendChild(root);
+  const title = document.title, d = new Date();
+  document.title = `AI Report ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  document.body.classList.add('ai-print');
+  let done = false;
+  const undo = () => { if (done) return; done = true; document.body.classList.remove('ai-print'); root.remove(); document.title = title;
+    window.removeEventListener('afterprint', undo); document.removeEventListener('pointerdown', undo, true); };
+  window.addEventListener('afterprint', undo);
+  // phones may not wait for the print sheet: undo on the next tap back on the page as well
+  setTimeout(() => { window.print(); setTimeout(() => document.addEventListener('pointerdown', undo, true), 800); }, 50);
+}
+
 function renderAnalysisReport(text, meta) {
   const lang = meta.lang || analysisLang;
+  aiLast = { text, lang, meta }; aiOutButtons(true);
   let html = '<div class="analysis-content" dir="' + (lang === 'ar' ? 'rtl' : 'ltr') + '" lang="' + lang + '">' + aiReportHtml(text, lang) + '</div>';
   html += `<div class="analysis-meta">
     <span>${SamsamUI.ic('bot')}Generated by Claude AI${meta.model ? ' (' + SamsamCoins.esc(meta.model) + ')' : ''}</span>${meta.left != null ? `<span>${SamsamUI.ic('clock')}${meta.left} report${meta.left === 1 ? '' : 's'} left today</span>` : ''}
