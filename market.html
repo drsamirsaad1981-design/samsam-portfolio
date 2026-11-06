@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611060114"></script>
-<script src="samsam-hints.js?v=202611060114"></script>
-<script src="samsam-vault.js?v=202611060114"></script>
-<script src="samsam-labels.js?v=202611060114"></script>
-<script src="samsam-taxonomy.js?v=202611060114"></script>
-<script src="samsam-coins.js?v=202611060114"></script>
-<script src="samsam-dropdown.js?v=202611060114"></script>
-<script src="samsam-add.js?v=202611060114"></script>
-<script src="samsam-market.js?v=202611060114"></script>
+<script src="samsam-ui.js?v=202611061132"></script>
+<script src="samsam-hints.js?v=202611061132"></script>
+<script src="samsam-vault.js?v=202611061132"></script>
+<script src="samsam-labels.js?v=202611061132"></script>
+<script src="samsam-taxonomy.js?v=202611061132"></script>
+<script src="samsam-coins.js?v=202611061132"></script>
+<script src="samsam-dropdown.js?v=202611061132"></script>
+<script src="samsam-add.js?v=202611061132"></script>
+<script src="samsam-market.js?v=202611061132"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -68,6 +68,8 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-vrow .mk-v { font-size: 1.6rem; }
 .mk-vrow .mk-tag { font-size: .74rem; }
 .mk-altg { margin: auto 0; padding: 6px 0; }
+.mk-tag.btc-side { color: #f7931a; } .mk-tag.alt-side { color: #60a5fa; }
+[data-theme="light"] .mk-tag.btc-side { color: #d97706; } [data-theme="light"] .mk-tag.alt-side { color: #2563eb; }
 .mk-altnote { font-size: .7rem; line-height: 1.35; color: var(--fg2); }   /* what the number means: coins beating BTC · season from 75 */
 .mk-altnote b { color: var(--fg); font-weight: 700; }   /* the gauge sits in the middle of the free space */
 .mk-li b.up { color: var(--green); } .mk-li b.down { color: var(--red); }
@@ -422,7 +424,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611060114"></script>
+<script type="module" src="samsam-cloud.js?v=202611061132"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -485,7 +487,7 @@ function paintFng(f) {
 function paintAlt(a) {
   if (!a) { document.getElementById('altL').textContent = 'Waiting for data'; return; }
   document.getElementById('altV').innerHTML = a.value + '<small>/100</small>';
-  const l = document.getElementById('altL'); l.textContent = a.label; l.style.color = a.value >= 75 ? '#3b82f6' : a.value <= 25 ? '#f7931a' : 'var(--fg2)';
+  const l = document.getElementById('altL'); l.textContent = a.label; l.style.color = ''; l.className = 'mk-tag ' + (a.value >= 50 ? 'alt-side' : 'btc-side');   // the gauge's colours: Bitcoin side orange, Altcoin side blue
   document.querySelector('#altG i').style.left = Math.max(2, Math.min(98, a.value)) + '%';
   document.getElementById('altG').setAttribute('aria-label', `Altcoin season ${a.value} of 100: ${a.label}`);
   const per = a.period || '30d', b = a.btc90 != null ? a.btc90 : a.btc30;
