@@ -671,7 +671,7 @@
       if ((ov && ov.style.display === 'flex') || /^#holdings/.test(location.hash)) return 'holdings';
       return window.cpShell && window.cpShell.cur ? window.cpShell.cur : 'home';
     }
-    var m = /^(performance|allocation|accumulation|market)\.html$/.exec(f);
+    var m = /^(performance|allocation|accumulation|market|altseason)\.html$/.exec(f);
     return m ? m[1] : null;
   }
   function navCss() {
@@ -712,7 +712,7 @@
   }
   function navPaint() {
     var bar = document.getElementById('cpBnav'); if (!bar) return;
-    var cur = navPage();
+    var cur = navPage(); if (cur === 'altseason') cur = 'market';   // Altcoin Season is part of Market
     [].forEach.call(bar.querySelectorAll('a'), function (a) { if (a.dataset.k === cur) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   }
   // Pages with the bottom bar get the main page's header: logo + "Cute Portfolio" (→ Home), and the page's icon + name under it
@@ -738,7 +738,7 @@
   function navGo(e, k) {
     var here = navPage(), onIndex = !!window.cpShell;
     if (!onIndex || e.metaKey || e.ctrlKey || e.shiftKey) return;   // a page opened on its own: a normal link
-    if (k === 'performance' || k === 'allocation' || k === 'accumulation' || k === 'market') { e.preventDefault(); window.cpShell.go(k); setTimeout(navPaint, 0); return; }
+    if (k === 'performance' || k === 'allocation' || k === 'accumulation' || k === 'market' || k === 'altseason') { e.preventDefault(); window.cpShell.go(k); setTimeout(navPaint, 0); return; }
     if (k === 'home' && window.cpShell.cur !== 'home' && here !== 'holdings') { e.preventDefault(); window.cpShell.go('home'); setTimeout(navPaint, 0); return; }
     if (k === 'holdings' && typeof window.openHoldingsView === 'function') {
       e.preventDefault();
@@ -896,7 +896,7 @@
       navCss(); document.body.classList.add('in-shell');
       document.addEventListener('click', function (e) {
         var a = e.target.closest && e.target.closest('a[href]'); if (!a || a.target === '_blank' || e.defaultPrevented) return;
-        var m = /(?:^|\/)(index|performance|allocation|accumulation|market)\.html(#[\w\/-]*)?$/.exec(a.getAttribute('href') || ''); if (!m) return;
+        var m = /(?:^|\/)(index|performance|allocation|accumulation|market|altseason)\.html(#[\w\/-]*)?$/.exec(a.getAttribute('href') || ''); if (!m) return;
         e.preventDefault();
         var k = m[1] === 'index' ? (/^#holdings/.test(m[2] || '') ? 'holdings' : 'home') : m[1];
         window.parent.cpShell.go(k);

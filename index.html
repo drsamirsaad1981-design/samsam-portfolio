@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611061132"></script>
-<script src="samsam-hints.js?v=202611061132"></script>
-<script src="samsam-vault.js?v=202611061132"></script>
-<script src="samsam-labels.js?v=202611061132"></script>
-<script src="samsam-taxonomy.js?v=202611061132"></script>
-<script src="samsam-coins.js?v=202611061132"></script>
-<script src="samsam-dropdown.js?v=202611061132"></script>
-<script src="samsam-add.js?v=202611061132"></script>
-<script src="samsam-chart.js?v=202611061132"></script>
-<script src="samsam-market.js?v=202611061132"></script>
+<script src="samsam-ui.js?v=202611061211"></script>
+<script src="samsam-hints.js?v=202611061211"></script>
+<script src="samsam-vault.js?v=202611061211"></script>
+<script src="samsam-labels.js?v=202611061211"></script>
+<script src="samsam-taxonomy.js?v=202611061211"></script>
+<script src="samsam-coins.js?v=202611061211"></script>
+<script src="samsam-dropdown.js?v=202611061211"></script>
+<script src="samsam-add.js?v=202611061211"></script>
+<script src="samsam-chart.js?v=202611061211"></script>
+<script src="samsam-market.js?v=202611061211"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1486,7 +1486,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611061132"></script>
+<script type="module" src="samsam-cloud.js?v=202611061211"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3766,8 +3766,8 @@ function renderHoldingsAssetList() {
 </style>
 <script>
 (function () {
-  const VIEWS = { performance: 'performance.html', accumulation: 'accumulation.html', market: 'market.html' };   // (Allocation lives inside Holdings)
-  const TITLES = { home: 'Cute Portfolio', performance: 'Performance — Cute Portfolio', accumulation: 'Accumulation Plan — Cute Portfolio', market: 'Market Hub — Cute Portfolio' };
+  const VIEWS = { performance: 'performance.html', accumulation: 'accumulation.html', market: 'market.html', altseason: 'altseason.html' };   // altseason: opened from Market's Altcoin Season card   // (Allocation lives inside Holdings)
+  const TITLES = { home: 'Cute Portfolio', performance: 'Performance — Cute Portfolio', accumulation: 'Accumulation Plan — Cute Portfolio', market: 'Market Hub — Cute Portfolio', altseason: 'Altcoin Season — Cute Portfolio' };
   const box = document.getElementById('cpViews'), frames = {};
   const baseTitle = document.title;
   function frame(k) {
@@ -3791,7 +3791,7 @@ function renderHoldingsAssetList() {
       history.replaceState({ hov: 'list' }, '', '#holdings');
       if (typeof applyHoldingsRoute === 'function') applyHoldingsRoute();
     }
-    const m = /^#(performance|accumulation|market)$/.exec(location.hash);
+    const m = /^#(performance|accumulation|market|altseason)$/.exec(location.hash);
     if (m) return show(m[1]);
     if (/^#holdings/.test(location.hash)) {   // Holdings opens on top; the tab you came from stays underneath
       const ret = history.state && history.state.ret;
@@ -3824,7 +3824,7 @@ function renderHoldingsAssetList() {
       applyHoldingsRoute(); if (window.SamsamUI) SamsamUI.navPaint();
     },
     // open the other tabs quietly in the background, one after another
-    preload() { Object.keys(VIEWS).forEach((k, i) => setTimeout(() => frame(k), i * 1500)); },
+    preload() { Object.keys(VIEWS).filter(k => k !== 'altseason').forEach((k, i) => setTimeout(() => frame(k), i * 1500)); },   // Altcoin Season opens when asked
   };
   window.addEventListener('popstate', route);
   // closing Holdings (Home on the bar, its Back) shows whatever is under it
@@ -3834,7 +3834,7 @@ function renderHoldingsAssetList() {
   document.addEventListener('click', e => {
     const a = e.target.closest && e.target.closest('a[href]');
     if (!a || a.target === '_blank' || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey) return;
-    const m = /(?:^|\/)(performance|allocation|accumulation|market)\.html$/.exec(a.getAttribute('href') || '');
+    const m = /(?:^|\/)(performance|allocation|accumulation|market|altseason)\.html$/.exec(a.getAttribute('href') || '');
     if (!m) return;
     e.preventDefault(); shell.go(m[1]);
   });

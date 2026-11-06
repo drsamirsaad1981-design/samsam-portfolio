@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611061132"></script>
-<script src="samsam-hints.js?v=202611061132"></script>
-<script src="samsam-vault.js?v=202611061132"></script>
-<script src="samsam-labels.js?v=202611061132"></script>
-<script src="samsam-taxonomy.js?v=202611061132"></script>
-<script src="samsam-coins.js?v=202611061132"></script>
-<script src="samsam-dropdown.js?v=202611061132"></script>
-<script src="samsam-add.js?v=202611061132"></script>
-<script src="samsam-market.js?v=202611061132"></script>
+<script src="samsam-ui.js?v=202611061211"></script>
+<script src="samsam-hints.js?v=202611061211"></script>
+<script src="samsam-vault.js?v=202611061211"></script>
+<script src="samsam-labels.js?v=202611061211"></script>
+<script src="samsam-taxonomy.js?v=202611061211"></script>
+<script src="samsam-coins.js?v=202611061211"></script>
+<script src="samsam-dropdown.js?v=202611061211"></script>
+<script src="samsam-add.js?v=202611061211"></script>
+<script src="samsam-market.js?v=202611061211"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -67,6 +67,11 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-vrow { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 8px; row-gap: 2px; }
 .mk-vrow .mk-v { font-size: 1.6rem; }
 .mk-vrow .mk-tag { font-size: .74rem; }
+.mk-go { text-decoration: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color .15s, transform .15s; }
+@media (hover: hover) { .mk-go:hover { border-color: rgba(124,58,237,.45); } }
+.mk-go:active { transform: scale(.985); }
+.mk-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mk-chev { margin-left: auto; display: inline-flex; color: var(--fg2); }
 .mk-altg { margin: auto 0; padding: 6px 0; }
 .mk-tag.btc-side { color: #f7931a; } .mk-tag.alt-side { color: #60a5fa; }
 [data-theme="light"] .mk-tag.btc-side { color: #d97706; } [data-theme="light"] .mk-tag.alt-side { color: #2563eb; }
@@ -353,8 +358,8 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
         <div class="mk-li">Last week <b id="fngWeek">—</b></div>
       </div>
     </div>
-    <div class="mk-card" id="cardAlt">
-      <div class="mk-k"><span data-ic="activity"></span>Altcoin Season</div>
+    <a class="mk-card mk-go" id="cardAlt" href="./altseason.html" aria-label="Altcoin Season — open the full page">
+      <div class="mk-k"><span data-ic="activity"></span>Altcoin Season<span class="mk-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></div>
       <div class="mk-vrow"><div class="mk-v" id="altV">—<small>/100</small></div><div class="mk-tag" id="altL">—</div></div>
       <div class="mk-altnote" id="altNote">Altcoin Season starts at 75.</div>
       <div class="mk-altg"><div class="mk-gauge alt" role="img" id="altG" aria-label="Altcoin season gauge"><i style="left:50%"></i></div>
@@ -363,7 +368,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
         <div class="mk-li" id="altN">Beating BTC <b>—</b></div>
         <div class="mk-li" id="altB">BTC (90 days) <b>—</b></div>
       </div>
-    </div>
+    </a>
     <div class="mk-card" id="cardDom">
       <div class="mk-k"><span data-ic="bar"></span>Market Dominance</div>
       <div class="mk-domw">
@@ -424,7 +429,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611061132"></script>
+<script type="module" src="samsam-cloud.js?v=202611061211"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';

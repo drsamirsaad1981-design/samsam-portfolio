@@ -24,7 +24,7 @@ const OUT = path.resolve(process.argv[2] || 'out', 'm');
 const FILE = path.join(OUT, 'market.json');
 const HIST = path.join(OUT, 'hist.json');
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const DAY = 864e5, KEEP_DAYS = 100, PERIOD = 90;
+const DAY = 864e5, PERIOD = 90, DEEP = 460, KEEP_DAYS = DEEP + 2;   // DEEP: a year of the 90-day index needs ~455 days of prices
 const histBudget = Date.now() + (process.env.CG_FAST ? 20e3 : 4 * 60e3);   // history filling: at most ~4 minutes a run (the job has 20)
 const API = process.env.CG_API || 'https://api.coingecko.com/api/v3';
 const BN = process.env.BN_API || 'https://data-api.binance.vision/api/v3';
@@ -95,7 +95,7 @@ async function main() {
   if (a.length) { snap.fng = { value: +a[0].value, label: a[0].value_classification, prev: a[1] ? +a[1].value : null, week: a[7] ? +a[7].value : null }; snap.parts.fng = now; log('fng', snap.fng.value); }
   else log('fng: no answer, kept the last one');
 
-  try { const alt = await altSeason(all); if (alt) { snap.alt = alt; snap.parts.alt = now; } else if (old.alt) snap.alt = old.alt; }
+  try { const alt = await altSeason(all, snap.global); if (alt) { snap.alt = alt; snap.parts.alt = now; } else if (old.alt) snap.alt = old.alt; }
   catch (e) { log('alt season:', e.message); if (old.alt) snap.alt = old.alt; }
 
   if (!snap.top.length && !snap.global) { log('nothing to save yet'); return; }
@@ -181,7 +181,26 @@ async function links(top) {
   log('wrote', FILE_L);
 }
 // ── Altcoin Season, 90 days, top 100 (no stablecoins / wrapped / staked) ──
-async function altSeason(all) {
+// Daily prices (m/hist.json) go back DEEP days, so the Altcoin Season page can draw a year of the index (each day needs
+// the price 90 days before it). The app's own coins (samsam-coins.js → CG_IDS) are kept too — not counted in the index,
+// only so the page can show how your coins did against BTC.
+function appCoins() {
+  const out = {};
+  try {
+    const src = fs.readFileSync(path.join(ROOT, 'samsam-coins.js'), 'utf8'), m = src.match(/var CG_IDS = \{([\s\S]*?)\};/);
+    if (m) for (const x of m[1].matchAll(/"([^"]+)"\s*:\s*"([a-z0-9-]+)"/g)) out[x[2]] = x[1].toUpperCase();
+  } catch (_) {}
+  return out;   // { coingeckoId: SYM }
+}
+// today's price for a coin outside the market list: the newest hour of its file from the price job (p/<id>.json)
+function lastPrice(id) {
+  try {
+    const j = JSON.parse(fs.readFileSync(path.join(OUT, '..', 'p', id + '.json'), 'utf8'));
+    for (let i = j.p.length - 1; i >= 0; i--) if (j.p[i] > 0) return Date.now() - (j.t0 + i * j.step) < 2 * DAY ? j.p[i] : null;
+  } catch (_) {}
+  return null;
+}
+async function altSeason(all, glob) {
   if (!all.length) return null;
   const M = appMarket();
   const btc = all.find(c => c.id === 'bitcoin');
@@ -191,64 +210,117 @@ async function altSeason(all) {
   let hist = {};
   try { hist = JSON.parse(fs.readFileSync(HIST, 'utf8')); } catch (_) {}
   const ids = [btc, ...alts].map(c => c.id);
+  const mineSym = appCoins();
+  const extras = Object.keys(mineSym).filter(id => !ids.includes(id));
   const put = (id, day, v) => { if (!(v > 0)) return; const h = hist[id] || (hist[id] = { d: {} }); h.d[day] = +(+v).toPrecision(8); };
+  const byId = Object.fromEntries(all.map(c => [c.id, c]));
   for (const c of [btc, ...alts]) put(c.id, today, c.price);                       // today's price for everyone
-  // coins without 90 days yet — 1) Binance daily candles (fast)
-  const byId = Object.fromEntries([btc, ...alts].map(c => [c.id, c]));
-  // (Binance coins saved before the daily-open fix are read once more, so every coin is priced at the same hour as BTC)
-  let need = ids.filter(id => !(hist[id] && hist[id].full && (hist[id].src !== 'binance' || hist[id].open)));
-  log('alt season:', need.length, 'coins still need their 90-day history');
+  for (const id of extras) put(id, today, byId[id] ? byId[id].price : lastPrice(id));
+  const sym = id => (byId[id] && byId[id].sym) || mineSym[id] || '';
+  const price = id => (byId[id] && byId[id].price) || (hist[id] && hist[id].d[today]) || 0;
+  // coins whose history doesn't reach DEEP days yet (the index's coins first) — 1) Binance daily candles (fast)
+  const ready = id => hist[id] && hist[id].deep && (hist[id].src !== 'binance' || hist[id].open);
+  let need = ids.concat(extras).filter(id => !ready(id));
+  log('alt season:', need.length, 'coins still need their history');
   let bn = 0;
   for (const id of need) {
-    const c = byId[id], pair = c.sym.replace(/[^A-Z0-9]/g, '') + 'USDT';
+    const pair = sym(id).replace(/[^A-Z0-9]/g, '') + 'USDT', now = price(id);
+    if (!pair || pair === 'USDT') continue;
     try {
-      const r = await fetch(`${BN}/klines?symbol=${pair}&interval=1d&limit=${PERIOD + 3}`);
+      const r = await fetch(`${BN}/klines?symbol=${pair}&interval=1d&limit=${DEEP + 3}`);
       if (r.ok) {
         const k = await r.json();
         const last = k.length && +k[k.length - 1][4];
         // same coin (price within 5% of CoinGecko's) and at least 90 days of candles
-        if (last > 0 && c.price > 0 && Math.abs(last / c.price - 1) <= 0.05 && k.length >= PERIOD) {
+        if (last > 0 && now > 0 && Math.abs(last / now - 1) <= 0.05 && k.length >= PERIOD) {
           for (const row of k) { const day = Math.floor(row[0] / DAY); if (day < today) put(id, day, +row[1]); }   // the day's opening price (00:00 UTC) — the same moment as CoinGecko's daily point (the close is the next day's)
-          hist[id].full = true; hist[id].src = 'binance'; hist[id].open = true; bn++;
+          Object.assign(hist[id], { full: true, deep: true, src: 'binance', open: true }); bn++;
         }
       }
     } catch (_) {}
     await sleep(120);
   }
-  // 2) CoinGecko for the rest, paced for its free limit; a refusal waits a minute once, then the rest is next run
-  need = ids.filter(id => !(hist[id] && hist[id].full && (hist[id].src !== 'binance' || hist[id].open)));
+  // 2) CoinGecko for the rest (its free API gives up to a year), paced for its free limit; a refusal waits a minute
+  //    once, then the rest is next run
+  need = ids.concat(extras).filter(id => !ready(id));
   log('alt season:', bn, 'from Binance,', need.length, 'left for CoinGecko');
   let waited = false;
   for (const id of need) {
     if (Date.now() > histBudget) { log('alt season: out of time — the rest next run'); break; }
-    let r; try { r = await fetch(`${API}/coins/${id}/market_chart?vs_currency=usd&days=${PERIOD + 2}&interval=daily`, { headers: { accept: 'application/json' } }); } catch (_) { r = null; }
+    let r; try { r = await fetch(`${API}/coins/${id}/market_chart?vs_currency=usd&days=365&interval=daily`, { headers: { accept: 'application/json' } }); } catch (_) { r = null; }
     if (!r || r.status === 429) {
       if (waited || Date.now() + 60e3 > histBudget) { log('alt season: CoinGecko busy — the rest next run'); break; }
       waited = true; await sleep(60e3); continue;
     }
     if (r.ok) { const j = await r.json(); for (const [t, v] of (j.prices || [])) if (Math.floor(t / DAY) < today) put(id, Math.floor(t / DAY), v); }
-    { const h = hist[id] || (hist[id] = { d: {} }); h.full = true; h.src = 'coingecko'; }   // a 404 also counts — don't ask again
+    { const h = hist[id] || (hist[id] = { d: {} }); Object.assign(h, { full: true, deep: true, src: 'coingecko' }); }   // a 404 also counts — don't ask again
     await sleep(13e3);
   }
-  // keep 100 days, only coins still in the top list
+  // keep DEEP days, only coins still in the top list or the app's own
   for (const id of Object.keys(hist)) {
-    if (!ids.includes(id)) { delete hist[id]; continue; }
+    if (!ids.includes(id) && !extras.includes(id)) { delete hist[id]; continue; }
     for (const k of Object.keys(hist[id].d)) if (+k < today - KEEP_DAYS) delete hist[id].d[k];
   }
   fs.writeFileSync(HIST, JSON.stringify(hist));
+  try { altPage(hist, btc, alts, extras, mineSym, today, glob); } catch (e) { log('alt page:', e.message); }
   // change over 90 days: today's price vs the price 90 days ago (a day either side if that day is missing)
-  const ch = id => {
-    const d = hist[id] && hist[id].d; if (!d || !d[today]) return null;
-    const then = d[today - PERIOD] || d[today - PERIOD - 1] || d[today - PERIOD + 1];
-    return then ? (d[today] / then - 1) * 100 : null;
-  };
+  const ch = id => chg(hist, id, today, PERIOD);
   const b90 = ch('bitcoin');
   const have = alts.map(c => ch(c.id)).filter(v => v != null);
   if (b90 == null || have.length < 50) { log('alt season: warming up', have.length, '/', alts.length); return { ready: false, have: have.length, n: alts.length, period: '90d' }; }
   const beat = have.filter(v => v > b90).length, value = Math.round(beat / have.length * 100);
   log('alt season 90d:', value, `(${beat}/${have.length})`);
-  return { value, beat, n: have.length, btc90: +b90.toFixed(2), period: '90d', ready: have.length >= alts.length * 0.9, have: have.length,
-    label: value >= 75 ? 'Altcoin Season' : value <= 25 ? 'Bitcoin Season' : value >= 50 ? 'Leaning Altcoins' : 'Leaning Bitcoin' };
+  return { value, beat, n: have.length, btc90: +b90.toFixed(2), period: '90d', ready: have.length >= alts.length * 0.9, have: have.length, label: seasonLabel(value) };
+}
+const seasonLabel = v => v >= 75 ? 'Altcoin Season' : v <= 25 ? 'Bitcoin Season' : v >= 50 ? 'Leaning Altcoins' : 'Leaning Bitcoin';
+// % change of a coin from `per` days before `day` to `day` (that day's price exactly; the earlier one a day either side if missing)
+function chg(hist, id, day, per) {
+  const d = hist[id] && hist[id].d; if (!d || !d[day]) return null;
+  const t = day - per, then = d[t] || d[t - 1] || d[t + 1];
+  return then ? (d[day] / then - 1) * 100 : null;
+}
+
+// ── The Altcoin Season page (m/alt.json) ──
+// { updated, today, idx: [[day, value, coins, btc90], …] a year of the 90-day index, live: { day: [value, coins, btc90] }
+//   (what was saved on that day with that day's top 100 — used over the worked-out value), ethbtc: [[day, ratio], …],
+//   dom: { day: btcDominance } (saved from today on), breadth: { 7: {beat, n, btc, med}, 30: …, 90: … },
+//   btc: [7d, 30d, 90d], coins: [{ id, sym, name, img, rank, p: [7d, 30d, 90d] }] the index's 100 coins,
+//   mine: { id: [7d, 30d, 90d] } the app's own coins outside the top 100 }
+// A past day is worked out with today's top 100 (CoinMarketCap uses each day's own list), so old days can differ a little.
+const ALT_FILE = path.join(OUT, 'alt.json');
+function altPage(hist, btc, alts, extras, mineSym, today, glob) {
+  let old = {}; try { old = JSON.parse(fs.readFileSync(ALT_FILE, 'utf8')); } catch (_) {}
+  const r2 = v => v == null ? null : Math.round(v * 100) / 100;
+  const at = (day, per) => {
+    const b = chg(hist, 'bitcoin', day, per); if (b == null) return null;
+    const v = alts.map(c => chg(hist, c.id, day, per)).filter(x => x != null);
+    if (v.length < 50) return null;
+    const s = v.slice().sort((x, y) => x - y), med = s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+    return { beat: v.filter(x => x > b).length, n: v.length, btc: r2(b), med: r2(med) };
+  };
+  const idx = [];
+  for (let day = today - 365; day <= today; day++) { const a = at(day, PERIOD); if (a) idx.push([day, Math.round(a.beat / a.n * 100), a.n, a.btc]); }
+  const live = old.live || {}, now = at(today, PERIOD);
+  if (now) live[today] = [Math.round(now.beat / now.n * 100), now.n, now.btc];
+  for (const k of Object.keys(live)) if (+k < today - 400) delete live[k];
+  const ethbtc = [];
+  for (let day = today - 365; day <= today; day++) {
+    const e = hist.ethereum && hist.ethereum.d[day], b = hist.bitcoin && hist.bitcoin.d[day];
+    if (e > 0 && b > 0) ethbtc.push([day, +(e / b).toPrecision(5)]);
+  }
+  const dom = old.dom || {};
+  if (glob && glob.dom && glob.dom.btc > 0) dom[today] = r2(glob.dom.btc);
+  for (const k of Object.keys(dom)) if (+k < today - 400) delete dom[k];
+  const three = id => [7, 30, PERIOD].map(p => r2(chg(hist, id, today, p)));
+  const page = {
+    updated: new Date().toISOString(), today, idx, live, ethbtc, dom,
+    breadth: { 7: at(today, 7), 30: at(today, 30), 90: now },
+    btc: three('bitcoin'),
+    coins: alts.map(c => ({ id: c.id, sym: c.sym, name: c.name, img: c.img, rank: c.rank, p: three(c.id) })),
+    mine: Object.fromEntries(extras.map(id => [id, three(id)]).filter(([, p]) => p.some(v => v != null))),
+  };
+  fs.writeFileSync(ALT_FILE, JSON.stringify(page));
+  log('alt page:', idx.length, 'days of the index,', Object.keys(page.mine).length, 'of your coins outside the top 100');
 }
 
 main().catch(e => { console.error(e); process.exit(0); });   // never fail the price job

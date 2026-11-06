@@ -142,6 +142,16 @@
     alt90: function () {
       return snapshot().then(function (j) { var a = j.alt; return a && a.ready && a.value != null ? a : null; }, function () { return null; });
     },
+    // The Altcoin Season page's data (m/alt.json, written by GitHub with each snapshot): a year of the index, ETH/BTC,
+    // the top 100 coins' 7 / 30 / 90-day change. Kept in this browser for 10 minutes; the last copy is used offline.
+    altPage: function (force) {
+      var k = 'samsam_mkt_altpage', c = null;
+      try { c = JSON.parse(localStorage.getItem(k)); } catch (_) {}
+      if (c && c.data && !force && Date.now() - c.t < 10 * 60e3) return Promise.resolve(c.data);
+      return fetch(SNAP.replace(/market\.json$/, 'alt.json'), { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) { if (!j || !j.updated) throw new Error('No data'); try { localStorage.setItem(k, JSON.stringify({ t: Date.now(), data: j })); } catch (_) {} return j; },
+          function (e) { if (c && c.data) return c.data; throw e; });
+    },
     // first paint: whatever this browser has, else the GitHub snapshot — no CoinGecko call
     peek: function () {
       var g = get('global'), f = get('fng'), t = get('top');
