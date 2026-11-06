@@ -126,7 +126,7 @@ async function links(top) {
   const FILE_L = path.join(OUT, 'links.json');
   let old = {}; try { old = JSON.parse(fs.readFileSync(FILE_L, 'utf8')); } catch (_) {}
   const out = { updated: new Date().toISOString(), cmc: old.cmc || {}, cc: old.cc || {}, fut: old.fut || [], ccDay: old.ccDay || 0, ccMiss: old.ccMiss || {} };
-  const today = Math.floor(Date.now() / 864e5), fullCc = out.ccDay !== today;   // the whole list once a day; in between only coins not looked up today
+  const CC_V = 2, today = Math.floor(Date.now() / 864e5), fullCc = out.ccDay !== today || old.ccV !== CC_V;   // CC_V: bumped when the matching rules change → a fresh pass   // the whole list once a day; in between only coins not looked up today
   // CoinMarketCap: 3 pages of 500
   const cmc = {};
   let got = 0;
@@ -158,9 +158,13 @@ async function links(top) {
   const norm = x => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\b(token|coin|network|protocol|the)\b/g, '').replace(/[^a-z0-9]/g, '');
   const slugOf = x => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   // the same coin = same ticker AND (CoinCodex page named like its CoinGecko id, or the same name) — never just a ticker
-  const sameCoin = (x, S, id, nm) => x && /^[a-z0-9][a-z0-9-]{0,99}$/.test(x.slug || '') && !x.not_trading_anymore
-    && String(x.display_symbol || x.symbol || '').toUpperCase() === S
-    && (x.slug === id || (nm && norm(x.name) === nm) || near(norm(x.name), nm));
+  // …or the same ticker with a market cap close to CoinGecko's (BNB = "Binance Coin"), or the page named exactly like the
+  // CoinGecko id with the same name even under another ticker (Pi Network is "IOU" on CoinCodex)
+  const sameCoin = (x, S, id, nm, cap) => x && /^[a-z0-9][a-z0-9-]{0,99}$/.test(x.slug || '') && !x.not_trading_anymore && (
+    (String(x.display_symbol || x.symbol || '').toUpperCase() === S
+      && (x.slug === id || x.slug.replace(/-/g, '') === id.replace(/-/g, '') || (nm && norm(x.name) === nm) || near(norm(x.name), nm)
+        || (cap > 1e7 && mc(x) > 0 && mc(x) / cap > 0.5 && mc(x) / cap < 2)))
+    || (x.slug === id && nm && norm(x.name) === nm));
   // "Hyperliquid" ~ "Hyperliquid HYPE" — one name starts the other and covers most of it (never "Pi" ~ "Pi Trump")
   const near = (a, b) => { const [s, l] = a.length < b.length ? [a, b] : [b, a]; return s.length >= 5 && l.startsWith(s) && s.length / l.length >= 0.6; };
   const ccRows = async q => { const j = await get(`${CC_API}?${q}&limit=1000`, 2); return Array.isArray(j && j.data) ? j.data : []; };
@@ -172,14 +176,14 @@ async function links(top) {
     const list = (await ccRows('select_bysymbol=' + syms.slice(i, i + 8).map(encodeURIComponent).join(','))).concat(await ccRows('select_byslug=' + guesses.map(encodeURIComponent).join(',')));
     for (const [id, w] of group) {
       const S = String(w.sym).toUpperCase(), nm = norm(w.name);
-      const ok = list.filter(x => sameCoin(x, S, id, nm)).sort((a, b) => (b.slug === id) - (a.slug === id) || mc(b) - mc(a));
+      const ok = list.filter(x => sameCoin(x, S, id, nm, +w.mcap || 0)).sort((a, b) => (b.slug === id) - (a.slug === id) || mc(b) - mc(a));
       if (ok[0]) { cc[id] = ok[0].slug; found++; }
     }
     await sleep(700);
   }
   if (fullCc) {
     if (found < 30 && out.cc && Object.keys(out.cc).length) log('links: CoinCodex looks down, kept the last list');
-    else { out.cc = cc; out.ccDay = today; out.ccMiss = {}; }
+    else { out.cc = cc; out.ccDay = today; out.ccMiss = {}; out.ccV = CC_V; }
   } else Object.assign(out.cc, cc);
   for (const id of want.keys()) if (!cc[id]) out.ccMiss[id] = today;   // no page — not asked again until tomorrow
   log('links: CoinCodex', found, 'of', want.size, fullCc ? '(daily pass)' : '(new coins)');
