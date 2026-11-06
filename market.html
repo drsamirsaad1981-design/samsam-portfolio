@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611061658"></script>
-<script src="samsam-hints.js?v=202611061658"></script>
-<script src="samsam-vault.js?v=202611061658"></script>
-<script src="samsam-labels.js?v=202611061658"></script>
-<script src="samsam-taxonomy.js?v=202611061658"></script>
-<script src="samsam-coins.js?v=202611061658"></script>
-<script src="samsam-dropdown.js?v=202611061658"></script>
-<script src="samsam-add.js?v=202611061658"></script>
-<script src="samsam-market.js?v=202611061658"></script>
+<script src="samsam-ui.js?v=202611061741"></script>
+<script src="samsam-hints.js?v=202611061741"></script>
+<script src="samsam-vault.js?v=202611061741"></script>
+<script src="samsam-labels.js?v=202611061741"></script>
+<script src="samsam-taxonomy.js?v=202611061741"></script>
+<script src="samsam-coins.js?v=202611061741"></script>
+<script src="samsam-dropdown.js?v=202611061741"></script>
+<script src="samsam-add.js?v=202611061741"></script>
+<script src="samsam-market.js?v=202611061741"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -168,6 +168,18 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-tabs button { min-width: 0; white-space: nowrap; }
 @media (max-width: 759px) { .mk-own-v + .nm { display: none; } .mk-tabs .pf-in { display: none; } .mk-tabs button { font-size: .8rem; padding: 0 4px; } .mk-tabs button [data-ic] { margin-right: 0; } .mk-tabs .n { margin-left: 4px; padding: 1px 6px; } }
 .mk-own-v { color: var(--fg); font-weight: 700; }
+.mk-list { position: relative; }
+.mk-tchev { display: inline-flex; margin-left: 4px; opacity: .7; transition: transform .2s; }
+#tabTop[aria-expanded="true"] .mk-tchev { transform: rotate(180deg); }
+.mk-topmenu { position: absolute; z-index: 30; top: 50px; left: 4px; min-width: 150px; padding: 6px; border-radius: 12px; background: var(--card-solid, var(--card)); border: 1px solid var(--border); box-shadow: 0 10px 28px rgba(0,0,0,.25); display: grid; gap: 2px; }
+.mk-topmenu[hidden] { display: none; }
+.mk-topmenu button { all: unset; box-sizing: border-box; padding: 9px 12px; border-radius: 8px; font-size: .84rem; font-weight: 700; color: var(--fg); cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+.mk-topmenu button[aria-checked="true"] { background: rgba(124,58,237,.16); color: #7c3aed; }
+:root:not([data-theme="light"]) .mk-topmenu button[aria-checked="true"] { color: #c4b5fd; } :root[data-theme="light"] .mk-topmenu button[aria-checked="true"] { color: #6d28d9; }
+.mk-topmenu button[aria-checked="true"]::after { content: "✓"; }
+@media (hover: hover) { .mk-topmenu button:hover { background: var(--bg3); } }
+.mk-topmenu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mk-morerows { height: 40px; display: flex; align-items: center; justify-content: center; font-size: .74rem; color: var(--fg2); }
 .mk-tabs .n { margin-left: 6px; font-size: .7rem; padding: 1px 7px; border-radius: 9px; background: rgba(124,58,237,.18); color: #a78bfa; }
 [data-theme="light"] .mk-tabs .n { color: #6d28d9; }
 .mk-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
@@ -438,11 +450,15 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 
   <section class="mk-list" aria-label="Market watchlist">
     <div class="mk-tabs" role="tablist">
-      <button type="button" role="tab" id="tabTop" aria-selected="true" onclick="setMode('top')"><span data-ic="bar"></span>Top 100</button>
+      <button type="button" role="tab" id="tabTop" aria-selected="true" aria-haspopup="menu" aria-expanded="false" onclick="topTab(event)"><span data-ic="bar"></span><span id="topLbl">Top 100</span><span class="mk-tchev" aria-hidden="true"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
       <button type="button" role="tab" id="tabWatch" aria-selected="false" onclick="setMode('watch')"><span data-ic="star"></span>Watchlist<span class="n" id="watchN">0</span></button>
       <button type="button" role="tab" id="tabPf" aria-selected="false" onclick="setMode('pf')"><span data-ic="briefcase"></span><span class="pf-in">In </span>Portfolio<span class="n" id="pfN">0</span></button>
     </div>
+    <div class="mk-topmenu" id="topMenu" role="menu" aria-label="How many coins" hidden>
+      <button type="button" role="menuitemradio" data-n="100">Top 100</button><button type="button" role="menuitemradio" data-n="200">Top 200</button><button type="button" role="menuitemradio" data-n="300">Top 300</button><button type="button" role="menuitemradio" data-n="400">Top 400</button><button type="button" role="menuitemradio" data-n="500">Top 500</button>
+    </div>
     <div class="mk-note" id="mkStable" role="note"></div>
+    <div class="mk-note mk-bignote" id="mkBig" role="note" hidden></div>
     <div class="mk-tools">
       <div class="ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo data-ic-size="16"></span><input type="search" id="mkSearch" placeholder="Search coin…" autocomplete="off" oninput="onSearch()" aria-label="Search coin"></div>
       <div class="mk-chips" role="group" aria-label="Filter">
@@ -473,10 +489,13 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611061658"></script>
+<script type="module" src="samsam-cloud.js?v=202611061741"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
+// Top 100 … 500: the first 150 coins come live (CoinGecko, every 3 min); 101–500 from GitHub's file (every ~30 min)
+let topN = 100; try { const n = +localStorage.getItem('samsam_mkt_topn'); if ([100, 200, 300, 400, 500].includes(n)) topN = n; } catch (_) {}
+let bigRows = [], bigT = 0, bigBusy = false, shownN = 100;
 let topRows = [], watchRows = [], pfExtra = [], lastT = 0, warn = '';
 let state = null;   // your portfolio (from the cloud), for "In portfolio" / "In plan" and the watchlist
 let searchSeq = 0, searchTimer = null, moreRows = [], moreMsg = '';
@@ -659,8 +678,8 @@ async function loadPf(force) {
   pfBusy = false; status(); render();
 }
 function rowsNow() {
-  // Top 100: stablecoins left out (unless you show them), so it's 100 coins that move; ranks stay the real ones
-  let rows = mode === 'top' ? topRows.filter(r => showStable || !M.isStable(r)).slice(0, 100)
+  // Top 100…500: stablecoins left out (unless you show them), so it's N coins that move; ranks stay the real ones
+  let rows = mode === 'top' ? topList()
     : mode === 'pf' ? pfAll().filter(r => showStable || !M.isStable(r)) : watchRows.slice();
   if (mode === 'watch') {   // coins CoinGecko didn't return (yet) still show, from what was saved
     const have = new Set(rows.map(r => r.id));
@@ -673,6 +692,41 @@ function rowsNow() {
   rows.sort((a, b) => k === 'rank' ? (v(a) - v(b)) * sortDir : (v(b) - v(a)) * sortDir);
   return rows;
 }
+function topList() {
+  let list = topRows;
+  if (topN > 100 && bigRows.length) { const have = new Set(topRows.map(r => r.id)); list = topRows.concat(bigRows.filter(r => !have.has(r.id))); }   // live rows win
+  return list.filter(r => showStable || !M.isStable(r)).slice(0, topN);
+}
+function loadBig(force) {
+  if (topN <= 100 || bigBusy) return;
+  bigBusy = true;
+  M.top500(force).then(j => { bigRows = fix(j.top.map(r => ({ ...r }))); bigT = j.t; bigBusy = false; render();
+    M.binanceTopUp(bigRows).then(n => { if (n) { bigT = Date.now(); render(); } });   // fresher prices from Binance for the coins it trades
+  }, () => { bigBusy = false; render(); });
+}
+function paintBig() {
+  const el = document.getElementById('mkBig'); if (!el) return;
+  el.hidden = !(mode === 'top' && topN > 100);
+  if (el.hidden) return;
+  el.innerHTML = bigRows.length ? `${ic('clock', { solo: true, size: 13 })}<span>Coins 101–${topN}: prices from ${ago(bigT)}${bigRows.some(r => r.bn) ? ' (Binance)' : ''} · the first 100 are live</span>`
+    : `${ic('clock', { solo: true, size: 13 })}<span>Loading coins 101–${topN}…</span>`;
+}
+function topTab(e) {
+  if (mode !== 'top') { setMode('top'); return; }
+  const m = document.getElementById('topMenu'), open = m.hidden;
+  m.hidden = !open; document.getElementById('tabTop').setAttribute('aria-expanded', String(open));
+  m.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(+b.dataset.n === topN)));
+  if (open) (m.querySelector('[aria-checked="true"]') || m.querySelector('button')).focus();
+}
+function setTopN(n) {
+  topN = n; shownN = 100; try { localStorage.setItem('samsam_mkt_topn', String(n)); } catch (_) {}
+  document.getElementById('topLbl').textContent = 'Top ' + n;
+  document.getElementById('topMenu').hidden = true; document.getElementById('tabTop').setAttribute('aria-expanded', 'false');
+  loadBig(false); render();
+}
+document.getElementById('topMenu').addEventListener('click', e => { const b = e.target.closest('button[data-n]'); if (b) setTopN(+b.dataset.n); });
+document.addEventListener('click', e => { const m = document.getElementById('topMenu'); if (!m.hidden && !e.target.closest('#topMenu') && !e.target.closest('#tabTop')) { m.hidden = true; document.getElementById('tabTop').setAttribute('aria-expanded', 'false'); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { const m = document.getElementById('topMenu'); if (!m.hidden) { m.hidden = true; document.getElementById('tabTop').setAttribute('aria-expanded', 'false'); document.getElementById('tabTop').focus(); } } });
 function logo(c) {
   return c.img && /^https:\/\//.test(c.img)
     ? `<img src="${E(c.img)}" alt="" width="36" height="36" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'mk-fb',textContent:'${E(c.sym.slice(0, 3))}'}))">`
@@ -755,7 +809,7 @@ function render() {
   document.getElementById('pfN').textContent = pfCoins().length;
   const ha = document.getElementById('hAsset'), pfm = mode === 'pf';   // In Portfolio: this column sorts by what your coins are worth
   ha.dataset.s = pfm ? 'val' : 'mcap'; document.getElementById('hAssetM').textContent = pfm ? 'Value' : 'Market Cap'; document.getElementById('hAssetD').textContent = pfm ? 'Asset · Value' : 'Asset';
-  paintStableNote();
+  paintStableNote(); paintBig();
   document.querySelectorAll('.mk-head [data-s]').forEach(b => { if (b.dataset.s === sortKey) { b.setAttribute('aria-sort', sortDir === 1 ? (sortKey === 'rank' ? 'ascending' : 'descending') : (sortKey === 'rank' ? 'descending' : 'ascending')); b.dataset.arrow = sortDir === 1 ? '↓' : '↑'; } else b.removeAttribute('aria-sort'); });
   if (mode === 'top' && !topRows.length) { box.innerHTML = warn ? `<div class="mk-empty">${E(warn)}</div>` : '<div class="mk-skel"></div>'.repeat(8); renderMore(); return; }
   const rows = rowsNow();
@@ -764,8 +818,15 @@ function render() {
       ? `<div class="mk-empty">${ic('briefcase')}No coins in your portfolio yet.</div>`
       : mode === 'watch' && !watchlist().length
       ? `<div class="mk-empty">${ic('star')}Your Watchlist is empty.<br>Tap the star next to any coin to follow it here, or use <b>Add Custom Coin</b> for coins outside the Top 100.</div>`
-      : `<div class="mk-empty">No coin in ${mode === 'top' ? 'the Top 100' : mode === 'pf' ? 'your portfolio' : 'the Watchlist'} matches${query ? ' “' + E(query) + '”' : ''}${filter !== 'all' ? ' with this filter' : ''}.${query.length >= 2 ? ' See “More on CoinGecko” below.' : ''}</div>`;
-  } else { box.innerHTML = rows.map(rowHtml).join(''); fitNames(); }
+      : `<div class="mk-empty">No coin in ${mode === 'top' ? 'the Top ' + topN : mode === 'pf' ? 'your portfolio' : 'the Watchlist'} matches${query ? ' “' + E(query) + '”' : ''}${filter !== 'all' ? ' with this filter' : ''}.${query.length >= 2 ? ' See “More on CoinGecko” below.' : ''}</div>`;
+  } else {
+    // long lists: 100 rows at a time, the next 100 when you scroll near the end
+    const show = rows.slice(0, shownN);
+    box.innerHTML = show.map(rowHtml).join('') + (rows.length > shownN ? `<div class="mk-morerows" id="mkMoreRows">Loading more… (${shownN} of ${rows.length})</div>` : '');
+    fitNames();
+    const s = document.getElementById('mkMoreRows');
+    if (s && 'IntersectionObserver' in window) { const io = new IntersectionObserver(en => { if (en.some(x => x.isIntersecting)) { io.disconnect(); shownN += 100; render(); } }, { rootMargin: '600px' }); io.observe(s); }
+  }
   renderMore();
 }
 // phone: the coin's name under its market cap when it fits whole, otherwise left out — no cut-off names
@@ -780,7 +841,7 @@ function findCoin(id) { return (mode === 'pf' && pfAll().find(r => r.id === id))
 
 // ── search: filters the list; 2+ letters also look the coin up on CoinGecko (any coin) ──
 function onSearch() {
-  query = document.getElementById('mkSearch').value.trim();
+  query = document.getElementById('mkSearch').value.trim(); shownN = 100;
   clearTimeout(searchTimer); moreRows = []; moreMsg = '';
   if (query.length >= 2) {
     moreMsg = 'Searching CoinGecko…';
@@ -788,7 +849,7 @@ function onSearch() {
     searchTimer = setTimeout(async () => {
       try {
         const list = await M.search(query); if (seq !== searchSeq) return;
-        const shown = new Set(topRows.filter(r => showStable || !M.isStable(r)).slice(0, 100).map(r => r.id).concat(watchlist().map(w => w.id)));   // already in the lists above
+        const shown = new Set(topList().map(r => r.id).concat(watchlist().map(w => w.id)));   // already in the lists above
         moreRows = list.filter(c => !shown.has(c.id)); moreMsg = list.length ? '' : 'No coin found on CoinGecko.';
       } catch (e) { if (seq !== searchSeq) return; moreMsg = e.rate ? 'CoinGecko search is busy right now (free limit) — try again in a minute.' : (e.message === 'You are offline.' ? 'You are offline.' : 'Search failed — try again.'); }
       renderMore();
@@ -820,7 +881,7 @@ document.addEventListener('focusout', e => { if (e.target.id === 'mkSearch') set
 
 // ── controls ──
 function setMode(m) {
-  const was = mode; mode = m;
+  const was = mode; mode = m; shownN = 100;
   document.getElementById('tabTop').setAttribute('aria-selected', m === 'top');
   document.getElementById('tabWatch').setAttribute('aria-selected', m === 'watch');
   document.getElementById('tabPf').setAttribute('aria-selected', m === 'pf');
@@ -828,8 +889,8 @@ function setMode(m) {
   if (m === 'pf' && was !== 'pf') { sortKey = 'val'; sortDir = 1; } else if (m !== 'pf' && sortKey === 'val') { sortKey = 'rank'; sortDir = 1; }
   if (m === 'watch') loadWatch(false); else if (m === 'pf') loadPf(false); else render();
 }
-function setFilter(f) { filter = f; document.querySelectorAll('.mk-chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === f)); render(); }
-function setSort(k) { if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } render(); }
+function setFilter(f) { filter = f; shownN = 100; document.querySelectorAll('.mk-chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === f)); render(); }
+function setSort(k) { shownN = 100; if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } render(); }
 
 // ── actions ──
 function toast(msg, action) {
@@ -878,7 +939,7 @@ async function addToPlan(c) {
 // ── loading ──
 // "Updated 3 min ago"; when the numbers aren't live (CoinGecko busy) it says so calmly; amber only when they
 // are old (over 90 minutes) or there are none at all.
-let paused = false;
+let paused = false, bnLive = false;
 function ago(t) {
   const m = Math.max(0, Math.round((Date.now() - t) / 60e3));
   return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 48 * 60 ? Math.round(m / 60) + ' h ago' : new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -892,7 +953,7 @@ function status() {
     : busy && !lastT ? SamsamUI.liveDot('loading') + 'Loading…'
     : lastT ? SamsamUI.liveDot(old ? 'error' : paused ? 'loading' : 'ok', !paused && !old) + (paused || old ? 'Saved · ' : 'Live · ') + ago(lastT)
     : 'Loading…';
-  el.title = paused ? 'CoinGecko’s free limit is busy — showing the newest saved numbers.' : '';
+  el.title = paused ? 'CoinGecko’s free limit is busy — showing the newest saved numbers.' : bnLive ? 'CoinGecko is busy — prices from Binance.' : '';
 }
 // every 20 s: refresh the "x min ago"; back on this tab after 3+ minutes → fresh numbers at once
 setInterval(() => { if (!onScreen()) return; if (lastT && Date.now() - lastT > 3 * 60e3 && !busy) refreshAll(false); else if (lastT) status(); }, 20e3);
@@ -949,6 +1010,9 @@ async function refreshAll(force) {
   if (newest) lastT = newest;
   paused = stale || failed > 0;
   if (!topRows.length && !lastT) warn = 'Market data isn’t reachable right now — trying again in a few minutes.';
+  // CoinGecko busy → the newest saved numbers, topped up with Binance's prices where it trades the coin
+  if (paused && topRows.length) { const n = await M.binanceTopUp(topRows); if (n) { lastT = Date.now(); paused = false; bnLive = true; } } else bnLive = false;
+  if (topN > 100) loadBig(force);
   if (mode === 'watch') await loadWatch(force);
   if (mode === 'pf') await loadPf(force);
   busy = false; status(); render();
@@ -965,6 +1029,7 @@ function hookCloud(S) { S.onChange(d => { const before = JSON.stringify(watchlis
   if (mode === 'pf' && pfCoins().map(pfId).join() !== pfBefore) loadPf(false); if (mode === 'watch' && JSON.stringify(watchlist()) !== before) loadWatch(false); }); }
 if (window.Samsam) hookCloud(window.Samsam); else window.addEventListener('samsam-ready', () => hookCloud(window.Samsam), { once: true });
 SamsamUI.refresh();
+document.getElementById('topLbl').textContent = 'Top ' + topN;
 paintPer(); render(); refreshAll(false);
 </script>
 </body>

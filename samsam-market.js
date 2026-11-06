@@ -152,6 +152,32 @@
         .then(function (j) { if (!j || !j.updated) throw new Error('No data'); try { localStorage.setItem(k, JSON.stringify({ t: Date.now(), data: j })); } catch (_) {} return j; },
           function (e) { if (c && c.data) return c.data; throw e; });
     },
+    // Coins 101–500 (m/top500.json, saved by GitHub every ~30 min) — read only when the list is set to Top 200…500
+    top500: function (force) {
+      if (!force && mem.top500 && Date.now() - mem.top500.t < 10 * 60e3) return Promise.resolve(mem.top500.data);
+      return fetch(SNAP.replace(/market\.json$/, 'top500.json'), { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) { if (!j || !Array.isArray(j.top)) throw new Error('No data'); j.t = Date.parse(j.updated) || Date.now(); mem.top500 = { t: Date.now(), data: j }; return j; },
+          function (e) { if (mem.top500) return mem.top500.data; throw e; });
+    },
+    // When CoinGecko is busy: fresher prices from Binance's public market data (no key) for coins it trades against
+    // USDT. 24h % is worked out from the saved row (its price 24 h ago) and the new price. A coin is only touched
+    // when Binance's price is within 25% of the saved one (tickers are reused by different coins). Returns how many.
+    binanceTopUp: function (rows) {
+      var now = Date.now();
+      // one download of Binance's prices every 4 minutes at most, shared by every list that asks
+      if (!API._bn || now - API._bn.at > 4 * 60e3) API._bn = { at: now, p: fetch('https://data-api.binance.vision/api/v3/ticker/price').then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function (list) {
+        var px = {}; (list || []).forEach(function (t) { if (/USDT$/.test(t.symbol)) px[t.symbol.slice(0, -4)] = +t.price; }); return px; }) };
+      return API._bn.p.then(function (px) {
+        var n = 0;
+        (rows || []).forEach(function (c) {
+          var p = px[String(c.sym || '').toUpperCase()]; if (!(p > 0) || !(c.price > 0)) return;
+          if (Math.abs(p / c.price - 1) > 0.25 || API.isStable(c)) return;
+          var ago = c.ch24 != null ? c.price / (1 + c.ch24 / 100) : null;
+          c.price = p; if (ago > 0) c.ch24 = (p / ago - 1) * 100; c.bn = now; n++;
+        });
+        return n;
+      }, function () { return 0; });
+    },
     // US spot BTC / ETH ETF flows (m/etf.json, written by GitHub once a trading day from SoSoValue). null until it exists.
     etf: function (force) {
       var k = 'samsam_mkt_etf', c = null;

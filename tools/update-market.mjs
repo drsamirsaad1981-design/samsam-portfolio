@@ -13,7 +13,8 @@
 //
 // market.json: { updated, global: { mcap, vol, mcapCh24, dom: { btc, eth, usdt }, coins }, fng: { value, label, prev, week },
 //                alt: { value, label, beat, n, btc90, period: '90d', ready, have },
-//                top: [ { id, sym, name, img, rank, price, mcap, vol, ch24, ch30, spark: [~42 points, 7d], spark24: [25, hourly] } ×100 ] }
+//                top: [ { id, sym, name, img, rank, price, mcap, vol, ch24, ch30, spark: [~42 points, 7d], spark24: [25, hourly] } ×150 ] }
+// top500.json: { updated, from: 101, top: [the same rows for coins 101–500] }
 // Any part that fails keeps the value from the last snapshot.
 
 import fs from 'node:fs';
@@ -75,10 +76,18 @@ async function main() {
   const now = snap.updated;
 
   // 150 coins: the first 100 are the list; Altcoin Season needs the top 100 *after* leaving out stablecoins etc.
-  const top = await get(`${API}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=150&page=1&sparkline=true&price_change_percentage=24h%2C7d%2C30d`);
+  const MK = p => `${API}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${p}&sparkline=true&price_change_percentage=24h%2C7d%2C30d`;
+  const top = await get(MK(1));
   let all = [];
-  // all 150 kept: the page shows 100 without stablecoins
-  if (Array.isArray(top) && top.length) { all = top.map(row); snap.top = all; snap.parts.top = now; log('top', top.length); } else log('top: no answer, kept the last one');
+  // the first 150 go in market.json (the page shows 100 without stablecoins; Altcoin Season needs the top 100 after
+  // leaving stablecoins out); coins 101–500 go in m/top500.json, read only when the list is set to Top 200…500
+  if (Array.isArray(top) && top.length) { const rows = top.map(row); all = rows.slice(0, 150); snap.top = all; snap.parts.top = now; log('top', top.length);
+    await sleep(4000);
+    const p2 = await get(MK(2));
+    const big = rows.concat(Array.isArray(p2) ? p2.map(row) : []).slice(100);
+    if (Array.isArray(p2) && p2.length) { fs.writeFileSync(path.join(OUT, 'top500.json'), JSON.stringify({ updated: now, from: 101, top: big })); log('top500', big.length); }
+    else log('top500: page 2 no answer, kept the last one');
+  } else log('top: no answer, kept the last one');
 
   await sleep(4000);
   const g = await get(`${API}/global`);
