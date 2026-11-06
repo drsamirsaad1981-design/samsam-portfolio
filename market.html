@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611061414"></script>
-<script src="samsam-hints.js?v=202611061414"></script>
-<script src="samsam-vault.js?v=202611061414"></script>
-<script src="samsam-labels.js?v=202611061414"></script>
-<script src="samsam-taxonomy.js?v=202611061414"></script>
-<script src="samsam-coins.js?v=202611061414"></script>
-<script src="samsam-dropdown.js?v=202611061414"></script>
-<script src="samsam-add.js?v=202611061414"></script>
-<script src="samsam-market.js?v=202611061414"></script>
+<script src="samsam-ui.js?v=202611061446"></script>
+<script src="samsam-hints.js?v=202611061446"></script>
+<script src="samsam-vault.js?v=202611061446"></script>
+<script src="samsam-labels.js?v=202611061446"></script>
+<script src="samsam-taxonomy.js?v=202611061446"></script>
+<script src="samsam-coins.js?v=202611061446"></script>
+<script src="samsam-dropdown.js?v=202611061446"></script>
+<script src="samsam-add.js?v=202611061446"></script>
+<script src="samsam-market.js?v=202611061446"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -106,6 +106,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 [data-theme="light"] .mk-tag.btc-side { color: #d97706; } [data-theme="light"] .mk-tag.alt-side { color: #2563eb; }
 .mk-altnote { font-size: .7rem; line-height: 1.35; color: var(--fg2); }   /* what the number means: coins beating BTC · season from 75 */
 .mk-altnote b { color: var(--fg); font-weight: 700; }   /* the gauge sits in the middle of the free space */
+.mk-li-cap { margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: .64rem; font-weight: 700; }
 .mk-li b.up { color: var(--green); } .mk-li b.down { color: var(--red); }
 .mk-gauge { position: relative; height: 8px; border-radius: 6px; margin: 6px 0 2px; }
 .mk-gauge.fng { background: linear-gradient(90deg, #ef4444 0%, #f97316 25%, #eab308 50%, #84cc16 72%, #22c55e 100%); }
@@ -396,6 +397,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       <div class="mk-foot">
         <div class="mk-li" id="altN">Beating BTC <b>—</b></div>
         <div class="mk-li" id="altB">BTC (90 days) <b>—</b></div>
+        <div class="mk-li mk-li-cap" id="altEtfCap" hidden>ETF money, last 7 days</div>
+        <div class="mk-li" id="altEthEtf" hidden>ETH ETFs <b>—</b></div>
+        <div class="mk-li" id="altBtcEtf" hidden>BTC ETFs <b>—</b></div>
       </div>
     </a>
     <div class="mk-card" id="cardDom">
@@ -473,7 +477,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611061414"></script>
+<script type="module" src="samsam-cloud.js?v=202611061446"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -588,7 +592,21 @@ function paintEtf() {
   let tt; box.onpointerleave = e => { clearTimeout(tt); if (e.pointerType === 'mouse') hide(); else tt = setTimeout(hide, 2500); };   // a finger: the card stays a moment
   // the biggest moves among the funds that day
   const f = a.funds && a.funds.date === last[0] ? a.funds.list.slice().sort((x, y) => Math.abs(y.net) - Math.abs(x.net)).slice(0, 4) : [];
+  paintAltEtf();
   document.getElementById('etfFunds').innerHTML = f.map(x => `<div title="${x.name.replace(/"/g, '&quot;')}"><span>${x.t}</span><b class="${cls(x.net)}">${money(x.net)}</b></div>`).join('');
+}
+// Altcoin Season card: money into ETH vs BTC ETFs over the last 7 days (5 trading days) — ETH taking more is often an early sign
+function paintAltEtf() {
+  document.getElementById('altEtfCap').hidden = !(etf && ((etf.eth && etf.eth.days.length) || (etf.btc && etf.btc.days.length)));
+  ['eth', 'btc'].forEach(k => {
+    const el = document.getElementById(k === 'eth' ? 'altEthEtf' : 'altBtcEtf'), d = etf && etf[k] && etf[k].days;
+    if (!d || !d.length) { el.hidden = true; return; }
+    const w = d.slice(-5), sum = w.reduce((s, r) => s + r[1], 0), assets = d[d.length - 1][3];
+    el.hidden = false;
+    el.title = `${k.toUpperCase()} spot ETFs, last 5 trading days: ${money(sum)}${assets > 0 ? ` (${pct(sum / assets * 100, 2)} of their assets)` : ''}`;
+    const a = Math.abs(sum), short = (sum < 0 ? '−' : sum > 0 ? '+' : '') + (a >= 1e9 ? '$' + (a / 1e9).toFixed(2) + 'B' : '$' + Math.round(a / 1e6) + 'M');   // short: it shares a narrow line
+    el.querySelector('b').textContent = short; el.querySelector('b').className = cls(sum);
+  });
 }
 document.getElementById('etfSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; etfA = b.dataset.a; try { localStorage.setItem('samsam_mkt_etfa', etfA); } catch (_) {} paintEtf(); });
 function loadEtf(force) { if (M.etf) M.etf(force).then(j => { etf = j; paintEtf(); }, () => {}); }
