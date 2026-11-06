@@ -1,0 +1,53 @@
+# The app's test suite (tests/), on every change to the site and on demand (Actions → Tests → Run workflow).
+# Four runners take a quarter of tests/suite.txt each; a test that fails is retried once.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+    paths: ['*.html', '*.js', 'tests/**', '.github/workflows/tests.yml']
+  pull_request:
+    paths: ['*.html', '*.js', 'tests/**']
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  suite:
+    name: Tests ${{ matrix.shard }}/4
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright + Chromium
+        run: |
+          pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+          sudo apt-get install -y -q poppler-utils
+      - name: Run tests (part ${{ matrix.shard }} of 4)
+        env:
+          SHARD: ${{ matrix.shard }}/4
+        run: python tests/run.py
+      - name: Screenshots of this run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shots-${{ matrix.shard }}
+          path: tests/shots/
+          retention-days: 7
+          if-no-files-found: ignore
