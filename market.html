@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611061354"></script>
-<script src="samsam-hints.js?v=202611061354"></script>
-<script src="samsam-vault.js?v=202611061354"></script>
-<script src="samsam-labels.js?v=202611061354"></script>
-<script src="samsam-taxonomy.js?v=202611061354"></script>
-<script src="samsam-coins.js?v=202611061354"></script>
-<script src="samsam-dropdown.js?v=202611061354"></script>
-<script src="samsam-add.js?v=202611061354"></script>
-<script src="samsam-market.js?v=202611061354"></script>
+<script src="samsam-ui.js?v=202611061414"></script>
+<script src="samsam-hints.js?v=202611061414"></script>
+<script src="samsam-vault.js?v=202611061414"></script>
+<script src="samsam-labels.js?v=202611061414"></script>
+<script src="samsam-taxonomy.js?v=202611061414"></script>
+<script src="samsam-coins.js?v=202611061414"></script>
+<script src="samsam-dropdown.js?v=202611061414"></script>
+<script src="samsam-add.js?v=202611061414"></script>
+<script src="samsam-market.js?v=202611061414"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -67,6 +67,35 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-vrow { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 8px; row-gap: 2px; }
 .mk-vrow .mk-v { font-size: 1.6rem; }
 .mk-vrow .mk-tag { font-size: .74rem; }
+/* ETF flows */
+.mk-etf { margin-bottom: 14px; gap: 10px; }
+.mk-etf-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mk-etf-h .mk-k small { font-weight: 700; margin-left: 6px; opacity: .75; }
+.mk-etf-seg { display: inline-grid; grid-auto-flow: column; background: var(--bg3); border: 1px solid var(--border); border-radius: 9px; padding: 2px; gap: 2px; }
+.mk-etf-seg button { all: unset; box-sizing: border-box; padding: 5px 14px; border-radius: 7px; font-size: .74rem; font-weight: 800; color: var(--fg2); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mk-etf-seg button.on { background: var(--accent); color: #fff; }
+:root:not([data-theme="light"]) .mk-etf-seg button.on { color: #0d0d0f; } :root[data-theme="light"] .mk-etf-seg button.on { color: #fff; }
+.mk-etf-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mk-etf-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.mk-etf-l { font-size: .7rem; font-weight: 700; color: var(--fg2); }
+.mk-etf-v { font-size: 1.6rem; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.mk-etf-stats { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 16px; font-size: .7rem; color: var(--fg2); font-variant-numeric: tabular-nums; }
+.mk-etf-stats b { display: block; font-size: .86rem; font-weight: 800; color: var(--fg); }
+.mk-etf-stats b.up { color: var(--green); } .mk-etf-stats b.down { color: var(--red); }
+.mk-etf-bars { position: relative; height: 96px; padding-top: 30px; box-sizing: content-box; display: flex; align-items: stretch; gap: 3px; touch-action: pan-y; }
+.mk-etf-bars .b { flex: 1 1 0; position: relative; cursor: pointer; border-radius: 3px; }
+.mk-etf-bars .b i { position: absolute; left: 0; right: 0; border-radius: 3px; }
+.mk-etf-bars .b.on i { outline: 2px solid var(--fg); outline-offset: 1px; }
+.mk-etf-bars .z { position: absolute; left: 0; right: 0; height: 1px; background: var(--border); pointer-events: none; }
+.mk-etf-tip { position: absolute; top: 0; pointer-events: none; background: var(--card-solid, var(--card)); border: 1px solid var(--border); border-radius: 9px; box-shadow: 0 6px 18px rgba(0,0,0,.2); padding: 5px 9px; font-size: .7rem; white-space: nowrap; font-variant-numeric: tabular-nums; z-index: 2; }
+.mk-etf-tip b { font-weight: 800; }
+.mk-etf-funds { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 14px; font-size: .74rem; font-variant-numeric: tabular-nums; }
+@media (min-width: 760px) { .mk-etf-funds { grid-template-columns: repeat(4, 1fr); } }
+.mk-etf-funds div { display: flex; justify-content: space-between; gap: 8px; padding: 6px 9px; border-radius: 9px; background: var(--bg3); min-width: 0; }
+.mk-etf-funds span { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mk-etf-funds b { font-weight: 800; white-space: nowrap; }
+.mk-etf-note { font-size: .66rem; color: var(--fg2); line-height: 1.45; }
+.mk-etf-note a { color: inherit; }
 .mk-go { text-decoration: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color .15s, transform .15s; }
 @media (hover: hover) { .mk-go:hover { border-color: rgba(124,58,237,.45); } }
 .mk-go:active { transform: scale(.985); }
@@ -392,6 +421,21 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     </div>
   </section>
 
+  <!-- ETF flows: US spot Bitcoin / Ether ETFs, daily (hidden until GitHub has the data) -->
+  <section class="mk-card mk-etf" id="etfCard" hidden aria-label="ETF flows">
+    <div class="mk-etf-h">
+      <div class="mk-k"><span data-ic="bar"></span>ETF Flows <small>US spot</small></div>
+      <div class="mk-etf-seg" id="etfSeg" role="group" aria-label="ETF"><button type="button" data-a="btc">BTC</button><button type="button" data-a="eth">ETH</button></div>
+    </div>
+    <div class="mk-etf-top">
+      <div><div class="mk-etf-l" id="etfDay">—</div><div class="mk-etf-v" id="etfNet">—</div></div>
+      <div class="mk-etf-stats" id="etfStats"></div>
+    </div>
+    <div class="mk-etf-bars" id="etfBars" role="img" aria-label="Daily net flows"></div>
+    <div class="mk-etf-funds" id="etfFunds"></div>
+    <p class="mk-etf-note">Net money in or out of the US spot ETFs each trading day (no trading on weekends). Source: <a href="https://sosovalue.com" target="_blank" rel="noopener">SoSoValue</a>, saved by GitHub after the US market closes.</p>
+  </section>
+
   <section class="mk-list" aria-label="Market watchlist">
     <div class="mk-tabs" role="tablist">
       <button type="button" role="tab" id="tabTop" aria-selected="true" onclick="setMode('top')"><span data-ic="bar"></span>Top 100</button>
@@ -429,7 +473,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611061354"></script>
+<script type="module" src="samsam-cloud.js?v=202611061414"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -505,6 +549,49 @@ function paintAlt(a) {
 }
 let alt90 = null;   // CMC-style number from the GitHub snapshot; until it's ready, the 30-day one from the list
 function paintAltNow() { paintAlt(alt90 || M.altSeason(topRows)); }
+
+// ── ETF flows (US spot BTC / ETH ETFs, one number per trading day) ──
+let etf = null, etfA = 'btc';
+try { if (localStorage.getItem('samsam_mkt_etfa') === 'eth') etfA = 'eth'; } catch (_) {}
+const money = v => v == null ? '—' : !v ? '$0' : (v > 0 ? '+' : '−') + M.fmtBig(Math.abs(v));
+const etfDate = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+function paintEtf() {
+  const card = document.getElementById('etfCard'), a = etf && etf[etfA];
+  if (!etf || !((etf.btc && etf.btc.days.length) || (etf.eth && etf.eth.days.length))) { card.hidden = true; return; }
+  card.hidden = false;
+  document.querySelectorAll('#etfSeg button').forEach(b => { const on = b.dataset.a === etfA; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  const days = (a && a.days) || [];
+  if (!days.length) { document.getElementById('etfNet').textContent = '—'; document.getElementById('etfDay').textContent = 'No data yet'; document.getElementById('etfBars').innerHTML = ''; document.getElementById('etfFunds').innerHTML = ''; document.getElementById('etfStats').innerHTML = ''; return; }
+  const last = days[days.length - 1], sumN = n => days.slice(-n).reduce((s, r) => s + r[1], 0);
+  document.getElementById('etfDay').textContent = etfDate(last[0]);
+  const net = document.getElementById('etfNet'); net.textContent = money(last[1]); net.className = 'mk-etf-v ' + cls(last[1]);
+  const st = (k, v, c) => `<div>${k}<b class="${c == null ? '' : cls(v)}">${c == null ? v : money(v)}</b></div>`;
+  document.getElementById('etfStats').innerHTML = st('Last 7 days', sumN(5), 1) + st('Last 30 days', sumN(22), 1) + st('Since launch', last[2], 1);
+  // bars: the last 30 trading days, in green above the line / red below
+  const bars = days.slice(-30), max = Math.max(1, ...bars.map(r => Math.abs(r[1]))), pos = Math.max(...bars.map(r => r[1]), 0), neg = Math.max(...bars.map(r => -r[1]), 0);
+  const zero = pos + neg > 0 ? pos / (pos + neg) * 100 : 50;
+  const box = document.getElementById('etfBars');
+  box.innerHTML = `<span class="z" style="top:${zero}%"></span>` + bars.map((r, i) => {
+    const h = Math.abs(r[1]) / (pos + neg || 1) * 100;
+    return `<span class="b" data-i="${i}" title="${etfDate(r[0])}: ${money(r[1])}"><i style="${r[1] >= 0 ? `bottom:${100 - zero}%` : `top:${zero}%`};height:${Math.max(1.5, h)}%;background:${r[1] >= 0 ? 'var(--green)' : 'var(--red)'}"></i></span>`;
+  }).join('') + '<div class="mk-etf-tip" id="etfTip" hidden></div>';
+  box.setAttribute('aria-label', `${etfA.toUpperCase()} ETF daily net flows, last ${bars.length} trading days`);
+  const tip = document.getElementById('etfTip');
+  const show = e => {
+    const b = e.target.closest && e.target.closest('.b'); if (!b) return;
+    const r = bars[+b.dataset.i]; box.querySelectorAll('.b.on').forEach(x => x.classList.remove('on')); b.classList.add('on');
+    tip.innerHTML = `${etfDate(r[0])} · <b class="${cls(r[1])}">${money(r[1])}</b>`; tip.hidden = false;
+    const bx = b.offsetLeft + b.offsetWidth / 2, w = tip.offsetWidth; tip.style.left = Math.max(0, Math.min(box.clientWidth - w, bx - w / 2)) + 'px';
+  };
+  box.onpointerover = show; box.onpointerdown = show;
+  const hide = () => { tip.hidden = true; box.querySelectorAll('.b.on').forEach(x => x.classList.remove('on')); };
+  let tt; box.onpointerleave = e => { clearTimeout(tt); if (e.pointerType === 'mouse') hide(); else tt = setTimeout(hide, 2500); };   // a finger: the card stays a moment
+  // the biggest moves among the funds that day
+  const f = a.funds && a.funds.date === last[0] ? a.funds.list.slice().sort((x, y) => Math.abs(y.net) - Math.abs(x.net)).slice(0, 4) : [];
+  document.getElementById('etfFunds').innerHTML = f.map(x => `<div title="${x.name.replace(/"/g, '&quot;')}"><span>${x.t}</span><b class="${cls(x.net)}">${money(x.net)}</b></div>`).join('');
+}
+document.getElementById('etfSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; etfA = b.dataset.a; try { localStorage.setItem('samsam_mkt_etfa', etfA); } catch (_) {} paintEtf(); });
+function loadEtf(force) { if (M.etf) M.etf(force).then(j => { etf = j; paintEtf(); }, () => {}); }
 
 // ── list ──
 // phone: one period for the whole list (24h or 7d), remembered; a computer shows both columns
@@ -817,6 +904,7 @@ async function loadWatch(force) {
 let busy = false;
 async function refreshAll(force) {
   if (busy) return; busy = true;
+  loadEtf(force);
   warn = '';
   // first open: the newest numbers this browser or GitHub has, on screen at once
   if (!topRows.length) {

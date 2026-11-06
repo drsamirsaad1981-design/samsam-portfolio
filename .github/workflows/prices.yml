@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['tools/update-prices.mjs', 'tools/update-market.mjs', 'tools/extra-price-ids.json', '.github/workflows/prices.yml', 'samsam-coins.js']
+    paths: ['tools/update-prices.mjs', 'tools/update-market.mjs', 'tools/update-etf.mjs', 'tools/extra-price-ids.json', '.github/workflows/prices.yml', 'samsam-coins.js']
 permissions:
   contents: write
 concurrency:
@@ -34,6 +34,11 @@ jobs:
       - name: Market snapshot (Market Hub + Home card)
         run: node tools/update-market.mjs out
         continue-on-error: true
+      - name: ETF flows (Market Hub)
+        run: node tools/update-etf.mjs out
+        continue-on-error: true
+        env:
+          SOSO_API_KEY: ${{ secrets.SOSO_API_KEY }}
       - name: Update prices
         run: node tools/update-prices.mjs out
       - name: Save (one commit, replaced each hour)

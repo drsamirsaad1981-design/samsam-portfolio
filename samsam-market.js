@@ -152,6 +152,15 @@
         .then(function (j) { if (!j || !j.updated) throw new Error('No data'); try { localStorage.setItem(k, JSON.stringify({ t: Date.now(), data: j })); } catch (_) {} return j; },
           function (e) { if (c && c.data) return c.data; throw e; });
     },
+    // US spot BTC / ETH ETF flows (m/etf.json, written by GitHub once a trading day from SoSoValue). null until it exists.
+    etf: function (force) {
+      var k = 'samsam_mkt_etf', c = null;
+      try { c = JSON.parse(localStorage.getItem(k)); } catch (_) {}
+      if (c && c.data && !force && Date.now() - c.t < 15 * 60e3) return Promise.resolve(c.data);
+      return fetch(SNAP.replace(/market\.json$/, 'etf.json'), { cache: 'no-cache' }).then(function (r) { if (r.status === 404) return null; if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) { if (j && j.updated) { try { localStorage.setItem(k, JSON.stringify({ t: Date.now(), data: j })); } catch (_) {} } return j && j.updated ? j : null; },
+          function (e) { if (c && c.data) return c.data; throw e; });
+    },
     // first paint: whatever this browser has, else the GitHub snapshot — no CoinGecko call
     peek: function () {
       var g = get('global'), f = get('fng'), t = get('top');
