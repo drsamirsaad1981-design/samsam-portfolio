@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611061211"></script>
-<script src="samsam-hints.js?v=202611061211"></script>
-<script src="samsam-vault.js?v=202611061211"></script>
-<script src="samsam-labels.js?v=202611061211"></script>
-<script src="samsam-taxonomy.js?v=202611061211"></script>
-<script src="samsam-coins.js?v=202611061211"></script>
-<script src="samsam-dropdown.js?v=202611061211"></script>
-<script src="samsam-add.js?v=202611061211"></script>
-<script src="samsam-market.js?v=202611061211"></script>
+<script src="samsam-ui.js?v=202611061243"></script>
+<script src="samsam-hints.js?v=202611061243"></script>
+<script src="samsam-vault.js?v=202611061243"></script>
+<script src="samsam-labels.js?v=202611061243"></script>
+<script src="samsam-taxonomy.js?v=202611061243"></script>
+<script src="samsam-coins.js?v=202611061243"></script>
+<script src="samsam-dropdown.js?v=202611061243"></script>
+<script src="samsam-add.js?v=202611061243"></script>
+<script src="samsam-market.js?v=202611061243"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }
@@ -92,6 +92,28 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 :root[data-theme="light"] .as-seg button.on { color: #fff; }
 .as-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 @media (hover: hover) { .as-seg button:not(.on):hover { background: var(--border); } }
+
+/* four summary cards → one full view at a time */
+.as-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+@media (min-width: 1024px) { .as-tiles { grid-template-columns: repeat(4, 1fr); gap: 12px; } }
+.as-tile { all: unset; box-sizing: border-box; position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px 14px 12px; border-radius: 16px; background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.as-tile .tk { display: flex; align-items: center; gap: 6px; padding-right: 18px; font-size: .78rem; font-weight: 800; color: var(--fg); line-height: 1.2; }
+.as-tile .tk .ss-ic { color: #a78bfa; flex-shrink: 0; } [data-theme="light"] .as-tile .tk .ss-ic { color: #7c3aed; }
+.as-tile .ts { font-size: .72rem; color: var(--fg2); line-height: 1.45; font-variant-numeric: tabular-nums; min-width: 0; }
+.as-tile .ts b { color: var(--fg); font-weight: 800; }
+.as-tile .ts b.up { color: var(--green); } .as-tile .ts b.down { color: var(--red); } .as-tile .ts b.alt-side { color: var(--alt); } .as-tile .ts b.btc-side { color: var(--btc); }
+.as-tile .ts .big { display: block; font-size: 1.05rem; font-weight: 800; color: var(--fg); margin-bottom: 1px; }
+.as-tile .ts svg { display: block; width: 100%; height: 34px; margin: 2px 0 4px; overflow: visible; }
+.as-tile .tch { position: absolute; top: 13px; right: 12px; width: 16px; height: 16px; color: var(--fg2); transition: transform .2s; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat; }
+.as-tile[aria-expanded="true"] { border-color: #a78bfa; box-shadow: 0 0 0 1px #a78bfa, var(--shadow); }
+[data-theme="light"] .as-tile[aria-expanded="true"] { border-color: #7c3aed; box-shadow: 0 0 0 1px #7c3aed, var(--shadow); }
+.as-tile[aria-expanded="true"] .tch { transform: rotate(180deg); color: #a78bfa; }
+@media (hover: hover) { .as-tile:hover { border-color: rgba(124,58,237,.45); } }
+.as-tile:active { transform: scale(.985); }
+.as-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.as-panel { margin-bottom: 12px; scroll-margin-top: 12px; animation: asIn .22s ease; }
+@keyframes asIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .as-panel { animation: none; } }
 
 /* history chart */
 .as-chart { position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
@@ -208,8 +230,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     </div>
   </section>
 
+  <!-- 2–5: four small cards with a summary; tapping one opens its full view below them (one at a time) -->
+  <section class="as-tiles" id="asTiles" aria-label="More about Altcoin Season">
+    <button type="button" class="as-tile" data-k="hist" aria-expanded="false" aria-controls="asP_hist"><span class="tk"><span data-ic="bar"></span>History</span><span class="ts" id="asT_hist">—</span><span class="tch" aria-hidden="true"></span></button>
+    <button type="button" class="as-tile" data-k="breadth" aria-expanded="false" aria-controls="asP_breadth"><span class="tk"><span data-ic="gauge"></span>Coins beating BTC</span><span class="ts" id="asT_breadth">—</span><span class="tch" aria-hidden="true"></span></button>
+    <button type="button" class="as-tile" data-k="you" aria-expanded="false" aria-controls="asP_you"><span class="tk"><span data-ic="briefcase"></span>Your coins vs BTC</span><span class="ts" id="asT_you">—</span><span class="tch" aria-hidden="true"></span></button>
+    <button type="button" class="as-tile" data-k="top" aria-expanded="false" aria-controls="asP_top"><span class="tk"><span data-ic="target"></span>Top 100 vs BTC</span><span class="ts" id="asT_top">—</span><span class="tch" aria-hidden="true"></span></button>
+  </section>
+
   <!-- 2. a year of the index -->
-  <section class="as-card" style="margin-bottom:12px" aria-label="Altcoin Season history">
+  <section class="as-card as-panel" id="asP_hist" data-k="hist" hidden aria-label="Altcoin Season history">
     <div class="as-h"><h2><span data-ic="bar"></span>History</h2>
       <div class="as-seg" id="asRange" role="group" aria-label="Period"><button type="button" data-r="30">30d</button><button type="button" data-r="90">90d</button><button type="button" data-r="365" class="on">1y</button></div></div>
     <div class="as-chart" id="asChart"><div class="as-empty">Loading…</div></div>
@@ -221,24 +251,22 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     <p class="as-note" id="asNote">Past days are worked out with today's top 100 coins (CoinMarketCap uses each day's own list), so older days can differ a little. From now on every day is saved with that day's list.</p>
   </section>
 
-  <section class="as-grid two">
-    <!-- 3. who is beating BTC: short vs long term -->
-    <div class="as-card" aria-label="Coins beating BTC">
+  <!-- 3. who is beating BTC: short vs long term -->
+    <section class="as-card as-panel" id="asP_breadth" data-k="breadth" hidden aria-label="Coins beating BTC">
       <div class="as-h"><h2><span data-ic="gauge"></span>Coins beating BTC</h2></div>
       <div class="as-br" id="asBreadth"></div>
       <table class="as-tbl" id="asTbl"><thead><tr><th>Period</th><th>BTC</th><th>Typical altcoin</th><th>Gap</th></tr></thead><tbody></tbody></table>
       <div class="as-read" id="asRead" hidden></div>
-    </div>
+    </section>
     <!-- 4. your coins against BTC -->
-    <div class="as-card" id="asYouCard" aria-label="Your coins vs BTC">
+    <section class="as-card as-panel" id="asP_you" data-k="you" hidden aria-label="Your coins vs BTC">
       <div class="as-h"><h2><span data-ic="briefcase"></span>Your coins vs BTC</h2>
         <div class="as-seg" id="asPerYou" role="group" aria-label="Period"><button type="button" data-p="0">7d</button><button type="button" data-p="1">30d</button><button type="button" data-p="2" class="on">90d</button></div></div>
       <div id="asYou"><div class="as-empty">Sign in to compare your coins with BTC.</div></div>
-    </div>
-  </section>
+    </section>
 
   <!-- 5. the 100 coins, each against BTC -->
-  <section class="as-card" aria-label="Top 100 vs BTC">
+  <section class="as-card as-panel" id="asP_top" data-k="top" hidden aria-label="Top 100 vs BTC">
     <div class="as-h"><h2><span data-ic="target"></span>Top 100 vs BTC</h2>
       <div class="as-seg" id="asPer" role="group" aria-label="Period"><button type="button" data-p="0">7d</button><button type="button" data-p="1">30d</button><button type="button" data-p="2" class="on">90d</button></div></div>
     <div class="as-tools">
@@ -252,12 +280,12 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   <p class="as-src">Prices: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> and Binance (daily, 00:00 UTC), saved by GitHub with each market snapshot. The index follows the CoinMarketCap method. "vs BTC" = how the coin did against holding BTC over the same days.</p>
 </main>
 
-<script type="module" src="samsam-cloud.js?v=202611061211"></script>
+<script type="module" src="samsam-cloud.js?v=202611061243"></script>
 <script>
 const M = SamsamMarket, C = SamsamCoins, DAY = 864e5;
-let data = null, state = null, range = 365, per = 2, perYou = 2, filter = 'all', query = '', showAll = false;
-try { const v = JSON.parse(localStorage.getItem('samsam_as_view') || 'null'); if (v) { range = [30, 90, 365].includes(v.range) ? v.range : 365; per = [0, 1, 2].includes(v.per) ? v.per : 2; perYou = [0, 1, 2].includes(v.perYou) ? v.perYou : 2; } } catch (_) {}
-const save = () => { try { localStorage.setItem('samsam_as_view', JSON.stringify({ range, per, perYou })); } catch (_) {} };
+let data = null, state = null, range = 365, per = 2, perYou = 2, filter = 'all', query = '', showAll = false, open = null;
+try { const v = JSON.parse(localStorage.getItem('samsam_as_view') || 'null'); if (v) { range = [30, 90, 365].includes(v.range) ? v.range : 365; per = [0, 1, 2].includes(v.per) ? v.per : 2; perYou = [0, 1, 2].includes(v.perYou) ? v.perYou : 2; open = ['hist', 'breadth', 'you', 'top'].includes(v.open) ? v.open : null; } } catch (_) {}
+const save = () => { try { localStorage.setItem('samsam_as_view', JSON.stringify({ range, per, perYou, open })); } catch (_) {} };
 const PER = ['7 days', '30 days', '90 days'], PERK = [7, 30, 90];
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -396,19 +424,25 @@ function findCoin(h) {
   return p ? { id, sym: h.sym, name: (C.NAMES && C.NAMES[h.sym]) || h.name || '', img: h.logoUrl, p } : null;
 }
 
+// your coins against BTC over a period: { beat, n (altcoins), pf (your coins' change), b (BTC), rows, alts, missing }
+function yourSummary(pi) {
+  const hold = myCoins(); if (!state || !hold.length || !data) return null;
+  const b = data.btc[pi];
+  const rows = hold.map(h => ({ h, c: findCoin(h), val: h.qty * h.currentPrice })).filter(r => r.c && r.c.p[pi] != null);
+  if (!rows.length) return null;
+  const alts = rows.filter(r => r.c.id !== 'bitcoin' && !M.isStable({ sym: r.h.sym, name: r.c.name }));
+  const now = rows.reduce((s, r) => s + r.val, 0), then = rows.reduce((s, r) => s + r.val / (1 + r.c.p[pi] / 100), 0);
+  return { b, rows, alts, beat: alts.filter(r => vsBtc(r.c.p[pi], b) > 0).length, n: alts.length, pf: then > 0 ? (now / then - 1) * 100 : null, missing: hold.length - rows.length };
+}
 // ── 4. your coins ──
 function paintYou() {
   const box = $('asYou'), hold = myCoins();
   if (!state) { box.innerHTML = '<div class="as-empty">Sign in to compare your coins with BTC.</div>'; return; }
   if (!hold.length) { box.innerHTML = '<div class="as-empty">No coins in your portfolio yet.</div>'; return; }
-  const b = data.btc[perYou], P = PER[perYou];
-  const rows = hold.map(h => ({ h, c: findCoin(h), val: h.qty * h.currentPrice })).filter(r => r.c && r.c.p[perYou] != null);
-  const alts = rows.filter(r => r.c.id !== 'bitcoin' && !M.isStable({ sym: r.h.sym, name: r.c.name }));
-  const beat = alts.filter(r => vsBtc(r.c.p[perYou], b) > 0).length;
+  const P = PER[perYou], Y = yourSummary(perYou);
+  if (!Y) { box.innerHTML = `<div class="as-empty">None of your coins has ${P} of prices yet.</div>`; return; }
   // your coins as they are today: their value now against their value then (same amounts), next to the same money in BTC
-  const now = rows.reduce((s, r) => s + r.val, 0), then = rows.reduce((s, r) => s + r.val / (1 + r.c.p[perYou] / 100), 0);
-  const pf = then > 0 ? (now / then - 1) * 100 : null, diff = vsBtc(pf, b);
-  const missing = hold.length - rows.length;
+  const { b, alts, beat, pf, missing } = Y, diff = vsBtc(pf, b);
   let html = `<div class="as-you">
     <div class="as-stat"><div class="k">Beat BTC (${P})</div><div class="n ${beat * 2 >= alts.length ? 'alt-side' : 'btc-side'}">${beat} <small style="font-size:.7rem;color:var(--fg2)">of ${alts.length}</small></div><div class="s">of your altcoins</div></div>
     <div class="as-stat"><div class="k">Your coins (${P})</div><div class="n ${cls(pf)}">${pct(pf)}</div><div class="s">BTC <b class="${cls(b)}">${pct(b)}</b></div></div></div>`;
@@ -439,10 +473,45 @@ function paintRows() {
   const more = $('asMore'); more.hidden = !(rows.length > limit); more.textContent = `Show all ${rows.length}`;
 }
 
+// ── the four summary cards ──
+function paintTiles(S) {
+  const now = S[S.length - 1];
+  // History: the last 90 days as a small line + where it was a month ago
+  const pts = now ? S.filter(r => r.d > now.d - 90) : [];
+  let spark = '';
+  if (pts.length > 1) {
+    const x0 = pts[0].d, x1 = now.d, X = d => (d - x0) / Math.max(1, x1 - x0) * 100, Y = v => 34 - v / 100 * 34;
+    spark = `<svg viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="${Y(75)}" fill="var(--alt-bg)"/><rect x="0" y="${Y(25)}" width="100" height="${34 - Y(25)}" fill="var(--btc-bg)"/>` +
+      `<path d="${pts.map((r, i) => (i ? 'L' : 'M') + X(r.d).toFixed(2) + ',' + Y(r.v).toFixed(2)).join('')}" fill="none" stroke="${now.v >= 50 ? '#3b82f6' : '#f7931a'}" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+  }
+  const m = now && S.filter(r => r.d <= now.d - 30).pop();
+  $('asT_hist').innerHTML = spark + (now ? (m && now.d - m.d <= 32 ? `<b class="${side(m.v)}">${m.v}</b> a month ago → <b class="${side(now.v)}">${now.v}</b> today` : `<b class="${side(now.v)}">${now.v}</b> today`) : 'Getting ready');
+  // Coins beating BTC: 7 / 30 / 90 days
+  const br = data.breadth || {}, one = k => br[k] ? `<b class="${br[k].beat * 2 >= br[k].n ? 'alt-side' : 'btc-side'}">${br[k].beat}</b>` : '<b>—</b>';
+  $('asT_breadth').innerHTML = `<span class="big">${one(7)} · ${one(30)} · ${one(90)}</span>of 100, over 7 · 30 · 90 days`;
+  // Your coins vs BTC (90 days)
+  const you = yourSummary(2);
+  $('asT_you').innerHTML = !state ? 'Sign in to compare your coins with BTC.' : !you ? 'No coins with 90 days of prices yet.'
+    : `<span class="big"><b class="${you.beat * 2 >= you.n ? 'alt-side' : 'btc-side'}">${you.beat}</b> <small style="font-size:.72rem;color:var(--fg2)">of ${you.n} beat BTC</small></span>You <b class="${cls(you.pf)}">${pct(you.pf)}</b> · BTC <b class="${cls(you.b)}">${pct(you.b)}</b> (90 days)`;
+  // Top 100 vs BTC (90 days): the best one + how many are ahead
+  const b = data.btc[2], list = (data.coins || []).map(c => ({ c, v: vsBtc(c.p[2], b) })).filter(r => r.v != null).sort((x, y) => y.v - x.v);
+  const ahead = list.filter(r => r.v > 0).length;
+  $('asT_top').innerHTML = list.length ? `<span class="big">${esc(list[0].c.sym)} <b class="up">${pct(list[0].v)}</b></span>the best · <b>${ahead}</b> of ${list.length} ahead of BTC (90 days)` : '—';
+}
+function setOpen(k, scroll) {
+  open = open === k ? null : k; save();
+  document.querySelectorAll('.as-tile').forEach(t => t.setAttribute('aria-expanded', String(t.dataset.k === open)));
+  document.querySelectorAll('.as-panel').forEach(p => { p.hidden = p.dataset.k !== open; });
+  if (open && data) { const S = series(); if (open === 'hist') paintChart(S); if (open === 'top') paintRows(); if (open === 'you') paintYou(); }
+  if (open && scroll) { const p = $('asP_' + open); requestAnimationFrame(() => p.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })); }
+}
+document.querySelectorAll('.as-tile').forEach(t => t.addEventListener('click', () => setOpen(t.dataset.k, true)));
+
 function paint() {
   if (!data) return;
   const S = series();
-  paintHero(S); paintChart(S); paintBreadth(); paintYou(); paintRows();
+  paintHero(S); paintTiles(S); paintBreadth(); paintYou(); paintRows();
+  if (open === 'hist') paintChart(S);
   $('asOvDomL').hidden = Object.keys(data.dom || {}).length < 7;   // BTC Dominance is saved day by day from the first run of this page
   $('asUpd').textContent = 'Updated ' + ago(Date.parse(data.updated));
   if (window.CPSplash) CPSplash.hide();
@@ -460,9 +529,10 @@ seg('asFilter', 'f', () => filter, v => { filter = v; showAll = false; });
 $('asSearch').addEventListener('input', e => { query = e.target.value; paintRows(); });
 $('asMore').addEventListener('click', () => { showAll = true; paintRows(); });
 $('asOvEth').addEventListener('change', () => paintChart(series()));
+{ const k = open; open = null; if (k) setOpen(k, false); }   // the card you had open last time
 $('asOvDom').addEventListener('change', () => paintChart(series()));
 $('asBack').addEventListener('click', () => { if (SamsamUI.inShell) window.parent.cpShell.go('market'); else location.href = './market.html'; });
-let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => data && paintChart(series()), 150); });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => data && open === 'hist' && paintChart(series()), 150); });
 
 function load(force) {
   return M.altPage(force).then(j => { data = j; paint(); }, () => {
@@ -471,7 +541,7 @@ function load(force) {
     $('asRows').innerHTML = ''; if (window.CPSplash) CPSplash.hide();
   });
 }
-function hookCloud(S) { S.onChange(d => { state = d; if (data) { paintYou(); paintRows(); } }); }
+function hookCloud(S) { S.onChange(d => { state = d; if (data) { paintTiles(series()); paintYou(); paintRows(); } }); }
 if (window.Samsam) hookCloud(window.Samsam); else window.addEventListener('samsam-ready', () => hookCloud(window.Samsam), { once: true });
 SamsamUI.refresh();
 load(false);
