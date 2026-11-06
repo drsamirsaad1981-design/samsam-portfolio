@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611061343"></script>
-<script src="samsam-hints.js?v=202611061343"></script>
-<script src="samsam-vault.js?v=202611061343"></script>
-<script src="samsam-labels.js?v=202611061343"></script>
-<script src="samsam-taxonomy.js?v=202611061343"></script>
-<script src="samsam-coins.js?v=202611061343"></script>
-<script src="samsam-dropdown.js?v=202611061343"></script>
-<script src="samsam-add.js?v=202611061343"></script>
-<script src="samsam-market.js?v=202611061343"></script>
+<script src="samsam-ui.js?v=202611061354"></script>
+<script src="samsam-hints.js?v=202611061354"></script>
+<script src="samsam-vault.js?v=202611061354"></script>
+<script src="samsam-labels.js?v=202611061354"></script>
+<script src="samsam-taxonomy.js?v=202611061354"></script>
+<script src="samsam-coins.js?v=202611061354"></script>
+<script src="samsam-dropdown.js?v=202611061354"></script>
+<script src="samsam-add.js?v=202611061354"></script>
+<script src="samsam-market.js?v=202611061354"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }
@@ -189,7 +189,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 </head>
 <body>
 <div id="cpSplash" role="status" aria-live="polite" aria-label="Loading Cute Portfolio" style="position:fixed;inset:0;z-index:100200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0e1a;color:#e5e7eb;font-family:Inter,system-ui,-apple-system,sans-serif;transition:opacity .35s ease,visibility .35s">
-  <svg class="cp-splash-mark" viewBox="0 0 512 512" width="84" height="84" aria-hidden="true"><g fill="none" stroke-width="64"><path d="M260.4,106.1 A150,150 0 0 1 320.0,391.7" stroke="#f7931a"/><path d="M302.2,398.6 A150,150 0 0 1 106.5,292.9" stroke="#a78bfa"/><path d="M104.4,273.7 A150,150 0 0 1 242.9,106.6" stroke="#2dd4bf"/></g><path d="M256,300 C222,265 208,230 238,213 C248,208 254,212 256,218 C258,212 264,208 274,213 C304,230 290,265 256,300 Z" fill="#fbbf24"/></svg>
+  <svg class="cp-splash-mark" viewBox="0 0 512 512" width="84" height="84" aria-hidden="true"><g fill="none" stroke-width="64"><path d="M260.4,106.1 A150,150 0 0 1 320.0,391.7" stroke="#f7931a"/><path d="M302.2,398.6 A150,150 0 0 1 106.5,292.9" stroke="#a78bfa"/><path d="M104.4,273.7 A150,150 0 0 1 242.9,106.6" stroke="#ec4899"/></g><path d="M256,300 C222,265 208,230 238,213 C248,208 254,212 256,218 C258,212 264,208 274,213 C304,230 290,265 256,300 Z" fill="#fbbf24"/></svg>
   <div style="font-weight:700;font-size:1.25rem;letter-spacing:.01em">Cute Portfolio</div>
   <div id="cpSplashMsg" style="font-size:.82rem;color:#94a3b8;min-height:1.2em">Loading Altcoin Season…</div>
 </div>
@@ -248,7 +248,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       <span><span class="sw solid" style="--c:#a78bfa"></span>Altcoin Season Index</span>
       <label><input type="checkbox" id="asOvEth" checked> <span class="sw" style="--c:#22c55e"></span>ETH / BTC</label>
       <label id="asOvDomL" hidden><input type="checkbox" id="asOvDom"> <span class="sw" style="--c:#f7931a"></span>BTC Dominance</label>
-      <label id="asOvUsdtL" hidden><input type="checkbox" id="asOvUsdt"> <span class="sw" style="--c:#2dd4bf"></span>USDT Dominance</label>
+      <label id="asOvUsdtL" hidden><input type="checkbox" id="asOvUsdt"> <span class="sw" style="--c:#ec4899"></span>USDT Dominance</label>
     </div>
     <p class="as-note" id="asNote">Past days are worked out with today's top 100 coins (CoinMarketCap uses each day's own list), so older days can differ a little. From now on every day is saved with that day's list.</p>
   </section>
@@ -282,7 +282,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   <p class="as-src">Prices: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> and Binance (daily, 00:00 UTC), saved by GitHub with each market snapshot. The index follows the CoinMarketCap method. "vs BTC" = how the coin did against holding BTC over the same days.</p>
 </main>
 
-<script type="module" src="samsam-cloud.js?v=202611061343"></script>
+<script type="module" src="samsam-cloud.js?v=202611061354"></script>
 <script>
 const M = SamsamMarket, C = SamsamCoins, DAY = 864e5;
 let data = null, state = null, range = 365, per = 2, perYou = 2, filter = 'all', query = '', showAll = false, open = null;
@@ -346,7 +346,7 @@ function paintChart(S) {
   const ov = [];
   if ($('asOvEth').checked) ov.push({ k: 'ETH / BTC', c: '#22c55e', pts: (data.ethbtc || []).filter(r => r[0] >= x0 && r[0] <= x1), f: v => v.toFixed(5) });
   if ($('asOvDom').checked) ov.push({ k: 'BTC Dominance', c: '#f7931a', pts: domSeries('btc').filter(r => r[0] >= x0 && r[0] <= x1), f: v => v.toFixed(2) + '%' });
-  if ($('asOvUsdt').checked) ov.push({ k: 'USDT Dominance', c: '#2dd4bf', pts: domSeries('usdt').filter(r => r[0] >= x0 && r[0] <= x1), f: v => v.toFixed(2) + '%' });
+  if ($('asOvUsdt').checked) ov.push({ k: 'USDT Dominance', c: '#ec4899', pts: domSeries('usdt').filter(r => r[0] >= x0 && r[0] <= x1), f: v => v.toFixed(2) + '%' });
   let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Altcoin Season Index, last ${range} days"><defs>
     <linearGradient id="asLine" x1="0" y1="${Y(100)}" x2="0" y2="${Y(0)}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3b82f6"/><stop offset=".5" stop-color="#a78bfa"/><stop offset="1" stop-color="#f7931a"/></linearGradient>
     <linearGradient id="asFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a78bfa" stop-opacity=".22"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></linearGradient></defs>`;
