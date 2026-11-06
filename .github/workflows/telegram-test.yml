@@ -1,0 +1,28 @@
+# Sends one test message to your Telegram bot (Actions → Telegram test → Run workflow).
+# Checks TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID; never prints either.
+name: Telegram test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/telegram-test.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  hello:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Send a test message
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          [ -n "$TOKEN" ] || { echo "TELEGRAM_BOT_TOKEN is missing"; exit 1; }
+          [ -n "$CHAT" ] || { echo "TELEGRAM_CHAT_ID is missing"; exit 1; }
+          TEXT=$(printf '<b>✅ Cute Portfolio is connected</b>\n\nYour alerts will arrive here: the morning brief, big moves, signal changes and plan targets.\n\n<i>Test sent by GitHub · %s UTC</i>' "$(date -u '+%d %b %Y %H:%M')")
+          R=$(curl -s "https://api.telegram.org/bot${TOKEN}/sendMessage" --data-urlencode "chat_id=${CHAT}" --data-urlencode "parse_mode=HTML" --data-urlencode "text=${TEXT}" \
+            --data-urlencode 'reply_markup={"inline_keyboard":[[{"text":"Open Cute Portfolio","url":"https://drsamirsaad1981-design.github.io/samsam-portfolio/"}]]}')
+          echo "$R" | python3 -c "import json,sys; r=json.load(sys.stdin); print('Telegram:', 'sent' if r.get('ok') else 'refused — ' + str(r.get('description'))); sys.exit(0 if r.get('ok') else 1)"

@@ -11,7 +11,9 @@ with sync_playwright() as p:
         for page in PAGES:
             pg = ctx.new_page(); msgs = []
             pg.on('console', lambda m, msgs=msgs: msgs.append(f'{m.type}: {m.text[:200]}') if m.type in ('error', 'warning') and 'Failed to load resource' not in m.text else None)
-            pg.on('requestfailed', lambda r, msgs=msgs: msgs.append('REQFAIL ' + re.sub(r'\?.*','',r.url)[:90]) if not re.match(r'https?://(127\.0\.0\.1|.*coingecko|assets\.coingecko|coin-images|fonts\.|img\.test)', r.url) else None)
+            # e2e_setup cuts every request outside this machine on purpose (GitHub data, logos, Binance…), so only the
+            # site's own files count here: one of them failing to load is a real problem
+            pg.on('requestfailed', lambda r, msgs=msgs: msgs.append('REQFAIL ' + re.sub(r'\?.*','',r.url)[:90]) if re.match(r'https?://127\.0\.0\.1', r.url) else None)
             pg.on('pageerror', lambda e, msgs=msgs: msgs.append(f'EXC: {e}'))
             pg.goto(f'{S.SITE_CSP}/{page}'); pg.wait_for_timeout(600)
             if pg.is_visible('#samsamSignInBtn'): pg.click('#samsamSignInBtn')
