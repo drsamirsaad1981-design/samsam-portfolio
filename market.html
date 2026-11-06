@@ -15,15 +15,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611061446"></script>
-<script src="samsam-hints.js?v=202611061446"></script>
-<script src="samsam-vault.js?v=202611061446"></script>
-<script src="samsam-labels.js?v=202611061446"></script>
-<script src="samsam-taxonomy.js?v=202611061446"></script>
-<script src="samsam-coins.js?v=202611061446"></script>
-<script src="samsam-dropdown.js?v=202611061446"></script>
-<script src="samsam-add.js?v=202611061446"></script>
-<script src="samsam-market.js?v=202611061446"></script>
+<script src="samsam-ui.js?v=202611061521"></script>
+<script src="samsam-hints.js?v=202611061521"></script>
+<script src="samsam-vault.js?v=202611061521"></script>
+<script src="samsam-labels.js?v=202611061521"></script>
+<script src="samsam-taxonomy.js?v=202611061521"></script>
+<script src="samsam-coins.js?v=202611061521"></script>
+<script src="samsam-dropdown.js?v=202611061521"></script>
+<script src="samsam-add.js?v=202611061521"></script>
+<script src="samsam-market.js?v=202611061521"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -106,7 +106,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 [data-theme="light"] .mk-tag.btc-side { color: #d97706; } [data-theme="light"] .mk-tag.alt-side { color: #2563eb; }
 .mk-altnote { font-size: .7rem; line-height: 1.35; color: var(--fg2); }   /* what the number means: coins beating BTC · season from 75 */
 .mk-altnote b { color: var(--fg); font-weight: 700; }   /* the gauge sits in the middle of the free space */
-.mk-li-cap { margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: .64rem; font-weight: 700; }
+.mk-li-cap { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--border); font-size: .64rem; font-weight: 700; }
 .mk-li b.up { color: var(--green); } .mk-li b.down { color: var(--red); }
 .mk-gauge { position: relative; height: 8px; border-radius: 6px; margin: 6px 0 2px; }
 .mk-gauge.fng { background: linear-gradient(90deg, #ef4444 0%, #f97316 25%, #eab308 50%, #84cc16 72%, #22c55e 100%); }
@@ -155,10 +155,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   .mk-li { font-size: .7rem; gap: 4px; }
   .mk-li b { overflow: visible; flex-shrink: 0; }
   .mk-vrow .mk-v { font-size: 1.75rem; }
-  .mk-donut { width: 58px; height: 58px; }
+  .mk-donut { width: 84px; height: 84px; }
 }
 @media (min-width: 1024px) { .mk-donut { width: 76px; height: 76px; } .mk-leg div { font-size: .78rem; } }
-@media (max-width: 380px) { .mk-v { font-size: 1.14rem; } .mk-card { padding: 12px; } .mk-donut { width: 56px; height: 56px; } }
+@media (max-width: 380px) { .mk-v { font-size: 1.14rem; } .mk-card { padding: 12px; } .mk-donut { width: 76px; height: 76px; } }
 
 /* ── Watchlist card ── */
 .mk-list { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 12px; }
@@ -407,16 +407,12 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       <div class="mk-domw">
         <svg class="mk-donut" id="domBar" viewBox="0 0 40 40" role="img" aria-label="Market dominance">
           <circle cx="20" cy="20" r="15.9155" stroke="var(--bar-bg)"/>
-          <circle cx="20" cy="20" r="15.9155" stroke="#f7931a" stroke-dasharray="0 100"/>
-          <circle cx="20" cy="20" r="15.9155" stroke="#8b5cf6" stroke-dasharray="0 100"/>
-          <circle cx="20" cy="20" r="15.9155" stroke="#26a17b" stroke-dasharray="0 100"/>
-          <circle cx="20" cy="20" r="15.9155" stroke="#64748b" stroke-dasharray="0 100"/>
         </svg>
-        <div class="mk-leg">
-          <div><span style="--c:#f7931a">BTC</span><b id="domBtc">—</b></div>
-          <div><span style="--c:#8b5cf6">ETH</span><b id="domEth">—</b></div>
-          <div><span style="--c:#26a17b">USDT</span><b id="domUsdt">—</b></div>
-          <div><span style="--c:#64748b">Others</span><b id="domOth">—</b></div>
+        <div class="mk-leg" id="domLeg">
+          <div><span style="--c:#f7931a">BTC</span><b>—</b></div>
+          <div><span style="--c:#8b5cf6">ETH</span><b>—</b></div>
+          <div><span style="--c:#26a17b">USDT</span><b>—</b></div>
+          <div><span style="--c:#64748b">Others</span><b>—</b></div>
         </div>
       </div>
       <div class="mk-foot">
@@ -477,7 +473,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611061446"></script>
+<script type="module" src="samsam-cloud.js?v=202611061521"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -500,19 +496,29 @@ function paintGlobal(g) {
   const ch = document.getElementById('mcapCh');
   ch.innerHTML = (g.mcapCh24 >= 0 ? '▲ ' : '▼ ') + Math.abs(g.mcapCh24 || 0).toFixed(2) + '% <small>24h</small>'; ch.className = 'mk-pill ' + cls(g.mcapCh24);
   document.getElementById('volV').textContent = M.fmtBig(g.vol);
-  const d = g.dom, oth = Math.max(0, 100 - d.btc - d.eth - d.usdt);
+  lastGlobal = g; paintDom();
+}
+// Market Dominance: BTC · ETH · USDT, then the next three biggest coins (XRP, BNB, SOL… — from the list's market caps), Others
+let lastGlobal = null;
+const DOM_C = ['#f7931a', '#8b5cf6', '#26a17b', '#38bdf8', '#facc15', '#f472b6'];
+function paintDom() {
+  const g = lastGlobal; if (!g || !g.dom) return;
+  const d = g.dom, parts = [['BTC', d.btc], ['ETH', d.eth], ['USDT', d.usdt]];
+  // (no stablecoins, wrapped or staked copies — only coins of their own; never more than what is left)
+  if (g.mcap > 0) topRows.filter(c => c.id !== 'ethereum' && !M.isExcluded(c) && c.mcap > 0).sort((a, b) => b.mcap - a.mcap).slice(0, 3)
+    .forEach(c => { const v = c.mcap / g.mcap * 100, left = 100 - parts.reduce((s, p) => s + p[1], 0); if (v > 0 && v < left) parts.push([c.sym, v]); });
+  const oth = Math.max(0, 100 - parts.reduce((s, p) => s + p[1], 0));
+  const all = parts.map((p, i) => [p[0], p[1], DOM_C[i]]).concat([['Others', oth, '#64748b']]);
   // donut: each ring piece starts where the previous one ended (circumference = 100)
-  const parts = [d.btc, d.eth, d.usdt, oth], rings = document.querySelectorAll('#domBar circle');
-  let at = 0;
-  parts.forEach((v, i) => { const r = rings[i + 1]; r.setAttribute('stroke-dasharray', `${Math.max(0, v - 0.6).toFixed(2)} ${(100 - Math.max(0, v - 0.6)).toFixed(2)}`); r.setAttribute('stroke-dashoffset', (-at).toFixed(2)); at += v; });
-  document.getElementById('domBtc').textContent = d.btc.toFixed(2) + '%';
-  document.getElementById('domEth').textContent = d.eth.toFixed(2) + '%';
-  document.getElementById('domUsdt').textContent = d.usdt.toFixed(2) + '%';
-  document.getElementById('domOth').textContent = oth.toFixed(2) + '%';
-  document.getElementById('domBar').setAttribute('aria-label', `Dominance: BTC ${d.btc.toFixed(1)}%, ETH ${d.eth.toFixed(1)}%, USDT ${d.usdt.toFixed(1)}%, others ${oth.toFixed(1)}%`);
+  let at = 0, rings = '<circle cx="20" cy="20" r="15.9155" stroke="var(--bar-bg)"/>';
+  all.forEach(([, v, c]) => { const w = Math.max(0, v - 0.6); rings += `<circle cx="20" cy="20" r="15.9155" stroke="${c}" stroke-dasharray="${w.toFixed(2)} ${(100 - w).toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}"/>`; at += v; });
+  const bar = document.getElementById('domBar'); bar.innerHTML = rings;
+  bar.setAttribute('aria-label', 'Dominance: ' + all.map(([k, v]) => `${k} ${v.toFixed(1)}%`).join(', '));
+  document.getElementById('domLeg').innerHTML = all.map(([k, v, c]) => `<div><span style="--c:${c}">${k}</span><b>${v.toFixed(2)}%</b></div>`).join('');
 }
 // BTC / ETH price lines on the market-cap card (from the list)
 function paintMajors() {
+  paintDom();
   [['bitcoin', 'liBtc', 'BTC'], ['ethereum', 'liEth', 'ETH']].forEach(([id, el, sym]) => {
     const c = topRows.find(r => r.id === id); if (!c) return;
     document.getElementById(el).innerHTML = `${sym} <span><b>${c.price >= 1000 ? '$' + Math.round(c.price).toLocaleString('en-US') : SamsamFmt.price(c.price)}</b><span class="ch ${cls(c.ch24)}">${pct(c.ch24)}</span></span>`;
