@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611062043"></script>
-<script src="samsam-hints.js?v=202611062043"></script>
-<script src="samsam-vault.js?v=202611062043"></script>
-<script src="samsam-labels.js?v=202611062043"></script>
-<script src="samsam-taxonomy.js?v=202611062043"></script>
-<script src="samsam-coins.js?v=202611062043"></script>
-<script src="samsam-dropdown.js?v=202611062043"></script>
-<script src="samsam-add.js?v=202611062043"></script>
-<script src="samsam-chart.js?v=202611062043"></script>
-<script src="samsam-market.js?v=202611062043"></script>
+<script src="samsam-ui.js?v=202611062201"></script>
+<script src="samsam-hints.js?v=202611062201"></script>
+<script src="samsam-vault.js?v=202611062201"></script>
+<script src="samsam-labels.js?v=202611062201"></script>
+<script src="samsam-taxonomy.js?v=202611062201"></script>
+<script src="samsam-coins.js?v=202611062201"></script>
+<script src="samsam-dropdown.js?v=202611062201"></script>
+<script src="samsam-add.js?v=202611062201"></script>
+<script src="samsam-chart.js?v=202611062201"></script>
+<script src="samsam-market.js?v=202611062201"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -883,17 +883,32 @@
   @keyframes spin { to { transform:rotate(360deg); } }
   .analysis-error { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:14px 16px; color:#f87171; font-size:0.85rem; line-height:1.6; }
   .analysis-error a { color:var(--accent); text-decoration:underline; }
-  .analysis-content { font-size:0.95rem; line-height:1.6; }
-  .analysis-content h3 { font-size:1.05rem; font-weight:700; color:var(--accent); margin:14px 0 6px; border-bottom:1px solid var(--border); padding-bottom:4px; }
-  .analysis-content h3:first-child { margin-top:0; }
-  .analysis-content ul { margin:0 0 8px 0; padding:0; list-style:none; }
-  .analysis-content ul li { padding:3px 0; position:relative; font-size:0.95rem; }
-  /* LTR bullets */
-  .analysis-content[dir="ltr"] ul li { padding-left:16px; }
-  .analysis-content[dir="ltr"] ul li::before { content:'•'; position:absolute; left:2px; color:var(--accent); }
-  /* RTL bullets */
-  .analysis-content[dir="rtl"] ul li { padding-right:16px; text-align:right; }
-  .analysis-content[dir="rtl"] ul li::after { content:'•'; position:absolute; right:2px; color:var(--accent); }
+  .analysis-content { font-size:0.93rem; line-height:1.65; display:flex; flex-direction:column; gap:10px; }
+  .analysis-content p { margin:0 0 6px; } .analysis-content p:last-child { margin-bottom:0; }
+  .ai-sec { background:var(--bg3); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
+  .ai-sec h3 { display:flex; align-items:center; gap:9px; font-size:1rem; font-weight:800; color:var(--fg); margin:0 0 9px; line-height:1.3; }
+  .ai-ic { width:28px; height:28px; border-radius:8px; flex:none; display:inline-flex; align-items:center; justify-content:center; color:var(--accent); background:color-mix(in srgb, var(--accent) 15%, transparent); }
+  .ai-sum { border-color:color-mix(in srgb, var(--accent) 45%, var(--border)); background:color-mix(in srgb, var(--accent) 7%, var(--bg3)); }
+  .analysis-content ul, .analysis-content ol { margin:0 0 6px; padding:0; list-style:none; display:flex; flex-direction:column; gap:7px; }
+  .analysis-content ul:last-child, .analysis-content ol:last-child { margin-bottom:0; }
+  .analysis-content li { position:relative; padding-inline-start:15px; }
+  .analysis-content ul > li::before { content:''; position:absolute; inset-inline-start:2px; top:0.66em; width:5px; height:5px; border-radius:50%; background:var(--accent); }
+  .analysis-content li.sub { margin-inline-start:16px; color:var(--fg2); }
+  .ai-k { font-weight:800; color:var(--fg); }
+  .analysis-content ol { counter-reset:ai; }
+  .analysis-content ol > li { counter-increment:ai; padding-inline-start:30px; }
+  .analysis-content ol > li::before { content:counter(ai); position:absolute; inset-inline-start:0; top:0.15em; width:20px; height:20px; border-radius:50%; background:var(--accent); color:#fff; font-size:0.7rem; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .analysis-content li.ai-verdict { padding:8px 12px; border-radius:9px; background:color-mix(in srgb, var(--accent) 12%, transparent); display:flex; flex-direction:column; gap:2px; }
+  .analysis-content li.ai-verdict::before, .analysis-content li.ai-rec::before { display:none; }
+  .ai-verdict .ai-k { color:var(--accent); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; }
+  .analysis-content li.ai-rec { padding:8px 0 0; border-top:1px solid var(--border); display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; }
+  .analysis-content li.ai-rec:first-child { border-top:0; padding-top:0; }
+  .ai-sym { font-weight:800; }
+  .ai-badge { font-size:0.72rem; font-weight:800; padding:2px 9px; border-radius:999px; }
+  .ai-buy { color:var(--green); background:rgba(16,185,129,0.15); }
+  .ai-hold { color:var(--fg2); background:rgba(148,163,184,0.18); }
+  .ai-reduce { color:var(--red); background:rgba(239,68,68,0.13); }
+  .ai-rec .ai-t { flex:1 1 100%; }
   .analysis-meta { display:flex; flex-direction:column; gap:4px; }
   @media(max-width:600px){
     #analysisModal { align-items:center; justify-content:center; padding:8px; }
@@ -901,7 +916,8 @@
     .analysis-toolbar { gap:6px; }
     .analysis-lang-btn { font-size:0.8rem; padding:5px 10px; }
     .analysis-content { font-size:0.9rem; }
-    .analysis-content h3 { font-size:1rem; }
+    .ai-sec { padding:11px 12px; }
+    .ai-sec h3 { font-size:0.95rem; }
   }
   .analysis-meta { font-size:0.7rem; color:var(--fg2); margin-top:10px; padding-top:8px; border-top:1px solid var(--border); display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; }
   .btn-analysis { background:var(--bg3); color:var(--fg); border:1px solid var(--border); border-radius:8px; padding:6px 14px; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; transition:border-color .2s, color .2s; }
@@ -1487,7 +1503,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611062043"></script>
+<script type="module" src="samsam-cloud.js?v=202611062201"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2733,33 +2749,87 @@ function buildPortfolioPayload() {
   };
 }
 
-// Market summary for the AI report: cached / snapshot numbers (no extra CoinGecko calls), at most ~4 seconds.
+// Market data for the AI report: cached / snapshot numbers (no extra CoinGecko calls), at most ~4 seconds.
+// Live overview + the trends GitHub saves (m/alt.json: dominance, ETH/BTC, breadth; m/etf.json: ETF flows).
 async function marketContext() {
   const M = window.SamsamMarket; if (!M) return '';
-  const quiet = p => Promise.race([p.then(r => r && 'data' in r ? r.data : r, () => null), new Promise(r => setTimeout(() => r(null), 4000))]);
-  const [g, f, top, a90] = await Promise.all([quiet(M.global()), quiet(M.fng()), quiet(M.top()), quiet(M.alt90())]);
-  if (!g && !f && !top) return '';
+  const wait = p => Promise.race([Promise.resolve(p).then(r => r, () => null), new Promise(r => setTimeout(() => r(null), 4000))]);
+  const quiet = p => wait(Promise.resolve(p).then(r => r && 'data' in r ? r.data : r));
+  const [g, f, top, a90, ap, etf] = await Promise.all([quiet(M.global()), quiet(M.fng()), quiet(M.top()), quiet(M.alt90()), wait(M.altPage && M.altPage()), wait(M.etf && M.etf())]);
+  aiAltPage = ap;
+  if (!g && !f && !top && !ap) return '';
   const pc = v => v == null || isNaN(v) ? 'n/a' : (v >= 0 ? '+' : '') + (+v).toFixed(2) + '%';
   const usd = v => v >= 1000 ? '$' + Math.round(v).toLocaleString('en-US') : '$' + (+v).toPrecision(4);
-  const L = ['', '', 'MARKET OVERVIEW (live crypto market, same data as the app\'s Market tab):'];
-  if (g) {
-    L.push(`- Total market cap ${M.fmtBig(g.mcap)} (${pc(g.mcapCh24)} in 24h), 24h volume ${M.fmtBig(g.vol)}`);
-    L.push(`- Dominance: BTC ${g.dom.btc.toFixed(1)}%, ETH ${g.dom.eth.toFixed(1)}%, USDT ${g.dom.usdt.toFixed(1)}%, others ${Math.max(0, 100 - g.dom.btc - g.dom.eth - g.dom.usdt).toFixed(1)}%`);
+  const flow = v => (v < 0 ? '-' : '+') + (Math.abs(v) >= 1e9 ? '$' + (Math.abs(v) / 1e9).toFixed(2) + 'B' : '$' + (Math.abs(v) / 1e6).toFixed(1) + 'M');
+  // a saved daily series ([day, value], day = days since 1970): its value `days` days before today
+  const back = (ser, days) => { if (!ap || !Array.isArray(ser)) return null; const d = ap.today - days; let v = null; ser.forEach(p => { if (p[0] <= d) v = p[1]; }); return v; };
+  const last = ser => Array.isArray(ser) && ser.length ? ser[ser.length - 1][1] : null;
+  const L = ['', '', 'MARKET DATA (the live crypto market — the same numbers as the app\'s Market Hub):'];
+  if (g) L.push(`- Total market cap ${M.fmtBig(g.mcap)} (${pc(g.mcapCh24)} in 24h), 24h volume ${M.fmtBig(g.vol)}`);
+  if (top && top.length) {
+    const by = id => top.find(r => r.id === id);
+    [['bitcoin', 'BTC'], ['ethereum', 'ETH']].forEach(([id, s]) => { const c = by(id); if (c && c.price) L.push(`- ${s} price ${usd(c.price)} (${pc(c.ch24)} 24h${c.ch7 != null ? `, ${pc(c.ch7)} 7d` : ''}${c.ch30 != null ? `, ${pc(c.ch30)} 30d` : ''})`); });
+  }
+  if (ap && Array.isArray(ap.btc)) L.push(`- BTC trend: ${pc(ap.btc[0])} over 7 days, ${pc(ap.btc[1])} over 30 days, ${pc(ap.btc[2])} over 90 days`);
+  const trend = (name, now, ser, dp, unit) => {
+    if (now == null) return; const w = back(ser, 7), m = back(ser, 30), f2 = v => v == null ? 'n/a' : (+v).toFixed(dp) + unit;
+    L.push(`- ${name}: ${f2(now)} now, ${f2(w)} 7 days ago, ${f2(m)} 30 days ago`);
+  };
+  if (g) L.push(`- Dominance now: BTC ${g.dom.btc.toFixed(1)}%, ETH ${g.dom.eth.toFixed(1)}%, USDT ${g.dom.usdt.toFixed(1)}%, others ${Math.max(0, 100 - g.dom.btc - g.dom.eth - g.dom.usdt).toFixed(1)}%`);
+  if (ap) {
+    trend('BTC dominance', g ? g.dom.btc : last(ap.domEst), ap.domEst, 1, '%');
+    trend('USDT dominance (stablecoin cash waiting on the side)', g ? g.dom.usdt : last(ap.usdtEst), ap.usdtEst, 2, '%');
+    trend('ETH/BTC ratio', last(ap.ethbtc), ap.ethbtc, 5, '');
   }
   if (f) L.push(`- Fear & Greed: ${f.value}/100 (${f.label})${f.prev != null ? `, yesterday ${f.prev}` : ''}${f.week != null ? `, a week ago ${f.week}` : ''}`);
   const alt = a90 || (top && M.altSeason(top));
-  if (alt) L.push(`- Altcoin Season: ${alt.value}/100 (${alt.label}) — ${alt.beat}/${alt.n} top coins beat BTC over ${alt.period || '30d'}`);
+  if (alt) {
+    const was = ap && Array.isArray(ap.idx) ? back(ap.idx.map(r => [r[0], r[1]]), 30) : null;
+    L.push(`- Altcoin Season index: ${alt.value}/100 (${alt.label}) — ${alt.beat}/${alt.n} top coins beat BTC over ${alt.period || '30d'}${was != null ? `; it was ${was}/100 30 days ago` : ''}`);
+  }
+  if (ap && ap.breadth) L.push('- Top 100 coins vs BTC: ' + ['7', '30', '90'].filter(k => ap.breadth[k]).map(k => { const b = ap.breadth[k]; return `${k} days: ${b.beat}/${b.n} beat BTC (BTC ${pc(b.btc)}, median coin ${pc(b.med)})`; }).join('; '));
+  if (etf) ['btc', 'eth'].forEach(k => {
+    const e = etf[k], d = e && e.days; if (!d || !d.length) return;
+    const sum = n => d.slice(-n).reduce((s, r) => s + r[1], 0), z = d[d.length - 1];
+    L.push(`- US spot ${k.toUpperCase()} ETF flows: ${flow(z[1])} on ${z[0]}, ${flow(sum(5))} over the last 5 trading days, ${flow(sum(d.length))} over the last ${d.length} trading days; net assets ${M.fmtBig(z[3])}`);
+    const fl = e.funds && e.funds.list;
+    if (fl && fl.length) L.push(`  Biggest moves on ${e.funds.date}: ` + fl.slice().sort((a, b) => Math.abs(b.net) - Math.abs(a.net)).slice(0, 3).map(x => `${x.t} ${flow(x.net)}`).join(', '));
+  });
   if (top && top.length) {
-    const by = id => top.find(r => r.id === id);
-    [['bitcoin', 'BTC'], ['ethereum', 'ETH']].forEach(([id, s]) => { const c = by(id); if (c && c.price) L.push(`- ${s} ${usd(c.price)} (${pc(c.ch24)} 24h${c.ch30 != null ? `, ${pc(c.ch30)} 30d` : ''})`); });
     const ok = top.filter(r => r.ch24 != null && !M.isExcluded(r)).sort((a, b) => b.ch24 - a.ch24);
     if (ok.length >= 10) {
       L.push(`- Top 24h gainers (top 100): ${ok.slice(0, 5).map(r => `${r.sym} ${pc(r.ch24)}`).join(', ')}`);
       L.push(`- Top 24h losers (top 100): ${ok.slice(-5).reverse().map(r => `${r.sym} ${pc(r.ch24)}`).join(', ')}`);
     }
   }
-  L.push('Begin the report with a short section titled "Market Overview" (in the report language) that reads these market conditions — trend, sentiment, BTC vs altcoins — and what they mean for this portfolio right now. Then continue with the usual portfolio analysis, and take the market conditions into account in the recommendations.');
   return L.join('\n');
+}
+let aiAltPage = null;
+
+// What the report must look like — sent with every request (the Worker's 7 sections, each with fixed points),
+// so the app can show it as clean cards in English or Arabic.
+function aiLayout(lang) {
+  const ar = lang === 'ar';
+  const T = ar
+    ? { sum: 'الخلاصة', btc: 'اتجاه BTC', dom: 'سيطرة BTC', eb: 'ETH/BTC', liq: 'السيولة', etf: 'تدفقات ETF', fng: 'المعنويات', alt: 'موسم العملات البديلة', ver: 'الحكم',
+        val: 'القيمة والربح', vs: 'مقارنة بـ BTC', all: 'التوزيع', bs: 'حصة BTC', best: 'الأفضل', worst: 'الأسوأ', risk: 'التركّز، العملات الضعيفة، العملات المستقرة…',
+        pr: 'التقدّم', cl: 'الأقرب للهدف', need: 'المتبقي', nx: 'الشراء القادم', buy: 'شراء', hold: 'احتفاظ', red: 'تقليل', wk: 'الأسبوع' }
+    : { sum: 'Summary', btc: 'BTC trend', dom: 'BTC dominance', eb: 'ETH/BTC', liq: 'Liquidity', etf: 'ETF flows', fng: 'Sentiment', alt: 'Altcoin Season', ver: 'Verdict',
+        val: 'Value & profit', vs: 'vs BTC', all: 'Allocation', bs: 'BTC share', best: 'Best', worst: 'Worst', risk: 'Concentration, Weak coins, Stablecoins…',
+        pr: 'Progress', cl: 'Closest to target', need: 'Still needed', nx: 'Next buy', buy: 'Buy', hold: 'Hold', red: 'Reduce', wk: 'Week' };
+  const b = s => `**${s}:**`;
+  return ['', '', 'REPORT LAYOUT — follow it exactly (it details the 7 sections above):',
+    `- First a line ${'**' + T.sum + '**'} and exactly 3 "- " bullets: the market phase, the state of the portfolio, the single most important action. Then the 7 sections.`,
+    '- Each section heading on its own line as "N. <emoji> <title>" with N = 1 to 7' + (ar ? ' and the title in Arabic' : '') + '. No other line may start with a number followed by a dot.',
+    '- Inside the sections only "- " bullets: one idea per bullet, at most 2 short sentences, always with the real numbers. Every bullet starts with a bold label and a colon, like "- **Label:** text".',
+    `- 1 Market — one bullet each, in this order: ${b(T.btc)} 7 / 30 / 90 days · ${b(T.dom)} now vs 7 and 30 days ago, rising or falling, and what that says · ${b(T.eb)} the ratio and its direction · ${b(T.liq)} the USDT dominance trend and volume · ${b(T.etf)} BTC and ETH, inflow or outflow over the last 5 trading days · ${b(T.fng)} Fear & Greed now vs a week ago · ${b(T.alt)} the index and how many top coins beat BTC over 7 / 30 / 90 days. Last bullet ${b(T.ver)} the market phase in one sentence and what it means for this portfolio.`,
+    `- 2 Portfolio — ${b(T.val)} · ${b(T.vs)} how many coins beat holding the same money in BTC (vsBtcPct), the biggest gaps · ${b(T.all)} each category with its % · ${b(T.bs)}.`,
+    `- 3 Best & Worst — ${b(T.best)} and ${b(T.worst)}: up to 3 coins each, with their 24h, 7d and since-buy %.`,
+    `- 4 Risks — one bullet per risk with its own bold label (${T.risk}) and the numbers.`,
+    `- 5 Accumulation Plan — ${b(T.pr)} · ${b(T.cl)} · ${b(T.need)} in $ · ${b(T.nx)}.`,
+    `- 6 Recommendations — one bullet per coin that matters, BTC first, at most 10: "- **SYM — ${T.buy}:** the reason", using exactly one of ${T.buy} / ${T.hold} / ${T.red}. Each coin has the app's Signal (signal); say when you disagree with it and why.`,
+    `- 7 Action Plan — 4 bullets "- **${T.wk} 1:** …" to "**${T.wk} 4:**", each a concrete action with an amount or a price level where it helps.`,
+    '- Keep the whole report under about 900 words.'].join('\n');
 }
 
 function renderAnalysisLoading() {
@@ -2767,7 +2837,7 @@ function renderAnalysisLoading() {
     <div class="analysis-loading">
       <div class="analysis-spinner"></div>
       <div style="font-size:0.85rem">Claude AI is reading the market and analyzing your portfolio…</div>
-      <div style="font-size:0.72rem;opacity:0.6">This takes 5–15 seconds</div>
+      <div style="font-size:0.72rem;opacity:0.6">This takes 10–30 seconds</div>
     </div>`;
 }
 
@@ -2783,24 +2853,79 @@ function renderAnalysisError(msg, detail) {
     </div>`;
 }
 
+// The report as cards: a summary, then the 7 sections — each with its SVG icon and its title in the report's language
+// (whatever emoji / wording the AI used). Bullets with a bold label, numbered steps, Buy / Hold / Reduce badges.
+// The AI's text is escaped first, so it can never put markup or script on the page.
+const AI_SECS = [
+  ['bar', 'Market Overview', 'نظرة على السوق', /market|السوق/i],
+  ['briefcase', 'Portfolio & Allocation', 'المحفظة والتوزيع', /portfolio|allocation|المحفظة|التوزيع/i],
+  ['star', 'Best & Worst Performers', 'الأفضل والأسوأ أداءً', /best|worst|perform|الأفضل|الأسوأ|أداء/i],
+  ['alert', 'Risks & Concentration', 'المخاطر والتركّز', /risk|concentr|المخاطر|التركز|التركّز/i],
+  ['target', 'Accumulation Plan', 'خطة التجميع', /accumul|التجميع/i],
+  ['sparkles', 'Recommendations', 'التوصيات', /recommend|التوصيات|توصيات/i],
+  ['zap', 'Action Plan — Next 30 Days', 'خطة العمل — الـ 30 يوم القادمة', /action|plan|30|خطة|العمل/i],
+];
+const AI_EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+function aiReportHtml(text, lang) {
+  const ar = lang === 'ar', ic = n => SamsamUI.ic(n, { solo: true, size: 16 });
+  const lines = SamsamCoins.esc(String(text || '')).replace(/\r/g, '').split('\n');
+  const secs = [{ n: 0, items: [] }]; let cur = secs[0], next = 1;
+  for (const raw of lines) {
+    const t = raw.trim();
+    if (!t || /^([-_*])\1{2,}$/.test(t)) { cur.items.push({ k: 'gap' }); continue; }
+    const h = t.replace(/^#{1,4}\s*/, '').replace(/^\*\*(.*)\*\*:?$/, '$1').trim();
+    const m = /^(\d)\s*[.)]\s*(.*)$/.exec(h);
+    if (m && +m[1] === next && next <= 7 && (AI_EMOJI.test(h) || /^#/.test(t) || /^\*\*.*\*\*:?$/.test(t) || AI_SECS[next - 1][3].test(m[2]))) {
+      cur = { n: next++, items: [] }; secs.push(cur); continue;
+    }
+    if (cur.n === 0 && /^(summary|tl;?dr|key takeaways|الخلاصة|ملخص|الملخص)\s*:?$/i.test(h.replace(AI_EMOJI, '').trim())) continue;
+    let b = /^(\s*)[-•*·]\s+(.*)$/.exec(raw);
+    if (b) { cur.items.push({ k: 'li', sub: b[1].replace(/\t/g, '  ').length >= 2, s: b[2] }); continue; }
+    b = /^\s*(\d+)[.)]\s+(.*)$/.exec(raw);
+    if (b) { cur.items.push({ k: 'step', s: b[2] }); continue; }
+    cur.items.push({ k: 'p', s: t.replace(/^#{1,4}\s*/, '') });
+  }
+  // in Arabic, numbers like -2.96% / -$1.2B / 0.0331 keep their left-to-right order inside the right-to-left text
+  const num = s => ar ? s.replace(/(?<![&#\w.])[+\-−]?\$?\d[\d,]*(\.\d+)?%?[KMBT]?(?![\w;])/g, m => `<bdi dir="ltr">${m}</bdi>`) : s;
+  const bold = s => num(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*\*/g, '');
+  const VERD = /^(verdict|bottom line|conclusion|الحكم|الخلاصة|النتيجة)$/i;
+  const REC = [[/\b(buy|accumulate|add)\b|شراء|اشتر|تجميع|زيادة/i, 'buy'], [/\b(reduce|sell|trim|convert)\b|تقليل|بيع|خفض/i, 'reduce'], [/\b(hold|keep)\b|احتفاظ|احتفظ|انتظار/i, 'hold']];
+  const li = (it, sec) => {
+    const lm = /^\*\*(.+?)\*\*\s*:?\s*([\s\S]*)$/.exec(it.s);
+    if (!lm) return `<li${it.sub ? ' class="sub"' : ''}>${bold(it.s)}</li>`;
+    const key = lm[1].replace(/:\s*$/, '').trim(), rest = bold(lm[2]), keyH = ar ? key.replace(/[A-Za-z][\w/&.$-]*(\s+[A-Za-z][\w/&.$-]*)*/g, m => `<bdi dir="ltr">${m}</bdi>`) : key;
+    if (sec === 6) {   // "SYM — Buy: reason"
+      const parts = key.split(/\s*[—–\-:|]\s*/), word = parts.length > 1 ? parts.slice(1).join(' ') : '', kind = word && (REC.find(r => r[0].test(word)) || [])[1];
+      if (kind) return `<li class="ai-rec"><span class="ai-sym">${parts[0]}</span><span class="ai-badge ai-${kind}">${word}</span><span class="ai-t">${rest}</span></li>`;
+    }
+    if (VERD.test(key)) return `<li class="ai-verdict"><span class="ai-k">${keyH}</span><span class="ai-t">${rest}</span></li>`;
+    return `<li${it.sub ? ' class="sub"' : ''}><bdi class="ai-k">${keyH}:</bdi> ${rest}</li>`;
+  };
+  const body = sec => {
+    let out = '', open = '';
+    const close = () => { if (open) { out += `</${open}>`; open = ''; } };
+    sec.items.forEach(it => {
+      if (it.k === 'gap') return close();
+      const want = it.k === 'li' ? 'ul' : it.k === 'step' ? 'ol' : '';
+      if (want !== open) { close(); if (want) { out += `<${want}>`; open = want; } }
+      out += it.k === 'li' ? li(it, sec.n) : it.k === 'step' ? `<li>${bold(it.s)}</li>` : `<p>${bold(it.s)}</p>`;
+    });
+    close(); return out;
+  };
+  const found = secs.length > 1;
+  let html = '';
+  secs.forEach(sec => {
+    const inner = body(sec); if (!inner) return;
+    if (sec.n === 0) { html += found ? `<section class="ai-sec ai-sum"><h3><span class="ai-ic">${ic('checkCircle')}</span><span>${ar ? 'الخلاصة' : 'Summary'}</span></h3>${inner}</section>` : `<section class="ai-sec">${inner}</section>`; return; }
+    const S = AI_SECS[sec.n - 1];
+    html += `<section class="ai-sec" data-sec="${sec.n}"><h3><span class="ai-ic">${ic(S[0])}</span><span><bdi dir="ltr">${sec.n}.</bdi> ${ar ? S[2] : S[1]}</span></h3>${inner}</section>`;
+  });
+  return html;
+}
+
 function renderAnalysisReport(text, meta) {
-  // Parse the 7 sections from Claude's response
-  const sections = text.split(/\n(?=\d+\.\s|[📊🥧🏆⚠️💰💡🎯])/);
-  let html = '<div class="analysis-content" dir="' + (analysisLang === 'ar' ? 'rtl' : 'ltr') + '">';
-
-  // Convert markdown to HTML — the AI's text is escaped first, so it can never put markup or script on the page
-  const formatted = SamsamCoins.esc(String(text || ''))
-    .replace(/^---+$/gm, '')                                               // remove horizontal rules
-    .replace(/^#{1,3}\s*(.+)/gm, '<h3>$1</h3>')                          // ## headings
-    .replace(/^(\d+\.\s+[📊🥧🏆⚠️💰💡🎯]?\s*[^\n]+)/gm, '<h3>$1</h3>') // numbered sections
-    .replace(/^[•\-\*]\s+(.+)/gm, '<li>$1</li>')                         // bullets
-    .replace(/(<li>[^<]*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>')        // wrap in ul
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')                     // bold
-    .replace(/\n{2,}/g, '\n')                                             // collapse multiple blank lines
-    .replace(/\n(?!<)/g, ' ');                                            // single newlines → space (no <br>)
-
-  html += formatted;
-  html += '</div>';
+  const lang = meta.lang || analysisLang;
+  let html = '<div class="analysis-content" dir="' + (lang === 'ar' ? 'rtl' : 'ltr') + '" lang="' + lang + '">' + aiReportHtml(text, lang) + '</div>';
   html += `<div class="analysis-meta">
     <span>${SamsamUI.ic('bot')}Generated by Claude AI${meta.model ? ' (' + SamsamCoins.esc(meta.model) + ')' : ''}</span>${meta.left != null ? `<span>${SamsamUI.ic('clock')}${meta.left} report${meta.left === 1 ? '' : 's'} left today</span>` : ''}
     <span>${SamsamUI.ic('clock')}${meta.generatedAt}</span>
@@ -2809,6 +2934,30 @@ function renderAnalysisReport(text, meta) {
   </div>`;
 
   document.getElementById('analysisBody').innerHTML = html;
+}
+
+// More about each coin for the AI: 24h / 7 / 30 / 90-day change, vs BTC, weight, the app's Signal; and the split by category.
+function enrichPayload(pd) {
+  const total = pd.stats.total || 0, mine = (aiAltPage && aiAltPage.mine) || {}, btc = aiAltPage && aiAltPage.btc;
+  const r2 = v => v == null || isNaN(v) ? null : +(+v).toFixed(2);
+  const cats = {};
+  pd.coins.forEach(x => {
+    const c = portfolio.find(p => p.sym === x.sym); if (!c) return;
+    const id = c.cgId || (SamsamCoins.CG_IDS || {})[c.sym], tc = id && aiAltPage && (aiAltPage.coins || []).find(r => r.id === id), p = (c.sym === 'BTC' ? btc : id && (mine[id] || (tc && tc.p))) || [];
+    x.ch24 = r2(c.change24h); x.ch7 = r2(p[0]); x.ch30 = r2(p[1]); x.ch90 = r2(p[2]);
+    x.weightPct = total > 0 ? r2(x.currentValue / total * 100) : null;
+    x.vsBtcPct = c.sym === 'BTC' ? 0 : r2(getPerf(c));
+    x.signal = signalLabel(getAction(c.sym, 0, c), true);
+    x.catLabel = (typeof CAT_LABELS !== 'undefined' && CAT_LABELS[x.cat]) || x.cat;
+    const k = x.catLabel; cats[k] = (cats[k] || 0) + x.currentValue;
+  });
+  pd.stats.byCategory = Object.keys(cats).map(k => ({ cat: k, value: +cats[k].toFixed(2), pct: total > 0 ? +(cats[k] / total * 100).toFixed(1) : 0 })).sort((a, b) => b.value - a.value);
+  const alts = pd.coins.filter(x => x.sym !== 'BTC' && x.qty > 0 && x.vsBtcPct != null);
+  pd.stats.coinsBeatingBtc = `${alts.filter(x => x.vsBtcPct > 0).length} of ${alts.length}`;
+  pd.stats.btcSharePct = total > 0 ? +(pd.stats.btcValue / total * 100).toFixed(1) : 0;
+  const rules = window.Samsam && Samsam.getSignalRules ? Samsam.getSignalRules() : { reinforce: -5, sell: -20 };
+  pd.stats.signalRules = `Signal vs the coin's avg buy price: Reinforce at ${rules.reinforce}% or lower, Sell / Convert to BTC below ${rules.sell}%, otherwise Hold; BTC is always Hold`;
+  return pd;
 }
 
 async function runAnalysis() {
@@ -2857,7 +3006,10 @@ async function runAnalysis() {
 
     // The market right now (same numbers as the Market tab) — the report opens with a Market Overview.
     // It travels in the same free-text context the Worker already adds to the prompt, so the Worker needs no change.
+    const lang = analysisLang;
     accumContext += await marketContext();
+    enrichPayload(portfolioData);
+    accumContext += aiLayout(lang);
 
     // Proof of sign-in: the Worker verifies this Firebase ID token and counts reports per account per day
     let idToken = null;
@@ -2867,7 +3019,7 @@ async function runAnalysis() {
     const res = await fetch(ANALYSIS_WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ portfolioData, language: analysisLang, accumContext, idToken }),
+      body: JSON.stringify({ portfolioData, language: lang, accumContext, idToken }),
     });
 
     if (!res.ok) {
@@ -2886,6 +3038,7 @@ async function runAnalysis() {
     }
 
     renderAnalysisReport(data.report, {
+      lang,
       model:       typeof data.model === 'string' ? data.model : '',
       left:        Number.isFinite(data.remaining) ? data.remaining : null,
       generatedAt: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
