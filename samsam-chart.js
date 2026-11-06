@@ -9,7 +9,10 @@
 //   height: 200,
 //   series: [{ points: [{t, v}], color: '#22c55e', fill: true, width: 2.5, dashed: false }],
 //   format: 'usd' | 'pct',
+//   hover: true,   // crosshair + a small card with the date and each line's value (mouse or finger) — same style as the
+//                  // Altcoin Season chart; series may carry a name for that card
 // })
+// Every chart ends each line with a dot on its latest value.
 (function () {
   function niceStep(range, target) {
     if (!(range > 0) || !isFinite(range)) return 1;
@@ -77,6 +80,10 @@
   }
 
   function draw(canvas, o) {
+    canvas._cpo = o; render(canvas, o, -1);
+    if (o.hover) hook(canvas);
+  }
+  function render(canvas, o, hi) {
     var dpr = window.devicePixelRatio || 1;
     // Width available inside the parent (clientWidth includes padding, so subtract it)
     var par = canvas.parentElement, W = 340;
@@ -131,9 +138,11 @@
     });
     canvas.dataset.xLabels = drawn.join('|');
     // series
+    var geo = { W: W, H: Hh, top: pad.top, bottom: pad.top + cH, left: pad.left, right: W - pad.right, series: [], format: o.format, mode: o.timeMode, dark: dark };
     series.forEach(function (s) {
       var n = s.points.length;
       var pts = s.points.map(function (p, i) { return [toX(p.t, i, n), toY(p.v)]; });
+      geo.series.push({ s: s, pts: pts });
       if (s.fill) {
         var g = ctx.createLinearGradient(0, pad.top, 0, pad.top + cH);
         g.addColorStop(0, hexToRgba(s.color, dark ? 0.30 : 0.22)); g.addColorStop(1, hexToRgba(s.color, 0));
@@ -145,6 +154,81 @@
       ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.setLineDash(s.dashed ? [5, 4] : []);
       smoothPath(ctx, pts, true); ctx.stroke(); ctx.setLineDash([]);
     });
+    // the latest value of each line: a dot with a ring
+    var ring = dark ? '#1c1a3a' : '#ffffff';
+    geo.series.forEach(function (g) {
+      var q = g.pts[g.pts.length - 1];
+      ctx.beginPath(); ctx.arc(q[0], q[1], g.s.fill ? 4.5 : 3.5, 0, Math.PI * 2); ctx.fillStyle = g.s.color; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = ring; ctx.stroke();
+    });
+    // crosshair at the hovered point
+    if (hi >= 0) {
+      var main = mainOf(geo), m = main.pts[hi];
+      if (m) {
+        ctx.strokeStyle = dark ? 'rgba(148,163,184,.55)' : 'rgba(100,116,139,.55)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(Math.round(m[0]) + 0.5, geo.top); ctx.lineTo(Math.round(m[0]) + 0.5, geo.bottom); ctx.stroke(); ctx.setLineDash([]);
+        geo.series.forEach(function (g) {
+          var k = nearest(g, main.s.points[hi].t); if (k < 0) return; var q = g.pts[k];
+          ctx.beginPath(); ctx.arc(q[0], q[1], 5, 0, Math.PI * 2); ctx.fillStyle = ring; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = g.s.color; ctx.stroke();
+        });
+      }
+    }
+    canvas._cpg = geo;
+  }
+  // the line the crosshair follows: the filled one (your portfolio), else the longest
+  function mainOf(geo) { var f = geo.series.filter(function (g) { return g.s.fill; })[0]; return f || geo.series.slice().sort(function (a, b) { return b.pts.length - a.pts.length; })[0]; }
+  function nearest(g, t) {
+    var p = g.s.points, best = -1, d = Infinity;
+    for (var i = 0; i < p.length; i++) { var x = Math.abs(p[i].t - t); if (x < d) { d = x; best = i; } }
+    return best;
+  }
+  var MONF = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function when(t, mode) {
+    var d = new Date(t), day = MONF[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+    return mode === 'hours' ? day + ' · ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') : day;
+  }
+  function val(v, format) {
+    if (format === 'pct') return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2) + '%';
+    return (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function tipCss() {
+    if (document.getElementById('cpcTipCss')) return;
+    var st = document.createElement('style'); st.id = 'cpcTipCss';
+    st.textContent = '.cpc-tip{position:absolute;top:4px;z-index:3;pointer-events:none;display:none;white-space:nowrap;font:600 12px/1.5 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;' +
+      'background:#1e1b3a;color:#f1f5f9;border:1px solid rgba(255,255,255,.1);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.3);padding:7px 10px}' +
+      '[data-theme="light"] .cpc-tip{background:#fff;color:#0f172a;border-color:rgba(0,0,0,.08);box-shadow:0 6px 18px rgba(15,23,42,.14)}' +
+      '.cpc-tip .d{font-size:11px;font-weight:700;color:#94a3b8}[data-theme="light"] .cpc-tip .d{color:#64748b}.cpc-tip b{font-weight:800}' +
+      '.cpc-tip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}';
+    document.head.appendChild(st);
+  }
+  // mouse / finger → crosshair + card (the page still scrolls up and down with a finger)
+  function hook(canvas) {
+    if (canvas._cpHooked) return; canvas._cpHooked = true; tipCss();
+    var par = canvas.parentElement; if (getComputedStyle(par).position === 'static') par.style.position = 'relative';
+    var tip = document.createElement('div'); tip.className = 'cpc-tip'; tip.setAttribute('aria-hidden', 'true'); par.appendChild(tip);
+    canvas.style.touchAction = 'pan-y'; canvas.style.cursor = 'crosshair';
+    var timer;
+    function show(e) {
+      var g = canvas._cpg; if (!g || !g.series.length) return;
+      var r = canvas.getBoundingClientRect(), cx = ((e.touches ? e.touches[0].clientX : e.clientX) - r.left) * g.W / r.width;
+      var main = mainOf(g), hi = 0, d = Infinity;
+      main.pts.forEach(function (q, i) { var x = Math.abs(q[0] - cx); if (x < d) { d = x; hi = i; } });
+      render(canvas, canvas._cpo, hi); g = canvas._cpg;
+      var t = main.s.points[hi].t, rows = g.series.map(function (s) {
+        var k = nearest(s, t); if (k < 0) return '';
+        return '<div><i style="background:' + s.s.color + '"></i>' + (s.s.name ? s.s.name + ' ' : '') + '<b>' + val(s.s.points[k].v, g.format) + '</b></div>';
+      }).reverse().join('');
+      tip.innerHTML = '<div class="d">' + when(t, g.mode) + '</div>' + rows; tip.style.display = 'block';
+      var x = main.pts[hi][0] * r.width / g.W, w = tip.offsetWidth, pw = par.clientWidth, off = canvas.offsetLeft;
+      tip.style.left = Math.max(0, Math.min(pw - w, off + x + (x > r.width / 2 ? -w - 12 : 12))) + 'px';
+      tip.style.top = (canvas.offsetTop + 4) + 'px';
+      clearTimeout(timer);
+    }
+    function hide() { tip.style.display = 'none'; if (canvas._cpo) render(canvas, canvas._cpo, -1); }
+    canvas.addEventListener('pointermove', show); canvas.addEventListener('pointerdown', show);
+    canvas.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') hide(); });
+    canvas.addEventListener('touchmove', show, { passive: true });
+    canvas.addEventListener('touchend', function () { clearTimeout(timer); timer = setTimeout(hide, 1800); });
   }
   window.SamsamChart = { draw: draw, _niceStep: niceStep, _yFormatter: yFormatter, _timeTicks: timeTicks };
 })();

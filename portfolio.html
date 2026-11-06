@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611061243"></script>
-<script src="samsam-hints.js?v=202611061243"></script>
-<script src="samsam-vault.js?v=202611061243"></script>
-<script src="samsam-labels.js?v=202611061243"></script>
-<script src="samsam-taxonomy.js?v=202611061243"></script>
-<script src="samsam-coins.js?v=202611061243"></script>
-<script src="samsam-dropdown.js?v=202611061243"></script>
-<script src="samsam-add.js?v=202611061243"></script>
-<script src="samsam-chart.js?v=202611061243"></script>
-<script src="samsam-market.js?v=202611061243"></script>
+<script src="samsam-ui.js?v=202611061252"></script>
+<script src="samsam-hints.js?v=202611061252"></script>
+<script src="samsam-vault.js?v=202611061252"></script>
+<script src="samsam-labels.js?v=202611061252"></script>
+<script src="samsam-taxonomy.js?v=202611061252"></script>
+<script src="samsam-coins.js?v=202611061252"></script>
+<script src="samsam-dropdown.js?v=202611061252"></script>
+<script src="samsam-add.js?v=202611061252"></script>
+<script src="samsam-chart.js?v=202611061252"></script>
+<script src="samsam-market.js?v=202611061252"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1486,7 +1486,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611061243"></script>
+<script type="module" src="samsam-cloud.js?v=202611061252"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -3540,7 +3540,7 @@ function drawHoldingsOverlayChart() {
   if (changeEl) { changeEl.textContent = hc.text; changeEl.title = hc.title; changeEl.className = 'hov-change ' + (isPos ? 'pos' : 'neg'); }
 
   const lineColor = isPos ? '#22c55e' : '#f43f5e'; // green when up, red when down
-  SamsamChart.draw(canvas, { height: 210, format: 'usd', timeMode: timeModeFor(holdingsOverlayRange), series: [{ points: snaps, color: lineColor, width: 2.6, fill: true }] });
+  SamsamChart.draw(canvas, { height: 210, format: 'usd', hover: true, timeMode: timeModeFor(holdingsOverlayRange), series: [{ points: snaps, color: lineColor, width: 2.6, fill: true, name: 'Portfolio' }] });
 }
 
 // Holdings screen: sort by Asset (A→Z), Price or Holdings value; tap the same column again to reverse
