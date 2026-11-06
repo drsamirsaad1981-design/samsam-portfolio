@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['tools/update-prices.mjs', 'tools/update-market.mjs', 'tools/update-etf.mjs', 'tools/extra-price-ids.json', '.github/workflows/prices.yml', 'samsam-coins.js']
+    paths: ['tools/update-prices.mjs', 'tools/update-market.mjs', 'tools/update-etf.mjs', 'tools/alerts.mjs', 'tools/alerts-core.mjs', 'tools/extra-price-ids.json', '.github/workflows/prices.yml', 'samsam-coins.js', 'samsam-core.js']
 permissions:
   contents: write
 concurrency:
@@ -51,3 +51,12 @@ jobs:
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
           if git rev-parse -q --verify HEAD >/dev/null; then git commit -q --amend -m "Prices $(date -u +%FT%H:%MZ)"; else git commit -q -m "Prices $(date -u +%FT%H:%MZ)"; fi
           git push -q -f origin prices
+      # Telegram alerts (tools/alerts.mjs): the morning brief, big moves, signal changes, plan targets, exit levels…
+      # Reads your portfolio with the Firebase service account; prints only counts (Actions logs are public).
+      - name: Telegram alerts
+        run: node tools/alerts.mjs out
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
