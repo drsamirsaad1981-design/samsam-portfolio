@@ -15,15 +15,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611071938"></script>
-<script src="samsam-hints.js?v=202611071938"></script>
-<script src="samsam-vault.js?v=202611071938"></script>
-<script src="samsam-labels.js?v=202611071938"></script>
-<script src="samsam-taxonomy.js?v=202611071938"></script>
-<script src="samsam-coins.js?v=202611071938"></script>
-<script src="samsam-dropdown.js?v=202611071938"></script>
-<script src="samsam-add.js?v=202611071938"></script>
-<script src="samsam-market.js?v=202611071938"></script>
+<script src="samsam-ui.js?v=202611071957"></script>
+<script src="samsam-hints.js?v=202611071957"></script>
+<script src="samsam-vault.js?v=202611071957"></script>
+<script src="samsam-labels.js?v=202611071957"></script>
+<script src="samsam-taxonomy.js?v=202611071957"></script>
+<script src="samsam-coins.js?v=202611071957"></script>
+<script src="samsam-import.js?v=202611071957"></script>
+<script src="samsam-dropdown.js?v=202611071957"></script>
+<script src="samsam-add.js?v=202611071957"></script>
+<script src="samsam-market.js?v=202611071957"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -69,6 +70,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-vrow .mk-tag { font-size: .74rem; }
 /* ETF flows */
 .mk-etf { margin-bottom: 14px; gap: 10px; }
+/* closed by default (the Altcoin Season card already shows the last 7 days) — tap the title to open */
+.mk-etf-tog { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; cursor: pointer; border-radius: 9px; }
+.mk-etf-tog:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.mk-etf-sum { margin-left: auto; font-size: .74rem; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mk-etf-sum.up { color: var(--green); } .mk-etf-sum.down { color: var(--red); }
+.mk-etf-chev { width: 18px; height: 18px; flex: none; color: var(--fg2); transition: transform .2s; }
+.mk-etf-tog[aria-expanded="true"] .mk-etf-chev { transform: rotate(180deg); }
+.mk-etf-tog[aria-expanded="true"] .mk-etf-sum { display: none; }
+.mk-etf:not(.open) .mk-etf-seg { display: none; }
+.mk-etf-body { display: grid; gap: 10px; } .mk-etf-body[hidden] { display: none; }
 .mk-etf-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .mk-etf-h .mk-k small { font-weight: 700; margin-left: 6px; opacity: .75; }
 .mk-etf-seg { display: inline-grid; grid-auto-flow: column; background: var(--bg3); border: 1px solid var(--border); border-radius: 9px; padding: 2px; gap: 2px; }
@@ -439,9 +450,14 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   <!-- ETF flows: US spot Bitcoin / Ether ETFs, daily (hidden until GitHub has the data) -->
   <section class="mk-card mk-etf" id="etfCard" hidden aria-label="ETF flows">
     <div class="mk-etf-h">
-      <div class="mk-k"><span data-ic="bar"></span>ETF Flows <small>US spot</small></div>
+      <button type="button" class="mk-etf-tog" id="etfTog" aria-expanded="false" aria-controls="etfBody">
+        <span class="mk-k"><span data-ic="bar"></span>ETF Flows <small>US spot</small></span>
+        <span class="mk-etf-sum" id="etfSum"></span>
+        <svg class="mk-etf-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
       <div class="mk-etf-seg" id="etfSeg" role="group" aria-label="ETF"><button type="button" data-a="btc">BTC</button><button type="button" data-a="eth">ETH</button></div>
     </div>
+    <div class="mk-etf-body" id="etfBody" hidden>
     <div class="mk-etf-top">
       <div><div class="mk-etf-l" id="etfDay">—</div><div class="mk-etf-v" id="etfNet">—</div></div>
       <div class="mk-etf-stats" id="etfStats"></div>
@@ -449,6 +465,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     <div class="mk-etf-bars" id="etfBars" role="img" aria-label="Daily net flows"></div>
     <div class="mk-etf-funds" id="etfFunds"></div>
     <p class="mk-etf-note">Net money in or out of the US spot ETFs each trading day (no trading on weekends). Source: <a href="https://sosovalue.com" target="_blank" rel="noopener">SoSoValue</a>, saved by GitHub after the US market closes.</p>
+    </div>
   </section>
 
   <section class="mk-list" aria-label="Market watchlist">
@@ -492,7 +509,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611071938"></script>
+<script type="module" src="samsam-cloud.js?v=202611071957"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -591,6 +608,8 @@ function paintEtf() {
   const card = document.getElementById('etfCard'), a = etf && etf[etfA];
   if (!etf || !((etf.btc && etf.btc.days.length) || (etf.eth && etf.eth.days.length))) { card.hidden = true; return; }
   card.hidden = false;
+  { const b = etf.btc && etf.btc.days.length ? etf.btc.days[etf.btc.days.length - 1] : null, sum = document.getElementById('etfSum');   // closed: BTC's last day
+    sum.textContent = b ? 'BTC ' + money(b[1]) : ''; sum.className = 'mk-etf-sum ' + (b ? cls(b[1]) : ''); }
   document.querySelectorAll('#etfSeg button').forEach(b => { const on = b.dataset.a === etfA; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   const days = (a && a.days) || [];
   if (!days.length) { document.getElementById('etfNet').textContent = '—'; document.getElementById('etfDay').textContent = 'No data yet'; document.getElementById('etfBars').innerHTML = ''; document.getElementById('etfFunds').innerHTML = ''; document.getElementById('etfStats').innerHTML = ''; return; }
@@ -636,6 +655,15 @@ function paintAltEtf() {
     el.querySelector('b').textContent = short; el.querySelector('b').className = cls(sum);
   });
 }
+// open / closed, remembered on this device
+function setEtfOpen(on) {
+  document.getElementById('etfBody').hidden = !on; document.getElementById('etfCard').classList.toggle('open', on);
+  document.getElementById('etfTog').setAttribute('aria-expanded', String(on));
+}
+{ let on = false; try { on = localStorage.getItem('samsam_mkt_etf_open') === '1'; } catch (_) {} setEtfOpen(on); }
+document.getElementById('etfTog').addEventListener('click', () => {
+  const on = document.getElementById('etfBody').hidden; setEtfOpen(on); try { localStorage.setItem('samsam_mkt_etf_open', on ? '1' : '0'); } catch (_) {}
+});
 document.getElementById('etfSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; etfA = b.dataset.a; try { localStorage.setItem('samsam_mkt_etfa', etfA); } catch (_) {} paintEtf(); });
 function loadEtf(force) { if (M.etf) M.etf(force).then(j => { etf = j; paintEtf(); }, () => {}); }
 

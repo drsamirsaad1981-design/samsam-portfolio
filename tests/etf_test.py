@@ -15,11 +15,15 @@ with sync_playwright() as p:
     for vn, vp in (('small', dict(viewport={'width': 360, 'height': 740}, is_mobile=True, has_touch=True, device_scale_factor=2)), ('phone', dict(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True, device_scale_factor=2)), ('desktop', dict(viewport={'width': 1366, 'height': 900}, device_scale_factor=2))):
         for theme in ('light', 'dark'):
             ctx = br.new_context(**vp); S.setup(ctx); ctx.route('**/prices/m/etf.json', lambda r: r.fulfill(status=200, content_type='application/json', body=FIX))
-            ctx.add_init_script(f"try{{localStorage.setItem('samsam_theme','{theme}');if(!sessionStorage.getItem('e')){{localStorage.removeItem('samsam_mkt_etf');localStorage.removeItem('samsam_mkt_etfa');sessionStorage.setItem('e','1')}}}}catch(e){{}}")
+            ctx.add_init_script(f"try{{localStorage.setItem('samsam_theme','{theme}');if(!sessionStorage.getItem('e')){{localStorage.removeItem('samsam_mkt_etf');localStorage.removeItem('samsam_mkt_etfa');localStorage.removeItem('samsam_mkt_etf_open');sessionStorage.setItem('e','1')}}}}catch(e){{}}")
             pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
             pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.goto(S.SITE + '/market.html'); pg.wait_for_function("!document.getElementById('etfCard').hidden"); pg.wait_for_timeout(400)
             pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')")
             last = E['btc']['days'][-1]
+            cl = pg.evaluate("({body: document.getElementById('etfBody').hidden, exp: etfTog.getAttribute('aria-expanded'), sum: etfSum.innerText, seg: getComputedStyle(etfSeg).display, h: Math.round(etfCard.getBoundingClientRect().height)})")
+            check(f'{vn}/{theme}: closed by default — title + BTC last day only {cl}', cl['body'] and cl['exp'] == 'false' and cl['sum'].startswith('BTC ') and cl['seg'] == 'none' and cl['h'] < 90, cl)
+            pg.click('#etfTog'); pg.wait_for_timeout(200)
+            check(f'{vn}/{theme}: tap the title → opens', not pg.evaluate("document.getElementById('etfBody').hidden") and pg.get_attribute('#etfTog', 'aria-expanded') == 'true' and pg.is_visible('#etfSeg'))
             c = pg.evaluate("({net: etfNet.textContent, cls: etfNet.className, day: etfDay.textContent, stats: etfStats.innerText, bars: document.querySelectorAll('#etfBars .b').length, funds: [...document.querySelectorAll('#etfFunds div')].map(d=>d.innerText), on: document.querySelector('#etfSeg .on').dataset.a})")
             want = ('+' if last[1] > 0 else '−') + '$'
             check(f'{vn}/{theme}: BTC first — last day, its date, 7 / 30 days, since launch {c}', c['on'] == 'btc' and c['net'].startswith(want) and ('up' in c['cls']) == (last[1] > 0) and 'Last 7 days' in c['stats'] and 'Since launch' in c['stats'] and c['day'], c)
@@ -38,6 +42,7 @@ with sync_playwright() as p:
             e = pg.evaluate("({net: etfNet.textContent, on: document.querySelector('#etfSeg .on').dataset.a})")
             check(f'{vn}/{theme}: ETH switch {e}', e['on'] == 'eth' and e['net'].startswith(('+' if E['eth']['days'][-1][1] > 0 else '−') + '$'), e)
             pg.reload(); pg.wait_for_function("!document.getElementById('etfCard').hidden")
+            check(f'{vn}/{theme}: stays open next time', not pg.evaluate("document.getElementById('etfBody').hidden"))
             check(f'{vn}/{theme}: ETH remembered next time', pg.evaluate("document.querySelector('#etfSeg .on').dataset.a") == 'eth')
             check(f'{vn}/{theme}: no sideways scrolling', pg.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"))
             check(f'{vn}/{theme}: no JS errors', not errs, errs[:3]); ctx.close()
