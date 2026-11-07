@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611071437"></script>
-<script src="samsam-hints.js?v=202611071437"></script>
-<script src="samsam-vault.js?v=202611071437"></script>
-<script src="samsam-labels.js?v=202611071437"></script>
-<script src="samsam-taxonomy.js?v=202611071437"></script>
-<script src="samsam-coins.js?v=202611071437"></script>
-<script src="samsam-dropdown.js?v=202611071437"></script>
-<script src="samsam-add.js?v=202611071437"></script>
-<script src="samsam-chart.js?v=202611071437"></script>
-<script src="samsam-market.js?v=202611071437"></script>
+<script src="samsam-ui.js?v=202611071516"></script>
+<script src="samsam-hints.js?v=202611071516"></script>
+<script src="samsam-vault.js?v=202611071516"></script>
+<script src="samsam-labels.js?v=202611071516"></script>
+<script src="samsam-taxonomy.js?v=202611071516"></script>
+<script src="samsam-coins.js?v=202611071516"></script>
+<script src="samsam-dropdown.js?v=202611071516"></script>
+<script src="samsam-add.js?v=202611071516"></script>
+<script src="samsam-chart.js?v=202611071516"></script>
+<script src="samsam-market.js?v=202611071516"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1586,7 +1586,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611071437"></script>
+<script type="module" src="samsam-cloud.js?v=202611071516"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2325,7 +2325,7 @@ function renderHistory() {
   // Summary bar — realized P&L uses the average cost at the time of each sale
   const sumEl = document.getElementById('histSummary');
   const sells = txs.filter(t=>t.type==='sell');
-  const totalBuys  = txs.filter(t=>t.type==='buy').reduce((s,t)=>s+t.qty,0);
+  const totalBuys  = txs.filter(t=>t.type==='buy').reduce((s,t)=>s+t.qty-(+t.fee||0),0);   // what arrived (after a fee in coins)
   const totalSells = sells.reduce((s,t)=>s+t.qty,0);
   const realized   = sells.reduce((s,t)=>s+((perTx[t.id]&&perTx[t.id].realized)||0),0);
   const curQty = coin ? coin.qty : 0;
@@ -2371,7 +2371,7 @@ function renderHistory() {
     return `<div class="tx-row tx-${t.type}">
       <div class="tx-details">
         <span class="tx-type-badge">${isBuy?SamsamUI.dot('green')+'BUY':SamsamUI.dot('red')+'SELL'}</span>
-        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>${SamsamFmt.usd((t.total ?? t.qty*t.price) + (isBuy ? 1 : -1) * (+t.feeUsd || 0))}</strong>${+t.feeUsd ? ` <small>(${isBuy ? 'incl.' : 'after'} fee ${SamsamFmt.usd(+t.feeUsd)})</small>` : ''}</div>
+        <div><strong>${fmtN(t.qty)} ${t.sym}</strong> @ <strong>$${t.price.toFixed(4)}</strong> = <strong>${SamsamFmt.usd((t.total ?? t.qty*t.price) + (isBuy ? 1 : -1) * (+t.feeUsd || 0))}</strong>${+t.feeUsd ? ` <small>(${isBuy ? 'incl.' : 'after'} fee ${SamsamFmt.usd(+t.feeUsd)})</small>` : ''}${isBuy && +t.fee ? ` <small>· fee ${fmtN(+t.fee)} ${t.sym} → ${fmtN(t.qty - t.fee)} arrived</small>` : ''}</div>
         ${pnlStr}
         ${meta}
       </div>
@@ -3951,8 +3951,9 @@ function renderCoinTx() {
     if (t.type === 'buy' || t.type === 'sell') {
       const r = perTx[t.id];
       const feeU = +t.feeUsd || 0;   // buy: added to the cost · sell: taken off the proceeds
-      entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty, usd: (t.total ?? t.qty * t.price) + (t.type === 'buy' ? feeU : -feeU),
-        note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (t.type === 'sell' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
+      const feeQ = t.type === 'buy' ? (+t.fee || 0) : 0;   // buy: coins taken as a fee / network fee to your wallet
+      entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty - feeQ, usd: (t.total ?? t.qty * t.price) + (t.type === 'buy' ? feeU : -feeU),
+        note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (feeQ ? ' · fee ' + qtyFmt(feeQ) + ' ' + sym : '') + (t.type === 'sell' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' || t.type === 'transfer_out') {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;

@@ -56,6 +56,12 @@
     '.atx-field{display:block;margin-bottom:10px;font-size:.8rem;font-weight:600;color:#cbd5e1;min-width:0}' +
     '[data-theme="light"] .atx-field{color:#475569}' +
     '.atx-field small{font-weight:500;color:#94a3b8}' +
+    '.atx-field>label{display:block}' +
+    '.atx-feebox{display:flex;gap:6px;align-items:stretch;margin-top:5px}.atx-feebox input{margin-top:0!important;flex:1;min-width:0}' +
+    '.atx-unit{display:flex;gap:3px;background:rgba(148,163,184,.12);padding:3px;border-radius:10px;flex:none}' +
+    '.atx-unit button{border:none;background:transparent;color:inherit;font:inherit;font-size:.74rem;font-weight:700;padding:0 10px;border-radius:8px;cursor:pointer;opacity:.7;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.atx-unit button[aria-checked="true"]{opacity:1;background:var(--bg-card-secondary,#334155);box-shadow:inset 0 0 0 1px var(--atx-c,#64748b)}' +
+    '[data-theme="light"] .atx-unit button[aria-checked="true"]{background:#fff}' +
     '.atx-field input,.atx-field select{display:block;width:100%;box-sizing:border-box;margin-top:5px;height:44px;padding:0 12px;border-radius:10px;border:1px solid #334155;' +
       'background:rgba(255,255,255,.05);color:inherit;font:inherit;font-size:1rem;color-scheme:dark}' +
     '.atx-field select option,.atx-field select optgroup{background:var(--bg-card,#1e293b);color:#f1f5f9}' +
@@ -161,7 +167,10 @@
       '<div class="atx-coin" id="atxCoin"></div>' +
       '<label class="atx-field"><span id="atxQtyLabel">Amount</span><input type="number" inputmode="decimal" step="any" min="0" id="atxQty" placeholder="0.00" oninput="previewAddTx()"></label>' +
       '<label class="atx-field" id="atxPriceRow"><span id="atxPriceLabel">Price per coin (USD)</span><input type="number" inputmode="decimal" step="any" min="0" id="atxPrice" placeholder="0.00" oninput="previewAddTx()"></label>' +
-      '<label class="atx-field" id="atxFeeUsdRow"><span id="atxFeeUsdLabel">Buying fee <small>(USD, optional — added to Cost Basis)</small></span><input type="number" inputmode="decimal" step="any" min="0" id="atxFeeUsd" placeholder="0.00" oninput="previewAddTx()"></label>' +
+      '<div class="atx-field" id="atxFeeUsdRow"><label for="atxFeeUsd" id="atxFeeUsdLabel">Buying fee <small>(USD, optional — added to Cost Basis)</small></label>' +
+        '<div class="atx-feebox"><input type="number" inputmode="decimal" step="any" min="0" id="atxFeeUsd" placeholder="0.00" oninput="previewAddTx()">' +
+        '<div class="atx-unit" id="atxFeeUnitSeg" role="radiogroup" aria-label="Fee paid in"><button type="button" role="radio" data-u="usd">USD</button><button type="button" role="radio" data-u="coin" id="atxFeeUnitCoin">Coin</button></div></div></div>' +
+      '<label class="atx-field" id="atxNetFeeRow"><span>Network fee to your wallet <small id="atxNetFeeUnit">(in coin, optional — e.g. Binance → Tangem)</small></span><input type="number" inputmode="decimal" step="any" min="0" id="atxNetFee" placeholder="0" oninput="previewAddTx()"></label>' +
       '<div class="atx-cash" id="atxCashRow"><label><input type="checkbox" id="atxCashOn" onchange="previewAddTx()"><span>Add the money to</span></label><select id="atxCashSym" aria-label="Stablecoin that receives the money" onchange="previewAddTx()"></select></div>' +
       '<label class="atx-field" id="atxFeeRow"><span>Transfer fee <small id="atxFeeUnit">(in coin, optional)</small></span><input type="number" inputmode="decimal" step="any" min="0" id="atxFee" placeholder="0" oninput="previewAddTx()"></label>' +
       '<label class="atx-field"><span>Date &amp; time</span><input type="datetime-local" id="atxDate" oninput="previewAddTx()"></label>' +
@@ -463,7 +472,7 @@
     if (!atxSym || !requireCloud()) return;
     var coin = held(atxSym);
     $('atxCoin').innerHTML = icon(atxSym, 24) + '<span>' + E(atxSym) + '</span><small>' + E(coinName(atxSym)) + (coin ? ' · holding ' + parseFloat(coin.qty.toFixed(8)) : '') + '</small>';
-    ['atxQty', 'atxFee', 'atxNote'].forEach(function (id) { var el = $(id); el.value = ''; el.classList.remove('bad'); });
+    ['atxQty', 'atxFee', 'atxNetFee', 'atxNote'].forEach(function (id) { var el = $(id); el.value = ''; el.classList.remove('bad'); });
     $('atxDate').value = localDateTimeValue(new Date());
     $('atxDate').max = localDateTimeValue(new Date(Date.now() + 60e3));
     delete $('atxPrice').dataset.touched; delete $('atxDate').dataset.touched;
@@ -481,8 +490,13 @@
     $('atxPriceLabel').textContent = cfg.price;
     $('atxFeeRow').style.display = cfg.fee ? '' : 'none';
     $('atxFeeUsdRow').style.display = (t === 'buy' || t === 'sell') ? '' : 'none';
+    $('atxNetFeeRow').style.display = t === 'buy' ? '' : 'none';
+    $('atxFeeUnitSeg').style.display = t === 'buy' ? '' : 'none';
+    $('atxFeeUnitCoin').textContent = atxSym;
+    $('atxNetFeeUnit').textContent = '(in ' + atxSym + ', optional — e.g. Binance → your cold wallet)';
+    setFeeUnit(t === 'buy' ? feeUnitPref() : 'usd', true);
     fillCashRow();
-    $('atxFeeUsdLabel').innerHTML = t === 'sell' ? 'Selling fee <small>(USD, optional — subtracted from Realized Profit)</small>' : 'Buying fee <small>(USD, optional — added to Cost Basis)</small>';
+    feeLabel();
     $('atxFeeUnit').textContent = '(in ' + atxSym + ', optional)';
     $('atxHint').textContent = cfg.hint;
     var LB = window.SAMSAM_LABELS || { BUY: 'Buy', SELL: 'Sell', TRANSFER_IN: 'Transfer In', TRANSFER_OUT: 'Transfer Out' };
@@ -491,6 +505,22 @@
     if (cfg.price && !pr.dataset.touched) pr.value = coin && coin.currentPrice ? fmtInput(coin.currentPrice) : '';
     previewAddTx();
   }
+  // Buying fee: in USD (added to the cost) or in the coin itself (Binance takes it from what you bought — fewer coins arrive)
+  var FEE_UNIT_KEY = 'samsam_buyfee_unit', feeUnit = 'usd';
+  function feeUnitPref() { try { return localStorage.getItem(FEE_UNIT_KEY) === 'coin' ? 'coin' : 'usd'; } catch (_) { return 'usd'; } }
+  function feeLabel() {
+    $('atxFeeUsdLabel').innerHTML = atxType === 'sell' ? 'Selling fee <small>(USD, optional — subtracted from Realized Profit)</small>'
+      : feeUnit === 'coin' ? 'Buying fee <small>(in ' + E(atxSym) + ', optional — taken from the amount bought)</small>'
+      : 'Buying fee <small>(USD, optional — added to Cost Basis)</small>';
+    $('atxFeeUsd').placeholder = feeUnit === 'coin' && atxType === 'buy' ? '0' : '0.00';
+  }
+  function setFeeUnit(u, quiet) {
+    feeUnit = u === 'coin' ? 'coin' : 'usd';
+    document.querySelectorAll('#atxFeeUnitSeg button').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.u === feeUnit)); });
+    if (!quiet) { try { localStorage.setItem(FEE_UNIT_KEY, feeUnit); } catch (_) {} }
+    feeLabel(); previewAddTx();
+  }
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#atxFeeUnitSeg button'); if (b) setFeeUnit(b.dataset.u); });
   document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.atx-types button'); if (b && b.closest('#atxForm')) setAddTxType(b.dataset.t); });
   document.addEventListener('input', function (e) { if (e.target && (e.target.id === 'atxPrice' || e.target.id === 'atxDate')) e.target.dataset.touched = '1'; });
   document.addEventListener('keydown', function (e) {
@@ -504,7 +534,12 @@
   function readAddTx() {
     var cfg = ATX[atxType], v = function (id) { return $(id).value.trim(); };
     var qty = parseFloat(v('atxQty')), price = cfg.price ? parseFloat(v('atxPrice')) : 0, fee = cfg.fee ? (parseFloat(v('atxFee')) || 0) : 0;
-    var feeUsd = (atxType === 'buy' || atxType === 'sell') ? (parseFloat(v('atxFeeUsd')) || 0) : 0;
+    var feeUsd = (atxType === 'buy' || atxType === 'sell') ? (parseFloat(v('atxFeeUsd')) || 0) : 0, tradeFee = 0, netFee = 0;
+    if (atxType === 'buy') {
+      if (feeUnit === 'coin') { tradeFee = feeUsd; feeUsd = 0; }   // the fee box holds coins, not dollars
+      netFee = parseFloat(v('atxNetFee')) || 0;
+      fee = Math.max(0, tradeFee) + Math.max(0, netFee);           // every coin that never reaches your wallet
+    }
     // Date left as it was → the exact moment you save (even if the minute changed while the form was open), so the entry
     // always comes after what you just recorded. A date you picked (minute precision) → that minute, or "now" if it's this one.
     var dateStr = v('atxDate'), picked = !!$('atxDate').dataset.touched;
@@ -515,7 +550,9 @@
     if (cfg.priceReq && !(price >= 0 && v('atxPrice') !== '')) errs.atxPrice = 'Enter a price (0 is allowed for free/mined coins).';
     if ((atxType === 'buy' || atxType === 'sell') && !(price > 0)) errs.atxPrice = 'Enter a price greater than 0.';
     if (fee < 0) errs.atxFee = 'Fee cannot be negative.';
-    if (feeUsd < 0) errs.atxFeeUsd = 'Fee cannot be negative.';
+    if (feeUsd < 0 || tradeFee < 0) errs.atxFeeUsd = 'Fee cannot be negative.';
+    if (netFee < 0) errs.atxNetFee = 'Fee cannot be negative.';
+    if (atxType === 'buy' && qty > 0 && fee >= qty) errs[netFee > 0 ? 'atxNetFee' : 'atxFeeUsd'] = 'The fees must be smaller than the amount bought.';
     if (atxType === 'transfer_in' && qty > 0 && fee >= qty) errs.atxFee = 'Fee must be smaller than the amount transferred in.';
     if (isNaN(date.getTime())) errs.atxDate = 'Enter a valid date.';
     else if (dateStr && new Date(dateStr).getTime() > Date.now() + 60e3) errs.atxDate = 'Date cannot be in the future.';
@@ -534,15 +571,16 @@
       if (short === 'new') errs.atxQty = (atxType === 'sell' ? 'You can’t sell' : 'You can’t transfer out') + ' more than you held on that date.';
       after = { qty: pos.qty, avg: pos.avg, realized: t._realized, short: short };
     }
-    return { qty: qty, price: price, fee: fee, feeUsd: feeUsd, date: date, errs: errs, after: after };
+    return { qty: qty, price: price, fee: fee, feeUsd: feeUsd, tradeFee: tradeFee, netFee: netFee, date: date, errs: errs, after: after };
   }
   function previewAddTx() {
     var r = readAddTx(), pv = $('atxPreview');
-    ['atxQty', 'atxPrice', 'atxFee', 'atxFeeUsd', 'atxDate'].forEach(function (id) { $(id).classList.toggle('bad', !!r.errs[id] && $(id).value !== ''); });
+    ['atxQty', 'atxPrice', 'atxFee', 'atxFeeUsd', 'atxNetFee', 'atxDate'].forEach(function (id) { $(id).classList.toggle('bad', !!r.errs[id] && $(id).value !== ''); });
     $('atxErr').textContent = '';
     if (!r.after) { pv.innerHTML = ''; return; }
     var usd = function (n) { return SamsamFmt.usd(n); }, q = function (n) { return fmtQty(n); }, lines = [];
     if (atxType === 'buy') lines.push('Total cost: <b>' + usd(r.qty * r.price + r.feeUsd) + '</b>' + (r.feeUsd > 0 ? ' <small>(' + usd(r.qty * r.price) + ' + fee ' + usd(r.feeUsd) + ')</small>' : ''));
+    if (atxType === 'buy' && r.fee > 0) lines.push('Arrives in your wallet: <b>' + q(r.qty - r.fee) + ' ' + atxSym + '</b> <small>(' + q(r.qty) + ' − fees ' + q(r.fee) + ')</small>');
     if (atxType === 'sell') lines.push('Proceeds: <b>' + usd(r.qty * r.price - r.feeUsd) + '</b>' + (r.feeUsd > 0 ? ' <small>(' + usd(r.qty * r.price) + ' − fee ' + usd(r.feeUsd) + ')</small>' : '') + (r.after.realized != null ? ' · ' + (r.after.realized >= 0 ? 'profit' : 'loss') + ' <b>' + usd(Math.abs(r.after.realized)) + '</b>' : ''));
     var cs = atxType === 'sell' ? cashTarget() : null;
     $('atxCashSym').disabled = atxType === 'sell' && !$('atxCashOn').checked;
@@ -564,7 +602,7 @@
     atxSaving = true; $('atxSave').disabled = true;
     var note = $('atxNote').value.trim(), sym = atxSym, type = atxType;
     // Saved instantly on this device and synced to the cloud; every screen recalculates from the ledger
-    var extra = { date: r.date.toISOString(), fee: r.fee, feeUsd: r.feeUsd }, cs = type === 'sell' ? cashTarget() : null;
+    var extra = { date: r.date.toISOString(), fee: r.fee, feeUsd: r.feeUsd, netFee: r.netFee }, cs = type === 'sell' ? cashTarget() : null;
     if (type === 'sell' && $('atxCashRow').style.display !== 'none') { try { localStorage.setItem(CASH_KEY, JSON.stringify({ on: !!cs, sym: $('atxCashSym').value })); } catch (_) {} }
     if (cs && Samsam.sellToStable) {
       var sc = held(cs), info = CASH_INFO[cs] || {};
@@ -572,7 +610,7 @@
     } else write(Samsam.addTx(sym, type, r.qty, r.price, note, extra));
     setTimeout(function () { atxSaving = false; $('atxSave').disabled = false; }, 400);
     delete $('atxPrice').dataset.touched;
-    $('atxFeeUsd').value = '';
+    $('atxFeeUsd').value = ''; $('atxNetFee').value = '';
     closeAddTx();
     emit('tx', { sym: sym, type: type });
     if (cs) emit('tx', { sym: cs, type: 'buy' });

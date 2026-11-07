@@ -7,7 +7,8 @@
 //   deleting a transaction always gives the correct result.
 //
 //   tx.type:
-//     'buy'    qty, price         → avg = (qty*avg + q*p) / (qty+q)
+//     'buy'    qty, price, feeUsd?, fee? → fee = coins that never reach you (a trading fee taken in the coin and/or the
+//                                  network fee to your own wallet): qty += q − fee, cost += q*p + feeUsd (fees raise the average)
 //     'sell'   qty, price, feeUsd? → qty -= q, avg unchanged, realised P&L = (p-avg)*q − feeUsd
 //     'adjust' setQty?, setAvg?   → manual correction (inline edits, re-adding a coin)
 //     'transfer_in'  qty, price, fee → coins arrive from outside: qty += q − fee,
@@ -27,6 +28,12 @@ export function compareTx(a, b) {
   return 0;
 }
 
+// Coins a buy / transfer in actually adds (after the fee in coin units); other types → their amount.
+export function netQty(t) {
+  const q = num(t && t.qty);
+  return t && (t.type === 'buy' || t.type === 'transfer_in') ? Math.max(0, q - Math.max(0, num(t.fee))) : q;
+}
+
 // Apply one transaction to a position. Returns {qty, avg, realized, sellQty, sellFee}.
 export function applyTx(pos, t) {
   let qty = pos.qty, avg = pos.avg, realized = 0, sellQty = 0, sellFee = 0;
@@ -34,9 +41,8 @@ export function applyTx(pos, t) {
   if (t.type === 'buy') {
     if (q > 0) {
       // Average Cost Basis: cost = Σ(buy price × buy amount) + Σ(buying fees in USD)
-      const nq = qty + q, feeUsd = Math.max(0, num(t.feeUsd));
-      avg = nq > EPS ? (qty * avg + q * p + feeUsd) / nq : 0;
-      qty = nq;
+      const net = q - Math.min(q, Math.max(0, num(t.fee))), nq = qty + net, feeUsd = Math.max(0, num(t.feeUsd));
+      if (net > 0) { avg = nq > EPS ? (qty * avg + q * p + feeUsd) / nq : 0; qty = nq; }
     }
   } else if (t.type === 'sell') {
     // Realized = (Sell Price − Avg Buy Price) × Amount Sold − Selling Fee (USD)
@@ -383,10 +389,11 @@ export function deriveOpening(current, txs) {
   for (let i = sorted.length - 1; i >= 0; i--) {
     const t = sorted[i], q = num(t.qty), p = num(t.price);
     if (t.type === 'buy') {
-      const pq = qty - q;
-      if (pq < -1e-9 * Math.max(1, q)) { ok = false; qty = 0; avg = 0; continue; }
-      if (pq <= 1e-9 * Math.max(1, q)) { qty = 0; avg = 0; continue; }
-      const pa = (qty * avg - q * p) / pq;
+      const net = q - Math.min(q, Math.max(0, num(t.fee))), pq = qty - net;
+      if (!(net > 0)) continue;
+      if (pq < -1e-9 * Math.max(1, net)) { ok = false; qty = 0; avg = 0; continue; }
+      if (pq <= 1e-9 * Math.max(1, net)) { qty = 0; avg = 0; continue; }
+      const pa = (qty * avg - q * p - Math.max(0, num(t.feeUsd))) / pq;
       if (!(pa >= -1e-9)) { ok = false; }
       qty = pq; avg = Math.max(0, pa);
     } else if (t.type === 'sell') {

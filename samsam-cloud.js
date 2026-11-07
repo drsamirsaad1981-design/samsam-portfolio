@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611071516';
-import * as Hist from './samsam-history.js?v=202611071516';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071516';
+import * as Core from './samsam-core.js?v=202611071814';
+import * as Hist from './samsam-history.js?v=202611071814';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071814';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -495,6 +495,7 @@ function txDoc(sym, type, qty, price, note, extra = {}) {
     ...(extra.setAvg != null ? { setAvg: Number(extra.setAvg) } : {}),
     ...(extra.fee > 0 ? { fee: Number(extra.fee) } : {}),
     ...(extra.feeUsd > 0 ? { feeUsd: Number(extra.feeUsd) } : {}),
+    ...(type === 'buy' && extra.netFee > 0 ? { netFee: Number(extra.netFee) } : {}),   // the part of `fee` that was the network fee to your wallet
     ...(extra.link ? { link: Clean.text(extra.link, 60) } : {}),   // a stablecoin Buy made from a Sell → that Sell's id
   });
 }

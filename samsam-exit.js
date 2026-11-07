@@ -76,7 +76,7 @@
       var since = Date.parse(entry.startedAt) || 0;
       var after = function (types) {   // recorded after the coin joined the plan
         return (txs || []).filter(function (x) { return x.sym === entry.sym && types.indexOf(x.type) >= 0 && (Date.parse(x.createdAt || x.date) || 0) >= since; })
-          .reduce(function (s, x) { return s + (+x.qty || 0); }, 0);
+          .reduce(function (s, x) { return s + (+x.qty || 0) - (x.type === 'sell' ? 0 : (+x.fee || 0)); }, 0);   // after a fee in coins
       };
       var sold = after(['sell']), bought = after(['buy', 'transfer_in']);
       // buying more after the coin joined the plan raises the plan amount; selling fills the steps (never shrinks them)
