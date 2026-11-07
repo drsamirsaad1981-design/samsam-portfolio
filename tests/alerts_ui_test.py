@@ -22,7 +22,7 @@ with sync_playwright() as p:
               return {open:!!document.getElementById('cpAlerts'), sw:document.querySelectorAll('#cpAlerts input[type=checkbox]').length, on:[...document.querySelectorAll('#cpAlerts input[type=checkbox]')].every(i=>i.checked),
                 en:document.querySelector('#cpAlerts [data-lang=en]').getAttribute('aria-pressed'), fits:b.left>=0&&b.right<=innerWidth+1, svg:document.querySelectorAll('#cpAlerts svg').length,
                 focus:document.activeElement&&document.activeElement.dataset.lang, move:document.querySelector('#cpAlerts select[data-k=movePct]').value}})()""")
-            check(f'{vn}/{theme}: sheet opens with 13 switches (all on), English, ±5%, fits the screen {st}', st['open'] and st['sw'] == 13 and st['on'] and st['en'] == 'true' and st['fits'] and st['svg'] >= 2 and st['move'] == '5' and st['focus'] == 'en', st)
+            check(f'{vn}/{theme}: sheet opens with 14 switches (all on), English, ±5%, fits the screen {st}', st['open'] and st['sw'] == 14 and st['on'] and st['en'] == 'true' and st['fits'] and st['svg'] >= 2 and st['move'] == '5' and st['focus'] == 'en', st)
             pg.locator('#cpAlerts .al-box').screenshot(path=str(SH / f'alertsui_{vn}_{theme}.png'))
             pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
             check(f'{vn}/{theme}: Escape closes it', not pg.evaluate("!!document.getElementById('cpAlerts')"))

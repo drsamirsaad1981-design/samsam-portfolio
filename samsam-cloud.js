@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611072221';
-import * as Hist from './samsam-history.js?v=202611072221';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611072221';
+import * as Core from './samsam-core.js?v=202611072251';
+import * as Hist from './samsam-history.js?v=202611072251';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611072251';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -206,7 +206,7 @@ function cleanTargets(t) {
 }
 // ── Telegram alerts settings, saved in users/{uid}/meta/info.alerts (read by tools/alerts.mjs on GitHub every 30 min) ──
 export const DEFAULT_ALERTS = Object.freeze({ lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
-  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true });
+  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true, buy: true });
 function cleanAlerts(a) {
   const d = DEFAULT_ALERTS, out = { ...d };
   if (!a || typeof a !== 'object') return { ...out, isDefault: true };
@@ -1203,6 +1203,7 @@ function openAlertsSheet() {
     ${sw('moves', 'Big moves', 'BTC or your portfolio moves this much', sel('movePct', [3, 5, 8, 10, 15], v => '±' + v + '%'))}
     ${sw('signals', 'Signal changes', 'A coin turns Reinforce, Hold or Sell / Convert')}
     ${sw('plan', 'Plan targets', 'A coin reaches its Accumulation Plan target')}
+    ${sw('buy', 'Buy-price alerts', 'A plan coin drops to the alert price you set on it')}
     ${sw('tp', 'Take-profit levels', 'A coin reaches TP1 / TP2 / TP3 of your exit plan')}
     ${sw('macro', 'Exit levels', 'BTC dominance, USDT dominance, ETH/BTC at your exit targets')}
     ${sw('drift', 'Allocation drift', 'A category moves outside your target allocation band')}

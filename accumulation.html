@@ -16,18 +16,18 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611072221"></script>
-<script src="samsam-hints.js?v=202611072221"></script>
-<script src="samsam-vault.js?v=202611072221"></script>
-<script src="samsam-labels.js?v=202611072221"></script>
-<script src="samsam-taxonomy.js?v=202611072221"></script>
-<script src="samsam-coins.js?v=202611072221"></script>
-<script src="samsam-import.js?v=202611072221"></script>
-<script src="samsam-settings.js?v=202611072221"></script>
-<script src="samsam-dropdown.js?v=202611072221"></script>
-<script src="samsam-market.js?v=202611072221"></script>
-<script src="samsam-exit.js?v=202611072221"></script>
-<script src="samsam-add.js?v=202611072221"></script>
+<script src="samsam-ui.js?v=202611072251"></script>
+<script src="samsam-hints.js?v=202611072251"></script>
+<script src="samsam-vault.js?v=202611072251"></script>
+<script src="samsam-labels.js?v=202611072251"></script>
+<script src="samsam-taxonomy.js?v=202611072251"></script>
+<script src="samsam-coins.js?v=202611072251"></script>
+<script src="samsam-import.js?v=202611072251"></script>
+<script src="samsam-settings.js?v=202611072251"></script>
+<script src="samsam-dropdown.js?v=202611072251"></script>
+<script src="samsam-market.js?v=202611072251"></script>
+<script src="samsam-exit.js?v=202611072251"></script>
+<script src="samsam-add.js?v=202611072251"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -884,7 +884,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611072221"></script>
+<script type="module" src="samsam-cloud.js?v=202611072251"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -980,7 +980,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!planTabCloudSeen && d.exit) { planTabCloudSeen = true; if (d.exit.tab !== planTab) setPlanTab(d.exit.tab, true); }
     if (planTab === 'exit' && window.SamsamExit) SamsamExit.render(d);
     renderAll();
-    try { checkAllAlerts(); } catch(_) {}
   }));
 });
 
@@ -1451,7 +1450,6 @@ function renderAll() {
   else { renderCards(); }
   renderDashboard();
   // Check price alerts on every full render (prices may have updated)
-  setTimeout(checkAllAlerts, 100);
 }
 
 // ─── Update target quantity ──────────────────────────────────────────────────
@@ -1827,40 +1825,13 @@ function commitAlert(idx, val) {
   const n = parseFloat(val);
   accumPlan[idx].alertPrice = isNaN(n) || n <= 0 ? 0 : n;
   saveAccumPlan();
-  renderAll();
-  // Browser notification if supported and alert is triggered
-  if (accumPlan[idx].alertPrice > 0) checkAlertNotify(idx);
+  renderAll();   // the alert itself is sent by Telegram (Settings → Telegram alerts → Buy-price alerts)
 }
 
 function clearAlert(idx) {
   accumPlan[idx].alertPrice = 0;
   saveAccumPlan();
   renderAll();
-}
-
-function checkAlertNotify(idx) {
-  const entry = accumPlan[idx];
-  const r = calcRow(entry);
-  if (!entry.alertPrice || entry.alertPrice <= 0 || r.currentPrice <= 0) return;
-  if (r.currentPrice <= entry.alertPrice) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(`${entry.sym} price alert — Cute Portfolio`, {
-        body: `Price $${fmtUSD(r.currentPrice)} reached your alert at $${fmtUSD(entry.alertPrice)}`,
-        icon: entry.logoUrl || './icon-192.png?v=2', badge: './icon-192.png?v=2', tag: 'cp-alert-' + entry.sym
-      });
-    } else if ('Notification' in window && Notification.permission !== 'denied') {
-      Notification.requestPermission().then(p => {
-        if (p === 'granted') checkAlertNotify(idx);
-      });
-    }
-  }
-}
-
-// Check all alerts on every price refresh
-function checkAllAlerts() {
-  accumPlan.forEach((entry, idx) => {
-    if (entry.alertPrice > 0) checkAlertNotify(idx);
-  });
 }
 
 </script>

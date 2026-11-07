@@ -71,7 +71,7 @@
       if (k === 'account') { var u = s.user(); return u ? u.email || 'Signed in' : 'Not signed in'; }
       if (k === 'backup') { var b = lastBackup(); return '<span' + (b.old ? ' class="st-warn"' : '') + '>Last backup: ' + b.text + '</span>'; }
       if (k === 'alerts') {
-        var a = s.getAlerts(), keys = ['brief', 'weekly', 'moves', 'signals', 'plan', 'tp', 'macro', 'drift', 'dca', 'sentiment', 'etf', 'health'];
+        var a = s.getAlerts(), keys = ['brief', 'weekly', 'moves', 'signals', 'plan', 'buy', 'tp', 'macro', 'drift', 'dca', 'sentiment', 'etf', 'health'];
         var on = keys.filter(function (x) { return a[x]; }).length;
         return (a.lang === 'ar' ? 'العربية' : 'English') + ' · ' + on + ' of ' + keys.length + ' on' + (a.brief ? ' · brief ' + a.briefTime : '');
       }

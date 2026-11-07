@@ -13,7 +13,7 @@ export const APP = 'https://drsamirsaad1981-design.github.io/samsam-portfolio/';
 export const TZ = 'Asia/Riyadh';
 export const DEFAULTS = Object.freeze({
   lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
-  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true,
+  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true, buy: true,
 });
 const DEFAULT_SIGNAL = { reinforce: -5, sell: -20 };
 const DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085 };
@@ -36,6 +36,8 @@ const W = {
     brief: 'Morning brief', weekly: 'Weekly report', today: 'today', week: 'this week', profit: 'All Time Profit', vsBtc: 'vs holding BTC',
     best: 'Best today', worst: 'Worst today', bestW: 'Best this week', worstW: 'Worst this week', market: 'Market', dom: 'Dominance',
     fng: 'Fear & Greed', alt: 'Altcoin Season', etf: 'ETF flows', signals: 'Signals', plan: 'Plan', met: 'targets met',
+    buyHit: s => `${s} reached your buy price`, buyLine: (p, a) => `Price ${p} ≤ your alert ${a}`, buyLeft: (q, s) => `Still to buy for the plan: ${q} ${s}`,
+    buyDca: 'Today is also your regular (DCA) buy day',
     reinforce: 'Reinforce', sell: 'Sell / Convert to BTC', hold: 'Hold', open: 'Open portfolio', hub: 'Market Hub', planBtn: 'Open the plan',
     coinBtn: s => `Open ${s}`, seasonBtn: 'Altcoin Season', btcMove: (pct, h) => `BTC ${pct} in ${h}`, pfMove: (pct, h) => `Your portfolio ${pct} in ${h}`,
     since: 'since the last alert', yourPf: 'Your portfolio', h24: '24h', sig: s => `Signal change · ${s}`, vsAvg: 'vs your avg',
@@ -56,6 +58,8 @@ const W = {
   ar: {
     brief: 'ملخص الصباح', weekly: 'التقرير الأسبوعي', today: 'اليوم', week: 'هذا الأسبوع', profit: 'إجمالي الربح', vsBtc: 'مقارنة بالاحتفاظ بـ BTC',
     best: 'الأفضل اليوم', worst: 'الأسوأ اليوم', bestW: 'الأفضل هذا الأسبوع', worstW: 'الأسوأ هذا الأسبوع', market: 'السوق', dom: 'السيطرة',
+    buyHit: s => `${s} وصلت لسعر الشراء`, buyLine: (p, a) => `السعر ${p} ≤ تنبيهك ${a}`, buyLeft: (q, s) => `المتبقي للخطة: ${q} ${s}`,
+    buyDca: 'واليوم كمان يوم الشراء المنتظم (DCA)',
     fng: 'الخوف والطمع', alt: 'موسم العملات البديلة', etf: 'تدفقات ETF', signals: 'الإشارات', plan: 'الخطة', met: 'أهداف تحققت',
     reinforce: 'تعزيز', sell: 'بيع / تحويل لـ BTC', hold: 'احتفاظ', open: 'افتح المحفظة', hub: 'Market Hub', planBtn: 'افتح الخطة',
     coinBtn: s => `افتح ${s}`, seasonBtn: 'موسم العملات البديلة', btcMove: (pct, h) => `BTC ${pct} خلال ${h}`, pfMove: (pct, h) => `محفظتك ${pct} خلال ${h}`,
@@ -180,6 +184,14 @@ export function summarize(user, market, now = Date.now()) {
   // DCA: the plan coins' regular buys (samsam-core.js → dcaStatus), today = Riyadh's calendar day
   const today = localParts(now).date;
   const dca = (user.accum || []).filter(a => a && a.sym && a.dca).map(a => ({ sym: String(a.sym).toUpperCase(), s: C.dcaStatus(a.dca, a.sym, user.txs, today) })).filter(x => x.s);
+  // buy-price alerts: the alert price you set on a plan coin (also coins you don't own yet — priced by their CoinGecko id)
+  const buyAt = (user.accum || []).filter(a => a && a.sym && +a.alertPrice > 0).map(a => {
+    const sym = String(a.sym).toUpperCase();
+    let price = prices[sym] && prices[sym].usd;
+    if (!(price > 0)) { const id = a.cgId || (market.cgIds || {})[sym], r = id && byId.get(id), s = id && market.series && market.series[id]; price = r && r.price > 0 ? r.price : s ? s.last : null; }
+    const p = plan.find(x => x.sym === sym), dc = dca.find(x => x.sym === sym);
+    return { sym, at: +a.alertPrice, price, left: p ? Math.max(0, p.target - p.actual) : null, dcaToday: !!(dc && dc.s.state === 'today') };
+  }).filter(x => x.price > 0);
   // target allocation (Holdings → Allocation): Bitcoin on its own, the others by category
   let alloc = null;
   const tg = meta.targets && typeof meta.targets === 'object' ? meta.targets : null;
@@ -196,7 +208,7 @@ export function summarize(user, market, now = Date.now()) {
     alloc, dca,
     value, cost, total, invested, pctTotal: invested > 0 ? total / invested * 100 : 0,
     ch24: value24 > 0 ? (value / value24 - 1) * 100 : null, d24: value - value24, ch7: value7 > 0 ? (value / value7 - 1) * 100 : null, d7: value - value7,
-    vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, sigMode, counts, plan, prog, tps, macro, btcNow,
+    vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, sigMode, counts, plan, prog, tps, macro, btcNow, buyAt,
     btc24: btcRow ? btcRow.ch24 : null, btc7: btcRow ? btcRow.ch7 : null,
   };
 }
@@ -294,6 +306,21 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       const text = `🎯 <b>${t.targetHit(esc(p.sym))}</b>\n${+p.actual.toFixed(6)} / ${+p.target.toFixed(6)} ${esc(p.sym)} ✅\n${t.planNow}: ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`;
       if (push({ key: 'plan-' + p.sym, text, buttons: [[btn(t.planBtn, 'accumulation.html')]] })) st.plan[p.sym] = 1;
     }
+  }
+  // 3b. buy-price alerts: once when the price gets to your alert price; again only after it went 3% back above it
+  if (cfg.buy && sum.buyAt) {
+    st.buy = st.buy || {};
+    const live = new Set();
+    for (const x of sum.buyAt) {
+      const k = x.sym + ':' + x.at; live.add(k);
+      if (x.price > x.at * 1.03) { delete st.buy[k]; continue; }
+      if (x.price > x.at || st.buy[k]) continue;
+      if (first) { st.buy[k] = 1; continue; }
+      const text = `🔔 <b>${t.buyHit(esc(x.sym))}</b>\n${t.buyLine(usd(x.price), usd(x.at))}` +
+        (x.left > 0 ? `\n${t.buyLeft(+x.left.toPrecision(6), esc(x.sym))}` : '') + (x.dcaToday ? `\n🛒 ${t.buyDca}` : '');
+      if (push({ key: 'buy-' + k, text, buttons: [[btn(t.planBtn, 'accumulation.html'), btn(t.coinBtn(x.sym), 'index.html#holdings/' + encodeURIComponent(x.sym))]] })) st.buy[k] = 1;
+    }
+    for (const k of Object.keys(st.buy)) if (!live.has(k)) delete st.buy[k];
   }
   // 4. take-profit levels of your exit plan (alert when the price gets there; again only after it fell 10% below)
   if (cfg.tp) {

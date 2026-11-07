@@ -124,7 +124,8 @@ async function main() {
     tg = { token, chat };
   }
   const cfg = settings(user.meta);
-  const ids = cgIds(), need = (user.coins || []).map(c => c.cgId || ids[String(c.sym || '').toUpperCase()]).filter(Boolean);
+  const ids = cgIds(), need = [...user.coins || [], ...(user.accum || []).filter(a => a && +a.alertPrice > 0)]   // + plan coins with a buy-price alert
+    .map(c => c.cgId || ids[String(c.sym || '').toUpperCase()]).filter(Boolean);
   const m = market(need); m.cgIds = ids;
   if (!m.top.length && !m.series.bitcoin) throw new Error('no market data in ' + DIR);
   const sum = summarize(user, m, now);

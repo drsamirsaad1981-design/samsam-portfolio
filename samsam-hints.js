@@ -71,7 +71,7 @@
     buyAt: { title: 'Buy at %', body: function () { return '<p>A buy target relative to the price <b>on the day you set it</b>. That price is saved as the <b>base</b>, so the target stays fixed until you change the % — it doesn\'t move with the market.</p>' +
       '<div class="cph-f"><b>Target price</b><code>Base price × (1 + Buy at % ÷ 100)</code></div>' +
       '<ul><li>−10% from a $100 base → buy at <b>$90</b>: <b>BUY NOW</b> when the price is at or below $90</li><li>+10% → buy at <b>$110</b> (a breakout): <b>BUY NOW</b> at or above $110</li></ul><p>Changing the % saves today\'s price as the new base.</p>'; } },
-    priceAlert: { title: 'Price Alert', body: function () { return '<p>A price you want to hear about. When the current price is <b>at or below</b> it, the coin shows <b>Hit</b> and — if you allowed notifications — your device gets one.</p>'; } },
+    priceAlert: { title: 'Price Alert', body: function () { return '<p>A price you want to hear about. When the current price is <b>at or below</b> it, the coin shows <b>Hit</b> and your Telegram bot sends you one message (again only after the price went 3% back above it). Turn it on or off in Settings → Telegram alerts → Buy-price alerts.</p>'; } },
     overallProgress: { title: 'Overall Progress', body: function () { return '<p>How far you are with the whole plan.</p>' +
       '<div class="cph-f"><b>Overall Progress</b><code>Average of every coin\'s Progress (each capped at 100%)</code></div>' +
       '<p>Only coins with a target count. A coin above its target counts as 100%: the extra never makes up for coins still below target.</p>'; } },

@@ -178,7 +178,28 @@ const sB = summarize(uB, mk({ now: mon }), mon);
 check('bought on Saturday → done, no reminder', sB.dca[0].s.state === 'done' && !evaluate(sB, mk({ now: mon }), dD.state, cfg, mon).messages.some(x => x.key.startsWith('dca-')), sB.dca[0].s);
 check('DCA reminders switched off → nothing', !evaluate(sD, mk(), { ...fD.state, dcaDay: {} }, settings({ alerts: { dca: false } }), T0).messages.some(x => x.key.startsWith('dca-')));
 
+// buy-price alerts: the alert price on a plan coin (owned or not), once, again after 3% back above, DCA day noted, Arabic, off switch
+const uBP = user(); uBP.accum = [{ sym: 'SEI', targetQty: 6000, alertPrice: 0.055, dca: { usd: 100, every: 'week', day: 6, since: '2026-10-01' } },
+  { sym: 'DOT', cgId: 'polkadot', targetQty: 100, alertPrice: 5 }, { sym: 'LINK', targetQty: 10, alertPrice: 10 }];
+const mBP = (sei = 0.05) => { const m = mk({ sei }); m.top.push({ id: 'polkadot', sym: 'DOT', price: 4, ch24: 0, ch7: 0 }); return m; };
+const sBP = summarize(uBP, mBP(), T0);
+check('buy levels: SEI 0.05 vs 0.055, DOT (not owned) 4 vs 5, LINK 20 vs 10', sBP.buyAt.length === 3 && sBP.buyAt.find(x => x.sym === 'DOT').price === 4 && sBP.buyAt.find(x => x.sym === 'SEI').left === 1000, sBP.buyAt);
+const fBP = evaluate(sBP, mBP(), null, cfg, T0);
+check('first run: no buy-price message (no burst on the first run)', !fBP.messages.some(x => x.key.startsWith('buy-')));
+const eBP = evaluate(sBP, mBP(), { ...fBP.state, buy: {} }, cfg, T0);
+const bSP = eBP.messages.find(x => x.key === 'buy-SEI:0.055'), bDP = eBP.messages.find(x => x.key === 'buy-DOT:5');
+check('SEI and DOT at / under their alert → one message each, LINK (20 > 10) none', bSP && bDP && !eBP.messages.some(x => x.key.startsWith('buy-LINK')), eBP.messages.map(x => x.key));
+check('the message: price ≤ alert, still to buy for the plan, DCA day noted, plan + coin buttons', /SEI reached your buy price/.test(bSP.text) && /Price \$0\.05\d* ≤ your alert \$0\.055/.test(bSP.text) && /Still to buy for the plan: 1000 SEI/.test(bSP.text) && /DCA/.test(bSP.text) && bSP.buttons[0].length === 2 && !/DCA/.test(bDP.text), bSP.text);
+check('…not again while it stays there', !evaluate(sBP, mBP(), eBP.state, cfg, T0 + 1800e3).messages.some(x => x.key.startsWith('buy-SEI')));
+const up = evaluate(summarize(uBP, mBP(0.0575), T0), mBP(0.0575), eBP.state, cfg, T0 + 3600e3);
+check('3% back above → re-armed', !up.state.buy['SEI:0.055']);
+check('…drops again → a new message', evaluate(sBP, mBP(), up.state, cfg, T0 + 7200e3).messages.some(x => x.key === 'buy-SEI:0.055'));
+const arBP = evaluate(sBP, mBP(), { ...fBP.state, buy: {} }, settings({ alerts: { lang: 'ar' } }), T0).messages.find(x => x.key === 'buy-SEI:0.055');
+check('Arabic', arBP && /وصلت لسعر الشراء/.test(arBP.text) && /المتبقي للخطة/.test(arBP.text), arBP && arBP.text);
+check('switched off → nothing', !evaluate(sBP, mBP(), { ...fBP.state, buy: {} }, settings({ alerts: { buy: false } }), T0).messages.some(x => x.key.startsWith('buy-')));
+check('a new alert price → a new alert (old one forgotten)', (() => { const u2 = JSON.parse(JSON.stringify(uBP)); u2.accum[0].alertPrice = 0.052; const r = evaluate(summarize(u2, mBP(), T0), mBP(), eBP.state, cfg, T0 + 900e3); return r.messages.some(x => x.key === 'buy-SEI:0.052') && !r.state.buy['SEI:0.055']; })());
+
 // every message ever made here is Telegram-safe
-const all = [b, ba, mv.text, sg.text];
+const all = [b, ba, mv.text, sg.text, bSP.text, bDP.text, arBP.text];
 check('all texts Telegram-safe', all.every(okHtml));
 console.log(`${pass}/${pass + fail} passed`); process.exit(fail ? 1 : 0);
