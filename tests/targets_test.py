@@ -56,6 +56,14 @@ with sync_playwright() as p:
             pg.locator('#hovTgtCard').screenshot(path=str(SH / f'tgfull_{vn}_{theme}.png'))
             wide = pg.evaluate("[...document.querySelectorAll('#hovTgtCard *')].some(e=>e.getBoundingClientRect().right>innerWidth+1)")
             check(f'{vn}/{theme}: fits the screen', not wide)
+            # a category renamed in Manage Categories: the card shows the new name, the alerts' copy of the names follows
+            pg.evaluate("Samsam.renameCategory('defi', 'My DeFi')"); pg.wait_for_timeout(2500)   # what Manage Categories does
+            nm = pg.evaluate("[...document.querySelectorAll('#hovTgtCard .tg-row')].map(r=>r.querySelector('.tg-n').textContent)")
+            saved = {x['g']: x['label'] for x in ((meta().get('targets') or {}).get('names') or [])}
+            check(f'{vn}/{theme}: renamed category → new name on the card and in the alerts\' copy', 'My DeFi' in nm and saved.get('defi') == 'My DeFi', (nm, saved.get('defi')))
+            pg.evaluate("Samsam.resetCategory('defi')"); pg.wait_for_timeout(1500)
+            zero = pg.evaluate("[...document.querySelectorAll('#hovTgtCard .tg-d')].map(e=>e.textContent)")
+            check(f'{vn}/{theme}: no "−0.0" / "+0.0" (a rounding crumb shows 0.0)', not any(z.endswith(('−0.0', '+0.0')) for z in zero), zero)
             # editor: a total that isn't 100 can't be saved; Remove → back to the empty card
             pg.click('#hovTgtCard .tg-edit'); pg.wait_for_timeout(300)
             pg.locator('#tgModal .tge-row[data-g=btc] input').fill('70'); pg.wait_for_timeout(100)

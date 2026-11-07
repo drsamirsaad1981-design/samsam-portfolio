@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611071147"></script>
-<script src="samsam-hints.js?v=202611071147"></script>
-<script src="samsam-vault.js?v=202611071147"></script>
-<script src="samsam-labels.js?v=202611071147"></script>
-<script src="samsam-taxonomy.js?v=202611071147"></script>
-<script src="samsam-coins.js?v=202611071147"></script>
-<script src="samsam-dropdown.js?v=202611071147"></script>
-<script src="samsam-add.js?v=202611071147"></script>
-<script src="samsam-chart.js?v=202611071147"></script>
-<script src="samsam-market.js?v=202611071147"></script>
+<script src="samsam-ui.js?v=202611071214"></script>
+<script src="samsam-hints.js?v=202611071214"></script>
+<script src="samsam-vault.js?v=202611071214"></script>
+<script src="samsam-labels.js?v=202611071214"></script>
+<script src="samsam-taxonomy.js?v=202611071214"></script>
+<script src="samsam-coins.js?v=202611071214"></script>
+<script src="samsam-dropdown.js?v=202611071214"></script>
+<script src="samsam-add.js?v=202611071214"></script>
+<script src="samsam-chart.js?v=202611071214"></script>
+<script src="samsam-market.js?v=202611071214"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1586,7 +1586,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611071147"></script>
+<script type="module" src="samsam-cloud.js?v=202611071214"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -4153,9 +4153,10 @@ function renderHovTargets() {
       <button type="button" class="tg-go" onclick="openTargets()">${ic('target')}Set my targets</button></div>`;
     return;
   }
-  const esc = SamsamCoins.esc, usd = v => SamsamFmt.usd(v), f1 = v => v.toFixed(1) + '%', pts = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1);
+  const esc = SamsamCoins.esc, usd = v => SamsamFmt.usd(v), f1 = v => v.toFixed(1) + '%', pts = v => Math.abs(v) < 0.05 ? '0.0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);   // a rounding crumb is 0.0, no sign
   const plan = Samsam.core.allocationPlan(tgGroups(), t.cats, { band: t.band, cash: tgMode === 'cash' ? tgCash : 0 });
-  const shown = plan.groups.filter(g => g.target > 0 || g.now >= 0.05);   // a group with no target and (almost) nothing in it: left out
+  const shown = plan.groups.filter(g => g.target > 0 || g.now >= 0.05);
+  tgSyncNames(t, shown.map(g => g.key));   // a group with no target and (almost) nothing in it: left out
   plan.count = shown.length; plan.onTarget = shown.filter(g => g.state === 'ok').length;
   const rows = shown.map(g => `<div class="tg-row" data-g="${esc(g.key)}">
       <div class="tg-l"><span class="tg-dot" style="background:${tgColor(g.key)}"></span><span class="tg-n">${esc(tgLabel(g.key))}</span>
@@ -4184,6 +4185,17 @@ function renderHovTargets() {
   const ci = document.getElementById('tgCash');
   if (ci) ci.onchange = ci.onkeyup = e => { const v = Math.max(0, parseFloat(String(ci.value).replace(/[^0-9.]/g, '')) || 0); if (v === tgCash && e.type !== 'change') return; tgCash = v; try { localStorage.setItem('samsam_rb_cash', String(v)); } catch (_) {}
     clearTimeout(ci._t); ci._t = setTimeout(() => { const pos = ci.selectionStart; renderHovTargets(); const n = document.getElementById('tgCash'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (_) {} } }, e.type === 'change' ? 0 : 450); };
+}
+// A category renamed (Manage Categories): the targets follow the category, not its name — on screen at once; the copy of
+// the names the Telegram alerts use is refreshed here (one save, only when a name really changed)
+let tgNamesBusy = false;
+function tgSyncNames(t, keys) {
+  if (tgNamesBusy || !t) return;
+  const all = [...new Set([...Object.keys(t.cats), ...keys])], names = Object.fromEntries(all.map(k => [k, tgLabel(k)]));
+  if (all.every(k => (t.names || {})[k] === names[k])) return;
+  tgNamesBusy = true;
+  const cats = Object.fromEntries(Object.entries(t.cats).map(([k, v]) => [k, { pct: v.pct, label: names[k] }]));
+  Samsam.setTargets({ cats, band: t.band, names }).catch(() => {}).finally(() => { tgNamesBusy = false; });   // once saved, the names match: no second save
 }
 // the editor: a % per group, adding up to 100
 function openTargets() {
