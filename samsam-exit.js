@@ -119,6 +119,48 @@
   // ── page ───────────────────────────────────────────────────────────────────
   var root = null, st = null, mkt = { g: null, ethBtc: null, t: 0 }, editTargets = false, draft = null, saveT = null, pickOpen = false;
   var stepsOpen = false, stepsDraft = null, view = null, flashSym = null;
+  // one coin on its own (a row tapped), the search, the order — the order is remembered on this device
+  var forcePaint = false, qTimer = null;
+  var focusSym = null, query = '', SORT_KEY = 'samsam_exit_sort', sortBy = { k: '', d: 1 };
+  try { var sv = JSON.parse(localStorage.getItem(SORT_KEY) || 'null'); if (sv && typeof sv.k === 'string') sortBy = { k: sv.k, d: sv.d === -1 ? -1 : 1 }; } catch (_) {}
+  var SORTS = [['', 'Plan order', 1], ['asset', 'Asset A–Z', 1], ['value', 'Value', -1], ['gain', 'Price vs average', -1], ['tp1', 'Closest to TP1', 1],
+    ['tp2', 'Closest to TP2', 1], ['tp3', 'Closest to TP3', 1], ['cash', 'Cash out', -1], ['profit', 'Net profit', -1]];
+  function sortVal(k, e, r) {
+    if (k === 'asset') return e.sym;
+    if (k === 'value') return r.base * (r.price || 0);
+    if (k === 'gain') return r.avg > 0 && r.price > 0 ? r.price / r.avg - 1 : -Infinity;
+    if (k === 'tp1' || k === 'tp2' || k === 'tp3') { var s = r.steps[+k.slice(2) - 1]; return !s ? Infinity : s.status === 'done' ? Infinity : s.status === 'hit' ? -1 : s.away == null ? Infinity : s.away; }
+    if (k === 'cash') return r.cash;
+    if (k === 'profit') return r.profit;
+    return 0;
+  }
+  // the plan as shown: [entry, its index in the plan, its numbers], searched and sorted
+  function shown(plan) {
+    var cfg = cfgNow(), q = query.trim().toUpperCase();
+    var list = plan.map(function (e, i) { return [e, i, calc.coin(e, coinOf(e.sym), st.transactions, cfg)]; })
+      .filter(function (x) { var c = coinOf(x[0].sym); return !q || x[0].sym.indexOf(q) >= 0 || (c && String(c.name || '').toUpperCase().indexOf(q) >= 0); });
+    if (sortBy.k) list.sort(function (a, b) {
+      var va = sortVal(sortBy.k, a[0], a[2]), vb = sortVal(sortBy.k, b[0], b[2]);
+      var c = typeof va === 'string' ? va.localeCompare(vb) : (va === vb ? 0 : va > vb ? 1 : -1);
+      return c * sortBy.d || a[1] - b[1];
+    });
+    return list;
+  }
+  function setSort(k) {
+    var def = (SORTS.filter(function (x) { return x[0] === k; })[0] || [k, '', 1])[2];
+    sortBy = sortBy.k === k && k ? { k: k, d: -sortBy.d } : { k: k, d: def };
+    try { localStorage.setItem(SORT_KEY, JSON.stringify(sortBy)); } catch (_) {}
+    paint();
+  }
+  var ARROW = function (k) {
+    var on = sortBy.k === k;
+    return '<svg class="xv-sort' + (on ? ' on' : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      (on ? (sortBy.d === 1 ? '<path d="m6 15 6-6 6 6"/>' : '<path d="m6 9 6 6 6-6"/>') : '<path d="m7 10 5-5 5 5M7 14l5 5 5-5"/>') + '</svg>';
+  };
+  function th(k, label, cls) {
+    var on = sortBy.k === k, aria = on ? (sortBy.d === 1 ? 'ascending' : 'descending') : 'none';
+    return '<th' + (cls ? ' class="' + cls + '"' : '') + ' aria-sort="' + aria + '"><button type="button" class="xv-th" data-act="sort" data-k="' + k + '">' + label + ARROW(k) + '</button></th>';
+  }
   function S() { return window.Samsam; }
   function exitState() { return draft || (st && st.exit) || { targets: {}, plan: [] }; }
   function cfgNow() { return cfgOf(exitState().steps || (st && st.exit && st.exit.steps)); }
@@ -250,9 +292,9 @@
       (s.linked ? '' : IC('lock', { cls: 'xv-lock' })) + '</div><small>' + +s.pct.toFixed(2) + '% · ' + sub + '</small></td>';
   }
   function tableHtml(plan) {
-    var cfg = cfgNow(), tc = 0, tp = 0, cost = 0;
-    var rows = plan.map(function (e) {
-      var pc = coinOf(e.sym), r = calc.coin(e, pc, st.transactions, cfg), sym = E(e.sym);
+    var cfg = cfgNow(), tc = 0, tp = 0, cost = 0, list = shown(plan);
+    var rows = list.map(function (x) {
+      var e = x[0], r = x[2], pc = coinOf(e.sym), sym = E(e.sym);
       tc += r.cash; tp += r.profit; cost += r.cash - r.profit;
       return '<tr data-act="open" data-sym="' + sym + '" tabindex="0" title="Open ' + sym + '">' +
         '<td class="xv-coin"><div>' + SamsamCoins.assetIcon(e.sym, { logoUrl: (pc && pc.logoUrl) || '', cgId: (pc && pc.cgId) || e.cgId || '' }) + '<span><b>' + sym + '</b><small>' + r.done + ' of 3 done</small></span></div></td>' +
@@ -262,14 +304,33 @@
         '<td class="num"><b>' + F().usd(r.cash) + '</b></td>' +
         '<td class="num"><b class="' + (r.profit >= 0 ? 'up' : 'down') + '">' + F().usdSigned(r.profit) + '</b>' + (r.profitPct != null ? '<small>' + (r.profitPct >= 0 ? '+' : '') + r.profitPct.toFixed(1) + '%</small>' : '') + '</td></tr>';
     }).join('');
-    return '<div class="xv-wrap"><table class="xv"><thead><tr><th>Asset</th><th class="num">Plan amount</th><th class="num">Average buy price</th>' +
-      cfg.mults.map(function (m, i) { return '<th>Take profit ' + (i + 1) + '</th>'; }).join('') +
-      '<th class="num">Cash out</th><th class="num">Net profit</th></tr></thead><tbody>' + rows + '</tbody>' +
-      '<tfoot><tr><td colspan="6">Total · ' + plan.length + ' asset' + (plan.length === 1 ? '' : 's') + '</td><td class="num"><b>' + F().usd(tc) + '</b></td>' +
+    if (!list.length) return '<div class="xs-empty">No coin in your exit plan matches “' + E(query) + '”.</div>';
+    return '<div class="xv-wrap"><table class="xv"><thead><tr>' + th('asset', 'Asset') + th('value', 'Plan amount', 'num') + th('gain', 'Average buy price', 'num') +
+      cfg.mults.map(function (m, i) { return th('tp' + (i + 1), 'Take profit ' + (i + 1)); }).join('') +
+      th('cash', 'Cash out', 'num') + th('profit', 'Net profit', 'num') + '</tr></thead><tbody>' + rows + '</tbody>' +
+      '<tfoot><tr><td colspan="6">Total · ' + list.length + ' asset' + (list.length === 1 ? '' : 's') + '</td><td class="num"><b>' + F().usd(tc) + '</b></td>' +
       '<td class="num"><b class="' + (tp >= 0 ? 'up' : 'down') + '">' + F().usdSigned(tp) + '</b>' + (cost > 0 ? '<small>' + (tp >= 0 ? '+' : '') + (tp / cost * 100).toFixed(1) + '%</small>' : '') + '</td></tr></tfoot></table></div>' +
       '<div class="xs-note xv-leg"><span>' + IC('checkCircle') + 'Done</span><span>' + IC('target') + 'Target hit</span><span>' + IC('hourglass') + 'Waiting</span><span>' + IC('lock') + 'Price you set</span><span>· Tap a row to edit</span></div>';
   }
 
+  function findHtml() {
+    return '<div class="xs-find"><label class="xs-q ss-search"><span class="ss-search-ic" aria-hidden="true">' + IC('search', { solo: true, size: 15 }) + '</span>' +
+      '<input type="search" id="xsQ" placeholder="Search a coin" autocomplete="off" spellcheck="false" aria-label="Search the exit plan" value="' + E(query) + '"></label>' +
+      '<label class="xs-sort"><span class="sr-only">Sort</span><select id="xsSort" aria-label="Sort">' + SORTS.map(function (o) {
+        return '<option value="' + o[0] + '"' + (sortBy.k === o[0] ? ' selected' : '') + '>' + (o[0] ? 'Sort: ' : '') + o[1] + '</option>'; }).join('') + '</select></label></div>';
+  }
+  function cardsHtml(plan) {
+    var list = shown(plan);
+    return list.length ? '<div class="xk-grid">' + list.map(function (x) { return coinHtml(x[0], x[1]); }).join('') + '</div>' : '<div class="xs-empty">No coin in your exit plan matches “' + E(query) + '”.</div>';
+  }
+  // a row tapped → that coin's card on its own, and a way back to the list
+  function focusHtml(plan) {
+    if (!focusSym) return '';
+    var i = plan.findIndex(function (e) { return e.sym === focusSym; });
+    if (i < 0) { focusSym = null; return ''; }
+    return '<div class="xs-focus"><button type="button" class="xs-back" data-act="unfocus">' + '‹ All coins</button>' +
+      '<span>' + E(focusSym) + '</span></div><div class="xk-grid xk-one">' + coinHtml(plan[i], i) + '</div>';
+  }
   function pickHtml() {
     if (!pickOpen) return '';
     var inPlan = {}; exitState().plan.forEach(function (e) { inPlan[e.sym] = 1; });
@@ -284,7 +345,7 @@
 
   function paint() {
     if (!root || !st) return;
-    var a = document.activeElement; if (a && root.contains(a) && a.tagName === 'INPUT' && a.type !== 'checkbox') return;   // never redraw under your typing
+    var a = document.activeElement; if (!forcePaint && a && root.contains(a) && a.tagName === 'INPUT' && a.type !== 'checkbox') return;   // never redraw under your typing
     var plan = exitState().plan, v = getView(), cfg = cfgNow();
     root.innerHTML = '<div class="xs-top">' + macroHtml() + cashHtml() + '</div>' +
       '<div class="xs-bar"><button type="button" class="cp-add" data-act="pick"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="xs-long"> to Exit Plan</span></span></button>' +
@@ -295,7 +356,7 @@
         '<button type="button" data-act="view" data-v="cards" class="' + (v === 'cards' ? 'btn-toggle-active' : '') + '" aria-pressed="' + (v === 'cards') + '">' + IC('cards') + 'Cards</button></div></div>' +
       stepsHtml() + pickHtml() +
       (!plan.length ? '<div class="xs-empty">No coins in your exit plan yet.<br>Tap <b>Add to Exit Plan</b> and choose the coins you want to take profit on.</div>'
-        : v === 'table' ? tableHtml(plan) : '<div class="xk-grid">' + plan.map(coinHtml).join('') + '</div>') +
+        : focusHtml(plan) || (findHtml() + (v === 'table' ? tableHtml(plan) : cardsHtml(plan)))) +
       '<div class="xs-note center">A tool to organise and follow your own plan — not financial advice.</div>';
     if (flashSym) {
       var el = document.getElementById('xk-' + flashSym); flashSym = null;
@@ -313,7 +374,9 @@
       editTargets = false; S().saveExit({ targets: t }); paint();
     }
     else if (act === 'view') { setView(b.dataset.v); }
-    else if (act === 'open') { flashSym = b.dataset.sym; setView('cards', true); }
+    else if (act === 'open') { focusSym = b.dataset.sym; paint(); var fb = root.querySelector('.xs-focus'); if (fb) fb.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+    else if (act === 'unfocus') { var back = focusSym; focusSym = null; paint(); var tr = root.querySelector('tr[data-sym="' + back + '"]') || document.getElementById('xk-' + back); if (tr) tr.scrollIntoView({ block: 'center' }); }
+    else if (act === 'sort') { setSort(b.dataset.k); }
     else if (act === 'steps') { stepsOpen = !stepsOpen; stepsDraft = null; paint(); }
     else if (act === 'steps-close') { stepsOpen = false; stepsDraft = null; paint(); }
     else if (act === 'steps-reset') { stepsDraft = { mults: DEF.mults.slice(), pcts: DEF.pcts.slice() }; paint(); }
@@ -348,6 +411,8 @@
   }
   function onChange(ev) {
     var x = ev.target;
+    if (x.id === 'xsSort') { sortBy = { k: x.value, d: (SORTS.filter(function (o) { return o[0] === x.value; })[0] || ['', '', 1])[2] }; try { localStorage.setItem(SORT_KEY, JSON.stringify(sortBy)); } catch (_) {} paint(); return; }
+    if (x.id === 'xsQ') return;
     if (x.dataset.act === 'moon') { var plan = planCopy(); plan[+x.dataset.i].moonbag = x.checked; save({ plan: plan }, true); paint(); return; }
     if (x.dataset.st) {   // default steps panel (saved with Save)
       var d = stepsDraft || JSON.parse(JSON.stringify({ mults: cfgNow().mults, pcts: cfgNow().pcts })), k = +x.dataset.k;
@@ -377,11 +442,21 @@
       if (root === el) return; root = el;
       root.addEventListener('click', onClick);
       root.addEventListener('change', onChange);
+      // search: the list follows as you type (redrawn with the box kept focused, the keyboard stays up)
+      root.addEventListener('input', function (ev) {
+        if (ev.target.id !== 'xsQ') return;
+        query = ev.target.value; clearTimeout(qTimer);
+        qTimer = setTimeout(function () {
+          var el = document.getElementById('xsQ'), pos = el ? el.selectionStart : null;
+          forcePaint = true; paint(); forcePaint = false;
+          var n = document.getElementById('xsQ'); if (n) { n.focus(); try { if (pos != null) n.setSelectionRange(pos, pos); } catch (_) {} }
+        }, 200);
+      });
       root.addEventListener('keydown', function (ev) {
         if (ev.key === 'Enter' && ev.target.tagName === 'INPUT') ev.target.blur();
         else if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches && ev.target.matches('tr[data-act=open]')) { ev.preventDefault(); ev.target.click(); }
       });
-      root.addEventListener('focusout', function () { setTimeout(function () { var a = document.activeElement; if (!(a && root.contains(a) && a.tagName === 'INPUT')) paint(); }, 0); });
+      root.addEventListener('focusout', function (ev) { if (ev.target.id === 'xsQ') return; setTimeout(function () { var a = document.activeElement; if (!(a && root.contains(a) && a.tagName === 'INPUT')) paint(); }, 0); });
       loadMarket(false);
       setInterval(function () { if (!document.hidden && root.offsetParent) loadMarket(false); }, 3 * 60e3);
     },

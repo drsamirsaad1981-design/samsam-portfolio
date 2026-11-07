@@ -16,18 +16,18 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611072128"></script>
-<script src="samsam-hints.js?v=202611072128"></script>
-<script src="samsam-vault.js?v=202611072128"></script>
-<script src="samsam-labels.js?v=202611072128"></script>
-<script src="samsam-taxonomy.js?v=202611072128"></script>
-<script src="samsam-coins.js?v=202611072128"></script>
-<script src="samsam-import.js?v=202611072128"></script>
-<script src="samsam-settings.js?v=202611072128"></script>
-<script src="samsam-dropdown.js?v=202611072128"></script>
-<script src="samsam-market.js?v=202611072128"></script>
-<script src="samsam-exit.js?v=202611072128"></script>
-<script src="samsam-add.js?v=202611072128"></script>
+<script src="samsam-ui.js?v=202611072146"></script>
+<script src="samsam-hints.js?v=202611072146"></script>
+<script src="samsam-vault.js?v=202611072146"></script>
+<script src="samsam-labels.js?v=202611072146"></script>
+<script src="samsam-taxonomy.js?v=202611072146"></script>
+<script src="samsam-coins.js?v=202611072146"></script>
+<script src="samsam-import.js?v=202611072146"></script>
+<script src="samsam-settings.js?v=202611072146"></script>
+<script src="samsam-dropdown.js?v=202611072146"></script>
+<script src="samsam-market.js?v=202611072146"></script>
+<script src="samsam-exit.js?v=202611072146"></script>
+<script src="samsam-add.js?v=202611072146"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -660,6 +660,25 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 table.xv { width: 100%; min-width: 780px; border-collapse: separate; border-spacing: 0; }
 table.xv thead { position: static; background: var(--bg3); }
 table.xv th { padding: 9px 10px; font-size: .74rem; font-weight: 700; color: var(--fg2); text-align: left; white-space: nowrap; border: 0; }
+/* sortable headers: tap to sort, tap again to reverse */
+table.xv th .xv-th { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font: inherit; color: inherit; border-radius: 6px; }
+table.xv th.num .xv-th { flex-direction: row; }
+table.xv th .xv-th:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+table.xv th .xv-sort { width: 13px; height: 13px; flex: none; opacity: .4; }
+table.xv th .xv-sort.on { opacity: 1; color: var(--accent); }
+table.xv th[aria-sort="ascending"], table.xv th[aria-sort="descending"] { color: var(--fg); }
+/* search + sort above the list */
+.xs-find { display: flex; gap: 8px; margin: 0 0 12px; align-items: stretch; }
+.xs-find .xs-q { position: relative; flex: 1; min-width: 0; display: block; }
+.xs-find input { width: 100%; box-sizing: border-box; height: 40px; padding: 0 12px 0 36px; border-radius: 11px; border: 1px solid var(--border); background: var(--card-solid, var(--card)); color: var(--fg); font: inherit; font-size: .86rem; }
+.xs-find select { height: 40px; border-radius: 11px; border: 1px solid var(--border); background: var(--card-solid, var(--card)); color: var(--fg); font: inherit; font-size: .8rem; font-weight: 600; padding: 0 8px; max-width: 46vw; }
+.xs-find select option { background: var(--card-solid, #1c1c1e); color: var(--fg); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* one coin on its own */
+.xs-focus { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-weight: 800; scroll-margin-top: 92px; }
+.xs-back { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-solid, var(--card)); font-size: .84rem; font-weight: 700; color: var(--fg); }
+.xs-back:focus-visible { outline: 2px solid var(--accent); }
+.xk-grid.xk-one { grid-template-columns: 1fr; max-width: 640px; }
 table.xv td { padding: 9px 10px; font-size: .8rem; border-top: 1px solid var(--border); vertical-align: middle; white-space: nowrap; font-variant-numeric: tabular-nums; }
 table.xv .num { text-align: right; }
 table.xv td small { display: block; font-size: .66rem; color: var(--fg2); font-weight: 600; margin-top: 2px; }
@@ -865,7 +884,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611072128"></script>
+<script type="module" src="samsam-cloud.js?v=202611072146"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
