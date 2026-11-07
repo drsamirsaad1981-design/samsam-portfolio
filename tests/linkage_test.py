@@ -50,7 +50,7 @@ with sync_playwright() as p:
     check('not owned: Actual 0, live price $40, Cost to Target = 100 × $40', r['notOwned'] and r['actualQty'] == 0 and r['currentPrice'] == 40 and abs(r['costToTarget'] - 4000) < 1e-9, r)
     card = pg.locator('#cardsView .coin-card', has_text='HYPE').first
     ct = card.inner_text()
-    check('card says Not Owned Yet and has ➕ Buy', 'Not Owned Yet' in ct and '➕ Buy' in ct and '$4,000.00' in ct, ct[:300])
+    check('card says Not Owned Yet and has + Buy (icon)', 'Not Owned Yet' in ct and 'Buy' in ct and '$4,000.00' in ct, ct[:300])
     card.screenshot(path=str(SH / 'linkage-notowned-card.png'))
     pg.reload(); S.wait_ready(pg); pg.wait_for_timeout(1500)
     r = pg.evaluate("calcRow(accumPlan.find(x => x.sym === 'HYPE'))")

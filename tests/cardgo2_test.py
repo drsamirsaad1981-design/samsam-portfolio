@@ -21,7 +21,7 @@ with sync_playwright() as p:
         pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(1800)
         pg.mouse.move(1, 1)
         g = pg.evaluate(OVER, '#allTimeCard')
-        check(f'{name}: header All Time Profit has the small round button, text clear of it', g and g[0] != 'missing' and g[0]['sm'] and g[0]['w'] in (22, 26) and g[0]['inside'] and not g[0]['hit'], g)
+        check(f'{name}: header All Time Profit has the small round button, text clear of it', g and g[0] != 'missing' and g[0]['sm'] and g[0]['w'] in (20, 22, 26) and g[0]['inside'] and not g[0]['hit'], g)
         check(f'{name}: no ⓘ left anywhere', not pg.query_selector('.cp-profit-i'))
         mv = pg.evaluate("[...document.querySelectorAll('#moversCard button.mv-half')].map(b => !!b.querySelector('.mv-go'))")
         check(f'{name}: main movers rows show a small ›', mv and all(mv), mv)

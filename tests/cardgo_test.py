@@ -33,7 +33,7 @@ with sync_playwright() as p:
                 check('keyboard Enter on Holdings opens it', pg.evaluate("location.hash").startswith('#holdings'), pg.evaluate("location.hash"))
                 pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(800)
                 pg.click('#perfChartWrap .card-go', force=True); pg.wait_for_timeout(800)
-                check('tapping the round button opens Performance', 'performance.html' in pg.url, pg.url)
+                check('tapping the round button opens Performance', 'performance.html' in pg.url or pg.url.endswith('#performance'), pg.url)   # Performance opens as a Portfolio tab since the bar redesign
             check(f'{tag}: no page errors', not errs, errs)
             ctx.close()
     br.close()

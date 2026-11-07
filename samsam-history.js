@@ -53,9 +53,16 @@ function db() { return dbP || (dbP = idb()); }
   if (lastAsk) ensure(lastAsk.needs, lastAsk.from);
 })();
 function saveOne(id) {
-  db().then(d => { const tx = d.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put(cache[id], id); })
+  return db().then(d => new Promise(ok => { const tx = d.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put(cache[id], id); tx.oncomplete = tx.onerror = tx.onabort = () => ok(); }))
     .catch(() => {});   // can't keep it: it's simply fetched again next time
 }
+function readOne(id) {
+  return db().then(d => new Promise(ok => { const r = d.transaction(STORE, 'readonly').objectStore(STORE).get(id); r.onsuccess = () => ok(r.result || null); r.onerror = () => ok(null); }))
+    .catch(() => null);
+}
+// The main page and the tabs open inside it (Performance, Plan, Market) each run this file: one lock per coin, so only
+// one of them asks CoinGecko — the others find the fresh copy it saved (same IndexedDB) and use that.
+function oneAtATime(id, fn) { return navigator.locks && navigator.locks.request ? navigator.locks.request('samsam-hist:' + id, fn) : fn(); }
 
 // ── shared files (prices branch) ──
 // https://raw.githubusercontent.com/<owner>/<repo>/prices/p/<coingecko-id>.json  { t0, step, p: [usd, …] }
@@ -148,16 +155,22 @@ async function work() {
   try {
     while (queue.length) {
       const job = queue[0];
+      let asked = true;
       try {
-        const pts = await fetchChart(job.id, job.days);
-        if (!pts.length && job.full) throw new Error('no prices');
-        const c = cache[job.id] || { from: Infinity, at: 0, pts: [] };
-        c.pts = merge(job.full ? [] : c.pts, pts);
-        if (job.full) c.from = job.from; else c.from = Math.min(c.from, job.from);
-        c.at = Date.now();
-        cache[job.id] = c; saveOne(job.id);
+        await oneAtATime(job.id, async () => {
+          const rec = await readOne(job.id);   // another window of the app may have just brought it
+          if (rec && rec.pts && rec.pts.length && Date.now() - rec.at < REFRESH_MS && (!job.full || rec.from <= job.from + HOUR)) { cache[job.id] = rec; asked = false; return; }
+          const pts = await fetchChart(job.id, job.days);
+          if (!pts.length && job.full) throw new Error('no prices');
+          const c = cache[job.id] || { from: Infinity, at: 0, pts: [] };
+          c.pts = merge(job.full ? [] : c.pts, pts);
+          if (job.full) c.from = job.from; else c.from = Math.min(c.from, job.from);
+          c.at = Date.now();
+          cache[job.id] = c; await saveOne(job.id);
+        });
         queue.shift(); status.pending = queue.length; status.last = job.id; status.done++; status.waiting = false; progress();
         if (!queue.length) onUpdate();   // redraw once everything asked for has arrived
+        if (!asked) continue;             // nothing was asked of CoinGecko: no need to wait before the next one
       } catch (e) {
         if (!navigator.onLine) { queue = []; status.pending = 0; status.waiting = false; progress(); break; }   // offline: next time
         job.tries = (job.tries || 0) + 1;

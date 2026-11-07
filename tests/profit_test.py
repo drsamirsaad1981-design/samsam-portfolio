@@ -11,7 +11,7 @@ FORMULAS = ['Realized Profit + Unrealized Profit',
             '(Current Price − Avg Buy Price) × Amount Held',
             'Avg Buy Price × Amount Held',
             '(Amount Held × Avg Buy Price + Buy Price × Amount Bought + Buying Fee) ÷ (Amount Held + Amount Bought)',
-            'All Time Profit ÷ Cost Basis × 100']
+            'All Time Profit ÷ (Cost Basis + Cost of Coins Sold) × 100']   # % on everything invested (sold coins too)
 def sheet_nums(pg):
     return pg.evaluate("['cppTotal','cppRealized','cppUnrealized','cppCost','cppPct'].map(i => document.getElementById(i).innerText)")
 
@@ -33,7 +33,7 @@ with sync_playwright() as p:
             check('selling fee is counted in sellFees', pg.evaluate("realizedState.sellFees") >= 0.25 - 1e-12, pg.evaluate("realizedState.sellFees"))
         # ── header card ──
         lbl = pg.inner_text('#allTimeCard .stat-label').strip()
-        check(f'{name}: header card is called All Time Profit', lbl.upper().startswith('ALL-TIME PROFIT'), lbl)
+        check(f'{name}: header card is called All Time Profit', lbl.upper().replace('-', ' ').startswith('ALL TIME PROFIT'), lbl)
         d = pg.evaluate("allTimeProfitData()")
         exp = pg.evaluate("""(() => { const v = calcStats().total, c = portfolio.reduce((s, x) => s + x.qty * x.basePrice, 0);
             return { total: realizedState.total + (v - c), cost: c }; })()""")
@@ -91,7 +91,7 @@ with sync_playwright() as p:
         pg.goto(S.SITE + '/performance.html'); S.wait_ready(pg); pg.wait_for_timeout(2500)
         lab = pg.inner_text('#allTimeCard .sum-label').strip(); pv = pg.inner_text('#totalPnl'); bd = pg.inner_text('#perfCatVal b')
         pd = pg.evaluate("allTimeData")
-        check(f'{name}: Performance card is called All Time Profit', lab.upper().startswith('ALL-TIME PROFIT'), lab)
+        check(f'{name}: Performance card is called All Time Profit', lab.upper().replace('-', ' ').startswith('ALL TIME PROFIT'), lab)
         check(f'{name}: Performance All Time Profit includes realized (= main page)', abs(pd['total'] - main_total) < 0.01 and abs(money(pv) - pd['total']) < 0.006, (pv, pd, main_total))
         check(f'{name}: breakdown All Time Profit = same number', abs(money(bd) - pd['total']) < 0.006 and abs(money(pg.inner_text('#bdUnrealized')) - pd['unrealized']) < 0.006, (bd, pd))
         pt = pg.inner_text('body')
