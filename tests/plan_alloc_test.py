@@ -40,6 +40,13 @@ with sync_playwright() as p:
             pg.evaluate("Samsam.setTargets({cats:{btc:{pct:5},layer1:{pct:5},meme:{pct:80},oracle:{pct:10}},band:5})"); pg.wait_for_timeout(1500)
             st2 = pg.evaluate("Object.entries(paState).map(([k,v])=>[k,v.state])")
             check(f'{vn}/{theme}: new targets → the states follow ({dict(st2).get("meme")})', st2 != st and dict(st2).get('btc') in ('over', 'ok'), (st, st2))
+            # "Allocation ›" inside the app (the Plan tab of index.html) → Portfolio → Allocation, not Home
+            pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(800)
+            pg.evaluate("cpShell.go('accumulation')"); pg.wait_for_timeout(2500)
+            fr = next(f for f in pg.frames if 'accumulation.html' in f.url)
+            fr.click('#planAlloc .pa-open'); pg.wait_for_timeout(1500)
+            st3 = pg.evaluate("({hash:location.hash, mode:document.getElementById('holdingsOverlay').getAttribute('data-mode'), shown:getComputedStyle(document.getElementById('holdingsOverlay')).display, tgt:!!document.getElementById('hovTgtCard').offsetParent})")
+            check(f'{vn}/{theme}: "Allocation ›" in the app opens Portfolio → Allocation {st3}', st3['hash'].startswith('#holdings') and st3['mode'] == 'alloc' and st3['shown'] != 'none' and st3['tgt'], st3)
             pg.evaluate("Samsam.setTargets(null)"); pg.wait_for_timeout(800)
             check(f'{vn}/{theme}: no JS errors', not errs, errs[:3]); ctx.close()
     br.close()

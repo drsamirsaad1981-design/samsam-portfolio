@@ -16,16 +16,16 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611071347"></script>
-<script src="samsam-hints.js?v=202611071347"></script>
-<script src="samsam-vault.js?v=202611071347"></script>
-<script src="samsam-labels.js?v=202611071347"></script>
-<script src="samsam-taxonomy.js?v=202611071347"></script>
-<script src="samsam-coins.js?v=202611071347"></script>
-<script src="samsam-dropdown.js?v=202611071347"></script>
-<script src="samsam-market.js?v=202611071347"></script>
-<script src="samsam-exit.js?v=202611071347"></script>
-<script src="samsam-add.js?v=202611071347"></script>
+<script src="samsam-ui.js?v=202611071355"></script>
+<script src="samsam-hints.js?v=202611071355"></script>
+<script src="samsam-vault.js?v=202611071355"></script>
+<script src="samsam-labels.js?v=202611071355"></script>
+<script src="samsam-taxonomy.js?v=202611071355"></script>
+<script src="samsam-coins.js?v=202611071355"></script>
+<script src="samsam-dropdown.js?v=202611071355"></script>
+<script src="samsam-market.js?v=202611071355"></script>
+<script src="samsam-exit.js?v=202611071355"></script>
+<script src="samsam-add.js?v=202611071355"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -836,7 +836,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611071347"></script>
+<script type="module" src="samsam-cloud.js?v=202611071355"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1348,6 +1348,11 @@ function planAllocation() {
   accumPlan.forEach(e => { const r = calcRow(e); if (r.costToTarget > 0) { const g = paGroup(e); after[g] = (after[g] || 0) + r.costToTarget; toBuy += r.costToTarget; } });
   return { t, now: Samsam.core.allocationPlan(now, t.cats, { band: t.band }), after: Samsam.core.allocationPlan(after, t.cats, { band: t.band }), toBuy };
 }
+// "Allocation ›": the Portfolio → Allocation tab, the same way the Portfolio tabs open it (inside the app: no reload)
+function paOpenAlloc(e) {
+  if (window.SamsamUI && SamsamUI.ptabGo) { e.preventDefault(); SamsamUI.ptabGo('allocation'); return false; }
+  return true;
+}
 function paChip(entry) {
   if (!paState) return '';
   const g = paGroup(entry), st = paState[g]; if (!st) return '';
@@ -1363,7 +1368,7 @@ function renderPlanAlloc() {
   paState = null;
   if (!a) {
     box.hidden = !(window.Samsam && Samsam.isReady && Samsam.isReady());
-    box.innerHTML = `<div class="pa-h"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation</b><a class="pa-open" href="./index.html#allocation" target="_top">Set targets ›</a></div>
+    box.innerHTML = `<div class="pa-h"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation</b><a class="pa-open" href="./index.html#allocation" target="_top" onclick="return paOpenAlloc(event)">Set targets ›</a></div>
       <div class="pa-empty">Set a target allocation (Portfolio → Allocation) to see whether finishing this plan keeps your categories where you want them, and which coins to buy first.</div>`;
     return;
   }
@@ -1377,7 +1382,7 @@ function renderPlanAlloc() {
     return `<div class="pa-row" data-g="${esc(g.key)}"><span class="pa-dot" style="background:${SamsamTaxonomy.color(g.key)}"></span><span class="pa-n">${esc(SamsamTaxonomy.label(g.key))}</span>
       <span class="pa-v">${f1(n.now)} → <b>${f1(g.now)}</b> · target ${f1(g.target)}</span><span class="pa-d ${g.state}" title="after the plan: points from your target">${g.state === 'ok' ? '✓ ' : ''}${pts(g.drift)}</span></div>`; }).join('');
   box.hidden = false;
-  box.innerHTML = `<div class="pa-h"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation</b><a class="pa-open" href="./index.html#allocation" target="_top">Allocation ›</a></div>
+  box.innerHTML = `<div class="pa-h"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation</b><a class="pa-open" href="./index.html#allocation" target="_top" onclick="return paOpenAlloc(event)">Allocation ›</a></div>
     <div class="pa-sub">${a.toBuy > 0 ? `If you finish this plan (<b>+${SamsamFmt.usd(a.toBuy)}</b> at today's prices): <b>${okAfter} of ${shown.length}</b> categories on target — today ${okNow} of ${shown.length}.` : `Your plan is complete — <b>${okNow} of ${shown.length}</b> categories on target.`} Today → after the plan · band ±${band} pts.</div>
     <div class="pa-rows">${rows}</div>`;
 }
