@@ -15,12 +15,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611071840"></script>
-<script src="samsam-hints.js?v=202611071840"></script>
-<script src="samsam-vault.js?v=202611071840"></script>
-<script src="samsam-labels.js?v=202611071840"></script>
-<script src="samsam-taxonomy.js?v=202611071840"></script>
-<script src="samsam-coins.js?v=202611071840"></script>
+<script src="samsam-ui.js?v=202611071902"></script>
+<script src="samsam-hints.js?v=202611071902"></script>
+<script src="samsam-vault.js?v=202611071902"></script>
+<script src="samsam-labels.js?v=202611071902"></script>
+<script src="samsam-taxonomy.js?v=202611071902"></script>
+<script src="samsam-coins.js?v=202611071902"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root { --bg:#f5f5f7; --card:#fff; --fg:#1a1a1e; --fg2:#6e6e73; --border:rgba(0,0,0,.08); --accent:#3b82f6; --header-bg:#fff;
@@ -137,8 +137,13 @@ body:not(.show-all) tr.same-row { display:none; }
       <div class="tablewrap"><table id="coinTable"></table></div>
     </div>
     <div class="card" id="accCard">
-      <h2>Accumulation targets</h2>
+      <h2>Accumulation targets &amp; DCA</h2>
       <div class="tablewrap"><table id="accTable"></table></div>
+    </div>
+    <div class="card hidden" id="setCard">
+      <h2>Settings</h2>
+      <div class="meta">Settings in the backup that differ from the cloud now. Ticked ones are put back exactly as they were in the backup.</div>
+      <div class="tablewrap"><table id="setTable"></table></div>
     </div>
   </div>
 </div>
@@ -148,7 +153,7 @@ body:not(.show-all) tr.same-row { display:none; }
   <button class="btn primary" id="applyBtn">Restore selected</button>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611071840"></script>
+<script type="module" src="samsam-cloud.js?v=202611071902"></script>
 <script>
 const $ = id => document.getElementById(id);
 const LEG = { pf:'samsam_pf_v4', tx:'samsam_tx_v1', custom:'samsam_custom_v1', archived:'samsam_archived_v1', acc:'samsam_acc_v1' };
@@ -174,7 +179,7 @@ function normalise(raw, label) {
   removed.forEach(s => { if (activeSyms.has(s)) removed.delete(s); });
   return { label, savedAt: pf.lastSave || raw.exportedAt || null,
     coins: coinsArr.filter(c => c && c.sym), transactions: (pf.transactions || []).filter(t => t && t.sym && t.id),
-    removed, accumPlan: raw.accumPlan || pf.accumPlan || [] };
+    removed, accumPlan: raw.accumPlan || pf.accumPlan || [], settings: raw.settings || null };
 }
 // Old-app data on this device: plain localStorage, or the encrypted device vault it was moved into.
 const legGet = (k, d) => window.SamsamVault ? SamsamVault.readKey(k, d) : Promise.resolve(lsGet(k, d));
@@ -202,18 +207,41 @@ function compare() {
     const s = src.coins.find(c => c.sym === sym), c = cloudBy.get(sym);
     const sQty = s ? +s.qty || 0 : null, sAvg = s ? +s.basePrice || 0 : null;
     const cQty = c ? c.qty : 0, cAvg = c ? c.basePrice : 0;
-    const differs = s && !src.removed.has(sym) && (!c || !near(sQty, cQty) || !near(sAvg, cAvg));
+    // compared after the missing transactions are added back — a coin those already fix needs no "Edit"
+    const doc = st.coins.find(x => x.sym === sym);
+    const fixed = core.replay(doc ? doc.opening : { qty: 0, avg: 0 }, st.transactions.filter(t => t.sym === sym).concat(missing.filter(t => t.sym === sym)));
+    const close = (a, b) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a), Math.abs(b));
+    const differs = s && !src.removed.has(sym) && (!c || !close(sQty, fixed.qty) || !close(sAvg, fixed.avg));
     return { sym, src: s, sQty, sAvg, cQty, cAvg, inCloud: !!c, cloudRemoved: cloudRemoved.has(sym), srcRemoved: src.removed.has(sym), differs, _on: !!differs };
   }).sort((a, b) => (b.differs - a.differs) || a.sym.localeCompare(b.sym));
   const accBy = new Map(st.accumPlan.map(a => [a.sym, a]));
   const acc = (src.accumPlan || []).filter(a => a && a.sym).map(a => {
     const c = accBy.get(a.sym);
-    return { a, c, differs: !c || +c.targetQty !== +a.targetQty || +(c.targetPct || 0) !== +(a.targetPct || 0) || +(c.alertPrice || 0) !== +(a.alertPrice || 0), _on: !c };
+    const dcaDiff = JSON.stringify(a.dca || null) !== JSON.stringify((c && c.dca) || null);
+    return { a, c, dcaDiff, differs: !c || dcaDiff || +c.targetQty !== +a.targetQty || +(c.targetPct || 0) !== +(a.targetPct || 0) || +(c.alertPrice || 0) !== +(a.alertPrice || 0),
+      _on: !c || (!!a.dca && !(c && c.dca)) };
   }).filter(x => x.differs);
-  plan = { missing, rows, acc };
+  plan = { missing, rows, acc, set: settingRows() };
   render();
 }
 
+// Settings: one row per group, compared without the "saved at" stamps
+const SET_GROUPS = [
+  ['targets', 'Target allocation', ['targets']], ['alerts', 'Telegram alerts', ['alerts']], ['signal', 'Signal thresholds', ['signal', 'signalSmart']],
+  ['exit', 'Exit plan (steps, macro targets, coins)', ['exitSteps', 'exitTargets', 'exitPlan', 'exitTab']], ['watch', 'Watchlist', ['watch']],
+  ['baseline', 'Baseline (BTC comparison)', ['baseline']], ['categories', 'Category names & colours', null]];
+const noStamp = v => JSON.stringify(v == null ? null : v, (k, x) => (k === 'setAt' || k === 'updatedAt' ? undefined : x));
+function settingRows() {
+  const b = src.settings; if (!b || !b.info) return [];
+  const now = Samsam.settingsNow();
+  return SET_GROUPS.map(([k, label, keys]) => {
+    const from = keys ? Object.fromEntries(keys.map(x => [x, b.info[x] ?? null])) : (b.categories || null);
+    const cur = keys ? Object.fromEntries(keys.map(x => [x, now.info[x] ?? null])) : (now.categories || null);
+    const empty = v => v == null || (keys && Object.values(v).every(x => x == null));
+    return { k, label, keys, from, cur, differs: noStamp(from) !== noStamp(cur) && !empty(from), _on: true };
+  }).filter(r => r.differs);
+}
+const dcaTxt = d => d && d.usd ? `$${(+d.usd).toLocaleString('en-US')} / ${d.every === '2weeks' ? '2 weeks' : d.every || 'month'}` : '—';
 // "After" = cloud ledger + selected missing txs, then the pin (if ticked)
 function after(row) {
   const st = Samsam.getState(), core = Samsam.core;
@@ -249,18 +277,21 @@ function render() {
       <td><span class="${cmp(a.qty, r.cQty)}">${fq(a.qty)}</span><span class="small">avg ${fp(a.avg)}</span></td></tr>`;
   }).join('');
   $('accCard').classList.toggle('hidden', !plan.acc.length);
-  $('accTable').innerHTML = `<tr><th></th><th>Coin</th><th>Cloud target</th><th>Source target</th></tr>` + plan.acc.map((x, i) =>
+  $('accTable').innerHTML = `<tr><th></th><th>Coin</th><th>Cloud target</th><th>Source target</th><th>Cloud DCA</th><th>Source DCA</th></tr>` + plan.acc.map((x, i) =>
     `<tr class="diff"><td><input type="checkbox" data-acc="${i}" ${x._on ? 'checked' : ''}></td><td><strong>${esc(x.a.sym)}</strong></td>
-     <td>${x.c ? fq(x.c.targetQty) : '—'}</td><td>${fq(x.a.targetQty)}</td></tr>`).join('');
-  const nTx = plan.missing.filter(t => t._on).length, nCoin = plan.rows.filter(r => r._on && r.src && !r.srcRemoved).length, nAcc = plan.acc.filter(x => x._on).length;
-  $('sumTxt').textContent = `${nTx} transaction(s), ${nCoin} coin balance(s), ${nAcc} target(s) selected`;
-  $('applyBtn').disabled = !(nTx || nCoin || nAcc);
+     <td>${x.c ? fq(x.c.targetQty) : '—'}</td><td>${fq(x.a.targetQty)}</td><td>${esc(dcaTxt(x.c && x.c.dca))}</td><td>${esc(dcaTxt(x.a.dca))}</td></tr>`).join('');
+  $('setCard').classList.toggle('hidden', !plan.set.length);
+  $('setTable').innerHTML = plan.set.map((r, i) => `<tr class="diff"><td><input type="checkbox" data-set="${i}" ${r._on ? 'checked' : ''}></td><td style="text-align:left"><strong>${esc(r.label)}</strong></td></tr>`).join('');
+  const nTx = plan.missing.filter(t => t._on).length, nCoin = plan.rows.filter(r => r._on && r.src && !r.srcRemoved).length, nAcc = plan.acc.filter(x => x._on).length, nSet = plan.set.filter(r => r._on).length;
+  $('sumTxt').textContent = `${nTx} transaction(s), ${nCoin} coin balance(s), ${nAcc} target(s), ${nSet} setting(s) selected`;
+  $('applyBtn').disabled = !(nTx || nCoin || nAcc || nSet);
 }
 document.addEventListener('change', e => {
   const t = e.target; if (!plan || t.type !== 'checkbox') return;
   if (t.dataset.tx != null) plan.missing[+t.dataset.tx]._on = t.checked;
   if (t.dataset.coin != null) plan.rows[+t.dataset.coin]._on = t.checked;
   if (t.dataset.acc != null) plan.acc[+t.dataset.acc]._on = t.checked;
+  if (t.dataset.set != null) plan.set[+t.dataset.set]._on = t.checked;
   render();
 });
 $('selDiff').onclick = () => { plan.rows.forEach(r => r._on = !!r.differs); render(); };
@@ -273,7 +304,9 @@ $('applyBtn').onclick = async () => {
   const pinRows = plan.rows.filter(r => r._on && r.src && !r.srcRemoved);
   const accSel = plan.acc.filter(x => x._on).map(x => { const { updatedAt, order, ...a } = x.a; return a; });
   const needCoin = new Set([...pinRows.filter(r => !r.inCloud).map(r => r.sym), ...txs.map(t => t.sym).filter(s => !plan.rows.find(r => r.sym === s && r.inCloud))]);
-  if (!(await CPDialog.confirm(`${txs.length} transaction(s), ${pinRows.length} coin balance(s) and ${accSel.length} target(s) from “${src.label}”.\n\nAn encrypted backup of your current cloud data downloads first.`, { title: 'Restore selected?', okText: 'Restore' }))) return;
+  const setSel = plan.set.filter(r => r._on), setInfo = {}; let setCats;
+  setSel.forEach(r => { if (r.keys) r.keys.forEach(k => { setInfo[k] = r.from[k]; }); else setCats = r.from; });
+  if (!(await CPDialog.confirm(`${txs.length} transaction(s), ${pinRows.length} coin balance(s), ${accSel.length} target(s) and ${setSel.length} setting(s) from “${src.label}”.\n\nAn encrypted backup of your current cloud data downloads first.`, { title: 'Restore selected?', okText: 'Restore' }))) return;
   $('applyBtn').disabled = true;
   try {
     const saved = await Samsam.downloadBackup({ title: 'Safety backup first', icon: 'lock', text: 'Your current cloud data is saved to an encrypted file before anything changes. Choose a password (8+ characters).' });
@@ -283,6 +316,7 @@ $('applyBtn').onclick = async () => {
       coins: [...needCoin].map(sym => { const s = src.coins.find(c => c.sym === sym) || { sym }; return { sym, name: s.name, cat: s.cat, cgId: s.cgId, logoUrl: s.logoUrl }; }),
       pins: pinRows.map(r => ({ sym: r.sym, qty: r.sQty, avg: r.sAvg, note: 'Recovered from ' + src.label })),
     });
+    if (setSel.length) await Samsam.restoreSettings({ info: setInfo, categories: setCats });
     msg(`${SamsamUI.ic('checkCircle')}Restored. Every page and device now shows the recovered data. <a href="index.html">Back to portfolio</a>`, 'ok');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(compare, 800);

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611071840';
-import * as Hist from './samsam-history.js?v=202611071840';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071840';
+import * as Core from './samsam-core.js?v=202611071902';
+import * as Hist from './samsam-history.js?v=202611071902';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071902';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -670,6 +670,15 @@ const API = {
     return parts.reduce((p, part, i) => p.then(() => commit((b, ref) => part.forEach(([col, id, d, merge]) => merge ? b.set(ref(col, id), d, { merge: true }) : b.set(ref(col, id), d)),
       parts.length > 1 ? `Import (${i + 1}/${parts.length})` : 'Import')), Promise.resolve()).then(() => txs.length);
   },
+  // Settings saved in a backup (recover.html): the ones you tick are put back as they were
+  settingsNow: () => settingsNow(),
+  restoreSettings({ info = {}, categories } = {}) {
+    const d = {}; for (const k of SETTING_KEYS) if (k in info) d[k] = info[k] === undefined ? null : info[k];
+    return commit((b, ref) => {
+      if (Object.keys(d).length) b.set(ref('meta', 'info'), clean(d), { merge: true });
+      if (categories !== undefined) b.set(ref('meta', 'categories'), clean(categories || { labels: {}, colors: {}, customs: {}, removed: [] }));
+    }, 'Restore settings');
+  },
   // coins
   updateCoin(sym, fields) {
     fields = { ...fields };
@@ -941,10 +950,18 @@ function downloadJson(obj, name) {
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 function stamp() { return new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-'); }
+// Your settings (meta/info) — everything except the setup bookkeeping — and the category names/colours (meta/categories)
+const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps'];
+function settingsNow() {
+  const m = S.meta || {}, info = {};
+  for (const k of SETTING_KEYS) if (m[k] !== undefined) info[k] = m[k];
+  return { info, categories: S.catCfg || null };
+}
 function backupObject() {
   const d = API.getState();
   return { app: 'samsam-portfolio', kind: 'cloud-backup', exportedAt: new Date().toISOString(),
     coins: d.coins, transactions: d.transactions, accumPlan: d.accumPlan, perfSnaps: d.perfSnaps, holdingsSnaps: d.holdingsSnaps,
+    settings: settingsNow(),
     // legacy-compatible view, so a backup can always be re-imported
     legacy: { coins: d.portfolio.map(c => ({ ...c })), transactions: d.transactions, archivedCoins: d.archivedCoins,
       customCoins: d.customCoins, accumPlan: d.accumPlan, perfSnaps: d.perfSnaps, holdingsSnaps: d.holdingsSnaps } };
@@ -960,7 +977,16 @@ async function downloadEncrypted(obj, name, opts = {}) {
   return true;
 }
 function downloadBackup(opts = {}) {
-  return downloadEncrypted(backupObject(), `cute-portfolio-backup-${stamp()}.enc.json`, opts);
+  return downloadEncrypted(backupObject(), `cute-portfolio-backup-${stamp()}.enc.json`, opts).then(ok => {
+    // remembered in the cloud, so every device's menu shows when the last backup was made
+    if (ok && S.user) commit((b, ref) => b.set(ref('meta', 'info'), { lastBackupAt: new Date().toISOString() }, { merge: true }), 'Backup').catch(() => {});
+    return ok;
+  });
+}
+function backupAge() {
+  const t = Date.parse(S.meta && S.meta.lastBackupAt); if (!t) return { text: 'never', old: true };
+  const days = Math.floor((Date.now() - t) / 864e5);
+  return { text: days <= 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago', old: days >= 30 };
 }
 // Opens a backup file chosen by the person: plain JSON, or an encrypted backup (asks for its password).
 async function readBackupFile(file) {
@@ -1144,6 +1170,7 @@ function renderStatus() {
       ${S.user && allLoaded() ? '<div class="row"><button class="samsam-btn" id="samsamAlerts" title="Telegram alerts: language, which alerts, thresholds">' + UIc('bell') + 'Telegram alerts</button></div>' : ''}
       ${S.user && allLoaded() && window.SamsamImport ? '<div class="row"><button class="samsam-btn" id="samsamImport" title="Add transactions from an exchange file (CSV): trade history + withdraw history">' + UIc('upload') + 'Import from exchange</button></div>' : ''}
       ${S.user && allLoaded() ? '<div class="row"><a class="samsam-btn" href="recover.html" style="text-decoration:none">' + UIc('lifebuoy') + 'Recover Data</a><button type="button" class="cp-hint" data-hint="recover" aria-label="About Recover data"></button></div>' : ''}
+      ${S.user && allLoaded() ? (a => '<div class="muted" style="margin-top:10px"' + (a.old ? ' data-old="1"' : '') + '>' + UIc(a.old ? 'alert' : 'lock') + 'Last backup: <b' + (a.old ? ' style="color:#f59e0b"' : '') + '>' + a.text + '</b></div>')(backupAge()) : ''}
       <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk" title="Download an encrypted backup (AES-256)">' + UIc('lock') + 'Backup</button><button type="button" class="cp-hint" data-hint="backup" aria-label="About the encrypted backup"></button>' : ''}
       ${S.user ? '<button class="samsam-btn" id="samsamOut">Sign out</button>' : '<button class="samsam-btn primary" id="samsamIn">Sign in</button>'}</div>
       ${S.lastError ? '<div class="row"><button class="samsam-btn" id="samsamClr">Dismiss error</button><button class="samsam-btn" id="samsamReload">Reload</button></div>' : ''}`;
