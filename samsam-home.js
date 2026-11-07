@@ -1179,7 +1179,7 @@ function applyView(view) {
     const on = b.dataset.view === (view === 'table' ? 'table' : 'cards');
     b.classList.toggle('btn-toggle-active', on); b.setAttribute('aria-pressed', String(on));
   });
-  try { localStorage.setItem(VIEW_KEY, view); } catch(e) {}
+  try { localStorage.setItem(window.innerWidth <= 640 ? 'samsam_view_phone' : VIEW_KEY, view); } catch(e) {}   // phones keep their own choice
 }
 
 function toggleView() {
@@ -1188,8 +1188,9 @@ function toggleView() {
 
 function initView() {
   // On mobile (<= 640px) always start with cards view regardless of saved pref
-  if (window.innerWidth <= 640) {
-    applyView('cards');
+  if (window.innerWidth <= 640) {   // phones: Cards, unless you picked Table in Settings
+    let ph = 'cards'; try { ph = localStorage.getItem('samsam_view_phone') === 'table' ? 'table' : 'cards'; } catch (_) {}
+    applyView(ph);
     return;
   }
   let saved = 'cards';

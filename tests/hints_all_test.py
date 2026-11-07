@@ -51,7 +51,7 @@ with sync_playwright() as p:
     pg.evaluate("openHoldingsView()"); pg.wait_for_timeout(700); run(pg, 'holdings', '#holdingsOverlay')
     pg.evaluate("openCoinTx('SOL')"); pg.wait_for_timeout(700); run(pg, 'coin page', '#holdingsOverlay')
     pg.evaluate("hovBack()"); pg.wait_for_timeout(300); pg.evaluate("hovBack()"); pg.wait_for_timeout(400)
-    pg.click('.hdr-btns .ss-sync-hdr'); pg.wait_for_timeout(300); run(pg, 'cloud menu', '#samsamSyncMenu')
+    pg.click('.hdr-btns .ss-set-hdr'); pg.wait_for_selector('#cpSet'); pg.wait_for_timeout(300); run(pg, 'cloud menu', '#cpSet')   # Backup / Recover live in Settings now
     pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
     pg.evaluate("openBaselineEdit()"); pg.wait_for_timeout(300); run(pg, 'baseline editor', '#blModal'); pg.evaluate("closeBaselineEdit()")
     pg.screenshot(path=str(SH / 'hint-cloudmenu.png'))

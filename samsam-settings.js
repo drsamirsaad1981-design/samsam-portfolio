@@ -11,7 +11,8 @@
   var IC = function (n) { return window.SamsamUI ? SamsamUI.ic(n) : ''; };
   var GEAR = '<svg class="ss-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
   var CHEV = '<svg class="st-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
-  var K = { range: 'samsam_chart_range', view: 'samsam_view_pref', fee: 'samsam_buyfee_unit' };
+  var K = { range: 'samsam_chart_range', view: 'samsam_view_pref', viewPhone: 'samsam_view_phone', exitView: 'samsam_exit_view', fee: 'samsam_buyfee_unit' };
+  var phone = function () { return innerWidth <= 640; };
   function get(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (_) { return d; } }
   function put(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
   function S() { return window.Samsam; }
@@ -44,6 +45,19 @@
     dca: function () { goPlan('accum'); },
   };
 
+  // the window each line opens: when it closes again, Settings comes back
+  var OPENS = { alerts: '#cpAlerts', signal: '#sgModal', targets: '#tgModal', baseline: '#blModal', cats: '#catMgrModal', import: '#impBd' };
+  function shownNow(sel) {
+    var e = doc.querySelector(sel); if (!e) return false;
+    var cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && e.getClientRects().length > 0;
+  }
+  function backAfter(act) {
+    var sel = OPENS[act]; if (!sel) return;
+    var seen = false, n = 0, iv = setInterval(function () {
+      var on = shownNow(sel); if (on) seen = true;
+      if ((seen && !on) || (!seen && ++n > 20)) { clearInterval(iv); if (seen && !$('cpSet') && !doc.querySelector('#ssPw,#cpDialog')) open(); }
+    }, 250);
+  }
   // ── the current values ──
   function lastBackup() {
     var at = Date.parse(S().lastBackupAt && S().lastBackupAt()) || 0;
@@ -90,21 +104,22 @@
         set: function (v) { if (window.SamsamUI && SamsamUI.currentTheme() !== v) SamsamUI.toggleTheme(); } },
       { seg: 'range', title: 'Charts open on', opts: [['24h', '24h'], ['7d', '7d'], ['30d', '30d'], ['90d', '90d'], ['all', 'All']], get: function () { return get(K.range, 'all'); },
         set: function (v) { put(K.range, v); if (window.setHoldingsRange) setHoldingsRange(v); } },
-      // phones always open on Cards, so this choice shows on wider screens only
-      { seg: 'view', wide: true, title: 'Coins shown as', opts: [['cards', 'Cards'], ['table', 'Table']], get: function () { return get(K.view, 'cards'); },
-        set: function (v) { put(K.view, v); if (window.applyView) applyView(v); } },
+      // the coin list (main page) and the Exit Strategy list — phones keep their own choice
+      { seg: 'view', title: 'Lists shown as', opts: [['cards', 'Cards'], ['table', 'Table']], get: function () { return get(phone() ? K.viewPhone : K.view, 'cards') === 'table' ? 'table' : 'cards'; },
+        set: function (v) { put(phone() ? K.viewPhone : K.view, v); put(K.exitView, v); if (window.applyView) applyView(v); } },
       { seg: 'fee', title: 'Buying fee in', opts: [['usd', 'USD'], ['coin', 'The coin']], get: function () { return get(K.fee, 'usd') === 'coin' ? 'coin' : 'usd'; },
         set: function (v) { put(K.fee, v); } },
     ]],
     ['About', [['version', 'sparkles', 'Version', null]]],
   ];
   var CSS =
-    '#cpSet{position:fixed;inset:0;z-index:99996;background:rgba(2,6,23,.55);display:flex;align-items:flex-end;justify-content:center}' +
+    '#cpSet{position:fixed;inset:0;z-index:99994;background:rgba(2,6,23,.55);display:flex;align-items:flex-end;justify-content:center}' +
     '@media (min-width:640px){#cpSet{align-items:center;padding:16px}}' +
     '#cpSet .st-box{width:min(520px,100%);max-height:92vh;overflow:auto;background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:18px 18px 0 0;' +
       'padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font:14px/1.45 system-ui,-apple-system,"Inter",sans-serif;box-shadow:0 -10px 40px rgba(0,0,0,.35);box-sizing:border-box}' +
     '@media (min-width:640px){#cpSet .st-box{border-radius:18px}}' +
-    '#cpSet .st-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}#cpSet .st-h b{font-size:1.05rem;flex:1}' +
+    '#cpSet .st-h{display:flex;align-items:center;gap:10px;position:sticky;top:-16px;z-index:3;margin:-16px -16px 4px;padding:16px 16px 10px;background:inherit;border-radius:inherit;border-bottom:1px solid var(--border,rgba(148,163,184,.15))}' +
+    '#cpSet .st-h b{font-size:1.05rem;flex:1}' +
     '#cpSet .st-hic{width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(124,58,237,.15);color:#a78bfa}' +
     '[data-theme="light"] #cpSet .st-hic{color:#7c3aed}' +
     '#cpSet .st-x{background:none;border:none;color:inherit;opacity:.7;cursor:pointer;padding:6px;line-height:0}' +
@@ -113,7 +128,8 @@
     '#cpSet .st-row{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-top:1px solid var(--border,rgba(148,163,184,.15));cursor:pointer;min-height:52px}' +
     '#cpSet .st-list>:first-child{border-top:none}' +
     '#cpSet .st-row:focus-visible{outline:2px solid #7c3aed;outline-offset:-2px}' +
-    '@media (hover:hover){#cpSet button.st-row:hover{background:rgba(148,163,184,.08)}}' +
+    '@media (hover:hover){#cpSet .st-go:hover{background:rgba(148,163,184,.08)}}' +
+    '#cpSet .st-t b .cp-hint{vertical-align:-2px}' +
     '#cpSet .st-row.st-static{cursor:default}' +
     '#cpSet .st-ic{width:30px;height:30px;flex:none;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;background:rgba(148,163,184,.12)}#cpSet .st-ic .ss-ic{margin:0}' +
     '#cpSet .st-t{flex:1;min-width:0;display:flex;flex-direction:column}#cpSet .st-t b{font-weight:700;font-size:.92rem}' +
@@ -129,15 +145,16 @@
     '.ss-set-hdr .ss-icon{width:18px;height:18px}' +
     '@media print{.ss-set-hdr,#cpSet{display:none!important}}';
 
+  var HINT = function (k) { return ' <button type="button" class="cp-hint" data-hint="' + k + '" aria-label="About ' + k + '"></button>'; };
   function line(r) {
     var k = r[0], v = k === 'version' ? version() : val(k), act = r[3], extra = r[4];
     if (k === 'account' || k === 'backup') {   // a value + a small button
-      return '<div class="st-row st-static"><span class="st-ic">' + IC(r[1]) + '</span><span class="st-t"><b>' + E(r[2]) + '</b><span>' + (k === 'backup' ? v : E(v)) + '</span></span>' +
+      return '<div class="st-row st-static"><span class="st-ic">' + IC(r[1]) + '</span><span class="st-t"><b>' + E(r[2]) + (k === 'backup' ? HINT('backup') : '') + '</b><span>' + (k === 'backup' ? v : E(v)) + '</span></span>' +
         '<button type="button" class="st-act" data-act="' + act + '" id="stAct_' + k + '">' + E(extra) + '</button></div>';
     }
     if (!act) return '<div class="st-row st-static"><span class="st-ic">' + IC(r[1]) + '</span><span class="st-t"><b>' + E(r[2]) + '</b><span>' + E(v) + '</span></span></div>';
-    return '<button type="button" class="st-row" data-act="' + act + '" id="stRow_' + k + '"><span class="st-ic">' + IC(r[1]) + '</span><span class="st-t"><b>' + E(r[2]) + '</b>' +
-      (v ? '<span>' + E(v) + '</span>' : '') + '</span>' + CHEV + '</button>';
+    return '<div role="button" tabindex="0" class="st-row st-go" data-act="' + act + '" id="stRow_' + k + '"><span class="st-ic">' + IC(r[1]) + '</span><span class="st-t"><b>' + E(r[2]) + (k === 'recover' ? HINT('recover') : '') + '</b>' +
+      (v ? '<span>' + E(v) + '</span>' : '') + '</span>' + CHEV + '</div>';
   }
   function choice(c) {
     var cur = c.get();
@@ -148,12 +165,18 @@
     var box = $('cpSet'); if (!box) return;
     var hasImport = !!window.SamsamImport;
     box.querySelector('.st-body').innerHTML = SECTIONS.map(function (s) {
-      var rows = s[1].filter(function (r) { return r.seg ? !(r.wide && innerWidth <= 640) : r[0] !== 'import' || hasImport; });
+      var rows = s[1].filter(function (r) { return r.seg || r[0] !== 'import' || hasImport; });
       return '<div class="st-sec">' + E(s[0]) + '</div><div class="st-list">' + rows.map(function (r) { return r.seg ? choice(r) : line(r); }).join('') + '</div>';
     }).join('') + '<div class="st-later">More settings (app language, AI) will be added here.</div>';
   }
+  function run(act) {
+    var keep = act === 'backup';
+    if (!keep) close();
+    ACT[act]();
+    if (keep) setTimeout(draw, 1500); else backAfter(act);
+  }
   function close() { var b = $('cpSet'); if (b) b.remove(); doc.removeEventListener('keydown', esc, true); }
-  function esc(e) { if (e.key === 'Escape' && !doc.querySelector('#cpAlerts,#ssPw,#cpDialog,#impBd.show')) { e.stopPropagation(); close(); } }
+  function esc(e) { if (e.key === 'Escape' && !doc.querySelector('#cpAlerts,#ssPw,#cpDialog,#impBd.show,.cph')) { e.stopPropagation(); close(); } }
   function open() {
     var t = top(); if (t) { t.SamsamSettings.open(); return; }
     if (!ready()) return;
@@ -166,11 +189,13 @@
       if (e.target === el || e.target.closest('.st-x')) { close(); return; }
       var sg = e.target.closest('[data-seg]');
       if (sg) { var c = SECTIONS[3][1].filter(function (x) { return x.seg === sg.dataset.seg; })[0]; if (c) { c.set(sg.dataset.v); draw(); } return; }
+      if (e.target.closest('.cp-hint')) return;   // ⓘ explains, it doesn't open the line
       var a = e.target.closest('[data-act]'); if (!a || !ACT[a.dataset.act]) return;
-      var keep = a.dataset.act === 'backup';
-      if (!keep) close();
-      ACT[a.dataset.act]();
-      if (keep) setTimeout(draw, 1500);
+      run(a.dataset.act);
+    });
+    el.addEventListener('keydown', function (e) {
+      var a = e.target.closest && e.target.closest('.st-go'); if (!a || (e.key !== 'Enter' && e.key !== ' ')) return;
+      e.preventDefault(); run(a.dataset.act);
     });
     doc.addEventListener('keydown', esc, true);
     setTimeout(function () { var f = el.querySelector('.st-row,button'); if (f) f.focus(); }, 0);
@@ -193,7 +218,7 @@
   var want = (location.hash.match(/^#set=([a-z]+)/) || [])[1];
   if (want && ACT[want]) {
     history.replaceState(null, '', location.pathname + location.search);
-    var tries = 0, iv = setInterval(function () { if (ready() || ++tries > 60) { clearInterval(iv); if (ready()) ACT[want](); } }, 250);
+    var tries = 0, iv = setInterval(function () { if (ready() || ++tries > 60) { clearInterval(iv); if (ready()) { ACT[want](); backAfter(want); } } }, 250);
   }
   window.SamsamSettings = { open: open, close: close };
 })();

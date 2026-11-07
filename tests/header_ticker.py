@@ -25,9 +25,9 @@ with sync_playwright() as p:
         b=pg.evaluate("""(()=>{const r=e=>e.getBoundingClientRect(); const btns=[...document.querySelectorAll('#appHead .ss-theme-btn')].map(r); const date=r(document.getElementById('currentDate')), live=r(document.getElementById('liveIndicator')), hdr=r(document.querySelector('#appHead'));
           const brand=r(document.querySelector('.brand')); const stackMid=(brand.top+brand.bottom)/2,   /* buttons line up with the logo + name row */ btnMid=(btns[0].top+btns[0].bottom)/2; return {n:btns.length, sameRow: Math.abs(btns[0].top-btns[1].top)<1, mid: Math.round(btnMid-stackMid), gapRight: Math.round(hdr.right-btns[1].right), gapTop: Math.round(btns[0].top-hdr.top), overlap: btns.some(b=>b.left<date.right && b.right>date.left && b.top<live.bottom && b.bottom>date.top)}})()""")
         if name.startswith('desktop'):
-            check(f'{name}: cloud + theme buttons centred with the logo / name row {b}', b['n']==2 and b['sameRow'] and abs(b['mid'])<=3 and not b['overlap'] and b['gapRight']>=16, b)
+            check(f'{name}: settings + cloud + theme buttons centred with the logo / name row {b}', b['n']==3 and b['sameRow'] and abs(b['mid'])<=3 and not b['overlap'] and b['gapRight']>=16, b)
         else:
-            check(f'mobile: buttons in the top-right corner, clear of everything {b}', b['n']==2 and b['sameRow'] and not b['overlap'] and b['gapRight']>=14 and b['gapTop']>=14, b)
+            check(f'mobile: buttons in the top-right corner, clear of everything {b}', b['n']==3 and b['sameRow'] and not b['overlap'] and b['gapRight']>=14 and b['gapTop']>=14, b)
         pg.screenshot(path=str(SH/f'hdr_{name}.png'), clip={'x':0,'y':0,'width':vp['viewport']['width'],'height':360 if name!='mobile' else 700})
         pg.locator('#appHead [data-theme-toggle]').click(); pg.wait_for_timeout(200)
         check(f'{name}: theme button still works', pg.evaluate("document.documentElement.getAttribute('data-theme')")=='light')

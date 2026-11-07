@@ -27,8 +27,8 @@ with sync_playwright() as p:
         pg.evaluate("applyView('cards')")
         pg.evaluate("scrollTo(0,0)"); pg.wait_for_timeout(100)
         [b for b in pg.query_selector_all('.ss-sync-hdr') if b.is_visible()][0].click(); pg.wait_for_timeout(200)
-        mm=pg.evaluate("(()=>{const m=document.getElementById('samsamSyncMenu'), r=m.getBoundingClientRect(); return [getComputedStyle(m).display, m.innerText.includes('Recover'), Math.round(r.top), r.right<=innerWidth]})()")
-        check(f'{name}: header cloud button opens the sync menu under it (with Recover data) {mm}', mm[0]=='block' and mm[1] and mm[2]<200 and mm[3], mm)
+        mm=pg.evaluate("(()=>{const m=document.getElementById('samsamSyncMenu'), r=m.getBoundingClientRect(); return [getComputedStyle(m).display, m.innerText.includes('Settings'), Math.round(r.top), r.right<=innerWidth]})()")
+        check(f'{name}: header cloud button opens the sync menu under it (with Settings) {mm}', mm[0]=='block' and mm[1] and mm[2]<200 and mm[3], mm)
         pg.mouse.click(5,5); pg.wait_for_timeout(100)
         for page in ('accumulation','allocation','performance'):
             pg.goto(f'{SITE}/{page}.html'); pg.wait_for_function("Samsam.isReady()"); pg.wait_for_timeout(3300)

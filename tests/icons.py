@@ -42,7 +42,7 @@ with sync_playwright() as p:
                 geo[(theme, page)] = info
                 if page == 'index.html':
                     check(f'{vp_name}/{theme}/{page}: one theme button, 36x36, shows current theme',
-                          info['nBtn'] == 1 and info['w'] == 36 and info['h'] == 36 and info['btnTheme'] == theme == info['theme'], info)
+                          info['nBtn'] == 1 and info['w'] == info['h'] == (34 if vp_name == 'mobile' and page == 'index.html' else 36) and info['btnTheme'] == theme == info['theme'], info)
                 else:   # theme + cloud live only on the main page; inner pages just follow the chosen theme
                     check(f'{vp_name}/{theme}/{page}: one header theme button, page follows the theme', info['nBtn'] == 1 and info['btnTheme'] == theme and info['theme'] == theme, info)
                 check(f'{vp_name}/{theme}/{page}: no emoji theme/date icons left', not info['emoji'])
