@@ -284,6 +284,32 @@ export function strengthMap(alt) {
   return out;
 }
 
+// ── Target allocation & rebalancing ─────────────────────────────────────────────
+// Groups: Bitcoin on its own ('btc'), every other coin by its category.
+export function groupOf(c) { return c && String(c.sym || '').toUpperCase() === 'BTC' ? 'btc' : (c && c.cat) || 'other'; }
+// values: { group: $ now }; targets: { group: { pct } } (adding up to 100); band: points a group may drift.
+// cash: new money to invest. → per group: now %, target %, drift (points), full (buy + / trim − to be exactly on
+// target, total unchanged) and add (how much of `cash` goes there: the furthest-below groups first, never a sale).
+export function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
+  const keys = [...new Set([...Object.keys(values || {}), ...Object.keys(targets || {})])];
+  const total = keys.reduce((s, k) => s + Math.max(0, num(values[k])), 0), T = total + Math.max(0, num(cash));
+  const tg = k => targets && targets[k] ? num(targets[k].pct) / 100 : 0;
+  const groups = keys.map(k => {
+    const v = Math.max(0, num(values[k])), now = total > 0 ? v / total * 100 : 0, target = tg(k) * 100;
+    return { key: k, value: v, now, target, drift: now - target, full: tg(k) * total - v, need: Math.max(0, tg(k) * T - v), add: 0,
+      state: Math.abs(now - target) <= band ? 'ok' : Math.abs(now - target) <= 2 * band ? 'warn' : 'off' };
+  });
+  // new money: fill what each group is missing (in proportion when there isn't enough), the rest by the targets
+  const money = Math.max(0, num(cash)), need = groups.reduce((s, g) => s + g.need, 0);
+  if (money > 0) {
+    if (need >= money) groups.forEach(g => { g.add = need > 0 ? g.need / need * money : 0; });
+    else { const rest = money - need; groups.forEach(g => { g.add = g.need + tg(g.key) * rest; }); }
+  }
+  groups.sort((a, b) => b.target - a.target || b.value - a.value);
+  const off = groups.filter(g => g.state !== 'ok' && (g.target > 0 || g.value > 0));
+  return { total, groups, band, onTarget: groups.length - off.length, count: groups.length, off };
+}
+
 // ── Accumulation plan: Overall Progress ──────────────────────────────────────
 // Average of each coin's own completion, capped at 100%: a coin past its target counts as 100% and its extra
 // amount never makes up for coins still below target. Only coins with a target above 0 count.

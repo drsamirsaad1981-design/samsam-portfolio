@@ -13,7 +13,7 @@ export const APP = 'https://drsamirsaad1981-design.github.io/samsam-portfolio/';
 export const TZ = 'Asia/Riyadh';
 export const DEFAULTS = Object.freeze({
   lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
-  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true,
+  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true,
 });
 const DEFAULT_SIGNAL = { reinforce: -5, sell: -20 };
 const DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085 };
@@ -47,7 +47,9 @@ const W = {
     marketData: 'Market data', etfData: 'ETF flows', priceData: 'Price history', ok: 'Data back to normal', none: 'none', coins: 'coins',
     quietNote: 'held during quiet hours', welcome: 'Alerts are on. You will get the morning brief every day, the weekly report on Friday, and an alert whenever something important happens.',
     noData: 'no history yet', in7: '7 days', beatBtc: (a, n) => `${a} of ${n} coins beat BTC`,
-    vsBtc30: (a, b) => `vs BTC ${a} pts (30d) · ${b} pts (90d)`, smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
+    vsBtc30: (a, b) => `vs BTC ${a} pts (30d) · ${b} pts (90d)`,
+    allocation: 'Allocation', onTarget: (a, n) => `${a} of ${n} groups on target`, driftT: n => `Allocation off target · ${n}`, nowW: 'now', targetW: 'target', ptsW: 'pts',
+    trim: v => `To get back: trim about ${v}, or add to the other groups`, add: v => `To get back: add about ${v}`, allocBtn: 'Open Allocation', smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
   },
   ar: {
     brief: 'ملخص الصباح', weekly: 'التقرير الأسبوعي', today: 'اليوم', week: 'هذا الأسبوع', profit: 'إجمالي الربح', vsBtc: 'مقارنة بالاحتفاظ بـ BTC',
@@ -64,7 +66,9 @@ const W = {
     marketData: 'بيانات السوق', etfData: 'تدفقات ETF', priceData: 'سجل الأسعار', ok: 'البيانات عادت طبيعية', none: 'لا شيء', coins: 'عملة',
     quietNote: 'أُجّل خلال ساعات الهدوء', welcome: 'التنبيهات تعمل. سيصلك ملخص الصباح يوميًا، والتقرير الأسبوعي يوم الجمعة، وتنبيه عند حدوث أي شيء مهم.',
     noData: 'لا يوجد سجل بعد', in7: '7 أيام', beatBtc: (a, n) => `${a} من ${n} عملة تفوقت على BTC`,
-    vsBtc30: (a, b) => `مقارنة بـ BTC ${a} نقطة (30 يوم) · ${b} نقطة (90 يوم)`, smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
+    vsBtc30: (a, b) => `مقارنة بـ BTC ${a} نقطة (30 يوم) · ${b} نقطة (90 يوم)`,
+    allocation: 'التوزيع', onTarget: (a, n) => `${a} من ${n} مجموعات على الهدف`, driftT: n => `خروج عن التوزيع المستهدف · ${n}`, nowW: 'الآن', targetW: 'الهدف', ptsW: 'نقطة',
+    trim: v => `للعودة: خفّض حوالي ${v}، أو أضف للمجموعات الأخرى`, add: v => `للعودة: أضف حوالي ${v}`, allocBtn: 'افتح التوزيع', smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
   },
 };
 
@@ -169,7 +173,20 @@ export function summarize(user, market, now = Date.now()) {
     { k: 'usdtD', now: d.usdt, lvl: T.usdtHi, met: d.usdt != null && d.usdt <= T.usdtHi, op: '≤', dp: 2, unit: '%' },
     { k: 'ethBtc', now: ethbtc, lvl: T.ethBtc, met: ethbtc != null && ethbtc >= T.ethBtc, op: '≥', dp: 4, unit: '' },
   ];
+  // target allocation (Holdings → Allocation): Bitcoin on its own, the others by category
+  let alloc = null;
+  const tg = meta.targets && typeof meta.targets === 'object' ? meta.targets : null;
+  const tlist = tg && Array.isArray(tg.list) ? tg.list : [];
+  if (tlist.length) {
+    const cats = Object.fromEntries(tlist.filter(x => x && x.g && x.pct > 0).map(x => [x.g, { pct: +x.pct }]));
+    const names = Object.fromEntries([...(Array.isArray(tg.names) ? tg.names : []), ...tlist].filter(x => x && x.g).map(x => [x.g, x.label || x.g]));
+    const vals = {}; for (const c of pf) { const g = C.groupOf(c); vals[g] = (vals[g] || 0) + c.qty * c.currentPrice; }
+    const plan = C.allocationPlan(vals, cats, { band: +tg.band || 5 });
+    const shown = plan.groups.filter(g => g.target > 0 || g.now >= 0.05);
+    alloc = { band: plan.band, groups: shown, onTarget: shown.filter(g => g.state === 'ok').length, count: shown.length, names, key: JSON.stringify([tlist, tg.band]) };
+  }
   return {
+    alloc,
     value, cost, total, invested, pctTotal: invested > 0 ? total / invested * 100 : 0,
     ch24: value24 > 0 ? (value / value24 - 1) * 100 : null, d24: value - value24, ch7: value7 > 0 ? (value / value7 - 1) * 100 : null, d7: value - value7,
     vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, sigMode, counts, plan, prog, tps, macro, btcNow,
@@ -215,6 +232,7 @@ export function brief(sum, m, cfg, now, weekly = false) {
   L.push('', `🎯 <b>${t.signals}</b>  ${sum.counts.reinforce} ${t.reinforce} · ${sum.counts.sell} ${t.sell.split(' /')[0]} · ${sum.counts.hold} ${t.hold}`);
   if (sum.plan.length) L.push(`📋 <b>${t.plan}</b>  ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`);
   const mc = sum.macro.filter(x => x.met).length; if (mc) L.push(`🧭 ${t.of3(mc)}`);
+  if (sum.alloc) L.push(`⚖️ <b>${t.allocation}</b>  ${t.onTarget(sum.alloc.onTarget, sum.alloc.count)}`);
   return { key: weekly ? 'weekly' : 'brief', text: L.join('\n'), buttons: [[btn(t.open, 'index.html'), btn(t.hub, 'market.html')]] };
 }
 
@@ -318,6 +336,18 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       if (!bad) { if (st.health[k]) { delete st.health[k]; } continue; }
       if (st.health[k] === lp.date) continue;
       if (push({ key: 'health-' + k, text: `🛠 <b>${t.health}</b>\n${t.stale(what[k], Math.round(ages[k] / H))}` })) st.health[k] = lp.date;
+    }
+  }
+  // 8b. target allocation: a group leaves your band (once; again only after it came back inside)
+  if (cfg.drift && sum.alloc) {
+    st.drift = st.drift || {};
+    const reset = st.allocKey !== sum.alloc.key; st.allocKey = sum.alloc.key;   // new targets: start again, silently
+    for (const g of sum.alloc.groups) {
+      if (g.state === 'ok') { delete st.drift[g.key]; continue; }
+      if (st.drift[g.key] || first || reset) { st.drift[g.key] = 1; continue; }
+      const name = esc(sum.alloc.names[g.key] || g.key), over = g.drift > 0;
+      const text = `⚖️ <b>${t.driftT(name)}</b>\n${g.now.toFixed(1)}% ${t.nowW} · ${t.targetW} ${g.target.toFixed(1)}% · ${(over ? '+' : '−') + Math.abs(g.drift).toFixed(1)} ${t.ptsW}\n${over ? t.trim(usd(Math.abs(g.full))) : t.add(usd(Math.abs(g.full)))}`;
+      if (push({ key: 'drift-' + g.key, text, buttons: [[btn(t.allocBtn, 'index.html#allocation')]] })) st.drift[g.key] = 1;
     }
   }
   // 9. the morning brief (once a day, at your time) and the weekly report (Friday)

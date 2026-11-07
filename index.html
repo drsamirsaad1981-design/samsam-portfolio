@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611070345"></script>
-<script src="samsam-hints.js?v=202611070345"></script>
-<script src="samsam-vault.js?v=202611070345"></script>
-<script src="samsam-labels.js?v=202611070345"></script>
-<script src="samsam-taxonomy.js?v=202611070345"></script>
-<script src="samsam-coins.js?v=202611070345"></script>
-<script src="samsam-dropdown.js?v=202611070345"></script>
-<script src="samsam-add.js?v=202611070345"></script>
-<script src="samsam-chart.js?v=202611070345"></script>
-<script src="samsam-market.js?v=202611070345"></script>
+<script src="samsam-ui.js?v=202611071147"></script>
+<script src="samsam-hints.js?v=202611071147"></script>
+<script src="samsam-vault.js?v=202611071147"></script>
+<script src="samsam-labels.js?v=202611071147"></script>
+<script src="samsam-taxonomy.js?v=202611071147"></script>
+<script src="samsam-coins.js?v=202611071147"></script>
+<script src="samsam-dropdown.js?v=202611071147"></script>
+<script src="samsam-add.js?v=202611071147"></script>
+<script src="samsam-chart.js?v=202611071147"></script>
+<script src="samsam-market.js?v=202611071147"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1586,7 +1586,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611070345"></script>
+<script type="module" src="samsam-cloud.js?v=202611071147"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -2971,7 +2971,7 @@ function aiLayout(lang) {
     '- كل عنوان قسم في سطر وحده بالشكل "N. <إيموجي> <العنوان>" حيث N من 1 إلى 7 والعنوان بالعربية. لا يبدأ أي سطر آخر برقم بعده نقطة.',
     '- داخل الأقسام نقاط "- " فقط: فكرة واحدة في كل نقطة، جملتان قصيرتان على الأكثر، ودائمًا بالأرقام الحقيقية. كل نقطة تبدأ بعنوان صغير عريض ثم نقطتين، مثل "- **العنوان:** النص".',
     `- 1 السوق — نقطة لكل بند وبهذا الترتيب: ${b(T.btc)} خلال 7 و30 و90 يومًا · ${b(T.dom)} الآن مقارنة بقبل 7 و30 يومًا، صاعدة أم هابطة وماذا يعني ذلك · ${b(T.eb)} النسبة واتجاهها · ${b(T.liq)} اتجاه سيطرة USDT وحجم التداول · ${b(T.etf)} لـ BTC وETH، دخول أم خروج خلال آخر 5 أيام تداول · ${b(T.fng)} مؤشر Fear & Greed الآن مقارنة بقبل أسبوع · ${b(T.alt)} قيمة المؤشر وعدد العملات الكبرى التي تفوقت على BTC خلال 7 و30 و90 يومًا. آخر نقطة ${b(T.ver)} مرحلة السوق في جملة واحدة وماذا تعني لهذه المحفظة.`,
-    `- 2 المحفظة — ${b(T.val)} · ${b(T.vs)} كم عملة تفوقت على وضع المبلغ نفسه في BTC (vsBtcPct) وأكبر الفروق · ${b(T.all)} كل فئة ونسبتها · ${b(T.bs)}.`,
+    `- 2 المحفظة — ${b(T.val)} · ${b(T.vs)} كم عملة تفوقت على وضع المبلغ نفسه في BTC (vsBtcPct) وأكبر الفروق · ${b(T.all)} كل فئة ونسبتها (وإن وُجد targetAllocation: بُعد كل مجموعة عن هدفها وما يجب شراؤه أو تخفيضه) · ${b(T.bs)}.`,
     `- 3 الأفضل والأسوأ — ${b(T.best)} و${b(T.worst)}: حتى 3 عملات لكل منهما مع تغيّر 24 ساعة و7 أيام ومنذ الشراء.`,
     `- 4 المخاطر — نقطة لكل خطر بعنوان عريض خاص به (${T.risk}) مع الأرقام.`,
     `- 5 خطة التجميع — ${b(T.pr)} · ${b(T.cl)} · ${b(T.need)} بالدولار · ${b(T.nx)}.`,
@@ -2983,7 +2983,7 @@ function aiLayout(lang) {
     '- Each section heading on its own line as "N. <emoji> <title>" with N = 1 to 7' + (ar ? ' and the title in Arabic' : '') + '. No other line may start with a number followed by a dot.',
     '- Inside the sections only "- " bullets: one idea per bullet, at most 2 short sentences, always with the real numbers. Every bullet starts with a bold label and a colon, like "- **Label:** text".',
     `- 1 Market — one bullet each, in this order: ${b(T.btc)} 7 / 30 / 90 days · ${b(T.dom)} now vs 7 and 30 days ago, rising or falling, and what that says · ${b(T.eb)} the ratio and its direction · ${b(T.liq)} the USDT dominance trend and volume · ${b(T.etf)} BTC and ETH, inflow or outflow over the last 5 trading days · ${b(T.fng)} Fear & Greed now vs a week ago · ${b(T.alt)} the index and how many top coins beat BTC over 7 / 30 / 90 days. Last bullet ${b(T.ver)} the market phase in one sentence and what it means for this portfolio.`,
-    `- 2 Portfolio — ${b(T.val)} · ${b(T.vs)} how many coins beat holding the same money in BTC (vsBtcPct), the biggest gaps · ${b(T.all)} each category with its % · ${b(T.bs)}.`,
+    `- 2 Portfolio — ${b(T.val)} · ${b(T.vs)} how many coins beat holding the same money in BTC (vsBtcPct), the biggest gaps · ${b(T.all)} each category with its % (and, if targetAllocation is given, how far each group is from its target and what to buy or trim) · ${b(T.bs)}.`,
     `- 3 Best & Worst — ${b(T.best)} and ${b(T.worst)}: up to 3 coins each, with their 24h, 7d and since-buy %.`,
     `- 4 Risks — one bullet per risk with its own bold label (${T.risk}) and the numbers.`,
     `- 5 Accumulation Plan — ${b(T.pr)} · ${b(T.cl)} · ${b(T.need)} in $ · ${b(T.nx)}.`,
@@ -3161,6 +3161,11 @@ function enrichPayload(pd) {
   const alts = pd.coins.filter(x => x.sym !== 'BTC' && x.qty > 0 && x.vsBtcPct != null);
   pd.stats.coinsBeatingBtc = `${alts.filter(x => x.vsBtcPct > 0).length} of ${alts.length}`;
   pd.stats.btcSharePct = total > 0 ? +(pd.stats.btcValue / total * 100).toFixed(1) : 0;
+  const tg = Samsam.getTargets && Samsam.getTargets();   // your target allocation (Bitcoin on its own, then categories)
+  if (tg && Samsam.core.allocationPlan) {
+    const plan = Samsam.core.allocationPlan(tgGroups(), tg.cats, { band: tg.band });
+    pd.stats.targetAllocation = { bandPts: tg.band, groups: plan.groups.filter(g => g.target > 0 || g.now >= 0.05).map(g => ({ group: tgLabel(g.key), nowPct: +g.now.toFixed(1), targetPct: +g.target.toFixed(1), driftPts: +g.drift.toFixed(1), toTargetUsd: Math.round(g.full) })) };
+  }
   const rules = window.Samsam && Samsam.getSignalRules ? Samsam.getSignalRules() : { reinforce: -5, sell: -20 };
   pd.stats.signalRules = `Signal vs the coin's avg buy price: Reinforce at ${rules.reinforce}% or lower, Sell / Convert to BTC below ${rules.sell}%, otherwise Hold; BTC is always Hold`;
   return pd;
@@ -4119,12 +4124,123 @@ function renderHovDonut() {
   if (hovCat) { cv.textContent = (all > 0 ? (totals[hovCat] || 0) / all * 100 : 0).toFixed(1) + '%'; cv.style.color = T.color(hovCat); cl.textContent = T.label(hovCat); }
   else { cv.textContent = SamsamFmt.usd(all); cv.style.color = ''; cl.textContent = 'Total'; }
 }
+// ── Target allocation (Allocation mode): your target % per group (Bitcoin on its own, then your categories), how far
+// each group is from it, and what to buy / trim — with new money only, or a full rebalance (samsam-core.js → allocationPlan).
+function tgGroups() {
+  const out = {};
+  portfolio.forEach(c => { const v = c.qty * c.currentPrice; if (v > 0) { const g = Samsam.core.groupOf(c); out[g] = (out[g] || 0) + v; } });
+  return out;
+}
+const tgLabel = g => g === 'btc' ? 'Bitcoin' : SamsamTaxonomy.label(g);
+const tgColor = g => g === 'btc' ? '#f7931a' : SamsamTaxonomy.color(g);
+let tgMode = 'cash', tgCash = 500;
+try { tgMode = localStorage.getItem('samsam_rb_mode') === 'full' ? 'full' : 'cash'; tgCash = Math.max(0, +localStorage.getItem('samsam_rb_cash') || 500); } catch (_) {}
+// coins to use in a group: to buy — Reinforce first, never Sell / Convert; to trim — Sell / Convert first, then the biggest
+function tgCoins(g, buy) {
+  const pri = buy ? { reinforce: 0, hold: 1, convert: 9 } : { convert: 0, hold: 1, reinforce: 2 };
+  return portfolio.filter(c => !isSoldOut(c) && Samsam.core.groupOf(c) === g)
+    .map(c => ({ c, a: getAction(c.sym, 0, c), v: c.qty * c.currentPrice }))
+    .filter(x => !buy || x.a !== 'convert')
+    .sort((x, y) => pri[x.a] - pri[y.a] || y.v - x.v).slice(0, 3)
+    .map(x => x.c.sym + (x.a === 'reinforce' ? ' (Reinforce)' : x.a === 'convert' ? ' (Sell / Convert)' : ''));
+}
+function renderHovTargets() {
+  const box = document.getElementById('hovTgtCard'); if (!box || hovMode !== 'alloc' || !window.Samsam || !Samsam.core || !Samsam.core.allocationPlan) return;
+  const t = Samsam.getTargets ? Samsam.getTargets() : null, ic = n => SamsamUI.ic(n, { solo: true, size: 16 });
+  if (!t) {
+    box.innerHTML = `<div class="tg-h"><span class="tg-ic">${ic('target')}</span><b>Target allocation</b></div>
+      <div class="tg-empty"><p>Set the share you want for Bitcoin and for each category — see how far you are from it, and exactly what to buy (or trim) to get back.</p>
+      <button type="button" class="tg-go" onclick="openTargets()">${ic('target')}Set my targets</button></div>`;
+    return;
+  }
+  const esc = SamsamCoins.esc, usd = v => SamsamFmt.usd(v), f1 = v => v.toFixed(1) + '%', pts = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1);
+  const plan = Samsam.core.allocationPlan(tgGroups(), t.cats, { band: t.band, cash: tgMode === 'cash' ? tgCash : 0 });
+  const shown = plan.groups.filter(g => g.target > 0 || g.now >= 0.05);   // a group with no target and (almost) nothing in it: left out
+  plan.count = shown.length; plan.onTarget = shown.filter(g => g.state === 'ok').length;
+  const rows = shown.map(g => `<div class="tg-row" data-g="${esc(g.key)}">
+      <div class="tg-l"><span class="tg-dot" style="background:${tgColor(g.key)}"></span><span class="tg-n">${esc(tgLabel(g.key))}</span>
+        <span class="tg-v"><b>${f1(g.now)}</b> → ${f1(g.target)}</span><span class="tg-d ${g.state}" title="points away from your target">${g.state === 'ok' ? '✓ ' : ''}${pts(g.drift)}</span></div>
+      <div class="tg-bar"><i style="width:${Math.min(100, g.now).toFixed(2)}%;background:${tgColor(g.key)}"></i>${g.target > 0 ? `<u style="left:${Math.min(100, g.target).toFixed(2)}%" title="target ${f1(g.target)}"></u>` : ''}</div></div>`).join('');
+  let acts;
+  if (tgMode === 'cash') {
+    const list = plan.groups.filter(g => g.add >= 1).sort((a, b) => b.add - a.add);
+    acts = list.length ? list.map(g => { const coins = tgCoins(g.key, true);
+      return `<div class="tg-act"><span class="tg-dot" style="background:${tgColor(g.key)}"></span><span class="tg-n">${esc(tgLabel(g.key))}<span>${coins.length ? esc(coins.join(' · ')) : 'no coin in this group yet — pick one to add'}</span></span><span class="tg-amt buy">+${usd(g.add)}</span></div>`; }).join('')
+      : '<div class="tg-note">Type an amount to see where it should go.</div>';
+  } else {
+    const list = plan.groups.filter(g => Math.abs(g.full) >= 1 && g.state !== 'ok').sort((a, b) => Math.abs(b.full) - Math.abs(a.full));
+    acts = list.length ? list.map(g => { const buy = g.full > 0, coins = tgCoins(g.key, buy);
+      return `<div class="tg-act"><span class="tg-dot" style="background:${tgColor(g.key)}"></span><span class="tg-n">${buy ? 'Buy' : 'Trim'} ${esc(tgLabel(g.key))}<span>${coins.length ? esc(coins.join(' · ')) : 'no coin in this group yet — pick one to add'}</span></span><span class="tg-amt ${buy ? 'buy' : 'sell'}">${buy ? '+' : '−'}${usd(Math.abs(g.full))}</span></div>`; }).join('')
+      : `<div class="tg-note">${ic('checkCircle')} Every group is inside your ±${t.band} band — nothing to do.</div>`;
+  }
+  box.innerHTML = `<div class="tg-h"><span class="tg-ic">${ic('target')}</span><b>Target allocation</b><button type="button" class="tg-edit" onclick="openTargets()">${SamsamUI.ic('pencil', { solo: true, size: 13 })}Edit</button></div>
+    <div class="tg-sub"><b>${plan.onTarget} of ${plan.count}</b> groups on target · band ±${t.band} pts · Bitcoin is its own group</div>
+    <div class="tg-rows">${rows}</div>
+    <div class="tg-rb"><div class="tg-rb-h"><b>Rebalance</b><span class="tg-seg" role="group" aria-label="Rebalance with"><button type="button" data-m="cash" aria-pressed="${tgMode === 'cash'}">New money</button><button type="button" data-m="full" aria-pressed="${tgMode === 'full'}">Full rebalance</button></span></div>
+      ${tgMode === 'cash' ? `<div class="tg-cash">Invest <label>$<input type="text" inputmode="decimal" id="tgCash" value="${tgCash}" aria-label="Amount to invest"></label> without selling anything</div>` : '<div class="tg-cash">Buy and trim so every group is on target (your total stays the same)</div>'}
+      <div class="tg-acts">${acts}</div>
+      <div class="tg-note">At today's prices. Coins to use: Reinforce first; to trim, Sell / Convert first. A plan to check, not advice.</div></div>`;
+  box.querySelectorAll('.tg-seg button').forEach(b => b.onclick = () => { tgMode = b.dataset.m; try { localStorage.setItem('samsam_rb_mode', tgMode); } catch (_) {} renderHovTargets(); });
+  const ci = document.getElementById('tgCash');
+  if (ci) ci.onchange = ci.onkeyup = e => { const v = Math.max(0, parseFloat(String(ci.value).replace(/[^0-9.]/g, '')) || 0); if (v === tgCash && e.type !== 'change') return; tgCash = v; try { localStorage.setItem('samsam_rb_cash', String(v)); } catch (_) {}
+    clearTimeout(ci._t); ci._t = setTimeout(() => { const pos = ci.selectionStart; renderHovTargets(); const n = document.getElementById('tgCash'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (_) {} } }, e.type === 'change' ? 0 : 450); };
+}
+// the editor: a % per group, adding up to 100
+function openTargets() {
+  if (!requireCloud()) return;
+  document.getElementById('tgModal')?.remove();
+  const t = Samsam.getTargets(), now = tgGroups(), total = Object.values(now).reduce((a, b) => a + b, 0), esc = SamsamCoins.esc;
+  const keys = [...new Set(['btc', ...Object.keys(now).sort((a, b) => now[b] - now[a]), ...Object.keys((t && t.cats) || {})])];
+  const all = ['btc', ...SamsamTaxonomy.ORDER, ...SamsamTaxonomy.customs().map(c => c.key), 'other'];
+  const el = document.createElement('div'); el.className = 'bl-overlay show'; el.id = 'tgModal'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'tgTitle');
+  const row = k => `<div class="tge-row" data-g="${esc(k)}"><span class="tg-dot" style="background:${tgColor(k)}"></span><span class="tg-n">${esc(tgLabel(k))}<span>now ${(total > 0 ? (now[k] || 0) / total * 100 : 0).toFixed(1)}%</span></span>
+      <span class="tge-in"><input type="text" inputmode="decimal" value="${t && t.cats[k] ? +t.cats[k].pct : ''}" placeholder="0" aria-label="${esc(tgLabel(k))} target %"><i>%</i></span>
+      ${now[k] ? '<span style="width:30px"></span>' : `<button type="button" class="tge-x" aria-label="Remove ${esc(tgLabel(k))}">${SamsamUI.ic('x', { solo: true, size: 15 })}</button>`}</div>`;
+  el.innerHTML = `<div class="bl-card">
+    <div class="bl-head"><span style="color:var(--accent)">${SamsamUI.ic('target', { solo: true, size: 22 })}</span><h3 id="tgTitle">Target allocation</h3><button type="button" class="bl-x" aria-label="Close">×</button></div>
+    <p class="bl-lead">The share you want for each group. Bitcoin is its own group; the others are your categories. They must add up to 100%.</p>
+    <div class="tge-rows">${keys.map(row).join('')}</div>
+    <div class="tge-tools"><select id="tgAdd" aria-label="Add a group"><option value="">+ Add a group</option>${all.filter(k => !keys.includes(k)).map(k => `<option value="${esc(k)}">${esc(tgLabel(k))}</option>`).join('')}</select>
+      <button type="button" data-act="current">Use my current split</button><button type="button" data-act="clear">Clear</button></div>
+    <label class="bl-field"><span>Band — how far a group may drift before it counts as off target</span>
+      <select id="tgBand" style="height:40px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--fg);font:inherit;padding:0 10px">${[3, 5, 10, 15].map(b => `<option value="${b}" ${(t ? t.band : 5) === b ? 'selected' : ''}>±${b} points</option>`).join('')}</select></label>
+    <div class="tge-sum" id="tgSum" aria-live="polite"></div>
+    <div class="bl-acts"><button type="button" data-act="cancel">Cancel</button><button type="button" class="bl-save" data-act="save">Save</button></div>
+    ${t ? '<button type="button" class="bl-reset" data-act="remove">Remove my targets</button>' : ''}
+  </div>`;
+  document.body.appendChild(el);
+  const rowsBox = el.querySelector('.tge-rows'), sumEl = el.querySelector('#tgSum'), save = el.querySelector('[data-act=save]');
+  const read = () => { const cats = {}; let sum = 0; rowsBox.querySelectorAll('.tge-row').forEach(r => { const v = parseFloat(String(r.querySelector('input').value).replace(',', '.')); if (v > 0) { cats[r.dataset.g] = { pct: Math.round(v * 100) / 100, label: tgLabel(r.dataset.g) }; sum += v; } }); return { cats, sum: Math.round(sum * 100) / 100 }; };
+  const paint = () => { const { sum } = read(), ok = Math.abs(sum - 100) <= 0.05; sumEl.className = 'tge-sum ' + (ok ? 'ok' : 'bad');
+    sumEl.textContent = ok ? 'Total 100% ✓' : sum < 100 ? `Total ${+sum.toFixed(2)}% — ${+(100 - sum).toFixed(2)}% left to place` : `Total ${+sum.toFixed(2)}% — ${+(sum - 100).toFixed(2)}% too much`; save.disabled = !ok; };
+  const wire = r => { r.querySelector('input').oninput = paint; const x = r.querySelector('.tge-x'); if (x) x.onclick = () => { r.remove(); paint(); }; };
+  rowsBox.querySelectorAll('.tge-row').forEach(wire);
+  el.querySelector('#tgAdd').onchange = e => { const k = e.target.value; if (!k) return; rowsBox.insertAdjacentHTML('beforeend', row(k)); wire(rowsBox.lastElementChild); e.target.querySelector(`option[value="${CSS.escape(k)}"]`)?.remove(); e.target.value = ''; rowsBox.lastElementChild.querySelector('input').focus(); paint(); };
+  el.querySelector('[data-act=current]').onclick = () => {   // today's split, rounded to 0.1 and made to add up to exactly 100
+    const ins = [...rowsBox.querySelectorAll('.tge-row')].map(r => ({ i: r.querySelector('input'), v: total > 0 ? (now[r.dataset.g] || 0) / total * 100 : 0 }));
+    ins.forEach(x => { x.r = Math.round(x.v * 10) / 10; }); const diff = Math.round((100 - ins.reduce((s, x) => s + x.r, 0)) * 10) / 10, big = ins.reduce((a, b) => b.v > a.v ? b : a, ins[0]);
+    if (big) big.r = Math.round((big.r + diff) * 10) / 10; ins.forEach(x => { x.i.value = x.r > 0 ? x.r : ''; }); paint(); };
+  el.querySelector('[data-act=clear]').onclick = () => { rowsBox.querySelectorAll('input').forEach(i => { i.value = ''; }); paint(); };
+  const close = () => { el.remove(); document.removeEventListener('keydown', key, true); };
+  const key = e => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+  document.addEventListener('keydown', key, true);
+  el.addEventListener('click', e => { if (e.target === el) close(); });
+  el.querySelector('.bl-x').onclick = close; el.querySelector('[data-act=cancel]').onclick = close;
+  save.onclick = async () => { const { cats } = read(); save.disabled = true;
+    const names = Object.fromEntries([...rowsBox.querySelectorAll('.tge-row')].map(r => [r.dataset.g, tgLabel(r.dataset.g)]));   // every group's name, for the Telegram alerts
+    try { await Samsam.setTargets({ cats, band: +el.querySelector('#tgBand').value, names }); close(); renderHoldingsAssetList(); }
+    catch (e) { sumEl.className = 'tge-sum bad'; sumEl.textContent = (e && e.message) || String(e); save.disabled = false; } };
+  const rm = el.querySelector('[data-act=remove]');
+  if (rm) rm.onclick = async () => { await Samsam.setTargets(null); close(); renderHoldingsAssetList(); };
+  paint(); setTimeout(() => rowsBox.querySelector('input').focus(), 30);
+}
 function renderHoldingsAssetList() {
   const container = document.getElementById('hovAssetList');
   if (!container || !portfolio) return;
   paintHovMode();
   renderHovCatPicker();
   renderHovDonut();
+  renderHovTargets();
   const allVal = portfolio.reduce((s, c) => s + (c.qty * c.currentPrice || 0), 0);
   const maxVal = hovMode === 'alloc' ? portfolio.filter(c => !hovCat || (c.cat || 'other') === hovCat).reduce((m, c) => Math.max(m, c.qty * c.currentPrice || 0), 0) : 0;
   const val = c => hovSort.key === 'asset' ? c.sym : hovSort.key === 'price' ? (c.currentPrice || 0) : c.holdingVal;
@@ -4763,6 +4879,49 @@ async function saveBaselineEdit() {
     .hov-mode-ic svg { width: 16px; height: 16px; display: block; }
     .hov-mode .cp-vseg > button.btn-toggle-active .nav-ic { color: currentColor; }
     .hov-alloc-card { display: none; padding: 20px; margin-bottom: 14px; justify-content: center; }
+    .hov-tgt-card { display: none; padding: 16px; margin-bottom: 14px; }
+    #holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-tgt-card { display: block; }
+    .tg-h { display: flex; align-items: center; gap: 10px; } .tg-h b { flex: 1; font-size: .98rem; }
+    .tg-ic { width: 30px; height: 30px; border-radius: 9px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: rgba(124,58,237,.15); color: #a78bfa; }
+    [data-theme="light"] .tg-ic { color: #6d28d9; background: rgba(124,58,237,.1); }
+    .tg-edit { border: 1px solid var(--border); background: var(--bg3); color: var(--fg); border-radius: 9px; padding: 6px 12px; font: inherit; font-size: .8rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+    .tg-sub { font-size: .78rem; color: var(--fg2); margin: 4px 0 10px; } .tg-sub b { color: var(--fg); }
+    .tg-empty p { margin: 6px 0 12px; font-size: .84rem; color: var(--fg2); line-height: 1.5; }
+    .tg-go { width: 100%; height: 42px; border-radius: 10px; border: 0; background: linear-gradient(135deg,#7c3aed,#6d28d9); color: #fff; font: inherit; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .tg-row { padding: 8px 0; border-top: 1px solid var(--border); } .tg-row:first-child { border-top: 0; }
+    .tg-l { display: flex; align-items: center; gap: 8px; font-size: .84rem; } .tg-l .tg-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+    .tg-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+    .tg-v { font-variant-numeric: tabular-nums; color: var(--fg2); white-space: nowrap; } .tg-v b { color: var(--fg); }
+    .tg-d { min-width: 54px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; font-size: .8rem; }
+    .tg-d.ok { color: #22c55e; } .tg-d.warn { color: #f59e0b; } .tg-d.off { color: #ef4444; }
+    [data-theme="light"] .tg-d.ok { color: #047857; } [data-theme="light"] .tg-d.warn { color: #b45309; } [data-theme="light"] .tg-d.off { color: #b91c1c; }
+    .tg-bar { position: relative; height: 7px; border-radius: 5px; background: rgba(148,163,184,.18); margin-top: 6px; overflow: visible; }
+    .tg-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; max-width: 100%; }
+    .tg-bar u { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--fg); border-radius: 1px; opacity: .85; }
+    .tg-rb { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .tg-rb-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; } .tg-rb-h b { flex: 1; font-size: .9rem; }
+    .tg-seg { display: inline-grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 10px; background: var(--bg3); border: 1px solid var(--border); }
+    .tg-seg button { border: 0; background: none; color: var(--fg2); font: inherit; font-size: .76rem; font-weight: 800; padding: 6px 10px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+    .tg-seg button[aria-pressed="true"] { background: #7c3aed; color: #fff; }
+    .tg-cash { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--fg2); margin-bottom: 8px; }
+    .tg-cash label { display: flex; align-items: center; height: 36px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg3); padding: 0 10px; color: var(--fg); font-weight: 800; }
+    .tg-cash input { width: 90px; border: 0; background: none; color: var(--fg); font: inherit; font-weight: 800; outline: none; padding: 0 0 0 3px; }
+    .tg-act { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; font-size: .84rem; border-top: 1px dashed var(--border); } .tg-act:first-of-type { border-top: 0; }
+    .tg-act .tg-n { flex: 1; min-width: 0; } .tg-act .tg-n span { display: block; font-size: .74rem; color: var(--fg2); margin-top: 1px; }
+    .tg-amt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; } .tg-amt.buy { color: #22c55e; } .tg-amt.sell { color: #ef4444; }
+    [data-theme="light"] .tg-amt.buy { color: #047857; } [data-theme="light"] .tg-amt.sell { color: #b91c1c; }
+    .tg-note { font-size: .72rem; color: var(--fg2); margin-top: 8px; line-height: 1.45; }
+    /* the targets editor */
+    .tge-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); } .tge-row:first-child { border-top: 0; }
+    .tge-row .tg-n { flex: 1; min-width: 0; font-size: .86rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tge-row .tg-n span { display: block; font-size: .72rem; font-weight: 600; color: var(--fg2); }
+    .tge-in { display: flex; align-items: center; height: 38px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg3); padding: 0 8px; } .tge-in:focus-within { border-color: #7c3aed; }
+    .tge-in input { width: 52px; border: 0; background: none; color: var(--fg); font: inherit; font-weight: 800; text-align: right; outline: none; } .tge-in i { font-style: normal; color: var(--fg2); font-weight: 700; margin-left: 2px; }
+    .tge-x { width: 30px; height: 30px; border-radius: 8px; border: 0; background: none; color: var(--fg2); cursor: pointer; line-height: 0; }
+    .tge-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+    .tge-tools button, .tge-tools select { height: 36px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-size: .78rem; font-weight: 700; padding: 0 10px; cursor: pointer; }
+    .tge-sum { border-radius: 10px; padding: 9px 12px; font-size: .84rem; font-weight: 700; background: rgba(148,163,184,.1); border: 1px solid var(--border); }
+    .tge-sum.ok { color: #22c55e; border-color: rgba(34,197,94,.4); } .tge-sum.bad { color: #f87171; border-color: rgba(239,68,68,.4); }
+    [data-theme="light"] .tge-sum.ok { color: #047857; } [data-theme="light"] .tge-sum.bad { color: #b91c1c; }
     #holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-alloc-card { display: flex; }
     #holdingsOverlay[data-view="tx"] .hov-ptabs { display: none; }
     .hov-alloc-card .donut-wrap { position: relative; width: 230px; height: 230px; flex-shrink: 0; }
@@ -4829,6 +4988,8 @@ async function saveBaselineEdit() {
       <div class="donut-center"><div class="donut-total" id="hovDonutVal">—</div><div class="donut-label" id="hovDonutLbl">Total</div></div>
     </div>
   </div>
+  <!-- Target allocation: how far each group is from your targets + what to buy / trim (Allocation mode) -->
+  <div class="hov-card hov-tgt-card" id="hovTgtCard"></div>
   <!-- Category card (same component as the main page) -->
   <div class="hov-cat" id="hovCatHost"></div>
   <!-- Asset list: one card -->

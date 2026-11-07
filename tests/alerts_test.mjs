@@ -140,6 +140,23 @@ const u3 = user({ signal: { reinforce: -2, sell: -30 } });
 const r3 = evaluate(summarize(u3, mk(), T0), mk(), r1, cfg, T0 + 1800e3);
 check('you change the thresholds → no flood of signal alerts (memory starts again)', !r3.messages.some(x => x.key.startsWith('sig-')) && r3.state.sigMode !== r1.sigMode, r3.messages.map(m => m.key));
 
+// target allocation: off-band group → one alert with what to do; the brief shows how many are on target
+const uT = user({ targets: { list: [{ g: 'btc', pct: 60, label: 'Bitcoin' }, { g: 'other', pct: 40, label: 'Other' }], band: 5, names: [{ g: 'other', label: 'Other' }] } });
+const sT = summarize(uT, mk(), T0);
+check('allocation: Bitcoin 94.7% vs 60% target → off', sT.alloc && sT.alloc.groups.find(g => g.key === 'btc').state === 'off' && sT.alloc.onTarget === 0, sT.alloc);
+const fT = evaluate(sT, mk(), {}, cfg, T0);
+check('first run: no drift alert, just remembered; the brief has the Allocation line', !fT.messages.some(x => x.key.startsWith('drift-')) && /Allocation<\/b>  0 of 2 groups on target/.test(fT.messages[0].text), fT.messages[0].text);
+const st2 = { ...fT.state, drift: {} };
+const dT = evaluate(sT, mk(), st2, cfg, T0 + 1800e3);
+const dm = dT.messages.find(x => x.key === 'drift-btc');
+check('Bitcoin outside the band → "Allocation off target", how much, Open Allocation', dm && /Allocation off target · Bitcoin/.test(dm.text) && /trim about \$2,930/.test(dm.text) && dm.buttons[0][0].url.endsWith('#allocation') && okHtml(dm.text), dT.messages.map(m => m.text));
+check('…and Other (below target): "add about"', dT.messages.some(x => x.key === 'drift-other' && /add about \$2,930/.test(x.text)));
+const again = evaluate(sT, mk(), dT.state, cfg, T0 + 3600e3);
+check('…once', !again.messages.some(x => x.key.startsWith('drift-')));
+const uT2 = user({ targets: { list: [{ g: 'btc', pct: 90, label: 'Bitcoin' }, { g: 'other', pct: 10, label: 'Other' }], band: 5 } });
+const nT = evaluate(summarize(uT2, mk(), T0), mk(), again.state, cfg, T0 + 5400e3);
+check('new targets → memory starts again silently', !nT.messages.some(x => x.key.startsWith('drift-')) && nT.state.allocKey !== again.state.allocKey);
+
 // every message ever made here is Telegram-safe
 const all = [b, ba, mv.text, sg.text];
 check('all texts Telegram-safe', all.every(okHtml));

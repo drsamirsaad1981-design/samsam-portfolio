@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611070345';
-import * as Hist from './samsam-history.js?v=202611070345';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611070345';
+import * as Core from './samsam-core.js?v=202611071147';
+import * as Hist from './samsam-history.js?v=202611071147';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071147';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -180,9 +180,32 @@ function currentExit() {
   const m = S.meta || {};
   return { tab: m.exitTab === 'exit' ? 'exit' : 'accum', targets: cleanExitTargets(m.exitTargets), plan: cleanExitPlan(m.exitPlan), steps: cleanExitSteps(m.exitSteps) };
 }
+// ── Target allocation, saved in users/{uid}/meta/info.targets ──
+//   { cats: { group: { pct, label } }, band }   group = a category key, or 'btc' (Bitcoin on its own); pct add up to 100;
+//   label = the group's name when saved (the Telegram alerts show it); band = how far (points) a group may drift.
+//   Saved as a list ({ list: [{ g, pct, label }], band }): a saved map would be merged with the old one (a group you
+//   removed would stay), a list is replaced whole.
+function cleanTargets(t) {
+  if (!t || typeof t !== 'object') return null;
+  const src = Array.isArray(t.list) ? Object.fromEntries(t.list.filter(x => x && x.g).map(x => [String(x.g), x])) : t.cats;
+  if (Array.isArray(t.names)) t = { ...t, names: Object.fromEntries(t.names.filter(x => x && x.g).map(x => [String(x.g), x.label])) };
+  if (!src || typeof src !== 'object') return null;
+  const cats = {}; let sum = 0, n = 0;
+  for (const [k, v] of Object.entries(src)) {
+    if (!/^[a-z0-9][a-z0-9_-]{0,39}$/i.test(k) || n >= 40) continue;
+    const pct = numIn(v && typeof v === 'object' ? v.pct : v, 0, 100); if (pct == null || pct <= 0) continue;
+    const label = String((v && v.label) || k).replace(/[<>"'`\\]/g, '').trim().slice(0, 40) || k;
+    cats[k] = { pct: Math.round(pct * 100) / 100, label }; sum += pct; n++;
+  }
+  if (!n || Math.abs(sum - 100) > 0.05) return null;
+  const names = {};   // every group's name when saved (also the ones without a target) — for the Telegram alerts
+  for (const [k, v] of Object.entries(t.names && typeof t.names === 'object' ? t.names : {})) if (/^[a-z0-9][a-z0-9_-]{0,39}$/i.test(k) && Object.keys(names).length < 60) names[k] = String(v || k).replace(/[<>"'`\\]/g, '').trim().slice(0, 40) || k;
+  for (const [k, v] of Object.entries(cats)) names[k] = v.label;
+  return { cats, band: numIn(t.band, 1, 50) ?? 5, names };
+}
 // ── Telegram alerts settings, saved in users/{uid}/meta/info.alerts (read by tools/alerts.mjs on GitHub every 30 min) ──
 export const DEFAULT_ALERTS = Object.freeze({ lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
-  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true });
+  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true });
 function cleanAlerts(a) {
   const d = DEFAULT_ALERTS, out = { ...d };
   if (!a || typeof a !== 'object') return { ...out, isDefault: true };
@@ -488,6 +511,7 @@ const API = {
   getWatchlist() { return cleanWatch(S.meta && S.meta.watch); },
   getExit() { return currentExit(); },
   getAlerts() { return cleanAlerts(S.meta && S.meta.alerts); },
+  getTargets() { return cleanTargets(S.meta && S.meta.targets); },
   openAlerts() { openAlertsSheet(); },
   // any of { tab, targets (null → defaults), plan, steps (null → defaults) } — each saved as its own field, so edits on two devices don't clash
   saveExit(part = {}) {
@@ -498,6 +522,14 @@ const API = {
     if ('steps' in part) { if (part.steps == null) d.exitSteps = null; else { const { isDefault, ...v } = cleanExitSteps(part.steps); d.exitSteps = v; } }
     if (!Object.keys(d).length) return Promise.resolve();
     return commit((bt, ref) => bt.set(ref('meta', 'info'), d, { merge: true }), 'Exit plan');
+  },
+  // null → no targets
+  setTargets(t) {
+    const c = t == null ? null : cleanTargets(t);
+    if (t != null && !c) { const e = new Error('The targets must add up to 100%.'); setError(e, 'Targets'); return Promise.reject(e); }
+    const saved = c ? { list: Object.entries(c.cats).map(([g, v]) => ({ g, pct: v.pct, label: v.label })), band: c.band,
+      names: Object.entries(c.names).map(([g, label]) => ({ g, label })), setAt: new Date().toISOString() } : null;
+    return commit((bt, ref) => bt.set(ref('meta', 'info'), { targets: saved }, { merge: true }), 'Targets');
   },
   setAlerts(a) {
     const { isDefault, ...c } = cleanAlerts(a);
@@ -1120,6 +1152,7 @@ function openAlertsSheet() {
     ${sw('plan', 'Plan targets', 'A coin reaches its Accumulation Plan target')}
     ${sw('tp', 'Take-profit levels', 'A coin reaches TP1 / TP2 / TP3 of your exit plan')}
     ${sw('macro', 'Exit levels', 'BTC dominance, USDT dominance, ETH/BTC at your exit targets')}
+    ${sw('drift', 'Allocation drift', 'A group moves outside your target allocation band')}
     ${sw('sentiment', 'Market extremes', 'Extreme Fear / Greed, Altcoin / Bitcoin Season')}
     ${sw('etf', 'Big ETF days', 'BTC or ETH spot ETFs move at least', sel('etfMin', [250, 500, 1000, 2000], v => v >= 1000 ? '$' + v / 1000 + 'B' : '$' + v + 'M'))}
     ${sw('health', 'Data warnings', 'A price or market source stops updating')}
