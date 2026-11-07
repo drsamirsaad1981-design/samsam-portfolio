@@ -157,6 +157,27 @@ const uT2 = user({ targets: { list: [{ g: 'btc', pct: 90, label: 'Bitcoin' }, { 
 const nT = evaluate(summarize(uT2, mk(), T0), mk(), again.state, cfg, T0 + 5400e3);
 check('new targets → memory starts again silently', !nT.messages.some(x => x.key.startsWith('drift-')) && nT.state.allocKey !== again.state.allocKey);
 
+// DCA: a weekly Saturday buy of SEI ($100) — reminder on the day (at the brief time), a nudge 2 days late, nothing once bought
+const uD = user(); uD.accum = [{ sym: 'SEI', targetQty: 6000, dca: { usd: 100, every: 'week', day: 6, since: '2026-10-01' } }, { sym: 'LINK', targetQty: 10 }];
+const sD = summarize(uD, mk(), T0);
+check('DCA status: Saturday = today, not bought', sD.dca.length === 1 && sD.dca[0].s.state === 'today' && sD.dca[0].s.last === '2026-11-07', sD.dca);
+const fD = evaluate(sD, mk(), {}, cfg, T0);
+check('first run: no DCA message, the brief has the DCA line', !fD.messages.some(x => x.key.startsWith('dca-')) && /🛒 <b>DCA<\/b>  1 regular buy · \$433\/mo/.test(fD.messages[0].text), fD.messages[0].text.slice(-300));
+const dD = evaluate(sD, mk(), { ...fD.state, dcaDay: {} }, cfg, T0);
+const dm2 = dD.messages.find(x => x.key === 'dca-day');
+check('buy day → "DCA day" with SEI $100 and a button to the plan', dm2 && /SEI  <b>\$100<\/b>/.test(dm2.text) && dm2.buttons[0][0].url.endsWith('accumulation.html') && okHtml(dm2.text), dD.messages.map(m => m.key));
+check('…once that day', !evaluate(sD, mk(), dD.state, cfg, T0 + 1800e3).messages.some(x => x.key === 'dca-day'));
+const earlyD = Date.parse('2026-11-07T04:00:00Z');   // 07:00 in Riyadh — before the 08:30 brief time
+check('before the brief time → not yet', !evaluate(summarize(uD, mk({ now: earlyD }), earlyD), mk({ now: earlyD }), { ...fD.state, dcaDay: {} }, cfg, earlyD).messages.some(x => x.key === 'dca-day'));
+const mon = Date.parse('2026-11-09T06:00:00Z'), sM = summarize(uD, mk({ now: mon }), mon);
+const lD = evaluate(sM, mk({ now: mon }), dD.state, cfg, mon);
+check('Monday, not bought (2 days late) → one DCA reminder', sM.dca[0].s.state === 'missed' && lD.messages.some(x => x.key === 'dca-late' && /was due Nov 7 \(2 days ago\)/.test(x.text)), [sM.dca[0].s, lD.messages.map(m => m.key)]);
+check('…once', !evaluate(sM, mk({ now: mon }), lD.state, cfg, mon + 1800e3).messages.some(x => x.key === 'dca-late'));
+const uB = user(); uB.accum = uD.accum; uB.txs = [{ id: 'b1', sym: 'SEI', type: 'buy', qty: 2000, price: 0.05, date: '2026-11-07T09:00:00Z' }];
+const sB = summarize(uB, mk({ now: mon }), mon);
+check('bought on Saturday → done, no reminder', sB.dca[0].s.state === 'done' && !evaluate(sB, mk({ now: mon }), dD.state, cfg, mon).messages.some(x => x.key.startsWith('dca-')), sB.dca[0].s);
+check('DCA reminders switched off → nothing', !evaluate(sD, mk(), { ...fD.state, dcaDay: {} }, settings({ alerts: { dca: false } }), T0).messages.some(x => x.key.startsWith('dca-')));
+
 // every message ever made here is Telegram-safe
 const all = [b, ba, mv.text, sg.text];
 check('all texts Telegram-safe', all.every(okHtml));

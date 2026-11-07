@@ -13,7 +13,7 @@ export const APP = 'https://drsamirsaad1981-design.github.io/samsam-portfolio/';
 export const TZ = 'Asia/Riyadh';
 export const DEFAULTS = Object.freeze({
   lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
-  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true,
+  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true,
 });
 const DEFAULT_SIGNAL = { reinforce: -5, sell: -20 };
 const DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085 };
@@ -49,7 +49,9 @@ const W = {
     noData: 'no history yet', in7: '7 days', beatBtc: (a, n) => `${a} of ${n} coins beat BTC`,
     vsBtc30: (a, b) => `vs BTC ${a} pts (30d) · ${b} pts (90d)`,
     allocation: 'Allocation', onTarget: (a, n) => `${a} of ${n} categories on target`, driftT: n => `Allocation off target · ${n}`, nowW: 'now', targetW: 'target', ptsW: 'pts',
-    trim: v => `To get back: trim about ${v}, or add to the other categories`, add: v => `To get back: add about ${v}`, allocBtn: 'Open Allocation', smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
+    trim: v => `To get back: trim about ${v}, or add to the other categories`, add: v => `To get back: add about ${v}`, allocBtn: 'Open Allocation',
+    dcaDay: 'DCA day — your regular buys', dcaTotal: v => `Total today: ${v}`, dcaLate: 'DCA reminder — not bought yet', dcaWasDue: (d, n) => `was due ${d} (${n} days ago)`, dcaNext: 'Buy when you can, or skip — the next one is on schedule.',
+    dcaLine: (n, mo, nx) => `${n} regular buy${n === 1 ? '' : 's'} · ${mo}/mo · next ${nx}`, smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
   },
   ar: {
     brief: 'ملخص الصباح', weekly: 'التقرير الأسبوعي', today: 'اليوم', week: 'هذا الأسبوع', profit: 'إجمالي الربح', vsBtc: 'مقارنة بالاحتفاظ بـ BTC',
@@ -68,7 +70,9 @@ const W = {
     noData: 'لا يوجد سجل بعد', in7: '7 أيام', beatBtc: (a, n) => `${a} من ${n} عملة تفوقت على BTC`,
     vsBtc30: (a, b) => `مقارنة بـ BTC ${a} نقطة (30 يوم) · ${b} نقطة (90 يوم)`,
     allocation: 'التوزيع', onTarget: (a, n) => `${a} من ${n} فئات على الهدف`, driftT: n => `خروج عن التوزيع المستهدف · ${n}`, nowW: 'الآن', targetW: 'الهدف', ptsW: 'نقطة',
-    trim: v => `للعودة: خفّض حوالي ${v}، أو أضف للفئات الأخرى`, add: v => `للعودة: أضف حوالي ${v}`, allocBtn: 'افتح التوزيع', smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
+    trim: v => `للعودة: خفّض حوالي ${v}، أو أضف للفئات الأخرى`, add: v => `للعودة: أضف حوالي ${v}`, allocBtn: 'افتح التوزيع',
+    dcaDay: 'يوم الشراء المنتظم (DCA)', dcaTotal: v => `الإجمالي اليوم: ${v}`, dcaLate: 'تذكير DCA — لم يتم الشراء بعد', dcaWasDue: (d, n) => `كان موعده ${d} (منذ ${n} أيام)`, dcaNext: 'اشترِ عندما تستطيع أو تجاوزه — الموعد التالي في وقته.',
+    dcaLine: (n, mo, nx) => `${n} شراء منتظم · ${mo} شهريًا · التالي ${nx}`, smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
   },
 };
 
@@ -173,6 +177,9 @@ export function summarize(user, market, now = Date.now()) {
     { k: 'usdtD', now: d.usdt, lvl: T.usdtHi, met: d.usdt != null && d.usdt <= T.usdtHi, op: '≤', dp: 2, unit: '%' },
     { k: 'ethBtc', now: ethbtc, lvl: T.ethBtc, met: ethbtc != null && ethbtc >= T.ethBtc, op: '≥', dp: 4, unit: '' },
   ];
+  // DCA: the plan coins' regular buys (samsam-core.js → dcaStatus), today = Riyadh's calendar day
+  const today = localParts(now).date;
+  const dca = (user.accum || []).filter(a => a && a.sym && a.dca).map(a => ({ sym: String(a.sym).toUpperCase(), s: C.dcaStatus(a.dca, a.sym, user.txs, today) })).filter(x => x.s);
   // target allocation (Holdings → Allocation): Bitcoin on its own, the others by category
   let alloc = null;
   const tg = meta.targets && typeof meta.targets === 'object' ? meta.targets : null;
@@ -186,7 +193,7 @@ export function summarize(user, market, now = Date.now()) {
     alloc = { band: plan.band, groups: shown, onTarget: shown.filter(g => g.state === 'ok').length, count: shown.length, names, key: JSON.stringify([tlist, tg.band]) };
   }
   return {
-    alloc,
+    alloc, dca,
     value, cost, total, invested, pctTotal: invested > 0 ? total / invested * 100 : 0,
     ch24: value24 > 0 ? (value / value24 - 1) * 100 : null, d24: value - value24, ch7: value7 > 0 ? (value / value7 - 1) * 100 : null, d7: value - value7,
     vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, sigMode, counts, plan, prog, tps, macro, btcNow,
@@ -213,6 +220,7 @@ function marketLines(t, m) {
   if (e) out.push(`${t.etf} (${e.label})  BTC ${flow(e.btc)} · ETH ${flow(e.eth)}`);
   return out;
 }
+const shortD = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 function etfDay(etf) {
   if (!etf || !etf.btc || !etf.btc.days || !etf.btc.days.length) return null;
   const b = etf.btc.days[etf.btc.days.length - 1], e = etf.eth && etf.eth.days && etf.eth.days.find(x => x[0] === b[0]);
@@ -233,6 +241,10 @@ export function brief(sum, m, cfg, now, weekly = false) {
   if (sum.plan.length) L.push(`📋 <b>${t.plan}</b>  ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`);
   const mc = sum.macro.filter(x => x.met).length; if (mc) L.push(`🧭 ${t.of3(mc)}`);
   if (sum.alloc) L.push(`⚖️ <b>${t.allocation}</b>  ${t.onTarget(sum.alloc.onTarget, sum.alloc.count)}`);
+  if (sum.dca && sum.dca.length) {
+    const nx = [...sum.dca].filter(x => x.s.next).sort((a, b) => a.s.next.localeCompare(b.s.next))[0], mo = sum.dca.reduce((a, x) => a + x.s.perMonth, 0);
+    L.push(`🛒 <b>DCA</b>  ${t.dcaLine(sum.dca.length, usd(mo), nx ? esc(nx.sym) + ' ' + shortD(nx.s.next) : '—')}`);
+  }
   return { key: weekly ? 'weekly' : 'brief', text: L.join('\n'), buttons: [[btn(t.open, 'index.html'), btn(t.hub, 'market.html')]] };
 }
 
@@ -348,6 +360,23 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       const name = esc(sum.alloc.names[g.key] || g.key), over = g.drift > 0;
       const text = `⚖️ <b>${t.driftT(name)}</b>\n${g.now.toFixed(1)}% ${t.nowW} · ${t.targetW} ${g.target.toFixed(1)}% · ${(over ? '+' : '−') + Math.abs(g.drift).toFixed(1)} ${t.ptsW}\n${over ? t.trim(usd(Math.abs(g.full))) : t.add(usd(Math.abs(g.full)))}`;
       if (push({ key: 'drift-' + g.key, text, buttons: [[btn(t.allocBtn, 'index.html#allocation')]] })) st.drift[g.key] = 1;
+    }
+  }
+  // 8c. DCA: on a buy day (at your brief time) one message with what to buy today; 2 days late, one reminder
+  if (cfg.dca && sum.dca && sum.dca.length) {
+    st.dcaDay = st.dcaDay || {}; st.dcaMiss = st.dcaMiss || {};
+    const day = sum.dca.filter(x => x.s.state === 'today' && st.dcaDay[x.sym] !== x.s.last);
+    const late = sum.dca.filter(x => x.s.state === 'missed' && x.s.late >= 2 && st.dcaMiss[x.sym] !== x.s.last);
+    if (first) { sum.dca.forEach(x => { if (x.s.last) { st.dcaDay[x.sym] = x.s.last; if (x.s.state === 'missed') st.dcaMiss[x.sym] = x.s.last; } }); }
+    else {
+      if (day.length && lp.hm >= cfg.briefTime) {
+        const text = `🛒 <b>${t.dcaDay}</b>\n${day.map(x => `${esc(x.sym)}  <b>${usd(x.s.usd)}</b>`).join('\n')}\n${t.dcaTotal(usd(day.reduce((a, x) => a + x.s.usd, 0)))}`;
+        if (push({ key: 'dca-day', text, buttons: [[btn(t.planBtn, 'accumulation.html')]] })) day.forEach(x => { st.dcaDay[x.sym] = x.s.last; });
+      }
+      if (late.length && lp.hm >= cfg.briefTime) {
+        const text = `⏰ <b>${t.dcaLate}</b>\n${late.map(x => `${esc(x.sym)}  ${usd(x.s.usd)} · ${t.dcaWasDue(shortD(x.s.last), x.s.late)}`).join('\n')}\n${t.dcaNext}`;
+        if (push({ key: 'dca-late', text, buttons: [[btn(t.planBtn, 'accumulation.html')]] })) late.forEach(x => { st.dcaMiss[x.sym] = x.s.last; });
+      }
     }
   }
   // 9. the morning brief (once a day, at your time) and the weekly report (Friday)

@@ -109,3 +109,4 @@ alerts_ui_test.py
 smart_signal_test.py
 targets_test.py
 plan_alloc_test.py
+dca_schedule_test.py

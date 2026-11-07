@@ -315,6 +315,50 @@ export function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
   return { total, groups, band, onTarget: groups.length - off.length, count: groups.length, off };
 }
 
+// ── DCA schedule: a plan coin's regular buy ─────────────────────────────────────
+// s = { usd, every: 'week' | '2weeks' | 'month', day, since: 'YYYY-MM-DD' }
+//   day: 0–6 (Sunday–Saturday) for 'week' / '2weeks', 1–28 for 'month'. Dates are calendar days ('YYYY-MM-DD').
+// A buy of the coin from 2 days before a due date until the next one counts for that date.
+const DAYMS = 864e5, dOf = d => Date.parse(d + 'T00:00:00Z'), isoD = t => new Date(t).toISOString().slice(0, 10);
+export const DCA_PER_MONTH = { week: 52 / 12, '2weeks': 26 / 12, month: 1 };
+export function cleanDca(s) {
+  if (!s || typeof s !== 'object') return null;
+  const usd = num(s.usd), every = ['week', '2weeks', 'month'].includes(s.every) ? s.every : null, day = Math.round(num(s.day, -1));
+  if (!(usd > 0 && usd <= 1e9) || !every) return null;
+  if (every === 'month' ? !(day >= 1 && day <= 28) : !(day >= 0 && day <= 6)) return null;
+  const since = typeof s.since === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.since) ? s.since : isoD(Date.now());
+  return { usd: Math.round(usd * 100) / 100, every, day, since };
+}
+// every due date from `from` to `to` (both included)
+export function dcaDue(s, from, to) {
+  const c = cleanDca(s); if (!c) return [];
+  const out = [], a = Math.max(dOf(c.since), dOf(from)), b = dOf(to);
+  if (c.every === 'month') {
+    const d0 = new Date(a); let y = d0.getUTCFullYear(), m = d0.getUTCMonth();
+    for (let i = 0; i < 1200; i++) { const t = Date.UTC(y, m, c.day); if (t > b) break; if (t >= a) out.push(isoD(t)); m++; if (m > 11) { m = 0; y++; } }
+    return out;
+  }
+  let t = dOf(c.since); while (new Date(t).getUTCDay() !== c.day) t += DAYMS;   // the first one: that weekday on or after `since`
+  const step = (c.every === 'week' ? 7 : 14) * DAYMS;
+  if (t < a) t += Math.ceil((a - t) / step) * step;
+  for (; t <= b && out.length < 2000; t += step) out.push(isoD(t));
+  return out;
+}
+function dcaNextAfter(c, d) { const n = dcaDue(c, isoD(dOf(d) + DAYMS), isoD(dOf(d) + 40 * DAYMS)); return n[0] || null; }
+// today's state for one coin: the latest due date, whether it was bought, the next one, and how many of the last 6 were kept
+export function dcaStatus(s, sym, txs, today) {
+  const c = cleanDca(s); if (!c) return null;
+  const S = String(sym || '').toUpperCase();
+  const buys = (txs || []).filter(t => t && t.type === 'buy' && String(t.sym || '').toUpperCase() === S && t.date).map(t => String(t.date).slice(0, 10)).sort();
+  const boughtFor = d => { const lo = isoD(dOf(d) - 2 * DAYMS), hi = dcaNextAfter(c, d) || '9999-12-31'; return buys.some(b => b >= lo && b < hi); };
+  const past = dcaDue(c, c.since, today), last = past.length ? past[past.length - 1] : null;
+  const recent = past.slice(-6), kept = recent.filter(boughtFor).length;
+  const done = last ? boughtFor(last) : false;
+  const late = last && !done ? Math.round((dOf(today) - dOf(last)) / DAYMS) : 0;
+  const next = last === today && !done ? today : dcaNextAfter(c, today);   // the coming due date (today when today is one and not bought yet)
+  return { ...c, last, done, next, state: !last ? 'upcoming' : done ? 'done' : late === 0 ? 'today' : 'missed', late, kept, of: recent.length, perMonth: c.usd * DCA_PER_MONTH[c.every] };
+}
+
 // ── Accumulation plan: Overall Progress ──────────────────────────────────────
 // Average of each coin's own completion, capped at 100%: a coin past its target counts as 100% and its extra
 // amount never makes up for coins still below target. Only coins with a target above 0 count.

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611071400';
-import * as Hist from './samsam-history.js?v=202611071400';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071400';
+import * as Core from './samsam-core.js?v=202611071437';
+import * as Hist from './samsam-history.js?v=202611071437';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071437';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -80,6 +80,7 @@ function cleanAccum(a) {
   if ('cgId' in o) o.cgId = Clean.cgId(o.cgId);
   if ('logoUrl' in o) o.logoUrl = Clean.url(o.logoUrl);
   if ('cat' in o) o.cat = Clean.key(o.cat) || 'other';
+  if ('dca' in o) o.dca = Core.cleanDca(o.dca);   // the coin's regular buy (null = none)
   return o;
 }
 
@@ -205,7 +206,7 @@ function cleanTargets(t) {
 }
 // ── Telegram alerts settings, saved in users/{uid}/meta/info.alerts (read by tools/alerts.mjs on GitHub every 30 min) ──
 export const DEFAULT_ALERTS = Object.freeze({ lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
-  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true });
+  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true });
 function cleanAlerts(a) {
   const d = DEFAULT_ALERTS, out = { ...d };
   if (!a || typeof a !== 'object') return { ...out, isDefault: true };
@@ -1153,6 +1154,7 @@ function openAlertsSheet() {
     ${sw('tp', 'Take-profit levels', 'A coin reaches TP1 / TP2 / TP3 of your exit plan')}
     ${sw('macro', 'Exit levels', 'BTC dominance, USDT dominance, ETH/BTC at your exit targets')}
     ${sw('drift', 'Allocation drift', 'A category moves outside your target allocation band')}
+    ${sw('dca', 'DCA reminders', 'Your regular buys: on the day, and 2 days late if not bought')}
     ${sw('sentiment', 'Market extremes', 'Extreme Fear / Greed, Altcoin / Bitcoin Season')}
     ${sw('etf', 'Big ETF days', 'BTC or ETH spot ETFs move at least', sel('etfMin', [250, 500, 1000, 2000], v => v >= 1000 ? '$' + v / 1000 + 'B' : '$' + v + 'M'))}
     ${sw('health', 'Data warnings', 'A price or market source stops updating')}
