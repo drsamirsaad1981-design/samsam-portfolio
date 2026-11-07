@@ -113,3 +113,4 @@ dca_schedule_test.py
 fee_coin_test.py
 import_test.py
 backup_restore_test.py
+windows_solid_test.py
