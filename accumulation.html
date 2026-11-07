@@ -16,16 +16,16 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611071355"></script>
-<script src="samsam-hints.js?v=202611071355"></script>
-<script src="samsam-vault.js?v=202611071355"></script>
-<script src="samsam-labels.js?v=202611071355"></script>
-<script src="samsam-taxonomy.js?v=202611071355"></script>
-<script src="samsam-coins.js?v=202611071355"></script>
-<script src="samsam-dropdown.js?v=202611071355"></script>
-<script src="samsam-market.js?v=202611071355"></script>
-<script src="samsam-exit.js?v=202611071355"></script>
-<script src="samsam-add.js?v=202611071355"></script>
+<script src="samsam-ui.js?v=202611071400"></script>
+<script src="samsam-hints.js?v=202611071400"></script>
+<script src="samsam-vault.js?v=202611071400"></script>
+<script src="samsam-labels.js?v=202611071400"></script>
+<script src="samsam-taxonomy.js?v=202611071400"></script>
+<script src="samsam-coins.js?v=202611071400"></script>
+<script src="samsam-dropdown.js?v=202611071400"></script>
+<script src="samsam-market.js?v=202611071400"></script>
+<script src="samsam-exit.js?v=202611071400"></script>
+<script src="samsam-add.js?v=202611071400"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -107,7 +107,12 @@ body {
 [data-theme="light"] .pa-ic { color: #6d28d9; background: rgba(124,58,237,.1); }
 .pa-open { font-size: .78rem; font-weight: 800; color: #a78bfa; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 [data-theme="light"] .pa-open { color: #6d28d9; }
-.pa-sub { font-size: .8rem; color: var(--fg2); margin: 6px 0 8px; line-height: 1.45; } .pa-sub b { color: var(--fg); }
+.pa-sub { font-size: .8rem; color: var(--fg2); margin: 6px 0 0; line-height: 1.45; cursor: pointer; } .pa-sub b { color: var(--fg); }
+.plan-alloc.open .pa-sub { margin-bottom: 8px; }
+.pa-tog { cursor: pointer; user-select: none; -webkit-user-select: none; } .pa-tog:focus-visible { outline: 2px solid #a78bfa; outline-offset: 3px; border-radius: 8px; }
+.pa-chev { width: 26px; height: 26px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center; color: var(--fg2); background: var(--bg3); transition: transform .18s; }
+.plan-alloc.open .pa-chev { transform: rotate(180deg); }
+.pa-rows[hidden] { display: none; }
 .pa-row { display: grid; grid-template-columns: 12px minmax(0,1fr) auto auto; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); font-size: .82rem; }
 .pa-row:first-child { border-top: 0; }
 .pa-dot { width: 10px; height: 10px; border-radius: 3px; }
@@ -836,7 +841,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611071355"></script>
+<script type="module" src="samsam-cloud.js?v=202611071400"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1382,10 +1387,17 @@ function renderPlanAlloc() {
     return `<div class="pa-row" data-g="${esc(g.key)}"><span class="pa-dot" style="background:${SamsamTaxonomy.color(g.key)}"></span><span class="pa-n">${esc(SamsamTaxonomy.label(g.key))}</span>
       <span class="pa-v">${f1(n.now)} → <b>${f1(g.now)}</b> · target ${f1(g.target)}</span><span class="pa-d ${g.state}" title="after the plan: points from your target">${g.state === 'ok' ? '✓ ' : ''}${pts(g.drift)}</span></div>`; }).join('');
   box.hidden = false;
-  box.innerHTML = `<div class="pa-h"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation</b><a class="pa-open" href="./index.html#allocation" target="_top" onclick="return paOpenAlloc(event)">Allocation ›</a></div>
+  const open = paOpen();
+  box.classList.toggle('open', open);
+  box.innerHTML = `<div class="pa-h pa-tog" role="button" tabindex="0" aria-expanded="${open}" aria-controls="paRows" title="${open ? 'Hide' : 'Show'} the categories"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation</b><a class="pa-open" href="./index.html#allocation" target="_top" onclick="event.stopPropagation(); return paOpenAlloc(event)">Allocation ›</a><span class="pa-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
     <div class="pa-sub">${a.toBuy > 0 ? `If you finish this plan (<b>+${SamsamFmt.usd(a.toBuy)}</b> at today's prices): <b>${okAfter} of ${shown.length}</b> categories on target — today ${okNow} of ${shown.length}.` : `Your plan is complete — <b>${okNow} of ${shown.length}</b> categories on target.`} Today → after the plan · band ±${band} pts.</div>
-    <div class="pa-rows">${rows}</div>`;
+    <div class="pa-rows" id="paRows"${open ? '' : ' hidden'}>${rows}</div>`;
+  const tog = box.querySelector('.pa-tog'), flip = () => { try { localStorage.setItem('samsam_pa_open', paOpen() ? '0' : '1'); } catch (_) {} renderPlanAlloc(); box.querySelector('.pa-tog').focus(); };
+  tog.onclick = flip; tog.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
+  box.querySelector('.pa-sub').onclick = flip;
 }
+// closed by default (the page stays short); your choice is remembered on this device
+function paOpen() { try { return localStorage.getItem('samsam_pa_open') === '1'; } catch (_) { return false; } }
 
 function renderAll() {
   try { ensureBuyAtBases(); } catch (_) {}
