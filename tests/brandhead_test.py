@@ -28,7 +28,7 @@ with sync_playwright() as p:
               btnsRight: Math.round(document.querySelector('header.app-head').getBoundingClientRect().right - b.right) < 30 && b.top < n.bottom, nameOneLine: n.height < 40, metaOneLineOrWrap: m.scrollWidth <= m.clientWidth + 1,
               btns: document.querySelectorAll('.hdr-btns .ss-theme-btn').length, overflow: document.documentElement.scrollWidth > innerWidth + 1 }; })()""")
         check(f'{name}: "Cute" in the logo gradient, name on one line', g['grad'] and g['nameOneLine'], g)
-        check(f'{name}: Live sits under the name; cloud + theme top-right', g['liveUnder'] and g['btnsRight'] and g['btns'] == 2, g)
+        check(f'{name}: Live sits under the name; settings + cloud + theme top-right', g['liveUnder'] and g['btnsRight'] and g['btns'] == 3, g)
         check(f'{name}: date · Baseline line fits, no sideways scroll', g['metaOneLineOrWrap'] and not g['overflow'], g)
         check(f'{name}: baseline shown with ⓘ and ✎', pg.inner_text('#baselineLabel') == 'Oct 15, 2026' and pg.is_visible('.hm-baseline .cp-hint') and pg.is_visible('.hm-baseline .val-edit svg'))
         pg.locator('header.app-head').screenshot(path=str(SH / f'brandhead-{name}.png'))

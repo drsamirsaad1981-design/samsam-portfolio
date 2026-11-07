@@ -15,9 +15,9 @@ with sync_playwright() as p:
             pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
             pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(1200)
             pg.evaluate("Samsam.setAlerts(null)"); pg.wait_for_timeout(800)   # each run starts from the defaults (the fake database is shared)
-            pg.locator('.ss-sync-hdr').first.click(); pg.wait_for_timeout(300)
-            check(f'{vn}/{theme}: cloud menu has Telegram alerts', pg.is_visible('#samsamAlerts'))
-            pg.click('#samsamAlerts'); pg.wait_for_timeout(300)
+            pg.locator('.ss-set-hdr').first.click(); pg.wait_for_selector('#cpSet')
+            check(f'{vn}/{theme}: Settings has Telegram alerts', pg.is_visible('#stRow_alerts'))
+            pg.click('#stRow_alerts'); pg.wait_for_timeout(300)
             st = pg.evaluate("""(()=>{const b=document.querySelector('#cpAlerts .al-box').getBoundingClientRect();
               return {open:!!document.getElementById('cpAlerts'), sw:document.querySelectorAll('#cpAlerts input[type=checkbox]').length, on:[...document.querySelectorAll('#cpAlerts input[type=checkbox]')].every(i=>i.checked),
                 en:document.querySelector('#cpAlerts [data-lang=en]').getAttribute('aria-pressed'), fits:b.left>=0&&b.right<=innerWidth+1, svg:document.querySelectorAll('#cpAlerts svg').length,

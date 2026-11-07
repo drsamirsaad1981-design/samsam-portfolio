@@ -2001,7 +2001,9 @@ function updatePerfChart() {
 }
 
 // ── Holdings Chart ────────────────────────────────────────────────────────────
-let holdingsRange  = 'all';   // the main page's charts open on All (the whole history)
+// the main page's charts open on All (the whole history) — or the range picked in Settings
+let holdingsRange  = (() => { try { const v = localStorage.getItem('samsam_chart_range'); return ['24h', '7d', '30d', '90d', 'all'].includes(v) ? v : 'all'; } catch (_) { return 'all'; } })();
+document.querySelectorAll('.holdings-tab').forEach(b => b.classList.toggle('active', b.dataset.range === holdingsRange));
 
 // Holdings points: one per 5 minutes, stored in the cloud (merged across devices).
 function saveHoldingsSnapshot(value) {

@@ -1,0 +1,199 @@
+// samsam-settings.js — one Settings screen (⚙️ in every page header) for every setting the app has.
+//
+// Nothing is rebuilt here: each line shows the setting's current value and opens the same window you already know
+// (Telegram alerts, Signal thresholds, Target allocation…). The editors that live on the main page are opened there —
+// inside the app the screen always opens on the main page; a page opened on its own goes to the main page first.
+// To add a setting later (e.g. the app language, AI), add one line to SECTIONS.
+(function () {
+  'use strict';
+  var doc = document, $ = function (id) { return doc.getElementById(id); };
+  var E = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var IC = function (n) { return window.SamsamUI ? SamsamUI.ic(n) : ''; };
+  var GEAR = '<svg class="ss-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+  var CHEV = '<svg class="st-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+  var K = { range: 'samsam_chart_range', view: 'samsam_view_pref', fee: 'samsam_buyfee_unit' };
+  function get(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (_) { return d; } }
+  function put(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  function S() { return window.Samsam; }
+  function ready() { return !!(S() && S().isReady && S().isReady() && S().user && S().user()); }
+  // inside the app (a page in a frame of the main page) → the main page does everything
+  function top() { try { return window.parent !== window && window.parent.SamsamSettings && window.parent.cpShell ? window.parent : null; } catch (_) { return null; } }
+  var onMain = function () { return !!window.cpShell; };
+
+  // ── what each line opens ──
+  function goMain(act) {   // a page opened on its own: the editor is on the main page
+    location.href = 'index.html#set=' + encodeURIComponent(act);
+  }
+  function goPlan(tab) {
+    var s = S(); if (s && s.saveExit) s.saveExit({ tab: tab }).catch(function () {});
+    if (window.cpShell) { window.cpShell.go('accumulation'); return; }
+    if (/accumulation\.html/.test(location.pathname)) { location.reload(); return; }
+    location.href = 'accumulation.html';
+  }
+  var ACT = {
+    alerts: function () { S().openAlerts(); },
+    import: function () { window.SamsamImport && SamsamImport.open(); },
+    backup: function () { S().downloadBackup().catch(function () {}); },
+    recover: function () { location.href = 'recover.html'; },
+    signout: function () { S().signOut(); },
+    signal: function () { if (window.openSignalEdit) openSignalEdit(); else goMain('signal'); },
+    targets: function () { if (window.openTargets) openTargets(); else goMain('targets'); },
+    baseline: function () { if (window.openBaselineEdit) openBaselineEdit(); else goMain('baseline'); },
+    cats: function () { if (window.openCatManager && onMain()) openCatManager(); else if (window.openCatManager) openCatManager(); else goMain('cats'); },
+    exit: function () { goPlan('exit'); },
+    dca: function () { goPlan('accum'); },
+  };
+
+  // ── the current values ──
+  function lastBackup() {
+    var at = Date.parse(S().lastBackupAt && S().lastBackupAt()) || 0;
+    if (!at) return { text: 'Never', old: true };
+    var days = Math.floor((Date.now() - at) / 864e5);
+    return { text: days <= 0 ? 'Today' : days === 1 ? 'Yesterday' : days + ' days ago', old: days >= 30 };
+  }
+  function val(k) {
+    var s = S(), st = s.getState() || {};
+    try {
+      if (k === 'account') { var u = s.user(); return u ? u.email || 'Signed in' : 'Not signed in'; }
+      if (k === 'backup') { var b = lastBackup(); return '<span' + (b.old ? ' class="st-warn"' : '') + '>Last backup: ' + b.text + '</span>'; }
+      if (k === 'alerts') {
+        var a = s.getAlerts(), keys = ['brief', 'weekly', 'moves', 'signals', 'plan', 'tp', 'macro', 'drift', 'dca', 'sentiment', 'etf', 'health'];
+        var on = keys.filter(function (x) { return a[x]; }).length;
+        return (a.lang === 'ar' ? 'العربية' : 'English') + ' · ' + on + ' of ' + keys.length + ' on' + (a.brief ? ' · brief ' + a.briefTime : '');
+      }
+      if (k === 'signal') { var r = s.getSignalRules(); return 'Reinforce ' + r.reinforce + '% · Sell ' + r.sell + '%' + (r.smart ? ' · Smart on' : ''); }
+      if (k === 'targets') { var t = s.getTargets(); return t ? Object.keys(t.cats).length + ' categories · ±' + t.band + '%' : 'Not set'; }
+      if (k === 'baseline') { var bl = s.getBaseline(); return bl && bl.date ? new Date(bl.date + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—'; }
+      if (k === 'cats') { var T = window.SamsamTaxonomy, n = T ? Object.keys(T.labels).filter(function (x) { return !T.isRemoved(x); }).length : 0; return n ? n + ' categories · names & colours' : ''; }
+      if (k === 'exit') { var ex = st.exit || (s.getExit && s.getExit()), steps = ex && ex.steps; return steps ? 'Sell at ×' + steps.mults.join(' / ×') + ' · ' + ((ex.plan || []).length) + ' coin' + ((ex.plan || []).length === 1 ? '' : 's') : ''; }
+      if (k === 'dca') { var n2 = (st.accumPlan || []).filter(function (x) { return x.dca && x.dca.usd > 0; }).length; return n2 ? n2 + ' coin' + (n2 === 1 ? '' : 's') + ' with a regular buy' : 'None yet'; }
+    } catch (_) {}
+    return '';
+  }
+  function version() {
+    var sc = [].slice.call(doc.scripts).map(function (x) { return x.src; }).filter(function (x) { return /samsam-settings\.js\?v=\d{12}/.test(x); })[0];
+    var v = sc && sc.match(/v=(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)/);
+    if (!v) return '—';
+    var d = new Date(+v[1], +v[2] - 1, +v[3], +v[4], +v[5]);
+    return v[1] + v[2] + v[3] + '.' + v[4] + v[5] + ' · ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // ── the screen ──
+  // a line: [key, icon, title, action]  ·  a choice: { seg: key, title, opts: [[value, label]], get(), set(v) }
+  var SECTIONS = [
+    ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import']]],
+    ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts']]],
+    ['Investing rules', [['signal', 'sliders', 'Signal thresholds', 'signal'], ['targets', 'target', 'Target allocation', 'targets'], ['cats', 'note', 'Categories', 'cats'],
+      ['baseline', 'history', 'Baseline', 'baseline'], ['exit', 'exit', 'Exit plan', 'exit'], ['dca', 'calc', 'DCA (regular buys)', 'dca']]],
+    ['Display', [
+      { seg: 'theme', title: 'Theme', opts: [['light', 'Light'], ['dark', 'Dark']], get: function () { return window.SamsamUI ? SamsamUI.currentTheme() : 'dark'; },
+        set: function (v) { if (window.SamsamUI && SamsamUI.currentTheme() !== v) SamsamUI.toggleTheme(); } },
+      { seg: 'range', title: 'Charts open on', opts: [['24h', '24h'], ['7d', '7d'], ['30d', '30d'], ['90d', '90d'], ['all', 'All']], get: function () { return get(K.range, 'all'); },
+        set: function (v) { put(K.range, v); if (window.setHoldingsRange) setHoldingsRange(v); } },
+      // phones always open on Cards, so this choice shows on wider screens only
+      { seg: 'view', wide: true, title: 'Coins shown as', opts: [['cards', 'Cards'], ['table', 'Table']], get: function () { return get(K.view, 'cards'); },
+        set: function (v) { put(K.view, v); if (window.applyView) applyView(v); } },
+      { seg: 'fee', title: 'Buying fee in', opts: [['usd', 'USD'], ['coin', 'The coin']], get: function () { return get(K.fee, 'usd') === 'coin' ? 'coin' : 'usd'; },
+        set: function (v) { put(K.fee, v); } },
+    ]],
+    ['About', [['version', 'sparkles', 'Version', null]]],
+  ];
+  var CSS =
+    '#cpSet{position:fixed;inset:0;z-index:99996;background:rgba(2,6,23,.55);display:flex;align-items:flex-end;justify-content:center}' +
+    '@media (min-width:640px){#cpSet{align-items:center;padding:16px}}' +
+    '#cpSet .st-box{width:min(520px,100%);max-height:92vh;overflow:auto;background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:18px 18px 0 0;' +
+      'padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font:14px/1.45 system-ui,-apple-system,"Inter",sans-serif;box-shadow:0 -10px 40px rgba(0,0,0,.35);box-sizing:border-box}' +
+    '@media (min-width:640px){#cpSet .st-box{border-radius:18px}}' +
+    '#cpSet .st-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}#cpSet .st-h b{font-size:1.05rem;flex:1}' +
+    '#cpSet .st-hic{width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(124,58,237,.15);color:#a78bfa}' +
+    '[data-theme="light"] #cpSet .st-hic{color:#7c3aed}' +
+    '#cpSet .st-x{background:none;border:none;color:inherit;opacity:.7;cursor:pointer;padding:6px;line-height:0}' +
+    '#cpSet .st-sec{margin:16px 0 4px;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--fg2,#94a3b8)}' +
+    '#cpSet .st-list{border:1px solid var(--border,rgba(148,163,184,.2));border-radius:14px;overflow:hidden}' +
+    '#cpSet .st-row{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-top:1px solid var(--border,rgba(148,163,184,.15));cursor:pointer;min-height:52px}' +
+    '#cpSet .st-list>:first-child{border-top:none}' +
+    '#cpSet .st-row:focus-visible{outline:2px solid #7c3aed;outline-offset:-2px}' +
+    '@media (hover:hover){#cpSet button.st-row:hover{background:rgba(148,163,184,.08)}}' +
+    '#cpSet .st-row.st-static{cursor:default}' +
+    '#cpSet .st-ic{width:30px;height:30px;flex:none;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;background:rgba(148,163,184,.12)}#cpSet .st-ic .ss-ic{margin:0}' +
+    '#cpSet .st-t{flex:1;min-width:0;display:flex;flex-direction:column}#cpSet .st-t b{font-weight:700;font-size:.92rem}' +
+    '#cpSet .st-t span{font-size:.78rem;color:var(--fg2,#94a3b8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#cpSet .st-warn{color:#f59e0b!important}' +
+    '#cpSet .st-chev{width:16px;height:16px;flex:none;opacity:.5}' +
+    '#cpSet .st-act{flex:none;font-size:.76rem;font-weight:700;padding:6px 10px;border-radius:8px;border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:inherit;cursor:pointer;font-family:inherit}' +
+    '#cpSet .st-seg-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--border,rgba(148,163,184,.15))}' +
+    '#cpSet .st-seg-row b{font-weight:700;font-size:.9rem}' +
+    '#cpSet .st-seg{display:inline-flex;gap:3px;background:rgba(148,163,184,.12);padding:3px;border-radius:10px;flex-wrap:wrap}' +
+    '#cpSet .st-seg button{border:none;background:transparent;color:inherit;font:inherit;font-size:.78rem;font-weight:700;padding:6px 11px;border-radius:8px;cursor:pointer;opacity:.7}' +
+    '#cpSet .st-seg button[aria-checked="true"]{opacity:1;background:#7c3aed;color:#fff}' +
+    '#cpSet .st-later{margin-top:14px;font-size:.74rem;color:var(--fg2,#94a3b8);text-align:center}' +
+    '.ss-set-hdr .ss-icon{width:18px;height:18px}' +
+    '@media print{.ss-set-hdr,#cpSet{display:none!important}}';
+
+  function line(r) {
+    var k = r[0], v = k === 'version' ? version() : val(k), act = r[3], extra = r[4];
+    if (k === 'account' || k === 'backup') {   // a value + a small button
+      return '<div class="st-row st-static"><span class="st-ic">' + IC(r[1]) + '</span><span class="st-t"><b>' + E(r[2]) + '</b><span>' + (k === 'backup' ? v : E(v)) + '</span></span>' +
+        '<button type="button" class="st-act" data-act="' + act + '" id="stAct_' + k + '">' + E(extra) + '</button></div>';
+    }
+    if (!act) return '<div class="st-row st-static"><span class="st-ic">' + IC(r[1]) + '</span><span class="st-t"><b>' + E(r[2]) + '</b><span>' + E(v) + '</span></span></div>';
+    return '<button type="button" class="st-row" data-act="' + act + '" id="stRow_' + k + '"><span class="st-ic">' + IC(r[1]) + '</span><span class="st-t"><b>' + E(r[2]) + '</b>' +
+      (v ? '<span>' + E(v) + '</span>' : '') + '</span>' + CHEV + '</button>';
+  }
+  function choice(c) {
+    var cur = c.get();
+    return '<div class="st-seg-row"><b>' + E(c.title) + '</b><span class="st-seg" role="radiogroup" aria-label="' + E(c.title) + '">' +
+      c.opts.map(function (o) { return '<button type="button" role="radio" data-seg="' + c.seg + '" data-v="' + o[0] + '" aria-checked="' + (o[0] === cur) + '">' + E(o[1]) + '</button>'; }).join('') + '</span></div>';
+  }
+  function draw() {
+    var box = $('cpSet'); if (!box) return;
+    var hasImport = !!window.SamsamImport;
+    box.querySelector('.st-body').innerHTML = SECTIONS.map(function (s) {
+      var rows = s[1].filter(function (r) { return r.seg ? !(r.wide && innerWidth <= 640) : r[0] !== 'import' || hasImport; });
+      return '<div class="st-sec">' + E(s[0]) + '</div><div class="st-list">' + rows.map(function (r) { return r.seg ? choice(r) : line(r); }).join('') + '</div>';
+    }).join('') + '<div class="st-later">More settings (app language, AI) will be added here.</div>';
+  }
+  function close() { var b = $('cpSet'); if (b) b.remove(); doc.removeEventListener('keydown', esc, true); }
+  function esc(e) { if (e.key === 'Escape' && !doc.querySelector('#cpAlerts,#ssPw,#cpDialog,#impBd.show')) { e.stopPropagation(); close(); } }
+  function open() {
+    var t = top(); if (t) { t.SamsamSettings.open(); return; }
+    if (!ready()) return;
+    if (!$('stCss')) { var st = doc.createElement('style'); st.id = 'stCss'; st.textContent = CSS; doc.head.appendChild(st); }
+    close();
+    var el = doc.createElement('div'); el.id = 'cpSet'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Settings');
+    el.innerHTML = '<div class="st-box"><div class="st-h"><span class="st-hic">' + GEAR + '</span><b>Settings</b><button type="button" class="st-x" aria-label="Close">' + IC('x') + '</button></div><div class="st-body"></div></div>';
+    doc.body.appendChild(el); draw();
+    el.addEventListener('click', function (e) {
+      if (e.target === el || e.target.closest('.st-x')) { close(); return; }
+      var sg = e.target.closest('[data-seg]');
+      if (sg) { var c = SECTIONS[3][1].filter(function (x) { return x.seg === sg.dataset.seg; })[0]; if (c) { c.set(sg.dataset.v); draw(); } return; }
+      var a = e.target.closest('[data-act]'); if (!a || !ACT[a.dataset.act]) return;
+      var keep = a.dataset.act === 'backup';
+      if (!keep) close();
+      ACT[a.dataset.act]();
+      if (keep) setTimeout(draw, 1500);
+    });
+    doc.addEventListener('keydown', esc, true);
+    setTimeout(function () { var f = el.querySelector('.st-row,button'); if (f) f.focus(); }, 0);
+  }
+
+  // ⚙️ in every page header, just left of ☁️ (samsam-cloud.js adds ☁️ next to each light/dark button)
+  function addGear(cloud) {
+    if (!cloud || cloud.__ssSet) return; cloud.__ssSet = true;
+    var b = doc.createElement('button'); b.type = 'button'; b.className = 'ss-theme-btn ss-set-hdr'; b.title = 'Settings'; b.setAttribute('aria-label', 'Settings'); b.innerHTML = GEAR;
+    b.addEventListener('click', function (e) { e.stopPropagation(); open(); });
+    cloud.parentNode.insertBefore(b, cloud);
+    var cs = getComputedStyle(cloud);
+    if (cs.position === 'absolute') Object.assign(b.style, { position: 'absolute', top: cs.top, right: (parseFloat(cs.right) + cloud.offsetWidth + 8) + 'px', zIndex: cs.zIndex });
+  }
+  function scan() { [].forEach.call(doc.querySelectorAll('.ss-sync-hdr'), addGear); }
+  new MutationObserver(function () { scan(); }).observe(doc.documentElement, { childList: true, subtree: true });
+  if (doc.readyState !== 'loading') scan(); else doc.addEventListener('DOMContentLoaded', scan);
+
+  // the main page opened with #set=… (from a page opened on its own) → open that editor once the portfolio is ready
+  var want = (location.hash.match(/^#set=([a-z]+)/) || [])[1];
+  if (want && ACT[want]) {
+    history.replaceState(null, '', location.pathname + location.search);
+    var tries = 0, iv = setInterval(function () { if (ready() || ++tries > 60) { clearInterval(iv); if (ready()) ACT[want](); } }, 250);
+  }
+  window.SamsamSettings = { open: open, close: close };
+})();

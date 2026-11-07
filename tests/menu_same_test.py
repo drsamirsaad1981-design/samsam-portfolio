@@ -1,22 +1,85 @@
-"""The cloud menu (☁️) is the same on every page: Telegram alerts, Import from exchange, Recover Data, last backup, Backup, Sign out."""
+"""Settings (⚙️ in every page header) and the small cloud menu (☁️).
+⚙️ is on every page and opens the same screen; inside the app it opens on the main page. Each line shows its value and opens
+the window you know (Telegram alerts, Signal thresholds, Target allocation, Baseline, Categories, Import, Recover); Exit plan
+and DCA go to the Plan page; Display choices are kept and used. A page opened on its own sends you to the main page's editor.
+☁️ now holds the sync status, last backup, Backup and Settings."""
 import sys, pathlib
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(pathlib.Path(__file__).parent)); import e2e_setup as S
-res = []
+res = []; SH = pathlib.Path(__file__).parent / 'shots'
 def check(n, c, d=''): res.append(bool(c)); print(('PASS ' if c else 'FAIL ') + n + ('' if c else f' -> {d}'), flush=True)
-WANT = ['Telegram alerts', 'Import from exchange', 'Recover Data', 'Backup', 'Sign out']
+def opn(pg):
+    pg.locator('.ss-set-hdr').first.click(); pg.wait_for_selector('#cpSet'); pg.wait_for_timeout(150)
 with sync_playwright() as p:
-    br = p.chromium.launch(); ctx = br.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True); S.setup(ctx)
-    pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg)
-    for f in ['index.html', 'accumulation.html', 'market.html', 'performance.html', 'altseason.html', 'recover.html']:
-        pg.goto(S.SITE + '/' + f); pg.wait_for_function("window.Samsam && Samsam.isReady()", timeout=20000); pg.wait_for_timeout(1200)
-        if pg.locator('.ss-sync-hdr').count(): pg.locator('.ss-sync-hdr').first.click()
-        else: pg.evaluate("document.getElementById('samsamSyncPill').click()")
-        pg.wait_for_timeout(300)
-        items = pg.evaluate("[...document.querySelectorAll('#samsamSyncMenu .samsam-btn')].map(b=>b.innerText.trim())")
-        check(f'{f}: menu = {items}', items == WANT and 'Last backup' in pg.inner_text('#samsamSyncMenu'), items)
-        pg.click('#samsamImport'); pg.wait_for_timeout(300)
-        check(f'{f}: Import opens here', pg.is_visible('#impModal')); pg.evaluate("SamsamImport.close()")
-    check('no JS errors', not errs, errs[:3]); br.close()
+    br = p.chromium.launch()
+    for vn, vp in (('phone', dict(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True, device_scale_factor=2)), ('desktop', dict(viewport={'width': 1366, 'height': 900}))):
+        ctx = br.new_context(**vp); S.setup(ctx); pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(800)
+        # every page has ⚙️ and the same small ☁️ menu
+        for f in ['index.html', 'accumulation.html', 'market.html', 'performance.html', 'altseason.html', 'recover.html']:
+            pg.goto(S.SITE + '/' + f); pg.wait_for_function("window.Samsam && Samsam.isReady()", timeout=20000); pg.wait_for_timeout(1000)
+            g = pg.locator('.ss-set-hdr')
+            if g.count():
+                check(f'{vn} {f}: ⚙️ in the header', g.first.is_visible())
+                gb, cb = g.first.bounding_box(), pg.locator('.ss-sync-hdr').first.bounding_box()
+                check(f'{vn} {f}: ⚙️ sits just left of ☁️, same height', gb['x'] < cb['x'] and abs(gb['y'] - cb['y']) < 3 and abs(gb['height'] - cb['height']) < 1, (gb, cb))
+                pg.locator('.ss-sync-hdr').first.click()
+            else:
+                pg.evaluate("document.getElementById('samsamSyncPill').click()")
+            pg.wait_for_timeout(300)
+            items = pg.evaluate("[...document.querySelectorAll('#samsamSyncMenu .samsam-btn')].map(b=>b.innerText.trim())")
+            check(f'{vn} {f}: ☁️ menu = Backup, Settings {items}', items == ['Backup', 'Settings'] and 'Last backup' in pg.inner_text('#samsamSyncMenu'), items)
+            pg.click('#samsamSettings'); pg.wait_for_selector('#cpSet')
+            rows = pg.evaluate("[...document.querySelectorAll('#cpSet .st-row b, #cpSet .st-seg-row > b')].map(b=>b.innerText)")
+            want = ['Account', 'Backup', 'Recover Data', 'Import from exchange', 'Telegram alerts', 'Signal thresholds', 'Target allocation', 'Categories', 'Baseline', 'Exit plan', 'DCA (regular buys)', 'Theme', 'Charts open on'] + ([] if vn == 'phone' else ['Coins shown as']) + ['Buying fee in', 'Version']
+            check(f'{vn} {f}: Settings lists every setting' + (' (phones always show Cards — no view choice)' if vn == 'phone' else ''), rows == want, rows)
+            pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
+            check(f'{vn} {f}: Esc closes it', not pg.query_selector('#cpSet'))
+        # values
+        pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(800)
+        opn(pg); t = pg.inner_text('#cpSet')
+        check(f'{vn}: values shown (email, last backup, alerts, signals, baseline, exit steps, version)', 'owner@example.com' in t and 'Last backup:' in t and ' on' in pg.inner_text('#stRow_alerts') and 'Reinforce' in pg.inner_text('#stRow_signal') and '2026' in pg.inner_text('#stRow_baseline') and '×' in pg.inner_text('#stRow_exit') and '2026' in t.split('Version')[-1], t[:400])
+        pg.screenshot(path=str(SH / f'settings_{vn}.png'))
+        # each line opens its window
+        for row, sel in (('alerts', '#cpAlerts'), ('signal', '#sgReinforce'), ('targets', '#tgModal'), ('baseline', '#blDate'), ('cats', '#catMgrModal'), ('import', '#impModal')):
+            if not pg.query_selector('#cpSet'): opn(pg)
+            pg.click(f'#stRow_{row}'); pg.wait_for_timeout(400)
+            check(f'{vn}: {row} → its window opens (Settings closes)', pg.is_visible(sel) and not pg.query_selector('#cpSet'), row)
+            pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
+            pg.evaluate("for (const id of ['cpAlerts']) document.getElementById(id)?.remove(); try{closeSignalEdit()}catch(e){} try{closeTargets()}catch(e){} try{closeBaselineEdit()}catch(e){} try{closeCatManager()}catch(e){} try{SamsamImport.close()}catch(e){}")
+            pg.wait_for_timeout(150)
+        # Exit plan / DCA → the Plan page (opened in the app's frame)
+        opn(pg); pg.click('#stRow_exit'); pg.wait_for_timeout(1500)
+        check(f'{vn}: Exit plan → Plan page, Exit Strategy tab', pg.evaluate("(()=>{const f=[...document.querySelectorAll('#cpViews iframe')].find(x=>x.classList.contains('on')); return !!f && /accumulation/.test(f.src) && Samsam.getState().exit.tab==='exit'})()"))
+        pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(600)
+        opn(pg); pg.click('#stRow_dca'); pg.wait_for_timeout(1500)
+        check(f'{vn}: DCA → Plan page, Accumulation tab', pg.evaluate("(()=>{const f=[...document.querySelectorAll('#cpViews iframe')].find(x=>x.classList.contains('on')); return !!f && /accumulation/.test(f.src) && Samsam.getState().exit.tab!=='exit'})()"))
+        # ⚙️ inside the Plan frame opens Settings on the main page (whole screen)
+        fr = [f for f in pg.frames if 'accumulation.html' in f.url][0]
+        g = fr.locator('.ss-set-hdr >> visible=true')
+        if g.count(): g.first.dispatch_event('click')
+        else: fr.evaluate("SamsamSettings.open()")
+        pg.wait_for_timeout(400)
+        check(f'{vn}: ⚙️ inside the app opens Settings on the main page', pg.query_selector('#cpSet') is not None and fr.query_selector('#cpSet') is None)
+        pg.keyboard.press('Escape')
+        # Display choices are kept and used
+        pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(600)
+        opn(pg)
+        pg.click('#cpSet [data-seg="range"][data-v="30d"]'); pg.click('#cpSet [data-seg="fee"][data-v="coin"]')
+        if vn == 'desktop': pg.click('#cpSet [data-seg="view"][data-v="table"]')
+        th0 = pg.evaluate("SamsamUI.currentTheme()"); other = 'light' if th0 == 'dark' else 'dark'
+        pg.click(f'#cpSet [data-seg="theme"][data-v="{other}"]'); pg.wait_for_timeout(200)
+        check(f'{vn}: theme switches from Settings', pg.evaluate("SamsamUI.currentTheme()") == other)
+        pg.keyboard.press('Escape'); pg.reload(); S.wait_ready(pg); pg.wait_for_timeout(800)
+        check(f'{vn}: charts now open on 30d', pg.evaluate("document.querySelector('.holdings-tab.active').dataset.range") == '30d')
+        if vn == 'desktop': check(f'{vn}: coins shown as Table', pg.evaluate("localStorage.getItem('samsam_view_pref')") == 'table' and pg.is_visible('#portfolioTableWrapper'))
+        pg.evaluate("openAddTx('buy','BTC')"); pg.wait_for_timeout(200)
+        check(f'{vn}: buying fee starts in the coin', pg.get_attribute('#atxFeeUnitSeg [data-u="coin"]', 'aria-checked') == 'true')
+        pg.evaluate("closeAddTx(); localStorage.removeItem('samsam_chart_range'); localStorage.setItem('samsam_view_pref','cards'); localStorage.removeItem('samsam_buyfee_unit')")
+        # a page opened on its own → the main page's editor
+        pg.goto(S.SITE + '/market.html'); pg.wait_for_function("Samsam.isReady()"); pg.wait_for_timeout(800)
+        opn(pg); pg.click('#stRow_signal'); pg.wait_for_url('**/index.html*'); S.wait_ready(pg); pg.wait_for_timeout(1500)
+        check(f'{vn}: Market page on its own → Signal thresholds opens on the main page', pg.is_visible('#sgReinforce') and '#set=' not in pg.url, pg.url)
+        check(f'{vn}: no JS errors', not errs, errs[:3]); ctx.close()
+    br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)

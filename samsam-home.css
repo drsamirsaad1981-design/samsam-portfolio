@@ -83,7 +83,9 @@
   .hm-item b { color: var(--fg); font-weight: 700; }
   @media (max-width: 480px) { .lv-upd { display: none; } }   /* phone: "Live · 02:24 AM" */
   .hm-baseline .cp-hint { margin-left: 0; } .hm-baseline .val-edit { margin-left: -2px; }
-  @media (max-width: 380px) { .brand-name { font-size: 1.25rem; } .brand .app-logo { width: 44px; height: 44px; } }
+  /* phones: room for the three header buttons (⚙️ ☁️ light/dark) next to the name */
+  @media (max-width: 430px) { .hdr-btns { gap: 6px; } .hdr-btns .ss-theme-btn { width: 34px; height: 34px; min-width: 34px; } .brand-name { font-size: 1.3rem; } }
+  @media (max-width: 380px) { .brand-name { font-size: 1.15rem; } .brand .app-logo { width: 42px; height: 42px; } .hdr-btns .ss-theme-btn { width: 32px; height: 32px; min-width: 32px; } }
 
   .btc-icon {
     width: 44px; height: 44px;

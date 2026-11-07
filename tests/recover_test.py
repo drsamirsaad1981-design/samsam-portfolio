@@ -32,7 +32,8 @@ with sync_playwright() as p:
     b.wait_for_function("Samsam.isReady() && Samsam.getState().portfolio.length > 5", timeout=10000)
     # Recover page via the sync menu link
     a.click('.ss-sync-hdr >> visible=true'); a.wait_for_timeout(200)   # the pill only shows offline / on errors; the header cloud button opens the same menu
-    check('sync menu offers "Recover data"', a.locator('#samsamSyncMenu a[href="recover.html"]').count() == 1)
+    a.click('#samsamSettings'); a.wait_for_selector('#cpSet')
+    check('Settings offers "Recover Data"', a.locator('#stRow_recover').count() == 1); a.keyboard.press('Escape')
     a.goto(SITE + '/recover.html'); a.wait_for_function("window.Samsam && Samsam.isReady()", timeout=10000)
     a.click('#loadDevice'); a.wait_for_selector('#results:not(.hidden)')
     txt = a.inner_text('#txTable'); check('finds the missing ETH buy', 'ETH' in txt and 'BUY' in txt and '0.48464' in txt, txt[:200])

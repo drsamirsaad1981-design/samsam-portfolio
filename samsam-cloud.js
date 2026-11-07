@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611072040';
-import * as Hist from './samsam-history.js?v=202611072040';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611072040';
+import * as Core from './samsam-core.js?v=202611072128';
+import * as Hist from './samsam-history.js?v=202611072128';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611072128';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -672,6 +672,7 @@ const API = {
   },
   // Settings saved in a backup (recover.html): the ones you tick are put back as they were
   settingsNow: () => settingsNow(),
+  lastBackupAt: () => (S.meta && S.meta.lastBackupAt) || null,
   restoreSettings({ info = {}, categories } = {}) {
     const d = {}; for (const k of SETTING_KEYS) if (k in info) d[k] = info[k] === undefined ? null : info[k];
     return commit((b, ref) => {
@@ -1167,18 +1168,17 @@ function renderStatus() {
       <div class="muted">Last confirmed by server: ${t}</div>
       <div class="muted">Device: ${deviceId.slice(-6)}</div>
       ${S.lastError ? `<div class="err">${UIc('alert')}${esc(S.lastError.label)}: ${esc(S.lastError.message)}</div>` : ''}
-      ${S.user && allLoaded() ? '<div class="row"><button class="samsam-btn" id="samsamAlerts" title="Telegram alerts: language, which alerts, thresholds">' + UIc('bell') + 'Telegram alerts</button></div>' : ''}
-      ${S.user && allLoaded() && window.SamsamImport ? '<div class="row"><button class="samsam-btn" id="samsamImport" title="Add transactions from an exchange file (CSV): trade history + withdraw history">' + UIc('upload') + 'Import from exchange</button></div>' : ''}
-      ${S.user && allLoaded() ? '<div class="row"><a class="samsam-btn" href="recover.html" style="text-decoration:none">' + UIc('lifebuoy') + 'Recover Data</a><button type="button" class="cp-hint" data-hint="recover" aria-label="About Recover data"></button></div>' : ''}
       ${S.user && allLoaded() ? (a => '<div class="muted" style="margin-top:10px"' + (a.old ? ' data-old="1"' : '') + '>' + UIc(a.old ? 'alert' : 'lock') + 'Last backup: <b' + (a.old ? ' style="color:#f59e0b"' : '') + '>' + a.text + '</b></div>')(backupAge()) : ''}
-      <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk" title="Download an encrypted backup (AES-256)">' + UIc('lock') + 'Backup</button><button type="button" class="cp-hint" data-hint="backup" aria-label="About the encrypted backup"></button>' : ''}
-      ${S.user ? '<button class="samsam-btn" id="samsamOut">Sign out</button>' : '<button class="samsam-btn primary" id="samsamIn">Sign in</button>'}</div>
+      <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk" title="Download an encrypted backup (AES-256)">' + UIc('lock') + 'Backup</button>' +
+        (window.SamsamSettings ? '<button class="samsam-btn" id="samsamSettings" title="Every setting: alerts, rules, data, display">' + UIc('sliders') + 'Settings</button>' : '') : ''}
+      ${S.user ? '' : '<button class="samsam-btn primary" id="samsamIn">Sign in</button>'}</div>
       ${S.lastError ? '<div class="row"><button class="samsam-btn" id="samsamClr">Dismiss error</button><button class="samsam-btn" id="samsamReload">Reload</button></div>' : ''}`;
     const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
     on('samsamBk', () => { menu.style.display = 'none'; downloadBackup().catch(e => setError(e, 'Backup')); }); on('samsamOut', () => API.signOut()); on('samsamIn', signIn);
     on('samsamClr', () => { S.lastError = null; renderStatus(); }); on('samsamReload', () => location.reload());
     on('samsamAlerts', () => { menu.style.display = 'none'; openAlertsSheet(); });
     on('samsamImport', () => { menu.style.display = 'none'; window.SamsamImport.open(); });
+    on('samsamSettings', () => { menu.style.display = 'none'; window.SamsamSettings.open(); });
   }
 }
 
