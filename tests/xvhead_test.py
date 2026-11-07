@@ -12,7 +12,7 @@ with sync_playwright() as p:
             ctx = br.new_context(**vp); S.setup(ctx); pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
             pg.goto(S.SITE + '/accumulation.html'); pg.wait_for_timeout(500)
             if pg.locator('#samsamSignInBtn').is_visible(): pg.click('#samsamSignInBtn')
-            pg.wait_for_function("window.Samsam && Samsam.isReady()")
+            pg.wait_for_function("window.Samsam && Samsam.isReady() && Samsam.getState().portfolio.some(c=>c.qty>0)")
             pg.evaluate("""(()=>{const tps=()=>[{price:0,pct:25,lock:false},{price:0,pct:50,lock:false},{price:0,pct:25,lock:false}];
               const pf=Samsam.getState().portfolio.filter(c=>c.qty>0).slice(0,3);
               return Samsam.saveExit({tab:'exit', plan: pf.map(c=>({sym:c.sym,cgId:c.cgId||'',baseQty:c.qty,startedAt:new Date().toISOString(),moonbag:true,tps:tps()}))})})()""")
