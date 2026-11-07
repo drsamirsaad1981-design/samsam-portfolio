@@ -8,7 +8,7 @@ Starts the two local servers the tests need (the site on :8000/:8001 and a fake 
 resets the fake database before each test (e2e.py), and retries a failed test once — a test that only
 passes on the retry is reported as flaky. Exit code 1 if any test failed twice.
 """
-import os, sys, time, socket, subprocess, pathlib
+import os, re, sys, time, socket, subprocess, pathlib
 
 T = pathlib.Path(__file__).resolve().parent
 SEED_FIRST = ('axis_hover', 'charts_check', 'fmt_check', 'perf_chart')   # need a long chart history in the fake database
@@ -44,7 +44,13 @@ def run(cmd, timeout):
 def one(name):
     run([sys.executable, 'e2e.py'], 180)                                   # fresh fake database + sign-in state
     if name.startswith(SEED_FIRST): run([sys.executable, 'seed_snaps.py'], 120)
-    return run([sys.executable, name], TEST_TIMEOUT)
+    code, out = run([sys.executable, name], TEST_TIMEOUT)
+    # some older tests only print "N/M passed" and exit 0 either way: a shortfall there is a failure too
+    if code == 0:
+        for m in re.finditer(r'(\d+)\s*/\s*(\d+)\s+passed', out):
+            if int(m.group(1)) < int(m.group(2)): code = 1
+        if re.search(r'^FAIL ', out, re.M): code = 1
+    return code, out
 
 
 def main():

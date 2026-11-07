@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611070235';
-import * as Hist from './samsam-history.js?v=202611070235';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611070235';
+import * as Core from './samsam-core.js?v=202611070300';
+import * as Hist from './samsam-history.js?v=202611070300';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611070300';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -194,8 +194,8 @@ function cleanAlerts(a) {
   return { ...out, isDefault: false };
 }
 function currentSignal() {
-  const s = cleanSignal(S.meta && S.meta.signal);
-  return s ? { ...s, isDefault: false } : { ...DEFAULT_SIGNAL, isDefault: true };
+  const s = cleanSignal(S.meta && S.meta.signal), smart = !(S.meta && S.meta.signalSmart === false);
+  return s ? { ...s, smart, isDefault: false } : { ...DEFAULT_SIGNAL, smart, isDefault: true };
 }
 function currentBaseline() {
   const b = cleanBaseline(S.meta && S.meta.baseline);
@@ -514,6 +514,8 @@ const API = {
     if (rules != null && !s) { const e = new Error('Sell / Convert must be lower than Reinforce (between −99% and +100%).'); setError(e, 'Signal'); return Promise.reject(e); }
     return commit((bt, ref, fs) => bt.set(ref('meta', 'info'), { signal: s ? { ...s, setAt: new Date().toISOString() } : null }, { merge: true }), 'Signal');
   },
+  // Smart signal on / off (users/{uid}/meta/info.signalSmart; missing = on)
+  setSignalSmart(on) { return commit((bt, ref) => bt.set(ref('meta', 'info'), { signalSmart: !!on }, { merge: true }), 'Signal'); },
   // Change the baseline (date + BTC price on that date). Only the comparison with BTC changes —
   // holdings, transactions and profit stay exactly as they are.
   setBaseline({ date, btcPrice, source } = {}) {

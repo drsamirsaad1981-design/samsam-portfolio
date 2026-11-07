@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611070235"></script>
-<script src="samsam-hints.js?v=202611070235"></script>
-<script src="samsam-vault.js?v=202611070235"></script>
-<script src="samsam-labels.js?v=202611070235"></script>
-<script src="samsam-taxonomy.js?v=202611070235"></script>
-<script src="samsam-coins.js?v=202611070235"></script>
-<script src="samsam-dropdown.js?v=202611070235"></script>
-<script src="samsam-add.js?v=202611070235"></script>
-<script src="samsam-chart.js?v=202611070235"></script>
-<script src="samsam-market.js?v=202611070235"></script>
+<script src="samsam-ui.js?v=202611070300"></script>
+<script src="samsam-hints.js?v=202611070300"></script>
+<script src="samsam-vault.js?v=202611070300"></script>
+<script src="samsam-labels.js?v=202611070300"></script>
+<script src="samsam-taxonomy.js?v=202611070300"></script>
+<script src="samsam-coins.js?v=202611070300"></script>
+<script src="samsam-dropdown.js?v=202611070300"></script>
+<script src="samsam-add.js?v=202611070300"></script>
+<script src="samsam-chart.js?v=202611070300"></script>
+<script src="samsam-market.js?v=202611070300"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -593,6 +593,12 @@
   .action-hold { background: rgba(148,163,184,0.08); color: var(--fg2); border: 1px solid var(--border); }
   .action-soldout { background: rgba(148,163,184,0.10); color: var(--fg2); border: 1px dashed rgba(148,163,184,0.45); }
   .action-reinforce { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid rgba(16,185,129,0.25); }
+  .action-badge.sig-smart { display: inline-flex; align-items: center; gap: 3px; }
+  .action-badge.sig-smart .ss-ic { opacity: .75; }
+  .sg-smart { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg3); cursor: pointer; }
+  .sg-smart input { margin-top: 3px; width: 18px; height: 18px; accent-color: #7c3aed; flex: none; }
+  .sg-smart b { display: flex; align-items: center; gap: 5px; font-size: .88rem; color: var(--fg); } .sg-smart i { display: block; font-style: normal; font-size: .76rem; color: var(--fg2); margin-top: 3px; line-height: 1.45; }
+  .sg-sm { color: #a78bfa; margin-top: 4px; } [data-theme="light"] .sg-sm { color: #6d28d9; }
 
   .summary-grid {
     display: grid;
@@ -1580,7 +1586,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611070235"></script>
+<script type="module" src="samsam-cloud.js?v=202611070300"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -1890,16 +1896,35 @@ function signalLabel(action, long) {
 // Avg. Buy Price as shown: "—" once the coin is sold out (the old average means nothing then)
 const avgShown = c => isSoldOut(c) ? '—' : SamsamFmt.price(c.basePrice);
 
+// Signal: the coin's price vs its Avg. Buy Price with your thresholds (Signal ✏️ — defaults −5% / −20%), and with Smart on
+// (the default) checked against the coin's 30 / 90 days vs BTC — samsam-core.js → signalFor (the Telegram alerts use the same).
+let rsMap = {};   // 30 / 90-day strength vs BTC per CoinGecko id (m/alt.json, written by GitHub with each market snapshot)
+function rsFor(c) { const id = c && (c.cgId || (SamsamCoins.CG_IDS || {})[c.sym]); return (id && rsMap[id]) || null; }
+function signalRules() { return window.Samsam && Samsam.getSignalRules ? Samsam.getSignalRules() : { reinforce: -5, sell: -20, smart: true }; }
+function signalInfo(coin, rules) {
+  const r = rules || signalRules(), chg = getCoinPct(coin);
+  if (window.Samsam && Samsam.core && Samsam.core.signalFor) return Samsam.core.signalFor({ sym: coin.sym, chg, rules: r, rs: rsFor(coin), smart: r.smart !== false });
+  const a = coin.sym === 'BTC' ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
+  return { action: a, base: a, why: null, rs: null };
+}
 function getAction(sym, perf, coin) {
   if (isSoldOut(coin)) return 'soldout';
   if (sym === 'BTC') return 'hold';
-  // Signal from the coin's price vs its Avg. Buy Price, with your thresholds (Signal ✏️ — defaults −5% / −20%)
-  const pct = coin ? getCoinPct(coin) : perf;
-  const r = window.Samsam && Samsam.getSignalRules ? Samsam.getSignalRules() : { reinforce: -5, sell: -20 };
-  if (pct < r.sell) return 'convert';          // below Sell: Sell / Convert to BTC
-  if (pct <= r.reinforce) return 'reinforce';  // Reinforce .. Sell: Reinforce
-  return 'hold';
+  if (!coin) { const r = signalRules(); return perf < r.sell ? 'convert' : perf <= r.reinforce ? 'reinforce' : 'hold'; }
+  return signalInfo(coin).action;
 }
+// the Signal badge; when Smart changed the classic signal, a small mark and the reason on hover / long-press
+function sigBadge(c, action) {
+  const i = action === 'soldout' || !c || c.sym === 'BTC' ? null : signalInfo(c);
+  const changed = i && (i.why === 'weak' || i.why === 'strong');
+  const tip = changed ? (i.why === 'weak' ? `Smart: Hold instead of Reinforce — ${c.sym} is behind BTC over 30 and 90 days` : `Smart: Hold instead of Sell / Convert — ${c.sym} is ahead of BTC over 30 and 90 days`) : '';
+  return `<span class="action-badge action-${action}${changed ? ' sig-smart' : ''}"${tip ? ` title="${SamsamCoins.esc(tip)}"` : ''}>${signalLabel(action)}${changed ? SamsamUI.ic('sparkles', { solo: true, size: 11 }) : ''}</span>`;
+}
+whenSamsam(() => {
+  const M = window.SamsamMarket; if (!M || !M.altPage) return;
+  const load = () => M.altPage().then(j => { rsMap = Samsam.core && Samsam.core.strengthMap ? Samsam.core.strengthMap(j) : {}; try { renderAll(); if (typeof coinTxSym !== 'undefined' && coinTxSym && typeof renderCoinTx === 'function') renderCoinTx(); } catch (_) {} }, () => {});
+  load(); setInterval(load, 30 * 60e3);
+});
 
 // Full-precision value for editable inputs (no rounding → editing never loses digits)
 function fmtInput(n) { n = Number(n) || 0; return parseFloat(n.toPrecision(12)).toString(); }
@@ -2168,7 +2193,7 @@ function renderTableAndStack() {
         <td class="ro-num num-r" style="color:var(--fg2)" title="${isSoldOut(c) ? 'Sold out — no coins held' : 'Calculated from Buy / Sell / Transfer'}">${avgShown(c)}</td>
         <td class="ro-num num-r" style="color:var(--fg2)">${SamsamFmt.usd(baseVal)}</td>
         <td class="num-r"><span class="${pnlCls}" style="font-size:0.82rem;font-weight:600">${SamsamFmt.usdSigned(pnl)}<br><span style="font-size:0.7rem;opacity:0.8">${pnlSign}${pnlPct.toFixed(1)}%</span></span></td>
-        <td><span class="action-badge action-${action}">${actionLabel}</span></td>
+        <td>${sigBadge(c, action)}</td>
         <td style="text-align:center;white-space:nowrap">
           <div class="row-act act3">
             <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')" title="Buy ${c.sym}">+ Buy</button>
@@ -2205,7 +2230,7 @@ function renderTableAndStack() {
           <div class="coin-metric"><label>Holdings</label><val>${SamsamCoins.holdCell(c.sym, curVal, c.qty, { align: 'left' })}</val></div>
           <div class="coin-metric"><label>${SAMSAM_LABELS.AVG_BUY_PRICE}<button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></label><val title="${avgShown(c)}">${avgShown(c)}</val></div>
           <div class="coin-metric"><label>${SAMSAM_LABELS.COST_BASIS}<button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></label><val title="${SamsamFmt.usd(baseVal)}">${SamsamFmt.usd(baseVal)}</val></div>
-          <div class="coin-metric"><label>${SAMSAM_LABELS.SIGNAL}<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button></label><val><span class="action-badge action-${action}">${actionLabel}</span></val></div>
+          <div class="coin-metric"><label>${SAMSAM_LABELS.SIGNAL}<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button></label><val>${sigBadge(c, action)}</val></div>
         </div>
         <div class="coin-card-actions card-act act3 card-actions-footer">
           <button class="btn-buy-more" onclick="openBuyMore('${c.sym}')">+ Buy</button>
@@ -3884,8 +3909,11 @@ function renderCoinTx() {
   const sigEl = document.getElementById('htxSignal');
   if (coin) {
     const act = getAction(sym, 0, coin), pct = getCoinPct(coin);
-    const lab = signalLabel(act, false);
-    const why = act === 'soldout' ? 'You hold none of this coin now' : sym === 'BTC' ? 'BTC is always Hold' : `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}% vs your Avg. Buy Price`;
+    const lab = signalLabel(act, false), si = act === 'soldout' || sym === 'BTC' ? null : signalInfo(coin);
+    const pts = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(0) + ' pts';
+    const vsB = si && si.rs ? ` · vs BTC ${pts(si.rs.d30)} (30d), ${pts(si.rs.d90)} (90d)` : '';
+    const smartWhy = !si ? '' : si.why === 'weak' ? ' — Smart: not adding, it keeps losing to BTC' : si.why === 'strong' ? ' — Smart: holding, it is beating BTC (the market dipped)' : si.why === 'confirmed' ? ' — confirmed vs BTC' : '';
+    const why = act === 'soldout' ? 'You hold none of this coin now' : sym === 'BTC' ? 'BTC is always Hold' : `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}% vs your Avg. Buy Price${vsB}${smartWhy}`;
     sigEl.innerHTML = `<span>Signal</span><span class="action-badge action-${act}">${lab}</span><span class="htx-sig-why">${why}</span>` +
       `<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button><button type="button" class="val-edit" onclick="openSignalEdit()" title="Change the Signal thresholds" aria-label="Change the Signal thresholds">${SamsamUI.icon('pencil')}</button>`;
   } else sigEl.innerHTML = '';
@@ -4224,6 +4252,8 @@ function renderHoldingsAssetList() {
       <span class="sg-num"><b aria-hidden="true">−</b><input type="text" inputmode="decimal" id="sgReinforce" placeholder="5" oninput="sgPreview()" autocomplete="off" aria-label="Reinforce: percent below your Avg. Buy Price"><i aria-hidden="true">%</i></span></label>
     <label class="bl-field"><span><span class="ss-dot" data-c="red"></span>Sell / Convert to BTC — when it is more than this much below</span>
       <span class="sg-num"><b aria-hidden="true">−</b><input type="text" inputmode="decimal" id="sgSell" placeholder="20" oninput="sgPreview()" autocomplete="off" aria-label="Sell / Convert: percent below your Avg. Buy Price"><i aria-hidden="true">%</i></span></label>
+    <label class="sg-smart"><input type="checkbox" id="sgSmart" onchange="sgPreview()"><span><b><span data-ic="sparkles"></span>Smart check vs BTC</b>
+      <i>Also looks at the coin's last 30 and 90 days vs BTC: no Reinforce for a coin that keeps losing to BTC (15+ points behind on both), no Sell / Convert for one that is beating BTC on both — those stay Hold.</i></span></label>
     <div class="bl-prev" id="sgPrev" aria-live="polite"></div>
     <div class="bl-acts"><button type="button" onclick="closeSignalEdit()">Cancel</button><button type="button" class="bl-save" id="sgSave" onclick="saveSignalEdit()">Save</button></div>
     <button type="button" class="bl-reset" id="sgReset" onclick="sgUseDefault()">Use the defaults (−5% / −20%)</button>
@@ -4345,6 +4375,7 @@ function openSignalEdit() {
   const r = Samsam.getSignalRules();
   document.getElementById('sgReinforce').value = sgShow(r.reinforce); document.getElementById('sgSell').value = sgShow(r.sell);
   document.getElementById('sgReset').style.display = r.isDefault ? 'none' : '';
+  document.getElementById('sgSmart').checked = r.smart !== false;
   document.getElementById('sgModal').classList.add('show'); sgPreview();
   setTimeout(() => document.getElementById('sgReinforce').focus(), 30);
   document.addEventListener('keydown', sgKey, true);
@@ -4358,15 +4389,20 @@ function sgPreview() {
   const v = sgRead(), box = document.getElementById('sgPrev'), save = document.getElementById('sgSave');
   save.disabled = !v.ok;
   if (!v.ok) { box.innerHTML = '<span style="color:#f87171">' + SamsamUI.ic('alert') + 'Sell / Convert must be further below than Reinforce (e.g. 5 and 20), up to 99.</span>'; return; }
-  const n = { hold: 0, reinforce: 0, convert: 0 };
-  portfolio.forEach(c => { if (isSoldOut(c)) return; if (c.sym === 'BTC') { n.hold++; return; } const p = getCoinPct(c); n[p < v.sell ? 'convert' : p <= v.reinforce ? 'reinforce' : 'hold']++; });
+  const n = { hold: 0, reinforce: 0, convert: 0 }, smart = document.getElementById('sgSmart').checked; let changed = 0;
+  portfolio.forEach(c => { if (isSoldOut(c)) return; if (c.sym === 'BTC') { n.hold++; return; } const i = signalInfo(c, { reinforce: v.reinforce, sell: v.sell, smart }); n[i.action]++; if (i.why === 'weak' || i.why === 'strong') changed++; });
   const f = x => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x) + '%';
-  box.innerHTML = `<div>${SamsamUI.dot('grey')}Hold: above ${f(v.reinforce)} — <b>${n.hold}</b> coins</div><div>${SamsamUI.dot('green')}Reinforce: ${f(v.reinforce)} to ${f(v.sell)} — <b>${n.reinforce}</b> coins</div><div>${SamsamUI.dot('red')}Sell / Convert: below ${f(v.sell)} — <b>${n.convert}</b> coins</div>`;
+  box.innerHTML = `<div>${SamsamUI.dot('grey')}Hold: above ${f(v.reinforce)} — <b>${n.hold}</b> coins</div><div>${SamsamUI.dot('green')}Reinforce: ${f(v.reinforce)} to ${f(v.sell)} — <b>${n.reinforce}</b> coins</div><div>${SamsamUI.dot('red')}Sell / Convert: below ${f(v.sell)} — <b>${n.convert}</b> coins</div>` + (smart ? `<div class="sg-sm">${SamsamUI.ic('sparkles')}Smart keeps <b>${changed}</b> coin${changed === 1 ? '' : 's'} on Hold</div>` : '');
 }
 async function saveSignalEdit() {
   const v = sgRead(); if (!v.ok) return;
   const btn = document.getElementById('sgSave'); btn.disabled = true;
-  try { await Samsam.setSignalRules(v.reinforce === -5 && v.sell === -20 ? null : { reinforce: v.reinforce, sell: v.sell }); closeSignalEdit(); }
+  try {
+    await Samsam.setSignalRules(v.reinforce === -5 && v.sell === -20 ? null : { reinforce: v.reinforce, sell: v.sell });
+    const smart = document.getElementById('sgSmart').checked;
+    if (smart !== (Samsam.getSignalRules().smart !== false)) await Samsam.setSignalSmart(smart);
+    closeSignalEdit();
+  }
   catch (e) { document.getElementById('sgPrev').innerHTML = '<span style="color:#f87171">' + SamsamUI.ic('alert') + SamsamCoins.esc((e && e.message) || e) + '</span>'; }
   finally { btn.disabled = false; }
 }

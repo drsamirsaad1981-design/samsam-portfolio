@@ -255,6 +255,35 @@ export function btcPriceLookup(snaps) {
   };
 }
 
+// ── Signal (Hold / Reinforce / Sell / Convert) ────────────────────────────────
+// Classic: the coin's price vs your Avg. Buy Price — at or under `reinforce` % → Reinforce, under `sell` % → Sell / Convert.
+// Smart (on by default): the classic signal checked against how the coin did vs BTC over 30 and 90 days
+// (rs = { d30, d90 } = the coin's % change minus BTC's, in points). It only stops two kinds of wrong signal:
+//   Reinforce on a coin that keeps losing to BTC (behind by WEAK points or more on both)  → Hold, don't add to it
+//   Sell / Convert on a coin that is beating BTC on both                                    → Hold, it's the market's dip
+// Without 30 / 90-day data for the coin, the classic signal stands.
+export const SMART_WEAK = 15;
+export function signalFor({ sym, chg, rules, rs = null, smart = true }) {
+  const r = rules || { reinforce: -5, sell: -20 };
+  const base = sym === 'BTC' ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
+  const ok = smart && sym !== 'BTC' && rs && Number.isFinite(rs.d30) && Number.isFinite(rs.d90);
+  if (!ok) return { action: base, base, why: null, rs: rs || null };
+  const weak = rs.d30 <= -SMART_WEAK && rs.d90 <= -SMART_WEAK, strong = rs.d30 > 0 && rs.d90 > 0;
+  if (base === 'reinforce' && weak) return { action: 'hold', base, why: 'weak', rs };
+  if (base === 'convert' && strong) return { action: 'hold', base, why: 'strong', rs };
+  return { action: base, base, why: base !== 'hold' && (weak || strong) ? 'confirmed' : null, rs };
+}
+// 30 / 90-day strength vs BTC for every coin, from the Altcoin Season file (m/alt.json: top 100 + the app's other coins)
+export function strengthMap(alt) {
+  const out = {}, b = alt && alt.btc;
+  if (!b || !Number.isFinite(b[1]) || !Number.isFinite(b[2])) return out;
+  const put = (id, p) => { if (id && Array.isArray(p) && Number.isFinite(p[1]) && Number.isFinite(p[2])) out[id] = { d30: p[1] - b[1], d90: p[2] - b[2], c30: p[1], c90: p[2] }; };
+  (alt.coins || []).forEach(c => put(c.id, c.p));
+  Object.entries(alt.mine || {}).forEach(([id, p]) => put(id, p));
+  out.__btc = { c30: b[1], c90: b[2] };
+  return out;
+}
+
 // ── Accumulation plan: Overall Progress ──────────────────────────────────────
 // Average of each coin's own completion, capped at 100%: a coin past its target counts as 100% and its extra
 // amount never makes up for coins still below target. Only coins with a target above 0 count.

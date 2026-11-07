@@ -1,6 +1,7 @@
 // Telegram alerts (tools/alerts-core.mjs): the numbers, each alert once, quiet hours, the brief / weekly timing,
 // English + Arabic, and text Telegram accepts (HTML with only <b> <i> <code>, every & < > escaped).
 import { summarize, evaluate, settings, priceSeries, brief } from '../tools/alerts-core.mjs';
+import { signalFor, strengthMap } from '../samsam-core.js';
 let pass = 0, fail = 0;
 const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' -> ' + JSON.stringify(d).slice(0, 300))); };
 const H = 3600e3, DAY = 24 * H;
@@ -116,6 +117,28 @@ r = evaluate(s, mo, st, cfg, T0 + 3 * H);
 check('market data 5 h old → a data warning', r.messages.some(x => x.key === 'health-market' && /5 h/.test(x.text)), r.messages.map(m => m.key));
 r = evaluate(s, mo, r.state, cfg, T0 + 3.5 * H);
 check('…once that day', !r.messages.some(x => x.key === 'health-market'));
+
+// Smart signal (samsam-core.js → signalFor), the same in the app and here
+const R = { reinforce: -5, sell: -20 };
+check('smart: Reinforce on a coin behind BTC on 30d and 90d → Hold (weak)', (x => x.action === 'hold' && x.base === 'reinforce' && x.why === 'weak')(signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: -20, d90: -30 } })));
+check('smart: Sell / Convert on a coin ahead of BTC on both → Hold (strong)', (x => x.action === 'hold' && x.base === 'convert' && x.why === 'strong')(signalFor({ sym: 'SEI', chg: -25, rules: R, rs: { d30: 5, d90: 2 } })));
+check('smart: Sell / Convert on a weak coin → stays, confirmed', (x => x.action === 'convert' && x.why === 'confirmed')(signalFor({ sym: 'SEI', chg: -25, rules: R, rs: { d30: -20, d90: -30 } })));
+check('smart: mixed (30d behind, 90d ahead) → the classic signal', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: -20, d90: 5 } }).action === 'reinforce');
+check('smart: no 30 / 90-day data → the classic signal', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: null }).action === 'reinforce');
+check('smart off → the classic signal', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: -20, d90: -30 }, smart: false }).action === 'reinforce');
+check('BTC is always Hold', signalFor({ sym: 'BTC', chg: -40, rules: R, rs: { d30: -50, d90: -50 } }).action === 'hold');
+const sm = strengthMap({ btc: [1, -10, 20], coins: [{ id: 'sei', p: [0, -30, -5] }], mine: { kava: [0, 5, 30] } });
+check('strength map: points vs BTC from the Altcoin Season file', sm.sei.d30 === -20 && sm.sei.d90 === -25 && sm.kava.d30 === 15 && sm.kava.d90 === 10, sm);
+// in the alerts: SEI −16.7% (Reinforce) but far behind BTC → Hold, with the reason in the alert
+const mS = mk(); mS.altPage = { ethbtc: [[1, 0.03]], btc: [0, 0, 0], coins: [{ id: 'sei', p: [0, -30, -40] }] };
+const sS = summarize(user(), mS, T0);
+check('alerts use Smart: SEI Reinforce → Hold (behind BTC)', sS.signal.SEI === 'hold' && sS.coins.find(c => c.sym === 'SEI').why === 'weak', sS.signal);
+const r1 = evaluate(summarize(user(), mk(), T0), mk(), {}, cfg, T0).state;
+const r2 = evaluate(sS, mS, { ...r1, sigMode: r1.sigMode }, cfg, T0 + 1800e3);
+check('signal turned by Smart → a signal alert with the vs BTC points', r2.messages.some(x => x.key === 'sig-SEI' && /vs BTC −30 pts \(30d\)/.test(x.text) && /Smart: not adding/.test(x.text)), r2.messages.map(m => m.text));
+const u3 = user({ signal: { reinforce: -2, sell: -30 } });
+const r3 = evaluate(summarize(u3, mk(), T0), mk(), r1, cfg, T0 + 1800e3);
+check('you change the thresholds → no flood of signal alerts (memory starts again)', !r3.messages.some(x => x.key.startsWith('sig-')) && r3.state.sigMode !== r1.sigMode, r3.messages.map(m => m.key));
 
 // every message ever made here is Telegram-safe
 const all = [b, ba, mv.text, sg.text];

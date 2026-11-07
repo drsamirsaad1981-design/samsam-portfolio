@@ -47,6 +47,7 @@ const W = {
     marketData: 'Market data', etfData: 'ETF flows', priceData: 'Price history', ok: 'Data back to normal', none: 'none', coins: 'coins',
     quietNote: 'held during quiet hours', welcome: 'Alerts are on. You will get the morning brief every day, the weekly report on Friday, and an alert whenever something important happens.',
     noData: 'no history yet', in7: '7 days', beatBtc: (a, n) => `${a} of ${n} coins beat BTC`,
+    vsBtc30: (a, b) => `vs BTC ${a} pts (30d) · ${b} pts (90d)`, smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
   },
   ar: {
     brief: 'ملخص الصباح', weekly: 'التقرير الأسبوعي', today: 'اليوم', week: 'هذا الأسبوع', profit: 'إجمالي الربح', vsBtc: 'مقارنة بالاحتفاظ بـ BTC',
@@ -63,6 +64,7 @@ const W = {
     marketData: 'بيانات السوق', etfData: 'تدفقات ETF', priceData: 'سجل الأسعار', ok: 'البيانات عادت طبيعية', none: 'لا شيء', coins: 'عملة',
     quietNote: 'أُجّل خلال ساعات الهدوء', welcome: 'التنبيهات تعمل. سيصلك ملخص الصباح يوميًا، والتقرير الأسبوعي يوم الجمعة، وتنبيه عند حدوث أي شيء مهم.',
     noData: 'لا يوجد سجل بعد', in7: '7 أيام', beatBtc: (a, n) => `${a} من ${n} عملة تفوقت على BTC`,
+    vsBtc30: (a, b) => `مقارنة بـ BTC ${a} نقطة (30 يوم) · ${b} نقطة (90 يوم)`, smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
   },
 };
 
@@ -131,13 +133,17 @@ export function summarize(user, market, now = Date.now()) {
   let cp = 0, bp = 0, cb = 0, beat = 0, alts = 0;
   for (const c of pf) { const v = vs[c.sym]; if (!v) continue; const k = c.qty * c.basePrice; cp += v.coinPct * k / 100; bp += v.btcPct * k / 100; cb += k; if (c.sym !== 'BTC') { alts++; if (v.pct > 0) beat++; } }
   // signals (the app's rule: price vs your average buy price; BTC is always Hold)
+  // (the app's rule, samsam-core.js → signalFor: price vs your average buy price, Smart-checked vs BTC over 30 / 90 days)
   const rule = meta.signal && isFinite(meta.signal.reinforce) && isFinite(meta.signal.sell) ? meta.signal : DEFAULT_SIGNAL;
+  const smart = meta.signalSmart !== false, rsMap = C.strengthMap(market.altPage);
   const signal = {}, coinRows = [];
   for (const c of pf) {
     const chg = c.basePrice > 0 ? (c.currentPrice / c.basePrice - 1) * 100 : 0;
-    signal[c.sym] = c.sym === 'BTC' ? 'hold' : chg < rule.sell ? 'sell' : chg <= rule.reinforce ? 'reinforce' : 'hold';
-    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7 });
+    const si = C.signalFor({ sym: c.sym, chg, rules: rule, rs: info[c.sym].id ? rsMap[info[c.sym].id] : null, smart });
+    signal[c.sym] = si.action === 'convert' ? 'sell' : si.action;
+    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs });
   }
+  const sigMode = JSON.stringify({ r: rule.reinforce, s: rule.sell, smart });
   const counts = { reinforce: 0, sell: 0, hold: 0 }; Object.values(signal).forEach(s => counts[s]++);
   // accumulation plan
   const held = Object.fromEntries(pf.map(c => [c.sym.toUpperCase(), c.qty]));
@@ -166,7 +172,7 @@ export function summarize(user, market, now = Date.now()) {
   return {
     value, cost, total, invested, pctTotal: invested > 0 ? total / invested * 100 : 0,
     ch24: value24 > 0 ? (value / value24 - 1) * 100 : null, d24: value - value24, ch7: value7 > 0 ? (value / value7 - 1) * 100 : null, d7: value - value7,
-    vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, counts, plan, prog, tps, macro, btcNow,
+    vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, sigMode, counts, plan, prog, tps, macro, btcNow,
     btc24: btcRow ? btcRow.ch24 : null, btc7: btcRow ? btcRow.ch7 : null,
   };
 }
@@ -237,11 +243,14 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
   // 2. signals that changed
   if (cfg.signals) {
     const names = { reinforce: t.reinforce, sell: t.sell, hold: t.hold }, icon = { reinforce: '🟢', sell: '🔴', hold: '⚪' };
+    const reset = st.sigMode !== sum.sigMode; st.sigMode = sum.sigMode;   // you changed the thresholds or Smart: start again, silently
     for (const c of sum.coins) {
       const now1 = sum.signal[c.sym], was = st.sig[c.sym];
-      if (first || !was) { st.sig[c.sym] = now1; continue; }
+      if (first || !was || reset) { st.sig[c.sym] = now1; continue; }
       if (was === now1) continue;
-      const text = `${icon[now1]} <b>${t.sig(esc(c.sym))}</b>\n${names[was]} → <b>${names[now1]}</b>\n${usd(c.price)} · ${pct(c.chg, 1)} ${t.vsAvg} ${usd(c.avg)}\n${t.holding}: ${usd(c.value)}`;
+      const pts = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(0);
+      const vsB = c.rs ? `\n${t.vsBtc30(pts(c.rs.d30), pts(c.rs.d90))}${c.why === 'weak' ? ' · ' + t.smartWeak : c.why === 'strong' ? ' · ' + t.smartStrong : ''}` : '';
+      const text = `${icon[now1]} <b>${t.sig(esc(c.sym))}</b>\n${names[was]} → <b>${names[now1]}</b>\n${usd(c.price)} · ${pct(c.chg, 1)} ${t.vsAvg} ${usd(c.avg)}${vsB}\n${t.holding}: ${usd(c.value)}`;
       if (push({ key: 'sig-' + c.sym, text, buttons: [[btn(t.coinBtn(c.sym), 'index.html#holdings/' + encodeURIComponent(c.sym))]] })) st.sig[c.sym] = now1;
     }
     for (const s of Object.keys(st.sig)) if (!sum.signal[s]) delete st.sig[s];
