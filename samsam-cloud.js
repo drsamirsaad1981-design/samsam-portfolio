@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611071214';
-import * as Hist from './samsam-history.js?v=202611071214';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071214';
+import * as Core from './samsam-core.js?v=202611071251';
+import * as Hist from './samsam-history.js?v=202611071251';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071251';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -1152,7 +1152,7 @@ function openAlertsSheet() {
     ${sw('plan', 'Plan targets', 'A coin reaches its Accumulation Plan target')}
     ${sw('tp', 'Take-profit levels', 'A coin reaches TP1 / TP2 / TP3 of your exit plan')}
     ${sw('macro', 'Exit levels', 'BTC dominance, USDT dominance, ETH/BTC at your exit targets')}
-    ${sw('drift', 'Allocation drift', 'A group moves outside your target allocation band')}
+    ${sw('drift', 'Allocation drift', 'A category moves outside your target allocation band')}
     ${sw('sentiment', 'Market extremes', 'Extreme Fear / Greed, Altcoin / Bitcoin Season')}
     ${sw('etf', 'Big ETF days', 'BTC or ETH spot ETFs move at least', sel('etfMin', [250, 500, 1000, 2000], v => v >= 1000 ? '$' + v / 1000 + 'B' : '$' + v + 'M'))}
     ${sw('health', 'Data warnings', 'A price or market source stops updating')}

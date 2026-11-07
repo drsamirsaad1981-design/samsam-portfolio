@@ -15,7 +15,7 @@ with sync_playwright() as p:
         check(f'{name}: category card on Holdings ({t})', 'All Coins' in t and total in t and n_all==pg.evaluate("Samsam.getState().portfolio.length"), (t,n_all))
         pg.click('#hovCatPicker .sdd-btn'); pg.wait_for_timeout(300)
         names=pg.evaluate("[...document.querySelectorAll('.sdd-panel.show .sdd-opt > span:not(.sdd-ico):not(.sdd-sub)')].map(l=>l.innerText.trim())")
-        check(f'{name}: same 9 categories as main page', names[:10]==['All Coins','Layer 1 Blockchains','Layer 2 Blockchains','AI & DePIN','Layer 0 & Interoperability','Oracles & Middleware','DeFi & RWA','Meme & Utility Tokens','Launchpad','Web3 & Gaming'], names)
+        check(f'{name}: same 10 categories as main page', names[:11]==['All Coins','Bitcoin','Layer 1 Blockchains','Layer 2 Blockchains','AI & DePIN','Layer 0 & Interoperability','Oracles & Middleware','DeFi & RWA','Meme & Utility Tokens','Launchpad','Web3 & Gaming'], names)
         vis=pg.evaluate("(()=>{const p=document.querySelector('.sdd-panel.show'); const r=p.getBoundingClientRect(); const el=document.elementFromPoint(r.left+r.width/2, r.top+40); return [p.classList.contains('sheet'), p.contains(el)]})()")
         check(f'{name}: list shows above the Holdings screen {vis}', vis[1] and (vis[0] if name=='mobile' else not vis[0]), vis)
         pg.screenshot(path=str(SH/f'hov_cat_{name}_open.png'))

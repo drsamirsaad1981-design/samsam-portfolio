@@ -3,11 +3,11 @@ from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(pathlib.Path(__file__).parent)); import e2e_setup as S
 SITE='http://127.0.0.1:8000'; SH=pathlib.Path(__file__).parent/'shots'; res=[]
 def check(n,c,d=''): res.append(bool(c)); print(('PASS ' if c else 'FAIL ')+n+('' if c else f' -> {d}'), flush=True)
-MAP={'ai':['TAO','NEAR','ICP','RENDER','WLD'],'layer1':['BTC','ETH','SOL','SUI','APT','SEI','AVAX','KAS','HBAR','VET','XDC','FLR','NIGHT','KAVA','CRO','XPL','MON','MOVR','GLMR','GRAM'],
+MAP={'btc':['BTC'],'ai':['TAO','NEAR','ICP','RENDER','WLD'],'layer1':['ETH','SOL','SUI','APT','SEI','AVAX','KAS','HBAR','VET','XDC','FLR','NIGHT','KAVA','CRO','XPL','MON','MOVR','GLMR','GRAM'],
  'layer2':['ARB','OP','STRK','POL','MNT'],'layer0':['DOT','ATOM','KSM','QNT'],'oracle':['LINK','PYTH','AVAIL'],'defi':['ONDO','JUP'],'launchpad':['PONS'],'web3':['ENS'],'meme':['DOGE','VTHO']}
 EXP={s:k for k,v in MAP.items() for s in v}
 for s in ('BNB','TEST','NOFEED'): EXP[s]='layer1'   # not in the master list: keep their saved (valid) category
-LABELS=['AI & DePIN','Layer 1 Blockchains','Layer 2 Blockchains','Layer 0 & Interoperability','Oracles & Middleware','DeFi & RWA','Launchpad','Web3 & Gaming','Meme & Utility Tokens','Other']
+LABELS=['Bitcoin','AI & DePIN','Layer 1 Blockchains','Layer 2 Blockchains','Layer 0 & Interoperability','Oracles & Middleware','DeFi & RWA','Launchpad','Web3 & Gaming','Meme & Utility Tokens','Other']
 with sync_playwright() as p:
     br=p.chromium.launch()
     for name,vp in (('desktop',dict(viewport={'width':1440,'height':900})),('mobile',dict(viewport={'width':390,'height':844},is_mobile=True,has_touch=True))):
@@ -23,12 +23,12 @@ with sync_playwright() as p:
             check(f'cloud: saved categories updated ({len(saved)} coins)', not bad, bad[:6])
         pg.click('#catPicker .sdd-btn'); pg.wait_for_timeout(250)
         labs=pg.evaluate("[...document.querySelectorAll('.sdd-panel.show .sdd-opt > span:not(.sdd-ico):not(.sdd-sub)')].map(l=>l.innerText.trim())"); pg.keyboard.press('Escape')
-        check(f'{name}: category picker uses the 9 categories {labs[1:]}', labs[0]=='All Coins' and all(l in LABELS for l in labs[1:-1]) and labs[-1]=='Manage Categories', labs)
+        check(f'{name}: category picker uses the 10 categories {labs[1:]}', labs[0]=='All Coins' and all(l in LABELS for l in labs[1:-1]) and labs[-1]=='Manage Categories', labs)
         tot=pg.evaluate("(() => { const p=Samsam.getState().portfolio; const by={}; p.forEach(c=>by[c.cat]=(by[c.cat]||0)+c.qty*c.currentPrice); return [Object.values(by).reduce((a,b)=>a+b,0), p.reduce((a,c)=>a+c.qty*c.currentPrice,0)]; })()")
         check(f'{name}: category totals add up to the portfolio', abs(tot[0]-tot[1])<1e-6, tot)
         pg.evaluate("applyView('table')"); pg.wait_for_timeout(300)
         tags=pg.evaluate("""[...document.querySelectorAll('#tableBody tr')].map(r=>[(r.querySelector('.btn-buy-more').getAttribute('onclick').match(/'([^']+)'/)||[])[1], (r.querySelector('.cat-tag')||{}).textContent])""")
-        lab=dict(zip(['ai','layer1','layer2','layer0','oracle','defi','launchpad','web3','meme','other'],LABELS))
+        lab=dict(zip(['btc','ai','layer1','layer2','layer0','oracle','defi','launchpad','web3','meme','other'],LABELS))
         bt=[(s,t) for s,t in tags if t!=lab[EXP.get(s,'other')]]
         check(f'{name}: table category tags', tags and not bt, bt[:5])
         pg.evaluate("applyView('cards')"); pg.wait_for_timeout(300)
@@ -50,7 +50,7 @@ with sync_playwright() as p:
         check(f'{name}: neighbouring slices never share a colour', all(a!=b for a,b in adj))
         pg.click('#hovCatPicker .sdd-btn'); pg.wait_for_timeout(300)   # categories live in the Category card now
         txt=pg.evaluate("document.body.innerText")
-        check(f'{name}: allocation legend shows new labels', 'Layer 1 Blockchains' in txt and 'Bitcoin\n' not in txt and 'Infrastructure' not in txt)
+        check(f'{name}: allocation legend shows new labels', 'Layer 1 Blockchains' in txt and 'Infrastructure' not in txt)
         if name=='desktop': pg.screenshot(path=str(SH/'tax_alloc.png'), full_page=False)
         pg.goto(SITE+'/performance.html'); pg.wait_for_function("Samsam.isReady()"); pg.wait_for_timeout(1800)
         pg.click('#perfCatPicker .sdd-btn'); pg.wait_for_timeout(300)

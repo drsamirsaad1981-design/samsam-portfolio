@@ -22,8 +22,8 @@ with sync_playwright() as p:
         check(f'{name}: lists All Coins + categories with values ({panel["n"]})', panel['n']>=10 and all('$' in o for o in panel['opts']), panel['opts'])
         pg.screenshot(path=str(SH/f'catpicker_{name}_open.png'))
         names=pg.evaluate("[...document.querySelectorAll('.sdd-panel.show .sdd-opt > span:not(.sdd-ico):not(.sdd-sub)')].map(l=>l.innerText.trim())")
-        want=['All Coins','Layer 1 Blockchains','Layer 2 Blockchains','AI & DePIN','Layer 0 & Interoperability','Oracles & Middleware','DeFi & RWA','Meme & Utility Tokens','Launchpad','Web3 & Gaming']
-        check(f'{name}: all 9 categories listed in order', names[:10]==want, names)
+        want=['All Coins','Bitcoin','Layer 1 Blockchains','Layer 2 Blockchains','AI & DePIN','Layer 0 & Interoperability','Oracles & Middleware','DeFi & RWA','Meme & Utility Tokens','Launchpad','Web3 & Gaming']
+        check(f'{name}: all 10 categories listed in order (Bitcoin first)', names[:11]==want, names)
         fit=pg.evaluate("(()=>{const p=document.querySelector('.sdd-panel.show'), l=p.querySelector('.sdd-list'), r=p.getBoundingClientRect(); return [r.top>=0, r.bottom<=innerHeight+1, l.scrollHeight<=l.clientHeight+1 || getComputedStyle(l).overflowY==='auto']})()")
         check(f'{name}: list fits on screen (scrolls if needed) {fit}', all(fit), fit)
         pg.locator('.sdd-panel.show .sdd-opt:has-text("Layer 0 & Interoperability")').click(); pg.wait_for_timeout(120)

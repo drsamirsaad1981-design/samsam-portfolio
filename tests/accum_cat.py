@@ -15,7 +15,7 @@ with sync_playwright() as p:
         check(f'{name}: category card shows All Coins ({t})', 'All Coins' in t)
         pg.click('#catPicker .sdd-btn'); pg.wait_for_timeout(300)
         names=pg.evaluate("[...document.querySelectorAll('.sdd-panel.show .sdd-opt > span:not(.sdd-ico):not(.sdd-sub)')].map(l=>l.innerText.trim())")
-        check(f'{name}: same 9 categories as main page', names[:10]==['All Coins','Layer 1 Blockchains','Layer 2 Blockchains','AI & DePIN','Layer 0 & Interoperability','Oracles & Middleware','DeFi & RWA','Meme & Utility Tokens','Launchpad','Web3 & Gaming'], names)
+        check(f'{name}: same 10 categories as main page', names[:11]==['All Coins','Bitcoin','Layer 1 Blockchains','Layer 2 Blockchains','AI & DePIN','Layer 0 & Interoperability','Oracles & Middleware','DeFi & RWA','Meme & Utility Tokens','Launchpad','Web3 & Gaming'], names)
         if name=='mobile': check('mobile: bottom sheet', pg.evaluate("document.querySelector('.sdd-panel.show').classList.contains('sheet')"))
         pg.screenshot(path=str(SH/f'accum_cat_{name}_open.png'))
         pg.locator('.sdd-panel.show .sdd-opt:has-text("Layer 0 & Interoperability")').click(); pg.wait_for_timeout(150)

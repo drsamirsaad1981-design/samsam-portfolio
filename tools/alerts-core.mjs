@@ -48,8 +48,8 @@ const W = {
     quietNote: 'held during quiet hours', welcome: 'Alerts are on. You will get the morning brief every day, the weekly report on Friday, and an alert whenever something important happens.',
     noData: 'no history yet', in7: '7 days', beatBtc: (a, n) => `${a} of ${n} coins beat BTC`,
     vsBtc30: (a, b) => `vs BTC ${a} pts (30d) · ${b} pts (90d)`,
-    allocation: 'Allocation', onTarget: (a, n) => `${a} of ${n} groups on target`, driftT: n => `Allocation off target · ${n}`, nowW: 'now', targetW: 'target', ptsW: 'pts',
-    trim: v => `To get back: trim about ${v}, or add to the other groups`, add: v => `To get back: add about ${v}`, allocBtn: 'Open Allocation', smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
+    allocation: 'Allocation', onTarget: (a, n) => `${a} of ${n} categories on target`, driftT: n => `Allocation off target · ${n}`, nowW: 'now', targetW: 'target', ptsW: 'pts',
+    trim: v => `To get back: trim about ${v}, or add to the other categories`, add: v => `To get back: add about ${v}`, allocBtn: 'Open Allocation', smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
   },
   ar: {
     brief: 'ملخص الصباح', weekly: 'التقرير الأسبوعي', today: 'اليوم', week: 'هذا الأسبوع', profit: 'إجمالي الربح', vsBtc: 'مقارنة بالاحتفاظ بـ BTC',
@@ -67,8 +67,8 @@ const W = {
     quietNote: 'أُجّل خلال ساعات الهدوء', welcome: 'التنبيهات تعمل. سيصلك ملخص الصباح يوميًا، والتقرير الأسبوعي يوم الجمعة، وتنبيه عند حدوث أي شيء مهم.',
     noData: 'لا يوجد سجل بعد', in7: '7 أيام', beatBtc: (a, n) => `${a} من ${n} عملة تفوقت على BTC`,
     vsBtc30: (a, b) => `مقارنة بـ BTC ${a} نقطة (30 يوم) · ${b} نقطة (90 يوم)`,
-    allocation: 'التوزيع', onTarget: (a, n) => `${a} من ${n} مجموعات على الهدف`, driftT: n => `خروج عن التوزيع المستهدف · ${n}`, nowW: 'الآن', targetW: 'الهدف', ptsW: 'نقطة',
-    trim: v => `للعودة: خفّض حوالي ${v}، أو أضف للمجموعات الأخرى`, add: v => `للعودة: أضف حوالي ${v}`, allocBtn: 'افتح التوزيع', smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
+    allocation: 'التوزيع', onTarget: (a, n) => `${a} من ${n} فئات على الهدف`, driftT: n => `خروج عن التوزيع المستهدف · ${n}`, nowW: 'الآن', targetW: 'الهدف', ptsW: 'نقطة',
+    trim: v => `للعودة: خفّض حوالي ${v}، أو أضف للفئات الأخرى`, add: v => `للعودة: أضف حوالي ${v}`, allocBtn: 'افتح التوزيع', smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
   },
 };
 

@@ -18,16 +18,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-ui.js?v=202611071214"></script>
-<script src="samsam-hints.js?v=202611071214"></script>
-<script src="samsam-vault.js?v=202611071214"></script>
-<script src="samsam-labels.js?v=202611071214"></script>
-<script src="samsam-taxonomy.js?v=202611071214"></script>
-<script src="samsam-coins.js?v=202611071214"></script>
-<script src="samsam-dropdown.js?v=202611071214"></script>
-<script src="samsam-add.js?v=202611071214"></script>
-<script src="samsam-chart.js?v=202611071214"></script>
-<script src="samsam-market.js?v=202611071214"></script>
+<script src="samsam-ui.js?v=202611071251"></script>
+<script src="samsam-hints.js?v=202611071251"></script>
+<script src="samsam-vault.js?v=202611071251"></script>
+<script src="samsam-labels.js?v=202611071251"></script>
+<script src="samsam-taxonomy.js?v=202611071251"></script>
+<script src="samsam-coins.js?v=202611071251"></script>
+<script src="samsam-dropdown.js?v=202611071251"></script>
+<script src="samsam-add.js?v=202611071251"></script>
+<script src="samsam-chart.js?v=202611071251"></script>
+<script src="samsam-market.js?v=202611071251"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -1586,7 +1586,7 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611071214"></script>
+<script type="module" src="samsam-cloud.js?v=202611071251"></script>
 <script>
 const COIN_COLORS = SamsamCoins.COLORS;   // shared: samsam-coins.js
 
@@ -4131,8 +4131,8 @@ function tgGroups() {
   portfolio.forEach(c => { const v = c.qty * c.currentPrice; if (v > 0) { const g = Samsam.core.groupOf(c); out[g] = (out[g] || 0) + v; } });
   return out;
 }
-const tgLabel = g => g === 'btc' ? 'Bitcoin' : SamsamTaxonomy.label(g);
-const tgColor = g => g === 'btc' ? '#f7931a' : SamsamTaxonomy.color(g);
+const tgLabel = g => SamsamTaxonomy.label(g);   // Bitcoin is a category like the others (renamed in Manage Categories too)
+const tgColor = g => SamsamTaxonomy.color(g);
 let tgMode = 'cash', tgCash = 500;
 try { tgMode = localStorage.getItem('samsam_rb_mode') === 'full' ? 'full' : 'cash'; tgCash = Math.max(0, +localStorage.getItem('samsam_rb_cash') || 500); } catch (_) {}
 // coins to use in a group: to buy — Reinforce first, never Sell / Convert; to trim — Sell / Convert first, then the biggest
@@ -4149,7 +4149,7 @@ function renderHovTargets() {
   const t = Samsam.getTargets ? Samsam.getTargets() : null, ic = n => SamsamUI.ic(n, { solo: true, size: 16 });
   if (!t) {
     box.innerHTML = `<div class="tg-h"><span class="tg-ic">${ic('target')}</span><b>Target allocation</b></div>
-      <div class="tg-empty"><p>Set the share you want for Bitcoin and for each category — see how far you are from it, and exactly what to buy (or trim) to get back.</p>
+      <div class="tg-empty"><p>Set the share you want for each category (Bitcoin included) — see how far you are from it, and exactly what to buy (or trim) to get back.</p>
       <button type="button" class="tg-go" onclick="openTargets()">${ic('target')}Set my targets</button></div>`;
     return;
   }
@@ -4166,16 +4166,16 @@ function renderHovTargets() {
   if (tgMode === 'cash') {
     const list = plan.groups.filter(g => g.add >= 1).sort((a, b) => b.add - a.add);
     acts = list.length ? list.map(g => { const coins = tgCoins(g.key, true);
-      return `<div class="tg-act"><span class="tg-dot" style="background:${tgColor(g.key)}"></span><span class="tg-n">${esc(tgLabel(g.key))}<span>${coins.length ? esc(coins.join(' · ')) : 'no coin in this group yet — pick one to add'}</span></span><span class="tg-amt buy">+${usd(g.add)}</span></div>`; }).join('')
+      return `<div class="tg-act"><span class="tg-dot" style="background:${tgColor(g.key)}"></span><span class="tg-n">${esc(tgLabel(g.key))}<span>${coins.length ? esc(coins.join(' · ')) : 'no coin in this category yet — pick one to add'}</span></span><span class="tg-amt buy">+${usd(g.add)}</span></div>`; }).join('')
       : '<div class="tg-note">Type an amount to see where it should go.</div>';
   } else {
     const list = plan.groups.filter(g => Math.abs(g.full) >= 1 && g.state !== 'ok').sort((a, b) => Math.abs(b.full) - Math.abs(a.full));
     acts = list.length ? list.map(g => { const buy = g.full > 0, coins = tgCoins(g.key, buy);
-      return `<div class="tg-act"><span class="tg-dot" style="background:${tgColor(g.key)}"></span><span class="tg-n">${buy ? 'Buy' : 'Trim'} ${esc(tgLabel(g.key))}<span>${coins.length ? esc(coins.join(' · ')) : 'no coin in this group yet — pick one to add'}</span></span><span class="tg-amt ${buy ? 'buy' : 'sell'}">${buy ? '+' : '−'}${usd(Math.abs(g.full))}</span></div>`; }).join('')
+      return `<div class="tg-act"><span class="tg-dot" style="background:${tgColor(g.key)}"></span><span class="tg-n">${buy ? 'Buy' : 'Trim'} ${esc(tgLabel(g.key))}<span>${coins.length ? esc(coins.join(' · ')) : 'no coin in this category yet — pick one to add'}</span></span><span class="tg-amt ${buy ? 'buy' : 'sell'}">${buy ? '+' : '−'}${usd(Math.abs(g.full))}</span></div>`; }).join('')
       : `<div class="tg-note">${ic('checkCircle')} Every group is inside your ±${t.band} band — nothing to do.</div>`;
   }
   box.innerHTML = `<div class="tg-h"><span class="tg-ic">${ic('target')}</span><b>Target allocation</b><button type="button" class="tg-edit" onclick="openTargets()">${SamsamUI.ic('pencil', { solo: true, size: 13 })}Edit</button></div>
-    <div class="tg-sub"><b>${plan.onTarget} of ${plan.count}</b> groups on target · band ±${t.band} pts · Bitcoin is its own group</div>
+    <div class="tg-sub"><b>${plan.onTarget} of ${plan.count}</b> categories on target · band ±${t.band} pts</div>
     <div class="tg-rows">${rows}</div>
     <div class="tg-rb"><div class="tg-rb-h"><b>Rebalance</b><span class="tg-seg" role="group" aria-label="Rebalance with"><button type="button" data-m="cash" aria-pressed="${tgMode === 'cash'}">New money</button><button type="button" data-m="full" aria-pressed="${tgMode === 'full'}">Full rebalance</button></span></div>
       ${tgMode === 'cash' ? `<div class="tg-cash">Invest <label>$<input type="text" inputmode="decimal" id="tgCash" value="${tgCash}" aria-label="Amount to invest"></label> without selling anything</div>` : '<div class="tg-cash">Buy and trim so every group is on target (your total stays the same)</div>'}
@@ -4203,18 +4203,18 @@ function openTargets() {
   document.getElementById('tgModal')?.remove();
   const t = Samsam.getTargets(), now = tgGroups(), total = Object.values(now).reduce((a, b) => a + b, 0), esc = SamsamCoins.esc;
   const keys = [...new Set(['btc', ...Object.keys(now).sort((a, b) => now[b] - now[a]), ...Object.keys((t && t.cats) || {})])];
-  const all = ['btc', ...SamsamTaxonomy.ORDER, ...SamsamTaxonomy.customs().map(c => c.key), 'other'];
+  const all = [...new Set(['btc', ...SamsamTaxonomy.ORDER, ...SamsamTaxonomy.customs().map(c => c.key), 'other'])].filter(k => !SamsamTaxonomy.isRemoved(k));
   const el = document.createElement('div'); el.className = 'bl-overlay show'; el.id = 'tgModal'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'tgTitle');
   const row = k => `<div class="tge-row" data-g="${esc(k)}"><span class="tg-dot" style="background:${tgColor(k)}"></span><span class="tg-n">${esc(tgLabel(k))}<span>now ${(total > 0 ? (now[k] || 0) / total * 100 : 0).toFixed(1)}%</span></span>
       <span class="tge-in"><input type="text" inputmode="decimal" value="${t && t.cats[k] ? +t.cats[k].pct : ''}" placeholder="0" aria-label="${esc(tgLabel(k))} target %"><i>%</i></span>
       ${now[k] ? '<span style="width:30px"></span>' : `<button type="button" class="tge-x" aria-label="Remove ${esc(tgLabel(k))}">${SamsamUI.ic('x', { solo: true, size: 15 })}</button>`}</div>`;
   el.innerHTML = `<div class="bl-card">
     <div class="bl-head"><span style="color:var(--accent)">${SamsamUI.ic('target', { solo: true, size: 22 })}</span><h3 id="tgTitle">Target allocation</h3><button type="button" class="bl-x" aria-label="Close">×</button></div>
-    <p class="bl-lead">The share you want for each group. Bitcoin is its own group; the others are your categories. They must add up to 100%.</p>
+    <p class="bl-lead">The share you want for each category. They must add up to 100%.</p>
     <div class="tge-rows">${keys.map(row).join('')}</div>
-    <div class="tge-tools"><select id="tgAdd" aria-label="Add a group"><option value="">+ Add a group</option>${all.filter(k => !keys.includes(k)).map(k => `<option value="${esc(k)}">${esc(tgLabel(k))}</option>`).join('')}</select>
+    <div class="tge-tools"><select id="tgAdd" aria-label="Add a group"><option value="">+ Add a category</option>${all.filter(k => !keys.includes(k)).map(k => `<option value="${esc(k)}">${esc(tgLabel(k))}</option>`).join('')}</select>
       <button type="button" data-act="current">Use my current split</button><button type="button" data-act="clear">Clear</button></div>
-    <label class="bl-field"><span>Band — how far a group may drift before it counts as off target</span>
+    <label class="bl-field"><span>Band — how far a category may drift before it counts as off target</span>
       <select id="tgBand" style="height:40px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--fg);font:inherit;padding:0 10px">${[3, 5, 10, 15].map(b => `<option value="${b}" ${(t ? t.band : 5) === b ? 'selected' : ''}>±${b} points</option>`).join('')}</select></label>
     <div class="tge-sum" id="tgSum" aria-live="polite"></div>
     <div class="bl-acts"><button type="button" data-act="cancel">Cancel</button><button type="button" class="bl-save" data-act="save">Save</button></div>

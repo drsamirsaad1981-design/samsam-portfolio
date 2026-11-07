@@ -285,8 +285,13 @@ export function strengthMap(alt) {
 }
 
 // ── Target allocation & rebalancing ─────────────────────────────────────────────
-// Groups: Bitcoin on its own ('btc'), every other coin by its category.
-export function groupOf(c) { return c && String(c.sym || '').toUpperCase() === 'BTC' ? 'btc' : (c && c.cat) || 'other'; }
+// Groups = categories (Bitcoin is its own category, 'btc'). A BTC whose saved category is still the old Layer 1 (not chosen by you)
+// counts as Bitcoin — the app moves it there in the cloud the next time it opens.
+export function groupOf(c) {
+  if (!c) return 'other';
+  if (String(c.sym || '').toUpperCase() === 'BTC' && !c.catLocked && (!c.cat || c.cat === 'layer1' || c.cat === 'other')) return 'btc';
+  return c.cat || 'other';
+}
 // values: { group: $ now }; targets: { group: { pct } } (adding up to 100); band: points a group may drift.
 // cash: new money to invest. → per group: now %, target %, drift (points), full (buy + / trim − to be exactly on
 // target, total unchanged) and add (how much of `cash` goes there: the furthest-below groups first, never a sale).

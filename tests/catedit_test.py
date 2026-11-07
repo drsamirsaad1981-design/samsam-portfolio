@@ -20,12 +20,12 @@ with sync_playwright() as p:
     bb = btn.bounding_box(); check('mobile: edit button is a 28px touch target next to the tag', bb and round(bb['width']) == 28, bb)
     btn.scroll_into_view_if_needed(); btn.click(); m.wait_for_timeout(300)
     st = m.evaluate("({open: catEditModal.classList.contains('show'), title: ceTitle.innerText, val: ceCat.value, custom: !ceCustomBox.hidden, reset: !ceReset.hidden})")
-    check('tap ✏️ opens Category — BTC with its current category, no custom box', st == {'open': True, 'title': 'Category — BTC', 'val': 'layer1', 'custom': False, 'reset': False}, st)
+    check('tap ✏️ opens Category — BTC with its current category, no custom box', st == {'open': True, 'title': 'Category — BTC', 'val': 'btc', 'custom': False, 'reset': False}, st)
     # built-in change on a listed coin sticks (not reset by the default list)
     m.select_option('#ceCat', 'defi', force=True); m.click('#catEditModal .btn-primary'); m.wait_for_timeout(900)
     check('BTC moved to DeFi & RWA (overrides default list)', cat(m, 'BTC') == 'defi' and not m.evaluate("catEditModal.classList.contains('show')"), cat(m, 'BTC'))
     m.reload(); S.wait_ready(m); m.wait_for_timeout(1500)
-    check('…still DeFi after refresh (not reset to Layer 1)', cat(m, 'BTC') == 'defi', cat(m, 'BTC'))
+    check('…still DeFi after refresh (not reset to Bitcoin)', cat(m, 'BTC') == 'defi', cat(m, 'BTC'))
     check('…and on the desktop live', d.evaluate("(Samsam.getState().portfolio.find(c=>c.sym==='BTC')||{}).cat") == 'defi')
     # Other → custom name
     m.evaluate("applyView('cards')"); m.wait_for_timeout(300)
@@ -53,12 +53,12 @@ with sync_playwright() as p:
     check('same name (any case) → same category, not a duplicate', cat(m, 'ETH') == k, cat(m, 'ETH'))
     # reset to default
     m.locator('.coins-stack .cat-edit[aria-label$=" BTC"]').click(); m.wait_for_timeout(200)
-    check('locked coin offers "Use default (Layer 1 Blockchains)"', 'Layer 1 Blockchains' in m.inner_text('#ceReset') and m.is_visible('#ceReset'))
+    check('locked coin offers "Use default (Bitcoin)"', 'Bitcoin' in m.inner_text('#ceReset') and m.is_visible('#ceReset'))
     m.click('#ceReset'); m.wait_for_timeout(900)
-    check('reset returns BTC to Layer 1', cat(m, 'BTC') == 'layer1', cat(m, 'BTC'))
+    check('reset returns BTC to Bitcoin', cat(m, 'BTC') == 'btc', cat(m, 'BTC'))
     # Escape / outside tap close
     m.locator('.coins-stack .cat-edit[aria-label$=" BTC"]').click(); m.wait_for_timeout(150); m.mouse.click(10, 10); m.wait_for_timeout(150)
-    check('tap outside closes without saving', not m.evaluate("catEditModal.classList.contains('show')") and cat(m, 'BTC') == 'layer1')
+    check('tap outside closes without saving', not m.evaluate("catEditModal.classList.contains('show')") and cat(m, 'BTC') == 'btc')
     # desktop: table row edit + other pages see custom category
     d.wait_for_timeout(800); d.evaluate("applyView('table')"); d.wait_for_timeout(300)
     check('desktop table: edit button on every row', d.evaluate("document.querySelectorAll('#tableBody .cat-edit').length === document.querySelectorAll('#tableBody tr').length"))

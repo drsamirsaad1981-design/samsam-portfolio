@@ -1,10 +1,11 @@
-// Samsam Portfolio — the one asset taxonomy (9 categories + Other) used by every page:
+// Samsam Portfolio — the one asset taxonomy (10 categories + Other) used by every page:
 // allocation donut, category filter cards, P&L breakdowns, table/card tags, Add coin form.
 // To move a coin, change its line here — the cloud copy of each coin's category follows automatically.
 (function () {
   var CATS = [
+    { key: 'btc',       label: 'Bitcoin',                    color: '#f7931a', coins: ['BTC'] },   // its own category (the portfolio is built around it)
     { key: 'ai',        label: 'AI & DePIN',                 color: '#a855f7', coins: ['TAO', 'NEAR', 'ICP', 'RENDER', 'WLD'] },
-    { key: 'layer1',    label: 'Layer 1 Blockchains',        color: '#3b82f6', coins: ['BTC', 'ETH', 'SOL', 'SUI', 'APT', 'SEI', 'AVAX', 'KAS', 'HBAR', 'VET', 'XDC', 'FLR', 'NIGHT', 'KAVA', 'CRO', 'XPL', 'MON', 'MOVR', 'GLMR', 'GRAM'] },
+    { key: 'layer1',    label: 'Layer 1 Blockchains',        color: '#3b82f6', coins: ['ETH', 'SOL', 'SUI', 'APT', 'SEI', 'AVAX', 'KAS', 'HBAR', 'VET', 'XDC', 'FLR', 'NIGHT', 'KAVA', 'CRO', 'XPL', 'MON', 'MOVR', 'GLMR', 'GRAM'] },
     { key: 'layer2',    label: 'Layer 2 Blockchains',        color: '#06b6d4', coins: ['ARB', 'OP', 'STRK', 'POL', 'MNT'] },
     { key: 'layer0',    label: 'Layer 0 & Interoperability', color: '#f59e0b', coins: ['DOT', 'ATOM', 'KSM', 'QNT'] },
     { key: 'oracle',    label: 'Oracles & Middleware',       color: '#ec4899', coins: ['LINK', 'PYTH', 'AVAIL'] },
@@ -20,7 +21,7 @@
     c.coins.forEach(function (s) { BY_SYM[s] = c.key; });
   });
   // Categories saved by older versions of the app → nearest new category (only for coins not listed above)
-  var LEGACY = { btc: 'layer1', infra: 'other', layer1: 'layer1', layer2: 'layer2', defi: 'defi', ai: 'ai', meme: 'meme' };
+  var LEGACY = { infra: 'other', layer1: 'layer1', layer2: 'layer2', defi: 'defi', ai: 'ai', meme: 'meme' };
 
   // A category you chose yourself for a coin (locked) always wins over the default list above.
   function categoryOf(sym, savedCat, locked) {
@@ -33,7 +34,7 @@
   }
   // ── Your own categories (made by choosing "Other" and typing a name) ──
   // Saved on each coin as cat = 'x-…' + catLabel; every page registers them from the cloud data.
-  var ORDER = ['layer1', 'layer2', 'ai', 'layer0', 'oracle', 'defi', 'meme', 'launchpad', 'web3'];
+  var ORDER = ['btc', 'layer1', 'layer2', 'ai', 'layer0', 'oracle', 'defi', 'meme', 'launchpad', 'web3'];
   var PALETTE = ['#14b8a6', '#e879f9', '#facc15', '#60a5fa', '#fb7185', '#a3e635', '#c084fc', '#38bdf8', '#fdba74', '#4ade80'];
   var CUSTOM = {};
   // ── Your category settings (Manage Categories, saved once in the cloud: users/{uid}/meta/categories) ──

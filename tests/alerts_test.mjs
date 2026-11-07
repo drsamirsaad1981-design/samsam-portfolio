@@ -145,7 +145,7 @@ const uT = user({ targets: { list: [{ g: 'btc', pct: 60, label: 'Bitcoin' }, { g
 const sT = summarize(uT, mk(), T0);
 check('allocation: Bitcoin 94.7% vs 60% target → off', sT.alloc && sT.alloc.groups.find(g => g.key === 'btc').state === 'off' && sT.alloc.onTarget === 0, sT.alloc);
 const fT = evaluate(sT, mk(), {}, cfg, T0);
-check('first run: no drift alert, just remembered; the brief has the Allocation line', !fT.messages.some(x => x.key.startsWith('drift-')) && /Allocation<\/b>  0 of 2 groups on target/.test(fT.messages[0].text), fT.messages[0].text);
+check('first run: no drift alert, just remembered; the brief has the Allocation line', !fT.messages.some(x => x.key.startsWith('drift-')) && /Allocation<\/b>  0 of 2 categories on target/.test(fT.messages[0].text), fT.messages[0].text);
 const st2 = { ...fT.state, drift: {} };
 const dT = evaluate(sT, mk(), st2, cfg, T0 + 1800e3);
 const dm = dT.messages.find(x => x.key === 'drift-btc');
