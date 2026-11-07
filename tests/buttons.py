@@ -28,6 +28,8 @@ with sync_playwright() as p:
             pg.locator(sel).first.locator(btn).click(); pg.wait_for_timeout(200)
             check(f'{name}: {btn} opens the form on {t} for {sym}', form(pg) == [True, t, sym], form(pg)); pg.click('#atxForm .atx-x'); pg.wait_for_timeout(150)
         pg.locator(f"{sel} .btn-more[aria-label$=' {sym}']").first.click(); pg.wait_for_selector('.cpm')
+        try: pg.wait_for_function("document.activeElement && document.activeElement.classList.contains('cpm-item')", timeout=3000)   # focus moves in a moment (slow CI machines)
+        except Exception: pass
         m = pg.evaluate("({ sheet: document.querySelector('.cpm').classList.contains('sheet'), items: [...document.querySelectorAll('.cpm .cpm-item')].map(i => i.innerText.replace(/\\s+/g,' ').replace('↗','').trim()), focus: document.activeElement.classList.contains('cpm-item'), exp: document.querySelector('" + sel + " .btn-more[aria-expanded=true]') != null, hrefs: [...document.querySelectorAll('.cpm a.cpm-item')].map(a => [a.href, a.target, a.rel]) })")
         check(f'{name}: ⋯ menu lists In, Out, History, Note, Liq Map, Prediction, Remove', m['items'] == ['Transfer In', 'Transfer Out', 'History', 'Add Note', 'Liquidation Map', 'Price Prediction', 'Remove'], m['items'])
         check(f'{name}: menu is a ' + ('bottom sheet' if name == 'mobile' else 'popover') + ', first item focused, button expanded', m['sheet'] == (name == 'mobile') and m['focus'] and m['exp'], m)
