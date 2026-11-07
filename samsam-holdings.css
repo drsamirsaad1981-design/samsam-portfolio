@@ -1,0 +1,305 @@
+/* samsam-holdings.css — the Holdings / coin screen (full-screen overlay) styles. */
+    /* ── Same design tokens as Allocation / Performance ── */
+    #holdingsOverlay {
+      --bg: #0d0d0f; --card: #1c1c1e; --bg2: #1c1c1e; --bg3: #2c2c2e; --fg: #f5f5f7; --fg2: #94a3b8;
+      --border: rgba(255,255,255,0.08); --header-bg: #1c1c1e; --shadow: 0 1px 3px rgba(0,0,0,0.30); --accent: #3b82f6;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    [data-theme="light"] #holdingsOverlay {
+      --bg: #f5f5f7; --card: #ffffff; --bg2: #ffffff; --bg3: #f2f2f7; --fg: #1a1a1e; --fg2: #6e6e73;
+      --border: rgba(0,0,0,0.08); --header-bg: #ffffff; --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .hov-container { max-width: 860px; width: 100%; margin: 0 auto;
+      padding: 20px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 40px max(var(--gut, 16px), env(safe-area-inset-left,0px)); }
+    @media (min-width: 1024px) { .hov-container { max-width: 1232px; } }   /* same 1200px content width as every page */
+    /* Nav bar: shared .cp-head (samsam-ui.js) */
+
+    /* ── Hero total ── */
+    .hov-hero { padding: 18px 16px 4px; }
+    .hov-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -6px -4px 0 0; }   /* Portfolio Value · Add (top right of the card) */
+    .hov-page-label { font-size:0.7rem;font-weight:700;text-transform: none;letter-spacing: .01em;color:var(--fg2); }
+    .hov-total { font-size:2.2rem;font-weight:700;color:var(--fg);line-height:1.15;margin-top:4px; }
+    .hov-change { font-size:0.82rem;font-weight:600;margin-top:4px; }
+    .hov-change.pos { color:var(--green); }
+    .hov-change.neg { color:var(--red); }
+
+    /* ── Chart ── */
+    .hov-chart-wrap { padding: 8px 0 0; }
+    .hov-canvas { width:100%;display:block; }
+
+    /* ── Range tabs ── */
+    .hov-tabs {
+      display: flex; gap: 4px; padding: 12px 16px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hov-tab {
+      flex:1; background:none; border:1px solid transparent;
+      font-size:0.78rem; font-weight:600; color:var(--fg2);
+      padding:6px 0; cursor:pointer; border-radius:8px;
+      font-family:inherit; transition:background .15s,color .15s,border-color .15s;
+    }
+    .hov-tab.active {
+      background: var(--bg3); color: var(--fg);
+      border-color: var(--border);
+    }
+    .hov-tab:hover:not(.active) { color:var(--fg); }
+
+    /* ── Asset list: header and rows share one column layout ── */
+    #holdingsOverlay { --hov-icon: 44px; --hov-gap: 8px;
+      --hov-cols: var(--hov-icon) minmax(0,1fr) max-content; }   /* each row's holdings take just what they need, the name + price get the rest */
+    @media (max-width: 400px) { #holdingsOverlay { --hov-icon: 40px; --hov-gap: 6px; } }
+    /* ── Asset list header ── */
+    .hov-list-header {
+      display: grid; grid-template-columns: var(--hov-cols);
+      align-items: center; gap: var(--hov-gap);
+      padding: 8px 16px;
+      font-size: 0.67rem; font-weight: 700; text-transform: none;
+      letter-spacing: .01em; color: var(--fg2);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .hov-list-header .hov-h-asset { display:flex; align-items:center; gap:6px; }
+    .hov-h-dot { opacity:.6; }
+    .hov-sort { all: unset; cursor: pointer; text-align: right; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; -webkit-tap-highlight-color: transparent; border-radius: 4px; transition: color .15s; }
+    .hov-sort:hover, .hov-sort.active { color: var(--fg); }
+    .hov-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .hov-sort i { font-style: normal; font-size: .9em; color: var(--accent); }
+
+    /* ── Asset rows ── */
+    .hov-asset-row {
+      display: grid; grid-template-columns: var(--hov-cols);
+      align-items: center; gap: var(--hov-gap);
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+      transition: background .1s; cursor: default;
+    }
+    .hov-asset-row:active { background: var(--bg3); }
+    .hov-coin-icon { width:36px;height:36px;flex-shrink:0; }
+    .hov-coin-logo { width:36px;height:36px;border-radius:50%;object-fit:cover; }
+    .hov-coin-initial {
+      width:36px;height:36px;border-radius:50%;
+      background:var(--bg3);border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:0.82rem;color:var(--fg);
+    }
+    .hov-asset-name { display:flex;flex-direction:column;gap:1px; min-width:0; }
+    .hov-sym  { font-weight:700; }   /* the symbol in front of the amount: BTC 0.03811531 */
+    /* Tap the holdings amount → coin transactions */
+    .hov-asset-holding.htx-open { cursor:pointer; border-radius:8px; padding:4px 6px; margin:-4px -6px; transition:background .15s; -webkit-tap-highlight-color:transparent; }
+    @media (hover:hover) { .hov-asset-holding.htx-open:hover { background:var(--bg3); } .hov-asset-holding.htx-open:hover .hov-go { color:#a78bfa; opacity:1; transform:translateX(2px); } }
+    .hov-asset-holding.htx-open:active { background:var(--bg3); }
+    .hov-asset-holding.htx-open:focus-visible { outline:2px solid #3b82f6; outline-offset:2px; }
+    /* the same small › as the best/worst rows: grey, purple on hover/press, always level with the two lines */
+    .hov-go { display:flex; flex-shrink:0; color:var(--fg2); opacity:.7; transition:color .15s, opacity .15s, transform .15s; }
+    .hov-asset-holding.htx-open:active .hov-go, .hov-asset-holding.htx-open:focus-visible .hov-go { color:#a78bfa; opacity:1; }
+
+    /* ── Coin transactions view ── */
+    #hovTxView { display:none; padding:0 0 calc(80px + env(safe-area-inset-bottom,0px)); }
+    #holdingsOverlay[data-view="tx"] #hovTxView { display:block; }
+    #holdingsOverlay[data-view="tx"] .hov-hero, #holdingsOverlay[data-view="tx"] .hov-chart-wrap,
+    #holdingsOverlay[data-view="tx"] .hov-tabs, #holdingsOverlay[data-view="tx"] .hov-list-header,
+    #holdingsOverlay[data-view="tx"] #hovAssetList { display:none; }
+    .htx-tabs { display:flex; gap:22px; padding:10px 16px 0; border-bottom:1px solid var(--border); }
+    .htx-tab { background:none; border:none; border-bottom:2px solid transparent; padding:10px 0 12px; font:inherit; font-size:0.95rem; font-weight:600; color:var(--fg2); cursor:pointer; }
+    .htx-tab:hover { color:var(--fg); }
+    .htx-tab.active { color:var(--fg); border-bottom-color:#3b82f6; cursor:default; }
+    .htx-filters { display:flex; gap:10px; padding:14px 16px; flex-wrap:wrap; }
+    .htx-cards { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; padding:0 16px 6px; }
+    .htx-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:14px; min-width:0; overflow-wrap:anywhere; }
+    .htx-card .htx-value { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .htx-label { font-size:0.78rem; color:var(--fg2); font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:5px; }
+    .htx-info { cursor:help; opacity:.7; font-size:0.85rem; }
+    .info-tip { position: relative; background: none; border: none; padding: 0 2px; margin: 0; color: inherit; font: inherit; font-size: .85rem; cursor: help; opacity: .75; vertical-align: 0; text-transform: none; letter-spacing: 0; }
+    .info-tip:hover, .info-tip:focus-visible, .info-tip.open { opacity: 1; }
+    .info-pop { display: none; position: absolute; z-index: 50; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: min(300px, 82vw);
+      background: #ffffff; color: #64748b; border-radius: 14px; padding: 16px 18px; box-shadow: 0 16px 40px rgba(0,0,0,.35); text-align: center;
+      font-size: .85rem; font-weight: 500; line-height: 1.45; white-space: normal; cursor: default; }
+    .info-pop b { display: block; color: #0f172a; font-size: 1.05rem; font-weight: 800; margin-bottom: 6px; }
+    .info-pop em { font-style: normal; color: #0f172a; }
+    .info-pop .info-formula { display: block; margin-top: 10px; }
+    .info-pop small { display: block; margin-top: 8px; font-size: .75rem; color: #94a3b8; }
+    [data-theme="dark"] .info-pop { background: var(--bg-card, #1e293b); color: #94a3b8; border: 1px solid var(--border-card, #334155); }
+    [data-theme="dark"] .info-pop b, [data-theme="dark"] .info-pop em { color: #f1f5f9; }
+    .info-tip:hover .info-pop, .info-tip:focus-visible .info-pop, .info-tip.open .info-pop { display: block; }
+    .info-pop.edge-r { left: auto; right: -12px; transform: none; }
+    .htx-value { font-size:1.25rem; font-weight:800; color:var(--fg); letter-spacing:-0.01em; overflow-wrap:anywhere; }
+    .htx-sub { font-size:0.8rem; font-weight:700; margin-top:4px; }
+    .htx-pos { color:var(--green); } .htx-neg { color:var(--red); } .htx-muted { color:var(--fg2); font-weight:500; }
+    .htx-list { padding:4px 0 0; }
+    .htx-date { padding:16px 16px 6px; font-size:0.8rem; color:var(--fg2); font-weight:600; }
+    .htx-row { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border); }
+    .htx-row-icon { width:30px; height:30px; flex-shrink:0; display:inline-flex; }
+    .htx-row-icon img, .htx-row-icon > div { width:30px !important; height:30px !important; }
+    .htx-row-main { flex:1; min-width:0; }
+    .htx-row-type { font-weight:700; font-size:0.92rem; color:var(--fg); }
+    .htx-row-note { font-size:0.72rem; color:var(--fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    @media (max-width: 600px) { .htx-row-note { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; overflow-wrap:anywhere; } .htx-row-main { min-width:0; flex:1 1 auto; } }
+    .htx-row-amt { text-align:right; flex-shrink:0; }
+    .htx-row-act { flex-shrink:0; margin-left:4px; }
+    .htx-act.htx-edit { border:none; background:none; color:var(--fg2); display:inline-flex; align-items:center; justify-content:center; }
+    .htx-act.htx-edit .ss-pencil { width:17px; height:17px; }
+    .htx-act.htx-edit:hover, .htx-act.htx-edit:focus-visible { color:var(--accent); }
+    .htx-act { width:34px; height:34px; border-radius:9px; border:1px solid var(--border); background:transparent; cursor:pointer; font-size:.9rem;
+      opacity:.75; display:inline-flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+    .htx-act:hover, .htx-act:focus-visible { opacity:1; border-color:var(--fg2); }
+    .htx-row-qty { font-weight:700; font-size:0.9rem; }
+    .htx-row-usd { font-size:0.8rem; color:var(--fg2); margin-top:2px; }
+    .htx-in { color:#3b82f6; } .htx-out { color:#f59e0b; }
+    [data-theme="light"] .htx-in { color:#2563eb; } [data-theme="light"] .htx-out { color:#d97706; }
+    .htx-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; vertical-align:1px; }
+    .htx-dot-buy { background:#22c55e; } .htx-dot-sell { background:#ef4444; } .htx-dot-transfer_in { background:#3b82f6; }
+    .htx-dot-transfer_out { background:#f59e0b; } .htx-dot-adjust { background:#94a3b8; }
+    .htx-fab { position:fixed; right:max(16px, env(safe-area-inset-right,0px)); bottom:calc(64px + env(safe-area-inset-bottom,0px)); z-index:10001;
+      width:56px; height:56px; border-radius:50%; border:none; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 8px 22px rgba(37,99,235,.45); cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .12s, background .15s; }
+    .htx-fab:hover { background:#1d4ed8; } .htx-fab:active { transform:scale(.94); }
+    .htx-fab:focus-visible { outline:3px solid #93c5fd; outline-offset:3px; }
+    .htx-filters { align-items:center; }
+    /* Add Transaction: shared ➕ .cp-add look (samsam-ui.js), pushed to the right of the filters */
+    .htx-add-btn { margin-left:auto; }
+    /* Phones: one row — type, coin, Add (the word "Transaction" drops on the narrowest screens) */
+    @media (max-width: 600px) {
+      .htx-filters { flex-wrap:nowrap; gap:8px; }
+      .htx-filters > div { min-width:0; flex:0 1 auto; }
+      .htx-filters .sdd-btn { padding:0 10px; gap:6px; font-size:.84rem; max-width:100%; }
+      .htx-add-btn { flex:0 0 auto; padding:0 13px 0 5px; font-size:.84rem; gap:6px; }
+    }
+    @media (max-width: 600px) { .htx-add-btn .lbl-long { display:none; } }
+    /* ➕ Add in the Holdings header (the coin's Transactions screen has its own Add Transaction) */
+    #holdingsOverlay[data-view="tx"] .hov-add-btn { display:none; }
+    /* Add Transaction form + .atx-* dialog styles: shared samsam-add.js (Edit opening uses them too) */
+    .htx-empty { padding:36px 16px; text-align:center; color:var(--fg2); font-size:0.88rem; }
+    @media (min-width: 900px) {
+      #hovTxView { max-width:none; margin:0 auto; width:100%; }
+      /* 4 equal columns that never grow with long values (a wide value can't push a card out of view) */
+      .htx-cards { grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; }
+    }
+    .hov-cg-link { text-decoration:none; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .hov-cg-link .hov-name { text-decoration: underline transparent; text-underline-offset: 3px; transition: color .15s, text-decoration-color .15s; }
+    @media (hover:hover) {
+      .hov-cg-link:hover .hov-name { color:#60a5fa; text-decoration-color: currentColor; }
+    }
+    .hov-cg-link:active .hov-name { color:#60a5fa; }
+    .hov-cg-link:focus-visible { outline:2px solid #3b82f6; outline-offset:2px; border-radius:4px; }
+    [data-theme="light"] .hov-cg-link:hover .hov-name, [data-theme="light"] .hov-cg-link:active .hov-name { color:#2563eb; }
+    .hov-asset-left { display:flex; flex-direction:column; gap:3px; min-width:0; }
+    .hov-asset-left .hov-asset-name { flex-direction:row; align-items:center; gap:2px; align-self:flex-start; max-width:100%; }
+    .hov-name { font-size:0.95rem;font-weight:700;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0; }
+    .hov-asset-price { display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:1px;white-space:nowrap;min-width:0; }   /* on a very narrow row the % drops under the price instead of being cut */
+    .hov-price { font-size:0.8rem;font-weight:600;color:var(--fg2);font-variant-numeric:tabular-nums; }
+    .hov-pct  { font-size:0.8rem;font-weight:600;font-variant-numeric:tabular-nums; }
+    .hov-cents { opacity:.55; }
+    .hov-asset-holding { display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0; }
+    .hov-hold-txt { display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0; }
+    .hov-hval { font-size:0.95rem;font-weight:700;color:var(--fg);white-space:nowrap;font-variant-numeric:tabular-nums; }
+    .hov-hqty { font-size:0.8rem;font-weight:600;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-variant-numeric:tabular-nums; }
+
+    /* ══ Card layout — matches Allocation / Performance ══════════════════════ */
+    /* Value + chart + range tabs = one card; asset list = one card */
+    .hov-card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px; }
+    .hov-cat { margin-bottom: 14px; }
+    .hov-cat .cat-picker .sdd-btn { background: var(--card); border-color: var(--border); border-left-color: var(--cat-c); border-radius: 18px; box-shadow: var(--shadow); }
+    .hov-cat .cat-picker .cp-kicker { color: var(--fg2); }
+    #holdingsOverlay[data-view="tx"] .hov-cat { display: none; }
+    .hov-hero { padding: 18px 18px 4px; }
+    .hov-chart-wrap { padding: 8px 10px 0; }
+    .hov-tabs { padding: 10px 14px 14px; border-bottom: none; }
+    .hov-tab.active { background: var(--bg3); border-color: transparent; }
+    .hov-list-header { background: transparent; padding: 14px 18px 10px; border-bottom: 1px solid var(--border); }
+    .hov-asset-row { padding: 12px 18px; }
+    #hovAssetList .hov-asset-row:last-child { border-bottom: none; }
+    @media (hover:hover) { .hov-asset-row:hover { background: var(--bg3); } }
+    #holdingsOverlay[data-view="tx"] .hov-card { display: none; }
+    /* "ASSET" sits over the coin icons (spans the icon + name columns, left-aligned) */
+    .hov-list-header .hov-h-asset { grid-column: 1 / 3; text-align: left !important; }
+    /* "HOLDINGS" lines up with the numbers, not with the › beside them */
+    .hov-list-header .hov-sort[data-sort="holdings"] { padding-right: 20px; }
+    /* room at the bottom so the floating Synced badge never covers the last row */
+    .hov-container { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+    /* Coin Transactions view inside the same column */
+    #hovTxView { padding-top: 0; }
+    .htx-tabs { padding: 0; margin-bottom: 4px; }
+    .htx-filters { padding: 14px 0; }
+    .htx-cards { padding: 0 0 6px; }
+    .htx-card { background: var(--card); border: none; border-radius: 16px; box-shadow: var(--shadow); }
+    .htx-list { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); margin-top: 14px; overflow: hidden; padding: 0; }
+    .htx-list:empty { display: none; }
+    .htx-date { padding: 14px 18px 4px; }
+    .htx-row { padding: 12px 18px; }
+    .htx-list .htx-row:last-child { border-bottom: none; }
+    .htx-empty { background: var(--card); border-radius: 18px; }
+    @media (min-width: 900px) { #hovTxView { max-width: none; } }
+  
+    /* ── Assets | Allocation switch + donut (Allocation used to be its own page) ── */
+    .hov-ptabs { margin: 2px 0 14px; }
+    #holdingsOverlay[data-mode="alloc"] .hov-value-card { display: none; }   /* Allocation: the donut instead of the total + chart */
+    .hov-mode .cp-vseg { min-width: 260px; }
+    .hov-mode-ic svg { width: 16px; height: 16px; display: block; }
+    .hov-mode .cp-vseg > button.btn-toggle-active .nav-ic { color: currentColor; }
+    .hov-alloc-card { display: none; padding: 20px; margin-bottom: 14px; justify-content: center; }
+    .hov-tgt-card { display: none; padding: 16px; margin-bottom: 14px; }
+    #holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-tgt-card { display: block; }
+    .tg-h { display: flex; align-items: center; gap: 10px; } .tg-h b { flex: 1; font-size: .98rem; }
+    .tg-ic { width: 30px; height: 30px; border-radius: 9px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: rgba(124,58,237,.15); color: #a78bfa; }
+    [data-theme="light"] .tg-ic { color: #6d28d9; background: rgba(124,58,237,.1); }
+    .tg-edit { border: 1px solid var(--border); background: var(--bg3); color: var(--fg); border-radius: 9px; padding: 6px 12px; font: inherit; font-size: .8rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+    .tg-sub { font-size: .78rem; color: var(--fg2); margin: 4px 0 10px; } .tg-sub b { color: var(--fg); }
+    .tg-empty p { margin: 6px 0 12px; font-size: .84rem; color: var(--fg2); line-height: 1.5; }
+    .tg-go { width: 100%; height: 42px; border-radius: 10px; border: 0; background: linear-gradient(135deg,#7c3aed,#6d28d9); color: #fff; font: inherit; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .tg-row { padding: 8px 0; border-top: 1px solid var(--border); } .tg-row:first-child { border-top: 0; }
+    .tg-l { display: flex; align-items: center; gap: 8px; font-size: .84rem; } .tg-l .tg-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+    .tg-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+    .tg-v { font-variant-numeric: tabular-nums; color: var(--fg2); white-space: nowrap; } .tg-v b { color: var(--fg); }
+    .tg-d { min-width: 54px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; font-size: .8rem; }
+    .tg-d.ok { color: #22c55e; } .tg-d.warn { color: #f59e0b; } .tg-d.off { color: #ef4444; }
+    [data-theme="light"] .tg-d.ok { color: #047857; } [data-theme="light"] .tg-d.warn { color: #b45309; } [data-theme="light"] .tg-d.off { color: #b91c1c; }
+    .tg-bar { position: relative; height: 7px; border-radius: 5px; background: rgba(148,163,184,.18); margin-top: 6px; overflow: visible; }
+    .tg-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; max-width: 100%; }
+    .tg-bar u { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--fg); border-radius: 1px; opacity: .85; }
+    .tg-rb { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .tg-rb-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; } .tg-rb-h b { flex: 1; font-size: .9rem; }
+    .tg-seg { display: inline-grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 10px; background: var(--bg3); border: 1px solid var(--border); }
+    .tg-seg button { border: 0; background: none; color: var(--fg2); font: inherit; font-size: .76rem; font-weight: 800; padding: 6px 10px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+    .tg-seg button[aria-pressed="true"] { background: #7c3aed; color: #fff; }
+    .tg-cash { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--fg2); margin-bottom: 8px; }
+    .tg-cash label { display: flex; align-items: center; height: 36px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg3); padding: 0 10px; color: var(--fg); font-weight: 800; }
+    .tg-cash input { width: 90px; border: 0; background: none; color: var(--fg); font: inherit; font-weight: 800; outline: none; padding: 0 0 0 3px; }
+    .tg-act { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; font-size: .84rem; border-top: 1px dashed var(--border); } .tg-act:first-of-type { border-top: 0; }
+    .tg-act .tg-n { flex: 1; min-width: 0; } .tg-act .tg-n span { display: block; font-size: .74rem; color: var(--fg2); margin-top: 1px; }
+    .tg-amt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; } .tg-amt.buy { color: #22c55e; } .tg-amt.sell { color: #ef4444; }
+    [data-theme="light"] .tg-amt.buy { color: #047857; } [data-theme="light"] .tg-amt.sell { color: #b91c1c; }
+    .tg-note { font-size: .72rem; color: var(--fg2); margin-top: 8px; line-height: 1.45; }
+    /* the targets editor */
+    .tge-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); } .tge-row:first-child { border-top: 0; }
+    .tge-row .tg-n { flex: 1; min-width: 0; font-size: .86rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tge-row .tg-n span { display: block; font-size: .72rem; font-weight: 600; color: var(--fg2); }
+    .tge-in { display: flex; align-items: center; height: 38px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg3); padding: 0 8px; } .tge-in:focus-within { border-color: #7c3aed; }
+    .tge-in input { width: 52px; border: 0; background: none; color: var(--fg); font: inherit; font-weight: 800; text-align: right; outline: none; } .tge-in i { font-style: normal; color: var(--fg2); font-weight: 700; margin-left: 2px; }
+    .tge-x { width: 30px; height: 30px; border-radius: 8px; border: 0; background: none; color: var(--fg2); cursor: pointer; line-height: 0; }
+    .tge-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+    .tge-tools button, .tge-tools select { height: 36px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-size: .78rem; font-weight: 700; padding: 0 10px; cursor: pointer; }
+    .tge-sum { border-radius: 10px; padding: 9px 12px; font-size: .84rem; font-weight: 700; background: rgba(148,163,184,.1); border: 1px solid var(--border); }
+    .tge-sum.ok { color: #22c55e; border-color: rgba(34,197,94,.4); } .tge-sum.bad { color: #f87171; border-color: rgba(239,68,68,.4); }
+    [data-theme="light"] .tge-sum.ok { color: #047857; } [data-theme="light"] .tge-sum.bad { color: #b91c1c; }
+    #holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-alloc-card { display: flex; }
+    #holdingsOverlay[data-view="tx"] .hov-ptabs { display: none; }
+    .hov-alloc-card .donut-wrap { position: relative; width: 230px; height: 230px; flex-shrink: 0; }
+    .hov-alloc-card .donut-wrap svg { width: 100%; height: 100%; display: block; }
+    .hov-alloc-card .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; text-align: center; }
+    .hov-alloc-card .donut-total { font-size: 1.02rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hov-alloc-card .donut-label { font-size: .72rem; color: var(--fg2); margin-top: 2px; line-height: 1.2; }
+    .hov-alloc-card .donut-slice { cursor: pointer; transition: opacity .15s, transform .15s; transform-origin: 100px 100px; }
+    .hov-share { display: flex; align-items: center; gap: 8px; margin-top: 5px; }   /* [bar ────── ] 17.55% */
+    .hov-share .alloc-bar-wrap { height: 5px; flex: 1; min-width: 44px; background: var(--bar-bg, var(--bg3)); border-radius: 4px; overflow: hidden; }
+    .hov-share .alloc-bar { display: block; height: 100%; border-radius: 4px; transition: width .4s; }
+    .hov-share .coin-pct { font-size: .74rem; font-weight: 700; color: var(--fg); white-space: nowrap; min-width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
+    @media (max-width: 500px) { .hov-alloc-card .donut-wrap { width: 220px; height: 220px; } .hov-mode .cp-vseg { min-width: 0; flex: 1; max-width: 340px; } }
+
+    /* ── phone: more room for the content, like CoinMarketCap — 8px sides, coin lists edge to edge with dividers ── */
+    @media (max-width: 759px) {
+      :root { --gut: 8px; }
+      body { padding-left: max(8px, env(safe-area-inset-left,0px)); padding-right: max(8px, env(safe-area-inset-right,0px)); }
+      .coin-card { padding: 12px; }
+      .hov-list-card { background: none; box-shadow: none; border-radius: 0; margin-left: -4px; margin-right: -4px; overflow: visible; }
+      .hov-list-header { padding: 10px 8px 8px; }
+      .hov-asset-row { padding: 12px 8px; }
+      .hov-hero { padding: 16px 12px 4px; }
+    }

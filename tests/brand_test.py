@@ -10,7 +10,7 @@ check('manifest icons are the new PNGs (192, 512, maskable), no photo', [i['src'
 src = {f: (ROOT / f).read_text() for f in ['index.html', 'accumulation.html', 'performance.html', 'recover.html']}
 for f, s in src.items():
     check(f'{f}: title has Cute Portfolio, no old name / photo icon', 'Cute Portfolio' in re.search(r'<title>(.*?)</title>', s).group(1) and 'icon.jpg' not in s and 'سمسم' not in s and 'apple-mobile-web-app-title" content="Cute Portfolio"' in s)
-allsrc = '\n'.join(list(src.values()) + [(ROOT / f).read_text() for f in ['samsam-cloud.js', 'samsam-vault.js', 'samsam-ui.js']])
+allsrc = '\n'.join(list(src.values()) + [(ROOT / f).read_text() for f in ['samsam-cloud.js', 'samsam-vault.js', 'samsam-ui.js', 'samsam-home.js', 'samsam-shell.js', 'samsam-edits.js']])
 native = re.findall(r'(?<![\w.])(alert|confirm|prompt)\(|window\.(alert|confirm|prompt)\(', allsrc)
 check('no browser alert/confirm/prompt left anywhere (they show the site address)', not native, native)
 check('no "Samsam Portfolio" text left for the user', not re.search(r'Samsam Portfolio|سمسم', allsrc))
