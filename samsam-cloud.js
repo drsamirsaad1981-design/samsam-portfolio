@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611071814';
-import * as Hist from './samsam-history.js?v=202611071814';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071814';
+import * as Core from './samsam-core.js?v=202611071840';
+import * as Hist from './samsam-history.js?v=202611071840';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611071840';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -648,6 +648,28 @@ const API = {
     }, 'Restore data');
   },
 
+  // Import from an exchange file: new coins first, then the transactions. Each transaction has a fixed id made from
+  // the file (order number…), so importing the same file again rewrites the same documents — never a duplicate.
+  // Firestore takes ≤ 500 writes per batch → chunks of 400.
+  importTxs({ txs = [], coins = [] } = {}) {
+    const now = new Date().toISOString();
+    const docs = [];
+    for (const c of coins) {
+      const cc = cleanCoin({ ...c, cat: c.cat || 'other' }); if (!cc.sym || S.coins.get(cc.sym) && !S.coins.get(cc.sym).removed) continue;
+      const order = Math.max(-1, ...[...S.coins.values()].map(x => x.order ?? 0)) + 1 + docs.length;
+      docs.push(['coins', safeId(cc.sym), clean({ sym: cc.sym, name: cc.name || cc.sym, cat: cc.cat || 'other', cgId: cc.cgId || null, cmcSlug: null,
+        logoUrl: cc.logoUrl || null, notes: '', isCustom: true, removed: false, removedAt: null, order, opening: { qty: 0, avg: 0 }, addedAt: now, updatedAt: now }), true]);
+    }
+    for (const t of txs) {
+      const id = 'imp_' + String(t.key || '').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
+      if (id === 'imp_') continue;
+      docs.push(['txs', safeId(id), txDoc(t.sym, t.type, t.qty, t.price, t.note || '', { date: t.date, fee: t.fee, feeUsd: t.feeUsd, netFee: t.netFee }), false]);
+    }
+    const parts = [];
+    for (let i = 0; i < docs.length; i += 400) parts.push(docs.slice(i, i + 400));
+    return parts.reduce((p, part, i) => p.then(() => commit((b, ref) => part.forEach(([col, id, d, merge]) => merge ? b.set(ref(col, id), d, { merge: true }) : b.set(ref(col, id), d)),
+      parts.length > 1 ? `Import (${i + 1}/${parts.length})` : 'Import')), Promise.resolve()).then(() => txs.length);
+  },
   // coins
   updateCoin(sym, fields) {
     fields = { ...fields };
@@ -1120,6 +1142,7 @@ function renderStatus() {
       <div class="muted">Device: ${deviceId.slice(-6)}</div>
       ${S.lastError ? `<div class="err">${UIc('alert')}${esc(S.lastError.label)}: ${esc(S.lastError.message)}</div>` : ''}
       ${S.user && allLoaded() ? '<div class="row"><button class="samsam-btn" id="samsamAlerts" title="Telegram alerts: language, which alerts, thresholds">' + UIc('bell') + 'Telegram alerts</button></div>' : ''}
+      ${S.user && allLoaded() && window.SamsamImport ? '<div class="row"><button class="samsam-btn" id="samsamImport" title="Add transactions from an exchange file (CSV): trade history + withdraw history">' + UIc('upload') + 'Import from exchange</button></div>' : ''}
       ${S.user && allLoaded() ? '<div class="row"><a class="samsam-btn" href="recover.html" style="text-decoration:none">' + UIc('lifebuoy') + 'Recover Data</a><button type="button" class="cp-hint" data-hint="recover" aria-label="About Recover data"></button></div>' : ''}
       <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk" title="Download an encrypted backup (AES-256)">' + UIc('lock') + 'Backup</button><button type="button" class="cp-hint" data-hint="backup" aria-label="About the encrypted backup"></button>' : ''}
       ${S.user ? '<button class="samsam-btn" id="samsamOut">Sign out</button>' : '<button class="samsam-btn primary" id="samsamIn">Sign in</button>'}</div>
@@ -1128,6 +1151,7 @@ function renderStatus() {
     on('samsamBk', () => { menu.style.display = 'none'; downloadBackup().catch(e => setError(e, 'Backup')); }); on('samsamOut', () => API.signOut()); on('samsamIn', signIn);
     on('samsamClr', () => { S.lastError = null; renderStatus(); }); on('samsamReload', () => location.reload());
     on('samsamAlerts', () => { menu.style.display = 'none'; openAlertsSheet(); });
+    on('samsamImport', () => { menu.style.display = 'none'; window.SamsamImport.open(); });
   }
 }
 

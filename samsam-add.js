@@ -56,6 +56,7 @@
     '.atx-field{display:block;margin-bottom:10px;font-size:.8rem;font-weight:600;color:#cbd5e1;min-width:0}' +
     '[data-theme="light"] .atx-field{color:#475569}' +
     '.atx-field small{font-weight:500;color:#94a3b8}' +
+    '.atx-imp{display:block;margin:10px auto 0;background:none;border:none;color:#3b82f6;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;padding:6px}' +
     '.atx-field>label{display:block}' +
     '.atx-feebox{display:flex;gap:6px;align-items:stretch;margin-top:5px}.atx-feebox input{margin-top:0!important;flex:1;min-width:0}' +
     '.atx-unit{display:flex;gap:3px;background:rgba(148,163,184,.12);padding:3px;border-radius:10px;flex:none}' +
@@ -177,6 +178,7 @@
       '<label class="atx-field"><span>Note <small>(optional)</small></span><input type="text" id="atxNote" maxlength="120" placeholder="e.g. from Binance, to cold wallet"></label>' +
       '<div class="atx-hint" id="atxHint"></div><div class="atx-preview" id="atxPreview"></div><div class="atx-err" id="atxErr" role="alert"></div>' +
       '<button type="submit" class="atx-save" id="atxSave">Add Transaction</button>' +
+      '<button type="button" class="atx-imp" id="atxImp" hidden onclick="closeAddTx();SamsamImport.open()">Import many from an exchange file (CSV) ›</button>' +
     '</form></div>';
 
   var HTML_MGR =
@@ -477,6 +479,7 @@
     $('atxDate').max = localDateTimeValue(new Date(Date.now() + 60e3));
     delete $('atxPrice').dataset.touched; delete $('atxDate').dataset.touched;
     setAddTxType(type || 'buy');
+    $('atxImp').hidden = !window.SamsamImport;
     setOpen($('atxBackdrop'), true);
     setTimeout(function () { focusFirst('atxForm', 'atxQty'); }, 50);
   }
