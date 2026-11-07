@@ -16,16 +16,16 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611071251"></script>
-<script src="samsam-hints.js?v=202611071251"></script>
-<script src="samsam-vault.js?v=202611071251"></script>
-<script src="samsam-labels.js?v=202611071251"></script>
-<script src="samsam-taxonomy.js?v=202611071251"></script>
-<script src="samsam-coins.js?v=202611071251"></script>
-<script src="samsam-dropdown.js?v=202611071251"></script>
-<script src="samsam-market.js?v=202611071251"></script>
-<script src="samsam-exit.js?v=202611071251"></script>
-<script src="samsam-add.js?v=202611071251"></script>
+<script src="samsam-ui.js?v=202611071347"></script>
+<script src="samsam-hints.js?v=202611071347"></script>
+<script src="samsam-vault.js?v=202611071347"></script>
+<script src="samsam-labels.js?v=202611071347"></script>
+<script src="samsam-taxonomy.js?v=202611071347"></script>
+<script src="samsam-coins.js?v=202611071347"></script>
+<script src="samsam-dropdown.js?v=202611071347"></script>
+<script src="samsam-market.js?v=202611071347"></script>
+<script src="samsam-exit.js?v=202611071347"></script>
+<script src="samsam-add.js?v=202611071347"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -98,6 +98,29 @@ body {
 .dash-card.green-card { border-color: rgba(16,185,129,.3); background: rgba(16,185,129,.05); }
 .dash-card.red-card { border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.05); }
 .dash-card.purple-card { border-color: rgba(139,92,246,.3); background: rgba(139,92,246,.05); }
+
+/* This plan vs your target allocation */
+.plan-alloc { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; }
+.plan-alloc[hidden] { display: none; }
+.pa-h { display: flex; align-items: center; gap: 10px; } .pa-h b { flex: 1; font-size: .95rem; }
+.pa-ic { width: 30px; height: 30px; border-radius: 9px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: rgba(124,58,237,.15); color: #a78bfa; }
+[data-theme="light"] .pa-ic { color: #6d28d9; background: rgba(124,58,237,.1); }
+.pa-open { font-size: .78rem; font-weight: 800; color: #a78bfa; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+[data-theme="light"] .pa-open { color: #6d28d9; }
+.pa-sub { font-size: .8rem; color: var(--fg2); margin: 6px 0 8px; line-height: 1.45; } .pa-sub b { color: var(--fg); }
+.pa-row { display: grid; grid-template-columns: 12px minmax(0,1fr) auto auto; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); font-size: .82rem; }
+.pa-row:first-child { border-top: 0; }
+.pa-dot { width: 10px; height: 10px; border-radius: 3px; }
+.pa-n { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-v { color: var(--fg2); font-variant-numeric: tabular-nums; white-space: nowrap; } .pa-v b { color: var(--fg); }
+.pa-d { min-width: 50px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pa-d.ok { color: #22c55e; } .pa-d.warn { color: #f59e0b; } .pa-d.off { color: #ef4444; }
+[data-theme="light"] .pa-d.ok { color: #047857; } [data-theme="light"] .pa-d.warn { color: #b45309; } [data-theme="light"] .pa-d.off { color: #b91c1c; }
+.pa-empty { font-size: .82rem; color: var(--fg2); margin-top: 6px; line-height: 1.5; }
+.pa-chip { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: .68rem; font-weight: 800; white-space: nowrap; vertical-align: middle; }
+.pa-chip.under { color: #22c55e; background: rgba(34,197,94,.13); } .pa-chip.over { color: #f59e0b; background: rgba(245,158,11,.14); } .pa-chip.ok { color: var(--fg2); background: rgba(148,163,184,.14); }
+[data-theme="light"] .pa-chip.under { color: #047857; } [data-theme="light"] .pa-chip.over { color: #b45309; }
+@media (max-width: 480px) { .pa-row { grid-template-columns: 12px minmax(0,1fr) auto; } .pa-row .pa-v { grid-column: 2 / 3; grid-row: 2; } .pa-row .pa-d { grid-row: 1 / 3; grid-column: 3; } }
 
 /* Overall progress bar */
 .overall-progress { margin-bottom: 20px; }
@@ -749,6 +772,9 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
+<!-- This plan vs your target allocation (Portfolio → Allocation) -->
+<div class="plan-alloc" id="planAlloc" hidden></div>
+
 <!-- Toolbar -->
 <div class="toolbar">
   <button type="button" class="cp-add" onclick="openAddModal()" title="Add any coin to your plan — even one you don't own yet"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="lbl-long"> Coin</span> to Plan</span></button>
@@ -810,7 +836,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611071251"></script>
+<script type="module" src="samsam-cloud.js?v=202611071347"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1011,7 +1037,7 @@ function catBadge(entry, idx) {
   const T = window.SamsamTaxonomy; if (!T) return '';
   const k = catOfEntry(entry), L = SamsamCoins.esc(T.label(k)), sym = entry.sym;
   return `<span class="category-badge-editable"><button type="button" class="cat-tag" style="--cat-c:${T.color(k)}" onclick="editPlanCat(${idx})" title="${L} — tap to change the category of ${sym}" aria-label="Category ${L} — change for ${sym}">${L}</button>` +
-    `<button type="button" class="cat-edit" onclick="editPlanCat(${idx})" title="Change the category of ${sym}" aria-label="Change the category of ${sym}">${SamsamUI.icon('pencil')}</button></span>`;
+    `<button type="button" class="cat-edit" onclick="editPlanCat(${idx})" title="Change the category of ${sym}" aria-label="Change the category of ${sym}">${SamsamUI.icon('pencil')}</button></span>` + paChip(entry);
 }
 function editPlanCat(idx) {
   const e = accumPlan[idx]; if (!e) return;
@@ -1308,8 +1334,57 @@ function renderDashboard() {
   document.getElementById('overallBar').style.width   = overallPct.toFixed(1) + '%';
 }
 
+// ── This plan vs your target allocation (Portfolio → Allocation) ──
+// now: your categories today; after: if every target of this plan were bought at today's prices. Each plan coin gets a chip
+// for its category today: ↓ Priority (below its target — buying here moves you toward it), ↑ Over target (wait), ✓ On target.
+let paState = null;   // { group: 'under' | 'over' | 'ok' } — for the chips; null without targets
+const paGroup = e => Samsam.core.groupOf({ sym: e.sym, cat: catOfEntry(e), catLocked: true });
+function planAllocation() {
+  const t = window.Samsam && Samsam.getTargets ? Samsam.getTargets() : null;
+  if (!t || !Samsam.core || !Samsam.core.allocationPlan) return null;
+  const now = {}, after = {};
+  portfolioCoins.forEach(c => { const v = (c.qty || 0) * (c.currentPrice || 0); if (v > 0) { const g = Samsam.core.groupOf(c); now[g] = (now[g] || 0) + v; after[g] = (after[g] || 0) + v; } });
+  let toBuy = 0;
+  accumPlan.forEach(e => { const r = calcRow(e); if (r.costToTarget > 0) { const g = paGroup(e); after[g] = (after[g] || 0) + r.costToTarget; toBuy += r.costToTarget; } });
+  return { t, now: Samsam.core.allocationPlan(now, t.cats, { band: t.band }), after: Samsam.core.allocationPlan(after, t.cats, { band: t.band }), toBuy };
+}
+function paChip(entry) {
+  if (!paState) return '';
+  const g = paGroup(entry), st = paState[g]; if (!st) return '';
+  const L = SamsamCoins.esc(SamsamTaxonomy.label(g));
+  const t = st.state === 'under' ? [`↓ Priority`, `${L} is ${st.pts} pts below your target allocation — buying ${entry.sym} moves you toward it`]
+    : st.state === 'over' ? [`↑ Over target`, `${L} is ${st.pts} pts above your target allocation — better to wait, or buy below-target categories first`]
+    : [`✓ On target`, `${L} is within your target allocation band`];
+  return `<span class="pa-chip ${st.state}" title="${t[1]}">${t[0]}</span>`;
+}
+function renderPlanAlloc() {
+  const box = document.getElementById('planAlloc'); if (!box) return;
+  const a = planAllocation(), ic = n => SamsamUI.ic(n, { solo: true, size: 16 }), esc = SamsamCoins.esc;
+  paState = null;
+  if (!a) {
+    box.hidden = !(window.Samsam && Samsam.isReady && Samsam.isReady());
+    box.innerHTML = `<div class="pa-h"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation</b><a class="pa-open" href="./index.html#allocation" target="_top">Set targets ›</a></div>
+      <div class="pa-empty">Set a target allocation (Portfolio → Allocation) to see whether finishing this plan keeps your categories where you want them, and which coins to buy first.</div>`;
+    return;
+  }
+  const band = a.t.band; paState = {};
+  a.now.groups.forEach(g => { paState[g.key] = { state: g.drift < -band ? 'under' : g.drift > band ? 'over' : 'ok', pts: Math.abs(g.drift).toFixed(1) }; });
+  const nowBy = Object.fromEntries(a.now.groups.map(g => [g.key, g]));
+  const shown = a.after.groups.filter(g => g.target > 0 || g.now >= 0.05 || (nowBy[g.key] && nowBy[g.key].now >= 0.05));
+  const okAfter = shown.filter(g => g.state === 'ok').length, okNow = shown.filter(g => (nowBy[g.key] || { state: 'ok' }).state === 'ok').length;
+  const f1 = v => v.toFixed(1) + '%', pts = v => Math.abs(v) < 0.05 ? '0.0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+  const rows = shown.map(g => { const n = nowBy[g.key] || { now: 0 };
+    return `<div class="pa-row" data-g="${esc(g.key)}"><span class="pa-dot" style="background:${SamsamTaxonomy.color(g.key)}"></span><span class="pa-n">${esc(SamsamTaxonomy.label(g.key))}</span>
+      <span class="pa-v">${f1(n.now)} → <b>${f1(g.now)}</b> · target ${f1(g.target)}</span><span class="pa-d ${g.state}" title="after the plan: points from your target">${g.state === 'ok' ? '✓ ' : ''}${pts(g.drift)}</span></div>`; }).join('');
+  box.hidden = false;
+  box.innerHTML = `<div class="pa-h"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation</b><a class="pa-open" href="./index.html#allocation" target="_top">Allocation ›</a></div>
+    <div class="pa-sub">${a.toBuy > 0 ? `If you finish this plan (<b>+${SamsamFmt.usd(a.toBuy)}</b> at today's prices): <b>${okAfter} of ${shown.length}</b> categories on target — today ${okNow} of ${shown.length}.` : `Your plan is complete — <b>${okNow} of ${shown.length}</b> categories on target.`} Today → after the plan · band ±${band} pts.</div>
+    <div class="pa-rows">${rows}</div>`;
+}
+
 function renderAll() {
   try { ensureBuyAtBases(); } catch (_) {}
+  try { renderPlanAlloc(); } catch (_) {}   // before the rows: it sets the category chips
   renderCatPicker();
   if (currentView === 'table') { renderTable(); }
   else { renderCards(); }
