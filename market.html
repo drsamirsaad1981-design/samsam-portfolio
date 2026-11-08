@@ -15,17 +15,17 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611072251"></script>
-<script src="samsam-hints.js?v=202611072251"></script>
-<script src="samsam-vault.js?v=202611072251"></script>
-<script src="samsam-labels.js?v=202611072251"></script>
-<script src="samsam-taxonomy.js?v=202611072251"></script>
-<script src="samsam-coins.js?v=202611072251"></script>
-<script src="samsam-import.js?v=202611072251"></script>
-<script src="samsam-settings.js?v=202611072251"></script>
-<script src="samsam-dropdown.js?v=202611072251"></script>
-<script src="samsam-add.js?v=202611072251"></script>
-<script src="samsam-market.js?v=202611072251"></script>
+<script src="samsam-ui.js?v=202611081024"></script>
+<script src="samsam-hints.js?v=202611081024"></script>
+<script src="samsam-vault.js?v=202611081024"></script>
+<script src="samsam-labels.js?v=202611081024"></script>
+<script src="samsam-taxonomy.js?v=202611081024"></script>
+<script src="samsam-coins.js?v=202611081024"></script>
+<script src="samsam-import.js?v=202611081024"></script>
+<script src="samsam-settings.js?v=202611081024"></script>
+<script src="samsam-dropdown.js?v=202611081024"></script>
+<script src="samsam-add.js?v=202611081024"></script>
+<script src="samsam-market.js?v=202611081024"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -510,7 +510,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611072251"></script>
+<script type="module" src="samsam-cloud.js?v=202611081024"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -934,7 +934,12 @@ function setMode(m) {
   if (m === 'pf' && was !== 'pf') { sortKey = 'val'; sortDir = 1; } else if (m !== 'pf' && sortKey === 'val') { sortKey = 'rank'; sortDir = 1; }
   if (m === 'watch') loadWatch(false); else if (m === 'pf') loadPf(false); else render();
 }
-function setFilter(f) { filter = f; shownN = 100; document.querySelectorAll('.mk-chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === f)); render(); }
+// Gainers → the biggest rise first · Losers → the biggest drop first (for the 24h / 7d you picked) · All → back to rank
+function setFilter(f) {
+  filter = f; shownN = 100;
+  if (f === 'gain') { sortKey = 'chP'; sortDir = 1; } else if (f === 'lose') { sortKey = 'chP'; sortDir = -1; } else if (sortKey === 'chP') { sortKey = mode === 'pf' ? 'val' : 'rank'; sortDir = 1; }
+  document.querySelectorAll('.mk-chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === f)); render();
+}
 function setSort(k) { shownN = 100; if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } render(); }
 
 // ── actions ──

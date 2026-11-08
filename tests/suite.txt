@@ -116,3 +116,4 @@ backup_restore_test.py
 windows_solid_test.py
 menu_same_test.py
 exit_find_test.py
+market_filter_test.py
