@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611092211';
-import * as Hist from './samsam-history.js?v=202611092211';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611092211';
+import * as Core from './samsam-core.js?v=202611092310';
+import * as Hist from './samsam-history.js?v=202611092310';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611092310';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -209,7 +209,15 @@ function cleanTargets(t) {
 export function walletKind(addr) {
   const a = String(addr || '').trim();
   if (/^0x[0-9a-fA-F]{40}$/.test(a)) return 'evm';
+  if (/^0x[0-9a-fA-F]{64}$/.test(a)) return 'sui';
   if (/^(bc1[02-9ac-hj-np-z]{11,87}|[13][1-9A-HJ-NP-Za-km-z]{25,34})$/.test(a)) return 'btc';
+  if (/^0\.0\.\d{1,12}$/.test(a)) return 'hbar';
+  if (/^kaspa:[02-9ac-hj-np-z]{61,63}$/.test(a)) return 'kas';
+  if (/^cosmos1[02-9ac-hj-np-z]{38,58}$/.test(a)) return 'atom';
+  if (/^sei1[02-9ac-hj-np-z]{38,58}$/.test(a)) return 'sei';
+  if (/^kava1[02-9ac-hj-np-z]{38,58}$/.test(a)) return 'kava';
+  if (/^(([a-z0-9_-]+\.)*[a-z0-9_-]{2,}\.near|[0-9a-f]{64})$/.test(a)) return 'near';
+  if (/^D[5-9A-HJ-NP-U][1-9A-HJ-NP-Za-km-z]{32}$/.test(a)) return 'doge';
   if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a)) return 'sol';
   return null;
 }

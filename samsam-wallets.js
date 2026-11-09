@@ -17,7 +17,8 @@
   function S() { return window.Samsam; }
   var CFG = { gap: 2500, retry: 30000, tries: 3 };   // CoinGecko's free limit: one coin lookup at a time, a pause between, wait when busy
   var CG = 'https://api.coingecko.com/api/v3/coins/';
-  var JUP = 'https://lite-api.jup.ag/tokens/v2/search?query=';   // Jupiter: what a Solana token (mint) is — up to 100 at a time
+  var JUP = 'https://lite-api.jup.ag/tokens/v2/search?query=';
+  var JUP_BAL = 'https://lite-api.jup.ag/ultra/v1/balances/';   // Jupiter: SOL + every token of a wallet   // Jupiter: what a Solana token (mint) is — up to 100 at a time
   var BTC_API = ['https://mempool.space/api/address/', 'https://blockstream.info/api/address/'];
   var SOL_RPC = ['https://solana-rpc.publicnode.com', 'https://api.mainnet-beta.solana.com'];
   var SPL = ['TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'];
@@ -31,9 +32,17 @@
     { k: 'polygon-pos', name: 'Polygon', rpc: 'https://polygon-bor-rpc.publicnode.com', id: 'polygon-ecosystem-token', syms: ['POL', 'MATIC'] },
     { k: 'avalanche', name: 'Avalanche', rpc: 'https://avalanche-c-chain-rpc.publicnode.com', id: 'avalanche-2', syms: ['AVAX'] },
   ];
-  var KIND = { btc: 'Bitcoin', sol: 'Solana', evm: 'Ethereum & EVM chains' };
+  var KIND = { btc: 'Bitcoin', sol: 'Solana', evm: 'Ethereum & EVM chains', sui: 'Sui', near: 'NEAR', hbar: 'Hedera', kas: 'Kaspa', doge: 'Dogecoin', atom: 'Cosmos', sei: 'Sei', kava: 'Kava' };
+  // networks with their own blockchain that can be read without a key: the coin, and staked coins counted with it
+  var CHAIN = {
+    sui: { id: 'sui', syms: ['SUI'] }, near: { id: 'near', syms: ['NEAR'] }, hbar: { id: 'hedera-hashgraph', syms: ['HBAR'] },
+    kas: { id: 'kaspa', syms: ['KAS'] }, doge: { id: 'dogecoin', syms: ['DOGE'] },
+    atom: { id: 'cosmos', syms: ['ATOM'], lcd: 'cosmoshub', denom: 'uatom' }, sei: { id: 'sei-network', syms: ['SEI'], lcd: 'sei', denom: 'usei' },
+    kava: { id: 'kava', syms: ['KAVA'], lcd: 'kava', denom: 'ukava' },
+  };
+  var NEAR_RPC = ['https://rpc.mainnet.fastnear.com', 'https://rpc.mainnet.near.org'];
   // coins that live on their own blockchain (not Bitcoin / Solana / EVM): never looked up, listed as "can't be checked"
-  var OWN = /^(ATOM|DOT|KSM|NEAR|APT|SUI|ICP|HBAR|TON|VET|DOGE|TAO|FIL|XPL|SEI|KAVA|XRP|ADA|TRX|XLM|ALGO|LTC|BCH|ETC|XMR|EGLD|TIA|OSMO|XTZ|EOS|ZEC|DASH|KAS|STX|MINA|FLOW|ROSE|HYPE|THETA|IOTA|NEO|QNT|AR|CKB|ONE|ZIL|RUNE|CFX|BSV|XDC|KDA|ICX|WAVES|CSPR)$/;
+  var OWN = /^(DOT|KSM|APT|ICP|TON|VET|TAO|FIL|XPL|XRP|ADA|TRX|XLM|ALGO|LTC|BCH|ETC|XMR|EGLD|TIA|OSMO|XTZ|EOS|ZEC|DASH|STX|MINA|FLOW|ROSE|HYPE|THETA|IOTA|NEO|QNT|AR|CKB|ONE|ZIL|RUNE|CFX|BSV|XDC|KDA|ICX|WAVES|CSPR)$/;
   var K = { plat: 'samsam_platforms', last: 'samsam_wal_last' };
   function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (_) { return d; } }
   function lsPut(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
@@ -92,16 +101,33 @@
   async function solWallet(w, held, plat, info) {
     var out = [], call = function (m, p) { return post(SOL_RPC, { jsonrpc: '2.0', id: 1, method: m, params: p }); };
     var sol = held.filter(function (x) { return x.cgId === 'solana' || x.sym === 'SOL'; })[0];
-    if (sol) { var b = await call('getBalance', [w.addr]); if (b.error) throw new Error('Solana'); out.push({ sym: sol.sym, q: ((b.result && b.result.value) || 0) / 1e9, where: 'Solana' }); }
-    var accts = {};   // mint → amount
-    for (var i = 0; i < SPL.length; i++) {
-      var t = await call('getTokenAccountsByOwner', [w.addr, { programId: SPL[i] }, { encoding: 'jsonParsed' }]);
-      if (t.error) throw new Error('Solana');
-      ((t.result && t.result.value) || []).forEach(function (a) {
-        var inf = a && a.account && a.account.data && a.account.data.parsed && a.account.data.parsed.info; if (!inf || !inf.mint) return;
-        var ta = inf.tokenAmount || {}; accts[inf.mint] = (accts[inf.mint] || 0) + (+(ta.uiAmountString != null ? ta.uiAmountString : ta.uiAmount) || 0);
+    var accts = {}, solQ = null;   // mint → amount
+    // 1) Jupiter: SOL and every token in one answer (made for browsers, no key)
+    try {
+      var r = await fetch(JUP_BAL + encodeURIComponent(w.addr)); if (!r.ok) throw new Error('Jupiter');
+      var j = await r.json(); if (!j || typeof j !== 'object' || Array.isArray(j) || j.error) throw new Error('Jupiter');
+      Object.keys(j).forEach(function (k) {
+        var v = j[k], q = v && v.uiAmount != null ? +v.uiAmount : NaN; if (!isFinite(q)) return;
+        if (k === 'SOL') solQ = q; else accts[k] = (accts[k] || 0) + q;
       });
+      if (solQ == null) solQ = 0;
+    } catch (_) {
+      // 2) the public Solana servers: SOL on its own, then the tokens (often refused to browsers — SOL is kept anyway)
+      var b = await call('getBalance', [w.addr]); if (b.error) throw new Error('Solana');
+      solQ = ((b.result && b.result.value) || 0) / 1e9;
+      try {
+        for (var i = 0; i < SPL.length; i++) {
+          var t = await call('getTokenAccountsByOwner', [w.addr, { programId: SPL[i] }, { encoding: 'jsonParsed' }]);
+          if (t.error) throw new Error('Solana');
+          ((t.result && t.result.value) || []).forEach(function (a) {
+            var inf = a && a.account && a.account.data && a.account.data.parsed && a.account.data.parsed.info; if (!inf || !inf.mint) return;
+            var ta = inf.tokenAmount || {}; accts[inf.mint] = (accts[inf.mint] || 0) + (+(ta.uiAmountString != null ? ta.uiAmountString : ta.uiAmount) || 0);
+          });
+        }
+      } catch (e) { info.solTokFail = true; accts = null; }
     }
+    if (sol) out.push({ sym: sol.sym, q: solQ, where: 'Solana' });
+    if (!accts) return out;
     var bySym = {}, mintSym = {};
     held.forEach(function (c) { bySym[c.sym] = c; var p = c.cgId && plat[c.cgId] && plat[c.cgId].p && plat[c.cgId].p.solana; if (p) mintSym[p[0]] = c.sym; });
     var unknown = Object.keys(accts).filter(function (m) { return !mintSym[m] && accts[m] > 0; });
@@ -142,6 +168,43 @@
     var at = function (r) { for (var i = 0; i < EVM.length; i++) if (EVM[i].name === r.where) return i; return 99; };
     return out.sort(function (a, b) { return at(a) - at(b); });   // always Ethereum, BNB Chain, Arbitrum… in that order
   }
+  async function getJ(url) { var r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+  function dec(str, d) { str = String(str || '0').replace(/^0+(?=\d)/, ''); if (!/^\d+$/.test(str)) return 0; str = str.padStart(d + 1, '0'); return Number(str.slice(0, -d) + '.' + str.slice(-d)); }
+  // one coin per network: { q (free + staked), staked }
+  async function chainWallet(w, held) {
+    var ch = CHAIN[w.kind], c = held.filter(function (x) { return x.cgId === ch.id || ch.syms.indexOf(x.sym) >= 0; })[0];
+    if (!c) return [];
+    var a = w.addr, free = 0, staked = 0;
+    if (w.kind === 'sui') {
+      var rpc = function (m, p) { return post('https://fullnode.mainnet.sui.io:443', { jsonrpc: '2.0', id: 1, method: m, params: p }); };
+      var b = await rpc('suix_getBalance', [a, '0x2::sui::SUI']); if (b.error) throw new Error('Sui');
+      free = dec(b.result && b.result.totalBalance, 9);
+      var st = await rpc('suix_getStakes', [a]);
+      ((st && st.result) || []).forEach(function (v) { (v.stakes || []).forEach(function (x) { staked += dec(x.principal, 9) + dec(x.estimatedReward, 9); }); });
+    } else if (w.kind === 'near') {
+      var n = await post(NEAR_RPC, { jsonrpc: '2.0', id: '1', method: 'query', params: { request_type: 'view_account', finality: 'final', account_id: a } });
+      if (n.error || !n.result) throw new Error('NEAR');
+      free = dec(n.result.amount, 24); staked = dec(n.result.locked, 24);
+    } else if (w.kind === 'hbar') {
+      var h = await getJ('https://mainnet-public.mirrornode.hedera.com/api/v1/accounts/' + encodeURIComponent(a));
+      free = ((h.balance && h.balance.balance) || 0) / 1e8;   // staked HBAR never leaves the balance
+    } else if (w.kind === 'kas') {
+      var k = await getJ('https://api.kaspa.org/addresses/' + encodeURIComponent(a) + '/balance'); free = (+k.balance || 0) / 1e8;
+    } else if (w.kind === 'doge') {
+      var d = await getJ('https://api.blockcypher.com/v1/doge/main/addrs/' + encodeURIComponent(a) + '/balance'); free = (+d.final_balance || 0) / 1e8;
+    } else if (ch.lcd) {   // Cosmos family: in the wallet + delegated (staked) + on its way back (unbonding)
+      var base = 'https://rest.cosmos.directory/' + ch.lcd + '/cosmos/';
+      var bal = await getJ(base + 'bank/v1beta1/balances/' + a);
+      (bal.balances || []).forEach(function (x) { if (x.denom === ch.denom) free += dec(x.amount, 6); });
+      try {
+        var dl = await getJ(base + 'staking/v1beta1/delegations/' + a);
+        (dl.delegation_responses || []).forEach(function (x) { if (x.balance && x.balance.denom === ch.denom) staked += dec(x.balance.amount, 6); });
+        var ub = await getJ(base + 'staking/v1beta1/delegators/' + a + '/unbonding_delegations');
+        (ub.unbonding_responses || []).forEach(function (x) { (x.entries || []).forEach(function (e) { staked += dec(e.balance, 6); }); });
+      } catch (_) {}
+    }
+    return [{ sym: c.sym, q: free + staked, staked: staked, where: KIND[w.kind] }];
+  }
   // CoinGecko: where each token lives (contract + decimals per chain) — remembered 90 days
   async function platforms(ids, onStep) {
     var c = lsGet(K.plat, {}), now = Date.now(), failed = [], need = ids.filter(function (id) { return !(c[id] && now - c[id].at < 90 * 864e5); });
@@ -166,7 +229,7 @@
     c.__failed = failed; return c;
   }
   function isNative(c) {
-    return c.cgId === 'bitcoin' || c.cgId === 'solana' || EVM.some(function (ch) { return c.cgId === ch.id; }) || (!c.cgId && /^(BTC|SOL|ETH|BNB|POL|MATIC|AVAX)$/.test(c.sym));
+    return c.cgId === 'bitcoin' || c.cgId === 'solana' || Object.keys(CHAIN).some(function (k) { return c.cgId === CHAIN[k].id; }) || EVM.some(function (ch) { return c.cgId === ch.id; }) || (!c.cgId && /^(BTC|SOL|ETH|BNB|POL|MATIC|AVAX)$/.test(c.sym));
   }
   function heldNow() {
     var st = S().getState() || {};
@@ -185,16 +248,16 @@
       var take = function (w, rows) {
         rows.forEach(function (r) {
           checked[r.sym] = 1; if (!(r.q > 0)) return;
-          var f = found[r.sym] || (found[r.sym] = { q: 0, where: [] });
-          f.q += r.q; var lab = w.kind === 'evm' ? (w.label ? w.label + ' · ' : '') + r.where : (w.label || KIND[w.kind]);
+          var f = found[r.sym] || (found[r.sym] = { q: 0, where: [], staked: 0 });
+          f.q += r.q; f.staked = (f.staked || 0) + (r.staked || 0); var lab = w.kind === 'evm' ? (w.label ? w.label + ' · ' : '') + r.where : (w.label || KIND[w.kind]);
           if (f.where.indexOf(lab) < 0) f.where.push(lab);
         });
       };
       var plat = lsGet(K.plat, {});
-      // 1) Bitcoin + Solana: read straight away (Solana lists its own tokens)
+      // 1) Bitcoin, Solana and the networks with their own blockchain: read straight away (Solana lists its own tokens)
       step = 'Reading balances from the blockchain…'; draw();
       await Promise.all(ws.filter(function (w) { return w.kind !== 'evm'; }).map(async function (w) {
-        try { take(w, w.kind === 'btc' ? await btcWallet(w, held) : await solWallet(w, held, plat, info)); }
+        try { take(w, w.kind === 'btc' ? await btcWallet(w, held) : w.kind === 'sol' ? await solWallet(w, held, plat, info) : await chainWallet(w, held)); }
         catch (e) { errs.push((w.label || KIND[w.kind]) + ' (' + short(w.addr) + ')'); }
       }));
       // 2) EVM: a token is read by its contract on each chain — CoinGecko says where (once, then remembered)
@@ -212,11 +275,13 @@
         }));
       }
       if (info.jupFail) errs.push('Solana token names (Jupiter)');
+      if (info.solTokFail) errs.push('Solana tokens (SOL itself was read)');
       // why a coin wasn't checked
       var why = {};
       held.forEach(function (c) {
         if (checked[c.sym]) return;
         var bs = c.cgId === 'bitcoin' || c.sym === 'BTC' ? 'btc' : c.cgId === 'solana' || c.sym === 'SOL' ? 'sol' : '';
+        Object.keys(CHAIN).forEach(function (k) { if (c.cgId === CHAIN[k].id || CHAIN[k].syms.indexOf(c.sym) >= 0) bs = k; });
         why[c.sym] = bs && !kinds[bs] ? 'nowallet' : OWN.test(c.sym) ? 'own' : failed.indexOf(c.cgId) >= 0 ? 'busy' : !kinds.evm ? 'noevm' : !c.cgId ? 'unknown' : 'other';
       });
       LAST = { at: new Date().toISOString(), found: found, checked: Object.keys(checked), why: why, errs: errs };
@@ -232,7 +297,7 @@
     held.forEach(function (c) {
       if (!ck[c.sym]) { out.cant.push({ sym: c.sym, why: (last.why || {})[c.sym] || 'other' }); return; }
       var f = (last.found || {})[c.sym], w = f ? f.q : 0, a = c.qty, d = w - a, p = c.currentPrice || 0;
-      var row = { sym: c.sym, wallet: w, app: a, diff: d, usd: d * p, where: f ? f.where : [] };
+      var row = { sym: c.sym, wallet: w, app: a, diff: d, usd: d * p, where: f ? f.where : [], staked: f ? f.staked || 0 : 0 };
       var same = p > 0 ? Math.abs(d) * p < 0.5 : Math.abs(d) <= Math.max(a, w) * 1e-4;
       if (!(w > 0)) out.none.push(row); else if (same) out.same.push(row); else if (d > 0) out.more.push(row); else out.less.push(row);
     });
@@ -293,15 +358,16 @@
     var have = {}; ws.forEach(function (w) { have[w.addr.toLowerCase()] = 1; });
     var imp = lsGet('samsam_imp_addr', {}), sug = Object.keys(imp || {}).filter(function (a) { return imp[a] === 'mine' && !have[a.toLowerCase()] && S().walletKind(a); }).slice(0, 6);
     return list +
-      '<div class="wl-add"><input id="wlAddr" placeholder="Paste a public address (bc1… · 0x… · Solana)" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + E(form.addr) + '">' +
+      '<div class="wl-add"><input id="wlAddr" placeholder="Paste a public address" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + E(form.addr) + '">' +
       '<input id="wlLabel" placeholder="Name (optional)" maxlength="30" value="' + E(form.label) + '">' +
       '<button type="button" class="wl-btn" id="wlAddBtn">' + IC('plus') + 'Add</button></div>' +
       '<div class="wl-err" id="wlErr" role="alert">' + E(form.err) + '</div>' +
       (sug.length ? '<div class="wl-note">From your imported withdrawals:</div><div class="wl-sug">' + sug.map(function (a) { return '<button type="button" class="wl-btn2" data-sug="' + E(a) + '">' + IC('plus') + E(KIND[S().walletKind(a)]) + ' ' + E(short(a)) + '</button>'; }).join('') + '</div>' : '') +
+      '<div class="wl-note">Networks: Bitcoin · Solana (+ its tokens) · 0x… = Ethereum, Base, Optimism, Arbitrum, BNB Chain, Polygon, Avalanche (+ their tokens) · Sui · NEAR · Hedera (0.0.…) · Kaspa · Dogecoin · Cosmos · Sei · Kava. Staked coins are counted on Sui and the Cosmos family (NEAR staked in a pool isn’t).</div>' +
       '<div class="wl-note">' + IC('lock') + 'Public addresses only — never type your recovery phrase or private key anywhere.</div>';
   }
   function rowHtml(r, kind) {
-    var nums = 'Wallets <b>' + qf(r.wallet) + '</b> · App <b>' + qf(r.app) + '</b>' + (r.where.length ? ' · ' + E(r.where.join(', ')) : '');
+    var nums = 'Wallets <b>' + qf(r.wallet) + '</b> · App <b>' + qf(r.app) + '</b>' + (r.where.length ? ' · ' + E(r.where.join(', ')) : '') + (r.staked > 0 ? ' · incl. <b>' + qf(r.staked) + '</b> staked' : '');
     var d = (r.diff > 0 ? '+' : '−') + qf(Math.abs(r.diff)) + ' ' + r.sym + (r.usd ? ' <small>(' + usd(Math.abs(r.usd)) + ')</small>' : '');
     var acts = '';
     if (kind === 'more') {
@@ -324,7 +390,7 @@
     if (c.cant.length) {
       var WHY = [['busy', 'CoinGecko was busy, so these weren’t looked up yet — tap Check now again (what was found is remembered).'],
         ['noevm', 'Ethereum-type coins (ETH, LINK, ONDO, ARB, USDT on Ethereum…): add your 0x… address — the same one covers Ethereum, Base, Optimism, Arbitrum, BNB Chain, Polygon and Avalanche. Not there? Then they’re on another chain or an exchange.'],
-        ['nowallet', 'Add your Bitcoin / Solana address to check these.'],
+        ['nowallet', 'Add the wallet address of their network to check these (Bitcoin, Solana, Sui, NEAR, Hedera, Kaspa, Dogecoin, Cosmos, Sei, Kava).'],
         ['other', 'Not on Bitcoin, Solana or the EVM chains of your wallets.'], ['unknown', 'Not linked to CoinGecko.'], ['own', 'Their own blockchain (can’t be read here).']];
       h += '<div class="wl-sec">Not checked (' + c.cant.length + ')</div><div class="wl-list" id="wlRes-cant">' + WHY.map(function (g) {
         var l = c.cant.filter(function (x) { return x.why === g[0]; }); if (!l.length) return '';
@@ -350,7 +416,7 @@
     var setIn = function (a, l) { if ($('wlAddr')) $('wlAddr').value = a; if ($('wlLabel') && l != null) $('wlLabel').value = l; };
     if (addr.split(/\s+/).length >= 8) { setIn(''); form.err = 'That looks like a recovery phrase — never type it anywhere. Only a public address goes here.'; draw(); return; }
     var kind = S().walletKind(addr);
-    if (!kind) { form.err = 'Not a Bitcoin, Solana or 0x… address.'; draw(); return; }
+    if (!kind) { form.err = 'Not an address of a network the check can read (see the list below).'; draw(); return; }
     var ws = S().getWallets();
     if (ws.some(function (w) { return w.addr.toLowerCase() === addr.toLowerCase(); })) { form.err = 'Already in the list.'; draw(); return; }
     ws.push({ id: 'w' + Date.now().toString(36), kind: kind, addr: addr, label: String(label || '').trim() });

@@ -52,7 +52,7 @@ with sync_playwright() as p:
         # ── Wallets: mocked blockchain ──
         held = pg.evaluate("Samsam.getState().portfolio.filter(c=>c.qty>0).map(c=>({sym:c.sym,cgId:c.cgId||SamsamCoins.CG_IDS[c.sym]||'',qty:c.qty}))")
         H = {c['sym']: c for c in held}
-        natives = {'bitcoin', 'ethereum', 'solana', 'binancecoin', 'polygon-ecosystem-token', 'avalanche-2'}
+        natives = {'bitcoin', 'ethereum', 'solana', 'binancecoin', 'polygon-ecosystem-token', 'avalanche-2', 'sui', 'near', 'hedera-hashgraph', 'kaspa', 'dogecoin', 'cosmos', 'sei-network', 'kava'}
         own = pg.evaluate("SamsamWallets._own.source")
         toks = [c for c in held if c['cgId'] and c['cgId'] not in natives and not re.match(own, c['sym']) and not c['sym'].startswith('USD')]
         X, Y, Z = toks[0], toks[1], toks[2]   # X: an Ethereum token (the app has more) · Y: a Solana token (the wallet has more) · Z: CoinGecko always busy
@@ -82,6 +82,7 @@ with sync_playwright() as p:
         def sol(route):
             b = json.loads(route.request.post_data)
             if b['method'] == 'getBalance': r = {'value': int(round(live.get('SOL', 0) * 1e9))}
+            elif not mode['soltok']: return J(route, {'jsonrpc': '2.0', 'id': b['id'], 'error': {'code': 403, 'message': 'not allowed'}})
             else:
                 r = {'value': [{'account': {'data': {'parsed': {'info': {'mint': TOK_SOL, 'tokenAmount': {'uiAmountString': str(live[Y['sym']] + 5)}}}}}},
                                 {'account': {'data': {'parsed': {'info': {'mint': SPAM, 'tokenAmount': {'uiAmountString': '1000'}}}}}}] if b['params'][1]['programId'].startswith('Tokenkeg') else []}
@@ -91,6 +92,32 @@ with sync_playwright() as p:
             route.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps(
                 [{'id': TOK_SOL, 'symbol': Y['sym'].lower(), 'isVerified': True}, {'id': SPAM, 'symbol': Y['sym'], 'isVerified': False}]))
         ctx.route('https://lite-api.jup.ag/tokens/v2/**', jup)
+        mode = {'jupbal': vn == 'phone', 'soltok': True}   # phone: Jupiter answers SOL + tokens · desktop: Jupiter down → the public Solana server
+        def jupbal(route):
+            if not mode['jupbal']: return route.fulfill(status=503, body='down')
+            route.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps({
+                'SOL': {'amount': '1', 'uiAmount': live.get('SOL', 0), 'slot': 1, 'isFrozen': False},
+                TOK_SOL: {'amount': '1', 'uiAmount': live[Y['sym']] + 5, 'slot': 1, 'isFrozen': False},
+                SPAM: {'amount': '1', 'uiAmount': 1000, 'slot': 1, 'isFrozen': False}}))
+        ctx.route('https://lite-api.jup.ag/ultra/v1/balances/**', jupbal)
+        # networks with their own blockchain (made-up addresses; the app's amounts, some staked)
+        J = lambda r, o: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps(o))
+        def sui(route):
+            b = json.loads(route.request.post_data); q = live.get('SUI', 0)
+            J(route, {'jsonrpc': '2.0', 'id': b['id'], 'result': {'totalBalance': str(int(round((q - 10) * 1e9)))} if b['method'] == 'suix_getBalance'
+                      else [{'stakes': [{'principal': str(int(9.5e9)), 'estimatedReward': str(int(0.5e9))}]}]})
+        ctx.route('https://fullnode.mainnet.sui.io/**', sui); ctx.route('https://fullnode.mainnet.sui.io:443/', sui); ctx.route('https://fullnode.mainnet.sui.io:443', sui)
+        ctx.route('https://rpc.mainnet.fastnear.com/**', lambda r: J(r, {'jsonrpc': '2.0', 'id': '1', 'result': {'amount': str(int(round(live.get('NEAR', 0) * 1e6))) + '0' * 18, 'locked': '0'}}))
+        ctx.route('https://rpc.mainnet.fastnear.com', lambda r: J(r, {'jsonrpc': '2.0', 'id': '1', 'result': {'amount': str(int(round(live.get('NEAR', 0) * 1e6))) + '0' * 18, 'locked': '0'}}))
+        ctx.route('https://mainnet-public.mirrornode.hedera.com/**', lambda r: J(r, {'balance': {'balance': int(round(live.get('HBAR', 0) * 1e8))}}))
+        ctx.route('https://api.kaspa.org/**', lambda r: J(r, {'balance': int(round((live.get('KAS', 0) + 20) * 1e8))}))
+        ctx.route('https://api.blockcypher.com/**', lambda r: J(r, {'final_balance': int(round((live.get('DOGE', 0) - 30) * 1e8))}))
+        def cosmos(route):
+            u = route.request.url; q = live.get('ATOM', 0)
+            if '/bank/' in u: J(route, {'balances': [{'denom': 'uatom', 'amount': str(int(round((q - 2) * 1e6)))}, {'denom': 'ibc/XYZ', 'amount': '999999'}]})
+            elif '/delegations/' in u: J(route, {'delegation_responses': [{'balance': {'denom': 'uatom', 'amount': '1500000'}}]})
+            else: J(route, {'unbonding_responses': [{'entries': [{'balance': '500000'}]}]})
+        ctx.route('https://rest.cosmos.directory/**', cosmos)
         ctx.route('https://solana-rpc.publicnode.com/**', sol); ctx.route('https://solana-rpc.publicnode.com', sol)
 
         # Settings → Wallets & check
@@ -101,7 +128,7 @@ with sync_playwright() as p:
         pg.fill('#wlAddr', SEED); pg.click('#wlAddBtn'); pg.wait_for_timeout(200)
         check(f'{vn} a recovery phrase is refused (and cleared)', 'recovery phrase' in pg.inner_text('#wlErr') and pg.input_value('#wlAddr') == '' and pg.evaluate("Samsam.getWallets().length") == 0, pg.inner_text('#wlErr'))
         pg.fill('#wlAddr', 'hello123'); pg.click('#wlAddBtn'); pg.wait_for_timeout(200)
-        check(f'{vn} a bad address is refused', 'Not a Bitcoin' in pg.inner_text('#wlErr'))
+        check(f'{vn} a bad address is refused', 'Not an address' in pg.inner_text('#wlErr'))
         for a, lab in ((BTC_A, 'Tangem BTC'), (EVM_A, ''), (SOL_A, 'Tangem SOL')):
             pg.fill('#wlAddr', a); pg.fill('#wlLabel', lab); pg.press('#wlAddr', 'Enter'); pg.wait_for_timeout(350)
         ws = pg.evaluate("Samsam.getWallets()")
@@ -110,6 +137,13 @@ with sync_playwright() as p:
         check(f'{vn} the same address twice is refused', 'Already' in pg.inner_text('#wlErr'))
         check(f'{vn} wallets are in the backup', len(pg.evaluate("Samsam.settingsNow().info.wallets || []")) == 3)
 
+        CH = {'SUI': '0x' + '5' * 64, 'NEAR': 'samsam.near', 'HBAR': '0.0.4321', 'KAS': 'kaspa:q' + 'p' * 62, 'DOGE': 'DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L', 'ATOM': 'cosmos1' + 'q' * 38}
+        CH = {k: v for k, v in CH.items() if k in H}
+        pg.evaluate("(a)=>Samsam.setWallets(Samsam.getWallets().concat(a.map((x,i)=>({id:'c'+i,addr:x,label:''}))))", list(CH.values())); pg.wait_for_timeout(500)
+        nw = 3 + len(CH)
+        kinds = pg.evaluate("Samsam.getWallets().map(w=>w.kind)")
+        KM = {'SUI': 'sui', 'NEAR': 'near', 'HBAR': 'hbar', 'KAS': 'kas', 'DOGE': 'doge', 'ATOM': 'atom'}
+        check(f'{vn} Sui / NEAR / Hedera / Kaspa / Dogecoin / Cosmos addresses recognised {kinds[3:]}', kinds[3:] == [KM[k] for k in CH], kinds)
         live.update(pg.evaluate("Object.fromEntries(Samsam.getState().portfolio.filter(c=>c.qty>0).map(c=>[c.sym,c.qty]))"))
         pg.evaluate("SamsamWallets._cfg.gap = 0; SamsamWallets._cfg.retry = 0")
         pg.click('#wlCheck'); pg.wait_for_function("!document.querySelector('#wlCheck').disabled && document.getElementById('wlResults').innerText.length > 10", timeout=15000)
@@ -117,11 +151,17 @@ with sync_playwright() as p:
         more = pg.evaluate("[...document.querySelectorAll('#wlRes-more .wl-r')].map(r=>r.dataset.sym)")
         less = pg.evaluate("[...document.querySelectorAll('#wlRes-less .wl-r')].map(r=>r.dataset.sym)")
         same = pg.evaluate("[...document.querySelectorAll('#wlRes-same .wl-r')].map(r=>r.dataset.sym)")
-        check(f'{vn} wallet has more: BTC (+0.001) and {Y["sym"]} (+5, Solana token named by Jupiter; the look-alike token not counted) {more}', set(more) == {'BTC', Y['sym']} and '+5 ' + Y['sym'] in pg.inner_text(f'#wlRes-more .wl-r[data-sym="{Y["sym"]}"]'), (more, txt[:400]))
+        check(f'{vn} wallet has more: BTC (+0.001) and {Y["sym"]} (+5, Solana token named by Jupiter; the look-alike token not counted) {more}', set(more) == {'BTC', Y['sym']} | ({'KAS'} & set(CH)) and '+5 ' + Y['sym'] in pg.inner_text(f'#wlRes-more .wl-r[data-sym="{Y["sym"]}"]'), (more, txt[:400]))
         check(f'{vn} Jupiter asked once, for the wallet\'s token mints', len(jup_q) == 1 and TOK_SOL in jup_q[0] and SPAM in jup_q[0], jup_q)
         busy = pg.inner_text('#wlRes-cant [data-why="busy"]') if pg.query_selector('#wlRes-cant [data-why="busy"]') else ''
         check(f'{vn} CoinGecko busy for {Z["sym"]} → "tap Check now again" (asked 3×)', Z['sym'] in busy and 'Check now again' in busy and cg_calls.count(Z['cgId']) == 3, (busy, cg_calls.count(Z['cgId'])))
-        check(f'{vn} app has more: {X["sym"]} (−10, Ethereum token, decimals asked) {less}', less == [X['sym']], (less, txt[:400]))
+        check(f'{vn} app has more: {X["sym"]} (−10, Ethereum token, decimals asked) + DOGE (−30) {less}', set(less) == {X['sym']} | ({'DOGE'} & set(CH)), (less, txt[:400]))
+        for k in ('SUI', 'ATOM'):
+            if k in CH:
+                t2 = pg.inner_text(f'#wlRes-same .wl-r[data-sym="{k}"]') if pg.query_selector(f'#wlRes-same .wl-r[data-sym="{k}"]') else ''
+                check(f'{vn} {k}: in the wallet + staked = the app → Match, "incl. 2/10 staked" ({t2!r})', 'Match' in t2 and 'staked' in t2, t2)
+        for k in ('NEAR', 'HBAR'):
+            if k in CH: check(f'{vn} {k} read → Match', k in same, same)
         exp_same = [s for s in ('SOL', 'ETH') if s in H]
         check(f'{vn} match: {exp_same} (ETH split over Ethereum + Arbitrum) {same}', set(exp_same) <= set(same), same)
         none = pg.inner_text('#wlRes-none') if pg.query_selector('#wlRes-none') else ''
@@ -148,13 +188,16 @@ with sync_playwright() as p:
         n_cg = len(cg_calls); pg.click('#wlCheck'); pg.wait_for_function("!document.querySelector('#wlCheck').disabled", timeout=15000)
         check(f'{vn} a second check uses the remembered contracts (only the busy coin asked again)', set(cg_calls[n_cg:]) == {Z['cgId']}, cg_calls[n_cg:])
         pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
-        check(f'{vn} closing the window brings Settings back, with "3 wallets"', pg.is_visible('#stRow_wallets') and '3 wallets' in pg.inner_text('#stRow_wallets'), pg.inner_text('#stRow_wallets') if pg.query_selector('#stRow_wallets') else '')
+        check(f'{vn} closing the window brings Settings back, with the number of wallets"', pg.is_visible('#stRow_wallets') and f'{nw} wallets' in pg.inner_text('#stRow_wallets'), pg.inner_text('#stRow_wallets') if pg.query_selector('#stRow_wallets') else '')
         pg.click('#stRow_wallets'); pg.wait_for_selector('#cpWal [data-del]')
         pg.click('#cpWal [data-del]'); pg.wait_for_timeout(400)
-        check(f'{vn} remove a wallet', len(pg.evaluate("Samsam.getWallets()")) == 2)
+        check(f'{vn} remove a wallet', len(pg.evaluate("Samsam.getWallets()")) == nw - 1)
         pg.click('#cpWal .wl-w:has(.wl-k:text("EVM")) [data-del]'); pg.wait_for_timeout(400)
+        mode['jupbal'] = False; mode['soltok'] = False   # Jupiter down and the Solana server refuses tokens → SOL is still read
         pg.click('#wlCheck'); pg.wait_for_function("!document.querySelector('#wlCheck').disabled", timeout=15000)
         ne = pg.inner_text('#wlRes-cant [data-why="noevm"]') if pg.query_selector('#wlRes-cant [data-why="noevm"]') else ''
+        warn = pg.inner_text('#wlResults')
+        check(f'{vn} Solana tokens refused → SOL still read (Match) + a plain note', 'SOL itself was read' in warn and 'SOL' in pg.evaluate("[...document.querySelectorAll('#wlRes-same .wl-r')].map(r=>r.dataset.sym)"), warn[:300])
         check(f'{vn} no 0x wallet → {X["sym"]} under "add your 0x… address" (no CoinGecko lookups)', X['sym'] in ne and '0x' in ne, ne)
         nw = pg.inner_text('#wlRes-cant [data-why="nowallet"]') if pg.query_selector('#wlRes-cant [data-why="nowallet"]') else ''
         check(f'{vn} no Bitcoin wallet → BTC under "add your Bitcoin address", not the 0x note', 'BTC' in nw and 'BTC' not in ne.split('\n')[0].split(' · '), (nw, ne))
