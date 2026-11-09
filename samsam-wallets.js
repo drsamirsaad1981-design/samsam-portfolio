@@ -31,18 +31,30 @@
     { k: 'base', name: 'Base', rpc: 'https://base-rpc.publicnode.com', id: 'ethereum', syms: ['ETH'] },
     { k: 'polygon-pos', name: 'Polygon', rpc: 'https://polygon-bor-rpc.publicnode.com', id: 'polygon-ecosystem-token', syms: ['POL', 'MATIC'] },
     { k: 'avalanche', name: 'Avalanche', rpc: 'https://avalanche-c-chain-rpc.publicnode.com', id: 'avalanche-2', syms: ['AVAX'] },
+    { k: 'linea', name: 'Linea', rpc: 'https://linea-rpc.publicnode.com', id: 'ethereum', syms: ['ETH'] },
+    { k: 'sei-v2', name: 'Sei EVM', rpc: ['https://sei-evm-rpc.publicnode.com', 'https://evm-rpc.sei-apis.com'], id: 'sei-network', syms: ['SEI'] },
+    { k: 'kava', name: 'Kava EVM', rpc: ['https://kava-evm-rpc.publicnode.com', 'https://evm.kava.io'], id: 'kava', syms: ['KAVA'] },
+    { k: 'cronos', name: 'Cronos', rpc: ['https://cronos-evm-rpc.publicnode.com', 'https://evm.cronos.org'], id: 'crypto-com-chain', syms: ['CRO'] },
+    { k: 'mantle', name: 'Mantle', rpc: ['https://mantle-rpc.publicnode.com', 'https://rpc.mantle.xyz'], id: 'mantle', syms: ['MNT'] },
+    { k: 'moonbeam', name: 'Moonbeam', rpc: ['https://moonbeam-rpc.publicnode.com', 'https://rpc.api.moonbeam.network'], id: 'moonbeam', syms: ['GLMR'] },
+    { k: 'moonriver', name: 'Moonriver', rpc: ['https://moonriver-rpc.publicnode.com', 'https://rpc.api.moonriver.moonbeam.network'], id: 'moonriver', syms: ['MOVR'] },
+    { k: 'flare-network', name: 'Flare', rpc: ['https://flare-api.flare.network/ext/C/rpc'], id: 'flare-networks', syms: ['FLR'] },
+    { k: 'monad', name: 'Monad', rpc: ['https://rpc.monad.xyz', 'https://rpc1.monad.xyz'], id: 'monad', syms: ['MON'] },
+    { k: 'sonic', name: 'Sonic', rpc: ['https://sonic-rpc.publicnode.com', 'https://rpc.soniclabs.com'], id: 'sonic-3', syms: ['S'] },
+    { k: 'celo', name: 'Celo', rpc: ['https://celo-rpc.publicnode.com', 'https://forno.celo.org'], id: 'celo', syms: ['CELO'] },
+    { k: 'xdai', name: 'Gnosis', rpc: ['https://gnosis-rpc.publicnode.com', 'https://rpc.gnosischain.com'], id: 'xdai', syms: ['XDAI'] },
   ];
-  var KIND = { btc: 'Bitcoin', sol: 'Solana', evm: 'Ethereum & EVM chains', sui: 'Sui', near: 'NEAR', hbar: 'Hedera', kas: 'Kaspa', doge: 'Dogecoin', atom: 'Cosmos', sei: 'Sei', kava: 'Kava' };
+  var KIND = { btc: 'Bitcoin', sol: 'Solana', evm: 'Ethereum & EVM chains', sui: 'Sui', near: 'NEAR', hbar: 'Hedera', kas: 'Kaspa', doge: 'Dogecoin', atom: 'Cosmos', sei: 'Sei', kava: 'Kava', apt: 'Aptos' };
   // networks with their own blockchain that can be read without a key: the coin, and staked coins counted with it
   var CHAIN = {
-    sui: { id: 'sui', syms: ['SUI'] }, near: { id: 'near', syms: ['NEAR'] }, hbar: { id: 'hedera-hashgraph', syms: ['HBAR'] },
+    sui: { id: 'sui', syms: ['SUI'] }, apt: { id: 'aptos', syms: ['APT'] }, near: { id: 'near', syms: ['NEAR'] }, hbar: { id: 'hedera-hashgraph', syms: ['HBAR'] },
     kas: { id: 'kaspa', syms: ['KAS'] }, doge: { id: 'dogecoin', syms: ['DOGE'] },
     atom: { id: 'cosmos', syms: ['ATOM'], lcd: 'cosmoshub', denom: 'uatom' }, sei: { id: 'sei-network', syms: ['SEI'], lcd: 'sei', denom: 'usei' },
     kava: { id: 'kava', syms: ['KAVA'], lcd: 'kava', denom: 'ukava' },
   };
   var NEAR_RPC = ['https://rpc.mainnet.fastnear.com', 'https://rpc.mainnet.near.org'];
   // coins that live on their own blockchain (not Bitcoin / Solana / EVM): never looked up, listed as "can't be checked"
-  var OWN = /^(DOT|KSM|APT|ICP|TON|VET|TAO|FIL|XPL|XRP|ADA|TRX|XLM|ALGO|LTC|BCH|ETC|XMR|EGLD|TIA|OSMO|XTZ|EOS|ZEC|DASH|STX|MINA|FLOW|ROSE|HYPE|THETA|IOTA|NEO|QNT|AR|CKB|ONE|ZIL|RUNE|CFX|BSV|XDC|KDA|ICX|WAVES|CSPR)$/;
+  var OWN = /^(DOT|KSM|ICP|TON|VET|VTHO|TAO|FIL|XPL|XRP|ADA|TRX|XLM|ALGO|LTC|BCH|ETC|XMR|EGLD|TIA|OSMO|XTZ|EOS|ZEC|DASH|STX|MINA|FLOW|ROSE|HYPE|THETA|IOTA|NEO|QNT|AR|CKB|ONE|ZIL|RUNE|CFX|BSV|XDC|KDA|ICX|WAVES|CSPR)$/;
   var K = { plat: 'samsam_platforms', last: 'samsam_wal_last' };
   function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (_) { return d; } }
   function lsPut(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
@@ -176,11 +188,20 @@
     if (!c) return [];
     var a = w.addr, free = 0, staked = 0;
     if (w.kind === 'sui') {
-      var rpc = function (m, p) { return post('https://fullnode.mainnet.sui.io:443', { jsonrpc: '2.0', id: 1, method: m, params: p }); };
+      var rpc = function (m, p) { return post(['https://fullnode.mainnet.sui.io', 'https://sui-rpc.publicnode.com', 'https://sui-mainnet-endpoint.blockvision.org'], { jsonrpc: '2.0', id: 1, method: m, params: p }); };
       var b = await rpc('suix_getBalance', [a, '0x2::sui::SUI']); if (b.error) throw new Error('Sui');
       free = dec(b.result && b.result.totalBalance, 9);
       var st = await rpc('suix_getStakes', [a]);
       ((st && st.result) || []).forEach(function (v) { (v.stakes || []).forEach(function (x) { staked += dec(x.principal, 9) + dec(x.estimatedReward, 9); }); });
+    } else if (w.kind === 'apt') {
+      var AP = 'https://api.mainnet.aptoslabs.com/v1/accounts/' + encodeURIComponent(a);
+      var ar = await fetch(AP + '/balance/0x1::aptos_coin::AptosCoin');
+      if (ar.ok) free = (+(await ar.text()) || 0) / 1e8;
+      else if (ar.status !== 404) {
+        var rr = await fetch(AP + '/resource/' + encodeURIComponent('0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>'));
+        if (rr.ok) { var rj = await rr.json(); free = (+(rj.data && rj.data.coin && rj.data.coin.value) || 0) / 1e8; }
+        else if (rr.status !== 404) throw new Error('Aptos');
+      }
     } else if (w.kind === 'near') {
       var n = await post(NEAR_RPC, { jsonrpc: '2.0', id: '1', method: 'query', params: { request_type: 'view_account', finality: 'final', account_id: a } });
       if (n.error || !n.result) throw new Error('NEAR');
@@ -208,6 +229,22 @@
   // CoinGecko: where each token lives (contract + decimals per chain) — remembered 90 days
   async function platforms(ids, onStep) {
     var c = lsGet(K.plat, {}), now = Date.now(), failed = [], need = ids.filter(function (id) { return !(c[id] && now - c[id].at < 90 * 864e5); });
+    if (need.length > 2) {   // one answer for every coin: CoinGecko's full list with contracts (only the coins you hold are kept)
+      try {
+        if (onStep) onStep(0, need.length);
+        var lr = await fetch('https://api.coingecko.com/api/v3/coins/list?include_platform=true');
+        if (lr.ok) {
+          var want = {}; need.forEach(function (id) { want[id] = 1; });
+          (await lr.json()).forEach(function (x) {
+            if (!x || !want[x.id]) return; var p = {}, pl = x.platforms || {};
+            Object.keys(pl).forEach(function (k) { if (k && pl[k]) p[k] = [String(pl[k]).trim(), null]; });
+            c[x.id] = { p: p, at: now };
+          });
+          lsPut(K.plat, c);
+          need = need.filter(function (id) { return !c[id]; });
+        }
+      } catch (_) {}
+    }
     for (var i = 0; i < need.length; i++) {
       if (onStep) onStep(i + 1, need.length);
       var id = need[i], d = null;
@@ -265,7 +302,7 @@
       if (kinds.evm) {
         var look = held.filter(function (c) { return c.cgId && !isNative(c) && !OWN.test(c.sym); }).map(function (c) { return c.cgId; });
         if (look.length) {
-          plat = await platforms(look, function (i, n, slow) { step = slow ? 'CoinGecko is busy — waiting a moment… ' + i + ' / ' + n : 'Finding token contracts on CoinGecko… ' + i + ' / ' + n; draw(); });
+          plat = await platforms(look, function (i, n, slow) { step = !i ? 'Finding token contracts on CoinGecko…' : slow ? 'CoinGecko is busy — waiting a moment… ' + i + ' / ' + n : 'Finding token contracts on CoinGecko… ' + i + ' / ' + n; draw(); });
           failed = plat.__failed || []; delete plat.__failed;
         }
         step = 'Reading balances from the blockchain…'; draw();
@@ -324,6 +361,7 @@
     '#cpWal .wl-w .wl-t{flex:1;min-width:0;display:flex;flex-direction:column}#cpWal .wl-w b{font-size:.9rem}' +
     '#cpWal .wl-w code{font-size:.74rem;color:var(--fg2,#94a3b8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '#cpWal .wl-k{font-size:.66rem;font-weight:800;padding:2px 7px;border-radius:6px;background:rgba(148,163,184,.14);white-space:nowrap}' +
+    '#cpWal .wl-kb{border:1px solid rgba(124,58,237,.5);color:inherit;font-family:inherit;cursor:pointer}' +
     '#cpWal .wl-del{background:none;border:none;color:inherit;opacity:.6;cursor:pointer;padding:6px;line-height:0}' +
     '#cpWal .wl-add{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}' +
     '#cpWal .wl-add input{flex:1 1 220px;min-width:0;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--border,rgba(148,163,184,.3));background:rgba(148,163,184,.08);color:inherit;font:inherit;font-size:.85rem}' +
@@ -351,7 +389,9 @@
     var ws = S().getWallets();
     var list = ws.length ? '<div class="wl-list">' + ws.map(function (w) {
       return '<div class="wl-w" data-id="' + E(w.id) + '"><span class="wl-t"><b>' + E(w.label || KIND[w.kind]) + '</b><code title="' + E(w.addr) + '">' + E(w.addr) + '</code></span>' +
-        '<span class="wl-k">' + E(w.kind === 'evm' ? 'EVM' : KIND[w.kind]) + '</span>' +
+        ((S().walletKinds ? S().walletKinds(w.addr) : []).length > 1
+          ? '<button type="button" class="wl-k wl-kb" data-kind="' + E(w.id) + '" title="Wrong network? Tap to switch (' + E(S().walletKinds(w.addr).map(function (k) { return KIND[k]; }).join(' / ')) + ')">' + E(KIND[w.kind]) + ' ⇄</button>'
+          : '<span class="wl-k">' + E(w.kind === 'evm' ? 'EVM' : KIND[w.kind]) + '</span>') +
         '<button type="button" class="wl-del" data-del="' + E(w.id) + '" aria-label="Remove ' + E(w.label || short(w.addr)) + '" title="Remove">' + IC('trash', { solo: true }) + '</button></div>';
     }).join('') + '</div>' : '<div class="wl-note">No wallet yet. Add the public address of each wallet you keep coins in (Tangem: tap the coin → Receive → copy).</div>';
     // addresses the import marked as "My wallet"
@@ -362,8 +402,10 @@
       '<input id="wlLabel" placeholder="Name (optional)" maxlength="30" value="' + E(form.label) + '">' +
       '<button type="button" class="wl-btn" id="wlAddBtn">' + IC('plus') + 'Add</button></div>' +
       '<div class="wl-err" id="wlErr" role="alert">' + E(form.err) + '</div>' +
+      (form.pick ? '<div class="wl-pick" id="wlPick"><div class="wl-note">This address shape is used by ' + form.pick.kinds.map(function (k) { return KIND[k]; }).join(' and ') + ' — which network is it?</div><div class="wl-sug">' +
+        form.pick.kinds.map(function (k) { return '<button type="button" class="wl-btn2" data-pick="' + k + '">' + E(KIND[k]) + '</button>'; }).join('') + '</div></div>' : '') +
       (sug.length ? '<div class="wl-note">From your imported withdrawals:</div><div class="wl-sug">' + sug.map(function (a) { return '<button type="button" class="wl-btn2" data-sug="' + E(a) + '">' + IC('plus') + E(KIND[S().walletKind(a)]) + ' ' + E(short(a)) + '</button>'; }).join('') + '</div>' : '') +
-      '<div class="wl-note">Networks: Bitcoin · Solana (+ its tokens) · 0x… = Ethereum, Base, Optimism, Arbitrum, BNB Chain, Polygon, Avalanche (+ their tokens) · Sui · NEAR · Hedera (0.0.…) · Kaspa · Dogecoin · Cosmos · Sei · Kava. Staked coins are counted on Sui and the Cosmos family (NEAR staked in a pool isn’t).</div>' +
+      '<div class="wl-note">Networks: Bitcoin · Solana (+ its tokens) · 0x… = Ethereum, Base, Optimism, Arbitrum, Linea, BNB Chain, Polygon, Avalanche, Sei EVM, Kava EVM, Cronos, Mantle, Moonbeam, Moonriver, Flare, Monad, Sonic, Celo, Gnosis (+ their tokens) · Sui / Aptos (you pick) · NEAR · Hedera (0.0.…) · Kaspa · Dogecoin · Cosmos · Sei · Kava. Staked coins are counted on Sui and the Cosmos family (NEAR staked in a pool isn’t).</div>' +
       '<div class="wl-note">' + IC('lock') + 'Public addresses only — never type your recovery phrase or private key anywhere.</div>';
   }
   function rowHtml(r, kind) {
@@ -390,7 +432,7 @@
     if (c.cant.length) {
       var WHY = [['busy', 'CoinGecko was busy, so these weren’t looked up yet — tap Check now again (what was found is remembered).'],
         ['noevm', 'Ethereum-type coins (ETH, LINK, ONDO, ARB, USDT on Ethereum…): add your 0x… address — the same one covers Ethereum, Base, Optimism, Arbitrum, BNB Chain, Polygon and Avalanche. Not there? Then they’re on another chain or an exchange.'],
-        ['nowallet', 'Add the wallet address of their network to check these (Bitcoin, Solana, Sui, NEAR, Hedera, Kaspa, Dogecoin, Cosmos, Sei, Kava).'],
+        ['nowallet', 'Add the wallet address of their network to check these (Bitcoin, Solana, Sui, Aptos, NEAR, Hedera, Kaspa, Dogecoin; Sei and Kava: their 0x… or sei1… / kava1… address).'],
         ['other', 'Not on Bitcoin, Solana or the EVM chains of your wallets.'], ['unknown', 'Not linked to CoinGecko.'], ['own', 'Their own blockchain (can’t be read here).']];
       h += '<div class="wl-sec">Not checked (' + c.cant.length + ')</div><div class="wl-list" id="wlRes-cant">' + WHY.map(function (g) {
         var l = c.cant.filter(function (x) { return x.why === g[0]; }); if (!l.length) return '';
@@ -411,18 +453,27 @@
       '<div id="wlResults">' + (busy ? '' : resultsHtml()) + '</div>';
     if (keep) { var a = $('wlAddr'); a.focus(); a.setSelectionRange(a.value.length, a.value.length); }
   }
-  async function addWallet(addr, label) {
-    addr = String(addr || '').trim(); form.err = '';
+  async function addWallet(addr, label, pick) {
+    addr = String(addr || '').trim(); form.err = ''; form.pick = null;
     var setIn = function (a, l) { if ($('wlAddr')) $('wlAddr').value = a; if ($('wlLabel') && l != null) $('wlLabel').value = l; };
     if (addr.split(/\s+/).length >= 8) { setIn(''); form.err = 'That looks like a recovery phrase — never type it anywhere. Only a public address goes here.'; draw(); return; }
-    var kind = S().walletKind(addr);
+    var kinds = S().walletKinds ? S().walletKinds(addr) : [S().walletKind(addr)].filter(Boolean), kind = kinds[0];
     if (!kind) { form.err = 'Not an address of a network the check can read (see the list below).'; draw(); return; }
     var ws = S().getWallets();
     if (ws.some(function (w) { return w.addr.toLowerCase() === addr.toLowerCase(); })) { form.err = 'Already in the list.'; draw(); return; }
+    if (kinds.length > 1) {   // the same address shape on two networks (Sui / Aptos): ask which one
+      if (kinds.indexOf(pick) < 0) { form.pick = { addr: addr, label: String(label || '').trim(), kinds: kinds }; draw(); return; }
+      kind = pick;
+    }
     ws.push({ id: 'w' + Date.now().toString(36), kind: kind, addr: addr, label: String(label || '').trim() });
     setIn('', '');
     try { await S().setWallets(ws); } catch (e) { form.err = 'Not saved — ' + ((e && e.message) || e); }
     draw();
+  }
+  async function switchKind(id) {   // Sui ⇄ Aptos
+    var ws = S().getWallets(), w = ws.filter(function (x) { return x.id === id; })[0]; if (!w) return;
+    var ks = S().walletKinds(w.addr); w.kind = ks[(ks.indexOf(w.kind) + 1) % ks.length];
+    await S().setWallets(ws).catch(function () {}); draw();
   }
   async function removeWallet(id) {
     var ws = S().getWallets(), w = ws.filter(function (x) { return x.id === id; })[0]; if (!w) return;
@@ -455,6 +506,8 @@
       if (t.closest('#wlAddBtn')) { addWallet($('wlAddr').value, $('wlLabel').value); return; }
       var b = t.closest('[data-sug]'); if (b) { addWallet(b.dataset.sug, ''); return; }
       b = t.closest('[data-del]'); if (b) { removeWallet(b.dataset.del); return; }
+      b = t.closest('[data-pick]'); if (b && form.pick) { addWallet(form.pick.addr, form.pick.label, b.dataset.pick); return; }
+      b = t.closest('[data-kind]'); if (b) { switchKind(b.dataset.kind); return; }
       if (t.closest('#wlCheck')) { check(); return; }
       b = t.closest('[data-rw]'); if (b) { addReward(b.dataset.rw, +b.dataset.q); return; }
       b = t.closest('[data-tin]'); if (b) { var sym = b.dataset.tin, q = +b.dataset.q; close(); SamsamAdd.openTx('transfer_in', sym, { qty: q, note: 'Found by the wallet check' }); }

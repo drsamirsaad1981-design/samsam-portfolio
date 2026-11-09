@@ -52,13 +52,16 @@ with sync_playwright() as p:
         # ── Wallets: mocked blockchain ──
         held = pg.evaluate("Samsam.getState().portfolio.filter(c=>c.qty>0).map(c=>({sym:c.sym,cgId:c.cgId||SamsamCoins.CG_IDS[c.sym]||'',qty:c.qty}))")
         H = {c['sym']: c for c in held}
-        natives = {'bitcoin', 'ethereum', 'solana', 'binancecoin', 'polygon-ecosystem-token', 'avalanche-2', 'sui', 'near', 'hedera-hashgraph', 'kaspa', 'dogecoin', 'cosmos', 'sei-network', 'kava'}
+        natives = {'bitcoin', 'ethereum', 'solana', 'binancecoin', 'polygon-ecosystem-token', 'avalanche-2', 'sui', 'near', 'hedera-hashgraph', 'kaspa', 'dogecoin', 'cosmos', 'sei-network', 'kava', 'aptos', 'crypto-com-chain', 'mantle', 'moonbeam', 'moonriver', 'flare-networks', 'monad', 'sonic-3', 'celo', 'xdai'}
         own = pg.evaluate("SamsamWallets._own.source")
         toks = [c for c in held if c['cgId'] and c['cgId'] not in natives and not re.match(own, c['sym']) and not c['sym'].startswith('USD')]
         X, Y, Z = toks[0], toks[1], toks[2]   # X: an Ethereum token (the app has more) · Y: a Solana token (the wallet has more) · Z: CoinGecko always busy
         cg_calls = []; jup_q = []
         def cg(route):
             cid = route.request.url.split('/coins/')[1].split('?')[0]; cg_calls.append(cid)
+            if cid == 'list':   # the whole list in one answer — without Z (so Z is asked on its own, and CoinGecko is busy)
+                return route.fulfill(status=200, content_type='application/json', body=json.dumps(
+                    [{'id': c['cgId'], 'symbol': c['sym'].lower(), 'platforms': {'ethereum': TOK_EVM} if c is X else {}} for c in held if c['cgId'] and c is not Z]))
             if cid == Z['cgId']: return route.fulfill(status=429, body='busy')
             dp = {'ethereum': {'decimal_place': None, 'contract_address': TOK_EVM}} if cid == X['cgId'] else {}   # Y's Solana mint comes from Jupiter, not CoinGecko
             route.fulfill(status=200, content_type='application/json', body=json.dumps({'id': cid, 'detail_platforms': dp, 'platforms': {}}))
@@ -73,6 +76,7 @@ with sync_playwright() as p:
             for c in body:
                 v = 0
                 if c['method'] == 'eth_getBalance' and 'ETH' in live and chain in ('ethereum', 'arbitrum'): v = int(live['ETH'] / 2 * 1e18)
+                if c['method'] == 'eth_getBalance' and chain in ('sei', 'kava'): v = int(round(live.get(chain.upper(), 0) * 1e6)) * 10 ** 12   # SEI on Sei EVM, KAVA on Kava EVM
                 if c['method'] == 'eth_call' and c['params'][0]['to'] == TOK_EVM:
                     if c['params'][0]['data'] == '0x313ce567': v = 6
                     elif chain == 'ethereum': v = int(round((live[X['sym']] - 10) * 1e6))
@@ -137,13 +141,22 @@ with sync_playwright() as p:
         check(f'{vn} the same address twice is refused', 'Already' in pg.inner_text('#wlErr'))
         check(f'{vn} wallets are in the backup', len(pg.evaluate("Samsam.settingsNow().info.wallets || []")) == 3)
 
+        ctx.route('https://api.mainnet.aptoslabs.com/**', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=str(int(round(live.get('APT', 0) * 1e8)))))
+        if 'APT' in H:   # a 0x… with 64 digits: Sui or Aptos → asked
+            pg.fill('#wlAddr', '0x' + '7' * 64); pg.click('#wlAddBtn'); pg.wait_for_timeout(250)
+            pk = pg.inner_text('#wlPick') if pg.query_selector('#wlPick') else ''
+            check(f'{vn} a 0x…(64) address → "Sui or Aptos?"', 'Sui and Aptos' in pk and pg.evaluate("Samsam.getWallets().length") == 3, pk)
+            pg.click('#wlPick [data-pick="apt"]'); pg.wait_for_timeout(400)
+            ws2 = pg.evaluate("Samsam.getWallets()")
+            check(f'{vn} saved as Aptos, the tag can switch it (Aptos ⇄)', ws2[-1]['kind'] == 'apt' and 'Aptos ⇄' in pg.inner_text('#cpWal .wl-list'), ws2[-1])
+        n0 = pg.evaluate("Samsam.getWallets().length")
         CH = {'SUI': '0x' + '5' * 64, 'NEAR': 'samsam.near', 'HBAR': '0.0.4321', 'KAS': 'kaspa:q' + 'p' * 62, 'DOGE': 'DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L', 'ATOM': 'cosmos1' + 'q' * 38}
         CH = {k: v for k, v in CH.items() if k in H}
         pg.evaluate("(a)=>Samsam.setWallets(Samsam.getWallets().concat(a.map((x,i)=>({id:'c'+i,addr:x,label:''}))))", list(CH.values())); pg.wait_for_timeout(500)
-        nw = 3 + len(CH)
+        nw = n0 + len(CH)
         kinds = pg.evaluate("Samsam.getWallets().map(w=>w.kind)")
         KM = {'SUI': 'sui', 'NEAR': 'near', 'HBAR': 'hbar', 'KAS': 'kas', 'DOGE': 'doge', 'ATOM': 'atom'}
-        check(f'{vn} Sui / NEAR / Hedera / Kaspa / Dogecoin / Cosmos addresses recognised {kinds[3:]}', kinds[3:] == [KM[k] for k in CH], kinds)
+        check(f'{vn} Sui / NEAR / Hedera / Kaspa / Dogecoin / Cosmos addresses recognised {kinds[3:]}', kinds[n0:] == [KM[k] for k in CH], kinds)
         live.update(pg.evaluate("Object.fromEntries(Samsam.getState().portfolio.filter(c=>c.qty>0).map(c=>[c.sym,c.qty]))"))
         pg.evaluate("SamsamWallets._cfg.gap = 0; SamsamWallets._cfg.retry = 0")
         pg.click('#wlCheck'); pg.wait_for_function("!document.querySelector('#wlCheck').disabled && document.getElementById('wlResults').innerText.length > 10", timeout=15000)
@@ -160,7 +173,7 @@ with sync_playwright() as p:
             if k in CH:
                 t2 = pg.inner_text(f'#wlRes-same .wl-r[data-sym="{k}"]') if pg.query_selector(f'#wlRes-same .wl-r[data-sym="{k}"]') else ''
                 check(f'{vn} {k}: in the wallet + staked = the app → Match, "incl. 2/10 staked" ({t2!r})', 'Match' in t2 and 'staked' in t2, t2)
-        for k in ('NEAR', 'HBAR'):
+        for k in ('NEAR', 'HBAR', 'APT', 'SEI', 'KAVA'):
             if k in CH: check(f'{vn} {k} read → Match', k in same, same)
         exp_same = [s for s in ('SOL', 'ETH') if s in H]
         check(f'{vn} match: {exp_same} (ETH split over Ethereum + Arbitrum) {same}', set(exp_same) <= set(same), same)

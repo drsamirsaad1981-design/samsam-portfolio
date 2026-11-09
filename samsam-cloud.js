@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611092310';
-import * as Hist from './samsam-history.js?v=202611092310';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611092310';
+import * as Core from './samsam-core.js?v=202611100013';
+import * as Hist from './samsam-history.js?v=202611100013';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611100013';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -221,11 +221,13 @@ export function walletKind(addr) {
   if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a)) return 'sol';
   return null;
 }
+// the networks an address could belong to (a 0x… with 64 hex digits is used by both Sui and Aptos — you pick)
+export function walletKinds(addr) { const k = walletKind(addr); return k === 'sui' ? ['sui', 'apt'] : k ? [k] : []; }
 function cleanWallets(w) {
   const out = [], seen = new Set();
   for (const x of Array.isArray(w) ? w : []) {
     if (!x || out.length >= 20) continue;
-    const addr = String(x.addr || '').trim(), kind = walletKind(addr);
+    const addr = String(x.addr || '').trim(), ks = walletKinds(addr), kind = ks.includes(x.kind) ? x.kind : ks[0];
     if (!kind || seen.has(addr.toLowerCase())) continue; seen.add(addr.toLowerCase());
     out.push({ id: String(x.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || ('w' + out.length), kind, addr,
       label: String(x.label || '').replace(/[<>"'`\\]/g, '').trim().slice(0, 30) });
@@ -548,7 +550,7 @@ const API = {
     const w = cleanWallets(list);
     return commit((bt, ref) => bt.set(ref('meta', 'info'), { wallets: w }, { merge: true }), 'Wallets').then(() => w);
   },
-  walletKind,
+  walletKind, walletKinds,
   openAlerts() { openAlertsSheet(); },
   // any of { tab, targets (null → defaults), plan, steps (null → defaults) } — each saved as its own field, so edits on two devices don't clash
   saveExit(part = {}) {
