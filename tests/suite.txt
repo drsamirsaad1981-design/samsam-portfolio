@@ -121,3 +121,4 @@ holdings_pct_test.py
 coin_links_test.py
 fast_price_test.py
 cards_fold_test.py
+exit_sold_test.py

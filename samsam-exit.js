@@ -79,6 +79,19 @@
           .reduce(function (s, x) { return s + (+x.qty || 0) - (x.type === 'sell' ? 0 : (+x.fee || 0)); }, 0);   // after a fee in coins
       };
       var sold = after(['sell']), bought = after(['buy', 'transfer_in']);
+      // the sells since the coin joined the plan, as they really happened: money received, their profit, what they had cost
+      // (from the ledger: the average buy price at each sell) — a coin you sold out keeps that average, not 0
+      var sells = (txs || []).filter(function (x) { return x.sym === entry.sym && x.type === 'sell' && (Date.parse(x.createdAt || x.date) || 0) >= since; });
+      var real = { cash: 0, profit: 0, cost: 0, avg: 0 };
+      if (sells.length) {
+        var R = window.Samsam && Samsam.core && Samsam.getState ? (function () { var st0 = Samsam.getState(), d = (st0.coins || []).find(function (c) { return c.sym === entry.sym; });
+          return Samsam.core.replay(d ? d.opening : { qty: 0, avg: 0 }, (txs || []).filter(function (x) { return x.sym === entry.sym; })); })() : null;
+        sells.forEach(function (x) {
+          var q = +x.qty || 0, got = q * (+x.price || 0) - (+x.feeUsd || 0), t = R && R.perTx[x.id], a = t ? t.avgBefore : avg;
+          real.cash += got; real.cost += q * a; real.profit += t && t.realized != null ? t.realized : got - q * a; real.avg = a || real.avg;
+        });
+      }
+      if (!(avg > 0) && real.avg > 0) avg = real.avg;   // sold out: the average you sold at
       // buying more after the coin joined the plan raises the plan amount; selling fills the steps (never shrinks them)
       var base = (+entry.baseQty || 0) + bought;
       var moon = entry.moonbag ? base * MOON : 0, sellable = base - moon;
@@ -92,14 +105,17 @@
         var hit = tpPrice > 0 && price >= tpPrice;
         var status = isDone ? 'done' : !(tpPrice > 0) || !(qty > 0) ? 'unset' : hit ? 'hit' : 'wait';
         if (isDone) done++;
-        cash += qty * tpPrice; cost += qty * avg; profit += qty * (tpPrice - avg);
+        var rest = Math.max(0, qty - filled);   // still to sell at the step's price (the sold part is counted as it happened, below)
+        cash += rest * tpPrice; cost += rest * avg; profit += rest * (tpPrice - avg);
         return { i: i, name: 'TP' + (i + 1), price: tpPrice, pct: pct, qty: qty, filled: filled, part: part, status: status,
           linked: linked, mult: cfg.mults[i], ofAvg: avg > 0 && tpPrice > 0 ? tpPrice / avg : null,
           toSell: Math.max(0, qty - filled), cash: qty * tpPrice, progress: tpPrice > 0 && price > 0 ? Math.min(100, price / tpPrice * 100) : 0,
           away: tpPrice > 0 && price > 0 ? (tpPrice / price - 1) * 100 : null };
       });
+      cash += real.cash; profit += real.profit; cost += real.cost;
       return { base: base, bought: bought, moon: moon, sellable: sellable, sold: sold, steps: steps, pctSum: pctSum, cash: cash, profit: profit,
-        profitPct: cost > 0 ? profit / cost * 100 : null, done: done, price: price, avg: avg, held: +coin.qty || 0 };
+        profitPct: cost > 0 ? profit / cost * 100 : null, done: done, price: price, avg: avg, held: +coin.qty || 0,
+        cashed: real.cash, cashedProfit: real.profit, left: Math.max(0, base - sold) };
     },
     // the three steps from your average buy price (your default multipliers and %)
     quickFill: function (avg, cfg) { cfg = cfgOf(cfg); return avg > 0 ? cfg.mults.map(function (m, i) { return { price: r6(avg * m), pct: cfg.pcts[i] }; }) : null; },
@@ -127,7 +143,7 @@
     ['tp2', 'Closest to TP2', 1], ['tp3', 'Closest to TP3', 1], ['cash', 'Cash out', -1], ['profit', 'Net profit', -1]];
   function sortVal(k, e, r) {
     if (k === 'asset') return e.sym;
-    if (k === 'value') return r.base * (r.price || 0);
+    if (k === 'value') return r.left * (r.price || 0);   // what is still in the plan (a sold-out coin: 0)
     if (k === 'gain') return r.avg > 0 && r.price > 0 ? r.price / r.avg - 1 : -Infinity;
     if (k === 'tp1' || k === 'tp2' || k === 'tp3') { var s = r.steps[+k.slice(2) - 1]; return !s ? Infinity : s.status === 'done' ? Infinity : s.status === 'hit' ? -1 : s.away == null ? Infinity : s.away; }
     if (k === 'cash') return r.cash;
