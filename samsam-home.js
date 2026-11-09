@@ -1911,17 +1911,23 @@ function updateSyncFooter() {
 //   From prices = Profit(end) − Profit(start)     (Profit = Value − Cost Basis + Realized, from the ledger)
 //   Added       = Net invested(end) − Net invested(start)   (buys + fees − sells)
 // Value change = From prices + Added. The green/red and the % follow the price part only.
+// % = the price part ÷ (value at the start + money added) · "All" = the All Time Profit card (same $ and %).
 function holdingsChangeText(snaps) {
   const a = snaps[0], z = snaps[snaps.length - 1];
   if (!(window.Samsam && Samsam.isReady())) { const d = z.v - a.v, p = a.v > 0 ? d / a.v * 100 : 0; return { text: `${d >= 0 ? '+' : '−'}${SamsamFmt.usd(Math.abs(d))}  (${d >= 0 ? '+' : '−'}${Math.abs(p).toFixed(2)}%)`, up: d >= 0, title: '' }; }
   const st = Samsam.getState();
   const s = Samsam.core.profitSeries(st.coins, st.transactions, [a.t, z.t]);
-  const gain = (z.v - s.cost[1] + s.realized[1]) - (a.v - s.cost[0] + s.realized[0]);
+  const priceGain = (z.v - s.cost[1] + s.realized[1]) - (a.v - s.cost[0] + s.realized[0]);
+  let gain = priceGain;
   const added = (s.cost[1] - s.realized[1]) - (s.cost[0] - s.realized[0]);
-  const pct = a.v > 0 ? gain / a.v * 100 : 0, sg = n => n >= 0 ? '+' : '−';
+  // % of the money at work in the range: what you held at the start + what you added (a $20k top-up is not a loss or a gain).
+  // "All" = the All Time Profit card exactly (profit since you bought, ÷ everything invested).
+  let pct = (a.v + Math.max(0, added)) > 0 ? gain / (a.v + Math.max(0, added)) * 100 : 0;
+  if (holdingsRange === 'all') { const at = allTimeProfitData(); gain = at.total; pct = at.pct; }
+  const sg = n => n >= 0 ? '+' : '−';
   let text = `${sg(gain)}${SamsamFmt.usd(Math.abs(gain))}  (${sg(pct)}${Math.abs(pct).toFixed(2)}%)`;
   if (Math.abs(added) >= 1) text += ` · ${added > 0 ? '+' : '−'}${SamsamFmt.usd(Math.abs(added))} ${added > 0 ? 'added' : 'taken out'}`;
-  return { text, up: gain >= 0, title: `Value change ${sg(z.v - a.v)}${SamsamFmt.usd(Math.abs(z.v - a.v))} = ${sg(gain)}${SamsamFmt.usd(Math.abs(gain))} from prices, ${added >= 0 ? '+' : '−'}${SamsamFmt.usd(Math.abs(added))} ${added >= 0 ? 'added' : 'taken out'}` };
+  return { text, up: gain >= 0, title: `Value change ${sg(z.v - a.v)}${SamsamFmt.usd(Math.abs(z.v - a.v))} = ${sg(priceGain)}${SamsamFmt.usd(Math.abs(priceGain))} from prices, ${added >= 0 ? '+' : '−'}${SamsamFmt.usd(Math.abs(added))} ${added >= 0 ? 'added' : 'taken out'}` };
 }
 
 function withLiveTotal(snaps) {
