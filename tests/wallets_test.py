@@ -13,7 +13,7 @@ def check(n, c, d=''): res.append(bool(c)); print(('PASS ' if c else 'FAIL ') + 
 BTC_A = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'          # made-up / test-vector addresses
 EVM_A = '0x1234567890abcdef1234567890abcdef12345678'
 SOL_A = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU'
-TOK_EVM = '0x' + 'ab' * 20; TOK_SOL = 'MintTestYyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy1'; SPAM = 'MintSpamZzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz1'
+TOK_EVM = '0x' + 'ab' * 20; TOK_SOL = 'MintTestYyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy1'; SPAM = 'MintSpamZzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz1'; DEAD = '0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000'
 SEED = 'abandon ability able about above absent absorb abstract absurd abuse access accident'
 
 with sync_playwright() as p:
@@ -52,16 +52,16 @@ with sync_playwright() as p:
         # ── Wallets: mocked blockchain ──
         held = pg.evaluate("Samsam.getState().portfolio.filter(c=>c.qty>0).map(c=>({sym:c.sym,cgId:c.cgId||SamsamCoins.CG_IDS[c.sym]||'',qty:c.qty}))")
         H = {c['sym']: c for c in held}
-        natives = {'bitcoin', 'ethereum', 'solana', 'binancecoin', 'polygon-ecosystem-token', 'avalanche-2', 'sui', 'near', 'hedera-hashgraph', 'kaspa', 'dogecoin', 'cosmos', 'sei-network', 'kava', 'aptos', 'crypto-com-chain', 'mantle', 'moonbeam', 'moonriver', 'flare-networks', 'monad', 'sonic-3', 'celo', 'xdai'}
+        natives = {'bitcoin', 'ethereum', 'solana', 'binancecoin', 'polygon-ecosystem-token', 'avalanche-2', 'sui', 'near', 'hedera-hashgraph', 'kaspa', 'dogecoin', 'cosmos', 'sei-network', 'kava', 'aptos', 'crypto-com-chain', 'mantle', 'moonbeam', 'moonriver', 'flare-networks', 'monad', 'sonic-3', 'celo', 'xdai', 'the-open-network'}
         own = pg.evaluate("SamsamWallets._own.source")
-        toks = [c for c in held if c['cgId'] and c['cgId'] not in natives and not re.match(own, c['sym']) and not c['sym'].startswith('USD')]
+        toks = [c for c in held if c['cgId'] and c['cgId'] not in natives and not re.match(own, c['sym']) and not c['sym'].startswith('USD') and c['sym'] not in ('GRAM', 'MNT', 'GLMR', 'QNT')]
         X, Y, Z = toks[0], toks[1], toks[2]   # X: an Ethereum token (the app has more) · Y: a Solana token (the wallet has more) · Z: CoinGecko always busy
         cg_calls = []; jup_q = []
         def cg(route):
             cid = route.request.url.split('/coins/')[1].split('?')[0]; cg_calls.append(cid)
             if cid == 'list':   # the whole list in one answer — without Z (so Z is asked on its own, and CoinGecko is busy)
                 return route.fulfill(status=200, content_type='application/json', body=json.dumps(
-                    [{'id': c['cgId'], 'symbol': c['sym'].lower(), 'platforms': {'ethereum': TOK_EVM} if c is X else {}} for c in held if c['cgId'] and c is not Z]))
+                    [{'id': c['cgId'], 'symbol': c['sym'].lower(), 'platforms': {'ethereum': TOK_EVM} if c is X else {'mantle': DEAD} if c['sym'] == 'MNT' else {}} for c in held if c['cgId'] and c is not Z]))
             if cid == Z['cgId']: return route.fulfill(status=429, body='busy')
             dp = {'ethereum': {'decimal_place': None, 'contract_address': TOK_EVM}} if cid == X['cgId'] else {}   # Y's Solana mint comes from Jupiter, not CoinGecko
             route.fulfill(status=200, content_type='application/json', body=json.dumps({'id': cid, 'detail_platforms': dp, 'platforms': {}}))
@@ -71,11 +71,13 @@ with sync_playwright() as p:
             body=json.dumps({'chain_stats': {'funded_txo_sum': round((live['BTC'] + 0.001) * 1e8) + 5000, 'spent_txo_sum': 5000}, 'mempool_stats': {'funded_txo_sum': 0, 'spent_txo_sum': 0}})))
         def evm(route):
             chain = route.request.url.split('//')[1].split('-')[0]   # ethereum / bsc / arbitrum …
+            if chain == 'moonbeam': return route.fulfill(status=503, body='down')   # Moonbeam doesn't answer → GLMR "didn't answer", never "not in the wallet"
             body = json.loads(route.request.post_data); one = not isinstance(body, list); body = [body] if one else body
             out = []
             for c in body:
                 v = 0
                 if c['method'] == 'eth_getBalance' and 'ETH' in live and chain in ('ethereum', 'arbitrum'): v = int(live['ETH'] / 2 * 1e18)
+                if chain == 'mantle' and (c['method'] == 'eth_getBalance' or (c['method'] == 'eth_call' and c['params'][0]['to'] == DEAD)): v = int(round(live.get('MNT', 0) * 1e6)) * 10 ** 12   # the same MNT twice (native + its system token)
                 if c['method'] == 'eth_getBalance' and chain in ('sei', 'kava'): v = int(round(live.get(chain.upper(), 0) * 1e6)) * 10 ** 12   # SEI on Sei EVM, KAVA on Kava EVM
                 if c['method'] == 'eth_call' and c['params'][0]['to'] == TOK_EVM:
                     if c['params'][0]['data'] == '0x313ce567': v = 6
@@ -107,10 +109,25 @@ with sync_playwright() as p:
         # networks with their own blockchain (made-up addresses; the app's amounts, some staked)
         J = lambda r, o: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps(o))
         def sui(route):
+            if vn == 'desktop': return route.fulfill(status=503, body='JSON-RPC switched off')   # desktop: Sui's GraphQL answers instead
             b = json.loads(route.request.post_data); q = live.get('SUI', 0)
             J(route, {'jsonrpc': '2.0', 'id': b['id'], 'result': {'totalBalance': str(int(round((q - 10) * 1e9)))} if b['method'] == 'suix_getBalance'
                       else [{'stakes': [{'principal': str(int(9.5e9)), 'estimatedReward': str(int(0.5e9))}]}]})
         ctx.route('https://fullnode.mainnet.sui.io/**', sui); ctx.route('https://fullnode.mainnet.sui.io:443/', sui); ctx.route('https://fullnode.mainnet.sui.io:443', sui)
+        ctx.route('https://sui-rpc.publicnode.com/**', sui); ctx.route('https://sui-rpc.publicnode.com', sui)
+        def suigql(route):
+            q = json.loads(route.request.post_data)['query']
+            if 'coinType' in q: return J(route, {'data': {'address': {'balance': {'totalBalance': str(int(round((live.get('SUI', 0) - 10) * 1e9)))}}}})
+            if 'stakedSuis' in q: return J(route, {'data': {'address': {'stakedSuis': {'nodes': [{'principal': str(int(10e9))}]}}}})
+            J(route, {'errors': [{'message': 'unknown'}]})
+        ctx.route('https://graphql.mainnet.sui.io/**', suigql)
+        TONA = 'EQ' + 'A' * 46; GRAM_M = '0:' + 'AB' * 32
+        def toncenter(route):
+            u = route.request.url
+            if 'getAddressBalance' in u: return J(route, {'ok': True, 'result': str(int(round(live.get('TON', 0) * 1e9)))})
+            J(route, {'jetton_wallets': [{'jetton': GRAM_M, 'balance': str(int(round(live.get('GRAM', 0) * 1e9)))}, {'jetton': '0:' + 'CD' * 32, 'balance': '5000000000000'}],
+                      'metadata': {GRAM_M: {'is_indexed': True, 'token_info': [{'symbol': 'GRAM', 'extra': {'decimals': '9'}}]}, '0:' + 'CD' * 32: {'token_info': [{'symbol': 'FREEGIFT'}]}}})
+        ctx.route('https://toncenter.com/**', toncenter)
         ctx.route('https://rpc.mainnet.fastnear.com/**', lambda r: J(r, {'jsonrpc': '2.0', 'id': '1', 'result': {'amount': str(int(round(live.get('NEAR', 0) * 1e6))) + '0' * 18, 'locked': '0'}}))
         ctx.route('https://rpc.mainnet.fastnear.com', lambda r: J(r, {'jsonrpc': '2.0', 'id': '1', 'result': {'amount': str(int(round(live.get('NEAR', 0) * 1e6))) + '0' * 18, 'locked': '0'}}))
         ctx.route('https://mainnet-public.mirrornode.hedera.com/**', lambda r: J(r, {'balance': {'balance': int(round(live.get('HBAR', 0) * 1e8))}}))
@@ -150,12 +167,13 @@ with sync_playwright() as p:
             ws2 = pg.evaluate("Samsam.getWallets()")
             check(f'{vn} saved as Aptos, the tag can switch it (Aptos ⇄)', ws2[-1]['kind'] == 'apt' and 'Aptos ⇄' in pg.inner_text('#cpWal .wl-list'), ws2[-1])
         n0 = pg.evaluate("Samsam.getWallets().length")
-        CH = {'SUI': '0x' + '5' * 64, 'NEAR': 'samsam.near', 'HBAR': '0.0.4321', 'KAS': 'kaspa:q' + 'p' * 62, 'DOGE': 'DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L', 'ATOM': 'cosmos1' + 'q' * 38}
+        pg.evaluate("SamsamWallets._cfg.tonGap = 0")
+        CH = {'GRAM': TONA, 'SUI': '0x' + '5' * 64, 'NEAR': 'samsam.near', 'HBAR': '0.0.4321', 'KAS': 'kaspa:q' + 'p' * 62, 'DOGE': 'DH5yaieqoZN36fDVciNyRueRGvGLR3mr7L', 'ATOM': 'cosmos1' + 'q' * 38}
         CH = {k: v for k, v in CH.items() if k in H}
         pg.evaluate("(a)=>Samsam.setWallets(Samsam.getWallets().concat(a.map((x,i)=>({id:'c'+i,addr:x,label:''}))))", list(CH.values())); pg.wait_for_timeout(500)
         nw = n0 + len(CH)
         kinds = pg.evaluate("Samsam.getWallets().map(w=>w.kind)")
-        KM = {'SUI': 'sui', 'NEAR': 'near', 'HBAR': 'hbar', 'KAS': 'kas', 'DOGE': 'doge', 'ATOM': 'atom'}
+        KM = {'GRAM': 'ton', 'SUI': 'sui', 'NEAR': 'near', 'HBAR': 'hbar', 'KAS': 'kas', 'DOGE': 'doge', 'ATOM': 'atom'}
         check(f'{vn} Sui / NEAR / Hedera / Kaspa / Dogecoin / Cosmos addresses recognised {kinds[3:]}', kinds[n0:] == [KM[k] for k in CH], kinds)
         live.update(pg.evaluate("Object.fromEntries(Samsam.getState().portfolio.filter(c=>c.qty>0).map(c=>[c.sym,c.qty]))"))
         pg.evaluate("SamsamWallets._cfg.gap = 0; SamsamWallets._cfg.retry = 0")
@@ -173,11 +191,15 @@ with sync_playwright() as p:
             if k in CH:
                 t2 = pg.inner_text(f'#wlRes-same .wl-r[data-sym="{k}"]') if pg.query_selector(f'#wlRes-same .wl-r[data-sym="{k}"]') else ''
                 check(f'{vn} {k}: in the wallet + staked = the app → Match, "incl. 2/10 staked" ({t2!r})', 'Match' in t2 and 'staked' in t2, t2)
-        for k in ('NEAR', 'HBAR', 'APT', 'SEI', 'KAVA'):
+        if 'MNT' in H: check(f'{vn} MNT on Mantle counted once (native, not again as its system token) → Match', 'MNT' in same, same)
+        for k in ('NEAR', 'HBAR', 'APT', 'SEI', 'KAVA', 'GRAM'):
             if k in CH: check(f'{vn} {k} read → Match', k in same, same)
         exp_same = [s for s in ('SOL', 'ETH') if s in H]
         check(f'{vn} match: {exp_same} (ETH split over Ethereum + Arbitrum) {same}', set(exp_same) <= set(same), same)
         none = pg.inner_text('#wlRes-none') if pg.query_selector('#wlRes-none') else ''
+        rf = pg.inner_text('#wlRes-cant [data-why="readfail"]') if pg.query_selector('#wlRes-cant [data-why="readfail"]') else ''
+        if 'GLMR' in H: check(f'{vn} Moonbeam down → GLMR "didn\'t answer — check again", not "not in these wallets"', 'GLMR' in rf and 'GLMR' not in none and txt.count('Moonbeam') <= 2, (rf, none))
+        if 'QNT' in H: check(f'{vn} QNT is an Ethereum token now (looked up, not "own blockchain")', 'QNT' not in (pg.inner_text('#wlRes-cant [data-why="own"]') if pg.query_selector('#wlRes-cant [data-why="own"]') else ''))
         check(f'{vn} a coin with 0 in the wallets is "Not in these wallets", never "Match"', all(s not in same for s in ('AVAX', 'POL', 'BNB') if s in H) and all(s in none for s in ('AVAX', 'POL') if s in H), (same, none))
         bt = pg.inner_text('#wlRes-more .wl-r[data-sym="BTC"]')
         check(f'{vn} BTC row: +0.001 BTC, from "Tangem BTC", Reward button', '+0.001 BTC' in bt and 'Tangem BTC' in bt and 'as Reward' in bt, bt)
