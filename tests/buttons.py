@@ -31,7 +31,7 @@ with sync_playwright() as p:
         try: pg.wait_for_function("document.activeElement && document.activeElement.classList.contains('cpm-item')", timeout=3000)   # focus moves in a moment (slow CI machines)
         except Exception: pass
         m = pg.evaluate("({ sheet: document.querySelector('.cpm').classList.contains('sheet'), items: [...document.querySelectorAll('.cpm .cpm-item')].map(i => i.innerText.replace(/\\s+/g,' ').replace('↗','').trim()), focus: document.activeElement.classList.contains('cpm-item'), exp: document.querySelector('" + sel + " .btn-more[aria-expanded=true]') != null, hrefs: [...document.querySelectorAll('.cpm a.cpm-item')].map(a => [a.href, a.target, a.rel]) })")
-        check(f'{name}: ⋯ menu lists In, Out, History, Note, Liq Map, Prediction, Remove', m['items'] == ['Transfer In', 'Transfer Out', 'History', 'Add Note', 'Liquidation Map', 'Price Prediction', 'Remove'], m['items'])
+        check(f'{name}: ⋯ menu lists In, Out, Reward, History, Note, Liq Map, Prediction, Remove', m['items'] == ['Transfer In', 'Transfer Out', 'Reward (staking)', 'History', 'Add Note', 'Liquidation Map', 'Price Prediction', 'Remove'], m['items'])
         check(f'{name}: menu is a ' + ('bottom sheet' if name == 'mobile' else 'popover') + ', first item focused, button expanded', m['sheet'] == (name == 'mobile') and m['focus'] and m['exp'], m)
         check(f'{name}: Liq Map / Prediction open CoinGlass / CoinCodex in a new tab', 'coinglass.com' in m['hrefs'][0][0] and 'coincodex' in m['hrefs'][1][0] and all(h[1] == '_blank' and 'noopener' in h[2] for h in m['hrefs']), m['hrefs'])
         pg.screenshot(path=str(T / f'more-menu-{name}.png'))

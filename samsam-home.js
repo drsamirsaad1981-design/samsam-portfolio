@@ -52,6 +52,7 @@ function openCoinMenu(btn, sym) {
   CPMenu.open(btn, `${sym} — more actions`, [
     { icon: 'arrowDown', label: SAMSAM_LABELS.TRANSFER_IN, onClick: () => openTransferIn(sym) },
     { icon: 'arrowUp', label: SAMSAM_LABELS.TRANSFER_OUT, onClick: () => openTransferOut(sym) },
+    { icon: 'coins', label: 'Reward (staking)', onClick: () => openAddTx('reward', sym) },
     { icon: 'history', label: 'History', onClick: () => openHistory(sym) },
     { icon: 'note', label: (c.notes || '').trim() ? 'Edit Note' : 'Add Note', onClick: () => editNote(sym) },
     { divider: true },
@@ -757,6 +758,14 @@ function renderHistory() {
   }
   listEl.innerHTML = [...txs].reverse().map(t => {
     const meta = `<div class="tx-meta">${fmtDate(t.date)}${t.note?' · '+String(t.note).replace(/</g,'&lt;'):''}</div>`;
+    if (t.type === 'transfer_in' && t.kind === 'reward') {
+      const q = t.qty - (+t.fee || 0);
+      return `<div class="tx-row tx-tin">
+        <div class="tx-details"><span class="tx-type-badge">${SamsamUI.dot('purple')}REWARD</span>
+          <div><strong>+${fmtN(q)} ${t.sym}</strong> at <strong>$0 cost</strong></div>${meta}</div>
+        <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button>
+      </div>`;
+    }
     if (t.type === 'transfer_in' || t.type === 'transfer_out') {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
       return `<div class="tx-row tx-${isIn ? 'tin' : 'tout'}">
@@ -798,6 +807,7 @@ async function deleteTx(txId) {
   const fmtN = n => n < 1 ? n.toFixed(6) : n < 10 ? n.toFixed(4) : n.toFixed(2);
   const what = tx.type === 'adjust'
     ? `this manual edit of ${tx.sym}`
+    : tx.kind === 'reward' ? `this REWARD?\n\n+${fmtN(tx.qty)} ${tx.sym} at $0 cost`
     : `this ${tx.type.replace('_', ' ').toUpperCase()} transaction?\n\n${fmtN(tx.qty)} ${tx.sym}` + (tx.type === 'transfer_out' ? '' : ` @ ${SamsamFmt.price(tx.price)} = ${SamsamFmt.usd(tx.qty*tx.price)}`);
   // Warn if a later sale would then exceed the remaining holdings.
   let oversell = '';
@@ -2255,7 +2265,7 @@ function ensureHtxDropdowns() {
   if (htxTypeDD) return;
   htxTypeDD = SamsamDropdown.create(document.getElementById('htxTypeDD'), {
     options: [{ value: 'all', label: SAMSAM_LABELS.ALL_TYPES }, { value: 'buy', label: SAMSAM_LABELS.BUY }, { value: 'sell', label: SAMSAM_LABELS.SELL },
-      { value: 'transfer_in', label: SAMSAM_LABELS.TRANSFER_IN }, { value: 'transfer_out', label: SAMSAM_LABELS.TRANSFER_OUT }],
+      { value: 'transfer_in', label: SAMSAM_LABELS.TRANSFER_IN }, { value: 'transfer_out', label: SAMSAM_LABELS.TRANSFER_OUT }, { value: 'reward', label: 'Reward' }],
     value: 'all', ariaLabel: 'Transaction type', title: 'Transaction type', minWidth: 180,
     onChange: () => renderCoinTx(),
   });
@@ -2350,7 +2360,9 @@ function renderCoinTx() {
   // Holdings: value • 24h change, the amount under it (same as the main page)
   document.getElementById('htxHoldings').innerHTML = SamsamCoins.esc(usd(value)) + (ch == null ? '' : ` <span class="htx-h24 ${ch >= 0 ? 'htx-pos' : 'htx-neg'}" title="24h change">• ${ch >= 0 ? '+' : '−'}${Math.abs(ch).toFixed(2)}%</span>`);
   const h24 = document.getElementById('htxHoldings24');
-  h24.textContent = qtyFmt(qty) + ' ' + sym; h24.className = 'htx-sub htx-muted';
+  const rewQty = coinTxs.filter(t => t.type === 'transfer_in' && t.kind === 'reward').reduce((s, t) => s + (+t.qty || 0) - (+t.fee || 0), 0);
+  h24.textContent = qtyFmt(qty) + ' ' + sym + (rewQty > 0 ? ` · rewards +${qtyFmt(rewQty)}` : ''); h24.className = 'htx-sub htx-muted';
+  h24.title = rewQty > 0 ? `${qtyFmt(rewQty)} ${sym} came from staking / mining rewards (≈ ${usd(rewQty * price)} now, $0 cost)` : '';
   // Signal (your thresholds) + why
   const sigEl = document.getElementById('htxSignal');
   if (coin) {
@@ -2396,6 +2408,9 @@ function renderCoinTx() {
       entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty - feeQ, usd: (t.total ?? t.qty * t.price) + (t.type === 'buy' ? feeU : -feeU),
         note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (feeQ ? ' · fee ' + qtyFmt(feeQ) + ' ' + sym : '') + (t.type === 'sell' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
+    } else if (t.type === 'transfer_in' && t.kind === 'reward') {
+      entries.push({ id: t.id, kind: 'reward', label: 'Reward', qty: t.qty - (+t.fee || 0), usd: (t.qty - (+t.fee || 0)) * (price || 0),
+        note: [t.note, '$0 cost · value now'].filter(Boolean).join(' · '), date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' || t.type === 'transfer_out') {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
       entries.push({ id: t.id, kind: t.type, label: isIn ? SAMSAM_LABELS.TRANSFER_IN : SAMSAM_LABELS.TRANSFER_OUT,
@@ -2413,7 +2428,7 @@ function renderCoinTx() {
   const shown = entries.filter(e => type === 'all' || e.kind === type || (type === 'transfer' && e.kind.startsWith('transfer')))
     .sort((a, b) => (b.date + b.order).localeCompare(a.date + a.order));
   if (!shown.length) {
-    const tName = { all: '', buy: 'Buy ', sell: 'Sell ', transfer_in: SAMSAM_LABELS.TRANSFER_IN + ' ', transfer_out: SAMSAM_LABELS.TRANSFER_OUT + ' ' }[type] || '';
+    const tName = { all: '', buy: 'Buy ', sell: 'Sell ', reward: 'Reward ', transfer_in: SAMSAM_LABELS.TRANSFER_IN + ' ', transfer_out: SAMSAM_LABELS.TRANSFER_OUT + ' ' }[type] || '';
     listEl.innerHTML = `<div class="htx-empty">No ${tName}transactions for ${sym} yet.<br><small>Tap + to add one.</small></div>`;
     return;
   }
@@ -2422,8 +2437,8 @@ function renderCoinTx() {
   shown.forEach(e => {
     const day = new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     if (day !== lastDay) { html += `<div class="htx-date">${day}</div>`; lastDay = day; }
-    const plus = e.kind === 'buy' || e.kind === 'transfer_in';
-    const qCls = { buy: 'htx-pos', sell: 'htx-neg', transfer_in: 'htx-in', transfer_out: 'htx-out' }[e.kind];
+    const plus = e.kind === 'buy' || e.kind === 'transfer_in' || e.kind === 'reward';
+    const qCls = { buy: 'htx-pos', sell: 'htx-neg', transfer_in: 'htx-in', transfer_out: 'htx-out', reward: 'htx-rew' }[e.kind];
     const amt = e.kind === 'adjust' ? '' :
       `<div class="htx-row-qty ${qCls}">${plus ? '+' : '-'}${qtyFmt(e.qty)} ${sym}</div><div class="htx-row-usd">${usd(e.usd)}</div>`;
     html += `<div class="htx-row">

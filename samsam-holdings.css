@@ -156,7 +156,7 @@
     .htx-act:hover, .htx-act:focus-visible { opacity:1; border-color:var(--fg2); }
     .htx-row-qty { font-weight:700; font-size:0.9rem; }
     .htx-row-usd { font-size:0.8rem; color:var(--fg2); margin-top:2px; }
-    .htx-in { color:#3b82f6; } .htx-out { color:#f59e0b; }
+    .htx-in { color:#3b82f6; } .htx-out { color:#f59e0b; } .htx-rew { color:#a855f7; } [data-theme="light"] .htx-rew { color:#9333ea; }
     [data-theme="light"] .htx-in { color:#2563eb; } [data-theme="light"] .htx-out { color:#d97706; }
     .htx-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; vertical-align:1px; }
     .htx-dot-buy { background:#22c55e; } .htx-dot-sell { background:#ef4444; } .htx-dot-transfer_in { background:#3b82f6; }

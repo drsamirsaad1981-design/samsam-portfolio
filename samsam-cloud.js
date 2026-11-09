@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611091906';
-import * as Hist from './samsam-history.js?v=202611091906';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611091906';
+import * as Core from './samsam-core.js?v=202611092022';
+import * as Hist from './samsam-history.js?v=202611092022';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611092022';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -203,6 +203,26 @@ function cleanTargets(t) {
   for (const [k, v] of Object.entries(t.names && typeof t.names === 'object' ? t.names : {})) if (/^[a-z0-9][a-z0-9_-]{0,39}$/i.test(k) && Object.keys(names).length < 60) names[k] = String(v || k).replace(/[<>"'`\\]/g, '').trim().slice(0, 40) || k;
   for (const [k, v] of Object.entries(cats)) names[k] = v.label;
   return { cats, band: numIn(t.band, 1, 50) ?? 5, names };
+}
+// ── Your own wallet addresses (public addresses only — never a seed phrase or private key), saved in meta/info.wallets ──
+//   [{ id, label, kind: 'btc' | 'sol' | 'evm', addr }] — the wallet check reads their balances from the blockchain
+export function walletKind(addr) {
+  const a = String(addr || '').trim();
+  if (/^0x[0-9a-fA-F]{40}$/.test(a)) return 'evm';
+  if (/^(bc1[02-9ac-hj-np-z]{11,87}|[13][1-9A-HJ-NP-Za-km-z]{25,34})$/.test(a)) return 'btc';
+  if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a)) return 'sol';
+  return null;
+}
+function cleanWallets(w) {
+  const out = [], seen = new Set();
+  for (const x of Array.isArray(w) ? w : []) {
+    if (!x || out.length >= 20) continue;
+    const addr = String(x.addr || '').trim(), kind = walletKind(addr);
+    if (!kind || seen.has(addr.toLowerCase())) continue; seen.add(addr.toLowerCase());
+    out.push({ id: String(x.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || ('w' + out.length), kind, addr,
+      label: String(x.label || '').replace(/[<>"'`\\]/g, '').trim().slice(0, 30) });
+  }
+  return out;
 }
 // ── Telegram alerts settings, saved in users/{uid}/meta/info.alerts (read by tools/alerts.mjs on GitHub every 30 min) ──
 export const DEFAULT_ALERTS = Object.freeze({ lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
@@ -497,6 +517,7 @@ function txDoc(sym, type, qty, price, note, extra = {}) {
     ...(extra.feeUsd > 0 ? { feeUsd: Number(extra.feeUsd) } : {}),
     ...(type === 'buy' && extra.netFee > 0 ? { netFee: Number(extra.netFee) } : {}),   // the part of `fee` that was the network fee to your wallet
     ...(extra.link ? { link: Clean.text(extra.link, 60) } : {}),   // a stablecoin Buy made from a Sell → that Sell's id
+    ...(type === 'transfer_in' && extra.kind === 'reward' ? { kind: 'reward' } : {}),   // staking / mining reward: coins in at $0 cost
   });
 }
 
@@ -514,6 +535,12 @@ const API = {
   getExit() { return currentExit(); },
   getAlerts() { return cleanAlerts(S.meta && S.meta.alerts); },
   getTargets() { return cleanTargets(S.meta && S.meta.targets); },
+  getWallets() { return cleanWallets(S.meta && S.meta.wallets); },
+  setWallets(list) {
+    const w = cleanWallets(list);
+    return commit((bt, ref) => bt.set(ref('meta', 'info'), { wallets: w }, { merge: true }), 'Wallets').then(() => w);
+  },
+  walletKind,
   openAlerts() { openAlertsSheet(); },
   // any of { tab, targets (null → defaults), plan, steps (null → defaults) } — each saved as its own field, so edits on two devices don't clash
   saveExit(part = {}) {
@@ -663,7 +690,7 @@ const API = {
     for (const t of txs) {
       const id = 'imp_' + String(t.key || '').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
       if (id === 'imp_') continue;
-      docs.push(['txs', safeId(id), txDoc(t.sym, t.type, t.qty, t.price, t.note || '', { date: t.date, fee: t.fee, feeUsd: t.feeUsd, netFee: t.netFee }), false]);
+      docs.push(['txs', safeId(id), txDoc(t.sym, t.type, t.qty, t.price, t.note || '', { date: t.date, fee: t.fee, feeUsd: t.feeUsd, netFee: t.netFee, kind: t.kind }), false]);
     }
     const parts = [];
     for (let i = 0; i < docs.length; i += 400) parts.push(docs.slice(i, i + 400));
@@ -952,7 +979,7 @@ function downloadJson(obj, name) {
 }
 function stamp() { return new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-'); }
 // Your settings (meta/info) — everything except the setup bookkeeping — and the category names/colours (meta/categories)
-const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps'];
+const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps', 'wallets'];
 function settingsNow() {
   const m = S.meta || {}, info = {};
   for (const k of SETTING_KEYS) if (m[k] !== undefined) info[k] = m[k];

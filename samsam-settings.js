@@ -34,6 +34,7 @@
   var ACT = {
     alerts: function () { S().openAlerts(); },
     import: function () { window.SamsamImport && SamsamImport.open(); },
+    wallets: function () { if (window.SamsamWallets) SamsamWallets.open(); else goMain('wallets'); },
     backup: function () { S().downloadBackup().catch(function () {}); },
     recover: function () { location.href = 'recover.html'; },
     signout: function () { S().signOut(); },
@@ -46,7 +47,7 @@
   };
 
   // the window each line opens: when it closes again, Settings comes back
-  var OPENS = { alerts: '#cpAlerts', signal: '#sgModal', targets: '#tgModal', baseline: '#blModal', cats: '#catMgrModal', import: '#impBd' };
+  var OPENS = { alerts: '#cpAlerts', signal: '#sgModal', targets: '#tgModal', baseline: '#blModal', cats: '#catMgrModal', import: '#impBd', wallets: '#cpWal' };
   function shownNow(sel) {
     var e = doc.querySelector(sel); if (!e) return false;
     var cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && e.getClientRects().length > 0;
@@ -80,6 +81,11 @@
       if (k === 'baseline') { var bl = s.getBaseline(); return bl && bl.date ? new Date(bl.date + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—'; }
       if (k === 'cats') { var T = window.SamsamTaxonomy, n = T ? Object.keys(T.labels).filter(function (x) { return !T.isRemoved(x); }).length : 0; return n ? n + ' categories · names & colours' : ''; }
       if (k === 'exit') { var ex = st.exit || (s.getExit && s.getExit()), steps = ex && ex.steps; return steps ? 'Sell at ×' + steps.mults.join(' / ×') + ' · ' + ((ex.plan || []).length) + ' coin' + ((ex.plan || []).length === 1 ? '' : 's') : ''; }
+      if (k === 'wallets') {
+        var ws = s.getWallets ? s.getWallets() : [], L = window.SamsamWallets && SamsamWallets.last(), c = L && SamsamWallets.compare(L);
+        if (!ws.length) return 'Compare your real wallets with the app';
+        return ws.length + ' wallet' + (ws.length === 1 ? '' : 's') + (c ? ' · ' + (c.more.length + c.less.length ? (c.more.length + c.less.length) + ' to look at' : 'all match') : ' · not checked yet');
+      }
       if (k === 'dca') { var n2 = (st.accumPlan || []).filter(function (x) { return x.dca && x.dca.usd > 0; }).length; return n2 ? n2 + ' coin' + (n2 === 1 ? '' : 's') + ' with a regular buy' : 'None yet'; }
     } catch (_) {}
     return '';
@@ -95,7 +101,7 @@
   // ── the screen ──
   // a line: [key, icon, title, action]  ·  a choice: { seg: key, title, opts: [[value, label]], get(), set(v) }
   var SECTIONS = [
-    ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import']]],
+    ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import'], ['wallets', 'wallet', 'Wallets & check', 'wallets']]],
     ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts']]],
     ['Investing rules', [['signal', 'sliders', 'Signal thresholds', 'signal'], ['targets', 'target', 'Target allocation', 'targets'], ['cats', 'note', 'Categories', 'cats'],
       ['baseline', 'history', 'Baseline', 'baseline'], ['exit', 'exit', 'Exit plan', 'exit'], ['dca', 'calc', 'DCA (regular buys)', 'dca']]],
@@ -176,7 +182,7 @@
     if (keep) setTimeout(draw, 1500); else backAfter(act);
   }
   function close() { var b = $('cpSet'); if (b) b.remove(); doc.removeEventListener('keydown', esc, true); }
-  function esc(e) { if (e.key === 'Escape' && !doc.querySelector('#cpAlerts,#ssPw,#cpDialog,#impBd.show,.cph')) { e.stopPropagation(); close(); } }
+  function esc(e) { if (e.key === 'Escape' && !doc.querySelector('#cpAlerts,#ssPw,#cpDialog,#impBd.show,#cpWal,.cph')) { e.stopPropagation(); close(); } }
   function open() {
     var t = top(); if (t) { t.SamsamSettings.open(); return; }
     if (!ready()) return;

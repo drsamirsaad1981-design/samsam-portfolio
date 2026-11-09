@@ -31,7 +31,7 @@ with sync_playwright() as p:
     # form structure
     A.click('#htxAddBtn'); A.wait_for_selector('#atxBackdrop.show')
     types = A.eval_on_selector_all('.atx-types button', 'b => b.map(x => x.innerText.trim())')
-    check('4 type buttons: Buy, Sell, Transfer In, Transfer Out', types == ['Buy', 'Sell', 'Transfer In', 'Transfer Out'], types)
+    check('5 type buttons: Buy, Sell, Reward, Transfer In, Transfer Out', types == ['Buy', 'Sell', 'Reward', 'Transfer In', 'Transfer Out'], types)
     vis = {}
     for t in ('buy', 'sell', 'transfer_in', 'transfer_out'):
         A.click(f'.atx-types button[data-t="{t}"]')
@@ -74,7 +74,7 @@ with sync_playwright() as p:
     B.click('#htxTypeDD .sdd-btn'); B.click('.sdd-panel.show .sdd-opt:has(span:text-is("Transfer In"))'); B.wait_for_timeout(200)
     t = B.inner_text('#htxList'); check('filter Transfer In shows only transfers in', 'Transfer In' in t and 'Transfer Out' not in t and 'Buy\n' not in t, t[:200])
     opts = (B.click('#htxTypeDD .sdd-btn'), B.eval_on_selector_all('.sdd-panel.show .sdd-opt', 'els => els.map(e => e.innerText.trim())'), B.keyboard.press('Escape'))[1]
-    check('type filter = All Types, Buy, Sell, Transfer In, Transfer Out', [o for o in opts if o] == ['All Types','Buy','Sell','Transfer In','Transfer Out'], opts)
+    check('type filter = All Types, Buy, Sell, Transfer In, Transfer Out, Reward', [o for o in opts if o] == ['All Types','Buy','Sell','Transfer In','Transfer Out','Reward'], opts)
     B.click('#htxTypeDD .sdd-btn'); B.click('.sdd-panel.show .sdd-opt:has(span:text-is("All Types"))'); B.wait_for_timeout(200)
 
     # Buy + Sell through the same form; realized updates; backdated date sorts correctly
