@@ -118,3 +118,5 @@ menu_same_test.py
 exit_find_test.py
 market_filter_test.py
 holdings_pct_test.py
+coin_links_test.py
+fast_price_test.py

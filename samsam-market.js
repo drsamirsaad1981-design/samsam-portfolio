@@ -162,6 +162,21 @@
     // When CoinGecko is busy: fresher prices from Binance's public market data (no key) for coins it trades against
     // USDT. 24h % is worked out from the saved row (its price 24 h ago) and the new price. A coin is only touched
     // when Binance's price is within 25% of the saved one (tickers are reused by different coins). Returns how many.
+    // Live prices every few seconds from Binance's public market data (no key) for the coins you hold that trade against
+    // USDT: { SYM: price }. The first call learns which USDT pairs exist (once a session); then only those are asked for.
+    fastPrices: function (syms) {
+      var want = (syms || []).map(function (s) { return String(s || '').toUpperCase(); }).filter(function (s) { return /^[A-Z0-9]{2,15}$/.test(s) && !API.isStable({ sym: s, name: '' }); });
+      if (!want.length) return Promise.resolve({});
+      var known = API._bnPairs || (API._bnPairs = fetch('https://data-api.binance.vision/api/v3/ticker/price').then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (list) { var set = {}; (list || []).forEach(function (t) { if (/USDT$/.test(t.symbol)) set[t.symbol.slice(0, -4)] = 1; }); return set; }, function (e) { API._bnPairs = null; throw e; }));
+      return known.then(function (set) {
+        var q = want.filter(function (s) { return set[s]; }).slice(0, 100).map(function (s) { return s + 'USDT'; });
+        if (!q.length) return {};
+        return fetch('https://data-api.binance.vision/api/v3/ticker/price?symbols=' + encodeURIComponent(JSON.stringify(q)), { cache: 'no-store' })
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(function (list) { var px = {}; (list || []).forEach(function (t) { if (+t.price > 0) px[t.symbol.slice(0, -4)] = +t.price; }); return px; });
+      }).catch(function () { return {}; });
+    },
     binanceTopUp: function (rows) {
       var now = Date.now();
       // one download of Binance's prices every 4 minutes at most, shared by every list that asks

@@ -5,16 +5,16 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202611091655"></script>
-<script src="samsam-hints.js?v=202611091655"></script>
-<script src="samsam-vault.js?v=202611091655"></script>
-<script src="samsam-labels.js?v=202611091655"></script>
-<script src="samsam-taxonomy.js?v=202611091655"></script>
-<script src="samsam-dropdown.js?v=202611091655"></script>
-<script src="samsam-coins.js?v=202611091655"></script>
-<script src="samsam-import.js?v=202611091655"></script>
-<script src="samsam-settings.js?v=202611091655"></script>
-<script src="samsam-chart.js?v=202611091655"></script>
+<script src="samsam-ui.js?v=202611091751"></script>
+<script src="samsam-hints.js?v=202611091751"></script>
+<script src="samsam-vault.js?v=202611091751"></script>
+<script src="samsam-labels.js?v=202611091751"></script>
+<script src="samsam-taxonomy.js?v=202611091751"></script>
+<script src="samsam-dropdown.js?v=202611091751"></script>
+<script src="samsam-coins.js?v=202611091751"></script>
+<script src="samsam-import.js?v=202611091751"></script>
+<script src="samsam-settings.js?v=202611091751"></script>
+<script src="samsam-chart.js?v=202611091751"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -352,7 +352,7 @@ body {
 }
 .col-header-inner {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-columns: 1.2fr 1fr 1fr 28px;
   gap: 8px;
   padding: 0 13px;
   font-size: 0.62rem;
@@ -404,7 +404,7 @@ body {
   border-radius: 14px;
   padding: 11px 13px;
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;   /* Asset (+ price) | Holdings / Value | All Time Profit */
+  grid-template-columns: 1.2fr 1fr 1fr 28px;   /* Asset (+ price) | Holdings / Value | All Time Profit | › ⌄ */
   align-items: center;
   gap: 8px;
   box-shadow: var(--shadow);
@@ -546,7 +546,7 @@ body {
   .sum-card-icon { font-size: 1.5rem; top: 16px; right: 16px; }
   .coin-row  {
     padding: 14px 16px;
-    grid-template-columns: 1.2fr 1fr 1fr;
+    grid-template-columns: 1.2fr 1fr 1fr 28px;
     border-radius: 16px;
   }
   .coin-row:hover { opacity: 0.85; transition: opacity 0.15s; }
@@ -562,6 +562,20 @@ body {
   .col-header-inner { font-size: 0.74rem; }
   .a-qty { font-size: 0.8rem; }
 }
+/* › transactions · ⌄ Liq.Map / Prediction / CMC (a full-width line inside the row) · search */
+.c-act { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.c-btn { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center; width: 26px; height: 22px; border-radius: 7px; color: var(--fg2); opacity: .75; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.c-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (hover: hover) { .c-btn:hover { background: var(--bg3); color: #a78bfa; opacity: 1; } }
+.c-btn:active { background: var(--bg3); color: #a78bfa; }
+.c-btn svg { transition: transform .2s; }
+.c-more[aria-expanded="true"] { color: #a78bfa; opacity: 1; } .c-more[aria-expanded="true"] svg { transform: rotate(180deg); }
+.c-links { grid-column: 1 / -1; padding-top: 4px; }
+.c-links[hidden] { display: none; }
+.coin-row:hover { opacity: 1 !important; }
+.perf-find { max-width: 1200px; margin: 0 auto; padding: 4px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 6px max(var(--gut, 16px), env(safe-area-inset-left,0px)); box-sizing: border-box; }
+.perf-find input { width: 100%; box-sizing: border-box; height: 40px; padding: 0 12px 0 36px; border-radius: 11px; border: 1px solid var(--border); background: var(--card-solid, var(--card)); color: var(--fg); font: inherit; font-size: .88rem; }
+.perf-none { padding: 18px 12px; text-align: center; color: var(--fg2); font-size: .85rem; }
 /* ── phone: more room for the content, like CoinMarketCap — 8px sides, coin lists edge to edge with dividers ── */
 @media (max-width: 759px) {
   :root { --gut: 8px; }
@@ -685,11 +699,13 @@ body {
   </div>
 </div>
 
+<div class="perf-find"><label class="ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo aria-hidden="true"></span><input type="search" id="perfQ" placeholder="Search a coin" autocomplete="off" spellcheck="false" aria-label="Search your coins" oninput="perfQuery=this.value.trim().toUpperCase();render()"></label></div>
 <div class="col-header">
   <div class="col-header-inner">
     <span>Asset</span>
     <span class="ch-value" id="col-value" onclick="setSort('value')">Holdings<span class="ch-sort-arrow" id="arrow-value"></span></span>
     <span class="ch-pnl"   id="col-pnl"   onclick="setSort('pnl')"  >All Time Profit<span class="ch-sort-arrow" id="arrow-pnl"></span></span>
+    <span aria-hidden="true"></span>
   </div>
 </div>
 
@@ -699,7 +715,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202611091655"></script>
+<script type="module" src="samsam-cloud.js?v=202611091751"></script>
 <script>
 // ── Constants ──
 
@@ -1097,7 +1113,8 @@ function render() {
 
 
   // Row HTML — the coins of the category picked above (all coins when "All Coins")
-  const listRows = perfCat ? rows.filter(r => catOfRow(r) === perfCat) : rows;
+  const listRows = (perfCat ? rows.filter(r => catOfRow(r) === perfCat) : rows)
+    .filter(r => !perfQuery || r.c.sym.includes(perfQuery) || String(COIN_NAMES[r.c.sym] || r.c.name || '').toUpperCase().includes(perfQuery));
   const html = listRows.map(({ c, currentPrice, change24h, value, pnl, pct }) => {
     const isPos  = pnl >= 0;
 
@@ -1111,10 +1128,25 @@ function render() {
         <div class="pnl-usd ${isPos ? 'pos' : 'neg'}">${fmtUSD(pnl)}</div>
         <div class="pnl-pct ${isPos ? 'pos' : 'neg'}">${fmtPct(pct)}</div>
       </div>
+      <div class="c-act">
+        <button type="button" class="c-btn c-go" title="${c.sym} transactions" aria-label="Open ${c.sym} transactions" onclick="SamsamUI.openCoin('${c.sym}')">${PERF_CHEV('m9 6 6 6-6 6')}</button>
+        <button type="button" class="c-btn c-more" title="${c.sym}: Liq.Map, Prediction, CMC" aria-label="${c.sym} links: Liq.Map, Prediction, CMC" aria-expanded="${perfOpen.has(c.sym)}" aria-controls="perfLinks-${c.sym}" onclick="togglePerfLinks('${c.sym}',this)">${PERF_CHEV('m6 9 6 6 6-6')}</button>
+      </div>
+      <div class="c-links" id="perfLinks-${c.sym}"${perfOpen.has(c.sym) ? '' : ' hidden'}>${SamsamCoins.quickLinks(c.sym, { cgId: c.cgId, ccSlug: c.ccSlug, name: COIN_NAMES[c.sym] || c.name })}</div>
     </div>`;
-  }).join('');
+  }).join('') || (perfQuery ? `<div class="perf-none">No coin matches “${perfQuery.replace(/[<>&"]/g, '')}”.</div>` : '');
 
   document.getElementById('coinList').innerHTML = html;
+}
+
+// › opens the coin's transactions · ⌄ shows its Liq.Map / Prediction / CMC (stays open across price refreshes)
+let perfQuery = '';
+const perfOpen = new Set();
+const PERF_CHEV = d => `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+function togglePerfLinks(sym, btn) {
+  const box = document.getElementById('perfLinks-' + sym); if (!box) return;
+  const on = box.hidden; box.hidden = !on; on ? perfOpen.add(sym) : perfOpen.delete(sym);
+  if (btn) btn.setAttribute('aria-expanded', String(on));
 }
 
 // ── Init ──

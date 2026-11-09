@@ -90,6 +90,19 @@
     .hov-asset-holding.htx-open:focus-visible { outline:2px solid #3b82f6; outline-offset:2px; }
     /* the same small › as the best/worst rows: grey, purple on hover/press, always level with the two lines */
     .hov-go { display:flex; flex-shrink:0; color:var(--fg2); opacity:.7; transition:color .15s, opacity .15s, transform .15s; }
+    /* two arrows: › transactions · ⌄ Liq.Map / Prediction / CMC */
+    .hov-arrows { display:flex; flex-direction:column; gap:2px; flex-shrink:0; margin-left:2px; }
+    .hov-btn { all:unset; box-sizing:border-box; display:flex; align-items:center; justify-content:center; width:26px; height:22px; border-radius:7px; color:var(--fg2); opacity:.75; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .hov-btn:focus-visible { outline:2px solid #3b82f6; outline-offset:1px; }
+    @media (hover:hover) { .hov-btn:hover { background:var(--bg3); color:#a78bfa; opacity:1; } }
+    .hov-btn:active { background:var(--bg3); color:#a78bfa; }
+    .hov-more svg { transition:transform .2s; }
+    .hov-more[aria-expanded="true"] { color:#a78bfa; opacity:1; } .hov-more[aria-expanded="true"] svg { transform:rotate(180deg); }
+    .hov-links { padding:2px 16px 12px; border-bottom:1px solid var(--border); }
+    .hov-links[hidden] { display:none; }
+    .hov-find { padding:12px 16px 4px; }
+    .hov-find .ss-search input { width:100%; box-sizing:border-box; height:40px; padding:0 12px 0 36px; border-radius:11px; border:1px solid var(--border); background:var(--bg3); color:var(--fg); font:inherit; font-size:.88rem; }
+    .hov-none { padding:18px 16px; text-align:center; color:var(--fg2); font-size:.85rem; }
     .hov-asset-holding.htx-open:active .hov-go, .hov-asset-holding.htx-open:focus-visible .hov-go { color:#a78bfa; opacity:1; }
 
     /* ── Coin transactions view ── */
@@ -212,7 +225,7 @@
     /* "ASSET" sits over the coin icons (spans the icon + name columns, left-aligned) */
     .hov-list-header .hov-h-asset { grid-column: 1 / 3; text-align: left !important; }
     /* "HOLDINGS" lines up with the numbers, not with the › beside them */
-    .hov-list-header .hov-sort[data-sort="holdings"] { padding-right: 20px; }
+    .hov-list-header .hov-sort[data-sort="holdings"] { padding-right: 32px; }   /* = the › ⌄ column (26px + 2px + 4px gap) */
     /* room at the bottom so the floating Synced badge never covers the last row */
     .hov-container { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
     /* Coin Transactions view inside the same column */

@@ -1108,9 +1108,10 @@ async function fetchLivePrices() {
       const coin = portfolio.find(c => c.sym === sym);
       const cgId = (coin && coin.cgId) || COINGECKO_IDS[sym];
       const hit = [cgId, ...(ALT_CG_IDS[sym] || [])].find(i => i && data[i] && data[i].usd);
-      if (hit) map[sym] = { usd: data[hit].usd, ch24: data[hit].usd_24h_change ?? null };
+      if (hit && !(typeof fastAt !== 'undefined' && Date.now() - (fastAt[sym] || 0) < 45000)) map[sym] = { usd: data[hit].usd, ch24: data[hit].usd_24h_change ?? null };   // a fresher Binance price wins
     });
-    if (data['bitcoin'] && data['bitcoin'].usd) { btcPrice = data['bitcoin'].usd; map.BTC = map.BTC || { usd: btcPrice, ch24: data['bitcoin'].usd_24h_change ?? null }; }
+    const btcFresh = typeof fastAt !== 'undefined' && Date.now() - (fastAt.BTC || 0) < 45000;   // a fresher Binance BTC price wins
+    if (data['bitcoin'] && data['bitcoin'].usd && !btcFresh) { btcPrice = data['bitcoin'].usd; map.BTC = map.BTC || { usd: btcPrice, ch24: data['bitcoin'].usd_24h_change ?? null }; }
     lastFetchTime=new Date();
     setLiveStatus('ok');
     snapshotDue = true;
@@ -1856,6 +1857,26 @@ document.addEventListener('visibilitychange', () => {
   _startPricePolling();
 });
 window.addEventListener('online', () => _pollPrices());
+
+// Fast lane: every 15 s, Binance's live price for the coins you hold that trade against USDT (CoinGecko's free prices lag
+// a minute or more). A Binance price is used only when it is within 25% of the CoinGecko one (the same ticker can be a
+// different coin), and the 24h % keeps CoinGecko's price of 24 h ago. Coins Binance doesn't have stay on CoinGecko.
+var fastAt = {};   // var: fetchLivePrices() runs before this line on load
+async function fastPrices() {
+  if (document.hidden || !navigator.onLine || !window.SamsamMarket || !SamsamMarket.fastPrices || !(window.Samsam && Samsam.isReady())) return;
+  const held = portfolio.filter(c => c.qty > 0 && c.currentPrice > 0);
+  const px = await SamsamMarket.fastPrices(held.map(c => c.sym));
+  const map = {}, now = Date.now();
+  held.forEach(c => {
+    const p = px[c.sym]; if (!(p > 0) || Math.abs(p / c.currentPrice - 1) > 0.25) return;
+    const ago = c.change24h != null ? c.currentPrice / (1 + c.change24h / 100) : null;
+    map[c.sym] = { usd: p, ch24: ago > 0 ? (p / ago - 1) * 100 : (c.change24h ?? null) }; fastAt[c.sym] = now;
+    if (c.sym === 'BTC') btcPrice = p;
+  });
+  if (Object.keys(map).length) { lastFetchTime = new Date(); Samsam.updatePrices(map); }
+}
+setInterval(fastPrices, 15000); setTimeout(fastPrices, 4000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) fastPrices(); });
 window.addEventListener('offline', () => { if (typeof setLiveStatus === 'function') setLiveStatus('offline'); });
 
 function showSyncStatus(msg, color) {
@@ -2667,6 +2688,16 @@ function openTargets() {
   if (rm) rm.onclick = async () => { await Samsam.setTargets(null); close(); renderHoldingsAssetList(); };
   paint(); setTimeout(() => rowsBox.querySelector('input').focus(), 30);
 }
+// Each coin: › its transactions, ⌄ its three outside links (Liq.Map · Prediction · CMC). Open rows stay open across
+// the live price refreshes; the search box filters by symbol or name.
+const hovOpen = new Set(); let hovQuery = '';
+function toggleHovLinks(sym, btn) {
+  const box = document.getElementById('hovLinks-' + sym); if (!box) return;
+  const on = box.hidden; box.hidden = !on; on ? hovOpen.add(sym) : hovOpen.delete(sym);
+  if (btn) btn.setAttribute('aria-expanded', String(on));
+}
+function hovSearch(v) { hovQuery = String(v || '').trim().toUpperCase(); renderHoldingsAssetList(); }
+const HOV_CHEV = d => `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 function renderHoldingsAssetList() {
   const container = document.getElementById('hovAssetList');
   if (!container || !portfolio) return;
@@ -2678,6 +2709,7 @@ function renderHoldingsAssetList() {
   const maxVal = hovMode === 'alloc' ? portfolio.filter(c => !hovCat || (c.cat || 'other') === hovCat).reduce((m, c) => Math.max(m, c.qty * c.currentPrice || 0), 0) : 0;
   const val = c => hovSort.key === 'asset' ? c.sym : hovSort.key === 'price' ? (c.currentPrice || 0) : c.holdingVal;
   const sorted = portfolio.filter(c => !hovCat || (c.cat || 'other') === hovCat)
+    .filter(c => !hovQuery || c.sym.includes(hovQuery) || String(COIN_NAMES[c.sym] || c.name || '').toUpperCase().includes(hovQuery))
     .map(c => ({ ...c, holdingVal: c.qty * c.currentPrice }))
     .sort((a, b) => { const x = val(a), y = val(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * hovSort.dir || b.holdingVal - a.holdingVal; });
   document.querySelectorAll('.hov-list-header .hov-sort').forEach(b => {
@@ -2721,8 +2753,12 @@ function renderHoldingsAssetList() {
       <div class="hov-asset-holding htx-open" role="button" tabindex="0" title="View ${c.sym} transactions"
            onclick="openCoinTx('${c.sym}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCoinTx('${c.sym}')}">
         <span class="hov-hold-txt">${SamsamCoins.holdCell(c.sym, c.qty * c.currentPrice, c.qty, hovMode === 'alloc' ? { below: `<div class="hov-share"><span class="alloc-bar-wrap"><span class="alloc-bar" style="width:${maxVal > 0 ? Math.max(2, c.holdingVal / maxVal * 100) : 0}%;background:${SamsamTaxonomy.color(c.cat || 'other')}"></span></span><span class="coin-pct">${(allVal > 0 ? c.holdingVal / allVal * 100 : 0).toFixed(2)}%</span></div>` } : undefined)}</span>
-        <span class="hov-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
+        <span class="hov-arrows">
+          <button type="button" class="hov-btn hov-go" title="${c.sym} transactions" aria-label="Open ${c.sym} transactions" onclick="event.stopPropagation();openCoinTx('${c.sym}')">${HOV_CHEV('m9 6 6 6-6 6')}</button>
+          <button type="button" class="hov-btn hov-more" title="${c.sym}: Liq.Map, Prediction, CMC" aria-label="${c.sym} links: Liq.Map, Prediction, CMC" aria-expanded="${hovOpen.has(c.sym)}" aria-controls="hovLinks-${c.sym}" onclick="event.stopPropagation();toggleHovLinks('${c.sym}',this)" onkeydown="event.stopPropagation()">${HOV_CHEV('m6 9 6 6 6-6')}</button>
+        </span>
       </div>
-    </div>`;
-  }).join('');
+    </div>
+    <div class="hov-links" id="hovLinks-${c.sym}"${hovOpen.has(c.sym) ? '' : ' hidden'}>${SamsamCoins.quickLinks(c.sym, { cgId: c.cgId, ccSlug: c.ccSlug, name: coinName })}</div>`;
+  }).join('') || (hovQuery ? `<div class="hov-none">No coin matches “${String(hovQuery).replace(/[<>&"]/g, '')}”.</div>` : '');
 }

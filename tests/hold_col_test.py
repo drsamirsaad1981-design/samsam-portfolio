@@ -14,7 +14,11 @@ JS = """() => { const rows = [...document.querySelectorAll('#hovAssetList .hov-a
     if (v.getBoundingClientRect().height > lh(v) * 1.5 || q.getBoundingClientRect().height > lh(q) * 1.5) bad.push(sym);
     if (q.scrollWidth > q.clientWidth + 1 || v.scrollWidth > v.clientWidth + 1) cut.push(sym + ' ' + q.textContent);
     if (!g || g.querySelector('svg') == null) go.push(sym);
-    else { const a = g.getBoundingClientRect(), b = t.getBoundingClientRect(); if (Math.abs((a.top + a.bottom) / 2 - (b.top + b.bottom) / 2) > 2) mid.push(sym); }
+    else {   // the two arrows: the pair is level with value + amount, › beside the value, ⌄ beside the amount
+      const pair = r.querySelector('.hov-arrows').getBoundingClientRect(), b = t.getBoundingClientRect(), mo = r.querySelector('.hov-more');
+      const c = e => { const x = e.getBoundingClientRect(); return (x.top + x.bottom) / 2; };
+      if (Math.abs((pair.top + pair.bottom) / 2 - (b.top + b.bottom) / 2) > 3 || !mo || Math.abs(c(g) - c(v)) > 6 || Math.abs(c(mo) - c(q)) > 6) mid.push(sym);
+    }
     right.push(Math.round(t.getBoundingClientRect().right));
     const pr = Math.max(r.querySelector('.ast-price').getBoundingClientRect().right, r.querySelector('.ast-chg').getBoundingClientRect().right);
     const hl = Math.min(v.getBoundingClientRect().left, q.getBoundingClientRect().left);
@@ -43,8 +47,8 @@ with sync_playwright() as p:
         r = pg.evaluate(JS)
         check(f'{name}: value and amount stay on one line each', r['n'] > 5 and not r['bad'], r['bad'][:6])
         check(f'{name}: amounts are never cut off', not r['cut'], r['cut'][:6])
-        check(f'{name}: every row has the › icon', not r['go'], r['go'][:6])
-        check(f'{name}: › sits level with the value + amount', not r['mid'], r['mid'][:6])
+        check(f'{name}: every row has the › (and ⌄) icon', not r['go'], r['go'][:6])
+        check(f'{name}: › beside the value, ⌄ beside the amount', not r['mid'], r['mid'][:6])
         check(f'{name}: numbers share one right edge, HOLDINGS heading lines up with them', r['rightSpread'] <= 1 and abs(r['headVsNums']) <= 3, (r['rightSpread'], r['headVsNums']))
         check(f'{name}: no sideways scroll', r['page'])
         if name == 'phone-360':
