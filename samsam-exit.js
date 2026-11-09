@@ -200,6 +200,11 @@
       : '<span class="xs-badge wait">' + (s.away != null ? '+' + s.away.toFixed(1) + '% to go' : 'Waiting') + '</span>';
   }
 
+  // Macro Exit Indicators and Cash-out Progress are cards: closed they show the title + one line; tap to open (remembered)
+  var OPEN_KEY = 'samsam_exit_cards';
+  function cardOpen(k) { try { return (JSON.parse(localStorage.getItem(OPEN_KEY) || '{}') || {})[k] === 1; } catch (_) { return false; } }
+  function setCardOpen(k, on) { try { var o = JSON.parse(localStorage.getItem(OPEN_KEY) || '{}') || {}; o[k] = on ? 1 : 0; localStorage.setItem(OPEN_KEY, JSON.stringify(o)); } catch (_) {} }
+  var CHEV = '<span class="xs-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>';
   function macroHtml() {
     var t = exitState().targets, m = calc.macro(mkt.g, mkt.ethBtc, t);
     var rows = m.rows.map(function (r) {
@@ -214,12 +219,13 @@
       field('btcD', 'BTC.D at or under (%)', t.btcD) + field('usdtHi', 'USDT.D range — from (%)', t.usdtHi) +
       field('usdtLo', 'USDT.D range — to (%)', t.usdtLo) + field('ethBtc', 'ETH / BTC at or over', t.ethBtc) +
       '<div class="xm-edit-btns"><button type="button" class="xs-btn" data-act="tg-reset">' + IC('reset') + 'Reset to defaults</button><button type="button" class="xs-btn pri" data-act="tg-save">' + IC('check') + 'Save</button></div></div>' : '';
-    return '<section class="xs-card xm-card" aria-label="Macro exit indicators">' +
-      '<div class="xs-head"><div class="xs-title">' + IC('gauge') + 'Macro Exit Indicators</div>' +
-      '<button type="button" class="xs-link" data-act="tg-edit">' + (editTargets ? 'Close' : IC('pencil') + 'Edit targets') + '</button></div>' +
-      '<div class="xm-sum ' + (m.hit === 3 ? 'all' : m.hit ? 'some' : '') + '">Signals Hit: <b>' + m.hit + ' of 3</b></div>' +
-      '<div class="xm-rows">' + rows + '</div>' + ed +
-      '<div class="xs-note">Your own levels — the page compares, it doesn’t predict the top.</div></section>';
+    var open = cardOpen('macro') || editTargets;
+    return '<section class="xs-card xm-card' + (open ? ' open' : '') + '" aria-label="Macro exit indicators">' +
+      '<div class="xs-head xs-tap" role="button" tabindex="0" data-act="card" data-k="macro" aria-expanded="' + open + '"><div class="xs-title">' + IC('gauge') + 'Macro Exit Indicators</div>' +
+      (open ? '<button type="button" class="xs-link" data-act="tg-edit">' + (editTargets ? 'Close' : IC('pencil') + 'Edit targets') + '</button>' : '') + CHEV + '</div>' +
+      '<div class="xm-sum xs-tap ' + (m.hit === 3 ? 'all' : m.hit ? 'some' : '') + '" data-act="card" data-k="macro">Signals Hit: <b>' + m.hit + ' of 3</b></div>' +
+      (open ? '<div class="xm-rows">' + rows + '</div>' + ed +
+      '<div class="xs-note">Your own levels — the page compares, it doesn’t predict the top.</div>' : '') + '</section>';
   }
   function field(k, label, v) { return '<label class="xm-f"><span>' + label + '</span><input type="number" inputmode="decimal" step="any" data-tg="' + k + '" value="' + v + '"></label>'; }
 
@@ -227,12 +233,13 @@
     var c = calc.cashBar(st.portfolio, st.realized && st.realized.total, isStable), cfg = cfgNow();
     var plan = exitState().plan, steps = 0, done = 0;
     plan.forEach(function (e) { var r = calc.coin(e, coinOf(e.sym), st.transactions, cfg); r.steps.forEach(function (s) { if (s.qty > 0) { steps++; if (s.status === 'done') done++; } }); });
-    return '<section class="xs-card xc-card" aria-label="Cash and stablecoins">' +
-      '<div class="xs-head"><div class="xs-title">' + IC('cash') + 'Cash-out Progress</div><div class="xc-pct">' + c.pct.toFixed(1) + '% <small>in stablecoins</small></div></div>' +
-      '<div class="xc-bar" role="img" aria-label="' + c.pct.toFixed(1) + '% of the portfolio in stablecoins"><i style="width:' + Math.min(100, c.pct).toFixed(2) + '%"></i></div>' +
-      '<div class="xc-leg"><span><i class="s"></i>Stablecoins <b>' + F().usd(c.stable) + '</b></span><span><i class="m"></i>In the market <b>' + F().usd(c.market) + '</b></span></div>' +
+    var open = cardOpen('cash');
+    return '<section class="xs-card xc-card' + (open ? ' open' : '') + '" aria-label="Cash and stablecoins">' +
+      '<div class="xs-head xs-tap" role="button" tabindex="0" data-act="card" data-k="cash" aria-expanded="' + open + '"><div class="xs-title">' + IC('cash') + 'Cash-out Progress</div><div class="xc-pct">' + c.pct.toFixed(1) + '% <small>in stablecoins</small></div>' + CHEV + '</div>' +
+      '<div class="xc-bar xs-tap" data-act="card" data-k="cash" role="img" aria-label="' + c.pct.toFixed(1) + '% of the portfolio in stablecoins"><i style="width:' + Math.min(100, c.pct).toFixed(2) + '%"></i></div>' +
+      (open ? '<div class="xc-leg"><span><i class="s"></i>Stablecoins <b>' + F().usd(c.stable) + '</b></span><span><i class="m"></i>In the market <b>' + F().usd(c.market) + '</b></span></div>' +
       '<div class="xc-foot"><div>Realized profit <b class="' + (c.realized >= 0 ? 'up' : 'down') + '">' + F().usdSigned(c.realized) + '</b></div>' +
-      '<div>Exit steps done <b>' + done + ' of ' + steps + '</b></div></div></section>';
+      '<div>Exit steps done <b>' + done + ' of ' + steps + '</b></div></div>' : '') + '</section>';
   }
 
   // your default steps: ×2 ×3 ×5 · 25 / 50 / 25 %
@@ -367,7 +374,8 @@
   function onClick(ev) {
     var b = ev.target.closest('[data-act]'); if (!b || !root.contains(b)) return;
     var act = b.dataset.act, i = +b.dataset.i, plan;
-    if (act === 'tg-edit') { editTargets = !editTargets; paint(); }
+    if (act === 'card') { if (ev.target.closest('.xs-link')) return; var k = b.dataset.k, on = !(cardOpen(k) || (k === 'macro' && editTargets)); if (!on && k === 'macro') editTargets = false; setCardOpen(k, on); paint(); }
+    else if (act === 'tg-edit') { ev.stopPropagation(); editTargets = !editTargets; if (editTargets) setCardOpen('macro', true); paint(); }
     else if (act === 'tg-reset') { editTargets = false; S().saveExit({ targets: null }); paint(); }
     else if (act === 'tg-save') {
       var t = {}; root.querySelectorAll('[data-tg]').forEach(function (x) { t[x.dataset.tg] = +x.value; });
@@ -454,7 +462,7 @@
       });
       root.addEventListener('keydown', function (ev) {
         if (ev.key === 'Enter' && ev.target.tagName === 'INPUT') ev.target.blur();
-        else if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches && ev.target.matches('tr[data-act=open]')) { ev.preventDefault(); ev.target.click(); }
+        else if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches && ev.target.matches('tr[data-act=open], .xs-head[data-act=card]')) { ev.preventDefault(); ev.target.click(); }
       });
       root.addEventListener('focusout', function (ev) { if (ev.target.id === 'xsQ') return; setTimeout(function () { var a = document.activeElement; if (!(a && root.contains(a) && a.tagName === 'INPUT')) paint(); }, 0); });
       loadMarket(false);

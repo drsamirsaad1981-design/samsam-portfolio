@@ -15,17 +15,17 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611091751"></script>
-<script src="samsam-hints.js?v=202611091751"></script>
-<script src="samsam-vault.js?v=202611091751"></script>
-<script src="samsam-labels.js?v=202611091751"></script>
-<script src="samsam-taxonomy.js?v=202611091751"></script>
-<script src="samsam-coins.js?v=202611091751"></script>
-<script src="samsam-import.js?v=202611091751"></script>
-<script src="samsam-settings.js?v=202611091751"></script>
-<script src="samsam-dropdown.js?v=202611091751"></script>
-<script src="samsam-add.js?v=202611091751"></script>
-<script src="samsam-market.js?v=202611091751"></script>
+<script src="samsam-ui.js?v=202611091839"></script>
+<script src="samsam-hints.js?v=202611091839"></script>
+<script src="samsam-vault.js?v=202611091839"></script>
+<script src="samsam-labels.js?v=202611091839"></script>
+<script src="samsam-taxonomy.js?v=202611091839"></script>
+<script src="samsam-coins.js?v=202611091839"></script>
+<script src="samsam-import.js?v=202611091839"></script>
+<script src="samsam-settings.js?v=202611091839"></script>
+<script src="samsam-dropdown.js?v=202611091839"></script>
+<script src="samsam-add.js?v=202611091839"></script>
+<script src="samsam-market.js?v=202611091839"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -510,7 +510,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611091751"></script>
+<script type="module" src="samsam-cloud.js?v=202611091839"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -692,12 +692,21 @@ function paintStableNote() {
 // your portfolio's own price when CoinGecko has none) and what your coins are worth
 function pfCoins() { return ((state && state.portfolio) || []).filter(c => c.qty > 0); }
 function pfId(c) { return c.cgId || SamsamCoins.CG_IDS[c.sym] || ''; }
+// a row missing its 24h / 7d % takes it from another list that has the same coin (Top 100 live, Top 101–500 saved)
+function fillCh(r) {
+  if (!r || (r.ch24 != null && r.ch7 != null)) return r;
+  const o = topRows.find(x => x.id === r.id && x !== r) || bigRows.find(x => x.id === r.id && x !== r) || pfExtra.find(x => x.id === r.id && x !== r);
+  return o ? { ...r, ch24: r.ch24 != null ? r.ch24 : o.ch24, ch7: r.ch7 != null ? r.ch7 : o.ch7 } : r;
+}
 function pfAll() {
   return pfCoins().map(c => {
-    const id = pfId(c), m = id && (topRows.find(r => r.id === id) || pfExtra.find(r => r.id === id) || watchRows.find(r => r.id === id));
-    const price = m && m.price > 0 ? m.price : c.currentPrice > 0 ? c.currentPrice : null;
+    const id = pfId(c), live = id && (topRows.find(r => r.id === id) || pfExtra.find(r => r.id === id));   // CoinGecko just now
+    const m = id && fillCh(live || bigRows.find(r => r.id === id) || watchRows.find(r => r.id === id));   // or a saved list (7d %, rank, chart)
+    // price and 24h: the live list, else your portfolio's live price (Binance every 15 s), else the saved list
+    const price = live && live.price > 0 ? live.price : c.currentPrice > 0 ? c.currentPrice : m && m.price > 0 ? m.price : null;
+    const ch24 = live && live.ch24 != null ? live.ch24 : c.change24h != null ? c.change24h : m && m.ch24 != null ? m.ch24 : null;
     return { ...(m || {}), id: id || 'own-' + c.sym.toLowerCase(), sym: m ? m.sym : c.sym, name: (m && m.name) || c.name || c.sym, img: (m && m.img) || c.logoUrl || '',
-      rank: m ? m.rank : null, price, ch24: m && m.ch24 != null ? m.ch24 : c.change24h != null ? c.change24h : null, ch7: m ? m.ch7 : null,
+      rank: m ? m.rank : null, price, ch24, ch7: m ? m.ch7 : null,
       mcap: m ? m.mcap : null, spark: m ? m.spark : [], val: price ? c.qty * price : 0, own: true };
   });
 }
@@ -712,7 +721,7 @@ async function loadPf(force) {
 function rowsNow() {
   // Top 100…500: stablecoins left out (unless you show them), so it's N coins that move; ranks stay the real ones
   let rows = mode === 'top' ? topList()
-    : mode === 'pf' ? pfAll().filter(r => showStable || !M.isStable(r)) : watchRows.slice();
+    : mode === 'pf' ? pfAll().filter(r => showStable || !M.isStable(r)) : watchRows.map(fillCh);
   if (mode === 'watch') {   // coins CoinGecko didn't return (yet) still show, from what was saved
     const have = new Set(rows.map(r => r.id));
     watchlist().forEach(w => { if (!have.has(w.id)) rows.push({ id: w.id, sym: w.sym, name: w.name, img: w.img, rank: null, price: null, ch24: null, mcap: null, spark: [] }); });
@@ -729,8 +738,9 @@ function topList() {
   if (topN > 100 && bigRows.length) { const have = new Set(topRows.map(r => r.id)); list = topRows.concat(bigRows.filter(r => !have.has(r.id))); }   // live rows win
   return list.filter(r => showStable || !M.isStable(r)).slice(0, topN);
 }
-function loadBig(force) {
-  if (topN <= 100 || bigBusy) return;
+function loadBig(force, any) {
+  if ((topN <= 100 && !any) || bigBusy) return;
+  if (!force && bigRows.length && Date.now() - bigT < 10 * 60e3) { render(); return; }
   bigBusy = true;
   M.top500(force).then(j => { bigRows = fix(j.top.map(r => ({ ...r }))); bigT = j.t; bigBusy = false; render();
     M.binanceTopUp(bigRows).then(n => { if (n) { bigT = Date.now(); render(); } });   // fresher prices from Binance for the coins it trades
@@ -931,7 +941,10 @@ function setMode(m) {
   document.getElementById('tabWatch').setAttribute('aria-selected', m === 'watch');
   document.getElementById('tabPf').setAttribute('aria-selected', m === 'pf');
   // your coins: biggest holding first; the other lists: by rank
-  if (m === 'pf' && was !== 'pf') { sortKey = 'val'; sortDir = 1; } else if (m !== 'pf' && sortKey === 'val') { sortKey = 'rank'; sortDir = 1; }
+  // (Gainers / Losers keep their order — biggest move first — in every list)
+  if (filter === 'gain' || filter === 'lose') { sortKey = 'chP'; sortDir = filter === 'gain' ? 1 : -1; }
+  else if (m === 'pf' && was !== 'pf') { sortKey = 'val'; sortDir = 1; } else if (m !== 'pf' && sortKey === 'val') { sortKey = 'rank'; sortDir = 1; }
+  if (m !== 'top') loadBig(false, true);   // coins ranked 101–500 in your portfolio / watchlist get their 24h / 7d % from it
   if (m === 'watch') loadWatch(false); else if (m === 'pf') loadPf(false); else render();
 }
 // Gainers → the biggest rise first · Losers → the biggest drop first (for the 24h / 7d you picked) · All → back to rank

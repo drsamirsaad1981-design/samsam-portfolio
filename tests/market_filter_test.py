@@ -12,12 +12,17 @@ with sync_playwright() as p:
     br = p.chromium.launch()
     for vn, vp in (('desktop', dict(viewport={'width': 1366, 'height': 900})), ('phone', dict(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True))):
         ctx = br.new_context(**vp); S.setup(ctx); ctx.route('https://api.coingecko.com/api/v3/coins/markets**', markets)
+        FIX5 = (pathlib.Path(__file__).parent / 'top500_fixture.json').read_text()
+        ctx.route('**/prices/m/top500.json', lambda r: r.fulfill(status=200, content_type='application/json', body=FIX5))
         pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg)
         pg.goto(S.SITE + '/market.html'); pg.wait_for_function("Samsam.isReady() && typeof rowsNow === 'function' && rowsNow().length > 20", timeout=30000); pg.wait_for_timeout(800)
-        for per in ('24h', '7d'):
+        for mode, per in (('top', '24h'), ('top', '7d'), ('pf', '24h'), ('pf', '7d')):
+            if vn == 'desktop' and per == '7d': continue   # wide screens show both columns; the switch is a phone thing
+            pg.evaluate(f"setMode('{mode}')"); pg.wait_for_timeout(1500)
             pg.evaluate(f"setPer('{per}')"); pg.wait_for_timeout(200)
             k = pg.evaluate("chKey()")
+            per = mode + ' ' + per
             pg.click('.mk-chip[data-f="lose"]'); pg.wait_for_timeout(300)
             ch = pg.evaluate(f"rowsNow().map(r=>r['{k}'])")
             check(f'{vn} {per}: Losers → only falling, biggest drop first ({len(ch)} coins, {ch[:3]})', ch and all(c < 0 for c in ch) and ch == sorted(ch), ch[:8])
@@ -25,8 +30,23 @@ with sync_playwright() as p:
             ch = pg.evaluate(f"rowsNow().map(r=>r['{k}'])")
             check(f'{vn} {per}: Gainers → only rising, biggest rise first ({len(ch)} coins, {ch[:3]})', ch and all(c > 0 for c in ch) and ch == sorted(ch, reverse=True), ch[:8])
             pg.click('.mk-chip[data-f="all"]'); pg.wait_for_timeout(300)
-            rk = pg.evaluate("rowsNow().map(r=>r.rank||1e9)")
-            check(f'{vn} {per}: All → back to rank order', rk == sorted(rk), rk[:8])
+            if mode == 'top':
+                rk = pg.evaluate("rowsNow().map(r=>r.rank||1e9)")
+                check(f'{vn} {per}: All → back to rank order', rk == sorted(rk), rk[:8])
+            else:
+                vv = pg.evaluate("rowsNow().map(r=>r.val)")
+                check(f'{vn} {per}: All → biggest holding first', vv == sorted(vv, reverse=True), vv[:6])
+        # switching lists keeps Losers in order (it used to fall back to rank / holding)
+        pg.evaluate("setMode('top')"); pg.wait_for_timeout(800); pg.click('.mk-chip[data-f="lose"]'); pg.wait_for_timeout(200)
+        pg.evaluate("setMode('pf')"); pg.wait_for_timeout(1500)
+        k = pg.evaluate("chKey()"); ch = pg.evaluate(f"rowsNow().map(r=>r['{k}'])")
+        check(f'{vn}: Losers, then Portfolio → still biggest drop first {ch[:4]}', ch and all(c < 0 for c in ch) and ch == sorted(ch), ch)
+        if vn == 'phone':
+            pg.evaluate("setPer('7d')"); pg.wait_for_timeout(300)
+            n7 = pg.evaluate("rowsNow().length")
+            check(f'{vn}: Portfolio 7d Losers include coins ranked 101–500 (their 7d % comes from the saved list) — {n7} coins', n7 >= 3, n7)
+            pg.evaluate("setPer('24h')")
+        pg.evaluate("setMode('top')"); pg.click('.mk-chip[data-f="all"]'); pg.wait_for_timeout(300)
         pg.evaluate("setPer('24h')"); pg.click('.mk-chip[data-f="lose"]'); pg.wait_for_timeout(300)
         if vn == 'desktop': pg.screenshot(path=str(SH / 'market_losers.png'))
         pg.click('.mk-chip[data-f="all"]')

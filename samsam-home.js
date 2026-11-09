@@ -2616,13 +2616,21 @@ function renderHovTargets() {
       return `<div class="tg-act"><span class="tg-dot" style="background:${tgColor(g.key)}"></span><span class="tg-n">${buy ? 'Buy' : 'Trim'} ${esc(tgLabel(g.key))}<span>${coins.length ? esc(coins.join(' · ')) : 'no coin in this category yet — pick one to add'}</span></span><span class="tg-amt ${buy ? 'buy' : 'sell'}">${buy ? '+' : '−'}${usd(Math.abs(g.full))}</span></div>`; }).join('')
       : `<div class="tg-note">${ic('checkCircle')} Every group is inside your ±${t.band} band — nothing to do.</div>`;
   }
-  box.innerHTML = `<div class="tg-h"><span class="tg-ic">${ic('target')}</span><b>Target allocation</b><button type="button" class="tg-edit" onclick="openTargets()">${SamsamUI.ic('pencil', { solo: true, size: 13 })}Edit</button></div>
-    <div class="tg-sub"><b>${plan.onTarget} of ${plan.count}</b> categories on target · band ±${t.band} pts</div>
+  // a card: closed it shows the title + how many categories are on target; tap it to open (remembered on this device)
+  let tgOpen = false; try { tgOpen = localStorage.getItem('samsam_tg_open') === '1'; } catch (_) {}
+  const off = shown.filter(g => g.state !== 'ok').length;
+  box.innerHTML = `<div class="tg-h tg-tap" role="button" tabindex="0" aria-expanded="${tgOpen}" aria-controls="tgBody"><span class="tg-ic">${ic('target')}</span><b>Target allocation</b><button type="button" class="tg-edit" onclick="event.stopPropagation();openTargets()">${SamsamUI.ic('pencil', { solo: true, size: 13 })}Edit</button>
+      <span class="tg-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
+    <div class="tg-sub tg-tap2"><b>${plan.onTarget} of ${plan.count}</b> categories on target · band ±${t.band} pts${!tgOpen && off ? ` · <span class="tg-offn">${off} to rebalance</span>` : ''}</div>
+    <div class="tg-body" id="tgBody"${tgOpen ? '' : ' hidden'}>
     <div class="tg-rows">${rows}</div>
     <div class="tg-rb"><div class="tg-rb-h"><b>Rebalance</b><span class="tg-seg" role="group" aria-label="Rebalance with"><button type="button" data-m="cash" aria-pressed="${tgMode === 'cash'}">New money</button><button type="button" data-m="full" aria-pressed="${tgMode === 'full'}">Full rebalance</button></span></div>
       ${tgMode === 'cash' ? `<div class="tg-cash">Invest <label>$<input type="text" inputmode="decimal" id="tgCash" value="${tgCash}" aria-label="Amount to invest"></label> without selling anything</div>` : '<div class="tg-cash">Buy and trim so every group is on target (your total stays the same)</div>'}
       <div class="tg-acts">${acts}</div>
-      <div class="tg-note">At today's prices. Coins to use: Reinforce first; to trim, Sell / Convert first. A plan to check, not advice.</div></div>`;
+      <div class="tg-note">At today's prices. Coins to use: Reinforce first; to trim, Sell / Convert first. A plan to check, not advice.</div></div></div>`;
+  const tgTog = () => { try { localStorage.setItem('samsam_tg_open', tgOpen ? '0' : '1'); } catch (_) {} renderHovTargets(); };
+  box.querySelector('.tg-h').onclick = tgTog; box.querySelector('.tg-sub').onclick = tgTog;
+  box.querySelector('.tg-h').onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); tgTog(); } };
   box.querySelectorAll('.tg-seg button').forEach(b => b.onclick = () => { tgMode = b.dataset.m; try { localStorage.setItem('samsam_rb_mode', tgMode); } catch (_) {} renderHovTargets(); });
   const ci = document.getElementById('tgCash');
   if (ci) ci.onchange = ci.onkeyup = e => { const v = Math.max(0, parseFloat(String(ci.value).replace(/[^0-9.]/g, '')) || 0); if (v === tgCash && e.type !== 'change') return; tgCash = v; try { localStorage.setItem('samsam_rb_cash', String(v)); } catch (_) {}

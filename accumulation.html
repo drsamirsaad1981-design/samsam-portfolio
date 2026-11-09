@@ -16,18 +16,18 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611091751"></script>
-<script src="samsam-hints.js?v=202611091751"></script>
-<script src="samsam-vault.js?v=202611091751"></script>
-<script src="samsam-labels.js?v=202611091751"></script>
-<script src="samsam-taxonomy.js?v=202611091751"></script>
-<script src="samsam-coins.js?v=202611091751"></script>
-<script src="samsam-import.js?v=202611091751"></script>
-<script src="samsam-settings.js?v=202611091751"></script>
-<script src="samsam-dropdown.js?v=202611091751"></script>
-<script src="samsam-market.js?v=202611091751"></script>
-<script src="samsam-exit.js?v=202611091751"></script>
-<script src="samsam-add.js?v=202611091751"></script>
+<script src="samsam-ui.js?v=202611091839"></script>
+<script src="samsam-hints.js?v=202611091839"></script>
+<script src="samsam-vault.js?v=202611091839"></script>
+<script src="samsam-labels.js?v=202611091839"></script>
+<script src="samsam-taxonomy.js?v=202611091839"></script>
+<script src="samsam-coins.js?v=202611091839"></script>
+<script src="samsam-import.js?v=202611091839"></script>
+<script src="samsam-settings.js?v=202611091839"></script>
+<script src="samsam-dropdown.js?v=202611091839"></script>
+<script src="samsam-market.js?v=202611091839"></script>
+<script src="samsam-exit.js?v=202611091839"></script>
+<script src="samsam-add.js?v=202611091839"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -587,6 +587,13 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 .xs-card + .xc-card, .xc-card { margin: 0; }
 /* toolbar + picker */
 .xs-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+/* Macro / Cash-out: cards that open on a tap */
+.xs-tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.xs-head.xs-tap:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 10px; }
+.xs-chev { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border); color: var(--fg2); flex: none; margin-left: 8px; transition: transform .2s; }
+.xs-card.open > .xs-head .xs-chev { transform: rotate(180deg); }
+.xs-card:not(.open) .xm-sum { margin-bottom: 0; }
+.xs-head.xs-tap { justify-content: flex-start; } .xs-head.xs-tap .xs-title { margin-right: auto; }
 .xs-count { font-size: .76rem; color: var(--fg2); font-weight: 600; }
 .xp-card { margin-bottom: 12px; }
 .xp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; max-height: 320px; overflow: auto; }
@@ -884,7 +891,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611091751"></script>
+<script type="module" src="samsam-cloud.js?v=202611091839"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';

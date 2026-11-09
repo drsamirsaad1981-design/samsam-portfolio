@@ -120,3 +120,4 @@ market_filter_test.py
 holdings_pct_test.py
 coin_links_test.py
 fast_price_test.py
+cards_fold_test.py

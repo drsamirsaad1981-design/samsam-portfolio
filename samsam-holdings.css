@@ -252,6 +252,12 @@
     .hov-tgt-card { display: none; padding: 16px; margin-bottom: 14px; }
     #holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-tgt-card { display: block; }
     .tg-h { display: flex; align-items: center; gap: 10px; } .tg-h b { flex: 1; font-size: .98rem; }
+    .tg-tap, .tg-tap2 { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .tg-tap:focus-visible { outline: 2px solid #7c3aed; outline-offset: 3px; border-radius: 10px; }
+    .tg-chev { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border); color: var(--fg2); flex: none; transition: transform .2s; }
+    .tg-tap[aria-expanded="true"] .tg-chev { transform: rotate(180deg); }
+    .tg-offn { color: #f59e0b; font-weight: 700; }
+    .tg-body[hidden] { display: none; }
     .tg-ic { width: 30px; height: 30px; border-radius: 9px; flex: none; display: inline-flex; align-items: center; justify-content: center; background: rgba(124,58,237,.15); color: #a78bfa; }
     [data-theme="light"] .tg-ic { color: #6d28d9; background: rgba(124,58,237,.1); }
     .tg-edit { border: 1px solid var(--border); background: var(--bg3); color: var(--fg); border-radius: 9px; padding: 6px 12px; font: inherit; font-size: .8rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
