@@ -37,7 +37,7 @@ with sync_playwright() as p:
     txt=scan(pg,'Coin transactions screen')
     check('coin screen shows Avg. Buy Price + Cost Basis', 'Avg. Buy Price' in txt and 'Cost Basis' in txt)
     pg.click('#htxTypeDD .sdd-btn'); opts=pg.eval_on_selector_all('.sdd-panel.show .sdd-opt','els=>els.map(e=>e.innerText.trim())'); pg.keyboard.press('Escape')
-    check('type filter options', [o for o in opts if o]==['All Types','Buy','Sell','Transfer In','Transfer Out'], opts)
+    check('type filter options', [o for o in opts if o]==['All Types','Buy','Sell','Transfer In','Transfer Out','Reward'], opts)
     pg.goto(SITE+'/index.html#holdings'); pg.wait_for_timeout(1200); scan(pg,'Holdings screen')
     for page in ('accumulation','allocation','performance','recover'):
         pg.goto(f'{SITE}/{page}.html'); pg.wait_for_timeout(1800); scan(pg, page)
