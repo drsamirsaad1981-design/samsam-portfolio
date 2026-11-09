@@ -6,7 +6,8 @@
 //   · the same            → ✓
 //   · the wallet has more → e.g. a staking reward arrived: add the difference as a Reward ($0 cost) in one tap, or as a Transfer In
 //   · the app has more    → the rest is on an exchange, staked, or a sell / transfer wasn't recorded
-// Token contracts (USDT on Ethereum, JUP on Solana…) come from CoinGecko and are remembered on this device for 90 days.
+// Solana tokens are listed by the blockchain itself (named by Jupiter's verified list). EVM token contracts (USDT on Ethereum…)
+// come from CoinGecko, looked up once and remembered on this device for 90 days.
 // Saved in the cloud (meta/info.wallets) and in your backups. A seed phrase or private key is never accepted.
 (function () {
   'use strict';
@@ -14,8 +15,9 @@
   var E = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var IC = function (n, o) { return window.SamsamUI ? SamsamUI.ic(n, o) : ''; };
   function S() { return window.Samsam; }
-  var CFG = { gap: 1300, retry: 15000 };   // CoinGecko's free limit: one coin lookup at a time, a pause between
+  var CFG = { gap: 2500, retry: 30000, tries: 3 };   // CoinGecko's free limit: one coin lookup at a time, a pause between, wait when busy
   var CG = 'https://api.coingecko.com/api/v3/coins/';
+  var JUP = 'https://lite-api.jup.ag/tokens/v2/search?query=';   // Jupiter: what a Solana token (mint) is — up to 100 at a time
   var BTC_API = ['https://mempool.space/api/address/', 'https://blockstream.info/api/address/'];
   var SOL_RPC = ['https://solana-rpc.publicnode.com', 'https://api.mainnet-beta.solana.com'];
   var SPL = ['TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'];
@@ -77,24 +79,42 @@
     }
     throw new Error('Bitcoin');
   }
-  async function solWallet(w, held, plat) {
+  // Solana: every token the wallet holds is listed by the blockchain itself, so nothing has to be looked up first.
+  // A token is matched to your coin by its mint: CoinGecko's (if remembered) or Jupiter's verified token list.
+  async function jupTokens(mints) {
+    var out = [];
+    for (var i = 0; i < mints.length; i += 100) {
+      var r = await fetch(JUP + encodeURIComponent(mints.slice(i, i + 100).join(','))); if (!r.ok) throw new Error('Jupiter');
+      var j = await r.json(); out = out.concat(Array.isArray(j) ? j : (j && j.tokens) || []);
+    }
+    return out;
+  }
+  async function solWallet(w, held, plat, info) {
     var out = [], call = function (m, p) { return post(SOL_RPC, { jsonrpc: '2.0', id: 1, method: m, params: p }); };
     var sol = held.filter(function (x) { return x.cgId === 'solana' || x.sym === 'SOL'; })[0];
     if (sol) { var b = await call('getBalance', [w.addr]); if (b.error) throw new Error('Solana'); out.push({ sym: sol.sym, q: ((b.result && b.result.value) || 0) / 1e9, where: 'Solana' }); }
-    var mints = {};
-    held.forEach(function (c) { var p = c.cgId && plat[c.cgId] && plat[c.cgId].p && plat[c.cgId].p.solana; if (p) mints[p[0]] = c.sym; });
-    if (!Object.keys(mints).length) return out;
-    var got = {};
+    var accts = {};   // mint → amount
     for (var i = 0; i < SPL.length; i++) {
       var t = await call('getTokenAccountsByOwner', [w.addr, { programId: SPL[i] }, { encoding: 'jsonParsed' }]);
       if (t.error) throw new Error('Solana');
       ((t.result && t.result.value) || []).forEach(function (a) {
-        var info = a && a.account && a.account.data && a.account.data.parsed && a.account.data.parsed.info, sym = info && mints[info.mint];
-        if (!sym) return; var ta = info.tokenAmount || {};
-        got[sym] = (got[sym] || 0) + (+(ta.uiAmountString != null ? ta.uiAmountString : ta.uiAmount) || 0);
+        var inf = a && a.account && a.account.data && a.account.data.parsed && a.account.data.parsed.info; if (!inf || !inf.mint) return;
+        var ta = inf.tokenAmount || {}; accts[inf.mint] = (accts[inf.mint] || 0) + (+(ta.uiAmountString != null ? ta.uiAmountString : ta.uiAmount) || 0);
       });
     }
-    Object.keys(mints).forEach(function (m) { var s = mints[m]; out.push({ sym: s, q: got[s] || 0, where: 'Solana' }); });
+    var bySym = {}, mintSym = {};
+    held.forEach(function (c) { bySym[c.sym] = c; var p = c.cgId && plat[c.cgId] && plat[c.cgId].p && plat[c.cgId].p.solana; if (p) mintSym[p[0]] = c.sym; });
+    var unknown = Object.keys(accts).filter(function (m) { return !mintSym[m] && accts[m] > 0; });
+    if (unknown.length) {
+      try {
+        (await jupTokens(unknown)).forEach(function (tk) {
+          var m = tk && (tk.id || tk.address), sy = String((tk && tk.symbol) || '').toUpperCase();
+          if (m && accts[m] != null && bySym[sy] && tk.isVerified !== false) mintSym[m] = sy;   // a look-alike (unverified) token is never counted
+        });
+      } catch (_) { info.jupFail = true; }
+    }
+    var got = {}; Object.keys(mintSym).forEach(function (m) { var sy = mintSym[m]; got[sy] = (got[sy] || 0) + (accts[m] || 0); });
+    Object.keys(got).forEach(function (sy) { out.push({ sym: sy, q: got[sy], where: 'Solana' }); });
     return out;
   }
   async function evmWallet(w, held, plat, errs) {
@@ -124,14 +144,14 @@
   }
   // CoinGecko: where each token lives (contract + decimals per chain) — remembered 90 days
   async function platforms(ids, onStep) {
-    var c = lsGet(K.plat, {}), now = Date.now(), need = ids.filter(function (id) { return !(c[id] && now - c[id].at < 90 * 864e5); });
+    var c = lsGet(K.plat, {}), now = Date.now(), failed = [], need = ids.filter(function (id) { return !(c[id] && now - c[id].at < 90 * 864e5); });
     for (var i = 0; i < need.length; i++) {
       if (onStep) onStep(i + 1, need.length);
       var id = need[i], d = null;
-      for (var n = 0; n < 2 && !d; n++) {
+      for (var n = 0; n < CFG.tries && !d; n++) {
         try {
           var r = await fetch(CG + encodeURIComponent(id) + '?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false');
-          if (r.status === 429) { await wait(CFG.retry); continue; }
+          if (r.status === 429) { if (onStep) onStep(i + 1, need.length, true); await wait(CFG.retry); continue; }
           if (!r.ok) break; d = await r.json();
         } catch (_) { break; }
       }
@@ -139,11 +159,11 @@
         var p = {}, dp = d.detail_platforms || {}, pl = d.platforms || {};
         Object.keys(dp).forEach(function (k) { var x = dp[k]; if (k && x && x.contract_address) p[k] = [String(x.contract_address).trim(), x.decimal_place == null ? null : +x.decimal_place]; });
         Object.keys(pl).forEach(function (k) { if (k && pl[k] && !p[k]) p[k] = [String(pl[k]).trim(), null]; });
-        c[id] = { p: p, at: now }; lsPut(K.plat, c);
-      }
+        c[id] = { p: p, at: now }; lsPut(K.plat, c);   // saved coin by coin: a check stopped half-way goes on from there next time
+      } else failed.push(id);
       if (i < need.length - 1 && CFG.gap) await wait(CFG.gap);
     }
-    return c;
+    c.__failed = failed; return c;
   }
   function isNative(c) {
     return c.cgId === 'bitcoin' || c.cgId === 'solana' || EVM.some(function (ch) { return c.cgId === ch.id; }) || (!c.cgId && /^(BTC|SOL|ETH|BNB|POL|MATIC|AVAX)$/.test(c.sym));
@@ -159,24 +179,47 @@
   async function check() {
     if (busy) return LAST; busy = true; step = 'Reading your wallets…'; draw();
     try {
-      var ws = S().getWallets(), held = heldNow(), kinds = {};
+      var ws = S().getWallets(), held = heldNow(), kinds = {}, info = {};
       ws.forEach(function (w) { kinds[w.kind] = 1; });
-      var look = (kinds.evm || kinds.sol) ? held.filter(function (c) { return c.cgId && !isNative(c) && !OWN.test(c.sym); }).map(function (c) { return c.cgId; }) : [];
-      var plat = look.length ? await platforms(look, function (i, n) { step = 'Finding token contracts on CoinGecko… ' + i + ' / ' + n; draw(); }) : lsGet(K.plat, {});
-      step = 'Reading balances from the blockchain…'; draw();
       var found = {}, errs = [], checked = {};
-      await Promise.all(ws.map(async function (w) {
-        try {
-          var rows = w.kind === 'btc' ? await btcWallet(w, held) : w.kind === 'sol' ? await solWallet(w, held, plat) : await evmWallet(w, held, plat, errs);
-          rows.forEach(function (r) {
-            checked[r.sym] = 1; if (!(r.q > 0)) return;
-            var f = found[r.sym] || (found[r.sym] = { q: 0, where: [] });
-            f.q += r.q; var lab = w.kind === 'evm' ? (w.label ? w.label + ' · ' : '') + r.where : (w.label || KIND[w.kind]);
-            if (f.where.indexOf(lab) < 0) f.where.push(lab);
-          });
-        } catch (e) { errs.push((w.label || KIND[w.kind]) + ' (' + short(w.addr) + ')'); }
+      var take = function (w, rows) {
+        rows.forEach(function (r) {
+          checked[r.sym] = 1; if (!(r.q > 0)) return;
+          var f = found[r.sym] || (found[r.sym] = { q: 0, where: [] });
+          f.q += r.q; var lab = w.kind === 'evm' ? (w.label ? w.label + ' · ' : '') + r.where : (w.label || KIND[w.kind]);
+          if (f.where.indexOf(lab) < 0) f.where.push(lab);
+        });
+      };
+      var plat = lsGet(K.plat, {});
+      // 1) Bitcoin + Solana: read straight away (Solana lists its own tokens)
+      step = 'Reading balances from the blockchain…'; draw();
+      await Promise.all(ws.filter(function (w) { return w.kind !== 'evm'; }).map(async function (w) {
+        try { take(w, w.kind === 'btc' ? await btcWallet(w, held) : await solWallet(w, held, plat, info)); }
+        catch (e) { errs.push((w.label || KIND[w.kind]) + ' (' + short(w.addr) + ')'); }
       }));
-      LAST = { at: new Date().toISOString(), found: found, checked: Object.keys(checked), errs: errs };
+      // 2) EVM: a token is read by its contract on each chain — CoinGecko says where (once, then remembered)
+      var failed = [];
+      if (kinds.evm) {
+        var look = held.filter(function (c) { return c.cgId && !isNative(c) && !OWN.test(c.sym); }).map(function (c) { return c.cgId; });
+        if (look.length) {
+          plat = await platforms(look, function (i, n, slow) { step = slow ? 'CoinGecko is busy — waiting a moment… ' + i + ' / ' + n : 'Finding token contracts on CoinGecko… ' + i + ' / ' + n; draw(); });
+          failed = plat.__failed || []; delete plat.__failed;
+        }
+        step = 'Reading balances from the blockchain…'; draw();
+        await Promise.all(ws.filter(function (w) { return w.kind === 'evm'; }).map(async function (w) {
+          try { take(w, await evmWallet(w, held, plat, errs)); }
+          catch (e) { errs.push((w.label || KIND[w.kind]) + ' (' + short(w.addr) + ')'); }
+        }));
+      }
+      if (info.jupFail) errs.push('Solana token names (Jupiter)');
+      // why a coin wasn't checked
+      var why = {};
+      held.forEach(function (c) {
+        if (checked[c.sym]) return;
+        var bs = c.cgId === 'bitcoin' || c.sym === 'BTC' ? 'btc' : c.cgId === 'solana' || c.sym === 'SOL' ? 'sol' : '';
+        why[c.sym] = bs && !kinds[bs] ? 'nowallet' : OWN.test(c.sym) ? 'own' : failed.indexOf(c.cgId) >= 0 ? 'busy' : !kinds.evm ? 'noevm' : !c.cgId ? 'unknown' : 'other';
+      });
+      LAST = { at: new Date().toISOString(), found: found, checked: Object.keys(checked), why: why, errs: errs };
       lsPut(K.last, LAST);
     } finally { busy = false; step = ''; draw(); }
     return LAST;
@@ -187,7 +230,7 @@
     var held = heldNow(), out = { more: [], less: [], same: [], none: [], cant: [] }, ck = {};
     (last.checked || []).forEach(function (s) { ck[s] = 1; });
     held.forEach(function (c) {
-      if (!ck[c.sym]) { out.cant.push(c.sym); return; }
+      if (!ck[c.sym]) { out.cant.push({ sym: c.sym, why: (last.why || {})[c.sym] || 'other' }); return; }
       var f = (last.found || {})[c.sym], w = f ? f.q : 0, a = c.qty, d = w - a, p = c.currentPrice || 0;
       var row = { sym: c.sym, wallet: w, app: a, diff: d, usd: d * p, where: f ? f.where : [] };
       var same = p > 0 ? Math.abs(d) * p < 0.5 : Math.abs(d) <= Math.max(a, w) * 1e-4;
@@ -235,6 +278,7 @@
     '#cpWal .wl-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}' +
     '#cpWal .wl-ok{color:#22c55e}[data-theme="light"] #cpWal .wl-ok{color:#16a34a}' +
     '#cpWal .wl-syms{font-size:.8rem;padding:10px 12px;line-height:1.6}' +
+    '#cpWal .wl-syms+.wl-syms{border-top:1px solid var(--border,rgba(148,163,184,.15))}' +
     '#cpWal .wl-warn{color:#f59e0b;font-size:.8rem;margin-top:6px}';
 
   var form = { addr: '', label: '', err: '' };
@@ -277,7 +321,16 @@
     var sec = function (title, rows, kind) { return rows.length ? '<div class="wl-sec">' + title + ' (' + rows.length + ')</div><div class="wl-list" id="wlRes-' + kind + '">' + rows.map(function (r) { return rowHtml(r, kind); }).join('') + '</div>' : ''; };
     h += sec('Wallet has more', c.more, 'more') + sec('App has more', c.less, 'less') + sec('Match', c.same, 'same');
     if (c.none.length) h += '<div class="wl-sec">Not in these wallets (' + c.none.length + ')</div><div class="wl-list"><div class="wl-syms" id="wlRes-none">' + c.none.map(function (r) { return '<b>' + E(r.sym) + '</b> ' + qf(r.app); }).join(' · ') + '<div class="wl-note">On an exchange, staked, or in a wallet you haven’t added.</div></div></div>';
-    if (c.cant.length) h += '<div class="wl-sec">Can’t be checked here (' + c.cant.length + ')</div><div class="wl-list"><div class="wl-syms" id="wlRes-cant">' + c.cant.map(E).join(' · ') + '<div class="wl-note">Their own blockchain, or no wallet of that kind added.</div></div></div>';
+    if (c.cant.length) {
+      var WHY = [['busy', 'CoinGecko was busy, so these weren’t looked up yet — tap Check now again (what was found is remembered).'],
+        ['noevm', 'Ethereum-type coins (ETH, LINK, ONDO, ARB, USDT on Ethereum…): add your 0x… address — the same one covers Ethereum, Base, Optimism, Arbitrum, BNB Chain, Polygon and Avalanche. Not there? Then they’re on another chain or an exchange.'],
+        ['nowallet', 'Add your Bitcoin / Solana address to check these.'],
+        ['other', 'Not on Bitcoin, Solana or the EVM chains of your wallets.'], ['unknown', 'Not linked to CoinGecko.'], ['own', 'Their own blockchain (can’t be read here).']];
+      h += '<div class="wl-sec">Not checked (' + c.cant.length + ')</div><div class="wl-list" id="wlRes-cant">' + WHY.map(function (g) {
+        var l = c.cant.filter(function (x) { return x.why === g[0]; }); if (!l.length) return '';
+        return '<div class="wl-syms" data-why="' + g[0] + '">' + l.map(function (x) { return '<b>' + E(x.sym) + '</b>'; }).join(' · ') + '<div class="wl-note">' + E(g[1]) + '</div></div>';
+      }).join('') + '</div>';
+    }
     return h;
   }
   function draw() {
