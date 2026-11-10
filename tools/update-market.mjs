@@ -117,7 +117,7 @@ async function main() {
 //   cmc: { SYM: [[slug, name, marketCap], …] }  CoinMarketCap's own page names, top ~1500 coins (tickers are reused,
 //        so the app picks by name / market cap)
 //   cc:  { coingeckoId: slug }                   CoinCodex (Prediction) page for the Top 150 + the app's known coins
-//   fut: [SYM, …]                                coins with perpetual futures (OKX or Hyperliquid) — CoinGlass has a
+//   fut: [SYM, …]                                coins with perpetual futures (OKX, Hyperliquid, Gate, Bitget or KuCoin) — CoinGlass has a
 //        Liquidation Map only for those
 // Any part that fails keeps the last one.
 const CMC_LIST = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?sortBy=market_cap&sortType=desc&convert=USD&cryptoType=all&tagType=all&audited=false';
@@ -187,14 +187,31 @@ async function links(top) {
   } else Object.assign(out.cc, cc);
   for (const id of want.keys()) if (!cc[id]) out.ccMiss[id] = today;   // no page — not asked again until tomorrow
   log('links: CoinCodex', found, 'of', want.size, fullCc ? '(daily pass)' : '(new coins)');
-  // perpetual futures: OKX + Hyperliquid (Binance / Bybit refuse GitHub's US servers)
-  const fut = new Set();
-  const okx = await get('https://www.okx.com/api/v5/public/instruments?instType=SWAP', 2);
-  for (const x of (okx && okx.data) || []) { const m = /^([A-Z0-9]+)-USDT?$/.exec(x.instFamily || ''); if (m && x.state === 'live') fut.add(m[1]); }
-  let hl = null;
-  try { const r = await fetch('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"type":"meta"}' }); if (r.ok) hl = await r.json(); } catch (_) {}
-  for (const x of (hl && hl.universe) || []) if (!x.isDelisted && x.name) fut.add(String(x.name).replace(/^k(?=[A-Z])/, '').toUpperCase());
-  if (fut.size > 100) { out.fut = [...fut].sort(); log('links: futures', fut.size); } else log('links: futures no answer, kept the last one');
+  // perpetual futures, from every exchange that answers GitHub's US servers (Binance / Bybit refuse them).
+  // Each exchange keeps its last list if it does not answer this time, so one outage never turns coins into "No futures".
+  const X = (sym) => String(sym || '').toUpperCase().replace(/^XBT$/, 'BTC');
+  const FUT_SRC = {
+    okx: async () => { const j = await get('https://www.okx.com/api/v5/public/instruments?instType=SWAP', 2);
+      return ((j && j.data) || []).filter(x => x.state === 'live').map(x => (/^([A-Z0-9]+)-USDT?$/.exec(x.instFamily || '') || [])[1]); },
+    hyperliquid: async () => { let j = null;
+      try { const r = await fetch('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"type":"meta"}' }); if (r.ok) j = await r.json(); } catch (_) {}
+      return ((j && j.universe) || []).filter(x => !x.isDelisted && x.name).map(x => String(x.name).replace(/^k(?=[A-Z])/, '')); },
+    gate: async () => { const j = await get('https://api.gateio.ws/api/v4/futures/usdt/contracts', 2);
+      return (Array.isArray(j) ? j : []).filter(x => !x.in_delisting && x.status !== 'delisted').map(x => String(x.name || '').split('_')[0]); },
+    bitget: async () => { const j = await get('https://api.bitget.com/api/v2/mix/market/contracts?productType=USDT-FUTURES', 2);
+      return ((j && j.data) || []).filter(x => x.symbolStatus === 'normal').map(x => x.baseCoin); },
+    kucoin: async () => { const j = await get('https://api-futures.kucoin.com/api/v1/contracts/active', 2);
+      return ((j && j.data) || []).filter(x => x.status === 'Open' && /^USDT?$/.test(x.quoteCurrency || '')).map(x => x.baseCurrency); },
+  };
+  out.futBy = out.futBy || {};
+  for (const [name, read] of Object.entries(FUT_SRC)) {
+    let list = [];
+    try { list = [...new Set((await read()).map(X).filter(x => /^[A-Z0-9]{1,20}$/.test(x)))]; } catch (_) {}
+    if (list.length > 20) { out.futBy[name] = list.sort(); log('links: futures', name, list.length); }
+    else log('links: futures', name, 'no answer, kept its last list (' + ((out.futBy[name] || []).length) + ')');
+  }
+  const fut = new Set([...Object.values(out.futBy).flat(), ...(Object.keys(out.futBy).length ? [] : out.fut || [])]);
+  if (fut.size > 100) { out.fut = [...fut].sort(); log('links: futures in all', fut.size); } else log('links: futures no answer, kept the last one');
   fs.writeFileSync(FILE_L, JSON.stringify(out));
   log('wrote', FILE_L);
 }
