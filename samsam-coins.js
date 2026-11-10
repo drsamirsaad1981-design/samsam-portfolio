@@ -215,7 +215,9 @@
   //    Kept in this browser; until it arrives the links use the names below / a guess, as before.
   var LINKS = null;
   (function loadLinks() {
-    try { var c = JSON.parse(localStorage.getItem('samsam_links') || 'null'); if (c && c.data && c.data.cmc) { LINKS = c.data; if (Date.now() - c.t < 6 * 3600e3) return; } } catch (_) {}
+    // the copy kept here is used at once; a fresh one is fetched when it is over 30 minutes old (GitHub refreshes the
+    // list every half hour) or from before the futures came from every exchange (no futBy) — then every page redraws
+    try { var c = JSON.parse(localStorage.getItem('samsam_links') || 'null'); if (c && c.data && c.data.cmc) { LINKS = c.data; if (Date.now() - c.t < 30 * 60e3 && c.data.futBy) return; } } catch (_) {}
     if (typeof fetch !== 'function' || typeof location === 'undefined') return;
     var m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname || ''), repo = (location.pathname || '/').split('/')[1];
     var url = window.__linksUrl || 'https://raw.githubusercontent.com/' + (m ? m[1] : 'drsamirsaad1981-design') + '/' + (m && repo ? repo : 'samsam-portfolio') + '/prices/m/links.json';

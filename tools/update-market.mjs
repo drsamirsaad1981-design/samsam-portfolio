@@ -117,7 +117,7 @@ async function main() {
 //   cmc: { SYM: [[slug, name, marketCap], …] }  CoinMarketCap's own page names, top ~1500 coins (tickers are reused,
 //        so the app picks by name / market cap)
 //   cc:  { coingeckoId: slug }                   CoinCodex (Prediction) page for the Top 150 + the app's known coins
-//   fut: [SYM, …]                                coins with perpetual futures (OKX, Hyperliquid, Gate, Bitget or KuCoin) — CoinGlass has a
+//   fut: [SYM, …]                                coins with perpetual futures (OKX, Hyperliquid, Gate, Bitget, KuCoin, MEXC or BingX) — CoinGlass has a
 //        Liquidation Map only for those
 // Any part that fails keeps the last one.
 const CMC_LIST = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?sortBy=market_cap&sortType=desc&convert=USD&cryptoType=all&tagType=all&audited=false';
@@ -190,6 +190,8 @@ async function links(top) {
   // perpetual futures, from every exchange that answers GitHub's US servers (Binance / Bybit refuse them).
   // Each exchange keeps its last list if it does not answer this time, so one outage never turns coins into "No futures".
   const X = (sym) => String(sym || '').toUpperCase().replace(/^XBT$/, 'BTC');
+  // 1000PEPE, 10000SATS, 1000000MOG, 1MBABYDOGE … are the same coins (contracts priced per 1000) — listed under both names
+  const unPrefix = (x) => x.replace(/^(?:1000000|100000|10000|1000|1M)(?=[A-Z]{2})/, '');
   const FUT_SRC = {
     okx: async () => { const j = await get('https://www.okx.com/api/v5/public/instruments?instType=SWAP', 2);
       return ((j && j.data) || []).filter(x => x.state === 'live').map(x => (/^([A-Z0-9]+)-USDT?$/.exec(x.instFamily || '') || [])[1]); },
@@ -202,11 +204,15 @@ async function links(top) {
       return ((j && j.data) || []).filter(x => x.symbolStatus === 'normal').map(x => x.baseCoin); },
     kucoin: async () => { const j = await get('https://api-futures.kucoin.com/api/v1/contracts/active', 2);
       return ((j && j.data) || []).filter(x => x.status === 'Open' && /^USDT?$/.test(x.quoteCurrency || '')).map(x => x.baseCurrency); },
+    mexc: async () => { const j = await get('https://contract.mexc.com/api/v1/contract/detail', 2);
+      return ((j && j.data) || []).filter(x => x.state === 0 && x.quoteCoin === 'USDT').map(x => x.baseCoin); },
+    bingx: async () => { const j = await get('https://open-api.bingx.com/openApi/swap/v2/quote/contracts', 2);
+      return ((j && j.data) || []).filter(x => x.status === 1 && /-USDT$/.test(x.symbol || '')).map(x => String(x.symbol).split('-')[0]); },
   };
   out.futBy = out.futBy || {};
   for (const [name, read] of Object.entries(FUT_SRC)) {
     let list = [];
-    try { list = [...new Set((await read()).map(X).filter(x => /^[A-Z0-9]{1,20}$/.test(x)))]; } catch (_) {}
+    try { list = [...new Set((await read()).map(X).flatMap(x => [x, unPrefix(x)]).filter(x => /^[A-Z0-9]{1,20}$/.test(x)))]; } catch (_) {}
     if (list.length > 20) { out.futBy[name] = list.sort(); log('links: futures', name, list.length); }
     else log('links: futures', name, 'no answer, kept its last list (' + ((out.futBy[name] || []).length) + ')');
   }

@@ -79,5 +79,24 @@ with sync_playwright() as p:
     st = pg2.evaluate("(() => { const a = document.getElementById('htxLiqLink'); return a ? [a.className, a.getAttribute('href'), a.textContent.trim()] : null; })()")
     check(f'coin page: {sym} without futures shows "No futures" (no dead link)', st and 'off' in st[0] and not st[1] and 'No futures' in st[2], st)
     check('no JS errors (coin page)', not errs, errs[:3])
+
+    # an old copy of the list kept in the browser: fetched again at once (then every 30 min), and every page follows —
+    # Performance's ⌄ too (a coin that was "No futures" in the old copy shows Liq.Map)
+    import time
+    new = dict(LINKS, fut=LINKS['fut'] + [sym], futBy={'gate': LINKS['fut'] + [sym]})
+    for label, cached in (('a copy from before every exchange was asked', dict(t=int(time.time() * 1000), data=LINKS)),
+                          ('a copy over 30 minutes old', dict(t=int(time.time() * 1000) - 31 * 60000, data=dict(LINKS, futBy={'gate': LINKS['fut']})))):
+        c3 = br.new_context(viewport={'width': 1366, 'height': 900}); S.setup(c3)
+        c3.add_init_script("try{localStorage.setItem('samsam_links'," + json.dumps(json.dumps(cached)) + ")}catch(e){}")
+        c3.route('**/prices/m/links.json', lambda r: r.fulfill(status=200, content_type='application/json', body=json.dumps(new)))
+        p3 = c3.new_page(); p3.on('pageerror', lambda e: errs.append(str(e)))
+        p3.goto(S.SITE + '/performance.html'); p3.wait_for_timeout(500)
+        if p3.locator('#samsamSignInBtn').is_visible(): p3.click('#samsamSignInBtn')
+        p3.wait_for_function(f"Samsam.isReady() && document.getElementById('perfLinks-{sym}')", timeout=15000); p3.wait_for_timeout(1200)
+        p3.click(f'.c-more[aria-controls="perfLinks-{sym}"]'); p3.wait_for_timeout(300)
+        t3 = p3.inner_text(f'#perfLinks-{sym}')
+        check(f'{label}: fetched again, Performance ⌄ {sym} now shows Liq.Map ({t3.split(chr(10))[0]})', 'Liq.Map' in t3 and 'No futures' not in t3, t3)
+        c3.close()
+    check('no JS errors (old copy)', not errs, errs[:3])
     br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)
