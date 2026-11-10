@@ -53,6 +53,7 @@ const W = {
     allocation: 'Allocation', onTarget: (a, n) => `${a} of ${n} categories on target`, driftT: n => `Allocation off target · ${n}`, nowW: 'now', targetW: 'target', ptsW: 'pts',
     trim: v => `To get back: trim about ${v}, or add to the other categories`, add: v => `To get back: add about ${v}`, allocBtn: 'Open Allocation',
     dcaDay: 'DCA day — your regular buys', dcaTotal: v => `Total today: ${v}`, dcaLate: 'DCA reminder — not bought yet', dcaWasDue: (d, n) => `was due ${d} (${n} days ago)`, dcaNext: 'Buy when you can, or skip — the next one is on schedule.',
+    freeW: 'Rewards & mining this week',
     dcaLine: (n, mo, nx) => `${n} regular buy${n === 1 ? '' : 's'} · ${mo}/mo · next ${nx}`, smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
   },
   ar: {
@@ -76,6 +77,7 @@ const W = {
     allocation: 'التوزيع', onTarget: (a, n) => `${a} من ${n} فئات على الهدف`, driftT: n => `خروج عن التوزيع المستهدف · ${n}`, nowW: 'الآن', targetW: 'الهدف', ptsW: 'نقطة',
     trim: v => `للعودة: خفّض حوالي ${v}، أو أضف للفئات الأخرى`, add: v => `للعودة: أضف حوالي ${v}`, allocBtn: 'افتح التوزيع',
     dcaDay: 'يوم الشراء المنتظم (DCA)', dcaTotal: v => `الإجمالي اليوم: ${v}`, dcaLate: 'تذكير DCA — لم يتم الشراء بعد', dcaWasDue: (d, n) => `كان موعده ${d} (منذ ${n} أيام)`, dcaNext: 'اشترِ عندما تستطيع أو تجاوزه — الموعد التالي في وقته.',
+    freeW: 'المكافآت والتعدين هذا الأسبوع',
     dcaLine: (n, mo, nx) => `${n} شراء منتظم · ${mo} شهريًا · التالي ${nx}`, smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
   },
 };
@@ -204,8 +206,15 @@ export function summarize(user, market, now = Date.now()) {
     const shown = plan.groups.filter(g => g.target > 0 || g.now >= 0.05);
     alloc = { band: plan.band, groups: shown, onTarget: shown.filter(g => g.state === 'ok').length, count: shown.length, names, key: JSON.stringify([tlist, tg.band]) };
   }
+  // coins you got without buying in the last 7 days (staking rewards, mined BTC, airdrops) — the weekly report shows them
+  const free7 = {};
+  for (const r of C.freeCoins(user.txs, new Date(now - 7 * DAY).toISOString())) {
+    const f = free7[r.sym] || (free7[r.sym] = { sym: r.sym, qty: 0, usd: 0 });
+    f.qty += r.qty; f.usd += r.qty * ((prices[r.sym] && prices[r.sym].usd) || 0);
+  }
+  const free = Object.values(free7).sort((a, b) => b.usd - a.usd);
   return {
-    alloc, dca,
+    alloc, dca, free,
     value, cost, total, invested, pctTotal: invested > 0 ? total / invested * 100 : 0,
     ch24: value24 > 0 ? (value / value24 - 1) * 100 : null, d24: value - value24, ch7: value7 > 0 ? (value / value7 - 1) * 100 : null, d7: value - value7,
     vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, sigMode, counts, plan, prog, tps, macro, btcNow, buyAt,
@@ -256,6 +265,10 @@ export function brief(sum, m, cfg, now, weekly = false) {
   if (sum.dca && sum.dca.length) {
     const nx = [...sum.dca].filter(x => x.s.next).sort((a, b) => a.s.next.localeCompare(b.s.next))[0], mo = sum.dca.reduce((a, x) => a + x.s.perMonth, 0);
     L.push(`🛒 <b>DCA</b>  ${t.dcaLine(sum.dca.length, usd(mo), nx ? esc(nx.sym) + ' ' + shortD(nx.s.next) : '—')}`);
+  }
+  if (weekly && sum.free && sum.free.length) {
+    const tot = sum.free.reduce((a, f) => a + f.usd, 0), q = n => String(+Number(n).toPrecision(6));
+    L.push(`🎁 <b>${esc(t.freeW)}</b>  ${sum.free.slice(0, 4).map(f => '+' + q(f.qty) + ' ' + esc(f.sym)).join(' · ')}${sum.free.length > 4 ? ' …' : ''} (≈ ${usd(tot)})`);
   }
   return { key: weekly ? 'weekly' : 'brief', text: L.join('\n'), buttons: [[btn(t.open, 'index.html'), btn(t.hub, 'market.html')]] };
 }

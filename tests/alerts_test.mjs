@@ -96,6 +96,20 @@ check('quiet hours: BTC +12% (≥ 2× 5%) still alerts', r.messages.some(x => x.
 const fri = Date.parse('2026-11-13T06:10:00Z');   // Friday 09:10 Riyadh
 r = evaluate(s, mk({ now: fri }), { ...st, briefDay: '2026-11-12' }, cfg, fri);
 check('Friday 09:10 → morning brief + weekly report', r.messages.some(x => x.key === 'brief') && r.messages.some(x => x.key === 'weekly' && /Weekly report/.test(x.text)), r.messages.map(m => m.key));
+// weekly: rewards & mining of the last 7 days (staking Reward + mined BTC), not older ones, not the daily brief
+const uf = user(); uf.txs = [
+  { id: 'r1', sym: 'LINK', type: 'transfer_in', qty: 0.5, price: 0, kind: 'reward', date: '2026-11-10T08:00:00Z' },
+  { id: 'r2', sym: 'BTC', type: 'transfer_in', qty: 0.001, price: 0, note: 'Mined BTC sent to your wallet (cost $0)', date: '2026-11-11T08:00:00Z' },
+  { id: 'r3', sym: 'LINK', type: 'transfer_in', qty: 9, price: 0, kind: 'reward', date: '2026-10-01T08:00:00Z' },
+  { id: 'r4', sym: 'SEI', type: 'transfer_in', qty: 100, price: 0.05, date: '2026-11-11T09:00:00Z' }];
+const sf = summarize(uf, mk({ now: fri }), fri);
+check('summary: rewards & mining this week = LINK +0.5, BTC +0.001 (not the old one, not a paid Transfer In)', sf.free.length === 2 && sf.free.some(f => f.sym === 'LINK' && f.qty === 0.5) && sf.free.some(f => f.sym === 'BTC' && f.qty === 0.001), sf.free);
+r = evaluate(sf, mk({ now: fri }), { ...st, briefDay: '2026-11-12' }, cfg, fri);
+const wk = r.messages.find(x => x.key === 'weekly'), bf = r.messages.find(x => x.key === 'brief');
+check('weekly report: "🎁 Rewards & mining this week +… BTC · +0.5 LINK (≈ $…)"', wk && /🎁 <b>Rewards &amp; mining this week<\/b>|🎁 <b>Rewards & mining this week<\/b>/.test(wk.text) && /\+0\.5 LINK/.test(wk.text) && /\+0\.001 BTC/.test(wk.text) && okHtml(wk.text), wk && wk.text);
+check('…not in the daily brief', bf && !/🎁/.test(bf.text));
+const rar = evaluate(sf, mk({ now: fri }), { ...st, briefDay: '2026-11-12' }, settings({ alerts: { lang: 'ar' } }), fri).messages.find(x => x.key === 'weekly');
+check('weekly report in Arabic: "المكافآت والتعدين هذا الأسبوع"', rar && rar.text.includes('المكافآت والتعدين هذا الأسبوع'));
 const early = Date.parse('2026-11-13T04:00:00Z');   // 07:00 — before 08:30
 r = evaluate(s, mk({ now: early }), { ...st, briefDay: '2026-11-12' }, cfg, early);
 check('07:00 → no brief yet', !r.messages.some(x => x.key === 'brief'));

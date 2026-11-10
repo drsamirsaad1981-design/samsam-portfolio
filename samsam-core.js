@@ -29,6 +29,18 @@ export function compareTx(a, b) {
 }
 
 // Coins a buy / transfer in actually adds (after the fee in coin units); other types → their amount.
+// Coins you got without buying them: Transfer In at $0 cost. kind = 'reward' (staking, marked Reward) · 'mining' (the note
+// says mined / mining, e.g. imported mined BTC) · 'free' (airdrops and other $0 coins). from / to: ISO dates (to not included).
+export function freeCoins(txs, from = null, to = null) {
+  const out = [];
+  for (const t of txs || []) {
+    if (!t || t.type !== 'transfer_in' || num(t.price) > 0) continue;
+    const q = netQty(t); if (!(q > 0)) continue;
+    const d = String(t.date || ''); if ((from && d < from) || (to && d >= to)) continue;
+    out.push({ id: t.id, sym: t.sym, date: d, qty: q, kind: t.kind === 'reward' ? 'reward' : /min(ed|ing)\b/i.test(String(t.note || '')) ? 'mining' : 'free' });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
 export function netQty(t) {
   const q = num(t && t.qty);
   return t && (t.type === 'buy' || t.type === 'transfer_in') ? Math.max(0, q - Math.max(0, num(t.fee))) : q;

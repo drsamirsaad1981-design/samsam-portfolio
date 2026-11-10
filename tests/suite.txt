@@ -124,3 +124,4 @@ cards_fold_test.py
 exit_sold_test.py
 wallets_test.py
 pay_from_test.py
+pwa_rewards_test.py

@@ -18,3 +18,8 @@ for name in ['index.html', 'accumulation.html', 'performance.html', 'recover.htm
     s2 = pat_css.sub(lambda m: f'{m.group(1)}?v={v}{m.group(2)}', s2)
     s2 = pat_imp.sub(lambda m: f'{m.group(1)}?v={v}{m.group(2)}', s2)
     if s2 != s: p.write_text(s2, encoding='utf-8'); print('stamped', name, v)
+# the service worker's cache name: a new release clears the old offline copies
+sw = root / 'sw.js'
+if sw.exists():
+    s = sw.read_text(encoding='utf-8'); s2 = re.sub(r"const VERSION = 'cp-[0-9a-z]+';", f"const VERSION = 'cp-{v}';", s)
+    if s2 != s: sw.write_text(s2, encoding='utf-8'); print('stamped sw.js', v)

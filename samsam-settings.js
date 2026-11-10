@@ -21,6 +21,24 @@
   function top() { try { return window.parent !== window && window.parent.SamsamSettings && window.parent.cpShell ? window.parent : null; } catch (_) { return null; } }
   var onMain = function () { return !!window.cpShell; };
 
+  // ── the app on your phone (PWA): home-screen icon, opens without internet (sw.js) ──
+  var installEvt = null;
+  addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installEvt = e; if ($('cpSet')) draw(); });
+  addEventListener('appinstalled', function () { installEvt = null; if ($('cpSet')) draw(); });
+  function standalone() { try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (_) { return false; } }
+  function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+  if ('serviceWorker' in navigator && window.parent === window && (location.protocol === 'https:' || get('samsam_sw_test', '') === '1')) {
+    var reg = function () { navigator.serviceWorker.register('./sw.js').catch(function () {}); };
+    if (doc.readyState === 'complete') reg(); else addEventListener('load', reg);
+  }
+  function installApp() {
+    if (installEvt) { var ev = installEvt; ev.prompt(); (ev.userChoice || Promise.resolve()).then(function () { installEvt = null; draw(); }); return; }
+    var msg = standalone() ? 'Cute Portfolio is already on your home screen — it opens like an app, also without internet (with your last numbers).'
+      : isIOS() ? 'In Safari: tap Share (the square with the arrow) → “Add to Home Screen” → Add.'
+      : 'In Chrome: tap ⋮ (menu) → “Install app” or “Add to Home screen”.';
+    if (window.CPDialog) CPDialog.alert(msg, { title: 'Install the app' }); else alert(msg);
+  }
+
   // ── what each line opens ──
   function goMain(act) {   // a page opened on its own: the editor is on the main page
     location.href = 'index.html#set=' + encodeURIComponent(act);
@@ -37,6 +55,7 @@
     wallets: function () { if (window.SamsamWallets) SamsamWallets.open(); else goMain('wallets'); },
     backup: function () { S().downloadBackup().catch(function () {}); },
     recover: function () { location.href = 'recover.html'; },
+    install: function () { installApp(); },
     signout: function () { S().signOut(); },
     signal: function () { if (window.openSignalEdit) openSignalEdit(); else goMain('signal'); },
     targets: function () { if (window.openTargets) openTargets(); else goMain('targets'); },
@@ -86,6 +105,10 @@
         if (!ws.length) return 'Compare your real wallets with the app';
         return ws.length + ' wallet' + (ws.length === 1 ? '' : 's') + (c ? ' · ' + (c.more.length + c.less.length ? (c.more.length + c.less.length) + ' to look at' : 'all match') : ' · not checked yet');
       }
+      if (k === 'install') {
+        var off = 'serviceWorker' in navigator && navigator.serviceWorker.controller ? ' · works offline' : '';
+        return standalone() ? 'On your home screen' + off : installEvt ? 'Add it to your home screen — opens like an app' : isIOS() ? 'Safari: Share → Add to Home Screen' : 'Browser menu → Install app';
+      }
       if (k === 'dca') { var n2 = (st.accumPlan || []).filter(function (x) { return x.dca && x.dca.usd > 0; }).length; return n2 ? n2 + ' coin' + (n2 === 1 ? '' : 's') + ' with a regular buy' : 'None yet'; }
     } catch (_) {}
     return '';
@@ -116,7 +139,7 @@
       { seg: 'fee', title: 'Buying fee in', opts: [['usd', 'USD'], ['coin', 'The coin']], get: function () { return get(K.fee, 'usd') === 'coin' ? 'coin' : 'usd'; },
         set: function (v) { put(K.fee, v); } },
     ]],
-    ['About', [['version', 'sparkles', 'Version', null]]],
+    ['About', [['install', 'download', 'Install the app', 'install'], ['version', 'sparkles', 'Version', null]]],
   ];
   var CSS =
     '#cpSet{position:fixed;inset:0;z-index:99994;background:rgba(2,6,23,.55);display:flex;align-items:flex-end;justify-content:center}' +
@@ -176,7 +199,7 @@
     }).join('') + '<div class="st-later">More settings (app language, AI) will be added here.</div>';
   }
   function run(act) {
-    var keep = act === 'backup';
+    var keep = act === 'backup' || act === 'install';
     if (!keep) close();
     ACT[act]();
     if (keep) setTimeout(draw, 1500); else backAfter(act);

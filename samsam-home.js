@@ -2373,6 +2373,7 @@ function renderCoinTx() {
     netEl.innerHTML = SamsamUI.ic('link') + '<span>' + SamsamCoins.esc(nt || 'Set network & where held') + '</span>';
     netEl.classList.toggle('htx-net-empty', !nt); netEl.title = 'Network & where held — used by the wallet check'; netEl.onclick = () => SamsamWallets.editCoin(sym);
   }
+  h24.onclick = rewQty > 0 && window.SamsamRewards ? () => SamsamRewards.open({ sym }) : null; h24.style.cursor = h24.onclick ? 'pointer' : '';
   h24.title = rewQty > 0 ? `${qtyFmt(rewQty)} ${sym} came from staking / mining rewards (≈ ${usd(rewQty * price)} now, $0 cost)` : '';
   // Signal (your thresholds) + why
   const sigEl = document.getElementById('htxSignal');
