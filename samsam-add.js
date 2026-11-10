@@ -578,7 +578,7 @@
     $('atxFeeUsdRow').style.display = (t === 'buy' || t === 'sell') ? '' : 'none';
     $('atxNetFeeRow').style.display = t === 'buy' ? '' : 'none';
     $('atxFeeUnitSeg').style.display = t === 'buy' ? '' : 'none';
-    $('atxSrcRow').style.display = t === 'reward' ? '' : 'none'; setSrc(srcPref(), true);
+    $('atxSrcRow').style.display = t === 'reward' ? '' : 'none';
     $('atxFeeUnitCoin').textContent = atxSym;
     $('atxNetFeeUnit').textContent = '(in ' + atxSym + ', optional — e.g. Binance → your cold wallet)';
     setFeeUnit(t === 'buy' ? feeUnitPref() : 'usd', true);
@@ -587,6 +587,7 @@
     $('atxFeeUnit').textContent = '(in ' + atxSym + ', optional)';
     $('atxHint').textContent = cfg.hint;
     $('atxNote').placeholder = t === 'reward' ? 'e.g. SOL staking (Tangem)' : 'e.g. from Binance, to cold wallet';
+    setSrc(srcPref(), true);   // after the note placeholder, so Mining / Airdrop get their own example
     var LB = window.SAMSAM_LABELS || { BUY: 'Buy', SELL: 'Sell', TRANSFER_IN: 'Transfer In', TRANSFER_OUT: 'Transfer Out' };
     $('atxSave').textContent = 'Add ' + { buy: LB.BUY, sell: LB.SELL, transfer_in: LB.TRANSFER_IN, transfer_out: LB.TRANSFER_OUT, reward: 'Reward' }[t];
     var coin = held(atxSym), pr = $('atxPrice');

@@ -762,7 +762,7 @@ function renderHistory() {
     if (t.type === 'transfer_in' && t.kind === 'reward') {
       const q = t.qty - (+t.fee || 0);
       return `<div class="tx-row tx-tin">
-        <div class="tx-details"><span class="tx-type-badge">${SamsamUI.dot('purple')}REWARD</span>
+        <div class="tx-details"><span class="tx-type-badge">${SamsamUI.dot('purple')}${t.src === 'mining' ? 'MINING' : t.src === 'airdrop' ? 'AIRDROP' : 'REWARD'}</span>
           <div><strong>+${fmtN(q)} ${t.sym}</strong> at <strong>$0 cost</strong></div>${meta}</div>
         <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button>
       </div>`;

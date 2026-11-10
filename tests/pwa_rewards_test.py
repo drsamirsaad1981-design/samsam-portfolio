@@ -84,6 +84,7 @@ with sync_playwright() as p:
         pg.click('#htxAddBtn'); pg.wait_for_selector('#atxBackdrop.show'); pg.click('.atx-types button[data-t="reward"]')
         check(f'{vn} the choice is remembered (Mining)', pg.get_attribute('#atxSrcSeg [data-s="mining"]', 'aria-checked') == 'true')
         pg.click('#atxForm .atx-x')
+        pg.evaluate("Samsam.deleteTx(" + repr(t['id']) + ")"); pg.wait_for_timeout(400)   # the next screen size shares this database — don't leave a fresh mined BTC behind
         check(f'{vn}: no sideways scroll', pg.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"))
         check(f'{vn}: no JS errors', not errs, errs[:3]); ctx.close()
     # ── the service worker: registered, then the app opens offline ──
