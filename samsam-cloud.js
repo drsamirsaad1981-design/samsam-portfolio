@@ -548,7 +548,7 @@ function txDoc(sym, type, qty, price, note, extra = {}) {
     ...(extra.feeUsd > 0 ? { feeUsd: Number(extra.feeUsd) } : {}),
     ...(type === 'buy' && extra.netFee > 0 ? { netFee: Number(extra.netFee) } : {}),   // the part of `fee` that was the network fee to your wallet
     ...(extra.link ? { link: Clean.text(extra.link, 60) } : {}),   // a stablecoin Buy made from a Sell → that Sell's id
-    ...(type === 'transfer_in' && extra.kind === 'reward' ? { kind: 'reward' } : {}),
+    ...(type === 'transfer_in' && extra.kind === 'reward' ? { kind: 'reward', ...(['staking', 'mining', 'airdrop'].includes(extra.src) ? { src: extra.src } : {}) } : {}),
     ...(type === 'sell' && extra.kind === 'pay' ? { kind: 'pay' } : {}),   // stablecoin spent on a Buy (link = that Buy's id)   // staking / mining reward: coins in at $0 cost
   });
 }

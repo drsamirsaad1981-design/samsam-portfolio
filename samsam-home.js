@@ -52,7 +52,7 @@ function openCoinMenu(btn, sym) {
   CPMenu.open(btn, `${sym} — more actions`, [
     { icon: 'arrowDown', label: SAMSAM_LABELS.TRANSFER_IN, onClick: () => openTransferIn(sym) },
     { icon: 'arrowUp', label: SAMSAM_LABELS.TRANSFER_OUT, onClick: () => openTransferOut(sym) },
-    { icon: 'coins', label: 'Reward (staking)', onClick: () => openAddTx('reward', sym) },
+    { icon: 'coins', label: 'Reward (staking / mining)', onClick: () => openAddTx('reward', sym) },
     window.SamsamWallets ? { icon: 'link', label: 'Network & where held', onClick: () => SamsamWallets.editCoin(sym) } : null,
     { icon: 'history', label: 'History', onClick: () => openHistory(sym) },
     { icon: 'note', label: (c.notes || '').trim() ? 'Edit Note' : 'Add Note', onClick: () => editNote(sym) },
@@ -2421,7 +2421,7 @@ function renderCoinTx() {
         note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (feeQ ? ' · fee ' + qtyFmt(feeQ) + ' ' + sym : '') + (t.type === 'sell' && t.kind !== 'pay' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' && t.kind === 'reward') {
-      entries.push({ id: t.id, kind: 'reward', label: 'Reward', qty: t.qty - (+t.fee || 0), usd: (t.qty - (+t.fee || 0)) * (price || 0),
+      entries.push({ id: t.id, kind: 'reward', label: t.src === 'mining' ? 'Mining' : t.src === 'airdrop' ? 'Airdrop' : 'Reward', qty: t.qty - (+t.fee || 0), usd: (t.qty - (+t.fee || 0)) * (price || 0),
         note: [t.note, '$0 cost · value now'].filter(Boolean).join(' · '), date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' || t.type === 'transfer_out') {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;

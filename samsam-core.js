@@ -37,7 +37,7 @@ export function freeCoins(txs, from = null, to = null) {
     if (!t || t.type !== 'transfer_in' || num(t.price) > 0) continue;
     const q = netQty(t); if (!(q > 0)) continue;
     const d = String(t.date || ''); if ((from && d < from) || (to && d >= to)) continue;
-    out.push({ id: t.id, sym: t.sym, date: d, qty: q, kind: t.kind === 'reward' ? 'reward' : /min(ed|ing)\b/i.test(String(t.note || '')) ? 'mining' : 'free' });
+    out.push({ id: t.id, sym: t.sym, date: d, qty: q, kind: t.src === 'mining' ? 'mining' : t.src === 'airdrop' ? 'free' : t.kind === 'reward' ? 'reward' : /min(ed|ing)\b/i.test(String(t.note || '')) ? 'mining' : 'free' });
   }
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }

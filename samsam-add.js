@@ -63,6 +63,7 @@
     '.atx-imp{display:block;margin:10px auto 0;background:none;border:none;color:#3b82f6;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;padding:6px}' +
     '.atx-field>label{display:block}' +
     '.atx-feebox{display:flex;gap:6px;align-items:stretch;margin-top:5px}.atx-feebox input{margin-top:0!important;flex:1;min-width:0}' +
+    '.atx-src{display:grid;grid-template-columns:repeat(3,1fr)}.atx-src button{padding:9px 4px}' +
     '.atx-unit{display:flex;gap:3px;background:rgba(148,163,184,.12);padding:3px;border-radius:10px;flex:none}' +
     '.atx-unit button{border:none;background:transparent;color:inherit;font:inherit;font-size:.74rem;font-weight:700;padding:0 10px;border-radius:8px;cursor:pointer;opacity:.7;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '.atx-unit button[aria-checked="true"]{opacity:1;background:var(--bg-card-secondary,#334155);box-shadow:inset 0 0 0 1px var(--atx-c,#64748b)}' +
@@ -173,6 +174,8 @@
         '<button type="button" data-t="transfer_out" role="radio"><span class="htx-dot htx-dot-transfer_out"></span>Transfer Out</button>' +
       '</div>' +
       '<div class="atx-coin" id="atxCoin"></div>' +
+      '<div class="atx-field" id="atxSrcRow"><span>From</span><div class="atx-unit atx-src" id="atxSrcSeg" role="radiogroup" aria-label="Where the coins came from">' +
+        '<button type="button" role="radio" data-s="staking">Staking</button><button type="button" role="radio" data-s="mining">Mining</button><button type="button" role="radio" data-s="airdrop">Airdrop</button></div></div>' +
       '<label class="atx-field"><span id="atxQtyLabel">Amount</span><input type="number" inputmode="decimal" step="any" min="0" id="atxQty" placeholder="0.00" oninput="previewAddTx()"></label>' +
       '<label class="atx-field" id="atxPriceRow"><span id="atxPriceLabel">Price per coin (USD)</span><input type="number" inputmode="decimal" step="any" min="0" id="atxPrice" placeholder="0.00" oninput="previewAddTx()"></label>' +
       '<div class="atx-field" id="atxFeeUsdRow"><label for="atxFeeUsd" id="atxFeeUsdLabel">Buying fee <small>(USD, optional — added to Cost Basis)</small></label>' +
@@ -575,6 +578,7 @@
     $('atxFeeUsdRow').style.display = (t === 'buy' || t === 'sell') ? '' : 'none';
     $('atxNetFeeRow').style.display = t === 'buy' ? '' : 'none';
     $('atxFeeUnitSeg').style.display = t === 'buy' ? '' : 'none';
+    $('atxSrcRow').style.display = t === 'reward' ? '' : 'none'; setSrc(srcPref(), true);
     $('atxFeeUnitCoin').textContent = atxSym;
     $('atxNetFeeUnit').textContent = '(in ' + atxSym + ', optional — e.g. Binance → your cold wallet)';
     setFeeUnit(t === 'buy' ? feeUnitPref() : 'usd', true);
@@ -589,6 +593,16 @@
     if (cfg.price && !pr.dataset.touched) pr.value = coin && coin.currentPrice ? fmtInput(coin.currentPrice) : '';
     previewAddTx();
   }
+  // Reward: where the coins came from — Staking / Mining / Airdrop (Rewards & mining sorts them by it)
+  var SRC_KEY = 'samsam_reward_src', rwSrc = 'staking', SRC_NOTE = { staking: 'Staking reward', mining: 'Mining reward', airdrop: 'Airdrop' };
+  function srcPref() { try { var v = localStorage.getItem(SRC_KEY); return SRC_NOTE[v] ? v : 'staking'; } catch (_) { return 'staking'; } }
+  function setSrc(v, quiet) {
+    rwSrc = SRC_NOTE[v] ? v : 'staking';
+    document.querySelectorAll('#atxSrcSeg button').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.s === rwSrc)); });
+    if (!quiet) { try { localStorage.setItem(SRC_KEY, rwSrc); } catch (_) {} }
+    var n = $('atxNote'); if (n) n.placeholder = atxType === 'reward' ? { staking: 'e.g. SOL staking (Tangem)', mining: 'e.g. my mining pool', airdrop: 'e.g. JUP airdrop' }[rwSrc] : n.placeholder;
+  }
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#atxSrcSeg button'); if (b) { setSrc(b.dataset.s); previewAddTx(); } });
   // Buying fee: in USD (added to the cost) or in the coin itself (Binance takes it from what you bought — fewer coins arrive)
   var FEE_UNIT_KEY = 'samsam_buyfee_unit', feeUnit = 'usd';
   function feeUnitPref() { try { return localStorage.getItem(FEE_UNIT_KEY) === 'coin' ? 'coin' : 'usd'; } catch (_) { return 'usd'; } }
@@ -704,7 +718,7 @@
       var sc = held(cs), info = CASH_INFO[cs] || {};
       write(Samsam.sellToStable(sym, r.qty, r.price, note, extra, { sym: cs, name: (sc && sc.name) || info.name || cs, cgId: (sc && sc.cgId) || info.cgId || null, cmcSlug: info.cmcSlug || null, cat: (sc && sc.cat) || 'other', logoUrl: (sc && sc.logoUrl) || null }));
     } else if (pay && Samsam.buyFromStable) write(Samsam.buyFromStable(sym, r.qty, r.price, note, extra, pay));
-    else { if (atxType === 'reward') { extra.kind = 'reward'; if (!note) note = 'Staking reward'; } write(Samsam.addTx(sym, type, r.qty, r.price, note, extra)); }
+    else { if (atxType === 'reward') { extra.kind = 'reward'; extra.src = rwSrc; if (!note) note = SRC_NOTE[rwSrc]; } write(Samsam.addTx(sym, type, r.qty, r.price, note, extra)); }
     setTimeout(function () { atxSaving = false; $('atxSave').disabled = false; }, 400);
     delete $('atxPrice').dataset.touched;
     $('atxFeeUsd').value = ''; $('atxNetFee').value = '';
