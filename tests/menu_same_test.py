@@ -32,7 +32,7 @@ with sync_playwright() as p:
             check(f'{vn} {f}: ☁️ menu = Backup, Settings {items}', items == ['Backup', 'Settings'] and 'Last backup' in pg.inner_text('#samsamSyncMenu'), items)
             pg.click('#samsamSettings'); pg.wait_for_selector('#cpSet')
             rows = pg.evaluate("[...document.querySelectorAll('#cpSet .st-row b, #cpSet .st-seg-row > b')].map(b=>b.innerText.trim())")
-            want = ['Account', 'Backup', 'Recover Data', 'Import from exchange', 'Wallets & check', 'Telegram alerts', 'Signal thresholds', 'Target allocation', 'Categories', 'Baseline', 'Exit plan', 'DCA (regular buys)', 'Theme', 'Charts open on', 'Lists shown as', 'Buying fee in', 'Install the app', 'Version']
+            want = ['Account', 'Backup', 'Recover Data', 'Import from exchange', 'Wallets & check', 'Rewards & mining', 'Telegram alerts', 'Signal thresholds', 'Target allocation', 'Categories', 'Baseline', 'Exit plan', 'DCA (regular buys)', 'Theme', 'Charts open on', 'Lists shown as', 'Buying fee in', 'Install the app', 'Version']
             check(f'{vn} {f}: Settings lists every setting', rows == want, rows)
             pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
             check(f'{vn} {f}: Esc closes it', not pg.query_selector('#cpSet'))

@@ -31,6 +31,12 @@ with sync_playwright() as p:
         check(f'{vn} no install button in this browser → how to do it ("Install app" / "Add to Home screen")', 'Add to Home' in log or 'Install app' in log, log)
         pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
         # ── Rewards & mining ──
+        pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stRow_rewards')
+        check(f'{vn} Settings → "Rewards & mining"', 'Rewards & mining' in pg.inner_text('#stRow_rewards'))
+        pg.click('#stRow_rewards'); pg.wait_for_selector('#cpRew .rw-body')
+        check(f'{vn} … opens the window (none yet → how to add them)', 'Add Transaction' in pg.inner_text('#cpRew') or 'without buying' in pg.inner_text('#cpRew'))
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(500)
+        if pg.query_selector('#cpSet'): pg.evaluate("SamsamSettings.close()")
         pg.evaluate("""(async()=>{ const d=new Date(Date.now()-3*864e5).toISOString(), old=new Date(Date.now()-90*864e5).toISOString();
           await Samsam.addTx('SOL','transfer_in',0.5,0,'SOL staking',{kind:'reward',date:d});
           await Samsam.addTx('BTC','transfer_in',0.001,0,'Mined BTC sent to your wallet (cost $0)',{date:old});

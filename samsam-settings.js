@@ -52,6 +52,7 @@
   var ACT = {
     alerts: function () { S().openAlerts(); },
     import: function () { window.SamsamImport && SamsamImport.open(); },
+    rewards: function () { if (window.SamsamRewards) SamsamRewards.open(); else goMain('rewards'); },
     wallets: function () { if (window.SamsamWallets) SamsamWallets.open(); else goMain('wallets'); },
     backup: function () { S().downloadBackup().catch(function () {}); },
     recover: function () { location.href = 'recover.html'; },
@@ -66,7 +67,7 @@
   };
 
   // the window each line opens: when it closes again, Settings comes back
-  var OPENS = { alerts: '#cpAlerts', signal: '#sgModal', targets: '#tgModal', baseline: '#blModal', cats: '#catMgrModal', import: '#impBd', wallets: '#cpWal' };
+  var OPENS = { alerts: '#cpAlerts', signal: '#sgModal', targets: '#tgModal', baseline: '#blModal', cats: '#catMgrModal', import: '#impBd', wallets: '#cpWal', rewards: '#cpRew' };
   function shownNow(sel) {
     var e = doc.querySelector(sel); if (!e) return false;
     var cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && e.getClientRects().length > 0;
@@ -105,6 +106,10 @@
         if (!ws.length) return 'Compare your real wallets with the app';
         return ws.length + ' wallet' + (ws.length === 1 ? '' : 's') + (c ? ' · ' + (c.more.length + c.less.length ? (c.more.length + c.less.length) + ' to look at' : 'all match') : ' · not checked yet');
       }
+      if (k === 'rewards') {
+        var R = window.SamsamRewards && SamsamRewards.data('all');
+        return R && R.rows.length ? (window.SamsamFmt ? SamsamFmt.usd(R.tot.all) : '') + ' · staking, mining, airdrops' : 'Staking rewards, mined BTC, airdrops';
+      }
       if (k === 'install') {
         var off = 'serviceWorker' in navigator && navigator.serviceWorker.controller ? ' · works offline' : '';
         return standalone() ? 'On your home screen' + off : installEvt ? 'Add it to your home screen — opens like an app' : isIOS() ? 'Safari: Share → Add to Home Screen' : 'Browser menu → Install app';
@@ -124,7 +129,7 @@
   // ── the screen ──
   // a line: [key, icon, title, action]  ·  a choice: { seg: key, title, opts: [[value, label]], get(), set(v) }
   var SECTIONS = [
-    ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import'], ['wallets', 'wallet', 'Wallets & check', 'wallets']]],
+    ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import'], ['wallets', 'wallet', 'Wallets & check', 'wallets'], ['rewards', 'coins', 'Rewards & mining', 'rewards']]],
     ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts']]],
     ['Investing rules', [['signal', 'sliders', 'Signal thresholds', 'signal'], ['targets', 'target', 'Target allocation', 'targets'], ['cats', 'note', 'Categories', 'cats'],
       ['baseline', 'history', 'Baseline', 'baseline'], ['exit', 'exit', 'Exit plan', 'exit'], ['dca', 'calc', 'DCA (regular buys)', 'dca']]],

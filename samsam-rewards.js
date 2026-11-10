@@ -123,8 +123,11 @@
   function card() {
     var host = $('freeCard'); if (!host || !ready()) return;
     var d = data('all'), m = data('30');
-    if (!d.rows.length) { host.hidden = true; return; }
     css(); host.hidden = false;
+    if (!d.rows.length) {   // always there, so you know where it is — tap shows how to add them
+      host.innerHTML = '<span class="fc-ic">' + IC('coins', { solo: true }) + '</span><span class="fc-t"><b>Rewards &amp; mining</b><small>None yet — staking rewards, mined BTC and airdrops show here</small></span><span class="fc-v">$0</span><span class="fc-go">›</span>';
+      return;
+    }
     var top = d.coins.slice(0, 3).map(function (c) { return '+' + qf(c.qty) + ' ' + c.sym; }).join(' · ');
     host.innerHTML = '<span class="fc-ic">' + IC('coins', { solo: true }) + '</span><span class="fc-t"><b>Rewards &amp; mining</b><small>' + E(top) + (m.tot.all > 0 ? ' · ' + usd(m.tot.all) + ' in 30 days' : '') + '</small></span><span class="fc-v">' + usd(d.tot.all) + '</span><span class="fc-go">›</span>';
   }
