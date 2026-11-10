@@ -47,6 +47,10 @@ with sync_playwright() as p:
         sk = pg.inner_text('#htxStake')
         check(f'{vn} coin page: "Staking … SOL · 7% APY" with Change and Stop', 'Staking' in sk and '7% APY' in sk and 'Change' in sk and 'Stop' in sk, sk)
         if vn == 'phone': pg.locator('#htxStake').screenshot(path=str(SH / 'auto_stake_strip.png'))
+        row = pg.locator('#htxList .htx-row', has_text='Auto').first
+        rt = (row.inner_text() if row.count() else '').replace('\xa0', ' ')
+        check(f'{vn} History row: "Staking" · "Auto · 7% APY · $0 cost" (no repeated "Staking reward")', 'Staking' in rt and 'Auto · 7% APY · $0 cost' in rt and 'Staking reward' not in rt, rt)
+        if vn == 'phone' and row.count(): row.evaluate("e=>e.scrollIntoView({block:'center'})"); pg.wait_for_timeout(200); row.screenshot(path=str(SH / 'auto_stake_row.png'))
         pg.click('#htxStake .htx-stake-btn:not(.stop)'); pg.wait_for_selector('#atxBackdrop.show')
         check(f'{vn} Change: "Change staking", amount + APY filled, no type buttons',
               pg.inner_text('#atxTitle') == 'Change staking' and pg.input_value('#atxApy') == '7' and not pg.is_visible('.atx-types') and pg.inner_text('#atxSave') == 'Save changes',

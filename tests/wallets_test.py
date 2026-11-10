@@ -44,7 +44,7 @@ with sync_playwright() as p:
         check(f'{vn} Reward saved as transfer_in, kind reward, price 0', tx['type'] == 'transfer_in' and tx.get('kind') == 'reward' and tx['price'] == 0, tx)
         pg.wait_for_timeout(300)
         hl = pg.inner_text('#htxList')
-        check(f'{vn} Reward listed as "Reward +0.5 SOL"', 'Reward' in hl and '+0.5 SOL' in hl, hl[:200])
+        check(f'{vn} Reward listed as "Staking +0.5 SOL"', 'Staking' in hl and '+0.5 SOL' in hl, hl[:200])
         exp_rw = f"rewards +{rw0 + 0.5:g}"
         check(f'{vn} coin page: "{exp_rw}"', exp_rw in pg.inner_text('#htxHoldings24'), pg.inner_text('#htxHoldings24'))
         pg.evaluate("closeCoinTx && closeCoinTx()") if pg.evaluate("typeof closeCoinTx==='function'") else None

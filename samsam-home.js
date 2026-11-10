@@ -2454,8 +2454,12 @@ function renderCoinTx() {
         note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (feeQ ? ' · fee ' + qtyFmt(feeQ) + ' ' + sym : '') + (t.type === 'sell' && t.kind !== 'pay' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' && t.kind === 'reward') {
-      entries.push({ id: t.id, kind: 'reward', tag: true, label: t.src === 'mining' ? 'Mining' : t.src === 'airdrop' ? 'Airdrop' : 'Reward', qty: t.qty - (+t.fee || 0), usd: (t.qty - (+t.fee || 0)) * (price || 0),
-        note: [t.note, '$0 cost · value now'].filter(Boolean).join(' · '), date: t.date, order: t.createdAt || '' });
+      // the label already says Mining / Staking / Airdrop, so the app's own note ("Mining reward · wallet check") is shortened
+      // to what it adds ("Wallet check"); a note you typed stays as it is
+      const rNote = String(t.note || '').replace(/^(Staking reward|Mining reward|Airdrop)\s*(·\s*)?/i, '')
+        .replace(/^wallet check$/i, 'Wallet check').replace(/^auto (\S+)$/i, 'Auto · $1 APY');
+      entries.push({ id: t.id, kind: 'reward', tag: true, label: t.src === 'mining' ? 'Mining' : t.src === 'airdrop' ? 'Airdrop' : 'Staking', qty: t.qty - (+t.fee || 0), usd: (t.qty - (+t.fee || 0)) * (price || 0),
+        note: [rNote, '$0\u00a0cost'].filter(Boolean).join(' · '), date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' || t.type === 'transfer_out') {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
       entries.push({ id: t.id, kind: t.type, tag: isIn && !(+t.price > 0), label: isIn ? SAMSAM_LABELS.TRANSFER_IN : SAMSAM_LABELS.TRANSFER_OUT,

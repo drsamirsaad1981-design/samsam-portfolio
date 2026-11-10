@@ -143,9 +143,9 @@
     .htx-row-icon { width:30px; height:30px; flex-shrink:0; display:inline-flex; }
     .htx-row-icon img, .htx-row-icon > div { width:30px !important; height:30px !important; }
     .htx-row-main { flex:1; min-width:0; }
-    .htx-row-type { font-weight:700; font-size:0.92rem; color:var(--fg); }
+    .htx-row-type { font-weight:700; font-size:0.92rem; color:var(--fg); white-space:nowrap; }
     .htx-row-note { font-size:0.72rem; color:var(--fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    @media (max-width: 600px) { .htx-row-note { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; overflow-wrap:anywhere; } .htx-row-main { min-width:0; flex:1 1 auto; } }
+    @media (max-width: 600px) { .htx-row-act { flex-direction:column; } .htx-row { gap:10px; } .htx-row-note { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; overflow-wrap:anywhere; } .htx-row-main { min-width:0; flex:1 1 auto; } }
     .htx-row-amt { text-align:right; flex-shrink:0; }
     .htx-row-act { flex-shrink:0; margin-left:4px; display:flex; gap:4px; }
     .htx-act.htx-edit { border:none; background:none; color:var(--fg2); display:inline-flex; align-items:center; justify-content:center; }
