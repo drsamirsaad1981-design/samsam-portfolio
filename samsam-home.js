@@ -807,7 +807,7 @@ function openTagMenu(btn, id) {
   const t = transactions.find(x => x.id === id);
   if (!t || !requireCloud()) return;
   const cur = t.kind === 'reward' ? (t.src || 'staking') : null;
-  const go = src => Samsam.tagTx(id, src).catch(e => alert('Could not change it: ' + (e && e.message || e)));   // the row's label changes at once
+  const go = src => Samsam.tagTx(id, src).catch(e => CPDialog.alert('Could not change it: ' + (e && e.message || e)));   // the row's label changes at once
   const opt = (s, label) => ({ icon: cur === s ? '✓' : 'coins', label, onClick: () => { if (cur !== s) go(s); } });
   CPMenu.open(btn, `This ${t.sym} came from…`, [opt('mining', 'Mining'), opt('staking', 'Staking'), opt('airdrop', 'Airdrop'),
     cur ? { divider: true } : null, cur ? { icon: 'arrowDown', label: 'Not a reward (plain Transfer In)', onClick: () => go(null) } : null]);

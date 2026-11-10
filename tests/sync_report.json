@@ -1,10 +1,10 @@
 {
  "phone \u2192 desktop": {
-  "median_ms": 383,
-  "max_ms": 468
+  "median_ms": 265,
+  "max_ms": 573
  },
  "desktop \u2192 phone": {
-  "median_ms": 114,
-  "max_ms": 378
+  "median_ms": 206,
+  "max_ms": 698
  }
 }
