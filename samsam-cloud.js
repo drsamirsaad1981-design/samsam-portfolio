@@ -661,6 +661,19 @@ const API = {
     return API.addTx(sym, 'adjust', 0, 0, note || 'Manual edit', { setQty, setAvg });
   },
   deleteTx(id) { return commit((b, ref) => b.delete(ref('txs', safeId(id))), 'Delete transaction'); },
+  // A coin you got for free (Transfer In at $0) → mark it Staking / Mining / Airdrop, or back to a plain Transfer In (src = null).
+  // Only the label changes: amount, $0 cost, date and your note stay. The database rules never let a saved transaction change
+  // in place, so it is saved again under a new id and the old one is deleted — both in one step (all or nothing).
+  tagTx(id, src) {
+    const t = S.txs.get(String(id));
+    if (!t || t.type !== 'transfer_in' || Number(t.price) > 0) return Promise.reject(new Error('Only a Transfer In at $0 cost can be marked as a reward'));
+    const ok = ['staking', 'mining', 'airdrop'].includes(src);
+    const AUTO = ['Staking reward', 'Mining reward', 'Airdrop'], NOTE = { staking: 'Staking reward', mining: 'Mining reward', airdrop: 'Airdrop' };
+    const { id: _id, kind: _k, src: _s, ...rest } = t;
+    if (AUTO.includes(rest.note)) rest.note = ok ? NOTE[src] : '';   // the note the app wrote itself follows the new label; yours stays
+    const nid = Core.newId('tx_');
+    return commit((b, ref) => { b.set(ref('txs', nid), clean({ ...rest, ...(ok ? { kind: 'reward', src } : {}) })); b.delete(ref('txs', safeId(t.id))); }, 'Mark transaction').then(() => nid);
+  },
   deleteTxs(ids) { return commit((b, ref) => (ids || []).forEach(id => b.delete(ref('txs', safeId(id)))), 'Delete transactions'); },
   // A Sell whose money stays in the portfolio: the Sell + a Buy of the stablecoin for what you got (sell value − fee),
   // in ONE write. The Buy is priced at $1, so it adds exactly that much cash and no profit is counted twice.
@@ -743,7 +756,7 @@ const API = {
     for (const t of txs) {
       const id = 'imp_' + String(t.key || '').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
       if (id === 'imp_') continue;
-      docs.push(['txs', safeId(id), txDoc(t.sym, t.type, t.qty, t.price, t.note || '', { date: t.date, fee: t.fee, feeUsd: t.feeUsd, netFee: t.netFee, kind: t.kind }), false]);
+      docs.push(['txs', safeId(id), txDoc(t.sym, t.type, t.qty, t.price, t.note || '', { date: t.date, fee: t.fee, feeUsd: t.feeUsd, netFee: t.netFee, kind: t.kind, src: t.src }), false]);
     }
     const parts = [];
     for (let i = 0; i < docs.length; i += 400) parts.push(docs.slice(i, i + 400));

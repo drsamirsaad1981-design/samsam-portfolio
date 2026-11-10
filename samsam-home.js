@@ -801,6 +801,18 @@ function renderHistory() {
   }).join('');
 }
 
+// A coin you got for free (Transfer In at $0, or a Reward) → Mining / Staking / Airdrop, or back to a plain Transfer In.
+// Only the label changes (Rewards & mining sorts by it) — the amount, the $0 cost and your holdings stay the same.
+function openTagMenu(btn, id) {
+  const t = transactions.find(x => x.id === id);
+  if (!t || !requireCloud()) return;
+  const cur = t.kind === 'reward' ? (t.src || 'staking') : null;
+  const go = src => Samsam.tagTx(id, src).catch(e => alert('Could not change it: ' + (e && e.message || e)));   // the row's label changes at once
+  const opt = (s, label) => ({ icon: cur === s ? '✓' : 'coins', label, onClick: () => { if (cur !== s) go(s); } });
+  CPMenu.open(btn, `This ${t.sym} came from…`, [opt('mining', 'Mining'), opt('staking', 'Staking'), opt('airdrop', 'Airdrop'),
+    cur ? { divider: true } : null, cur ? { icon: 'arrowDown', label: 'Not a reward (plain Transfer In)', onClick: () => go(null) } : null]);
+}
+
 async function deleteTx(txId) {
   const tx = transactions.find(t => t.id === txId);
   if(!tx) return;
@@ -2421,11 +2433,11 @@ function renderCoinTx() {
         note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (feeQ ? ' · fee ' + qtyFmt(feeQ) + ' ' + sym : '') + (t.type === 'sell' && t.kind !== 'pay' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' && t.kind === 'reward') {
-      entries.push({ id: t.id, kind: 'reward', label: t.src === 'mining' ? 'Mining' : t.src === 'airdrop' ? 'Airdrop' : 'Reward', qty: t.qty - (+t.fee || 0), usd: (t.qty - (+t.fee || 0)) * (price || 0),
+      entries.push({ id: t.id, kind: 'reward', tag: true, label: t.src === 'mining' ? 'Mining' : t.src === 'airdrop' ? 'Airdrop' : 'Reward', qty: t.qty - (+t.fee || 0), usd: (t.qty - (+t.fee || 0)) * (price || 0),
         note: [t.note, '$0 cost · value now'].filter(Boolean).join(' · '), date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' || t.type === 'transfer_out') {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
-      entries.push({ id: t.id, kind: t.type, label: isIn ? SAMSAM_LABELS.TRANSFER_IN : SAMSAM_LABELS.TRANSFER_OUT,
+      entries.push({ id: t.id, kind: t.type, tag: isIn && !(+t.price > 0), label: isIn ? SAMSAM_LABELS.TRANSFER_IN : SAMSAM_LABELS.TRANSFER_OUT,
         qty: isIn ? t.qty - fee : t.qty + fee, usd: isIn ? t.qty * t.price : (t.qty + fee) * (price || 0),
         note: [t.note, isIn && t.price ? '@ ' + priceFmt(t.price) : '', fee ? 'fee ' + qtyFmt(fee) + ' ' + sym : ''].filter(Boolean).join(' · '),
         date: t.date, order: t.createdAt || '' });
@@ -2459,7 +2471,8 @@ function renderCoinTx() {
       <div class="htx-row-amt">${amt}</div>
       <div class="htx-row-act">${e.opening
         ? `<button type="button" class="htx-act htx-edit" onclick="openEditOpening()" title="Edit opening position" aria-label="Edit opening position">${SamsamUI.icon('pencil')}</button>`
-        : `<button type="button" class="htx-act" onclick="deleteTx('${e.id}')" title="Delete" aria-label="Delete this ${e.label}">${SamsamUI.ic('trash', { solo: true })}</button>`}</div>
+        : (e.tag ? `<button type="button" class="htx-act htx-tag" onclick="openTagMenu(this,'${e.id}')" title="Mark as Mining / Staking / Airdrop" aria-label="Mark this ${e.label} as Mining, Staking or Airdrop">${SamsamUI.ic('coins', { solo: true })}</button>` : '') +
+          `<button type="button" class="htx-act" onclick="deleteTx('${e.id}')" title="Delete" aria-label="Delete this ${e.label}">${SamsamUI.ic('trash', { solo: true })}</button>`}</div>
     </div>`;
   });
   listEl.innerHTML = html;
