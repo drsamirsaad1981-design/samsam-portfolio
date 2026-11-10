@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611101010';
-import * as Hist from './samsam-history.js?v=202611101010';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611101010';
+import * as Core from './samsam-core.js?v=202611101308';
+import * as Hist from './samsam-history.js?v=202611101308';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611101308';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -548,7 +548,8 @@ function txDoc(sym, type, qty, price, note, extra = {}) {
     ...(extra.feeUsd > 0 ? { feeUsd: Number(extra.feeUsd) } : {}),
     ...(type === 'buy' && extra.netFee > 0 ? { netFee: Number(extra.netFee) } : {}),   // the part of `fee` that was the network fee to your wallet
     ...(extra.link ? { link: Clean.text(extra.link, 60) } : {}),   // a stablecoin Buy made from a Sell → that Sell's id
-    ...(type === 'transfer_in' && extra.kind === 'reward' ? { kind: 'reward' } : {}),   // staking / mining reward: coins in at $0 cost
+    ...(type === 'transfer_in' && extra.kind === 'reward' ? { kind: 'reward' } : {}),
+    ...(type === 'sell' && extra.kind === 'pay' ? { kind: 'pay' } : {}),   // stablecoin spent on a Buy (link = that Buy's id)   // staking / mining reward: coins in at $0 cost
   });
 }
 
@@ -681,6 +682,19 @@ const API = {
     return commit((b, ref) => b.set(ref('txs', sellId), txDoc(sym, 'sell', qty, price, note, extra)), `Save sell ${sym}`)
       .then(() => API.addCoin({ sym: ss, name: stable.name || ss, cat: stable.cat || 'other', cgId: stable.cgId || null, cmcSlug: stable.cmcSlug || null, logoUrl: stable.logoUrl || null }, { qty: cash, price: 1, note: bnote, link: sellId }))
       .then(() => sellId);
+  },
+
+  // Buy paid from a stablecoin: the Buy + the stablecoin going out at $1 (marked kind:'pay', linked to the Buy) in ONE write
+  buyFromStable(sym, qty, price, note, extra = {}, stableSym) {
+    const ss = Clean.sym(String(stableSym || '').toUpperCase());
+    const cost = Math.max(0, (Number(qty) || 0) * (Number(price) || 0) + (Number(extra.feeUsd) || 0));
+    if (!ss || ss === Clean.sym(String(sym).toUpperCase()) || !(cost > 0) || !S.coins.has(ss)) return API.addTx(sym, 'buy', qty, price, note, extra);
+    const buyId = Core.newId('tx_'), when = Date.parse(extra.date) || Date.now();
+    const pnote = 'Paid for buying ' + (+Number(qty).toPrecision(8)) + ' ' + sym;
+    return commit((b, ref) => {
+      b.set(ref('txs', buyId), txDoc(sym, 'buy', qty, price, note, extra));
+      b.set(ref('txs', Core.newId('tx_')), txDoc(ss, 'sell', cost, 1, pnote, { date: new Date(when + 1).toISOString(), link: buyId, kind: 'pay' }));
+    }, `Buy ${sym} with ${ss}`).then(() => buyId);
   },
 
   // Recovery: in ONE atomic write, restore missing transactions (keeping their original ids, so

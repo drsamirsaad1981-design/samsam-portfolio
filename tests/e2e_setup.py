@@ -37,6 +37,8 @@ def setup(ctx, keep_csp=False):
     ctx.add_init_script("window.__cpAutoAnswer = (kind, msg, o) => { (window.__cpLog = window.__cpLog || []).push(msg); return kind === 'prompt' ? (o && o.value != null ? String(o.value) : '') : true; };")   # in-app dialogs (CPDialog) answer OK in tests
     # cards that open on a tap (Target allocation, Exit Strategy's Macro + Cash-out) start open in the older tests;
     # a test of the closed state clears these keys first
+    # Buy → "Pay from" a stablecoin is on by default in the app; the older tests record plain Buys (pay_from_test.py tests it)
+    ctx.add_init_script("try{if(localStorage.getItem('samsam_buy_from')===null)localStorage.setItem('samsam_buy_from','{\"on\":false}')}catch(e){}")
     ctx.add_init_script("try{if(localStorage.getItem('samsam_tg_open')===null)localStorage.setItem('samsam_tg_open','1');if(localStorage.getItem('samsam_exit_cards')===null)localStorage.setItem('samsam_exit_cards','{\"macro\":1,\"cash\":1}')}catch(e){}")
     cfg = "export const FIREBASE_CONFIG={apiKey:'test',authDomain:'x',projectId:'samsam-test',appId:'x'};export const ALLOWED_EMAILS=['owner@example.com'];"
     ctx.route(re.compile(r'.*/firebase-config\.js(\?.*)?$'), lambda r: r.fulfill(status=200, content_type='text/javascript', body=cfg))

@@ -113,7 +113,7 @@ with sync_playwright() as p:
         check(f'{name}: the untick is remembered next time', not pg.is_checked('#atxCashOn'))
         pg.check('#atxCashOn'); pg.evaluate("closeAddTx()"); pg.evaluate(f"Samsam.deleteTx('{sell['id']}')"); pg.wait_for_timeout(800)
         pg.evaluate(f"openAddTx('buy','{ss}')"); pg.wait_for_timeout(200)
-        check(f'{name}: Buy form has no "Add the money to" row', not pg.is_visible('#atxCashRow')); pg.evaluate("closeAddTx()")
+        check(f'{name}: Buy form has no "Add the money to" row (only "Pay from", when you hold a stablecoin)', not pg.is_visible('#atxCashRow') or pg.inner_text('#atxCashLbl') == 'Pay from'); pg.evaluate("closeAddTx()")
         check(f'{name}: no JS errors', not errs, errs[:3])
         ctx.close()
     br.close()

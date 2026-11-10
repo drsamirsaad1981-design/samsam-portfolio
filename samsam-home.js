@@ -827,7 +827,9 @@ async function deleteTx(txId) {
   } catch(_) {}
   // A sell whose money went into a stablecoin: that Buy goes with it (and the other way round)
   const pair = tx.link ? transactions.find(t => t.id === tx.link) : transactions.find(t => t.link === txId);
-  const pairTxt = pair ? (pair.type === 'buy'
+  const pairTxt = pair && pair.kind === 'pay' ? `\n\nThe ${SamsamFmt.usd(pair.qty)} ${pair.sym} it was paid with comes back (that payment is deleted too).`
+    : pair && tx.kind === 'pay' ? `\n\nThis paid for buying ${fmtN(pair.qty)} ${pair.sym} — that buy is deleted too.`
+    : pair ? (pair.type === 'buy'
     ? `\n\nThe ${SamsamFmt.usd(pair.qty * pair.price)} ${pair.sym} added from this sell is deleted too.`
     : `\n\nThis ${tx.sym} came from selling ${fmtN(pair.qty)} ${pair.sym} — that sell is deleted too.`) : '';
   const ok = await CPDialog.confirm(
@@ -2414,8 +2416,8 @@ function renderCoinTx() {
       const r = perTx[t.id];
       const feeU = +t.feeUsd || 0;   // buy: added to the cost · sell: taken off the proceeds
       const feeQ = t.type === 'buy' ? (+t.fee || 0) : 0;   // buy: coins taken as a fee / network fee to your wallet
-      entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : 'Sell', qty: t.qty - feeQ, usd: (t.total ?? t.qty * t.price) + (t.type === 'buy' ? feeU : -feeU),
-        note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (feeQ ? ' · fee ' + qtyFmt(feeQ) + ' ' + sym : '') + (t.type === 'sell' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
+      entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : t.kind === 'pay' ? 'Paid' : 'Sell', qty: t.qty - feeQ, usd: (t.total ?? t.qty * t.price) + (t.type === 'buy' ? feeU : -feeU),
+        note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (feeQ ? ' · fee ' + qtyFmt(feeQ) + ' ' + sym : '') + (t.type === 'sell' && t.kind !== 'pay' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' && t.kind === 'reward') {
       entries.push({ id: t.id, kind: 'reward', label: 'Reward', qty: t.qty - (+t.fee || 0), usd: (t.qty - (+t.fee || 0)) * (price || 0),

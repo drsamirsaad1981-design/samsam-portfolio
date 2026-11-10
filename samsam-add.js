@@ -178,7 +178,7 @@
         '<div class="atx-feebox"><input type="number" inputmode="decimal" step="any" min="0" id="atxFeeUsd" placeholder="0.00" oninput="previewAddTx()">' +
         '<div class="atx-unit" id="atxFeeUnitSeg" role="radiogroup" aria-label="Fee paid in"><button type="button" role="radio" data-u="usd">USD</button><button type="button" role="radio" data-u="coin" id="atxFeeUnitCoin">Coin</button></div></div></div>' +
       '<label class="atx-field" id="atxNetFeeRow"><span>Network fee to your wallet <small id="atxNetFeeUnit">(in coin, optional — e.g. Binance → Tangem)</small></span><input type="number" inputmode="decimal" step="any" min="0" id="atxNetFee" placeholder="0" oninput="previewAddTx()"></label>' +
-      '<div class="atx-cash" id="atxCashRow"><label><input type="checkbox" id="atxCashOn" onchange="previewAddTx()"><span>Add the money to</span></label><select id="atxCashSym" aria-label="Stablecoin that receives the money" onchange="previewAddTx()"></select></div>' +
+      '<div class="atx-cash" id="atxCashRow"><label><input type="checkbox" id="atxCashOn" onchange="previewAddTx()"><span id="atxCashLbl">Add the money to</span></label><select id="atxCashSym" aria-label="Stablecoin that receives the money" onchange="previewAddTx()"></select></div>' +
       '<label class="atx-field" id="atxFeeRow"><span>Transfer fee <small id="atxFeeUnit">(in coin, optional)</small></span><input type="number" inputmode="decimal" step="any" min="0" id="atxFee" placeholder="0" oninput="previewAddTx()"></label>' +
       '<label class="atx-field"><span>Date &amp; time</span><input type="datetime-local" id="atxDate" oninput="previewAddTx()"></label>' +
       '<label class="atx-field"><span>Note <small>(optional)</small></span><input type="text" id="atxNote" maxlength="120" placeholder="e.g. from Binance, to cold wallet"></label>' +
@@ -482,15 +482,18 @@
     if (window.SamsamMarket && SamsamMarket.isStable) return SamsamMarket.isStable({ sym: c.sym, name: c.name || '' });
     return /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD)$/.test(c.sym);
   }
-  function cashPref() { try { var v = JSON.parse(localStorage.getItem(CASH_KEY) || 'null'); return v && typeof v === 'object' ? v : {}; } catch (_) { return {}; } }
+  var PAY_KEY = 'samsam_buy_from';   // Buy: "Pay from" a stablecoin you hold (remembered like the Sell choice)
+  function cashPref(k) { try { var v = JSON.parse(localStorage.getItem(k || (atxType === 'buy' ? PAY_KEY : CASH_KEY)) || 'null'); return v && typeof v === 'object' ? v : {}; } catch (_) { return {}; } }
   function fillCashRow() {
-    var row = $('atxCashRow'), coin = held(atxSym);
-    var show = atxType === 'sell' && !isStableCoin({ sym: atxSym, name: (coin && coin.name) || '' });
-    row.style.display = show ? '' : 'none'; if (!show) return;
+    var row = $('atxCashRow'), coin = held(atxSym), buy = atxType === 'buy';
     var mine = portfolio().filter(function (c) { return c.qty > 0 && isStableCoin(c); }).sort(function (a, b) { return b.qty - a.qty; }).map(function (c) { return c.sym; });
-    var list = mine.concat(['USDT', 'USDC'].filter(function (s) { return mine.indexOf(s) < 0; }));
+    var show = (atxType === 'sell' || (buy && mine.length)) && !isStableCoin({ sym: atxSym, name: (coin && coin.name) || '' });
+    row.style.display = show ? '' : 'none'; if (!show) return;
+    $('atxCashLbl').textContent = buy ? 'Pay from' : 'Add the money to';
+    $('atxCashSym').setAttribute('aria-label', buy ? 'Stablecoin the buy is paid from' : 'Stablecoin that receives the money');
+    var list = buy ? mine : mine.concat(['USDT', 'USDC'].filter(function (s) { return mine.indexOf(s) < 0; }));
     var pref = cashPref(), pick = list.indexOf(pref.sym) >= 0 ? pref.sym : list[0];
-    $('atxCashSym').innerHTML = list.map(function (s) { return '<option value="' + E(s) + '"' + (s === pick ? ' selected' : '') + '>' + E(s) + (mine.indexOf(s) < 0 ? ' (new)' : '') + '</option>'; }).join('');
+    $('atxCashSym').innerHTML = list.map(function (s) { var h = held(s); return '<option value="' + E(s) + '"' + (s === pick ? ' selected' : '') + '>' + E(s) + (mine.indexOf(s) < 0 ? ' (new)' : buy && h ? ' (' + fmtQty(h.qty) + ')' : '') + '</option>'; }).join('');
     $('atxCashOn').checked = pref.on !== false;
   }
   function cashTarget() {
@@ -589,6 +592,11 @@
     if (netFee < 0) errs.atxNetFee = 'Fee cannot be negative.';
     if (atxType === 'buy' && qty > 0 && fee >= qty) errs[netFee > 0 ? 'atxNetFee' : 'atxFeeUsd'] = 'The fees must be smaller than the amount bought.';
     if (atxType === 'transfer_in' && qty > 0 && fee >= qty) errs.atxFee = 'Fee must be smaller than the amount transferred in.';
+    var payFrom = atxType === 'buy' ? cashTarget() : null, payCost = qty * price + feeUsd;
+    if (payFrom && qty > 0 && price > 0) {
+      var have = (held(payFrom) || {}).qty || 0;
+      if (payCost > have + 1e-9) errs.atxCashSym = 'Not enough ' + payFrom + ': you have ' + fmtQty(have) + ', this buy costs ' + SamsamFmt.usd(payCost) + '. Untick “Pay from” to record it without.';
+    }
     if (isNaN(date.getTime())) errs.atxDate = 'Enter a valid date.';
     else if (dateStr && new Date(dateStr).getTime() > Date.now() + 60e3) errs.atxDate = 'Date cannot be in the future.';
     var after = null;
@@ -606,19 +614,21 @@
       if (short === 'new') errs.atxQty = (atxType === 'sell' ? 'You can’t sell' : 'You can’t transfer out') + ' more than you held on that date.';
       after = { qty: pos.qty, avg: pos.avg, realized: t._realized, short: short };
     }
-    return { qty: qty, price: price, fee: fee, feeUsd: feeUsd, tradeFee: tradeFee, netFee: netFee, date: date, errs: errs, after: after };
+    return { qty: qty, price: price, fee: fee, feeUsd: feeUsd, tradeFee: tradeFee, netFee: netFee, date: date, errs: errs, after: after, payFrom: payFrom, payCost: payCost };
   }
   function previewAddTx() {
     var r = readAddTx(), pv = $('atxPreview');
     ['atxQty', 'atxPrice', 'atxFee', 'atxFeeUsd', 'atxNetFee', 'atxDate'].forEach(function (id) { $(id).classList.toggle('bad', !!r.errs[id] && $(id).value !== ''); });
-    $('atxErr').textContent = '';
+    $('atxErr').textContent = r.errs.atxCashSym || '';
+    $('atxCashSym').classList.toggle('bad', !!r.errs.atxCashSym);
     if (!r.after) { pv.innerHTML = ''; return; }
     var usd = function (n) { return SamsamFmt.usd(n); }, q = function (n) { return fmtQty(n); }, lines = [];
     if (atxType === 'buy') lines.push('Total cost: <b>' + usd(r.qty * r.price + r.feeUsd) + '</b>' + (r.feeUsd > 0 ? ' <small>(' + usd(r.qty * r.price) + ' + fee ' + usd(r.feeUsd) + ')</small>' : ''));
     if (atxType === 'buy' && r.fee > 0) lines.push('Arrives in your wallet: <b>' + q(r.qty - r.fee) + ' ' + atxSym + '</b> <small>(' + q(r.qty) + ' − fees ' + q(r.fee) + ')</small>');
     if (atxType === 'sell') lines.push('Proceeds: <b>' + usd(r.qty * r.price - r.feeUsd) + '</b>' + (r.feeUsd > 0 ? ' <small>(' + usd(r.qty * r.price) + ' − fee ' + usd(r.feeUsd) + ')</small>' : '') + (r.after.realized != null ? ' · ' + (r.after.realized >= 0 ? 'profit' : 'loss') + ' <b>' + usd(Math.abs(r.after.realized)) + '</b>' : ''));
     var cs = atxType === 'sell' ? cashTarget() : null;
-    $('atxCashSym').disabled = atxType === 'sell' && !$('atxCashOn').checked;
+    $('atxCashSym').disabled = (atxType === 'sell' || atxType === 'buy') && !$('atxCashOn').checked;
+    if (r.payFrom && r.payCost > 0 && !r.errs.atxCashSym) { var hv = (held(r.payFrom) || {}).qty || 0; lines.push(SamsamUI.ic('cash') + 'Pays <b>' + SamsamFmt.usd(r.payCost) + ' from ' + E(r.payFrom) + '</b> · ' + fmtQty(hv - r.payCost) + ' ' + E(r.payFrom) + ' left'); }
     if (cs && r.qty * r.price - r.feeUsd > 0) lines.push(SamsamUI.ic('cash') + 'Adds <b>' + SamsamFmt.usd(r.qty * r.price - r.feeUsd) + ' in ' + E(cs) + '</b> to your portfolio');
     if (atxType === 'transfer_in') lines.push('Received after fee: <b>' + q(r.qty - r.fee) + ' ' + atxSym + '</b> · cost added <b>' + usd(r.qty * r.price) + '</b>');
     if (atxType === 'reward') { var cp = (held(atxSym) || {}).currentPrice || 0; lines.push('Adds <b>+' + q(r.qty) + ' ' + atxSym + '</b> at <b>$0 cost</b>' + (cp > 0 ? ' <small>(≈ ' + usd(r.qty * cp) + ' now)</small>' : '')); }
@@ -639,17 +649,20 @@
     var note = $('atxNote').value.trim(), sym = atxSym, type = ledgerType(atxType);
     // Saved instantly on this device and synced to the cloud; every screen recalculates from the ledger
     var extra = { date: r.date.toISOString(), fee: r.fee, feeUsd: r.feeUsd, netFee: r.netFee }, cs = type === 'sell' ? cashTarget() : null;
-    if (type === 'sell' && $('atxCashRow').style.display !== 'none') { try { localStorage.setItem(CASH_KEY, JSON.stringify({ on: !!cs, sym: $('atxCashSym').value })); } catch (_) {} }
+    var pay = atxType === 'buy' ? r.payFrom : null;
+    if ((type === 'sell' || atxType === 'buy') && $('atxCashRow').style.display !== 'none') { try { localStorage.setItem(atxType === 'buy' ? PAY_KEY : CASH_KEY, JSON.stringify({ on: $('atxCashOn').checked, sym: $('atxCashSym').value })); } catch (_) {} }
     if (cs && Samsam.sellToStable) {
       var sc = held(cs), info = CASH_INFO[cs] || {};
       write(Samsam.sellToStable(sym, r.qty, r.price, note, extra, { sym: cs, name: (sc && sc.name) || info.name || cs, cgId: (sc && sc.cgId) || info.cgId || null, cmcSlug: info.cmcSlug || null, cat: (sc && sc.cat) || 'other', logoUrl: (sc && sc.logoUrl) || null }));
-    } else { if (atxType === 'reward') { extra.kind = 'reward'; if (!note) note = 'Staking reward'; } write(Samsam.addTx(sym, type, r.qty, r.price, note, extra)); }
+    } else if (pay && Samsam.buyFromStable) write(Samsam.buyFromStable(sym, r.qty, r.price, note, extra, pay));
+    else { if (atxType === 'reward') { extra.kind = 'reward'; if (!note) note = 'Staking reward'; } write(Samsam.addTx(sym, type, r.qty, r.price, note, extra)); }
     setTimeout(function () { atxSaving = false; $('atxSave').disabled = false; }, 400);
     delete $('atxPrice').dataset.touched;
     $('atxFeeUsd').value = ''; $('atxNetFee').value = '';
     closeAddTx();
     emit('tx', { sym: sym, type: type });
     if (cs) emit('tx', { sym: cs, type: 'buy' });
+    if (pay) emit('tx', { sym: pay, type: 'sell' });
   }
 
   // ── Change category ──
