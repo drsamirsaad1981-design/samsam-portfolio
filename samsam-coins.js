@@ -249,8 +249,8 @@
   // null = not known yet (list not loaded), true / false = has / has no perpetual futures (CoinGlass maps only those)
   function hasFutures(sym) {
     if (!LINKS || !LINKS.fut || !LINKS.fut.length) return null;
-    var s = LIQ_SYMS[String(sym || '').toUpperCase()] || String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    return LINKS.fut.indexOf(s) >= 0;
+    var raw = String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, ''), s = LIQ_SYMS[raw] || raw;
+    return LINKS.fut.indexOf(s) >= 0 || LINKS.fut.indexOf(raw) >= 0;   // exchanges list TON as GRAM now, CoinGlass still as TON
   }
   function ccFromList(cgId) { return cgId && LINKS && LINKS.cc && LINKS.cc[cgId] || null; }
   function cmcUrl(sym, opts) { var s = cmcSlug(sym, opts); return s ? 'https://coinmarketcap.com/currencies/' + encodeURIComponent(s) + '/' : null; }
