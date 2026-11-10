@@ -31,7 +31,7 @@ with sync_playwright() as p:
     # form structure
     A.click('#htxAddBtn'); A.wait_for_selector('#atxBackdrop.show')
     types = A.eval_on_selector_all('.atx-types button', 'b => b.map(x => x.innerText.trim())')
-    check('5 type buttons: Buy, Sell, Reward, Transfer In, Transfer Out', types == ['Buy', 'Sell', 'Reward', 'Transfer In', 'Transfer Out'], types)
+    check('5 type buttons: Buy, Sell, Transfer In, Transfer Out, Reward', types == ['Buy', 'Sell', 'Transfer In', 'Transfer Out', 'Reward'], types)
     vis = {}
     for t in ('buy', 'sell', 'transfer_in', 'transfer_out'):
         A.click(f'.atx-types button[data-t="{t}"]')

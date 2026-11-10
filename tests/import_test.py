@@ -102,6 +102,9 @@ with sync_playwright() as p:
         # the Add Transaction form links here
         pg.evaluate("openAddTx('buy','BTC')"); pg.wait_for_timeout(150)
         check(f'{name}: Add Transaction has the import link', pg.is_visible('#atxImp'))
+        vis = {t: (pg.click(f'.atx-types button[data-t="{t}"]'), pg.is_visible('#atxImp'))[1] for t in ('sell', 'transfer_in', 'transfer_out', 'reward', 'buy')}
+        check(f'{name}: the import link shows on Buy and Sell only ({vis})', vis == {'sell': True, 'transfer_in': False, 'transfer_out': False, 'reward': False, 'buy': True}, vis)
+        if name == 'phone': pg.locator('#atxForm').screenshot(path=str(pathlib.Path(__file__).parent / 'shots' / 'atx_types_phone.png'))
         check(f'{name}: no JS errors', not errs, errs[:3]); ctx.close()
     br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)

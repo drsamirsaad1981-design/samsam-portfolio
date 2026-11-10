@@ -461,7 +461,8 @@
     '#cpWal .wl-nums{font-size:.78rem;color:var(--fg2,#94a3b8);margin-top:2px}' +
     '#cpWal .wl-d{font-weight:800;font-size:.86rem;white-space:nowrap}#cpWal .wl-d.up{color:#22c55e}#cpWal .wl-d.dn{color:#f59e0b}' +
     '[data-theme="light"] #cpWal .wl-d.up{color:#16a34a}[data-theme="light"] #cpWal .wl-d.dn{color:#d97706}' +
-    '#cpWal .wl-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}' +
+    '#cpWal .wl-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}#cpWal .wl-as{font-size:.76rem;opacity:.75;flex-basis:100%}' +
+    '#cpWal .wl-btn2.rw.main{background:rgba(168,85,247,.16)}' +
     '#cpWal .wl-ok{color:#22c55e}[data-theme="light"] #cpWal .wl-ok{color:#16a34a}' +
     '#cpWal .wl-syms{font-size:.8rem;padding:10px 12px;line-height:1.6}' +
     '#cpWal .wl-chip{display:inline-flex;align-items:center;gap:4px;margin:0 4px 6px 0;padding:4px 9px;border-radius:8px;border:1px solid var(--border,rgba(148,163,184,.3));background:rgba(148,163,184,.08);color:inherit;font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}#cpWal .wl-chip span{font-weight:500;opacity:.8}' +
@@ -498,7 +499,10 @@
     var d = (r.diff > 0 ? '+' : '−') + qf(Math.abs(r.diff)) + ' ' + r.sym + (r.usd ? ' <small>(' + usd(Math.abs(r.usd)) + ')</small>' : '');
     var acts = '';
     if (kind === 'more') {
-      acts = '<div class="wl-acts"><button type="button" class="wl-btn2 rw" data-rw="' + E(r.sym) + '" data-q="' + r.diff + '">' + IC('coins') + 'Add +' + qf(r.diff) + ' as Reward</button>' +
+      // the extra coins as a $0 Reward — from Mining, Staking or Airdrop (a mined coin like BTC shows Mining first)
+      var srcs = POW.indexOf(r.sym) >= 0 ? ['mining', 'staking', 'airdrop'] : ['staking', 'mining', 'airdrop'];
+      acts = '<div class="wl-acts"><span class="wl-as">Add +' + qf(r.diff) + ' as</span>' +
+        srcs.map(function (k, i) { return '<button type="button" class="wl-btn2 rw' + (i ? '' : ' main') + '" data-rw="' + E(r.sym) + '" data-src="' + k + '" data-q="' + r.diff + '">' + (i ? '' : IC('coins')) + SRC[k] + '</button>'; }).join('') +
         (window.CPAdd && CPAdd.openTx ? '<button type="button" class="wl-btn2" data-tin="' + E(r.sym) + '" data-q="' + r.diff + '">' + IC('arrowDown') + 'Transfer In…</button>' : '') + '</div>';
     }
     return '<div class="wl-r" data-sym="' + E(r.sym) + '"><div class="wl-top"><b>' + E(r.sym) + '</b>' +
@@ -573,11 +577,14 @@
     await S().setWallets(ws.filter(function (x) { return x.id !== id; })).catch(function () {});
     draw();
   }
-  async function addReward(sym, q) {
+  var SRC = { mining: 'Mining', staking: 'Staking', airdrop: 'Airdrop' }, SRC_NOTE = { mining: 'Mining reward', staking: 'Staking reward', airdrop: 'Airdrop' };
+  var POW = ['BTC', 'LTC', 'DOGE', 'KAS', 'BCH', 'ETC', 'XMR', 'ZEC', 'DASH', 'RVN', 'BSV', 'ERG'];   // coins that are mined, not staked
+  async function addReward(sym, q, src) {
     if (!(q > 0)) return;
-    var ok = window.CPDialog ? await CPDialog.confirm('Add +' + qf(q) + ' ' + sym + ' as a staking Reward at $0 cost? Your holdings go up and the average buy price goes down.', { title: 'Add Reward', okText: 'Add Reward' }) : true;
+    src = SRC[src] ? src : 'staking';
+    var ok = window.CPDialog ? await CPDialog.confirm('Add +' + qf(q) + ' ' + sym + ' as ' + (src === 'airdrop' ? 'an Airdrop' : 'a ' + SRC[src] + ' reward') + ' at $0 cost? Your holdings go up and the average buy price goes down.', { title: 'Add ' + SRC[src], okText: 'Add ' + SRC[src] }) : true;
     if (!ok) return;
-    try { await S().addTx(sym, 'transfer_in', q, 0, 'Staking reward · wallet check', { kind: 'reward' }); }
+    try { await S().addTx(sym, 'transfer_in', q, 0, SRC_NOTE[src] + ' · wallet check', { kind: 'reward', src: src }); }
     catch (e) { if (window.CPDialog) CPDialog.alert('Not saved — ' + ((e && e.message) || e)); }
     draw();
   }
@@ -601,7 +608,7 @@
       b = t.closest('[data-kind]'); if (b) { switchKind(b.dataset.kind); return; }
       b = t.closest('[data-net]'); if (b) { editCoin(b.dataset.net); return; }
       if (t.closest('#wlCheck')) { check(); return; }
-      b = t.closest('[data-rw]'); if (b) { addReward(b.dataset.rw, +b.dataset.q); return; }
+      b = t.closest('[data-rw]'); if (b) { addReward(b.dataset.rw, +b.dataset.q, b.dataset.src); return; }
       b = t.closest('[data-tin]'); if (b) { var sym = b.dataset.tin, q = +b.dataset.q; close(); CPAdd.openTx('transfer_in', sym, { qty: q, note: 'Found by the wallet check' }); }
     });
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.target.id === 'wlAddr' || e.target.id === 'wlLabel')) { e.preventDefault(); addWallet($('wlAddr').value, $('wlLabel').value); } });

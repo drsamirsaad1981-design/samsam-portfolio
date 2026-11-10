@@ -227,7 +227,10 @@ with sync_playwright() as p:
         if 'QNT' in H: check(f'{vn} QNT is an Ethereum token now (looked up, not "own blockchain")', 'QNT' not in (pg.inner_text('#wlRes-cant [data-why="own"]') if pg.query_selector('#wlRes-cant [data-why="own"]') else ''))
         check(f'{vn} a coin with 0 in the wallets is "Not in these wallets", never "Match"', all(s not in same for s in ('AVAX', 'POL', 'BNB') if s in H) and all(s in none for s in ('AVAX', 'POL') if s in H), (same, none))
         bt = pg.inner_text('#wlRes-more .wl-r[data-sym="BTC"]')
-        check(f'{vn} BTC row: +0.001 BTC, from "Tangem BTC", Reward button', '+0.001 BTC' in bt and 'Tangem BTC' in bt and 'as Reward' in bt, bt)
+        check(f'{vn} BTC row: +0.001 BTC, from "Tangem BTC", "Add as" Mining / Staking / Airdrop', '+0.001 BTC' in bt and 'Tangem BTC' in bt and 'as' in bt, bt)
+        srcs = pg.evaluate("[...document.querySelectorAll('#wlRes-more .wl-r[data-sym=\"BTC\"] [data-rw]')].map(b=>b.dataset.src+':'+b.innerText.trim())")
+        if vn == 'phone': pg.locator('#wlRes-more .wl-r[data-sym="BTC"]').screenshot(path=str(SH / 'wallets_btc_row.png'))
+        check(f'{vn} BTC (a mined coin) shows Mining first, then Staking, Airdrop', srcs == ['mining:Mining', 'staking:Staking', 'airdrop:Airdrop'], srcs)
         if 'ETH' in H:
             et = pg.inner_text('#wlRes-same .wl-r[data-sym="ETH"] .wl-nums')
             check(f'{vn} ETH found on "Ethereum, Arbitrum" ({et})', et.endswith('· Ethereum, Arbitrum'), et)
@@ -242,7 +245,7 @@ with sync_playwright() as p:
         pg.wait_for_function(f"Math.abs(Samsam.getState().portfolio.find(c=>c.sym==='BTC').qty - {b0['qty'] + 0.001}) < 1e-9", timeout=8000); pg.wait_for_timeout(500)
         b1 = pg.evaluate("Samsam.getState().portfolio.find(c=>c.sym==='BTC')")
         t = pg.evaluate("Samsam.getState().transactions.filter(t=>t.sym==='BTC').slice(-1)[0]")
-        check(f'{vn} Add as Reward: +0.001 BTC at $0 cost (kind reward)', t.get('kind') == 'reward' and t['price'] == 0 and abs(b1['qty'] * b1['basePrice'] - b0['qty'] * b0['basePrice']) < 1e-4, t)
+        check(f'{vn} Add as Mining: +0.001 BTC at $0 cost (kind reward, from mining)', t.get('kind') == 'reward' and t.get('src') == 'mining' and t['price'] == 0 and abs(b1['qty'] * b1['basePrice'] - b0['qty'] * b0['basePrice']) < 1e-4, t)
         same2 = pg.evaluate("[...document.querySelectorAll('#wlRes-same .wl-r')].map(r=>r.dataset.sym)")
         check(f'{vn} BTC now shows Match (no new check needed)', 'BTC' in same2, same2)
         kept = pg.inner_text(f'#wlRes-kept .wl-r[data-sym="{NS}"]') if pg.query_selector(f'#wlRes-kept .wl-r[data-sym="{NS}"]') else ''

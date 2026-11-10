@@ -44,12 +44,12 @@
     '.atx-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}' +
     '.atx-head h3{margin:0;font-size:1.05rem}' +
     '.atx-x{background:none;border:none;color:inherit;font-size:1.5rem;line-height:1;opacity:.7;cursor:pointer;padding:2px 6px}' +
-    '.atx-types{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;background:rgba(148,163,184,.12);padding:4px;border-radius:12px;margin-bottom:12px}' +
-    '.atx-types button{border:none;background:transparent;color:inherit;font:inherit;font-size:.8rem;font-weight:700;padding:9px 4px;border-radius:9px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;justify-content:center;opacity:.75}' +
+    '.atx-types{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}' +
+    '.atx-types button{border:none;background:rgba(148,163,184,.12);color:inherit;font:inherit;font-size:.85rem;font-weight:700;min-height:42px;padding:9px 6px;border-radius:10px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;justify-content:center;opacity:.8}' +
     '.atx-types button[aria-checked="true"]{opacity:1;background:var(--bg-card-secondary,#334155);box-shadow:inset 0 0 0 1px var(--atx-c,#64748b)}' +
     '[data-theme="light"] .atx-types button[aria-checked="true"]{background:#fff}' +
-    '.atx-types button{grid-column:span 2}.atx-types button[data-t^="transfer"]{grid-column:span 3}' +
-    '@media (max-width:380px){.atx-types button{font-size:.72rem;padding:9px 2px}}' +
+    '.atx-types button[data-t="reward"]{grid-column:1 / -1}' +   // Buy | Sell · Transfer In | Transfer Out · Reward across
+    '@media (max-width:380px){.atx-types button{font-size:.78rem;padding:9px 2px}}' +
     '.ac-net{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--border,rgba(148,163,184,.3));background:rgba(148,163,184,.06);color:inherit;font:inherit;font-size:.86rem;cursor:pointer}' +
     '.ac-net #acNetTxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ac-net .ac-net-go{opacity:.6;font-size:1.1rem}.ac-net .ss-ic{margin:0}' +
     '.htx-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}.atx-types button .htx-dot{margin-right:5px}' +
@@ -60,7 +60,7 @@
     '.atx-field{display:block;margin-bottom:10px;font-size:.8rem;font-weight:600;color:#cbd5e1;min-width:0}' +
     '[data-theme="light"] .atx-field{color:#475569}' +
     '.atx-field small{font-weight:500;color:#94a3b8}' +
-    '.atx-imp{display:block;margin:10px auto 0;background:none;border:none;color:#3b82f6;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;padding:6px}' +
+    '.atx-imp[hidden]{display:none}.atx-imp{display:block;margin:10px auto 0;background:none;border:none;color:#3b82f6;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;padding:6px}' +
     '.atx-field>label{display:block}' +
     '.atx-feebox{display:flex;gap:6px;align-items:stretch;margin-top:5px}.atx-feebox input{margin-top:0!important;flex:1;min-width:0}' +
     '.atx-src{display:grid;grid-template-columns:repeat(3,1fr)}.atx-src button{padding:9px 4px}' +
@@ -169,9 +169,9 @@
       '<div class="atx-types" role="radiogroup" aria-label="Transaction type">' +
         '<button type="button" data-t="buy" role="radio"><span class="htx-dot htx-dot-buy"></span>Buy</button>' +
         '<button type="button" data-t="sell" role="radio"><span class="htx-dot htx-dot-sell"></span>Sell</button>' +
-        '<button type="button" data-t="reward" role="radio"><span class="htx-dot htx-dot-reward"></span>Reward</button>' +
         '<button type="button" data-t="transfer_in" role="radio"><span class="htx-dot htx-dot-transfer_in"></span>Transfer In</button>' +
         '<button type="button" data-t="transfer_out" role="radio"><span class="htx-dot htx-dot-transfer_out"></span>Transfer Out</button>' +
+        '<button type="button" data-t="reward" role="radio"><span class="htx-dot htx-dot-reward"></span>Reward</button>' +
       '</div>' +
       '<div class="atx-coin" id="atxCoin"></div>' +
       '<div class="atx-field" id="atxSrcRow"><span>From</span><div class="atx-unit atx-src" id="atxSrcSeg" role="radiogroup" aria-label="Where the coins came from">' +
@@ -562,7 +562,6 @@
     delete $('atxPrice').dataset.touched; delete $('atxDate').dataset.touched;
     setAddTxType(ATX[type] ? type : 'buy');
     if (pre && pre.qty > 0) { $('atxQty').value = fmtInput(pre.qty); if (pre.note) $('atxNote').value = String(pre.note).slice(0, 200); previewAddTx(); }
-    $('atxImp').hidden = !window.SamsamImport;
     setOpen($('atxBackdrop'), true);
     setTimeout(function () { focusFirst('atxForm', 'atxQty'); }, 50);
   }
@@ -579,6 +578,7 @@
     $('atxNetFeeRow').style.display = t === 'buy' ? '' : 'none';
     $('atxFeeUnitSeg').style.display = t === 'buy' ? '' : 'none';
     $('atxSrcRow').style.display = t === 'reward' ? '' : 'none';
+    $('atxImp').hidden = !window.SamsamImport || !(t === 'buy' || t === 'sell');   // an exchange file holds trades only
     $('atxFeeUnitCoin').textContent = atxSym;
     $('atxNetFeeUnit').textContent = '(in ' + atxSym + ', optional — e.g. Binance → your cold wallet)';
     setFeeUnit(t === 'buy' ? feeUnitPref() : 'usd', true);
