@@ -328,3 +328,12 @@
     .htx-net span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .htx-net .ss-ic { margin:0; width:12px; height:12px; }
     .htx-net.htx-net-empty { opacity:.7; border-style:dashed; }
+
+/* Automatic staking strip on the coin page */
+.htx-stake{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:8px;padding:8px 10px;border-radius:10px;border:1px solid rgba(168,85,247,.4);background:rgba(168,85,247,.08);font-size:.8rem}
+.htx-stake[hidden]{display:none}
+.htx-stake-t{display:flex;align-items:center;gap:5px}.htx-stake-t b{color:#c084fc}[data-theme="light"] .htx-stake-t b{color:#7e22ce}
+.htx-stake-s{opacity:.75;flex-basis:100%}
+.htx-stake-b{display:flex;gap:6px;flex-basis:100%}
+.htx-stake-btn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border,rgba(148,163,184,.35));border-radius:8px;padding:4px 10px;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer;background:transparent;color:inherit}
+.htx-stake-btn.stop{color:#f87171;border-color:rgba(248,113,113,.45)}

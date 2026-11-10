@@ -36,3 +36,22 @@ console.log('core tests passed');
   const m2=C.deriveOpening({qty:r2.qty,avg:r2.avg},tout); assert.ok(m2.exact,'tout backward exact'); close(m2.opening.qty,10,'tout open qty');
   console.log('transfer tests passed');
 }
+// Automatic staking: weekly rewards that compound, a part-week on stop, same answer every time
+{
+  const W = C.STAKE_WEEK, t0 = Date.parse('2026-01-01T00:00:00Z');
+  const st = { qty: 1000, apy: 10, since: new Date(t0).toISOString() };
+  const yr = C.stakeBook(st, t0 + 365 * 864e5 + 1);
+  assert.equal(yr.rewards.length, 52, '52 weekly rewards in a year');
+  assert.equal(yr.rewards[0].date, new Date(t0 + W).toISOString(), 'dated at the end of each week');
+  const sum = yr.rewards.reduce((s, r) => s + r.qty, 0);
+  close(1000 + sum, 1000 * Math.pow(1.1, 364 / 365), 'compounds to the APY');
+  close(yr.qty, 1000 + sum, 'rewards added to the staked amount');
+  const fin = C.stakeBook(st, t0 + 10 * 864e5, true);
+  assert.equal(fin.rewards.length, 2, 'stop after 10 days: 1 week + 3 days');
+  close(fin.rewards[0].qty + fin.rewards[1].qty, 1000 * (Math.pow(1.1, 10 / 365) - 1), 'stop books up to the day');
+  assert.equal(fin.since, new Date(t0 + 10 * 864e5).toISOString());
+  assert.deepEqual(C.stakeBook(st, t0 + 30 * 864e5), C.stakeBook(st, t0 + 30 * 864e5), 'same input, same rewards (two devices)');
+  assert.equal(C.stakeBook(st, t0 + 6 * 864e5).rewards.length, 0, 'nothing before a full week');
+  assert.equal(C.stakeBook({ ...st, apy: 0 }, t0 + 30 * 864e5).rewards.length, 0, '0% earns nothing');
+  console.log('staking tests passed');
+}

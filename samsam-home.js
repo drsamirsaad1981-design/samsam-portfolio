@@ -803,6 +803,12 @@ function renderHistory() {
 
 // A coin you got for free (Transfer In at $0, or a Reward) → Mining / Staking / Airdrop, or back to a plain Transfer In.
 // Only the label changes (Rewards & mining sorts by it) — the amount, the $0 cost and your holdings stay the same.
+async function stopStaking(sym) {
+  const st = Samsam.getStake && Samsam.getStake(sym); if (!st || !requireCloud()) return;
+  const due = Samsam.core.stakeEarned(st.qty, st.apy, Date.now() - Date.parse(st.since));
+  const ok = await CPDialog.confirm(`Stop automatic staking for ${sym}? What it earned up to now (+${parseFloat(due.toFixed(8))} ${sym}) is added as a last Staking reward. Rewards already added stay.`, { title: 'Stop staking', okText: 'Stop staking' });
+  if (ok) Samsam.stopStake(sym).catch(e => CPDialog.alert('Could not stop it: ' + (e && e.message || e)));
+}
 function openTagMenu(btn, id) {
   const t = transactions.find(x => x.id === id);
   if (!t || !requireCloud()) return;
@@ -2384,6 +2390,21 @@ function renderCoinTx() {
     const nt = SamsamWallets.placeText(sym);
     netEl.innerHTML = SamsamUI.ic('link') + '<span>' + SamsamCoins.esc(nt || 'Set network & where held') + '</span>';
     netEl.classList.toggle('htx-net-empty', !nt); netEl.title = 'Network & where held — used by the wallet check'; netEl.onclick = () => SamsamWallets.editCoin(sym);
+  }
+  // Automatic staking: amount · APY · earned since the last weekly booking — Change / Stop
+  let stkEl = document.getElementById('htxStake');
+  const stake = Samsam.getStake ? Samsam.getStake(sym) : null;
+  if (stake && !stkEl) { stkEl = document.createElement('div'); stkEl.id = 'htxStake'; stkEl.className = 'htx-stake'; document.getElementById('htxSignal').insertAdjacentElement('beforebegin', stkEl); }
+  if (stkEl) {
+    stkEl.hidden = !stake;
+    if (stake) {
+      const C = Samsam.core, due = C.stakeEarned(stake.qty, stake.apy, Date.now() - Date.parse(stake.since));
+      const next = Math.max(0, Math.ceil((Date.parse(stake.since) + C.STAKE_WEEK - Date.now()) / 864e5));
+      stkEl.innerHTML = `<span class="htx-stake-t">${SamsamUI.ic('coins')}<b>Staking</b> ${qtyFmt(stake.qty)} ${SamsamCoins.esc(sym)} · ${+stake.apy.toFixed(2)}% APY</span>` +
+        `<span class="htx-stake-s">+${qtyFmt(due)} ${SamsamCoins.esc(sym)} earned this week · next reward ${next <= 0 ? 'today' : 'in ' + next + ' day' + (next > 1 ? 's' : '')}</span>` +
+        `<span class="htx-stake-b"><button type="button" class="htx-stake-btn" onclick="CPAdd.openStake('${SamsamCoins.esc(sym)}')">${SamsamUI.ic('pencil')}Change</button>` +
+        `<button type="button" class="htx-stake-btn stop" onclick="stopStaking('${SamsamCoins.esc(sym)}')">${SamsamUI.ic('x')}Stop</button></span>`;
+    }
   }
   h24.onclick = rewQty > 0 && window.SamsamRewards ? () => SamsamRewards.open({ sym }) : null; h24.style.cursor = h24.onclick ? 'pointer' : '';
   h24.title = rewQty > 0 ? `${qtyFmt(rewQty)} ${sym} came from staking / mining rewards (≈ ${usd(rewQty * price)} now, $0 cost)` : '';

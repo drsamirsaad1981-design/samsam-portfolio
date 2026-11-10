@@ -420,6 +420,7 @@ window.addEventListener('storage', e => {
 function emit() {
   setTimeout(syncCategories, 0);
   setTimeout(sealLegacy, 0);
+  setTimeout(autoBookStakes, 0);
   if (emitTimer) return;
   emitTimer = setTimeout(() => {
     emitTimer = null;
@@ -553,7 +554,84 @@ function txDoc(sym, type, qty, price, note, extra = {}) {
   });
 }
 
+// ── Automatic staking (users/{uid}/meta/info.stakes): [{ sym, qty, apy, since, start }] ──
+function cleanStakes(list) {
+  const out = [], seen = new Set();
+  for (const x of Array.isArray(list) ? list : []) {
+    const sym = Clean.sym(x && x.sym), qty = Number(x && x.qty), apy = Number(x && x.apy), since = Date.parse(x && x.since);
+    if (!sym || seen.has(sym) || !(qty > 0) || !(apy > 0 && apy <= 1000) || !Number.isFinite(since) || out.length >= 50) continue;
+    seen.add(sym); out.push({ sym, qty, apy, since: new Date(since).toISOString(), start: Number.isFinite(Date.parse(x.start)) ? new Date(Date.parse(x.start)).toISOString() : new Date(since).toISOString() });
+  }
+  return out;
+}
+const fmtApy = a => (Math.round(a * 100) / 100) + '%';
+// The Reward transactions for a stake up to `now` (one per week, plus the part-week when `final`) — the same id and
+// content on every device, so two devices booking the same week write one transaction, not two.
+function stakeWrites(stake, now, final) {
+  const r = Core.stakeBook(stake, now, final);
+  const docs = r.rewards.map(w => ['stk_' + stake.sym + '_' + Date.parse(w.date), { ...txDoc(stake.sym, 'transfer_in', w.qty, 0,
+    'Staking reward · auto ' + fmtApy(stake.apy), { kind: 'reward', src: 'staking', date: w.date }), createdAt: w.date, device: 'auto-staking' }]);
+  return { docs, stake: { ...stake, qty: r.qty, since: r.since } };
+}
+function writeStakes(build, list, label) {
+  return commit((b, ref) => { build(b, ref); b.set(ref('meta', 'info'), { stakes: list }, { merge: true }); }, label);
+}
+let stakeBusy = false, stakeLast = 0;
+function autoBookStakes() {
+  if (stakeBusy || !S.user || !allLoaded() || Date.now() - stakeLast < 10 * 60e3) return;
+  const list = cleanStakes(S.meta && S.meta.stakes); if (!list.length) return;
+  stakeLast = Date.now();
+  API.bookStakes().catch(() => {});
+}
+
 const API = {
+  // ── automatic staking ──
+  getStakes() { return cleanStakes(S.meta && S.meta.stakes); },
+  getStake(sym) { return API.getStakes().find(x => x.sym === String(sym || '').toUpperCase()) || null; },
+  // Every full week since the last booking becomes a Reward (Staking) at $0 cost; the staked amount grows by it.
+  bookStakes(now = Date.now()) {
+    const list = API.getStakes(); let docs = [];
+    const next = list.map(st => {
+      const w = stakeWrites(st, now, false);
+      if (!w.docs.length || docs.length + w.docs.length > 400) return st;   // one batch holds 500 writes; the rest waits for the next run
+      docs = docs.concat(w.docs); return w.stake;
+    });
+    if (!docs.length) return Promise.resolve(0);
+    stakeBusy = true;
+    return writeStakes((b, ref) => docs.forEach(([id, d]) => b.set(ref('txs', id), d)), next, 'Staking rewards')
+      .then(() => docs.length).finally(() => { stakeBusy = false; });
+  },
+  // Start (or replace) automatic staking for a coin you hold: qty staked, APY %, from `start` (default now)
+  startStake(sym, { qty, apy, start } = {}) {
+    sym = String(sym || '').toUpperCase();
+    if (!S.coins.has(sym)) return Promise.reject(new Error('Add the coin first'));
+    const since = start ? new Date(start) : new Date();
+    const st = cleanStakes([{ sym, qty, apy, since: since.toISOString(), start: since.toISOString() }])[0];
+    if (!st) return Promise.reject(new Error('Enter the amount staked and an APY above 0%'));
+    if (Date.parse(st.since) > Date.now() + 60e3) return Promise.reject(new Error('The start date cannot be in the future'));
+    if (Date.parse(st.since) < Date.now() - 5 * 365 * 864e5) return Promise.reject(new Error('The start date can be at most 5 years ago'));
+    const old = API.getStake(sym);
+    if (old) return API.editStake(sym, { qty: st.qty, apy: st.apy });
+    return writeStakes(() => {}, API.getStakes().concat(st), 'Start staking').then(() => API.bookStakes()).then(() => st);
+  },
+  // New amount and / or APY from now on: what was earned so far is booked first at the old rate
+  editStake(sym, { qty, apy } = {}) {
+    const list = API.getStakes(), i = list.findIndex(x => x.sym === String(sym || '').toUpperCase());
+    if (i < 0) return Promise.reject(new Error('This coin is not on automatic staking'));
+    const now = Date.now(), w = stakeWrites(list[i], now, true);
+    const st = cleanStakes([{ ...w.stake, qty: qty != null && qty !== '' ? qty : w.stake.qty, apy: apy != null && apy !== '' ? apy : w.stake.apy, start: list[i].start }])[0];
+    if (!st) return Promise.reject(new Error('Enter the amount staked and an APY above 0%'));
+    list[i] = st;
+    return writeStakes((b, ref) => w.docs.forEach(([id, d]) => b.set(ref('txs', id), d)), list, 'Change staking').then(() => st);
+  },
+  // Stop: books what was earned up to now, then the coin is no longer on automatic staking
+  stopStake(sym) {
+    const list = API.getStakes(), i = list.findIndex(x => x.sym === String(sym || '').toUpperCase());
+    if (i < 0) return Promise.resolve(0);
+    const w = stakeWrites(list[i], Date.now(), true);
+    list.splice(i, 1);
+    return writeStakes((b, ref) => w.docs.forEach(([id, d]) => b.set(ref('txs', id), d)), list, 'Stop staking').then(() => w.docs.length);
+  },
   // reading
   onChange(cb) { S.listeners.add(cb); if (S.derived && allLoaded()) setTimeout(() => cb(S.derived), 0); return () => S.listeners.delete(cb); },
   getState() { return S.derived || derive(); },

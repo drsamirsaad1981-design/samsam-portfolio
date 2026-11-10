@@ -41,6 +41,26 @@ export function freeCoins(txs, from = null, to = null) {
   }
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }
+// ── Automatic staking: coins staked at an APY earn every day; a Reward is booked once a week (and at a change / stop) ──
+//   stake = { sym, qty (staked now, rewards compound into it), apy (% a year), since (ISO: earned up to here), start (ISO) }
+export const STAKE_WEEK = 7 * 864e5;
+export function stakeEarned(qty, apy, ms) {
+  qty = num(qty); apy = num(apy); if (!(qty > 0) || !(apy > 0) || !(ms > 0)) return 0;
+  return qty * (Math.pow(1 + apy / 100, ms / (365 * 864e5)) - 1);   // APY already includes compounding
+}
+// The Rewards due by `nowMs`: one per full week since `since` (dated at the week's end), plus the part-week when `final`
+// (an edit or a stop). Each reward is added to the staked amount. The same stake and time always give the same answer,
+// so two devices booking at once write the same transactions.
+export function stakeBook(stake, nowMs, final = false) {
+  const out = []; if (!stake) return { rewards: out, qty: 0, since: null };
+  let since = Date.parse(stake.since), qty = num(stake.qty); const apy = num(stake.apy);
+  if (!Number.isFinite(since)) return { rewards: out, qty, since: stake.since };
+  const r10 = x => Math.round(x * 1e10) / 1e10;
+  const step = to => { const q = r10(stakeEarned(qty, apy, to - since)); since = to; if (q > 0) { out.push({ date: new Date(to).toISOString(), qty: q }); qty = r10(qty + q); } };
+  while (since + STAKE_WEEK <= nowMs && out.length < 600) step(since + STAKE_WEEK);
+  if (final && nowMs > since) step(nowMs);
+  return { rewards: out, qty, since: new Date(since).toISOString() };
+}
 export function netQty(t) {
   const q = num(t && t.qty);
   return t && (t.type === 'buy' || t.type === 'transfer_in') ? Math.max(0, q - Math.max(0, num(t.fee))) : q;

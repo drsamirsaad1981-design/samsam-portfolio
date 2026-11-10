@@ -176,7 +176,10 @@
       '<div class="atx-coin" id="atxCoin"></div>' +
       '<div class="atx-field" id="atxSrcRow"><span>From</span><div class="atx-unit atx-src" id="atxSrcSeg" role="radiogroup" aria-label="Where the coins came from">' +
         '<button type="button" role="radio" data-s="staking">Staking</button><button type="button" role="radio" data-s="mining">Mining</button><button type="button" role="radio" data-s="airdrop">Airdrop</button></div></div>' +
+      '<div class="atx-field" id="atxModeRow"><span>How</span><div class="atx-unit atx-src" id="atxModeSeg" role="radiogroup" aria-label="Enter staking rewards by hand or automatically">' +
+        '<button type="button" role="radio" data-m="manual">Manual</button><button type="button" role="radio" data-m="auto">Automatic</button></div></div>' +
       '<label class="atx-field"><span id="atxQtyLabel">Amount</span><input type="number" inputmode="decimal" step="any" min="0" id="atxQty" placeholder="0.00" oninput="previewAddTx()"></label>' +
+      '<label class="atx-field" id="atxApyRow"><span>APY <small>(% a year — from your wallet or exchange)</small></span><input type="number" inputmode="decimal" step="any" min="0" id="atxApy" placeholder="e.g. 6.5" oninput="previewAddTx()"></label>' +
       '<label class="atx-field" id="atxPriceRow"><span id="atxPriceLabel">Price per coin (USD)</span><input type="number" inputmode="decimal" step="any" min="0" id="atxPrice" placeholder="0.00" oninput="previewAddTx()"></label>' +
       '<div class="atx-field" id="atxFeeUsdRow"><label for="atxFeeUsd" id="atxFeeUsdLabel">Buying fee <small>(USD, optional — added to Cost Basis)</small></label>' +
         '<div class="atx-feebox"><input type="number" inputmode="decimal" step="any" min="0" id="atxFeeUsd" placeholder="0.00" oninput="previewAddTx()">' +
@@ -184,8 +187,8 @@
       '<label class="atx-field" id="atxNetFeeRow"><span>Network fee to your wallet <small id="atxNetFeeUnit">(in coin, optional — e.g. Binance → Tangem)</small></span><input type="number" inputmode="decimal" step="any" min="0" id="atxNetFee" placeholder="0" oninput="previewAddTx()"></label>' +
       '<div class="atx-cash" id="atxCashRow"><label><input type="checkbox" id="atxCashOn" onchange="this.dataset.manual=\'1\';previewAddTx()"><span id="atxCashLbl">Add the money to</span></label><select id="atxCashSym" aria-label="Stablecoin that receives the money" onchange="previewAddTx()"></select></div>' +
       '<label class="atx-field" id="atxFeeRow"><span>Transfer fee <small id="atxFeeUnit">(in coin, optional)</small></span><input type="number" inputmode="decimal" step="any" min="0" id="atxFee" placeholder="0" oninput="previewAddTx()"></label>' +
-      '<label class="atx-field"><span>Date &amp; time</span><input type="datetime-local" id="atxDate" oninput="previewAddTx()"></label>' +
-      '<label class="atx-field"><span>Note <small>(optional)</small></span><input type="text" id="atxNote" maxlength="120" placeholder="e.g. from Binance, to cold wallet"></label>' +
+      '<label class="atx-field"><span id="atxDateLabel">Date &amp; time</span><input type="datetime-local" id="atxDate" oninput="this.dataset.touched=\'1\';previewAddTx()"></label>' +
+      '<label class="atx-field" id="atxNoteRow"><span>Note <small>(optional)</small></span><input type="text" id="atxNote" maxlength="120" placeholder="e.g. from Binance, to cold wallet"></label>' +
       '<div class="atx-hint" id="atxHint"></div><div class="atx-preview" id="atxPreview"></div><div class="atx-err" id="atxErr" role="alert"></div>' +
       '<button type="submit" class="atx-save" id="atxSave">Add Transaction</button>' +
       '<button type="button" class="atx-imp" id="atxImp" hidden onclick="closeAddTx();SamsamImport.open()">Import many from an exchange file (CSV) ›</button>' +
@@ -556,7 +559,9 @@
     if (!atxSym || !requireCloud()) return;
     var coin = held(atxSym);
     $('atxCoin').innerHTML = icon(atxSym, 24) + '<span>' + E(atxSym) + '</span><small>' + E(coinName(atxSym)) + (coin ? ' · holding ' + parseFloat(coin.qty.toFixed(8)) : '') + '</small>';
-    ['atxQty', 'atxFee', 'atxNetFee', 'atxNote'].forEach(function (id) { var el = $(id); el.value = ''; el.classList.remove('bad'); });
+    ['atxQty', 'atxFee', 'atxNetFee', 'atxNote', 'atxApy'].forEach(function (id) { var el = $(id); el.value = ''; el.classList.remove('bad'); });
+    if (!stkEdit) stkMode = modePref();
+    if (Samsam.getStake && Samsam.getStake(atxSym) && !stkEdit) stkMode = 'manual';   // already on automatic: change it from the coin page
     $('atxDate').value = localDateTimeValue(new Date());
     $('atxDate').max = localDateTimeValue(new Date(Date.now() + 60e3));
     delete $('atxPrice').dataset.touched; delete $('atxDate').dataset.touched;
@@ -565,7 +570,7 @@
     setOpen($('atxBackdrop'), true);
     setTimeout(function () { focusFirst('atxForm', 'atxQty'); }, 50);
   }
-  function closeAddTx() { var m = $('atxBackdrop'); if (m) setOpen(m, false); }
+  function closeAddTx() { var m = $('atxBackdrop'); if (m) setOpen(m, false); stkEdit = false; }
   function setAddTxType(t) {
     atxType = t; var cfg = ATX[t];
     document.querySelectorAll('.atx-types button').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.t === t)); });
@@ -588,6 +593,7 @@
     $('atxHint').textContent = cfg.hint;
     $('atxNote').placeholder = t === 'reward' ? 'e.g. SOL staking (Tangem)' : 'e.g. from Binance, to cold wallet';
     setSrc(srcPref(), true);   // after the note placeholder, so Mining / Airdrop get their own example
+    applyMode();
     var LB = window.SAMSAM_LABELS || { BUY: 'Buy', SELL: 'Sell', TRANSFER_IN: 'Transfer In', TRANSFER_OUT: 'Transfer Out' };
     $('atxSave').textContent = 'Add ' + { buy: LB.BUY, sell: LB.SELL, transfer_in: LB.TRANSFER_IN, transfer_out: LB.TRANSFER_OUT, reward: 'Reward' }[t];
     var coin = held(atxSym), pr = $('atxPrice');
@@ -603,7 +609,43 @@
     if (!quiet) { try { localStorage.setItem(SRC_KEY, rwSrc); } catch (_) {} }
     var n = $('atxNote'); if (n) n.placeholder = atxType === 'reward' ? { staking: 'e.g. SOL staking (Tangem)', mining: 'e.g. my mining pool', airdrop: 'e.g. JUP airdrop' }[rwSrc] : n.placeholder;
   }
-  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#atxSrcSeg button'); if (b) { setSrc(b.dataset.s); previewAddTx(); } });
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#atxSrcSeg button'); if (b) { setSrc(b.dataset.s); applyMode(); previewAddTx(); } });
+  // Staking: Manual (type each reward) or Automatic — the amount staked + APY, and the app books a Reward every week
+  var MODE_KEY = 'samsam_stake_mode', stkMode = 'manual', stkEdit = false;
+  function isAuto() { return atxType === 'reward' && rwSrc === 'staking' && stkMode === 'auto'; }
+  function setMode(m, quiet) {
+    stkMode = m === 'auto' ? 'auto' : 'manual';
+    if (!quiet) { try { localStorage.setItem(MODE_KEY, stkMode); } catch (_) {} }
+    applyMode(); previewAddTx();
+  }
+  function modePref() { try { return localStorage.getItem(MODE_KEY) === 'auto' ? 'auto' : 'manual'; } catch (_) { return 'manual'; } }
+  function applyMode() {
+    var rw = atxType === 'reward', auto = isAuto(), cfg = ATX[atxType];
+    document.querySelectorAll('#atxModeSeg button').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.m === stkMode)); });
+    $('atxModeRow').style.display = rw && rwSrc === 'staking' && !stkEdit ? '' : 'none';
+    $('atxApyRow').style.display = auto ? '' : 'none';
+    $('atxNoteRow').style.display = auto ? 'none' : '';
+    document.querySelector('#atxForm .atx-types').style.display = stkEdit ? 'none' : '';
+    $('atxSrcRow').style.display = rw && !stkEdit ? '' : 'none';
+    $('atxTitle').textContent = stkEdit ? 'Change staking' : 'Add Transaction';
+    $('atxQtyLabel').textContent = auto ? 'Amount staked' : cfg.qty;
+    $('atxDateLabel').innerHTML = auto ? (stkEdit ? 'Staking since' : 'Staking since <small>(rewards from this day on)</small>') : 'Date &amp; time';
+    $('atxDate').disabled = auto && stkEdit;
+    $('atxImp').hidden = !window.SamsamImport || !(atxType === 'buy' || atxType === 'sell');
+    $('atxHint').textContent = auto ? 'The app works out what the ' + atxSym + ' you staked earns at this APY and adds it as a Staking reward once a week (when you open the app), so your holdings grow by themselves. Change the amount or the APY, or stop it, from the coin page. Wallets & check shows any difference from the real balance.' : cfg.hint;
+    if (auto && !$('atxQty').value) { var c = held(atxSym); if (c && c.qty > 0) $('atxQty').value = fmtInput(c.qty); }
+    var LB = window.SAMSAM_LABELS || {};
+    $('atxSave').textContent = auto ? (stkEdit ? 'Save changes' : 'Start staking') : 'Add ' + ({ buy: LB.BUY || 'Buy', sell: LB.SELL || 'Sell', transfer_in: LB.TRANSFER_IN || 'Transfer In', transfer_out: LB.TRANSFER_OUT || 'Transfer Out', reward: 'Reward' }[atxType]);
+  }
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#atxModeSeg button'); if (b) setMode(b.dataset.m); });
+  // Change the amount / APY of a coin already on automatic staking (the coin page's Change button)
+  function openStake(sym) {
+    var st = window.Samsam && Samsam.getStake && Samsam.getStake(sym); if (!st) return;
+    stkEdit = true; stkMode = 'auto'; openAddTx('reward', sym); setSrc('staking', true);
+    $('atxQty').value = fmtInput(st.qty); $('atxApy').value = fmtInput(st.apy);
+    $('atxDate').value = localDateTimeValue(new Date(st.start));
+    applyMode(); previewAddTx();
+  }
   // Buying fee: in USD (added to the cost) or in the coin itself (Binance takes it from what you bought — fewer coins arrive)
   var FEE_UNIT_KEY = 'samsam_buyfee_unit', feeUnit = 'usd';
   function feeUnitPref() { try { return localStorage.getItem(FEE_UNIT_KEY) === 'coin' ? 'coin' : 'usd'; } catch (_) { return 'usd'; } }
@@ -630,7 +672,21 @@
     else if ($('addCoinModal') && $('addCoinModal').classList.contains('show') && ($('acSuggest').hidden)) closeAddCoin();
   });
   // Validate + preview the result using the same ledger maths as the rest of the app
+  function readStake() {
+    var qty = parseFloat($('atxQty').value), apy = parseFloat($('atxApy').value), ds = $('atxDate').value, errs = {};
+    var date = ds && $('atxDate').dataset.touched ? new Date(ds) : new Date();
+    if (!stkEdit && !isNaN(date.getTime()) && Math.floor(date.getTime() / 60e3) >= Math.floor(Date.now() / 60e3)) date = new Date();
+    if (!(qty > 0)) errs.atxQty = 'Enter the amount you have staked.';
+    if (!(apy > 0 && apy <= 1000)) errs.atxApy = 'Enter the APY, e.g. 6.5 for 6.5% a year.';
+    if (!stkEdit) {
+      if (isNaN(date.getTime())) errs.atxDate = 'Enter a valid date.';
+      else if (date.getTime() > Date.now() + 60e3) errs.atxDate = 'The start date cannot be in the future.';
+      else if (date.getTime() < Date.now() - 5 * 365 * 864e5) errs.atxDate = 'The start date can be at most 5 years ago.';
+    }
+    return { auto: true, qty: qty, apy: apy, date: date, errs: errs };
+  }
   function readAddTx() {
+    if (isAuto()) return readStake();
     var cfg = ATX[atxType], v = function (id) { return $(id).value.trim(); };
     var qty = parseFloat(v('atxQty')), price = cfg.price ? parseFloat(v('atxPrice')) : 0, fee = cfg.fee ? (parseFloat(v('atxFee')) || 0) : 0;
     var feeUsd = (atxType === 'buy' || atxType === 'sell') ? (parseFloat(v('atxFeeUsd')) || 0) : 0, tradeFee = 0, netFee = 0;
@@ -680,7 +736,8 @@
   function previewAddTx() {
     autoPay();
     var r = readAddTx(), pv = $('atxPreview');
-    ['atxQty', 'atxPrice', 'atxFee', 'atxFeeUsd', 'atxNetFee', 'atxDate'].forEach(function (id) { $(id).classList.toggle('bad', !!r.errs[id] && $(id).value !== ''); });
+    ['atxQty', 'atxPrice', 'atxFee', 'atxFeeUsd', 'atxNetFee', 'atxDate', 'atxApy'].forEach(function (id) { $(id).classList.toggle('bad', !!r.errs[id] && $(id).value !== ''); });
+    if (r.auto) { pv.innerHTML = stakePreview(r); $('atxErr').textContent = ''; return; }
     $('atxErr').textContent = r.errs.atxCashSym || '';
     $('atxCashSym').classList.toggle('bad', !!r.errs.atxCashSym);
     if (!r.after) { pv.innerHTML = ''; return; }
@@ -700,8 +757,34 @@
     if (r.after.short === 'later') lines.push('<span style="color:#f59e0b">' + SamsamUI.ic('alert') + 'A later sell/transfer would then exceed your holdings.</span>');
     pv.innerHTML = lines.join('<br>');
   }
+  function stakePreview(r) {
+    if (Object.keys(r.errs).length) return '';
+    var C = Samsam.core, cp = (held(atxSym) || {}).currentPrice || 0, q = function (n) { return fmtQty(n); };
+    var wk = C.stakeEarned(r.qty, r.apy, C.STAKE_WEEK), yr = r.qty * r.apy / 100;
+    var money = function (n) { return cp > 0 ? ' <small>(≈ ' + SamsamFmt.usd(n * cp) + ')</small>' : ''; };
+    var lines = ['Earns about <b>+' + q(wk) + ' ' + atxSym + ' a week</b>' + money(wk) + ' · <b>+' + q(yr) + ' ' + atxSym + ' a year</b>' + money(yr)];
+    if (!stkEdit) {
+      var back = C.stakeBook({ qty: r.qty, apy: r.apy, since: r.date.toISOString() }, Date.now());
+      if (back.rewards.length) lines.push('From the start date to now: <b>' + back.rewards.length + ' weekly reward' + (back.rewards.length > 1 ? 's' : '') + ', +' + q(back.qty - r.qty) + ' ' + atxSym + '</b> — added right away');
+      lines.push(SamsamUI.ic('coins') + 'Booked as a <b>Staking reward</b> at $0 cost every 7 days');
+    } else lines.push('What was earned so far is booked first at the old APY; the new numbers count from now.');
+    return lines.join('<br>');
+  }
+  function saveStake(r) {
+    atxSaving = true; $('atxSave').disabled = true;
+    var sym = atxSym, edit = stkEdit;
+    var p = edit ? Samsam.editStake(sym, { qty: r.qty, apy: r.apy }) : Samsam.startStake(sym, { qty: r.qty, apy: r.apy, start: r.date.toISOString() });
+    p.then(function () { emit('tx', { sym: sym, type: 'transfer_in' }); }, function (e) { CPDialog.alert('Not saved — ' + ((e && e.message) || e)); });
+    setTimeout(function () { atxSaving = false; $('atxSave').disabled = false; }, 400);
+    closeAddTx();
+  }
   function saveAddTx() {
     if (atxSaving) return;
+    if (isAuto()) {
+      var rs = readStake(), fe = Object.keys(rs.errs)[0];
+      if (fe) { $('atxErr').textContent = rs.errs[fe]; Object.keys(rs.errs).forEach(function (id) { $(id).classList.add('bad'); }); $(fe).focus(); return; }
+      return saveStake(rs);
+    }
     autoPay();
     var r = readAddTx(), firstErr = Object.keys(r.errs)[0];
     if (firstErr) {
@@ -856,7 +939,7 @@
   }
 
   var API = {
-    openCoin: openAddCoin, closeCoin: closeAddCoin, openTx: openAddTx, closeTx: closeAddTx, buy: buy, editCategory: openCatEdit, manageCategories: openCatManager,
+    openCoin: openAddCoin, closeCoin: closeAddCoin, openTx: openAddTx, closeTx: closeAddTx, openStake: openStake, buy: buy, editCategory: openCatEdit, manageCategories: openCatManager,
     search: search, coinInfo: coinInfo, categoryFrom: categoryFrom, linkCodex: linkCodex, fetchLogoAndPrice: fetchLogoAndPrice,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
     on: function (k, fn) { if (hooks[k]) hooks[k].push(fn); }, defaultTxSym: null
