@@ -44,7 +44,7 @@ with sync_playwright() as p:
             sym = pg.evaluate("document.querySelector('#coinList .c-more').getAttribute('aria-controls').replace('perfLinks-','')")
             pg.locator('#coinList .c-more').first.click(); pg.wait_for_timeout(200)
             L = pg.evaluate(LINKS, f'perfLinks-{sym}')
-            check(f'{tag} Performance: ⌄ {sym} → 3 links {[x[0] for x in L]}', len(L) == 3 and L[0][0] in ('Liq.Map', 'No futures') and L[1][0] in ('Prediction', 'No prediction') and L[2][0] in ('CMC', 'CoinGecko'), L)
+            check(f'{tag} Performance: ⌄ {sym} → 3 links {[x[0] for x in L]}', len(L) == 3 and L[0][0] in ('Liq.Map', 'Try Liq.Map') and L[1][0] in ('Prediction', 'No prediction') and L[2][0] in ('CMC', 'CoinGecko'), L)
             box = pg.locator(f'#perfLinks-{sym}').bounding_box(); row = pg.locator('#coinList .coin-row').first.bounding_box()
             check(f'{tag} Performance: the links sit inside the coin row, full width', box and row and box['y'] >= row['y'] and box['y'] + box['height'] <= row['y'] + row['height'] + 1 and box['width'] > row['width'] * 0.8, (box, row))
             if theme == 'dark': pg.screenshot(path=str(SH / f'coin_links_perf_{vn}.png'))

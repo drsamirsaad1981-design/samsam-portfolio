@@ -1,5 +1,5 @@
 """Market Hub links from the list GitHub checks (prices/m/links.json): CoinMarketCap page by ticker + name / market cap,
-CoinCodex page by CoinGecko id, "No futures" instead of an empty Liq.Map; euro / pegged coins hidden like stablecoins;
+CoinCodex page by CoinGecko id, a dashed "Try Liq.Map" (still opens CoinGlass) when no futures were found; euro / pegged coins hidden like stablecoins;
 a watched coin CoinGecko doesn't answer for still shows your portfolio's price. Coin page uses the same rules."""
 import sys, pathlib, json, re, math, urllib.parse
 from playwright.sync_api import sync_playwright
@@ -53,7 +53,7 @@ with sync_playwright() as p:
     check('PUMP Prediction → CoinCodex page from the checked list', any(c == 'l-pred' and h.endswith('/crypto/pump-fun-cc/price-prediction/') for c, h in lk), lk)
     pg.click('.mk-row[data-id="aster-2"] .mk-pc'); pg.wait_for_timeout(300)
     lk = pg.eval_on_selector('#mkl-aster-2', "e => [...e.querySelectorAll('a,span.off')].map(a => [a.className, a.getAttribute('href') || '', a.textContent.trim()])")
-    check('ASTER (no futures) shows "No futures", not a dead Liq.Map link', any(c == 'l-liq off' and not h and 'No futures' in t for c, h, t in lk), lk)
+    check('ASTER (no futures found) still opens CoinGlass, marked "Try Liq.Map"', any(c == 'l-liq maybe' and 'coinglass.com' in h and 'coin=ASTER' in h and 'Try Liq.Map' in t for c, h, t in lk), lk)
     check('ASTER Prediction → its CoinCodex page (no Google search)', any(c == 'l-pred' and h.endswith('/crypto/aster-cc/price-prediction/') for c, h, _ in lk), lk)
     check('no Google links in the open row', not any('google.com' in h for _, h, _ in lk), lk)
 
@@ -77,11 +77,11 @@ with sync_playwright() as p:
     pg2.evaluate(f"openCoinTx && openCoinTx('{sym}')") if pg2.evaluate("typeof openCoinTx === 'function'") else pg2.goto(S.SITE + f'/index.html#holdings/{sym}')
     pg2.wait_for_timeout(1200)
     st = pg2.evaluate("(() => { const a = document.getElementById('htxLiqLink'); return a ? [a.className, a.getAttribute('href'), a.textContent.trim()] : null; })()")
-    check(f'coin page: {sym} without futures shows "No futures" (no dead link)', st and 'off' in st[0] and not st[1] and 'No futures' in st[2], st)
+    check(f'coin page: {sym} without futures found → "Try Liq.Map" that still opens CoinGlass', st and 'maybe' in st[0] and 'off' not in st[0] and st[1] and 'coinglass.com' in st[1] and 'Try Liq.Map' in st[2], st)
     check('no JS errors (coin page)', not errs, errs[:3])
 
     # an old copy of the list kept in the browser: fetched again at once (then every 30 min), and every page follows —
-    # Performance's ⌄ too (a coin that was "No futures" in the old copy shows Liq.Map)
+    # Performance's ⌄ too (a coin that was "Try Liq.Map" in the old copy shows Liq.Map)
     import time
     new = dict(LINKS, fut=LINKS['fut'] + [sym], futBy={'gate': LINKS['fut'] + [sym]})
     for label, cached in (('a copy from before every exchange was asked', dict(t=int(time.time() * 1000), data=LINKS)),
@@ -95,7 +95,7 @@ with sync_playwright() as p:
         p3.wait_for_function(f"Samsam.isReady() && document.getElementById('perfLinks-{sym}')", timeout=15000); p3.wait_for_timeout(1200)
         p3.click(f'.c-more[aria-controls="perfLinks-{sym}"]'); p3.wait_for_timeout(300)
         t3 = p3.inner_text(f'#perfLinks-{sym}')
-        check(f'{label}: fetched again, Performance ⌄ {sym} now shows Liq.Map ({t3.split(chr(10))[0]})', 'Liq.Map' in t3 and 'No futures' not in t3, t3)
+        check(f'{label}: fetched again, Performance ⌄ {sym} now shows Liq.Map ({t3.split(chr(10))[0]})', 'Liq.Map' in t3 and 'Try Liq.Map' not in t3, t3)
         c3.close()
     check('no JS errors (old copy)', not errs, errs[:3])
     br.close()

@@ -1142,6 +1142,7 @@
   .btn-liq, .btn-pred, .btn-cmc { display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 600; white-space: nowrap; line-height: 1;
     color: #fb923c; background: var(--metric-bg); border: 1px solid rgba(251,146,60,.45); border-radius: 8px; height: 36px; font-size: 0.8rem; -webkit-tap-highlight-color: transparent; }
   .btn-liq:hover { background: #f97316; color: #fff; border-color: #f97316; }
+  .btn-liq.maybe { border-style: dashed; opacity: .85; }
   .btn-liq.off, .btn-liq.off:hover, .btn-pred.off, .btn-pred.off:hover { color: var(--fg2); background: var(--bg3); border-color: var(--border); border-style: dashed; cursor: default; opacity: .85; }
   .btn-pred { color: #a78bfa; border-color: rgba(167,139,250,.45); }
   .btn-pred:hover { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }

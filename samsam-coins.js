@@ -347,6 +347,7 @@
   function assetCell(sym, o) { return '<div class="ast">' + assetIcon(sym, o) + assetText(sym, o) + '</div>'; }
   // CoinGlass liquidation heatmap for a coin (opens in a new tab). Symbol differs on CoinGlass for a few coins.
   var LIQ_SYMS = { GRAM: 'TON' };
+  var LIQ_MAYBE = 'no futures found on the exchanges we check (OKX, Gate, Bitget, KuCoin, MEXC, BingX, Hyperliquid) — CoinGlass may have no map for it, open it to see';
   function liqMapUrl(sym) { var s = LIQ_SYMS[sym] || String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); return 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(s); }
   // CoinCodex price prediction. CoinCodex uses its own page names (checked against its API, Oct 2026);
   // a coin added later stores its CoinCodex name as coin.ccSlug (looked up when it is added).
@@ -467,14 +468,15 @@
     '.ql-liq{color:#fb923c;border-color:rgba(251,146,60,.45)}.ql-pred{color:#a78bfa;border-color:rgba(167,139,250,.45)}.ql-cmc{color:#60a5fa;border-color:rgba(96,165,250,.45)}' +
     '[data-theme="light"] .ql-liq{color:#ea580c}[data-theme="light"] .ql-pred{color:#7c3aed}[data-theme="light"] .ql-cmc{color:#2563eb}' +
     '@media (hover:hover){.ql-liq:hover{background:#f97316;color:#fff}.ql-pred:hover{background:#8b5cf6;color:#fff}.ql-cmc:hover{background:#3b82f6;color:#fff}}' +
-    '.ql-off{color:var(--fg2,#94a3b8);border-style:dashed;cursor:default;font-weight:600}';
+    '.ql-off{color:var(--fg2,#94a3b8);border-style:dashed;cursor:default;font-weight:600}.ql-liq.ql-maybe{border-style:dashed;opacity:.85}';
   function quickLinks(sym, o) {
     o = o || {}; sym = String(sym || '').toUpperCase();
     if (!document.getElementById('qlCss')) { var st = document.createElement('style'); st.id = 'qlCss'; st.textContent = QL_CSS; document.head.appendChild(st); }
     var I = function (n, z) { return window.SamsamUI ? SamsamUI.ic(n, { solo: true, size: z || 15 }) : ''; }, X = '<span class="ql-x">' + I('ext', 11) + '</span>';
     var a = function (cls, href, icon, label, title) { return '<a class="ql ' + cls + '" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer" title="' + esc(title) + '">' + I(icon) + label + X + '</a>'; };
     var off = function (icon, label, title) { return '<span class="ql ql-off" title="' + esc(title) + '">' + I(icon) + label + '</span>'; };
-    var liq = hasFutures(sym) === false ? off('flame', 'No futures', sym + ' has no futures market, so CoinGlass has no liquidation map for it')
+    // no futures found → still a link (Binance / Bybit can't be asked from GitHub, so CoinGlass may still have it), marked "Try"
+    var liq = hasFutures(sym) === false ? a('ql-liq ql-maybe', liqMapUrl(sym), 'flame', 'Try Liq.Map', sym + ': ' + LIQ_MAYBE)
       : a('ql-liq', liqMapUrl(sym), 'flame', 'Liq.Map', 'Open the ' + sym + ' liquidation heatmap on CoinGlass (new tab)');
     var pred = ccSlug(sym, o) ? a('ql-pred', predictionUrl(sym, o), 'sparkles', 'Prediction', 'Open the ' + sym + ' price prediction on CoinCodex (new tab)')
       : off('sparkles', 'No prediction', 'CoinCodex has no price prediction page for ' + sym);
@@ -482,5 +484,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

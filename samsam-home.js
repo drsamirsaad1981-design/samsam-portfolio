@@ -57,7 +57,7 @@ function openCoinMenu(btn, sym) {
     { icon: 'history', label: 'History', onClick: () => openHistory(sym) },
     { icon: 'note', label: (c.notes || '').trim() ? 'Edit Note' : 'Add Note', onClick: () => editNote(sym) },
     { divider: true },
-    SamsamCoins.hasFutures(sym) === false ? null : { icon: 'flame', label: 'Liquidation Map', href: SamsamCoins.liqMapUrl(sym) },
+    { icon: 'flame', label: SamsamCoins.hasFutures(sym) === false ? 'Liquidation Map (try — no futures found)' : 'Liquidation Map', href: SamsamCoins.liqMapUrl(sym) },
     SamsamCoins.ccSlug(sym, c) ? { icon: 'sparkles', label: 'Price Prediction', href: SamsamCoins.predictionUrl(sym, c) } : null,   // only a CoinCodex page we know — never a web search
     { divider: true },
     { icon: 'trash', label: 'Remove', danger: true, onClick: () => removeCoin(sym) },
@@ -2329,10 +2329,10 @@ function renderCoinTx() {
   const st = window.Samsam && Samsam.isReady() ? Samsam.getState() : null;
   const listEl = document.getElementById('htxList');
   const liq = document.getElementById('htxLiqLink');
-  if (liq) {   // CoinGlass maps only coins with futures — the others get a plain note instead of an empty page
+  if (liq) {   // CoinGlass maps coins with futures — the others still open it, marked "Try" (it may have none)
     const noFut = SamsamCoins.hasFutures(sym) === false;
-    liq.classList.toggle('off', noFut);
-    if (noFut) { liq.removeAttribute('href'); liq.title = `${sym} has no futures market, so CoinGlass has no liquidation map for it`; liq.innerHTML = SamsamUI.ic('flame', { solo: true }) + 'No futures'; }
+    liq.classList.remove('off'); liq.classList.toggle('maybe', noFut);
+    if (noFut) { liq.href = SamsamCoins.liqMapUrl(sym); liq.title = `${sym}: ${SamsamCoins.LIQ_MAYBE}`; liq.innerHTML = SamsamUI.ic('flame', { solo: true }) + 'Try Liq.Map' + '<span class="ext-mark">' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</span>'; }
     else { liq.href = SamsamCoins.liqMapUrl(sym); liq.title = `Open the ${sym} liquidation heatmap on CoinGlass (new tab)`; liq.innerHTML = SamsamUI.ic('flame', { solo: true }) + 'Liq.Map' + '<span class="ext-mark">' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</span>'; }
   }
   const pred = document.getElementById('htxPredLink');

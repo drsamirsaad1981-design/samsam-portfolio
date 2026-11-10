@@ -15,19 +15,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611110116"></script>
-<script src="samsam-hints.js?v=202611110116"></script>
-<script src="samsam-vault.js?v=202611110116"></script>
-<script src="samsam-labels.js?v=202611110116"></script>
-<script src="samsam-taxonomy.js?v=202611110116"></script>
-<script src="samsam-coins.js?v=202611110116"></script>
-<script src="samsam-import.js?v=202611110116"></script>
-<script src="samsam-wallets.js?v=202611110116"></script>
-<script src="samsam-rewards.js?v=202611110116"></script>
-<script src="samsam-settings.js?v=202611110116"></script>
-<script src="samsam-dropdown.js?v=202611110116"></script>
-<script src="samsam-add.js?v=202611110116"></script>
-<script src="samsam-market.js?v=202611110116"></script>
+<script src="samsam-ui.js?v=202611110138"></script>
+<script src="samsam-hints.js?v=202611110138"></script>
+<script src="samsam-vault.js?v=202611110138"></script>
+<script src="samsam-labels.js?v=202611110138"></script>
+<script src="samsam-taxonomy.js?v=202611110138"></script>
+<script src="samsam-coins.js?v=202611110138"></script>
+<script src="samsam-import.js?v=202611110138"></script>
+<script src="samsam-wallets.js?v=202611110138"></script>
+<script src="samsam-rewards.js?v=202611110138"></script>
+<script src="samsam-settings.js?v=202611110138"></script>
+<script src="samsam-dropdown.js?v=202611110138"></script>
+<script src="samsam-add.js?v=202611110138"></script>
+<script src="samsam-market.js?v=202611110138"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -286,6 +286,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-links .l-liq { color: #fb923c; border-color: rgba(251,146,60,.45); } .mk-links .l-liq:hover { background: #f97316; color: #fff; border-color: #f97316; }
 .mk-links .l-pred { color: #a78bfa; border-color: rgba(167,139,250,.45); } .mk-links .l-pred:hover { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
 .mk-links .l-cmc { color: #60a5fa; border-color: rgba(96,165,250,.45); } .mk-links .l-cmc:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.mk-links .l-liq.maybe { border-style: dashed; opacity: .85; }
 .mk-links .l-liq.off, [data-theme="light"] .mk-links .l-liq.off, .mk-links .l-pred.off, [data-theme="light"] .mk-links .l-pred.off { color: var(--fg2); border-color: var(--border); border-style: dashed; opacity: .85; cursor: default; }
 [data-theme="light"] .mk-links .l-liq { color: #ea580c; } [data-theme="light"] .mk-links .l-pred { color: #7c3aed; } [data-theme="light"] .mk-links .l-cmc { color: #2563eb; }
 @media (max-width: 380px) { .mk-links { gap: 6px; } .mk-links a { padding: 0 5px; font-size: .74rem; gap: 4px; } }
@@ -512,7 +513,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611110116"></script>
+<script type="module" src="samsam-cloud.js?v=202611110138"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -810,9 +811,9 @@ function predLink(c) {
   if (ccCache[c.id]) return SamsamCoins.predictionUrl(c.sym, { ccSlug: ccCache[c.id] });
   return SamsamCoins.predictionUrl(known(c) ? c.sym : '', { cgId: c.id, name: c.name + (known(c) ? '' : ' ' + c.sym) });
 }
-// CoinGlass has a liquidation map only for coins with futures — the others get a plain "No futures" note
+// CoinGlass has a liquidation map for coins with futures — a coin with none found still opens it, marked "Try"
 function liqHtml(c, x) {
-  if (SamsamCoins.hasFutures(c.sym) === false) return `<span class="l-liq off" title="${E(c.sym)} has no futures market, so CoinGlass has no liquidation map for it">${ic('flame', { solo: true, size: 15 })}No futures</span>`;
+  if (SamsamCoins.hasFutures(c.sym) === false) return `<a class="l-liq maybe" href="${E(SamsamCoins.liqMapUrl(c.sym))}" target="_blank" rel="noopener noreferrer" title="${E(c.sym)}: ${E(SamsamCoins.LIQ_MAYBE)}">${ic('flame', { solo: true, size: 15 })}Try Liq.Map${x}</a>`;
   return `<a class="l-liq" href="${E(SamsamCoins.liqMapUrl(c.sym))}" target="_blank" rel="noopener noreferrer" title="Open the ${E(c.sym)} liquidation heatmap on CoinGlass (new tab)">${ic('flame', { solo: true, size: 15 })}Liq.Map${x}</a>`;
 }
 // opening a coin's links: find its CoinCodex page if we don't know it yet, so Prediction opens the page itself
