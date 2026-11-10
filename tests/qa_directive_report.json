@@ -1,0 +1,24 @@
+{
+ "t1_ms": 698,
+ "t1_ui_ms": 54,
+ "t2_ms": 942,
+ "t3_eth_after": {
+  "qty": 0,
+  "avg": 2432,
+  "cost": 0,
+  "price": 2
+ },
+ "t3_avg_kept": 2432,
+ "t4_ms": 1446,
+ "t5_values_seen": [
+  "$\u2014.\u2014\u2014 [under loading screen]",
+  "$1,077,241.58 [under loading screen]",
+  "$1,077,241.58"
+ ],
+ "t5_zero_hidden_by_loading_screen": false,
+ "tab_ms": {
+  "accumulation": 6,
+  "market": 6,
+  "home": 3
+ }
+}
