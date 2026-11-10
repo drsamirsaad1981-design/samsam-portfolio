@@ -150,6 +150,7 @@
         '<div class="atx-field ac-full"><label for="acCmc">CoinMarketCap Page</label><div class="ac-cmc"><span class="ac-cmc-pre">coinmarketcap.com/currencies/</span>' +
           '<input type="text" id="acCmc" placeholder="auto" autocomplete="off" spellcheck="false" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,\'\');acCmcCheck()">' +
           '<a id="acCmcCheck" class="ac-cmc-check" href="#" target="_blank" rel="noopener noreferrer" hidden>Check' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</a></div></div>' +
+        '<div class="atx-cash ac-full" id="acPayRow"><label><input type="checkbox" id="acPayOn" onchange="this.dataset.manual=\'1\';previewAddCoin()"><span>Pay from</span></label><select id="acPaySym" aria-label="Stablecoin the buy is paid from" onchange="previewAddCoin()"></select></div>' +
         '<div class="atx-field ac-full"><span>Network &amp; where held</span><button type="button" class="ac-net" id="acNet" onclick="acEditNet()">' + SamsamUI.ic('link') + '<span id="acNetTxt">Pick the coin first</span><span class="ac-net-go">›</span></button></div>' +
         '<label class="atx-field ac-full"><span>Category</span><select id="acCat" onchange="syncCatCustom(this,\'acCatCustomBox\')"></select></label>' +
         '<div class="atx-field ac-full cat-custom" id="acCatCustomBox" hidden><label for="acCatCustom">New Category Name</label>' +
@@ -381,6 +382,7 @@
     ['acSym', 'acName', 'acQty', 'acPrice', 'acFeeUsd', 'acCgId'].forEach(function (id) { $(id).value = ''; });
     acShow([]); acLink(null);
     acNet = { nets: null, at: [], platforms: null }; acNetText();
+    delete $('acPayOn').dataset.manual; $('acPaySym').innerHTML = ''; acPayFill();
     var p = prefill && typeof prefill === 'object' ? prefill : null;
     var catSel = $('acCat');
     fillCatSelect(catSel, (p && p.cat) || 'layer1');
@@ -407,10 +409,39 @@
     $(fieldId).focus();
   }
   function closeAddCoin() { var m = $('addCoinModal'); if (m) setOpen(m, false); }
+  // "Pay from" a stablecoin you hold — the same choice as in Buy (remembered together); ticks itself only when it covers the cost
+  function acPayFill() {
+    var row = $('acPayRow'), sym = $('acSym').value.trim().toUpperCase();
+    var mine = portfolio().filter(function (c) { return c.qty > 0 && isStableCoin(c) && c.sym !== sym; }).sort(function (a, b) { return b.qty - a.qty; });
+    var show = mine.length > 0 && !(sym && isStableCoin({ sym: sym, name: $('acName').value || '' }));
+    row.style.display = show ? '' : 'none'; if (!show) return;
+    var pref = cashPref(PAY_KEY), cur = $('acPaySym').value, pick = mine.some(function (c) { return c.sym === cur; }) ? cur : mine.some(function (c) { return c.sym === pref.sym; }) ? pref.sym : mine[0].sym;
+    var html = mine.map(function (c) { return '<option value="' + E(c.sym) + '"' + (c.sym === pick ? ' selected' : '') + '>' + E(c.sym) + ' (' + fmtQty(c.qty) + ')</option>'; }).join('');
+    if ($('acPaySym').innerHTML !== html) $('acPaySym').innerHTML = html;
+  }
+  function acPay() {   // → { sym, cost, short, err }
+    acPayFill();
+    var row = $('acPayRow'), on = $('acPayOn'), out = { sym: null, cost: 0, short: '', err: '' };
+    if (row.style.display === 'none') return out;
+    var qty = parseFloat($('acQty').value) || 0, price = parseFloat($('acPrice').value) || 0, fee = Math.max(0, parseFloat($('acFeeUsd').value) || 0);
+    var s = $('acPaySym').value, have = (held(s) || {}).qty || 0; out.cost = qty * price + fee;
+    var enough = !(out.cost > have + 1e-9);
+    if (!on.dataset.manual) {
+      var want = cashPref(PAY_KEY).on !== false; on.checked = want && enough;
+      if (want && !enough && out.cost > 0) out.short = 'Not enough ' + s + ' to pay this (you have ' + fmtQty(have) + ') — saved without paying from it. Tick “Pay from” to use it anyway.';
+    }
+    $('acPaySym').disabled = !on.checked;
+    if (on.checked && out.cost > 0) { if (enough) out.sym = s; else out.err = 'Not enough ' + s + ': you have ' + fmtQty(have) + ', this costs ' + SamsamFmt.usd(out.cost) + '. Untick “Pay from” to add it without.'; }
+    out.have = have; return out;
+  }
   function previewAddCoin() {
     var qty = parseFloat($('acQty').value), price = parseFloat($('acPrice').value);
-    var fee = Math.max(0, parseFloat($('acFeeUsd').value) || 0);
-    $('acPreview').innerHTML = qty > 0 && price > 0 ? 'Cost Basis: <b>' + SamsamFmt.usd(qty * price + fee) + '</b>' : '';
+    var fee = Math.max(0, parseFloat($('acFeeUsd').value) || 0), py = acPay(), L = [];
+    if (qty > 0 && price > 0) L.push('Cost Basis: <b>' + SamsamFmt.usd(qty * price + fee) + '</b>');
+    if (py.sym && py.cost > 0) L.push(SamsamUI.ic('cash') + 'Pays <b>' + SamsamFmt.usd(py.cost) + ' from ' + E(py.sym) + '</b> · ' + fmtQty(py.have - py.cost) + ' ' + E(py.sym) + ' left');
+    if (py.short && qty > 0) L.push('<span style="color:#f59e0b">' + SamsamUI.ic('alert') + E(py.short) + '</span>');
+    if (py.err && qty > 0) L.push('<span style="color:#f87171">' + SamsamUI.ic('alert') + E(py.err) + '</span>');
+    $('acPreview').innerHTML = L.join('<br>');
   }
   function acErr(msg) { $('acError').textContent = msg; }
   async function applyAddCoin() {
@@ -422,11 +453,14 @@
     if (!qty || qty <= 0) return acErr('Enter a valid quantity.');
     if (!price || price <= 0) return acErr('Enter a valid buy price.');
     if (!requireCloud()) return;
-    var feeUsd = Math.max(0, parseFloat($('acFeeUsd').value) || 0);
+    var feeUsd = Math.max(0, parseFloat($('acFeeUsd').value) || 0), py = acPay();
+    if (py.err) return acErr(py.err);
+    if ($('acPayOn').dataset.manual && $('acPayRow').style.display !== 'none') { try { localStorage.setItem(PAY_KEY, JSON.stringify({ on: $('acPayOn').checked, sym: $('acPaySym').value })); } catch (_) {} }
     if (held(sym)) {   // one Add button for everything: a coin you already hold gets this as a Buy
       if (!(await CPDialog.confirm(sym + ' is already in your portfolio.\nAdd ' + fmtQty(qty) + ' ' + sym + ' at ' + SamsamFmt.price(price) + ' as a Buy?', { title: 'Add as a Buy?', okText: 'Add Buy' }))) return;
-      write(Samsam.addTx(sym, 'buy', qty, price, '', { date: new Date().toISOString(), fee: 0, feeUsd: feeUsd }));
-      closeAddCoin(); emit('tx', { sym: sym, type: 'buy' }); return;
+      var bx = { date: new Date().toISOString(), fee: 0, feeUsd: feeUsd };
+      write(py.sym && Samsam.buyFromStable ? Samsam.buyFromStable(sym, qty, price, '', bx, py.sym) : Samsam.addTx(sym, 'buy', qty, price, '', bx));
+      closeAddCoin(); emit('tx', { sym: sym, type: 'buy' }); if (py.sym) emit('tx', { sym: py.sym, type: 'sell' }); return;
     }
     // A coin you removed earlier starts again from zero (Samsam.addCoin closes the old position); its past history stays
     var cgId = $('acCgId').value.trim().toLowerCase() || null;
@@ -440,7 +474,8 @@
     SamsamCoins.registerCoin(sym, { cmcSlug: cmcSlug, name: name });
     // One atomic cloud write: coin settings + its opening buy
     write(Samsam.addCoin({ sym: sym, name: name, cat: cat, catLabel: catCh.label, catLocked: true, cgId: cgId, cmcSlug: cmcSlug, logoUrl: acLogo,
-      nets: acNet.nets && acNet.nets.length ? acNet.nets : undefined, at: acNet.at.length ? acNet.at : undefined }, { qty: qty, price: price, feeUsd: feeUsd }));
+      nets: acNet.nets && acNet.nets.length ? acNet.nets : undefined, at: acNet.at.length ? acNet.at : undefined }, { qty: qty, price: price, feeUsd: feeUsd, pay: py.sym || null }));
+    if (py.sym) emit('tx', { sym: py.sym, type: 'sell' });
     linkCodex(sym, { cgId: cgId, name: name });
     closeAddCoin();
     if (cgId) fetchLogoAndPrice(sym, cgId);

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611101347';
-import * as Hist from './samsam-history.js?v=202611101347';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611101347';
+import * as Core from './samsam-core.js?v=202611101453';
+import * as Hist from './samsam-history.js?v=202611101453';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611101453';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -777,7 +777,7 @@ const API = {
     if ('lastPrice' in fields && !(Number(fields.lastPrice) > 0 && Number.isFinite(Number(fields.lastPrice)))) delete fields.lastPrice;
     return commit((b, ref, fs) => b.set(ref('coins', safeId(sym)), clean({ ...fields, updatedAt: new Date().toISOString() }), { merge: true }), `Update ${sym}`);
   },
-  addCoin(coin, { qty, price, note, feeUsd, link } = {}) {
+  addCoin(coin, { qty, price, note, feeUsd, link, pay } = {}) {
     const rawSym = String(coin.sym == null ? '' : coin.sym).trim().toUpperCase();
     coin = cleanCoin({ ...coin, cat: coin.cat || 'other' });
     const sym = coin.sym;
@@ -806,6 +806,10 @@ const API = {
       const id = Core.newId('tx_');
       // Every new or re-added coin starts with an ordinary Buy (no manual corrections).
       b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position'), { feeUsd, link }));
+      // paid from a stablecoin you hold: it goes out at $1 in the same write, linked to this Buy
+      const ps = pay && Clean.sym(String(pay).toUpperCase()), cost = (Number(qty) || 0) * (Number(price) || 0) + (Number(feeUsd) || 0);
+      if (ps && ps !== sym && S.coins.has(ps) && !S.coins.get(ps).removed && cost > 0)
+        b.set(ref('txs', Core.newId('tx_')), txDoc(ps, 'sell', cost, 1, 'Paid for buying ' + (+Number(qty).toPrecision(8)) + ' ' + sym, { date: new Date(Date.now() + 1).toISOString(), link: id, kind: 'pay' }));
     }, `Add ${sym}`);
   },
   // ── Manage Categories: one settings doc (users/{uid}/meta/categories) every page and device applies ──
