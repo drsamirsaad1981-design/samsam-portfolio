@@ -53,6 +53,7 @@ function openCoinMenu(btn, sym) {
     { icon: 'arrowDown', label: SAMSAM_LABELS.TRANSFER_IN, onClick: () => openTransferIn(sym) },
     { icon: 'arrowUp', label: SAMSAM_LABELS.TRANSFER_OUT, onClick: () => openTransferOut(sym) },
     { icon: 'coins', label: 'Reward (staking)', onClick: () => openAddTx('reward', sym) },
+    window.SamsamWallets ? { icon: 'link', label: 'Network & where held', onClick: () => SamsamWallets.editCoin(sym) } : null,
     { icon: 'history', label: 'History', onClick: () => openHistory(sym) },
     { icon: 'note', label: (c.notes || '').trim() ? 'Edit Note' : 'Add Note', onClick: () => editNote(sym) },
     { divider: true },
@@ -2362,6 +2363,14 @@ function renderCoinTx() {
   const h24 = document.getElementById('htxHoldings24');
   const rewQty = coinTxs.filter(t => t.type === 'transfer_in' && t.kind === 'reward').reduce((s, t) => s + (+t.qty || 0) - (+t.fee || 0), 0);
   h24.textContent = qtyFmt(qty) + ' ' + sym + (rewQty > 0 ? ` · rewards +${qtyFmt(rewQty)}` : ''); h24.className = 'htx-sub htx-muted';
+  // Network & where held (the wallet check reads the coin there) — tap to change
+  let netEl = document.getElementById('htxNet');
+  if (!netEl && window.SamsamWallets) { netEl = document.createElement('button'); netEl.type = 'button'; netEl.id = 'htxNet'; netEl.className = 'htx-net'; h24.insertAdjacentElement('afterend', netEl); }
+  if (netEl) {
+    const nt = SamsamWallets.placeText(sym);
+    netEl.innerHTML = SamsamUI.ic('link') + '<span>' + SamsamCoins.esc(nt || 'Set network & where held') + '</span>';
+    netEl.classList.toggle('htx-net-empty', !nt); netEl.title = 'Network & where held — used by the wallet check'; netEl.onclick = () => SamsamWallets.editCoin(sym);
+  }
   h24.title = rewQty > 0 ? `${qtyFmt(rewQty)} ${sym} came from staking / mining rewards (≈ ${usd(rewQty * price)} now, $0 cost)` : '';
   // Signal (your thresholds) + why
   const sigEl = document.getElementById('htxSignal');

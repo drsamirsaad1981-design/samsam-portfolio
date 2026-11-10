@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611100110';
-import * as Hist from './samsam-history.js?v=202611100110';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611100110';
+import * as Core from './samsam-core.js?v=202611101010';
+import * as Hist from './samsam-history.js?v=202611101010';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611101010';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -54,6 +54,24 @@ export const Clean = {
   key: v => (typeof v === 'string' && /^[a-z0-9_-]{1,30}$/.test(v)) ? v : undefined,
   num: v => { const n = Number(v); return Number.isFinite(n) ? n : 0; },
 };
+// Where a coin lives (the wallet check reads it there): nets = [{ k: network, c: token contract or '' for the network's own coin }]
+//   k = 'btc' | 'sol' | 'ton' | 'sui' | 'apt' | 'near' | 'hbar' | 'kas' | 'doge' | 'atom' | 'sei' | 'kava' | 'evm:<CoinGecko platform>'
+// at = where you keep it: 'wallet' | 'binance' | 'gate' | 'staked' | 'other'
+export const COIN_PLACES = ['wallet', 'binance', 'gate', 'staked', 'other'];
+function cleanNets(v) {
+  if (!Array.isArray(v)) return null;
+  const out = [];
+  for (const x of v) {
+    if (!x || out.length >= 6) continue;
+    const k = String(x.k || '').trim().toLowerCase();
+    if (!/^(btc|sol|ton|sui|apt|near|hbar|kas|doge|atom|sei|kava|evm:[a-z0-9][a-z0-9-]{0,60})$/.test(k)) continue;
+    const c = String(x.c || '').trim().slice(0, 120);
+    if (c && !/^[A-Za-z0-9:_-]{20,120}$/.test(c)) continue;
+    if (!out.some(y => y.k === k && y.c.toLowerCase() === c.toLowerCase())) out.push({ k, c });
+  }
+  return out;
+}
+function cleanPlaces(v) { return Array.isArray(v) ? COIN_PLACES.filter(p => v.includes(p)) : null; }
 function cleanCoin(c) {
   const o = { ...c, sym: Clean.sym(c.sym || c.id) };
   if ('name' in o) o.name = Clean.label(o.name) || o.sym;
@@ -65,6 +83,8 @@ function cleanCoin(c) {
   if ('cat' in o) o.cat = Clean.key(o.cat) || 'other';
   if ('catLabel' in o) o.catLabel = Clean.label(o.catLabel, 40) || null;
   if ('catLocked' in o) o.catLocked = o.catLocked === true;
+  if ('nets' in o) o.nets = cleanNets(o.nets);
+  if ('at' in o) o.at = cleanPlaces(o.at);
   if (o.opening) o.opening = { qty: Clean.num(o.opening.qty), avg: Clean.num(o.opening.avg) };
   return o;
 }
@@ -547,6 +567,14 @@ const API = {
   getAlerts() { return cleanAlerts(S.meta && S.meta.alerts); },
   getTargets() { return cleanTargets(S.meta && S.meta.targets); },
   getWallets() { return cleanWallets(S.meta && S.meta.wallets); },
+  // Network & where held of many coins in one cloud write: { SYM: { nets?, at? } } — only for coins you have
+  setCoinPlaces(map) {
+    const rows = Object.entries(map || {}).filter(([sym]) => S.coins.has(sym)).map(([sym, v]) => {
+      const f = {}; if (v && 'nets' in v) f.nets = cleanNets(v.nets); if (v && 'at' in v) f.at = cleanPlaces(v.at); return [sym, f];
+    }).filter(([, f]) => Object.keys(f).length);
+    if (!rows.length) return Promise.resolve(0);
+    return commit((b, ref) => rows.forEach(([sym, f]) => b.set(ref('coins', safeId(sym)), clean({ ...f, updatedAt: new Date().toISOString() }), { merge: true })), 'Networks').then(() => rows.length);
+  },
   setWallets(list) {
     const w = cleanWallets(list);
     return commit((bt, ref) => bt.set(ref('meta', 'info'), { wallets: w }, { merge: true }), 'Wallets').then(() => w);
@@ -730,6 +758,8 @@ const API = {
     if ('ccSlug' in fields) fields.ccSlug = Clean.cgId(fields.ccSlug);
     if ('cmcSlug' in fields) fields.cmcSlug = Clean.cgId(fields.cmcSlug);
     if ('logoUrl' in fields) fields.logoUrl = Clean.url(fields.logoUrl);
+    if ('nets' in fields) fields.nets = cleanNets(fields.nets);
+    if ('at' in fields) fields.at = cleanPlaces(fields.at);
     if ('lastPrice' in fields && !(Number(fields.lastPrice) > 0 && Number.isFinite(Number(fields.lastPrice)))) delete fields.lastPrice;
     return commit((b, ref, fs) => b.set(ref('coins', safeId(sym)), clean({ ...fields, updatedAt: new Date().toISOString() }), { merge: true }), `Update ${sym}`);
   },
@@ -753,6 +783,7 @@ const API = {
       b.set(ref('coins', safeId(sym)), clean({
         sym, name: coin.name || sym, cat: coin.cat || 'other', catLocked: coin.catLocked === true, catLabel: coin.catLabel || null,
         cgId: coin.cgId || null, cmcSlug: coin.cmcSlug || null, logoUrl: coin.logoUrl || null,
+        ...(coin.nets ? { nets: coin.nets } : {}), ...(coin.at ? { at: coin.at } : {}),
         notes: coin.notes || '', isCustom: true, removed: false, removedAt: null, order, lastPrice: price || null,
         opening: existing && existing.opening ? existing.opening : { qty: 0, avg: 0 },
         addedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),

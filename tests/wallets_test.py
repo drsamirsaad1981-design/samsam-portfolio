@@ -49,6 +49,28 @@ with sync_playwright() as p:
         check(f'{vn} coin page: "{exp_rw}"', exp_rw in pg.inner_text('#htxHoldings24'), pg.inner_text('#htxHoldings24'))
         pg.evaluate("closeCoinTx && closeCoinTx()") if pg.evaluate("typeof closeCoinTx==='function'") else None
 
+        # ── Add Coin: "Network & where held" (a token on a network CoinGecko doesn't place it on) ──
+        NS = 'NEWP' if vn == 'phone' else 'NEWD'   # one new coin per screen size (the fake database is shared)
+        pg.evaluate("(s)=>CPAdd.openCoin({sym:s, name:'Newt Test', cgId:'newt-test'})", NS); pg.wait_for_selector('#addCoinModal.show', timeout=5000)
+        pg.wait_for_timeout(400)
+        check(f'{vn} Add Coin shows "Network & where held"', pg.is_visible('#acNet') and 'network' in pg.inner_text('#acNetTxt').lower(), pg.inner_text('#acNetTxt'))
+        pg.click('#acNet'); pg.wait_for_selector('#cpNet .nt-body')
+        pg.select_option('#ntNet', 'evm:robinhood-chain'); pg.fill('#ntCon', 'not-a-contract'); pg.click('#ntAdd'); pg.wait_for_timeout(150)
+        check(f'{vn} a bad contract is refused', '0x' in pg.inner_text('#ntErr'), pg.inner_text('#ntErr'))
+        pg.fill('#ntCon', '0x9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c'); pg.click('#ntAdd'); pg.wait_for_timeout(150)
+        pg.click('#cpNet [data-pl="wallet"]'); pg.click('#cpNet [data-pl="binance"]')
+        if vn == 'phone': pg.locator('#cpNet .nt-box').screenshot(path=str(SH / 'coin_network.png'))
+        pg.click('#ntSave'); pg.wait_for_timeout(200)
+        nt = pg.inner_text('#acNetTxt')
+        check(f'{vn} Add Coin: "Robinhood Chain · Your wallet + Binance" ({nt})', 'Robinhood Chain' in nt and 'Binance' in nt and 'Your wallet' in nt, nt)
+        pg.fill('#acQty', '100'); pg.fill('#acPrice', '2'); pg.click('#acSave')
+        pg.wait_for_function("(s)=>Samsam.getState().coins.some(c=>c.sym===s && c.nets)", arg=NS, timeout=8000)
+        nd = pg.evaluate("(s)=>Samsam.getState().coins.find(c=>c.sym===s)", NS)
+        check(f'{vn} saved on the coin: network + contract + where held', nd['nets'] == [{'k': 'evm:robinhood-chain', 'c': '0x9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c'}] and nd['at'] == ['wallet', 'binance'], (nd.get('nets'), nd.get('at')))
+        pg.evaluate("(s)=>openCoinTx(s)", NS); pg.wait_for_timeout(500)
+        check(f'{vn} coin page: "Robinhood Chain · Your wallet + Binance" under the amount', 'Robinhood Chain' in pg.inner_text('#htxNet'), pg.inner_text('#htxNet') if pg.query_selector('#htxNet') else '')
+        pg.evaluate("closeCoinTx && closeCoinTx()") if pg.evaluate("typeof closeCoinTx==='function'") else None
+
         # ── Wallets: mocked blockchain ──
         held = pg.evaluate("Samsam.getState().portfolio.filter(c=>c.qty>0).map(c=>({sym:c.sym,cgId:c.cgId||SamsamCoins.CG_IDS[c.sym]||'',qty:c.qty}))")
         H = {c['sym']: c for c in held}
@@ -71,6 +93,7 @@ with sync_playwright() as p:
             body=json.dumps({'chain_stats': {'funded_txo_sum': round((live['BTC'] + 0.001) * 1e8) + 5000, 'spent_txo_sum': 5000}, 'mempool_stats': {'funded_txo_sum': 0, 'spent_txo_sum': 0}})))
         def evm(route):
             chain = route.request.url.split('//')[1].split('-')[0]   # ethereum / bsc / arbitrum …
+            if 'robinhood' in route.request.url: chain = 'robinhood'
             if chain == 'moonbeam': return route.fulfill(status=503, body='down')   # Moonbeam doesn't answer → GLMR "didn't answer", never "not in the wallet"
             body = json.loads(route.request.post_data); one = not isinstance(body, list); body = [body] if one else body
             out = []
@@ -78,13 +101,14 @@ with sync_playwright() as p:
                 v = 0
                 if c['method'] == 'eth_getBalance' and 'ETH' in live and chain in ('ethereum', 'arbitrum'): v = int(live['ETH'] / 2 * 1e18)
                 if chain == 'mantle' and (c['method'] == 'eth_getBalance' or (c['method'] == 'eth_call' and c['params'][0]['to'] == DEAD)): v = int(round(live.get('MNT', 0) * 1e6)) * 10 ** 12   # the same MNT twice (native + its system token)
+                if chain == 'robinhood' and c['method'] == 'eth_call' and c['params'][0]['to'] == '0x9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c': v = 6 if c['params'][0]['data'] == '0x313ce567' else int(round((live.get(NS, 0) - 3) * 1e6))
                 if c['method'] == 'eth_getBalance' and chain in ('sei', 'kava'): v = int(round(live.get(chain.upper(), 0) * 1e6)) * 10 ** 12   # SEI on Sei EVM, KAVA on Kava EVM
                 if c['method'] == 'eth_call' and c['params'][0]['to'] == TOK_EVM:
                     if c['params'][0]['data'] == '0x313ce567': v = 6
                     elif chain == 'ethereum': v = int(round((live[X['sym']] - 10) * 1e6))
                 out.append({'jsonrpc': '2.0', 'id': c['id'], 'result': hex(v)})
             route.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps(out[0] if one else out))
-        ctx.route(re.compile(r'https://[a-z-]+-rpc\.publicnode\.com/?$'), evm)
+        ctx.route(re.compile(r'https://[a-z-]+-rpc\.publicnode\.com/?$'), evm); ctx.route('https://rpc.mainnet.chain.robinhood.com/**', evm); ctx.route('https://rpc.mainnet.chain.robinhood.com', evm)
         def sol(route):
             b = json.loads(route.request.post_data)
             if b['method'] == 'getBalance': r = {'value': int(round(live.get('SOL', 0) * 1e9))}
@@ -183,7 +207,8 @@ with sync_playwright() as p:
         less = pg.evaluate("[...document.querySelectorAll('#wlRes-less .wl-r')].map(r=>r.dataset.sym)")
         same = pg.evaluate("[...document.querySelectorAll('#wlRes-same .wl-r')].map(r=>r.dataset.sym)")
         check(f'{vn} wallet has more: BTC (+0.001) and {Y["sym"]} (+5, Solana token named by Jupiter; the look-alike token not counted) {more}', set(more) == {'BTC', Y['sym']} | ({'KAS'} & set(CH)) and '+5 ' + Y['sym'] in pg.inner_text(f'#wlRes-more .wl-r[data-sym="{Y["sym"]}"]'), (more, txt[:400]))
-        check(f'{vn} Jupiter asked once, for the wallet\'s token mints', len(jup_q) == 1 and TOK_SOL in jup_q[0] and SPAM in jup_q[0], jup_q)
+        # phone: the mint isn't known yet → Jupiter names it · desktop: the phone's check saved SOL network + mint on the coin → only the unknown look-alike is asked
+        check(f'{vn} Jupiter asked once, for the unknown token mints', len(jup_q) == 1 and SPAM in jup_q[0] and ((TOK_SOL in jup_q[0]) == (vn == 'phone')), jup_q)
         busy = pg.inner_text('#wlRes-cant [data-why="busy"]') if pg.query_selector('#wlRes-cant [data-why="busy"]') else ''
         check(f'{vn} CoinGecko busy for {Z["sym"]} → "tap Check now again" (asked 3×)', Z['sym'] in busy and 'Check now again' in busy and cg_calls.count(Z['cgId']) == 3, (busy, cg_calls.count(Z['cgId'])))
         check(f'{vn} app has more: {X["sym"]} (−10, Ethereum token, decimals asked) + DOGE (−30) {less}', set(less) == {X['sym']} | ({'DOGE'} & set(CH)), (less, txt[:400]))
@@ -196,7 +221,7 @@ with sync_playwright() as p:
             if k in CH: check(f'{vn} {k} read → Match', k in same, same)
         exp_same = [s for s in ('SOL', 'ETH') if s in H]
         check(f'{vn} match: {exp_same} (ETH split over Ethereum + Arbitrum) {same}', set(exp_same) <= set(same), same)
-        none = pg.inner_text('#wlRes-none') if pg.query_selector('#wlRes-none') else ''
+        none = (pg.inner_text('#wlRes-none') if pg.query_selector('#wlRes-none') else '') + (pg.inner_text('#wlRes-kept') if pg.query_selector('#wlRes-kept') else '')   # a coin you marked "Binance" earlier sits under "Where you said"
         rf = pg.inner_text('#wlRes-cant [data-why="readfail"]') if pg.query_selector('#wlRes-cant [data-why="readfail"]') else ''
         if 'GLMR' in H: check(f'{vn} Moonbeam down → GLMR "didn\'t answer — check again", not "not in these wallets"', 'GLMR' in rf and 'GLMR' not in none and txt.count('Moonbeam') <= 2, (rf, none))
         if 'QNT' in H: check(f'{vn} QNT is an Ethereum token now (looked up, not "own blockchain")', 'QNT' not in (pg.inner_text('#wlRes-cant [data-why="own"]') if pg.query_selector('#wlRes-cant [data-why="own"]') else ''))
@@ -220,6 +245,17 @@ with sync_playwright() as p:
         check(f'{vn} Add as Reward: +0.001 BTC at $0 cost (kind reward)', t.get('kind') == 'reward' and t['price'] == 0 and abs(b1['qty'] * b1['basePrice'] - b0['qty'] * b0['basePrice']) < 1e-4, t)
         same2 = pg.evaluate("[...document.querySelectorAll('#wlRes-same .wl-r')].map(r=>r.dataset.sym)")
         check(f'{vn} BTC now shows Match (no new check needed)', 'BTC' in same2, same2)
+        kept = pg.inner_text(f'#wlRes-kept .wl-r[data-sym="{NS}"]') if pg.query_selector(f'#wlRes-kept .wl-r[data-sym="{NS}"]') else ''
+        check(f'{vn} {NS} read on Robinhood Chain with your contract: "Wallets 97 + Binance 3 = App 100"', 'Binance' in kept and 'Wallets 97' in kept and '3' in kept and 'App 100' in kept, kept)
+        bd = pg.evaluate("Samsam.getState().coins.find(c=>c.sym==='BTC')")
+        check(f'{vn} a coin found in the wallet gets its network + "Your wallet" saved (BTC {bd.get("nets")} {bd.get("at")})', bd.get('nets') == [{'k': 'btc', 'c': ''}] and bd.get('at') == ['wallet'], (bd.get('nets'), bd.get('at')))
+        none_syms = pg.evaluate("[...document.querySelectorAll('#wlRes-none [data-net]')].map(b=>b.dataset.net)")
+        if none_syms:
+            z = none_syms[0]; pg.click(f'#wlRes-none [data-net="{z}"]'); pg.wait_for_selector('#cpNet .nt-pl')
+            pg.click('#cpNet [data-pl="binance"]'); pg.click('#ntSave'); pg.wait_for_timeout(700)
+            moved = pg.inner_text(f'#wlRes-kept .wl-r[data-sym="{z}"]') if pg.query_selector(f'#wlRes-kept .wl-r[data-sym="{z}"]') else ''
+            check(f'{vn} tap {z} under "Not in these wallets" → Binance → it moves to "Where you said" ({moved!r})', 'Binance' in moved and not pg.query_selector(f'#wlRes-none [data-net="{z}"]'), moved)
+            if vn == 'phone': pg.locator('#wlRes-kept').screenshot(path=str(SH / 'wallets_kept.png'))
         n_cg = len(cg_calls); pg.click('#wlCheck'); pg.wait_for_function("!document.querySelector('#wlCheck').disabled", timeout=15000)
         check(f'{vn} a second check uses the remembered contracts (only the busy coin asked again)', set(cg_calls[n_cg:]) == {Z['cgId']}, cg_calls[n_cg:])
         pg.keyboard.press('Escape'); pg.wait_for_timeout(300)

@@ -322,3 +322,9 @@
       .hov-asset-row { padding: 12px 8px; }
       .hov-hero { padding: 16px 12px 4px; }
     }
+
+    /* Network & where held, under the amount on the coin page */
+    .htx-net { display:inline-flex; align-items:center; gap:5px; max-width:100%; margin-top:4px; padding:3px 9px; border-radius:999px; border:1px solid rgba(124,58,237,.35); background:rgba(124,58,237,.08); color:inherit; font:inherit; font-size:.72rem; font-weight:700; cursor:pointer; }
+    .htx-net span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .htx-net .ss-ic { margin:0; width:12px; height:12px; }
+    .htx-net.htx-net-empty { opacity:.7; border-style:dashed; }

@@ -96,7 +96,7 @@
         var r = await fetch(BTC_API[i] + encodeURIComponent(w.addr)); if (!r.ok) continue;
         var j = await r.json(), a = j.chain_stats || {}, m = j.mempool_stats || {};
         var sats = (a.funded_txo_sum || 0) - (a.spent_txo_sum || 0) + (m.funded_txo_sum || 0) - (m.spent_txo_sum || 0);
-        return [{ sym: c.sym, q: sats / 1e8, where: 'Bitcoin' }];
+        return [{ sym: c.sym, q: sats / 1e8, where: 'Bitcoin', net: { k: 'btc', c: '' } }];
       } catch (_) {}
     }
     throw new Error('Bitcoin');
@@ -139,10 +139,10 @@
         }
       } catch (e) { info.solTokFail = true; accts = null; }
     }
-    if (sol) out.push({ sym: sol.sym, q: solQ, where: 'Solana' });
+    if (sol) out.push({ sym: sol.sym, q: solQ, where: 'Solana', net: { k: 'sol', c: '' } });
     if (!accts) return out;
     var bySym = {}, mintSym = {};
-    held.forEach(function (c) { bySym[c.sym] = c; var p = c.cgId && plat[c.cgId] && plat[c.cgId].p && plat[c.cgId].p.solana; if (p) mintSym[p[0]] = c.sym; });
+    held.forEach(function (c) { bySym[c.sym] = c; var p = plat[c.pk] && plat[c.pk].p && plat[c.pk].p.solana; if (p) mintSym[p[0]] = c.sym; });
     var unknown = Object.keys(accts).filter(function (m) { return !mintSym[m] && accts[m] > 0; });
     if (unknown.length) {
       try {
@@ -152,8 +152,8 @@
         });
       } catch (_) { info.jupFail = true; }
     }
-    var got = {}; Object.keys(mintSym).forEach(function (m) { var sy = mintSym[m]; got[sy] = (got[sy] || 0) + (accts[m] || 0); });
-    Object.keys(got).forEach(function (sy) { out.push({ sym: sy, q: got[sy], where: 'Solana' }); });
+    var got = {}, mint = {}; Object.keys(mintSym).forEach(function (m) { var sy = mintSym[m]; got[sy] = (got[sy] || 0) + (accts[m] || 0); if (accts[m] > 0 || !mint[sy]) mint[sy] = m; });
+    Object.keys(got).forEach(function (sy) { out.push({ sym: sy, q: got[sy], where: 'Solana', net: { k: 'sol', c: mint[sy] } }); });
     return out;
   }
   async function evmWallet(w, held, plat, errs) {
@@ -161,9 +161,9 @@
     await Promise.all(EVM.map(async function (ch) {
       var calls = [], meta = [];
       held.forEach(function (c) {
-        var nat = c.cgId === ch.id || (!c.cgId && ch.syms.indexOf(c.sym) >= 0);
+        var nat = c.cgId === ch.id || (!c.cgId && ch.syms.indexOf(c.sym) >= 0) || (c.nets || []).some(function (n) { return n.k === 'evm:' + ch.k && !n.c; });
         if (nat) { calls.push({ method: 'eth_getBalance', params: [w.addr, 'latest'] }); meta.push({ sym: c.sym, dec: 18 }); return; }   // the chain's own coin: never again as a token there
-        var P = c.cgId && plat[c.cgId] && plat[c.cgId].p, p = P && P[ch.k];
+        var P = plat[c.pk] && plat[c.pk].p, p = P && P[ch.k];
         if (P && !p && ch.rx) Object.keys(P).some(function (k) { if (ch.rx.test(k)) { p = P[k]; return true; } return false; });
         if (p && /^0x[0-9a-fA-F]{40}$/.test(p[0])) { calls.push({ method: 'eth_call', params: [{ to: p[0], data: '0x70a08231' + pad }, 'latest'] }); meta.push({ sym: c.sym, dec: p[1], to: p[0] }); }
       });
@@ -176,7 +176,7 @@
           need.forEach(function (i, k) { meta[i].dec = d[k] && d[k] !== '0x' ? Number(BigInt(d[k])) : 18; });
         }
         var bad = false;
-        meta.forEach(function (m, i) { if (res[i] === undefined) { bad = true; out.push({ sym: m.sym, q: 0, fail: true, where: ch.name }); return; } out.push({ sym: m.sym, q: units(res[i], m.dec || 0), where: ch.name }); });
+        meta.forEach(function (m, i) { if (res[i] === undefined) { bad = true; out.push({ sym: m.sym, q: 0, fail: true, where: ch.name }); return; } out.push({ sym: m.sym, q: units(res[i], m.dec || 0), where: ch.name, net: { k: 'evm:' + ch.k, c: m.to || '' } }); });
         if (bad && errs.indexOf(ch.name) < 0) errs.push(ch.name);
       } catch (_) {
         if (errs.indexOf(ch.name) < 0) errs.push(ch.name);
@@ -200,22 +200,22 @@
   }
   async function tonWallet(w, held, plat) {
     var out = [], T = 'https://toncenter.com/api/', ton = held.filter(function (x) { return x.cgId === 'the-open-network' || x.sym === 'TON'; })[0];
-    if (ton) { var b = await getJ(T + 'v2/getAddressBalance?address=' + encodeURIComponent(w.addr)); out.push({ sym: ton.sym, q: (+(b && b.result) || 0) / 1e9, where: 'TON' }); await wait(CFG.tonGap); }
+    if (ton) { var b = await getJ(T + 'v2/getAddressBalance?address=' + encodeURIComponent(w.addr)); out.push({ sym: ton.sym, q: (+(b && b.result) || 0) / 1e9, where: 'TON', net: { k: 'ton', c: '' } }); await wait(CFG.tonGap); }
     var masters = {};   // raw jetton address → your coin (CoinGecko's TON contract)
-    held.forEach(function (c) { var p = c.cgId && plat[c.cgId] && plat[c.cgId].p && plat[c.cgId].p['the-open-network']; if (p) { var r = tonRaw(p[0]); if (r) masters[r] = { sym: c.sym, dec: p[1] }; } });
+    held.forEach(function (c) { var p = plat[c.pk] && plat[c.pk].p && plat[c.pk].p['the-open-network']; if (p) { var r = tonRaw(p[0]); if (r) masters[r] = { sym: c.sym, dec: p[1] }; } });
     var j = await getJ(T + 'v3/jetton/wallets?owner_address=' + encodeURIComponent(w.addr) + '&limit=100');
-    var md = j.metadata || {}, bySym = {}, got = {};
-    held.forEach(function (c) { if (!(c.cgId && plat[c.cgId] && plat[c.cgId].p && plat[c.cgId].p['the-open-network'])) bySym[c.sym] = c; });
+    var md = j.metadata || {}, bySym = {}, got = {}, mst = {};
+    held.forEach(function (c) { if (!(plat[c.pk] && plat[c.pk].p && plat[c.pk].p['the-open-network'])) bySym[c.sym] = c; });
     (j.jetton_wallets || []).forEach(function (x) {
       var raw = String(x.jetton || '').toUpperCase(), m = masters[raw], ti = null;
       var meta = md[x.jetton] || md[raw]; if (meta && meta.token_info) ti = [].concat(meta.token_info)[0];
       if (!m && ti && bySym[String(ti.symbol || '').toUpperCase()]) m = { sym: String(ti.symbol).toUpperCase(), dec: null };   // a coin CoinGecko doesn't place on TON: by its name
       if (!m) return;
       var d = m.dec != null ? m.dec : ti && ti.extra && ti.extra.decimals != null ? +ti.extra.decimals : 9;
-      got[m.sym] = (got[m.sym] || 0) + dec(x.balance, d);
+      got[m.sym] = (got[m.sym] || 0) + dec(x.balance, d); mst[m.sym] = raw;
     });
     Object.keys(masters).forEach(function (r) { var sy = masters[r].sym; if (!(sy in got)) got[sy] = 0; });
-    Object.keys(got).forEach(function (sy) { out.push({ sym: sy, q: got[sy], where: 'TON' }); });
+    Object.keys(got).forEach(function (sy) { out.push({ sym: sy, q: got[sy], where: 'TON', net: { k: 'ton', c: mst[sy] || '' } }); });
     return out;
   }
   // one coin per network: { q (free + staked), staked }
@@ -275,7 +275,7 @@
         (ub.unbonding_responses || []).forEach(function (x) { (x.entries || []).forEach(function (e) { staked += dec(e.balance, 6); }); });
       } catch (_) {}
     }
-    return [{ sym: c.sym, q: free + staked, staked: staked, where: KIND[w.kind] }];
+    return [{ sym: c.sym, q: free + staked, staked: staked, where: KIND[w.kind], net: { k: w.kind, c: '' } }];
   }
   // CoinGecko: where each token lives (contract + decimals per chain) — remembered 90 days
   async function platforms(ids, onStep) {
@@ -320,10 +320,24 @@
   function isNative(c) {
     return c.cgId === 'bitcoin' || c.cgId === 'solana' || Object.keys(CHAIN).some(function (k) { return c.cgId === CHAIN[k].id; }) || EVM.some(function (ch) { return c.cgId === ch.id; }) || (!c.cgId && /^(BTC|SOL|ETH|BNB|POL|MATIC|AVAX)$/.test(c.sym));
   }
+  // your saved networks: a contract you gave is used as is, and a coin with networks saved is read only there
+  function withSaved(plat, held) {
+    var out = Object.assign({}, plat);
+    held.forEach(function (c) {
+      if (!c.nets) return; var P = {};
+      c.nets.forEach(function (n) { if (!n.c) return; var pk = n.k === 'sol' ? 'solana' : n.k === 'ton' ? 'the-open-network' : n.k.indexOf('evm:') === 0 ? n.k.slice(4) : null; if (pk) P[pk] = [n.c, null]; });
+      out[c.pk] = { p: P, at: Date.now() };
+    });
+    return out;
+  }
   function heldNow() {
     var st = S().getState() || {};
     var ids = (window.SamsamCoins && SamsamCoins.CG_IDS) || {};   // the starting coins carry no CoinGecko id of their own
-    return (st.portfolio || []).filter(function (c) { return c.qty > 0; }).map(function (c) { return { sym: c.sym, qty: c.qty, currentPrice: c.currentPrice, cgId: c.cgId || ids[c.sym] || '' }; });
+    var docs = {}; (st.coins || []).forEach(function (d) { if (d && d.sym) docs[d.sym] = d; });
+    return (st.portfolio || []).filter(function (c) { return c.qty > 0; }).map(function (c) {
+      var d = docs[c.sym] || {}, cg = c.cgId || ids[c.sym] || '';
+      return { sym: c.sym, qty: c.qty, currentPrice: c.currentPrice, cgId: cg, pk: cg || 'sym:' + c.sym, nets: Array.isArray(d.nets) && d.nets.length ? d.nets : null, at: Array.isArray(d.at) ? d.at : [] };
+    });
   }
 
   // ── Check now ──
@@ -339,11 +353,12 @@
           if (r.fail) { unsure[r.sym] = 1; return; }
           checked[r.sym] = 1; if (!(r.q > 0)) return;
           var f = found[r.sym] || (found[r.sym] = { q: 0, where: [], staked: 0 });
+          f.nets = f.nets || []; if (r.net && !f.nets.some(function (n) { return n.k === r.net.k; })) f.nets.push(r.net);
           f.q += r.q; f.staked = (f.staked || 0) + (r.staked || 0); var lab = w.kind === 'evm' ? (w.label ? w.label + ' · ' : '') + r.where : (w.label || KIND[w.kind]);
           if (f.where.indexOf(lab) < 0) f.where.push(lab);
         });
       };
-      var plat = lsGet(K.plat, {});
+      var plat = withSaved(lsGet(K.plat, {}), held);
       // 1) Bitcoin, Solana and the networks with their own blockchain: read straight away (Solana lists its own tokens)
       step = 'Reading balances from the blockchain…'; draw();
       await Promise.all(ws.filter(function (w) { return w.kind !== 'evm'; }).map(async function (w) {
@@ -353,10 +368,10 @@
       // 2) EVM: a token is read by its contract on each chain — CoinGecko says where (once, then remembered)
       var failed = [];
       if (kinds.evm) {
-        var look = held.filter(function (c) { return c.cgId && !isNative(c) && !OWN.test(c.sym); }).map(function (c) { return c.cgId; });
+        var look = held.filter(function (c) { return c.cgId && !c.nets && !isNative(c) && !OWN.test(c.sym); }).map(function (c) { return c.cgId; });
         if (look.length) {
           plat = await platforms(look, function (i, n, slow) { step = !i ? (slow ? 'CoinGecko is busy — waiting a moment…' : 'Finding token contracts on CoinGecko…') : slow ? 'CoinGecko is busy — waiting a moment… ' + i + ' / ' + n : 'Finding token contracts on CoinGecko… ' + i + ' / ' + n; draw(); });
-          failed = plat.__failed || []; delete plat.__failed;
+          failed = plat.__failed || []; delete plat.__failed; plat = withSaved(plat, held);
         }
         step = 'Reading balances from the blockchain…'; draw();
         await Promise.all(ws.filter(function (w) { return w.kind === 'evm'; }).map(async function (w) {
@@ -378,22 +393,35 @@
       Object.keys(unsure).forEach(function (sy) { if (checked[sy] && !(found[sy] && found[sy].q > 0)) { delete checked[sy]; why[sy] = 'readfail'; } });
       LAST = { at: new Date().toISOString(), found: found, checked: Object.keys(checked), why: why, errs: errs };
       lsPut(K.last, LAST);
+      // coins with no network / place saved yet: what the check found is saved on them (never over yours)
+      var fill = {};
+      held.forEach(function (c) {
+        var f = found[c.sym]; if (!f || !(f.q > 0)) return;
+        var v = {}; if (!c.nets && f.nets && f.nets.length) v.nets = f.nets; if (!c.at.length) v.at = ['wallet'];
+        if (Object.keys(v).length) fill[c.sym] = v;
+      });
+      if (Object.keys(fill).length && S().setCoinPlaces) S().setCoinPlaces(fill).catch(function () {});
     } finally { busy = false; step = ''; draw(); }
     return LAST;
   }
   // every coin you hold: wallet vs app (with today's numbers in the app, so a Reward you just added shows as matched)
   function compare(last) {
     last = last || LAST; if (!last) return null;
-    var held = heldNow(), out = { more: [], less: [], same: [], none: [], cant: [] }, ck = {};
+    var held = heldNow(), out = { more: [], less: [], same: [], none: [], cant: [], kept: [] }, ck = {};
+    var away = function (c) { return c.at.filter(function (p) { return p !== 'wallet'; }); };
     (last.checked || []).forEach(function (s) { ck[s] = 1; });
     held.forEach(function (c) {
-      if (!ck[c.sym]) { out.cant.push({ sym: c.sym, why: (last.why || {})[c.sym] || 'other' }); return; }
+      if (!ck[c.sym]) {
+        if (away(c).length && c.at.indexOf('wallet') < 0) { out.kept.push({ sym: c.sym, wallet: null, app: c.qty, rest: c.qty, places: away(c), usd: c.qty * (c.currentPrice || 0) }); return; }
+        out.cant.push({ sym: c.sym, why: (last.why || {})[c.sym] || 'other' }); return;
+      }
       var f = (last.found || {})[c.sym], w = f ? f.q : 0, a = c.qty, d = w - a, p = c.currentPrice || 0;
       var row = { sym: c.sym, wallet: w, app: a, diff: d, usd: d * p, where: f ? f.where : [], staked: f ? f.staked || 0 : 0 };
       var same = p > 0 ? Math.abs(d) * p < 0.5 : Math.abs(d) <= Math.max(a, w) * 1e-4;
+      if (d < 0 && away(c).length && (!same || !(w > 0))) { row.rest = -d; row.places = away(c); row.usd = -row.usd; out.kept.push(row); return; }   // the rest is where you said: Binance, staked…
       if (!(w > 0)) out.none.push(row); else if (same) out.same.push(row); else if (d > 0) out.more.push(row); else out.less.push(row);
     });
-    out.more.sort(function (x, y) { return y.usd - x.usd; }); out.less.sort(function (x, y) { return x.usd - y.usd; });
+    out.more.sort(function (x, y) { return y.usd - x.usd; }); out.less.sort(function (x, y) { return x.usd - y.usd; }); out.kept.sort(function (x, y) { return y.usd - x.usd; });
     return out;
   }
 
@@ -436,6 +464,8 @@
     '#cpWal .wl-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}' +
     '#cpWal .wl-ok{color:#22c55e}[data-theme="light"] #cpWal .wl-ok{color:#16a34a}' +
     '#cpWal .wl-syms{font-size:.8rem;padding:10px 12px;line-height:1.6}' +
+    '#cpWal .wl-chip{display:inline-flex;align-items:center;gap:4px;margin:0 4px 6px 0;padding:4px 9px;border-radius:8px;border:1px solid var(--border,rgba(148,163,184,.3));background:rgba(148,163,184,.08);color:inherit;font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}#cpWal .wl-chip span{font-weight:500;opacity:.8}' +
+    '#cpWal .wl-r .wl-chip{margin:0;font-size:.92rem}' +
     '#cpWal .wl-syms+.wl-syms{border-top:1px solid var(--border,rgba(148,163,184,.15))}' +
     '#cpWal .wl-warn{color:#f59e0b;font-size:.8rem;margin-top:6px}';
 
@@ -469,7 +499,7 @@
     var acts = '';
     if (kind === 'more') {
       acts = '<div class="wl-acts"><button type="button" class="wl-btn2 rw" data-rw="' + E(r.sym) + '" data-q="' + r.diff + '">' + IC('coins') + 'Add +' + qf(r.diff) + ' as Reward</button>' +
-        (window.SamsamAdd && SamsamAdd.openTx ? '<button type="button" class="wl-btn2" data-tin="' + E(r.sym) + '" data-q="' + r.diff + '">' + IC('arrowDown') + 'Transfer In…</button>' : '') + '</div>';
+        (window.CPAdd && CPAdd.openTx ? '<button type="button" class="wl-btn2" data-tin="' + E(r.sym) + '" data-q="' + r.diff + '">' + IC('arrowDown') + 'Transfer In…</button>' : '') + '</div>';
     }
     return '<div class="wl-r" data-sym="' + E(r.sym) + '"><div class="wl-top"><b>' + E(r.sym) + '</b>' +
       (kind === 'same' ? '<span class="wl-d wl-ok">' + IC('check') + 'Match</span>' : '<span class="wl-d ' + (r.diff > 0 ? 'up' : 'dn') + '">' + d + '</span>') + '</div>' +
@@ -482,16 +512,22 @@
     var h = '<div class="wl-note">Checked ' + (ago < 1 ? 'just now' : ago < 60 ? ago + ' min ago' : when.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</div>';
     if ((LAST.errs || []).length) h += '<div class="wl-warn">' + IC('alert') + 'Couldn’t read: ' + E(LAST.errs.join(', ')) + ' — try again in a minute.</div>';
     var sec = function (title, rows, kind) { return rows.length ? '<div class="wl-sec">' + title + ' (' + rows.length + ')</div><div class="wl-list" id="wlRes-' + kind + '">' + rows.map(function (r) { return rowHtml(r, kind); }).join('') + '</div>' : ''; };
-    h += sec('Wallet has more', c.more, 'more') + sec('App has more', c.less, 'less') + sec('Match', c.same, 'same');
-    if (c.none.length) h += '<div class="wl-sec">Not in these wallets (' + c.none.length + ')</div><div class="wl-list"><div class="wl-syms" id="wlRes-none">' + c.none.map(function (r) { return '<b>' + E(r.sym) + '</b> ' + qf(r.app); }).join(' · ') + '<div class="wl-note">On an exchange, staked, or in a wallet you haven’t added.</div></div></div>';
+    var chip = function (sym, extra) { return '<button type="button" class="wl-chip" data-net="' + E(sym) + '" title="Network & where held">' + E(sym) + (extra ? ' <span>' + extra + '</span>' : '') + '</button>'; };
+    h += sec('Wallet has more', c.more, 'more') + sec('App has more', c.less, 'less');
+    if (c.kept.length) h += '<div class="wl-sec">Where you said (' + c.kept.length + ')</div><div class="wl-list" id="wlRes-kept">' + c.kept.map(function (r) {
+      return '<div class="wl-r" data-sym="' + E(r.sym) + '"><div class="wl-top">' + chip(r.sym) + '<span class="wl-d wl-ok">' + IC('check') + E(r.places.map(placeName).join(' + ')) + '</span></div>' +
+        '<div class="wl-nums">' + (r.wallet > 0 ? 'Wallets <b>' + qf(r.wallet) + '</b> + ' : r.wallet === null ? 'Not read here · ' : '') + E(r.places.map(placeName).join(' + ')) + ' <b>' + qf(r.rest) + '</b> = App <b>' + qf(r.app) + '</b></div></div>';
+    }).join('') + '</div>';
+    h += sec('Match', c.same, 'same');
+    if (c.none.length) h += '<div class="wl-sec">Not in these wallets (' + c.none.length + ')</div><div class="wl-list"><div class="wl-syms" id="wlRes-none">' + c.none.map(function (r) { return chip(r.sym, qf(r.app)); }).join(' ') + '<div class="wl-note">On an exchange, staked, or in a wallet you haven’t added. Tap a coin to say where it is (Binance, Gate.io, staked…) or which network it’s on.</div></div></div>';
     if (c.cant.length) {
       var WHY = [['readfail', 'Their network didn’t answer this time — tap Check now again.'], ['busy', 'CoinGecko was busy, so these weren’t looked up yet — tap Check now again (what was found is remembered).'],
         ['noevm', 'Ethereum-type coins (ETH, LINK, ONDO, ARB, USDT on Ethereum…): add your 0x… address — the same one covers Ethereum, Base, Optimism, Arbitrum, BNB Chain, Polygon and Avalanche. Not there? Then they’re on another chain or an exchange.'],
         ['nowallet', 'Add the wallet address of their network to check these (Bitcoin, Solana, TON, Sui, Aptos, NEAR, Hedera, Kaspa, Dogecoin; Sei and Kava: their 0x… or sei1… / kava1… address).'],
-        ['other', 'Not on Bitcoin, Solana or the EVM chains of your wallets.'], ['unknown', 'Not linked to CoinGecko.'], ['own', 'Their own blockchain (can’t be read here).']];
+        ['other', 'Not found on the networks of your wallets — tap the coin to pick its network (and paste its contract if it’s a token).'], ['unknown', 'Not linked to CoinGecko.'], ['own', 'Their own blockchain (can’t be read here).']];
       h += '<div class="wl-sec">Not checked (' + c.cant.length + ')</div><div class="wl-list" id="wlRes-cant">' + WHY.map(function (g) {
         var l = c.cant.filter(function (x) { return x.why === g[0]; }); if (!l.length) return '';
-        return '<div class="wl-syms" data-why="' + g[0] + '">' + l.map(function (x) { return '<b>' + E(x.sym) + '</b>'; }).join(' · ') + '<div class="wl-note">' + E(g[1]) + '</div></div>';
+        return '<div class="wl-syms" data-why="' + g[0] + '">' + l.map(function (x) { return chip(x.sym); }).join(' ') + '<div class="wl-note">' + E(g[1]) + '</div></div>';
       }).join('') + '</div>';
     }
     return h;
@@ -547,7 +583,7 @@
   }
   var unsub = null;
   function close() { var b = $('cpWal'); if (b) b.remove(); doc.removeEventListener('keydown', esc, true); if (unsub) { unsub(); unsub = null; } }
-  function esc(e) { if (e.key === 'Escape' && !doc.querySelector('#cpDialog')) { e.stopPropagation(); close(); } }
+  function esc(e) { if (e.key === 'Escape' && !doc.querySelector('#cpDialog,#cpNet')) { e.stopPropagation(); close(); } }
   function open() {
     var s = S(); if (!s || !s.isReady || !s.isReady() || !s.getWallets) return;
     if (!$('wlCss')) { var st = doc.createElement('style'); st.id = 'wlCss'; st.textContent = CSS; doc.head.appendChild(st); }
@@ -563,14 +599,135 @@
       b = t.closest('[data-del]'); if (b) { removeWallet(b.dataset.del); return; }
       b = t.closest('[data-pick]'); if (b && form.pick) { addWallet(form.pick.addr, form.pick.label, b.dataset.pick); return; }
       b = t.closest('[data-kind]'); if (b) { switchKind(b.dataset.kind); return; }
+      b = t.closest('[data-net]'); if (b) { editCoin(b.dataset.net); return; }
       if (t.closest('#wlCheck')) { check(); return; }
       b = t.closest('[data-rw]'); if (b) { addReward(b.dataset.rw, +b.dataset.q); return; }
-      b = t.closest('[data-tin]'); if (b) { var sym = b.dataset.tin, q = +b.dataset.q; close(); SamsamAdd.openTx('transfer_in', sym, { qty: q, note: 'Found by the wallet check' }); }
+      b = t.closest('[data-tin]'); if (b) { var sym = b.dataset.tin, q = +b.dataset.q; close(); CPAdd.openTx('transfer_in', sym, { qty: q, note: 'Found by the wallet check' }); }
     });
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.target.id === 'wlAddr' || e.target.id === 'wlLabel')) { e.preventDefault(); addWallet($('wlAddr').value, $('wlLabel').value); } });
     doc.addEventListener('keydown', esc, true);
     unsub = s.onChange(function () { if ($('cpWal') && !busy) draw(); });
     setTimeout(function () { var f = $('wlAddr'); if (f && !s.getWallets().length) f.focus(); }, 0);
   }
-  window.SamsamWallets = { open: open, close: close, check: check, compare: compare, last: function () { return LAST; }, _cfg: CFG, _units: units, _own: OWN };
+  // ── Network & where held (one coin) — also used by Add Coin before the coin exists (opts.onSave) ──
+  var PLACES = [['wallet', 'Your wallet'], ['binance', 'Binance'], ['gate', 'Gate.io'], ['staked', 'Staked'], ['other', 'Other']];
+  function placeName(p) { for (var i = 0; i < PLACES.length; i++) if (PLACES[i][0] === p) return PLACES[i][1]; return p; }
+  var NATIVE_NETS = [['btc', 'Bitcoin'], ['sol', 'Solana'], ['ton', 'TON'], ['sui', 'Sui'], ['apt', 'Aptos'], ['near', 'NEAR'], ['hbar', 'Hedera'], ['kas', 'Kaspa'], ['doge', 'Dogecoin'], ['atom', 'Cosmos'], ['sei', 'Sei'], ['kava', 'Kava']];
+  function allNets() { return NATIVE_NETS.concat(EVM.map(function (ch) { return ['evm:' + ch.k, ch.name]; })); }
+  function netName(k) { var l = allNets().filter(function (x) { return x[0] === k; })[0]; return l ? l[1] : k; }
+  function tokenable(k) { return k === 'sol' || k === 'ton' || k.indexOf('evm:') === 0; }
+  function platToNet(pk) {
+    if (pk === 'solana') return 'sol'; if (pk === 'the-open-network') return 'ton';
+    var ch = EVM.filter(function (x) { return x.k === pk || (x.rx && x.rx.test(pk)); })[0]; return ch ? 'evm:' + ch.k : null;
+  }
+  function nativeNet(cgId, sym) {
+    if (cgId === 'bitcoin' || sym === 'BTC') return 'btc'; if (cgId === 'solana' || sym === 'SOL') return 'sol';
+    var k = Object.keys(CHAIN).filter(function (x) { return CHAIN[x].id === cgId || (!cgId && CHAIN[x].syms.indexOf(sym) >= 0); })[0]; if (k) return k;
+    var ch = EVM.filter(function (x) { return x.id === cgId || (!cgId && x.syms.indexOf(sym) >= 0); })[0]; return ch ? 'evm:' + ch.k : null;
+  }
+  // the networks CoinGecko knows for a coin: [{ k, c }] — the coin's own network first
+  function suggest(cgId, sym, platforms) {
+    var out = [], nn = nativeNet(cgId, sym); if (nn) out.push({ k: nn, c: '' });
+    var P = platforms || {};
+    if (!platforms && cgId) { var pc = lsGet(K.plat, {})[cgId]; if (pc && pc.p) Object.keys(pc.p).forEach(function (k) { P[k] = pc.p[k][0]; }); }
+    Object.keys(P).forEach(function (pk) {
+      var v = P[pk], c = String(v && typeof v === 'object' ? v.contract_address || '' : v || '').trim(), k = platToNet(pk);
+      if (k && c && !out.some(function (x) { return x.k === k; })) out.push({ k: k, c: c });
+    });
+    return out;
+  }
+  function coinDoc(sym) { var st = S() && S().getState ? S().getState() : null; return st ? (st.coins || []).filter(function (d) { return d.sym === sym; })[0] || null : null; }
+  function placeText(sym) {
+    var d = coinDoc(sym) || {}, n = (d.nets || []).map(function (x) { return netName(x.k); }), a = (d.at || []).map(placeName);
+    return [n.join(', '), a.join(' + ')].filter(Boolean).join(' · ');
+  }
+  var ed = null;   // { sym, cgId, nets, at, opts, sug, list }
+  var ECSS =
+    '#cpNet{position:fixed;inset:0;z-index:100100;background:rgba(2,6,23,.55);display:flex;align-items:flex-end;justify-content:center}' +
+    '@media (min-width:640px){#cpNet{align-items:center;padding:16px}}' +
+    '#cpNet .nt-box{width:min(480px,100%);max-height:92vh;overflow:auto;background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font:14px/1.45 system-ui,-apple-system,"Inter",sans-serif;box-sizing:border-box}' +
+    '@media (min-width:640px){#cpNet .nt-box{border-radius:18px}}' +
+    '#cpNet .nt-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}#cpNet .nt-h b{flex:1;font-size:1.02rem}' +
+    '#cpNet .nt-x{background:none;border:none;color:inherit;opacity:.7;cursor:pointer;padding:6px;line-height:0}' +
+    '#cpNet .nt-sec{margin:14px 0 6px;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--fg2,#94a3b8)}' +
+    '#cpNet .nt-note{font-size:.78rem;color:var(--fg2,#94a3b8);margin:4px 0}' +
+    '#cpNet .nt-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border,rgba(148,163,184,.2));border-radius:11px;margin-bottom:6px;cursor:pointer}' +
+    '#cpNet .nt-row[aria-checked="true"]{border-color:#7c3aed;background:rgba(124,58,237,.1)}' +
+    '#cpNet .nt-row .nt-t{flex:1;min-width:0;display:flex;flex-direction:column}#cpNet .nt-row b{font-size:.88rem}#cpNet .nt-row small{font-weight:500;opacity:.75}' +
+    '#cpNet .nt-row code{font-size:.72rem;color:var(--fg2,#94a3b8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '#cpNet .nt-box2{width:18px;height:18px;border-radius:5px;border:2px solid var(--border,rgba(148,163,184,.5));flex:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}' +
+    '#cpNet .nt-row[aria-checked="true"] .nt-box2{background:#7c3aed;border-color:#7c3aed;color:#fff}#cpNet .nt-box2 .ss-ic{margin:0;width:12px;height:12px}' +
+    '#cpNet .nt-add{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}#cpNet select,#cpNet input{flex:1 1 140px;min-width:0;box-sizing:border-box;padding:9px 10px;border-radius:10px;border:1px solid var(--border,rgba(148,163,184,.3));background:var(--card-solid,rgba(148,163,184,.08));color:inherit;font:inherit;font-size:.84rem}' +
+    '#cpNet .nt-pl{display:flex;gap:6px;flex-wrap:wrap}#cpNet .nt-pl button{border:1px solid var(--border,rgba(148,163,184,.35));background:transparent;color:inherit;font:inherit;font-size:.82rem;font-weight:700;padding:7px 12px;border-radius:999px;cursor:pointer}' +
+    '#cpNet .nt-pl button[aria-pressed="true"]{background:#7c3aed;border-color:#7c3aed;color:#fff}' +
+    '#cpNet .nt-btn{border:none;border-radius:10px;padding:9px 14px;font:inherit;font-size:.84rem;font-weight:700;cursor:pointer;background:#7c3aed;color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:6px}' +
+    '#cpNet .nt-btn2{border:1px solid var(--border,rgba(148,163,184,.35));border-radius:10px;padding:9px 12px;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;background:transparent;color:inherit}' +
+    '#cpNet .nt-save{width:100%;margin-top:16px;padding:12px}#cpNet .nt-err{color:#f87171;font-size:.8rem;min-height:1em;margin-top:4px}[data-theme="light"] #cpNet .nt-err{color:#dc2626}';
+  function same2(a, b) { return a.k === b.k && String(a.c).toLowerCase() === String(b.c).toLowerCase(); }
+  function edDraw() {
+    var el = $('cpNet'); if (!el || !ed) return;
+    var sel = function (n) { return ed.nets.some(function (x) { return same2(x, n); }); };
+    var list = ed.sug.slice(); ed.nets.forEach(function (n) { if (!list.some(function (x) { return same2(x, n); })) list.push(n); });
+    ed.list = list;
+    el.querySelector('.nt-body').innerHTML =
+      '<div class="nt-sec">Network</div>' +
+      (list.length ? list.map(function (n, i) {
+        return '<div class="nt-row" role="checkbox" tabindex="0" data-i="' + i + '" aria-checked="' + sel(n) + '"><span class="nt-box2">' + (sel(n) ? IC('check', { solo: true }) : '') + '</span>' +
+          '<span class="nt-t"><b>' + E(netName(n.k)) + (n.c ? '' : ' <small>(its own coin)</small>') + '</b>' + (n.c ? '<code title="' + E(n.c) + '">' + E(n.c) + '</code>' : '') + '</span></div>';
+      }).join('') : '<div class="nt-note">CoinGecko doesn’t list a network for it — add it below.</div>') +
+      '<div class="nt-note">Another network (e.g. Robinhood Chain): pick it and paste the token contract (from the explorer or your wallet app):</div>' +
+      '<div class="nt-add"><select id="ntNet" aria-label="Network"><option value="">Network…</option>' + allNets().map(function (x) { return '<option value="' + E(x[0]) + '">' + E(x[1]) + '</option>'; }).join('') + '</select>' +
+      '<input id="ntCon" aria-label="Token contract" placeholder="Token contract (empty = its own coin)" autocomplete="off" spellcheck="false"><button type="button" class="nt-btn2" id="ntAdd">' + IC('plus') + 'Add</button></div>' +
+      '<div class="nt-err" id="ntErr" role="alert"></div>' +
+      '<div class="nt-sec">Where you keep it</div><div class="nt-pl" role="group" aria-label="Where you keep it">' +
+      PLACES.map(function (p) { return '<button type="button" data-pl="' + p[0] + '" aria-pressed="' + (ed.at.indexOf(p[0]) >= 0) + '">' + E(p[1]) + '</button>'; }).join('') + '</div>' +
+      '<div class="nt-note">The wallet check reads the coin on the networks you tick, and counts the rest as held where you said.</div>' +
+      '<button type="button" class="nt-btn nt-save" id="ntSave">' + IC('check') + (ed.opts.saveText || 'Save') + '</button>';
+  }
+  function editCoin(sym, opts) {
+    opts = opts || {}; sym = String(sym || '').toUpperCase(); if (!sym) return;
+    var d = coinDoc(sym) || {}, ids = (window.SamsamCoins && SamsamCoins.CG_IDS) || {}, cg = opts.cgId || d.cgId || ids[sym] || '';
+    var nets = opts.nets || (Array.isArray(d.nets) && d.nets.length ? d.nets : null), at = opts.at || (Array.isArray(d.at) ? d.at : []);
+    var sug = suggest(cg, sym, opts.platforms);
+    if (!nets) { var f = LAST && LAST.found && LAST.found[sym]; nets = f && f.nets && f.nets.length ? f.nets.slice() : sug.length === 1 ? sug.slice() : []; }
+    ed = { sym: sym, cgId: cg, nets: nets.map(function (n) { return { k: n.k, c: n.c || '' }; }), at: at.slice(), opts: opts, sug: sug, list: [] };
+    if (!$('ntCss')) { var st = doc.createElement('style'); st.id = 'ntCss'; st.textContent = ECSS; doc.head.appendChild(st); }
+    var old = $('cpNet'); if (old) old.remove();
+    var el = doc.createElement('div'); el.id = 'cpNet'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Network and where held — ' + sym);
+    el.innerHTML = '<div class="nt-box"><div class="nt-h">' + IC('link') + '<b>Network &amp; where held — ' + E(sym) + '</b><button type="button" class="nt-x" aria-label="Close">' + IC('x') + '</button></div><div class="nt-body"></div></div>';
+    doc.body.appendChild(el); edDraw();
+    var toggle = function (i) {
+      var n = ed.list[+i]; if (!n) return; var j = -1;
+      ed.nets.forEach(function (x, k) { if (same2(x, n)) j = k; });
+      if (j >= 0) ed.nets.splice(j, 1); else ed.nets.push({ k: n.k, c: n.c }); edDraw();
+    };
+    el.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t === el || t.closest('.nt-x')) { edClose(); return; }
+      var r = t.closest('.nt-row'); if (r) { toggle(r.dataset.i); return; }
+      var pl = t.closest('[data-pl]'); if (pl) { var k = pl.dataset.pl, i = ed.at.indexOf(k); if (i >= 0) ed.at.splice(i, 1); else ed.at.push(k); edDraw(); return; }
+      if (t.closest('#ntAdd')) {
+        var k2 = $('ntNet').value, c2 = $('ntCon').value.trim(), er = $('ntErr');
+        if (!k2) { er.textContent = 'Pick the network first.'; return; }
+        if (c2 && !tokenable(k2)) { er.textContent = netName(k2) + ' tokens can’t be read here — leave the contract empty for its own coin.'; return; }
+        if (c2 && k2.indexOf('evm:') === 0 && !/^0x[0-9a-fA-F]{40}$/.test(c2)) { er.textContent = 'An EVM token contract is 0x followed by 40 letters / digits.'; return; }
+        if (c2 && !/^[A-Za-z0-9:_-]{20,120}$/.test(c2)) { er.textContent = 'That doesn’t look like a contract address.'; return; }
+        if (!ed.nets.some(function (x) { return same2(x, { k: k2, c: c2 }); })) ed.nets.push({ k: k2, c: c2 });
+        edDraw(); return;
+      }
+      if (t.closest('#ntSave')) {
+        var v = { nets: ed.nets.slice(), at: PLACES.map(function (p) { return p[0]; }).filter(function (p) { return ed.at.indexOf(p) >= 0; }) }, o = ed.opts, sy = ed.sym;
+        edClose();
+        if (o.onSave) { o.onSave(v); return; }
+        if (S() && S().updateCoin) S().updateCoin(sy, { nets: v.nets, at: v.at }).then(function () { if ($('cpWal')) draw(); }).catch(function () {});
+      }
+    });
+    el.addEventListener('keydown', function (e) { var r = e.target.closest && e.target.closest('.nt-row'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle(r.dataset.i); } });
+    doc.addEventListener('keydown', edEsc, true);
+  }
+  function edEsc(e) { if (e.key === 'Escape' && $('cpNet') && !doc.querySelector('#cpDialog')) { e.stopPropagation(); edClose(); } }
+  function edClose() { var b = $('cpNet'); if (b) b.remove(); ed = null; doc.removeEventListener('keydown', edEsc, true); }
+
+  window.SamsamWallets = { open: open, close: close, check: check, compare: compare, last: function () { return LAST; }, _cfg: CFG, _units: units, _own: OWN,
+    editCoin: editCoin, closeCoin: edClose, suggest: suggest, placeText: placeText, netName: netName, placeName: placeName };
 })();

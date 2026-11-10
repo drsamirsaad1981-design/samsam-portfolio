@@ -50,6 +50,8 @@
     '[data-theme="light"] .atx-types button[aria-checked="true"]{background:#fff}' +
     '.atx-types button{grid-column:span 2}.atx-types button[data-t^="transfer"]{grid-column:span 3}' +
     '@media (max-width:380px){.atx-types button{font-size:.72rem;padding:9px 2px}}' +
+    '.ac-net{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--border,rgba(148,163,184,.3));background:rgba(148,163,184,.06);color:inherit;font:inherit;font-size:.86rem;cursor:pointer}' +
+    '.ac-net #acNetTxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ac-net .ac-net-go{opacity:.6;font-size:1.1rem}.ac-net .ss-ic{margin:0}' +
     '.htx-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}.atx-types button .htx-dot{margin-right:5px}' +
     '.htx-dot-buy{background:#22c55e}.htx-dot-sell{background:#ef4444}.htx-dot-transfer_in{background:#3b82f6}.htx-dot-transfer_out{background:#f59e0b}.htx-dot-adjust{background:#94a3b8}.htx-dot-reward{background:#a855f7}' +
     '.htx-rw{display:inline-block;font-size:.66rem;font-weight:800;letter-spacing:.02em;padding:1px 6px;border-radius:6px;margin-left:6px;vertical-align:1px;color:#a855f7;background:rgba(168,85,247,.14)}' +
@@ -148,6 +150,7 @@
         '<div class="atx-field ac-full"><label for="acCmc">CoinMarketCap Page</label><div class="ac-cmc"><span class="ac-cmc-pre">coinmarketcap.com/currencies/</span>' +
           '<input type="text" id="acCmc" placeholder="auto" autocomplete="off" spellcheck="false" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,\'\');acCmcCheck()">' +
           '<a id="acCmcCheck" class="ac-cmc-check" href="#" target="_blank" rel="noopener noreferrer" hidden>Check' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</a></div></div>' +
+        '<div class="atx-field ac-full"><span>Network &amp; where held</span><button type="button" class="ac-net" id="acNet" onclick="acEditNet()">' + SamsamUI.ic('link') + '<span id="acNetTxt">Pick the coin first</span><span class="ac-net-go">›</span></button></div>' +
         '<label class="atx-field ac-full"><span>Category</span><select id="acCat" onchange="syncCatCustom(this,\'acCatCustomBox\')"></select></label>' +
         '<div class="atx-field ac-full cat-custom" id="acCatCustomBox" hidden><label for="acCatCustom">New Category Name</label>' +
           '<input type="text" id="acCatCustom" maxlength="40" placeholder="Enter Custom Category..." autocomplete="off"><div class="cat-custom-hint">Saved for this coin and added to the category filters.</div></div>' +
@@ -273,7 +276,7 @@
     if (!r.ok) throw new Error('CoinGecko answered ' + r.status);
     var d = await r.json(), md = d.market_data || {};
     return { usd: md.current_price && md.current_price.usd || 0, ch24: md.price_change_percentage_24h != null ? md.price_change_percentage_24h : null,
-      logo: d.image && (d.image.small || d.image.thumb) || null, categories: d.categories || [] };
+      logo: d.image && (d.image.small || d.image.thumb) || null, categories: d.categories || [], platforms: d.detail_platforms || d.platforms || {} };
   }
 
   // ── Add Coin form ──
@@ -332,7 +335,26 @@
       var known = SamsamTaxonomy.categoryOf(c.sym, null), key = known !== 'other' ? known : categoryFrom(d.categories);
       if (key) { $('acCat').value = key; syncCatCustom($('acCat'), 'acCatCustomBox'); }
       if (d.usd > 0) { var el = $('acLinkedPrice'); if (el) el.textContent = ' · now ' + SamsamFmt.price(d.usd); }
-    } catch (_) { /* category stays as chosen */ }
+      acNetAuto(c.sym, c.id, d.platforms);
+    } catch (_) { acNetAuto(c.sym, c.id, null); /* category stays as chosen */ }
+  }
+  // Network & where held for the coin being added (saved with it; the wallet check reads it there)
+  var acNet = { nets: null, at: [], platforms: null };
+  function acNetText() {
+    var t = $('acNetTxt'); if (!t) return; var W = window.SamsamWallets;
+    if (!W) { $('acNet').parentNode.hidden = true; return; }
+    var n = (acNet.nets || []).map(function (x) { return W.netName(x.k); }), a = acNet.at.map(W.placeName);
+    t.textContent = n.length || a.length ? [n.join(', '), a.join(' + ')].filter(Boolean).join(' · ') : ($('acSym').value.trim() ? 'Tap to pick its network and where you keep it' : 'Pick the coin first');
+  }
+  function acNetAuto(sym, cgId, platforms) {   // the coin's own network, or its only token network — the rest you pick
+    var W = window.SamsamWallets; acNet.platforms = platforms || null;
+    if (W && !acNet.touched) { var sg = W.suggest(cgId, sym, platforms); acNet.nets = sg.length === 1 ? sg : sg.filter(function (x) { return !x.c; }).slice(0, 1); }
+    acNetText();
+  }
+  function acEditNet() {
+    var W = window.SamsamWallets, sym = $('acSym').value.trim().toUpperCase(); if (!W || !sym) return;
+    W.editCoin(sym, { cgId: $('acCgId').value.trim() || null, platforms: acNet.platforms || undefined, nets: acNet.nets || [], at: acNet.at, saveText: 'Done',
+      onSave: function (v) { acNet.nets = v.nets; acNet.at = v.at; acNet.touched = true; acNetText(); } });
   }
   function acCmcCheck() {
     var v = $('acCmc').value, a = $('acCmcCheck');
@@ -358,6 +380,7 @@
     if (!mount()) return;
     ['acSym', 'acName', 'acQty', 'acPrice', 'acFeeUsd', 'acCgId'].forEach(function (id) { $(id).value = ''; });
     acShow([]); acLink(null);
+    acNet = { nets: null, at: [], platforms: null }; acNetText();
     var p = prefill && typeof prefill === 'object' ? prefill : null;
     var catSel = $('acCat');
     fillCatSelect(catSel, (p && p.cat) || 'layer1');
@@ -370,7 +393,7 @@
         acLink({ sym: $('acSym').value, name: p.name || p.sym, id: p.cgId });
         $('acCgId').value = p.cgId;
         acLogo = p.logoUrl && /^https:\/\//.test(p.logoUrl) ? p.logoUrl : null;
-        coinInfo(p.cgId).then(function (d) { var el = $('acLinkedPrice'); if (d.usd > 0 && el && $('acCgId').value === p.cgId) el.textContent = ' · now ' + SamsamFmt.price(d.usd); }).catch(function () {});
+        coinInfo(p.cgId).then(function (d) { var el = $('acLinkedPrice'); if (d.usd > 0 && el && $('acCgId').value === p.cgId) el.textContent = ' · now ' + SamsamFmt.price(d.usd); if ($('acCgId').value === p.cgId) acNetAuto($('acSym').value, p.cgId, d.platforms); }).catch(function () { acNetAuto($('acSym').value, p.cgId, null); });
       }
       $('acCmc').value = p.cmcSlug || SamsamCoins.CMC_SLUGS[$('acSym').value] || SamsamCoins.cmcGuess(p.name || '') || ''; acCmcCheck();
     }
@@ -416,7 +439,8 @@
     if (catCh.label) SamsamTaxonomy.register(cat, catCh.label);
     SamsamCoins.registerCoin(sym, { cmcSlug: cmcSlug, name: name });
     // One atomic cloud write: coin settings + its opening buy
-    write(Samsam.addCoin({ sym: sym, name: name, cat: cat, catLabel: catCh.label, catLocked: true, cgId: cgId, cmcSlug: cmcSlug, logoUrl: acLogo }, { qty: qty, price: price, feeUsd: feeUsd }));
+    write(Samsam.addCoin({ sym: sym, name: name, cat: cat, catLabel: catCh.label, catLocked: true, cgId: cgId, cmcSlug: cmcSlug, logoUrl: acLogo,
+      nets: acNet.nets && acNet.nets.length ? acNet.nets : undefined, at: acNet.at.length ? acNet.at : undefined }, { qty: qty, price: price, feeUsd: feeUsd }));
     linkCodex(sym, { cgId: cgId, name: name });
     closeAddCoin();
     if (cgId) fetchLogoAndPrice(sym, cgId);
@@ -763,7 +787,7 @@
   window.CPAdd = API;
   // the names the pages (and inline handlers) already use
   var G = { openAddCoin: function () { openAddCoin(); }, closeAddCoin: closeAddCoin, previewAddCoin: previewAddCoin, applyAddCoin: applyAddCoin,
-    acSearchInput: acSearchInput, acSearchKey: acSearchKey, acPick: acPick, acCmcCheck: acCmcCheck,
+    acSearchInput: acSearchInput, acSearchKey: acSearchKey, acPick: acPick, acCmcCheck: acCmcCheck, acEditNet: acEditNet,
     openAddTx: openAddTx, closeAddTx: closeAddTx, setAddTxType: setAddTxType, readAddTx: readAddTx, previewAddTx: previewAddTx, saveAddTx: saveAddTx,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
     openCatEdit: function (sym) { openCatEdit(sym); }, closeCatEdit: closeCatEdit, saveCatEdit: saveCatEdit,
