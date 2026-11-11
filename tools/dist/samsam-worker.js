@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 3cb78d801eec5883
+// sources-hash: 2c6d6f5b872df53b
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -710,7 +710,7 @@ async function loadMarket(ids = [], coins = []) {
     const s = await cached("p:" + id, 10 * 6e4, async () => priceSeries(await getJson(RAW + "p/" + id + ".json")) || false);
     if (s) series[id] = s;
   }));
-  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf };
+  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [] };
   await liveTopUp(market, all);
   const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
   const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 6);
@@ -937,8 +937,11 @@ var T = {
     hold: "\u26AA Hold",
     vsAvg: "vs your avg",
     mkT: "Market",
-    topUp: "Top 500 \xB7 best 24h",
-    topDn: "Top 500 \xB7 worst 24h",
+    topUp: (n) => `Top ${n} \xB7 best 24h`,
+    topDn: (n) => `Top ${n} \xB7 worst 24h`,
+    stUp: "bStocks \xB7 best 24h",
+    stDn: "bStocks \xB7 worst 24h",
+    stNote: "tokenized US stocks (Binance)",
     updated: "Updated",
     futures: "Futures",
     yes: "yes",
@@ -1036,8 +1039,11 @@ var T = {
     hold: "\u26AA \u0627\u062D\u062A\u0641\u0627\u0638",
     vsAvg: "\u0645\u0642\u0627\u0628\u0644 \u0645\u062A\u0648\u0633\u0637\u0643",
     mkT: "\u0627\u0644\u0633\u0648\u0642",
-    topUp: "\u0623\u0639\u0644\u0649 500 \xB7 \u0627\u0644\u0623\u0641\u0636\u0644 24\u0633",
-    topDn: "\u0623\u0639\u0644\u0649 500 \xB7 \u0627\u0644\u0623\u0633\u0648\u0623 24\u0633",
+    topUp: (n) => `\u0623\u0639\u0644\u0649 ${n} \xB7 \u0627\u0644\u0623\u0641\u0636\u0644 24\u0633`,
+    topDn: (n) => `\u0623\u0639\u0644\u0649 ${n} \xB7 \u0627\u0644\u0623\u0633\u0648\u0623 24\u0633`,
+    stUp: "bStocks \xB7 \u0627\u0644\u0623\u0641\u0636\u0644 24\u0633",
+    stDn: "bStocks \xB7 \u0627\u0644\u0623\u0633\u0648\u0623 24\u0633",
+    stNote: "\u0623\u0633\u0647\u0645 \u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0645\u0631\u0645\u0651\u0632\u0629 (Binance)",
     updated: "\u0627\u062A\u062D\u062F\u0651\u062B",
     futures: "Futures",
     yes: "\u0623\u064A\u0648\u0647",
@@ -1106,6 +1112,22 @@ async function getLang(env) {
   }
   if (v === "ar" || v === "en") return v;
   return env.BOT_LANG === "ar" ? "ar" : "en";
+}
+var memRange = null;
+async function getRange(env) {
+  let v = memRange;
+  try {
+    if (env.RATE) v = +await env.RATE.get("tg:mk") || v;
+  } catch (_) {
+  }
+  return RANGES.includes(+v) ? +v : 100;
+}
+async function setRange(env, v) {
+  memRange = v;
+  try {
+    if (env.RATE) await env.RATE.put("tg:mk", String(v));
+  } catch (_) {
+  }
 }
 async function setLang(env, v) {
   memLang = v;
@@ -1225,14 +1247,20 @@ ${t.noPlan}`, buttons: [[url(t.openApp, APP + "accumulation.html"), cb(t.back, "
   }
   return { text: L.join("\n"), buttons: [[cb(t.refresh, "pl"), url(t.openApp, APP + "accumulation.html")], [cb(t.back, "menu")]] };
 }
-function viewMarket(t, m, now) {
+var RANGES = [100, 200, 300, 500];
+function viewMarket(t, m, now, range = 100) {
   const L = [`\u{1F30D} <b>${t.mkT}</b> \xB7 ${hm(now)}`, "", ...marketShort(t, m)];
-  const seen = /* @__PURE__ */ new Set(), top = [...m.top || [], ...m.top500 || []].filter((r) => r.rank && r.rank <= 500 && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
+  const seen = /* @__PURE__ */ new Set(), top = [...m.top || [], ...m.top500 || []].filter((r) => r.rank && r.rank <= range && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
   const line = (r) => row(r.sym, r.ch24, price(r.price));
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
-  if (up.length) L.push("", `\u{1F4C8} <b>${t.topUp}</b>`, ...up.map(line));
-  if (dn.length) L.push("", `\u{1F4C9} <b>${t.topDn}</b>`, ...dn.map(line));
-  return { text: L.join("\n"), buttons: [[cb(t.refresh, "mk"), url("\u{1F9ED} Market Hub", APP + "market.html")], [cb(t.back, "menu")]] };
+  if (up.length) L.push("", `\u{1F4C8} <b>${t.topUp(range)}</b>`, ...up.map(line));
+  if (dn.length) L.push("", `\u{1F4C9} <b>${t.topDn(range)}</b>`, ...dn.map(line));
+  const st = (m.stocks || []).filter((r) => r.ch24 != null && r.price > 0);
+  if (st.length) {
+    const sUp = [...st].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...st].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
+    L.push("", `\u{1F3E6} <b>${t.stUp}</b>`, ...sUp.map(line), "", `\u{1F3E6} <b>${t.stDn}</b>`, ...sDn.map(line), `<i>${t.stNote}</i>`);
+  }
+  return { text: L.join("\n"), buttons: [RANGES.map((n) => cb((n === range ? "\u2713 " : "") + "Top " + n, "mk:" + n)), [cb(t.refresh, "mk:" + range), url("\u{1F9ED} Market Hub", APP + "market.html")], [cb(t.back, "menu")]] };
 }
 function viewCoin(t, coin, m, sum, now) {
   const row2 = [...m.top, ...m.top500].find((r) => r.id === coin.id) || {}, s = m.series[coin.id];
@@ -1325,7 +1353,7 @@ async function buildView(env, act, arg) {
     return { t, views };
   }
   const m = await loadMarket([], mine);
-  if (act === "mk") return { t, views: [viewMarket(t, m, now)] };
+  if (act === "mk") return { t, views: [viewMarket(t, m, now, await getRange(env))] };
   const sum = summarize(withIds(user, m), m, now);
   if (act === "pf") return { t, views: [viewPortfolio(t, cfg, sum, m, now)] };
   if (act === "mv") return { t, views: [viewMovers(t, sum)] };
@@ -1354,7 +1382,8 @@ async function handleTelegram(request, env) {
         await done();
         return ok();
       }
-      const { t: t2, views: views2 } = d.startsWith("c:") ? await run(env, "coinById", d.slice(2)) : await run(env, d);
+      if (/^mk:\d+$/.test(d) && RANGES.includes(+d.slice(3))) await setRange(env, +d.slice(3));
+      const { t: t2, views: views2 } = d.startsWith("c:") ? await run(env, "coinById", d.slice(2)) : await run(env, /^mk:/.test(d) ? "mk" : d);
       const r = await edit(env, chat, q.message.message_id, views2[0]);
       if (!r.ok && !/not modified/i.test(r.description || "")) await send(env, chat, views2[0]);
       await done(`\u2705 ${t2.updated} ${local(Date.now(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })}`);

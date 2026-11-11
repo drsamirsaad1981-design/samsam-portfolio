@@ -24,6 +24,7 @@ check('no secret value in the built file', !/sk-ant-|BEGIN PRIVATE KEY|\d{8,}:[A
 const NOW = Date.now(), HR = 3600e3;
 const market = fx('market_snap_fixture.json'), top500 = fx('top500_fixture.json'), alt = fx('alt_fixture.json'), etf = fx('etf_fixture.json');
 market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() };
+market.stocks = [['NVDAB', 2.1], ['TSLAB', -3.4], ['CRCLB', 7.8], ['AAPLB', 0.4], ['GMEB', -6.2], ['MSFTB', 1.1], ['METAB', -0.9], ['AMZNB', 3.3]].map(([sym, ch24], i) => ({ id: sym.toLowerCase() + '-bstock', sym, name: sym, price: 100 + i * 10, ch24 }));
 const series = (price, p24, p7) => { const n = 24 * 9, t0 = NOW - (n - 1) * HR; return { t0, step: HR, p: Array.from({ length: n }, (_, i) => i === n - 1 ? price : i >= n - 25 ? p24 : i >= n - 169 ? (p24 + p7) / 2 : p7) }; };
 const LIVE = { bitcoin: { usd: 77000, usd_24h_change: 1.25, usd_market_cap: 1.53e12, usd_24h_vol: 4e10 }, solana: { usd: 150, usd_24h_change: 3.5 }, tether: { usd: 1.0002, usd_24h_change: 0.01 }, chainlink: { usd: 11, usd_24h_change: -4.2 }, pendle: { usd: 3.21, usd_24h_change: 7.7, usd_market_cap: 5e8 } };
 const { privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -181,12 +182,25 @@ MANY = 0;
 // ── market, plan, signals, menu ──
 sent.length = 0; await say('/market');
 v = last();
-check('market: BTC, dominance, Fear & Greed, top 100 best / worst', /BTC/.test(v.b.text) && /Fear/.test(v.b.text) && /Top 500 · best 24h/.test(v.b.text), v.b.text.slice(0, 300));
-const tops = [...v.b.text.matchAll(/<code>(\S+)\s/g)].map(x => x[1]);
+const cryptoPart = x => x.split('🏦')[0];
+check('market: BTC, dominance, Fear & Greed, Top 100 by default', /BTC/.test(v.b.text) && /Fear/.test(v.b.text) && /Top 100 · best 24h/.test(v.b.text), v.b.text.slice(0, 300));
+const pick = n => { const T = [...market.top, ...top500.top].filter((r, i, a) => r.rank <= n && r.ch24 != null && !isStable(r.sym) && a.findIndex(x => x.id === r.id) === i).map(r => ({ ...r, ch24: LIVE[r.id] ? LIVE[r.id].usd_24h_change : r.ch24 }));
+  return [...[...T].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), ...[...T].sort((a, b) => a.ch24 - b.ch24).slice(0, 5)].map(r => r.sym.toUpperCase()); };
+let tops = [...cryptoPart(v.b.text).matchAll(/<code>(\S+)\s/g)].map(x => x[1]);
 check('market best / worst: no stablecoins', tops.length > 0 && !tops.some(isStable), tops);
-const T5 = [...market.top, ...top500.top].filter((r, i, a) => r.rank <= 500 && r.ch24 != null && !isStable(r.sym) && a.findIndex(x => x.id === r.id) === i).map(r => ({ ...r, ch24: LIVE[r.id] ? LIVE[r.id].usd_24h_change : r.ch24 }));
-const best5 = [...T5].sort((a, b) => b.ch24 - a.ch24).slice(0, 5).map(r => r.sym.toUpperCase()), worst5 = [...T5].sort((a, b) => a.ch24 - b.ch24).slice(0, 5).map(r => r.sym.toUpperCase());
-check(`market: top 500, 5 best ${best5} + 5 worst ${worst5}`, /Top 500 · best 24h/.test(v.b.text) && JSON.stringify(tops) === JSON.stringify([...best5, ...worst5]), { tops, best5, worst5 });
+check(`market: Top 100 → 5 best + 5 worst ${pick(100)}`, JSON.stringify(tops) === JSON.stringify(pick(100)), { tops, want: pick(100) });
+check('market buttons: ✓ Top 100 · Top 200 · Top 300 · Top 500, then Refresh', JSON.stringify(btns(v).slice(0, 5).map(b => [b.text, b.callback_data])) === JSON.stringify([['✓ Top 100', 'mk:100'], ['Top 200', 'mk:200'], ['Top 300', 'mk:300'], ['Top 500', 'mk:500'], ['🔄 Refresh', 'mk:100']]), btns(v).map(b => b.text));
+const bs = [...v.b.text.split('🏦')[1] ? v.b.text.matchAll(/🏦 <b>bStocks · (best|worst) 24h<\/b>\n((?:<code>.*\n?)+)/g) : []].map(x => [x[1], [...x[2].matchAll(/<code>(\S+)\s/g)].map(y => y[1])]);
+check('bStocks: best 5 (CRCLB, AMZNB, NVDAB, MSFTB, AAPLB) + worst 5 (GMEB, TSLAB, METAB, AAPLB, MSFTB)', JSON.stringify(bs) === JSON.stringify([['best', ['CRCLB', 'AMZNB', 'NVDAB', 'MSFTB', 'AAPLB']], ['worst', ['GMEB', 'TSLAB', 'METAB', 'AAPLB', 'MSFTB']]]) && /tokenized US stocks/.test(v.b.text), bs);
+sent.length = 0; await tap('mk:500');
+v = last(); tops = [...cryptoPart(v.b.text).matchAll(/<code>(\S+)\s/g)].map(x => x[1]);
+check(`tap Top 500 → edited in place, 5 best + 5 worst of the top 500 ${pick(500)}`, v.m === 'editMessageText' && /Top 500 · best 24h/.test(v.b.text) && JSON.stringify(tops) === JSON.stringify(pick(500)) && btns(v)[3].text === '✓ Top 500', { tops, want: pick(500) });
+sent.length = 0; await say('/market');
+check('…and Top 500 is remembered next time', /Top 500 · best 24h/.test(last().b.text) && btns(last())[4].callback_data === 'mk:500', last().b.text.slice(0, 40));
+sent.length = 0; await tap('mk:100');
+check('back to Top 100', /Top 100 · best 24h/.test(last().b.text));
+const longMk = Math.max(...plain(last().b.text).split('\n').map(l => [...l].length));
+check(`market: every line fits a phone (longest ${longMk} ≤ 40)`, longMk <= 40, plain(last().b.text).split('\n').filter(l => [...l].length > 40));
 check('market: Telegram-safe', okHtml(v.b.text), v.b.text);
 sent.length = 0; await say('/plan');
 v = last();
@@ -206,7 +220,7 @@ check('signals: grouped, Telegram-safe', /Signals/.test(last().b.text) && okHtml
 sent.length = 0; await say('/start');
 check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent && btnTexts(out()[1]).length === 8 && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
 check('the keyboard under the chat: 6 buttons in 3 rows (Portfolio · Market / Plan · Exit / Best & worst · Signals)', JSON.stringify(out()[0].b.reply_markup.keyboard.map(r => r.map(b => b.text))) === JSON.stringify([['💼 Portfolio', '🌍 Market'], ['📋 Plan', '🚪 Exit plan'], ['🏆 Best & worst', '🎯 Signals']]), out()[0].b.reply_markup.keyboard);
-for (const [txt, want] of [['🏆 Best & worst', /Best & worst \(your coins\)|Best &amp; worst \(your coins\)/], ['🚪 Exit plan', /Exit conditions/], ['🎯 Signals', /<b>Signals<\/b>/], ['📋 Plan', /Accumulation plan/], ['🌍 Market', /Top 500/]]) {
+for (const [txt, want] of [['🏆 Best & worst', /Best & worst \(your coins\)|Best &amp; worst \(your coins\)/], ['🚪 Exit plan', /Exit conditions/], ['🎯 Signals', /<b>Signals<\/b>/], ['📋 Plan', /Accumulation plan/], ['🌍 Market', /Top \d+ · best/]]) {
   sent.length = 0; await say(txt);
   check(`keyboard "${txt}" works on the first tap`, want.test(last().b.text), last().b.text.slice(0, 80));
 }

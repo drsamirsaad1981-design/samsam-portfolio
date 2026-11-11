@@ -104,6 +104,13 @@ async function main() {
   if (a.length) { snap.fng = { value: +a[0].value, label: a[0].value_classification, prev: a[1] ? +a[1].value : null, week: a[7] ? +a[7].value : null }; snap.parts.fng = now; log('fng', snap.fng.value); }
   else log('fng: no answer, kept the last one');
 
+  // Binance bStocks (tokenized US stocks: NVIDIA, Tesla, Circle…) — CoinGecko's "bStocks Ecosystem" category, for the
+  // Telegram bot's Market (best / worst 5). Kept from the last run when CoinGecko doesn't answer.
+  await sleep(4000);
+  const bs = await get(`${API}/coins/markets?vs_currency=usd&category=bstocks-ecosystem&order=market_cap_desc&per_page=100&page=1&price_change_percentage=24h`, 2);
+  if (Array.isArray(bs) && bs.length) { snap.stocks = bs.filter(c => c && c.current_price > 0).map(c => ({ id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, price: c.current_price, ch24: c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null, mcap: c.market_cap || null })); snap.parts.stocks = now; log('bstocks', snap.stocks.length); }
+  else { if (old.stocks) snap.stocks = old.stocks; log('bstocks: no answer, kept the last one'); }
+
   try { const alt = await altSeason(all, snap.global); if (alt) { snap.alt = alt; snap.parts.alt = now; } else if (old.alt) snap.alt = old.alt; }
   catch (e) { log('alt season:', e.message); if (old.alt) snap.alt = old.alt; }
 

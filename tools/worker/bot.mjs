@@ -31,7 +31,7 @@ const T = {
     planT: 'Accumulation plan', overall: 'Overall', done: 'done', left: 'left', dca: 'Regular buys (DCA)', next: 'next', buyAt: 'Buy-price alerts', away: 'away',
     noPlan: 'No plan targets yet — set them on the Accumulation page.', best24: 'Best 24h', worst24: 'Worst 24h', best7: 'Best 7d', worst7: 'Worst 7d',
     mvT: 'Best & worst (your coins)', noStable: 'stablecoins left out', sigT: 'Signals', reinforce: '🟢 Reinforce', sell: '🔴 Sell / convert to BTC', hold: '⚪ Hold',
-    vsAvg: 'vs your avg', mkT: 'Market', topUp: 'Top 500 · best 24h', topDn: 'Top 500 · worst 24h', updated: 'Updated', futures: 'Futures', yes: 'yes', private: '',
+    vsAvg: 'vs your avg', mkT: 'Market', topUp: n => `Top ${n} · best 24h`, topDn: n => `Top ${n} · worst 24h`, stUp: 'bStocks · best 24h', stDn: 'bStocks · worst 24h', stNote: 'tokenized US stocks (Binance)', updated: 'Updated', futures: 'Futures', yes: 'yes', private: '',
     welcome: 'Your bot is connected ✅\nIt answers here any time. Tap a button below, or send a ticker like <code>btc</code>.',
     other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅', exit: '🚪 Exit plan',
     today: 'today', profit: 'All Time Profit', vsBtcS: 'vs BTC', beat: (a, n) => `${a}/${n} coins beat BTC`, bestT: 'Best today', worstT: 'Worst today',
@@ -53,7 +53,7 @@ const T = {
     planT: 'خطة التجميع', overall: 'الإجمالي', done: 'تم', left: 'باقي', dca: 'الشراء المنتظم (DCA)', next: 'التالي', buyAt: 'تنبيهات سعر الشراء', away: 'بعيد',
     noPlan: 'مفيش أهداف في الخطة لسه — حطها من صفحة Accumulation.', best24: 'الأفضل 24س', worst24: 'الأسوأ 24س', best7: 'الأفضل 7 أيام', worst7: 'الأسوأ 7 أيام',
     mvT: 'الأفضل والأسوأ (عملاتك)', noStable: 'من غير الـ stablecoins', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل لـ BTC', hold: '⚪ احتفاظ',
-    vsAvg: 'مقابل متوسطك', mkT: 'السوق', topUp: 'أعلى 500 · الأفضل 24س', topDn: 'أعلى 500 · الأسوأ 24س', updated: 'اتحدّث', futures: 'Futures', yes: 'أيوه', private: '',
+    vsAvg: 'مقابل متوسطك', mkT: 'السوق', topUp: n => `أعلى ${n} · الأفضل 24س`, topDn: n => `أعلى ${n} · الأسوأ 24س`, stUp: 'bStocks · الأفضل 24س', stDn: 'bStocks · الأسوأ 24س', stNote: 'أسهم أمريكية مرمّزة (Binance)', updated: 'اتحدّث', futures: 'Futures', yes: 'أيوه', private: '',
     welcome: 'البوت اتوصل ✅\nبيرد عليك هنا في أي وقت. اضغط زرار تحت، أو ابعت رمز عملة زي <code>btc</code>.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
     today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل BTC', beat: (a, n) => `${a}/${n} عملة سبقت BTC`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
@@ -92,6 +92,9 @@ export async function getLang(env) {
   if (v === 'ar' || v === 'en') return v;
   return env.BOT_LANG === 'ar' ? 'ar' : 'en';
 }
+let memRange = null;
+async function getRange(env) { let v = memRange; try { if (env.RATE) v = +(await env.RATE.get('tg:mk')) || v; } catch (_) {} return RANGES.includes(+v) ? +v : 100; }
+async function setRange(env, v) { memRange = v; try { if (env.RATE) await env.RATE.put('tg:mk', String(v)); } catch (_) {} }
 async function setLang(env, v) { memLang = v; try { if (env.RATE) await env.RATE.put('tg:lang', v); } catch (_) {} }
 
 // ── views: each returns { text, buttons } ──
@@ -198,14 +201,22 @@ export function viewPlan(t, sum, now) {
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pl'), url(t.openApp, APP + 'accumulation.html')], [cb(t.back, 'menu')]] };
 }
 
-export function viewMarket(t, m, now) {
+// 🌍 the market: BTC, dominance, Fear & Greed…, then the best / worst 5 of the Top 100 · 200 · 300 · 500 (the buttons
+// switch; the choice is remembered), then the best / worst 5 Binance bStocks (tokenized US stocks)
+export const RANGES = [100, 200, 300, 500];
+export function viewMarket(t, m, now, range = 100) {
   const L = [`🌍 <b>${t.mkT}</b> · ${hm(now)}`, '', ...marketShort(t, m)];
-  const seen = new Set(), top = [...(m.top || []), ...(m.top500 || [])].filter(r => r.rank && r.rank <= 500 && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));   // the top 500 by market cap, once each
+  const seen = new Set(), top = [...(m.top || []), ...(m.top500 || [])].filter(r => r.rank && r.rank <= range && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));   // the top N by market cap, once each
   const line = r => row(r.sym, r.ch24, price(r.price));
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
-  if (up.length) L.push('', `📈 <b>${t.topUp}</b>`, ...up.map(line));
-  if (dn.length) L.push('', `📉 <b>${t.topDn}</b>`, ...dn.map(line));
-  return { text: L.join('\n'), buttons: [[cb(t.refresh, 'mk'), url('🧭 Market Hub', APP + 'market.html')], [cb(t.back, 'menu')]] };
+  if (up.length) L.push('', `📈 <b>${t.topUp(range)}</b>`, ...up.map(line));
+  if (dn.length) L.push('', `📉 <b>${t.topDn(range)}</b>`, ...dn.map(line));
+  const st = (m.stocks || []).filter(r => r.ch24 != null && r.price > 0);
+  if (st.length) {
+    const sUp = [...st].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...st].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
+    L.push('', `🏦 <b>${t.stUp}</b>`, ...sUp.map(line), '', `🏦 <b>${t.stDn}</b>`, ...sDn.map(line), `<i>${t.stNote}</i>`);
+  }
+  return { text: L.join('\n'), buttons: [RANGES.map(n => cb((n === range ? '✓ ' : '') + 'Top ' + n, 'mk:' + n)), [cb(t.refresh, 'mk:' + range), url('🧭 Market Hub', APP + 'market.html')], [cb(t.back, 'menu')]] };
 }
 
 export function viewCoin(t, coin, m, sum, now) {
@@ -289,7 +300,7 @@ async function buildView(env, act, arg) {
     return { t, views };
   }
   const m = await loadMarket([], mine);
-  if (act === 'mk') return { t, views: [viewMarket(t, m, now)] };
+  if (act === 'mk') return { t, views: [viewMarket(t, m, now, await getRange(env))] };
   const sum = summarize(withIds(user, m), m, now);
   if (act === 'pf') return { t, views: [viewPortfolio(t, cfg, sum, m, now)] };
   if (act === 'mv') return { t, views: [viewMovers(t, sum)] };
@@ -317,7 +328,8 @@ export async function handleTelegram(request, env) {
       // even when nothing changed (the message is the same → Telegram would show no change at all)
       const done = text => tg(env, 'answerCallbackQuery', { callback_query_id: q.id, ...(text ? { text } : {}) }).catch(() => {});
       if (/^lang:(ar|en)$/.test(d)) { await switchLang(env, chat, d.slice(5), q.message.message_id); await done(); return ok(); }
-      const { t, views } = d.startsWith('c:') ? await run(env, 'coinById', d.slice(2)) : await run(env, d);
+      if (/^mk:\d+$/.test(d) && RANGES.includes(+d.slice(3))) await setRange(env, +d.slice(3));   // Top 100 · 200 · 300 · 500
+      const { t, views } = d.startsWith('c:') ? await run(env, 'coinById', d.slice(2)) : await run(env, /^mk:/.test(d) ? 'mk' : d);
       const r = await edit(env, chat, q.message.message_id, views[0]);
       if (!r.ok && !/not modified/i.test(r.description || '')) await send(env, chat, views[0]);
       await done(`✅ ${t.updated} ${local(Date.now(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })}`);

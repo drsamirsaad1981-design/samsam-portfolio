@@ -54,7 +54,7 @@ export async function loadMarket(ids = [], coins = []) {
   const series = {};
   const need = ['bitcoin', ...all.filter(id => id !== 'bitcoin' && !byId.has(id)).slice(0, 10)];
   await Promise.all(need.map(async id => { const s = await cached('p:' + id, 10 * 60e3, async () => priceSeries(await getJson(RAW + 'p/' + id + '.json')) || false); if (s) series[id] = s; }));
-  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: CG_IDS, live: {}, idOf };
+  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: CG_IDS, live: {}, idOf, stocks: base.m.stocks || [] };
   await liveTopUp(market, all);
   // still no price (CoinGecko busy, not in the top 500, no price file) → the exchanges, by ticker (6 coins at most)
   const rows = new Map([...market.top, ...market.top500].map(r => [r.id, r]));
