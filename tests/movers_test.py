@@ -43,7 +43,7 @@ with sync_playwright() as p:
         pg.evaluate("setCatFilter('', true)"); pg.wait_for_timeout(200)
         pg.click('#moversCard .mv-half >> nth=0'); pg.wait_for_timeout(600)
         check(f'{name}: tapping the coin opens its transactions', pg.evaluate("location.hash") == '#holdings/' + exp['best'], pg.evaluate("location.hash"))
-        pg.evaluate("history.back()"); pg.wait_for_timeout(300); pg.evaluate("history.back()"); pg.wait_for_timeout(300)
+        pg.evaluate("history.back()"); pg.wait_for_timeout(400)   # one step: the coin opens straight over Overview (no Holdings list in between)
         # performance page
         pg.goto(S.SITE + '/performance.html'); S.wait_ready(pg); pg.wait_for_timeout(2500)
         e = pg.evaluate("""(() => { const tot = portfolio.reduce((s, c) => s + c.qty * c.currentPrice, 0), min = Math.max(1, tot * 0.001);
