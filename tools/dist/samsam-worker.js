@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 6ce121632ff8e068
+// sources-hash: 697b2f3a3401b8b2
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -978,7 +978,7 @@ var T = {
     mkT: "\u0627\u0644\u0633\u0648\u0642",
     topUp: "\u0623\u0639\u0644\u0649 500 \xB7 \u0627\u0644\u0623\u0641\u0636\u0644 24\u0633",
     topDn: "\u0623\u0639\u0644\u0649 500 \xB7 \u0627\u0644\u0623\u0633\u0648\u0623 24\u0633",
-    updated: "\u062A\u062D\u062F\u064A\u062B",
+    updated: "\u0627\u062A\u062D\u062F\u0651\u062B",
     futures: "Futures",
     yes: "\u0623\u064A\u0648\u0647",
     private: "",
@@ -1271,19 +1271,23 @@ async function handleTelegram(request, env) {
   try {
     if (q) {
       const d = String(q.data || "");
-      await tg(env, "answerCallbackQuery", { callback_query_id: q.id }).catch(() => {
+      const done = (text) => tg(env, "answerCallbackQuery", { callback_query_id: q.id, ...text ? { text } : {} }).catch(() => {
       });
       if (/^lang:(ar|en)$/.test(d)) {
         await switchLang(env, chat, d.slice(5), q.message.message_id);
+        await done();
         return ok();
       }
-      const { views: views2 } = d.startsWith("c:") ? await run(env, "coinById", d.slice(2)) : await run(env, d);
+      const { t: t2, views: views2 } = d.startsWith("c:") ? await run(env, "coinById", d.slice(2)) : await run(env, d);
       const r = await edit(env, chat, q.message.message_id, views2[0]);
       if (!r.ok && !/not modified/i.test(r.description || "")) await send(env, chat, views2[0]);
+      await done(`\u2705 ${t2.updated} ${local(Date.now(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })}`);
       return ok();
     }
     if (!msg || typeof msg.text !== "string") return ok();
     const p = parse(msg.text);
+    tg(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
+    });
     if (/^lang:(ar|en)$/.test(p.act)) {
       await switchLang(env, chat, p.act.slice(5));
       return ok();

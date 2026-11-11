@@ -53,7 +53,7 @@ const T = {
     planT: 'خطة التجميع', overall: 'الإجمالي', done: 'تم', left: 'باقي', dca: 'الشراء المنتظم (DCA)', next: 'التالي', buyAt: 'تنبيهات سعر الشراء', away: 'بعيد',
     noPlan: 'مفيش أهداف في الخطة لسه — حطها من صفحة Accumulation.', best24: 'الأفضل 24س', worst24: 'الأسوأ 24س', best7: 'الأفضل 7 أيام', worst7: 'الأسوأ 7 أيام',
     mvT: 'الأفضل والأسوأ (عملاتك)', noStable: 'من غير الـ stablecoins', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل لـ BTC', hold: '⚪ احتفاظ',
-    vsAvg: 'مقابل متوسطك', mkT: 'السوق', topUp: 'أعلى 500 · الأفضل 24س', topDn: 'أعلى 500 · الأسوأ 24س', updated: 'تحديث', futures: 'Futures', yes: 'أيوه', private: '',
+    vsAvg: 'مقابل متوسطك', mkT: 'السوق', topUp: 'أعلى 500 · الأفضل 24س', topDn: 'أعلى 500 · الأسوأ 24س', updated: 'اتحدّث', futures: 'Futures', yes: 'أيوه', private: '',
     welcome: 'البوت اتوصل ✅\nبيرد عليك هنا في أي وقت. اضغط زرار تحت، أو ابعت رمز عملة زي <code>btc</code>.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
     today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل BTC', beat: (a, n) => `${a}/${n} عملة سبقت BTC`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
@@ -296,15 +296,19 @@ export async function handleTelegram(request, env) {
   try {
     if (q) {
       const d = String(q.data || '');
-      await tg(env, 'answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});   // stops the button's spinner
-      if (/^lang:(ar|en)$/.test(d)) { await switchLang(env, chat, d.slice(5), q.message.message_id); return ok(); }
-      const { views } = d.startsWith('c:') ? await run(env, 'coinById', d.slice(2)) : await run(env, d);
+      // the button keeps its little spinner while the numbers load; when done, a short note says so — so one tap is enough,
+      // even when nothing changed (the message is the same → Telegram would show no change at all)
+      const done = text => tg(env, 'answerCallbackQuery', { callback_query_id: q.id, ...(text ? { text } : {}) }).catch(() => {});
+      if (/^lang:(ar|en)$/.test(d)) { await switchLang(env, chat, d.slice(5), q.message.message_id); await done(); return ok(); }
+      const { t, views } = d.startsWith('c:') ? await run(env, 'coinById', d.slice(2)) : await run(env, d);
       const r = await edit(env, chat, q.message.message_id, views[0]);
       if (!r.ok && !/not modified/i.test(r.description || '')) await send(env, chat, views[0]);
+      await done(`✅ ${t.updated} ${local(Date.now(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })}`);
       return ok();
     }
     if (!msg || typeof msg.text !== 'string') return ok();
     const p = parse(msg.text);
+    tg(env, 'sendChatAction', { chat_id: chat, action: 'typing' }).catch(() => {});   // "typing…" while the numbers load
     if (/^lang:(ar|en)$/.test(p.act)) { await switchLang(env, chat, p.act.slice(5)); return ok(); }
     const { t, views } = await run(env, p.act, p.q);
     if (/^\/start/.test(msg.text)) await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });   // the keyboard under the chat

@@ -123,6 +123,7 @@ check('one Google sign-in for several questions (token cached)', tokenCalls === 
 sent.length = 0; await tap('mv');
 v = last();
 check('tap Best & worst → the same message is edited (no new message)', v.m === 'editMessageText' && v.b.message_id === 42 && sent.some(x => x.m === 'answerCallbackQuery'));
+check('…and the button answers AFTER the edit with "✅ Updated hh:mm:ss" (one tap is enough)', sent.findIndex(x => x.m === 'answerCallbackQuery') > sent.findIndex(x => x.m === 'editMessageText') && /^✅ Updated \d\d:\d\d:\d\d$/.test(sent.find(x => x.m === 'answerCallbackQuery').b.text), sent.map(x => x.m));
 check('best & worst: never a stablecoin (USDT bought at $0.50 is +100%)', !/USDT/.test(v.b.text) && /SOL|LINK/.test(v.b.text) && /stablecoins left out/.test(v.b.text), v.b.text);
 check('best & worst: Telegram-safe', okHtml(v.b.text), v.b.text);
 sent.length = 0; await tap('pf');
@@ -178,6 +179,7 @@ check('signals: grouped, Telegram-safe', /Signals/.test(last().b.text) && okHtml
 sent.length = 0; await say('/start');
 check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent && btnTexts(out()[1]).length === 8 && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
 sent.length = 0; await say('💼 Portfolio');
+check('a typed message shows "typing…" first', sent[0] && sent[0].m === 'sendChatAction' && sent[0].b.action === 'typing', sent.slice(0, 2).map(x => x.m));
 check('the keyboard button "💼 Portfolio" → the portfolio', last().b.text.includes(fmt2(sum.value)));
 sent.length = 0; await say('what do you think about the market this week?');
 check('free text → "plain words arrive in the next phase" + menu (no crash)', /next phase/.test(last().b.text) && btnTexts(last()).length === 8, last().b.text);
