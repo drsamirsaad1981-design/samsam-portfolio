@@ -5,18 +5,18 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202611112121"></script>
-<script src="samsam-hints.js?v=202611112121"></script>
-<script src="samsam-vault.js?v=202611112121"></script>
-<script src="samsam-labels.js?v=202611112121"></script>
-<script src="samsam-taxonomy.js?v=202611112121"></script>
-<script src="samsam-dropdown.js?v=202611112121"></script>
-<script src="samsam-coins.js?v=202611112121"></script>
-<script src="samsam-import.js?v=202611112121"></script>
-<script src="samsam-wallets.js?v=202611112121"></script>
-<script src="samsam-rewards.js?v=202611112121"></script>
-<script src="samsam-settings.js?v=202611112121"></script>
-<script src="samsam-chart.js?v=202611112121"></script>
+<script src="samsam-ui.js?v=202611112338"></script>
+<script src="samsam-hints.js?v=202611112338"></script>
+<script src="samsam-vault.js?v=202611112338"></script>
+<script src="samsam-labels.js?v=202611112338"></script>
+<script src="samsam-taxonomy.js?v=202611112338"></script>
+<script src="samsam-dropdown.js?v=202611112338"></script>
+<script src="samsam-coins.js?v=202611112338"></script>
+<script src="samsam-import.js?v=202611112338"></script>
+<script src="samsam-wallets.js?v=202611112338"></script>
+<script src="samsam-rewards.js?v=202611112338"></script>
+<script src="samsam-settings.js?v=202611112338"></script>
+<script src="samsam-chart.js?v=202611112338"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -749,7 +749,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202611112121"></script>
+<script type="module" src="samsam-cloud.js?v=202611112338"></script>
 <script>
 // ── Constants ──
 
@@ -1089,7 +1089,7 @@ const sortKey = () => sortMode === 'value' ? 'value' : (pnlUnit === 'pct' ? 'pct
 // ── Best / worst performer: since purchase ($ · %) and vs BTC; tiny holdings left out ──
 // BTC reference price = BTC on the baseline date (a cloud setting, changed on the main page) — same as "Portfolio vs BTC" there.
 function baselineNow() { try { if (window.Samsam && Samsam.getBaseline) return Samsam.getBaseline(); } catch (_) {} return { date: '2026-10-15', btcPrice: 81162 }; }
-// One card, two rankings — each computed on its own over every coin (tiny holdings left out):
+// One card, two rankings — each computed on its own over every coin (tiny holdings and stablecoins left out):
 //   USD    → All Time Profit in $ (sells included)
 //   vs BTC → coin's profit % minus what the same dollars, put into BTC at each buy/sell, would have made (samsam-core.js → vsBtcByCoin)
 let moverMode = (() => { try { return localStorage.getItem('perfMoverMode') === 'btc' ? 'btc' : 'usd'; } catch (_) { return 'usd'; } })();
@@ -1107,7 +1107,7 @@ function renderPerfMovers(rows, totalValue) {
   const head = { title: 'Top Performers', hint: moverMode === 'btc' ? 'vsBtc' : 'sincePurchase', extra: seg };
   const host = document.getElementById('moversOne');
   if (moverMode === 'usd') {
-    const usdRows = rows.filter(r => r.cost > 0).map(r => ({ sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: r.pnl, pct: r.pct }));
+    const usdRows = rows.filter(r => r.cost > 0).map(r => ({ sym: r.c.sym, name: r.c.name, logoUrl: r.c.logoUrl, value: r.value, score: r.pnl, pct: r.pct }));
     const m = C.pickMovers(usdRows, totalValue);
     const half = (label, r) => r ? { label, row: r, pct: r.score, text: money(r.score), text2: `• ${C.signedPct(r.pct)}`, onClickJs: open(r.sym) } : { label };
     host.innerHTML = m ? C.moversCard({ head, best: half('Best Performer', m.best), worst: half('Worst Performer', m.worst) })
@@ -1118,7 +1118,7 @@ function renderPerfMovers(rows, totalValue) {
   const bl = baselineNow(), st = window.Samsam && Samsam.isReady() ? Samsam.getState() : null;
   const prices = {}; rows.forEach(r => { prices[r.c.sym] = r.currentPrice; });
   const vs = st && btc > 0 ? Samsam.core.vsBtcByCoin(st.coins, st.transactions, { prices, btcNow: btc, btcAt: Samsam.core.btcPriceLookup(st.perfSnaps), baselineBtc: bl.btcPrice }) : {};
-  const vsRows = rows.filter(r => r.cost > 0 && r.c.sym !== 'BTC' && vs[r.c.sym]).map(r => ({ sym: r.c.sym, logoUrl: r.c.logoUrl, value: r.value, score: vs[r.c.sym].pct, own: vs[r.c.sym].coinPct, btcSame: vs[r.c.sym].btcPct }));
+  const vsRows = rows.filter(r => r.cost > 0 && r.c.sym !== 'BTC' && vs[r.c.sym]).map(r => ({ sym: r.c.sym, name: r.c.name, logoUrl: r.c.logoUrl, value: r.value, score: vs[r.c.sym].pct, own: vs[r.c.sym].coinPct, btcSame: vs[r.c.sym].btcPct }));
   const m = C.pickMovers(vsRows, totalValue);
   const half = (label, r) => r ? { label, row: r, pct: r.score, text: C.signedPct(r.score, 1), text2: 'vs BTC', split: [['Coin', C.signedPct(r.own, 1)], ['BTC Benchmark', C.signedPct(r.btcSame, 1)]], onClickJs: open(r.sym) } : { label };
   host.innerHTML = m ? C.moversCard({ head, best: half('Best Performer', m.best), worst: half('Worst Performer', m.worst) })

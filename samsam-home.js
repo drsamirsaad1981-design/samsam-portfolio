@@ -564,7 +564,7 @@ function renderMovers() {
   const C = SamsamCoins, T = SamsamTaxonomy;
   const total = portfolio.reduce((s, c) => s + c.qty * c.currentPrice, 0);
   const rows = portfolio.filter(c => !activeCatFilter || (c.cat || 'other') === activeCatFilter)
-    .map(c => ({ sym: c.sym, logoUrl: c.logoUrl, value: c.qty * c.currentPrice, score: typeof c.change24h === 'number' ? c.change24h : NaN }));
+    .map(c => ({ sym: c.sym, name: c.name, logoUrl: c.logoUrl, value: c.qty * c.currentPrice, score: typeof c.change24h === 'number' ? c.change24h : NaN }));
   const m = C.pickMovers(rows, total);
   const head = { title: "Today's Movers", badge: '24h · ' + (activeCatFilter ? T.label(activeCatFilter) : 'All Coins'), hint: 'movers24h' };
   if (!m) { host.innerHTML = C.moversCard({ head, empty: activeCatFilter ? `No 24h price changes yet for ${T.label(activeCatFilter)}.` : 'Best and worst performer appear once live prices load.' }); return; }
