@@ -148,9 +148,12 @@ cgDown = false;
 // ── market, plan, signals, menu ──
 sent.length = 0; await say('/market');
 v = last();
-check('market: BTC, dominance, Fear & Greed, top 100 best / worst', /BTC/.test(v.b.text) && /Fear/.test(v.b.text) && /Top 100 · best 24h/.test(v.b.text), v.b.text.slice(0, 300));
+check('market: BTC, dominance, Fear & Greed, top 100 best / worst', /BTC/.test(v.b.text) && /Fear/.test(v.b.text) && /Top 500 · best 24h/.test(v.b.text), v.b.text.slice(0, 300));
 const tops = [...v.b.text.matchAll(/<code>(\S+)\s/g)].map(x => x[1]);
 check('market best / worst: no stablecoins', tops.length > 0 && !tops.some(isStable), tops);
+const T5 = [...market.top, ...top500.top].filter((r, i, a) => r.rank <= 500 && r.ch24 != null && !isStable(r.sym) && a.findIndex(x => x.id === r.id) === i).map(r => ({ ...r, ch24: LIVE[r.id] ? LIVE[r.id].usd_24h_change : r.ch24 }));
+const best5 = [...T5].sort((a, b) => b.ch24 - a.ch24).slice(0, 5).map(r => r.sym.toUpperCase()), worst5 = [...T5].sort((a, b) => a.ch24 - b.ch24).slice(0, 5).map(r => r.sym.toUpperCase());
+check(`market: top 500, 5 best ${best5} + 5 worst ${worst5}`, /Top 500 · best 24h/.test(v.b.text) && JSON.stringify(tops) === JSON.stringify([...best5, ...worst5]), { tops, best5, worst5 });
 check('market: Telegram-safe', okHtml(v.b.text), v.b.text);
 sent.length = 0; await say('/plan');
 v = last();

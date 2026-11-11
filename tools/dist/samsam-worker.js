@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 862dfb4a2f5c0f3b
+// sources-hash: 755ffaf83305efbd
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1106,8 +1106,8 @@ var T = {
     hold: "\u26AA Hold",
     vsAvg: "vs your avg",
     mkT: "Market",
-    topUp: "Top 100 \xB7 best 24h",
-    topDn: "Top 100 \xB7 worst 24h",
+    topUp: "Top 500 \xB7 best 24h",
+    topDn: "Top 500 \xB7 worst 24h",
     updated: "Updated",
     futures: "Futures",
     yes: "yes",
@@ -1173,8 +1173,8 @@ var T = {
     hold: "\u26AA \u0627\u062D\u062A\u0641\u0627\u0638",
     vsAvg: "\u0645\u0642\u0627\u0628\u0644 \u0645\u062A\u0648\u0633\u0637\u0643",
     mkT: "\u0627\u0644\u0633\u0648\u0642",
-    topUp: "\u0623\u0639\u0644\u0649 100 \xB7 \u0627\u0644\u0623\u0641\u0636\u0644 24\u0633",
-    topDn: "\u0623\u0639\u0644\u0649 100 \xB7 \u0627\u0644\u0623\u0633\u0648\u0623 24\u0633",
+    topUp: "\u0623\u0639\u0644\u0649 500 \xB7 \u0627\u0644\u0623\u0641\u0636\u0644 24\u0633",
+    topDn: "\u0623\u0639\u0644\u0649 500 \xB7 \u0627\u0644\u0623\u0633\u0648\u0623 24\u0633",
     updated: "\u062A\u062D\u062F\u064A\u062B",
     futures: "Futures",
     yes: "\u0623\u064A\u0648\u0647",
@@ -1279,9 +1279,9 @@ ${t.noPlan}`, buttons: [[url(t.openApp, APP + "accumulation.html"), cb(t.back, "
 }
 function viewMarket(t, m, now) {
   const L = [`\u{1F30D} <b>${t.mkT}</b> \xB7 ${local(now, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`, "", ...marketLines(W[t === T.ar ? "ar" : "en"], m)];
-  const top = (m.top || []).filter((r) => r.rank && r.rank <= 100 && r.ch24 != null && !isStable(r.sym));
+  const seen = /* @__PURE__ */ new Set(), top = [...m.top || [], ...m.top500 || []].filter((r) => r.rank && r.rank <= 500 && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
   const line = (r) => `<code>${esc(String(r.sym).toUpperCase().padEnd(6))} ${pct(r.ch24, 1).padStart(7)}</code>  ${price(r.price)}`;
-  const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 4), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 4);
+  const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
   if (up.length) L.push("", `\u{1F4C8} <b>${t.topUp}</b>`, ...up.map(line));
   if (dn.length) L.push("", `\u{1F4C9} <b>${t.topDn}</b>`, ...dn.map(line));
   return { text: L.join("\n"), buttons: [[cb(t.refresh, "mk"), url("\u{1F9ED} Market Hub", APP + "market.html")], [cb(t.back, "menu")]] };

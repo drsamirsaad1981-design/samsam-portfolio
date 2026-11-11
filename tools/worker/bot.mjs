@@ -31,7 +31,7 @@ const T = {
     planT: 'Accumulation plan', overall: 'Overall', done: 'done', left: 'left', dca: 'Regular buys (DCA)', next: 'next', buyAt: 'Buy-price alerts', away: 'away',
     noPlan: 'No plan targets yet — set them on the Accumulation page.', best24: 'Best 24h', worst24: 'Worst 24h', best7: 'Best 7d', worst7: 'Worst 7d',
     mvT: 'Best & worst (your coins)', noStable: 'stablecoins left out', sigT: 'Signals', reinforce: '🟢 Reinforce', sell: '🔴 Sell / convert to BTC', hold: '⚪ Hold',
-    vsAvg: 'vs your avg', mkT: 'Market', topUp: 'Top 100 · best 24h', topDn: 'Top 100 · worst 24h', updated: 'Updated', futures: 'Futures', yes: 'yes', private: '',
+    vsAvg: 'vs your avg', mkT: 'Market', topUp: 'Top 500 · best 24h', topDn: 'Top 500 · worst 24h', updated: 'Updated', futures: 'Futures', yes: 'yes', private: '',
     welcome: 'Your bot is connected ✅\nIt answers here any time. Tap a button below, or send a ticker like <code>btc</code>.',
     other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅',
     kb: { pf: '💼 Portfolio', market: '🌍 Market', plan: '📋 Plan', movers: '🏆 Best & worst' },
@@ -47,7 +47,7 @@ const T = {
     planT: 'خطة التجميع', overall: 'الإجمالي', done: 'تم', left: 'باقي', dca: 'الشراء المنتظم (DCA)', next: 'التالي', buyAt: 'تنبيهات سعر الشراء', away: 'بعيد',
     noPlan: 'مفيش أهداف في الخطة لسه — حطها من صفحة Accumulation.', best24: 'الأفضل 24س', worst24: 'الأسوأ 24س', best7: 'الأفضل 7 أيام', worst7: 'الأسوأ 7 أيام',
     mvT: 'الأفضل والأسوأ (عملاتك)', noStable: 'من غير الـ stablecoins', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل لـ BTC', hold: '⚪ احتفاظ',
-    vsAvg: 'مقابل متوسطك', mkT: 'السوق', topUp: 'أعلى 100 · الأفضل 24س', topDn: 'أعلى 100 · الأسوأ 24س', updated: 'تحديث', futures: 'Futures', yes: 'أيوه', private: '',
+    vsAvg: 'مقابل متوسطك', mkT: 'السوق', topUp: 'أعلى 500 · الأفضل 24س', topDn: 'أعلى 500 · الأسوأ 24س', updated: 'تحديث', futures: 'Futures', yes: 'أيوه', private: '',
     welcome: 'البوت اتوصل ✅\nبيرد عليك هنا في أي وقت. اضغط زرار تحت، أو ابعت رمز عملة زي <code>btc</code>.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅',
     kb: { pf: '💼 محفظتي', market: '🌍 السوق', plan: '📋 الخطة', movers: '🏆 الأفضل والأسوأ' },
@@ -136,9 +136,9 @@ export function viewPlan(t, sum, now) {
 
 export function viewMarket(t, m, now) {
   const L = [`🌍 <b>${t.mkT}</b> · ${local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`, '', ...marketLines(W[t === T.ar ? 'ar' : 'en'], m)];
-  const top = (m.top || []).filter(r => r.rank && r.rank <= 100 && r.ch24 != null && !isStable(r.sym));
+  const seen = new Set(), top = [...(m.top || []), ...(m.top500 || [])].filter(r => r.rank && r.rank <= 500 && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));   // the top 500 by market cap, once each
   const line = r => `<code>${esc(String(r.sym).toUpperCase().padEnd(6))} ${pct(r.ch24, 1).padStart(7)}</code>  ${price(r.price)}`;
-  const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 4), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 4);
+  const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
   if (up.length) L.push('', `📈 <b>${t.topUp}</b>`, ...up.map(line));
   if (dn.length) L.push('', `📉 <b>${t.topDn}</b>`, ...dn.map(line));
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'mk'), url('🧭 Market Hub', APP + 'market.html')], [cb(t.back, 'menu')]] };
