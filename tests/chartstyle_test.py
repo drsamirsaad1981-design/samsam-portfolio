@@ -16,17 +16,7 @@ with sync_playwright() as p:
             pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(1500)
             pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')")
             check(f'{vn}/{theme}: Home cards have no value card (they open their page on a tap)', pg.evaluate("!document.querySelector('#holdingsCanvas').parentElement.querySelector('.cpc-tip') && !document.querySelector('#perfChartCanvas').parentElement.querySelector('.cpc-tip')"))
-            # Holdings
-            pg.evaluate("SamsamUI.ptabGo('holdings')"); pg.wait_for_timeout(1200)
-            pg.click('#holdingsOverlay .hov-tab:nth-child(3)'); pg.wait_for_timeout(600)
-            c = pg.locator('#hovCanvas'); c.scroll_into_view_if_needed(); bb = c.bounding_box()
-            if vn == 'phone': pg.touchscreen.tap(bb['x'] + bb['width'] * .55, bb['y'] + bb['height'] / 2)
-            else: pg.mouse.move(bb['x'] + bb['width'] * .55, bb['y'] + bb['height'] / 2)
-            pg.wait_for_timeout(250)
-            t = pg.evaluate("(()=>{const t=document.querySelector('#holdingsOverlay .cpc-tip'); return t ? {on: getComputedStyle(t).display, txt: t.innerText} : null})()")
-            check(f'{vn}/{theme}: Holdings chart — crosshair card with the date and the value {t}', t and t['on'] == 'block' and 'Portfolio $' in t['txt'] and ', 20' in t['txt'], t)
-            pg.screenshot(path=str(SH / f'cs_hold_{vn}_{theme}.png'), clip={'x': 0, 'y': max(0, bb['y'] - 150), 'width': vp['viewport']['width'], 'height': bb['height'] + 230})
-            pg.evaluate("hovBack()"); pg.wait_for_timeout(400)
+            # (the Holdings screen and its big chart were dropped)
             # Performance
             pg.evaluate("SamsamUI.ptabGo('performance')"); pg.wait_for_timeout(2000)
             fr = pg.frame(url=lambda u: 'performance.html' in u); fr.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')")
