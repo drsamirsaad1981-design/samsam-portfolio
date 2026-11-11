@@ -33,6 +33,7 @@ jobs:
         run: |
           # a key pasted with a line break, spaces, quotes or "Bearer" in front still works
           CLOUDFLARE_API_TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d ' \r\n\t"' | sed 's/^Bearer//; s/^Authorization://')
+          case "$CLOUDFLARE_API_TOKEN" in *cfat_*) CLOUDFLARE_API_TOKEN=$(printf '%s' "$CLOUDFLARE_API_TOKEN" | grep -o 'cfat_[A-Za-z0-9_-]*' | head -1);; esac   # the whole curl example pasted → just the key
           export CLOUDFLARE_API_TOKEN
           case "$CLOUDFLARE_API_TOKEN" in cfat_*) K=yes;; *) K=no;; esac   # its shape only — never the key itself
           echo "key: ${#CLOUDFLARE_API_TOKEN} characters, starts with cfat_: $K, $(printf '%s' "$CLOUDFLARE_API_TOKEN" | grep -o 'cfat_' | wc -l) × cfat_, other characters: $(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d 'A-Za-z0-9_-' | wc -c)"
