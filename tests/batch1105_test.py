@@ -16,12 +16,7 @@ with sync_playwright() as p:
             pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')"); pg.evaluate("applyView('table')"); pg.wait_for_timeout(400)
             l = pg.evaluate(LINE, '#portfolioTable tbody td:first-child'); h = pg.evaluate(LINE, '#portfolioTable thead th:first-child')
             check(f'{vn}/{theme}: Home — Asset column without the divider line {l} {h}', l[0] == 'none' and h[0] == 'none', (l, h))
-            # Holdings: Add in the card
-            pg.evaluate("SamsamUI.ptabGo('holdings')"); pg.wait_for_timeout(1300)
-            card = pg.locator('.hov-value-card'); bb = card.bounding_box()
-            pg.screenshot(path=str(SH / f'b1105_hold_{vn}_{theme}.png'), clip={'x': bb['x'] - 4, 'y': max(0, bb['y'] - 4), 'width': min(bb['width'] + 8, vp['viewport']['width'] - bb['x'] + 4), 'height': 170})
-            check(f'{vn}/{theme}: Holdings Add visible in the card', pg.is_visible('.hov-value-card #hovAddBtn'))
-            pg.evaluate("hovBack && hovBack()"); pg.wait_for_timeout(300)
+            # (Holdings and its Add-in-the-card were dropped)
             # Accumulation
             pg.goto(S.SITE + '/accumulation.html'); pg.wait_for_function("window.Samsam && Samsam.isReady()"); pg.wait_for_timeout(1000)
             pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')"); pg.evaluate("setView('table')"); pg.wait_for_timeout(300)
