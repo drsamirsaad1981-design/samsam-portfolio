@@ -13,25 +13,15 @@ with sync_playwright() as p:
         pg = ctx.new_page(); pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(1500)
         check(f'{name}: home — no Holdings Add', not pg.is_visible('#hovAddBtn'))
-        # Holdings
-        pg.evaluate("SamsamUI.ptabGo('holdings')"); pg.wait_for_timeout(1200)
+        # Allocation (the screen Holdings used to share)
+        pg.evaluate("SamsamUI.ptabGo('allocation')"); pg.wait_for_timeout(1200)
         h = pg.evaluate("""(() => { const hd = document.querySelector('#holdingsOverlay .cp-head');
           return [hd.querySelectorAll('[data-theme-toggle]').length, hd.querySelectorAll('.ss-sync-hdr').length, !!hd.querySelector('.cp-add')]; })()""")
-        check(f'{name}: Holdings header — cloud + light/dark, no Add in the bar {h}', h == [1, 1, False], h)
-        f = pg.evaluate("""(() => { const b = document.getElementById('hovAddBtn'), r = b.getBoundingClientRect(), card = document.querySelector('.hov-value-card').getBoundingClientRect(),
-          lab = document.querySelector('.hov-page-label').getBoundingClientRect(), tot = (()=>{const rg=document.createRange(); rg.selectNodeContents(document.getElementById('hovTotal')); return rg.getBoundingClientRect()})(), cs = getComputedStyle(b),
-          c = getComputedStyle(document.getElementById('cpAiFab'));
-          return { vis: cs.display !== 'none' && r.width > 0, inCard: b.closest('.hov-value-card') !== null, fixed: cs.position === 'fixed', gapTop: Math.round(r.top - card.top), gapRight: Math.round(card.right - r.right),
-            sameRowAsLabel: r.top <= lab.bottom && r.bottom >= lab.top, overlapTotal: r.bottom > tot.top + 1, wideTotalFits: true, txt: b.innerText.trim(), svg: !!b.querySelector('svg'), cls: b.className,
-            aiPlain: c.backgroundColor === 'rgba(0, 0, 0, 0)' && c.backdropFilter === 'none', aiEyes: !!document.querySelector('#cpAiFab svg') }; })()""")
-        check(f'{name}: Add inside the Portfolio Value card, top right {f}', f['vis'] and f['inCard'] and not f['fixed'] and 6 <= f['gapTop'] <= 20 and 6 <= f['gapRight'] <= 20 and f['sameRowAsLabel'], f)
-        check(f'{name}: Add — the app violet + Add button, clear of the total', 'cp-add' in f['cls'] and f['svg'] and f['txt'] == 'Add' and not f['overlapTotal'], f)
-        check(f'{name}: no floating Add any more; AI button the plain logo', not pg.evaluate("!!document.querySelector('.cp-addfab')") and f['aiPlain'] and f['aiEyes'], f)
-        pg.click('#hovAddBtn'); pg.wait_for_timeout(500)
-        check(f'{name}: tap → Add Coin opens', pg.evaluate("document.getElementById('addCoinModal') && document.getElementById('addCoinModal').classList.contains('show')"))
-        pg.evaluate("closeAddCoin()"); pg.wait_for_timeout(300)
+        check(f'{name}: Allocation header — cloud + light/dark, no Add in the bar {h}', h == [1, 1, False], h)
+        # (the Holdings screen and its Portfolio Value card with ➕ Add were dropped — the main page keeps its Add)
+        c = pg.evaluate("(() => { const c = getComputedStyle(document.getElementById('cpAiFab')); return [c.backgroundColor === 'rgba(0, 0, 0, 0)' && c.backdropFilter === 'none', !!document.querySelector('#cpAiFab svg')]; })()")
+        check(f'{name}: no floating Add any more; AI button the plain logo', not pg.evaluate("!!document.querySelector('.cp-addfab')") and all(c), c)
         pg.evaluate("openCoinTx(portfolio[0].sym)"); pg.wait_for_timeout(700)
-        check(f'{name}: inside a coin — no Add (it has Add Transaction)', not pg.is_visible('#hovAddBtn'))
         pg.evaluate("hovBack()"); pg.wait_for_timeout(300); pg.evaluate("SamsamUI.ptabGo('overview')"); pg.wait_for_timeout(700)
         check(f'{name}: back home — Holdings Add not shown', not pg.is_visible('#hovAddBtn'))
         # pages in the app: buttons + theme from there
