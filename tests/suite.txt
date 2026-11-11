@@ -126,3 +126,4 @@ wallets_test.py
 pay_from_test.py
 pwa_rewards_test.py
 auto_stake_test.py
+hv_chart_test.py

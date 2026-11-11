@@ -129,7 +129,7 @@
 <!-- ── Main trio: Holdings · Allocation · Performance — one equal grid ── -->
 <div class="main-trio" id="mainTrio">
 <!-- ── Holdings Chart Card ── -->
-<div class="holdings-card card-tap" id="holdingsCard" onclick="SamsamUI.ptabGo('performance')" role="link" tabindex="0" aria-label="Holdings — open Performance" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();SamsamUI.ptabGo('performance')}" style="cursor:pointer">
+<div class="holdings-card card-tap" id="holdingsCard" onclick="openHoldingsChart()" role="link" tabindex="0" aria-label="Holdings — open the Portfolio Value chart (Performance)" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();openHoldingsChart()}" style="cursor:pointer">
   <div class="holdings-header">
     <div>
       <div class="holdings-title"><span class="card-ic" data-nav-ic="holdings" data-nav-size="16" aria-hidden="true"></span>Holdings</div>

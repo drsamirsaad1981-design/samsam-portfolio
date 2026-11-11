@@ -132,6 +132,19 @@ body {
 .pcc-tabs button { border: none; background: transparent; color: var(--fg2); font: inherit; font-size: .74rem; font-weight: 700; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
 .pcc-tabs button[aria-pressed="true"] { background: var(--card); color: var(--fg); box-shadow: var(--shadow); }
 .pcc-canvas-wrap { width: 100%; min-width: 0; }
+/* Total Value card → tap opens the Portfolio Value chart under the two cards (the old Holdings chart) */
+#tvCard { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: box-shadow .15s, transform .1s; }
+#tvCard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#tvCard[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+@media (hover:hover) { #tvCard:hover { box-shadow: 0 0 0 1px var(--accent), var(--shadow); } #tvCard[aria-expanded="true"]:hover { box-shadow: 0 0 0 2px var(--accent), var(--shadow); } }
+#tvCard:active { transform: scale(.99); }
+.tv-chev { display: inline-flex; vertical-align: -2px; margin-left: 4px; color: var(--fg2); transition: transform .2s; }
+.tv-chev svg { width: 12px; height: 12px; }
+#tvCard[aria-expanded="true"] .tv-chev { transform: rotate(180deg); color: var(--accent); }
+.hv-card[hidden] { display: none; }
+.hv-val { font-size: 1.7rem; font-weight: 800; color: var(--fg); line-height: 1.15; padding: 0 4px; letter-spacing: -.01em; }
+.hv-chg { font-size: .8rem; font-weight: 700; padding: 2px 4px 6px; }
+.hv-chg.pos { color: var(--green); } .hv-chg.neg { color: var(--red); }
 .pcc-canvas-wrap canvas { display: block; }
 .pcc-empty { padding: 40px 10px; text-align: center; color: var(--fg2); font-size: .85rem; }
 .pcc-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; padding: 0 4px; font-size: .8rem; color: var(--fg2); font-weight: 600; }
@@ -623,9 +636,9 @@ body {
 <div class="cp-ptabs-host pf-ptabs" data-ptabs="performance"></div>
 <div class="summary">
   <div class="summary-cards">
-    <div class="sum-card">
+    <div class="sum-card" id="tvCard" role="button" tabindex="0" aria-expanded="false" aria-controls="hvCard" title="Show the Portfolio Value chart">
       <span class="sum-card-icon" data-ic="briefcase" data-ic-solo data-ic-size="22"></span>
-      <div class="sum-label">Total Value</div>
+      <div class="sum-label">Total Value<span class="tv-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
       <div class="sum-value" id="totalValue">—</div>
       <div id="costBasis" class="sum-sub-cost">Cost: —</div>
       <svg class="sum-sparkline" viewBox="0 0 100 40" preserveAspectRatio="none">
@@ -642,6 +655,22 @@ body {
         <polyline fill="none" stroke="currentColor" stroke-width="3"
           points="0,35 15,28 30,32 45,18 60,22 75,12 90,16 100,8"/>
       </svg>
+    </div>
+
+    <!-- ── Portfolio Value chart (was the Holdings screen): opens from the Total Value card ── -->
+    <div class="perf-chart-card hv-card" id="hvCard" hidden>
+      <div class="pcc-head">
+        <div class="pnl-bd-title" style="margin:0"><span data-ic="briefcase"></span>Portfolio Value<button type="button" class="cp-hint" data-hint="holdingsChange" aria-label="About the holdings change"></button></div>
+        <div class="pcc-tabs" role="tablist" aria-label="Portfolio Value range">
+          <button type="button" data-hr="24h" aria-pressed="true">24h</button><button type="button" data-hr="7d">7d</button>
+          <button type="button" data-hr="30d">30d</button><button type="button" data-hr="90d">90d</button>
+          <button type="button" data-hr="all">All</button>
+        </div>
+      </div>
+      <div class="hv-val" id="hvVal">—</div>
+      <div class="hv-chg" id="hvChg"></div>
+      <div class="pcc-canvas-wrap"><canvas id="hvCanvas"></canvas></div>
+      <div class="pcc-empty" id="hvEmpty" hidden><span data-ic="hourglass"></span>Collecting data… the chart fills in as snapshots are recorded.</div>
     </div>
 
     <!-- ── Best / worst performer: since purchase, and vs BTC (Golden Triangle) ── -->
@@ -791,16 +820,67 @@ function drawPerfFull() {
   const u = document.getElementById('pccPortUsd'); u.textContent = (ap.total >= 0 ? '+' : '−') + fmtUSD(Math.abs(ap.total)); u.className = ap.total >= 0 ? 'pos' : 'neg';
 }
 document.addEventListener('click', e => {
-  const b = e.target.closest && e.target.closest('.pcc-tabs button'); if (!b) return;
+  const b = e.target.closest && e.target.closest('#perfChartCard .pcc-tabs button'); if (!b) return;
   perfRange = b.dataset.r;
-  document.querySelectorAll('.pcc-tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  document.querySelectorAll('#perfChartCard .pcc-tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
   drawPerfFull();
 });
+// ── Portfolio Value chart (the old Holdings screen's chart): tap Total Value to open / close it ──
+// Same data and maths as the main page's Holdings card: the value over time, ending on the live total; the change line
+// splits what prices did from money added or taken out ("All" = the All Time Profit card).
+let hvSnaps = [], hvRange = '24h';
+const HV_KEY = 'samsam_pf_hv';
+function hvOpen() { try { return localStorage.getItem(HV_KEY) === '1'; } catch (_) { return false; } }
+function hvPaint() {
+  const on = hvOpen(), card = document.getElementById('hvCard'), tv = document.getElementById('tvCard');
+  if (!card || !tv) return;
+  card.hidden = !on; tv.setAttribute('aria-expanded', String(on)); tv.title = on ? 'Hide the Portfolio Value chart' : 'Show the Portfolio Value chart';
+  if (on) drawHoldingsValue();
+}
+function hvToggle() { try { localStorage.setItem(HV_KEY, hvOpen() ? '0' : '1'); } catch (_) {} hvPaint(); }
+function hvChange(snaps) {
+  const a = snaps[0], z = snaps[snaps.length - 1], sg = n => n >= 0 ? '+' : '−';
+  const st = Samsam.getState(), s = Samsam.core.profitSeries(st.coins, st.transactions, [a.t, z.t]);
+  const priceGain = (z.v - s.cost[1] + s.realized[1]) - (a.v - s.cost[0] + s.realized[0]);
+  const added = (s.cost[1] - s.realized[1]) - (s.cost[0] - s.realized[0]);
+  let gain = priceGain, pct = (a.v + Math.max(0, added)) > 0 ? gain / (a.v + Math.max(0, added)) * 100 : 0;
+  if (hvRange === 'all' && allTimeData) { gain = allTimeData.total; pct = allTimeData.pct; }
+  let text = `${sg(gain)}${fmtUSD(Math.abs(gain))}  (${sg(pct)}${Math.abs(pct).toFixed(2)}%)`;
+  if (Math.abs(added) >= 1) text += ` · ${added > 0 ? '+' : '−'}${fmtUSD(Math.abs(added))} ${added > 0 ? 'added' : 'taken out'}`;
+  return { text, up: gain >= 0 };
+}
+function drawHoldingsValue() {
+  const canvas = document.getElementById('hvCanvas'), card = document.getElementById('hvCard');
+  if (!canvas || !card || card.hidden || !window.SamsamChart || !window.Samsam || !Samsam.isReady()) return;
+  const st = Samsam.getState(), total = st.portfolio.reduce((a, c) => a + c.qty * (c.currentPrice || 0), 0);
+  const cutoff = hvRange === 'all' ? 0 : Date.now() - PERF_RANGE_MS[hvRange];
+  let snaps = hvSnaps.filter(s => s.t >= cutoff);
+  if (!snaps.length && hvSnaps.length) snaps = [hvSnaps[hvSnaps.length - 1]];
+  if (snaps.length && total > 0) snaps = snaps.concat([{ t: Math.max(Date.now(), snaps[snaps.length - 1].t + 1), v: total }]);   // ends on the live total
+  const val = document.getElementById('hvVal'), chg = document.getElementById('hvChg'), empty = document.getElementById('hvEmpty');
+  val.textContent = total > 0 ? fmtUSD(total) : '$—';
+  if (!snaps.length) { canvas.style.display = 'none'; empty.hidden = false; chg.textContent = ''; return; }
+  canvas.style.display = ''; empty.hidden = true;
+  if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
+  const c = hvChange(snaps);
+  chg.textContent = c.text; chg.className = 'hv-chg ' + (c.up ? 'pos' : 'neg');
+  const h = window.innerWidth >= 900 ? 300 : window.innerWidth >= 600 ? 240 : 210;
+  SamsamChart.draw(canvas, { height: h, format: 'usd', hover: true, timeMode: hvRange === '24h' ? 'hours' : 'days',
+    series: [{ points: snaps, color: c.up ? '#22c55e' : '#f43f5e', width: 2.6, fill: true, name: 'Portfolio' }] });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('#hvCard .pcc-tabs button');
+  if (b) { hvRange = b.dataset.hr; document.querySelectorAll('#hvCard .pcc-tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); drawHoldingsValue(); return; }
+  if (e.target.closest && e.target.closest('#tvCard') && !e.target.closest('.cp-hint')) hvToggle();
+});
+document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.id === 'tvCard') { e.preventDefault(); hvToggle(); } });
+window.addEventListener('storage', e => { if (e.key === HV_KEY) hvPaint(); });   // the main page's Holdings card opens Performance with the chart open
+document.addEventListener('DOMContentLoaded', hvPaint);
 (function () {
-  let t; const redraw = () => { clearTimeout(t); t = setTimeout(drawPerfFull, 60); };
+  let t; const redraw = () => { clearTimeout(t); t = setTimeout(() => { drawPerfFull(); drawHoldingsValue(); }, 60); };
   window.addEventListener('resize', redraw);
   window.addEventListener('samsam-theme', redraw);
-  if (window.ResizeObserver) document.addEventListener('DOMContentLoaded', () => { const w = document.querySelector('.pcc-canvas-wrap'); if (w) new ResizeObserver(redraw).observe(w); });
+  if (window.ResizeObserver) document.addEventListener('DOMContentLoaded', () => { const w = document.querySelector('#perfChartCard .pcc-canvas-wrap'); if (w) new ResizeObserver(redraw).observe(w); });
 })();
 
 // ── Theme — handled by samsam-ui.js (shared by every page) ──
@@ -812,6 +892,7 @@ function loadPortfolio() {
   const subscribe = S => S.onChange(d => {
     portfolio = d.portfolio;
     perfSnaps = d.perfSnaps || [];
+    hvSnaps = d.holdingsSnaps || [];
     drawPerfFull();
     portfolio.forEach(c => {
       const prev = livePrices[c.sym];
@@ -821,6 +902,7 @@ function loadPortfolio() {
       };
     });
     render();
+    drawHoldingsValue();   // after render(): "All" uses the All Time Profit card's numbers
     if (SamsamUI.inShell) shellLive();
     if (!pricesFetchedOnce) { pricesFetchedOnce = true; fetchLivePrices(); }
   });

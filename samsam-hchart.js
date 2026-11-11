@@ -139,6 +139,8 @@ function renderHovCatPicker() {
   document.getElementById('hovCatVal').textContent = (options.find(o => o.value === cur) || options[0]).sub;
   document.getElementById('hovCatPicker').style.setProperty('--cat-c', cur === 'all' ? 'var(--accent)' : T.color(cur));
 }
+// The main page's Holdings card → Performance, with its Portfolio Value chart (under Total Value) open
+function openHoldingsChart() { try { localStorage.setItem('samsam_pf_hv', '1'); } catch (_) {} SamsamUI.ptabGo('performance'); }
 // This screen is Allocation (donut by category + each coin's share of the whole portfolio). It used to also be
 // "Holdings" (the total + chart + coin list) — dropped: Performance has the same list, the Overview card the chart.
 const hovMode = 'alloc';
