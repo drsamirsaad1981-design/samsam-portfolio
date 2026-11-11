@@ -30,7 +30,7 @@ with sync_playwright() as p:
             pg.locator('.main-trio').screenshot(path=str(SH / f'cardgo-{name}-{theme}.png'))
             if name == 'desktop' and theme == 'dark':
                 pg.focus('#holdingsCard'); pg.keyboard.press('Enter'); pg.wait_for_timeout(600)
-                check('keyboard Enter on Holdings opens it', pg.evaluate("location.hash").startswith('#holdings'), pg.evaluate("location.hash"))
+                check('keyboard Enter on the Holdings card opens Performance', pg.evaluate("location.hash") == '#performance', pg.evaluate("location.hash"))
                 pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(800)
                 pg.click('#perfChartWrap .card-go', force=True); pg.wait_for_timeout(800)
                 check('tapping the round button opens Performance', 'performance.html' in pg.url or pg.url.endswith('#performance'), pg.url)   # Performance opens as a Portfolio tab since the bar redesign
