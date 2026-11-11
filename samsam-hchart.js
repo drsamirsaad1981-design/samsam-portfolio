@@ -100,57 +100,6 @@ function updateHoldingsChart() {
   // (cloud sync is live — no polling needed)
 })();
 
-let holdingsOverlayRange = '24h';
-
-function setHoldingsOverlayRange(range, btn) {
-  holdingsOverlayRange = range;
-  document.querySelectorAll('.hov-tab').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  drawHoldingsOverlayChart();
-}
-
-// Redraw the Holdings chart when its card changes width (rotation, window resize)
-(function () {
-  const wrap = document.querySelector('#holdingsOverlay .hov-chart-wrap');
-  if (!wrap || !window.ResizeObserver) return;
-  let t; new ResizeObserver(() => { clearTimeout(t); t = setTimeout(() => {
-    const ov = document.getElementById('holdingsOverlay');
-    if (ov && ov.style.display === 'flex' && !coinTxSym) drawHoldingsOverlayChart();
-  }, 60); }).observe(wrap);
-})();
-function drawHoldingsOverlayChart() {
-  const canvas = document.getElementById('hovCanvas');
-  if (!canvas) return;
-  const allSnaps = loadHoldingsSnaps();
-  const now = Date.now();
-  const rangeMs = { '24h': 86400000, '7d': 604800000, '30d': 2592000000, '90d': 7776000000, 'all': Infinity };
-  const cutoff = holdingsOverlayRange === 'all' ? 0 : now - rangeMs[holdingsOverlayRange];
-  let snaps = allSnaps.filter(s => s.t >= cutoff);
-  if (snaps.length === 0) { snaps = allSnaps.length ? [allSnaps[allSnaps.length-1]] : []; }
-  snaps = withLiveTotal(snaps);
-  if (snaps.length === 1) snaps = [snaps[0], snaps[0]];
-
-  const totalEl  = document.getElementById('hovTotal');
-  const changeEl = document.getElementById('hovChange');
-
-  if (snaps.length === 0) {
-    if (totalEl) { const {total} = calcStats(); totalEl.textContent = total > 0 ? SamsamFmt.usd(total) : '$—'; }
-    if (changeEl) changeEl.textContent = '';
-    canvas.style.display = 'none';
-    return;
-  }
-  canvas.style.display = '';
-
-  const last = snaps[snaps.length-1].v;
-  const hc = holdingsChangeText(snaps), isPos = hc.up;
-
-  if (totalEl) totalEl.textContent = SamsamFmt.usd(last);
-  if (changeEl) { changeEl.textContent = hc.text; changeEl.title = hc.title; changeEl.className = 'hov-change ' + (isPos ? 'pos' : 'neg'); }
-
-  const lineColor = isPos ? '#22c55e' : '#f43f5e'; // green when up, red when down
-  SamsamChart.draw(canvas, { height: 210, format: 'usd', hover: true, timeMode: timeModeFor(holdingsOverlayRange), series: [{ points: snaps, color: lineColor, width: 2.6, fill: true, name: 'Portfolio' }] });
-}
-
 // Holdings screen: sort by Asset (A→Z), Price or Holdings value; tap the same column again to reverse
 let hovSort = { key: 'holdings', dir: -1 };
 try { const v = JSON.parse(localStorage.getItem('samsam_hov_sort') || 'null'); if (v && ['asset', 'holdings'].includes(v.key)) hovSort = v; } catch (_) {}
@@ -190,24 +139,18 @@ function renderHovCatPicker() {
   document.getElementById('hovCatVal').textContent = (options.find(o => o.value === cur) || options[0]).sub;
   document.getElementById('hovCatPicker').style.setProperty('--cat-c', cur === 'all' ? 'var(--accent)' : T.color(cur));
 }
-// Assets | Allocation switch (Allocation = donut by category + each coin's share of the whole portfolio)
-let hovMode = 'assets';
-try { if (localStorage.getItem('samsam_hov_mode') === 'alloc') hovMode = 'alloc'; } catch (_) {}
-function setHovMode(m, quiet) {
-  hovMode = m === 'alloc' ? 'alloc' : 'assets';
-  try { localStorage.setItem('samsam_hov_mode', hovMode); } catch (_) {}
-  paintHovMode();
-  if (!quiet) { renderHoldingsAssetList(); if (hovMode === 'assets' && typeof drawHoldingsOverlayChart === 'function') drawHoldingsOverlayChart(); }   // the chart was hidden → draw it at its real size
-}
+// This screen is Allocation (donut by category + each coin's share of the whole portfolio). It used to also be
+// "Holdings" (the total + chart + coin list) — dropped: Performance has the same list, the Overview card the chart.
+const hovMode = 'alloc';
+function setHovMode(m, quiet) { paintHovMode(); if (!quiet) renderHoldingsAssetList(); }   // kept for old callers
 function paintHovMode() {
-  const ov = document.getElementById('holdingsOverlay'); if (ov) ov.setAttribute('data-mode', hovMode);
-  document.querySelectorAll('#hovModeSeg > button').forEach(b => { const on = b.dataset.m === hovMode; b.classList.toggle('btn-toggle-active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
-  const h = document.querySelector('.hov-list-header .hov-h-lbl'); if (h) h.textContent = hovMode === 'alloc' ? 'Allocation' : 'Holdings';
-  const tabs = document.getElementById('hovPtabs'); if (tabs && window.SamsamUI && SamsamUI.ptabs) SamsamUI.ptabs(tabs, hovMode === 'alloc' ? 'allocation' : 'holdings');
-  if (ov && ov.getAttribute('data-view') !== 'tx') {   // the screen's title follows the tab
+  const ov = document.getElementById('holdingsOverlay'); if (ov) ov.setAttribute('data-mode', 'alloc');
+  const h = document.querySelector('.hov-list-header .hov-h-lbl'); if (h) h.textContent = 'Allocation';
+  const tabs = document.getElementById('hovPtabs'); if (tabs && window.SamsamUI && SamsamUI.ptabs) SamsamUI.ptabs(tabs, 'allocation');
+  if (ov && ov.getAttribute('data-view') !== 'tx') {   // the screen's title
     const t = document.getElementById('hovNavTitle'), ic = document.getElementById('hovNavIcon');
-    if (t) t.textContent = hovMode === 'alloc' ? 'Allocation' : 'Holdings';
-    if (ic && window.SamsamUI) ic.innerHTML = SamsamUI.navIcon(hovMode === 'alloc' ? 'allocation' : 'holdings');
+    if (t) t.textContent = 'Allocation';
+    if (ic && window.SamsamUI) ic.innerHTML = SamsamUI.navIcon('allocation');
   }
 }
 function renderHovDonut() {

@@ -19,8 +19,10 @@
     document.title = VIEWS[shell.cur] ? TITLES[shell.cur] : baseTitle;
     if (window.SamsamUI && SamsamUI.navPaint) SamsamUI.navPaint();
   }
+  // An old Holdings link or bookmark (opened fresh, not a refresh of the Allocation screen) → Performance, which has its list
+  if (location.hash === '#holdings' && !history.state) history.replaceState({ view: 'performance' }, '', '#performance');
   function route() {
-    if (location.hash === '#allocation') {   // old Allocation links → Holdings on its Allocation switch
+    if (location.hash === '#allocation') {   // Allocation links → the Allocation screen
       if (typeof setHovMode === 'function') setHovMode('alloc', true);
       history.replaceState({ hov: 'list' }, '', '#holdings');
       if (typeof applyHoldingsRoute === 'function') applyHoldingsRoute();

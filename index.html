@@ -129,7 +129,7 @@
 <!-- ── Main trio: Holdings · Allocation · Performance — one equal grid ── -->
 <div class="main-trio" id="mainTrio">
 <!-- ── Holdings Chart Card ── -->
-<div class="holdings-card card-tap" id="holdingsCard" onclick="openHoldingsView()" role="link" tabindex="0" aria-label="Holdings — open details" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();openHoldingsView()}" style="cursor:pointer">
+<div class="holdings-card card-tap" id="holdingsCard" onclick="SamsamUI.ptabGo('performance')" role="link" tabindex="0" aria-label="Holdings — open Performance" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();SamsamUI.ptabGo('performance')}" style="cursor:pointer">
   <div class="holdings-header">
     <div>
       <div class="holdings-title"><span class="card-ic" data-nav-ic="holdings" data-nav-size="16" aria-hidden="true"></span>Holdings</div>
@@ -427,32 +427,8 @@
   </header>
 
   <div class="hov-container">
-  <!-- Portfolio tabs: Overview · Holdings · Performance · Allocation (Holdings and Allocation are this screen) -->
-  <div class="cp-ptabs-host hov-ptabs" id="hovPtabs" data-ptabs="holdings"></div>
-  <!-- Hero total + chart + range tabs: one card (Assets only) -->
-  <div class="hov-card hov-value-card">
-  <div class="hov-hero">
-    <div class="hov-hero-top"><div class="hov-page-label">Portfolio Value</div>
-      <button type="button" id="hovAddBtn" class="cp-add sm hov-add-btn" onclick="openAddCoin()" title="Add a new coin, or a Buy for a coin you hold" aria-label="Add a coin or a Buy"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add</span></button></div>
-    <div class="hov-total" id="hovTotal">$—</div>
-    <div class="holdings-change-row"><span class="hov-change" id="hovChange"></span><button type="button" class="cp-hint" data-hint="holdingsChange" aria-label="About the holdings change"></button></div>
-  </div>
-
-  <!-- Chart -->
-  <div class="hov-chart-wrap">
-    <canvas class="hov-canvas" id="hovCanvas" height="200"></canvas><div class="hist-note" data-hist-note hidden></div>
-  </div>
-
-  <!-- Range tabs -->
-  <div class="hov-tabs">
-    <button class="hov-tab active" onclick="setHoldingsOverlayRange('24h',this)">24h</button>
-    <button class="hov-tab" onclick="setHoldingsOverlayRange('7d',this)">7d</button>
-    <button class="hov-tab" onclick="setHoldingsOverlayRange('30d',this)">30d</button>
-    <button class="hov-tab" onclick="setHoldingsOverlayRange('90d',this)">90d</button>
-    <button class="hov-tab" onclick="setHoldingsOverlayRange('all',this)">All</button>
-  </div>
-  </div>
-
+  <!-- Portfolio tabs: Overview · Performance · Allocation (Allocation is this screen; a coin's page opens here too) -->
+  <div class="cp-ptabs-host hov-ptabs" id="hovPtabs" data-ptabs="allocation"></div>
   <div class="hov-card hov-alloc-card" id="hovAllocCard">
     <div class="donut-wrap">
       <svg id="hovDonut" viewBox="0 0 200 200" role="img" aria-label="Portfolio allocation by category"></svg>

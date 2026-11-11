@@ -213,7 +213,7 @@ function applyCloudState(d) {
   try { drawPerfChart(); } catch(_) {}
   try { drawHoldingsChart(); } catch(_) {}
   const ov = document.getElementById('holdingsOverlay');
-  if (ov && ov.style.display === 'flex') { try { if (coinTxSym) renderCoinTx(); else { drawHoldingsOverlayChart(); renderHoldingsAssetList(); } } catch(_) {} }
+  if (ov && ov.style.display === 'flex') { try { if (coinTxSym) renderCoinTx(); else renderHoldingsAssetList(); } catch(_) {} }
   lastCloudSync = new Date(); updateSyncFooter();
   takeSnapshotsIfDue();
   // Coins that arrived from the cloud without a live price on this device (e.g. a coin
@@ -571,7 +571,7 @@ function renderMovers() {
   const half = (label, r) => r && { label, row: r, pct: r.score, text: C.signedPct(r.score), onClickJs: `openCoinFromMovers('${r.sym}')` };
   host.innerHTML = C.moversCard({ head, best: half('Best Performer', m.best), worst: half('Worst Performer', m.worst) || { label: 'Worst Performer' } });
 }
-function openCoinFromMovers(sym) { openHoldingsView(); openCoinTx(sym); }   // Back → Holdings list → page
+function openCoinFromMovers(sym) { if (window.cpShell) cpShell.openCoin(sym); else openCoinTx(sym); }   // Back → Overview
 
 // The sorted column is lit with ▲ (A→Z / lowest first) or ▼ (highest first)
 function markSortedHeader() {
@@ -1302,11 +1302,6 @@ function showHoldingsOverlay() {
   if (overlay.style.display !== 'flex') {
     overlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
-    // Reset range tabs to 24h when the overlay opens
-    overlay.querySelectorAll('.hov-tab').forEach(b => b.classList.remove('active'));
-    const first = overlay.querySelector('.hov-tab');
-    if (first) first.classList.add('active');
-    holdingsOverlayRange = '24h';
   }
   return overlay;
 }
@@ -1327,8 +1322,7 @@ function applyHoldingsRoute() {
   } else {
     coinTxSym = null;
     overlay.removeAttribute('data-view');
-    document.getElementById('hovNavTitle').textContent = 'Holdings'; document.getElementById('hovNavIcon').innerHTML = SamsamUI.navIcon('holdings');
-    drawHoldingsOverlayChart();
+    paintHovMode();
     renderHoldingsAssetList();
   }
   overlay.scrollTop = 0;

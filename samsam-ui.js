@@ -641,8 +641,8 @@
     confirm: function (m, o) { return dialog('confirm', m, o); },
     prompt: function (m, o) { return dialog('prompt', m, o); },
   };
-  // ── Bottom navigation: Portfolio · Plan · Market Hub (every main page). Portfolio (the app's logo) holds four tabs —
-  //    Overview · Holdings · Performance · Allocation (SamsamUI.ptabs) — and opens on the one you used last.
+  // ── Bottom navigation: Portfolio · Plan · Market Hub (every main page). Portfolio (the app's logo) holds three tabs —
+  //    Overview · Performance · Allocation (SamsamUI.ptabs) — and opens on the one you used last.
   //    Holdings / Performance / Allocation keep entries here for their icons only. ──
   // Phones / tablets: a bar at the bottom (labels hide on ≤ 360px screens, except the open page).
   // Computer: the same bar floats as a small dock at the bottom centre. The open page has a violet pill.
@@ -764,12 +764,12 @@
       e.preventDefault(); window.closeHoldingsView(); try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (_) { window.scrollTo(0, 0); } setTimeout(navPaint, 0);
     } else if (k === 'home') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   }
-  // ── Portfolio tabs: Overview · Holdings · Performance · Allocation — one row at the top of each of the four ──
-  var PTABS = [['overview', 'Overview', 'home'], ['holdings', 'Holdings', 'holdings'], ['performance', 'Performance', 'performance'], ['allocation', 'Allocation', 'allocation']];
-  function ptabLast() { try { var v = localStorage.getItem('samsam_pf_tab'); return PTABS.some(function (t) { return t[0] === v; }) ? v : 'overview'; } catch (_) { return 'overview'; } }
+  // ── Portfolio tabs: Overview · Performance · Allocation — one row at the top of each of the three ──
+  var PTABS = [['overview', 'Overview', 'home'], ['performance', 'Performance', 'performance'], ['allocation', 'Allocation', 'allocation']];   // (Holdings was dropped — Performance has its list)
+  function ptabLast() { try { var v = localStorage.getItem('samsam_pf_tab'); if (v === 'holdings') v = 'performance'; return PTABS.some(function (t) { return t[0] === v; }) ? v : 'overview'; } catch (_) { return 'overview'; } }
   function ptabCur() {
     var here = navPage(), ov = document.getElementById('holdingsOverlay');
-    if (here === 'holdings') return ov && ov.getAttribute('data-mode') === 'alloc' ? 'allocation' : 'holdings';
+    if (here === 'holdings') return 'allocation';   // the Allocation screen (and a coin's page) is the #holdings overlay
     return here === 'performance' ? 'performance' : here === 'home' ? 'overview' : ptabLast();
   }
   function ptabGo(t) {
@@ -779,17 +779,16 @@
       var w = window.cpShell ? window : window.parent;
       if (t === 'overview') S.go('home');
       else if (t === 'performance') S.go('performance');
-      else { if (w.setHovMode) w.setHovMode(t === 'allocation' ? 'alloc' : 'assets', true); S.go('holdings'); }
+      else S.go('allocation');
       return;
     }
     // a page opened on its own (not inside the app)
-    try { if (t === 'holdings' || t === 'allocation') localStorage.setItem('samsam_hov_mode', t === 'allocation' ? 'alloc' : 'assets'); } catch (_) {}
-    location.href = t === 'performance' ? './performance.html' : t === 'overview' ? './index.html' : './index.html#holdings';
+    location.href = t === 'performance' ? './performance.html' : t === 'overview' ? './index.html' : './index.html#allocation';
   }
   function ptabsCss() {
     if (document.getElementById('cpPtabsCss')) return;
     var st = document.createElement('style'); st.id = 'cpPtabsCss';
-    st.textContent = '.cp-ptabs{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:3px;border-radius:12px;background:var(--bg3,#f1f5f9);border:1px solid var(--border,rgba(0,0,0,.08));box-sizing:border-box;width:100%;max-width:640px;margin:0 auto}' +
+    st.textContent = '.cp-ptabs{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;border-radius:12px;background:var(--bg3,#f1f5f9);border:1px solid var(--border,rgba(0,0,0,.08));box-sizing:border-box;width:100%;max-width:640px;margin:0 auto}' +
       '.cp-ptabs button{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:6px 4px;border-radius:9px;font:700 .78rem/1.1 Inter,system-ui,sans-serif;color:var(--fg2,#64748b);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}' +
       '.cp-ptabs button svg{width:16px;height:16px;flex-shrink:0}' +
       '.cp-ptabs button[aria-selected="true"],:root .cp-ptabs button[aria-selected="true"]{background:#7c3aed;color:#fff;box-shadow:0 1px 4px rgba(124,58,237,.35)}' +   // the app's violet on every page (some pages' accent is orange or blue)

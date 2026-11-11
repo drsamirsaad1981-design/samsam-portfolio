@@ -14,36 +14,6 @@
     @media (min-width: 1024px) { .hov-container { max-width: 1232px; } }   /* same 1200px content width as every page */
     /* Nav bar: shared .cp-head (samsam-ui.js) */
 
-    /* ── Hero total ── */
-    .hov-hero { padding: 18px 16px 4px; }
-    .hov-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -6px -4px 0 0; }   /* Portfolio Value · Add (top right of the card) */
-    .hov-page-label { font-size:0.7rem;font-weight:700;text-transform: none;letter-spacing: .01em;color:var(--fg2); }
-    .hov-total { font-size:2.2rem;font-weight:700;color:var(--fg);line-height:1.15;margin-top:4px; }
-    .hov-change { font-size:0.82rem;font-weight:600;margin-top:4px; }
-    .hov-change.pos { color:var(--green); }
-    .hov-change.neg { color:var(--red); }
-
-    /* ── Chart ── */
-    .hov-chart-wrap { padding: 8px 0 0; }
-    .hov-canvas { width:100%;display:block; }
-
-    /* ── Range tabs ── */
-    .hov-tabs {
-      display: flex; gap: 4px; padding: 12px 16px 8px;
-      border-bottom: 1px solid var(--border);
-    }
-    .hov-tab {
-      flex:1; background:none; border:1px solid transparent;
-      font-size:0.78rem; font-weight:600; color:var(--fg2);
-      padding:6px 0; cursor:pointer; border-radius:8px;
-      font-family:inherit; transition:background .15s,color .15s,border-color .15s;
-    }
-    .hov-tab.active {
-      background: var(--bg3); color: var(--fg);
-      border-color: var(--border);
-    }
-    .hov-tab:hover:not(.active) { color:var(--fg); }
-
     /* ── Asset list: header and rows share one column layout ── */
     #holdingsOverlay { --hov-icon: 44px; --hov-gap: 8px;
       --hov-cols: var(--hov-icon) minmax(0,1fr) max-content; }   /* each row's holdings take just what they need, the name + price get the rest */
@@ -108,8 +78,7 @@
     /* ── Coin transactions view ── */
     #hovTxView { display:none; padding:0 0 calc(80px + env(safe-area-inset-bottom,0px)); }
     #holdingsOverlay[data-view="tx"] #hovTxView { display:block; }
-    #holdingsOverlay[data-view="tx"] .hov-hero, #holdingsOverlay[data-view="tx"] .hov-chart-wrap,
-    #holdingsOverlay[data-view="tx"] .hov-tabs, #holdingsOverlay[data-view="tx"] .hov-list-header,
+    #holdingsOverlay[data-view="tx"] .hov-list-header,
     #holdingsOverlay[data-view="tx"] #hovAssetList { display:none; }
     .htx-tabs { display:flex; gap:22px; padding:10px 16px 0; border-bottom:1px solid var(--border); }
     .htx-tab { background:none; border:none; border-bottom:2px solid transparent; padding:10px 0 12px; font:inherit; font-size:0.95rem; font-weight:600; color:var(--fg2); cursor:pointer; }
@@ -178,7 +147,6 @@
     }
     @media (max-width: 600px) { .htx-add-btn .lbl-long { display:none; } }
     /* ➕ Add in the Holdings header (the coin's Transactions screen has its own Add Transaction) */
-    #holdingsOverlay[data-view="tx"] .hov-add-btn { display:none; }
     /* Add Transaction form + .atx-* dialog styles: shared samsam-add.js (Edit opening uses them too) */
     .htx-empty { padding:36px 16px; text-align:center; color:var(--fg2); font-size:0.88rem; }
     @media (min-width: 900px) {
@@ -213,10 +181,6 @@
     .hov-cat .cat-picker .sdd-btn { background: var(--card); border-color: var(--border); border-left-color: var(--cat-c); border-radius: 18px; box-shadow: var(--shadow); }
     .hov-cat .cat-picker .cp-kicker { color: var(--fg2); }
     #holdingsOverlay[data-view="tx"] .hov-cat { display: none; }
-    .hov-hero { padding: 18px 18px 4px; }
-    .hov-chart-wrap { padding: 8px 10px 0; }
-    .hov-tabs { padding: 10px 14px 14px; border-bottom: none; }
-    .hov-tab.active { background: var(--bg3); border-color: transparent; }
     .hov-list-header { background: transparent; padding: 14px 18px 10px; border-bottom: 1px solid var(--border); }
     .hov-asset-row { padding: 12px 18px; }
     #hovAssetList .hov-asset-row:last-child { border-bottom: none; }
@@ -242,12 +206,8 @@
     .htx-empty { background: var(--card); border-radius: 18px; }
     @media (min-width: 900px) { #hovTxView { max-width: none; } }
   
-    /* ── Assets | Allocation switch + donut (Allocation used to be its own page) ── */
+    /* ── Allocation: donut ── */
     .hov-ptabs { margin: 2px 0 14px; }
-    #holdingsOverlay[data-mode="alloc"] .hov-value-card { display: none; }   /* Allocation: the donut instead of the total + chart */
-    .hov-mode .cp-vseg { min-width: 260px; }
-    .hov-mode-ic svg { width: 16px; height: 16px; display: block; }
-    .hov-mode .cp-vseg > button.btn-toggle-active .nav-ic { color: currentColor; }
     .hov-alloc-card { display: none; padding: 20px; margin-bottom: 14px; justify-content: center; }
     .hov-tgt-card { display: none; padding: 16px; margin-bottom: 14px; }
     #holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-tgt-card { display: block; }
@@ -310,7 +270,7 @@
     .hov-share .alloc-bar-wrap { height: 5px; flex: 1; min-width: 44px; background: var(--bar-bg, var(--bg3)); border-radius: 4px; overflow: hidden; }
     .hov-share .alloc-bar { display: block; height: 100%; border-radius: 4px; transition: width .4s; }
     .hov-share .coin-pct { font-size: .74rem; font-weight: 700; color: var(--fg); white-space: nowrap; min-width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
-    @media (max-width: 500px) { .hov-alloc-card .donut-wrap { width: 220px; height: 220px; } .hov-mode .cp-vseg { min-width: 0; flex: 1; max-width: 340px; } }
+    @media (max-width: 500px) { .hov-alloc-card .donut-wrap { width: 220px; height: 220px; } }
 
     /* ── phone: more room for the content, like CoinMarketCap — 8px sides, coin lists edge to edge with dividers ── */
     @media (max-width: 759px) {
@@ -320,7 +280,6 @@
       .hov-list-card { background: none; box-shadow: none; border-radius: 0; margin-left: -4px; margin-right: -4px; overflow: visible; }
       .hov-list-header { padding: 10px 8px 8px; }
       .hov-asset-row { padding: 12px 8px; }
-      .hov-hero { padding: 16px 12px 4px; }
     }
 
     /* Network & where held, under the amount on the coin page */

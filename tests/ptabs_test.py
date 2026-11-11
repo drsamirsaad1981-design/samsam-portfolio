@@ -1,4 +1,4 @@
-"""Bottom bar Portfolio · Plan · Market Hub; Portfolio = four tabs (Overview · Holdings · Performance · Allocation) at the
+"""Bottom bar Portfolio · Plan · Market Hub; Portfolio = three tabs (Overview · Performance · Allocation — Holdings was dropped) at the
 top of each of them; Portfolio opens the tab used last; tapping it again goes back to the top; standalone pages work too."""
 import sys, pathlib
 from playwright.sync_api import sync_playwright
@@ -23,15 +23,17 @@ with sync_playwright() as p:
             check(f'{vn}/{theme}: bar = Portfolio (app logo) · Plan · Market Hub {bar}', [b[:2] for b in bar] == [['home', 'Portfolio'], ['accumulation', 'Plan'], ['market', 'Market Hub']] and bar[0][2], bar)
             check(f'{vn}/{theme}: Overview tab marked on the main page, Portfolio marked in the bar', sel(pg) == ['overview'] and pg.evaluate(CUR) == 'home', (sel(pg), pg.evaluate(CUR)))
             fit = pg.evaluate("[...document.querySelectorAll('.cp-ptabs button')].filter(b=>b.offsetParent).every(b=>b.scrollWidth<=b.clientWidth+1)")
-            check(f'{vn}/{theme}: all four tab names fit', fit)
+            check(f'{vn}/{theme}: all three tab names fit', fit)
+            names = pg.evaluate("[...document.querySelector('.cp-ptabs').querySelectorAll('button')].map(b=>b.dataset.t)")
+            check(f'{vn}/{theme}: tabs = Overview · Performance · Allocation (no Holdings) {names}', names == ['overview', 'performance', 'allocation'], names)
             pg.screenshot(path=str(SH / f'pt_{vn}_{theme}_overview.png'))
-            # Holdings
-            pg.locator('.cp-ptabs button[data-t=holdings]').first.click(); pg.wait_for_timeout(900)
-            h = pg.evaluate("({hash: location.hash, mode: holdingsOverlay.getAttribute('data-mode'), title: hovNavTitle.textContent, chart: getComputedStyle(document.querySelector('.hov-value-card')).display})")
-            check(f'{vn}/{theme}: Holdings tab → the Holdings screen with its chart {h}', h['hash'] == '#holdings' and h['mode'] == 'assets' and h['title'] == 'Holdings' and h['chart'] != 'none' and sel(pg) == ['holdings'] and pg.evaluate(CUR) == 'home', (h, sel(pg)))
-            pg.screenshot(path=str(SH / f'pt_{vn}_{theme}_holdings.png'))
+            # the Holdings card on Overview → Performance
+            pg.click('#holdingsCard'); pg.wait_for_timeout(1200)
+            fr = pg.frame(url=lambda u: 'performance.html' in u)
+            check(f'{vn}/{theme}: Holdings card → Performance', pg.evaluate("location.hash") == '#performance' and fr and sel(pg, fr) == ['performance'], pg.evaluate("location.hash"))
+            fr.locator('.cp-ptabs button[data-t=overview]').click(); pg.wait_for_timeout(800)
             # Allocation
-            pg.locator('#hovPtabs button[data-t=allocation]').click(); pg.wait_for_timeout(600)
+            pg.locator('.cp-ptabs button[data-t=allocation]').first.click(); pg.wait_for_timeout(900)
             a = pg.evaluate("({mode: holdingsOverlay.getAttribute('data-mode'), title: hovNavTitle.textContent, donut: getComputedStyle(hovAllocCard).display})")
             check(f'{vn}/{theme}: Allocation tab → donut + shares {a}', a['mode'] == 'alloc' and a['title'] == 'Allocation' and a['donut'] == 'flex' and sel(pg) == ['allocation'], (a, sel(pg)))
             pg.screenshot(path=str(SH / f'pt_{vn}_{theme}_allocation.png'))
@@ -51,12 +53,12 @@ with sync_playwright() as p:
             pg.click('#cpBnav a[data-k=market]'); pg.wait_for_timeout(800)
             pg.click('#cpBnav a[data-k=home]'); pg.wait_for_timeout(800)
             check(f'{vn}/{theme}: Portfolio after Market → Overview (used last)', sel(pg) == ['overview'] and pg.evaluate(CUR) == 'home')
-            # Holdings → coin → tabs hidden; Back → Holdings with tabs
-            pg.locator('.cp-ptabs button[data-t=holdings]').first.click(); pg.wait_for_timeout(800)
+            # Allocation → coin → tabs hidden; Portfolio → back to Allocation with tabs
+            pg.locator('.cp-ptabs button[data-t=allocation]').first.click(); pg.wait_for_timeout(800)
             pg.locator('#hovAssetList .htx-open').first.click(); pg.wait_for_timeout(600)
             check(f'{vn}/{theme}: a coin page hides the tabs', not pg.is_visible('#hovPtabs'))
             pg.click('#cpBnav a[data-k=home]'); pg.wait_for_timeout(700)
-            check(f'{vn}/{theme}: Portfolio from a coin page → back to that tab (Holdings)', pg.evaluate("location.hash") == '#holdings' and pg.is_visible('#hovPtabs') and sel(pg) == ['holdings'])
+            check(f'{vn}/{theme}: Portfolio from a coin page → back to that tab (Allocation)', pg.evaluate("location.hash") == '#holdings' and pg.is_visible('#hovPtabs') and sel(pg) == ['allocation'])
             # Home cards still open their tabs
             pg.locator('#hovPtabs button[data-t=overview]').click(); pg.wait_for_timeout(700)
             pg.click('#allocMiniCard'); pg.wait_for_timeout(900)
@@ -70,5 +72,11 @@ with sync_playwright() as p:
     check('standalone Performance: tabs + Portfolio marked', sel(pg) == ['performance'] and pg.evaluate(CUR) == 'home', (sel(pg), pg.evaluate(CUR)))
     pg.locator('.cp-ptabs button[data-t=allocation]').click(); pg.wait_for_timeout(2500)
     check('standalone: Allocation tab → main app on Allocation', pg.url.endswith('#holdings') and pg.evaluate("holdingsOverlay.getAttribute('data-mode')") == 'alloc', pg.url)
-    check('standalone: no JS errors', not errs, errs[:3]); ctx.close(); br.close()
+    check('standalone: no JS errors', not errs, errs[:3]); ctx.close()
+    # an old Holdings link / bookmark → Performance (it has the list)
+    ctx = br.new_context(viewport={'width': 390, 'height': 844}); S.setup(ctx); pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg)
+    pg2 = ctx.new_page(); pg2.on('pageerror', lambda e: errs.append(str(e))); pg2.goto(S.SITE + '/index.html#holdings'); pg2.wait_for_timeout(2500)
+    check('old #holdings link → Performance', pg2.evaluate("location.hash") == '#performance' and pg2.evaluate("holdingsOverlay.style.display") != 'flex', pg2.url)
+    check('old link: no JS errors', not errs, errs[:3]); ctx.close(); br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)
