@@ -1,5 +1,6 @@
 // tools/ai-worker.js — the Cloudflare Worker behind "AI Analysis" (samsam-analysis.<you>.workers.dev/analyze).
-// Paste this whole file into the Worker (Cloudflare dashboard → Workers & Pages → samsam-analysis → Edit code → Deploy).
+// Since the Telegram bot shares this Worker, what you paste is the BUILT file tools/dist/samsam-worker.js (this file + the bot),
+// made by `node tools/build-worker.mjs` (Cloudflare dashboard → Workers & Pages → samsam-analysis → Edit code → paste → Deploy).
 //
 // What it does, in order, for every request:
 //   1. Only POST from the app's own site (CORS allow-list) — anything else is refused.

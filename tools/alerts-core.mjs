@@ -31,7 +31,7 @@ export function settings(meta) {
 }
 
 // ── words (English / Arabic; numbers, tickers and $ stay Latin) ──
-const W = {
+export const W = {
   en: {
     brief: 'Morning brief', weekly: 'Weekly report', today: 'today', week: 'this week', profit: 'All Time Profit', vsBtc: 'vs holding BTC',
     best: 'Best today', worst: 'Worst today', bestW: 'Best this week', worstW: 'Worst this week', market: 'Market', dom: 'Dominance',
@@ -83,7 +83,7 @@ const W = {
 };
 
 // ── formatting ──
-const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+export const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 export function usd(v) {
   if (v == null || !isFinite(v)) return '—';
   const a = Math.abs(v), s = v < 0 ? '−' : '';
@@ -94,10 +94,10 @@ export function usd(v) {
   if (a === 0) return '$0';
   return s + '$' + a.toPrecision(3);
 }
-const usd2 = v => (v < 0 ? '−' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const usd2 = v => (v < 0 ? '−' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const pct = (v, d = 2) => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d) + '%';
-const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '') + usd(Math.abs(v)).replace('−', '');
-const dot = v => v > 0 ? '🟢' : v < 0 ? '🔴' : '⚪';
+export const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '') + usd(Math.abs(v)).replace('−', '');
+export const dot = v => v > 0 ? '🟢' : v < 0 ? '🔴' : '⚪';
 const flow = v => (v < 0 ? '−' : '+') + (Math.abs(v) >= 1e9 ? '$' + (Math.abs(v) / 1e9).toFixed(2) + 'B' : '$' + Math.round(Math.abs(v) / 1e6) + 'M');
 export function local(now, opt) { return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, ...opt }).format(new Date(now)); }
 export function localParts(now) {
@@ -224,14 +224,17 @@ export function summarize(user, market, now = Date.now()) {
 
 // ── messages ──
 const btn = (text, path) => ({ text, url: APP + (path || '') });
+// stablecoins never count as a best / worst coin (same list as the app's Top Performers — samsam-coins.js → isStable)
+export const STABLE_RX = /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD)$/;
+export const isStable = sym => STABLE_RX.test(String(sym || '').toUpperCase());
 function movers(sum, key, n = 3) {
-  const list = sum.coins.filter(c => c[key] != null && c.value >= 1);
+  const list = sum.coins.filter(c => c[key] != null && c.value >= 1 && !isStable(c.sym));
   const up = [...list].sort((a, b) => b[key] - a[key]).slice(0, n).filter(c => c[key] > 0);
   const dn = [...list].sort((a, b) => a[key] - b[key]).slice(0, n).filter(c => c[key] < 0);
   const line = c => `<code>${esc(c.sym.padEnd(6))} ${pct(c[key], 1).padStart(7)}</code>  ${usd(c.value)}`;
   return { up: up.map(line), dn: dn.map(line) };
 }
-function marketLines(t, m) {
+export function marketLines(t, m) {
   const g = m.global || {}, d = g.dom || {}, out = [];
   if (m.btc) out.push(`BTC  <b>${usd(m.btc.price)}</b>  ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
   if (d.btc != null) out.push(`${t.dom}  BTC ${d.btc.toFixed(1)}% · USDT ${(d.usdt || 0).toFixed(2)}%`);
