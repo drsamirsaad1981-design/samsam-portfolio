@@ -98,7 +98,7 @@ export const usd2 = v => (v < 0 ? '−' : '') + '$' + Math.abs(v).toLocaleString
 export const pct = (v, d = 2) => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d) + '%';
 export const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '') + usd(Math.abs(v)).replace('−', '');
 export const dot = v => v > 0 ? '🟢' : v < 0 ? '🔴' : '⚪';
-const flow = v => (v < 0 ? '−' : '+') + (Math.abs(v) >= 1e9 ? '$' + (Math.abs(v) / 1e9).toFixed(2) + 'B' : '$' + Math.round(Math.abs(v) / 1e6) + 'M');
+export const flow = v => (v < 0 ? '−' : '+') + (Math.abs(v) >= 1e9 ? '$' + (Math.abs(v) / 1e9).toFixed(2) + 'B' : '$' + Math.round(Math.abs(v) / 1e6) + 'M');
 export function local(now, opt) { return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, ...opt }).format(new Date(now)); }
 export function localParts(now) {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short' })
@@ -245,7 +245,7 @@ export function marketLines(t, m) {
   return out;
 }
 const shortD = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-function etfDay(etf) {
+export function etfDay(etf) {
   if (!etf || !etf.btc || !etf.btc.days || !etf.btc.days.length) return null;
   const b = etf.btc.days[etf.btc.days.length - 1], e = etf.eth && etf.eth.days && etf.eth.days.find(x => x[0] === b[0]);
   return { date: b[0], label: new Date(b[0] + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), btc: b[1], eth: e ? e[1] : 0 };

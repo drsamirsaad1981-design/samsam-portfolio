@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 755ffaf83305efbd
+// sources-hash: 877c410b2ef189c3
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -470,186 +470,6 @@ function settings(meta) {
   if (!/^\d{2}:\d{2}$/.test(out.briefTime)) out.briefTime = d.briefTime;
   return out;
 }
-var W = {
-  en: {
-    brief: "Morning brief",
-    weekly: "Weekly report",
-    today: "today",
-    week: "this week",
-    profit: "All Time Profit",
-    vsBtc: "vs holding BTC",
-    best: "Best today",
-    worst: "Worst today",
-    bestW: "Best this week",
-    worstW: "Worst this week",
-    market: "Market",
-    dom: "Dominance",
-    fng: "Fear & Greed",
-    alt: "Altcoin Season",
-    etf: "ETF flows",
-    signals: "Signals",
-    plan: "Plan",
-    met: "targets met",
-    buyHit: (s) => `${s} reached your buy price`,
-    buyLine: (p, a) => `Price ${p} \u2264 your alert ${a}`,
-    buyLeft: (q, s) => `Still to buy for the plan: ${q} ${s}`,
-    buyDca: "Today is also your regular (DCA) buy day",
-    reinforce: "Reinforce",
-    sell: "Sell / Convert to BTC",
-    hold: "Hold",
-    open: "Open portfolio",
-    hub: "Market Hub",
-    planBtn: "Open the plan",
-    coinBtn: (s) => `Open ${s}`,
-    seasonBtn: "Altcoin Season",
-    btcMove: (pct2, h) => `BTC ${pct2} in ${h}`,
-    pfMove: (pct2, h) => `Your portfolio ${pct2} in ${h}`,
-    since: "since the last alert",
-    yourPf: "Your portfolio",
-    h24: "24h",
-    sig: (s) => `Signal change \xB7 ${s}`,
-    vsAvg: "vs your avg",
-    holding: "Holding",
-    targetHit: (s) => `Plan target reached \xB7 ${s}`,
-    planNow: "Plan",
-    tpHit: (n, s) => `Take-profit ${n} reached \xB7 ${s}`,
-    tpLine: (n, p, x, pct2) => `Price ${p} \u2265 TP${n} ${x}${pct2 ? ` \xB7 your plan sells ${pct2}% here` : ""}`,
-    macro: "Exit level reached",
-    btcD: "BTC dominance",
-    usdtD: "USDT dominance",
-    ethBtc: "ETH/BTC",
-    of3: (n) => `${n} of 3 of your exit conditions are met`,
-    allExit: "All 3 exit conditions are met \u2014 your exit zone",
-    xFear: "Extreme Fear",
-    xGreed: "Extreme Greed",
-    was: "yesterday",
-    altSeason: "Altcoin Season",
-    btcSeason: "Bitcoin Season",
-    idx: "index",
-    bigEtf: "Big ETF day",
-    health: "Data warning",
-    stale: (what, h) => `${what} not updated for ${h} h \u2014 the app may show old numbers.`,
-    marketData: "Market data",
-    etfData: "ETF flows",
-    priceData: "Price history",
-    ok: "Data back to normal",
-    none: "none",
-    coins: "coins",
-    quietNote: "held during quiet hours",
-    welcome: "Alerts are on. You will get the morning brief every day, the weekly report on Friday, and an alert whenever something important happens.",
-    noData: "no history yet",
-    in7: "7 days",
-    beatBtc: (a, n) => `${a} of ${n} coins beat BTC`,
-    vsBtc30: (a, b) => `vs BTC ${a} pts (30d) \xB7 ${b} pts (90d)`,
-    allocation: "Allocation",
-    onTarget: (a, n) => `${a} of ${n} categories on target`,
-    driftT: (n) => `Allocation off target \xB7 ${n}`,
-    nowW: "now",
-    targetW: "target",
-    ptsW: "pts",
-    trim: (v) => `To get back: trim about ${v}, or add to the other categories`,
-    add: (v) => `To get back: add about ${v}`,
-    allocBtn: "Open Allocation",
-    dcaDay: "DCA day \u2014 your regular buys",
-    dcaTotal: (v) => `Total today: ${v}`,
-    dcaLate: "DCA reminder \u2014 not bought yet",
-    dcaWasDue: (d, n) => `was due ${d} (${n} days ago)`,
-    dcaNext: "Buy when you can, or skip \u2014 the next one is on schedule.",
-    freeW: "Rewards & mining this week",
-    dcaLine: (n, mo, nx) => `${n} regular buy${n === 1 ? "" : "s"} \xB7 ${mo}/mo \xB7 next ${nx}`,
-    smartWeak: "Smart: not adding, it keeps losing to BTC",
-    smartStrong: "Smart: holding, it is beating BTC"
-  },
-  ar: {
-    brief: "\u0645\u0644\u062E\u0635 \u0627\u0644\u0635\u0628\u0627\u062D",
-    weekly: "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0623\u0633\u0628\u0648\u0639\u064A",
-    today: "\u0627\u0644\u064A\u0648\u0645",
-    week: "\u0647\u0630\u0627 \u0627\u0644\u0623\u0633\u0628\u0648\u0639",
-    profit: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0628\u062D",
-    vsBtc: "\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0640 BTC",
-    best: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0627\u0644\u064A\u0648\u0645",
-    worst: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0627\u0644\u064A\u0648\u0645",
-    bestW: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0647\u0630\u0627 \u0627\u0644\u0623\u0633\u0628\u0648\u0639",
-    worstW: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0647\u0630\u0627 \u0627\u0644\u0623\u0633\u0628\u0648\u0639",
-    market: "\u0627\u0644\u0633\u0648\u0642",
-    dom: "\u0627\u0644\u0633\u064A\u0637\u0631\u0629",
-    buyHit: (s) => `${s} \u0648\u0635\u0644\u062A \u0644\u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621`,
-    buyLine: (p, a) => `\u0627\u0644\u0633\u0639\u0631 ${p} \u2264 \u062A\u0646\u0628\u064A\u0647\u0643 ${a}`,
-    buyLeft: (q, s) => `\u0627\u0644\u0645\u062A\u0628\u0642\u064A \u0644\u0644\u062E\u0637\u0629: ${q} ${s}`,
-    buyDca: "\u0648\u0627\u0644\u064A\u0648\u0645 \u0643\u0645\u0627\u0646 \u064A\u0648\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u0638\u0645 (DCA)",
-    fng: "\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639",
-    alt: "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629",
-    etf: "\u062A\u062F\u0641\u0642\u0627\u062A ETF",
-    signals: "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A",
-    plan: "\u0627\u0644\u062E\u0637\u0629",
-    met: "\u0623\u0647\u062F\u0627\u0641 \u062A\u062D\u0642\u0642\u062A",
-    reinforce: "\u062A\u0639\u0632\u064A\u0632",
-    sell: "\u0628\u064A\u0639 / \u062A\u062D\u0648\u064A\u0644 \u0644\u0640 BTC",
-    hold: "\u0627\u062D\u062A\u0641\u0627\u0638",
-    open: "\u0627\u0641\u062A\u062D \u0627\u0644\u0645\u062D\u0641\u0638\u0629",
-    hub: "Market Hub",
-    planBtn: "\u0627\u0641\u062A\u062D \u0627\u0644\u062E\u0637\u0629",
-    coinBtn: (s) => `\u0627\u0641\u062A\u062D ${s}`,
-    seasonBtn: "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629",
-    btcMove: (pct2, h) => `BTC ${pct2} \u062E\u0644\u0627\u0644 ${h}`,
-    pfMove: (pct2, h) => `\u0645\u062D\u0641\u0638\u062A\u0643 ${pct2} \u062E\u0644\u0627\u0644 ${h}`,
-    since: "\u0645\u0646\u0630 \u0622\u062E\u0631 \u062A\u0646\u0628\u064A\u0647",
-    yourPf: "\u0645\u062D\u0641\u0638\u062A\u0643",
-    h24: "24 \u0633\u0627\u0639\u0629",
-    sig: (s) => `\u062A\u063A\u064A\u0651\u0631 \u0627\u0644\u0625\u0634\u0627\u0631\u0629 \xB7 ${s}`,
-    vsAvg: "\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643",
-    holding: "\u0642\u064A\u0645\u0629 \u0645\u0627 \u062A\u0645\u0644\u0643\u0647",
-    targetHit: (s) => `\u062A\u062D\u0642\u0642 \u0647\u062F\u0641 \u0627\u0644\u062E\u0637\u0629 \xB7 ${s}`,
-    planNow: "\u0627\u0644\u062E\u0637\u0629",
-    tpHit: (n, s) => `\u0648\u0635\u0644 \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D ${n} \xB7 ${s}`,
-    tpLine: (n, p, x, pct2) => `\u0627\u0644\u0633\u0639\u0631 ${p} \u2265 TP${n} ${x}${pct2 ? ` \xB7 \u062E\u0637\u062A\u0643 \u062A\u0628\u064A\u0639 ${pct2}% \u0647\u0646\u0627` : ""}`,
-    macro: "\u062A\u062D\u0642\u0642 \u0645\u0633\u062A\u0648\u0649 \u062E\u0631\u0648\u062C",
-    btcD: "\u0633\u064A\u0637\u0631\u0629 BTC",
-    usdtD: "\u0633\u064A\u0637\u0631\u0629 USDT",
-    ethBtc: "ETH/BTC",
-    of3: (n) => `\u062A\u062D\u0642\u0642 ${n} \u0645\u0646 3 \u0645\u0646 \u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C`,
-    allExit: "\u062A\u062D\u0642\u0642\u062A \u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C \u0627\u0644\u062B\u0644\u0627\u062B\u0629 \u2014 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
-    xFear: "\u062E\u0648\u0641 \u0634\u062F\u064A\u062F",
-    xGreed: "\u0637\u0645\u0639 \u0634\u062F\u064A\u062F",
-    was: "\u0623\u0645\u0633",
-    altSeason: "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629",
-    btcSeason: "\u0645\u0648\u0633\u0645 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
-    idx: "\u0627\u0644\u0645\u0624\u0634\u0631",
-    bigEtf: "\u064A\u0648\u0645 \u0643\u0628\u064A\u0631 \u0644\u0635\u0646\u0627\u062F\u064A\u0642 ETF",
-    health: "\u062A\u0646\u0628\u064A\u0647 \u0628\u064A\u0627\u0646\u0627\u062A",
-    stale: (what, h) => `${what} \u0644\u0645 \u062A\u062A\u062D\u062F\u062B \u0645\u0646\u0630 ${h} \u0633\u0627\u0639\u0629 \u2014 \u0642\u062F \u064A\u0639\u0631\u0636 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0623\u0631\u0642\u0627\u0645\u064B\u0627 \u0642\u062F\u064A\u0645\u0629.`,
-    marketData: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0633\u0648\u0642",
-    etfData: "\u062A\u062F\u0641\u0642\u0627\u062A ETF",
-    priceData: "\u0633\u062C\u0644 \u0627\u0644\u0623\u0633\u0639\u0627\u0631",
-    ok: "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0639\u0627\u062F\u062A \u0637\u0628\u064A\u0639\u064A\u0629",
-    none: "\u0644\u0627 \u0634\u064A\u0621",
-    coins: "\u0639\u0645\u0644\u0629",
-    quietNote: "\u0623\u064F\u062C\u0651\u0644 \u062E\u0644\u0627\u0644 \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0647\u062F\u0648\u0621",
-    welcome: "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u062A\u0639\u0645\u0644. \u0633\u064A\u0635\u0644\u0643 \u0645\u0644\u062E\u0635 \u0627\u0644\u0635\u0628\u0627\u062D \u064A\u0648\u0645\u064A\u064B\u0627\u060C \u0648\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0623\u0633\u0628\u0648\u0639\u064A \u064A\u0648\u0645 \u0627\u0644\u062C\u0645\u0639\u0629\u060C \u0648\u062A\u0646\u0628\u064A\u0647 \u0639\u0646\u062F \u062D\u062F\u0648\u062B \u0623\u064A \u0634\u064A\u0621 \u0645\u0647\u0645.",
-    noData: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0633\u062C\u0644 \u0628\u0639\u062F",
-    in7: "7 \u0623\u064A\u0627\u0645",
-    beatBtc: (a, n) => `${a} \u0645\u0646 ${n} \u0639\u0645\u0644\u0629 \u062A\u0641\u0648\u0642\u062A \u0639\u0644\u0649 BTC`,
-    vsBtc30: (a, b) => `\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0640 BTC ${a} \u0646\u0642\u0637\u0629 (30 \u064A\u0648\u0645) \xB7 ${b} \u0646\u0642\u0637\u0629 (90 \u064A\u0648\u0645)`,
-    allocation: "\u0627\u0644\u062A\u0648\u0632\u064A\u0639",
-    onTarget: (a, n) => `${a} \u0645\u0646 ${n} \u0641\u0626\u0627\u062A \u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641`,
-    driftT: (n) => `\u062E\u0631\u0648\u062C \u0639\u0646 \u0627\u0644\u062A\u0648\u0632\u064A\u0639 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641 \xB7 ${n}`,
-    nowW: "\u0627\u0644\u0622\u0646",
-    targetW: "\u0627\u0644\u0647\u062F\u0641",
-    ptsW: "\u0646\u0642\u0637\u0629",
-    trim: (v) => `\u0644\u0644\u0639\u0648\u062F\u0629: \u062E\u0641\u0651\u0636 \u062D\u0648\u0627\u0644\u064A ${v}\u060C \u0623\u0648 \u0623\u0636\u0641 \u0644\u0644\u0641\u0626\u0627\u062A \u0627\u0644\u0623\u062E\u0631\u0649`,
-    add: (v) => `\u0644\u0644\u0639\u0648\u062F\u0629: \u0623\u0636\u0641 \u062D\u0648\u0627\u0644\u064A ${v}`,
-    allocBtn: "\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0648\u0632\u064A\u0639",
-    dcaDay: "\u064A\u0648\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u0638\u0645 (DCA)",
-    dcaTotal: (v) => `\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u064A\u0648\u0645: ${v}`,
-    dcaLate: "\u062A\u0630\u0643\u064A\u0631 DCA \u2014 \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0628\u0639\u062F",
-    dcaWasDue: (d, n) => `\u0643\u0627\u0646 \u0645\u0648\u0639\u062F\u0647 ${d} (\u0645\u0646\u0630 ${n} \u0623\u064A\u0627\u0645)`,
-    dcaNext: "\u0627\u0634\u062A\u0631\u0650 \u0639\u0646\u062F\u0645\u0627 \u062A\u0633\u062A\u0637\u064A\u0639 \u0623\u0648 \u062A\u062C\u0627\u0648\u0632\u0647 \u2014 \u0627\u0644\u0645\u0648\u0639\u062F \u0627\u0644\u062A\u0627\u0644\u064A \u0641\u064A \u0648\u0642\u062A\u0647.",
-    freeW: "\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062A \u0648\u0627\u0644\u062A\u0639\u062F\u064A\u0646 \u0647\u0630\u0627 \u0627\u0644\u0623\u0633\u0628\u0648\u0639",
-    dcaLine: (n, mo, nx) => `${n} \u0634\u0631\u0627\u0621 \u0645\u0646\u062A\u0638\u0645 \xB7 ${mo} \u0634\u0647\u0631\u064A\u064B\u0627 \xB7 \u0627\u0644\u062A\u0627\u0644\u064A ${nx}`,
-    smartWeak: "\u0630\u0643\u064A: \u0644\u0627 \u062A\u0639\u0632\u064A\u0632\u060C \u062A\u062E\u0633\u0631 \u0623\u0645\u0627\u0645 BTC \u0628\u0627\u0633\u062A\u0645\u0631\u0627\u0631",
-    smartStrong: "\u0630\u0643\u064A: \u0627\u062D\u062A\u0641\u0627\u0638\u060C \u062A\u062A\u0641\u0648\u0642 \u0639\u0644\u0649 BTC"
-  }
-};
 var esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 function usd(v) {
   if (v == null || !isFinite(v)) return "\u2014";
@@ -824,61 +644,12 @@ function summarize(user, market, now = Date.now()) {
     btc7: btcRow ? btcRow.ch7 : null
   };
 }
-var btn = (text, path) => ({ text, url: APP + (path || "") });
 var STABLE_RX = /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD)$/;
 var isStable = (sym) => STABLE_RX.test(String(sym || "").toUpperCase());
-function movers(sum, key, n = 3) {
-  const list2 = sum.coins.filter((c) => c[key] != null && c.value >= 1 && !isStable(c.sym));
-  const up = [...list2].sort((a, b) => b[key] - a[key]).slice(0, n).filter((c) => c[key] > 0);
-  const dn = [...list2].sort((a, b) => a[key] - b[key]).slice(0, n).filter((c) => c[key] < 0);
-  const line = (c) => `<code>${esc(c.sym.padEnd(6))} ${pct(c[key], 1).padStart(7)}</code>  ${usd(c.value)}`;
-  return { up: up.map(line), dn: dn.map(line) };
-}
-function marketLines(t, m) {
-  const g = m.global || {}, d = g.dom || {}, out = [];
-  if (m.btc) out.push(`BTC  <b>${usd(m.btc.price)}</b>  ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
-  if (d.btc != null) out.push(`${t.dom}  BTC ${d.btc.toFixed(1)}% \xB7 USDT ${(d.usdt || 0).toFixed(2)}%`);
-  if (m.fng) out.push(`${esc(t.fng)}  <b>${m.fng.value}</b> \xB7 ${esc(m.fng.label)}`);
-  if (m.alt && m.alt.value != null) out.push(`${t.alt}  <b>${m.alt.value}</b> \xB7 ${esc(m.alt.label)}`);
-  const e = etfDay(m.etf);
-  if (e) out.push(`${t.etf} (${e.label})  BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}`);
-  return out;
-}
-var shortD = (d) => (/* @__PURE__ */ new Date(d + "T12:00:00Z")).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 function etfDay(etf) {
   if (!etf || !etf.btc || !etf.btc.days || !etf.btc.days.length) return null;
   const b = etf.btc.days[etf.btc.days.length - 1], e = etf.eth && etf.eth.days && etf.eth.days.find((x) => x[0] === b[0]);
   return { date: b[0], label: (/* @__PURE__ */ new Date(b[0] + "T12:00:00Z")).toLocaleDateString("en-US", { month: "short", day: "numeric" }), btc: b[1], eth: e ? e[1] : 0 };
-}
-function brief(sum, m, cfg, now, weekly = false) {
-  const t = W[cfg.lang], key = weekly ? "ch7" : "ch24", mv = movers(sum, key);
-  const head = `${weekly ? "\u{1F5D3}" : "\u2600\uFE0F"} <b>${weekly ? t.weekly : t.brief}</b> \xB7 ${local(now, { weekday: "short", day: "numeric", month: "short" })}`;
-  const ch = weekly ? sum.ch7 : sum.ch24, dv = weekly ? sum.d7 : sum.d24;
-  const L = [
-    head,
-    "",
-    `\u{1F4BC} <b>${usd2(sum.value)}</b>   ${dot(ch)} ${pct(ch)} (${signed(dv)}) ${weekly ? t.week : t.today}`,
-    `${t.profit}  <b>${signed(sum.total)}</b> (${pct(sum.pctTotal, 1)})`
-  ];
-  if (sum.vsBtc != null) L.push(`${t.vsBtc}  ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} \xB7 ${t.beatBtc(sum.beat, sum.alts)}`);
-  if (mv.up.length) L.push("", `\u{1F4C8} <b>${weekly ? t.bestW : t.best}</b>`, ...mv.up);
-  if (mv.dn.length) L.push("", `\u{1F4C9} <b>${weekly ? t.worstW : t.worst}</b>`, ...mv.dn);
-  const ml = marketLines(t, m);
-  if (ml.length) L.push("", `\u{1F30D} <b>${t.market}</b>`, ...ml);
-  L.push("", `\u{1F3AF} <b>${t.signals}</b>  ${sum.counts.reinforce} ${t.reinforce} \xB7 ${sum.counts.sell} ${t.sell.split(" /")[0]} \xB7 ${sum.counts.hold} ${t.hold}`);
-  if (sum.plan.length) L.push(`\u{1F4CB} <b>${t.plan}</b>  ${sum.prog.pct.toFixed(1)}% \xB7 ${sum.prog.completed}/${sum.prog.counted} ${t.met}`);
-  const mc = sum.macro.filter((x) => x.met).length;
-  if (mc) L.push(`\u{1F9ED} ${t.of3(mc)}`);
-  if (sum.alloc) L.push(`\u2696\uFE0F <b>${t.allocation}</b>  ${t.onTarget(sum.alloc.onTarget, sum.alloc.count)}`);
-  if (sum.dca && sum.dca.length) {
-    const nx = [...sum.dca].filter((x) => x.s.next).sort((a, b) => a.s.next.localeCompare(b.s.next))[0], mo = sum.dca.reduce((a, x) => a + x.s.perMonth, 0);
-    L.push(`\u{1F6D2} <b>DCA</b>  ${t.dcaLine(sum.dca.length, usd(mo), nx ? esc(nx.sym) + " " + shortD(nx.s.next) : "\u2014")}`);
-  }
-  if (weekly && sum.free && sum.free.length) {
-    const tot = sum.free.reduce((a, f) => a + f.usd, 0), q = (n) => String(+Number(n).toPrecision(6));
-    L.push(`\u{1F381} <b>${esc(t.freeW)}</b>  ${sum.free.slice(0, 4).map((f) => "+" + q(f.qty) + " " + esc(f.sym)).join(" \xB7 ")}${sum.free.length > 4 ? " \u2026" : ""} (\u2248 ${usd(tot)})`);
-  }
-  return { key: weekly ? "weekly" : "brief", text: L.join("\n"), buttons: [[btn(t.open, "index.html"), btn(t.hub, "market.html")]] };
 }
 
 // tools/worker/cg-ids.json
@@ -1116,6 +887,36 @@ var T = {
     other: "\u{1F310} \u0639\u0631\u0628\u064A",
     otherCode: "ar",
     langSet: "Language: English \u2705",
+    exit: "\u{1F6AA} Exit plan",
+    today: "today",
+    profit: "All Time Profit",
+    vsBtcS: "vs BTC",
+    beat: (a, n) => `${a}/${n} coins beat BTC`,
+    bestT: "Best today",
+    worstT: "Worst today",
+    dom: "Dominance",
+    fng: "Fear & Greed",
+    altS: "Altcoin Season",
+    etf: "ETF",
+    planS: "Plan",
+    allocS: "Allocation",
+    onT: (a, n) => `${a}/${n} on target`,
+    dcaS: (n, mo) => `${n} buys \xB7 ${mo}/mo`,
+    exitS: (n) => `Exit ${n}/3`,
+    nearTp: "next TP",
+    exitT: "Exit plan",
+    conds: "Exit conditions",
+    met3: (n) => `${n} of 3 met`,
+    btcD: "BTC dominance",
+    usdtD: "USDT dominance",
+    ethBtc: "ETH/BTC",
+    tpT: "Take-profit levels",
+    toGo: "to go",
+    sellP: (p) => `sell ${p}%`,
+    reached: "reached",
+    noExit: "No take-profit levels yet \u2014 set them on the Exit Strategy page.",
+    openExit: "\u{1F6AA} Open Exit Strategy",
+    allExit: "All 3 conditions met \u2014 your exit zone",
     kb: { pf: "\u{1F4BC} Portfolio", market: "\u{1F30D} Market", plan: "\u{1F4CB} Plan", movers: "\u{1F3C6} Best & worst" }
   },
   ar: {
@@ -1183,6 +984,36 @@ var T = {
     other: "\u{1F310} English",
     otherCode: "en",
     langSet: "\u0627\u0644\u0644\u063A\u0629: \u0639\u0631\u0628\u064A \u2705",
+    exit: "\u{1F6AA} \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
+    today: "\u0627\u0644\u064A\u0648\u0645",
+    profit: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0628\u062D",
+    vsBtcS: "\u0645\u0642\u0627\u0628\u0644 BTC",
+    beat: (a, n) => `${a}/${n} \u0639\u0645\u0644\u0629 \u0633\u0628\u0642\u062A BTC`,
+    bestT: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0627\u0644\u064A\u0648\u0645",
+    worstT: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0627\u0644\u064A\u0648\u0645",
+    dom: "\u0627\u0644\u0633\u064A\u0637\u0631\u0629",
+    fng: "\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639",
+    altS: "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A",
+    etf: "ETF",
+    planS: "\u0627\u0644\u062E\u0637\u0629",
+    allocS: "\u0627\u0644\u062A\u0648\u0632\u064A\u0639",
+    onT: (a, n) => `${a}/${n} \u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641`,
+    dcaS: (n, mo) => `${n} \u0634\u0631\u0627\u0621 \xB7 ${mo}/\u0634\u0647\u0631`,
+    exitS: (n) => `\u0627\u0644\u062E\u0631\u0648\u062C ${n}/3`,
+    nearTp: "\u0623\u0642\u0631\u0628 TP",
+    exitT: "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
+    conds: "\u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C",
+    met3: (n) => `\u062A\u062D\u0642\u0642 ${n} \u0645\u0646 3`,
+    btcD: "\u0633\u064A\u0637\u0631\u0629 BTC",
+    usdtD: "\u0633\u064A\u0637\u0631\u0629 USDT",
+    ethBtc: "ETH/BTC",
+    tpT: "\u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D",
+    toGo: "\u0628\u0627\u0642\u064A",
+    sellP: (p) => `\u0628\u064A\u0639 ${p}%`,
+    reached: "\u0648\u0635\u0644",
+    noExit: "\u0645\u0641\u064A\u0634 \u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0623\u0631\u0628\u0627\u062D \u0644\u0633\u0647 \u2014 \u062D\u0637\u0647\u0627 \u0645\u0646 \u0635\u0641\u062D\u0629 Exit Strategy.",
+    openExit: "\u{1F6AA} \u0627\u0641\u062A\u062D Exit Strategy",
+    allExit: "\u0627\u0644\u0634\u0631\u0648\u0637 \u0627\u0644\u0640 3 \u0627\u062A\u062D\u0642\u0642\u062A \u2014 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
     kb: { pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A", market: "\u{1F30D} \u0627\u0644\u0633\u0648\u0642", plan: "\u{1F4CB} \u0627\u0644\u062E\u0637\u0629", movers: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" }
   }
 };
@@ -1199,7 +1030,7 @@ function spark(arr, n = 16) {
   const lo = Math.min(...pts), hi = Math.max(...pts);
   return pts.map((v) => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join("");
 }
-var menuRows = (t) => [[cb(t.pf, "pf"), cb(t.market, "mk")], [cb(t.plan, "pl"), cb(t.movers, "mv")], [cb(t.signals, "sg"), cb(t.coin, "coin")], [cb(t.other, "lang:" + t.otherCode)]];
+var menuRows = (t) => [[cb(t.pf, "pf"), cb(t.market, "mk")], [cb(t.plan, "pl"), cb(t.movers, "mv")], [cb(t.signals, "sg"), cb(t.exit, "ex")], [cb(t.coin, "coin"), cb(t.other, "lang:" + t.otherCode)]];
 var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.market }], [{ text: t.kb.plan }, { text: t.kb.movers }]], resize_keyboard: true, is_persistent: true });
 var memLang = null;
 async function getLang(env) {
@@ -1222,15 +1053,67 @@ function viewMenu(t) {
   return { text: `${t.hi}
 ${t.menuTitle}`, buttons: menuRows(t) };
 }
+var hm = (now) => local(now, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+var row = (sym, v, extra) => `<code>${esc(String(sym).toUpperCase().padEnd(6))}${pct(v, 1).padStart(7)}</code> ${extra}`;
+function moverRows(sum, key, dir, n = 5) {
+  return sum.coins.filter((c) => c[key] != null && c.value >= 1 && !isStable(c.sym)).sort((a, b) => dir * (b[key] - a[key])).slice(0, n).filter((c) => dir > 0 ? c[key] > 0 : c[key] < 0);
+}
+function marketShort(t, m) {
+  const g = m.global || {}, d = g.dom || {}, out = [];
+  if (m.btc) out.push(`BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
+  if (d.btc != null) out.push(`${t.dom} BTC ${d.btc.toFixed(1)}% \xB7 USDT ${(d.usdt || 0).toFixed(2)}%`);
+  if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> \xB7 ${esc(m.fng.label)}`);
+  if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> \xB7 ${esc(m.alt.label)}`);
+  const e = etfDay(m.etf);
+  if (e) out.push(`${t.etf} ${e.label} \xB7 BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}`);
+  return out;
+}
+var nearestTp = (sum) => (sum.tps || []).filter((x) => x.price < x.level).map((x) => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to)[0];
 function viewPortfolio(t, cfg, sum, m, now) {
-  const b = brief(sum, m, cfg, now).text.split("\n");
-  b[0] = `\u{1F4BC} <b>${t.pfNow}</b> \xB7 ${local(now, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;
-  return { text: b.join("\n"), buttons: [[cb(t.refresh, "pf"), cb(t.movers, "mv")], [cb(t.plan, "pl"), cb(t.signals, "sg")], [url(t.openApp, APP), cb(t.back, "menu")]] };
+  const L = [`\u{1F4BC} <b>${t.pfNow}</b> \xB7 ${hm(now)}`, "", `<b>${usd2(sum.value)}</b>`];
+  if (sum.ch24 != null) L.push(`${dot(sum.ch24)} ${pct(sum.ch24)} \xB7 ${signed(sum.d24)} ${t.today}`);
+  L.push(`${t.profit} <b>${signed(sum.total)}</b> \xB7 ${pct(sum.pctTotal, 1)}`);
+  if (sum.vsBtc != null) L.push(`${t.vsBtcS} ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} \xB7 ${t.beat(sum.beat, sum.alts)}`);
+  const up = moverRows(sum, "ch24", 1), dn = moverRows(sum, "ch24", -1);
+  if (up.length) L.push("", `\u{1F4C8} <b>${t.bestT}</b>`, ...up.map((c) => row(c.sym, c.ch24, usd(c.value))));
+  if (dn.length) L.push("", `\u{1F4C9} <b>${t.worstT}</b>`, ...dn.map((c) => row(c.sym, c.ch24, usd(c.value))));
+  const mk = marketShort(t, m);
+  if (mk.length) L.push("", `\u{1F30D} <b>${t.mkT}</b>`, ...mk);
+  L.push("", `\u{1F3AF} ${t.sigT} \u{1F7E2} ${sum.counts.reinforce} \xB7 \u{1F534} ${sum.counts.sell} \xB7 \u26AA ${sum.counts.hold}`);
+  if (sum.plan.length) L.push(`\u{1F4CB} ${t.planS} <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${sum.prog.completed}/${sum.prog.counted} \u2705`);
+  if (sum.alloc) L.push(`\u2696\uFE0F ${t.allocS} ${t.onT(sum.alloc.onTarget, sum.alloc.count)}`);
+  if ((sum.dca || []).length) L.push(`\u{1F6D2} DCA ${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
+  const mc = sum.macro.filter((x) => x.met).length, tp = nearestTp(sum);
+  L.push(`\u{1F6AA} ${t.exitS(mc)}${tp ? ` \xB7 ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ""}`);
+  return { text: L.join("\n"), buttons: [[cb(t.refresh, "pf"), cb(t.movers, "mv")], [cb(t.plan, "pl"), cb(t.exit, "ex")], [cb(t.signals, "sg"), url(t.openApp, APP)], [cb(t.back, "menu")]] };
+}
+function viewExit(t, sum, now) {
+  const mc = sum.macro.filter((x) => x.met).length, name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc };
+  const L = [`\u{1F6AA} <b>${t.exitT}</b> \xB7 ${hm(now)}`, "", `\u{1F9ED} <b>${t.conds}</b> \xB7 ${t.met3(mc)}`];
+  for (const x of sum.macro) {
+    const v = (n) => n == null ? "\u2014" : n.toFixed(x.dp) + x.unit;
+    L.push(`${x.met ? "\u2705" : "\u2B1C"} ${name[x.k]} ${v(x.now)} \u2192 ${x.op} ${v(x.lvl)}`);
+  }
+  if (mc === 3) L.push(`\u{1F514} <b>${t.allExit}</b>`);
+  const tps = (sum.tps || []).map((x) => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
+  L.push("", `\u{1F3AF} <b>${t.tpT}</b>`);
+  if (!tps.length) L.push(t.noExit);
+  const bySym = /* @__PURE__ */ new Map();
+  tps.forEach((x) => {
+    if (!bySym.has(x.sym)) bySym.set(x.sym, []);
+    bySym.get(x.sym).push(x);
+  });
+  for (const [sym, list2] of [...bySym].slice(0, 12)) {
+    L.push(`<b>${esc(sym)}</b> \xB7 ${price(list2[0].price)}`);
+    list2.sort((a, b) => a.n - b.n).forEach((x) => L.push(`  ${x.to <= 0 ? "\u2705" : "\u2B1C"} TP${x.n} ${price(x.level)}${x.mult ? ` (\xD7${x.mult})` : ""} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}% ${t.toGo}`}${x.pct ? ` \xB7 ${t.sellP(x.pct)}` : ""}`));
+  }
+  if (bySym.size > 12) L.push("\u2026");
+  return { text: L.join("\n"), buttons: [[cb(t.refresh, "ex"), url(t.openExit, APP + "accumulation.html#exit")], [cb(t.pf, "pf"), cb(t.back, "menu")]] };
 }
 function viewMovers(t, sum) {
   const list2 = sum.coins.filter((c) => c.value >= 1 && !isStable(c.sym));
   const block = (key, title, dir) => {
-    const rows = list2.filter((c) => c[key] != null).sort((a, b) => dir * (b[key] - a[key])).slice(0, 3).filter((c) => dir > 0 ? c[key] > 0 : c[key] < 0);
+    const rows = list2.filter((c) => c[key] != null).sort((a, b) => dir * (b[key] - a[key])).slice(0, 5).filter((c) => dir > 0 ? c[key] > 0 : c[key] < 0);
     return rows.length ? [``, `${dir > 0 ? "\u{1F4C8}" : "\u{1F4C9}"} <b>${title}</b>`, ...rows.map((c) => `<code>${esc(c.sym.padEnd(6))} ${pct(c[key], 1).padStart(7)}</code>  ${usd(c.value)}`)] : [];
   };
   const L = [`\u{1F3C6} <b>${esc(t.mvT)}</b>  <i>(${t.noStable})</i>`, ...block("ch24", t.best24, 1), ...block("ch24", t.worst24, -1), ...block("ch7", t.best7, 1), ...block("ch7", t.worst7, -1)];
@@ -1278,27 +1161,27 @@ ${t.noPlan}`, buttons: [[url(t.openApp, APP + "accumulation.html"), cb(t.back, "
   return { text: L.join("\n"), buttons: [[cb(t.refresh, "pl"), url(t.openApp, APP + "accumulation.html")], [cb(t.back, "menu")]] };
 }
 function viewMarket(t, m, now) {
-  const L = [`\u{1F30D} <b>${t.mkT}</b> \xB7 ${local(now, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`, "", ...marketLines(W[t === T.ar ? "ar" : "en"], m)];
+  const L = [`\u{1F30D} <b>${t.mkT}</b> \xB7 ${hm(now)}`, "", ...marketShort(t, m)];
   const seen = /* @__PURE__ */ new Set(), top = [...m.top || [], ...m.top500 || []].filter((r) => r.rank && r.rank <= 500 && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
-  const line = (r) => `<code>${esc(String(r.sym).toUpperCase().padEnd(6))} ${pct(r.ch24, 1).padStart(7)}</code>  ${price(r.price)}`;
+  const line = (r) => row(r.sym, r.ch24, price(r.price));
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
   if (up.length) L.push("", `\u{1F4C8} <b>${t.topUp}</b>`, ...up.map(line));
   if (dn.length) L.push("", `\u{1F4C9} <b>${t.topDn}</b>`, ...dn.map(line));
   return { text: L.join("\n"), buttons: [[cb(t.refresh, "mk"), url("\u{1F9ED} Market Hub", APP + "market.html")], [cb(t.back, "menu")]] };
 }
 function viewCoin(t, coin, m, sum, now) {
-  const row = [...m.top, ...m.top500].find((r) => r.id === coin.id) || {}, s = m.series[coin.id];
-  const p = row.price > 0 ? row.price : s ? s.last : null;
-  const ch7 = row.ch7 != null ? row.ch7 : s && p && s.at(now - 7 * 24 * H2) ? (p / s.at(now - 7 * 24 * H2) - 1) * 100 : null;
-  const sym = (coin.sym || row.sym || "").toUpperCase(), name = coin.name || row.name || sym;
+  const row2 = [...m.top, ...m.top500].find((r) => r.id === coin.id) || {}, s = m.series[coin.id];
+  const p = row2.price > 0 ? row2.price : s ? s.last : null;
+  const ch7 = row2.ch7 != null ? row2.ch7 : s && p && s.at(now - 7 * 24 * H2) ? (p / s.at(now - 7 * 24 * H2) - 1) * 100 : null;
+  const sym = (coin.sym || row2.sym || "").toUpperCase(), name = coin.name || row2.name || sym;
   const L = [
-    `\u{1FA99} <b>${esc(name)}</b> (${esc(sym)})${row.rank ? ` \xB7 #${row.rank}` : ""}`,
+    `\u{1FA99} <b>${esc(name)}</b> (${esc(sym)})${row2.rank ? ` \xB7 #${row2.rank}` : ""}`,
     "",
-    `\u{1F4B2} <b>${price(p)}</b>   ${dot(row.ch24)} ${pct(row.ch24, 1)} ${t.h24} \xB7 ${dot(ch7)} ${pct(ch7, 1)} ${t.d7}`
+    `\u{1F4B2} <b>${price(p)}</b>   ${dot(row2.ch24)} ${pct(row2.ch24, 1)} ${t.h24} \xB7 ${dot(ch7)} ${pct(ch7, 1)} ${t.d7}`
   ];
-  const sp = spark(row.spark);
+  const sp = spark(row2.spark);
   if (sp) L.push(`<code>${sp}</code>  ${t.d7}`);
-  if (row.mcap || row.vol) L.push(`\u{1F4CA} ${t.cap} ${big(row.mcap)} \xB7 ${t.vol} ${big(row.vol)}`);
+  if (row2.mcap || row2.vol) L.push(`\u{1F4CA} ${t.cap} ${big(row2.mcap)} \xB7 ${t.vol} ${big(row2.vol)}`);
   const mine = sum && sum.coins.find((c) => c.sym === sym);
   if (mine) L.push("", `\u{1F45B} ${t.you} <b>${qty(mine.qty)} ${esc(sym)}</b> = ${usd2(mine.value)}`, `${t.avg} ${price(mine.avg)} \xB7 ${dot(mine.chg)} ${pct(mine.chg, 1)} \xB7 ${t.signal}: ${t[sum.signal[sym]] || t.hold}`);
   else if (sum) L.push("", `\u{1F45B} ${t.noHold}`);
@@ -1323,6 +1206,7 @@ var WORDS = [
   [/^\/?(lang|language|لغة|اللغة)$/i, "lang"],
   [/^(عربي|arabic)$/i, "lang:ar"],
   [/^(english|انجليزي|إنجليزي)$/i, "lang:en"],
+  [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, "ex"],
   [/^\/?(movers|mv|best)$|الأفضل/i, "mv"],
   [/^\/?(signals|sg)$|الإشارات/i, "sg"],
   [/^\/?(coin|price)$/i, "coin"]
@@ -1343,7 +1227,7 @@ async function buildView(env, act, arg) {
   if (act === "lang") return { t, views: [{ text: "\u{1F310} English / \u0639\u0631\u0628\u064A", buttons: [[cb("\u{1F1EC}\u{1F1E7} English", "lang:en"), cb("\u{1F1F8}\u{1F1E6} \u0639\u0631\u0628\u064A", "lang:ar")]] }] };
   if (act === "coin") return { t, views: [{ text: `\u{1FA99} ${t.askCoin}`, buttons: [[cb(t.back, "menu")]] }] };
   if (act === "soon") return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
-  const needUser = ["pf", "pl", "mv", "sg"].includes(act);
+  const needUser = ["pf", "pl", "mv", "sg", "ex"].includes(act);
   if (needUser && !user) return { t, views: [{ text: t.noUser, buttons: [[cb(t.market, "mk"), cb(t.back, "menu")]] }] };
   const ids = user ? [...(user.coins || []).filter((c) => c && !c.removed), ...(user.accum || []).filter((a) => a && +a.alertPrice > 0)].map((c) => cgIdOf(c, { cgIds: null })) : [];
   if (act === "coins") {
@@ -1368,6 +1252,7 @@ async function buildView(env, act, arg) {
   if (act === "mv") return { t, views: [viewMovers(t, sum)] };
   if (act === "sg") return { t, views: [viewSignals(t, sum)] };
   if (act === "pl") return { t, views: [viewPlan(t, sum, now)] };
+  if (act === "ex") return { t, views: [viewExit(t, sum, now)] };
   return { t, views: [viewMenu(t)] };
 }
 var ok = () => new Response("ok", { headers: { "content-type": "text/plain" } });
@@ -1420,9 +1305,9 @@ async function buildById(env, id) {
   const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
   const ids = user ? (user.coins || []).filter((c) => c && !c.removed).map((c) => cgIdOf(c, { cgIds: null })) : [];
   const m = await loadMarket([...ids, id]);
-  const row = [...m.top, ...m.top500].find((r) => r.id === id) || {};
+  const row2 = [...m.top, ...m.top500].find((r) => r.id === id) || {};
   const own = user && (user.coins || []).find((c) => c && !c.removed && cgIdOf(c, m) === id);
-  const coin = { id, sym: own && own.sym || row.sym || "", name: row.name || own && own.name || "" };
+  const coin = { id, sym: own && own.sym || row2.sym || "", name: row2.name || own && own.name || "" };
   return { t, views: [viewCoin(t, coin, m, user ? summarize(user, m, now) : null, now)] };
 }
 var run = (env, act, arg) => act === "coinById" ? buildById(env, arg) : buildView(env, act, arg);
@@ -1441,6 +1326,7 @@ async function setup(request, env) {
     ["plan", lang2 === "ar" ? "\u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639" : "Accumulation plan"],
     ["movers", lang2 === "ar" ? "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" : "Best & worst"],
     ["signals", lang2 === "ar" ? "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" : "Signals"],
+    ["exit", lang2 === "ar" ? "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" : "Exit plan"],
     ["menu", lang2 === "ar" ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
     ["lang", "English / \u0639\u0631\u0628\u064A"]
   ].map(([command, description]) => ({ command, description }));

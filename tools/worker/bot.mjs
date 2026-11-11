@@ -12,7 +12,7 @@
 // Worker secrets (Settings → Variables and Secrets): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT,
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
-import { summarize, brief, settings, marketLines, W, esc, usd, usd2, pct, dot, signed, local, isStable, APP } from '../alerts-core.mjs';
+import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, findCoin, cgIdOf, serviceAccount } from './data.mjs';
 
 const H = 3600e3;
@@ -33,7 +33,13 @@ const T = {
     mvT: 'Best & worst (your coins)', noStable: 'stablecoins left out', sigT: 'Signals', reinforce: '🟢 Reinforce', sell: '🔴 Sell / convert to BTC', hold: '⚪ Hold',
     vsAvg: 'vs your avg', mkT: 'Market', topUp: 'Top 500 · best 24h', topDn: 'Top 500 · worst 24h', updated: 'Updated', futures: 'Futures', yes: 'yes', private: '',
     welcome: 'Your bot is connected ✅\nIt answers here any time. Tap a button below, or send a ticker like <code>btc</code>.',
-    other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅',
+    other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅', exit: '🚪 Exit plan',
+    today: 'today', profit: 'All Time Profit', vsBtcS: 'vs BTC', beat: (a, n) => `${a}/${n} coins beat BTC`, bestT: 'Best today', worstT: 'Worst today',
+    dom: 'Dominance', fng: 'Fear & Greed', altS: 'Altcoin Season', etf: 'ETF', planS: 'Plan', allocS: 'Allocation', onT: (a, n) => `${a}/${n} on target`,
+    dcaS: (n, mo) => `${n} buys · ${mo}/mo`, exitS: (n) => `Exit ${n}/3`, nearTp: 'next TP',
+    exitT: 'Exit plan', conds: 'Exit conditions', met3: n => `${n} of 3 met`, btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC',
+    tpT: 'Take-profit levels', toGo: 'to go', sellP: p => `sell ${p}%`, reached: 'reached', noExit: 'No take-profit levels yet — set them on the Exit Strategy page.',
+    openExit: '🚪 Open Exit Strategy', allExit: 'All 3 conditions met — your exit zone',
     kb: { pf: '💼 Portfolio', market: '🌍 Market', plan: '📋 Plan', movers: '🏆 Best & worst' },
   },
   ar: {
@@ -49,7 +55,13 @@ const T = {
     mvT: 'الأفضل والأسوأ (عملاتك)', noStable: 'من غير الـ stablecoins', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل لـ BTC', hold: '⚪ احتفاظ',
     vsAvg: 'مقابل متوسطك', mkT: 'السوق', topUp: 'أعلى 500 · الأفضل 24س', topDn: 'أعلى 500 · الأسوأ 24س', updated: 'تحديث', futures: 'Futures', yes: 'أيوه', private: '',
     welcome: 'البوت اتوصل ✅\nبيرد عليك هنا في أي وقت. اضغط زرار تحت، أو ابعت رمز عملة زي <code>btc</code>.',
-    other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅',
+    other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
+    today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل BTC', beat: (a, n) => `${a}/${n} عملة سبقت BTC`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
+    dom: 'السيطرة', fng: 'الخوف والطمع', altS: 'موسم العملات', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a}/${n} على الهدف`,
+    dcaS: (n, mo) => `${n} شراء · ${mo}/شهر`, exitS: (n) => `الخروج ${n}/3`, nearTp: 'أقرب TP',
+    exitT: 'خطة الخروج', conds: 'شروط الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'سيطرة BTC', usdtD: 'سيطرة USDT', ethBtc: 'ETH/BTC',
+    tpT: 'مستويات جني الأرباح', toGo: 'باقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'مفيش مستويات جني أرباح لسه — حطها من صفحة Exit Strategy.',
+    openExit: '🚪 افتح Exit Strategy', allExit: 'الشروط الـ 3 اتحققت — منطقة الخروج',
     kb: { pf: '💼 محفظتي', market: '🌍 السوق', plan: '📋 الخطة', movers: '🏆 الأفضل والأسوأ' },
   },
 };
@@ -67,7 +79,7 @@ export function spark(arr, n = 16) {   // a 7-day line drawn with block characte
   const lo = Math.min(...pts), hi = Math.max(...pts);
   return pts.map(v => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join('');
 }
-const menuRows = t => [[cb(t.pf, 'pf'), cb(t.market, 'mk')], [cb(t.plan, 'pl'), cb(t.movers, 'mv')], [cb(t.signals, 'sg'), cb(t.coin, 'coin')], [cb(t.other, 'lang:' + t.otherCode)]];
+const menuRows = t => [[cb(t.pf, 'pf'), cb(t.market, 'mk')], [cb(t.plan, 'pl'), cb(t.movers, 'mv')], [cb(t.signals, 'sg'), cb(t.exit, 'ex')], [cb(t.coin, 'coin'), cb(t.other, 'lang:' + t.otherCode)]];
 const replyKb = t => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.market }], [{ text: t.kb.plan }, { text: t.kb.movers }]], resize_keyboard: true, is_persistent: true });
 
 // ── language: English by default; 🌐 in the menu (or /lang) switches. Kept in the Worker's KV (RATE), else in memory ──
@@ -83,16 +95,65 @@ async function setLang(env, v) { memLang = v; try { if (env.RATE) await env.RATE
 // ── views: each returns { text, buttons } ──
 export function viewMenu(t) { return { text: `${t.hi}\n${t.menuTitle}`, buttons: menuRows(t) }; }
 
+// short lines (they fit a phone without wrapping): money in bold, a dot for up / down, details after a ·
+const hm = now => local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const row = (sym, v, extra) => `<code>${esc(String(sym).toUpperCase().padEnd(6))}${pct(v, 1).padStart(7)}</code> ${extra}`;
+function moverRows(sum, key, dir, n = 5) {
+  return sum.coins.filter(c => c[key] != null && c.value >= 1 && !isStable(c.sym)).sort((a, b) => dir * (b[key] - a[key])).slice(0, n).filter(c => dir > 0 ? c[key] > 0 : c[key] < 0);
+}
+function marketShort(t, m) {
+  const g = m.global || {}, d = g.dom || {}, out = [];
+  if (m.btc) out.push(`BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
+  if (d.btc != null) out.push(`${t.dom} BTC ${d.btc.toFixed(1)}% · USDT ${(d.usdt || 0).toFixed(2)}%`);
+  if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> · ${esc(m.fng.label)}`);
+  if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> · ${esc(m.alt.label)}`);
+  const e = etfDay(m.etf); if (e) out.push(`${t.etf} ${e.label} · BTC ${flow(e.btc)} · ETH ${flow(e.eth)}`);
+  return out;
+}
+const nearestTp = sum => (sum.tps || []).filter(x => x.price < x.level).map(x => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to)[0];
 export function viewPortfolio(t, cfg, sum, m, now) {
-  const b = brief(sum, m, cfg, now).text.split('\n');
-  b[0] = `💼 <b>${t.pfNow}</b> · ${local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`;
-  return { text: b.join('\n'), buttons: [[cb(t.refresh, 'pf'), cb(t.movers, 'mv')], [cb(t.plan, 'pl'), cb(t.signals, 'sg')], [url(t.openApp, APP), cb(t.back, 'menu')]] };
+  const L = [`💼 <b>${t.pfNow}</b> · ${hm(now)}`, '', `<b>${usd2(sum.value)}</b>`];
+  if (sum.ch24 != null) L.push(`${dot(sum.ch24)} ${pct(sum.ch24)} · ${signed(sum.d24)} ${t.today}`);
+  L.push(`${t.profit} <b>${signed(sum.total)}</b> · ${pct(sum.pctTotal, 1)}`);
+  if (sum.vsBtc != null) L.push(`${t.vsBtcS} ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} · ${t.beat(sum.beat, sum.alts)}`);
+  const up = moverRows(sum, 'ch24', 1), dn = moverRows(sum, 'ch24', -1);
+  if (up.length) L.push('', `📈 <b>${t.bestT}</b>`, ...up.map(c => row(c.sym, c.ch24, usd(c.value))));
+  if (dn.length) L.push('', `📉 <b>${t.worstT}</b>`, ...dn.map(c => row(c.sym, c.ch24, usd(c.value))));
+  const mk = marketShort(t, m); if (mk.length) L.push('', `🌍 <b>${t.mkT}</b>`, ...mk);
+  L.push('', `🎯 ${t.sigT} 🟢 ${sum.counts.reinforce} · 🔴 ${sum.counts.sell} · ⚪ ${sum.counts.hold}`);
+  if (sum.plan.length) L.push(`📋 ${t.planS} <b>${sum.prog.pct.toFixed(1)}%</b> · ${sum.prog.completed}/${sum.prog.counted} ✅`);
+  if (sum.alloc) L.push(`⚖️ ${t.allocS} ${t.onT(sum.alloc.onTarget, sum.alloc.count)}`);
+  if ((sum.dca || []).length) L.push(`🛒 DCA ${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
+  const mc = sum.macro.filter(x => x.met).length, tp = nearestTp(sum);
+  L.push(`🚪 ${t.exitS(mc)}${tp ? ` · ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ''}`);
+  return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pf'), cb(t.movers, 'mv')], [cb(t.plan, 'pl'), cb(t.exit, 'ex')], [cb(t.signals, 'sg'), url(t.openApp, APP)], [cb(t.back, 'menu')]] };
+}
+
+// 🚪 the exit plan: the 3 market conditions (BTC / USDT dominance, ETH/BTC) and your take-profit levels, nearest first
+export function viewExit(t, sum, now) {
+  const mc = sum.macro.filter(x => x.met).length, name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc };
+  const L = [`🚪 <b>${t.exitT}</b> · ${hm(now)}`, '', `🧭 <b>${t.conds}</b> · ${t.met3(mc)}`];
+  for (const x of sum.macro) {
+    const v = n => n == null ? '—' : n.toFixed(x.dp) + x.unit;
+    L.push(`${x.met ? '✅' : '⬜'} ${name[x.k]} ${v(x.now)} → ${x.op} ${v(x.lvl)}`);
+  }
+  if (mc === 3) L.push(`🔔 <b>${t.allExit}</b>`);
+  const tps = (sum.tps || []).map(x => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
+  L.push('', `🎯 <b>${t.tpT}</b>`);
+  if (!tps.length) L.push(t.noExit);
+  const bySym = new Map(); tps.forEach(x => { if (!bySym.has(x.sym)) bySym.set(x.sym, []); bySym.get(x.sym).push(x); });
+  for (const [sym, list] of [...bySym].slice(0, 12)) {
+    L.push(`<b>${esc(sym)}</b> · ${price(list[0].price)}`);
+    list.sort((a, b) => a.n - b.n).forEach(x => L.push(`  ${x.to <= 0 ? '✅' : '⬜'} TP${x.n} ${price(x.level)}${x.mult ? ` (×${x.mult})` : ''} · ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}% ${t.toGo}`}${x.pct ? ` · ${t.sellP(x.pct)}` : ''}`));
+  }
+  if (bySym.size > 12) L.push('…');
+  return { text: L.join('\n'), buttons: [[cb(t.refresh, 'ex'), url(t.openExit, APP + 'accumulation.html#exit')], [cb(t.pf, 'pf'), cb(t.back, 'menu')]] };
 }
 
 export function viewMovers(t, sum) {
   const list = sum.coins.filter(c => c.value >= 1 && !isStable(c.sym));
   const block = (key, title, dir) => {
-    const rows = list.filter(c => c[key] != null).sort((a, b) => dir * (b[key] - a[key])).slice(0, 3).filter(c => dir > 0 ? c[key] > 0 : c[key] < 0);
+    const rows = list.filter(c => c[key] != null).sort((a, b) => dir * (b[key] - a[key])).slice(0, 5).filter(c => dir > 0 ? c[key] > 0 : c[key] < 0);
     return rows.length ? [``, `${dir > 0 ? '📈' : '📉'} <b>${title}</b>`, ...rows.map(c => `<code>${esc(c.sym.padEnd(6))} ${pct(c[key], 1).padStart(7)}</code>  ${usd(c.value)}`)] : [];
   };
   const L = [`🏆 <b>${esc(t.mvT)}</b>  <i>(${t.noStable})</i>`, ...block('ch24', t.best24, 1), ...block('ch24', t.worst24, -1), ...block('ch7', t.best7, 1), ...block('ch7', t.worst7, -1)];
@@ -135,9 +196,9 @@ export function viewPlan(t, sum, now) {
 }
 
 export function viewMarket(t, m, now) {
-  const L = [`🌍 <b>${t.mkT}</b> · ${local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`, '', ...marketLines(W[t === T.ar ? 'ar' : 'en'], m)];
+  const L = [`🌍 <b>${t.mkT}</b> · ${hm(now)}`, '', ...marketShort(t, m)];
   const seen = new Set(), top = [...(m.top || []), ...(m.top500 || [])].filter(r => r.rank && r.rank <= 500 && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));   // the top 500 by market cap, once each
-  const line = r => `<code>${esc(String(r.sym).toUpperCase().padEnd(6))} ${pct(r.ch24, 1).padStart(7)}</code>  ${price(r.price)}`;
+  const line = r => row(r.sym, r.ch24, price(r.price));
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
   if (up.length) L.push('', `📈 <b>${t.topUp}</b>`, ...up.map(line));
   if (dn.length) L.push('', `📉 <b>${t.topDn}</b>`, ...dn.map(line));
@@ -177,6 +238,7 @@ const WORDS = [
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, 'menu'],
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
+  [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
 ];
 export function parse(text) {
@@ -196,7 +258,7 @@ async function buildView(env, act, arg) {
   if (act === 'lang') return { t, views: [{ text: '🌐 English / عربي', buttons: [[cb('🇬🇧 English', 'lang:en'), cb('🇸🇦 عربي', 'lang:ar')]] }] };
   if (act === 'coin') return { t, views: [{ text: `🪙 ${t.askCoin}`, buttons: [[cb(t.back, 'menu')]] }] };
   if (act === 'soon') return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
-  const needUser = ['pf', 'pl', 'mv', 'sg'].includes(act);
+  const needUser = ['pf', 'pl', 'mv', 'sg', 'ex'].includes(act);
   if (needUser && !user) return { t, views: [{ text: t.noUser, buttons: [[cb(t.market, 'mk'), cb(t.back, 'menu')]] }] };
   const ids = user ? [...(user.coins || []).filter(c => c && !c.removed), ...(user.accum || []).filter(a => a && +a.alertPrice > 0)].map(c => cgIdOf(c, { cgIds: null })) : [];
   if (act === 'coins') {
@@ -216,6 +278,7 @@ async function buildView(env, act, arg) {
   if (act === 'mv') return { t, views: [viewMovers(t, sum)] };
   if (act === 'sg') return { t, views: [viewSignals(t, sum)] };
   if (act === 'pl') return { t, views: [viewPlan(t, sum, now)] };
+  if (act === 'ex') return { t, views: [viewExit(t, sum, now)] };
   return { t, views: [viewMenu(t)] };
 }
 
@@ -282,7 +345,7 @@ export async function setup(request, env) {
   const hook = u.origin + u.pathname.replace(/\/setup$/, '');
   const a = await tg(env, 'setWebhook', { url: hook, secret_token: env.TG_SECRET, allowed_updates: ['message', 'edited_message', 'callback_query'], drop_pending_updates: true });
   const cmds = lang => [['portfolio', lang === 'ar' ? 'محفظتي' : 'My portfolio'], ['price', lang === 'ar' ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', lang === 'ar' ? 'السوق' : 'Market'],
-    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي']]
+    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['exit', lang === 'ar' ? 'خطة الخروج' : 'Exit plan'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي']]
     .map(([command, description]) => ({ command, description }));
   const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];
   const b = await tg(env, 'setMyCommands', { commands: cmds(lang) });

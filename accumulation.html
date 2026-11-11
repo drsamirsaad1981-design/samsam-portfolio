@@ -16,20 +16,20 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611112338"></script>
-<script src="samsam-hints.js?v=202611112338"></script>
-<script src="samsam-vault.js?v=202611112338"></script>
-<script src="samsam-labels.js?v=202611112338"></script>
-<script src="samsam-taxonomy.js?v=202611112338"></script>
-<script src="samsam-coins.js?v=202611112338"></script>
-<script src="samsam-import.js?v=202611112338"></script>
-<script src="samsam-wallets.js?v=202611112338"></script>
-<script src="samsam-rewards.js?v=202611112338"></script>
-<script src="samsam-settings.js?v=202611112338"></script>
-<script src="samsam-dropdown.js?v=202611112338"></script>
-<script src="samsam-market.js?v=202611112338"></script>
-<script src="samsam-exit.js?v=202611112338"></script>
-<script src="samsam-add.js?v=202611112338"></script>
+<script src="samsam-ui.js?v=202611120137"></script>
+<script src="samsam-hints.js?v=202611120137"></script>
+<script src="samsam-vault.js?v=202611120137"></script>
+<script src="samsam-labels.js?v=202611120137"></script>
+<script src="samsam-taxonomy.js?v=202611120137"></script>
+<script src="samsam-coins.js?v=202611120137"></script>
+<script src="samsam-import.js?v=202611120137"></script>
+<script src="samsam-wallets.js?v=202611120137"></script>
+<script src="samsam-rewards.js?v=202611120137"></script>
+<script src="samsam-settings.js?v=202611120137"></script>
+<script src="samsam-dropdown.js?v=202611120137"></script>
+<script src="samsam-market.js?v=202611120137"></script>
+<script src="samsam-exit.js?v=202611120137"></script>
+<script src="samsam-add.js?v=202611120137"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -893,7 +893,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611112338"></script>
+<script type="module" src="samsam-cloud.js?v=202611120137"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -945,7 +945,7 @@ function setView(v) {
 }
 
 // ─── Accumulation | Exit Strategy (remembered on this device and in the cloud) ──
-let planTab = (() => { try { return localStorage.getItem('samsam_plan_tab') === 'exit' ? 'exit' : 'accum'; } catch (_) { return 'accum'; } })();
+let planTab = (() => { if (location.hash === '#exit') return 'exit'; try { return localStorage.getItem('samsam_plan_tab') === 'exit' ? 'exit' : 'accum'; } catch (_) { return 'accum'; } })();   // #exit: opened on Exit Strategy (the Telegram bot's link)
 let planTabCloudSeen = false;
 function showPlanTab() {
   const ex = planTab === 'exit';
@@ -986,7 +986,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (window.SamsamTaxonomy) accumPlan.forEach(e => { if (e.catLabel && SamsamTaxonomy.isCustom(e.cat)) SamsamTaxonomy.register(e.cat, e.catLabel); });
     if (!cloudReady) { cloudReady = true; setSaveStatus('ready', 'Ready'); startPlanPrices(); }
     // the tab you last chose on any device (once, when the cloud first answers — later taps here win)
-    if (!planTabCloudSeen && d.exit) { planTabCloudSeen = true; if (d.exit.tab !== planTab) setPlanTab(d.exit.tab, true); }
+    if (!planTabCloudSeen && d.exit) { planTabCloudSeen = true; if (location.hash !== '#exit' && d.exit.tab !== planTab) setPlanTab(d.exit.tab, true); }   // a #exit link wins over the tab used last
     if (planTab === 'exit' && window.SamsamExit) SamsamExit.render(d);
     renderAll();
   }));

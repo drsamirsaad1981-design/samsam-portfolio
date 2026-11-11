@@ -35,7 +35,7 @@ const USER = () => ({
   coins: [{ sym: 'BTC', cgId: 'bitcoin', opening: { qty: 0.1, avg: 70000 } }, { sym: 'SOL', cgId: 'solana', opening: { qty: 10, avg: 160 } },
     { sym: 'LINK', cgId: 'chainlink', opening: { qty: 50, avg: 15 } }, { sym: 'USDT', cgId: 'tether', opening: { qty: 900, avg: 0.5 } }],
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
-  meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 } },
+  meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
 const sent = []; let tokenCalls = 0, cgDown = false;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
@@ -110,7 +110,12 @@ const fmt2 = x => '$' + x.toLocaleString('en-US', { minimumFractionDigits: 2, ma
 check(`portfolio value = the app's (${fmt2(sum.value)})`, pf.includes(fmt2(sum.value)), pf.slice(0, 300));
 check('portfolio uses live prices (BTC 0.1 × $77,000 inside the total)', sum.value > 7700 && pf.includes('💼'));
 check('portfolio: Telegram-safe HTML', okHtml(pf), pf);
-check('portfolio buttons: Refresh · Best & worst · Plan · Signals · Open the app · Menu', JSON.stringify(btnTexts(v)) === JSON.stringify(['🔄 Refresh', '🏆 Best & worst', '📋 Plan', '🎯 Signals', '📱 Open the app', '⬅️ Menu']), btnTexts(v));
+check('portfolio buttons: Refresh · Best & worst · Plan · Exit plan · Signals · Open the app · Menu', JSON.stringify(btnTexts(v)) === JSON.stringify(['🔄 Refresh', '🏆 Best & worst', '📋 Plan', '🚪 Exit plan', '🎯 Signals', '📱 Open the app', '⬅️ Menu']), btnTexts(v));
+const plain = x => x.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&');
+const longest = Math.max(...plain(pf).split('\n').map(l => [...l].length));
+check(`portfolio: every line fits a phone (longest ${longest} ≤ 40 characters)`, longest <= 40, plain(pf).split('\n').filter(l => [...l].length > 40));
+check('portfolio: the exit line — Exit 0/3 · next TP LINK +127%', /🚪 Exit 0\/3 · next TP LINK \+127%/.test(pf), pf.slice(-200));
+check('portfolio: best / worst today up to 5 each, no stablecoin', !/USDT\s/.test(pf.split('🌍')[0]) && (pf.match(/📈 <b>Best today<\/b>\n((?:<code>.*\n?)+)/) || ['', ''])[1].trim().split('\n').length <= 5, pf);
 check('"Open the app" is a link to the site', btns(v).find(b => b.text === '📱 Open the app').url === 'https://drsamirsaad1981-design.github.io/samsam-portfolio/');
 check('one Google sign-in for several questions (token cached)', tokenCalls === 1, tokenCalls);
 
@@ -159,14 +164,21 @@ sent.length = 0; await say('/plan');
 v = last();
 check('plan: overall %, a bar per coin, LINK done ✅, SOL 50%', /Overall: <b>/.test(v.b.text) && /LINK\s*<\/code> ▰{10} 100% ✅/.test(v.b.text) && /SOL\s*<\/code> ▰{5}▱{5} 50%/.test(v.b.text), v.b.text);
 check('plan: buy-price alert for PENDLE (a coin you don\'t own)', /Buy-price alerts/.test(v.b.text) && /PENDLE/.test(v.b.text), v.b.text);
+sent.length = 0; await say('/exit');
+v = last();
+check('exit: the 3 conditions (✅ / ⬜) with now → target', /Exit conditions<\/b> · 0 of 3 met/.test(v.b.text) && /⬜ BTC dominance [\d.]+% → ≤ 45\.9%/.test(v.b.text) && /⬜ USDT dominance/.test(v.b.text) && /⬜ ETH\/BTC/.test(v.b.text), v.b.text);
+check('exit: LINK TP1 $25 (+127% to go, sell 25%), TP2 = avg $15 × 3, TP3 × 5', /<b>LINK<\/b> · \$11\.00/.test(v.b.text) && /⬜ TP1 \$25\.00 · \+127% to go · sell 25%/.test(v.b.text) && /TP2 \$45\.00 \(×3\)/.test(v.b.text) && /TP3 \$75\.00 \(×5\)/.test(v.b.text), v.b.text);
+check('exit: button opens Exit Strategy (accumulation.html#exit); Telegram-safe', btns(v).some(b => b.url && b.url.endsWith('accumulation.html#exit')) && okHtml(v.b.text), btns(v));
+sent.length = 0; await tap('ex');
+check('tap 🚪 Exit plan → edited in place', last().m === 'editMessageText' && /Exit plan/.test(last().b.text));
 sent.length = 0; await say('/signals');
 check('signals: grouped, Telegram-safe', /Signals/.test(last().b.text) && okHtml(last().b.text), last().b.text);
 sent.length = 0; await say('/start');
-check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent && btnTexts(out()[1]).length === 7 && btnTexts(out()[1]).includes('🌐 عربي'), out().map(x => Object.keys(x.b.reply_markup || {})));
+check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent && btnTexts(out()[1]).length === 8 && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
 sent.length = 0; await say('💼 Portfolio');
 check('the keyboard button "💼 Portfolio" → the portfolio', last().b.text.includes(fmt2(sum.value)));
 sent.length = 0; await say('what do you think about the market this week?');
-check('free text → "plain words arrive in the next phase" + menu (no crash)', /next phase/.test(last().b.text) && btnTexts(last()).length === 7, last().b.text);
+check('free text → "plain words arrive in the next phase" + menu (no crash)', /next phase/.test(last().b.text) && btnTexts(last()).length === 8, last().b.text);
 
 // ── language: English by default, 🌐 switches (and back) ──
 sent.length = 0; await say('/menu');
