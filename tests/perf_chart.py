@@ -24,9 +24,9 @@ with sync_playwright() as p:
         check(f'{name}: no horizontal page scroll', g['docW'] <= g['vw'], g)
         check(f'{name}: responsive height', (g['cH'] >= 300) if name == 'desktop' else (200 <= g['cH'] <= 240), g['cH'])
         for r in ('all', '7d', '24h'):
-            pg.click(f'.pcc-tabs button[data-r="{r}"]'); pg.wait_for_timeout(150)
+            pg.click(f'#perfChartCard .pcc-tabs button[data-r="{r}"]'); pg.wait_for_timeout(150)
             n, ev, eb = pg.evaluate(EXP, r)
-            got = pg.evaluate("[document.getElementById('pccPort').textContent, document.getElementById('pccBtc').textContent, document.querySelector('.pcc-tabs button[aria-pressed=\"true\"]').dataset.r]")
+            got = pg.evaluate("[document.getElementById('pccPort').textContent, document.getElementById('pccBtc').textContent, document.querySelector('#perfChartCard .pcc-tabs button[aria-pressed=\"true\"]').dataset.r]")
             want = [('▲ ' if ev >= 0 else '▼ ') + f'{abs(ev):.2f}%', ('▲ ' if eb >= 0 else '▼ ') + f'{abs(eb):.2f}%', r]
             check(f'{name}: {r} legend matches same % maths as main card ({n} pts)', got == want, (got, want))
             if r == 'all': pg.screenshot(path=str(SH / f'perf_full_{name}.png'), full_page=False, clip=None) if False else pg.locator('#perfChartCard').screenshot(path=str(SH / f'perf_full_{name}.png'))
