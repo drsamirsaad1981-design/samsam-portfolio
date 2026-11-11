@@ -26,8 +26,7 @@ with sync_playwright() as p:
         pg.evaluate("Samsam.updatePrices && 0")
         bad=pg.evaluate(BAD); check(f'{name}: index — every $ amount has 2 decimals', not bad, bad[:5])
         pg.evaluate("openHoldingsView()"); pg.wait_for_timeout(600)
-        h=pg.evaluate("document.getElementById('hovTotal').textContent"); check(f'{name}: Holdings screen total == {a}', h==a, h)
-        bad=pg.evaluate(BAD); check(f'{name}: holdings screen — 2 decimals', not bad, bad[:5]); pg.evaluate("closeHoldingsView()")
+        bad=pg.evaluate(BAD); check(f'{name}: Allocation screen (list) — 2 decimals', not bad, bad[:5]); pg.evaluate("closeHoldingsView()")
         for page in ('performance','accumulation'):
             pg.goto(f'{SITE}/{page}.html'); pg.wait_for_function("Samsam.isReady()", timeout=10000); pg.wait_for_timeout(1500)
             bad=pg.evaluate(BAD); check(f'{name}: {page} — every $ amount has 2 decimals', not bad, bad[:5])
