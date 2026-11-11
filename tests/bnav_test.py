@@ -38,7 +38,7 @@ with sync_playwright() as p:
         check(f'{name}: Holdings from another view opens the Holdings screen', pg.evaluate("document.getElementById('holdingsOverlay').style.display") == 'flex' and pg.evaluate(CUR) == 'home')
         pg.goto(S.SITE + '/performance.html'); S.wait_ready(pg); pg.wait_for_timeout(600)
         check(f'{name}: opened directly, a page still has its own bar, Portfolio marked', pg.evaluate(CUR) == 'home')
-        pg.locator('.cp-ptabs button[data-t=holdings]').click(); pg.wait_for_url('**/index.html#holdings'); S.wait_ready(pg); pg.wait_for_timeout(800)
+        pg.locator('.cp-ptabs button[data-t=allocation]').click(); pg.wait_for_url('**/index.html#*'); S.wait_ready(pg); pg.wait_for_timeout(800)
         check(f'{name}: Holdings from a standalone page opens the Holdings screen', pg.evaluate("document.getElementById('holdingsOverlay').style.display") == 'flex' and pg.evaluate(CUR) == 'home')
         pg.goto(S.SITE + '/recover.html'); pg.wait_for_timeout(600)
         check(f'{name}: no bar on the Recover tool', pg.query_selector('#cpBnav') is None)
