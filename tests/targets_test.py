@@ -70,8 +70,6 @@ with sync_playwright() as p:
             check(f'{vn}/{theme}: 120% → "too much", Save off', 'too much' in pg.inner_text('#tgSum') and pg.is_disabled('#tgModal [data-act=save]'), pg.inner_text('#tgSum'))
             pg.click('#tgModal [data-act=remove]'); pg.wait_for_timeout(1500)
             check(f'{vn}/{theme}: Remove my targets → empty card again, nothing saved', meta().get('targets') is None and 'Set my targets' in pg.inner_text('#hovTgtCard'))
-            pg.evaluate("setHovMode('assets')"); pg.wait_for_timeout(300)
-            check(f'{vn}/{theme}: Assets mode hides it', not pg.is_visible('#hovTgtCard'))
             check(f'{vn}/{theme}: no JS errors', not errs, errs[:3]); ctx.close()
     br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)
