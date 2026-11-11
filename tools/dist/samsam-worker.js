@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: fc9dce4c068deac0
+// sources-hash: 862dfb4a2f5c0f3b
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1113,6 +1113,9 @@ var T = {
     yes: "yes",
     private: "",
     welcome: "Your bot is connected \u2705\nIt answers here any time. Tap a button below, or send a ticker like <code>btc</code>.",
+    other: "\u{1F310} \u0639\u0631\u0628\u064A",
+    otherCode: "ar",
+    langSet: "Language: English \u2705",
     kb: { pf: "\u{1F4BC} Portfolio", market: "\u{1F30D} Market", plan: "\u{1F4CB} Plan", movers: "\u{1F3C6} Best & worst" }
   },
   ar: {
@@ -1177,6 +1180,9 @@ var T = {
     yes: "\u0623\u064A\u0648\u0647",
     private: "",
     welcome: "\u0627\u0644\u0628\u0648\u062A \u0627\u062A\u0648\u0635\u0644 \u2705\n\u0628\u064A\u0631\u062F \u0639\u0644\u064A\u0643 \u0647\u0646\u0627 \u0641\u064A \u0623\u064A \u0648\u0642\u062A. \u0627\u0636\u063A\u0637 \u0632\u0631\u0627\u0631 \u062A\u062D\u062A\u060C \u0623\u0648 \u0627\u0628\u0639\u062A \u0631\u0645\u0632 \u0639\u0645\u0644\u0629 \u0632\u064A <code>btc</code>.",
+    other: "\u{1F310} English",
+    otherCode: "en",
+    langSet: "\u0627\u0644\u0644\u063A\u0629: \u0639\u0631\u0628\u064A \u2705",
     kb: { pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A", market: "\u{1F30D} \u0627\u0644\u0633\u0648\u0642", plan: "\u{1F4CB} \u0627\u0644\u062E\u0637\u0629", movers: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" }
   }
 };
@@ -1193,8 +1199,25 @@ function spark(arr, n = 16) {
   const lo = Math.min(...pts), hi = Math.max(...pts);
   return pts.map((v) => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join("");
 }
-var menuRows = (t) => [[cb(t.pf, "pf"), cb(t.market, "mk")], [cb(t.plan, "pl"), cb(t.movers, "mv")], [cb(t.signals, "sg"), cb(t.coin, "coin")]];
+var menuRows = (t) => [[cb(t.pf, "pf"), cb(t.market, "mk")], [cb(t.plan, "pl"), cb(t.movers, "mv")], [cb(t.signals, "sg"), cb(t.coin, "coin")], [cb(t.other, "lang:" + t.otherCode)]];
 var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.market }], [{ text: t.kb.plan }, { text: t.kb.movers }]], resize_keyboard: true, is_persistent: true });
+var memLang = null;
+async function getLang(env) {
+  let v = memLang;
+  try {
+    if (env.RATE) v = await env.RATE.get("tg:lang") || v;
+  } catch (_) {
+  }
+  if (v === "ar" || v === "en") return v;
+  return env.BOT_LANG === "ar" ? "ar" : "en";
+}
+async function setLang(env, v) {
+  memLang = v;
+  try {
+    if (env.RATE) await env.RATE.put("tg:lang", v);
+  } catch (_) {
+  }
+}
 function viewMenu(t) {
   return { text: `${t.hi}
 ${t.menuTitle}`, buttons: menuRows(t) };
@@ -1297,6 +1320,9 @@ var WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, "pf"],
   [/^\/?(market|mk)$|السوق/i, "mk"],
   [/^\/?(plan|pl)$|الخطة/i, "pl"],
+  [/^\/?(lang|language|لغة|اللغة)$/i, "lang"],
+  [/^(عربي|arabic)$/i, "lang:ar"],
+  [/^(english|انجليزي|إنجليزي)$/i, "lang:en"],
   [/^\/?(movers|mv|best)$|الأفضل/i, "mv"],
   [/^\/?(signals|sg)$|الإشارات/i, "sg"],
   [/^\/?(coin|price)$/i, "coin"]
@@ -1312,8 +1338,9 @@ function parse(text) {
 async function buildView(env, act, arg) {
   const now = Date.now();
   const user = act === "menu" || act === "coin" ? null : await loadUser(env).catch(() => null);
-  const cfg = settings(user && user.meta), lang = env.BOT_LANG === "ar" || env.BOT_LANG === "en" ? env.BOT_LANG : cfg.lang, t = T[lang];
+  const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
   if (act === "menu") return { t, views: [viewMenu(t)] };
+  if (act === "lang") return { t, views: [{ text: "\u{1F310} English / \u0639\u0631\u0628\u064A", buttons: [[cb("\u{1F1EC}\u{1F1E7} English", "lang:en"), cb("\u{1F1F8}\u{1F1E6} \u0639\u0631\u0628\u064A", "lang:ar")]] }] };
   if (act === "coin") return { t, views: [{ text: `\u{1FA99} ${t.askCoin}`, buttons: [[cb(t.back, "menu")]] }] };
   if (act === "soon") return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
   const needUser = ["pf", "pl", "mv", "sg"].includes(act);
@@ -1357,6 +1384,10 @@ async function handleTelegram(request, env) {
       const d = String(q.data || "");
       await tg(env, "answerCallbackQuery", { callback_query_id: q.id }).catch(() => {
       });
+      if (/^lang:(ar|en)$/.test(d)) {
+        await switchLang(env, chat, d.slice(5), q.message.message_id);
+        return ok();
+      }
       const { views: views2 } = d.startsWith("c:") ? await run(env, "coinById", d.slice(2)) : await run(env, d);
       const r = await edit(env, chat, q.message.message_id, views2[0]);
       if (!r.ok && !/not modified/i.test(r.description || "")) await send(env, chat, views2[0]);
@@ -1364,18 +1395,29 @@ async function handleTelegram(request, env) {
     }
     if (!msg || typeof msg.text !== "string") return ok();
     const p = parse(msg.text);
+    if (/^lang:(ar|en)$/.test(p.act)) {
+      await switchLang(env, chat, p.act.slice(5));
+      return ok();
+    }
     const { t, views } = await run(env, p.act, p.q);
     if (/^\/start/.test(msg.text)) await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });
     for (const v of views) await send(env, chat, v);
   } catch (e) {
-    await send(env, chat, { text: (T[env.BOT_LANG] || T.ar).err }).catch(() => {
+    await send(env, chat, { text: T[await getLang(env).catch(() => "en")].err }).catch(() => {
     });
   }
   return ok();
 }
+async function switchLang(env, chat, lang, msgId) {
+  await setLang(env, lang);
+  const t = T[lang];
+  await send(env, chat, { text: t.langSet }, { reply_markup: replyKb(t) });
+  if (msgId) await edit(env, chat, msgId, viewMenu(t));
+  else await send(env, chat, viewMenu(t));
+}
 async function buildById(env, id) {
   const user = await loadUser(env).catch(() => null), now = Date.now();
-  const cfg = settings(user && user.meta), lang = env.BOT_LANG === "ar" || env.BOT_LANG === "en" ? env.BOT_LANG : cfg.lang, t = T[lang];
+  const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
   const ids = user ? (user.coins || []).filter((c) => c && !c.removed).map((c) => cgIdOf(c, { cgIds: null })) : [];
   const m = await loadMarket([...ids, id]);
   const row = [...m.top, ...m.top500].find((r) => r.id === id) || {};
@@ -1399,9 +1441,10 @@ async function setup(request, env) {
     ["plan", lang2 === "ar" ? "\u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639" : "Accumulation plan"],
     ["movers", lang2 === "ar" ? "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" : "Best & worst"],
     ["signals", lang2 === "ar" ? "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" : "Signals"],
-    ["menu", lang2 === "ar" ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"]
+    ["menu", lang2 === "ar" ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
+    ["lang", "English / \u0639\u0631\u0628\u064A"]
   ].map(([command, description]) => ({ command, description }));
-  const user = await loadUser(env).catch(() => null), lang = env.BOT_LANG === "ar" || env.BOT_LANG === "en" ? env.BOT_LANG : settings(user && user.meta).lang, t = T[lang];
+  const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];
   const b = await tg(env, "setMyCommands", { commands: cmds(lang) });
   const c = await send(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
   await send(env, env.TELEGRAM_CHAT_ID, viewMenu(t));

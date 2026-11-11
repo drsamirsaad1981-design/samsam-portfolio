@@ -30,7 +30,7 @@ const { privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }
 const SA = { type: 'service_account', project_id: 'samsam-portfolio', client_email: 'bot@samsam-portfolio.iam.gserviceaccount.com', private_key: privateKey.export({ type: 'pkcs8', format: 'pem' }), token_uri: 'https://oauth2.googleapis.com/token' };
 const fsv = v => typeof v === 'string' ? { stringValue: v } : typeof v === 'number' ? { doubleValue: v } : typeof v === 'boolean' ? { booleanValue: v } : Array.isArray(v) ? { arrayValue: { values: v.map(fsv) } } : v && typeof v === 'object' ? { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fsv(x)])) } } : { nullValue: null };
 const doc = o => ({ name: 'x', fields: Object.fromEntries(Object.entries(o).map(([k, v]) => [k, fsv(v)])) });
-let LANG = 'en';
+let LANG = 'ar';   // the alerts are in Arabic — the bot still starts in English
 const USER = () => ({
   coins: [{ sym: 'BTC', cgId: 'bitcoin', opening: { qty: 0.1, avg: 70000 } }, { sym: 'SOL', cgId: 'solana', opening: { qty: 10, avg: 160 } },
     { sym: 'LINK', cgId: 'chainlink', opening: { qty: 50, avg: 15 } }, { sym: 'USDT', cgId: 'tether', opening: { qty: 900, avg: 0.5 } }],
@@ -159,15 +159,26 @@ check('plan: buy-price alert for PENDLE (a coin you don\'t own)', /Buy-price ale
 sent.length = 0; await say('/signals');
 check('signals: grouped, Telegram-safe', /Signals/.test(last().b.text) && okHtml(last().b.text), last().b.text);
 sent.length = 0; await say('/start');
-check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent && btnTexts(out()[1]).length === 6, out().map(x => Object.keys(x.b.reply_markup || {})));
+check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent && btnTexts(out()[1]).length === 7 && btnTexts(out()[1]).includes('🌐 عربي'), out().map(x => Object.keys(x.b.reply_markup || {})));
 sent.length = 0; await say('💼 Portfolio');
 check('the keyboard button "💼 Portfolio" → the portfolio', last().b.text.includes(fmt2(sum.value)));
 sent.length = 0; await say('what do you think about the market this week?');
-check('free text → "plain words arrive in the next phase" + menu (no crash)', /next phase/.test(last().b.text) && btnTexts(last()).length === 6, last().b.text);
+check('free text → "plain words arrive in the next phase" + menu (no crash)', /next phase/.test(last().b.text) && btnTexts(last()).length === 7, last().b.text);
+
+// ── language: English by default, 🌐 switches (and back) ──
+sent.length = 0; await say('/menu');
+check('English by default (even with the alerts set to Arabic): menu has "🌐 عربي"', /What would you like/.test(last().b.text) && btnTexts(last()).includes('🌐 عربي'), last().b.text);
+sent.length = 0; await tap('lang:ar');
+check('tap 🌐 عربي → "اللغة: عربي ✅" with the Arabic keyboard, the menu redrawn in Arabic', out().some(x => x.b.text === 'اللغة: عربي ✅' && x.b.reply_markup.keyboard[0][0].text === '💼 محفظتي') && out().some(x => x.m === 'editMessageText' && /تحب تشوف إيه/.test(x.b.text) && btnTexts(x).includes('🌐 English')), out().map(x => x.b.text.slice(0, 30)));
+sent.length = 0; await say('/portfolio');
+check('…and it stays Arabic', /محفظتك الآن/.test(last().b.text), last().b.text.slice(0, 60));
+sent.length = 0; await say('english');
+check('typing "english" → back to English', out().some(x => x.b.text === 'Language: English ✅') && /What would you like/.test(last().b.text), out().map(x => x.b.text.slice(0, 30)));
+sent.length = 0; await say('/lang');
+check('/lang → the two choices', JSON.stringify(btns(last()).map(b => b.callback_data)) === '["lang:en","lang:ar"]', btns(last()));
 
 // ── Arabic ──
-LANG = 'ar';
-const D = await import('../tools/dist/samsam-worker.js');   // same instance — the 60 s user cache would keep English
+await tap('lang:ar');   // the Arabic checks below
 sent.length = 0;
 await post({ message: { chat: { id: 555 }, text: '/portfolio' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
 check('Arabic: "محفظتك الآن"', /محفظتك الآن/.test(last().b.text) && btnTexts(last()).includes('🔄 تحديث'), last().b.text.slice(0, 120));

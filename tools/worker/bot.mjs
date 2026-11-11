@@ -33,6 +33,7 @@ const T = {
     mvT: 'Best & worst (your coins)', noStable: 'stablecoins left out', sigT: 'Signals', reinforce: '🟢 Reinforce', sell: '🔴 Sell / convert to BTC', hold: '⚪ Hold',
     vsAvg: 'vs your avg', mkT: 'Market', topUp: 'Top 100 · best 24h', topDn: 'Top 100 · worst 24h', updated: 'Updated', futures: 'Futures', yes: 'yes', private: '',
     welcome: 'Your bot is connected ✅\nIt answers here any time. Tap a button below, or send a ticker like <code>btc</code>.',
+    other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅',
     kb: { pf: '💼 Portfolio', market: '🌍 Market', plan: '📋 Plan', movers: '🏆 Best & worst' },
   },
   ar: {
@@ -48,6 +49,7 @@ const T = {
     mvT: 'الأفضل والأسوأ (عملاتك)', noStable: 'من غير الـ stablecoins', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل لـ BTC', hold: '⚪ احتفاظ',
     vsAvg: 'مقابل متوسطك', mkT: 'السوق', topUp: 'أعلى 100 · الأفضل 24س', topDn: 'أعلى 100 · الأسوأ 24س', updated: 'تحديث', futures: 'Futures', yes: 'أيوه', private: '',
     welcome: 'البوت اتوصل ✅\nبيرد عليك هنا في أي وقت. اضغط زرار تحت، أو ابعت رمز عملة زي <code>btc</code>.',
+    other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅',
     kb: { pf: '💼 محفظتي', market: '🌍 السوق', plan: '📋 الخطة', movers: '🏆 الأفضل والأسوأ' },
   },
 };
@@ -65,8 +67,18 @@ export function spark(arr, n = 16) {   // a 7-day line drawn with block characte
   const lo = Math.min(...pts), hi = Math.max(...pts);
   return pts.map(v => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join('');
 }
-const menuRows = t => [[cb(t.pf, 'pf'), cb(t.market, 'mk')], [cb(t.plan, 'pl'), cb(t.movers, 'mv')], [cb(t.signals, 'sg'), cb(t.coin, 'coin')]];
+const menuRows = t => [[cb(t.pf, 'pf'), cb(t.market, 'mk')], [cb(t.plan, 'pl'), cb(t.movers, 'mv')], [cb(t.signals, 'sg'), cb(t.coin, 'coin')], [cb(t.other, 'lang:' + t.otherCode)]];
 const replyKb = t => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.market }], [{ text: t.kb.plan }, { text: t.kb.movers }]], resize_keyboard: true, is_persistent: true });
+
+// ── language: English by default; 🌐 in the menu (or /lang) switches. Kept in the Worker's KV (RATE), else in memory ──
+let memLang = null;
+export async function getLang(env) {
+  let v = memLang;
+  try { if (env.RATE) v = (await env.RATE.get('tg:lang')) || v; } catch (_) {}
+  if (v === 'ar' || v === 'en') return v;
+  return env.BOT_LANG === 'ar' ? 'ar' : 'en';
+}
+async function setLang(env, v) { memLang = v; try { if (env.RATE) await env.RATE.put('tg:lang', v); } catch (_) {} }
 
 // ── views: each returns { text, buttons } ──
 export function viewMenu(t) { return { text: `${t.hi}\n${t.menuTitle}`, buttons: menuRows(t) }; }
@@ -164,6 +176,7 @@ const edit = (env, chat, msgId, v) => tg(env, 'editMessageText', { chat_id: chat
 const WORDS = [
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, 'menu'],
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
+  [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
 ];
 export function parse(text) {
@@ -178,8 +191,9 @@ export function parse(text) {
 async function buildView(env, act, arg) {
   const now = Date.now();
   const user = act === 'menu' || act === 'coin' ? null : await loadUser(env).catch(() => null);
-  const cfg = settings(user && user.meta), lang = env.BOT_LANG === 'ar' || env.BOT_LANG === 'en' ? env.BOT_LANG : cfg.lang, t = T[lang];
+  const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
   if (act === 'menu') return { t, views: [viewMenu(t)] };
+  if (act === 'lang') return { t, views: [{ text: '🌐 English / عربي', buttons: [[cb('🇬🇧 English', 'lang:en'), cb('🇸🇦 عربي', 'lang:ar')]] }] };
   if (act === 'coin') return { t, views: [{ text: `🪙 ${t.askCoin}`, buttons: [[cb(t.back, 'menu')]] }] };
   if (act === 'soon') return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
   const needUser = ['pf', 'pl', 'mv', 'sg'].includes(act);
@@ -219,6 +233,7 @@ export async function handleTelegram(request, env) {
     if (q) {
       const d = String(q.data || '');
       await tg(env, 'answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});   // stops the button's spinner
+      if (/^lang:(ar|en)$/.test(d)) { await switchLang(env, chat, d.slice(5), q.message.message_id); return ok(); }
       const { views } = d.startsWith('c:') ? await run(env, 'coinById', d.slice(2)) : await run(env, d);
       const r = await edit(env, chat, q.message.message_id, views[0]);
       if (!r.ok && !/not modified/i.test(r.description || '')) await send(env, chat, views[0]);
@@ -226,19 +241,28 @@ export async function handleTelegram(request, env) {
     }
     if (!msg || typeof msg.text !== 'string') return ok();
     const p = parse(msg.text);
+    if (/^lang:(ar|en)$/.test(p.act)) { await switchLang(env, chat, p.act.slice(5)); return ok(); }
     const { t, views } = await run(env, p.act, p.q);
     if (/^\/start/.test(msg.text)) await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });   // the keyboard under the chat
     for (const v of views) await send(env, chat, v);
   } catch (e) {
-    await send(env, chat, { text: (T[env.BOT_LANG] || T.ar).err }).catch(() => {});
+    await send(env, chat, { text: T[await getLang(env).catch(() => 'en')].err }).catch(() => {});
   }
   return ok();
+}
+
+// 🌐 → the other language: the menu redraws in it and the keyboard under the chat follows
+async function switchLang(env, chat, lang, msgId) {
+  await setLang(env, lang);
+  const t = T[lang];
+  await send(env, chat, { text: t.langSet }, { reply_markup: replyKb(t) });
+  if (msgId) await edit(env, chat, msgId, viewMenu(t)); else await send(env, chat, viewMenu(t));
 }
 
 // a coin button carries the CoinGecko id → look it up by id (not by ticker)
 async function buildById(env, id) {
   const user = await loadUser(env).catch(() => null), now = Date.now();
-  const cfg = settings(user && user.meta), lang = env.BOT_LANG === 'ar' || env.BOT_LANG === 'en' ? env.BOT_LANG : cfg.lang, t = T[lang];
+  const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
   const ids = user ? (user.coins || []).filter(c => c && !c.removed).map(c => cgIdOf(c, { cgIds: null })) : [];
   const m = await loadMarket([...ids, id]);
   const row = [...m.top, ...m.top500].find(r => r.id === id) || {};
@@ -258,9 +282,9 @@ export async function setup(request, env) {
   const hook = u.origin + u.pathname.replace(/\/setup$/, '');
   const a = await tg(env, 'setWebhook', { url: hook, secret_token: env.TG_SECRET, allowed_updates: ['message', 'edited_message', 'callback_query'], drop_pending_updates: true });
   const cmds = lang => [['portfolio', lang === 'ar' ? 'محفظتي' : 'My portfolio'], ['price', lang === 'ar' ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', lang === 'ar' ? 'السوق' : 'Market'],
-    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu']]
+    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي']]
     .map(([command, description]) => ({ command, description }));
-  const user = await loadUser(env).catch(() => null), lang = env.BOT_LANG === 'ar' || env.BOT_LANG === 'en' ? env.BOT_LANG : settings(user && user.meta).lang, t = T[lang];
+  const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];
   const b = await tg(env, 'setMyCommands', { commands: cmds(lang) });
   const c = await send(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
   await send(env, env.TELEGRAM_CHAT_ID, viewMenu(t));
