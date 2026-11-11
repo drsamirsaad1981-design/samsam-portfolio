@@ -33,12 +33,7 @@ with sync_playwright() as p:
                 if card=='#perfChartWrap' and r in('24h','7d') and name=='desktop':
                     pg.locator('#mainTrio').screenshot(path=str(SH/f'axis_{r}.png'))
         pg.locator('#holdingsCard .holdings-tab[data-range="24h"]').click()
-        pg.evaluate("openHoldingsView()"); pg.wait_for_timeout(600)
-        for r,lab in (('24h',HOURS),('7d',DATES)):
-            pg.locator(f'#holdingsOverlay .hov-tab:text-is("{r}")').first.click(); pg.wait_for_timeout(300)
-            xl=pg.evaluate("document.getElementById('hovCanvas').dataset.xLabels")
-            check(f'{name}: Holdings screen {r} axis ({xl})', xl and all(lab.match(x) for x in xl.split('|')), xl)
-        pg.evaluate("closeHoldingsView()")
+        # (the Holdings screen and its own chart were dropped — the Overview card above is that chart)
         pg.goto(SITE+'/performance.html'); pg.wait_for_function("Samsam.isReady() && Samsam.getState().perfSnaps.length>100"); pg.wait_for_timeout(800)
         for r,lab in (('24h',HOURS),('7d',DATES),('all',DATES)):
             pg.click(f'.pcc-tabs button[data-r="{r}"]'); pg.wait_for_timeout(200)
