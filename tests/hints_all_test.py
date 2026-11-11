@@ -8,7 +8,7 @@ def check(n, c, d=''): res.append(bool(c)); print(('PASS ' if c else 'FAIL ') + 
 EXPECT = {
   'main cards': {'baseline', 'totalPortfolio', 'btcAccum', 'altAccum', 'movers24h', 'holdingsChange', 'perfChart', 'avgBuy', 'costBasis', 'signal'},   # Portfolio vs BTC moved off the main page (Performance)
   'main table': {'avgBuy', 'costBasis', 'signal'},   # Current Price column removed (price + ✏️ under the symbol)
-  'holdings': {'holdingsChange'},
+  'allocation': set(),   # (the Holdings screen with its holdingsChange ⓘ was dropped — that ⓘ is on the Overview card)
   'coin page': {'avgBuy', 'costBasis', 'external'},
   'performance': {'perfChart', 'sincePurchase'},   # Top & Bottom card: its ⓘ follows the USD | vs BTC switch (vsBtc when vs BTC)
   'accumulation cards': {'planTotals', 'overallProgress', 'pendingAmount', 'costToTarget', 'buyAt', 'targetAmount', 'priceAlert'},
@@ -48,7 +48,7 @@ with sync_playwright() as p:
     pg.locator('#portfolioTableWrapper th .cp-hint[data-hint="signal"]').tap(); pg.wait_for_timeout(200); pg.keyboard.press('Escape')
     check('tapping an ⓘ in a table header does not sort', pg.evaluate("[sortCol, sortDir]") == sort_before)
     pg.evaluate("applyView('cards')")
-    pg.evaluate("openHoldingsView()"); pg.wait_for_timeout(700); run(pg, 'holdings', '#holdingsOverlay')
+    pg.evaluate("openHoldingsView()"); pg.wait_for_timeout(700); run(pg, 'allocation', '#holdingsOverlay')
     pg.evaluate("openCoinTx('SOL')"); pg.wait_for_timeout(700); run(pg, 'coin page', '#holdingsOverlay')
     pg.evaluate("hovBack()"); pg.wait_for_timeout(300); pg.evaluate("hovBack()"); pg.wait_for_timeout(400)
     pg.click('.hdr-btns .ss-set-hdr'); pg.wait_for_selector('#cpSet'); pg.wait_for_timeout(300); run(pg, 'cloud menu', '#cpSet')   # Backup / Recover live in Settings now
