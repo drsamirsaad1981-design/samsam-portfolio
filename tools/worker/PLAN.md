@@ -4,7 +4,7 @@ Private to Samir first (only his chat gets answers); opened to everyone in the l
 Runs in the same Cloudflare Worker as AI Analysis (`tools/worker/*` → `node tools/build-worker.mjs` → `tools/dist/samsam-worker.js`).
 
 1. **Answers you** ✅ — webhook `/tg`, `/portfolio /price /market /plan /movers /signals /menu`, buttons that redraw in place, keyboard under the chat, live prices.
-2. **The brain** — plain Arabic / English questions; Claude with tools (prices, market, futures / liq, ETF, your portfolio + plan); remembers the conversation; says where each number comes from.
+2. **The brain** ✅ — plain Arabic / English questions → Claude with 6 live-data tools (coin, portfolio, market + bStocks, plan, exit, price history); remembers the last 10 messages (/new forgets); 30 questions a day; says where its numbers came from (`tools/worker/ai.mjs`).
 3. **Alerts in words + "what if"** — "tell me if ETH < 3000"; "if BTC hits 150k?", "if I sell half my SOL?".
 4. **Record trades in words** — "bought 0.01 BTC at 95k" → summary → [Confirm] [Cancel]; nothing saved without Confirm.
 5. **Smart morning + smart evening + radars** — morning: 3 things to do today from the plan; evening: what happened today, what changed, what to watch tonight / tomorrow; liquidation radar near your coins' prices; sector radar; a live pinned message.

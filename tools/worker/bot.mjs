@@ -1,4 +1,4 @@
-// tools/worker/bot.mjs — the Telegram bot that answers you (phase 1), running in the same Cloudflare Worker as AI Analysis.
+// tools/worker/bot.mjs — the Telegram bot that answers you, running in the same Cloudflare Worker as AI Analysis.
 //
 //   POST /tg          Telegram's webhook. Only Telegram (it sends the secret header) and only your chat get an answer —
 //                     anyone else is ignored silently.
@@ -7,13 +7,15 @@
 //
 // What it can do now: your portfolio, a coin (any coin), the market, your plan, best / worst, signals — each with
 // buttons that redraw the same message in place (🔄 = fresh numbers). Type a ticker ("btc", "sol eth") for its price.
+// Anything else you write is a question for Claude (tools/worker/ai.mjs — phase 2).
 // The numbers are the app's own (tools/alerts-core.mjs → summarize, samsam-core.js), with live prices on top.
 //
 // Worker secrets (Settings → Variables and Secrets): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT,
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
-import { loadMarket, loadUser, findCoin, serviceAccount, resetBudget } from './data.mjs';
+import { loadMarket, loadUser, findCoin, serviceAccount, resetBudget, coinsOf, withIds } from './data.mjs';
+import { ask, firstTime, forget, usage } from './ai.mjs';
 
 const H = 3600e3;
 const LIQ = 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=';
@@ -32,7 +34,10 @@ const T = {
     noPlan: 'No plan targets yet — set them on the Accumulation page.', best24: 'Best 24h', worst24: 'Worst 24h', best7: 'Best 7d', worst7: 'Worst 7d',
     mvT: 'Best & worst (your coins)', noStable: 'stablecoins left out', sigT: 'Signals', reinforce: '🟢 Reinforce', sell: '🔴 Sell / convert to BTC', hold: '⚪ Hold',
     vsAvg: 'vs your avg', mkT: 'Market', topUp: n => `Top ${n} · best 24h`, topDn: n => `Top ${n} · worst 24h`, stUp: 'bStocks · best 24h', stDn: 'bStocks · worst 24h', stNote: 'tokenized US stocks (Binance)', updated: 'Updated', futures: 'Futures', yes: 'yes', private: '',
-    welcome: 'Your bot is connected ✅\nIt answers here any time. Tap a button below, or send a ticker like <code>btc</code>.',
+    welcome: 'Your bot is connected ✅\nAsk me anything in plain words, tap a button below, or send a ticker like <code>btc</code>.',
+    thinking: '🧠 Thinking…', aiLimit: n => `You've used today's ${n} questions — more tomorrow (midnight Riyadh). Buttons and tickers still work.`,
+    aiNoKey: 'The AI is not set up (ANTHROPIC_API_KEY is missing in the Worker).', aiBusy: 'Claude is busy right now — try again in a minute.',
+    aiErr: "I couldn't answer that just now — try again, or rephrase.", newChat: '🆕 New chat', newDone: 'New chat — I forgot the earlier messages 🧹', aiLeft: (a, n) => `${a}/${n} left today`, data: 'Data',
     other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅', exit: '🚪 Exit plan',
     today: 'today', profit: 'All Time Profit', vsBtcS: 'vs BTC', beat: (a, n) => `${a}/${n} coins beat BTC`, bestT: 'Best today', worstT: 'Worst today',
     dom: 'Dominance', fng: 'Fear & Greed', altS: 'Altcoin Season', etf: 'ETF', planS: 'Plan', allocS: 'Allocation', onT: (a, n) => `${a}/${n} on target`,
@@ -57,6 +62,9 @@ const T = {
     mvT: 'الأفضل والأسوأ (عملاتك)', noStable: 'من غير الـ stablecoins', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل لـ BTC', hold: '⚪ احتفاظ',
     vsAvg: 'مقابل متوسطك', mkT: 'السوق', topUp: n => `أعلى ${n} · الأفضل 24س`, topDn: n => `أعلى ${n} · الأسوأ 24س`, stUp: 'bStocks · الأفضل 24س', stDn: 'bStocks · الأسوأ 24س', stNote: 'أسهم أمريكية مرمّزة (Binance)', updated: 'اتحدّث', futures: 'Futures', yes: 'أيوه', private: '',
     welcome: 'البوت اتوصل ✅\nبيرد عليك هنا في أي وقت. اضغط زرار تحت، أو ابعت رمز عملة زي <code>btc</code>.',
+    thinking: '🧠 بفكّر…', aiLimit: n => `خلصت الـ ${n} سؤال بتوع النهارده — بكرة يتجددوا (12 بالليل بتوقيت الرياض). الأزرار والرموز شغالة عادي.`,
+    aiNoKey: 'الـ AI مش متظبط (ANTHROPIC_API_KEY ناقص في الـ Worker).', aiBusy: 'Claude مشغول دلوقتي — جرّب كمان دقيقة.',
+    aiErr: 'ما قدرتش أجاوب دلوقتي — جرّب تاني أو اكتب السؤال بشكل تاني.', newChat: '🆕 محادثة جديدة', newDone: 'محادثة جديدة — نسيت الكلام اللي فات 🧹', aiLeft: (a, n) => `باقي ${a}/${n} النهارده`, data: 'البيانات',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
     today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل BTC', beat: (a, n) => `${a}/${n} عملة سبقت BTC`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
     dom: 'السيطرة', fng: 'الخوف والطمع', altS: 'موسم العملات', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a}/${n} على الهدف`,
@@ -259,7 +267,7 @@ const edit = (env, chat, msgId, v) => tg(env, 'editMessageText', { chat_id: chat
 const WORDS = [
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, 'menu'],
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
-  [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'],
+  [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -271,17 +279,11 @@ export function parse(text) {
   const m = /^\/(price|p|coin)\s+(.+)$/i.exec(s);
   if (m) return { act: 'coins', q: m[2].split(/[\s,]+/).filter(Boolean).slice(0, 5) };
   for (const [rx, act] of WORDS) if (rx.test(s)) return { act };
-  if (/^\$?[A-Za-z][A-Za-z0-9]{1,11}([\s,]+\$?[A-Za-z][A-Za-z0-9]{1,11}){0,4}$/.test(s)) return { act: 'coins', q: s.split(/[\s,]+/).filter(Boolean) };
-  return { act: 'soon' };
+  if (/^\$?[A-Za-z][A-Za-z0-9]{1,11}([\s,]+\$?[A-Za-z][A-Za-z0-9]{1,11}){0,4}$/.test(s)) return { act: 'coins', q: s.split(/[\s,]+/).filter(Boolean), guess: String(text || '').trim() };   // tickers? (checked: else a question)
+  return { act: 'ai', q: String(text || '').trim() };   // anything else: a question for Claude
 }
 
-// your coins (and plan coins with a buy-price alert) as { sym, id } — the market finds each one's price
-const coinsOf = user => user ? [...(user.coins || []).filter(c => c && !c.removed), ...(user.accum || []).filter(a => a && +a.alertPrice > 0)].map(c => ({ sym: String(c.sym || '').toUpperCase(), id: c.cgId || null })) : [];
-// the same portfolio, each coin carrying the id its price was found under (a coin saved without a CoinGecko id included)
-const withIds = (user, m) => ({ ...user, coins: (user.coins || []).map(c => c && c.sym && m.idOf[String(c.sym).toUpperCase()] ? { ...c, cgId: m.idOf[String(c.sym).toUpperCase()] } : c),
-  accum: (user.accum || []).map(a => a && a.sym && m.idOf[String(a.sym).toUpperCase()] ? { ...a, cgId: m.idOf[String(a.sym).toUpperCase()] } : a) });
-
-async function buildView(env, act, arg) {
+async function buildView(env, act, arg, guess) {
   const now = Date.now();
   const user = act === 'menu' || act === 'coin' ? null : await loadUser(env).catch(() => null);
   const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
@@ -294,6 +296,11 @@ async function buildView(env, act, arg) {
   const mine = coinsOf(user);
   if (act === 'coins') {
     const m0 = await loadMarket([], mine);
+    if (guess) {   // typed words that look like tickers: cards only when every word is a coin the bot knows — else it's a question
+      const known = w => { const W = String(w).toUpperCase().replace(/^\$/, ''), lw = String(w).toLowerCase();
+        return mine.some(c => c.sym === W) || !!m0.cgIds[W] || [...m0.top, ...m0.top500].some(r => String(r.sym || '').toUpperCase() === W || String(r.name || '').toLowerCase() === lw || r.id === lw); };
+      if (!arg.every(known)) return { t, ai: guess };
+    }
     const found = [], miss = [];
     for (const q of arg) { const c = await findCoin(q, m0, user); if (c) found.push(c); else miss.push(q); }
     const m = await loadMarket(found.map(c => c.id).filter(Boolean), [...mine, ...found.map(c => ({ sym: c.sym, id: c.id }))]);
@@ -328,6 +335,7 @@ export async function handleTelegram(request, env) {
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null || String(chat) !== String(env.TELEGRAM_CHAT_ID)) return ok();   // a private bot: nobody else gets an answer
+  if (!(await firstTime(env, u.update_id))) return ok();   // Telegram re-sent it (a slow answer): already handled
   try {
     if (q) {
       const d = String(q.data || '');
@@ -335,6 +343,7 @@ export async function handleTelegram(request, env) {
       // even when nothing changed (the message is the same → Telegram would show no change at all)
       const done = text => tg(env, 'answerCallbackQuery', { callback_query_id: q.id, ...(text ? { text } : {}) }).catch(() => {});
       if (/^lang:(ar|en)$/.test(d)) { await switchLang(env, chat, d.slice(5), q.message.message_id); await done(); return ok(); }
+      if (d === 'new') { await forget(env); await done(T[await getLang(env)].newDone); return ok(); }
       if (/^mk:\d+$/.test(d) && RANGES.includes(+d.slice(3))) await setRange(env, +d.slice(3));   // Top 100 · 200 · 300 · 500
       const { t, views } = d.startsWith('c:') ? await run(env, 'coinById', d.slice(2)) : await run(env, /^mk:/.test(d) ? 'mk' : d);
       const r = await edit(env, chat, q.message.message_id, views[0]);
@@ -346,14 +355,37 @@ export async function handleTelegram(request, env) {
     const p = parse(msg.text);
     tg(env, 'sendChatAction', { chat_id: chat, action: 'typing' }).catch(() => {});   // "typing…" while the numbers load
     if (/^lang:(ar|en)$/.test(p.act)) { await switchLang(env, chat, p.act.slice(5)); return ok(); }
+    if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return ok(); }
+    if (p.act === 'ai') { await answer(env, chat, p.q); return ok(); }
     if (p.act === 'hide') { const t = T[await getLang(env)]; await send(env, chat, { text: t.hidden }, { reply_markup: { remove_keyboard: true } }); return ok(); }
-    const { t, views } = await run(env, p.act, p.q);
+    const { t, views, ai } = await run(env, p.act, p.q, p.guess);
+    if (ai) { await answer(env, chat, ai); return ok(); }
     if (/^\/start/.test(msg.text)) { await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) }); await tg(env, 'setMyCommands', { commands: cmds(await getLang(env)) }).catch(() => {}); }   // the keyboard under the chat + the "/" menu
     for (const v of views) await send(env, chat, v);
   } catch (e) {
     await send(env, chat, { text: T[await getLang(env).catch(() => 'en')].err }).catch(() => {});
   }
   return ok();
+}
+
+// 🧠 a question in plain words → "Thinking…" at once, then the same message becomes Claude's answer, with where its numbers
+// came from, how many questions are left today, and buttons for the coins it looked at
+async function answer(env, chat, question) {
+  const lang = await getLang(env), t = T[lang];
+  resetBudget(30);   // Claude's own calls (up to 7) + Telegram's stay inside Cloudflare's 50
+  const ph = await send(env, chat, { text: t.thinking });
+  const id = ph && ph.result && ph.result.message_id;
+  const show = v => id ? edit(env, chat, id, v).then(r => r.ok ? r : send(env, chat, v)) : send(env, chat, v);
+  const r = await ask(env, question, lang).catch(() => ({ error: 'claude' }));
+  if (r.error) return show({ text: r.error === 'limit' ? t.aiLimit(r.limit) : r.error === 'nokey' ? t.aiNoKey : r.error === 'busy' ? t.aiBusy : t.aiErr, buttons: [[cb(t.back, 'menu')]] });
+  const foot = `<i>📡 ${t.data}: ${esc(r.sources.length ? r.sources.join(' · ') : 'general knowledge')}\n${t.aiLeft(r.left, r.limit)}</i>`;
+  const btns = [];
+  if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb('🪙 ' + sym, 'c:' + cid.slice(0, 58))));
+  if (r.coins.length === 1) btns[0].push(url('🔥 Liq Map', LIQ + encodeURIComponent(r.coins[0][1])));
+  btns.push([cb(t.newChat, 'new'), cb(t.back, 'menu')]);
+  let text = r.text + '\n\n' + foot;
+  if (text.length > 4000) text = r.text.slice(0, 3900 - foot.length) + '…\n\n' + foot;
+  return show({ text, buttons: btns });
 }
 
 // 🌐 → the other language: the menu redraws in it and the keyboard under the chat follows
@@ -377,11 +409,11 @@ async function buildById(env, id) {
   const coin = { id: xs ? (m.idOf[xs] || id) : id, sym: xs || ownSym || row.sym || '', name: row.name || (own && own.name) || '' };
   return { t, views: [viewCoin(t, coin, m, user ? summarize(withIds(user, m), m, now) : null, now)] };
 }
-export const run = (env, act, arg) => act === 'coinById' ? buildById(env, arg) : buildView(env, act, arg);
+export const run = (env, act, arg, guess) => act === 'coinById' ? buildById(env, arg) : buildView(env, act, arg, guess);
 
 // the "/" menu in Telegram (set by the setup link and again on /start, so new commands show up)
 const cmds = lang => [['portfolio', lang === 'ar' ? 'محفظتي' : 'My portfolio'], ['price', lang === 'ar' ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', lang === 'ar' ? 'السوق' : 'Market'],
-    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['exit', lang === 'ar' ? 'خطة الخروج' : 'Exit plan'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي'], ['hide', lang === 'ar' ? 'إخفاء الأزرار' : 'Hide the buttons']]
+    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['exit', lang === 'ar' ? 'خطة الخروج' : 'Exit plan'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي'], ['hide', lang === 'ar' ? 'إخفاء الأزرار' : 'Hide the buttons'], ['new', lang === 'ar' ? 'محادثة جديدة مع الـ AI' : 'New AI chat']]
     .map(([command, description]) => ({ command, description }));
 
 // ── one-time setup: GET /tg/setup?key=<TG_SECRET> ──

@@ -24,7 +24,7 @@ export function clearCache() { cache.clear(); tokenCache = null; }
 // outside calls this message may still make (Telegram's few are kept apart): never more than Cloudflare allows
 const BUDGET = 42;
 let used = 0;
-export function resetBudget() { used = 0; }
+export function resetBudget(n = BUDGET) { used = BUDGET - n; }   // n: how many outside calls this message may make
 export const budgetUsed = () => used;
 async function xfetch(url, init) { if (used >= BUDGET) throw new Error('budget'); used++; return fetch(url, init); }
 async function getJson(url, init) {
@@ -202,3 +202,24 @@ export async function loadUser(env, fresh = false) {
   });
 }
 export const cgIdOf = (c, market) => c.cgId || (market.cgIds || CG_IDS)[String(c.sym || '').toUpperCase()] || null;
+
+// your coins (and plan coins with a buy-price alert) as { sym, id } — the market finds each one's price
+export const coinsOf = user => user ? [...(user.coins || []).filter(c => c && !c.removed), ...(user.accum || []).filter(a => a && +a.alertPrice > 0)].map(c => ({ sym: String(c.sym || '').toUpperCase(), id: c.cgId || null })) : [];
+// the same portfolio, each coin carrying the id its price was found under (a coin saved without a CoinGecko id included)
+export const withIds = (user, m) => ({ ...user, coins: (user.coins || []).map(c => c && c.sym && m.idOf[String(c.sym).toUpperCase()] ? { ...c, cgId: m.idOf[String(c.sym).toUpperCase()] } : c),
+  accum: (user.accum || []).map(a => a && a.sym && m.idOf[String(a.sym).toUpperCase()] ? { ...a, cgId: m.idOf[String(a.sym).toUpperCase()] } : a) });
+
+
+// m/links.json → which tickers have perpetual futures (CoinGlass has a Liquidation Map for those) — cached 10 min
+export async function loadFutures() {
+  return cached('fut', 10 * 60e3, async () => { const j = await getJson(RAW + 'm/links.json'); return j && Array.isArray(j.fut) ? new Set(j.fut) : null; });
+}
+// a coin's hourly price file (the last ~29 days), when GitHub keeps one for it
+export async function loadSeries(id) {
+  if (!id || /^x-/.test(id)) return null;
+  return cached('p:' + id, 10 * 60e3, async () => priceSeries(await getJson(RAW + 'p/' + id + '.json')) || false);
+}
+export async function rawSeries(id) {   // the file itself: { t0, step, p: [...] } (for highs / lows over a period)
+  if (!id || /^x-/.test(id)) return null;
+  return cached('raw:' + id, 10 * 60e3, async () => (await getJson(RAW + 'p/' + id + '.json')) || false);
+}

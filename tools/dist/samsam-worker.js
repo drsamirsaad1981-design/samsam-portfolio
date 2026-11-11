@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: d41f61ffcd1ec667
+// sources-hash: 94a3e324b6715e2b
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -410,7 +410,7 @@ function dcaNextAfter(c, d) {
   const n = dcaDue(c, isoD(dOf(d) + DAYMS), isoD(dOf(d) + 40 * DAYMS));
   return n[0] || null;
 }
-function dcaStatus(s, sym, txs, today) {
+function dcaStatus(s, sym, txs, today2) {
   const c = cleanDca(s);
   if (!c) return null;
   const S = String(sym || "").toUpperCase();
@@ -419,11 +419,11 @@ function dcaStatus(s, sym, txs, today) {
     const lo = isoD(dOf(d) - 2 * DAYMS), hi = dcaNextAfter(c, d) || "9999-12-31";
     return buys.some((b) => b >= lo && b < hi);
   };
-  const past = dcaDue(c, c.since, today), last = past.length ? past[past.length - 1] : null;
+  const past = dcaDue(c, c.since, today2), last = past.length ? past[past.length - 1] : null;
   const recent = past.slice(-6), kept = recent.filter(boughtFor).length;
   const done = last ? boughtFor(last) : false;
-  const late = last && !done ? Math.round((dOf(today) - dOf(last)) / DAYMS) : 0;
-  const next = last === today && !done ? today : dcaNextAfter(c, today);
+  const late = last && !done ? Math.round((dOf(today2) - dOf(last)) / DAYMS) : 0;
+  const next = last === today2 && !done ? today2 : dcaNextAfter(c, today2);
   return { ...c, last, done, next, state: !last ? "upcoming" : done ? "done" : late === 0 ? "today" : "missed", late, kept, of: recent.length, perMonth: c.usd * DCA_PER_MONTH[c.every] };
 }
 function overallProgress(rows) {
@@ -580,8 +580,8 @@ function summarize(user, market, now = Date.now()) {
     { k: "usdtD", now: d.usdt, lvl: T2.usdtHi, met: d.usdt != null && d.usdt <= T2.usdtHi, op: "\u2264", dp: 2, unit: "%" },
     { k: "ethBtc", now: ethbtc, lvl: T2.ethBtc, met: ethbtc != null && ethbtc >= T2.ethBtc, op: "\u2265", dp: 4, unit: "" }
   ];
-  const today = localParts(now).date;
-  const dca = (user.accum || []).filter((a) => a && a.sym && a.dca).map((a) => ({ sym: String(a.sym).toUpperCase(), s: dcaStatus(a.dca, a.sym, user.txs, today) })).filter((x) => x.s);
+  const today2 = localParts(now).date;
+  const dca = (user.accum || []).filter((a) => a && a.sym && a.dca).map((a) => ({ sym: String(a.sym).toUpperCase(), s: dcaStatus(a.dca, a.sym, user.txs, today2) })).filter((x) => x.s);
   const buyAt = (user.accum || []).filter((a) => a && a.sym && +a.alertPrice > 0).map((a) => {
     const sym = String(a.sym).toUpperCase();
     let price2 = prices[sym] && prices[sym].usd;
@@ -668,8 +668,8 @@ async function cached(key, ms, make) {
 }
 var BUDGET = 42;
 var used = 0;
-function resetBudget() {
-  used = 0;
+function resetBudget(n = BUDGET) {
+  used = BUDGET - n;
 }
 async function xfetch(url2, init) {
   if (used >= BUDGET) throw new Error("budget");
@@ -877,9 +877,361 @@ async function loadUser(env, fresh = false) {
     return { coins, txs, accum, meta: meta || {} };
   });
 }
+var coinsOf = (user) => user ? [...(user.coins || []).filter((c) => c && !c.removed), ...(user.accum || []).filter((a) => a && +a.alertPrice > 0)].map((c) => ({ sym: String(c.sym || "").toUpperCase(), id: c.cgId || null })) : [];
+var withIds = (user, m) => ({
+  ...user,
+  coins: (user.coins || []).map((c) => c && c.sym && m.idOf[String(c.sym).toUpperCase()] ? { ...c, cgId: m.idOf[String(c.sym).toUpperCase()] } : c),
+  accum: (user.accum || []).map((a) => a && a.sym && m.idOf[String(a.sym).toUpperCase()] ? { ...a, cgId: m.idOf[String(a.sym).toUpperCase()] } : a)
+});
+async function loadFutures() {
+  return cached("fut", 10 * 6e4, async () => {
+    const j = await getJson(RAW + "m/links.json");
+    return j && Array.isArray(j.fut) ? new Set(j.fut) : null;
+  });
+}
+async function rawSeries(id) {
+  if (!id || /^x-/.test(id)) return null;
+  return cached("raw:" + id, 10 * 6e4, async () => await getJson(RAW + "p/" + id + ".json") || false);
+}
+
+// tools/worker/ai.mjs
+var H2 = 36e5;
+var DAY2 = 24 * H2;
+var LIMIT = (env) => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30));
+var MAX_ROUNDS = 6;
+var HISTORY = 10;
+var r2 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+var r6 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
+var mem = /* @__PURE__ */ new Map();
+async function kvGet(env, k) {
+  try {
+    if (env.RATE) return await env.RATE.get(k);
+  } catch (_) {
+  }
+  return mem.has(k) ? mem.get(k) : null;
+}
+async function kvPut(env, k, v, ttl) {
+  mem.set(k, v);
+  try {
+    if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
+  } catch (_) {
+  }
+}
+async function kvDel(env, k) {
+  mem.delete(k);
+  try {
+    if (env.RATE) await env.RATE.delete(k);
+  } catch (_) {
+  }
+}
+async function firstTime(env, updateId) {
+  if (updateId == null) return true;
+  const k = "tg:u:" + updateId;
+  if (await kvGet(env, k)) return false;
+  await kvPut(env, k, "1", 3600);
+  return true;
+}
+var today = () => localParts(Date.now()).date;
+async function usage(env) {
+  const n = +await kvGet(env, "tg:ai:" + today()) || 0;
+  return { used: n, limit: LIMIT(env), left: Math.max(0, LIMIT(env) - n) };
+}
+async function countOne(env) {
+  const u = await usage(env);
+  await kvPut(env, "tg:ai:" + today(), String(u.used + 1), 2 * 86400);
+  return u.left - 1;
+}
+async function forget(env) {
+  await kvDel(env, "tg:hist");
+}
+async function history(env) {
+  try {
+    const h = JSON.parse(await kvGet(env, "tg:hist") || "[]");
+    return Array.isArray(h) ? h : [];
+  } catch (_) {
+    return [];
+  }
+}
+async function remember(env, q, a) {
+  const h = (await history(env)).concat([{ role: "user", content: q }, { role: "assistant", content: a }]).slice(-HISTORY);
+  await kvPut(env, "tg:hist", JSON.stringify(h), 6 * 3600);
+}
+var TOOLS = [
+  {
+    name: "get_coin",
+    description: "Live data for one coin (any coin, by ticker or name): price, 24h / 7d / 30d change, market-cap rank, market cap, 24h volume, 7-day high / low, whether it has perpetual futures (a CoinGlass liquidation map), and \u2014 if the user holds it \u2014 amount, value, average buy price, profit %, the app's signal and its result vs holding BTC. Call once per coin; call it for every coin you mention with a number.",
+    input_schema: { type: "object", properties: { coin: { type: "string", description: 'Ticker or name, e.g. "BTC", "sol", "pendle", "Render"' } }, required: ["coin"] }
+  },
+  {
+    name: "get_portfolio",
+    description: "The user's whole portfolio now: total value, 24h / 7d change, all-time profit, result vs holding BTC, every coin (value, share %, 24h / 7d change, profit vs average buy price, signal), signal counts, allocation vs targets.",
+    input_schema: { type: "object", properties: {} }
+  },
+  {
+    name: "get_market",
+    description: "The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), and the best / worst 24h Binance bStocks (tokenized US stocks).",
+    input_schema: { type: "object", properties: { top: { type: "integer", enum: [100, 200, 300, 500], description: "Rank range for best / worst (default 100)" } } }
+  },
+  {
+    name: "get_plan",
+    description: "The user's accumulation plan: per-coin target vs held (progress %), overall progress, regular buys (DCA: amount, schedule, next date, late or not), buy-price alerts (alert price vs current price).",
+    input_schema: { type: "object", properties: {} }
+  },
+  {
+    name: "get_exit",
+    description: "The user's exit plan: the 3 market exit conditions (BTC dominance, USDT dominance, ETH/BTC \u2014 now vs target, met or not) and every take-profit level (coin, level, multiple of average, % still to go, % to sell there).",
+    input_schema: { type: "object", properties: {} }
+  },
+  {
+    name: "get_history",
+    description: "Hourly price history of a coin for the last N days (1\u201329): start, end, % change, high and low with their dates, and the daily closes. Only for coins GitHub keeps a price file for (the user's coins and the big ones); otherwise it says so.",
+    input_schema: { type: "object", properties: { coin: { type: "string" }, days: { type: "integer", minimum: 1, maximum: 29 } }, required: ["coin"] }
+  }
+];
+function context(env) {
+  let user, base, sum, used2 = /* @__PURE__ */ new Set(), coins = /* @__PURE__ */ new Set();
+  const ctx = {
+    used: used2,
+    coins,
+    async user() {
+      if (user === void 0) user = await loadUser(env).catch(() => null);
+      return user;
+    },
+    async market(extra = []) {
+      const u = await ctx.user();
+      const m = await loadMarket(extra.map((c) => c.id).filter(Boolean), [...coinsOf(u), ...extra]);
+      if (!extra.length) base = m;
+      return m;
+    },
+    async sum() {
+      if (sum) return sum;
+      const u = await ctx.user();
+      if (!u) return null;
+      const m = base || await ctx.market();
+      sum = { s: summarize(withIds(u, m), m, Date.now()), m };
+      return sum;
+    }
+  };
+  return ctx;
+}
+var srcOf = (m, id) => typeof m.live[id] === "string" ? m.live[id] + " (live)" : m.live[id] ? "CoinGecko (live)" : "market snapshot" + (m.parts && m.parts.top ? " of " + local(Date.parse(m.parts.top), { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) + " Riyadh" : "");
+async function runTool(ctx, name, input) {
+  const now = Date.now();
+  if (name === "get_coin") {
+    const q = String(input && input.coin || "").trim().slice(0, 40);
+    if (!q) return { error: "no coin given" };
+    const u = await ctx.user(), m0 = await ctx.market();
+    const c = await findCoin(q, m0, u);
+    if (!c) return { error: `no coin found for "${q}"` };
+    const m = await ctx.market([{ sym: c.sym, id: c.id }]);
+    const id = c.id || m.idOf[c.sym];
+    if (!id) return { error: `no price found for "${q}" (not on CoinGecko or the big exchanges)` };
+    const row2 = [...m.top, ...m.top500].find((r) => r.id === id) || {};
+    const sym = (c.sym || row2.sym || "").toUpperCase();
+    ctx.used.add(srcOf(m, id));
+    ctx.coins.add(id + "|" + sym);
+    const fut = await loadFutures().catch(() => null);
+    const sp = (row2.spark || []).filter((x) => x > 0);
+    const out = {
+      coin: row2.name || c.name || sym,
+      ticker: sym,
+      price_usd: r6(row2.price),
+      change_24h_pct: r2(row2.ch24),
+      change_7d_pct: r2(row2.ch7),
+      change_30d_pct: r2(row2.ch30),
+      rank: row2.rank || c.rank || null,
+      market_cap_usd: row2.mcap ? Math.round(row2.mcap) : null,
+      volume_24h_usd: row2.vol ? Math.round(row2.vol) : null,
+      high_7d: sp.length ? r6(Math.max(...sp)) : null,
+      low_7d: sp.length ? r6(Math.min(...sp)) : null,
+      perpetual_futures: fut ? fut.has(sym) : null,
+      liquidation_map: `https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=${encodeURIComponent(sym)}`,
+      price_source: srcOf(m, id),
+      stablecoin: isStable(sym)
+    };
+    if (!(row2.price > 0)) {
+      const s = m.series[id];
+      if (s) out.price_usd = r6(s.last);
+    }
+    if (u) {
+      const sum = summarize(withIds(u, m), m, now), h = sum.coins.find((x) => x.sym === sym);
+      ctx.used.add("your portfolio (Firebase)");
+      out.you_hold = h ? { amount: r6(h.qty), value_usd: r2(h.value), share_of_portfolio_pct: sum.value > 0 ? r2(h.value / sum.value * 100) : null, average_buy_usd: r6(h.avg), profit_vs_average_pct: r2(h.chg), signal: sum.signal[sym] || "hold", signal_reason: h.why || null } : "not held";
+      if (!out.price_usd && h) out.price_usd = r6(h.price);
+    }
+    return out;
+  }
+  if (name === "get_portfolio") {
+    const x = await ctx.sum();
+    if (!x) return { error: "portfolio not connected" };
+    const { s } = x;
+    ctx.used.add("your portfolio (Firebase)");
+    ctx.used.add(srcOf(x.m, "bitcoin"));
+    return {
+      total_value_usd: r2(s.value),
+      change_24h_pct: r2(s.ch24),
+      change_24h_usd: r2(s.d24),
+      change_7d_pct: r2(s.ch7),
+      change_7d_usd: r2(s.d7),
+      all_time_profit_usd: r2(s.total),
+      all_time_profit_pct: r2(s.pctTotal),
+      invested_usd: r2(s.invested),
+      vs_holding_btc_pct: r2(s.vsBtc),
+      alts_beating_btc: `${s.beat} of ${s.alts}`,
+      signals: s.counts,
+      coins: [...s.coins].sort((a, b) => b.value - a.value).map((c) => ({ ticker: c.sym, value_usd: r2(c.value), share_pct: s.value > 0 ? r2(c.value / s.value * 100) : null, change_24h_pct: r2(c.ch24), change_7d_pct: r2(c.ch7), profit_vs_average_pct: r2(c.chg), signal: s.signal[c.sym], stablecoin: isStable(c.sym) || void 0 })),
+      allocation: s.alloc ? s.alloc.groups.map((g) => ({ group: s.alloc.names[g.key] || g.key, now_pct: r2(g.now), target_pct: r2(g.target), state: g.state })) : null
+    };
+  }
+  if (name === "get_market") {
+    const m = await ctx.market(), n = [100, 200, 300, 500].includes(+(input && input.top)) ? +input.top : 100;
+    ctx.used.add(srcOf(m, "bitcoin"));
+    ctx.used.add("market snapshot (CoinGecko, alternative.me, ETF flows)");
+    const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
+    const seen = /* @__PURE__ */ new Set(), list2 = [...m.top, ...m.top500].filter((r) => r.rank && r.rank <= n && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
+    const pick = (a, dir) => [...a].sort((x, y) => dir * (y.ch24 - x.ch24)).slice(0, 5).map((r) => ({ ticker: String(r.sym).toUpperCase(), rank: r.rank, price_usd: r6(r.price), change_24h_pct: r2(r.ch24) }));
+    const st = (m.stocks || []).filter((r) => r.ch24 != null);
+    return {
+      btc_price_usd: m.btc ? r6(m.btc.price) : null,
+      btc_change_24h_pct: m.btc ? r2(m.btc.ch24) : null,
+      total_market_cap_usd: g.mcap ? Math.round(g.mcap) : null,
+      market_cap_change_24h_pct: r2(g.mcapCh24),
+      btc_dominance_pct: r2(d.btc),
+      eth_dominance_pct: r2(d.eth),
+      usdt_dominance_pct: r2(d.usdt),
+      fear_greed: m.fng ? { value: m.fng.value, label: m.fng.label, yesterday: m.fng.prev, week_ago: m.fng.week } : null,
+      altcoin_season: m.alt ? { value: m.alt.value, label: m.alt.label } : null,
+      etf_flows_latest_day: e ? { date: e.date, btc_usd: e.btc, eth_usd: e.eth } : null,
+      [`top${n}_best_24h`]: pick(list2, 1),
+      [`top${n}_worst_24h`]: pick(list2, -1),
+      bstocks_best_24h: pick(st, 1).map(({ rank, ...x }) => x),
+      bstocks_worst_24h: pick(st, -1).map(({ rank, ...x }) => x)
+    };
+  }
+  if (name === "get_plan") {
+    const x = await ctx.sum();
+    if (!x) return { error: "portfolio not connected" };
+    const { s } = x;
+    ctx.used.add("your plan (Firebase)");
+    return {
+      overall_progress_pct: r2(s.prog.pct),
+      targets_met: `${s.prog.completed} of ${s.prog.counted}`,
+      coins: s.plan.map((p) => ({ ticker: p.sym, held: r6(p.actual), target: r6(p.target), progress_pct: p.target > 0 ? r2(p.actual / p.target * 100) : null })),
+      regular_buys: (s.dca || []).map((dc) => ({ ticker: dc.sym, per_month_usd: r2(dc.s.perMonth), next: dc.s.next || null, state: dc.s.state })),
+      buy_price_alerts: (s.buyAt || []).map((b) => ({ ticker: b.sym, alert_price_usd: r6(b.at), price_now_usd: r6(b.price), pct_above_alert: r2((b.price / b.at - 1) * 100), still_to_buy: r6(b.left) }))
+    };
+  }
+  if (name === "get_exit") {
+    const x = await ctx.sum();
+    if (!x) return { error: "portfolio not connected" };
+    const { s } = x;
+    ctx.used.add("your exit plan (Firebase)");
+    ctx.used.add("market snapshot");
+    return {
+      conditions: s.macro.map((c) => ({ name: { btcD: "BTC dominance", usdtD: "USDT dominance", ethBtc: "ETH/BTC" }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
+      take_profits: (s.tps || []).map((t) => ({ ticker: t.sym, tp: t.n, level_usd: r6(t.level), price_now_usd: r6(t.price), pct_to_go: r2((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go)
+    };
+  }
+  if (name === "get_history") {
+    const q = String(input && input.coin || "").trim(), days = Math.max(1, Math.min(29, parseInt(input && input.days || 7, 10) || 7));
+    const u = await ctx.user(), m = await ctx.market(), c = await findCoin(q, m, u);
+    const id = c && (c.id || m.idOf[c.sym]);
+    const f = id && await rawSeries(id);
+    if (!f || !Array.isArray(f.p)) return { error: `no price history kept for "${q}" \u2014 use get_coin for its 7d / 30d change` };
+    const from = now - days * DAY2, pts = f.p.map((p, i) => [f.t0 + i * f.step, p]).filter(([t, p]) => t >= from && p > 0);
+    if (pts.length < 2) return { error: "not enough history" };
+    ctx.used.add("hourly price history (GitHub prices branch)");
+    let hi = pts[0], lo = pts[0];
+    for (const x of pts) {
+      if (x[1] > hi[1]) hi = x;
+      if (x[1] < lo[1]) lo = x;
+    }
+    const day = (t) => local(t, { day: "numeric", month: "short" }), closes = {};
+    for (const [t, p] of pts) closes[localParts(t).date] = r6(p);
+    return {
+      coin: c.sym,
+      days,
+      start_usd: r6(pts[0][1]),
+      end_usd: r6(pts[pts.length - 1][1]),
+      change_pct: r2((pts[pts.length - 1][1] / pts[0][1] - 1) * 100),
+      high: { usd: r6(hi[1]), on: day(hi[0]) },
+      low: { usd: r6(lo[1]), on: day(lo[0]) },
+      daily_closes: closes
+    };
+  }
+  return { error: "unknown tool" };
+}
+function system(now, lang) {
+  return [
+    "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app.",
+    `Now: ${local(now, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} (Riyadh).`,
+    "RULES",
+    "- Every number you state (price, %, value, rank, flow\u2026) must come from a tool result in this conversation. Never use prices or market data from memory \u2014 call the tools first (several in one turn if needed). If a tool has no data, say so.",
+    "- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.",
+    '- About the future: give scenarios, levels and probabilities with reasons \u2014 never promises. Not financial advice, but do give a clear, practical view when asked "should I\u2026" (based on his plan and signals).',
+    '- Be concise: a phone screen. Short lines (aim \u2264 40 characters), short paragraphs, "\u2022 " bullets, at most ~12 lines unless asked for detail. No tables.',
+    "- Formatting: plain text with **bold** for key numbers / verdicts and `code` for tickers in lists. No headings with #, no links unless asked (buttons under the answer open coins).",
+    `- Language: answer in the language of the question. Arabic \u2192 Egyptian Arabic, numbers and tickers in Latin characters.${lang === "ar" ? " (The user's bot language is Arabic.)" : ""}`,
+    "- Do not write a sources line \u2014 the bot adds one."
+  ].join("\n");
+}
+async function claude(env, model, body) {
+  const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model, ...body }) });
+  const j = await r.json().catch(() => ({}));
+  return { ok: r.ok, status: r.status, j };
+}
+function toHtml(text) {
+  let s = String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  s = s.replace(/^#{1,6}\s*(.+)$/gm, "<b>$1</b>");
+  s = s.replace(/\*\*([^*\n][^*]*?)\*\*/g, "<b>$1</b>").replace(/__([^_\n]+?)__/g, "<b>$1</b>");
+  s = s.replace(/`([^`\n]+?)`/g, "<code>$1</code>");
+  s = s.replace(/(^|[\s(])\*([^*\n]+?)\*(?=[\s).,!?:;]|$)/gm, "$1<i>$2</i>");
+  s = s.replace(/^\s*[-*]\s+/gm, "\u2022 ");
+  return s.trim();
+}
+async function ask(env, question, lang = "en") {
+  if (!env.ANTHROPIC_API_KEY) return { error: "nokey" };
+  const u = await usage(env);
+  if (u.left <= 0) return { error: "limit", limit: u.limit };
+  const now = Date.now(), ctx = context(env);
+  const messages = [...await history(env), { role: "user", content: String(question).slice(0, 2e3) }];
+  let model = env.BOT_MODEL || "claude-sonnet-5-5", fellBack = false, text = "";
+  for (let round = 0; round <= MAX_ROUNDS; round++) {
+    const body = { max_tokens: 1500, system: system(now, lang), tools: round < MAX_ROUNDS ? TOOLS : void 0, messages };
+    let r = await claude(env, model, body);
+    if (!r.ok && !fellBack && (r.status === 404 || r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {})))) {
+      fellBack = true;
+      model = env.MODEL || "claude-opus-4-5";
+      r = await claude(env, model, body);
+    }
+    if (!r.ok) return { error: r.status === 429 || r.status === 529 ? "busy" : "claude", detail: r.status };
+    const content = r.j.content || [];
+    const calls = content.filter((b) => b.type === "tool_use");
+    if (!calls.length || r.j.stop_reason !== "tool_use") {
+      text = content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+      break;
+    }
+    messages.push({ role: "assistant", content });
+    const results = await Promise.all(calls.map(async (c) => {
+      let out;
+      try {
+        out = await runTool(ctx, c.name, c.input || {});
+      } catch (e) {
+        out = { error: "tool failed" };
+      }
+      return { type: "tool_result", tool_use_id: c.id, content: JSON.stringify(out).slice(0, 12e3) };
+    }));
+    messages.push({ role: "user", content: results });
+  }
+  if (!text) return { error: "empty" };
+  const left = await countOne(env);
+  await remember(env, String(question).slice(0, 2e3), text.slice(0, 3e3));
+  const coins = [...ctx.coins].map((x) => x.split("|")).slice(0, 3);
+  return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model };
+}
 
 // tools/worker/bot.mjs
-var H2 = 36e5;
+var H3 = 36e5;
 var LIQ = "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=";
 var T = {
   en: {
@@ -946,7 +1298,16 @@ var T = {
     futures: "Futures",
     yes: "yes",
     private: "",
-    welcome: "Your bot is connected \u2705\nIt answers here any time. Tap a button below, or send a ticker like <code>btc</code>.",
+    welcome: "Your bot is connected \u2705\nAsk me anything in plain words, tap a button below, or send a ticker like <code>btc</code>.",
+    thinking: "\u{1F9E0} Thinking\u2026",
+    aiLimit: (n) => `You've used today's ${n} questions \u2014 more tomorrow (midnight Riyadh). Buttons and tickers still work.`,
+    aiNoKey: "The AI is not set up (ANTHROPIC_API_KEY is missing in the Worker).",
+    aiBusy: "Claude is busy right now \u2014 try again in a minute.",
+    aiErr: "I couldn't answer that just now \u2014 try again, or rephrase.",
+    newChat: "\u{1F195} New chat",
+    newDone: "New chat \u2014 I forgot the earlier messages \u{1F9F9}",
+    aiLeft: (a, n) => `${a}/${n} left today`,
+    data: "Data",
     other: "\u{1F310} \u0639\u0631\u0628\u064A",
     otherCode: "ar",
     langSet: "Language: English \u2705",
@@ -1051,6 +1412,15 @@ var T = {
     yes: "\u0623\u064A\u0648\u0647",
     private: "",
     welcome: "\u0627\u0644\u0628\u0648\u062A \u0627\u062A\u0648\u0635\u0644 \u2705\n\u0628\u064A\u0631\u062F \u0639\u0644\u064A\u0643 \u0647\u0646\u0627 \u0641\u064A \u0623\u064A \u0648\u0642\u062A. \u0627\u0636\u063A\u0637 \u0632\u0631\u0627\u0631 \u062A\u062D\u062A\u060C \u0623\u0648 \u0627\u0628\u0639\u062A \u0631\u0645\u0632 \u0639\u0645\u0644\u0629 \u0632\u064A <code>btc</code>.",
+    thinking: "\u{1F9E0} \u0628\u0641\u0643\u0651\u0631\u2026",
+    aiLimit: (n) => `\u062E\u0644\u0635\u062A \u0627\u0644\u0640 ${n} \u0633\u0624\u0627\u0644 \u0628\u062A\u0648\u0639 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647 \u2014 \u0628\u0643\u0631\u0629 \u064A\u062A\u062C\u062F\u062F\u0648\u0627 (12 \u0628\u0627\u0644\u0644\u064A\u0644 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636). \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u0648\u0627\u0644\u0631\u0645\u0648\u0632 \u0634\u063A\u0627\u0644\u0629 \u0639\u0627\u062F\u064A.`,
+    aiNoKey: "\u0627\u0644\u0640 AI \u0645\u0634 \u0645\u062A\u0638\u0628\u0637 (ANTHROPIC_API_KEY \u0646\u0627\u0642\u0635 \u0641\u064A \u0627\u0644\u0640 Worker).",
+    aiBusy: "Claude \u0645\u0634\u063A\u0648\u0644 \u062F\u0644\u0648\u0642\u062A\u064A \u2014 \u062C\u0631\u0651\u0628 \u0643\u0645\u0627\u0646 \u062F\u0642\u064A\u0642\u0629.",
+    aiErr: "\u0645\u0627 \u0642\u062F\u0631\u062A\u0634 \u0623\u062C\u0627\u0648\u0628 \u062F\u0644\u0648\u0642\u062A\u064A \u2014 \u062C\u0631\u0651\u0628 \u062A\u0627\u0646\u064A \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0644\u0633\u0624\u0627\u0644 \u0628\u0634\u0643\u0644 \u062A\u0627\u0646\u064A.",
+    newChat: "\u{1F195} \u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629",
+    newDone: "\u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 \u2014 \u0646\u0633\u064A\u062A \u0627\u0644\u0643\u0644\u0627\u0645 \u0627\u0644\u0644\u064A \u0641\u0627\u062A \u{1F9F9}",
+    aiLeft: (a, n) => `\u0628\u0627\u0642\u064A ${a}/${n} \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647`,
+    data: "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A",
     other: "\u{1F310} English",
     otherCode: "en",
     langSet: "\u0627\u0644\u0644\u063A\u0629: \u0639\u0631\u0628\u064A \u2705",
@@ -1270,7 +1640,7 @@ function viewCoin(t, coin, m, sum, now) {
   const row2 = [...m.top, ...m.top500].find((r) => r.id === coin.id) || {}, s = m.series[coin.id];
   const symU = (coin.sym || row2.sym || "").toUpperCase(), held = sum && sum.coins.find((c) => c.sym === symU);
   const p = row2.price > 0 ? row2.price : s ? s.last : held && held.price > 0 ? held.price : null;
-  const ch7 = row2.ch7 != null ? row2.ch7 : s && p && s.at(now - 7 * 24 * H2) ? (p / s.at(now - 7 * 24 * H2) - 1) * 100 : null;
+  const ch7 = row2.ch7 != null ? row2.ch7 : s && p && s.at(now - 7 * 24 * H3) ? (p / s.at(now - 7 * 24 * H3) - 1) * 100 : null;
   const sym = (coin.sym || row2.sym || "").toUpperCase(), name = coin.name || row2.name || sym;
   const L = [
     `\u{1FA99} <b>${esc(name)}</b> (${esc(sym)})${row2.rank ? ` \xB7 #${row2.rank}` : ""}`,
@@ -1303,6 +1673,7 @@ var WORDS = [
   [/^\/?(market|mk)$|السوق/i, "mk"],
   [/^\/?(plan|pl)$|الخطة/i, "pl"],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, "hide"],
+  [/^\/(new|reset|clear)$|^محادثة جديدة$/i, "new"],
   [/^\/?(lang|language|لغة|اللغة)$/i, "lang"],
   [/^(عربي|arabic)$/i, "lang:ar"],
   [/^(english|انجليزي|إنجليزي)$/i, "lang:en"],
@@ -1318,16 +1689,10 @@ function parse(text) {
   const m = /^\/(price|p|coin)\s+(.+)$/i.exec(s);
   if (m) return { act: "coins", q: m[2].split(/[\s,]+/).filter(Boolean).slice(0, 5) };
   for (const [rx, act] of WORDS) if (rx.test(s)) return { act };
-  if (/^\$?[A-Za-z][A-Za-z0-9]{1,11}([\s,]+\$?[A-Za-z][A-Za-z0-9]{1,11}){0,4}$/.test(s)) return { act: "coins", q: s.split(/[\s,]+/).filter(Boolean) };
-  return { act: "soon" };
+  if (/^\$?[A-Za-z][A-Za-z0-9]{1,11}([\s,]+\$?[A-Za-z][A-Za-z0-9]{1,11}){0,4}$/.test(s)) return { act: "coins", q: s.split(/[\s,]+/).filter(Boolean), guess: String(text || "").trim() };
+  return { act: "ai", q: String(text || "").trim() };
 }
-var coinsOf = (user) => user ? [...(user.coins || []).filter((c) => c && !c.removed), ...(user.accum || []).filter((a) => a && +a.alertPrice > 0)].map((c) => ({ sym: String(c.sym || "").toUpperCase(), id: c.cgId || null })) : [];
-var withIds = (user, m) => ({
-  ...user,
-  coins: (user.coins || []).map((c) => c && c.sym && m.idOf[String(c.sym).toUpperCase()] ? { ...c, cgId: m.idOf[String(c.sym).toUpperCase()] } : c),
-  accum: (user.accum || []).map((a) => a && a.sym && m.idOf[String(a.sym).toUpperCase()] ? { ...a, cgId: m.idOf[String(a.sym).toUpperCase()] } : a)
-});
-async function buildView(env, act, arg) {
+async function buildView(env, act, arg, guess) {
   const now = Date.now();
   const user = act === "menu" || act === "coin" ? null : await loadUser(env).catch(() => null);
   const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
@@ -1340,6 +1705,13 @@ async function buildView(env, act, arg) {
   const mine = coinsOf(user);
   if (act === "coins") {
     const m0 = await loadMarket([], mine);
+    if (guess) {
+      const known = (w) => {
+        const W2 = String(w).toUpperCase().replace(/^\$/, ""), lw = String(w).toLowerCase();
+        return mine.some((c) => c.sym === W2) || !!m0.cgIds[W2] || [...m0.top, ...m0.top500].some((r) => String(r.sym || "").toUpperCase() === W2 || String(r.name || "").toLowerCase() === lw || r.id === lw);
+      };
+      if (!arg.every(known)) return { t, ai: guess };
+    }
     const found = [], miss = [];
     for (const q of arg) {
       const c = await findCoin(q, m0, user);
@@ -1377,6 +1749,7 @@ async function handleTelegram(request, env) {
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null || String(chat) !== String(env.TELEGRAM_CHAT_ID)) return ok();
+  if (!await firstTime(env, u.update_id)) return ok();
   try {
     if (q) {
       const d = String(q.data || "");
@@ -1385,6 +1758,11 @@ async function handleTelegram(request, env) {
       if (/^lang:(ar|en)$/.test(d)) {
         await switchLang(env, chat, d.slice(5), q.message.message_id);
         await done();
+        return ok();
+      }
+      if (d === "new") {
+        await forget(env);
+        await done(T[await getLang(env)].newDone);
         return ok();
       }
       if (/^mk:\d+$/.test(d) && RANGES.includes(+d.slice(3))) await setRange(env, +d.slice(3));
@@ -1402,12 +1780,25 @@ async function handleTelegram(request, env) {
       await switchLang(env, chat, p.act.slice(5));
       return ok();
     }
+    if (p.act === "new") {
+      await forget(env);
+      await send(env, chat, { text: T[await getLang(env)].newDone });
+      return ok();
+    }
+    if (p.act === "ai") {
+      await answer(env, chat, p.q);
+      return ok();
+    }
     if (p.act === "hide") {
       const t2 = T[await getLang(env)];
       await send(env, chat, { text: t2.hidden }, { reply_markup: { remove_keyboard: true } });
       return ok();
     }
-    const { t, views } = await run(env, p.act, p.q);
+    const { t, views, ai } = await run(env, p.act, p.q, p.guess);
+    if (ai) {
+      await answer(env, chat, ai);
+      return ok();
+    }
     if (/^\/start/.test(msg.text)) {
       await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });
       await tg(env, "setMyCommands", { commands: cmds(await getLang(env)) }).catch(() => {
@@ -1419,6 +1810,24 @@ async function handleTelegram(request, env) {
     });
   }
   return ok();
+}
+async function answer(env, chat, question) {
+  const lang = await getLang(env), t = T[lang];
+  resetBudget(30);
+  const ph = await send(env, chat, { text: t.thinking });
+  const id = ph && ph.result && ph.result.message_id;
+  const show = (v) => id ? edit(env, chat, id, v).then((r3) => r3.ok ? r3 : send(env, chat, v)) : send(env, chat, v);
+  const r = await ask(env, question, lang).catch(() => ({ error: "claude" }));
+  if (r.error) return show({ text: r.error === "limit" ? t.aiLimit(r.limit) : r.error === "nokey" ? t.aiNoKey : r.error === "busy" ? t.aiBusy : t.aiErr, buttons: [[cb(t.back, "menu")]] });
+  const foot = `<i>\u{1F4E1} ${t.data}: ${esc(r.sources.length ? r.sources.join(" \xB7 ") : "general knowledge")}
+${t.aiLeft(r.left, r.limit)}</i>`;
+  const btns = [];
+  if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb("\u{1FA99} " + sym, "c:" + cid.slice(0, 58))));
+  if (r.coins.length === 1) btns[0].push(url("\u{1F525} Liq Map", LIQ + encodeURIComponent(r.coins[0][1])));
+  btns.push([cb(t.newChat, "new"), cb(t.back, "menu")]);
+  let text = r.text + "\n\n" + foot;
+  if (text.length > 4e3) text = r.text.slice(0, 3900 - foot.length) + "\u2026\n\n" + foot;
+  return show({ text, buttons: btns });
 }
 async function switchLang(env, chat, lang, msgId) {
   await setLang(env, lang);
@@ -1439,7 +1848,7 @@ async function buildById(env, id) {
   const coin = { id: xs ? m.idOf[xs] || id : id, sym: xs || ownSym || row2.sym || "", name: row2.name || own && own.name || "" };
   return { t, views: [viewCoin(t, coin, m, user ? summarize(withIds(user, m), m, now) : null, now)] };
 }
-var run = (env, act, arg) => act === "coinById" ? buildById(env, arg) : buildView(env, act, arg);
+var run = (env, act, arg, guess) => act === "coinById" ? buildById(env, arg) : buildView(env, act, arg, guess);
 var cmds = (lang) => [
   ["portfolio", lang === "ar" ? "\u0645\u062D\u0641\u0638\u062A\u064A" : "My portfolio"],
   ["price", lang === "ar" ? "\u0633\u0639\u0631 \u0639\u0645\u0644\u0629 \u2014 /price btc" : "A coin \u2014 /price btc"],
@@ -1450,7 +1859,8 @@ var cmds = (lang) => [
   ["exit", lang === "ar" ? "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" : "Exit plan"],
   ["menu", lang === "ar" ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
   ["lang", "English / \u0639\u0631\u0628\u064A"],
-  ["hide", lang === "ar" ? "\u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0623\u0632\u0631\u0627\u0631" : "Hide the buttons"]
+  ["hide", lang === "ar" ? "\u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0623\u0632\u0631\u0627\u0631" : "Hide the buttons"],
+  ["new", lang === "ar" ? "\u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0639 \u0627\u0644\u0640 AI" : "New AI chat"]
 ].map(([command, description]) => ({ command, description }));
 async function setup(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { "content-type": "application/json" } });

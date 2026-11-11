@@ -40,7 +40,7 @@ const USER = () => ({
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
   meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
-const sent = []; let tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
+const sent = [], claudeCalls = []; let tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
@@ -73,17 +73,35 @@ globalThis.fetch = async (input, init = {}) => {
     return J({}, 404);
   }
   if (u.startsWith('https://www.googleapis.com/service_accounts')) return J({ keys: [] });
+  if (u === 'https://api.anthropic.com/v1/messages') {
+    const b = JSON.parse(body); claudeCalls.push(b);
+    if (init.headers['x-api-key'] !== 'sk-test') return J({ type: 'error', error: { type: 'authentication_error' } }, 401);
+    if (b.model === 'bad-model') return J({ type: 'error', error: { type: 'not_found_error', message: 'model: bad-model' } }, 404);
+    const msgs = b.messages, lastM = msgs[msgs.length - 1];
+    if (Array.isArray(lastM.content) && lastM.content[0].type === 'tool_result') {   // after the tools: answer from their results
+      const res = lastM.content.map(r => JSON.parse(r.content));
+      const coin = res.find(r => r.ticker);
+      if (coin) return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: `**${coin.ticker}** is $${coin.price_usd} (${coin.change_24h_pct}% 24h).\n- You hold ${coin.you_hold && coin.you_hold.amount} — ${coin.you_hold && coin.you_hold.signal}\n<script>x</script> & done` }] });
+      const tools = res.map(r => Object.keys(r).sort().join(',')).join(' | ');
+      return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Tools gave: ' + tools }] });
+    }
+    const q = String(lastM.content);
+    if (/price of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'text', text: 'Let me check.' }, { type: 'tool_use', id: 'tu1', name: 'get_coin', input: { coin: 'sol' } }] });
+    if (/everything/i.test(q)) return J({ stop_reason: 'tool_use', content: ['get_portfolio', 'get_market', 'get_plan', 'get_exit'].map((name, i) => ({ type: 'tool_use', id: 'tu' + i, name, input: name === 'get_market' ? { top: 200 } : {} })).concat([{ type: 'tool_use', id: 'tuh', name: 'get_history', input: { coin: 'sol', days: 7 } }]) });
+    return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'A general answer about ' + q.slice(0, 30) }] });
+  }
   if (u.startsWith('https://data-api.binance.vision/api/v3/ticker/24hr')) { const sy = new URL(u).searchParams.get('symbol'); return sy === 'NOIDUSDT' ? J({ symbol: sy, lastPrice: '2.50000000', priceChangePercent: '4.20' }) : J({ code: -1121, msg: 'Invalid symbol.' }, 400); }
   if (u.startsWith('https://www.okx.com/') || u.startsWith('https://api.gateio.ws/') || u.startsWith('https://api.mexc.com/')) return J({ code: '51001', data: [] }, 400);
   throw new Error('unexpected fetch ' + u);
 };
 
 const W = (await import('../tools/dist/samsam-worker.js')).default;
-const ENV = { TELEGRAM_BOT_TOKEN: '123:fake', TELEGRAM_CHAT_ID: '555', TG_SECRET: 'test_secret_0123456789', FIREBASE_SERVICE_ACCOUNT: JSON.stringify(SA) };
+const ENV = { ANTHROPIC_API_KEY: 'sk-test', TELEGRAM_BOT_TOKEN: '123:fake', TELEGRAM_CHAT_ID: '555', TG_SECRET: 'test_secret_0123456789', FIREBASE_SERVICE_ACCOUNT: JSON.stringify(SA) };
 const HOST = 'https://samsam-analysis.example.workers.dev';
 const post = (upd, secret = ENV.TG_SECRET, env = ENV) => W.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', ...(secret ? { 'X-Telegram-Bot-Api-Secret-Token': secret } : {}) }, body: JSON.stringify(upd) }), env, {});
-const say = (text, chat = 555) => post({ update_id: 1, message: { message_id: 1, chat: { id: chat, type: 'private' }, from: { id: chat }, text } });
-const tap = data => post({ update_id: 2, callback_query: { id: 'q1', data, from: { id: 555 }, message: { message_id: 42, chat: { id: 555 } } } });
+let UPD = 100;
+const say = (text, chat = 555) => post({ update_id: ++UPD, message: { message_id: 1, chat: { id: chat, type: 'private' }, from: { id: chat }, text } });
+const tap = data => post({ update_id: ++UPD, callback_query: { id: 'q1', data, from: { id: 555 }, message: { message_id: 42, chat: { id: 555 } } } });
 const out = () => sent.filter(x => x.m === 'sendMessage' || x.m === 'editMessageText');
 const last = () => out().slice(-1)[0];
 const okHtml = t => { const tags = [...t.matchAll(/<\/?([a-z]+)[^>]*>/g)].map(m => m[1]); const stray = t.replace(/<\/?(b|i|code)>/g, '').match(/[<>]|&(?!amp;|lt;|gt;)/); return tags.every(x => ['b', 'i', 'code'].includes(x)) && !stray; };
@@ -153,7 +171,9 @@ sent.length = 0; await say('/price pendle');
 v = last();
 check('a coin you don\'t hold (pendle) → its card, "You don\'t hold it", no "In the app"', /Pendle/.test(v.b.text) && /don't hold/.test(v.b.text) && !btnTexts(v).includes('💼 In the app'), v.b.text);
 sent.length = 0; await say('zzqqxx');
-check('unknown coin → "couldn\'t find", no crash', /couldn't find/.test(last().b.text) && okHtml(last().b.text), last().b.text);
+check('a word that is no coin → a question for Claude (not "couldn\'t find"), no crash', /A general answer about zzqqxx/.test(last().b.text) && okHtml(last().b.text), last().b.text);
+sent.length = 0; await say('/price zzqqxx');
+check('/price of an unknown coin → "couldn\'t find"', /couldn't find/.test(last().b.text), last().b.text);
 cgDown = true; sent.length = 0; await say('link');
 check('CoinGecko busy → the snapshot, with its age', /snapshot \d+ min old/.test(last().b.text) || /CoinGecko · live/.test(last().b.text), last().b.text.slice(-80));
 cgDown = false;
@@ -229,8 +249,45 @@ for (const [txt, want] of [['🏆 Movers', /Best &amp; worst \(your coins\)/], [
 sent.length = 0; await say('💼 Portfolio');
 check('a typed message shows "typing…" first', sent[0] && sent[0].m === 'sendChatAction' && sent[0].b.action === 'typing', sent.slice(0, 2).map(x => x.m));
 check('the keyboard button "💼 Portfolio" → the portfolio', last().b.text.includes(fmt2(sum.value)));
-sent.length = 0; await say('what do you think about the market this week?');
-check('free text → "plain words arrive in the next phase" + menu (no crash)', /next phase/.test(last().b.text) && btnTexts(last()).length === 8, last().b.text);
+
+// ── 🧠 phase 2: plain words → Claude, with the live-data tools ──
+await say('/new'); sent.length = 0; claudeCalls.length = 0; await say('what is the price of SOL?');
+v = last();
+check('a question → "🧠 Thinking…" at once, then that same message becomes the answer', sent.find(x => x.m === 'sendMessage').b.text === '🧠 Thinking…' && v.m === 'editMessageText' && v.b.message_id === 7, sent.map(x => x.m));
+check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 6 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
+const tr = JSON.parse(claudeCalls[1].messages.at(-1).content[0].content);
+check('get_coin gave Claude: live price + source, rank, 7d high / low, futures, your holding (avg, profit, signal)', tr.price_usd === 150 && /CoinGecko \(live\)/.test(tr.price_source) && tr.you_hold.amount === 10 && tr.you_hold.average_buy_usd === 160 && tr.you_hold.signal && 'perpetual_futures' in tr && tr.high_7d > 0, tr);
+check('the answer is Telegram-safe (its <script> and & escaped, ** → <b>, "- " → •)', okHtml(v.b.text) && /&lt;script&gt;/.test(v.b.text) && /• You hold/.test(v.b.text), v.b.text);
+check('footer: where the numbers came from + "N/30 left today"', /📡 Data: CoinGecko \(live\) · your portfolio \(Firebase\)/.test(v.b.text) && /\d+\/30 left today/.test(v.b.text), v.b.text.slice(-160));
+check('buttons: 🪙 SOL (opens its card) · 🔥 Liq Map · 🆕 New chat · ⬅️ Menu', JSON.stringify(btns(v).map(b => b.text)) === JSON.stringify(['🪙 SOL', '🔥 Liq Map', '🆕 New chat', '⬅️ Menu']) && btns(v)[0].callback_data === 'c:solana', btns(v));
+check('the system prompt forbids numbers from memory and asks for short phone lines', /must come from a tool result/.test(claudeCalls[0].system) && /≤ 40 characters/.test(claudeCalls[0].system) && claudeCalls[0].model === 'claude-sonnet-5-5', claudeCalls[0].system.slice(0, 120));
+sent.length = 0; claudeCalls.length = 0; await say('and ETH?');
+check('it remembers: the next question carries the earlier question + answer', claudeCalls[0].messages.length === 3 && /price of SOL/.test(claudeCalls[0].messages[0].content) && /SOL\*\* is/.test(claudeCalls[0].messages[1].content), claudeCalls[0].messages.map(x => String(x.content).slice(0, 30)));
+sent.length = 0; await say('/new');
+check('/new → "New chat" and the memory is gone', /New chat/.test(last().b.text));
+claudeCalls.length = 0; await say('hello there');
+check('…the next question starts fresh (1 message)', claudeCalls[0].messages.length === 1, claudeCalls[0].messages.length);
+sent.length = 0; claudeCalls.length = 0; await say('tell me everything');
+const all = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
+check('5 tools in one turn: portfolio, market (Top 200), plan, exit, 7-day history', all && all.length === 5 && all[0].total_value_usd > 0 && all[1].top200_best_24h && all[1].bstocks_best_24h.length === 5 && all[2].coins.length === 3 && all[3].conditions.length === 3 && all[4].change_pct != null && all[4].high && all[4].daily_closes, all && all.map(x => Object.keys(x).slice(0, 4)));
+check('get_portfolio: every coin with share %, profit vs average, signal (USDT marked stablecoin)', all[0].coins.length === 5 && all[0].coins.find(c => c.ticker === 'USDT').stablecoin === true && all[0].coins.every(c => 'signal' in c && 'share_pct' in c), all[0].coins);
+check('get_exit: LINK TP1 $25 at +127% to go, sell 25%', all[3].take_profits[0].ticker === 'LINK' && all[3].take_profits[0].level_usd === 25 && Math.round(all[3].take_profits[0].pct_to_go) === 127 && all[3].take_profits[0].sell_pct === 25, all[3].take_profits[0]);
+sent.length = 0; claudeCalls.length = 0; const dup = UPD + 1;
+await post({ update_id: dup, message: { message_id: 9, chat: { id: 555 }, text: 'what is the price of SOL?' } });
+await post({ update_id: dup, message: { message_id: 9, chat: { id: 555 }, text: 'what is the price of SOL?' } });
+UPD = dup;
+check('Telegram re-sends the same message (slow answer) → answered once', claudeCalls.length === 2 && sent.filter(x => x.m === 'sendMessage').length === 1, [claudeCalls.length, sent.map(x => x.m)]);
+sent.length = 0; claudeCalls.length = 0;
+await post({ update_id: ++UPD, message: { chat: { id: 555 }, text: 'hello model' } }, ENV.TG_SECRET, { ...ENV, BOT_MODEL: 'bad-model', MODEL: 'claude-opus-4-5' });
+check('a model name Anthropic refuses → asks again with AI Analysis\'s model', claudeCalls.map(c => c.model).join() === 'bad-model,claude-opus-4-5' && /A general answer/.test(last().b.text), claudeCalls.map(c => c.model));
+sent.length = 0; claudeCalls.length = 0;
+await post({ update_id: ++UPD, message: { chat: { id: 555 }, text: 'over the limit?' } }, ENV.TG_SECRET, { ...ENV, AI_DAILY_LIMIT: '3' });
+check('past the daily limit → "used today\'s 3 questions", Claude not called', claudeCalls.length === 0 && /used today's 3 questions/.test(last().b.text), last().b.text);
+sent.length = 0;
+await post({ update_id: ++UPD, message: { chat: { id: 555 }, text: 'no key?' } }, ENV.TG_SECRET, { ...ENV, ANTHROPIC_API_KEY: '' });
+check('no Anthropic key → says so, no crash', /not set up/.test(last().b.text), last().b.text);
+sent.length = 0; outside = 0; claudeCalls.length = 0; await say('tell me everything');
+check(`a 5-tool question stays within Cloudflare's 50 calls (${outside} outside + ${sent.length} Telegram)`, outside + sent.length <= 50, [outside, sent.length]);
 
 // ── language: English by default, 🌐 switches (and back) ──
 sent.length = 0; await say('/menu');
@@ -250,7 +307,7 @@ sent.length = 0;
 await post({ message: { chat: { id: 555 }, text: '/portfolio' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
 check('Arabic: "محفظتك الآن"', /محفظتك الآن/.test(last().b.text) && btnTexts(last()).includes('🔄 تحديث'), last().b.text.slice(0, 120));
 sent.length = 0; await post({ message: { chat: { id: 555 }, text: '📋 الخطة' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
-check('Arabic keyboard "📋 الخطة" → the plan in Arabic', /خطة التجميع/.test(last().b.text) && okHtml(last().b.text), last().b.text.slice(0, 120));
+check('Arabic keyboard "📋 الخطة" → the plan in Arabic', /خطة التجميع/.test(last().b.text) && okHtml(last().b.text), last().b.text);
 sent.length = 0; await post({ message: { chat: { id: 555 }, text: 'sol' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
 check('Arabic coin card', /معاك <b>10 SOL<\/b>/.test(last().b.text) && /متوسطك/.test(last().b.text), last().b.text);
 
