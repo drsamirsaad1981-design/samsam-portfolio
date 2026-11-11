@@ -1,6 +1,9 @@
 // tools/worker/data.mjs — what the Telegram bot reads, from inside the Cloudflare Worker (no Node, Web APIs only):
 //   · the market snapshot GitHub saves every ~30 min (prices branch on raw.githubusercontent.com — no limit)
-//   · live prices from CoinGecko's free API on top (a few seconds old), so an answer is never half an hour stale
+//   · live prices from CoinGecko's free API on top (a few seconds old), so an answer is never half an hour stale;
+//     a coin CoinGecko doesn't answer for gets its price from the exchanges by ticker (Binance → OKX → Gate → MEXC)
+//   · a budget of outside calls per message: Cloudflare allows 50 per request (free plan) — going over made answers
+//     come back with missing prices now and then
 //   · your portfolio from Firebase (Firestore REST, signed in with the service account in the Worker's secrets)
 // Nothing here prints or logs a value. Everything is cached for a short time per Worker instance.
 
@@ -18,26 +21,75 @@ async function cached(key, ms, make) {
   return value;
 }
 export function clearCache() { cache.clear(); tokenCache = null; }
+// outside calls this message may still make (Telegram's few are kept apart): never more than Cloudflare allows
+const BUDGET = 42;
+let used = 0;
+export function resetBudget() { used = 0; }
+export const budgetUsed = () => used;
+async function xfetch(url, init) { if (used >= BUDGET) throw new Error('budget'); used++; return fetch(url, init); }
 async function getJson(url, init) {
-  try { const r = await fetch(url, init); if (!r.ok) return null; return await r.json(); } catch (_) { return null; }
+  try { const r = await xfetch(url, init); if (!r.ok) return null; return await r.json(); } catch (_) { return null; }
 }
 
 // ── the market (same shape tools/alerts.mjs builds from the files on disk) ──
-export async function loadMarket(ids = []) {
+// ids: CoinGecko ids wanted; coins: [{ sym, id? }] — each gets an id (yours, the app's list, the top 500 by ticker) and a
+// price (CoinGecko live → the snapshot → its price file → the exchanges by ticker). market.idOf[SYM] → the id used.
+export async function loadMarket(ids = [], coins = []) {
   const base = await cached('market', 60e3, async () => {
     const [m, t5, alt, etf] = await Promise.all(['m/market.json', 'm/top500.json', 'm/alt.json', 'm/etf.json'].map(f => getJson(RAW + f)));
-    return { m: m || {}, t5: t5 || {}, alt, etf };
-  });
-  const want = [...new Set(['bitcoin', ...ids.filter(Boolean)])];
-  const series = {};
-  await Promise.all(want.map(async id => { const s = await cached('p:' + id, 10 * 60e3, async () => priceSeries(await getJson(RAW + 'p/' + id + '.json'))); if (s) series[id] = s; }));
+    return m && t5 ? { m, t5, alt, etf } : null;   // a failed load is not kept: the next message tries again
+  }) || { m: {}, t5: {}, alt: null, etf: null };
+  if (!base.m.top) cache.delete('market');
   const top = (base.m.top || []).map(r => ({ ...r })), top500 = (base.t5.top || []).map(r => ({ ...r }));
-  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: CG_IDS, live: {} };
-  await liveTopUp(market, want);
+  const byId = new Map(), bySym = {};
+  for (const r of [...top, ...top500]) {
+    if (!byId.has(r.id)) byId.set(r.id, r);
+    const S = String(r.sym || '').toUpperCase();
+    if (S && (!bySym[S] || (r.rank || 1e9) < (bySym[S].rank || 1e9))) bySym[S] = r;
+  }
+  const idOf = {};
+  for (const c of coins) { const S = String(c.sym || '').toUpperCase(); if (S) idOf[S] = c.id || CG_IDS[S] || (bySym[S] && bySym[S].id) || null; }
+  const all = [...new Set(['bitcoin', ...ids, ...Object.values(idOf)].filter(Boolean))];
+  // price files: Bitcoin (the BTC comparison) + coins the snapshot doesn't have — at most 10
+  const series = {};
+  const need = ['bitcoin', ...all.filter(id => id !== 'bitcoin' && !byId.has(id)).slice(0, 10)];
+  await Promise.all(need.map(async id => { const s = await cached('p:' + id, 10 * 60e3, async () => priceSeries(await getJson(RAW + 'p/' + id + '.json')) || false); if (s) series[id] = s; }));
+  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: CG_IDS, live: {}, idOf };
+  await liveTopUp(market, all);
+  // still no price (CoinGecko busy, not in the top 500, no price file) → the exchanges, by ticker (6 coins at most)
+  const rows = new Map([...market.top, ...market.top500].map(r => [r.id, r]));
+  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || (rows.get(id) && rows.get(id).price > 0) || series[id]))).slice(0, 6);
+  await Promise.all(missing.map(async ([S, id]) => {
+    const x = await exchangePrice(S); if (!x) return;
+    const key = id || 'x-' + S.toLowerCase(), r = rows.get(key);
+    if (r) { r.price = x.price; if (x.ch24 != null) r.ch24 = x.ch24; }
+    else market.top500.push({ id: key, sym: S, name: S, price: x.price, ch24: x.ch24, extra: true });
+    market.live[key] = x.src; idOf[S] = key;
+  }));
   const btc = market.top.find(r => r.id === 'bitcoin');
   market.btc = btc ? { price: btc.price, ch24: btc.ch24 } : series.bitcoin ? { price: series.bitcoin.last, ch24: null } : null;
   market.priceT = Date.now();
   return market;
+}
+
+// a coin's live price from an exchange, by ticker against USDT: { price, ch24 (%), src }
+const EX = [
+  ['Binance', S => `https://data-api.binance.vision/api/v3/ticker/24hr?symbol=${S}USDT`, j => j && j.lastPrice && { price: +j.lastPrice, ch24: +j.priceChangePercent }],
+  ['OKX', S => `https://www.okx.com/api/v5/market/ticker?instId=${S}-USDT`, j => { const d = j && j.data && j.data[0]; return d && { price: +d.last, ch24: +d.open24h > 0 ? (d.last / d.open24h - 1) * 100 : null }; }],
+  ['Gate', S => `https://api.gateio.ws/api/v4/spot/tickers?currency_pair=${S}_USDT`, j => { const d = Array.isArray(j) && j[0]; return d && { price: +d.last, ch24: d.change_percentage != null ? +d.change_percentage : null }; }],
+  ['MEXC', S => `https://api.mexc.com/api/v3/ticker/24hr?symbol=${S}USDT`, j => j && j.lastPrice && { price: +j.lastPrice, ch24: +j.openPrice > 0 ? (j.lastPrice / j.openPrice - 1) * 100 : null }],
+];
+export async function exchangePrice(sym) {
+  const S = String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!S || /^(USDT|USD)$/.test(S)) return null;
+  return cached('ex:' + S, 45e3, async () => {
+    for (const [src, url, read] of EX) {
+      const x = read(await getJson(url(S)));
+      if (x && x.price > 0 && isFinite(x.price)) return { price: x.price, ch24: isFinite(x.ch24) ? x.ch24 : null, src };
+      if (used >= BUDGET) break;
+    }
+    return null;
+  });
 }
 
 // live prices (CoinGecko /simple/price, up to 250 ids a call) written over the snapshot rows; a coin not in the
@@ -72,7 +124,8 @@ export async function findCoin(q, market, user) {
   if (byName) return { id: byName.id, sym: String(byName.sym).toUpperCase(), name: byName.name };
   const j = await cached('search:' + s.toLowerCase(), 3600e3, () => getJson(`${CG}/search?query=${encodeURIComponent(s)}`));
   const c = j && (j.coins || []).sort((a, b) => (String(b.symbol).toUpperCase() === S) - (String(a.symbol).toUpperCase() === S) || (a.market_cap_rank || 1e9) - (b.market_cap_rank || 1e9))[0];
-  return c ? { id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, rank: c.market_cap_rank } : null;
+  if (c) return { id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, rank: c.market_cap_rank };
+  return /^[A-Z0-9]{2,12}$/.test(S) ? { id: null, sym: S, name: '' } : null;   // the exchanges may still know the ticker
 }
 
 // ── Firebase: the service account → an OAuth token → Firestore REST (read only here) ──
@@ -89,7 +142,7 @@ async function googleToken(sa) {
   const body = b64urlJson({ alg: 'RS256', typ: 'JWT' }) + '.' + b64urlJson({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore', aud, iat: now, exp: now + 3600 });
   const key = await crypto.subtle.importKey('pkcs8', pemBytes(sa.private_key), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(body));
-  const r = await fetch(aud, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: body + '.' + b64url(sig) }) });
+  const r = await xfetch(aud, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: body + '.' + b64url(sig) }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) throw new Error('Firebase sign-in refused (' + r.status + ')');
   tokenCache = { token: j.access_token, until: Date.now() + 50 * 60e3, email: sa.client_email };
@@ -114,7 +167,7 @@ export function serviceAccount(env) {
 async function firestore(sa) {
   const token = await googleToken(sa), base = `https://firestore.googleapis.com/v1/projects/${sa.project_id}/databases/(default)/documents`;
   const call = async (url, init = {}) => {
-    const r = await fetch(url, { ...init, headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json', ...(init.headers || {}) } });
+    const r = await xfetch(url, { ...init, headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json', ...(init.headers || {}) } });
     if (r.status === 404) return null;
     if (!r.ok) throw new Error('Firestore ' + r.status);
     return r.json();
@@ -135,12 +188,12 @@ async function firestore(sa) {
     async get(p) { const j = await call(`${base}/${p}`); return j ? fields(j.fields) : null; },
   };
 }
-// your portfolio: { coins, txs, accum, meta } (the first account found, as the alerts do) — cached for 60 s
+// your portfolio: { coins, txs, accum, meta } (the first account found, as the alerts do) — cached for 2 min (🔄 reads it fresh)
 export async function loadUser(env, fresh = false) {
   const sa = serviceAccount(env);
   if (!sa) return null;
   if (fresh) cache.delete('user');
-  return cached('user', 60e3, async () => {
+  return cached('user', 120e3, async () => {
     const db = await firestore(sa), users = await db.users();
     if (!users.length) return null;
     const uid = env.FIREBASE_UID && users.includes(env.FIREBASE_UID) ? env.FIREBASE_UID : users[0];

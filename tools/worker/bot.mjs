@@ -13,7 +13,7 @@
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
-import { loadMarket, loadUser, findCoin, cgIdOf, serviceAccount } from './data.mjs';
+import { loadMarket, loadUser, findCoin, serviceAccount, resetBudget } from './data.mjs';
 
 const H = 3600e3;
 const LIQ = 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=';
@@ -40,7 +40,7 @@ const T = {
     exitT: 'Exit plan', conds: 'Exit conditions', met3: n => `${n} of 3 met`, btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC',
     tpT: 'Take-profit levels', tpKey: 'level · to go · sell', more: n => `+${n} more coins in the app`, toGo: 'to go', sellP: p => `sell ${p}%`, reached: 'reached', noExit: 'No take-profit levels yet — set them on the Exit Strategy page.',
     openExit: '🚪 Open Exit Strategy', allExit: 'All 3 conditions met — your exit zone',
-    kb: { pf: '💼 Portfolio', market: '🌍 Market', plan: '📋 Plan', movers: '🏆 Best & worst' },
+    kb: { pf: '💼 Portfolio', mk: '🌍 Market', pl: '📋 Plan', ex: '🚪 Exit plan', mv: '🏆 Best & worst', sg: '🎯 Signals' },
   },
   ar: {
     hi: 'أهلاً سمير 👋', menuTitle: 'تحب تشوف إيه؟', pf: '💼 محفظتي', coin: '🪙 عملة', market: '🌍 السوق', plan: '📋 الخطة',
@@ -62,7 +62,7 @@ const T = {
     exitT: 'خطة الخروج', conds: 'شروط الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'سيطرة BTC', usdtD: 'سيطرة USDT', ethBtc: 'ETH/BTC',
     tpT: 'مستويات جني الأرباح', tpKey: 'السعر · الباقي · البيع', more: n => `+${n} عملة كمان في التطبيق`, toGo: 'باقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'مفيش مستويات جني أرباح لسه — حطها من صفحة Exit Strategy.',
     openExit: '🚪 افتح Exit Strategy', allExit: 'الشروط الـ 3 اتحققت — منطقة الخروج',
-    kb: { pf: '💼 محفظتي', market: '🌍 السوق', plan: '📋 الخطة', movers: '🏆 الأفضل والأسوأ' },
+    kb: { pf: '💼 محفظتي', mk: '🌍 السوق', pl: '📋 الخطة', ex: '🚪 خطة الخروج', mv: '🏆 الأفضل والأسوأ', sg: '🎯 الإشارات' },
   },
 };
 
@@ -80,7 +80,9 @@ export function spark(arr, n = 16) {   // a 7-day line drawn with block characte
   return pts.map(v => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join('');
 }
 const menuRows = t => [[cb(t.pf, 'pf'), cb(t.market, 'mk')], [cb(t.plan, 'pl'), cb(t.movers, 'mv')], [cb(t.signals, 'sg'), cb(t.exit, 'ex')], [cb(t.coin, 'coin'), cb(t.other, 'lang:' + t.otherCode)]];
-const replyKb = t => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.market }], [{ text: t.kb.plan }, { text: t.kb.movers }]], resize_keyboard: true, is_persistent: true });
+// the keyboard under the chat: 6 buttons, 3 rows. Each one is matched by its exact text (both languages), so a tap always works
+const replyKb = t => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }], [{ text: t.kb.pl }, { text: t.kb.ex }], [{ text: t.kb.mv }, { text: t.kb.sg }]], resize_keyboard: true, is_persistent: true });
+const KB_ACT = () => Object.fromEntries(Object.values(T).flatMap(L => Object.entries(L.kb).map(([act, text]) => [text, act])));
 
 // ── language: English by default; 🌐 in the menu (or /lang) switches. Kept in the Worker's KV (RATE), else in memory ──
 let memLang = null;
@@ -208,7 +210,8 @@ export function viewMarket(t, m, now) {
 
 export function viewCoin(t, coin, m, sum, now) {
   const row = [...m.top, ...m.top500].find(r => r.id === coin.id) || {}, s = m.series[coin.id];
-  const p = row.price > 0 ? row.price : s ? s.last : null;
+  const symU = (coin.sym || row.sym || '').toUpperCase(), held = sum && sum.coins.find(c => c.sym === symU);
+  const p = row.price > 0 ? row.price : s ? s.last : held && held.price > 0 ? held.price : null;
   const ch7 = row.ch7 != null ? row.ch7 : (s && p && s.at(now - 7 * 24 * H) ? (p / s.at(now - 7 * 24 * H) - 1) * 100 : null);
   const sym = (coin.sym || row.sym || '').toUpperCase(), name = coin.name || row.name || sym;
   const L = [`🪙 <b>${esc(name)}</b> (${esc(sym)})${row.rank ? ` · #${row.rank}` : ''}`, '',
@@ -218,9 +221,10 @@ export function viewCoin(t, coin, m, sum, now) {
   const mine = sum && sum.coins.find(c => c.sym === sym);
   if (mine) L.push('', `👛 ${t.you} <b>${qty(mine.qty)} ${esc(sym)}</b> = ${usd2(mine.value)}`, `${t.avg} ${price(mine.avg)} · ${dot(mine.chg)} ${pct(mine.chg, 1)} · ${t.signal}: ${t[sum.signal[sym]] || t.hold}`);
   else if (sum) L.push('', `👛 ${t.noHold}`);
-  const age = m.live[coin.id] ? t.live : (m.parts && m.parts.top ? t.snap(Math.max(1, Math.round((now - Date.parse(m.parts.top)) / 60e3))) : '');
-  L.push('', `<i>${t.src}${age ? ' · ' + age : ''}</i>`);
-  const btns = [[cb(t.refresh, 'c:' + coin.id.slice(0, 58)), url(t.liq, LIQ + encodeURIComponent(sym))], [url(t.chart, 'https://www.coingecko.com/en/coins/' + encodeURIComponent(coin.id))]];
+  const lv = m.live[coin.id], src = typeof lv === 'string' ? lv : t.src;   // CoinGecko, or the exchange that answered
+  const age = lv ? t.live : (m.parts && m.parts.top ? t.snap(Math.max(1, Math.round((now - Date.parse(m.parts.top)) / 60e3))) : '');
+  L.push('', `<i>${src}${age ? ' · ' + age : ''}</i>`);
+  const btns = [[cb(t.refresh, 'c:' + coin.id.slice(0, 58)), url(t.liq, LIQ + encodeURIComponent(sym))], [url(t.chart, /^x-/.test(coin.id) ? 'https://www.tradingview.com/symbols/' + encodeURIComponent(sym) + 'USDT/' : 'https://www.coingecko.com/en/coins/' + encodeURIComponent(coin.id))]];
   if (mine) btns[1].push(url(t.inApp, APP + 'index.html#holdings/' + encodeURIComponent(sym)));
   btns.push([cb(t.back, 'menu')]);
   return { text: L.join('\n'), buttons: btns };
@@ -243,6 +247,8 @@ const WORDS = [
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
 ];
 export function parse(text) {
+  const kb = KB_ACT()[String(text || '').trim()];
+  if (kb) return { act: kb };
   const s = String(text || '').trim().replace(/@\w+/, '').replace(/^[^\p{L}\p{N}\/$]+/u, '').trim();   // "💼 Portfolio" → "Portfolio"
   const m = /^\/(price|p|coin)\s+(.+)$/i.exec(s);
   if (m) return { act: 'coins', q: m[2].split(/[\s,]+/).filter(Boolean).slice(0, 5) };
@@ -250,6 +256,12 @@ export function parse(text) {
   if (/^\$?[A-Za-z][A-Za-z0-9]{1,11}([\s,]+\$?[A-Za-z][A-Za-z0-9]{1,11}){0,4}$/.test(s)) return { act: 'coins', q: s.split(/[\s,]+/).filter(Boolean) };
   return { act: 'soon' };
 }
+
+// your coins (and plan coins with a buy-price alert) as { sym, id } — the market finds each one's price
+const coinsOf = user => user ? [...(user.coins || []).filter(c => c && !c.removed), ...(user.accum || []).filter(a => a && +a.alertPrice > 0)].map(c => ({ sym: String(c.sym || '').toUpperCase(), id: c.cgId || null })) : [];
+// the same portfolio, each coin carrying the id its price was found under (a coin saved without a CoinGecko id included)
+const withIds = (user, m) => ({ ...user, coins: (user.coins || []).map(c => c && c.sym && m.idOf[String(c.sym).toUpperCase()] ? { ...c, cgId: m.idOf[String(c.sym).toUpperCase()] } : c),
+  accum: (user.accum || []).map(a => a && a.sym && m.idOf[String(a.sym).toUpperCase()] ? { ...a, cgId: m.idOf[String(a.sym).toUpperCase()] } : a) });
 
 async function buildView(env, act, arg) {
   const now = Date.now();
@@ -261,20 +273,24 @@ async function buildView(env, act, arg) {
   if (act === 'soon') return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
   const needUser = ['pf', 'pl', 'mv', 'sg', 'ex'].includes(act);
   if (needUser && !user) return { t, views: [{ text: t.noUser, buttons: [[cb(t.market, 'mk'), cb(t.back, 'menu')]] }] };
-  const ids = user ? [...(user.coins || []).filter(c => c && !c.removed), ...(user.accum || []).filter(a => a && +a.alertPrice > 0)].map(c => cgIdOf(c, { cgIds: null })) : [];
+  const mine = coinsOf(user);
   if (act === 'coins') {
-    const m0 = await loadMarket(ids);
-    const coins = []; const miss = [];
-    for (const q of arg) { const c = await findCoin(q, m0, user); if (c) coins.push(c); else miss.push(q); }
-    const m = coins.some(c => !m0.series[c.id] || !m0.live[c.id]) ? await loadMarket([...ids, ...coins.map(c => c.id)]) : m0;
-    const sum = user ? summarize(user, m, now) : null;
-    const views = coins.map(c => viewCoin(t, c, m, sum, now));
+    const m0 = await loadMarket([], mine);
+    const found = [], miss = [];
+    for (const q of arg) { const c = await findCoin(q, m0, user); if (c) found.push(c); else miss.push(q); }
+    const m = await loadMarket(found.map(c => c.id).filter(Boolean), [...mine, ...found.map(c => ({ sym: c.sym, id: c.id }))]);
+    const sum = user ? summarize(withIds(user, m), m, now) : null;
+    const views = [];
+    for (const c of found) {
+      const id = c.id || m.idOf[c.sym];
+      if (id) views.push(viewCoin(t, { ...c, id }, m, sum, now)); else miss.push(c.sym);
+    }
     miss.forEach(q => views.push({ text: t.notFound(esc(q)), buttons: [[cb(t.back, 'menu')]] }));
     return { t, views };
   }
-  const m = await loadMarket(ids);
+  const m = await loadMarket([], mine);
   if (act === 'mk') return { t, views: [viewMarket(t, m, now)] };
-  const sum = summarize(user, m, now);
+  const sum = summarize(withIds(user, m), m, now);
   if (act === 'pf') return { t, views: [viewPortfolio(t, cfg, sum, m, now)] };
   if (act === 'mv') return { t, views: [viewMovers(t, sum)] };
   if (act === 'sg') return { t, views: [viewSignals(t, sum)] };
@@ -288,6 +304,7 @@ const ok = () => new Response('ok', { headers: { 'content-type': 'text/plain' } 
 export async function handleTelegram(request, env) {
   if (request.method !== 'POST') return new Response('Not found', { status: 404 });
   if (!env.TG_SECRET || request.headers.get('X-Telegram-Bot-Api-Secret-Token') !== env.TG_SECRET) return new Response('Forbidden', { status: 403 });
+  resetBudget();   // a fresh allowance of outside calls for this message
   const u = await request.json().catch(() => null);
   if (!u) return ok();
   const msg = u.message || u.edited_message, q = u.callback_query;
@@ -330,13 +347,15 @@ async function switchLang(env, chat, lang, msgId) {
 // a coin button carries the CoinGecko id → look it up by id (not by ticker)
 async function buildById(env, id) {
   const user = await loadUser(env).catch(() => null), now = Date.now();
-  const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
-  const ids = user ? (user.coins || []).filter(c => c && !c.removed).map(c => cgIdOf(c, { cgIds: null })) : [];
-  const m = await loadMarket([...ids, id]);
+  const lang = await getLang(env), t = T[lang];
+  const xs = /^x-/.test(id) ? id.slice(2).toUpperCase() : null;   // a coin priced by the exchanges (no CoinGecko id)
+  const mine = coinsOf(user);
+  const m = await loadMarket(xs ? [] : [id], xs ? [...mine, { sym: xs }] : mine);
   const row = [...m.top, ...m.top500].find(r => r.id === id) || {};
-  const own = user && (user.coins || []).find(c => c && !c.removed && cgIdOf(c, m) === id);
-  const coin = { id, sym: (own && own.sym) || row.sym || '', name: row.name || (own && own.name) || '' };
-  return { t, views: [viewCoin(t, coin, m, user ? summarize(user, m, now) : null, now)] };
+  const ownSym = Object.keys(m.idOf).find(S => m.idOf[S] === id);
+  const own = user && ownSym && (user.coins || []).find(c => c && !c.removed && String(c.sym).toUpperCase() === ownSym);
+  const coin = { id: xs ? (m.idOf[xs] || id) : id, sym: xs || ownSym || row.sym || '', name: row.name || (own && own.name) || '' };
+  return { t, views: [viewCoin(t, coin, m, user ? summarize(withIds(user, m), m, now) : null, now)] };
 }
 export const run = (env, act, arg) => act === 'coinById' ? buildById(env, arg) : buildView(env, act, arg);
 
@@ -352,6 +371,7 @@ export async function setup(request, env) {
   const cmds = lang => [['portfolio', lang === 'ar' ? 'محفظتي' : 'My portfolio'], ['price', lang === 'ar' ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', lang === 'ar' ? 'السوق' : 'Market'],
     ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['exit', lang === 'ar' ? 'خطة الخروج' : 'Exit plan'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي']]
     .map(([command, description]) => ({ command, description }));
+  resetBudget();
   const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];
   const b = await tg(env, 'setMyCommands', { commands: cmds(lang) });
   const c = await send(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });

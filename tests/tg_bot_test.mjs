@@ -33,14 +33,17 @@ const doc = o => ({ name: 'x', fields: Object.fromEntries(Object.entries(o).map(
 let LANG = 'ar';   // the alerts are in Arabic — the bot still starts in English
 const USER = () => ({
   coins: [{ sym: 'BTC', cgId: 'bitcoin', opening: { qty: 0.1, avg: 70000 } }, { sym: 'SOL', cgId: 'solana', opening: { qty: 10, avg: 160 } },
-    { sym: 'LINK', cgId: 'chainlink', opening: { qty: 50, avg: 15 } }, { sym: 'USDT', cgId: 'tether', opening: { qty: 900, avg: 0.5 } }],
+    { sym: 'LINK', cgId: 'chainlink', opening: { qty: 50, avg: 15 } }, { sym: 'USDT', cgId: 'tether', opening: { qty: 900, avg: 0.5 } },
+    { sym: 'NOID', name: 'No Id Coin', opening: { qty: 100, avg: 2 } },   // saved without a CoinGecko id, not in the top 500 — like PONS / CYBER
+    ...Array.from({ length: MANY }, (_, i) => ({ sym: 'ZZ' + i, cgId: 'zz-coin-' + i, opening: { qty: 1, avg: 1 } }))],
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
   meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
-const sent = []; let tokenCalls = 0, cgDown = false;
+const sent = []; let tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
+  if (!u.startsWith('https://api.telegram.org/')) outside++;
   if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); sent.push({ m, b }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
   if (u.includes('raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/')) {
     const f = u.split('/prices/')[1];
@@ -69,6 +72,8 @@ globalThis.fetch = async (input, init = {}) => {
     return J({}, 404);
   }
   if (u.startsWith('https://www.googleapis.com/service_accounts')) return J({ keys: [] });
+  if (u.startsWith('https://data-api.binance.vision/api/v3/ticker/24hr')) { const sy = new URL(u).searchParams.get('symbol'); return sy === 'NOIDUSDT' ? J({ symbol: sy, lastPrice: '2.50000000', priceChangePercent: '4.20' }) : J({ code: -1121, msg: 'Invalid symbol.' }, 400); }
+  if (u.startsWith('https://www.okx.com/') || u.startsWith('https://api.gateio.ws/') || u.startsWith('https://api.mexc.com/')) return J({ code: '51001', data: [] }, 400);
   throw new Error('unexpected fetch ' + u);
 };
 
@@ -105,7 +110,8 @@ let v = last(); const pf = v.b.text;
 const m = { top: market.top.map(x => ({ ...x })), top500: top500.top.map(x => ({ ...x })), global: market.global, fng: market.fng, alt: market.alt, altPage: alt, etf, cgIds: {},
   series: Object.fromEntries(['bitcoin', 'solana', 'chainlink', 'tether', 'pendle'].map(id => [id, priceSeries(JSON.parse(JSON.stringify(series(...{ bitcoin: [77000, 76000, 72000], solana: [150, 145, 170], chainlink: [11, 11.5, 12], tether: [1, 1, 1], pendle: [3.2, 3, 2.8] }[id]))))])) };
 for (const r0 of [...m.top, ...m.top500]) if (LIVE[r0.id]) { r0.price = LIVE[r0.id].usd; r0.ch24 = LIVE[r0.id].usd_24h_change; }
-const sum = summarize(USER(), m, NOW);
+m.top500.push({ id: 'x-noid', sym: 'NOID', name: 'NOID', price: 2.5, ch24: 4.2 });   // what the exchanges give the bot
+const sum = summarize({ ...USER(), coins: USER().coins.map(c => c.sym === 'NOID' ? { ...c, cgId: 'x-noid' } : c) }, m, NOW);
 const fmt2 = x => '$' + x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 check(`portfolio value = the app's (${fmt2(sum.value)})`, pf.includes(fmt2(sum.value)), pf.slice(0, 300));
 check('portfolio uses live prices (BTC 0.1 × $77,000 inside the total)', sum.value > 7700 && pf.includes('💼'));
@@ -151,6 +157,27 @@ cgDown = true; sent.length = 0; await say('link');
 check('CoinGecko busy → the snapshot, with its age', /snapshot \d+ min old/.test(last().b.text) || /CoinGecko · live/.test(last().b.text), last().b.text.slice(-80));
 cgDown = false;
 
+// ── a coin saved without a CoinGecko id, not in the top 500, CoinGecko quiet → priced by the exchanges ──
+sent.length = 0; await say('noid');
+v = last();
+check('a coin with no CoinGecko id → its live price from Binance ($2.50, +4.2%), "Binance · live"', /\$2\.50/.test(v.b.text) && /\+4\.2% 24h/.test(v.b.text) && /Binance · live/.test(v.b.text), v.b.text);
+check('…and your holding of it at that price (100 × $2.50 = $250.00, +25.0% vs avg $2)', /You hold <b>100 NOID<\/b> = \$250\.00/.test(v.b.text) && /\+25\.0%/.test(v.b.text), v.b.text);
+check('…its Refresh button works (by ticker) and the chart opens TradingView', btns(v)[0].callback_data === 'c:x-noid' && btns(v).some(b => /tradingview\.com\/symbols\/NOIDUSDT/.test(b.url || '')), btns(v));
+sent.length = 0; await tap('c:x-noid');
+check('tap Refresh on it → the same card, edited', last().m === 'editMessageText' && /\$2\.50/.test(last().b.text), last().b.text.slice(0, 80));
+sent.length = 0; await say('/portfolio');
+check('the portfolio counts it at the exchange price (value includes 100 × $2.50)', last().b.text.includes(fmt2(sum.value)) && sum.coins.find(c => c.sym === 'NOID').value === 250, [fmt2(sum.value), last().b.text.slice(0, 120)]);
+
+// ── outside calls stay within Cloudflare's 50 even with 60 coins (none in the top 500) ──
+MANY = 60; outside = 0;
+await W.fetch(new Request(HOST + '/tg/setup?key=nope'), ENV, {});   // (nothing)
+const D2 = await import('../tools/dist/samsam-worker.js?many');   // a fresh Worker instance → nothing cached
+const post2 = upd => D2.default.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify(upd) }), ENV, {});
+sent.length = 0; outside = 0;
+await post2({ message: { chat: { id: 555 }, text: '/portfolio' } });
+check(`60 coins, nothing cached: ${outside} outside calls for one answer (≤ 42; Cloudflare allows 50 with Telegram's)`, outside <= 42 && /Your portfolio now|محفظتك الآن/.test(last().b.text), outside);
+MANY = 0;
+
 // ── market, plan, signals, menu ──
 sent.length = 0; await say('/market');
 v = last();
@@ -178,6 +205,11 @@ sent.length = 0; await say('/signals');
 check('signals: grouped, Telegram-safe', /Signals/.test(last().b.text) && okHtml(last().b.text), last().b.text);
 sent.length = 0; await say('/start');
 check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent && btnTexts(out()[1]).length === 8 && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
+check('the keyboard under the chat: 6 buttons in 3 rows (Portfolio · Market / Plan · Exit / Best & worst · Signals)', JSON.stringify(out()[0].b.reply_markup.keyboard.map(r => r.map(b => b.text))) === JSON.stringify([['💼 Portfolio', '🌍 Market'], ['📋 Plan', '🚪 Exit plan'], ['🏆 Best & worst', '🎯 Signals']]), out()[0].b.reply_markup.keyboard);
+for (const [txt, want] of [['🏆 Best & worst', /Best & worst \(your coins\)|Best &amp; worst \(your coins\)/], ['🚪 Exit plan', /Exit conditions/], ['🎯 Signals', /<b>Signals<\/b>/], ['📋 Plan', /Accumulation plan/], ['🌍 Market', /Top 500/]]) {
+  sent.length = 0; await say(txt);
+  check(`keyboard "${txt}" works on the first tap`, want.test(last().b.text), last().b.text.slice(0, 80));
+}
 sent.length = 0; await say('💼 Portfolio');
 check('a typed message shows "typing…" first', sent[0] && sent[0].m === 'sendChatAction' && sent[0].b.action === 'typing', sent.slice(0, 2).map(x => x.m));
 check('the keyboard button "💼 Portfolio" → the portfolio', last().b.text.includes(fmt2(sum.value)));

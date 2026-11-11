@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 697b2f3a3401b8b2
+// sources-hash: 3cb78d801eec5883
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -43,8 +43,8 @@ var ai_worker_default = {
     const limit = Math.max(1, parseInt(env.DAILY_LIMIT || "5", 10) || 5);
     const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const key = `ai:${user.uid}:${day}`;
-    const used = await getCount(env, key);
-    if (used >= limit) return reply(429, { error: `You have used today's ${limit} AI reports. New reports are available tomorrow (00:00 UTC).`, remaining: 0 });
+    const used2 = await getCount(env, key);
+    if (used2 >= limit) return reply(429, { error: `You have used today's ${limit} AI reports. New reports are available tomorrow (00:00 UTC).`, remaining: 0 });
     if (!env.ANTHROPIC_API_KEY) return reply(500, { error: "The Worker has no ANTHROPIC_API_KEY secret." });
     const model = env.MODEL || "claude-opus-4-5";
     const lang = body.language === "ar" ? "ar" : "en";
@@ -65,8 +65,8 @@ var ai_worker_default = {
     if (!res.ok) return reply(502, { error: out.error && out.error.message || `Claude returned ${res.status}.` });
     const report = (out.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
     if (!report) return reply(502, { error: "Claude returned an empty report." });
-    await setCount(env, key, used + 1);
-    return reply(200, { report, model: out.model || model, remaining: limit - used - 1 });
+    await setCount(env, key, used2 + 1);
+    return reply(200, { report, model: out.model || model, remaining: limit - used2 - 1 });
   }
 };
 async function verifyFirebaseToken(token, projectId) {
@@ -666,33 +666,93 @@ async function cached(key, ms, make) {
   cache.set(key, { until: Date.now() + ms, value });
   return value;
 }
+var BUDGET = 42;
+var used = 0;
+function resetBudget() {
+  used = 0;
+}
+async function xfetch(url2, init) {
+  if (used >= BUDGET) throw new Error("budget");
+  used++;
+  return fetch(url2, init);
+}
 async function getJson(url2, init) {
   try {
-    const r = await fetch(url2, init);
+    const r = await xfetch(url2, init);
     if (!r.ok) return null;
     return await r.json();
   } catch (_) {
     return null;
   }
 }
-async function loadMarket(ids = []) {
+async function loadMarket(ids = [], coins = []) {
   const base = await cached("market", 6e4, async () => {
     const [m, t5, alt, etf] = await Promise.all(["m/market.json", "m/top500.json", "m/alt.json", "m/etf.json"].map((f) => getJson(RAW + f)));
-    return { m: m || {}, t5: t5 || {}, alt, etf };
-  });
-  const want = [.../* @__PURE__ */ new Set(["bitcoin", ...ids.filter(Boolean)])];
+    return m && t5 ? { m, t5, alt, etf } : null;
+  }) || { m: {}, t5: {}, alt: null, etf: null };
+  if (!base.m.top) cache.delete("market");
+  const top = (base.m.top || []).map((r) => ({ ...r })), top500 = (base.t5.top || []).map((r) => ({ ...r }));
+  const byId = /* @__PURE__ */ new Map(), bySym = {};
+  for (const r of [...top, ...top500]) {
+    if (!byId.has(r.id)) byId.set(r.id, r);
+    const S = String(r.sym || "").toUpperCase();
+    if (S && (!bySym[S] || (r.rank || 1e9) < (bySym[S].rank || 1e9))) bySym[S] = r;
+  }
+  const idOf = {};
+  for (const c of coins) {
+    const S = String(c.sym || "").toUpperCase();
+    if (S) idOf[S] = c.id || cg_ids_default[S] || bySym[S] && bySym[S].id || null;
+  }
+  const all = [...new Set(["bitcoin", ...ids, ...Object.values(idOf)].filter(Boolean))];
   const series = {};
-  await Promise.all(want.map(async (id) => {
-    const s = await cached("p:" + id, 10 * 6e4, async () => priceSeries(await getJson(RAW + "p/" + id + ".json")));
+  const need = ["bitcoin", ...all.filter((id) => id !== "bitcoin" && !byId.has(id)).slice(0, 10)];
+  await Promise.all(need.map(async (id) => {
+    const s = await cached("p:" + id, 10 * 6e4, async () => priceSeries(await getJson(RAW + "p/" + id + ".json")) || false);
     if (s) series[id] = s;
   }));
-  const top = (base.m.top || []).map((r) => ({ ...r })), top500 = (base.t5.top || []).map((r) => ({ ...r }));
-  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {} };
-  await liveTopUp(market, want);
+  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf };
+  await liveTopUp(market, all);
+  const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
+  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 6);
+  await Promise.all(missing.map(async ([S, id]) => {
+    const x = await exchangePrice(S);
+    if (!x) return;
+    const key = id || "x-" + S.toLowerCase(), r = rows.get(key);
+    if (r) {
+      r.price = x.price;
+      if (x.ch24 != null) r.ch24 = x.ch24;
+    } else market.top500.push({ id: key, sym: S, name: S, price: x.price, ch24: x.ch24, extra: true });
+    market.live[key] = x.src;
+    idOf[S] = key;
+  }));
   const btc = market.top.find((r) => r.id === "bitcoin");
   market.btc = btc ? { price: btc.price, ch24: btc.ch24 } : series.bitcoin ? { price: series.bitcoin.last, ch24: null } : null;
   market.priceT = Date.now();
   return market;
+}
+var EX = [
+  ["Binance", (S) => `https://data-api.binance.vision/api/v3/ticker/24hr?symbol=${S}USDT`, (j) => j && j.lastPrice && { price: +j.lastPrice, ch24: +j.priceChangePercent }],
+  ["OKX", (S) => `https://www.okx.com/api/v5/market/ticker?instId=${S}-USDT`, (j) => {
+    const d = j && j.data && j.data[0];
+    return d && { price: +d.last, ch24: +d.open24h > 0 ? (d.last / d.open24h - 1) * 100 : null };
+  }],
+  ["Gate", (S) => `https://api.gateio.ws/api/v4/spot/tickers?currency_pair=${S}_USDT`, (j) => {
+    const d = Array.isArray(j) && j[0];
+    return d && { price: +d.last, ch24: d.change_percentage != null ? +d.change_percentage : null };
+  }],
+  ["MEXC", (S) => `https://api.mexc.com/api/v3/ticker/24hr?symbol=${S}USDT`, (j) => j && j.lastPrice && { price: +j.lastPrice, ch24: +j.openPrice > 0 ? (j.lastPrice / j.openPrice - 1) * 100 : null }]
+];
+async function exchangePrice(sym) {
+  const S = String(sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!S || /^(USDT|USD)$/.test(S)) return null;
+  return cached("ex:" + S, 45e3, async () => {
+    for (const [src, url2, read] of EX) {
+      const x = read(await getJson(url2(S)));
+      if (x && x.price > 0 && isFinite(x.price)) return { price: x.price, ch24: isFinite(x.ch24) ? x.ch24 : null, src };
+      if (used >= BUDGET) break;
+    }
+    return null;
+  });
 }
 async function liveTopUp(market, ids) {
   if (!ids.length) return;
@@ -732,7 +792,8 @@ async function findCoin(q, market, user) {
   if (byName) return { id: byName.id, sym: String(byName.sym).toUpperCase(), name: byName.name };
   const j = await cached("search:" + s.toLowerCase(), 36e5, () => getJson(`${CG}/search?query=${encodeURIComponent(s)}`));
   const c = j && (j.coins || []).sort((a, b) => (String(b.symbol).toUpperCase() === S) - (String(a.symbol).toUpperCase() === S) || (a.market_cap_rank || 1e9) - (b.market_cap_rank || 1e9))[0];
-  return c ? { id: c.id, sym: String(c.symbol || "").toUpperCase(), name: c.name, rank: c.market_cap_rank } : null;
+  if (c) return { id: c.id, sym: String(c.symbol || "").toUpperCase(), name: c.name, rank: c.market_cap_rank };
+  return /^[A-Z0-9]{2,12}$/.test(S) ? { id: null, sym: S, name: "" } : null;
 }
 var tokenCache = null;
 var b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -747,7 +808,7 @@ async function googleToken(sa) {
   const body = b64urlJson({ alg: "RS256", typ: "JWT" }) + "." + b64urlJson({ iss: sa.client_email, scope: "https://www.googleapis.com/auth/datastore", aud, iat: now, exp: now + 3600 });
   const key = await crypto.subtle.importKey("pkcs8", pemBytes(sa.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(body));
-  const r = await fetch(aud, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: body + "." + b64url(sig) }) });
+  const r = await xfetch(aud, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: body + "." + b64url(sig) }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) throw new Error("Firebase sign-in refused (" + r.status + ")");
   tokenCache = { token: j.access_token, until: Date.now() + 50 * 6e4, email: sa.client_email };
@@ -777,7 +838,7 @@ function serviceAccount(env) {
 async function firestore(sa) {
   const token = await googleToken(sa), base = `https://firestore.googleapis.com/v1/projects/${sa.project_id}/databases/(default)/documents`;
   const call = async (url2, init = {}) => {
-    const r = await fetch(url2, { ...init, headers: { authorization: "Bearer " + token, "content-type": "application/json", ...init.headers || {} } });
+    const r = await xfetch(url2, { ...init, headers: { authorization: "Bearer " + token, "content-type": "application/json", ...init.headers || {} } });
     if (r.status === 404) return null;
     if (!r.ok) throw new Error("Firestore " + r.status);
     return r.json();
@@ -808,7 +869,7 @@ async function loadUser(env, fresh = false) {
   const sa = serviceAccount(env);
   if (!sa) return null;
   if (fresh) cache.delete("user");
-  return cached("user", 6e4, async () => {
+  return cached("user", 12e4, async () => {
     const db = await firestore(sa), users = await db.users();
     if (!users.length) return null;
     const uid = env.FIREBASE_UID && users.includes(env.FIREBASE_UID) ? env.FIREBASE_UID : users[0];
@@ -816,7 +877,6 @@ async function loadUser(env, fresh = false) {
     return { coins, txs, accum, meta: meta || {} };
   });
 }
-var cgIdOf = (c, market) => c.cgId || (market.cgIds || cg_ids_default)[String(c.sym || "").toUpperCase()] || null;
 
 // tools/worker/bot.mjs
 var H2 = 36e5;
@@ -919,7 +979,7 @@ var T = {
     noExit: "No take-profit levels yet \u2014 set them on the Exit Strategy page.",
     openExit: "\u{1F6AA} Open Exit Strategy",
     allExit: "All 3 conditions met \u2014 your exit zone",
-    kb: { pf: "\u{1F4BC} Portfolio", market: "\u{1F30D} Market", plan: "\u{1F4CB} Plan", movers: "\u{1F3C6} Best & worst" }
+    kb: { pf: "\u{1F4BC} Portfolio", mk: "\u{1F30D} Market", pl: "\u{1F4CB} Plan", ex: "\u{1F6AA} Exit plan", mv: "\u{1F3C6} Best & worst", sg: "\u{1F3AF} Signals" }
   },
   ar: {
     hi: "\u0623\u0647\u0644\u0627\u064B \u0633\u0645\u064A\u0631 \u{1F44B}",
@@ -1018,7 +1078,7 @@ var T = {
     noExit: "\u0645\u0641\u064A\u0634 \u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0623\u0631\u0628\u0627\u062D \u0644\u0633\u0647 \u2014 \u062D\u0637\u0647\u0627 \u0645\u0646 \u0635\u0641\u062D\u0629 Exit Strategy.",
     openExit: "\u{1F6AA} \u0627\u0641\u062A\u062D Exit Strategy",
     allExit: "\u0627\u0644\u0634\u0631\u0648\u0637 \u0627\u0644\u0640 3 \u0627\u062A\u062D\u0642\u0642\u062A \u2014 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
-    kb: { pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A", market: "\u{1F30D} \u0627\u0644\u0633\u0648\u0642", plan: "\u{1F4CB} \u0627\u0644\u062E\u0637\u0629", movers: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" }
+    kb: { pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A", mk: "\u{1F30D} \u0627\u0644\u0633\u0648\u0642", pl: "\u{1F4CB} \u0627\u0644\u062E\u0637\u0629", ex: "\u{1F6AA} \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C", mv: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623", sg: "\u{1F3AF} \u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" }
   }
 };
 var cb = (text, data) => ({ text, callback_data: data });
@@ -1035,7 +1095,8 @@ function spark(arr, n = 16) {
   return pts.map((v) => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join("");
 }
 var menuRows = (t) => [[cb(t.pf, "pf"), cb(t.market, "mk")], [cb(t.plan, "pl"), cb(t.movers, "mv")], [cb(t.signals, "sg"), cb(t.exit, "ex")], [cb(t.coin, "coin"), cb(t.other, "lang:" + t.otherCode)]];
-var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.market }], [{ text: t.kb.plan }, { text: t.kb.movers }]], resize_keyboard: true, is_persistent: true });
+var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }], [{ text: t.kb.pl }, { text: t.kb.ex }], [{ text: t.kb.mv }, { text: t.kb.sg }]], resize_keyboard: true, is_persistent: true });
+var KB_ACT = () => Object.fromEntries(Object.values(T).flatMap((L) => Object.entries(L.kb).map(([act, text]) => [text, act])));
 var memLang = null;
 async function getLang(env) {
   let v = memLang;
@@ -1175,7 +1236,8 @@ function viewMarket(t, m, now) {
 }
 function viewCoin(t, coin, m, sum, now) {
   const row2 = [...m.top, ...m.top500].find((r) => r.id === coin.id) || {}, s = m.series[coin.id];
-  const p = row2.price > 0 ? row2.price : s ? s.last : null;
+  const symU = (coin.sym || row2.sym || "").toUpperCase(), held = sum && sum.coins.find((c) => c.sym === symU);
+  const p = row2.price > 0 ? row2.price : s ? s.last : held && held.price > 0 ? held.price : null;
   const ch7 = row2.ch7 != null ? row2.ch7 : s && p && s.at(now - 7 * 24 * H2) ? (p / s.at(now - 7 * 24 * H2) - 1) * 100 : null;
   const sym = (coin.sym || row2.sym || "").toUpperCase(), name = coin.name || row2.name || sym;
   const L = [
@@ -1189,9 +1251,10 @@ function viewCoin(t, coin, m, sum, now) {
   const mine = sum && sum.coins.find((c) => c.sym === sym);
   if (mine) L.push("", `\u{1F45B} ${t.you} <b>${qty(mine.qty)} ${esc(sym)}</b> = ${usd2(mine.value)}`, `${t.avg} ${price(mine.avg)} \xB7 ${dot(mine.chg)} ${pct(mine.chg, 1)} \xB7 ${t.signal}: ${t[sum.signal[sym]] || t.hold}`);
   else if (sum) L.push("", `\u{1F45B} ${t.noHold}`);
-  const age = m.live[coin.id] ? t.live : m.parts && m.parts.top ? t.snap(Math.max(1, Math.round((now - Date.parse(m.parts.top)) / 6e4))) : "";
-  L.push("", `<i>${t.src}${age ? " \xB7 " + age : ""}</i>`);
-  const btns = [[cb(t.refresh, "c:" + coin.id.slice(0, 58)), url(t.liq, LIQ + encodeURIComponent(sym))], [url(t.chart, "https://www.coingecko.com/en/coins/" + encodeURIComponent(coin.id))]];
+  const lv = m.live[coin.id], src = typeof lv === "string" ? lv : t.src;
+  const age = lv ? t.live : m.parts && m.parts.top ? t.snap(Math.max(1, Math.round((now - Date.parse(m.parts.top)) / 6e4))) : "";
+  L.push("", `<i>${src}${age ? " \xB7 " + age : ""}</i>`);
+  const btns = [[cb(t.refresh, "c:" + coin.id.slice(0, 58)), url(t.liq, LIQ + encodeURIComponent(sym))], [url(t.chart, /^x-/.test(coin.id) ? "https://www.tradingview.com/symbols/" + encodeURIComponent(sym) + "USDT/" : "https://www.coingecko.com/en/coins/" + encodeURIComponent(coin.id))]];
   if (mine) btns[1].push(url(t.inApp, APP + "index.html#holdings/" + encodeURIComponent(sym)));
   btns.push([cb(t.back, "menu")]);
   return { text: L.join("\n"), buttons: btns };
@@ -1216,6 +1279,8 @@ var WORDS = [
   [/^\/?(coin|price)$/i, "coin"]
 ];
 function parse(text) {
+  const kb = KB_ACT()[String(text || "").trim()];
+  if (kb) return { act: kb };
   const s = String(text || "").trim().replace(/@\w+/, "").replace(/^[^\p{L}\p{N}\/$]+/u, "").trim();
   const m = /^\/(price|p|coin)\s+(.+)$/i.exec(s);
   if (m) return { act: "coins", q: m[2].split(/[\s,]+/).filter(Boolean).slice(0, 5) };
@@ -1223,6 +1288,12 @@ function parse(text) {
   if (/^\$?[A-Za-z][A-Za-z0-9]{1,11}([\s,]+\$?[A-Za-z][A-Za-z0-9]{1,11}){0,4}$/.test(s)) return { act: "coins", q: s.split(/[\s,]+/).filter(Boolean) };
   return { act: "soon" };
 }
+var coinsOf = (user) => user ? [...(user.coins || []).filter((c) => c && !c.removed), ...(user.accum || []).filter((a) => a && +a.alertPrice > 0)].map((c) => ({ sym: String(c.sym || "").toUpperCase(), id: c.cgId || null })) : [];
+var withIds = (user, m) => ({
+  ...user,
+  coins: (user.coins || []).map((c) => c && c.sym && m.idOf[String(c.sym).toUpperCase()] ? { ...c, cgId: m.idOf[String(c.sym).toUpperCase()] } : c),
+  accum: (user.accum || []).map((a) => a && a.sym && m.idOf[String(a.sym).toUpperCase()] ? { ...a, cgId: m.idOf[String(a.sym).toUpperCase()] } : a)
+});
 async function buildView(env, act, arg) {
   const now = Date.now();
   const user = act === "menu" || act === "coin" ? null : await loadUser(env).catch(() => null);
@@ -1233,25 +1304,29 @@ async function buildView(env, act, arg) {
   if (act === "soon") return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
   const needUser = ["pf", "pl", "mv", "sg", "ex"].includes(act);
   if (needUser && !user) return { t, views: [{ text: t.noUser, buttons: [[cb(t.market, "mk"), cb(t.back, "menu")]] }] };
-  const ids = user ? [...(user.coins || []).filter((c) => c && !c.removed), ...(user.accum || []).filter((a) => a && +a.alertPrice > 0)].map((c) => cgIdOf(c, { cgIds: null })) : [];
+  const mine = coinsOf(user);
   if (act === "coins") {
-    const m0 = await loadMarket(ids);
-    const coins = [];
-    const miss = [];
+    const m0 = await loadMarket([], mine);
+    const found = [], miss = [];
     for (const q of arg) {
       const c = await findCoin(q, m0, user);
-      if (c) coins.push(c);
+      if (c) found.push(c);
       else miss.push(q);
     }
-    const m2 = coins.some((c) => !m0.series[c.id] || !m0.live[c.id]) ? await loadMarket([...ids, ...coins.map((c) => c.id)]) : m0;
-    const sum2 = user ? summarize(user, m2, now) : null;
-    const views = coins.map((c) => viewCoin(t, c, m2, sum2, now));
+    const m2 = await loadMarket(found.map((c) => c.id).filter(Boolean), [...mine, ...found.map((c) => ({ sym: c.sym, id: c.id }))]);
+    const sum2 = user ? summarize(withIds(user, m2), m2, now) : null;
+    const views = [];
+    for (const c of found) {
+      const id = c.id || m2.idOf[c.sym];
+      if (id) views.push(viewCoin(t, { ...c, id }, m2, sum2, now));
+      else miss.push(c.sym);
+    }
     miss.forEach((q) => views.push({ text: t.notFound(esc(q)), buttons: [[cb(t.back, "menu")]] }));
     return { t, views };
   }
-  const m = await loadMarket(ids);
+  const m = await loadMarket([], mine);
   if (act === "mk") return { t, views: [viewMarket(t, m, now)] };
-  const sum = summarize(user, m, now);
+  const sum = summarize(withIds(user, m), m, now);
   if (act === "pf") return { t, views: [viewPortfolio(t, cfg, sum, m, now)] };
   if (act === "mv") return { t, views: [viewMovers(t, sum)] };
   if (act === "sg") return { t, views: [viewSignals(t, sum)] };
@@ -1263,6 +1338,7 @@ var ok = () => new Response("ok", { headers: { "content-type": "text/plain" } })
 async function handleTelegram(request, env) {
   if (request.method !== "POST") return new Response("Not found", { status: 404 });
   if (!env.TG_SECRET || request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TG_SECRET) return new Response("Forbidden", { status: 403 });
+  resetBudget();
   const u = await request.json().catch(() => null);
   if (!u) return ok();
   const msg = u.message || u.edited_message, q = u.callback_query;
@@ -1310,13 +1386,15 @@ async function switchLang(env, chat, lang, msgId) {
 }
 async function buildById(env, id) {
   const user = await loadUser(env).catch(() => null), now = Date.now();
-  const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
-  const ids = user ? (user.coins || []).filter((c) => c && !c.removed).map((c) => cgIdOf(c, { cgIds: null })) : [];
-  const m = await loadMarket([...ids, id]);
+  const lang = await getLang(env), t = T[lang];
+  const xs = /^x-/.test(id) ? id.slice(2).toUpperCase() : null;
+  const mine = coinsOf(user);
+  const m = await loadMarket(xs ? [] : [id], xs ? [...mine, { sym: xs }] : mine);
   const row2 = [...m.top, ...m.top500].find((r) => r.id === id) || {};
-  const own = user && (user.coins || []).find((c) => c && !c.removed && cgIdOf(c, m) === id);
-  const coin = { id, sym: own && own.sym || row2.sym || "", name: row2.name || own && own.name || "" };
-  return { t, views: [viewCoin(t, coin, m, user ? summarize(user, m, now) : null, now)] };
+  const ownSym = Object.keys(m.idOf).find((S) => m.idOf[S] === id);
+  const own = user && ownSym && (user.coins || []).find((c) => c && !c.removed && String(c.sym).toUpperCase() === ownSym);
+  const coin = { id: xs ? m.idOf[xs] || id : id, sym: xs || ownSym || row2.sym || "", name: row2.name || own && own.name || "" };
+  return { t, views: [viewCoin(t, coin, m, user ? summarize(withIds(user, m), m, now) : null, now)] };
 }
 var run = (env, act, arg) => act === "coinById" ? buildById(env, arg) : buildView(env, act, arg);
 async function setup(request, env) {
@@ -1338,6 +1416,7 @@ async function setup(request, env) {
     ["menu", lang2 === "ar" ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
     ["lang", "English / \u0639\u0631\u0628\u064A"]
   ].map(([command, description]) => ({ command, description }));
+  resetBudget();
   const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];
   const b = await tg(env, "setMyCommands", { commands: cmds(lang) });
   const c = await send(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
