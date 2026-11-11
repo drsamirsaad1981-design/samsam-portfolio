@@ -167,7 +167,9 @@ check('plan: buy-price alert for PENDLE (a coin you don\'t own)', /Buy-price ale
 sent.length = 0; await say('/exit');
 v = last();
 check('exit: the 3 conditions (✅ / ⬜) with now → target', /Exit conditions<\/b> · 0 of 3 met/.test(v.b.text) && /⬜ BTC dominance [\d.]+% → ≤ 45\.9%/.test(v.b.text) && /⬜ USDT dominance/.test(v.b.text) && /⬜ ETH\/BTC/.test(v.b.text), v.b.text);
-check('exit: LINK TP1 $25 (+127% to go, sell 25%), TP2 = avg $15 × 3, TP3 × 5', /<b>LINK<\/b> · \$11\.00/.test(v.b.text) && /⬜ TP1 \$25\.00 · \+127% to go · sell 25%/.test(v.b.text) && /TP2 \$45\.00 \(×3\)/.test(v.b.text) && /TP3 \$75\.00 \(×5\)/.test(v.b.text), v.b.text);
+check('exit: LINK TP1 $25 (+127%, sell 25%), TP2 = avg $15 × 3, TP3 × 5 — one short line each', /<b>LINK<\/b> · \$11\.00/.test(v.b.text) && /⬜ TP1 \$25\.00 · \+127% · 25%/.test(v.b.text) && /⬜ TP2 \$45\.00 · \+309% · 50%/.test(v.b.text) && /⬜ TP3 \$75\.00 · \+582% · 25%/.test(v.b.text), v.b.text);
+const exLong = Math.max(...plain(v.b.text).split('\n').map(l => [...l].length));
+check(`exit: every line fits a phone (longest ${exLong} ≤ 40)`, exLong <= 40, plain(v.b.text).split('\n').filter(l => [...l].length > 40));
 check('exit: button opens Exit Strategy (accumulation.html#exit); Telegram-safe', btns(v).some(b => b.url && b.url.endsWith('accumulation.html#exit')) && okHtml(v.b.text), btns(v));
 sent.length = 0; await tap('ex');
 check('tap 🚪 Exit plan → edited in place', last().m === 'editMessageText' && /Exit plan/.test(last().b.text));

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 877c410b2ef189c3
+// sources-hash: 6ce121632ff8e068
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -911,6 +911,8 @@ var T = {
     usdtD: "USDT dominance",
     ethBtc: "ETH/BTC",
     tpT: "Take-profit levels",
+    tpKey: "level \xB7 to go \xB7 sell",
+    more: (n) => `+${n} more coins in the app`,
     toGo: "to go",
     sellP: (p) => `sell ${p}%`,
     reached: "reached",
@@ -1008,6 +1010,8 @@ var T = {
     usdtD: "\u0633\u064A\u0637\u0631\u0629 USDT",
     ethBtc: "ETH/BTC",
     tpT: "\u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D",
+    tpKey: "\u0627\u0644\u0633\u0639\u0631 \xB7 \u0627\u0644\u0628\u0627\u0642\u064A \xB7 \u0627\u0644\u0628\u064A\u0639",
+    more: (n) => `+${n} \u0639\u0645\u0644\u0629 \u0643\u0645\u0627\u0646 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642`,
     toGo: "\u0628\u0627\u0642\u064A",
     sellP: (p) => `\u0628\u064A\u0639 ${p}%`,
     reached: "\u0648\u0635\u0644",
@@ -1096,18 +1100,18 @@ function viewExit(t, sum, now) {
   }
   if (mc === 3) L.push(`\u{1F514} <b>${t.allExit}</b>`);
   const tps = (sum.tps || []).map((x) => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
-  L.push("", `\u{1F3AF} <b>${t.tpT}</b>`);
+  L.push("", `\u{1F3AF} <b>${t.tpT}</b>`, `<i>${t.tpKey}</i>`);
   if (!tps.length) L.push(t.noExit);
   const bySym = /* @__PURE__ */ new Map();
   tps.forEach((x) => {
     if (!bySym.has(x.sym)) bySym.set(x.sym, []);
     bySym.get(x.sym).push(x);
   });
-  for (const [sym, list2] of [...bySym].slice(0, 12)) {
-    L.push(`<b>${esc(sym)}</b> \xB7 ${price(list2[0].price)}`);
-    list2.sort((a, b) => a.n - b.n).forEach((x) => L.push(`  ${x.to <= 0 ? "\u2705" : "\u2B1C"} TP${x.n} ${price(x.level)}${x.mult ? ` (\xD7${x.mult})` : ""} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}% ${t.toGo}`}${x.pct ? ` \xB7 ${t.sellP(x.pct)}` : ""}`));
+  for (const [sym, list2] of [...bySym].slice(0, 8)) {
+    L.push("", `<b>${esc(sym)}</b> \xB7 ${price(list2[0].price)}`);
+    list2.sort((a, b) => a.n - b.n).forEach((x) => L.push(`${x.to <= 0 ? "\u2705" : "\u2B1C"} TP${x.n} ${price(x.level)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`));
   }
-  if (bySym.size > 12) L.push("\u2026");
+  if (bySym.size > 8) L.push("", `<i>${t.more(bySym.size - 8)}</i>`);
   return { text: L.join("\n"), buttons: [[cb(t.refresh, "ex"), url(t.openExit, APP + "accumulation.html#exit")], [cb(t.pf, "pf"), cb(t.back, "menu")]] };
 }
 function viewMovers(t, sum) {

@@ -38,7 +38,7 @@ const T = {
     dom: 'Dominance', fng: 'Fear & Greed', altS: 'Altcoin Season', etf: 'ETF', planS: 'Plan', allocS: 'Allocation', onT: (a, n) => `${a}/${n} on target`,
     dcaS: (n, mo) => `${n} buys · ${mo}/mo`, exitS: (n) => `Exit ${n}/3`, nearTp: 'next TP',
     exitT: 'Exit plan', conds: 'Exit conditions', met3: n => `${n} of 3 met`, btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC',
-    tpT: 'Take-profit levels', toGo: 'to go', sellP: p => `sell ${p}%`, reached: 'reached', noExit: 'No take-profit levels yet — set them on the Exit Strategy page.',
+    tpT: 'Take-profit levels', tpKey: 'level · to go · sell', more: n => `+${n} more coins in the app`, toGo: 'to go', sellP: p => `sell ${p}%`, reached: 'reached', noExit: 'No take-profit levels yet — set them on the Exit Strategy page.',
     openExit: '🚪 Open Exit Strategy', allExit: 'All 3 conditions met — your exit zone',
     kb: { pf: '💼 Portfolio', market: '🌍 Market', plan: '📋 Plan', movers: '🏆 Best & worst' },
   },
@@ -60,7 +60,7 @@ const T = {
     dom: 'السيطرة', fng: 'الخوف والطمع', altS: 'موسم العملات', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a}/${n} على الهدف`,
     dcaS: (n, mo) => `${n} شراء · ${mo}/شهر`, exitS: (n) => `الخروج ${n}/3`, nearTp: 'أقرب TP',
     exitT: 'خطة الخروج', conds: 'شروط الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'سيطرة BTC', usdtD: 'سيطرة USDT', ethBtc: 'ETH/BTC',
-    tpT: 'مستويات جني الأرباح', toGo: 'باقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'مفيش مستويات جني أرباح لسه — حطها من صفحة Exit Strategy.',
+    tpT: 'مستويات جني الأرباح', tpKey: 'السعر · الباقي · البيع', more: n => `+${n} عملة كمان في التطبيق`, toGo: 'باقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'مفيش مستويات جني أرباح لسه — حطها من صفحة Exit Strategy.',
     openExit: '🚪 افتح Exit Strategy', allExit: 'الشروط الـ 3 اتحققت — منطقة الخروج',
     kb: { pf: '💼 محفظتي', market: '🌍 السوق', plan: '📋 الخطة', movers: '🏆 الأفضل والأسوأ' },
   },
@@ -139,14 +139,15 @@ export function viewExit(t, sum, now) {
   }
   if (mc === 3) L.push(`🔔 <b>${t.allExit}</b>`);
   const tps = (sum.tps || []).map(x => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
-  L.push('', `🎯 <b>${t.tpT}</b>`);
+  L.push('', `🎯 <b>${t.tpT}</b>`, `<i>${t.tpKey}</i>`);
   if (!tps.length) L.push(t.noExit);
   const bySym = new Map(); tps.forEach(x => { if (!bySym.has(x.sym)) bySym.set(x.sym, []); bySym.get(x.sym).push(x); });
-  for (const [sym, list] of [...bySym].slice(0, 12)) {
-    L.push(`<b>${esc(sym)}</b> · ${price(list[0].price)}`);
-    list.sort((a, b) => a.n - b.n).forEach(x => L.push(`  ${x.to <= 0 ? '✅' : '⬜'} TP${x.n} ${price(x.level)}${x.mult ? ` (×${x.mult})` : ''} · ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}% ${t.toGo}`}${x.pct ? ` · ${t.sellP(x.pct)}` : ''}`));
+  // one short line per level (fits a phone): ⬜ TP1 $0.5529 · +93% · 25%  — the 8 coins closest to a take-profit
+  for (const [sym, list] of [...bySym].slice(0, 8)) {
+    L.push('', `<b>${esc(sym)}</b> · ${price(list[0].price)}`);
+    list.sort((a, b) => a.n - b.n).forEach(x => L.push(`${x.to <= 0 ? '✅' : '⬜'} TP${x.n} ${price(x.level)} · ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` · ${x.pct}%` : ''}`));
   }
-  if (bySym.size > 12) L.push('…');
+  if (bySym.size > 8) L.push('', `<i>${t.more(bySym.size - 8)}</i>`);
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'ex'), url(t.openExit, APP + 'accumulation.html#exit')], [cb(t.pf, 'pf'), cb(t.back, 'menu')]] };
 }
 
