@@ -34,5 +34,7 @@ jobs:
           # a key pasted with a line break, spaces, quotes or "Bearer" in front still works
           CLOUDFLARE_API_TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d ' \r\n\t"' | sed 's/^Bearer//; s/^Authorization://')
           export CLOUDFLARE_API_TOKEN
+          case "$CLOUDFLARE_API_TOKEN" in cfat_*) K=yes;; *) K=no;; esac   # its shape only — never the key itself
+          echo "key: ${#CLOUDFLARE_API_TOKEN} characters, starts with cfat_: $K, $(printf '%s' "$CLOUDFLARE_API_TOKEN" | grep -o 'cfat_' | wc -l) × cfat_, other characters: $(printf '%s' "$CLOUDFLARE_API_TOKEN" | tr -d 'A-Za-z0-9_-' | wc -c)"
           [ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "CLOUDFLARE_API_TOKEN is not set yet — skipped (paste the built file by hand, or add the secret)"; exit 0; }
           npx -y wrangler@4 deploy --config tools/worker/wrangler.toml
