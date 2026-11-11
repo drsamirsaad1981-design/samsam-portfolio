@@ -40,7 +40,9 @@ const T = {
     exitT: 'Exit plan', conds: 'Exit conditions', met3: n => `${n} of 3 met`, btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC',
     tpT: 'Take-profit levels', tpKey: 'level · to go · sell', more: n => `+${n} more coins in the app`, toGo: 'to go', sellP: p => `sell ${p}%`, reached: 'reached', noExit: 'No take-profit levels yet — set them on the Exit Strategy page.',
     openExit: '🚪 Open Exit Strategy', allExit: 'All 3 conditions met — your exit zone',
-    kb: { pf: '💼 Portfolio', mk: '🌍 Market', pl: '📋 Plan', ex: '🚪 Exit plan', mv: '🏆 Best & worst', sg: '🎯 Signals' },
+    kb: { pf: '💼 Portfolio', mk: '🌍 Market', pl: '📋 Plan', ex: '🚪 Exit', mv: '🏆 Movers', sg: '🎯 Signals' },
+    kbOld: { mv: '🏆 Best & worst', ex: '🚪 Exit plan' },
+    hidden: 'Buttons hidden ⌨️ — tap the ⌨️ icon in the message box (or send /start) to bring them back.',
   },
   ar: {
     hi: 'أهلاً سمير 👋', menuTitle: 'تحب تشوف إيه؟', pf: '💼 محفظتي', coin: '🪙 عملة', market: '🌍 السوق', plan: '📋 الخطة',
@@ -62,7 +64,9 @@ const T = {
     exitT: 'خطة الخروج', conds: 'شروط الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'سيطرة BTC', usdtD: 'سيطرة USDT', ethBtc: 'ETH/BTC',
     tpT: 'مستويات جني الأرباح', tpKey: 'السعر · الباقي · البيع', more: n => `+${n} عملة كمان في التطبيق`, toGo: 'باقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'مفيش مستويات جني أرباح لسه — حطها من صفحة Exit Strategy.',
     openExit: '🚪 افتح Exit Strategy', allExit: 'الشروط الـ 3 اتحققت — منطقة الخروج',
-    kb: { pf: '💼 محفظتي', mk: '🌍 السوق', pl: '📋 الخطة', ex: '🚪 خطة الخروج', mv: '🏆 الأفضل والأسوأ', sg: '🎯 الإشارات' },
+    kb: { pf: '💼 محفظتي', mk: '🌍 السوق', pl: '📋 الخطة', ex: '🚪 الخروج', mv: '🏆 الأفضل', sg: '🎯 الإشارات' },
+    kbOld: { mv: '🏆 الأفضل والأسوأ', ex: '🚪 خطة الخروج' },
+    hidden: 'الأزرار اتخفت ⌨️ — اضغط علامة ⌨️ في خانة الكتابة (أو ابعت /start) عشان ترجع.',
   },
 };
 
@@ -81,8 +85,10 @@ export function spark(arr, n = 16) {   // a 7-day line drawn with block characte
 }
 const menuRows = t => [[cb(t.pf, 'pf'), cb(t.market, 'mk')], [cb(t.plan, 'pl'), cb(t.movers, 'mv')], [cb(t.signals, 'sg'), cb(t.exit, 'ex')], [cb(t.coin, 'coin'), cb(t.other, 'lang:' + t.otherCode)]];
 // the keyboard under the chat: 6 buttons, 3 rows. Each one is matched by its exact text (both languages), so a tap always works
-const replyKb = t => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }], [{ text: t.kb.pl }, { text: t.kb.ex }], [{ text: t.kb.mv }, { text: t.kb.sg }]], resize_keyboard: true, is_persistent: true });
-const KB_ACT = () => Object.fromEntries(Object.values(T).flatMap(L => Object.entries(L.kb).map(([act, text]) => [text, act])));
+// the keyboard under the chat: 6 short buttons in 2 rows. Not pinned: the ⌨️ icon in the message box hides / shows it,
+// /hide hides it, /start brings it back. Each button is matched by its exact text (both languages, old names too).
+const replyKb = t => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }, { text: t.kb.pl }], [{ text: t.kb.ex }, { text: t.kb.mv }, { text: t.kb.sg }]], resize_keyboard: true, is_persistent: false, input_field_placeholder: 'btc · sol eth · /menu' });
+const KB_ACT = () => Object.fromEntries(Object.values(T).flatMap(L => [...Object.entries(L.kb), ...Object.entries(L.kbOld || {})].map(([act, text]) => [text, act])));
 
 // ── language: English by default; 🌐 in the menu (or /lang) switches. Kept in the Worker's KV (RATE), else in memory ──
 let memLang = null;
@@ -253,6 +259,7 @@ const edit = (env, chat, msgId, v) => tg(env, 'editMessageText', { chat_id: chat
 const WORDS = [
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, 'menu'],
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
+  [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -339,8 +346,9 @@ export async function handleTelegram(request, env) {
     const p = parse(msg.text);
     tg(env, 'sendChatAction', { chat_id: chat, action: 'typing' }).catch(() => {});   // "typing…" while the numbers load
     if (/^lang:(ar|en)$/.test(p.act)) { await switchLang(env, chat, p.act.slice(5)); return ok(); }
+    if (p.act === 'hide') { const t = T[await getLang(env)]; await send(env, chat, { text: t.hidden }, { reply_markup: { remove_keyboard: true } }); return ok(); }
     const { t, views } = await run(env, p.act, p.q);
-    if (/^\/start/.test(msg.text)) await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });   // the keyboard under the chat
+    if (/^\/start/.test(msg.text)) { await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) }); await tg(env, 'setMyCommands', { commands: cmds(await getLang(env)) }).catch(() => {}); }   // the keyboard under the chat + the "/" menu
     for (const v of views) await send(env, chat, v);
   } catch (e) {
     await send(env, chat, { text: T[await getLang(env).catch(() => 'en')].err }).catch(() => {});
@@ -371,6 +379,11 @@ async function buildById(env, id) {
 }
 export const run = (env, act, arg) => act === 'coinById' ? buildById(env, arg) : buildView(env, act, arg);
 
+// the "/" menu in Telegram (set by the setup link and again on /start, so new commands show up)
+const cmds = lang => [['portfolio', lang === 'ar' ? 'محفظتي' : 'My portfolio'], ['price', lang === 'ar' ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', lang === 'ar' ? 'السوق' : 'Market'],
+    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['exit', lang === 'ar' ? 'خطة الخروج' : 'Exit plan'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي'], ['hide', lang === 'ar' ? 'إخفاء الأزرار' : 'Hide the buttons']]
+    .map(([command, description]) => ({ command, description }));
+
 // ── one-time setup: GET /tg/setup?key=<TG_SECRET> ──
 export async function setup(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { 'content-type': 'application/json' } });
@@ -380,9 +393,6 @@ export async function setup(request, env) {
   if (!/^[A-Za-z0-9_-]{16,256}$/.test(env.TG_SECRET)) return json(400, { ok: false, error: 'TG_SECRET must be 16+ letters, digits, _ or - (Telegram rule).' });
   const hook = u.origin + u.pathname.replace(/\/setup$/, '');
   const a = await tg(env, 'setWebhook', { url: hook, secret_token: env.TG_SECRET, allowed_updates: ['message', 'edited_message', 'callback_query'], drop_pending_updates: true });
-  const cmds = lang => [['portfolio', lang === 'ar' ? 'محفظتي' : 'My portfolio'], ['price', lang === 'ar' ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', lang === 'ar' ? 'السوق' : 'Market'],
-    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['exit', lang === 'ar' ? 'خطة الخروج' : 'Exit plan'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي']]
-    .map(([command, description]) => ({ command, description }));
   resetBudget();
   const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];
   const b = await tg(env, 'setMyCommands', { commands: cmds(lang) });

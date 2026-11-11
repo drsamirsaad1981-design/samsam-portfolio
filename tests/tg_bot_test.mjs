@@ -218,9 +218,11 @@ check('tap 🚪 Exit plan → edited in place', last().m === 'editMessageText' &
 sent.length = 0; await say('/signals');
 check('signals: grouped, Telegram-safe', /Signals/.test(last().b.text) && okHtml(last().b.text), last().b.text);
 sent.length = 0; await say('/start');
-check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent && btnTexts(out()[1]).length === 8 && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
-check('the keyboard under the chat: 6 buttons in 3 rows (Portfolio · Market / Plan · Exit / Best & worst · Signals)', JSON.stringify(out()[0].b.reply_markup.keyboard.map(r => r.map(b => b.text))) === JSON.stringify([['💼 Portfolio', '🌍 Market'], ['📋 Plan', '🚪 Exit plan'], ['🏆 Best & worst', '🎯 Signals']]), out()[0].b.reply_markup.keyboard);
-for (const [txt, want] of [['🏆 Best & worst', /Best & worst \(your coins\)|Best &amp; worst \(your coins\)/], ['🚪 Exit plan', /Exit conditions/], ['🎯 Signals', /<b>Signals<\/b>/], ['📋 Plan', /Accumulation plan/], ['🌍 Market', /Top \d+ · best/]]) {
+check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent === false && btnTexts(out()[1]).length === 8 && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
+check('the keyboard under the chat: 6 short buttons in 2 rows, not pinned (the ⌨️ icon hides / shows it)', JSON.stringify(out()[0].b.reply_markup.keyboard.map(r => r.map(b => b.text))) === JSON.stringify([['💼 Portfolio', '🌍 Market', '📋 Plan'], ['🚪 Exit', '🏆 Movers', '🎯 Signals']]) && out()[0].b.reply_markup.is_persistent === false, out()[0].b.reply_markup);
+sent.length = 0; await say('/hide');
+check('/hide → the buttons go away (remove_keyboard) with a note how to bring them back', last().b.reply_markup && last().b.reply_markup.remove_keyboard === true && /⌨️/.test(last().b.text), last().b);
+for (const [txt, want] of [['🏆 Movers', /Best &amp; worst \(your coins\)/], ['🏆 Best & worst', /Best &amp; worst \(your coins\)/], ['🚪 Exit', /Exit conditions/], ['🚪 Exit plan', /Exit conditions/], ['🎯 Signals', /<b>Signals<\/b>/], ['📋 Plan', /Accumulation plan/], ['🌍 Market', /Top \d+ · best/]]) {
   sent.length = 0; await say(txt);
   check(`keyboard "${txt}" works on the first tap`, want.test(last().b.text), last().b.text.slice(0, 80));
 }

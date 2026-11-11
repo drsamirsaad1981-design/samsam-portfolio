@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 2c6d6f5b872df53b
+// sources-hash: d41f61ffcd1ec667
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -982,7 +982,9 @@ var T = {
     noExit: "No take-profit levels yet \u2014 set them on the Exit Strategy page.",
     openExit: "\u{1F6AA} Open Exit Strategy",
     allExit: "All 3 conditions met \u2014 your exit zone",
-    kb: { pf: "\u{1F4BC} Portfolio", mk: "\u{1F30D} Market", pl: "\u{1F4CB} Plan", ex: "\u{1F6AA} Exit plan", mv: "\u{1F3C6} Best & worst", sg: "\u{1F3AF} Signals" }
+    kb: { pf: "\u{1F4BC} Portfolio", mk: "\u{1F30D} Market", pl: "\u{1F4CB} Plan", ex: "\u{1F6AA} Exit", mv: "\u{1F3C6} Movers", sg: "\u{1F3AF} Signals" },
+    kbOld: { mv: "\u{1F3C6} Best & worst", ex: "\u{1F6AA} Exit plan" },
+    hidden: "Buttons hidden \u2328\uFE0F \u2014 tap the \u2328\uFE0F icon in the message box (or send /start) to bring them back."
   },
   ar: {
     hi: "\u0623\u0647\u0644\u0627\u064B \u0633\u0645\u064A\u0631 \u{1F44B}",
@@ -1084,7 +1086,9 @@ var T = {
     noExit: "\u0645\u0641\u064A\u0634 \u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0623\u0631\u0628\u0627\u062D \u0644\u0633\u0647 \u2014 \u062D\u0637\u0647\u0627 \u0645\u0646 \u0635\u0641\u062D\u0629 Exit Strategy.",
     openExit: "\u{1F6AA} \u0627\u0641\u062A\u062D Exit Strategy",
     allExit: "\u0627\u0644\u0634\u0631\u0648\u0637 \u0627\u0644\u0640 3 \u0627\u062A\u062D\u0642\u0642\u062A \u2014 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
-    kb: { pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A", mk: "\u{1F30D} \u0627\u0644\u0633\u0648\u0642", pl: "\u{1F4CB} \u0627\u0644\u062E\u0637\u0629", ex: "\u{1F6AA} \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C", mv: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623", sg: "\u{1F3AF} \u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" }
+    kb: { pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A", mk: "\u{1F30D} \u0627\u0644\u0633\u0648\u0642", pl: "\u{1F4CB} \u0627\u0644\u062E\u0637\u0629", ex: "\u{1F6AA} \u0627\u0644\u062E\u0631\u0648\u062C", mv: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644", sg: "\u{1F3AF} \u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" },
+    kbOld: { mv: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623", ex: "\u{1F6AA} \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" },
+    hidden: "\u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u0627\u062A\u062E\u0641\u062A \u2328\uFE0F \u2014 \u0627\u0636\u063A\u0637 \u0639\u0644\u0627\u0645\u0629 \u2328\uFE0F \u0641\u064A \u062E\u0627\u0646\u0629 \u0627\u0644\u0643\u062A\u0627\u0628\u0629 (\u0623\u0648 \u0627\u0628\u0639\u062A /start) \u0639\u0634\u0627\u0646 \u062A\u0631\u062C\u0639."
   }
 };
 var cb = (text, data) => ({ text, callback_data: data });
@@ -1101,8 +1105,8 @@ function spark(arr, n = 16) {
   return pts.map((v) => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join("");
 }
 var menuRows = (t) => [[cb(t.pf, "pf"), cb(t.market, "mk")], [cb(t.plan, "pl"), cb(t.movers, "mv")], [cb(t.signals, "sg"), cb(t.exit, "ex")], [cb(t.coin, "coin"), cb(t.other, "lang:" + t.otherCode)]];
-var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }], [{ text: t.kb.pl }, { text: t.kb.ex }], [{ text: t.kb.mv }, { text: t.kb.sg }]], resize_keyboard: true, is_persistent: true });
-var KB_ACT = () => Object.fromEntries(Object.values(T).flatMap((L) => Object.entries(L.kb).map(([act, text]) => [text, act])));
+var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }, { text: t.kb.pl }], [{ text: t.kb.ex }, { text: t.kb.mv }, { text: t.kb.sg }]], resize_keyboard: true, is_persistent: false, input_field_placeholder: "btc \xB7 sol eth \xB7 /menu" });
+var KB_ACT = () => Object.fromEntries(Object.values(T).flatMap((L) => [...Object.entries(L.kb), ...Object.entries(L.kbOld || {})].map(([act, text]) => [text, act])));
 var memLang = null;
 async function getLang(env) {
   let v = memLang;
@@ -1298,6 +1302,7 @@ var WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, "pf"],
   [/^\/?(market|mk)$|السوق/i, "mk"],
   [/^\/?(plan|pl)$|الخطة/i, "pl"],
+  [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, "hide"],
   [/^\/?(lang|language|لغة|اللغة)$/i, "lang"],
   [/^(عربي|arabic)$/i, "lang:ar"],
   [/^(english|انجليزي|إنجليزي)$/i, "lang:en"],
@@ -1397,8 +1402,17 @@ async function handleTelegram(request, env) {
       await switchLang(env, chat, p.act.slice(5));
       return ok();
     }
+    if (p.act === "hide") {
+      const t2 = T[await getLang(env)];
+      await send(env, chat, { text: t2.hidden }, { reply_markup: { remove_keyboard: true } });
+      return ok();
+    }
     const { t, views } = await run(env, p.act, p.q);
-    if (/^\/start/.test(msg.text)) await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });
+    if (/^\/start/.test(msg.text)) {
+      await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });
+      await tg(env, "setMyCommands", { commands: cmds(await getLang(env)) }).catch(() => {
+      });
+    }
     for (const v of views) await send(env, chat, v);
   } catch (e) {
     await send(env, chat, { text: T[await getLang(env).catch(() => "en")].err }).catch(() => {
@@ -1426,6 +1440,18 @@ async function buildById(env, id) {
   return { t, views: [viewCoin(t, coin, m, user ? summarize(withIds(user, m), m, now) : null, now)] };
 }
 var run = (env, act, arg) => act === "coinById" ? buildById(env, arg) : buildView(env, act, arg);
+var cmds = (lang) => [
+  ["portfolio", lang === "ar" ? "\u0645\u062D\u0641\u0638\u062A\u064A" : "My portfolio"],
+  ["price", lang === "ar" ? "\u0633\u0639\u0631 \u0639\u0645\u0644\u0629 \u2014 /price btc" : "A coin \u2014 /price btc"],
+  ["market", lang === "ar" ? "\u0627\u0644\u0633\u0648\u0642" : "Market"],
+  ["plan", lang === "ar" ? "\u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639" : "Accumulation plan"],
+  ["movers", lang === "ar" ? "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" : "Best & worst"],
+  ["signals", lang === "ar" ? "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" : "Signals"],
+  ["exit", lang === "ar" ? "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" : "Exit plan"],
+  ["menu", lang === "ar" ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
+  ["lang", "English / \u0639\u0631\u0628\u064A"],
+  ["hide", lang === "ar" ? "\u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0623\u0632\u0631\u0627\u0631" : "Hide the buttons"]
+].map(([command, description]) => ({ command, description }));
 async function setup(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { "content-type": "application/json" } });
   if (!env.TG_SECRET || u.searchParams.get("key") !== env.TG_SECRET) return json(403, { ok: false, error: "Wrong or missing key." });
@@ -1434,17 +1460,6 @@ async function setup(request, env) {
   if (!/^[A-Za-z0-9_-]{16,256}$/.test(env.TG_SECRET)) return json(400, { ok: false, error: "TG_SECRET must be 16+ letters, digits, _ or - (Telegram rule)." });
   const hook = u.origin + u.pathname.replace(/\/setup$/, "");
   const a = await tg(env, "setWebhook", { url: hook, secret_token: env.TG_SECRET, allowed_updates: ["message", "edited_message", "callback_query"], drop_pending_updates: true });
-  const cmds = (lang2) => [
-    ["portfolio", lang2 === "ar" ? "\u0645\u062D\u0641\u0638\u062A\u064A" : "My portfolio"],
-    ["price", lang2 === "ar" ? "\u0633\u0639\u0631 \u0639\u0645\u0644\u0629 \u2014 /price btc" : "A coin \u2014 /price btc"],
-    ["market", lang2 === "ar" ? "\u0627\u0644\u0633\u0648\u0642" : "Market"],
-    ["plan", lang2 === "ar" ? "\u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639" : "Accumulation plan"],
-    ["movers", lang2 === "ar" ? "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" : "Best & worst"],
-    ["signals", lang2 === "ar" ? "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" : "Signals"],
-    ["exit", lang2 === "ar" ? "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" : "Exit plan"],
-    ["menu", lang2 === "ar" ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
-    ["lang", "English / \u0639\u0631\u0628\u064A"]
-  ].map(([command, description]) => ({ command, description }));
   resetBudget();
   const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];
   const b = await tg(env, "setMyCommands", { commands: cmds(lang) });
