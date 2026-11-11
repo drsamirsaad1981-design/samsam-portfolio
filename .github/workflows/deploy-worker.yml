@@ -1,0 +1,35 @@
+# Deploys the Cloudflare Worker (AI Analysis + the Telegram bot) whenever its built file changes on main.
+# Needs one secret: CLOUDFLARE_API_TOKEN (Cloudflare → samsam-analysis → Settings → "API token for external CI/CD").
+# Before deploying it checks the built file is current and runs the bot's tests; it never prints a secret.
+name: Deploy Worker
+
+on:
+  push:
+    branches: [main]
+    paths: ['tools/dist/samsam-worker.js', 'tools/worker/wrangler.toml', '.github/workflows/deploy-worker.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check the built file + the bot's tests
+        run: node tests/tg_bot_test.mjs
+      - name: Deploy to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: a69e897ed0e95f7f281ff717742e0ead
+        run: |
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "CLOUDFLARE_API_TOKEN is not set yet — skipped (paste the built file by hand, or add the secret)"; exit 0; }
+          npx -y wrangler@4 deploy --config tools/worker/wrangler.toml

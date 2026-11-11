@@ -1,0 +1,17 @@
+# tools/worker/wrangler.toml — how GitHub deploys the Worker (.github/workflows/deploy-worker.yml).
+# It deploys the BUILT file only; the settings you made in the dashboard stay:
+#   keep_vars   → the plain variables (ALLOWED_EMAILS, DAILY_LIMIT, …) are kept; secrets are never touched by a deploy
+#   RATE        → the same KV namespace (samsam-ai-rate): the AI daily counter + the bot's language
+name = "samsam-analysis"
+main = "../dist/samsam-worker.js"
+compatibility_date = "2026-10-16"
+workers_dev = true
+keep_vars = true
+no_bundle = true
+
+[[kv_namespaces]]
+binding = "RATE"
+id = "1702e6d9e72046d1909dcef441c27571"
+
+[observability]
+enabled = true
