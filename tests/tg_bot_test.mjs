@@ -40,13 +40,14 @@ const USER = () => ({
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
   meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
-const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; let FS_WRITE_403 = false, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
+const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
   if (!u.startsWith('https://api.telegram.org/')) outside++;
   if (u.startsWith('https://api.telegram.org/file/bot123:fake/')) { fileGets.push(u); return new Response(VOICE_BYTES, { status: 200 }); }
   if (u.startsWith('https://api.telegram.org/bot') && u.endsWith('/getFile')) { const b = JSON.parse(body); sent.push({ m: 'getFile', b }); return J({ ok: true, result: { file_id: b.file_id, file_path: 'voice/file_9.oga' } }); }
+  if (/^https:\/\/(coin-images|assets)\.coingecko\.com\//.test(u)) { logoFetches++; return /tether|325/.test(u) ? new Response('nf', { status: 404 }) : /notimage/.test(u) ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : new Response(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'), { headers: { 'content-type': 'image/png' } }); }
   if (u.startsWith('https://api.telegram.org/bot') && body instanceof FormData) { const m = u.split('/').pop(); const ph = body.get('photo'); sent.push({ m, b: { chat_id: body.get('chat_id'), caption: body.get('caption'), photoBytes: ph ? new Uint8Array(await ph.arrayBuffer()) : null } }); return J({ ok: true, result: { message_id: 8 } }); }
   if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); sent.push({ m, b }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
   if (u.includes('raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/')) {
@@ -700,8 +701,10 @@ await pg.click('.btn'); await pg.waitForTimeout(150); await pg.click('.tab >> nt
 check('page never runs data as HTML (a coin named <img onerror> is shown as text)', (await pg.$$('img')).length === 0 && (await pg.innerText('body')).includes('<img'));
 // 📸 image cards: drawn in the page, previewed, sent through /tg/card
 REP = rj.report; await pg.click('.btn'); await pg.waitForTimeout(150);
+await pg.route(HOST + '/tg/logo**', async r => { const res = await W.fetch(new Request(r.request().url()), ENVK, {}); r.fulfill({ status: res.status, contentType: res.headers.get('content-type') || 'text/plain', body: Buffer.from(await res.arrayBuffer()) }); });
 let cardBody = null; await pg.route(HOST + '/tg/card', async r => { cardBody = JSON.parse(r.request().postData()); const res = await W.fetch(new Request(HOST + '/tg/card', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...cardBody, initData: initData(555) }) }), ENVK, {}); r.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() }); });
 await pg.click('.hero .cam'); await pg.waitForFunction(() => { const i = document.querySelector('.sheet .prev'); return i && i.naturalWidth === 1080; }, null, { timeout: 5000 });
+check('…the card draws the real logos (fetched through /tg/logo)', logoFetches >= 3, logoFetches);
 check('📸 on the value card → a preview of a 1080×1350 portfolio card', (await pg.$eval('.sheet .prev', i => [i.naturalWidth, i.naturalHeight].join('x'))) === '1080x1350');
 const pv1 = await pg.$eval('.sheet .prev', i => i.src); fs.writeFileSync(path.join(ROOT, 'tests/shots/card_portfolio.png'), Buffer.from(pv1.split(',')[1], 'base64'));
 await pg.click('.sheet .more >> nth=0'); await pg.waitForFunction(old => document.querySelector('.sheet .prev').src !== old, pv1, { timeout: 5000 }).catch(() => {});
@@ -746,6 +749,12 @@ const JPG = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3]).toString('base64');
 check('/tg/card: no signature → 401 · someone else → 403 · not a JPEG → 400', (await cardCall({ jpg: JPG })).status === 401 && (await cardCall({ initData: initData(999), jpg: JPG })).status === 403 && (await cardCall({ initData: initData(555), jpg: Buffer.from('<svg/>').toString('base64') })).status === 400);
 sent.length = 0; const cr = await cardCall({ initData: initData(555), jpg: JPG, kind: 'coin', sym: 'sol' });
 check('…you + a JPEG → sendPhoto to your chat, caption "🪙 SOL · Cute Portfolio"', cr.status === 200 && sent.some(x => x.m === 'sendPhoto' && x.b.caption === '🪙 SOL · Cute Portfolio' && x.b.chat_id === '555'));
+
+// /tg/logo: only coin-logo hosts, only images
+const lg = u => W.fetch(new Request(HOST + '/tg/logo?u=' + encodeURIComponent(u)), ENVK, {});
+let lr = await lg('https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png');
+check('/tg/logo → the logo from this site (an image, cached a week)', lr.status === 200 && lr.headers.get('content-type') === 'image/png' && /max-age=604800/.test(lr.headers.get('cache-control')));
+check('…another host → 400 · not https → 400 · not an image → 404', (await lg('https://evil.example.com/x.png')).status === 400 && (await lg('http://coin-images.coingecko.com/x.png')).status === 400 && (await lg('https://assets.coingecko.com/notimage')).status === 404);
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

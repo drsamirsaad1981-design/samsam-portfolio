@@ -4,7 +4,7 @@ import ai from '../ai-worker.js';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
 import { runDaily } from './daily.mjs';
-import { page, api, cardSend } from './miniapp.mjs';
+import { page, api, cardSend, logo } from './miniapp.mjs';
 import { resetBudget } from './data.mjs';
 
 export default {
@@ -14,6 +14,7 @@ export default {
     if (p.endsWith('/tg/check')) return check(request, env);
     if (p.endsWith('/tg/app')) return page();          // the Mini App page (phase 7)
     if (p.endsWith('/tg/api')) return api(request, env); // its data, only with Telegram's signature for your account
+    if (p.endsWith('/tg/logo')) return logo(request);   // a coin logo from this site (the image cards draw it)
     if (p.endsWith('/tg/card')) return cardSend(request, env); // 📸 an image card drawn in the Mini App → a photo in your chat
     if (p.endsWith('/tg')) return handleTelegram(request, env, ctx);
     return ai.fetch(request, env, ctx);

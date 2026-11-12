@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 5e46e752d7f046e8
+// sources-hash: 8e997111b1de3080
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3831,8 +3831,8 @@ var miniapp_default = `<!doctype html>
   function N(s, cls) { return h('span', 'num' + (cls ? ' ' + cls : ''), [s]); }
   function usd(v, d) { if (v == null || !isFinite(v)) return '\u2014'; var a = Math.abs(v), s = v < 0 ? '\u2212' : ''; if (a >= 1e9) return s + '$' + (a / 1e9).toFixed(2) + 'B'; if (a >= 1e6) return s + '$' + (a / 1e6).toFixed(1) + 'M';
     if (a >= 1 || a === 0) return s + '$' + a.toLocaleString('en-US', { minimumFractionDigits: d == null ? (a >= 1000 ? 0 : 2) : d, maximumFractionDigits: d == null ? (a >= 1000 ? 0 : 2) : d }); return s + '$' + (+a.toPrecision(4)); }
-  function pct(v, d) { if (v == null || !isFinite(v)) return '\u2014'; return (v > 0 ? '+' : v < 0 ? '\u2212' : '') + Math.abs(v).toFixed(d == null ? 2 : d) + '%'; }
-  function cls(v) { return v > 0 ? 'up' : v < 0 ? 'dn' : 'mut'; }
+  function pct(v, d) { if (v == null || !isFinite(v)) return '\u2014'; d = d == null ? 2 : d; var r = +Number(v).toFixed(d); return (r > 0 ? '+' : r < 0 ? '\u2212' : '') + Math.abs(r).toFixed(d) + '%'; }   // \u22120.00 \u2192 0.00
+  function cls(v) { return v >= 0.05 ? 'up' : v <= -0.05 ? 'dn' : 'mut'; }
   function qty(q) { return (+Number(q).toPrecision(8)).toLocaleString('en-US', { maximumFractionDigits: 8 }); }
   var PAL = ['#7c3aed', '#10b981', '#ec4899', '#3b82f6', '#14b8a6', '#eab308', '#8b5cf6', '#f43f5e', '#64748b'];
   var CMAP = {};   // each coin its own colour (BTC orange, ETH blue, the rest in order of size \u2014 never two the same in a row)
@@ -3992,10 +3992,10 @@ var miniapp_default = `<!doctype html>
     if (LOGO[sym] !== undefined) return Promise.resolve(LOGO[sym]);
     var u = R && R.logos && R.logos[sym]; if (!u) return Promise.resolve(LOGO[sym] = null);
     return new Promise(function (res) {
-      var im = new Image(), done = function (v) { LOGO[sym] = v; res(v); }; im.crossOrigin = 'anonymous'; im.referrerPolicy = 'no-referrer';
+      var im = new Image(), done = function (v) { LOGO[sym] = v; res(v); };   // through the Worker (/tg/logo): same site, so the canvas can use it
       var t = setTimeout(function () { done(null); }, 3000);
       im.onload = function () { clearTimeout(t); try { var c = document.createElement('canvas'); c.width = c.height = 4; c.getContext('2d').drawImage(im, 0, 0, 4, 4); c.toDataURL(); done(im); } catch (_) { done(null); } };   // tainted (no CORS) \u2192 letters
-      im.onerror = function () { clearTimeout(t); done(null); }; im.src = u;
+      im.onerror = function () { clearTimeout(t); done(null); }; im.src = 'logo?u=' + encodeURIComponent(u);
     });
   }
   var F = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Arabic", sans-serif';
@@ -4017,7 +4017,7 @@ var miniapp_default = `<!doctype html>
   }
   function chip(x, t, X, Y, col) { x.font = '700 30px ' + F; var tw = x.measureText(t).width; rr(x, 'rgba(255,255,255,.16)', X, Y - 34, tw + 36, 50, 25); txt(x, t, X + 18, Y, 30, 700, col || '#fff'); return tw + 36 + 12; }
   var UPC = '#4ade80', DNC = '#fca5a5';
-  function pc(v) { return v > 0 ? UPC : v < 0 ? DNC : '#fff'; }
+  function pc(v) { return v >= 0.05 ? UPC : v <= -0.05 ? DNC : '#fff'; }
   function cardPortfolio(hideUsd) {
     var r = R, p = r.pf, Wd = 1080, Hd = 1350, c = document.createElement('canvas'); c.width = Wd; c.height = Hd; var x = c.getContext('2d'), ar = r.lang === 'ar';
     var top = r.coins.filter(function (k) { return k.value >= 1; }).slice(0, 5);
@@ -4034,7 +4034,7 @@ var miniapp_default = `<!doctype html>
         var Y = 660 + i * 104; coinMark(x, k.sym, imgs[i], 88, Y, 72);
         txt(x, k.sym, 184, Y + 34, 34, 800, '#111114'); txt(x, (hideUsd ? '' : usd(k.value, 0) + ' \xB7 ') + k.share.toFixed(1) + '%', 184, Y + 70, 26, 500, '#6b7280');
         rr(x, '#eef0f4', 560, Y + 26, 260, 16, 8); rr(x, color(k.sym), 560, Y + 26, Math.max(12, 260 * Math.min(100, k.share) / 100), 16, 8);
-        txt(x, pct(k.ch24, 1), Wd - 88, Y + 46, 32, 800, k.ch24 > 0 ? '#16a34a' : k.ch24 < 0 ? '#dc2626' : '#6b7280', 'right');
+        txt(x, pct(k.ch24, 1), Wd - 88, Y + 46, 32, 800, k.ch24 >= 0.05 ? '#16a34a' : k.ch24 <= -0.05 ? '#dc2626' : '#6b7280', 'right');
       });
       // allocation bar (groups)
       var a = r.alloc, Y2 = 1200;
@@ -4285,6 +4285,22 @@ async function cardSend(request, env) {
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: "POST", body: fd }).then((x) => x.json()).catch(() => ({ ok: false }));
   return json(r.ok ? 200 : 502, { ok: !!r.ok });
 }
+async function logo(request) {
+  const u = new URL(request.url).searchParams.get("u") || "";
+  if (!LOGO_HOSTS.test(u) || u.length > 400) return new Response("no", { status: 400 });
+  const cache2 = typeof caches !== "undefined" ? caches.default : null, key = new Request("https://logo.cache/" + encodeURIComponent(u));
+  const hit = cache2 && await cache2.match(key).catch(() => null);
+  if (hit) return hit;
+  const r = await fetch(u, { cf: { cacheTtl: 604800, cacheEverything: true } }).catch(() => null);
+  const type = r && r.ok ? r.headers.get("content-type") || "" : "";
+  if (!/^image\/(png|jpeg|jpg|webp|gif|svg\+xml)/.test(type)) return new Response("no", { status: 404 });
+  const buf = await r.arrayBuffer();
+  if (buf.byteLength > 4e5) return new Response("too big", { status: 413 });
+  const out = new Response(buf, { headers: { "content-type": type, "cache-control": "public, max-age=604800", "x-content-type-options": "nosniff", "content-security-policy": "default-src 'none'" } });
+  if (cache2) await cache2.put(key, out.clone()).catch(() => {
+  });
+  return out;
+}
 
 // tools/worker/index.mjs
 var worker_default = {
@@ -4294,6 +4310,7 @@ var worker_default = {
     if (p.endsWith("/tg/check")) return check(request, env);
     if (p.endsWith("/tg/app")) return page();
     if (p.endsWith("/tg/api")) return api(request, env);
+    if (p.endsWith("/tg/logo")) return logo(request);
     if (p.endsWith("/tg/card")) return cardSend(request, env);
     if (p.endsWith("/tg")) return handleTelegram(request, env, ctx);
     return ai_worker_default.fetch(request, env, ctx);

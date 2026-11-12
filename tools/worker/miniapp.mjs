@@ -128,3 +128,22 @@ export async function cardSend(request, env) {
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd }).then(x => x.json()).catch(() => ({ ok: false }));
   return json(r.ok ? 200 : 502, { ok: !!r.ok });
 }
+
+// GET /tg/logo?u=<a coin logo URL> — the same logo, from this site, so the Mini App can draw it on an image card
+// (CoinGecko's own images can't be drawn into a canvas that is saved). Only the logo hosts above, only images, ≤ 400 KB,
+// kept by Cloudflare's cache for a week (one outside call per logo, then none).
+export async function logo(request) {
+  const u = new URL(request.url).searchParams.get('u') || '';
+  if (!LOGO_HOSTS.test(u) || u.length > 400) return new Response('no', { status: 400 });
+  const cache = typeof caches !== 'undefined' ? caches.default : null, key = new Request('https://logo.cache/' + encodeURIComponent(u));
+  const hit = cache && await cache.match(key).catch(() => null);
+  if (hit) return hit;
+  const r = await fetch(u, { cf: { cacheTtl: 604800, cacheEverything: true } }).catch(() => null);
+  const type = r && r.ok ? (r.headers.get('content-type') || '') : '';
+  if (!/^image\/(png|jpeg|jpg|webp|gif|svg\+xml)/.test(type)) return new Response('no', { status: 404 });
+  const buf = await r.arrayBuffer();
+  if (buf.byteLength > 400e3) return new Response('too big', { status: 413 });
+  const out = new Response(buf, { headers: { 'content-type': type, 'cache-control': 'public, max-age=604800', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'" } });
+  if (cache) await cache.put(key, out.clone()).catch(() => {});
+  return out;
+}
