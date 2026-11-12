@@ -6,7 +6,7 @@ Runs in the same Cloudflare Worker as AI Analysis (`tools/worker/*` → `node to
 1. **Answers you** ✅ — webhook `/tg`, `/portfolio /price /market /plan /movers /signals /menu`, buttons that redraw in place, keyboard under the chat, live prices.
 2. **The brain** ✅ — plain Arabic / English questions → Claude with 6 live-data tools (coin, portfolio, market + bStocks, plan, exit, price history); remembers the last 10 messages (/new forgets); 30 questions a day; says where its numbers came from (`tools/worker/ai.mjs`).
 3. **Alerts in words + "what if"** ✅ — "tell me if ETH < 3000" (price, 24h change, funding, portfolio value; checked every 5 min by the Worker cron, each fires once; /alerts lists them with 🗑); "if BTC hits 150k?", "if I sell half my SOL?" (`tools/worker/watch.mjs`, what_if in ai.mjs).
-4. **Record trades in words** — "bought 0.01 BTC at 95k" → summary → [Confirm] [Cancel]; nothing saved without Confirm.
+4. **Record trades in words** ✅ — "bought 0.01 BTC at 95k" → the bot's own summary (amount, average, realized profit, the stablecoin side) → [✅ Confirm] [❌ Cancel]; only Confirm writes to Firestore (one all-or-nothing write, the app's transaction format); 15 min to confirm (`tools/worker/trade.mjs`).
 5. **Smart morning + smart evening + radars** — morning: 3 things to do today from the plan; evening: what happened today, what changed, what to watch tonight / tomorrow; liquidation radar near your coins' prices; sector radar; a live pinned message.
 6. **Image cards** — coin / portfolio / brief as designed images in the app's colours.
 7. **Telegram Mini App** — "📊 Open the report" opens a full page inside Telegram (AI Analysis design), checked by Telegram's signature.

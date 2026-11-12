@@ -2,7 +2,8 @@
 //
 // Claude never answers numbers from memory: while it thinks it calls the tools below, which read the same live data as
 // the rest of the bot (prices, your portfolio, plan, exit plan, the market, price history), and the answer ends with
-// where its numbers came from. Read-only: nothing here changes your portfolio.
+// where its numbers came from. It never changes your portfolio by itself: a trade you tell it (record_trade, phase 4)
+// is only prepared — the bot shows it with ✅ Confirm / ❌ Cancel, and only Confirm saves it (tools/worker/trade.mjs).
 //
 //   · 30 questions a day (Riyadh time; AI_DAILY_LIMIT in the Worker's settings changes it), counted in KV (RATE)
 //   · remembers the last 10 messages (6 h) so "and ETH?" follows on; /new starts over
@@ -12,6 +13,7 @@
 import { summarize, settings, local, localParts, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries, derivatives } from './data.mjs';
 import { addAlert, listAlerts, deleteAlert, describe, KINDS } from './watch.mjs';
+import { prepareTrade } from './trade.mjs';
 
 const H = 3600e3, DAY = 24 * H;
 const LIMIT = env => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30));
@@ -63,6 +65,8 @@ export const TOOLS = [
     input_schema: { type: 'object', properties: { prices: { type: 'object', additionalProperties: { type: 'number' } }, moves_pct: { type: 'object', additionalProperties: { type: 'number' } }, alts_move_pct: { type: 'number' },
       sell: { type: 'array', items: { type: 'object', properties: { coin: { type: 'string' }, fraction: { type: 'number' } }, required: ['coin', 'fraction'] } },
       buy: { type: 'array', items: { type: 'object', properties: { coin: { type: 'string' }, usd: { type: 'number' } }, required: ['coin', 'usd'] } } } } },
+  { name: 'record_trade', description: 'PREPARE a trade the user says he made ("bought 0.01 BTC at 95k", "اشتريت 5 SOL بـ 140", "sold half my LINK at 18", "بعت 100 دولار ETH بسعر السوق"). It is NOT saved: the bot shows it with ✅ Confirm / ❌ Cancel buttons; only his tap saves it. Only for coins already in his portfolio. amount = coins (for "half my LINK" call get_portfolio first and pass the number); price_usd per coin, OR total_usd (with amount or price), OR at_market true when he says market / now price. fee_usd optional. date: YYYY-MM-DD (or with time) only when he says when ("yesterday" → that date), else leave it out (= now). paid_with (buy) / received_in (sell): a stablecoin he names ("with USDT", "into USDC") — that coin moves too, like the app. One call per trade. If the price or amount is missing and he did not say market price, ask him instead of guessing.',
+    input_schema: { type: 'object', properties: { side: { type: 'string', enum: ['buy', 'sell'] }, coin: { type: 'string' }, amount: { type: 'number' }, price_usd: { type: 'number' }, total_usd: { type: 'number' }, at_market: { type: 'boolean' }, fee_usd: { type: 'number' }, date: { type: 'string' }, paid_with: { type: 'string' }, received_in: { type: 'string' }, note: { type: 'string' } }, required: ['side', 'coin'] } },
   { name: 'get_history', description: 'Hourly price history of a coin for the last N days (1–29): start, end, % change, high and low with their dates, and the daily closes. Only for coins GitHub keeps a price file for (the user\'s coins and the big ones); otherwise it says so.',
     input_schema: { type: 'object', properties: { coin: { type: 'string' }, days: { type: 'integer', minimum: 1, maximum: 29 } }, required: ['coin'] } },
 ];
@@ -71,7 +75,7 @@ export const TOOLS = [
 function context(env) {
   let user, base, sum, used = new Set(), coins = new Set();
   const ctx = {
-    env, used, coins,
+    env, used, coins, trades: [],
     async user() { if (user === undefined) user = loadUser(env).catch(() => null); return user; },   // one read shared by every tool
     async market(extra = []) {
       const u = await ctx.user();
@@ -163,6 +167,7 @@ export async function runTool(ctx, name, input) {
   }
   if (name === 'list_alerts') { const l = await listAlerts(ctx.env); return { alerts: l.map(a => ({ id: a.id, alert: describe(a), armed: a.armed, note: a.note || undefined })) }; }
   if (name === 'delete_alert') return { deleted: await deleteAlert(ctx.env, String((input && input.id) || '')) };
+  if (name === 'record_trade') { ctx.used.add('your portfolio (Firebase)'); return prepareTrade(ctx, input); }
   if (name === 'what_if') {
     const x = await ctx.sum(); if (!x) return { error: 'portfolio not connected' };
     const { s } = x; ctx.used.add('your portfolio (Firebase)'); ctx.used.add('what-if (the app\'s maths)');
@@ -215,6 +220,7 @@ function system(now, lang, qLang) {
     '- Each new question: call the tools again. Earlier answers in this chat may be stale or wrong — never repeat an earlier "no data" (or any earlier number) without calling the tool now.',
     '- For liquidation / squeeze / leverage / funding questions always call get_derivatives (with get_coin and get_history for the levels).',
     '- "Tell me / alert me / نبّهني if …" → set_alert (then confirm in one short line what was set, the value now, and if already_met that it waits for the next crossing). "What if / لو …" about prices or trades → what_if (with get_coin for a coin he does not hold).',
+    '- "I bought / I sold / اشتريت / بعت …" (a trade he MADE) → record_trade. It is only prepared: say in 1–2 lines what will be saved and the effect (new amount / average, realized profit), then "tap ✅ Confirm to save". Never say it is saved. A trade he is only thinking about ("should I / what if I sell") → what_if, not record_trade.',
     '- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.',
     '- About the future: give scenarios, levels and probabilities with reasons — never promises. Not financial advice, but do give a clear, practical view when asked "should I…" (based on his plan and signals).',
     'STYLE — like the app\'s AI Analysis report, short and sharp, all in points:',
@@ -277,5 +283,5 @@ export async function ask(env, question, lang = 'en') {
   const left = await countOne(env);
   await remember(env, String(question).slice(0, 2000), text.slice(0, 3000));
   const coins = [...ctx.coins].map(x => x.split('|')).slice(0, 3);
-  return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model };
+  return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model, trades: ctx.trades };
 }

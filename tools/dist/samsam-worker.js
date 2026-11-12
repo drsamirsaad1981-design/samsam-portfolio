@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 3c7501bea056c91a
+// sources-hash: 314384b4239c4dac
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -352,13 +352,13 @@ function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
       state: Math.abs(now - target) <= band ? "ok" : Math.abs(now - target) <= 2 * band ? "warn" : "off"
     };
   });
-  const money = Math.max(0, num(cash)), need = groups.reduce((s, g) => s + g.need, 0);
-  if (money > 0) {
-    if (need >= money) groups.forEach((g) => {
-      g.add = need > 0 ? g.need / need * money : 0;
+  const money2 = Math.max(0, num(cash)), need = groups.reduce((s, g) => s + g.need, 0);
+  if (money2 > 0) {
+    if (need >= money2) groups.forEach((g) => {
+      g.add = need > 0 ? g.need / need * money2 : 0;
     });
     else {
-      const rest = money - need;
+      const rest = money2 - need;
       groups.forEach((g) => {
         g.add = g.need + tg3(g.key) * rest;
       });
@@ -934,8 +934,30 @@ async function firestore(sa) {
     async get(p) {
       const j = await call(`${base}/${p}`);
       return j ? fields(j.fields) : null;
+    },
+    // new documents, all or nothing (each must not exist yet — never overwrites)
+    async commit(docs) {
+      const name = (p) => `projects/${sa.project_id}/databases/(default)/documents/${p}`;
+      return call(base + ":commit", { method: "POST", body: JSON.stringify({ writes: docs.map((d) => ({ update: { name: name(d.path), fields: enc(d.data) }, currentDocument: { exists: false } })) }) });
     }
   };
+}
+function encV(v) {
+  if (v == null) return { nullValue: null };
+  if (typeof v === "string") return { stringValue: v };
+  if (typeof v === "boolean") return { booleanValue: v };
+  if (typeof v === "number") return Number.isSafeInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(encV) } };
+  return { mapValue: { fields: enc(v) } };
+}
+var enc = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, encV(v)]));
+async function commitDocs(env, uid, docs) {
+  const sa = serviceAccount(env);
+  if (!sa) throw new Error("no service account");
+  const db = await firestore(sa);
+  await db.commit(docs.map((d) => ({ path: `users/${uid}/${d.path}`, data: d.data })));
+  cache.delete("user");
+  return { ok: true };
 }
 async function loadUser(env, fresh = false) {
   const sa = serviceAccount(env);
@@ -946,7 +968,7 @@ async function loadUser(env, fresh = false) {
     if (!users.length) return null;
     const uid = env.FIREBASE_UID && users.includes(env.FIREBASE_UID) ? env.FIREBASE_UID : users[0];
     const [coins, txs, accum, meta] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`)]);
-    return { coins, txs, accum, meta: meta || {} };
+    return { coins, txs, accum, meta: meta || {}, uid };
   });
 }
 var coinsOf = (user) => user ? [...(user.coins || []).filter((c) => c && !c.removed), ...(user.accum || []).filter((a) => a && +a.alertPrice > 0)].map((c) => ({ sym: String(c.sym || "").toUpperCase(), id: c.cgId || null })) : [];
@@ -1253,14 +1275,8 @@ async function viewAlerts(env, lang = "en") {
   return { text: L.join("\n"), buttons };
 }
 
-// tools/worker/ai.mjs
-var H2 = 36e5;
-var DAY2 = 24 * H2;
-var LIMIT = (env) => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30));
-var MAX_ROUNDS = 8;
-var HISTORY = 10;
-var r2 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
-var r6 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
+// tools/worker/trade.mjs
+var TTL = 15 * 6e4;
 var mem2 = /* @__PURE__ */ new Map();
 async function kvGet2(env, k) {
   try {
@@ -1269,10 +1285,10 @@ async function kvGet2(env, k) {
   }
   return mem2.has(k) ? mem2.get(k) : null;
 }
-async function kvPut2(env, k, v, ttl) {
+async function kvPut2(env, k, v) {
   mem2.set(k, v);
   try {
-    if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
+    if (env.RATE) await env.RATE.put(k, v, { expirationTtl: 3600 });
   } catch (_) {
   }
 }
@@ -1283,29 +1299,218 @@ async function kvDel(env, k) {
   } catch (_) {
   }
 }
+var r6 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
+var r2 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+var cleanSym = (v) => String(v == null ? "" : v).toUpperCase().replace(/^\$/, "").replace(/[^A-Z0-9._-]/g, "").slice(0, 20);
+var newId = () => "tx_" + Date.now() + "_" + crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+var money = (v) => v == null || !isFinite(v) ? "\u2014" : Math.abs(v) >= 1e6 ? usd(v) : Math.abs(v) >= 1 || v === 0 ? usd2(v) : (v < 0 ? "\u2212" : "") + "$" + +Math.abs(v).toPrecision(4);
+var amt = (q) => (+Number(q).toPrecision(8)).toLocaleString("en-US", { maximumFractionDigits: 8 });
+function txDoc(sym, type, qty2, price2, note, extra = {}) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  return JSON.parse(JSON.stringify({
+    sym,
+    type,
+    qty: +qty2 || 0,
+    price: +price2 || 0,
+    total: (+qty2 || 0) * (+price2 || 0),
+    date: extra.date || now,
+    createdAt: now,
+    note: String(note || "").slice(0, 500),
+    device: "telegram-bot",
+    ...extra.feeUsd > 0 ? { feeUsd: +extra.feeUsd } : {},
+    ...extra.link ? { link: String(extra.link).slice(0, 60) } : {},
+    ...type === "sell" && extra.kind === "pay" ? { kind: "pay" } : {}
+  }));
+}
+function when(d, now) {
+  if (d == null || d === "") return { iso: new Date(now).toISOString() };
+  let s = String(d).trim(), t;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    t = Date.parse(s + "T12:00:00+03:00");
+    if (t > now && t - now < 864e5) t = now;
+  } else t = Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + "+03:00");
+  if (!isFinite(t)) return { error: `date "${s}" not understood \u2014 use YYYY-MM-DD` };
+  if (t > now + 5 * 6e4) return { error: "the date is in the future" };
+  if (t < Date.parse("2009-01-03")) return { error: "the date is too early" };
+  return { iso: new Date(t).toISOString() };
+}
+async function prepareTrade(ctx, input) {
+  const now = Date.now(), i = input || {};
+  const side = String(i.side || "").toLowerCase();
+  if (side !== "buy" && side !== "sell") return { error: "side must be buy or sell" };
+  const user = await ctx.user();
+  if (!user) return { error: "portfolio not connected \u2014 nothing can be recorded" };
+  if (!user.uid) return { error: "portfolio account not found" };
+  const sym = cleanSym(i.coin);
+  if (!sym) return { error: "coin is needed (its ticker)" };
+  const held = (user.coins || []).find((c) => c && !c.removed && String(c.sym).toUpperCase() === sym);
+  if (!held) return { error: `${sym} is not in the portfolio \u2014 add the coin in the app first (Add Coin), then record trades here` };
+  const m = await loadMarket([], coinsOf(user)), sum = summarize(withIds(user, m), m, now);
+  const row2 = sum.coins.find((c) => c.sym === sym), have = row2 ? row2.qty : 0, marketPrice = row2 && row2.price > 0 ? row2.price : null;
+  let qty2 = +i.amount, price2 = +i.price_usd;
+  const total = +i.total_usd, fee = +i.fee_usd > 0 ? +i.fee_usd : 0;
+  if (!(price2 > 0) && i.at_market) price2 = marketPrice || NaN;
+  if (!(price2 > 0) && qty2 > 0 && total > 0) price2 = total / qty2;
+  if (!(qty2 > 0) && total > 0 && price2 > 0) qty2 = total / price2;
+  if (!(price2 > 0)) return { error: i.at_market ? `no current price for ${sym}` : 'the price is missing \u2014 ask the user for the price (or the total paid), or set at_market if they said "at market price"' };
+  if (!(qty2 > 0)) return { error: "the amount is missing \u2014 ask the user how much (coins, or the total in USD)" };
+  if (!isFinite(qty2 * price2) || qty2 * price2 > 1e9) return { error: "amount \xD7 price is not a sane number" };
+  if (side === "sell" && qty2 > have * (1 + 1e-9) + 1e-12) return { error: `only ${amt(have)} ${sym} held \u2014 can't sell ${amt(qty2)}` };
+  if (marketPrice && (price2 > marketPrice * 5 || price2 < marketPrice / 5)) return { error: `price $${r6(price2)} is far from today's $${r6(marketPrice)} \u2014 check the price with the user (maybe a typo or a different unit)` };
+  const w = when(i.date, now);
+  if (w.error) return { error: w.error };
+  const note = String(i.note || "").slice(0, 200);
+  const stableSym = cleanSym(side === "buy" ? i.paid_with : i.received_in);
+  let stable = null;
+  if (stableSym) {
+    if (!isStable(stableSym)) return { error: `${stableSym} is not a stablecoin \u2014 only stablecoins (USDT, USDC\u2026) can pay / receive` };
+    if (stableSym === sym) return { error: "same coin on both sides" };
+    const sc = (user.coins || []).find((c) => c && !c.removed && String(c.sym).toUpperCase() === stableSym);
+    if (!sc) return { error: `${stableSym} is not in the portfolio \u2014 add it in the app first, or record the trade without it` };
+    const sr = sum.coins.find((c) => c.sym === stableSym), sHave = sr ? sr.qty : 0;
+    const cost = qty2 * price2 + fee;
+    if (side === "buy" && cost > sHave * (1 + 1e-9) + 1e-9) return { error: `only ${amt(sHave)} ${stableSym} held \u2014 not enough to pay $${r2(cost)}` };
+    stable = stableSym;
+  }
+  const id = newId(), docs = [[id, txDoc(sym, side, qty2, price2, note, { date: w.iso, feeUsd: fee })]];
+  const t2 = new Date(Date.parse(w.iso) + 1).toISOString();
+  if (stable && side === "buy") docs.push([newId() + "p", txDoc(stable, "sell", qty2 * price2 + fee, 1, "Paid for buying " + amt(qty2) + " " + sym, { date: t2, link: id, kind: "pay" })]);
+  if (stable && side === "sell") {
+    const cash = Math.max(0, qty2 * price2 - fee);
+    if (cash > 0) docs.push([newId() + "s", txDoc(stable, "buy", cash, 1, "From selling " + amt(qty2) + " " + sym, { date: t2, link: id })]);
+  }
+  const after = summarize(withIds({ ...user, txs: [...user.txs || [], ...docs.map((d) => d[1])] }, m), m, now);
+  const a = after.coins.find((c) => c.sym === sym), sa = stable ? after.coins.find((c) => c.sym === stable) : null;
+  const trade = {
+    side,
+    sym,
+    qty: r6(qty2),
+    price: r6(price2),
+    total: r2(qty2 * price2),
+    fee: fee || 0,
+    date: w.iso,
+    note,
+    stable,
+    held_before: r6(have),
+    held_after: r6(a ? a.qty : 0),
+    avg_before: row2 ? r6(row2.avg) : null,
+    avg_after: a ? r6(a.avg) : null,
+    realized_usd: side === "sell" && row2 ? r2((price2 - row2.avg) * qty2 - fee) : null,
+    stable_after: sa ? r6(sa.qty) : stable ? 0 : null,
+    value_after: r2(after.value)
+  };
+  ctx.trades.push({ trade, docs });
+  return { ok: true, prepared: trade, saved: false, note_for_you: "NOT saved yet: the bot shows this trade with \u2705 Confirm / \u274C Cancel buttons under your answer. Tell the user to check it and tap Confirm. Never say it was saved." };
+}
+async function keepTrades(env, trades, lang = "en") {
+  const gid = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
+  await kvPut2(env, "tg:tx:" + gid, JSON.stringify({ created: Date.now(), trades, lang }));
+  return gid;
+}
+function tradeLines(trades, ar) {
+  const L = [ar ? "\u{1F9FE} <b>\u0644\u0644\u062D\u0641\u0638 \u2014 \u0631\u0627\u062C\u0639 \u0648\u0627\u0636\u063A\u0637 \u062A\u0623\u0643\u064A\u062F:</b>" : "\u{1F9FE} <b>To save \u2014 check, then Confirm:</b>"];
+  trades.forEach(({ trade: t }, n) => {
+    const d = local(Date.parse(t.date), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    const buy = t.side === "buy";
+    L.push(`${trades.length > 1 ? n + 1 + ". " : ""}${buy ? "\u{1F7E2}" : "\u{1F534}"} <b>${buy ? ar ? "\u0634\u0631\u0627\u0621" : "Buy" : ar ? "\u0628\u064A\u0639" : "Sell"} ${amt(t.qty)} ${esc(t.sym)}</b> @ ${money(t.price)} = <b>${money(t.total)}</b>`);
+    L.push(`   ${esc(d)}${t.fee ? ` \xB7 ${ar ? "\u0631\u0633\u0648\u0645" : "fee"} ${money(t.fee)}` : ""}${t.note ? " \xB7 " + esc(t.note) : ""}`);
+    if (t.stable) L.push(`   ${buy ? ar ? "\u0645\u062F\u0641\u0648\u0639 \u0645\u0646" : "paid with" : ar ? "\u0627\u0644\u0641\u0644\u0648\u0633 \u0641\u064A" : "into"} ${esc(t.stable)} ${buy ? "\u2212" : "+"}${money(buy ? t.total + t.fee : Math.max(0, t.total - t.fee))}`);
+    L.push(`   \u2192 ${esc(t.sym)} ${amt(t.held_before)} \u2192 <b>${amt(t.held_after)}</b>${buy && t.avg_after ? ` \xB7 ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : "avg"} ${money(t.avg_before)} \u2192 <b>${money(t.avg_after)}</b>` : ""}`);
+    if (t.realized_usd != null) L.push(`   ${ar ? "\u0631\u0628\u062D \u0645\u062D\u0642\u0642" : "Realized"}: <b>${t.realized_usd >= 0 ? "+" : "\u2212"}${money(Math.abs(t.realized_usd))}</b>`);
+  });
+  return L.join("\n");
+}
+async function confirmTrades(env, gid) {
+  const raw = await kvGet2(env, "tg:tx:" + gid);
+  if (!raw) return { error: "gone" };
+  const g = JSON.parse(raw), lang = g.lang;
+  await kvDel(env, "tg:tx:" + gid);
+  if (Date.now() - g.created > TTL) return { error: "expired", lang };
+  const user = await loadUser(env, true);
+  if (!user || !user.uid) return { error: "nouser", lang };
+  const m = await loadMarket([], coinsOf(user)), sum = summarize(withIds(user, m), m, Date.now());
+  for (const { trade: t } of g.trades) {
+    if (!(user.coins || []).some((c) => c && !c.removed && String(c.sym).toUpperCase() === t.sym)) return { error: "changed", lang, why: t.sym + " is no longer in the portfolio" };
+    const r = sum.coins.find((c) => c.sym === t.sym);
+    if (t.side === "sell" && t.qty > (r ? r.qty : 0) * (1 + 1e-9) + 1e-12) return { error: "changed", lang, why: `only ${amt(r ? r.qty : 0)} ${t.sym} held now` };
+  }
+  const docs = g.trades.flatMap((x) => x.docs).map(([id, data]) => ({ path: "txs/" + id, data }));
+  const ok2 = await commitDocs(env, user.uid, docs).catch((e) => ({ error: String(e && e.message) }));
+  if (ok2 && ok2.error) {
+    console.log(JSON.stringify({ trade: "save-failed", message: ok2.error.slice(0, 200) }));
+    return { error: "save", lang, why: ok2.error };
+  }
+  const fresh = await loadUser(env, true).catch(() => null);
+  const m2 = fresh ? await loadMarket([], coinsOf(fresh)) : null, s2 = fresh ? summarize(withIds(fresh, m2), m2, Date.now()) : null;
+  return { ok: true, lang: g.lang, trades: g.trades.map((x) => x.trade), holdings: s2 ? g.trades.map(({ trade: t }) => {
+    const c = s2.coins.find((z) => z.sym === t.sym);
+    return { sym: t.sym, qty: c ? c.qty : 0, avg: c ? c.avg : null };
+  }) : [] };
+}
+async function cancelTrades(env, gid) {
+  const raw = await kvGet2(env, "tg:tx:" + gid);
+  await kvDel(env, "tg:tx:" + gid);
+  if (!raw) return false;
+  try {
+    return JSON.parse(raw).lang || "en";
+  } catch (_) {
+    return "en";
+  }
+}
+
+// tools/worker/ai.mjs
+var H2 = 36e5;
+var DAY2 = 24 * H2;
+var LIMIT = (env) => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30));
+var MAX_ROUNDS = 8;
+var HISTORY = 10;
+var r22 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+var r62 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
+var mem3 = /* @__PURE__ */ new Map();
+async function kvGet3(env, k) {
+  try {
+    if (env.RATE) return await env.RATE.get(k);
+  } catch (_) {
+  }
+  return mem3.has(k) ? mem3.get(k) : null;
+}
+async function kvPut3(env, k, v, ttl) {
+  mem3.set(k, v);
+  try {
+    if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
+  } catch (_) {
+  }
+}
+async function kvDel2(env, k) {
+  mem3.delete(k);
+  try {
+    if (env.RATE) await env.RATE.delete(k);
+  } catch (_) {
+  }
+}
 async function firstTime(env, updateId) {
   if (updateId == null) return true;
   const k = "tg:u:" + updateId;
-  if (await kvGet2(env, k)) return false;
-  await kvPut2(env, k, "1", 3600);
+  if (await kvGet3(env, k)) return false;
+  await kvPut3(env, k, "1", 3600);
   return true;
 }
 var today = () => localParts(Date.now()).date;
 async function usage(env) {
-  const n = +await kvGet2(env, "tg:ai:" + today()) || 0;
+  const n = +await kvGet3(env, "tg:ai:" + today()) || 0;
   return { used: n, limit: LIMIT(env), left: Math.max(0, LIMIT(env) - n) };
 }
 async function countOne(env) {
   const u = await usage(env);
-  await kvPut2(env, "tg:ai:" + today(), String(u.used + 1), 2 * 86400);
+  await kvPut3(env, "tg:ai:" + today(), String(u.used + 1), 2 * 86400);
   return u.left - 1;
 }
 async function forget(env) {
-  await kvDel(env, "tg:hist");
+  await kvDel2(env, "tg:hist");
 }
 async function history(env) {
   try {
-    const h = JSON.parse(await kvGet2(env, "tg:hist") || "[]");
+    const h = JSON.parse(await kvGet3(env, "tg:hist") || "[]");
     return Array.isArray(h) ? h : [];
   } catch (_) {
     return [];
@@ -1313,7 +1518,7 @@ async function history(env) {
 }
 async function remember(env, q, a) {
   const h = (await history(env)).concat([{ role: "user", content: q }, { role: "assistant", content: a }]).slice(-HISTORY);
-  await kvPut2(env, "tg:hist", JSON.stringify(h), 6 * 3600);
+  await kvPut3(env, "tg:hist", JSON.stringify(h), 6 * 3600);
 }
 var TOOLS = [
   {
@@ -1365,6 +1570,11 @@ var TOOLS = [
     } }
   },
   {
+    name: "record_trade",
+    description: 'PREPARE a trade the user says he made ("bought 0.01 BTC at 95k", "\u0627\u0634\u062A\u0631\u064A\u062A 5 SOL \u0628\u0640 140", "sold half my LINK at 18", "\u0628\u0639\u062A 100 \u062F\u0648\u0644\u0627\u0631 ETH \u0628\u0633\u0639\u0631 \u0627\u0644\u0633\u0648\u0642"). It is NOT saved: the bot shows it with \u2705 Confirm / \u274C Cancel buttons; only his tap saves it. Only for coins already in his portfolio. amount = coins (for "half my LINK" call get_portfolio first and pass the number); price_usd per coin, OR total_usd (with amount or price), OR at_market true when he says market / now price. fee_usd optional. date: YYYY-MM-DD (or with time) only when he says when ("yesterday" \u2192 that date), else leave it out (= now). paid_with (buy) / received_in (sell): a stablecoin he names ("with USDT", "into USDC") \u2014 that coin moves too, like the app. One call per trade. If the price or amount is missing and he did not say market price, ask him instead of guessing.',
+    input_schema: { type: "object", properties: { side: { type: "string", enum: ["buy", "sell"] }, coin: { type: "string" }, amount: { type: "number" }, price_usd: { type: "number" }, total_usd: { type: "number" }, at_market: { type: "boolean" }, fee_usd: { type: "number" }, date: { type: "string" }, paid_with: { type: "string" }, received_in: { type: "string" }, note: { type: "string" } }, required: ["side", "coin"] }
+  },
+  {
     name: "get_history",
     description: "Hourly price history of a coin for the last N days (1\u201329): start, end, % change, high and low with their dates, and the daily closes. Only for coins GitHub keeps a price file for (the user's coins and the big ones); otherwise it says so.",
     input_schema: { type: "object", properties: { coin: { type: "string" }, days: { type: "integer", minimum: 1, maximum: 29 } }, required: ["coin"] }
@@ -1376,6 +1586,7 @@ function context(env) {
     env,
     used: used2,
     coins,
+    trades: [],
     async user() {
       if (user === void 0) user = loadUser(env).catch(() => null);
       return user;
@@ -1419,15 +1630,15 @@ async function runTool(ctx, name, input) {
     const out = {
       coin: row2.name || c.name || sym,
       ticker: sym,
-      price_usd: r6(row2.price),
-      change_24h_pct: r2(row2.ch24),
-      change_7d_pct: r2(row2.ch7),
-      change_30d_pct: r2(row2.ch30),
+      price_usd: r62(row2.price),
+      change_24h_pct: r22(row2.ch24),
+      change_7d_pct: r22(row2.ch7),
+      change_30d_pct: r22(row2.ch30),
       rank: row2.rank || c.rank || null,
       market_cap_usd: row2.mcap ? Math.round(row2.mcap) : null,
       volume_24h_usd: row2.vol ? Math.round(row2.vol) : null,
-      high_7d: sp.length ? r6(Math.max(...sp)) : null,
-      low_7d: sp.length ? r6(Math.min(...sp)) : null,
+      high_7d: sp.length ? r62(Math.max(...sp)) : null,
+      low_7d: sp.length ? r62(Math.min(...sp)) : null,
       perpetual_futures: fut ? fut.has(sym) : null,
       liquidation_map: `https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=${encodeURIComponent(sym)}`,
       price_source: srcOf(m, id),
@@ -1435,13 +1646,13 @@ async function runTool(ctx, name, input) {
     };
     if (!(row2.price > 0)) {
       const s = m.series[id];
-      if (s) out.price_usd = r6(s.last);
+      if (s) out.price_usd = r62(s.last);
     }
     if (u) {
       const sum = summarize(withIds(u, m), m, now), h = sum.coins.find((x) => x.sym === sym);
       ctx.used.add("your portfolio (Firebase)");
-      out.you_hold = h ? { amount: r6(h.qty), value_usd: r2(h.value), share_of_portfolio_pct: sum.value > 0 ? r2(h.value / sum.value * 100) : null, average_buy_usd: r6(h.avg), profit_vs_average_pct: r2(h.chg), signal: sum.signal[sym] || "hold", signal_reason: h.why || null } : "not held";
-      if (!out.price_usd && h) out.price_usd = r6(h.price);
+      out.you_hold = h ? { amount: r62(h.qty), value_usd: r22(h.value), share_of_portfolio_pct: sum.value > 0 ? r22(h.value / sum.value * 100) : null, average_buy_usd: r62(h.avg), profit_vs_average_pct: r22(h.chg), signal: sum.signal[sym] || "hold", signal_reason: h.why || null } : "not held";
+      if (!out.price_usd && h) out.price_usd = r62(h.price);
     }
     return out;
   }
@@ -1452,19 +1663,19 @@ async function runTool(ctx, name, input) {
     ctx.used.add("your portfolio (Firebase)");
     ctx.used.add(srcOf(x.m, "bitcoin"));
     return {
-      total_value_usd: r2(s.value),
-      change_24h_pct: r2(s.ch24),
-      change_24h_usd: r2(s.d24),
-      change_7d_pct: r2(s.ch7),
-      change_7d_usd: r2(s.d7),
-      all_time_profit_usd: r2(s.total),
-      all_time_profit_pct: r2(s.pctTotal),
-      invested_usd: r2(s.invested),
-      vs_holding_btc_pct: r2(s.vsBtc),
+      total_value_usd: r22(s.value),
+      change_24h_pct: r22(s.ch24),
+      change_24h_usd: r22(s.d24),
+      change_7d_pct: r22(s.ch7),
+      change_7d_usd: r22(s.d7),
+      all_time_profit_usd: r22(s.total),
+      all_time_profit_pct: r22(s.pctTotal),
+      invested_usd: r22(s.invested),
+      vs_holding_btc_pct: r22(s.vsBtc),
       alts_beating_btc: `${s.beat} of ${s.alts}`,
       signals: s.counts,
-      coins: [...s.coins].sort((a, b) => b.value - a.value).map((c) => ({ ticker: c.sym, value_usd: r2(c.value), share_pct: s.value > 0 ? r2(c.value / s.value * 100) : null, change_24h_pct: r2(c.ch24), change_7d_pct: r2(c.ch7), profit_vs_average_pct: r2(c.chg), signal: s.signal[c.sym], vs_btc_pct: c.vs ? r2(c.vs.pct) : null, vs_btc_30d_pts: c.rs ? r2(c.rs.d30) : null, vs_btc_90d_pts: c.rs ? r2(c.rs.d90) : null, stablecoin: isStable(c.sym) || void 0 })),
-      allocation: s.alloc ? s.alloc.groups.map((g) => ({ group: s.alloc.names[g.key] || g.key, now_pct: r2(g.now), target_pct: r2(g.target), state: g.state })) : null
+      coins: [...s.coins].sort((a, b) => b.value - a.value).map((c) => ({ ticker: c.sym, value_usd: r22(c.value), share_pct: s.value > 0 ? r22(c.value / s.value * 100) : null, change_24h_pct: r22(c.ch24), change_7d_pct: r22(c.ch7), profit_vs_average_pct: r22(c.chg), signal: s.signal[c.sym], vs_btc_pct: c.vs ? r22(c.vs.pct) : null, vs_btc_30d_pts: c.rs ? r22(c.rs.d30) : null, vs_btc_90d_pts: c.rs ? r22(c.rs.d90) : null, stablecoin: isStable(c.sym) || void 0 })),
+      allocation: s.alloc ? s.alloc.groups.map((g) => ({ group: s.alloc.names[g.key] || g.key, now_pct: r22(g.now), target_pct: r22(g.target), state: g.state })) : null
     };
   }
   if (name === "get_market") {
@@ -1473,16 +1684,16 @@ async function runTool(ctx, name, input) {
     ctx.used.add("market snapshot (CoinGecko, alternative.me, ETF flows)");
     const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
     const seen = /* @__PURE__ */ new Set(), list2 = [...m.top, ...m.top500].filter((r) => r.rank && r.rank <= n && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
-    const pick = (a, dir) => [...a].sort((x, y) => dir * (y.ch24 - x.ch24)).slice(0, 5).map((r) => ({ ticker: String(r.sym).toUpperCase(), rank: r.rank, price_usd: r6(r.price), change_24h_pct: r2(r.ch24) }));
+    const pick = (a, dir) => [...a].sort((x, y) => dir * (y.ch24 - x.ch24)).slice(0, 5).map((r) => ({ ticker: String(r.sym).toUpperCase(), rank: r.rank, price_usd: r62(r.price), change_24h_pct: r22(r.ch24) }));
     const st = (m.stocks || []).filter((r) => r.ch24 != null);
     return {
-      btc_price_usd: m.btc ? r6(m.btc.price) : null,
-      btc_change_24h_pct: m.btc ? r2(m.btc.ch24) : null,
+      btc_price_usd: m.btc ? r62(m.btc.price) : null,
+      btc_change_24h_pct: m.btc ? r22(m.btc.ch24) : null,
       total_market_cap_usd: g.mcap ? Math.round(g.mcap) : null,
-      market_cap_change_24h_pct: r2(g.mcapCh24),
-      btc_dominance_pct: r2(d.btc),
-      eth_dominance_pct: r2(d.eth),
-      usdt_dominance_pct: r2(d.usdt),
+      market_cap_change_24h_pct: r22(g.mcapCh24),
+      btc_dominance_pct: r22(d.btc),
+      eth_dominance_pct: r22(d.eth),
+      usdt_dominance_pct: r22(d.usdt),
       fear_greed: m.fng ? { value: m.fng.value, label: m.fng.label, yesterday: m.fng.prev, week_ago: m.fng.week } : null,
       altcoin_season: m.alt ? { value: m.alt.value, label: m.alt.label } : null,
       etf_flows_latest_day: e ? { date: e.date, btc_usd: e.btc, eth_usd: e.eth } : null,
@@ -1498,11 +1709,11 @@ async function runTool(ctx, name, input) {
     const { s } = x;
     ctx.used.add("your plan (Firebase)");
     return {
-      overall_progress_pct: r2(s.prog.pct),
+      overall_progress_pct: r22(s.prog.pct),
       targets_met: `${s.prog.completed} of ${s.prog.counted}`,
-      coins: s.plan.map((p) => ({ ticker: p.sym, held: r6(p.actual), target: r6(p.target), progress_pct: p.target > 0 ? r2(p.actual / p.target * 100) : null })),
-      regular_buys: (s.dca || []).map((dc) => ({ ticker: dc.sym, per_month_usd: r2(dc.s.perMonth), next: dc.s.next || null, state: dc.s.state })),
-      buy_price_alerts: (s.buyAt || []).map((b) => ({ ticker: b.sym, alert_price_usd: r6(b.at), price_now_usd: r6(b.price), pct_above_alert: r2((b.price / b.at - 1) * 100), still_to_buy: r6(b.left) }))
+      coins: s.plan.map((p) => ({ ticker: p.sym, held: r62(p.actual), target: r62(p.target), progress_pct: p.target > 0 ? r22(p.actual / p.target * 100) : null })),
+      regular_buys: (s.dca || []).map((dc) => ({ ticker: dc.sym, per_month_usd: r22(dc.s.perMonth), next: dc.s.next || null, state: dc.s.state })),
+      buy_price_alerts: (s.buyAt || []).map((b) => ({ ticker: b.sym, alert_price_usd: r62(b.at), price_now_usd: r62(b.price), pct_above_alert: r22((b.price / b.at - 1) * 100), still_to_buy: r62(b.left) }))
     };
   }
   if (name === "get_exit") {
@@ -1513,7 +1724,7 @@ async function runTool(ctx, name, input) {
     ctx.used.add("market snapshot");
     return {
       conditions: s.macro.map((c) => ({ name: { btcD: "BTC dominance", usdtD: "USDT dominance", ethBtc: "ETH/BTC" }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
-      take_profits: (s.tps || []).map((t) => ({ ticker: t.sym, tp: t.n, level_usd: r6(t.level), price_now_usd: r6(t.price), pct_to_go: r2((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go)
+      take_profits: (s.tps || []).map((t) => ({ ticker: t.sym, tp: t.n, level_usd: r62(t.level), price_now_usd: r62(t.price), pct_to_go: r22((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go)
     };
   }
   if (name === "get_derivatives") {
@@ -1534,6 +1745,10 @@ async function runTool(ctx, name, input) {
     return { alerts: l.map((a) => ({ id: a.id, alert: describe(a), armed: a.armed, note: a.note || void 0 })) };
   }
   if (name === "delete_alert") return { deleted: await deleteAlert(ctx.env, String(input && input.id || "")) };
+  if (name === "record_trade") {
+    ctx.used.add("your portfolio (Firebase)");
+    return prepareTrade(ctx, input);
+  }
   if (name === "what_if") {
     const x = await ctx.sum();
     if (!x) return { error: "portfolio not connected" };
@@ -1563,7 +1778,7 @@ async function runTool(ctx, name, input) {
       realized += q * (r.p - r.avg);
       r.qty -= q;
       r.sold += q;
-      trades.push({ sell: r.sym, amount: r6(q), usd: r2(q * r.p), profit_usd: r2(q * (r.p - r.avg)) });
+      trades.push({ sell: r.sym, amount: r62(q), usd: r22(q * r.p), profit_usd: r22(q * (r.p - r.avg)) });
     }
     for (const t of input && input.buy || []) {
       const r = by(t.coin), u = +t.usd;
@@ -1576,7 +1791,7 @@ async function runTool(ctx, name, input) {
       r.qty += q;
       newMoney += u;
       r.buyUsd += u;
-      trades.push({ buy: r.sym, amount: r6(q), usd: r2(u), new_average: r6(r.avg) });
+      trades.push({ buy: r.sym, amount: r62(q), usd: r22(u), new_average: r62(r.avg) });
     }
     const before = s.value, coinsAfter = rows.reduce((a, r) => a + r.qty * r.p, 0), after = coinsAfter + cash;
     const priceGain = s.coins.reduce((a, c) => {
@@ -1586,19 +1801,19 @@ async function runTool(ctx, name, input) {
     const tps = (s.tps || []).filter((t) => {
       const r = by(t.sym);
       return r && r.p >= t.level && t.price < t.level;
-    }).map((t) => ({ coin: t.sym, tp: t.n, level_usd: r6(t.level), sell_pct: t.pct || null }));
+    }).map((t) => ({ coin: t.sym, tp: t.n, level_usd: r62(t.level), sell_pct: t.pct || null }));
     return {
-      value_now_usd: r2(before),
-      value_after_usd: r2(after),
-      change_usd: r2(after - before - newMoney),
-      change_pct: before > 0 ? r2((after - before - newMoney) / before * 100) : null,
-      cash_from_sells_usd: r2(cash),
-      new_money_usd: r2(newMoney),
-      realized_profit_from_sells_usd: r2(realized),
-      all_time_profit_now_usd: r2(s.total),
-      all_time_profit_after_usd: r2(s.total + priceGain),
-      all_time_profit_after_pct: s.invested + newMoney > 0 ? r2((s.total + priceGain) / (s.invested + newMoney) * 100) : null,
-      changed_coins: rows.filter((r) => r.p !== r.price || r.sold || r.buyUsd).sort((a, b) => Math.abs(b.qty * b.p - b.qty * b.price) - Math.abs(a.qty * a.p - a.qty * a.price)).slice(0, 20).map((r) => ({ ticker: r.sym, price_now: r6(r.price), price_then: r6(r.p), value_then_usd: r2(r.qty * r.p), profit_vs_average_pct: r.avg > 0 ? r2((r.p / r.avg - 1) * 100) : null })),
+      value_now_usd: r22(before),
+      value_after_usd: r22(after),
+      change_usd: r22(after - before - newMoney),
+      change_pct: before > 0 ? r22((after - before - newMoney) / before * 100) : null,
+      cash_from_sells_usd: r22(cash),
+      new_money_usd: r22(newMoney),
+      realized_profit_from_sells_usd: r22(realized),
+      all_time_profit_now_usd: r22(s.total),
+      all_time_profit_after_usd: r22(s.total + priceGain),
+      all_time_profit_after_pct: s.invested + newMoney > 0 ? r22((s.total + priceGain) / (s.invested + newMoney) * 100) : null,
+      changed_coins: rows.filter((r) => r.p !== r.price || r.sold || r.buyUsd).sort((a, b) => Math.abs(b.qty * b.p - b.qty * b.price) - Math.abs(a.qty * a.p - a.qty * a.price)).slice(0, 20).map((r) => ({ ticker: r.sym, price_now: r62(r.price), price_then: r62(r.p), value_then_usd: r22(r.qty * r.p), profit_vs_average_pct: r.avg > 0 ? r22((r.p / r.avg - 1) * 100) : null })),
       trades,
       exit_take_profits_reached: tps,
       note: "coins not mentioned keep today's price; sells go to cash (USD)"
@@ -1619,15 +1834,15 @@ async function runTool(ctx, name, input) {
       if (x[1] < lo[1]) lo = x;
     }
     const day = (t) => local(t, { day: "numeric", month: "short" }), closes = {};
-    for (const [t, p] of pts) closes[localParts(t).date] = r6(p);
+    for (const [t, p] of pts) closes[localParts(t).date] = r62(p);
     return {
       coin: c.sym,
       days,
-      start_usd: r6(pts[0][1]),
-      end_usd: r6(pts[pts.length - 1][1]),
-      change_pct: r2((pts[pts.length - 1][1] / pts[0][1] - 1) * 100),
-      high: { usd: r6(hi[1]), on: day(hi[0]) },
-      low: { usd: r6(lo[1]), on: day(lo[0]) },
+      start_usd: r62(pts[0][1]),
+      end_usd: r62(pts[pts.length - 1][1]),
+      change_pct: r22((pts[pts.length - 1][1] / pts[0][1] - 1) * 100),
+      high: { usd: r62(hi[1]), on: day(hi[0]) },
+      low: { usd: r62(lo[1]), on: day(lo[0]) },
       daily_closes: closes
     };
   }
@@ -1642,6 +1857,7 @@ function system(now, lang, qLang) {
     '- Each new question: call the tools again. Earlier answers in this chat may be stale or wrong \u2014 never repeat an earlier "no data" (or any earlier number) without calling the tool now.',
     "- For liquidation / squeeze / leverage / funding questions always call get_derivatives (with get_coin and get_history for the levels).",
     '- "Tell me / alert me / \u0646\u0628\u0651\u0647\u0646\u064A if \u2026" \u2192 set_alert (then confirm in one short line what was set, the value now, and if already_met that it waits for the next crossing). "What if / \u0644\u0648 \u2026" about prices or trades \u2192 what_if (with get_coin for a coin he does not hold).',
+    '- "I bought / I sold / \u0627\u0634\u062A\u0631\u064A\u062A / \u0628\u0639\u062A \u2026" (a trade he MADE) \u2192 record_trade. It is only prepared: say in 1\u20132 lines what will be saved and the effect (new amount / average, realized profit), then "tap \u2705 Confirm to save". Never say it is saved. A trade he is only thinking about ("should I / what if I sell") \u2192 what_if, not record_trade.',
     "- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.",
     '- About the future: give scenarios, levels and probabilities with reasons \u2014 never promises. Not financial advice, but do give a clear, practical view when asked "should I\u2026" (based on his plan and signals).',
     "STYLE \u2014 like the app's AI Analysis report, short and sharp, all in points:",
@@ -1717,7 +1933,7 @@ async function ask(env, question, lang = "en") {
   const left = await countOne(env);
   await remember(env, String(question).slice(0, 2e3), text.slice(0, 3e3));
   const coins = [...ctx.coins].map((x) => x.split("|")).slice(0, 3);
-  return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model };
+  return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model, trades: ctx.trades };
 }
 
 // tools/worker/voice.mjs
@@ -1867,6 +2083,17 @@ var T = {
     kb: { pf: "\u{1F4BC} Portfolio", mk: "\u{1F30D} Market", pl: "\u{1F4CB} Plan", ex: "\u{1F6AA} Exit", mv: "\u{1F3C6} Movers", sg: "\u{1F3AF} Signals" },
     kbOld: { mv: "\u{1F3C6} Best & worst", ex: "\u{1F6AA} Exit plan" },
     hidden: "Buttons hidden \u2328\uFE0F \u2014 tap the \u2328\uFE0F icon in the message box (or send /start) to bring them back.",
+    txOk: "\u2705 Confirm",
+    txNo: "\u274C Cancel",
+    txOkAll: (n) => `\u2705 Confirm all ${n}`,
+    txSaved: (n) => `\u2705 <b>Saved ${n === 1 ? "the trade" : n + " trades"}</b> to your portfolio \u2014 the app shows it now.`,
+    txCancelled: "\u274C Cancelled \u2014 nothing was saved.",
+    txGone: "This trade was already saved or cancelled.",
+    txExpired: "\u231B Over 15 minutes old \u2014 nothing saved. Tell me the trade again.",
+    txChanged: (why) => `\u26A0\uFE0F Not saved \u2014 your portfolio changed since: ${why}. Tell me the trade again.`,
+    txNoUser: "Your portfolio is not connected \u2014 nothing saved.",
+    txSaveErr: (why) => `\u26A0\uFE0F Not saved \u2014 Firestore refused it (${why}).${/403/.test(why) ? ' The service account can only read: in Google Cloud \u2192 IAM give it the role "Cloud Datastore User".' : ""}`,
+    nowHold: "now",
     listening: "\u{1F399}\uFE0F Listening\u2026",
     heard: "\u{1F399}\uFE0F I heard:",
     vNoAi: "Voice notes are not set up yet (the AI binding is missing in the Worker) \u2014 please type it.",
@@ -1988,6 +2215,17 @@ var T = {
     kb: { pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A", mk: "\u{1F30D} \u0627\u0644\u0633\u0648\u0642", pl: "\u{1F4CB} \u0627\u0644\u062E\u0637\u0629", ex: "\u{1F6AA} \u0627\u0644\u062E\u0631\u0648\u062C", mv: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644", sg: "\u{1F3AF} \u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" },
     kbOld: { mv: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623", ex: "\u{1F6AA} \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" },
     hidden: "\u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u0627\u062A\u062E\u0641\u062A \u2328\uFE0F \u2014 \u0627\u0636\u063A\u0637 \u0639\u0644\u0627\u0645\u0629 \u2328\uFE0F \u0641\u064A \u062E\u0627\u0646\u0629 \u0627\u0644\u0643\u062A\u0627\u0628\u0629 (\u0623\u0648 \u0627\u0628\u0639\u062A /start) \u0639\u0634\u0627\u0646 \u062A\u0631\u062C\u0639.",
+    txOk: "\u2705 \u062A\u0623\u0643\u064A\u062F",
+    txNo: "\u274C \u0625\u0644\u063A\u0627\u0621",
+    txOkAll: (n) => `\u2705 \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0640 ${n}`,
+    txSaved: (n) => `\u2705 <b>\u0627\u062A\u062D\u0641\u0638${n === 1 ? "\u062A \u0627\u0644\u0635\u0641\u0642\u0629" : "\u062A " + n + " \u0635\u0641\u0642\u0627\u062A"}</b> \u0641\u064A \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 \u0647\u062A\u0644\u0627\u0642\u064A\u0647\u0627 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u062F\u0644\u0648\u0642\u062A\u064A.`,
+    txCancelled: "\u274C \u0627\u062A\u0644\u063A\u062A \u2014 \u0645\u0627 \u0627\u062A\u062D\u0641\u0638\u0634 \u062D\u0627\u062C\u0629.",
+    txGone: "\u0627\u0644\u0635\u0641\u0642\u0629 \u062F\u064A \u0627\u062A\u062D\u0641\u0638\u062A \u0623\u0648 \u0627\u062A\u0644\u063A\u062A \u0642\u0628\u0644 \u0643\u062F\u0647.",
+    txExpired: "\u231B \u0639\u062F\u0651\u0649 \u0623\u0643\u062A\u0631 \u0645\u0646 15 \u062F\u0642\u064A\u0642\u0629 \u2014 \u0645\u0627 \u0627\u062A\u062D\u0641\u0638\u0634 \u062D\u0627\u062C\u0629. \u0642\u0648\u0644\u0651\u064A \u0627\u0644\u0635\u0641\u0642\u0629 \u062A\u0627\u0646\u064A.",
+    txChanged: (why) => `\u26A0\uFE0F \u0645\u0627 \u0627\u062A\u062D\u0641\u0638\u0634 \u2014 \u0645\u062D\u0641\u0638\u062A\u0643 \u0627\u062A\u063A\u064A\u0631\u062A: ${why}. \u0642\u0648\u0644\u0651\u064A \u0627\u0644\u0635\u0641\u0642\u0629 \u062A\u0627\u0646\u064A.`,
+    txNoUser: "\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0634 \u0645\u062A\u0648\u0635\u0644\u0629 \u2014 \u0645\u0627 \u0627\u062A\u062D\u0641\u0638\u0634 \u062D\u0627\u062C\u0629.",
+    txSaveErr: (why) => `\u26A0\uFE0F \u0645\u0627 \u0627\u062A\u062D\u0641\u0638\u0634 \u2014 Firestore \u0631\u0641\u0636 (${why}).${/403/.test(why) ? ' \u062D\u0633\u0627\u0628 \u0627\u0644\u062E\u062F\u0645\u0629 \u0628\u064A\u0642\u0631\u0627 \u0628\u0633: \u0645\u0646 Google Cloud \u2192 IAM \u0627\u062F\u064A\u0644\u0647 \u062F\u0648\u0631 "Cloud Datastore User".' : ""}`,
+    nowHold: "\u062F\u0644\u0648\u0642\u062A\u064A",
     listening: "\u{1F399}\uFE0F \u0628\u0633\u0645\u0639\u2026",
     heard: "\u{1F399}\uFE0F \u0633\u0645\u0639\u062A:",
     vNoAi: "\u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0644\u0633\u0647 \u0645\u0634 \u0645\u062A\u0638\u0628\u0637\u0629 (\u0627\u0644\u0640 AI binding \u0646\u0627\u0642\u0635 \u0641\u064A \u0627\u0644\u0640 Worker) \u2014 \u0627\u0643\u062A\u0628\u0647\u0627 \u0644\u0648 \u0633\u0645\u062D\u062A.",
@@ -2296,6 +2534,30 @@ async function handleTelegram(request, env) {
         await done();
         return ok();
       }
+      if (/^tx:(ok|no):\w+$/.test(d)) {
+        const lang = await getLang(env), t2 = T[lang], gid = d.slice(6);
+        const kb = ((q.message.reply_markup || {}).inline_keyboard || []).map((r4) => r4.filter((b) => !/^tx:/.test(b.callback_data || ""))).filter((r4) => r4.length);
+        await tg2(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: kb } }).catch(() => {
+        });
+        if (d.startsWith("tx:no:")) {
+          const was = await cancelTrades(env, gid);
+          const tl = T[was || lang];
+          await send(env, chat, { text: was ? tl.txCancelled : tl.txGone });
+          await done(was ? "\u274C" : null);
+          return ok();
+        }
+        const r0 = await confirmTrades(env, gid), r3 = r0, t22 = T[r0.lang || lang];
+        if (r3.ok) {
+          const L = [t22.txSaved(r3.trades.length)];
+          for (const h of r3.holdings) L.push(`\u2022 ${esc(h.sym)} ${t22.nowHold}: <b>${(+Number(h.qty).toPrecision(8)).toLocaleString("en-US", { maximumFractionDigits: 8 })}</b>${h.avg ? ` \xB7 ${t22.avg} ${money(h.avg)}` : ""}`);
+          await send(env, chat, { text: L.join("\n"), buttons: [[cb(t22.pf, "pf"), cb(t22.back, "menu")]] });
+          await done("\u2705");
+        } else {
+          await send(env, chat, { text: r3.error === "gone" ? t22.txGone : r3.error === "expired" ? t22.txExpired : r3.error === "changed" ? t22.txChanged(esc(r3.why)) : r3.error === "nouser" ? t22.txNoUser : t22.txSaveErr(esc(String(r3.why || "").slice(0, 80))) });
+          await done("\u26A0\uFE0F");
+        }
+        return ok();
+      }
       if (d === "new") {
         await forget(env);
         await done(T[await getLang(env)].newDone);
@@ -2420,8 +2682,15 @@ ${t.aiLeft(r.left, r.limit)}</i>`;
   if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb("\u{1FA99} " + sym, "c:" + cid.slice(0, 58))));
   if (r.coins.length === 1) btns[0].push(url("\u{1F525} Liq Map", LIQ + encodeURIComponent(r.coins[0][1])));
   btns.push([cb(t.newChat, "new"), cb(t.back, "menu")]);
-  let text = r.text + "\n\n" + foot;
-  if (top.length + text.length > 4e3) text = r.text.slice(0, 3900 - foot.length - top.length) + "\u2026\n\n" + foot;
+  let tx = "";
+  if (r.trades && r.trades.length) {
+    const ql = /[\u0600-\u06FF]/.test(question) ? "ar" : "en", tq = T[ql];
+    const gid = await keepTrades(env, r.trades, ql);
+    tx = tradeLines(r.trades, ql === "ar") + "\n\n";
+    btns.unshift([cb(r.trades.length > 1 ? tq.txOkAll(r.trades.length) : tq.txOk, "tx:ok:" + gid), cb(tq.txNo, "tx:no:" + gid)]);
+  }
+  let text = r.text + "\n\n" + tx + foot;
+  if (top.length + text.length > 4e3) text = r.text.slice(0, Math.max(200, 3900 - foot.length - tx.length - top.length)) + "\u2026\n\n" + tx + foot;
   return show({ text, buttons: btns });
 }
 async function switchLang(env, chat, lang, msgId) {

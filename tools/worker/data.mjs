@@ -175,7 +175,7 @@ export async function findCoin(q, market, user) {
   return /^[A-Z0-9]{2,12}$/.test(S) ? { id: null, sym: S, name: '' } : null;   // the exchanges may still know the ticker
 }
 
-// ── Firebase: the service account → an OAuth token → Firestore REST (read only here) ──
+// ── Firebase: the service account → an OAuth token → Firestore REST (reads; writes only a trade you confirmed) ──
 let tokenCache = null;
 const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const b64urlJson = o => b64url(new TextEncoder().encode(JSON.stringify(o)));
@@ -233,7 +233,31 @@ async function firestore(sa) {
       return out;
     },
     async get(p) { const j = await call(`${base}/${p}`); return j ? fields(j.fields) : null; },
+    // new documents, all or nothing (each must not exist yet — never overwrites)
+    async commit(docs) {
+      const name = p => `projects/${sa.project_id}/databases/(default)/documents/${p}`;
+      return call(base + ':commit', { method: 'POST', body: JSON.stringify({ writes: docs.map(d => ({ update: { name: name(d.path), fields: enc(d.data) }, currentDocument: { exists: false } })) }) });
+    },
   };
+}
+// a plain object → Firestore fields (numbers: whole → integerValue, else doubleValue — the app's SDK writes the same)
+function encV(v) {
+  if (v == null) return { nullValue: null };
+  if (typeof v === 'string') return { stringValue: v };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return Number.isSafeInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(encV) } };
+  return { mapValue: { fields: enc(v) } };
+}
+const enc = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, encV(v)]));
+// write new documents under users/<uid>/… (phase 4: a trade you confirmed in Telegram)
+export async function commitDocs(env, uid, docs) {
+  const sa = serviceAccount(env);
+  if (!sa) throw new Error('no service account');
+  const db = await firestore(sa);
+  await db.commit(docs.map(d => ({ path: `users/${uid}/${d.path}`, data: d.data })));
+  cache.delete('user');
+  return { ok: true };
 }
 // your portfolio: { coins, txs, accum, meta } (the first account found, as the alerts do) — cached for 2 min (🔄 reads it fresh)
 export async function loadUser(env, fresh = false) {
@@ -245,7 +269,7 @@ export async function loadUser(env, fresh = false) {
     if (!users.length) return null;
     const uid = env.FIREBASE_UID && users.includes(env.FIREBASE_UID) ? env.FIREBASE_UID : users[0];
     const [coins, txs, accum, meta] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`)]);
-    return { coins, txs, accum, meta: meta || {} };
+    return { coins, txs, accum, meta: meta || {}, uid };
   });
 }
 export const cgIdOf = (c, market) => c.cgId || (market.cgIds || CG_IDS)[String(c.sym || '').toUpperCase()] || null;

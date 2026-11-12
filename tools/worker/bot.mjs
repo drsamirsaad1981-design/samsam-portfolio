@@ -18,6 +18,7 @@ import { loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount
 import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
+import { keepTrades, tradeLines, confirmTrades, cancelTrades, money } from './trade.mjs';
 
 const H = 3600e3;
 const LIQ = 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=';
@@ -51,6 +52,12 @@ const T = {
     kb: { pf: '💼 Portfolio', mk: '🌍 Market', pl: '📋 Plan', ex: '🚪 Exit', mv: '🏆 Movers', sg: '🎯 Signals' },
     kbOld: { mv: '🏆 Best & worst', ex: '🚪 Exit plan' },
     hidden: 'Buttons hidden ⌨️ — tap the ⌨️ icon in the message box (or send /start) to bring them back.',
+    txOk: '✅ Confirm', txNo: '❌ Cancel', txOkAll: n => `✅ Confirm all ${n}`,
+    txSaved: n => `✅ <b>Saved ${n === 1 ? 'the trade' : n + ' trades'}</b> to your portfolio — the app shows it now.`, txCancelled: '❌ Cancelled — nothing was saved.',
+    txGone: 'This trade was already saved or cancelled.', txExpired: '⌛ Over 15 minutes old — nothing saved. Tell me the trade again.',
+    txChanged: why => `⚠️ Not saved — your portfolio changed since: ${why}. Tell me the trade again.`, txNoUser: 'Your portfolio is not connected — nothing saved.',
+    txSaveErr: why => `⚠️ Not saved — Firestore refused it (${why}).${/403/.test(why) ? ' The service account can only read: in Google Cloud → IAM give it the role "Cloud Datastore User".' : ''}`,
+    nowHold: 'now',
     listening: '🎙️ Listening…', heard: '🎙️ I heard:', vNoAi: 'Voice notes are not set up yet (the AI binding is missing in the Worker) — please type it.',
     vLong: s => `Voice notes up to ${s / 60} min, please — or type it.`, vEmpty: "🎙️ I couldn't make out any words — try again, or type it.", vFail: "🎙️ I couldn't read that voice note — try again, or type it.",
   },
@@ -81,6 +88,12 @@ const T = {
     kb: { pf: '💼 محفظتي', mk: '🌍 السوق', pl: '📋 الخطة', ex: '🚪 الخروج', mv: '🏆 الأفضل', sg: '🎯 الإشارات' },
     kbOld: { mv: '🏆 الأفضل والأسوأ', ex: '🚪 خطة الخروج' },
     hidden: 'الأزرار اتخفت ⌨️ — اضغط علامة ⌨️ في خانة الكتابة (أو ابعت /start) عشان ترجع.',
+    txOk: '✅ تأكيد', txNo: '❌ إلغاء', txOkAll: n => `✅ تأكيد الـ ${n}`,
+    txSaved: n => `✅ <b>اتحفظ${n === 1 ? 'ت الصفقة' : 'ت ' + n + ' صفقات'}</b> في محفظتك — هتلاقيها في التطبيق دلوقتي.`, txCancelled: '❌ اتلغت — ما اتحفظش حاجة.',
+    txGone: 'الصفقة دي اتحفظت أو اتلغت قبل كده.', txExpired: '⌛ عدّى أكتر من 15 دقيقة — ما اتحفظش حاجة. قولّي الصفقة تاني.',
+    txChanged: why => `⚠️ ما اتحفظش — محفظتك اتغيرت: ${why}. قولّي الصفقة تاني.`, txNoUser: 'المحفظة مش متوصلة — ما اتحفظش حاجة.',
+    txSaveErr: why => `⚠️ ما اتحفظش — Firestore رفض (${why}).${/403/.test(why) ? ' حساب الخدمة بيقرا بس: من Google Cloud → IAM اديله دور "Cloud Datastore User".' : ''}`,
+    nowHold: 'دلوقتي',
     listening: '🎙️ بسمع…', heard: '🎙️ سمعت:', vNoAi: 'الرسايل الصوتية لسه مش متظبطة (الـ AI binding ناقص في الـ Worker) — اكتبها لو سمحت.',
     vLong: s => `الفويس لحد ${s / 60} دقيقة بس — أو اكتبها.`, vEmpty: '🎙️ ما سمعتش كلام واضح — جرّب تاني أو اكتبها.', vFail: '🎙️ ما قدرتش أقرا الفويس ده — جرّب تاني أو اكتبها.',
   },
@@ -352,6 +365,23 @@ export async function handleTelegram(request, env) {
       // even when nothing changed (the message is the same → Telegram would show no change at all)
       const done = text => tg(env, 'answerCallbackQuery', { callback_query_id: q.id, ...(text ? { text } : {}) }).catch(() => {});
       if (/^lang:(ar|en)$/.test(d)) { await switchLang(env, chat, d.slice(5), q.message.message_id); await done(); return ok(); }
+      if (/^tx:(ok|no):\w+$/.test(d)) {   // 🧾 a trade: ✅ saves it (all or nothing), ❌ forgets it
+        const lang = await getLang(env), t = T[lang], gid = d.slice(6);
+        const kb = ((q.message.reply_markup || {}).inline_keyboard || []).map(r => r.filter(b => !/^tx:/.test(b.callback_data || ''))).filter(r => r.length);
+        await tg(env, 'editMessageReplyMarkup', { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: kb } }).catch(() => {});   // the buttons go at once (no second tap)
+        if (d.startsWith('tx:no:')) { const was = await cancelTrades(env, gid); const tl = T[was || lang]; await send(env, chat, { text: was ? tl.txCancelled : tl.txGone }); await done(was ? '❌' : null); return ok(); }
+        const r0 = await confirmTrades(env, gid), r = r0, t2 = T[r0.lang || lang];
+        if (r.ok) {
+          const L = [t2.txSaved(r.trades.length)];
+          for (const h of r.holdings) L.push(`• ${esc(h.sym)} ${t2.nowHold}: <b>${(+Number(h.qty).toPrecision(8)).toLocaleString('en-US', { maximumFractionDigits: 8 })}</b>${h.avg ? ` · ${t2.avg} ${money(h.avg)}` : ''}`);
+          await send(env, chat, { text: L.join('\n'), buttons: [[cb(t2.pf, 'pf'), cb(t2.back, 'menu')]] });
+          await done('✅');
+        } else {
+          await send(env, chat, { text: r.error === 'gone' ? t2.txGone : r.error === 'expired' ? t2.txExpired : r.error === 'changed' ? t2.txChanged(esc(r.why)) : r.error === 'nouser' ? t2.txNoUser : t2.txSaveErr(esc(String(r.why || '').slice(0, 80))) });
+          await done('⚠️');
+        }
+        return ok();
+      }
       if (d === 'new') { await forget(env); await done(T[await getLang(env)].newDone); return ok(); }
       if (d === 'al' || d.startsWith('ad:')) {   // 🔔 the alerts list; 🗑 n deletes one and redraws the list
         const lang = await getLang(env);
@@ -436,8 +466,15 @@ async function answer(env, chat, question, budget = 36, into = null) {
   if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb('🪙 ' + sym, 'c:' + cid.slice(0, 58))));
   if (r.coins.length === 1) btns[0].push(url('🔥 Liq Map', LIQ + encodeURIComponent(r.coins[0][1])));
   btns.push([cb(t.newChat, 'new'), cb(t.back, 'menu')]);
-  let text = r.text + '\n\n' + foot;
-  if (top.length + text.length > 4000) text = r.text.slice(0, 3900 - foot.length - top.length) + '…\n\n' + foot;
+  let tx = '';
+  if (r.trades && r.trades.length) {   // 🧾 trades Claude prepared: the bot's own summary + ✅ / ❌ (nothing saved before the tap)
+    const ql = /[\u0600-\u06FF]/.test(question) ? 'ar' : 'en', tq = T[ql];   // in the language of THIS message, like Claude's answer
+    const gid = await keepTrades(env, r.trades, ql);
+    tx = tradeLines(r.trades, ql === 'ar') + '\n\n';
+    btns.unshift([cb(r.trades.length > 1 ? tq.txOkAll(r.trades.length) : tq.txOk, 'tx:ok:' + gid), cb(tq.txNo, 'tx:no:' + gid)]);
+  }
+  let text = r.text + '\n\n' + tx + foot;
+  if (top.length + text.length > 4000) text = r.text.slice(0, Math.max(200, 3900 - foot.length - tx.length - top.length)) + '…\n\n' + tx + foot;
   return show({ text, buttons: btns });
 }
 

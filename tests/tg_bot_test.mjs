@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -40,7 +40,7 @@ const USER = () => ({
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
   meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
-const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); let BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
+const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = []; let FS_WRITE_403 = false, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
@@ -69,7 +69,8 @@ globalThis.fetch = async (input, init = {}) => {
     const U = USER();
     if (u.endsWith(':runQuery')) return J([{ document: { name: 'projects/p/databases/(default)/documents/users/UID1/meta/info' } }]);
     if (u.includes('/users/UID1/coins?')) return J({ documents: U.coins.map(doc) });
-    if (u.includes('/users/UID1/txs?')) return J({ documents: [] });
+    if (u.includes('/users/UID1/txs?')) return J({ documents: committed.map(w => ({ name: w.update.name, fields: w.update.fields })) });
+    if (u.endsWith('/documents:commit')) { if (FS_WRITE_403) return J({ error: { code: 403, message: 'Missing or insufficient permissions.' } }, 403); const b = JSON.parse(body); commits.push(b); committed.push(...b.writes); return J({ writeResults: b.writes.map(() => ({ updateTime: new Date().toISOString() })), commitTime: new Date().toISOString() }); }
     if (u.includes('/users/UID1/accum?')) return J({ documents: U.accum.map(doc) });
     if (u.endsWith('/users/UID1/meta/info')) return J(doc(U.meta));
     return J({}, 404);
@@ -96,6 +97,10 @@ globalThis.fetch = async (input, init = {}) => {
     if (/keep looking/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tl0', name: 'get_coin', input: { coin: 'btc' } }] });
     if (/price of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'text', text: 'Let me check.' }, { type: 'tool_use', id: 'tu1', name: 'get_coin', input: { coin: 'sol' } }] });
     if (/alert me sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'ta1', name: 'set_alert', input: { coin: 'sol', kind: 'price_below', value: 140, note: 'buy zone' } }, { type: 'tool_use', id: 'ta2', name: 'set_alert', input: { coin: 'sol', kind: 'price_above', value: 100 } }, { type: 'tool_use', id: 'ta3', name: 'set_alert', input: { kind: 'portfolio_above', value: 1e9 } }, { type: 'tool_use', id: 'ta4', name: 'set_alert', input: { coin: 'sol', kind: 'nonsense', value: 1 } }] });
+    if (/i bought 5 sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tr1', name: 'record_trade', input: { side: 'buy', coin: 'sol', amount: 5, price_usd: 140, paid_with: 'USDT' } }] });
+    if (/i sold 20 link/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tr2', name: 'record_trade', input: { side: 'sell', coin: 'link', amount: 20, price_usd: 18, fee_usd: 1, date: '2026-11-10' } }] });
+    if (/i sold 999 sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tr3', name: 'record_trade', input: { side: 'sell', coin: 'sol', amount: 999, price_usd: 150 } }, { type: 'tool_use', id: 'tr4', name: 'record_trade', input: { side: 'buy', coin: 'doge', amount: 10, price_usd: 0.2 } }, { type: 'tool_use', id: 'tr5', name: 'record_trade', input: { side: 'buy', coin: 'sol', amount: 1 } }, { type: 'tool_use', id: 'tr6', name: 'record_trade', input: { side: 'buy', coin: 'sol', amount: 1, price_usd: 15000 } }, { type: 'tool_use', id: 'tr7', name: 'record_trade', input: { side: 'buy', coin: 'sol', amount: 1, price_usd: 150, date: '2030-01-01' } }] });
+    if (/two buys/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tr8', name: 'record_trade', input: { side: 'buy', coin: 'btc', total_usd: 770, at_market: true } }, { type: 'tool_use', id: 'tr9', name: 'record_trade', input: { side: 'buy', coin: 'link', amount: 10, total_usd: 120 } }] });
     if (/what if/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tw1', name: 'what_if', input: { prices: { BTC: 100000 } } }, { type: 'tool_use', id: 'tw2', name: 'what_if', input: { moves_pct: { SOL: -20 }, sell: [{ coin: 'sol', fraction: 0.5 }], buy: [{ coin: 'link', usd: 110 }] } }, { type: 'tool_use', id: 'tw3', name: 'what_if', input: { prices: { LINK: 26 } } }] });
     if (/futures of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'td1', name: 'get_derivatives', input: { coin: 'sol' } }, { type: 'tool_use', id: 'td2', name: 'get_derivatives', input: { coin: 'zzqq' } }] });
     if (/liq of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tq1', name: 'get_coin', input: { coin: 'sol' } }, { type: 'tool_use', id: 'tq2', name: 'get_history', input: { coin: 'sol', days: 3 } }, { type: 'tool_use', id: 'tq3', name: 'get_derivatives', input: { coin: 'sol' } }, { type: 'tool_use', id: 'tq4', name: 'get_portfolio', input: {} }] });
@@ -292,7 +297,7 @@ check('the keyboard button "💼 Portfolio" → the portfolio', last().b.text.in
 await say('/new'); sent.length = 0; claudeCalls.length = 0; await say('what is the price of SOL?');
 v = last();
 check('a question → "🧠 Thinking…" at once, then that same message becomes the answer', sent.find(x => x.m === 'sendMessage').b.text === '🧠 Thinking…' && v.m === 'editMessageText' && v.b.message_id === 7, sent.map(x => x.m));
-check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 11 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
+check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 12 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
 const tr = JSON.parse(claudeCalls[1].messages.at(-1).content[0].content);
 check('get_coin gave Claude: live price + source, rank, 7d high / low, futures, your holding (avg, profit, signal)', tr.price_usd === 150 && /CoinGecko \(live\)/.test(tr.price_source) && tr.you_hold.amount === 10 && tr.you_hold.average_buy_usd === 160 && tr.you_hold.signal && 'perpetual_futures' in tr && tr.high_7d > 0, tr);
 check('the answer is Telegram-safe (its <script> and & escaped, ** → <b>, "- " → •)', okHtml(v.b.text) && /&lt;script&gt;/.test(v.b.text) && /• You hold/.test(v.b.text), v.b.text);
@@ -486,6 +491,47 @@ BN403 = false;
 market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() }; EXLIVE = {}; sent.length = 0; Wk = await fresh(); await postK(Wk, 'sol');
 check('a fresh snapshot (12 min) → no exchange call needed, snapshot price', !/Binance/.test(last().b.text), last().b.text.slice(0, 200));
 cgDown = false;
+
+// ── 🧾 phase 4: trades in words → summary → ✅ Confirm / ❌ Cancel → Firestore (only on Confirm) ──
+const tapM = (data, markup) => post({ update_id: ++UPD, callback_query: { id: 'qt', data, from: { id: 555 }, message: { message_id: 42, chat: { id: 555 }, reply_markup: markup } } });
+await say('/new'); sent.length = 0; claudeCalls.length = 0; await say('I bought 5 SOL at 140 with USDT');
+let tv = last(), tb = btns(tv);
+check('trade → the bot\'s own summary: Buy 5 SOL @ $140 = $700, paid with USDT, SOL 10 → 15, avg $160 → $153.33', /🧾/.test(tv.b.text) && /Buy 5 SOL<\/b> @ \$140\.00 = <b>\$700\.00<\/b>/.test(tv.b.text) && /paid with USDT −\$700\.00/.test(tv.b.text) && /SOL 10 → <b>15<\/b>/.test(tv.b.text) && /avg \$160\.00 → <b>\$153\.33<\/b>/.test(tv.b.text) && okHtml(tv.b.text), tv.b.text);
+check('…with ✅ Confirm / ❌ Cancel as the first row, and NOTHING saved yet', tb[0].text === '✅ Confirm' && /^tx:ok:\w+$/.test(tb[0].callback_data) && tb[1].text === '❌ Cancel' && commits.length === 0, [tb.map(b => b.text), commits.length]);
+check('…Claude was told it is NOT saved (and to say tap Confirm)', JSON.stringify(claudeCalls[1].messages.at(-1).content).includes('NOT saved yet'));
+const markup = tv.b.reply_markup; sent.length = 0; await tapM(tb[0].callback_data, markup);
+const cw = commits[0] && commits[0].writes, f = w => w.update.fields;
+check('✅ → ONE all-or-nothing write of 2 docs (the Buy + USDT out at $1, kind pay, linked), never overwriting', commits.length === 1 && cw.length === 2 && cw.every(w => w.currentDocument && w.currentDocument.exists === false) && /\/users\/UID1\/txs\/tx_\d+_\w+$/.test(cw[0].update.name), commits);
+check('…the Buy doc = the app\'s txDoc (sym, type, qty, price, total, date, createdAt, note, device telegram-bot)', f(cw[0]).sym.stringValue === 'SOL' && f(cw[0]).type.stringValue === 'buy' && f(cw[0]).qty.integerValue === '5' && f(cw[0]).price.integerValue === '140' && f(cw[0]).total.integerValue === '700' && f(cw[0]).device.stringValue === 'telegram-bot' && !isNaN(Date.parse(f(cw[0]).date.stringValue)) && 'createdAt' in f(cw[0]) && 'note' in f(cw[0]), f(cw[0]));
+check('…the USDT doc: sell 700 @ $1, kind pay, link = the Buy\'s id, 1 ms later', f(cw[1]).sym.stringValue === 'USDT' && f(cw[1]).type.stringValue === 'sell' && f(cw[1]).qty.integerValue === '700' && f(cw[1]).kind.stringValue === 'pay' && f(cw[1]).link.stringValue === cw[0].update.name.split('/').pop() && Date.parse(f(cw[1]).date.stringValue) === Date.parse(f(cw[0]).date.stringValue) + 1, f(cw[1]));
+check('…the buttons go at once (✅/❌ removed, the others kept) and "Saved" + SOL now 15 · avg $153.33 (read back from Firestore)', sent[0].m === 'editMessageReplyMarkup' && !JSON.stringify(sent[0].b.reply_markup).includes('tx:') && sent[0].b.reply_markup.inline_keyboard.length === markup.inline_keyboard.length - 1 && /Saved the trade/.test(last().b.text) && /SOL now: <b>15<\/b> · avg \$153\.33/.test(last().b.text), [sent.map(x => x.m), last().b.text]);
+sent.length = 0; await tapM(tb[0].callback_data, markup);
+check('✅ tapped again → "already saved or cancelled", nothing written twice', commits.length === 1 && /already saved or cancelled|اتحفظت أو اتلغت/.test(last().b.text), last().b.text);
+sent.length = 0; claudeCalls.length = 0; await say('I sold 20 LINK at 18');
+tv = last(); tb = btns(tv);
+check('a sell: date 10 Nov, fee $1, realized +$59 ((18−15)×20 − 1), LINK 50 → 30', /Sell 20 LINK<\/b> @ \$18\.00 = <b>\$360\.00<\/b>/.test(tv.b.text) && /10 Nov/.test(tv.b.text) && /fee \$1\.00/.test(tv.b.text) && /Realized: <b>\+\$59\.00<\/b>/.test(tv.b.text) && /LINK 50 → <b>30<\/b>/.test(tv.b.text), tv.b.text);
+sent.length = 0; await tapM(tb[1].callback_data, tv.b.reply_markup);
+check('❌ → cancelled, nothing written; ✅ after that does nothing', /Cancelled/.test(last().b.text) && commits.length === 1, last().b.text);
+sent.length = 0; await tapM(tb[0].callback_data, tv.b.reply_markup);
+check('…(✅ after ❌ → already cancelled)', commits.length === 1 && /already saved or cancelled|اتحفظت أو اتلغت/.test(last().b.text));
+sent.length = 0; claudeCalls.length = 0; await say('I sold 999 SOL at 150');
+const errs = claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content).error);
+check('checks: sell more than held / a coin not held / no price / a price 100× off / a future date → errors, no buttons', /only 15 SOL held/.test(errs[0]) && /DOGE is not in the portfolio/.test(errs[1]) && /price is missing/.test(errs[2]) && /far from today/.test(errs[3]) && /future/.test(errs[4]) && !btns(last()).some(b => /^tx:/.test(b.callback_data || '')), errs);
+sent.length = 0; claudeCalls.length = 0; await say('two buys please');
+tv = last(); tb = btns(tv);
+check('two trades in one message → numbered, "✅ Confirm all 2"; at-market BTC ($770 at $77,000 = 0.01 BTC); LINK 10 for $120 = $12 each', /1\. 🟢/.test(tv.b.text) && /2\. 🟢/.test(tv.b.text) && /Buy 0\.01 BTC<\/b> @ \$77,000/.test(tv.b.text) && /Buy 10 LINK<\/b> @ \$12\.00/.test(tv.b.text) && tb[0].text === '✅ Confirm all 2', [tv.b.text, tb.map(b => b.text)]);
+FS_WRITE_403 = true; sent.length = 0; await tapM(tb[0].callback_data, tv.b.reply_markup); FS_WRITE_403 = false;
+check('Firestore refuses the write (read-only account) → "Not saved" + how to fix it (Cloud Datastore User)', /Not saved/.test(last().b.text) && /Cloud Datastore User/.test(last().b.text) && commits.length === 1, last().b.text);
+sent.length = 0; claudeCalls.length = 0; await say('بعت i sold 20 link بـ 18');
+tv = last(); tb = btns(tv);
+check('Arabic message → the summary + buttons in Arabic (بيع … ربح محقق, ✅ تأكيد)', /للحفظ/.test(tv.b.text) && /بيع 20 LINK/.test(tv.b.text) && /ربح محقق/.test(tv.b.text) && tb[0].text === '✅ تأكيد', [tv.b.text, tb.map(b => b.text)]);
+sent.length = 0; await tapM(tb[1].callback_data, tv.b.reply_markup);
+check('…❌ answered in Arabic too', /اتلغت/.test(last().b.text), last().b.text);
+// 15 minutes later → nothing saved
+const Wt = await fresh(); sent.length = 0; claudeCalls.length = 0; await postK(Wt, 'I sold 20 LINK at 18');
+const tkey = [...kvStore.keys()].find(k => k.startsWith('tg:tx:')), tg0 = JSON.parse(kvStore.get(tkey)); tg0.created -= 16 * 60e3; kvStore.set(tkey, JSON.stringify(tg0));
+await Wt.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qx', data: 'tx:ok:' + tkey.slice(6), message: { message_id: 9, chat: { id: 555 } } } }) }), ENVK, {});
+check('a trade confirmed after 15 min → "Over 15 minutes old", nothing saved', /15 (minutes|دقيقة)/.test(last().b.text) && commits.length === 1, last().b.text);
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
