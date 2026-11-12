@@ -12,7 +12,8 @@ import CG_IDS from './cg-ids.json' with { type: 'json' };
 
 export const RAW = 'https://raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/';
 const CG = 'https://api.coingecko.com/api/v3';
-const STALE = 20 * 60e3;   // a market snapshot older than this: the coins asked about are priced live by the exchanges
+let STALE = 20 * 60e3;   // a market snapshot older than this: the coins asked about are priced live by the exchanges
+export const setStale = ms => { const old = STALE; STALE = ms; return old; };   // the check page (stale=1) tries the old-snapshot path now
 const cache = new Map();   // key → { until, value }
 const inflight = new Map();   // key → the promise being fetched: tools asking at the same moment share one call
 async function cached(key, ms, make) {

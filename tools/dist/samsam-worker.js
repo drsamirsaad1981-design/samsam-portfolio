@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 2120918de9520acc
+// sources-hash: 49eac1d04f8d7ddf
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -659,6 +659,11 @@ var cg_ids_default = { APT: "aptos", ARB: "arbitrum", ATOM: "cosmos", AVAIL: "av
 var RAW = "https://raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/";
 var CG = "https://api.coingecko.com/api/v3";
 var STALE = 20 * 6e4;
+var setStale = (ms) => {
+  const old = STALE;
+  STALE = ms;
+  return old;
+};
 var cache = /* @__PURE__ */ new Map();
 var inflight = /* @__PURE__ */ new Map();
 async function cached(key, ms, make) {
@@ -2471,7 +2476,10 @@ async function check(request, env) {
   startTrace();
   if (u.searchParams.get("what") === "price") {
     const t02 = Date.now(), m0 = await loadMarket([], []), c = await findCoin(sym, m0, null);
-    const m = c ? await loadMarket(c.id ? [c.id] : [], [{ sym: c.sym, id: c.id }]) : null, id = c && (c.id || m.idOf[c.sym]);
+    const old = u.searchParams.get("stale") === "1" ? setStale(0) : null;
+    const m = c ? await loadMarket(c.id ? [c.id] : [], [{ sym: c.sym, id: c.id }]).finally(() => {
+      if (old != null) setStale(old);
+    }) : null, id = c && (c.id || m.idOf[c.sym]);
     const row2 = m && [...m.top, ...m.top500].find((r) => r.id === id);
     return json(200, { coin: sym, found: c, ms: Date.now() - t02, snapshot: m0.parts, snapshot_age_min: Math.round((Date.now() - Date.parse(m0.parts && m0.parts.top)) / 6e4), price: row2 ? row2.price : null, ch24: row2 ? row2.ch24 : null, source: m && id ? m.live[id] || "snapshot" : null, exchange: await exchangePrice(sym).catch((e) => String(e && e.message)), calls: stopTrace() });
   }
