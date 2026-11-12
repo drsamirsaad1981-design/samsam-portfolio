@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 5b68721776a29986
+// sources-hash: baed76b9909bd76f
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -19,7 +19,7 @@ var ai_worker_default = {
       "Access-Control-Max-Age": "86400",
       "Vary": "Origin"
     };
-    const reply = (status, obj) => new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
+    const reply = (status2, obj) => new Response(JSON.stringify(obj), { status: status2, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
     if (request.method === "OPTIONS") return new Response(null, { status: okOrigin ? 204 : 403, headers: cors });
     if (!okOrigin) return reply(403, { error: "This service only answers the Cute Portfolio app." });
     if (request.method !== "POST" || !new URL(request.url).pathname.endsWith("/analyze")) return reply(404, { error: "Not found." });
@@ -231,11 +231,11 @@ function groupTxBySym(txs) {
   }
   return m;
 }
-function derivePortfolio(coins, txs, prices = {}, fallbackPrices = {}) {
+function derivePortfolio(coins, txs, prices2 = {}, fallbackPrices = {}) {
   const bySym = groupTxBySym(txs);
   return (coins || []).filter((c) => c && c.sym && !c.removed).sort((a, b) => num(a.order, 1e9) - num(b.order, 1e9) || String(a.sym).localeCompare(String(b.sym))).map((c) => {
     const r = replay(c.opening, bySym.get(c.sym) || []);
-    const pr = prices[c.sym];
+    const pr = prices2[c.sym];
     const currentPrice = pr && pr.usd > 0 ? pr.usd : num(c.lastPrice) > 0 ? num(c.lastPrice) : num(fallbackPrices[c.sym]) > 0 ? num(fallbackPrices[c.sym]) : r.avg;
     return {
       sym: c.sym,
@@ -275,7 +275,7 @@ function realizedPnl(coins, txs) {
   }
   return { total, sellCount, sellFees, soldCost, perTx, bySym: bySymTotal };
 }
-function vsBtcByCoin(coins, txs, { prices = {}, btcNow = 0, btcAt = null, baselineBtc = 0 } = {}) {
+function vsBtcByCoin(coins, txs, { prices: prices2 = {}, btcNow = 0, btcAt = null, baselineBtc = 0 } = {}) {
   const out = {};
   const bySym = groupTxBySym(txs);
   for (const c of coins || []) {
@@ -296,7 +296,7 @@ function vsBtcByCoin(coins, txs, { prices = {}, btcNow = 0, btcAt = null, baseli
       const t = Date.parse(x.date) || 0, bp = btcAt && btcAt(t) || baselineBtc;
       if (dN && bp > 0) shadow += dN / bp;
     }
-    const cost = pos.qty * pos.avg, price2 = num(prices[c.sym]), value = pos.qty * price2;
+    const cost = pos.qty * pos.avg, price2 = num(prices2[c.sym]), value = pos.qty * price2;
     if (!(cost > 0) || !(price2 > 0) || !(btcNow > 0)) {
       out[c.sym] = null;
       continue;
@@ -352,13 +352,13 @@ function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
       state: Math.abs(now - target) <= band ? "ok" : Math.abs(now - target) <= 2 * band ? "warn" : "off"
     };
   });
-  const money2 = Math.max(0, num(cash)), need = groups.reduce((s, g) => s + g.need, 0);
-  if (money2 > 0) {
-    if (need >= money2) groups.forEach((g) => {
-      g.add = need > 0 ? g.need / need * money2 : 0;
+  const money3 = Math.max(0, num(cash)), need = groups.reduce((s, g) => s + g.need, 0);
+  if (money3 > 0) {
+    if (need >= money3) groups.forEach((g) => {
+      g.add = need > 0 ? g.need / need * money3 : 0;
     });
     else {
-      const rest = money2 - need;
+      const rest = money3 - need;
       groups.forEach((g) => {
         g.add = g.need + tg4(g.key) * rest;
       });
@@ -512,7 +512,7 @@ function summarize(user, market, now = Date.now()) {
   const meta = user.meta || {}, rows = [...market.top || [], ...market.top500 || []];
   const byId = new Map(rows.map((r) => [r.id, r]));
   const idOf = (c) => c.cgId || (market.cgIds || {})[c.sym] || null;
-  const prices = {}, info = {};
+  const prices2 = {}, info = {};
   for (const c of user.coins || []) {
     if (!c || !c.sym || c.removed) continue;
     const id = idOf(c), r = id && byId.get(id), s = id && market.series && market.series[id];
@@ -520,10 +520,10 @@ function summarize(user, market, now = Date.now()) {
     const p24 = s && s.at(now - DAY), p7 = s && s.at(now - 7 * DAY);
     const ch24 = r && r.ch24 != null ? r.ch24 : price2 && p24 ? (price2 / p24 - 1) * 100 : null;
     const ch7 = r && r.ch7 != null ? r.ch7 : price2 && p7 ? (price2 / p7 - 1) * 100 : null;
-    if (price2) prices[c.sym] = { usd: price2, ch24 };
+    if (price2) prices2[c.sym] = { usd: price2, ch24 };
     info[c.sym] = { id, ch24, ch7, p24: ch24 != null && price2 ? price2 / (1 + ch24 / 100) : null, p7: ch7 != null && price2 ? price2 / (1 + ch7 / 100) : null };
   }
-  const pf = derivePortfolio(user.coins, user.txs, prices).filter((c) => c.qty > 1e-12);
+  const pf = derivePortfolio(user.coins, user.txs, prices2).filter((c) => c.qty > 1e-12);
   const rz = realizedPnl(user.coins, user.txs);
   const value = pf.reduce((s, c) => s + c.qty * c.currentPrice, 0), cost = pf.reduce((s, c) => s + c.qty * c.basePrice, 0);
   const value24 = pf.reduce((s, c) => s + c.qty * (info[c.sym].p24 || c.currentPrice), 0);
@@ -532,7 +532,7 @@ function summarize(user, market, now = Date.now()) {
   const btcRow = byId.get("bitcoin"), btcSer = market.series && market.series.bitcoin;
   const btcNow = btcRow && btcRow.price || btcSer && btcSer.last || 0;
   const baselineBtc = meta.baseline && meta.baseline.btcPrice || 81162;
-  const vs = vsBtcByCoin(user.coins, user.txs, { prices: Object.fromEntries(Object.entries(prices).map(([k, v]) => [k, v.usd])), btcNow, btcAt: btcSer ? (t) => btcSer.at(t) : null, baselineBtc });
+  const vs = vsBtcByCoin(user.coins, user.txs, { prices: Object.fromEntries(Object.entries(prices2).map(([k, v]) => [k, v.usd])), btcNow, btcAt: btcSer ? (t) => btcSer.at(t) : null, baselineBtc });
   let cp = 0, bp = 0, cb3 = 0, beat = 0, alts = 0;
   for (const c of pf) {
     const v = vs[c.sym];
@@ -584,7 +584,7 @@ function summarize(user, market, now = Date.now()) {
   const dca = (user.accum || []).filter((a) => a && a.sym && a.dca).map((a) => ({ sym: String(a.sym).toUpperCase(), s: dcaStatus(a.dca, a.sym, user.txs, today2) })).filter((x) => x.s);
   const buyAt = (user.accum || []).filter((a) => a && a.sym && +a.alertPrice > 0).map((a) => {
     const sym = String(a.sym).toUpperCase();
-    let price2 = prices[sym] && prices[sym].usd;
+    let price2 = prices2[sym] && prices2[sym].usd;
     if (!(price2 > 0)) {
       const id = a.cgId || (market.cgIds || {})[sym], r = id && byId.get(id), s = id && market.series && market.series[id];
       price2 = r && r.price > 0 ? r.price : s ? s.last : null;
@@ -611,7 +611,7 @@ function summarize(user, market, now = Date.now()) {
   for (const r of freeCoins(user.txs, new Date(now - 7 * DAY).toISOString())) {
     const f = free7[r.sym] || (free7[r.sym] = { sym: r.sym, qty: 0, usd: 0 });
     f.qty += r.qty;
-    f.usd += r.qty * (prices[r.sym] && prices[r.sym].usd || 0);
+    f.usd += r.qty * (prices2[r.sym] && prices2[r.sym].usd || 0);
   }
   const free = Object.values(free7).sort((a, b) => b.usd - a.usd);
   return {
@@ -1491,31 +1491,272 @@ async function cancelTrades(env, gid) {
   }
 }
 
+// tools/worker/paper.mjs
+var KEY2 = "tg:paper";
+var FEE = 1e-3;
+var START = 1e4;
+var mem3 = /* @__PURE__ */ new Map();
+async function kvGet3(env, k) {
+  try {
+    if (env.RATE) {
+      const v = await env.RATE.get(k);
+      if (v != null) return v;
+    }
+  } catch (_) {
+  }
+  return mem3.has(k) ? mem3.get(k) : null;
+}
+async function kvPut3(env, k, v) {
+  mem3.set(k, v);
+  try {
+    if (env.RATE) await env.RATE.put(k, v);
+  } catch (_) {
+  }
+}
+var r22 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+var r8 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(8);
+var amt2 = (q) => (+Number(q).toPrecision(8)).toLocaleString("en-US", { maximumFractionDigits: 8 });
+var money2 = (v) => v == null || !isFinite(v) ? "\u2014" : Math.abs(v) >= 1 || v === 0 ? usd2(v) : "$" + +v.toPrecision(4);
+var lock2 = Promise.resolve();
+var locked2 = (fn) => {
+  const run2 = lock2.then(fn, fn);
+  lock2 = run2.catch(() => {
+  });
+  return run2;
+};
+async function load(env) {
+  try {
+    const p = JSON.parse(await kvGet3(env, KEY2) || "null");
+    return p && p.pos ? p : null;
+  } catch (_) {
+    return null;
+  }
+}
+var save = (env, p) => kvPut3(env, KEY2, JSON.stringify(p));
+async function prices(coins) {
+  const list2 = coins.filter((c) => c && c.sym);
+  const m = await loadMarket(list2.map((c) => c.id).filter(Boolean), list2.map((c) => ({ sym: c.sym, id: c.id || null })));
+  const rows = [...m.top, ...m.top500], out = {};
+  for (const c of list2) {
+    const id = c.id || m.idOf[c.sym], r = id && rows.find((x) => x.id === id), s = id && m.series[id];
+    const p = r && r.price > 0 ? r.price : s ? s.last : null;
+    if (p > 0) out[c.sym] = { price: p, ch24: r ? r.ch24 : null, id: id || null, src: typeof m.live[id] === "string" ? m.live[id] : m.live[id] ? "CoinGecko" : "snapshot" };
+  }
+  if (m.btc && m.btc.price > 0) out.BTC = out.BTC || { price: m.btc.price, ch24: m.btc.ch24, id: "bitcoin", src: m.live.bitcoin ? typeof m.live.bitcoin === "string" ? m.live.bitcoin : "CoinGecko" : "snapshot" };
+  return out;
+}
+async function reset(env, cash = START) {
+  const c = [1e3, 1e4, 1e5].includes(+cash) ? +cash : START;
+  const px = await prices([{ sym: "BTC", id: "bitcoin" }]);
+  if (!px.BTC) return { error: "no BTC price right now \u2014 try again in a minute" };
+  return locked2(async () => {
+    const p = { start: Date.now(), startCash: c, btcStart: px.BTC.price, cash: c, pos: {}, trades: [] };
+    await save(env, p);
+    return { ok: true, paper: p };
+  });
+}
+async function status(env) {
+  let p = await load(env);
+  if (!p) {
+    const r = await reset(env);
+    if (r.error) return r;
+    p = r.paper;
+  }
+  const px = await prices([{ sym: "BTC", id: "bitcoin" }, ...Object.entries(p.pos).map(([sym, x]) => ({ sym, id: x.id }))]);
+  const coins = Object.entries(p.pos).map(([sym, x]) => {
+    const q = px[sym];
+    const price2 = q ? q.price : x.avg;
+    return { sym, qty: x.qty, avg: x.avg, price: price2, value: x.qty * price2, pnl_pct: x.avg > 0 ? (price2 / x.avg - 1) * 100 : 0, ch24: q ? q.ch24 : null, priced: !!q };
+  }).sort((a, b) => b.value - a.value);
+  const value = p.cash + coins.reduce((a, c) => a + c.value, 0), btcNow = px.BTC ? px.BTC.price : null;
+  const hodl = btcNow && p.btcStart ? p.startCash * btcNow / p.btcStart : null;
+  return { p, coins, value, profit: value - p.startCash, profitPct: (value / p.startCash - 1) * 100, hodl, vsBtcPts: hodl ? (value / p.startCash - hodl / p.startCash) * 100 : null, btcNow };
+}
+async function paperTrade(env, input) {
+  const i = input || {}, side = String(i.side || "").toLowerCase();
+  if (side !== "buy" && side !== "sell") return { error: "side must be buy or sell" };
+  const q = String(i.coin || "").trim();
+  if (!q) return { error: "coin is needed" };
+  let p = await load(env);
+  if (!p) {
+    const r = await reset(env);
+    if (r.error) return r;
+    p = r.paper;
+  }
+  const m0 = await loadMarket([], []), c = await findCoin(q, m0, null);
+  if (!c) return { error: `no coin found for "${q}"` };
+  const sym = c.sym.toUpperCase();
+  if (isStable(sym)) return { error: "stablecoins are the cash here \u2014 buy or sell another coin" };
+  const px = await prices([{ sym, id: c.id }]), x = px[sym];
+  if (!x) return { error: `no live price for ${sym} right now` };
+  return locked2(async () => {
+    p = await load(env) || p;
+    const held = p.pos[sym] || { qty: 0, avg: 0, id: x.id };
+    let qty2 = +i.amount;
+    if (!(qty2 > 0) && +i.usd > 0) qty2 = side === "buy" ? +i.usd / (x.price * (1 + FEE)) : +i.usd / x.price;
+    if (!(qty2 > 0) && side === "sell" && +i.fraction > 0) qty2 = held.qty * Math.min(1, +i.fraction);
+    if (!(qty2 > 0)) return { error: "how much? give amount (coins), usd, or (to sell) fraction" };
+    const gross = qty2 * x.price, fee = gross * FEE;
+    if (side === "buy") {
+      if (gross + fee > p.cash + 1e-6) return { error: `only ${money2(p.cash)} pretend cash left \u2014 that costs ${money2(gross + fee)}` };
+      p.cash -= gross + fee;
+      held.avg = (held.qty * held.avg + gross + fee) / (held.qty + qty2);
+      held.qty += qty2;
+      held.id = held.id || x.id;
+      p.pos[sym] = held;
+    } else {
+      if (qty2 > held.qty * (1 + 1e-9) + 1e-12) return { error: `only ${amt2(held.qty)} ${sym} in the paper portfolio` };
+      qty2 = Math.min(qty2, held.qty);
+      p.cash += gross - fee;
+      held.qty -= qty2;
+      if (held.qty * x.price < 0.01) delete p.pos[sym];
+      else p.pos[sym] = held;
+    }
+    const t = { t: Date.now(), side, sym, qty: r8(qty2), price: r8(x.price), fee: r22(fee), realized: side === "sell" ? r22((x.price - (held.avg || 0)) * qty2 - fee) : null };
+    p.trades = [...p.trades || [], t].slice(-50);
+    p.undo = { t: t.t, side, sym, qty: qty2, gross, fee, avgBefore: side === "buy" ? null : held.avg };
+    await save(env, p);
+    return { ok: true, done: t, price_source: x.src, cash_left_usd: r22(p.cash), now_held: r8((p.pos[sym] || { qty: 0 }).qty), note: "Pretend money only \u2014 the real portfolio is untouched. Done at once; the user can tap \u21A9\uFE0F Undo last." };
+  });
+}
+async function undoLast(env) {
+  return locked2(async () => {
+    const p = await load(env);
+    if (!p || !p.trades || !p.trades.length || !p.undo) return { error: "nothing to undo" };
+    const u = p.undo, t = p.trades[p.trades.length - 1];
+    const h = p.pos[u.sym] || { qty: 0, avg: u.avgBefore || 0, id: null };
+    if (u.side === "buy") {
+      const q = h.qty - u.qty;
+      if (q < -1e-12) return { error: "nothing to undo" };
+      h.avg = q > 1e-12 ? (h.qty * h.avg - u.gross - u.fee) / q : 0;
+      h.qty = q;
+      p.cash += u.gross + u.fee;
+      if (h.qty <= 1e-12) delete p.pos[u.sym];
+      else p.pos[u.sym] = h;
+    } else {
+      if (p.cash < u.gross - u.fee - 1e-6) return { error: "nothing to undo" };
+      p.cash -= u.gross - u.fee;
+      h.qty += u.qty;
+      h.avg = u.avgBefore || h.avg;
+      p.pos[u.sym] = h;
+    }
+    p.trades = p.trades.slice(0, -1);
+    delete p.undo;
+    await save(env, p);
+    return { ok: true, undone: t };
+  });
+}
+async function paperFacts(env) {
+  const s = await status(env);
+  if (s.error) return s;
+  return {
+    started: new Date(s.p.start).toISOString().slice(0, 10),
+    start_cash_usd: s.p.startCash,
+    value_usd: r22(s.value),
+    cash_usd: r22(s.p.cash),
+    profit_usd: r22(s.profit),
+    profit_pct: r22(s.profitPct),
+    same_money_in_btc_usd: r22(s.hodl),
+    vs_btc_pts: r22(s.vsBtcPts),
+    coins: s.coins.map((c) => ({ coin: c.sym, amount: r8(c.qty), avg_usd: r8(c.avg), price_usd: r8(c.price), value_usd: r22(c.value), profit_pct: r22(c.pnl_pct) })),
+    last_trades: (s.p.trades || []).slice(-5).map((t) => ({ when: new Date(t.t).toISOString(), side: t.side, coin: t.sym, amount: t.qty, price_usd: t.price, realized_usd: t.realized })),
+    fee_pct: FEE * 100
+  };
+}
+var PW = {
+  en: {
+    title: "\u{1F9EA} <b>Paper trading</b>",
+    sub: "pretend money \xB7 real prices",
+    value: "Value",
+    cash: "Cash",
+    profit: "Profit",
+    btc: "Same money in BTC",
+    beat: "vs BTC",
+    since: "since",
+    none: "No coins yet \u2014 write e.g. <i>paper buy 0.05 BTC</i> or <i>paper buy SOL for $500</i>.",
+    last: "Last",
+    undo: "\u21A9\uFE0F Undo last",
+    restart: "\u{1F501} Start again",
+    back: "\u2B05\uFE0F Menu",
+    refresh: "\u{1F504}",
+    fee: "fee 0.1% / trade",
+    pick: "Start again with how much pretend cash? (the current paper portfolio is cleared)",
+    undone: "\u21A9\uFE0F Undone",
+    nothing: "Nothing to undo"
+  },
+  ar: {
+    title: "\u{1F9EA} <b>\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A</b>",
+    sub: "\u0641\u0644\u0648\u0633 \u0648\u0647\u0645\u064A\u0629 \xB7 \u0623\u0633\u0639\u0627\u0631 \u062D\u0642\u064A\u0642\u064A\u0629",
+    value: "\u0627\u0644\u0642\u064A\u0645\u0629",
+    cash: "\u0627\u0644\u0643\u0627\u0634",
+    profit: "\u0627\u0644\u0631\u0628\u062D",
+    btc: "\u0646\u0641\u0633 \u0627\u0644\u0641\u0644\u0648\u0633 \u0641\u064A BTC",
+    beat: "\u0645\u0642\u0627\u0628\u0644 BTC",
+    since: "\u0645\u0646",
+    none: "\u0645\u0641\u064A\u0634 \u0639\u0645\u0644\u0627\u062A \u0644\u0633\u0647 \u2014 \u0627\u0643\u062A\u0628 \u0645\u062B\u0644\u0627\u064B <i>\u062A\u062C\u0631\u064A\u0628\u064A \u0627\u0634\u062A\u0631\u064A 0.05 BTC</i> \u0623\u0648 <i>\u062A\u062C\u0631\u064A\u0628\u064A \u0627\u0634\u062A\u0631\u064A SOL \u0628\u0640 500 \u062F\u0648\u0644\u0627\u0631</i>.",
+    last: "\u0622\u062E\u0631 \u0635\u0641\u0642\u0629",
+    undo: "\u21A9\uFE0F \u062A\u0631\u0627\u062C\u0639",
+    restart: "\u{1F501} \u0627\u0628\u062F\u0623 \u0645\u0646 \u062C\u062F\u064A\u062F",
+    back: "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629",
+    refresh: "\u{1F504}",
+    fee: "\u0631\u0633\u0648\u0645 0.1% \u0644\u0644\u0635\u0641\u0642\u0629",
+    pick: "\u062A\u0628\u062F\u0623 \u0645\u0646 \u062C\u062F\u064A\u062F \u0628\u0643\u0627\u0645 \u0641\u0644\u0648\u0633 \u0648\u0647\u0645\u064A\u0629\u061F (\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u0647\u062A\u062A\u0645\u0633\u062D)",
+    undone: "\u21A9\uFE0F \u0627\u062A\u0644\u063A\u062A",
+    nothing: "\u0645\u0641\u064A\u0634 \u062D\u0627\u062C\u0629 \u062A\u062A\u0644\u063A\u064A"
+  }
+};
+var paperWords = PW;
+async function viewPaper(env, lang2 = "en") {
+  const w = PW[lang2] || PW.en, s = await status(env);
+  if (s.error) return { text: "\u26A0\uFE0F " + esc(s.error), buttons: [[{ text: w.back, callback_data: "menu" }]] };
+  const { p } = s, L = [
+    `${w.title} \xB7 <i>${w.sub}</i>`,
+    `<i>${w.since} ${esc(local(p.start, { day: "numeric", month: "short", year: "numeric" }))} \xB7 ${usd(p.startCash)}</i>`,
+    "",
+    `\u{1F4BC} ${w.value}: <b>${usd2(s.value)}</b>`,
+    `\u{1F4B5} ${w.cash}: ${usd2(p.cash)}`,
+    `${dot(s.profit)} ${w.profit}: <b>${s.profit >= 0 ? "+" : "\u2212"}${usd2(Math.abs(s.profit))}</b> (${pct(s.profitPct)})`
+  ];
+  if (s.hodl) L.push(`\u{1F7E0} ${w.btc}: ${usd2(s.hodl)} \xB7 ${w.beat} <b>${s.vsBtcPts >= 0 ? "+" : "\u2212"}${Math.abs(s.vsBtcPts).toFixed(1)}</b> pts`);
+  L.push("");
+  if (!s.coins.length) L.push(w.none);
+  for (const c of s.coins.slice(0, 12)) L.push(`<code>${esc(c.sym.padEnd(6))}</code> ${amt2(c.qty)} \xB7 ${usd2(c.value)} \xB7 ${dot(c.pnl_pct)} ${pct(c.pnl_pct, 1)}`);
+  const t = (p.trades || []).slice(-1)[0];
+  if (t) L.push("", `<i>${w.last}: ${t.side === "buy" ? "\u{1F7E2}" : "\u{1F534}"} ${t.side} ${amt2(t.qty)} ${esc(t.sym)} @ ${money2(t.price)} \xB7 ${esc(local(t.t, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }))}</i>`);
+  L.push(`<i>${w.fee}</i>`);
+  const b = [[{ text: w.refresh, callback_data: "pp" }, ...p.undo ? [{ text: w.undo, callback_data: "pp:undo" }] : [], { text: w.restart, callback_data: "pp:new" }], [{ text: w.back, callback_data: "menu" }]];
+  return { text: L.join("\n"), buttons: b };
+}
+function viewRestart(lang2 = "en") {
+  const w = PW[lang2] || PW.en;
+  return { text: "\u{1F501} " + w.pick, buttons: [[{ text: "$1,000", callback_data: "pp:new:1000" }, { text: "$10,000", callback_data: "pp:new:10000" }, { text: "$100,000", callback_data: "pp:new:100000" }], [{ text: "\u2716\uFE0F", callback_data: "pp" }]] };
+}
+
 // tools/worker/ai.mjs
 var H2 = 36e5;
 var DAY2 = 24 * H2;
 var LIMIT = (env) => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30));
 var MAX_ROUNDS = 8;
 var HISTORY = 10;
-var r22 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+var r23 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
 var r62 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
-var mem3 = /* @__PURE__ */ new Map();
-async function kvGet3(env, k) {
+var mem4 = /* @__PURE__ */ new Map();
+async function kvGet4(env, k) {
   try {
     if (env.RATE) return await env.RATE.get(k);
   } catch (_) {
   }
-  return mem3.has(k) ? mem3.get(k) : null;
+  return mem4.has(k) ? mem4.get(k) : null;
 }
-async function kvPut3(env, k, v, ttl) {
-  mem3.set(k, v);
+async function kvPut4(env, k, v, ttl) {
+  mem4.set(k, v);
   try {
     if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
   } catch (_) {
   }
 }
 async function kvDel2(env, k) {
-  mem3.delete(k);
+  mem4.delete(k);
   try {
     if (env.RATE) await env.RATE.delete(k);
   } catch (_) {
@@ -1524,18 +1765,18 @@ async function kvDel2(env, k) {
 async function firstTime(env, updateId) {
   if (updateId == null) return true;
   const k = "tg:u:" + updateId;
-  if (await kvGet3(env, k)) return false;
-  await kvPut3(env, k, "1", 3600);
+  if (await kvGet4(env, k)) return false;
+  await kvPut4(env, k, "1", 3600);
   return true;
 }
 var today = () => localParts(Date.now()).date;
 async function usage(env) {
-  const n = +await kvGet3(env, "tg:ai:" + today()) || 0;
+  const n = +await kvGet4(env, "tg:ai:" + today()) || 0;
   return { used: n, limit: LIMIT(env), left: Math.max(0, LIMIT(env) - n) };
 }
 async function countOne(env) {
   const u = await usage(env);
-  await kvPut3(env, "tg:ai:" + today(), String(u.used + 1), 2 * 86400);
+  await kvPut4(env, "tg:ai:" + today(), String(u.used + 1), 2 * 86400);
   return u.left - 1;
 }
 async function forget(env) {
@@ -1543,7 +1784,7 @@ async function forget(env) {
 }
 async function history(env) {
   try {
-    const h = JSON.parse(await kvGet3(env, "tg:hist") || "[]");
+    const h = JSON.parse(await kvGet4(env, "tg:hist") || "[]");
     return Array.isArray(h) ? h : [];
   } catch (_) {
     return [];
@@ -1551,7 +1792,7 @@ async function history(env) {
 }
 async function remember(env, q, a) {
   const h = (await history(env)).concat([{ role: "user", content: q }, { role: "assistant", content: a }]).slice(-HISTORY);
-  await kvPut3(env, "tg:hist", JSON.stringify(h), 6 * 3600);
+  await kvPut4(env, "tg:hist", JSON.stringify(h), 6 * 3600);
 }
 var TOOLS = [
   {
@@ -1608,6 +1849,12 @@ var TOOLS = [
     input_schema: { type: "object", properties: { side: { type: "string", enum: ["buy", "sell"] }, coin: { type: "string" }, amount: { type: "number" }, price_usd: { type: "number" }, total_usd: { type: "number" }, at_market: { type: "boolean" }, fee_usd: { type: "number" }, date: { type: "string" }, paid_with: { type: "string" }, received_in: { type: "string" }, note: { type: "string" } }, required: ["side", "coin"] }
   },
   {
+    name: "paper_trade",
+    description: 'PAPER (pretend) trading \u2014 a separate practice portfolio at real prices, never the real one. Use ONLY when the user says paper / practice / pretend / \u062A\u062C\u0631\u064A\u0628\u064A / \u0648\u0647\u0645\u064A / \u062A\u062C\u0631\u0628\u0629 ("paper buy 0.1 BTC", "\u062A\u062C\u0631\u064A\u0628\u064A \u0627\u0634\u062A\u0631\u064A SOL \u0628\u0640 500 \u062F\u0648\u0644\u0627\u0631", "paper sell half my ETH"). Done at once at the live price (0.1% fee). amount = coins, or usd = dollars, or (sell) fraction 0\u20131. Any coin. The user can tap \u21A9\uFE0F Undo.',
+    input_schema: { type: "object", properties: { side: { type: "string", enum: ["buy", "sell"] }, coin: { type: "string" }, amount: { type: "number" }, usd: { type: "number" }, fraction: { type: "number" } }, required: ["side", "coin"] }
+  },
+  { name: "get_paper", description: "The PAPER (pretend) portfolio: value, cash, profit, vs the same money in BTC since the start, each coin, the last trades.", input_schema: { type: "object", properties: {} } },
+  {
     name: "get_history",
     description: "Hourly price history of a coin for the last N days (1\u201329): start, end, % change, high and low with their dates, and the daily closes. Only for coins GitHub keeps a price file for (the user's coins and the big ones); otherwise it says so.",
     input_schema: { type: "object", properties: { coin: { type: "string" }, days: { type: "integer", minimum: 1, maximum: 29 } }, required: ["coin"] }
@@ -1620,6 +1867,7 @@ function context(env) {
     used: used2,
     coins,
     trades: [],
+    paper: false,
     async user() {
       if (user === void 0) user = loadUser(env).catch(() => null);
       return user;
@@ -1664,9 +1912,9 @@ async function runTool(ctx, name, input) {
       coin: row2.name || c.name || sym,
       ticker: sym,
       price_usd: r62(row2.price),
-      change_24h_pct: r22(row2.ch24),
-      change_7d_pct: r22(row2.ch7),
-      change_30d_pct: r22(row2.ch30),
+      change_24h_pct: r23(row2.ch24),
+      change_7d_pct: r23(row2.ch7),
+      change_30d_pct: r23(row2.ch30),
       rank: row2.rank || c.rank || null,
       market_cap_usd: row2.mcap ? Math.round(row2.mcap) : null,
       volume_24h_usd: row2.vol ? Math.round(row2.vol) : null,
@@ -1684,7 +1932,7 @@ async function runTool(ctx, name, input) {
     if (u) {
       const sum = summarize(withIds(u, m), m, now), h = sum.coins.find((x) => x.sym === sym);
       ctx.used.add("your portfolio (Firebase)");
-      out.you_hold = h ? { amount: r62(h.qty), value_usd: r22(h.value), share_of_portfolio_pct: sum.value > 0 ? r22(h.value / sum.value * 100) : null, average_buy_usd: r62(h.avg), profit_vs_average_pct: r22(h.chg), signal: sum.signal[sym] || "hold", signal_reason: h.why || null } : "not held";
+      out.you_hold = h ? { amount: r62(h.qty), value_usd: r23(h.value), share_of_portfolio_pct: sum.value > 0 ? r23(h.value / sum.value * 100) : null, average_buy_usd: r62(h.avg), profit_vs_average_pct: r23(h.chg), signal: sum.signal[sym] || "hold", signal_reason: h.why || null } : "not held";
       if (!out.price_usd && h) out.price_usd = r62(h.price);
     }
     return out;
@@ -1696,19 +1944,19 @@ async function runTool(ctx, name, input) {
     ctx.used.add("your portfolio (Firebase)");
     ctx.used.add(srcOf(x.m, "bitcoin"));
     return {
-      total_value_usd: r22(s.value),
-      change_24h_pct: r22(s.ch24),
-      change_24h_usd: r22(s.d24),
-      change_7d_pct: r22(s.ch7),
-      change_7d_usd: r22(s.d7),
-      all_time_profit_usd: r22(s.total),
-      all_time_profit_pct: r22(s.pctTotal),
-      invested_usd: r22(s.invested),
-      vs_holding_btc_pct: r22(s.vsBtc),
+      total_value_usd: r23(s.value),
+      change_24h_pct: r23(s.ch24),
+      change_24h_usd: r23(s.d24),
+      change_7d_pct: r23(s.ch7),
+      change_7d_usd: r23(s.d7),
+      all_time_profit_usd: r23(s.total),
+      all_time_profit_pct: r23(s.pctTotal),
+      invested_usd: r23(s.invested),
+      vs_holding_btc_pct: r23(s.vsBtc),
       alts_beating_btc: `${s.beat} of ${s.alts}`,
       signals: s.counts,
-      coins: [...s.coins].sort((a, b) => b.value - a.value).map((c) => ({ ticker: c.sym, value_usd: r22(c.value), share_pct: s.value > 0 ? r22(c.value / s.value * 100) : null, change_24h_pct: r22(c.ch24), change_7d_pct: r22(c.ch7), profit_vs_average_pct: r22(c.chg), signal: s.signal[c.sym], vs_btc_pct: c.vs ? r22(c.vs.pct) : null, vs_btc_30d_pts: c.rs ? r22(c.rs.d30) : null, vs_btc_90d_pts: c.rs ? r22(c.rs.d90) : null, stablecoin: isStable(c.sym) || void 0 })),
-      allocation: s.alloc ? s.alloc.groups.map((g) => ({ group: s.alloc.names[g.key] || g.key, now_pct: r22(g.now), target_pct: r22(g.target), state: g.state })) : null
+      coins: [...s.coins].sort((a, b) => b.value - a.value).map((c) => ({ ticker: c.sym, value_usd: r23(c.value), share_pct: s.value > 0 ? r23(c.value / s.value * 100) : null, change_24h_pct: r23(c.ch24), change_7d_pct: r23(c.ch7), profit_vs_average_pct: r23(c.chg), signal: s.signal[c.sym], vs_btc_pct: c.vs ? r23(c.vs.pct) : null, vs_btc_30d_pts: c.rs ? r23(c.rs.d30) : null, vs_btc_90d_pts: c.rs ? r23(c.rs.d90) : null, stablecoin: isStable(c.sym) || void 0 })),
+      allocation: s.alloc ? s.alloc.groups.map((g) => ({ group: s.alloc.names[g.key] || g.key, now_pct: r23(g.now), target_pct: r23(g.target), state: g.state })) : null
     };
   }
   if (name === "get_market") {
@@ -1717,16 +1965,16 @@ async function runTool(ctx, name, input) {
     ctx.used.add("market snapshot (CoinGecko, alternative.me, ETF flows)");
     const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
     const seen = /* @__PURE__ */ new Set(), list2 = [...m.top, ...m.top500].filter((r) => r.rank && r.rank <= n && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
-    const pick = (a, dir) => [...a].sort((x, y) => dir * (y.ch24 - x.ch24)).slice(0, 5).map((r) => ({ ticker: String(r.sym).toUpperCase(), rank: r.rank, price_usd: r62(r.price), change_24h_pct: r22(r.ch24) }));
+    const pick = (a, dir) => [...a].sort((x, y) => dir * (y.ch24 - x.ch24)).slice(0, 5).map((r) => ({ ticker: String(r.sym).toUpperCase(), rank: r.rank, price_usd: r62(r.price), change_24h_pct: r23(r.ch24) }));
     const st = (m.stocks || []).filter((r) => r.ch24 != null);
     return {
       btc_price_usd: m.btc ? r62(m.btc.price) : null,
-      btc_change_24h_pct: m.btc ? r22(m.btc.ch24) : null,
+      btc_change_24h_pct: m.btc ? r23(m.btc.ch24) : null,
       total_market_cap_usd: g.mcap ? Math.round(g.mcap) : null,
-      market_cap_change_24h_pct: r22(g.mcapCh24),
-      btc_dominance_pct: r22(d.btc),
-      eth_dominance_pct: r22(d.eth),
-      usdt_dominance_pct: r22(d.usdt),
+      market_cap_change_24h_pct: r23(g.mcapCh24),
+      btc_dominance_pct: r23(d.btc),
+      eth_dominance_pct: r23(d.eth),
+      usdt_dominance_pct: r23(d.usdt),
       fear_greed: m.fng ? { value: m.fng.value, label: m.fng.label, yesterday: m.fng.prev, week_ago: m.fng.week } : null,
       altcoin_season: m.alt ? { value: m.alt.value, label: m.alt.label } : null,
       etf_flows_latest_day: e ? { date: e.date, btc_usd: e.btc, eth_usd: e.eth } : null,
@@ -1742,11 +1990,11 @@ async function runTool(ctx, name, input) {
     const { s } = x;
     ctx.used.add("your plan (Firebase)");
     return {
-      overall_progress_pct: r22(s.prog.pct),
+      overall_progress_pct: r23(s.prog.pct),
       targets_met: `${s.prog.completed} of ${s.prog.counted}`,
-      coins: s.plan.map((p) => ({ ticker: p.sym, held: r62(p.actual), target: r62(p.target), progress_pct: p.target > 0 ? r22(p.actual / p.target * 100) : null })),
-      regular_buys: (s.dca || []).map((dc) => ({ ticker: dc.sym, per_month_usd: r22(dc.s.perMonth), next: dc.s.next || null, state: dc.s.state })),
-      buy_price_alerts: (s.buyAt || []).map((b) => ({ ticker: b.sym, alert_price_usd: r62(b.at), price_now_usd: r62(b.price), pct_above_alert: r22((b.price / b.at - 1) * 100), still_to_buy: r62(b.left) }))
+      coins: s.plan.map((p) => ({ ticker: p.sym, held: r62(p.actual), target: r62(p.target), progress_pct: p.target > 0 ? r23(p.actual / p.target * 100) : null })),
+      regular_buys: (s.dca || []).map((dc) => ({ ticker: dc.sym, per_month_usd: r23(dc.s.perMonth), next: dc.s.next || null, state: dc.s.state })),
+      buy_price_alerts: (s.buyAt || []).map((b) => ({ ticker: b.sym, alert_price_usd: r62(b.at), price_now_usd: r62(b.price), pct_above_alert: r23((b.price / b.at - 1) * 100), still_to_buy: r62(b.left) }))
     };
   }
   if (name === "get_exit") {
@@ -1757,7 +2005,7 @@ async function runTool(ctx, name, input) {
     ctx.used.add("market snapshot");
     return {
       conditions: s.macro.map((c) => ({ name: { btcD: "BTC dominance", usdtD: "USDT dominance", ethBtc: "ETH/BTC" }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
-      take_profits: (s.tps || []).map((t) => ({ ticker: t.sym, tp: t.n, level_usd: r62(t.level), price_now_usd: r62(t.price), pct_to_go: r22((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go)
+      take_profits: (s.tps || []).map((t) => ({ ticker: t.sym, tp: t.n, level_usd: r62(t.level), price_now_usd: r62(t.price), pct_to_go: r23((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go)
     };
   }
   if (name === "get_derivatives") {
@@ -1782,6 +2030,16 @@ async function runTool(ctx, name, input) {
     ctx.used.add("your portfolio (Firebase)");
     return prepareTrade(ctx, input);
   }
+  if (name === "paper_trade") {
+    ctx.used.add("paper portfolio (live prices)");
+    ctx.paper = true;
+    return paperTrade(ctx.env, input);
+  }
+  if (name === "get_paper") {
+    ctx.used.add("paper portfolio (live prices)");
+    ctx.paper = true;
+    return paperFacts(ctx.env);
+  }
   if (name === "what_if") {
     const x = await ctx.sum();
     if (!x) return { error: "portfolio not connected" };
@@ -1789,10 +2047,10 @@ async function runTool(ctx, name, input) {
     ctx.used.add("your portfolio (Firebase)");
     ctx.used.add("what-if (the app's maths)");
     const up = (o) => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [String(k).toUpperCase(), +v]).filter(([, v]) => isFinite(v)));
-    const prices = up(input && input.prices), moves = up(input && input.moves_pct), alts = isFinite(+(input && input.alts_move_pct)) ? +input.alts_move_pct : null;
+    const prices2 = up(input && input.prices), moves = up(input && input.moves_pct), alts = isFinite(+(input && input.alts_move_pct)) ? +input.alts_move_pct : null;
     const rows = s.coins.map((c) => {
       let p = c.price;
-      if (prices[c.sym] > 0) p = prices[c.sym];
+      if (prices2[c.sym] > 0) p = prices2[c.sym];
       else if (c.sym in moves) p = c.price * (1 + moves[c.sym] / 100);
       else if (alts != null && c.sym !== "BTC" && !isStable(c.sym)) p = c.price * (1 + alts / 100);
       return { sym: c.sym, qty: c.qty, avg: c.avg, price: c.price, p, buyUsd: 0, sold: 0 };
@@ -1811,7 +2069,7 @@ async function runTool(ctx, name, input) {
       realized += q * (r.p - r.avg);
       r.qty -= q;
       r.sold += q;
-      trades.push({ sell: r.sym, amount: r62(q), usd: r22(q * r.p), profit_usd: r22(q * (r.p - r.avg)) });
+      trades.push({ sell: r.sym, amount: r62(q), usd: r23(q * r.p), profit_usd: r23(q * (r.p - r.avg)) });
     }
     for (const t of input && input.buy || []) {
       const r = by(t.coin), u = +t.usd;
@@ -1824,7 +2082,7 @@ async function runTool(ctx, name, input) {
       r.qty += q;
       newMoney += u;
       r.buyUsd += u;
-      trades.push({ buy: r.sym, amount: r62(q), usd: r22(u), new_average: r62(r.avg) });
+      trades.push({ buy: r.sym, amount: r62(q), usd: r23(u), new_average: r62(r.avg) });
     }
     const before = s.value, coinsAfter = rows.reduce((a, r) => a + r.qty * r.p, 0), after = coinsAfter + cash;
     const priceGain = s.coins.reduce((a, c) => {
@@ -1836,17 +2094,17 @@ async function runTool(ctx, name, input) {
       return r && r.p >= t.level && t.price < t.level;
     }).map((t) => ({ coin: t.sym, tp: t.n, level_usd: r62(t.level), sell_pct: t.pct || null }));
     return {
-      value_now_usd: r22(before),
-      value_after_usd: r22(after),
-      change_usd: r22(after - before - newMoney),
-      change_pct: before > 0 ? r22((after - before - newMoney) / before * 100) : null,
-      cash_from_sells_usd: r22(cash),
-      new_money_usd: r22(newMoney),
-      realized_profit_from_sells_usd: r22(realized),
-      all_time_profit_now_usd: r22(s.total),
-      all_time_profit_after_usd: r22(s.total + priceGain),
-      all_time_profit_after_pct: s.invested + newMoney > 0 ? r22((s.total + priceGain) / (s.invested + newMoney) * 100) : null,
-      changed_coins: rows.filter((r) => r.p !== r.price || r.sold || r.buyUsd).sort((a, b) => Math.abs(b.qty * b.p - b.qty * b.price) - Math.abs(a.qty * a.p - a.qty * a.price)).slice(0, 20).map((r) => ({ ticker: r.sym, price_now: r62(r.price), price_then: r62(r.p), value_then_usd: r22(r.qty * r.p), profit_vs_average_pct: r.avg > 0 ? r22((r.p / r.avg - 1) * 100) : null })),
+      value_now_usd: r23(before),
+      value_after_usd: r23(after),
+      change_usd: r23(after - before - newMoney),
+      change_pct: before > 0 ? r23((after - before - newMoney) / before * 100) : null,
+      cash_from_sells_usd: r23(cash),
+      new_money_usd: r23(newMoney),
+      realized_profit_from_sells_usd: r23(realized),
+      all_time_profit_now_usd: r23(s.total),
+      all_time_profit_after_usd: r23(s.total + priceGain),
+      all_time_profit_after_pct: s.invested + newMoney > 0 ? r23((s.total + priceGain) / (s.invested + newMoney) * 100) : null,
+      changed_coins: rows.filter((r) => r.p !== r.price || r.sold || r.buyUsd).sort((a, b) => Math.abs(b.qty * b.p - b.qty * b.price) - Math.abs(a.qty * a.p - a.qty * a.price)).slice(0, 20).map((r) => ({ ticker: r.sym, price_now: r62(r.price), price_then: r62(r.p), value_then_usd: r23(r.qty * r.p), profit_vs_average_pct: r.avg > 0 ? r23((r.p / r.avg - 1) * 100) : null })),
       trades,
       exit_take_profits_reached: tps,
       note: "coins not mentioned keep today's price; sells go to cash (USD)"
@@ -1873,7 +2131,7 @@ async function runTool(ctx, name, input) {
       days,
       start_usd: r62(pts[0][1]),
       end_usd: r62(pts[pts.length - 1][1]),
-      change_pct: r22((pts[pts.length - 1][1] / pts[0][1] - 1) * 100),
+      change_pct: r23((pts[pts.length - 1][1] / pts[0][1] - 1) * 100),
       high: { usd: r62(hi[1]), on: day(hi[0]) },
       low: { usd: r62(lo[1]), on: day(lo[0]) },
       daily_closes: closes
@@ -1891,6 +2149,7 @@ function system(now, lang2, qLang) {
     "- For liquidation / squeeze / leverage / funding questions always call get_derivatives (with get_coin and get_history for the levels).",
     '- "Tell me / alert me / \u0646\u0628\u0651\u0647\u0646\u064A if \u2026" \u2192 set_alert (then confirm in one short line what was set, the value now, and if already_met that it waits for the next crossing). "What if / \u0644\u0648 \u2026" about prices or trades \u2192 what_if (with get_coin for a coin he does not hold).',
     `- "I bought / I sold / \u0627\u0634\u062A\u0631\u064A\u062A / \u0628\u0639\u062A \u2026" (a trade he MADE) \u2192 record_trade. It is only prepared, and the bot shows the full summary itself \u2014 so your whole answer is ONE short line ("\u{1F9FE} \u062C\u0627\u0647\u0632\u0629 \u2014 \u0631\u0627\u062C\u0639 \u0627\u0644\u0645\u0644\u062E\u0635 \u062A\u062D\u062A \u0648\u0627\u0636\u063A\u0637 \u2705 \u062A\u0623\u0643\u064A\u062F" / "\u{1F9FE} Ready \u2014 check the summary below and tap \u2705 Confirm"), plus at most one line if something needs attention (e.g. a price far from today's). No sections, no repeated numbers. Never say it is saved. A trade he is only thinking about ("should I / what if I sell") \u2192 what_if, not record_trade.`,
+    "- paper / practice / pretend / \u062A\u062C\u0631\u064A\u0628\u064A / \u0648\u0647\u0645\u064A \u2192 paper_trade or get_paper (the pretend portfolio) \u2014 never record_trade or the real portfolio. Confirm a paper trade in 1\u20132 lines (done, price, cash left).",
     "- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.",
     '- About the future: give scenarios, levels and probabilities with reasons \u2014 never promises. Not financial advice, but do give a clear, practical view when asked "should I\u2026" (based on his plan and signals).',
     "STYLE \u2014 like the app's AI Analysis report, short and sharp, all in points:",
@@ -1966,7 +2225,7 @@ async function ask(env, question, lang2 = "en") {
   const left = await countOne(env);
   await remember(env, String(question).slice(0, 2e3), text.slice(0, 3e3));
   const coins = [...ctx.coins].map((x) => x.split("|")).slice(0, 3);
-  return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model, trades: ctx.trades };
+  return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model, trades: ctx.trades, paper: ctx.paper };
 }
 async function compose(env, kind, lang2, facts) {
   if (!env.ANTHROPIC_API_KEY) return null;
@@ -2026,8 +2285,8 @@ async function transcribe(env, voice) {
 var H3 = 36e5;
 var DAY3 = 24 * H3;
 var DEF = { morning: true, evening: true, radar: true, sectors: true, pin: true, morningAt: "08:45", eveningAt: "21:00" };
-var mem4 = /* @__PURE__ */ new Map();
-async function kvGet4(env, k) {
+var mem5 = /* @__PURE__ */ new Map();
+async function kvGet5(env, k) {
   try {
     if (env.RATE) {
       const v = await env.RATE.get(k);
@@ -2035,10 +2294,10 @@ async function kvGet4(env, k) {
     }
   } catch (_) {
   }
-  return mem4.has(k) ? mem4.get(k) : null;
+  return mem5.has(k) ? mem5.get(k) : null;
 }
-async function kvPut4(env, k, v, ttl) {
-  mem4.set(k, v);
+async function kvPut5(env, k, v, ttl) {
+  mem5.set(k, v);
   try {
     if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
   } catch (_) {
@@ -2046,13 +2305,13 @@ async function kvPut4(env, k, v, ttl) {
 }
 var jget = async (env, k, d) => {
   try {
-    const v = JSON.parse(await kvGet4(env, k) || "null");
+    const v = JSON.parse(await kvGet5(env, k) || "null");
     return v == null ? d : v;
   } catch (_) {
     return d;
   }
 };
-var jput = (env, k, v, ttl) => kvPut4(env, k, JSON.stringify(v), ttl);
+var jput = (env, k, v, ttl) => kvPut5(env, k, JSON.stringify(v), ttl);
 async function lang(env) {
   let v = null;
   try {
@@ -2073,7 +2332,7 @@ var send = (env, v, extra = {}) => tg2(env, "sendMessage", { chat_id: env.TELEGR
 var cb = (text, data) => ({ text, callback_data: data });
 var url = (text, u) => ({ text, url: u });
 var LIQ = "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=";
-var r23 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+var r24 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
 var r63 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
 var mins = (hm2) => {
   const [h, m] = String(hm2).split(":").map(Number);
@@ -2157,40 +2416,40 @@ function marketFacts(m, sum) {
   const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
   return {
     btc_usd: m.btc ? r63(m.btc.price) : null,
-    btc_24h_pct: m.btc ? r23(m.btc.ch24) : null,
+    btc_24h_pct: m.btc ? r24(m.btc.ch24) : null,
     fear_greed: m.fng ? { value: m.fng.value, label: m.fng.label, yesterday: m.fng.prev, week_ago: m.fng.week } : null,
-    btc_dominance_pct: r23(d.btc),
-    usdt_dominance_pct: r23(d.usdt),
-    total_mcap_24h_pct: r23(g.mcapCh24),
+    btc_dominance_pct: r24(d.btc),
+    usdt_dominance_pct: r24(d.usdt),
+    total_mcap_24h_pct: r24(g.mcapCh24),
     altcoin_season: m.alt && m.alt.value != null ? m.alt.value : null,
     etf_flows: e ? { day: e.label, btc_usd: Math.round(e.btc), eth_usd: Math.round(e.eth) } : null
   };
 }
-var pfFacts = (sum) => ({ value_usd: r23(sum.value), change_24h_pct: r23(sum.ch24), change_24h_usd: r23(sum.d24), all_time_profit_usd: r23(sum.total), all_time_profit_pct: r23(sum.pctTotal), vs_holding_btc_pct: r23(sum.vsBtc) });
+var pfFacts = (sum) => ({ value_usd: r24(sum.value), change_24h_pct: r24(sum.ch24), change_24h_usd: r24(sum.d24), all_time_profit_usd: r24(sum.total), all_time_profit_pct: r24(sum.pctTotal), vs_holding_btc_pct: r24(sum.vsBtc) });
 function todo(sum, now) {
   const out = [], add = (prio, o) => out.push({ prio, ...o });
   const tomorrow = localParts(now + DAY3).date;
   for (const x of sum.dca || []) {
-    if (x.s.state === "today") add(100, { what: "dca_today", coin: x.sym, buy_usd: r23(x.s.usd) });
-    else if (x.s.state === "missed") add(90, { what: "dca_missed", coin: x.sym, buy_usd: r23(x.s.usd), days_late: x.s.late });
-    else if (x.s.next === tomorrow) add(20, { what: "dca_tomorrow", coin: x.sym, buy_usd: r23(x.s.usd) });
+    if (x.s.state === "today") add(100, { what: "dca_today", coin: x.sym, buy_usd: r24(x.s.usd) });
+    else if (x.s.state === "missed") add(90, { what: "dca_missed", coin: x.sym, buy_usd: r24(x.s.usd), days_late: x.s.late });
+    else if (x.s.next === tomorrow) add(20, { what: "dca_tomorrow", coin: x.sym, buy_usd: r24(x.s.usd) });
   }
   for (const x of sum.buyAt || []) {
     const away = (x.price / x.at - 1) * 100;
-    if (away <= 3) add(away <= 0 ? 95 : 85, { what: away <= 0 ? "at_buy_price" : "near_buy_price", coin: x.sym, price_usd: r63(x.price), your_buy_price_usd: r63(x.at), pct_above_buy_price: r23(away), still_to_buy: x.left != null ? r63(x.left) : null });
+    if (away <= 3) add(away <= 0 ? 95 : 85, { what: away <= 0 ? "at_buy_price" : "near_buy_price", coin: x.sym, price_usd: r63(x.price), your_buy_price_usd: r63(x.at), pct_above_buy_price: r24(away), still_to_buy: x.left != null ? r63(x.left) : null });
   }
   for (const t of sum.tps || []) {
     const to = (t.level / t.price - 1) * 100;
     if (to <= 0) add(92, { what: "take_profit_reached", coin: t.sym, tp: t.n, level_usd: r63(t.level), price_usd: r63(t.price), sell_pct: t.pct });
-    else if (to <= 7) add(80, { what: "take_profit_close", coin: t.sym, tp: t.n, level_usd: r63(t.level), price_usd: r63(t.price), pct_to_go: r23(to), sell_pct: t.pct });
+    else if (to <= 7) add(80, { what: "take_profit_close", coin: t.sym, tp: t.n, level_usd: r63(t.level), price_usd: r63(t.price), pct_to_go: r24(to), sell_pct: t.pct });
   }
   const met2 = (sum.macro || []).filter((x) => x.met).length;
   if (met2 >= 2) add(75, { what: "exit_conditions", met_of_3: met2 });
   if (sum.alloc) for (const g of sum.alloc.groups.filter((g2) => g2.state !== "ok").sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift)).slice(0, 1))
-    add(50, { what: g.drift > 0 ? "allocation_over" : "allocation_under", group: sum.alloc.names[g.key] || g.key, now_pct: r23(g.now), target_pct: r23(g.target), usd_to_fix: Math.round(Math.abs(g.full)) });
+    add(50, { what: g.drift > 0 ? "allocation_over" : "allocation_under", group: sum.alloc.names[g.key] || g.key, now_pct: r24(g.now), target_pct: r24(g.target), usd_to_fix: Math.round(Math.abs(g.full)) });
   const rows = sum.coins.filter((c) => !isStable(c.sym) && c.value >= 5);
-  rows.filter((c) => sum.signal[c.sym] === "reinforce").sort((a, b) => a.chg - b.chg).slice(0, 2).forEach((c) => add(40, { what: "reinforce_signal", coin: c.sym, pct_vs_your_avg: r23(c.chg), price_usd: r63(c.price), your_avg_usd: r63(c.avg) }));
-  rows.filter((c) => sum.signal[c.sym] === "sell").sort((a, b) => b.chg - a.chg).slice(0, 2).forEach((c) => add(45, { what: "sell_signal", coin: c.sym, pct_vs_your_avg: r23(c.chg), price_usd: r63(c.price) }));
+  rows.filter((c) => sum.signal[c.sym] === "reinforce").sort((a, b) => a.chg - b.chg).slice(0, 2).forEach((c) => add(40, { what: "reinforce_signal", coin: c.sym, pct_vs_your_avg: r24(c.chg), price_usd: r63(c.price), your_avg_usd: r63(c.avg) }));
+  rows.filter((c) => sum.signal[c.sym] === "sell").sort((a, b) => b.chg - a.chg).slice(0, 2).forEach((c) => add(45, { what: "sell_signal", coin: c.sym, pct_vs_your_avg: r24(c.chg), price_usd: r63(c.price) }));
   return out.sort((a, b) => b.prio - a.prio).slice(0, 8).map(({ prio, ...o }) => o);
 }
 function nearest(alerts, m, sum) {
@@ -2203,10 +2462,10 @@ function nearest(alerts, m, sum) {
     if (KINDS[a.kind].what !== "price") continue;
     const p = priceOf(a.sym, a.cg);
     if (!p) continue;
-    out.push({ alert: describe(a), price_usd: r63(p), pct_away: r23(Math.abs(p / a.value - 1) * 100) });
+    out.push({ alert: describe(a), price_usd: r63(p), pct_away: r24(Math.abs(p / a.value - 1) * 100) });
   }
-  for (const t of sum.tps || []) if (t.level > t.price) out.push({ level: `${t.sym} TP${t.n} ${usd(t.level)}`, price_usd: r63(t.price), pct_away: r23((t.level / t.price - 1) * 100) });
-  for (const x of sum.buyAt || []) if (x.price > x.at) out.push({ level: `${x.sym} buy price ${usd(x.at)}`, price_usd: r63(x.price), pct_away: r23((x.price / x.at - 1) * 100) });
+  for (const t of sum.tps || []) if (t.level > t.price) out.push({ level: `${t.sym} TP${t.n} ${usd(t.level)}`, price_usd: r63(t.price), pct_away: r24((t.level / t.price - 1) * 100) });
+  for (const x of sum.buyAt || []) if (x.price > x.at) out.push({ level: `${x.sym} buy price ${usd(x.at)}`, price_usd: r63(x.price), pct_away: r24((x.price / x.at - 1) * 100) });
   return out.sort((a, b) => a.pct_away - b.pct_away).slice(0, 4);
 }
 async function morning(env, now = Date.now(), L = null) {
@@ -2222,7 +2481,7 @@ async function morning(env, now = Date.now(), L = null) {
     todo: tasks,
     closest_levels: nearest(alerts, m, sum),
     signals: sum.counts,
-    plan_progress_pct: r23(sum.prog && sum.prog.pct)
+    plan_progress_pct: r24(sum.prog && sum.prog.pct)
   };
   await jput(env, "tg:snap:" + localParts(now).date, { t: now, value: sum.value, btc: m.btc && m.btc.price, fng: m.fng && m.fng.value, dom: m.global && m.global.dom && m.global.dom.btc }, 2 * 86400);
   const body = await compose(env, "morning", L, facts) || plainMorning(L, facts);
@@ -2244,18 +2503,18 @@ async function evening(env, now = Date.now(), L = null) {
     time_riyadh: local(now, { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
     portfolio: pfFacts(sum),
     since_morning: snap ? {
-      portfolio_change_usd: r23(sum.value - snap.value),
-      portfolio_change_pct: snap.value > 0 ? r23((sum.value / snap.value - 1) * 100) : null,
+      portfolio_change_usd: r24(sum.value - snap.value),
+      portfolio_change_pct: snap.value > 0 ? r24((sum.value / snap.value - 1) * 100) : null,
       btc_morning_usd: r63(snap.btc),
-      btc_change_pct: snap.btc > 0 && m.btc ? r23((m.btc.price / snap.btc - 1) * 100) : null,
+      btc_change_pct: snap.btc > 0 && m.btc ? r24((m.btc.price / snap.btc - 1) * 100) : null,
       fear_greed_morning: snap.fng,
-      btc_dominance_morning: r23(snap.dom)
+      btc_dominance_morning: r24(snap.dom)
     } : null,
-    best_coins_24h: movers.slice(0, 3).map((c) => ({ coin: c.sym, pct: r23(c.ch24) })),
-    worst_coins_24h: movers.slice(-3).reverse().filter((c) => c.ch24 < 0).map((c) => ({ coin: c.sym, pct: r23(c.ch24) })),
+    best_coins_24h: movers.slice(0, 3).map((c) => ({ coin: c.sym, pct: r24(c.ch24) })),
+    worst_coins_24h: movers.slice(-3).reverse().filter((c) => c.ch24 < 0).map((c) => ({ coin: c.sym, pct: r24(c.ch24) })),
     market: marketFacts(m, sum),
     btc_futures: d && d.summary ? { funding_8h_pct: d.summary.funding_8h_pct_avg, funding_reading: d.summary.funding_reading, open_interest_24h_pct: d.summary.open_interest_change_24h_pct, long_accounts_pct: d.summary.long_accounts_pct } : null,
-    sectors_24h: sectors.length ? { best: sectors.filter((s) => s.ch24 > 0).sort((a, b) => b.ch24 - a.ch24).slice(0, 3).map((s) => ({ name: s.name, pct: r23(s.ch24) })), worst: sectors.filter((s) => s.ch24 < 0).sort((a, b) => a.ch24 - b.ch24).slice(0, 3).map((s) => ({ name: s.name, pct: r23(s.ch24) })) } : null,
+    sectors_24h: sectors.length ? { best: sectors.filter((s) => s.ch24 > 0).sort((a, b) => b.ch24 - a.ch24).slice(0, 3).map((s) => ({ name: s.name, pct: r24(s.ch24) })), worst: sectors.filter((s) => s.ch24 < 0).sort((a, b) => a.ch24 - b.ch24).slice(0, 3).map((s) => ({ name: s.name, pct: r24(s.ch24) })) } : null,
     trades_today: trades,
     events_today: log.map((e) => ({ time: local(e.t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }), type: e.type, what: e.text })),
     closest_levels: nearest(alerts, m, sum),
@@ -2273,7 +2532,7 @@ var TODO_TXT = {
     at_buy_price: `\u{1F3AF} ${x.coin} ${usd(x.price_usd)} \u2014 at your buy price ${usd(x.your_buy_price_usd)}`,
     near_buy_price: `\u{1F3AF} ${x.coin} ${pct(x.pct_above_buy_price, 1)} above your buy price ${usd(x.your_buy_price_usd)}`,
     take_profit_reached: `\u{1F4B0} ${x.coin} reached TP${x.tp} ${usd(x.level_usd)} \u2014 sell ${x.sell_pct}%`,
-    take_profit_close: `\u{1F4B0} ${x.coin} ${r23(x.pct_to_go)}% from TP${x.tp} ${usd(x.level_usd)}`,
+    take_profit_close: `\u{1F4B0} ${x.coin} ${r24(x.pct_to_go)}% from TP${x.tp} ${usd(x.level_usd)}`,
     exit_conditions: `\u{1F6AA} Exit: ${x.met_of_3}/3 conditions met`,
     allocation_over: `\u2696\uFE0F ${x.group} ${x.now_pct}% vs ${x.target_pct}% \u2014 trim ${usd(x.usd_to_fix)}`,
     allocation_under: `\u2696\uFE0F ${x.group} ${x.now_pct}% vs ${x.target_pct}% \u2014 add ${usd(x.usd_to_fix)}`,
@@ -2287,7 +2546,7 @@ var TODO_TXT = {
     at_buy_price: `\u{1F3AF} ${x.coin} ${usd(x.price_usd)} \u2014 \u0648\u0635\u0644 \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 \u0628\u062A\u0627\u0639\u0643 ${usd(x.your_buy_price_usd)}`,
     near_buy_price: `\u{1F3AF} ${x.coin} \u0641\u0648\u0642 \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 ${usd(x.your_buy_price_usd)} \u0628\u0640 ${pct(x.pct_above_buy_price, 1)}`,
     take_profit_reached: `\u{1F4B0} ${x.coin} \u0648\u0635\u0644 TP${x.tp} ${usd(x.level_usd)} \u2014 \u0628\u064A\u0639 ${x.sell_pct}%`,
-    take_profit_close: `\u{1F4B0} ${x.coin} \u0628\u0627\u0642\u064A ${r23(x.pct_to_go)}% \u0639\u0644\u0649 TP${x.tp} ${usd(x.level_usd)}`,
+    take_profit_close: `\u{1F4B0} ${x.coin} \u0628\u0627\u0642\u064A ${r24(x.pct_to_go)}% \u0639\u0644\u0649 TP${x.tp} ${usd(x.level_usd)}`,
     exit_conditions: `\u{1F6AA} \u0627\u0644\u062E\u0631\u0648\u062C: ${x.met_of_3}/3 \u0634\u0631\u0648\u0637 \u0627\u062A\u062D\u0642\u0642\u062A`,
     allocation_over: `\u2696\uFE0F ${x.group} ${x.now_pct}% \u0648\u0627\u0644\u0647\u062F\u0641 ${x.target_pct}% \u2014 \u0642\u0644\u0651\u0644 ${usd(x.usd_to_fix)}`,
     allocation_under: `\u2696\uFE0F ${x.group} ${x.now_pct}% \u0648\u0627\u0644\u0647\u062F\u0641 ${x.target_pct}% \u2014 \u0632\u0648\u0651\u062F ${usd(x.usd_to_fix)}`,
@@ -2378,8 +2637,8 @@ async function radar(env, now = Date.now()) {
     idOf = { ...m.idOf, BTC: "bitcoin" };
     list2 = [.../* @__PURE__ */ new Set(["BTC", ...sum.coins.filter((c) => !isStable(c.sym) && (!fut || fut.has(c.sym))).sort((a, b) => b.value - a.value).slice(0, 3).map((c) => c.sym)])];
   }
-  const i = (+await kvGet4(env, "tg:radar:i") || 0) % list2.length, sym = list2[i];
-  await kvPut4(env, "tg:radar:i", String(i + 1));
+  const i = (+await kvGet5(env, "tg:radar:i") || 0) % list2.length, sym = list2[i];
+  await kvPut5(env, "tg:radar:i", String(i + 1));
   const d = await derivatives(sym).catch(() => null);
   if (!d || !d.summary) return { sym, sent: 0 };
   const s = d.summary, seen = await jget(env, "tg:radar:seen", {});
@@ -2393,7 +2652,7 @@ async function radar(env, now = Date.now()) {
   const lines = [`\u{1F9F2} <b>${ww.radar} \xB7 ${esc(sym)}</b>`, ...fresh.map((k) => `\u26A0\uFE0F <b>${w[k]}</b>`), ""];
   if (s.funding_8h_pct_avg != null) lines.push(`\u2022 ${w.fund}: <b>${s.funding_8h_pct_avg > 0 ? "+" : ""}${s.funding_8h_pct_avg}%</b> / 8h (\u2248 ${s.funding_annualized_pct > 0 ? "+" : ""}${s.funding_annualized_pct}% ${w.yr})`);
   if (s.open_interest_change_24h_pct != null) lines.push(`\u2022 ${w.oi}: <b>${pct(s.open_interest_change_24h_pct, 1)}</b>${s.open_interest_usd_total ? " (" + usd(s.open_interest_usd_total) + ")" : ""}`);
-  if (s.long_accounts_pct != null) lines.push(`\u2022 ${w.longs}: <b>${r23(s.long_accounts_pct)}%</b>`);
+  if (s.long_accounts_pct != null) lines.push(`\u2022 ${w.longs}: <b>${r24(s.long_accounts_pct)}%</b>`);
   if (s.liquidations_24h) lines.push(`\u2022 ${w.liq}: ${w.longsW} ${usd(s.liquidations_24h.longs_usd)} \xB7 ${w.shortsW} ${usd(s.liquidations_24h.shorts_usd)}`);
   const longSide = fresh.some((k) => /hot_longs|crowd_long/.test(k)), shortSide = fresh.some((k) => /hot_shorts|crowd_short/.test(k));
   lines.push("", `<i>${longSide && !shortSide ? w.noteL : shortSide && !longSide ? w.noteS : w.noteN}</i>`);
@@ -2595,6 +2854,7 @@ var T = {
     alertsB: "\u{1F514} Alerts",
     alertGone: "\u{1F5D1} Alert deleted",
     dailyB: "\u{1F5D3} Daily",
+    paperB: "\u{1F9EA} Paper",
     working: "\u23F3 On it\u2026",
     pinOff: "Pinned message off \u2014 /pin brings it back.",
     other: "\u{1F310} \u0639\u0631\u0628\u064A",
@@ -2730,6 +2990,7 @@ var T = {
     alertsB: "\u{1F514} \u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A",
     alertGone: "\u{1F5D1} \u0627\u062A\u0645\u0633\u062D \u0627\u0644\u062A\u0646\u0628\u064A\u0647",
     dailyB: "\u{1F5D3} \u0627\u0644\u064A\u0648\u0645\u064A",
+    paperB: "\u{1F9EA} \u062A\u062C\u0631\u064A\u0628\u064A",
     working: "\u23F3 \u062B\u0648\u0627\u0646\u064A\u2026",
     pinOff: "\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062A\u062B\u0628\u062A\u0629 \u0627\u062A\u0642\u0641\u0644\u062A \u2014 /pin \u062A\u0631\u062C\u0651\u0639\u0647\u0627.",
     other: "\u{1F310} English",
@@ -2802,7 +3063,7 @@ function spark(arr, n = 16) {
   const lo = Math.min(...pts), hi = Math.max(...pts);
   return pts.map((v) => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join("");
 }
-var menuRows = (t) => [[cb2(t.pf, "pf"), cb2(t.market, "mk")], [cb2(t.plan, "pl"), cb2(t.movers, "mv")], [cb2(t.signals, "sg"), cb2(t.exit, "ex")], [cb2(t.alertsB, "al"), cb2(t.coin, "coin")], [cb2(t.dailyB, "dy"), cb2(t.other, "lang:" + t.otherCode)]];
+var menuRows = (t) => [[cb2(t.pf, "pf"), cb2(t.market, "mk")], [cb2(t.plan, "pl"), cb2(t.movers, "mv")], [cb2(t.signals, "sg"), cb2(t.exit, "ex")], [cb2(t.alertsB, "al"), cb2(t.coin, "coin")], [cb2(t.dailyB, "dy"), cb2(t.paperB, "pp")], [cb2(t.other, "lang:" + t.otherCode)]];
 var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }, { text: t.kb.pl }], [{ text: t.kb.ex }, { text: t.kb.mv }, { text: t.kb.sg }]], resize_keyboard: true, is_persistent: false, input_field_placeholder: "btc \xB7 sol eth \xB7 /menu" });
 var KB_ACT = () => Object.fromEntries(Object.values(T).flatMap((L) => [...Object.entries(L.kb), ...Object.entries(L.kbOld || {})].map(([act, text]) => [text, act])));
 var memLang = null;
@@ -3004,6 +3265,7 @@ var WORDS = [
   [/^\/(new|reset|clear)$|^محادثة جديدة$/i, "new"],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, "al"],
   [/^\/(daily|settings)$|^اليومي$/i, "dy"],
+  [/^\/(paper|practice)$|^تجريبي$/i, "pp"],
   [/^\/morning$/i, "dy:now:m"],
   [/^\/evening$/i, "dy:now:e"],
   [/^\/pin$/i, "pin:on"],
@@ -3093,6 +3355,27 @@ async function handleTelegram(request, env) {
       if (/^lang:(ar|en)$/.test(d)) {
         await switchLang(env, chat, d.slice(5), q.message.message_id);
         await done();
+        return ok();
+      }
+      if (d === "pp" || /^pp:/.test(d)) {
+        const lang2 = await getLang(env), w = paperWords[lang2];
+        if (d === "pp:new") {
+          await edit(env, chat, q.message.message_id, viewRestart(lang2));
+          await done();
+          return ok();
+        }
+        let note = null;
+        if (d === "pp:undo") {
+          const r4 = await undoLast(env);
+          note = r4.ok ? w.undone : w.nothing;
+        }
+        if (/^pp:new:\d+$/.test(d)) {
+          const r4 = await reset(env, +d.slice(7));
+          note = r4.ok ? "\u{1F501} " + usd(+d.slice(7)) : "\u26A0\uFE0F";
+        }
+        const v = await viewPaper(env, lang2), r3 = await edit(env, chat, q.message.message_id, v);
+        if (!r3.ok && !/not modified/i.test(r3.description || "")) await send2(env, chat, v);
+        await done(note || `\u2705 ${T[lang2].updated}`);
         return ok();
       }
       if (d === "dy" || /^dy:/.test(d) || d === "pin:r") {
@@ -3221,6 +3504,10 @@ async function onText(env, chat, text, budget = 36, into = null) {
     await send2(env, chat, await viewDaily(env));
     return;
   }
+  if (p.act === "pp") {
+    await send2(env, chat, await viewPaper(env, await getLang(env)));
+    return;
+  }
   if (p.act === "dy:now:m") {
     await morning(env);
     return;
@@ -3290,6 +3577,7 @@ ${t.aiLeft(r.left, r.limit)}</i>`;
   const btns = [];
   if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb2("\u{1FA99} " + sym, "c:" + cid.slice(0, 58))));
   if (r.coins.length === 1) btns[0].push(url2("\u{1F525} Liq Map", LIQ2 + encodeURIComponent(r.coins[0][1])));
+  if (r.paper) btns.push([cb2(t.paperB, "pp"), cb2(paperWords[lang2].undo, "pp:undo")]);
   btns.push([cb2(t.newChat, "new"), cb2(t.back, "menu")]);
   let tx = "";
   if (r.trades && r.trades.length) {
@@ -3336,6 +3624,7 @@ var cmds = (lang2) => {
     ["movers", a ? "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" : "Best & worst"],
     ["signals", a ? "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" : "Signals"],
     ["alerts", a ? "\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643" : "Your alerts"],
+    ["paper", a ? "\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A" : "Paper trading"],
     ["daily", a ? "\u0627\u0644\u0635\u0628\u0627\u062D \u0648\u0627\u0644\u0645\u0633\u0627\u0621 \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A" : "Morning, evening, radars"],
     ["morning", a ? "\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A \u062F\u0644\u0648\u0642\u062A\u064A" : "Smart morning now"],
     ["evening", a ? "\u0627\u0644\u0645\u0633\u0627\u0621 \u0627\u0644\u0630\u0643\u064A \u062F\u0644\u0648\u0642\u062A\u064A" : "Smart evening now"],

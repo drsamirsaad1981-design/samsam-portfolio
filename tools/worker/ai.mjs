@@ -14,6 +14,7 @@ import { summarize, settings, local, localParts, isStable, etfDay, APP } from '.
 import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries, derivatives } from './data.mjs';
 import { addAlert, listAlerts, deleteAlert, describe, KINDS } from './watch.mjs';
 import { prepareTrade } from './trade.mjs';
+import { paperTrade, paperFacts } from './paper.mjs';
 
 const H = 3600e3, DAY = 24 * H;
 const LIMIT = env => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30));
@@ -67,6 +68,9 @@ export const TOOLS = [
       buy: { type: 'array', items: { type: 'object', properties: { coin: { type: 'string' }, usd: { type: 'number' } }, required: ['coin', 'usd'] } } } } },
   { name: 'record_trade', description: 'PREPARE a trade the user says he made ("bought 0.01 BTC at 95k", "اشتريت 5 SOL بـ 140", "sold half my LINK at 18", "بعت 100 دولار ETH بسعر السوق"). It is NOT saved: the bot shows it with ✅ Confirm / ❌ Cancel buttons; only his tap saves it. Only for coins already in his portfolio. amount = coins (for "half my LINK" call get_portfolio first and pass the number); price_usd per coin, OR total_usd (with amount or price), OR at_market true when he says market / now price. fee_usd optional. date: YYYY-MM-DD (or with time) only when he says when ("yesterday" → that date), else leave it out (= now). paid_with (buy) / received_in (sell): a stablecoin he names ("with USDT", "into USDC") — that coin moves too, like the app. One call per trade. If the price or amount is missing and he did not say market price, ask him instead of guessing.',
     input_schema: { type: 'object', properties: { side: { type: 'string', enum: ['buy', 'sell'] }, coin: { type: 'string' }, amount: { type: 'number' }, price_usd: { type: 'number' }, total_usd: { type: 'number' }, at_market: { type: 'boolean' }, fee_usd: { type: 'number' }, date: { type: 'string' }, paid_with: { type: 'string' }, received_in: { type: 'string' }, note: { type: 'string' } }, required: ['side', 'coin'] } },
+  { name: 'paper_trade', description: 'PAPER (pretend) trading — a separate practice portfolio at real prices, never the real one. Use ONLY when the user says paper / practice / pretend / تجريبي / وهمي / تجربة ("paper buy 0.1 BTC", "تجريبي اشتري SOL بـ 500 دولار", "paper sell half my ETH"). Done at once at the live price (0.1% fee). amount = coins, or usd = dollars, or (sell) fraction 0–1. Any coin. The user can tap ↩️ Undo.',
+    input_schema: { type: 'object', properties: { side: { type: 'string', enum: ['buy', 'sell'] }, coin: { type: 'string' }, amount: { type: 'number' }, usd: { type: 'number' }, fraction: { type: 'number' } }, required: ['side', 'coin'] } },
+  { name: 'get_paper', description: 'The PAPER (pretend) portfolio: value, cash, profit, vs the same money in BTC since the start, each coin, the last trades.', input_schema: { type: 'object', properties: {} } },
   { name: 'get_history', description: 'Hourly price history of a coin for the last N days (1–29): start, end, % change, high and low with their dates, and the daily closes. Only for coins GitHub keeps a price file for (the user\'s coins and the big ones); otherwise it says so.',
     input_schema: { type: 'object', properties: { coin: { type: 'string' }, days: { type: 'integer', minimum: 1, maximum: 29 } }, required: ['coin'] } },
 ];
@@ -75,7 +79,7 @@ export const TOOLS = [
 function context(env) {
   let user, base, sum, used = new Set(), coins = new Set();
   const ctx = {
-    env, used, coins, trades: [],
+    env, used, coins, trades: [], paper: false,
     async user() { if (user === undefined) user = loadUser(env).catch(() => null); return user; },   // one read shared by every tool
     async market(extra = []) {
       const u = await ctx.user();
@@ -168,6 +172,8 @@ export async function runTool(ctx, name, input) {
   if (name === 'list_alerts') { const l = await listAlerts(ctx.env); return { alerts: l.map(a => ({ id: a.id, alert: describe(a), armed: a.armed, note: a.note || undefined })) }; }
   if (name === 'delete_alert') return { deleted: await deleteAlert(ctx.env, String((input && input.id) || '')) };
   if (name === 'record_trade') { ctx.used.add('your portfolio (Firebase)'); return prepareTrade(ctx, input); }
+  if (name === 'paper_trade') { ctx.used.add('paper portfolio (live prices)'); ctx.paper = true; return paperTrade(ctx.env, input); }
+  if (name === 'get_paper') { ctx.used.add('paper portfolio (live prices)'); ctx.paper = true; return paperFacts(ctx.env); }
   if (name === 'what_if') {
     const x = await ctx.sum(); if (!x) return { error: 'portfolio not connected' };
     const { s } = x; ctx.used.add('your portfolio (Firebase)'); ctx.used.add('what-if (the app\'s maths)');
@@ -221,6 +227,7 @@ function system(now, lang, qLang) {
     '- For liquidation / squeeze / leverage / funding questions always call get_derivatives (with get_coin and get_history for the levels).',
     '- "Tell me / alert me / نبّهني if …" → set_alert (then confirm in one short line what was set, the value now, and if already_met that it waits for the next crossing). "What if / لو …" about prices or trades → what_if (with get_coin for a coin he does not hold).',
     '- "I bought / I sold / اشتريت / بعت …" (a trade he MADE) → record_trade. It is only prepared, and the bot shows the full summary itself — so your whole answer is ONE short line ("🧾 جاهزة — راجع الملخص تحت واضغط ✅ تأكيد" / "🧾 Ready — check the summary below and tap ✅ Confirm"), plus at most one line if something needs attention (e.g. a price far from today\'s). No sections, no repeated numbers. Never say it is saved. A trade he is only thinking about ("should I / what if I sell") → what_if, not record_trade.',
+    '- paper / practice / pretend / تجريبي / وهمي → paper_trade or get_paper (the pretend portfolio) — never record_trade or the real portfolio. Confirm a paper trade in 1–2 lines (done, price, cash left).',
     '- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.',
     '- About the future: give scenarios, levels and probabilities with reasons — never promises. Not financial advice, but do give a clear, practical view when asked "should I…" (based on his plan and signals).',
     'STYLE — like the app\'s AI Analysis report, short and sharp, all in points:',
@@ -283,7 +290,7 @@ export async function ask(env, question, lang = 'en') {
   const left = await countOne(env);
   await remember(env, String(question).slice(0, 2000), text.slice(0, 3000));
   const coins = [...ctx.coins].map(x => x.split('|')).slice(0, 3);
-  return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model, trades: ctx.trades };
+  return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model, trades: ctx.trades, paper: ctx.paper };
 }
 
 // ── the smart morning / evening (phase 5): the facts the bot gathered → one short report in the AI Analysis style ──

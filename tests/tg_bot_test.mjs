@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -102,6 +102,9 @@ globalThis.fetch = async (input, init = {}) => {
     if (/i sold 20 link/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tr2', name: 'record_trade', input: { side: 'sell', coin: 'link', amount: 20, price_usd: 18, fee_usd: 1, date: '2026-11-10' } }] });
     if (/i sold 999 sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tr3', name: 'record_trade', input: { side: 'sell', coin: 'sol', amount: 999, price_usd: 150 } }, { type: 'tool_use', id: 'tr4', name: 'record_trade', input: { side: 'buy', coin: 'doge', amount: 10, price_usd: 0.2 } }, { type: 'tool_use', id: 'tr5', name: 'record_trade', input: { side: 'buy', coin: 'sol', amount: 1 } }, { type: 'tool_use', id: 'tr6', name: 'record_trade', input: { side: 'buy', coin: 'sol', amount: 1, price_usd: 15000 } }, { type: 'tool_use', id: 'tr7', name: 'record_trade', input: { side: 'buy', coin: 'sol', amount: 1, price_usd: 150, date: '2030-01-01' } }] });
     if (/two buys/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tr8', name: 'record_trade', input: { side: 'buy', coin: 'btc', total_usd: 770, at_market: true } }, { type: 'tool_use', id: 'tr9', name: 'record_trade', input: { side: 'buy', coin: 'link', amount: 10, total_usd: 120 } }] });
+    if (/paper buy btc/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'pa1', name: 'paper_trade', input: { side: 'buy', coin: 'btc', usd: 1000 } }] });
+    if (/paper sell half/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'pa2', name: 'paper_trade', input: { side: 'sell', coin: 'btc', fraction: 0.5 } }, { type: 'tool_use', id: 'pa3', name: 'get_paper', input: {} }] });
+    if (/paper too much/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'pa4', name: 'paper_trade', input: { side: 'buy', coin: 'sol', usd: 1e7 } }, { type: 'tool_use', id: 'pa5', name: 'paper_trade', input: { side: 'sell', coin: 'link', amount: 1 } }, { type: 'tool_use', id: 'pa6', name: 'paper_trade', input: { side: 'buy', coin: 'usdt', usd: 10 } }] });
     if (/what if/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tw1', name: 'what_if', input: { prices: { BTC: 100000 } } }, { type: 'tool_use', id: 'tw2', name: 'what_if', input: { moves_pct: { SOL: -20 }, sell: [{ coin: 'sol', fraction: 0.5 }], buy: [{ coin: 'link', usd: 110 }] } }, { type: 'tool_use', id: 'tw3', name: 'what_if', input: { prices: { LINK: 26 } } }] });
     if (/futures of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'td1', name: 'get_derivatives', input: { coin: 'sol' } }, { type: 'tool_use', id: 'td2', name: 'get_derivatives', input: { coin: 'zzqq' } }] });
     if (/liq of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tq1', name: 'get_coin', input: { coin: 'sol' } }, { type: 'tool_use', id: 'tq2', name: 'get_history', input: { coin: 'sol', days: 3 } }, { type: 'tool_use', id: 'tq3', name: 'get_derivatives', input: { coin: 'sol' } }, { type: 'tool_use', id: 'tq4', name: 'get_portfolio', input: {} }] });
@@ -282,7 +285,7 @@ check('tap 🚪 Exit plan → edited in place', last().m === 'editMessageText' &
 sent.length = 0; await say('/signals');
 check('signals: grouped, Telegram-safe', /Signals/.test(last().b.text) && okHtml(last().b.text), last().b.text);
 sent.length = 0; await say('/start');
-check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent === false && btnTexts(out()[1]).length === 10 && btnTexts(out()[1]).includes('🗓 Daily') && btnTexts(out()[1]).includes('🔔 Alerts') && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
+check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent === false && btnTexts(out()[1]).length === 11 && btnTexts(out()[1]).includes('🗓 Daily') && btnTexts(out()[1]).includes('🧪 Paper') && btnTexts(out()[1]).includes('🔔 Alerts') && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
 check('the keyboard under the chat: 6 short buttons in 2 rows, not pinned (the ⌨️ icon hides / shows it)', JSON.stringify(out()[0].b.reply_markup.keyboard.map(r => r.map(b => b.text))) === JSON.stringify([['💼 Portfolio', '🌍 Market', '📋 Plan'], ['🚪 Exit', '🏆 Movers', '🎯 Signals']]) && out()[0].b.reply_markup.is_persistent === false, out()[0].b.reply_markup);
 sent.length = 0; await say('/hide');
 check('/hide → the buttons go away (remove_keyboard) with a note how to bring them back', last().b.reply_markup && last().b.reply_markup.remove_keyboard === true && /⌨️/.test(last().b.text), last().b);
@@ -298,7 +301,7 @@ check('the keyboard button "💼 Portfolio" → the portfolio', last().b.text.in
 await say('/new'); sent.length = 0; claudeCalls.length = 0; await say('what is the price of SOL?');
 v = last();
 check('a question → "🧠 Thinking…" at once, then that same message becomes the answer', sent.find(x => x.m === 'sendMessage').b.text === '🧠 Thinking…' && v.m === 'editMessageText' && v.b.message_id === 7, sent.map(x => x.m));
-check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 12 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
+check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 14 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
 const tr = JSON.parse(claudeCalls[1].messages.at(-1).content[0].content);
 check('get_coin gave Claude: live price + source, rank, 7d high / low, futures, your holding (avg, profit, signal)', tr.price_usd === 150 && /CoinGecko \(live\)/.test(tr.price_source) && tr.you_hold.amount === 10 && tr.you_hold.average_buy_usd === 160 && tr.you_hold.signal && 'perpetual_futures' in tr && tr.high_7d > 0, tr);
 check('the answer is Telegram-safe (its <script> and & escaped, ** → <b>, "- " → •)', okHtml(v.b.text) && /&lt;script&gt;/.test(v.b.text) && /• You hold/.test(v.b.text), v.b.text);
@@ -600,12 +603,42 @@ LIVE.pendle.usd = 3.21;
 // the "/" menu: every command, refreshed by itself when the list changes (no /start needed)
 kvStore.delete('tg:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
 const sc = sent.find(x => x.m === 'setMyCommands'), names = sc ? sc.b.commands.map(c => c.command) : [];
-check('"/" menu sent again by itself: start, daily, morning, evening, alerts, pin, unpin, hide… (18)', names.length === 18 && ['start', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
+check('"/" menu sent again by itself: start, daily, morning, evening, alerts, paper, pin, unpin, hide… (19)', names.length === 19 && ['start', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/menu');
 check('…and only once (remembered in KV)', !sent.some(x => x.m === 'setMyCommands'));
 claudeCalls.length = 0; sent.length = 0;
 for (const c of ['/start', '/menu', '/portfolio', '/price btc', '/market', '/plan', '/exit', '/movers', '/signals', '/alerts', '/daily', '/morning', '/evening', '/pin', '/unpin', '/new', '/lang', '/hide']) { Wd = await fresh(); await postK(Wd, c); }
 check('every command in the "/" menu is understood (none goes to the AI as a question) and answers', claudeCalls.filter(b => !/SMART/.test(b.system || '')).length === 0 && out().length >= 18, [claudeCalls.length, out().length]);
+
+// ── 🧪 phase 9: paper trading — pretend money, real prices, the real portfolio untouched ──
+kvStore.delete('tg:paper'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/paper');
+let pv = last();
+check('/paper → a new pretend portfolio: $10,000 cash, no coins yet, vs BTC', /🧪/.test(pv.b.text) && /\$10,000\.00/.test(pv.b.text) && /(No coins yet|مفيش عملات)/.test(pv.b.text) && JSON.parse(kvStore.get('tg:paper')).btcStart === 77000 && okHtml(pv.b.text), pv.b.text);
+const cmt0 = commits.length; claudeCalls.length = 0; sent.length = 0; Wd = await fresh(); await postK(Wd, 'paper buy btc for 1000');
+let pp = JSON.parse(kvStore.get('tg:paper')), pr = JSON.parse(claudeCalls[1].messages.at(-1).content[0].content);
+check('"paper buy BTC $1000" → done at once at $77,000 with 0.1% fee: 0.012975 BTC, $9,000 cash left', pr.ok && Math.abs(pp.pos.BTC.qty - 1000 / (77000 * 1.001)) < 1e-9 && Math.abs(pp.cash - 9000) < 1e-6 && Math.abs(pp.pos.BTC.avg - 77077) < 0.01, [pr, pp]);
+check('…the real portfolio untouched (no Firestore write) and the answer has 🧪 / ↩️ Undo', commits.length === cmt0 && btns(last()).some(b => b.callback_data === 'pp:undo') && btns(last()).some(b => b.callback_data === 'pp'), btnTexts(last()));
+LIVE.bitcoin.usd = 84700; sent.length = 0; Wd = await fresh(); await postK(Wd, '/paper');
+pv = last();
+check('BTC +10% → paper value $10,098.90; the same $10,000 in BTC from the start = $11,000 → −9.0 pts vs BTC', /\$10,098\.90/.test(pv.b.text) && /\$11,000\.00/.test(pv.b.text) && /−9\.0<\/b> pts/.test(pv.b.text), pv.b.text);
+claudeCalls.length = 0; Wd = await fresh(); await postK(Wd, 'paper sell half my btc');
+const ps = claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
+pp = JSON.parse(kvStore.get('tg:paper'));
+check('"paper sell half" → half the BTC sold at $84,700 minus 0.1%; realized ≈ +$49; get_paper reads it back', ps[0].ok && Math.abs(pp.pos.BTC.qty - 1000 / (77000 * 1.001) / 2) < 1e-9 && Math.abs(ps[0].done.realized - ((84700 - 77077) * pp.pos.BTC.qty - 84700 * pp.pos.BTC.qty * 0.001)) < 0.05 && ps[1].coins[0].coin === 'BTC', [ps[0].done, ps[1].value_usd]);
+const cashBefore = pp.cash; sent.length = 0;
+await Wd.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qp', data: 'pp:undo', message: { message_id: 60, chat: { id: 555 } } } }) }), ENVK, {});
+pp = JSON.parse(kvStore.get('tg:paper'));
+check('↩️ Undo → the sell reversed exactly (BTC and cash back), the view redrawn in place, only once', Math.abs(pp.pos.BTC.qty - 1000 / (77000 * 1.001)) < 1e-9 && Math.abs(pp.cash - 9000) < 1e-6 && pp.cash < cashBefore && !pp.undo && last().m === 'editMessageText' && !btns(last()).some(b => b.callback_data === 'pp:undo'), [pp.cash, pp.pos]);
+claudeCalls.length = 0; Wd = await fresh(); await postK(Wd, 'paper too much');
+const pe = claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content).error);
+check('checks: more than the pretend cash / a coin not in the paper portfolio / a stablecoin → errors', /pretend cash left/.test(pe[0]) && /only 0 LINK/.test(pe[1]) && /stablecoins are the cash/.test(pe[2]), pe);
+sent.length = 0;
+await Wd.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qp2', data: 'pp:new', message: { message_id: 60, chat: { id: 555 } } } }) }), ENVK, {});
+check('🔁 → asks how much: $1,000 / $10,000 / $100,000', btns(last()).map(b => b.callback_data).join() === 'pp:new:1000,pp:new:10000,pp:new:100000,pp');
+await Wd.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qp3', data: 'pp:new:1000', message: { message_id: 60, chat: { id: 555 } } } }) }), ENVK, {});
+pp = JSON.parse(kvStore.get('tg:paper'));
+check('…$1,000 → a fresh paper portfolio from BTC $84,700', pp.cash === 1000 && pp.startCash === 1000 && !Object.keys(pp.pos).length && pp.btcStart === 84700 && /\$1,000\.00/.test(last().b.text), pp);
+LIVE.bitcoin.usd = 77000;
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

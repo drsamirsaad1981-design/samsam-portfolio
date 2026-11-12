@@ -11,5 +11,5 @@ Runs in the same Cloudflare Worker as AI Analysis (`tools/worker/*` → `node to
 6. **Image cards** — coin / portfolio / brief as designed images in the app's colours.
 7. **Telegram Mini App** — "📊 Open the report" opens a full page inside Telegram (AI Analysis design), checked by Telegram's signature.
 8. **Voice** ✅ (brought forward) — Arabic / English voice notes → text (Workers AI Whisper, `tools/worker/voice.mjs`) → shown as "🎙️ I heard: …" → answered as if typed.
-9. **Paper trading** — a separate pretend portfolio at real prices, compared with BTC.
+9. **Paper trading** ✅ — /paper: a separate pretend portfolio ($1k / $10k / $100k) at real prices, 0.1% fee, any coin; "paper buy 0.1 BTC" / "تجريبي اشتري SOL بـ 500" done at once (↩️ undo); compared with the same money kept in BTC (`tools/worker/paper.mjs`).
 10. **Open to everyone** — each person links their own portfolio, daily limits, abuse protection, Arabic + English.
