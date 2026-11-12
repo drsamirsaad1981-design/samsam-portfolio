@@ -105,3 +105,26 @@ export async function api(request, env) {
   try { return json(200, { ok: true, report: await report(env) }); }
   catch (e) { console.log(JSON.stringify({ miniapp: 'error', message: String(e && e.message).slice(0, 200) })); return json(500, { ok: false, error: 'report failed' }); }
 }
+
+// POST /tg/card — an image card drawn in the Mini App (phase 6) → a photo in your chat (to save or forward).
+// The phone draws it (a canvas), so the Worker only checks the signature and passes the JPEG on — almost no CPU.
+export async function cardSend(request, env) {
+  const json = (s, o) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+  if (request.method !== 'POST') return json(405, { ok: false });
+  const body = await request.json().catch(() => ({}));
+  const v = await verifyInitData(String(body.initData || '').slice(0, 4096), env.TELEGRAM_BOT_TOKEN);
+  if (!v.ok) return json(401, { ok: false, error: v.why });
+  if (String(v.user.id) !== String(env.TELEGRAM_CHAT_ID)) return json(403, { ok: false, error: 'private' });
+  const b64 = String(body.jpg || '');
+  if (!b64 || b64.length > 7e6 || !/^[A-Za-z0-9+/=]+$/.test(b64)) return json(400, { ok: false, error: 'no image' });
+  const bin = atob(b64), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  if (!(bytes[0] === 0xFF && bytes[1] === 0xD8)) return json(400, { ok: false, error: 'not a jpeg' });   // only a JPEG goes on
+  const kind = ['pf', 'coin', 'market'].includes(body.kind) ? body.kind : 'pf', sym = String(body.sym || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  const caption = kind === 'coin' && sym ? `🪙 ${sym} · Cute Portfolio` : kind === 'market' ? '🌍 Market · Cute Portfolio' : '💼 Cute Portfolio';
+  const fd = new FormData();
+  fd.append('chat_id', String(env.TELEGRAM_CHAT_ID)); fd.append('caption', caption);
+  fd.append('photo', new Blob([bytes], { type: 'image/jpeg' }), 'cute-portfolio.jpg');
+  const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd }).then(x => x.json()).catch(() => ({ ok: false }));
+  return json(r.ok ? 200 : 502, { ok: !!r.ok });
+}

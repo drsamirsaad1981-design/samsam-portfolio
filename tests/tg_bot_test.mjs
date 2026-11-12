@@ -47,6 +47,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (!u.startsWith('https://api.telegram.org/')) outside++;
   if (u.startsWith('https://api.telegram.org/file/bot123:fake/')) { fileGets.push(u); return new Response(VOICE_BYTES, { status: 200 }); }
   if (u.startsWith('https://api.telegram.org/bot') && u.endsWith('/getFile')) { const b = JSON.parse(body); sent.push({ m: 'getFile', b }); return J({ ok: true, result: { file_id: b.file_id, file_path: 'voice/file_9.oga' } }); }
+  if (u.startsWith('https://api.telegram.org/bot') && body instanceof FormData) { const m = u.split('/').pop(); const ph = body.get('photo'); sent.push({ m, b: { chat_id: body.get('chat_id'), caption: body.get('caption'), photoBytes: ph ? new Uint8Array(await ph.arrayBuffer()) : null } }); return J({ ok: true, result: { message_id: 8 } }); }
   if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); sent.push({ m, b }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
   if (u.includes('raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/')) {
     const f = u.split('/prices/')[1];
@@ -697,6 +698,29 @@ await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_ar.png'), fullP
 REP = { ...rj.report, coins: [{ sym: '<img src=x onerror=alert(1)>', name: '', qty: 1, price: 1, avg: 1, value: 50, share: 100, ch24: 1, ch7: 1, pnl: 1, signal: 'hold', stable: false }], lang: 'en' };
 await pg.click('.btn'); await pg.waitForTimeout(150); await pg.click('.tab >> nth=0');
 check('page never runs data as HTML (a coin named <img onerror> is shown as text)', (await pg.$$('img')).length === 0 && (await pg.innerText('body')).includes('<img'));
+// 📸 image cards: drawn in the page, previewed, sent through /tg/card
+REP = rj.report; await pg.click('.btn'); await pg.waitForTimeout(150);
+let cardBody = null; await pg.route(HOST + '/tg/card', async r => { cardBody = JSON.parse(r.request().postData()); const res = await W.fetch(new Request(HOST + '/tg/card', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...cardBody, initData: initData(555) }) }), ENVK, {}); r.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() }); });
+await pg.click('.hero .cam'); await pg.waitForFunction(() => { const i = document.querySelector('.sheet .prev'); return i && i.naturalWidth === 1080; }, null, { timeout: 5000 });
+check('📸 on the value card → a preview of a 1080×1350 portfolio card', (await pg.$eval('.sheet .prev', i => [i.naturalWidth, i.naturalHeight].join('x'))) === '1080x1350');
+const pv1 = await pg.$eval('.sheet .prev', i => i.src); fs.writeFileSync(path.join(ROOT, 'tests/shots/card_portfolio.png'), Buffer.from(pv1.split(',')[1], 'base64'));
+await pg.click('.sheet .more >> nth=0'); await pg.waitForFunction(old => document.querySelector('.sheet .prev').src !== old, pv1, { timeout: 5000 }).catch(() => {});
+const pv2 = await pg.$eval('.sheet .prev', i => i.src);
+check('…"hide $" redraws it without the amounts (a different image), remembered', pv2 !== pv1 && (await pg.evaluate(() => localStorage.getItem('cp-priv'))) === '1', [pv1.length, pv2.length, await pg.evaluate(() => localStorage.getItem('cp-priv')), await pg.$$eval('.sheet .more', b => b.map(x => x.textContent))]);
+fs.writeFileSync(path.join(ROOT, 'tests/shots/card_portfolio_hidden.png'), Buffer.from(pv2.split(',')[1], 'base64'));
+sent.length = 0; await pg.click('.sheet .btn'); await pg.waitForFunction(() => /Sent|اتبعتت/.test((document.querySelector('.sheet-st') || {}).textContent || ''), null, { timeout: 5000 });
+const ph = sent.find(x => x.m === 'sendPhoto');
+check('…📤 → the JPEG goes through /tg/card to Telegram as a photo in your chat, with a caption', cardBody && /^\/9j\//.test(cardBody.jpg) && ph && ph.b.chat_id === '555' && ph.b.photoBytes[0] === 0xFF && ph.b.photoBytes[1] === 0xD8 && /Cute Portfolio/.test(ph.b.caption), [cardBody && cardBody.jpg.slice(0, 8), ph && ph.b.caption]);
+await pg.waitForTimeout(1000);
+await pg.evaluate(() => localStorage.setItem('cp-priv', '0'));
+await pg.click('.tab >> nth=0'); await pg.click('.row.tap >> nth=1'); await pg.waitForFunction(() => { const i = document.querySelector('.sheet .prev'); return i && i.naturalWidth === 1080; }, null, { timeout: 5000 });
+fs.writeFileSync(path.join(ROOT, 'tests/shots/card_coin.png'), Buffer.from((await pg.$eval('.sheet .prev', i => i.src)).split(',')[1], 'base64'));
+check('tap a coin in Holdings → its own card (SOL)', !!(await pg.$('.sheet .prev')));
+await pg.click('.sheet .more >> text=Close');
+await pg.click('.tab >> nth=3'); await pg.click('h2 .cam'); await pg.waitForFunction(() => { const i = document.querySelector('.sheet .prev'); return i && i.naturalWidth === 1080; }, null, { timeout: 5000 });
+fs.writeFileSync(path.join(ROOT, 'tests/shots/card_market.png'), Buffer.from((await pg.$eval('.sheet .prev', i => i.src)).split(',')[1], 'base64'));
+check('📸 on Market → the market card (no "hide $" there)', (await pg.$$('.sheet .more')).length === 1);
+await pg.click('.sheet .more >> text=Close');
 const many = Array.from({ length: 20 }, (_, i) => ({ sym: 'C' + i, name: '', qty: 1, price: 1, avg: 1, value: 1000 - i * 10, share: 5, ch24: 1, ch7: 1, pnl: 1, signal: 'hold', stable: false }));
 REP = { ...rj.report, lang: 'en', coins: many, plan: { pct: 80, completed: 6, counted: 9, items: [...Array.from({ length: 6 }, (_, i) => ({ sym: 'D' + i, actual: 10, target: 10, pct: 100 })), { sym: 'ETH', actual: 0, target: 1, pct: 0 }, { sym: 'BTC', actual: 0.13, target: 1, pct: 13 }, { sym: 'SOL', actual: 9, target: 10, pct: 90 }] } };
 await pg.click('.btn'); await pg.waitForTimeout(150); await pg.click('.tab >> nth=0');
@@ -715,6 +739,13 @@ REP = rj.report;
 check('page: no script errors', perr.filter(e => !/Failed to load resource/.test(e)).length === 0, perr);
 await br.close();
 }
+
+// /tg/card directly: the same checks as /tg/api, and only a JPEG goes on
+const cardCall = body => W.fetch(new Request(HOST + '/tg/card', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }), ENVK, {});
+const JPG = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3]).toString('base64');
+check('/tg/card: no signature → 401 · someone else → 403 · not a JPEG → 400', (await cardCall({ jpg: JPG })).status === 401 && (await cardCall({ initData: initData(999), jpg: JPG })).status === 403 && (await cardCall({ initData: initData(555), jpg: Buffer.from('<svg/>').toString('base64') })).status === 400);
+sent.length = 0; const cr = await cardCall({ initData: initData(555), jpg: JPG, kind: 'coin', sym: 'sol' });
+check('…you + a JPEG → sendPhoto to your chat, caption "🪙 SOL · Cute Portfolio"', cr.status === 200 && sent.some(x => x.m === 'sendPhoto' && x.b.caption === '🪙 SOL · Cute Portfolio' && x.b.chat_id === '555'));
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
