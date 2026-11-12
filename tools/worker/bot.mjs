@@ -493,6 +493,12 @@ export async function check(request, env) {
   if (!env.TG_SECRET || u.searchParams.get('key') !== env.TG_SECRET) return json(403, { ok: false, error: 'Wrong or missing key.' });
   const sym = String(u.searchParams.get('coin') || 'BTC').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
   clearCache(); resetBudget(); startTrace();
+  if (u.searchParams.get('what') === 'price') {   // /tg/check?key=…&coin=KAVA&what=price — where a coin's price comes from right now
+    const t0 = Date.now(), m0 = await loadMarket([], []), c = await findCoin(sym, m0, null);
+    const m = c ? await loadMarket(c.id ? [c.id] : [], [{ sym: c.sym, id: c.id }]) : null, id = c && (c.id || m.idOf[c.sym]);
+    const row = m && [...m.top, ...m.top500].find(r => r.id === id);
+    return json(200, { coin: sym, found: c, ms: Date.now() - t0, snapshot: m0.parts, snapshot_age_min: Math.round((Date.now() - Date.parse(m0.parts && m0.parts.top)) / 60e3), price: row ? row.price : null, ch24: row ? row.ch24 : null, source: m && id ? (m.live[id] || 'snapshot') : null, calls: stopTrace() });
+  }
   const t0 = Date.now(), d = await derivatives(sym).catch(e => ({ error: String(e && e.message) }));
   return json(200, { coin: sym, ms: Date.now() - t0, colo: (request.cf && request.cf.colo) || null, country: (request.cf && request.cf.country) || null, result: d, calls: stopTrace() });
 }
