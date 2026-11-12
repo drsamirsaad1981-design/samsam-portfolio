@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: f53e3a23ac143969
+// sources-hash: a17d28a2ad0d946a
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2310,13 +2310,33 @@ async function onVoice(env, chat, voice) {
   const show = (v) => id ? edit(env, chat, id, v).then((r3) => r3.ok ? r3 : send(env, chat, v)) : send(env, chat, v);
   const r = await transcribe(env, voice);
   if (r.error) return show({ text: r.error === "noai" ? t.vNoAi : r.error === "long" ? t.vLong(MAX_SEC) : r.error === "empty" ? t.vEmpty : t.vFail });
-  await show({ text: `${t.heard} <i>${esc(r.text)}</i>` });
-  return onText(env, chat, r.text, 32);
+  const head = `${t.heard} <i>${esc(r.text)}</i>`;
+  if (!id) await send(env, chat, { text: head });
+  return onText(env, chat, r.text, 32, id ? { id, head } : null);
 }
-async function onText(env, chat, text, budget = 36) {
+async function onText(env, chat, text, budget = 36, into = null) {
   const p = parse(text);
   tg2(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
   });
+  if (into && p.act !== "ai") {
+    if (!["menu", "coin", "coins", "pf", "mk", "pl", "mv", "sg", "ex"].includes(p.act)) await edit(env, chat, into.id, { text: into.head });
+    else {
+      const { views: views2, ai: ai2 } = await run(env, p.act, p.q, p.guess);
+      if (ai2) {
+        await answer(env, chat, ai2, budget, into);
+        return;
+      }
+      const [v0, ...rest] = views2, both = v0 && { ...v0, text: into.head + "\n\n" + v0.text };
+      const r = both && both.text.length <= 4e3 ? await edit(env, chat, into.id, both) : null;
+      if (!r || !r.ok) {
+        await edit(env, chat, into.id, { text: into.head });
+        if (v0) await send(env, chat, v0);
+      }
+      for (const v of rest) await send(env, chat, v);
+      return;
+    }
+    into = null;
+  }
   if (/^lang:(ar|en)$/.test(p.act)) {
     await switchLang(env, chat, p.act.slice(5));
     return;
@@ -2331,7 +2351,7 @@ async function onText(env, chat, text, budget = 36) {
     return;
   }
   if (p.act === "ai") {
-    await answer(env, chat, p.q, budget);
+    await answer(env, chat, p.q, budget, into);
     return;
   }
   if (p.act === "hide") {
@@ -2351,12 +2371,20 @@ async function onText(env, chat, text, budget = 36) {
   }
   for (const v of views) await send(env, chat, v);
 }
-async function answer(env, chat, question, budget = 36) {
+async function answer(env, chat, question, budget = 36, into = null) {
   const lang = await getLang(env), t = T[lang];
   resetBudget(budget);
-  const ph = await send(env, chat, { text: t.thinking });
-  const id = ph && ph.result && ph.result.message_id;
-  const show = (v) => id ? edit(env, chat, id, v).then((r3) => r3.ok ? r3 : send(env, chat, v)) : send(env, chat, v);
+  const top = into ? into.head + "\n\n" : "";
+  let id;
+  if (into) {
+    id = into.id;
+    await edit(env, chat, id, { text: into.head + "\n" + t.thinking });
+  } else {
+    const ph = await send(env, chat, { text: t.thinking });
+    id = ph && ph.result && ph.result.message_id;
+  }
+  const show0 = (v) => id ? edit(env, chat, id, v).then((r3) => r3.ok ? r3 : send(env, chat, v)) : send(env, chat, v);
+  const show = (v) => show0({ ...v, text: top + v.text });
   const r = await ask(env, question, lang).catch((e) => {
     console.log(JSON.stringify({ ai: "crash", message: String(e && e.message).slice(0, 300) }));
     return { error: "claude" };
@@ -2369,7 +2397,7 @@ ${t.aiLeft(r.left, r.limit)}</i>`;
   if (r.coins.length === 1) btns[0].push(url("\u{1F525} Liq Map", LIQ + encodeURIComponent(r.coins[0][1])));
   btns.push([cb(t.newChat, "new"), cb(t.back, "menu")]);
   let text = r.text + "\n\n" + foot;
-  if (text.length > 4e3) text = r.text.slice(0, 3900 - foot.length) + "\u2026\n\n" + foot;
+  if (top.length + text.length > 4e3) text = r.text.slice(0, 3900 - foot.length - top.length) + "\u2026\n\n" + foot;
   return show({ text, buttons: btns });
 }
 async function switchLang(env, chat, lang, msgId) {

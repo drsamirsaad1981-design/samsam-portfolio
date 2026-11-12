@@ -375,7 +375,8 @@ export async function handleTelegram(request, env) {
   return ok();
 }
 
-// 🎙️ a voice note → "Listening…" → that message becomes what it heard → then exactly as if you had typed it
+// 🎙️ a voice note → ONE message: "Listening…" → "I heard: … / 🧠 Thinking…" → "I heard: …" + the answer
+// (handled exactly as if you had typed the words; what it heard stays on top, so you can see it understood you)
 async function onVoice(env, chat, voice) {
   const t = T[await getLang(env)];
   const ph = await send(env, chat, { text: t.listening });
@@ -383,18 +384,33 @@ async function onVoice(env, chat, voice) {
   const show = v => id ? edit(env, chat, id, v).then(r => r.ok ? r : send(env, chat, v)) : send(env, chat, v);
   const r = await transcribe(env, voice);
   if (r.error) return show({ text: r.error === 'noai' ? t.vNoAi : r.error === 'long' ? t.vLong(MAX_SEC) : r.error === 'empty' ? t.vEmpty : t.vFail });
-  await show({ text: `${t.heard} <i>${esc(r.text)}</i>` });
-  return onText(env, chat, r.text, 32);   // 4 calls went on the voice note → a little less for the data
+  const head = `${t.heard} <i>${esc(r.text)}</i>`;
+  if (!id) await send(env, chat, { text: head });
+  return onText(env, chat, r.text, 32, id ? { id, head } : null);   // 4 calls went on the voice note → a little less for the data
 }
 
 // a typed message (or a voice note's words) → a view, or a question for Claude
-async function onText(env, chat, text, budget = 36) {
+// into = { id, head }: a voice note's message — the answer goes into it, under what it heard
+async function onText(env, chat, text, budget = 36, into = null) {
   const p = parse(text);
   tg(env, 'sendChatAction', { chat_id: chat, action: 'typing' }).catch(() => {});   // "typing…" while the numbers load
+  if (into && p.act !== 'ai') {   // a view: it is drawn into the voice note's message (lists / settings: the heard line stays alone)
+    if (!['menu', 'coin', 'coins', 'pf', 'mk', 'pl', 'mv', 'sg', 'ex'].includes(p.act)) await edit(env, chat, into.id, { text: into.head });
+    else {
+      const { views, ai } = await run(env, p.act, p.q, p.guess);
+      if (ai) { await answer(env, chat, ai, budget, into); return; }
+      const [v0, ...rest] = views, both = v0 && { ...v0, text: into.head + '\n\n' + v0.text };
+      const r = both && both.text.length <= 4000 ? await edit(env, chat, into.id, both) : null;
+      if (!r || !r.ok) { await edit(env, chat, into.id, { text: into.head }); if (v0) await send(env, chat, v0); }
+      for (const v of rest) await send(env, chat, v);
+      return;
+    }
+    into = null;
+  }
   if (/^lang:(ar|en)$/.test(p.act)) { await switchLang(env, chat, p.act.slice(5)); return; }
   if (p.act === 'al') { await send(env, chat, await viewAlerts(env, await getLang(env))); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
-  if (p.act === 'ai') { await answer(env, chat, p.q, budget); return; }
+  if (p.act === 'ai') { await answer(env, chat, p.q, budget, into); return; }
   if (p.act === 'hide') { const t = T[await getLang(env)]; await send(env, chat, { text: t.hidden }, { reply_markup: { remove_keyboard: true } }); return; }
   const { t, views, ai } = await run(env, p.act, p.q, p.guess);
   if (ai) { await answer(env, chat, ai, budget); return; }
@@ -404,12 +420,15 @@ async function onText(env, chat, text, budget = 36) {
 
 // 🧠 a question in plain words → "Thinking…" at once, then the same message becomes Claude's answer, with where its numbers
 // came from, how many questions are left today, and buttons for the coins it looked at
-async function answer(env, chat, question, budget = 36) {
+async function answer(env, chat, question, budget = 36, into = null) {
   const lang = await getLang(env), t = T[lang];
   resetBudget(budget);   // data calls; Claude's own (usually 2–4, at most 9) + Telegram's 3 keep the total inside Cloudflare's 50
-  const ph = await send(env, chat, { text: t.thinking });
-  const id = ph && ph.result && ph.result.message_id;
-  const show = v => id ? edit(env, chat, id, v).then(r => r.ok ? r : send(env, chat, v)) : send(env, chat, v);
+  const top = into ? into.head + '\n\n' : '';   // a voice note: what it heard stays above the answer, in the same message
+  let id;
+  if (into) { id = into.id; await edit(env, chat, id, { text: into.head + '\n' + t.thinking }); }
+  else { const ph = await send(env, chat, { text: t.thinking }); id = ph && ph.result && ph.result.message_id; }
+  const show0 = v => id ? edit(env, chat, id, v).then(r => r.ok ? r : send(env, chat, v)) : send(env, chat, v);
+  const show = v => show0({ ...v, text: top + v.text });
   const r = await ask(env, question, lang).catch(e => { console.log(JSON.stringify({ ai: 'crash', message: String(e && e.message).slice(0, 300) })); return { error: 'claude' }; });
   if (r.error) return show({ text: r.error === 'limit' ? t.aiLimit(r.limit) : r.error === 'nokey' ? t.aiNoKey : r.error === 'busy' ? t.aiBusy : t.aiErr, buttons: [[cb(t.back, 'menu')]] });
   const foot = `<i>📡 ${t.data}: ${esc(r.sources.length ? r.sources.join(' · ') : 'general knowledge')}\n${t.aiLeft(r.left, r.limit)}</i>`;
@@ -418,7 +437,7 @@ async function answer(env, chat, question, budget = 36) {
   if (r.coins.length === 1) btns[0].push(url('🔥 Liq Map', LIQ + encodeURIComponent(r.coins[0][1])));
   btns.push([cb(t.newChat, 'new'), cb(t.back, 'menu')]);
   let text = r.text + '\n\n' + foot;
-  if (text.length > 4000) text = r.text.slice(0, 3900 - foot.length) + '…\n\n' + foot;
+  if (top.length + text.length > 4000) text = r.text.slice(0, 3900 - foot.length - top.length) + '…\n\n' + foot;
   return show({ text, buttons: btns });
 }
 
