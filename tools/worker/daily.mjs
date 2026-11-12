@@ -13,7 +13,7 @@
 // The morning / evening are written by Claude from the facts gathered here (tools/worker/ai.mjs → compose); if Claude
 // can't, the bot's own plain version goes out. They do not count in the 30 questions a day.
 
-import { K, chatOf } from './who.mjs';
+import { K, chatOf, isOwner } from './who.mjs';
 import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures } from './data.mjs';
 import { compose } from './ai.mjs';
@@ -39,7 +39,7 @@ const r2 = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
 const r6 = v => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
 const mins = hm => { const [h, m] = String(hm).split(':').map(Number); return h * 60 + m; };
 
-export async function getCfg(env) { return { ...DEF, ...(await jget(env, K(env, 'daily'), {})) }; }
+export async function getCfg(env) { return { ...DEF, ...(isOwner(env) ? {} : { morning: false, evening: false, pin: false }), ...(await jget(env, K(env, 'daily'), {})) }; }   // invited people: the portfolio messages start off (no portfolio linked yet)
 export async function setCfg(env, patch) { const c = { ...(await getCfg(env)), ...patch }; await jput(env, K(env, 'daily'), c); return c; }
 
 const WD = {

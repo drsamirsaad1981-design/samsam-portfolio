@@ -10,7 +10,7 @@
 //   · Telegram sometimes sends the same message twice when an answer is slow — each message is answered once
 //   · the model: BOT_MODEL in the Worker's settings, else Claude Sonnet 5.5; if that name is refused, MODEL (AI Analysis's)
 
-import { K } from './who.mjs';
+import { K, isOwner } from './who.mjs';
 import { summarize, settings, local, localParts, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries, derivatives } from './data.mjs';
 import { addAlert, listAlerts, deleteAlert, describe, KINDS } from './watch.mjs';
@@ -18,7 +18,7 @@ import { prepareTrade } from './trade.mjs';
 import { paperTrade, paperFacts } from './paper.mjs';
 
 const H = 3600e3, DAY = 24 * H;
-const LIMIT = env => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30));
+const LIMIT = env => isOwner(env) ? Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30)) : Math.max(1, Math.min(100, parseInt(env.MEMBER_AI_LIMIT || '10', 10) || 10));   // the owner 30, each invited person 10
 const MAX_ROUNDS = 8;          // tool rounds per question (the last one answers with what it has)
 const HISTORY = 10;            // messages remembered
 const r2 = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
@@ -218,9 +218,9 @@ export async function runTool(ctx, name, input) {
 }
 
 // ── Claude ──
-function system(now, lang, qLang) {
+function system(now, lang, qLang, owner = true) {
   return [
-    'You are the Cute Portfolio assistant inside Telegram — a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app.',
+    owner ? 'You are the Cute Portfolio assistant inside Telegram — a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app.' : 'You are the Cute Portfolio assistant inside Telegram — a sharp, honest crypto analyst for a user the owner invited. Their portfolio may not be linked yet: if a portfolio / plan / exit tool says it is not connected, say linking from the app is coming soon, and help with the market, coins, alerts and paper trading.',
     `Now: ${local(now, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} (Riyadh).`,
     'RULES',
     '- Every number you state (price, %, value, rank, flow…) must come from a tool result in this conversation. Never use prices or market data from memory — call the tools first (several in one turn if needed). If a tool has no data, say so.',
@@ -272,7 +272,7 @@ export async function ask(env, question, lang = 'en') {
   let model = env.BOT_MODEL || 'claude-sonnet-5-5', fellBack = false, text = '';
   for (let round = 0; round <= MAX_ROUNDS; round++) {
     // the tools stay declared every round (earlier tool turns need them); the last round may not call any more
-    const body = { max_tokens: 2000, system: system(now, lang, qLang), tools: TOOLS, ...(round === MAX_ROUNDS ? { tool_choice: { type: 'none' } } : {}), messages };
+    const body = { max_tokens: 2000, system: system(now, lang, qLang, isOwner(env)), tools: TOOLS, ...(round === MAX_ROUNDS ? { tool_choice: { type: 'none' } } : {}), messages };
     let r = await claude(env, model, body);
     if (!r.ok && !fellBack && (r.status === 404 || (r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {}))))) { fellBack = true; model = env.MODEL || 'claude-opus-4-5'; r = await claude(env, model, body); }   // that model name refused → AI Analysis's
     if (!r.ok) { console.log(JSON.stringify({ ai: 'claude-error', round, status: r.status, type: r.j.error && r.j.error.type, message: String((r.j.error && r.j.error.message) || '').slice(0, 300) })); return { error: r.status === 429 || r.status === 529 ? 'busy' : 'claude', detail: r.status }; }

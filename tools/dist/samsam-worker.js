@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 6e0814c62cab999e
+// sources-hash: f1e059b5356de171
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -664,11 +664,82 @@ var chatOf = (env) => {
 };
 var isOwner = (env) => chatOf(env) === String(env.TELEGRAM_CHAT_ID);
 var K = (env, name) => `tg:${chatOf(env)}:${name}`;
+var memKV = /* @__PURE__ */ new Map();
+var kget = async (env, k) => {
+  if (env.RATE) {
+    try {
+      return await env.RATE.get(k);
+    } catch (_) {
+    }
+  }
+  return memKV.has(k) ? memKV.get(k) : null;
+};
+var kput = async (env, k, v, ttl) => {
+  memKV.set(k, v);
+  try {
+    if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
+  } catch (_) {
+  }
+};
+var kdel = async (env, k) => {
+  memKV.delete(k);
+  try {
+    if (env.RATE) await env.RATE.delete(k);
+  } catch (_) {
+  }
+};
+var MAX_MEMBERS = 20;
+async function members(env) {
+  try {
+    const m = JSON.parse(await kget(env, "tg:users") || "{}");
+    return m && typeof m === "object" ? m : {};
+  } catch (_) {
+    return {};
+  }
+}
 async function chats(env) {
-  return env.TELEGRAM_CHAT_ID ? [String(env.TELEGRAM_CHAT_ID)] : [];
+  return env.TELEGRAM_CHAT_ID ? [String(env.TELEGRAM_CHAT_ID), ...Object.keys(await members(env)).filter((c) => c !== String(env.TELEGRAM_CHAT_ID))] : [];
 }
 async function allowed(env, chat) {
   return (await chats(env)).includes(String(chat));
+}
+var ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+async function newInvite(env, note = "") {
+  const b = crypto.getRandomValues(new Uint8Array(8)), code = [...b].map((x) => ABC[x % ABC.length]).join("");
+  await kput(env, "tg:inv:" + code, JSON.stringify({ created: Date.now(), note: String(note).slice(0, 40) }), 7 * 86400);
+  return code;
+}
+async function useInvite(env, code, chat, from) {
+  const C = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (C.length !== 8) return { error: "bad" };
+  const raw = await kget(env, "tg:inv:" + C);
+  if (!raw) return { error: "bad" };
+  const m = await members(env);
+  if (Object.keys(m).length >= MAX_MEMBERS) return { error: "full" };
+  await kdel(env, "tg:inv:" + C);
+  const name = [from && from.first_name, from && from.last_name].filter(Boolean).join(" ").slice(0, 40) || "Friend";
+  m[String(chat)] = { name, user: from && from.username ? String(from.username).slice(0, 32) : "", joined: Date.now(), note: (() => {
+    try {
+      return JSON.parse(raw).note || "";
+    } catch (_) {
+      return "";
+    }
+  })() };
+  await kput(env, "tg:users", JSON.stringify(m));
+  return { ok: true, member: m[String(chat)] };
+}
+async function removeMember(env, chat) {
+  const m = await members(env);
+  if (!m[String(chat)]) return false;
+  delete m[String(chat)];
+  await kput(env, "tg:users", JSON.stringify(m));
+  return true;
+}
+async function strangerOnce(env, chat) {
+  const k = "tg:nope:" + chat;
+  if (await kget(env, k)) return false;
+  await kput(env, k, "1", 86400);
+  return true;
 }
 var LEGACY = ["alerts", "hist", "lang", "mk", "daily", "daily:sent", "pin", "radar:i", "radar:seen", "sector:seen", "paper"];
 var migrated = false;
@@ -1782,7 +1853,7 @@ function viewRestart(lang2 = "en") {
 // tools/worker/ai.mjs
 var H2 = 36e5;
 var DAY2 = 24 * H2;
-var LIMIT = (env) => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30));
+var LIMIT = (env) => isOwner(env) ? Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30)) : Math.max(1, Math.min(100, parseInt(env.MEMBER_AI_LIMIT || "10", 10) || 10));
 var MAX_ROUNDS = 8;
 var HISTORY = 10;
 var r23 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
@@ -2186,9 +2257,9 @@ async function runTool(ctx, name, input) {
   }
   return { error: "unknown tool" };
 }
-function system(now, lang2, qLang) {
+function system(now, lang2, qLang, owner = true) {
   return [
-    "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app.",
+    owner ? "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app." : "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for a user the owner invited. Their portfolio may not be linked yet: if a portfolio / plan / exit tool says it is not connected, say linking from the app is coming soon, and help with the market, coins, alerts and paper trading.",
     `Now: ${local(now, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} (Riyadh).`,
     "RULES",
     "- Every number you state (price, %, value, rank, flow\u2026) must come from a tool result in this conversation. Never use prices or market data from memory \u2014 call the tools first (several in one turn if needed). If a tool has no data, say so.",
@@ -2234,7 +2305,7 @@ async function ask(env, question, lang2 = "en") {
   const messages = [...await history(env), { role: "user", content: String(question).slice(0, 2e3) + (qLang === "ar" ? "\n\n(\u062C\u0627\u0648\u0628 \u0628\u0627\u0644\u0639\u0631\u0628\u064A \u0627\u0644\u0645\u0635\u0631\u064A)" : "\n\n(Reply in English.)") }];
   let model = env.BOT_MODEL || "claude-sonnet-5-5", fellBack = false, text = "";
   for (let round = 0; round <= MAX_ROUNDS; round++) {
-    const body = { max_tokens: 2e3, system: system(now, lang2, qLang), tools: TOOLS, ...round === MAX_ROUNDS ? { tool_choice: { type: "none" } } : {}, messages };
+    const body = { max_tokens: 2e3, system: system(now, lang2, qLang, isOwner(env)), tools: TOOLS, ...round === MAX_ROUNDS ? { tool_choice: { type: "none" } } : {}, messages };
     let r = await claude(env, model, body);
     if (!r.ok && !fellBack && (r.status === 404 || r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {})))) {
       fellBack = true;
@@ -2409,7 +2480,7 @@ var mins = (hm2) => {
   return h * 60 + m;
 };
 async function getCfg(env) {
-  return { ...DEF, ...await jget(env, K(env, "daily"), {}) };
+  return { ...DEF, ...isOwner(env) ? {} : { morning: false, evening: false, pin: false }, ...await jget(env, K(env, "daily"), {}) };
 }
 async function setCfg(env, patch) {
   const c = { ...await getCfg(env), ...patch };
@@ -2941,6 +3012,8 @@ var T = {
     newDone: "New chat \u2014 I forgot the earlier messages \u{1F9F9}",
     aiLeft: (a, n) => `${a}/${n} left today`,
     data: "Data",
+    ownerOnly: "Only the bot owner can do that.",
+    noLink: "Your portfolio isn't linked yet \u2014 linking from the app comes soon. Meanwhile: the market, any coin, alerts, paper trading and questions all work.",
     alertsB: "\u{1F514} Alerts",
     alertGone: "\u{1F5D1} Alert deleted",
     dailyB: "\u{1F5D3} Daily",
@@ -3079,6 +3152,8 @@ var T = {
     newDone: "\u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 \u2014 \u0646\u0633\u064A\u062A \u0627\u0644\u0643\u0644\u0627\u0645 \u0627\u0644\u0644\u064A \u0641\u0627\u062A \u{1F9F9}",
     aiLeft: (a, n) => `\u0628\u0627\u0642\u064A ${a}/${n} \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647`,
     data: "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A",
+    ownerOnly: "\u062F\u0647 \u0644\u0635\u0627\u062D\u0628 \u0627\u0644\u0628\u0648\u062A \u0628\u0633.",
+    noLink: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0644\u0633\u0647 \u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629 \u2014 \u0627\u0644\u0631\u0628\u0637 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u062C\u0627\u064A \u0642\u0631\u064A\u0628. \u0644\u062D\u062F \u0645\u0627 \u064A\u062C\u064A: \u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0623\u064A \u0639\u0645\u0644\u0629\u060C \u0648\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u060C \u0648\u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0648\u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0643\u0644\u0647\u0627 \u0634\u063A\u0627\u0644\u0629.",
     alertsB: "\u{1F514} \u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A",
     alertGone: "\u{1F5D1} \u0627\u062A\u0645\u0633\u062D \u0627\u0644\u062A\u0646\u0628\u064A\u0647",
     dailyB: "\u{1F5D3} \u0627\u0644\u064A\u0648\u0645\u064A",
@@ -3360,6 +3435,9 @@ var WORDS = [
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, "hide"],
   [/^\/(new|reset|clear)$|^محادثة جديدة$/i, "new"],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, "al"],
+  [/^\/invite$/i, "inv"],
+  [/^\/(users|members)$/i, "us"],
+  [/^\/start\s+\S+$/i, "menu"],
   [/^\/(report|app)$|^التقرير$/i, "rp"],
   [/^\/(daily|settings)$|^اليومي$/i, "dy"],
   [/^\/(paper|practice)$|^تجريبي$/i, "pp"],
@@ -3394,7 +3472,7 @@ async function buildView(env, act, arg, guess) {
   if (act === "coin") return { t, views: [{ text: `\u{1FA99} ${t.askCoin}`, buttons: [[cb2(t.back, "menu")]] }] };
   if (act === "soon") return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
   const needUser = ["pf", "pl", "mv", "sg", "ex"].includes(act);
-  if (needUser && !user) return { t, views: [{ text: t.noUser, buttons: [[cb2(t.market, "mk"), cb2(t.back, "menu")]] }] };
+  if (needUser && !user) return { t, views: [{ text: isOwner(env) ? t.noUser : t.noLink, buttons: [[cb2(t.market, "mk"), cb2(t.back, "menu")]] }] };
   const mine = coinsOf(user);
   if (act === "coins") {
     const m0 = await loadMarket([], mine);
@@ -3449,9 +3527,91 @@ async function handleTelegram(request, env) {
   if (!u) return ok();
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
-  if (chat == null || !await allowed(env, chat)) return ok();
+  if (chat == null) return ok();
+  if (!await allowed(env, chat)) return stranger(env, u, msg, chat);
   await migrateOwner(env);
   return asChat(chat, () => onUpdate(env, u, msg, q, chat));
+}
+var STR = {
+  en: {
+    private: "\u{1F512} This bot is private. If you have an invite code, send it here.",
+    bad: "\u274C That invite code is not valid (or was already used).",
+    full: "The bot is full right now \u2014 ask the owner.",
+    welcome: (n) => `\u{1F44B} Welcome, ${n}! You're in \u2705
+Ask me anything about crypto in plain words, tap a button below, or send a ticker like <code>btc</code>.
+Your portfolio isn't linked yet \u2014 that comes next.`,
+    joined: (n, u) => `\u{1F464} <b>${n}</b>${u ? " (@" + u + ")" : ""} joined with your invite.`
+  },
+  ar: {
+    private: "\u{1F512} \u0627\u0644\u0628\u0648\u062A \u062F\u0647 \u062E\u0627\u0635. \u0644\u0648 \u0645\u0639\u0627\u0643 \u0643\u0648\u062F \u062F\u0639\u0648\u0629 \u0627\u0628\u0639\u062A\u0647 \u0647\u0646\u0627.",
+    bad: "\u274C \u0643\u0648\u062F \u0627\u0644\u062F\u0639\u0648\u0629 \u062F\u0647 \u0645\u0634 \u0635\u0627\u0644\u062D (\u0623\u0648 \u0627\u062A\u0633\u062A\u0639\u0645\u0644 \u0642\u0628\u0644 \u0643\u062F\u0647).",
+    full: "\u0627\u0644\u0628\u0648\u062A \u0645\u0644\u064A\u0627\u0646 \u062F\u0644\u0648\u0642\u062A\u064A \u2014 \u0643\u0644\u0651\u0645 \u0635\u0627\u062D\u0628\u0647.",
+    welcome: (n) => `\u{1F44B} \u0623\u0647\u0644\u0627\u064B ${n}! \u062F\u062E\u0644\u062A \u2705
+\u0627\u0633\u0623\u0644\u0646\u064A \u0623\u064A \u062D\u0627\u062C\u0629 \u0639\u0646 \u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648 \u0628\u0627\u0644\u0643\u0644\u0627\u0645\u060C \u0623\u0648 \u0627\u0636\u063A\u0637 \u0632\u0631\u0627\u0631 \u062A\u062D\u062A\u060C \u0623\u0648 \u0627\u0628\u0639\u062A \u0631\u0645\u0632 \u0632\u064A <code>btc</code>.
+\u0645\u062D\u0641\u0638\u062A\u0643 \u0644\u0633\u0647 \u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629 \u2014 \u062F\u064A \u0627\u0644\u062E\u0637\u0648\u0629 \u0627\u0644\u062C\u0627\u064A\u0629.`,
+    joined: (n, u) => `\u{1F464} <b>${n}</b>${u ? " (@" + u + ")" : ""} \u062F\u062E\u0644 \u0628\u062F\u0639\u0648\u062A\u0643.`
+  }
+};
+async function stranger(env, u, msg, chat) {
+  if (!msg || !msg.chat || msg.chat.type !== "private" || typeof msg.text !== "string") return ok();
+  if (!await firstTime(env, u.update_id)) return ok();
+  const L = /^ar/.test(msg.from && msg.from.language_code || "") ? "ar" : "en", w = STR[L];
+  const code = (/^\/start\s+([A-Za-z0-9]{8})\b/.exec(msg.text.trim()) || /^([A-Za-z0-9]{8})$/.exec(msg.text.trim()) || [])[1];
+  if (code) {
+    const r = await useInvite(env, code, chat, msg.from);
+    if (r.ok) {
+      await asChat(chat, async () => {
+        await setLang(env, L);
+        const t = T[L];
+        await send2(env, chat, { text: w.welcome(esc(r.member.name)) }, { reply_markup: replyKb(t) });
+        await send2(env, chat, viewMenu(t));
+      });
+      await asChat(env.TELEGRAM_CHAT_ID, async () => send2(env, env.TELEGRAM_CHAT_ID, { text: STR[await getLang(env)].joined(esc(r.member.name), esc(r.member.user)), buttons: [[cb2("\u{1F465} /users", "us")]] }));
+      return ok();
+    }
+    if (await strangerOnce(env, chat)) await send2(env, chat, { text: r.error === "full" ? w.full : w.bad });
+    return ok();
+  }
+  if (await strangerOnce(env, chat)) await send2(env, chat, { text: w.private });
+  return ok();
+}
+async function viewUsers(env, lang2) {
+  const m = await members(env), ar = lang2 === "ar", list2 = Object.entries(m);
+  const L = [ar ? `\u{1F465} <b>\u0627\u0644\u0623\u0639\u0636\u0627\u0621</b> (${list2.length}/${MAX_MEMBERS})` : `\u{1F465} <b>Members</b> (${list2.length}/${MAX_MEMBERS})`, ""];
+  if (!list2.length) L.push(ar ? "\u0644\u0633\u0647 \u0645\u0641\u064A\u0634 \u062D\u062F. \u0627\u0636\u063A\u0637 \u2795 \u0644\u0643\u0648\u062F \u062F\u0639\u0648\u0629." : "Nobody yet. Tap \u2795 for an invite code.");
+  list2.forEach(([c, x], i) => L.push(`${i + 1}. <b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>`));
+  const b = [];
+  for (let i = 0; i < list2.length; i += 3) b.push(list2.slice(i, i + 3).map(([c], j) => cb2(`\u{1F5D1} ${i + j + 1}`, "us:del:" + c)));
+  b.push([cb2(ar ? "\u2795 \u062F\u0639\u0648\u0629 \u062C\u062F\u064A\u062F\u0629" : "\u2795 New invite", "us:inv"), cb2(T[lang2].back, "menu")]);
+  return { text: L.join("\n"), buttons: b };
+}
+async function inviteMsg(env, lang2) {
+  const code = await newInvite(env), ar = lang2 === "ar";
+  let bot = null;
+  try {
+    bot = env.RATE ? await env.RATE.get("tg:botname") : null;
+  } catch (_) {
+  }
+  if (!bot) {
+    const me = await tg3(env, "getMe", {}).catch(() => null);
+    bot = me && me.ok && me.result && me.result.username;
+    if (bot) try {
+      if (env.RATE) await env.RATE.put("tg:botname", bot);
+    } catch (_) {
+    }
+  }
+  const link = bot ? `https://t.me/${bot}?start=${code}` : null;
+  return { text: (ar ? `\u{1F39F} <b>\u0643\u0648\u062F \u062F\u0639\u0648\u0629</b> \u2014 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629\u060C \u0635\u0627\u0644\u062D 7 \u0623\u064A\u0627\u0645:
+
+<code>${code}</code>` : `\u{1F39F} <b>Invite code</b> \u2014 works once, for 7 days:
+
+<code>${code}</code>`) + (link ? ar ? `
+
+\u0623\u0648 \u0627\u0628\u0639\u062A\u0644\u0647 \u0627\u0644\u0644\u064A\u0646\u0643 \u062F\u0647 (\u064A\u0641\u062A\u062D \u0627\u0644\u0628\u0648\u062A \u0648\u064A\u062F\u062E\u0644 \u0639\u0644\u0649 \u0637\u0648\u0644):
+${link}` : `
+
+Or send this link (opens the bot and lets them in):
+${link}` : ""), buttons: [[cb2(ar ? "\u{1F465} \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u{1F465} Members", "us")]] };
 }
 async function onUpdate(env, u, msg, q, chat) {
   if (!await firstTime(env, u.update_id)) return ok();
@@ -3464,6 +3624,30 @@ async function onUpdate(env, u, msg, q, chat) {
       if (/^lang:(ar|en)$/.test(d)) {
         await switchLang(env, chat, d.slice(5), q.message.message_id);
         await done();
+        return ok();
+      }
+      if (d === "us" || /^us:/.test(d)) {
+        const lang2 = await getLang(env);
+        if (!isOwner(env)) {
+          await done();
+          return ok();
+        }
+        if (d === "us:inv") {
+          await send2(env, chat, await inviteMsg(env, lang2));
+          await done();
+          return ok();
+        }
+        let note = null;
+        if (d.startsWith("us:del:")) {
+          const who = d.slice(7);
+          if (await removeMember(env, who)) {
+            note = "\u{1F5D1}";
+            await tg3(env, "sendMessage", { chat_id: who, text: lang2 === "ar" ? "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0648\u0635\u0648\u0644\u0643 \u0644\u0644\u0628\u0648\u062A." : "Your access to this bot was removed." }).catch(() => {
+            });
+          }
+        }
+        await edit(env, chat, q.message.message_id, await viewUsers(env, lang2));
+        await done(note);
         return ok();
       }
       if (d === "pp" || /^pp:/.test(d)) {
@@ -3622,6 +3806,15 @@ async function onText(env, chat, text, budget = 36, into = null) {
     await send2(env, chat, await viewPaper(env, await getLang(env)));
     return;
   }
+  if (p.act === "inv" || p.act === "us") {
+    if (!isOwner(env)) {
+      const t2 = T[await getLang(env)];
+      await send2(env, chat, { text: t2.ownerOnly });
+      return;
+    }
+    await send2(env, chat, p.act === "inv" ? await inviteMsg(env, await getLang(env)) : await viewUsers(env, await getLang(env)));
+    return;
+  }
   if (p.act === "dy:now:m") {
     await morning(env);
     return;
@@ -3725,9 +3918,10 @@ async function buildById(env, id) {
   return { t, views: [viewCoin(t, coin, m, user ? summarize(withIds(user, m), m, now) : null, now)] };
 }
 var run = (env, act, arg, guess) => act === "coinById" ? buildById(env, arg) : buildView(env, act, arg, guess);
-var cmds = (lang2) => {
+var cmds = (lang2, owner = true) => {
   const a = lang2 === "ar";
   return [
+    ...owner ? [["invite", a ? "\u0643\u0648\u062F \u062F\u0639\u0648\u0629 \u0644\u0635\u0627\u062D\u0628\u0643" : "Invite code for a friend"], ["users", a ? "\u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "Members"]] : [],
     ["start", a ? "\u0627\u0628\u062F\u0623 \u2014 \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u062A\u062D\u062A \u0627\u0644\u0634\u0627\u062A" : "Start \u2014 the buttons under the chat"],
     ["menu", a ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
     ["report", a ? "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644 (\u0635\u0641\u062D\u0629)" : "Full report (a page)"],
@@ -3751,7 +3945,7 @@ var cmds = (lang2) => {
   ].map(([command, description]) => ({ command, description }));
 };
 async function ensureCmds(env) {
-  const lang2 = await getLang(env), v = lang2 + ":" + cmds(lang2).map((c2) => c2.command).join(","), c = chatOf(env);
+  const lang2 = await getLang(env), own = isOwner(env), v = lang2 + ":" + cmds(lang2, own).map((c2) => c2.command).join(","), c = chatOf(env);
   if (cmdMem.get(c) === v) return;
   let had = null;
   try {
@@ -3762,7 +3956,7 @@ async function ensureCmds(env) {
     cmdMem.set(c, v);
     return;
   }
-  const r = await tg3(env, "setMyCommands", { commands: cmds(lang2), scope: { type: "chat", chat_id: +c || c } }).catch(() => ({}));
+  const r = await tg3(env, "setMyCommands", { commands: cmds(lang2, own), scope: { type: "chat", chat_id: +c || c } }).catch(() => ({}));
   if (r && r.ok) {
     cmdMem.set(c, v);
     try {

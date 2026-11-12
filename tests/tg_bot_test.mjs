@@ -620,7 +620,7 @@ LIVE.pendle.usd = 3.21;
 // the "/" menu: every command, refreshed by itself when the list changes (no /start needed)
 kvStore.delete('tg:555:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
 const sc = sent.find(x => x.m === 'setMyCommands'), names = sc ? sc.b.commands.map(c => c.command) : [];
-check('"/" menu sent again by itself: start, report, daily, morning, evening, alerts, paper, pin, unpin, hide… (20)', names.length === 20 && ['start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
+check('"/" menu sent again by itself: invite, users, start, report, daily, morning, evening, alerts, paper, pin, unpin, hide… (22)', names.length === 22 && ['invite', 'users', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/menu');
 check('…and only once (remembered in KV)', !sent.some(x => x.m === 'setMyCommands'));
 claudeCalls.length = 0; sent.length = 0;
@@ -808,6 +808,43 @@ check('another chat still gets nothing (only invited chats — step 2)', await (
 check('a trade prepared by one chat can\'t be confirmed from another', await (async () => { kvStore.set('tg:tx:zz1', JSON.stringify({ created: Date.now(), trades: [], lang: 'en', chat: '999' })); const c0 = commits.length; Wd = await fresh(); await Wd.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qz', data: 'tx:ok:zz1', message: { message_id: 5, chat: { id: 555 } } } }) }), ENVK, {}); return commits.length === c0 && !!kvStore.get('tg:tx:zz1'); })());
 kvStore.set('tg:555:lang', 'en'); kvStore.set('tg:555:alerts', '[]'); kvStore.delete('tg:paper'); kvStore.delete('tg:alerts'); kvStore.delete('tg:lang');
 check('wrangler: AsyncLocalStorage on (nodejs_als)', /compatibility_flags = \["nodejs_als"\]/.test(fs.readFileSync(path.join(ROOT, 'tools/worker/wrangler.toml'), 'utf8')));
+
+// ── phase 10 · step 2: invites ──
+const sayAs = (chat, text, from = {}) => post({ update_id: ++UPD, message: { message_id: 1, chat: { id: chat, type: 'private' }, from: { id: chat, first_name: 'Ali', language_code: 'en', ...from }, text } }, ENV.TG_SECRET, ENVK);
+const tapAs = (chat, data) => post({ update_id: ++UPD, callback_query: { id: 'qq', data, from: { id: chat }, message: { message_id: 61, chat: { id: chat } } } }, ENV.TG_SECRET, ENVK);
+kvStore.delete('tg:users'); for (const k of [...kvStore.keys()]) if (/^tg:(nope|inv):/.test(k)) kvStore.delete(k);
+sent.length = 0; await sayAs(777, 'hello'); await sayAs(777, 'hello again'); await sayAs(777, '/portfolio');
+check('a stranger → one polite "private, send your invite code" a day — then silence (no data, no AI)', sent.filter(x => x.m === 'sendMessage').length === 1 && /private/.test(sent.find(x => x.m === 'sendMessage').b.text) && String(sent.find(x => x.m === 'sendMessage').b.chat_id) === '777', sent.map(x => x.m));
+sent.length = 0; Wd = await fresh(); await postK(Wd, '/invite');
+const code = (/<code>([A-Z2-9]{8})<\/code>/.exec(last().b.text) || [])[1];
+check('/invite (owner) → an 8-letter one-time code', !!code && !/[01IO]/.test(code), last().b.text);
+for (const k of [...kvStore.keys()]) if (/^tg:nope:/.test(k)) kvStore.delete(k);
+sent.length = 0; await sayAs(777, '/start ' + code);
+const toOwner = sent.find(x => x.m === 'sendMessage' && String(x.b.chat_id) === '555');
+check('the friend sends /start CODE → welcome + the keyboard + the menu; you get "👤 Ali joined"', JSON.parse(kvStore.get('tg:users'))['777'].name === 'Ali' && sent.some(x => String(x.b.chat_id) === '777' && /Welcome, Ali/.test(x.b.text || '')) && toOwner && /Ali/.test(toOwner.b.text), sent.map(x => [x.m, x.b.chat_id, (x.b.text || '').slice(0, 30)]));
+sent.length = 0; await sayAs(888, code, { first_name: 'Eve' });
+check('…the same code again (someone else) → not valid; Eve stays out', !JSON.parse(kvStore.get('tg:users'))['888'] && /not valid/.test(last().b.text));
+sent.length = 0; await sayAs(777, '/portfolio');
+const c7 = sent.find(x => x.m === 'setMyCommands' && x.b.scope && String(x.b.scope.chat_id) === '777');
+check('Ali: /portfolio → "not linked yet" (never your portfolio)', /linked yet/.test(last().b.text) && !/\$7,700|BTC .*0\.1\b/.test(last().b.text), last().b.text);
+sent.length = 0; await sayAs(777, '/invite');
+check('Ali: /invite → owner only', /Only the bot owner/.test(last().b.text));
+kvStore.delete('tg:777:alerts'); claudeCalls.length = 0; sent.length = 0; await sayAs(777, 'alert me sol');
+check('Ali sets alerts → stored under his chat only; yours untouched', JSON.parse(kvStore.get('tg:777:alerts') || '[]').length >= 1 && JSON.parse(kvStore.get('tg:555:alerts') || '[]').every(a => a.id !== JSON.parse(kvStore.get('tg:777:alerts'))[0].id));
+check('…his AI limit is 10 a day (yours 30)', /\d+\/10 left today/.test(last().b.text), last().b.text.slice(-60));
+check('…and Claude is told he is an invited user (not Samir)', /invited/.test(claudeCalls[0].system) && !/one private user, Samir/.test(claudeCalls[0].system));
+check('…his "/" menu has no /invite or /users', c7 && !c7.b.commands.some(c => /invite|users/.test(c.command)), c7 && c7.b.commands.map(c => c.command));
+check('Mini App for Ali (signed by him) → his report, no portfolio (connected: false)', await (async () => { const r = await apiCall({ initData: initData(777) }); const j = await r.json(); return r.status === 200 && j.report.connected === false; })());
+LIVE.solana.usd = 130; kvStore.set('tg:777:alerts', JSON.stringify([{ id: 'a7', kind: 'price_below', value: 140, sym: 'SOL', cg: 'solana', armed: true, created: NOW }]));
+sent.length = 0; Wd = await fresh(); await cron(Wd); LIVE.solana.usd = 150;
+check('cron: Ali\'s alert fires to Ali (chat 777), not to you', sent.some(x => x.m === 'sendMessage' && String(x.b.chat_id) === '777' && /SOL below/.test(x.b.text)) && !sent.some(x => x.m === 'sendMessage' && String(x.b.chat_id) === '555' && /SOL below \$140/.test(x.b.text)), sent.map(x => [x.b.chat_id, (x.b.text || '').slice(0, 30)]));
+sent.length = 0; Wd = await fresh(); await postK(Wd, '/users');
+check('/users (owner) → Ali listed with 🗑', /Ali/.test(last().b.text) && btns(last()).some(b => b.callback_data === 'us:del:777'));
+sent.length = 0; await tapAs(555, 'us:del:777');
+check('🗑 → Ali removed, told so, and the list redrawn', !JSON.parse(kvStore.get('tg:users'))['777'] && sent.some(x => String(x.b.chat_id) === '777' && /removed/.test(x.b.text || '')) && sent.some(x => x.m === 'editMessageText'));
+for (const k of [...kvStore.keys()]) if (/^tg:nope:/.test(k)) kvStore.delete(k);
+sent.length = 0; claudeCalls.length = 0; await sayAs(777, 'what is the price of SOL?');
+check('…after that Ali is a stranger again (no AI, just "private")', claudeCalls.length === 0 && /private/.test(last().b.text));
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
