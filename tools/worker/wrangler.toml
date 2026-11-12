@@ -15,3 +15,7 @@ id = "1702e6d9e72046d1909dcef441c27571"
 
 [observability]
 enabled = true
+
+# every 5 minutes: the Telegram alerts set in words (tools/worker/watch.mjs)
+[triggers]
+crons = ["*/5 * * * *"]

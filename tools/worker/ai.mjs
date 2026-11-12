@@ -11,6 +11,7 @@
 
 import { summarize, settings, local, localParts, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries, derivatives } from './data.mjs';
+import { addAlert, listAlerts, deleteAlert, describe, KINDS } from './watch.mjs';
 
 const H = 3600e3, DAY = 24 * H;
 const LIMIT = env => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30));
@@ -54,6 +55,14 @@ export const TOOLS = [
     input_schema: { type: 'object', properties: {} } },
   { name: 'get_derivatives', description: 'Futures (perpetuals) data for one coin, live from OKX, Binance and Hyperliquid (free public APIs): funding rate (per 8 h, average + annualized, and what it means), open interest in USD and its 24h change, % of accounts long (long / short ratio), top traders\' long / short positions (Binance), and the liquidations OKX reported in the last 24 h (longs vs shorts in USD). Use it for liquidation, squeeze, leverage, funding or "where can price be pulled" questions, with get_coin / get_history for the price levels. It has no liquidation heatmap (CoinGlass\'s is private) — the Liq Map button opens it.',
     input_schema: { type: 'object', properties: { coin: { type: 'string', description: 'Ticker, e.g. "SOL"' } }, required: ['coin'] } },
+  { name: 'set_alert', description: 'Save an alert the user asks for in words ("tell me if SOL drops below 82", "if BTC goes above 100k", "if ETH moves -8% in a day", "if SOL funding turns negative", "if my portfolio goes under 25k"). Checked every 5 minutes; fires once, then removed. kinds: price_below / price_above (USD), change_24h_below / change_24h_above (%), funding_below / funding_above (% per 8 h; "turns negative" = funding_below 0), portfolio_below / portfolio_above (USD, no coin). The result says the value now and already_met (then it waits for the next crossing — tell the user).',
+    input_schema: { type: 'object', properties: { coin: { type: 'string' }, kind: { type: 'string', enum: ['price_below', 'price_above', 'change_24h_below', 'change_24h_above', 'funding_below', 'funding_above', 'portfolio_below', 'portfolio_above'] }, value: { type: 'number' }, note: { type: 'string', description: 'Optional short reminder shown when it fires' } }, required: ['kind', 'value'] } },
+  { name: 'list_alerts', description: "The user's saved alerts (id, what, armed).", input_schema: { type: 'object', properties: {} } },
+  { name: 'delete_alert', description: 'Delete an alert by its id (from list_alerts) — when the user asks to cancel / remove one.', input_schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
+  { name: 'what_if', description: 'Simulate the user\'s portfolio at other prices and / or after trades, with the app\'s numbers: new total value, change, all-time profit, each changed coin, cash from sells, and which exit-plan take-profits would be reached. prices = {"BTC": 150000} (USD); moves_pct = {"SOL": -20}; alts_move_pct = a % applied to every other non-BTC, non-stable coin not given (e.g. "if alts follow BTC"); sell = [{coin, fraction 0–1}] at the new price; buy = [{coin, usd}] with new money at the new price. Coins not mentioned keep today\'s price.',
+    input_schema: { type: 'object', properties: { prices: { type: 'object', additionalProperties: { type: 'number' } }, moves_pct: { type: 'object', additionalProperties: { type: 'number' } }, alts_move_pct: { type: 'number' },
+      sell: { type: 'array', items: { type: 'object', properties: { coin: { type: 'string' }, fraction: { type: 'number' } }, required: ['coin', 'fraction'] } },
+      buy: { type: 'array', items: { type: 'object', properties: { coin: { type: 'string' }, usd: { type: 'number' } }, required: ['coin', 'usd'] } } } } },
   { name: 'get_history', description: 'Hourly price history of a coin for the last N days (1–29): start, end, % change, high and low with their dates, and the daily closes. Only for coins GitHub keeps a price file for (the user\'s coins and the big ones); otherwise it says so.',
     input_schema: { type: 'object', properties: { coin: { type: 'string' }, days: { type: 'integer', minimum: 1, maximum: 29 } }, required: ['coin'] } },
 ];
@@ -62,7 +71,7 @@ export const TOOLS = [
 function context(env) {
   let user, base, sum, used = new Set(), coins = new Set();
   const ctx = {
-    used, coins,
+    env, used, coins,
     async user() { if (user === undefined) user = loadUser(env).catch(() => null); return user; },   // one read shared by every tool
     async market(extra = []) {
       const u = await ctx.user();
@@ -148,6 +157,36 @@ export async function runTool(ctx, name, input) {
     if (c && (c.id || m.idOf[c.sym])) ctx.coins.add((c.id || m.idOf[c.sym]) + '|' + S);
     return { ...d, liquidation_map: `https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=${encodeURIComponent(S)}` };
   }
+  if (name === 'set_alert') {
+    ctx.used.add('alerts (checked every 5 min)');
+    return addAlert(ctx.env, input || {}, await ctx.user());
+  }
+  if (name === 'list_alerts') { const l = await listAlerts(ctx.env); return { alerts: l.map(a => ({ id: a.id, alert: describe(a), armed: a.armed, note: a.note || undefined })) }; }
+  if (name === 'delete_alert') return { deleted: await deleteAlert(ctx.env, String((input && input.id) || '')) };
+  if (name === 'what_if') {
+    const x = await ctx.sum(); if (!x) return { error: 'portfolio not connected' };
+    const { s } = x; ctx.used.add('your portfolio (Firebase)'); ctx.used.add('what-if (the app\'s maths)');
+    const up = o => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [String(k).toUpperCase(), +v]).filter(([, v]) => isFinite(v)));
+    const prices = up(input && input.prices), moves = up(input && input.moves_pct), alts = isFinite(+(input && input.alts_move_pct)) ? +input.alts_move_pct : null;
+    const rows = s.coins.map(c => {
+      let p = c.price;
+      if (prices[c.sym] > 0) p = prices[c.sym]; else if (c.sym in moves) p = c.price * (1 + moves[c.sym] / 100);
+      else if (alts != null && c.sym !== 'BTC' && !isStable(c.sym)) p = c.price * (1 + alts / 100);
+      return { sym: c.sym, qty: c.qty, avg: c.avg, price: c.price, p, buyUsd: 0, sold: 0 };
+    });
+    const by = sym => rows.find(r => r.sym === String(sym || '').toUpperCase());
+    let cash = 0, newMoney = 0, realized = 0; const trades = [];
+    for (const t of (input && input.sell) || []) { const r = by(t.coin), f = Math.max(0, Math.min(1, +t.fraction)); if (!r || !f) { trades.push({ sell: t.coin, error: 'not held' }); continue; } const q = r.qty * f; cash += q * r.p; realized += q * (r.p - r.avg); r.qty -= q; r.sold += q; trades.push({ sell: r.sym, amount: r6(q), usd: r2(q * r.p), profit_usd: r2(q * (r.p - r.avg)) }); }
+    for (const t of (input && input.buy) || []) { const r = by(t.coin), u = +t.usd; if (!r || !(u > 0)) { trades.push({ buy: t.coin, error: !r ? 'not held — ask about it with get_coin' : 'bad amount' }); continue; } const q = u / r.p; r.avg = (r.avg * r.qty + u) / (r.qty + q); r.qty += q; newMoney += u; r.buyUsd += u; trades.push({ buy: r.sym, amount: r6(q), usd: r2(u), new_average: r6(r.avg) }); }
+    const before = s.value, coinsAfter = rows.reduce((a, r) => a + r.qty * r.p, 0), after = coinsAfter + cash;
+    const priceGain = s.coins.reduce((a, c) => { const r = by(c.sym); return a + c.qty * (r.p - c.price); }, 0);   // what the price moves add to profit (trades at the new prices add none)
+    const tps = (s.tps || []).filter(t => { const r = by(t.sym); return r && r.p >= t.level && t.price < t.level; }).map(t => ({ coin: t.sym, tp: t.n, level_usd: r6(t.level), sell_pct: t.pct || null }));
+    return { value_now_usd: r2(before), value_after_usd: r2(after), change_usd: r2(after - before - newMoney), change_pct: before > 0 ? r2((after - before - newMoney) / before * 100) : null,
+      cash_from_sells_usd: r2(cash), new_money_usd: r2(newMoney), realized_profit_from_sells_usd: r2(realized),
+      all_time_profit_now_usd: r2(s.total), all_time_profit_after_usd: r2(s.total + priceGain), all_time_profit_after_pct: s.invested + newMoney > 0 ? r2((s.total + priceGain) / (s.invested + newMoney) * 100) : null,
+      changed_coins: rows.filter(r => r.p !== r.price || r.sold || r.buyUsd).sort((a, b) => Math.abs(b.qty * b.p - b.qty * b.price) - Math.abs(a.qty * a.p - a.qty * a.price)).slice(0, 20).map(r => ({ ticker: r.sym, price_now: r6(r.price), price_then: r6(r.p), value_then_usd: r2(r.qty * r.p), profit_vs_average_pct: r.avg > 0 ? r2((r.p / r.avg - 1) * 100) : null })),
+      trades, exit_take_profits_reached: tps, note: 'coins not mentioned keep today\'s price; sells go to cash (USD)' };
+  }
   if (name === 'get_history') {
     const q = String((input && input.coin) || '').trim(), days = Math.max(1, Math.min(29, parseInt((input && input.days) || 7, 10) || 7));
     const u = await ctx.user(), m = await ctx.market(), c = await findCoin(q, m, u);
@@ -175,6 +214,7 @@ function system(now, lang, qLang) {
     '- Every number you state (price, %, value, rank, flow…) must come from a tool result in this conversation. Never use prices or market data from memory — call the tools first (several in one turn if needed). If a tool has no data, say so.',
     '- Each new question: call the tools again. Earlier answers in this chat may be stale or wrong — never repeat an earlier "no data" (or any earlier number) without calling the tool now.',
     '- For liquidation / squeeze / leverage / funding questions always call get_derivatives (with get_coin and get_history for the levels).',
+    '- "Tell me / alert me / نبّهني if …" → set_alert (then confirm in one short line what was set, the value now, and if already_met that it waits for the next crossing). "What if / لو …" about prices or trades → what_if (with get_coin for a coin he does not hold).',
     '- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.',
     '- About the future: give scenarios, levels and probabilities with reasons — never promises. Not financial advice, but do give a clear, practical view when asked "should I…" (based on his plan and signals).',
     'STYLE — like the app\'s AI Analysis report, short and sharp, all in points:',

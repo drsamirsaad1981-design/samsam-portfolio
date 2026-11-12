@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -93,6 +93,8 @@ globalThis.fetch = async (input, init = {}) => {
     const q = String(lastM.content);
     if (/keep looking/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tl0', name: 'get_coin', input: { coin: 'btc' } }] });
     if (/price of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'text', text: 'Let me check.' }, { type: 'tool_use', id: 'tu1', name: 'get_coin', input: { coin: 'sol' } }] });
+    if (/alert me sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'ta1', name: 'set_alert', input: { coin: 'sol', kind: 'price_below', value: 140, note: 'buy zone' } }, { type: 'tool_use', id: 'ta2', name: 'set_alert', input: { coin: 'sol', kind: 'price_above', value: 100 } }, { type: 'tool_use', id: 'ta3', name: 'set_alert', input: { kind: 'portfolio_above', value: 1e9 } }, { type: 'tool_use', id: 'ta4', name: 'set_alert', input: { coin: 'sol', kind: 'nonsense', value: 1 } }] });
+    if (/what if/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tw1', name: 'what_if', input: { prices: { BTC: 100000 } } }, { type: 'tool_use', id: 'tw2', name: 'what_if', input: { moves_pct: { SOL: -20 }, sell: [{ coin: 'sol', fraction: 0.5 }], buy: [{ coin: 'link', usd: 110 }] } }, { type: 'tool_use', id: 'tw3', name: 'what_if', input: { prices: { LINK: 26 } } }] });
     if (/futures of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'td1', name: 'get_derivatives', input: { coin: 'sol' } }, { type: 'tool_use', id: 'td2', name: 'get_derivatives', input: { coin: 'zzqq' } }] });
     if (/liq of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tq1', name: 'get_coin', input: { coin: 'sol' } }, { type: 'tool_use', id: 'tq2', name: 'get_history', input: { coin: 'sol', days: 3 } }, { type: 'tool_use', id: 'tq3', name: 'get_derivatives', input: { coin: 'sol' } }, { type: 'tool_use', id: 'tq4', name: 'get_portfolio', input: {} }] });
     if (/everything/i.test(q)) return J({ stop_reason: 'tool_use', content: ['get_portfolio', 'get_market', 'get_plan', 'get_exit'].map((name, i) => ({ type: 'tool_use', id: 'tu' + i, name, input: name === 'get_market' ? { top: 200 } : {} })).concat([{ type: 'tool_use', id: 'tuh', name: 'get_history', input: { coin: 'sol', days: 7 } }]) });
@@ -270,7 +272,7 @@ check('tap 🚪 Exit plan → edited in place', last().m === 'editMessageText' &
 sent.length = 0; await say('/signals');
 check('signals: grouped, Telegram-safe', /Signals/.test(last().b.text) && okHtml(last().b.text), last().b.text);
 sent.length = 0; await say('/start');
-check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent === false && btnTexts(out()[1]).length === 8 && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
+check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent === false && btnTexts(out()[1]).length === 9 && btnTexts(out()[1]).includes('🔔 Alerts') && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
 check('the keyboard under the chat: 6 short buttons in 2 rows, not pinned (the ⌨️ icon hides / shows it)', JSON.stringify(out()[0].b.reply_markup.keyboard.map(r => r.map(b => b.text))) === JSON.stringify([['💼 Portfolio', '🌍 Market', '📋 Plan'], ['🚪 Exit', '🏆 Movers', '🎯 Signals']]) && out()[0].b.reply_markup.is_persistent === false, out()[0].b.reply_markup);
 sent.length = 0; await say('/hide');
 check('/hide → the buttons go away (remove_keyboard) with a note how to bring them back', last().b.reply_markup && last().b.reply_markup.remove_keyboard === true && /⌨️/.test(last().b.text), last().b);
@@ -286,7 +288,7 @@ check('the keyboard button "💼 Portfolio" → the portfolio', last().b.text.in
 await say('/new'); sent.length = 0; claudeCalls.length = 0; await say('what is the price of SOL?');
 v = last();
 check('a question → "🧠 Thinking…" at once, then that same message becomes the answer', sent.find(x => x.m === 'sendMessage').b.text === '🧠 Thinking…' && v.m === 'editMessageText' && v.b.message_id === 7, sent.map(x => x.m));
-check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 7 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
+check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 11 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
 const tr = JSON.parse(claudeCalls[1].messages.at(-1).content[0].content);
 check('get_coin gave Claude: live price + source, rank, 7d high / low, futures, your holding (avg, profit, signal)', tr.price_usd === 150 && /CoinGecko \(live\)/.test(tr.price_source) && tr.you_hold.amount === 10 && tr.you_hold.average_buy_usd === 160 && tr.you_hold.signal && 'perpetual_futures' in tr && tr.high_7d > 0, tr);
 check('the answer is Telegram-safe (its <script> and & escaped, ** → <b>, "- " → •)', okHtml(v.b.text) && /&lt;script&gt;/.test(v.b.text) && /• You hold/.test(v.b.text), v.b.text);
@@ -384,6 +386,49 @@ check('/analyze without sign-in → 401 (unchanged)', r.status === 401);
 sent.length = 0;
 await post({ message: { chat: { id: 555 }, text: 'btc' } }, ENV.TG_SECRET, { ...ENV, FIREBASE_SERVICE_ACCOUNT: '' });
 check('without the Firebase key a coin still works (no holding line)', /Bitcoin/.test(last().b.text) && !/You hold/.test(last().b.text), last().b.text);
+
+// ── 🔔 phase 3: alerts in words, checked by the cron; what-if ──
+const kvStore = new Map(), KV = { get: async k => kvStore.has(k) ? kvStore.get(k) : null, put: async (k, v) => { kvStore.set(k, v); }, delete: async k => { kvStore.delete(k); } };
+const ENVK = { ...ENV, RATE: KV };
+let inst = 0;
+const fresh = async () => (await import('../tools/dist/samsam-worker.js?w' + (++inst))).default;   // a new Worker instance: nothing cached
+const postK = async (Wk, text) => Wk.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, message: { chat: { id: 555 }, text } }) }), ENVK, {});
+const cron = async Wk => { const p = []; await Wk.scheduled({ cron: '*/5 * * * *' }, ENVK, { waitUntil: x => p.push(x) }); await Promise.all(p); };
+let Wk = await fresh();
+sent.length = 0; claudeCalls.length = 0; await postK(Wk, 'alert me sol');
+const al = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
+check('set_alert: "SOL ≤ $140" saved, now $150, waiting (armed)', al && al[0].ok && al[0].alert === 'SOL price ≤ $140' && al[0].now === 150 && al[0].already_met === false, al && al[0]);
+check('set_alert: "SOL ≥ $100" is already true → saved, but waits for the next crossing (already_met)', al[1].ok && al[1].already_met === true, al[1]);
+check('set_alert: portfolio ≥ $1B (no coin needed); a wrong kind → a clear error', al[2].ok && al[2].alert === 'Portfolio value ≥ $1.00B' && /kind must be/.test(al[3].error), [al[2], al[3]]);
+check('the prompt routes "tell me if…" to set_alert and "what if…" to what_if', /set_alert/.test(claudeCalls[0].system) && /what_if/.test(claudeCalls[0].system));
+sent.length = 0; await postK(Wk, '/alerts');
+let av = last();
+check('/alerts: the 3 alerts listed, the one already true marked "waits to reset first", a 🗑 per alert', /Your alerts<\/b> \(3\)/.test(av.b.text) && /SOL price ≤ \$140/.test(av.b.text) && /waits to reset first/.test(av.b.text) && btns(av).filter(b => /^🗑/.test(b.text)).length === 3, av.b.text);
+LIVE.solana.usd = 139; Wk = await fresh(); sent.length = 0; await cron(Wk);
+const fired = sent.filter(x => x.m === 'sendMessage');
+check('cron: SOL $139 → "🔔 🔻 SOL below $140", now $139, the note, buttons SOL + Liq Map', fired.length === 1 && /🔔 🔻 <b>SOL below \$140<\/b>/.test(fired[0].b.text) && /Now: <b>\$139<\/b>/.test(fired[0].b.text) && /buy zone/.test(fired[0].b.text) && btns(fired[0])[0].text === '🪙 SOL', fired.map(x => x.b.text));
+const left = JSON.parse(kvStore.get('tg:alerts'));
+check('…and it is removed; the waiting one is still waiting (still above $100)', left.length === 2 && !left.some(a => a.value === 140) && left.find(a => a.value === 100).armed === false, left);
+sent.length = 0; Wk = await fresh(); await cron(Wk);
+check('next cron: nothing fires again', sent.filter(x => x.m === 'sendMessage').length === 0, sent.map(x => x.b.text));
+LIVE.solana.usd = 95; Wk = await fresh(); await cron(Wk);
+check('SOL drops to $95 → the "≥ $100" alert is now armed (no message)', JSON.parse(kvStore.get('tg:alerts')).find(a => a.value === 100).armed === true && sent.filter(x => x.m === 'sendMessage').length === 0);
+LIVE.solana.usd = 105; Wk = await fresh(); sent.length = 0; await cron(Wk);
+check('…back above $100 → "🚀 SOL above $100" fires', sent.some(x => x.m === 'sendMessage' && /🚀 <b>SOL above \$100<\/b>/.test(x.b.text)), sent.map(x => x.b.text));
+LIVE.solana.usd = 150;
+sent.length = 0; Wk = await fresh(); await postK(Wk, '/alerts');
+av = last(); const del = btns(av).find(b => /^🗑 1/.test(b.text));
+await Wk.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qd', data: del.callback_data, message: { message_id: 77, chat: { id: 555 } } } }) }), ENVK, {});
+check('🗑 1 → deleted, the list redrawn in place, "🗑 Alert deleted"', JSON.parse(kvStore.get('tg:alerts')).length === 0 && last().m === 'editMessageText' && /No alerts yet/.test(last().b.text) && sent.some(x => x.m === 'answerCallbackQuery' && /deleted/.test(x.b.text || '')), [kvStore.get('tg:alerts'), last().b.text]);
+sent.length = 0; Wk = await fresh(); await cron(Wk);
+check('cron with no alerts → no outside calls, nothing sent', sent.length === 0);
+// what-if
+claudeCalls.length = 0; Wk = await fresh(); await postK(Wk, 'what if btc hits 100k');
+const wi = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
+check('what_if BTC $100,000: value +$2,300 (0.1 BTC × $23,000), profit up by the same', wi && wi[0].change_usd === 2300 && Math.round(wi[0].all_time_profit_after_usd - wi[0].all_time_profit_now_usd) === 2300 && wi[0].changed_coins[0].ticker === 'BTC' && wi[0].changed_coins[0].price_then === 100000, wi && wi[0]);
+check('what_if SOL −20% + sell half (5 SOL at $120 → $600 cash, −$200 vs avg $160) + buy $110 LINK: value change = −$300 (only the price move)', wi[1].cash_from_sells_usd === 600 && wi[1].realized_profit_from_sells_usd === -200 && wi[1].change_usd === -300 && wi[1].new_money_usd === 110 && wi[1].trades.find(t => t.buy === 'LINK').amount === 10, wi[1]);
+check('what_if LINK $26 → the exit plan\'s TP1 ($25) would be reached', wi[2].exit_take_profits_reached.length === 1 && wi[2].exit_take_profits_reached[0].coin === 'LINK' && wi[2].exit_take_profits_reached[0].tp === 1, wi[2].exit_take_profits_reached);
+check('wrangler.toml runs the alerts every 5 minutes', /crons = \["\*\/5 \* \* \* \*"\]/.test(fs.readFileSync(path.join(ROOT, 'tools/worker/wrangler.toml'), 'utf8')));
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
