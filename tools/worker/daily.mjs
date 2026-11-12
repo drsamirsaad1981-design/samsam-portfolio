@@ -13,6 +13,7 @@
 // The morning / evening are written by Claude from the facts gathered here (tools/worker/ai.mjs → compose); if Claude
 // can't, the bot's own plain version goes out. They do not count in the 30 questions a day.
 
+import { K, chatOf } from './who.mjs';
 import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures } from './data.mjs';
 import { compose } from './ai.mjs';
@@ -25,12 +26,12 @@ async function kvGet(env, k) { try { if (env.RATE) { const v = await env.RATE.ge
 async function kvPut(env, k, v, ttl) { mem.set(k, v); try { if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : undefined); } catch (_) {} }
 const jget = async (env, k, d) => { try { const v = JSON.parse((await kvGet(env, k)) || 'null'); return v == null ? d : v; } catch (_) { return d; } };
 const jput = (env, k, v, ttl) => kvPut(env, k, JSON.stringify(v), ttl);
-async function lang(env) { let v = null; try { if (env.RATE) v = await env.RATE.get('tg:lang'); } catch (_) {} return v === 'ar' || v === 'en' ? v : env.BOT_LANG === 'ar' ? 'ar' : 'en'; }
+async function lang(env) { let v = null; try { if (env.RATE) v = await env.RATE.get(K(env, 'lang')); } catch (_) {} return v === 'ar' || v === 'en' ? v : env.BOT_LANG === 'ar' ? 'ar' : 'en'; }
 async function tg(env, method, body) {
   try { const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
   catch (_) { return { ok: false }; }
 }
-const send = (env, v, extra = {}) => tg(env, 'sendMessage', { chat_id: env.TELEGRAM_CHAT_ID, text: v.text.slice(0, 4000), parse_mode: 'HTML', disable_web_page_preview: true, ...(v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}), ...extra });
+const send = (env, v, extra = {}) => tg(env, 'sendMessage', { chat_id: chatOf(env), text: v.text.slice(0, 4000), parse_mode: 'HTML', disable_web_page_preview: true, ...(v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}), ...extra });
 const cb = (text, data) => ({ text, callback_data: data });
 const url = (text, u) => ({ text, url: u });
 const LIQ = 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=';
@@ -38,8 +39,8 @@ const r2 = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
 const r6 = v => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
 const mins = hm => { const [h, m] = String(hm).split(':').map(Number); return h * 60 + m; };
 
-export async function getCfg(env) { return { ...DEF, ...(await jget(env, 'tg:daily', {})) }; }
-export async function setCfg(env, patch) { const c = { ...(await getCfg(env)), ...patch }; await jput(env, 'tg:daily', c); return c; }
+export async function getCfg(env) { return { ...DEF, ...(await jget(env, K(env, 'daily'), {})) }; }
+export async function setCfg(env, patch) { const c = { ...(await getCfg(env)), ...patch }; await jput(env, K(env, 'daily'), c); return c; }
 
 const WD = {
   en: { morning: 'Smart morning', evening: 'Smart evening', radar: 'Leverage radar', sectors: 'Sector radar', pin: 'Live pinned message', on: 'on', off: 'off',
@@ -116,7 +117,7 @@ export async function morning(env, now = Date.now(), L = null) {
   const { m, sum } = g, tasks = todo(sum, now), alerts = await listAlerts(env);
   const facts = { time_riyadh: local(now, { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }), portfolio: pfFacts(sum), market: marketFacts(m, sum),
     todo: tasks, closest_levels: nearest(alerts, m, sum), signals: sum.counts, plan_progress_pct: r2(sum.prog && sum.prog.pct) };
-  await jput(env, 'tg:snap:' + localParts(now).date, { t: now, value: sum.value, btc: m.btc && m.btc.price, fng: m.fng && m.fng.value, dom: m.global && m.global.dom && m.global.dom.btc }, 2 * 86400);   // the evening compares with this
+  await jput(env, K(env, 'snap:' + localParts(now).date), { t: now, value: sum.value, btc: m.btc && m.btc.price, fng: m.fng && m.fng.value, dom: m.global && m.global.dom && m.global.dom.btc }, 2 * 86400);   // the evening compares with this
   const body = await compose(env, 'morning', L, facts) || plainMorning(L, facts);
   const head = `☀️ <b>${w.morning}</b> · ${esc(local(now, { weekday: 'short', day: 'numeric', month: 'short' }))}`;
   return send(env, { text: head + '\n\n' + body, buttons: [[cb(w.plan, 'pl'), cb(w.pf, 'pf'), cb(w.mk, 'mk')]] });
@@ -126,7 +127,7 @@ export async function evening(env, now = Date.now(), L = null) {
   const g = await gather(env, now);
   if (!g) return send(env, { text: w.noUser });
   const { user, m, sum } = g, day = localParts(now).date;
-  const snap = await jget(env, 'tg:snap:' + day, null), alerts = await listAlerts(env), log = await todayLog(env, now);
+  const snap = await jget(env, K(env, 'snap:' + day), null), alerts = await listAlerts(env), log = await todayLog(env, now);
   const movers = sum.coins.filter(c => !isStable(c.sym) && c.value >= 5 && c.ch24 != null).sort((a, b) => b.ch24 - a.ch24);
   const trades = (user.txs || []).filter(t => t && t.date && localParts(Date.parse(t.date)).date === day && t.kind !== 'pay' && ['buy', 'sell'].includes(t.type))
     .slice(0, 6).map(t => ({ type: t.type, coin: t.sym, amount: r6(t.qty), price_usd: r6(t.price) }));
@@ -198,14 +199,14 @@ export async function radar(env, now = Date.now()) {
     const m = await loadMarket([], coinsOf(user)), sum = summarize(withIds(user, m), m, now); idOf = { ...m.idOf, BTC: 'bitcoin' };
     list = [...new Set(['BTC', ...sum.coins.filter(c => !isStable(c.sym) && (!fut || fut.has(c.sym))).sort((a, b) => b.value - a.value).slice(0, 3).map(c => c.sym)])];
   }
-  const i = (+(await kvGet(env, 'tg:radar:i')) || 0) % list.length, sym = list[i];
-  await kvPut(env, 'tg:radar:i', String(i + 1));
+  const i = (+(await kvGet(env, K(env, 'radar:i'))) || 0) % list.length, sym = list[i];
+  await kvPut(env, K(env, 'radar:i'), String(i + 1));
   const d = await derivatives(sym).catch(() => null);
   if (!d || !d.summary) return { sym, sent: 0 };
-  const s = d.summary, seen = await jget(env, 'tg:radar:seen', {});
+  const s = d.summary, seen = await jget(env, K(env, 'radar:seen'), {});
   for (const k of Object.keys(seen)) if (now - seen[k] > 2 * DAY) delete seen[k];
   const fresh = radarFindings(s).filter(k => !(now - (seen[sym + ':' + k] || 0) < 12 * H));
-  if (!fresh.length) { await jput(env, 'tg:radar:seen', seen); return { sym, sent: 0 }; }
+  if (!fresh.length) { await jput(env, K(env, 'radar:seen'), seen); return { sym, sent: 0 }; }
   const L = await lang(env), w = RADAR_TXT[L], ww = WD[L];
   const lines = [`🧲 <b>${ww.radar} · ${esc(sym)}</b>`, ...fresh.map(k => `⚠️ <b>${w[k]}</b>`), ''];
   if (s.funding_8h_pct_avg != null) lines.push(`• ${w.fund}: <b>${s.funding_8h_pct_avg > 0 ? '+' : ''}${s.funding_8h_pct_avg}%</b> / 8h (≈ ${s.funding_annualized_pct > 0 ? '+' : ''}${s.funding_annualized_pct}% ${w.yr})`);
@@ -216,7 +217,7 @@ export async function radar(env, now = Date.now()) {
   lines.push('', `<i>${longSide && !shortSide ? w.noteL : shortSide && !longSide ? w.noteS : w.noteN}</i>`);
   const r = await send(env, { text: lines.join('\n'), buttons: [[url('🔥 Liq Map', LIQ + encodeURIComponent(sym)), cb('🪙 ' + sym, 'c:' + String(idOf[sym] || 'x-' + sym.toLowerCase()).slice(0, 58))]] });
   if (r && r.ok) { fresh.forEach(k => { seen[sym + ':' + k] = now; }); await logEvent(env, 'radar', sym + ': ' + fresh.map(k => RADAR_TXT.en[k]).join(', '), now); }
-  await jput(env, 'tg:radar:seen', seen);
+  await jput(env, K(env, 'radar:seen'), seen);
   return { sym, sent: r && r.ok ? 1 : 0 };
 }
 
@@ -226,7 +227,7 @@ export async function sectorRadar(env, now = Date.now()) {
   const m = await loadMarket([], user ? coinsOf(user) : []);
   const big = (m.sectors || []).filter(s => s && s.mcap >= 1e9 && s.ch24 != null && Math.abs(s.ch24) >= 10);
   if (!big.length) return { sent: 0 };
-  const day = localParts(now).date, seen = await jget(env, 'tg:sector:seen', {});
+  const day = localParts(now).date, seen = await jget(env, K(env, 'sector:seen'), {});
   const fresh = big.filter(s => seen[s.id] !== day).sort((a, b) => Math.abs(b.ch24) - Math.abs(a.ch24)).slice(0, 3);
   if (!fresh.length) return { sent: 0 };
   const mine = new Set(user ? Object.values(m.idOf).filter(Boolean) : []), symOf = id => (Object.entries(m.idOf).find(([, v]) => v === id) || [])[0];
@@ -237,7 +238,7 @@ export async function sectorRadar(env, now = Date.now()) {
     lines.push(`${s.ch24 > 0 ? '🚀' : '🔻'} <b>${esc(s.name)}</b> ${pct(s.ch24, 1)} · ${usd(s.mcap)}${held.length ? `\n   ${ar ? 'معاك من قادته' : 'you hold its leaders'}: <b>${esc(held.join(', '))}</b>` : ''}`);
   }
   const r = await send(env, { text: lines.join('\n'), buttons: [[cb(w.mk, 'mk'), cb(w.pf, 'pf')]] });
-  if (r && r.ok) { fresh.forEach(s => { seen[s.id] = day; }); for (const k of Object.keys(seen)) if (seen[k] !== day) delete seen[k]; await jput(env, 'tg:sector:seen', seen); await logEvent(env, 'sector', fresh.map(s => s.name + ' ' + pct(s.ch24, 1)).join(', '), now); }
+  if (r && r.ok) { fresh.forEach(s => { seen[s.id] = day; }); for (const k of Object.keys(seen)) if (seen[k] !== day) delete seen[k]; await jput(env, K(env, 'sector:seen'), seen); await logEvent(env, 'sector', fresh.map(s => s.name + ' ' + pct(s.ch24, 1)).join(', '), now); }
   return { sent: r && r.ok ? 1 : 0 };
 }
 
@@ -260,25 +261,25 @@ export async function pinView(env, now = Date.now()) {
 export async function pinUpdate(env, now = Date.now(), force = false) {
   const v = await pinView(env, now);
   if (!v) return { ok: false };
-  const st = await jget(env, 'tg:pin', {});
+  const st = await jget(env, K(env, 'pin'), {});
   const body = v.text.split('\n').slice(1).join('\n');   // the first line is the time: only redraw when a number changed (or hourly)
   if (!force && st.id && st.body === body && now - (st.t || 0) < H) return { ok: true, same: true };
   if (st.id) {
-    const r = await tg(env, 'editMessageText', { chat_id: env.TELEGRAM_CHAT_ID, message_id: st.id, text: v.text, parse_mode: 'HTML', reply_markup: { inline_keyboard: v.buttons } });
-    if (r.ok || /not modified/i.test(r.description || '')) { await jput(env, 'tg:pin', { id: st.id, body, t: now }); return { ok: true, id: st.id }; }
+    const r = await tg(env, 'editMessageText', { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: 'HTML', reply_markup: { inline_keyboard: v.buttons } });
+    if (r.ok || /not modified/i.test(r.description || '')) { await jput(env, K(env, 'pin'), { id: st.id, body, t: now }); return { ok: true, id: st.id }; }
   }
   const r = await send(env, v, { disable_notification: true });
   const id = r && r.ok && r.result && r.result.message_id;
   if (!id) return { ok: false };
-  await tg(env, 'pinChatMessage', { chat_id: env.TELEGRAM_CHAT_ID, message_id: id, disable_notification: true });
-  if (st.id) tg(env, 'unpinChatMessage', { chat_id: env.TELEGRAM_CHAT_ID, message_id: st.id }).catch(() => {});
-  await jput(env, 'tg:pin', { id, body, t: now });
+  await tg(env, 'pinChatMessage', { chat_id: chatOf(env), message_id: id, disable_notification: true });
+  if (st.id) tg(env, 'unpinChatMessage', { chat_id: chatOf(env), message_id: st.id }).catch(() => {});
+  await jput(env, K(env, 'pin'), { id, body, t: now });
   return { ok: true, id, new: true };
 }
 export async function unpin(env) {
-  const st = await jget(env, 'tg:pin', {});
-  if (st.id) await tg(env, 'unpinChatMessage', { chat_id: env.TELEGRAM_CHAT_ID, message_id: st.id });
-  await jput(env, 'tg:pin', {});
+  const st = await jget(env, K(env, 'pin'), {});
+  if (st.id) await tg(env, 'unpinChatMessage', { chat_id: chatOf(env), message_id: st.id });
+  await jput(env, K(env, 'pin'), {});
 }
 
 // ── /daily ──
@@ -292,10 +293,10 @@ export async function viewDaily(env) {
 
 // ── the cron (every 5 min, after the alerts): one bigger job per run ──
 export async function runDaily(env, now = Date.now()) {
-  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return { job: null };
-  const c = await getCfg(env), lp = localParts(now), sent = await jget(env, 'tg:daily:sent', {}), min = new Date(now).getUTCMinutes();
+  if (!env.TELEGRAM_BOT_TOKEN || !chatOf(env)) return { job: null };
+  const c = await getCfg(env), lp = localParts(now), sent = await jget(env, K(env, 'daily:sent'), {}), min = new Date(now).getUTCMinutes();
   const due = (on, at, k) => { const late = mins(lp.hm) - mins(at); return on && late >= 0 && late < 180 && sent[k] !== lp.date; };   // up to 3 h late (a missed run catches up), once a day
-  const done = async k => { sent[k] = lp.date; await jput(env, 'tg:daily:sent', sent); };
+  const done = async k => { sent[k] = lp.date; await jput(env, K(env, 'daily:sent'), sent); };
   if (due(c.morning, c.morningAt, 'morning')) { await done('morning'); await morning(env, now); return { job: 'morning' }; }   // marked first: never twice
   if (due(c.evening, c.eveningAt, 'evening')) { await done('evening'); await evening(env, now); return { job: 'evening' }; }
   if (c.pin && min % 15 === 0) { await pinUpdate(env, now); return { job: 'pin' }; }

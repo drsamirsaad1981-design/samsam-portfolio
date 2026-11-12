@@ -6,6 +6,7 @@ import { runWatch } from './watch.mjs';
 import { runDaily, kickPrices } from './daily.mjs';
 import { page, api, cardSend, logo } from './miniapp.mjs';
 import { resetBudget } from './data.mjs';
+import { asChat, chats, migrateOwner } from './who.mjs';
 
 export default {
   async fetch(request, env, ctx) {
@@ -24,9 +25,15 @@ export default {
     const now = event && event.scheduledTime ? +event.scheduledTime : Date.now(), log = (k, e) => console.log(JSON.stringify({ [k]: 'error', message: String(e && e.message).slice(0, 200) }));
     ctx.waitUntil((async () => {
       resetBudget();   // one allowance of outside calls for the whole run (Cloudflare counts per run)
-      await runWatch(env).then(r => { if (r.fired) console.log(JSON.stringify({ watch: r })); }).catch(e => log('watch', e));
+      await migrateOwner(env);
       await kickPrices(env).then(r => { if (r.kick === 'sent' || r.kick === 'refused') console.log(JSON.stringify(r)); }).catch(e => log('kick', e));   // GitHub late → run the market snapshot now
-      await runDaily(env, now).then(r => { if (r.job) console.log(JSON.stringify({ daily: r })); }).catch(e => log('daily', e));   // phase 5: morning / evening / radars / pinned
+      for (const chat of await chats(env)) {   // each person in turn, as themselves: their alerts, then their daily messages
+        resetBudget();
+        await asChat(chat, async () => {
+          await runWatch(env).then(r => { if (r.fired) console.log(JSON.stringify({ watch: r })); }).catch(e => log('watch', e));
+          await runDaily(env, now).then(r => { if (r.job) console.log(JSON.stringify({ daily: r })); }).catch(e => log('daily', e));   // phase 5: morning / evening / radars / pinned
+        });
+      }
     })());
   },
 };

@@ -8,6 +8,7 @@
 // stablecoin also writes the stablecoin going out at $1 (kind 'pay'); a Sell into a stablecoin also writes its Buy at $1.
 // A prepared trade waits 15 minutes (KV tg:tx:<id>), then it is gone.
 
+import { chatOf } from './who.mjs';
 import { summarize, isStable, local, usd, usd2, esc } from '../alerts-core.mjs';
 import { loadUser, loadMarket, coinsOf, withIds, commitDocs } from './data.mjs';
 
@@ -113,7 +114,7 @@ export async function prepareTrade(ctx, input) {
 // the trades of one answer → kept 15 min under one id (the buttons carry it)
 export async function keepTrades(env, trades, lang = 'en') {
   const gid = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
-  await kvPut(env, 'tg:tx:' + gid, JSON.stringify({ created: Date.now(), trades, lang }));
+  await kvPut(env, 'tg:tx:' + gid, JSON.stringify({ created: Date.now(), trades, lang, chat: chatOf(env) }));   // whose trade it is
   return gid;
 }
 
@@ -148,6 +149,7 @@ export async function confirmTrades(env, gid) {
   const raw = await kvGet(env, 'tg:tx:' + gid);
   if (!raw) return { error: 'gone' };
   const g = JSON.parse(raw), lang = g.lang;
+  if (g.chat && g.chat !== chatOf(env)) return { error: 'gone' };   // another person's trade: never
   await kvDel(env, 'tg:tx:' + gid);   // first: a second tap can never save twice
   if (Date.now() - g.created > TTL) return { error: 'expired', lang };
   const user = await loadUser(env, true);
@@ -167,4 +169,4 @@ export async function confirmTrades(env, gid) {
   return { ok: true, lang: g.lang, trades: g.trades.map(x => x.trade), holdings: s2 ? g.trades.map(({ trade: t }) => { const c = s2.coins.find(z => z.sym === t.sym); return { sym: t.sym, qty: c ? c.qty : 0, avg: c ? c.avg : null }; }) : [] };
 }
 // → the trade's language when it was waiting, false when it was already saved / cancelled
-export async function cancelTrades(env, gid) { const raw = await kvGet(env, 'tg:tx:' + gid); await kvDel(env, 'tg:tx:' + gid); if (!raw) return false; try { return JSON.parse(raw).lang || 'en'; } catch (_) { return 'en'; } }
+export async function cancelTrades(env, gid) { const raw = await kvGet(env, 'tg:tx:' + gid); if (!raw) return false; try { const g0 = JSON.parse(raw); if (g0.chat && g0.chat !== chatOf(env)) return false; } catch (_) {} await kvDel(env, 'tg:tx:' + gid); try { return JSON.parse(raw).lang || 'en'; } catch (_) { return 'en'; } }

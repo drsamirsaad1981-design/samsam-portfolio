@@ -13,6 +13,7 @@
 // Worker secrets (Settings → Variables and Secrets): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT,
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
+import { asChat, chatOf, K, allowed, migrateOwner } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
@@ -126,17 +127,17 @@ const replyKb = t => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }, { text
 const KB_ACT = () => Object.fromEntries(Object.values(T).flatMap(L => [...Object.entries(L.kb), ...Object.entries(L.kbOld || {})].map(([act, text]) => [text, act])));
 
 // ── language: English by default; 🌐 in the menu (or /lang) switches. Kept in the Worker's KV (RATE), else in memory ──
-let memLang = null;
+const memLang = new Map();   // per chat (each person has their own language)
 export async function getLang(env) {
-  let v = memLang;
-  try { if (env.RATE) v = (await env.RATE.get('tg:lang')) || v; } catch (_) {}
+  let v = memLang.get(chatOf(env));
+  try { if (env.RATE) v = (await env.RATE.get(K(env, 'lang'))) || v; } catch (_) {}
   if (v === 'ar' || v === 'en') return v;
   return env.BOT_LANG === 'ar' ? 'ar' : 'en';
 }
-let memRange = null;
-async function getRange(env) { let v = memRange; try { if (env.RATE) v = +(await env.RATE.get('tg:mk')) || v; } catch (_) {} return RANGES.includes(+v) ? +v : 100; }
-async function setRange(env, v) { memRange = v; try { if (env.RATE) await env.RATE.put('tg:mk', String(v)); } catch (_) {} }
-async function setLang(env, v) { memLang = v; try { if (env.RATE) await env.RATE.put('tg:lang', v); } catch (_) {} }
+const memRange = new Map();
+async function getRange(env) { let v = memRange.get(chatOf(env)); try { if (env.RATE) v = +(await env.RATE.get(K(env, 'mk'))) || v; } catch (_) {} return RANGES.includes(+v) ? +v : 100; }
+async function setRange(env, v) { memRange.set(chatOf(env), v); try { if (env.RATE) await env.RATE.put(K(env, 'mk'), String(v)); } catch (_) {} }
+async function setLang(env, v) { memLang.set(chatOf(env), v); try { if (env.RATE) await env.RATE.put(K(env, 'lang'), v); } catch (_) {} }
 
 // ── views: each returns { text, buttons } ──
 export function viewMenu(t) { return { text: `${t.hi}\n${t.menuTitle}`, buttons: menuRows(t) }; }
@@ -365,9 +366,13 @@ export async function handleTelegram(request, env) {
   if (!u) return ok();
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
-  if (chat == null || String(chat) !== String(env.TELEGRAM_CHAT_ID)) return ok();   // a private bot: nobody else gets an answer
-  if (!(await firstTime(env, u.update_id))) return ok();
-  await ensureCmds(env);   // Telegram re-sent it (a slow answer): already handled
+  if (chat == null || !(await allowed(env, chat))) return ok();   // a private bot: only the chats it serves get an answer
+  await migrateOwner(env);
+  return asChat(chat, () => onUpdate(env, u, msg, q, chat));   // everything below runs as this chat: its own alerts, memory, language…
+}
+async function onUpdate(env, u, msg, q, chat) {
+  if (!(await firstTime(env, u.update_id))) return ok();   // Telegram re-sent it (a slow answer): already handled
+  await ensureCmds(env);
   try {
     if (q) {
       const d = String(q.data || '');
@@ -553,14 +558,14 @@ const cmds = lang => { const a = lang === 'ar'; return [
   ].map(([command, description]) => ({ command, description })); };
 // the "/" menu follows the code: when the list (or the language) changed since it was last sent, it is sent again — no /start needed
 async function ensureCmds(env) {
-  const lang = await getLang(env), v = lang + ':' + cmds(lang).map(c => c.command).join(',');
-  if (cmdMem === v) return;
-  let had = null; try { if (env.RATE) had = await env.RATE.get('tg:cmdv'); } catch (_) {}
-  if (had === v) { cmdMem = v; return; }
-  const r = await tg(env, 'setMyCommands', { commands: cmds(lang) }).catch(() => ({}));
-  if (r && r.ok) { cmdMem = v; try { if (env.RATE) await env.RATE.put('tg:cmdv', v); } catch (_) {} }
+  const lang = await getLang(env), v = lang + ':' + cmds(lang).map(c => c.command).join(','), c = chatOf(env);
+  if (cmdMem.get(c) === v) return;
+  let had = null; try { if (env.RATE) had = await env.RATE.get(K(env, 'cmdv')); } catch (_) {}
+  if (had === v) { cmdMem.set(c, v); return; }
+  const r = await tg(env, 'setMyCommands', { commands: cmds(lang), scope: { type: 'chat', chat_id: +c || c } }).catch(() => ({}));   // this chat's own "/" menu, in its language
+  if (r && r.ok) { cmdMem.set(c, v); try { if (env.RATE) await env.RATE.put(K(env, 'cmdv'), v); } catch (_) {} }
 }
-let cmdMem = null;
+const cmdMem = new Map();
 
 // ── one-time setup: GET /tg/setup?key=<TG_SECRET> ──
 export async function setup(request, env) {
@@ -572,11 +577,13 @@ export async function setup(request, env) {
   const hook = u.origin + u.pathname.replace(/\/setup$/, '');
   const a = await tg(env, 'setWebhook', { url: hook, secret_token: env.TG_SECRET, allowed_updates: ['message', 'edited_message', 'callback_query'], drop_pending_updates: true });
   resetBudget();
+  return asChat(env.TELEGRAM_CHAT_ID, async () => {   // the owner's chat
   const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];
   const b = await tg(env, 'setMyCommands', { commands: cmds(lang) });
   const c = await send(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
   await send(env, env.TELEGRAM_CHAT_ID, viewMenu(t));
   return json(a.ok && b.ok && c.ok ? 200 : 502, { ok: !!(a.ok && b.ok && c.ok), webhook: a.ok ? 'set' : a.description, menu: b.ok ? 'set' : b.description, welcome: c.ok ? 'sent' : c.description, portfolio: serviceAccount(env) ? (user ? 'connected' : 'not found') : 'FIREBASE_SERVICE_ACCOUNT missing' });
+  });
 }
 
 // ── a check you open in the browser: GET /tg/check?key=<TG_SECRET>&coin=SOL — the futures data for a coin, fresh, and

@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -424,19 +424,19 @@ check('/alerts: the 3 alerts listed, the one already true marked "waits to reset
 LIVE.solana.usd = 139; Wk = await fresh(); sent.length = 0; await cron(Wk);
 const fired = sent.filter(x => x.m === 'sendMessage');
 check('cron: SOL $139 → "🔔 🔻 SOL below $140", now $139, the note, buttons SOL + Liq Map', fired.length === 1 && /🔔 🔻 <b>SOL below \$140<\/b>/.test(fired[0].b.text) && /Now: <b>\$139<\/b>/.test(fired[0].b.text) && /buy zone/.test(fired[0].b.text) && btns(fired[0])[0].text === '🪙 SOL', fired.map(x => x.b.text));
-const left = JSON.parse(kvStore.get('tg:alerts'));
+const left = JSON.parse(kvStore.get('tg:555:alerts'));
 check('…and it is removed; the waiting one is still waiting (still above $100)', left.length === 2 && !left.some(a => a.value === 140) && left.find(a => a.value === 100).armed === false, left);
 sent.length = 0; Wk = await fresh(); await cron(Wk);
 check('next cron: nothing fires again', sent.filter(x => x.m === 'sendMessage').length === 0, sent.map(x => x.b.text));
 LIVE.solana.usd = 95; Wk = await fresh(); await cron(Wk);
-check('SOL drops to $95 → the "≥ $100" alert is now armed (no message)', JSON.parse(kvStore.get('tg:alerts')).find(a => a.value === 100).armed === true && sent.filter(x => x.m === 'sendMessage').length === 0);
+check('SOL drops to $95 → the "≥ $100" alert is now armed (no message)', JSON.parse(kvStore.get('tg:555:alerts')).find(a => a.value === 100).armed === true && sent.filter(x => x.m === 'sendMessage').length === 0);
 LIVE.solana.usd = 105; Wk = await fresh(); sent.length = 0; await cron(Wk);
 check('…back above $100 → "🚀 SOL above $100" fires', sent.some(x => x.m === 'sendMessage' && /🚀 <b>SOL above \$100<\/b>/.test(x.b.text)), sent.map(x => x.b.text));
 LIVE.solana.usd = 150;
 sent.length = 0; Wk = await fresh(); await postK(Wk, '/alerts');
 av = last(); const del = btns(av).find(b => /^🗑 1/.test(b.text));
 await Wk.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qd', data: del.callback_data, message: { message_id: 77, chat: { id: 555 } } } }) }), ENVK, {});
-check('🗑 1 → deleted, the list redrawn in place, "🗑 Alert deleted"', JSON.parse(kvStore.get('tg:alerts')).length === 0 && last().m === 'editMessageText' && /No alerts yet/.test(last().b.text) && sent.some(x => x.m === 'answerCallbackQuery' && /deleted/.test(x.b.text || '')), [kvStore.get('tg:alerts'), last().b.text]);
+check('🗑 1 → deleted, the list redrawn in place, "🗑 Alert deleted"', JSON.parse(kvStore.get('tg:555:alerts')).length === 0 && last().m === 'editMessageText' && /No alerts yet/.test(last().b.text) && sent.some(x => x.m === 'answerCallbackQuery' && /deleted/.test(x.b.text || '')), [kvStore.get('tg:555:alerts'), last().b.text]);
 sent.length = 0; Wk = await fresh(); await cron(Wk);
 check('cron with no alerts → no outside calls, nothing sent', sent.length === 0);
 // what-if
@@ -559,31 +559,31 @@ check('a trade confirmed after 15 min → "Over 15 minutes old", nothing saved',
 
 // ── 🗓 phase 5: smart morning / evening, radars, the live pinned message (the 5-minute cron) ──
 market.sectors = [{ id: 'artificial-intelligence', name: 'AI', mcap: 5e10, ch24: 14.2, top: ['solana', 'x1', 'x2'] }, { id: 'meme-token', name: 'Meme', mcap: 3e10, ch24: -11.5, top: ['dogecoin'] }, { id: 'small', name: 'Tiny', mcap: 2e8, ch24: 40, top: [] }, { id: 'calm', name: 'Calm', mcap: 9e10, ch24: 2, top: [] }];
-for (const k of [...kvStore.keys()]) if (/^tg:(daily|snap|pin|radar|sector|log)/.test(k)) kvStore.delete(k);
+for (const k of [...kvStore.keys()]) if (/^tg:555:(daily|snap|pin|radar|sector|log)/.test(k)) kvStore.delete(k);
 LIVE.pendle.usd = 3.05;   // 1.7% above the buy-price alert ($3) → a morning task
 let Wd = await fresh(); sent.length = 0; composeCalls.length = 0; await cron(Wd, RIYADH('08:45'));
 let mm = sent.find(x => x.m === 'sendMessage');
 check('08:45 Riyadh → ☀️ Smart morning (Claude writes it from the facts: no tools, not counted)', mm && /☀️ <b>(Smart morning|الصباح الذكي)<\/b>/.test(mm.b.text) && /Calm day/.test(mm.b.text) && composeCalls.length === 1 && !composeCalls[0].tools && okHtml(mm.b.text), mm && mm.b.text);
 const mf = JSON.parse(composeCalls[0].messages[0].content.replace(/^FACTS:\n/, ''));
 check('…its facts: the portfolio (= summarize), the market, and today\'s tasks (PENDLE 1.7% above your $3 buy price)', mf.portfolio.value_usd > 0 && mf.market.btc_usd > 0 && mf.todo.some(x => x.what === 'near_buy_price' && x.coin === 'PENDLE' && x.your_buy_price_usd === 3 && Math.abs(x.pct_above_buy_price - 1.67) < 0.01), mf.todo);
-check('…a snapshot is kept for the evening', !!kvStore.get('tg:snap:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)));
+check('…a snapshot is kept for the evening', !!kvStore.get('tg:555:snap:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)));
 sent.length = 0; await cron(Wd, RIYADH('09:00')); await cron(Wd, RIYADH('10:20'));
 check('…sent once a day (later runs: nothing; 09:00 is a pinned-message slot → that one only)', !sent.some(x => x.m === 'sendMessage' && /Smart morning|الصباح الذكي/.test(x.b.text)), sent.map(x => x.m));
 LIVE.solana.usd = 140; Wd = await fresh(); sent.length = 0; composeCalls.length = 0; await cron(Wd, RIYADH('21:00'));
 const em = sent.find(x => x.m === 'sendMessage' && /🌙/.test(x.b.text)), ef = composeCalls[0] && JSON.parse(composeCalls[0].messages[0].content.replace(/^FACTS:\n/, ''));
 check('21:00 → 🌙 Smart evening: since the morning −$150 (SOL 150 → 140 × 15 — 5 bought above), BTC futures, sectors, closest levels', em && ef && ef.since_morning && Math.round(ef.since_morning.portfolio_change_usd) === -150 && ef.btc_futures !== undefined && ef.sectors_24h && ef.sectors_24h.best[0].name === 'AI' && Array.isArray(ef.closest_levels), ef && { s: ef.since_morning, sec: ef.sectors_24h });
 LIVE.solana.usd = 150;
-for (const k of [...kvStore.keys()]) if (/^tg:daily:sent/.test(k)) kvStore.delete(k);
+for (const k of [...kvStore.keys()]) if (/^tg:555:daily:sent/.test(k)) kvStore.delete(k);
 COMPOSE_FAIL = true; Wd = await fresh(); sent.length = 0; await cron(Wd, RIYADH('08:50')); COMPOSE_FAIL = false;
 mm = sent.find(x => x.m === 'sendMessage');
 check('Claude busy → the bot\'s own plain morning (value, 3 tasks, BTC) — still sent', mm && /☀️/.test(mm.b.text) && /PENDLE/.test(mm.b.text) && /BTC/.test(mm.b.text) && okHtml(mm.b.text), mm && mm.b.text);
-for (const k of [...kvStore.keys()]) if (/^tg:daily:sent/.test(k)) kvStore.delete(k);
+for (const k of [...kvStore.keys()]) if (/^tg:555:daily:sent/.test(k)) kvStore.delete(k);
 sent.length = 0; outside = 0; Wd = await fresh(); await cron(Wd, RIYADH('23:55'));
 check('…the evening run (portfolio + market + BTC futures + Claude) stays inside Cloudflare\'s 50 calls with Telegram', outside + sent.length <= 45, [outside, sent.length]);
 check('evening window wraps fine: 23:55 (2 h 55 late) still sends it', sent.some(x => x.m === 'sendMessage' && /🌙/.test(x.b.text)));
 // 📌 pinned
-for (const k of [...kvStore.keys()]) if (/^tg:daily:sent/.test(k)) kvStore.set(k, JSON.stringify({ morning: new Date(NOW + 3 * HR).toISOString().slice(0, 10), evening: new Date(NOW + 3 * HR).toISOString().slice(0, 10) }));
-kvStore.delete('tg:pin'); sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('12:15'));
+for (const k of [...kvStore.keys()]) if (/^tg:555:daily:sent/.test(k)) kvStore.set(k, JSON.stringify({ morning: new Date(NOW + 3 * HR).toISOString().slice(0, 10), evening: new Date(NOW + 3 * HR).toISOString().slice(0, 10) }));
+kvStore.delete('tg:555:pin'); sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('12:15'));
 const pm = sent.find(x => x.m === 'sendMessage');
 check('📌 :15 → the live message sent silently and pinned (value, BTC, plan, exit, alerts)', pm && /📌/.test(pm.b.text) && pm.b.disable_notification === true && sent.some(x => x.m === 'pinChatMessage' && x.b.disable_notification === true) && /BTC/.test(pm.b.text) && okHtml(pm.b.text), sent.map(x => x.m));
 sent.length = 0; await cron(Wd, RIYADH('12:30'));
@@ -603,14 +603,14 @@ const secm = sent.find(x => x.m === 'sendMessage' && /🔥/.test(x.b.text));
 check('🔥 :25 hourly → sectors ≥ $1B moving ≥ 10%: AI +14.2% (you hold its leader SOL) and Meme −11.5%; tiny / calm ones left out', secm && /AI<\/b> \+14\.2%/.test(secm.b.text) && /SOL/.test(secm.b.text) && /Meme<\/b> −11\.5%/.test(secm.b.text) && !/Tiny|Calm/.test(secm.b.text), secm && secm.b.text);
 sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('17:25'));
 check('…once a day each', !sent.some(x => x.m === 'sendMessage' && /🔥/.test(x.b.text)));
-check('today\'s log keeps what happened (radar, sector) for the evening', /radar/.test(kvStore.get('tg:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || '') && /sector/.test(kvStore.get('tg:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || ''));
+check('today\'s log keeps what happened (radar, sector) for the evening', /radar/.test(kvStore.get('tg:555:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || '') && /sector/.test(kvStore.get('tg:555:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || ''));
 // /daily
 Wd = await fresh(); sent.length = 0; await postK(Wd, '/daily');
 let dyv = last();
 check('/daily → the 5 switches (all ✅) + morning / evening now', /✅/.test(dyv.b.text) && btns(dyv).filter(b => /^dy:(morning|evening|radar|sectors|pin)$/.test(b.callback_data)).length === 5 && btns(dyv).some(b => b.callback_data === 'dy:now:m'), dyv.b.text);
 await Wd.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qy', data: 'dy:radar', message: { message_id: 50, chat: { id: 555 } } } }) }), ENVK, {});
-check('tap ⬜/✅ Leverage radar → off, the list redrawn in place', JSON.parse(kvStore.get('tg:daily')).radar === false && last().m === 'editMessageText' && btns(last()).some(b => b.callback_data === 'dy:radar' && /^⬜/.test(b.text)), kvStore.get('tg:daily'));
-HOT = true; sent.length = 0; kvStore.delete('tg:radar:seen'); Wd = await fresh(); await cron(Wd, RIYADH('18:10')); await cron(Wd, RIYADH('18:40')); HOT = false;
+check('tap ⬜/✅ Leverage radar → off, the list redrawn in place', JSON.parse(kvStore.get('tg:555:daily')).radar === false && last().m === 'editMessageText' && btns(last()).some(b => b.callback_data === 'dy:radar' && /^⬜/.test(b.text)), kvStore.get('tg:555:daily'));
+HOT = true; sent.length = 0; kvStore.delete('tg:555:radar:seen'); Wd = await fresh(); await cron(Wd, RIYADH('18:10')); await cron(Wd, RIYADH('18:40')); HOT = false;
 check('…radar off → no radar message', !sent.some(x => x.m === 'sendMessage' && /🧲/.test(x.b.text)));
 sent.length = 0; composeCalls.length = 0; await postK(Wd, '/morning');
 check('/morning → the smart morning now', sent.some(x => x.m === 'sendMessage' && /☀️/.test(x.b.text)) && composeCalls.length === 1);
@@ -618,7 +618,7 @@ check('wrangler cron still every 5 min; update-market keeps the sectors (≥ $50
 LIVE.pendle.usd = 3.21;
 
 // the "/" menu: every command, refreshed by itself when the list changes (no /start needed)
-kvStore.delete('tg:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
+kvStore.delete('tg:555:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
 const sc = sent.find(x => x.m === 'setMyCommands'), names = sc ? sc.b.commands.map(c => c.command) : [];
 check('"/" menu sent again by itself: start, report, daily, morning, evening, alerts, paper, pin, unpin, hide… (20)', names.length === 20 && ['start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/menu');
@@ -628,11 +628,11 @@ for (const c of ['/start', '/menu', '/portfolio', '/price btc', '/market', '/pla
 check('every command in the "/" menu is understood (none goes to the AI as a question) and answers', claudeCalls.filter(b => !/SMART/.test(b.system || '')).length === 0 && out().length >= 18, [claudeCalls.length, out().length]);
 
 // ── 🧪 phase 9: paper trading — pretend money, real prices, the real portfolio untouched ──
-kvStore.delete('tg:paper'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/paper');
+kvStore.delete('tg:555:paper'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/paper');
 let pv = last();
-check('/paper → a new pretend portfolio: $10,000 cash, no coins yet, vs BTC', /🧪/.test(pv.b.text) && /\$10,000\.00/.test(pv.b.text) && /(No coins yet|مفيش عملات)/.test(pv.b.text) && JSON.parse(kvStore.get('tg:paper')).btcStart === 77000 && okHtml(pv.b.text), pv.b.text);
+check('/paper → a new pretend portfolio: $10,000 cash, no coins yet, vs BTC', /🧪/.test(pv.b.text) && /\$10,000\.00/.test(pv.b.text) && /(No coins yet|مفيش عملات)/.test(pv.b.text) && JSON.parse(kvStore.get('tg:555:paper')).btcStart === 77000 && okHtml(pv.b.text), pv.b.text);
 const cmt0 = commits.length; claudeCalls.length = 0; sent.length = 0; Wd = await fresh(); await postK(Wd, 'paper buy btc for 1000');
-let pp = JSON.parse(kvStore.get('tg:paper')), pr = JSON.parse(claudeCalls[1].messages.at(-1).content[0].content);
+let pp = JSON.parse(kvStore.get('tg:555:paper')), pr = JSON.parse(claudeCalls[1].messages.at(-1).content[0].content);
 check('"paper buy BTC $1000" → done at once at $77,000 with 0.1% fee: 0.012975 BTC, $9,000 cash left', pr.ok && Math.abs(pp.pos.BTC.qty - 1000 / (77000 * 1.001)) < 1e-9 && Math.abs(pp.cash - 9000) < 1e-6 && Math.abs(pp.pos.BTC.avg - 77077) < 0.01, [pr, pp]);
 check('…the real portfolio untouched (no Firestore write) and the answer has 🧪 / ↩️ Undo', commits.length === cmt0 && btns(last()).some(b => b.callback_data === 'pp:undo') && btns(last()).some(b => b.callback_data === 'pp'), btnTexts(last()));
 LIVE.bitcoin.usd = 84700; sent.length = 0; Wd = await fresh(); await postK(Wd, '/paper');
@@ -640,11 +640,11 @@ pv = last();
 check('BTC +10% → paper value $10,098.90; the same $10,000 in BTC from the start = $11,000 → −9.0 pts vs BTC', /\$10,098\.90/.test(pv.b.text) && /\$11,000\.00/.test(pv.b.text) && /−9\.0<\/b> pts/.test(pv.b.text), pv.b.text);
 claudeCalls.length = 0; Wd = await fresh(); await postK(Wd, 'paper sell half my btc');
 const ps = claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
-pp = JSON.parse(kvStore.get('tg:paper'));
+pp = JSON.parse(kvStore.get('tg:555:paper'));
 check('"paper sell half" → half the BTC sold at $84,700 minus 0.1%; realized ≈ +$49; get_paper reads it back', ps[0].ok && Math.abs(pp.pos.BTC.qty - 1000 / (77000 * 1.001) / 2) < 1e-9 && Math.abs(ps[0].done.realized - ((84700 - 77077) * pp.pos.BTC.qty - 84700 * pp.pos.BTC.qty * 0.001)) < 0.05 && ps[1].coins[0].coin === 'BTC', [ps[0].done, ps[1].value_usd]);
 const cashBefore = pp.cash; sent.length = 0;
 await Wd.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qp', data: 'pp:undo', message: { message_id: 60, chat: { id: 555 } } } }) }), ENVK, {});
-pp = JSON.parse(kvStore.get('tg:paper'));
+pp = JSON.parse(kvStore.get('tg:555:paper'));
 check('↩️ Undo → the sell reversed exactly (BTC and cash back), the view redrawn in place, only once', Math.abs(pp.pos.BTC.qty - 1000 / (77000 * 1.001)) < 1e-9 && Math.abs(pp.cash - 9000) < 1e-6 && pp.cash < cashBefore && !pp.undo && last().m === 'editMessageText' && !btns(last()).some(b => b.callback_data === 'pp:undo'), [pp.cash, pp.pos]);
 claudeCalls.length = 0; Wd = await fresh(); await postK(Wd, 'paper too much');
 const pe = claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content).error);
@@ -653,7 +653,7 @@ sent.length = 0;
 await Wd.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qp2', data: 'pp:new', message: { message_id: 60, chat: { id: 555 } } } }) }), ENVK, {});
 check('🔁 → asks how much: $1,000 / $10,000 / $100,000', btns(last()).map(b => b.callback_data).join() === 'pp:new:1000,pp:new:10000,pp:new:100000,pp');
 await Wd.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qp3', data: 'pp:new:1000', message: { message_id: 60, chat: { id: 555 } } } }) }), ENVK, {});
-pp = JSON.parse(kvStore.get('tg:paper'));
+pp = JSON.parse(kvStore.get('tg:555:paper'));
 check('…$1,000 → a fresh paper portfolio from BTC $84,700', pp.cash === 1000 && pp.startCash === 1000 && !Object.keys(pp.pos).length && pp.btcStart === 84700 && /\$1,000\.00/.test(last().b.text), pp);
 LIVE.bitcoin.usd = 77000;
 
@@ -788,10 +788,26 @@ check('built file holds no GitHub token', !/github_pat_|ghp_[A-Za-z0-9]{20}/.tes
 market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() };
 
 // the same alert twice (e.g. said again by voice) → kept once
-kvStore.set('tg:alerts', '[]'); Wd = await fresh(); claudeCalls.length = 0; await postK(Wd, 'alert me sol'); claudeCalls.length = 0; await postK(Wd, 'alert me sol');
-const al2 = JSON.parse(kvStore.get('tg:alerts')), dupRes = claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
+kvStore.set('tg:555:alerts', '[]'); Wd = await fresh(); claudeCalls.length = 0; await postK(Wd, 'alert me sol'); claudeCalls.length = 0; await postK(Wd, 'alert me sol');
+const al2 = JSON.parse(kvStore.get('tg:555:alerts')), dupRes = claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
 check('the same alert asked twice → stored once ("already set")', al2.filter(a => a.kind === 'price_below' && a.value === 140).length === 1 && dupRes[0].already_set === true, [al2.length, dupRes[0]]);
-kvStore.set('tg:alerts', '[]');
+kvStore.set('tg:555:alerts', '[]');
+
+// ── phase 10 · step 1: each person their own space; the owner's old shared keys move to theirs once ──
+for (const k of [...kvStore.keys()]) if (/^tg:555:|^tg:migrated/.test(k)) kvStore.delete(k);
+kvStore.set('tg:alerts', JSON.stringify([{ id: 'old1', kind: 'price_below', value: 1, sym: 'SOL', cg: 'solana', armed: true, created: NOW }]));
+kvStore.set('tg:paper', JSON.stringify({ start: NOW, startCash: 10000, btcStart: 77000, cash: 9000, pos: { BTC: { qty: 0.01, avg: 77000, id: 'bitcoin' } }, trades: [] }));
+kvStore.set('tg:lang', 'ar');
+Wd = await fresh(); sent.length = 0; await postK(Wd, '/alerts');
+check('the owner\'s old shared data (alerts, paper, language) moves to their own keys, once', JSON.parse(kvStore.get('tg:555:alerts'))[0].id === 'old1' && JSON.parse(kvStore.get('tg:555:paper')).cash === 9000 && kvStore.get('tg:555:lang') === 'ar' && !!kvStore.get('tg:migrated') && /تنبيهاتك/.test(last().b.text), [kvStore.get('tg:555:lang'), last().b.text.slice(0, 40)]);
+kvStore.set('tg:alerts', '[]'); Wd = await fresh(); await postK(Wd, '/alerts');
+check('…and never again (a later change of the old key doesn\'t overwrite)', JSON.parse(kvStore.get('tg:555:alerts')).length === 1);
+const cmdCall = sent.find(x => x.m === 'setMyCommands');
+check('the "/" menu is set for this chat only (scope chat 555)', cmdCall && cmdCall.b.scope && cmdCall.b.scope.type === 'chat' && String(cmdCall.b.scope.chat_id) === '555', cmdCall && cmdCall.b.scope);
+check('another chat still gets nothing (only invited chats — step 2)', await (async () => { sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 777 }, from: { id: 777 }, text: '/start' } }, ENV.TG_SECRET, ENVK); return sent.length === 0; })());
+check('a trade prepared by one chat can\'t be confirmed from another', await (async () => { kvStore.set('tg:tx:zz1', JSON.stringify({ created: Date.now(), trades: [], lang: 'en', chat: '999' })); const c0 = commits.length; Wd = await fresh(); await Wd.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, callback_query: { id: 'qz', data: 'tx:ok:zz1', message: { message_id: 5, chat: { id: 555 } } } }) }), ENVK, {}); return commits.length === c0 && !!kvStore.get('tg:tx:zz1'); })());
+kvStore.set('tg:555:lang', 'en'); kvStore.set('tg:555:alerts', '[]'); kvStore.delete('tg:paper'); kvStore.delete('tg:alerts'); kvStore.delete('tg:lang');
+check('wrangler: AsyncLocalStorage on (nodejs_als)', /compatibility_flags = \["nodejs_als"\]/.test(fs.readFileSync(path.join(ROOT, 'tools/worker/wrangler.toml'), 'utf8')));
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

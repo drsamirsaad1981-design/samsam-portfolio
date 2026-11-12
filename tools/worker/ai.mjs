@@ -10,6 +10,7 @@
 //   · Telegram sometimes sends the same message twice when an answer is slow — each message is answered once
 //   · the model: BOT_MODEL in the Worker's settings, else Claude Sonnet 5.5; if that name is refused, MODEL (AI Analysis's)
 
+import { K } from './who.mjs';
 import { summarize, settings, local, localParts, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries, derivatives } from './data.mjs';
 import { addAlert, listAlerts, deleteAlert, describe, KINDS } from './watch.mjs';
@@ -38,11 +39,11 @@ export async function firstTime(env, updateId) {
   return true;
 }
 const today = () => localParts(Date.now()).date;
-export async function usage(env) { const n = +(await kvGet(env, 'tg:ai:' + today())) || 0; return { used: n, limit: LIMIT(env), left: Math.max(0, LIMIT(env) - n) }; }
-async function countOne(env) { const u = await usage(env); await kvPut(env, 'tg:ai:' + today(), String(u.used + 1), 2 * 86400); return u.left - 1; }
-export async function forget(env) { await kvDel(env, 'tg:hist'); }
-async function history(env) { try { const h = JSON.parse((await kvGet(env, 'tg:hist')) || '[]'); return Array.isArray(h) ? h : []; } catch (_) { return []; } }
-async function remember(env, q, a) { const h = (await history(env)).concat([{ role: 'user', content: q }, { role: 'assistant', content: a }]).slice(-HISTORY); await kvPut(env, 'tg:hist', JSON.stringify(h), 6 * 3600); }
+export async function usage(env) { const n = +(await kvGet(env, K(env, 'ai:' + today()))) || 0; return { used: n, limit: LIMIT(env), left: Math.max(0, LIMIT(env) - n) }; }
+async function countOne(env) { const u = await usage(env); await kvPut(env, K(env, 'ai:' + today()), String(u.used + 1), 2 * 86400); return u.left - 1; }
+export async function forget(env) { await kvDel(env, K(env, 'hist')); }
+async function history(env) { try { const h = JSON.parse((await kvGet(env, K(env, 'hist'))) || '[]'); return Array.isArray(h) ? h : []; } catch (_) { return []; } }
+async function remember(env, q, a) { const h = (await history(env)).concat([{ role: 'user', content: q }, { role: 'assistant', content: a }]).slice(-HISTORY); await kvPut(env, K(env, 'hist'), JSON.stringify(h), 6 * 3600); }
 
 // ── the tools Claude can call ──
 export const TOOLS = [

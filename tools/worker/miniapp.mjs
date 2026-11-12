@@ -6,6 +6,7 @@
 //                  key = HMAC("WebAppData", bot token)), that it is less than 24 h old, and that the user is TELEGRAM_CHAT_ID.
 // The numbers are the bot's own (summarize = the app's maths), plus the morning's "today" list, alerts and the paper portfolio.
 
+import { asChat, allowed, K } from './who.mjs';
 import { summarize, isStable, etfDay } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, resetBudget } from './data.mjs';
 import { listAlerts, describe } from './watch.mjs';
@@ -47,7 +48,7 @@ const r6 = v => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
 
 export async function report(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null);
-  let lang = null; try { if (env.RATE) lang = await env.RATE.get('tg:lang'); } catch (_) {}
+  let lang = null; try { if (env.RATE) lang = await env.RATE.get(K(env, 'lang')); } catch (_) {}
   lang = lang === 'ar' || lang === 'en' ? lang : env.BOT_LANG === 'ar' ? 'ar' : 'en';
   const m = await loadMarket([], coinsOf(user));
   const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
@@ -100,9 +101,9 @@ export async function api(request, env) {
   const body = await request.json().catch(() => ({}));
   const v = await verifyInitData(String(body.initData || '').slice(0, 4096), env.TELEGRAM_BOT_TOKEN);
   if (!v.ok) return json(401, { ok: false, error: v.why });
-  if (String(v.user.id) !== String(env.TELEGRAM_CHAT_ID)) return json(403, { ok: false, error: 'private' });
+  if (!(await allowed(env, v.user.id))) return json(403, { ok: false, error: 'private' });
   resetBudget();
-  try { return json(200, { ok: true, report: await report(env) }); }
+  try { return json(200, { ok: true, report: await asChat(v.user.id, () => report(env)) }); }   // only this person's own data
   catch (e) { console.log(JSON.stringify({ miniapp: 'error', message: String(e && e.message).slice(0, 200) })); return json(500, { ok: false, error: 'report failed' }); }
 }
 
@@ -114,7 +115,7 @@ export async function cardSend(request, env) {
   const body = await request.json().catch(() => ({}));
   const v = await verifyInitData(String(body.initData || '').slice(0, 4096), env.TELEGRAM_BOT_TOKEN);
   if (!v.ok) return json(401, { ok: false, error: v.why });
-  if (String(v.user.id) !== String(env.TELEGRAM_CHAT_ID)) return json(403, { ok: false, error: 'private' });
+  if (!(await allowed(env, v.user.id))) return json(403, { ok: false, error: 'private' });
   const b64 = String(body.jpg || '');
   if (!b64 || b64.length > 7e6 || !/^[A-Za-z0-9+/=]+$/.test(b64)) return json(400, { ok: false, error: 'no image' });
   const bin = atob(b64), bytes = new Uint8Array(bin.length);
@@ -123,7 +124,7 @@ export async function cardSend(request, env) {
   const kind = ['pf', 'coin', 'market'].includes(body.kind) ? body.kind : 'pf', sym = String(body.sym || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
   const caption = kind === 'coin' && sym ? `🪙 ${sym} · Cute Portfolio` : kind === 'market' ? '🌍 Market · Cute Portfolio' : '💼 Cute Portfolio';
   const fd = new FormData();
-  fd.append('chat_id', String(env.TELEGRAM_CHAT_ID)); fd.append('caption', caption);
+  fd.append('chat_id', String(v.user.id)); fd.append('caption', caption);   // to the person who drew it
   fd.append('photo', new Blob([bytes], { type: 'image/jpeg' }), 'cute-portfolio.jpg');
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`, { method: 'POST', body: fd }).then(x => x.json()).catch(() => ({ ok: false }));
   return json(r.ok ? 200 : 502, { ok: !!r.ok });

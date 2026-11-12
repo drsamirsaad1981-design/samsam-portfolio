@@ -7,10 +7,11 @@
 // like Binance spot, so it isn't too rosy. Any coin the bot can price — not only the ones you hold.
 // Stored in KV (RATE): tg:paper = { start, startCash, btcStart, cash, pos: { SYM: { qty, avg, id } }, trades: [...] }.
 
+import { K } from './who.mjs';
 import { local, usd, usd2, pct, esc, dot, isStable } from '../alerts-core.mjs';
 import { loadMarket, findCoin } from './data.mjs';
 
-const KEY = 'tg:paper', FEE = 0.001, START = 10000;
+const KEY = env => K(env, 'paper'), FEE = 0.001, START = 10000;
 const mem = new Map();
 async function kvGet(env, k) { try { if (env.RATE) { const v = await env.RATE.get(k); if (v != null) return v; } } catch (_) {} return mem.has(k) ? mem.get(k) : null; }
 async function kvPut(env, k, v) { mem.set(k, v); try { if (env.RATE) await env.RATE.put(k, v); } catch (_) {} }
@@ -21,8 +22,8 @@ const money = v => v == null || !isFinite(v) ? '—' : Math.abs(v) >= 1 || v ===
 let lock = Promise.resolve();
 const locked = fn => { const run = lock.then(fn, fn); lock = run.catch(() => {}); return run; };
 
-async function load(env) { try { const p = JSON.parse((await kvGet(env, KEY)) || 'null'); return p && p.pos ? p : null; } catch (_) { return null; } }
-const save = (env, p) => kvPut(env, KEY, JSON.stringify(p));
+async function load(env) { try { const p = JSON.parse((await kvGet(env, KEY(env))) || 'null'); return p && p.pos ? p : null; } catch (_) { return null; } }
+const save = (env, p) => kvPut(env, KEY(env), JSON.stringify(p));
 
 // live prices for some coins: { SYM: { price, ch24, id, src } }
 async function prices(coins) {

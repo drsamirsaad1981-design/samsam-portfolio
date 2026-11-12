@@ -7,10 +7,11 @@
 // the next time it becomes true (so "below 82" set at 81 fires after a bounce and a new drop — never at once).
 // Prices: the exchanges first (live, by ticker), then CoinGecko / the market snapshot. Stored in KV (RATE): tg:alerts.
 
+import { K, chatOf } from './who.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, exchangePrice, derivatives, findCoin, resetBudget } from './data.mjs';
 import { summarize, usd, pct, esc, local, localParts } from '../alerts-core.mjs';
 
-const KEY = 'tg:alerts', MAX = 30;
+const KEY = env => K(env, 'alerts'), MAX = 30;
 export const KINDS = {
   price_below: { what: 'price', op: '≤' }, price_above: { what: 'price', op: '≥' },
   change_24h_below: { what: 'change_24h', op: '≤' }, change_24h_above: { what: 'change_24h', op: '≥' },
@@ -22,17 +23,17 @@ async function kvGet(env, k) { try { if (env.RATE) return await env.RATE.get(k);
 async function kvPut(env, k, v) { mem.set(k, v); try { if (env.RATE) await env.RATE.put(k, v); } catch (_) {} }
 let lock = Promise.resolve();   // changes to the list one at a time (Claude may set several alerts at once)
 const locked = fn => { const run = lock.then(fn, fn); lock = run.catch(() => {}); return run; };
-export async function listAlerts(env) { try { const a = JSON.parse((await kvGet(env, KEY)) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
-async function saveAlerts(env, list) { await kvPut(env, KEY, JSON.stringify(list.slice(0, MAX))); }
+export async function listAlerts(env) { try { const a = JSON.parse((await kvGet(env, KEY(env))) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+async function saveAlerts(env, list) { await kvPut(env, KEY(env), JSON.stringify(list.slice(0, MAX))); }
 // today's events (alerts that fired, radar hits, trades saved) — the smart evening tells what happened. KV tg:log:<Riyadh day>
 export async function logEvent(env, type, text, now = Date.now()) {
-  const k = 'tg:log:' + localParts(now).date;
+  const k = K(env, 'log:' + localParts(now).date);
   let a = []; try { a = JSON.parse((await kvGet(env, k)) || '[]'); } catch (_) {}
   a.push({ t: now, type, text: String(text).replace(/<[^>]+>/g, '').slice(0, 200) });
   const v = JSON.stringify(a.slice(-30)); mem.set(k, v);
   try { if (env.RATE) await env.RATE.put(k, v, { expirationTtl: 3 * 86400 }); } catch (_) {}
 }
-export async function todayLog(env, now = Date.now()) { try { return JSON.parse((await kvGet(env, 'tg:log:' + localParts(now).date)) || '[]'); } catch (_) { return []; } }
+export async function todayLog(env, now = Date.now()) { try { return JSON.parse((await kvGet(env, K(env, 'log:' + localParts(now).date))) || '[]'); } catch (_) { return []; } }
 const met = (kind, now, v) => now != null && (KINDS[kind].op === '≤' ? now <= v : now >= v);
 
 // what an alert watches, right now
@@ -111,7 +112,7 @@ async function tg(env, method, body) {
 }
 export async function runWatch(env, now = Date.now()) {
   const list = await listAlerts(env);
-  if (!list.length || !env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return { checked: 0, fired: 0 };
+  if (!list.length || !env.TELEGRAM_BOT_TOKEN || !chatOf(env)) return { checked: 0, fired: 0 };
   resetBudget();
   const cache = {}, keep = [], fired = [];
   for (const a of list) {
@@ -128,7 +129,7 @@ export async function runWatch(env, now = Date.now()) {
     const head = k.what === 'portfolio' ? `💼 <b>Portfolio ${up ? 'above' : 'below'} ${usd(a.value)}</b>` : `${up ? '🚀' : '🔻'} <b>${esc(a.sym)} ${k.what === 'price' ? (up ? 'above' : 'below') + ' ' + usd(a.value) : k.what === 'funding' ? 'funding ' + k.op + ' ' + a.value + '%' : '24h ' + k.op + ' ' + pct(a.value, 1)}</b>`;
     const text = `🔔 ${head}\nNow: <b>${nowTxt}</b>${a.note ? '\n<i>' + esc(a.note) + '</i>' : ''}\n<i>Your alert from ${local(a.created, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} — done, removed.</i>`;
     const buttons = a.sym ? [[{ text: '🪙 ' + a.sym, callback_data: 'c:' + (a.cg || 'x-' + a.sym.toLowerCase()).slice(0, 58) }, { text: '🔥 Liq Map', url: 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(a.sym) }]] : [[{ text: '💼 Portfolio', callback_data: 'pf' }]];
-    const r = await tg(env, 'sendMessage', { chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
+    const r = await tg(env, 'sendMessage', { chat_id: chatOf(env), text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
     if (!r.ok) keep.push(a);   // Telegram refused: try again next time
     else await logEvent(env, 'alert', describe(a) + ' — now ' + nowTxt);
   }

@@ -7,6 +7,7 @@
 //   · your portfolio from Firebase (Firestore REST, signed in with the service account in the Worker's secrets)
 // Nothing here prints or logs a value. Everything is cached for a short time per Worker instance.
 
+import { isOwner } from './who.mjs';
 import { priceSeries } from '../alerts-core.mjs';
 import CG_IDS from './cg-ids.json' with { type: 'json' };
 
@@ -263,6 +264,7 @@ export async function commitDocs(env, uid, docs) {
 export async function loadUser(env, fresh = false) {
   const sa = serviceAccount(env);
   if (!sa) return null;
+  if (!isOwner(env)) return null;   // phase 10 step 1: only the owner's portfolio; others link theirs in step 3
   if (fresh) cache.delete('user');
   return cached('user', 120e3, async () => {
     const db = await firestore(sa), users = await db.users();

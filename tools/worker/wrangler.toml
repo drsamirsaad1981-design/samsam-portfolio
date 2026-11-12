@@ -5,6 +5,8 @@
 name = "samsam-analysis"
 main = "../dist/samsam-worker.js"
 compatibility_date = "2026-10-16"
+# AsyncLocalStorage: each message / cron round runs as one chat (tools/worker/who.mjs)
+compatibility_flags = ["nodejs_als"]
 workers_dev = true
 keep_vars = true
 no_bundle = true
