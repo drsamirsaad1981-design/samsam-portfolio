@@ -10,7 +10,7 @@
 //   · the model: BOT_MODEL in the Worker's settings, else Claude Sonnet 5.5; if that name is refused, MODEL (AI Analysis's)
 
 import { summarize, settings, local, localParts, isStable, etfDay, APP } from '../alerts-core.mjs';
-import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries } from './data.mjs';
+import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries, derivatives } from './data.mjs';
 
 const H = 3600e3, DAY = 24 * H;
 const LIMIT = env => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30));
@@ -52,6 +52,8 @@ export const TOOLS = [
     input_schema: { type: 'object', properties: {} } },
   { name: 'get_exit', description: "The user's exit plan: the 3 market exit conditions (BTC dominance, USDT dominance, ETH/BTC — now vs target, met or not) and every take-profit level (coin, level, multiple of average, % still to go, % to sell there).",
     input_schema: { type: 'object', properties: {} } },
+  { name: 'get_derivatives', description: 'Futures (perpetuals) data for one coin, live from OKX, Binance and Hyperliquid (free public APIs): funding rate (per 8 h, average + annualized, and what it means), open interest in USD and its 24h change, % of accounts long (long / short ratio), top traders\' long / short positions (Binance), and the liquidations OKX reported in the last 24 h (longs vs shorts in USD). Use it for liquidation, squeeze, leverage, funding or "where can price be pulled" questions, with get_coin / get_history for the price levels. It has no liquidation heatmap (CoinGlass\'s is private) — the Liq Map button opens it.',
+    input_schema: { type: 'object', properties: { coin: { type: 'string', description: 'Ticker, e.g. "SOL"' } }, required: ['coin'] } },
   { name: 'get_history', description: 'Hourly price history of a coin for the last N days (1–29): start, end, % change, high and low with their dates, and the daily closes. Only for coins GitHub keeps a price file for (the user\'s coins and the big ones); otherwise it says so.',
     input_schema: { type: 'object', properties: { coin: { type: 'string' }, days: { type: 'integer', minimum: 1, maximum: 29 } }, required: ['coin'] } },
 ];
@@ -137,6 +139,15 @@ export async function runTool(ctx, name, input) {
     return { conditions: s.macro.map(c => ({ name: { btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC' }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
       take_profits: (s.tps || []).map(t => ({ ticker: t.sym, tp: t.n, level_usd: r6(t.level), price_now_usd: r6(t.price), pct_to_go: r2((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go) };
   }
+  if (name === 'get_derivatives') {
+    const q = String((input && input.coin) || '').trim(), u = await ctx.user(), m = await ctx.market(), c = await findCoin(q, m, u);
+    const S = c ? c.sym : q.toUpperCase();
+    const d = await derivatives(S);
+    if (!d) return { error: `no futures data found for ${S} on OKX, Binance or Hyperliquid` };
+    ctx.used.add('futures: ' + d.sources.map(x => x.source).join(', ') + ' (live)');
+    if (c && (c.id || m.idOf[c.sym])) ctx.coins.add((c.id || m.idOf[c.sym]) + '|' + S);
+    return { ...d, liquidation_map: `https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=${encodeURIComponent(S)}` };
+  }
   if (name === 'get_history') {
     const q = String((input && input.coin) || '').trim(), days = Math.max(1, Math.min(29, parseInt((input && input.days) || 7, 10) || 7));
     const u = await ctx.user(), m = await ctx.market(), c = await findCoin(q, m, u);
@@ -164,8 +175,13 @@ function system(now, lang, qLang) {
     '- Every number you state (price, %, value, rank, flow…) must come from a tool result in this conversation. Never use prices or market data from memory — call the tools first (several in one turn if needed). If a tool has no data, say so.',
     '- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.',
     '- About the future: give scenarios, levels and probabilities with reasons — never promises. Not financial advice, but do give a clear, practical view when asked "should I…" (based on his plan and signals).',
-    '- Be concise: a phone screen. Short lines (aim ≤ 40 characters), short paragraphs, "• " bullets, at most ~12 lines unless asked for detail. No tables.',
-    '- Formatting: plain text with **bold** for key numbers / verdicts and `code` for tickers in lists. No headings with #, no links unless asked (buttons under the answer open coins).',
+    'STYLE — like the app\'s AI Analysis report, short and sharp, all in points:',
+    '- Line 1: one emoji + a **bold one-line verdict**.',
+    '- Then 2–4 short sections. Each section: a title line = emoji + **Title** (e.g. 📊 **Market**, 💼 **Your SOL**, ⚡ **Futures**, 🧲 **Liquidation levels**, 📈 **Scenarios**, 🎯 **My view**), then 2–4 bullets.',
+    '- Bullets: "• label: **value** — 3–6 word note". One idea per bullet. No paragraphs; any sentence ≤ ~12 words.',
+    '- A blank line between sections. ~16 lines in all unless asked for detail. Phone screen: short lines (aim ≤ 40 characters). No tables, no # headings.',
+    '- **bold** only for numbers and verdicts; `code` for tickers in lists. No links (buttons under the answer open coins and the Liq Map).',
+    '- Scenarios as bullets with a % each that adds to ~100, and the price level that triggers each.',
     `- Language: the user's latest message is in ${qLang === 'ar' ? 'Arabic — answer in Egyptian Arabic' : 'English — answer in English'} (whatever language earlier messages were in). Numbers and tickers in Latin characters.`,
     '- Prefer one call that covers many coins (get_portfolio) over many get_coin calls; call independent tools together in one turn.',
     '- Do not write a sources line — the bot adds one.',

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: e6bd05ea8ff9c7e4
+// sources-hash: e27a76bd2e362551
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -893,6 +893,119 @@ async function rawSeries(id) {
   if (!id || /^x-/.test(id)) return null;
   return cached("raw:" + id, 10 * 6e4, async () => await getJson(RAW + "p/" + id + ".json") || false);
 }
+var num2 = (v) => {
+  const n = +v;
+  return isFinite(n) ? n : null;
+};
+async function postJson(url2, body) {
+  try {
+    const r = await xfetch(url2, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (_) {
+    return null;
+  }
+}
+async function okxDeriv(S, now) {
+  const O = "https://www.okx.com/api/v5", inst = `${S}-USDT-SWAP`;
+  const [fr, oi, oih, ls, liq, ins] = await Promise.all([
+    getJson(`${O}/public/funding-rate?instId=${inst}`),
+    getJson(`${O}/public/open-interest?instType=SWAP&instId=${inst}`),
+    getJson(`${O}/rubik/stat/contracts/open-interest-volume?ccy=${S}&period=1H`),
+    getJson(`${O}/rubik/stat/contracts/long-short-account-ratio?ccy=${S}&period=1H`),
+    getJson(`${O}/public/liquidation-orders?instType=SWAP&uly=${S}-USDT&state=filled&limit=100`),
+    cached("okx-ins:" + S, 864e5, () => getJson(`${O}/public/instruments?instType=SWAP&instId=${inst}`))
+  ]);
+  const f = fr && fr.data && fr.data[0], o = oi && oi.data && oi.data[0];
+  if (!f && !o) return null;
+  const out = { source: "OKX" };
+  if (f) {
+    out.funding_8h_pct = num2(f.fundingRate) != null ? +(f.fundingRate * 100).toFixed(4) : null;
+    out.next_funding = f.nextFundingTime ? (/* @__PURE__ */ new Date(+f.nextFundingTime)).toISOString() : null;
+  }
+  if (o) out.open_interest_usd = num2(o.oiUsd) != null ? Math.round(+o.oiUsd) : null;
+  const h = oih && Array.isArray(oih.data) ? oih.data.map((x) => [+x[0], +x[1]]).sort((a, b) => a[0] - b[0]) : [];
+  if (h.length > 2) {
+    const last = h[h.length - 1], prev = h.find((x) => x[0] >= last[0] - 24 * 36e5) || h[0];
+    if (prev[1] > 0) out.open_interest_change_24h_pct = +((last[1] / prev[1] - 1) * 100).toFixed(2);
+  }
+  const r = ls && Array.isArray(ls.data) && ls.data.length ? ls.data.map((x) => [+x[0], +x[1]]).sort((a, b) => b[0] - a[0])[0] : null;
+  if (r && r[1] > 0) {
+    out.long_short_accounts = +r[1].toFixed(2);
+    out.long_accounts_pct = +(r[1] / (1 + r[1]) * 100).toFixed(1);
+  }
+  const ct = ins && ins.data && ins.data[0] ? num2(ins.data[0].ctVal) || 1 : 1, det = liq && liq.data && liq.data[0] && Array.isArray(liq.data[0].details) ? liq.data[0].details : [];
+  if (det.length) {
+    let longs = 0, shorts = 0, n = 0, oldest = now;
+    for (const d of det) {
+      const t = +d.ts;
+      if (!(t > now - 24 * 36e5)) continue;
+      const usd3 = (+d.sz || 0) * ct * (+d.bkPx || 0);
+      n++;
+      oldest = Math.min(oldest, t);
+      if ((d.posSide || "") === "long" || d.side === "sell") longs += usd3;
+      else shorts += usd3;
+    }
+    out.liquidations = { orders: n, longs_usd: Math.round(longs), shorts_usd: Math.round(shorts), since: new Date(oldest).toISOString(), note: "OKX only, its last 100 liquidation orders" };
+  }
+  return out;
+}
+async function binanceDeriv(S) {
+  const F = "https://fapi.binance.com", p = `${S}USDT`;
+  const [pi, oi, oih, ls, top] = await Promise.all([
+    getJson(`${F}/fapi/v1/premiumIndex?symbol=${p}`),
+    getJson(`${F}/fapi/v1/openInterest?symbol=${p}`),
+    getJson(`${F}/futures/data/openInterestHist?symbol=${p}&period=1h&limit=25`),
+    getJson(`${F}/futures/data/globalLongShortAccountRatio?symbol=${p}&period=1h&limit=1`),
+    getJson(`${F}/futures/data/topLongShortPositionRatio?symbol=${p}&period=1h&limit=1`)
+  ]);
+  if (!pi || pi.code) return null;
+  const out = { source: "Binance", funding_8h_pct: num2(pi.lastFundingRate) != null ? +(pi.lastFundingRate * 100).toFixed(4) : null, mark_price: num2(pi.markPrice) };
+  if (oi && num2(oi.openInterest) != null && num2(pi.markPrice)) out.open_interest_usd = Math.round(oi.openInterest * pi.markPrice);
+  if (Array.isArray(oih) && oih.length > 2) {
+    const a = +oih[0].sumOpenInterestValue, b = +oih[oih.length - 1].sumOpenInterestValue;
+    if (a > 0) out.open_interest_change_24h_pct = +((b / a - 1) * 100).toFixed(2);
+  }
+  if (Array.isArray(ls) && ls[0]) {
+    out.long_short_accounts = num2(ls[0].longShortRatio);
+    out.long_accounts_pct = num2(ls[0].longAccount) != null ? +(ls[0].longAccount * 100).toFixed(1) : null;
+  }
+  if (Array.isArray(top) && top[0]) out.top_traders_long_short_positions = num2(top[0].longShortRatio);
+  return out;
+}
+async function hyperliquidDeriv(S) {
+  const j = await cached("hl-ctx", 6e4, () => postJson("https://api.hyperliquid.xyz/info", { type: "metaAndAssetCtxs" }));
+  if (!Array.isArray(j) || !j[0] || !Array.isArray(j[0].universe)) return null;
+  const i = j[0].universe.findIndex((u) => String(u.name).toUpperCase() === S), c = i >= 0 && j[1] && j[1][i];
+  if (!c) return null;
+  const px = num2(c.markPx);
+  return { source: "Hyperliquid", funding_8h_pct: num2(c.funding) != null ? +(c.funding * 8 * 100).toFixed(4) : null, open_interest_usd: num2(c.openInterest) != null && px ? Math.round(c.openInterest * px) : null, volume_24h_usd: num2(c.dayNtlVlm) != null ? Math.round(+c.dayNtlVlm) : null, mark_price: px };
+}
+async function derivatives(sym) {
+  const S = String(sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!S) return null;
+  return cached("deriv:" + S, 12e4, async () => {
+    const now = Date.now(), [okx, bn, hl] = await Promise.all([okxDeriv(S, now), binanceDeriv(S), hyperliquidDeriv(S)]);
+    const src = [okx, bn, hl].filter(Boolean);
+    if (!src.length) return null;
+    const fr = src.map((x) => x.funding_8h_pct).filter((v) => v != null), oi = src.map((x) => x.open_interest_usd).filter((v) => v > 0);
+    const avgF = fr.length ? fr.reduce((a, b) => a + b, 0) / fr.length : null;
+    return {
+      coin: S,
+      summary: {
+        funding_8h_pct_avg: avgF != null ? +avgF.toFixed(4) : null,
+        funding_annualized_pct: avgF != null ? +(avgF * 3 * 365).toFixed(1) : null,
+        funding_reading: avgF == null ? null : avgF > 0.03 ? "longs paying a lot (crowded longs)" : avgF > 0 ? "longs paying (normal)" : avgF < -0.01 ? "shorts paying (crowded shorts)" : "about neutral",
+        open_interest_usd_total: oi.length ? oi.reduce((a, b) => a + b, 0) : null,
+        open_interest_note: "sum of the sources listed (not the whole market)",
+        open_interest_change_24h_pct: (okx && okx.open_interest_change_24h_pct) ?? (bn && bn.open_interest_change_24h_pct) ?? null,
+        long_accounts_pct: (bn && bn.long_accounts_pct) ?? (okx && okx.long_accounts_pct) ?? null,
+        liquidations_24h: okx && okx.liquidations || null
+      },
+      sources: src
+    };
+  });
+}
 
 // tools/worker/ai.mjs
 var H2 = 36e5;
@@ -981,6 +1094,11 @@ var TOOLS = [
     name: "get_exit",
     description: "The user's exit plan: the 3 market exit conditions (BTC dominance, USDT dominance, ETH/BTC \u2014 now vs target, met or not) and every take-profit level (coin, level, multiple of average, % still to go, % to sell there).",
     input_schema: { type: "object", properties: {} }
+  },
+  {
+    name: "get_derivatives",
+    description: `Futures (perpetuals) data for one coin, live from OKX, Binance and Hyperliquid (free public APIs): funding rate (per 8 h, average + annualized, and what it means), open interest in USD and its 24h change, % of accounts long (long / short ratio), top traders' long / short positions (Binance), and the liquidations OKX reported in the last 24 h (longs vs shorts in USD). Use it for liquidation, squeeze, leverage, funding or "where can price be pulled" questions, with get_coin / get_history for the price levels. It has no liquidation heatmap (CoinGlass's is private) \u2014 the Liq Map button opens it.`,
+    input_schema: { type: "object", properties: { coin: { type: "string", description: 'Ticker, e.g. "SOL"' } }, required: ["coin"] }
   },
   {
     name: "get_history",
@@ -1132,6 +1250,15 @@ async function runTool(ctx, name, input) {
       take_profits: (s.tps || []).map((t) => ({ ticker: t.sym, tp: t.n, level_usd: r6(t.level), price_now_usd: r6(t.price), pct_to_go: r2((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go)
     };
   }
+  if (name === "get_derivatives") {
+    const q = String(input && input.coin || "").trim(), u = await ctx.user(), m = await ctx.market(), c = await findCoin(q, m, u);
+    const S = c ? c.sym : q.toUpperCase();
+    const d = await derivatives(S);
+    if (!d) return { error: `no futures data found for ${S} on OKX, Binance or Hyperliquid` };
+    ctx.used.add("futures: " + d.sources.map((x) => x.source).join(", ") + " (live)");
+    if (c && (c.id || m.idOf[c.sym])) ctx.coins.add((c.id || m.idOf[c.sym]) + "|" + S);
+    return { ...d, liquidation_map: `https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=${encodeURIComponent(S)}` };
+  }
   if (name === "get_history") {
     const q = String(input && input.coin || "").trim(), days = Math.max(1, Math.min(29, parseInt(input && input.days || 7, 10) || 7));
     const u = await ctx.user(), m = await ctx.market(), c = await findCoin(q, m, u);
@@ -1169,8 +1296,13 @@ function system(now, lang, qLang) {
     "- Every number you state (price, %, value, rank, flow\u2026) must come from a tool result in this conversation. Never use prices or market data from memory \u2014 call the tools first (several in one turn if needed). If a tool has no data, say so.",
     "- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.",
     '- About the future: give scenarios, levels and probabilities with reasons \u2014 never promises. Not financial advice, but do give a clear, practical view when asked "should I\u2026" (based on his plan and signals).',
-    '- Be concise: a phone screen. Short lines (aim \u2264 40 characters), short paragraphs, "\u2022 " bullets, at most ~12 lines unless asked for detail. No tables.',
-    "- Formatting: plain text with **bold** for key numbers / verdicts and `code` for tickers in lists. No headings with #, no links unless asked (buttons under the answer open coins).",
+    "STYLE \u2014 like the app's AI Analysis report, short and sharp, all in points:",
+    "- Line 1: one emoji + a **bold one-line verdict**.",
+    "- Then 2\u20134 short sections. Each section: a title line = emoji + **Title** (e.g. \u{1F4CA} **Market**, \u{1F4BC} **Your SOL**, \u26A1 **Futures**, \u{1F9F2} **Liquidation levels**, \u{1F4C8} **Scenarios**, \u{1F3AF} **My view**), then 2\u20134 bullets.",
+    '- Bullets: "\u2022 label: **value** \u2014 3\u20136 word note". One idea per bullet. No paragraphs; any sentence \u2264 ~12 words.',
+    "- A blank line between sections. ~16 lines in all unless asked for detail. Phone screen: short lines (aim \u2264 40 characters). No tables, no # headings.",
+    "- **bold** only for numbers and verdicts; `code` for tickers in lists. No links (buttons under the answer open coins and the Liq Map).",
+    "- Scenarios as bullets with a % each that adds to ~100, and the price level that triggers each.",
     `- Language: the user's latest message is in ${qLang === "ar" ? "Arabic \u2014 answer in Egyptian Arabic" : "English \u2014 answer in English"} (whatever language earlier messages were in). Numbers and tickers in Latin characters.`,
     "- Prefer one call that covers many coins (get_portfolio) over many get_coin calls; call independent tools together in one turn.",
     "- Do not write a sources line \u2014 the bot adds one."

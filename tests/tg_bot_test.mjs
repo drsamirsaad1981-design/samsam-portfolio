@@ -93,10 +93,25 @@ globalThis.fetch = async (input, init = {}) => {
     const q = String(lastM.content);
     if (/keep looking/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tl0', name: 'get_coin', input: { coin: 'btc' } }] });
     if (/price of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'text', text: 'Let me check.' }, { type: 'tool_use', id: 'tu1', name: 'get_coin', input: { coin: 'sol' } }] });
+    if (/futures of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'td1', name: 'get_derivatives', input: { coin: 'sol' } }, { type: 'tool_use', id: 'td2', name: 'get_derivatives', input: { coin: 'zzqq' } }] });
     if (/everything/i.test(q)) return J({ stop_reason: 'tool_use', content: ['get_portfolio', 'get_market', 'get_plan', 'get_exit'].map((name, i) => ({ type: 'tool_use', id: 'tu' + i, name, input: name === 'get_market' ? { top: 200 } : {} })).concat([{ type: 'tool_use', id: 'tuh', name: 'get_history', input: { coin: 'sol', days: 7 } }]) });
     return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'A general answer about ' + q.slice(0, 30) }] });
   }
   if (u.startsWith('https://data-api.binance.vision/api/v3/ticker/24hr')) { const sy = new URL(u).searchParams.get('symbol'); return sy === 'NOIDUSDT' ? J({ symbol: sy, lastPrice: '2.50000000', priceChangePercent: '4.20' }) : J({ code: -1121, msg: 'Invalid symbol.' }, 400); }
+  // futures data for SOL (OKX, Binance, Hyperliquid); anything else → not found
+  if (u.startsWith('https://www.okx.com/api/v5/public/funding-rate?instId=SOL-USDT-SWAP')) return J({ code: '0', data: [{ fundingRate: '0.0001', nextFundingTime: String(NOW + 3 * HR) }] });
+  if (u.startsWith('https://www.okx.com/api/v5/public/open-interest?instType=SWAP&instId=SOL-USDT-SWAP')) return J({ code: '0', data: [{ oiUsd: '500000000' }] });
+  if (u.startsWith('https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?ccy=SOL')) return J({ code: '0', data: Array.from({ length: 30 }, (_, i) => [String(NOW - i * HR), String(500e6 / (1 + i * 0.004)), '1']) });
+  if (u.startsWith('https://www.okx.com/api/v5/rubik/stat/contracts/long-short-account-ratio?ccy=SOL')) return J({ code: '0', data: [[String(NOW), '2.5'], [String(NOW - HR), '2.4']] });
+  if (u.startsWith('https://www.okx.com/api/v5/public/liquidation-orders?instType=SWAP&uly=SOL-USDT')) return J({ code: '0', data: [{ details: [{ side: 'sell', posSide: 'long', sz: '100', bkPx: '150', ts: String(NOW - HR) }, { side: 'buy', posSide: 'short', sz: '20', bkPx: '160', ts: String(NOW - 2 * HR) }, { side: 'sell', posSide: 'long', sz: '999', bkPx: '150', ts: String(NOW - 30 * HR) }] }] });
+  if (u.startsWith('https://www.okx.com/api/v5/public/instruments?instType=SWAP&instId=SOL-USDT-SWAP')) return J({ code: '0', data: [{ ctVal: '1' }] });
+  if (u.startsWith('https://fapi.binance.com/fapi/v1/premiumIndex?symbol=SOLUSDT')) return J({ symbol: 'SOLUSDT', lastFundingRate: '0.0003', markPrice: '150' });
+  if (u.startsWith('https://fapi.binance.com/fapi/v1/openInterest?symbol=SOLUSDT')) return J({ openInterest: '4000000' });
+  if (u.startsWith('https://fapi.binance.com/futures/data/openInterestHist?symbol=SOLUSDT')) return J(Array.from({ length: 25 }, (_, i) => ({ sumOpenInterestValue: String(550e6 + i * 2e6) })));
+  if (u.startsWith('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=SOLUSDT')) return J([{ longShortRatio: '2.2', longAccount: '0.6875' }]);
+  if (u.startsWith('https://fapi.binance.com/futures/data/topLongShortPositionRatio?symbol=SOLUSDT')) return J([{ longShortRatio: '1.4' }]);
+  if (u.startsWith('https://fapi.binance.com/')) return J({ code: -1121, msg: 'Invalid symbol.' }, 400);
+  if (u === 'https://api.hyperliquid.xyz/info') return J([{ universe: [{ name: 'BTC' }, { name: 'SOL' }] }, [{ funding: '0.0000125', openInterest: '1000', markPx: '77000' }, { funding: '0.0000125', openInterest: '2000000', markPx: '150', dayNtlVlm: '90000000' }]]);
   if (u.startsWith('https://www.okx.com/') || u.startsWith('https://api.gateio.ws/') || u.startsWith('https://api.mexc.com/')) return J({ code: '51001', data: [] }, 400);
   throw new Error('unexpected fetch ' + u);
 };
@@ -260,7 +275,7 @@ check('the keyboard button "💼 Portfolio" → the portfolio', last().b.text.in
 await say('/new'); sent.length = 0; claudeCalls.length = 0; await say('what is the price of SOL?');
 v = last();
 check('a question → "🧠 Thinking…" at once, then that same message becomes the answer', sent.find(x => x.m === 'sendMessage').b.text === '🧠 Thinking…' && v.m === 'editMessageText' && v.b.message_id === 7, sent.map(x => x.m));
-check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 6 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
+check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 7 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
 const tr = JSON.parse(claudeCalls[1].messages.at(-1).content[0].content);
 check('get_coin gave Claude: live price + source, rank, 7d high / low, futures, your holding (avg, profit, signal)', tr.price_usd === 150 && /CoinGecko \(live\)/.test(tr.price_source) && tr.you_hold.amount === 10 && tr.you_hold.average_buy_usd === 160 && tr.you_hold.signal && 'perpetual_futures' in tr && tr.high_7d > 0, tr);
 check('the answer is Telegram-safe (its <script> and & escaped, ** → <b>, "- " → •)', okHtml(v.b.text) && /&lt;script&gt;/.test(v.b.text) && /• You hold/.test(v.b.text), v.b.text);
@@ -279,6 +294,16 @@ check('5 tools in one turn: portfolio, market (Top 200), plan, exit, 7-day histo
 check('get_portfolio: every coin with share %, profit vs average, signal (USDT marked stablecoin)', all[0].coins.length === 5 && all[0].coins.find(c => c.ticker === 'USDT').stablecoin === true && all[0].coins.every(c => 'signal' in c && 'share_pct' in c), all[0].coins);
 check('get_exit: LINK TP1 $25 at +127% to go, sell 25%', all[3].take_profits[0].ticker === 'LINK' && all[3].take_profits[0].level_usd === 25 && Math.round(all[3].take_profits[0].pct_to_go) === 127 && all[3].take_profits[0].sell_pct === 25, all[3].take_profits[0]);
 check('get_portfolio: each coin\'s result vs BTC (vs_btc_pct) and 30 / 90-day strength vs BTC — one call answers "which coins are weaker than BTC"', all[0].coins.every(c => 'vs_btc_pct' in c && 'vs_btc_30d_pts' in c) && all[0].coins.find(c => c.ticker === 'SOL').vs_btc_pct != null, all[0].coins.map(c => [c.ticker, c.vs_btc_pct]));
+sent.length = 0; claudeCalls.length = 0; await say('the futures of SOL?');
+const dv = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
+const sm = dv && dv[0].summary;
+check('get_derivatives: OKX + Binance + Hyperliquid for SOL', dv && dv[0].sources.map(x => x.source).join() === 'OKX,Binance,Hyperliquid', dv && dv[0]);
+check('…funding: OKX 0.01% / Binance 0.03% / Hyperliquid 0.01% (hourly × 8) → average 0.0167% per 8 h, 18.3% a year, "longs paying (normal)"', sm.funding_8h_pct_avg === 0.0167 && sm.funding_annualized_pct === 18.3 && /longs paying \(normal\)/.test(sm.funding_reading), sm);
+check('…open interest $500M + $600M + $300M = $1.4B, +9.6% in 24 h (OKX), 68.8% of accounts long (Binance)', sm.open_interest_usd_total === 1.4e9 && sm.open_interest_change_24h_pct === 9.6 && sm.long_accounts_pct === 68.8, sm);
+check('…liquidations in the last 24 h (OKX): longs $15,000, shorts $3,200 (the 30-hour-old one left out)', sm.liquidations_24h.orders === 2 && sm.liquidations_24h.longs_usd === 15000 && sm.liquidations_24h.shorts_usd === 3200, sm.liquidations_24h);
+check('…a coin with no futures → "no futures data", not a crash', /no futures data/.test(dv[1].error), dv[1]);
+check('…the 📡 line names the futures sources', /futures: OKX, Binance, Hyperliquid \(live\)/.test(last().b.text), last().b.text.slice(-200));
+check('the prompt asks for the AI Analysis style: verdict line, emoji section titles, short bullets', /AI Analysis report/.test(claudeCalls[0].system) && /emoji \+ \*\*Title\*\*/.test(claudeCalls[0].system) && /One idea per bullet/.test(claudeCalls[0].system), claudeCalls[0].system.slice(0, 80));
 sent.length = 0; claudeCalls.length = 0; await say('keep looking at btc please');
 check('a model that keeps calling tools → after 8 rounds it must answer (tools still declared, tool_choice none) — no error', /Final answer after many rounds/.test(last().b.text) && claudeCalls.length === 9 && claudeCalls.at(-1).tool_choice.type === 'none' && claudeCalls.every(c => c.tools), [claudeCalls.length, last().b.text.slice(0, 60)]);
 await say('/new'); claudeCalls.length = 0; await say('ما هي أفضل عملة؟'); await say('Which coins are weaker than BTC in my portfolio?');
