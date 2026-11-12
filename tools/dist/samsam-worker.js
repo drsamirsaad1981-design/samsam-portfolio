@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 314384b4239c4dac
+// sources-hash: 4b0d5f438855647e
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1400,7 +1400,7 @@ async function prepareTrade(ctx, input) {
     value_after: r2(after.value)
   };
   ctx.trades.push({ trade, docs });
-  return { ok: true, prepared: trade, saved: false, note_for_you: "NOT saved yet: the bot shows this trade with \u2705 Confirm / \u274C Cancel buttons under your answer. Tell the user to check it and tap Confirm. Never say it was saved." };
+  return { ok: true, prepared: trade, saved: false, note_for_you: 'NOT saved yet. The bot itself shows the full summary (amounts, average, realized profit) with \u2705 Confirm / \u274C Cancel under your answer \u2014 so reply in ONE short line only (e.g. "\u{1F9FE} Ready \u2014 check the summary below and tap \u2705 Confirm"), plus one line only if something needs his attention. Do not repeat the numbers. Never say it was saved.' };
 }
 async function keepTrades(env, trades, lang = "en") {
   const gid = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
@@ -1412,11 +1412,22 @@ function tradeLines(trades, ar) {
   trades.forEach(({ trade: t }, n) => {
     const d = local(Date.parse(t.date), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
     const buy = t.side === "buy";
-    L.push(`${trades.length > 1 ? n + 1 + ". " : ""}${buy ? "\u{1F7E2}" : "\u{1F534}"} <b>${buy ? ar ? "\u0634\u0631\u0627\u0621" : "Buy" : ar ? "\u0628\u064A\u0639" : "Sell"} ${amt(t.qty)} ${esc(t.sym)}</b> @ ${money(t.price)} = <b>${money(t.total)}</b>`);
-    L.push(`   ${esc(d)}${t.fee ? ` \xB7 ${ar ? "\u0631\u0633\u0648\u0645" : "fee"} ${money(t.fee)}` : ""}${t.note ? " \xB7 " + esc(t.note) : ""}`);
-    if (t.stable) L.push(`   ${buy ? ar ? "\u0645\u062F\u0641\u0648\u0639 \u0645\u0646" : "paid with" : ar ? "\u0627\u0644\u0641\u0644\u0648\u0633 \u0641\u064A" : "into"} ${esc(t.stable)} ${buy ? "\u2212" : "+"}${money(buy ? t.total + t.fee : Math.max(0, t.total - t.fee))}`);
-    L.push(`   \u2192 ${esc(t.sym)} ${amt(t.held_before)} \u2192 <b>${amt(t.held_after)}</b>${buy && t.avg_after ? ` \xB7 ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : "avg"} ${money(t.avg_before)} \u2192 <b>${money(t.avg_after)}</b>` : ""}`);
-    if (t.realized_usd != null) L.push(`   ${ar ? "\u0631\u0628\u062D \u0645\u062D\u0642\u0642" : "Realized"}: <b>${t.realized_usd >= 0 ? "+" : "\u2212"}${money(Math.abs(t.realized_usd))}</b>`);
+    const head = `${trades.length > 1 ? n + 1 + ". " : ""}${buy ? "\u{1F7E2}" : "\u{1F534}"} `, cash = money(buy ? t.total + t.fee : Math.max(0, t.total - t.fee));
+    if (ar) {
+      L.push(`${head}<b>${buy ? "\u0634\u0631\u0627\u0621" : "\u0628\u064A\u0639"} ${amt(t.qty)} ${esc(t.sym)}</b> \u0628\u0633\u0639\u0631 ${money(t.price)} \u2014 \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A <b>${money(t.total)}</b>`);
+      L.push(`   \u0627\u0644\u062A\u0627\u0631\u064A\u062E: ${esc(d)}${t.fee ? ` \xB7 \u0627\u0644\u0631\u0633\u0648\u0645: ${money(t.fee)}` : ""}${t.note ? " \xB7 " + esc(t.note) : ""}`);
+      if (t.stable) L.push(`   ${buy ? "\u0645\u062F\u0641\u0648\u0639 \u0645\u0646" : "\u0627\u0644\u0641\u0644\u0648\u0633 \u0631\u0627\u064A\u062D\u0629 \u0644\u0640"} ${esc(t.stable)}: ${buy ? "\u2212" : "+"}${cash}`);
+      L.push(`   \u0627\u0644\u0643\u0645\u064A\u0629: \u0645\u0646 ${amt(t.held_before)} \u0644\u0640 <b>${amt(t.held_after)}</b> ${esc(t.sym)}`);
+      if (buy && t.avg_after) L.push(`   \u0627\u0644\u0645\u062A\u0648\u0633\u0637: \u0645\u0646 ${money(t.avg_before)} \u0644\u0640 <b>${money(t.avg_after)}</b>`);
+      if (t.realized_usd != null) L.push(`   \u0631\u0628\u062D \u0645\u062D\u0642\u0642: <b>${t.realized_usd >= 0 ? "+" : "\u2212"}${money(Math.abs(t.realized_usd))}</b>`);
+      return;
+    }
+    L.push(`${head}<b>${buy ? "Buy" : "Sell"} ${amt(t.qty)} ${esc(t.sym)}</b> @ ${money(t.price)} = <b>${money(t.total)}</b>`);
+    L.push(`   ${esc(d)}${t.fee ? ` \xB7 fee ${money(t.fee)}` : ""}${t.note ? " \xB7 " + esc(t.note) : ""}`);
+    if (t.stable) L.push(`   ${buy ? "paid with" : "into"} ${esc(t.stable)} ${buy ? "\u2212" : "+"}${cash}`);
+    L.push(`   ${esc(t.sym)} ${amt(t.held_before)} \u2192 <b>${amt(t.held_after)}</b>`);
+    if (buy && t.avg_after) L.push(`   avg ${money(t.avg_before)} \u2192 <b>${money(t.avg_after)}</b>`);
+    if (t.realized_usd != null) L.push(`   Realized: <b>${t.realized_usd >= 0 ? "+" : "\u2212"}${money(Math.abs(t.realized_usd))}</b>`);
   });
   return L.join("\n");
 }
@@ -1857,7 +1868,7 @@ function system(now, lang, qLang) {
     '- Each new question: call the tools again. Earlier answers in this chat may be stale or wrong \u2014 never repeat an earlier "no data" (or any earlier number) without calling the tool now.',
     "- For liquidation / squeeze / leverage / funding questions always call get_derivatives (with get_coin and get_history for the levels).",
     '- "Tell me / alert me / \u0646\u0628\u0651\u0647\u0646\u064A if \u2026" \u2192 set_alert (then confirm in one short line what was set, the value now, and if already_met that it waits for the next crossing). "What if / \u0644\u0648 \u2026" about prices or trades \u2192 what_if (with get_coin for a coin he does not hold).',
-    '- "I bought / I sold / \u0627\u0634\u062A\u0631\u064A\u062A / \u0628\u0639\u062A \u2026" (a trade he MADE) \u2192 record_trade. It is only prepared: say in 1\u20132 lines what will be saved and the effect (new amount / average, realized profit), then "tap \u2705 Confirm to save". Never say it is saved. A trade he is only thinking about ("should I / what if I sell") \u2192 what_if, not record_trade.',
+    `- "I bought / I sold / \u0627\u0634\u062A\u0631\u064A\u062A / \u0628\u0639\u062A \u2026" (a trade he MADE) \u2192 record_trade. It is only prepared, and the bot shows the full summary itself \u2014 so your whole answer is ONE short line ("\u{1F9FE} \u062C\u0627\u0647\u0632\u0629 \u2014 \u0631\u0627\u062C\u0639 \u0627\u0644\u0645\u0644\u062E\u0635 \u062A\u062D\u062A \u0648\u0627\u0636\u063A\u0637 \u2705 \u062A\u0623\u0643\u064A\u062F" / "\u{1F9FE} Ready \u2014 check the summary below and tap \u2705 Confirm"), plus at most one line if something needs attention (e.g. a price far from today's). No sections, no repeated numbers. Never say it is saved. A trade he is only thinking about ("should I / what if I sell") \u2192 what_if, not record_trade.`,
     "- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.",
     '- About the future: give scenarios, levels and probabilities with reasons \u2014 never promises. Not financial advice, but do give a clear, practical view when asked "should I\u2026" (based on his plan and signals).',
     "STYLE \u2014 like the app's AI Analysis report, short and sharp, all in points:",

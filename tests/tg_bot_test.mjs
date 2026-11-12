@@ -524,7 +524,7 @@ FS_WRITE_403 = true; sent.length = 0; await tapM(tb[0].callback_data, tv.b.reply
 check('Firestore refuses the write (read-only account) → "Not saved" + how to fix it (Cloud Datastore User)', /Not saved/.test(last().b.text) && /Cloud Datastore User/.test(last().b.text) && commits.length === 1, last().b.text);
 sent.length = 0; claudeCalls.length = 0; await say('بعت i sold 20 link بـ 18');
 tv = last(); tb = btns(tv);
-check('Arabic message → the summary + buttons in Arabic (بيع … ربح محقق, ✅ تأكيد)', /للحفظ/.test(tv.b.text) && /بيع 20 LINK/.test(tv.b.text) && /ربح محقق/.test(tv.b.text) && tb[0].text === '✅ تأكيد', [tv.b.text, tb.map(b => b.text)]);
+check('Arabic message → the summary + buttons in Arabic (بيع … ربح محقق, ✅ تأكيد)', /للحفظ/.test(tv.b.text) && /بيع 20 LINK<\/b> بسعر \$18\.00/.test(tv.b.text) && /الكمية: من 50 لـ <b>30<\/b> LINK/.test(tv.b.text) && /ربح محقق/.test(tv.b.text) && !/→/.test(tv.b.text) && tb[0].text === '✅ تأكيد', [tv.b.text, tb.map(b => b.text)]);
 sent.length = 0; await tapM(tb[1].callback_data, tv.b.reply_markup);
 check('…❌ answered in Arabic too', /اتلغت/.test(last().b.text), last().b.text);
 // 15 minutes later → nothing saved

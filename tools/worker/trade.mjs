@@ -107,7 +107,7 @@ export async function prepareTrade(ctx, input) {
     stable_after: sa ? r6(sa.qty) : stable ? 0 : null, value_after: r2(after.value),
   };
   ctx.trades.push({ trade, docs });
-  return { ok: true, prepared: trade, saved: false, note_for_you: 'NOT saved yet: the bot shows this trade with ✅ Confirm / ❌ Cancel buttons under your answer. Tell the user to check it and tap Confirm. Never say it was saved.' };
+  return { ok: true, prepared: trade, saved: false, note_for_you: 'NOT saved yet. The bot itself shows the full summary (amounts, average, realized profit) with ✅ Confirm / ❌ Cancel under your answer — so reply in ONE short line only (e.g. "🧾 Ready — check the summary below and tap ✅ Confirm"), plus one line only if something needs his attention. Do not repeat the numbers. Never say it was saved.' };
 }
 
 // the trades of one answer → kept 15 min under one id (the buttons carry it)
@@ -123,11 +123,22 @@ export function tradeLines(trades, ar) {
   trades.forEach(({ trade: t }, n) => {
     const d = local(Date.parse(t.date), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
     const buy = t.side === 'buy';
-    L.push(`${trades.length > 1 ? (n + 1) + '. ' : ''}${buy ? '🟢' : '🔴'} <b>${buy ? (ar ? 'شراء' : 'Buy') : (ar ? 'بيع' : 'Sell')} ${amt(t.qty)} ${esc(t.sym)}</b> @ ${money(t.price)} = <b>${money(t.total)}</b>`);
-    L.push(`   ${esc(d)}${t.fee ? ` · ${ar ? 'رسوم' : 'fee'} ${money(t.fee)}` : ''}${t.note ? ' · ' + esc(t.note) : ''}`);
-    if (t.stable) L.push(`   ${buy ? (ar ? 'مدفوع من' : 'paid with') : (ar ? 'الفلوس في' : 'into')} ${esc(t.stable)} ${buy ? '−' : '+'}${money(buy ? t.total + t.fee : Math.max(0, t.total - t.fee))}`);
-    L.push(`   → ${esc(t.sym)} ${amt(t.held_before)} → <b>${amt(t.held_after)}</b>${buy && t.avg_after ? ` · ${ar ? 'المتوسط' : 'avg'} ${money(t.avg_before)} → <b>${money(t.avg_after)}</b>` : ''}`);
-    if (t.realized_usd != null) L.push(`   ${ar ? 'ربح محقق' : 'Realized'}: <b>${t.realized_usd >= 0 ? '+' : '−'}${money(Math.abs(t.realized_usd))}</b>`);
+    const head = `${trades.length > 1 ? (n + 1) + '. ' : ''}${buy ? '🟢' : '🔴'} `, cash = money(buy ? t.total + t.fee : Math.max(0, t.total - t.fee));
+    if (ar) {   // Arabic: each line starts with an Arabic word and reads "من X لـ Y" (arrows flip in right-to-left text)
+      L.push(`${head}<b>${buy ? 'شراء' : 'بيع'} ${amt(t.qty)} ${esc(t.sym)}</b> بسعر ${money(t.price)} — الإجمالي <b>${money(t.total)}</b>`);
+      L.push(`   التاريخ: ${esc(d)}${t.fee ? ` · الرسوم: ${money(t.fee)}` : ''}${t.note ? ' · ' + esc(t.note) : ''}`);
+      if (t.stable) L.push(`   ${buy ? 'مدفوع من' : 'الفلوس رايحة لـ'} ${esc(t.stable)}: ${buy ? '−' : '+'}${cash}`);
+      L.push(`   الكمية: من ${amt(t.held_before)} لـ <b>${amt(t.held_after)}</b> ${esc(t.sym)}`);
+      if (buy && t.avg_after) L.push(`   المتوسط: من ${money(t.avg_before)} لـ <b>${money(t.avg_after)}</b>`);
+      if (t.realized_usd != null) L.push(`   ربح محقق: <b>${t.realized_usd >= 0 ? '+' : '−'}${money(Math.abs(t.realized_usd))}</b>`);
+      return;
+    }
+    L.push(`${head}<b>${buy ? 'Buy' : 'Sell'} ${amt(t.qty)} ${esc(t.sym)}</b> @ ${money(t.price)} = <b>${money(t.total)}</b>`);
+    L.push(`   ${esc(d)}${t.fee ? ` · fee ${money(t.fee)}` : ''}${t.note ? ' · ' + esc(t.note) : ''}`);
+    if (t.stable) L.push(`   ${buy ? 'paid with' : 'into'} ${esc(t.stable)} ${buy ? '−' : '+'}${cash}`);
+    L.push(`   ${esc(t.sym)} ${amt(t.held_before)} → <b>${amt(t.held_after)}</b>`);
+    if (buy && t.avg_after) L.push(`   avg ${money(t.avg_before)} → <b>${money(t.avg_after)}</b>`);
+    if (t.realized_usd != null) L.push(`   Realized: <b>${t.realized_usd >= 0 ? '+' : '−'}${money(Math.abs(t.realized_usd))}</b>`);
   });
   return L.join('\n');
 }
