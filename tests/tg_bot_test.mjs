@@ -667,11 +667,23 @@ const perr = []; pg.on('pageerror', e => perr.push(String(e))); pg.on('console',
 let REP = rj.report;
 await pg.route('https://telegram.org/**', r => r.fulfill({ contentType: 'text/javascript', body: 'window.Telegram={WebApp:{initData:"signed",ready(){},expand(){},HapticFeedback:{selectionChanged(){}}}};' }));
 await pg.route(HOST + '/tg/app', r => r.fulfill({ contentType: 'text/html', body: html }));
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+await pg.route(/https:\/\/(coin-images|assets)\.coingecko\.com\/.*/, r => /tether|usdt|325/i.test(r.request().url()) ? r.fulfill({ status: 404, body: '' }) : r.fulfill({ contentType: 'image/png', body: PNG }));   // USDT's logo "broken" → letters
 let apiBody = null; await pg.route(HOST + '/tg/api', r => { apiBody = r.request().postData(); r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, report: REP }) }); });
 await pg.goto(HOST + '/tg/app'); await pg.waitForSelector('.hero');
 const txt0 = await pg.innerText('body');
 check('page: sends Telegram\'s initData, shows the value, today\'s list, the coins tab (allocation + holdings)', JSON.parse(apiBody).initData === 'signed' && txt0.includes(new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(REP.pf.value)) && /Today/.test(txt0) && /Allocation/.test(txt0) && /Holdings/.test(txt0) && /BTC/.test(txt0), txt0.slice(0, 300));
+await pg.waitForTimeout(200);
+check('report sends real logos (CoinGecko) for your coins; only from allowed hosts', rj.report.logos.BTC && /^https:\/\/(coin-images|assets)\.coingecko\.com\//.test(rj.report.logos.BTC) && Object.values(rj.report.logos).every(u => /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com)\//.test(u)), rj.report.logos);
+check('page shows them as images; a logo that fails becomes the coin\'s letters (USDT)', (await pg.$$('.ic.logo img')).length >= 3 && (await pg.$$eval('.ic:not(.logo)', a => a.map(x => x.textContent))).includes('USDT'), await pg.$$eval('.ic', a => a.map(x => x.className + ':' + x.textContent)));
+check('allocation by the app\'s groups (no targets set → now only: Bitcoin first)', rj.report.alloc && !rj.report.alloc.targets && rj.report.alloc.groups[0].key === 'btc' && /Bitcoin/.test(await pg.innerText('body')), rj.report.alloc);
 await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_coins.png'), fullPage: true });
+REP = { ...rj.report, alloc: { targets: true, band: 5, groups: [{ key: 'btc', name: 'Bitcoin', now: 62, target: 50, drift: 12, usd: 6800, fix: -1300, state: 'off' }, { key: 'layer1', name: 'Layer 1', now: 25, target: 30, drift: -5, usd: 2700, fix: 550, state: 'ok' }, { key: 'defi', name: 'DeFi', now: 13, target: 20, drift: -7, usd: 1400, fix: 770, state: 'warn' }] } };
+await pg.click('.btn'); await pg.waitForTimeout(150);
+const at = await pg.innerText('body');
+check('with targets → now vs target, a target mark, "1/3 on target", trim $1,300 / add $770', /1\/3 on target/.test(at) && /trim \$1,300/.test(at) && /add \$770/.test(at) && /target 50%/.test(at) && (await pg.$$('.tmark')).length === 3, at.slice(0, 600));
+await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_alloc.png'), fullPage: false });
+REP = rj.report;
 const tabTexts = await pg.$$eval('.tab', a => a.map(x => x.textContent));
 for (const [i, want] of [[1, /Overall/], [2, /Exit conditions/], [3, /Fear & Greed|Market/], [4, /Paper/], [5, /Alerts/]]) {
   await pg.click(`.tab >> nth=${i}`); const tt = await pg.innerText('body');
@@ -685,7 +697,7 @@ await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_ar.png'), fullP
 REP = { ...rj.report, coins: [{ sym: '<img src=x onerror=alert(1)>', name: '', qty: 1, price: 1, avg: 1, value: 50, share: 100, ch24: 1, ch7: 1, pnl: 1, signal: 'hold', stable: false }], lang: 'en' };
 await pg.click('.btn'); await pg.waitForTimeout(150); await pg.click('.tab >> nth=0');
 check('page never runs data as HTML (a coin named <img onerror> is shown as text)', (await pg.$$('img')).length === 0 && (await pg.innerText('body')).includes('<img'));
-check('page: no script errors', perr.length === 0, perr);
+check('page: no script errors', perr.filter(e => !/Failed to load resource/.test(e)).length === 0, perr);
 await br.close();
 }
 

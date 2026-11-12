@@ -12,6 +12,11 @@ import { listAlerts, describe } from './watch.mjs';
 import { todo } from './daily.mjs';
 import { paperFacts } from './paper.mjs';
 import PAGE from './miniapp.html';
+import { groupOf } from '../../samsam-core.js';
+
+// coin logos: your saved logo, else CoinGecko's from the market snapshot — only from these hosts (the page's CSP allows them)
+const LOGO_HOSTS = /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com)\//;
+const NICE = { btc: 'Bitcoin', layer1: 'Layer 1', layer2: 'Layer 2', defi: 'DeFi', stable: 'Stablecoins', stables: 'Stablecoins', ai: 'AI', meme: 'Meme', gaming: 'Gaming', rwa: 'RWA', infra: 'Infrastructure', exchange: 'Exchange', privacy: 'Privacy', storage: 'Storage', oracle: 'Oracle', other: 'Other' };
 
 const enc = new TextEncoder();
 async function hmac(key, data) {
@@ -55,6 +60,22 @@ export async function report(env, now = Date.now()) {
   const sum = summarize(withIds(user, m), m, now), names = Object.fromEntries((user.coins || []).map(c => [String(c.sym).toUpperCase(), c.name || '']));
   const coins = sum.coins.filter(c => c.value >= 0.01).sort((a, b) => b.value - a.value).map(c => ({ sym: c.sym, name: names[c.sym] || '', qty: r6(c.qty), price: r6(c.price), avg: r6(c.avg), value: r2(c.value),
     share: sum.value > 0 ? r2(c.value / sum.value * 100) : 0, ch24: r2(c.ch24), ch7: r2(c.ch7), pnl: r2(c.chg), signal: sum.signal[c.sym] || 'hold', stable: isStable(c.sym), vsBtc: c.vs ? r2(c.vs.pct) : null }));
+  // logos for every coin the page shows (your coins, plan coins, paper coins)
+  const rows = [...m.top, ...m.top500], logos = {};
+  const want = new Set([...coins.map(c => c.sym), ...sum.plan.map(p => p.sym), ...(paper && paper.coins ? paper.coins.map(c => c.coin) : [])]);
+  for (const S of want) {
+    const own = (user.coins || []).find(c => c && String(c.sym).toUpperCase() === S), id = (own && own.cgId) || m.idOf[S];
+    const r = (id && rows.find(x => x.id === id)) || rows.find(x => String(x.sym || '').toUpperCase() === S);
+    const u = [own && own.logoUrl, r && r.img].find(x => typeof x === 'string' && LOGO_HOSTS.test(x));
+    if (u) logos[S] = u.slice(0, 300);
+  }
+  // allocation by the app's groups (Holdings → Allocation): now vs your target; without targets, just now
+  let alloc;
+  if (sum.alloc) alloc = { band: sum.alloc.band, targets: true, groups: sum.alloc.groups.map(g2 => ({ key: g2.key, name: sum.alloc.names[g2.key] || NICE[g2.key] || g2.key, now: r2(g2.now), target: r2(g2.target), drift: r2(g2.drift), usd: r2(g2.value), fix: Math.round(g2.full), state: g2.state })).sort((a, b) => b.now - a.now) };
+  else {
+    const vals = {}; for (const c of coins) { const own = (user.coins || []).find(x => x && String(x.sym).toUpperCase() === c.sym); const k = groupOf(own || { sym: c.sym }); vals[k] = (vals[k] || 0) + c.value; }
+    alloc = { targets: false, groups: Object.entries(vals).map(([k, v]) => ({ key: k, name: NICE[k] || k, now: sum.value > 0 ? r2(v / sum.value * 100) : 0, usd: r2(v) })).sort((a, b) => b.now - a.now) };
+  }
   const tps = (sum.tps || []).map(t => ({ sym: t.sym, n: t.n, level: r6(t.level), price: r6(t.price), to: r2((t.level / t.price - 1) * 100), sell: t.pct })).sort((a, b) => a.to - b.to).slice(0, 10);
   return {
     t: now, lang, connected: true,
@@ -64,12 +85,12 @@ export async function report(env, now = Date.now()) {
     dca: (sum.dca || []).map(x => ({ sym: x.sym, usd: r2(x.s.usd), next: x.s.next || null, state: x.s.state, perMonth: r2(x.s.perMonth) })),
     buyAt: (sum.buyAt || []).map(x => ({ sym: x.sym, at: r6(x.at), price: r6(x.price), away: r2((x.price / x.at - 1) * 100) })),
     exit: { macro: sum.macro.map(x => ({ k: x.k, now: x.now != null ? +Number(x.now).toFixed(x.dp) : null, lvl: x.lvl, met: x.met, op: x.op, unit: x.unit })), tps },
-    alloc: sum.alloc ? sum.alloc.groups.map(g2 => ({ name: sum.alloc.names[g2.key] || g2.key, now: r2(g2.now), target: r2(g2.target), state: g2.state })) : null,
+    alloc, logos,
     todo: todo(sum, now), market, alerts, paper,
   };
 }
 
-const CSP = "default-src 'none'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors https://web.telegram.org https://*.telegram.org";
+const CSP = "default-src 'none'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https://assets.coingecko.com https://coin-images.coingecko.com https://s2.coinmarketcap.com https://raw.githubusercontent.com; base-uri 'none'; frame-ancestors https://web.telegram.org https://*.telegram.org";
 export function page() {
   return new Response(PAGE, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': CSP, 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' } });
 }

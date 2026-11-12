@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 755eee8e5075bb6f
+// sources-hash: d989d17c73e5fc99
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3754,6 +3754,7 @@ var miniapp_default = `<!doctype html>
   .row .grow { flex: 1; min-width: 0; }
   .row .t1 { font-weight: 650; } .row .t2 { font-size: 12.5px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row .end { text-align: end; } .row .end .t2 { white-space: nowrap; }
+  .ic.logo { background: var(--bg); padding: 3px; } .ic.logo img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block; }
   .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-weight: 800; font-size: 12px; color: #fff; flex: none; }
   .pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; display: inline-block; }
   .p-reinforce { background: rgba(22,163,74,.14); color: var(--up); } .p-sell { background: rgba(220,38,38,.13); color: var(--dn); } .p-hold { background: var(--line); color: var(--mut); }
@@ -3761,6 +3762,12 @@ var miniapp_default = `<!doctype html>
   .todo:first-of-type { border-top: 0; } .todo .n { width: 24px; height: 24px; border-radius: 8px; background: var(--acc); color: #fff; font-weight: 800; font-size: 12px; display: grid; place-items: center; flex: none; }
   .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; } .bar > i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--acc), var(--acc2)); }
   .stack { display: flex; height: 12px; border-radius: 99px; overflow: hidden; margin: 2px 0 10px; }
+  .grow-row .grow { flex: 1; min-width: 0; } .grow-row .end { text-align: end; min-width: 64px; } .grow-row .t1 { font-weight: 650; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .grow-row .t2 { font-size: 12.5px; color: var(--mut); white-space: nowrap; }
+  .grow-row .end .t1 { justify-content: flex-end; }
+  .grow-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); } .stack + .grow-row { border-top: 0; }
+  .gbar { position: relative; height: 6px; border-radius: 99px; background: var(--line); margin-top: 6px; } .gbar > i { display: block; height: 100%; border-radius: 99px; }
+  .tmark { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--text); border-radius: 2px; opacity: .55; }
+  .p-warn { background: rgba(245,158,11,.16); color: #b45309; }
   .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--mut); } .legend b { color: var(--text); font-weight: 650; } .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-inline-end: 5px; }
   .tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; overflow-x: auto; padding: 8px 2px; margin: 0 -2px 8px; background: var(--bg); scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
@@ -3791,14 +3798,14 @@ var miniapp_default = `<!doctype html>
   try { TAB = localStorage.getItem('cp-tab') || 'coins'; } catch (_) {}
   var W = {
     en: { total: 'Total value', today: 'today', week: '7d', profit: 'All-time', vsBtc: 'vs BTC', todayT: 'Today', coins: 'Coins', plan: 'Plan', exit: 'Exit', market: 'Market', paper: 'Paper', alerts: 'Alerts',
-      alloc: 'Allocation', holdings: 'Holdings', share: 'of portfolio', avg: 'avg', reinforce: 'Reinforce', sell: 'Sell', hold: 'Hold', overall: 'Overall', done: 'targets met', dca: 'Regular buys (DCA)', next: 'next',
+      alloc: 'Allocation', holdings: 'Holdings', onT: 'on target', add: 'add', trim: 'trim', target: 'target', share: 'of portfolio', avg: 'avg', reinforce: 'Reinforce', sell: 'Sell', hold: 'Hold', overall: 'Overall', done: 'targets met', dca: 'Regular buys (DCA)', next: 'next',
       buyAt: 'Buy-price alerts', above: 'above', conds: 'Exit conditions', met: 'met', tps: 'Take-profit levels', toGo: 'to go', sellP: 'sell', btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC',
       fng: 'Fear & Greed', dom: 'Dominance', altS: 'Altcoin Season', etf: 'ETF flows', sectors: 'Sectors 24h', cash: 'Cash', sameBtc: 'Same money in BTC', pts: 'pts', noPaper: 'No paper portfolio yet \u2014 /paper in the chat.',
       noAlerts: 'No alerts \u2014 write in the chat: "tell me if SOL drops below 80".', waits: 'waits to reset', nothing: 'Nothing to do today \u2014 hold \u2705', updated: 'Updated', refresh: 'Refresh', notConn: 'Portfolio not connected.',
       err: 'Could not load the report.', onlyTg: 'Open this from the bot in Telegram.', snapshot: 'market snapshot', beat: function (a, n) { return a + '/' + n + ' coins beat BTC'; },
       vUp: 'Up today \u2014 your plan is on track', vDn: 'Down today \u2014 stick to the plan', vFlat: 'Quiet day', acts: function (n) { return n + ' thing' + (n === 1 ? '' : 's') + ' to do today'; } },
     ar: { total: '\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0643\u0644\u064A\u0629', today: '\u0627\u0644\u064A\u0648\u0645', week: '7 \u0623\u064A\u0627\u0645', profit: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0628\u062D', vsBtc: '\u0645\u0642\u0627\u0628\u0644 BTC', todayT: '\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647', coins: '\u0627\u0644\u0639\u0645\u0644\u0627\u062A', plan: '\u0627\u0644\u062E\u0637\u0629', exit: '\u0627\u0644\u062E\u0631\u0648\u062C', market: '\u0627\u0644\u0633\u0648\u0642', paper: '\u062A\u062C\u0631\u064A\u0628\u064A', alerts: '\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A',
-      alloc: '\u0627\u0644\u062A\u0648\u0632\u064A\u0639', holdings: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629', share: '\u0645\u0646 \u0627\u0644\u0645\u062D\u0641\u0638\u0629', avg: '\u0645\u062A\u0648\u0633\u0637', reinforce: '\u062A\u0639\u0632\u064A\u0632', sell: '\u0628\u064A\u0639', hold: '\u0627\u062D\u062A\u0641\u0627\u0638', overall: '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A', done: '\u0623\u0647\u062F\u0627\u0641 \u0627\u062A\u062D\u0642\u0642\u062A', dca: '\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u0638\u0645 (DCA)', next: '\u0627\u0644\u062C\u0627\u064A',
+      alloc: '\u0627\u0644\u062A\u0648\u0632\u064A\u0639', holdings: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629', onT: '\u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641', add: '\u0632\u0648\u0651\u062F', trim: '\u0642\u0644\u0651\u0644', target: '\u0627\u0644\u0647\u062F\u0641', share: '\u0645\u0646 \u0627\u0644\u0645\u062D\u0641\u0638\u0629', avg: '\u0645\u062A\u0648\u0633\u0637', reinforce: '\u062A\u0639\u0632\u064A\u0632', sell: '\u0628\u064A\u0639', hold: '\u0627\u062D\u062A\u0641\u0627\u0638', overall: '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A', done: '\u0623\u0647\u062F\u0627\u0641 \u0627\u062A\u062D\u0642\u0642\u062A', dca: '\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u0638\u0645 (DCA)', next: '\u0627\u0644\u062C\u0627\u064A',
       buyAt: '\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621', above: '\u0641\u0648\u0642', conds: '\u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C', met: '\u0627\u062A\u062D\u0642\u0642', tps: '\u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D', toGo: '\u0628\u0627\u0642\u064A', sellP: '\u0628\u064A\u0639', btcD: '\u0633\u064A\u0637\u0631\u0629 BTC', usdtD: '\u0633\u064A\u0637\u0631\u0629 USDT', ethBtc: 'ETH/BTC',
       fng: '\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639', dom: '\u0627\u0644\u0633\u064A\u0637\u0631\u0629', altS: '\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A', etf: '\u062A\u062F\u0641\u0642\u0627\u062A ETF', sectors: '\u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A 24\u0633', cash: '\u0627\u0644\u0643\u0627\u0634', sameBtc: '\u0646\u0641\u0633 \u0627\u0644\u0641\u0644\u0648\u0633 \u0641\u064A BTC', pts: '\u0646\u0642\u0637\u0629', noPaper: '\u0645\u0641\u064A\u0634 \u0645\u062D\u0641\u0638\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0644\u0633\u0647 \u2014 /paper \u0641\u064A \u0627\u0644\u0634\u0627\u062A.',
       noAlerts: '\u0645\u0641\u064A\u0634 \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u2014 \u0627\u0643\u062A\u0628 \u0641\u064A \u0627\u0644\u0634\u0627\u062A: \xAB\u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648 SOL \u0646\u0632\u0644 \u062A\u062D\u062A 80\xBB.', waits: '\u0645\u0633\u062A\u0646\u064A \u064A\u0631\u062C\u0639 \u0627\u0644\u0623\u0648\u0644', nothing: '\u0645\u0641\u064A\u0634 \u062D\u0627\u062C\u0629 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647 \u2014 \u0627\u062D\u062A\u0641\u0638 \u2705', updated: '\u0627\u062A\u062D\u062F\u0651\u062B', refresh: '\u062A\u062D\u062F\u064A\u062B', notConn: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0634 \u0645\u062A\u0648\u0635\u0644\u0629.',
@@ -3818,7 +3825,15 @@ var miniapp_default = `<!doctype html>
   var CMAP = {};   // each coin its own colour (BTC orange, ETH blue, the rest in order of size \u2014 never two the same in a row)
   function setColors(syms) { CMAP = { BTC: '#f7931a', ETH: '#627eea' }; var k = 0; syms.forEach(function (s) { if (!CMAP[s]) CMAP[s] = PAL[k++ % PAL.length]; }); }
   function color(sym) { if (CMAP[sym]) return CMAP[sym]; var x = 0; for (var i = 0; i < sym.length; i++) x = (x * 31 + sym.charCodeAt(i)) >>> 0; return PAL[x % PAL.length]; }
-  function icon(sym) { var e = h('div', 'ic', [sym.slice(0, 4)]); e.style.background = color(sym); if (sym.length > 3) e.style.fontSize = '10px'; return e; }
+  function letters(sym) { var e = h('div', 'ic', [sym.slice(0, 4)]); e.style.background = color(sym); if (sym.length > 3) e.style.fontSize = '10px'; return e; }
+  // the coin's real logo (CoinGecko / your saved one); if it doesn't load, its letters on its colour
+  function icon(sym) {
+    var u = R && R.logos && R.logos[sym]; if (!u) return letters(sym);
+    var box = h('div', 'ic logo'), img = document.createElement('img');
+    img.alt = ''; img.referrerPolicy = 'no-referrer'; img.loading = 'lazy'; img.decoding = 'async'; img.src = u;
+    img.addEventListener('error', function () { box.replaceWith(letters(sym)); });
+    box.appendChild(img); return box;
+  }
   function card(title, sub, kids) { return h('section', 'card', [h('h2', '', [title, sub ? h('span', 'sub', [sub]) : null])].concat(kids)); }
 
   function todoText(x) {
@@ -3852,17 +3867,31 @@ var miniapp_default = `<!doctype html>
     var list = r.todo.slice(0, 3);
     return card('\u{1F3AF} ' + w.todayT, null, list.length ? list.map(function (x, i) { return h('div', 'todo', [h('div', 'n', [String(i + 1)]), h('div', 'grow', [todoIcon(x) + ' ' + todoText(x)])]); }) : [h('div', 'empty', [w.nothing])]);
   }
+  var GPAL = ['#7c3aed', '#10b981', '#3b82f6', '#ec4899', '#14b8a6', '#eab308', '#8b5cf6', '#f43f5e', '#64748b', '#0ea5e9', '#a3e635'];
+  function gcolor(g, i) { return g.key === 'btc' ? '#f7931a' : /stable/.test(g.key) ? '#26a17b' : GPAL[i % GPAL.length]; }
+  function allocCard(r) {
+    var a = r.alloc; if (!a || !a.groups.length) return null;
+    var stack = h('div', 'stack'), rows = [];
+    a.groups.forEach(function (g, i) {
+      var c = gcolor(g, i), seg = h('i'); seg.style.cssText = 'display:block;height:100%;width:' + Math.max(0, g.now) + '%;background:' + c; stack.appendChild(seg);
+      var bar = h('div', 'gbar', [h('i')]); bar.firstChild.style.cssText = 'width:' + Math.min(100, g.now) + '%;background:' + c;
+      if (a.targets && g.target != null) { var mk = h('b', 'tmark'); mk.style[document.documentElement.dir === 'rtl' ? 'right' : 'left'] = Math.min(100, g.target) + '%'; bar.appendChild(mk); }
+      var st = !a.targets ? null : g.state === 'ok' ? h('span', 'pill p-reinforce', ['\u2713 ' + w.onT]) : h('span', 'pill ' + (g.state === 'off' ? 'p-sell' : 'p-warn'), [(g.fix > 0 ? '\u2191 ' + w.add + ' ' : '\u2193 ' + w.trim + ' ') + usd(Math.abs(g.fix), 0)]);
+      var dotE = h('span', 'dot'); dotE.style.background = c;
+      rows.push(h('div', 'grow-row', [h('div', 'grow', [h('div', 't1', [dotE, g.name, ' ', st]), bar]),
+        h('div', 'end', [h('div', 't1', [N(g.now.toFixed(1) + '%')]), a.targets && g.target != null ? h('div', 't2', [w.target + ' ', N(g.target.toFixed(0) + '%')]) : h('div', 't2', [N(usd(g.usd, 0))])])]));
+    });
+    var on = a.targets ? a.groups.filter(function (g) { return g.state === 'ok'; }).length + '/' + a.groups.length + ' ' + w.onT : null;
+    return card('\u{1F9E9} ' + w.alloc, on, [stack].concat(rows));
+  }
   function coinsTab(r) {
-    var cs = r.coins.filter(function (c) { return c.value >= 1; }), top = cs.slice(0, 6), rest = cs.slice(6).reduce(function (a, c) { return a + c.share; }, 0);
-    var stack = h('div', 'stack'), legend = h('div', 'legend');
-    top.forEach(function (c) { var i = h('i'); i.style.cssText = 'display:block;height:100%;width:' + c.share + '%;background:' + color(c.sym); stack.appendChild(i); legend.appendChild(h('span', '', [h('span', 'dot'), h('b', '', [c.sym]), ' ', N(c.share.toFixed(1) + '%')])); legend.lastChild.firstChild.style.background = color(c.sym); });
-    if (rest > 0.05) { var i2 = h('i'); i2.style.cssText = 'display:block;height:100%;width:' + rest + '%;background:#94a3b8'; stack.appendChild(i2); legend.appendChild(h('span', '', [h('span', 'dot'), '+' + (cs.length - 6) + ' ', N(rest.toFixed(1) + '%')])); legend.lastChild.firstChild.style.background = '#94a3b8'; }
-    var c1 = card('\u{1F9E9} ' + w.alloc, r.pf.beat != null ? w.beat(r.pf.beat, r.pf.alts) : null, [stack, legend]);
+    var cs = r.coins.filter(function (c) { return c.value >= 1; });
+    var c1 = allocCard(r);
     var rows = cs.map(function (c) {
       return h('div', 'row', [icon(c.sym), h('div', 'grow', [h('div', 't1', [c.sym, ' ', c.stable ? null : h('span', 'pill p-' + c.signal, [w[c.signal]])]), h('div', 't2', c.stable ? [N(qty(c.qty))] : [N(qty(c.qty)), ' \xB7 ', w.avg + ' ', N(usd(c.avg))])]),
         h('div', 'end', [h('div', 't1', [N(usd(c.value, c.value >= 1000 ? 0 : 2))]), h('div', 't2', c.stable ? [N(pct(c.ch24, 2), 'mut')] : [N(pct(c.ch24, 1), cls(c.ch24)), ' \xB7 ', N(pct(c.pnl, 1), cls(c.pnl))])])]);
     });
-    return [c1, card('\u{1F4BC} ' + w.holdings, r.coins.length + '', rows)];
+    return [c1, card('\u{1F4BC} ' + w.holdings, (r.pf.beat != null ? w.beat(r.pf.beat, r.pf.alts) + ' \xB7 ' : '') + r.coins.length, rows)].filter(Boolean);
   }
   function planTab(r) {
     var out = [], pl = r.plan;
@@ -3949,6 +3978,8 @@ var miniapp_default = `<!doctype html>
 `;
 
 // tools/worker/miniapp.mjs
+var LOGO_HOSTS = /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com)\//;
+var NICE = { btc: "Bitcoin", layer1: "Layer 1", layer2: "Layer 2", defi: "DeFi", stable: "Stablecoins", stables: "Stablecoins", ai: "AI", meme: "Meme", gaming: "Gaming", rwa: "RWA", infra: "Infrastructure", exchange: "Exchange", privacy: "Privacy", storage: "Storage", oracle: "Oracle", other: "Other" };
 var enc2 = new TextEncoder();
 async function hmac(key, data) {
   const k = await crypto.subtle.importKey("raw", typeof key === "string" ? enc2.encode(key) : key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -4017,6 +4048,25 @@ async function report(env, now = Date.now()) {
     stable: isStable(c.sym),
     vsBtc: c.vs ? r25(c.vs.pct) : null
   }));
+  const rows = [...m.top, ...m.top500], logos = {};
+  const want = /* @__PURE__ */ new Set([...coins.map((c) => c.sym), ...sum.plan.map((p) => p.sym), ...paper && paper.coins ? paper.coins.map((c) => c.coin) : []]);
+  for (const S of want) {
+    const own = (user.coins || []).find((c) => c && String(c.sym).toUpperCase() === S), id = own && own.cgId || m.idOf[S];
+    const r = id && rows.find((x) => x.id === id) || rows.find((x) => String(x.sym || "").toUpperCase() === S);
+    const u = [own && own.logoUrl, r && r.img].find((x) => typeof x === "string" && LOGO_HOSTS.test(x));
+    if (u) logos[S] = u.slice(0, 300);
+  }
+  let alloc;
+  if (sum.alloc) alloc = { band: sum.alloc.band, targets: true, groups: sum.alloc.groups.map((g2) => ({ key: g2.key, name: sum.alloc.names[g2.key] || NICE[g2.key] || g2.key, now: r25(g2.now), target: r25(g2.target), drift: r25(g2.drift), usd: r25(g2.value), fix: Math.round(g2.full), state: g2.state })).sort((a, b) => b.now - a.now) };
+  else {
+    const vals = {};
+    for (const c of coins) {
+      const own = (user.coins || []).find((x) => x && String(x.sym).toUpperCase() === c.sym);
+      const k = groupOf(own || { sym: c.sym });
+      vals[k] = (vals[k] || 0) + c.value;
+    }
+    alloc = { targets: false, groups: Object.entries(vals).map(([k, v]) => ({ key: k, name: NICE[k] || k, now: sum.value > 0 ? r25(v / sum.value * 100) : 0, usd: r25(v) })).sort((a, b) => b.now - a.now) };
+  }
   const tps = (sum.tps || []).map((t) => ({ sym: t.sym, n: t.n, level: r64(t.level), price: r64(t.price), to: r25((t.level / t.price - 1) * 100), sell: t.pct })).sort((a, b) => a.to - b.to).slice(0, 10);
   return {
     t: now,
@@ -4029,14 +4079,15 @@ async function report(env, now = Date.now()) {
     dca: (sum.dca || []).map((x) => ({ sym: x.sym, usd: r25(x.s.usd), next: x.s.next || null, state: x.s.state, perMonth: r25(x.s.perMonth) })),
     buyAt: (sum.buyAt || []).map((x) => ({ sym: x.sym, at: r64(x.at), price: r64(x.price), away: r25((x.price / x.at - 1) * 100) })),
     exit: { macro: sum.macro.map((x) => ({ k: x.k, now: x.now != null ? +Number(x.now).toFixed(x.dp) : null, lvl: x.lvl, met: x.met, op: x.op, unit: x.unit })), tps },
-    alloc: sum.alloc ? sum.alloc.groups.map((g2) => ({ name: sum.alloc.names[g2.key] || g2.key, now: r25(g2.now), target: r25(g2.target), state: g2.state })) : null,
+    alloc,
+    logos,
     todo: todo(sum, now),
     market,
     alerts,
     paper
   };
 }
-var CSP = "default-src 'none'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors https://web.telegram.org https://*.telegram.org";
+var CSP = "default-src 'none'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https://assets.coingecko.com https://coin-images.coingecko.com https://s2.coinmarketcap.com https://raw.githubusercontent.com; base-uri 'none'; frame-ancestors https://web.telegram.org https://*.telegram.org";
 function page() {
   return new Response(miniapp_default, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": CSP, "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" } });
 }
