@@ -1328,6 +1328,8 @@ function system(now, lang, qLang) {
     `Now: ${local(now, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} (Riyadh).`,
     "RULES",
     "- Every number you state (price, %, value, rank, flow\u2026) must come from a tool result in this conversation. Never use prices or market data from memory \u2014 call the tools first (several in one turn if needed). If a tool has no data, say so.",
+    '- Each new question: call the tools again. Earlier answers in this chat may be stale or wrong \u2014 never repeat an earlier "no data" (or any earlier number) without calling the tool now.',
+    "- For liquidation / squeeze / leverage / funding questions always call get_derivatives (with get_coin and get_history for the levels).",
     "- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.",
     '- About the future: give scenarios, levels and probabilities with reasons \u2014 never promises. Not financial advice, but do give a clear, practical view when asked "should I\u2026" (based on his plan and signals).',
     "STYLE \u2014 like the app's AI Analysis report, short and sharp, all in points:",
