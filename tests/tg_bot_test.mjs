@@ -597,5 +597,15 @@ check('/morning → the smart morning now', sent.some(x => x.m === 'sendMessage'
 check('wrangler cron still every 5 min; update-market keeps the sectors (≥ $500M, kept on failure)', /sectors/.test(fs.readFileSync(path.join(ROOT, 'tools/update-market.mjs'), 'utf8')) && /old\.sectors/.test(fs.readFileSync(path.join(ROOT, 'tools/update-market.mjs'), 'utf8')));
 LIVE.pendle.usd = 3.21;
 
+// the "/" menu: every command, refreshed by itself when the list changes (no /start needed)
+kvStore.delete('tg:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
+const sc = sent.find(x => x.m === 'setMyCommands'), names = sc ? sc.b.commands.map(c => c.command) : [];
+check('"/" menu sent again by itself: start, daily, morning, evening, alerts, pin, unpin, hide… (18)', names.length === 18 && ['start', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
+sent.length = 0; Wd = await fresh(); await postK(Wd, '/menu');
+check('…and only once (remembered in KV)', !sent.some(x => x.m === 'setMyCommands'));
+claudeCalls.length = 0; sent.length = 0;
+for (const c of ['/start', '/menu', '/portfolio', '/price btc', '/market', '/plan', '/exit', '/movers', '/signals', '/alerts', '/daily', '/morning', '/evening', '/pin', '/unpin', '/new', '/lang', '/hide']) { Wd = await fresh(); await postK(Wd, c); }
+check('every command in the "/" menu is understood (none goes to the AI as a question) and answers', claudeCalls.filter(b => !/SMART/.test(b.system || '')).length === 0 && out().length >= 18, [claudeCalls.length, out().length]);
+
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

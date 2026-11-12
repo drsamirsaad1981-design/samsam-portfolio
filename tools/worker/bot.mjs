@@ -360,7 +360,8 @@ export async function handleTelegram(request, env) {
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null || String(chat) !== String(env.TELEGRAM_CHAT_ID)) return ok();   // a private bot: nobody else gets an answer
-  if (!(await firstTime(env, u.update_id))) return ok();   // Telegram re-sent it (a slow answer): already handled
+  if (!(await firstTime(env, u.update_id))) return ok();
+  await ensureCmds(env);   // Telegram re-sent it (a slow answer): already handled
   try {
     if (q) {
       const d = String(q.data || '');
@@ -500,7 +501,7 @@ async function answer(env, chat, question, budget = 36, into = null) {
 
 // 🌐 → the other language: the menu redraws in it and the keyboard under the chat follows
 async function switchLang(env, chat, lang, msgId) {
-  await setLang(env, lang);
+  await setLang(env, lang); await ensureCmds(env);   // the "/" menu in the new language
   const t = T[lang];
   await send(env, chat, { text: t.langSet }, { reply_markup: replyKb(t) });
   if (msgId) await edit(env, chat, msgId, viewMenu(t)); else await send(env, chat, viewMenu(t));
@@ -522,9 +523,25 @@ async function buildById(env, id) {
 export const run = (env, act, arg, guess) => act === 'coinById' ? buildById(env, arg) : buildView(env, act, arg, guess);
 
 // the "/" menu in Telegram (set by the setup link and again on /start, so new commands show up)
-const cmds = lang => [['portfolio', lang === 'ar' ? 'محفظتي' : 'My portfolio'], ['price', lang === 'ar' ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', lang === 'ar' ? 'السوق' : 'Market'],
-    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['exit', lang === 'ar' ? 'خطة الخروج' : 'Exit plan'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي'], ['alerts', lang === 'ar' ? 'تنبيهاتك' : 'Your alerts'], ['daily', lang === 'ar' ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'], ['morning', lang === 'ar' ? 'الصباح الذكي دلوقتي' : 'Smart morning now'], ['evening', lang === 'ar' ? 'المساء الذكي دلوقتي' : 'Smart evening now'], ['pin', lang === 'ar' ? 'الرسالة المتثبتة' : 'Live pinned message'], ['hide', lang === 'ar' ? 'إخفاء الأزرار' : 'Hide the buttons'], ['new', lang === 'ar' ? 'محادثة جديدة مع الـ AI' : 'New AI chat']]
-    .map(([command, description]) => ({ command, description }));
+const cmds = lang => { const a = lang === 'ar'; return [
+    ['start', a ? 'ابدأ — الأزرار تحت الشات' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
+    ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],
+    ['plan', a ? 'خطة التجميع' : 'Accumulation plan'], ['exit', a ? 'خطة الخروج' : 'Exit plan'], ['movers', a ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', a ? 'الإشارات' : 'Signals'],
+    ['alerts', a ? 'تنبيهاتك' : 'Your alerts'], ['daily', a ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'],
+    ['morning', a ? 'الصباح الذكي دلوقتي' : 'Smart morning now'], ['evening', a ? 'المساء الذكي دلوقتي' : 'Smart evening now'],
+    ['pin', a ? 'الرسالة المتثبتة' : 'Live pinned message'], ['unpin', a ? 'شيل الرسالة المتثبتة' : 'Remove the pinned message'],
+    ['new', a ? 'محادثة جديدة مع الـ AI' : 'New AI chat'], ['lang', 'English / عربي'], ['hide', a ? 'إخفاء الأزرار' : 'Hide the buttons'],
+  ].map(([command, description]) => ({ command, description })); };
+// the "/" menu follows the code: when the list (or the language) changed since it was last sent, it is sent again — no /start needed
+async function ensureCmds(env) {
+  const lang = await getLang(env), v = lang + ':' + cmds(lang).map(c => c.command).join(',');
+  if (cmdMem === v) return;
+  let had = null; try { if (env.RATE) had = await env.RATE.get('tg:cmdv'); } catch (_) {}
+  if (had === v) { cmdMem = v; return; }
+  const r = await tg(env, 'setMyCommands', { commands: cmds(lang) }).catch(() => ({}));
+  if (r && r.ok) { cmdMem = v; try { if (env.RATE) await env.RATE.put('tg:cmdv', v); } catch (_) {} }
+}
+let cmdMem = null;
 
 // ── one-time setup: GET /tg/setup?key=<TG_SECRET> ──
 export async function setup(request, env) {

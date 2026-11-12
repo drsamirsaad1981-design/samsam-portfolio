@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 135a4001b0568418
+// sources-hash: 5b68721776a29986
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3084,6 +3084,7 @@ async function handleTelegram(request, env) {
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null || String(chat) !== String(env.TELEGRAM_CHAT_ID)) return ok();
   if (!await firstTime(env, u.update_id)) return ok();
+  await ensureCmds(env);
   try {
     if (q) {
       const d = String(q.data || "");
@@ -3303,6 +3304,7 @@ ${t.aiLeft(r.left, r.limit)}</i>`;
 }
 async function switchLang(env, chat, lang2, msgId) {
   await setLang(env, lang2);
+  await ensureCmds(env);
   const t = T[lang2];
   await send2(env, chat, { text: t.langSet }, { reply_markup: replyKb(t) });
   if (msgId) await edit(env, chat, msgId, viewMenu(t));
@@ -3321,24 +3323,51 @@ async function buildById(env, id) {
   return { t, views: [viewCoin(t, coin, m, user ? summarize(withIds(user, m), m, now) : null, now)] };
 }
 var run = (env, act, arg, guess) => act === "coinById" ? buildById(env, arg) : buildView(env, act, arg, guess);
-var cmds = (lang2) => [
-  ["portfolio", lang2 === "ar" ? "\u0645\u062D\u0641\u0638\u062A\u064A" : "My portfolio"],
-  ["price", lang2 === "ar" ? "\u0633\u0639\u0631 \u0639\u0645\u0644\u0629 \u2014 /price btc" : "A coin \u2014 /price btc"],
-  ["market", lang2 === "ar" ? "\u0627\u0644\u0633\u0648\u0642" : "Market"],
-  ["plan", lang2 === "ar" ? "\u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639" : "Accumulation plan"],
-  ["movers", lang2 === "ar" ? "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" : "Best & worst"],
-  ["signals", lang2 === "ar" ? "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" : "Signals"],
-  ["exit", lang2 === "ar" ? "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" : "Exit plan"],
-  ["menu", lang2 === "ar" ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
-  ["lang", "English / \u0639\u0631\u0628\u064A"],
-  ["alerts", lang2 === "ar" ? "\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643" : "Your alerts"],
-  ["daily", lang2 === "ar" ? "\u0627\u0644\u0635\u0628\u0627\u062D \u0648\u0627\u0644\u0645\u0633\u0627\u0621 \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A" : "Morning, evening, radars"],
-  ["morning", lang2 === "ar" ? "\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A \u062F\u0644\u0648\u0642\u062A\u064A" : "Smart morning now"],
-  ["evening", lang2 === "ar" ? "\u0627\u0644\u0645\u0633\u0627\u0621 \u0627\u0644\u0630\u0643\u064A \u062F\u0644\u0648\u0642\u062A\u064A" : "Smart evening now"],
-  ["pin", lang2 === "ar" ? "\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062A\u062B\u0628\u062A\u0629" : "Live pinned message"],
-  ["hide", lang2 === "ar" ? "\u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0623\u0632\u0631\u0627\u0631" : "Hide the buttons"],
-  ["new", lang2 === "ar" ? "\u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0639 \u0627\u0644\u0640 AI" : "New AI chat"]
-].map(([command, description]) => ({ command, description }));
+var cmds = (lang2) => {
+  const a = lang2 === "ar";
+  return [
+    ["start", a ? "\u0627\u0628\u062F\u0623 \u2014 \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u062A\u062D\u062A \u0627\u0644\u0634\u0627\u062A" : "Start \u2014 the buttons under the chat"],
+    ["menu", a ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
+    ["portfolio", a ? "\u0645\u062D\u0641\u0638\u062A\u064A" : "My portfolio"],
+    ["price", a ? "\u0633\u0639\u0631 \u0639\u0645\u0644\u0629 \u2014 /price btc" : "A coin \u2014 /price btc"],
+    ["market", a ? "\u0627\u0644\u0633\u0648\u0642" : "Market"],
+    ["plan", a ? "\u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639" : "Accumulation plan"],
+    ["exit", a ? "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" : "Exit plan"],
+    ["movers", a ? "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" : "Best & worst"],
+    ["signals", a ? "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" : "Signals"],
+    ["alerts", a ? "\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643" : "Your alerts"],
+    ["daily", a ? "\u0627\u0644\u0635\u0628\u0627\u062D \u0648\u0627\u0644\u0645\u0633\u0627\u0621 \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A" : "Morning, evening, radars"],
+    ["morning", a ? "\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A \u062F\u0644\u0648\u0642\u062A\u064A" : "Smart morning now"],
+    ["evening", a ? "\u0627\u0644\u0645\u0633\u0627\u0621 \u0627\u0644\u0630\u0643\u064A \u062F\u0644\u0648\u0642\u062A\u064A" : "Smart evening now"],
+    ["pin", a ? "\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062A\u062B\u0628\u062A\u0629" : "Live pinned message"],
+    ["unpin", a ? "\u0634\u064A\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062A\u062B\u0628\u062A\u0629" : "Remove the pinned message"],
+    ["new", a ? "\u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0639 \u0627\u0644\u0640 AI" : "New AI chat"],
+    ["lang", "English / \u0639\u0631\u0628\u064A"],
+    ["hide", a ? "\u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0623\u0632\u0631\u0627\u0631" : "Hide the buttons"]
+  ].map(([command, description]) => ({ command, description }));
+};
+async function ensureCmds(env) {
+  const lang2 = await getLang(env), v = lang2 + ":" + cmds(lang2).map((c) => c.command).join(",");
+  if (cmdMem === v) return;
+  let had = null;
+  try {
+    if (env.RATE) had = await env.RATE.get("tg:cmdv");
+  } catch (_) {
+  }
+  if (had === v) {
+    cmdMem = v;
+    return;
+  }
+  const r = await tg3(env, "setMyCommands", { commands: cmds(lang2) }).catch(() => ({}));
+  if (r && r.ok) {
+    cmdMem = v;
+    try {
+      if (env.RATE) await env.RATE.put("tg:cmdv", v);
+    } catch (_) {
+    }
+  }
+}
+var cmdMem = null;
 async function setup(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { "content-type": "application/json" } });
   if (!env.TG_SECRET || u.searchParams.get("key") !== env.TG_SECRET) return json(403, { ok: false, error: "Wrong or missing key." });
