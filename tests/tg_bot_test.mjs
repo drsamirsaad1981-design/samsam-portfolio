@@ -40,7 +40,7 @@ const USER = () => ({
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
   meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
-const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = []; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
+const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = [], pinWrites = []; let OWNER_PIN = 'UID1', ACCOUNTS = ['UID1']; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
@@ -70,7 +70,8 @@ globalThis.fetch = async (input, init = {}) => {
   if (u.startsWith('https://firestore.googleapis.com/')) {
     if ((init.headers || {}).authorization !== 'Bearer tok') return J({}, 403);
     const U = USER();
-    if (u.endsWith(':runQuery')) return J([{ document: { name: 'projects/p/databases/(default)/documents/users/UID1/meta/info' } }]);
+    if (u.endsWith('/documents/config/owner')) { if (init.method === 'PATCH') { pinWrites.push(JSON.parse(body)); OWNER_PIN = JSON.parse(body).fields.uid.stringValue; return J({}); } return OWNER_PIN ? J(doc({ uid: OWNER_PIN })) : J({}, 404); }
+    if (u.endsWith(':runQuery')) return J(ACCOUNTS.map(a => ({ document: { name: 'projects/p/databases/(default)/documents/users/' + a + '/meta/info' } })));
     if (u.includes('/users/UID1/coins?')) return J({ documents: U.coins.map(doc) });
     if (u.includes('/users/UID1/txs?')) return J({ documents: committed.map(w => ({ name: w.update.name, fields: w.update.fields })) });
     if (u.endsWith('/documents:commit')) { if (FS_WRITE_403) return J({ error: { code: 403, message: 'Missing or insufficient permissions.' } }, 403); const b = JSON.parse(body); commits.push(b); committed.push(...b.writes); return J({ writeResults: b.writes.map(() => ({ updateTime: new Date().toISOString() })), commitTime: new Date().toISOString() }); }
@@ -845,6 +846,16 @@ check('🗑 → Ali removed, told so, and the list redrawn', !JSON.parse(kvStore
 for (const k of [...kvStore.keys()]) if (/^tg:nope:/.test(k)) kvStore.delete(k);
 sent.length = 0; claudeCalls.length = 0; await sayAs(777, 'what is the price of SOL?');
 check('…after that Ali is a stranger again (no AI, just "private")', claudeCalls.length === 0 && /private/.test(last().b.text));
+
+// ── phase 10 · step 3a: the owner's portfolio is pinned (config/owner) — another account in Firebase can never be read instead ──
+OWNER_PIN = null; ACCOUNTS = ['UID1']; pinWrites.length = 0; Wd = await fresh(); sent.length = 0; await postK(Wd, '/portfolio');
+check('no pin + one account → that account, pinned now (config/owner = UID1)', pinWrites.length === 1 && OWNER_PIN === 'UID1' && /\$/.test(last().b.text));
+OWNER_PIN = null; ACCOUNTS = ['UID2', 'UID1']; pinWrites.length = 0; Wd = await fresh(); sent.length = 0; await postK(Wd, '/portfolio');
+check('no pin + two accounts → no portfolio at all (never a guess), nothing pinned', pinWrites.length === 0 && /not connected/i.test(last().b.text), last().b.text);
+OWNER_PIN = 'UID1'; Wd = await fresh(); sent.length = 0; await postK(Wd, '/portfolio');
+check('pinned UID1 + two accounts → yours', /\$/.test(last().b.text) && !/not connected/i.test(last().b.text));
+ACCOUNTS = ['UID1'];
+check('GitHub alerts use the same pin (config/owner), skip when unsure', /config\/owner/.test(fs.readFileSync(path.join(ROOT, 'tools/alerts.mjs'), 'utf8')) && /no owner pinned — skipped/.test(fs.readFileSync(path.join(ROOT, 'tools/alerts.mjs'), 'utf8')));
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

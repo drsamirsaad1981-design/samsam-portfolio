@@ -71,6 +71,9 @@ function firestore(sa, token) {
       return out;
     },
     async get(p) { const j = await call(`${base}/${p}`); return j ? fields(j.fields) : null; },
+    async setOwner(uid) {   // config/owner: whose portfolio the alerts (and the bot) read — set once, while there is only one account
+      await call(`${base}/config/owner`, { method: 'PATCH', body: JSON.stringify({ fields: { uid: { stringValue: uid }, at: { timestampValue: new Date().toISOString() } } }) });
+    },
     async setState(p, state) {
       await call(`${base}/${p}`, { method: 'PATCH', body: JSON.stringify({ fields: { state: { stringValue: JSON.stringify(state) }, updatedAt: { timestampValue: new Date().toISOString() } } }) });
     },
@@ -116,8 +119,12 @@ async function main() {
     db = firestore(sa, await googleToken(sa));
     const users = await db.users();
     if (!users.length) { log('no portfolio found in Firebase — skipped'); return; }
-    uid = users[0];
-    if (users.length > 1) log(users.length, 'accounts found; alerts go to the first one');
+    // whose portfolio: the pinned owner (config/owner). Not pinned yet + only one account → that one, pinned now.
+    // Several accounts and no pin → skip (never someone else's portfolio).
+    const pin = await db.get('config/owner').catch(() => null);
+    if (pin && pin.uid && users.includes(pin.uid)) uid = pin.uid;
+    else if (users.length === 1) { uid = users[0]; await db.setOwner(uid).catch(() => {}); log('owner pinned'); }
+    else { log(users.length, 'accounts and no owner pinned — skipped'); return; }
     const [coins, txs, accum, meta, st] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`), db.get(`users/${uid}/meta/alerts`)]);
     user = { coins, txs, accum, meta: meta || {} };
     try { state = st && st.state ? JSON.parse(st.state) : {}; } catch (_) { state = {}; }

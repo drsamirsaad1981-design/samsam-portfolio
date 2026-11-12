@@ -234,6 +234,7 @@ async function firestore(sa) {
       return out;
     },
     async get(p) { const j = await call(`${base}/${p}`); return j ? fields(j.fields) : null; },
+    async set(p, data) { return call(`${base}/${p}`, { method: 'PATCH', body: JSON.stringify({ fields: enc(data) }) }); },
     // new documents, all or nothing (each must not exist yet — never overwrites)
     async commit(docs) {
       const name = p => `projects/${sa.project_id}/databases/(default)/documents/${p}`;
@@ -260,6 +261,20 @@ export async function commitDocs(env, uid, docs) {
   cache.delete('user');
   return { ok: true };
 }
+// whose portfolio is the owner's: FIREBASE_UID, else the pin in Firestore (config/owner, shared with the GitHub alerts),
+// else — only while there is just one account — that account, pinned now. Several accounts and no pin → none (never a
+// stranger's portfolio).
+let ownerMem = null;
+async function ownerUid(env, db) {
+  if (env.FIREBASE_UID) return env.FIREBASE_UID;
+  if (ownerMem) return ownerMem;
+  const pin = await db.get('config/owner').catch(() => null);
+  if (pin && pin.uid) return (ownerMem = pin.uid);
+  const users = await db.users();
+  if (users.length !== 1) { console.log(JSON.stringify({ owner: 'not pinned', accounts: users.length })); return null; }
+  await db.set('config/owner', { uid: users[0], at: new Date().toISOString() }).catch(() => {});
+  return (ownerMem = users[0]);
+}
 // your portfolio: { coins, txs, accum, meta } (the first account found, as the alerts do) — cached for 2 min (🔄 reads it fresh)
 export async function loadUser(env, fresh = false) {
   const sa = serviceAccount(env);
@@ -267,9 +282,9 @@ export async function loadUser(env, fresh = false) {
   if (!isOwner(env)) return null;   // phase 10 step 1: only the owner's portfolio; others link theirs in step 3
   if (fresh) cache.delete('user');
   return cached('user', 120e3, async () => {
-    const db = await firestore(sa), users = await db.users();
-    if (!users.length) return null;
-    const uid = env.FIREBASE_UID && users.includes(env.FIREBASE_UID) ? env.FIREBASE_UID : users[0];
+    const db = await firestore(sa);
+    const uid = await ownerUid(env, db);
+    if (!uid) return null;
     const [coins, txs, accum, meta] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`)]);
     return { coins, txs, accum, meta: meta || {}, uid };
   });

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 2ab1b16504498900
+// sources-hash: c5807473acc548d6
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1044,6 +1044,9 @@ async function firestore(sa) {
       const j = await call(`${base}/${p}`);
       return j ? fields(j.fields) : null;
     },
+    async set(p, data) {
+      return call(`${base}/${p}`, { method: "PATCH", body: JSON.stringify({ fields: enc(data) }) });
+    },
     // new documents, all or nothing (each must not exist yet — never overwrites)
     async commit(docs) {
       const name = (p) => `projects/${sa.project_id}/databases/(default)/documents/${p}`;
@@ -1068,15 +1071,30 @@ async function commitDocs(env, uid, docs) {
   cache.delete("user");
   return { ok: true };
 }
+var ownerMem = null;
+async function ownerUid(env, db) {
+  if (env.FIREBASE_UID) return env.FIREBASE_UID;
+  if (ownerMem) return ownerMem;
+  const pin = await db.get("config/owner").catch(() => null);
+  if (pin && pin.uid) return ownerMem = pin.uid;
+  const users = await db.users();
+  if (users.length !== 1) {
+    console.log(JSON.stringify({ owner: "not pinned", accounts: users.length }));
+    return null;
+  }
+  await db.set("config/owner", { uid: users[0], at: (/* @__PURE__ */ new Date()).toISOString() }).catch(() => {
+  });
+  return ownerMem = users[0];
+}
 async function loadUser(env, fresh = false) {
   const sa = serviceAccount(env);
   if (!sa) return null;
   if (!isOwner(env)) return null;
   if (fresh) cache.delete("user");
   return cached("user", 12e4, async () => {
-    const db = await firestore(sa), users = await db.users();
-    if (!users.length) return null;
-    const uid = env.FIREBASE_UID && users.includes(env.FIREBASE_UID) ? env.FIREBASE_UID : users[0];
+    const db = await firestore(sa);
+    const uid = await ownerUid(env, db);
+    if (!uid) return null;
     const [coins, txs, accum, meta] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`)]);
     return { coins, txs, accum, meta: meta || {}, uid };
   });
