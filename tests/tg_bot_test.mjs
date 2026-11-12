@@ -697,6 +697,21 @@ await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_ar.png'), fullP
 REP = { ...rj.report, coins: [{ sym: '<img src=x onerror=alert(1)>', name: '', qty: 1, price: 1, avg: 1, value: 50, share: 100, ch24: 1, ch7: 1, pnl: 1, signal: 'hold', stable: false }], lang: 'en' };
 await pg.click('.btn'); await pg.waitForTimeout(150); await pg.click('.tab >> nth=0');
 check('page never runs data as HTML (a coin named <img onerror> is shown as text)', (await pg.$$('img')).length === 0 && (await pg.innerText('body')).includes('<img'));
+const many = Array.from({ length: 20 }, (_, i) => ({ sym: 'C' + i, name: '', qty: 1, price: 1, avg: 1, value: 1000 - i * 10, share: 5, ch24: 1, ch7: 1, pnl: 1, signal: 'hold', stable: false }));
+REP = { ...rj.report, lang: 'en', coins: many, plan: { pct: 80, completed: 6, counted: 9, items: [...Array.from({ length: 6 }, (_, i) => ({ sym: 'D' + i, actual: 10, target: 10, pct: 100 })), { sym: 'ETH', actual: 0, target: 1, pct: 0 }, { sym: 'BTC', actual: 0.13, target: 1, pct: 13 }, { sym: 'SOL', actual: 9, target: 10, pct: 90 }] } };
+await pg.click('.btn'); await pg.waitForTimeout(150); await pg.click('.tab >> nth=0');
+const holdVisible = async () => pg.$$eval('section.card', cs => { const c = cs.find(x => /Holdings/.test(x.textContent)); return [...c.querySelectorAll('.row')].filter(r => r.getBoundingClientRect().height > 0 && r.closest('.fold') == null || (r.closest('.fold') && r.closest('.fold').getBoundingClientRect().height > 0)).length; });
+check('a long list (20 coins) shows 8 + "▾ Show all 20"', (await holdVisible()) === 8 && (await pg.$$eval('.more', b => b.map(x => x.textContent))).includes('▾ Show all 20'), [await holdVisible(), await pg.$$eval('.more', b => b.map(x => x.textContent))]);
+await pg.click('.more >> text=Show all 20'); await pg.waitForTimeout(400);
+check('…tap → slides open to all 20, the button says "▴ Show less"', (await holdVisible()) === 20 && (await pg.$$eval('.more', b => b.map(x => x.textContent))).includes('▴ Show less'));
+await pg.click('.tab >> nth=1'); await pg.waitForTimeout(100);
+const planOrder = await pg.$$eval('section.card', cs => { const c = cs.find(x => /Overall/.test(x.textContent)); return [...c.querySelectorAll('.row')].filter(r => !r.closest('.fold') || r.closest('.fold').getBoundingClientRect().height > 0).map(r => r.textContent.trim().slice(0, 30)); });
+check('plan: still-to-buy first, furthest first (ETH 0% → BTC 13% → SOL 90%); the 6 met fold into "✅ 6 targets met"', /Overall/.test(planOrder[0]) && /ETH/.test(planOrder[1]) && /BTC/.test(planOrder[2]) && /SOL/.test(planOrder[3]) && planOrder.length === 4 && (await pg.$$eval('.more', b => b.map(x => x.textContent))).includes('▾ ✅ 6 targets met'), planOrder);
+await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_plan_fold.png') });
+await pg.click('.tab >> nth=0'); await pg.waitForTimeout(100);
+check('…an opened list stays open when you come back to the tab', (await holdVisible()) === 20);
+await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_fold.png') });
+REP = rj.report;
 check('page: no script errors', perr.filter(e => !/Failed to load resource/.test(e)).length === 0, perr);
 await br.close();
 }

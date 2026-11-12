@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: d989d17c73e5fc99
+// sources-hash: 344da8d1fd2f9f13
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3785,6 +3785,9 @@ var miniapp_default = `<!doctype html>
   .sk { height: 90px; border-radius: var(--r); margin-bottom: 12px; background: linear-gradient(90deg, var(--card), var(--line), var(--card)); background-size: 200% 100%; animation: sk 1.2s infinite linear; }
   @keyframes sk { from { background-position: 200% 0; } to { background-position: -200% 0; } }
   .hide { display: none !important; }
+  .fold { overflow: hidden; transition: max-height .3s ease; }
+  .fold > div > .row:first-child, .fold > div > .grow-row:first-child { border-top: 1px solid var(--line); }
+  .more { display: block; width: 100%; margin-top: 6px; border: 0; background: var(--bg); color: var(--acc); font: inherit; font-weight: 700; font-size: 13.5px; padding: 9px; border-radius: 12px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -3798,14 +3801,14 @@ var miniapp_default = `<!doctype html>
   try { TAB = localStorage.getItem('cp-tab') || 'coins'; } catch (_) {}
   var W = {
     en: { total: 'Total value', today: 'today', week: '7d', profit: 'All-time', vsBtc: 'vs BTC', todayT: 'Today', coins: 'Coins', plan: 'Plan', exit: 'Exit', market: 'Market', paper: 'Paper', alerts: 'Alerts',
-      alloc: 'Allocation', holdings: 'Holdings', onT: 'on target', add: 'add', trim: 'trim', target: 'target', share: 'of portfolio', avg: 'avg', reinforce: 'Reinforce', sell: 'Sell', hold: 'Hold', overall: 'Overall', done: 'targets met', dca: 'Regular buys (DCA)', next: 'next',
+      alloc: 'Allocation', holdings: 'Holdings', onT: 'on target', add: 'add', trim: 'trim', target: 'target', less: 'Show less', showAll: function (n) { return 'Show all ' + n; }, doneN: function (n) { return n + ' targets met'; }, share: 'of portfolio', avg: 'avg', reinforce: 'Reinforce', sell: 'Sell', hold: 'Hold', overall: 'Overall', done: 'targets met', dca: 'Regular buys (DCA)', next: 'next',
       buyAt: 'Buy-price alerts', above: 'above', conds: 'Exit conditions', met: 'met', tps: 'Take-profit levels', toGo: 'to go', sellP: 'sell', btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC',
       fng: 'Fear & Greed', dom: 'Dominance', altS: 'Altcoin Season', etf: 'ETF flows', sectors: 'Sectors 24h', cash: 'Cash', sameBtc: 'Same money in BTC', pts: 'pts', noPaper: 'No paper portfolio yet \u2014 /paper in the chat.',
       noAlerts: 'No alerts \u2014 write in the chat: "tell me if SOL drops below 80".', waits: 'waits to reset', nothing: 'Nothing to do today \u2014 hold \u2705', updated: 'Updated', refresh: 'Refresh', notConn: 'Portfolio not connected.',
       err: 'Could not load the report.', onlyTg: 'Open this from the bot in Telegram.', snapshot: 'market snapshot', beat: function (a, n) { return a + '/' + n + ' coins beat BTC'; },
       vUp: 'Up today \u2014 your plan is on track', vDn: 'Down today \u2014 stick to the plan', vFlat: 'Quiet day', acts: function (n) { return n + ' thing' + (n === 1 ? '' : 's') + ' to do today'; } },
     ar: { total: '\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0643\u0644\u064A\u0629', today: '\u0627\u0644\u064A\u0648\u0645', week: '7 \u0623\u064A\u0627\u0645', profit: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0628\u062D', vsBtc: '\u0645\u0642\u0627\u0628\u0644 BTC', todayT: '\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647', coins: '\u0627\u0644\u0639\u0645\u0644\u0627\u062A', plan: '\u0627\u0644\u062E\u0637\u0629', exit: '\u0627\u0644\u062E\u0631\u0648\u062C', market: '\u0627\u0644\u0633\u0648\u0642', paper: '\u062A\u062C\u0631\u064A\u0628\u064A', alerts: '\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A',
-      alloc: '\u0627\u0644\u062A\u0648\u0632\u064A\u0639', holdings: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629', onT: '\u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641', add: '\u0632\u0648\u0651\u062F', trim: '\u0642\u0644\u0651\u0644', target: '\u0627\u0644\u0647\u062F\u0641', share: '\u0645\u0646 \u0627\u0644\u0645\u062D\u0641\u0638\u0629', avg: '\u0645\u062A\u0648\u0633\u0637', reinforce: '\u062A\u0639\u0632\u064A\u0632', sell: '\u0628\u064A\u0639', hold: '\u0627\u062D\u062A\u0641\u0627\u0638', overall: '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A', done: '\u0623\u0647\u062F\u0627\u0641 \u0627\u062A\u062D\u0642\u0642\u062A', dca: '\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u0638\u0645 (DCA)', next: '\u0627\u0644\u062C\u0627\u064A',
+      alloc: '\u0627\u0644\u062A\u0648\u0632\u064A\u0639', holdings: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629', onT: '\u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641', add: '\u0632\u0648\u0651\u062F', trim: '\u0642\u0644\u0651\u0644', target: '\u0627\u0644\u0647\u062F\u0641', less: '\u0639\u0631\u0636 \u0623\u0642\u0644', showAll: function (n) { return '\u0639\u0631\u0636 \u0627\u0644\u0643\u0644 ' + n; }, doneN: function (n) { return n + ' \u0647\u062F\u0641 \u0627\u062A\u062D\u0642\u0642'; }, share: '\u0645\u0646 \u0627\u0644\u0645\u062D\u0641\u0638\u0629', avg: '\u0645\u062A\u0648\u0633\u0637', reinforce: '\u062A\u0639\u0632\u064A\u0632', sell: '\u0628\u064A\u0639', hold: '\u0627\u062D\u062A\u0641\u0627\u0638', overall: '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A', done: '\u0623\u0647\u062F\u0627\u0641 \u0627\u062A\u062D\u0642\u0642\u062A', dca: '\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u0638\u0645 (DCA)', next: '\u0627\u0644\u062C\u0627\u064A',
       buyAt: '\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621', above: '\u0641\u0648\u0642', conds: '\u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C', met: '\u0627\u062A\u062D\u0642\u0642', tps: '\u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D', toGo: '\u0628\u0627\u0642\u064A', sellP: '\u0628\u064A\u0639', btcD: '\u0633\u064A\u0637\u0631\u0629 BTC', usdtD: '\u0633\u064A\u0637\u0631\u0629 USDT', ethBtc: 'ETH/BTC',
       fng: '\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639', dom: '\u0627\u0644\u0633\u064A\u0637\u0631\u0629', altS: '\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A', etf: '\u062A\u062F\u0641\u0642\u0627\u062A ETF', sectors: '\u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A 24\u0633', cash: '\u0627\u0644\u0643\u0627\u0634', sameBtc: '\u0646\u0641\u0633 \u0627\u0644\u0641\u0644\u0648\u0633 \u0641\u064A BTC', pts: '\u0646\u0642\u0637\u0629', noPaper: '\u0645\u0641\u064A\u0634 \u0645\u062D\u0641\u0638\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0644\u0633\u0647 \u2014 /paper \u0641\u064A \u0627\u0644\u0634\u0627\u062A.',
       noAlerts: '\u0645\u0641\u064A\u0634 \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u2014 \u0627\u0643\u062A\u0628 \u0641\u064A \u0627\u0644\u0634\u0627\u062A: \xAB\u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648 SOL \u0646\u0632\u0644 \u062A\u062D\u062A 80\xBB.', waits: '\u0645\u0633\u062A\u0646\u064A \u064A\u0631\u062C\u0639 \u0627\u0644\u0623\u0648\u0644', nothing: '\u0645\u0641\u064A\u0634 \u062D\u0627\u062C\u0629 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647 \u2014 \u0627\u062D\u062A\u0641\u0638 \u2705', updated: '\u0627\u062A\u062D\u062F\u0651\u062B', refresh: '\u062A\u062D\u062F\u064A\u062B', notConn: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0634 \u0645\u062A\u0648\u0635\u0644\u0629.',
@@ -3833,6 +3836,23 @@ var miniapp_default = `<!doctype html>
     img.alt = ''; img.referrerPolicy = 'no-referrer'; img.loading = 'lazy'; img.decoding = 'async'; img.src = u;
     img.addEventListener('error', function () { box.replaceWith(letters(sym)); });
     box.appendChild(img); return box;
+  }
+  // a long list: the first n rows, the rest slides open with a tap (and stays open while you switch tabs / refresh)
+  var OPEN = {};
+  function fold(key, rows, n, label) {
+    if (rows.length <= n + 1) return rows;
+    var more = rows.slice(n), box = h('div', 'fold'), inner = h('div', '', more), btn = h('button', 'more');
+    box.appendChild(inner);
+    function set(open, anim) {
+      OPEN[key] = open; btn.textContent = open ? '\u25B4 ' + w.less : '\u25BE ' + (label ? label(more.length) : w.showAll(rows.length));
+      btn.setAttribute('aria-expanded', String(open));
+      if (!anim) { box.style.maxHeight = open ? 'none' : '0px'; return; }
+      if (open) { box.style.maxHeight = inner.scrollHeight + 'px'; setTimeout(function () { if (OPEN[key]) box.style.maxHeight = 'none'; }, 320); }
+      else { box.style.maxHeight = inner.scrollHeight + 'px'; box.offsetHeight; box.style.maxHeight = '0px'; }
+    }
+    btn.onclick = function () { set(!OPEN[key], true); if (tg && tg.HapticFeedback) try { tg.HapticFeedback.impactOccurred('light'); } catch (_) {} };
+    set(!!OPEN[key], false);
+    return rows.slice(0, n).concat([box, btn]);
   }
   function card(title, sub, kids) { return h('section', 'card', [h('h2', '', [title, sub ? h('span', 'sub', [sub]) : null])].concat(kids)); }
 
@@ -3882,7 +3902,7 @@ var miniapp_default = `<!doctype html>
         h('div', 'end', [h('div', 't1', [N(g.now.toFixed(1) + '%')]), a.targets && g.target != null ? h('div', 't2', [w.target + ' ', N(g.target.toFixed(0) + '%')]) : h('div', 't2', [N(usd(g.usd, 0))])])]));
     });
     var on = a.targets ? a.groups.filter(function (g) { return g.state === 'ok'; }).length + '/' + a.groups.length + ' ' + w.onT : null;
-    return card('\u{1F9E9} ' + w.alloc, on, [stack].concat(rows));
+    return card('\u{1F9E9} ' + w.alloc, on, [stack].concat(fold('alloc', rows, 6)));
   }
   function coinsTab(r) {
     var cs = r.coins.filter(function (c) { return c.value >= 1; });
@@ -3891,21 +3911,28 @@ var miniapp_default = `<!doctype html>
       return h('div', 'row', [icon(c.sym), h('div', 'grow', [h('div', 't1', [c.sym, ' ', c.stable ? null : h('span', 'pill p-' + c.signal, [w[c.signal]])]), h('div', 't2', c.stable ? [N(qty(c.qty))] : [N(qty(c.qty)), ' \xB7 ', w.avg + ' ', N(usd(c.avg))])]),
         h('div', 'end', [h('div', 't1', [N(usd(c.value, c.value >= 1000 ? 0 : 2))]), h('div', 't2', c.stable ? [N(pct(c.ch24, 2), 'mut')] : [N(pct(c.ch24, 1), cls(c.ch24)), ' \xB7 ', N(pct(c.pnl, 1), cls(c.pnl))])])]);
     });
-    return [c1, card('\u{1F4BC} ' + w.holdings, (r.pf.beat != null ? w.beat(r.pf.beat, r.pf.alts) + ' \xB7 ' : '') + r.coins.length, rows)].filter(Boolean);
+    return [c1, card('\u{1F4BC} ' + w.holdings, (r.pf.beat != null ? w.beat(r.pf.beat, r.pf.alts) + ' \xB7 ' : '') + r.coins.length, fold('hold', rows, 8))].filter(Boolean);
   }
   function planTab(r) {
     var out = [], pl = r.plan;
-    if (pl && pl.items.length) out.push(card('\u{1F4CB} ' + w.plan, pl.completed + '/' + pl.counted + ' ' + w.done, [h('div', 'row', [h('div', 'grow', [h('div', 't1', [w.overall]), (function () { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = Math.min(100, pl.pct) + '%'; return b; })()]), h('div', 'end t1', [N(pl.pct.toFixed(1) + '%')])])].concat(
-      pl.items.map(function (x) { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = x.pct + '%'; return h('div', 'row', [icon(x.sym), h('div', 'grow', [h('div', 't2', [N(qty(x.actual) + ' / ' + qty(x.target)), ' ' + x.sym]), b]), h('div', 'end t1', [N(Math.round(x.pct) + '%')])]); }))));
-    if (r.dca && r.dca.length) out.push(card('\u{1F6D2} ' + w.dca, null, r.dca.map(function (x) { return h('div', 'row', [icon(x.sym), h('div', 'grow', [h('div', 't1', [N(usd(x.usd))]), h('div', 't2', [w.next + ' ', N(x.next || '\u2014')])]), h('div', 'end t2', [x.state === 'today' ? '\u{1F7E2}' : x.state === 'missed' ? '\u23F0' : '\u{1F5D3}'])]); })));
-    if (r.buyAt && r.buyAt.length) out.push(card('\u{1F3AF} ' + w.buyAt, null, r.buyAt.map(function (x) { return h('div', 'row', [icon(x.sym), h('div', 'grow', [h('div', 't1', [N(usd(x.at))]), h('div', 't2', [N(usd(x.price))])]), h('div', 'end t1', [N(pct(x.away, 1), x.away <= 0 ? 'up' : x.away <= 5 ? '' : 'mut')])]); })));
+    if (pl && pl.items.length) {
+      // still to buy first (furthest from the target on top); the targets already met fold into one line
+      var row = function (x) { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = x.pct + '%'; return h('div', 'row', [icon(x.sym), h('div', 'grow', [h('div', 't2', [N(qty(x.actual) + ' / ' + qty(x.target)), ' ' + x.sym]), b]), h('div', 'end t1', [N(Math.round(x.pct) + '%')])]); };
+      var todoP = pl.items.filter(function (x) { return x.pct < 100; }).sort(function (a, b) { return a.pct - b.pct; }), doneP = pl.items.filter(function (x) { return x.pct >= 100; });
+      var head = h('div', 'row', [h('div', 'grow', [h('div', 't1', [w.overall]), (function () { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = Math.min(100, pl.pct) + '%'; return b; })()]), h('div', 'end t1', [N(pl.pct.toFixed(1) + '%')])]);
+      var kids = [head].concat(fold('plan', todoP.map(row), 8));
+      if (doneP.length) { var dr = doneP.map(row), f = fold('planDone', [h('div', 'hide')].concat(dr), 0, function () { return '\u2705 ' + w.doneN(doneP.length); }); kids = kids.concat(f); }
+      out.push(card('\u{1F4CB} ' + w.plan, pl.completed + '/' + pl.counted + ' ' + w.done, kids));
+    }
+    if (r.dca && r.dca.length) out.push(card('\u{1F6D2} ' + w.dca, null, fold('dca', r.dca.map(function (x) { return h('div', 'row', [icon(x.sym), h('div', 'grow', [h('div', 't1', [x.sym + ' ', N(usd(x.usd))]), h('div', 't2', [w.next + ' ', N(x.next || '\u2014')])]), h('div', 'end t2', [x.state === 'today' ? '\u{1F7E2}' : x.state === 'missed' ? '\u23F0' : '\u{1F5D3}'])]); }), 5)));
+    if (r.buyAt && r.buyAt.length) out.push(card('\u{1F3AF} ' + w.buyAt, null, fold('buyAt', r.buyAt.map(function (x) { return h('div', 'row', [icon(x.sym), h('div', 'grow', [h('div', 't1', [x.sym + ' ', N(usd(x.at))]), h('div', 't2', [N(usd(x.price))])]), h('div', 'end t1', [N(pct(x.away, 1), x.away <= 0 ? 'up' : x.away <= 5 ? '' : 'mut')])]); }), 5)));
     if (!out.length) out.push(h('div', 'card empty', ['\u2014']));
     return out;
   }
   function exitTab(r) {
     var nm = { btcD: w.btcD, usdtD: w.usdtD, ethBtc: w.ethBtc }, met = r.exit.macro.filter(function (x) { return x.met; }).length;
     var c1 = card('\u{1F6AA} ' + w.conds, met + '/3 ' + w.met, r.exit.macro.map(function (x) { return h('div', 'cond', [h('div', 'ok' + (x.met ? ' on' : ''), [x.met ? '\u2713' : '']), h('div', 'grow', [h('div', 't1', [nm[x.k] || x.k]), h('div', 't2', [N((x.now == null ? '\u2014' : x.now + x.unit) + '  ' + x.op + ' ' + x.lvl + x.unit)])])]); }));
-    var c2 = card('\u{1F4B0} ' + w.tps, null, r.exit.tps.length ? r.exit.tps.map(function (t) { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = Math.max(2, Math.min(100, 100 - t.to)) + '%'; return h('div', 'row', [icon(t.sym), h('div', 'grow', [h('div', 't1', ['TP' + t.n + ' ', N(usd(t.level))]), b]), h('div', 'end', [h('div', 't1', [N(t.to <= 0 ? '\u2713' : pct(t.to, 1))]), h('div', 't2', [w.sellP + ' ' + t.sell + '%'])])]); }) : [h('div', 'empty', ['\u2014'])]);
+    var c2 = card('\u{1F4B0} ' + w.tps, null, r.exit.tps.length ? fold('tps', r.exit.tps.map(function (t) { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = Math.max(2, Math.min(100, 100 - t.to)) + '%'; return h('div', 'row', [icon(t.sym), h('div', 'grow', [h('div', 't1', ['TP' + t.n + ' ', N(usd(t.level))]), b]), h('div', 'end', [h('div', 't1', [N(t.to <= 0 ? '\u2713' : pct(t.to, 1))]), h('div', 't2', [w.sellP + ' ' + t.sell + '%'])])]); }), 4) : [h('div', 'empty', ['\u2014'])]);
     return [c1, c2];
   }
   function gauge(v) {
@@ -3937,10 +3964,10 @@ var miniapp_default = `<!doctype html>
     return [card('\u{1F9EA} ' + w.paper, usd(p.start_cash_usd, 0), [h('div', 'grid2', [
       h('div', 'kpi', [h('div', 'l', [w.total]), h('div', 'v', [N(usd(p.value_usd, 2))])]), h('div', 'kpi', [h('div', 'l', [w.cash]), h('div', 'v', [N(usd(p.cash_usd, 2))])]),
       h('div', 'kpi', [h('div', 'l', [w.profit]), h('div', 'v', [N(pct(p.profit_pct), cls(p.profit_pct))])]), h('div', 'kpi', [h('div', 'l', [w.vsBtc]), h('div', 'v', [N((p.vs_btc_pts >= 0 ? '+' : '\u2212') + Math.abs(p.vs_btc_pts || 0).toFixed(1) + ' ' + w.pts, cls(p.vs_btc_pts))])])])]
-      .concat(p.coins.map(function (c) { return h('div', 'row', [icon(c.coin), h('div', 'grow', [h('div', 't1', [c.coin]), h('div', 't2', [N(qty(c.amount))])]), h('div', 'end', [h('div', 't1', [N(usd(c.value_usd))]), h('div', 't2', [N(pct(c.profit_pct, 1), cls(c.profit_pct))])])]); })))];
+      .concat(fold('paper', p.coins.map(function (c) { return h('div', 'row', [icon(c.coin), h('div', 'grow', [h('div', 't1', [c.coin]), h('div', 't2', [N(qty(c.amount))])]), h('div', 'end', [h('div', 't1', [N(usd(c.value_usd))]), h('div', 't2', [N(pct(c.profit_pct, 1), cls(c.profit_pct))])])]); }), 6)))];
   }
   function alertsTab(r) {
-    return [card('\u{1F514} ' + w.alerts, r.alerts.length ? String(r.alerts.length) : null, r.alerts.length ? r.alerts.map(function (a) { return h('div', 'row', [h('div', 'grow', [h('div', 't1', [N(a.what)]), a.note ? h('div', 't2', [a.note]) : null]), a.armed ? null : h('span', 'pill p-hold', [w.waits])]); }) : [h('div', 'empty', [w.noAlerts])])];
+    return [card('\u{1F514} ' + w.alerts, r.alerts.length ? String(r.alerts.length) : null, r.alerts.length ? fold('alerts', r.alerts.map(function (a) { return h('div', 'row', [h('div', 'grow', [h('div', 't1', [N(a.what)]), a.note ? h('div', 't2', [a.note]) : null]), a.armed ? null : h('span', 'pill p-hold', [w.waits])]); }), 6) : [h('div', 'empty', [w.noAlerts])])];
   }
   var TABS = [['coins', function () { return '\u{1F4BC} ' + w.coins; }, coinsTab], ['plan', function () { return '\u{1F4CB} ' + w.plan; }, planTab], ['exit', function () { return '\u{1F6AA} ' + w.exit; }, exitTab],
     ['market', function () { return '\u{1F30D} ' + w.market; }, marketTab], ['paper', function () { return '\u{1F9EA} ' + w.paper; }, paperTab], ['alerts', function () { return '\u{1F514} ' + w.alerts; }, alertsTab]];
