@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 6c6af45d1f96c446
+// sources-hash: 2120918de9520acc
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2473,7 +2473,7 @@ async function check(request, env) {
     const t02 = Date.now(), m0 = await loadMarket([], []), c = await findCoin(sym, m0, null);
     const m = c ? await loadMarket(c.id ? [c.id] : [], [{ sym: c.sym, id: c.id }]) : null, id = c && (c.id || m.idOf[c.sym]);
     const row2 = m && [...m.top, ...m.top500].find((r) => r.id === id);
-    return json(200, { coin: sym, found: c, ms: Date.now() - t02, snapshot: m0.parts, snapshot_age_min: Math.round((Date.now() - Date.parse(m0.parts && m0.parts.top)) / 6e4), price: row2 ? row2.price : null, ch24: row2 ? row2.ch24 : null, source: m && id ? m.live[id] || "snapshot" : null, calls: stopTrace() });
+    return json(200, { coin: sym, found: c, ms: Date.now() - t02, snapshot: m0.parts, snapshot_age_min: Math.round((Date.now() - Date.parse(m0.parts && m0.parts.top)) / 6e4), price: row2 ? row2.price : null, ch24: row2 ? row2.ch24 : null, source: m && id ? m.live[id] || "snapshot" : null, exchange: await exchangePrice(sym).catch((e) => String(e && e.message)), calls: stopTrace() });
   }
   const t0 = Date.now(), d = await derivatives(sym).catch((e) => ({ error: String(e && e.message) }));
   return json(200, { coin: sym, ms: Date.now() - t0, colo: request.cf && request.cf.colo || null, country: request.cf && request.cf.country || null, result: d, calls: stopTrace() });

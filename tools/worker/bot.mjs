@@ -14,7 +14,7 @@
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
-import { loadMarket, loadUser, findCoin, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
+import { loadMarket, loadUser, findCoin, exchangePrice, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
@@ -497,7 +497,7 @@ export async function check(request, env) {
     const t0 = Date.now(), m0 = await loadMarket([], []), c = await findCoin(sym, m0, null);
     const m = c ? await loadMarket(c.id ? [c.id] : [], [{ sym: c.sym, id: c.id }]) : null, id = c && (c.id || m.idOf[c.sym]);
     const row = m && [...m.top, ...m.top500].find(r => r.id === id);
-    return json(200, { coin: sym, found: c, ms: Date.now() - t0, snapshot: m0.parts, snapshot_age_min: Math.round((Date.now() - Date.parse(m0.parts && m0.parts.top)) / 60e3), price: row ? row.price : null, ch24: row ? row.ch24 : null, source: m && id ? (m.live[id] || 'snapshot') : null, calls: stopTrace() });
+    return json(200, { coin: sym, found: c, ms: Date.now() - t0, snapshot: m0.parts, snapshot_age_min: Math.round((Date.now() - Date.parse(m0.parts && m0.parts.top)) / 60e3), price: row ? row.price : null, ch24: row ? row.ch24 : null, source: m && id ? (m.live[id] || 'snapshot') : null, exchange: await exchangePrice(sym).catch(e => String(e && e.message)), calls: stopTrace() });
   }
   const t0 = Date.now(), d = await derivatives(sym).catch(e => ({ error: String(e && e.message) }));
   return json(200, { coin: sym, ms: Date.now() - t0, colo: (request.cf && request.cf.colo) || null, country: (request.cf && request.cf.country) || null, result: d, calls: stopTrace() });
