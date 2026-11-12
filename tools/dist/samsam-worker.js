@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: e27a76bd2e362551
+// sources-hash: 0faf8d4dd7c19f04
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -662,17 +662,22 @@ var cache = /* @__PURE__ */ new Map();
 async function cached(key, ms, make) {
   const hit = cache.get(key);
   if (hit && Date.now() < hit.until) return hit.value;
+  const before = refused;
   const value = await make();
-  cache.set(key, { until: Date.now() + ms, value });
+  if (!(refused > before && !value)) cache.set(key, { until: Date.now() + ms, value });
   return value;
 }
+var refused = 0;
 var BUDGET = 42;
 var used = 0;
 function resetBudget(n = BUDGET) {
   used = BUDGET - n;
 }
 async function xfetch(url2, init) {
-  if (used >= BUDGET) throw new Error("budget");
+  if (used >= BUDGET) {
+    refused++;
+    throw new Error("budget");
+  }
   used++;
   return fetch(url2, init);
 }
@@ -713,7 +718,7 @@ async function loadMarket(ids = [], coins = []) {
   const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [] };
   await liveTopUp(market, all);
   const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
-  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 6);
+  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 4);
   await Promise.all(missing.map(async ([S, id]) => {
     const x = await exchangePrice(S);
     if (!x) return;
@@ -739,20 +744,27 @@ var EX = [
   ["Gate", (S) => `https://api.gateio.ws/api/v4/spot/tickers?currency_pair=${S}_USDT`, (j) => {
     const d = Array.isArray(j) && j[0];
     return d && { price: +d.last, ch24: d.change_percentage != null ? +d.change_percentage : null };
-  }],
-  ["MEXC", (S) => `https://api.mexc.com/api/v3/ticker/24hr?symbol=${S}USDT`, (j) => j && j.lastPrice && { price: +j.lastPrice, ch24: +j.openPrice > 0 ? (j.lastPrice / j.openPrice - 1) * 100 : null }]
+  }]
 ];
 async function exchangePrice(sym) {
   const S = String(sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (!S || /^(USDT|USD)$/.test(S)) return null;
-  return cached("ex:" + S, 45e3, async () => {
+  const miss = cache.get("exmiss:" + S);
+  if (miss && Date.now() < miss.until) return null;
+  const x = await cached("ex:" + S, 45e3, async () => {
     for (const [src, url2, read] of EX) {
-      const x = read(await getJson(url2(S)));
-      if (x && x.price > 0 && isFinite(x.price)) return { price: x.price, ch24: isFinite(x.ch24) ? x.ch24 : null, src };
-      if (used >= BUDGET) break;
+      const x2 = read(await getJson(url2(S)));
+      if (x2 && x2.price > 0 && isFinite(x2.price)) return { price: x2.price, ch24: isFinite(x2.ch24) ? x2.ch24 : null, src };
+      if (used >= BUDGET) return null;
     }
-    return null;
+    return "none";
   });
+  if (x === "none") {
+    cache.delete("ex:" + S);
+    cache.set("exmiss:" + S, { until: Date.now() + 30 * 6e4, value: 1 });
+    return null;
+  }
+  return x;
 }
 async function liveTopUp(market, ids) {
   if (!ids.length) return;
@@ -952,14 +964,19 @@ async function okxDeriv(S, now) {
 }
 async function binanceDeriv(S) {
   const F = "https://fapi.binance.com", p = `${S}USDT`;
-  const [pi, oi, oih, ls, top] = await Promise.all([
-    getJson(`${F}/fapi/v1/premiumIndex?symbol=${p}`),
+  const off = cache.get("bn-off");
+  if (off && Date.now() < off.until) return null;
+  const pi = await getJson(`${F}/fapi/v1/premiumIndex?symbol=${p}`);
+  if (!pi || pi.code) {
+    if (!pi) cache.set("bn-off", { until: Date.now() + 30 * 6e4, value: 1 });
+    return null;
+  }
+  const [oi, oih, ls, top] = await Promise.all([
     getJson(`${F}/fapi/v1/openInterest?symbol=${p}`),
     getJson(`${F}/futures/data/openInterestHist?symbol=${p}&period=1h&limit=25`),
     getJson(`${F}/futures/data/globalLongShortAccountRatio?symbol=${p}&period=1h&limit=1`),
     getJson(`${F}/futures/data/topLongShortPositionRatio?symbol=${p}&period=1h&limit=1`)
   ]);
-  if (!pi || pi.code) return null;
   const out = { source: "Binance", funding_8h_pct: num2(pi.lastFundingRate) != null ? +(pi.lastFundingRate * 100).toFixed(4) : null, mark_price: num2(pi.markPrice) };
   if (oi && num2(oi.openInterest) != null && num2(pi.markPrice)) out.open_interest_usd = Math.round(oi.openInterest * pi.markPrice);
   if (Array.isArray(oih) && oih.length > 2) {
@@ -1955,7 +1972,7 @@ async function handleTelegram(request, env) {
 }
 async function answer(env, chat, question) {
   const lang = await getLang(env), t = T[lang];
-  resetBudget(30);
+  resetBudget(36);
   const ph = await send(env, chat, { text: t.thinking });
   const id = ph && ph.result && ph.result.message_id;
   const show = (v) => id ? edit(env, chat, id, v).then((r3) => r3.ok ? r3 : send(env, chat, v)) : send(env, chat, v);

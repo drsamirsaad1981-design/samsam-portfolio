@@ -218,6 +218,10 @@ const post2 = upd => D2.default.fetch(new Request(HOST + '/tg', { method: 'POST'
 sent.length = 0; outside = 0;
 await post2({ message: { chat: { id: 555 }, text: '/portfolio' } });
 check(`60 coins, nothing cached: ${outside} outside calls for one answer (≤ 42; Cloudflare allows 50 with Telegram's)`, outside <= 42 && /Your portfolio now|محفظتك الآن/.test(last().b.text), outside);
+claudeCalls.length = 0; outside = 0;
+await post2({ update_id: 900001, message: { chat: { id: 555 }, text: 'the futures of SOL?' } });
+const dv2 = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
+check(`60 coins, a fresh Worker: the futures question still gets its data (${outside} outside calls)`, dv2 && dv2[0].summary && dv2[0].sources.length === 3, dv2 && dv2[0]);
 MANY = 0;
 
 // ── market, plan, signals, menu ──

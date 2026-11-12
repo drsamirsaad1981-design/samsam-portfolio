@@ -372,7 +372,7 @@ export async function handleTelegram(request, env) {
 // came from, how many questions are left today, and buttons for the coins it looked at
 async function answer(env, chat, question) {
   const lang = await getLang(env), t = T[lang];
-  resetBudget(30);   // Claude's own calls (up to 7) + Telegram's stay inside Cloudflare's 50
+  resetBudget(36);   // data calls; Claude's own (usually 2–4, at most 9) + Telegram's 3 keep the total inside Cloudflare's 50
   const ph = await send(env, chat, { text: t.thinking });
   const id = ph && ph.result && ph.result.message_id;
   const show = v => id ? edit(env, chat, id, v).then(r => r.ok ? r : send(env, chat, v)) : send(env, chat, v);

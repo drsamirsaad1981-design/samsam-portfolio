@@ -1,7 +1,7 @@
 // tools/worker/data.mjs — what the Telegram bot reads, from inside the Cloudflare Worker (no Node, Web APIs only):
 //   · the market snapshot GitHub saves every ~30 min (prices branch on raw.githubusercontent.com — no limit)
 //   · live prices from CoinGecko's free API on top (a few seconds old), so an answer is never half an hour stale;
-//     a coin CoinGecko doesn't answer for gets its price from the exchanges by ticker (Binance → OKX → Gate → MEXC)
+//     a coin CoinGecko doesn't answer for gets its price from the exchanges by ticker (Binance → OKX → Gate)
 //   · a budget of outside calls per message: Cloudflare allows 50 per request (free plan) — going over made answers
 //     come back with missing prices now and then
 //   · your portfolio from Firebase (Firestore REST, signed in with the service account in the Worker's secrets)
@@ -16,17 +16,20 @@ const cache = new Map();   // key → { until, value }
 async function cached(key, ms, make) {
   const hit = cache.get(key);
   if (hit && Date.now() < hit.until) return hit.value;
+  const before = refused;
   const value = await make();
-  cache.set(key, { until: Date.now() + ms, value });
+  // an empty answer because the call allowance ran out is not "no data": not kept, so the next message tries again
+  if (!(refused > before && !value)) cache.set(key, { until: Date.now() + ms, value });
   return value;
 }
+let refused = 0;
 export function clearCache() { cache.clear(); tokenCache = null; }
 // outside calls this message may still make (Telegram's few are kept apart): never more than Cloudflare allows
 const BUDGET = 42;
 let used = 0;
 export function resetBudget(n = BUDGET) { used = BUDGET - n; }   // n: how many outside calls this message may make
 export const budgetUsed = () => used;
-async function xfetch(url, init) { if (used >= BUDGET) throw new Error('budget'); used++; return fetch(url, init); }
+async function xfetch(url, init) { if (used >= BUDGET) { refused++; throw new Error('budget'); } used++; return fetch(url, init); }
 async function getJson(url, init) {
   try { const r = await xfetch(url, init); if (!r.ok) return null; return await r.json(); } catch (_) { return null; }
 }
@@ -56,9 +59,9 @@ export async function loadMarket(ids = [], coins = []) {
   await Promise.all(need.map(async id => { const s = await cached('p:' + id, 10 * 60e3, async () => priceSeries(await getJson(RAW + 'p/' + id + '.json')) || false); if (s) series[id] = s; }));
   const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: CG_IDS, live: {}, idOf, stocks: base.m.stocks || [] };
   await liveTopUp(market, all);
-  // still no price (CoinGecko busy, not in the top 500, no price file) → the exchanges, by ticker (6 coins at most)
+  // still no price (CoinGecko busy, not in the top 500, no price file) → the exchanges, by ticker (4 coins at most)
   const rows = new Map([...market.top, ...market.top500].map(r => [r.id, r]));
-  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || (rows.get(id) && rows.get(id).price > 0) || series[id]))).slice(0, 6);
+  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || (rows.get(id) && rows.get(id).price > 0) || series[id]))).slice(0, 4);
   await Promise.all(missing.map(async ([S, id]) => {
     const x = await exchangePrice(S); if (!x) return;
     const key = id || 'x-' + S.toLowerCase(), r = rows.get(key);
@@ -77,19 +80,22 @@ const EX = [
   ['Binance', S => `https://data-api.binance.vision/api/v3/ticker/24hr?symbol=${S}USDT`, j => j && j.lastPrice && { price: +j.lastPrice, ch24: +j.priceChangePercent }],
   ['OKX', S => `https://www.okx.com/api/v5/market/ticker?instId=${S}-USDT`, j => { const d = j && j.data && j.data[0]; return d && { price: +d.last, ch24: +d.open24h > 0 ? (d.last / d.open24h - 1) * 100 : null }; }],
   ['Gate', S => `https://api.gateio.ws/api/v4/spot/tickers?currency_pair=${S}_USDT`, j => { const d = Array.isArray(j) && j[0]; return d && { price: +d.last, ch24: d.change_percentage != null ? +d.change_percentage : null }; }],
-  ['MEXC', S => `https://api.mexc.com/api/v3/ticker/24hr?symbol=${S}USDT`, j => j && j.lastPrice && { price: +j.lastPrice, ch24: +j.openPrice > 0 ? (j.lastPrice / j.openPrice - 1) * 100 : null }],
 ];
 export async function exchangePrice(sym) {
   const S = String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (!S || /^(USDT|USD)$/.test(S)) return null;
-  return cached('ex:' + S, 45e3, async () => {
+  const miss = cache.get('exmiss:' + S);   // no exchange had it lately → don't ask again for 30 min
+  if (miss && Date.now() < miss.until) return null;
+  const x = await cached('ex:' + S, 45e3, async () => {
     for (const [src, url, read] of EX) {
       const x = read(await getJson(url(S)));
       if (x && x.price > 0 && isFinite(x.price)) return { price: x.price, ch24: isFinite(x.ch24) ? x.ch24 : null, src };
-      if (used >= BUDGET) break;
+      if (used >= BUDGET) return null;
     }
-    return null;
+    return 'none';
   });
+  if (x === 'none') { cache.delete('ex:' + S); cache.set('exmiss:' + S, { until: Date.now() + 30 * 60e3, value: 1 }); return null; }
+  return x;
 }
 
 // live prices (CoinGecko /simple/price, up to 250 ids a call) written over the snapshot rows; a coin not in the
@@ -258,12 +264,17 @@ async function okxDeriv(S, now) {
 }
 async function binanceDeriv(S) {
   const F = 'https://fapi.binance.com', p = `${S}USDT`;
-  const [pi, oi, oih, ls, top] = await Promise.all([
-    getJson(`${F}/fapi/v1/premiumIndex?symbol=${p}`), getJson(`${F}/fapi/v1/openInterest?symbol=${p}`),
+  // Binance's futures API refuses some regions (Cloudflare may run the Worker there): ask once first, and when it is
+  // refused leave Binance out for 30 min instead of spending 5 calls on it every time
+  const off = cache.get('bn-off');
+  if (off && Date.now() < off.until) return null;
+  const pi = await getJson(`${F}/fapi/v1/premiumIndex?symbol=${p}`);
+  if (!pi || pi.code) { if (!pi) cache.set('bn-off', { until: Date.now() + 30 * 60e3, value: 1 }); return null; }
+  const [oi, oih, ls, top] = await Promise.all([
+    getJson(`${F}/fapi/v1/openInterest?symbol=${p}`),
     getJson(`${F}/futures/data/openInterestHist?symbol=${p}&period=1h&limit=25`), getJson(`${F}/futures/data/globalLongShortAccountRatio?symbol=${p}&period=1h&limit=1`),
     getJson(`${F}/futures/data/topLongShortPositionRatio?symbol=${p}&period=1h&limit=1`),
   ]);
-  if (!pi || pi.code) return null;
   const out = { source: 'Binance', funding_8h_pct: num(pi.lastFundingRate) != null ? +(pi.lastFundingRate * 100).toFixed(4) : null, mark_price: num(pi.markPrice) };
   if (oi && num(oi.openInterest) != null && num(pi.markPrice)) out.open_interest_usd = Math.round(oi.openInterest * pi.markPrice);
   if (Array.isArray(oih) && oih.length > 2) { const a = +oih[0].sumOpenInterestValue, b = +oih[oih.length - 1].sumOpenInterestValue; if (a > 0) out.open_interest_change_24h_pct = +((b / a - 1) * 100).toFixed(2); }
