@@ -4,6 +4,7 @@ import ai from '../ai-worker.js';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
 import { runDaily } from './daily.mjs';
+import { page, api } from './miniapp.mjs';
 import { resetBudget } from './data.mjs';
 
 export default {
@@ -11,6 +12,8 @@ export default {
     const p = new URL(request.url).pathname.replace(/\/+$/, '');
     if (p.endsWith('/tg/setup')) return setup(request, env);
     if (p.endsWith('/tg/check')) return check(request, env);
+    if (p.endsWith('/tg/app')) return page();          // the Mini App page (phase 7)
+    if (p.endsWith('/tg/api')) return api(request, env); // its data, only with Telegram's signature for your account
     if (p.endsWith('/tg')) return handleTelegram(request, env, ctx);
     return ai.fetch(request, env, ctx);
   },

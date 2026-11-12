@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -285,7 +285,7 @@ check('tap 🚪 Exit plan → edited in place', last().m === 'editMessageText' &
 sent.length = 0; await say('/signals');
 check('signals: grouped, Telegram-safe', /Signals/.test(last().b.text) && okHtml(last().b.text), last().b.text);
 sent.length = 0; await say('/start');
-check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent === false && btnTexts(out()[1]).length === 11 && btnTexts(out()[1]).includes('🗓 Daily') && btnTexts(out()[1]).includes('🧪 Paper') && btnTexts(out()[1]).includes('🔔 Alerts') && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
+check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent === false && btnTexts(out()[1]).length === 12 && btnTexts(out()[1]).includes('🗓 Daily') && btnTexts(out()[1]).includes('🧪 Paper') && btns(out()[1]).some(b => b.text === '📊 Report' && b.web_app && b.web_app.url === HOST + '/tg/app') && btnTexts(out()[1]).includes('🔔 Alerts') && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
 check('the keyboard under the chat: 6 short buttons in 2 rows, not pinned (the ⌨️ icon hides / shows it)', JSON.stringify(out()[0].b.reply_markup.keyboard.map(r => r.map(b => b.text))) === JSON.stringify([['💼 Portfolio', '🌍 Market', '📋 Plan'], ['🚪 Exit', '🏆 Movers', '🎯 Signals']]) && out()[0].b.reply_markup.is_persistent === false, out()[0].b.reply_markup);
 sent.length = 0; await say('/hide');
 check('/hide → the buttons go away (remove_keyboard) with a note how to bring them back', last().b.reply_markup && last().b.reply_markup.remove_keyboard === true && /⌨️/.test(last().b.text), last().b);
@@ -603,7 +603,7 @@ LIVE.pendle.usd = 3.21;
 // the "/" menu: every command, refreshed by itself when the list changes (no /start needed)
 kvStore.delete('tg:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
 const sc = sent.find(x => x.m === 'setMyCommands'), names = sc ? sc.b.commands.map(c => c.command) : [];
-check('"/" menu sent again by itself: start, daily, morning, evening, alerts, paper, pin, unpin, hide… (19)', names.length === 19 && ['start', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
+check('"/" menu sent again by itself: start, report, daily, morning, evening, alerts, paper, pin, unpin, hide… (20)', names.length === 20 && ['start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/menu');
 check('…and only once (remembered in KV)', !sent.some(x => x.m === 'setMyCommands'));
 claudeCalls.length = 0; sent.length = 0;
@@ -639,6 +639,55 @@ await Wd.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-t
 pp = JSON.parse(kvStore.get('tg:paper'));
 check('…$1,000 → a fresh paper portfolio from BTC $84,700', pp.cash === 1000 && pp.startCash === 1000 && !Object.keys(pp.pos).length && pp.btcStart === 84700 && /\$1,000\.00/.test(last().b.text), pp);
 LIVE.bitcoin.usd = 77000;
+
+// ── 📊 phase 7: the Mini App — the page holds no data; /tg/api answers only Telegram-signed requests from your account ──
+const initData = (userId, ageS = 60, token = ENV.TELEGRAM_BOT_TOKEN) => {
+  const p = new URLSearchParams({ auth_date: String(Math.floor(Date.now() / 1000) - ageS), query_id: 'AAE1', user: JSON.stringify({ id: userId, first_name: 'Samir' }) });
+  const dcs = [...p.entries()].sort(([a], [b]) => a < b ? -1 : 1).map(([k, v]) => k + '=' + v).join('\n');
+  const secret = crypto.createHmac('sha256', 'WebAppData').update(token).digest();
+  p.set('hash', crypto.createHmac('sha256', secret).update(dcs).digest('hex')); return p.toString();
+};
+const apiCall = (body, env = ENVK) => W.fetch(new Request(HOST + '/tg/api', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }), env, {});
+let ar0 = await W.fetch(new Request(HOST + '/tg/app'), ENVK, {}), html = await ar0.text();
+check('/tg/app → the page (HTML, no data in it, a strict CSP, Telegram\'s script)', ar0.status === 200 && /text\/html/.test(ar0.headers.get('content-type')) && /telegram-web-app\.js/.test(html) && /frame-ancestors/.test(ar0.headers.get('content-security-policy')) && !/77,?000|UID1|samir@/i.test(html), ar0.headers.get('content-security-policy'));
+check('/tg/api: no signature → 401', (await apiCall({})).status === 401);
+check('…a forged signature (another bot token) → 401', (await apiCall({ initData: initData(555, 60, '999:other') })).status === 401);
+check('…a signature older than 24 h → 401', (await apiCall({ initData: initData(555, 90000) })).status === 401);
+check('…signed, but someone else (not your chat id) → 403', (await apiCall({ initData: initData(999) })).status === 403);
+check('…GET → 405', (await W.fetch(new Request(HOST + '/tg/api'), ENVK, {})).status === 405);
+let ar1 = await apiCall({ initData: initData(555) }), rj = await ar1.json();
+check('…you, signed → the report: value / coins / plan / exit / market / today / alerts / paper', ar1.status === 200 && rj.ok && rj.report.connected && rj.report.pf.value > 0 && rj.report.coins[0].sym === 'BTC' && rj.report.plan.items.length === 3 && rj.report.exit.macro.length === 3 && rj.report.market.btc.price === 77000 && Array.isArray(rj.report.todo) && Array.isArray(rj.report.alerts) && rj.report.paper && rj.report.paper.start_cash_usd === 1000, rj.report && Object.keys(rj.report));
+check('…coin shares add up to 100% and match the value', Math.abs(rj.report.coins.reduce((a, c) => a + c.share, 0) - 100) < 0.1 && Math.abs(rj.report.coins.reduce((a, c) => a + c.value, 0) - rj.report.pf.value) < 0.05);
+// the page itself, in a browser: a fake Telegram + the real report
+let PW = null; try { PW = (await import('node:module')).createRequire(import.meta.url)('playwright'); } catch (_) { console.log('SKIP the page in a browser (no Playwright here — GitHub\'s deploy check)'); }
+if (PW) {
+const { chromium } = PW;
+const br = await chromium.launch(), pg = await br.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+const perr = []; pg.on('pageerror', e => perr.push(String(e))); pg.on('console', m => { if (m.type() === 'error') perr.push(m.text()); });
+let REP = rj.report;
+await pg.route('https://telegram.org/**', r => r.fulfill({ contentType: 'text/javascript', body: 'window.Telegram={WebApp:{initData:"signed",ready(){},expand(){},HapticFeedback:{selectionChanged(){}}}};' }));
+await pg.route(HOST + '/tg/app', r => r.fulfill({ contentType: 'text/html', body: html }));
+let apiBody = null; await pg.route(HOST + '/tg/api', r => { apiBody = r.request().postData(); r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, report: REP }) }); });
+await pg.goto(HOST + '/tg/app'); await pg.waitForSelector('.hero');
+const txt0 = await pg.innerText('body');
+check('page: sends Telegram\'s initData, shows the value, today\'s list, the coins tab (allocation + holdings)', JSON.parse(apiBody).initData === 'signed' && txt0.includes(new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(REP.pf.value)) && /Today/.test(txt0) && /Allocation/.test(txt0) && /Holdings/.test(txt0) && /BTC/.test(txt0), txt0.slice(0, 300));
+await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_coins.png'), fullPage: true });
+const tabTexts = await pg.$$eval('.tab', a => a.map(x => x.textContent));
+for (const [i, want] of [[1, /Overall/], [2, /Exit conditions/], [3, /Fear & Greed|Market/], [4, /Paper/], [5, /Alerts/]]) {
+  await pg.click(`.tab >> nth=${i}`); const tt = await pg.innerText('body');
+  check(`page tab ${tabTexts[i]} → ${want}`, want.test(tt), tt.slice(0, 200));
+  if (i === 2 || i === 3) await pg.screenshot({ path: path.join(ROOT, `tests/shots/miniapp_${i === 2 ? 'exit' : 'market'}.png`), fullPage: true });
+}
+REP = { ...rj.report, lang: 'ar' }; await pg.click('.btn'); await pg.waitForTimeout(150);
+const txtAr = await pg.innerText('body');
+check('page in Arabic (right to left) after 🔄 with the bot in Arabic', (await pg.getAttribute('html', 'dir')) === 'rtl' && /القيمة الكلية/.test(txtAr), txtAr.slice(0, 120));
+await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_ar.png'), fullPage: true });
+REP = { ...rj.report, coins: [{ sym: '<img src=x onerror=alert(1)>', name: '', qty: 1, price: 1, avg: 1, value: 50, share: 100, ch24: 1, ch7: 1, pnl: 1, signal: 'hold', stable: false }], lang: 'en' };
+await pg.click('.btn'); await pg.waitForTimeout(150); await pg.click('.tab >> nth=0');
+check('page never runs data as HTML (a coin named <img onerror> is shown as text)', (await pg.$$('img')).length === 0 && (await pg.innerText('body')).includes('<img'));
+check('page: no script errors', perr.length === 0, perr);
+await br.close();
+}
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

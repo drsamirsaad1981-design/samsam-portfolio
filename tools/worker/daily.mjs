@@ -45,11 +45,11 @@ const WD = {
   en: { morning: 'Smart morning', evening: 'Smart evening', radar: 'Leverage radar', sectors: 'Sector radar', pin: 'Live pinned message', on: 'on', off: 'off',
     dailyT: '🗓 <b>The bot speaks first</b>', dailyNote: 'Tap to turn on / off.', nowM: '☀️ Morning now', nowE: '🌙 Evening now', back: '⬅️ Menu', plan: '📋 Plan', pf: '💼 Portfolio', mk: '🌍 Market',
     live: 'Live', today: 'today', alerts: n => `${n} alert${n === 1 ? '' : 's'}`, nearest: 'nearest', away: 'away', nextDca: 'Next DCA', exit: 'Exit', planS: 'Plan', fng: 'F&amp;G', updated: 'updated',
-    noUser: 'Portfolio not connected.', refresh: '🔄' },
+    noUser: 'Portfolio not connected.', refresh: '🔄', report: '📊 Full report' },
   ar: { morning: 'الصباح الذكي', evening: 'المساء الذكي', radar: 'رادار الرافعة', sectors: 'رادار القطاعات', pin: 'الرسالة المتثبتة', on: 'شغال', off: 'مقفول',
     dailyT: '🗓 <b>البوت بيبدأ الكلام</b>', dailyNote: 'اضغط عشان تشغّل / تقفل.', nowM: '☀️ الصباح دلوقتي', nowE: '🌙 المساء دلوقتي', back: '⬅️ القائمة', plan: '📋 الخطة', pf: '💼 محفظتي', mk: '🌍 السوق',
     live: 'مباشر', today: 'اليوم', alerts: n => `${n} تنبيه`, nearest: 'الأقرب', away: 'باقي', nextDca: 'الـ DCA الجاي', exit: 'الخروج', planS: 'الخطة', fng: 'الخوف/الطمع', updated: 'اتحدّث',
-    noUser: 'المحفظة مش متوصلة.', refresh: '🔄' },
+    noUser: 'المحفظة مش متوصلة.', refresh: '🔄', report: '📊 التقرير الكامل' },
 };
 
 // ── the numbers both reports start from ──
@@ -254,7 +254,8 @@ export async function pinView(env, now = Date.now()) {
     `📋 ${w.planS} <b>${sum.prog ? sum.prog.pct.toFixed(1) : '0'}%</b> · 🚪 ${w.exit} <b>${met}/3</b>`,
     dca ? `🛒 ${w.nextDca}: <b>${esc(dca.sym)}</b> · ${esc(new Date(dca.s.next + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}` : null,
     alerts.length ? `🔔 ${w.alerts(alerts.length)}${near ? ` · ${w.nearest}: ${esc(near.alert)} (${near.pct_away}% ${w.away})` : ''}` : null].filter(Boolean);
-  return { text: L1.join('\n'), buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk'), cb(w.refresh, 'pin:r')]] };
+  const origin = await kvGet(env, 'tg:origin');   // 📊 the Mini App, when the bot knows its own address
+  return { text: L1.join('\n'), buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk'), cb(w.refresh, 'pin:r')], ...(origin ? [[{ text: w.report, web_app: { url: origin + '/tg/app' } }]] : [])] };
 }
 export async function pinUpdate(env, now = Date.now(), force = false) {
   const v = await pinView(env, now);

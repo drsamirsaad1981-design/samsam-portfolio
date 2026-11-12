@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: baed76b9909bd76f
+// sources-hash: 755eee8e5075bb6f
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -63,10 +63,10 @@ var ai_worker_default = {
     }
     const out = await res.json().catch(() => ({}));
     if (!res.ok) return reply(502, { error: out.error && out.error.message || `Claude returned ${res.status}.` });
-    const report = (out.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
-    if (!report) return reply(502, { error: "Claude returned an empty report." });
+    const report2 = (out.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+    if (!report2) return reply(502, { error: "Claude returned an empty report." });
     await setCount(env, key, used2 + 1);
-    return reply(200, { report, model: out.model || model, remaining: limit - used2 - 1 });
+    return reply(200, { report: report2, model: out.model || model, remaining: limit - used2 - 1 });
   }
 };
 async function verifyFirebaseToken(token, projectId) {
@@ -2374,7 +2374,8 @@ var WD = {
     fng: "F&amp;G",
     updated: "updated",
     noUser: "Portfolio not connected.",
-    refresh: "\u{1F504}"
+    refresh: "\u{1F504}",
+    report: "\u{1F4CA} Full report"
   },
   ar: {
     morning: "\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A",
@@ -2403,7 +2404,8 @@ var WD = {
     fng: "\u0627\u0644\u062E\u0648\u0641/\u0627\u0644\u0637\u0645\u0639",
     updated: "\u0627\u062A\u062D\u062F\u0651\u062B",
     noUser: "\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0634 \u0645\u062A\u0648\u0635\u0644\u0629.",
-    refresh: "\u{1F504}"
+    refresh: "\u{1F504}",
+    report: "\u{1F4CA} \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644"
   }
 };
 async function gather(env, now) {
@@ -2707,7 +2709,8 @@ async function pinView(env, now = Date.now()) {
     dca ? `\u{1F6D2} ${w.nextDca}: <b>${esc(dca.sym)}</b> \xB7 ${esc((/* @__PURE__ */ new Date(dca.s.next + "T12:00:00Z")).toLocaleDateString("en-US", { month: "short", day: "numeric" }))}` : null,
     alerts.length ? `\u{1F514} ${w.alerts(alerts.length)}${near ? ` \xB7 ${w.nearest}: ${esc(near.alert)} (${near.pct_away}% ${w.away})` : ""}` : null
   ].filter(Boolean);
-  return { text: L1.join("\n"), buttons: [[cb(w.pf, "pf"), cb(w.mk, "mk"), cb(w.refresh, "pin:r")]] };
+  const origin = await kvGet5(env, "tg:origin");
+  return { text: L1.join("\n"), buttons: [[cb(w.pf, "pf"), cb(w.mk, "mk"), cb(w.refresh, "pin:r")], ...origin ? [[{ text: w.report, web_app: { url: origin + "/tg/app" } }]] : []] };
 }
 async function pinUpdate(env, now = Date.now(), force = false) {
   const v = await pinView(env, now);
@@ -2855,6 +2858,8 @@ var T = {
     alertGone: "\u{1F5D1} Alert deleted",
     dailyB: "\u{1F5D3} Daily",
     paperB: "\u{1F9EA} Paper",
+    report: "\u{1F4CA} Report",
+    reportT: "\u{1F4CA} <b>Your full report</b> \u2014 opens inside Telegram.",
     working: "\u23F3 On it\u2026",
     pinOff: "Pinned message off \u2014 /pin brings it back.",
     other: "\u{1F310} \u0639\u0631\u0628\u064A",
@@ -2991,6 +2996,8 @@ var T = {
     alertGone: "\u{1F5D1} \u0627\u062A\u0645\u0633\u062D \u0627\u0644\u062A\u0646\u0628\u064A\u0647",
     dailyB: "\u{1F5D3} \u0627\u0644\u064A\u0648\u0645\u064A",
     paperB: "\u{1F9EA} \u062A\u062C\u0631\u064A\u0628\u064A",
+    report: "\u{1F4CA} \u0627\u0644\u062A\u0642\u0631\u064A\u0631",
+    reportT: "\u{1F4CA} <b>\u062A\u0642\u0631\u064A\u0631\u0643 \u0627\u0644\u0643\u0627\u0645\u0644</b> \u2014 \u0628\u064A\u0641\u062A\u062D \u062C\u0648\u0647 \u062A\u0644\u064A\u062C\u0631\u0627\u0645.",
     working: "\u23F3 \u062B\u0648\u0627\u0646\u064A\u2026",
     pinOff: "\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062A\u062B\u0628\u062A\u0629 \u0627\u062A\u0642\u0641\u0644\u062A \u2014 /pin \u062A\u0631\u062C\u0651\u0639\u0647\u0627.",
     other: "\u{1F310} English",
@@ -3051,6 +3058,8 @@ var T = {
   }
 };
 var cb2 = (text, data) => ({ text, callback_data: data });
+var ORIGIN = null;
+var appBtn = (t, origin = ORIGIN) => origin ? { text: t.report, web_app: { url: origin + "/tg/app" } } : null;
 var url2 = (text, u) => ({ text, url: u });
 var price = (v) => !(v > 0) ? "\u2014" : v >= 1e3 ? usd2(v).replace(/\.\d\d$/, "") : v >= 1 ? usd2(v) : "$" + (+v.toPrecision(4)).toString();
 var big = (v) => !(v > 0) ? "\u2014" : v >= 1e12 ? "$" + (v / 1e12).toFixed(2) + "T" : v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + "B" : v >= 1e6 ? "$" + (v / 1e6).toFixed(1) + "M" : usd(v);
@@ -3063,7 +3072,7 @@ function spark(arr, n = 16) {
   const lo = Math.min(...pts), hi = Math.max(...pts);
   return pts.map((v) => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join("");
 }
-var menuRows = (t) => [[cb2(t.pf, "pf"), cb2(t.market, "mk")], [cb2(t.plan, "pl"), cb2(t.movers, "mv")], [cb2(t.signals, "sg"), cb2(t.exit, "ex")], [cb2(t.alertsB, "al"), cb2(t.coin, "coin")], [cb2(t.dailyB, "dy"), cb2(t.paperB, "pp")], [cb2(t.other, "lang:" + t.otherCode)]];
+var menuRows = (t) => [[cb2(t.pf, "pf"), cb2(t.market, "mk")], [cb2(t.plan, "pl"), cb2(t.movers, "mv")], [cb2(t.signals, "sg"), cb2(t.exit, "ex")], [cb2(t.alertsB, "al"), cb2(t.coin, "coin")], [cb2(t.dailyB, "dy"), cb2(t.paperB, "pp")], [appBtn(t), cb2(t.other, "lang:" + t.otherCode)].filter(Boolean)];
 var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }, { text: t.kb.pl }], [{ text: t.kb.ex }, { text: t.kb.mv }, { text: t.kb.sg }]], resize_keyboard: true, is_persistent: false, input_field_placeholder: "btc \xB7 sol eth \xB7 /menu" });
 var KB_ACT = () => Object.fromEntries(Object.values(T).flatMap((L) => [...Object.entries(L.kb), ...Object.entries(L.kbOld || {})].map(([act, text]) => [text, act])));
 var memLang = null;
@@ -3264,6 +3273,7 @@ var WORDS = [
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, "hide"],
   [/^\/(new|reset|clear)$|^محادثة جديدة$/i, "new"],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, "al"],
+  [/^\/(report|app)$|^التقرير$/i, "rp"],
   [/^\/(daily|settings)$|^اليومي$/i, "dy"],
   [/^\/(paper|practice)$|^تجريبي$/i, "pp"],
   [/^\/morning$/i, "dy:now:m"],
@@ -3340,6 +3350,14 @@ async function handleTelegram(request, env) {
   if (request.method !== "POST") return new Response("Not found", { status: 404 });
   if (!env.TG_SECRET || request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TG_SECRET) return new Response("Forbidden", { status: 403 });
   resetBudget();
+  const origin = new URL(request.url).origin;
+  if (ORIGIN !== origin) {
+    ORIGIN = origin;
+    try {
+      if (env.RATE) await env.RATE.put("tg:origin", origin);
+    } catch (_) {
+    }
+  }
   const u = await request.json().catch(() => null);
   if (!u) return ok();
   const msg = u.message || u.edited_message, q = u.callback_query;
@@ -3504,6 +3522,11 @@ async function onText(env, chat, text, budget = 36, into = null) {
     await send2(env, chat, await viewDaily(env));
     return;
   }
+  if (p.act === "rp") {
+    const t2 = T[await getLang(env)], b = appBtn(t2);
+    await send2(env, chat, { text: t2.reportT, buttons: b ? [[b]] : [[cb2(t2.back, "menu")]] });
+    return;
+  }
   if (p.act === "pp") {
     await send2(env, chat, await viewPaper(env, await getLang(env)));
     return;
@@ -3616,6 +3639,7 @@ var cmds = (lang2) => {
   return [
     ["start", a ? "\u0627\u0628\u062F\u0623 \u2014 \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u062A\u062D\u062A \u0627\u0644\u0634\u0627\u062A" : "Start \u2014 the buttons under the chat"],
     ["menu", a ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
+    ["report", a ? "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644 (\u0635\u0641\u062D\u0629)" : "Full report (a page)"],
     ["portfolio", a ? "\u0645\u062D\u0641\u0638\u062A\u064A" : "My portfolio"],
     ["price", a ? "\u0633\u0639\u0631 \u0639\u0645\u0644\u0629 \u2014 /price btc" : "A coin \u2014 /price btc"],
     ["market", a ? "\u0627\u0644\u0633\u0648\u0642" : "Market"],
@@ -3692,12 +3716,354 @@ async function check(request, env) {
   return json(200, { coin: sym, ms: Date.now() - t0, colo: request.cf && request.cf.colo || null, country: request.cf && request.cf.country || null, result: d, calls: stopTrace() });
 }
 
+// tools/worker/miniapp.html
+var miniapp_default = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cute Portfolio \xB7 Report</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  /* tools/worker/miniapp.html \u2014 the Mini App page (served by the Worker at /tg/app). It holds no data: it asks /tg/api
+     with Telegram's signed initData. Colours follow Telegram's theme, with the app's purple / green / red. */
+  :root {
+    --bg: var(--tg-theme-secondary-bg-color, #f2f2f7); --card: var(--tg-theme-bg-color, #ffffff); --text: var(--tg-theme-text-color, #111114);
+    --mut: var(--tg-theme-hint-color, #8a8a93); --acc: #7c3aed; --acc2: #a78bfa; --up: #16a34a; --dn: #dc2626; --warn: #f59e0b; --line: rgba(127,127,140,.18);
+    --r: 18px;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-tg]) { --bg: #0e0e12; --card: #1a1a21; --text: #f2f2f5; --mut: #9a9aa6; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Arabic", sans-serif; -webkit-font-smoothing: antialiased; }
+  body { padding: 12px 14px calc(28px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+  [dir=rtl] body { font-family: "Noto Sans Arabic", -apple-system, "Segoe UI", sans-serif; }
+  .num { font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+  .card { background: var(--card); border-radius: var(--r); padding: 16px; margin: 0 0 12px; box-shadow: 0 1px 0 var(--line); }
+  .hero { background: linear-gradient(135deg, #6d28d9, #9333ea 55%, #c026d3); color: #fff; position: relative; overflow: hidden; }
+  .hero::after { content: ""; position: absolute; inset: auto -40px -60px auto; width: 180px; height: 180px; border-radius: 50%; background: rgba(255,255,255,.08); }
+  .hero .lbl { opacity: .8; font-size: 13px; }
+  .hero .big { font-size: 34px; font-weight: 800; letter-spacing: -.5px; margin: 2px 0 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: rgba(255,255,255,.16); border-radius: 999px; padding: 4px 10px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .verdict { margin-top: 12px; font-weight: 600; font-size: 14px; display: flex; gap: 8px; align-items: flex-start; }
+  h2 { font-size: 15px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+  h2 .sub { margin-inline-start: auto; color: var(--mut); font-weight: 500; font-size: 12.5px; }
+  .up { color: var(--up); } .dn { color: var(--dn); } .mut { color: var(--mut); }
+  .row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: 0; }
+  .row .grow { flex: 1; min-width: 0; }
+  .row .t1 { font-weight: 650; } .row .t2 { font-size: 12.5px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .end { text-align: end; } .row .end .t2 { white-space: nowrap; }
+  .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-weight: 800; font-size: 12px; color: #fff; flex: none; }
+  .pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; display: inline-block; }
+  .p-reinforce { background: rgba(22,163,74,.14); color: var(--up); } .p-sell { background: rgba(220,38,38,.13); color: var(--dn); } .p-hold { background: var(--line); color: var(--mut); }
+  .todo { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .todo:first-of-type { border-top: 0; } .todo .n { width: 24px; height: 24px; border-radius: 8px; background: var(--acc); color: #fff; font-weight: 800; font-size: 12px; display: grid; place-items: center; flex: none; }
+  .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; } .bar > i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--acc), var(--acc2)); }
+  .stack { display: flex; height: 12px; border-radius: 99px; overflow: hidden; margin: 2px 0 10px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--mut); } .legend b { color: var(--text); font-weight: 650; } .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-inline-end: 5px; }
+  .tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 6px; overflow-x: auto; padding: 8px 2px; margin: 0 -2px 8px; background: var(--bg); scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { border: 0; background: var(--card); color: var(--text); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 13.5px; font-weight: 650; white-space: nowrap; cursor: pointer; }
+  .tab[aria-selected=true] { background: var(--acc); color: #fff; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kpi { background: var(--bg); border-radius: 14px; padding: 10px 12px; } .kpi .l { font-size: 12px; color: var(--mut); } .kpi .v { font-size: 18px; font-weight: 750; margin-top: 2px; }
+  .cond { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); } .cond:first-of-type { border-top: 0; }
+  .ok { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; flex: none; background: var(--line); }
+  .ok.on { background: var(--up); color: #fff; }
+  .gauge { display: block; margin: 0 auto; }
+  .empty { color: var(--mut); text-align: center; padding: 18px 6px; }
+  .foot { text-align: center; color: var(--mut); font-size: 12px; margin-top: 6px; }
+  .btn { display: block; width: 100%; border: 0; border-radius: 14px; padding: 12px; font: inherit; font-weight: 700; background: var(--acc); color: #fff; margin-top: 10px; cursor: pointer; }
+  .sk { height: 90px; border-radius: var(--r); margin-bottom: 12px; background: linear-gradient(90deg, var(--card), var(--line), var(--card)); background-size: 200% 100%; animation: sk 1.2s infinite linear; }
+  @keyframes sk { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .hide { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app"><div class="sk" style="height:170px"></div><div class="sk"></div><div class="sk"></div></div>
+<script>
+(function () {
+  'use strict';
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { try { tg.ready(); tg.expand(); document.documentElement.setAttribute('data-tg', '1'); } catch (_) {} }
+  var A = document.getElementById('app'), R = null, TAB = 'coins';
+  try { TAB = localStorage.getItem('cp-tab') || 'coins'; } catch (_) {}
+  var W = {
+    en: { total: 'Total value', today: 'today', week: '7d', profit: 'All-time', vsBtc: 'vs BTC', todayT: 'Today', coins: 'Coins', plan: 'Plan', exit: 'Exit', market: 'Market', paper: 'Paper', alerts: 'Alerts',
+      alloc: 'Allocation', holdings: 'Holdings', share: 'of portfolio', avg: 'avg', reinforce: 'Reinforce', sell: 'Sell', hold: 'Hold', overall: 'Overall', done: 'targets met', dca: 'Regular buys (DCA)', next: 'next',
+      buyAt: 'Buy-price alerts', above: 'above', conds: 'Exit conditions', met: 'met', tps: 'Take-profit levels', toGo: 'to go', sellP: 'sell', btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC',
+      fng: 'Fear & Greed', dom: 'Dominance', altS: 'Altcoin Season', etf: 'ETF flows', sectors: 'Sectors 24h', cash: 'Cash', sameBtc: 'Same money in BTC', pts: 'pts', noPaper: 'No paper portfolio yet \u2014 /paper in the chat.',
+      noAlerts: 'No alerts \u2014 write in the chat: "tell me if SOL drops below 80".', waits: 'waits to reset', nothing: 'Nothing to do today \u2014 hold \u2705', updated: 'Updated', refresh: 'Refresh', notConn: 'Portfolio not connected.',
+      err: 'Could not load the report.', onlyTg: 'Open this from the bot in Telegram.', snapshot: 'market snapshot', beat: function (a, n) { return a + '/' + n + ' coins beat BTC'; },
+      vUp: 'Up today \u2014 your plan is on track', vDn: 'Down today \u2014 stick to the plan', vFlat: 'Quiet day', acts: function (n) { return n + ' thing' + (n === 1 ? '' : 's') + ' to do today'; } },
+    ar: { total: '\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0643\u0644\u064A\u0629', today: '\u0627\u0644\u064A\u0648\u0645', week: '7 \u0623\u064A\u0627\u0645', profit: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0628\u062D', vsBtc: '\u0645\u0642\u0627\u0628\u0644 BTC', todayT: '\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647', coins: '\u0627\u0644\u0639\u0645\u0644\u0627\u062A', plan: '\u0627\u0644\u062E\u0637\u0629', exit: '\u0627\u0644\u062E\u0631\u0648\u062C', market: '\u0627\u0644\u0633\u0648\u0642', paper: '\u062A\u062C\u0631\u064A\u0628\u064A', alerts: '\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A',
+      alloc: '\u0627\u0644\u062A\u0648\u0632\u064A\u0639', holdings: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629', share: '\u0645\u0646 \u0627\u0644\u0645\u062D\u0641\u0638\u0629', avg: '\u0645\u062A\u0648\u0633\u0637', reinforce: '\u062A\u0639\u0632\u064A\u0632', sell: '\u0628\u064A\u0639', hold: '\u0627\u062D\u062A\u0641\u0627\u0638', overall: '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A', done: '\u0623\u0647\u062F\u0627\u0641 \u0627\u062A\u062D\u0642\u0642\u062A', dca: '\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u0638\u0645 (DCA)', next: '\u0627\u0644\u062C\u0627\u064A',
+      buyAt: '\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621', above: '\u0641\u0648\u0642', conds: '\u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C', met: '\u0627\u062A\u062D\u0642\u0642', tps: '\u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D', toGo: '\u0628\u0627\u0642\u064A', sellP: '\u0628\u064A\u0639', btcD: '\u0633\u064A\u0637\u0631\u0629 BTC', usdtD: '\u0633\u064A\u0637\u0631\u0629 USDT', ethBtc: 'ETH/BTC',
+      fng: '\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639', dom: '\u0627\u0644\u0633\u064A\u0637\u0631\u0629', altS: '\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A', etf: '\u062A\u062F\u0641\u0642\u0627\u062A ETF', sectors: '\u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A 24\u0633', cash: '\u0627\u0644\u0643\u0627\u0634', sameBtc: '\u0646\u0641\u0633 \u0627\u0644\u0641\u0644\u0648\u0633 \u0641\u064A BTC', pts: '\u0646\u0642\u0637\u0629', noPaper: '\u0645\u0641\u064A\u0634 \u0645\u062D\u0641\u0638\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0644\u0633\u0647 \u2014 /paper \u0641\u064A \u0627\u0644\u0634\u0627\u062A.',
+      noAlerts: '\u0645\u0641\u064A\u0634 \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u2014 \u0627\u0643\u062A\u0628 \u0641\u064A \u0627\u0644\u0634\u0627\u062A: \xAB\u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648 SOL \u0646\u0632\u0644 \u062A\u062D\u062A 80\xBB.', waits: '\u0645\u0633\u062A\u0646\u064A \u064A\u0631\u062C\u0639 \u0627\u0644\u0623\u0648\u0644', nothing: '\u0645\u0641\u064A\u0634 \u062D\u0627\u062C\u0629 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647 \u2014 \u0627\u062D\u062A\u0641\u0638 \u2705', updated: '\u0627\u062A\u062D\u062F\u0651\u062B', refresh: '\u062A\u062D\u062F\u064A\u062B', notConn: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0634 \u0645\u062A\u0648\u0635\u0644\u0629.',
+      err: '\u0645\u0627 \u0642\u062F\u0631\u062A\u0634 \u0623\u062D\u0645\u0651\u0644 \u0627\u0644\u062A\u0642\u0631\u064A\u0631.', onlyTg: '\u0627\u0641\u062A\u062D\u0647\u0627 \u0645\u0646 \u0627\u0644\u0628\u0648\u062A \u0641\u064A \u062A\u0644\u064A\u062C\u0631\u0627\u0645.', snapshot: '\u0644\u0642\u0637\u0629 \u0627\u0644\u0633\u0648\u0642', beat: function (a, n) { return a + '/' + n + ' \u0639\u0645\u0644\u0629 \u0633\u0628\u0642\u062A BTC'; },
+      vUp: '\u0637\u0627\u0644\u0639 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647 \u2014 \u062E\u0637\u062A\u0643 \u0645\u0627\u0634\u064A\u0629', vDn: '\u0646\u0627\u0632\u0644 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647 \u2014 \u0627\u0645\u0634\u064A \u0639\u0644\u0649 \u0627\u0644\u062E\u0637\u0629', vFlat: '\u064A\u0648\u0645 \u0647\u0627\u062F\u064A', acts: function (n) { return n + ' \u062D\u0627\u062C\u0629 \u062A\u0639\u0645\u0644\u0647\u0627 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647'; } },
+  };
+  var w = W.en;
+  // \u2500\u2500 tiny DOM helpers (text only: nothing from the data is ever parsed as HTML) \u2500\u2500
+  function h(tag, cls, kids) { var e = document.createElement(tag); if (cls) e.className = cls; (kids || []).forEach(function (k) { if (k == null || k === false) return; e.appendChild(typeof k === 'string' || typeof k === 'number' ? document.createTextNode(String(k)) : k); }); return e; }
+  function N(s, cls) { return h('span', 'num' + (cls ? ' ' + cls : ''), [s]); }
+  function usd(v, d) { if (v == null || !isFinite(v)) return '\u2014'; var a = Math.abs(v), s = v < 0 ? '\u2212' : ''; if (a >= 1e9) return s + '$' + (a / 1e9).toFixed(2) + 'B'; if (a >= 1e6) return s + '$' + (a / 1e6).toFixed(1) + 'M';
+    if (a >= 1 || a === 0) return s + '$' + a.toLocaleString('en-US', { minimumFractionDigits: d == null ? (a >= 1000 ? 0 : 2) : d, maximumFractionDigits: d == null ? (a >= 1000 ? 0 : 2) : d }); return s + '$' + (+a.toPrecision(4)); }
+  function pct(v, d) { if (v == null || !isFinite(v)) return '\u2014'; return (v > 0 ? '+' : v < 0 ? '\u2212' : '') + Math.abs(v).toFixed(d == null ? 2 : d) + '%'; }
+  function cls(v) { return v > 0 ? 'up' : v < 0 ? 'dn' : 'mut'; }
+  function qty(q) { return (+Number(q).toPrecision(8)).toLocaleString('en-US', { maximumFractionDigits: 8 }); }
+  var PAL = ['#7c3aed', '#10b981', '#ec4899', '#3b82f6', '#14b8a6', '#eab308', '#8b5cf6', '#f43f5e', '#64748b'];
+  var CMAP = {};   // each coin its own colour (BTC orange, ETH blue, the rest in order of size \u2014 never two the same in a row)
+  function setColors(syms) { CMAP = { BTC: '#f7931a', ETH: '#627eea' }; var k = 0; syms.forEach(function (s) { if (!CMAP[s]) CMAP[s] = PAL[k++ % PAL.length]; }); }
+  function color(sym) { if (CMAP[sym]) return CMAP[sym]; var x = 0; for (var i = 0; i < sym.length; i++) x = (x * 31 + sym.charCodeAt(i)) >>> 0; return PAL[x % PAL.length]; }
+  function icon(sym) { var e = h('div', 'ic', [sym.slice(0, 4)]); e.style.background = color(sym); if (sym.length > 3) e.style.fontSize = '10px'; return e; }
+  function card(title, sub, kids) { return h('section', 'card', [h('h2', '', [title, sub ? h('span', 'sub', [sub]) : null])].concat(kids)); }
+
+  function todoText(x) {
+    var ar = w === W.ar;
+    switch (x.what) {
+      case 'dca_today': return ar ? '\u064A\u0648\u0645 \u0627\u0644\u0640 DCA: \u0627\u0634\u062A\u0631\u064A ' + x.coin + ' \u0628\u0640 ' + usd(x.buy_usd) : 'DCA day: buy ' + usd(x.buy_usd) + ' of ' + x.coin;
+      case 'dca_missed': return ar ? 'DCA ' + x.coin + ' \u0645\u062A\u0623\u062E\u0631 ' + x.days_late + ' \u064A\u0648\u0645' : 'DCA ' + x.coin + ' is ' + x.days_late + ' days late';
+      case 'dca_tomorrow': return ar ? '\u0628\u0643\u0631\u0629: DCA ' + x.coin + ' ' + usd(x.buy_usd) : 'Tomorrow: DCA ' + x.coin + ' ' + usd(x.buy_usd);
+      case 'at_buy_price': return ar ? x.coin + ' \u0648\u0635\u0644 \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 ' + usd(x.your_buy_price_usd) : x.coin + ' is at your buy price ' + usd(x.your_buy_price_usd);
+      case 'near_buy_price': return ar ? x.coin + ' \u0641\u0648\u0642 \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 ' + usd(x.your_buy_price_usd) + ' \u0628\u0640 ' + pct(x.pct_above_buy_price, 1) : x.coin + ' ' + pct(x.pct_above_buy_price, 1) + ' above your buy price ' + usd(x.your_buy_price_usd);
+      case 'take_profit_reached': return ar ? x.coin + ' \u0648\u0635\u0644 TP' + x.tp + ' \u2014 \u0628\u064A\u0639 ' + x.sell_pct + '%' : x.coin + ' reached TP' + x.tp + ' \u2014 sell ' + x.sell_pct + '%';
+      case 'take_profit_close': return ar ? x.coin + ' \u0628\u0627\u0642\u064A ' + x.pct_to_go + '% \u0639\u0644\u0649 TP' + x.tp : x.coin + ' is ' + x.pct_to_go + '% from TP' + x.tp;
+      case 'exit_conditions': return ar ? '\u0627\u0644\u062E\u0631\u0648\u062C: ' + x.met_of_3 + '/3 \u0634\u0631\u0648\u0637 \u0627\u062A\u062D\u0642\u0642\u062A' : 'Exit: ' + x.met_of_3 + '/3 conditions met';
+      case 'allocation_over': return (ar ? '\u0642\u0644\u0651\u0644 ' : 'Trim ') + x.group + ' ' + usd(x.usd_to_fix) + ' (' + x.now_pct + '% \u2192 ' + x.target_pct + '%)';
+      case 'allocation_under': return (ar ? '\u0632\u0648\u0651\u062F ' : 'Add to ') + x.group + ' ' + usd(x.usd_to_fix) + ' (' + x.now_pct + '% \u2192 ' + x.target_pct + '%)';
+      case 'reinforce_signal': return ar ? x.coin + ' ' + pct(x.pct_vs_your_avg, 1) + ' \u0645\u0646 \u0645\u062A\u0648\u0633\u0637\u0643 \u2014 \u062A\u0639\u0632\u064A\u0632' : x.coin + ' ' + pct(x.pct_vs_your_avg, 1) + ' vs your avg \u2014 Reinforce';
+      case 'sell_signal': return ar ? x.coin + ' ' + pct(x.pct_vs_your_avg, 1) + ' \u0645\u0646 \u0645\u062A\u0648\u0633\u0637\u0643 \u2014 \u0628\u064A\u0639' : x.coin + ' ' + pct(x.pct_vs_your_avg, 1) + ' vs your avg \u2014 Sell';
+    }
+    return x.what;
+  }
+  function todoIcon(x) { return /dca/.test(x.what) ? '\u{1F6D2}' : /buy_price/.test(x.what) ? '\u{1F3AF}' : /take_profit/.test(x.what) ? '\u{1F4B0}' : /exit/.test(x.what) ? '\u{1F6AA}' : /allocation/.test(x.what) ? '\u2696\uFE0F' : /reinforce/.test(x.what) ? '\u{1F7E2}' : '\u{1F534}'; }
+
+  function hero(r) {
+    var p = r.pf, v = p.ch24 > 0.3 ? '\u{1F7E2} ' + w.vUp : p.ch24 < -0.3 ? '\u{1F534} ' + w.vDn : '\u26AA ' + w.vFlat;
+    return h('section', 'card hero', [h('div', 'lbl', [w.total]), h('div', 'big num', [usd(p.value, 2)]),
+      h('div', 'chips', [h('span', 'chip', [N(pct(p.ch24) + ' (' + (p.d24 >= 0 ? '+' : '\u2212') + usd(Math.abs(p.d24), 0) + ')'), ' ' + w.today]), h('span', 'chip', [N(pct(p.ch7)), ' ' + w.week]),
+        h('span', 'chip', [w.profit + ' ', N((p.profit >= 0 ? '+' : '\u2212') + usd(Math.abs(p.profit), 0) + ' (' + pct(p.profitPct, 1) + ')')]), p.vsBtc != null ? h('span', 'chip', [w.vsBtc + ' ', N(pct(p.vsBtc, 1))]) : null]),
+      h('div', 'verdict', [v + ' \xB7 ' + w.acts(Math.min(3, r.todo.length))])]);
+  }
+  function todayCard(r) {
+    var list = r.todo.slice(0, 3);
+    return card('\u{1F3AF} ' + w.todayT, null, list.length ? list.map(function (x, i) { return h('div', 'todo', [h('div', 'n', [String(i + 1)]), h('div', 'grow', [todoIcon(x) + ' ' + todoText(x)])]); }) : [h('div', 'empty', [w.nothing])]);
+  }
+  function coinsTab(r) {
+    var cs = r.coins.filter(function (c) { return c.value >= 1; }), top = cs.slice(0, 6), rest = cs.slice(6).reduce(function (a, c) { return a + c.share; }, 0);
+    var stack = h('div', 'stack'), legend = h('div', 'legend');
+    top.forEach(function (c) { var i = h('i'); i.style.cssText = 'display:block;height:100%;width:' + c.share + '%;background:' + color(c.sym); stack.appendChild(i); legend.appendChild(h('span', '', [h('span', 'dot'), h('b', '', [c.sym]), ' ', N(c.share.toFixed(1) + '%')])); legend.lastChild.firstChild.style.background = color(c.sym); });
+    if (rest > 0.05) { var i2 = h('i'); i2.style.cssText = 'display:block;height:100%;width:' + rest + '%;background:#94a3b8'; stack.appendChild(i2); legend.appendChild(h('span', '', [h('span', 'dot'), '+' + (cs.length - 6) + ' ', N(rest.toFixed(1) + '%')])); legend.lastChild.firstChild.style.background = '#94a3b8'; }
+    var c1 = card('\u{1F9E9} ' + w.alloc, r.pf.beat != null ? w.beat(r.pf.beat, r.pf.alts) : null, [stack, legend]);
+    var rows = cs.map(function (c) {
+      return h('div', 'row', [icon(c.sym), h('div', 'grow', [h('div', 't1', [c.sym, ' ', c.stable ? null : h('span', 'pill p-' + c.signal, [w[c.signal]])]), h('div', 't2', c.stable ? [N(qty(c.qty))] : [N(qty(c.qty)), ' \xB7 ', w.avg + ' ', N(usd(c.avg))])]),
+        h('div', 'end', [h('div', 't1', [N(usd(c.value, c.value >= 1000 ? 0 : 2))]), h('div', 't2', c.stable ? [N(pct(c.ch24, 2), 'mut')] : [N(pct(c.ch24, 1), cls(c.ch24)), ' \xB7 ', N(pct(c.pnl, 1), cls(c.pnl))])])]);
+    });
+    return [c1, card('\u{1F4BC} ' + w.holdings, r.coins.length + '', rows)];
+  }
+  function planTab(r) {
+    var out = [], pl = r.plan;
+    if (pl && pl.items.length) out.push(card('\u{1F4CB} ' + w.plan, pl.completed + '/' + pl.counted + ' ' + w.done, [h('div', 'row', [h('div', 'grow', [h('div', 't1', [w.overall]), (function () { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = Math.min(100, pl.pct) + '%'; return b; })()]), h('div', 'end t1', [N(pl.pct.toFixed(1) + '%')])])].concat(
+      pl.items.map(function (x) { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = x.pct + '%'; return h('div', 'row', [icon(x.sym), h('div', 'grow', [h('div', 't2', [N(qty(x.actual) + ' / ' + qty(x.target)), ' ' + x.sym]), b]), h('div', 'end t1', [N(Math.round(x.pct) + '%')])]); }))));
+    if (r.dca && r.dca.length) out.push(card('\u{1F6D2} ' + w.dca, null, r.dca.map(function (x) { return h('div', 'row', [icon(x.sym), h('div', 'grow', [h('div', 't1', [N(usd(x.usd))]), h('div', 't2', [w.next + ' ', N(x.next || '\u2014')])]), h('div', 'end t2', [x.state === 'today' ? '\u{1F7E2}' : x.state === 'missed' ? '\u23F0' : '\u{1F5D3}'])]); })));
+    if (r.buyAt && r.buyAt.length) out.push(card('\u{1F3AF} ' + w.buyAt, null, r.buyAt.map(function (x) { return h('div', 'row', [icon(x.sym), h('div', 'grow', [h('div', 't1', [N(usd(x.at))]), h('div', 't2', [N(usd(x.price))])]), h('div', 'end t1', [N(pct(x.away, 1), x.away <= 0 ? 'up' : x.away <= 5 ? '' : 'mut')])]); })));
+    if (!out.length) out.push(h('div', 'card empty', ['\u2014']));
+    return out;
+  }
+  function exitTab(r) {
+    var nm = { btcD: w.btcD, usdtD: w.usdtD, ethBtc: w.ethBtc }, met = r.exit.macro.filter(function (x) { return x.met; }).length;
+    var c1 = card('\u{1F6AA} ' + w.conds, met + '/3 ' + w.met, r.exit.macro.map(function (x) { return h('div', 'cond', [h('div', 'ok' + (x.met ? ' on' : ''), [x.met ? '\u2713' : '']), h('div', 'grow', [h('div', 't1', [nm[x.k] || x.k]), h('div', 't2', [N((x.now == null ? '\u2014' : x.now + x.unit) + '  ' + x.op + ' ' + x.lvl + x.unit)])])]); }));
+    var c2 = card('\u{1F4B0} ' + w.tps, null, r.exit.tps.length ? r.exit.tps.map(function (t) { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = Math.max(2, Math.min(100, 100 - t.to)) + '%'; return h('div', 'row', [icon(t.sym), h('div', 'grow', [h('div', 't1', ['TP' + t.n + ' ', N(usd(t.level))]), b]), h('div', 'end', [h('div', 't1', [N(t.to <= 0 ? '\u2713' : pct(t.to, 1))]), h('div', 't2', [w.sellP + ' ' + t.sell + '%'])])]); }) : [h('div', 'empty', ['\u2014'])]);
+    return [c1, c2];
+  }
+  function gauge(v) {
+    var ns = 'http://www.w3.org/2000/svg', s = document.createElementNS(ns, 'svg'); s.setAttribute('viewBox', '0 0 200 112'); s.setAttribute('width', '210'); s.setAttribute('class', 'gauge');
+    var cols = ['#dc2626', '#f97316', '#eab308', '#84cc16', '#16a34a'];
+    for (var i = 0; i < 5; i++) { var a0 = Math.PI * (1 - i / 5), a1 = Math.PI * (1 - (i + 1) / 5) + 0.02, p = document.createElementNS(ns, 'path');
+      p.setAttribute('d', 'M' + (100 + 84 * Math.cos(a0)) + ' ' + (100 - 84 * Math.sin(a0)) + ' A84 84 0 0 1 ' + (100 + 84 * Math.cos(a1)) + ' ' + (100 - 84 * Math.sin(a1)));
+      p.setAttribute('stroke', cols[i]); p.setAttribute('stroke-width', '16'); p.setAttribute('fill', 'none'); p.setAttribute('stroke-linecap', 'round'); s.appendChild(p); }
+    var a = Math.PI * (1 - Math.max(0, Math.min(100, v)) / 100), n = document.createElementNS(ns, 'line');
+    n.setAttribute('x1', '100'); n.setAttribute('y1', '100'); n.setAttribute('x2', String(100 + 64 * Math.cos(a))); n.setAttribute('y2', String(100 - 64 * Math.sin(a)));
+    n.setAttribute('stroke', 'currentColor'); n.setAttribute('stroke-width', '5'); n.setAttribute('stroke-linecap', 'round'); s.appendChild(n);
+    var c = document.createElementNS(ns, 'circle'); c.setAttribute('cx', '100'); c.setAttribute('cy', '100'); c.setAttribute('r', '7'); c.setAttribute('fill', 'currentColor'); s.appendChild(c);
+    return s;
+  }
+  function marketTab(r) {
+    var m = r.market, out = [];
+    out.push(card('\u{1F30D} ' + w.market, null, [h('div', 'grid2', [
+      h('div', 'kpi', [h('div', 'l', ['BTC']), h('div', 'v', [N(m.btc ? usd(m.btc.price, 0) : '\u2014')]), h('div', '', [N(m.btc ? pct(m.btc.ch24) : '', m.btc ? cls(m.btc.ch24) : '')])]),
+      h('div', 'kpi', [h('div', 'l', [w.dom]), h('div', 'v', [N(m.dom.btc != null ? m.dom.btc.toFixed(1) + '%' : '\u2014')]), h('div', 'mut', ['USDT ', N(m.dom.usdt != null ? m.dom.usdt.toFixed(2) + '%' : '\u2014')])]),
+      h('div', 'kpi', [h('div', 'l', [w.altS]), h('div', 'v', [N(m.alt ? String(m.alt.value) : '\u2014')]), h('div', 'mut', [m.alt ? m.alt.label : ''])]),
+      h('div', 'kpi', [h('div', 'l', [w.etf + (m.etf ? ' \xB7 ' + m.etf.day : '')]), h('div', 'v', [N(m.etf ? (m.etf.btc >= 0 ? '+' : '\u2212') + usd(Math.abs(m.etf.btc), 0) : '\u2014', m.etf ? cls(m.etf.btc) : '')]), h('div', 'mut', ['ETH ', N(m.etf ? (m.etf.eth >= 0 ? '+' : '\u2212') + usd(Math.abs(m.etf.eth), 0) : '\u2014')])])])]));
+    if (m.fng) out.push(card('\u{1F628} ' + w.fng, null, [gauge(m.fng.value), h('div', '', [h('div', 't1', [N(String(m.fng.value))]), h('div', 'mut', [m.fng.label])])]));
+    if (m.fng) { var last = out[out.length - 1]; last.lastChild.style.textAlign = 'center'; last.lastChild.firstChild.style.cssText = 'font-size:26px;font-weight:800'; }
+    if (m.sectors && m.sectors.length) out.push(card('\u{1F525} ' + w.sectors, null, m.sectors.map(function (s) { return h('div', 'row', [h('div', 'grow t1', [s.name]), h('div', 'end t1', [N(pct(s.ch24, 1), cls(s.ch24))])]); })));
+    return out;
+  }
+  function paperTab(r) {
+    var p = r.paper; if (!p || p.error) return [h('div', 'card empty', [w.noPaper])];
+    return [card('\u{1F9EA} ' + w.paper, usd(p.start_cash_usd, 0), [h('div', 'grid2', [
+      h('div', 'kpi', [h('div', 'l', [w.total]), h('div', 'v', [N(usd(p.value_usd, 2))])]), h('div', 'kpi', [h('div', 'l', [w.cash]), h('div', 'v', [N(usd(p.cash_usd, 2))])]),
+      h('div', 'kpi', [h('div', 'l', [w.profit]), h('div', 'v', [N(pct(p.profit_pct), cls(p.profit_pct))])]), h('div', 'kpi', [h('div', 'l', [w.vsBtc]), h('div', 'v', [N((p.vs_btc_pts >= 0 ? '+' : '\u2212') + Math.abs(p.vs_btc_pts || 0).toFixed(1) + ' ' + w.pts, cls(p.vs_btc_pts))])])])]
+      .concat(p.coins.map(function (c) { return h('div', 'row', [icon(c.coin), h('div', 'grow', [h('div', 't1', [c.coin]), h('div', 't2', [N(qty(c.amount))])]), h('div', 'end', [h('div', 't1', [N(usd(c.value_usd))]), h('div', 't2', [N(pct(c.profit_pct, 1), cls(c.profit_pct))])])]); })))];
+  }
+  function alertsTab(r) {
+    return [card('\u{1F514} ' + w.alerts, r.alerts.length ? String(r.alerts.length) : null, r.alerts.length ? r.alerts.map(function (a) { return h('div', 'row', [h('div', 'grow', [h('div', 't1', [N(a.what)]), a.note ? h('div', 't2', [a.note]) : null]), a.armed ? null : h('span', 'pill p-hold', [w.waits])]); }) : [h('div', 'empty', [w.noAlerts])])];
+  }
+  var TABS = [['coins', function () { return '\u{1F4BC} ' + w.coins; }, coinsTab], ['plan', function () { return '\u{1F4CB} ' + w.plan; }, planTab], ['exit', function () { return '\u{1F6AA} ' + w.exit; }, exitTab],
+    ['market', function () { return '\u{1F30D} ' + w.market; }, marketTab], ['paper', function () { return '\u{1F9EA} ' + w.paper; }, paperTab], ['alerts', function () { return '\u{1F514} ' + w.alerts; }, alertsTab]];
+
+  function render() {
+    var r = R; w = W[r.lang] || W.en; setColors((r.coins || []).map(function (c) { return c.sym; }));
+    document.documentElement.lang = r.lang; document.documentElement.dir = r.lang === 'ar' ? 'rtl' : 'ltr';
+    A.textContent = '';
+    if (!r.connected) { A.appendChild(h('div', 'card empty', [w.notConn])); }
+    else { A.appendChild(hero(r)); A.appendChild(todayCard(r)); }
+    var tabs = h('nav', 'tabs'), body = h('div');
+    TABS.forEach(function (t) { if (!r.connected && /coins|plan|exit/.test(t[0])) return; var b = h('button', 'tab', [t[1]()]); b.setAttribute('aria-selected', String(t[0] === TAB)); b.onclick = function () { TAB = t[0]; try { localStorage.setItem('cp-tab', TAB); } catch (_) {} render(); if (tg && tg.HapticFeedback) try { tg.HapticFeedback.selectionChanged(); } catch (_) {} }; tabs.appendChild(b); });
+    var cur = TABS.filter(function (t) { return t[0] === TAB && (r.connected || !/coins|plan|exit/.test(t[0])); })[0] || TABS[3];
+    cur[2](r).forEach(function (e) { body.appendChild(e); });
+    A.appendChild(tabs); A.appendChild(body);
+    var when = new Date(r.t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Riyadh' });
+    var btn = h('button', 'btn', ['\u{1F504} ' + w.refresh]); btn.onclick = load;
+    A.appendChild(btn);
+    A.appendChild(h('div', 'foot', [w.updated + ' ' + when + (r.market && r.market.snapshot ? ' \xB7 ' + w.snapshot + ' ' + new Date(r.market.snapshot).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Riyadh' }) : '')]));
+  }
+  function fail(msg) { A.textContent = ''; A.appendChild(h('div', 'card empty', [msg])); var b = h('button', 'btn', ['\u{1F504}']); b.onclick = load; A.appendChild(b); }
+  function load() {
+    var init = tg && tg.initData;
+    if (!init) { fail(W.en.onlyTg + ' \xB7 ' + W.ar.onlyTg); return; }
+    fetch('api', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ initData: init }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (!j || !j.ok) throw new Error(j && j.error || 'x'); R = j.report; render(); })
+      .catch(function () { fail(W.en.err + ' \xB7 ' + W.ar.err); });
+  }
+  load();
+})();
+</script>
+</body>
+</html>
+`;
+
+// tools/worker/miniapp.mjs
+var enc2 = new TextEncoder();
+async function hmac(key, data) {
+  const k = await crypto.subtle.importKey("raw", typeof key === "string" ? enc2.encode(key) : key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, enc2.encode(data)));
+}
+var hex = (b) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+async function verifyInitData(initData, token, now = Date.now(), maxAge = 86400) {
+  if (!initData || !token) return { ok: false, why: "missing" };
+  const p = new URLSearchParams(initData), hash = p.get("hash");
+  if (!hash) return { ok: false, why: "no hash" };
+  p.delete("hash");
+  const check2 = [...p.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([k, v]) => k + "=" + v).join("\n");
+  const want = hex(await hmac(await hmac("WebAppData", token), check2));
+  if (want.length !== hash.length) return { ok: false, why: "bad signature" };
+  let diff = 0;
+  for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ hash.charCodeAt(i);
+  if (diff) return { ok: false, why: "bad signature" };
+  const at = +p.get("auth_date") * 1e3;
+  if (!(at > 0) || now - at > maxAge * 1e3) return { ok: false, why: "too old" };
+  let user = null;
+  try {
+    user = JSON.parse(p.get("user") || "null");
+  } catch (_) {
+  }
+  return user && user.id ? { ok: true, user } : { ok: false, why: "no user" };
+}
+var r25 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+var r64 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
+async function report(env, now = Date.now()) {
+  const user = await loadUser(env).catch(() => null);
+  let lang2 = null;
+  try {
+    if (env.RATE) lang2 = await env.RATE.get("tg:lang");
+  } catch (_) {
+  }
+  lang2 = lang2 === "ar" || lang2 === "en" ? lang2 : env.BOT_LANG === "ar" ? "ar" : "en";
+  const m = await loadMarket([], coinsOf(user));
+  const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
+  const market = {
+    btc: m.btc ? { price: r64(m.btc.price), ch24: r25(m.btc.ch24) } : null,
+    fng: m.fng || null,
+    dom: { btc: r25(d.btc), eth: r25(d.eth), usdt: r25(d.usdt) },
+    mcap: g.mcap || null,
+    mcapCh24: r25(g.mcapCh24),
+    alt: m.alt && m.alt.value != null ? { value: m.alt.value, label: m.alt.label } : null,
+    etf: e ? { day: e.label, btc: Math.round(e.btc), eth: Math.round(e.eth) } : null,
+    snapshot: m.parts && m.parts.top || null,
+    sectors: (m.sectors || []).filter((s) => s.mcap >= 1e9).sort((a, b) => b.ch24 - a.ch24).filter((s, i, a) => i < 3 || i >= a.length - 3).map((s) => ({ name: s.name, ch24: s.ch24 }))
+  };
+  const alerts = (await listAlerts(env)).map((a) => ({ what: describe(a), armed: a.armed, note: a.note || "" }));
+  const paper = await paperFacts(env).catch(() => null);
+  if (!user) return { t: now, lang: lang2, connected: false, market, alerts, paper };
+  const sum = summarize(withIds(user, m), m, now), names = Object.fromEntries((user.coins || []).map((c) => [String(c.sym).toUpperCase(), c.name || ""]));
+  const coins = sum.coins.filter((c) => c.value >= 0.01).sort((a, b) => b.value - a.value).map((c) => ({
+    sym: c.sym,
+    name: names[c.sym] || "",
+    qty: r64(c.qty),
+    price: r64(c.price),
+    avg: r64(c.avg),
+    value: r25(c.value),
+    share: sum.value > 0 ? r25(c.value / sum.value * 100) : 0,
+    ch24: r25(c.ch24),
+    ch7: r25(c.ch7),
+    pnl: r25(c.chg),
+    signal: sum.signal[c.sym] || "hold",
+    stable: isStable(c.sym),
+    vsBtc: c.vs ? r25(c.vs.pct) : null
+  }));
+  const tps = (sum.tps || []).map((t) => ({ sym: t.sym, n: t.n, level: r64(t.level), price: r64(t.price), to: r25((t.level / t.price - 1) * 100), sell: t.pct })).sort((a, b) => a.to - b.to).slice(0, 10);
+  return {
+    t: now,
+    lang: lang2,
+    connected: true,
+    pf: { value: r25(sum.value), ch24: r25(sum.ch24), d24: r25(sum.d24), ch7: r25(sum.ch7), d7: r25(sum.d7), profit: r25(sum.total), profitPct: r25(sum.pctTotal), invested: r25(sum.invested), vsBtc: r25(sum.vsBtc), beat: sum.beat, alts: sum.alts },
+    coins,
+    counts: sum.counts,
+    plan: { pct: r25(sum.prog && sum.prog.pct), completed: sum.prog && sum.prog.completed, counted: sum.prog && sum.prog.counted, items: sum.plan.map((p) => ({ sym: p.sym, actual: r64(p.actual), target: r64(p.target), pct: p.target > 0 ? r25(Math.min(100, p.actual / p.target * 100)) : 0 })) },
+    dca: (sum.dca || []).map((x) => ({ sym: x.sym, usd: r25(x.s.usd), next: x.s.next || null, state: x.s.state, perMonth: r25(x.s.perMonth) })),
+    buyAt: (sum.buyAt || []).map((x) => ({ sym: x.sym, at: r64(x.at), price: r64(x.price), away: r25((x.price / x.at - 1) * 100) })),
+    exit: { macro: sum.macro.map((x) => ({ k: x.k, now: x.now != null ? +Number(x.now).toFixed(x.dp) : null, lvl: x.lvl, met: x.met, op: x.op, unit: x.unit })), tps },
+    alloc: sum.alloc ? sum.alloc.groups.map((g2) => ({ name: sum.alloc.names[g2.key] || g2.key, now: r25(g2.now), target: r25(g2.target), state: g2.state })) : null,
+    todo: todo(sum, now),
+    market,
+    alerts,
+    paper
+  };
+}
+var CSP = "default-src 'none'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors https://web.telegram.org https://*.telegram.org";
+function page() {
+  return new Response(miniapp_default, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": CSP, "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" } });
+}
+async function api(request, env) {
+  const json = (s, o) => new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+  if (request.method !== "POST") return json(405, { ok: false });
+  const body = await request.json().catch(() => ({}));
+  const v = await verifyInitData(String(body.initData || "").slice(0, 4096), env.TELEGRAM_BOT_TOKEN);
+  if (!v.ok) return json(401, { ok: false, error: v.why });
+  if (String(v.user.id) !== String(env.TELEGRAM_CHAT_ID)) return json(403, { ok: false, error: "private" });
+  resetBudget();
+  try {
+    return json(200, { ok: true, report: await report(env) });
+  } catch (e) {
+    console.log(JSON.stringify({ miniapp: "error", message: String(e && e.message).slice(0, 200) }));
+    return json(500, { ok: false, error: "report failed" });
+  }
+}
+
 // tools/worker/index.mjs
 var worker_default = {
   async fetch(request, env, ctx) {
     const p = new URL(request.url).pathname.replace(/\/+$/, "");
     if (p.endsWith("/tg/setup")) return setup(request, env);
     if (p.endsWith("/tg/check")) return check(request, env);
+    if (p.endsWith("/tg/app")) return page();
+    if (p.endsWith("/tg/api")) return api(request, env);
     if (p.endsWith("/tg")) return handleTelegram(request, env, ctx);
     return ai_worker_default.fetch(request, env, ctx);
   },
