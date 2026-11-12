@@ -40,7 +40,7 @@ const USER = () => ({
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
   meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
-const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); let EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
+const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); let BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
@@ -102,6 +102,8 @@ globalThis.fetch = async (input, init = {}) => {
     if (/everything/i.test(q)) return J({ stop_reason: 'tool_use', content: ['get_portfolio', 'get_market', 'get_plan', 'get_exit'].map((name, i) => ({ type: 'tool_use', id: 'tu' + i, name, input: name === 'get_market' ? { top: 200 } : {} })).concat([{ type: 'tool_use', id: 'tuh', name: 'get_history', input: { coin: 'sol', days: 7 } }]) });
     return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'A general answer about ' + q.slice(0, 30) }] });
   }
+  if (u.startsWith('https://data-api.binance.vision/api/v3/ticker/24hr') && BN403) { bnCalls++; return new Response('{"code":0,"msg":"Service unavailable from a restricted location"}', { status: 403 }); }
+  if (u.startsWith('https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT') && BN403) return J({ code: '0', data: [{ last: '96.1', open24h: '94' }] });
   if (u.startsWith('https://data-api.binance.vision/api/v3/ticker/24hr')) { const sy = new URL(u).searchParams.get('symbol'); if (EXLIVE[sy]) return J({ symbol: sy, lastPrice: String(EXLIVE[sy][0]), priceChangePercent: String(EXLIVE[sy][1]) }); return sy === 'NOIDUSDT' ? J({ symbol: sy, lastPrice: '2.50000000', priceChangePercent: '4.20' }) : J({ code: -1121, msg: 'Invalid symbol.' }, 400); }
   // futures data for SOL (OKX, Binance, Hyperliquid); anything else → not found
   if (u.startsWith('https://www.okx.com/api/v5/public/funding-rate?instId=SOL-USDT-SWAP')) return J({ code: '0', data: [{ fundingRate: '0.0001', nextFundingTime: String(NOW + 3 * HR) }] });
@@ -476,6 +478,11 @@ sent.length = 0; Wk = await fresh(); await postK(Wk, 'link');
 check('…but a price far from the snapshot\'s (another coin with that ticker) is never used', !/\$900/.test(last().b.text) && /LINK/.test(last().b.text), last().b.text.slice(0, 200));
 sent.length = 0; claudeCalls.length = 0; Wk = await fresh(); await postK(Wk, 'what is the price of SOL?');
 check('…and Claude\'s get_coin gets the live price + says where it came from', /\$95\.5/.test(last().b.text) && /Binance \(live\)/.test(last().b.text), last().b.text.slice(-200));
+BN403 = true; bnCalls = 0; sent.length = 0; Wk = await fresh(); await postK(Wk, 'sol');
+check('Binance refuses Cloudflare (403) → OKX gives the SOL price ($96.1)', /96\.1/.test(last().b.text) && /OKX/.test(last().b.text) && bnCalls >= 1, [bnCalls, last().b.text.slice(0, 120)]);
+const bn1 = bnCalls; sent.length = 0; await postK(Wk, 'sol'); await postK(Wk, 'link');
+check('…and Binance is left out after that (no more calls to it for 30 min)', bnCalls === bn1, [bn1, bnCalls]);
+BN403 = false;
 market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() }; EXLIVE = {}; sent.length = 0; Wk = await fresh(); await postK(Wk, 'sol');
 check('a fresh snapshot (12 min) → no exchange call needed, snapshot price', !/Binance/.test(last().b.text), last().b.text.slice(0, 200));
 cgDown = false;

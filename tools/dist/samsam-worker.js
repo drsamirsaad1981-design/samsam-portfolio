@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 49eac1d04f8d7ddf
+// sources-hash: 3c7501bea056c91a
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -714,6 +714,9 @@ function stopTrace() {
   return t;
 }
 async function getJson(url2, init) {
+  return (await getJsonS(url2, init)).j;
+}
+async function getJsonS(url2, init) {
   const tag = () => {
     try {
       const u = new URL(url2);
@@ -725,11 +728,10 @@ async function getJson(url2, init) {
   try {
     const r = await xfetch(url2, init);
     if (trace) trace.push([tag(), r.status]);
-    if (!r.ok) return null;
-    return await r.json();
+    return { s: r.status, j: r.ok ? await r.json() : null };
   } catch (e) {
     if (trace) trace.push([tag(), String(e && e.message).slice(0, 60)]);
-    return null;
+    return { s: 0, j: null };
   }
 }
 async function loadMarket(ids = [], coins = []) {
@@ -807,7 +809,11 @@ async function exchangePrice(sym) {
   if (miss && Date.now() < miss.until) return null;
   const x = await cached("ex:" + S, 45e3, async () => {
     for (const [src, url2, read] of EX) {
-      const x2 = read(await getJson(url2(S)));
+      const off = cache.get("ex-off:" + src);
+      if (off && Date.now() < off.until) continue;
+      const { s: st, j } = await getJsonS(url2(S));
+      if (st === 403 || st === 451) cache.set("ex-off:" + src, { until: Date.now() + 30 * 6e4, value: 1 });
+      const x2 = read(j);
       if (x2 && x2.price > 0 && isFinite(x2.price)) return { price: x2.price, ch24: isFinite(x2.ch24) ? x2.ch24 : null, src };
       if (used >= BUDGET) return null;
     }

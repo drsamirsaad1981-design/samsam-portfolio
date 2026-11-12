@@ -50,10 +50,12 @@ async function xfetch(url, init) {
 let trace = null;
 export function startTrace() { trace = []; }
 export function stopTrace() { const t = trace; trace = null; return t; }
-async function getJson(url, init) {
+async function getJson(url, init) { return (await getJsonS(url, init)).j; }
+// the same, with the HTTP status too (0 = no answer / out of calls)
+async function getJsonS(url, init) {
   const tag = () => { try { const u = new URL(url); return u.host + u.pathname; } catch (_) { return '?'; } };
-  try { const r = await xfetch(url, init); if (trace) trace.push([tag(), r.status]); if (!r.ok) return null; return await r.json(); }
-  catch (e) { if (trace) trace.push([tag(), String(e && e.message).slice(0, 60)]); return null; }
+  try { const r = await xfetch(url, init); if (trace) trace.push([tag(), r.status]); return { s: r.status, j: r.ok ? await r.json() : null }; }
+  catch (e) { if (trace) trace.push([tag(), String(e && e.message).slice(0, 60)]); return { s: 0, j: null }; }
 }
 
 // ── the market (same shape tools/alerts.mjs builds from the files on disk) ──
@@ -123,7 +125,11 @@ export async function exchangePrice(sym) {
   if (miss && Date.now() < miss.until) return null;
   const x = await cached('ex:' + S, 45e3, async () => {
     for (const [src, url, read] of EX) {
-      const x = read(await getJson(url(S)));
+      const off = cache.get('ex-off:' + src);   // this exchange refuses Cloudflare (Binance: 403/451) → left out for 30 min
+      if (off && Date.now() < off.until) continue;
+      const { s: st, j } = await getJsonS(url(S));
+      if (st === 403 || st === 451) cache.set('ex-off:' + src, { until: Date.now() + 30 * 60e3, value: 1 });
+      const x = read(j);
       if (x && x.price > 0 && isFinite(x.price)) return { price: x.price, ch24: isFinite(x.ch24) ? x.ch24 : null, src };
       if (used >= BUDGET) return null;
     }
