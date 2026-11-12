@@ -62,7 +62,7 @@ export async function report(env, now = Date.now()) {
     share: sum.value > 0 ? r2(c.value / sum.value * 100) : 0, ch24: r2(c.ch24), ch7: r2(c.ch7), pnl: r2(c.chg), signal: sum.signal[c.sym] || 'hold', stable: isStable(c.sym), vsBtc: c.vs ? r2(c.vs.pct) : null }));
   // logos for every coin the page shows (your coins, plan coins, paper coins)
   const rows = [...m.top, ...m.top500], logos = {};
-  const want = new Set([...coins.map(c => c.sym), ...sum.plan.map(p => p.sym), ...(paper && paper.coins ? paper.coins.map(c => c.coin) : [])]);
+  const want = new Set(['BTC', 'USDT', 'ETH', ...coins.map(c => c.sym), ...sum.plan.map(p => p.sym), ...(paper && paper.coins ? paper.coins.map(c => c.coin) : [])]);
   for (const S of want) {
     const own = (user.coins || []).find(c => c && String(c.sym).toUpperCase() === S), id = (own && own.cgId) || m.idOf[S];
     const r = (id && rows.find(x => x.id === id)) || rows.find(x => String(x.sym || '').toUpperCase() === S);

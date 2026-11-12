@@ -57,6 +57,8 @@
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .kpi { background: var(--bg); border-radius: 14px; padding: 10px 12px; } .kpi .l { font-size: 12px; color: var(--mut); } .kpi .v { font-size: 18px; font-weight: 750; margin-top: 2px; }
   .cond { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); } .cond:first-of-type { border-top: 0; }
+  .cic { position: relative; flex: none; } .badge { position: absolute; bottom: -4px; inset-inline-end: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--mut); color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; border: 2px solid var(--card); } .badge.on { background: var(--up); }
+  .cond .t2 { margin-bottom: 6px; }
   .ok { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; flex: none; background: var(--line); }
   .ok.on { background: var(--up); color: #fff; }
   .gauge { display: block; margin: 0 auto; }
@@ -92,14 +94,14 @@
   try { TAB = localStorage.getItem('cp-tab') || 'coins'; } catch (_) {}
   var W = {
     en: { total: 'Total value', today: 'today', week: '7d', profit: 'All-time', vsBtc: 'vs BTC', todayT: 'Today', coins: 'Coins', plan: 'Plan', exit: 'Exit', market: 'Market', paper: 'Paper', alerts: 'Alerts',
-      alloc: 'Allocation', holdings: 'Holdings', onT: 'on target', add: 'add', trim: 'trim', target: 'target', less: 'Show less', minsOld: function (n) { return n + ' min old'; }, imgT: 'Image card', sendChat: 'Send to the chat', close: 'Close', hidden: '$ amounts hidden', shown: '$ amounts shown', sending: 'Sending…', sent: 'Sent to the chat', sendErr: 'Could not send — try again', showAll: function (n) { return 'Show all ' + n; }, doneN: function (n) { return n + ' targets met'; }, share: 'of portfolio', avg: 'avg', reinforce: 'Reinforce', sell: 'Sell', hold: 'Hold', overall: 'Overall', done: 'targets met', dca: 'Regular buys (DCA)', next: 'next',
+      alloc: 'Allocation', holdings: 'Holdings', onT: 'on target', now: 'now', add: 'add', trim: 'trim', target: 'target', less: 'Show less', minsOld: function (n) { return n + ' min old'; }, imgT: 'Image card', sendChat: 'Send to the chat', close: 'Close', hidden: '$ amounts hidden', shown: '$ amounts shown', sending: 'Sending…', sent: 'Sent to the chat', sendErr: 'Could not send — try again', showAll: function (n) { return 'Show all ' + n; }, doneN: function (n) { return n + ' targets met'; }, share: 'of portfolio', avg: 'avg', reinforce: 'Reinforce', sell: 'Sell', hold: 'Hold', overall: 'Overall', done: 'targets met', dca: 'Regular buys (DCA)', next: 'next',
       buyAt: 'Buy-price alerts', above: 'above', conds: 'Exit conditions', met: 'met', tps: 'Take-profit levels', toGo: 'to go', sellP: 'sell', btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC',
       fng: 'Fear & Greed', dom: 'Dominance', altS: 'Altcoin Season', etf: 'ETF flows', sectors: 'Sectors 24h', cash: 'Cash', sameBtc: 'Same money in BTC', pts: 'pts', noPaper: 'No paper portfolio yet — /paper in the chat.',
       noAlerts: 'No alerts — write in the chat: "tell me if SOL drops below 80".', waits: 'waits to reset', nothing: 'Nothing to do today — hold ✅', updated: 'Updated', refresh: 'Refresh', notConn: 'Portfolio not connected.',
       err: 'Could not load the report.', onlyTg: 'Open this from the bot in Telegram.', snapshot: 'market snapshot', beat: function (a, n) { return a + '/' + n + ' coins beat BTC'; },
       vUp: 'Up today — your plan is on track', vDn: 'Down today — stick to the plan', vFlat: 'Quiet day', acts: function (n) { return n + ' thing' + (n === 1 ? '' : 's') + ' to do today'; } },
     ar: { total: 'القيمة الكلية', today: 'اليوم', week: '7 أيام', profit: 'إجمالي الربح', vsBtc: 'مقابل BTC', todayT: 'النهارده', coins: 'العملات', plan: 'الخطة', exit: 'الخروج', market: 'السوق', paper: 'تجريبي', alerts: 'التنبيهات',
-      alloc: 'التوزيع', holdings: 'المحفظة', onT: 'على الهدف', add: 'زوّد', trim: 'قلّل', target: 'الهدف', less: 'عرض أقل', minsOld: function (n) { return 'من ' + n + ' دقيقة'; }, imgT: 'كارت صورة', sendChat: 'ابعتها في الشات', close: 'قفل', hidden: 'المبالغ مخفية', shown: 'المبالغ ظاهرة', sending: 'بتتبعت…', sent: 'اتبعتت في الشات', sendErr: 'ما اتبعتتش — جرّب تاني', showAll: function (n) { return 'عرض الكل ' + n; }, doneN: function (n) { return n + ' هدف اتحقق'; }, share: 'من المحفظة', avg: 'متوسط', reinforce: 'تعزيز', sell: 'بيع', hold: 'احتفاظ', overall: 'الإجمالي', done: 'أهداف اتحققت', dca: 'الشراء المنتظم (DCA)', next: 'الجاي',
+      alloc: 'التوزيع', holdings: 'المحفظة', onT: 'على الهدف', now: 'دلوقتي', add: 'زوّد', trim: 'قلّل', target: 'الهدف', less: 'عرض أقل', minsOld: function (n) { return 'من ' + n + ' دقيقة'; }, imgT: 'كارت صورة', sendChat: 'ابعتها في الشات', close: 'قفل', hidden: 'المبالغ مخفية', shown: 'المبالغ ظاهرة', sending: 'بتتبعت…', sent: 'اتبعتت في الشات', sendErr: 'ما اتبعتتش — جرّب تاني', showAll: function (n) { return 'عرض الكل ' + n; }, doneN: function (n) { return n + ' هدف اتحقق'; }, share: 'من المحفظة', avg: 'متوسط', reinforce: 'تعزيز', sell: 'بيع', hold: 'احتفاظ', overall: 'الإجمالي', done: 'أهداف اتحققت', dca: 'الشراء المنتظم (DCA)', next: 'الجاي',
       buyAt: 'تنبيهات سعر الشراء', above: 'فوق', conds: 'شروط الخروج', met: 'اتحقق', tps: 'مستويات جني الأرباح', toGo: 'باقي', sellP: 'بيع', btcD: 'سيطرة BTC', usdtD: 'سيطرة USDT', ethBtc: 'ETH/BTC',
       fng: 'الخوف والطمع', dom: 'السيطرة', altS: 'موسم العملات', etf: 'تدفقات ETF', sectors: 'القطاعات 24س', cash: 'الكاش', sameBtc: 'نفس الفلوس في BTC', pts: 'نقطة', noPaper: 'مفيش محفظة تجريبية لسه — /paper في الشات.',
       noAlerts: 'مفيش تنبيهات — اكتب في الشات: «نبّهني لو SOL نزل تحت 80».', waits: 'مستني يرجع الأول', nothing: 'مفيش حاجة النهارده — احتفظ ✅', updated: 'اتحدّث', refresh: 'تحديث', notConn: 'المحفظة مش متوصلة.',
@@ -224,7 +226,15 @@
   }
   function exitTab(r) {
     var nm = { btcD: w.btcD, usdtD: w.usdtD, ethBtc: w.ethBtc }, met = r.exit.macro.filter(function (x) { return x.met; }).length;
-    var c1 = card('🚪 ' + w.conds, met + '/3 ' + w.met, r.exit.macro.map(function (x) { return h('div', 'cond', [h('div', 'ok' + (x.met ? ' on' : ''), [x.met ? '✓' : '']), h('div', 'grow', [h('div', 't1', [nm[x.k] || x.k]), h('div', 't2', [N((x.now == null ? '—' : x.now + x.unit) + '  ' + x.op + ' ' + x.lvl + x.unit)])])]); }));
+    var symOf = { btcD: 'BTC', usdtD: 'USDT', ethBtc: 'ETH' };
+    var c1 = card('🚪 ' + w.conds, met + '/3 ' + w.met, r.exit.macro.map(function (x) {
+      // how far along: "≤" levels (dominance) → target / now; "≥" (ETH/BTC) → now / target
+      var prog = x.now == null ? 0 : x.met ? 100 : x.op === '≤' ? Math.max(0, Math.min(100, x.lvl / x.now * 100)) : Math.max(0, Math.min(100, x.now / x.lvl * 100));
+      var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = prog.toFixed(0) + '%'; if (x.met) b.firstChild.style.background = 'var(--up)';
+      var ic = h('div', 'cic', [icon(symOf[x.k] || 'BTC'), h('span', 'badge' + (x.met ? ' on' : ''), [x.met ? '✓' : '…'])]);
+      return h('div', 'cond', [ic, h('div', 'grow', [h('div', 't1', [nm[x.k] || x.k, ' ', h('span', 'pill ' + (x.met ? 'p-reinforce' : 'p-hold'), [x.met ? '✓ ' + w.met : N(prog.toFixed(0) + '%')])]),
+        h('div', 't2', [w.now + ' ', N(x.now == null ? '—' : x.now + x.unit), ' · ' + w.target + ' ', N(x.op + ' ' + x.lvl + x.unit)]), b])]);
+    }));
     var c2 = card('💰 ' + w.tps, null, r.exit.tps.length ? fold('tps', r.exit.tps.map(function (t) { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = Math.max(2, Math.min(100, 100 - t.to)) + '%'; return h('div', 'row', [icon(t.sym), h('div', 'grow', [h('div', 't1', ['TP' + t.n + ' ', N(usd(t.level))]), b]), h('div', 'end', [h('div', 't1', [N(t.to <= 0 ? '✓' : pct(t.to, 1))]), h('div', 't2', [w.sellP + ' ' + t.sell + '%'])])]); }), 4) : [h('div', 'empty', ['—'])]);
     return [c1, c2];
   }

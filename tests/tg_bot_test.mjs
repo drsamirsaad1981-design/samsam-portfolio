@@ -40,7 +40,7 @@ const USER = () => ({
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
   meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
-const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
+const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = []; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
@@ -48,6 +48,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (u.startsWith('https://api.telegram.org/file/bot123:fake/')) { fileGets.push(u); return new Response(VOICE_BYTES, { status: 200 }); }
   if (u.startsWith('https://api.telegram.org/bot') && u.endsWith('/getFile')) { const b = JSON.parse(body); sent.push({ m: 'getFile', b }); return J({ ok: true, result: { file_id: b.file_id, file_path: 'voice/file_9.oga' } }); }
   if (/^https:\/\/(coin-images|assets)\.coingecko\.com\//.test(u)) { logoFetches++; return /tether|325/.test(u) ? new Response('nf', { status: 404 }) : /notimage/.test(u) ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : new Response(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'), { headers: { 'content-type': 'image/png' } }); }
+  if (u === 'https://api.github.com/repos/drsamirsaad1981-design/samsam-portfolio/actions/workflows/prices.yml/dispatches') { kicks.push({ auth: init.headers.authorization, body: JSON.parse(body) }); return new Response(null, { status: 204 }); }
   if (u.startsWith('https://api.telegram.org/bot') && body instanceof FormData) { const m = u.split('/').pop(); const ph = body.get('photo'); sent.push({ m, b: { chat_id: body.get('chat_id'), caption: body.get('caption'), photoBytes: ph ? new Uint8Array(await ph.arrayBuffer()) : null } }); return J({ ok: true, result: { message_id: 8 } }); }
   if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); sent.push({ m, b }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
   if (u.includes('raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/')) {
@@ -687,7 +688,7 @@ check('with targets → now vs target, a target mark, "1/3 on target", trim $1,3
 await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_alloc.png'), fullPage: false });
 REP = rj.report;
 const tabTexts = await pg.$$eval('.tab', a => a.map(x => x.textContent));
-for (const [i, want] of [[1, /Overall/], [2, /Exit conditions/], [3, /Fear & Greed|Market/], [4, /Paper/], [5, /Alerts/]]) {
+for (const [i, want] of [[1, /Overall/], [2, /Exit conditions[\s\S]*now[\s\S]*target/], [3, /Fear & Greed|Market/], [4, /Paper/], [5, /Alerts/]]) {
   await pg.click(`.tab >> nth=${i}`); const tt = await pg.innerText('body');
   check(`page tab ${tabTexts[i]} → ${want}`, want.test(tt), tt.slice(0, 200));
   if (i === 2 || i === 3) await pg.screenshot({ path: path.join(ROOT, `tests/shots/miniapp_${i === 2 ? 'exit' : 'market'}.png`), fullPage: true });
@@ -755,6 +756,22 @@ const lg = u => W.fetch(new Request(HOST + '/tg/logo?u=' + encodeURIComponent(u)
 let lr = await lg('https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png');
 check('/tg/logo → the logo from this site (an image, cached a week)', lr.status === 200 && lr.headers.get('content-type') === 'image/png' && /max-age=604800/.test(lr.headers.get('cache-control')));
 check('…another host → 400 · not https → 400 · not an image → 404', (await lg('https://evil.example.com/x.png')).status === 400 && (await lg('http://coin-images.coingecko.com/x.png')).status === 400 && (await lg('https://assets.coingecko.com/notimage')).status === 404);
+
+// GitHub late with the market snapshot → the Worker's cron asks GitHub to run it now (needs GH_DISPATCH_TOKEN)
+const ENVG = { ...ENVK, GH_DISPATCH_TOKEN: 'github_pat_test' };
+const cronG = async (env, at) => { const Wg = await fresh(); const p = []; await Wg.scheduled({ cron: '*/5 * * * *', scheduledTime: at }, env, { waitUntil: x => p.push(x) }); await Promise.all(p); };
+kvStore.delete('tg:kick'); market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() };
+await cronG(ENVG, RIYADH('03:07'));
+check('snapshot 12 min old → GitHub is not asked', kicks.length === 0);
+market.parts = { top: new Date(NOW - 70 * 60e3).toISOString() };
+await cronG(ENVK, RIYADH('03:12'));
+check('…70 min old but no GH_DISPATCH_TOKEN → nothing (it just waits for GitHub)', kicks.length === 0);
+await cronG(ENVG, RIYADH('03:17'));
+check('…70 min old + the token → GitHub runs the snapshot now (workflow_dispatch on main)', kicks.length === 1 && kicks[0].auth === 'Bearer github_pat_test' && kicks[0].body.ref === 'main', kicks);
+await cronG(ENVG, RIYADH('03:22'));
+check('…and not again for 20 min', kicks.length === 1);
+check('built file holds no GitHub token', !/github_pat_|ghp_[A-Za-z0-9]{20}/.test(built));
+market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() };
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

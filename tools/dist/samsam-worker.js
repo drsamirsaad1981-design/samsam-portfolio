@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 8e997111b1de3080
+// sources-hash: 19448405a8ae0961
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2775,6 +2775,23 @@ async function runDaily(env, now = Date.now()) {
   if (c.sectors && min % 60 === 25) return { job: "sectors", ...await sectorRadar(env, now) };
   return { job: null };
 }
+var REPO = "drsamirsaad1981-design/samsam-portfolio";
+async function kickPrices(env, now = Date.now()) {
+  if (!env.GH_DISPATCH_TOKEN) return { kick: "no token" };
+  const m = await loadMarket([], []).catch(() => null), t = m && m.parts && Date.parse(m.parts.top);
+  if (!t || now - t < 25 * 6e4) return { kick: "fresh" };
+  const last = +await kvGet5(env, "tg:kick") || 0;
+  if (now - last < 20 * 6e4) return { kick: "waiting" };
+  await kvPut5(env, "tg:kick", String(now), 3600);
+  const r = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/prices.yml/dispatches`, {
+    method: "POST",
+    headers: { authorization: "Bearer " + env.GH_DISPATCH_TOKEN, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", "user-agent": "samsam-worker", "content-type": "application/json" },
+    body: JSON.stringify({ ref: "main" })
+  }).catch(() => null);
+  const ok2 = !!(r && r.status === 204);
+  if (!ok2) console.log(JSON.stringify({ kick: "refused", status: r && r.status }));
+  return { kick: ok2 ? "sent" : "refused", age_min: Math.round((now - t) / 6e4) };
+}
 
 // tools/worker/bot.mjs
 var H4 = 36e5;
@@ -3776,6 +3793,8 @@ var miniapp_default = `<!doctype html>
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .kpi { background: var(--bg); border-radius: 14px; padding: 10px 12px; } .kpi .l { font-size: 12px; color: var(--mut); } .kpi .v { font-size: 18px; font-weight: 750; margin-top: 2px; }
   .cond { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); } .cond:first-of-type { border-top: 0; }
+  .cic { position: relative; flex: none; } .badge { position: absolute; bottom: -4px; inset-inline-end: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--mut); color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; border: 2px solid var(--card); } .badge.on { background: var(--up); }
+  .cond .t2 { margin-bottom: 6px; }
   .ok { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; flex: none; background: var(--line); }
   .ok.on { background: var(--up); color: #fff; }
   .gauge { display: block; margin: 0 auto; }
@@ -3811,14 +3830,14 @@ var miniapp_default = `<!doctype html>
   try { TAB = localStorage.getItem('cp-tab') || 'coins'; } catch (_) {}
   var W = {
     en: { total: 'Total value', today: 'today', week: '7d', profit: 'All-time', vsBtc: 'vs BTC', todayT: 'Today', coins: 'Coins', plan: 'Plan', exit: 'Exit', market: 'Market', paper: 'Paper', alerts: 'Alerts',
-      alloc: 'Allocation', holdings: 'Holdings', onT: 'on target', add: 'add', trim: 'trim', target: 'target', less: 'Show less', minsOld: function (n) { return n + ' min old'; }, imgT: 'Image card', sendChat: 'Send to the chat', close: 'Close', hidden: '$ amounts hidden', shown: '$ amounts shown', sending: 'Sending\u2026', sent: 'Sent to the chat', sendErr: 'Could not send \u2014 try again', showAll: function (n) { return 'Show all ' + n; }, doneN: function (n) { return n + ' targets met'; }, share: 'of portfolio', avg: 'avg', reinforce: 'Reinforce', sell: 'Sell', hold: 'Hold', overall: 'Overall', done: 'targets met', dca: 'Regular buys (DCA)', next: 'next',
+      alloc: 'Allocation', holdings: 'Holdings', onT: 'on target', now: 'now', add: 'add', trim: 'trim', target: 'target', less: 'Show less', minsOld: function (n) { return n + ' min old'; }, imgT: 'Image card', sendChat: 'Send to the chat', close: 'Close', hidden: '$ amounts hidden', shown: '$ amounts shown', sending: 'Sending\u2026', sent: 'Sent to the chat', sendErr: 'Could not send \u2014 try again', showAll: function (n) { return 'Show all ' + n; }, doneN: function (n) { return n + ' targets met'; }, share: 'of portfolio', avg: 'avg', reinforce: 'Reinforce', sell: 'Sell', hold: 'Hold', overall: 'Overall', done: 'targets met', dca: 'Regular buys (DCA)', next: 'next',
       buyAt: 'Buy-price alerts', above: 'above', conds: 'Exit conditions', met: 'met', tps: 'Take-profit levels', toGo: 'to go', sellP: 'sell', btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC',
       fng: 'Fear & Greed', dom: 'Dominance', altS: 'Altcoin Season', etf: 'ETF flows', sectors: 'Sectors 24h', cash: 'Cash', sameBtc: 'Same money in BTC', pts: 'pts', noPaper: 'No paper portfolio yet \u2014 /paper in the chat.',
       noAlerts: 'No alerts \u2014 write in the chat: "tell me if SOL drops below 80".', waits: 'waits to reset', nothing: 'Nothing to do today \u2014 hold \u2705', updated: 'Updated', refresh: 'Refresh', notConn: 'Portfolio not connected.',
       err: 'Could not load the report.', onlyTg: 'Open this from the bot in Telegram.', snapshot: 'market snapshot', beat: function (a, n) { return a + '/' + n + ' coins beat BTC'; },
       vUp: 'Up today \u2014 your plan is on track', vDn: 'Down today \u2014 stick to the plan', vFlat: 'Quiet day', acts: function (n) { return n + ' thing' + (n === 1 ? '' : 's') + ' to do today'; } },
     ar: { total: '\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0643\u0644\u064A\u0629', today: '\u0627\u0644\u064A\u0648\u0645', week: '7 \u0623\u064A\u0627\u0645', profit: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0628\u062D', vsBtc: '\u0645\u0642\u0627\u0628\u0644 BTC', todayT: '\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647', coins: '\u0627\u0644\u0639\u0645\u0644\u0627\u062A', plan: '\u0627\u0644\u062E\u0637\u0629', exit: '\u0627\u0644\u062E\u0631\u0648\u062C', market: '\u0627\u0644\u0633\u0648\u0642', paper: '\u062A\u062C\u0631\u064A\u0628\u064A', alerts: '\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A',
-      alloc: '\u0627\u0644\u062A\u0648\u0632\u064A\u0639', holdings: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629', onT: '\u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641', add: '\u0632\u0648\u0651\u062F', trim: '\u0642\u0644\u0651\u0644', target: '\u0627\u0644\u0647\u062F\u0641', less: '\u0639\u0631\u0636 \u0623\u0642\u0644', minsOld: function (n) { return '\u0645\u0646 ' + n + ' \u062F\u0642\u064A\u0642\u0629'; }, imgT: '\u0643\u0627\u0631\u062A \u0635\u0648\u0631\u0629', sendChat: '\u0627\u0628\u0639\u062A\u0647\u0627 \u0641\u064A \u0627\u0644\u0634\u0627\u062A', close: '\u0642\u0641\u0644', hidden: '\u0627\u0644\u0645\u0628\u0627\u0644\u063A \u0645\u062E\u0641\u064A\u0629', shown: '\u0627\u0644\u0645\u0628\u0627\u0644\u063A \u0638\u0627\u0647\u0631\u0629', sending: '\u0628\u062A\u062A\u0628\u0639\u062A\u2026', sent: '\u0627\u062A\u0628\u0639\u062A\u062A \u0641\u064A \u0627\u0644\u0634\u0627\u062A', sendErr: '\u0645\u0627 \u0627\u062A\u0628\u0639\u062A\u062A\u0634 \u2014 \u062C\u0631\u0651\u0628 \u062A\u0627\u0646\u064A', showAll: function (n) { return '\u0639\u0631\u0636 \u0627\u0644\u0643\u0644 ' + n; }, doneN: function (n) { return n + ' \u0647\u062F\u0641 \u0627\u062A\u062D\u0642\u0642'; }, share: '\u0645\u0646 \u0627\u0644\u0645\u062D\u0641\u0638\u0629', avg: '\u0645\u062A\u0648\u0633\u0637', reinforce: '\u062A\u0639\u0632\u064A\u0632', sell: '\u0628\u064A\u0639', hold: '\u0627\u062D\u062A\u0641\u0627\u0638', overall: '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A', done: '\u0623\u0647\u062F\u0627\u0641 \u0627\u062A\u062D\u0642\u0642\u062A', dca: '\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u0638\u0645 (DCA)', next: '\u0627\u0644\u062C\u0627\u064A',
+      alloc: '\u0627\u0644\u062A\u0648\u0632\u064A\u0639', holdings: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629', onT: '\u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641', now: '\u062F\u0644\u0648\u0642\u062A\u064A', add: '\u0632\u0648\u0651\u062F', trim: '\u0642\u0644\u0651\u0644', target: '\u0627\u0644\u0647\u062F\u0641', less: '\u0639\u0631\u0636 \u0623\u0642\u0644', minsOld: function (n) { return '\u0645\u0646 ' + n + ' \u062F\u0642\u064A\u0642\u0629'; }, imgT: '\u0643\u0627\u0631\u062A \u0635\u0648\u0631\u0629', sendChat: '\u0627\u0628\u0639\u062A\u0647\u0627 \u0641\u064A \u0627\u0644\u0634\u0627\u062A', close: '\u0642\u0641\u0644', hidden: '\u0627\u0644\u0645\u0628\u0627\u0644\u063A \u0645\u062E\u0641\u064A\u0629', shown: '\u0627\u0644\u0645\u0628\u0627\u0644\u063A \u0638\u0627\u0647\u0631\u0629', sending: '\u0628\u062A\u062A\u0628\u0639\u062A\u2026', sent: '\u0627\u062A\u0628\u0639\u062A\u062A \u0641\u064A \u0627\u0644\u0634\u0627\u062A', sendErr: '\u0645\u0627 \u0627\u062A\u0628\u0639\u062A\u062A\u0634 \u2014 \u062C\u0631\u0651\u0628 \u062A\u0627\u0646\u064A', showAll: function (n) { return '\u0639\u0631\u0636 \u0627\u0644\u0643\u0644 ' + n; }, doneN: function (n) { return n + ' \u0647\u062F\u0641 \u0627\u062A\u062D\u0642\u0642'; }, share: '\u0645\u0646 \u0627\u0644\u0645\u062D\u0641\u0638\u0629', avg: '\u0645\u062A\u0648\u0633\u0637', reinforce: '\u062A\u0639\u0632\u064A\u0632', sell: '\u0628\u064A\u0639', hold: '\u0627\u062D\u062A\u0641\u0627\u0638', overall: '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A', done: '\u0623\u0647\u062F\u0627\u0641 \u0627\u062A\u062D\u0642\u0642\u062A', dca: '\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0645\u0646\u062A\u0638\u0645 (DCA)', next: '\u0627\u0644\u062C\u0627\u064A',
       buyAt: '\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621', above: '\u0641\u0648\u0642', conds: '\u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C', met: '\u0627\u062A\u062D\u0642\u0642', tps: '\u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D', toGo: '\u0628\u0627\u0642\u064A', sellP: '\u0628\u064A\u0639', btcD: '\u0633\u064A\u0637\u0631\u0629 BTC', usdtD: '\u0633\u064A\u0637\u0631\u0629 USDT', ethBtc: 'ETH/BTC',
       fng: '\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639', dom: '\u0627\u0644\u0633\u064A\u0637\u0631\u0629', altS: '\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A', etf: '\u062A\u062F\u0641\u0642\u0627\u062A ETF', sectors: '\u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A 24\u0633', cash: '\u0627\u0644\u0643\u0627\u0634', sameBtc: '\u0646\u0641\u0633 \u0627\u0644\u0641\u0644\u0648\u0633 \u0641\u064A BTC', pts: '\u0646\u0642\u0637\u0629', noPaper: '\u0645\u0641\u064A\u0634 \u0645\u062D\u0641\u0638\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0644\u0633\u0647 \u2014 /paper \u0641\u064A \u0627\u0644\u0634\u0627\u062A.',
       noAlerts: '\u0645\u0641\u064A\u0634 \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u2014 \u0627\u0643\u062A\u0628 \u0641\u064A \u0627\u0644\u0634\u0627\u062A: \xAB\u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648 SOL \u0646\u0632\u0644 \u062A\u062D\u062A 80\xBB.', waits: '\u0645\u0633\u062A\u0646\u064A \u064A\u0631\u062C\u0639 \u0627\u0644\u0623\u0648\u0644', nothing: '\u0645\u0641\u064A\u0634 \u062D\u0627\u062C\u0629 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647 \u2014 \u0627\u062D\u062A\u0641\u0638 \u2705', updated: '\u0627\u062A\u062D\u062F\u0651\u062B', refresh: '\u062A\u062D\u062F\u064A\u062B', notConn: '\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0634 \u0645\u062A\u0648\u0635\u0644\u0629.',
@@ -3943,7 +3962,15 @@ var miniapp_default = `<!doctype html>
   }
   function exitTab(r) {
     var nm = { btcD: w.btcD, usdtD: w.usdtD, ethBtc: w.ethBtc }, met = r.exit.macro.filter(function (x) { return x.met; }).length;
-    var c1 = card('\u{1F6AA} ' + w.conds, met + '/3 ' + w.met, r.exit.macro.map(function (x) { return h('div', 'cond', [h('div', 'ok' + (x.met ? ' on' : ''), [x.met ? '\u2713' : '']), h('div', 'grow', [h('div', 't1', [nm[x.k] || x.k]), h('div', 't2', [N((x.now == null ? '\u2014' : x.now + x.unit) + '  ' + x.op + ' ' + x.lvl + x.unit)])])]); }));
+    var symOf = { btcD: 'BTC', usdtD: 'USDT', ethBtc: 'ETH' };
+    var c1 = card('\u{1F6AA} ' + w.conds, met + '/3 ' + w.met, r.exit.macro.map(function (x) {
+      // how far along: "\u2264" levels (dominance) \u2192 target / now; "\u2265" (ETH/BTC) \u2192 now / target
+      var prog = x.now == null ? 0 : x.met ? 100 : x.op === '\u2264' ? Math.max(0, Math.min(100, x.lvl / x.now * 100)) : Math.max(0, Math.min(100, x.now / x.lvl * 100));
+      var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = prog.toFixed(0) + '%'; if (x.met) b.firstChild.style.background = 'var(--up)';
+      var ic = h('div', 'cic', [icon(symOf[x.k] || 'BTC'), h('span', 'badge' + (x.met ? ' on' : ''), [x.met ? '\u2713' : '\u2026'])]);
+      return h('div', 'cond', [ic, h('div', 'grow', [h('div', 't1', [nm[x.k] || x.k, ' ', h('span', 'pill ' + (x.met ? 'p-reinforce' : 'p-hold'), [x.met ? '\u2713 ' + w.met : N(prog.toFixed(0) + '%')])]),
+        h('div', 't2', [w.now + ' ', N(x.now == null ? '\u2014' : x.now + x.unit), ' \xB7 ' + w.target + ' ', N(x.op + ' ' + x.lvl + x.unit)]), b])]);
+    }));
     var c2 = card('\u{1F4B0} ' + w.tps, null, r.exit.tps.length ? fold('tps', r.exit.tps.map(function (t) { var b = h('div', 'bar', [h('i')]); b.firstChild.style.width = Math.max(2, Math.min(100, 100 - t.to)) + '%'; return h('div', 'row', [icon(t.sym), h('div', 'grow', [h('div', 't1', ['TP' + t.n + ' ', N(usd(t.level))]), b]), h('div', 'end', [h('div', 't1', [N(t.to <= 0 ? '\u2713' : pct(t.to, 1))]), h('div', 't2', [w.sellP + ' ' + t.sell + '%'])])]); }), 4) : [h('div', 'empty', ['\u2014'])]);
     return [c1, c2];
   }
@@ -4207,7 +4234,7 @@ async function report(env, now = Date.now()) {
     vsBtc: c.vs ? r25(c.vs.pct) : null
   }));
   const rows = [...m.top, ...m.top500], logos = {};
-  const want = /* @__PURE__ */ new Set([...coins.map((c) => c.sym), ...sum.plan.map((p) => p.sym), ...paper && paper.coins ? paper.coins.map((c) => c.coin) : []]);
+  const want = /* @__PURE__ */ new Set(["BTC", "USDT", "ETH", ...coins.map((c) => c.sym), ...sum.plan.map((p) => p.sym), ...paper && paper.coins ? paper.coins.map((c) => c.coin) : []]);
   for (const S of want) {
     const own = (user.coins || []).find((c) => c && String(c.sym).toUpperCase() === S), id = own && own.cgId || m.idOf[S];
     const r = id && rows.find((x) => x.id === id) || rows.find((x) => String(x.sym || "").toUpperCase() === S);
@@ -4323,6 +4350,9 @@ var worker_default = {
       await runWatch(env).then((r) => {
         if (r.fired) console.log(JSON.stringify({ watch: r }));
       }).catch((e) => log("watch", e));
+      await kickPrices(env).then((r) => {
+        if (r.kick === "sent" || r.kick === "refused") console.log(JSON.stringify(r));
+      }).catch((e) => log("kick", e));
       await runDaily(env, now).then((r) => {
         if (r.job) console.log(JSON.stringify({ daily: r }));
       }).catch((e) => log("daily", e));

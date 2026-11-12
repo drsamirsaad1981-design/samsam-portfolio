@@ -3,7 +3,7 @@
 import ai from '../ai-worker.js';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
-import { runDaily } from './daily.mjs';
+import { runDaily, kickPrices } from './daily.mjs';
 import { page, api, cardSend, logo } from './miniapp.mjs';
 import { resetBudget } from './data.mjs';
 
@@ -25,6 +25,7 @@ export default {
     ctx.waitUntil((async () => {
       resetBudget();   // one allowance of outside calls for the whole run (Cloudflare counts per run)
       await runWatch(env).then(r => { if (r.fired) console.log(JSON.stringify({ watch: r })); }).catch(e => log('watch', e));
+      await kickPrices(env).then(r => { if (r.kick === 'sent' || r.kick === 'refused') console.log(JSON.stringify(r)); }).catch(e => log('kick', e));   // GitHub late → run the market snapshot now
       await runDaily(env, now).then(r => { if (r.job) console.log(JSON.stringify({ daily: r })); }).catch(e => log('daily', e));   // phase 5: morning / evening / radars / pinned
     })());
   },

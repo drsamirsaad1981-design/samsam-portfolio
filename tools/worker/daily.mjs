@@ -303,3 +303,22 @@ export async function runDaily(env, now = Date.now()) {
   if (c.sectors && min % 60 === 25) return { job: 'sectors', ...(await sectorRadar(env, now)) };
   return { job: null };
 }
+
+// ── GitHub runs the market snapshot "twice an hour" but often an hour+ late. When the snapshot is over 25 min old, the
+// Worker (whose cron is on time) asks GitHub to run it now (workflow_dispatch) — at most once every 20 min.
+// Needs the Worker secret GH_DISPATCH_TOKEN: a fine-grained GitHub token for this repo only, "Actions: Read and write".
+const REPO = 'drsamirsaad1981-design/samsam-portfolio';
+export async function kickPrices(env, now = Date.now()) {
+  if (!env.GH_DISPATCH_TOKEN) return { kick: 'no token' };
+  const m = await loadMarket([], []).catch(() => null), t = m && m.parts && Date.parse(m.parts.top);
+  if (!t || now - t < 25 * 60e3) return { kick: 'fresh' };
+  const last = +(await kvGet(env, 'tg:kick')) || 0;
+  if (now - last < 20 * 60e3) return { kick: 'waiting' };
+  await kvPut(env, 'tg:kick', String(now), 3600);
+  const r = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/prices.yml/dispatches`, { method: 'POST',
+    headers: { authorization: 'Bearer ' + env.GH_DISPATCH_TOKEN, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28', 'user-agent': 'samsam-worker', 'content-type': 'application/json' },
+    body: JSON.stringify({ ref: 'main' }) }).catch(() => null);
+  const ok = !!(r && r.status === 204);
+  if (!ok) console.log(JSON.stringify({ kick: 'refused', status: r && r.status }));
+  return { kick: ok ? 'sent' : 'refused', age_min: Math.round((now - t) / 60e3) };
+}
