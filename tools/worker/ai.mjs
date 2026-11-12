@@ -194,9 +194,10 @@ export async function ask(env, question, lang = 'en') {
   const u = await usage(env);
   if (u.left <= 0) return { error: 'limit', limit: u.limit };
   const now = Date.now(), ctx = context(env);
-  const messages = [...(await history(env)), { role: 'user', content: String(question).slice(0, 2000) }];
-  let model = env.BOT_MODEL || 'claude-sonnet-5-5', fellBack = false, text = '';
   const qLang = /[\u0600-\u06FF]/.test(String(question)) ? 'ar' : 'en';   // answer in the language of THIS message
+  // the language note rides on the question itself (stronger than the system prompt when earlier answers were in the other language)
+  const messages = [...(await history(env)), { role: 'user', content: String(question).slice(0, 2000) + (qLang === 'ar' ? '\n\n(جاوب بالعربي المصري)' : '\n\n(Reply in English.)') }];
+  let model = env.BOT_MODEL || 'claude-sonnet-5-5', fellBack = false, text = '';
   for (let round = 0; round <= MAX_ROUNDS; round++) {
     // the tools stay declared every round (earlier tool turns need them); the last round may not call any more
     const body = { max_tokens: 2000, system: system(now, lang, qLang), tools: TOOLS, ...(round === MAX_ROUNDS ? { tool_choice: { type: 'none' } } : {}), messages };

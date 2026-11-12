@@ -1195,9 +1195,9 @@ async function ask(env, question, lang = "en") {
   const u = await usage(env);
   if (u.left <= 0) return { error: "limit", limit: u.limit };
   const now = Date.now(), ctx = context(env);
-  const messages = [...await history(env), { role: "user", content: String(question).slice(0, 2e3) }];
-  let model = env.BOT_MODEL || "claude-sonnet-5-5", fellBack = false, text = "";
   const qLang = /[\u0600-\u06FF]/.test(String(question)) ? "ar" : "en";
+  const messages = [...await history(env), { role: "user", content: String(question).slice(0, 2e3) + (qLang === "ar" ? "\n\n(\u062C\u0627\u0648\u0628 \u0628\u0627\u0644\u0639\u0631\u0628\u064A \u0627\u0644\u0645\u0635\u0631\u064A)" : "\n\n(Reply in English.)") }];
+  let model = env.BOT_MODEL || "claude-sonnet-5-5", fellBack = false, text = "";
   for (let round = 0; round <= MAX_ROUNDS; round++) {
     const body = { max_tokens: 2e3, system: system(now, lang, qLang), tools: TOOLS, ...round === MAX_ROUNDS ? { tool_choice: { type: "none" } } : {}, messages };
     let r = await claude(env, model, body);

@@ -268,7 +268,7 @@ check('footer: where the numbers came from + "N/30 left today"', /📡 Data: Coi
 check('buttons: 🪙 SOL (opens its card) · 🔥 Liq Map · 🆕 New chat · ⬅️ Menu', JSON.stringify(btns(v).map(b => b.text)) === JSON.stringify(['🪙 SOL', '🔥 Liq Map', '🆕 New chat', '⬅️ Menu']) && btns(v)[0].callback_data === 'c:solana', btns(v));
 check('the system prompt forbids numbers from memory and asks for short phone lines', /must come from a tool result/.test(claudeCalls[0].system) && /≤ 40 characters/.test(claudeCalls[0].system) && claudeCalls[0].model === 'claude-sonnet-5-5', claudeCalls[0].system.slice(0, 120));
 sent.length = 0; claudeCalls.length = 0; await say('and ETH?');
-check('it remembers: the next question carries the earlier question + answer', claudeCalls[0].messages.length === 3 && /price of SOL/.test(claudeCalls[0].messages[0].content) && /SOL\*\* is/.test(claudeCalls[0].messages[1].content), claudeCalls[0].messages.map(x => String(x.content).slice(0, 30)));
+check('it remembers: the next question carries the earlier question + answer', claudeCalls[0].messages.length === 3 && /price of SOL\?$/.test(claudeCalls[0].messages[0].content) && /SOL\*\* is/.test(claudeCalls[0].messages[1].content), claudeCalls[0].messages.map(x => String(x.content).slice(0, 30)));
 sent.length = 0; await say('/new');
 check('/new → "New chat" and the memory is gone', /New chat/.test(last().b.text));
 claudeCalls.length = 0; await say('hello there');
@@ -283,6 +283,7 @@ sent.length = 0; claudeCalls.length = 0; await say('keep looking at btc please')
 check('a model that keeps calling tools → after 8 rounds it must answer (tools still declared, tool_choice none) — no error', /Final answer after many rounds/.test(last().b.text) && claudeCalls.length === 9 && claudeCalls.at(-1).tool_choice.type === 'none' && claudeCalls.every(c => c.tools), [claudeCalls.length, last().b.text.slice(0, 60)]);
 await say('/new'); claudeCalls.length = 0; await say('ما هي أفضل عملة؟'); await say('Which coins are weaker than BTC in my portfolio?');
 check('language follows THIS message: Arabic question → "answer in Egyptian Arabic", English after it → "answer in English"', /in Arabic — answer in Egyptian Arabic/.test(claudeCalls[0].system) && /in English — answer in English/.test(claudeCalls.at(-1).system), claudeCalls.map(c => (c.system.match(/latest message is in [^—]+— [^(]+/) || [''])[0]));
+check('…and the note rides on the question itself ("(Reply in English.)"), not kept in the memory', /\(Reply in English\.\)$/.test(claudeCalls.at(-1).messages.at(-1).content) && /جاوب بالعربي/.test(claudeCalls[0].messages.at(-1).content) && !claudeCalls.at(-1).messages.slice(0, -1).some(m => /Reply in English|جاوب بالعربي/.test(String(m.content))), claudeCalls.at(-1).messages.map(m => String(m.content).slice(-30)));
 sent.length = 0; claudeCalls.length = 0; const dup = UPD + 1;
 await post({ update_id: dup, message: { message_id: 9, chat: { id: 555 }, text: 'what is the price of SOL?' } });
 await post({ update_id: dup, message: { message_id: 9, chat: { id: 555 }, text: 'what is the price of SOL?' } });
