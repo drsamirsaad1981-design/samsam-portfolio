@@ -449,13 +449,16 @@ check('wrangler.toml runs the alerts every 5 minutes', /crons = \["\*\/5 \* \* \
 
 // ── 🎙️ voice notes → Whisper (Workers AI binding) → answered as if typed ──
 const aiRuns = []; let HEARD = 'what is the price of SOL?', AI_FAIL = false;
-const ENVV = { ...ENV, AI: { run: async (model, inp) => { aiRuns.push({ model, inp }); if (AI_FAIL) throw new Error('3010: bad audio'); return { text: HEARD, word_count: 6 }; } } };
+let VLANG = 'en', VPROB = 0.95, VFORCED = null;   // what Whisper "detects", and (unsure case) what each forced language gives
+const ENVV = { ...ENV, AI: { run: async (model, inp) => { aiRuns.push({ model, inp }); if (AI_FAIL) throw new Error('3010: bad audio');
+  if (inp.language && VFORCED) return { text: VFORCED[inp.language][0], segments: [{ avg_logprob: VFORCED[inp.language][1] }] };
+  return { text: HEARD, word_count: 6, transcription_info: { language: /[\u0600-\u06FF]/.test(HEARD) ? 'ar' : VLANG, language_probability: VPROB }, segments: [{ avg_logprob: -0.2 }] }; } } };
 const voice = (v, env = ENVV) => post({ update_id: ++UPD, message: { message_id: 3, chat: { id: 555, type: 'private' }, from: { id: 555 }, voice: { file_id: 'VF1', duration: 5, mime_type: 'audio/ogg', file_size: 70000, ...v } } }, ENV.TG_SECRET, env);
 await say('/new'); sent.length = 0; claudeCalls.length = 0; fileGets.length = 0; await voice();
 const vm = sent.filter(x => x.m === 'sendMessage' || x.m === 'editMessageText');
 check('voice → "🎙️ Listening…" at once', vm[0] && vm[0].m === 'sendMessage' && /^🎙️ (Listening|بسمع)…$/.test(vm[0].b.text), vm.map(x => x.b.text));
 check('…the file is fetched from Telegram (getFile, then the download)', sent.some(x => x.m === 'getFile' && x.b.file_id === 'VF1') && fileGets.length === 1 && fileGets[0].endsWith('/voice/file_9.oga'), fileGets);
-check('…Whisper turbo gets the whole note as base64 (+ the crypto words hint)', aiRuns.length === 1 && aiRuns[0].model === '@cf/openai/whisper-large-v3-turbo' && aiRuns[0].inp.audio === Buffer.from(VOICE_BYTES).toString('base64') && /BTC/.test(aiRuns[0].inp.initial_prompt), aiRuns[0] && aiRuns[0].model);
+check('…Whisper turbo: first finds the language (no hint), then the whole note again in English with the English crypto words', aiRuns.length === 2 && aiRuns[0].model === '@cf/openai/whisper-large-v3-turbo' && aiRuns[0].inp.audio === Buffer.from(VOICE_BYTES).toString('base64') && !aiRuns[0].inp.initial_prompt && !aiRuns[0].inp.language && aiRuns[1].inp.language === 'en' && /BTC/.test(aiRuns[1].inp.initial_prompt) && !/[\u0600-\u06FF]/.test(aiRuns[1].inp.initial_prompt), aiRuns.map(x => [x.inp.language, x.inp.initial_prompt]));
 check('…that message becomes "🎙️ I heard: <i>…</i>" + "🧠 Thinking…" under it', vm[1] && vm[1].m === 'editMessageText' && vm[1].b.message_id === 7 && /^🎙️ (I heard:|سمعت:) <i>what is the price of SOL\?<\/i>\n🧠 (Thinking|بفكّر)…$/.test(vm[1].b.text) && okHtml(vm[1].b.text), vm[1] && vm[1].b.text);
 check('…then answered by Claude exactly like the typed question (tools called, answer about SOL)', claudeCalls.length === 2 && claudeCalls[0].messages.at(-1).content.startsWith('what is the price of SOL?') && /SOL<\/b> is \$/.test(last().b.text), [claudeCalls.length, last().b.text.slice(0, 80)]);
 check('…all in ONE message: one sendMessage, the answer is an edit with "I heard" still on top + the buttons', sent.filter(x => x.m === 'sendMessage').length === 1 && last().m === 'editMessageText' && last().b.message_id === 7 && /^🎙️ (I heard:|سمعت:) <i>what is the price of SOL\?<\/i>\n\n<b>SOL/.test(last().b.text) && /left today|النهارده/.test(last().b.text) && btnTexts(last()).some(x => /SOL/.test(x)) && okHtml(last().b.text), [sent.map(x => x.m), last().b.text.slice(0, 90)]);
@@ -480,7 +483,18 @@ check('Worker without the AI binding → says so, asks to type it', /AI binding/
 sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 4, chat: { id: 999 }, voice: { file_id: 'X', duration: 3 } } }, ENV.TG_SECRET, ENVV);
 check('a voice note from another chat → ignored', sent.length === 0);
 sent.length = 0; aiRuns.length = 0; await post({ update_id: ++UPD, message: { message_id: 5, chat: { id: 555 }, audio: { file_id: 'AU1', duration: 20, file_size: 300000 } } }, ENV.TG_SECRET, ENVV);
-check('an audio file (not a voice note) is understood too', aiRuns.length === 1 && sent.some(x => x.m === 'getFile' && x.b.file_id === 'AU1'));
+check('an audio file (not a voice note) is understood too', aiRuns.length >= 1 && sent.some(x => x.m === 'getFile' && x.b.file_id === 'AU1'));
+// the note that came back as Arabic letters + Russian ("… 24 час"): Whisper unsure → English and Arabic both, the surer one wins
+HEARD = 'تبهني لقوضية كيفية كوين في 24 час'; VLANG = 'ru'; VPROB = 0.41; VFORCED = { en: ['Notify me for liquidation of KAVA coin in 24 hours.', -0.25], ar: ['نبهني لتصفية كافا كوين في 24 ساعة', -0.9] };
+sent.length = 0; aiRuns.length = 0; claudeCalls.length = 0; await voice();
+check('Whisper unsure (another script, low probability) → tries English and Arabic, keeps the surer one (English)', aiRuns.length === 3 && aiRuns.slice(1).map(x => x.inp.language).sort().join() === 'ar,en' && out().some(x => /I heard:|سمعت:/.test(x.b.text) && /Notify me for liquidation of KAVA/.test(x.b.text)), out().map(x => x.b.text.slice(0, 80)));
+VFORCED = { en: ['Wait hold on there', -1.4], ar: ['نبّهني لو سولانا نزلت تحت 80', -0.3] }; sent.length = 0; aiRuns.length = 0; await voice();
+check('…and when the Arabic one is surer, Arabic wins', out().some(x => /نبّهني لو سولانا نزلت تحت 80/.test(x.b.text)));
+VFORCED = { en: ['Привет как дела', -0.1], ar: ['نبهني لو بيتكوين نزل', -0.8] }; sent.length = 0; aiRuns.length = 0; await voice();
+check('…never one in another script (Cyrillic), even if Whisper is surer of it', out().some(x => /نبهني لو بيتكوين نزل/.test(x.b.text)) && !out().some(x => /Привет/.test(x.b.text)));
+HEARD = 'نبّهني لو ETH نزل تحت 2000'; VLANG = 'ar'; VPROB = 0.97; VFORCED = null; sent.length = 0; aiRuns.length = 0; await voice();
+check('sure it is Arabic → again in Arabic with the Arabic hint', aiRuns.length === 2 && aiRuns[1].inp.language === 'ar' && /نبّهني/.test(aiRuns[1].inp.initial_prompt));
+VLANG = 'en'; VPROB = 0.95; HEARD = 'what is the price of SOL?';
 check('wrangler.toml has the AI binding for voice', /\[ai\]\s*\nbinding = "AI"/.test(fs.readFileSync(path.join(ROOT, 'tools/worker/wrangler.toml'), 'utf8')));
 
 // ── an old market snapshot (GitHub ran its schedule late) + CoinGecko busy → the coin asked about is priced live by the exchanges ──

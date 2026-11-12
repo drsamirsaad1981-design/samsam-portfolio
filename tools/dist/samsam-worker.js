@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 19448405a8ae0961
+// sources-hash: 324321ab7a73770a
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2255,7 +2255,17 @@ async function compose(env, kind, lang2, facts) {
 // tools/worker/voice.mjs
 var MAX_SEC = 120;
 var MODEL = "@cf/openai/whisper-large-v3-turbo";
-var HINT = "Bitcoin BTC, ETH, SOL, LINK, PENDLE, funding, alert, portfolio, take profit. \u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648\u060C \u0645\u062D\u0641\u0638\u062A\u064A\u060C \u0627\u0644\u0633\u0639\u0631\u060C \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C.";
+var HINT = {
+  en: "Bitcoin BTC, Ethereum ETH, Solana SOL, KAVA, LINK, funding, liquidation, alert me if, portfolio, take profit, paper buy.",
+  ar: "\u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648\u060C \u0645\u062D\u0641\u0638\u062A\u064A\u060C \u0627\u0644\u0633\u0639\u0631\u060C \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C\u060C \u062A\u0635\u0641\u064A\u0627\u062A\u060C \u062A\u0645\u0648\u064A\u0644\u060C \u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0628\u064A\u062A\u0643\u0648\u064A\u0646 BTC\u060C \u0625\u064A\u062B\u064A\u0631\u064A\u0648\u0645 ETH\u060C \u0633\u0648\u0644\u0627\u0646\u0627 SOL\u060C \u0643\u0627\u0641\u0627 KAVA."
+};
+var score = (o) => {
+  const s = o && o.segments || [];
+  const v = s.map((x) => +x.avg_logprob).filter(isFinite);
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : -9;
+};
+var clean = (o) => String(o && o.text || "").replace(/\s+/g, " ").trim().slice(0, 1e3);
+var odd = (t) => /[^\p{Script=Latin}\p{Script=Arabic}\p{M}\p{N}\p{P}\p{S}\s]/u.test(t);
 function b64(buf) {
   const u8 = new Uint8Array(buf);
   let s = "";
@@ -2272,9 +2282,22 @@ async function transcribe(env, voice) {
     if (!p) return { error: "fail" };
     const audio = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${p}`);
     if (!audio.ok) return { error: "fail" };
-    const out = await env.AI.run(MODEL, { audio: b64(await audio.arrayBuffer()), vad_filter: true, initial_prompt: HINT });
-    const text = String(out && out.text || "").replace(/\s+/g, " ").trim().slice(0, 1e3);
-    return text.replace(/[\p{P}\s]/gu, "").length < 2 ? { error: "empty" } : { text };
+    const a = b64(await audio.arrayBuffer());
+    const run2 = (language, hint) => env.AI.run(MODEL, { audio: a, vad_filter: true, ...language ? { language } : {}, ...hint ? { initial_prompt: hint } : {} });
+    const first = await run2(null, null), info = first && first.transcription_info || {}, lang2 = info.language, prob = +info.language_probability || 0;
+    let best;
+    if ((lang2 === "en" || lang2 === "ar") && prob >= 0.7) best = { o: await run2(lang2, HINT[lang2]), lang: lang2 };
+    else {
+      const [en, ar] = await Promise.all([run2("en", HINT.en), run2("ar", HINT.ar)]);
+      const c = [{ o: en, lang: "en" }, { o: ar, lang: "ar" }].filter((x) => clean(x.o)).sort((x, y) => odd(clean(x.o)) - odd(clean(y.o)) || score(y.o) - score(x.o));
+      best = c[0] || { o: first, lang: lang2 };
+    }
+    let text = clean(best.o);
+    if (!text || odd(text)) {
+      const t0 = clean(first);
+      if (t0 && !odd(t0)) text = t0;
+    }
+    return text.replace(/[\p{P}\s]/gu, "").length < 2 ? { error: "empty" } : { text, lang: best.lang };
   } catch (e) {
     console.log(JSON.stringify({ voice: "fail", message: String(e && e.message).slice(0, 300) }));
     return { error: "fail" };
