@@ -18,7 +18,7 @@ import { prepareTrade } from './trade.mjs';
 import { paperTrade, paperFacts } from './paper.mjs';
 
 const H = 3600e3, DAY = 24 * H;
-const LIMIT = env => isOwner(env) ? Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30)) : Math.max(1, Math.min(100, parseInt(env.MEMBER_AI_LIMIT || '10', 10) || 10));   // the owner 30, each invited person 10
+const LIMIT = env => isOwner(env) ? Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30)) : Math.max(1, Math.min(100, parseInt(env.MEMBER_AI_LIMIT || '5', 10) || 5));   // the owner 30, each invited person 5 (changeable per person in /users — next)
 const MAX_ROUNDS = 8;          // tool rounds per question (the last one answers with what it has)
 const HISTORY = 10;            // messages remembered
 const r2 = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;

@@ -832,7 +832,7 @@ sent.length = 0; await sayAs(777, '/invite');
 check('Ali: /invite → owner only', /Only the bot owner/.test(last().b.text));
 kvStore.delete('tg:777:alerts'); claudeCalls.length = 0; sent.length = 0; await sayAs(777, 'alert me sol');
 check('Ali sets alerts → stored under his chat only; yours untouched', JSON.parse(kvStore.get('tg:777:alerts') || '[]').length >= 1 && JSON.parse(kvStore.get('tg:555:alerts') || '[]').every(a => a.id !== JSON.parse(kvStore.get('tg:777:alerts'))[0].id));
-check('…his AI limit is 10 a day (yours 30)', /\d+\/10 left today/.test(last().b.text), last().b.text.slice(-60));
+check('…his AI limit is 5 a day (yours 30)', /\d+\/5 left today/.test(last().b.text), last().b.text.slice(-60));
 check('…and Claude is told he is an invited user (not Samir)', /invited/.test(claudeCalls[0].system) && !/one private user, Samir/.test(claudeCalls[0].system));
 check('…his "/" menu has no /invite or /users', c7 && !c7.b.commands.some(c => /invite|users/.test(c.command)), c7 && c7.b.commands.map(c => c.command));
 check('Mini App for Ali (signed by him) → his report, no portfolio (connected: false)', await (async () => { const r = await apiCall({ initData: initData(777) }); const j = await r.json(); return r.status === 200 && j.report.connected === false; })());
