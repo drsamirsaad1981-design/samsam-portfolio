@@ -1,12 +1,15 @@
 // tools/worker/index.mjs — the one Cloudflare Worker: AI Analysis (/analyze, tools/ai-worker.js) + the Telegram bot (/tg).
 // Built into a single file by tools/build-worker.mjs → tools/dist/samsam-worker.js (that file is what you paste).
-import ai from '../ai-worker.js';
+import ai, { setMemberCheck } from '../ai-worker.js';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
 import { runDaily, kickPrices } from './daily.mjs';
 import { page, api, cardSend, logo } from './miniapp.mjs';
 import { resetBudget } from './data.mjs';
-import { asChat, chats, migrateOwner } from './who.mjs';
+import { asChat, chats, migrateOwner, memberByEmail, DEF_REPORTS } from './who.mjs';
+
+// AI Analysis in the app: people invited through the bot whose e-mail Samir approved — their own daily reports (/users), Sonnet
+setMemberCheck(async (env, email) => { const x = await memberByEmail(env, email); return x ? { limit: Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, model: env.MEMBER_MODEL || 'claude-sonnet-5-5' } : null; });
 
 export default {
   async fetch(request, env, ctx) {

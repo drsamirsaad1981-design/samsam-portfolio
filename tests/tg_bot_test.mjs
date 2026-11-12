@@ -40,7 +40,7 @@ const USER = () => ({
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
   meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
-const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = [], pinWrites = []; let OWNER_PIN = 'UID1', ACCOUNTS = ['UID1']; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
+const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = [], pinWrites = [], accessWrites = [], tglinkWrites = []; let TGLINK = null; let OWNER_PIN = 'UID1', ACCOUNTS = ['UID1']; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
@@ -70,7 +70,12 @@ globalThis.fetch = async (input, init = {}) => {
   if (u.startsWith('https://firestore.googleapis.com/')) {
     if ((init.headers || {}).authorization !== 'Bearer tok') return J({}, 403);
     const U = USER();
+    if (u.endsWith('/documents/config/access')) { accessWrites.push(JSON.parse(body)); return J({}); }
+    if (/\/users\/UID2\/meta\/tglink$/.test(u) && init.method === 'PATCH') { tglinkWrites.push(JSON.parse(body)); TGLINK = null; return J({}); }
     if (u.endsWith('/documents/config/owner')) { if (init.method === 'PATCH') { pinWrites.push(JSON.parse(body)); OWNER_PIN = JSON.parse(body).fields.uid.stringValue; return J({}); } return OWNER_PIN ? J(doc({ uid: OWNER_PIN })) : J({}, 404); }
+    if (u.endsWith(':runQuery') && /"limit":1000/.test(body)) return J([...ACCOUNTS.map(a => ({ document: { name: 'projects/p/databases/(default)/documents/users/' + a + '/meta/info', fields: {} } })), ...(TGLINK ? [{ document: { name: 'projects/p/databases/(default)/documents/users/UID2/meta/tglink', fields: doc(TGLINK).fields } }] : [])]);
+    if (/\/users\/UID2\/(coins|txs|accum)\?/.test(u)) return J({ documents: /coins/.test(u) ? [doc({ sym: 'ETH', cgId: 'ethereum', opening: { qty: 2, avg: 2500 } })] : [] });
+    if (u.endsWith('/users/UID2/meta/info')) return J(doc({}));
     if (u.endsWith(':runQuery')) return J(ACCOUNTS.map(a => ({ document: { name: 'projects/p/databases/(default)/documents/users/' + a + '/meta/info' } })));
     if (u.includes('/users/UID1/coins?')) return J({ documents: U.coins.map(doc) });
     if (u.includes('/users/UID1/txs?')) return J({ documents: committed.map(w => ({ name: w.update.name, fields: w.update.fields })) });
@@ -79,7 +84,7 @@ globalThis.fetch = async (input, init = {}) => {
     if (u.endsWith('/users/UID1/meta/info')) return J(doc(U.meta));
     return J({}, 404);
   }
-  if (u.startsWith('https://www.googleapis.com/service_accounts')) return J({ keys: [] });
+  if (u.startsWith('https://www.googleapis.com/service_accounts')) return J({ keys: [{ ...crypto.createPublicKey(privateKey).export({ format: 'jwk' }), kid: 'k1', alg: 'RS256', use: 'sig' }] });
   if (u === 'https://api.anthropic.com/v1/messages') {
     const b = JSON.parse(body); claudeCalls.push(b);
     if (/SMART (MORNING|EVENING)/.test(b.system || '')) { composeCalls.push(b); if (COMPOSE_FAIL) return J({ type: 'error', error: { type: 'overloaded_error' } }, 529); const f = JSON.parse(b.messages[0].content.replace(/^FACTS:\n/, '')); return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: /MORNING/.test(b.system) ? `☀️ **Calm day**\n🎯 **Today**\n1. ${(f.todo[0] || {}).what || 'hold'}` : `🌙 **Quiet day**\n• since morning: **${f.since_morning ? f.since_morning.portfolio_change_usd : 'n/a'}**` }] }); }
@@ -840,7 +845,7 @@ LIVE.solana.usd = 130; kvStore.set('tg:777:alerts', JSON.stringify([{ id: 'a7', 
 sent.length = 0; Wd = await fresh(); await cron(Wd); LIVE.solana.usd = 150;
 check('cron: Ali\'s alert fires to Ali (chat 777), not to you', sent.some(x => x.m === 'sendMessage' && String(x.b.chat_id) === '777' && /SOL below/.test(x.b.text)) && !sent.some(x => x.m === 'sendMessage' && String(x.b.chat_id) === '555' && /SOL below \$140/.test(x.b.text)), sent.map(x => [x.b.chat_id, (x.b.text || '').slice(0, 30)]));
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/users');
-check('/users (owner) → Ali listed with 🗑', /Ali/.test(last().b.text) && btns(last()).some(b => b.callback_data === 'us:del:777'));
+check('/users (owner) → Ali listed (tap → his card with limits and 🗑)', /Ali/.test(last().b.text) && btns(last()).some(b => b.callback_data === 'us:m:777'));
 sent.length = 0; await tapAs(555, 'us:del:777');
 check('🗑 → Ali removed, told so, and the list redrawn', !JSON.parse(kvStore.get('tg:users'))['777'] && sent.some(x => String(x.b.chat_id) === '777' && /removed/.test(x.b.text || '')) && sent.some(x => x.m === 'editMessageText'));
 for (const k of [...kvStore.keys()]) if (/^tg:nope:/.test(k)) kvStore.delete(k);
@@ -856,6 +861,54 @@ OWNER_PIN = 'UID1'; Wd = await fresh(); sent.length = 0; await postK(Wd, '/portf
 check('pinned UID1 + two accounts → yours', /\$/.test(last().b.text) && !/not connected/i.test(last().b.text));
 ACCOUNTS = ['UID1'];
 check('GitHub alerts use the same pin (config/owner), skip when unsure', /config\/owner/.test(fs.readFileSync(path.join(ROOT, 'tools/alerts.mjs'), 'utf8')) && /no owner pinned — skipped/.test(fs.readFileSync(path.join(ROOT, 'tools/alerts.mjs'), 'utf8')));
+
+// ── phase 10 · step 3: the app for invited people (/app → your ✅ → config/access), /link their portfolio, AI Analysis limits ──
+kvStore.delete('tg:users'); for (const k of [...kvStore.keys()]) if (/^tg:(nope|inv|appreq):|^tg:777:/.test(k)) kvStore.delete(k);
+Wd = await fresh(); sent.length = 0; await postK(Wd, '/invite');
+const code2 = (/<code>([A-Z2-9]{8})<\/code>/.exec(last().b.text) || [])[1]; await sayAs(777, '/start ' + code2);
+sent.length = 0; await sayAs(777, '/app');
+check('/app with no e-mail → how to send it', /\/app you@example\.com/.test(last().b.text));
+sent.length = 0; accessWrites.length = 0; await sayAs(777, '/app Ali.Friend@iCloud.com');
+const req = sent.find(x => String(x.b.chat_id) === '555' && /ap:ok:777/.test(JSON.stringify(x.b.reply_markup || {})));
+check('/app ali.friend@icloud.com → "sent for approval"; you get ✅ Allow / ❌ No; nothing allowed yet', /approval/.test(sent.find(x => x.m === 'sendMessage' && String(x.b.chat_id) === '777').b.text) && req && /ali\.friend@icloud\.com/.test(req.b.text) && accessWrites.length === 0, [sent.map(x => [x.m, x.b.chat_id, (x.b.text || '').slice(0, 40)]), accessWrites.length]);
+sent.length = 0; await tapAs(555, 'ap:ok:777');
+check('✅ → his e-mail goes into config/access (the rules read it) and he gets the app link', accessWrites.length === 1 && JSON.stringify(accessWrites[0]).includes('ali.friend@icloud.com') && sent.some(x => String(x.b.chat_id) === '777' && /drsamirsaad1981-design\.github\.io/.test(x.b.text || '')), accessWrites);
+sent.length = 0; await sayAs(777, '/link ABCDEFGH');
+check('/link with a wrong code → not valid (nothing linked)', /not valid/.test(last().b.text) && !JSON.parse(kvStore.get('tg:users'))['777'].uid);
+TGLINK = { code: 'K7M2PQ9R', exp: new Date(Date.now() + 5 * 60e3).toISOString(), email: 'someone.else@x.com' }; sent.length = 0; await sayAs(777, '/link K7M2PQ9R');
+check('…a code made by another e-mail than the approved one → refused', /another e-mail/.test(last().b.text) && !JSON.parse(kvStore.get('tg:users'))['777'].uid);
+TGLINK = { code: 'K7M2PQ9R', exp: new Date(Date.now() - 60e3).toISOString(), email: 'ali.friend@icloud.com' }; sent.length = 0; await sayAs(777, '/link K7M2PQ9R');
+check('…an expired code (over 10 min) → refused', /not valid/.test(last().b.text));
+TGLINK = { code: 'K7M2PQ9R', exp: new Date(Date.now() + 5 * 60e3).toISOString(), email: 'ali.friend@icloud.com' }; sent.length = 0; tglinkWrites.length = 0; await sayAs(777, '/start LK7M2PQ9R');
+check('…the app\'s "Open the bot" (/start LCODE) → linked to UID2, the code used up, his daily messages on', JSON.parse(kvStore.get('tg:users'))['777'].uid === 'UID2' && tglinkWrites.length === 1 && /Linked/.test(last().b.text) && JSON.parse(kvStore.get('tg:777:daily')).morning === true, [kvStore.get('tg:users'), last().b.text]);
+sent.length = 0; await sayAs(777, '/portfolio');
+check('Ali /portfolio → HIS portfolio (2 ETH from UID2) — never yours', /ETH/.test(last().b.text) && !/LINK|SOL/.test(last().b.text), last().b.text.slice(0, 200));
+sent.length = 0; await postK(await fresh(), '/portfolio');
+check('…and yours is still yours', /BTC/.test(last().b.text) && /SOL/.test(last().b.text));
+// limits in /users: his card, − / +
+sent.length = 0; await tapAs(555, 'us:m:777');
+check('/users → tap Ali → his card: app e-mail, linked, 🧠 5 a day, 📊 1 a day', /ali\.friend@icloud\.com/.test(last().b.text) && /linked/.test(last().b.text) && /<b>5<\/b>/.test(last().b.text) && /<b>1<\/b>/.test(last().b.text), last().b.text);
+await tapAs(555, 'us:ai:+:777'); await tapAs(555, 'us:ai:+:777'); await tapAs(555, 'us:rp:-:777');
+check('…🧠 + + → 7 questions, 📊 − → 0 reports (saved for him)', JSON.parse(kvStore.get('tg:users'))['777'].ai === 7 && JSON.parse(kvStore.get('tg:users'))['777'].reports === 0);
+claudeCalls.length = 0; sent.length = 0; await sayAs(777, 'what is the price of SOL?');
+check('…his bot now says x/7 left today', /\/7 left today/.test(last().b.text), last().b.text.slice(-40));
+// AI Analysis in the app (a real signed Firebase token)
+const fbToken = (email, uid) => { const b = o => Buffer.from(JSON.stringify(o)).toString('base64url'), now = Math.floor(Date.now() / 1000);
+  const h = b({ alg: 'RS256', kid: 'k1', typ: 'JWT' }), p = b({ aud: 'samsam-portfolio', iss: 'https://securetoken.google.com/samsam-portfolio', sub: uid, email, email_verified: true, iat: now, auth_time: now, exp: now + 3600 });
+  return h + '.' + p + '.' + crypto.sign('RSA-SHA256', Buffer.from(h + '.' + p), privateKey).toString('base64url'); };
+const ENVA = { ...ENVK, ALLOWED_EMAILS: 'dr.samir.saad.1981@gmail.com', DAILY_LIMIT: '5' };
+const analyze = (email, uid) => W.fetch(new Request(HOST + '/analyze', { method: 'POST', headers: { Origin: 'https://drsamirsaad1981-design.github.io', 'content-type': 'application/json' }, body: JSON.stringify({ idToken: fbToken(email, uid), portfolioData: { value: 1 }, language: 'en' }) }), ENVA, {});
+claudeCalls.length = 0; let an = await analyze('dr.samir.saad.1981@gmail.com', 'UID1');
+check('AI Analysis: you → a report on your model (Opus), limit 5', an.status === 200 && claudeCalls.at(-1).model === 'claude-opus-4-5' && (await an.json()).remaining === 4);
+an = await analyze('ali.friend@icloud.com', 'UID2');
+check('…Ali with reports set to 0 → "not on for this account"', an.status === 429 && claudeCalls.length === 1);
+await tapAs(555, 'us:rp:+:777'); claudeCalls.length = 0; an = await analyze('ali.friend@icloud.com', 'UID2');
+const anj = await an.json();
+check('…reports 1 → his report on Sonnet 5.5, 0 left today; a second → limit', an.status === 200 && claudeCalls.at(-1).model === 'claude-sonnet-5-5' && anj.remaining === 0 && (await analyze('ali.friend@icloud.com', 'UID2')).status === 429, anj);
+check('…an e-mail nobody approved → 403', (await analyze('random@gmail.com', 'UIDX')).status === 403);
+sent.length = 0; accessWrites.length = 0; await tapAs(555, 'us:del:777');
+check('🗑 Ali → his e-mail leaves config/access too (the app closes for him)', accessWrites.length === 1 && !JSON.stringify(accessWrites[0]).includes('ali.friend'), accessWrites);
+check('firestore.rules: own data only; Samir always; invited e-mails from config/access; config/ never writable by the app', /allowedEmail\(\)/.test(fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8')) && /config\/access/.test(fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8')) && /request\.auth\.uid == userId/.test(fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8')) && !/match \/config/.test(fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8')));
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

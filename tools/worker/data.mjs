@@ -7,7 +7,7 @@
 //   · your portfolio from Firebase (Firestore REST, signed in with the service account in the Worker's secrets)
 // Nothing here prints or logs a value. Everything is cached for a short time per Worker instance.
 
-import { isOwner } from './who.mjs';
+import { isOwner, member } from './who.mjs';
 import { priceSeries } from '../alerts-core.mjs';
 import CG_IDS from './cg-ids.json' with { type: 'json' };
 
@@ -221,6 +221,10 @@ async function firestore(sa) {
     return r.json();
   };
   return {
+    async metaDocs() {   // every users/<uid>/meta/<doc> with its fields (the /link code lives in meta/tglink)
+      const rows = await call(base + ':runQuery', { method: 'POST', body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'meta', allDescendants: true }], limit: 1000 } }) }) || [];
+      return rows.filter(x => x.document && x.document.name).map(x => ({ name: x.document.name, data: fields(x.document.fields) }));
+    },
     async users() {
       const rows = await call(base + ':runQuery', { method: 'POST', body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'meta', allDescendants: true }], limit: 200 } }) }) || [];
       return [...new Set(rows.map(x => x.document && x.document.name).filter(n => n && /\/users\/[^/]+\/meta\/info$/.test(n)).map(n => n.match(/\/users\/([^/]+)\/meta\/info$/)[1]))];
@@ -261,6 +265,35 @@ export async function commitDocs(env, uid, docs) {
   cache.delete('user');
   return { ok: true };
 }
+// an invited person's own portfolio — the uid they linked with a code from the app (never anyone else's)
+async function loadMemberUser(env, sa, fresh) {
+  const me = await member(env);
+  if (!me || !me.uid) return null;
+  const key = 'user:' + me.uid;
+  if (fresh) cache.delete(key);
+  return cached(key, 120e3, async () => {
+    const db = await firestore(sa), uid = me.uid;
+    const [coins, txs, accum, meta] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`)]);
+    return { coins, txs, accum, meta: meta || {}, uid };
+  });
+}
+// /link CODE → the account whose meta/tglink holds that code (made in the app's Settings, 10 minutes) → { uid, email } | null
+export async function findLinkCode(env, code) {
+  const sa = serviceAccount(env); if (!sa) return null;
+  const db = await firestore(sa), C = String(code || '').toUpperCase();
+  const hit = (await db.metaDocs()).find(d => /\/users\/[^/]+\/meta\/tglink$/.test(d.name) && d.data.code === C);
+  if (!hit || !(Date.parse(hit.data.exp) > Date.now())) return null;
+  const uid = hit.name.match(/\/users\/([^/]+)\/meta\/tglink$/)[1];
+  await db.set(`users/${uid}/meta/tglink`, { linked: 'telegram', at: new Date().toISOString() }).catch(() => {});   // the code is used up
+  return { uid, email: String(hit.data.email || '').toLowerCase() };
+}
+// the app's access list (config/access) = the members' approved e-mails; the Firestore rules read it
+export async function syncAccess(env, emails) {
+  const sa = serviceAccount(env); if (!sa) return false;
+  const db = await firestore(sa);
+  await db.set('config/access', { emails, at: new Date().toISOString() });
+  return true;
+}
 // whose portfolio is the owner's: FIREBASE_UID, else the pin in Firestore (config/owner, shared with the GitHub alerts),
 // else — only while there is just one account — that account, pinned now. Several accounts and no pin → none (never a
 // stranger's portfolio).
@@ -279,7 +312,7 @@ async function ownerUid(env, db) {
 export async function loadUser(env, fresh = false) {
   const sa = serviceAccount(env);
   if (!sa) return null;
-  if (!isOwner(env)) return null;   // phase 10 step 1: only the owner's portfolio; others link theirs in step 3
+  if (!isOwner(env)) return loadMemberUser(env, sa, fresh);   // an invited person: only the portfolio they linked (/link)
   if (fresh) cache.delete('user');
   return cached('user', 120e3, async () => {
     const db = await firestore(sa);

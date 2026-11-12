@@ -12,3 +12,8 @@ export const signInWithRedirect = signInWithPopup;
 export async function getRedirectResult() { return null; }
 export function onAuthStateChanged(auth, cb) { subs.add(cb); setTimeout(() => cb(cur()), 10); return () => subs.delete(cb); }
 export async function signOut() { localStorage.removeItem(KEY); fire(); }
+
+// e-mail link sign-in (the app's "any e-mail" option) — never a link in the tests
+export function isSignInWithEmailLink() { return false; }
+export async function sendSignInLinkToEmail() {}
+export async function signInWithEmailLink() { throw Object.assign(new Error('not in tests'), { code: 'auth/invalid-action-code' }); }

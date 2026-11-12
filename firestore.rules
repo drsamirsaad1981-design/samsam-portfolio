@@ -1,14 +1,21 @@
 rules_version = '2';
 // Samsam Portfolio — paste this into Firebase console → Firestore Database → Rules → Publish.
-// Only the signed-in owner (allow-listed Google account) can read or write their own data.
+// Each signed-in person reads and writes only their OWN data (users/<their uid>/…), and only if they are allowed:
+// Samir always; people Samir invited through the Telegram bot are listed in config/access (written only by the bot's
+// service account — no app user can read or change that list, or anything under config/).
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function allowedEmail() {
+      return request.auth.token.email in ['dr.samir.saad.1981@gmail.com']
+        || (exists(/databases/$(database)/documents/config/access)
+            && request.auth.token.email.lower() in get(/databases/$(database)/documents/config/access).data.emails);
+    }
     function isOwner(userId) {
       return request.auth != null
         && request.auth.uid == userId
         && request.auth.token.email_verified == true
-        && request.auth.token.email in ['dr.samir.saad.1981@gmail.com'];
+        && allowedEmail();
     }
 
     // Server-side input checks (the app cleans input too; these stop anything that bypasses the app).

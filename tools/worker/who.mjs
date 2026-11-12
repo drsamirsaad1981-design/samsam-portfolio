@@ -48,8 +48,9 @@ export async function useInvite(env, code, chat, from) {
 export async function removeMember(env, chat) {
   const m = await members(env);
   if (!m[String(chat)]) return false;
+  const had = m[String(chat)];
   delete m[String(chat)]; await kput(env, 'tg:users', JSON.stringify(m));
-  return true;
+  return had;   // the record (its e-mail leaves the app's access list — the caller syncs it)
 }
 // a stranger gets one polite answer a day, no more (so the bot can't be used to spam)
 export async function strangerOnce(env, chat) {
@@ -74,3 +75,32 @@ export async function migrateOwner(env) {
     migrated = true;
   } catch (_) {}
 }
+
+// ── a member's details (step 3–4): { email (allowed into the app), uid (their linked portfolio), ai, reports (per-day limits) } ──
+export async function member(env, chat = null) { const m = await members(env); return m[String(chat || chatOf(env))] || null; }
+export async function setMember(env, chat, patch) {
+  const m = await members(env), c = String(chat);
+  if (!m[c]) return null;
+  m[c] = { ...m[c], ...patch };
+  for (const k of Object.keys(m[c])) if (m[c][k] === undefined) delete m[c][k];
+  await kput(env, 'tg:users', JSON.stringify(m));
+  return m[c];
+}
+export async function memberByEmail(env, email) {
+  const e = String(email || '').toLowerCase(), m = await members(env);
+  const hit = Object.entries(m).find(([, x]) => x.email && x.email === e);
+  return hit ? { chat: hit[0], ...hit[1] } : null;
+}
+// the e-mails allowed into the app = the members' approved e-mails (the owner's is in the rules themselves)
+export async function accessEmails(env) { return Object.values(await members(env)).map(x => x.email).filter(Boolean).sort(); }
+// limits: the owner's from the Worker settings; a member's own (set in /users) or the defaults: 5 questions, 1 report
+export const DEF_AI = 5, DEF_REPORTS = 1;
+export async function aiLimitFor(env) {
+  if (isOwner(env)) return Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30));
+  const x = await member(env);
+  return x && Number.isFinite(x.ai) ? x.ai : Math.max(0, parseInt(env.MEMBER_AI_LIMIT || String(DEF_AI), 10) || DEF_AI);
+}
+// a pending /app request (the e-mail waits for the owner's ✅)
+export async function setPending(env, chat, email) { await kput(env, 'tg:appreq:' + chat, email, 7 * 86400); }
+export async function getPending(env, chat) { return kget(env, 'tg:appreq:' + chat); }
+export async function clearPending(env, chat) { await kdel(env, 'tg:appreq:' + chat); }

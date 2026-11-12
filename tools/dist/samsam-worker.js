@@ -1,12 +1,16 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 33e1e369478d8aaa
+// sources-hash: f39a3d5a5cca3f99
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
 var MAX_BODY = 200 * 1024;
 var jwksCache = { keys: null, until: 0 };
 var memCount = /* @__PURE__ */ new Map();
+var memberCheck = null;
+function setMemberCheck(fn) {
+  memberCheck = fn;
+}
 var ai_worker_default = {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
@@ -38,15 +42,20 @@ var ai_worker_default = {
     } catch (e) {
       return reply(401, { error: "Please sign in again, then retry. (" + e.message + ")" });
     }
-    const emails = list(env.ALLOWED_EMAILS || "");
-    if (emails.length && !emails.includes(String(user.email || "").toLowerCase())) return reply(403, { error: "This account is not allowed to use the AI analysis." });
-    const limit = Math.max(1, parseInt(env.DAILY_LIMIT || "5", 10) || 5);
+    const emails = list(env.ALLOWED_EMAILS || ""), em = String(user.email || "").toLowerCase();
+    let limit = Math.max(1, parseInt(env.DAILY_LIMIT || "5", 10) || 5), model = env.MODEL || "claude-opus-4-5";
+    if (emails.length && !emails.includes(em)) {
+      const m = memberCheck ? await memberCheck(env, em).catch(() => null) : null;
+      if (!m) return reply(403, { error: "This account is not allowed to use the AI analysis." });
+      limit = m.limit;
+      model = m.model;
+      if (!(limit > 0)) return reply(429, { error: "AI reports are not on for this account \u2014 ask Samir.", remaining: 0 });
+    }
     const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const key = `ai:${user.uid}:${day}`;
     const used2 = await getCount(env, key);
     if (used2 >= limit) return reply(429, { error: `You have used today's ${limit} AI reports. New reports are available tomorrow (00:00 UTC).`, remaining: 0 });
     if (!env.ANTHROPIC_API_KEY) return reply(500, { error: "The Worker has no ANTHROPIC_API_KEY secret." });
-    const model = env.MODEL || "claude-opus-4-5";
     const lang2 = body.language === "ar" ? "ar" : "en";
     const data = body.portfolioData && typeof body.portfolioData === "object" ? body.portfolioData : null;
     if (!data) return reply(400, { error: "No portfolio data in the request." });
@@ -731,9 +740,10 @@ async function useInvite(env, code, chat, from) {
 async function removeMember(env, chat) {
   const m = await members(env);
   if (!m[String(chat)]) return false;
+  const had = m[String(chat)];
   delete m[String(chat)];
   await kput(env, "tg:users", JSON.stringify(m));
-  return true;
+  return had;
 }
 async function strangerOnce(env, chat) {
   const k = "tg:nope:" + chat;
@@ -759,6 +769,42 @@ async function migrateOwner(env) {
     migrated = true;
   } catch (_) {
   }
+}
+async function member(env, chat = null) {
+  const m = await members(env);
+  return m[String(chat || chatOf(env))] || null;
+}
+async function setMember(env, chat, patch) {
+  const m = await members(env), c = String(chat);
+  if (!m[c]) return null;
+  m[c] = { ...m[c], ...patch };
+  for (const k of Object.keys(m[c])) if (m[c][k] === void 0) delete m[c][k];
+  await kput(env, "tg:users", JSON.stringify(m));
+  return m[c];
+}
+async function memberByEmail(env, email) {
+  const e = String(email || "").toLowerCase(), m = await members(env);
+  const hit = Object.entries(m).find(([, x]) => x.email && x.email === e);
+  return hit ? { chat: hit[0], ...hit[1] } : null;
+}
+async function accessEmails(env) {
+  return Object.values(await members(env)).map((x) => x.email).filter(Boolean).sort();
+}
+var DEF_AI = 5;
+var DEF_REPORTS = 1;
+async function aiLimitFor(env) {
+  if (isOwner(env)) return Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30));
+  const x = await member(env);
+  return x && Number.isFinite(x.ai) ? x.ai : Math.max(0, parseInt(env.MEMBER_AI_LIMIT || String(DEF_AI), 10) || DEF_AI);
+}
+async function setPending(env, chat, email) {
+  await kput(env, "tg:appreq:" + chat, email, 7 * 86400);
+}
+async function getPending(env, chat) {
+  return kget(env, "tg:appreq:" + chat);
+}
+async function clearPending(env, chat) {
+  await kdel(env, "tg:appreq:" + chat);
 }
 
 // tools/worker/cg-ids.json
@@ -1025,6 +1071,10 @@ async function firestore(sa) {
     return r.json();
   };
   return {
+    async metaDocs() {
+      const rows = await call(base + ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "meta", allDescendants: true }], limit: 1e3 } }) }) || [];
+      return rows.filter((x) => x.document && x.document.name).map((x) => ({ name: x.document.name, data: fields(x.document.fields) }));
+    },
     async users() {
       const rows = await call(base + ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "meta", allDescendants: true }], limit: 200 } }) }) || [];
       return [...new Set(rows.map((x) => x.document && x.document.name).filter((n) => n && /\/users\/[^/]+\/meta\/info$/.test(n)).map((n) => n.match(/\/users\/([^/]+)\/meta\/info$/)[1]))];
@@ -1071,6 +1121,35 @@ async function commitDocs(env, uid, docs) {
   cache.delete("user");
   return { ok: true };
 }
+async function loadMemberUser(env, sa, fresh) {
+  const me = await member(env);
+  if (!me || !me.uid) return null;
+  const key = "user:" + me.uid;
+  if (fresh) cache.delete(key);
+  return cached(key, 12e4, async () => {
+    const db = await firestore(sa), uid = me.uid;
+    const [coins, txs, accum, meta] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`)]);
+    return { coins, txs, accum, meta: meta || {}, uid };
+  });
+}
+async function findLinkCode(env, code) {
+  const sa = serviceAccount(env);
+  if (!sa) return null;
+  const db = await firestore(sa), C = String(code || "").toUpperCase();
+  const hit = (await db.metaDocs()).find((d) => /\/users\/[^/]+\/meta\/tglink$/.test(d.name) && d.data.code === C);
+  if (!hit || !(Date.parse(hit.data.exp) > Date.now())) return null;
+  const uid = hit.name.match(/\/users\/([^/]+)\/meta\/tglink$/)[1];
+  await db.set(`users/${uid}/meta/tglink`, { linked: "telegram", at: (/* @__PURE__ */ new Date()).toISOString() }).catch(() => {
+  });
+  return { uid, email: String(hit.data.email || "").toLowerCase() };
+}
+async function syncAccess(env, emails) {
+  const sa = serviceAccount(env);
+  if (!sa) return false;
+  const db = await firestore(sa);
+  await db.set("config/access", { emails, at: (/* @__PURE__ */ new Date()).toISOString() });
+  return true;
+}
 var ownerMem = null;
 async function ownerUid(env, db) {
   if (env.FIREBASE_UID) return env.FIREBASE_UID;
@@ -1089,7 +1168,7 @@ async function ownerUid(env, db) {
 async function loadUser(env, fresh = false) {
   const sa = serviceAccount(env);
   if (!sa) return null;
-  if (!isOwner(env)) return null;
+  if (!isOwner(env)) return loadMemberUser(env, sa, fresh);
   if (fresh) cache.delete("user");
   return cached("user", 12e4, async () => {
     const db = await firestore(sa);
@@ -1871,7 +1950,6 @@ function viewRestart(lang2 = "en") {
 // tools/worker/ai.mjs
 var H2 = 36e5;
 var DAY2 = 24 * H2;
-var LIMIT = (env) => isOwner(env) ? Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30)) : Math.max(1, Math.min(100, parseInt(env.MEMBER_AI_LIMIT || "5", 10) || 5));
 var MAX_ROUNDS = 8;
 var HISTORY = 10;
 var r23 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
@@ -1907,8 +1985,8 @@ async function firstTime(env, updateId) {
 }
 var today = () => localParts(Date.now()).date;
 async function usage(env) {
-  const n = +await kvGet4(env, K(env, "ai:" + today())) || 0;
-  return { used: n, limit: LIMIT(env), left: Math.max(0, LIMIT(env) - n) };
+  const n = +await kvGet4(env, K(env, "ai:" + today())) || 0, lim = await aiLimitFor(env);
+  return { used: n, limit: lim, left: Math.max(0, lim - n) };
 }
 async function countOne(env) {
   const u = await usage(env);
@@ -3457,6 +3535,8 @@ var WORDS = [
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, "al"],
   [/^\/invite$/i, "inv"],
   [/^\/(users|members)$/i, "us"],
+  [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, "link"],
+  [/^\/app(\s+\S+)?$/i, "app"],
   [/^\/start\s+\S+$/i, "menu"],
   [/^\/(report|app)$|^التقرير$/i, "rp"],
   [/^\/(daily|settings)$|^اليومي$/i, "dy"],
@@ -3599,9 +3679,10 @@ async function viewUsers(env, lang2) {
   const m = await members(env), ar = lang2 === "ar", list2 = Object.entries(m);
   const L = [ar ? `\u{1F465} <b>\u0627\u0644\u0623\u0639\u0636\u0627\u0621</b> (${list2.length}/${MAX_MEMBERS})` : `\u{1F465} <b>Members</b> (${list2.length}/${MAX_MEMBERS})`, ""];
   if (!list2.length) L.push(ar ? "\u0644\u0633\u0647 \u0645\u0641\u064A\u0634 \u062D\u062F. \u0627\u0636\u063A\u0637 \u2795 \u0644\u0643\u0648\u062F \u062F\u0639\u0648\u0629." : "Nobody yet. Tap \u2795 for an invite code.");
-  list2.forEach(([c, x], i) => L.push(`${i + 1}. <b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>`));
+  list2.forEach(([c, x], i) => L.push(`${i + 1}. <b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""} \xB7 \u{1F9E0}${Number.isFinite(x.ai) ? x.ai : DEF_AI} \u{1F4CA}${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
+  if (list2.length) L.push("", ar ? "<i>\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0633\u0645 \u0639\u0634\u0627\u0646 \u062A\u063A\u064A\u0651\u0631 \u062D\u062F\u0648\u062F\u0647 \u0623\u0648 \u062A\u0634\u064A\u0644\u0647 \xB7 \u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u{1F517} \u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0631\u0628\u0648\u0637\u0629</i>" : "<i>Tap a name to change their limits or remove them \xB7 \u{1F4F1} app \xB7 \u{1F517} portfolio linked</i>");
   const b = [];
-  for (let i = 0; i < list2.length; i += 3) b.push(list2.slice(i, i + 3).map(([c], j) => cb2(`\u{1F5D1} ${i + j + 1}`, "us:del:" + c)));
+  for (let i = 0; i < list2.length; i += 3) b.push(list2.slice(i, i + 3).map(([c, x], j) => cb2(`${i + j + 1}. ${x.name.split(" ")[0].slice(0, 12)}${x.uid ? " \u{1F517}" : x.email ? " \u{1F4F1}" : ""}`, "us:m:" + c)));
   b.push([cb2(ar ? "\u2795 \u062F\u0639\u0648\u0629 \u062C\u062F\u064A\u062F\u0629" : "\u2795 New invite", "us:inv"), cb2(T[lang2].back, "menu")]);
   return { text: L.join("\n"), buttons: b };
 }
@@ -3633,6 +3714,92 @@ ${link}` : `
 Or send this link (opens the bot and lets them in):
 ${link}` : ""), buttons: [[cb2(ar ? "\u{1F465} \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u{1F465} Members", "us")]] };
 }
+var AW = {
+  en: {
+    ask: "Send the e-mail you will sign in with, like:\n<code>/app you@example.com</code>\n(Google, or any e-mail with a sign-in link.)",
+    sent: "\u{1F4E8} Sent to Samir for approval \u2014 you'll get a message here.",
+    owner: "\u{1F4F1} You already have the app \u{1F642}",
+    req: (n, e) => `\u{1F4F1} <b>${n}</b> asks to open the app with
+<code>${e}</code>`,
+    ok: (e) => `\u2705 You can open the app now with <b>${e}</b>:
+${APP}
+Then Settings \u2192 \u{1F517} Link the Telegram bot, to see your portfolio here.`,
+    no: "Your app request was not approved.",
+    linked: "\u{1F517} Linked \u2705 \u2014 your portfolio, plan and exit plan now show here (only to you).",
+    badCode: "\u274C That code is not valid or is over 10 minutes old \u2014 make a new one in the app (Settings \u2192 Link the Telegram bot).",
+    notYou: "\u274C That code was made by another e-mail than the one approved for you.",
+    ownerLink: "Your portfolio is already the bot's \u{1F642}"
+  },
+  ar: {
+    ask: "\u0627\u0628\u0639\u062A \u0627\u0644\u0625\u064A\u0645\u064A\u0644 \u0627\u0644\u0644\u064A \u0647\u062A\u062F\u062E\u0644 \u0628\u064A\u0647\u060C \u0643\u062F\u0647:\n<code>/app you@example.com</code>\n(Google\u060C \u0623\u0648 \u0623\u064A \u0625\u064A\u0645\u064A\u0644 \u0628\u0644\u064A\u0646\u0643 \u062F\u062E\u0648\u0644.)",
+    sent: "\u{1F4E8} \u0627\u062A\u0628\u0639\u062A \u0644\u0633\u0645\u064A\u0631 \u064A\u0648\u0627\u0641\u0642 \u2014 \u0647\u064A\u0648\u0635\u0644\u0643 \u0631\u062F \u0647\u0646\u0627.",
+    owner: "\u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0639\u0627\u0643 \u0623\u0635\u0644\u0627\u064B \u{1F642}",
+    req: (n, e) => `\u{1F4F1} <b>${n}</b> \u0639\u0627\u064A\u0632 \u064A\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0640
+<code>${e}</code>`,
+    ok: (e) => `\u2705 \u062A\u0642\u062F\u0631 \u062A\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u062F\u0644\u0648\u0642\u062A\u064A \u0628\u0640 <b>${e}</b>:
+${APP}
+\u0648\u0628\u0639\u062F\u064A\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u{1F517} Link the Telegram bot \u0639\u0634\u0627\u0646 \u0645\u062D\u0641\u0638\u062A\u0643 \u062A\u0638\u0647\u0631 \u0647\u0646\u0627.`,
+    no: "\u0637\u0644\u0628 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0627 \u0627\u062A\u0648\u0627\u0641\u0642\u0634 \u0639\u0644\u064A\u0647.",
+    linked: "\u{1F517} \u0627\u062A\u0631\u0628\u0637\u062A \u2705 \u2014 \u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C \u0628\u0642\u062A \u062A\u0638\u0647\u0631 \u0647\u0646\u0627 (\u0644\u064A\u0643 \u0627\u0646\u062A \u0628\u0633).",
+    badCode: "\u274C \u0627\u0644\u0643\u0648\u062F \u062F\u0647 \u0645\u0634 \u0635\u0627\u0644\u062D \u0623\u0648 \u0639\u062F\u0651\u0649 \u0639\u0644\u064A\u0647 10 \u062F\u0642\u0627\u064A\u0642 \u2014 \u0627\u0639\u0645\u0644 \u0648\u0627\u062D\u062F \u062C\u062F\u064A\u062F \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 Link the Telegram bot).",
+    notYou: "\u274C \u0627\u0644\u0643\u0648\u062F \u062F\u0647 \u0627\u062A\u0639\u0645\u0644 \u0628\u0625\u064A\u0645\u064A\u0644 \u063A\u064A\u0631 \u0627\u0644\u0625\u064A\u0645\u064A\u0644 \u0627\u0644\u0644\u064A \u0627\u062A\u0648\u0627\u0641\u0642 \u0639\u0644\u064A\u0647 \u0644\u064A\u0643.",
+    ownerLink: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0647\u064A \u0627\u0644\u0644\u064A \u0641\u064A \u0627\u0644\u0628\u0648\u062A \u0623\u0635\u0644\u0627\u064B \u{1F642}"
+  }
+};
+async function appRequest(env, chat, text) {
+  const lang2 = await getLang(env), w = AW[lang2];
+  if (isOwner(env)) {
+    await send2(env, chat, { text: w.owner });
+    return;
+  }
+  const email = (/\/app\s+(\S+)/i.exec(text) || [])[1];
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    await send2(env, chat, { text: w.ask });
+    return;
+  }
+  const e = email.toLowerCase().slice(0, 120), me = await member(env);
+  await setPending(env, chat, e);
+  await send2(env, chat, { text: w.sent });
+  await asChat(env.TELEGRAM_CHAT_ID, async () => {
+    const L = await getLang(env);
+    await send2(env, env.TELEGRAM_CHAT_ID, { text: AW[L].req(esc(me ? me.name : chat), esc(e)), buttons: [[cb2(L === "ar" ? "\u2705 \u0627\u0633\u0645\u062D" : "\u2705 Allow", "ap:ok:" + chat), cb2(L === "ar" ? "\u274C \u0644\u0623" : "\u274C No", "ap:no:" + chat)]] });
+  });
+}
+async function linkPortfolio(env, chat, text) {
+  const lang2 = await getLang(env), w = AW[lang2], code = (/([A-Za-z0-9]{8})\s*$/.exec(text) || [])[1];
+  if (isOwner(env)) {
+    await send2(env, chat, { text: w.ownerLink });
+    return;
+  }
+  const hit = code && await findLinkCode(env, code.toUpperCase());
+  if (!hit) {
+    await send2(env, chat, { text: w.badCode });
+    return;
+  }
+  const me = await member(env);
+  if (me && me.email && hit.email && hit.email !== me.email) {
+    await send2(env, chat, { text: w.notYou });
+    return;
+  }
+  await setMember(env, chat, { uid: hit.uid, ...me && !me.email && hit.email ? { email: hit.email } : {} });
+  await setCfg(env, { morning: true, evening: true, pin: true });
+  await send2(env, chat, { text: w.linked, buttons: [[cb2(T[lang2].pf, "pf"), cb2(T[lang2].back, "menu")]] });
+}
+async function viewMember(env, lang2, c) {
+  const x = await member(env, c), ar = lang2 === "ar";
+  if (!x) return viewUsers(env, lang2);
+  const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
+  const L = [
+    `\u{1F464} <b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""}`,
+    `${ar ? "\u0645\u0646" : "Since"} ${esc(local(x.joined, { day: "numeric", month: "short", year: "numeric" }))}`,
+    `\u{1F4F1} ${ar ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "App"}: ${x.email ? "<code>" + esc(x.email) + "</code>" : ar ? "\u0644\u0633\u0647" : "not yet"}`,
+    `\u{1F517} ${ar ? "\u0627\u0644\u0645\u062D\u0641\u0638\u0629" : "Portfolio"}: ${x.uid ? ar ? "\u0645\u0631\u0628\u0648\u0637\u0629 \u2705" : "linked \u2705" : ar ? "\u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629" : "not linked"}`,
+    "",
+    `\u{1F9E0} ${ar ? "\u0623\u0633\u0626\u0644\u0629 AI \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI questions a day"}: <b>${ai}</b>`,
+    `\u{1F4CA} ${ar ? "\u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI Analysis reports a day"}: <b>${rp}</b>`
+  ];
+  return { text: L.join("\n"), buttons: [[cb2("\u{1F9E0} \u2212", `us:ai:-:${c}`), cb2("\u{1F9E0} +", `us:ai:+:${c}`), cb2("\u{1F4CA} \u2212", `us:rp:-:${c}`), cb2("\u{1F4CA} +", `us:rp:+:${c}`)], [cb2("\u{1F5D1} " + (ar ? "\u0634\u064A\u0644\u0647" : "Remove"), "us:del:" + c), cb2(ar ? "\u2B05\uFE0F \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u2B05\uFE0F Members", "us")]] };
+}
 async function onUpdate(env, u, msg, q, chat) {
   if (!await firstTime(env, u.update_id)) return ok();
   await ensureCmds(env);
@@ -3647,6 +3814,37 @@ async function onUpdate(env, u, msg, q, chat) {
         await done();
         return ok();
       }
+      if (/^ap:(ok|no):/.test(d)) {
+        const lang2 = await getLang(env), who = d.slice(6);
+        if (!isOwner(env)) {
+          await done();
+          return ok();
+        }
+        const email = await getPending(env, who);
+        await tg3(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {
+        });
+        if (!email || !await member(env, who)) {
+          await done("\u2014");
+          return ok();
+        }
+        await clearPending(env, who);
+        if (d.startsWith("ap:ok:")) {
+          await setMember(env, who, { email });
+          const okSync = await syncAccess(env, await accessEmails(env)).catch(() => false);
+          await asChat(who, async () => {
+            const L = await getLang(env);
+            await send2(env, who, { text: AW[L].ok(esc(email)) });
+          });
+          await done(okSync ? "\u2705" : "\u26A0\uFE0F Firestore");
+          return ok();
+        }
+        await asChat(who, async () => {
+          const L = await getLang(env);
+          await send2(env, who, { text: AW[L].no });
+        });
+        await done("\u274C");
+        return ok();
+      }
       if (d === "us" || /^us:/.test(d)) {
         const lang2 = await getLang(env);
         if (!isOwner(env)) {
@@ -3659,10 +3857,28 @@ async function onUpdate(env, u, msg, q, chat) {
           return ok();
         }
         let note = null;
+        if (d.startsWith("us:m:")) {
+          await edit(env, chat, q.message.message_id, await viewMember(env, lang2, d.slice(5)));
+          await done();
+          return ok();
+        }
+        const lim = /^us:(ai|rp):([+-]):(.+)$/.exec(d);
+        if (lim) {
+          const x = await member(env, lim[3]);
+          if (x) {
+            const f = lim[1] === "ai" ? "ai" : "reports", cur = Number.isFinite(x[f]) ? x[f] : f === "ai" ? DEF_AI : DEF_REPORTS, max = f === "ai" ? 50 : 10;
+            await setMember(env, lim[3], { [f]: Math.max(0, Math.min(max, cur + (lim[2] === "+" ? 1 : -1))) });
+          }
+          await edit(env, chat, q.message.message_id, await viewMember(env, lang2, lim[3]));
+          await done("\u2705");
+          return ok();
+        }
         if (d.startsWith("us:del:")) {
-          const who = d.slice(7);
-          if (await removeMember(env, who)) {
+          const who = d.slice(7), had = await removeMember(env, who);
+          if (had) {
             note = "\u{1F5D1}";
+            if (had.email) await syncAccess(env, await accessEmails(env)).catch(() => {
+            });
             await tg3(env, "sendMessage", { chat_id: who, text: lang2 === "ar" ? "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0648\u0635\u0648\u0644\u0643 \u0644\u0644\u0628\u0648\u062A." : "Your access to this bot was removed." }).catch(() => {
             });
           }
@@ -3827,6 +4043,14 @@ async function onText(env, chat, text, budget = 36, into = null) {
     await send2(env, chat, await viewPaper(env, await getLang(env)));
     return;
   }
+  if (p.act === "app") {
+    await appRequest(env, chat, text);
+    return;
+  }
+  if (p.act === "link") {
+    await linkPortfolio(env, chat, text);
+    return;
+  }
   if (p.act === "inv" || p.act === "us") {
     if (!isOwner(env)) {
       const t2 = T[await getLang(env)];
@@ -3942,6 +4166,7 @@ var run = (env, act, arg, guess) => act === "coinById" ? buildById(env, arg) : b
 var cmds = (lang2, owner = true) => {
   const a = lang2 === "ar";
   return [
+    ...owner ? [] : [["app", a ? "\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "Open the app"], ["link", a ? "\u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 /link \u0627\u0644\u0643\u0648\u062F" : "Link your portfolio \u2014 /link CODE"]],
     ...owner ? [["invite", a ? "\u0643\u0648\u062F \u062F\u0639\u0648\u0629 \u0644\u0635\u0627\u062D\u0628\u0643" : "Invite code for a friend"], ["users", a ? "\u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "Members"]] : [],
     ["start", a ? "\u0627\u0628\u062F\u0623 \u2014 \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u062A\u062D\u062A \u0627\u0644\u0634\u0627\u062A" : "Start \u2014 the buttons under the chat"],
     ["menu", a ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
@@ -4646,6 +4871,10 @@ async function logo(request) {
 }
 
 // tools/worker/index.mjs
+setMemberCheck(async (env, email) => {
+  const x = await memberByEmail(env, email);
+  return x ? { limit: Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, model: env.MEMBER_MODEL || "claude-sonnet-5-5" } : null;
+});
 var worker_default = {
   async fetch(request, env, ctx) {
     const p = new URL(request.url).pathname.replace(/\/+$/, "");

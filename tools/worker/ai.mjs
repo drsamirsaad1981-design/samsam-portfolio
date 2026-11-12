@@ -10,7 +10,7 @@
 //   · Telegram sometimes sends the same message twice when an answer is slow — each message is answered once
 //   · the model: BOT_MODEL in the Worker's settings, else Claude Sonnet 5.5; if that name is refused, MODEL (AI Analysis's)
 
-import { K, isOwner } from './who.mjs';
+import { K, isOwner, aiLimitFor } from './who.mjs';
 import { summarize, settings, local, localParts, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries, derivatives } from './data.mjs';
 import { addAlert, listAlerts, deleteAlert, describe, KINDS } from './watch.mjs';
@@ -18,7 +18,7 @@ import { prepareTrade } from './trade.mjs';
 import { paperTrade, paperFacts } from './paper.mjs';
 
 const H = 3600e3, DAY = 24 * H;
-const LIMIT = env => isOwner(env) ? Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30)) : Math.max(1, Math.min(100, parseInt(env.MEMBER_AI_LIMIT || '5', 10) || 5));   // the owner 30, each invited person 5 (changeable per person in /users — next)
+// the daily limit: the owner 30 (AI_DAILY_LIMIT), each invited person their own (set in /users, else 5) — who.mjs → aiLimitFor
 const MAX_ROUNDS = 8;          // tool rounds per question (the last one answers with what it has)
 const HISTORY = 10;            // messages remembered
 const r2 = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
@@ -39,7 +39,7 @@ export async function firstTime(env, updateId) {
   return true;
 }
 const today = () => localParts(Date.now()).date;
-export async function usage(env) { const n = +(await kvGet(env, K(env, 'ai:' + today()))) || 0; return { used: n, limit: LIMIT(env), left: Math.max(0, LIMIT(env) - n) }; }
+export async function usage(env) { const n = +(await kvGet(env, K(env, 'ai:' + today()))) || 0, lim = await aiLimitFor(env); return { used: n, limit: lim, left: Math.max(0, lim - n) }; }
 async function countOne(env) { const u = await usage(env); await kvPut(env, K(env, 'ai:' + today()), String(u.used + 1), 2 * 86400); return u.left - 1; }
 export async function forget(env) { await kvDel(env, K(env, 'hist')); }
 async function history(env) { try { const h = JSON.parse((await kvGet(env, K(env, 'hist'))) || '[]'); return Array.isArray(h) ? h : []; } catch (_) { return []; } }

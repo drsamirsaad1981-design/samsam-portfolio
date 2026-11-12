@@ -27,6 +27,10 @@ const MAX_BODY = 200 * 1024;        // the app's request is ~5–20 KB
 let jwksCache = { keys: null, until: 0 };
 const memCount = new Map();         // fallback counter when no KV binding
 
+// the Telegram bot's members (tools/worker/who.mjs) — set by tools/worker/index.mjs; absent when this file runs alone
+let memberCheck = null;
+export function setMemberCheck(fn) { memberCheck = fn; }
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -55,11 +59,18 @@ export default {
     let user;
     try { user = await verifyFirebaseToken(token, env.FIREBASE_PROJECT || 'samsam-portfolio'); }
     catch (e) { return reply(401, { error: 'Please sign in again, then retry. (' + e.message + ')' }); }
-    const emails = list(env.ALLOWED_EMAILS || '');
-    if (emails.length && !emails.includes(String(user.email || '').toLowerCase())) return reply(403, { error: 'This account is not allowed to use the AI analysis.' });
+    const emails = list(env.ALLOWED_EMAILS || ''), em = String(user.email || '').toLowerCase();
+    let limit = Math.max(1, parseInt(env.DAILY_LIMIT || '5', 10) || 5), model = env.MODEL || 'claude-opus-4-5';
+    if (emails.length && !emails.includes(em)) {
+      // someone the owner invited through the Telegram bot (their e-mail approved there): their own limit (default 1 a day)
+      // and the lighter model (MEMBER_MODEL, else Claude Sonnet 5.5)
+      const m = memberCheck ? await memberCheck(env, em).catch(() => null) : null;
+      if (!m) return reply(403, { error: 'This account is not allowed to use the AI analysis.' });
+      limit = m.limit; model = m.model;
+      if (!(limit > 0)) return reply(429, { error: 'AI reports are not on for this account — ask Samir.', remaining: 0 });
+    }
 
     // 3. daily limit per account
-    const limit = Math.max(1, parseInt(env.DAILY_LIMIT || '5', 10) || 5);
     const day = new Date().toISOString().slice(0, 10);
     const key = `ai:${user.uid}:${day}`;
     const used = await getCount(env, key);
@@ -67,7 +78,6 @@ export default {
 
     // 4. Claude
     if (!env.ANTHROPIC_API_KEY) return reply(500, { error: 'The Worker has no ANTHROPIC_API_KEY secret.' });
-    const model = env.MODEL || 'claude-opus-4-5';
     const lang = body.language === 'ar' ? 'ar' : 'en';
     const data = body.portfolioData && typeof body.portfolioData === 'object' ? body.portfolioData : null;
     if (!data) return reply(400, { error: 'No portfolio data in the request.' });

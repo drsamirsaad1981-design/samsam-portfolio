@@ -13,9 +13,9 @@
 // Worker secrets (Settings → Variables and Secrets): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT,
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
-import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS } from './who.mjs';
+import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
-import { loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
+import { findLinkCode, syncAccess, loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
@@ -299,7 +299,7 @@ const WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
-  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
+  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -405,8 +405,9 @@ async function viewUsers(env, lang) {
   const m = await members(env), ar = lang === 'ar', list = Object.entries(m);
   const L = [ar ? `👥 <b>الأعضاء</b> (${list.length}/${MAX_MEMBERS})` : `👥 <b>Members</b> (${list.length}/${MAX_MEMBERS})`, ''];
   if (!list.length) L.push(ar ? 'لسه مفيش حد. اضغط ➕ لكود دعوة.' : 'Nobody yet. Tap ➕ for an invite code.');
-  list.forEach(([c, x], i) => L.push(`${i + 1}. <b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>`));
-  const b = []; for (let i = 0; i < list.length; i += 3) b.push(list.slice(i, i + 3).map(([c], j) => cb(`🗑 ${i + j + 1}`, 'us:del:' + c)));
+  list.forEach(([c, x], i) => L.push(`${i + 1}. <b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''} · 🧠${Number.isFinite(x.ai) ? x.ai : DEF_AI} 📊${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
+  if (list.length) L.push('', ar ? '<i>اضغط على اسم عشان تغيّر حدوده أو تشيله · 📱 التطبيق · 🔗 المحفظة مربوطة</i>' : '<i>Tap a name to change their limits or remove them · 📱 app · 🔗 portfolio linked</i>');
+  const b = []; for (let i = 0; i < list.length; i += 3) b.push(list.slice(i, i + 3).map(([c, x], j) => cb(`${i + j + 1}. ${x.name.split(' ')[0].slice(0, 12)}${x.uid ? ' 🔗' : x.email ? ' 📱' : ''}`, 'us:m:' + c)));
   b.push([cb(ar ? '➕ دعوة جديدة' : '➕ New invite', 'us:inv'), cb(T[lang].back, 'menu')]);
   return { text: L.join('\n'), buttons: b };
 }
@@ -419,6 +420,48 @@ async function inviteMsg(env, lang) {
     (link ? (ar ? `\n\nأو ابعتله اللينك ده (يفتح البوت ويدخل على طول):\n${link}` : `\n\nOr send this link (opens the bot and lets them in):\n${link}`) : ''), buttons: [[cb(ar ? '👥 الأعضاء' : '👥 Members', 'us')]] };
 }
 
+// 📱 /app you@example.com — an invited person asks to open the app with that e-mail; the owner taps ✅ (or ❌)
+const AW = {
+  en: { ask: 'Send the e-mail you will sign in with, like:\n<code>/app you@example.com</code>\n(Google, or any e-mail with a sign-in link.)', sent: '📨 Sent to Samir for approval — you\'ll get a message here.', owner: '📱 You already have the app 🙂',
+    req: (n, e) => `📱 <b>${n}</b> asks to open the app with\n<code>${e}</code>`, ok: e => `✅ You can open the app now with <b>${e}</b>:\n${APP}\nThen Settings → 🔗 Link the Telegram bot, to see your portfolio here.`, no: 'Your app request was not approved.',
+    linked: '🔗 Linked ✅ — your portfolio, plan and exit plan now show here (only to you).', badCode: '❌ That code is not valid or is over 10 minutes old — make a new one in the app (Settings → Link the Telegram bot).', notYou: '❌ That code was made by another e-mail than the one approved for you.', ownerLink: 'Your portfolio is already the bot\'s 🙂' },
+  ar: { ask: 'ابعت الإيميل اللي هتدخل بيه، كده:\n<code>/app you@example.com</code>\n(Google، أو أي إيميل بلينك دخول.)', sent: '📨 اتبعت لسمير يوافق — هيوصلك رد هنا.', owner: '📱 التطبيق معاك أصلاً 🙂',
+    req: (n, e) => `📱 <b>${n}</b> عايز يفتح التطبيق بـ\n<code>${e}</code>`, ok: e => `✅ تقدر تفتح التطبيق دلوقتي بـ <b>${e}</b>:\n${APP}\nوبعدين الإعدادات ← 🔗 Link the Telegram bot عشان محفظتك تظهر هنا.`, no: 'طلب التطبيق ما اتوافقش عليه.',
+    linked: '🔗 اتربطت ✅ — محفظتك وخطتك وخطة الخروج بقت تظهر هنا (ليك انت بس).', badCode: '❌ الكود ده مش صالح أو عدّى عليه 10 دقايق — اعمل واحد جديد من التطبيق (الإعدادات ← Link the Telegram bot).', notYou: '❌ الكود ده اتعمل بإيميل غير الإيميل اللي اتوافق عليه ليك.', ownerLink: 'محفظتك هي اللي في البوت أصلاً 🙂' },
+};
+async function appRequest(env, chat, text) {
+  const lang = await getLang(env), w = AW[lang];
+  if (isOwner(env)) { await send(env, chat, { text: w.owner }); return; }
+  const email = (/\/app\s+(\S+)/i.exec(text) || [])[1];
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { await send(env, chat, { text: w.ask }); return; }
+  const e = email.toLowerCase().slice(0, 120), me = await member(env);
+  await setPending(env, chat, e);
+  await send(env, chat, { text: w.sent });
+  await asChat(env.TELEGRAM_CHAT_ID, async () => { const L = await getLang(env); await send(env, env.TELEGRAM_CHAT_ID, { text: AW[L].req(esc(me ? me.name : chat), esc(e)), buttons: [[cb(L === 'ar' ? '✅ اسمح' : '✅ Allow', 'ap:ok:' + chat), cb(L === 'ar' ? '❌ لأ' : '❌ No', 'ap:no:' + chat)]] }); });
+}
+// /link CODE (or the app's "Open the bot" → /start LCODE): this chat now reads that account's portfolio
+async function linkPortfolio(env, chat, text) {
+  const lang = await getLang(env), w = AW[lang], code = (/([A-Za-z0-9]{8})\s*$/.exec(text) || [])[1];
+  if (isOwner(env)) { await send(env, chat, { text: w.ownerLink }); return; }
+  const hit = code && await findLinkCode(env, code.toUpperCase());
+  if (!hit) { await send(env, chat, { text: w.badCode }); return; }
+  const me = await member(env);
+  if (me && me.email && hit.email && hit.email !== me.email) { await send(env, chat, { text: w.notYou }); return; }
+  await setMember(env, chat, { uid: hit.uid, ...(me && !me.email && hit.email ? { email: hit.email } : {}) });
+  await setCfg(env, { morning: true, evening: true, pin: true });   // their portfolio is here now: the daily messages come on
+  await send(env, chat, { text: w.linked, buttons: [[cb(T[lang].pf, 'pf'), cb(T[lang].back, 'menu')]] });
+}
+// a member's card in /users: limits − / +, remove
+async function viewMember(env, lang, c) {
+  const x = await member(env, c), ar = lang === 'ar';
+  if (!x) return viewUsers(env, lang);
+  const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
+  const L = [`👤 <b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
+    `📱 ${ar ? 'التطبيق' : 'App'}: ${x.email ? '<code>' + esc(x.email) + '</code>' : (ar ? 'لسه' : 'not yet')}`, `🔗 ${ar ? 'المحفظة' : 'Portfolio'}: ${x.uid ? (ar ? 'مربوطة ✅' : 'linked ✅') : (ar ? 'مش مربوطة' : 'not linked')}`, '',
+    `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${ai}</b>`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${rp}</b>`];
+  return { text: L.join('\n'), buttons: [[cb('🧠 −', `us:ai:-:${c}`), cb('🧠 +', `us:ai:+:${c}`), cb('📊 −', `us:rp:-:${c}`), cb('📊 +', `us:rp:+:${c}`)], [cb('🗑 ' + (ar ? 'شيله' : 'Remove'), 'us:del:' + c), cb(ar ? '⬅️ الأعضاء' : '⬅️ Members', 'us')]] };
+}
+
 async function onUpdate(env, u, msg, q, chat) {
   if (!(await firstTime(env, u.update_id))) return ok();   // Telegram re-sent it (a slow answer): already handled
   await ensureCmds(env); await ensureDesc(env);
@@ -429,12 +472,36 @@ async function onUpdate(env, u, msg, q, chat) {
       // even when nothing changed (the message is the same → Telegram would show no change at all)
       const done = text => tg(env, 'answerCallbackQuery', { callback_query_id: q.id, ...(text ? { text } : {}) }).catch(() => {});
       if (/^lang:(ar|en)$/.test(d)) { await switchLang(env, chat, d.slice(5), q.message.message_id); await done(); return ok(); }
+      if (/^ap:(ok|no):/.test(d)) {   // 📱 owner: allow / refuse a member's app e-mail
+        const lang = await getLang(env), who = d.slice(6);
+        if (!isOwner(env)) { await done(); return ok(); }
+        const email = await getPending(env, who);
+        await tg(env, 'editMessageReplyMarkup', { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {});
+        if (!email || !(await member(env, who))) { await done('—'); return ok(); }
+        await clearPending(env, who);
+        if (d.startsWith('ap:ok:')) {
+          await setMember(env, who, { email });
+          const okSync = await syncAccess(env, await accessEmails(env)).catch(() => false);
+          await asChat(who, async () => { const L = await getLang(env); await send(env, who, { text: AW[L].ok(esc(email)) }); });
+          await done(okSync ? '✅' : '⚠️ Firestore'); return ok();
+        }
+        await asChat(who, async () => { const L = await getLang(env); await send(env, who, { text: AW[L].no }); });
+        await done('❌'); return ok();
+      }
       if (d === 'us' || /^us:/.test(d)) {   // 👥 owner only: members, remove, new invite
         const lang = await getLang(env);
         if (!isOwner(env)) { await done(); return ok(); }
         if (d === 'us:inv') { await send(env, chat, await inviteMsg(env, lang)); await done(); return ok(); }
         let note = null;
-        if (d.startsWith('us:del:')) { const who = d.slice(7); if (await removeMember(env, who)) { note = '🗑'; await tg(env, 'sendMessage', { chat_id: who, text: lang === 'ar' ? 'تم إيقاف وصولك للبوت.' : 'Your access to this bot was removed.' }).catch(() => {}); } }
+        if (d.startsWith('us:m:')) { await edit(env, chat, q.message.message_id, await viewMember(env, lang, d.slice(5))); await done(); return ok(); }
+        const lim = /^us:(ai|rp):([+-]):(.+)$/.exec(d);
+        if (lim) {   // − / + a member's daily limit (questions 0–50, reports 0–10)
+          const x = await member(env, lim[3]);
+          if (x) { const f = lim[1] === 'ai' ? 'ai' : 'reports', cur = Number.isFinite(x[f]) ? x[f] : (f === 'ai' ? DEF_AI : DEF_REPORTS), max = f === 'ai' ? 50 : 10;
+            await setMember(env, lim[3], { [f]: Math.max(0, Math.min(max, cur + (lim[2] === '+' ? 1 : -1))) }); }
+          await edit(env, chat, q.message.message_id, await viewMember(env, lang, lim[3])); await done('✅'); return ok();
+        }
+        if (d.startsWith('us:del:')) { const who = d.slice(7), had = await removeMember(env, who); if (had) { note = '🗑'; if (had.email) await syncAccess(env, await accessEmails(env)).catch(() => {}); await tg(env, 'sendMessage', { chat_id: who, text: lang === 'ar' ? 'تم إيقاف وصولك للبوت.' : 'Your access to this bot was removed.' }).catch(() => {}); } }
         await edit(env, chat, q.message.message_id, await viewUsers(env, lang)); await done(note); return ok();
       }
       if (d === 'pp' || /^pp:/.test(d)) {   // 🧪 the paper portfolio: 🔄, ↩️ undo, 🔁 start again
@@ -536,6 +603,8 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'dy') { await send(env, chat, await viewDaily(env)); return; }
   if (p.act === 'rp') { const t = T[await getLang(env)], b = appBtn(t); await send(env, chat, { text: t.reportT, buttons: b ? [[b]] : [[cb(t.back, 'menu')]] }); return; }
   if (p.act === 'pp') { await send(env, chat, await viewPaper(env, await getLang(env))); return; }
+  if (p.act === 'app') { await appRequest(env, chat, text); return; }
+  if (p.act === 'link') { await linkPortfolio(env, chat, text); return; }
   if (p.act === 'inv' || p.act === 'us') {   // owner only
     if (!isOwner(env)) { const t = T[await getLang(env)]; await send(env, chat, { text: t.ownerOnly }); return; }
     await send(env, chat, p.act === 'inv' ? await inviteMsg(env, await getLang(env)) : await viewUsers(env, await getLang(env))); return;
@@ -609,6 +678,7 @@ export const run = (env, act, arg, guess) => act === 'coinById' ? buildById(env,
 
 // the "/" menu in Telegram (set by the setup link and again on /start, so new commands show up)
 const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
+    ...(owner ? [] : [['app', a ? 'افتح التطبيق' : 'Open the app'], ['link', a ? 'اربط محفظتك — /link الكود' : 'Link your portfolio — /link CODE']]),
     ...(owner ? [['invite', a ? 'كود دعوة لصاحبك' : 'Invite code for a friend'], ['users', a ? 'الأعضاء' : 'Members']] : []),
     ['start', a ? 'ابدأ — الأزرار تحت الشات' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
     ['report', a ? 'التقرير الكامل (صفحة)' : 'Full report (a page)'], ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],

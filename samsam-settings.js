@@ -51,6 +51,13 @@
   }
   var ACT = {
     alerts: function () { S().openAlerts(); },
+    tglink: function () {   // a one-time code → send it to the bot (or open the bot with it)
+      S().linkTelegram().then(function (r) {
+        var msg = 'Your code (10 minutes): ' + r.code + '\n\nSend it to the bot as  /link ' + r.code + '  — or tap “Open the bot”. The bot then reads this portfolio for you (only you).';
+        var ask = window.CPDialog ? CPDialog.confirm(msg, { title: 'Link the Telegram bot', icon: 'link', okText: 'Open the bot' }) : Promise.resolve(false);
+        return ask.then(function (go) { if (go) window.open('https://t.me/samsam_portfolio_bot?start=L' + r.code, '_blank', 'noopener'); });
+      }).catch(function (e) { if (window.CPDialog) CPDialog.alert('Could not make a code — ' + ((e && e.message) || e)); });
+    },
     import: function () { window.SamsamImport && SamsamImport.open(); },
     rewards: function () { if (window.SamsamRewards) SamsamRewards.open(); else goMain('rewards'); },
     wallets: function () { if (window.SamsamWallets) SamsamWallets.open(); else goMain('wallets'); },
@@ -130,7 +137,7 @@
   // a line: [key, icon, title, action]  ·  a choice: { seg: key, title, opts: [[value, label]], get(), set(v) }
   var SECTIONS = [
     ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import'], ['wallets', 'wallet', 'Wallets & check', 'wallets'], ['rewards', 'coins', 'Rewards & mining', 'rewards']]],
-    ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts']]],
+    ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link the Telegram bot', 'tglink']]],
     ['Investing rules', [['signal', 'sliders', 'Signal thresholds', 'signal'], ['targets', 'target', 'Target allocation', 'targets'], ['cats', 'note', 'Categories', 'cats'],
       ['baseline', 'history', 'Baseline', 'baseline'], ['exit', 'exit', 'Exit plan', 'exit'], ['dca', 'calc', 'DCA (regular buys)', 'dca']]],
     ['Display', [

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611120137';
-import * as Hist from './samsam-history.js?v=202611120137';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611120137';
+import * as Core from './samsam-core.js?v=202611122227';
+import * as Hist from './samsam-history.js?v=202611122227';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611122227';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -455,25 +455,36 @@ async function boot() {
   const auth = au.getAuth(app);
   fb = { app, db, auth, fs, au };
   try { await au.getRedirectResult(auth); } catch (e) { setError(e); }
+  // came back from the sign-in link in the e-mail → finish signing in (the address was kept on this device; else asked again)
+  if (au.isSignInWithEmailLink && au.isSignInWithEmailLink(auth, location.href)) {
+    const email = (() => { try { return localStorage.getItem('cp-signin-email'); } catch (_) { return null; } })();
+    if (email) await finishEmailLink(email); else S.emailLinkPending = true;
+  }
   au.onAuthStateChanged(auth, user => onUser(user));
   window.addEventListener('online', renderStatus);
   window.addEventListener('offline', renderStatus);
 }
 
-function emailAllowed(user) {
+function emailAllowed(user) {   // the owner(s) in firebase-config.js; everyone else: the database rules decide (see probeAccess)
   if (!user) return false;
   const list = (ALLOWED_EMAILS || []).map(e => String(e).toLowerCase().trim()).filter(Boolean);
   return list.length === 0 || list.includes(String(user.email || '').toLowerCase());
 }
+// someone invited through the Telegram bot: their e-mail is in Firestore config/access, which only the rules can read.
+// One read of their own (empty) settings tells: allowed → in; "permission denied" → not (yet) invited.
+async function probeAccess(user) {
+  try { await (fb.fs.getDocFromServer || fb.fs.getDoc)(fb.fs.doc(fb.db, 'users', user.uid, 'meta', 'info')); return true; }
+  catch (e) { return !/permission-denied/.test((e && e.code) || ''); }   // offline etc. → let them in; the rules still guard every read
+}
 
-function onUser(user) {
+async function onUser(user) {
   S.authResolved = true;
   S.unsub.forEach(u => { try { u(); } catch (_) {} }); S.unsub = [];
   S.coins.clear(); S.txs.clear(); S.accum.clear(); S.snapDocs.clear(); S.meta = null; S.catCfg = null;
   Object.keys(S.loaded).forEach(k => S.loaded[k] = false);
   S.user = null; S.denied = null;
   if (!user) { showGate('signin'); renderStatus(); return; }
-  if (!emailAllowed(user)) { S.denied = user.email; showGate('denied'); fb.au.signOut(fb.auth); return; }
+  if (!emailAllowed(user) && !(await probeAccess(user))) { S.denied = user.email; showGate('denied'); fb.au.signOut(fb.auth); return; }
   S.user = user;
   hideGate();
   listen();
@@ -586,6 +597,12 @@ function autoBookStakes() {
 
 const API = {
   // ── automatic staking ──
+  // 🔗 the Telegram bot: a one-time code (10 min) the bot reads with its service account when you send /link CODE
+  linkTelegram() {
+    const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', b = crypto.getRandomValues(new Uint8Array(8)), code = [...b].map(x => ABC[x % ABC.length]).join('');
+    const exp = new Date(Date.now() + 10 * 60e3).toISOString();
+    return commit((b2, ref) => b2.set(ref('meta', 'tglink'), { code, exp, email: String((S.user && S.user.email) || '').toLowerCase(), createdAt: new Date().toISOString() }), 'Link Telegram').then(() => ({ code, exp }));
+  },
   getStakes() { return cleanStakes(S.meta && S.meta.stakes); },
   getStake(sym) { return API.getStakes().find(x => x.sym === String(sym || '').toUpperCase()) || null; },
   // Every full week since the last booking becomes a Reward (Staking) at $0 cost; the staked amount grows by it.
@@ -1277,11 +1294,37 @@ function showGate(kind) {
   if (!g) return;
   if (kind === 'config') body.innerHTML = `<p>Cloud sync isn't configured yet.</p><p>Add your Firebase settings to <code>firebase-config.js</code> and publish again.</p>`;
   else if (kind === 'denied') body.innerHTML = `<p><strong>${esc(S.denied)}</strong> isn't allowed to open this portfolio.</p><button class="samsam-btn primary" id="samsamSignInBtn">Sign in with another Google account</button>`;
-  else body.innerHTML = `<p>Sign in to load your portfolio. Your data is stored privately in the cloud and stays the same on every device.</p><button class="samsam-btn primary" id="samsamSignInBtn">Sign in with Google</button><p id="samsamGateErr" style="color:#ef4444"></p>`;
+  else body.innerHTML = `<p>${S.emailLinkPending ? 'Type the e-mail address the sign-in link was sent to.' : 'Sign in to load your portfolio. Your data is stored privately in the cloud and stays the same on every device.'}</p>` +
+    (S.emailLinkPending ? '' : `<button class="samsam-btn primary" id="samsamSignInBtn">Sign in with Google</button><p class="samsam-or" style="margin:14px 0 8px;opacity:.7">or with any e-mail (iCloud, Outlook…) — no password</p>`) +
+    `<input id="samsamEmail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(127,127,140,.35);font:inherit;margin-bottom:8px">` +
+    `<button class="samsam-btn" id="samsamEmailBtn">${S.emailLinkPending ? 'Sign in' : 'Email me a sign-in link'}</button><p id="samsamGateErr" style="color:#ef4444"></p><p id="samsamGateOk" style="color:#16a34a"></p>`;
+  if (kind === 'denied') body.innerHTML += `<p style="opacity:.75;font-size:13px">Invited by Samir? Ask him in the Telegram bot to allow this address.</p>`;
   const b = document.getElementById('samsamSignInBtn'); if (b) b.onclick = () => signIn();
+  const eb = document.getElementById('samsamEmailBtn'); if (eb) eb.onclick = () => emailLink(document.getElementById('samsamEmail').value);
   g.style.display = 'flex';
 }
 function hideGate() { const g = document.getElementById('samsamGate'); if (g) g.style.display = 'none'; }
+
+// any e-mail: Firebase sends a one-time sign-in link; opening it on this device finishes the sign-in (finishEmailLink)
+async function emailLink(raw) {
+  const email = String(raw || '').trim().toLowerCase(), err = document.getElementById('samsamGateErr'), ok = document.getElementById('samsamGateOk');
+  if (err) err.textContent = ''; if (ok) ok.textContent = '';
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { if (err) err.textContent = 'Type a valid e-mail address.'; return; }
+  if (S.emailLinkPending) return finishEmailLink(email);
+  try {
+    await fb.au.sendSignInLinkToEmail(fb.auth, email, { url: location.origin + location.pathname, handleCodeInApp: true });
+    try { localStorage.setItem('cp-signin-email', email); } catch (_) {}
+    if (ok) ok.textContent = 'Sent ✅ Open the link in the e-mail on this device (check spam too).';
+  } catch (e) { if (err) err.textContent = friendly(e); }
+}
+async function finishEmailLink(email) {
+  try {
+    await fb.au.signInWithEmailLink(fb.auth, email, location.href);
+    try { localStorage.removeItem('cp-signin-email'); } catch (_) {}
+    S.emailLinkPending = false;
+    history.replaceState(null, '', location.pathname + location.hash);   // the one-time code out of the address bar
+  } catch (e) { S.emailLinkPending = false; setError(e); const el = document.getElementById('samsamGateErr'); if (el) el.textContent = friendly(e); }
+}
 
 async function signIn() {
   const { au, auth } = fb;
