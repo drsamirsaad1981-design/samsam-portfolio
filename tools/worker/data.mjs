@@ -12,6 +12,7 @@ import CG_IDS from './cg-ids.json' with { type: 'json' };
 
 export const RAW = 'https://raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/';
 const CG = 'https://api.coingecko.com/api/v3';
+const STALE = 20 * 60e3;   // a market snapshot older than this: the coins asked about are priced live by the exchanges
 const cache = new Map();   // key → { until, value }
 const inflight = new Map();   // key → the promise being fetched: tools asking at the same moment share one call
 async function cached(key, ms, make) {
@@ -89,8 +90,21 @@ export async function loadMarket(ids = [], coins = []) {
     else market.top500.push({ id: key, sym: S, name: S, price: x.price, ch24: x.ch24, extra: true });
     market.live[key] = x.src; idOf[S] = key;
   }));
+  // the snapshot is old (GitHub runs its schedule late) and CoinGecko gave nothing → the coins asked about (+ BTC) live from the
+  // exchanges, like the alerts. Only a price near the snapshot's (±50%) is taken, so a different coin with the same ticker is never used.
+  const snapT = Date.parse(market.parts && market.parts.top) || 0;
+  if (Date.now() - snapT > STALE) {
+    const want = [...new Set(['bitcoin', ...ids])].filter(id => !market.live[id] && rows.get(id) && rows.get(id).price > 0).slice(0, 3);
+    await Promise.all(want.map(async id => {
+      const r = rows.get(id), S = String(r.sym || Object.keys(idOf).find(k => idOf[k] === id) || '').toUpperCase();
+      const x = S && await exchangePrice(S).catch(() => null);
+      if (!x || !(x.price > r.price / 1.5 && x.price < r.price * 1.5)) return;
+      r.price = x.price; if (x.ch24 != null) r.ch24 = x.ch24;
+      market.live[id] = x.src;
+    }));
+  }
   const btc = market.top.find(r => r.id === 'bitcoin');
-  market.btc = btc ? { price: btc.price, ch24: btc.ch24 } : series.bitcoin ? { price: series.bitcoin.last, ch24: null } : null;
+  market.btc =btc ? { price: btc.price, ch24: btc.ch24 } : series.bitcoin ? { price: series.bitcoin.last, ch24: null } : null;
   market.priceT = Date.now();
   return market;
 }

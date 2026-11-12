@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: a17d28a2ad0d946a
+// sources-hash: b32f4c3e179e7938
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -658,6 +658,7 @@ var cg_ids_default = { APT: "aptos", ARB: "arbitrum", ATOM: "cosmos", AVAIL: "av
 // tools/worker/data.mjs
 var RAW = "https://raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/";
 var CG = "https://api.coingecko.com/api/v3";
+var STALE = 20 * 6e4;
 var cache = /* @__PURE__ */ new Map();
 var inflight = /* @__PURE__ */ new Map();
 async function cached(key, ms, make) {
@@ -766,6 +767,18 @@ async function loadMarket(ids = [], coins = []) {
     market.live[key] = x.src;
     idOf[S] = key;
   }));
+  const snapT = Date.parse(market.parts && market.parts.top) || 0;
+  if (Date.now() - snapT > STALE) {
+    const want = [.../* @__PURE__ */ new Set(["bitcoin", ...ids])].filter((id) => !market.live[id] && rows.get(id) && rows.get(id).price > 0).slice(0, 3);
+    await Promise.all(want.map(async (id) => {
+      const r = rows.get(id), S = String(r.sym || Object.keys(idOf).find((k) => idOf[k] === id) || "").toUpperCase();
+      const x = S && await exchangePrice(S).catch(() => null);
+      if (!x || !(x.price > r.price / 1.5 && x.price < r.price * 1.5)) return;
+      r.price = x.price;
+      if (x.ch24 != null) r.ch24 = x.ch24;
+      market.live[id] = x.src;
+    }));
+  }
   const btc = market.top.find((r) => r.id === "bitcoin");
   market.btc = btc ? { price: btc.price, ch24: btc.ch24 } : series.bitcoin ? { price: series.bitcoin.last, ch24: null } : null;
   market.priceT = Date.now();
