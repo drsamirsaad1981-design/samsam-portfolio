@@ -63,7 +63,7 @@ function context(env) {
   let user, base, sum, used = new Set(), coins = new Set();
   const ctx = {
     used, coins,
-    async user() { if (user === undefined) user = await loadUser(env).catch(() => null); return user; },
+    async user() { if (user === undefined) user = loadUser(env).catch(() => null); return user; },   // one read shared by every tool
     async market(extra = []) {
       const u = await ctx.user();
       const m = await loadMarket(extra.map(c => c.id).filter(Boolean), [...coinsOf(u), ...extra]);
@@ -228,7 +228,7 @@ export async function ask(env, question, lang = 'en') {
     messages.push({ role: 'assistant', content });
     const results = await Promise.all(calls.map(async c => {
       let out; try { out = await runTool(ctx, c.name, c.input || {}); } catch (e) { console.log(JSON.stringify({ ai: 'tool-error', tool: c.name, message: String(e && e.message).slice(0, 200) })); out = { error: 'tool failed' }; }
-      return { type: 'tool_result', tool_use_id: c.id, content: JSON.stringify(out).slice(0, 12000) };
+      return { type: 'tool_result', tool_use_id: c.id, content: JSON.stringify(out).slice(0, 40000) };
     }));
     messages.push({ role: 'user', content: results });
   }

@@ -13,14 +13,20 @@ import CG_IDS from './cg-ids.json' with { type: 'json' };
 export const RAW = 'https://raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/';
 const CG = 'https://api.coingecko.com/api/v3';
 const cache = new Map();   // key → { until, value }
+const inflight = new Map();   // key → the promise being fetched: tools asking at the same moment share one call
 async function cached(key, ms, make) {
   const hit = cache.get(key);
   if (hit && Date.now() < hit.until) return hit.value;
-  const before = refused;
-  const value = await make();
-  // an empty answer because the call allowance ran out is not "no data": not kept, so the next message tries again
-  if (!(refused > before && !value)) cache.set(key, { until: Date.now() + ms, value });
-  return value;
+  if (inflight.has(key)) return inflight.get(key);
+  const run = (async () => {
+    const before = refused;
+    const value = await make();
+    // an empty answer because the call allowance ran out is not "no data": not kept, so the next message tries again
+    if (!(refused > before && !value)) cache.set(key, { until: Date.now() + ms, value });
+    return value;
+  })();
+  inflight.set(key, run);
+  try { return await run; } finally { inflight.delete(key); }
 }
 let refused = 0;
 export function clearCache() { cache.clear(); tokenCache = null; }
@@ -29,7 +35,15 @@ const BUDGET = 42;
 let used = 0;
 export function resetBudget(n = BUDGET) { used = BUDGET - n; }   // n: how many outside calls this message may make
 export const budgetUsed = () => used;
-async function xfetch(url, init) { if (used >= BUDGET) { refused++; throw new Error('budget'); } used++; return fetch(url, init); }
+// the futures calls (OKX public / rubik, Binance futures, Hyperliquid) have 10 calls kept for them: the rest of a message
+// (portfolio, market, prices) stops 10 short of the allowance, so a futures question always gets its data
+const RESERVE = 10;
+const isFutures = url => /okx\.com\/api\/v5\/(public|rubik)\/|fapi\.binance\.com\/|api\.hyperliquid\.xyz\//.test(String(url));
+async function xfetch(url, init) {
+  const cap = isFutures(url) ? BUDGET : BUDGET - RESERVE;
+  if (used >= cap) { refused++; throw new Error('budget'); }
+  used++; return fetch(url, init);
+}
 // a trace of the outside calls of one message (only while /tg/check runs): host + path, status — never a body or a key
 let trace = null;
 export function startTrace() { trace = []; }
@@ -59,15 +73,15 @@ export async function loadMarket(ids = [], coins = []) {
   const idOf = {};
   for (const c of coins) { const S = String(c.sym || '').toUpperCase(); if (S) idOf[S] = c.id || CG_IDS[S] || (bySym[S] && bySym[S].id) || null; }
   const all = [...new Set(['bitcoin', ...ids, ...Object.values(idOf)].filter(Boolean))];
-  // price files: Bitcoin (the BTC comparison) + coins the snapshot doesn't have — at most 10
+  // price files: Bitcoin (the BTC comparison) + coins the snapshot doesn't have — at most 5 (the exchanges price the rest)
   const series = {};
-  const need = ['bitcoin', ...all.filter(id => id !== 'bitcoin' && !byId.has(id)).slice(0, 10)];
+  const need = ['bitcoin', ...all.filter(id => id !== 'bitcoin' && !byId.has(id)).slice(0, 5)];
   await Promise.all(need.map(async id => { const s = await cached('p:' + id, 10 * 60e3, async () => priceSeries(await getJson(RAW + 'p/' + id + '.json')) || false); if (s) series[id] = s; }));
   const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: CG_IDS, live: {}, idOf, stocks: base.m.stocks || [] };
   await liveTopUp(market, all);
-  // still no price (CoinGecko busy, not in the top 500, no price file) → the exchanges, by ticker (4 coins at most)
+  // still no price (CoinGecko busy, not in the top 500, no price file) → the exchanges, by ticker (3 coins at most)
   const rows = new Map([...market.top, ...market.top500].map(r => [r.id, r]));
-  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || (rows.get(id) && rows.get(id).price > 0) || series[id]))).slice(0, 4);
+  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || (rows.get(id) && rows.get(id).price > 0) || series[id]))).slice(0, 3);
   await Promise.all(missing.map(async ([S, id]) => {
     const x = await exchangePrice(S); if (!x) return;
     const key = id || 'x-' + S.toLowerCase(), r = rows.get(key);

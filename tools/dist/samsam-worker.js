@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: b60097a160e50b76
+// sources-hash: 39f419cd2d0429fc
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -659,13 +659,23 @@ var cg_ids_default = { APT: "aptos", ARB: "arbitrum", ATOM: "cosmos", AVAIL: "av
 var RAW = "https://raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/";
 var CG = "https://api.coingecko.com/api/v3";
 var cache = /* @__PURE__ */ new Map();
+var inflight = /* @__PURE__ */ new Map();
 async function cached(key, ms, make) {
   const hit = cache.get(key);
   if (hit && Date.now() < hit.until) return hit.value;
-  const before = refused;
-  const value = await make();
-  if (!(refused > before && !value)) cache.set(key, { until: Date.now() + ms, value });
-  return value;
+  if (inflight.has(key)) return inflight.get(key);
+  const run2 = (async () => {
+    const before = refused;
+    const value = await make();
+    if (!(refused > before && !value)) cache.set(key, { until: Date.now() + ms, value });
+    return value;
+  })();
+  inflight.set(key, run2);
+  try {
+    return await run2;
+  } finally {
+    inflight.delete(key);
+  }
 }
 var refused = 0;
 function clearCache() {
@@ -677,8 +687,11 @@ var used = 0;
 function resetBudget(n = BUDGET) {
   used = BUDGET - n;
 }
+var RESERVE = 10;
+var isFutures = (url2) => /okx\.com\/api\/v5\/(public|rubik)\/|fapi\.binance\.com\/|api\.hyperliquid\.xyz\//.test(String(url2));
 async function xfetch(url2, init) {
-  if (used >= BUDGET) {
+  const cap = isFutures(url2) ? BUDGET : BUDGET - RESERVE;
+  if (used >= cap) {
     refused++;
     throw new Error("budget");
   }
@@ -733,7 +746,7 @@ async function loadMarket(ids = [], coins = []) {
   }
   const all = [...new Set(["bitcoin", ...ids, ...Object.values(idOf)].filter(Boolean))];
   const series = {};
-  const need = ["bitcoin", ...all.filter((id) => id !== "bitcoin" && !byId.has(id)).slice(0, 10)];
+  const need = ["bitcoin", ...all.filter((id) => id !== "bitcoin" && !byId.has(id)).slice(0, 5)];
   await Promise.all(need.map(async (id) => {
     const s = await cached("p:" + id, 10 * 6e4, async () => priceSeries(await getJson(RAW + "p/" + id + ".json")) || false);
     if (s) series[id] = s;
@@ -741,7 +754,7 @@ async function loadMarket(ids = [], coins = []) {
   const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [] };
   await liveTopUp(market, all);
   const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
-  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 4);
+  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 3);
   await Promise.all(missing.map(async ([S, id]) => {
     const x = await exchangePrice(S);
     if (!x) return;
@@ -1146,9 +1159,10 @@ function context(env) {
     used: used2,
     coins,
     async user() {
-      if (user === void 0) user = await loadUser(env).catch(() => null);
+      if (user === void 0) user = loadUser(env).catch(() => null);
       return user;
     },
+    // one read shared by every tool
     async market(extra = []) {
       const u = await ctx.user();
       const m = await loadMarket(extra.map((c) => c.id).filter(Boolean), [...coinsOf(u), ...extra]);
@@ -1393,7 +1407,7 @@ async function ask(env, question, lang = "en") {
         console.log(JSON.stringify({ ai: "tool-error", tool: c.name, message: String(e && e.message).slice(0, 200) }));
         out = { error: "tool failed" };
       }
-      return { type: "tool_result", tool_use_id: c.id, content: JSON.stringify(out).slice(0, 12e3) };
+      return { type: "tool_result", tool_use_id: c.id, content: JSON.stringify(out).slice(0, 4e4) };
     }));
     messages.push({ role: "user", content: results });
   }

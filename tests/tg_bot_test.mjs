@@ -94,6 +94,7 @@ globalThis.fetch = async (input, init = {}) => {
     if (/keep looking/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tl0', name: 'get_coin', input: { coin: 'btc' } }] });
     if (/price of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'text', text: 'Let me check.' }, { type: 'tool_use', id: 'tu1', name: 'get_coin', input: { coin: 'sol' } }] });
     if (/futures of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'td1', name: 'get_derivatives', input: { coin: 'sol' } }, { type: 'tool_use', id: 'td2', name: 'get_derivatives', input: { coin: 'zzqq' } }] });
+    if (/liq of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tq1', name: 'get_coin', input: { coin: 'sol' } }, { type: 'tool_use', id: 'tq2', name: 'get_history', input: { coin: 'sol', days: 3 } }, { type: 'tool_use', id: 'tq3', name: 'get_derivatives', input: { coin: 'sol' } }, { type: 'tool_use', id: 'tq4', name: 'get_portfolio', input: {} }] });
     if (/everything/i.test(q)) return J({ stop_reason: 'tool_use', content: ['get_portfolio', 'get_market', 'get_plan', 'get_exit'].map((name, i) => ({ type: 'tool_use', id: 'tu' + i, name, input: name === 'get_market' ? { top: 200 } : {} })).concat([{ type: 'tool_use', id: 'tuh', name: 'get_history', input: { coin: 'sol', days: 7 } }]) });
     return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'A general answer about ' + q.slice(0, 30) }] });
   }
@@ -222,6 +223,12 @@ claudeCalls.length = 0; outside = 0;
 await post2({ update_id: 900001, message: { chat: { id: 555 }, text: 'the futures of SOL?' } });
 const dv2 = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
 check(`60 coins, a fresh Worker: the futures question still gets its data (${outside} outside calls)`, dv2 && dv2[0].summary && dv2[0].sources.length === 3, dv2 && dv2[0]);
+const D3 = await import('../tools/dist/samsam-worker.js?liq');   // another fresh Worker: nothing cached at all
+MANY = 60; claudeCalls.length = 0; outside = 0;
+await D3.default.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: 900002, message: { chat: { id: 555 }, text: 'Liq of SOL in 24 hours' } }) }), ENV, {});
+const lq = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
+check(`the real case: 60 coins, cold start, coin + history + futures + portfolio at once → all four arrive, futures included (${outside} outside calls)`, lq && lq[0].ticker && lq[1].change_pct != null && lq[2].summary && lq[2].summary.liquidations_24h && lq[3].total_value_usd > 0 && outside + 4 <= 50, lq && lq.map(x => x.error || Object.keys(x).slice(0, 3)));
+MANY = 0;
 MANY = 0;
 
 // ── market, plan, signals, menu ──
