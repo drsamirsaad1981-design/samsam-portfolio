@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -40,11 +40,13 @@ const USER = () => ({
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
   meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
-const sent = [], claudeCalls = []; let tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
+const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); let tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
   if (!u.startsWith('https://api.telegram.org/')) outside++;
+  if (u.startsWith('https://api.telegram.org/file/bot123:fake/')) { fileGets.push(u); return new Response(VOICE_BYTES, { status: 200 }); }
+  if (u.startsWith('https://api.telegram.org/bot') && u.endsWith('/getFile')) { const b = JSON.parse(body); sent.push({ m: 'getFile', b }); return J({ ok: true, result: { file_id: b.file_id, file_path: 'voice/file_9.oga' } }); }
   if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); sent.push({ m, b }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
   if (u.includes('raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/')) {
     const f = u.split('/prices/')[1];
@@ -429,6 +431,37 @@ check('what_if BTC $100,000: value +$2,300 (0.1 BTC × $23,000), profit up by th
 check('what_if SOL −20% + sell half (5 SOL at $120 → $600 cash, −$200 vs avg $160) + buy $110 LINK: value change = −$300 (only the price move)', wi[1].cash_from_sells_usd === 600 && wi[1].realized_profit_from_sells_usd === -200 && wi[1].change_usd === -300 && wi[1].new_money_usd === 110 && wi[1].trades.find(t => t.buy === 'LINK').amount === 10, wi[1]);
 check('what_if LINK $26 → the exit plan\'s TP1 ($25) would be reached', wi[2].exit_take_profits_reached.length === 1 && wi[2].exit_take_profits_reached[0].coin === 'LINK' && wi[2].exit_take_profits_reached[0].tp === 1, wi[2].exit_take_profits_reached);
 check('wrangler.toml runs the alerts every 5 minutes', /crons = \["\*\/5 \* \* \* \*"\]/.test(fs.readFileSync(path.join(ROOT, 'tools/worker/wrangler.toml'), 'utf8')));
+
+// ── 🎙️ voice notes → Whisper (Workers AI binding) → answered as if typed ──
+const aiRuns = []; let HEARD = 'what is the price of SOL?', AI_FAIL = false;
+const ENVV = { ...ENV, AI: { run: async (model, inp) => { aiRuns.push({ model, inp }); if (AI_FAIL) throw new Error('3010: bad audio'); return { text: HEARD, word_count: 6 }; } } };
+const voice = (v, env = ENVV) => post({ update_id: ++UPD, message: { message_id: 3, chat: { id: 555, type: 'private' }, from: { id: 555 }, voice: { file_id: 'VF1', duration: 5, mime_type: 'audio/ogg', file_size: 70000, ...v } } }, ENV.TG_SECRET, env);
+await say('/new'); sent.length = 0; claudeCalls.length = 0; fileGets.length = 0; await voice();
+const vm = sent.filter(x => x.m === 'sendMessage' || x.m === 'editMessageText');
+check('voice → "🎙️ Listening…" at once', vm[0] && vm[0].m === 'sendMessage' && /^🎙️ (Listening|بسمع)…$/.test(vm[0].b.text), vm.map(x => x.b.text));
+check('…the file is fetched from Telegram (getFile, then the download)', sent.some(x => x.m === 'getFile' && x.b.file_id === 'VF1') && fileGets.length === 1 && fileGets[0].endsWith('/voice/file_9.oga'), fileGets);
+check('…Whisper turbo gets the whole note as base64 (+ the crypto words hint)', aiRuns.length === 1 && aiRuns[0].model === '@cf/openai/whisper-large-v3-turbo' && aiRuns[0].inp.audio === Buffer.from(VOICE_BYTES).toString('base64') && /BTC/.test(aiRuns[0].inp.initial_prompt), aiRuns[0] && aiRuns[0].model);
+check('…that message becomes "🎙️ I heard: <i>…</i>"', vm[1] && vm[1].m === 'editMessageText' && /^🎙️ (I heard:|سمعت:) <i>what is the price of SOL\?<\/i>$/.test(vm[1].b.text) && okHtml(vm[1].b.text), vm[1] && vm[1].b.text);
+check('…then answered by Claude exactly like the typed question (tools called, answer about SOL)', claudeCalls.length === 2 && claudeCalls[0].messages.at(-1).content.startsWith('what is the price of SOL?') && /SOL<\/b> is \$/.test(last().b.text), [claudeCalls.length, last().b.text.slice(0, 80)]);
+HEARD = 'sol'; sent.length = 0; claudeCalls.length = 0; await voice();
+check('voice "sol" → the SOL card (no Claude, no question used)', claudeCalls.length === 0 && /SOL/.test(last().b.text) && btnTexts(last()).some(x => /Liq Map/.test(x)), last().b.text.slice(0, 60));
+HEARD = 'ممكن تنبهني لو سولانا نزلت تحت 82'; sent.length = 0; claudeCalls.length = 0; await voice();
+check('Arabic voice → "سمعت / I heard" in Arabic letters, then to Claude', out().some(x => /ممكن تنبهني لو سولانا نزلت تحت 82/.test(x.b.text)) && claudeCalls.length >= 1, out().map(x => x.b.text.slice(0, 50)));
+HEARD = 'tell <b>me</b> & go'; sent.length = 0; await voice();
+check('heard text with < & is escaped (Telegram accepts it)', out().some(x => /I heard:|سمعت:/.test(x.b.text) && okHtml(x.b.text) && x.b.text.includes('&lt;b&gt;')), out().map(x => x.b.text.slice(0, 60)));
+HEARD = ' . '; sent.length = 0; claudeCalls.length = 0; await voice();
+check('silence / no words → "couldn\'t make out any words", nothing asked', /make out|ما سمعتش/.test(last().b.text) && claudeCalls.length === 0, last().b.text);
+AI_FAIL = true; sent.length = 0; await voice(); AI_FAIL = false;
+check('Whisper fails → "couldn\'t read that voice note", no crash', /read that voice|ما قدرتش أقرا/.test(last().b.text), last().b.text);
+sent.length = 0; aiRuns.length = 0; fileGets.length = 0; await voice({ duration: 300 });
+check('a 5-minute note → "up to 2 min", nothing downloaded', /2 min|2 دقيقة/.test(last().b.text) && aiRuns.length === 0 && fileGets.length === 0, last().b.text);
+sent.length = 0; await voice({}, ENV);
+check('Worker without the AI binding → says so, asks to type it', /AI binding/.test(last().b.text), last().b.text);
+sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 4, chat: { id: 999 }, voice: { file_id: 'X', duration: 3 } } }, ENV.TG_SECRET, ENVV);
+check('a voice note from another chat → ignored', sent.length === 0);
+sent.length = 0; aiRuns.length = 0; await post({ update_id: ++UPD, message: { message_id: 5, chat: { id: 555 }, audio: { file_id: 'AU1', duration: 20, file_size: 300000 } } }, ENV.TG_SECRET, ENVV);
+check('an audio file (not a voice note) is understood too', aiRuns.length === 1 && sent.some(x => x.m === 'getFile' && x.b.file_id === 'AU1'));
+check('wrangler.toml has the AI binding for voice', /\[ai\]\s*\nbinding = "AI"/.test(fs.readFileSync(path.join(ROOT, 'tools/worker/wrangler.toml'), 'utf8')));
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

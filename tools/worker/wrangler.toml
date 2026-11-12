@@ -13,6 +13,10 @@ no_bundle = true
 binding = "RATE"
 id = "1702e6d9e72046d1909dcef441c27571"
 
+# voice notes → text (Whisper, tools/worker/voice.mjs) — no key, the account's free daily allowance
+[ai]
+binding = "AI"
+
 [observability]
 enabled = true
 

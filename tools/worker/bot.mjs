@@ -17,6 +17,7 @@ import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, isStab
 import { loadMarket, loadUser, findCoin, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
+import { transcribe, MAX_SEC } from './voice.mjs';
 
 const H = 3600e3;
 const LIQ = 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=';
@@ -50,6 +51,8 @@ const T = {
     kb: { pf: '💼 Portfolio', mk: '🌍 Market', pl: '📋 Plan', ex: '🚪 Exit', mv: '🏆 Movers', sg: '🎯 Signals' },
     kbOld: { mv: '🏆 Best & worst', ex: '🚪 Exit plan' },
     hidden: 'Buttons hidden ⌨️ — tap the ⌨️ icon in the message box (or send /start) to bring them back.',
+    listening: '🎙️ Listening…', heard: '🎙️ I heard:', vNoAi: 'Voice notes are not set up yet (the AI binding is missing in the Worker) — please type it.',
+    vLong: s => `Voice notes up to ${s / 60} min, please — or type it.`, vEmpty: "🎙️ I couldn't make out any words — try again, or type it.", vFail: "🎙️ I couldn't read that voice note — try again, or type it.",
   },
   ar: {
     hi: 'أهلاً سمير 👋', menuTitle: 'تحب تشوف إيه؟', pf: '💼 محفظتي', coin: '🪙 عملة', market: '🌍 السوق', plan: '📋 الخطة',
@@ -78,6 +81,8 @@ const T = {
     kb: { pf: '💼 محفظتي', mk: '🌍 السوق', pl: '📋 الخطة', ex: '🚪 الخروج', mv: '🏆 الأفضل', sg: '🎯 الإشارات' },
     kbOld: { mv: '🏆 الأفضل والأسوأ', ex: '🚪 خطة الخروج' },
     hidden: 'الأزرار اتخفت ⌨️ — اضغط علامة ⌨️ في خانة الكتابة (أو ابعت /start) عشان ترجع.',
+    listening: '🎙️ بسمع…', heard: '🎙️ سمعت:', vNoAi: 'الرسايل الصوتية لسه مش متظبطة (الـ AI binding ناقص في الـ Worker) — اكتبها لو سمحت.',
+    vLong: s => `الفويس لحد ${s / 60} دقيقة بس — أو اكتبها.`, vEmpty: '🎙️ ما سمعتش كلام واضح — جرّب تاني أو اكتبها.', vFail: '🎙️ ما قدرتش أقرا الفويس ده — جرّب تاني أو اكتبها.',
   },
 };
 
@@ -361,29 +366,47 @@ export async function handleTelegram(request, env) {
       await done(`✅ ${t.updated} ${local(Date.now(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })}`);
       return ok();
     }
+    if (msg && (msg.voice || msg.audio)) { await onVoice(env, chat, msg.voice || msg.audio); return ok(); }
     if (!msg || typeof msg.text !== 'string') return ok();
-    const p = parse(msg.text);
-    tg(env, 'sendChatAction', { chat_id: chat, action: 'typing' }).catch(() => {});   // "typing…" while the numbers load
-    if (/^lang:(ar|en)$/.test(p.act)) { await switchLang(env, chat, p.act.slice(5)); return ok(); }
-    if (p.act === 'al') { await send(env, chat, await viewAlerts(env, await getLang(env))); return ok(); }
-    if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return ok(); }
-    if (p.act === 'ai') { await answer(env, chat, p.q); return ok(); }
-    if (p.act === 'hide') { const t = T[await getLang(env)]; await send(env, chat, { text: t.hidden }, { reply_markup: { remove_keyboard: true } }); return ok(); }
-    const { t, views, ai } = await run(env, p.act, p.q, p.guess);
-    if (ai) { await answer(env, chat, ai); return ok(); }
-    if (/^\/start/.test(msg.text)) { await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) }); await tg(env, 'setMyCommands', { commands: cmds(await getLang(env)) }).catch(() => {}); }   // the keyboard under the chat + the "/" menu
-    for (const v of views) await send(env, chat, v);
+    await onText(env, chat, msg.text);
   } catch (e) {
     await send(env, chat, { text: T[await getLang(env).catch(() => 'en')].err }).catch(() => {});
   }
   return ok();
 }
 
+// 🎙️ a voice note → "Listening…" → that message becomes what it heard → then exactly as if you had typed it
+async function onVoice(env, chat, voice) {
+  const t = T[await getLang(env)];
+  const ph = await send(env, chat, { text: t.listening });
+  const id = ph && ph.result && ph.result.message_id;
+  const show = v => id ? edit(env, chat, id, v).then(r => r.ok ? r : send(env, chat, v)) : send(env, chat, v);
+  const r = await transcribe(env, voice);
+  if (r.error) return show({ text: r.error === 'noai' ? t.vNoAi : r.error === 'long' ? t.vLong(MAX_SEC) : r.error === 'empty' ? t.vEmpty : t.vFail });
+  await show({ text: `${t.heard} <i>${esc(r.text)}</i>` });
+  return onText(env, chat, r.text, 32);   // 4 calls went on the voice note → a little less for the data
+}
+
+// a typed message (or a voice note's words) → a view, or a question for Claude
+async function onText(env, chat, text, budget = 36) {
+  const p = parse(text);
+  tg(env, 'sendChatAction', { chat_id: chat, action: 'typing' }).catch(() => {});   // "typing…" while the numbers load
+  if (/^lang:(ar|en)$/.test(p.act)) { await switchLang(env, chat, p.act.slice(5)); return; }
+  if (p.act === 'al') { await send(env, chat, await viewAlerts(env, await getLang(env))); return; }
+  if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
+  if (p.act === 'ai') { await answer(env, chat, p.q, budget); return; }
+  if (p.act === 'hide') { const t = T[await getLang(env)]; await send(env, chat, { text: t.hidden }, { reply_markup: { remove_keyboard: true } }); return; }
+  const { t, views, ai } = await run(env, p.act, p.q, p.guess);
+  if (ai) { await answer(env, chat, ai, budget); return; }
+  if (/^\/start/.test(text)) { await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) }); await tg(env, 'setMyCommands', { commands: cmds(await getLang(env)) }).catch(() => {}); }   // the keyboard under the chat + the "/" menu
+  for (const v of views) await send(env, chat, v);
+}
+
 // 🧠 a question in plain words → "Thinking…" at once, then the same message becomes Claude's answer, with where its numbers
 // came from, how many questions are left today, and buttons for the coins it looked at
-async function answer(env, chat, question) {
+async function answer(env, chat, question, budget = 36) {
   const lang = await getLang(env), t = T[lang];
-  resetBudget(36);   // data calls; Claude's own (usually 2–4, at most 9) + Telegram's 3 keep the total inside Cloudflare's 50
+  resetBudget(budget);   // data calls; Claude's own (usually 2–4, at most 9) + Telegram's 3 keep the total inside Cloudflare's 50
   const ph = await send(env, chat, { text: t.thinking });
   const id = ph && ph.result && ph.result.message_id;
   const show = v => id ? edit(env, chat, id, v).then(r => r.ok ? r : send(env, chat, v)) : send(env, chat, v);

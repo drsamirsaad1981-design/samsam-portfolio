@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: cfb7bbf3cd37105e
+// sources-hash: f53e3a23ac143969
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1696,6 +1696,35 @@ async function ask(env, question, lang = "en") {
   return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model };
 }
 
+// tools/worker/voice.mjs
+var MAX_SEC = 120;
+var MODEL = "@cf/openai/whisper-large-v3-turbo";
+var HINT = "Bitcoin BTC, ETH, SOL, LINK, PENDLE, funding, alert, portfolio, take profit. \u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648\u060C \u0645\u062D\u0641\u0638\u062A\u064A\u060C \u0627\u0644\u0633\u0639\u0631\u060C \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C.";
+function b64(buf) {
+  const u8 = new Uint8Array(buf);
+  let s = "";
+  for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+  return btoa(s);
+}
+async function transcribe(env, voice) {
+  if (!env.AI || typeof env.AI.run !== "function") return { error: "noai" };
+  if (!voice || !voice.file_id) return { error: "fail" };
+  if ((voice.duration || 0) > MAX_SEC || (voice.file_size || 0) > 1e7) return { error: "long" };
+  try {
+    const f = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ file_id: voice.file_id }) }).then((r) => r.json());
+    const p = f && f.ok && f.result && f.result.file_path;
+    if (!p) return { error: "fail" };
+    const audio = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${p}`);
+    if (!audio.ok) return { error: "fail" };
+    const out = await env.AI.run(MODEL, { audio: b64(await audio.arrayBuffer()), vad_filter: true, initial_prompt: HINT });
+    const text = String(out && out.text || "").replace(/\s+/g, " ").trim().slice(0, 1e3);
+    return text.replace(/[\p{P}\s]/gu, "").length < 2 ? { error: "empty" } : { text };
+  } catch (e) {
+    console.log(JSON.stringify({ voice: "fail", message: String(e && e.message).slice(0, 300) }));
+    return { error: "fail" };
+  }
+}
+
 // tools/worker/bot.mjs
 var H3 = 36e5;
 var LIQ = "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=";
@@ -1813,7 +1842,13 @@ var T = {
     allExit: "All 3 conditions met \u2014 your exit zone",
     kb: { pf: "\u{1F4BC} Portfolio", mk: "\u{1F30D} Market", pl: "\u{1F4CB} Plan", ex: "\u{1F6AA} Exit", mv: "\u{1F3C6} Movers", sg: "\u{1F3AF} Signals" },
     kbOld: { mv: "\u{1F3C6} Best & worst", ex: "\u{1F6AA} Exit plan" },
-    hidden: "Buttons hidden \u2328\uFE0F \u2014 tap the \u2328\uFE0F icon in the message box (or send /start) to bring them back."
+    hidden: "Buttons hidden \u2328\uFE0F \u2014 tap the \u2328\uFE0F icon in the message box (or send /start) to bring them back.",
+    listening: "\u{1F399}\uFE0F Listening\u2026",
+    heard: "\u{1F399}\uFE0F I heard:",
+    vNoAi: "Voice notes are not set up yet (the AI binding is missing in the Worker) \u2014 please type it.",
+    vLong: (s) => `Voice notes up to ${s / 60} min, please \u2014 or type it.`,
+    vEmpty: "\u{1F399}\uFE0F I couldn't make out any words \u2014 try again, or type it.",
+    vFail: "\u{1F399}\uFE0F I couldn't read that voice note \u2014 try again, or type it."
   },
   ar: {
     hi: "\u0623\u0647\u0644\u0627\u064B \u0633\u0645\u064A\u0631 \u{1F44B}",
@@ -1928,7 +1963,13 @@ var T = {
     allExit: "\u0627\u0644\u0634\u0631\u0648\u0637 \u0627\u0644\u0640 3 \u0627\u062A\u062D\u0642\u0642\u062A \u2014 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
     kb: { pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A", mk: "\u{1F30D} \u0627\u0644\u0633\u0648\u0642", pl: "\u{1F4CB} \u0627\u0644\u062E\u0637\u0629", ex: "\u{1F6AA} \u0627\u0644\u062E\u0631\u0648\u062C", mv: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644", sg: "\u{1F3AF} \u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" },
     kbOld: { mv: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623", ex: "\u{1F6AA} \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" },
-    hidden: "\u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u0627\u062A\u062E\u0641\u062A \u2328\uFE0F \u2014 \u0627\u0636\u063A\u0637 \u0639\u0644\u0627\u0645\u0629 \u2328\uFE0F \u0641\u064A \u062E\u0627\u0646\u0629 \u0627\u0644\u0643\u062A\u0627\u0628\u0629 (\u0623\u0648 \u0627\u0628\u0639\u062A /start) \u0639\u0634\u0627\u0646 \u062A\u0631\u062C\u0639."
+    hidden: "\u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u0627\u062A\u062E\u0641\u062A \u2328\uFE0F \u2014 \u0627\u0636\u063A\u0637 \u0639\u0644\u0627\u0645\u0629 \u2328\uFE0F \u0641\u064A \u062E\u0627\u0646\u0629 \u0627\u0644\u0643\u062A\u0627\u0628\u0629 (\u0623\u0648 \u0627\u0628\u0639\u062A /start) \u0639\u0634\u0627\u0646 \u062A\u0631\u062C\u0639.",
+    listening: "\u{1F399}\uFE0F \u0628\u0633\u0645\u0639\u2026",
+    heard: "\u{1F399}\uFE0F \u0633\u0645\u0639\u062A:",
+    vNoAi: "\u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0644\u0633\u0647 \u0645\u0634 \u0645\u062A\u0638\u0628\u0637\u0629 (\u0627\u0644\u0640 AI binding \u0646\u0627\u0642\u0635 \u0641\u064A \u0627\u0644\u0640 Worker) \u2014 \u0627\u0643\u062A\u0628\u0647\u0627 \u0644\u0648 \u0633\u0645\u062D\u062A.",
+    vLong: (s) => `\u0627\u0644\u0641\u0648\u064A\u0633 \u0644\u062D\u062F ${s / 60} \u062F\u0642\u064A\u0642\u0629 \u0628\u0633 \u2014 \u0623\u0648 \u0627\u0643\u062A\u0628\u0647\u0627.`,
+    vEmpty: "\u{1F399}\uFE0F \u0645\u0627 \u0633\u0645\u0639\u062A\u0634 \u0643\u0644\u0627\u0645 \u0648\u0627\u0636\u062D \u2014 \u062C\u0631\u0651\u0628 \u062A\u0627\u0646\u064A \u0623\u0648 \u0627\u0643\u062A\u0628\u0647\u0627.",
+    vFail: "\u{1F399}\uFE0F \u0645\u0627 \u0642\u062F\u0631\u062A\u0634 \u0623\u0642\u0631\u0627 \u0627\u0644\u0641\u0648\u064A\u0633 \u062F\u0647 \u2014 \u062C\u0631\u0651\u0628 \u062A\u0627\u0646\u064A \u0623\u0648 \u0627\u0643\u062A\u0628\u0647\u0627."
   }
 };
 var cb = (text, data) => ({ text, callback_data: data });
@@ -2244,58 +2285,75 @@ async function handleTelegram(request, env) {
         return ok();
       }
       if (/^mk:\d+$/.test(d) && RANGES.includes(+d.slice(3))) await setRange(env, +d.slice(3));
-      const { t: t2, views: views2 } = d.startsWith("c:") ? await run(env, "coinById", d.slice(2)) : await run(env, /^mk:/.test(d) ? "mk" : d);
-      const r = await edit(env, chat, q.message.message_id, views2[0]);
-      if (!r.ok && !/not modified/i.test(r.description || "")) await send(env, chat, views2[0]);
-      await done(`\u2705 ${t2.updated} ${local(Date.now(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })}`);
+      const { t, views } = d.startsWith("c:") ? await run(env, "coinById", d.slice(2)) : await run(env, /^mk:/.test(d) ? "mk" : d);
+      const r = await edit(env, chat, q.message.message_id, views[0]);
+      if (!r.ok && !/not modified/i.test(r.description || "")) await send(env, chat, views[0]);
+      await done(`\u2705 ${t.updated} ${local(Date.now(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })}`);
+      return ok();
+    }
+    if (msg && (msg.voice || msg.audio)) {
+      await onVoice(env, chat, msg.voice || msg.audio);
       return ok();
     }
     if (!msg || typeof msg.text !== "string") return ok();
-    const p = parse(msg.text);
-    tg2(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
-    });
-    if (/^lang:(ar|en)$/.test(p.act)) {
-      await switchLang(env, chat, p.act.slice(5));
-      return ok();
-    }
-    if (p.act === "al") {
-      await send(env, chat, await viewAlerts(env, await getLang(env)));
-      return ok();
-    }
-    if (p.act === "new") {
-      await forget(env);
-      await send(env, chat, { text: T[await getLang(env)].newDone });
-      return ok();
-    }
-    if (p.act === "ai") {
-      await answer(env, chat, p.q);
-      return ok();
-    }
-    if (p.act === "hide") {
-      const t2 = T[await getLang(env)];
-      await send(env, chat, { text: t2.hidden }, { reply_markup: { remove_keyboard: true } });
-      return ok();
-    }
-    const { t, views, ai } = await run(env, p.act, p.q, p.guess);
-    if (ai) {
-      await answer(env, chat, ai);
-      return ok();
-    }
-    if (/^\/start/.test(msg.text)) {
-      await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });
-      await tg2(env, "setMyCommands", { commands: cmds(await getLang(env)) }).catch(() => {
-      });
-    }
-    for (const v of views) await send(env, chat, v);
+    await onText(env, chat, msg.text);
   } catch (e) {
     await send(env, chat, { text: T[await getLang(env).catch(() => "en")].err }).catch(() => {
     });
   }
   return ok();
 }
-async function answer(env, chat, question) {
+async function onVoice(env, chat, voice) {
+  const t = T[await getLang(env)];
+  const ph = await send(env, chat, { text: t.listening });
+  const id = ph && ph.result && ph.result.message_id;
+  const show = (v) => id ? edit(env, chat, id, v).then((r3) => r3.ok ? r3 : send(env, chat, v)) : send(env, chat, v);
+  const r = await transcribe(env, voice);
+  if (r.error) return show({ text: r.error === "noai" ? t.vNoAi : r.error === "long" ? t.vLong(MAX_SEC) : r.error === "empty" ? t.vEmpty : t.vFail });
+  await show({ text: `${t.heard} <i>${esc(r.text)}</i>` });
+  return onText(env, chat, r.text, 32);
+}
+async function onText(env, chat, text, budget = 36) {
+  const p = parse(text);
+  tg2(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
+  });
+  if (/^lang:(ar|en)$/.test(p.act)) {
+    await switchLang(env, chat, p.act.slice(5));
+    return;
+  }
+  if (p.act === "al") {
+    await send(env, chat, await viewAlerts(env, await getLang(env)));
+    return;
+  }
+  if (p.act === "new") {
+    await forget(env);
+    await send(env, chat, { text: T[await getLang(env)].newDone });
+    return;
+  }
+  if (p.act === "ai") {
+    await answer(env, chat, p.q, budget);
+    return;
+  }
+  if (p.act === "hide") {
+    const t2 = T[await getLang(env)];
+    await send(env, chat, { text: t2.hidden }, { reply_markup: { remove_keyboard: true } });
+    return;
+  }
+  const { t, views, ai } = await run(env, p.act, p.q, p.guess);
+  if (ai) {
+    await answer(env, chat, ai, budget);
+    return;
+  }
+  if (/^\/start/.test(text)) {
+    await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });
+    await tg2(env, "setMyCommands", { commands: cmds(await getLang(env)) }).catch(() => {
+    });
+  }
+  for (const v of views) await send(env, chat, v);
+}
+async function answer(env, chat, question, budget = 36) {
   const lang = await getLang(env), t = T[lang];
-  resetBudget(36);
+  resetBudget(budget);
   const ph = await send(env, chat, { text: t.thinking });
   const id = ph && ph.result && ph.result.message_id;
   const show = (v) => id ? edit(env, chat, id, v).then((r3) => r3.ok ? r3 : send(env, chat, v)) : send(env, chat, v);
