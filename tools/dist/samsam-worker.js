@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 0faf8d4dd7c19f04
+// sources-hash: b60097a160e50b76
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -668,6 +668,10 @@ async function cached(key, ms, make) {
   return value;
 }
 var refused = 0;
+function clearCache() {
+  cache.clear();
+  tokenCache = null;
+}
 var BUDGET = 42;
 var used = 0;
 function resetBudget(n = BUDGET) {
@@ -681,12 +685,31 @@ async function xfetch(url2, init) {
   used++;
   return fetch(url2, init);
 }
+var trace = null;
+function startTrace() {
+  trace = [];
+}
+function stopTrace() {
+  const t = trace;
+  trace = null;
+  return t;
+}
 async function getJson(url2, init) {
+  const tag = () => {
+    try {
+      const u = new URL(url2);
+      return u.host + u.pathname;
+    } catch (_) {
+      return "?";
+    }
+  };
   try {
     const r = await xfetch(url2, init);
+    if (trace) trace.push([tag(), r.status]);
     if (!r.ok) return null;
     return await r.json();
-  } catch (_) {
+  } catch (e) {
+    if (trace) trace.push([tag(), String(e && e.message).slice(0, 60)]);
     return null;
   }
 }
@@ -910,13 +933,7 @@ var num2 = (v) => {
   return isFinite(n) ? n : null;
 };
 async function postJson(url2, body) {
-  try {
-    const r = await xfetch(url2, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    if (!r.ok) return null;
-    return await r.json();
-  } catch (_) {
-    return null;
-  }
+  return getJson(url2, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 }
 async function okxDeriv(S, now) {
   const O = "https://www.okx.com/api/v5", inst = `${S}-USDT-SWAP`;
@@ -2039,12 +2056,23 @@ async function setup(request, env) {
   await send(env, env.TELEGRAM_CHAT_ID, viewMenu(t));
   return json(a.ok && b.ok && c.ok ? 200 : 502, { ok: !!(a.ok && b.ok && c.ok), webhook: a.ok ? "set" : a.description, menu: b.ok ? "set" : b.description, welcome: c.ok ? "sent" : c.description, portfolio: serviceAccount(env) ? user ? "connected" : "not found" : "FIREBASE_SERVICE_ACCOUNT missing" });
 }
+async function check(request, env) {
+  const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { "content-type": "application/json" } });
+  if (!env.TG_SECRET || u.searchParams.get("key") !== env.TG_SECRET) return json(403, { ok: false, error: "Wrong or missing key." });
+  const sym = String(u.searchParams.get("coin") || "BTC").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  clearCache();
+  resetBudget();
+  startTrace();
+  const t0 = Date.now(), d = await derivatives(sym).catch((e) => ({ error: String(e && e.message) }));
+  return json(200, { coin: sym, ms: Date.now() - t0, colo: request.cf && request.cf.colo || null, country: request.cf && request.cf.country || null, result: d, calls: stopTrace() });
+}
 
 // tools/worker/index.mjs
 var worker_default = {
   async fetch(request, env, ctx) {
     const p = new URL(request.url).pathname.replace(/\/+$/, "");
     if (p.endsWith("/tg/setup")) return setup(request, env);
+    if (p.endsWith("/tg/check")) return check(request, env);
     if (p.endsWith("/tg")) return handleTelegram(request, env, ctx);
     return ai_worker_default.fetch(request, env, ctx);
   }

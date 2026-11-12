@@ -30,8 +30,14 @@ let used = 0;
 export function resetBudget(n = BUDGET) { used = BUDGET - n; }   // n: how many outside calls this message may make
 export const budgetUsed = () => used;
 async function xfetch(url, init) { if (used >= BUDGET) { refused++; throw new Error('budget'); } used++; return fetch(url, init); }
+// a trace of the outside calls of one message (only while /tg/check runs): host + path, status — never a body or a key
+let trace = null;
+export function startTrace() { trace = []; }
+export function stopTrace() { const t = trace; trace = null; return t; }
 async function getJson(url, init) {
-  try { const r = await xfetch(url, init); if (!r.ok) return null; return await r.json(); } catch (_) { return null; }
+  const tag = () => { try { const u = new URL(url); return u.host + u.pathname; } catch (_) { return '?'; } };
+  try { const r = await xfetch(url, init); if (trace) trace.push([tag(), r.status]); if (!r.ok) return null; return await r.json(); }
+  catch (e) { if (trace) trace.push([tag(), String(e && e.message).slice(0, 60)]); return null; }
 }
 
 // ── the market (same shape tools/alerts.mjs builds from the files on disk) ──
@@ -234,9 +240,7 @@ export async function rawSeries(id) {   // the file itself: { t0, step, p: [...]
 // is just left out. Per coin: funding rate, open interest (and its 24h change), long / short accounts, the liquidations
 // OKX reports for the last 24 h. About 10 outside calls per coin (cached 2 min).
 const num = v => { const n = +v; return isFinite(n) ? n : null; };
-async function postJson(url, body) {
-  try { const r = await xfetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); if (!r.ok) return null; return await r.json(); } catch (_) { return null; }
-}
+async function postJson(url, body) { return getJson(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); }
 async function okxDeriv(S, now) {
   const O = 'https://www.okx.com/api/v5', inst = `${S}-USDT-SWAP`;
   const [fr, oi, oih, ls, liq, ins] = await Promise.all([

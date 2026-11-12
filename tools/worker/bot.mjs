@@ -14,7 +14,7 @@
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
-import { loadMarket, loadUser, findCoin, serviceAccount, resetBudget, coinsOf, withIds } from './data.mjs';
+import { loadMarket, loadUser, findCoin, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
 
 const H = 3600e3;
@@ -431,4 +431,15 @@ export async function setup(request, env) {
   const c = await send(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
   await send(env, env.TELEGRAM_CHAT_ID, viewMenu(t));
   return json(a.ok && b.ok && c.ok ? 200 : 502, { ok: !!(a.ok && b.ok && c.ok), webhook: a.ok ? 'set' : a.description, menu: b.ok ? 'set' : b.description, welcome: c.ok ? 'sent' : c.description, portfolio: serviceAccount(env) ? (user ? 'connected' : 'not found') : 'FIREBASE_SERVICE_ACCOUNT missing' });
+}
+
+// ── a check you open in the browser: GET /tg/check?key=<TG_SECRET>&coin=SOL — the futures data for a coin, fresh, and
+// every outside call it made (host, path, status). Shows no keys and no portfolio data.
+export async function check(request, env) {
+  const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { 'content-type': 'application/json' } });
+  if (!env.TG_SECRET || u.searchParams.get('key') !== env.TG_SECRET) return json(403, { ok: false, error: 'Wrong or missing key.' });
+  const sym = String(u.searchParams.get('coin') || 'BTC').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  clearCache(); resetBudget(); startTrace();
+  const t0 = Date.now(), d = await derivatives(sym).catch(e => ({ error: String(e && e.message) }));
+  return json(200, { coin: sym, ms: Date.now() - t0, colo: (request.cf && request.cf.colo) || null, country: (request.cf && request.cf.country) || null, result: d, calls: stopTrace() });
 }
