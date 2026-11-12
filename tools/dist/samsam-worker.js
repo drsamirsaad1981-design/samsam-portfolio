@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 324321ab7a73770a
+// sources-hash: f23f12bcbb628203
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1219,6 +1219,8 @@ async function addAlert(env, input, user) {
   a.armed = !met(kind, now, value);
   return locked(async () => {
     const list2 = await listAlerts(env);
+    const same = list2.find((b) => b.kind === a.kind && b.value === a.value && (b.sym || null) === (a.sym || null));
+    if (same) return { ok: true, alert: describe(same), id: same.id, now, already_set: true, note: "This exact alert already exists \u2014 nothing added. Tell the user it was already set." };
     if (list2.length >= MAX) return { error: `you already have ${MAX} alerts \u2014 delete some first` };
     list2.push(a);
     await saveAlerts(env, list2);

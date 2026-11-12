@@ -787,5 +787,11 @@ check('…and not again for 20 min', kicks.length === 1);
 check('built file holds no GitHub token', !/github_pat_|ghp_[A-Za-z0-9]{20}/.test(built));
 market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() };
 
+// the same alert twice (e.g. said again by voice) → kept once
+kvStore.set('tg:alerts', '[]'); Wd = await fresh(); claudeCalls.length = 0; await postK(Wd, 'alert me sol'); claudeCalls.length = 0; await postK(Wd, 'alert me sol');
+const al2 = JSON.parse(kvStore.get('tg:alerts')), dupRes = claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
+check('the same alert asked twice → stored once ("already set")', al2.filter(a => a.kind === 'price_below' && a.value === 140).length === 1 && dupRes[0].already_set === true, [al2.length, dupRes[0]]);
+kvStore.set('tg:alerts', '[]');
+
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

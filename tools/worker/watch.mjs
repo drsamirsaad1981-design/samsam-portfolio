@@ -84,6 +84,8 @@ export async function addAlert(env, input, user) {
   a.armed = !met(kind, now, value);   // already true → waits until it isn't, then fires on the next crossing
   return locked(async () => {
     const list = await listAlerts(env);
+    const same = list.find(b => b.kind === a.kind && b.value === a.value && (b.sym || null) === (a.sym || null));
+    if (same) return { ok: true, alert: describe(same), id: same.id, now, already_set: true, note: 'This exact alert already exists — nothing added. Tell the user it was already set.' };   // no duplicates
     if (list.length >= MAX) return { error: `you already have ${MAX} alerts — delete some first` };
     list.push(a); await saveAlerts(env, list);
     return { ok: true, alert: describe(a), id: a.id, now, already_met: !a.armed };
