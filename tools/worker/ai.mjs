@@ -285,3 +285,27 @@ export async function ask(env, question, lang = 'en') {
   const coins = [...ctx.coins].map(x => x.split('|')).slice(0, 3);
   return { text: toHtml(text), sources: [...ctx.used], coins, left, limit: u.limit, model, trades: ctx.trades };
 }
+
+// ── the smart morning / evening (phase 5): the facts the bot gathered → one short report in the AI Analysis style ──
+// One call, no tools (every number is in the facts), not counted in the 30 questions a day. null if Claude can't → the bot
+// sends its own plain version instead.
+export async function compose(env, kind, lang, facts) {
+  if (!env.ANTHROPIC_API_KEY) return null;
+  const ar = lang === 'ar';
+  const sys = [
+    `You write Samir's ${kind === 'morning' ? 'SMART MORNING' : 'SMART EVENING'} message in Telegram for his Cute Portfolio app (long-term, Bitcoin-first: accumulation plan, DCA, exit plan).`,
+    'Every number must come from FACTS (JSON). Never invent a number, price or event. If something is missing, leave it out.',
+    kind === 'morning'
+      ? 'Shape: line 1 = one emoji + **bold one-line verdict for today**. Then 🎯 **Today** — exactly 3 numbered actions (1. 2. 3.) picked from FACTS.todo (most useful first; "nothing to do — hold" is a valid action when the list is short), each one line with its number. Then 🌍 **Market mood** — 2 bullets. Then 👀 **Watch today** — 1–2 bullets (levels / alerts closest to triggering).'
+      : 'Shape: line 1 = one emoji + **bold one-line verdict on the day**. Then 📊 **Today** — 2–3 bullets (portfolio change since the morning, best / worst coin, trades or alerts that happened). Then 🔄 **What changed** — 2 bullets (BTC, Fear & Greed, dominance, futures, sectors — vs the morning when FACTS has it). Then 👀 **Tonight & tomorrow** — 2–3 bullets (closest levels / alerts, tomorrow\'s DCA if any).',
+    'Bullets: "• label: **value** — 3–6 word note". Short lines (≤ 40 characters when possible), ~14 lines in all, no tables, no headings with #, no links, no sources line.',
+    ar ? 'Write in Egyptian Arabic; numbers and tickers in Latin characters.' : 'Write in English.',
+  ].join('\n');
+  const body = { max_tokens: 900, system: sys, messages: [{ role: 'user', content: 'FACTS:\n' + JSON.stringify(facts).slice(0, 12000) }] };
+  let model = env.BOT_MODEL || 'claude-sonnet-5-5';
+  let r = await claude(env, model, body).catch(() => ({ ok: false, status: 0, j: {} }));
+  if (!r.ok && (r.status === 404 || (r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {}))))) { model = env.MODEL || 'claude-opus-4-5'; r = await claude(env, model, body).catch(() => ({ ok: false, j: {} })); }
+  if (!r.ok) { console.log(JSON.stringify({ daily: 'claude-error', kind, status: r.status })); return null; }
+  const text = (r.j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+  return text ? toHtml(text) : null;
+}

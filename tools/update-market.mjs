@@ -111,6 +111,16 @@ async function main() {
   if (Array.isArray(bs) && bs.length) { snap.stocks = bs.filter(c => c && c.current_price > 0).map(c => ({ id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, price: c.current_price, ch24: c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null, mcap: c.market_cap || null })); snap.parts.stocks = now; log('bstocks', snap.stocks.length); }
   else { if (old.stocks) snap.stocks = old.stocks; log('bstocks: no answer, kept the last one'); }
 
+  // sectors (CoinGecko categories: market cap + its 24h change + their 3 biggest coins) — the Telegram bot's sector radar
+  // and smart evening. Only sectors ≥ $500M; kept from the last run when CoinGecko doesn't answer.
+  await sleep(4000);
+  const cats = await get(`${API}/coins/categories?order=market_cap_desc`, 2);
+  if (Array.isArray(cats) && cats.length) {
+    snap.sectors = cats.filter(c => c && c.id && c.market_cap >= 5e8 && isFinite(c.market_cap_change_24h)).slice(0, 120)
+      .map(c => ({ id: c.id, name: String(c.name || c.id).slice(0, 60), mcap: Math.round(c.market_cap), ch24: +(+c.market_cap_change_24h).toFixed(2), top: Array.isArray(c.top_3_coins_id) ? c.top_3_coins_id.slice(0, 3) : [] }));
+    snap.parts.sectors = now; log('sectors', snap.sectors.length);
+  } else { if (old.sectors) snap.sectors = old.sectors; log('sectors: no answer, kept the last one'); }
+
   try { const alt = await altSeason(all, snap.global); if (alt) { snap.alt = alt; snap.parts.alt = now; } else if (old.alt) snap.alt = old.alt; }
   catch (e) { log('alt season:', e.message); if (old.alt) snap.alt = old.alt; }
 

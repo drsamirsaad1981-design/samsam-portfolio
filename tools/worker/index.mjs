@@ -3,6 +3,8 @@
 import ai from '../ai-worker.js';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
+import { runDaily } from './daily.mjs';
+import { resetBudget } from './data.mjs';
 
 export default {
   async fetch(request, env, ctx) {
@@ -12,8 +14,13 @@ export default {
     if (p.endsWith('/tg')) return handleTelegram(request, env, ctx);
     return ai.fetch(request, env, ctx);
   },
-  // every 5 minutes (tools/worker/wrangler.toml → crons): the alerts you set in words
+  // every 5 minutes (tools/worker/wrangler.toml → crons): the alerts you set in words, then the bot's own messages (phase 5)
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runWatch(env).then(r => { if (r.fired) console.log(JSON.stringify({ watch: r })); }).catch(e => console.log(JSON.stringify({ watch: 'error', message: String(e && e.message).slice(0, 200) }))));
+    const now = event && event.scheduledTime ? +event.scheduledTime : Date.now(), log = (k, e) => console.log(JSON.stringify({ [k]: 'error', message: String(e && e.message).slice(0, 200) }));
+    ctx.waitUntil((async () => {
+      resetBudget();   // one allowance of outside calls for the whole run (Cloudflare counts per run)
+      await runWatch(env).then(r => { if (r.fired) console.log(JSON.stringify({ watch: r })); }).catch(e => log('watch', e));
+      await runDaily(env, now).then(r => { if (r.job) console.log(JSON.stringify({ daily: r })); }).catch(e => log('daily', e));   // phase 5: morning / evening / radars / pinned
+    })());
   },
 };

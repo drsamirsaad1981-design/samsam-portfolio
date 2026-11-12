@@ -8,7 +8,7 @@
 // Prices: the exchanges first (live, by ticker), then CoinGecko / the market snapshot. Stored in KV (RATE): tg:alerts.
 
 import { loadMarket, loadUser, coinsOf, withIds, exchangePrice, derivatives, findCoin, resetBudget } from './data.mjs';
-import { summarize, usd, pct, esc, local } from '../alerts-core.mjs';
+import { summarize, usd, pct, esc, local, localParts } from '../alerts-core.mjs';
 
 const KEY = 'tg:alerts', MAX = 30;
 export const KINDS = {
@@ -24,6 +24,15 @@ let lock = Promise.resolve();   // changes to the list one at a time (Claude may
 const locked = fn => { const run = lock.then(fn, fn); lock = run.catch(() => {}); return run; };
 export async function listAlerts(env) { try { const a = JSON.parse((await kvGet(env, KEY)) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
 async function saveAlerts(env, list) { await kvPut(env, KEY, JSON.stringify(list.slice(0, MAX))); }
+// today's events (alerts that fired, radar hits, trades saved) — the smart evening tells what happened. KV tg:log:<Riyadh day>
+export async function logEvent(env, type, text, now = Date.now()) {
+  const k = 'tg:log:' + localParts(now).date;
+  let a = []; try { a = JSON.parse((await kvGet(env, k)) || '[]'); } catch (_) {}
+  a.push({ t: now, type, text: String(text).replace(/<[^>]+>/g, '').slice(0, 200) });
+  const v = JSON.stringify(a.slice(-30)); mem.set(k, v);
+  try { if (env.RATE) await env.RATE.put(k, v, { expirationTtl: 3 * 86400 }); } catch (_) {}
+}
+export async function todayLog(env, now = Date.now()) { try { return JSON.parse((await kvGet(env, 'tg:log:' + localParts(now).date)) || '[]'); } catch (_) { return []; } }
 const met = (kind, now, v) => now != null && (KINDS[kind].op === '≤' ? now <= v : now >= v);
 
 // what an alert watches, right now
@@ -119,6 +128,7 @@ export async function runWatch(env, now = Date.now()) {
     const buttons = a.sym ? [[{ text: '🪙 ' + a.sym, callback_data: 'c:' + (a.cg || 'x-' + a.sym.toLowerCase()).slice(0, 58) }, { text: '🔥 Liq Map', url: 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(a.sym) }]] : [[{ text: '💼 Portfolio', callback_data: 'pf' }]];
     const r = await tg(env, 'sendMessage', { chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
     if (!r.ok) keep.push(a);   // Telegram refused: try again next time
+    else await logEvent(env, 'alert', describe(a) + ' — now ' + nowTxt);
   }
   await locked(async () => {   // alerts added while this ran stay; the fired ones go
     const nowList = await listAlerts(env), seen = new Set(list.map(a => a.id));

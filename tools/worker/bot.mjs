@@ -19,6 +19,8 @@ import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
 import { keepTrades, tradeLines, confirmTrades, cancelTrades, money } from './trade.mjs';
+import { viewDaily, setCfg, getCfg, morning, evening, pinUpdate, unpin } from './daily.mjs';
+import { logEvent } from './watch.mjs';
 
 const H = 3600e3;
 const LIQ = 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=';
@@ -41,7 +43,7 @@ const T = {
     thinking: '🧠 Thinking…', aiLimit: n => `You've used today's ${n} questions — more tomorrow (midnight Riyadh). Buttons and tickers still work.`,
     aiNoKey: 'The AI is not set up (ANTHROPIC_API_KEY is missing in the Worker).', aiBusy: 'Claude is busy right now — try again in a minute.',
     aiErr: "I couldn't answer that just now — try again, or rephrase.", newChat: '🆕 New chat', newDone: 'New chat — I forgot the earlier messages 🧹', aiLeft: (a, n) => `${a}/${n} left today`, data: 'Data',
-    alertsB: '🔔 Alerts', alertGone: '🗑 Alert deleted',
+    alertsB: '🔔 Alerts', alertGone: '🗑 Alert deleted', dailyB: '🗓 Daily', working: '⏳ On it…', pinOff: 'Pinned message off — /pin brings it back.',
     other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅', exit: '🚪 Exit plan',
     today: 'today', profit: 'All Time Profit', vsBtcS: 'vs BTC', beat: (a, n) => `${a}/${n} coins beat BTC`, bestT: 'Best today', worstT: 'Worst today',
     dom: 'Dominance', fng: 'Fear & Greed', altS: 'Altcoin Season', etf: 'ETF', planS: 'Plan', allocS: 'Allocation', onT: (a, n) => `${a}/${n} on target`,
@@ -77,7 +79,7 @@ const T = {
     thinking: '🧠 بفكّر…', aiLimit: n => `خلصت الـ ${n} سؤال بتوع النهارده — بكرة يتجددوا (12 بالليل بتوقيت الرياض). الأزرار والرموز شغالة عادي.`,
     aiNoKey: 'الـ AI مش متظبط (ANTHROPIC_API_KEY ناقص في الـ Worker).', aiBusy: 'Claude مشغول دلوقتي — جرّب كمان دقيقة.',
     aiErr: 'ما قدرتش أجاوب دلوقتي — جرّب تاني أو اكتب السؤال بشكل تاني.', newChat: '🆕 محادثة جديدة', newDone: 'محادثة جديدة — نسيت الكلام اللي فات 🧹', aiLeft: (a, n) => `باقي ${a}/${n} النهارده`, data: 'البيانات',
-    alertsB: '🔔 التنبيهات', alertGone: '🗑 اتمسح التنبيه',
+    alertsB: '🔔 التنبيهات', alertGone: '🗑 اتمسح التنبيه', dailyB: '🗓 اليومي', working: '⏳ ثواني…', pinOff: 'الرسالة المتثبتة اتقفلت — /pin ترجّعها.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
     today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل BTC', beat: (a, n) => `${a}/${n} عملة سبقت BTC`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
     dom: 'السيطرة', fng: 'الخوف والطمع', altS: 'موسم العملات', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a}/${n} على الهدف`,
@@ -112,7 +114,7 @@ export function spark(arr, n = 16) {   // a 7-day line drawn with block characte
   const lo = Math.min(...pts), hi = Math.max(...pts);
   return pts.map(v => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join('');
 }
-const menuRows = t => [[cb(t.pf, 'pf'), cb(t.market, 'mk')], [cb(t.plan, 'pl'), cb(t.movers, 'mv')], [cb(t.signals, 'sg'), cb(t.exit, 'ex')], [cb(t.alertsB, 'al'), cb(t.coin, 'coin')], [cb(t.other, 'lang:' + t.otherCode)]];
+const menuRows = t => [[cb(t.pf, 'pf'), cb(t.market, 'mk')], [cb(t.plan, 'pl'), cb(t.movers, 'mv')], [cb(t.signals, 'sg'), cb(t.exit, 'ex')], [cb(t.alertsB, 'al'), cb(t.coin, 'coin')], [cb(t.dailyB, 'dy'), cb(t.other, 'lang:' + t.otherCode)]];
 // the keyboard under the chat: 6 buttons, 3 rows. Each one is matched by its exact text (both languages), so a tap always works
 // the keyboard under the chat: 6 short buttons in 2 rows. Not pinned: the ⌨️ icon in the message box hides / shows it,
 // /hide hides it, /start brings it back. Each button is matched by its exact text (both languages, old names too).
@@ -290,6 +292,7 @@ const WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
+  [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -365,6 +368,17 @@ export async function handleTelegram(request, env) {
       // even when nothing changed (the message is the same → Telegram would show no change at all)
       const done = text => tg(env, 'answerCallbackQuery', { callback_query_id: q.id, ...(text ? { text } : {}) }).catch(() => {});
       if (/^lang:(ar|en)$/.test(d)) { await switchLang(env, chat, d.slice(5), q.message.message_id); await done(); return ok(); }
+      if (d === 'dy' || /^dy:/.test(d) || d === 'pin:r') {   // 🗓 the daily messages: toggles, "now" buttons; 🔄 on the pinned message
+        const lang = await getLang(env);
+        if (d === 'pin:r') { await pinUpdate(env, Date.now(), true); await done(`✅ ${T[lang].updated}`); return ok(); }
+        if (/^dy:now:[me]$/.test(d)) { await done(T[lang].working); await (d.endsWith('m') ? morning(env) : evening(env)); return ok(); }
+        if (/^dy:(morning|evening|radar|sectors|pin)$/.test(d)) {
+          const k = d.slice(3), c = await getCfg(env), on = !c[k];
+          await setCfg(env, { [k]: on });
+          if (k === 'pin') { if (on) await pinUpdate(env, Date.now(), true); else await unpin(env); }
+        }
+        await edit(env, chat, q.message.message_id, await viewDaily(env)); await done(); return ok();
+      }
       if (/^tx:(ok|no):\w+$/.test(d)) {   // 🧾 a trade: ✅ saves it (all or nothing), ❌ forgets it
         const lang = await getLang(env), t = T[lang], gid = d.slice(6);
         const kb = ((q.message.reply_markup || {}).inline_keyboard || []).map(r => r.filter(b => !/^tx:/.test(b.callback_data || ''))).filter(r => r.length);
@@ -375,6 +389,7 @@ export async function handleTelegram(request, env) {
           const L = [t2.txSaved(r.trades.length)];
           for (const h of r.holdings) L.push(`• ${esc(h.sym)} ${t2.nowHold}: <b>${(+Number(h.qty).toPrecision(8)).toLocaleString('en-US', { maximumFractionDigits: 8 })}</b>${h.avg ? ` · ${t2.avg} ${money(h.avg)}` : ''}`);
           await send(env, chat, { text: L.join('\n'), buttons: [[cb(t2.pf, 'pf'), cb(t2.back, 'menu')]] });
+          for (const x of r.trades) await logEvent(env, 'trade', `${x.side} ${x.qty} ${x.sym} @ $${x.price}`);   // the smart evening tells it
           await done('✅');
         } else {
           await send(env, chat, { text: r.error === 'gone' ? t2.txGone : r.error === 'expired' ? t2.txExpired : r.error === 'changed' ? t2.txChanged(esc(r.why)) : r.error === 'nouser' ? t2.txNoUser : t2.txSaveErr(esc(String(r.why || '').slice(0, 80))) });
@@ -439,6 +454,11 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (/^lang:(ar|en)$/.test(p.act)) { await switchLang(env, chat, p.act.slice(5)); return; }
   if (p.act === 'al') { await send(env, chat, await viewAlerts(env, await getLang(env))); return; }
+  if (p.act === 'dy') { await send(env, chat, await viewDaily(env)); return; }
+  if (p.act === 'dy:now:m') { await morning(env); return; }
+  if (p.act === 'dy:now:e') { await evening(env); return; }
+  if (p.act === 'pin:on') { await setCfg(env, { pin: true }); await pinUpdate(env, Date.now(), true); return; }
+  if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
   if (p.act === 'ai') { await answer(env, chat, p.q, budget, into); return; }
   if (p.act === 'hide') { const t = T[await getLang(env)]; await send(env, chat, { text: t.hidden }, { reply_markup: { remove_keyboard: true } }); return; }
@@ -503,7 +523,7 @@ export const run = (env, act, arg, guess) => act === 'coinById' ? buildById(env,
 
 // the "/" menu in Telegram (set by the setup link and again on /start, so new commands show up)
 const cmds = lang => [['portfolio', lang === 'ar' ? 'محفظتي' : 'My portfolio'], ['price', lang === 'ar' ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', lang === 'ar' ? 'السوق' : 'Market'],
-    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['exit', lang === 'ar' ? 'خطة الخروج' : 'Exit plan'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي'], ['alerts', lang === 'ar' ? 'تنبيهاتك' : 'Your alerts'], ['hide', lang === 'ar' ? 'إخفاء الأزرار' : 'Hide the buttons'], ['new', lang === 'ar' ? 'محادثة جديدة مع الـ AI' : 'New AI chat']]
+    ['plan', lang === 'ar' ? 'خطة التجميع' : 'Accumulation plan'], ['movers', lang === 'ar' ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', lang === 'ar' ? 'الإشارات' : 'Signals'], ['exit', lang === 'ar' ? 'خطة الخروج' : 'Exit plan'], ['menu', lang === 'ar' ? 'القائمة' : 'Menu'], ['lang', 'English / عربي'], ['alerts', lang === 'ar' ? 'تنبيهاتك' : 'Your alerts'], ['daily', lang === 'ar' ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'], ['morning', lang === 'ar' ? 'الصباح الذكي دلوقتي' : 'Smart morning now'], ['evening', lang === 'ar' ? 'المساء الذكي دلوقتي' : 'Smart evening now'], ['pin', lang === 'ar' ? 'الرسالة المتثبتة' : 'Live pinned message'], ['hide', lang === 'ar' ? 'إخفاء الأزرار' : 'Hide the buttons'], ['new', lang === 'ar' ? 'محادثة جديدة مع الـ AI' : 'New AI chat']]
     .map(([command, description]) => ({ command, description }));
 
 // ── one-time setup: GET /tg/setup?key=<TG_SECRET> ──

@@ -13,7 +13,7 @@ const ids = {};
 if (src) for (const x of src[1].matchAll(/"([^"]+)"\s*:\s*"([a-z0-9-]+)"/g)) ids[x[1].toUpperCase()] = x[2];
 fs.writeFileSync(path.join(ROOT, 'tools/worker/cg-ids.json'), JSON.stringify(ids, Object.keys(ids).sort(), 0) + '\n');
 const out = path.join(ROOT, 'tools/dist/samsam-worker.js');
-export const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs'];
+export const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs'];
 const hash = crypto.createHash('sha256'); for (const f of SOURCES) hash.update(fs.readFileSync(path.join(ROOT, f)));
 const H = hash.digest('hex').slice(0, 16);
 fs.mkdirSync(path.dirname(out), { recursive: true });
