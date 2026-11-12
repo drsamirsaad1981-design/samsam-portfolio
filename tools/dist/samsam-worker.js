@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: f1e059b5356de171
+// sources-hash: 2ab1b16504498900
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2940,6 +2940,7 @@ var LIQ2 = "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=";
 var T = {
   en: {
     hi: "Hi Samir \u{1F44B}",
+    hiAll: "Hi \u{1F44B}",
     menuTitle: "What would you like to see?",
     pf: "\u{1F4BC} Portfolio",
     coin: "\u{1FA99} A coin",
@@ -3080,6 +3081,7 @@ var T = {
   },
   ar: {
     hi: "\u0623\u0647\u0644\u0627\u064B \u0633\u0645\u064A\u0631 \u{1F44B}",
+    hiAll: "\u0623\u0647\u0644\u0627\u064B \u{1F44B}",
     menuTitle: "\u062A\u062D\u0628 \u062A\u0634\u0648\u0641 \u0625\u064A\u0647\u061F",
     pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A",
     coin: "\u{1FA99} \u0639\u0645\u0644\u0629",
@@ -3270,8 +3272,8 @@ async function setLang(env, v) {
   } catch (_) {
   }
 }
-function viewMenu(t) {
-  return { text: `${t.hi}
+function viewMenu(t, owner = true) {
+  return { text: `${owner ? t.hi : t.hiAll}
 ${t.menuTitle}`, buttons: menuRows(t) };
 }
 var hm = (now) => local(now, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
@@ -3467,7 +3469,7 @@ async function buildView(env, act, arg, guess) {
   const now = Date.now();
   const user = act === "menu" || act === "coin" ? null : await loadUser(env).catch(() => null);
   const cfg = settings(user && user.meta), lang2 = await getLang(env), t = T[lang2];
-  if (act === "menu") return { t, views: [viewMenu(t)] };
+  if (act === "menu") return { t, views: [viewMenu(t, isOwner(env))] };
   if (act === "lang") return { t, views: [{ text: "\u{1F310} English / \u0639\u0631\u0628\u064A", buttons: [[cb2("\u{1F1EC}\u{1F1E7} English", "lang:en"), cb2("\u{1F1F8}\u{1F1E6} \u0639\u0631\u0628\u064A", "lang:ar")]] }] };
   if (act === "coin") return { t, views: [{ text: `\u{1FA99} ${t.askCoin}`, buttons: [[cb2(t.back, "menu")]] }] };
   if (act === "soon") return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
@@ -3508,7 +3510,7 @@ async function buildView(env, act, arg, guess) {
   if (act === "sg") return { t, views: [viewSignals(t, sum)] };
   if (act === "pl") return { t, views: [viewPlan(t, sum, now)] };
   if (act === "ex") return { t, views: [viewExit(t, sum, now)] };
-  return { t, views: [viewMenu(t)] };
+  return { t, views: [viewMenu(t, isOwner(env))] };
 }
 var ok = () => new Response("ok", { headers: { "content-type": "text/plain" } });
 async function handleTelegram(request, env) {
@@ -3564,7 +3566,7 @@ async function stranger(env, u, msg, chat) {
         await setLang(env, L);
         const t = T[L];
         await send2(env, chat, { text: w.welcome(esc(r.member.name)) }, { reply_markup: replyKb(t) });
-        await send2(env, chat, viewMenu(t));
+        await send2(env, chat, viewMenu(t, isOwner(env)));
       });
       await asChat(env.TELEGRAM_CHAT_ID, async () => send2(env, env.TELEGRAM_CHAT_ID, { text: STR[await getLang(env)].joined(esc(r.member.name), esc(r.member.user)), buttons: [[cb2("\u{1F465} /users", "us")]] }));
       return ok();
@@ -3616,6 +3618,7 @@ ${link}` : ""), buttons: [[cb2(ar ? "\u{1F465} \u0627\u0644\u0623\u0639\u0636\u0
 async function onUpdate(env, u, msg, q, chat) {
   if (!await firstTime(env, u.update_id)) return ok();
   await ensureCmds(env);
+  await ensureDesc(env);
   try {
     if (q) {
       const d = String(q.data || "");
@@ -3902,8 +3905,8 @@ async function switchLang(env, chat, lang2, msgId) {
   await ensureCmds(env);
   const t = T[lang2];
   await send2(env, chat, { text: t.langSet }, { reply_markup: replyKb(t) });
-  if (msgId) await edit(env, chat, msgId, viewMenu(t));
-  else await send2(env, chat, viewMenu(t));
+  if (msgId) await edit(env, chat, msgId, viewMenu(t, isOwner(env)));
+  else await send2(env, chat, viewMenu(t, isOwner(env)));
 }
 async function buildById(env, id) {
   const user = await loadUser(env).catch(() => null), now = Date.now();
@@ -3966,6 +3969,31 @@ async function ensureCmds(env) {
   }
 }
 var cmdMem = /* @__PURE__ */ new Map();
+var DESC_V = "2";
+var DESC = {
+  en: ["Your private crypto assistant (by invitation). Ask anything in plain words or by voice, live coins and market, alerts in words, smart morning & evening, radars, paper trading, image cards and a full report page. Have an invite code? Send it here.", "Private crypto assistant \xB7 by invitation"],
+  ar: ["\u0645\u0633\u0627\u0639\u062F\u0643 \u0627\u0644\u062E\u0627\u0635 \u0641\u064A \u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648 (\u0628\u062F\u0639\u0648\u0629). \u0627\u0633\u0623\u0644 \u0623\u064A \u062D\u0627\u062C\u0629 \u0628\u0627\u0644\u0643\u0644\u0627\u0645 \u0623\u0648 \u0628\u0627\u0644\u0641\u0648\u064A\u0633\u060C \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0648\u0627\u0644\u0633\u0648\u0642 \u0645\u0628\u0627\u0634\u0631\u060C \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0628\u0627\u0644\u0643\u0644\u0627\u0645\u060C \u0635\u0628\u0627\u062D \u0648\u0645\u0633\u0627\u0621 \u0630\u0643\u064A\u060C \u0631\u0627\u062F\u0627\u0631\u0627\u062A\u060C \u062A\u062F\u0627\u0648\u0644 \u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0643\u0631\u0648\u062A \u0635\u0648\u0631\u060C \u0648\u062A\u0642\u0631\u064A\u0631 \u0643\u0627\u0645\u0644. \u0645\u0639\u0627\u0643 \u0643\u0648\u062F \u062F\u0639\u0648\u0629\u061F \u0627\u0628\u0639\u062A\u0647 \u0647\u0646\u0627.", "\u0645\u0633\u0627\u0639\u062F \u0643\u0631\u064A\u0628\u062A\u0648 \u062E\u0627\u0635 \xB7 \u0628\u062F\u0639\u0648\u0629"]
+};
+async function ensureDesc(env) {
+  let had = null;
+  try {
+    if (env.RATE) had = await env.RATE.get("tg:desc");
+  } catch (_) {
+  }
+  if (had === DESC_V || descMem === DESC_V) return;
+  descMem = DESC_V;
+  for (const [lc, [long, short]] of Object.entries(DESC)) {
+    await tg3(env, "setMyDescription", { description: long, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
+    });
+    await tg3(env, "setMyShortDescription", { short_description: short, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
+    });
+  }
+  try {
+    if (env.RATE) await env.RATE.put("tg:desc", DESC_V);
+  } catch (_) {
+  }
+}
+var descMem = null;
 async function setup(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { "content-type": "application/json" } });
   if (!env.TG_SECRET || u.searchParams.get("key") !== env.TG_SECRET) return json(403, { ok: false, error: "Wrong or missing key." });
@@ -3979,7 +4007,7 @@ async function setup(request, env) {
     const user = await loadUser(env).catch(() => null), lang2 = await getLang(env), t = T[lang2];
     const b = await tg3(env, "setMyCommands", { commands: cmds(lang2) });
     const c = await send2(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
-    await send2(env, env.TELEGRAM_CHAT_ID, viewMenu(t));
+    await send2(env, env.TELEGRAM_CHAT_ID, viewMenu(t, isOwner(env)));
     return json(a.ok && b.ok && c.ok ? 200 : 502, { ok: !!(a.ok && b.ok && c.ok), webhook: a.ok ? "set" : a.description, menu: b.ok ? "set" : b.description, welcome: c.ok ? "sent" : c.description, portfolio: serviceAccount(env) ? user ? "connected" : "not found" : "FIREBASE_SERVICE_ACCOUNT missing" });
   });
 }

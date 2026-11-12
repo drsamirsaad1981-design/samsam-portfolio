@@ -30,7 +30,7 @@ const LIQ = 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=';
 // ── words (Arabic / English) — the bot speaks the language you chose for the alerts in the app ──
 const T = {
   en: {
-    hi: 'Hi Samir 👋', menuTitle: 'What would you like to see?', pf: '💼 Portfolio', coin: '🪙 A coin', market: '🌍 Market', plan: '📋 Plan',
+    hi: 'Hi Samir 👋', hiAll: 'Hi 👋', menuTitle: 'What would you like to see?', pf: '💼 Portfolio', coin: '🪙 A coin', market: '🌍 Market', plan: '📋 Plan',
     movers: '🏆 Best & worst', signals: '🎯 Signals', refresh: '🔄 Refresh', back: '⬅️ Menu', openApp: '📱 Open the app', liq: '🔥 Liq Map',
     chart: '📈 Chart', inApp: '💼 In the app', pfNow: 'Your portfolio now', askCoin: 'Send a ticker or a name — e.g. <code>btc</code>, <code>sol eth</code> or <code>pendle</code>.',
     notFound: q => `I couldn't find “${q}”. Try the ticker (e.g. <code>sol</code>) or the full name.`,
@@ -67,7 +67,7 @@ const T = {
     vLong: s => `Voice notes up to ${s / 60} min, please — or type it.`, vEmpty: "🎙️ I couldn't make out any words — try again, or type it.", vFail: "🎙️ I couldn't read that voice note — try again, or type it.",
   },
   ar: {
-    hi: 'أهلاً سمير 👋', menuTitle: 'تحب تشوف إيه؟', pf: '💼 محفظتي', coin: '🪙 عملة', market: '🌍 السوق', plan: '📋 الخطة',
+    hi: 'أهلاً سمير 👋', hiAll: 'أهلاً 👋', menuTitle: 'تحب تشوف إيه؟', pf: '💼 محفظتي', coin: '🪙 عملة', market: '🌍 السوق', plan: '📋 الخطة',
     movers: '🏆 الأفضل والأسوأ', signals: '🎯 الإشارات', refresh: '🔄 تحديث', back: '⬅️ القائمة', openApp: '📱 افتح التطبيق', liq: '🔥 Liq Map',
     chart: '📈 الرسم', inApp: '💼 في التطبيق', pfNow: 'محفظتك الآن', askCoin: 'ابعت رمز العملة أو اسمها — مثلاً <code>btc</code> أو <code>sol eth</code> أو <code>pendle</code>.',
     notFound: q => `ما لقيتش «${q}». جرّب الرمز (مثلاً <code>sol</code>) أو الاسم كامل.`,
@@ -142,7 +142,7 @@ async function setRange(env, v) { memRange.set(chatOf(env), v); try { if (env.RA
 async function setLang(env, v) { memLang.set(chatOf(env), v); try { if (env.RATE) await env.RATE.put(K(env, 'lang'), v); } catch (_) {} }
 
 // ── views: each returns { text, buttons } ──
-export function viewMenu(t) { return { text: `${t.hi}\n${t.menuTitle}`, buttons: menuRows(t) }; }
+export function viewMenu(t, owner = true) { return { text: `${owner ? t.hi : t.hiAll}\n${t.menuTitle}`, buttons: menuRows(t) }; }   // "Hi Samir" only for Samir
 
 // short lines (they fit a phone without wrapping): money in bold, a dot for up / down, details after a ·
 const hm = now => local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -319,7 +319,7 @@ async function buildView(env, act, arg, guess) {
   const now = Date.now();
   const user = act === 'menu' || act === 'coin' ? null : await loadUser(env).catch(() => null);
   const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
-  if (act === 'menu') return { t, views: [viewMenu(t)] };
+  if (act === 'menu') return { t, views: [viewMenu(t, isOwner(env))] };
   if (act === 'lang') return { t, views: [{ text: '🌐 English / عربي', buttons: [[cb('🇬🇧 English', 'lang:en'), cb('🇸🇦 عربي', 'lang:ar')]] }] };
   if (act === 'coin') return { t, views: [{ text: `🪙 ${t.askCoin}`, buttons: [[cb(t.back, 'menu')]] }] };
   if (act === 'soon') return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
@@ -353,7 +353,7 @@ async function buildView(env, act, arg, guess) {
   if (act === 'sg') return { t, views: [viewSignals(t, sum)] };
   if (act === 'pl') return { t, views: [viewPlan(t, sum, now)] };
   if (act === 'ex') return { t, views: [viewExit(t, sum, now)] };
-  return { t, views: [viewMenu(t)] };
+  return { t, views: [viewMenu(t, isOwner(env))] };
 }
 
 // ── the webhook ──
@@ -389,7 +389,7 @@ async function stranger(env, u, msg, chat) {
   if (code) {
     const r = await useInvite(env, code, chat, msg.from);
     if (r.ok) {
-      await asChat(chat, async () => { await setLang(env, L); const t = T[L]; await send(env, chat, { text: w.welcome(esc(r.member.name)) }, { reply_markup: replyKb(t) }); await send(env, chat, viewMenu(t)); });
+      await asChat(chat, async () => { await setLang(env, L); const t = T[L]; await send(env, chat, { text: w.welcome(esc(r.member.name)) }, { reply_markup: replyKb(t) }); await send(env, chat, viewMenu(t, isOwner(env))); });
       await asChat(env.TELEGRAM_CHAT_ID, async () => send(env, env.TELEGRAM_CHAT_ID, { text: STR[await getLang(env)].joined(esc(r.member.name), esc(r.member.user)), buttons: [[cb('👥 /users', 'us')]] }));
       return ok();
     }
@@ -421,7 +421,7 @@ async function inviteMsg(env, lang) {
 
 async function onUpdate(env, u, msg, q, chat) {
   if (!(await firstTime(env, u.update_id))) return ok();   // Telegram re-sent it (a slow answer): already handled
-  await ensureCmds(env);
+  await ensureCmds(env); await ensureDesc(env);
   try {
     if (q) {
       const d = String(q.data || '');
@@ -589,7 +589,7 @@ async function switchLang(env, chat, lang, msgId) {
   await setLang(env, lang); await ensureCmds(env);   // the "/" menu in the new language
   const t = T[lang];
   await send(env, chat, { text: t.langSet }, { reply_markup: replyKb(t) });
-  if (msgId) await edit(env, chat, msgId, viewMenu(t)); else await send(env, chat, viewMenu(t));
+  if (msgId) await edit(env, chat, msgId, viewMenu(t, isOwner(env))); else await send(env, chat, viewMenu(t, isOwner(env)));
 }
 
 // a coin button carries the CoinGecko id → look it up by id (not by ticker)
@@ -628,6 +628,23 @@ async function ensureCmds(env) {
   if (r && r.ok) { cmdMem.set(c, v); try { if (env.RATE) await env.RATE.put(K(env, 'cmdv'), v); } catch (_) {} }
 }
 const cmdMem = new Map();
+// the "What can this bot do?" text (shown before /start) and the short one on the bot's profile — set once per version
+const DESC_V = '2';
+const DESC = {
+  en: ['Your private crypto assistant (by invitation). Ask anything in plain words or by voice, live coins and market, alerts in words, smart morning & evening, radars, paper trading, image cards and a full report page. Have an invite code? Send it here.', 'Private crypto assistant · by invitation'],
+  ar: ['مساعدك الخاص في الكريبتو (بدعوة). اسأل أي حاجة بالكلام أو بالفويس، العملات والسوق مباشر، تنبيهات بالكلام، صباح ومساء ذكي، رادارات، تداول تجريبي، كروت صور، وتقرير كامل. معاك كود دعوة؟ ابعته هنا.', 'مساعد كريبتو خاص · بدعوة'],
+};
+async function ensureDesc(env) {
+  let had = null; try { if (env.RATE) had = await env.RATE.get('tg:desc'); } catch (_) {}
+  if (had === DESC_V || descMem === DESC_V) return;
+  descMem = DESC_V;
+  for (const [lc, [long, short]] of Object.entries(DESC)) {
+    await tg(env, 'setMyDescription', { description: long, ...(lc === 'en' ? {} : { language_code: lc }) }).catch(() => {});
+    await tg(env, 'setMyShortDescription', { short_description: short, ...(lc === 'en' ? {} : { language_code: lc }) }).catch(() => {});
+  }
+  try { if (env.RATE) await env.RATE.put('tg:desc', DESC_V); } catch (_) {}
+}
+let descMem = null;
 
 // ── one-time setup: GET /tg/setup?key=<TG_SECRET> ──
 export async function setup(request, env) {
@@ -643,7 +660,7 @@ export async function setup(request, env) {
   const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];
   const b = await tg(env, 'setMyCommands', { commands: cmds(lang) });
   const c = await send(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
-  await send(env, env.TELEGRAM_CHAT_ID, viewMenu(t));
+  await send(env, env.TELEGRAM_CHAT_ID, viewMenu(t, isOwner(env)));
   return json(a.ok && b.ok && c.ok ? 200 : 502, { ok: !!(a.ok && b.ok && c.ok), webhook: a.ok ? 'set' : a.description, menu: b.ok ? 'set' : b.description, welcome: c.ok ? 'sent' : c.description, portfolio: serviceAccount(env) ? (user ? 'connected' : 'not found') : 'FIREBASE_SERVICE_ACCOUNT missing' });
   });
 }
