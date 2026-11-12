@@ -14,7 +14,7 @@ import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSerie
 
 const H = 3600e3, DAY = 24 * H;
 const LIMIT = env => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30));
-const MAX_ROUNDS = 6;          // tool rounds per question
+const MAX_ROUNDS = 8;          // tool rounds per question (the last one answers with what it has)
 const HISTORY = 10;            // messages remembered
 const r2 = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
 const r6 = v => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
@@ -44,7 +44,7 @@ async function remember(env, q, a) { const h = (await history(env)).concat([{ ro
 export const TOOLS = [
   { name: 'get_coin', description: 'Live data for one coin (any coin, by ticker or name): price, 24h / 7d / 30d change, market-cap rank, market cap, 24h volume, 7-day high / low, whether it has perpetual futures (a CoinGlass liquidation map), and — if the user holds it — amount, value, average buy price, profit %, the app\'s signal and its result vs holding BTC. Call once per coin; call it for every coin you mention with a number.',
     input_schema: { type: 'object', properties: { coin: { type: 'string', description: 'Ticker or name, e.g. "BTC", "sol", "pendle", "Render"' } }, required: ['coin'] } },
-  { name: 'get_portfolio', description: "The user's whole portfolio now: total value, 24h / 7d change, all-time profit, result vs holding BTC, every coin (value, share %, 24h / 7d change, profit vs average buy price, signal), signal counts, allocation vs targets.",
+  { name: 'get_portfolio', description: "The user's whole portfolio now: total value, 24h / 7d change, all-time profit, result vs holding BTC, and EVERY coin with value, share %, 24h / 7d change, profit vs average buy price, signal, vs_btc_pct (its result minus the same dollars in BTC since bought) and vs_btc_30d_pts / vs_btc_90d_pts (strength vs BTC over 30 / 90 days); signal counts; allocation vs targets. One call answers questions about all coins — no need to call get_coin for each.",
     input_schema: { type: 'object', properties: {} } },
   { name: 'get_market', description: 'The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), and the best / worst 24h Binance bStocks (tokenized US stocks).',
     input_schema: { type: 'object', properties: { top: { type: 'integer', enum: [100, 200, 300, 500], description: 'Rank range for best / worst (default 100)' } } } },
@@ -108,7 +108,7 @@ export async function runTool(ctx, name, input) {
     const { s } = x; ctx.used.add('your portfolio (Firebase)'); ctx.used.add(srcOf(x.m, 'bitcoin'));
     return { total_value_usd: r2(s.value), change_24h_pct: r2(s.ch24), change_24h_usd: r2(s.d24), change_7d_pct: r2(s.ch7), change_7d_usd: r2(s.d7),
       all_time_profit_usd: r2(s.total), all_time_profit_pct: r2(s.pctTotal), invested_usd: r2(s.invested), vs_holding_btc_pct: r2(s.vsBtc), alts_beating_btc: `${s.beat} of ${s.alts}`,
-      signals: s.counts, coins: [...s.coins].sort((a, b) => b.value - a.value).map(c => ({ ticker: c.sym, value_usd: r2(c.value), share_pct: s.value > 0 ? r2(c.value / s.value * 100) : null, change_24h_pct: r2(c.ch24), change_7d_pct: r2(c.ch7), profit_vs_average_pct: r2(c.chg), signal: s.signal[c.sym], stablecoin: isStable(c.sym) || undefined })),
+      signals: s.counts, coins: [...s.coins].sort((a, b) => b.value - a.value).map(c => ({ ticker: c.sym, value_usd: r2(c.value), share_pct: s.value > 0 ? r2(c.value / s.value * 100) : null, change_24h_pct: r2(c.ch24), change_7d_pct: r2(c.ch7), profit_vs_average_pct: r2(c.chg), signal: s.signal[c.sym], vs_btc_pct: c.vs ? r2(c.vs.pct) : null, vs_btc_30d_pts: c.rs ? r2(c.rs.d30) : null, vs_btc_90d_pts: c.rs ? r2(c.rs.d90) : null, stablecoin: isStable(c.sym) || undefined })),
       allocation: s.alloc ? s.alloc.groups.map(g => ({ group: s.alloc.names[g.key] || g.key, now_pct: r2(g.now), target_pct: r2(g.target), state: g.state })) : null };
   }
   if (name === 'get_market') {
@@ -156,7 +156,7 @@ export async function runTool(ctx, name, input) {
 }
 
 // ── Claude ──
-function system(now, lang) {
+function system(now, lang, qLang) {
   return [
     'You are the Cute Portfolio assistant inside Telegram — a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app.',
     `Now: ${local(now, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} (Riyadh).`,
@@ -166,7 +166,8 @@ function system(now, lang) {
     '- About the future: give scenarios, levels and probabilities with reasons — never promises. Not financial advice, but do give a clear, practical view when asked "should I…" (based on his plan and signals).',
     '- Be concise: a phone screen. Short lines (aim ≤ 40 characters), short paragraphs, "• " bullets, at most ~12 lines unless asked for detail. No tables.',
     '- Formatting: plain text with **bold** for key numbers / verdicts and `code` for tickers in lists. No headings with #, no links unless asked (buttons under the answer open coins).',
-    `- Language: answer in the language of the question. Arabic → Egyptian Arabic, numbers and tickers in Latin characters.${lang === 'ar' ? ' (The user\'s bot language is Arabic.)' : ''}`,
+    `- Language: the user's latest message is in ${qLang === 'ar' ? 'Arabic — answer in Egyptian Arabic' : 'English — answer in English'} (whatever language earlier messages were in). Numbers and tickers in Latin characters.`,
+    '- Prefer one call that covers many coins (get_portfolio) over many get_coin calls; call independent tools together in one turn.',
     '- Do not write a sources line — the bot adds one.',
   ].join('\n');
 }
@@ -195,22 +196,25 @@ export async function ask(env, question, lang = 'en') {
   const now = Date.now(), ctx = context(env);
   const messages = [...(await history(env)), { role: 'user', content: String(question).slice(0, 2000) }];
   let model = env.BOT_MODEL || 'claude-sonnet-5-5', fellBack = false, text = '';
+  const qLang = /[\u0600-\u06FF]/.test(String(question)) ? 'ar' : 'en';   // answer in the language of THIS message
   for (let round = 0; round <= MAX_ROUNDS; round++) {
-    const body = { max_tokens: 1500, system: system(now, lang), tools: round < MAX_ROUNDS ? TOOLS : undefined, messages };
+    // the tools stay declared every round (earlier tool turns need them); the last round may not call any more
+    const body = { max_tokens: 2000, system: system(now, lang, qLang), tools: TOOLS, ...(round === MAX_ROUNDS ? { tool_choice: { type: 'none' } } : {}), messages };
     let r = await claude(env, model, body);
     if (!r.ok && !fellBack && (r.status === 404 || (r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {}))))) { fellBack = true; model = env.MODEL || 'claude-opus-4-5'; r = await claude(env, model, body); }   // that model name refused → AI Analysis's
-    if (!r.ok) return { error: r.status === 429 || r.status === 529 ? 'busy' : 'claude', detail: r.status };
+    if (!r.ok) { console.log(JSON.stringify({ ai: 'claude-error', round, status: r.status, type: r.j.error && r.j.error.type, message: String((r.j.error && r.j.error.message) || '').slice(0, 300) })); return { error: r.status === 429 || r.status === 529 ? 'busy' : 'claude', detail: r.status }; }
     const content = r.j.content || [];
     const calls = content.filter(b => b.type === 'tool_use');
     if (!calls.length || r.j.stop_reason !== 'tool_use') { text = content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim(); break; }
     messages.push({ role: 'assistant', content });
     const results = await Promise.all(calls.map(async c => {
-      let out; try { out = await runTool(ctx, c.name, c.input || {}); } catch (e) { out = { error: 'tool failed' }; }
+      let out; try { out = await runTool(ctx, c.name, c.input || {}); } catch (e) { console.log(JSON.stringify({ ai: 'tool-error', tool: c.name, message: String(e && e.message).slice(0, 200) })); out = { error: 'tool failed' }; }
       return { type: 'tool_result', tool_use_id: c.id, content: JSON.stringify(out).slice(0, 12000) };
     }));
     messages.push({ role: 'user', content: results });
   }
-  if (!text) return { error: 'empty' };
+  if (!text) { console.log(JSON.stringify({ ai: 'empty-answer', rounds: MAX_ROUNDS })); return { error: 'empty' }; }
+  console.log(JSON.stringify({ ai: 'ok', model, tools: [...ctx.used].length, ms: Date.now() - now }));
   const left = await countOne(env);
   await remember(env, String(question).slice(0, 2000), text.slice(0, 3000));
   const coins = [...ctx.coins].map(x => x.split('|')).slice(0, 3);

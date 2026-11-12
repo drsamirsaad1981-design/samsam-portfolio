@@ -155,7 +155,7 @@ export function summarize(user, market, now = Date.now()) {
     const chg = c.basePrice > 0 ? (c.currentPrice / c.basePrice - 1) * 100 : 0;
     const si = C.signalFor({ sym: c.sym, chg, rules: rule, rs: info[c.sym].id ? rsMap[info[c.sym].id] : null, smart });
     signal[c.sym] = si.action === 'convert' ? 'sell' : si.action;
-    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs });
+    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
   }
   const sigMode = JSON.stringify({ r: rule.reinforce, s: rule.sell, smart });
   const counts = { reinforce: 0, sell: 0, hold: 0 }; Object.values(signal).forEach(s => counts[s]++);

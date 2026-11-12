@@ -376,7 +376,7 @@ async function answer(env, chat, question) {
   const ph = await send(env, chat, { text: t.thinking });
   const id = ph && ph.result && ph.result.message_id;
   const show = v => id ? edit(env, chat, id, v).then(r => r.ok ? r : send(env, chat, v)) : send(env, chat, v);
-  const r = await ask(env, question, lang).catch(() => ({ error: 'claude' }));
+  const r = await ask(env, question, lang).catch(e => { console.log(JSON.stringify({ ai: 'crash', message: String(e && e.message).slice(0, 300) })); return { error: 'claude' }; });
   if (r.error) return show({ text: r.error === 'limit' ? t.aiLimit(r.limit) : r.error === 'nokey' ? t.aiNoKey : r.error === 'busy' ? t.aiBusy : t.aiErr, buttons: [[cb(t.back, 'menu')]] });
   const foot = `<i>📡 ${t.data}: ${esc(r.sources.length ? r.sources.join(' · ') : 'general knowledge')}\n${t.aiLeft(r.left, r.limit)}</i>`;
   const btns = [];

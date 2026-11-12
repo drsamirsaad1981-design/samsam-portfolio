@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 94a3e324b6715e2b
+// sources-hash: e6bd05ea8ff9c7e4
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -553,7 +553,7 @@ function summarize(user, market, now = Date.now()) {
     const chg = c.basePrice > 0 ? (c.currentPrice / c.basePrice - 1) * 100 : 0;
     const si = signalFor({ sym: c.sym, chg, rules: rule, rs: info[c.sym].id ? rsMap[info[c.sym].id] : null, smart });
     signal[c.sym] = si.action === "convert" ? "sell" : si.action;
-    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs });
+    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
   }
   const sigMode = JSON.stringify({ r: rule.reinforce, s: rule.sell, smart });
   const counts = { reinforce: 0, sell: 0, hold: 0 };
@@ -898,7 +898,7 @@ async function rawSeries(id) {
 var H2 = 36e5;
 var DAY2 = 24 * H2;
 var LIMIT = (env) => Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30));
-var MAX_ROUNDS = 6;
+var MAX_ROUNDS = 8;
 var HISTORY = 10;
 var r2 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
 var r6 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
@@ -964,7 +964,7 @@ var TOOLS = [
   },
   {
     name: "get_portfolio",
-    description: "The user's whole portfolio now: total value, 24h / 7d change, all-time profit, result vs holding BTC, every coin (value, share %, 24h / 7d change, profit vs average buy price, signal), signal counts, allocation vs targets.",
+    description: "The user's whole portfolio now: total value, 24h / 7d change, all-time profit, result vs holding BTC, and EVERY coin with value, share %, 24h / 7d change, profit vs average buy price, signal, vs_btc_pct (its result minus the same dollars in BTC since bought) and vs_btc_30d_pts / vs_btc_90d_pts (strength vs BTC over 30 / 90 days); signal counts; allocation vs targets. One call answers questions about all coins \u2014 no need to call get_coin for each.",
     input_schema: { type: "object", properties: {} }
   },
   {
@@ -1079,7 +1079,7 @@ async function runTool(ctx, name, input) {
       vs_holding_btc_pct: r2(s.vsBtc),
       alts_beating_btc: `${s.beat} of ${s.alts}`,
       signals: s.counts,
-      coins: [...s.coins].sort((a, b) => b.value - a.value).map((c) => ({ ticker: c.sym, value_usd: r2(c.value), share_pct: s.value > 0 ? r2(c.value / s.value * 100) : null, change_24h_pct: r2(c.ch24), change_7d_pct: r2(c.ch7), profit_vs_average_pct: r2(c.chg), signal: s.signal[c.sym], stablecoin: isStable(c.sym) || void 0 })),
+      coins: [...s.coins].sort((a, b) => b.value - a.value).map((c) => ({ ticker: c.sym, value_usd: r2(c.value), share_pct: s.value > 0 ? r2(c.value / s.value * 100) : null, change_24h_pct: r2(c.ch24), change_7d_pct: r2(c.ch7), profit_vs_average_pct: r2(c.chg), signal: s.signal[c.sym], vs_btc_pct: c.vs ? r2(c.vs.pct) : null, vs_btc_30d_pts: c.rs ? r2(c.rs.d30) : null, vs_btc_90d_pts: c.rs ? r2(c.rs.d90) : null, stablecoin: isStable(c.sym) || void 0 })),
       allocation: s.alloc ? s.alloc.groups.map((g) => ({ group: s.alloc.names[g.key] || g.key, now_pct: r2(g.now), target_pct: r2(g.target), state: g.state })) : null
     };
   }
@@ -1161,7 +1161,7 @@ async function runTool(ctx, name, input) {
   }
   return { error: "unknown tool" };
 }
-function system(now, lang) {
+function system(now, lang, qLang) {
   return [
     "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app.",
     `Now: ${local(now, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} (Riyadh).`,
@@ -1171,7 +1171,8 @@ function system(now, lang) {
     '- About the future: give scenarios, levels and probabilities with reasons \u2014 never promises. Not financial advice, but do give a clear, practical view when asked "should I\u2026" (based on his plan and signals).',
     '- Be concise: a phone screen. Short lines (aim \u2264 40 characters), short paragraphs, "\u2022 " bullets, at most ~12 lines unless asked for detail. No tables.',
     "- Formatting: plain text with **bold** for key numbers / verdicts and `code` for tickers in lists. No headings with #, no links unless asked (buttons under the answer open coins).",
-    `- Language: answer in the language of the question. Arabic \u2192 Egyptian Arabic, numbers and tickers in Latin characters.${lang === "ar" ? " (The user's bot language is Arabic.)" : ""}`,
+    `- Language: the user's latest message is in ${qLang === "ar" ? "Arabic \u2014 answer in Egyptian Arabic" : "English \u2014 answer in English"} (whatever language earlier messages were in). Numbers and tickers in Latin characters.`,
+    "- Prefer one call that covers many coins (get_portfolio) over many get_coin calls; call independent tools together in one turn.",
     "- Do not write a sources line \u2014 the bot adds one."
   ].join("\n");
 }
@@ -1196,15 +1197,19 @@ async function ask(env, question, lang = "en") {
   const now = Date.now(), ctx = context(env);
   const messages = [...await history(env), { role: "user", content: String(question).slice(0, 2e3) }];
   let model = env.BOT_MODEL || "claude-sonnet-5-5", fellBack = false, text = "";
+  const qLang = /[\u0600-\u06FF]/.test(String(question)) ? "ar" : "en";
   for (let round = 0; round <= MAX_ROUNDS; round++) {
-    const body = { max_tokens: 1500, system: system(now, lang), tools: round < MAX_ROUNDS ? TOOLS : void 0, messages };
+    const body = { max_tokens: 2e3, system: system(now, lang, qLang), tools: TOOLS, ...round === MAX_ROUNDS ? { tool_choice: { type: "none" } } : {}, messages };
     let r = await claude(env, model, body);
     if (!r.ok && !fellBack && (r.status === 404 || r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {})))) {
       fellBack = true;
       model = env.MODEL || "claude-opus-4-5";
       r = await claude(env, model, body);
     }
-    if (!r.ok) return { error: r.status === 429 || r.status === 529 ? "busy" : "claude", detail: r.status };
+    if (!r.ok) {
+      console.log(JSON.stringify({ ai: "claude-error", round, status: r.status, type: r.j.error && r.j.error.type, message: String(r.j.error && r.j.error.message || "").slice(0, 300) }));
+      return { error: r.status === 429 || r.status === 529 ? "busy" : "claude", detail: r.status };
+    }
     const content = r.j.content || [];
     const calls = content.filter((b) => b.type === "tool_use");
     if (!calls.length || r.j.stop_reason !== "tool_use") {
@@ -1217,13 +1222,18 @@ async function ask(env, question, lang = "en") {
       try {
         out = await runTool(ctx, c.name, c.input || {});
       } catch (e) {
+        console.log(JSON.stringify({ ai: "tool-error", tool: c.name, message: String(e && e.message).slice(0, 200) }));
         out = { error: "tool failed" };
       }
       return { type: "tool_result", tool_use_id: c.id, content: JSON.stringify(out).slice(0, 12e3) };
     }));
     messages.push({ role: "user", content: results });
   }
-  if (!text) return { error: "empty" };
+  if (!text) {
+    console.log(JSON.stringify({ ai: "empty-answer", rounds: MAX_ROUNDS }));
+    return { error: "empty" };
+  }
+  console.log(JSON.stringify({ ai: "ok", model, tools: [...ctx.used].length, ms: Date.now() - now }));
   const left = await countOne(env);
   await remember(env, String(question).slice(0, 2e3), text.slice(0, 3e3));
   const coins = [...ctx.coins].map((x) => x.split("|")).slice(0, 3);
@@ -1817,7 +1827,10 @@ async function answer(env, chat, question) {
   const ph = await send(env, chat, { text: t.thinking });
   const id = ph && ph.result && ph.result.message_id;
   const show = (v) => id ? edit(env, chat, id, v).then((r3) => r3.ok ? r3 : send(env, chat, v)) : send(env, chat, v);
-  const r = await ask(env, question, lang).catch(() => ({ error: "claude" }));
+  const r = await ask(env, question, lang).catch((e) => {
+    console.log(JSON.stringify({ ai: "crash", message: String(e && e.message).slice(0, 300) }));
+    return { error: "claude" };
+  });
   if (r.error) return show({ text: r.error === "limit" ? t.aiLimit(r.limit) : r.error === "nokey" ? t.aiNoKey : r.error === "busy" ? t.aiBusy : t.aiErr, buttons: [[cb(t.back, "menu")]] });
   const foot = `<i>\u{1F4E1} ${t.data}: ${esc(r.sources.length ? r.sources.join(" \xB7 ") : "general knowledge")}
 ${t.aiLeft(r.left, r.limit)}</i>`;

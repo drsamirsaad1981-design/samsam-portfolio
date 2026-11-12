@@ -78,6 +78,11 @@ globalThis.fetch = async (input, init = {}) => {
     if (init.headers['x-api-key'] !== 'sk-test') return J({ type: 'error', error: { type: 'authentication_error' } }, 401);
     if (b.model === 'bad-model') return J({ type: 'error', error: { type: 'not_found_error', message: 'model: bad-model' } }, 404);
     const msgs = b.messages, lastM = msgs[msgs.length - 1];
+    if (msgs.some(m => Array.isArray(m.content) && m.content.some(c => c.type === 'tool_use')) && !b.tools) return J({ type: 'error', error: { type: 'invalid_request_error', message: 'Requests which include `tool_use` or `tool_result` blocks must define tools.' } }, 400);   // the real API's rule
+    if (msgs.some(m => typeof m.content === 'string' && /keep looking/i.test(m.content)) && msgs.length > 1) {   // a model that never stops calling tools
+      if (b.tool_choice && b.tool_choice.type === 'none') return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Final answer after many rounds.' }] });
+      return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tl' + msgs.length, name: 'get_coin', input: { coin: 'btc' } }] });
+    }
     if (Array.isArray(lastM.content) && lastM.content[0].type === 'tool_result') {   // after the tools: answer from their results
       const res = lastM.content.map(r => JSON.parse(r.content));
       const coin = res.find(r => r.ticker);
@@ -86,6 +91,7 @@ globalThis.fetch = async (input, init = {}) => {
       return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'Tools gave: ' + tools }] });
     }
     const q = String(lastM.content);
+    if (/keep looking/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tl0', name: 'get_coin', input: { coin: 'btc' } }] });
     if (/price of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'text', text: 'Let me check.' }, { type: 'tool_use', id: 'tu1', name: 'get_coin', input: { coin: 'sol' } }] });
     if (/everything/i.test(q)) return J({ stop_reason: 'tool_use', content: ['get_portfolio', 'get_market', 'get_plan', 'get_exit'].map((name, i) => ({ type: 'tool_use', id: 'tu' + i, name, input: name === 'get_market' ? { top: 200 } : {} })).concat([{ type: 'tool_use', id: 'tuh', name: 'get_history', input: { coin: 'sol', days: 7 } }]) });
     return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: 'A general answer about ' + q.slice(0, 30) }] });
@@ -272,6 +278,11 @@ const all = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JS
 check('5 tools in one turn: portfolio, market (Top 200), plan, exit, 7-day history', all && all.length === 5 && all[0].total_value_usd > 0 && all[1].top200_best_24h && all[1].bstocks_best_24h.length === 5 && all[2].coins.length === 3 && all[3].conditions.length === 3 && all[4].change_pct != null && all[4].high && all[4].daily_closes, all && all.map(x => Object.keys(x).slice(0, 4)));
 check('get_portfolio: every coin with share %, profit vs average, signal (USDT marked stablecoin)', all[0].coins.length === 5 && all[0].coins.find(c => c.ticker === 'USDT').stablecoin === true && all[0].coins.every(c => 'signal' in c && 'share_pct' in c), all[0].coins);
 check('get_exit: LINK TP1 $25 at +127% to go, sell 25%', all[3].take_profits[0].ticker === 'LINK' && all[3].take_profits[0].level_usd === 25 && Math.round(all[3].take_profits[0].pct_to_go) === 127 && all[3].take_profits[0].sell_pct === 25, all[3].take_profits[0]);
+check('get_portfolio: each coin\'s result vs BTC (vs_btc_pct) and 30 / 90-day strength vs BTC — one call answers "which coins are weaker than BTC"', all[0].coins.every(c => 'vs_btc_pct' in c && 'vs_btc_30d_pts' in c) && all[0].coins.find(c => c.ticker === 'SOL').vs_btc_pct != null, all[0].coins.map(c => [c.ticker, c.vs_btc_pct]));
+sent.length = 0; claudeCalls.length = 0; await say('keep looking at btc please');
+check('a model that keeps calling tools → after 8 rounds it must answer (tools still declared, tool_choice none) — no error', /Final answer after many rounds/.test(last().b.text) && claudeCalls.length === 9 && claudeCalls.at(-1).tool_choice.type === 'none' && claudeCalls.every(c => c.tools), [claudeCalls.length, last().b.text.slice(0, 60)]);
+await say('/new'); claudeCalls.length = 0; await say('ما هي أفضل عملة؟'); await say('Which coins are weaker than BTC in my portfolio?');
+check('language follows THIS message: Arabic question → "answer in Egyptian Arabic", English after it → "answer in English"', /in Arabic — answer in Egyptian Arabic/.test(claudeCalls[0].system) && /in English — answer in English/.test(claudeCalls.at(-1).system), claudeCalls.map(c => (c.system.match(/latest message is in [^—]+— [^(]+/) || [''])[0]));
 sent.length = 0; claudeCalls.length = 0; const dup = UPD + 1;
 await post({ update_id: dup, message: { message_id: 9, chat: { id: 555 }, text: 'what is the price of SOL?' } });
 await post({ update_id: dup, message: { message_id: 9, chat: { id: 555 }, text: 'what is the price of SOL?' } });
