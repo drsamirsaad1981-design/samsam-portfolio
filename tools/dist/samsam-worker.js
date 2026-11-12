@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 4b0d5f438855647e
+// sources-hash: d67acc88161f8e8d
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1451,8 +1451,7 @@ async function confirmTrades(env, gid) {
     console.log(JSON.stringify({ trade: "save-failed", message: ok2.error.slice(0, 200) }));
     return { error: "save", lang, why: ok2.error };
   }
-  const fresh = await loadUser(env, true).catch(() => null);
-  const m2 = fresh ? await loadMarket([], coinsOf(fresh)) : null, s2 = fresh ? summarize(withIds(fresh, m2), m2, Date.now()) : null;
+  const s2 = summarize(withIds({ ...user, txs: [...user.txs || [], ...docs.map((d) => d.data)] }, m), m, Date.now());
   return { ok: true, lang: g.lang, trades: g.trades.map((x) => x.trade), holdings: s2 ? g.trades.map(({ trade: t }) => {
     const c = s2.coins.find((z) => z.sym === t.sym);
     return { sym: t.sym, qty: c ? c.qty : 0, avg: c ? c.avg : null };

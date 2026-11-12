@@ -162,8 +162,8 @@ export async function confirmTrades(env, gid) {
   const docs = g.trades.flatMap(x => x.docs).map(([id, data]) => ({ path: 'txs/' + id, data }));
   const ok = await commitDocs(env, user.uid, docs).catch(e => ({ error: String(e && e.message) }));
   if (ok && ok.error) { console.log(JSON.stringify({ trade: 'save-failed', message: ok.error.slice(0, 200) })); return { error: 'save', lang, why: ok.error }; }
-  const fresh = await loadUser(env, true).catch(() => null);
-  const m2 = fresh ? await loadMarket([], coinsOf(fresh)) : null, s2 = fresh ? summarize(withIds(fresh, m2), m2, Date.now()) : null;
+  // the portfolio now = what was just read + the saved transactions (no second read: it could run out of calls)
+  const s2 = summarize(withIds({ ...user, txs: [...(user.txs || []), ...docs.map(d => d.data)] }, m), m, Date.now());
   return { ok: true, lang: g.lang, trades: g.trades.map(x => x.trade), holdings: s2 ? g.trades.map(({ trade: t }) => { const c = s2.coins.find(z => z.sym === t.sym); return { sym: t.sym, qty: c ? c.qty : 0, avg: c ? c.avg : null }; }) : [] };
 }
 // → the trade's language when it was waiting, false when it was already saved / cancelled
