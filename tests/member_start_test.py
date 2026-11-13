@@ -45,6 +45,7 @@ with sync_playwright() as p:
             pg.evaluate("document.getElementById('blModal').classList.remove('show')")
             pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#cpSet')
             check('member: Settings has "My Claude key"', 'My Claude key' in pg.inner_text('#cpSet'))
+            check('member: no "Telegram alerts" in Settings (they reach Samir only)', 'Telegram alerts' not in pg.inner_text('#cpSet') and 'Link the Telegram bot' in pg.inner_text('#cpSet'))
             pg.evaluate("window.__cpAutoAnswer = null")
             pg.click('#stRow_claudekey')
             pg.wait_for_selector('#cpDialog #cpdI')

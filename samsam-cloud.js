@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611131539';
-import * as Hist from './samsam-history.js?v=202611131539';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611131539';
+import * as Core from './samsam-core.js?v=202611131614';
+import * as Hist from './samsam-history.js?v=202611131614';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611131614';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -1417,7 +1417,7 @@ function renderStatus() {
 
 // ── Telegram alerts sheet (from the cloud menu, on every page) ──
 function openAlertsSheet() {
-  if (!S.user || !allLoaded()) return;
+  if (!S.user || !allLoaded() || !isMainOwner()) return;   // the GitHub Telegram alerts go to Samir only (members: alerts in the bot)
   document.getElementById('cpAlerts')?.remove();
   const a = cleanAlerts(S.meta && S.meta.alerts), back = document.activeElement;
   const sw = (k, title, sub, extra = '') => `<div class="al-row"><div class="al-t"><b>${title}</b><span>${sub}</span></div>${extra}<label class="al-sw"><input type="checkbox" data-k="${k}" ${a[k] ? 'checked' : ''} aria-label="${esc(title)}"><i></i></label></div>`;

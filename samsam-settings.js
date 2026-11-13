@@ -228,7 +228,7 @@
     var hasImport = !!window.SamsamImport;
     box.querySelector('.st-body').innerHTML = SECTIONS.map(function (s) {
       var member = !!(S() && S().isOwner && !S().isOwner());   // 🔑 only invited members bring their own key
-      var rows = s[1].filter(function (r) { return r.seg || ((r[0] !== 'import' || hasImport) && (r[0] !== 'claudekey' || member)); });
+      var rows = s[1].filter(function (r) { return r.seg || ((r[0] !== 'import' || hasImport) && (r[0] !== 'claudekey' || member) && (r[0] !== 'alerts' || !member)); });   // 🔔 Telegram alerts (GitHub) reach Samir only: hidden for members
       return '<div class="st-sec">' + E(s[0]) + '</div><div class="st-list">' + rows.map(function (r) { return r.seg ? choice(r) : line(r); }).join('') + '</div>';
     }).join('') + '<div class="st-later">More settings (app language, AI) will be added here.</div>';
   }
