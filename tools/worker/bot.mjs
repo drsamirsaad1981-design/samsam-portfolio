@@ -375,7 +375,7 @@ export async function handleTelegram(request, env) {
   if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {   // a member: ⏸ paused → nothing (one note a day); 🌊 too many messages → wait
     const x = (await members(env))[String(chat)] || {}, ar = x.lang === 'ar';
     const quiet = () => q ? tg(env, 'answerCallbackQuery', { callback_query_id: q.id }).catch(() => {}) : null;
-    if (x.paused) { await quiet(); if (await strangerOnce(env, chat)) await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '⏸ البوت متوقف عندك مؤقتاً — كلّم سمير.' : '⏸ The bot is paused for you for now — ask Samir.' }).catch(() => {}); return ok(); }
+    if (x.paused) { await quiet(); if (await strangerOnce(env, chat)) await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '⏸ البوت متوقف عندك مؤقتاً — كلّم Dr. Samir Saad.' : '⏸ The bot is paused for you for now — ask Dr. Samir Saad.' }).catch(() => {}); return ok(); }
     const f = await flood(env, chat);
     if (f !== 'ok') { await quiet(); if (f === 'warn') await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '🌊 رسايل كتير ورا بعض — استنى دقيقة وكمّل 🙂' : '🌊 That\'s a lot of messages at once — wait a minute, then carry on 🙂' }).catch(() => {}); return ok(); }
   }
@@ -446,10 +446,10 @@ async function usedToday(env, c, x) {
 
 // 📱 /app you@example.com — an invited person asks to open the app with that e-mail; the owner taps ✅ (or ❌)
 const AW = {
-  en: { ask: 'Send the e-mail you will sign in with, like:\n<code>/app you@example.com</code>\n(Google, or any e-mail with a sign-in link.)', sent: '📨 Sent to Samir for approval — you\'ll get a message here.', owner: '📱 You already have the app 🙂',
+  en: { ask: 'Send the e-mail you will sign in with, like:\n<code>/app you@example.com</code>\n(Google, or any e-mail with a sign-in link.)', sent: '📨 Sent to Dr. Samir Saad for approval — you\'ll get a message here.', owner: '📱 You already have the app 🙂',
     req: (n, e) => `📱 <b>${n}</b> asks to open the app with\n<code>${e}</code>`, ok: e => `✅ You can open the app now with <b>${e}</b>:\n${APP}\nThen Settings → 🔗 Link the Telegram bot, to see your portfolio here.`, no: 'Your app request was not approved.',
     linked: '🔗 Linked ✅ — your portfolio, plan and exit plan now show here (only to you).', badCode: '❌ That code is not valid or is over 10 minutes old — make a new one in the app (Settings → Link the Telegram bot).', notYou: '❌ That code was made by another e-mail than the one approved for you.', ownerLink: 'Your portfolio is already the bot\'s 🙂' },
-  ar: { ask: 'ابعت الإيميل اللي هتدخل بيه، كده:\n<code>/app you@example.com</code>\n(Google، أو أي إيميل بلينك دخول.)', sent: '📨 اتبعت لسمير يوافق — هيوصلك رد هنا.', owner: '📱 التطبيق معاك أصلاً 🙂',
+  ar: { ask: 'ابعت الإيميل اللي هتدخل بيه، كده:\n<code>/app you@example.com</code>\n(Google، أو أي إيميل بلينك دخول.)', sent: '📨 اتبعت لـ Dr. Samir Saad يوافق — هيوصلك رد هنا.', owner: '📱 التطبيق معاك أصلاً 🙂',
     req: (n, e) => `📱 <b>${n}</b> عايز يفتح التطبيق بـ\n<code>${e}</code>`, ok: e => `✅ تقدر تفتح التطبيق دلوقتي بـ <b>${e}</b>:\n${APP}\nوبعدين الإعدادات ← 🔗 Link the Telegram bot عشان محفظتك تظهر هنا.`, no: 'طلب التطبيق ما اتوافقش عليه.',
     linked: '🔗 اتربطت ✅ — محفظتك وخطتك وخطة الخروج بقت تظهر هنا (ليك انت بس).', badCode: '❌ الكود ده مش صالح أو عدّى عليه 10 دقايق — اعمل واحد جديد من التطبيق (الإعدادات ← Link the Telegram bot).', notYou: '❌ الكود ده اتعمل بإيميل غير الإيميل اللي اتوافق عليه ليك.', ownerLink: 'محفظتك هي اللي في البوت أصلاً 🙂' },
 };
@@ -552,7 +552,7 @@ async function onUpdate(env, u, msg, q, chat) {
           if (x) {
             if (!pd && premiumNow(x)) { await revoke(env, who); note = '☆'; await tg(env, 'sendMessage', { chat_id: who, text: x.lang === 'ar' ? 'العضوية المميزة اتشالت — رجعت للحدود العادية.' : 'Premium is off — back to the standard limits.' }).catch(() => {}); }
             else { const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? local(y.premUntil, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-              await tg(env, 'sendMessage', { chat_id: who, parse_mode: 'HTML', text: x.lang === 'ar' ? `🎁 سمير ادّالك المميز هدية لحد ${until}!\nالرسايل الصوتية 🎙 اشتغلت، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis في اليوم.` : `🎁 Samir gave you premium as a gift — until ${until}!\nVoice notes 🎙 are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {}); }
+              await tg(env, 'sendMessage', { chat_id: who, parse_mode: 'HTML', text: x.lang === 'ar' ? `🎁 Dr. Samir Saad ادّالك المميز هدية لحد ${until}!\nالرسايل الصوتية 🎙 اشتغلت، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis في اليوم.` : `🎁 Dr. Samir Saad gave you premium as a gift — until ${until}!\nVoice notes 🎙 are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {}); }
           }
           const v = await viewMember(env, lang, who), r = await edit(env, chat, q.message.message_id, v);
           if (!r.ok && !/not modified/i.test(r.description || '')) await send(env, chat, v);
@@ -623,7 +623,7 @@ async function onUpdate(env, u, msg, q, chat) {
     }
     if (msg && msg.successful_payment) { await paid(env, chat, msg.successful_payment, await getLang(env)); return ok(); }   // ⭐💛 paid (also each monthly renewal)
     if (msg && (msg.voice || msg.audio)) {
-      if (!(await isPremium(env)) && !(await keyInfo(env)).has) { const ar = (await getLang(env)) === 'ar'; await send(env, chat, { text: ar ? '🎙 الرسايل الصوتية للأعضاء المميزين ⭐ — اكتبها كتابة، أو اطلب من سمير.' : '🎙 Voice notes are for ⭐ premium members — type it instead, or ask Samir.' }); return ok(); }
+      if (!(await isPremium(env)) && !(await keyInfo(env)).has) { const ar = (await getLang(env)) === 'ar'; await send(env, chat, { text: ar ? '🎙 الرسايل الصوتية للأعضاء المميزين ⭐ — اكتبها كتابة، أو اطلب من Dr. Samir Saad.' : '🎙 Voice notes are for ⭐ premium members — type it instead, or ask Dr. Samir Saad.' }); return ok(); }
       await onVoice(env, chat, msg.voice || msg.audio); return ok();
     }
     if (!msg || typeof msg.text !== 'string') return ok();

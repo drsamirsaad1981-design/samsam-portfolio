@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 3dc969c3dc100509
+// sources-hash: 779a1a5068ba77e2
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -923,12 +923,12 @@ var W = {
 \u2022 Why it costs anything: the AI is paid per question. This only covers that \u2014 Cute Portfolio is non-profit.
 
 <i>Telegram Stars are Telegram's own coins: you buy them inside Telegram, like any in-app purchase.</i>`,
-    isPrem: (u) => u ? `\u2705 <b>You're premium until ${u}.</b>` : "\u2705 <b>You're premium</b> (a gift from Samir).",
+    isPrem: (u) => u ? `\u2705 <b>You're premium until ${u}.</b>` : "\u2705 <b>You're premium</b> (a gift from Dr. Samir Saad).",
     renews: "It renews by itself \u2014 to stop: Telegram \u2192 Settings \u2192 My Stars.",
     subscribe: (p) => `\u2B50 Subscribe \u2014 ${p} \u2B50 / month`,
     extend: (p) => `\u2B50 Subscribe \u2014 ${p} \u2B50 / month (after the gift)`,
     supportInstead: "\u{1F49B} Support instead",
-    ask: "\u{1F381} Ask Samir",
+    ask: "\u{1F381} Ask Dr. Samir Saad",
     back: "\u2B05\uFE0F Menu",
     sTitle: "\u{1F49B} <b>Support Cute Portfolio</b>",
     sBody: "<b>Optional</b> \u2014 a one-time thank-you of any size. Nothing changes in the features: everything stays free.\nIt helps pay for the servers and the AI. You get a <b>Supporter \u{1F49B}</b> badge in the bot and the app.\n\nPick an amount (Telegram Stars):",
@@ -948,7 +948,7 @@ Until ${u} \u2014 it renews by itself (stop any time: Telegram \u2192 Settings \
     ownerRenew: (n, s, u) => `\u2B50 <b>${n}</b> renewed Premium \u2014 ${s} \u2B50 (until ${u}).`,
     ownerSup: (n, s) => `\u{1F49B} <b>${n}</b> supported the project with ${s} \u2B50.`,
     ownerAsk: (n) => `\u{1F381} <b>${n}</b> asks you for premium as a gift.`,
-    asked: "\u{1F381} Sent to Samir \u2014 you'll hear here.",
+    asked: "\u{1F381} Sent to Dr. Samir Saad \u2014 you'll hear here.",
     ownerP: "You are premium already \u2B50 \u2014 this is what members see:"
   },
   ar: {
@@ -963,12 +963,12 @@ Until ${u} \u2014 it renews by itself (stop any time: Telegram \u2192 Settings \
 \u2022 \u0644\u064A\u0647 \u0628\u0641\u0644\u0648\u0633 \u0623\u0635\u0644\u0627\u064B: \u0627\u0644\u0640 AI \u0628\u064A\u062A\u062D\u0627\u0633\u0628 \u0639\u0644\u0649 \u0643\u0644 \u0633\u0624\u0627\u0644\u060C \u0648\u0627\u0644\u0645\u0628\u0644\u063A \u062F\u0647 \u0628\u064A\u063A\u0637\u064A \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u062F\u064A \u0628\u0633 \u2014 Cute Portfolio \u0645\u0634 \u0647\u0627\u062F\u0641 \u0644\u0644\u0631\u0628\u062D.
 
 <i>\u0627\u0644\u0640 Telegram Stars \u0639\u0645\u0644\u0629 \u062A\u0644\u062C\u0631\u0627\u0645 \u0646\u0641\u0633\u0647: \u0628\u062A\u0634\u062A\u0631\u064A\u0647\u0627 \u0645\u0646 \u062C\u0648\u0647 \u062A\u0644\u062C\u0631\u0627\u0645 \u0632\u064A \u0623\u064A \u0634\u0631\u0627\u0621 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642.</i>`,
-    isPrem: (u) => u ? `\u2705 <b>\u0627\u0646\u062A \u0645\u0645\u064A\u0632 \u0644\u062D\u062F ${u}.</b>` : "\u2705 <b>\u0627\u0646\u062A \u0645\u0645\u064A\u0632</b> (\u0647\u062F\u064A\u0629 \u0645\u0646 \u0633\u0645\u064A\u0631).",
+    isPrem: (u) => u ? `\u2705 <b>\u0627\u0646\u062A \u0645\u0645\u064A\u0632 \u0644\u062D\u062F ${u}.</b>` : "\u2705 <b>\u0627\u0646\u062A \u0645\u0645\u064A\u0632</b> (\u0647\u062F\u064A\u0629 \u0645\u0646 Dr. Samir Saad).",
     renews: "\u0628\u064A\u062A\u062C\u062F\u062F \u0644\u0648\u062D\u062F\u0647 \u2014 \u0639\u0634\u0627\u0646 \u062A\u0648\u0642\u0641\u0647: \u062A\u0644\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars.",
     subscribe: (p) => `\u2B50 \u0627\u0634\u062A\u0631\u0643 \u2014 ${p} \u2B50 \u0641\u064A \u0627\u0644\u0634\u0647\u0631`,
     extend: (p) => `\u2B50 \u0627\u0634\u062A\u0631\u0643 \u2014 ${p} \u2B50 \u0641\u064A \u0627\u0644\u0634\u0647\u0631 (\u0628\u0639\u062F \u0627\u0644\u0647\u062F\u064A\u0629)`,
     supportInstead: "\u{1F49B} \u0627\u062F\u0639\u0645 \u0628\u062F\u0644 \u0643\u062F\u0647",
-    ask: "\u{1F381} \u0627\u0637\u0644\u0628 \u0645\u0646 \u0633\u0645\u064A\u0631",
+    ask: "\u{1F381} \u0627\u0637\u0644\u0628 \u0645\u0646 Dr. Samir Saad",
     back: "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629",
     sTitle: "\u{1F49B} <b>\u0627\u062F\u0639\u0645 Cute Portfolio</b>",
     sBody: "<b>\u0627\u062E\u062A\u064A\u0627\u0631\u064A</b> \u2014 \u0634\u0643\u0631 \u0644\u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0628\u0623\u064A \u0645\u0628\u0644\u063A. \u0627\u0644\u0645\u0632\u0627\u064A\u0627 \u0645\u0627 \u0628\u062A\u062A\u063A\u064A\u0631\u0634: \u0643\u0644 \u062D\u0627\u062C\u0629 \u0628\u062A\u0641\u0636\u0644 \u0645\u062C\u0627\u0646\u064A\u0629.\n\u0628\u064A\u0633\u0627\u0639\u062F \u0641\u064A \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0633\u064A\u0631\u0641\u0631\u0627\u062A \u0648\u0627\u0644\u0640 AI\u060C \u0648\u0628\u062A\u0627\u062E\u062F \u0648\u0633\u0627\u0645 <b>Supporter \u{1F49B}</b> \u0641\u064A \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0644\u062A\u0637\u0628\u064A\u0642.\n\n\u0627\u062E\u062A\u0627\u0631 \u0627\u0644\u0645\u0628\u0644\u063A (Telegram Stars):",
@@ -988,7 +988,7 @@ Until ${u} \u2014 it renews by itself (stop any time: Telegram \u2192 Settings \
     ownerRenew: (n, s, u) => `\u2B50 <b>${n}</b> \u062C\u062F\u062F \u0627\u0644\u0645\u0645\u064A\u0632 \u2014 ${s} \u2B50 (\u0644\u062D\u062F ${u}).`,
     ownerSup: (n, s) => `\u{1F49B} <b>${n}</b> \u062F\u0639\u0645 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0628\u0640 ${s} \u2B50.`,
     ownerAsk: (n) => `\u{1F381} <b>${n}</b> \u0628\u064A\u0637\u0644\u0628 \u0645\u0646\u0643 \u0627\u0644\u0645\u0645\u064A\u0632 \u0647\u062F\u064A\u0629.`,
-    asked: "\u{1F381} \u0627\u062A\u0628\u0639\u062A \u0644\u0633\u0645\u064A\u0631 \u2014 \u0647\u064A\u0648\u0635\u0644\u0643 \u0631\u062F \u0647\u0646\u0627.",
+    asked: "\u{1F381} \u0627\u062A\u0628\u0639\u062A \u0644\u0640 Dr. Samir Saad \u2014 \u0647\u064A\u0648\u0635\u0644\u0643 \u0631\u062F \u0647\u0646\u0627.",
     ownerP: "\u0627\u0646\u062A \u0645\u0645\u064A\u0632 \u0623\u0635\u0644\u0627\u064B \u2B50 \u2014 \u062F\u0647 \u0627\u0644\u0644\u064A \u0627\u0644\u0623\u0639\u0636\u0627\u0621 \u0628\u064A\u0634\u0648\u0641\u0648\u0647:"
   }
 };
@@ -4129,7 +4129,7 @@ async function handleTelegram(request, env) {
     }) : null;
     if (x.paused) {
       await quiet();
-      if (await strangerOnce(env, chat)) await tg4(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u0643\u0644\u0651\u0645 \u0633\u0645\u064A\u0631." : "\u23F8 The bot is paused for you for now \u2014 ask Samir." }).catch(() => {
+      if (await strangerOnce(env, chat)) await tg4(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u0643\u0644\u0651\u0645 Dr. Samir Saad." : "\u23F8 The bot is paused for you for now \u2014 ask Dr. Samir Saad." }).catch(() => {
       });
       return ok();
     }
@@ -4260,7 +4260,7 @@ async function usedToday(env, c, x) {
 var AW = {
   en: {
     ask: "Send the e-mail you will sign in with, like:\n<code>/app you@example.com</code>\n(Google, or any e-mail with a sign-in link.)",
-    sent: "\u{1F4E8} Sent to Samir for approval \u2014 you'll get a message here.",
+    sent: "\u{1F4E8} Sent to Dr. Samir Saad for approval \u2014 you'll get a message here.",
     owner: "\u{1F4F1} You already have the app \u{1F642}",
     req: (n, e) => `\u{1F4F1} <b>${n}</b> asks to open the app with
 <code>${e}</code>`,
@@ -4275,7 +4275,7 @@ Then Settings \u2192 \u{1F517} Link the Telegram bot, to see your portfolio here
   },
   ar: {
     ask: "\u0627\u0628\u0639\u062A \u0627\u0644\u0625\u064A\u0645\u064A\u0644 \u0627\u0644\u0644\u064A \u0647\u062A\u062F\u062E\u0644 \u0628\u064A\u0647\u060C \u0643\u062F\u0647:\n<code>/app you@example.com</code>\n(Google\u060C \u0623\u0648 \u0623\u064A \u0625\u064A\u0645\u064A\u0644 \u0628\u0644\u064A\u0646\u0643 \u062F\u062E\u0648\u0644.)",
-    sent: "\u{1F4E8} \u0627\u062A\u0628\u0639\u062A \u0644\u0633\u0645\u064A\u0631 \u064A\u0648\u0627\u0641\u0642 \u2014 \u0647\u064A\u0648\u0635\u0644\u0643 \u0631\u062F \u0647\u0646\u0627.",
+    sent: "\u{1F4E8} \u0627\u062A\u0628\u0639\u062A \u0644\u0640 Dr. Samir Saad \u064A\u0648\u0627\u0641\u0642 \u2014 \u0647\u064A\u0648\u0635\u0644\u0643 \u0631\u062F \u0647\u0646\u0627.",
     owner: "\u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0639\u0627\u0643 \u0623\u0635\u0644\u0627\u064B \u{1F642}",
     req: (n, e) => `\u{1F4F1} <b>${n}</b> \u0639\u0627\u064A\u0632 \u064A\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0640
 <code>${e}</code>`,
@@ -4470,8 +4470,8 @@ async function onUpdate(env, u, msg, q, chat) {
               });
             } else {
               const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? local(y.premUntil, { day: "numeric", month: "short", year: "numeric" }) : "";
-              await tg4(env, "sendMessage", { chat_id: who, parse_mode: "HTML", text: x.lang === "ar" ? `\u{1F381} \u0633\u0645\u064A\u0631 \u0627\u062F\u0651\u0627\u0644\u0643 \u0627\u0644\u0645\u0645\u064A\u0632 \u0647\u062F\u064A\u0629 \u0644\u062D\u062F ${until}!
-\u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u{1F399} \u0627\u0634\u062A\u063A\u0644\u062A\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645.` : `\u{1F381} Samir gave you premium as a gift \u2014 until ${until}!
+              await tg4(env, "sendMessage", { chat_id: who, parse_mode: "HTML", text: x.lang === "ar" ? `\u{1F381} Dr. Samir Saad \u0627\u062F\u0651\u0627\u0644\u0643 \u0627\u0644\u0645\u0645\u064A\u0632 \u0647\u062F\u064A\u0629 \u0644\u062D\u062F ${until}!
+\u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u{1F399} \u0627\u0634\u062A\u063A\u0644\u062A\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645.` : `\u{1F381} Dr. Samir Saad gave you premium as a gift \u2014 until ${until}!
 Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {
               });
             }
@@ -4603,7 +4603,7 @@ Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} A
     if (msg && (msg.voice || msg.audio)) {
       if (!await isPremium(env) && !(await keyInfo(env)).has) {
         const ar = await getLang(env) === "ar";
-        await send2(env, chat, { text: ar ? "\u{1F399} \u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 \u2014 \u0627\u0643\u062A\u0628\u0647\u0627 \u0643\u062A\u0627\u0628\u0629\u060C \u0623\u0648 \u0627\u0637\u0644\u0628 \u0645\u0646 \u0633\u0645\u064A\u0631." : "\u{1F399} Voice notes are for \u2B50 premium members \u2014 type it instead, or ask Samir." });
+        await send2(env, chat, { text: ar ? "\u{1F399} \u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 \u2014 \u0627\u0643\u062A\u0628\u0647\u0627 \u0643\u062A\u0627\u0628\u0629\u060C \u0623\u0648 \u0627\u0637\u0644\u0628 \u0645\u0646 Dr. Samir Saad." : "\u{1F399} Voice notes are for \u2B50 premium members \u2014 type it instead, or ask Dr. Samir Saad." });
         return ok();
       }
       await onVoice(env, chat, msg.voice || msg.audio);
