@@ -13,7 +13,7 @@
 // Worker secrets (Settings → Variables and Secrets): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT,
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
-import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS } from './who.mjs';
+import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, langOf } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
 import { findLinkCode, syncAccess, loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
@@ -131,15 +131,12 @@ const KB_ACT = () => Object.fromEntries(Object.values(T).flatMap(L => [...Object
 // ── language: English by default; 🌐 in the menu (or /lang) switches. Kept in the Worker's KV (RATE), else in memory ──
 const memLang = new Map();   // per chat (each person has their own language)
 export async function getLang(env) {
-  let v = memLang.get(chatOf(env));
-  try { if (env.RATE) v = (await env.RATE.get(K(env, 'lang'))) || v; } catch (_) {}
-  if (v === 'ar' || v === 'en') return v;
-  return env.BOT_LANG === 'ar' ? 'ar' : 'en';
+  return langOf(env, memLang.get(chatOf(env)));
 }
 const memRange = new Map();
 async function getRange(env) { let v = memRange.get(chatOf(env)); try { if (env.RATE) v = +(await env.RATE.get(K(env, 'mk'))) || v; } catch (_) {} return RANGES.includes(+v) ? +v : 100; }
 async function setRange(env, v) { memRange.set(chatOf(env), v); try { if (env.RATE) await env.RATE.put(K(env, 'mk'), String(v)); } catch (_) {} }
-async function setLang(env, v) { memLang.set(chatOf(env), v); try { if (env.RATE) await env.RATE.put(K(env, 'lang'), v); } catch (_) {} }
+async function setLang(env, v) { memLang.set(chatOf(env), v); try { if (env.RATE) await env.RATE.put(K(env, 'lang'), v); } catch (_) {} if (!isOwner(env)) await setMember(env, chatOf(env), { lang: v }).catch(() => {}); }
 
 // ── views: each returns { text, buttons } ──
 export function viewMenu(t, owner = true) { return { text: `${owner ? t.hi : t.hiAll}\n${t.menuTitle}`, buttons: menuRows(t) }; }   // "Hi Samir" only for Samir

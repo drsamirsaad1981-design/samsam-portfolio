@@ -13,7 +13,7 @@
 // The morning / evening are written by Claude from the facts gathered here (tools/worker/ai.mjs → compose); if Claude
 // can't, the bot's own plain version goes out. They do not count in the 30 questions a day.
 
-import { K, chatOf, isOwner } from './who.mjs';
+import { K, chatOf, isOwner, langOf } from './who.mjs';
 import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures } from './data.mjs';
 import { compose } from './ai.mjs';
@@ -26,7 +26,7 @@ async function kvGet(env, k) { try { if (env.RATE) { const v = await env.RATE.ge
 async function kvPut(env, k, v, ttl) { mem.set(k, v); try { if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : undefined); } catch (_) {} }
 const jget = async (env, k, d) => { try { const v = JSON.parse((await kvGet(env, k)) || 'null'); return v == null ? d : v; } catch (_) { return d; } };
 const jput = (env, k, v, ttl) => kvPut(env, k, JSON.stringify(v), ttl);
-async function lang(env) { let v = null; try { if (env.RATE) v = await env.RATE.get(K(env, 'lang')); } catch (_) {} return v === 'ar' || v === 'en' ? v : env.BOT_LANG === 'ar' ? 'ar' : 'en'; }
+const lang = env => langOf(env);
 async function tg(env, method, body) {
   try { const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
   catch (_) { return { ok: false }; }

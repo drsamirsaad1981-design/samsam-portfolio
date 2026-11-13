@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: a8e549ed1013c1e2
+// sources-hash: 259ea9f2001cd987
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -806,6 +806,18 @@ async function aiLimitFor(env) {
   if (isOwner(env)) return Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30));
   const x = await member(env);
   return x && Number.isFinite(x.ai) ? x.ai : Math.max(0, parseInt(env.MEMBER_AI_LIMIT || String(DEF_AI), 10) || DEF_AI);
+}
+async function langOf(env, mem6 = null) {
+  let v = null;
+  try {
+    if (env.RATE) v = await env.RATE.get(K(env, "lang"));
+  } catch (_) {
+  }
+  if (v === "ar" || v === "en") return v;
+  if (mem6 === "ar" || mem6 === "en") return mem6;
+  if (isOwner(env)) return env.BOT_LANG === "ar" ? "ar" : "en";
+  const x = await member(env);
+  return x && (x.lang === "ar" || x.lang === "en") ? x.lang : "en";
 }
 async function setPending(env, chat, email) {
   await kput(env, "tg:appreq:" + chat, email, 7 * 86400);
@@ -2625,14 +2637,7 @@ var jget = async (env, k, d) => {
   }
 };
 var jput = (env, k, v, ttl) => kvPut5(env, k, JSON.stringify(v), ttl);
-async function lang(env) {
-  let v = null;
-  try {
-    if (env.RATE) v = await env.RATE.get(K(env, "lang"));
-  } catch (_) {
-  }
-  return v === "ar" || v === "en" ? v : env.BOT_LANG === "ar" ? "ar" : "en";
-}
+var lang = (env) => langOf(env);
 async function tg2(env, method, body) {
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -3413,13 +3418,7 @@ var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }, { text
 var KB_ACT = () => Object.fromEntries(Object.values(T).flatMap((L) => [...Object.entries(L.kb), ...Object.entries(L.kbOld || {})].map(([act, text]) => [text, act])));
 var memLang = /* @__PURE__ */ new Map();
 async function getLang(env) {
-  let v = memLang.get(chatOf(env));
-  try {
-    if (env.RATE) v = await env.RATE.get(K(env, "lang")) || v;
-  } catch (_) {
-  }
-  if (v === "ar" || v === "en") return v;
-  return env.BOT_LANG === "ar" ? "ar" : "en";
+  return langOf(env, memLang.get(chatOf(env)));
 }
 var memRange = /* @__PURE__ */ new Map();
 async function getRange(env) {
@@ -3443,6 +3442,8 @@ async function setLang(env, v) {
     if (env.RATE) await env.RATE.put(K(env, "lang"), v);
   } catch (_) {
   }
+  if (!isOwner(env)) await setMember(env, chatOf(env), { lang: v }).catch(() => {
+  });
 }
 function viewMenu(t, owner = true) {
   return { text: `${owner ? t.hi : t.hiAll}
@@ -4813,12 +4814,7 @@ var r25 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
 var r64 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
 async function report(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null);
-  let lang2 = null;
-  try {
-    if (env.RATE) lang2 = await env.RATE.get(K(env, "lang"));
-  } catch (_) {
-  }
-  lang2 = lang2 === "ar" || lang2 === "en" ? lang2 : env.BOT_LANG === "ar" ? "ar" : "en";
+  const lang2 = await langOf(env);
   const m = await loadMarket([], coinsOf(user));
   const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
   const market = {

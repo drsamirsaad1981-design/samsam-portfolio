@@ -100,6 +100,15 @@ export async function aiLimitFor(env) {
   const x = await member(env);
   return x && Number.isFinite(x.ai) ? x.ai : Math.max(0, parseInt(env.MEMBER_AI_LIMIT || String(DEF_AI), 10) || DEF_AI);
 }
+// a chat's language: its own key, else the one saved with the member (kept in two places — a missing key once made a
+// member's pinned message come out in the owner's language), else English (the owner: the Worker's BOT_LANG)
+export async function langOf(env, mem = null) {
+  let v = null; try { if (env.RATE) v = await env.RATE.get(K(env, 'lang')); } catch (_) {}
+  if (v === 'ar' || v === 'en') return v;
+  if (mem === 'ar' || mem === 'en') return mem;
+  if (isOwner(env)) return env.BOT_LANG === 'ar' ? 'ar' : 'en';
+  const x = await member(env); return x && (x.lang === 'ar' || x.lang === 'en') ? x.lang : 'en';
+}
 // a pending /app request (the e-mail waits for the owner's ✅)
 export async function setPending(env, chat, email) { await kput(env, 'tg:appreq:' + chat, email, 7 * 86400); }
 export async function getPending(env, chat) { return kget(env, 'tg:appreq:' + chat); }

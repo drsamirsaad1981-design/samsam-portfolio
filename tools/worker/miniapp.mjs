@@ -6,7 +6,7 @@
 //                  key = HMAC("WebAppData", bot token)), that it is less than 24 h old, and that the user is TELEGRAM_CHAT_ID.
 // The numbers are the bot's own (summarize = the app's maths), plus the morning's "today" list, alerts and the paper portfolio.
 
-import { asChat, allowed, K } from './who.mjs';
+import { asChat, allowed, K, langOf } from './who.mjs';
 import { summarize, isStable, etfDay } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, resetBudget } from './data.mjs';
 import { listAlerts, describe } from './watch.mjs';
@@ -48,8 +48,7 @@ const r6 = v => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
 
 export async function report(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null);
-  let lang = null; try { if (env.RATE) lang = await env.RATE.get(K(env, 'lang')); } catch (_) {}
-  lang = lang === 'ar' || lang === 'en' ? lang : env.BOT_LANG === 'ar' ? 'ar' : 'en';
+  const lang = await langOf(env);
   const m = await loadMarket([], coinsOf(user));
   const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
   const market = { btc: m.btc ? { price: r6(m.btc.price), ch24: r2(m.btc.ch24) } : null, fng: m.fng || null, dom: { btc: r2(d.btc), eth: r2(d.eth), usdt: r2(d.usdt) }, mcap: g.mcap || null, mcapCh24: r2(g.mcapCh24),

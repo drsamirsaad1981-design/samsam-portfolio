@@ -941,6 +941,13 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   const m2 = JSON.parse(kvStore.get('tg:users')); m2['888'] = { name: 'New', joined: Date.now() }; kvStore.set('tg:users', JSON.stringify(m2)); kvStore.delete('tg:888:daily');
   sent.length = 0; await sayAs(888, '/daily');
   check('a member not linked yet: Leverage radar and Sector radar start off', /⬜ Leverage radar/.test(last().b.text) && /⬜ Sector radar/.test(last().b.text), last().b.text);
+  // the language: a member whose language key went missing still gets their own (saved with them), never the owner's Arabic
+  const ENV_AR = { ...ENVK, BOT_LANG: 'ar' };
+  await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 888, type: 'private' }, from: { id: 888, first_name: 'New', language_code: 'en' }, text: '/lang' } }, ENV.TG_SECRET, ENV_AR);
+  kvStore.delete('tg:888:lang');
+  const W3 = await fresh(); sent.length = 0;
+  await W3.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, message: { message_id: 1, chat: { id: 888, type: 'private' }, from: { id: 888, first_name: 'New' }, text: '/daily' } }) }), ENV_AR, {});
+  check('a member with no language key (a new Worker, BOT_LANG=ar for the owner) → still English, not the owner\'s Arabic', /Leverage radar/.test(last().b.text), last().b.text.slice(0, 80));
   const mk = { top: [{ id: 'solana', price: 79.65, ch24: -3.88 }], top500: [], series: {}, global: {}, cgIds: {} };
   const s1 = summarize({ coins: [{ sym: 'SOL', cgId: 'solana', opening: { qty: 1, avg: 81 }, addedAt: new Date(Date.now() - 3600e3).toISOString() }], txs: [], accum: [], meta: {} }, mk, Date.now());
   check('📉 a coin added an hour ago at $81, now $79.65: "today" = −$1.35 (from the price paid), not the 24 h drop', Math.abs(s1.d24 + 1.35) < 0.01, s1.d24);
