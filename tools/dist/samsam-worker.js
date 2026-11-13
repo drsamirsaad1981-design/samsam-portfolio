@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 779a1a5068ba77e2
+// sources-hash: da108ff6d887aa4b
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1010,7 +1010,8 @@ async function premiumView(env, lang2, now = Date.now()) {
     });
     if (link.ok && typeof link.result === "string") b.push([{ text: on ? w.extend(p) : w.subscribe(p), url: link.result }]);
   }
-  b.push([cb(w.supportInstead, "sp"), ...own || on ? [] : [cb(w.ask, "pm:ask")]]);
+  b.push([cb(w.supportInstead, "sp")]);
+  if (!own && !on) b.push([cb(w.ask, "pm:ask")]);
   b.push([cb(w.back, "menu")]);
   return { text: lines.join("\n"), buttons: b };
 }

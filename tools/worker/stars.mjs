@@ -98,7 +98,8 @@ export async function premiumView(env, lang, now = Date.now()) {
       prices: [{ label: w.invTitle, amount: p }], subscription_period: 30 * 86400 });
     if (link.ok && typeof link.result === 'string') b.push([{ text: on ? w.extend(p) : w.subscribe(p), url: link.result }]);
   }
-  b.push([cb(w.supportInstead, 'sp'), ...(own || on ? [] : [cb(w.ask, 'pm:ask')])]);
+  b.push([cb(w.supportInstead, 'sp')]);
+  if (!own && !on) b.push([cb(w.ask, 'pm:ask')]);   // its own row: the full name fits
   b.push([cb(w.back, 'menu')]);
   return { text: lines.join('\n'), buttons: b };
 }
