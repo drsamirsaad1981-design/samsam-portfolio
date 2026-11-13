@@ -486,8 +486,9 @@ async function viewMember(env, lang, c) {
     `📱 ${ar ? 'التطبيق' : 'App'}: ${x.email ? '<code>' + esc(x.email) + '</code>' : (ar ? 'لسه' : 'not yet')}`, `🔗 ${ar ? 'المحفظة' : 'Portfolio'}: ${x.uid ? (ar ? 'مربوطة ✅' : 'linked ✅') : (ar ? 'مش مربوطة' : 'not linked')}`, '',
     `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${ai}</b> · ${ar ? 'النهارده' : 'today'} ${u.q}`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${rp}</b> · ${ar ? 'النهارده' : 'today'} ${u.r}`];
   return { text: L.join('\n'), buttons: [[cb('🧠 −', `us:ai:-:${c}`), cb('🧠 +', `us:ai:+:${c}`), cb('📊 −', `us:rp:-:${c}`), cb('📊 +', `us:rp:+:${c}`)],
-    [cb(ar ? '🎁 ⭐ +30 يوم' : '🎁 ⭐ +30 days', `us:pd:30:${c}`), cb(ar ? '🎁 ⭐ +365 يوم' : '🎁 ⭐ +365 days', `us:pd:365:${c}`), ...(premiumNow(x) ? [cb(ar ? '☆ إلغاء' : '☆ Remove', 'us:pr:' + c)] : [])],
-    [cb(x.paused ? (ar ? '▶️ رجّعه' : '▶️ Resume') : (ar ? '⏸ وقّفه' : '⏸ Pause'), 'us:pz:' + c), cb('🗑 ' + (ar ? 'شيله' : 'Remove'), 'us:del:' + c)], [cb(ar ? '⬅️ الأعضاء' : '⬅️ Members', 'us')]] };
+    [cb(ar ? '🎁 ⭐ +30 يوم' : '🎁 ⭐ +30 days', `us:pd:30:${c}`), cb(ar ? '🎁 ⭐ +365 يوم' : '🎁 ⭐ +365 days', `us:pd:365:${c}`)],
+    [...(premiumNow(x) ? [cb(ar ? '☆ إلغاء المميز' : '☆ End premium', 'us:pr:' + c)] : []), cb(x.paused ? (ar ? '▶️ رجّعه' : '▶️ Resume') : (ar ? '⏸ وقّفه' : '⏸ Pause'), 'us:pz:' + c)],
+    [cb('🗑 ' + (ar ? 'شيل العضو' : 'Remove member'), 'us:del:' + c), cb(ar ? '⬅️ الأعضاء' : '⬅️ Members', 'us')]] };
 }
 
 async function onUpdate(env, u, msg, q, chat) {

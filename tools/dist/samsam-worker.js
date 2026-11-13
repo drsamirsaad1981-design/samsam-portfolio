@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: da108ff6d887aa4b
+// sources-hash: 311da7b5e4a6376e
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -4346,9 +4346,9 @@ async function viewMember(env, lang2, c) {
   ];
   return { text: L.join("\n"), buttons: [
     [cb3("\u{1F9E0} \u2212", `us:ai:-:${c}`), cb3("\u{1F9E0} +", `us:ai:+:${c}`), cb3("\u{1F4CA} \u2212", `us:rp:-:${c}`), cb3("\u{1F4CA} +", `us:rp:+:${c}`)],
-    [cb3(ar ? "\u{1F381} \u2B50 +30 \u064A\u0648\u0645" : "\u{1F381} \u2B50 +30 days", `us:pd:30:${c}`), cb3(ar ? "\u{1F381} \u2B50 +365 \u064A\u0648\u0645" : "\u{1F381} \u2B50 +365 days", `us:pd:365:${c}`), ...premiumNow(x) ? [cb3(ar ? "\u2606 \u0625\u0644\u063A\u0627\u0621" : "\u2606 Remove", "us:pr:" + c)] : []],
-    [cb3(x.paused ? ar ? "\u25B6\uFE0F \u0631\u062C\u0651\u0639\u0647" : "\u25B6\uFE0F Resume" : ar ? "\u23F8 \u0648\u0642\u0651\u0641\u0647" : "\u23F8 Pause", "us:pz:" + c), cb3("\u{1F5D1} " + (ar ? "\u0634\u064A\u0644\u0647" : "Remove"), "us:del:" + c)],
-    [cb3(ar ? "\u2B05\uFE0F \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u2B05\uFE0F Members", "us")]
+    [cb3(ar ? "\u{1F381} \u2B50 +30 \u064A\u0648\u0645" : "\u{1F381} \u2B50 +30 days", `us:pd:30:${c}`), cb3(ar ? "\u{1F381} \u2B50 +365 \u064A\u0648\u0645" : "\u{1F381} \u2B50 +365 days", `us:pd:365:${c}`)],
+    [...premiumNow(x) ? [cb3(ar ? "\u2606 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632" : "\u2606 End premium", "us:pr:" + c)] : [], cb3(x.paused ? ar ? "\u25B6\uFE0F \u0631\u062C\u0651\u0639\u0647" : "\u25B6\uFE0F Resume" : ar ? "\u23F8 \u0648\u0642\u0651\u0641\u0647" : "\u23F8 Pause", "us:pz:" + c)],
+    [cb3("\u{1F5D1} " + (ar ? "\u0634\u064A\u0644 \u0627\u0644\u0639\u0636\u0648" : "Remove member"), "us:del:" + c), cb3(ar ? "\u2B05\uFE0F \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u2B05\uFE0F Members", "us")]
   ] };
 }
 async function onUpdate(env, u, msg, q, chat) {
