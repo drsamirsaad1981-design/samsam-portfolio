@@ -136,7 +136,20 @@ export function summarize(user, market, now = Date.now()) {
   const pf = C.derivePortfolio(user.coins, user.txs, prices).filter(c => c.qty > 1e-12);
   const rz = C.realizedPnl(user.coins, user.txs);
   const value = pf.reduce((s, c) => s + c.qty * c.currentPrice, 0), cost = pf.reduce((s, c) => s + c.qty * c.basePrice, 0);
-  const value24 = pf.reduce((s, c) => s + c.qty * (info[c.sym].p24 || c.currentPrice), 0);
+  // today's change counts only what you held through the last 24 h; a coin bought (or added) today is measured from the
+  // price you paid, and a sale today from yesterday's price to the sale price (else a coin bought an hour ago showed its
+  // whole 24 h drop as your loss "today")
+  const since = now - DAY, txT = t => Date.parse(t.date) || 0, coinDoc = Object.fromEntries((user.coins || []).filter(c => c && c.sym).map(c => [c.sym, c]));
+  const dayPnl = pf.reduce((s, c) => {
+    const p = c.currentPrice, p24 = info[c.sym].p24 || p, doc = coinDoc[c.sym] || {}, o = doc.opening || {};
+    const oT = Date.parse(o.date || doc.addedAt || '') || 0;
+    const buys = (user.txs || []).filter(t => t && t.sym === c.sym && t.type === 'buy' && txT(t) > since).map(t => [+t.qty || 0, +t.price || 0]);
+    if (oT > since && +o.qty > 0) buys.push([+o.qty, +o.avg || p]);
+    const sells = (user.txs || []).filter(t => t && t.sym === c.sym && t.type === 'sell' && txT(t) > since).map(t => [+t.qty || 0, +t.price || 0]);
+    const B = buys.reduce((a, [q]) => a + q, 0);
+    return s + Math.max(0, c.qty - B) * (p - p24) + buys.reduce((a, [q, bp]) => a + q * (p - bp), 0) + sells.reduce((a, [q, sp]) => a + q * (sp - p24), 0);
+  }, 0);
+  const value24 = value - dayPnl;
   const value7 = pf.reduce((s, c) => s + c.qty * (info[c.sym].p7 || c.currentPrice), 0);
   const total = value - cost + rz.total, invested = cost + rz.soldCost;
   // vs holding BTC (the app's Portfolio vs BTC, summed over your coins)

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 78a0add03e92593d
+// sources-hash: a8e549ed1013c1e2
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -538,7 +538,17 @@ function summarize(user, market, now = Date.now()) {
   const pf = derivePortfolio(user.coins, user.txs, prices2).filter((c) => c.qty > 1e-12);
   const rz = realizedPnl(user.coins, user.txs);
   const value = pf.reduce((s, c) => s + c.qty * c.currentPrice, 0), cost = pf.reduce((s, c) => s + c.qty * c.basePrice, 0);
-  const value24 = pf.reduce((s, c) => s + c.qty * (info[c.sym].p24 || c.currentPrice), 0);
+  const since = now - DAY, txT = (t) => Date.parse(t.date) || 0, coinDoc = Object.fromEntries((user.coins || []).filter((c) => c && c.sym).map((c) => [c.sym, c]));
+  const dayPnl = pf.reduce((s, c) => {
+    const p = c.currentPrice, p24 = info[c.sym].p24 || p, doc = coinDoc[c.sym] || {}, o = doc.opening || {};
+    const oT = Date.parse(o.date || doc.addedAt || "") || 0;
+    const buys = (user.txs || []).filter((t) => t && t.sym === c.sym && t.type === "buy" && txT(t) > since).map((t) => [+t.qty || 0, +t.price || 0]);
+    if (oT > since && +o.qty > 0) buys.push([+o.qty, +o.avg || p]);
+    const sells = (user.txs || []).filter((t) => t && t.sym === c.sym && t.type === "sell" && txT(t) > since).map((t) => [+t.qty || 0, +t.price || 0]);
+    const B = buys.reduce((a, [q]) => a + q, 0);
+    return s + Math.max(0, c.qty - B) * (p - p24) + buys.reduce((a, [q, bp2]) => a + q * (p - bp2), 0) + sells.reduce((a, [q, sp]) => a + q * (sp - p24), 0);
+  }, 0);
+  const value24 = value - dayPnl;
   const value7 = pf.reduce((s, c) => s + c.qty * (info[c.sym].p7 || c.currentPrice), 0);
   const total = value - cost + rz.total, invested = cost + rz.soldCost;
   const btcRow = byId.get("bitcoin"), btcSer = market.series && market.series.bitcoin;
@@ -2642,7 +2652,7 @@ var mins = (hm2) => {
   return h * 60 + m;
 };
 async function getCfg(env) {
-  return { ...DEF, ...isOwner(env) ? {} : { morning: false, evening: false, pin: false }, ...await jget(env, K(env, "daily"), {}) };
+  return { ...DEF, ...isOwner(env) ? {} : { morning: false, evening: false, pin: false, radar: false, sectors: false }, ...await jget(env, K(env, "daily"), {}) };
 }
 async function setCfg(env, patch) {
   const c = { ...await getCfg(env), ...patch };
@@ -3849,7 +3859,7 @@ async function linkPortfolio(env, chat, text) {
     return;
   }
   await setMember(env, chat, { uid: hit.uid, ...me && !me.email && hit.email ? { email: hit.email } : {} });
-  await setCfg(env, { morning: true, evening: true, pin: true });
+  await setCfg(env, { morning: true, evening: true, pin: true, radar: true, sectors: true });
   await send2(env, chat, { text: w.linked, buttons: [[cb2(T[lang2].pf, "pf"), cb2(T[lang2].back, "menu")]] });
 }
 async function viewMember(env, lang2, c) {

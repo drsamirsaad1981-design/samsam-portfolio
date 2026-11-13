@@ -449,7 +449,7 @@ async function linkPortfolio(env, chat, text) {
   const me = await member(env);
   if (me && me.email && hit.email && hit.email !== me.email) { await send(env, chat, { text: w.notYou }); return; }
   await setMember(env, chat, { uid: hit.uid, ...(me && !me.email && hit.email ? { email: hit.email } : {}) });
-  await setCfg(env, { morning: true, evening: true, pin: true });   // their portfolio is here now: the daily messages come on
+  await setCfg(env, { morning: true, evening: true, pin: true, radar: true, sectors: true });   // their portfolio is here now: the daily messages come on
   await send(env, chat, { text: w.linked, buttons: [[cb(T[lang].pf, 'pf'), cb(T[lang].back, 'menu')]] });
 }
 // a member's card in /users: limits − / +, remove

@@ -39,7 +39,7 @@ const r2 = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
 const r6 = v => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
 const mins = hm => { const [h, m] = String(hm).split(':').map(Number); return h * 60 + m; };
 
-export async function getCfg(env) { return { ...DEF, ...(isOwner(env) ? {} : { morning: false, evening: false, pin: false }), ...(await jget(env, K(env, 'daily'), {})) }; }   // invited people: the portfolio messages start off (no portfolio linked yet)
+export async function getCfg(env) { return { ...DEF, ...(isOwner(env) ? {} : { morning: false, evening: false, pin: false, radar: false, sectors: false }), ...(await jget(env, K(env, 'daily'), {})) }; }   // invited people: the portfolio messages and the radars start off — they come on when a portfolio is linked (/link)
 export async function setCfg(env, patch) { const c = { ...(await getCfg(env)), ...patch }; await jput(env, K(env, 'daily'), c); return c; }
 
 const WD = {

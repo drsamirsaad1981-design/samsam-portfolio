@@ -888,7 +888,7 @@ check('…a code made by another e-mail than the approved one → refused', /ano
 TGLINK = { code: 'K7M2PQ9R', exp: new Date(Date.now() - 60e3).toISOString(), email: 'ali.friend@icloud.com' }; sent.length = 0; await sayAs(777, '/link K7M2PQ9R');
 check('…an expired code (over 10 min) → refused', /not valid/.test(last().b.text));
 TGLINK = { code: 'K7M2PQ9R', exp: new Date(Date.now() + 5 * 60e3).toISOString(), email: 'ali.friend@icloud.com' }; sent.length = 0; tglinkWrites.length = 0; await sayAs(777, '/start LK7M2PQ9R');
-check('…the app\'s "Open the bot" (/start LCODE) → linked to UID2, the code used up, his daily messages on', JSON.parse(kvStore.get('tg:users'))['777'].uid === 'UID2' && tglinkWrites.length === 1 && /Linked/.test(last().b.text) && JSON.parse(kvStore.get('tg:777:daily')).morning === true, [kvStore.get('tg:users'), last().b.text]);
+check('…the app\'s "Open the bot" (/start LCODE) → linked to UID2, the code used up, his daily messages on', JSON.parse(kvStore.get('tg:users'))['777'].uid === 'UID2' && tglinkWrites.length === 1 && /Linked/.test(last().b.text) && JSON.parse(kvStore.get('tg:777:daily')).morning === true && JSON.parse(kvStore.get('tg:777:daily')).radar === true, [kvStore.get('tg:users'), last().b.text]);
 sent.length = 0; await sayAs(777, '/portfolio');
 check('Ali /portfolio → HIS portfolio (2 ETH from UID2) — never yours', /ETH/.test(last().b.text) && !/LINK|SOL/.test(last().b.text), last().b.text.slice(0, 200));
 sent.length = 0; await postK(await fresh(), '/portfolio');
@@ -934,6 +934,18 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   const k = JSON.parse(kvStore.get('fs:pf:UID1')); k.at -= 7 * 3600e3; kvStore.set('fs:pf:UID1', JSON.stringify(k)); LIST_TXS = 0; await postK(await fresh(), '/portfolio');
   check('…and a full read every 6 hours anyway', LIST_TXS === 1, LIST_TXS);
   COIN_UPD = '';
+}
+
+// 🧲 the radars wait for a portfolio: a member who joined but hasn't linked gets none; 📉 "today" for a coin bought today
+{
+  const m2 = JSON.parse(kvStore.get('tg:users')); m2['888'] = { name: 'New', joined: Date.now() }; kvStore.set('tg:users', JSON.stringify(m2)); kvStore.delete('tg:888:daily');
+  sent.length = 0; await sayAs(888, '/daily');
+  check('a member not linked yet: Leverage radar and Sector radar start off', /⬜ Leverage radar/.test(last().b.text) && /⬜ Sector radar/.test(last().b.text), last().b.text);
+  const mk = { top: [{ id: 'solana', price: 79.65, ch24: -3.88 }], top500: [], series: {}, global: {}, cgIds: {} };
+  const s1 = summarize({ coins: [{ sym: 'SOL', cgId: 'solana', opening: { qty: 1, avg: 81 }, addedAt: new Date(Date.now() - 3600e3).toISOString() }], txs: [], accum: [], meta: {} }, mk, Date.now());
+  check('📉 a coin added an hour ago at $81, now $79.65: "today" = −$1.35 (from the price paid), not the 24 h drop', Math.abs(s1.d24 + 1.35) < 0.01, s1.d24);
+  const s2 = summarize({ coins: [{ sym: 'SOL', cgId: 'solana', opening: { qty: 1, avg: 81 }, addedAt: '2026-01-01T00:00:00Z' }], txs: [], accum: [], meta: {} }, mk, Date.now());
+  check('…held since before today: "today" = the 24 h move (−3.88%)', Math.abs(s2.ch24 + 3.88) < 0.01, s2.ch24);
 }
 
 console.log(`${pass}/${pass + fail} passed`);
