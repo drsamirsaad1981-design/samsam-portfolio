@@ -20,6 +20,7 @@ import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
 import { keyInfo } from './byok.mjs';
+import GUIDE from '../../guide.json' with { type: 'json' };
 import { premiumView, supportView, sendSupportInvoice, askGift, preCheckout, paid, statsView, addDays, revoke, premiumNow } from './stars.mjs';
 import { keepTrades, tradeLines, confirmTrades, cancelTrades, money } from './trade.mjs';
 import { viewDaily, setCfg, getCfg, morning, evening, pinUpdate, unpin } from './daily.mjs';
@@ -298,7 +299,7 @@ const WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
-  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
+  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -386,9 +387,9 @@ export async function handleTelegram(request, env) {
 // one polite answer a day. Only private chats (no groups).
 const STR = {
   en: { private: '🔒 This bot is private. If you have an invite code, send it here.', bad: '❌ That invite code is not valid (or was already used).', full: 'The bot is full right now — ask the owner.',
-    welcome: n => `👋 Welcome, ${n}! You're in ✅\nAsk me anything about crypto in plain words, tap a button below, or send a ticker like <code>btc</code>.\nYour portfolio isn't linked yet — that comes next.`, joined: (n, u) => `👤 <b>${n}</b>${u ? ' (@' + u + ')' : ''} joined with your invite.` },
+    welcome: n => `👋 Welcome, ${n}! You're in ✅\nAsk me anything about crypto in plain words, tap a button below, or send a ticker like <code>btc</code>.\nYour portfolio isn't linked yet — that comes next.\n📘 <code>/guide</code> — everything the bot and the app can do.`, joined: (n, u) => `👤 <b>${n}</b>${u ? ' (@' + u + ')' : ''} joined with your invite.` },
   ar: { private: '🔒 البوت ده خاص. لو معاك كود دعوة ابعته هنا.', bad: '❌ كود الدعوة ده مش صالح (أو اتستعمل قبل كده).', full: 'البوت مليان دلوقتي — كلّم صاحبه.',
-    welcome: n => `👋 أهلاً ${n}! دخلت ✅\nاسألني أي حاجة عن الكريبتو بالكلام، أو اضغط زرار تحت، أو ابعت رمز زي <code>btc</code>.\nمحفظتك لسه مش مربوطة — دي الخطوة الجاية.`, joined: (n, u) => `👤 <b>${n}</b>${u ? ' (@' + u + ')' : ''} دخل بدعوتك.` },
+    welcome: n => `👋 أهلاً ${n}! دخلت ✅\nاسألني أي حاجة عن الكريبتو بالكلام، أو اضغط زرار تحت، أو ابعت رمز زي <code>btc</code>.\nمحفظتك لسه مش مربوطة — دي الخطوة الجاية.\n📘 <code>/guide</code> — كل اللي البوت والبرنامج بيعملوه.`, joined: (n, u) => `👤 <b>${n}</b>${u ? ' (@' + u + ')' : ''} دخل بدعوتك.` },
 };
 async function stranger(env, u, msg, chat) {
   if (!msg || !msg.chat || msg.chat.type !== 'private' || typeof msg.text !== 'string') return ok();
@@ -452,6 +453,15 @@ async function usedToday(env, c, x) {
   let q = 0, r = 0;
   try { if (env.RATE) { q = +(await env.RATE.get(`tg:${c}:ai:${localParts(Date.now()).date}`)) || 0; if (x.uid) r = +(await env.RATE.get(`ai:${x.uid}:${new Date().toISOString().slice(0, 10)}`)) || 0; } } catch (_) {}
   return { q, r };
+}
+
+// 📘 /guide — the same guide as the app's (guide.json): an index of buttons, each part opens in place
+export function guideView(lang, k = null) {
+  const L = lang === 'ar' ? 'ar' : 'en', ar = L === 'ar', s = k && GUIDE.sections.find(x => x.k === k);
+  if (s) return { text: [`${s.e} <b>${s.t[L]}</b>`, '', ...s[L]].join('\n'), buttons: [[cb(ar ? '📘 الدليل' : '📘 Guide', 'gd'), cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')]] };
+  const b = []; for (let i = 0; i < GUIDE.sections.length; i += 2) b.push(GUIDE.sections.slice(i, i + 2).map(x => cb(`${x.e} ${x.t[L]}`, 'gd:' + x.k)));
+  b.push([cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')]);
+  return { text: `<b>${GUIDE.title[L]}</b>\n\n${GUIDE.intro[L]}`, buttons: b };
 }
 
 // ⭐ / 💛 next to a member's hello: "Hi ⭐ — premium member · 💛 Supporter"
@@ -521,6 +531,11 @@ async function onUpdate(env, u, msg, q, chat) {
       // the button keeps its little spinner while the numbers load; when done, a short note says so — so one tap is enough,
       // even when nothing changed (the message is the same → Telegram would show no change at all)
       const done = text => tg(env, 'answerCallbackQuery', { callback_query_id: q.id, ...(text ? { text } : {}) }).catch(() => {});
+      if (d === 'gd' || /^gd:[a-z]+$/.test(d)) {   // 📘 the guide: index ↔ a part, in place
+        const v = guideView(await getLang(env), d.slice(3) || null), r = await edit(env, chat, q.message.message_id, v);
+        if (!r.ok && !/not modified/i.test(r.description || '')) await send(env, chat, v);
+        await done(); return ok();
+      }
       if (d === 'sp' || /^sp:\d+$/.test(d) || d === 'pm:ask' || d === 'pm') {   // 💛 support amounts · 🎁 ask for a gift · ⭐ premium page
         const lang = await getLang(env);
         if (d === 'sp') await send(env, chat, await supportView(env, lang));
@@ -704,6 +719,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'pin:on') { await setCfg(env, { pin: true }); const r = await pinUpdate(env, Date.now(), true, true).catch(() => null); if (!r || !r.ok) await send(env, chat, { text: (await getLang(env)) === 'ar' ? '⚠️ ما قدرتش أثبّت الرسالة دلوقتي — جرّب تاني بعد دقيقة.' : '⚠️ I couldn\'t pin it right now — try again in a minute.' }); return; }
   if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
+  if (p.act === 'gd') { await send(env, chat, guideView(await getLang(env))); return; }
   if (p.act === 'prem') { await send(env, chat, await premiumView(env, await getLang(env))); return; }   // ⭐ what premium is, the price, Subscribe
   if (p.act === 'sup') { await send(env, chat, await supportView(env, await getLang(env))); return; }      // 💛 support (optional)
   if (p.act === 'stats') { const lang = await getLang(env); await send(env, chat, isOwner(env) ? await statsView(env, lang) : { text: T[lang].ownerOnly }); return; }
@@ -785,7 +801,7 @@ const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
     ['alerts', a ? 'تنبيهاتك' : 'Your alerts'], ['paper', a ? 'التداول التجريبي' : 'Paper trading'], ['daily', a ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'],
     ['morning', a ? 'الصباح الذكي دلوقتي' : 'Smart morning now'], ['evening', a ? 'المساء الذكي دلوقتي' : 'Smart evening now'],
     ['pin', a ? 'الرسالة المتثبتة' : 'Live pinned message'], ['unpin', a ? 'شيل الرسالة المتثبتة' : 'Remove the pinned message'],
-    ['new', a ? 'محادثة جديدة مع الـ AI' : 'New AI chat'], ['lang', 'English / عربي'], ['hide', a ? 'إخفاء الأزرار' : 'Hide the buttons'],
+    ['guide', a ? 'الدليل الكامل 📘' : 'The full guide 📘'], ['new', a ? 'محادثة جديدة مع الـ AI' : 'New AI chat'], ['lang', 'English / عربي'], ['hide', a ? 'إخفاء الأزرار' : 'Hide the buttons'],
   ].map(([command, description]) => ({ command, description })); };
 // the "/" menu follows the code: when the list (or the language) changed since it was last sent, it is sent again — no /start needed
 async function ensureCmds(env) {

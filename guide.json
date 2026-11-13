@@ -1,0 +1,175 @@
+{
+  "v": 1,
+  "title": { "en": "📘 Cute Portfolio — the guide", "ar": "📘 دليل Cute Portfolio" },
+  "intro": {
+    "en": "Everything the app and the bot can do, in short steps. Tap a part to open it.",
+    "ar": "كل اللي البرنامج والبوت بيعملوه، بخطوات قصيرة. اضغط على أي جزء يفتحلك."
+  },
+  "sections": [
+    { "k": "start", "e": "🚀", "t": { "en": "Getting started", "ar": "البداية" },
+      "en": [
+        "You join with an invite from Dr. Samir Saad — one code, two ways in:",
+        "📱 <b>The app link</b> → sign in with Google or any e-mail (a sign-in link, no password) → <b>Start my portfolio</b>.",
+        "🤖 <b>The bot link</b> → you're in the bot at once; send <code>/app</code> with your e-mail to open the app too.",
+        "Then link the two (see <b>Link the app and the bot</b>) so the bot sees your portfolio.",
+        "Language: 🌐 in the bot's menu (English / عربي); the app's AI report has its own English / العربية switch."
+      ],
+      "ar": [
+        "بتدخل بدعوة من Dr. Samir Saad — كود واحد وطريقتين:",
+        "📱 <b>لينك البرنامج</b> ← ادخل بـ Google أو أي إيميل (لينك دخول من غير باسورد) ← <b>Start my portfolio</b>.",
+        "🤖 <b>لينك البوت</b> ← بتدخل البوت على طول؛ ابعت <code>/app</code> بإيميلك عشان تفتح البرنامج كمان.",
+        "وبعدين اربط الاتنين (شوف <b>ربط البرنامج بالبوت</b>) عشان البوت يشوف محفظتك.",
+        "اللغة: 🌐 في قائمة البوت (English / عربي)؛ وتقرير الـ AI في البرنامج ليه زرار English / العربية."
+      ] },
+    { "k": "app", "e": "📱", "t": { "en": "The app", "ar": "البرنامج" },
+      "en": [
+        "<b>Portfolio</b>: your coins, value, profit, charts. Add a coin with <b>+</b>, or bring trades from an exchange: Settings → Import from exchange.",
+        "<b>Plan</b>: the accumulation plan (targets, DCA) and the <b>Exit Strategy</b> (take-profit steps).",
+        "<b>Market Hub</b>: market cap, Fear &amp; Greed, Altcoin Season, dominance, movers.",
+        "<b>AI Analysis</b> (🤖 button): a full report — <i>free</i> with your Claude app (copy → paste), or a quick report here for ⭐ premium members / your own Claude key.",
+        "<b>Settings</b> (⚙️): backup, wallets, baseline, signals, targets, theme, install the app on your phone.",
+        "Your data is private: stored in the cloud under your own account — nobody else can read it."
+      ],
+      "ar": [
+        "<b>Portfolio</b>: عملاتك، القيمة، الربح، الرسوم. ضيف عملة بـ <b>+</b>، أو هات صفقاتك من منصة: الإعدادات ← Import from exchange.",
+        "<b>Plan</b>: خطة التجميع (الأهداف والـ DCA) و<b>خطة الخروج</b> (مراحل جني الربح).",
+        "<b>Market Hub</b>: حجم السوق، الخوف والطمع، موسم العملات البديلة، السيطرة، الأكتر حركة.",
+        "<b>AI Analysis</b> (زرار 🤖): تقرير كامل — <i>مجاناً</i> مع تطبيق Claude بتاعك (انسخ ← الصق)، أو تقرير سريع هنا للأعضاء المميزين ⭐ أو بمفتاح Claude بتاعك.",
+        "<b>الإعدادات</b> (⚙️): نسخة احتياطية، المحافظ، الـ Baseline، الإشارات، الأهداف، الثيم، وتثبيت البرنامج على الموبايل.",
+        "بياناتك خاصة: محفوظة في السحابة على حسابك انت بس — محدش غيرك يقدر يشوفها."
+      ] },
+    { "k": "link", "e": "🔗", "t": { "en": "Link the app and the bot", "ar": "ربط البرنامج بالبوت" },
+      "en": [
+        "In the app: Settings → <b>Link the Telegram bot</b> → <b>Open the bot</b>. That's it — one tap.",
+        "Or copy the 8-letter code and send <code>/link CODE</code> to the bot (the code works for 10 minutes).",
+        "Once linked: your portfolio, plan and exit plan show in the bot — only to you — and the morning, evening and pinned messages start."
+      ],
+      "ar": [
+        "في البرنامج: الإعدادات ← <b>Link the Telegram bot</b> ← <b>Open the bot</b>. خلاص — دوسة واحدة.",
+        "أو انسخ الكود (8 حروف) وابعت للبوت <code>/link CODE</code> (الكود شغال 10 دقايق).",
+        "بعد الربط: محفظتك وخطتك وخطة الخروج بتظهر في البوت — ليك انت بس — والصباح والمساء والرسالة المتثبتة بيشتغلوا."
+      ] },
+    { "k": "ask", "e": "🧠", "t": { "en": "Ask anything", "ar": "اسأل أي حاجة" },
+      "en": [
+        "Write to the bot in plain words, English or Arabic — it answers with live data:",
+        "• <i>How is my portfolio today?</i> • <i>Is SOL a good buy now?</i> • <i>What if BTC hits 150k?</i> • <i>What if I sell half my ETH?</i>",
+        "Each answer says where its numbers came from, and how many questions you have left today (5 a day; ⭐ premium 20).",
+        "<code>/new</code> starts a fresh chat (the bot forgets the last messages)."
+      ],
+      "ar": [
+        "اكتب للبوت عادي، عربي أو إنجليزي — بيرد بأرقام لحظية:",
+        "• <i>محفظتي عاملة إيه النهارده؟</i> • <i>SOL ينفع أشتري دلوقتي؟</i> • <i>لو BTC وصل 150 ألف؟</i> • <i>لو بعت نص الـ ETH؟</i>",
+        "كل رد بيقول الأرقام جاية منين، وفاضلك كام سؤال النهارده (5 في اليوم؛ المميز ⭐ 20).",
+        "<code>/new</code> يبدأ محادثة جديدة (البوت ينسى آخر الرسايل)."
+      ] },
+    { "k": "voice", "e": "🎙", "t": { "en": "Voice notes", "ar": "الرسايل الصوتية" },
+      "en": [
+        "Hold the 🎙 in Telegram and just talk — Arabic or English. The bot shows <i>I heard: …</i> and answers as if you typed it.",
+        "Voice notes are for ⭐ premium members (or with your own Claude key). Up to 2 minutes each."
+      ],
+      "ar": [
+        "دوس على 🎙 في تلجرام واتكلم — عربي أو إنجليزي. البوت بيكتب <i>I heard: …</i> وبيرد كأنك كتبت.",
+        "الرسايل الصوتية للأعضاء المميزين ⭐ (أو بمفتاح Claude بتاعك). لحد دقيقتين للرسالة."
+      ] },
+    { "k": "coins", "e": "🪙", "t": { "en": "Coins and the market", "ar": "العملات والسوق" },
+      "en": [
+        "Send a ticker — <code>btc</code>, <code>sol eth</code> — for the live price, trend, futures and funding.",
+        "Buttons / commands: <code>/market</code> (BTC, dominance, Fear &amp; Greed, ETF), <code>/movers</code> (best &amp; worst), <code>/signals</code> (hold / add / sell for your coins), <code>/portfolio</code>, <code>/plan</code>, <code>/exit</code>.",
+        "🔄 on any message refreshes it in place."
+      ],
+      "ar": [
+        "ابعت رمز العملة — <code>btc</code>، <code>sol eth</code> — للسعر اللحظي والاتجاه والعقود والـ funding.",
+        "الأزرار والأوامر: <code>/market</code> (BTC، السيطرة، الخوف والطمع، الـ ETF)، <code>/movers</code> (الأفضل والأسوأ)، <code>/signals</code> (احتفظ / زوّد / بيع لعملاتك)، <code>/portfolio</code>، <code>/plan</code>، <code>/exit</code>.",
+        "🔄 على أي رسالة بيحدّثها مكانها."
+      ] },
+    { "k": "alerts", "e": "🔔", "t": { "en": "Alerts in words", "ar": "التنبيهات بالكلام" },
+      "en": [
+        "Just say it: <i>tell me if ETH drops below 3000</i> · <i>alert me if SOL is up 10% in a day</i> · <i>if my portfolio passes $30k</i>.",
+        "Checked every 5 minutes; each alert fires once. <code>/alerts</code> lists them, 🗑 removes one."
+      ],
+      "ar": [
+        "قولها عادي: <i>نبّهني لو ETH نزل تحت 3000</i> · <i>نبّهني لو SOL طلع 10% في يوم</i> · <i>لو محفظتي عدّت 30 ألف دولار</i>.",
+        "بيتشيّك كل 5 دقايق، وكل تنبيه بيتبعت مرة واحدة. <code>/alerts</code> بيعرضهم، و🗑 يمسح واحد."
+      ] },
+    { "k": "trades", "e": "🧾", "t": { "en": "Record a trade in words", "ar": "سجّل صفقة بالكلام" },
+      "en": [
+        "Write <i>bought 0.01 BTC at 95k</i> or <i>sold 5 SOL at 180</i> — the bot shows what will change (amount, average, profit).",
+        "Nothing is saved until you tap <b>✅ Confirm</b> (15 minutes). Then it's in your app too."
+      ],
+      "ar": [
+        "اكتب <i>اشتريت 0.01 BTC بـ 95 ألف</i> أو <i>بعت 5 SOL بـ 180</i> — البوت بيوريك اللي هيتغير (الكمية، المتوسط، الربح).",
+        "مفيش حاجة بتتحفظ غير لما تدوس <b>✅ Confirm</b> (خلال 15 دقيقة). وبعدها بتبان في البرنامج كمان."
+      ] },
+    { "k": "daily", "e": "🗓", "t": { "en": "Daily messages and radars", "ar": "الرسايل اليومية والرادارات" },
+      "en": [
+        "☀️ <b>Smart morning</b> (08:45 Riyadh): 3 things to do today. 🌙 <b>Smart evening</b> (21:00): what happened and what to watch.",
+        "🧲 <b>Leverage radar</b>: crowded longs / shorts on BTC and your biggest coins. 🔥 <b>Sector radar</b>: a big sector moving fast.",
+        "📌 <b>Live pinned message</b> at the top of the chat (every 15 min). <code>/pin</code> brings it back, <code>/unpin</code> removes it.",
+        "<code>/daily</code> switches each one on or off."
+      ],
+      "ar": [
+        "☀️ <b>الصباح الذكي</b> (8:45 بتوقيت الرياض): 3 حاجات تعملها النهارده. 🌙 <b>المساء الذكي</b> (9 بالليل): اللي حصل وتراقب إيه.",
+        "🧲 <b>رادار الرافعة</b>: زحمة لونج أو شورت على BTC وأكبر عملاتك. 🔥 <b>رادار القطاعات</b>: قطاع كبير بيتحرك بسرعة.",
+        "📌 <b>رسالة متثبتة مباشرة</b> فوق الشات (كل 15 دقيقة). <code>/pin</code> يرجّعها، و<code>/unpin</code> يشيلها.",
+        "<code>/daily</code> بيشغّل أو يقفل كل واحدة."
+      ] },
+    { "k": "paper", "e": "🧪", "t": { "en": "Paper trading", "ar": "التداول التجريبي" },
+      "en": [
+        "Practice with pretend money at real prices: <code>/paper</code> → pick $1k / $10k / $100k.",
+        "Say <i>paper buy 0.1 BTC</i> or <i>paper sell half SOL</i>. ↩️ undoes the last one. You see how you'd do against simply holding BTC."
+      ],
+      "ar": [
+        "اتمرّن بفلوس وهمية بأسعار حقيقية: <code>/paper</code> ← اختار $1k / $10k / $100k.",
+        "قول <i>تجريبي اشتري 0.1 BTC</i> أو <i>تجريبي بيع نص SOL</i>. ↩️ يلغي آخر واحدة. وبتشوف نتيجتك مقارنة بإنك تحتفظ بـ BTC بس."
+      ] },
+    { "k": "report", "e": "📊", "t": { "en": "Full report and image cards", "ar": "التقرير الكامل وكروت الصور" },
+      "en": [
+        "📊 <b>Report</b> (in the menu, or <code>/report</code>) opens a page inside Telegram: value, coins, plan, exit, market, paper, alerts.",
+        "📸 on a card makes a share-ready image (portfolio, a coin, the market) — with \"hide $\" if you'd rather not show amounts."
+      ],
+      "ar": [
+        "📊 <b>Report</b> (في القائمة، أو <code>/report</code>) بيفتح صفحة جوه تلجرام: القيمة، العملات، الخطة، الخروج، السوق، التجريبي، التنبيهات.",
+        "📸 على أي كارت بيعمل صورة جاهزة للمشاركة (المحفظة، عملة، السوق) — ومعاها \"إخفاء $\" لو مش عايز تبيّن المبالغ."
+      ] },
+    { "k": "premium", "e": "⭐", "t": { "en": "Premium and support", "ar": "المميز والدعم" },
+      "en": [
+        "Everything stays free. ⭐ <b>Premium</b> adds voice notes, 20 AI questions and 3 quick AI reports a day — <code>/premium</code> (350 Telegram Stars a month, renews by itself, cancel any time in Telegram → Settings → My Stars).",
+        "💛 <b>Support</b> is optional: a one-time thank-you of 50–500 Stars — <code>/support</code> — and a Supporter 💛 badge.",
+        "Why it costs anything: the AI is paid per question; this only covers that. Cute Portfolio is non-profit."
+      ],
+      "ar": [
+        "كل حاجة بتفضل مجانية. ⭐ <b>المميز</b> بيزوّد الرسايل الصوتية، و20 سؤال AI، و3 تقارير سريعة في اليوم — <code>/premium</code> (350 Telegram Stars في الشهر، بيتجدد لوحده، وتلغيه في أي وقت من تلجرام ← الإعدادات ← My Stars).",
+        "💛 <b>الدعم</b> اختياري: شكر لمرة واحدة من 50 لـ 500 Star — <code>/support</code> — ووسام Supporter 💛.",
+        "ليه بفلوس أصلاً: الـ AI بيتحاسب على كل سؤال، وده بيغطي التكلفة دي بس. Cute Portfolio مش هادف للربح."
+      ] },
+    { "k": "key", "e": "🔑", "t": { "en": "Your own Claude key", "ar": "مفتاح Claude بتاعك" },
+      "en": [
+        "Have an Anthropic API key? App → Settings → <b>My Claude key</b>. It's checked, then kept encrypted — nobody can see it again.",
+        "With it: 100 questions a day, voice notes and 10 quick AI reports — billed to your own Anthropic account. Remove it any time."
+      ],
+      "ar": [
+        "معاك مفتاح Anthropic API؟ البرنامج ← الإعدادات ← <b>My Claude key</b>. بيتأكد منه، وبعدين بيتخزن متشفّر — محدش يقدر يشوفه تاني.",
+        "بيه: 100 سؤال في اليوم، والرسايل الصوتية، و10 تقارير سريعة — على حسابك انت في Anthropic. وتقدر تشيله في أي وقت."
+      ] },
+    { "k": "privacy", "e": "🔒", "t": { "en": "Privacy and your data", "ar": "الخصوصية وبياناتك" },
+      "en": [
+        "Your portfolio is yours alone — the bot reads it only for you, never for anyone else.",
+        "<code>/forget</code> deletes everything the bot keeps about you (alerts, chat memory, settings, the link) — your app portfolio stays.",
+        "To keep things fair, the bot takes up to 20 messages a minute."
+      ],
+      "ar": [
+        "محفظتك ليك انت بس — البوت بيقراها عشانك انت، ولا لحد تاني أبداً.",
+        "<code>/forget</code> بيمسح كل حاجة البوت شايلها عنك (التنبيهات، ذاكرة المحادثة، الإعدادات، الربط) — ومحفظتك في البرنامج بتفضل زي ما هي.",
+        "عشان العدل للكل، البوت بياخد لحد 20 رسالة في الدقيقة."
+      ] },
+    { "k": "help", "e": "💬", "t": { "en": "Help", "ar": "المساعدة" },
+      "en": [
+        "Stuck? Ask the bot in plain words — <i>how do I add a coin?</i> — or write to Dr. Samir Saad.",
+        "<code>/guide</code> opens this guide again any time; in the app: Settings → Guide."
+      ],
+      "ar": [
+        "وقفت في حاجة؟ اسأل البوت عادي — <i>إزاي أضيف عملة؟</i> — أو كلّم Dr. Samir Saad.",
+        "<code>/guide</code> يفتح الدليل ده تاني في أي وقت؛ وفي البرنامج: الإعدادات ← Guide."
+      ] }
+  ]
+}

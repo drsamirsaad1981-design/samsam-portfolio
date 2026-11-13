@@ -83,6 +83,12 @@
   var SUP_TXT = 'Optional — a one-time thank-you of any size (50 to 500 Stars, about $1 to $10). Nothing changes in the features: everything stays free.\n\n' +
     'It helps pay for the servers and the AI, and you get a Supporter 💛 badge here and in the bot. You pay inside Telegram.';
   var ACT = {
+    guide: function () {   // 📘 the guide (loaded only when opened)
+      if (window.SamsamGuide) { SamsamGuide.open(); return; }
+      var me = doc.querySelector('script[src*="samsam-settings.js"]'), v = me && (me.getAttribute('src').split('?')[1] || '');
+      var sc = doc.createElement('script'); sc.src = 'samsam-guide.js' + (v ? '?' + v : ''); sc.onload = function () { window.SamsamGuide && SamsamGuide.open(); };
+      doc.head.appendChild(sc);
+    },
     admin: function () {   // 🛠 the owner's dashboard (loaded only when opened)
       if (window.SamsamAdmin) { SamsamAdmin.open(); return; }
       var me = doc.querySelector('script[src*="samsam-settings.js"]'), v = me && (me.getAttribute('src').split('?')[1] || '');
@@ -186,6 +192,7 @@
         var off = 'serviceWorker' in navigator && navigator.serviceWorker.controller ? ' · works offline' : '';
         return standalone() ? 'On your home screen' + off : installEvt ? 'Add it to your home screen — opens like an app' : isIOS() ? 'Safari: Share → Add to Home Screen' : 'Browser menu → Install app';
       }
+      if (k === 'guide') return 'How the app and the bot work · English / العربية';
       if (k === 'dca') { var n2 = (st.accumPlan || []).filter(function (x) { return x.dca && x.dca.usd > 0; }).length; return n2 ? n2 + ' coin' + (n2 === 1 ? '' : 's') + ' with a regular buy' : 'None yet'; }
     } catch (_) {}
     return '';
@@ -218,7 +225,7 @@
       { seg: 'fee', title: 'Buying fee in', opts: [['usd', 'USD'], ['coin', 'The coin']], get: function () { return get(K.fee, 'usd') === 'coin' ? 'coin' : 'usd'; },
         set: function (v) { put(K.fee, v); } },
     ]],
-    ['About', [['install', 'download', 'Install the app', 'install'], ['version', 'sparkles', 'Version', null]]],
+    ['About', [['guide', 'book', 'Guide', 'guide'], ['install', 'download', 'Install the app', 'install'], ['version', 'sparkles', 'Version', null]]],
   ];
   var CSS =
     '#cpSet{position:fixed;inset:0;z-index:99994;background:rgba(2,6,23,.55);display:flex;align-items:flex-end;justify-content:center}' +

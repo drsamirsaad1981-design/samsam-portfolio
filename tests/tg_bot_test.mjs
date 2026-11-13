@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -634,7 +634,7 @@ LIVE.pendle.usd = 3.21;
 // the "/" menu: every command, refreshed by itself when the list changes (no /start needed)
 kvStore.delete('tg:555:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
 const sc = sent.find(x => x.m === 'setMyCommands'), names = sc ? sc.b.commands.map(c => c.command) : [];
-check('"/" menu sent again by itself: invite, users, stats, start, report, daily, morning, evening, alerts, paper, pin, unpin, hide… (23)', names.length === 23 && ['invite', 'users', 'stats', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
+check('"/" menu sent again by itself: invite, users, stats, start, report, daily, morning, evening, alerts, paper, pin, unpin, guide, hide… (24)', names.length === 24 && ['invite', 'users', 'stats', 'guide', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/menu');
 check('…and only once (remembered in KV)', !sent.some(x => x.m === 'setMyCommands'));
 claudeCalls.length = 0; sent.length = 0;
@@ -1193,6 +1193,18 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   const k = JSON.parse(kvStore.get('fs:pf:UID1')); k.checked -= 11 * 60e3; kvStore.set('fs:pf:UID1', JSON.stringify(k));
   AGG_CALLS = 0; const W11 = await fresh(); const pw4 = []; await W11.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('03:35') }, ENVK, { waitUntil: x => pw4.push(x) }); await Promise.all(pw4);
   check('…11 minutes later the owner\'s portfolio is asked again (members: 30)', AGG_CALLS === 0 || AGG_CALLS === 3, AGG_CALLS);
+}
+
+// 📘 /guide — the same guide as the app (guide.json), both languages, every part opens in place
+{
+  const G = JSON.parse(fs.readFileSync(path.join(ROOT, 'guide.json'), 'utf8'));
+  check('📘 guide.json: every part has a title, English and Arabic lines, Telegram-safe HTML', G.sections.length >= 12 && G.sections.every(x => x.k && x.e && x.t.en && x.t.ar && x.en.length && x.ar.length && [...x.en, ...x.ar].every(l => okHtml(l))), G.sections.filter(x => ![...x.en, ...x.ar].every(l => okHtml(l))).map(x => x.k));
+  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:')) kvStore.delete(k);
+  sent.length = 0; await sayAs(555, '/guide');
+  check('…/guide → the index: one button per part (two in a row) + Menu', /the guide|الدليل/.test(last().b.text) && G.sections.every(x => JSON.stringify(last().b.reply_markup).includes('gd:' + x.k)), last().b.text);
+  sent.length = 0; await tapAs(555, 'gd:alerts');
+  const ed = sent.find(x => x.m === 'editMessageText');
+  check('…tap a part → it opens in the same message, with ⬅️ Guide', ed && /🔔/.test(ed.b.text) && JSON.stringify(ed.b.reply_markup).includes('"gd"'), ed && ed.b.text.slice(0, 80));
 }
 
 console.log(`${pass}/${pass + fail} passed`);

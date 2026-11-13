@@ -131,3 +131,4 @@ tg_bot_test.py
 member_start_test.py
 admin_dash_test.py
 invite_app_test.py
+guide_test.py
