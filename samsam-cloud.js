@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611131218';
-import * as Hist from './samsam-history.js?v=202611131218';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611131218';
+import * as Core from './samsam-core.js?v=202611131238';
+import * as Hist from './samsam-history.js?v=202611131238';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611131238';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -274,7 +274,12 @@ function currentSignal() {
 }
 function currentBaseline() {
   const b = cleanBaseline(S.meta && S.meta.baseline);
-  return b ? { ...b, isDefault: false } : { ...DEFAULT_BASELINE, setAt: '', source: 'default', isDefault: true };
+  if (b) return { ...b, isDefault: false };
+  if (S.user && !isMainOwner()) {   // a member who hasn't started yet: today (Oct 15 is Samir's start, never theirs)
+    const p = S.prices.BTC && S.prices.BTC.usd > 0 ? S.prices.BTC.usd : DEFAULT_BASELINE.btcPrice;
+    return { date: new Date().toISOString().slice(0, 10), btcPrice: p, setAt: '', source: 'default', isDefault: true };
+  }
+  return { ...DEFAULT_BASELINE, setAt: '', source: 'default', isDefault: true };
 }
 
 // Chart history: rebuilt from the ledger × real hourly prices (samsam-history.js → CoinGecko), from the first day your

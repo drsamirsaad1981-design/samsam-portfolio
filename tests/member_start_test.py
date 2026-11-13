@@ -23,6 +23,7 @@ with sync_playwright() as p:
             check('member: a welcome, not "the cloud is empty / most up-to-date device"', 'Welcome' in txt and 'most up-to-date' not in txt, txt)
             check('member: no "Start from the Oct-15 starting portfolio" (that is Samir\'s)', 'Oct-15' not in txt and not pg.is_visible('#samsamImpBase'), txt)
             check('member: Samsam.isOwner() is false', pg.evaluate("Samsam.isOwner()") is False)
+            check('member: before starting, the baseline shown is today, not Oct 15', pg.evaluate("Samsam.getBaseline().date") == TODAY, pg.evaluate("Samsam.getBaseline()"))
             pg.goto(SITE + '/market.html'); pg.wait_for_selector('#samsamSetup', state='visible', timeout=15000)
             check('member: other pages say "your portfolio is new", not "One-time setup needed"', 'new' in pg.inner_text('#samsamSetup') and 'One-time' not in pg.inner_text('#samsamSetup'), pg.inner_text('#samsamSetup'))
             pg.goto(SITE + '/index.html'); pg.wait_for_selector('#samsamStartEmpty', state='visible', timeout=15000)

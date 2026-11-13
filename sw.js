@@ -3,7 +3,7 @@
 //   · the app's own files (js / css / icons, with ?v=…) and the Firebase library: kept once, used from the phone after that
 //   · prices, CoinGecko, Firestore, Telegram… are never kept here (your portfolio itself is kept by Firestore on the device)
 // VERSION is changed by stamp-version.py on every release, so old copies are cleared.
-const VERSION = 'cp-202611131218';
+const VERSION = 'cp-202611131238';
 const PAGES = ['./', './index.html', './portfolio.html', './accumulation.html', './performance.html', './market.html', './altseason.html', './recover.html'];
 
 self.addEventListener('install', e => {
