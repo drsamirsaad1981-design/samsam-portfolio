@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/stars.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -51,7 +51,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (/^https:\/\/(coin-images|assets)\.coingecko\.com\//.test(u)) { logoFetches++; return /tether|325/.test(u) ? new Response('nf', { status: 404 }) : /notimage/.test(u) ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : new Response(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'), { headers: { 'content-type': 'image/png' } }); }
   if (u === 'https://api.github.com/repos/drsamirsaad1981-design/samsam-portfolio/actions/workflows/prices.yml/dispatches') { kicks.push({ auth: init.headers.authorization, body: JSON.parse(body) }); return new Response(null, { status: 204 }); }
   if (u.startsWith('https://api.telegram.org/bot') && body instanceof FormData) { const m = u.split('/').pop(); const ph = body.get('photo'); sent.push({ m, b: { chat_id: body.get('chat_id'), caption: body.get('caption'), photoBytes: ph ? new Uint8Array(await ph.arrayBuffer()) : null } }); return J({ ok: true, result: { message_id: 8 } }); }
-  if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); sent.push({ m, b }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
+  if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); sent.push({ m, b }); if (m === 'createInvoiceLink') return J({ ok: true, result: 'https://t.me/$inv-' + b.payload }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
   if (u.includes('raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/')) {
     const f = u.split('/prices/')[1];
     if (f === 'm/market.json') return J(market); if (f === 'm/top500.json') return J(top500); if (f === 'm/alt.json') return J(alt); if (f === 'm/etf.json') return J(etf);
@@ -634,7 +634,7 @@ LIVE.pendle.usd = 3.21;
 // the "/" menu: every command, refreshed by itself when the list changes (no /start needed)
 kvStore.delete('tg:555:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
 const sc = sent.find(x => x.m === 'setMyCommands'), names = sc ? sc.b.commands.map(c => c.command) : [];
-check('"/" menu sent again by itself: invite, users, start, report, daily, morning, evening, alerts, paper, pin, unpin, hide… (22)', names.length === 22 && ['invite', 'users', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
+check('"/" menu sent again by itself: invite, users, stats, start, report, daily, morning, evening, alerts, paper, pin, unpin, hide… (23)', names.length === 23 && ['invite', 'users', 'stats', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/menu');
 check('…and only once (remembered in KV)', !sent.some(x => x.m === 'setMyCommands'));
 claudeCalls.length = 0; sent.length = 0;
@@ -1020,14 +1020,13 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('🎙 a member who is not premium: a voice note → "for ⭐ premium members", not transcribed', /premium/.test(last().b.text) && fileGets.length === 0, last().b.text);
   sent.length = 0; await tapAs(555, 'us:pr:888');
   const x = JSON.parse(kvStore.get('tg:users'))['888'];
-  check('⭐ Premium → 20 questions, 3 reports a day; the member is told; the card shows ⭐', x.premium === true && x.ai === 20 && x.reports === 3 && sent.some(x2 => String(x2.b.chat_id) === '888' && /premium member/.test(x2.b.text || '')) && /⭐/.test(sent.find(x2 => x2.m === 'editMessageText').b.text), x);
+  check('⭐ Premium → 20 questions, 3 reports a day; the member is told; the card shows ⭐', x.premium === true && x.ai === 20 && x.reports === 3 && sent.some(x2 => String(x2.b.chat_id) === '888' && /premium as a gift/.test(x2.b.text || '')) && /⭐/.test(sent.find(x2 => x2.m === 'editMessageText').b.text), x);
   sent.length = 0; fileGets.length = 0; await vMsg();
   check('…now their voice notes work', fileGets.length === 1, sent.map(x2 => (x2.b.text || '').slice(0, 30)));
   await tapAs(555, 'us:pr:888');
   sent.length = 0; for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
   await sayAs(888, '/start premium');
-  const req2 = sent.find(x2 => String(x2.b.chat_id) === '555' && /premium/.test(x2.b.text || ''));
-  check('⭐ the app\'s "become premium" link (/start premium) → the member is told it was sent; you get ⭐ Make premium', sent.some(x2 => String(x2.b.chat_id) === '888' && /Sent to Samir/.test(x2.b.text || '')) && req2 && JSON.stringify(req2.b.reply_markup).includes('us:pr:888'), sent.map(x2 => (x2.b.text || '').slice(0, 40)));
+  check('⭐ the app\'s "become premium" link (/start premium) → the premium page: what it adds, the price, why, Subscribe', /Cute Portfolio Premium/.test(last().b.text) && /300 ⭐ a month/.test(last().b.text) && /non-profit/.test(last().b.text) && JSON.stringify(last().b.reply_markup).includes('t.me/$inv'), last().b.text.slice(0, 80));
   const y = JSON.parse(kvStore.get('tg:users'))['888'];
   check('☆ off again → back to 5 / 0, no voice', !y.premium && y.ai === 5 && y.reports === 0);
 }
@@ -1074,6 +1073,60 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
   await sayAs(888, '/forget'); await tapAs(888, 'fg:yes');
   check('…/forget deletes it too', !kvStore.has('tg:888:byok'));
+}
+
+// ⭐💛 Telegram Stars: premium subscription, support, the checks, the end of a month, /stats
+{
+  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
+  const mm = JSON.parse(kvStore.get('tg:users')); mm['888'] = { name: 'New', joined: Date.now(), lang: 'en' }; kvStore.set('tg:users', JSON.stringify(mm)); kvStore.delete('tg:stars:log');
+  sent.length = 0; await sayAs(888, '/premium');
+  const inv = sent.find(x => x.m === 'createInvoiceLink');
+  check('⭐ /premium → a Stars SUBSCRIPTION link: 300 ⭐, every 30 days, for this member only', inv && inv.b.currency === 'XTR' && inv.b.prices[0].amount === 300 && inv.b.subscription_period === 2592000 && inv.b.payload === 'prem:888' && JSON.stringify(last().b.reply_markup).includes('Subscribe'), inv && inv.b);
+  const pre = (from, payload, amount) => post({ update_id: ++UPD, pre_checkout_query: { id: 'pc1', from: { id: from }, currency: 'XTR', total_amount: amount, invoice_payload: payload } }, ENV.TG_SECRET, ENVK);
+  sent.length = 0; await pre(888, 'prem:888', 300);
+  check('…Telegram\'s payment check: the member paying for themselves → OK', sent.some(x => x.m === 'answerPreCheckoutQuery' && x.b.ok === true));
+  sent.length = 0; await pre(999, 'prem:888', 300); const no1 = sent.find(x => x.m === 'answerPreCheckoutQuery');
+  sent.length = 0; await pre(888, 'prem:888', 5); const no2 = sent.find(x => x.m === 'answerPreCheckoutQuery');
+  check('…someone else, or a wrong price → refused (nothing is charged)', no1 && no1.b.ok === false && no2 && no2.b.ok === false);
+  const exp = Math.floor(Date.now() / 1000) + 30 * 86400;
+  const paidMsg = (sp) => post({ update_id: ++UPD, message: { message_id: 9, chat: { id: 888, type: 'private' }, from: { id: 888 }, successful_payment: { currency: 'XTR', ...sp } } }, ENV.TG_SECRET, ENVK);
+  sent.length = 0; await paidMsg({ total_amount: 300, invoice_payload: 'prem:888', telegram_payment_charge_id: 'ch1', subscription_expiration_date: exp, is_recurring: true, is_first_recurring: true });
+  let x = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('…paid → premium (Stars) until the date Telegram gives, 20 / 3; thanked; you are told', x.premium && x.premSrc === 'stars' && x.premUntil === exp * 1000 && x.ai === 20 && x.reports === 3 && sent.some(m => String(m.b.chat_id) === '888' && /you're premium now/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /subscribed to Premium — 300 ⭐/.test(m.b.text || '')), x);
+  sent.length = 0; await paidMsg({ total_amount: 300, invoice_payload: 'prem:888', telegram_payment_charge_id: 'ch2', subscription_expiration_date: exp + 30 * 86400, is_recurring: true, is_first_recurring: false });
+  x = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('…next month Telegram renews it → "Premium renewed", the end date moves', x.premUntil === (exp + 30 * 86400) * 1000 && sent.some(m => /renewed/.test(m.b.text || '')));
+  sent.length = 0; await sayAs(888, '/premium');
+  check('…/premium now says "premium until …, renews by itself" (no second Subscribe)', /premium until/.test(last().b.text) && /renews by itself/.test(last().b.text) && !sent.some(m => m.m === 'createInvoiceLink'), last().b.text.slice(-120));
+  // 💛 support
+  sent.length = 0; await sayAs(888, '/support');
+  check('💛 /support → optional, any size, a badge; 50 / 100 / 250 / 500 ⭐', /Optional/.test(last().b.text) && /Supporter 💛/.test(last().b.text) && ['sp:50', 'sp:100', 'sp:250', 'sp:500'].every(k => JSON.stringify(last().b.reply_markup).includes(k)), last().b.text);
+  sent.length = 0; await tapAs(888, 'sp:100'); const si = sent.find(m => m.m === 'sendInvoice');
+  check('…tap 100 ⭐ → a one-time Stars invoice of 100', si && si.b.currency === 'XTR' && si.b.prices[0].amount === 100 && si.b.payload === 'sup:888:100' && !si.b.subscription_period, si && si.b);
+  sent.length = 0; await paidMsg({ total_amount: 100, invoice_payload: 'sup:888:100', telegram_payment_charge_id: 'ch3' });
+  x = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('…paid → Supporter 💛 (100 ⭐), thanked, you are told', x.supporter === true && x.starsPaid === 100 && sent.some(m => /Supporter 💛/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /supported the project with 100 ⭐/.test(m.b.text || '')), x);
+  await paidMsg({ total_amount: 100, invoice_payload: 'sup:888:100', telegram_payment_charge_id: 'ch3' });
+  sent.length = 0; await sayAs(555, '/stats');
+  check('📈 /stats (you): members, premium now (Stars / gift), supporters, Stars this month and all time (a payment sent twice counts once)', /Premium now: <b>1<\/b> \(Stars 1/.test(last().b.text) && /Supporters: <b>1<\/b>/.test(last().b.text) && /All time: <b>700<\/b>/.test(last().b.text), last().b.text);
+  sent.length = 0; await sayAs(888, '/stats');
+  check('…/stats is yours only', /Only the bot owner/.test(last().b.text));
+  // the month ends (no renewal) → back to standard, told
+  const m2 = JSON.parse(kvStore.get('tg:users')); m2['888'].premUntil = Date.now() - 1000; kvStore.set('tg:users', JSON.stringify(m2));
+  sent.length = 0; const W8 = await fresh(); const pw = []; await W8.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('03:15') }, ENVK, { waitUntil: x2 => pw.push(x2) }); await Promise.all(pw);
+  x = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('⏳ the paid month ended (cancelled in Telegram) → back to 5 / 0, told "premium has ended"', !x.premium && x.ai === 5 && x.reports === 0 && x.supporter === true && sent.some(m => String(m.b.chat_id) === '888' && /premium has ended/.test(m.b.text || '')), x);
+  // 🎁 a gift of 30 days, and a reminder 3 days before its end
+  sent.length = 0; await tapAs(555, 'us:pd:30:888');
+  x = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('🎁 +30 days (from /users or a gift request) → premium (gift) for 30 days; the member is told until when', x.premium && x.premSrc === 'gift' && Math.abs(x.premUntil - (Date.now() + 30 * 864e5)) < 60e3 && sent.some(m => String(m.b.chat_id) === '888' && /gift — until/.test(m.b.text || '')), x);
+  const m3 = JSON.parse(kvStore.get('tg:users')); m3['888'].premUntil = Date.now() + 2 * 864e5; kvStore.set('tg:users', JSON.stringify(m3));
+  sent.length = 0; const W9 = await fresh(); const pw2 = []; await W9.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('03:20') }, ENVK, { waitUntil: x2 => pw2.push(x2) }); await Promise.all(pw2);
+  check('…2 days before a gift ends → one reminder ("/premium")', sent.filter(m => String(m.b.chat_id) === '888' && /ends on/.test(m.b.text || '')).length === 1);
+  // the webhook asks Telegram for the payment checks too (once)
+  kvStore.delete('tg:hookv'); sent.length = 0; await postK(await fresh(), '/menu'); await postK(await fresh(), '/menu');
+  const hooks = sent.filter(m => m.m === 'setWebhook');
+  check('🔌 the webhook is updated once to receive Telegram\'s payment checks (pre_checkout_query)', hooks.length === 1 && hooks[0].b.allowed_updates.includes('pre_checkout_query') && hooks[0].b.drop_pending_updates === false, hooks.map(h => h.b));
 }
 
 console.log(`${pass}/${pass + fail} passed`);

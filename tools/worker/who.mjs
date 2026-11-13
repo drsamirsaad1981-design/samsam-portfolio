@@ -118,7 +118,7 @@ export async function accessEmails(env) { return Object.values(await members(env
 export const DEF_AI = 5, DEF_REPORTS = 0,   // a member's quick AI Analysis report: off until they add their own Claude key (or the owner gives some in /users)
   PREM_AI = 20, PREM_REPORTS = 3;
 // ⭐ premium (the owner switches it in /users): voice notes + more questions / reports. The owner counts as premium.
-export async function isPremium(env) { if (isOwner(env)) return true; const x = await member(env); return !!(x && x.premium); }
+export async function isPremium(env) { if (isOwner(env)) return true; const x = await member(env); return !!(x && x.premium && (!x.premUntil || x.premUntil > Date.now())); }
 export async function aiLimitFor(env) {
   if (isOwner(env)) return Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || '30', 10) || 30));
   const x = await member(env);

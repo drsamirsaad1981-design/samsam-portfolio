@@ -20,6 +20,7 @@ import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
 import { keyInfo } from './byok.mjs';
+import { premiumView, supportView, sendSupportInvoice, askGift, preCheckout, paid, statsView, addDays, revoke, premiumNow } from './stars.mjs';
 import { keepTrades, tradeLines, confirmTrades, cancelTrades, money } from './trade.mjs';
 import { viewDaily, setCfg, getCfg, morning, evening, pinUpdate, unpin } from './daily.mjs';
 import { logEvent } from './watch.mjs';
@@ -297,7 +298,7 @@ const WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
-  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$/i, 'prem'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
+  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -365,6 +366,8 @@ export async function handleTelegram(request, env) {
   if (ORIGIN !== origin) { ORIGIN = origin; try { if (env.RATE) await env.RATE.put('tg:origin', origin); } catch (_) {} }
   const u = await request.json().catch(() => null);
   if (!u) return ok();
+  await ensureHook(env, request);
+  if (u.pre_checkout_query) { await preCheckout(env, u.pre_checkout_query); return ok(); }   // ⭐💛 a Stars payment: Telegram asks first
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null) return ok();
@@ -412,7 +415,7 @@ async function viewUsers(env, lang) {
   const L = [ar ? `👥 <b>الأعضاء</b> (${list.length}/${MAX_MEMBERS})` : `👥 <b>Members</b> (${list.length}/${MAX_MEMBERS})`, ''];
   if (!list.length) L.push(ar ? 'لسه مفيش حد. اضغط ➕ لكود دعوة.' : 'Nobody yet. Tap ➕ for an invite code.');
   const used = await Promise.all(list.map(([c, x]) => usedToday(env, c, x)));
-  list.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? '⏸ ' : ''}${x.premium ? '⭐ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''}\n    ${ar ? 'النهارده' : 'today'} 🧠 ${used[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} · 📊 ${used[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
+  list.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? '⏸ ' : ''}${premiumNow(x) ? '⭐ ' : ''}${x.supporter ? '💛 ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''}\n    ${ar ? 'النهارده' : 'today'} 🧠 ${used[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} · 📊 ${used[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
   if (list.length) L.push('', ar ? '<i>اضغط على اسم عشان تغيّر حدوده أو تشيله · 📱 التطبيق · 🔗 المحفظة مربوطة</i>' : '<i>Tap a name to change their limits or remove them · 📱 app · 🔗 portfolio linked</i>');
   const b = []; for (let i = 0; i < list.length; i += 3) b.push(list.slice(i, i + 3).map(([c, x], j) => cb(`${i + j + 1}. ${x.name.split(' ')[0].slice(0, 12)}${x.uid ? ' 🔗' : x.email ? ' 📱' : ''}`, 'us:m:' + c)));
   b.push([cb(ar ? '➕ دعوة جديدة' : '➕ New invite', 'us:inv'), cb(T[lang].back, 'menu')]);
@@ -478,12 +481,12 @@ async function viewMember(env, lang, c) {
   if (!x) return viewUsers(env, lang);
   const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
   const u = await usedToday(env, c, x), kk = await asChat(c, () => keyInfo(env));
-  const L = [`👤 ${x.paused ? '⏸ ' : ''}${x.premium ? '⭐ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}${x.paused ? (ar ? ' — <b>متوقف</b>' : ' — <b>paused</b>') : ''}${x.premium ? (ar ? ' — <b>مميز</b>' : ' — <b>premium</b>') : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
+  const L = [`👤 ${x.paused ? '⏸ ' : ''}${premiumNow(x) ? '⭐ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}${x.paused ? (ar ? ' — <b>متوقف</b>' : ' — <b>paused</b>') : ''}${premiumNow(x) ? (ar ? ' — <b>مميز</b>' : ' — <b>premium</b>') + (x.premUntil ? ` ${ar ? 'لحد' : 'until'} ${esc(local(x.premUntil, { day: 'numeric', month: 'short', year: 'numeric' }))}${x.premSrc === 'stars' ? ' (Stars)' : ar ? ' (هدية)' : ' (gift)'}` : '') : ''}${x.supporter ? ` · 💛 ${x.starsPaid || ''}⭐` : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
     ...(kk.has ? [`🔑 ${ar ? 'بيستعمل مفتاح Claude بتاعه' : 'Uses their own Claude key'} (…${esc(kk.tail)}) — ${ar ? 'تكلفته عليه' : 'on their bill'}`] : []),
     `📱 ${ar ? 'التطبيق' : 'App'}: ${x.email ? '<code>' + esc(x.email) + '</code>' : (ar ? 'لسه' : 'not yet')}`, `🔗 ${ar ? 'المحفظة' : 'Portfolio'}: ${x.uid ? (ar ? 'مربوطة ✅' : 'linked ✅') : (ar ? 'مش مربوطة' : 'not linked')}`, '',
     `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${ai}</b> · ${ar ? 'النهارده' : 'today'} ${u.q}`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${rp}</b> · ${ar ? 'النهارده' : 'today'} ${u.r}`];
   return { text: L.join('\n'), buttons: [[cb('🧠 −', `us:ai:-:${c}`), cb('🧠 +', `us:ai:+:${c}`), cb('📊 −', `us:rp:-:${c}`), cb('📊 +', `us:rp:+:${c}`)],
-    [cb(x.premium ? (ar ? '☆ إلغاء المميز' : '☆ Remove premium') : (ar ? '⭐ اجعله مميز' : '⭐ Make premium'), 'us:pr:' + c)],
+    [cb(ar ? '🎁 ⭐ +30 يوم' : '🎁 ⭐ +30 days', `us:pd:30:${c}`), cb(ar ? '🎁 ⭐ +365 يوم' : '🎁 ⭐ +365 days', `us:pd:365:${c}`), ...(premiumNow(x) ? [cb(ar ? '☆ إلغاء' : '☆ Remove', 'us:pr:' + c)] : [])],
     [cb(x.paused ? (ar ? '▶️ رجّعه' : '▶️ Resume') : (ar ? '⏸ وقّفه' : '⏸ Pause'), 'us:pz:' + c), cb('🗑 ' + (ar ? 'شيله' : 'Remove'), 'us:del:' + c)], [cb(ar ? '⬅️ الأعضاء' : '⬅️ Members', 'us')]] };
 }
 
@@ -496,6 +499,14 @@ async function onUpdate(env, u, msg, q, chat) {
       // the button keeps its little spinner while the numbers load; when done, a short note says so — so one tap is enough,
       // even when nothing changed (the message is the same → Telegram would show no change at all)
       const done = text => tg(env, 'answerCallbackQuery', { callback_query_id: q.id, ...(text ? { text } : {}) }).catch(() => {});
+      if (d === 'sp' || /^sp:\d+$/.test(d) || d === 'pm:ask' || d === 'pm') {   // 💛 support amounts · 🎁 ask for a gift · ⭐ premium page
+        const lang = await getLang(env);
+        if (d === 'sp') await send(env, chat, await supportView(env, lang));
+        else if (d === 'pm') await send(env, chat, await premiumView(env, lang));
+        else if (d === 'pm:ask') { if (!isOwner(env)) await askGift(env, chat, lang); }
+        else await sendSupportInvoice(env, chat, +d.slice(3), lang);
+        await done(); return ok();
+      }
       if (d === 'fg:yes' || d === 'fg:no') {   // 🧹 /forget — confirmed (members only)
         const lang = await getLang(env), w = FG[lang];
         if (d === 'fg:no' || isOwner(env)) { await edit(env, chat, q.message.message_id, { text: w.kept }); await done(); return ok(); }
@@ -535,13 +546,17 @@ async function onUpdate(env, u, msg, q, chat) {
             await setMember(env, lim[3], { [f]: Math.max(0, Math.min(max, cur + (lim[2] === '+' ? 1 : -1))) }); }
           await edit(env, chat, q.message.message_id, await viewMember(env, lang, lim[3])); await done('✅'); return ok();
         }
-        if (d.startsWith('us:pr:')) {   // ⭐ premium on / off: voice notes + 20 questions + 3 reports a day (− / + still adjust)
-          const who = d.slice(6), x = await member(env, who);
-          if (x) { const on = !x.premium;
-            await setMember(env, who, { premium: on ? true : undefined, ai: on ? Math.max(PREM_AI, Number.isFinite(x.ai) ? x.ai : 0) : DEF_AI, reports: on ? Math.max(PREM_REPORTS, Number.isFinite(x.reports) ? x.reports : 0) : DEF_REPORTS });
-            const ar2 = x.lang === 'ar';
-            await tg(env, 'sendMessage', { chat_id: who, text: on ? (ar2 ? `⭐ بقيت عضو مميز! الرسايل الصوتية 🎙 اشتغلت، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis في اليوم.` : `⭐ You're a premium member now! Voice notes 🎙 are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.`) : (ar2 ? 'العضوية المميزة اتشالت — رجعت للحدود العادية.' : 'Premium is off — back to the standard limits.') }).catch(() => {}); }
-          await edit(env, chat, q.message.message_id, await viewMember(env, lang, who)); await done(x && !x.premium ? '⭐' : '☆'); return ok();
+        if (d.startsWith('us:pr:') || /^us:pd:\d+:/.test(d)) {   // ⭐ a gift: +30 / +365 days (us:pr: on → 30 days, off → remove)
+          const pd = /^us:pd:(\d+):(.+)$/.exec(d), who = pd ? pd[2] : d.slice(6), x = await member(env, who);
+          let note = '⭐';
+          if (x) {
+            if (!pd && premiumNow(x)) { await revoke(env, who); note = '☆'; await tg(env, 'sendMessage', { chat_id: who, text: x.lang === 'ar' ? 'العضوية المميزة اتشالت — رجعت للحدود العادية.' : 'Premium is off — back to the standard limits.' }).catch(() => {}); }
+            else { const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? local(y.premUntil, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+              await tg(env, 'sendMessage', { chat_id: who, parse_mode: 'HTML', text: x.lang === 'ar' ? `🎁 سمير ادّالك المميز هدية لحد ${until}!\nالرسايل الصوتية 🎙 اشتغلت، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis في اليوم.` : `🎁 Samir gave you premium as a gift — until ${until}!\nVoice notes 🎙 are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {}); }
+          }
+          const v = await viewMember(env, lang, who), r = await edit(env, chat, q.message.message_id, v);
+          if (!r.ok && !/not modified/i.test(r.description || '')) await send(env, chat, v);
+          await done(note); return ok();
         }
         if (d.startsWith('us:pz:')) {   // ⏸ / ▶️ a member
           const who = d.slice(6), x = await member(env, who);
@@ -606,6 +621,7 @@ async function onUpdate(env, u, msg, q, chat) {
       await done(`✅ ${t.updated} ${local(Date.now(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })}`);
       return ok();
     }
+    if (msg && msg.successful_payment) { await paid(env, chat, msg.successful_payment, await getLang(env)); return ok(); }   // ⭐💛 paid (also each monthly renewal)
     if (msg && (msg.voice || msg.audio)) {
       if (!(await isPremium(env)) && !(await keyInfo(env)).has) { const ar = (await getLang(env)) === 'ar'; await send(env, chat, { text: ar ? '🎙 الرسايل الصوتية للأعضاء المميزين ⭐ — اكتبها كتابة، أو اطلب من سمير.' : '🎙 Voice notes are for ⭐ premium members — type it instead, or ask Samir.' }); return ok(); }
       await onVoice(env, chat, msg.voice || msg.audio); return ok();
@@ -666,15 +682,9 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'pin:on') { await setCfg(env, { pin: true }); const r = await pinUpdate(env, Date.now(), true, true).catch(() => null); if (!r || !r.ok) await send(env, chat, { text: (await getLang(env)) === 'ar' ? '⚠️ ما قدرتش أثبّت الرسالة دلوقتي — جرّب تاني بعد دقيقة.' : '⚠️ I couldn\'t pin it right now — try again in a minute.' }); return; }
   if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
-  if (p.act === 'prem') {   // ⭐ a member asks to be premium → the owner gets ⭐ Make premium
-    const lang = await getLang(env), ar = lang === 'ar';
-    if (isOwner(env)) { await send(env, chat, { text: ar ? 'انت مميز أصلاً ⭐' : 'You are premium already ⭐' }); return; }
-    const me = await member(env);
-    if (me && me.premium) { await send(env, chat, { text: ar ? '⭐ انت عضو مميز بالفعل.' : '⭐ You are a premium member already.' }); return; }
-    await send(env, chat, { text: ar ? `⭐ اتبعت لسمير — لما يوافق هيوصلك هنا.\nالمميز: رسايل صوتية 🎙، و${PREM_AI} سؤال و${PREM_REPORTS} تقارير AI Analysis في اليوم.` : `⭐ Sent to Samir — you'll hear here once he says yes.\nPremium: voice notes 🎙, ${PREM_AI} questions and ${PREM_REPORTS} AI Analysis reports a day.` });
-    await asChat(env.TELEGRAM_CHAT_ID, async () => { const L = await getLang(env); await send(env, env.TELEGRAM_CHAT_ID, { text: L === 'ar' ? `⭐ <b>${esc(me ? me.name : chat)}</b> عايز يبقى عضو مميز.` : `⭐ <b>${esc(me ? me.name : chat)}</b> asks to become a premium member.`, buttons: [[cb(L === 'ar' ? '⭐ اجعله مميز' : '⭐ Make premium', 'us:pr:' + chat), cb(L === 'ar' ? '👤 الكارت' : '👤 Their card', 'us:m:' + chat)]] }); });
-    return;
-  }
+  if (p.act === 'prem') { await send(env, chat, await premiumView(env, await getLang(env))); return; }   // ⭐ what premium is, the price, Subscribe
+  if (p.act === 'sup') { await send(env, chat, await supportView(env, await getLang(env))); return; }      // 💛 support (optional)
+  if (p.act === 'stats') { const lang = await getLang(env); await send(env, chat, isOwner(env) ? await statsView(env, lang) : { text: T[lang].ownerOnly }); return; }
   if (p.act === 'fg') { const lang = await getLang(env), w = FG[lang];
     if (isOwner(env)) { await send(env, chat, { text: w.owner }); return; }
     await send(env, chat, { text: w.ask, buttons: [[cb(w.yes, 'fg:yes'), cb(w.no, 'fg:no')]] }); return; }
@@ -744,8 +754,8 @@ export const run = (env, act, arg, guess) => act === 'coinById' ? buildById(env,
 
 // the "/" menu in Telegram (set by the setup link and again on /start, so new commands show up)
 const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
-    ...(owner ? [] : [['app', a ? 'افتح التطبيق' : 'Open the app'], ['link', a ? 'اربط محفظتك — /link الكود' : 'Link your portfolio — /link CODE'], ['premium', a ? 'اطلب العضوية المميزة ⭐' : 'Ask for premium ⭐'], ['forget', a ? 'امسح بياناتي من البوت' : 'Delete my data from the bot']]),
-    ...(owner ? [['invite', a ? 'كود دعوة لصاحبك' : 'Invite code for a friend'], ['users', a ? 'الأعضاء' : 'Members']] : []),
+    ...(owner ? [] : [['app', a ? 'افتح التطبيق' : 'Open the app'], ['link', a ? 'اربط محفظتك — /link الكود' : 'Link your portfolio — /link CODE'], ['premium', a ? 'العضوية المميزة ⭐' : 'Premium ⭐'], ['support', a ? 'ادعم المشروع 💛' : 'Support the project 💛'], ['forget', a ? 'امسح بياناتي من البوت' : 'Delete my data from the bot']]),
+    ...(owner ? [['invite', a ? 'كود دعوة لصاحبك' : 'Invite code for a friend'], ['users', a ? 'الأعضاء' : 'Members'], ['stats', a ? 'الإحصائيات والـ Stars' : 'Stats & Stars']] : []),
     ['start', a ? 'ابدأ — الأزرار تحت الشات' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
     ['report', a ? 'التقرير الكامل (صفحة)' : 'Full report (a page)'], ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],
     ['plan', a ? 'خطة التجميع' : 'Accumulation plan'], ['exit', a ? 'خطة الخروج' : 'Exit plan'], ['movers', a ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', a ? 'الإشارات' : 'Signals'],
@@ -782,6 +792,17 @@ async function ensureDesc(env) {
 }
 let descMem = null;
 
+// the webhook must also receive Telegram's payment checks (pre_checkout_query) — an older setup didn't ask for them: set once
+const HOOK_UPDATES = ['message', 'edited_message', 'callback_query', 'pre_checkout_query'], HOOK_V = '2';
+let hookMem = null;
+async function ensureHook(env, request) {
+  if (hookMem === HOOK_V) return;
+  let had = null; try { had = env.RATE ? await env.RATE.get('tg:hookv') : null; } catch (_) {}
+  if (had === HOOK_V) { hookMem = HOOK_V; return; }
+  const u = new URL(request.url), r = await tg(env, 'setWebhook', { url: u.origin + u.pathname, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: false });
+  if (r && r.ok) { hookMem = HOOK_V; try { if (env.RATE) await env.RATE.put('tg:hookv', HOOK_V); } catch (_) {} }
+}
+
 // ── one-time setup: GET /tg/setup?key=<TG_SECRET> ──
 export async function setup(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { 'content-type': 'application/json' } });
@@ -790,7 +811,7 @@ export async function setup(request, env) {
   if (missing.length) return json(400, { ok: false, missing });
   if (!/^[A-Za-z0-9_-]{16,256}$/.test(env.TG_SECRET)) return json(400, { ok: false, error: 'TG_SECRET must be 16+ letters, digits, _ or - (Telegram rule).' });
   const hook = u.origin + u.pathname.replace(/\/setup$/, '');
-  const a = await tg(env, 'setWebhook', { url: hook, secret_token: env.TG_SECRET, allowed_updates: ['message', 'edited_message', 'callback_query'], drop_pending_updates: true });
+  const a = await tg(env, 'setWebhook', { url: hook, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: true });
   resetBudget();
   return asChat(env.TELEGRAM_CHAT_ID, async () => {   // the owner's chat
   const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];

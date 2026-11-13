@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 11f0627ea3a4f8cf
+// sources-hash: 9f57054426affe36
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -63,8 +63,8 @@ var ai_worker_default = {
       if (m.apiKey) apiKey = m.apiKey;
       if (!(limit > 0)) return reply(429, { error: "The quick report needs your own Claude key (Settings \u2192 My Claude key). The free way \u2014 with the Claude app \u2014 works for everyone.", remaining: 0 });
     }
-    const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const key = `ai:${user.uid}:${day}`;
+    const day2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const key = `ai:${user.uid}:${day2}`;
     const used2 = await getCount(env, key);
     if (used2 >= limit) return reply(429, { error: `You have used today's ${limit} AI reports. New reports are available tomorrow (00:00 UTC).`, remaining: 0 });
     if (!apiKey) return reply(500, { error: "The Worker has no ANTHROPIC_API_KEY secret." });
@@ -320,8 +320,8 @@ function vsBtcByCoin(coins, txs, { prices: prices2 = {}, btcNow = 0, btcAt = nul
       const t = Date.parse(x.date) || 0, bp = btcAt && btcAt(t) || baselineBtc;
       if (dN && bp > 0) shadow += dN / bp;
     }
-    const cost = pos.qty * pos.avg, price2 = num(prices2[c.sym]), value = pos.qty * price2;
-    if (!(cost > 0) || !(price2 > 0) || !(btcNow > 0)) {
+    const cost = pos.qty * pos.avg, price3 = num(prices2[c.sym]), value = pos.qty * price3;
+    if (!(cost > 0) || !(price3 > 0) || !(btcNow > 0)) {
       out[c.sym] = null;
       continue;
     }
@@ -361,17 +361,17 @@ function groupOf(c) {
 function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
   const keys = [.../* @__PURE__ */ new Set([...Object.keys(values || {}), ...Object.keys(targets || {})])];
   const total = keys.reduce((s, k) => s + Math.max(0, num(values[k])), 0), T2 = total + Math.max(0, num(cash));
-  const tg4 = (k) => targets && targets[k] ? num(targets[k].pct) / 100 : 0;
+  const tg5 = (k) => targets && targets[k] ? num(targets[k].pct) / 100 : 0;
   const groups = keys.map((k) => {
-    const v = Math.max(0, num(values[k])), now = total > 0 ? v / total * 100 : 0, target = tg4(k) * 100;
+    const v = Math.max(0, num(values[k])), now = total > 0 ? v / total * 100 : 0, target = tg5(k) * 100;
     return {
       key: k,
       value: v,
       now,
       target,
       drift: now - target,
-      full: tg4(k) * total - v,
-      need: Math.max(0, tg4(k) * T2 - v),
+      full: tg5(k) * total - v,
+      need: Math.max(0, tg5(k) * T2 - v),
       add: 0,
       state: Math.abs(now - target) <= band ? "ok" : Math.abs(now - target) <= 2 * band ? "warn" : "off"
     };
@@ -384,7 +384,7 @@ function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
     else {
       const rest = money3 - need;
       groups.forEach((g) => {
-        g.add = g.need + tg4(g.key) * rest;
+        g.add = g.need + tg5(g.key) * rest;
       });
     }
   }
@@ -398,11 +398,11 @@ var isoD = (t) => new Date(t).toISOString().slice(0, 10);
 var DCA_PER_MONTH = { week: 52 / 12, "2weeks": 26 / 12, month: 1 };
 function cleanDca(s) {
   if (!s || typeof s !== "object") return null;
-  const usd3 = num(s.usd), every = ["week", "2weeks", "month"].includes(s.every) ? s.every : null, day = Math.round(num(s.day, -1));
+  const usd3 = num(s.usd), every = ["week", "2weeks", "month"].includes(s.every) ? s.every : null, day2 = Math.round(num(s.day, -1));
   if (!(usd3 > 0 && usd3 <= 1e9) || !every) return null;
-  if (every === "month" ? !(day >= 1 && day <= 28) : !(day >= 0 && day <= 6)) return null;
+  if (every === "month" ? !(day2 >= 1 && day2 <= 28) : !(day2 >= 0 && day2 <= 6)) return null;
   const since = typeof s.since === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.since) ? s.since : isoD(Date.now());
-  return { usd: Math.round(usd3 * 100) / 100, every, day, since };
+  return { usd: Math.round(usd3 * 100) / 100, every, day: day2, since };
 }
 function dcaDue(s, from, to) {
   const c = cleanDca(s);
@@ -540,12 +540,12 @@ function summarize(user, market, now = Date.now()) {
   for (const c of user.coins || []) {
     if (!c || !c.sym || c.removed) continue;
     const id = idOf(c), r = id && byId.get(id), s = id && market.series && market.series[id];
-    const price2 = r && r.price > 0 ? r.price : s ? s.last : c.lastPrice > 0 ? c.lastPrice : null;
+    const price3 = r && r.price > 0 ? r.price : s ? s.last : c.lastPrice > 0 ? c.lastPrice : null;
     const p24 = s && s.at(now - DAY), p7 = s && s.at(now - 7 * DAY);
-    const ch24 = r && r.ch24 != null ? r.ch24 : price2 && p24 ? (price2 / p24 - 1) * 100 : null;
-    const ch7 = r && r.ch7 != null ? r.ch7 : price2 && p7 ? (price2 / p7 - 1) * 100 : null;
-    if (price2) prices2[c.sym] = { usd: price2, ch24 };
-    info[c.sym] = { id, ch24, ch7, p24: ch24 != null && price2 ? price2 / (1 + ch24 / 100) : null, p7: ch7 != null && price2 ? price2 / (1 + ch7 / 100) : null };
+    const ch24 = r && r.ch24 != null ? r.ch24 : price3 && p24 ? (price3 / p24 - 1) * 100 : null;
+    const ch7 = r && r.ch7 != null ? r.ch7 : price3 && p7 ? (price3 / p7 - 1) * 100 : null;
+    if (price3) prices2[c.sym] = { usd: price3, ch24 };
+    info[c.sym] = { id, ch24, ch7, p24: ch24 != null && price3 ? price3 / (1 + ch24 / 100) : null, p7: ch7 != null && price3 ? price3 / (1 + ch7 / 100) : null };
   }
   const pf = derivePortfolio(user.coins, user.txs, prices2).filter((c) => c.qty > 1e-12);
   const rz = realizedPnl(user.coins, user.txs);
@@ -567,14 +567,14 @@ function summarize(user, market, now = Date.now()) {
   const btcNow = btcRow && btcRow.price || btcSer && btcSer.last || 0;
   const baselineBtc = meta.baseline && meta.baseline.btcPrice || 81162;
   const vs = vsBtcByCoin(user.coins, user.txs, { prices: Object.fromEntries(Object.entries(prices2).map(([k, v]) => [k, v.usd])), btcNow, btcAt: btcSer ? (t) => btcSer.at(t) : null, baselineBtc });
-  let cp = 0, bp = 0, cb3 = 0, beat = 0, alts = 0;
+  let cp = 0, bp = 0, cb4 = 0, beat = 0, alts = 0;
   for (const c of pf) {
     const v = vs[c.sym];
     if (!v) continue;
     const k = c.qty * c.basePrice;
     cp += v.coinPct * k / 100;
     bp += v.btcPct * k / 100;
-    cb3 += k;
+    cb4 += k;
     if (c.sym !== "BTC") {
       alts++;
       if (v.pct > 0) beat++;
@@ -618,28 +618,28 @@ function summarize(user, market, now = Date.now()) {
   const dca = (user.accum || []).filter((a) => a && a.sym && a.dca).map((a) => ({ sym: String(a.sym).toUpperCase(), s: dcaStatus(a.dca, a.sym, user.txs, today2) })).filter((x) => x.s);
   const buyAt = (user.accum || []).filter((a) => a && a.sym && +a.alertPrice > 0).map((a) => {
     const sym = String(a.sym).toUpperCase();
-    let price2 = prices2[sym] && prices2[sym].usd;
-    if (!(price2 > 0)) {
+    let price3 = prices2[sym] && prices2[sym].usd;
+    if (!(price3 > 0)) {
       const id = a.cgId || (market.cgIds || {})[sym], r = id && byId.get(id), s = id && market.series && market.series[id];
-      price2 = r && r.price > 0 ? r.price : s ? s.last : null;
+      price3 = r && r.price > 0 ? r.price : s ? s.last : null;
     }
     const p = plan.find((x) => x.sym === sym), dc = dca.find((x) => x.sym === sym);
-    return { sym, at: +a.alertPrice, price: price2, left: p ? Math.max(0, p.target - p.actual) : null, dcaToday: !!(dc && dc.s.state === "today") };
+    return { sym, at: +a.alertPrice, price: price3, left: p ? Math.max(0, p.target - p.actual) : null, dcaToday: !!(dc && dc.s.state === "today") };
   }).filter((x) => x.price > 0);
   let alloc = null;
-  const tg4 = meta.targets && typeof meta.targets === "object" ? meta.targets : null;
-  const tlist = tg4 && Array.isArray(tg4.list) ? tg4.list : [];
+  const tg5 = meta.targets && typeof meta.targets === "object" ? meta.targets : null;
+  const tlist = tg5 && Array.isArray(tg5.list) ? tg5.list : [];
   if (tlist.length) {
     const cats = Object.fromEntries(tlist.filter((x) => x && x.g && x.pct > 0).map((x) => [x.g, { pct: +x.pct }]));
-    const names = Object.fromEntries([...Array.isArray(tg4.names) ? tg4.names : [], ...tlist].filter((x) => x && x.g).map((x) => [x.g, x.label || x.g]));
+    const names = Object.fromEntries([...Array.isArray(tg5.names) ? tg5.names : [], ...tlist].filter((x) => x && x.g).map((x) => [x.g, x.label || x.g]));
     const vals = {};
     for (const c of pf) {
       const g2 = groupOf(c);
       vals[g2] = (vals[g2] || 0) + c.qty * c.currentPrice;
     }
-    const plan2 = allocationPlan(vals, cats, { band: +tg4.band || 5 });
+    const plan2 = allocationPlan(vals, cats, { band: +tg5.band || 5 });
     const shown = plan2.groups.filter((g2) => g2.target > 0 || g2.now >= 0.05);
-    alloc = { band: plan2.band, groups: shown, onTarget: shown.filter((g2) => g2.state === "ok").length, count: shown.length, names, key: JSON.stringify([tlist, tg4.band]) };
+    alloc = { band: plan2.band, groups: shown, onTarget: shown.filter((g2) => g2.state === "ok").length, count: shown.length, names, key: JSON.stringify([tlist, tg5.band]) };
   }
   const free7 = {};
   for (const r of freeCoins(user.txs, new Date(now - 7 * DAY).toISOString())) {
@@ -661,7 +661,7 @@ function summarize(user, market, now = Date.now()) {
     d24: value - value24,
     ch7: value7 > 0 ? (value / value7 - 1) * 100 : null,
     d7: value - value7,
-    vsBtc: cb3 > 0 ? (cp - bp) / cb3 * 100 : null,
+    vsBtc: cb4 > 0 ? (cp - bp) / cb4 * 100 : null,
     beat,
     alts,
     coins: coinRows,
@@ -811,8 +811,8 @@ async function migrateOwner(env) {
       migrated = true;
       return;
     }
-    const o = String(env.TELEGRAM_CHAT_ID), day = localParts(Date.now()).date;
-    for (const n of [...LEGACY, "ai:" + day, "snap:" + day, "log:" + day]) {
+    const o = String(env.TELEGRAM_CHAT_ID), day2 = localParts(Date.now()).date;
+    for (const n of [...LEGACY, "ai:" + day2, "snap:" + day2, "log:" + day2]) {
       const v = await env.RATE.get("tg:" + n);
       if (v != null && await env.RATE.get(`tg:${o}:${n}`) == null) await env.RATE.put(`tg:${o}:${n}`, v, /^(ai|snap|log):/.test(n) ? { expirationTtl: 3 * 86400 } : void 0);
     }
@@ -848,7 +848,7 @@ var PREM_REPORTS = 3;
 async function isPremium(env) {
   if (isOwner(env)) return true;
   const x = await member(env);
-  return !!(x && x.premium);
+  return !!(x && x.premium && (!x.premUntil || x.premUntil > Date.now()));
 }
 async function aiLimitFor(env) {
   if (isOwner(env)) return Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30));
@@ -875,6 +875,261 @@ async function getPending(env, chat) {
 }
 async function clearPending(env, chat) {
   await kdel(env, "tg:appreq:" + chat);
+}
+
+// tools/worker/stars.mjs
+var DAY2 = 864e5;
+var MONTH = 30 * DAY2;
+var price = (env) => Math.max(1, Math.min(1e4, parseInt(env.PREMIUM_STARS || "300", 10) || 300));
+var SUPPORT = [50, 100, 250, 500];
+var usdOf = (n) => "$" + Math.max(1, Math.round(n * 0.02));
+async function tg(env, method, body) {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    return await r.json();
+  } catch (_) {
+    return { ok: false };
+  }
+}
+var cb = (text, data) => ({ text, callback_data: data });
+var day = (ms) => local(ms, { day: "numeric", month: "short", year: "numeric" });
+var premiumNow = (x, now = Date.now()) => !!(x && x.premium && (!x.premUntil || x.premUntil > now));
+async function grant(env, chat, until, src, charge) {
+  const x = await member(env, chat);
+  if (!x) return null;
+  return setMember(env, chat, {
+    premium: true,
+    premUntil: until || void 0,
+    premSrc: src,
+    subCharge: charge || x.subCharge,
+    premRemind: void 0,
+    ai: Math.max(PREM_AI, Number.isFinite(x.ai) ? x.ai : 0),
+    reports: Math.max(PREM_REPORTS, Number.isFinite(x.reports) ? x.reports : 0)
+  });
+}
+async function revoke(env, chat) {
+  return setMember(env, chat, { premium: void 0, premUntil: void 0, premSrc: void 0, subCharge: void 0, premRemind: void 0, ai: DEF_AI, reports: DEF_REPORTS });
+}
+var W = {
+  en: {
+    pTitle: "\u2B50 <b>Cute Portfolio Premium</b>",
+    pBody: (p) => `Everything stays <b>free</b> for everyone. Premium adds:
+\u2022 \u{1F399} Voice notes \u2014 just talk to the bot
+\u2022 \u{1F9E0} ${PREM_AI} AI questions a day (instead of ${DEF_AI})
+\u2022 \u{1F4CA} ${PREM_REPORTS} quick AI Analysis reports a day in the app
+
+<b>Price:</b> ${p} \u2B50 a month (about ${usdOf(p)}), paid with Telegram Stars.
+\u2022 Renews every 30 days by itself \u2014 cancel any time in Telegram \u2192 Settings \u2192 My Stars. You keep it until the paid month ends.
+\u2022 Why it costs anything: the AI is paid per question. This only covers that \u2014 Cute Portfolio is non-profit.
+
+<i>Telegram Stars are Telegram's own coins: you buy them inside Telegram, like any in-app purchase.</i>`,
+    isPrem: (u) => u ? `\u2705 <b>You're premium until ${u}.</b>` : "\u2705 <b>You're premium</b> (a gift from Samir).",
+    renews: "It renews by itself \u2014 to stop: Telegram \u2192 Settings \u2192 My Stars.",
+    subscribe: (p) => `\u2B50 Subscribe \u2014 ${p} \u2B50 / month`,
+    extend: (p) => `\u2B50 Subscribe \u2014 ${p} \u2B50 / month (after the gift)`,
+    supportInstead: "\u{1F49B} Support instead",
+    ask: "\u{1F381} Ask Samir",
+    back: "\u2B05\uFE0F Menu",
+    sTitle: "\u{1F49B} <b>Support Cute Portfolio</b>",
+    sBody: "<b>Optional</b> \u2014 a one-time thank-you of any size. Nothing changes in the features: everything stays free.\nIt helps pay for the servers and the AI. You get a <b>Supporter \u{1F49B}</b> badge in the bot and the app.\n\nPick an amount (Telegram Stars):",
+    sThanksBadge: (n) => `You've given ${n} \u2B50 so far \u2014 thank you!`,
+    invTitle: "Cute Portfolio Premium",
+    invDesc: `Voice notes, ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day. Renews every 30 days; cancel any time.`,
+    supTitle: "Support Cute Portfolio \u{1F49B}",
+    supDesc: "A one-time thank-you \u2014 helps pay for the servers and the AI. You get a Supporter \u{1F49B} badge.",
+    paidPrem: (u) => `\u2B50 <b>Thank you \u2014 you're premium now!</b>
+Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.
+Until ${u} \u2014 it renews by itself (stop any time: Telegram \u2192 Settings \u2192 My Stars).`,
+    renewed: (u) => `\u2B50 Premium renewed \u2014 until ${u}. Thank you!`,
+    paidSup: (n) => `\u{1F49B} <b>Thank you!</b> Your ${n} \u2B50 help keep Cute Portfolio free. You're a <b>Supporter \u{1F49B}</b> now.`,
+    remind: (u) => `\u2B50 Your premium ends on ${u}. If your Stars subscription is on, it renews by itself; if not: /premium.`,
+    ended: "\u2B50 Your premium has ended \u2014 back to the standard limits. To renew: /premium",
+    ownerPrem: (n, s, u) => `\u2B50 <b>${n}</b> subscribed to Premium \u2014 ${s} \u2B50 (until ${u}).`,
+    ownerRenew: (n, s, u) => `\u2B50 <b>${n}</b> renewed Premium \u2014 ${s} \u2B50 (until ${u}).`,
+    ownerSup: (n, s) => `\u{1F49B} <b>${n}</b> supported the project with ${s} \u2B50.`,
+    ownerAsk: (n) => `\u{1F381} <b>${n}</b> asks you for premium as a gift.`,
+    asked: "\u{1F381} Sent to Samir \u2014 you'll hear here.",
+    ownerP: "You are premium already \u2B50 \u2014 this is what members see:"
+  },
+  ar: {
+    pTitle: "\u2B50 <b>Cute Portfolio \u0627\u0644\u0645\u0645\u064A\u0632</b>",
+    pBody: (p) => `\u0643\u0644 \u062D\u0627\u062C\u0629 \u0628\u062A\u0641\u0636\u0644 <b>\u0645\u062C\u0627\u0646\u064A\u0629</b> \u0644\u0644\u0643\u0644. \u0627\u0644\u0645\u0645\u064A\u0632 \u0628\u064A\u0632\u0648\u0651\u062F:
+\u2022 \u{1F399} \u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u2014 \u0643\u0644\u0651\u0645 \u0627\u0644\u0628\u0648\u062A \u0628\u0635\u0648\u062A\u0643
+\u2022 \u{1F9E0} ${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0641\u064A \u0627\u0644\u064A\u0648\u0645 (\u0628\u062F\u0644 ${DEF_AI})
+\u2022 \u{1F4CA} ${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0633\u0631\u064A\u0639\u0629 \u0641\u064A \u0627\u0644\u064A\u0648\u0645 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642
+
+<b>\u0627\u0644\u0633\u0639\u0631:</b> ${p} \u2B50 \u0641\u064A \u0627\u0644\u0634\u0647\u0631 (\u062D\u0648\u0627\u0644\u064A ${usdOf(p)})\u060C \u0628\u0627\u0644\u0640 Telegram Stars.
+\u2022 \u0628\u064A\u062A\u062C\u062F\u062F \u0644\u0648\u062D\u062F\u0647 \u0643\u0644 30 \u064A\u0648\u0645 \u2014 \u062A\u0642\u062F\u0631 \u062A\u0644\u063A\u064A\u0647 \u0641\u064A \u0623\u064A \u0648\u0642\u062A \u0645\u0646 \u062A\u0644\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars\u060C \u0648\u064A\u0641\u0636\u0644 \u0645\u0639\u0627\u0643 \u0644\u0622\u062E\u0631 \u0627\u0644\u0634\u0647\u0631 \u0627\u0644\u0645\u062F\u0641\u0648\u0639.
+\u2022 \u0644\u064A\u0647 \u0628\u0641\u0644\u0648\u0633 \u0623\u0635\u0644\u0627\u064B: \u0627\u0644\u0640 AI \u0628\u064A\u062A\u062D\u0627\u0633\u0628 \u0639\u0644\u0649 \u0643\u0644 \u0633\u0624\u0627\u0644\u060C \u0648\u0627\u0644\u0645\u0628\u0644\u063A \u062F\u0647 \u0628\u064A\u063A\u0637\u064A \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u062F\u064A \u0628\u0633 \u2014 Cute Portfolio \u0645\u0634 \u0647\u0627\u062F\u0641 \u0644\u0644\u0631\u0628\u062D.
+
+<i>\u0627\u0644\u0640 Telegram Stars \u0639\u0645\u0644\u0629 \u062A\u0644\u062C\u0631\u0627\u0645 \u0646\u0641\u0633\u0647: \u0628\u062A\u0634\u062A\u0631\u064A\u0647\u0627 \u0645\u0646 \u062C\u0648\u0647 \u062A\u0644\u062C\u0631\u0627\u0645 \u0632\u064A \u0623\u064A \u0634\u0631\u0627\u0621 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642.</i>`,
+    isPrem: (u) => u ? `\u2705 <b>\u0627\u0646\u062A \u0645\u0645\u064A\u0632 \u0644\u062D\u062F ${u}.</b>` : "\u2705 <b>\u0627\u0646\u062A \u0645\u0645\u064A\u0632</b> (\u0647\u062F\u064A\u0629 \u0645\u0646 \u0633\u0645\u064A\u0631).",
+    renews: "\u0628\u064A\u062A\u062C\u062F\u062F \u0644\u0648\u062D\u062F\u0647 \u2014 \u0639\u0634\u0627\u0646 \u062A\u0648\u0642\u0641\u0647: \u062A\u0644\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars.",
+    subscribe: (p) => `\u2B50 \u0627\u0634\u062A\u0631\u0643 \u2014 ${p} \u2B50 \u0641\u064A \u0627\u0644\u0634\u0647\u0631`,
+    extend: (p) => `\u2B50 \u0627\u0634\u062A\u0631\u0643 \u2014 ${p} \u2B50 \u0641\u064A \u0627\u0644\u0634\u0647\u0631 (\u0628\u0639\u062F \u0627\u0644\u0647\u062F\u064A\u0629)`,
+    supportInstead: "\u{1F49B} \u0627\u062F\u0639\u0645 \u0628\u062F\u0644 \u0643\u062F\u0647",
+    ask: "\u{1F381} \u0627\u0637\u0644\u0628 \u0645\u0646 \u0633\u0645\u064A\u0631",
+    back: "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629",
+    sTitle: "\u{1F49B} <b>\u0627\u062F\u0639\u0645 Cute Portfolio</b>",
+    sBody: "<b>\u0627\u062E\u062A\u064A\u0627\u0631\u064A</b> \u2014 \u0634\u0643\u0631 \u0644\u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0628\u0623\u064A \u0645\u0628\u0644\u063A. \u0627\u0644\u0645\u0632\u0627\u064A\u0627 \u0645\u0627 \u0628\u062A\u062A\u063A\u064A\u0631\u0634: \u0643\u0644 \u062D\u0627\u062C\u0629 \u0628\u062A\u0641\u0636\u0644 \u0645\u062C\u0627\u0646\u064A\u0629.\n\u0628\u064A\u0633\u0627\u0639\u062F \u0641\u064A \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0633\u064A\u0631\u0641\u0631\u0627\u062A \u0648\u0627\u0644\u0640 AI\u060C \u0648\u0628\u062A\u0627\u062E\u062F \u0648\u0633\u0627\u0645 <b>Supporter \u{1F49B}</b> \u0641\u064A \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0644\u062A\u0637\u0628\u064A\u0642.\n\n\u0627\u062E\u062A\u0627\u0631 \u0627\u0644\u0645\u0628\u0644\u063A (Telegram Stars):",
+    sThanksBadge: (n) => `\u0627\u062F\u0651\u064A\u062A ${n} \u2B50 \u0644\u062D\u062F \u062F\u0644\u0648\u0642\u062A\u064A \u2014 \u0634\u0643\u0631\u0627\u064B!`,
+    invTitle: "Cute Portfolio \u0627\u0644\u0645\u0645\u064A\u0632",
+    invDesc: `\u0631\u0633\u0627\u064A\u0644 \u0635\u0648\u062A\u064A\u0629\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645. \u0628\u064A\u062A\u062C\u062F\u062F \u0643\u0644 30 \u064A\u0648\u0645\u060C \u0648\u062A\u0642\u062F\u0631 \u062A\u0644\u063A\u064A\u0647 \u0641\u064A \u0623\u064A \u0648\u0642\u062A.`,
+    supTitle: "\u0627\u062F\u0639\u0645 Cute Portfolio \u{1F49B}",
+    supDesc: "\u0634\u0643\u0631 \u0644\u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u2014 \u0628\u064A\u0633\u0627\u0639\u062F \u0641\u064A \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0633\u064A\u0631\u0641\u0631\u0627\u062A \u0648\u0627\u0644\u0640 AI. \u0648\u0628\u062A\u0627\u062E\u062F \u0648\u0633\u0627\u0645 Supporter \u{1F49B}.",
+    paidPrem: (u) => `\u2B50 <b>\u0634\u0643\u0631\u0627\u064B \u2014 \u0628\u0642\u064A\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632!</b>
+\u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u{1F399} \u0627\u0634\u062A\u063A\u0644\u062A\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645.
+\u0644\u062D\u062F ${u} \u2014 \u0648\u0628\u064A\u062A\u062C\u062F\u062F \u0644\u0648\u062D\u062F\u0647 (\u062A\u0648\u0642\u0641\u0647 \u0641\u064A \u0623\u064A \u0648\u0642\u062A: \u062A\u0644\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars).`,
+    renewed: (u) => `\u2B50 \u0627\u0644\u0645\u0645\u064A\u0632 \u0627\u062A\u062C\u062F\u062F \u2014 \u0644\u062D\u062F ${u}. \u0634\u0643\u0631\u0627\u064B!`,
+    paidSup: (n) => `\u{1F49B} <b>\u0634\u0643\u0631\u0627\u064B!</b> \u0627\u0644\u0640 ${n} \u2B50 \u0628\u062A\u0648\u0639\u0643 \u0628\u064A\u0633\u0627\u0639\u062F\u0648\u0627 Cute Portfolio \u064A\u0641\u0636\u0644 \u0645\u062C\u0627\u0646\u064A. \u0628\u0642\u064A\u062A <b>Supporter \u{1F49B}</b>.`,
+    remind: (u) => `\u2B50 \u0627\u0644\u0645\u0645\u064A\u0632 \u0628\u062A\u0627\u0639\u0643 \u0628\u064A\u062E\u0644\u0635 \u064A\u0648\u0645 ${u}. \u0644\u0648 \u0627\u0634\u062A\u0631\u0627\u0643 \u0627\u0644\u0640 Stars \u0634\u063A\u0627\u0644 \u0647\u064A\u062A\u062C\u062F\u062F \u0644\u0648\u062D\u062F\u0647\u061B \u0644\u0648 \u0644\u0623: /premium`,
+    ended: "\u2B50 \u0627\u0644\u0645\u0645\u064A\u0632 \u062E\u0644\u0635 \u2014 \u0631\u062C\u0639\u062A \u0644\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629. \u0639\u0634\u0627\u0646 \u062A\u062C\u062F\u062F\u0647: /premium",
+    ownerPrem: (n, s, u) => `\u2B50 <b>${n}</b> \u0627\u0634\u062A\u0631\u0643 \u0641\u064A \u0627\u0644\u0645\u0645\u064A\u0632 \u2014 ${s} \u2B50 (\u0644\u062D\u062F ${u}).`,
+    ownerRenew: (n, s, u) => `\u2B50 <b>${n}</b> \u062C\u062F\u062F \u0627\u0644\u0645\u0645\u064A\u0632 \u2014 ${s} \u2B50 (\u0644\u062D\u062F ${u}).`,
+    ownerSup: (n, s) => `\u{1F49B} <b>${n}</b> \u062F\u0639\u0645 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0628\u0640 ${s} \u2B50.`,
+    ownerAsk: (n) => `\u{1F381} <b>${n}</b> \u0628\u064A\u0637\u0644\u0628 \u0645\u0646\u0643 \u0627\u0644\u0645\u0645\u064A\u0632 \u0647\u062F\u064A\u0629.`,
+    asked: "\u{1F381} \u0627\u062A\u0628\u0639\u062A \u0644\u0633\u0645\u064A\u0631 \u2014 \u0647\u064A\u0648\u0635\u0644\u0643 \u0631\u062F \u0647\u0646\u0627.",
+    ownerP: "\u0627\u0646\u062A \u0645\u0645\u064A\u0632 \u0623\u0635\u0644\u0627\u064B \u2B50 \u2014 \u062F\u0647 \u0627\u0644\u0644\u064A \u0627\u0644\u0623\u0639\u0636\u0627\u0621 \u0628\u064A\u0634\u0648\u0641\u0648\u0647:"
+  }
+};
+var words = (lang2) => W[lang2 === "ar" ? "ar" : "en"];
+async function premiumView(env, lang2, now = Date.now()) {
+  const w = words(lang2), p = price(env), own = isOwner(env), x = own ? null : await member(env);
+  const on = premiumNow(x, now), lines = [w.pTitle, "", w.pBody(p)];
+  if (own) lines.unshift(`<i>${w.ownerP}</i>`, "");
+  if (on) lines.push("", w.isPrem(x.premUntil ? day(x.premUntil) : null), ...x.premSrc === "stars" ? [w.renews] : []);
+  const b = [];
+  if (!own && !(on && x.premSrc === "stars")) {
+    const link = await tg(env, "createInvoiceLink", {
+      title: w.invTitle,
+      description: w.invDesc,
+      payload: `prem:${chatOf(env)}`,
+      currency: "XTR",
+      prices: [{ label: w.invTitle, amount: p }],
+      subscription_period: 30 * 86400
+    });
+    if (link.ok && typeof link.result === "string") b.push([{ text: on ? w.extend(p) : w.subscribe(p), url: link.result }]);
+  }
+  b.push([cb(w.supportInstead, "sp"), ...own || on ? [] : [cb(w.ask, "pm:ask")]]);
+  b.push([cb(w.back, "menu")]);
+  return { text: lines.join("\n"), buttons: b };
+}
+async function supportView(env, lang2) {
+  const w = words(lang2), x = isOwner(env) ? null : await member(env);
+  return {
+    text: [w.sTitle, "", w.sBody, ...x && x.starsPaid ? ["", `<i>${w.sThanksBadge(x.starsPaid)}</i>`] : []].join("\n"),
+    buttons: [SUPPORT.map((n) => cb(`${n} \u2B50 (\u2248${usdOf(n)})`, "sp:" + n)), [cb(w.back, "menu")]]
+  };
+}
+async function sendSupportInvoice(env, chat, n, lang2) {
+  const w = words(lang2);
+  if (!SUPPORT.includes(n)) return { ok: false };
+  return tg(env, "sendInvoice", { chat_id: chat, title: w.supTitle, description: w.supDesc, payload: `sup:${chat}:${n}`, currency: "XTR", prices: [{ label: w.supTitle, amount: n }] });
+}
+async function askGift(env, chat, lang2) {
+  const x = await member(env), w = words(lang2);
+  await tg(env, "sendMessage", { chat_id: chat, text: w.asked });
+  await asChat(env.TELEGRAM_CHAT_ID, async () => {
+    const L = await langOf(env), o = words(L);
+    await tg(env, "sendMessage", {
+      chat_id: env.TELEGRAM_CHAT_ID,
+      text: o.ownerAsk(esc(x ? x.name : chat)),
+      parse_mode: "HTML",
+      reply_markup: { inline_keyboard: [[cb("\u2B50 +30", `us:pd:30:${chat}`), cb("\u2B50 +365", `us:pd:365:${chat}`), cb(L === "ar" ? "\u{1F464} \u0627\u0644\u0643\u0627\u0631\u062A" : "\u{1F464} Their card", "us:m:" + chat)]] }
+    });
+  });
+}
+async function preCheckout(env, q) {
+  const m = /^(prem|sup):(-?\d+)(?::(\d+))?$/.exec(String(q.invoice_payload || "")), all = await members(env);
+  const okPay = !!m && String(m[2]) === String(q.from && q.from.id) && (all[m[2]] || String(m[2]) === String(env.TELEGRAM_CHAT_ID)) && q.currency === "XTR" && (m[1] === "prem" ? q.total_amount === price(env) : SUPPORT.includes(q.total_amount));
+  await tg(env, "answerPreCheckoutQuery", { pre_checkout_query_id: q.id, ok: okPay, ...okPay ? {} : { error_message: "This payment is not valid any more \u2014 open /premium or /support again." } });
+  return okPay;
+}
+async function paid(env, chat, sp, lang2, now = Date.now()) {
+  const w = words(lang2), [kind, , n] = String(sp.invoice_payload || "").split(":"), stars = +sp.total_amount || 0, x = await member(env, chat);
+  await log(env, { t: now, chat: String(chat), kind, stars, charge: sp.telegram_payment_charge_id, renew: !!(sp.is_recurring && !sp.is_first_recurring) });
+  const name = esc(x && x.name || String(chat)), owner = String(chat) === String(env.TELEGRAM_CHAT_ID);
+  const tellOwner = async (text) => {
+    if (!owner) await tg(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: "HTML" });
+  };
+  const O = words(await asChat(env.TELEGRAM_CHAT_ID, () => langOf(env)));
+  if (kind === "prem") {
+    const until = sp.subscription_expiration_date ? sp.subscription_expiration_date * 1e3 : now + MONTH;
+    if (!owner) await grant(env, chat, until, "stars", sp.telegram_payment_charge_id);
+    const renew = !!(sp.is_recurring && !sp.is_first_recurring);
+    await tg(env, "sendMessage", { chat_id: chat, text: renew ? w.renewed(day(until)) : w.paidPrem(day(until)), parse_mode: "HTML" });
+    await tellOwner(renew ? O.ownerRenew(name, stars, day(until)) : O.ownerPrem(name, stars, day(until)));
+    return { kind, until };
+  }
+  if (kind === "sup") {
+    if (!owner) await setMember(env, chat, { supporter: true, starsPaid: (x && x.starsPaid || 0) + stars });
+    await tg(env, "sendMessage", { chat_id: chat, text: w.paidSup(stars), parse_mode: "HTML" });
+    await tellOwner(O.ownerSup(name, stars));
+    return { kind, stars, n };
+  }
+  return { kind: "unknown" };
+}
+async function log(env, e) {
+  if (!env.RATE) return;
+  let a = [];
+  try {
+    a = JSON.parse(await env.RATE.get("tg:stars:log") || "[]");
+  } catch (_) {
+  }
+  if (e.charge && a.some((x) => x.charge === e.charge)) return;
+  a.push(e);
+  try {
+    await env.RATE.put("tg:stars:log", JSON.stringify(a.slice(-1e3)));
+  } catch (_) {
+  }
+}
+async function statsView(env, lang2, now = Date.now()) {
+  const ar = lang2 === "ar", m = await members(env), list2 = Object.values(m);
+  let a = [];
+  try {
+    a = JSON.parse(env.RATE && await env.RATE.get("tg:stars:log") || "[]");
+  } catch (_) {
+  }
+  const month = new Date(now).toISOString().slice(0, 7), sum = (f) => a.filter(f).reduce((s, x) => s + (+x.stars || 0), 0);
+  const prem = list2.filter((x) => premiumNow(x, now)), paidP = prem.filter((x) => x.premSrc === "stars").length;
+  const L = [
+    ar ? "\u{1F4C8} <b>\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A</b>" : "\u{1F4C8} <b>Stats</b>",
+    "",
+    `\u{1F465} ${ar ? "\u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "Members"}: <b>${list2.length}</b>${list2.some((x) => x.paused) ? ` \xB7 \u23F8 ${list2.filter((x) => x.paused).length}` : ""}`,
+    `\u2B50 ${ar ? "\u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u062F\u0644\u0648\u0642\u062A\u064A" : "Premium now"}: <b>${prem.length}</b> (${ar ? "Stars" : "Stars"} ${paidP} \xB7 ${ar ? "\u0647\u062F\u064A\u0629" : "gift"} ${prem.length - paidP})`,
+    `\u{1F49B} ${ar ? "\u0627\u0644\u062F\u0627\u0639\u0645\u064A\u0646" : "Supporters"}: <b>${list2.filter((x) => x.supporter).length}</b>`,
+    "",
+    `\u2B50 ${ar ? "\u0627\u0644\u0634\u0647\u0631 \u062F\u0647" : "This month"}: <b>${sum((x) => new Date(x.t).toISOString().slice(0, 7) === month)}</b> \u2B50 (${ar ? "\u0645\u0645\u064A\u0632" : "premium"} ${sum((x) => x.kind === "prem" && new Date(x.t).toISOString().slice(0, 7) === month)} \xB7 ${ar ? "\u062F\u0639\u0645" : "support"} ${sum((x) => x.kind === "sup" && new Date(x.t).toISOString().slice(0, 7) === month)})`,
+    `\u2B50 ${ar ? "\u0645\u0646 \u0627\u0644\u0623\u0648\u0644" : "All time"}: <b>${sum(() => true)}</b> \u2B50 (\u2248 ${usdOf(sum(() => true))} ${ar ? "\u062F\u0641\u0639\u0647\u0627 \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "paid by members"})`,
+    "",
+    `<i>${ar ? "\u0627\u0644\u0633\u062D\u0628: \u0645\u0646 \u062D\u0633\u0627\u0628 \u0627\u0644\u0628\u0648\u062A \u0641\u064A Fragment (\u0627\u0646\u062A \u0628\u0646\u0641\u0633\u0643)." : "Withdraw: from the bot's balance via Fragment (yourself)."}</i>`
+  ];
+  return { text: L.join("\n"), buttons: [[cb(ar ? "\u{1F465} \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u{1F465} Members", "us"), cb(ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", "menu")]] };
+}
+async function expireRound(env, now = Date.now()) {
+  const m = await members(env);
+  let ended = 0;
+  for (const [chat, x] of Object.entries(m)) {
+    if (!x.premium || !x.premUntil) continue;
+    const L = x.lang === "ar" ? "ar" : "en", w = words(L);
+    if (x.premUntil <= now) {
+      await revoke(env, chat);
+      await tg(env, "sendMessage", { chat_id: chat, text: w.ended });
+      ended++;
+      continue;
+    }
+    if (x.premUntil - now < 3 * DAY2 && !x.premRemind && x.premSrc !== "stars") {
+      await setMember(env, chat, { premRemind: true });
+      await tg(env, "sendMessage", { chat_id: chat, text: w.remind(day(x.premUntil)) });
+    }
+  }
+  return { ended };
+}
+async function addDays(env, chat, days, now = Date.now()) {
+  const x = await member(env, chat);
+  if (!x) return null;
+  const from = premiumNow(x, now) && x.premUntil ? x.premUntil : now;
+  return grant(env, chat, from + days * DAY2, x.premSrc === "stars" && premiumNow(x, now) ? "stars" : "gift", x.subCharge);
 }
 
 // tools/worker/byok.mjs
@@ -1677,7 +1932,7 @@ function describe(a) {
   const what = k.what === "price" ? `${a.sym} price` : k.what === "change_24h" ? `${a.sym} 24h change` : k.what === "funding" ? `${a.sym} funding` : "Portfolio value";
   return `${what} ${k.op} ${v}`;
 }
-async function tg(env, method, body) {
+async function tg2(env, method, body) {
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
 }
@@ -1715,7 +1970,7 @@ async function runWatch(env, now = Date.now()) {
 Now: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
 <i>Your alert from ${local(a.created, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} \u2014 done, removed.</i>`;
     const buttons = a.sym ? [[{ text: "\u{1FA99} " + a.sym, callback_data: "c:" + (a.cg || "x-" + a.sym.toLowerCase()).slice(0, 58) }, { text: "\u{1F525} Liq Map", url: "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=" + encodeURIComponent(a.sym) }]] : [[{ text: "\u{1F4BC} Portfolio", callback_data: "pf" }]];
-    const r = await tg(env, "sendMessage", { chat_id: chatOf(env), text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
+    const r = await tg2(env, "sendMessage", { chat_id: chatOf(env), text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
     if (!r.ok) keep.push(a);
     else await logEvent(env, "alert", describe(a) + " \u2014 now " + nowTxt);
   }
@@ -1767,14 +2022,14 @@ var cleanSym = (v) => String(v == null ? "" : v).toUpperCase().replace(/^\$/, ""
 var newId = () => "tx_" + Date.now() + "_" + crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 var money = (v) => v == null || !isFinite(v) ? "\u2014" : Math.abs(v) >= 1e6 ? usd(v) : Math.abs(v) >= 1 || v === 0 ? usd2(v) : (v < 0 ? "\u2212" : "") + "$" + +Math.abs(v).toPrecision(4);
 var amt = (q) => (+Number(q).toPrecision(8)).toLocaleString("en-US", { maximumFractionDigits: 8 });
-function txDoc(sym, type, qty2, price2, note, extra = {}) {
+function txDoc(sym, type, qty2, price3, note, extra = {}) {
   const now = (/* @__PURE__ */ new Date()).toISOString();
   return JSON.parse(JSON.stringify({
     sym,
     type,
     qty: +qty2 || 0,
-    price: +price2 || 0,
-    total: (+qty2 || 0) * (+price2 || 0),
+    price: +price3 || 0,
+    total: (+qty2 || 0) * (+price3 || 0),
     date: extra.date || now,
     createdAt: now,
     note: String(note || "").slice(0, 500),
@@ -1809,16 +2064,16 @@ async function prepareTrade(ctx, input) {
   if (!held) return { error: `${sym} is not in the portfolio \u2014 add the coin in the app first (Add Coin), then record trades here` };
   const m = await loadMarket([], coinsOf(user)), sum = summarize(withIds(user, m), m, now);
   const row2 = sum.coins.find((c) => c.sym === sym), have = row2 ? row2.qty : 0, marketPrice = row2 && row2.price > 0 ? row2.price : null;
-  let qty2 = +i.amount, price2 = +i.price_usd;
+  let qty2 = +i.amount, price3 = +i.price_usd;
   const total = +i.total_usd, fee = +i.fee_usd > 0 ? +i.fee_usd : 0;
-  if (!(price2 > 0) && i.at_market) price2 = marketPrice || NaN;
-  if (!(price2 > 0) && qty2 > 0 && total > 0) price2 = total / qty2;
-  if (!(qty2 > 0) && total > 0 && price2 > 0) qty2 = total / price2;
-  if (!(price2 > 0)) return { error: i.at_market ? `no current price for ${sym}` : 'the price is missing \u2014 ask the user for the price (or the total paid), or set at_market if they said "at market price"' };
+  if (!(price3 > 0) && i.at_market) price3 = marketPrice || NaN;
+  if (!(price3 > 0) && qty2 > 0 && total > 0) price3 = total / qty2;
+  if (!(qty2 > 0) && total > 0 && price3 > 0) qty2 = total / price3;
+  if (!(price3 > 0)) return { error: i.at_market ? `no current price for ${sym}` : 'the price is missing \u2014 ask the user for the price (or the total paid), or set at_market if they said "at market price"' };
   if (!(qty2 > 0)) return { error: "the amount is missing \u2014 ask the user how much (coins, or the total in USD)" };
-  if (!isFinite(qty2 * price2) || qty2 * price2 > 1e9) return { error: "amount \xD7 price is not a sane number" };
+  if (!isFinite(qty2 * price3) || qty2 * price3 > 1e9) return { error: "amount \xD7 price is not a sane number" };
   if (side === "sell" && qty2 > have * (1 + 1e-9) + 1e-12) return { error: `only ${amt(have)} ${sym} held \u2014 can't sell ${amt(qty2)}` };
-  if (marketPrice && (price2 > marketPrice * 5 || price2 < marketPrice / 5)) return { error: `price $${r6(price2)} is far from today's $${r6(marketPrice)} \u2014 check the price with the user (maybe a typo or a different unit)` };
+  if (marketPrice && (price3 > marketPrice * 5 || price3 < marketPrice / 5)) return { error: `price $${r6(price3)} is far from today's $${r6(marketPrice)} \u2014 check the price with the user (maybe a typo or a different unit)` };
   const w = when(i.date, now);
   if (w.error) return { error: w.error };
   const note = String(i.note || "").slice(0, 200);
@@ -1830,15 +2085,15 @@ async function prepareTrade(ctx, input) {
     const sc = (user.coins || []).find((c) => c && !c.removed && String(c.sym).toUpperCase() === stableSym);
     if (!sc) return { error: `${stableSym} is not in the portfolio \u2014 add it in the app first, or record the trade without it` };
     const sr = sum.coins.find((c) => c.sym === stableSym), sHave = sr ? sr.qty : 0;
-    const cost = qty2 * price2 + fee;
+    const cost = qty2 * price3 + fee;
     if (side === "buy" && cost > sHave * (1 + 1e-9) + 1e-9) return { error: `only ${amt(sHave)} ${stableSym} held \u2014 not enough to pay $${r2(cost)}` };
     stable = stableSym;
   }
-  const id = newId(), docs = [[id, txDoc(sym, side, qty2, price2, note, { date: w.iso, feeUsd: fee })]];
+  const id = newId(), docs = [[id, txDoc(sym, side, qty2, price3, note, { date: w.iso, feeUsd: fee })]];
   const t2 = new Date(Date.parse(w.iso) + 1).toISOString();
-  if (stable && side === "buy") docs.push([newId() + "p", txDoc(stable, "sell", qty2 * price2 + fee, 1, "Paid for buying " + amt(qty2) + " " + sym, { date: t2, link: id, kind: "pay" })]);
+  if (stable && side === "buy") docs.push([newId() + "p", txDoc(stable, "sell", qty2 * price3 + fee, 1, "Paid for buying " + amt(qty2) + " " + sym, { date: t2, link: id, kind: "pay" })]);
   if (stable && side === "sell") {
-    const cash = Math.max(0, qty2 * price2 - fee);
+    const cash = Math.max(0, qty2 * price3 - fee);
     if (cash > 0) docs.push([newId() + "s", txDoc(stable, "buy", cash, 1, "From selling " + amt(qty2) + " " + sym, { date: t2, link: id })]);
   }
   const after = summarize(withIds({ ...user, txs: [...user.txs || [], ...docs.map((d) => d[1])] }, m), m, now);
@@ -1847,8 +2102,8 @@ async function prepareTrade(ctx, input) {
     side,
     sym,
     qty: r6(qty2),
-    price: r6(price2),
-    total: r2(qty2 * price2),
+    price: r6(price3),
+    total: r2(qty2 * price3),
     fee: fee || 0,
     date: w.iso,
     note,
@@ -1857,7 +2112,7 @@ async function prepareTrade(ctx, input) {
     held_after: r6(a ? a.qty : 0),
     avg_before: row2 ? r6(row2.avg) : null,
     avg_after: a ? r6(a.avg) : null,
-    realized_usd: side === "sell" && row2 ? r2((price2 - row2.avg) * qty2 - fee) : null,
+    realized_usd: side === "sell" && row2 ? r2((price3 - row2.avg) * qty2 - fee) : null,
     stable_after: sa ? r6(sa.qty) : stable ? 0 : null,
     value_after: r2(after.value)
   };
@@ -2010,8 +2265,8 @@ async function status(env) {
   const px = await prices([{ sym: "BTC", id: "bitcoin" }, ...Object.entries(p.pos).map(([sym, x]) => ({ sym, id: x.id }))]);
   const coins = Object.entries(p.pos).map(([sym, x]) => {
     const q = px[sym];
-    const price2 = q ? q.price : x.avg;
-    return { sym, qty: x.qty, avg: x.avg, price: price2, value: x.qty * price2, pnl_pct: x.avg > 0 ? (price2 / x.avg - 1) * 100 : 0, ch24: q ? q.ch24 : null, priced: !!q };
+    const price3 = q ? q.price : x.avg;
+    return { sym, qty: x.qty, avg: x.avg, price: price3, value: x.qty * price3, pnl_pct: x.avg > 0 ? (price3 / x.avg - 1) * 100 : 0, ch24: q ? q.ch24 : null, priced: !!q };
   }).sort((a, b) => b.value - a.value);
   const value = p.cash + coins.reduce((a, c) => a + c.value, 0), btcNow = px.BTC ? px.BTC.price : null;
   const hodl = btcNow && p.btcStart ? p.startCash * btcNow / p.btcStart : null;
@@ -2179,7 +2434,7 @@ function viewRestart(lang2 = "en") {
 
 // tools/worker/ai.mjs
 var H2 = 36e5;
-var DAY2 = 24 * H2;
+var DAY3 = 24 * H2;
 var MAX_ROUNDS = 8;
 var HISTORY = 10;
 var r23 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
@@ -2560,7 +2815,7 @@ async function runTool(ctx, name, input) {
     const id = c && (c.id || m.idOf[c.sym]);
     const f = id && await rawSeries(id);
     if (!f || !Array.isArray(f.p)) return { error: `no price history kept for "${q}" \u2014 use get_coin for its 7d / 30d change` };
-    const from = now - days * DAY2, pts = f.p.map((p, i) => [f.t0 + i * f.step, p]).filter(([t, p]) => t >= from && p > 0);
+    const from = now - days * DAY3, pts = f.p.map((p, i) => [f.t0 + i * f.step, p]).filter(([t, p]) => t >= from && p > 0);
     if (pts.length < 2) return { error: "not enough history" };
     ctx.used.add("hourly price history (GitHub prices branch)");
     let hi = pts[0], lo = pts[0];
@@ -2568,7 +2823,7 @@ async function runTool(ctx, name, input) {
       if (x[1] > hi[1]) hi = x;
       if (x[1] < lo[1]) lo = x;
     }
-    const day = (t) => local(t, { day: "numeric", month: "short" }), closes = {};
+    const day2 = (t) => local(t, { day: "numeric", month: "short" }), closes = {};
     for (const [t, p] of pts) closes[localParts(t).date] = r62(p);
     return {
       coin: c.sym,
@@ -2576,8 +2831,8 @@ async function runTool(ctx, name, input) {
       start_usd: r62(pts[0][1]),
       end_usd: r62(pts[pts.length - 1][1]),
       change_pct: r23((pts[pts.length - 1][1] / pts[0][1] - 1) * 100),
-      high: { usd: r62(hi[1]), on: day(hi[0]) },
-      low: { usd: r62(lo[1]), on: day(lo[0]) },
+      high: { usd: r62(hi[1]), on: day2(hi[0]) },
+      low: { usd: r62(lo[1]), on: day2(lo[0]) },
       daily_closes: closes
     };
   }
@@ -2752,7 +3007,7 @@ async function transcribe(env, voice) {
 
 // tools/worker/daily.mjs
 var H3 = 36e5;
-var DAY3 = 24 * H3;
+var DAY4 = 24 * H3;
 var DEF = { morning: true, evening: true, radar: true, sectors: true, pin: true, morningAt: "08:45", eveningAt: "21:00" };
 var mem6 = /* @__PURE__ */ new Map();
 async function kvGet5(env, k) {
@@ -2782,7 +3037,7 @@ var jget = async (env, k, d) => {
 };
 var jput = (env, k, v, ttl) => kvPut5(env, k, JSON.stringify(v), ttl);
 var lang = (env) => langOf(env);
-async function tg2(env, method, body) {
+async function tg3(env, method, body) {
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     return await r.json();
@@ -2790,8 +3045,8 @@ async function tg2(env, method, body) {
     return { ok: false };
   }
 }
-var send = (env, v, extra = {}) => tg2(env, "sendMessage", { chat_id: chatOf(env), text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
-var cb = (text, data) => ({ text, callback_data: data });
+var send = (env, v, extra = {}) => tg3(env, "sendMessage", { chat_id: chatOf(env), text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
+var cb2 = (text, data) => ({ text, callback_data: data });
 var url = (text, u) => ({ text, url: u });
 var LIQ = "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=";
 var r24 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
@@ -2892,7 +3147,7 @@ function marketFacts(m, sum) {
 var pfFacts = (sum) => ({ value_usd: r24(sum.value), change_24h_pct: r24(sum.ch24), change_24h_usd: r24(sum.d24), all_time_profit_usd: r24(sum.total), all_time_profit_pct: r24(sum.pctTotal), vs_holding_btc_pct: r24(sum.vsBtc) });
 function todo(sum, now) {
   const out = [], add = (prio, o) => out.push({ prio, ...o });
-  const tomorrow = localParts(now + DAY3).date;
+  const tomorrow = localParts(now + DAY4).date;
   for (const x of sum.dca || []) {
     if (x.s.state === "today") add(100, { what: "dca_today", coin: x.sym, buy_usd: r24(x.s.usd) });
     else if (x.s.state === "missed") add(90, { what: "dca_missed", coin: x.sym, buy_usd: r24(x.s.usd), days_late: x.s.late });
@@ -2950,17 +3205,17 @@ async function morning(env, now = Date.now(), L = null) {
   await jput(env, K(env, "snap:" + localParts(now).date), { t: now, value: sum.value, btc: m.btc && m.btc.price, fng: m.fng && m.fng.value, dom: m.global && m.global.dom && m.global.dom.btc }, 2 * 86400);
   const body = await compose(env, "morning", L, facts) || plainMorning(L, facts);
   const head = `\u2600\uFE0F <b>${w.morning}</b> \xB7 ${esc(local(now, { weekday: "short", day: "numeric", month: "short" }))}`;
-  return send(env, { text: head + "\n\n" + body, buttons: [[cb(w.plan, "pl"), cb(w.pf, "pf"), cb(w.mk, "mk")]] });
+  return send(env, { text: head + "\n\n" + body, buttons: [[cb2(w.plan, "pl"), cb2(w.pf, "pf"), cb2(w.mk, "mk")]] });
 }
 async function evening(env, now = Date.now(), L = null) {
   L = L || await lang(env);
   const w = WD[L];
   const g = await gather(env, now);
   if (!g) return send(env, { text: w.noUser });
-  const { user, m, sum } = g, day = localParts(now).date;
-  const snap = await jget(env, K(env, "snap:" + day), null), alerts = await listAlerts(env), log = await todayLog(env, now);
+  const { user, m, sum } = g, day2 = localParts(now).date;
+  const snap = await jget(env, K(env, "snap:" + day2), null), alerts = await listAlerts(env), log2 = await todayLog(env, now);
   const movers = sum.coins.filter((c) => !isStable(c.sym) && c.value >= 5 && c.ch24 != null).sort((a, b) => b.ch24 - a.ch24);
-  const trades = (user.txs || []).filter((t) => t && t.date && localParts(Date.parse(t.date)).date === day && t.kind !== "pay" && ["buy", "sell"].includes(t.type)).slice(0, 6).map((t) => ({ type: t.type, coin: t.sym, amount: r63(t.qty), price_usd: r63(t.price) }));
+  const trades = (user.txs || []).filter((t) => t && t.date && localParts(Date.parse(t.date)).date === day2 && t.kind !== "pay" && ["buy", "sell"].includes(t.type)).slice(0, 6).map((t) => ({ type: t.type, coin: t.sym, amount: r63(t.qty), price_usd: r63(t.price) }));
   const d = await derivatives("BTC").catch(() => null);
   const sectors = (m.sectors || []).filter((s) => s.mcap >= 1e9 && s.ch24 != null);
   const facts = {
@@ -2980,13 +3235,13 @@ async function evening(env, now = Date.now(), L = null) {
     btc_futures: d && d.summary ? { funding_8h_pct: d.summary.funding_8h_pct_avg, funding_reading: d.summary.funding_reading, open_interest_24h_pct: d.summary.open_interest_change_24h_pct, long_accounts_pct: d.summary.long_accounts_pct } : null,
     sectors_24h: sectors.length ? { best: sectors.filter((s) => s.ch24 > 0).sort((a, b) => b.ch24 - a.ch24).slice(0, 3).map((s) => ({ name: s.name, pct: r24(s.ch24) })), worst: sectors.filter((s) => s.ch24 < 0).sort((a, b) => a.ch24 - b.ch24).slice(0, 3).map((s) => ({ name: s.name, pct: r24(s.ch24) })) } : null,
     trades_today: trades,
-    events_today: log.map((e) => ({ time: local(e.t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }), type: e.type, what: e.text })),
+    events_today: log2.map((e) => ({ time: local(e.t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }), type: e.type, what: e.text })),
     closest_levels: nearest(alerts, m, sum),
     tomorrow: todo(sum, now).filter((x) => /dca_tomorrow|near_buy|take_profit_close/.test(x.what))
   };
   const body = await compose(env, "evening", L, facts) || plainEvening(L, facts);
   const head = `\u{1F319} <b>${w.evening}</b> \xB7 ${esc(local(now, { weekday: "short", day: "numeric", month: "short" }))}`;
-  return send(env, { text: head + "\n\n" + body, buttons: [[cb(w.pf, "pf"), cb(w.mk, "mk")]] });
+  return send(env, { text: head + "\n\n" + body, buttons: [[cb2(w.pf, "pf"), cb2(w.mk, "mk")]] });
 }
 var TODO_TXT = {
   en: (x) => ({
@@ -3106,7 +3361,7 @@ async function radar(env, now = Date.now()) {
   const d = await derivatives(sym).catch(() => null);
   if (!d || !d.summary) return { sym, sent: 0 };
   const s = d.summary, seen = await jget(env, K(env, "radar:seen"), {});
-  for (const k of Object.keys(seen)) if (now - seen[k] > 2 * DAY3) delete seen[k];
+  for (const k of Object.keys(seen)) if (now - seen[k] > 2 * DAY4) delete seen[k];
   const fresh = radarFindings(s).filter((k) => !(now - (seen[sym + ":" + k] || 0) < 12 * H3));
   if (!fresh.length) {
     await jput(env, K(env, "radar:seen"), seen);
@@ -3120,7 +3375,7 @@ async function radar(env, now = Date.now()) {
   if (s.liquidations_24h) lines.push(`\u2022 ${w.liq}: ${w.longsW} ${usd(s.liquidations_24h.longs_usd)} \xB7 ${w.shortsW} ${usd(s.liquidations_24h.shorts_usd)}`);
   const longSide = fresh.some((k) => /hot_longs|crowd_long/.test(k)), shortSide = fresh.some((k) => /hot_shorts|crowd_short/.test(k));
   lines.push("", `<i>${longSide && !shortSide ? w.noteL : shortSide && !longSide ? w.noteS : w.noteN}</i>`);
-  const r = await send(env, { text: lines.join("\n"), buttons: [[url("\u{1F525} Liq Map", LIQ + encodeURIComponent(sym)), cb("\u{1FA99} " + sym, "c:" + String(idOf[sym] || "x-" + sym.toLowerCase()).slice(0, 58))]] });
+  const r = await send(env, { text: lines.join("\n"), buttons: [[url("\u{1F525} Liq Map", LIQ + encodeURIComponent(sym)), cb2("\u{1FA99} " + sym, "c:" + String(idOf[sym] || "x-" + sym.toLowerCase()).slice(0, 58))]] });
   if (r && r.ok) {
     fresh.forEach((k) => {
       seen[sym + ":" + k] = now;
@@ -3135,8 +3390,8 @@ async function sectorRadar(env, now = Date.now()) {
   const m = await loadMarket([], user ? coinsOf(user) : []);
   const big2 = (m.sectors || []).filter((s) => s && s.mcap >= 1e9 && s.ch24 != null && Math.abs(s.ch24) >= 10);
   if (!big2.length) return { sent: 0 };
-  const day = localParts(now).date, seen = await jget(env, K(env, "sector:seen"), {});
-  const fresh = big2.filter((s) => seen[s.id] !== day).sort((a, b) => Math.abs(b.ch24) - Math.abs(a.ch24)).slice(0, 3);
+  const day2 = localParts(now).date, seen = await jget(env, K(env, "sector:seen"), {});
+  const fresh = big2.filter((s) => seen[s.id] !== day2).sort((a, b) => Math.abs(b.ch24) - Math.abs(a.ch24)).slice(0, 3);
   if (!fresh.length) return { sent: 0 };
   const mine = new Set(user ? Object.values(m.idOf).filter(Boolean) : []), symOf = (id) => (Object.entries(m.idOf).find(([, v]) => v === id) || [])[0];
   const L = await lang(env), ar = L === "ar", w = WD[L];
@@ -3146,12 +3401,12 @@ async function sectorRadar(env, now = Date.now()) {
     lines.push(`${s.ch24 > 0 ? "\u{1F680}" : "\u{1F53B}"} <b>${esc(s.name)}</b> ${pct(s.ch24, 1)} \xB7 ${usd(s.mcap)}${held.length ? `
    ${ar ? "\u0645\u0639\u0627\u0643 \u0645\u0646 \u0642\u0627\u062F\u062A\u0647" : "you hold its leaders"}: <b>${esc(held.join(", "))}</b>` : ""}`);
   }
-  const r = await send(env, { text: lines.join("\n"), buttons: [[cb(w.mk, "mk"), cb(w.pf, "pf")]] });
+  const r = await send(env, { text: lines.join("\n"), buttons: [[cb2(w.mk, "mk"), cb2(w.pf, "pf")]] });
   if (r && r.ok) {
     fresh.forEach((s) => {
-      seen[s.id] = day;
+      seen[s.id] = day2;
     });
-    for (const k of Object.keys(seen)) if (seen[k] !== day) delete seen[k];
+    for (const k of Object.keys(seen)) if (seen[k] !== day2) delete seen[k];
     await jput(env, K(env, "sector:seen"), seen);
     await logEvent(env, "sector", fresh.map((s) => s.name + " " + pct(s.ch24, 1)).join(", "), now);
   }
@@ -3172,7 +3427,7 @@ async function pinView(env, now = Date.now()) {
     alerts.length ? `\u{1F514} ${w.alerts(alerts.length)}${near ? ` \xB7 ${w.nearest}: ${esc(near.alert)} (${near.pct_away}% ${w.away})` : ""}` : null
   ].filter(Boolean);
   const origin = await kvGet5(env, "tg:origin");
-  return { text: L1.join("\n"), buttons: [[cb(w.pf, "pf"), cb(w.mk, "mk"), cb(w.refresh, "pin:r")], ...origin ? [[{ text: w.report, web_app: { url: origin + "/tg/app" } }]] : []] };
+  return { text: L1.join("\n"), buttons: [[cb2(w.pf, "pf"), cb2(w.mk, "mk"), cb2(w.refresh, "pin:r")], ...origin ? [[{ text: w.report, web_app: { url: origin + "/tg/app" } }]] : []] };
 }
 async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const v = await pinView(env, now);
@@ -3181,8 +3436,8 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const body = v.text.split("\n").slice(1).join("\n");
   if (!force && st.id && st.body === body && now - (st.t || 0) < H3) return { ok: true, same: true };
   if (st.id && !fresh) {
-    const r3 = await tg2(env, "editMessageText", { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: "HTML", reply_markup: { inline_keyboard: v.buttons } });
-    if ((r3.ok || /not modified/i.test(r3.description || "")) && force) await tg2(env, "pinChatMessage", { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {
+    const r3 = await tg3(env, "editMessageText", { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: "HTML", reply_markup: { inline_keyboard: v.buttons } });
+    if ((r3.ok || /not modified/i.test(r3.description || "")) && force) await tg3(env, "pinChatMessage", { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {
     });
     if (r3.ok || /not modified/i.test(r3.description || "")) {
       await jput(env, K(env, "pin"), { id: st.id, body, t: now });
@@ -3192,11 +3447,11 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const r = await send(env, v, { disable_notification: true });
   const id = r && r.ok && r.result && r.result.message_id;
   if (!id) return { ok: false };
-  await tg2(env, "pinChatMessage", { chat_id: chatOf(env), message_id: id, disable_notification: true });
+  await tg3(env, "pinChatMessage", { chat_id: chatOf(env), message_id: id, disable_notification: true });
   if (st.id) {
-    await tg2(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
+    await tg3(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
     });
-    if (fresh) await tg2(env, "deleteMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
+    if (fresh) await tg3(env, "deleteMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
     });
   }
   await jput(env, K(env, "pin"), { id, body, t: now });
@@ -3204,15 +3459,15 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
 }
 async function unpin(env) {
   const st = await jget(env, K(env, "pin"), {});
-  if (st.id) await tg2(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id });
+  if (st.id) await tg3(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id });
   await jput(env, K(env, "pin"), {});
 }
 async function viewDaily(env) {
   const L = await lang(env), w = WD[L], c = await getCfg(env);
-  const row2 = (k) => cb(`${c[k] ? "\u2705" : "\u2B1C"} ${w[k]}`, "dy:" + k);
+  const row2 = (k) => cb2(`${c[k] ? "\u2705" : "\u2B1C"} ${w[k]}`, "dy:" + k);
   const at = { morning: c.morningAt, evening: c.eveningAt, radar: L === "ar" ? "\u0643\u0644 30 \u062F\u0642\u064A\u0642\u0629" : "every 30 min", sectors: L === "ar" ? "\u0643\u0644 \u0633\u0627\u0639\u0629" : "hourly", pin: L === "ar" ? "\u0643\u0644 15 \u062F\u0642\u064A\u0642\u0629" : "every 15 min" };
   const lines = [w.dailyT, "", ...["morning", "evening", "radar", "sectors", "pin"].map((k) => `${c[k] ? "\u2705" : "\u2B1C"} ${w[k]} \xB7 <i>${at[k]}</i>`), "", `<i>${w.dailyNote}</i>`];
-  return { text: lines.join("\n"), buttons: [[row2("morning"), row2("evening")], [row2("radar"), row2("sectors")], [row2("pin")], [cb(w.nowM, "dy:now:m"), cb(w.nowE, "dy:now:e")], [cb(w.back, "menu")]] };
+  return { text: lines.join("\n"), buttons: [[row2("morning"), row2("evening")], [row2("radar"), row2("sectors")], [row2("pin")], [cb2(w.nowM, "dy:now:m"), cb2(w.nowE, "dy:now:e")], [cb2(w.back, "menu")]] };
 }
 async function runDaily(env, now = Date.now()) {
   if (!env.TELEGRAM_BOT_TOKEN || !chatOf(env)) return { job: null };
@@ -3550,11 +3805,11 @@ var T = {
     vFail: "\u{1F399}\uFE0F \u0645\u0627 \u0642\u062F\u0631\u062A\u0634 \u0623\u0642\u0631\u0627 \u0627\u0644\u0641\u0648\u064A\u0633 \u062F\u0647 \u2014 \u062C\u0631\u0651\u0628 \u062A\u0627\u0646\u064A \u0623\u0648 \u0627\u0643\u062A\u0628\u0647\u0627."
   }
 };
-var cb2 = (text, data) => ({ text, callback_data: data });
+var cb3 = (text, data) => ({ text, callback_data: data });
 var ORIGIN = null;
 var appBtn = (t, origin = ORIGIN) => origin ? { text: t.report, web_app: { url: origin + "/tg/app" } } : null;
 var url2 = (text, u) => ({ text, url: u });
-var price = (v) => !(v > 0) ? "\u2014" : v >= 1e3 ? usd2(v).replace(/\.\d\d$/, "") : v >= 1 ? usd2(v) : "$" + (+v.toPrecision(4)).toString();
+var price2 = (v) => !(v > 0) ? "\u2014" : v >= 1e3 ? usd2(v).replace(/\.\d\d$/, "") : v >= 1 ? usd2(v) : "$" + (+v.toPrecision(4)).toString();
 var big = (v) => !(v > 0) ? "\u2014" : v >= 1e12 ? "$" + (v / 1e12).toFixed(2) + "T" : v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + "B" : v >= 1e6 ? "$" + (v / 1e6).toFixed(1) + "M" : usd(v);
 var qty = (v) => +Number(v).toPrecision(6) + "";
 var BARS = "\u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588";
@@ -3565,7 +3820,7 @@ function spark(arr, n = 16) {
   const lo = Math.min(...pts), hi = Math.max(...pts);
   return pts.map((v) => BARS[hi > lo ? Math.round((v - lo) / (hi - lo) * 7) : 3]).join("");
 }
-var menuRows = (t) => [[cb2(t.pf, "pf"), cb2(t.market, "mk")], [cb2(t.plan, "pl"), cb2(t.movers, "mv")], [cb2(t.signals, "sg"), cb2(t.exit, "ex")], [cb2(t.alertsB, "al"), cb2(t.coin, "coin")], [cb2(t.dailyB, "dy"), cb2(t.paperB, "pp")], [appBtn(t), cb2(t.other, "lang:" + t.otherCode)].filter(Boolean)];
+var menuRows = (t) => [[cb3(t.pf, "pf"), cb3(t.market, "mk")], [cb3(t.plan, "pl"), cb3(t.movers, "mv")], [cb3(t.signals, "sg"), cb3(t.exit, "ex")], [cb3(t.alertsB, "al"), cb3(t.coin, "coin")], [cb3(t.dailyB, "dy"), cb3(t.paperB, "pp")], [appBtn(t), cb3(t.other, "lang:" + t.otherCode)].filter(Boolean)];
 var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }, { text: t.kb.pl }], [{ text: t.kb.ex }, { text: t.kb.mv }, { text: t.kb.sg }]], resize_keyboard: true, is_persistent: false, input_field_placeholder: "btc \xB7 sol eth \xB7 /menu" });
 var KB_ACT = () => Object.fromEntries(Object.values(T).flatMap((L) => [...Object.entries(L.kb), ...Object.entries(L.kbOld || {})].map(([act, text]) => [text, act])));
 var memLang = /* @__PURE__ */ new Map();
@@ -3633,7 +3888,7 @@ function viewPortfolio(t, cfg, sum, m, now) {
   if ((sum.dca || []).length) L.push(`\u{1F6D2} DCA ${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
   const mc = sum.macro.filter((x) => x.met).length, tp = nearestTp(sum);
   L.push(`\u{1F6AA} ${t.exitS(mc)}${tp ? ` \xB7 ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ""}`);
-  return { text: L.join("\n"), buttons: [[cb2(t.refresh, "pf"), cb2(t.movers, "mv")], [cb2(t.plan, "pl"), cb2(t.exit, "ex")], [cb2(t.signals, "sg"), url2(t.openApp, APP)], [cb2(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pf"), cb3(t.movers, "mv")], [cb3(t.plan, "pl"), cb3(t.exit, "ex")], [cb3(t.signals, "sg"), url2(t.openApp, APP)], [cb3(t.back, "menu")]] };
 }
 function viewExit(t, sum, now) {
   const mc = sum.macro.filter((x) => x.met).length, name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc };
@@ -3652,11 +3907,11 @@ function viewExit(t, sum, now) {
     bySym.get(x.sym).push(x);
   });
   for (const [sym, list2] of [...bySym].slice(0, 8)) {
-    L.push("", `<b>${esc(sym)}</b> \xB7 ${price(list2[0].price)}`);
-    list2.sort((a, b) => a.n - b.n).forEach((x) => L.push(`${x.to <= 0 ? "\u2705" : "\u2B1C"} TP${x.n} ${price(x.level)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`));
+    L.push("", `<b>${esc(sym)}</b> \xB7 ${price2(list2[0].price)}`);
+    list2.sort((a, b) => a.n - b.n).forEach((x) => L.push(`${x.to <= 0 ? "\u2705" : "\u2B1C"} TP${x.n} ${price2(x.level)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`));
   }
   if (bySym.size > 8) L.push("", `<i>${t.more(bySym.size - 8)}</i>`);
-  return { text: L.join("\n"), buttons: [[cb2(t.refresh, "ex"), url2(t.openExit, APP + "accumulation.html#exit")], [cb2(t.pf, "pf"), cb2(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [[cb3(t.refresh, "ex"), url2(t.openExit, APP + "accumulation.html#exit")], [cb3(t.pf, "pf"), cb3(t.back, "menu")]] };
 }
 function viewMovers(t, sum) {
   const list2 = sum.coins.filter((c) => c.value >= 1 && !isStable(c.sym));
@@ -3665,7 +3920,7 @@ function viewMovers(t, sum) {
     return rows.length ? [``, `${dir > 0 ? "\u{1F4C8}" : "\u{1F4C9}"} <b>${title}</b>`, ...rows.map((c) => `<code>${esc(c.sym.padEnd(6))} ${pct(c[key], 1).padStart(7)}</code>  ${usd(c.value)}`)] : [];
   };
   const L = [`\u{1F3C6} <b>${esc(t.mvT)}</b>  <i>(${t.noStable})</i>`, ...block("ch24", t.best24, 1), ...block("ch24", t.worst24, -1), ...block("ch7", t.best7, 1), ...block("ch7", t.worst7, -1)];
-  return { text: L.join("\n"), buttons: [[cb2(t.refresh, "mv"), cb2(t.pf, "pf")], [cb2(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [[cb3(t.refresh, "mv"), cb3(t.pf, "pf")], [cb3(t.back, "menu")]] };
 }
 function viewSignals(t, sum) {
   const by = { reinforce: [], sell: [], hold: [] };
@@ -3674,15 +3929,15 @@ function viewSignals(t, sum) {
   for (const k of ["reinforce", "sell", "hold"]) {
     if (!by[k].length) continue;
     L.push("", `<b>${t[k]}</b> (${by[k].length})`);
-    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${t.vsAvg} ${price(c.avg)}`));
+    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${t.vsAvg} ${price2(c.avg)}`));
     if (by[k].length > 12) L.push("\u2026");
   }
-  return { text: L.join("\n"), buttons: [[cb2(t.refresh, "sg"), cb2(t.pf, "pf")], [cb2(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [[cb3(t.refresh, "sg"), cb3(t.pf, "pf")], [cb3(t.back, "menu")]] };
 }
 function viewPlan(t, sum, now) {
   if (!sum.plan.length && !(sum.dca || []).length && !(sum.buyAt || []).length) return { text: `\u{1F4CB} <b>${t.planT}</b>
 
-${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb2(t.back, "menu")]] };
+${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb3(t.back, "menu")]] };
   const L = [`\u{1F4CB} <b>${t.planT}</b>`];
   if (sum.plan.length) {
     L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${sum.prog.completed}/${sum.prog.counted} \u2705`, "");
@@ -3703,16 +3958,16 @@ ${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb2(t.back,
     L.push("", `\u{1F514} <b>${t.buyAt}</b>`);
     sum.buyAt.forEach((x) => {
       const d = (x.price / x.at - 1) * 100;
-      L.push(`<code>${esc(x.sym.padEnd(6))}</code> ${price(x.at)} \xB7 ${price(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : "\u2705"}`);
+      L.push(`<code>${esc(x.sym.padEnd(6))}</code> ${price2(x.at)} \xB7 ${price2(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : "\u2705"}`);
     });
   }
-  return { text: L.join("\n"), buttons: [[cb2(t.refresh, "pl"), url2(t.openApp, APP + "accumulation.html")], [cb2(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pl"), url2(t.openApp, APP + "accumulation.html")], [cb3(t.back, "menu")]] };
 }
 var RANGES = [100, 200, 300, 500];
 function viewMarket(t, m, now, range = 100) {
   const L = [`\u{1F30D} <b>${t.mkT}</b> \xB7 ${hm(now)}`, "", ...marketShort(t, m)];
   const seen = /* @__PURE__ */ new Set(), top = [...m.top || [], ...m.top500 || []].filter((r) => r.rank && r.rank <= range && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
-  const line = (r) => row(r.sym, r.ch24, price(r.price));
+  const line = (r) => row(r.sym, r.ch24, price2(r.price));
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
   if (up.length) L.push("", `\u{1F4C8} <b>${t.topUp(range)}</b>`, ...up.map(line));
   if (dn.length) L.push("", `\u{1F4C9} <b>${t.topDn(range)}</b>`, ...dn.map(line));
@@ -3721,7 +3976,7 @@ function viewMarket(t, m, now, range = 100) {
     const sUp = [...st].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...st].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
     L.push("", `\u{1F3E6} <b>${t.stUp}</b>`, ...sUp.map(line), "", `\u{1F3E6} <b>${t.stDn}</b>`, ...sDn.map(line), `<i>${t.stNote}</i>`);
   }
-  return { text: L.join("\n"), buttons: [RANGES.map((n) => cb2((n === range ? "\u2713 " : "") + "Top " + n, "mk:" + n)), [cb2(t.refresh, "mk:" + range), url2("\u{1F9ED} Market Hub", APP + "market.html")], [cb2(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [RANGES.map((n) => cb3((n === range ? "\u2713 " : "") + "Top " + n, "mk:" + n)), [cb3(t.refresh, "mk:" + range), url2("\u{1F9ED} Market Hub", APP + "market.html")], [cb3(t.back, "menu")]] };
 }
 function viewCoin(t, coin, m, sum, now) {
   const row2 = [...m.top, ...m.top500].find((r) => r.id === coin.id) || {}, s = m.series[coin.id];
@@ -3732,28 +3987,28 @@ function viewCoin(t, coin, m, sum, now) {
   const L = [
     `\u{1FA99} <b>${esc(name)}</b> (${esc(sym)})${row2.rank ? ` \xB7 #${row2.rank}` : ""}`,
     "",
-    `\u{1F4B2} <b>${price(p)}</b>   ${dot(row2.ch24)} ${pct(row2.ch24, 1)} ${t.h24} \xB7 ${dot(ch7)} ${pct(ch7, 1)} ${t.d7}`
+    `\u{1F4B2} <b>${price2(p)}</b>   ${dot(row2.ch24)} ${pct(row2.ch24, 1)} ${t.h24} \xB7 ${dot(ch7)} ${pct(ch7, 1)} ${t.d7}`
   ];
   const sp = spark(row2.spark);
   if (sp) L.push(`<code>${sp}</code>  ${t.d7}`);
   if (row2.mcap || row2.vol) L.push(`\u{1F4CA} ${t.cap} ${big(row2.mcap)} \xB7 ${t.vol} ${big(row2.vol)}`);
   const mine = sum && sum.coins.find((c) => c.sym === sym);
-  if (mine) L.push("", `\u{1F45B} ${t.you} <b>${qty(mine.qty)} ${esc(sym)}</b> = ${usd2(mine.value)}`, `${t.avg} ${price(mine.avg)} \xB7 ${dot(mine.chg)} ${pct(mine.chg, 1)} \xB7 ${t.signal}: ${t[sum.signal[sym]] || t.hold}`);
+  if (mine) L.push("", `\u{1F45B} ${t.you} <b>${qty(mine.qty)} ${esc(sym)}</b> = ${usd2(mine.value)}`, `${t.avg} ${price2(mine.avg)} \xB7 ${dot(mine.chg)} ${pct(mine.chg, 1)} \xB7 ${t.signal}: ${t[sum.signal[sym]] || t.hold}`);
   else if (sum) L.push("", `\u{1F45B} ${t.noHold}`);
   const lv = m.live[coin.id], src = typeof lv === "string" ? lv : t.src;
   const age = lv ? t.live : m.parts && m.parts.top ? t.snap(Math.max(1, Math.round((now - Date.parse(m.parts.top)) / 6e4))) : "";
   L.push("", `<i>${src}${age ? " \xB7 " + age : ""}</i>`);
-  const btns = [[cb2(t.refresh, "c:" + coin.id.slice(0, 58)), url2(t.liq, LIQ2 + encodeURIComponent(sym))], [url2(t.chart, /^x-/.test(coin.id) ? "https://www.tradingview.com/symbols/" + encodeURIComponent(sym) + "USDT/" : "https://www.coingecko.com/en/coins/" + encodeURIComponent(coin.id))]];
+  const btns = [[cb3(t.refresh, "c:" + coin.id.slice(0, 58)), url2(t.liq, LIQ2 + encodeURIComponent(sym))], [url2(t.chart, /^x-/.test(coin.id) ? "https://www.tradingview.com/symbols/" + encodeURIComponent(sym) + "USDT/" : "https://www.coingecko.com/en/coins/" + encodeURIComponent(coin.id))]];
   if (mine) btns[1].push(url2(t.inApp, APP + "index.html#holdings/" + encodeURIComponent(sym)));
-  btns.push([cb2(t.back, "menu")]);
+  btns.push([cb3(t.back, "menu")]);
   return { text: L.join("\n"), buttons: btns };
 }
-async function tg3(env, method, body) {
+async function tg4(env, method, body) {
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
 }
-var send2 = (env, chat, v, extra = {}) => tg3(env, "sendMessage", { chat_id: chat, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
-var edit = (env, chat, msgId, v) => tg3(env, "editMessageText", { chat_id: chat, message_id: msgId, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {} });
+var send2 = (env, chat, v, extra = {}) => tg4(env, "sendMessage", { chat_id: chat, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
+var edit = (env, chat, msgId, v) => tg4(env, "editMessageText", { chat_id: chat, message_id: msgId, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {} });
 var WORDS = [
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, "menu"],
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, "pf"],
@@ -3767,7 +4022,9 @@ var WORDS = [
   [/^\/(users|members)$/i, "us"],
   [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, "link"],
   [/^\/app(\s+\S+)?$/i, "app"],
-  [/^\/(start\s+)?premium$/i, "prem"],
+  [/^\/(start\s+)?premium$|^المميز$/i, "prem"],
+  [/^\/(start\s+)?support$|^ادعم$/i, "sup"],
+  [/^\/stats$/i, "stats"],
   [/^\/start\s+\S+$/i, "menu"],
   [/^\/(report|app)$|^التقرير$/i, "rp"],
   [/^\/(daily|settings)$|^اليومي$/i, "dy"],
@@ -3800,18 +4057,18 @@ async function buildView(env, act, arg, guess) {
   const user = act === "menu" || act === "coin" ? null : await loadUser(env).catch(() => null);
   const cfg = settings(user && user.meta), lang2 = await getLang(env), t = T[lang2];
   if (act === "menu") return { t, views: [viewMenu(t, isOwner(env))] };
-  if (act === "lang") return { t, views: [{ text: "\u{1F310} English / \u0639\u0631\u0628\u064A", buttons: [[cb2("\u{1F1EC}\u{1F1E7} English", "lang:en"), cb2("\u{1F1F8}\u{1F1E6} \u0639\u0631\u0628\u064A", "lang:ar")]] }] };
-  if (act === "coin") return { t, views: [{ text: `\u{1FA99} ${t.askCoin}`, buttons: [[cb2(t.back, "menu")]] }] };
+  if (act === "lang") return { t, views: [{ text: "\u{1F310} English / \u0639\u0631\u0628\u064A", buttons: [[cb3("\u{1F1EC}\u{1F1E7} English", "lang:en"), cb3("\u{1F1F8}\u{1F1E6} \u0639\u0631\u0628\u064A", "lang:ar")]] }] };
+  if (act === "coin") return { t, views: [{ text: `\u{1FA99} ${t.askCoin}`, buttons: [[cb3(t.back, "menu")]] }] };
   if (act === "soon") return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
   const needUser = ["pf", "pl", "mv", "sg", "ex"].includes(act);
-  if (needUser && !user) return { t, views: [{ text: isOwner(env) ? t.noUser : t.noLink, buttons: [[cb2(t.market, "mk"), cb2(t.back, "menu")]] }] };
+  if (needUser && !user) return { t, views: [{ text: isOwner(env) ? t.noUser : t.noLink, buttons: [[cb3(t.market, "mk"), cb3(t.back, "menu")]] }] };
   const mine = coinsOf(user);
   if (act === "coins") {
     const m0 = await loadMarket([], mine);
     if (guess) {
       const known = (w) => {
-        const W2 = String(w).toUpperCase().replace(/^\$/, ""), lw = String(w).toLowerCase();
-        return mine.some((c) => c.sym === W2) || !!m0.cgIds[W2] || [...m0.top, ...m0.top500].some((r) => String(r.sym || "").toUpperCase() === W2 || String(r.name || "").toLowerCase() === lw || r.id === lw);
+        const W3 = String(w).toUpperCase().replace(/^\$/, ""), lw = String(w).toLowerCase();
+        return mine.some((c) => c.sym === W3) || !!m0.cgIds[W3] || [...m0.top, ...m0.top500].some((r) => String(r.sym || "").toUpperCase() === W3 || String(r.name || "").toLowerCase() === lw || r.id === lw);
       };
       if (!arg.every(known)) return { t, ai: guess };
     }
@@ -3829,7 +4086,7 @@ async function buildView(env, act, arg, guess) {
       if (id) views.push(viewCoin(t, { ...c, id }, m2, sum2, now));
       else miss.push(c.sym);
     }
-    miss.forEach((q) => views.push({ text: t.notFound(esc(q)), buttons: [[cb2(t.back, "menu")]] }));
+    miss.forEach((q) => views.push({ text: t.notFound(esc(q)), buttons: [[cb3(t.back, "menu")]] }));
     return { t, views };
   }
   const m = await loadMarket([], mine);
@@ -3857,24 +4114,29 @@ async function handleTelegram(request, env) {
   }
   const u = await request.json().catch(() => null);
   if (!u) return ok();
+  await ensureHook(env, request);
+  if (u.pre_checkout_query) {
+    await preCheckout(env, u.pre_checkout_query);
+    return ok();
+  }
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null) return ok();
   if (!await allowed(env, chat)) return stranger(env, u, msg, chat);
   if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {
     const x = (await members(env))[String(chat)] || {}, ar = x.lang === "ar";
-    const quiet = () => q ? tg3(env, "answerCallbackQuery", { callback_query_id: q.id }).catch(() => {
+    const quiet = () => q ? tg4(env, "answerCallbackQuery", { callback_query_id: q.id }).catch(() => {
     }) : null;
     if (x.paused) {
       await quiet();
-      if (await strangerOnce(env, chat)) await tg3(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u0643\u0644\u0651\u0645 \u0633\u0645\u064A\u0631." : "\u23F8 The bot is paused for you for now \u2014 ask Samir." }).catch(() => {
+      if (await strangerOnce(env, chat)) await tg4(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u0643\u0644\u0651\u0645 \u0633\u0645\u064A\u0631." : "\u23F8 The bot is paused for you for now \u2014 ask Samir." }).catch(() => {
       });
       return ok();
     }
     const f = await flood(env, chat);
     if (f !== "ok") {
       await quiet();
-      if (f === "warn") await tg3(env, "sendMessage", { chat_id: chat, text: ar ? "\u{1F30A} \u0631\u0633\u0627\u064A\u0644 \u0643\u062A\u064A\u0631 \u0648\u0631\u0627 \u0628\u0639\u0636 \u2014 \u0627\u0633\u062A\u0646\u0649 \u062F\u0642\u064A\u0642\u0629 \u0648\u0643\u0645\u0651\u0644 \u{1F642}" : "\u{1F30A} That's a lot of messages at once \u2014 wait a minute, then carry on \u{1F642}" }).catch(() => {
+      if (f === "warn") await tg4(env, "sendMessage", { chat_id: chat, text: ar ? "\u{1F30A} \u0631\u0633\u0627\u064A\u0644 \u0643\u062A\u064A\u0631 \u0648\u0631\u0627 \u0628\u0639\u0636 \u2014 \u0627\u0633\u062A\u0646\u0649 \u062F\u0642\u064A\u0642\u0629 \u0648\u0643\u0645\u0651\u0644 \u{1F642}" : "\u{1F30A} That's a lot of messages at once \u2014 wait a minute, then carry on \u{1F642}" }).catch(() => {
       });
       return ok();
     }
@@ -3916,7 +4178,7 @@ async function stranger(env, u, msg, chat) {
         await send2(env, chat, { text: w.welcome(esc(r.member.name)) }, { reply_markup: replyKb(t) });
         await send2(env, chat, viewMenu(t, isOwner(env)));
       });
-      await asChat(env.TELEGRAM_CHAT_ID, async () => send2(env, env.TELEGRAM_CHAT_ID, { text: STR[await getLang(env)].joined(esc(r.member.name), esc(r.member.user)), buttons: [[cb2("\u{1F465} /users", "us")]] }));
+      await asChat(env.TELEGRAM_CHAT_ID, async () => send2(env, env.TELEGRAM_CHAT_ID, { text: STR[await getLang(env)].joined(esc(r.member.name), esc(r.member.user)), buttons: [[cb3("\u{1F465} /users", "us")]] }));
       return ok();
     }
     if (await strangerOnce(env, chat)) await send2(env, chat, { text: r.error === "full" ? w.full : w.bad });
@@ -3930,12 +4192,12 @@ async function viewUsers(env, lang2) {
   const L = [ar ? `\u{1F465} <b>\u0627\u0644\u0623\u0639\u0636\u0627\u0621</b> (${list2.length}/${MAX_MEMBERS})` : `\u{1F465} <b>Members</b> (${list2.length}/${MAX_MEMBERS})`, ""];
   if (!list2.length) L.push(ar ? "\u0644\u0633\u0647 \u0645\u0641\u064A\u0634 \u062D\u062F. \u0627\u0636\u063A\u0637 \u2795 \u0644\u0643\u0648\u062F \u062F\u0639\u0648\u0629." : "Nobody yet. Tap \u2795 for an invite code.");
   const used2 = await Promise.all(list2.map(([c, x]) => usedToday(env, c, x)));
-  list2.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? "\u23F8 " : ""}${x.premium ? "\u2B50 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""}
+  list2.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? "\u23F8 " : ""}${premiumNow(x) ? "\u2B50 " : ""}${x.supporter ? "\u{1F49B} " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""}
     ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} \u{1F9E0} ${used2[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} \xB7 \u{1F4CA} ${used2[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
   if (list2.length) L.push("", ar ? "<i>\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0633\u0645 \u0639\u0634\u0627\u0646 \u062A\u063A\u064A\u0651\u0631 \u062D\u062F\u0648\u062F\u0647 \u0623\u0648 \u062A\u0634\u064A\u0644\u0647 \xB7 \u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u{1F517} \u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0631\u0628\u0648\u0637\u0629</i>" : "<i>Tap a name to change their limits or remove them \xB7 \u{1F4F1} app \xB7 \u{1F517} portfolio linked</i>");
   const b = [];
-  for (let i = 0; i < list2.length; i += 3) b.push(list2.slice(i, i + 3).map(([c, x], j) => cb2(`${i + j + 1}. ${x.name.split(" ")[0].slice(0, 12)}${x.uid ? " \u{1F517}" : x.email ? " \u{1F4F1}" : ""}`, "us:m:" + c)));
-  b.push([cb2(ar ? "\u2795 \u062F\u0639\u0648\u0629 \u062C\u062F\u064A\u062F\u0629" : "\u2795 New invite", "us:inv"), cb2(T[lang2].back, "menu")]);
+  for (let i = 0; i < list2.length; i += 3) b.push(list2.slice(i, i + 3).map(([c, x], j) => cb3(`${i + j + 1}. ${x.name.split(" ")[0].slice(0, 12)}${x.uid ? " \u{1F517}" : x.email ? " \u{1F4F1}" : ""}`, "us:m:" + c)));
+  b.push([cb3(ar ? "\u2795 \u062F\u0639\u0648\u0629 \u062C\u062F\u064A\u062F\u0629" : "\u2795 New invite", "us:inv"), cb3(T[lang2].back, "menu")]);
   return { text: L.join("\n"), buttons: b };
 }
 async function inviteMsg(env, lang2) {
@@ -3946,7 +4208,7 @@ async function inviteMsg(env, lang2) {
   } catch (_) {
   }
   if (!bot) {
-    const me = await tg3(env, "getMe", {}).catch(() => null);
+    const me = await tg4(env, "getMe", {}).catch(() => null);
     bot = me && me.ok && me.result && me.result.username;
     if (bot) try {
       if (env.RATE) await env.RATE.put("tg:botname", bot);
@@ -3964,7 +4226,7 @@ async function inviteMsg(env, lang2) {
 ${link}` : `
 
 Or send this link (opens the bot and lets them in):
-${link}` : ""), buttons: [[cb2(ar ? "\u{1F465} \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u{1F465} Members", "us")]] };
+${link}` : ""), buttons: [[cb3(ar ? "\u{1F465} \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u{1F465} Members", "us")]] };
 }
 var FG = {
   en: {
@@ -4043,7 +4305,7 @@ async function appRequest(env, chat, text) {
   await send2(env, chat, { text: w.sent });
   await asChat(env.TELEGRAM_CHAT_ID, async () => {
     const L = await getLang(env);
-    await send2(env, env.TELEGRAM_CHAT_ID, { text: AW[L].req(esc(me ? me.name : chat), esc(e)), buttons: [[cb2(L === "ar" ? "\u2705 \u0627\u0633\u0645\u062D" : "\u2705 Allow", "ap:ok:" + chat), cb2(L === "ar" ? "\u274C \u0644\u0623" : "\u274C No", "ap:no:" + chat)]] });
+    await send2(env, env.TELEGRAM_CHAT_ID, { text: AW[L].req(esc(me ? me.name : chat), esc(e)), buttons: [[cb3(L === "ar" ? "\u2705 \u0627\u0633\u0645\u062D" : "\u2705 Allow", "ap:ok:" + chat), cb3(L === "ar" ? "\u274C \u0644\u0623" : "\u274C No", "ap:no:" + chat)]] });
   });
 }
 async function linkPortfolio(env, chat, text) {
@@ -4064,7 +4326,7 @@ async function linkPortfolio(env, chat, text) {
   }
   await setMember(env, chat, { uid: hit.uid, ...me && !me.email && hit.email ? { email: hit.email } : {} });
   await setCfg(env, { morning: true, evening: true, pin: true, radar: true, sectors: true });
-  await send2(env, chat, { text: w.linked, buttons: [[cb2(T[lang2].pf, "pf"), cb2(T[lang2].back, "menu")]] });
+  await send2(env, chat, { text: w.linked, buttons: [[cb3(T[lang2].pf, "pf"), cb3(T[lang2].back, "menu")]] });
 }
 async function viewMember(env, lang2, c) {
   const x = await member(env, c), ar = lang2 === "ar";
@@ -4072,7 +4334,7 @@ async function viewMember(env, lang2, c) {
   const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
   const u = await usedToday(env, c, x), kk = await asChat(c, () => keyInfo(env));
   const L = [
-    `\u{1F464} ${x.paused ? "\u23F8 " : ""}${x.premium ? "\u2B50 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""}${x.paused ? ar ? " \u2014 <b>\u0645\u062A\u0648\u0642\u0641</b>" : " \u2014 <b>paused</b>" : ""}${x.premium ? ar ? " \u2014 <b>\u0645\u0645\u064A\u0632</b>" : " \u2014 <b>premium</b>" : ""}`,
+    `\u{1F464} ${x.paused ? "\u23F8 " : ""}${premiumNow(x) ? "\u2B50 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""}${x.paused ? ar ? " \u2014 <b>\u0645\u062A\u0648\u0642\u0641</b>" : " \u2014 <b>paused</b>" : ""}${premiumNow(x) ? (ar ? " \u2014 <b>\u0645\u0645\u064A\u0632</b>" : " \u2014 <b>premium</b>") + (x.premUntil ? ` ${ar ? "\u0644\u062D\u062F" : "until"} ${esc(local(x.premUntil, { day: "numeric", month: "short", year: "numeric" }))}${x.premSrc === "stars" ? " (Stars)" : ar ? " (\u0647\u062F\u064A\u0629)" : " (gift)"}` : "") : ""}${x.supporter ? ` \xB7 \u{1F49B} ${x.starsPaid || ""}\u2B50` : ""}`,
     `${ar ? "\u0645\u0646" : "Since"} ${esc(local(x.joined, { day: "numeric", month: "short", year: "numeric" }))}`,
     ...kk.has ? [`\u{1F511} ${ar ? "\u0628\u064A\u0633\u062A\u0639\u0645\u0644 \u0645\u0641\u062A\u0627\u062D Claude \u0628\u062A\u0627\u0639\u0647" : "Uses their own Claude key"} (\u2026${esc(kk.tail)}) \u2014 ${ar ? "\u062A\u0643\u0644\u0641\u062A\u0647 \u0639\u0644\u064A\u0647" : "on their bill"}`] : [],
     `\u{1F4F1} ${ar ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "App"}: ${x.email ? "<code>" + esc(x.email) + "</code>" : ar ? "\u0644\u0633\u0647" : "not yet"}`,
@@ -4082,10 +4344,10 @@ async function viewMember(env, lang2, c) {
     `\u{1F4CA} ${ar ? "\u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI Analysis reports a day"}: <b>${rp}</b> \xB7 ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} ${u.r}`
   ];
   return { text: L.join("\n"), buttons: [
-    [cb2("\u{1F9E0} \u2212", `us:ai:-:${c}`), cb2("\u{1F9E0} +", `us:ai:+:${c}`), cb2("\u{1F4CA} \u2212", `us:rp:-:${c}`), cb2("\u{1F4CA} +", `us:rp:+:${c}`)],
-    [cb2(x.premium ? ar ? "\u2606 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632" : "\u2606 Remove premium" : ar ? "\u2B50 \u0627\u062C\u0639\u0644\u0647 \u0645\u0645\u064A\u0632" : "\u2B50 Make premium", "us:pr:" + c)],
-    [cb2(x.paused ? ar ? "\u25B6\uFE0F \u0631\u062C\u0651\u0639\u0647" : "\u25B6\uFE0F Resume" : ar ? "\u23F8 \u0648\u0642\u0651\u0641\u0647" : "\u23F8 Pause", "us:pz:" + c), cb2("\u{1F5D1} " + (ar ? "\u0634\u064A\u0644\u0647" : "Remove"), "us:del:" + c)],
-    [cb2(ar ? "\u2B05\uFE0F \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u2B05\uFE0F Members", "us")]
+    [cb3("\u{1F9E0} \u2212", `us:ai:-:${c}`), cb3("\u{1F9E0} +", `us:ai:+:${c}`), cb3("\u{1F4CA} \u2212", `us:rp:-:${c}`), cb3("\u{1F4CA} +", `us:rp:+:${c}`)],
+    [cb3(ar ? "\u{1F381} \u2B50 +30 \u064A\u0648\u0645" : "\u{1F381} \u2B50 +30 days", `us:pd:30:${c}`), cb3(ar ? "\u{1F381} \u2B50 +365 \u064A\u0648\u0645" : "\u{1F381} \u2B50 +365 days", `us:pd:365:${c}`), ...premiumNow(x) ? [cb3(ar ? "\u2606 \u0625\u0644\u063A\u0627\u0621" : "\u2606 Remove", "us:pr:" + c)] : []],
+    [cb3(x.paused ? ar ? "\u25B6\uFE0F \u0631\u062C\u0651\u0639\u0647" : "\u25B6\uFE0F Resume" : ar ? "\u23F8 \u0648\u0642\u0651\u0641\u0647" : "\u23F8 Pause", "us:pz:" + c), cb3("\u{1F5D1} " + (ar ? "\u0634\u064A\u0644\u0647" : "Remove"), "us:del:" + c)],
+    [cb3(ar ? "\u2B05\uFE0F \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u2B05\uFE0F Members", "us")]
   ] };
 }
 async function onUpdate(env, u, msg, q, chat) {
@@ -4095,8 +4357,18 @@ async function onUpdate(env, u, msg, q, chat) {
   try {
     if (q) {
       const d = String(q.data || "");
-      const done = (text) => tg3(env, "answerCallbackQuery", { callback_query_id: q.id, ...text ? { text } : {} }).catch(() => {
+      const done = (text) => tg4(env, "answerCallbackQuery", { callback_query_id: q.id, ...text ? { text } : {} }).catch(() => {
       });
+      if (d === "sp" || /^sp:\d+$/.test(d) || d === "pm:ask" || d === "pm") {
+        const lang2 = await getLang(env);
+        if (d === "sp") await send2(env, chat, await supportView(env, lang2));
+        else if (d === "pm") await send2(env, chat, await premiumView(env, lang2));
+        else if (d === "pm:ask") {
+          if (!isOwner(env)) await askGift(env, chat, lang2);
+        } else await sendSupportInvoice(env, chat, +d.slice(3), lang2);
+        await done();
+        return ok();
+      }
       if (d === "fg:yes" || d === "fg:no") {
         const lang2 = await getLang(env), w = FG[lang2];
         if (d === "fg:no" || isOwner(env)) {
@@ -4108,7 +4380,7 @@ async function onUpdate(env, u, msg, q, chat) {
           const st = env.RATE ? JSON.parse(await env.RATE.get(K(env, "pin")) || "{}") : {};
           await unpin(env).catch(() => {
           });
-          if (st.id) await tg3(env, "deleteMessage", { chat_id: chat, message_id: st.id });
+          if (st.id) await tg4(env, "deleteMessage", { chat_id: chat, message_id: st.id });
         } catch (_) {
         }
         const me = await member(env);
@@ -4135,7 +4407,7 @@ async function onUpdate(env, u, msg, q, chat) {
           return ok();
         }
         const email = await getPending(env, who);
-        await tg3(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {
+        await tg4(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {
         });
         if (!email || !await member(env, who)) {
           await done("\u2014");
@@ -4187,17 +4459,26 @@ async function onUpdate(env, u, msg, q, chat) {
           await done("\u2705");
           return ok();
         }
-        if (d.startsWith("us:pr:")) {
-          const who = d.slice(6), x = await member(env, who);
+        if (d.startsWith("us:pr:") || /^us:pd:\d+:/.test(d)) {
+          const pd = /^us:pd:(\d+):(.+)$/.exec(d), who = pd ? pd[2] : d.slice(6), x = await member(env, who);
+          let note2 = "\u2B50";
           if (x) {
-            const on = !x.premium;
-            await setMember(env, who, { premium: on ? true : void 0, ai: on ? Math.max(PREM_AI, Number.isFinite(x.ai) ? x.ai : 0) : DEF_AI, reports: on ? Math.max(PREM_REPORTS, Number.isFinite(x.reports) ? x.reports : 0) : DEF_REPORTS });
-            const ar2 = x.lang === "ar";
-            await tg3(env, "sendMessage", { chat_id: who, text: on ? ar2 ? `\u2B50 \u0628\u0642\u064A\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632! \u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u{1F399} \u0627\u0634\u062A\u063A\u0644\u062A\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645.` : `\u2B50 You're a premium member now! Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` : ar2 ? "\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0627\u062A\u0634\u0627\u0644\u062A \u2014 \u0631\u062C\u0639\u062A \u0644\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629." : "Premium is off \u2014 back to the standard limits." }).catch(() => {
-            });
+            if (!pd && premiumNow(x)) {
+              await revoke(env, who);
+              note2 = "\u2606";
+              await tg4(env, "sendMessage", { chat_id: who, text: x.lang === "ar" ? "\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0627\u062A\u0634\u0627\u0644\u062A \u2014 \u0631\u062C\u0639\u062A \u0644\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629." : "Premium is off \u2014 back to the standard limits." }).catch(() => {
+              });
+            } else {
+              const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? local(y.premUntil, { day: "numeric", month: "short", year: "numeric" }) : "";
+              await tg4(env, "sendMessage", { chat_id: who, parse_mode: "HTML", text: x.lang === "ar" ? `\u{1F381} \u0633\u0645\u064A\u0631 \u0627\u062F\u0651\u0627\u0644\u0643 \u0627\u0644\u0645\u0645\u064A\u0632 \u0647\u062F\u064A\u0629 \u0644\u062D\u062F ${until}!
+\u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u{1F399} \u0627\u0634\u062A\u063A\u0644\u062A\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645.` : `\u{1F381} Samir gave you premium as a gift \u2014 until ${until}!
+Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {
+              });
+            }
           }
-          await edit(env, chat, q.message.message_id, await viewMember(env, lang2, who));
-          await done(x && !x.premium ? "\u2B50" : "\u2606");
+          const v = await viewMember(env, lang2, who), r3 = await edit(env, chat, q.message.message_id, v);
+          if (!r3.ok && !/not modified/i.test(r3.description || "")) await send2(env, chat, v);
+          await done(note2);
           return ok();
         }
         if (d.startsWith("us:pz:")) {
@@ -4205,7 +4486,7 @@ async function onUpdate(env, u, msg, q, chat) {
           if (x) {
             await setMember(env, who, { paused: x.paused ? void 0 : true });
             const ar2 = x.lang === "ar";
-            await tg3(env, "sendMessage", { chat_id: who, text: x.paused ? ar2 ? "\u25B6\uFE0F \u0627\u0644\u0628\u0648\u062A \u0631\u062C\u0639 \u064A\u0634\u062A\u063A\u0644 \u0639\u0646\u062F\u0643." : "\u25B6\uFE0F The bot is back on for you." : ar2 ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0627\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B." : "\u23F8 The bot is paused for you for now." }).catch(() => {
+            await tg4(env, "sendMessage", { chat_id: who, text: x.paused ? ar2 ? "\u25B6\uFE0F \u0627\u0644\u0628\u0648\u062A \u0631\u062C\u0639 \u064A\u0634\u062A\u063A\u0644 \u0639\u0646\u062F\u0643." : "\u25B6\uFE0F The bot is back on for you." : ar2 ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0627\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B." : "\u23F8 The bot is paused for you for now." }).catch(() => {
             });
           }
           await edit(env, chat, q.message.message_id, await viewMember(env, lang2, who));
@@ -4218,7 +4499,7 @@ async function onUpdate(env, u, msg, q, chat) {
             note = "\u{1F5D1}";
             if (had.email) await syncAccess(env, await accessEmails(env)).catch(() => {
             });
-            await tg3(env, "sendMessage", { chat_id: who, text: lang2 === "ar" ? "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0648\u0635\u0648\u0644\u0643 \u0644\u0644\u0628\u0648\u062A." : "Your access to this bot was removed." }).catch(() => {
+            await tg4(env, "sendMessage", { chat_id: who, text: lang2 === "ar" ? "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0648\u0635\u0648\u0644\u0643 \u0644\u0644\u0628\u0648\u062A." : "Your access to this bot was removed." }).catch(() => {
             });
           }
         }
@@ -4274,7 +4555,7 @@ async function onUpdate(env, u, msg, q, chat) {
       if (/^tx:(ok|no):\w+$/.test(d)) {
         const lang2 = await getLang(env), t2 = T[lang2], gid = d.slice(6);
         const kb = ((q.message.reply_markup || {}).inline_keyboard || []).map((r4) => r4.filter((b) => !/^tx:/.test(b.callback_data || ""))).filter((r4) => r4.length);
-        await tg3(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: kb } }).catch(() => {
+        await tg4(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: kb } }).catch(() => {
         });
         if (d.startsWith("tx:no:")) {
           const was = await cancelTrades(env, gid);
@@ -4287,7 +4568,7 @@ async function onUpdate(env, u, msg, q, chat) {
         if (r3.ok) {
           const L = [t22.txSaved(r3.trades.length)];
           for (const h of r3.holdings) L.push(`\u2022 ${esc(h.sym)} ${t22.nowHold}: <b>${(+Number(h.qty).toPrecision(8)).toLocaleString("en-US", { maximumFractionDigits: 8 })}</b>${h.avg ? ` \xB7 ${t22.avg} ${money(h.avg)}` : ""}`);
-          await send2(env, chat, { text: L.join("\n"), buttons: [[cb2(t22.pf, "pf"), cb2(t22.back, "menu")]] });
+          await send2(env, chat, { text: L.join("\n"), buttons: [[cb3(t22.pf, "pf"), cb3(t22.back, "menu")]] });
           for (const x of r3.trades) await logEvent(env, "trade", `${x.side} ${x.qty} ${x.sym} @ $${x.price}`);
           await done("\u2705");
         } else {
@@ -4313,6 +4594,10 @@ async function onUpdate(env, u, msg, q, chat) {
       const r = await edit(env, chat, q.message.message_id, views[0]);
       if (!r.ok && !/not modified/i.test(r.description || "")) await send2(env, chat, views[0]);
       await done(`\u2705 ${t.updated} ${local(Date.now(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })}`);
+      return ok();
+    }
+    if (msg && msg.successful_payment) {
+      await paid(env, chat, msg.successful_payment, await getLang(env));
       return ok();
     }
     if (msg && (msg.voice || msg.audio)) {
@@ -4345,7 +4630,7 @@ async function onVoice(env, chat, voice) {
 }
 async function onText(env, chat, text, budget = 36, into = null) {
   const p = parse(text);
-  tg3(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
+  tg4(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
   });
   if (into && p.act !== "ai") {
     if (!["menu", "coin", "coins", "pf", "mk", "pl", "mv", "sg", "ex"].includes(p.act)) await edit(env, chat, into.id, { text: into.head });
@@ -4380,7 +4665,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (p.act === "rp") {
     const t2 = T[await getLang(env)], b = appBtn(t2);
-    await send2(env, chat, { text: t2.reportT, buttons: b ? [[b]] : [[cb2(t2.back, "menu")]] });
+    await send2(env, chat, { text: t2.reportT, buttons: b ? [[b]] : [[cb3(t2.back, "menu")]] });
     return;
   }
   if (p.act === "pp") {
@@ -4430,23 +4715,16 @@ async function onText(env, chat, text, budget = 36, into = null) {
     return;
   }
   if (p.act === "prem") {
-    const lang2 = await getLang(env), ar = lang2 === "ar";
-    if (isOwner(env)) {
-      await send2(env, chat, { text: ar ? "\u0627\u0646\u062A \u0645\u0645\u064A\u0632 \u0623\u0635\u0644\u0627\u064B \u2B50" : "You are premium already \u2B50" });
-      return;
-    }
-    const me = await member(env);
-    if (me && me.premium) {
-      await send2(env, chat, { text: ar ? "\u2B50 \u0627\u0646\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632 \u0628\u0627\u0644\u0641\u0639\u0644." : "\u2B50 You are a premium member already." });
-      return;
-    }
-    await send2(env, chat, { text: ar ? `\u2B50 \u0627\u062A\u0628\u0639\u062A \u0644\u0633\u0645\u064A\u0631 \u2014 \u0644\u0645\u0627 \u064A\u0648\u0627\u0641\u0642 \u0647\u064A\u0648\u0635\u0644\u0643 \u0647\u0646\u0627.
-\u0627\u0644\u0645\u0645\u064A\u0632: \u0631\u0633\u0627\u064A\u0644 \u0635\u0648\u062A\u064A\u0629 \u{1F399}\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645.` : `\u2B50 Sent to Samir \u2014 you'll hear here once he says yes.
-Premium: voice notes \u{1F399}, ${PREM_AI} questions and ${PREM_REPORTS} AI Analysis reports a day.` });
-    await asChat(env.TELEGRAM_CHAT_ID, async () => {
-      const L = await getLang(env);
-      await send2(env, env.TELEGRAM_CHAT_ID, { text: L === "ar" ? `\u2B50 <b>${esc(me ? me.name : chat)}</b> \u0639\u0627\u064A\u0632 \u064A\u0628\u0642\u0649 \u0639\u0636\u0648 \u0645\u0645\u064A\u0632.` : `\u2B50 <b>${esc(me ? me.name : chat)}</b> asks to become a premium member.`, buttons: [[cb2(L === "ar" ? "\u2B50 \u0627\u062C\u0639\u0644\u0647 \u0645\u0645\u064A\u0632" : "\u2B50 Make premium", "us:pr:" + chat), cb2(L === "ar" ? "\u{1F464} \u0627\u0644\u0643\u0627\u0631\u062A" : "\u{1F464} Their card", "us:m:" + chat)]] });
-    });
+    await send2(env, chat, await premiumView(env, await getLang(env)));
+    return;
+  }
+  if (p.act === "sup") {
+    await send2(env, chat, await supportView(env, await getLang(env)));
+    return;
+  }
+  if (p.act === "stats") {
+    const lang2 = await getLang(env);
+    await send2(env, chat, isOwner(env) ? await statsView(env, lang2) : { text: T[lang2].ownerOnly });
     return;
   }
   if (p.act === "fg") {
@@ -4455,7 +4733,7 @@ Premium: voice notes \u{1F399}, ${PREM_AI} questions and ${PREM_REPORTS} AI Anal
       await send2(env, chat, { text: w.owner });
       return;
     }
-    await send2(env, chat, { text: w.ask, buttons: [[cb2(w.yes, "fg:yes"), cb2(w.no, "fg:no")]] });
+    await send2(env, chat, { text: w.ask, buttons: [[cb3(w.yes, "fg:yes"), cb3(w.no, "fg:no")]] });
     return;
   }
   if (p.act === "ai") {
@@ -4474,7 +4752,7 @@ Premium: voice notes \u{1F399}, ${PREM_AI} questions and ${PREM_REPORTS} AI Anal
   }
   if (/^\/start/.test(text)) {
     await send2(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });
-    await tg3(env, "setMyCommands", { commands: cmds(await getLang(env)) }).catch(() => {
+    await tg4(env, "setMyCommands", { commands: cmds(await getLang(env)) }).catch(() => {
     });
   }
   for (const v of views) await send2(env, chat, v);
@@ -4497,20 +4775,20 @@ async function answer(env, chat, question, budget = 36, into = null) {
     console.log(JSON.stringify({ ai: "crash", message: String(e && e.message).slice(0, 300) }));
     return { error: "claude" };
   });
-  if (r.error) return show({ text: r.error === "limit" ? t.aiLimit(r.limit) : r.error === "nokey" ? t.aiNoKey : r.error === "ownkey" ? t.aiOwnKey : r.error === "busy" ? t.aiBusy : t.aiErr, buttons: [[cb2(t.back, "menu")]] });
+  if (r.error) return show({ text: r.error === "limit" ? t.aiLimit(r.limit) : r.error === "nokey" ? t.aiNoKey : r.error === "ownkey" ? t.aiOwnKey : r.error === "busy" ? t.aiBusy : t.aiErr, buttons: [[cb3(t.back, "menu")]] });
   const foot = `<i>\u{1F4E1} ${t.data}: ${esc(r.sources.length ? r.sources.join(" \xB7 ") : "general knowledge")}
 ${t.aiLeft(r.left, r.limit)}</i>`;
   const btns = [];
-  if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb2("\u{1FA99} " + sym, "c:" + cid.slice(0, 58))));
+  if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb3("\u{1FA99} " + sym, "c:" + cid.slice(0, 58))));
   if (r.coins.length === 1) btns[0].push(url2("\u{1F525} Liq Map", LIQ2 + encodeURIComponent(r.coins[0][1])));
-  if (r.paper) btns.push([cb2(t.paperB, "pp"), cb2(paperWords[lang2].undo, "pp:undo")]);
-  btns.push([cb2(t.newChat, "new"), cb2(t.back, "menu")]);
+  if (r.paper) btns.push([cb3(t.paperB, "pp"), cb3(paperWords[lang2].undo, "pp:undo")]);
+  btns.push([cb3(t.newChat, "new"), cb3(t.back, "menu")]);
   let tx = "";
   if (r.trades && r.trades.length) {
     const ql = /[\u0600-\u06FF]/.test(question) ? "ar" : "en", tq = T[ql];
     const gid = await keepTrades(env, r.trades, ql);
     tx = tradeLines(r.trades, ql === "ar") + "\n\n";
-    btns.unshift([cb2(r.trades.length > 1 ? tq.txOkAll(r.trades.length) : tq.txOk, "tx:ok:" + gid), cb2(tq.txNo, "tx:no:" + gid)]);
+    btns.unshift([cb3(r.trades.length > 1 ? tq.txOkAll(r.trades.length) : tq.txOk, "tx:ok:" + gid), cb3(tq.txNo, "tx:no:" + gid)]);
   }
   let text = r.text + "\n\n" + tx + foot;
   if (top.length + text.length > 4e3) text = r.text.slice(0, Math.max(200, 3900 - foot.length - tx.length - top.length)) + "\u2026\n\n" + tx + foot;
@@ -4547,8 +4825,8 @@ var run = (env, act, arg, guess) => act === "coinById" ? buildById(env, arg) : b
 var cmds = (lang2, owner = true) => {
   const a = lang2 === "ar";
   return [
-    ...owner ? [] : [["app", a ? "\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "Open the app"], ["link", a ? "\u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 /link \u0627\u0644\u0643\u0648\u062F" : "Link your portfolio \u2014 /link CODE"], ["premium", a ? "\u0627\u0637\u0644\u0628 \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u2B50" : "Ask for premium \u2B50"], ["forget", a ? "\u0627\u0645\u0633\u062D \u0628\u064A\u0627\u0646\u0627\u062A\u064A \u0645\u0646 \u0627\u0644\u0628\u0648\u062A" : "Delete my data from the bot"]],
-    ...owner ? [["invite", a ? "\u0643\u0648\u062F \u062F\u0639\u0648\u0629 \u0644\u0635\u0627\u062D\u0628\u0643" : "Invite code for a friend"], ["users", a ? "\u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "Members"]] : [],
+    ...owner ? [] : [["app", a ? "\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "Open the app"], ["link", a ? "\u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 /link \u0627\u0644\u0643\u0648\u062F" : "Link your portfolio \u2014 /link CODE"], ["premium", a ? "\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u2B50" : "Premium \u2B50"], ["support", a ? "\u0627\u062F\u0639\u0645 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u{1F49B}" : "Support the project \u{1F49B}"], ["forget", a ? "\u0627\u0645\u0633\u062D \u0628\u064A\u0627\u0646\u0627\u062A\u064A \u0645\u0646 \u0627\u0644\u0628\u0648\u062A" : "Delete my data from the bot"]],
+    ...owner ? [["invite", a ? "\u0643\u0648\u062F \u062F\u0639\u0648\u0629 \u0644\u0635\u0627\u062D\u0628\u0643" : "Invite code for a friend"], ["users", a ? "\u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "Members"], ["stats", a ? "\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0648\u0627\u0644\u0640 Stars" : "Stats & Stars"]] : [],
     ["start", a ? "\u0627\u0628\u062F\u0623 \u2014 \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u062A\u062D\u062A \u0627\u0644\u0634\u0627\u062A" : "Start \u2014 the buttons under the chat"],
     ["menu", a ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
     ["report", a ? "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644 (\u0635\u0641\u062D\u0629)" : "Full report (a page)"],
@@ -4583,7 +4861,7 @@ async function ensureCmds(env) {
     cmdMem.set(c, v);
     return;
   }
-  const r = await tg3(env, "setMyCommands", { commands: cmds(lang2, own), scope: { type: "chat", chat_id: +c || c } }).catch(() => ({}));
+  const r = await tg4(env, "setMyCommands", { commands: cmds(lang2, own), scope: { type: "chat", chat_id: +c || c } }).catch(() => ({}));
   if (r && r.ok) {
     cmdMem.set(c, v);
     try {
@@ -4607,9 +4885,9 @@ async function ensureDesc(env) {
   if (had === DESC_V || descMem === DESC_V) return;
   descMem = DESC_V;
   for (const [lc, [long, short]] of Object.entries(DESC)) {
-    await tg3(env, "setMyDescription", { description: long, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
+    await tg4(env, "setMyDescription", { description: long, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
     });
-    await tg3(env, "setMyShortDescription", { short_description: short, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
+    await tg4(env, "setMyShortDescription", { short_description: short, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
     });
   }
   try {
@@ -4618,6 +4896,29 @@ async function ensureDesc(env) {
   }
 }
 var descMem = null;
+var HOOK_UPDATES = ["message", "edited_message", "callback_query", "pre_checkout_query"];
+var HOOK_V = "2";
+var hookMem = null;
+async function ensureHook(env, request) {
+  if (hookMem === HOOK_V) return;
+  let had = null;
+  try {
+    had = env.RATE ? await env.RATE.get("tg:hookv") : null;
+  } catch (_) {
+  }
+  if (had === HOOK_V) {
+    hookMem = HOOK_V;
+    return;
+  }
+  const u = new URL(request.url), r = await tg4(env, "setWebhook", { url: u.origin + u.pathname, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: false });
+  if (r && r.ok) {
+    hookMem = HOOK_V;
+    try {
+      if (env.RATE) await env.RATE.put("tg:hookv", HOOK_V);
+    } catch (_) {
+    }
+  }
+}
 async function setup(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { "content-type": "application/json" } });
   if (!env.TG_SECRET || u.searchParams.get("key") !== env.TG_SECRET) return json(403, { ok: false, error: "Wrong or missing key." });
@@ -4625,11 +4926,11 @@ async function setup(request, env) {
   if (missing.length) return json(400, { ok: false, missing });
   if (!/^[A-Za-z0-9_-]{16,256}$/.test(env.TG_SECRET)) return json(400, { ok: false, error: "TG_SECRET must be 16+ letters, digits, _ or - (Telegram rule)." });
   const hook = u.origin + u.pathname.replace(/\/setup$/, "");
-  const a = await tg3(env, "setWebhook", { url: hook, secret_token: env.TG_SECRET, allowed_updates: ["message", "edited_message", "callback_query"], drop_pending_updates: true });
+  const a = await tg4(env, "setWebhook", { url: hook, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: true });
   resetBudget();
   return asChat(env.TELEGRAM_CHAT_ID, async () => {
     const user = await loadUser(env).catch(() => null), lang2 = await getLang(env), t = T[lang2];
-    const b = await tg3(env, "setMyCommands", { commands: cmds(lang2) });
+    const b = await tg4(env, "setMyCommands", { commands: cmds(lang2) });
     const c = await send2(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
     await send2(env, env.TELEGRAM_CHAT_ID, viewMenu(t, isOwner(env)));
     return json(a.ok && b.ok && c.ok ? 200 : 502, { ok: !!(a.ok && b.ok && c.ok), webhook: a.ok ? "set" : a.description, menu: b.ok ? "set" : b.description, welcome: c.ok ? "sent" : c.description, portfolio: serviceAccount(env) ? user ? "connected" : "not found" : "FIREBASE_SERVICE_ACCOUNT missing" });
@@ -5270,14 +5571,14 @@ setKeyHandler(async (env, email, body) => {
       await saveKey(env, k);
       return { ...await keyInfo(env), checked: w === "ok" };
     }
-    const st = await keyInfo(env), day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const st = await keyInfo(env), day2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const limit = x.paused ? 0 : st.has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
     let used2 = 0;
     try {
-      used2 = x.uid && env.RATE ? +await env.RATE.get(`ai:${x.uid}:${day}`) || 0 : 0;
+      used2 = x.uid && env.RATE ? +await env.RATE.get(`ai:${x.uid}:${day2}`) || 0 : 0;
     } catch (_) {
     }
-    return { ...st, reports: { limit, used: used2, left: Math.max(0, limit - used2) } };
+    return { ...st, reports: { limit, used: used2, left: Math.max(0, limit - used2) }, premium: premiumNow(x), premUntil: x.premUntil || null, premSrc: x.premSrc || null, supporter: !!x.supporter, starsPaid: x.starsPaid || 0 };
   });
 });
 var worker_default = {
@@ -5294,22 +5595,23 @@ var worker_default = {
   },
   // every 5 minutes (tools/worker/wrangler.toml → crons): the alerts you set in words, then the bot's own messages (phase 5)
   async scheduled(event, env, ctx) {
-    const now = event && event.scheduledTime ? +event.scheduledTime : Date.now(), log = (k, e) => console.log(JSON.stringify({ [k]: "error", message: String(e && e.message).slice(0, 200) }));
+    const now = event && event.scheduledTime ? +event.scheduledTime : Date.now(), log2 = (k, e) => console.log(JSON.stringify({ [k]: "error", message: String(e && e.message).slice(0, 200) }));
     ctx.waitUntil((async () => {
       resetBudget();
       await migrateOwner(env);
       await kickPrices(env).then((r) => {
         if (r.kick === "sent" || r.kick === "refused") console.log(JSON.stringify(r));
-      }).catch((e) => log("kick", e));
+      }).catch((e) => log2("kick", e));
+      await expireRound(env, Date.now()).catch((e) => log2("premium", e));
       for (const chat of await activeChats(env)) {
         resetBudget();
         await asChat(chat, async () => {
           await runWatch(env).then((r) => {
             if (r.fired) console.log(JSON.stringify({ watch: r }));
-          }).catch((e) => log("watch", e));
+          }).catch((e) => log2("watch", e));
           await runDaily(env, now).then((r) => {
             if (r.job) console.log(JSON.stringify({ daily: r }));
-          }).catch((e) => log("daily", e));
+          }).catch((e) => log2("daily", e));
         });
       }
     })());

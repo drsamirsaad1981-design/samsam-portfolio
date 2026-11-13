@@ -1,6 +1,7 @@
 // tools/worker/index.mjs — the one Cloudflare Worker: AI Analysis (/analyze, tools/ai-worker.js) + the Telegram bot (/tg).
 // Built into a single file by tools/build-worker.mjs → tools/dist/samsam-worker.js (that file is what you paste).
 import ai, { setMemberCheck, setKeyHandler } from '../ai-worker.js';
+import { expireRound, premiumNow } from './stars.mjs';
 import { saveKey, keyInfo, ownKey, deleteKey, validShape, keyWorks, BYOK_REPORTS } from './byok.mjs';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
@@ -32,7 +33,7 @@ setKeyHandler(async (env, email, body) => {
     const st = await keyInfo(env), day = new Date().toISOString().slice(0, 10);   // + the quick-report allowance for the AI Analysis screen
     const limit = x.paused ? 0 : st.has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
     let used = 0; try { used = x.uid && env.RATE ? +(await env.RATE.get(`ai:${x.uid}:${day}`)) || 0 : 0; } catch (_) {}
-    return { ...st, reports: { limit, used, left: Math.max(0, limit - used) } };
+    return { ...st, reports: { limit, used, left: Math.max(0, limit - used) }, premium: premiumNow(x), premUntil: x.premUntil || null, premSrc: x.premSrc || null, supporter: !!x.supporter, starsPaid: x.starsPaid || 0 };
   });
 });
 
@@ -55,6 +56,7 @@ export default {
       resetBudget();   // one allowance of outside calls for the whole run (Cloudflare counts per run)
       await migrateOwner(env);
       await kickPrices(env).then(r => { if (r.kick === 'sent' || r.kick === 'refused') console.log(JSON.stringify(r)); }).catch(e => log('kick', e));   // GitHub late → run the market snapshot now
+      await expireRound(env, Date.now()).catch(e => log('premium', e));   // ⭐ a premium that ended → standard limits (3-day reminder before)
       for (const chat of await activeChats(env)) {   // each person in turn, as themselves: their alerts, then their daily messages
         resetBudget();
         await asChat(chat, async () => {
