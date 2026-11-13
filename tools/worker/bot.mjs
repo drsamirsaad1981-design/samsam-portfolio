@@ -13,7 +13,7 @@
 // Worker secrets (Settings → Variables and Secrets): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT,
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
-import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, langOf, flood, forgetChat } from './who.mjs';
+import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
 import { forgetPortfolio, findLinkCode, syncAccess, loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
@@ -411,7 +411,7 @@ async function viewUsers(env, lang) {
   const L = [ar ? `👥 <b>الأعضاء</b> (${list.length}/${MAX_MEMBERS})` : `👥 <b>Members</b> (${list.length}/${MAX_MEMBERS})`, ''];
   if (!list.length) L.push(ar ? 'لسه مفيش حد. اضغط ➕ لكود دعوة.' : 'Nobody yet. Tap ➕ for an invite code.');
   const used = await Promise.all(list.map(([c, x]) => usedToday(env, c, x)));
-  list.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? '⏸ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''}\n    ${ar ? 'النهارده' : 'today'} 🧠 ${used[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} · 📊 ${used[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
+  list.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? '⏸ ' : ''}${x.premium ? '⭐ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''}\n    ${ar ? 'النهارده' : 'today'} 🧠 ${used[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} · 📊 ${used[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
   if (list.length) L.push('', ar ? '<i>اضغط على اسم عشان تغيّر حدوده أو تشيله · 📱 التطبيق · 🔗 المحفظة مربوطة</i>' : '<i>Tap a name to change their limits or remove them · 📱 app · 🔗 portfolio linked</i>');
   const b = []; for (let i = 0; i < list.length; i += 3) b.push(list.slice(i, i + 3).map(([c, x], j) => cb(`${i + j + 1}. ${x.name.split(' ')[0].slice(0, 12)}${x.uid ? ' 🔗' : x.email ? ' 📱' : ''}`, 'us:m:' + c)));
   b.push([cb(ar ? '➕ دعوة جديدة' : '➕ New invite', 'us:inv'), cb(T[lang].back, 'menu')]);
@@ -477,10 +477,11 @@ async function viewMember(env, lang, c) {
   if (!x) return viewUsers(env, lang);
   const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
   const u = await usedToday(env, c, x);
-  const L = [`👤 ${x.paused ? '⏸ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}${x.paused ? (ar ? ' — <b>متوقف</b>' : ' — <b>paused</b>') : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
+  const L = [`👤 ${x.paused ? '⏸ ' : ''}${x.premium ? '⭐ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}${x.paused ? (ar ? ' — <b>متوقف</b>' : ' — <b>paused</b>') : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
     `📱 ${ar ? 'التطبيق' : 'App'}: ${x.email ? '<code>' + esc(x.email) + '</code>' : (ar ? 'لسه' : 'not yet')}`, `🔗 ${ar ? 'المحفظة' : 'Portfolio'}: ${x.uid ? (ar ? 'مربوطة ✅' : 'linked ✅') : (ar ? 'مش مربوطة' : 'not linked')}`, '',
     `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${ai}</b> · ${ar ? 'النهارده' : 'today'} ${u.q}`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${rp}</b> · ${ar ? 'النهارده' : 'today'} ${u.r}`];
   return { text: L.join('\n'), buttons: [[cb('🧠 −', `us:ai:-:${c}`), cb('🧠 +', `us:ai:+:${c}`), cb('📊 −', `us:rp:-:${c}`), cb('📊 +', `us:rp:+:${c}`)],
+    [cb(x.premium ? (ar ? '☆ شيل المميز' : '☆ Not premium') : (ar ? '⭐ مميز' : '⭐ Premium'), 'us:pr:' + c)],
     [cb(x.paused ? (ar ? '▶️ رجّعه' : '▶️ Resume') : (ar ? '⏸ وقّفه' : '⏸ Pause'), 'us:pz:' + c), cb('🗑 ' + (ar ? 'شيله' : 'Remove'), 'us:del:' + c)], [cb(ar ? '⬅️ الأعضاء' : '⬅️ Members', 'us')]] };
 }
 
@@ -531,6 +532,14 @@ async function onUpdate(env, u, msg, q, chat) {
           if (x) { const f = lim[1] === 'ai' ? 'ai' : 'reports', cur = Number.isFinite(x[f]) ? x[f] : (f === 'ai' ? DEF_AI : DEF_REPORTS), max = f === 'ai' ? 50 : 10;
             await setMember(env, lim[3], { [f]: Math.max(0, Math.min(max, cur + (lim[2] === '+' ? 1 : -1))) }); }
           await edit(env, chat, q.message.message_id, await viewMember(env, lang, lim[3])); await done('✅'); return ok();
+        }
+        if (d.startsWith('us:pr:')) {   // ⭐ premium on / off: voice notes + 20 questions + 3 reports a day (− / + still adjust)
+          const who = d.slice(6), x = await member(env, who);
+          if (x) { const on = !x.premium;
+            await setMember(env, who, { premium: on ? true : undefined, ai: on ? Math.max(PREM_AI, Number.isFinite(x.ai) ? x.ai : 0) : DEF_AI, reports: on ? Math.max(PREM_REPORTS, Number.isFinite(x.reports) ? x.reports : 0) : DEF_REPORTS });
+            const ar2 = x.lang === 'ar';
+            await tg(env, 'sendMessage', { chat_id: who, text: on ? (ar2 ? `⭐ بقيت عضو مميز! الرسايل الصوتية 🎙 اشتغلت، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis في اليوم.` : `⭐ You're a premium member now! Voice notes 🎙 are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.`) : (ar2 ? 'العضوية المميزة اتشالت — رجعت للحدود العادية.' : 'Premium is off — back to the standard limits.') }).catch(() => {}); }
+          await edit(env, chat, q.message.message_id, await viewMember(env, lang, who)); await done(x && !x.premium ? '⭐' : '☆'); return ok();
         }
         if (d.startsWith('us:pz:')) {   // ⏸ / ▶️ a member
           const who = d.slice(6), x = await member(env, who);
@@ -595,7 +604,10 @@ async function onUpdate(env, u, msg, q, chat) {
       await done(`✅ ${t.updated} ${local(Date.now(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })}`);
       return ok();
     }
-    if (msg && (msg.voice || msg.audio)) { await onVoice(env, chat, msg.voice || msg.audio); return ok(); }
+    if (msg && (msg.voice || msg.audio)) {
+      if (!(await isPremium(env))) { const ar = (await getLang(env)) === 'ar'; await send(env, chat, { text: ar ? '🎙 الرسايل الصوتية للأعضاء المميزين ⭐ — اكتبها كتابة، أو اطلب من سمير.' : '🎙 Voice notes are for ⭐ premium members — type it instead, or ask Samir.' }); return ok(); }
+      await onVoice(env, chat, msg.voice || msg.audio); return ok();
+    }
     if (!msg || typeof msg.text !== 'string') return ok();
     await onText(env, chat, msg.text);
   } catch (e) {

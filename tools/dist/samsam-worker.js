@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 9cb1592f4d4798c6
+// sources-hash: b7bb6f282c355445
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -830,6 +830,13 @@ async function accessEmails(env) {
 }
 var DEF_AI = 5;
 var DEF_REPORTS = 1;
+var PREM_AI = 20;
+var PREM_REPORTS = 3;
+async function isPremium(env) {
+  if (isOwner(env)) return true;
+  const x = await member(env);
+  return !!(x && x.premium);
+}
 async function aiLimitFor(env) {
   if (isOwner(env)) return Math.max(1, Math.min(500, parseInt(env.AI_DAILY_LIMIT || "30", 10) || 30));
   const x = await member(env);
@@ -3829,7 +3836,7 @@ async function viewUsers(env, lang2) {
   const L = [ar ? `\u{1F465} <b>\u0627\u0644\u0623\u0639\u0636\u0627\u0621</b> (${list2.length}/${MAX_MEMBERS})` : `\u{1F465} <b>Members</b> (${list2.length}/${MAX_MEMBERS})`, ""];
   if (!list2.length) L.push(ar ? "\u0644\u0633\u0647 \u0645\u0641\u064A\u0634 \u062D\u062F. \u0627\u0636\u063A\u0637 \u2795 \u0644\u0643\u0648\u062F \u062F\u0639\u0648\u0629." : "Nobody yet. Tap \u2795 for an invite code.");
   const used2 = await Promise.all(list2.map(([c, x]) => usedToday(env, c, x)));
-  list2.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? "\u23F8 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""}
+  list2.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? "\u23F8 " : ""}${x.premium ? "\u2B50 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""}
     ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} \u{1F9E0} ${used2[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} \xB7 \u{1F4CA} ${used2[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
   if (list2.length) L.push("", ar ? "<i>\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0633\u0645 \u0639\u0634\u0627\u0646 \u062A\u063A\u064A\u0651\u0631 \u062D\u062F\u0648\u062F\u0647 \u0623\u0648 \u062A\u0634\u064A\u0644\u0647 \xB7 \u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u{1F517} \u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0631\u0628\u0648\u0637\u0629</i>" : "<i>Tap a name to change their limits or remove them \xB7 \u{1F4F1} app \xB7 \u{1F517} portfolio linked</i>");
   const b = [];
@@ -3971,7 +3978,7 @@ async function viewMember(env, lang2, c) {
   const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
   const u = await usedToday(env, c, x);
   const L = [
-    `\u{1F464} ${x.paused ? "\u23F8 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""}${x.paused ? ar ? " \u2014 <b>\u0645\u062A\u0648\u0642\u0641</b>" : " \u2014 <b>paused</b>" : ""}`,
+    `\u{1F464} ${x.paused ? "\u23F8 " : ""}${x.premium ? "\u2B50 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""}${x.paused ? ar ? " \u2014 <b>\u0645\u062A\u0648\u0642\u0641</b>" : " \u2014 <b>paused</b>" : ""}`,
     `${ar ? "\u0645\u0646" : "Since"} ${esc(local(x.joined, { day: "numeric", month: "short", year: "numeric" }))}`,
     `\u{1F4F1} ${ar ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "App"}: ${x.email ? "<code>" + esc(x.email) + "</code>" : ar ? "\u0644\u0633\u0647" : "not yet"}`,
     `\u{1F517} ${ar ? "\u0627\u0644\u0645\u062D\u0641\u0638\u0629" : "Portfolio"}: ${x.uid ? ar ? "\u0645\u0631\u0628\u0648\u0637\u0629 \u2705" : "linked \u2705" : ar ? "\u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629" : "not linked"}`,
@@ -3981,6 +3988,7 @@ async function viewMember(env, lang2, c) {
   ];
   return { text: L.join("\n"), buttons: [
     [cb2("\u{1F9E0} \u2212", `us:ai:-:${c}`), cb2("\u{1F9E0} +", `us:ai:+:${c}`), cb2("\u{1F4CA} \u2212", `us:rp:-:${c}`), cb2("\u{1F4CA} +", `us:rp:+:${c}`)],
+    [cb2(x.premium ? ar ? "\u2606 \u0634\u064A\u0644 \u0627\u0644\u0645\u0645\u064A\u0632" : "\u2606 Not premium" : ar ? "\u2B50 \u0645\u0645\u064A\u0632" : "\u2B50 Premium", "us:pr:" + c)],
     [cb2(x.paused ? ar ? "\u25B6\uFE0F \u0631\u062C\u0651\u0639\u0647" : "\u25B6\uFE0F Resume" : ar ? "\u23F8 \u0648\u0642\u0651\u0641\u0647" : "\u23F8 Pause", "us:pz:" + c), cb2("\u{1F5D1} " + (ar ? "\u0634\u064A\u0644\u0647" : "Remove"), "us:del:" + c)],
     [cb2(ar ? "\u2B05\uFE0F \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u2B05\uFE0F Members", "us")]
   ] };
@@ -4082,6 +4090,19 @@ async function onUpdate(env, u, msg, q, chat) {
           }
           await edit(env, chat, q.message.message_id, await viewMember(env, lang2, lim[3]));
           await done("\u2705");
+          return ok();
+        }
+        if (d.startsWith("us:pr:")) {
+          const who = d.slice(6), x = await member(env, who);
+          if (x) {
+            const on = !x.premium;
+            await setMember(env, who, { premium: on ? true : void 0, ai: on ? Math.max(PREM_AI, Number.isFinite(x.ai) ? x.ai : 0) : DEF_AI, reports: on ? Math.max(PREM_REPORTS, Number.isFinite(x.reports) ? x.reports : 0) : DEF_REPORTS });
+            const ar2 = x.lang === "ar";
+            await tg3(env, "sendMessage", { chat_id: who, text: on ? ar2 ? `\u2B50 \u0628\u0642\u064A\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632! \u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u{1F399} \u0627\u0634\u062A\u063A\u0644\u062A\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645.` : `\u2B50 You're a premium member now! Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` : ar2 ? "\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0627\u062A\u0634\u0627\u0644\u062A \u2014 \u0631\u062C\u0639\u062A \u0644\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629." : "Premium is off \u2014 back to the standard limits." }).catch(() => {
+            });
+          }
+          await edit(env, chat, q.message.message_id, await viewMember(env, lang2, who));
+          await done(x && !x.premium ? "\u2B50" : "\u2606");
           return ok();
         }
         if (d.startsWith("us:pz:")) {
@@ -4200,6 +4221,11 @@ async function onUpdate(env, u, msg, q, chat) {
       return ok();
     }
     if (msg && (msg.voice || msg.audio)) {
+      if (!await isPremium(env)) {
+        const ar = await getLang(env) === "ar";
+        await send2(env, chat, { text: ar ? "\u{1F399} \u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 \u2014 \u0627\u0643\u062A\u0628\u0647\u0627 \u0643\u062A\u0627\u0628\u0629\u060C \u0623\u0648 \u0627\u0637\u0644\u0628 \u0645\u0646 \u0633\u0645\u064A\u0631." : "\u{1F399} Voice notes are for \u2B50 premium members \u2014 type it instead, or ask Samir." });
+        return ok();
+      }
       await onVoice(env, chat, msg.voice || msg.audio);
       return ok();
     }

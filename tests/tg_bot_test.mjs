@@ -1010,5 +1010,21 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('…the owner: /forget is for members (points to /new)', /\/new/.test(last().b.text));
 }
 
+// ⭐ premium (manual, in /users): voice notes + 20 questions + 3 reports a day
+{
+  const vMsg = () => post({ update_id: ++UPD, message: { message_id: 3, chat: { id: 888, type: 'private' }, from: { id: 888 }, voice: { file_id: 'VF1', duration: 5, mime_type: 'audio/ogg', file_size: 70000 } } }, ENV.TG_SECRET, { ...ENVV, RATE: KV });
+  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
+  sent.length = 0; fileGets.length = 0; await vMsg();
+  check('🎙 a member who is not premium: a voice note → "for ⭐ premium members", not transcribed', /premium/.test(last().b.text) && fileGets.length === 0, last().b.text);
+  sent.length = 0; await tapAs(555, 'us:pr:888');
+  const x = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('⭐ Premium → 20 questions, 3 reports a day; the member is told; the card shows ⭐', x.premium === true && x.ai === 20 && x.reports === 3 && sent.some(x2 => String(x2.b.chat_id) === '888' && /premium member/.test(x2.b.text || '')) && /⭐/.test(sent.find(x2 => x2.m === 'editMessageText').b.text), x);
+  sent.length = 0; fileGets.length = 0; await vMsg();
+  check('…now their voice notes work', fileGets.length === 1, sent.map(x2 => (x2.b.text || '').slice(0, 30)));
+  await tapAs(555, 'us:pr:888');
+  const y = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('☆ off again → back to 5 / 1, no voice', !y.premium && y.ai === 5 && y.reports === 1);
+}
+
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
