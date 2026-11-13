@@ -115,7 +115,8 @@ export async function memberByEmail(env, email) {
 // the e-mails allowed into the app = the members' approved e-mails (the owner's is in the rules themselves)
 export async function accessEmails(env) { return Object.values(await members(env)).map(x => x.email).filter(Boolean).sort(); }
 // limits: the owner's from the Worker settings; a member's own (set in /users) or the defaults: 5 questions, 1 report
-export const DEF_AI = 5, DEF_REPORTS = 1, PREM_AI = 20, PREM_REPORTS = 3;
+export const DEF_AI = 5, DEF_REPORTS = 0,   // a member's quick AI Analysis report: off until they add their own Claude key (or the owner gives some in /users)
+  PREM_AI = 20, PREM_REPORTS = 3;
 // ⭐ premium (the owner switches it in /users): voice notes + more questions / reports. The owner counts as premium.
 export async function isPremium(env) { if (isOwner(env)) return true; const x = await member(env); return !!(x && x.premium); }
 export async function aiLimitFor(env) {

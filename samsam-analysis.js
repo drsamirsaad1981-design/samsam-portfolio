@@ -501,6 +501,31 @@ function renderAiStart() {
       </div>
     </div>`;
   aiPaintIcons();
+  if (window.Samsam && Samsam.isOwner && !Samsam.isOwner()) aiMemberQuick(ar);   // an invited member: the quick report runs on their own key
+}
+// a member: the quick report is off until they add their own Claude key (or Samir gives them some); the free way always works
+async function aiMemberQuick(ar) {
+  const btn = document.querySelector('#analysisBody .ai-quick'), note = btn && btn.parentElement.querySelector('.ai-opt-h div span');
+  if (!btn) return;
+  btn.disabled = true;
+  const say = t => { if (note) note.innerHTML = t; };
+  say(ar ? 'لحظة…' : 'One moment…');
+  let st = null;
+  try {
+    const t = await Samsam.idToken();
+    const r = await fetch(ANALYSIS_WORKER_URL.replace(/\/analyze$/, '/key'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken: t, action: 'status' }) });
+    st = r.ok ? await r.json() : null;
+  } catch (_) { st = null; }
+  if (!document.body.contains(btn)) return;
+  const rp = st && st.reports;
+  if (rp && rp.left > 0) {
+    btn.disabled = false;
+    say((st.has ? (ar ? `على مفتاح Claude بتاعك (…${st.tail}) — ` : `On your own Claude key (…${st.tail}) — `) : '') + (ar ? `باقي لك <b>${rp.left}</b> من ${rp.limit} النهارده.` : `<b>${rp.left}</b> of ${rp.limit} left today.`));
+  } else if (rp && rp.limit > 0) {
+    say(ar ? `خلّصت تقارير النهارده (${rp.limit}) — جرّب بكرة، أو الطريقة المجانية فوق.` : `Today's ${rp.limit} used — try tomorrow, or the free way above.`);
+  } else {
+    say(ar ? 'محتاج مفتاح Claude بتاعك — الإعدادات ← My Claude key. الطريقة المجانية فوق شغالة عادي.' : 'Needs your own Claude key — Settings → My Claude key. The free way above works as usual.');
+  }
 }
 function aiPaintIcons() { document.querySelectorAll('#analysisBody [data-ic]').forEach(e => { if (!e.firstChild) e.innerHTML = SamsamUI.ic(e.dataset.ic, { solo: true, size: 14 }); }); }
 async function aiPasteReport() {

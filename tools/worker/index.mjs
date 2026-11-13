@@ -29,7 +29,10 @@ setKeyHandler(async (env, email, body) => {
       if (w === 'refused') return { status: 400, error: 'Claude refused this key — check it in console.anthropic.com.' };
       await saveKey(env, k); return { ...(await keyInfo(env)), checked: w === 'ok' };
     }
-    return keyInfo(env);
+    const st = await keyInfo(env), day = new Date().toISOString().slice(0, 10);   // + the quick-report allowance for the AI Analysis screen
+    const limit = x.paused ? 0 : st.has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
+    let used = 0; try { used = x.uid && env.RATE ? +(await env.RATE.get(`ai:${x.uid}:${day}`)) || 0 : 0; } catch (_) {}
+    return { ...st, reports: { limit, used, left: Math.max(0, limit - used) } };
   });
 });
 

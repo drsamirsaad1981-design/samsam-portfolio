@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: a8fd8c4554967503
+// sources-hash: 57896584be827fb0
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -61,7 +61,7 @@ var ai_worker_default = {
       limit = m.limit;
       model = m.model;
       if (m.apiKey) apiKey = m.apiKey;
-      if (!(limit > 0)) return reply(429, { error: "AI reports are not on for this account \u2014 ask Samir.", remaining: 0 });
+      if (!(limit > 0)) return reply(429, { error: "The quick report needs your own Claude key (Settings \u2192 My Claude key). The free way \u2014 with the Claude app \u2014 works for everyone.", remaining: 0 });
     }
     const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const key = `ai:${user.uid}:${day}`;
@@ -842,7 +842,7 @@ async function accessEmails(env) {
   return Object.values(await members(env)).map((x) => x.email).filter(Boolean).sort();
 }
 var DEF_AI = 5;
-var DEF_REPORTS = 1;
+var DEF_REPORTS = 0;
 var PREM_AI = 20;
 var PREM_REPORTS = 3;
 async function isPremium(env) {
@@ -5249,7 +5249,14 @@ setKeyHandler(async (env, email, body) => {
       await saveKey(env, k);
       return { ...await keyInfo(env), checked: w === "ok" };
     }
-    return keyInfo(env);
+    const st = await keyInfo(env), day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const limit = x.paused ? 0 : st.has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
+    let used2 = 0;
+    try {
+      used2 = x.uid && env.RATE ? +await env.RATE.get(`ai:${x.uid}:${day}`) || 0 : 0;
+    } catch (_) {
+    }
+    return { ...st, reports: { limit, used: used2, left: Math.max(0, limit - used2) } };
   });
 });
 var worker_default = {

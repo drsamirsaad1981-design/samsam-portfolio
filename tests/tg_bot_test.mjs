@@ -897,7 +897,7 @@ sent.length = 0; await postK(await fresh(), '/portfolio');
 check('…and yours is still yours', /BTC/.test(last().b.text) && /SOL/.test(last().b.text));
 // limits in /users: his card, − / +
 sent.length = 0; await tapAs(555, 'us:m:777');
-check('/users → tap Ali → his card: app e-mail, linked, 🧠 5 a day, 📊 1 a day', /ali\.friend@icloud\.com/.test(last().b.text) && /linked/.test(last().b.text) && /<b>5<\/b>/.test(last().b.text) && /<b>1<\/b>/.test(last().b.text), last().b.text);
+check('/users → tap Ali → his card: app e-mail, linked, 🧠 5 a day, 📊 0 a day (quick reports off until his own key)', /ali\.friend@icloud\.com/.test(last().b.text) && /linked/.test(last().b.text) && /<b>5<\/b>/.test(last().b.text) && /reports a day: <b>0<\/b>/.test(last().b.text), last().b.text);
 await tapAs(555, 'us:ai:+:777'); await tapAs(555, 'us:ai:+:777'); await tapAs(555, 'us:rp:-:777');
 check('…🧠 + + → 7 questions, 📊 − → 0 reports (saved for him)', JSON.parse(kvStore.get('tg:users'))['777'].ai === 7 && JSON.parse(kvStore.get('tg:users'))['777'].reports === 0);
 claudeCalls.length = 0; sent.length = 0; await sayAs(777, 'what is the price of SOL?');
@@ -979,7 +979,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   const dayR = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
   kvStore.set(`tg:888:ai:${dayR}`, '3'); kvStore.set(`ai:UID2:${new Date().toISOString().slice(0, 10)}`, '1');
   sent.length = 0; await sayAs(555, '/users');
-  check('👥 /users: each member\'s use today — 🧠 3/5 · 📊 1/1', /New[\s\S]*today 🧠 3\/5 · 📊 1\/1/.test(last().b.text), last().b.text);
+  check('👥 /users: each member\'s use today — 🧠 3/5 · 📊 1/0', /New[\s\S]*today 🧠 3\/5 · 📊 1\/0/.test(last().b.text), last().b.text);
   // ⏸ pause
   sent.length = 0; await tapAs(555, 'us:pz:888');
   check('⏸ Pause → the member is paused (told once), the card says paused, ▶️ Resume shows', JSON.parse(kvStore.get('tg:users'))['888'].paused === true && sent.some(x => String(x.b.chat_id) === '888' && /paused/.test(x.b.text || '')) && /paused/.test(sent.find(x => x.m === 'editMessageText').b.text) && JSON.stringify(sent.find(x => x.m === 'editMessageText').b.reply_markup).includes('Resume'), sent.map(x => x.m));
@@ -1025,7 +1025,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('…now their voice notes work', fileGets.length === 1, sent.map(x2 => (x2.b.text || '').slice(0, 30)));
   await tapAs(555, 'us:pr:888');
   const y = JSON.parse(kvStore.get('tg:users'))['888'];
-  check('☆ off again → back to 5 / 1, no voice', !y.premium && y.ai === 5 && y.reports === 1);
+  check('☆ off again → back to 5 / 0, no voice', !y.premium && y.ai === 5 && y.reports === 0);
 }
 
 // 🔑 a member's own Claude key (Settings → My Claude key → /key)

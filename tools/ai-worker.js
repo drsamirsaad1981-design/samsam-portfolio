@@ -76,7 +76,7 @@ export default {
       const m = memberCheck ? await memberCheck(env, em).catch(() => null) : null;
       if (!m) return reply(403, { error: 'This account is not allowed to use the AI analysis.' });
       limit = m.limit; model = m.model; if (m.apiKey) apiKey = m.apiKey;   // 🔑 their own key → their bill
-      if (!(limit > 0)) return reply(429, { error: 'AI reports are not on for this account — ask Samir.', remaining: 0 });
+      if (!(limit > 0)) return reply(429, { error: 'The quick report needs your own Claude key (Settings → My Claude key). The free way — with the Claude app — works for everyone.', remaining: 0 });
     }
 
     // 3. daily limit per account
