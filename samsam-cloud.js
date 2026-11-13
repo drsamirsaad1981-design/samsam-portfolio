@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611122227';
-import * as Hist from './samsam-history.js?v=202611122227';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611122227';
+import * as Core from './samsam-core.js?v=202611131218';
+import * as Hist from './samsam-history.js?v=202611131218';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611131218';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -288,7 +288,7 @@ function chartHistory(coins, txs, portfolio, snaps) {
   const hasOpening = coins.some(c => c.opening && c.opening.qty > 0);
   // A portfolio with a starting position (the Oct-15 portfolio) charts from that day, like CoinMarketCap — older
   // transactions are already part of that day's amounts. Without one, from the first transaction.
-  let start = hasOpening ? START_DAY : firstTx;
+  let start = hasOpening ? (isMainOwner() ? START_DAY : Math.min(Date.parse(currentBaseline().date + 'T00:00:00Z') || firstTx, firstTx)) : firstTx;
   if (!isFinite(start)) return null;
   start = Math.max(start, Date.now() - 89 * 864e5);
   // only coins actually held at some moment since the start (a coin removed earlier, or never bought, needs no history)
@@ -465,6 +465,12 @@ async function boot() {
   window.addEventListener('offline', renderStatus);
 }
 
+// Samir (the e-mail in firebase-config.js) — everyone else is an invited member with a portfolio of their own: no Oct-15
+// starting portfolio, their own baseline (the day they started), their own setup screen.
+function isMainOwner(user = S.user) {
+  const list = (ALLOWED_EMAILS || []).map(e => String(e).toLowerCase().trim()).filter(Boolean);
+  return !!user && (list.length === 0 || list.includes(String(user.email || '').toLowerCase()));
+}
 function emailAllowed(user) {   // the owner(s) in firebase-config.js; everyone else: the database rules decide (see probeAccess)
   if (!user) return false;
   const list = (ALLOWED_EMAILS || []).map(e => String(e).toLowerCase().trim()).filter(Boolean);
@@ -657,6 +663,7 @@ const API = {
   core: Core,
   configure(opts) { Object.assign(S.opts, opts || {}); if (allLoaded()) emit(); },
   getBaseline() { return currentBaseline(); },
+  isOwner() { return isMainOwner(); },
   getSignalRules() { return currentSignal(); },
   getWatchlist() { return cleanWatch(S.meta && S.meta.watch); },
   getExit() { return currentExit(); },
@@ -1466,10 +1473,12 @@ function renderSetup(d) {
     host.insertBefore(el, host.firstChild);
   }
   if (!S.opts.setupPage) {
-    el.innerHTML = `<h3>${UIc('cloud')}One-time setup needed</h3><p>Your cloud portfolio is empty. Open the main <a href="index.html" style="color:#60a5fa">Portfolio page</a> to import your data.</p>`;
+    el.innerHTML = isMainOwner() ? `<h3>${UIc('cloud')}One-time setup needed</h3><p>Your cloud portfolio is empty. Open the main <a href="index.html" style="color:#60a5fa">Portfolio page</a> to import your data.</p>`
+      : `<h3>👋 Your portfolio is new</h3><p>Open the <a href="index.html" style="color:#60a5fa">Portfolio page</a> to start it — then add your first coin.</p>`;
     el.style.display = 'block'; return;
   }
   if (el.dataset.busy) return;
+  if (!isMainOwner()) return renderWelcome(el);
   const L = readLegacy();
   const hasLocal = L.coins.length > 0;
   const cost = L.coins.reduce((s, c) => s + (+c.qty || 0) * (+c.basePrice || 0), 0);
@@ -1516,6 +1525,48 @@ function renderSetup(d) {
       go(legacy, 'file:' + f.name, false);
     } catch (e) { msg(UIc('alert') + esc(friendly(e))); }
   };
+}
+
+// 👋 an invited member's first visit: a new, empty portfolio of their own (or their backup). Their baseline = the day they start.
+function renderWelcome(el) {
+  el.innerHTML = `<h3>👋 Welcome to Cute Portfolio</h3>
+    <p>Your portfolio is new and private — only you can see it.</p>
+    <div class="opts">
+      <button class="samsam-btn primary" id="samsamStartEmpty">${UIc('plus')}Start my portfolio</button>
+      <label class="samsam-btn" style="position:relative">${UIc('file')}I have a backup file<input type="file" accept="application/json,.json" id="samsamImpFile" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
+    </div>
+    <p class="muted" style="font-size:.8rem">Then add your coins with <b>+</b>, or bring your trades from an exchange: Settings → Import from exchange.</p>
+    <div class="msg" id="samsamSetupMsg"></div>`;
+  el.style.display = 'block';
+  const msg = t => { const m = document.getElementById('samsamSetupMsg'); if (m) m.innerHTML = t; };
+  const go = async (legacy, source) => {
+    el.dataset.busy = '1'; el.querySelectorAll('button,input').forEach(b => b.disabled = true); msg('Setting up…');
+    try {
+      await runImport(legacy, source);
+      await startBaseline().catch(() => {});   // the day they start (they can change it in Settings → Baseline)
+      delete el.dataset.busy; msg('');
+    } catch (e) { delete el.dataset.busy; msg(UIc('alert') + esc(friendly(e))); el.querySelectorAll('button,input').forEach(b => b.disabled = false); }
+  };
+  const be = document.getElementById('samsamStartEmpty'); if (be) be.onclick = () => go({ coins: [], transactions: [] }, 'new');
+  const bf = document.getElementById('samsamImpFile'); if (bf) bf.onchange = async () => {
+    const f = bf.files && bf.files[0]; if (!f) return;
+    try {
+      let j; try { j = await readBackupFile(f); } finally { bf.value = ''; }
+      if (!j) return;
+      const legacy = j.legacy || (j.portfolioData ? { ...j.portfolioData, accumPlan: j.accumPlan, perfSnaps: j.perfSnaps } : j);
+      if (!legacy || !Array.isArray(legacy.coins)) throw new Error('This file is not a Cute Portfolio backup.');
+      if (!(await CPDialog.confirm(`${legacy.coins.length} coins and ${(legacy.transactions || []).length} transactions from “${f.name}”.`, { title: 'Import this backup?', okText: 'Import' }))) return;
+      go(legacy, 'file:' + f.name);
+    } catch (e) { msg(UIc('alert') + esc(friendly(e))); }
+  };
+}
+// a member's baseline: today, at today's BTC price (live; else yesterday's close)
+async function startBaseline() {
+  if (S.meta && S.meta.baseline) return;
+  const today = new Date().toISOString().slice(0, 10);
+  let p = S.prices.BTC && S.prices.BTC.usd > 0 ? S.prices.BTC.usd : 0, date = today;
+  if (!(p > 0)) { date = new Date(Date.now() - 864e5).toISOString().slice(0, 10); p = await API.fetchBtcPriceOn(date); }
+  return API.setBaseline({ date, btcPrice: Math.round(p), source: 'coingecko' });
 }
 
 boot().catch(e => { setError(e, 'Start-up'); });

@@ -159,16 +159,19 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.g
 
 // ── Coin transactions & performance ─────────────────────────────────────────
 const BASELINE_DATE = '2026-10-15T00:00:00';
+// Samir's Oct-15 starting portfolio is his alone: an invited member's coins open on the day they were added (else their baseline)
+const OWNER = () => !(window.Samsam && Samsam.isOwner) || Samsam.isOwner();
+const startDay = () => { try { const b = OWNER() ? null : Samsam.getBaseline(); return b && b.date ? b.date + 'T00:00:00' : BASELINE_DATE; } catch (_) { return BASELINE_DATE; } };
 // ── Edit opening position ─────────────────────────────────────────────────────
 function openEditOpening() {
   if (!coinTxSym || !requireCloud()) return;
   const doc = Samsam.getState().coins.find(c => c.sym === coinTxSym);
   const o = (doc && doc.opening) || { qty: 0, avg: 0 };
-  const isBase = BASE_PORTFOLIO.some(b => b.sym === coinTxSym);
+  const isBase = OWNER() && BASE_PORTFOLIO.some(b => b.sym === coinTxSym);
   document.getElementById('eopCoin').innerHTML = getCoinIcon(coinTxSym, 24) + `<span>${coinTxSym}</span><small>${COIN_NAMES[coinTxSym] || ''}</small>`;
   document.getElementById('eopQty').value = fmtInput(o.qty);
   document.getElementById('eopAvg').value = fmtInput(o.avg);
-  document.getElementById('eopDate').value = (o.date || (isBase ? BASELINE_DATE : (doc && doc.addedAt) || BASELINE_DATE)).slice(0, 10);
+  document.getElementById('eopDate').value = (o.date || (isBase ? BASELINE_DATE : (doc && doc.addedAt) || startDay())).slice(0, 10);
   document.getElementById('eopErr').textContent = '';
   previewEditOpening();
   document.getElementById('eopBackdrop').classList.add('show'); document.body.classList.add('atx-open');
@@ -359,8 +362,8 @@ function renderCoinTx() {
   const entries = [];
   const open = doc && doc.opening;
   if (open && open.qty > 0) {
-    const isBase = BASE_PORTFOLIO.some(b => b.sym === sym);
-    const oDate = open.date || (isBase ? BASELINE_DATE : (doc.addedAt || BASELINE_DATE));
+    const isBase = OWNER() && BASE_PORTFOLIO.some(b => b.sym === sym);
+    const oDate = open.date || (isBase ? BASELINE_DATE : (doc.addedAt || startDay()));
     entries.push({ kind: 'buy', label: 'Buy', opening: true, note: (isBase && !open.date ? 'Opening position (Oct-15 start)' : 'Opening position') + ' · @ ' + priceFmt(open.avg),
       date: oDate, qty: open.qty, usd: open.qty * open.avg, order: '' });
   }

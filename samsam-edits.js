@@ -73,7 +73,7 @@ function openBaselineEdit() {
   d.value = baselineState.date; p.value = fmtInput(baselineState.btcPrice); blSource = baselineState.source === 'manual' ? 'manual' : 'coingecko';
   document.getElementById('blSrc').textContent = baselineState.isDefault ? 'Original baseline' : (blSource === 'manual' ? 'Entered by hand' : 'From CoinGecko (daily price, 00:00 UTC)');
   document.getElementById('blSrc').className = 'bl-src';
-  document.getElementById('blReset').style.display = baselineState.isDefault ? 'none' : '';
+  document.getElementById('blReset').style.display = baselineState.isDefault || (window.Samsam && Samsam.isOwner && !Samsam.isOwner()) ? 'none' : '';   // Oct-15 is Samir's start, not a member's
   document.getElementById('blModal').classList.add('show');
   blPreview(); setTimeout(() => d.focus(), 30);
   document.addEventListener('keydown', blKey, true);
