@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: b7bb6f282c355445
+// sources-hash: f79c90b64c785b14
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -10,6 +10,10 @@ var memCount = /* @__PURE__ */ new Map();
 var memberCheck = null;
 function setMemberCheck(fn) {
   memberCheck = fn;
+}
+var keyHandler = null;
+function setKeyHandler(fn) {
+  keyHandler = fn;
 }
 var ai_worker_default = {
   async fetch(request, env) {
@@ -26,7 +30,8 @@ var ai_worker_default = {
     const reply = (status2, obj) => new Response(JSON.stringify(obj), { status: status2, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
     if (request.method === "OPTIONS") return new Response(null, { status: okOrigin ? 204 : 403, headers: cors });
     if (!okOrigin) return reply(403, { error: "This service only answers the Cute Portfolio app." });
-    if (request.method !== "POST" || !new URL(request.url).pathname.endsWith("/analyze")) return reply(404, { error: "Not found." });
+    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path);
+    if (request.method !== "POST" || !(path.endsWith("/analyze") || isKey)) return reply(404, { error: "Not found." });
     const raw = await request.text();
     if (raw.length > MAX_BODY) return reply(413, { error: "Request too large." });
     let body;
@@ -43,19 +48,26 @@ var ai_worker_default = {
       return reply(401, { error: "Please sign in again, then retry. (" + e.message + ")" });
     }
     const emails = list(env.ALLOWED_EMAILS || ""), em = String(user.email || "").toLowerCase();
+    if (isKey) {
+      if (!keyHandler) return reply(404, { error: "Not found." });
+      const r = await keyHandler(env, em, body).catch(() => ({ status: 500, error: "Something went wrong \u2014 try again." }));
+      return reply(r.status || 200, r);
+    }
+    let apiKey = env.ANTHROPIC_API_KEY;
     let limit = Math.max(1, parseInt(env.DAILY_LIMIT || "5", 10) || 5), model = env.MODEL || "claude-opus-4-5";
     if (emails.length && !emails.includes(em)) {
       const m = memberCheck ? await memberCheck(env, em).catch(() => null) : null;
       if (!m) return reply(403, { error: "This account is not allowed to use the AI analysis." });
       limit = m.limit;
       model = m.model;
+      if (m.apiKey) apiKey = m.apiKey;
       if (!(limit > 0)) return reply(429, { error: "AI reports are not on for this account \u2014 ask Samir.", remaining: 0 });
     }
     const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const key = `ai:${user.uid}:${day}`;
     const used2 = await getCount(env, key);
     if (used2 >= limit) return reply(429, { error: `You have used today's ${limit} AI reports. New reports are available tomorrow (00:00 UTC).`, remaining: 0 });
-    if (!env.ANTHROPIC_API_KEY) return reply(500, { error: "The Worker has no ANTHROPIC_API_KEY secret." });
+    if (!apiKey) return reply(500, { error: "The Worker has no ANTHROPIC_API_KEY secret." });
     const lang2 = body.language === "ar" ? "ar" : "en";
     const data = body.portfolioData && typeof body.portfolioData === "object" ? body.portfolioData : null;
     if (!data) return reply(400, { error: "No portfolio data in the request." });
@@ -64,7 +76,7 @@ var ai_worker_default = {
     try {
       res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+        headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({ model, max_tokens: 4e3, system: systemPrompt(lang2), messages: [{ role: "user", content: userPrompt(data, extra, lang2) }] })
       });
     } catch (_) {
@@ -753,6 +765,7 @@ async function removeMember(env, chat) {
   const had = m[String(chat)];
   delete m[String(chat)];
   await kput(env, "tg:users", JSON.stringify(m));
+  await kdel(env, `tg:${chat}:byok`);
   return had;
 }
 async function activeChats(env) {
@@ -842,14 +855,14 @@ async function aiLimitFor(env) {
   const x = await member(env);
   return x && Number.isFinite(x.ai) ? x.ai : Math.max(0, parseInt(env.MEMBER_AI_LIMIT || String(DEF_AI), 10) || DEF_AI);
 }
-async function langOf(env, mem6 = null) {
+async function langOf(env, mem7 = null) {
   let v = null;
   try {
     if (env.RATE) v = await env.RATE.get(K(env, "lang"));
   } catch (_) {
   }
   if (v === "ar" || v === "en") return v;
-  if (mem6 === "ar" || mem6 === "en") return mem6;
+  if (mem7 === "ar" || mem7 === "en") return mem7;
   if (isOwner(env)) return env.BOT_LANG === "ar" ? "ar" : "en";
   const x = await member(env);
   return x && (x.lang === "ar" || x.lang === "en") ? x.lang : "en";
@@ -862,6 +875,82 @@ async function getPending(env, chat) {
 }
 async function clearPending(env, chat) {
   await kdel(env, "tg:appreq:" + chat);
+}
+
+// tools/worker/byok.mjs
+var BYOK_AI = 100;
+var BYOK_REPORTS = 10;
+var enc = new TextEncoder();
+var dec = new TextDecoder();
+var b64 = (u) => btoa(String.fromCharCode(...u));
+var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+async function aesKey(env) {
+  let secret = "";
+  try {
+    secret = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || "{}").private_key || "";
+  } catch (_) {
+  }
+  secret = secret || env.TG_SECRET || "";
+  if (secret.length < 16) throw new Error("no secret to encrypt with");
+  const base = await crypto.subtle.importKey("raw", enc.encode(secret), "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: enc.encode("samsam-byok"), info: enc.encode("claude-key-v1") }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function seal(env, plain) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await aesKey(env), enc.encode(plain)));
+  return b64(iv) + "." + b64(ct);
+}
+async function unseal(env, sealed) {
+  const [iv, ct] = String(sealed).split(".");
+  return dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(iv) }, await aesKey(env), unb64(ct)));
+}
+var SHAPE = /^sk-a[n]t-[A-Za-z0-9_\-]{20,200}$/;
+var validShape = (k) => SHAPE.test(String(k || "").trim());
+async function keyWorks(key) {
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/models?limit=1", { headers: { "x-api-key": key, "anthropic-version": "2023-06-01" } });
+    return r.ok ? "ok" : r.status === 401 || r.status === 403 ? "refused" : "unsure";
+  } catch (_) {
+    return "unsure";
+  }
+}
+async function saveKey(env, key) {
+  const k = String(key).trim();
+  await env.RATE.put(K(env, "byok"), JSON.stringify({ v: await seal(env, k), tail: k.slice(-4), at: (/* @__PURE__ */ new Date()).toISOString() }));
+}
+async function keyInfo(env) {
+  try {
+    const x = JSON.parse(env.RATE && await env.RATE.get(K(env, "byok")) || "null");
+    return x && x.v ? { has: true, tail: x.tail, at: x.at } : { has: false };
+  } catch (_) {
+    return { has: false };
+  }
+}
+var mem = /* @__PURE__ */ new Map();
+async function ownKey(env) {
+  let x = null;
+  try {
+    x = JSON.parse(env.RATE && await env.RATE.get(K(env, "byok")) || "null");
+  } catch (_) {
+    x = null;
+  }
+  if (!x || !x.v) return null;
+  if (mem.has(x.v)) return mem.get(x.v);
+  let key = null;
+  try {
+    key = await unseal(env, x.v);
+  } catch (_) {
+    key = null;
+  }
+  if (mem.size > 50) mem.clear();
+  mem.set(x.v, key);
+  return key;
+}
+async function deleteKey(env) {
+  try {
+    if (env.RATE) await env.RATE.delete(K(env, "byok"));
+  } catch (_) {
+  }
 }
 
 // tools/worker/cg-ids.json
@@ -1115,7 +1204,7 @@ async function googleToken(sa) {
   }
   return j.access_token;
 }
-function dec(v) {
+function dec2(v) {
   if (!v || typeof v !== "object") return null;
   if ("stringValue" in v) return v.stringValue;
   if ("integerValue" in v) return Number(v.integerValue);
@@ -1124,10 +1213,10 @@ function dec(v) {
   if ("nullValue" in v) return null;
   if ("timestampValue" in v) return v.timestampValue;
   if ("mapValue" in v) return fields(v.mapValue.fields);
-  if ("arrayValue" in v) return (v.arrayValue.values || []).map(dec);
+  if ("arrayValue" in v) return (v.arrayValue.values || []).map(dec2);
   return null;
 }
-var fields = (f) => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, dec(v)]));
+var fields = (f) => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, dec2(v)]));
 function serviceAccount(env) {
   if (env && env.RATE) KVS = env.RATE;
   try {
@@ -1181,12 +1270,12 @@ async function firestore(sa) {
       return !Array.isArray(rows) || rows.some((x) => x.document);
     },
     async set(p, data) {
-      return call(`${base}/${p}`, { method: "PATCH", body: JSON.stringify({ fields: enc(data) }) });
+      return call(`${base}/${p}`, { method: "PATCH", body: JSON.stringify({ fields: enc2(data) }) });
     },
     // new documents, all or nothing (each must not exist yet — never overwrites)
     async commit(docs) {
       const name = (p) => `projects/${sa.project_id}/databases/(default)/documents/${p}`;
-      return call(base + ":commit", { method: "POST", body: JSON.stringify({ writes: docs.map((d) => ({ update: { name: name(d.path), fields: enc(d.data) }, currentDocument: { exists: false } })) }) });
+      return call(base + ":commit", { method: "POST", body: JSON.stringify({ writes: docs.map((d) => ({ update: { name: name(d.path), fields: enc2(d.data) }, currentDocument: { exists: false } })) }) });
     }
   };
 }
@@ -1196,9 +1285,9 @@ function encV(v) {
   if (typeof v === "boolean") return { booleanValue: v };
   if (typeof v === "number") return Number.isSafeInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
   if (Array.isArray(v)) return { arrayValue: { values: v.map(encV) } };
-  return { mapValue: { fields: enc(v) } };
+  return { mapValue: { fields: enc2(v) } };
 }
-var enc = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, encV(v)]));
+var enc2 = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, encV(v)]));
 async function commitDocs(env, uid, docs) {
   const sa = serviceAccount(env);
   if (!sa) throw new Error("no service account");
@@ -1461,16 +1550,16 @@ var KINDS = {
   portfolio_below: { what: "portfolio", op: "\u2264" },
   portfolio_above: { what: "portfolio", op: "\u2265" }
 };
-var mem = /* @__PURE__ */ new Map();
+var mem2 = /* @__PURE__ */ new Map();
 async function kvGet(env, k) {
   try {
     if (env.RATE) return await env.RATE.get(k);
   } catch (_) {
   }
-  return mem.has(k) ? mem.get(k) : null;
+  return mem2.has(k) ? mem2.get(k) : null;
 }
 async function kvPut(env, k, v) {
-  mem.set(k, v);
+  mem2.set(k, v);
   try {
     if (env.RATE) await env.RATE.put(k, v);
   } catch (_) {
@@ -1503,7 +1592,7 @@ async function logEvent(env, type, text, now = Date.now()) {
   }
   a.push({ t: now, type, text: String(text).replace(/<[^>]+>/g, "").slice(0, 200) });
   const v = JSON.stringify(a.slice(-30));
-  mem.set(k, v);
+  mem2.set(k, v);
   try {
     if (env.RATE) await env.RATE.put(k, v, { expirationTtl: 3 * 86400 });
   } catch (_) {
@@ -1650,23 +1739,23 @@ async function viewAlerts(env, lang2 = "en") {
 
 // tools/worker/trade.mjs
 var TTL = 15 * 6e4;
-var mem2 = /* @__PURE__ */ new Map();
+var mem3 = /* @__PURE__ */ new Map();
 async function kvGet2(env, k) {
   try {
     if (env.RATE) return await env.RATE.get(k);
   } catch (_) {
   }
-  return mem2.has(k) ? mem2.get(k) : null;
+  return mem3.has(k) ? mem3.get(k) : null;
 }
 async function kvPut2(env, k, v) {
-  mem2.set(k, v);
+  mem3.set(k, v);
   try {
     if (env.RATE) await env.RATE.put(k, v, { expirationTtl: 3600 });
   } catch (_) {
   }
 }
 async function kvDel(env, k) {
-  mem2.delete(k);
+  mem3.delete(k);
   try {
     if (env.RATE) await env.RATE.delete(k);
   } catch (_) {
@@ -1851,7 +1940,7 @@ async function cancelTrades(env, gid) {
 var KEY2 = (env) => K(env, "paper");
 var FEE = 1e-3;
 var START = 1e4;
-var mem3 = /* @__PURE__ */ new Map();
+var mem4 = /* @__PURE__ */ new Map();
 async function kvGet3(env, k) {
   try {
     if (env.RATE) {
@@ -1860,10 +1949,10 @@ async function kvGet3(env, k) {
     }
   } catch (_) {
   }
-  return mem3.has(k) ? mem3.get(k) : null;
+  return mem4.has(k) ? mem4.get(k) : null;
 }
 async function kvPut3(env, k, v) {
-  mem3.set(k, v);
+  mem4.set(k, v);
   try {
     if (env.RATE) await env.RATE.put(k, v);
   } catch (_) {
@@ -2095,23 +2184,23 @@ var MAX_ROUNDS = 8;
 var HISTORY = 10;
 var r23 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
 var r62 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
-var mem4 = /* @__PURE__ */ new Map();
+var mem5 = /* @__PURE__ */ new Map();
 async function kvGet4(env, k) {
   try {
     if (env.RATE) return await env.RATE.get(k);
   } catch (_) {
   }
-  return mem4.has(k) ? mem4.get(k) : null;
+  return mem5.has(k) ? mem5.get(k) : null;
 }
 async function kvPut4(env, k, v, ttl) {
-  mem4.set(k, v);
+  mem5.set(k, v);
   try {
     if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
   } catch (_) {
   }
 }
 async function kvDel2(env, k) {
-  mem4.delete(k);
+  mem5.delete(k);
   try {
     if (env.RATE) await env.RATE.delete(k);
   } catch (_) {
@@ -2126,7 +2215,7 @@ async function firstTime(env, updateId) {
 }
 var today = () => localParts(Date.now()).date;
 async function usage(env) {
-  const n = +await kvGet4(env, K(env, "ai:" + today())) || 0, lim = await aiLimitFor(env);
+  const n = +await kvGet4(env, K(env, "ai:" + today())) || 0, lim = !isOwner(env) && (await keyInfo(env)).has ? BYOK_AI : await aiLimitFor(env);
   return { used: n, limit: lim, left: Math.max(0, lim - n) };
 }
 async function countOne(env) {
@@ -2519,8 +2608,8 @@ function system(now, lang2, qLang, owner = true) {
     "- Do not write a sources line \u2014 the bot adds one."
   ].join("\n");
 }
-async function claude(env, model, body) {
-  const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model, ...body }) });
+async function claude(env, model, body, key = null) {
+  const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "content-type": "application/json", "x-api-key": key || env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model, ...body }) });
   const j = await r.json().catch(() => ({}));
   return { ok: r.ok, status: r.status, j };
 }
@@ -2534,7 +2623,8 @@ function toHtml(text) {
   return s.trim();
 }
 async function ask(env, question, lang2 = "en") {
-  if (!env.ANTHROPIC_API_KEY) return { error: "nokey" };
+  const own = isOwner(env) ? null : await ownKey(env);
+  if (!env.ANTHROPIC_API_KEY && !own) return { error: "nokey" };
   const u = await usage(env);
   if (u.left <= 0) return { error: "limit", limit: u.limit };
   const now = Date.now(), ctx = context(env);
@@ -2543,11 +2633,12 @@ async function ask(env, question, lang2 = "en") {
   let model = env.BOT_MODEL || "claude-sonnet-5-5", fellBack = false, text = "";
   for (let round = 0; round <= MAX_ROUNDS; round++) {
     const body = { max_tokens: 2e3, system: system(now, lang2, qLang, isOwner(env)), tools: TOOLS, ...round === MAX_ROUNDS ? { tool_choice: { type: "none" } } : {}, messages };
-    let r = await claude(env, model, body);
+    let r = await claude(env, model, body, own);
+    if (!r.ok && own && (r.status === 401 || r.status === 403 || /credit|billing|balance/i.test(JSON.stringify(r.j.error || {})))) return { error: "ownkey" };
     if (!r.ok && !fellBack && (r.status === 404 || r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {})))) {
       fellBack = true;
       model = env.MODEL || "claude-opus-4-5";
-      r = await claude(env, model, body);
+      r = await claude(env, model, body, own);
     }
     if (!r.ok) {
       console.log(JSON.stringify({ ai: "claude-error", round, status: r.status, type: r.j.error && r.j.error.type, message: String(r.j.error && r.j.error.message || "").slice(0, 300) }));
@@ -2621,7 +2712,7 @@ var score = (o) => {
 };
 var clean = (o) => String(o && o.text || "").replace(/\s+/g, " ").trim().slice(0, 1e3);
 var odd = (t) => /[^\p{Script=Latin}\p{Script=Arabic}\p{M}\p{N}\p{P}\p{S}\s]/u.test(t);
-function b64(buf) {
+function b642(buf) {
   const u8 = new Uint8Array(buf);
   let s = "";
   for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
@@ -2637,7 +2728,7 @@ async function transcribe(env, voice) {
     if (!p) return { error: "fail" };
     const audio = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${p}`);
     if (!audio.ok) return { error: "fail" };
-    const a = b64(await audio.arrayBuffer());
+    const a = b642(await audio.arrayBuffer());
     const run2 = (language, hint) => env.AI.run(MODEL, { audio: a, vad_filter: true, ...language ? { language } : {}, ...hint ? { initial_prompt: hint } : {} });
     const first = await run2(null, null), info = first && first.transcription_info || {}, lang2 = info.language, prob = +info.language_probability || 0;
     let best;
@@ -2663,7 +2754,7 @@ async function transcribe(env, voice) {
 var H3 = 36e5;
 var DAY3 = 24 * H3;
 var DEF = { morning: true, evening: true, radar: true, sectors: true, pin: true, morningAt: "08:45", eveningAt: "21:00" };
-var mem5 = /* @__PURE__ */ new Map();
+var mem6 = /* @__PURE__ */ new Map();
 async function kvGet5(env, k) {
   try {
     if (env.RATE) {
@@ -2672,10 +2763,10 @@ async function kvGet5(env, k) {
     }
   } catch (_) {
   }
-  return mem5.has(k) ? mem5.get(k) : null;
+  return mem6.has(k) ? mem6.get(k) : null;
 }
 async function kvPut5(env, k, v, ttl) {
-  mem5.set(k, v);
+  mem6.set(k, v);
   try {
     if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
   } catch (_) {
@@ -3243,6 +3334,7 @@ var T = {
     thinking: "\u{1F9E0} Thinking\u2026",
     aiLimit: (n) => `You've used today's ${n} questions \u2014 more tomorrow (midnight Riyadh). Buttons and tickers still work.`,
     aiNoKey: "The AI is not set up (ANTHROPIC_API_KEY is missing in the Worker).",
+    aiOwnKey: "\u{1F511} Claude refused your own API key (wrong, removed, or out of credit). Fix it in the app: Settings \u2192 My Claude key.",
     aiBusy: "Claude is busy right now \u2014 try again in a minute.",
     aiErr: "I couldn't answer that just now \u2014 try again, or rephrase.",
     newChat: "\u{1F195} New chat",
@@ -3384,6 +3476,7 @@ var T = {
     thinking: "\u{1F9E0} \u0628\u0641\u0643\u0651\u0631\u2026",
     aiLimit: (n) => `\u062E\u0644\u0635\u062A \u0627\u0644\u0640 ${n} \u0633\u0624\u0627\u0644 \u0628\u062A\u0648\u0639 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647 \u2014 \u0628\u0643\u0631\u0629 \u064A\u062A\u062C\u062F\u062F\u0648\u0627 (12 \u0628\u0627\u0644\u0644\u064A\u0644 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636). \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u0648\u0627\u0644\u0631\u0645\u0648\u0632 \u0634\u063A\u0627\u0644\u0629 \u0639\u0627\u062F\u064A.`,
     aiNoKey: "\u0627\u0644\u0640 AI \u0645\u0634 \u0645\u062A\u0638\u0628\u0637 (ANTHROPIC_API_KEY \u0646\u0627\u0642\u0635 \u0641\u064A \u0627\u0644\u0640 Worker).",
+    aiOwnKey: "\u{1F511} Claude \u0631\u0641\u0636 \u0645\u0641\u062A\u0627\u062D\u0643 (\u063A\u0644\u0637\u060C \u0623\u0648 \u0627\u062A\u0634\u0627\u0644\u060C \u0623\u0648 \u0627\u0644\u0631\u0635\u064A\u062F \u062E\u0644\u0635). \u0635\u0644\u0651\u062D\u0647 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Claude key.",
     aiBusy: "Claude \u0645\u0634\u063A\u0648\u0644 \u062F\u0644\u0648\u0642\u062A\u064A \u2014 \u062C\u0631\u0651\u0628 \u0643\u0645\u0627\u0646 \u062F\u0642\u064A\u0642\u0629.",
     aiErr: "\u0645\u0627 \u0642\u062F\u0631\u062A\u0634 \u0623\u062C\u0627\u0648\u0628 \u062F\u0644\u0648\u0642\u062A\u064A \u2014 \u062C\u0631\u0651\u0628 \u062A\u0627\u0646\u064A \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0644\u0633\u0624\u0627\u0644 \u0628\u0634\u0643\u0644 \u062A\u0627\u0646\u064A.",
     newChat: "\u{1F195} \u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629",
@@ -3976,10 +4069,11 @@ async function viewMember(env, lang2, c) {
   const x = await member(env, c), ar = lang2 === "ar";
   if (!x) return viewUsers(env, lang2);
   const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
-  const u = await usedToday(env, c, x);
+  const u = await usedToday(env, c, x), kk = await asChat(c, () => keyInfo(env));
   const L = [
     `\u{1F464} ${x.paused ? "\u23F8 " : ""}${x.premium ? "\u2B50 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""}${x.paused ? ar ? " \u2014 <b>\u0645\u062A\u0648\u0642\u0641</b>" : " \u2014 <b>paused</b>" : ""}`,
     `${ar ? "\u0645\u0646" : "Since"} ${esc(local(x.joined, { day: "numeric", month: "short", year: "numeric" }))}`,
+    ...kk.has ? [`\u{1F511} ${ar ? "\u0628\u064A\u0633\u062A\u0639\u0645\u0644 \u0645\u0641\u062A\u0627\u062D Claude \u0628\u062A\u0627\u0639\u0647" : "Uses their own Claude key"} (\u2026${esc(kk.tail)}) \u2014 ${ar ? "\u062A\u0643\u0644\u0641\u062A\u0647 \u0639\u0644\u064A\u0647" : "on their bill"}`] : [],
     `\u{1F4F1} ${ar ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "App"}: ${x.email ? "<code>" + esc(x.email) + "</code>" : ar ? "\u0644\u0633\u0647" : "not yet"}`,
     `\u{1F517} ${ar ? "\u0627\u0644\u0645\u062D\u0641\u0638\u0629" : "Portfolio"}: ${x.uid ? ar ? "\u0645\u0631\u0628\u0648\u0637\u0629 \u2705" : "linked \u2705" : ar ? "\u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629" : "not linked"}`,
     "",
@@ -4221,7 +4315,7 @@ async function onUpdate(env, u, msg, q, chat) {
       return ok();
     }
     if (msg && (msg.voice || msg.audio)) {
-      if (!await isPremium(env)) {
+      if (!await isPremium(env) && !(await keyInfo(env)).has) {
         const ar = await getLang(env) === "ar";
         await send2(env, chat, { text: ar ? "\u{1F399} \u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 \u2014 \u0627\u0643\u062A\u0628\u0647\u0627 \u0643\u062A\u0627\u0628\u0629\u060C \u0623\u0648 \u0627\u0637\u0644\u0628 \u0645\u0646 \u0633\u0645\u064A\u0631." : "\u{1F399} Voice notes are for \u2B50 premium members \u2014 type it instead, or ask Samir." });
         return ok();
@@ -4382,7 +4476,7 @@ async function answer(env, chat, question, budget = 36, into = null) {
     console.log(JSON.stringify({ ai: "crash", message: String(e && e.message).slice(0, 300) }));
     return { error: "claude" };
   });
-  if (r.error) return show({ text: r.error === "limit" ? t.aiLimit(r.limit) : r.error === "nokey" ? t.aiNoKey : r.error === "busy" ? t.aiBusy : t.aiErr, buttons: [[cb2(t.back, "menu")]] });
+  if (r.error) return show({ text: r.error === "limit" ? t.aiLimit(r.limit) : r.error === "nokey" ? t.aiNoKey : r.error === "ownkey" ? t.aiOwnKey : r.error === "busy" ? t.aiBusy : t.aiErr, buttons: [[cb2(t.back, "menu")]] });
   const foot = `<i>\u{1F4E1} ${t.data}: ${esc(r.sources.length ? r.sources.join(" \xB7 ") : "general knowledge")}
 ${t.aiLeft(r.left, r.limit)}</i>`;
   const btns = [];
@@ -4972,10 +5066,10 @@ var miniapp_default = `<!doctype html>
 // tools/worker/miniapp.mjs
 var LOGO_HOSTS = /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com)\//;
 var NICE = { btc: "Bitcoin", layer1: "Layer 1", layer2: "Layer 2", defi: "DeFi", stable: "Stablecoins", stables: "Stablecoins", ai: "AI", meme: "Meme", gaming: "Gaming", rwa: "RWA", infra: "Infrastructure", exchange: "Exchange", privacy: "Privacy", storage: "Storage", oracle: "Oracle", other: "Other" };
-var enc2 = new TextEncoder();
+var enc3 = new TextEncoder();
 async function hmac(key, data) {
-  const k = await crypto.subtle.importKey("raw", typeof key === "string" ? enc2.encode(key) : key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return new Uint8Array(await crypto.subtle.sign("HMAC", k, enc2.encode(data)));
+  const k = await crypto.subtle.importKey("raw", typeof key === "string" ? enc3.encode(key) : key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, enc3.encode(data)));
 }
 var hex = (b) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
 async function verifyInitData(initData, token, now = Date.now(), maxAge = 86400) {
@@ -5100,9 +5194,9 @@ async function cardSend(request, env) {
   const v = await verifyInitData(String(body.initData || "").slice(0, 4096), env.TELEGRAM_BOT_TOKEN);
   if (!v.ok) return json(401, { ok: false, error: v.why });
   if (!await allowed(env, v.user.id)) return json(403, { ok: false, error: "private" });
-  const b642 = String(body.jpg || "");
-  if (!b642 || b642.length > 7e6 || !/^[A-Za-z0-9+/=]+$/.test(b642)) return json(400, { ok: false, error: "no image" });
-  const bin = atob(b642), bytes = new Uint8Array(bin.length);
+  const b643 = String(body.jpg || "");
+  if (!b643 || b643.length > 7e6 || !/^[A-Za-z0-9+/=]+$/.test(b643)) return json(400, { ok: false, error: "no image" });
+  const bin = atob(b643), bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   if (!(bytes[0] === 255 && bytes[1] === 216)) return json(400, { ok: false, error: "not a jpeg" });
   const kind = ["pf", "coin", "market"].includes(body.kind) ? body.kind : "pf", sym = String(body.sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
@@ -5134,7 +5228,29 @@ async function logo(request) {
 // tools/worker/index.mjs
 setMemberCheck(async (env, email) => {
   const x = await memberByEmail(env, email);
-  return x ? { limit: x.paused ? 0 : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, model: env.MEMBER_MODEL || "claude-sonnet-5-5" } : null;
+  if (!x) return null;
+  const apiKey = x.paused ? null : await asChat(x.chat, () => ownKey(env));
+  return { limit: x.paused ? 0 : apiKey ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, model: env.MEMBER_MODEL || "claude-sonnet-5-5", apiKey };
+});
+setKeyHandler(async (env, email, body) => {
+  const x = await memberByEmail(env, email);
+  if (!x) return { status: 403, error: "Only invited members can add their own key (the owner's key is already set)." };
+  return asChat(x.chat, async () => {
+    const a = body && body.action;
+    if (a === "delete") {
+      await deleteKey(env);
+      return { has: false };
+    }
+    if (a === "set") {
+      const k = String(body && body.key || "").trim();
+      if (!validShape(k)) return { status: 400, error: "That does not look like a Claude API key (it starts with sk-ant)." };
+      const w = await keyWorks(k);
+      if (w === "refused") return { status: 400, error: "Claude refused this key \u2014 check it in console.anthropic.com." };
+      await saveKey(env, k);
+      return { ...await keyInfo(env), checked: w === "ok" };
+    }
+    return keyInfo(env);
+  });
 });
 var worker_default = {
   async fetch(request, env, ctx) {

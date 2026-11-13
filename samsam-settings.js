@@ -58,6 +58,27 @@
         return ask.then(function (go) { if (go) window.open('https://t.me/samsam_portfolio_bot?start=L' + r.code, '_blank', 'noopener'); });
       }).catch(function (e) { if (window.CPDialog) CPDialog.alert('Could not make a code — ' + ((e && e.message) || e)); });
     },
+    claudekey: function () {   // 🔑 an invited member's own Claude API key → the Worker (sent once, kept encrypted there, never shown again)
+      var URL_KEY = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/key', D = window.CPDialog;
+      var call = function (body) {
+        return S().idToken().then(function (t) {
+          if (!t) throw new Error('Sign in first.');
+          return fetch(URL_KEY, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ idToken: t }, body)) })
+            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || ('Error ' + r.status)); return j; }); });
+        });
+      };
+      call({ action: 'status' }).then(function (st) {
+        if (st.has) {
+          return D.confirm('Your own Claude key (…' + st.tail + ') is on: your questions, voice notes and AI Analysis run on it — on your Anthropic bill — with high limits.\n\nRemove it?', { title: 'My Claude key', icon: 'key', okText: 'Remove', danger: true })
+            .then(function (go) { if (go) return call({ action: 'delete' }).then(function () { return D.alert('Removed — you are back on the standard limits.', { title: 'My Claude key', icon: 'key' }); }); });
+        }
+        return D.prompt('Paste your Claude API key (from console.anthropic.com → API keys). It is sent once, checked with Claude, then kept encrypted — nobody can see it again, and you can remove it any time.\n\nWith it: 100 questions a day, voice notes, and 10 AI Analysis reports — billed to your Anthropic account.', { title: 'My Claude key', icon: 'key', okText: 'Save', placeholder: 'sk-ant-…', secret: true })
+          .then(function (k) {
+            if (!k || !String(k).trim()) return;
+            return call({ action: 'set', key: String(k).trim() }).then(function (r) { return D.alert('Saved ✅ (…' + r.tail + '). The bot and AI Analysis use your key now.', { title: 'My Claude key', icon: 'key' }); });
+          });
+      }).catch(function (e) { if (D) D.alert(String((e && e.message) || e), { title: 'My Claude key', icon: 'key' }); });
+    },
     import: function () { window.SamsamImport && SamsamImport.open(); },
     rewards: function () { if (window.SamsamRewards) SamsamRewards.open(); else goMain('rewards'); },
     wallets: function () { if (window.SamsamWallets) SamsamWallets.open(); else goMain('wallets'); },
@@ -137,7 +158,7 @@
   // a line: [key, icon, title, action]  ·  a choice: { seg: key, title, opts: [[value, label]], get(), set(v) }
   var SECTIONS = [
     ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import'], ['wallets', 'wallet', 'Wallets & check', 'wallets'], ['rewards', 'coins', 'Rewards & mining', 'rewards']]],
-    ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link the Telegram bot', 'tglink']]],
+    ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link the Telegram bot', 'tglink'], ['claudekey', 'key', 'My Claude key', 'claudekey']]],
     ['Investing rules', [['signal', 'sliders', 'Signal thresholds', 'signal'], ['targets', 'target', 'Target allocation', 'targets'], ['cats', 'note', 'Categories', 'cats'],
       ['baseline', 'history', 'Baseline', 'baseline'], ['exit', 'exit', 'Exit plan', 'exit'], ['dca', 'calc', 'DCA (regular buys)', 'dca']]],
     ['Display', [
@@ -206,7 +227,8 @@
     var box = $('cpSet'); if (!box) return;
     var hasImport = !!window.SamsamImport;
     box.querySelector('.st-body').innerHTML = SECTIONS.map(function (s) {
-      var rows = s[1].filter(function (r) { return r.seg || r[0] !== 'import' || hasImport; });
+      var member = !!(S() && S().isOwner && !S().isOwner());   // 🔑 only invited members bring their own key
+      var rows = s[1].filter(function (r) { return r.seg || ((r[0] !== 'import' || hasImport) && (r[0] !== 'claudekey' || member)); });
       return '<div class="st-sec">' + E(s[0]) + '</div><div class="st-list">' + rows.map(function (r) { return r.seg ? choice(r) : line(r); }).join('') + '</div>';
     }).join('') + '<div class="st-later">More settings (app language, AI) will be added here.</div>';
   }

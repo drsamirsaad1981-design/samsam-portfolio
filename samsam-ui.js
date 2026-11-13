@@ -73,6 +73,7 @@
     reset: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
     sliders: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1.5 14h5M9.5 8h5M17.5 16h5"/>',
+    key: '<circle cx="7.5" cy="15.5" r="4"/><path d="m10.5 12.5 9-9M16 7l2.5 2.5M19 4l1.5 1.5"/>',
     sparkles: '<path d="m11 3 1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="m18.5 14.5.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
     star: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/>',
     table: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 10h18M3 15h18M9.5 10v10"/>',
@@ -417,7 +418,7 @@
       var ok = w.querySelector('.cpd-ok'), no = w.querySelector('.cpd-no'), inp = w.querySelector('#cpdI');
       ok.textContent = o.okText || 'OK'; if (o.danger) ok.classList.add('danger');
       if (no) no.textContent = o.cancelText || 'Cancel';
-      if (inp) { inp.value = o.value == null ? '' : String(o.value); if (o.placeholder) inp.placeholder = o.placeholder; if (o.inputMode) inp.inputMode = o.inputMode; }
+      if (inp) { inp.value = o.value == null ? '' : String(o.value); if (o.placeholder) inp.placeholder = o.placeholder; if (o.inputMode) inp.inputMode = o.inputMode; if (o.secret) { inp.type = 'password'; inp.spellcheck = false; inp.setAttribute('autocapitalize', 'off'); } }
       var done = function (v) { document.removeEventListener('keydown', key, true); w.remove(); try { back && back.focus && back.focus(); } catch (_) {} resolve(v); };
       var yes = function () { done(kind === 'prompt' ? inp.value : true); }, cancel = function () { done(kind === 'prompt' ? null : kind === 'alert' ? undefined : false); };
       var key = function (e) {

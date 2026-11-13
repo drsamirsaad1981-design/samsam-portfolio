@@ -1,6 +1,7 @@
 // tools/worker/index.mjs — the one Cloudflare Worker: AI Analysis (/analyze, tools/ai-worker.js) + the Telegram bot (/tg).
 // Built into a single file by tools/build-worker.mjs → tools/dist/samsam-worker.js (that file is what you paste).
-import ai, { setMemberCheck } from '../ai-worker.js';
+import ai, { setMemberCheck, setKeyHandler } from '../ai-worker.js';
+import { saveKey, keyInfo, ownKey, deleteKey, validShape, keyWorks, BYOK_REPORTS } from './byok.mjs';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
 import { runDaily, kickPrices } from './daily.mjs';
@@ -9,7 +10,28 @@ import { resetBudget } from './data.mjs';
 import { asChat, activeChats, migrateOwner, memberByEmail, DEF_REPORTS } from './who.mjs';
 
 // AI Analysis in the app: people invited through the bot whose e-mail Samir approved — their own daily reports (/users), Sonnet
-setMemberCheck(async (env, email) => { const x = await memberByEmail(env, email); return x ? { limit: x.paused ? 0 : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, model: env.MEMBER_MODEL || 'claude-sonnet-5-5' } : null; });
+setMemberCheck(async (env, email) => {
+  const x = await memberByEmail(env, email); if (!x) return null;
+  const apiKey = x.paused ? null : await asChat(x.chat, () => ownKey(env));   // 🔑 their own Claude key: their bill, 10 a day
+  return { limit: x.paused ? 0 : apiKey ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, model: env.MEMBER_MODEL || 'claude-sonnet-5-5', apiKey };
+});
+// 🔑 the app's Settings → My Claude key: { action: 'status' | 'set' | 'delete', key } from a signed-in, approved member
+setKeyHandler(async (env, email, body) => {
+  const x = await memberByEmail(env, email);
+  if (!x) return { status: 403, error: 'Only invited members can add their own key (the owner\'s key is already set).' };
+  return asChat(x.chat, async () => {
+    const a = body && body.action;
+    if (a === 'delete') { await deleteKey(env); return { has: false }; }
+    if (a === 'set') {
+      const k = String((body && body.key) || '').trim();
+      if (!validShape(k)) return { status: 400, error: 'That does not look like a Claude API key (it starts with sk-ant).' };
+      const w = await keyWorks(k);
+      if (w === 'refused') return { status: 400, error: 'Claude refused this key — check it in console.anthropic.com.' };
+      await saveKey(env, k); return { ...(await keyInfo(env)), checked: w === 'ok' };
+    }
+    return keyInfo(env);
+  });
+});
 
 export default {
   async fetch(request, env, ctx) {

@@ -16,6 +16,7 @@ import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSerie
 import { addAlert, listAlerts, deleteAlert, describe, KINDS } from './watch.mjs';
 import { prepareTrade } from './trade.mjs';
 import { paperTrade, paperFacts } from './paper.mjs';
+import { ownKey, keyInfo, BYOK_AI } from './byok.mjs';
 
 const H = 3600e3, DAY = 24 * H;
 // the daily limit: the owner 30 (AI_DAILY_LIMIT), each invited person their own (set in /users, else 5) — who.mjs → aiLimitFor
@@ -39,7 +40,8 @@ export async function firstTime(env, updateId) {
   return true;
 }
 const today = () => localParts(Date.now()).date;
-export async function usage(env) { const n = +(await kvGet(env, K(env, 'ai:' + today()))) || 0, lim = await aiLimitFor(env); return { used: n, limit: lim, left: Math.max(0, lim - n) }; }
+// 🔑 a member with their own Claude key → 100 a day
+export async function usage(env) { const n = +(await kvGet(env, K(env, 'ai:' + today()))) || 0, lim = !isOwner(env) && (await keyInfo(env)).has ? BYOK_AI : await aiLimitFor(env); return { used: n, limit: lim, left: Math.max(0, lim - n) }; }
 async function countOne(env) { const u = await usage(env); await kvPut(env, K(env, 'ai:' + today()), String(u.used + 1), 2 * 86400); return u.left - 1; }
 export async function forget(env) { await kvDel(env, K(env, 'hist')); }
 async function history(env) { try { const h = JSON.parse((await kvGet(env, K(env, 'hist'))) || '[]'); return Array.isArray(h) ? h : []; } catch (_) { return []; } }
@@ -243,8 +245,8 @@ function system(now, lang, qLang, owner = true) {
     '- Do not write a sources line — the bot adds one.',
   ].join('\n');
 }
-async function claude(env, model, body) {
-  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, ...body }) });
+async function claude(env, model, body, key = null) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key || env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, ...body }) });
   const j = await r.json().catch(() => ({}));
   return { ok: r.ok, status: r.status, j };
 }
@@ -262,7 +264,8 @@ export function toHtml(text) {
 
 // the whole question → answer. Returns { text (Telegram HTML), coins: [[id, SYM]], left } or { error }
 export async function ask(env, question, lang = 'en') {
-  if (!env.ANTHROPIC_API_KEY) return { error: 'nokey' };
+  const own = isOwner(env) ? null : await ownKey(env);   // 🔑 a member's own Claude key: their questions run on it
+  if (!env.ANTHROPIC_API_KEY && !own) return { error: 'nokey' };
   const u = await usage(env);
   if (u.left <= 0) return { error: 'limit', limit: u.limit };
   const now = Date.now(), ctx = context(env);
@@ -273,8 +276,9 @@ export async function ask(env, question, lang = 'en') {
   for (let round = 0; round <= MAX_ROUNDS; round++) {
     // the tools stay declared every round (earlier tool turns need them); the last round may not call any more
     const body = { max_tokens: 2000, system: system(now, lang, qLang, isOwner(env)), tools: TOOLS, ...(round === MAX_ROUNDS ? { tool_choice: { type: 'none' } } : {}), messages };
-    let r = await claude(env, model, body);
-    if (!r.ok && !fellBack && (r.status === 404 || (r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {}))))) { fellBack = true; model = env.MODEL || 'claude-opus-4-5'; r = await claude(env, model, body); }   // that model name refused → AI Analysis's
+    let r = await claude(env, model, body, own);
+    if (!r.ok && own && (r.status === 401 || r.status === 403 || /credit|billing|balance/i.test(JSON.stringify(r.j.error || {})))) return { error: 'ownkey' };   // their key refused / out of credit
+    if (!r.ok && !fellBack && (r.status === 404 || (r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {}))))) { fellBack = true; model = env.MODEL || 'claude-opus-4-5'; r = await claude(env, model, body, own); }   // that model name refused → AI Analysis's
     if (!r.ok) { console.log(JSON.stringify({ ai: 'claude-error', round, status: r.status, type: r.j.error && r.j.error.type, message: String((r.j.error && r.j.error.message) || '').slice(0, 300) })); return { error: r.status === 429 || r.status === 529 ? 'busy' : 'claude', detail: r.status }; }
     const content = r.j.content || [];
     const calls = content.filter(b => b.type === 'tool_use');

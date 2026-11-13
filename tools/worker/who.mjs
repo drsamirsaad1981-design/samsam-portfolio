@@ -49,7 +49,7 @@ export async function removeMember(env, chat) {
   const m = await members(env);
   if (!m[String(chat)]) return false;
   const had = m[String(chat)];
-  delete m[String(chat)]; await kput(env, 'tg:users', JSON.stringify(m));
+  delete m[String(chat)]; await kput(env, 'tg:users', JSON.stringify(m)); await kdel(env, `tg:${chat}:byok`);   // their Claude key goes too
   return had;   // the record (its e-mail leaves the app's access list — the caller syncs it)
 }
 // ⏸ a member the owner paused: still a member (their app and portfolio stay theirs) — the bot answers nothing, sends nothing

@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -32,7 +32,7 @@ const SA = { type: 'service_account', project_id: 'samsam-portfolio', client_ema
 const fsv = v => typeof v === 'string' ? { stringValue: v } : typeof v === 'number' ? { doubleValue: v } : typeof v === 'boolean' ? { booleanValue: v } : Array.isArray(v) ? { arrayValue: { values: v.map(fsv) } } : v && typeof v === 'object' ? { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fsv(x)])) } } : { nullValue: null };
 const doc = o => ({ name: 'x', fields: Object.fromEntries(Object.entries(o).map(([k, v]) => [k, fsv(v)])) });
 let LANG = 'ar';   // the alerts are in Arabic — the bot still starts in English
-let AGG_CALLS = 0, LIST_TXS = 0, COIN_UPD = '';
+const claudeKeys = []; let AGG_CALLS = 0, LIST_TXS = 0, COIN_UPD = '';
 const USER = () => ({
   coins: [{ sym: 'BTC', cgId: 'bitcoin', opening: { qty: 0.1, avg: 70000 }, ...(COIN_UPD ? { updatedAt: COIN_UPD } : {}) }, { sym: 'SOL', cgId: 'solana', opening: { qty: 10, avg: 160 } },
     { sym: 'LINK', cgId: 'chainlink', opening: { qty: 50, avg: 15 } }, { sym: 'USDT', cgId: 'tether', opening: { qty: 900, avg: 0.5 } },
@@ -91,10 +91,12 @@ globalThis.fetch = async (input, init = {}) => {
     return J({}, 404);
   }
   if (u.startsWith('https://www.googleapis.com/service_accounts')) return J({ keys: [{ ...crypto.createPublicKey(privateKey).export({ format: 'jwk' }), kid: 'k1', alg: 'RS256', use: 'sig' }] });
+  if (u.startsWith('https://api.anthropic.com/v1/models')) { const k = (init.headers || {})['x-api-key'] || ''; return J({ data: [] }, /^sk-ant-good/.test(k) ? 200 : 401); }
   if (u === 'https://api.anthropic.com/v1/messages') {
-    const b = JSON.parse(body); claudeCalls.push(b);
+    const b = JSON.parse(body); claudeCalls.push(b); claudeKeys.push(init.headers['x-api-key']);
+    if (/^sk-ant-dead/.test(init.headers['x-api-key'])) return J({ type: 'error', error: { type: 'authentication_error' } }, 401);
     if (/SMART (MORNING|EVENING)/.test(b.system || '')) { composeCalls.push(b); if (COMPOSE_FAIL) return J({ type: 'error', error: { type: 'overloaded_error' } }, 529); const f = JSON.parse(b.messages[0].content.replace(/^FACTS:\n/, '')); return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: /MORNING/.test(b.system) ? `☀️ **Calm day**\n🎯 **Today**\n1. ${(f.todo[0] || {}).what || 'hold'}` : `🌙 **Quiet day**\n• since morning: **${f.since_morning ? f.since_morning.portfolio_change_usd : 'n/a'}**` }] }); }
-    if (init.headers['x-api-key'] !== 'sk-test') return J({ type: 'error', error: { type: 'authentication_error' } }, 401);
+    if (init.headers['x-api-key'] !== 'sk-test' && !/^sk-ant-good/.test(init.headers['x-api-key'])) return J({ type: 'error', error: { type: 'authentication_error' } }, 401);
     if (b.model === 'bad-model') return J({ type: 'error', error: { type: 'not_found_error', message: 'model: bad-model' } }, 404);
     const msgs = b.messages, lastM = msgs[msgs.length - 1];
     if (msgs.some(m => Array.isArray(m.content) && m.content.some(c => c.type === 'tool_use')) && !b.tools) return J({ type: 'error', error: { type: 'invalid_request_error', message: 'Requests which include `tool_use` or `tool_result` blocks must define tools.' } }, 400);   // the real API's rule
@@ -1024,6 +1026,50 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   await tapAs(555, 'us:pr:888');
   const y = JSON.parse(kvStore.get('tg:users'))['888'];
   check('☆ off again → back to 5 / 1, no voice', !y.premium && y.ai === 5 && y.reports === 1);
+}
+
+// 🔑 a member's own Claude key (Settings → My Claude key → /key)
+{
+  const mm = JSON.parse(kvStore.get('tg:users')); mm['888'] = { ...mm['888'], email: 'new.member@x.com', premium: undefined, ai: 5, reports: 1 }; kvStore.set('tg:users', JSON.stringify(mm));
+  const GOOD = 'sk-ant-good-' + 'a'.repeat(40), BAD = 'sk-ant-nope-' + 'b'.repeat(40);
+  const keyReq = (email, uid, body) => W.fetch(new Request(HOST + '/key', { method: 'POST', headers: { Origin: 'https://drsamirsaad1981-design.github.io', 'content-type': 'application/json' }, body: JSON.stringify({ idToken: fbToken(email, uid), ...body }) }), ENVA, {});
+  let r = await keyReq('new.member@x.com', 'UID2', { action: 'status' }); let j = await r.json();
+  check('🔑 /key status: none yet', r.status === 200 && j.has === false, j);
+  r = await keyReq('new.member@x.com', 'UID2', { action: 'set', key: 'hello' });
+  check('…not a key shape → refused (400)', r.status === 400);
+  r = await keyReq('new.member@x.com', 'UID2', { action: 'set', key: BAD });
+  check('…a key Claude refuses → 400, nothing saved', r.status === 400 && !kvStore.has('tg:888:byok'));
+  r = await keyReq('new.member@x.com', 'UID2', { action: 'set', key: GOOD }); j = await r.json();
+  const stored = kvStore.get('tg:888:byok') || '';
+  check('…a working key → saved ENCRYPTED (the key never appears in KV), only its last 4 shown', r.status === 200 && j.has && j.tail === 'aaaa' && stored && !stored.includes(GOOD) && !stored.includes('sk-ant'), [j, stored.slice(0, 60)]);
+  r = await keyReq('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'status' });
+  check('…the owner (and strangers) can\'t use /key (403)', r.status === 403);
+  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
+  claudeKeys.length = 0; sent.length = 0; await sayAs(888, 'what is the price of SOL?');
+  check('…their questions now run on THEIR key, with 100 a day', claudeKeys.length > 0 && claudeKeys.every(k => k === GOOD) && /\/100 left today/.test(last().b.text), [claudeKeys.map(k => k.slice(0, 12)), last().b.text.slice(-40)]);
+  claudeKeys.length = 0; const an2 = await analyze('new.member@x.com', 'UID2'); const anj2 = await an2.json();
+  check('…their AI Analysis reports too (10 a day, on their key; 1 used earlier today → 8 left)', an2.status === 200 && claudeKeys.at(-1) === GOOD && anj2.remaining === 8, anj2);
+  sent.length = 0; fileGets.length = 0;
+  await post({ update_id: ++UPD, message: { message_id: 3, chat: { id: 888, type: 'private' }, from: { id: 888 }, voice: { file_id: 'VF1', duration: 5, mime_type: 'audio/ogg', file_size: 70000 } } }, ENV.TG_SECRET, { ...ENVV, RATE: KV });
+  check('…and voice notes work for them (not premium, own key)', fileGets.length === 1);
+  sent.length = 0; await tapAs(555, 'us:m:888');
+  check('…the owner sees 🔑 "uses their own Claude key (…aaaa)" on the card', /own Claude key \(…aaaa\)/.test(last().b.text), last().b.text);
+  // a dead key → a clear message (no silent fallback to Samir's key)
+  const DEAD = 'sk-ant-dead-' + 'c'.repeat(40);
+  r = await keyReq('new.member@x.com', 'UID2', { action: 'set', key: GOOD });
+  const W6 = await fresh(); kvStore.set('tg:888:byok', kvStore.get('tg:888:byok'));
+  // (simulate the key dying later: save DEAD directly through the module, as the app would have when it still worked)
+  const byok = await import('../tools/worker/byok.mjs'), who = await import('../tools/worker/who.mjs');
+  await who.asChat('888', () => byok.saveKey(ENVK, DEAD));
+  claudeKeys.length = 0;
+  await W6.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': ENV.TG_SECRET }, body: JSON.stringify({ update_id: ++UPD, message: { message_id: 1, chat: { id: 888, type: 'private' }, from: { id: 888 }, text: 'what is the price of SOL?' } }) }), ENVK, {});
+  check('…their key refused later → "Claude refused your own API key… fix it in the app", Samir\'s key not used', /refused your own API key/.test(last().b.text) && !claudeKeys.includes('sk-test'), [claudeKeys, last().b.text.slice(0, 60)]);
+  r = await keyReq('new.member@x.com', 'UID2', { action: 'delete' }); j = await r.json();
+  check('…🗑 delete → gone', j.has === false && !kvStore.has('tg:888:byok'));
+  await keyReq('new.member@x.com', 'UID2', { action: 'set', key: GOOD });
+  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
+  await sayAs(888, '/forget'); await tapAs(888, 'fg:yes');
+  check('…/forget deletes it too', !kvStore.has('tg:888:byok'));
 }
 
 console.log(`${pass}/${pass + fail} passed`);

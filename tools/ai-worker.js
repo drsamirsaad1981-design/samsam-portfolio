@@ -30,6 +30,8 @@ const memCount = new Map();         // fallback counter when no KV binding
 // the Telegram bot's members (tools/worker/who.mjs) — set by tools/worker/index.mjs; absent when this file runs alone
 let memberCheck = null;
 export function setMemberCheck(fn) { memberCheck = fn; }
+let keyHandler = null;   // /key — a member's own Claude key (tools/worker/byok.mjs), set by index.mjs
+export function setKeyHandler(fn) { keyHandler = fn; }
 
 export default {
   async fetch(request, env) {
@@ -47,7 +49,8 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { status: okOrigin ? 204 : 403, headers: cors });
     if (!okOrigin) return reply(403, { error: 'This service only answers the Cute Portfolio app.' });
-    if (request.method !== 'POST' || !new URL(request.url).pathname.endsWith('/analyze')) return reply(404, { error: 'Not found.' });
+    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path);
+    if (request.method !== 'POST' || !(path.endsWith('/analyze') || isKey)) return reply(404, { error: 'Not found.' });
 
     // body (size-capped)
     const raw = await request.text();
@@ -60,13 +63,19 @@ export default {
     try { user = await verifyFirebaseToken(token, env.FIREBASE_PROJECT || 'samsam-portfolio'); }
     catch (e) { return reply(401, { error: 'Please sign in again, then retry. (' + e.message + ')' }); }
     const emails = list(env.ALLOWED_EMAILS || ''), em = String(user.email || '').toLowerCase();
+    if (isKey) {   // 🔑 status / set / delete the signed-in member's own Claude key
+      if (!keyHandler) return reply(404, { error: 'Not found.' });
+      const r = await keyHandler(env, em, body).catch(() => ({ status: 500, error: 'Something went wrong — try again.' }));
+      return reply(r.status || 200, r);
+    }
+    let apiKey = env.ANTHROPIC_API_KEY;
     let limit = Math.max(1, parseInt(env.DAILY_LIMIT || '5', 10) || 5), model = env.MODEL || 'claude-opus-4-5';
     if (emails.length && !emails.includes(em)) {
       // someone the owner invited through the Telegram bot (their e-mail approved there): their own limit (default 1 a day)
       // and the lighter model (MEMBER_MODEL, else Claude Sonnet 5.5)
       const m = memberCheck ? await memberCheck(env, em).catch(() => null) : null;
       if (!m) return reply(403, { error: 'This account is not allowed to use the AI analysis.' });
-      limit = m.limit; model = m.model;
+      limit = m.limit; model = m.model; if (m.apiKey) apiKey = m.apiKey;   // 🔑 their own key → their bill
       if (!(limit > 0)) return reply(429, { error: 'AI reports are not on for this account — ask Samir.', remaining: 0 });
     }
 
@@ -77,7 +86,7 @@ export default {
     if (used >= limit) return reply(429, { error: `You have used today's ${limit} AI reports. New reports are available tomorrow (00:00 UTC).`, remaining: 0 });
 
     // 4. Claude
-    if (!env.ANTHROPIC_API_KEY) return reply(500, { error: 'The Worker has no ANTHROPIC_API_KEY secret.' });
+    if (!apiKey) return reply(500, { error: 'The Worker has no ANTHROPIC_API_KEY secret.' });
     const lang = body.language === 'ar' ? 'ar' : 'en';
     const data = body.portfolioData && typeof body.portfolioData === 'object' ? body.portfolioData : null;
     if (!data) return reply(400, { error: 'No portfolio data in the request.' });
@@ -87,7 +96,7 @@ export default {
     try {
       res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model, max_tokens: 4000, system: systemPrompt(lang), messages: [{ role: 'user', content: userPrompt(data, extra, lang) }] }),
       });
     } catch (_) { return reply(502, { error: 'Could not reach Claude. Please try again.' }); }

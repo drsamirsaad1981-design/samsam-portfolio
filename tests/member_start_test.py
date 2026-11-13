@@ -35,10 +35,29 @@ with sync_playwright() as p:
             pg.evaluate("openBaselineEdit && openBaselineEdit()")
             pg.wait_for_timeout(300)
             check('member: Baseline editor has no "Use the original baseline (Oct 15)"', not pg.is_visible('#blReset'))
+            # 🔑 Settings → My Claude key (members only): the key goes to the Worker once, typed in a hidden field
+            calls = []
+            def key_route(r):
+                body = json.loads(r.request.post_data or '{}'); calls.append(body)
+                r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'},
+                          body=json.dumps({'has': True, 'tail': 'wxyz'} if body.get('action') == 'set' else {'has': False}))
+            ctx.route('https://samsam-analysis.dr-samir-saad-1981.workers.dev/key', key_route)
+            pg.evaluate("document.getElementById('blModal').classList.remove('show')")
+            pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#cpSet')
+            check('member: Settings has "My Claude key"', 'My Claude key' in pg.inner_text('#cpSet'))
+            pg.evaluate("window.__cpAutoAnswer = null")
+            pg.click('#stRow_claudekey')
+            pg.wait_for_selector('#cpDialog #cpdI')
+            check('member: the key is typed in a hidden (password) field', pg.get_attribute('#cpDialog #cpdI', 'type') == 'password')
+            pg.fill('#cpDialog #cpdI', 'sk-ant-test-key-wxyz'); pg.click('#cpDialog .cpd-ok')
+            pg.wait_for_function("document.querySelector('#cpDialog') && /Saved/.test(document.querySelector('#cpDialog').textContent)", timeout=8000)
+            check('member: status asked, then the key sent once with their sign-in token → "Saved (…wxyz)"', [c.get('action') for c in calls] == ['status', 'set'] and calls[1].get('key') == 'sk-ant-test-key-wxyz' and calls[1].get('idToken'), [c.get('action') for c in calls])
             urllib.request.urlopen('http://127.0.0.1:8787/reset').read()
         else:
             check('owner: the setup still offers the Oct-15 starting portfolio', 'Oct-15' in txt, txt)
             check('owner: Samsam.isOwner() is true', pg.evaluate("Samsam.isOwner()") is True)
+            pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#cpSet')
+            check('owner: no "My Claude key" in Settings (your key is the Worker\'s)', 'My Claude key' not in pg.inner_text('#cpSet'))
         check(f'{who}: no page errors', not errs, errs[:3])
         ctx.close()
     br.close()
