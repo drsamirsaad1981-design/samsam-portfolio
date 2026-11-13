@@ -41,7 +41,7 @@ const USER = () => ({
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
   meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
-const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = [], pinWrites = [], accessWrites = [], tglinkWrites = []; let TGLINK = null; let OWNER_PIN = 'UID1', ACCOUNTS = ['UID1']; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
+const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = [], pinWrites = [], accessWrites = [], tglinkWrites = []; let TGLINK = null, TGLINK_UID = 'UID2'; let OWNER_PIN = 'UID1', ACCOUNTS = ['UID1']; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
@@ -72,13 +72,13 @@ globalThis.fetch = async (input, init = {}) => {
     if ((init.headers || {}).authorization !== 'Bearer tok') return J({}, 403);
     const U = USER();
     if (u.endsWith('/documents/config/access')) { accessWrites.push(JSON.parse(body)); return J({}); }
-    if (/\/users\/UID2\/meta\/tglink$/.test(u) && init.method === 'PATCH') { tglinkWrites.push(JSON.parse(body)); TGLINK = null; return J({}); }
+    if (new RegExp('/users/' + TGLINK_UID + '/meta/tglink$').test(u) && init.method === 'PATCH') { tglinkWrites.push(JSON.parse(body)); TGLINK = null; return J({}); }
     if (u.endsWith('/documents/config/owner')) { if (init.method === 'PATCH') { pinWrites.push(JSON.parse(body)); OWNER_PIN = JSON.parse(body).fields.uid.stringValue; return J({}); } return OWNER_PIN ? J(doc({ uid: OWNER_PIN })) : J({}, 404); }
     if (u.endsWith(':runAggregationQuery')) { AGG_CALLS++; const c = JSON.parse(body).structuredAggregationQuery.structuredQuery.from[0].collectionId, uid = (/\/users\/(\w+):/.exec(u) || [])[1];
       const n = uid === 'UID1' ? (c === 'txs' ? committed.length : c === 'coins' ? U.coins.length : U.accum.length) : (c === 'coins' ? 1 : 0); return J([{ result: { aggregateFields: { n: { integerValue: String(n) } } } }]); }
     if (u.endsWith(':runQuery') && /"updatedAt"/.test(body)) { const since = JSON.parse(body).structuredQuery.where.fieldFilter.value.stringValue, c = JSON.parse(body).structuredQuery.from[0].collectionId, uid = (/\/users\/(\w+):/.exec(u) || [])[1];
       const rows = uid === 'UID1' ? (c === 'coins' ? U.coins : U.accum) : []; return J(rows.filter(r => typeof r.updatedAt === 'string' && r.updatedAt > since).slice(0, 1).map(r => ({ document: { name: 'x', fields: doc(r).fields } })).concat([{ readTime: 'now' }])); }
-    if (u.endsWith(':runQuery') && /"limit":1000/.test(body)) return J([...ACCOUNTS.map(a => ({ document: { name: 'projects/p/databases/(default)/documents/users/' + a + '/meta/info', fields: {} } })), ...(TGLINK ? [{ document: { name: 'projects/p/databases/(default)/documents/users/UID2/meta/tglink', fields: doc(TGLINK).fields } }] : [])]);
+    if (u.endsWith(':runQuery') && /"limit":1000/.test(body)) return J([...ACCOUNTS.map(a => ({ document: { name: 'projects/p/databases/(default)/documents/users/' + a + '/meta/info', fields: {} } })), ...(TGLINK ? [{ document: { name: 'projects/p/databases/(default)/documents/users/' + TGLINK_UID + '/meta/tglink', fields: doc(TGLINK).fields } }] : [])]);
     if (/\/users\/UID2\/(coins|txs|accum)\?/.test(u)) return J({ documents: /coins/.test(u) ? [doc({ sym: 'ETH', cgId: 'ethereum', opening: { qty: 2, avg: 2500 } })] : [] });
     if (u.endsWith('/users/UID2/meta/info')) return J(doc({}));
     if (u.endsWith(':runQuery')) return J(ACCOUNTS.map(a => ({ document: { name: 'projects/p/databases/(default)/documents/users/' + a + '/meta/info' } })));
@@ -877,12 +877,12 @@ const code2 = (/<code>([A-Z2-9]{8})<\/code>/.exec(last().b.text) || [])[1]; awai
 sent.length = 0; await sayAs(777, '/app');
 check('/app with no e-mail → how to send it', /\/app you@example\.com/.test(last().b.text));
 sent.length = 0; accessWrites.length = 0; await sayAs(777, 'cute.friend@gmail.com');
-check('…then just the e-mail on its own (as people do) → the same request goes to the owner, not to the AI', sent.some(x => String(x.b.chat_id) === '555' && /cute\.friend@gmail\.com/.test(x.b.text || '') && /ap:ok:777/.test(JSON.stringify(x.b.reply_markup || {}))), sent.map(x => (x.b.text || '').slice(0, 60)));
+check('…then just the e-mail on its own (as people do) → handled as /app (not the AI): opened for that e-mail, you get a note', sent.some(x => String(x.b.chat_id) === '555' && /cute\.friend@gmail\.com/.test(x.b.text || '') && /opened the app/.test(x.b.text || '')), sent.map(x => (x.b.text || '').slice(0, 60)));
 sent.length = 0; accessWrites.length = 0; await sayAs(777, '/app Ali.Friend@iCloud.com');
-const req = sent.find(x => String(x.b.chat_id) === '555' && /ap:ok:777/.test(JSON.stringify(x.b.reply_markup || {})));
-check('/app ali.friend@icloud.com → "sent for approval"; you get ✅ Allow / ❌ No; nothing allowed yet', /approval/.test(sent.find(x => x.m === 'sendMessage' && String(x.b.chat_id) === '777').b.text) && req && /ali\.friend@icloud\.com/.test(req.b.text) && accessWrites.length === 0, [sent.map(x => [x.m, x.b.chat_id, (x.b.text || '').slice(0, 40)]), accessWrites.length]);
-sent.length = 0; await tapAs(555, 'ap:ok:777');
-check('✅ → his e-mail goes into config/access (the rules read it) and he gets the app link', accessWrites.length === 1 && JSON.stringify(accessWrites[0]).includes('ali.friend@icloud.com') && sent.some(x => String(x.b.chat_id) === '777' && /drsamirsaad1981-design\.github\.io/.test(x.b.text || '')), accessWrites);
+const req = sent.find(x => String(x.b.chat_id) === '555' && /opened the app/.test(x.b.text || ''));
+check('/app ali.friend@icloud.com → an invited member: the app opens for that e-mail at once (config/access), he gets the link, you get a note', accessWrites.length === 1 && JSON.stringify(accessWrites[0]).includes('ali.friend@icloud.com') && sent.some(x => String(x.b.chat_id) === '777' && /drsamirsaad1981-design\.github\.io/.test(x.b.text || '')) && req && /ali\.friend@icloud\.com/.test(req.b.text), sent.map(x => [x.m, x.b.chat_id, (x.b.text || '').slice(0, 40)]));
+// (✅ / ❌ buttons stay for old pending requests)
+check('…his record carries the approved e-mail', JSON.parse(kvStore.get('tg:users'))['777'].email === 'ali.friend@icloud.com');
 sent.length = 0; await sayAs(777, '/link ABCDEFGH');
 check('/link with a wrong code → not valid (nothing linked)', /not valid/.test(last().b.text) && !JSON.parse(kvStore.get('tg:users'))['777'].uid);
 TGLINK = { code: 'K7M2PQ9R', exp: new Date(Date.now() + 5 * 60e3).toISOString(), email: 'someone.else@x.com' }; sent.length = 0; await sayAs(777, '/link K7M2PQ9R');
@@ -1153,6 +1153,46 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('…📱 an app request waiting shows, ✅ approve → the e-mail allowed (config/access)', pend === 'new.friend@x.com' && JSON.parse(kvStore.get('tg:users'))['888'].email === 'new.friend@x.com' && accessWrites.length === 1);
   await adm('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'member', chat: '888', op: 'endPrem' });
   check('…☆ end premium', !premOn(JSON.parse(kvStore.get('tg:users'))['888']));
+}
+
+// 📱 an invite opened in the APP: /join → in at once; later the bot links in one step. Max members; the quiet 5-minute round
+{
+  const ADM = (body) => W.fetch(new Request(HOST + '/admin', { method: 'POST', headers: { Origin: 'https://drsamirsaad1981-design.github.io', 'content-type': 'application/json' }, body: JSON.stringify({ idToken: fbToken('dr.samir.saad.1981@gmail.com', 'UID1'), ...body }) }), ENVA, {});
+  const JOIN = (email, uid, code) => W.fetch(new Request(HOST + '/join', { method: 'POST', headers: { Origin: 'https://drsamirsaad1981-design.github.io', 'content-type': 'application/json' }, body: JSON.stringify({ idToken: fbToken(email, uid), code }) }), ENVA, {});
+  let j = await (await ADM({ action: 'invite' })).json();
+  check('➕ an invite now has two links: the bot\'s and the app\'s (…/samsam-portfolio/?invite=CODE)', /\?invite=/.test(j.appLink || '') && j.appLink.endsWith(j.code), j);
+  let r = await JOIN('mona@x.com', 'UIDM', 'WRONGXX1');
+  check('📱 /join with a wrong code → 400, nothing allowed', r.status === 400);
+  accessWrites.length = 0; sent.length = 0;
+  r = await JOIN('Mona@X.com', 'UIDM', j.code); const jj = await r.json();
+  const ms = JSON.parse(kvStore.get('tg:users'));
+  check('📱 /join with the code → in at once (no second approval): an app member "a:UIDM", e-mail on the access list, the code used up, you get a note', r.status === 200 && jj.ok && ms['a:UIDM'] && ms['a:UIDM'].email === 'mona@x.com' && accessWrites.length === 1 && JSON.stringify(accessWrites[0]).includes('mona@x.com') && !kvStore.has('tg:inv:' + j.code) && sent.some(m => /joined from the app/.test(m.b.text || '')), [jj, Object.keys(ms)]);
+  r = await JOIN('mona@x.com', 'UIDM', j.code);
+  check('…opening the link again (same account) → fine, nothing new used', r.status === 200 && (await r.json()).already === true);
+  sent.length = 0; const W7 = await fresh(); const pw = []; await W7.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('03:25') }, ENVK, { waitUntil: x => pw.push(x) }); await Promise.all(pw);
+  check('…an app-only member gets no Telegram messages from the 5-minute round', !sent.some(m => String(m.b.chat_id).startsWith('a:')));
+  j = await (await ADM({ action: 'overview' })).json();
+  check('🛠 the dashboard shows them as an app member (📱, no bot yet)', j.members.some(m => m.chat === 'a:UIDM' && m.appOnly === true));
+  // later: the app's "Link the Telegram bot" (/start LCODE) from a chat the bot doesn't know yet
+  TGLINK = { code: 'M0NA2LNK', exp: new Date(Date.now() + 5 * 60e3).toISOString(), email: 'mona@x.com' };
+  TGLINK_UID = 'UIDM';
+  sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 4444, type: 'private' }, from: { id: 4444, first_name: 'Mona', username: 'mona', language_code: 'en' }, text: '/start LM0NA2LNK' } }, ENV.TG_SECRET, ENVK);
+  const ms2 = JSON.parse(kvStore.get('tg:users'));
+  check('🔗 /start L<code> from the app member\'s Telegram → they\'re in AND linked in one step (record moved to their chat), welcomed; you get a note', !ms2['a:UIDM'] && ms2['4444'] && ms2['4444'].email === 'mona@x.com' && ms2['4444'].uid === 'UIDM' && ms2['4444'].user === 'mona' && sent.some(m => String(m.b.chat_id) === '4444' && /Linked/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /📱→🤖/.test(m.b.text || '')), [Object.keys(ms2), sent.map(m => (m.b.text || '').slice(0, 40))]);
+  TGLINK_UID = 'UID2';
+  // max members (20 / 50 / 100) from the dashboard
+  j = await (await ADM({ action: 'setMax', max: 50 })).json();
+  check('👥 max members → 50 from the dashboard (20 / 50 / 100 only)', j.max === 50 && (await ADM({ action: 'setMax', max: 7 })).status === 400);
+  sent.length = 0; await sayAs(555, '/users');
+  check('…/users shows x/50', /\/50\)/.test(last().b.text), last().b.text.slice(0, 60));
+  await ADM({ action: 'setMax', max: 20 });
+  // the quiet round: it asked Firebase lately → no question at all this time
+  kvStore.delete('fs:pf:UID1'); await postK(await fresh(), '/portfolio');   // a full read (now "checked")
+  AGG_CALLS = 0; LIST_TXS = 0; const W10 = await fresh(); const pw3 = []; await W10.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('03:30') }, ENVK, { waitUntil: x => pw3.push(x) }); await Promise.all(pw3);
+  check('📉 the 5-minute round right after a check: no Firebase question at all (0 counts, 0 full reads)', AGG_CALLS === 0 && LIST_TXS === 0, [AGG_CALLS, LIST_TXS]);
+  const k = JSON.parse(kvStore.get('fs:pf:UID1')); k.checked -= 11 * 60e3; kvStore.set('fs:pf:UID1', JSON.stringify(k));
+  AGG_CALLS = 0; const W11 = await fresh(); const pw4 = []; await W11.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('03:35') }, ENVK, { waitUntil: x => pw4.push(x) }); await Promise.all(pw4);
+  check('…11 minutes later the owner\'s portfolio is asked again (members: 30)', AGG_CALLS === 0 || AGG_CALLS === 3, AGG_CALLS);
 }
 
 console.log(`${pass}/${pass + fail} passed`);

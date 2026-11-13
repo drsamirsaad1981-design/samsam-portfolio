@@ -30,6 +30,8 @@ const memCount = new Map();         // fallback counter when no KV binding
 // the Telegram bot's members (tools/worker/who.mjs) — set by tools/worker/index.mjs; absent when this file runs alone
 let memberCheck = null;
 export function setMemberCheck(fn) { memberCheck = fn; }
+let joinHandler = null;   // /join — an invite code opened in the app (tools/worker/who.mjs useAppInvite)
+export function setJoinHandler(fn) { joinHandler = fn; }
 let adminHandler = null;   // /admin — the owner's dashboard in the app (tools/worker/admin.mjs)
 export function setAdminHandler(fn) { adminHandler = fn; }
 let keyHandler = null;   // /key — a member's own Claude key (tools/worker/byok.mjs), set by index.mjs
@@ -51,8 +53,8 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { status: okOrigin ? 204 : 403, headers: cors });
     if (!okOrigin) return reply(403, { error: 'This service only answers the Cute Portfolio app.' });
-    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path);
-    if (request.method !== 'POST' || !(path.endsWith('/analyze') || isKey || isAdmin)) return reply(404, { error: 'Not found.' });
+    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path), isJoin = /\/join\/?$/.test(path);
+    if (request.method !== 'POST' || !(path.endsWith('/analyze') || isKey || isAdmin || isJoin)) return reply(404, { error: 'Not found.' });
 
     // body (size-capped)
     const raw = await request.text();
@@ -65,6 +67,11 @@ export default {
     try { user = await verifyFirebaseToken(token, env.FIREBASE_PROJECT || 'samsam-portfolio'); }
     catch (e) { return reply(401, { error: 'Please sign in again, then retry. (' + e.message + ')' }); }
     const emails = list(env.ALLOWED_EMAILS || ''), em = String(user.email || '').toLowerCase();
+    if (isJoin) {   // 📱 an invite code opened in the app: this signed-in, checked e-mail may now use the app
+      if (!joinHandler) return reply(404, { error: 'Not found.' });
+      const r = await joinHandler(env, { email: em, uid: user.uid }, body).catch(() => ({ status: 500, error: 'Something went wrong — try again.' }));
+      return reply(r.status || 200, r);
+    }
     if (isAdmin) {   // 🛠 the owner's dashboard: only the owner's account (checked again inside)
       if (!adminHandler) return reply(404, { error: 'Not found.' });
       const r = await adminHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch(e => ({ status: 500, error: 'Something went wrong — ' + String(e && e.message || e).slice(0, 120) }));

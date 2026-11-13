@@ -19,9 +19,15 @@ const memKV = new Map();
 const kget = async (env, k) => { if (env.RATE) { try { return await env.RATE.get(k); } catch (_) {} } return memKV.has(k) ? memKV.get(k) : null; };   // KV is the truth when there is one
 const kput = async (env, k, v, ttl) => { memKV.set(k, v); try { if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : undefined); } catch (_) {} };
 const kdel = async (env, k) => { memKV.delete(k); try { if (env.RATE) await env.RATE.delete(k); } catch (_) {} };
-export const MAX_MEMBERS = 20;
+export const MAX_MEMBERS = 20;   // the default; the owner can choose 20 / 50 / 100 in the app's dashboard (KV tg:max)
+export const MAX_CHOICES = [20, 50, 100];
+export async function maxMembers(env) { const v = +(await kget(env, 'tg:max')); return MAX_CHOICES.includes(v) ? v : MAX_MEMBERS; }
+export async function setMaxMembers(env, n) { if (!MAX_CHOICES.includes(+n)) return false; await kput(env, 'tg:max', String(+n)); return true; }
+// a member who joined from the app (an invite link opened there) has no Telegram chat yet: kept under "a:<their uid>" until
+// they link the bot (then their record moves to their chat). Only real chats get messages / the 5-minute round.
+export const isTgChat = c => /^-?\d+$/.test(String(c));
 export async function members(env) { try { const m = JSON.parse((await kget(env, 'tg:users')) || '{}'); return m && typeof m === 'object' ? m : {}; } catch (_) { return {}; } }
-export async function chats(env) { return env.TELEGRAM_CHAT_ID ? [String(env.TELEGRAM_CHAT_ID), ...Object.keys(await members(env)).filter(c => c !== String(env.TELEGRAM_CHAT_ID))] : []; }
+export async function chats(env) { return env.TELEGRAM_CHAT_ID ? [String(env.TELEGRAM_CHAT_ID), ...Object.keys(await members(env)).filter(c => c !== String(env.TELEGRAM_CHAT_ID) && isTgChat(c))] : []; }
 export async function allowed(env, chat) { return (await chats(env)).includes(String(chat)); }
 
 // /invite → a one-time code (8 letters, no look-alikes), good for 7 days
@@ -38,12 +44,39 @@ export async function useInvite(env, code, chat, from) {
   const raw = await kget(env, 'tg:inv:' + C);
   if (!raw) return { error: 'bad' };
   const m = await members(env);
-  if (Object.keys(m).length >= MAX_MEMBERS) return { error: 'full' };
+  if (Object.keys(m).length >= await maxMembers(env)) return { error: 'full' };
   await kdel(env, 'tg:inv:' + C);   // first: a code works once
   const name = [from && from.first_name, from && from.last_name].filter(Boolean).join(' ').slice(0, 40) || 'Friend';
   m[String(chat)] = { name, user: from && from.username ? String(from.username).slice(0, 32) : '', joined: Date.now(), note: (() => { try { return JSON.parse(raw).note || ''; } catch (_) { return ''; } })() };
   await kput(env, 'tg:users', JSON.stringify(m));
   return { ok: true, member: m[String(chat)] };
+}
+// 📱 an invite code opened in the APP: that signed-in account (a checked e-mail) becomes a member at once — the invite is
+// Samir's yes, so no second approval. → { ok, member, already } | { error: 'bad' | 'full' }
+export async function useAppInvite(env, code, uid, email) {
+  const C = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''), e = String(email || '').toLowerCase();
+  if (!uid || !e) return { error: 'bad' };
+  const m = await members(env), had = Object.entries(m).find(([, x]) => x.email === e || x.uid === uid);
+  if (had) return { ok: true, already: true, member: had[1] };   // already in (from the bot or an earlier link)
+  if (C.length !== 8) return { error: 'bad' };
+  const raw = await kget(env, 'tg:inv:' + C);
+  if (!raw) return { error: 'bad' };
+  if (Object.keys(m).length >= await maxMembers(env)) return { error: 'full' };
+  await kdel(env, 'tg:inv:' + C);
+  m['a:' + uid] = { name: e.split('@')[0].slice(0, 40), user: '', joined: Date.now(), email: e, uid, appOnly: true, note: (() => { try { return JSON.parse(raw).note || ''; } catch (_) { return ''; } })() };
+  await kput(env, 'tg:users', JSON.stringify(m));
+  return { ok: true, member: m['a:' + uid] };
+}
+// …and later, from Telegram: the app's "Link the Telegram bot" code from that account → their record moves to their chat
+export async function moveAppMember(env, uid, chat, from) {
+  const m = await members(env), key = 'a:' + uid, x = m[key];
+  if (!x || m[String(chat)]) return null;
+  const name = [from && from.first_name, from && from.last_name].filter(Boolean).join(' ').slice(0, 40) || x.name;
+  m[String(chat)] = { ...x, name, user: from && from.username ? String(from.username).slice(0, 32) : '', appOnly: undefined };
+  delete m[String(chat)].appOnly; delete m[key];
+  await kput(env, 'tg:users', JSON.stringify(m));
+  const k = await kget(env, `tg:${key}:byok`); if (k) { await kput(env, `tg:${chat}:byok`, k); await kdel(env, `tg:${key}:byok`); }   // their own Claude key comes along
+  return m[String(chat)];
 }
 export async function removeMember(env, chat) {
   const m = await members(env);

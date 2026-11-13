@@ -294,6 +294,10 @@ async function readPortfolio(env, db, uid, fresh) {
   const kvKey = 'fs:pf:' + uid, parent = 'users/' + uid;
   let kept = null;
   if (!fresh && env.RATE) { try { kept = JSON.parse((await env.RATE.get(kvKey)) || 'null'); } catch (_) { kept = null; } }
+  // the 5-minute round (cron) doesn't even ask "anything new?" if it asked lately: 10 min for the owner, 30 for members —
+  // holdings rarely change, prices come live anyway; a message / 🔄 / a trade still checks right away
+  const quiet = +env.PF_CHECK_MS ? (isOwner(env) ? Math.min(+env.PF_CHECK_MS, 10 * 60e3) : +env.PF_CHECK_MS) : 0;
+  if (kept && kept.data && quiet && Date.now() - (kept.checked || kept.at) < quiet && Date.now() - kept.at < PF_FULL_MS) { pfStats.skip = (pfStats.skip || 0) + 1; return kept.data; }
   if (kept && kept.data && Date.now() - kept.at < PF_FULL_MS) {
     try {
       const [nt, nc, na, cc, ca, meta] = await Promise.all([db.count(parent, 'txs'), db.count(parent, 'coins'), db.count(parent, 'accum'),
@@ -301,7 +305,7 @@ async function readPortfolio(env, db, uid, fresh) {
       if (nt === kept.n.txs && nc === kept.n.coins && na === kept.n.accum && !cc && !ca) {
         pfStats.probe++;
         const m = meta || {};
-        if (JSON.stringify(m) !== JSON.stringify(kept.data.meta)) { kept.data.meta = m; try { await env.RATE.put(kvKey, JSON.stringify(kept)); } catch (_) {} }
+        kept.data.meta = m; kept.checked = Date.now(); try { await env.RATE.put(kvKey, JSON.stringify(kept)); } catch (_) {}
         return kept.data;
       }
     } catch (_) { /* unsure → read it all */ }
@@ -309,7 +313,7 @@ async function readPortfolio(env, db, uid, fresh) {
   const [coins, txs, accum, meta] = await Promise.all([db.list(`${parent}/coins`), db.list(`${parent}/txs`), db.list(`${parent}/accum`), db.get(`${parent}/meta/info`)]);
   pfStats.full++;
   const data = { coins, txs, accum, meta: meta || {}, uid };
-  if (env.RATE) { try { await env.RATE.put(kvKey, JSON.stringify({ at: Date.now(), seen: maxUpd([...coins, ...accum]), n: { txs: txs.length, coins: coins.length, accum: accum.length }, data })); } catch (_) {} }
+  if (env.RATE) { try { await env.RATE.put(kvKey, JSON.stringify({ at: Date.now(), checked: Date.now(), seen: maxUpd([...coins, ...accum]), n: { txs: txs.length, coins: coins.length, accum: accum.length }, data })); } catch (_) {} }
   return data;
 }
 export async function forgetPortfolio(env, uid) { try { if (env.RATE && uid) await env.RATE.delete('fs:pf:' + uid); } catch (_) {} }

@@ -13,7 +13,7 @@
 // Worker secrets (Settings → Variables and Secrets): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT,
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
-import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat } from './who.mjs';
+import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
 import { forgetPortfolio, findLinkCode, syncAccess, loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
@@ -394,6 +394,16 @@ async function stranger(env, u, msg, chat) {
   if (!msg || !msg.chat || msg.chat.type !== 'private' || typeof msg.text !== 'string') return ok();
   if (!(await firstTime(env, u.update_id))) return ok();
   const L = /^ar/.test((msg.from && msg.from.language_code) || '') ? 'ar' : 'en', w = STR[L];
+  const lk = (/^\/(?:start\s+L|link\s*)([A-Za-z0-9]{8})$/i.exec(msg.text.trim()) || [])[1];
+  if (lk) {   // 📱 someone who joined from the APP links the bot: their app's code → they're in, portfolio linked, in one step
+    const hit = await findLinkCode(env, lk.toUpperCase()), x = hit && await moveAppMember(env, hit.uid, chat, msg.from);
+    if (x) {
+      await asChat(chat, async () => { await setLang(env, L); await setCfg(env, { morning: true, evening: true, pin: true, radar: true, sectors: true }); const t = T[L];
+        await send(env, chat, { text: w.welcome(esc(x.name)).split('\n').slice(0, 2).join('\n') + '\n' + AW[L].linked }, { reply_markup: replyKb(t) }); await send(env, chat, viewMenu(t, false)); });
+      await asChat(env.TELEGRAM_CHAT_ID, async () => send(env, env.TELEGRAM_CHAT_ID, { text: STR[await getLang(env)].joined(esc(x.name), esc(x.user)) + ' · 📱→🤖', buttons: [[cb('👥 /users', 'us')]] }));
+      return ok();
+    }
+  }
   const code = (/^\/start\s+([A-Za-z0-9]{8})\b/.exec(msg.text.trim()) || /^([A-Za-z0-9]{8})$/.exec(msg.text.trim()) || [])[1];
   if (code) {
     const r = await useInvite(env, code, chat, msg.from);
@@ -412,7 +422,7 @@ async function stranger(env, u, msg, chat) {
 // 👥 /users (owner): who's in, 🗑 to remove someone; ➕ a new invite
 async function viewUsers(env, lang) {
   const m = await members(env), ar = lang === 'ar', list = Object.entries(m);
-  const L = [ar ? `👥 <b>الأعضاء</b> (${list.length}/${MAX_MEMBERS})` : `👥 <b>Members</b> (${list.length}/${MAX_MEMBERS})`, ''];
+  const mx = await maxMembers(env), L = [ar ? `👥 <b>الأعضاء</b> (${list.length}/${mx})` : `👥 <b>Members</b> (${list.length}/${mx})`, ''];
   if (!list.length) L.push(ar ? 'لسه مفيش حد. اضغط ➕ لكود دعوة.' : 'Nobody yet. Tap ➕ for an invite code.');
   const used = await Promise.all(list.map(([c, x]) => usedToday(env, c, x)));
   list.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? '⏸ ' : ''}${premiumNow(x) ? '⭐ ' : ''}${x.supporter ? '💛 ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''}\n    ${ar ? 'النهارده' : 'today'} 🧠 ${used[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} · 📊 ${used[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
@@ -468,9 +478,11 @@ async function appRequest(env, chat, text) {
   const email = (/([^@\s/]+@[^@\s]+\.[^@\s]+)/.exec(text) || [])[1];
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { await send(env, chat, { text: w.ask }); return; }
   const e = email.toLowerCase().slice(0, 120), me = await member(env);
-  await setPending(env, chat, e);
-  await send(env, chat, { text: w.sent });
-  await asChat(env.TELEGRAM_CHAT_ID, async () => { const L = await getLang(env); await send(env, env.TELEGRAM_CHAT_ID, { text: AW[L].req(esc(me ? me.name : chat), esc(e)), buttons: [[cb(L === 'ar' ? '✅ اسمح' : '✅ Allow', 'ap:ok:' + chat), cb(L === 'ar' ? '❌ لأ' : '❌ No', 'ap:no:' + chat)]] }); });
+  // the invite was Samir's yes: the app opens for that e-mail at once (he gets a note, and can remove them any time)
+  await setMember(env, chat, { email: e }); await clearPending(env, chat);
+  const okSync = await syncAccess(env, await accessEmails(env)).catch(() => false);
+  await send(env, chat, { text: okSync ? w.ok(esc(e)) : (lang === 'ar' ? '⚠️ حصل مشكلة — جرّب تاني بعد دقيقة.' : '⚠️ Something went wrong — try again in a minute.') });
+  await asChat(env.TELEGRAM_CHAT_ID, async () => { const L = await getLang(env); await send(env, env.TELEGRAM_CHAT_ID, { text: L === 'ar' ? `📱 <b>${esc(me ? me.name : chat)}</b> فتح التطبيق بـ\n<code>${esc(e)}</code>` : `📱 <b>${esc(me ? me.name : chat)}</b> opened the app with\n<code>${esc(e)}</code>`, buttons: [[cb(L === 'ar' ? '👤 الكارت' : '👤 Their card', 'us:m:' + chat)]] }); });
 }
 // /link CODE (or the app's "Open the bot" → /start LCODE): this chat now reads that account's portfolio
 async function linkPortfolio(env, chat, text) {

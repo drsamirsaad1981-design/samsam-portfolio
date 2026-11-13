@@ -2,18 +2,18 @@
 // /users, /invite and /stats: the numbers, every member (search, limits, ⭐ gift / end, ⏸ pause, 🗑 remove), app requests
 // waiting for a ✅, new invite codes, and the Stars log. Only the owner's account (checked here, server-side) can call it.
 
-import { asChat, members, member, setMember, removeMember, newInvite, accessEmails, getPending, clearPending, MAX_MEMBERS, DEF_AI, DEF_REPORTS } from './who.mjs';
+import { asChat, members, member, setMember, removeMember, newInvite, accessEmails, getPending, clearPending, maxMembers, setMaxMembers, MAX_CHOICES, isTgChat, DEF_AI, DEF_REPORTS } from './who.mjs';
 import { premiumNow, addDays, revoke, price } from './stars.mjs';
 import { keyInfo } from './byok.mjs';
 import { isOwnerAccount, syncAccess } from './data.mjs';
-import { localParts, local } from '../alerts-core.mjs';
+import { localParts, local, APP } from '../alerts-core.mjs';
 
 async function tg(env, method, body) {
   try { const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
   catch (_) { return { ok: false }; }
 }
 const kv = async (env, k) => { try { return env.RATE ? await env.RATE.get(k) : null; } catch (_) { return null; } };
-const tell = (env, chat, en, ar, lang) => tg(env, 'sendMessage', { chat_id: chat, text: lang === 'ar' ? ar : en, parse_mode: 'HTML' }).catch(() => {});
+const tell = (env, chat, en, ar, lang) => !isTgChat(chat) ? null : tg(env, 'sendMessage', { chat_id: chat, text: lang === 'ar' ? ar : en, parse_mode: 'HTML' }).catch(() => {});
 const day = ms => local(ms, { day: 'numeric', month: 'short', year: 'numeric' });
 
 async function botLink(env, code) {
@@ -27,7 +27,7 @@ async function overview(env, now = Date.now()) {
   const list = await Promise.all(Object.entries(m).map(async ([chat, x]) => {
     const q = +(await kv(env, `tg:${chat}:ai:${rDay}`)) || 0, r = x.uid ? +(await kv(env, `ai:${x.uid}:${uDay}`)) || 0 : 0;
     const k = await asChat(chat, () => keyInfo(env)), pend = await getPending(env, chat);
-    return { chat, name: x.name, user: x.user || '', joined: x.joined, email: x.email || '', pending: pend || '', linked: !!x.uid, paused: !!x.paused,
+    return { chat, appOnly: !isTgChat(chat), name: x.name, user: x.user || '', joined: x.joined, email: x.email || '', pending: pend || '', linked: !!x.uid, paused: !!x.paused,
       premium: premiumNow(x, now), premUntil: x.premUntil || null, premSrc: x.premSrc || null, supporter: !!x.supporter, starsPaid: x.starsPaid || 0,
       ai: Number.isFinite(x.ai) ? x.ai : DEF_AI, reports: Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, usedQ: q, usedR: r, ownKey: k.has ? k.tail : null, lang: x.lang || '' };
   }));
@@ -35,7 +35,7 @@ async function overview(env, now = Date.now()) {
   const month = new Date(now).toISOString().slice(0, 7), sum = f => log.filter(f).reduce((s, x) => s + (+x.stars || 0), 0);
   const names = Object.fromEntries(Object.entries(m).map(([c, x]) => [c, x.name]));
   return {
-    max: MAX_MEMBERS, price: price(env),
+    max: await maxMembers(env), maxChoices: MAX_CHOICES, price: price(env),
     stats: { members: list.length, paused: list.filter(x => x.paused).length, premium: list.filter(x => x.premium).length, premiumStars: list.filter(x => x.premium && x.premSrc === 'stars').length,
       supporters: list.filter(x => x.supporter).length, starsMonth: sum(x => new Date(x.t).toISOString().slice(0, 7) === month), starsAll: sum(() => true),
       starsMonthPremium: sum(x => x.kind === 'prem' && new Date(x.t).toISOString().slice(0, 7) === month), starsMonthSupport: sum(x => x.kind === 'sup' && new Date(x.t).toISOString().slice(0, 7) === month) },
@@ -76,7 +76,8 @@ export async function adminHandler(env, who, body) {
   if (!(await isOwnerAccount(env, who))) return { status: 403, error: 'Only the owner can open the dashboard.' };
   const a = body && body.action;
   if (a === 'overview') return overview(env);
-  if (a === 'invite') { const code = await newInvite(env, String((body && body.note) || '').slice(0, 40)); return { code, link: await botLink(env, code), days: 7 }; }
+  if (a === 'invite') { const code = await newInvite(env, String((body && body.note) || '').slice(0, 40)); return { code, link: await botLink(env, code), appLink: APP.replace(/\/?$/, '/') + '?invite=' + code, days: 7 }; }
+  if (a === 'setMax') { if (!(await setMaxMembers(env, body && body.max))) return { status: 400, error: 'Pick 20, 50 or 100.' }; return overview(env); }
   if (a === 'member') { const r = await act(env, String(body.chat || ''), String(body.op || '')); return r.ok ? { ...r, overview: await overview(env) } : r; }
   return { status: 400, error: 'Unknown action.' };
 }

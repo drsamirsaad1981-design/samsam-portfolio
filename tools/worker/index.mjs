@@ -1,16 +1,26 @@
 // tools/worker/index.mjs — the one Cloudflare Worker: AI Analysis (/analyze, tools/ai-worker.js) + the Telegram bot (/tg).
 // Built into a single file by tools/build-worker.mjs → tools/dist/samsam-worker.js (that file is what you paste).
-import ai, { setMemberCheck, setKeyHandler, setAdminHandler } from '../ai-worker.js';
+import ai, { setMemberCheck, setKeyHandler, setAdminHandler, setJoinHandler } from '../ai-worker.js';
 import { adminHandler } from './admin.mjs';
 setAdminHandler(adminHandler);   // 🛠 the owner's dashboard in the app
+// 📱 an invite code opened in the app (?invite=CODE): that account is in — its e-mail joins the access list the rules read
+setJoinHandler(async (env, who, body) => {
+  const r = await useAppInvite(env, body && body.code, who.uid, who.email);
+  if (r.error) return { status: r.error === 'full' ? 409 : 400, error: r.error === 'full' ? 'Cute Portfolio is full right now — ask Dr. Samir Saad.' : 'That invite code is not valid (or was already used).' };
+  const okSync = await syncAccess(env, await accessEmails(env)).catch(() => false);
+  if (!okSync) return { status: 502, error: 'Could not open the app for you — try again in a minute.' };
+  if (!r.already) { const n = r.member.name; await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text: `📱 ${n} (${who.email}) joined from the app with an invite.` }) }).catch(() => {}); }
+  return { ok: true, already: !!r.already };
+});
 import { expireRound, premiumNow } from './stars.mjs';
 import { saveKey, keyInfo, ownKey, deleteKey, validShape, keyWorks, BYOK_REPORTS } from './byok.mjs';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
 import { runDaily, kickPrices } from './daily.mjs';
 import { page, api, cardSend, logo } from './miniapp.mjs';
-import { resetBudget } from './data.mjs';
-import { asChat, activeChats, migrateOwner, memberByEmail, DEF_REPORTS } from './who.mjs';
+import { resetBudget, syncAccess } from './data.mjs';
+import { asChat, activeChats, migrateOwner, memberByEmail, DEF_REPORTS, useAppInvite, accessEmails } from './who.mjs';
 
 // AI Analysis in the app: people invited through the bot whose e-mail Samir approved — their own daily reports (/users), Sonnet
 setMemberCheck(async (env, email) => {
@@ -59,9 +69,11 @@ export default {
       await migrateOwner(env);
       await kickPrices(env).then(r => { if (r.kick === 'sent' || r.kick === 'refused') console.log(JSON.stringify(r)); }).catch(e => log('kick', e));   // GitHub late → run the market snapshot now
       await expireRound(env, Date.now()).catch(e => log('premium', e));   // ⭐ a premium that ended → standard limits (3-day reminder before)
+      const cenv = { ...env, PF_CHECK_MS: String(30 * 60e3) };
       for (const chat of await activeChats(env)) {   // each person in turn, as themselves: their alerts, then their daily messages
         resetBudget();
         await asChat(chat, async () => {
+          const env = cenv;   // the round asks Firebase "anything new?" at most every 10 (owner) / 30 (members) minutes
           await runWatch(env).then(r => { if (r.fired) console.log(JSON.stringify({ watch: r })); }).catch(e => log('watch', e));
           await runDaily(env, now).then(r => { if (r.job) console.log(JSON.stringify({ daily: r })); }).catch(e => log('daily', e));   // phase 5: morning / evening / radars / pinned
         });
