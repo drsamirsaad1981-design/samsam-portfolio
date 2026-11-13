@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: f79c90b64c785b14
+// sources-hash: a8fd8c4554967503
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -4071,7 +4071,7 @@ async function viewMember(env, lang2, c) {
   const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
   const u = await usedToday(env, c, x), kk = await asChat(c, () => keyInfo(env));
   const L = [
-    `\u{1F464} ${x.paused ? "\u23F8 " : ""}${x.premium ? "\u2B50 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""}${x.paused ? ar ? " \u2014 <b>\u0645\u062A\u0648\u0642\u0641</b>" : " \u2014 <b>paused</b>" : ""}`,
+    `\u{1F464} ${x.paused ? "\u23F8 " : ""}${x.premium ? "\u2B50 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""}${x.paused ? ar ? " \u2014 <b>\u0645\u062A\u0648\u0642\u0641</b>" : " \u2014 <b>paused</b>" : ""}${x.premium ? ar ? " \u2014 <b>\u0645\u0645\u064A\u0632</b>" : " \u2014 <b>premium</b>" : ""}`,
     `${ar ? "\u0645\u0646" : "Since"} ${esc(local(x.joined, { day: "numeric", month: "short", year: "numeric" }))}`,
     ...kk.has ? [`\u{1F511} ${ar ? "\u0628\u064A\u0633\u062A\u0639\u0645\u0644 \u0645\u0641\u062A\u0627\u062D Claude \u0628\u062A\u0627\u0639\u0647" : "Uses their own Claude key"} (\u2026${esc(kk.tail)}) \u2014 ${ar ? "\u062A\u0643\u0644\u0641\u062A\u0647 \u0639\u0644\u064A\u0647" : "on their bill"}`] : [],
     `\u{1F4F1} ${ar ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "App"}: ${x.email ? "<code>" + esc(x.email) + "</code>" : ar ? "\u0644\u0633\u0647" : "not yet"}`,
@@ -4082,7 +4082,7 @@ async function viewMember(env, lang2, c) {
   ];
   return { text: L.join("\n"), buttons: [
     [cb2("\u{1F9E0} \u2212", `us:ai:-:${c}`), cb2("\u{1F9E0} +", `us:ai:+:${c}`), cb2("\u{1F4CA} \u2212", `us:rp:-:${c}`), cb2("\u{1F4CA} +", `us:rp:+:${c}`)],
-    [cb2(x.premium ? ar ? "\u2606 \u0634\u064A\u0644 \u0627\u0644\u0645\u0645\u064A\u0632" : "\u2606 Not premium" : ar ? "\u2B50 \u0645\u0645\u064A\u0632" : "\u2B50 Premium", "us:pr:" + c)],
+    [cb2(x.premium ? ar ? "\u2606 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632" : "\u2606 Remove premium" : ar ? "\u2B50 \u0627\u062C\u0639\u0644\u0647 \u0645\u0645\u064A\u0632" : "\u2B50 Make premium", "us:pr:" + c)],
     [cb2(x.paused ? ar ? "\u25B6\uFE0F \u0631\u062C\u0651\u0639\u0647" : "\u25B6\uFE0F Resume" : ar ? "\u23F8 \u0648\u0642\u0651\u0641\u0647" : "\u23F8 Pause", "us:pz:" + c), cb2("\u{1F5D1} " + (ar ? "\u0634\u064A\u0644\u0647" : "Remove"), "us:del:" + c)],
     [cb2(ar ? "\u2B05\uFE0F \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u2B05\uFE0F Members", "us")]
   ] };

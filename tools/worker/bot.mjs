@@ -478,12 +478,12 @@ async function viewMember(env, lang, c) {
   if (!x) return viewUsers(env, lang);
   const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
   const u = await usedToday(env, c, x), kk = await asChat(c, () => keyInfo(env));
-  const L = [`👤 ${x.paused ? '⏸ ' : ''}${x.premium ? '⭐ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}${x.paused ? (ar ? ' — <b>متوقف</b>' : ' — <b>paused</b>') : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
+  const L = [`👤 ${x.paused ? '⏸ ' : ''}${x.premium ? '⭐ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}${x.paused ? (ar ? ' — <b>متوقف</b>' : ' — <b>paused</b>') : ''}${x.premium ? (ar ? ' — <b>مميز</b>' : ' — <b>premium</b>') : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
     ...(kk.has ? [`🔑 ${ar ? 'بيستعمل مفتاح Claude بتاعه' : 'Uses their own Claude key'} (…${esc(kk.tail)}) — ${ar ? 'تكلفته عليه' : 'on their bill'}`] : []),
     `📱 ${ar ? 'التطبيق' : 'App'}: ${x.email ? '<code>' + esc(x.email) + '</code>' : (ar ? 'لسه' : 'not yet')}`, `🔗 ${ar ? 'المحفظة' : 'Portfolio'}: ${x.uid ? (ar ? 'مربوطة ✅' : 'linked ✅') : (ar ? 'مش مربوطة' : 'not linked')}`, '',
     `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${ai}</b> · ${ar ? 'النهارده' : 'today'} ${u.q}`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${rp}</b> · ${ar ? 'النهارده' : 'today'} ${u.r}`];
   return { text: L.join('\n'), buttons: [[cb('🧠 −', `us:ai:-:${c}`), cb('🧠 +', `us:ai:+:${c}`), cb('📊 −', `us:rp:-:${c}`), cb('📊 +', `us:rp:+:${c}`)],
-    [cb(x.premium ? (ar ? '☆ شيل المميز' : '☆ Not premium') : (ar ? '⭐ مميز' : '⭐ Premium'), 'us:pr:' + c)],
+    [cb(x.premium ? (ar ? '☆ إلغاء المميز' : '☆ Remove premium') : (ar ? '⭐ اجعله مميز' : '⭐ Make premium'), 'us:pr:' + c)],
     [cb(x.paused ? (ar ? '▶️ رجّعه' : '▶️ Resume') : (ar ? '⏸ وقّفه' : '⏸ Pause'), 'us:pz:' + c), cb('🗑 ' + (ar ? 'شيله' : 'Remove'), 'us:del:' + c)], [cb(ar ? '⬅️ الأعضاء' : '⬅️ Members', 'us')]] };
 }
 
