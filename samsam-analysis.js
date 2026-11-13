@@ -525,8 +525,12 @@ async function aiMemberQuick(ar) {
     say(ar ? `خلّصت تقارير النهارده (${rp.limit}) — جرّب بكرة، أو الطريقة المجانية فوق.` : `Today's ${rp.limit} used — try tomorrow, or the free way above.`);
   } else {
     const go = 'https://t.me/samsam_portfolio_bot?start=premium';
-    say(ar ? `للتقرير السريع: بقى <a href="${go}" target="_blank" rel="noopener">عضو مميز ⭐</a> (اطلبها من البوت)، أو حط مفتاح Claude بتاعك (الإعدادات ← My Claude key). الطريقة المجانية فوق شغالة عادي.`
-      : `For the quick report: become a <a href="${go}" target="_blank" rel="noopener">⭐ premium member</a> (ask in the bot), or add your own Claude key (Settings → My Claude key). The free way above works as usual.`);
+    say(ar ? 'التقرير السريع للأعضاء المميزين ⭐ — اشتراك 350 Telegram Stars في الشهر (حوالي $7) من البوت، بيتجدد لوحده وتلغيه في أي وقت. أو حط مفتاح Claude بتاعك (الإعدادات ← My Claude key). الطريقة المجانية فوق شغالة عادي.'
+      : 'The quick report is for ⭐ premium members — 350 Telegram Stars a month (about $7) in the bot; it renews by itself and you can cancel any time. Or add your own Claude key (Settings → My Claude key). The free way above works as usual.');
+    const a = document.createElement('a');   // ⭐ straight to the bot's premium page (Telegram takes the Stars there)
+    a.href = go; a.target = '_blank'; a.rel = 'noopener'; a.className = 'btn-analysis ai-prem';
+    a.innerHTML = `<span data-ic="star"></span><span>${ar ? 'اشترك في المميز من البوت' : 'Get Premium in the bot'}</span>`;
+    btn.insertAdjacentElement('beforebegin', a); aiPaintIcons();
   }
 }
 function aiPaintIcons() { document.querySelectorAll('#analysisBody [data-ic]').forEach(e => { if (!e.firstChild) e.innerHTML = SamsamUI.ic(e.dataset.ic, { solo: true, size: 14 }); }); }

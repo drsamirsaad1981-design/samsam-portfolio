@@ -59,7 +59,7 @@ with sync_playwright() as p:
             check('member: Settings has "Premium ⭐" and "Support Cute Portfolio 💛"', pg.is_visible('#stRow_premium') and pg.is_visible('#stRow_support'))
             pg.click('#stRow_premium'); pg.wait_for_selector('#cpDialog')
             t = pg.inner_text('#cpDialog')
-            check('member: Premium explains what it adds, the price (300 Stars ≈ $6), renewal / cancel, and why (non-profit)', all(w in t for w in ('Voice notes', '20 AI questions', '300 Telegram Stars', 'cancel any time', 'non-profit')), t[:200])
+            check('member: Premium explains what it adds, the price (350 Stars ≈ $7), renewal / cancel, and why (non-profit)', all(w in t for w in ('Voice notes', '20 AI questions', '350 Telegram Stars', 'cancel any time', 'non-profit')), t[:200])
             pg.click('#cpDialog .cpd-ok'); pg.wait_for_function("window.__opened.length >= 1", timeout=5000)
             check('member: "Open in Telegram" → the bot\'s premium page', pg.evaluate("window.__opened[0]").endswith('?start=premium'), pg.evaluate("window.__opened"))
             pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stRow_support'); pg.click('#stRow_support'); pg.wait_for_selector('#cpDialog')
@@ -76,6 +76,7 @@ with sync_playwright() as p:
             pg.evaluate("document.getElementById('cpDialog') && document.getElementById('cpDialog').remove()")
             pg.evaluate("openAnalysis()"); pg.wait_for_function("document.querySelector('#analysisBody .ai-quick') && /Claude key/.test(document.querySelector('#analysisBody .ai-opt:last-child').textContent)", timeout=8000)
             check('member: AI Analysis quick report is OFF without their own key ("Needs your own Claude key"), the free way is there', pg.is_disabled('#analysisBody .ai-quick') and pg.is_visible('#aiAppCopy'))
+            check('member: …and a "Get Premium in the bot" button (350 Stars a month) → the bot\'s premium page', pg.is_visible('#analysisBody .ai-prem') and pg.get_attribute('#analysisBody .ai-prem', 'href').endswith('?start=premium') and '350' in pg.inner_text('#analysisBody .ai-opt:last-child'))
             state['has'] = True
             pg.evaluate("renderAiStart()"); pg.wait_for_function("/10 left today/.test(document.querySelector('#analysisBody .ai-opt:last-child').textContent)", timeout=8000)
             check('member: with their own key → ON, "on your own Claude key (…wxyz) — 10 of 10 left today"', not pg.is_disabled('#analysisBody .ai-quick') and 'wxyz' in pg.inner_text('#analysisBody .ai-opt:last-child'))

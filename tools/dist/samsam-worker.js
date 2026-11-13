@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 311da7b5e4a6376e
+// sources-hash: 51a5bce6d71cadf8
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -880,7 +880,7 @@ async function clearPending(env, chat) {
 // tools/worker/stars.mjs
 var DAY2 = 864e5;
 var MONTH = 30 * DAY2;
-var price = (env) => Math.max(1, Math.min(1e4, parseInt(env.PREMIUM_STARS || "300", 10) || 300));
+var price = (env) => Math.max(1, Math.min(1e4, parseInt(env.PREMIUM_STARS || "350", 10) || 350));
 var SUPPORT = [50, 100, 250, 500];
 var usdOf = (n) => "$" + Math.max(1, Math.round(n * 0.02));
 async function tg(env, method, body) {

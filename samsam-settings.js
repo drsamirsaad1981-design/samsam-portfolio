@@ -78,7 +78,7 @@
   }
   function untilTxt(ms) { return new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
   var PREM_TXT = 'Everything in Cute Portfolio stays free. Premium adds:\n• 🎙 Voice notes — talk to the bot\n• 🧠 20 AI questions a day (instead of 5)\n• 📊 3 quick AI Analysis reports a day here\n\n' +
-    'Price: 300 Telegram Stars a month (about $6). You pay inside Telegram; it renews every 30 days and you can cancel any time (Telegram → Settings → My Stars) — it stays until the paid month ends.\n\n' +
+    'Price: 350 Telegram Stars a month (about $7). You pay inside Telegram; it renews every 30 days and you can cancel any time (Telegram → Settings → My Stars) — it stays until the paid month ends.\n\n' +
     'Why it costs anything: the AI is paid per question — this only covers that cost. Cute Portfolio is non-profit.\n\nTelegram Stars are Telegram\'s own coins — you buy them inside Telegram, like any in-app purchase.';
   var SUP_TXT = 'Optional — a one-time thank-you of any size (50 to 500 Stars, about $1 to $10). Nothing changes in the features: everything stays free.\n\n' +
     'It helps pay for the servers and the AI, and you get a Supporter 💛 badge here and in the bot. You pay inside Telegram.';
@@ -154,7 +154,7 @@
     var s = S(), st = s.getState() || {};
     try {
       if (k === 'account') { var u = s.user(); return (u ? u.email || 'Signed in' : 'Not signed in') + (memberSt && memberSt.supporter ? ' · 💛 Supporter' : ''); }
-      if (k === 'premium') { var m = memberSt; return m ? (m.premium ? '⭐ Premium' + (m.premUntil ? ' until ' + untilTxt(m.premUntil) : '') : 'Voice notes + more AI · 300 ⭐ a month') : 'Voice notes + more AI · 300 ⭐ a month'; }
+      if (k === 'premium') { var m = memberSt; return m ? (m.premium ? '⭐ Premium' + (m.premUntil ? ' until ' + untilTxt(m.premUntil) : '') : 'Voice notes + more AI · 350 ⭐ a month') : 'Voice notes + more AI · 350 ⭐ a month'; }
       if (k === 'support') { var m2 = memberSt; return m2 && m2.supporter ? '💛 Supporter · ' + (m2.starsPaid || 0) + ' ⭐ — thank you!' : 'Optional · any amount, one time'; }
       if (k === 'backup') { var b = lastBackup(); return '<span' + (b.old ? ' class="st-warn"' : '') + '>Last backup: ' + b.text + '</span>'; }
       if (k === 'alerts') {

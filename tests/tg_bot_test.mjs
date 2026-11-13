@@ -1026,7 +1026,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   await tapAs(555, 'us:pr:888');
   sent.length = 0; for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
   await sayAs(888, '/start premium');
-  check('⭐ the app\'s "become premium" link (/start premium) → the premium page: what it adds, the price, why, Subscribe', /Cute Portfolio Premium/.test(last().b.text) && /300 ⭐ a month/.test(last().b.text) && /non-profit/.test(last().b.text) && JSON.stringify(last().b.reply_markup).includes('t.me/$inv'), last().b.text.slice(0, 80));
+  check('⭐ the app\'s "become premium" link (/start premium) → the premium page: what it adds, the price, why, Subscribe', /Cute Portfolio Premium/.test(last().b.text) && /350 ⭐ a month/.test(last().b.text) && /non-profit/.test(last().b.text) && JSON.stringify(last().b.reply_markup).includes('t.me/$inv'), last().b.text.slice(0, 80));
   const y = JSON.parse(kvStore.get('tg:users'))['888'];
   check('☆ off again → back to 5 / 0, no voice', !y.premium && y.ai === 5 && y.reports === 0);
 }
@@ -1081,19 +1081,19 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   const mm = JSON.parse(kvStore.get('tg:users')); mm['888'] = { name: 'New', joined: Date.now(), lang: 'en' }; kvStore.set('tg:users', JSON.stringify(mm)); kvStore.delete('tg:stars:log');
   sent.length = 0; await sayAs(888, '/premium');
   const inv = sent.find(x => x.m === 'createInvoiceLink');
-  check('⭐ /premium → a Stars SUBSCRIPTION link: 300 ⭐, every 30 days, for this member only', inv && inv.b.currency === 'XTR' && inv.b.prices[0].amount === 300 && inv.b.subscription_period === 2592000 && inv.b.payload === 'prem:888' && JSON.stringify(last().b.reply_markup).includes('Subscribe'), inv && inv.b);
+  check('⭐ /premium → a Stars SUBSCRIPTION link: 350 ⭐, every 30 days, for this member only', inv && inv.b.currency === 'XTR' && inv.b.prices[0].amount === 350 && inv.b.subscription_period === 2592000 && inv.b.payload === 'prem:888' && JSON.stringify(last().b.reply_markup).includes('Subscribe'), inv && inv.b);
   const pre = (from, payload, amount) => post({ update_id: ++UPD, pre_checkout_query: { id: 'pc1', from: { id: from }, currency: 'XTR', total_amount: amount, invoice_payload: payload } }, ENV.TG_SECRET, ENVK);
-  sent.length = 0; await pre(888, 'prem:888', 300);
+  sent.length = 0; await pre(888, 'prem:888', 350);
   check('…Telegram\'s payment check: the member paying for themselves → OK', sent.some(x => x.m === 'answerPreCheckoutQuery' && x.b.ok === true));
-  sent.length = 0; await pre(999, 'prem:888', 300); const no1 = sent.find(x => x.m === 'answerPreCheckoutQuery');
+  sent.length = 0; await pre(999, 'prem:888', 350); const no1 = sent.find(x => x.m === 'answerPreCheckoutQuery');
   sent.length = 0; await pre(888, 'prem:888', 5); const no2 = sent.find(x => x.m === 'answerPreCheckoutQuery');
   check('…someone else, or a wrong price → refused (nothing is charged)', no1 && no1.b.ok === false && no2 && no2.b.ok === false);
   const exp = Math.floor(Date.now() / 1000) + 30 * 86400;
   const paidMsg = (sp) => post({ update_id: ++UPD, message: { message_id: 9, chat: { id: 888, type: 'private' }, from: { id: 888 }, successful_payment: { currency: 'XTR', ...sp } } }, ENV.TG_SECRET, ENVK);
-  sent.length = 0; await paidMsg({ total_amount: 300, invoice_payload: 'prem:888', telegram_payment_charge_id: 'ch1', subscription_expiration_date: exp, is_recurring: true, is_first_recurring: true });
+  sent.length = 0; await paidMsg({ total_amount: 350, invoice_payload: 'prem:888', telegram_payment_charge_id: 'ch1', subscription_expiration_date: exp, is_recurring: true, is_first_recurring: true });
   let x = JSON.parse(kvStore.get('tg:users'))['888'];
-  check('…paid → premium (Stars) until the date Telegram gives, 20 / 3; thanked; you are told', x.premium && x.premSrc === 'stars' && x.premUntil === exp * 1000 && x.ai === 20 && x.reports === 3 && sent.some(m => String(m.b.chat_id) === '888' && /you're premium now/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /subscribed to Premium — 300 ⭐/.test(m.b.text || '')), x);
-  sent.length = 0; await paidMsg({ total_amount: 300, invoice_payload: 'prem:888', telegram_payment_charge_id: 'ch2', subscription_expiration_date: exp + 30 * 86400, is_recurring: true, is_first_recurring: false });
+  check('…paid → premium (Stars) until the date Telegram gives, 20 / 3; thanked; you are told', x.premium && x.premSrc === 'stars' && x.premUntil === exp * 1000 && x.ai === 20 && x.reports === 3 && sent.some(m => String(m.b.chat_id) === '888' && /you're premium now/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /subscribed to Premium — 350 ⭐/.test(m.b.text || '')), x);
+  sent.length = 0; await paidMsg({ total_amount: 350, invoice_payload: 'prem:888', telegram_payment_charge_id: 'ch2', subscription_expiration_date: exp + 30 * 86400, is_recurring: true, is_first_recurring: false });
   x = JSON.parse(kvStore.get('tg:users'))['888'];
   check('…next month Telegram renews it → "Premium renewed", the end date moves', x.premUntil === (exp + 30 * 86400) * 1000 && sent.some(m => /renewed/.test(m.b.text || '')));
   sent.length = 0; await sayAs(888, '/premium');
@@ -1108,7 +1108,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('…paid → Supporter 💛 (100 ⭐), thanked, you are told', x.supporter === true && x.starsPaid === 100 && sent.some(m => /Supporter 💛/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /supported the project with 100 ⭐/.test(m.b.text || '')), x);
   await paidMsg({ total_amount: 100, invoice_payload: 'sup:888:100', telegram_payment_charge_id: 'ch3' });
   sent.length = 0; await sayAs(555, '/stats');
-  check('📈 /stats (you): members, premium now (Stars / gift), supporters, Stars this month and all time (a payment sent twice counts once)', /Premium now: <b>1<\/b> \(Stars 1/.test(last().b.text) && /Supporters: <b>1<\/b>/.test(last().b.text) && /All time: <b>700<\/b>/.test(last().b.text), last().b.text);
+  check('📈 /stats (you): members, premium now (Stars / gift), supporters, Stars this month and all time (a payment sent twice counts once)', /Premium now: <b>1<\/b> \(Stars 1/.test(last().b.text) && /Supporters: <b>1<\/b>/.test(last().b.text) && /All time: <b>800<\/b>/.test(last().b.text), last().b.text);
   sent.length = 0; await sayAs(888, '/stats');
   check('…/stats is yours only', /Only the bot owner/.test(last().b.text));
   // the month ends (no renewal) → back to standard, told

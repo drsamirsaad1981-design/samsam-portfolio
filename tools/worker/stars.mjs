@@ -13,7 +13,7 @@ import { asChat, chatOf, isOwner, members, member, setMember, langOf, DEF_AI, DE
 import { esc, local } from '../alerts-core.mjs';
 
 const DAY = 864e5, MONTH = 30 * DAY;
-export const price = env => Math.max(1, Math.min(10000, parseInt(env.PREMIUM_STARS || '300', 10) || 300));
+export const price = env => Math.max(1, Math.min(10000, parseInt(env.PREMIUM_STARS || '350', 10) || 350));   // 350 = the smallest Stars pack Telegram sells
 export const SUPPORT = [50, 100, 250, 500];
 const usdOf = n => '$' + Math.max(1, Math.round(n * 0.02));   // what the member pays, roughly (≈ 2 cents a Star)
 

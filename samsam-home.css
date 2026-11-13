@@ -893,6 +893,7 @@
   .ai-steps li::before { content:counter(st); position:absolute; inset-inline-start:0; top:0; width:21px; height:21px; border-radius:50%; background:var(--accent); color:#fff; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; }
   .ai-steps .btn-analysis, .ai-opt .ai-quick, .ai-paste .btn-analysis { display:inline-flex; align-items:center; gap:6px; }
   .ai-opt .ai-quick { align-self:flex-start; }
+  .ai-opt .ai-prem { display:inline-flex; align-items:center; gap:6px; align-self:flex-start; text-decoration:none; margin-bottom:8px; background:#f59e0b; border-color:#f59e0b; color:#1f1300; font-weight:700; }
   #analysisModal .btn-analysis.done { color:var(--green); border-color:var(--green); }
   .ai-paste { display:flex; flex-direction:column; gap:8px; font-size:0.85rem; }
   .ai-paste textarea { width:100%; box-sizing:border-box; min-height:180px; resize:vertical; background:var(--bg3); color:var(--fg); border:1px solid var(--border); border-radius:10px; padding:10px; font:inherit; font-size:0.85rem; }
