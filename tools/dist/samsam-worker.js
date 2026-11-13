@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 57896584be827fb0
+// sources-hash: 11f0627ea3a4f8cf
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3767,6 +3767,7 @@ var WORDS = [
   [/^\/(users|members)$/i, "us"],
   [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, "link"],
   [/^\/app(\s+\S+)?$/i, "app"],
+  [/^\/(start\s+)?premium$/i, "prem"],
   [/^\/start\s+\S+$/i, "menu"],
   [/^\/(report|app)$|^التقرير$/i, "rp"],
   [/^\/(daily|settings)$|^اليومي$/i, "dy"],
@@ -4428,6 +4429,26 @@ async function onText(env, chat, text, budget = 36, into = null) {
     await send2(env, chat, { text: T[await getLang(env)].newDone });
     return;
   }
+  if (p.act === "prem") {
+    const lang2 = await getLang(env), ar = lang2 === "ar";
+    if (isOwner(env)) {
+      await send2(env, chat, { text: ar ? "\u0627\u0646\u062A \u0645\u0645\u064A\u0632 \u0623\u0635\u0644\u0627\u064B \u2B50" : "You are premium already \u2B50" });
+      return;
+    }
+    const me = await member(env);
+    if (me && me.premium) {
+      await send2(env, chat, { text: ar ? "\u2B50 \u0627\u0646\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632 \u0628\u0627\u0644\u0641\u0639\u0644." : "\u2B50 You are a premium member already." });
+      return;
+    }
+    await send2(env, chat, { text: ar ? `\u2B50 \u0627\u062A\u0628\u0639\u062A \u0644\u0633\u0645\u064A\u0631 \u2014 \u0644\u0645\u0627 \u064A\u0648\u0627\u0641\u0642 \u0647\u064A\u0648\u0635\u0644\u0643 \u0647\u0646\u0627.
+\u0627\u0644\u0645\u0645\u064A\u0632: \u0631\u0633\u0627\u064A\u0644 \u0635\u0648\u062A\u064A\u0629 \u{1F399}\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645.` : `\u2B50 Sent to Samir \u2014 you'll hear here once he says yes.
+Premium: voice notes \u{1F399}, ${PREM_AI} questions and ${PREM_REPORTS} AI Analysis reports a day.` });
+    await asChat(env.TELEGRAM_CHAT_ID, async () => {
+      const L = await getLang(env);
+      await send2(env, env.TELEGRAM_CHAT_ID, { text: L === "ar" ? `\u2B50 <b>${esc(me ? me.name : chat)}</b> \u0639\u0627\u064A\u0632 \u064A\u0628\u0642\u0649 \u0639\u0636\u0648 \u0645\u0645\u064A\u0632.` : `\u2B50 <b>${esc(me ? me.name : chat)}</b> asks to become a premium member.`, buttons: [[cb2(L === "ar" ? "\u2B50 \u0627\u062C\u0639\u0644\u0647 \u0645\u0645\u064A\u0632" : "\u2B50 Make premium", "us:pr:" + chat), cb2(L === "ar" ? "\u{1F464} \u0627\u0644\u0643\u0627\u0631\u062A" : "\u{1F464} Their card", "us:m:" + chat)]] });
+    });
+    return;
+  }
   if (p.act === "fg") {
     const lang2 = await getLang(env), w = FG[lang2];
     if (isOwner(env)) {
@@ -4526,7 +4547,7 @@ var run = (env, act, arg, guess) => act === "coinById" ? buildById(env, arg) : b
 var cmds = (lang2, owner = true) => {
   const a = lang2 === "ar";
   return [
-    ...owner ? [] : [["app", a ? "\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "Open the app"], ["link", a ? "\u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 /link \u0627\u0644\u0643\u0648\u062F" : "Link your portfolio \u2014 /link CODE"], ["forget", a ? "\u0627\u0645\u0633\u062D \u0628\u064A\u0627\u0646\u0627\u062A\u064A \u0645\u0646 \u0627\u0644\u0628\u0648\u062A" : "Delete my data from the bot"]],
+    ...owner ? [] : [["app", a ? "\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "Open the app"], ["link", a ? "\u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 /link \u0627\u0644\u0643\u0648\u062F" : "Link your portfolio \u2014 /link CODE"], ["premium", a ? "\u0627\u0637\u0644\u0628 \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u2B50" : "Ask for premium \u2B50"], ["forget", a ? "\u0627\u0645\u0633\u062D \u0628\u064A\u0627\u0646\u0627\u062A\u064A \u0645\u0646 \u0627\u0644\u0628\u0648\u062A" : "Delete my data from the bot"]],
     ...owner ? [["invite", a ? "\u0643\u0648\u062F \u062F\u0639\u0648\u0629 \u0644\u0635\u0627\u062D\u0628\u0643" : "Invite code for a friend"], ["users", a ? "\u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "Members"]] : [],
     ["start", a ? "\u0627\u0628\u062F\u0623 \u2014 \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u062A\u062D\u062A \u0627\u0644\u0634\u0627\u062A" : "Start \u2014 the buttons under the chat"],
     ["menu", a ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],

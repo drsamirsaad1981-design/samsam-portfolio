@@ -520,11 +520,13 @@ async function aiMemberQuick(ar) {
   const rp = st && st.reports;
   if (rp && rp.left > 0) {
     btn.disabled = false;
-    say((st.has ? (ar ? `على مفتاح Claude بتاعك (…${st.tail}) — ` : `On your own Claude key (…${st.tail}) — `) : '') + (ar ? `باقي لك <b>${rp.left}</b> من ${rp.limit} النهارده.` : `<b>${rp.left}</b> of ${rp.limit} left today.`));
+    say((st.has ? (ar ? `على مفتاح Claude بتاعك (…${st.tail}) — ` : `On your own Claude key (…${st.tail}) — `) : '') + (ar ? `باقي لك <strong>${rp.left}</strong> من ${rp.limit} النهارده.` : `<strong>${rp.left}</strong> of ${rp.limit} left today.`));
   } else if (rp && rp.limit > 0) {
     say(ar ? `خلّصت تقارير النهارده (${rp.limit}) — جرّب بكرة، أو الطريقة المجانية فوق.` : `Today's ${rp.limit} used — try tomorrow, or the free way above.`);
   } else {
-    say(ar ? 'محتاج مفتاح Claude بتاعك — الإعدادات ← My Claude key. الطريقة المجانية فوق شغالة عادي.' : 'Needs your own Claude key — Settings → My Claude key. The free way above works as usual.');
+    const go = 'https://t.me/samsam_portfolio_bot?start=premium';
+    say(ar ? `للتقرير السريع: بقى <a href="${go}" target="_blank" rel="noopener">عضو مميز ⭐</a> (اطلبها من البوت)، أو حط مفتاح Claude بتاعك (الإعدادات ← My Claude key). الطريقة المجانية فوق شغالة عادي.`
+      : `For the quick report: become a <a href="${go}" target="_blank" rel="noopener">⭐ premium member</a> (ask in the bot), or add your own Claude key (Settings → My Claude key). The free way above works as usual.`);
   }
 }
 function aiPaintIcons() { document.querySelectorAll('#analysisBody [data-ic]').forEach(e => { if (!e.firstChild) e.innerHTML = SamsamUI.ic(e.dataset.ic, { solo: true, size: 14 }); }); }

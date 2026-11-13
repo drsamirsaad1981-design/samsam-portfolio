@@ -1024,6 +1024,10 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; fileGets.length = 0; await vMsg();
   check('…now their voice notes work', fileGets.length === 1, sent.map(x2 => (x2.b.text || '').slice(0, 30)));
   await tapAs(555, 'us:pr:888');
+  sent.length = 0; for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
+  await sayAs(888, '/start premium');
+  const req2 = sent.find(x2 => String(x2.b.chat_id) === '555' && /premium/.test(x2.b.text || ''));
+  check('⭐ the app\'s "become premium" link (/start premium) → the member is told it was sent; you get ⭐ Make premium', sent.some(x2 => String(x2.b.chat_id) === '888' && /Sent to Samir/.test(x2.b.text || '')) && req2 && JSON.stringify(req2.b.reply_markup).includes('us:pr:888'), sent.map(x2 => (x2.b.text || '').slice(0, 40)));
   const y = JSON.parse(kvStore.get('tg:users'))['888'];
   check('☆ off again → back to 5 / 0, no voice', !y.premium && y.ai === 5 && y.reports === 0);
 }

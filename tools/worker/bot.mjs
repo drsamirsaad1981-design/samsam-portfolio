@@ -297,7 +297,7 @@ const WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
-  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
+  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$/i, 'prem'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -666,6 +666,15 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'pin:on') { await setCfg(env, { pin: true }); const r = await pinUpdate(env, Date.now(), true, true).catch(() => null); if (!r || !r.ok) await send(env, chat, { text: (await getLang(env)) === 'ar' ? '⚠️ ما قدرتش أثبّت الرسالة دلوقتي — جرّب تاني بعد دقيقة.' : '⚠️ I couldn\'t pin it right now — try again in a minute.' }); return; }
   if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
+  if (p.act === 'prem') {   // ⭐ a member asks to be premium → the owner gets ⭐ Make premium
+    const lang = await getLang(env), ar = lang === 'ar';
+    if (isOwner(env)) { await send(env, chat, { text: ar ? 'انت مميز أصلاً ⭐' : 'You are premium already ⭐' }); return; }
+    const me = await member(env);
+    if (me && me.premium) { await send(env, chat, { text: ar ? '⭐ انت عضو مميز بالفعل.' : '⭐ You are a premium member already.' }); return; }
+    await send(env, chat, { text: ar ? `⭐ اتبعت لسمير — لما يوافق هيوصلك هنا.\nالمميز: رسايل صوتية 🎙، و${PREM_AI} سؤال و${PREM_REPORTS} تقارير AI Analysis في اليوم.` : `⭐ Sent to Samir — you'll hear here once he says yes.\nPremium: voice notes 🎙, ${PREM_AI} questions and ${PREM_REPORTS} AI Analysis reports a day.` });
+    await asChat(env.TELEGRAM_CHAT_ID, async () => { const L = await getLang(env); await send(env, env.TELEGRAM_CHAT_ID, { text: L === 'ar' ? `⭐ <b>${esc(me ? me.name : chat)}</b> عايز يبقى عضو مميز.` : `⭐ <b>${esc(me ? me.name : chat)}</b> asks to become a premium member.`, buttons: [[cb(L === 'ar' ? '⭐ اجعله مميز' : '⭐ Make premium', 'us:pr:' + chat), cb(L === 'ar' ? '👤 الكارت' : '👤 Their card', 'us:m:' + chat)]] }); });
+    return;
+  }
   if (p.act === 'fg') { const lang = await getLang(env), w = FG[lang];
     if (isOwner(env)) { await send(env, chat, { text: w.owner }); return; }
     await send(env, chat, { text: w.ask, buttons: [[cb(w.yes, 'fg:yes'), cb(w.no, 'fg:no')]] }); return; }
@@ -735,7 +744,7 @@ export const run = (env, act, arg, guess) => act === 'coinById' ? buildById(env,
 
 // the "/" menu in Telegram (set by the setup link and again on /start, so new commands show up)
 const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
-    ...(owner ? [] : [['app', a ? 'افتح التطبيق' : 'Open the app'], ['link', a ? 'اربط محفظتك — /link الكود' : 'Link your portfolio — /link CODE'], ['forget', a ? 'امسح بياناتي من البوت' : 'Delete my data from the bot']]),
+    ...(owner ? [] : [['app', a ? 'افتح التطبيق' : 'Open the app'], ['link', a ? 'اربط محفظتك — /link الكود' : 'Link your portfolio — /link CODE'], ['premium', a ? 'اطلب العضوية المميزة ⭐' : 'Ask for premium ⭐'], ['forget', a ? 'امسح بياناتي من البوت' : 'Delete my data from the bot']]),
     ...(owner ? [['invite', a ? 'كود دعوة لصاحبك' : 'Invite code for a friend'], ['users', a ? 'الأعضاء' : 'Members']] : []),
     ['start', a ? 'ابدأ — الأزرار تحت الشات' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
     ['report', a ? 'التقرير الكامل (صفحة)' : 'Full report (a page)'], ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],
