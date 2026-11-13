@@ -141,7 +141,7 @@ async function setRange(env, v) { memRange.set(chatOf(env), v); try { if (env.RA
 async function setLang(env, v) { memLang.set(chatOf(env), v); try { if (env.RATE) await env.RATE.put(K(env, 'lang'), v); } catch (_) {} if (!isOwner(env)) await setMember(env, chatOf(env), { lang: v }).catch(() => {}); }
 
 // ── views: each returns { text, buttons } ──
-export function viewMenu(t, owner = true) { return { text: `${owner ? t.hi : t.hiAll}\n${t.menuTitle}`, buttons: menuRows(t) }; }   // "Hi Samir" only for Samir
+export function viewMenu(t, owner = true, badge = '') { return { text: `${owner ? t.hi : badge ? t.hiAll.replace('👋', badge) : t.hiAll}\n${t.menuTitle}`, buttons: menuRows(t) }; }   // "Hi Samir" only for Samir
 
 // short lines (they fit a phone without wrapping): money in bold, a dot for up / down, details after a ·
 const hm = now => local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -319,7 +319,7 @@ async function buildView(env, act, arg, guess) {
   const now = Date.now();
   const user = act === 'menu' || act === 'coin' ? null : await loadUser(env).catch(() => null);
   const cfg = settings(user && user.meta), lang = await getLang(env), t = T[lang];
-  if (act === 'menu') return { t, views: [viewMenu(t, isOwner(env))] };
+  if (act === 'menu') return { t, views: [viewMenu(t, isOwner(env), await badgeOf(env, t))] };
   if (act === 'lang') return { t, views: [{ text: '🌐 English / عربي', buttons: [[cb('🇬🇧 English', 'lang:en'), cb('🇸🇦 عربي', 'lang:ar')]] }] };
   if (act === 'coin') return { t, views: [{ text: `🪙 ${t.askCoin}`, buttons: [[cb(t.back, 'menu')]] }] };
   if (act === 'soon') return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
@@ -353,7 +353,7 @@ async function buildView(env, act, arg, guess) {
   if (act === 'sg') return { t, views: [viewSignals(t, sum)] };
   if (act === 'pl') return { t, views: [viewPlan(t, sum, now)] };
   if (act === 'ex') return { t, views: [viewExit(t, sum, now)] };
-  return { t, views: [viewMenu(t, isOwner(env))] };
+  return { t, views: [viewMenu(t, isOwner(env), await badgeOf(env, t))] };
 }
 
 // ── the webhook ──
@@ -442,6 +442,15 @@ async function usedToday(env, c, x) {
   let q = 0, r = 0;
   try { if (env.RATE) { q = +(await env.RATE.get(`tg:${c}:ai:${localParts(Date.now()).date}`)) || 0; if (x.uid) r = +(await env.RATE.get(`ai:${x.uid}:${new Date().toISOString().slice(0, 10)}`)) || 0; } } catch (_) {}
   return { q, r };
+}
+
+// ⭐ / 💛 next to a member's hello: "Hi ⭐ — premium member · 💛 Supporter"
+async function badgeOf(env, t) {
+  if (isOwner(env)) return '';
+  const x = await member(env); if (!x) return '';
+  const ar = t === T.ar, p = premiumNow(x), s = !!x.supporter;
+  if (!p && !s) return '';
+  return [p ? (ar ? '⭐ — عضو مميز' : '⭐ — premium member') : '👋', s ? '💛 Supporter' : ''].filter(Boolean).join(' · ');
 }
 
 // 📱 /app you@example.com — an invited person asks to open the app with that e-mail; the owner taps ✅ (or ❌)
@@ -733,7 +742,8 @@ async function switchLang(env, chat, lang, msgId) {
   await setLang(env, lang); await ensureCmds(env);   // the "/" menu in the new language
   const t = T[lang];
   await send(env, chat, { text: t.langSet }, { reply_markup: replyKb(t) });
-  if (msgId) await edit(env, chat, msgId, viewMenu(t, isOwner(env))); else await send(env, chat, viewMenu(t, isOwner(env)));
+  const bd = await badgeOf(env, t);
+  if (msgId) await edit(env, chat, msgId, viewMenu(t, isOwner(env), bd)); else await send(env, chat, viewMenu(t, isOwner(env), bd));
   let hasPin = false; try { hasPin = !!(env.RATE && JSON.parse((await env.RATE.get(K(env, 'pin'))) || '{}').id); } catch (_) {}
   if (hasPin && (await getCfg(env)).pin) await pinUpdate(env, Date.now(), true).catch(() => {});   // the pinned message follows the new language now
 }

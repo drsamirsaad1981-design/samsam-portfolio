@@ -1,6 +1,8 @@
 // tools/worker/index.mjs — the one Cloudflare Worker: AI Analysis (/analyze, tools/ai-worker.js) + the Telegram bot (/tg).
 // Built into a single file by tools/build-worker.mjs → tools/dist/samsam-worker.js (that file is what you paste).
-import ai, { setMemberCheck, setKeyHandler } from '../ai-worker.js';
+import ai, { setMemberCheck, setKeyHandler, setAdminHandler } from '../ai-worker.js';
+import { adminHandler } from './admin.mjs';
+setAdminHandler(adminHandler);   // 🛠 the owner's dashboard in the app
 import { expireRound, premiumNow } from './stars.mjs';
 import { saveKey, keyInfo, ownKey, deleteKey, validShape, keyWorks, BYOK_REPORTS } from './byok.mjs';
 import { handleTelegram, setup, check } from './bot.mjs';

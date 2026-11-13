@@ -13,7 +13,8 @@
 // The morning / evening are written by Claude from the facts gathered here (tools/worker/ai.mjs → compose); if Claude
 // can't, the bot's own plain version goes out. They do not count in the 30 questions a day.
 
-import { K, chatOf, isOwner, langOf } from './who.mjs';
+import { K, chatOf, isOwner, langOf, member } from './who.mjs';
+import { premiumNow } from './stars.mjs';
 import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures } from './data.mjs';
 import { compose } from './ai.mjs';
@@ -249,7 +250,8 @@ export async function pinView(env, now = Date.now()) {
   const { m, sum } = g, alerts = await listAlerts(env), near = nearest(alerts, m, sum).filter(x => x.alert)[0];
   const dca = (sum.dca || []).filter(x => x.s.next).sort((a, b) => a.s.next.localeCompare(b.s.next))[0];
   const met = (sum.macro || []).filter(x => x.met).length;
-  const L1 = [`📌 <b>${w.live}</b> · ${w.updated} ${local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`,
+  const me = isOwner(env) ? null : await member(env), star = me && premiumNow(me) ? ' ⭐' : '', heart = me && me.supporter ? ' 💛' : '';   // a member's badges
+  const L1 = [`📌 <b>${w.live}</b>${star}${heart} · ${w.updated} ${local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`,
     `💼 <b>${usd2(sum.value)}</b>  ${dot(sum.ch24)} ${pct(sum.ch24)} ${w.today}`,
     m.btc ? `🪙 BTC <b>${usd(m.btc.price)}</b>  ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}${m.fng ? ` · ${w.fng} <b>${m.fng.value}</b>` : ''}` : null,
     `📋 ${w.planS} <b>${sum.prog ? sum.prog.pct.toFixed(1) : '0'}%</b> · 🚪 ${w.exit} <b>${met}/3</b>`,

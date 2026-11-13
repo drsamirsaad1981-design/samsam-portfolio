@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/stars.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -32,7 +32,7 @@ const SA = { type: 'service_account', project_id: 'samsam-portfolio', client_ema
 const fsv = v => typeof v === 'string' ? { stringValue: v } : typeof v === 'number' ? { doubleValue: v } : typeof v === 'boolean' ? { booleanValue: v } : Array.isArray(v) ? { arrayValue: { values: v.map(fsv) } } : v && typeof v === 'object' ? { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fsv(x)])) } } : { nullValue: null };
 const doc = o => ({ name: 'x', fields: Object.fromEntries(Object.entries(o).map(([k, v]) => [k, fsv(v)])) });
 let LANG = 'ar';   // the alerts are in Arabic — the bot still starts in English
-const claudeKeys = []; let AGG_CALLS = 0, LIST_TXS = 0, COIN_UPD = '';
+const claudeKeys = []; const premOn = x => !!(x && x.premium && (!x.premUntil || x.premUntil > Date.now())); let AGG_CALLS = 0, LIST_TXS = 0, COIN_UPD = '';
 const USER = () => ({
   coins: [{ sym: 'BTC', cgId: 'bitcoin', opening: { qty: 0.1, avg: 70000 }, ...(COIN_UPD ? { updatedAt: COIN_UPD } : {}) }, { sym: 'SOL', cgId: 'solana', opening: { qty: 10, avg: 160 } },
     { sym: 'LINK', cgId: 'chainlink', opening: { qty: 50, avg: 15 } }, { sym: 'USDT', cgId: 'tether', opening: { qty: 900, avg: 0.5 } },
@@ -1127,6 +1127,32 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   kvStore.delete('tg:hookv'); sent.length = 0; await postK(await fresh(), '/menu'); await postK(await fresh(), '/menu');
   const hooks = sent.filter(m => m.m === 'setWebhook');
   check('🔌 the webhook is updated once to receive Telegram\'s payment checks (pre_checkout_query)', hooks.length === 1 && hooks[0].b.allowed_updates.includes('pre_checkout_query') && hooks[0].b.drop_pending_updates === false, hooks.map(h => h.b));
+}
+
+// 🛠 the app's admin dashboard (/admin) — the owner only; the same powers as /users, /invite, /stats
+{
+  const adm = (email, uid, body) => W.fetch(new Request(HOST + '/admin', { method: 'POST', headers: { Origin: 'https://drsamirsaad1981-design.github.io', 'content-type': 'application/json' }, body: JSON.stringify({ idToken: fbToken(email, uid), ...body }) }), ENVA, {});
+  let r = await adm('new.member@x.com', 'UID2', { action: 'overview' });
+  check('🛠 /admin: a member (or anyone but you) → 403', r.status === 403);
+  r = await adm('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'overview' }); let j = await r.json();
+  const n = j.members && j.members.find(x => x.chat === '888');
+  check('…you → the numbers (members, premium, supporters, Stars month / all time) + every member (badges, limits, use today) + the Stars log', r.status === 200 && j.stats.members >= 1 && j.stats.supporters >= 1 && j.stats.starsAll >= 450 && n && n.supporter === true && typeof n.usedQ === 'number' && Array.isArray(j.payments) && j.payments.length >= 2 && j.price === 350, JSON.stringify(j).slice(0, 300));
+  kvStore.set('tg:botname', 'samsam_portfolio_bot'); sent.length = 0; r = await adm('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'invite' }); j = await r.json();
+  check('…➕ new invite → a code + its t.me link (7 days), usable in the bot', /^[A-Z2-9]{8}$/.test(j.code) && /t\.me\/.+\?start=/.test(j.link || '') && kvStore.has('tg:inv:' + j.code), j);
+  sent.length = 0; r = await adm('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'member', chat: '888', op: 'gift30' }); j = await r.json();
+  let x = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('…🎁 +30 days from the dashboard → premium (gift), the member is told, the answer carries the fresh overview', j.ok && premOn(x) && sent.some(m => String(m.b.chat_id) === '888' && /gift/.test(m.b.text || '')) && j.overview && j.overview.members.find(y => y.chat === '888').premium, x);
+  await adm('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'member', chat: '888', op: 'ai+' });
+  check('…🧠 + → the question limit goes up', JSON.parse(kvStore.get('tg:users'))['888'].ai === x.ai + 1);
+  await adm('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'member', chat: '888', op: 'pause' });
+  check('…⏸ pause / ▶️ resume', JSON.parse(kvStore.get('tg:users'))['888'].paused === true && (await (await adm('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'member', chat: '888', op: 'resume' })).json()).ok && !JSON.parse(kvStore.get('tg:users'))['888'].paused);
+  kvStore.set('tg:appreq:888', 'new.friend@x.com'); accessWrites.length = 0;
+  j = await (await adm('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'overview' })).json();
+  const pend = j.members.find(y => y.chat === '888').pending;
+  await adm('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'member', chat: '888', op: 'approve' });
+  check('…📱 an app request waiting shows, ✅ approve → the e-mail allowed (config/access)', pend === 'new.friend@x.com' && JSON.parse(kvStore.get('tg:users'))['888'].email === 'new.friend@x.com' && accessWrites.length === 1);
+  await adm('dr.samir.saad.1981@gmail.com', 'UID1', { action: 'member', chat: '888', op: 'endPrem' });
+  check('…☆ end premium', !premOn(JSON.parse(kvStore.get('tg:users'))['888']));
 }
 
 console.log(`${pass}/${pass + fail} passed`);

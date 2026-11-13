@@ -356,6 +356,12 @@ async function ownerUid(env, db) {
   await db.set('config/owner', { uid: users[0], at: new Date().toISOString() }).catch(() => {});
   return (ownerMem = users[0]);
 }
+// is this Firebase account the owner's? (the e-mail list, else the pinned owner uid) — for the app's admin dashboard
+export async function isOwnerAccount(env, { email, uid, owners }) {
+  if (owners && owners.length) return owners.includes(String(email || '').toLowerCase());
+  const sa = serviceAccount(env); if (!sa) return false;
+  try { const db = await firestore(sa); return !!uid && uid === await ownerUid(env, db); } catch (_) { return false; }
+}
 // your portfolio: { coins, txs, accum, meta } (the first account found, as the alerts do) — cached for 2 min (🔄 reads it fresh)
 export async function loadUser(env, fresh = false) {
   const sa = serviceAccount(env);

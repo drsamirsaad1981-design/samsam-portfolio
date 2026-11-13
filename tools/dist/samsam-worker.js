@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 51a5bce6d71cadf8
+// sources-hash: c0625ca3597bc6d7
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -10,6 +10,10 @@ var memCount = /* @__PURE__ */ new Map();
 var memberCheck = null;
 function setMemberCheck(fn) {
   memberCheck = fn;
+}
+var adminHandler = null;
+function setAdminHandler(fn) {
+  adminHandler = fn;
 }
 var keyHandler = null;
 function setKeyHandler(fn) {
@@ -30,8 +34,8 @@ var ai_worker_default = {
     const reply = (status2, obj) => new Response(JSON.stringify(obj), { status: status2, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
     if (request.method === "OPTIONS") return new Response(null, { status: okOrigin ? 204 : 403, headers: cors });
     if (!okOrigin) return reply(403, { error: "This service only answers the Cute Portfolio app." });
-    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path);
-    if (request.method !== "POST" || !(path.endsWith("/analyze") || isKey)) return reply(404, { error: "Not found." });
+    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path);
+    if (request.method !== "POST" || !(path.endsWith("/analyze") || isKey || isAdmin)) return reply(404, { error: "Not found." });
     const raw = await request.text();
     if (raw.length > MAX_BODY) return reply(413, { error: "Request too large." });
     let body;
@@ -48,6 +52,11 @@ var ai_worker_default = {
       return reply(401, { error: "Please sign in again, then retry. (" + e.message + ")" });
     }
     const emails = list(env.ALLOWED_EMAILS || ""), em = String(user.email || "").toLowerCase();
+    if (isAdmin) {
+      if (!adminHandler) return reply(404, { error: "Not found." });
+      const r = await adminHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch((e) => ({ status: 500, error: "Something went wrong \u2014 " + String(e && e.message || e).slice(0, 120) }));
+      return reply(r.status || 200, r);
+    }
     if (isKey) {
       if (!keyHandler) return reply(404, { error: "Not found." });
       const r = await keyHandler(env, em, body).catch(() => ({ status: 500, error: "Something went wrong \u2014 try again." }));
@@ -63,8 +72,8 @@ var ai_worker_default = {
       if (m.apiKey) apiKey = m.apiKey;
       if (!(limit > 0)) return reply(429, { error: "The quick report needs your own Claude key (Settings \u2192 My Claude key). The free way \u2014 with the Claude app \u2014 works for everyone.", remaining: 0 });
     }
-    const day2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const key = `ai:${user.uid}:${day2}`;
+    const day3 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const key = `ai:${user.uid}:${day3}`;
     const used2 = await getCount(env, key);
     if (used2 >= limit) return reply(429, { error: `You have used today's ${limit} AI reports. New reports are available tomorrow (00:00 UTC).`, remaining: 0 });
     if (!apiKey) return reply(500, { error: "The Worker has no ANTHROPIC_API_KEY secret." });
@@ -361,17 +370,17 @@ function groupOf(c) {
 function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
   const keys = [.../* @__PURE__ */ new Set([...Object.keys(values || {}), ...Object.keys(targets || {})])];
   const total = keys.reduce((s, k) => s + Math.max(0, num(values[k])), 0), T2 = total + Math.max(0, num(cash));
-  const tg5 = (k) => targets && targets[k] ? num(targets[k].pct) / 100 : 0;
+  const tg6 = (k) => targets && targets[k] ? num(targets[k].pct) / 100 : 0;
   const groups = keys.map((k) => {
-    const v = Math.max(0, num(values[k])), now = total > 0 ? v / total * 100 : 0, target = tg5(k) * 100;
+    const v = Math.max(0, num(values[k])), now = total > 0 ? v / total * 100 : 0, target = tg6(k) * 100;
     return {
       key: k,
       value: v,
       now,
       target,
       drift: now - target,
-      full: tg5(k) * total - v,
-      need: Math.max(0, tg5(k) * T2 - v),
+      full: tg6(k) * total - v,
+      need: Math.max(0, tg6(k) * T2 - v),
       add: 0,
       state: Math.abs(now - target) <= band ? "ok" : Math.abs(now - target) <= 2 * band ? "warn" : "off"
     };
@@ -384,7 +393,7 @@ function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
     else {
       const rest = money3 - need;
       groups.forEach((g) => {
-        g.add = g.need + tg5(g.key) * rest;
+        g.add = g.need + tg6(g.key) * rest;
       });
     }
   }
@@ -398,11 +407,11 @@ var isoD = (t) => new Date(t).toISOString().slice(0, 10);
 var DCA_PER_MONTH = { week: 52 / 12, "2weeks": 26 / 12, month: 1 };
 function cleanDca(s) {
   if (!s || typeof s !== "object") return null;
-  const usd3 = num(s.usd), every = ["week", "2weeks", "month"].includes(s.every) ? s.every : null, day2 = Math.round(num(s.day, -1));
+  const usd3 = num(s.usd), every = ["week", "2weeks", "month"].includes(s.every) ? s.every : null, day3 = Math.round(num(s.day, -1));
   if (!(usd3 > 0 && usd3 <= 1e9) || !every) return null;
-  if (every === "month" ? !(day2 >= 1 && day2 <= 28) : !(day2 >= 0 && day2 <= 6)) return null;
+  if (every === "month" ? !(day3 >= 1 && day3 <= 28) : !(day3 >= 0 && day3 <= 6)) return null;
   const since = typeof s.since === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.since) ? s.since : isoD(Date.now());
-  return { usd: Math.round(usd3 * 100) / 100, every, day: day2, since };
+  return { usd: Math.round(usd3 * 100) / 100, every, day: day3, since };
 }
 function dcaDue(s, from, to) {
   const c = cleanDca(s);
@@ -627,19 +636,19 @@ function summarize(user, market, now = Date.now()) {
     return { sym, at: +a.alertPrice, price: price3, left: p ? Math.max(0, p.target - p.actual) : null, dcaToday: !!(dc && dc.s.state === "today") };
   }).filter((x) => x.price > 0);
   let alloc = null;
-  const tg5 = meta.targets && typeof meta.targets === "object" ? meta.targets : null;
-  const tlist = tg5 && Array.isArray(tg5.list) ? tg5.list : [];
+  const tg6 = meta.targets && typeof meta.targets === "object" ? meta.targets : null;
+  const tlist = tg6 && Array.isArray(tg6.list) ? tg6.list : [];
   if (tlist.length) {
     const cats = Object.fromEntries(tlist.filter((x) => x && x.g && x.pct > 0).map((x) => [x.g, { pct: +x.pct }]));
-    const names = Object.fromEntries([...Array.isArray(tg5.names) ? tg5.names : [], ...tlist].filter((x) => x && x.g).map((x) => [x.g, x.label || x.g]));
+    const names = Object.fromEntries([...Array.isArray(tg6.names) ? tg6.names : [], ...tlist].filter((x) => x && x.g).map((x) => [x.g, x.label || x.g]));
     const vals = {};
     for (const c of pf) {
       const g2 = groupOf(c);
       vals[g2] = (vals[g2] || 0) + c.qty * c.currentPrice;
     }
-    const plan2 = allocationPlan(vals, cats, { band: +tg5.band || 5 });
+    const plan2 = allocationPlan(vals, cats, { band: +tg6.band || 5 });
     const shown = plan2.groups.filter((g2) => g2.target > 0 || g2.now >= 0.05);
-    alloc = { band: plan2.band, groups: shown, onTarget: shown.filter((g2) => g2.state === "ok").length, count: shown.length, names, key: JSON.stringify([tlist, tg5.band]) };
+    alloc = { band: plan2.band, groups: shown, onTarget: shown.filter((g2) => g2.state === "ok").length, count: shown.length, names, key: JSON.stringify([tlist, tg6.band]) };
   }
   const free7 = {};
   for (const r of freeCoins(user.txs, new Date(now - 7 * DAY).toISOString())) {
@@ -811,8 +820,8 @@ async function migrateOwner(env) {
       migrated = true;
       return;
     }
-    const o = String(env.TELEGRAM_CHAT_ID), day2 = localParts(Date.now()).date;
-    for (const n of [...LEGACY, "ai:" + day2, "snap:" + day2, "log:" + day2]) {
+    const o = String(env.TELEGRAM_CHAT_ID), day3 = localParts(Date.now()).date;
+    for (const n of [...LEGACY, "ai:" + day3, "snap:" + day3, "log:" + day3]) {
       const v = await env.RATE.get("tg:" + n);
       if (v != null && await env.RATE.get(`tg:${o}:${n}`) == null) await env.RATE.put(`tg:${o}:${n}`, v, /^(ai|snap|log):/.test(n) ? { expirationTtl: 3 * 86400 } : void 0);
     }
@@ -1652,6 +1661,17 @@ async function ownerUid(env, db) {
   });
   return ownerMem = users[0];
 }
+async function isOwnerAccount(env, { email, uid, owners }) {
+  if (owners && owners.length) return owners.includes(String(email || "").toLowerCase());
+  const sa = serviceAccount(env);
+  if (!sa) return false;
+  try {
+    const db = await firestore(sa);
+    return !!uid && uid === await ownerUid(env, db);
+  } catch (_) {
+    return false;
+  }
+}
 async function loadUser(env, fresh = false) {
   const sa = serviceAccount(env);
   if (!sa) return null;
@@ -1791,6 +1811,138 @@ async function derivatives(sym) {
       sources: src
     };
   });
+}
+
+// tools/worker/admin.mjs
+async function tg2(env, method, body) {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    return await r.json();
+  } catch (_) {
+    return { ok: false };
+  }
+}
+var kv = async (env, k) => {
+  try {
+    return env.RATE ? await env.RATE.get(k) : null;
+  } catch (_) {
+    return null;
+  }
+};
+var tell = (env, chat, en, ar, lang2) => tg2(env, "sendMessage", { chat_id: chat, text: lang2 === "ar" ? ar : en, parse_mode: "HTML" }).catch(() => {
+});
+var day2 = (ms) => local(ms, { day: "numeric", month: "short", year: "numeric" });
+async function botLink(env, code) {
+  let bot = await kv(env, "tg:botname");
+  if (!bot) {
+    const me = await tg2(env, "getMe", {});
+    bot = me && me.ok && me.result && me.result.username;
+    if (bot) try {
+      await env.RATE.put("tg:botname", bot);
+    } catch (_) {
+    }
+  }
+  return bot ? `https://t.me/${bot}?start=${code}` : null;
+}
+async function overview(env, now = Date.now()) {
+  const m = await members(env), rDay = localParts(now).date, uDay = new Date(now).toISOString().slice(0, 10);
+  const list2 = await Promise.all(Object.entries(m).map(async ([chat, x]) => {
+    const q = +await kv(env, `tg:${chat}:ai:${rDay}`) || 0, r = x.uid ? +await kv(env, `ai:${x.uid}:${uDay}`) || 0 : 0;
+    const k = await asChat(chat, () => keyInfo(env)), pend = await getPending(env, chat);
+    return {
+      chat,
+      name: x.name,
+      user: x.user || "",
+      joined: x.joined,
+      email: x.email || "",
+      pending: pend || "",
+      linked: !!x.uid,
+      paused: !!x.paused,
+      premium: premiumNow(x, now),
+      premUntil: x.premUntil || null,
+      premSrc: x.premSrc || null,
+      supporter: !!x.supporter,
+      starsPaid: x.starsPaid || 0,
+      ai: Number.isFinite(x.ai) ? x.ai : DEF_AI,
+      reports: Number.isFinite(x.reports) ? x.reports : DEF_REPORTS,
+      usedQ: q,
+      usedR: r,
+      ownKey: k.has ? k.tail : null,
+      lang: x.lang || ""
+    };
+  }));
+  let log2 = [];
+  try {
+    log2 = JSON.parse(await kv(env, "tg:stars:log") || "[]");
+  } catch (_) {
+  }
+  const month = new Date(now).toISOString().slice(0, 7), sum = (f) => log2.filter(f).reduce((s, x) => s + (+x.stars || 0), 0);
+  const names = Object.fromEntries(Object.entries(m).map(([c, x]) => [c, x.name]));
+  return {
+    max: MAX_MEMBERS,
+    price: price(env),
+    stats: {
+      members: list2.length,
+      paused: list2.filter((x) => x.paused).length,
+      premium: list2.filter((x) => x.premium).length,
+      premiumStars: list2.filter((x) => x.premium && x.premSrc === "stars").length,
+      supporters: list2.filter((x) => x.supporter).length,
+      starsMonth: sum((x) => new Date(x.t).toISOString().slice(0, 7) === month),
+      starsAll: sum(() => true),
+      starsMonthPremium: sum((x) => x.kind === "prem" && new Date(x.t).toISOString().slice(0, 7) === month),
+      starsMonthSupport: sum((x) => x.kind === "sup" && new Date(x.t).toISOString().slice(0, 7) === month)
+    },
+    members: list2.sort((a, b) => (b.joined || 0) - (a.joined || 0)),
+    payments: log2.slice(-50).reverse().map((x) => ({ t: x.t, chat: x.chat, name: names[x.chat] || x.chat, kind: x.kind, stars: x.stars, renew: !!x.renew }))
+  };
+}
+async function act(env, chat, op) {
+  const x = await member(env, chat);
+  if (!x) return { status: 404, error: "No such member." };
+  const L = x.lang === "ar" ? "ar" : "en";
+  if (op === "gift30" || op === "gift365") {
+    const y = await addDays(env, chat, op === "gift30" ? 30 : 365), u = day2(y.premUntil);
+    await tell(env, chat, `\u{1F381} Dr. Samir Saad gave you premium as a gift \u2014 until ${u}!`, `\u{1F381} Dr. Samir Saad \u0627\u062F\u0651\u0627\u0644\u0643 \u0627\u0644\u0645\u0645\u064A\u0632 \u0647\u062F\u064A\u0629 \u0644\u062D\u062F ${u}!`, L);
+  } else if (op === "endPrem") {
+    await revoke(env, chat);
+    await tell(env, chat, "Premium is off \u2014 back to the standard limits.", "\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0627\u062A\u0634\u0627\u0644\u062A \u2014 \u0631\u062C\u0639\u062A \u0644\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629.", L);
+  } else if (op === "pause" || op === "resume") {
+    await setMember(env, chat, { paused: op === "pause" ? true : void 0 });
+    await tell(env, chat, op === "pause" ? "\u23F8 The bot is paused for you for now." : "\u25B6\uFE0F The bot is back on for you.", op === "pause" ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0627\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B." : "\u25B6\uFE0F \u0627\u0644\u0628\u0648\u062A \u0631\u062C\u0639 \u064A\u0634\u062A\u063A\u0644 \u0639\u0646\u062F\u0643.", L);
+  } else if (/^(ai|rp)[+-]$/.test(op)) {
+    const f = op.startsWith("ai") ? "ai" : "reports", cur = Number.isFinite(x[f]) ? x[f] : f === "ai" ? DEF_AI : DEF_REPORTS, max = f === "ai" ? 50 : 10;
+    await setMember(env, chat, { [f]: Math.max(0, Math.min(max, cur + (op.endsWith("+") ? 1 : -1))) });
+  } else if (op === "approve" || op === "refuse") {
+    const email = await getPending(env, chat);
+    if (!email) return { status: 404, error: "No request waiting." };
+    await clearPending(env, chat);
+    if (op === "approve") {
+      await setMember(env, chat, { email });
+      await syncAccess(env, await accessEmails(env)).catch(() => {
+      });
+      await tell(env, chat, `\u2705 You can open the app now with <b>${email}</b>.`, `\u2705 \u062A\u0642\u062F\u0631 \u062A\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u062F\u0644\u0648\u0642\u062A\u064A \u0628\u0640 <b>${email}</b>.`, L);
+    } else await tell(env, chat, "Your app request was not approved.", "\u0637\u0644\u0628 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0627 \u0627\u062A\u0648\u0627\u0641\u0642\u0634 \u0639\u0644\u064A\u0647.", L);
+  } else if (op === "remove") {
+    const had = await removeMember(env, chat);
+    if (had && had.email) await syncAccess(env, await accessEmails(env)).catch(() => {
+    });
+    await tell(env, chat, "Your access to this bot was removed.", "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0648\u0635\u0648\u0644\u0643 \u0644\u0644\u0628\u0648\u062A.", L);
+  } else return { status: 400, error: "Unknown action." };
+  return { ok: true };
+}
+async function adminHandler2(env, who, body) {
+  if (!await isOwnerAccount(env, who)) return { status: 403, error: "Only the owner can open the dashboard." };
+  const a = body && body.action;
+  if (a === "overview") return overview(env);
+  if (a === "invite") {
+    const code = await newInvite(env, String(body && body.note || "").slice(0, 40));
+    return { code, link: await botLink(env, code), days: 7 };
+  }
+  if (a === "member") {
+    const r = await act(env, String(body.chat || ""), String(body.op || ""));
+    return r.ok ? { ...r, overview: await overview(env) } : r;
+  }
+  return { status: 400, error: "Unknown action." };
 }
 
 // tools/worker/watch.mjs
@@ -1933,7 +2085,7 @@ function describe(a) {
   const what = k.what === "price" ? `${a.sym} price` : k.what === "change_24h" ? `${a.sym} 24h change` : k.what === "funding" ? `${a.sym} funding` : "Portfolio value";
   return `${what} ${k.op} ${v}`;
 }
-async function tg2(env, method, body) {
+async function tg3(env, method, body) {
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
 }
@@ -1971,7 +2123,7 @@ async function runWatch(env, now = Date.now()) {
 Now: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
 <i>Your alert from ${local(a.created, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} \u2014 done, removed.</i>`;
     const buttons = a.sym ? [[{ text: "\u{1FA99} " + a.sym, callback_data: "c:" + (a.cg || "x-" + a.sym.toLowerCase()).slice(0, 58) }, { text: "\u{1F525} Liq Map", url: "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=" + encodeURIComponent(a.sym) }]] : [[{ text: "\u{1F4BC} Portfolio", callback_data: "pf" }]];
-    const r = await tg2(env, "sendMessage", { chat_id: chatOf(env), text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
+    const r = await tg3(env, "sendMessage", { chat_id: chatOf(env), text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
     if (!r.ok) keep.push(a);
     else await logEvent(env, "alert", describe(a) + " \u2014 now " + nowTxt);
   }
@@ -2824,7 +2976,7 @@ async function runTool(ctx, name, input) {
       if (x[1] > hi[1]) hi = x;
       if (x[1] < lo[1]) lo = x;
     }
-    const day2 = (t) => local(t, { day: "numeric", month: "short" }), closes = {};
+    const day3 = (t) => local(t, { day: "numeric", month: "short" }), closes = {};
     for (const [t, p] of pts) closes[localParts(t).date] = r62(p);
     return {
       coin: c.sym,
@@ -2832,8 +2984,8 @@ async function runTool(ctx, name, input) {
       start_usd: r62(pts[0][1]),
       end_usd: r62(pts[pts.length - 1][1]),
       change_pct: r23((pts[pts.length - 1][1] / pts[0][1] - 1) * 100),
-      high: { usd: r62(hi[1]), on: day2(hi[0]) },
-      low: { usd: r62(lo[1]), on: day2(lo[0]) },
+      high: { usd: r62(hi[1]), on: day3(hi[0]) },
+      low: { usd: r62(lo[1]), on: day3(lo[0]) },
       daily_closes: closes
     };
   }
@@ -3038,7 +3190,7 @@ var jget = async (env, k, d) => {
 };
 var jput = (env, k, v, ttl) => kvPut5(env, k, JSON.stringify(v), ttl);
 var lang = (env) => langOf(env);
-async function tg3(env, method, body) {
+async function tg4(env, method, body) {
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     return await r.json();
@@ -3046,7 +3198,7 @@ async function tg3(env, method, body) {
     return { ok: false };
   }
 }
-var send = (env, v, extra = {}) => tg3(env, "sendMessage", { chat_id: chatOf(env), text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
+var send = (env, v, extra = {}) => tg4(env, "sendMessage", { chat_id: chatOf(env), text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
 var cb2 = (text, data) => ({ text, callback_data: data });
 var url = (text, u) => ({ text, url: u });
 var LIQ = "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=";
@@ -3213,10 +3365,10 @@ async function evening(env, now = Date.now(), L = null) {
   const w = WD[L];
   const g = await gather(env, now);
   if (!g) return send(env, { text: w.noUser });
-  const { user, m, sum } = g, day2 = localParts(now).date;
-  const snap = await jget(env, K(env, "snap:" + day2), null), alerts = await listAlerts(env), log2 = await todayLog(env, now);
+  const { user, m, sum } = g, day3 = localParts(now).date;
+  const snap = await jget(env, K(env, "snap:" + day3), null), alerts = await listAlerts(env), log2 = await todayLog(env, now);
   const movers = sum.coins.filter((c) => !isStable(c.sym) && c.value >= 5 && c.ch24 != null).sort((a, b) => b.ch24 - a.ch24);
-  const trades = (user.txs || []).filter((t) => t && t.date && localParts(Date.parse(t.date)).date === day2 && t.kind !== "pay" && ["buy", "sell"].includes(t.type)).slice(0, 6).map((t) => ({ type: t.type, coin: t.sym, amount: r63(t.qty), price_usd: r63(t.price) }));
+  const trades = (user.txs || []).filter((t) => t && t.date && localParts(Date.parse(t.date)).date === day3 && t.kind !== "pay" && ["buy", "sell"].includes(t.type)).slice(0, 6).map((t) => ({ type: t.type, coin: t.sym, amount: r63(t.qty), price_usd: r63(t.price) }));
   const d = await derivatives("BTC").catch(() => null);
   const sectors = (m.sectors || []).filter((s) => s.mcap >= 1e9 && s.ch24 != null);
   const facts = {
@@ -3391,8 +3543,8 @@ async function sectorRadar(env, now = Date.now()) {
   const m = await loadMarket([], user ? coinsOf(user) : []);
   const big2 = (m.sectors || []).filter((s) => s && s.mcap >= 1e9 && s.ch24 != null && Math.abs(s.ch24) >= 10);
   if (!big2.length) return { sent: 0 };
-  const day2 = localParts(now).date, seen = await jget(env, K(env, "sector:seen"), {});
-  const fresh = big2.filter((s) => seen[s.id] !== day2).sort((a, b) => Math.abs(b.ch24) - Math.abs(a.ch24)).slice(0, 3);
+  const day3 = localParts(now).date, seen = await jget(env, K(env, "sector:seen"), {});
+  const fresh = big2.filter((s) => seen[s.id] !== day3).sort((a, b) => Math.abs(b.ch24) - Math.abs(a.ch24)).slice(0, 3);
   if (!fresh.length) return { sent: 0 };
   const mine = new Set(user ? Object.values(m.idOf).filter(Boolean) : []), symOf = (id) => (Object.entries(m.idOf).find(([, v]) => v === id) || [])[0];
   const L = await lang(env), ar = L === "ar", w = WD[L];
@@ -3405,9 +3557,9 @@ async function sectorRadar(env, now = Date.now()) {
   const r = await send(env, { text: lines.join("\n"), buttons: [[cb2(w.mk, "mk"), cb2(w.pf, "pf")]] });
   if (r && r.ok) {
     fresh.forEach((s) => {
-      seen[s.id] = day2;
+      seen[s.id] = day3;
     });
-    for (const k of Object.keys(seen)) if (seen[k] !== day2) delete seen[k];
+    for (const k of Object.keys(seen)) if (seen[k] !== day3) delete seen[k];
     await jput(env, K(env, "sector:seen"), seen);
     await logEvent(env, "sector", fresh.map((s) => s.name + " " + pct(s.ch24, 1)).join(", "), now);
   }
@@ -3419,8 +3571,9 @@ async function pinView(env, now = Date.now()) {
   const { m, sum } = g, alerts = await listAlerts(env), near = nearest(alerts, m, sum).filter((x) => x.alert)[0];
   const dca = (sum.dca || []).filter((x) => x.s.next).sort((a, b) => a.s.next.localeCompare(b.s.next))[0];
   const met2 = (sum.macro || []).filter((x) => x.met).length;
+  const me = isOwner(env) ? null : await member(env), star = me && premiumNow(me) ? " \u2B50" : "", heart = me && me.supporter ? " \u{1F49B}" : "";
   const L1 = [
-    `\u{1F4CC} <b>${w.live}</b> \xB7 ${w.updated} ${local(now, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`,
+    `\u{1F4CC} <b>${w.live}</b>${star}${heart} \xB7 ${w.updated} ${local(now, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`,
     `\u{1F4BC} <b>${usd2(sum.value)}</b>  ${dot(sum.ch24)} ${pct(sum.ch24)} ${w.today}`,
     m.btc ? `\u{1FA99} BTC <b>${usd(m.btc.price)}</b>  ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}${m.fng ? ` \xB7 ${w.fng} <b>${m.fng.value}</b>` : ""}` : null,
     `\u{1F4CB} ${w.planS} <b>${sum.prog ? sum.prog.pct.toFixed(1) : "0"}%</b> \xB7 \u{1F6AA} ${w.exit} <b>${met2}/3</b>`,
@@ -3437,8 +3590,8 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const body = v.text.split("\n").slice(1).join("\n");
   if (!force && st.id && st.body === body && now - (st.t || 0) < H3) return { ok: true, same: true };
   if (st.id && !fresh) {
-    const r3 = await tg3(env, "editMessageText", { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: "HTML", reply_markup: { inline_keyboard: v.buttons } });
-    if ((r3.ok || /not modified/i.test(r3.description || "")) && force) await tg3(env, "pinChatMessage", { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {
+    const r3 = await tg4(env, "editMessageText", { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: "HTML", reply_markup: { inline_keyboard: v.buttons } });
+    if ((r3.ok || /not modified/i.test(r3.description || "")) && force) await tg4(env, "pinChatMessage", { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {
     });
     if (r3.ok || /not modified/i.test(r3.description || "")) {
       await jput(env, K(env, "pin"), { id: st.id, body, t: now });
@@ -3448,11 +3601,11 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const r = await send(env, v, { disable_notification: true });
   const id = r && r.ok && r.result && r.result.message_id;
   if (!id) return { ok: false };
-  await tg3(env, "pinChatMessage", { chat_id: chatOf(env), message_id: id, disable_notification: true });
+  await tg4(env, "pinChatMessage", { chat_id: chatOf(env), message_id: id, disable_notification: true });
   if (st.id) {
-    await tg3(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
+    await tg4(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
     });
-    if (fresh) await tg3(env, "deleteMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
+    if (fresh) await tg4(env, "deleteMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
     });
   }
   await jput(env, K(env, "pin"), { id, body, t: now });
@@ -3460,7 +3613,7 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
 }
 async function unpin(env) {
   const st = await jget(env, K(env, "pin"), {});
-  if (st.id) await tg3(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id });
+  if (st.id) await tg4(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id });
   await jput(env, K(env, "pin"), {});
 }
 async function viewDaily(env) {
@@ -3823,7 +3976,7 @@ function spark(arr, n = 16) {
 }
 var menuRows = (t) => [[cb3(t.pf, "pf"), cb3(t.market, "mk")], [cb3(t.plan, "pl"), cb3(t.movers, "mv")], [cb3(t.signals, "sg"), cb3(t.exit, "ex")], [cb3(t.alertsB, "al"), cb3(t.coin, "coin")], [cb3(t.dailyB, "dy"), cb3(t.paperB, "pp")], [appBtn(t), cb3(t.other, "lang:" + t.otherCode)].filter(Boolean)];
 var replyKb = (t) => ({ keyboard: [[{ text: t.kb.pf }, { text: t.kb.mk }, { text: t.kb.pl }], [{ text: t.kb.ex }, { text: t.kb.mv }, { text: t.kb.sg }]], resize_keyboard: true, is_persistent: false, input_field_placeholder: "btc \xB7 sol eth \xB7 /menu" });
-var KB_ACT = () => Object.fromEntries(Object.values(T).flatMap((L) => [...Object.entries(L.kb), ...Object.entries(L.kbOld || {})].map(([act, text]) => [text, act])));
+var KB_ACT = () => Object.fromEntries(Object.values(T).flatMap((L) => [...Object.entries(L.kb), ...Object.entries(L.kbOld || {})].map(([act2, text]) => [text, act2])));
 var memLang = /* @__PURE__ */ new Map();
 async function getLang(env) {
   return langOf(env, memLang.get(chatOf(env)));
@@ -3853,8 +4006,8 @@ async function setLang(env, v) {
   if (!isOwner(env)) await setMember(env, chatOf(env), { lang: v }).catch(() => {
   });
 }
-function viewMenu(t, owner = true) {
-  return { text: `${owner ? t.hi : t.hiAll}
+function viewMenu(t, owner = true, badge = "") {
+  return { text: `${owner ? t.hi : badge ? t.hiAll.replace("\u{1F44B}", badge) : t.hiAll}
 ${t.menuTitle}`, buttons: menuRows(t) };
 }
 var hm = (now) => local(now, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
@@ -4004,12 +4157,12 @@ function viewCoin(t, coin, m, sum, now) {
   btns.push([cb3(t.back, "menu")]);
   return { text: L.join("\n"), buttons: btns };
 }
-async function tg4(env, method, body) {
+async function tg5(env, method, body) {
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
 }
-var send2 = (env, chat, v, extra = {}) => tg4(env, "sendMessage", { chat_id: chat, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
-var edit = (env, chat, msgId, v) => tg4(env, "editMessageText", { chat_id: chat, message_id: msgId, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {} });
+var send2 = (env, chat, v, extra = {}) => tg5(env, "sendMessage", { chat_id: chat, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
+var edit = (env, chat, msgId, v) => tg5(env, "editMessageText", { chat_id: chat, message_id: msgId, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {} });
 var WORDS = [
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, "menu"],
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, "pf"],
@@ -4049,22 +4202,22 @@ function parse(text) {
   const s = String(text || "").trim().replace(/@\w+/, "").replace(/^[^\p{L}\p{N}\/$]+/u, "").trim();
   const m = /^\/(price|p|coin)\s+(.+)$/i.exec(s);
   if (m) return { act: "coins", q: m[2].split(/[\s,]+/).filter(Boolean).slice(0, 5) };
-  for (const [rx, act] of WORDS) if (rx.test(s)) return { act };
+  for (const [rx, act2] of WORDS) if (rx.test(s)) return { act: act2 };
   if (/^\$?[A-Za-z][A-Za-z0-9]{1,11}([\s,]+\$?[A-Za-z][A-Za-z0-9]{1,11}){0,4}$/.test(s)) return { act: "coins", q: s.split(/[\s,]+/).filter(Boolean), guess: String(text || "").trim() };
   return { act: "ai", q: String(text || "").trim() };
 }
-async function buildView(env, act, arg, guess) {
+async function buildView(env, act2, arg, guess) {
   const now = Date.now();
-  const user = act === "menu" || act === "coin" ? null : await loadUser(env).catch(() => null);
+  const user = act2 === "menu" || act2 === "coin" ? null : await loadUser(env).catch(() => null);
   const cfg = settings(user && user.meta), lang2 = await getLang(env), t = T[lang2];
-  if (act === "menu") return { t, views: [viewMenu(t, isOwner(env))] };
-  if (act === "lang") return { t, views: [{ text: "\u{1F310} English / \u0639\u0631\u0628\u064A", buttons: [[cb3("\u{1F1EC}\u{1F1E7} English", "lang:en"), cb3("\u{1F1F8}\u{1F1E6} \u0639\u0631\u0628\u064A", "lang:ar")]] }] };
-  if (act === "coin") return { t, views: [{ text: `\u{1FA99} ${t.askCoin}`, buttons: [[cb3(t.back, "menu")]] }] };
-  if (act === "soon") return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
-  const needUser = ["pf", "pl", "mv", "sg", "ex"].includes(act);
+  if (act2 === "menu") return { t, views: [viewMenu(t, isOwner(env), await badgeOf(env, t))] };
+  if (act2 === "lang") return { t, views: [{ text: "\u{1F310} English / \u0639\u0631\u0628\u064A", buttons: [[cb3("\u{1F1EC}\u{1F1E7} English", "lang:en"), cb3("\u{1F1F8}\u{1F1E6} \u0639\u0631\u0628\u064A", "lang:ar")]] }] };
+  if (act2 === "coin") return { t, views: [{ text: `\u{1FA99} ${t.askCoin}`, buttons: [[cb3(t.back, "menu")]] }] };
+  if (act2 === "soon") return { t, views: [{ text: t.soon, buttons: menuRows(t) }] };
+  const needUser = ["pf", "pl", "mv", "sg", "ex"].includes(act2);
   if (needUser && !user) return { t, views: [{ text: isOwner(env) ? t.noUser : t.noLink, buttons: [[cb3(t.market, "mk"), cb3(t.back, "menu")]] }] };
   const mine = coinsOf(user);
-  if (act === "coins") {
+  if (act2 === "coins") {
     const m0 = await loadMarket([], mine);
     if (guess) {
       const known = (w) => {
@@ -4091,14 +4244,14 @@ async function buildView(env, act, arg, guess) {
     return { t, views };
   }
   const m = await loadMarket([], mine);
-  if (act === "mk") return { t, views: [viewMarket(t, m, now, await getRange(env))] };
+  if (act2 === "mk") return { t, views: [viewMarket(t, m, now, await getRange(env))] };
   const sum = summarize(withIds(user, m), m, now);
-  if (act === "pf") return { t, views: [viewPortfolio(t, cfg, sum, m, now)] };
-  if (act === "mv") return { t, views: [viewMovers(t, sum)] };
-  if (act === "sg") return { t, views: [viewSignals(t, sum)] };
-  if (act === "pl") return { t, views: [viewPlan(t, sum, now)] };
-  if (act === "ex") return { t, views: [viewExit(t, sum, now)] };
-  return { t, views: [viewMenu(t, isOwner(env))] };
+  if (act2 === "pf") return { t, views: [viewPortfolio(t, cfg, sum, m, now)] };
+  if (act2 === "mv") return { t, views: [viewMovers(t, sum)] };
+  if (act2 === "sg") return { t, views: [viewSignals(t, sum)] };
+  if (act2 === "pl") return { t, views: [viewPlan(t, sum, now)] };
+  if (act2 === "ex") return { t, views: [viewExit(t, sum, now)] };
+  return { t, views: [viewMenu(t, isOwner(env), await badgeOf(env, t))] };
 }
 var ok = () => new Response("ok", { headers: { "content-type": "text/plain" } });
 async function handleTelegram(request, env) {
@@ -4126,18 +4279,18 @@ async function handleTelegram(request, env) {
   if (!await allowed(env, chat)) return stranger(env, u, msg, chat);
   if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {
     const x = (await members(env))[String(chat)] || {}, ar = x.lang === "ar";
-    const quiet = () => q ? tg4(env, "answerCallbackQuery", { callback_query_id: q.id }).catch(() => {
+    const quiet = () => q ? tg5(env, "answerCallbackQuery", { callback_query_id: q.id }).catch(() => {
     }) : null;
     if (x.paused) {
       await quiet();
-      if (await strangerOnce(env, chat)) await tg4(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u0643\u0644\u0651\u0645 Dr. Samir Saad." : "\u23F8 The bot is paused for you for now \u2014 ask Dr. Samir Saad." }).catch(() => {
+      if (await strangerOnce(env, chat)) await tg5(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u0643\u0644\u0651\u0645 Dr. Samir Saad." : "\u23F8 The bot is paused for you for now \u2014 ask Dr. Samir Saad." }).catch(() => {
       });
       return ok();
     }
     const f = await flood(env, chat);
     if (f !== "ok") {
       await quiet();
-      if (f === "warn") await tg4(env, "sendMessage", { chat_id: chat, text: ar ? "\u{1F30A} \u0631\u0633\u0627\u064A\u0644 \u0643\u062A\u064A\u0631 \u0648\u0631\u0627 \u0628\u0639\u0636 \u2014 \u0627\u0633\u062A\u0646\u0649 \u062F\u0642\u064A\u0642\u0629 \u0648\u0643\u0645\u0651\u0644 \u{1F642}" : "\u{1F30A} That's a lot of messages at once \u2014 wait a minute, then carry on \u{1F642}" }).catch(() => {
+      if (f === "warn") await tg5(env, "sendMessage", { chat_id: chat, text: ar ? "\u{1F30A} \u0631\u0633\u0627\u064A\u0644 \u0643\u062A\u064A\u0631 \u0648\u0631\u0627 \u0628\u0639\u0636 \u2014 \u0627\u0633\u062A\u0646\u0649 \u062F\u0642\u064A\u0642\u0629 \u0648\u0643\u0645\u0651\u0644 \u{1F642}" : "\u{1F30A} That's a lot of messages at once \u2014 wait a minute, then carry on \u{1F642}" }).catch(() => {
       });
       return ok();
     }
@@ -4209,7 +4362,7 @@ async function inviteMsg(env, lang2) {
   } catch (_) {
   }
   if (!bot) {
-    const me = await tg4(env, "getMe", {}).catch(() => null);
+    const me = await tg5(env, "getMe", {}).catch(() => null);
     bot = me && me.ok && me.result && me.result.username;
     if (bot) try {
       if (env.RATE) await env.RATE.put("tg:botname", bot);
@@ -4257,6 +4410,14 @@ async function usedToday(env, c, x) {
   } catch (_) {
   }
   return { q, r };
+}
+async function badgeOf(env, t) {
+  if (isOwner(env)) return "";
+  const x = await member(env);
+  if (!x) return "";
+  const ar = t === T.ar, p = premiumNow(x), s = !!x.supporter;
+  if (!p && !s) return "";
+  return [p ? ar ? "\u2B50 \u2014 \u0639\u0636\u0648 \u0645\u0645\u064A\u0632" : "\u2B50 \u2014 premium member" : "\u{1F44B}", s ? "\u{1F49B} Supporter" : ""].filter(Boolean).join(" \xB7 ");
 }
 var AW = {
   en: {
@@ -4358,7 +4519,7 @@ async function onUpdate(env, u, msg, q, chat) {
   try {
     if (q) {
       const d = String(q.data || "");
-      const done = (text) => tg4(env, "answerCallbackQuery", { callback_query_id: q.id, ...text ? { text } : {} }).catch(() => {
+      const done = (text) => tg5(env, "answerCallbackQuery", { callback_query_id: q.id, ...text ? { text } : {} }).catch(() => {
       });
       if (d === "sp" || /^sp:\d+$/.test(d) || d === "pm:ask" || d === "pm") {
         const lang2 = await getLang(env);
@@ -4381,7 +4542,7 @@ async function onUpdate(env, u, msg, q, chat) {
           const st = env.RATE ? JSON.parse(await env.RATE.get(K(env, "pin")) || "{}") : {};
           await unpin(env).catch(() => {
           });
-          if (st.id) await tg4(env, "deleteMessage", { chat_id: chat, message_id: st.id });
+          if (st.id) await tg5(env, "deleteMessage", { chat_id: chat, message_id: st.id });
         } catch (_) {
         }
         const me = await member(env);
@@ -4408,7 +4569,7 @@ async function onUpdate(env, u, msg, q, chat) {
           return ok();
         }
         const email = await getPending(env, who);
-        await tg4(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {
+        await tg5(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {
         });
         if (!email || !await member(env, who)) {
           await done("\u2014");
@@ -4467,11 +4628,11 @@ async function onUpdate(env, u, msg, q, chat) {
             if (!pd && premiumNow(x)) {
               await revoke(env, who);
               note2 = "\u2606";
-              await tg4(env, "sendMessage", { chat_id: who, text: x.lang === "ar" ? "\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0627\u062A\u0634\u0627\u0644\u062A \u2014 \u0631\u062C\u0639\u062A \u0644\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629." : "Premium is off \u2014 back to the standard limits." }).catch(() => {
+              await tg5(env, "sendMessage", { chat_id: who, text: x.lang === "ar" ? "\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0627\u062A\u0634\u0627\u0644\u062A \u2014 \u0631\u062C\u0639\u062A \u0644\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629." : "Premium is off \u2014 back to the standard limits." }).catch(() => {
               });
             } else {
               const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? local(y.premUntil, { day: "numeric", month: "short", year: "numeric" }) : "";
-              await tg4(env, "sendMessage", { chat_id: who, parse_mode: "HTML", text: x.lang === "ar" ? `\u{1F381} Dr. Samir Saad \u0627\u062F\u0651\u0627\u0644\u0643 \u0627\u0644\u0645\u0645\u064A\u0632 \u0647\u062F\u064A\u0629 \u0644\u062D\u062F ${until}!
+              await tg5(env, "sendMessage", { chat_id: who, parse_mode: "HTML", text: x.lang === "ar" ? `\u{1F381} Dr. Samir Saad \u0627\u062F\u0651\u0627\u0644\u0643 \u0627\u0644\u0645\u0645\u064A\u0632 \u0647\u062F\u064A\u0629 \u0644\u062D\u062F ${until}!
 \u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u{1F399} \u0627\u0634\u062A\u063A\u0644\u062A\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645.` : `\u{1F381} Dr. Samir Saad gave you premium as a gift \u2014 until ${until}!
 Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {
               });
@@ -4487,7 +4648,7 @@ Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} A
           if (x) {
             await setMember(env, who, { paused: x.paused ? void 0 : true });
             const ar2 = x.lang === "ar";
-            await tg4(env, "sendMessage", { chat_id: who, text: x.paused ? ar2 ? "\u25B6\uFE0F \u0627\u0644\u0628\u0648\u062A \u0631\u062C\u0639 \u064A\u0634\u062A\u063A\u0644 \u0639\u0646\u062F\u0643." : "\u25B6\uFE0F The bot is back on for you." : ar2 ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0627\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B." : "\u23F8 The bot is paused for you for now." }).catch(() => {
+            await tg5(env, "sendMessage", { chat_id: who, text: x.paused ? ar2 ? "\u25B6\uFE0F \u0627\u0644\u0628\u0648\u062A \u0631\u062C\u0639 \u064A\u0634\u062A\u063A\u0644 \u0639\u0646\u062F\u0643." : "\u25B6\uFE0F The bot is back on for you." : ar2 ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0627\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B." : "\u23F8 The bot is paused for you for now." }).catch(() => {
             });
           }
           await edit(env, chat, q.message.message_id, await viewMember(env, lang2, who));
@@ -4500,7 +4661,7 @@ Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} A
             note = "\u{1F5D1}";
             if (had.email) await syncAccess(env, await accessEmails(env)).catch(() => {
             });
-            await tg4(env, "sendMessage", { chat_id: who, text: lang2 === "ar" ? "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0648\u0635\u0648\u0644\u0643 \u0644\u0644\u0628\u0648\u062A." : "Your access to this bot was removed." }).catch(() => {
+            await tg5(env, "sendMessage", { chat_id: who, text: lang2 === "ar" ? "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0648\u0635\u0648\u0644\u0643 \u0644\u0644\u0628\u0648\u062A." : "Your access to this bot was removed." }).catch(() => {
             });
           }
         }
@@ -4556,7 +4717,7 @@ Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} A
       if (/^tx:(ok|no):\w+$/.test(d)) {
         const lang2 = await getLang(env), t2 = T[lang2], gid = d.slice(6);
         const kb = ((q.message.reply_markup || {}).inline_keyboard || []).map((r4) => r4.filter((b) => !/^tx:/.test(b.callback_data || ""))).filter((r4) => r4.length);
-        await tg4(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: kb } }).catch(() => {
+        await tg5(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: kb } }).catch(() => {
         });
         if (d.startsWith("tx:no:")) {
           const was = await cancelTrades(env, gid);
@@ -4631,7 +4792,7 @@ async function onVoice(env, chat, voice) {
 }
 async function onText(env, chat, text, budget = 36, into = null) {
   const p = parse(text);
-  tg4(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
+  tg5(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
   });
   if (into && p.act !== "ai") {
     if (!["menu", "coin", "coins", "pf", "mk", "pl", "mv", "sg", "ex"].includes(p.act)) await edit(env, chat, into.id, { text: into.head });
@@ -4753,7 +4914,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (/^\/start/.test(text)) {
     await send2(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });
-    await tg4(env, "setMyCommands", { commands: cmds(await getLang(env)) }).catch(() => {
+    await tg5(env, "setMyCommands", { commands: cmds(await getLang(env)) }).catch(() => {
     });
   }
   for (const v of views) await send2(env, chat, v);
@@ -4800,8 +4961,9 @@ async function switchLang(env, chat, lang2, msgId) {
   await ensureCmds(env);
   const t = T[lang2];
   await send2(env, chat, { text: t.langSet }, { reply_markup: replyKb(t) });
-  if (msgId) await edit(env, chat, msgId, viewMenu(t, isOwner(env)));
-  else await send2(env, chat, viewMenu(t, isOwner(env)));
+  const bd = await badgeOf(env, t);
+  if (msgId) await edit(env, chat, msgId, viewMenu(t, isOwner(env), bd));
+  else await send2(env, chat, viewMenu(t, isOwner(env), bd));
   let hasPin = false;
   try {
     hasPin = !!(env.RATE && JSON.parse(await env.RATE.get(K(env, "pin")) || "{}").id);
@@ -4822,7 +4984,7 @@ async function buildById(env, id) {
   const coin = { id: xs ? m.idOf[xs] || id : id, sym: xs || ownSym || row2.sym || "", name: row2.name || own && own.name || "" };
   return { t, views: [viewCoin(t, coin, m, user ? summarize(withIds(user, m), m, now) : null, now)] };
 }
-var run = (env, act, arg, guess) => act === "coinById" ? buildById(env, arg) : buildView(env, act, arg, guess);
+var run = (env, act2, arg, guess) => act2 === "coinById" ? buildById(env, arg) : buildView(env, act2, arg, guess);
 var cmds = (lang2, owner = true) => {
   const a = lang2 === "ar";
   return [
@@ -4862,7 +5024,7 @@ async function ensureCmds(env) {
     cmdMem.set(c, v);
     return;
   }
-  const r = await tg4(env, "setMyCommands", { commands: cmds(lang2, own), scope: { type: "chat", chat_id: +c || c } }).catch(() => ({}));
+  const r = await tg5(env, "setMyCommands", { commands: cmds(lang2, own), scope: { type: "chat", chat_id: +c || c } }).catch(() => ({}));
   if (r && r.ok) {
     cmdMem.set(c, v);
     try {
@@ -4886,9 +5048,9 @@ async function ensureDesc(env) {
   if (had === DESC_V || descMem === DESC_V) return;
   descMem = DESC_V;
   for (const [lc, [long, short]] of Object.entries(DESC)) {
-    await tg4(env, "setMyDescription", { description: long, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
+    await tg5(env, "setMyDescription", { description: long, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
     });
-    await tg4(env, "setMyShortDescription", { short_description: short, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
+    await tg5(env, "setMyShortDescription", { short_description: short, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
     });
   }
   try {
@@ -4911,7 +5073,7 @@ async function ensureHook(env, request) {
     hookMem = HOOK_V;
     return;
   }
-  const u = new URL(request.url), r = await tg4(env, "setWebhook", { url: u.origin + u.pathname, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: false });
+  const u = new URL(request.url), r = await tg5(env, "setWebhook", { url: u.origin + u.pathname, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: false });
   if (r && r.ok) {
     hookMem = HOOK_V;
     try {
@@ -4927,11 +5089,11 @@ async function setup(request, env) {
   if (missing.length) return json(400, { ok: false, missing });
   if (!/^[A-Za-z0-9_-]{16,256}$/.test(env.TG_SECRET)) return json(400, { ok: false, error: "TG_SECRET must be 16+ letters, digits, _ or - (Telegram rule)." });
   const hook = u.origin + u.pathname.replace(/\/setup$/, "");
-  const a = await tg4(env, "setWebhook", { url: hook, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: true });
+  const a = await tg5(env, "setWebhook", { url: hook, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: true });
   resetBudget();
   return asChat(env.TELEGRAM_CHAT_ID, async () => {
     const user = await loadUser(env).catch(() => null), lang2 = await getLang(env), t = T[lang2];
-    const b = await tg4(env, "setMyCommands", { commands: cmds(lang2) });
+    const b = await tg5(env, "setMyCommands", { commands: cmds(lang2) });
     const c = await send2(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
     await send2(env, env.TELEGRAM_CHAT_ID, viewMenu(t, isOwner(env)));
     return json(a.ok && b.ok && c.ok ? 200 : 502, { ok: !!(a.ok && b.ok && c.ok), webhook: a.ok ? "set" : a.description, menu: b.ok ? "set" : b.description, welcome: c.ok ? "sent" : c.description, portfolio: serviceAccount(env) ? user ? "connected" : "not found" : "FIREBASE_SERVICE_ACCOUNT missing" });
@@ -5549,6 +5711,7 @@ async function logo(request) {
 }
 
 // tools/worker/index.mjs
+setAdminHandler(adminHandler2);
 setMemberCheck(async (env, email) => {
   const x = await memberByEmail(env, email);
   if (!x) return null;
@@ -5572,11 +5735,11 @@ setKeyHandler(async (env, email, body) => {
       await saveKey(env, k);
       return { ...await keyInfo(env), checked: w === "ok" };
     }
-    const st = await keyInfo(env), day2 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const st = await keyInfo(env), day3 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const limit = x.paused ? 0 : st.has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
     let used2 = 0;
     try {
-      used2 = x.uid && env.RATE ? +await env.RATE.get(`ai:${x.uid}:${day2}`) || 0 : 0;
+      used2 = x.uid && env.RATE ? +await env.RATE.get(`ai:${x.uid}:${day3}`) || 0 : 0;
     } catch (_) {
     }
     return { ...st, reports: { limit, used: used2, left: Math.max(0, limit - used2) }, premium: premiumNow(x), premUntil: x.premUntil || null, premSrc: x.premSrc || null, supporter: !!x.supporter, starsPaid: x.starsPaid || 0 };
