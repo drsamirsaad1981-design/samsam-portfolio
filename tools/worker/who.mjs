@@ -52,6 +52,27 @@ export async function removeMember(env, chat) {
   delete m[String(chat)]; await kput(env, 'tg:users', JSON.stringify(m));
   return had;   // the record (its e-mail leaves the app's access list — the caller syncs it)
 }
+// ⏸ a member the owner paused: still a member (their app and portfolio stay theirs) — the bot answers nothing, sends nothing
+export async function activeChats(env) { const m = await members(env); return (await chats(env)).filter(c => !(m[c] && m[c].paused)); }
+// 🌊 too many messages: a member may send 20 a minute (the owner: no limit). The 21st gets one "wait a minute", the rest nothing.
+export const FLOOD_PER_MIN = 20;
+export async function flood(env, chat) {
+  if (String(chat) === String(env.TELEGRAM_CHAT_ID)) return 'ok';
+  const k = `tg:rl:${chat}:${Math.floor(Date.now() / 60e3)}`, n = (+(await kget(env, k)) || 0) + 1;
+  await kput(env, k, String(n), 120);
+  return n <= FLOOD_PER_MIN ? 'ok' : n === FLOOD_PER_MIN + 1 ? 'warn' : 'drop';
+}
+// /forget: everything the bot keeps for this chat (alerts, chat memory, language, daily switches, pinned message, radars,
+// paper portfolio…) — not today's AI counter (a fresh start must not mean fresh questions)
+export async function forgetChat(env, chat) {
+  const pre = `tg:${chat}:`; let names = [];
+  if (env.RATE && env.RATE.list) { let cursor; do { const r = await env.RATE.list({ prefix: pre, cursor }); names.push(...r.keys.map(x => x.name)); cursor = r.list_complete ? null : r.cursor; } while (cursor); }
+  for (const k of memKV.keys()) if (k.startsWith(pre)) names.push(k);
+  names = [...new Set(names)].filter(n => !/:ai:\d{4}-\d\d-\d\d$/.test(n));
+  for (const n of names) await kdel(env, n);
+  await kdel(env, 'tg:appreq:' + chat);
+  return names.length;
+}
 // a stranger gets one polite answer a day, no more (so the bot can't be used to spam)
 export async function strangerOnce(env, chat) {
   const k = 'tg:nope:' + chat;

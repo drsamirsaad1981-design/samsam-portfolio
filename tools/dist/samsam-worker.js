@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 99eb4c8e1c6620dc
+// sources-hash: 9cb1592f4d4798c6
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -754,6 +754,34 @@ async function removeMember(env, chat) {
   delete m[String(chat)];
   await kput(env, "tg:users", JSON.stringify(m));
   return had;
+}
+async function activeChats(env) {
+  const m = await members(env);
+  return (await chats(env)).filter((c) => !(m[c] && m[c].paused));
+}
+var FLOOD_PER_MIN = 20;
+async function flood(env, chat) {
+  if (String(chat) === String(env.TELEGRAM_CHAT_ID)) return "ok";
+  const k = `tg:rl:${chat}:${Math.floor(Date.now() / 6e4)}`, n = (+await kget(env, k) || 0) + 1;
+  await kput(env, k, String(n), 120);
+  return n <= FLOOD_PER_MIN ? "ok" : n === FLOOD_PER_MIN + 1 ? "warn" : "drop";
+}
+async function forgetChat(env, chat) {
+  const pre = `tg:${chat}:`;
+  let names = [];
+  if (env.RATE && env.RATE.list) {
+    let cursor;
+    do {
+      const r = await env.RATE.list({ prefix: pre, cursor });
+      names.push(...r.keys.map((x) => x.name));
+      cursor = r.list_complete ? null : r.cursor;
+    } while (cursor);
+  }
+  for (const k of memKV.keys()) if (k.startsWith(pre)) names.push(k);
+  names = [...new Set(names)].filter((n) => !/:ai:\d{4}-\d\d-\d\d$/.test(n));
+  for (const n of names) await kdel(env, n);
+  await kdel(env, "tg:appreq:" + chat);
+  return names.length;
 }
 async function strangerOnce(env, chat) {
   const k = "tg:nope:" + chat;
@@ -3215,7 +3243,7 @@ var T = {
     aiLeft: (a, n) => `${a}/${n} left today`,
     data: "Data",
     ownerOnly: "Only the bot owner can do that.",
-    noLink: "Your portfolio isn't linked yet \u2014 linking from the app comes soon. Meanwhile: the market, any coin, alerts, paper trading and questions all work.",
+    noLink: "Your portfolio isn't linked yet. In the app: Settings \u2192 \u{1F517} Link the Telegram bot (no app yet? send /app with your e-mail). Meanwhile the market, any coin, alerts, paper trading and questions all work.",
     alertsB: "\u{1F514} Alerts",
     alertGone: "\u{1F5D1} Alert deleted",
     dailyB: "\u{1F5D3} Daily",
@@ -3356,7 +3384,7 @@ var T = {
     aiLeft: (a, n) => `\u0628\u0627\u0642\u064A ${a}/${n} \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647`,
     data: "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A",
     ownerOnly: "\u062F\u0647 \u0644\u0635\u0627\u062D\u0628 \u0627\u0644\u0628\u0648\u062A \u0628\u0633.",
-    noLink: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0644\u0633\u0647 \u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629 \u2014 \u0627\u0644\u0631\u0628\u0637 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u062C\u0627\u064A \u0642\u0631\u064A\u0628. \u0644\u062D\u062F \u0645\u0627 \u064A\u062C\u064A: \u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0623\u064A \u0639\u0645\u0644\u0629\u060C \u0648\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u060C \u0648\u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0648\u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0643\u0644\u0647\u0627 \u0634\u063A\u0627\u0644\u0629.",
+    noLink: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0644\u0633\u0647 \u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629. \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u{1F517} Link the Telegram bot (\u0644\u0633\u0647 \u0645\u0639\u0646\u062F\u0643\u0634 \u0627\u0644\u062A\u0637\u0628\u064A\u0642\u061F \u0627\u0628\u0639\u062A /app \u0648\u0627\u0644\u0625\u064A\u0645\u064A\u0644). \u0644\u062D\u062F \u0643\u062F\u0647 \u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0623\u064A \u0639\u0645\u0644\u0629\u060C \u0648\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u060C \u0648\u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0648\u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0643\u0644\u0647\u0627 \u0634\u063A\u0627\u0644\u0629.",
     alertsB: "\u{1F514} \u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A",
     alertGone: "\u{1F5D1} \u0627\u062A\u0645\u0633\u062D \u0627\u0644\u062A\u0646\u0628\u064A\u0647",
     dailyB: "\u{1F5D3} \u0627\u0644\u064A\u0648\u0645\u064A",
@@ -3633,6 +3661,7 @@ var WORDS = [
   [/^\/?(plan|pl)$|الخطة/i, "pl"],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, "hide"],
   [/^\/(new|reset|clear)$|^محادثة جديدة$/i, "new"],
+  [/^\/(forget|delete)$|^امسح بياناتي$/i, "fg"],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, "al"],
   [/^\/invite$/i, "inv"],
   [/^\/(users|members)$/i, "us"],
@@ -3731,6 +3760,24 @@ async function handleTelegram(request, env) {
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null) return ok();
   if (!await allowed(env, chat)) return stranger(env, u, msg, chat);
+  if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {
+    const x = (await members(env))[String(chat)] || {}, ar = x.lang === "ar";
+    const quiet = () => q ? tg3(env, "answerCallbackQuery", { callback_query_id: q.id }).catch(() => {
+    }) : null;
+    if (x.paused) {
+      await quiet();
+      if (await strangerOnce(env, chat)) await tg3(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u0643\u0644\u0651\u0645 \u0633\u0645\u064A\u0631." : "\u23F8 The bot is paused for you for now \u2014 ask Samir." }).catch(() => {
+      });
+      return ok();
+    }
+    const f = await flood(env, chat);
+    if (f !== "ok") {
+      await quiet();
+      if (f === "warn") await tg3(env, "sendMessage", { chat_id: chat, text: ar ? "\u{1F30A} \u0631\u0633\u0627\u064A\u0644 \u0643\u062A\u064A\u0631 \u0648\u0631\u0627 \u0628\u0639\u0636 \u2014 \u0627\u0633\u062A\u0646\u0649 \u062F\u0642\u064A\u0642\u0629 \u0648\u0643\u0645\u0651\u0644 \u{1F642}" : "\u{1F30A} That's a lot of messages at once \u2014 wait a minute, then carry on \u{1F642}" }).catch(() => {
+      });
+      return ok();
+    }
+  }
   await migrateOwner(env);
   return asChat(chat, () => onUpdate(env, u, msg, q, chat));
 }
@@ -3781,7 +3828,9 @@ async function viewUsers(env, lang2) {
   const m = await members(env), ar = lang2 === "ar", list2 = Object.entries(m);
   const L = [ar ? `\u{1F465} <b>\u0627\u0644\u0623\u0639\u0636\u0627\u0621</b> (${list2.length}/${MAX_MEMBERS})` : `\u{1F465} <b>Members</b> (${list2.length}/${MAX_MEMBERS})`, ""];
   if (!list2.length) L.push(ar ? "\u0644\u0633\u0647 \u0645\u0641\u064A\u0634 \u062D\u062F. \u0627\u0636\u063A\u0637 \u2795 \u0644\u0643\u0648\u062F \u062F\u0639\u0648\u0629." : "Nobody yet. Tap \u2795 for an invite code.");
-  list2.forEach(([c, x], i) => L.push(`${i + 1}. <b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""} \xB7 \u{1F9E0}${Number.isFinite(x.ai) ? x.ai : DEF_AI} \u{1F4CA}${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
+  const used2 = await Promise.all(list2.map(([c, x]) => usedToday(env, c, x)));
+  list2.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? "\u23F8 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""}
+    ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} \u{1F9E0} ${used2[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} \xB7 \u{1F4CA} ${used2[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
   if (list2.length) L.push("", ar ? "<i>\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0633\u0645 \u0639\u0634\u0627\u0646 \u062A\u063A\u064A\u0651\u0631 \u062D\u062F\u0648\u062F\u0647 \u0623\u0648 \u062A\u0634\u064A\u0644\u0647 \xB7 \u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u{1F517} \u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0631\u0628\u0648\u0637\u0629</i>" : "<i>Tap a name to change their limits or remove them \xB7 \u{1F4F1} app \xB7 \u{1F517} portfolio linked</i>");
   const b = [];
   for (let i = 0; i < list2.length; i += 3) b.push(list2.slice(i, i + 3).map(([c, x], j) => cb2(`${i + j + 1}. ${x.name.split(" ")[0].slice(0, 12)}${x.uid ? " \u{1F517}" : x.email ? " \u{1F4F1}" : ""}`, "us:m:" + c)));
@@ -3815,6 +3864,35 @@ ${link}` : `
 
 Or send this link (opens the bot and lets them in):
 ${link}` : ""), buttons: [[cb2(ar ? "\u{1F465} \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u{1F465} Members", "us")]] };
+}
+var FG = {
+  en: {
+    ask: "\u{1F9F9} <b>Delete everything the bot keeps for you?</b>\nYour alerts, chat memory, language, daily settings, pinned message, radars and paper portfolio \u2014 and the link to your portfolio.\n\nYour portfolio in the app is NOT touched (it stays yours). You can link again any time.",
+    yes: "\u2705 Yes, delete",
+    no: "\u274C Cancel",
+    done: "\u{1F9F9} Done \u2014 the bot has forgotten everything about you. Your app portfolio is untouched.\nTo link again: the app \u2192 Settings \u2192 Link the Telegram bot.",
+    kept: "OK \u2014 nothing was deleted.",
+    owner: "That is for invited members. For you: /new clears the AI chat; your settings stay."
+  },
+  ar: {
+    ask: "\u{1F9F9} <b>\u0623\u0645\u0633\u062D \u0643\u0644 \u062D\u0627\u062C\u0629 \u0627\u0644\u0628\u0648\u062A \u0634\u0627\u064A\u0644\u0647\u0627 \u0639\u0646\u0643\u061F</b>\n\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643\u060C \u0648\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u0648\u0627\u0644\u0644\u063A\u0629\u060C \u0648\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u060C \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062A\u062B\u0628\u062A\u0629\u060C \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A\u060C \u0648\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A \u2014 \u0648\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643.\n\n\u0645\u062D\u0641\u0638\u062A\u0643 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0627 \u062A\u062A\u0644\u0645\u0633\u0634 (\u0641\u0627\u0636\u0644\u0629 \u0628\u062A\u0627\u0639\u062A\u0643). \u0648\u062A\u0642\u062F\u0631 \u062A\u0631\u0628\u0637 \u062A\u0627\u0646\u064A \u0641\u064A \u0623\u064A \u0648\u0642\u062A.",
+    yes: "\u2705 \u0623\u064A\u0648\u0647 \u0627\u0645\u0633\u062D",
+    no: "\u274C \u0644\u0623",
+    done: "\u{1F9F9} \u062E\u0644\u0627\u0635 \u2014 \u0627\u0644\u0628\u0648\u062A \u0646\u0633\u064A \u0643\u0644 \u062D\u0627\u062C\u0629 \u0639\u0646\u0643. \u0645\u062D\u0641\u0638\u062A\u0643 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0632\u064A \u0645\u0627 \u0647\u064A.\n\u0639\u0634\u0627\u0646 \u062A\u0631\u0628\u0637 \u062A\u0627\u0646\u064A: \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 Link the Telegram bot.",
+    kept: "\u062A\u0645\u0627\u0645 \u2014 \u0645\u0627 \u0627\u062A\u0645\u0633\u062D\u0634 \u062D\u0627\u062C\u0629.",
+    owner: "\u062F\u0647 \u0644\u0644\u0623\u0639\u0636\u0627\u0621. \u0644\u064A\u0643 \u0627\u0646\u062A: /new \u064A\u0645\u0633\u062D \u0645\u062D\u0627\u062F\u062B\u0629 \u0627\u0644\u0640 AI\u060C \u0648\u0625\u0639\u062F\u0627\u062F\u0627\u062A\u0643 \u0632\u064A \u0645\u0627 \u0647\u064A."
+  }
+};
+async function usedToday(env, c, x) {
+  let q = 0, r = 0;
+  try {
+    if (env.RATE) {
+      q = +await env.RATE.get(`tg:${c}:ai:${localParts(Date.now()).date}`) || 0;
+      if (x.uid) r = +await env.RATE.get(`ai:${x.uid}:${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}`) || 0;
+    }
+  } catch (_) {
+  }
+  return { q, r };
 }
 var AW = {
   en: {
@@ -3891,16 +3969,21 @@ async function viewMember(env, lang2, c) {
   const x = await member(env, c), ar = lang2 === "ar";
   if (!x) return viewUsers(env, lang2);
   const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
+  const u = await usedToday(env, c, x);
   const L = [
-    `\u{1F464} <b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""}`,
+    `\u{1F464} ${x.paused ? "\u23F8 " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""}${x.paused ? ar ? " \u2014 <b>\u0645\u062A\u0648\u0642\u0641</b>" : " \u2014 <b>paused</b>" : ""}`,
     `${ar ? "\u0645\u0646" : "Since"} ${esc(local(x.joined, { day: "numeric", month: "short", year: "numeric" }))}`,
     `\u{1F4F1} ${ar ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "App"}: ${x.email ? "<code>" + esc(x.email) + "</code>" : ar ? "\u0644\u0633\u0647" : "not yet"}`,
     `\u{1F517} ${ar ? "\u0627\u0644\u0645\u062D\u0641\u0638\u0629" : "Portfolio"}: ${x.uid ? ar ? "\u0645\u0631\u0628\u0648\u0637\u0629 \u2705" : "linked \u2705" : ar ? "\u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629" : "not linked"}`,
     "",
-    `\u{1F9E0} ${ar ? "\u0623\u0633\u0626\u0644\u0629 AI \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI questions a day"}: <b>${ai}</b>`,
-    `\u{1F4CA} ${ar ? "\u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI Analysis reports a day"}: <b>${rp}</b>`
+    `\u{1F9E0} ${ar ? "\u0623\u0633\u0626\u0644\u0629 AI \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI questions a day"}: <b>${ai}</b> \xB7 ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} ${u.q}`,
+    `\u{1F4CA} ${ar ? "\u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI Analysis reports a day"}: <b>${rp}</b> \xB7 ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} ${u.r}`
   ];
-  return { text: L.join("\n"), buttons: [[cb2("\u{1F9E0} \u2212", `us:ai:-:${c}`), cb2("\u{1F9E0} +", `us:ai:+:${c}`), cb2("\u{1F4CA} \u2212", `us:rp:-:${c}`), cb2("\u{1F4CA} +", `us:rp:+:${c}`)], [cb2("\u{1F5D1} " + (ar ? "\u0634\u064A\u0644\u0647" : "Remove"), "us:del:" + c), cb2(ar ? "\u2B05\uFE0F \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u2B05\uFE0F Members", "us")]] };
+  return { text: L.join("\n"), buttons: [
+    [cb2("\u{1F9E0} \u2212", `us:ai:-:${c}`), cb2("\u{1F9E0} +", `us:ai:+:${c}`), cb2("\u{1F4CA} \u2212", `us:rp:-:${c}`), cb2("\u{1F4CA} +", `us:rp:+:${c}`)],
+    [cb2(x.paused ? ar ? "\u25B6\uFE0F \u0631\u062C\u0651\u0639\u0647" : "\u25B6\uFE0F Resume" : ar ? "\u23F8 \u0648\u0642\u0651\u0641\u0647" : "\u23F8 Pause", "us:pz:" + c), cb2("\u{1F5D1} " + (ar ? "\u0634\u064A\u0644\u0647" : "Remove"), "us:del:" + c)],
+    [cb2(ar ? "\u2B05\uFE0F \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u2B05\uFE0F Members", "us")]
+  ] };
 }
 async function onUpdate(env, u, msg, q, chat) {
   if (!await firstTime(env, u.update_id)) return ok();
@@ -3911,6 +3994,32 @@ async function onUpdate(env, u, msg, q, chat) {
       const d = String(q.data || "");
       const done = (text) => tg3(env, "answerCallbackQuery", { callback_query_id: q.id, ...text ? { text } : {} }).catch(() => {
       });
+      if (d === "fg:yes" || d === "fg:no") {
+        const lang2 = await getLang(env), w = FG[lang2];
+        if (d === "fg:no" || isOwner(env)) {
+          await edit(env, chat, q.message.message_id, { text: w.kept });
+          await done();
+          return ok();
+        }
+        try {
+          const st = env.RATE ? JSON.parse(await env.RATE.get(K(env, "pin")) || "{}") : {};
+          await unpin(env).catch(() => {
+          });
+          if (st.id) await tg3(env, "deleteMessage", { chat_id: chat, message_id: st.id });
+        } catch (_) {
+        }
+        const me = await member(env);
+        if (me && me.uid) await forgetPortfolio(env, me.uid);
+        await forgetChat(env, chat);
+        await forget(env).catch(() => {
+        });
+        await setMember(env, chat, { uid: void 0, lang: void 0 });
+        memLang.delete(String(chat));
+        cmdMem.delete(String(chat));
+        await edit(env, chat, q.message.message_id, { text: w.done });
+        await done("\u{1F9F9}");
+        return ok();
+      }
       if (/^lang:(ar|en)$/.test(d)) {
         await switchLang(env, chat, d.slice(5), q.message.message_id);
         await done();
@@ -3973,6 +4082,18 @@ async function onUpdate(env, u, msg, q, chat) {
           }
           await edit(env, chat, q.message.message_id, await viewMember(env, lang2, lim[3]));
           await done("\u2705");
+          return ok();
+        }
+        if (d.startsWith("us:pz:")) {
+          const who = d.slice(6), x = await member(env, who);
+          if (x) {
+            await setMember(env, who, { paused: x.paused ? void 0 : true });
+            const ar2 = x.lang === "ar";
+            await tg3(env, "sendMessage", { chat_id: who, text: x.paused ? ar2 ? "\u25B6\uFE0F \u0627\u0644\u0628\u0648\u062A \u0631\u062C\u0639 \u064A\u0634\u062A\u063A\u0644 \u0639\u0646\u062F\u0643." : "\u25B6\uFE0F The bot is back on for you." : ar2 ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0627\u062A\u0648\u0642\u0641 \u0639\u0646\u062F\u0643 \u0645\u0624\u0642\u062A\u0627\u064B." : "\u23F8 The bot is paused for you for now." }).catch(() => {
+            });
+          }
+          await edit(env, chat, q.message.message_id, await viewMember(env, lang2, who));
+          await done(x && x.paused ? "\u25B6\uFE0F" : "\u23F8");
           return ok();
         }
         if (d.startsWith("us:del:")) {
@@ -4187,6 +4308,15 @@ async function onText(env, chat, text, budget = 36, into = null) {
     await send2(env, chat, { text: T[await getLang(env)].newDone });
     return;
   }
+  if (p.act === "fg") {
+    const lang2 = await getLang(env), w = FG[lang2];
+    if (isOwner(env)) {
+      await send2(env, chat, { text: w.owner });
+      return;
+    }
+    await send2(env, chat, { text: w.ask, buttons: [[cb2(w.yes, "fg:yes"), cb2(w.no, "fg:no")]] });
+    return;
+  }
   if (p.act === "ai") {
     await answer(env, chat, p.q, budget, into);
     return;
@@ -4276,7 +4406,7 @@ var run = (env, act, arg, guess) => act === "coinById" ? buildById(env, arg) : b
 var cmds = (lang2, owner = true) => {
   const a = lang2 === "ar";
   return [
-    ...owner ? [] : [["app", a ? "\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "Open the app"], ["link", a ? "\u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 /link \u0627\u0644\u0643\u0648\u062F" : "Link your portfolio \u2014 /link CODE"]],
+    ...owner ? [] : [["app", a ? "\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "Open the app"], ["link", a ? "\u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 /link \u0627\u0644\u0643\u0648\u062F" : "Link your portfolio \u2014 /link CODE"], ["forget", a ? "\u0627\u0645\u0633\u062D \u0628\u064A\u0627\u0646\u0627\u062A\u064A \u0645\u0646 \u0627\u0644\u0628\u0648\u062A" : "Delete my data from the bot"]],
     ...owner ? [["invite", a ? "\u0643\u0648\u062F \u062F\u0639\u0648\u0629 \u0644\u0635\u0627\u062D\u0628\u0643" : "Invite code for a friend"], ["users", a ? "\u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "Members"]] : [],
     ["start", a ? "\u0627\u0628\u062F\u0623 \u2014 \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u062A\u062D\u062A \u0627\u0644\u0634\u0627\u062A" : "Start \u2014 the buttons under the chat"],
     ["menu", a ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
@@ -4978,7 +5108,7 @@ async function logo(request) {
 // tools/worker/index.mjs
 setMemberCheck(async (env, email) => {
   const x = await memberByEmail(env, email);
-  return x ? { limit: Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, model: env.MEMBER_MODEL || "claude-sonnet-5-5" } : null;
+  return x ? { limit: x.paused ? 0 : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, model: env.MEMBER_MODEL || "claude-sonnet-5-5" } : null;
 });
 var worker_default = {
   async fetch(request, env, ctx) {
@@ -5001,7 +5131,7 @@ var worker_default = {
       await kickPrices(env).then((r) => {
         if (r.kick === "sent" || r.kick === "refused") console.log(JSON.stringify(r));
       }).catch((e) => log("kick", e));
-      for (const chat of await chats(env)) {
+      for (const chat of await activeChats(env)) {
         resetBudget();
         await asChat(chat, async () => {
           await runWatch(env).then((r) => {

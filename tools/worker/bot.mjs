@@ -13,9 +13,9 @@
 // Worker secrets (Settings → Variables and Secrets): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT,
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
-import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, langOf } from './who.mjs';
-import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
-import { findLinkCode, syncAccess, loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
+import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, langOf, flood, forgetChat } from './who.mjs';
+import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
+import { forgetPortfolio, findLinkCode, syncAccess, loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
@@ -45,7 +45,7 @@ const T = {
     thinking: '🧠 Thinking…', aiLimit: n => `You've used today's ${n} questions — more tomorrow (midnight Riyadh). Buttons and tickers still work.`,
     aiNoKey: 'The AI is not set up (ANTHROPIC_API_KEY is missing in the Worker).', aiBusy: 'Claude is busy right now — try again in a minute.',
     aiErr: "I couldn't answer that just now — try again, or rephrase.", newChat: '🆕 New chat', newDone: 'New chat — I forgot the earlier messages 🧹', aiLeft: (a, n) => `${a}/${n} left today`, data: 'Data',
-    ownerOnly: 'Only the bot owner can do that.', noLink: 'Your portfolio isn\'t linked yet — linking from the app comes soon. Meanwhile: the market, any coin, alerts, paper trading and questions all work.',
+    ownerOnly: 'Only the bot owner can do that.', noLink: 'Your portfolio isn\'t linked yet. In the app: Settings → 🔗 Link the Telegram bot (no app yet? send /app with your e-mail). Meanwhile the market, any coin, alerts, paper trading and questions all work.',
     alertsB: '🔔 Alerts', alertGone: '🗑 Alert deleted', dailyB: '🗓 Daily', paperB: '🧪 Paper', report: '📊 Report', reportT: '📊 <b>Your full report</b> — opens inside Telegram.', working: '⏳ On it…', pinOff: 'Pinned message off — /pin brings it back.',
     other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅', exit: '🚪 Exit plan',
     today: 'today', profit: 'All Time Profit', vsBtcS: 'vs BTC', beat: (a, n) => `${a}/${n} coins beat BTC`, bestT: 'Best today', worstT: 'Worst today',
@@ -82,7 +82,7 @@ const T = {
     thinking: '🧠 بفكّر…', aiLimit: n => `خلصت الـ ${n} سؤال بتوع النهارده — بكرة يتجددوا (12 بالليل بتوقيت الرياض). الأزرار والرموز شغالة عادي.`,
     aiNoKey: 'الـ AI مش متظبط (ANTHROPIC_API_KEY ناقص في الـ Worker).', aiBusy: 'Claude مشغول دلوقتي — جرّب كمان دقيقة.',
     aiErr: 'ما قدرتش أجاوب دلوقتي — جرّب تاني أو اكتب السؤال بشكل تاني.', newChat: '🆕 محادثة جديدة', newDone: 'محادثة جديدة — نسيت الكلام اللي فات 🧹', aiLeft: (a, n) => `باقي ${a}/${n} النهارده`, data: 'البيانات',
-    ownerOnly: 'ده لصاحب البوت بس.', noLink: 'محفظتك لسه مش مربوطة — الربط من التطبيق جاي قريب. لحد ما يجي: السوق، وأي عملة، والتنبيهات، والتجريبي، والأسئلة كلها شغالة.',
+    ownerOnly: 'ده لصاحب البوت بس.', noLink: 'محفظتك لسه مش مربوطة. من التطبيق: الإعدادات ← 🔗 Link the Telegram bot (لسه معندكش التطبيق؟ ابعت /app والإيميل). لحد كده السوق، وأي عملة، والتنبيهات، والتجريبي، والأسئلة كلها شغالة.',
     alertsB: '🔔 التنبيهات', alertGone: '🗑 اتمسح التنبيه', dailyB: '🗓 اليومي', paperB: '🧪 تجريبي', report: '📊 التقرير', reportT: '📊 <b>تقريرك الكامل</b> — بيفتح جوه تليجرام.', working: '⏳ ثواني…', pinOff: 'الرسالة المتثبتة اتقفلت — /pin ترجّعها.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
     today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل BTC', beat: (a, n) => `${a}/${n} عملة سبقت BTC`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
@@ -294,7 +294,7 @@ const edit = (env, chat, msgId, v) => tg(env, 'editMessageText', { chat_id: chat
 const WORDS = [
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, 'menu'],
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
-  [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'],
+  [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
   [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
@@ -368,6 +368,13 @@ export async function handleTelegram(request, env) {
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null) return ok();
   if (!(await allowed(env, chat))) return stranger(env, u, msg, chat);   // not (yet) invited: only an invite code works
+  if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {   // a member: ⏸ paused → nothing (one note a day); 🌊 too many messages → wait
+    const x = (await members(env))[String(chat)] || {}, ar = x.lang === 'ar';
+    const quiet = () => q ? tg(env, 'answerCallbackQuery', { callback_query_id: q.id }).catch(() => {}) : null;
+    if (x.paused) { await quiet(); if (await strangerOnce(env, chat)) await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '⏸ البوت متوقف عندك مؤقتاً — كلّم سمير.' : '⏸ The bot is paused for you for now — ask Samir.' }).catch(() => {}); return ok(); }
+    const f = await flood(env, chat);
+    if (f !== 'ok') { await quiet(); if (f === 'warn') await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '🌊 رسايل كتير ورا بعض — استنى دقيقة وكمّل 🙂' : '🌊 That\'s a lot of messages at once — wait a minute, then carry on 🙂' }).catch(() => {}); return ok(); }
+  }
   await migrateOwner(env);
   return asChat(chat, () => onUpdate(env, u, msg, q, chat));   // everything below runs as this chat: its own alerts, memory, language…
 }
@@ -403,7 +410,8 @@ async function viewUsers(env, lang) {
   const m = await members(env), ar = lang === 'ar', list = Object.entries(m);
   const L = [ar ? `👥 <b>الأعضاء</b> (${list.length}/${MAX_MEMBERS})` : `👥 <b>Members</b> (${list.length}/${MAX_MEMBERS})`, ''];
   if (!list.length) L.push(ar ? 'لسه مفيش حد. اضغط ➕ لكود دعوة.' : 'Nobody yet. Tap ➕ for an invite code.');
-  list.forEach(([c, x], i) => L.push(`${i + 1}. <b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''} · 🧠${Number.isFinite(x.ai) ? x.ai : DEF_AI} 📊${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
+  const used = await Promise.all(list.map(([c, x]) => usedToday(env, c, x)));
+  list.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? '⏸ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''}\n    ${ar ? 'النهارده' : 'today'} 🧠 ${used[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} · 📊 ${used[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
   if (list.length) L.push('', ar ? '<i>اضغط على اسم عشان تغيّر حدوده أو تشيله · 📱 التطبيق · 🔗 المحفظة مربوطة</i>' : '<i>Tap a name to change their limits or remove them · 📱 app · 🔗 portfolio linked</i>');
   const b = []; for (let i = 0; i < list.length; i += 3) b.push(list.slice(i, i + 3).map(([c, x], j) => cb(`${i + j + 1}. ${x.name.split(' ')[0].slice(0, 12)}${x.uid ? ' 🔗' : x.email ? ' 📱' : ''}`, 'us:m:' + c)));
   b.push([cb(ar ? '➕ دعوة جديدة' : '➕ New invite', 'us:inv'), cb(T[lang].back, 'menu')]);
@@ -416,6 +424,20 @@ async function inviteMsg(env, lang) {
   const link = bot ? `https://t.me/${bot}?start=${code}` : null;
   return { text: (ar ? `🎟 <b>كود دعوة</b> — مرة واحدة، صالح 7 أيام:\n\n<code>${code}</code>` : `🎟 <b>Invite code</b> — works once, for 7 days:\n\n<code>${code}</code>`) +
     (link ? (ar ? `\n\nأو ابعتله اللينك ده (يفتح البوت ويدخل على طول):\n${link}` : `\n\nOr send this link (opens the bot and lets them in):\n${link}`) : ''), buttons: [[cb(ar ? '👥 الأعضاء' : '👥 Members', 'us')]] };
+}
+
+// 🧹 /forget
+const FG = {
+  en: { ask: '🧹 <b>Delete everything the bot keeps for you?</b>\nYour alerts, chat memory, language, daily settings, pinned message, radars and paper portfolio — and the link to your portfolio.\n\nYour portfolio in the app is NOT touched (it stays yours). You can link again any time.', yes: '✅ Yes, delete', no: '❌ Cancel',
+    done: '🧹 Done — the bot has forgotten everything about you. Your app portfolio is untouched.\nTo link again: the app → Settings → Link the Telegram bot.', kept: 'OK — nothing was deleted.', owner: 'That is for invited members. For you: /new clears the AI chat; your settings stay.' },
+  ar: { ask: '🧹 <b>أمسح كل حاجة البوت شايلها عنك؟</b>\nتنبيهاتك، وذاكرة المحادثة، واللغة، وإعدادات اليومي، والرسالة المتثبتة، والرادارات، والتداول التجريبي — وربط محفظتك.\n\nمحفظتك في التطبيق ما تتلمسش (فاضلة بتاعتك). وتقدر تربط تاني في أي وقت.', yes: '✅ أيوه امسح', no: '❌ لأ',
+    done: '🧹 خلاص — البوت نسي كل حاجة عنك. محفظتك في التطبيق زي ما هي.\nعشان تربط تاني: التطبيق ← الإعدادات ← Link the Telegram bot.', kept: 'تمام — ما اتمسحش حاجة.', owner: 'ده للأعضاء. ليك انت: /new يمسح محادثة الـ AI، وإعداداتك زي ما هي.' },
+};
+// what a member used today: AI questions (Riyadh day) and AI Analysis reports (UTC day, counted per app account)
+async function usedToday(env, c, x) {
+  let q = 0, r = 0;
+  try { if (env.RATE) { q = +(await env.RATE.get(`tg:${c}:ai:${localParts(Date.now()).date}`)) || 0; if (x.uid) r = +(await env.RATE.get(`ai:${x.uid}:${new Date().toISOString().slice(0, 10)}`)) || 0; } } catch (_) {}
+  return { q, r };
 }
 
 // 📱 /app you@example.com — an invited person asks to open the app with that e-mail; the owner taps ✅ (or ❌)
@@ -454,10 +476,12 @@ async function viewMember(env, lang, c) {
   const x = await member(env, c), ar = lang === 'ar';
   if (!x) return viewUsers(env, lang);
   const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
-  const L = [`👤 <b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
+  const u = await usedToday(env, c, x);
+  const L = [`👤 ${x.paused ? '⏸ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}${x.paused ? (ar ? ' — <b>متوقف</b>' : ' — <b>paused</b>') : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
     `📱 ${ar ? 'التطبيق' : 'App'}: ${x.email ? '<code>' + esc(x.email) + '</code>' : (ar ? 'لسه' : 'not yet')}`, `🔗 ${ar ? 'المحفظة' : 'Portfolio'}: ${x.uid ? (ar ? 'مربوطة ✅' : 'linked ✅') : (ar ? 'مش مربوطة' : 'not linked')}`, '',
-    `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${ai}</b>`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${rp}</b>`];
-  return { text: L.join('\n'), buttons: [[cb('🧠 −', `us:ai:-:${c}`), cb('🧠 +', `us:ai:+:${c}`), cb('📊 −', `us:rp:-:${c}`), cb('📊 +', `us:rp:+:${c}`)], [cb('🗑 ' + (ar ? 'شيله' : 'Remove'), 'us:del:' + c), cb(ar ? '⬅️ الأعضاء' : '⬅️ Members', 'us')]] };
+    `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${ai}</b> · ${ar ? 'النهارده' : 'today'} ${u.q}`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${rp}</b> · ${ar ? 'النهارده' : 'today'} ${u.r}`];
+  return { text: L.join('\n'), buttons: [[cb('🧠 −', `us:ai:-:${c}`), cb('🧠 +', `us:ai:+:${c}`), cb('📊 −', `us:rp:-:${c}`), cb('📊 +', `us:rp:+:${c}`)],
+    [cb(x.paused ? (ar ? '▶️ رجّعه' : '▶️ Resume') : (ar ? '⏸ وقّفه' : '⏸ Pause'), 'us:pz:' + c), cb('🗑 ' + (ar ? 'شيله' : 'Remove'), 'us:del:' + c)], [cb(ar ? '⬅️ الأعضاء' : '⬅️ Members', 'us')]] };
 }
 
 async function onUpdate(env, u, msg, q, chat) {
@@ -469,6 +493,15 @@ async function onUpdate(env, u, msg, q, chat) {
       // the button keeps its little spinner while the numbers load; when done, a short note says so — so one tap is enough,
       // even when nothing changed (the message is the same → Telegram would show no change at all)
       const done = text => tg(env, 'answerCallbackQuery', { callback_query_id: q.id, ...(text ? { text } : {}) }).catch(() => {});
+      if (d === 'fg:yes' || d === 'fg:no') {   // 🧹 /forget — confirmed (members only)
+        const lang = await getLang(env), w = FG[lang];
+        if (d === 'fg:no' || isOwner(env)) { await edit(env, chat, q.message.message_id, { text: w.kept }); await done(); return ok(); }
+        try { const st = env.RATE ? JSON.parse((await env.RATE.get(K(env, 'pin'))) || '{}') : {}; await unpin(env).catch(() => {}); if (st.id) await tg(env, 'deleteMessage', { chat_id: chat, message_id: st.id }); } catch (_) {}
+        const me = await member(env); if (me && me.uid) await forgetPortfolio(env, me.uid);
+        await forgetChat(env, chat); await forget(env).catch(() => {});
+        await setMember(env, chat, { uid: undefined, lang: undefined }); memLang.delete(String(chat)); cmdMem.delete(String(chat));
+        await edit(env, chat, q.message.message_id, { text: w.done }); await done('🧹'); return ok();
+      }
       if (/^lang:(ar|en)$/.test(d)) { await switchLang(env, chat, d.slice(5), q.message.message_id); await done(); return ok(); }
       if (/^ap:(ok|no):/.test(d)) {   // 📱 owner: allow / refuse a member's app e-mail
         const lang = await getLang(env), who = d.slice(6);
@@ -498,6 +531,13 @@ async function onUpdate(env, u, msg, q, chat) {
           if (x) { const f = lim[1] === 'ai' ? 'ai' : 'reports', cur = Number.isFinite(x[f]) ? x[f] : (f === 'ai' ? DEF_AI : DEF_REPORTS), max = f === 'ai' ? 50 : 10;
             await setMember(env, lim[3], { [f]: Math.max(0, Math.min(max, cur + (lim[2] === '+' ? 1 : -1))) }); }
           await edit(env, chat, q.message.message_id, await viewMember(env, lang, lim[3])); await done('✅'); return ok();
+        }
+        if (d.startsWith('us:pz:')) {   // ⏸ / ▶️ a member
+          const who = d.slice(6), x = await member(env, who);
+          if (x) { await setMember(env, who, { paused: x.paused ? undefined : true });
+            const ar2 = x.lang === 'ar';
+            await tg(env, 'sendMessage', { chat_id: who, text: x.paused ? (ar2 ? '▶️ البوت رجع يشتغل عندك.' : '▶️ The bot is back on for you.') : (ar2 ? '⏸ البوت اتوقف عندك مؤقتاً.' : '⏸ The bot is paused for you for now.') }).catch(() => {}); }
+          await edit(env, chat, q.message.message_id, await viewMember(env, lang, who)); await done(x && x.paused ? '▶️' : '⏸'); return ok();
         }
         if (d.startsWith('us:del:')) { const who = d.slice(7), had = await removeMember(env, who); if (had) { note = '🗑'; if (had.email) await syncAccess(env, await accessEmails(env)).catch(() => {}); await tg(env, 'sendMessage', { chat_id: who, text: lang === 'ar' ? 'تم إيقاف وصولك للبوت.' : 'Your access to this bot was removed.' }).catch(() => {}); } }
         await edit(env, chat, q.message.message_id, await viewUsers(env, lang)); await done(note); return ok();
@@ -612,6 +652,9 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'pin:on') { await setCfg(env, { pin: true }); const r = await pinUpdate(env, Date.now(), true, true).catch(() => null); if (!r || !r.ok) await send(env, chat, { text: (await getLang(env)) === 'ar' ? '⚠️ ما قدرتش أثبّت الرسالة دلوقتي — جرّب تاني بعد دقيقة.' : '⚠️ I couldn\'t pin it right now — try again in a minute.' }); return; }
   if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
+  if (p.act === 'fg') { const lang = await getLang(env), w = FG[lang];
+    if (isOwner(env)) { await send(env, chat, { text: w.owner }); return; }
+    await send(env, chat, { text: w.ask, buttons: [[cb(w.yes, 'fg:yes'), cb(w.no, 'fg:no')]] }); return; }
   if (p.act === 'ai') { await answer(env, chat, p.q, budget, into); return; }
   if (p.act === 'hide') { const t = T[await getLang(env)]; await send(env, chat, { text: t.hidden }, { reply_markup: { remove_keyboard: true } }); return; }
   const { t, views, ai } = await run(env, p.act, p.q, p.guess);
@@ -678,7 +721,7 @@ export const run = (env, act, arg, guess) => act === 'coinById' ? buildById(env,
 
 // the "/" menu in Telegram (set by the setup link and again on /start, so new commands show up)
 const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
-    ...(owner ? [] : [['app', a ? 'افتح التطبيق' : 'Open the app'], ['link', a ? 'اربط محفظتك — /link الكود' : 'Link your portfolio — /link CODE']]),
+    ...(owner ? [] : [['app', a ? 'افتح التطبيق' : 'Open the app'], ['link', a ? 'اربط محفظتك — /link الكود' : 'Link your portfolio — /link CODE'], ['forget', a ? 'امسح بياناتي من البوت' : 'Delete my data from the bot']]),
     ...(owner ? [['invite', a ? 'كود دعوة لصاحبك' : 'Invite code for a friend'], ['users', a ? 'الأعضاء' : 'Members']] : []),
     ['start', a ? 'ابدأ — الأزرار تحت الشات' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
     ['report', a ? 'التقرير الكامل (صفحة)' : 'Full report (a page)'], ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],

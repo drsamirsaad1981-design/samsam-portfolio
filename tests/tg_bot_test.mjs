@@ -416,7 +416,7 @@ await post({ message: { chat: { id: 555 }, text: 'btc' } }, ENV.TG_SECRET, { ...
 check('without the Firebase key a coin still works (no holding line)', /Bitcoin/.test(last().b.text) && !/You hold/.test(last().b.text), last().b.text);
 
 // ── 🔔 phase 3: alerts in words, checked by the cron; what-if ──
-const kvStore = new Map(), KV = { get: async k => kvStore.has(k) ? kvStore.get(k) : null, put: async (k, v) => { kvStore.set(k, v); }, delete: async k => { kvStore.delete(k); } };
+const kvStore = new Map(), KV = { list: async ({ prefix }) => ({ keys: [...kvStore.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }), get: async k => kvStore.has(k) ? kvStore.get(k) : null, put: async (k, v) => { kvStore.set(k, v); }, delete: async k => { kvStore.delete(k); } };
 const ENVK = { ...ENV, RATE: KV };
 let inst = 0;
 const fresh = async () => (await import('../tools/dist/samsam-worker.js?w' + (++inst))).default;   // a new Worker instance: nothing cached
@@ -969,6 +969,45 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   tokenCalls = 0; kvStore.delete('fs:pf:UID1'); await postK(await fresh(), '/portfolio'); const t1 = tokenCalls;
   kvStore.delete('fs:pf:UID1'); await postK(await fresh(), '/portfolio');
   check('🔑 a new Worker instance reuses the Google token kept in KV (no new sign-in)', tokenCalls === t1 && kvStore.has('fs:gtok'), [t1, tokenCalls]);
+}
+
+// ── step 4: /users shows today's use; ⏸ pause; 🌊 too many messages; 🧹 /forget ──
+{
+  const mm = JSON.parse(kvStore.get('tg:users')); mm['888'] = { ...mm['888'], uid: 'UID2', lang: 'en' }; kvStore.set('tg:users', JSON.stringify(mm));
+  const dayR = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
+  kvStore.set(`tg:888:ai:${dayR}`, '3'); kvStore.set(`ai:UID2:${new Date().toISOString().slice(0, 10)}`, '1');
+  sent.length = 0; await sayAs(555, '/users');
+  check('👥 /users: each member\'s use today — 🧠 3/5 · 📊 1/1', /New[\s\S]*today 🧠 3\/5 · 📊 1\/1/.test(last().b.text), last().b.text);
+  // ⏸ pause
+  sent.length = 0; await tapAs(555, 'us:pz:888');
+  check('⏸ Pause → the member is paused (told once), the card says paused, ▶️ Resume shows', JSON.parse(kvStore.get('tg:users'))['888'].paused === true && sent.some(x => String(x.b.chat_id) === '888' && /paused/.test(x.b.text || '')) && /paused/.test(sent.find(x => x.m === 'editMessageText').b.text) && JSON.stringify(sent.find(x => x.m === 'editMessageText').b.reply_markup).includes('Resume'), sent.map(x => x.m));
+  kvStore.delete('tg:nope:888'); sent.length = 0; await sayAs(888, '/menu'); await sayAs(888, '/portfolio');
+  check('…a paused member: one short note, then nothing (no menu, no portfolio)', sent.filter(x => String(x.b.chat_id) === '888' && x.m === 'sendMessage').length === 1 && /paused/.test(sent[0].b.text), sent.map(x => x.m + ':' + (x.b.text || '').slice(0, 30)));
+  const W5 = await fresh(); sent.length = 0; await W5.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('03:15') }, ENVK, { waitUntil: () => {} });
+  await new Promise(r => setTimeout(r, 300));
+  check('…and the 5-minute round skips them (nothing sent to a paused member)', !sent.some(x => String(x.b.chat_id) === '888'), sent.filter(x => String(x.b.chat_id) === '888').map(x => x.m));
+  await tapAs(555, 'us:pz:888');
+  check('▶️ Resume → active again', !JSON.parse(kvStore.get('tg:users'))['888'].paused);
+  // 🌊 flood: 20 a minute
+  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
+  kvStore.set(`tg:rl:888:${Math.floor(Date.now() / 60e3)}`, '20'); sent.length = 0;
+  await sayAs(888, '/menu'); await sayAs(888, '/menu');
+  const to888 = sent.filter(x => String(x.b.chat_id) === '888' && x.m === 'sendMessage');
+  check('🌊 the 21st message in a minute → one "wait a minute", the 22nd → nothing', to888.length === 1 && /wait a minute/.test(to888[0].b.text), to888.map(x => x.b.text.slice(0, 40)));
+  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
+  sent.length = 0; for (let i = 0; i < 25; i++) await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 555, type: 'private' }, from: { id: 555, first_name: 'Samir' }, text: '/menu' } }, ENV.TG_SECRET, ENVK);
+  check('…the owner has no such limit', !sent.some(x => /wait a minute/.test(x.b.text || '')));
+  // 🧹 /forget
+  kvStore.set('tg:888:alerts', '[{"sym":"SOL"}]'); kvStore.set('tg:888:paper', '{}'); kvStore.set('tg:888:hist', '[]'); kvStore.set('fs:pf:UID2', '{}');
+  sent.length = 0; await sayAs(888, '/forget');
+  check('🧹 /forget → asks first (✅ Yes, delete / ❌ Cancel); nothing deleted yet', /Delete everything/.test(last().b.text) && JSON.stringify(last().b.reply_markup).includes('fg:yes') && kvStore.has('tg:888:alerts'), last().b.text);
+  await tapAs(888, 'fg:no');
+  check('…❌ Cancel → nothing deleted', kvStore.has('tg:888:alerts') && JSON.parse(kvStore.get('tg:users'))['888'].uid === 'UID2');
+  sent.length = 0; await tapAs(888, 'fg:yes');
+  const left = [...kvStore.keys()].filter(k => k.startsWith('tg:888:'));
+  check('…✅ → alerts, paper, chat memory… gone; the portfolio link removed; today\'s AI counter kept; still a member', !kvStore.has('tg:888:alerts') && !kvStore.has('tg:888:paper') && !kvStore.has('fs:pf:UID2') && left.every(k => /:ai:\d{4}-/.test(k)) && !JSON.parse(kvStore.get('tg:users'))['888'].uid && JSON.parse(kvStore.get('tg:users'))['888'] && /forgotten everything/.test(sent.find(x => x.m === 'editMessageText').b.text), left);
+  sent.length = 0; await sayAs(555, '/forget');
+  check('…the owner: /forget is for members (points to /new)', /\/new/.test(last().b.text));
 }
 
 console.log(`${pass}/${pass + fail} passed`);
