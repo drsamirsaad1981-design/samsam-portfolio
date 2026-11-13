@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: c101a167312965fc
+// sources-hash: 787c5d43bb920e74
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2557,6 +2557,14 @@ function pulseText(m, now, kind) {
   ].filter((x) => x != null);
   return L.join("\n");
 }
+function discussUrl(c) {
+  const g = c && c.group;
+  return g && g.topics && g.topics.chat ? `https://t.me/c/${String(g.id).replace(/^-100/, "")}/${g.topics.chat}` : null;
+}
+var channelButtons = (c, extra = []) => {
+  const d = discussUrl(c);
+  return { inline_keyboard: [[...extra, ...d ? [{ text: "\u{1F4AC} Discuss \xB7 \u0646\u0627\u0642\u0634\u0647\u0627", url: d }] : []]].filter((r) => r.length) };
+};
 async function runChannel(env, now = Date.now()) {
   const c = await getCommunity(env), ch = c.channel;
   if (!ch) return { job: null };
@@ -2572,7 +2580,7 @@ async function runChannel(env, now = Date.now()) {
     text: pulseText(m, now, kind),
     parse_mode: "HTML",
     disable_web_page_preview: true,
-    reply_markup: { inline_keyboard: [[{ text: "\u{1F9ED} Market Hub", url: APP + "market.html" }]] }
+    reply_markup: channelButtons(c, [{ text: "\u{1F9ED} Market Hub", url: APP + "market.html" }])
   });
   if (r.ok) {
     if (kind !== "move") {
@@ -2592,7 +2600,7 @@ async function announce(env, text) {
   const body = `\u{1F6E0} <b>What's new \xB7 \u0627\u0644\u062C\u062F\u064A\u062F</b>
 
 ${esc(text)}`;
-  if (c.channel) out.push((await tg3(env, "sendMessage", { chat_id: c.channel.id, text: body, parse_mode: "HTML" })).ok ? "\u{1F4E2}" : "\u26A0\uFE0F\u{1F4E2}");
+  if (c.channel) out.push((await tg3(env, "sendMessage", { chat_id: c.channel.id, text: body, parse_mode: "HTML", reply_markup: channelButtons(c) })).ok ? "\u{1F4E2}" : "\u26A0\uFE0F\u{1F4E2}");
   if (c.group && c.group.topics && c.group.topics.updates) out.push((await tg3(env, "sendMessage", { chat_id: c.group.id, message_thread_id: c.group.topics.updates, text: body, parse_mode: "HTML" })).ok ? "\u{1F4AC}" : "\u26A0\uFE0F\u{1F4AC}");
   return out;
 }

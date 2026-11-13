@@ -159,6 +159,9 @@ function pulseText(m, now, kind) {
     '', `<i>${NOTE.en} · ${NOTE.ar}</i>`].filter(x => x != null);
   return L.join('\n');
 }
+// 💬 the group's Chat topic as a link (works for the group's members): t.me/c/<id without -100>/<topic>
+export function discussUrl(c) { const g = c && c.group; return g && g.topics && g.topics.chat ? `https://t.me/c/${String(g.id).replace(/^-100/, '')}/${g.topics.chat}` : null; }
+const channelButtons = (c, extra = []) => { const d = discussUrl(c); return { inline_keyboard: [[...extra, ...(d ? [{ text: '💬 Discuss · ناقشها', url: d }] : [])]].filter(r => r.length) }; };
 export async function runChannel(env, now = Date.now()) {
   const c = await getCommunity(env), ch = c.channel; if (!ch) return { job: null };
   const lp = localParts(now), today = lp.date, hm = lp.hour * 60 + (+lp.hm.slice(3) || 0), sent = c.sent || {};
@@ -169,7 +172,7 @@ export async function runChannel(env, now = Date.now()) {
   if (!kind && m && m.btc && Math.abs(m.btc.ch24 || 0) >= 5 && sent.move !== today) kind = 'move';
   if (!kind || !m) return { job: null };
   const r = await tg(env, 'sendMessage', { chat_id: ch.id, text: pulseText(m, now, kind), parse_mode: 'HTML', disable_web_page_preview: true,
-    reply_markup: { inline_keyboard: [[{ text: '🧭 Market Hub', url: APP + 'market.html' }]] } });
+    reply_markup: channelButtons(c, [{ text: '🧭 Market Hub', url: APP + 'market.html' }]) });
   if (r.ok) {
     if (kind !== 'move') { if (ch.pinned) await tg(env, 'unpinChatMessage', { chat_id: ch.id, message_id: ch.pinned }); await tg(env, 'pinChatMessage', { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true }); ch.pinned = r.result.message_id; }
     sent[kind] = today; c.sent = sent; c.channel = ch; await putCommunity(env, c);
@@ -181,7 +184,7 @@ export async function runChannel(env, now = Date.now()) {
 export async function announce(env, text) {
   const c = await getCommunity(env), out = [];
   const body = `🛠 <b>What's new · الجديد</b>\n\n${esc(text)}`;
-  if (c.channel) out.push((await tg(env, 'sendMessage', { chat_id: c.channel.id, text: body, parse_mode: 'HTML' })).ok ? '📢' : '⚠️📢');
+  if (c.channel) out.push((await tg(env, 'sendMessage', { chat_id: c.channel.id, text: body, parse_mode: 'HTML', reply_markup: channelButtons(c) })).ok ? '📢' : '⚠️📢');
   if (c.group && c.group.topics && c.group.topics.updates) out.push((await tg(env, 'sendMessage', { chat_id: c.group.id, message_thread_id: c.group.topics.updates, text: body, parse_mode: 'HTML' })).ok ? '💬' : '⚠️💬');
   return out;
 }

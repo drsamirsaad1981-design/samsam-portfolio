@@ -1245,6 +1245,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; const Wp = await fresh(); const pp = []; await Wp.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('09:05') }, ENVK, { waitUntil: x => pp.push(x) }); await Promise.all(pp);
   const pulse = sent.find(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
   check('📢 09:05 → the market pulse in the channel (BTC, cap, dominance, Fear & Greed, movers, "not financial advice"), pinned', pulse && /Market pulse/.test(pulse.b.text) && /BTC/.test(pulse.b.text) && /Not financial advice/.test(pulse.b.text) && okHtml(pulse.b.text) && sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1001), pulse && pulse.b.text);
+  check('…with 🧭 Market Hub and 💬 Discuss (→ the group\'s Chat topic: t.me/c/2/<topic>)', JSON.stringify(pulse.b.reply_markup).includes('Market Hub') && JSON.stringify(pulse.b.reply_markup).includes('t.me/c/2/' + c.group.topics.chat), pulse && pulse.b.reply_markup);
   sent.length = 0; const Wq = await fresh(); const pq = []; await Wq.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('09:10') }, ENVK, { waitUntil: x => pq.push(x) }); await Promise.all(pq);
   check('…once a morning (09:10 → nothing new)', !sent.some(m => m.b.chat_id === -1001 && /Market pulse/.test(m.b.text || '')));
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: -1002, type: 'supergroup' }, from: { id: 888 }, text: 'hello everyone' } }, ENV.TG_SECRET, ENVK);
