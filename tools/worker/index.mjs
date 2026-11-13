@@ -14,6 +14,7 @@ setJoinHandler(async (env, who, body) => {
   return { ok: true, already: !!r.already };
 });
 import { expireRound, premiumNow } from './stars.mjs';
+import { runChannel } from './community.mjs';
 import { saveKey, keyInfo, ownKey, deleteKey, validShape, keyWorks, BYOK_REPORTS } from './byok.mjs';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
@@ -68,7 +69,8 @@ export default {
       resetBudget();   // one allowance of outside calls for the whole run (Cloudflare counts per run)
       await migrateOwner(env);
       await kickPrices(env).then(r => { if (r.kick === 'sent' || r.kick === 'refused') console.log(JSON.stringify(r)); }).catch(e => log('kick', e));   // GitHub late → run the market snapshot now
-      await expireRound(env, Date.now()).catch(e => log('premium', e));   // ⭐ a premium that ended → standard limits (3-day reminder before)
+      await expireRound(env, Date.now()).catch(e => log('premium', e));
+      await runChannel(env, now).then(r => { if (r.job) console.log(JSON.stringify(r)); }).catch(e => log('channel', e));   // 📢 the market pulse   // ⭐ a premium that ended → standard limits (3-day reminder before)
       const cenv = { ...env, PF_CHECK_MS: String(30 * 60e3) };
       for (const chat of await activeChats(env)) {   // each person in turn, as themselves: their alerts, then their daily messages
         resetBudget();

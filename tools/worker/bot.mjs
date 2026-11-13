@@ -21,6 +21,7 @@ import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
 import { keyInfo } from './byok.mjs';
 import GUIDE from '../../guide.json' with { type: 'json' };
+import { onMyChatMember, onJoinRequest, communityView, announce, setup as communitySetup } from './community.mjs';
 import { premiumView, supportView, sendSupportInvoice, askGift, preCheckout, paid, statsView, addDays, revoke, premiumNow } from './stars.mjs';
 import { keepTrades, tradeLines, confirmTrades, cancelTrades, money } from './trade.mjs';
 import { viewDaily, setCfg, getCfg, morning, evening, pinUpdate, unpin } from './daily.mjs';
@@ -299,7 +300,7 @@ const WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
-  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
+  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, 'cm'], [/^\/community setup$/i, 'cm:setup'], [/^\/announce\s+[\s\S]+$/i, 'ann'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -368,7 +369,9 @@ export async function handleTelegram(request, env) {
   const u = await request.json().catch(() => null);
   if (!u) return ok();
   await ensureHook(env, request);
-  if (u.pre_checkout_query) { await preCheckout(env, u.pre_checkout_query); return ok(); }   // ⭐💛 a Stars payment: Telegram asks first
+  if (u.pre_checkout_query) { await preCheckout(env, u.pre_checkout_query); return ok(); }
+  if (u.my_chat_member) { await onMyChatMember(env, u); return ok(); }           // 📢💬 added to the channel / the group
+  if (u.chat_join_request) { await onJoinRequest(env, u); return ok(); }         // members in, strangers out   // ⭐💛 a Stars payment: Telegram asks first
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null) return ok();
@@ -727,6 +730,13 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'pin:on') { await setCfg(env, { pin: true }); const r = await pinUpdate(env, Date.now(), true, true).catch(() => null); if (!r || !r.ok) await send(env, chat, { text: (await getLang(env)) === 'ar' ? '⚠️ ما قدرتش أثبّت الرسالة دلوقتي — جرّب تاني بعد دقيقة.' : '⚠️ I couldn\'t pin it right now — try again in a minute.' }); return; }
   if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
+  if (p.act === 'cm') { await send(env, chat, await communityView(env, await getLang(env))); return; }
+  if (p.act === 'cm:setup' || p.act === 'ann') {   // Samir only
+    if (!isOwner(env)) { await send(env, chat, { text: T[await getLang(env)].ownerOnly }); return; }
+    if (p.act === 'cm:setup') { await communitySetup(env, 'channel'); await communitySetup(env, 'group'); return; }
+    const out = await announce(env, String(text).replace(/^\/announce\s+/i, '').slice(0, 3500));
+    await send(env, chat, { text: out.length ? '📣 ' + out.join(' ') : 'ℹ️ No channel / group yet.' }); return;
+  }
   if (p.act === 'gd') { await send(env, chat, guideView(await getLang(env))); return; }
   if (p.act === 'prem') { await send(env, chat, await premiumView(env, await getLang(env))); return; }   // ⭐ what premium is, the price, Subscribe
   if (p.act === 'sup') { await send(env, chat, await supportView(env, await getLang(env))); return; }      // 💛 support (optional)
@@ -809,7 +819,7 @@ const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
     ['alerts', a ? 'تنبيهاتك' : 'Your alerts'], ['paper', a ? 'التداول التجريبي' : 'Paper trading'], ['daily', a ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'],
     ['morning', a ? 'الصباح الذكي دلوقتي' : 'Smart morning now'], ['evening', a ? 'المساء الذكي دلوقتي' : 'Smart evening now'],
     ['pin', a ? 'الرسالة المتثبتة' : 'Live pinned message'], ['unpin', a ? 'شيل الرسالة المتثبتة' : 'Remove the pinned message'],
-    ['guide', a ? 'الدليل الكامل 📘' : 'The full guide 📘'], ['new', a ? 'محادثة جديدة مع الـ AI' : 'New AI chat'], ['lang', 'English / عربي'], ['hide', a ? 'إخفاء الأزرار' : 'Hide the buttons'],
+    ['guide', a ? 'الدليل الكامل 📘' : 'The full guide 📘'], ['community', a ? 'القناة والجروب 👥' : 'Channel & group 👥'], ['new', a ? 'محادثة جديدة مع الـ AI' : 'New AI chat'], ['lang', 'English / عربي'], ['hide', a ? 'إخفاء الأزرار' : 'Hide the buttons'],
   ].map(([command, description]) => ({ command, description })); };
 // the "/" menu follows the code: when the list (or the language) changed since it was last sent, it is sent again — no /start needed
 async function ensureCmds(env) {
@@ -840,7 +850,7 @@ async function ensureDesc(env) {
 let descMem = null;
 
 // the webhook must also receive Telegram's payment checks (pre_checkout_query) — an older setup didn't ask for them: set once
-const HOOK_UPDATES = ['message', 'edited_message', 'callback_query', 'pre_checkout_query'], HOOK_V = '2';
+const HOOK_UPDATES = ['message', 'edited_message', 'callback_query', 'pre_checkout_query', 'my_chat_member', 'chat_join_request'], HOOK_V = '3';
 let hookMem = null;
 async function ensureHook(env, request) {
   if (hookMem === HOOK_V) return;
