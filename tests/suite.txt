@@ -129,3 +129,4 @@ auto_stake_test.py
 hv_chart_test.py
 tg_bot_test.py
 member_start_test.py
+admin_dash_test.py

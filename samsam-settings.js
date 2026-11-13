@@ -83,6 +83,12 @@
   var SUP_TXT = 'Optional — a one-time thank-you of any size (50 to 500 Stars, about $1 to $10). Nothing changes in the features: everything stays free.\n\n' +
     'It helps pay for the servers and the AI, and you get a Supporter 💛 badge here and in the bot. You pay inside Telegram.';
   var ACT = {
+    admin: function () {   // 🛠 the owner's dashboard (loaded only when opened)
+      if (window.SamsamAdmin) { SamsamAdmin.open(); return; }
+      var me = doc.querySelector('script[src*="samsam-settings.js"]'), v = me && (me.getAttribute('src').split('?')[1] || '');
+      var sc = doc.createElement('script'); sc.src = 'samsam-admin.js' + (v ? '?' + v : ''); sc.onload = function () { window.SamsamAdmin && SamsamAdmin.open(); };
+      doc.head.appendChild(sc);
+    },
     premium: function () {
       var st = memberSt, now = st && st.premium ? (st.premUntil ? '✅ You\'re premium until ' + untilTxt(st.premUntil) + (st.premSrc === 'stars' ? ' — it renews by itself.' : ' (a gift).') : '✅ You\'re premium (a gift).') + '\n\n' : '';
       CPDialog.confirm(now + PREM_TXT, { title: 'Premium', icon: 'star', okText: 'Open in Telegram' })
@@ -153,7 +159,7 @@
   function val(k) {
     var s = S(), st = s.getState() || {};
     try {
-      if (k === 'account') { var u = s.user(); return (u ? u.email || 'Signed in' : 'Not signed in') + (memberSt && memberSt.supporter ? ' · 💛 Supporter' : ''); }
+      if (k === 'account') { var u = s.user(); return (u ? u.email || 'Signed in' : 'Not signed in') + (memberSt && memberSt.premium ? ' · ⭐ Premium' : '') + (memberSt && memberSt.supporter ? ' · 💛 Supporter' : ''); }
       if (k === 'premium') { var m = memberSt; return m ? (m.premium ? '⭐ Premium' + (m.premUntil ? ' until ' + untilTxt(m.premUntil) : '') : 'Voice notes + more AI · 350 ⭐ a month') : 'Voice notes + more AI · 350 ⭐ a month'; }
       if (k === 'support') { var m2 = memberSt; return m2 && m2.supporter ? '💛 Supporter · ' + (m2.starsPaid || 0) + ' ⭐ — thank you!' : 'Optional · any amount, one time'; }
       if (k === 'backup') { var b = lastBackup(); return '<span' + (b.old ? ' class="st-warn"' : '') + '>Last backup: ' + b.text + '</span>'; }
@@ -197,6 +203,7 @@
   var SECTIONS = [
     ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import'], ['wallets', 'wallet', 'Wallets & check', 'wallets'], ['rewards', 'coins', 'Rewards & mining', 'rewards']]],
     ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link the Telegram bot', 'tglink'], ['claudekey', 'key', 'My Claude key', 'claudekey']]],
+    ['Admin', [['admin', 'shield', 'Admin dashboard', 'admin']]],
     ['Premium & support', [['premium', 'star', 'Premium ⭐', 'premium'], ['support', 'heart', 'Support Cute Portfolio 💛', 'support']]],
     ['Investing rules', [['signal', 'sliders', 'Signal thresholds', 'signal'], ['targets', 'target', 'Target allocation', 'targets'], ['cats', 'note', 'Categories', 'cats'],
       ['baseline', 'history', 'Baseline', 'baseline'], ['exit', 'exit', 'Exit plan', 'exit'], ['dca', 'calc', 'DCA (regular buys)', 'dca']]],
@@ -269,7 +276,8 @@
     box.querySelector('.st-body').innerHTML = SECTIONS.map(function (s) {
       var member = !!(S() && S().isOwner && !S().isOwner());   // 🔑 only invited members bring their own key
       var rows = s[1].filter(function (r) { return r.seg || ((r[0] !== 'import' || hasImport) && (r[0] !== 'claudekey' || member) && (r[0] !== 'alerts' || !member)); });   // 🔔 Telegram alerts (GitHub) reach Samir only: hidden for members
-      if (!member) rows = rows.filter(function (r) { return r.seg || (r[0] !== 'premium' && r[0] !== 'support'); });   // ⭐💛 for invited members (Samir: /stats in the bot)
+      if (!member) rows = rows.filter(function (r) { return r.seg || (r[0] !== 'premium' && r[0] !== 'support'); });
+      else rows = rows.filter(function (r) { return r.seg || r[0] !== 'admin'; });   // 🛠 the dashboard: Samir only   // ⭐💛 for invited members (Samir: /stats in the bot)
       if (!rows.length) return '';
       return '<div class="st-sec">' + E(s[0]) + '</div><div class="st-list">' + rows.map(function (r) { return r.seg ? choice(r) : line(r); }).join('') + '</div>';
     }).join('') + '<div class="st-later">More settings (app language, AI) will be added here.</div>';
