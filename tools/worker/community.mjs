@@ -15,7 +15,13 @@ import { localParts, local, esc, usd, pct, dot, isStable, etfDay, flow, APP } fr
 import GUIDE from '../../guide.json' with { type: 'json' };
 
 const KEY = 'tg:community';
+// Telegram allows ~20 messages a minute in a group: on "Too Many Requests" wait what it says (≤ 15 s) and try once more
 async function tg(env, method, body) {
+  let r = await tg1(env, method, body);
+  if (r && r.error_code === 429) { const w = Math.min(15, (r.parameters && r.parameters.retry_after) || 3); await new Promise(z => setTimeout(z, w * 1000)); r = await tg1(env, method, body); }
+  return r;
+}
+async function tg1(env, method, body) {
   try { const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
   catch (_) { return { ok: false }; }
 }
@@ -60,11 +66,16 @@ export async function registerForward(env, msg) {
 }
 
 // make the join link (requests approved by the bot), and for the group: topics + the guide
-export async function setup(env, kind) {
+export async function setup(env, kind, opt = {}) {
   const c = await getCommunity(env), x = c[kind]; if (!x) return { ok: false };
+  if (opt.reguide) x.reguide = true;
   const notes = [];
   const link = await tg(env, 'createChatInviteLink', { chat_id: x.id, name: 'Cute Portfolio members', creates_join_request: true });
   if (link.ok) x.link = link.result.invite_link; else notes.push('⚠️ No join link — give me "Invite users via link".');
+  if (kind === 'group' && !x.v2) {   // set up by the first version (14 Nov): its welcome and the guide's last part didn't go (Telegram's limit)
+    if (x.guidePosted === true) x.guidePosted = 14; x.helloPosted = false; x.v2 = true;
+  }
+  if (kind === 'group' && x.reguide) { x.guidePosted = -1; delete x.reguide; }   // /community guide: post it all again
   if (kind === 'group') {
     const info = await tg(env, 'getChat', { chat_id: x.id });
     if (info.ok && info.result.is_forum) {
@@ -74,11 +85,11 @@ export async function setup(env, kind) {
         const r = await tg(env, 'createForumTopic', { chat_id: x.id, name, icon_color: color });
         if (r.ok) x.topics[k] = r.result.message_thread_id; else { notes.push('⚠️ Topics not made — give me "Manage topics".'); break; }
       }
-      if (x.topics.guide && !x.guidePosted) { await postGuide(env, x); x.guidePosted = true; }
-      if (x.topics.chat && !x.helloPosted) {
-        await tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: x.topics.chat, parse_mode: 'HTML', text: '👋 <b>Welcome to the Cute Portfolio community!</b>\nChat here · ideas in 💡 · problems in 🐞 · how-to in 📘 · news in 🛠.\n\n👋 <b>أهلاً بيكم في مجتمع Cute Portfolio!</b>\nالدردشة هنا · الأفكار في 💡 · المشاكل في 🐞 · الشرح في 📘 · الجديد في 🛠.' });
-        x.helloPosted = true;
+      if (x.topics.chat && !x.helloPosted) {   // the welcome first (short), then the guide — each remembered only once it really went
+        const hr = await tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: x.topics.chat, parse_mode: 'HTML', text: '👋 <b>Welcome to the Cute Portfolio community!</b>\nChat here · ideas in 💡 · problems in 🐞 · how-to in 📘 · news in 🛠.\n\n👋 <b>أهلاً بيكم في مجتمع Cute Portfolio!</b>\nالدردشة هنا · الأفكار في 💡 · المشاكل في 🐞 · الشرح في 📘 · الجديد في 🛠.' });
+        x.helloPosted = !!(hr && hr.ok); if (!x.helloPosted) notes.push('⚠️ The welcome in 💬 Chat didn\'t go — send /community setup in a minute.');
       }
+      if (x.topics.guide && x.guidePosted !== true) { const done = await postGuide(env, x); x.guidePosted = done === true ? true : done; if (done !== true) notes.push(`⚠️ The guide stopped at part ${done + 1} (Telegram's limit) — send /community setup in a minute to finish it.`); }
     } else notes.push('⚠️ Turn on <b>Topics</b> in the group\'s settings, then send /community setup.');
   }
   c[kind] = x; await putCommunity(env, c);
@@ -87,13 +98,22 @@ export async function setup(env, kind) {
 }
 
 // 📘 the guide in its topic: an index message (pinned) + one message per part, in both languages
-async function postGuide(env, x) {
+async function postGuide(env, x) {   // → true when all went, else the number of parts posted (to go on from there)
   const t = x.topics.guide, send = text => tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: t, text, parse_mode: 'HTML', disable_web_page_preview: true });
-  const idx = await send(`<b>${GUIDE.title.en}</b>\n${GUIDE.intro.en}\n\n<b>${GUIDE.title.ar}</b>\n${GUIDE.intro.ar}\n\n` + GUIDE.sections.map(s => `${s.e} ${esc((s.b || s.t).en)} · ${esc((s.b || s.t).ar)}`).join('\n'));
-  if (idx.ok) await tg(env, 'pinChatMessage', { chat_id: x.id, message_id: idx.result.message_id, disable_notification: true });
-  for (const s of GUIDE.sections) {
-    await send(`${s.e} <b>${s.t.en}</b>\n` + s.en.map(l => (/^•\s/.test(l) ? '   ◦ ' + l.slice(2) : '• ' + l)).join('\n') + `\n\n${s.e} <b>${s.t.ar}</b>\n` + s.ar.map(l => (/^•\s/.test(l) ? '   ◦ ' + l.slice(2) : '• ' + l)).join('\n'));
+  let from = typeof x.guidePosted === 'number' ? x.guidePosted : -1;
+  if (from < 0) {
+    const idx = await send(`<b>${GUIDE.title.en}</b>\n${GUIDE.intro.en}\n\n<b>${GUIDE.title.ar}</b>\n${GUIDE.intro.ar}\n\n` + GUIDE.sections.map(s => `${s.e} ${esc((s.b || s.t).en)} · ${esc((s.b || s.t).ar)}`).join('\n'));
+    if (!idx.ok) return 0;
+    await tg(env, 'pinChatMessage', { chat_id: x.id, message_id: idx.result.message_id, disable_notification: true });
+    from = 0;
   }
+  const line = l => (/^•\s/.test(l) ? '   ◦ ' + l.slice(2) : '• ' + l);
+  for (let i = from; i < GUIDE.sections.length; i++) {
+    const s = GUIDE.sections[i];
+    const r = await send(`${s.e} <b>${s.t.en}</b>\n` + s.en.map(line).join('\n') + `\n\n${s.e} <b>${s.t.ar}</b>\n` + s.ar.map(line).join('\n'));
+    if (!r.ok) return i;
+  }
+  return true;
 }
 
 // ── a join request: members of the bot (and Samir) in, everyone else declined ──

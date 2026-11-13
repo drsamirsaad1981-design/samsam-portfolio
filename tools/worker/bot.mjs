@@ -300,7 +300,7 @@ const WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
-  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, 'cm'], [/^\/community setup$/i, 'cm:setup'], [/^\/announce\s+[\s\S]+$/i, 'ann'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
+  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, 'cm'], [/^\/community setup$/i, 'cm:setup'], [/^\/community guide$/i, 'cm:guide'], [/^\/announce\s+[\s\S]+$/i, 'ann'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -732,9 +732,10 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
   if (p.act === 'cm') { await send(env, chat, await communityView(env, await getLang(env))); return; }
-  if (p.act === 'cm:setup' || p.act === 'ann') {   // Samir only
+  if (p.act === 'cm:setup' || p.act === 'ann' || p.act === 'cm:guide') {   // Samir only
     if (!isOwner(env)) { await send(env, chat, { text: T[await getLang(env)].ownerOnly }); return; }
     if (p.act === 'cm:setup') { await communitySetup(env, 'channel'); await communitySetup(env, 'group'); return; }
+    if (p.act === 'cm:guide') { await communitySetup(env, 'group', { reguide: true }); return; }
     const out = await announce(env, String(text).replace(/^\/announce\s+/i, '').slice(0, 3500));
     await send(env, chat, { text: out.length ? '📣 ' + out.join(' ') : 'ℹ️ No channel / group yet.' }); return;
   }
