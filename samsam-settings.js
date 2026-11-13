@@ -61,7 +61,38 @@
     if (/accumulation\.html/.test(location.pathname)) { location.reload(); return; }
     location.href = 'accumulation.html';
   }
+  // the Worker (/key): a member's own Claude key, and their ⭐ premium / 💛 supporter status
+  var WORKER_KEY = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/key', BOT = 'https://t.me/samsam_portfolio_bot';
+  function workerCall(body) {
+    return S().idToken().then(function (t) {
+      if (!t) throw new Error('Sign in first.');
+      return fetch(WORKER_KEY, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ idToken: t }, body)) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || ('Error ' + r.status)); return j; }); });
+    });
+  }
+  var memberSt = null, memberAsked = false;   // { premium, premUntil, premSrc, supporter, starsPaid, has, tail }
+  function isMember() { var s = S(); return !!(s && s.isOwner && !s.isOwner()); }
+  function loadMemberSt() {
+    if (memberAsked || !isMember()) return; memberAsked = true;
+    workerCall({ action: 'status' }).then(function (st) { memberSt = st; draw(); }).catch(function () { memberAsked = false; });
+  }
+  function untilTxt(ms) { return new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  var PREM_TXT = 'Everything in Cute Portfolio stays free. Premium adds:\n• 🎙 Voice notes — talk to the bot\n• 🧠 20 AI questions a day (instead of 5)\n• 📊 3 quick AI Analysis reports a day here\n\n' +
+    'Price: 300 Telegram Stars a month (about $6). You pay inside Telegram; it renews every 30 days and you can cancel any time (Telegram → Settings → My Stars) — it stays until the paid month ends.\n\n' +
+    'Why it costs anything: the AI is paid per question — this only covers that cost. Cute Portfolio is non-profit.\n\nTelegram Stars are Telegram\'s own coins — you buy them inside Telegram, like any in-app purchase.';
+  var SUP_TXT = 'Optional — a one-time thank-you of any size (50 to 500 Stars, about $1 to $10). Nothing changes in the features: everything stays free.\n\n' +
+    'It helps pay for the servers and the AI, and you get a Supporter 💛 badge here and in the bot. You pay inside Telegram.';
   var ACT = {
+    premium: function () {
+      var st = memberSt, now = st && st.premium ? (st.premUntil ? '✅ You\'re premium until ' + untilTxt(st.premUntil) + (st.premSrc === 'stars' ? ' — it renews by itself.' : ' (a gift).') : '✅ You\'re premium (a gift).') + '\n\n' : '';
+      CPDialog.confirm(now + PREM_TXT, { title: 'Premium ⭐', icon: 'star', okText: 'Open in Telegram' })
+        .then(function (go) { if (go) window.open(BOT + '?start=premium', '_blank', 'noopener'); });
+    },
+    support: function () {
+      var st = memberSt, th = st && st.supporter ? '💛 You\'re a Supporter (' + (st.starsPaid || 0) + ' ⭐) — thank you!\n\n' : '';
+      CPDialog.confirm(th + SUP_TXT, { title: 'Support Cute Portfolio 💛', icon: 'heart', okText: 'Open in Telegram' })
+        .then(function (go) { if (go) window.open(BOT + '?start=support', '_blank', 'noopener'); });
+    },
     alerts: function () { S().openAlerts(); },
     tglink: function () {   // a one-time code → send it to the bot (or open the bot with it)
       S().linkTelegram().then(function (r) {
@@ -71,14 +102,7 @@
       }).catch(function (e) { if (window.CPDialog) CPDialog.alert('Could not make a code — ' + ((e && e.message) || e)); });
     },
     claudekey: function () {   // 🔑 an invited member's own Claude API key → the Worker (sent once, kept encrypted there, never shown again)
-      var URL_KEY = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/key', D = window.CPDialog;
-      var call = function (body) {
-        return S().idToken().then(function (t) {
-          if (!t) throw new Error('Sign in first.');
-          return fetch(URL_KEY, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ idToken: t }, body)) })
-            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || ('Error ' + r.status)); return j; }); });
-        });
-      };
+      var D = window.CPDialog, call = workerCall;
       call({ action: 'status' }).then(function (st) {
         if (st.has) {
           return D.confirm('Your own Claude key (…' + st.tail + ') is on: your questions, voice notes and AI Analysis run on it — on your Anthropic bill — with high limits.\n\nRemove it?', { title: 'My Claude key', icon: 'key', okText: 'Remove', danger: true })
@@ -129,7 +153,9 @@
   function val(k) {
     var s = S(), st = s.getState() || {};
     try {
-      if (k === 'account') { var u = s.user(); return u ? u.email || 'Signed in' : 'Not signed in'; }
+      if (k === 'account') { var u = s.user(); return (u ? u.email || 'Signed in' : 'Not signed in') + (memberSt && memberSt.supporter ? ' · 💛 Supporter' : ''); }
+      if (k === 'premium') { var m = memberSt; return m ? (m.premium ? '⭐ Premium' + (m.premUntil ? ' until ' + untilTxt(m.premUntil) : '') : 'Voice notes + more AI · 300 ⭐ a month') : 'Voice notes + more AI · 300 ⭐ a month'; }
+      if (k === 'support') { var m2 = memberSt; return m2 && m2.supporter ? '💛 Supporter · ' + (m2.starsPaid || 0) + ' ⭐ — thank you!' : 'Optional · any amount, one time'; }
       if (k === 'backup') { var b = lastBackup(); return '<span' + (b.old ? ' class="st-warn"' : '') + '>Last backup: ' + b.text + '</span>'; }
       if (k === 'alerts') {
         var a = s.getAlerts(), keys = ['brief', 'weekly', 'moves', 'signals', 'plan', 'buy', 'tp', 'macro', 'drift', 'dca', 'sentiment', 'etf', 'health'];
@@ -171,6 +197,7 @@
   var SECTIONS = [
     ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import'], ['wallets', 'wallet', 'Wallets & check', 'wallets'], ['rewards', 'coins', 'Rewards & mining', 'rewards']]],
     ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link the Telegram bot', 'tglink'], ['claudekey', 'key', 'My Claude key', 'claudekey']]],
+    ['Premium & support', [['premium', 'star', 'Premium ⭐', 'premium'], ['support', 'heart', 'Support Cute Portfolio 💛', 'support']]],
     ['Investing rules', [['signal', 'sliders', 'Signal thresholds', 'signal'], ['targets', 'target', 'Target allocation', 'targets'], ['cats', 'note', 'Categories', 'cats'],
       ['baseline', 'history', 'Baseline', 'baseline'], ['exit', 'exit', 'Exit plan', 'exit'], ['dca', 'calc', 'DCA (regular buys)', 'dca']]],
     ['Display', [
@@ -238,9 +265,12 @@
   function draw() {
     var box = $('cpSet'); if (!box) return;
     var hasImport = !!window.SamsamImport;
+    loadMemberSt();
     box.querySelector('.st-body').innerHTML = SECTIONS.map(function (s) {
       var member = !!(S() && S().isOwner && !S().isOwner());   // 🔑 only invited members bring their own key
       var rows = s[1].filter(function (r) { return r.seg || ((r[0] !== 'import' || hasImport) && (r[0] !== 'claudekey' || member) && (r[0] !== 'alerts' || !member)); });   // 🔔 Telegram alerts (GitHub) reach Samir only: hidden for members
+      if (!member) rows = rows.filter(function (r) { return r.seg || (r[0] !== 'premium' && r[0] !== 'support'); });   // ⭐💛 for invited members (Samir: /stats in the bot)
+      if (!rows.length) return '';
       return '<div class="st-sec">' + E(s[0]) + '</div><div class="st-list">' + rows.map(function (r) { return r.seg ? choice(r) : line(r); }).join('') + '</div>';
     }).join('') + '<div class="st-later">More settings (app language, AI) will be added here.</div>';
   }
@@ -263,7 +293,7 @@
     el.addEventListener('click', function (e) {
       if (e.target === el || e.target.closest('.st-x')) { close(); return; }
       var sg = e.target.closest('[data-seg]');
-      if (sg) { var c = SECTIONS[3][1].filter(function (x) { return x.seg === sg.dataset.seg; })[0]; if (c) { c.set(sg.dataset.v); draw(); } return; }
+      if (sg) { var c = SECTIONS.reduce(function (all, sec) { return all.concat(sec[1]); }, []).filter(function (x) { return x.seg === sg.dataset.seg; })[0]; if (c) { c.set(sg.dataset.v); draw(); } return; }
       if (e.target.closest('.cp-hint')) return;   // ⓘ explains, it doesn't open the line
       var a = e.target.closest('[data-act]'); if (!a || !ACT[a.dataset.act]) return;
       run(a.dataset.act);
