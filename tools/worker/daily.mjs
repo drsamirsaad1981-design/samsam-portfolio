@@ -266,6 +266,8 @@ export async function pinUpdate(env, now = Date.now(), force = false) {
   if (!force && st.id && st.body === body && now - (st.t || 0) < H) return { ok: true, same: true };
   if (st.id) {
     const r = await tg(env, 'editMessageText', { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: 'HTML', reply_markup: { inline_keyboard: v.buttons } });
+    // asked for (/pin, 🔄, a new language): pin it again too — it may have been unpinned in Telegram itself
+    if ((r.ok || /not modified/i.test(r.description || '')) && force) await tg(env, 'pinChatMessage', { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {});
     if (r.ok || /not modified/i.test(r.description || '')) { await jput(env, K(env, 'pin'), { id: st.id, body, t: now }); return { ok: true, id: st.id }; }
   }
   const r = await send(env, v, { disable_notification: true });

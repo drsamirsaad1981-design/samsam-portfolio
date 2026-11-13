@@ -657,6 +657,8 @@ async function switchLang(env, chat, lang, msgId) {
   const t = T[lang];
   await send(env, chat, { text: t.langSet }, { reply_markup: replyKb(t) });
   if (msgId) await edit(env, chat, msgId, viewMenu(t, isOwner(env))); else await send(env, chat, viewMenu(t, isOwner(env)));
+  let hasPin = false; try { hasPin = !!(env.RATE && JSON.parse((await env.RATE.get(K(env, 'pin'))) || '{}').id); } catch (_) {}
+  if (hasPin && (await getCfg(env)).pin) await pinUpdate(env, Date.now(), true).catch(() => {});   // the pinned message follows the new language now
 }
 
 // a coin button carries the CoinGecko id → look it up by id (not by ticker)

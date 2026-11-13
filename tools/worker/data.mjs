@@ -184,8 +184,12 @@ function pemBytes(pem) {
   const b = atob(String(pem).replace(/-----[^-]+-----/g, '').replace(/\\n/g, '').replace(/\s+/g, ''));
   return Uint8Array.from(b, c => c.charCodeAt(0));
 }
+// the Google sign-in token (1 h) is also kept in the Worker's KV: a fresh Worker instance (they come and go all the time)
+// then skips signing a new one — that took ~0.3–0.5 s before the first Firebase answer
+let KVS = null;
 async function googleToken(sa) {
   if (tokenCache && tokenCache.until > Date.now() && tokenCache.email === sa.client_email) return tokenCache.token;
+  if (KVS) { try { const k = JSON.parse((await KVS.get('fs:gtok')) || 'null'); if (k && k.until > Date.now() && k.email === sa.client_email) { tokenCache = k; return k.token; } } catch (_) {} }
   const now = Math.floor(Date.now() / 1000), aud = sa.token_uri || 'https://oauth2.googleapis.com/token';
   const body = b64urlJson({ alg: 'RS256', typ: 'JWT' }) + '.' + b64urlJson({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore', aud, iat: now, exp: now + 3600 });
   const key = await crypto.subtle.importKey('pkcs8', pemBytes(sa.private_key), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
@@ -194,6 +198,7 @@ async function googleToken(sa) {
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) throw new Error('Firebase sign-in refused (' + r.status + ')');
   tokenCache = { token: j.access_token, until: Date.now() + 50 * 60e3, email: sa.client_email };
+  if (KVS) { try { await KVS.put('fs:gtok', JSON.stringify(tokenCache), { expirationTtl: 50 * 60 }); } catch (_) {} }
   return j.access_token;
 }
 function dec(v) {
@@ -210,6 +215,7 @@ function dec(v) {
 }
 const fields = f => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, dec(v)]));
 export function serviceAccount(env) {
+  if (env && env.RATE) KVS = env.RATE;
   try { const sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || ''); return sa && sa.client_email && sa.private_key && sa.project_id ? sa : null; } catch (_) { return null; }
 }
 async function firestore(sa) {

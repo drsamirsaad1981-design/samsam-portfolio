@@ -955,5 +955,21 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('…held since before today: "today" = the 24 h move (−3.88%)', Math.abs(s2.ch24 + 3.88) < 0.01, s2.ch24);
 }
 
+// 📌 unpinned in Telegram itself, then /pin → pinned again; a new language redraws the pinned message in it
+{
+  const st = JSON.parse(kvStore.get('tg:555:pin') || '{}');
+  if (!st.id) { await postK(await fresh(), '/pin'); }
+  sent.length = 0; await postK(await fresh(), '/pin');
+  check('📌 /pin with the message still there (maybe unpinned in Telegram) → edited and pinned again', sent.some(x => x.m === 'pinChatMessage'), sent.map(x => x.m));
+  sent.length = 0; await postK(await fresh(), 'عربي');
+  const ed = sent.find(x => x.m === 'editMessageText' && /📌/.test(x.b.text || ''));
+  check('🌐 → عربي: the pinned message is redrawn in Arabic right away', ed && /مباشر/.test(ed.b.text), sent.map(x => x.m));
+  await postK(await fresh(), 'english');
+  // the Google token: a fresh Worker takes it from KV instead of signing in again
+  tokenCalls = 0; kvStore.delete('fs:pf:UID1'); await postK(await fresh(), '/portfolio'); const t1 = tokenCalls;
+  kvStore.delete('fs:pf:UID1'); await postK(await fresh(), '/portfolio');
+  check('🔑 a new Worker instance reuses the Google token kept in KV (no new sign-in)', tokenCalls === t1 && kvStore.has('fs:gtok'), [t1, tokenCalls]);
+}
+
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

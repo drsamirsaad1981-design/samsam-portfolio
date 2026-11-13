@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 259ea9f2001cd987
+// sources-hash: faa8b894a62ec8e1
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1051,8 +1051,19 @@ function pemBytes(pem) {
   const b = atob(String(pem).replace(/-----[^-]+-----/g, "").replace(/\\n/g, "").replace(/\s+/g, ""));
   return Uint8Array.from(b, (c) => c.charCodeAt(0));
 }
+var KVS = null;
 async function googleToken(sa) {
   if (tokenCache && tokenCache.until > Date.now() && tokenCache.email === sa.client_email) return tokenCache.token;
+  if (KVS) {
+    try {
+      const k = JSON.parse(await KVS.get("fs:gtok") || "null");
+      if (k && k.until > Date.now() && k.email === sa.client_email) {
+        tokenCache = k;
+        return k.token;
+      }
+    } catch (_) {
+    }
+  }
   const now = Math.floor(Date.now() / 1e3), aud = sa.token_uri || "https://oauth2.googleapis.com/token";
   const body = b64urlJson({ alg: "RS256", typ: "JWT" }) + "." + b64urlJson({ iss: sa.client_email, scope: "https://www.googleapis.com/auth/datastore", aud, iat: now, exp: now + 3600 });
   const key = await crypto.subtle.importKey("pkcs8", pemBytes(sa.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
@@ -1061,6 +1072,12 @@ async function googleToken(sa) {
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) throw new Error("Firebase sign-in refused (" + r.status + ")");
   tokenCache = { token: j.access_token, until: Date.now() + 50 * 6e4, email: sa.client_email };
+  if (KVS) {
+    try {
+      await KVS.put("fs:gtok", JSON.stringify(tokenCache), { expirationTtl: 50 * 60 });
+    } catch (_) {
+    }
+  }
   return j.access_token;
 }
 function dec(v) {
@@ -1077,6 +1094,7 @@ function dec(v) {
 }
 var fields = (f) => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, dec(v)]));
 function serviceAccount(env) {
+  if (env && env.RATE) KVS = env.RATE;
   try {
     const sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || "");
     return sa && sa.client_email && sa.private_key && sa.project_id ? sa : null;
@@ -3038,6 +3056,8 @@ async function pinUpdate(env, now = Date.now(), force = false) {
   if (!force && st.id && st.body === body && now - (st.t || 0) < H3) return { ok: true, same: true };
   if (st.id) {
     const r3 = await tg2(env, "editMessageText", { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: "HTML", reply_markup: { inline_keyboard: v.buttons } });
+    if ((r3.ok || /not modified/i.test(r3.description || "")) && force) await tg2(env, "pinChatMessage", { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {
+    });
     if (r3.ok || /not modified/i.test(r3.description || "")) {
       await jput(env, K(env, "pin"), { id: st.id, body, t: now });
       return { ok: true, id: st.id };
@@ -4227,6 +4247,13 @@ async function switchLang(env, chat, lang2, msgId) {
   await send2(env, chat, { text: t.langSet }, { reply_markup: replyKb(t) });
   if (msgId) await edit(env, chat, msgId, viewMenu(t, isOwner(env)));
   else await send2(env, chat, viewMenu(t, isOwner(env)));
+  let hasPin = false;
+  try {
+    hasPin = !!(env.RATE && JSON.parse(await env.RATE.get(K(env, "pin")) || "{}").id);
+  } catch (_) {
+  }
+  if (hasPin && (await getCfg(env)).pin) await pinUpdate(env, Date.now(), true).catch(() => {
+  });
 }
 async function buildById(env, id) {
   const user = await loadUser(env).catch(() => null), now = Date.now();
