@@ -105,6 +105,8 @@ export function writeBatch() {
     commit() { return submit(ops); },
   };
 }
+// the access check (samsam-cloud.js probeAccess): tests can make an account "not invited yet" with window.__FAKE_DENY
+export async function getDocFromServer(ref) { if (window.__FAKE_DENY) { const e = new Error('Missing or insufficient permissions.'); e.code = 'permission-denied'; throw e; } const v = view().get(ref.path); return { exists: () => v !== undefined, data: () => v }; }
 export function setDoc(ref, data, o) { const b = writeBatch(); b.set(ref, data, o); return b.commit(); }
 export async function runTransaction(db, fn) {
   for (let i = 0; i < 5; i++) {

@@ -43,10 +43,11 @@
     '#cpAdm summary b{font-size:.92rem}#cpAdm summary span{font-size:.76rem;color:var(--fg2,#94a3b8)}' +
     '#cpAdm .ad-body{padding:0 12px 12px;font-size:.84rem}#cpAdm .ad-body p{margin:6px 0}' +
     '#cpAdm .ad-pay{display:flex;justify-content:space-between;gap:8px;padding:7px 12px;border-top:1px solid var(--border,rgba(148,163,184,.12));font-size:.8rem}' +
+    '#cpAdm .ad-max{font:inherit;font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:6px;border:1px solid rgba(148,163,184,.35);background:transparent;color:inherit;cursor:pointer}#cpAdm .ad-max.on{background:#7c3aed;border-color:#7c3aed;color:#fff}' +
     '#cpAdm .ad-msg{font-size:.8rem;color:var(--fg2,#94a3b8);margin-top:6px}#cpAdm .ad-err{color:#f87171}';
 
   function badges(m) {
-    return (m.premium ? '⭐' : '') + (m.supporter ? '💛' : '') + (m.paused ? '⏸' : '') + (m.pending ? '⏳' : '') + (m.email ? '📱' : '') + (m.linked ? '🔗' : '') + (m.ownKey ? '🔑' : '');
+    return (m.appOnly ? '📱 app only ' : '') + (m.premium ? '⭐' : '') + (m.supporter ? '💛' : '') + (m.paused ? '⏸' : '') + (m.pending ? '⏳' : '') + (m.email ? '📱' : '') + (m.linked ? '🔗' : '') + (m.ownKey ? '🔑' : '');
   }
   function memberHtml(m) {
     var prem = m.premium ? '⭐ Premium' + (m.premUntil ? ' until ' + day(m.premUntil) : '') + (m.premSrc === 'stars' ? ' (Stars)' : ' (gift)') : 'Not premium';
@@ -67,7 +68,7 @@
     var list = data.members.filter(function (m) { return !q || [m.name, m.user, m.email, m.chat, m.pending].join(' ').toLowerCase().indexOf(q) >= 0; });
     box.innerHTML =
       '<div class="ad-grid">' +
-        '<div class="ad-card"><span>👥 Members</span><b>' + s.members + '/' + data.max + '</b><i>' + (s.paused ? '⏸ ' + s.paused + ' paused' : '&nbsp;') + '</i></div>' +
+        '<div class="ad-card"><span>👥 Members</span><b>' + s.members + '/' + data.max + '</b><i>' + (s.paused ? '⏸ ' + s.paused + ' paused · ' : '') + 'max: ' + (data.maxChoices || [20, 50, 100]).map(function (n) { return '<button type="button" class="ad-max' + (n === data.max ? ' on' : '') + '" data-max="' + n + '">' + n + '</button>'; }).join(' ') + '</i></div>' +
         '<div class="ad-card"><span>⭐ Premium now</span><b>' + s.premium + '</b><i>Stars ' + s.premiumStars + ' · gift ' + (s.premium - s.premiumStars) + '</i></div>' +
         '<div class="ad-card"><span>💛 Supporters</span><b>' + s.supporters + '</b><i>&nbsp;</i></div>' +
         '<div class="ad-card"><span>⭐ This month</span><b>' + s.starsMonth + '</b><i>premium ' + s.starsMonthPremium + ' · support ' + s.starsMonthSupport + '</i></div>' +
@@ -75,9 +76,10 @@
         '<div class="ad-card"><span>💲 Premium price</span><b>' + data.price + ' ⭐</b><i>a month ≈ ' + usd(data.price) + '</i></div>' +
       '</div>' +
       '<div class="ad-sec">Invite</div><button type="button" class="ad-btn pri" data-inv="1">➕ New invite code</button>' +
-      (lastInvite ? '<div class="ad-inv">Code: <code>' + E(lastInvite.code) + '</code><br>' + (lastInvite.link ? '<span style="font-size:.8rem">' + E(lastInvite.link) + '</span><br>' : '') +
-        '<span class="ad-msg">One use, ' + lastInvite.days + ' days. Send the link (it opens the bot and lets them in), or the code.</span><div class="ad-row">' +
-        '<button type="button" class="ad-btn" data-copy="1">Copy link</button>' + (navigator.share ? '<button type="button" class="ad-btn" data-share="1">Share…</button>' : '') + '</div></div>' : '') +
+      (lastInvite ? '<div class="ad-inv">Code: <code>' + E(lastInvite.code) + '</code>' +
+        (lastInvite.appLink ? '<p style="margin:8px 0 2px"><b>📱 Open the app</b> <span class="ad-msg">(no Telegram needed)</span><br><span style="font-size:.8rem">' + E(lastInvite.appLink) + '</span></p><div class="ad-row"><button type="button" class="ad-btn" data-copy="app">Copy app link</button>' + (navigator.share ? '<button type="button" class="ad-btn" data-share="app">Share…</button>' : '') + '</div>' : '') +
+        (lastInvite.link ? '<p style="margin:10px 0 2px"><b>🤖 Open the bot</b><br><span style="font-size:.8rem">' + E(lastInvite.link) + '</span></p><div class="ad-row"><button type="button" class="ad-btn" data-copy="bot">Copy bot link</button>' + (navigator.share ? '<button type="button" class="ad-btn" data-share="bot">Share…</button>' : '') + '</div>' : '') +
+        '<p class="ad-msg">The same code works in both — one use, ' + lastInvite.days + ' days. They can link the other one later (Settings → Link the Telegram bot).</p></div>' : '') +
       '<div class="ad-sec">Members (' + data.members.length + ')</div><input class="ad-q" id="cpAdmQ" type="search" placeholder="Search name, @user or e-mail" value="' + E(query) + '">' +
       (list.length ? list.map(memberHtml).join('') : '<p class="ad-msg">' + (data.members.length ? 'No one matches.' : 'Nobody yet — make an invite code above.') + '</p>') +
       '<div class="ad-sec">Stars</div><details' + (openChat === '__pay' ? ' open' : '') + ' data-chat="__pay"><summary><b>Payments (' + data.payments.length + ')</b><span>premium subscriptions, renewals and support</span></summary>' +
@@ -121,8 +123,11 @@
       if (e.target.closest('.ad-re')) { load(); return; }
       var b = e.target.closest('[data-op]'); if (b) { op(b.dataset.chat, b.dataset.op); return; }
       if (e.target.closest('[data-inv]')) { invite(); return; }
-      if (e.target.closest('[data-copy]') && lastInvite) { try { navigator.clipboard.writeText(lastInvite.link || lastInvite.code); draw('Copied ✅'); } catch (_) {} return; }
-      if (e.target.closest('[data-share]') && lastInvite) { navigator.share({ title: 'Cute Portfolio', text: 'Join my Cute Portfolio bot: ' + (lastInvite.link || lastInvite.code) }).catch(function () {}); return; }
+      var cp = e.target.closest('[data-copy]'), sh = e.target.closest('[data-share]'), mx = e.target.closest('[data-max]');
+      var linkOf = function (w) { return w === 'app' ? lastInvite.appLink : lastInvite.link || lastInvite.code; };
+      if (cp && lastInvite) { try { navigator.clipboard.writeText(linkOf(cp.dataset.copy)); draw('Copied ✅'); } catch (_) {} return; }
+      if (sh && lastInvite) { navigator.share({ title: 'Cute Portfolio', text: (sh.dataset.share === 'app' ? 'Join me on Cute Portfolio: ' : 'Join my Cute Portfolio bot: ') + linkOf(sh.dataset.share) }).catch(function () {}); return; }
+      if (mx) { if (busy) return; busy = true; call({ action: 'setMax', max: +mx.dataset.max }).then(function (j) { data = j; busy = false; draw(); }).catch(function (er) { busy = false; draw(String(er.message || er), true); }); return; }
       var sm = e.target.closest('summary'); if (sm) { var d = sm.parentElement; openChat = d.open ? null : d.dataset.chat; }
     });
     el.addEventListener('input', function (e) { if (e.target.id === 'cpAdmQ') { query = e.target.value; var pos = e.target.selectionStart; draw(); var q = $('cpAdmQ'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (_) {} } } });

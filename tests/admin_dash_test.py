@@ -25,13 +25,14 @@ with sync_playwright() as p:
         calls = []
         def route(r):
             body = json.loads(r.request.post_data or '{}'); calls.append(body)
-            if body.get('action') == 'invite': out = {'code': 'K7M2PQ9R', 'link': 'https://t.me/samsam_portfolio_bot?start=K7M2PQ9R', 'days': 7}
+            if body.get('action') == 'invite': out = {'code': 'K7M2PQ9R', 'link': 'https://t.me/samsam_portfolio_bot?start=K7M2PQ9R', 'appLink': 'https://drsamirsaad1981-design.github.io/samsam-portfolio/?invite=K7M2PQ9R', 'days': 7}
             elif body.get('action') == 'member':
                 ov = json.loads(json.dumps(OV)); m = [x for x in ov['members'] if x['chat'] == body['chat']][0]
                 if body['op'] == 'ai+': m['ai'] += 1
                 if body['op'] == 'approve': m['email'] = m['pending']; m['pending'] = ''
                 out = {'ok': True, 'overview': ov}
-            else: out = OV
+            elif body.get('action') == 'setMax': out = {**OV, 'max': body['max'], 'maxChoices': [20, 50, 100]}
+            else: out = {**OV, 'maxChoices': [20, 50, 100]}
             r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps(out))
         ctx.route(URL, route)
         ctx.route('https://samsam-analysis.dr-samir-saad-1981.workers.dev/key', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"has":false}'))
@@ -58,7 +59,9 @@ with sync_playwright() as p:
             check('owner: ✅ Allow → sent to the Worker; the list redraws (the card stays open)', calls[-1] == {**calls[-1], 'action': 'member', 'chat': '222', 'op': 'approve'} and pg.locator('#cpAdm details[data-chat="222"][open]').count() == 1)
             pg.fill('#cpAdmQ', ''); pg.wait_for_timeout(200)
             pg.click('#cpAdm [data-inv]'); pg.wait_for_selector('#cpAdm .ad-inv')
-            check('owner: ➕ New invite code → the code + the bot link, one use, 7 days', 'K7M2PQ9R' in pg.inner_text('#cpAdm .ad-inv') and 't.me/samsam_portfolio_bot?start=K7M2PQ9R' in pg.inner_text('#cpAdm .ad-inv'))
+            check('owner: ➕ New invite code → the code + TWO links: 📱 the app (?invite=) and 🤖 the bot, one use, 7 days', 'K7M2PQ9R' in pg.inner_text('#cpAdm .ad-inv') and '?invite=K7M2PQ9R' in pg.inner_text('#cpAdm .ad-inv') and 't.me/samsam_portfolio_bot?start=K7M2PQ9R' in pg.inner_text('#cpAdm .ad-inv') and pg.locator('#cpAdm [data-copy="app"]').count() == 1)
+            pg.click('#cpAdm [data-max="50"]'); pg.wait_for_function("/1\\/50|2\\/50/.test(document.getElementById('cpAdm').textContent)", timeout=8000)
+            check('owner: max members → 50 (20 / 50 / 100)', calls[-1].get('action') == 'setMax' and calls[-1].get('max') == 50)
             pg.evaluate("window.__cpAutoAnswer = () => false")
             pg.click('#cpAdm details[data-chat="111"] summary'); pg.click('#cpAdm details[data-chat="111"] [data-op="remove"]'); pg.wait_for_timeout(400)
             check('owner: 🗑 Remove asks first (cancel → nothing sent)', calls[-1].get('op') != 'remove')

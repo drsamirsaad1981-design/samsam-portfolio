@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611132029';
-import * as Hist from './samsam-history.js?v=202611132029';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611132029';
+import * as Core from './samsam-core.js?v=202611132058';
+import * as Hist from './samsam-history.js?v=202611132058';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611132058';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -488,6 +488,28 @@ async function probeAccess(user) {
   catch (e) { return !/permission-denied/.test((e && e.code) || ''); }   // offline etc. → let them in; the rules still guard every read
 }
 
+// 🎟 an invite opened in the app (…/?invite=CODE, from Dr. Samir Saad's dashboard): kept on this device until the person
+// has signed in, then sent once to the Worker (/join) — their checked e-mail joins the access list, no second approval
+const JOIN_URL = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/join';
+(function keepInvite() {
+  try {
+    const u = new URL(location.href), c = (u.searchParams.get('invite') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (c.length === 8) { localStorage.setItem('cp-invite', c); u.searchParams.delete('invite'); history.replaceState(null, '', u.pathname + (u.search || '') + u.hash); }
+  } catch (_) {}
+})();
+const pendingInvite = () => { try { return localStorage.getItem('cp-invite') || ''; } catch (_) { return ''; } };
+async function redeemInvite(user, code) {
+  code = String(code || pendingInvite()).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== 8 || !user || !user.getIdToken) return { ok: false };
+  try {
+    const r = await fetch(JOIN_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken: await user.getIdToken(true), code }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.ok) { try { localStorage.removeItem('cp-invite'); } catch (_) {} return { ok: true }; }
+    if (r.status === 400) { try { localStorage.removeItem('cp-invite'); } catch (_) {} }
+    return { ok: false, error: j.error || ('Error ' + r.status) };
+  } catch (e) { return { ok: false, error: 'Could not reach the server — check the internet and try again.' }; }
+}
+
 async function onUser(user) {
   S.authResolved = true;
   S.unsub.forEach(u => { try { u(); } catch (_) {} }); S.unsub = [];
@@ -495,7 +517,11 @@ async function onUser(user) {
   Object.keys(S.loaded).forEach(k => S.loaded[k] = false);
   S.user = null; S.denied = null;
   if (!user) { showGate('signin'); renderStatus(); return; }
-  if (!emailAllowed(user) && !(await probeAccess(user))) { S.denied = user.email; showGate('denied'); fb.au.signOut(fb.auth); return; }
+  if (!emailAllowed(user) && !(await probeAccess(user))) {
+    const j = pendingInvite() ? await redeemInvite(user) : { ok: false };   // 🎟 an invite waiting on this device → join now
+    if (!(j.ok && await probeAccess(user))) { S.denied = user.email; S.deniedUser = user; S.inviteErr = j.error || ''; showGate('denied'); return; }
+  }
+  S.deniedUser = null;
   S.user = user;
   hideGate();
   listen();
@@ -1305,12 +1331,23 @@ function showGate(kind) {
   if (window.CPSplash) CPSplash.hide();
   if (!g) return;
   if (kind === 'config') body.innerHTML = `<p>Cloud sync isn't configured yet.</p><p>Add your Firebase settings to <code>firebase-config.js</code> and publish again.</p>`;
-  else if (kind === 'denied') body.innerHTML = `<p><strong>${esc(S.denied)}</strong> isn't allowed to open this portfolio.</p><button class="samsam-btn primary" id="samsamSignInBtn">Sign in with another Google account</button>`;
-  else body.innerHTML = `<p>${S.emailLinkPending ? 'Type the e-mail address the sign-in link was sent to.' : 'Sign in to load your portfolio. Your data is stored privately in the cloud and stays the same on every device.'}</p>` +
+  else if (kind === 'denied') body.innerHTML = `<p><strong>${esc(S.denied)}</strong> isn't allowed in yet.</p>` +
+    `<p style="margin:10px 0 6px">🎟 Have an invite code?</p><input id="samsamInvite" autocapitalize="characters" autocomplete="off" maxlength="12" placeholder="e.g. 2NS782A9" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(127,127,140,.35);font:inherit;margin-bottom:8px;letter-spacing:.08em;text-transform:uppercase">` +
+    `<button class="samsam-btn primary" id="samsamJoinBtn">Join</button><p id="samsamGateErr" style="color:#ef4444">${esc(S.inviteErr || '')}</p>` +
+    `<button class="samsam-btn" id="samsamOtherBtn" style="margin-top:6px">Use another account</button>`;
+  else body.innerHTML = (pendingInvite() ? `<p style="font-weight:700">🎟 You're invited to Cute Portfolio — sign in to join.</p>` : '') + `<p>${S.emailLinkPending ? 'Type the e-mail address the sign-in link was sent to.' : 'Sign in to load your portfolio. Your data is stored privately in the cloud and stays the same on every device.'}</p>` +
     (S.emailLinkPending ? '' : `<button class="samsam-btn primary" id="samsamSignInBtn">Sign in with Google</button><p class="samsam-or" style="margin:14px 0 8px;opacity:.7">or with any e-mail (iCloud, Outlook…) — no password</p>`) +
     `<input id="samsamEmail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(127,127,140,.35);font:inherit;margin-bottom:8px">` +
     `<button class="samsam-btn" id="samsamEmailBtn">${S.emailLinkPending ? 'Sign in' : 'Email me a sign-in link'}</button><p id="samsamGateErr" style="color:#ef4444"></p><p id="samsamGateOk" style="color:#16a34a"></p>`;
-  if (kind === 'denied') body.innerHTML += `<p style="opacity:.75;font-size:13px">Invited by Dr. Samir Saad? Ask him in the Telegram bot to allow this address.</p>`;
+  if (kind === 'denied') body.innerHTML += `<p style="opacity:.75;font-size:13px">No code? Ask Dr. Samir Saad for an invite link — or, if you're in the Telegram bot already, send it /app with this e-mail.</p>`;
+  const jb = document.getElementById('samsamJoinBtn'); if (jb) jb.onclick = async () => {
+    const er = document.getElementById('samsamGateErr'), code = (document.getElementById('samsamInvite') || {}).value;
+    if (er) er.textContent = ''; jb.disabled = true;
+    const r = await redeemInvite(S.deniedUser, code);
+    if (r.ok) { onUser(S.deniedUser); return; }
+    jb.disabled = false; if (er) er.textContent = r.error || 'That code did not work.';
+  };
+  const ob = document.getElementById('samsamOtherBtn'); if (ob) ob.onclick = async () => { try { await fb.au.signOut(fb.auth); } catch (_) {} };
   const b = document.getElementById('samsamSignInBtn'); if (b) b.onclick = () => signIn();
   const eb = document.getElementById('samsamEmailBtn'); if (eb) eb.onclick = () => emailLink(document.getElementById('samsamEmail').value);
   g.style.display = 'flex';
