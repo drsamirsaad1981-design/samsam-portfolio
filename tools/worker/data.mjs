@@ -238,6 +238,17 @@ async function firestore(sa) {
       return out;
     },
     async get(p) { const j = await call(`${base}/${p}`); return j ? fields(j.fields) : null; },
+    // how many documents a collection has — a count costs 1 read per 1000 documents (not 1 per document)
+    async count(parent, coll) {
+      const j = await call(`${base}/${parent}:runAggregationQuery`, { method: 'POST', body: JSON.stringify({ structuredAggregationQuery: { structuredQuery: { from: [{ collectionId: coll }] }, aggregations: [{ alias: 'n', count: {} }] } }) });
+      const v = j && j[0] && j[0].result && j[0].result.aggregateFields && j[0].result.aggregateFields.n;
+      return v && v.integerValue != null ? +v.integerValue : null;
+    },
+    // is any document of the collection newer than `since` (its updatedAt — the app stamps every coin / plan change)? 1 read
+    async changedSince(parent, coll, since) {
+      const rows = await call(`${base}/${parent}:runQuery`, { method: 'POST', body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], where: { fieldFilter: { field: { fieldPath: 'updatedAt' }, op: 'GREATER_THAN', value: { stringValue: since } } }, limit: 1 } }) });
+      return !Array.isArray(rows) || rows.some(x => x.document);   // unsure → "changed" (read it all)
+    },
     async set(p, data) { return call(`${base}/${p}`, { method: 'PATCH', body: JSON.stringify({ fields: enc(data) }) }); },
     // new documents, all or nothing (each must not exist yet — never overwrites)
     async commit(docs) {
@@ -262,9 +273,41 @@ export async function commitDocs(env, uid, docs) {
   if (!sa) throw new Error('no service account');
   const db = await firestore(sa);
   await db.commit(docs.map(d => ({ path: `users/${uid}/${d.path}`, data: d.data })));
-  cache.delete('user');
+  cache.delete('user'); cache.delete('user:' + uid); await forgetPortfolio(env, uid);
   return { ok: true };
 }
+// one person's portfolio — read in full only when something changed. The bot looks every 5 minutes (alerts, the pinned
+// message); reading every coin and every transaction each time came to ~50,000 reads a day (Firebase's free daily limit).
+// Now a copy is kept in KV, and each look asks Firestore only "anything new?": the number of transactions / coins / plan
+// rows (counts) + any coin or plan row with a newer updatedAt + the settings document — about 6 reads instead of hundreds.
+// A full read still happens when something changed, every 6 hours anyway, and when asked fresh (🔄, a trade).
+const PF_FULL_MS = 6 * 3600e3;
+export const pfStats = { full: 0, probe: 0 };   // for the tests / the check page
+const maxUpd = rows => rows.reduce((m, r) => (r && typeof r.updatedAt === 'string' && r.updatedAt > m ? r.updatedAt : m), '');
+async function readPortfolio(env, db, uid, fresh) {
+  const kvKey = 'fs:pf:' + uid, parent = 'users/' + uid;
+  let kept = null;
+  if (!fresh && env.RATE) { try { kept = JSON.parse((await env.RATE.get(kvKey)) || 'null'); } catch (_) { kept = null; } }
+  if (kept && kept.data && Date.now() - kept.at < PF_FULL_MS) {
+    try {
+      const [nt, nc, na, cc, ca, meta] = await Promise.all([db.count(parent, 'txs'), db.count(parent, 'coins'), db.count(parent, 'accum'),
+        kept.seen ? db.changedSince(parent, 'coins', kept.seen) : true, kept.seen ? db.changedSince(parent, 'accum', kept.seen) : true, db.get(parent + '/meta/info')]);
+      if (nt === kept.n.txs && nc === kept.n.coins && na === kept.n.accum && !cc && !ca) {
+        pfStats.probe++;
+        const m = meta || {};
+        if (JSON.stringify(m) !== JSON.stringify(kept.data.meta)) { kept.data.meta = m; try { await env.RATE.put(kvKey, JSON.stringify(kept)); } catch (_) {} }
+        return kept.data;
+      }
+    } catch (_) { /* unsure → read it all */ }
+  }
+  const [coins, txs, accum, meta] = await Promise.all([db.list(`${parent}/coins`), db.list(`${parent}/txs`), db.list(`${parent}/accum`), db.get(`${parent}/meta/info`)]);
+  pfStats.full++;
+  const data = { coins, txs, accum, meta: meta || {}, uid };
+  if (env.RATE) { try { await env.RATE.put(kvKey, JSON.stringify({ at: Date.now(), seen: maxUpd([...coins, ...accum]), n: { txs: txs.length, coins: coins.length, accum: accum.length }, data })); } catch (_) {} }
+  return data;
+}
+export async function forgetPortfolio(env, uid) { try { if (env.RATE && uid) await env.RATE.delete('fs:pf:' + uid); } catch (_) {} }
+
 // an invited person's own portfolio — the uid they linked with a code from the app (never anyone else's)
 async function loadMemberUser(env, sa, fresh) {
   const me = await member(env);
@@ -272,9 +315,8 @@ async function loadMemberUser(env, sa, fresh) {
   const key = 'user:' + me.uid;
   if (fresh) cache.delete(key);
   return cached(key, 120e3, async () => {
-    const db = await firestore(sa), uid = me.uid;
-    const [coins, txs, accum, meta] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`)]);
-    return { coins, txs, accum, meta: meta || {}, uid };
+    const db = await firestore(sa);
+    return readPortfolio(env, db, me.uid, fresh);
   });
 }
 // /link CODE → the account whose meta/tglink holds that code (made in the app's Settings, 10 minutes) → { uid, email } | null
@@ -318,8 +360,7 @@ export async function loadUser(env, fresh = false) {
     const db = await firestore(sa);
     const uid = await ownerUid(env, db);
     if (!uid) return null;
-    const [coins, txs, accum, meta] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`)]);
-    return { coins, txs, accum, meta: meta || {}, uid };
+    return readPortfolio(env, db, uid, fresh);
   });
 }
 export const cgIdOf = (c, market) => c.cgId || (market.cgIds || CG_IDS)[String(c.sym || '').toUpperCase()] || null;

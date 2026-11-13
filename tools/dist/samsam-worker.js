@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 05e1c617ae08f384
+// sources-hash: 78a0add03e92593d
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1094,6 +1094,17 @@ async function firestore(sa) {
       const j = await call(`${base}/${p}`);
       return j ? fields(j.fields) : null;
     },
+    // how many documents a collection has — a count costs 1 read per 1000 documents (not 1 per document)
+    async count(parent, coll) {
+      const j = await call(`${base}/${parent}:runAggregationQuery`, { method: "POST", body: JSON.stringify({ structuredAggregationQuery: { structuredQuery: { from: [{ collectionId: coll }] }, aggregations: [{ alias: "n", count: {} }] } }) });
+      const v = j && j[0] && j[0].result && j[0].result.aggregateFields && j[0].result.aggregateFields.n;
+      return v && v.integerValue != null ? +v.integerValue : null;
+    },
+    // is any document of the collection newer than `since` (its updatedAt — the app stamps every coin / plan change)? 1 read
+    async changedSince(parent, coll, since) {
+      const rows = await call(`${base}/${parent}:runQuery`, { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], where: { fieldFilter: { field: { fieldPath: "updatedAt" }, op: "GREATER_THAN", value: { stringValue: since } } }, limit: 1 } }) });
+      return !Array.isArray(rows) || rows.some((x) => x.document);
+    },
     async set(p, data) {
       return call(`${base}/${p}`, { method: "PATCH", body: JSON.stringify({ fields: enc(data) }) });
     },
@@ -1119,7 +1130,64 @@ async function commitDocs(env, uid, docs) {
   const db = await firestore(sa);
   await db.commit(docs.map((d) => ({ path: `users/${uid}/${d.path}`, data: d.data })));
   cache.delete("user");
+  cache.delete("user:" + uid);
+  await forgetPortfolio(env, uid);
   return { ok: true };
+}
+var PF_FULL_MS = 6 * 36e5;
+var pfStats = { full: 0, probe: 0 };
+var maxUpd = (rows) => rows.reduce((m, r) => r && typeof r.updatedAt === "string" && r.updatedAt > m ? r.updatedAt : m, "");
+async function readPortfolio(env, db, uid, fresh) {
+  const kvKey = "fs:pf:" + uid, parent = "users/" + uid;
+  let kept = null;
+  if (!fresh && env.RATE) {
+    try {
+      kept = JSON.parse(await env.RATE.get(kvKey) || "null");
+    } catch (_) {
+      kept = null;
+    }
+  }
+  if (kept && kept.data && Date.now() - kept.at < PF_FULL_MS) {
+    try {
+      const [nt, nc, na, cc, ca, meta2] = await Promise.all([
+        db.count(parent, "txs"),
+        db.count(parent, "coins"),
+        db.count(parent, "accum"),
+        kept.seen ? db.changedSince(parent, "coins", kept.seen) : true,
+        kept.seen ? db.changedSince(parent, "accum", kept.seen) : true,
+        db.get(parent + "/meta/info")
+      ]);
+      if (nt === kept.n.txs && nc === kept.n.coins && na === kept.n.accum && !cc && !ca) {
+        pfStats.probe++;
+        const m = meta2 || {};
+        if (JSON.stringify(m) !== JSON.stringify(kept.data.meta)) {
+          kept.data.meta = m;
+          try {
+            await env.RATE.put(kvKey, JSON.stringify(kept));
+          } catch (_) {
+          }
+        }
+        return kept.data;
+      }
+    } catch (_) {
+    }
+  }
+  const [coins, txs, accum, meta] = await Promise.all([db.list(`${parent}/coins`), db.list(`${parent}/txs`), db.list(`${parent}/accum`), db.get(`${parent}/meta/info`)]);
+  pfStats.full++;
+  const data = { coins, txs, accum, meta: meta || {}, uid };
+  if (env.RATE) {
+    try {
+      await env.RATE.put(kvKey, JSON.stringify({ at: Date.now(), seen: maxUpd([...coins, ...accum]), n: { txs: txs.length, coins: coins.length, accum: accum.length }, data }));
+    } catch (_) {
+    }
+  }
+  return data;
+}
+async function forgetPortfolio(env, uid) {
+  try {
+    if (env.RATE && uid) await env.RATE.delete("fs:pf:" + uid);
+  } catch (_) {
+  }
 }
 async function loadMemberUser(env, sa, fresh) {
   const me = await member(env);
@@ -1127,9 +1195,8 @@ async function loadMemberUser(env, sa, fresh) {
   const key = "user:" + me.uid;
   if (fresh) cache.delete(key);
   return cached(key, 12e4, async () => {
-    const db = await firestore(sa), uid = me.uid;
-    const [coins, txs, accum, meta] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`)]);
-    return { coins, txs, accum, meta: meta || {}, uid };
+    const db = await firestore(sa);
+    return readPortfolio(env, db, me.uid, fresh);
   });
 }
 async function findLinkCode(env, code) {
@@ -1174,8 +1241,7 @@ async function loadUser(env, fresh = false) {
     const db = await firestore(sa);
     const uid = await ownerUid(env, db);
     if (!uid) return null;
-    const [coins, txs, accum, meta] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`)]);
-    return { coins, txs, accum, meta: meta || {}, uid };
+    return readPortfolio(env, db, uid, fresh);
   });
 }
 var coinsOf = (user) => user ? [...(user.coins || []).filter((c) => c && !c.removed), ...(user.accum || []).filter((a) => a && +a.alertPrice > 0)].map((c) => ({ sym: String(c.sym || "").toUpperCase(), id: c.cgId || null })) : [];

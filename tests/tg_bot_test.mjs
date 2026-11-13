@@ -32,8 +32,9 @@ const SA = { type: 'service_account', project_id: 'samsam-portfolio', client_ema
 const fsv = v => typeof v === 'string' ? { stringValue: v } : typeof v === 'number' ? { doubleValue: v } : typeof v === 'boolean' ? { booleanValue: v } : Array.isArray(v) ? { arrayValue: { values: v.map(fsv) } } : v && typeof v === 'object' ? { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fsv(x)])) } } : { nullValue: null };
 const doc = o => ({ name: 'x', fields: Object.fromEntries(Object.entries(o).map(([k, v]) => [k, fsv(v)])) });
 let LANG = 'ar';   // the alerts are in Arabic — the bot still starts in English
+let AGG_CALLS = 0, LIST_TXS = 0, COIN_UPD = '';
 const USER = () => ({
-  coins: [{ sym: 'BTC', cgId: 'bitcoin', opening: { qty: 0.1, avg: 70000 } }, { sym: 'SOL', cgId: 'solana', opening: { qty: 10, avg: 160 } },
+  coins: [{ sym: 'BTC', cgId: 'bitcoin', opening: { qty: 0.1, avg: 70000 }, ...(COIN_UPD ? { updatedAt: COIN_UPD } : {}) }, { sym: 'SOL', cgId: 'solana', opening: { qty: 10, avg: 160 } },
     { sym: 'LINK', cgId: 'chainlink', opening: { qty: 50, avg: 15 } }, { sym: 'USDT', cgId: 'tether', opening: { qty: 900, avg: 0.5 } },
     { sym: 'NOID', name: 'No Id Coin', opening: { qty: 100, avg: 2 } },   // saved without a CoinGecko id, not in the top 500 — like PONS / CYBER
     ...Array.from({ length: MANY }, (_, i) => ({ sym: 'ZZ' + i, cgId: 'zz-coin-' + i, opening: { qty: 1, avg: 1 } }))],
@@ -73,11 +74,16 @@ globalThis.fetch = async (input, init = {}) => {
     if (u.endsWith('/documents/config/access')) { accessWrites.push(JSON.parse(body)); return J({}); }
     if (/\/users\/UID2\/meta\/tglink$/.test(u) && init.method === 'PATCH') { tglinkWrites.push(JSON.parse(body)); TGLINK = null; return J({}); }
     if (u.endsWith('/documents/config/owner')) { if (init.method === 'PATCH') { pinWrites.push(JSON.parse(body)); OWNER_PIN = JSON.parse(body).fields.uid.stringValue; return J({}); } return OWNER_PIN ? J(doc({ uid: OWNER_PIN })) : J({}, 404); }
+    if (u.endsWith(':runAggregationQuery')) { AGG_CALLS++; const c = JSON.parse(body).structuredAggregationQuery.structuredQuery.from[0].collectionId, uid = (/\/users\/(\w+):/.exec(u) || [])[1];
+      const n = uid === 'UID1' ? (c === 'txs' ? committed.length : c === 'coins' ? U.coins.length : U.accum.length) : (c === 'coins' ? 1 : 0); return J([{ result: { aggregateFields: { n: { integerValue: String(n) } } } }]); }
+    if (u.endsWith(':runQuery') && /"updatedAt"/.test(body)) { const since = JSON.parse(body).structuredQuery.where.fieldFilter.value.stringValue, c = JSON.parse(body).structuredQuery.from[0].collectionId, uid = (/\/users\/(\w+):/.exec(u) || [])[1];
+      const rows = uid === 'UID1' ? (c === 'coins' ? U.coins : U.accum) : []; return J(rows.filter(r => typeof r.updatedAt === 'string' && r.updatedAt > since).slice(0, 1).map(r => ({ document: { name: 'x', fields: doc(r).fields } })).concat([{ readTime: 'now' }])); }
     if (u.endsWith(':runQuery') && /"limit":1000/.test(body)) return J([...ACCOUNTS.map(a => ({ document: { name: 'projects/p/databases/(default)/documents/users/' + a + '/meta/info', fields: {} } })), ...(TGLINK ? [{ document: { name: 'projects/p/databases/(default)/documents/users/UID2/meta/tglink', fields: doc(TGLINK).fields } }] : [])]);
     if (/\/users\/UID2\/(coins|txs|accum)\?/.test(u)) return J({ documents: /coins/.test(u) ? [doc({ sym: 'ETH', cgId: 'ethereum', opening: { qty: 2, avg: 2500 } })] : [] });
     if (u.endsWith('/users/UID2/meta/info')) return J(doc({}));
     if (u.endsWith(':runQuery')) return J(ACCOUNTS.map(a => ({ document: { name: 'projects/p/databases/(default)/documents/users/' + a + '/meta/info' } })));
     if (u.includes('/users/UID1/coins?')) return J({ documents: U.coins.map(doc) });
+    if (u.includes('/users/UID1/txs?')) LIST_TXS++;
     if (u.includes('/users/UID1/txs?')) return J({ documents: committed.map(w => ({ name: w.update.name, fields: w.update.fields })) });
     if (u.endsWith('/documents:commit')) { if (FS_WRITE_403) return J({ error: { code: 403, message: 'Missing or insufficient permissions.' } }, 403); const b = JSON.parse(body); commits.push(b); committed.push(...b.writes); return J({ writeResults: b.writes.map(() => ({ updateTime: new Date().toISOString() })), commitTime: new Date().toISOString() }); }
     if (u.includes('/users/UID1/accum?')) return J({ documents: U.accum.map(doc) });
@@ -911,6 +917,24 @@ check('…an e-mail nobody approved → 403', (await analyze('random@gmail.com',
 sent.length = 0; accessWrites.length = 0; await tapAs(555, 'us:del:777');
 check('🗑 Ali → his e-mail leaves config/access too (the app closes for him)', accessWrites.length === 1 && !JSON.stringify(accessWrites[0]).includes('ali.friend'), accessWrites);
 check('firestore.rules: own data only; Samir always; invited e-mails from config/access; config/ never writable by the app', /allowedEmail\(\)/.test(fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8')) && /config\/access/.test(fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8')) && /request\.auth\.uid == userId/.test(fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8')) && !/match \/config/.test(fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8')));
+
+// 📉 Firebase reads: each look (the 5-minute check, a message) reads the whole portfolio only when something changed (else ~6 small reads)
+{
+  kvStore.delete('fs:pf:UID1'); OWNER_PIN = 'UID1'; ACCOUNTS = ['UID1']; COIN_UPD = '2026-11-01T00:00:00.000Z';
+  LIST_TXS = 0; AGG_CALLS = 0; await postK(await fresh(), '/portfolio');
+  check('reads: the first look reads the portfolio in full and keeps a copy in KV', LIST_TXS === 1 && kvStore.has('fs:pf:UID1'), LIST_TXS);
+  LIST_TXS = 0; AGG_CALLS = 0; await postK(await fresh(), '/portfolio');
+  check('…the next look (a new Worker, nothing in memory): only the counts + "anything newer?" — no full read', LIST_TXS === 0 && AGG_CALLS === 3, [LIST_TXS, AGG_CALLS]);
+  COIN_UPD = '2026-11-13T09:00:00.000Z'; LIST_TXS = 0; await postK(await fresh(), '/portfolio');
+  check('…a coin changed in the app (newer updatedAt) → read in full again', LIST_TXS === 1, LIST_TXS);
+  LIST_TXS = 0; await postK(await fresh(), '/portfolio');
+  check('…then quiet again', LIST_TXS === 0, LIST_TXS);
+  MANY = 1; LIST_TXS = 0; await postK(await fresh(), '/portfolio'); MANY = 0;
+  check('…a coin added (the count moved) → read in full', LIST_TXS === 1, LIST_TXS);
+  const k = JSON.parse(kvStore.get('fs:pf:UID1')); k.at -= 7 * 3600e3; kvStore.set('fs:pf:UID1', JSON.stringify(k)); LIST_TXS = 0; await postK(await fresh(), '/portfolio');
+  check('…and a full read every 6 hours anyway', LIST_TXS === 1, LIST_TXS);
+  COIN_UPD = '';
+}
 
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
