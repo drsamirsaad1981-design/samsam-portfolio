@@ -31,12 +31,24 @@
     var reg = function () { navigator.serviceWorker.register('./sw.js').catch(function () {}); };
     if (doc.readyState === 'complete') reg(); else addEventListener('load', reg);
   }
+  // how to add the app to the home screen in THIS browser (each one hides it somewhere else)
+  function installHow() {
+    var ua = navigator.userAgent || '';
+    if (isIOS()) return /CriOS|FxiOS|EdgiOS|DuckDuckGo|OPiOS/.test(ua)
+      ? 'On iPhone: tap Share (the square with the arrow — in the address bar or the menu) → “Add to Home Screen” → Add. (If you don\'t see it, open this page in Safari.)'
+      : 'In Safari: tap Share (the square with the arrow) → “Add to Home Screen” → Add.';
+    if (/DuckDuckGo/i.test(ua)) return 'In DuckDuckGo: open the menu (top right) → “Add to Home Screen”.';
+    if (/SamsungBrowser/i.test(ua)) return 'In Samsung Internet: tap ☰ (menu, bottom right) → “Add page to” → “Home screen”.';
+    if (/Firefox|FxA/i.test(ua)) return 'In Firefox: tap ⋮ (menu) → “Add app to Home screen” (or “Install”).';
+    if (/EdgA|Edg\//.test(ua)) return 'In Edge: tap ⋯ (menu, bottom) → “Add to phone” → “Install”.';
+    if (/OPR|Opera/.test(ua)) return 'In Opera: tap ⋮ (menu) → “Add to → Home screen”.';
+    if (/Chrome/.test(ua)) return 'In Chrome: tap ⋮ (menu) → “Install app” or “Add to Home screen”.';
+    return 'In your browser\'s menu, look for “Add to Home screen” (or “Install app”). Chrome and Samsung Internet support it best.';
+  }
   function installApp() {
     if (installEvt) { var ev = installEvt; ev.prompt(); (ev.userChoice || Promise.resolve()).then(function () { installEvt = null; draw(); }); return; }
-    var msg = standalone() ? 'Cute Portfolio is already on your home screen — it opens like an app, also without internet (with your last numbers).'
-      : isIOS() ? 'In Safari: tap Share (the square with the arrow) → “Add to Home Screen” → Add.'
-      : 'In Chrome: tap ⋮ (menu) → “Install app” or “Add to Home screen”.';
-    if (window.CPDialog) CPDialog.alert(msg, { title: 'Install the app' }); else alert(msg);
+    var msg = standalone() ? 'Cute Portfolio is already on your home screen — it opens like an app, also without internet (with your last numbers).' : installHow();
+    if (window.CPDialog) CPDialog.alert(msg, { title: 'Install the app' });
   }
 
   // ── what each line opens ──
