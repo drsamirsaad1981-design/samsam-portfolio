@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: f39a3d5a5cca3f99
+// sources-hash: 05e1c617ae08f384
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2355,7 +2355,7 @@ async function runTool(ctx, name, input) {
 }
 function system(now, lang2, qLang, owner = true) {
   return [
-    owner ? "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app." : "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for a user the owner invited. Their portfolio may not be linked yet: if a portfolio / plan / exit tool says it is not connected, say linking from the app is coming soon, and help with the market, coins, alerts and paper trading.",
+    owner ? "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app." : "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for a user the owner invited. Their portfolio may not be linked yet: if a portfolio / plan / exit tool says it is not connected, tell them how in one line: send /app with their e-mail (Samir approves it), sign in to the app, then Settings \u2192 Link the Telegram bot (or /link CODE). Never say linking is coming soon; and help with the market, coins, alerts and paper trading.",
     `Now: ${local(now, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} (Riyadh).`,
     "RULES",
     "- Every number you state (price, %, value, rank, flow\u2026) must come from a tool result in this conversation. Never use prices or market data from memory \u2014 call the tools first (several in one turn if needed). If a tool has no data, say so.",
@@ -3556,6 +3556,7 @@ var WORDS = [
 function parse(text) {
   const kb = KB_ACT()[String(text || "").trim()];
   if (kb) return { act: kb };
+  if (/^[^@\s/]+@[^@\s]+\.[^@\s]+$/.test(String(text || "").trim())) return { act: "app" };
   const s = String(text || "").trim().replace(/@\w+/, "").replace(/^[^\p{L}\p{N}\/$]+/u, "").trim();
   const m = /^\/(price|p|coin)\s+(.+)$/i.exec(s);
   if (m) return { act: "coins", q: m[2].split(/[\s,]+/).filter(Boolean).slice(0, 5) };
@@ -3752,7 +3753,7 @@ async function appRequest(env, chat, text) {
     await send2(env, chat, { text: w.owner });
     return;
   }
-  const email = (/\/app\s+(\S+)/i.exec(text) || [])[1];
+  const email = (/([^@\s/]+@[^@\s]+\.[^@\s]+)/.exec(text) || [])[1];
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     await send2(env, chat, { text: w.ask });
     return;

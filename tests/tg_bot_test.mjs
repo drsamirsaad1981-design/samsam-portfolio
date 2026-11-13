@@ -868,6 +868,8 @@ Wd = await fresh(); sent.length = 0; await postK(Wd, '/invite');
 const code2 = (/<code>([A-Z2-9]{8})<\/code>/.exec(last().b.text) || [])[1]; await sayAs(777, '/start ' + code2);
 sent.length = 0; await sayAs(777, '/app');
 check('/app with no e-mail → how to send it', /\/app you@example\.com/.test(last().b.text));
+sent.length = 0; accessWrites.length = 0; await sayAs(777, 'cute.friend@gmail.com');
+check('…then just the e-mail on its own (as people do) → the same request goes to the owner, not to the AI', sent.some(x => String(x.b.chat_id) === '555' && /cute\.friend@gmail\.com/.test(x.b.text || '') && /ap:ok:777/.test(JSON.stringify(x.b.reply_markup || {}))), sent.map(x => (x.b.text || '').slice(0, 60)));
 sent.length = 0; accessWrites.length = 0; await sayAs(777, '/app Ali.Friend@iCloud.com');
 const req = sent.find(x => String(x.b.chat_id) === '555' && /ap:ok:777/.test(JSON.stringify(x.b.reply_markup || {})));
 check('/app ali.friend@icloud.com → "sent for approval"; you get ✅ Allow / ❌ No; nothing allowed yet', /approval/.test(sent.find(x => x.m === 'sendMessage' && String(x.b.chat_id) === '777').b.text) && req && /ali\.friend@icloud\.com/.test(req.b.text) && accessWrites.length === 0, [sent.map(x => [x.m, x.b.chat_id, (x.b.text || '').slice(0, 40)]), accessWrites.length]);

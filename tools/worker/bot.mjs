@@ -307,6 +307,7 @@ const WORDS = [
 export function parse(text) {
   const kb = KB_ACT()[String(text || '').trim()];
   if (kb) return { act: kb };
+  if (/^[^@\s/]+@[^@\s]+\.[^@\s]+$/.test(String(text || '').trim())) return { act: 'app' };   // a bare e-mail (after "/app" asked for one) = the app request
   const s = String(text || '').trim().replace(/@\w+/, '').replace(/^[^\p{L}\p{N}\/$]+/u, '').trim();   // "💼 Portfolio" → "Portfolio"
   const m = /^\/(price|p|coin)\s+(.+)$/i.exec(s);
   if (m) return { act: 'coins', q: m[2].split(/[\s,]+/).filter(Boolean).slice(0, 5) };
@@ -432,7 +433,7 @@ const AW = {
 async function appRequest(env, chat, text) {
   const lang = await getLang(env), w = AW[lang];
   if (isOwner(env)) { await send(env, chat, { text: w.owner }); return; }
-  const email = (/\/app\s+(\S+)/i.exec(text) || [])[1];
+  const email = (/([^@\s/]+@[^@\s]+\.[^@\s]+)/.exec(text) || [])[1];
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { await send(env, chat, { text: w.ask }); return; }
   const e = email.toLowerCase().slice(0, 120), me = await member(env);
   await setPending(env, chat, e);
