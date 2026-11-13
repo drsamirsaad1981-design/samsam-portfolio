@@ -455,11 +455,19 @@ async function usedToday(env, c, x) {
   return { q, r };
 }
 
+// a guide line: a bullet each; in Arabic, English words / commands are kept as their own left-to-right island
+// (else "/alerts" shows as "alerts/" and "Settings → Open the bot" comes out in the wrong order)
+const LRI = '\u2066', PDI = '\u2069';
+function gLine(l, ar) {
+  let s = /^•\s/.test(l) ? '◦ ' + l.slice(2) : '• ' + l;
+  if (ar) s = s.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI}<${t}>${x}</${t}>${PDI}`);
+  return s;
+}
 // 📘 /guide — the same guide as the app's (guide.json): an index of buttons, each part opens in place
 export function guideView(lang, k = null) {
   const L = lang === 'ar' ? 'ar' : 'en', ar = L === 'ar', s = k && GUIDE.sections.find(x => x.k === k);
-  if (s) return { text: [`${s.e} <b>${s.t[L]}</b>`, '', ...s[L]].join('\n'), buttons: [[cb(ar ? '📘 الدليل' : '📘 Guide', 'gd'), cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')]] };
-  const b = []; for (let i = 0; i < GUIDE.sections.length; i += 2) b.push(GUIDE.sections.slice(i, i + 2).map(x => cb(`${x.e} ${x.t[L]}`, 'gd:' + x.k)));
+  if (s) return { text: `${s.e} <b>${s.t[L]}</b>\n\n` + s[L].map(l => gLine(l, ar)).join('\n\n'), buttons: [[cb(ar ? '📘 الدليل' : '📘 Guide', 'gd'), cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')]] };
+  const b = []; for (let i = 0; i < GUIDE.sections.length; i += 2) b.push(GUIDE.sections.slice(i, i + 2).map(x => cb(`${x.e} ${(x.b || x.t)[L]}`, 'gd:' + x.k)));   // short names: two fit in a row
   b.push([cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')]);
   return { text: `<b>${GUIDE.title[L]}</b>\n\n${GUIDE.intro[L]}`, buttons: b };
 }
