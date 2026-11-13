@@ -519,7 +519,7 @@ async function onUpdate(env, u, msg, q, chat) {
         if (/^dy:(morning|evening|radar|sectors|pin)$/.test(d)) {
           const k = d.slice(3), c = await getCfg(env), on = !c[k];
           await setCfg(env, { [k]: on });
-          if (k === 'pin') { if (on) await pinUpdate(env, Date.now(), true); else await unpin(env); }
+          if (k === 'pin') { if (on) await pinUpdate(env, Date.now(), true, true); else await unpin(env); }
         }
         await edit(env, chat, q.message.message_id, await viewDaily(env)); await done(); return ok();
       }
@@ -609,7 +609,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (p.act === 'dy:now:m') { await morning(env); return; }
   if (p.act === 'dy:now:e') { await evening(env); return; }
-  if (p.act === 'pin:on') { await setCfg(env, { pin: true }); await pinUpdate(env, Date.now(), true); return; }
+  if (p.act === 'pin:on') { await setCfg(env, { pin: true }); const r = await pinUpdate(env, Date.now(), true, true).catch(() => null); if (!r || !r.ok) await send(env, chat, { text: (await getLang(env)) === 'ar' ? '⚠️ ما قدرتش أثبّت الرسالة دلوقتي — جرّب تاني بعد دقيقة.' : '⚠️ I couldn\'t pin it right now — try again in a minute.' }); return; }
   if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
   if (p.act === 'ai') { await answer(env, chat, p.q, budget, into); return; }

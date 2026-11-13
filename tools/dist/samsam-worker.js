@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: faa8b894a62ec8e1
+// sources-hash: 99eb4c8e1c6620dc
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3048,13 +3048,13 @@ async function pinView(env, now = Date.now()) {
   const origin = await kvGet5(env, "tg:origin");
   return { text: L1.join("\n"), buttons: [[cb(w.pf, "pf"), cb(w.mk, "mk"), cb(w.refresh, "pin:r")], ...origin ? [[{ text: w.report, web_app: { url: origin + "/tg/app" } }]] : []] };
 }
-async function pinUpdate(env, now = Date.now(), force = false) {
+async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const v = await pinView(env, now);
   if (!v) return { ok: false };
   const st = await jget(env, K(env, "pin"), {});
   const body = v.text.split("\n").slice(1).join("\n");
   if (!force && st.id && st.body === body && now - (st.t || 0) < H3) return { ok: true, same: true };
-  if (st.id) {
+  if (st.id && !fresh) {
     const r3 = await tg2(env, "editMessageText", { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: "HTML", reply_markup: { inline_keyboard: v.buttons } });
     if ((r3.ok || /not modified/i.test(r3.description || "")) && force) await tg2(env, "pinChatMessage", { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {
     });
@@ -3067,8 +3067,12 @@ async function pinUpdate(env, now = Date.now(), force = false) {
   const id = r && r.ok && r.result && r.result.message_id;
   if (!id) return { ok: false };
   await tg2(env, "pinChatMessage", { chat_id: chatOf(env), message_id: id, disable_notification: true });
-  if (st.id) tg2(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
-  });
+  if (st.id) {
+    await tg2(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
+    });
+    if (fresh) await tg2(env, "deleteMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
+    });
+  }
   await jput(env, K(env, "pin"), { id, body, t: now });
   return { ok: true, id, new: true };
 }
@@ -4022,7 +4026,7 @@ async function onUpdate(env, u, msg, q, chat) {
           const k = d.slice(3), c = await getCfg(env), on = !c[k];
           await setCfg(env, { [k]: on });
           if (k === "pin") {
-            if (on) await pinUpdate(env, Date.now(), true);
+            if (on) await pinUpdate(env, Date.now(), true, true);
             else await unpin(env);
           }
         }
@@ -4168,7 +4172,8 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (p.act === "pin:on") {
     await setCfg(env, { pin: true });
-    await pinUpdate(env, Date.now(), true);
+    const r = await pinUpdate(env, Date.now(), true, true).catch(() => null);
+    if (!r || !r.ok) await send2(env, chat, { text: await getLang(env) === "ar" ? "\u26A0\uFE0F \u0645\u0627 \u0642\u062F\u0631\u062A\u0634 \u0623\u062B\u0628\u0651\u062A \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u062F\u0644\u0648\u0642\u062A\u064A \u2014 \u062C\u0631\u0651\u0628 \u062A\u0627\u0646\u064A \u0628\u0639\u062F \u062F\u0642\u064A\u0642\u0629." : "\u26A0\uFE0F I couldn't pin it right now \u2014 try again in a minute." });
     return;
   }
   if (p.act === "pin:off") {

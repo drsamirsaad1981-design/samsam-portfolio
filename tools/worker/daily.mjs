@@ -258,13 +258,15 @@ export async function pinView(env, now = Date.now()) {
   const origin = await kvGet(env, 'tg:origin');   // 📊 the Mini App, when the bot knows its own address
   return { text: L1.join('\n'), buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk'), cb(w.refresh, 'pin:r')], ...(origin ? [[{ text: w.report, web_app: { url: origin + '/tg/app' } }]] : [])] };
 }
-export async function pinUpdate(env, now = Date.now(), force = false) {
+// fresh = /pin (or switching it on): always a NEW message, pinned — the old one may have been deleted in Telegram
+// ("delete for me" keeps the bot's copy, so editing it "works" but nobody sees it); the old one is removed
+export async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const v = await pinView(env, now);
   if (!v) return { ok: false };
   const st = await jget(env, K(env, 'pin'), {});
   const body = v.text.split('\n').slice(1).join('\n');   // the first line is the time: only redraw when a number changed (or hourly)
   if (!force && st.id && st.body === body && now - (st.t || 0) < H) return { ok: true, same: true };
-  if (st.id) {
+  if (st.id && !fresh) {
     const r = await tg(env, 'editMessageText', { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: 'HTML', reply_markup: { inline_keyboard: v.buttons } });
     // asked for (/pin, 🔄, a new language): pin it again too — it may have been unpinned in Telegram itself
     if ((r.ok || /not modified/i.test(r.description || '')) && force) await tg(env, 'pinChatMessage', { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {});
@@ -274,7 +276,7 @@ export async function pinUpdate(env, now = Date.now(), force = false) {
   const id = r && r.ok && r.result && r.result.message_id;
   if (!id) return { ok: false };
   await tg(env, 'pinChatMessage', { chat_id: chatOf(env), message_id: id, disable_notification: true });
-  if (st.id) tg(env, 'unpinChatMessage', { chat_id: chatOf(env), message_id: st.id }).catch(() => {});
+  if (st.id) { await tg(env, 'unpinChatMessage', { chat_id: chatOf(env), message_id: st.id }).catch(() => {}); if (fresh) await tg(env, 'deleteMessage', { chat_id: chatOf(env), message_id: st.id }).catch(() => {}); }
   await jput(env, K(env, 'pin'), { id, body, t: now });
   return { ok: true, id, new: true };
 }

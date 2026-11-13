@@ -960,7 +960,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   const st = JSON.parse(kvStore.get('tg:555:pin') || '{}');
   if (!st.id) { await postK(await fresh(), '/pin'); }
   sent.length = 0; await postK(await fresh(), '/pin');
-  check('📌 /pin with the message still there (maybe unpinned in Telegram) → edited and pinned again', sent.some(x => x.m === 'pinChatMessage'), sent.map(x => x.m));
+  check('📌 /pin (the old one maybe deleted in Telegram) → a NEW message, pinned; the old one unpinned and removed', sent.some(x => x.m === 'sendMessage' && /📌/.test(x.b.text || '')) && sent.some(x => x.m === 'pinChatMessage') && sent.some(x => x.m === 'deleteMessage'), sent.map(x => x.m));
   sent.length = 0; await postK(await fresh(), 'عربي');
   const ed = sent.find(x => x.m === 'editMessageText' && /📌/.test(x.b.text || ''));
   check('🌐 → عربي: the pinned message is redrawn in Arabic right away', ed && /مباشر/.test(ed.b.text), sent.map(x => x.m));
