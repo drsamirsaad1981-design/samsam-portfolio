@@ -106,7 +106,7 @@ export async function premiumView(env, lang, now = Date.now()) {
 export async function supportView(env, lang) {
   const w = words(lang), x = isOwner(env) ? null : await member(env);
   return { text: [w.sTitle, '', w.sBody, ...(x && x.starsPaid ? ['', `<i>${w.sThanksBadge(x.starsPaid)}</i>`] : [])].join('\n'),
-    buttons: [SUPPORT.map(n => cb(`${n} ⭐ (≈${usdOf(n)})`, 'sp:' + n)), [cb(w.back, 'menu')]] };
+    buttons: [SUPPORT.slice(0, 2).map(n => cb(`${n} ⭐ (≈${usdOf(n)})`, 'sp:' + n)), SUPPORT.slice(2).map(n => cb(`${n} ⭐ (≈${usdOf(n)})`, 'sp:' + n)), [cb(w.back, 'menu')]] };
 }
 export async function sendSupportInvoice(env, chat, n, lang) {
   const w = words(lang);
@@ -120,7 +120,7 @@ export async function askGift(env, chat, lang) {
   await asChat(env.TELEGRAM_CHAT_ID, async () => {
     const L = await langOf(env), o = words(L);
     await tg(env, 'sendMessage', { chat_id: env.TELEGRAM_CHAT_ID, text: o.ownerAsk(esc(x ? x.name : chat)), parse_mode: 'HTML',
-      reply_markup: { inline_keyboard: [[cb('⭐ +30', `us:pd:30:${chat}`), cb('⭐ +365', `us:pd:365:${chat}`), cb(L === 'ar' ? '👤 الكارت' : '👤 Their card', 'us:m:' + chat)]] } });
+      reply_markup: { inline_keyboard: [[cb(L === 'ar' ? '🎁 ⭐ +30 يوم' : '🎁 ⭐ +30 days', `us:pd:30:${chat}`), cb(L === 'ar' ? '🎁 ⭐ +365 يوم' : '🎁 ⭐ +365 days', `us:pd:365:${chat}`)], [cb(L === 'ar' ? '👤 الكارت' : '👤 Their card', 'us:m:' + chat)]] } });
   });
 }
 

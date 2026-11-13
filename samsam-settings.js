@@ -85,12 +85,12 @@
   var ACT = {
     premium: function () {
       var st = memberSt, now = st && st.premium ? (st.premUntil ? '✅ You\'re premium until ' + untilTxt(st.premUntil) + (st.premSrc === 'stars' ? ' — it renews by itself.' : ' (a gift).') : '✅ You\'re premium (a gift).') + '\n\n' : '';
-      CPDialog.confirm(now + PREM_TXT, { title: 'Premium ⭐', icon: 'star', okText: 'Open in Telegram' })
+      CPDialog.confirm(now + PREM_TXT, { title: 'Premium', icon: 'star', okText: 'Open in Telegram' })
         .then(function (go) { if (go) window.open(BOT + '?start=premium', '_blank', 'noopener'); });
     },
     support: function () {
       var st = memberSt, th = st && st.supporter ? '💛 You\'re a Supporter (' + (st.starsPaid || 0) + ' ⭐) — thank you!\n\n' : '';
-      CPDialog.confirm(th + SUP_TXT, { title: 'Support Cute Portfolio 💛', icon: 'heart', okText: 'Open in Telegram' })
+      CPDialog.confirm(th + SUP_TXT, { title: 'Support Cute Portfolio', icon: 'heart', okText: 'Open in Telegram' })
         .then(function (go) { if (go) window.open(BOT + '?start=support', '_blank', 'noopener'); });
     },
     alerts: function () { S().openAlerts(); },

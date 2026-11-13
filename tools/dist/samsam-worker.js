@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 9f57054426affe36
+// sources-hash: 3dc969c3dc100509
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1018,7 +1018,7 @@ async function supportView(env, lang2) {
   const w = words(lang2), x = isOwner(env) ? null : await member(env);
   return {
     text: [w.sTitle, "", w.sBody, ...x && x.starsPaid ? ["", `<i>${w.sThanksBadge(x.starsPaid)}</i>`] : []].join("\n"),
-    buttons: [SUPPORT.map((n) => cb(`${n} \u2B50 (\u2248${usdOf(n)})`, "sp:" + n)), [cb(w.back, "menu")]]
+    buttons: [SUPPORT.slice(0, 2).map((n) => cb(`${n} \u2B50 (\u2248${usdOf(n)})`, "sp:" + n)), SUPPORT.slice(2).map((n) => cb(`${n} \u2B50 (\u2248${usdOf(n)})`, "sp:" + n)), [cb(w.back, "menu")]]
   };
 }
 async function sendSupportInvoice(env, chat, n, lang2) {
@@ -1035,7 +1035,7 @@ async function askGift(env, chat, lang2) {
       chat_id: env.TELEGRAM_CHAT_ID,
       text: o.ownerAsk(esc(x ? x.name : chat)),
       parse_mode: "HTML",
-      reply_markup: { inline_keyboard: [[cb("\u2B50 +30", `us:pd:30:${chat}`), cb("\u2B50 +365", `us:pd:365:${chat}`), cb(L === "ar" ? "\u{1F464} \u0627\u0644\u0643\u0627\u0631\u062A" : "\u{1F464} Their card", "us:m:" + chat)]] }
+      reply_markup: { inline_keyboard: [[cb(L === "ar" ? "\u{1F381} \u2B50 +30 \u064A\u0648\u0645" : "\u{1F381} \u2B50 +30 days", `us:pd:30:${chat}`), cb(L === "ar" ? "\u{1F381} \u2B50 +365 \u064A\u0648\u0645" : "\u{1F381} \u2B50 +365 days", `us:pd:365:${chat}`)], [cb(L === "ar" ? "\u{1F464} \u0627\u0644\u0643\u0627\u0631\u062A" : "\u{1F464} Their card", "us:m:" + chat)]] }
     });
   });
 }
