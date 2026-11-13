@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 7dac794ed6b5d515
+// sources-hash: 61ad2a26c6accead
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2417,6 +2417,20 @@ async function onMyChatMember(env, u) {
   c[kind] = { id: chat.id, title: chat.title || "", at: Date.now() };
   await putCommunity(env, c);
   await setup(env, kind);
+}
+async function registerForward(env, msg) {
+  const o = msg.forward_origin, ch = o && (o.chat || o.sender_chat) || msg.forward_from_chat;
+  if (!ch || !ch.id) return false;
+  const me = await tg3(env, "getMe", {}), st = me.ok ? await tg3(env, "getChatMember", { chat_id: ch.id, user_id: me.result.id }) : null;
+  if (!st || !st.ok || st.result.status !== "administrator") {
+    await say(env, `\u2139\uFE0F I'm not an admin in <b>${esc(ch.title || "")}</b> yet \u2014 add me as admin there first.`);
+    return true;
+  }
+  const c = await getCommunity(env), kind = ch.type === "channel" ? "channel" : "group";
+  c[kind] = { ...c[kind] && String(c[kind].id) === String(ch.id) ? c[kind] : {}, id: ch.id, title: ch.title || "", at: Date.now() };
+  await putCommunity(env, c);
+  await setup(env, kind);
+  return true;
 }
 async function setup(env, kind) {
   const c = await getCommunity(env), x = c[kind];
@@ -5424,6 +5438,7 @@ Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} A
       await done(`\u2705 ${t.updated} ${local(Date.now(), { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })}`);
       return ok();
     }
+    if (msg && isOwner(env) && (msg.forward_origin || msg.forward_from_chat) && await registerForward(env, msg)) return ok();
     if (msg && msg.successful_payment) {
       await paid(env, chat, msg.successful_payment, await getLang(env));
       return ok();

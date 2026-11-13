@@ -47,6 +47,18 @@ export async function onMyChatMember(env, u) {
   await setup(env, kind);
 }
 
+// Samir forwards a post from the channel (or a message from the group) to the bot → that chat is registered, if the bot
+// is an admin there (for when the bot was made admin before it listened for that)
+export async function registerForward(env, msg) {
+  const o = msg.forward_origin, ch = (o && (o.chat || o.sender_chat)) || msg.forward_from_chat; if (!ch || !ch.id) return false;
+  const me = await tg(env, 'getMe', {}), st = me.ok ? await tg(env, 'getChatMember', { chat_id: ch.id, user_id: me.result.id }) : null;
+  if (!st || !st.ok || st.result.status !== 'administrator') { await say(env, `ℹ️ I'm not an admin in <b>${esc(ch.title || '')}</b> yet — add me as admin there first.`); return true; }
+  const c = await getCommunity(env), kind = ch.type === 'channel' ? 'channel' : 'group';
+  c[kind] = { ...(c[kind] && String(c[kind].id) === String(ch.id) ? c[kind] : {}), id: ch.id, title: ch.title || '', at: Date.now() };
+  await putCommunity(env, c); await setup(env, kind);
+  return true;
+}
+
 // make the join link (requests approved by the bot), and for the group: topics + the guide
 export async function setup(env, kind) {
   const c = await getCommunity(env), x = c[kind]; if (!x) return { ok: false };

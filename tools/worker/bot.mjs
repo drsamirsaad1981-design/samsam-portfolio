@@ -21,7 +21,7 @@ import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
 import { keyInfo } from './byok.mjs';
 import GUIDE from '../../guide.json' with { type: 'json' };
-import { onMyChatMember, onJoinRequest, communityView, announce, setup as communitySetup } from './community.mjs';
+import { onMyChatMember, onJoinRequest, communityView, announce, setup as communitySetup, registerForward } from './community.mjs';
 import { premiumView, supportView, sendSupportInvoice, askGift, preCheckout, paid, statsView, addDays, revoke, premiumNow } from './stars.mjs';
 import { keepTrades, tradeLines, confirmTrades, cancelTrades, money } from './trade.mjs';
 import { viewDaily, setCfg, getCfg, morning, evening, pinUpdate, unpin } from './daily.mjs';
@@ -669,6 +669,7 @@ async function onUpdate(env, u, msg, q, chat) {
       await done(`✅ ${t.updated} ${local(Date.now(), { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })}`);
       return ok();
     }
+    if (msg && isOwner(env) && (msg.forward_origin || msg.forward_from_chat) && await registerForward(env, msg)) return ok();   // 📢 a channel / group post forwarded by Samir → set it up
     if (msg && msg.successful_payment) { await paid(env, chat, msg.successful_payment, await getLang(env)); return ok(); }   // ⭐💛 paid (also each monthly renewal)
     if (msg && (msg.voice || msg.audio)) {
       if (!(await isPremium(env)) && !(await keyInfo(env)).has) { const ar = (await getLang(env)) === 'ar'; await send(env, chat, { text: ar ? '🎙 الرسايل الصوتية للأعضاء المميزين ⭐ — اكتبها كتابة، أو اطلب من Dr. Samir Saad.' : '🎙 Voice notes are for ⭐ premium members — type it instead, or ask Dr. Samir Saad.' }); return ok(); }
