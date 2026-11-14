@@ -84,8 +84,8 @@
   @media (max-width: 480px) { .lv-upd { display: none; } }   /* phone: "Live · 02:24 AM" */
   .hm-baseline .cp-hint { margin-left: 0; } .hm-baseline .val-edit { margin-left: -2px; }
   /* phones: room for the three header buttons (⚙️ ☁️ light/dark) next to the name */
-  @media (max-width: 430px) { .hdr-btns { gap: 6px; } .hdr-btns .ss-theme-btn { width: 34px; height: 34px; min-width: 34px; } .brand-name { font-size: 1.3rem; } }
-  @media (max-width: 380px) { .brand-name { font-size: 1.15rem; } .brand .app-logo { width: 42px; height: 42px; } .hdr-btns .ss-theme-btn { width: 32px; height: 32px; min-width: 32px; } }
+  @media (max-width: 430px) { .hdr-btns { gap: 6px; } .hdr-btns .ss-theme-btn { width: 34px; height: 34px; min-width: 34px; } }
+  @media (max-width: 380px) { .brand-name { font-size: 1.25rem; } .brand .app-logo { width: 44px; height: 44px; } .hdr-btns .ss-theme-btn { width: 32px; height: 32px; min-width: 32px; } }
 
   .btc-icon {
     width: 44px; height: 44px;
@@ -1279,3 +1279,20 @@
     .search-signal-bar .cp-add .cp-add-ic { background: transparent; } .search-signal-bar .cp-add .cp-add-ic svg { width: 20px; height: 20px; }
   }
   .search-signal-bar .cp-add { height: 44px; border-radius: 12px; }
+
+  /* ── One header on every page: the main page's top line looks exactly like Performance / Plan / Market Hub
+        (a full-width bar: logo + "Cute Portfolio", under it the status line; ⚙️ ☁️ 🌙 on the right). No card around it. ── */
+  header.app-head, [data-theme="light"] header.app-head { background: none; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
+  .header-top {
+    margin: calc(-1 * max(12px, env(safe-area-inset-top, 0px))) calc(50% - 50vw) 12px; min-height: 60px; box-sizing: border-box;
+    padding: max(10px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+    background: color-mix(in srgb, var(--header-bg, var(--bg, #0b0f17)) 80%, transparent);
+    -webkit-backdrop-filter: saturate(1.6) blur(16px); backdrop-filter: saturate(1.6) blur(16px);
+    border-bottom: 1px solid var(--border, rgba(148,163,184,.2));
+  }
+  .brand-live { font-size: .84rem; font-weight: 700; }
+  @media (min-width: 768px) {
+    header.app-head { padding: 0; }
+    .header-top { margin-top: -24px; margin-bottom: 14px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+  }
+  .lv-why { border: 0; background: none; color: inherit; opacity: .75; cursor: pointer; padding: 0 2px; font: inherit; line-height: 1; }

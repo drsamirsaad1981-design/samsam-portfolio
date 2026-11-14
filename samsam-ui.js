@@ -162,7 +162,17 @@
     '.cp-foot{max-width:1200px;margin:28px auto 0;padding:16px 16px 10px;border-top:1px solid var(--border,rgba(148,163,184,.2));text-align:center;font-size:.72rem;line-height:1.8;color:var(--fg2,#94a3b8);box-sizing:border-box}' +
     '.cp-foot p{margin:0}.cp-foot .cpf-sep{margin:0 8px;opacity:.6}.cp-foot b{font-weight:600;color:var(--fg,inherit)}.cp-foot .ss-ic{margin-right:.35em}' +
     '.cp-foot .cpf-msg{min-height:0;font-size:.7rem;transition:opacity .5s}.cp-foot .cpf-msg:empty{display:none}.cp-foot .cpf-copy{margin-top:2px;opacity:.75}.cp-foot a{color:inherit;text-decoration:none}.cp-foot a:hover{color:var(--accent,#a78bfa)}' +
-    '.cp-foot .cpf-sup{margin-top:4px;font-size:.74rem;font-weight:600;color:#d97706}.cp-foot .cpf-sup[hidden]{display:none}.cp-foot .cpf-sup a{color:#f59e0b;text-decoration:underline;text-underline-offset:2px}[data-theme="dark"] .cp-foot .cpf-sup{color:#fbbf24}' +
+    // 💛 the support line: one small pill above the rest (members) — then the sync line, then ©
+    '.cp-foot .cpf-sup{order:-1;margin:0 auto 10px;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:.74rem;font-weight:700;color:#b45309;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25)}' +
+    '.cp-foot .cpf-sup[hidden]{display:none}.cp-foot .cpf-sup a{color:inherit;text-decoration:none;font-weight:800}.cp-foot .cpf-sup a:hover{text-decoration:underline;color:inherit}[data-theme="dark"] .cp-foot .cpf-sup{color:#fbbf24;background:rgba(245,158,11,.08)}' +
+    '.cp-foot{display:flex;flex-direction:column;align-items:center}' +
+    // ⭐ / 💛 next to the page's status line in the header (members who support)
+    // (sits on the logo's corner, so it never pushes or cuts the name)
+    '.brand,.cp-brand-logo{position:relative}' +
+    '.cp-badge{position:absolute;z-index:2;right:-10px;bottom:-6px;display:inline-flex;align-items:center;gap:1px;padding:1px 5px;border-radius:999px;font-size:.62rem;line-height:1.45;' +
+      'background:var(--card-solid,#fff);border:1px solid rgba(245,158,11,.45);box-shadow:0 2px 6px rgba(15,23,42,.18);cursor:pointer;font-family:inherit;white-space:nowrap}' +
+    '.brand > .cp-badge{left:24px;right:auto;top:38px;bottom:auto}' +
+    '.cp-big.compact .cp-badge{display:none}' +
     '@media print{.cp-foot .cpf-copy{display:none}}' +
     '[data-theme=light] .ss-dot[data-c=green]{background:#16a34a}[data-theme=light] .ss-dot[data-c=red]{background:#dc2626}' +
     // Theme toggle — one size and style on every page
@@ -848,11 +858,27 @@
           else {
             var k = null; try { k = JSON.parse(localStorage.getItem('cp-support-st') || 'null'); } catch (_) {}
             var thanks = k && (k.premium || k.supporter);
-            sp.innerHTML = thanks ? '💛 Thank you for supporting Cute Portfolio' + (k.premium ? ' · ⭐ Premium' : '') : '💛 Free &amp; non-profit · <a href="#" data-sup="1">Support the project</a>';
+            sp.innerHTML = thanks ? (k.premium ? '⭐ ' : '') + '💛 <a href="#" data-sup="1">Thank you for your support</a>' : '💛 Free &amp; non-profit · <a href="#" data-sup="1">Support</a>';
             sp.hidden = false;
           }
         }
+        badge(member);
       } catch (_) {}
+    };
+    // ⭐ / 💛 next to "Cute Portfolio" at the top of every page (members who support) — tap → the Support card
+    var badge = function (member) {
+      var name = document.querySelector('.brand, .cp-brand-logo'); if (!name) return;   // the logo's corner, every page
+      var k = null; try { k = member ? JSON.parse(localStorage.getItem('cp-support-st') || 'null') : null; } catch (_) {}
+      var txt = k ? (k.premium ? '⭐' : '') + (k.supporter || k.premium ? '💛' : '') : '';
+      var b = name.querySelector('.cp-badge');
+      if (!txt) { if (b) b.remove(); return; }
+      if (!b) {
+        b = document.createElement('span'); b.className = 'cp-badge'; b.setAttribute('role', 'button'); b.tabIndex = 0;
+        var go = function (e) { e.preventDefault(); e.stopPropagation(); var w = window; try { if (window.parent !== window && window.parent.SamsamSettings) w = window.parent; } catch (_) {} if (w.SamsamSettings && w.SamsamSettings.run) w.SamsamSettings.run('support'); };
+        b.addEventListener('click', go); b.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') go(e); });
+        name.appendChild(b);
+      }
+      b.textContent = txt; b.title = k.premium ? 'Premium member & supporter — thank you!' : 'Supporter — thank you!'; b.setAttribute('aria-label', b.title);
     };
     f.addEventListener('click', function (e) {
       if (!e.target.closest('[data-sup]')) return; e.preventDefault();

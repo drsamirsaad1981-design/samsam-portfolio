@@ -136,3 +136,4 @@ guide_test.py
 light_popups_test.py
 edit_tx_test.py
 perf_add_test.py
+header_badge_test.py

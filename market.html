@@ -172,6 +172,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   .mk-donut { width: 84px; height: 84px; }
 }
 @media (min-width: 1024px) { .mk-donut { width: 76px; height: 76px; } .mk-leg div { font-size: .78rem; } }
+/* computer: the four cards line up — the same big number size, the middle part centred in the free space, the details at the bottom */
+@media (min-width: 1024px) {
+  .mk-card { padding: 16px 18px; gap: 8px; }
+  .mk-k { font-size: .78rem; }
+  .mk-v, .mk-vrow .mk-v { font-size: 1.7rem; }
+  #mcapV { margin-top: auto; } #mcapCh { margin-bottom: auto; align-self: flex-start; }
+  .mk-semi { max-width: 190px; margin: auto; } .mk-semi .num b { font-size: 1.8rem; }
+  .mk-domw { margin: auto 0; gap: 14px; } .mk-donut { width: 92px; height: 92px; }
+  .mk-li { font-size: .76rem; }
+}
 @media (max-width: 380px) { .mk-v { font-size: 1.14rem; } .mk-card { padding: 12px; } .mk-donut { width: 76px; height: 76px; } }
 
 /* ── Watchlist card ── */
@@ -400,6 +410,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
         <div class="mk-li">Volume 24h <b id="volV">—</b></div>
         <div class="mk-li" id="liBtc">BTC <span><b>—</b></span></div>
         <div class="mk-li" id="liEth">ETH <span><b>—</b></span></div>
+        <div class="mk-li mk-li-cap" id="altEtfCap" hidden>ETF money, last 7 days</div>
+        <div class="mk-li" id="altEthEtf" hidden>ETH ETFs <b>—</b></div>
+        <div class="mk-li" id="altBtcEtf" hidden>BTC ETFs <b>—</b></div>
       </div>
     </div>
     <div class="mk-card" id="cardFng">
@@ -427,9 +440,6 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       <div class="mk-foot">
         <div class="mk-li" id="altN">Beating BTC <b>—</b></div>
         <div class="mk-li" id="altB">BTC (90 days) <b>—</b></div>
-        <div class="mk-li mk-li-cap" id="altEtfCap" hidden>ETF money, last 7 days</div>
-        <div class="mk-li" id="altEthEtf" hidden>ETH ETFs <b>—</b></div>
-        <div class="mk-li" id="altBtcEtf" hidden>BTC ETFs <b>—</b></div>
       </div>
     </a>
     <div class="mk-card" id="cardDom">

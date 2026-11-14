@@ -1026,11 +1026,13 @@ function updateLiveIndicator(){
   const el=document.getElementById('liveIndicator');if(!el)return;
   if(liveStatus==='loading')el.innerHTML=SamsamUI.liveDot('loading')+' Fetching live prices…';
   else if(liveStatus==='ok'){const t=lastFetchTime?lastFetchTime.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}):'';el.innerHTML=SamsamUI.liveDot('ok')+` Live · <span class="lv-upd">Updated </span>${t}`;}
-  else if(liveStatus==='error')el.innerHTML=SamsamUI.liveDot('error')+' Fetch failed — using saved prices';
-  else if(liveStatus==='offline')el.innerHTML=SamsamUI.liveDot('idle')+' Offline — showing last saved prices';
-  else el.innerHTML=SamsamUI.liveDot('idle')+' Prices from last session';
+  else if(liveStatus==='error')el.innerHTML=SamsamUI.liveDot('error')+' Saved prices <button type="button" class="lv-why" data-lv="error" aria-label="Why saved prices?">ⓘ</button>';   // short (no cut-off text); ⓘ explains
+  else if(liveStatus==='offline')el.innerHTML=SamsamUI.liveDot('idle')+' Offline <button type="button" class="lv-why" data-lv="offline" aria-label="About offline">ⓘ</button>';
+  else el.innerHTML=SamsamUI.liveDot('idle')+' Last session';
 }
 
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.lv-why');if(!b||!window.CPDialog)return;
+  CPDialog.alert(b.dataset.lv==='offline'?'No internet right now — you see the prices saved last time. They update by themselves when you are back online.':'The live prices could not be loaded just now (the price service was busy or the connection dropped) — you see the prices saved last time. The app tries again by itself in a moment.',{title:b.dataset.lv==='offline'?'Offline':'Saved prices'});});
 function renderAll(){renderHeader();renderSummary();renderTableAndStack();renderDashboard();}
 
 // ── View Toggle (Cards ↔ Table) ───────────────────────
