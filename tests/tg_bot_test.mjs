@@ -95,7 +95,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (u === 'https://api.anthropic.com/v1/messages') {
     const b = JSON.parse(body); claudeCalls.push(b); claudeKeys.push(init.headers['x-api-key']);
     if (/^sk-ant-dead/.test(init.headers['x-api-key'])) return J({ type: 'error', error: { type: 'authentication_error' } }, 401);
-    if (/SMART (MORNING|EVENING)/.test(b.system || '')) { composeCalls.push(b); if (COMPOSE_FAIL) return J({ type: 'error', error: { type: 'overloaded_error' } }, 529); const f = JSON.parse(b.messages[0].content.replace(/^FACTS:\n/, '')); return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: /MORNING/.test(b.system) ? `☀️ **Calm day**\n🎯 **Today**\n1. ${(f.todo[0] || {}).what || 'hold'}` : `🌙 **Quiet day**\n• since morning: **${f.since_morning ? f.since_morning.portfolio_change_usd : 'n/a'}**` }] }); }
+    if (/SMART (MORNING|EVENING)/.test(b.system || '')) { composeCalls.push(b); if (COMPOSE_FAIL) return J({ type: 'error', error: { type: 'overloaded_error' } }, 529); if (globalThis.__shortMorning) return J({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '🩸 **the market is red, stay calm and don’t half' }] }); const f = JSON.parse(b.messages[0].content.replace(/^FACTS:\n/, '')); return J({ stop_reason: 'end_turn', content: [{ type: 'text', text: /MORNING/.test(b.system) ? `☀️ **Calm day**\n🎯 **Today**\n1. ${(f.todo[0] || {}).what || 'hold'}` : `🌙 **Quiet day**\n• since morning: **${f.since_morning ? f.since_morning.portfolio_change_usd : 'n/a'}**` }] }); }
     if (init.headers['x-api-key'] !== 'sk-test' && !/^sk-ant-good/.test(init.headers['x-api-key'])) return J({ type: 'error', error: { type: 'authentication_error' } }, 401);
     if (b.model === 'bad-model') return J({ type: 'error', error: { type: 'not_found_error', message: 'model: bad-model' } }, 404);
     const msgs = b.messages, lastM = msgs[msgs.length - 1];
@@ -1250,6 +1250,16 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('…once a morning (09:10 → nothing new)', !sent.some(m => m.b.chat_id === -1001 && /Market pulse/.test(m.b.text || '')));
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: -1002, type: 'supergroup' }, from: { id: 888 }, text: 'hello everyone' } }, ENV.TG_SECRET, ENVK);
   check('💬 people chatting in the group → the bot stays quiet', sent.filter(m => m.m === 'sendMessage').length === 0);
+}
+
+// ☀️ a smart morning cut short by Claude (max_tokens) → the plain morning, never half a message
+{
+  const old = globalThis.__shortMorning; globalThis.__shortMorning = true;
+  for (const k of [...kvStore.keys()]) if (/^tg:555:daily:sent/.test(k)) kvStore.delete(k);
+  sent.length = 0; const Wm = await fresh(); const pm = []; await Wm.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('08:45') }, ENVK, { waitUntil: x => pm.push(x) }); await Promise.all(pm);
+  const mm = sent.find(m => m.m === 'sendMessage' && /Smart morning|Morning/.test(m.b.text || '') && String(m.b.chat_id) === '555');
+  check('☀️ Claude cut off (max_tokens) → the plain morning is sent instead (no half line, no stray **)', mm && !/\*\*/.test(mm.b.text) && !/half/.test(mm.b.text) && /Today|💼/.test(mm.b.text), mm && mm.b.text.slice(0, 120));
+  globalThis.__shortMorning = old;
 }
 
 console.log(`${pass}/${pass + fail} passed`);

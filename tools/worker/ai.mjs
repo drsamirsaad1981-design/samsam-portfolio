@@ -313,11 +313,12 @@ export async function compose(env, kind, lang, facts) {
     'Bullets: "• label: **value** — 3–6 word note". Short lines (≤ 40 characters when possible), ~14 lines in all, no tables, no headings with #, no links, no sources line.',
     ar ? 'Write in Egyptian Arabic; numbers and tickers in Latin characters.' : 'Write in English.',
   ].join('\n');
-  const body = { max_tokens: 900, system: sys, messages: [{ role: 'user', content: 'FACTS:\n' + JSON.stringify(facts).slice(0, 12000) }] };
+  const body = { max_tokens: 3000, system: sys, messages: [{ role: 'user', content: 'FACTS:\n' + JSON.stringify(facts).slice(0, 12000) }] };   // 900 cut Arabic mornings short (14 Nov)
   let model = env.BOT_MODEL || 'claude-sonnet-5-5';
   let r = await claude(env, model, body).catch(() => ({ ok: false, status: 0, j: {} }));
   if (!r.ok && (r.status === 404 || (r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {}))))) { model = env.MODEL || 'claude-opus-4-5'; r = await claude(env, model, body).catch(() => ({ ok: false, j: {} })); }
   if (!r.ok) { console.log(JSON.stringify({ daily: 'claude-error', kind, status: r.status })); return null; }
   const text = (r.j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
-  return text ? toHtml(text) : null;
+  if (r.j.stop_reason === 'max_tokens' || text.length < 20) { console.log(JSON.stringify({ daily: 'claude-short', kind, stop: r.j.stop_reason, chars: text.length })); return null; }   // cut short → the plain version, never half a message
+  return toHtml(text);
 }

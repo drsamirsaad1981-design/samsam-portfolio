@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 787c5d43bb920e74
+// sources-hash: 87e594d1b810ee80
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3751,7 +3751,7 @@ async function compose(env, kind, lang2, facts) {
     'Bullets: "\u2022 label: **value** \u2014 3\u20136 word note". Short lines (\u2264 40 characters when possible), ~14 lines in all, no tables, no headings with #, no links, no sources line.',
     ar ? "Write in Egyptian Arabic; numbers and tickers in Latin characters." : "Write in English."
   ].join("\n");
-  const body = { max_tokens: 900, system: sys, messages: [{ role: "user", content: "FACTS:\n" + JSON.stringify(facts).slice(0, 12e3) }] };
+  const body = { max_tokens: 3e3, system: sys, messages: [{ role: "user", content: "FACTS:\n" + JSON.stringify(facts).slice(0, 12e3) }] };
   let model = env.BOT_MODEL || "claude-sonnet-5-5";
   let r = await claude(env, model, body).catch(() => ({ ok: false, status: 0, j: {} }));
   if (!r.ok && (r.status === 404 || r.status === 400 && /model/i.test(JSON.stringify(r.j.error || {})))) {
@@ -3763,7 +3763,11 @@ async function compose(env, kind, lang2, facts) {
     return null;
   }
   const text = (r.j.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
-  return text ? toHtml(text) : null;
+  if (r.j.stop_reason === "max_tokens" || text.length < 20) {
+    console.log(JSON.stringify({ daily: "claude-short", kind, stop: r.j.stop_reason, chars: text.length }));
+    return null;
+  }
+  return toHtml(text);
 }
 
 // tools/worker/voice.mjs

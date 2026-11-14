@@ -71,11 +71,19 @@ function firestore(sa, token) {
       return out;
     },
     async get(p) { const j = await call(`${base}/${p}`); return j ? fields(j.fields) : null; },
+    async count(parent, coll) {   // 1 read per 1000 documents
+      const j = await call(`${base}/${parent}:runAggregationQuery`, { method: 'POST', body: JSON.stringify({ structuredAggregationQuery: { structuredQuery: { from: [{ collectionId: coll }] }, aggregations: [{ alias: 'n', count: {} }] } }) });
+      const v = j && j[0] && j[0].result && j[0].result.aggregateFields && j[0].result.aggregateFields.n; return v && v.integerValue != null ? +v.integerValue : null;
+    },
+    async changedSince(parent, coll, since) {   // any document with a newer updatedAt? (1 read)
+      const rows = await call(`${base}/${parent}:runQuery`, { method: 'POST', body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], where: { fieldFilter: { field: { fieldPath: 'updatedAt' }, op: 'GREATER_THAN', value: { stringValue: since } } }, limit: 1 } }) });
+      return !Array.isArray(rows) || rows.some(x => x.document);
+    },
     async setOwner(uid) {   // config/owner: whose portfolio the alerts (and the bot) read — set once, while there is only one account
       await call(`${base}/config/owner`, { method: 'PATCH', body: JSON.stringify({ fields: { uid: { stringValue: uid }, at: { timestampValue: new Date().toISOString() } } }) });
     },
-    async setState(p, state) {
-      await call(`${base}/${p}`, { method: 'PATCH', body: JSON.stringify({ fields: { state: { stringValue: JSON.stringify(state) }, updatedAt: { timestampValue: new Date().toISOString() } } }) });
+    async setState(p, state, pf) {   // + a copy of the portfolio (pf): the next run reads ~8 documents instead of all of them
+      await call(`${base}/${p}`, { method: 'PATCH', body: JSON.stringify({ fields: { state: { stringValue: JSON.stringify(state) }, ...(pf ? { pf: { stringValue: pf } } : {}), updatedAt: { timestampValue: new Date().toISOString() } } }) });
     },
   };
 }
@@ -108,7 +116,7 @@ function cgIds() {   // samsam-coins.js → { SYM: coingecko id }
 
 async function main() {
   const now = opt('--now') ? Date.parse(opt('--now')) : Date.now();
-  let user, state, db, uid, tg = null;
+  let user, state, db, uid, tg = null, pfKeep = null;
   if (DRY) {
     user = readJson(opt('--user')); state = readJson(opt('--state')) || {};
     if (!user) throw new Error('--dry needs --user <file.json> ({ coins, txs, accum, meta })');
@@ -117,16 +125,37 @@ async function main() {
     if (!token || !chat || !saRaw) { log('not set up yet (needs TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT) — skipped'); return; }
     let sa; try { sa = JSON.parse(saRaw); } catch (_) { throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON — paste the whole key file'); }
     db = firestore(sa, await googleToken(sa));
-    const users = await db.users();
-    if (!users.length) { log('no portfolio found in Firebase — skipped'); return; }
     // whose portfolio: the pinned owner (config/owner). Not pinned yet + only one account → that one, pinned now.
     // Several accounts and no pin → skip (never someone else's portfolio).
     const pin = await db.get('config/owner').catch(() => null);
-    if (pin && pin.uid && users.includes(pin.uid)) uid = pin.uid;
-    else if (users.length === 1) { uid = users[0]; await db.setOwner(uid).catch(() => {}); log('owner pinned'); }
-    else { log(users.length, 'accounts and no owner pinned — skipped'); return; }
-    const [coins, txs, accum, meta, st] = await Promise.all([db.list(`users/${uid}/coins`), db.list(`users/${uid}/txs`), db.list(`users/${uid}/accum`), db.get(`users/${uid}/meta/info`), db.get(`users/${uid}/meta/alerts`)]);
-    user = { coins, txs, accum, meta: meta || {} };
+    if (pin && pin.uid) uid = pin.uid;
+    else {
+      const users = await db.users();
+      if (!users.length) { log('no portfolio found in Firebase — skipped'); return; }
+      if (users.length === 1) { uid = users[0]; await db.setOwner(uid).catch(() => {}); log('owner pinned'); }
+      else { log(users.length, 'accounts and no owner pinned — skipped'); return; }
+    }
+    // Firebase's free plan allows 50,000 reads a day and this job runs ~50 times a day: the whole portfolio is read only when
+    // something changed (the number of transactions / coins / plan rows, or a newer updatedAt) or every 6 hours; else the copy
+    // kept with the alerts' memory (meta/alerts.pf) is used — about 8 reads instead of every document.
+    const parent = `users/${uid}`, [meta, st] = await Promise.all([db.get(`${parent}/meta/info`), db.get(`${parent}/meta/alerts`)]);
+    let kept = null; try { kept = st && st.pf ? JSON.parse(st.pf) : null; } catch (_) { kept = null; }
+    let fresh = true;
+    if (kept && kept.data && Date.now() - kept.at < 6 * 3600e3) {
+      try {
+        const [nt, nc, na, cc, ca] = await Promise.all([db.count(parent, 'txs'), db.count(parent, 'coins'), db.count(parent, 'accum'),
+          kept.seen ? db.changedSince(parent, 'coins', kept.seen) : true, kept.seen ? db.changedSince(parent, 'accum', kept.seen) : true]);
+        fresh = !(nt === kept.n.txs && nc === kept.n.coins && na === kept.n.accum && !cc && !ca);
+      } catch (_) { fresh = true; }
+    }
+    if (fresh) {
+      const [coins, txs, accum] = await Promise.all([db.list(`${parent}/coins`), db.list(`${parent}/txs`), db.list(`${parent}/accum`)]);
+      const seen = [...coins, ...accum].reduce((m, r) => (r && typeof r.updatedAt === 'string' && r.updatedAt > m ? r.updatedAt : m), '');
+      kept = { at: Date.now(), seen, n: { txs: txs.length, coins: coins.length, accum: accum.length }, data: { coins, txs, accum } };
+      log('portfolio read in full (' + (coins.length + txs.length + accum.length) + ' documents)');
+    } else log('portfolio unchanged — the kept copy used');
+    user = { ...kept.data, meta: meta || {} };
+    pfKeep = JSON.stringify(kept); if (pfKeep.length > 900000) pfKeep = null;   // a document holds 1 MiB
     try { state = st && st.state ? JSON.parse(st.state) : {}; } catch (_) { state = {}; }
     tg = { token, chat };
   }
@@ -149,7 +178,7 @@ async function main() {
     if (r.ok) sent++; else { failed++; if (r.retry) retry = true; log('a message was refused by Telegram (' + r.status + ')'); }
     await new Promise(res => setTimeout(res, 400));
   }
-  if (!retry) await db.setState(`users/${uid}/meta/alerts`, next);   // a temporary Telegram problem → keep the old memory, so the next run tries again
+  await db.setState(`users/${uid}/meta/alerts`, retry ? state : next, pfKeep);   // a temporary Telegram problem → keep the old memory, so the next run tries again
   const kinds = [...new Set(messages.map(x => x.key.split('-')[0]))];
   log(`${sent} sent${failed ? `, ${failed} failed` : ''}${kinds.length ? ' (' + kinds.join(', ') + ')' : ''}`);
 }
