@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: d83ef611b7aad8af
+// sources-hash: bdfce31c0883d1d9
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2483,8 +2483,8 @@ var TOPICS = [
   ["chat", "\u{1F4AC} Chat \xB7 \u062F\u0631\u062F\u0634\u0629", 7322096],
   ["ideas", "\u{1F4A1} Suggestions \xB7 \u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A", 16766590],
   ["bugs", "\u{1F41E} Bugs & notes \xB7 \u0645\u0644\u0627\u062D\u0638\u0627\u062A", 16478047],
-  ["guide", "\u{1F4D8} Guide \xB7 \u0627\u0644\u062F\u0644\u064A\u0644", 9367192],
-  ["updates", "\u{1F6E0} Updates \xB7 \u0627\u0644\u062A\u062D\u062F\u064A\u062B\u0627\u062A", 13338331]
+  ["guide", "\u{1F4D8} Guide \xB7 \u0627\u0644\u062F\u0644\u064A\u0644", 9367192]
+  // (the 🛠 Updates topic of the first version: merged into the guide — removed by mergeUpdates)
 ];
 var NOTE = { en: "Not financial advice \u2014 for information only.", ar: "\u0645\u0634 \u0646\u0635\u064A\u062D\u0629 \u0645\u0627\u0644\u064A\u0629 \u2014 \u0644\u0644\u0645\u0639\u0644\u0648\u0645\u0629 \u0628\u0633." };
 async function onMyChatMember(env, u) {
@@ -2569,7 +2569,7 @@ async function setup(env, kind, opt = {}) {
         if (done !== true) notes.push(`\u26A0\uFE0F The guide stopped at part ${done + 1} (Telegram's limit) \u2014 send /community setup in a minute to finish it.`);
       }
       if (x.guidePosted === true && !x.guideSig) x.guideSig = guideSigs();
-      if (!x.tidy && !await tidy(env, x)) notes.push('\u26A0\uFE0F Could not close \u{1F6E0} / \u{1F4D8} or hide # General \u2014 check that I can "Manage topics".');
+      if (!x.tidy && !await tidy(env, x)) notes.push('\u26A0\uFE0F Could not close \u{1F4D8} or hide # General \u2014 check that I can "Manage topics".');
     } else notes.push("\u26A0\uFE0F Turn on <b>Topics</b> in the group's settings, then send /community setup.");
   }
   c[kind] = x;
@@ -2580,7 +2580,7 @@ Join link (members only \u2014 I approve each request): ${x.link}` : "") + (note
 }
 async function tidy(env, x) {
   let okAll = true;
-  for (const k of ["updates", "guide"]) if (x.topics && x.topics[k]) {
+  for (const k of ["guide"]) if (x.topics && x.topics[k]) {
     const r = await tg3(env, "closeForumTopic", { chat_id: x.id, message_thread_id: x.topics[k] });
     if (!r.ok && !/TOPIC_NOT_MODIFIED/.test(r.description || "")) okAll = false;
   }
@@ -2601,6 +2601,11 @@ async function guideUpdates(env) {
   if (!x.tidy && !x.tidyTried) {
     x.tidyTried = true;
     await tidy(env, x);
+    c.group = x;
+    await putCommunity(env, c);
+  }
+  if (x.topics.updates && !x.merged) {
+    await mergeUpdates(env, x);
     c.group = x;
     await putCommunity(env, c);
   }
@@ -2675,12 +2680,28 @@ async function onJoinRequest(env, u) {
     await tg3(env, "sendMessage", { chat_id: who, text: ar ? `\u2705 \u0627\u062A\u0642\u0628\u0644\u062A \u0641\u064A ${r.chat.title} \u2014 \u0623\u0647\u0644\u0627\u064B \u0628\u064A\u0643 \u{1F44B}` : `\u2705 You're in ${r.chat.title} \u2014 welcome \u{1F44B}` });
   }
 }
+async function mergeUpdates(env, x) {
+  const id = x.topics.updates;
+  const d = await tg3(env, "deleteForumTopic", { chat_id: x.id, message_thread_id: id });
+  if (!d.ok) {
+    await tg3(env, "closeForumTopic", { chat_id: x.id, message_thread_id: id });
+    await tg3(env, "editForumTopic", { chat_id: x.id, message_thread_id: id, name: "\u{1F4A4} Old updates \xB7 \u0642\u062F\u064A\u0645" });
+  }
+  delete x.topics.updates;
+  x.merged = true;
+  await tg3(env, "sendMessage", {
+    chat_id: x.id,
+    message_thread_id: x.topics.guide,
+    parse_mode: "HTML",
+    text: "\u{1F195} <b>One place for the guide and what's new</b>\nEvery new feature now shows up right here, marked \u{1F195}.\n\n\u{1F195} <b>\u0627\u0644\u062F\u0644\u064A\u0644 \u0648\u0627\u0644\u062C\u062F\u064A\u062F \u0641\u064A \u0645\u0643\u0627\u0646 \u0648\u0627\u062D\u062F</b>\n\u0623\u064A \u0645\u064A\u0632\u0629 \u062C\u062F\u064A\u062F\u0629 \u0647\u062A\u0646\u0632\u0644 \u0647\u0646\u0627\u060C \u0628\u0639\u0644\u0627\u0645\u0629 \u{1F195}."
+  });
+}
 async function communityView(env, lang2) {
   const c = await getCommunity(env), ar = lang2 === "ar", b = [];
   if (c.channel && c.channel.link) b.push([{ text: ar ? "\u{1F4E2} \u0642\u0646\u0627\u0629 \u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" : "\u{1F4E2} Signals channel", url: c.channel.link }]);
   if (c.group && c.group.link) b.push([{ text: ar ? "\u{1F4AC} \u062C\u0631\u0648\u0628 \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u{1F4AC} Members' group", url: c.group.link }]);
   b.push([{ text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]);
-  const text = b.length > 1 ? ar ? "\u{1F465} <b>\u0645\u062C\u062A\u0645\u0639 Cute Portfolio</b> \u2014 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0628\u0633\n\n\u{1F4E2} <b>\u0627\u0644\u0642\u0646\u0627\u0629</b>: \u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642 \u0645\u0631\u062A\u064A\u0646 \u0641\u064A \u0627\u0644\u064A\u0648\u0645 \u0648\u0627\u0644\u062A\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0643\u0628\u064A\u0631\u0629. \u062A\u0642\u062F\u0631 \u062A\u062F\u0651\u064A \u2B50 \u0639\u0644\u0649 \u0627\u0644\u0628\u0648\u0633\u062A \u0627\u0644\u0644\u064A \u064A\u0639\u062C\u0628\u0643.\n\u{1F4AC} <b>\u0627\u0644\u062C\u0631\u0648\u0628</b>: \u062F\u0631\u062F\u0634\u0629 \xB7 \u{1F4A1} \u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A \xB7 \u{1F41E} \u0645\u0644\u0627\u062D\u0638\u0627\u062A \xB7 \u{1F4D8} \u0627\u0644\u062F\u0644\u064A\u0644 \xB7 \u{1F6E0} \u0627\u0644\u062A\u062D\u062F\u064A\u062B\u0627\u062A.\n\n\u0627\u0636\u063A\u0637 \u0648\u0627\u0628\u0639\u062A \u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u2014 \u0627\u0644\u0628\u0648\u062A \u0628\u064A\u0642\u0628\u0644\u0643 \u0639\u0644\u0649 \u0637\u0648\u0644." : "\u{1F465} <b>The Cute Portfolio community</b> \u2014 members only\n\n\u{1F4E2} <b>The channel</b>: the market pulse twice a day and big moves. You can give \u2B50 to posts you like.\n\u{1F4AC} <b>The group</b>: chat \xB7 \u{1F4A1} suggestions \xB7 \u{1F41E} bugs & notes \xB7 \u{1F4D8} guide \xB7 \u{1F6E0} updates.\n\nTap, send the join request \u2014 the bot lets you in at once." : ar ? "\u{1F465} \u0627\u0644\u0645\u062C\u062A\u0645\u0639 \u0644\u0633\u0647 \u0628\u064A\u062A\u062C\u0647\u0632 \u2014 \u0642\u0631\u064A\u0628." : "\u{1F465} The community is being set up \u2014 soon.";
+  const text = b.length > 1 ? ar ? "\u{1F465} <b>\u0645\u062C\u062A\u0645\u0639 Cute Portfolio</b> \u2014 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0628\u0633\n\n\u{1F4E2} <b>\u0627\u0644\u0642\u0646\u0627\u0629</b>: \u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642 \u0645\u0631\u062A\u064A\u0646 \u0641\u064A \u0627\u0644\u064A\u0648\u0645 \u0648\u0627\u0644\u062A\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0643\u0628\u064A\u0631\u0629. \u062A\u0642\u062F\u0631 \u062A\u062F\u0651\u064A \u2B50 \u0639\u0644\u0649 \u0627\u0644\u0628\u0648\u0633\u062A \u0627\u0644\u0644\u064A \u064A\u0639\u062C\u0628\u0643.\n\u{1F4AC} <b>\u0627\u0644\u062C\u0631\u0648\u0628</b>: \u062F\u0631\u062F\u0634\u0629 \xB7 \u{1F4A1} \u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A \xB7 \u{1F41E} \u0645\u0644\u0627\u062D\u0638\u0627\u062A \xB7 \u{1F4D8} \u0627\u0644\u062F\u0644\u064A\u0644 \u0648\u0627\u0644\u062C\u062F\u064A\u062F.\n\n\u0627\u0636\u063A\u0637 \u0648\u0627\u0628\u0639\u062A \u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u2014 \u0627\u0644\u0628\u0648\u062A \u0628\u064A\u0642\u0628\u0644\u0643 \u0639\u0644\u0649 \u0637\u0648\u0644." : "\u{1F465} <b>The Cute Portfolio community</b> \u2014 members only\n\n\u{1F4E2} <b>The channel</b>: the market pulse twice a day and big moves. You can give \u2B50 to posts you like.\n\u{1F4AC} <b>The group</b>: chat \xB7 \u{1F4A1} suggestions \xB7 \u{1F41E} bugs & notes \xB7 \u{1F4D8} the guide &amp; what's new.\n\nTap, send the join request \u2014 the bot lets you in at once." : ar ? "\u{1F465} \u0627\u0644\u0645\u062C\u062A\u0645\u0639 \u0644\u0633\u0647 \u0628\u064A\u062A\u062C\u0647\u0632 \u2014 \u0642\u0631\u064A\u0628." : "\u{1F465} The community is being set up \u2014 soon.";
   return { text, buttons: b };
 }
 function pulseText(m, now, kind) {
@@ -2747,11 +2768,12 @@ async function runChannel(env, now = Date.now()) {
 }
 async function announce(env, text) {
   const c = await getCommunity(env), out = [];
-  const body = `\u{1F6E0} <b>What's new \xB7 \u0627\u0644\u062C\u062F\u064A\u062F</b>
+  const body = `\u{1F195} <b>What's new \xB7 \u0627\u0644\u062C\u062F\u064A\u062F</b>
 
 ${esc(text)}`;
   if (c.channel) out.push((await tg3(env, "sendMessage", { chat_id: c.channel.id, text: body, parse_mode: "HTML", reply_markup: channelButtons(c) })).ok ? "\u{1F4E2}" : "\u26A0\uFE0F\u{1F4E2}");
-  if (c.group && c.group.topics && c.group.topics.updates) out.push((await tg3(env, "sendMessage", { chat_id: c.group.id, message_thread_id: c.group.topics.updates, text: body, parse_mode: "HTML" })).ok ? "\u{1F4AC}" : "\u26A0\uFE0F\u{1F4AC}");
+  const th = c.group && c.group.topics && (c.group.topics.guide || c.group.topics.updates);
+  if (th) out.push((await tg3(env, "sendMessage", { chat_id: c.group.id, message_thread_id: th, text: body, parse_mode: "HTML" })).ok ? "\u{1F4AC}" : "\u26A0\uFE0F\u{1F4AC}");
   return out;
 }
 

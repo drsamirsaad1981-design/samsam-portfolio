@@ -1225,10 +1225,10 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; await added({ id: -1002, type: 'supergroup', title: 'Cute Portfolio Community' }, 555);
   c = JSON.parse(kvStore.get('tg:community'));
   const tps = sent.filter(m => m.m === 'createForumTopic').map(m => m.b.name);
-  check('💬 the group (topics on) → 5 topics: Chat, Suggestions, Bugs, Guide, Updates', tps.length === 5 && /Chat/.test(tps[0]) && /Updates/.test(tps[4]) && c.group.topics.guide, tps);
+  check('💬 the group (topics on) → 4 topics: Chat, Suggestions, Bugs, Guide (the guide and what\'s new in one)', tps.length === 4 && /Chat/.test(tps[0]) && /Guide/.test(tps[3]) && c.group.topics.guide && !c.group.topics.updates, tps);
   const gd = sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === c.group.topics.guide);
   check('…📘 the guide posted in its topic: an index (pinned) + a message per part, English + Arabic', gd.length === 1 + 15 && /Getting started · البداية/.test(gd[0].b.text) && sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1002) && gd.every(m => okHtml(m.b.text)), gd.length);
-  check('🔒 🛠 Updates and 📘 Guide closed (read-only for members), # General hidden', sent.filter(m => m.m === 'closeForumTopic').map(m => m.b.message_thread_id).sort().join() === [c.group.topics.updates, c.group.topics.guide].sort().join() && sent.some(m => m.m === 'hideGeneralForumTopic'), sent.filter(m => /Forum/.test(m.m)).map(m => m.m));
+  check('🔒 📘 Guide closed (read-only for members), # General hidden', sent.filter(m => m.m === 'closeForumTopic').map(m => m.b.message_thread_id).join() === String(c.group.topics.guide) && sent.some(m => m.m === 'hideGeneralForumTopic'), sent.filter(m => /Forum/.test(m.m)).map(m => m.m));
   check('…a welcome in 💬 Chat', sent.some(m => m.m === 'sendMessage' && m.b.message_thread_id === c.group.topics.chat && /Welcome/.test(m.b.text)));
   kvStore.set('tg:community', JSON.stringify({ ...JSON.parse(kvStore.get('tg:community')), channel: undefined }));
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 5, chat: { id: 555, type: 'private' }, from: { id: 555 }, forward_origin: { type: 'channel', chat: { id: -1003, type: 'channel', title: 'Signals 2' }, message_id: 1 }, text: 'hi' } }, ENV.TG_SECRET, ENVK);
@@ -1244,7 +1244,16 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; await sayAs(888, '/community');
   check('👥 /community (members) → both links, what each is for', /members only/.test(last().b.text) && JSON.stringify(last().b.reply_markup).includes('+join-1001') && JSON.stringify(last().b.reply_markup).includes('+join-1002'), last().b.text);
   sent.length = 0; await sayAs(555, '/announce The app now speaks Arabic!');
-  check('📣 /announce (you) → the channel and the 🛠 Updates topic', sent.some(m => m.b.chat_id === -1001 && /speaks Arabic/.test(m.b.text || '')) && sent.some(m => m.b.chat_id === -1002 && m.b.message_thread_id === c.group.topics.updates) && /📢 💬/.test(last().b.text));
+  check('📣 /announce (you) → the channel and the 📘 Guide topic (🆕 What\'s new)', sent.some(m => m.b.chat_id === -1001 && /speaks Arabic/.test(m.b.text || '')) && sent.some(m => m.b.chat_id === -1002 && m.b.message_thread_id === c.group.topics.guide && /🆕/.test(m.b.text)) && /📢 💬/.test(last().b.text));
+  {   // a group made by the first version (with 🛠 Updates): the next round merges it into 📘 Guide, once
+    const cc = JSON.parse(kvStore.get('tg:community')); cc.group.topics.updates = 4242; delete cc.group.merged; kvStore.set('tg:community', JSON.stringify(cc));
+    const cm = await import('../tools/worker/community.mjs');
+    sent.length = 0; await cm.guideUpdates(ENVK);
+    const after = JSON.parse(kvStore.get('tg:community')).group;
+    check('🔀 an old 🛠 Updates topic → deleted, a note in 📘 Guide, forgotten', sent.some(m => m.m === 'deleteForumTopic' && m.b.message_thread_id === 4242) && sent.some(m => m.b.message_thread_id === after.topics.guide && /One place for the guide/.test(m.b.text || '')) && !after.topics.updates && after.merged, sent.map(m => m.m));
+    sent.length = 0; await cm.guideUpdates(ENVK);
+    check('…only once', !sent.some(m => m.m === 'deleteForumTopic' || /One place/.test(m.b.text || '')));
+  }
   sent.length = 0; await sayAs(888, '/announce hi');
   check('…members can\'t announce', /Only the bot owner/.test(last().b.text) && !sent.some(m => m.b.chat_id === -1001));
   // the market pulse at 09:00 Riyadh, once, pinned

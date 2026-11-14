@@ -123,10 +123,15 @@
       var D = window.CPDialog, call = workerCall;
       call({ action: 'status' }).then(function (st) {
         if (st.has) {
-          return D.confirm('Your own Claude key (…' + st.tail + ') is on: your questions, voice notes and AI Analysis run on it — on your Anthropic bill — with high limits.\n\nRemove it?', { title: 'My Claude key', icon: 'key', okText: 'Remove', danger: true })
+          return D.confirm('🔑 Your own Claude key (…' + st.tail + ') is on — billed to your Anthropic account:\n\n🤖 Bot: 100 AI questions a day · 🎙 voice notes\n📊 App: 10 quick AI Analysis reports a day\n\nRemove it? You go back to the standard limits.', { title: 'My Claude key', icon: 'key', okText: 'Remove', danger: true })
             .then(function (go) { if (go) return call({ action: 'delete' }).then(function () { memberAsked = false; loadMemberSt(); return D.alert('Removed — you are back on the standard limits.', { title: 'My Claude key', icon: 'key' }); }); });
         }
-        return D.prompt('Paste your Claude API key (from console.anthropic.com → API keys). It is sent once, checked with Claude, then kept encrypted — nobody can see it again, and you can remove it any time.\n\nWith it: 100 questions a day, voice notes, and 10 AI Analysis reports — billed to your Anthropic account.', { title: 'My Claude key', icon: 'key', okText: 'Save', placeholder: 'sk-ant-…', secret: true })
+        return D.prompt('Optional — your own Claude key gives you more AI, paid by you to Anthropic (a question costs about a cent or two).\n\n' +
+          '🤖 In the bot: 100 AI questions a day (instead of 5) · 🎙 voice notes\n' +
+          '📊 In the app: 10 quick AI Analysis reports a day\n' +
+          '🔑 It is not ⭐ Premium or 💛 Supporter (those are Telegram Stars) — everything else stays the same.\n\n' +
+          'How to get one: console.anthropic.com → sign in → Billing (add a little credit) → API keys → Create key → copy it here.\n\n' +
+          'It is sent once, checked with Claude, then kept encrypted — nobody can see it again. Remove it any time.', { title: 'My Claude key', icon: 'key', okText: 'Save', placeholder: 'sk-ant-…', secret: true })
           .then(function (k) {
             if (!k || !String(k).trim()) return;
             return call({ action: 'set', key: String(k).trim() }).then(function (r) { memberAsked = false; loadMemberSt(); return D.alert('Saved ✅ (…' + r.tail + '). The bot and AI Analysis use your key now.', { title: 'My Claude key', icon: 'key' }); });
