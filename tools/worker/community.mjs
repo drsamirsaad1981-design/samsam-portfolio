@@ -90,11 +90,43 @@ export async function setup(env, kind, opt = {}) {
         x.helloPosted = !!(hr && hr.ok); if (!x.helloPosted) notes.push('⚠️ The welcome in 💬 Chat didn\'t go — send /community setup in a minute.');
       }
       if (x.topics.guide && x.guidePosted !== true) { const done = await postGuide(env, x); x.guidePosted = done === true ? true : done; if (done !== true) notes.push(`⚠️ The guide stopped at part ${done + 1} (Telegram's limit) — send /community setup in a minute to finish it.`); }
+      if (x.guidePosted === true && !x.guideSig) x.guideSig = guideSigs();   // what the posted guide says (for "🆕 updated" later)
+      // read-only topics: 🛠 Updates and 📘 Guide (only admins — the bot and Samir — post there); # General hidden
+      if (!x.tidy && !(await tidy(env, x))) notes.push('⚠️ Could not close 🛠 / 📘 or hide # General — check that I can "Manage topics".');
     } else notes.push('⚠️ Turn on <b>Topics</b> in the group\'s settings, then send /community setup.');
   }
   c[kind] = x; await putCommunity(env, c);
   await say(env, `✅ <b>${esc(x.title)}</b> is set up (${kind === 'channel' ? '📢 channel' : '💬 group'}).` + (x.link ? `\nJoin link (members only — I approve each request): ${x.link}` : '') + (notes.length ? '\n' + notes.join('\n') : ''));
   return { ok: true };
+}
+
+async function tidy(env, x) {
+  let okAll = true;
+  for (const k of ['updates', 'guide']) if (x.topics && x.topics[k]) { const r = await tg(env, 'closeForumTopic', { chat_id: x.id, message_thread_id: x.topics[k] }); if (!r.ok && !/TOPIC_NOT_MODIFIED/.test(r.description || '')) okAll = false; }
+  const h = await tg(env, 'hideGeneralForumTopic', { chat_id: x.id }); if (!h.ok && !/not modified|TOPIC_NOT_MODIFIED/i.test(h.description || '')) okAll = false;
+  if (okAll) x.tidy = true;
+  return okAll;
+}
+// 📘 the guide changed (a new release): post the parts that changed (🆕) in its topic, refresh nothing else — run from the cron
+const sig = s => { let h = 0; for (const ch of JSON.stringify([s.t, s.en, s.ar])) h = (h * 31 + ch.charCodeAt(0)) | 0; return String(h); };
+const guideSigs = () => Object.fromEntries(GUIDE.sections.map(s => [s.k, sig(s)]));
+export async function guideUpdates(env) {
+  const c = await getCommunity(env), x = c.group; if (!x || !x.topics || !x.topics.guide || x.guidePosted !== true) return { posted: 0 };
+  if (!x.tidy && !x.tidyTried) { x.tidyTried = true; await tidy(env, x); c.group = x; await putCommunity(env, c); }   // a group set up before this: tidy it once
+  if (!x.guideSig) { x.guideSig = guideSigs(); c.group = x; await putCommunity(env, c); return { posted: 0 }; }   // the guide posted so far = today's
+  const now = guideSigs(), changed = GUIDE.sections.filter(s => x.guideSig[s.k] !== now[s.k]);
+  if (!changed.length) return { posted: 0 };
+  const line = l => (/^•\s/.test(l) ? '   ◦ ' + l.slice(2) : '• ' + l);
+  let n = 0;
+  for (const s of changed.slice(0, 5)) {   // a few at a time (Telegram's group limit) — the rest next round
+    const isNew = !(s.k in x.guideSig);
+    const r = await tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: x.topics.guide, parse_mode: 'HTML', disable_web_page_preview: true,
+      text: `🆕 <b>${isNew ? 'New in the guide · جديد في الدليل' : 'Updated · اتحدّث'}</b>\n\n${s.e} <b>${s.t.en}</b>\n` + s.en.map(line).join('\n') + `\n\n${s.e} <b>${s.t.ar}</b>\n` + s.ar.map(line).join('\n') });
+    if (!r.ok) break;
+    x.guideSig[s.k] = now[s.k]; n++;
+  }
+  c.group = x; await putCommunity(env, c);
+  return { posted: n };
 }
 
 // 📘 the guide in its topic: an index message (pinned) + one message per part, in both languages
@@ -163,6 +195,7 @@ function pulseText(m, now, kind) {
 export function discussUrl(c) { const g = c && c.group; return g && g.topics && g.topics.chat ? `https://t.me/c/${String(g.id).replace(/^-100/, '')}/${g.topics.chat}` : null; }
 const channelButtons = (c, extra = []) => { const d = discussUrl(c); return { inline_keyboard: [[...extra, ...(d ? [{ text: '💬 Discuss · ناقشها', url: d }] : [])]].filter(r => r.length) }; };
 export async function runChannel(env, now = Date.now()) {
+  await guideUpdates(env).catch(() => {});   // 📘 a new release changed the guide → the changed parts in the guide topic
   const c = await getCommunity(env), ch = c.channel; if (!ch) return { job: null };
   const lp = localParts(now), today = lp.date, hm = lp.hour * 60 + (+lp.hm.slice(3) || 0), sent = c.sent || {};
   let kind = null;

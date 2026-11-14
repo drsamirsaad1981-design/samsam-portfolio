@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 87e594d1b810ee80
+// sources-hash: aa3703c2dd23e699
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1508,8 +1508,8 @@ async function googleToken(sa) {
   const now = Math.floor(Date.now() / 1e3), aud = sa.token_uri || "https://oauth2.googleapis.com/token";
   const body = b64urlJson({ alg: "RS256", typ: "JWT" }) + "." + b64urlJson({ iss: sa.client_email, scope: "https://www.googleapis.com/auth/datastore", aud, iat: now, exp: now + 3600 });
   const key = await crypto.subtle.importKey("pkcs8", pemBytes(sa.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
-  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(body));
-  const r = await xfetch(aud, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: body + "." + b64url(sig) }) });
+  const sig2 = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(body));
+  const r = await xfetch(aud, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: body + "." + b64url(sig2) }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) throw new Error("Firebase sign-in refused (" + r.status + ")");
   tokenCache = { token: j.access_token, until: Date.now() + 50 * 6e4, email: sa.client_email };
@@ -2481,6 +2481,8 @@ async function setup(env, kind, opt = {}) {
         x.guidePosted = done === true ? true : done;
         if (done !== true) notes.push(`\u26A0\uFE0F The guide stopped at part ${done + 1} (Telegram's limit) \u2014 send /community setup in a minute to finish it.`);
       }
+      if (x.guidePosted === true && !x.guideSig) x.guideSig = guideSigs();
+      if (!x.tidy && !await tidy(env, x)) notes.push('\u26A0\uFE0F Could not close \u{1F6E0} / \u{1F4D8} or hide # General \u2014 check that I can "Manage topics".');
     } else notes.push("\u26A0\uFE0F Turn on <b>Topics</b> in the group's settings, then send /community setup.");
   }
   c[kind] = x;
@@ -2488,6 +2490,65 @@ async function setup(env, kind, opt = {}) {
   await say(env, `\u2705 <b>${esc(x.title)}</b> is set up (${kind === "channel" ? "\u{1F4E2} channel" : "\u{1F4AC} group"}).` + (x.link ? `
 Join link (members only \u2014 I approve each request): ${x.link}` : "") + (notes.length ? "\n" + notes.join("\n") : ""));
   return { ok: true };
+}
+async function tidy(env, x) {
+  let okAll = true;
+  for (const k of ["updates", "guide"]) if (x.topics && x.topics[k]) {
+    const r = await tg3(env, "closeForumTopic", { chat_id: x.id, message_thread_id: x.topics[k] });
+    if (!r.ok && !/TOPIC_NOT_MODIFIED/.test(r.description || "")) okAll = false;
+  }
+  const h = await tg3(env, "hideGeneralForumTopic", { chat_id: x.id });
+  if (!h.ok && !/not modified|TOPIC_NOT_MODIFIED/i.test(h.description || "")) okAll = false;
+  if (okAll) x.tidy = true;
+  return okAll;
+}
+var sig = (s) => {
+  let h = 0;
+  for (const ch of JSON.stringify([s.t, s.en, s.ar])) h = h * 31 + ch.charCodeAt(0) | 0;
+  return String(h);
+};
+var guideSigs = () => Object.fromEntries(guide_default.sections.map((s) => [s.k, sig(s)]));
+async function guideUpdates(env) {
+  const c = await getCommunity(env), x = c.group;
+  if (!x || !x.topics || !x.topics.guide || x.guidePosted !== true) return { posted: 0 };
+  if (!x.tidy && !x.tidyTried) {
+    x.tidyTried = true;
+    await tidy(env, x);
+    c.group = x;
+    await putCommunity(env, c);
+  }
+  if (!x.guideSig) {
+    x.guideSig = guideSigs();
+    c.group = x;
+    await putCommunity(env, c);
+    return { posted: 0 };
+  }
+  const now = guideSigs(), changed = guide_default.sections.filter((s) => x.guideSig[s.k] !== now[s.k]);
+  if (!changed.length) return { posted: 0 };
+  const line = (l) => /^•\s/.test(l) ? "   \u25E6 " + l.slice(2) : "\u2022 " + l;
+  let n = 0;
+  for (const s of changed.slice(0, 5)) {
+    const isNew = !(s.k in x.guideSig);
+    const r = await tg3(env, "sendMessage", {
+      chat_id: x.id,
+      message_thread_id: x.topics.guide,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      text: `\u{1F195} <b>${isNew ? "New in the guide \xB7 \u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644" : "Updated \xB7 \u0627\u062A\u062D\u062F\u0651\u062B"}</b>
+
+${s.e} <b>${s.t.en}</b>
+` + s.en.map(line).join("\n") + `
+
+${s.e} <b>${s.t.ar}</b>
+` + s.ar.map(line).join("\n")
+    });
+    if (!r.ok) break;
+    x.guideSig[s.k] = now[s.k];
+    n++;
+  }
+  c.group = x;
+  await putCommunity(env, c);
+  return { posted: n };
 }
 async function postGuide(env, x) {
   const t = x.topics.guide, send3 = (text) => tg3(env, "sendMessage", { chat_id: x.id, message_thread_id: t, text, parse_mode: "HTML", disable_web_page_preview: true });
@@ -2566,6 +2627,8 @@ var channelButtons = (c, extra = []) => {
   return { inline_keyboard: [[...extra, ...d ? [{ text: "\u{1F4AC} Discuss \xB7 \u0646\u0627\u0642\u0634\u0647\u0627", url: d }] : []]].filter((r) => r.length) };
 };
 async function runChannel(env, now = Date.now()) {
+  await guideUpdates(env).catch(() => {
+  });
   const c = await getCommunity(env), ch = c.channel;
   if (!ch) return { job: null };
   const lp = localParts(now), today2 = lp.date, hm2 = lp.hour * 60 + (+lp.hm.slice(3) || 0), sent = c.sent || {};
@@ -5233,6 +5296,7 @@ async function onUpdate(env, u, msg, q, chat) {
   if (!await firstTime(env, u.update_id)) return ok();
   await ensureCmds(env);
   await ensureDesc(env);
+  await ensureCmdScope(env);
   try {
     if (q) {
       const d = String(q.data || "");
@@ -5664,8 +5728,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (/^\/start/.test(text)) {
     await send2(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) });
-    await tg6(env, "setMyCommands", { commands: cmds(await getLang(env)) }).catch(() => {
-    });
+    await privateCmds(env);
   }
   for (const v of views) await send2(env, chat, v);
 }
@@ -5786,6 +5849,29 @@ async function ensureCmds(env) {
   }
 }
 var cmdMem = /* @__PURE__ */ new Map();
+async function privateCmds(env, lang2 = null) {
+  lang2 = lang2 || await getLang(env);
+  await tg6(env, "deleteMyCommands", {}).catch(() => {
+  });
+  return tg6(env, "setMyCommands", { commands: cmds(lang2, false), scope: { type: "all_private_chats" } }).catch(() => ({ ok: false }));
+}
+var cmdScopeDone = false;
+async function ensureCmdScope(env) {
+  if (cmdScopeDone) return;
+  let v = null;
+  try {
+    v = env.RATE ? await env.RATE.get("tg:cmdscope") : null;
+  } catch (_) {
+  }
+  if (v !== "1") {
+    const r = await privateCmds(env);
+    if (r && r.ok) try {
+      if (env.RATE) await env.RATE.put("tg:cmdscope", "1");
+    } catch (_) {
+    }
+  }
+  cmdScopeDone = true;
+}
 var DESC_V = "2";
 var DESC = {
   en: ["Your private crypto assistant (by invitation). Ask anything in plain words or by voice, live coins and market, alerts in words, smart morning & evening, radars, paper trading, image cards and a full report page. Have an invite code? Send it here.", "Private crypto assistant \xB7 by invitation"],
@@ -5845,7 +5931,7 @@ async function setup2(request, env) {
   resetBudget();
   return asChat(env.TELEGRAM_CHAT_ID, async () => {
     const user = await loadUser(env).catch(() => null), lang2 = await getLang(env), t = T[lang2];
-    const b = await tg6(env, "setMyCommands", { commands: cmds(lang2) });
+    const b = await privateCmds(env, lang2);
     const c = await send2(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
     await send2(env, env.TELEGRAM_CHAT_ID, viewMenu(t, isOwner(env)));
     return json(a.ok && b.ok && c.ok ? 200 : 502, { ok: !!(a.ok && b.ok && c.ok), webhook: a.ok ? "set" : a.description, menu: b.ok ? "set" : b.description, welcome: c.ok ? "sent" : c.description, portfolio: serviceAccount(env) ? user ? "connected" : "not found" : "FIREBASE_SERVICE_ACCOUNT missing" });

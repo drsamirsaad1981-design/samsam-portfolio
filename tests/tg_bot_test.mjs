@@ -1223,6 +1223,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('💬 the group (topics on) → 5 topics: Chat, Suggestions, Bugs, Guide, Updates', tps.length === 5 && /Chat/.test(tps[0]) && /Updates/.test(tps[4]) && c.group.topics.guide, tps);
   const gd = sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === c.group.topics.guide);
   check('…📘 the guide posted in its topic: an index (pinned) + a message per part, English + Arabic', gd.length === 1 + 15 && /Getting started · البداية/.test(gd[0].b.text) && sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1002) && gd.every(m => okHtml(m.b.text)), gd.length);
+  check('🔒 🛠 Updates and 📘 Guide closed (read-only for members), # General hidden', sent.filter(m => m.m === 'closeForumTopic').map(m => m.b.message_thread_id).sort().join() === [c.group.topics.updates, c.group.topics.guide].sort().join() && sent.some(m => m.m === 'hideGeneralForumTopic'), sent.filter(m => /Forum/.test(m.m)).map(m => m.m));
   check('…a welcome in 💬 Chat', sent.some(m => m.m === 'sendMessage' && m.b.message_thread_id === c.group.topics.chat && /Welcome/.test(m.b.text)));
   kvStore.set('tg:community', JSON.stringify({ ...JSON.parse(kvStore.get('tg:community')), channel: undefined }));
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 5, chat: { id: 555, type: 'private' }, from: { id: 555 }, forward_origin: { type: 'channel', chat: { id: -1003, type: 'channel', title: 'Signals 2' }, message_id: 1 }, text: 'hi' } }, ENV.TG_SECRET, ENVK);
@@ -1260,6 +1261,21 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   const mm = sent.find(m => m.m === 'sendMessage' && /Smart morning|Morning/.test(m.b.text || '') && String(m.b.chat_id) === '555');
   check('☀️ Claude cut off (max_tokens) → the plain morning is sent instead (no half line, no stray **)', mm && !/\*\*/.test(mm.b.text) && !/half/.test(mm.b.text) && /Today|💼/.test(mm.b.text), mm && mm.b.text.slice(0, 120));
   globalThis.__shortMorning = old;
+}
+
+// 📘 a new release changed one part of the guide → only that part is posted (🆕) in the guide topic, once
+{
+  const cc = JSON.parse(kvStore.get('tg:community'));
+  if (cc.group) {
+    cc.group.guideSig = { ...cc.group.guideSig, alerts: 'old' }; delete cc.group.guideSig.help; kvStore.set('tg:community', JSON.stringify(cc));
+    sent.length = 0; const Wg = await fresh(); const pg2 = []; await Wg.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:05') }, ENVK, { waitUntil: x => pg2.push(x) }); await Promise.all(pg2);
+    const posts = sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === cc.group.topics.guide);
+    check('🆕 the guide changed (a part updated, a part new) → just those 2 posted in 📘 ("Updated" / "New in the guide")', posts.length === 2 && posts.some(m => /Updated/.test(m.b.text) && /🔔/.test(m.b.text)) && posts.some(m => /New in the guide/.test(m.b.text)), posts.map(m => m.b.text.slice(0, 40)));
+    sent.length = 0; const Wh = await fresh(); const ph = []; await Wh.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:10') }, ENVK, { waitUntil: x => ph.push(x) }); await Promise.all(ph);
+    check('…and not again', !sent.some(m => m.b.message_thread_id === cc.group.topics.guide));
+  }
+  kvStore.delete('tg:cmdscope'); sent.length = 0; await postK(await fresh(), '/menu');
+  check('"/" menu: the general list only in private chats (none in groups)', sent.some(m => m.m === 'deleteMyCommands') && sent.some(m => m.m === 'setMyCommands' && m.b.scope && m.b.scope.type === 'all_private_chats'));
 }
 
 console.log(`${pass}/${pass + fail} passed`);

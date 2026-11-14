@@ -535,7 +535,7 @@ async function viewMember(env, lang, c) {
 
 async function onUpdate(env, u, msg, q, chat) {
   if (!(await firstTime(env, u.update_id))) return ok();   // Telegram re-sent it (a slow answer): already handled
-  await ensureCmds(env); await ensureDesc(env);
+  await ensureCmds(env); await ensureDesc(env); await ensureCmdScope(env);
   try {
     if (q) {
       const d = String(q.data || '');
@@ -750,7 +750,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'hide') { const t = T[await getLang(env)]; await send(env, chat, { text: t.hidden }, { reply_markup: { remove_keyboard: true } }); return; }
   const { t, views, ai } = await run(env, p.act, p.q, p.guess);
   if (ai) { await answer(env, chat, ai, budget); return; }
-  if (/^\/start/.test(text)) { await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) }); await tg(env, 'setMyCommands', { commands: cmds(await getLang(env)) }).catch(() => {}); }   // the keyboard under the chat + the "/" menu
+  if (/^\/start/.test(text)) { await send(env, chat, { text: t.welcome }, { reply_markup: replyKb(t) }); await privateCmds(env); }   // the keyboard under the chat + the "/" menu
   for (const v of views) await send(env, chat, v);
 }
 
@@ -833,6 +833,19 @@ async function ensureCmds(env) {
   if (r && r.ok) { cmdMem.set(c, v); try { if (env.RATE) await env.RATE.put(K(env, 'cmdv'), v); } catch (_) {} }
 }
 const cmdMem = new Map();
+// the general "/" menu: private chats only — in the members' group (and any group) the bot shows no commands at all
+async function privateCmds(env, lang = null) {
+  lang = lang || await getLang(env);
+  await tg(env, 'deleteMyCommands', {}).catch(() => {});   // the old "everywhere" list (it showed in the group)
+  return tg(env, 'setMyCommands', { commands: cmds(lang, false), scope: { type: 'all_private_chats' } }).catch(() => ({ ok: false }));
+}
+let cmdScopeDone = false;
+async function ensureCmdScope(env) {   // once: move the general list to private chats
+  if (cmdScopeDone) return;
+  let v = null; try { v = env.RATE ? await env.RATE.get('tg:cmdscope') : null; } catch (_) {}
+  if (v !== '1') { const r = await privateCmds(env); if (r && r.ok) try { if (env.RATE) await env.RATE.put('tg:cmdscope', '1'); } catch (_) {} }
+  cmdScopeDone = true;
+}
 // the "What can this bot do?" text (shown before /start) and the short one on the bot's profile — set once per version
 const DESC_V = '2';
 const DESC = {
@@ -874,7 +887,7 @@ export async function setup(request, env) {
   resetBudget();
   return asChat(env.TELEGRAM_CHAT_ID, async () => {   // the owner's chat
   const user = await loadUser(env).catch(() => null), lang = await getLang(env), t = T[lang];
-  const b = await tg(env, 'setMyCommands', { commands: cmds(lang) });
+  const b = await privateCmds(env, lang);
   const c = await send(env, env.TELEGRAM_CHAT_ID, { text: t.welcome }, { reply_markup: replyKb(t) });
   await send(env, env.TELEGRAM_CHAT_ID, viewMenu(t, isOwner(env)));
   return json(a.ok && b.ok && c.ok ? 200 : 502, { ok: !!(a.ok && b.ok && c.ok), webhook: a.ok ? 'set' : a.description, menu: b.ok ? 'set' : b.description, welcome: c.ok ? 'sent' : c.description, portfolio: serviceAccount(env) ? (user ? 'connected' : 'not found') : 'FIREBASE_SERVICE_ACCOUNT missing' });
