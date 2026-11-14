@@ -29,6 +29,8 @@ with sync_playwright() as p:
             pg.goto(SITE + '/index.html'); pg.wait_for_selector('#samsamStartEmpty', state='visible', timeout=15000)
             pg.click('#samsamStartEmpty')
             pg.wait_for_function("Samsam.isReady() && !Samsam.getBaseline().isDefault", timeout=15000)
+            try: pg.wait_for_selector('#samsamSetup', state='hidden', timeout=10000)   # (slow machines: the panel closes a moment later)
+            except Exception: pass
             b = pg.evaluate("Samsam.getBaseline()")
             check('member: "Start my portfolio" → an empty portfolio, the setup is gone', pg.evaluate("Samsam.getState().portfolio.length") == 0 and not pg.is_visible('#samsamSetup'))
             check('member: the baseline is the day they started, at the BTC price then (not Oct 15)', b['date'] in (TODAY, (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)).strftime('%Y-%m-%d')) and b['btcPrice'] > 0, b)
