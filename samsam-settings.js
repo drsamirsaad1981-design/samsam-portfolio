@@ -90,6 +90,19 @@
       var sc = doc.createElement('script'); sc.src = 'samsam-admin.js' + (v ? '?' + v : ''); sc.onload = function () { window.SamsamAdmin && SamsamAdmin.open(); };
       doc.head.appendChild(sc);
     },
+    tgchan: function () { var l = memberSt && memberSt.community && memberSt.community.channel; window.open(l || BOT + '?start=community', '_blank', 'noopener'); },
+    tggroup: function () { var l = memberSt && memberSt.community && memberSt.community.group; window.open(l || BOT + '?start=community', '_blank', 'noopener'); },
+    aiinfo: function () {   // 🤖 why there are limits, the free ways, and what's left today
+      var st = memberSt || {}, q = st.questions, r = st.reports;
+      var msg = 'Every AI question and quick report is paid to Claude (Anthropic) one by one — that\'s the only reason for daily limits.\n\n' +
+        '🆓 Free for everyone, no limit: the full AI Analysis report with your own Claude app (AI Analysis → Copy for Claude → paste).\n\n' +
+        '🧠 Questions to the bot: 5 a day · ⭐ Premium 20 · 🔑 your own Claude key 100.\n' +
+        '📊 Quick reports here: ⭐ Premium 3 a day · 🔑 your own key 10.\n' +
+        '🎙 Voice notes: ⭐ Premium or your own key.' +
+        (q || r ? '\n\nToday: 🧠 ' + (q ? q.used + ' of ' + q.limit + ' questions' : '—') + ' · 📊 ' + (r ? r.used + ' of ' + r.limit + ' quick reports' : '—') + '.' : '');
+      CPDialog.confirm(msg, { title: 'AI Analysis & questions', icon: 'bot', okText: st.premium ? 'OK' : '⭐ Premium & support', cancelText: 'Close' })
+        .then(function (go) { if (go && !st.premium) ACT.support(); });
+    },
     support: function () {   // 💛 Support Cute Portfolio & Channel (loaded only when opened)
       if (window.SamsamSupport) { SamsamSupport.open(); return; }
       var me = doc.querySelector('script[src*="samsam-settings.js"]'), v = me && (me.getAttribute('src').split('?')[1] || '');
@@ -182,6 +195,10 @@
         var off = 'serviceWorker' in navigator && navigator.serviceWorker.controller ? ' · works offline' : '';
         return standalone() ? 'On your home screen' + off : installEvt ? 'Add it to your home screen — opens like an app' : isIOS() ? 'Safari: Share → Add to Home Screen' : 'Browser menu → Install app';
       }
+      if (k === 'tglink') return memberSt ? (memberSt.botLinked ? '✅ Linked — the bot reads your portfolio (only for you)' : 'One tap — then the bot shows your portfolio, alerts, morning & evening') : 'One tap — the bot shows your portfolio';
+      if (k === 'tgchan') { var tc = memberSt && memberSt.tgIn && memberSt.tgIn.channel; return tc ? '✅ You\'re in' : 'The market pulse twice a day · ⭐ on posts you like'; }
+      if (k === 'tggroup') { var tg2 = memberSt && memberSt.tgIn && memberSt.tgIn.group; return tg2 ? '✅ You\'re in' : 'Chat · suggestions · bugs · the guide · news'; }
+      if (k === 'aiinfo') { var qq = memberSt && memberSt.questions, rr = memberSt && memberSt.reports; return qq ? 'Today: 🧠 ' + qq.used + '/' + qq.limit + ' questions · 📊 ' + (rr ? rr.used + '/' + rr.limit : '0/0') + ' quick reports' : 'Why there are limits · free ways · more'; }
       if (k === 'guide') return 'How the app and the bot work · English / العربية';
       if (k === 'dca') { var n2 = (st.accumPlan || []).filter(function (x) { return x.dca && x.dca.usd > 0; }).length; return n2 ? n2 + ' coin' + (n2 === 1 ? '' : 's') + ' with a regular buy' : 'None yet'; }
     } catch (_) {}
@@ -199,7 +216,9 @@
   // a line: [key, icon, title, action]  ·  a choice: { seg: key, title, opts: [[value, label]], get(), set(v) }
   var SECTIONS = [
     ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import'], ['wallets', 'wallet', 'Wallets & check', 'wallets'], ['rewards', 'coins', 'Rewards & mining', 'rewards']]],
-    ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link the Telegram bot', 'tglink'], ['claudekey', 'key', 'My Claude key', 'claudekey']]],
+    ['Telegram', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link your portfolio to the Telegram bot', 'tglink'],
+      ['tgchan', 'megaphone', 'Join Cute Portfolio Signals', 'tgchan'], ['tggroup', 'chat', 'Join Cute Portfolio Community', 'tggroup']]],
+    ['AI', [['aiinfo', 'bot', 'AI Analysis & questions', 'aiinfo'], ['claudekey', 'key', 'My Claude key', 'claudekey']]],
     ['Admin', [['admin', 'shield', 'Admin dashboard', 'admin']]],
     ['Support', [['support', 'heart', 'Support Cute Portfolio & Channel 💛', 'support']]],
     ['Investing rules', [['signal', 'sliders', 'Signal thresholds', 'signal'], ['targets', 'target', 'Target allocation', 'targets'], ['cats', 'note', 'Categories', 'cats'],
@@ -272,7 +291,7 @@
     loadMemberSt();
     box.querySelector('.st-body').innerHTML = SECTIONS.map(function (s) {
       var member = !!(S() && S().isOwner && !S().isOwner());   // 🔑 only invited members bring their own key
-      var rows = s[1].filter(function (r) { return r.seg || ((r[0] !== 'import' || hasImport) && (r[0] !== 'claudekey' || member) && (r[0] !== 'alerts' || !member)); });   // 🔔 Telegram alerts (GitHub) reach Samir only: hidden for members
+      var rows = s[1].filter(function (r) { return r.seg || ((r[0] !== 'import' || hasImport) && (['claudekey', 'aiinfo', 'tglink', 'tgchan', 'tggroup'].indexOf(r[0]) < 0 || member) && (r[0] !== 'alerts' || !member)); });   // members: the bot, the channel / group, AI; Samir: Telegram alerts (GitHub) — his bot reads his portfolio already   // 🔔 Telegram alerts (GitHub) reach Samir only: hidden for members
       if (!member) rows = rows.filter(function (r) { return r.seg || r[0] !== 'support'; });
       else rows = rows.filter(function (r) { return r.seg || r[0] !== 'admin'; });   // 🛠 the dashboard: Samir only   // ⭐💛 for invited members (Samir: /stats in the bot)
       if (!rows.length) return '';

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 0de99825be73fa44
+// sources-hash: 2102b51802ea9eeb
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2168,12 +2168,12 @@ var guide_default = {
         ar: "\u0631\u0628\u0637 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0628\u0627\u0644\u0628\u0648\u062A"
       },
       en: [
-        "In the app: Settings \u2192 <b>Link the Telegram bot</b> \u2192 <b>Open the bot</b>. That's it \u2014 one tap.",
+        "In the app: Settings \u2192 <b>Telegram \u2192 Link your portfolio</b> \u2192 <b>Open the bot</b>. That's it \u2014 one tap.",
         "Or copy the 8-letter code and send <code>/link CODE</code> to the bot (the code works for 10 minutes).",
         "Once linked: your portfolio, plan and exit plan show in the bot \u2014 only to you \u2014 and the morning, evening and pinned messages start."
       ],
       ar: [
-        "\u0641\u064A \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 <b>Link the Telegram bot</b> \u2190 <b>Open the bot</b>. \u062E\u0644\u0627\u0635 \u2014 \u062F\u0648\u0633\u0629 \u0648\u0627\u062D\u062F\u0629.",
+        "\u0641\u064A \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 <b>Telegram \u2192 Link your portfolio</b> \u2190 <b>Open the bot</b>. \u062E\u0644\u0627\u0635 \u2014 \u062F\u0648\u0633\u0629 \u0648\u0627\u062D\u062F\u0629.",
         "\u0623\u0648 \u0627\u0646\u0633\u062E \u0627\u0644\u0643\u0648\u062F (8 \u062D\u0631\u0648\u0641) \u0648\u0627\u0628\u0639\u062A \u0644\u0644\u0628\u0648\u062A <code>/link CODE</code> (\u0627\u0644\u0643\u0648\u062F \u0634\u063A\u0627\u0644 10 \u062F\u0642\u0627\u064A\u0642).",
         "\u0628\u0639\u062F \u0627\u0644\u0631\u0628\u0637: \u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C \u0628\u062A\u0638\u0647\u0631 \u0641\u064A \u0627\u0644\u0628\u0648\u062A \u2014 \u0644\u064A\u0643 \u0627\u0646\u062A \u0628\u0633 \u2014 \u0648\u0627\u0644\u0635\u0628\u0627\u062D \u0648\u0627\u0644\u0645\u0633\u0627\u0621 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062A\u062B\u0628\u062A\u0629 \u0628\u064A\u0634\u062A\u063A\u0644\u0648\u0627."
       ],
@@ -3803,7 +3803,7 @@ async function runTool(ctx, name, input) {
 }
 function system(now, lang2, qLang, owner2 = true) {
   return [
-    owner2 ? "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app." : "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for a user the owner invited. Their portfolio may not be linked yet: if a portfolio / plan / exit tool says it is not connected, tell them how in one line: send /app with their e-mail (Samir approves it), sign in to the app, then Settings \u2192 Link the Telegram bot (or /link CODE). Never say linking is coming soon; and help with the market, coins, alerts and paper trading.",
+    owner2 ? "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for one private user, Samir, who runs a long-term Bitcoin-first strategy (accumulation plan, DCA, an exit plan) in the Cute Portfolio app." : "You are the Cute Portfolio assistant inside Telegram \u2014 a sharp, honest crypto analyst for a user the owner invited. Their portfolio may not be linked yet: if a portfolio / plan / exit tool says it is not connected, tell them how in one line: send /app with their e-mail (Samir approves it), sign in to the app, then Settings \u2192 Telegram \u2192 Link your portfolio (or /link CODE). Never say linking is coming soon; and help with the market, coins, alerts and paper trading.",
     `Now: ${local(now, { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} (Riyadh).`,
     "RULES",
     "- Every number you state (price, %, value, rank, flow\u2026) must come from a tool result in this conversation. Never use prices or market data from memory \u2014 call the tools first (several in one turn if needed). If a tool has no data, say so.",
@@ -4565,7 +4565,7 @@ var T = {
     aiLeft: (a, n) => `${a}/${n} left today`,
     data: "Data",
     ownerOnly: "Only the bot owner can do that.",
-    noLink: "Your portfolio isn't linked yet. In the app: Settings \u2192 \u{1F517} Link the Telegram bot (no app yet? send /app with your e-mail). Meanwhile the market, any coin, alerts, paper trading and questions all work.",
+    noLink: "Your portfolio isn't linked yet. In the app: Settings \u2192 Telegram \u2192 \u{1F517} Link your portfolio (no app yet? send /app with your e-mail). Meanwhile the market, any coin, alerts, paper trading and questions all work.",
     alertsB: "\u{1F514} Alerts",
     alertGone: "\u{1F5D1} Alert deleted",
     dailyB: "\u{1F5D3} Daily",
@@ -4707,7 +4707,7 @@ var T = {
     aiLeft: (a, n) => `\u0628\u0627\u0642\u064A ${a}/${n} \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647`,
     data: "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A",
     ownerOnly: "\u062F\u0647 \u0644\u0635\u0627\u062D\u0628 \u0627\u0644\u0628\u0648\u062A \u0628\u0633.",
-    noLink: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0644\u0633\u0647 \u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629. \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u{1F517} Link the Telegram bot (\u0644\u0633\u0647 \u0645\u0639\u0646\u062F\u0643\u0634 \u0627\u0644\u062A\u0637\u0628\u064A\u0642\u061F \u0627\u0628\u0639\u062A /app \u0648\u0627\u0644\u0625\u064A\u0645\u064A\u0644). \u0644\u062D\u062F \u0643\u062F\u0647 \u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0623\u064A \u0639\u0645\u0644\u0629\u060C \u0648\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u060C \u0648\u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0648\u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0643\u0644\u0647\u0627 \u0634\u063A\u0627\u0644\u0629.",
+    noLink: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0644\u0633\u0647 \u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629. \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 Telegram \u2190 \u{1F517} Link your portfolio (\u0644\u0633\u0647 \u0645\u0639\u0646\u062F\u0643\u0634 \u0627\u0644\u062A\u0637\u0628\u064A\u0642\u061F \u0627\u0628\u0639\u062A /app \u0648\u0627\u0644\u0625\u064A\u0645\u064A\u0644). \u0644\u062D\u062F \u0643\u062F\u0647 \u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0623\u064A \u0639\u0645\u0644\u0629\u060C \u0648\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u060C \u0648\u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0648\u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0643\u0644\u0647\u0627 \u0634\u063A\u0627\u0644\u0629.",
     alertsB: "\u{1F514} \u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A",
     alertGone: "\u{1F5D1} \u0627\u062A\u0645\u0633\u062D \u0627\u0644\u062A\u0646\u0628\u064A\u0647",
     dailyB: "\u{1F5D3} \u0627\u0644\u064A\u0648\u0645\u064A",
@@ -5231,7 +5231,7 @@ var FG = {
     ask: "\u{1F9F9} <b>Delete everything the bot keeps for you?</b>\nYour alerts, chat memory, language, daily settings, pinned message, radars and paper portfolio \u2014 and the link to your portfolio.\n\nYour portfolio in the app is NOT touched (it stays yours). You can link again any time.",
     yes: "\u2705 Yes, delete",
     no: "\u274C Cancel",
-    done: "\u{1F9F9} Done \u2014 the bot has forgotten everything about you. Your app portfolio is untouched.\nTo link again: the app \u2192 Settings \u2192 Link the Telegram bot.",
+    done: "\u{1F9F9} Done \u2014 the bot has forgotten everything about you. Your app portfolio is untouched.\nTo link again: the app \u2192 Settings \u2192 Telegram \u2192 Link your portfolio.",
     kept: "OK \u2014 nothing was deleted.",
     owner: "That is for invited members. For you: /new clears the AI chat; your settings stay."
   },
@@ -5239,7 +5239,7 @@ var FG = {
     ask: "\u{1F9F9} <b>\u0623\u0645\u0633\u062D \u0643\u0644 \u062D\u0627\u062C\u0629 \u0627\u0644\u0628\u0648\u062A \u0634\u0627\u064A\u0644\u0647\u0627 \u0639\u0646\u0643\u061F</b>\n\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643\u060C \u0648\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u0648\u0627\u0644\u0644\u063A\u0629\u060C \u0648\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u060C \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062A\u062B\u0628\u062A\u0629\u060C \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A\u060C \u0648\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A \u2014 \u0648\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643.\n\n\u0645\u062D\u0641\u0638\u062A\u0643 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0627 \u062A\u062A\u0644\u0645\u0633\u0634 (\u0641\u0627\u0636\u0644\u0629 \u0628\u062A\u0627\u0639\u062A\u0643). \u0648\u062A\u0642\u062F\u0631 \u062A\u0631\u0628\u0637 \u062A\u0627\u0646\u064A \u0641\u064A \u0623\u064A \u0648\u0642\u062A.",
     yes: "\u2705 \u0623\u064A\u0648\u0647 \u0627\u0645\u0633\u062D",
     no: "\u274C \u0644\u0623",
-    done: "\u{1F9F9} \u062E\u0644\u0627\u0635 \u2014 \u0627\u0644\u0628\u0648\u062A \u0646\u0633\u064A \u0643\u0644 \u062D\u0627\u062C\u0629 \u0639\u0646\u0643. \u0645\u062D\u0641\u0638\u062A\u0643 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0632\u064A \u0645\u0627 \u0647\u064A.\n\u0639\u0634\u0627\u0646 \u062A\u0631\u0628\u0637 \u062A\u0627\u0646\u064A: \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 Link the Telegram bot.",
+    done: "\u{1F9F9} \u062E\u0644\u0627\u0635 \u2014 \u0627\u0644\u0628\u0648\u062A \u0646\u0633\u064A \u0643\u0644 \u062D\u0627\u062C\u0629 \u0639\u0646\u0643. \u0645\u062D\u0641\u0638\u062A\u0643 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0632\u064A \u0645\u0627 \u0647\u064A.\n\u0639\u0634\u0627\u0646 \u062A\u0631\u0628\u0637 \u062A\u0627\u0646\u064A: \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 Telegram \u2190 Link your portfolio.",
     kept: "\u062A\u0645\u0627\u0645 \u2014 \u0645\u0627 \u0627\u062A\u0645\u0633\u062D\u0634 \u062D\u0627\u062C\u0629.",
     owner: "\u062F\u0647 \u0644\u0644\u0623\u0639\u0636\u0627\u0621. \u0644\u064A\u0643 \u0627\u0646\u062A: /new \u064A\u0645\u0633\u062D \u0645\u062D\u0627\u062F\u062B\u0629 \u0627\u0644\u0640 AI\u060C \u0648\u0625\u0639\u062F\u0627\u062F\u0627\u062A\u0643 \u0632\u064A \u0645\u0627 \u0647\u064A."
   }
@@ -5291,10 +5291,10 @@ var AW = {
 <code>${e}</code>`,
     ok: (e) => `\u2705 You can open the app now with <b>${e}</b>:
 ${APP}
-Then Settings \u2192 \u{1F517} Link the Telegram bot, to see your portfolio here.`,
+Then Settings \u2192 Telegram \u2192 \u{1F517} Link your portfolio, to see your portfolio here.`,
     no: "Your app request was not approved.",
     linked: "\u{1F517} Linked \u2705 \u2014 your portfolio, plan and exit plan now show here (only to you).",
-    badCode: "\u274C That code is not valid or is over 10 minutes old \u2014 make a new one in the app (Settings \u2192 Link the Telegram bot).",
+    badCode: "\u274C That code is not valid or is over 10 minutes old \u2014 make a new one in the app (Settings \u2192 Telegram \u2192 Link your portfolio).",
     notYou: "\u274C That code was made by another e-mail than the one approved for you.",
     ownerLink: "Your portfolio is already the bot's \u{1F642}"
   },
@@ -5306,10 +5306,10 @@ Then Settings \u2192 \u{1F517} Link the Telegram bot, to see your portfolio here
 <code>${e}</code>`,
     ok: (e) => `\u2705 \u062A\u0642\u062F\u0631 \u062A\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u062F\u0644\u0648\u0642\u062A\u064A \u0628\u0640 <b>${e}</b>:
 ${APP}
-\u0648\u0628\u0639\u062F\u064A\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u{1F517} Link the Telegram bot \u0639\u0634\u0627\u0646 \u0645\u062D\u0641\u0638\u062A\u0643 \u062A\u0638\u0647\u0631 \u0647\u0646\u0627.`,
+\u0648\u0628\u0639\u062F\u064A\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 Telegram \u2190 \u{1F517} Link your portfolio \u0639\u0634\u0627\u0646 \u0645\u062D\u0641\u0638\u062A\u0643 \u062A\u0638\u0647\u0631 \u0647\u0646\u0627.`,
     no: "\u0637\u0644\u0628 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0627 \u0627\u062A\u0648\u0627\u0641\u0642\u0634 \u0639\u0644\u064A\u0647.",
     linked: "\u{1F517} \u0627\u062A\u0631\u0628\u0637\u062A \u2705 \u2014 \u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C \u0628\u0642\u062A \u062A\u0638\u0647\u0631 \u0647\u0646\u0627 (\u0644\u064A\u0643 \u0627\u0646\u062A \u0628\u0633).",
-    badCode: "\u274C \u0627\u0644\u0643\u0648\u062F \u062F\u0647 \u0645\u0634 \u0635\u0627\u0644\u062D \u0623\u0648 \u0639\u062F\u0651\u0649 \u0639\u0644\u064A\u0647 10 \u062F\u0642\u0627\u064A\u0642 \u2014 \u0627\u0639\u0645\u0644 \u0648\u0627\u062D\u062F \u062C\u062F\u064A\u062F \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 Link the Telegram bot).",
+    badCode: "\u274C \u0627\u0644\u0643\u0648\u062F \u062F\u0647 \u0645\u0634 \u0635\u0627\u0644\u062D \u0623\u0648 \u0639\u062F\u0651\u0649 \u0639\u0644\u064A\u0647 10 \u062F\u0642\u0627\u064A\u0642 \u2014 \u0627\u0639\u0645\u0644 \u0648\u0627\u062D\u062F \u062C\u062F\u064A\u062F \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 Telegram \u2190 Link your portfolio).",
     notYou: "\u274C \u0627\u0644\u0643\u0648\u062F \u062F\u0647 \u0627\u062A\u0639\u0645\u0644 \u0628\u0625\u064A\u0645\u064A\u0644 \u063A\u064A\u0631 \u0627\u0644\u0625\u064A\u0645\u064A\u0644 \u0627\u0644\u0644\u064A \u0627\u062A\u0648\u0627\u0641\u0642 \u0639\u0644\u064A\u0647 \u0644\u064A\u0643.",
     ownerLink: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0647\u064A \u0627\u0644\u0644\u064A \u0641\u064A \u0627\u0644\u0628\u0648\u062A \u0623\u0635\u0644\u0627\u064B \u{1F642}"
   }
@@ -6655,6 +6655,19 @@ setJoinHandler(async (env, who, body) => {
   }
   return { ok: true, already: !!r.already };
 });
+async function inCommunity(env, chat) {
+  if (!isTgChat(chat)) return { channel: null, group: null };
+  const c = await getCommunity(env).catch(() => ({})), out = { channel: null, group: null };
+  await Promise.all(["channel", "group"].map(async (k) => {
+    if (!c[k]) return;
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getChatMember`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: c[k].id, user_id: +chat }) }).then((x) => x.json());
+      out[k] = !!(r.ok && ["member", "administrator", "creator", "restricted"].includes(r.result.status));
+    } catch (_) {
+    }
+  }));
+  return out;
+}
 setMemberCheck(async (env, email) => {
   const x = await memberByEmail(env, email);
   if (!x) return null;
@@ -6702,7 +6715,10 @@ setKeyHandler(async (env, email, body) => {
       botLinked: isTgChat(x.chat),
       price: price(env),
       amounts: SUPPORT,
-      community: await getCommunity(env).then((c) => ({ channel: c.channel && c.channel.link || null, group: c.group && c.group.link || null })).catch(() => ({}))
+      community: await getCommunity(env).then((c) => ({ channel: c.channel && c.channel.link || null, group: c.group && c.group.link || null })).catch(() => ({})),
+      questions: await usage(env).then((u) => ({ used: u.used, limit: u.limit })).catch(() => null),
+      // 🧠 today's AI questions (bot)
+      tgIn: await inCommunity(env, x.chat)
     };
   });
 });

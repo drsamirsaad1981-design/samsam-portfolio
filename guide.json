@@ -71,12 +71,12 @@
     "ar": "ربط البرنامج بالبوت"
    },
    "en": [
-    "In the app: Settings → <b>Link the Telegram bot</b> → <b>Open the bot</b>. That's it — one tap.",
+    "In the app: Settings → <b>Telegram → Link your portfolio</b> → <b>Open the bot</b>. That's it — one tap.",
     "Or copy the 8-letter code and send <code>/link CODE</code> to the bot (the code works for 10 minutes).",
     "Once linked: your portfolio, plan and exit plan show in the bot — only to you — and the morning, evening and pinned messages start."
    ],
    "ar": [
-    "في البرنامج: الإعدادات ← <b>Link the Telegram bot</b> ← <b>Open the bot</b>. خلاص — دوسة واحدة.",
+    "في البرنامج: الإعدادات ← <b>Telegram → Link your portfolio</b> ← <b>Open the bot</b>. خلاص — دوسة واحدة.",
     "أو انسخ الكود (8 حروف) وابعت للبوت <code>/link CODE</code> (الكود شغال 10 دقايق).",
     "بعد الربط: محفظتك وخطتك وخطة الخروج بتظهر في البوت — ليك انت بس — والصباح والمساء والرسالة المتثبتة بيشتغلوا."
    ],

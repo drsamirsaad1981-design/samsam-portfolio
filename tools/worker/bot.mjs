@@ -49,7 +49,7 @@ const T = {
     thinking: '🧠 Thinking…', aiLimit: n => `You've used today's ${n} questions — more tomorrow (midnight Riyadh). Buttons and tickers still work.`,
     aiNoKey: 'The AI is not set up (ANTHROPIC_API_KEY is missing in the Worker).', aiOwnKey: '🔑 Claude refused your own API key (wrong, removed, or out of credit). Fix it in the app: Settings → My Claude key.', aiBusy: 'Claude is busy right now — try again in a minute.',
     aiErr: "I couldn't answer that just now — try again, or rephrase.", newChat: '🆕 New chat', newDone: 'New chat — I forgot the earlier messages 🧹', aiLeft: (a, n) => `${a}/${n} left today`, data: 'Data',
-    ownerOnly: 'Only the bot owner can do that.', noLink: 'Your portfolio isn\'t linked yet. In the app: Settings → 🔗 Link the Telegram bot (no app yet? send /app with your e-mail). Meanwhile the market, any coin, alerts, paper trading and questions all work.',
+    ownerOnly: 'Only the bot owner can do that.', noLink: 'Your portfolio isn\'t linked yet. In the app: Settings → Telegram → 🔗 Link your portfolio (no app yet? send /app with your e-mail). Meanwhile the market, any coin, alerts, paper trading and questions all work.',
     alertsB: '🔔 Alerts', alertGone: '🗑 Alert deleted', dailyB: '🗓 Daily', paperB: '🧪 Paper', report: '📊 Report', reportT: '📊 <b>Your full report</b> — opens inside Telegram.', working: '⏳ On it…', pinOff: 'Pinned message off — /pin brings it back.',
     other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅', exit: '🚪 Exit plan',
     today: 'today', profit: 'All Time Profit', vsBtcS: 'vs BTC', beat: (a, n) => `${a}/${n} coins beat BTC`, bestT: 'Best today', worstT: 'Worst today',
@@ -86,7 +86,7 @@ const T = {
     thinking: '🧠 بفكّر…', aiLimit: n => `خلصت الـ ${n} سؤال بتوع النهارده — بكرة يتجددوا (12 بالليل بتوقيت الرياض). الأزرار والرموز شغالة عادي.`,
     aiNoKey: 'الـ AI مش متظبط (ANTHROPIC_API_KEY ناقص في الـ Worker).', aiOwnKey: '🔑 Claude رفض مفتاحك (غلط، أو اتشال، أو الرصيد خلص). صلّحه من التطبيق: الإعدادات ← My Claude key.', aiBusy: 'Claude مشغول دلوقتي — جرّب كمان دقيقة.',
     aiErr: 'ما قدرتش أجاوب دلوقتي — جرّب تاني أو اكتب السؤال بشكل تاني.', newChat: '🆕 محادثة جديدة', newDone: 'محادثة جديدة — نسيت الكلام اللي فات 🧹', aiLeft: (a, n) => `باقي ${a}/${n} النهارده`, data: 'البيانات',
-    ownerOnly: 'ده لصاحب البوت بس.', noLink: 'محفظتك لسه مش مربوطة. من التطبيق: الإعدادات ← 🔗 Link the Telegram bot (لسه معندكش التطبيق؟ ابعت /app والإيميل). لحد كده السوق، وأي عملة، والتنبيهات، والتجريبي، والأسئلة كلها شغالة.',
+    ownerOnly: 'ده لصاحب البوت بس.', noLink: 'محفظتك لسه مش مربوطة. من التطبيق: الإعدادات ← Telegram ← 🔗 Link your portfolio (لسه معندكش التطبيق؟ ابعت /app والإيميل). لحد كده السوق، وأي عملة، والتنبيهات، والتجريبي، والأسئلة كلها شغالة.',
     alertsB: '🔔 التنبيهات', alertGone: '🗑 اتمسح التنبيه', dailyB: '🗓 اليومي', paperB: '🧪 تجريبي', report: '📊 التقرير', reportT: '📊 <b>تقريرك الكامل</b> — بيفتح جوه تليجرام.', working: '⏳ ثواني…', pinOff: 'الرسالة المتثبتة اتقفلت — /pin ترجّعها.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
     today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل BTC', beat: (a, n) => `${a}/${n} عملة سبقت BTC`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
@@ -447,9 +447,9 @@ async function inviteMsg(env, lang) {
 // 🧹 /forget
 const FG = {
   en: { ask: '🧹 <b>Delete everything the bot keeps for you?</b>\nYour alerts, chat memory, language, daily settings, pinned message, radars and paper portfolio — and the link to your portfolio.\n\nYour portfolio in the app is NOT touched (it stays yours). You can link again any time.', yes: '✅ Yes, delete', no: '❌ Cancel',
-    done: '🧹 Done — the bot has forgotten everything about you. Your app portfolio is untouched.\nTo link again: the app → Settings → Link the Telegram bot.', kept: 'OK — nothing was deleted.', owner: 'That is for invited members. For you: /new clears the AI chat; your settings stay.' },
+    done: '🧹 Done — the bot has forgotten everything about you. Your app portfolio is untouched.\nTo link again: the app → Settings → Telegram → Link your portfolio.', kept: 'OK — nothing was deleted.', owner: 'That is for invited members. For you: /new clears the AI chat; your settings stay.' },
   ar: { ask: '🧹 <b>أمسح كل حاجة البوت شايلها عنك؟</b>\nتنبيهاتك، وذاكرة المحادثة، واللغة، وإعدادات اليومي، والرسالة المتثبتة، والرادارات، والتداول التجريبي — وربط محفظتك.\n\nمحفظتك في التطبيق ما تتلمسش (فاضلة بتاعتك). وتقدر تربط تاني في أي وقت.', yes: '✅ أيوه امسح', no: '❌ لأ',
-    done: '🧹 خلاص — البوت نسي كل حاجة عنك. محفظتك في التطبيق زي ما هي.\nعشان تربط تاني: التطبيق ← الإعدادات ← Link the Telegram bot.', kept: 'تمام — ما اتمسحش حاجة.', owner: 'ده للأعضاء. ليك انت: /new يمسح محادثة الـ AI، وإعداداتك زي ما هي.' },
+    done: '🧹 خلاص — البوت نسي كل حاجة عنك. محفظتك في التطبيق زي ما هي.\nعشان تربط تاني: التطبيق ← الإعدادات ← Telegram ← Link your portfolio.', kept: 'تمام — ما اتمسحش حاجة.', owner: 'ده للأعضاء. ليك انت: /new يمسح محادثة الـ AI، وإعداداتك زي ما هي.' },
 };
 // what a member used today: AI questions (Riyadh day) and AI Analysis reports (UTC day, counted per app account)
 async function usedToday(env, c, x) {
@@ -487,11 +487,11 @@ async function badgeOf(env, t) {
 // 📱 /app you@example.com — an invited person asks to open the app with that e-mail; the owner taps ✅ (or ❌)
 const AW = {
   en: { ask: 'Send the e-mail you will sign in with, like:\n<code>/app you@example.com</code>\n(Google, or any e-mail with a sign-in link.)', sent: '📨 Sent to Dr. Samir Saad for approval — you\'ll get a message here.', owner: '📱 You already have the app 🙂',
-    req: (n, e) => `📱 <b>${n}</b> asks to open the app with\n<code>${e}</code>`, ok: e => `✅ You can open the app now with <b>${e}</b>:\n${APP}\nThen Settings → 🔗 Link the Telegram bot, to see your portfolio here.`, no: 'Your app request was not approved.',
-    linked: '🔗 Linked ✅ — your portfolio, plan and exit plan now show here (only to you).', badCode: '❌ That code is not valid or is over 10 minutes old — make a new one in the app (Settings → Link the Telegram bot).', notYou: '❌ That code was made by another e-mail than the one approved for you.', ownerLink: 'Your portfolio is already the bot\'s 🙂' },
+    req: (n, e) => `📱 <b>${n}</b> asks to open the app with\n<code>${e}</code>`, ok: e => `✅ You can open the app now with <b>${e}</b>:\n${APP}\nThen Settings → Telegram → 🔗 Link your portfolio, to see your portfolio here.`, no: 'Your app request was not approved.',
+    linked: '🔗 Linked ✅ — your portfolio, plan and exit plan now show here (only to you).', badCode: '❌ That code is not valid or is over 10 minutes old — make a new one in the app (Settings → Telegram → Link your portfolio).', notYou: '❌ That code was made by another e-mail than the one approved for you.', ownerLink: 'Your portfolio is already the bot\'s 🙂' },
   ar: { ask: 'ابعت الإيميل اللي هتدخل بيه، كده:\n<code>/app you@example.com</code>\n(Google، أو أي إيميل بلينك دخول.)', sent: '📨 اتبعت لـ Dr. Samir Saad يوافق — هيوصلك رد هنا.', owner: '📱 التطبيق معاك أصلاً 🙂',
-    req: (n, e) => `📱 <b>${n}</b> عايز يفتح التطبيق بـ\n<code>${e}</code>`, ok: e => `✅ تقدر تفتح التطبيق دلوقتي بـ <b>${e}</b>:\n${APP}\nوبعدين الإعدادات ← 🔗 Link the Telegram bot عشان محفظتك تظهر هنا.`, no: 'طلب التطبيق ما اتوافقش عليه.',
-    linked: '🔗 اتربطت ✅ — محفظتك وخطتك وخطة الخروج بقت تظهر هنا (ليك انت بس).', badCode: '❌ الكود ده مش صالح أو عدّى عليه 10 دقايق — اعمل واحد جديد من التطبيق (الإعدادات ← Link the Telegram bot).', notYou: '❌ الكود ده اتعمل بإيميل غير الإيميل اللي اتوافق عليه ليك.', ownerLink: 'محفظتك هي اللي في البوت أصلاً 🙂' },
+    req: (n, e) => `📱 <b>${n}</b> عايز يفتح التطبيق بـ\n<code>${e}</code>`, ok: e => `✅ تقدر تفتح التطبيق دلوقتي بـ <b>${e}</b>:\n${APP}\nوبعدين الإعدادات ← Telegram ← 🔗 Link your portfolio عشان محفظتك تظهر هنا.`, no: 'طلب التطبيق ما اتوافقش عليه.',
+    linked: '🔗 اتربطت ✅ — محفظتك وخطتك وخطة الخروج بقت تظهر هنا (ليك انت بس).', badCode: '❌ الكود ده مش صالح أو عدّى عليه 10 دقايق — اعمل واحد جديد من التطبيق (الإعدادات ← Telegram ← Link your portfolio).', notYou: '❌ الكود ده اتعمل بإيميل غير الإيميل اللي اتوافق عليه ليك.', ownerLink: 'محفظتك هي اللي في البوت أصلاً 🙂' },
 };
 async function appRequest(env, chat, text) {
   const lang = await getLang(env), w = AW[lang];

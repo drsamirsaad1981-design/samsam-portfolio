@@ -15,6 +15,20 @@ setJoinHandler(async (env, who, body) => {
 });
 import { expireRound, premiumNow, invoiceLink, price as premPrice, SUPPORT } from './stars.mjs';
 import { runChannel, getCommunity } from './community.mjs';
+import { usage } from './ai.mjs';
+// is this member in the channel / the group? (Telegram tells the bot, an admin there) → { channel, group }: true / false / null
+async function inCommunity(env, chat) {
+  if (!isTgChat(chat)) return { channel: null, group: null };
+  const c = await getCommunity(env).catch(() => ({})), out = { channel: null, group: null };
+  await Promise.all(['channel', 'group'].map(async k => {
+    if (!c[k]) return;
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getChatMember`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: c[k].id, user_id: +chat }) }).then(x => x.json());
+      out[k] = !!(r.ok && ['member', 'administrator', 'creator', 'restricted'].includes(r.result.status));
+    } catch (_) {}
+  }));
+  return out;
+}
 import { saveKey, keyInfo, ownKey, deleteKey, validShape, keyWorks, BYOK_REPORTS } from './byok.mjs';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
@@ -53,7 +67,9 @@ setKeyHandler(async (env, email, body) => {
     const limit = x.paused ? 0 : st.has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
     let used = 0; try { used = x.uid && env.RATE ? +(await env.RATE.get(`ai:${x.uid}:${day}`)) || 0 : 0; } catch (_) {}
     return { ...st, reports: { limit, used, left: Math.max(0, limit - used) }, premium: premiumNow(x), premUntil: x.premUntil || null, premSrc: x.premSrc || null, supporter: !!x.supporter, starsPaid: x.starsPaid || 0, botLinked: isTgChat(x.chat), price: premPrice(env), amounts: SUPPORT,
-      community: await getCommunity(env).then(c => ({ channel: (c.channel && c.channel.link) || null, group: (c.group && c.group.link) || null })).catch(() => ({})) };
+      community: await getCommunity(env).then(c => ({ channel: (c.channel && c.channel.link) || null, group: (c.group && c.group.link) || null })).catch(() => ({})),
+      questions: await usage(env).then(u => ({ used: u.used, limit: u.limit })).catch(() => null),   // 🧠 today's AI questions (bot)
+      tgIn: await inCommunity(env, x.chat) };   // ✅ already in the channel / the group?
   });
 });
 

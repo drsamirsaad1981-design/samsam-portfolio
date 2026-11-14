@@ -45,7 +45,7 @@
     var me = [];
     if (s.premium) me.push('⭐ Premium' + (s.premUntil ? ' until ' + day(s.premUntil) : '') + (s.premSrc === 'stars' ? ' (renews by itself)' : ' (a gift)'));
     if (s.supporter) me.push('💛 Supporter · ' + (s.starsPaid || 0) + ' ⭐ — thank you!');
-    var link = st && s.botLinked === false ? '<div class="sp-card"><h4>🔗 First, link the Telegram bot</h4><p>Stars are paid from a Telegram account, so the bot needs to know you. Settings → Link the Telegram bot (one tap), then come back here.</p><div class="sp-row"><button type="button" class="sp-btn vio" data-link="1">🔗 Link the Telegram bot</button></div></div>' : '';
+    var link = st && s.botLinked === false ? '<div class="sp-card"><h4>🔗 First, link the Telegram bot</h4><p>Stars are paid from a Telegram account, so the bot needs to know you. Settings → Telegram → Link your portfolio (one tap), then come back here.</p><div class="sp-row"><button type="button" class="sp-btn vio" data-link="1">🔗 Link the Telegram bot</button></div></div>' : '';
     box.innerHTML =
       '<div class="sp-hero"><b>Cute Portfolio is completely free and non-profit.</b><span>Support is optional — it helps keep the servers and the AI running and the project growing. Thank you 💛</span></div>' +
       (me.length ? '<p class="sp-me">' + me.map(E).join(' · ') + '</p>' : '') + link +
