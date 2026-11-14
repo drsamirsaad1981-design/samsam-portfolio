@@ -1012,4 +1012,9 @@
     cmPal: cmPal, cmColor: cmColor, cmRename: cmRename, cmReset: cmReset, cmDelete: cmDelete, cmNew: cmNew };
   Object.keys(G).forEach(function (k) { window[k] = G[k]; });
   Object.defineProperty(window, 'atxSym', { get: function () { return atxSym; }, configurable: true });
+  // index.html#add (➕ on a page opened on its own) → the Add window once the portfolio is ready
+  if (location.hash === '#add' && /index\.html|\/$/.test(location.pathname)) {
+    try { history.replaceState(history.state, '', location.pathname + location.search); } catch (_) {}
+    var addTries = 0, addIv = setInterval(function () { if ((window.Samsam && Samsam.isReady && Samsam.isReady()) || ++addTries > 80) { clearInterval(addIv); if (window.Samsam && Samsam.isReady()) openAddCoin(); } }, 250);
+  }
 })();

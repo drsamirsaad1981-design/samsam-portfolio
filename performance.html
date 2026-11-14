@@ -589,6 +589,9 @@ body {
 .c-links[hidden] { display: none; }
 .coin-row:hover { opacity: 1 !important; }
 .perf-find { max-width: 1200px; margin: 0 auto; padding: 4px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 6px max(var(--gut, 16px), env(safe-area-inset-left,0px)); box-sizing: border-box; }
+.perf-find { display: flex; gap: 8px; align-items: center; } .perf-find .ss-search { flex: 1; min-width: 0; }
+.perf-find .perf-add { height: 40px; flex: none; }
+@media (max-width: 600px) { .perf-find .perf-add { width: 40px; padding: 0; gap: 0; } .perf-find .perf-add .btn-txt { display: none; } .perf-find .perf-add .cp-add-ic { background: transparent; } }
 .perf-find input { width: 100%; box-sizing: border-box; height: 40px; padding: 0 12px 0 36px; border-radius: 11px; border: 1px solid var(--border); background: var(--card-solid, var(--card)); color: var(--fg); font: inherit; font-size: .88rem; }
 .perf-none { padding: 18px 12px; text-align: center; color: var(--fg2); font-size: .85rem; }
 /* ── phone: more room for the content, like CoinMarketCap — 8px sides, coin lists edge to edge with dividers ── */
@@ -733,7 +736,7 @@ body {
   </div>
 </div>
 
-<div class="perf-find"><label class="ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo aria-hidden="true"></span><input type="search" id="perfQ" placeholder="Search a coin" autocomplete="off" spellcheck="false" aria-label="Search your coins" oninput="perfQuery=this.value.trim().toUpperCase();render()"></label></div>
+<div class="perf-find"><label class="ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo aria-hidden="true"></span><input type="search" id="perfQ" placeholder="Search a coin" autocomplete="off" spellcheck="false" aria-label="Search your coins" oninput="perfQuery=this.value.trim().toUpperCase();render()"></label><button type="button" class="cp-add perf-add" id="perfAdd" onclick="perfAddCoin()" title="Add a new coin, or a Buy for a coin you hold" aria-label="Add New Coin"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="btn-txt">Add</span></button></div>
 <div class="col-header">
   <div class="col-header-inner">
     <span>Asset</span>
@@ -1259,6 +1262,13 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('online', () => _pollPrices());
 window.addEventListener('offline', () => { if (typeof setLiveStatus === 'function') setLiveStatus('offline'); });
+
+// ➕ Add (a new coin, or a Buy for one you hold): the same window as on Overview — opened by the app around this page
+function perfAddCoin() {
+  try { if (window.parent !== window && typeof window.parent.openAddCoin === 'function') { window.parent.openAddCoin(); return; } } catch (_) {}
+  if (typeof window.openAddCoin === 'function') { window.openAddCoin(); return; }
+  location.href = 'index.html#add';
+}
 </script>
 </body>
 </html>
