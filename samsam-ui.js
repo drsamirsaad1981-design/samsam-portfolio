@@ -345,6 +345,9 @@
         '--accent-primary:#7c3aed;--accent-glow:rgba(124,58,237,.35);' +
         '--bg:#0e0d21;--bg2:rgba(255,255,255,.045);--card:rgba(255,255,255,.045);--bg3:rgba(255,255,255,.07);' +
         '--card-solid:#161339;--metric-bg:rgba(4,6,22,.38);--border:rgba(255,255,255,.08);--header-bg:rgba(13,14,38,.72);background:#0a0e1a}' +
+      // Light mode: the same colour names get light values wherever a page doesn't set its own (:where = no weight, so a
+      // page's own light colours still win). Windows written with dark fallbacks (var(--card-solid,#111827)…) stay light.
+      ':where(html[data-theme="light"]){--card-solid:#ffffff;--bg2:#ffffff;--bg3:#f1f5f9;--fg:#0f172a;--fg2:#64748b;--border:#e2e8f0;--metric-bg:#f8fafc;--bg-card:#ffffff;--bg-card-secondary:#f1f5f9}' +
       // the gradient stays put while the page scrolls (a fixed layer behind everything — works on phones too)
       'html[data-theme="dark"] body{background:transparent;min-height:100vh}' +
       'html[data-theme="dark"] body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--bg-app-gradient)}' +
