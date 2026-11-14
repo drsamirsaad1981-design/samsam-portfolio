@@ -1293,5 +1293,30 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('…an app-only member (no bot yet) → "link-bot" (Stars are paid from a Telegram account)', r.status === 409 && (await r.json()).error === 'link-bot');
 }
 
+// ↩️ removed by mistake: kept 60 days (restore from the dashboard), and someone who rejoins gets their premium / supporter back
+{
+  const ADM = (body) => W.fetch(new Request(HOST + '/admin', { method: 'POST', headers: { Origin: 'https://drsamirsaad1981-design.github.io', 'content-type': 'application/json' }, body: JSON.stringify({ idToken: fbToken('dr.samir.saad.1981@gmail.com', 'UID1'), ...body }) }), ENVA, {});
+  const mm = JSON.parse(kvStore.get('tg:users')); mm['888'] = { ...mm['888'], email: 'back@x.com', premium: true, premUntil: Date.now() + 20 * 864e5, premSrc: 'stars', supporter: true, starsPaid: 400 }; kvStore.set('tg:users', JSON.stringify(mm));
+  await ADM({ action: 'member', chat: '888', op: 'remove' });
+  let j = await (await ADM({ action: 'overview' })).json();
+  check('🗑 removed → gone from members, kept in "Removed (60 days)" with ⭐💛', !j.members.some(x => x.chat === '888') && j.removed.some(x => x.chat === '888' && x.premium && x.supporter), j.removed);
+  accessWrites.length = 0; j = await (await ADM({ action: 'restore', chat: '888' })).json();
+  const back = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('↩️ Restore → back exactly as before (premium, supporter, e-mail on the access list)', j.ok && back && back.premium && back.supporter && back.starsPaid === 400 && back.email === 'back@x.com' && accessWrites.length === 1 && !j.overview.removed.some(x => x.chat === '888'), back);
+  // removed, then rejoins with a new invite code (no restore pressed) → their record comes back by itself
+  await ADM({ action: 'member', chat: '888', op: 'remove' });
+  const code = (await (await ADM({ action: 'invite' })).json()).code;
+  sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 888, type: 'private' }, from: { id: 888, first_name: 'New', language_code: 'en' }, text: '/start ' + code } }, ENV.TG_SECRET, ENVK);
+  const re = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('…rejoining with a new invite → premium ⭐ + supporter 💛 + e-mail back, "Welcome back" in the welcome', re && re.premium && re.supporter && re.email === 'back@x.com' && sent.some(m => /Welcome back/.test(m.b.text || '')), re);
+  // no record kept (removed before this existed) → the Stars log tells
+  const m2 = JSON.parse(kvStore.get('tg:users')); delete m2['888']; kvStore.set('tg:users', JSON.stringify(m2)); kvStore.delete('tg:removed:888');
+  kvStore.set('tg:stars:log', JSON.stringify([{ t: Date.now() - 864e5, chat: '888', kind: 'prem', stars: 300 }, { t: Date.now() - 864e5, chat: '888', kind: 'sup', stars: 50 }]));
+  const code2 = (await (await ADM({ action: 'invite' })).json()).code;
+  await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 888, type: 'private' }, from: { id: 888, first_name: 'New' }, text: '/start ' + code2 } }, ENV.TG_SECRET, ENVK);
+  const r3 = JSON.parse(kvStore.get('tg:users'))['888'];
+  check('…no record kept → from the Stars log: supporter (350 ⭐) and this month\'s premium (Stars, 30 days from the payment)', r3.supporter && r3.starsPaid === 350 && r3.premium && r3.premSrc === 'stars' && Math.abs(r3.premUntil - (Date.now() + 29 * 864e5)) < 3600e3, r3);
+}
+
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

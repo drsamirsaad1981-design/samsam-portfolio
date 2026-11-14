@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 1a813a3bf439814a
+// sources-hash: bc431cd59a12925b
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -786,7 +786,8 @@ async function useInvite(env, code, chat, from) {
     }
   })() };
   await kput(env, "tg:users", JSON.stringify(m));
-  return { ok: true, member: m[String(chat)] };
+  const back = await restoreRecord(env, chat);
+  return { ok: true, member: (await members(env))[String(chat)], restored: back };
 }
 async function useAppInvite(env, code, uid, email) {
   const C = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, ""), e = String(email || "").toLowerCase();
@@ -821,7 +822,8 @@ async function moveAppMember(env, uid, chat, from) {
     await kput(env, `tg:${chat}:byok`, k);
     await kdel(env, `tg:${key}:byok`);
   }
-  return m[String(chat)];
+  await restoreRecord(env, chat);
+  return (await members(env))[String(chat)];
 }
 async function removeMember(env, chat) {
   const m = await members(env);
@@ -830,7 +832,71 @@ async function removeMember(env, chat) {
   delete m[String(chat)];
   await kput(env, "tg:users", JSON.stringify(m));
   await kdel(env, `tg:${chat}:byok`);
+  await kput(env, "tg:removed:" + chat, JSON.stringify({ ...had, removedAt: Date.now() }), 60 * 86400);
   return had;
+}
+async function restoreRecord(env, chat) {
+  const m = await members(env), c = String(chat);
+  if (!m[c]) return null;
+  let old = null;
+  try {
+    old = JSON.parse(await kget(env, "tg:removed:" + c) || "null");
+  } catch (_) {
+  }
+  const back = {};
+  if (old) {
+    for (const k of ["email", "uid", "ai", "reports", "premium", "premUntil", "premSrc", "subCharge", "supporter", "starsPaid", "lang", "note"]) if (old[k] !== void 0 && m[c][k] === void 0) back[k] = old[k];
+    await kdel(env, "tg:removed:" + c);
+  } else {
+    let log2 = [];
+    try {
+      log2 = JSON.parse(await kget(env, "tg:stars:log") || "[]");
+    } catch (_) {
+    }
+    const mine = log2.filter((x) => x.chat === c);
+    if (mine.length) {
+      back.supporter = true;
+      back.starsPaid = mine.reduce((s, x) => s + (+x.stars || 0), 0);
+      const p = mine.filter((x) => x.kind === "prem").sort((a, b) => b.t - a.t)[0];
+      if (p && p.t + 30 * 864e5 > Date.now()) Object.assign(back, { premium: true, premUntil: p.t + 30 * 864e5, premSrc: "stars", ai: Math.max(PREM_AI_, m[c].ai || 0), reports: Math.max(PREM_REPORTS_, m[c].reports || 0) });
+    }
+  }
+  if (!Object.keys(back).length) return null;
+  m[c] = { ...m[c], ...back };
+  await kput(env, "tg:users", JSON.stringify(m));
+  return back;
+}
+async function removedList(env) {
+  const out = [];
+  if (env.RATE && env.RATE.list) {
+    try {
+      const r = await env.RATE.list({ prefix: "tg:removed:" });
+      for (const k of r.keys) {
+        try {
+          out.push({ chat: k.name.slice(11), ...JSON.parse(await env.RATE.get(k.name)) });
+        } catch (_) {
+        }
+      }
+    } catch (_) {
+    }
+  }
+  return out.sort((a, b) => (b.removedAt || 0) - (a.removedAt || 0));
+}
+async function undoRemove(env, chat) {
+  const c = String(chat);
+  let old = null;
+  try {
+    old = JSON.parse(await kget(env, "tg:removed:" + c) || "null");
+  } catch (_) {
+  }
+  if (!old) return null;
+  const m = await members(env);
+  if (Object.keys(m).length >= await maxMembers(env)) return { error: "full" };
+  const { removedAt, ...rec } = old;
+  m[c] = rec;
+  await kput(env, "tg:users", JSON.stringify(m));
+  await kdel(env, "tg:removed:" + c);
+  return rec;
 }
 async function activeChats(env) {
   const m = await members(env);
@@ -905,6 +971,8 @@ async function memberByEmail(env, email) {
 async function accessEmails(env) {
   return Object.values(await members(env)).map((x) => x.email).filter(Boolean).sort();
 }
+var PREM_AI_ = 20;
+var PREM_REPORTS_ = 3;
 var DEF_AI = 5;
 var DEF_REPORTS = 0;
 var PREM_AI = 20;
@@ -1960,6 +2028,7 @@ async function overview(env, now = Date.now()) {
       starsMonthSupport: sum((x) => x.kind === "sup" && new Date(x.t).toISOString().slice(0, 7) === month)
     },
     members: list2.sort((a, b) => (b.joined || 0) - (a.joined || 0)),
+    removed: (await removedList(env)).map((x) => ({ chat: x.chat, name: x.name, email: x.email || "", removedAt: x.removedAt, premium: !!x.premium, supporter: !!x.supporter })),
     payments: log2.slice(-50).reverse().map((x) => ({ t: x.t, chat: x.chat, name: names[x.chat] || x.chat, kind: x.kind, stars: x.stars, renew: !!x.renew }))
   };
 }
@@ -2008,6 +2077,15 @@ async function adminHandler2(env, who, body) {
   if (a === "setMax") {
     if (!await setMaxMembers(env, body && body.max)) return { status: 400, error: "Pick 20, 50 or 100." };
     return overview(env);
+  }
+  if (a === "restore") {
+    const r = await undoRemove(env, String(body.chat || ""));
+    if (!r) return { status: 404, error: "Nothing to restore." };
+    if (r.error) return { status: 409, error: "Full \u2014 raise the maximum first." };
+    if (r.email) await syncAccess(env, await accessEmails(env)).catch(() => {
+    });
+    await tell(env, String(body.chat), "\u21A9\uFE0F Your access is back \u2014 welcome back!", "\u21A9\uFE0F \u0648\u0635\u0648\u0644\u0643 \u0631\u062C\u0639 \u2014 \u0623\u0647\u0644\u0627\u064B \u0628\u064A\u0643 \u062A\u0627\u0646\u064A!", r.lang);
+    return { ok: true, overview: await overview(env) };
   }
   if (a === "member") {
     const r = await act(env, String(body.chat || ""), String(body.op || ""));
@@ -5095,7 +5173,7 @@ async function stranger(env, u, msg, chat) {
       await asChat(chat, async () => {
         await setLang(env, L);
         const t = T[L];
-        await send2(env, chat, { text: w.welcome(esc(r.member.name)) }, { reply_markup: replyKb(t) });
+        await send2(env, chat, { text: w.welcome(esc(r.member.name)) + (r.restored ? L === "ar" ? "\n\n\u21A9\uFE0F \u0631\u062C\u0639\u062A \u2014 " + (r.restored.premium ? "\u0627\u0644\u0645\u0645\u064A\u0632 \u2B50 \u0648" : "") + (r.restored.supporter ? "\u0648\u0633\u0627\u0645 \u0627\u0644\u062F\u0627\u0639\u0645 \u{1F49B} " : "") + "\u0631\u062C\u0639\u0648\u0627 \u0645\u0639\u0627\u0643." : "\n\n\u21A9\uFE0F Welcome back \u2014 " + (r.restored.premium ? "your \u2B50 premium" : "") + (r.restored.premium && r.restored.supporter ? " and " : "") + (r.restored.supporter ? "your \u{1F49B} supporter badge" : "") + " came back with you." : "") }, { reply_markup: replyKb(t) });
         await send2(env, chat, viewMenu(t, isOwner(env)));
       });
       await asChat(env.TELEGRAM_CHAT_ID, async () => send2(env, env.TELEGRAM_CHAT_ID, { text: STR[await getLang(env)].joined(esc(r.member.name), esc(r.member.user)), buttons: [[cb3("\u{1F465} /users", "us")]] }));

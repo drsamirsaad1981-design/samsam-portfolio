@@ -412,7 +412,7 @@ async function stranger(env, u, msg, chat) {
   if (code) {
     const r = await useInvite(env, code, chat, msg.from);
     if (r.ok) {
-      await asChat(chat, async () => { await setLang(env, L); const t = T[L]; await send(env, chat, { text: w.welcome(esc(r.member.name)) }, { reply_markup: replyKb(t) }); await send(env, chat, viewMenu(t, isOwner(env))); });
+      await asChat(chat, async () => { await setLang(env, L); const t = T[L]; await send(env, chat, { text: w.welcome(esc(r.member.name)) + (r.restored ? (L === 'ar' ? '\n\n↩️ رجعت — ' + (r.restored.premium ? 'المميز ⭐ و' : '') + (r.restored.supporter ? 'وسام الداعم 💛 ' : '') + 'رجعوا معاك.' : '\n\n↩️ Welcome back — ' + (r.restored.premium ? 'your ⭐ premium' : '') + (r.restored.premium && r.restored.supporter ? ' and ' : '') + (r.restored.supporter ? 'your 💛 supporter badge' : '') + ' came back with you.') : '') }, { reply_markup: replyKb(t) }); await send(env, chat, viewMenu(t, isOwner(env))); });
       await asChat(env.TELEGRAM_CHAT_ID, async () => send(env, env.TELEGRAM_CHAT_ID, { text: STR[await getLang(env)].joined(esc(r.member.name), esc(r.member.user)), buttons: [[cb('👥 /users', 'us')]] }));
       return ok();
     }

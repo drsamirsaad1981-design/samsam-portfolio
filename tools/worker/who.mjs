@@ -49,7 +49,8 @@ export async function useInvite(env, code, chat, from) {
   const name = [from && from.first_name, from && from.last_name].filter(Boolean).join(' ').slice(0, 40) || 'Friend';
   m[String(chat)] = { name, user: from && from.username ? String(from.username).slice(0, 32) : '', joined: Date.now(), note: (() => { try { return JSON.parse(raw).note || ''; } catch (_) { return ''; } })() };
   await kput(env, 'tg:users', JSON.stringify(m));
-  return { ok: true, member: m[String(chat)] };
+  const back = await restoreRecord(env, chat);   // removed before? their premium / supporter / e-mail come back
+  return { ok: true, member: (await members(env))[String(chat)], restored: back };
 }
 // 📱 an invite code opened in the APP: that signed-in account (a checked e-mail) becomes a member at once — the invite is
 // Samir's yes, so no second approval. → { ok, member, already } | { error: 'bad' | 'full' }
@@ -76,14 +77,48 @@ export async function moveAppMember(env, uid, chat, from) {
   delete m[String(chat)].appOnly; delete m[key];
   await kput(env, 'tg:users', JSON.stringify(m));
   const k = await kget(env, `tg:${key}:byok`); if (k) { await kput(env, `tg:${chat}:byok`, k); await kdel(env, `tg:${key}:byok`); }   // their own Claude key comes along
-  return m[String(chat)];
+  await restoreRecord(env, chat);
+  return (await members(env))[String(chat)];
 }
 export async function removeMember(env, chat) {
   const m = await members(env);
   if (!m[String(chat)]) return false;
   const had = m[String(chat)];
   delete m[String(chat)]; await kput(env, 'tg:users', JSON.stringify(m)); await kdel(env, `tg:${chat}:byok`);   // their Claude key goes too
+  await kput(env, 'tg:removed:' + chat, JSON.stringify({ ...had, removedAt: Date.now() }), 60 * 86400);   // kept 60 days: ↩️ restore, or comes back by itself if they rejoin
   return had;   // the record (its e-mail leaves the app's access list — the caller syncs it)
+}
+// someone removed (by mistake?) comes back — their old record (premium, supporter, limits, e-mail, linked portfolio) returns;
+// with no record kept, their Stars payments (tg:stars:log) still say who supported and who paid for premium this month
+export async function restoreRecord(env, chat) {
+  const m = await members(env), c = String(chat); if (!m[c]) return null;
+  let old = null; try { old = JSON.parse((await kget(env, 'tg:removed:' + c)) || 'null'); } catch (_) {}
+  const back = {};
+  if (old) { for (const k of ['email', 'uid', 'ai', 'reports', 'premium', 'premUntil', 'premSrc', 'subCharge', 'supporter', 'starsPaid', 'lang', 'note']) if (old[k] !== undefined && m[c][k] === undefined) back[k] = old[k]; await kdel(env, 'tg:removed:' + c); }
+  else {
+    let log = []; try { log = JSON.parse((await kget(env, 'tg:stars:log')) || '[]'); } catch (_) {}
+    const mine = log.filter(x => x.chat === c);
+    if (mine.length) {
+      back.supporter = true; back.starsPaid = mine.reduce((s, x) => s + (+x.stars || 0), 0);
+      const p = mine.filter(x => x.kind === 'prem').sort((a, b) => b.t - a.t)[0];
+      if (p && p.t + 30 * 864e5 > Date.now()) Object.assign(back, { premium: true, premUntil: p.t + 30 * 864e5, premSrc: 'stars', ai: Math.max(PREM_AI_, m[c].ai || 0), reports: Math.max(PREM_REPORTS_, m[c].reports || 0) });
+    }
+  }
+  if (!Object.keys(back).length) return null;
+  m[c] = { ...m[c], ...back }; await kput(env, 'tg:users', JSON.stringify(m));
+  return back;
+}
+export async function removedList(env) {
+  const out = [];
+  if (env.RATE && env.RATE.list) { try { const r = await env.RATE.list({ prefix: 'tg:removed:' }); for (const k of r.keys) { try { out.push({ chat: k.name.slice(11), ...JSON.parse(await env.RATE.get(k.name)) }); } catch (_) {} } } catch (_) {} }
+  return out.sort((a, b) => (b.removedAt || 0) - (a.removedAt || 0));
+}
+export async function undoRemove(env, chat) {   // ↩️ from the dashboard: back exactly as they were
+  const c = String(chat); let old = null; try { old = JSON.parse((await kget(env, 'tg:removed:' + c)) || 'null'); } catch (_) {}
+  if (!old) return null;
+  const m = await members(env); if (Object.keys(m).length >= await maxMembers(env)) return { error: 'full' };
+  const { removedAt, ...rec } = old; m[c] = rec; await kput(env, 'tg:users', JSON.stringify(m)); await kdel(env, 'tg:removed:' + c);
+  return rec;
 }
 // ⏸ a member the owner paused: still a member (their app and portfolio stay theirs) — the bot answers nothing, sends nothing
 export async function activeChats(env) { const m = await members(env); return (await chats(env)).filter(c => !(m[c] && m[c].paused)); }
@@ -148,6 +183,7 @@ export async function memberByEmail(env, email) {
 // the e-mails allowed into the app = the members' approved e-mails (the owner's is in the rules themselves)
 export async function accessEmails(env) { return Object.values(await members(env)).map(x => x.email).filter(Boolean).sort(); }
 // limits: the owner's from the Worker settings; a member's own (set in /users) or the defaults: 5 questions, 1 report
+const PREM_AI_ = 20, PREM_REPORTS_ = 3;
 export const DEF_AI = 5, DEF_REPORTS = 0,   // a member's quick AI Analysis report: off until they add their own Claude key (or the owner gives some in /users)
   PREM_AI = 20, PREM_REPORTS = 3;
 // ⭐ premium (the owner switches it in /users): voice notes + more questions / reports. The owner counts as premium.

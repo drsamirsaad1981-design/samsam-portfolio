@@ -2,7 +2,7 @@
 // /users, /invite and /stats: the numbers, every member (search, limits, ⭐ gift / end, ⏸ pause, 🗑 remove), app requests
 // waiting for a ✅, new invite codes, and the Stars log. Only the owner's account (checked here, server-side) can call it.
 
-import { asChat, members, member, setMember, removeMember, newInvite, accessEmails, getPending, clearPending, maxMembers, setMaxMembers, MAX_CHOICES, isTgChat, DEF_AI, DEF_REPORTS } from './who.mjs';
+import { asChat, members, member, setMember, removeMember, newInvite, accessEmails, getPending, clearPending, maxMembers, setMaxMembers, MAX_CHOICES, isTgChat, DEF_AI, DEF_REPORTS, removedList, undoRemove } from './who.mjs';
 import { premiumNow, addDays, revoke, price } from './stars.mjs';
 import { keyInfo } from './byok.mjs';
 import { isOwnerAccount, syncAccess } from './data.mjs';
@@ -40,6 +40,7 @@ async function overview(env, now = Date.now()) {
       supporters: list.filter(x => x.supporter).length, starsMonth: sum(x => new Date(x.t).toISOString().slice(0, 7) === month), starsAll: sum(() => true),
       starsMonthPremium: sum(x => x.kind === 'prem' && new Date(x.t).toISOString().slice(0, 7) === month), starsMonthSupport: sum(x => x.kind === 'sup' && new Date(x.t).toISOString().slice(0, 7) === month) },
     members: list.sort((a, b) => (b.joined || 0) - (a.joined || 0)),
+    removed: (await removedList(env)).map(x => ({ chat: x.chat, name: x.name, email: x.email || '', removedAt: x.removedAt, premium: !!x.premium, supporter: !!x.supporter })),
     payments: log.slice(-50).reverse().map(x => ({ t: x.t, chat: x.chat, name: names[x.chat] || x.chat, kind: x.kind, stars: x.stars, renew: !!x.renew })),
   };
 }
@@ -78,6 +79,13 @@ export async function adminHandler(env, who, body) {
   if (a === 'overview') return overview(env);
   if (a === 'invite') { const code = await newInvite(env, String((body && body.note) || '').slice(0, 40)); return { code, link: await botLink(env, code), appLink: APP.replace(/\/?$/, '/') + '?invite=' + code, days: 7 }; }
   if (a === 'setMax') { if (!(await setMaxMembers(env, body && body.max))) return { status: 400, error: 'Pick 20, 50 or 100.' }; return overview(env); }
+  if (a === 'restore') {
+    const r = await undoRemove(env, String(body.chat || ''));
+    if (!r) return { status: 404, error: 'Nothing to restore.' }; if (r.error) return { status: 409, error: 'Full — raise the maximum first.' };
+    if (r.email) await syncAccess(env, await accessEmails(env)).catch(() => {});
+    await tell(env, String(body.chat), '↩️ Your access is back — welcome back!', '↩️ وصولك رجع — أهلاً بيك تاني!', r.lang);
+    return { ok: true, overview: await overview(env) };
+  }
   if (a === 'member') { const r = await act(env, String(body.chat || ''), String(body.op || '')); return r.ok ? { ...r, overview: await overview(env) } : r; }
   return { status: 400, error: 'Unknown action.' };
 }

@@ -82,6 +82,8 @@
         '<p class="ad-msg">The same code works in both — one use, ' + lastInvite.days + ' days. They can link the other one later (Settings → Link the Telegram bot).</p></div>' : '') +
       '<div class="ad-sec">Members (' + data.members.length + ')</div><input class="ad-q" id="cpAdmQ" type="search" placeholder="Search name, @user or e-mail" value="' + E(query) + '">' +
       (list.length ? list.map(memberHtml).join('') : '<p class="ad-msg">' + (data.members.length ? 'No one matches.' : 'Nobody yet — make an invite code above.') + '</p>') +
+      (data.removed && data.removed.length ? '<div class="ad-sec">Removed (kept 60 days)</div>' + data.removed.map(function (x) {
+        return '<div class="ad-pay"><span>' + E(x.name) + (x.premium ? ' ⭐' : '') + (x.supporter ? ' 💛' : '') + ' · removed ' + day(x.removedAt) + '</span><button type="button" class="ad-btn" data-restore="' + E(x.chat) + '">↩️ Restore</button></div>'; }).join('') : '') +
       '<div class="ad-sec">Stars</div><details' + (openChat === '__pay' ? ' open' : '') + ' data-chat="__pay"><summary><b>Payments (' + data.payments.length + ')</b><span>premium subscriptions, renewals and support</span></summary>' +
         (data.payments.length ? data.payments.map(function (p) { return '<div class="ad-pay"><span>' + day(p.t) + ' · ' + E(p.name) + '</span><span>' + (p.kind === 'prem' ? (p.renew ? '⭐ renewal' : '⭐ premium') : '💛 support') + ' · <b>' + p.stars + ' ⭐</b></span></div>'; }).join('') : '<p class="ad-msg" style="padding:0 12px 10px">No payments yet.</p>') +
       '</details><p class="ad-msg">Withdraw the Stars yourself: the bot\'s balance → Fragment.</p>' + (msg ? '<p class="ad-msg' + (err ? ' ad-err' : '') + '">' + E(msg) + '</p>' : '');
@@ -99,7 +101,7 @@
     };
     if (what === 'remove') {
       var m = data && data.members.filter(function (x) { return x.chat === chat; })[0];
-      CPDialog.confirm('Remove ' + (m ? m.name : 'this member') + ' from the bot? Their e-mail also leaves the app\'s access list. Their own portfolio data stays in Firebase.', { title: 'Remove member', okText: 'Remove', danger: true })
+      CPDialog.confirm('Remove ' + (m ? m.name : 'this member') + '? They lose the bot AND the app (their e-mail leaves the access list). Their portfolio data stays in Firebase, and you can ↩️ restore them for 60 days.\n\nJust want to stop them for a while? Use ⏸ Pause instead.', { title: 'Remove member', okText: 'Remove', danger: true })
         .then(function (yes) { if (yes) go(); else busy = false; });
       return;
     }
@@ -123,6 +125,8 @@
       if (e.target.closest('.ad-re')) { load(); return; }
       var b = e.target.closest('[data-op]'); if (b) { op(b.dataset.chat, b.dataset.op); return; }
       if (e.target.closest('[data-inv]')) { invite(); return; }
+      var rs = e.target.closest('[data-restore]');
+      if (rs) { if (busy) return; busy = true; call({ action: 'restore', chat: rs.dataset.restore }).then(function (j) { data = j.overview || data; busy = false; draw('↩️ Restored — they\'re back as they were.'); }).catch(function (er) { busy = false; draw(String(er.message || er), true); }); return; }
       var cp = e.target.closest('[data-copy]'), sh = e.target.closest('[data-share]'), mx = e.target.closest('[data-max]');
       var linkOf = function (w) { return w === 'app' ? lastInvite.appLink : lastInvite.link || lastInvite.code; };
       if (cp && lastInvite) { try { navigator.clipboard.writeText(linkOf(cp.dataset.copy)); draw('Copied ✅'); } catch (_) {} return; }
