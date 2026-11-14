@@ -184,7 +184,9 @@
       '<div class="atx-field" id="atxFeeUsdRow"><label for="atxFeeUsd" id="atxFeeUsdLabel">Buying fee <small>(USD, optional — added to Cost Basis)</small></label>' +
         '<div class="atx-feebox"><input type="number" inputmode="decimal" step="any" min="0" id="atxFeeUsd" placeholder="0.00" oninput="previewAddTx()">' +
         '<div class="atx-unit" id="atxFeeUnitSeg" role="radiogroup" aria-label="Fee paid in"><button type="button" role="radio" data-u="usd">USD</button><button type="button" role="radio" data-u="coin" id="atxFeeUnitCoin">Coin</button></div></div></div>' +
-      '<label class="atx-field" id="atxNetFeeRow"><span>Network fee to your wallet <small id="atxNetFeeUnit">(in coin, optional — e.g. Binance → Tangem)</small></span><input type="number" inputmode="decimal" step="any" min="0" id="atxNetFee" placeholder="0" oninput="previewAddTx()"></label>' +
+      '<div class="atx-field" id="atxNetFeeRow"><label for="atxNetFee">Network fee to your wallet <small id="atxNetFeeUnit">(optional — e.g. Binance → your cold wallet)</small></label>' +
+        '<div class="atx-feebox"><input type="number" inputmode="decimal" step="any" min="0" id="atxNetFee" placeholder="0.00" oninput="previewAddTx()">' +
+        '<div class="atx-unit" id="atxNetUnitSeg" role="radiogroup" aria-label="Network fee in"><button type="button" role="radio" data-u="usd">USD</button><button type="button" role="radio" data-u="coin" id="atxNetUnitCoin">Coin</button></div></div></div>' +
       '<div class="atx-cash" id="atxCashRow"><label><input type="checkbox" id="atxCashOn" onchange="this.dataset.manual=\'1\';previewAddTx()"><span id="atxCashLbl">Add the money to</span></label><select id="atxCashSym" aria-label="Stablecoin that receives the money" onchange="previewAddTx()"></select></div>' +
       '<label class="atx-field" id="atxFeeRow"><span>Transfer fee <small id="atxFeeUnit">(in coin, optional)</small></span><input type="number" inputmode="decimal" step="any" min="0" id="atxFee" placeholder="0" oninput="previewAddTx()"></label>' +
       '<label class="atx-field"><span id="atxDateLabel">Date &amp; time</span><input type="datetime-local" id="atxDate" oninput="this.dataset.touched=\'1\';previewAddTx()"></label>' +
@@ -585,8 +587,9 @@
     $('atxSrcRow').style.display = t === 'reward' ? '' : 'none';
     $('atxImp').hidden = !window.SamsamImport || !(t === 'buy' || t === 'sell');   // an exchange file holds trades only
     $('atxFeeUnitCoin').textContent = atxSym;
-    $('atxNetFeeUnit').textContent = '(in ' + atxSym + ', optional — e.g. Binance → your cold wallet)';
+    $('atxNetUnitCoin').textContent = atxSym;
     setFeeUnit(t === 'buy' ? feeUnitPref() : 'usd', true);
+    setNetUnit(netUnitPref(), true);
     fillCashRow();
     feeLabel();
     $('atxFeeUnit').textContent = '(in ' + atxSym + ', optional)';
@@ -662,6 +665,18 @@
     feeLabel(); previewAddTx();
   }
   document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#atxFeeUnitSeg button'); if (b) setFeeUnit(b.dataset.u); });
+  // Network fee to your wallet: in USD (turned into coins at the price you bought at) or in the coin itself
+  var NET_UNIT_KEY = 'samsam_netfee_unit', netUnit = 'usd';
+  function netUnitPref() { try { return localStorage.getItem(NET_UNIT_KEY) === 'coin' ? 'coin' : 'usd'; } catch (_) { return 'usd'; } }
+  function setNetUnit(u, quiet) {
+    netUnit = u === 'coin' ? 'coin' : 'usd';
+    document.querySelectorAll('#atxNetUnitSeg button').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.u === netUnit)); });
+    if (!quiet) { try { localStorage.setItem(NET_UNIT_KEY, netUnit); } catch (_) {} }
+    $('atxNetFee').placeholder = netUnit === 'coin' ? '0' : '0.00';
+    $('atxNetFeeUnit').textContent = netUnit === 'coin' ? '(in ' + atxSym + ', optional — e.g. Binance → your cold wallet)' : '(USD, optional — turned into ' + atxSym + ' at the price above)';
+    previewAddTx();
+  }
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#atxNetUnitSeg button'); if (b) setNetUnit(b.dataset.u); });
   document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.atx-types button'); if (b && b.closest('#atxForm')) setAddTxType(b.dataset.t); });
   document.addEventListener('input', function (e) { if (e.target && (e.target.id === 'atxPrice' || e.target.id === 'atxDate')) e.target.dataset.touched = '1'; });
   document.addEventListener('keydown', function (e) {
@@ -693,6 +708,7 @@
     if (atxType === 'buy') {
       if (feeUnit === 'coin') { tradeFee = feeUsd; feeUsd = 0; }   // the fee box holds coins, not dollars
       netFee = parseFloat(v('atxNetFee')) || 0;
+      if (netUnit === 'usd') netFee = price > 0 ? netFee / price : 0;   // $ → coins at the price you bought at
       fee = Math.max(0, tradeFee) + Math.max(0, netFee);           // every coin that never reaches your wallet
     }
     // Date left as it was → the exact moment you save (even if the minute changed while the form was open), so the entry
@@ -707,7 +723,11 @@
     if (fee < 0) errs.atxFee = 'Fee cannot be negative.';
     if (feeUsd < 0 || tradeFee < 0) errs.atxFeeUsd = 'Fee cannot be negative.';
     if (netFee < 0) errs.atxNetFee = 'Fee cannot be negative.';
-    if (atxType === 'buy' && qty > 0 && fee >= qty) errs[netFee > 0 ? 'atxNetFee' : 'atxFeeUsd'] = 'The fees must be smaller than the amount bought.';
+    if (atxType === 'buy' && qty > 0 && fee >= qty) {   // say it in numbers, and guess the likely slip
+      var fmtC = function (n) { return (+n.toPrecision(6)).toString() + ' ' + atxSym; };
+      var hint = netFee > 0 && netUnit === 'coin' ? ' Did you mean $' + v('atxNetFee') + '? Tap USD next to the box.' : tradeFee > 0 && price > 0 ? ' Did you mean $' + v('atxFeeUsd') + '? Tap USD next to the box.' : '';
+      errs[netFee > 0 ? 'atxNetFee' : 'atxFeeUsd'] = 'Fees of ' + fmtC(fee) + ' are more than the ' + fmtC(qty) + ' you bought.' + hint;
+    }
     if (atxType === 'transfer_in' && qty > 0 && fee >= qty) errs.atxFee = 'Fee must be smaller than the amount transferred in.';
     var payFrom = atxType === 'buy' ? cashTarget() : null, payCost = qty * price + feeUsd;
     if (payFrom && qty > 0 && price > 0) {

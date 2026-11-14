@@ -103,6 +103,8 @@ body {
 .dash-card.red-card { border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.05); }
 .dash-card.purple-card { border-color: rgba(139,92,246,.3); background: rgba(139,92,246,.05); }
 
+@keyframes cpFlash{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,0)}30%{box-shadow:0 0 0 4px rgba(124,58,237,.55)}}
+.cp-flash{animation:cpFlash 1.8s ease-in-out;border-radius:14px}
 /* DCA: the window's choices and the schedule card */
 .dca-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 10px; background: var(--bg3); border: 1px solid var(--border); }
 .dca-seg button { border: 0; background: none; color: var(--fg2); font: inherit; font-size: .78rem; font-weight: 800; padding: 8px 4px; border-radius: 7px; cursor: pointer; }
@@ -966,8 +968,35 @@ function setPlanTab(t, fromCloud) {
   if (changed && !fromCloud && window.Samsam && Samsam.isReady()) Samsam.saveExit({ tab: t }).catch(() => {});
 }
 
+// Settings → DCA / Exit plan: open the right tab, scroll to it and light it up (cp-plan-focus, set by Settings)
+function planFocus() {
+  let f = null; try { f = JSON.parse(localStorage.getItem('cp-plan-focus') || 'null'); } catch (_) {}
+  if (!f || Date.now() - f.t > 20000) return;
+  try { localStorage.removeItem('cp-plan-focus'); } catch (_) {}
+  setPlanTab(f.k === 'exit' ? 'exit' : 'accum');
+  let n = 0; const go = () => {
+    if (!(window.Samsam && Samsam.isReady()) && ++n < 40) return setTimeout(go, 250);
+    if (typeof renderDcaCard === 'function') try { renderDcaCard(); } catch (_) {}
+    const box = document.getElementById(f.k === 'exit' ? 'exitPane' : 'dcaCard');
+    const el = box && !box.hidden ? box : null;
+    document.body.dataset.planFocus = f.k + (el ? '' : ':none');
+    if (f.k === 'dca' && !el) {   // no regular buy yet → say where to start
+      if (window.CPDialog) CPDialog.alert('No regular buys yet. Tap a coin in your plan → 📅 DCA to give it a regular buy — it then shows here, and the bot reminds you on the day.', { title: 'DCA (regular buys)', icon: 'calendar' });
+      return;
+    }
+    if (!el) return;
+    if (f.k === 'dca' && !el.classList.contains('open')) { const t = el.querySelector('.pa-tog'); if (t) t.click(); }
+    const tgt = document.getElementById(f.k === 'exit' ? 'exitPane' : 'dcaCard');
+    tgt.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    tgt.classList.add('cp-flash'); setTimeout(() => tgt.classList.remove('cp-flash'), 1800);
+  };
+  setTimeout(go, 150);
+}
+window.addEventListener('storage', e => { if (e.key === 'cp-plan-focus' && e.newValue) planFocus(); });
+
 // ─── Init ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(planFocus, 300);
   showPlanTab();
   loadTheme();
   setSaveStatus('saving', 'Loading…');

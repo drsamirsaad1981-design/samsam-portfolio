@@ -55,8 +55,9 @@
   function goMain(act) {   // a page opened on its own: the editor is on the main page
     location.href = 'index.html#set=' + encodeURIComponent(act);
   }
-  function goPlan(tab) {
+  function goPlan(tab, focus) {
     var s = S(); if (s && s.saveExit) s.saveExit({ tab: tab }).catch(function () {});
+    try { localStorage.setItem('cp-plan-focus', JSON.stringify({ k: focus || tab, t: Date.now() })); } catch (_) {}   // the Plan page scrolls to it and lights it up
     if (window.cpShell) { window.cpShell.go('accumulation'); return; }
     if (/accumulation\.html/.test(location.pathname)) { location.reload(); return; }
     location.href = 'accumulation.html';
@@ -143,12 +144,13 @@
     targets: function () { if (window.openTargets) openTargets(); else goMain('targets'); },
     baseline: function () { if (window.openBaselineEdit) openBaselineEdit(); else goMain('baseline'); },
     cats: function () { if (window.openCatManager && onMain()) openCatManager(); else if (window.openCatManager) openCatManager(); else goMain('cats'); },
-    exit: function () { goPlan('exit'); },
-    dca: function () { goPlan('accum'); },
+    exit: function () { goPlan('exit', 'exit'); },
+    dca: function () { goPlan('accum', 'dca'); },
   };
 
   // the window each line opens: when it closes again, Settings comes back
-  var OPENS = { alerts: '#cpAlerts', signal: '#sgModal', targets: '#tgModal', baseline: '#blModal', cats: '#catMgrModal', import: '#impBd', wallets: '#cpWal', rewards: '#cpRew' };
+  var OPENS = { alerts: '#cpAlerts', signal: '#sgModal', targets: '#tgModal', baseline: '#blModal', cats: '#catMgrModal', import: '#impBd', wallets: '#cpWal', rewards: '#cpRew',
+    guide: '#cpGuide', admin: '#cpAdm', support: '#cpSup', aiinfo: '#cpDialog', claudekey: '#cpDialog', tglink: '#cpDialog,#cpTgLink' };
   function shownNow(sel) {
     var e = doc.querySelector(sel); if (!e) return false;
     var cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && e.getClientRects().length > 0;
@@ -157,7 +159,14 @@
     var sel = OPENS[act]; if (!sel) return;
     var seen = false, n = 0, iv = setInterval(function () {
       var on = shownNow(sel); if (on) seen = true;
-      if ((seen && !on) || (!seen && ++n > 20)) { clearInterval(iv); if (seen && !$('cpSet') && !doc.querySelector('#ssPw,#cpDialog')) open(); }
+      if ((seen && !on) || (!seen && ++n > (act === 'claudekey' || act === 'aiinfo' || act === 'tglink' ? 40 : 20))) {
+        clearInterval(iv); if (!seen) return;
+        setTimeout(function () {   // a second window may follow (the key: asked → saved ✅) — wait for the last one
+          if (doc.querySelector('#ssPw,#cpDialog') || $('cpSet')) { if (doc.querySelector('#cpDialog') && !$('cpSet')) backAfter(act); return; }
+          var hs = history.state; if (hs && hs.cpSet === 'win') { history.back(); return; }   // the Back entry goes too (popstate opens Settings)
+          open();
+        }, 120);
+      }
     }, 250);
   }
   // ── the current values ──
@@ -300,19 +309,40 @@
       return '<div class="st-sec">' + E(s[0]) + '</div><div class="st-list">' + rows.map(function (r) { return r.seg ? choice(r) : line(r); }).join('') + '</div>';
     }).join('') + '<div class="st-later">More settings (app language, AI) will be added here.</div>';
   }
+  // ← Back (the phone's button / the browser's): closes Settings, and from a window Settings opened it comes back to Settings
+  function mark(k) { try { history.replaceState(Object.assign({}, history.state, { cpSet: k }), '', location.href); } catch (_) {} }
+  function push(k) { try { history.pushState(Object.assign({}, history.state, { cpSet: k }), '', location.href); } catch (_) {} }
   function run(act) {
-    var keep = act === 'backup' || act === 'install';
-    if (!keep) close();
+    var keep = act === 'backup' || act === 'install' || act === 'tgchan' || act === 'tggroup';   // these stay on Settings
+    if (keep) { ACT[act](); setTimeout(draw, 1500); return; }
+    close(true);
+    var page = act === 'exit' || act === 'dca' || (!onMain() && !OPENS[act]);
+    if (history.state && history.state.cpSet === 'open') { mark('sub'); if (!page && OPENS[act]) push('win'); }
     ACT[act]();
-    if (keep) setTimeout(draw, 1500); else backAfter(act);
+    backAfter(act);
   }
-  function close() { var b = $('cpSet'); if (b) b.remove(); doc.removeEventListener('keydown', esc, true); }
+  function close(keepHist) {
+    var b = $('cpSet'); if (b) b.remove(); doc.removeEventListener('keydown', esc, true);
+    if (!keepHist && b && history.state && history.state.cpSet === 'open') { try { history.back(); } catch (_) {} }   // closed with × / Esc: its Back entry goes too
+  }
+  window.addEventListener('popstate', function (e) {
+    var st = e.state || {};
+    if ($('cpSet') && st.cpSet !== 'open') { close(true); return; }              // Back on Settings → closed
+    if (st.cpSet === 'sub' && !$('cpSet')) {                                       // Back from a window Settings opened → Settings again
+      [].forEach.call(doc.querySelectorAll('#cpGuide,#cpAdm,#cpSup,#cpAlerts,#cpWal,#cpRew'), function (x) { x.remove(); });
+      if (shownNow('#cpDialog')) try { doc.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); } catch (_) {}
+      try { window.closeSignalEdit && closeSignalEdit(); window.closeTargets && closeTargets(); window.closeBaselineEdit && closeBaselineEdit(); window.closeCatManager && closeCatManager(); window.SamsamImport && SamsamImport.close && SamsamImport.close(); } catch (_) {}
+      setTimeout(function () { if (!$('cpSet')) open(true); }, 60);
+    }
+  });
   function esc(e) { if (e.key === 'Escape' && !doc.querySelector('#cpAlerts,#ssPw,#cpDialog,#impBd.show,#cpWal,.cph')) { e.stopPropagation(); close(); } }
-  function open() {
+  function open(fromBack) {
     var t = top(); if (t) { t.SamsamSettings.open(); return; }
     if (!ready()) return;
     if (!$('stCss')) { var st = doc.createElement('style'); st.id = 'stCss'; st.textContent = CSS; doc.head.appendChild(st); }
-    close();
+    close(true);
+    var hs = history.state || {};
+    if (hs.cpSet === 'sub') mark('open'); else if (hs.cpSet !== 'open') push('open');
     var el = doc.createElement('div'); el.id = 'cpSet'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Settings');
     el.innerHTML = '<div class="st-box"><div class="st-h"><span class="st-hic">' + GEAR + '</span><b>Settings</b><button type="button" class="st-x" aria-label="Close">' + IC('x') + '</button></div><div class="st-body"></div></div>';
     doc.body.appendChild(el); draw();

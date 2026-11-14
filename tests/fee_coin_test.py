@@ -17,19 +17,22 @@ with sync_playwright() as p:
             tag = f'{name}/{theme}'
             sym = {'desktop/dark': 'ARB', 'desktop/light': 'OP', 'mobile/dark': 'SUI', 'mobile/light': 'NEAR'}[tag]
             b = pg.evaluate(f"{POS}('{sym}')")
-            pg.evaluate(f"try{{localStorage.removeItem('samsam_buyfee_unit')}}catch(e){{}}; openAddTx('buy','{sym}')"); pg.wait_for_timeout(200)
+            pg.evaluate(f"try{{localStorage.removeItem('samsam_buyfee_unit');localStorage.removeItem('samsam_netfee_unit')}}catch(e){{}}; openAddTx('buy','{sym}')"); pg.wait_for_timeout(200)
             check(f'{tag}: Buy shows the fee unit switch (USD | {sym}) and the network fee field',
                   pg.is_visible('#atxFeeUnitSeg') and pg.inner_text('#atxFeeUnitCoin') == sym and pg.is_visible('#atxNetFee'))
             check(f'{tag}: fee starts in USD', pg.get_attribute('#atxFeeUnitSeg [data-u="usd"]', 'aria-checked') == 'true' and 'USD' in pg.inner_text('#atxFeeUsdLabel'))
             pg.click('#atxFeeUnitCoin'); pg.wait_for_timeout(100)
             check(f'{tag}: switching to {sym} relabels the fee', sym in pg.inner_text('#atxFeeUsdLabel') and 'taken from the amount bought' in pg.inner_text('#atxFeeUsdLabel'))
-            pg.fill('#atxQty', '100'); pg.fill('#atxPrice', '2'); pg.fill('#atxFeeUsd', '0.1'); pg.fill('#atxNetFee', '1.5'); pg.wait_for_timeout(150)
+            check(f'{tag}: the network fee has its own USD | {sym} switch, USD first', pg.inner_text('#atxNetUnitCoin') == sym and pg.get_attribute('#atxNetUnitSeg [data-u="usd"]', 'aria-checked') == 'true')
+            pg.fill('#atxQty', '100'); pg.fill('#atxPrice', '2'); pg.fill('#atxFeeUsd', '0.1'); pg.fill('#atxNetFee', '3'); pg.wait_for_timeout(150)
+            check(f'{tag}: network fee $3 at $2 = 1.5 {sym} → 98.4 arrive', 'Arrives in your wallet: 98.4' in pg.inner_text('#atxPreview'), pg.inner_text('#atxPreview'))
+            pg.click('#atxNetUnitCoin'); pg.fill('#atxNetFee', '1.5'); pg.wait_for_timeout(150)
             pv = pg.inner_text('#atxPreview')
             check(f'{tag}: preview — total cost stays $200, 98.4 arrive', '$200.00' in pv and 'Arrives in your wallet: 98.4' in pv, pv)
             if theme == 'light': pg.screenshot(path=str(SH / f'fee_coin_{name}.png'))
             pg.fill('#atxNetFee', '100'); pg.wait_for_timeout(100)
             pg.click('#atxSave'); pg.wait_for_timeout(200)
-            check(f'{tag}: fees ≥ amount are refused', pg.is_visible('#atxForm') and 'smaller than the amount bought' in pg.inner_text('#atxErr'), pg.inner_text('#atxErr'))
+            check(f'{tag}: fees ≥ amount are refused', pg.is_visible('#atxForm') and 'more than the 100 ' + sym + ' you bought' in pg.inner_text('#atxErr') and 'Did you mean $100' in pg.inner_text('#atxErr'), pg.inner_text('#atxErr'))
             pg.fill('#atxNetFee', '1.5'); pg.click('#atxSave')
             exp_q = b[0] + 98.4; exp_a = (b[0] * b[1] + 200) / exp_q
             pg.wait_for_function(f"Math.abs({POS}('{sym}')[0] - {exp_q}) < 1e-7", timeout=8000)
