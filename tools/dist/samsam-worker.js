@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: bc431cd59a12925b
+// sources-hash: 0de99825be73fa44
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5370,7 +5370,9 @@ async function viewMember(env, lang2, c) {
     `\u{1F517} ${ar ? "\u0627\u0644\u0645\u062D\u0641\u0638\u0629" : "Portfolio"}: ${x.uid ? ar ? "\u0645\u0631\u0628\u0648\u0637\u0629 \u2705" : "linked \u2705" : ar ? "\u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629" : "not linked"}`,
     "",
     `\u{1F9E0} ${ar ? "\u0623\u0633\u0626\u0644\u0629 AI \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI questions a day"}: <b>${ai}</b> \xB7 ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} ${u.q}`,
-    `\u{1F4CA} ${ar ? "\u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI Analysis reports a day"}: <b>${rp}</b> \xB7 ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} ${u.r}`
+    `\u{1F4CA} ${ar ? "\u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI Analysis reports a day"}: <b>${rp}</b> \xB7 ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} ${u.r}`,
+    "",
+    ar ? "<i>\u2606 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632: \u064A\u0634\u064A\u0644 \u0627\u0644\u0645\u0645\u064A\u0632\u0627\u062A \u0628\u0633 \u2014 \u064A\u0641\u0636\u0644 \u0641\u064A \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0639\u0627\u062F\u064A.\n\u23F8 \u0648\u0642\u0651\u0641\u0647: \u0627\u0644\u0628\u0648\u062A \u064A\u0633\u0643\u062A \u0639\u0646\u062F\u0647 (\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0634\u063A\u0627\u0644) \u2014 \u25B6\uFE0F \u064A\u0631\u062C\u0651\u0639\u0647.\n\u{1F5D1} \u0634\u064A\u0644 \u0627\u0644\u0639\u0636\u0648: \u064A\u062E\u0631\u062C \u0645\u0646 \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u2014 \u21A9\uFE0F \u064A\u0631\u062C\u0639 \u062E\u0644\u0627\u0644 60 \u064A\u0648\u0645.</i>" : "<i>\u2606 End premium: removes the extras only \u2014 stays in the bot and the app.\n\u23F8 Pause: the bot goes quiet for them (the app still works) \u2014 \u25B6\uFE0F to resume.\n\u{1F5D1} Remove member: out of the bot and the app \u2014 \u21A9\uFE0F back within 60 days.</i>"
   ];
   return { text: L.join("\n"), buttons: [
     [cb3("\u{1F9E0} \u2212", `us:ai:-:${c}`), cb3("\u{1F9E0} +", `us:ai:+:${c}`), cb3("\u{1F4CA} \u2212", `us:rp:-:${c}`), cb3("\u{1F4CA} +", `us:rp:+:${c}`)],

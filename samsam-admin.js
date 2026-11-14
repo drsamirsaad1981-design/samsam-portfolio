@@ -43,6 +43,7 @@
     '#cpAdm summary b{font-size:.92rem}#cpAdm summary span{font-size:.76rem;color:var(--fg2,#94a3b8)}' +
     '#cpAdm .ad-body{padding:0 12px 12px;font-size:.84rem}#cpAdm .ad-body p{margin:6px 0}' +
     '#cpAdm .ad-pay{display:flex;justify-content:space-between;gap:8px;padding:7px 12px;border-top:1px solid var(--border,rgba(148,163,184,.12));font-size:.8rem}' +
+    '#cpAdm .ad-help{margin:10px 0 0;padding-inline-start:16px;font-size:.76rem;color:var(--fg2,#94a3b8)}#cpAdm .ad-help li{margin:3px 0}' +
     '#cpAdm .ad-max{font:inherit;font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:6px;border:1px solid rgba(148,163,184,.35);background:transparent;color:inherit;cursor:pointer}#cpAdm .ad-max.on{background:#7c3aed;border-color:#7c3aed;color:#fff}' +
     '#cpAdm .ad-msg{font-size:.8rem;color:var(--fg2,#94a3b8);margin-top:6px}#cpAdm .ad-err{color:#f87171}';
 
@@ -59,7 +60,10 @@
       '<p>' + prem + (m.supporter ? ' · 💛 Supporter (' + m.starsPaid + ' ⭐)' : '') + (m.ownKey ? ' · 🔑 own Claude key (…' + E(m.ownKey) + ')' : '') + (m.paused ? ' · ⏸ paused' : '') + '</p>' +
       '<div class="ad-row">' + b('ai-', '🧠 −') + b('ai+', '🧠 +') + b('rp-', '📊 −') + b('rp+', '📊 +') + '</div>' +
       '<div class="ad-row">' + b('gift30', '🎁 ⭐ +30 days') + b('gift365', '🎁 ⭐ +365 days') + (m.premium ? b('endPrem', '☆ End premium') : '') + '</div>' +
-      '<div class="ad-row">' + (m.paused ? b('resume', '▶️ Resume') : b('pause', '⏸ Pause')) + b('remove', '🗑 Remove member', 'warn') + '</div></div></details>';
+      '<div class="ad-row">' + (m.paused ? b('resume', '▶️ Resume') : b('pause', '⏸ Pause')) + b('remove', '🗑 Remove member', 'warn') + '</div>' +
+      '<ul class="ad-help">' + (m.premium ? '<li><b>☆ End premium</b> — removes the premium extras only; they keep using the bot and the app (standard limits). Happens by itself when a subscription or gift ends.</li>' : '') +
+        '<li><b>⏸ Pause</b> — the bot goes quiet for them (no answers, radars or daily messages); the app keeps working. ▶️ Resume brings everything back.</li>' +
+        '<li><b>🗑 Remove member</b> — out of the bot <i>and</i> the app; their data stays. ↩️ Restore within 60 days.</li></ul></div></details>';
   }
   function draw(msg, err) {
     var box = $('cpAdmBody'); if (!box) return;
