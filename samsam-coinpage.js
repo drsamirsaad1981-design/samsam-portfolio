@@ -58,7 +58,7 @@ function renderHistory() {
       return `<div class="tx-row tx-tin">
         <div class="tx-details"><span class="tx-type-badge">${SamsamUI.dot('purple')}${t.src === 'mining' ? 'MINING' : t.src === 'airdrop' ? 'AIRDROP' : 'REWARD'}</span>
           <div><strong>+${fmtN(q)} ${t.sym}</strong> at <strong>$0 cost</strong></div>${meta}</div>
-        <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button>
+        <span class="tx-btns"><button class="tx-delete-btn tx-edit-btn" onclick="openEditTx('${t.id}')">${SamsamUI.icon('pencil')}Edit</button><button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button></span>
       </div>`;
     }
     if (t.type === 'transfer_in' || t.type === 'transfer_out') {
@@ -66,7 +66,7 @@ function renderHistory() {
       return `<div class="tx-row tx-${isIn ? 'tin' : 'tout'}">
         <div class="tx-details"><span class="tx-type-badge">${isIn ? SamsamUI.dot('blue') + 'TRANSFER IN' : SamsamUI.dot('orange') + 'TRANSFER OUT'}</span>
           <div><strong>${isIn ? '+' : '-'}${fmtN(isIn ? t.qty - fee : t.qty + fee)} ${t.sym}</strong>${isIn ? ` @ <strong>$${t.price.toFixed(4)}</strong>` : ''}${fee ? ` · fee ${fmtN(fee)} ${t.sym}` : ''}</div>${meta}</div>
-        <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button>
+        <span class="tx-btns"><button class="tx-delete-btn tx-edit-btn" onclick="openEditTx('${t.id}')">${SamsamUI.icon('pencil')}Edit</button><button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button></span>
       </div>`;
     }
     if (t.type === 'adjust') {
@@ -90,7 +90,7 @@ function renderHistory() {
         ${pnlStr}
         ${meta}
       </div>
-      <button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button>
+      <span class="tx-btns"><button class="tx-delete-btn tx-edit-btn" onclick="openEditTx('${t.id}')">${SamsamUI.icon('pencil')}Edit</button><button class="tx-delete-btn" onclick="deleteTx('${t.id}')">${SamsamUI.ic('trash')}Delete</button></span>
     </div>`;
   }).join('');
 }
@@ -412,15 +412,21 @@ function renderCoinTx() {
     const qCls = { buy: 'htx-pos', sell: 'htx-neg', transfer_in: 'htx-in', transfer_out: 'htx-out', reward: 'htx-rew' }[e.kind];
     const amt = e.kind === 'adjust' ? '' :
       `<div class="htx-row-qty ${qCls}">${plus ? '+' : '-'}${qtyFmt(e.qty)} ${sym}</div><div class="htx-row-usd">${usd(e.usd)}</div>`;
-    html += `<div class="htx-row">
+    html += `<div class="htx-row${e.id && e.kind !== 'adjust' ? ' htx-editable' : ''}"${e.id && e.kind !== 'adjust' ? ` data-edit="${e.id}" role="button" tabindex="0" aria-label="Change this ${e.label}"` : ''}>
       <span class="htx-row-icon">${icon}</span>
       <div class="htx-row-main"><div class="htx-row-type"><span class="htx-dot htx-dot-${e.kind}"></span>${e.label}</div><div class="htx-row-note">${String(e.note).replace(/</g, '&lt;')}</div></div>
       <div class="htx-row-amt">${amt}</div>
       <div class="htx-row-act">${e.opening
         ? `<button type="button" class="htx-act htx-edit" onclick="openEditOpening()" title="Edit opening position" aria-label="Edit opening position">${SamsamUI.icon('pencil')}</button>`
         : (e.tag ? `<button type="button" class="htx-act htx-tag" onclick="openTagMenu(this,'${e.id}')" title="Mark as Mining / Staking / Airdrop" aria-label="Mark this ${e.label} as Mining, Staking or Airdrop">${SamsamUI.ic('coins', { solo: true })}</button>` : '') +
+          (e.kind !== 'adjust' ? `<button type="button" class="htx-act htx-edit" onclick="openEditTx('${e.id}')" title="Change" aria-label="Change this ${e.label}">${SamsamUI.icon('pencil')}</button>` : '') +
           `<button type="button" class="htx-act" onclick="deleteTx('${e.id}')" title="Delete" aria-label="Delete this ${e.label}">${SamsamUI.ic('trash', { solo: true })}</button>`}</div>
     </div>`;
   });
-  listEl.innerHTML = html;
+    listEl.innerHTML = html;
+  if (!listEl.__edit) {   // ✏️ tap a transaction (not its buttons) → change it
+    listEl.__edit = true;
+    const go = ev => { const r = ev.target.closest('.htx-editable'); if (!r || ev.target.closest('button') || !window.openEditTx) return; if (ev.type === 'keydown' && ev.key !== 'Enter' && ev.key !== ' ') return; ev.preventDefault(); if (requireCloud()) openEditTx(r.dataset.edit); };
+    listEl.addEventListener('click', go); listEl.addEventListener('keydown', go);
+  }
 }

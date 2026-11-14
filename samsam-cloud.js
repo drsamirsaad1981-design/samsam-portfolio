@@ -808,6 +808,30 @@ const API = {
     return commit((b, ref) => { b.set(ref('txs', nid), clean({ ...rest, ...(ok ? { kind: 'reward', src } : {}) })); b.delete(ref('txs', safeId(t.id))); }, 'Mark transaction').then(() => nid);
   },
   deleteTxs(ids) { return commit((b, ref) => (ids || []).forEach(id => b.delete(ref('txs', safeId(id)))), 'Delete transactions'); },
+  // ✏️ Change a saved transaction (History → tap it): amount, price, fees, date, note. Saved transactions never change in
+  // place (the database rules), so it is saved again under a new id and the old one deleted, in ONE write — and the
+  // stablecoin Buy / payment that goes with it (Sell → USDT, Buy paid from USDT) follows the new numbers in the same write.
+  editTx(id, f = {}) {
+    const t = S.txs.get(String(id));
+    if (!t || t.type === 'adjust') return Promise.reject(new Error('This entry can\'t be changed here'));
+    if (t.link) return Promise.reject(new Error('This one was made from another transaction — change that one and it follows'));
+    const pair = [...S.txs.values()].find(x => x.link === t.id) || null;
+    const nid = Core.newId('tx_');
+    const doc = txDoc(t.sym, t.type, f.qty, f.price, f.note, { date: f.date || t.date, fee: f.fee, feeUsd: f.feeUsd, netFee: f.netFee, kind: t.kind, src: t.src });
+    if (t.createdAt) doc.createdAt = t.createdAt;   // keeps its place among same-time entries
+    let pdoc = null, pid = null;
+    if (pair) {
+      const when = Date.parse(doc.date) || Date.now(), q = Number(doc.qty) || 0, pr = Number(doc.price) || 0, fu = Number(doc.feeUsd) || 0;
+      if (pair.kind === 'pay') pdoc = txDoc(pair.sym, 'sell', Math.max(0, q * pr + fu), 1, 'Paid for buying ' + (+q.toPrecision(8)) + ' ' + t.sym, { date: new Date(when + 1).toISOString(), link: nid, kind: 'pay' });
+      else pdoc = txDoc(pair.sym, 'buy', Math.max(0, q * pr - fu), 1, 'From selling ' + (+q.toPrecision(8)) + ' ' + t.sym, { date: new Date(when + 1).toISOString(), link: nid });
+      if (pair.createdAt) pdoc.createdAt = pair.createdAt;
+      pid = Core.newId('tx_');
+    }
+    return commit((b, ref) => {
+      b.set(ref('txs', nid), doc); b.delete(ref('txs', safeId(t.id)));
+      if (pdoc) { b.set(ref('txs', pid), pdoc); b.delete(ref('txs', safeId(pair.id))); }
+    }, 'Change transaction').then(() => nid);
+  },
   // A Sell whose money stays in the portfolio: the Sell + a Buy of the stablecoin for what you got (sell value − fee),
   // in ONE write. The Buy is priced at $1, so it adds exactly that much cash and no profit is counted twice.
   // A stablecoin you don't hold yet is added first (Add Coin), then gets the Buy.

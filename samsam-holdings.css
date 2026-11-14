@@ -109,6 +109,7 @@
     .htx-list { padding:4px 0 0; }
     .htx-date { padding:16px 16px 6px; font-size:0.8rem; color:var(--fg2); font-weight:600; }
     .htx-row { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border); }
+    .htx-editable { cursor:pointer; transition:background .15s; } .htx-editable:hover, .htx-editable:focus-visible { background:rgba(124,58,237,.07); outline:none; }
     .htx-row-icon { width:30px; height:30px; flex-shrink:0; display:inline-flex; }
     .htx-row-icon img, .htx-row-icon > div { width:30px !important; height:30px !important; }
     .htx-row-main { flex:1; min-width:0; }

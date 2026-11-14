@@ -572,7 +572,38 @@
     setOpen($('atxBackdrop'), true);
     setTimeout(function () { focusFirst('atxForm', 'atxQty'); }, 50);
   }
-  function closeAddTx() { var m = $('atxBackdrop'); if (m) setOpen(m, false); stkEdit = false; }
+  function closeAddTx() { var m = $('atxBackdrop'); if (m) setOpen(m, false); stkEdit = false; if (atxEditId) { atxEditId = null; var ty = document.querySelector('#atxForm .atx-types'); if (ty) ty.style.display = ''; } }
+  // ✏️ History → tap a transaction: the same form, filled in, "Save changes" (Samsam.editTx swaps it in one write)
+  var atxEditId = null;
+  function openEditTx(id) {
+    var t = (Samsam.getState().transactions || []).filter(function (x) { return x.id === id; })[0];
+    if (!t || t.type === 'adjust') return;
+    if (t.link) { var main = (Samsam.getState().transactions || []).filter(function (x) { return x.id === t.link; })[0]; if (main) return openEditTx(main.id); }
+    var type = t.type === 'transfer_in' && t.kind === 'reward' ? 'reward' : t.type;
+    if (t.kind === 'reward' && t.src && SRC_NOTE[t.src]) rwSrc = t.src;
+    stkMode = 'manual';
+    openAddTx(type, t.sym);
+    if (!$('atxBackdrop') || atxSym !== t.sym) return;
+    atxEditId = t.id;
+    var fee = +t.fee || 0, net = +t.netFee || 0, trade = Math.max(0, fee - net);
+    $('atxQty').value = fmtInput(+t.qty);
+    if (ATX[type].price) { $('atxPrice').value = fmtInput(+t.price); $('atxPrice').dataset.touched = '1'; }
+    if (type === 'buy') {
+      setFeeUnit(trade > 0 ? 'coin' : 'usd', true); $('atxFeeUsd').value = trade > 0 ? fmtInput(trade) : (+t.feeUsd ? String(+t.feeUsd) : '');
+      setNetUnit('coin', true); $('atxNetFee').value = net ? fmtInput(net) : '';
+    } else if (type === 'sell') $('atxFeeUsd').value = +t.feeUsd ? String(+t.feeUsd) : '';
+    else if (ATX[type].fee) $('atxFee').value = fee ? fmtInput(fee) : '';
+    $('atxDate').value = localDateTimeValue(new Date(t.date)); $('atxDate').dataset.touched = '1';
+    $('atxNote').value = t.note || '';
+    document.querySelector('#atxForm .atx-types').style.display = 'none';
+    ['atxCashRow', 'atxSrcRow', 'atxModeRow'].forEach(function (k) { if ($(k)) $(k).style.display = 'none'; });
+    var LB = window.SAMSAM_LABELS || {};
+    $('atxTitle').textContent = 'Edit ' + ({ buy: LB.BUY || 'Buy', sell: t.kind === 'pay' ? 'Paid' : LB.SELL || 'Sell', transfer_in: LB.TRANSFER_IN || 'Transfer In', transfer_out: LB.TRANSFER_OUT || 'Transfer Out', reward: SRC_NOTE[rwSrc] || 'Reward' }[type]);
+    $('atxSave').textContent = 'Save changes';
+    var pair = (Samsam.getState().transactions || []).filter(function (x) { return x.link === t.id; })[0];
+    $('atxHint').textContent = pair ? (pair.kind === 'pay' ? 'The ' + pair.sym + ' it was paid with follows the new numbers.' : 'The ' + pair.sym + ' added from this sell follows the new numbers.') + ' Holdings and averages are worked out again.' : 'Holdings, average buy price and profit are worked out again from your history.';
+    previewAddTx();
+  }
   function setAddTxType(t) {
     atxType = t; var cfg = ATX[t];
     document.querySelectorAll('.atx-types button').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.t === t)); });
@@ -805,7 +836,7 @@
       if (fe) { $('atxErr').textContent = rs.errs[fe]; Object.keys(rs.errs).forEach(function (id) { $(id).classList.add('bad'); }); $(fe).focus(); return; }
       return saveStake(rs);
     }
-    autoPay();
+    if (!atxEditId) autoPay();
     var r = readAddTx(), firstErr = Object.keys(r.errs)[0];
     if (firstErr) {
       $('atxErr').textContent = r.errs[firstErr];
@@ -814,6 +845,12 @@
     }
     atxSaving = true; $('atxSave').disabled = true;
     var note = $('atxNote').value.trim(), sym = atxSym, type = ledgerType(atxType);
+    if (atxEditId) {   // ✏️ save the changes (one write; a linked stablecoin entry follows)
+      var eid = atxEditId;
+      write(Samsam.editTx(eid, { qty: r.qty, price: r.price, note: note, date: r.date.toISOString(), fee: r.fee, feeUsd: r.feeUsd, netFee: r.netFee }).catch(function (e) { if (window.CPDialog) CPDialog.alert('Could not change it: ' + ((e && e.message) || e), { title: 'Edit transaction' }); throw e; }));
+      setTimeout(function () { atxSaving = false; $('atxSave').disabled = false; }, 400);
+      closeAddTx(); emit('tx', { sym: sym, type: type }); return;
+    }
     // Saved instantly on this device and synced to the cloud; every screen recalculates from the ledger
     var extra = { date: r.date.toISOString(), fee: r.fee, feeUsd: r.feeUsd, netFee: r.netFee }, cs = type === 'sell' ? cashTarget() : null;
     var pay = atxType === 'buy' ? r.payFrom : null;
@@ -968,7 +1005,7 @@
   // the names the pages (and inline handlers) already use
   var G = { openAddCoin: function () { openAddCoin(); }, closeAddCoin: closeAddCoin, previewAddCoin: previewAddCoin, applyAddCoin: applyAddCoin,
     acSearchInput: acSearchInput, acSearchKey: acSearchKey, acPick: acPick, acCmcCheck: acCmcCheck, acEditNet: acEditNet,
-    openAddTx: openAddTx, closeAddTx: closeAddTx, setAddTxType: setAddTxType, readAddTx: readAddTx, previewAddTx: previewAddTx, saveAddTx: saveAddTx,
+    openAddTx: openAddTx, openEditTx: openEditTx, closeAddTx: closeAddTx, setAddTxType: setAddTxType, readAddTx: readAddTx, previewAddTx: previewAddTx, saveAddTx: saveAddTx,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
     openCatEdit: function (sym) { openCatEdit(sym); }, closeCatEdit: closeCatEdit, saveCatEdit: saveCatEdit,
     ceDrawList: ceDrawList, cePick: cePick, openCatManager: openCatManager, closeCatManager: closeCatManager,

@@ -134,3 +134,4 @@ admin_dash_test.py
 invite_app_test.py
 guide_test.py
 light_popups_test.py
+edit_tx_test.py
