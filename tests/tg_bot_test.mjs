@@ -1057,6 +1057,11 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('…and voice notes work for them (not premium, own key)', fileGets.length === 1);
   sent.length = 0; await tapAs(555, 'us:m:888');
   check('…the owner sees 🔑 "uses their own Claude key (…aaaa)" on the card', /own Claude key \(…aaaa\)/.test(last().b.text), last().b.text);
+  check('…the card shows the key\'s limits (100 questions · 10 reports 🔑)', /a day: <b>100<\/b> 🔑/.test(last().b.text) && /a day: <b>10<\/b> 🔑/.test(last().b.text), last().b.text);
+  sent.length = 0; await tapAs(555, 'us');
+  check('…/users: 🔑 before their name and today …/100 · …/10', /🔑 <b>/.test(last().b.text) && /\/100 · 📊 \d+\/10/.test(last().b.text), last().b.text);
+  sent.length = 0; await tapAs(888, 'menu');
+  check('…their own hello says "🔑 Your own Claude key" (not ⭐ premium)', /🔑 Your own Claude key/.test(last().b.text) && !/premium member/.test(last().b.text), last().b.text.slice(0, 160));
   // a dead key → a clear message (no silent fallback to Samir's key)
   const DEAD = 'sk-ant-dead-' + 'c'.repeat(40);
   r = await keyReq('new.member@x.com', 'UID2', { action: 'set', key: GOOD });

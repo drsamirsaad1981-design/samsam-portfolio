@@ -19,7 +19,7 @@ import { forgetPortfolio, findLinkCode, syncAccess, loadMarket, loadUser, findCo
 import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
-import { keyInfo } from './byok.mjs';
+import { keyInfo, BYOK_AI, BYOK_REPORTS } from './byok.mjs';
 import GUIDE from '../../guide.json' with { type: 'json' };
 import { onMyChatMember, onJoinRequest, communityView, announce, setup as communitySetup, registerForward } from './community.mjs';
 import { premiumView, supportView, sendSupportInvoice, askGift, preCheckout, paid, statsView, addDays, revoke, premiumNow } from './stars.mjs';
@@ -429,8 +429,9 @@ async function viewUsers(env, lang) {
   const mx = await maxMembers(env), L = [ar ? `👥 <b>الأعضاء</b> (${list.length}/${mx})` : `👥 <b>Members</b> (${list.length}/${mx})`, ''];
   if (!list.length) L.push(ar ? 'لسه مفيش حد. اضغط ➕ لكود دعوة.' : 'Nobody yet. Tap ➕ for an invite code.');
   const used = await Promise.all(list.map(([c, x]) => usedToday(env, c, x)));
-  list.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? '⏸ ' : ''}${premiumNow(x) ? '⭐ ' : ''}${x.supporter ? '💛 ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''}\n    ${ar ? 'النهارده' : 'today'} 🧠 ${used[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} · 📊 ${used[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
-  if (list.length) L.push('', ar ? '<i>اضغط على اسم عشان تغيّر حدوده أو تشيله · 📱 التطبيق · 🔗 المحفظة مربوطة</i>' : '<i>Tap a name to change their limits or remove them · 📱 app · 🔗 portfolio linked</i>');
+  const keys = await Promise.all(list.map(([c]) => asChat(c, () => keyInfo(env))));   // 🔑 their own Claude key
+  list.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? '⏸ ' : ''}${premiumNow(x) ? '⭐ ' : ''}${x.supporter ? '💛 ' : ''}${keys[i].has ? '🔑 ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''}\n    ${ar ? 'النهارده' : 'today'} 🧠 ${used[i].q}/${keys[i].has ? BYOK_AI : Number.isFinite(x.ai) ? x.ai : DEF_AI} · 📊 ${used[i].r}/${keys[i].has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
+  if (list.length) L.push('', ar ? '<i>اضغط على اسم عشان تغيّر حدوده أو تشيله · 📱 التطبيق · 🔗 المحفظة مربوطة · 🔑 مفتاح Claude بتاعه</i>' : '<i>Tap a name to change their limits or remove them · 📱 app · 🔗 portfolio linked · 🔑 own Claude key</i>');
   const b = []; for (let i = 0; i < list.length; i += 3) b.push(list.slice(i, i + 3).map(([c, x], j) => cb(`${i + j + 1}. ${x.name.split(' ')[0].slice(0, 12)}${x.uid ? ' 🔗' : x.email ? ' 📱' : ''}`, 'us:m:' + c)));
   b.push([cb(ar ? '➕ دعوة جديدة' : '➕ New invite', 'us:inv'), cb(T[lang].back, 'menu')]);
   return { text: L.join('\n'), buttons: b };
@@ -479,9 +480,9 @@ export function guideView(lang, k = null) {
 async function badgeOf(env, t) {
   if (isOwner(env)) return '';
   const x = await member(env); if (!x) return '';
-  const ar = t === T.ar, p = premiumNow(x), s = !!x.supporter;
-  if (!p && !s) return '';
-  return [p ? (ar ? '⭐ — عضو مميز' : '⭐ — premium member') : '👋', s ? '💛 Supporter' : ''].filter(Boolean).join(' · ');
+  const ar = t === T.ar, p = premiumNow(x), s = !!x.supporter, k = (await keyInfo(env)).has;   // 🔑 own Claude key: its own badge (not premium, not supporter)
+  if (!p && !s && !k) return '';
+  return [p ? (ar ? '⭐ — عضو مميز' : '⭐ — premium member') : '👋', k ? (ar ? '🔑 مفتاح Claude بتاعك' : '🔑 Your own Claude key') : '', s ? '💛 Supporter' : ''].filter(Boolean).join(' · ');
 }
 
 // 📱 /app you@example.com — an invited person asks to open the app with that e-mail; the owner taps ✅ (or ❌)
@@ -526,7 +527,8 @@ async function viewMember(env, lang, c) {
   const L = [`👤 ${x.paused ? '⏸ ' : ''}${premiumNow(x) ? '⭐ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}${x.paused ? (ar ? ' — <b>متوقف</b>' : ' — <b>paused</b>') : ''}${premiumNow(x) ? (ar ? ' — <b>مميز</b>' : ' — <b>premium</b>') + (x.premUntil ? ` ${ar ? 'لحد' : 'until'} ${esc(local(x.premUntil, { day: 'numeric', month: 'short', year: 'numeric' }))}${x.premSrc === 'stars' ? ' (Stars)' : ar ? ' (هدية)' : ' (gift)'}` : '') : ''}${x.supporter ? ` · 💛 ${x.starsPaid || ''}⭐` : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
     ...(kk.has ? [`🔑 ${ar ? 'بيستعمل مفتاح Claude بتاعه' : 'Uses their own Claude key'} (…${esc(kk.tail)}) — ${ar ? 'تكلفته عليه' : 'on their bill'}`] : []),
     `📱 ${ar ? 'التطبيق' : 'App'}: ${x.email ? '<code>' + esc(x.email) + '</code>' : (ar ? 'لسه' : 'not yet')}`, `🔗 ${ar ? 'المحفظة' : 'Portfolio'}: ${x.uid ? (ar ? 'مربوطة ✅' : 'linked ✅') : (ar ? 'مش مربوطة' : 'not linked')}`, '',
-    `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${ai}</b> · ${ar ? 'النهارده' : 'today'} ${u.q}`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${rp}</b> · ${ar ? 'النهارده' : 'today'} ${u.r}`, '',
+    `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${kk.has ? BYOK_AI : ai}</b>${kk.has ? ' 🔑' : ''} · ${ar ? 'النهارده' : 'today'} ${u.q}`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${kk.has ? BYOK_REPORTS : rp}</b>${kk.has ? ' 🔑' : ''} · ${ar ? 'النهارده' : 'today'} ${u.r}`,
+    ...(kk.has ? [ar ? `<i>🔑 طول ما مفتاحه موجود حدوده ${BYOK_AI} سؤال و${BYOK_REPORTS} تقارير (على حسابه) — أزرار − / + بتغيّر حدوده من غير مفتاح.</i>` : `<i>🔑 While their key is set: ${BYOK_AI} questions and ${BYOK_REPORTS} reports (their bill) — − / + change the limits without a key.</i>`] : []), '',
     ar ? '<i>☆ إلغاء المميز: يشيل المميزات بس — يفضل في البوت والبرنامج عادي.\n⏸ وقّفه: البوت يسكت عنده (البرنامج شغال) — ▶️ يرجّعه.\n🗑 شيل العضو: يخرج من البوت والبرنامج — ↩️ يرجع خلال 60 يوم.</i>'
        : '<i>☆ End premium: removes the extras only — stays in the bot and the app.\n⏸ Pause: the bot goes quiet for them (the app still works) — ▶️ to resume.\n🗑 Remove member: out of the bot and the app — ↩️ back within 60 days.</i>'];
   return { text: L.join('\n'), buttons: [[cb('🧠 −', `us:ai:-:${c}`), cb('🧠 +', `us:ai:+:${c}`), cb('📊 −', `us:rp:-:${c}`), cb('📊 +', `us:rp:+:${c}`)],

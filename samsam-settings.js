@@ -99,9 +99,10 @@
         '🧠 Questions to the bot: 5 a day · ⭐ Premium 20 · 🔑 your own Claude key 100.\n' +
         '📊 Quick reports here: ⭐ Premium 3 a day · 🔑 your own key 10.\n' +
         '🎙 Voice notes: ⭐ Premium or your own key.' +
+        (st.has ? '\n\n🔑 You use your own Claude key (…' + st.tail + ') — your limits are the key\'s, on your Claude bill. It isn\'t ⭐ Premium or 💛 Supporter (those are Telegram Stars).' : st.premium ? '\n\n⭐ You\'re premium — thank you!' : '') +
         (q || r ? '\n\nToday: 🧠 ' + (q ? q.used + ' of ' + q.limit + ' questions' : '—') + ' · 📊 ' + (r ? r.used + ' of ' + r.limit + ' quick reports' : '—') + '.' : '');
-      CPDialog.confirm(msg, { title: 'AI Analysis & questions', icon: 'bot', okText: st.premium ? 'OK' : '⭐ Premium & support', cancelText: 'Close' })
-        .then(function (go) { if (go && !st.premium) ACT.support(); });
+      CPDialog.confirm(msg, { title: 'AI Analysis & questions', icon: 'bot', okText: st.premium || st.has ? 'OK' : '⭐ Premium & support', cancelText: 'Close' })
+        .then(function (go) { if (go && !st.premium && !st.has) ACT.support(); });
     },
     support: function () {   // 💛 Support Cute Portfolio & Channel (loaded only when opened)
       if (window.SamsamSupport) { SamsamSupport.open(); return; }
@@ -122,12 +123,12 @@
       call({ action: 'status' }).then(function (st) {
         if (st.has) {
           return D.confirm('Your own Claude key (…' + st.tail + ') is on: your questions, voice notes and AI Analysis run on it — on your Anthropic bill — with high limits.\n\nRemove it?', { title: 'My Claude key', icon: 'key', okText: 'Remove', danger: true })
-            .then(function (go) { if (go) return call({ action: 'delete' }).then(function () { return D.alert('Removed — you are back on the standard limits.', { title: 'My Claude key', icon: 'key' }); }); });
+            .then(function (go) { if (go) return call({ action: 'delete' }).then(function () { memberAsked = false; loadMemberSt(); return D.alert('Removed — you are back on the standard limits.', { title: 'My Claude key', icon: 'key' }); }); });
         }
         return D.prompt('Paste your Claude API key (from console.anthropic.com → API keys). It is sent once, checked with Claude, then kept encrypted — nobody can see it again, and you can remove it any time.\n\nWith it: 100 questions a day, voice notes, and 10 AI Analysis reports — billed to your Anthropic account.', { title: 'My Claude key', icon: 'key', okText: 'Save', placeholder: 'sk-ant-…', secret: true })
           .then(function (k) {
             if (!k || !String(k).trim()) return;
-            return call({ action: 'set', key: String(k).trim() }).then(function (r) { return D.alert('Saved ✅ (…' + r.tail + '). The bot and AI Analysis use your key now.', { title: 'My Claude key', icon: 'key' }); });
+            return call({ action: 'set', key: String(k).trim() }).then(function (r) { memberAsked = false; loadMemberSt(); return D.alert('Saved ✅ (…' + r.tail + '). The bot and AI Analysis use your key now.', { title: 'My Claude key', icon: 'key' }); });
           });
       }).catch(function (e) { if (D) D.alert(String((e && e.message) || e), { title: 'My Claude key', icon: 'key' }); });
     },
@@ -169,7 +170,7 @@
   function val(k) {
     var s = S(), st = s.getState() || {};
     try {
-      if (k === 'account') { var u = s.user(); return (u ? u.email || 'Signed in' : 'Not signed in') + (memberSt && memberSt.premium ? ' · ⭐ Premium' : '') + (memberSt && memberSt.supporter ? ' · 💛 Supporter' : ''); }
+      if (k === 'account') { var u = s.user(); return (u ? u.email || 'Signed in' : 'Not signed in') + (memberSt && memberSt.premium ? ' · ⭐ Premium' : '') + (memberSt && memberSt.supporter ? ' · 💛 Supporter' : '') + (memberSt && memberSt.has ? ' · 🔑 own key' : ''); }
       if (k === 'support') { var m2 = memberSt; return m2 && (m2.premium || m2.supporter) ? (m2.premium ? '⭐ Premium' + (m2.premUntil ? ' until ' + untilTxt(m2.premUntil) : '') + ' · ' : '') + '💛 thank you!' : 'Free & non-profit · optional support · ⭐ Premium'; }
       if (k === 'backup') { var b = lastBackup(); return '<span' + (b.old ? ' class="st-warn"' : '') + '>Last backup: ' + b.text + '</span>'; }
       if (k === 'alerts') {
@@ -198,7 +199,8 @@
       if (k === 'tglink') return memberSt ? (memberSt.botLinked ? '✅ Linked — the bot reads your portfolio (only for you)' : 'One tap — then the bot shows your portfolio, alerts, morning & evening') : 'One tap — the bot shows your portfolio';
       if (k === 'tgchan') { var tc = memberSt && memberSt.tgIn && memberSt.tgIn.channel; return tc ? '✅ You\'re in' : 'The market pulse twice a day · ⭐ on posts you like'; }
       if (k === 'tggroup') { var tg2 = memberSt && memberSt.tgIn && memberSt.tgIn.group; return tg2 ? '✅ You\'re in' : 'Chat · suggestions · bugs · the guide · news'; }
-      if (k === 'aiinfo') { var qq = memberSt && memberSt.questions, rr = memberSt && memberSt.reports; return qq ? 'Today: 🧠 ' + qq.used + '/' + qq.limit + ' questions · 📊 ' + (rr ? rr.used + '/' + rr.limit : '0/0') + ' quick reports' : 'Why there are limits · free ways · more'; }
+      if (k === 'claudekey') return memberSt && memberSt.has ? '🔑 Set (…' + memberSt.tail + ') · 100 questions & 10 reports a day — on your Claude bill' : 'Optional · your own key = 100 questions & 10 reports a day';
+      if (k === 'aiinfo') { var qq = memberSt && memberSt.questions, rr = memberSt && memberSt.reports; return qq ? (memberSt.has ? '🔑 Your own key · ' : memberSt.premium ? '⭐ Premium · ' : '') + 'Today: 🧠 ' + qq.used + '/' + qq.limit + ' questions · 📊 ' + (rr ? rr.used + '/' + rr.limit : '0/0') + ' quick reports' : 'Why there are limits · free ways · more'; }
       if (k === 'guide') return 'How the app and the bot work · English / العربية';
       if (k === 'dca') { var n2 = (st.accumPlan || []).filter(function (x) { return x.dca && x.dca.usd > 0; }).length; return n2 ? n2 + ' coin' + (n2 === 1 ? '' : 's') + ' with a regular buy' : 'None yet'; }
     } catch (_) {}

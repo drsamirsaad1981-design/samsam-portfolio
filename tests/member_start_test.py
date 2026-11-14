@@ -53,7 +53,7 @@ with sync_playwright() as p:
             check('member: the key is typed in a hidden (password) field', pg.get_attribute('#cpDialog #cpdI', 'type') == 'password')
             pg.fill('#cpDialog #cpdI', 'sk-ant-test-key-wxyz'); pg.click('#cpDialog .cpd-ok')
             pg.wait_for_function("document.querySelector('#cpDialog') && /Saved/.test(document.querySelector('#cpDialog').textContent)", timeout=8000)
-            check('member: status asked, then the key sent once with their sign-in token → "Saved (…wxyz)"', [c.get('action') for c in calls][-2:] == ['status', 'set'] and [c.get('action') for c in calls].count('set') == 1 and calls[-1].get('key') == 'sk-ant-test-key-wxyz' and calls[-1].get('idToken'), [c.get('action') for c in calls])
+            check('member: status asked, then the key sent once with their sign-in token → "Saved (…wxyz)", then Settings re-reads the status (🔑 shows)', [c.get('action') for c in calls][-3:] == ['status', 'set', 'status'] and [c.get('action') for c in calls].count('set') == 1 and [c for c in calls if c.get('action') == 'set'][0].get('key') == 'sk-ant-test-key-wxyz' and [c for c in calls if c.get('action') == 'set'][0].get('idToken'), [c.get('action') for c in calls])
             # 💛 Support Cute Portfolio & Channel: one card — free & non-profit, ⭐ premium (also a supporter), 💛 one-time, the channel / group;
             # each button opens Telegram's own payment for this member (the Worker makes the link)
             def sup_route(r):

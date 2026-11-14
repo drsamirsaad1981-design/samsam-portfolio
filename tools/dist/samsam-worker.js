@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 2102b51802ea9eeb
+// sources-hash: d83ef611b7aad8af
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5190,9 +5190,10 @@ async function viewUsers(env, lang2) {
   const mx = await maxMembers(env), L = [ar ? `\u{1F465} <b>\u0627\u0644\u0623\u0639\u0636\u0627\u0621</b> (${list2.length}/${mx})` : `\u{1F465} <b>Members</b> (${list2.length}/${mx})`, ""];
   if (!list2.length) L.push(ar ? "\u0644\u0633\u0647 \u0645\u0641\u064A\u0634 \u062D\u062F. \u0627\u0636\u063A\u0637 \u2795 \u0644\u0643\u0648\u062F \u062F\u0639\u0648\u0629." : "Nobody yet. Tap \u2795 for an invite code.");
   const used2 = await Promise.all(list2.map(([c, x]) => usedToday(env, c, x)));
-  list2.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? "\u23F8 " : ""}${premiumNow(x) ? "\u2B50 " : ""}${x.supporter ? "\u{1F49B} " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""}
-    ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} \u{1F9E0} ${used2[i].q}/${Number.isFinite(x.ai) ? x.ai : DEF_AI} \xB7 \u{1F4CA} ${used2[i].r}/${Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
-  if (list2.length) L.push("", ar ? "<i>\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0633\u0645 \u0639\u0634\u0627\u0646 \u062A\u063A\u064A\u0651\u0631 \u062D\u062F\u0648\u062F\u0647 \u0623\u0648 \u062A\u0634\u064A\u0644\u0647 \xB7 \u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u{1F517} \u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0631\u0628\u0648\u0637\u0629</i>" : "<i>Tap a name to change their limits or remove them \xB7 \u{1F4F1} app \xB7 \u{1F517} portfolio linked</i>");
+  const keys = await Promise.all(list2.map(([c]) => asChat(c, () => keyInfo(env))));
+  list2.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? "\u23F8 " : ""}${premiumNow(x) ? "\u2B50 " : ""}${x.supporter ? "\u{1F49B} " : ""}${keys[i].has ? "\u{1F511} " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""}
+    ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} \u{1F9E0} ${used2[i].q}/${keys[i].has ? BYOK_AI : Number.isFinite(x.ai) ? x.ai : DEF_AI} \xB7 \u{1F4CA} ${used2[i].r}/${keys[i].has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
+  if (list2.length) L.push("", ar ? "<i>\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0633\u0645 \u0639\u0634\u0627\u0646 \u062A\u063A\u064A\u0651\u0631 \u062D\u062F\u0648\u062F\u0647 \u0623\u0648 \u062A\u0634\u064A\u0644\u0647 \xB7 \u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u{1F517} \u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0631\u0628\u0648\u0637\u0629 \xB7 \u{1F511} \u0645\u0641\u062A\u0627\u062D Claude \u0628\u062A\u0627\u0639\u0647</i>" : "<i>Tap a name to change their limits or remove them \xB7 \u{1F4F1} app \xB7 \u{1F517} portfolio linked \xB7 \u{1F511} own Claude key</i>");
   const b = [];
   for (let i = 0; i < list2.length; i += 3) b.push(list2.slice(i, i + 3).map(([c, x], j) => cb3(`${i + j + 1}. ${x.name.split(" ")[0].slice(0, 12)}${x.uid ? " \u{1F517}" : x.email ? " \u{1F4F1}" : ""}`, "us:m:" + c)));
   b.push([cb3(ar ? "\u2795 \u062F\u0639\u0648\u0629 \u062C\u062F\u064A\u062F\u0629" : "\u2795 New invite", "us:inv"), cb3(T[lang2].back, "menu")]);
@@ -5278,9 +5279,9 @@ async function badgeOf(env, t) {
   if (isOwner(env)) return "";
   const x = await member(env);
   if (!x) return "";
-  const ar = t === T.ar, p = premiumNow(x), s = !!x.supporter;
-  if (!p && !s) return "";
-  return [p ? ar ? "\u2B50 \u2014 \u0639\u0636\u0648 \u0645\u0645\u064A\u0632" : "\u2B50 \u2014 premium member" : "\u{1F44B}", s ? "\u{1F49B} Supporter" : ""].filter(Boolean).join(" \xB7 ");
+  const ar = t === T.ar, p = premiumNow(x), s = !!x.supporter, k = (await keyInfo(env)).has;
+  if (!p && !s && !k) return "";
+  return [p ? ar ? "\u2B50 \u2014 \u0639\u0636\u0648 \u0645\u0645\u064A\u0632" : "\u2B50 \u2014 premium member" : "\u{1F44B}", k ? ar ? "\u{1F511} \u0645\u0641\u062A\u0627\u062D Claude \u0628\u062A\u0627\u0639\u0643" : "\u{1F511} Your own Claude key" : "", s ? "\u{1F49B} Supporter" : ""].filter(Boolean).join(" \xB7 ");
 }
 var AW = {
   en: {
@@ -5369,8 +5370,9 @@ async function viewMember(env, lang2, c) {
     `\u{1F4F1} ${ar ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "App"}: ${x.email ? "<code>" + esc(x.email) + "</code>" : ar ? "\u0644\u0633\u0647" : "not yet"}`,
     `\u{1F517} ${ar ? "\u0627\u0644\u0645\u062D\u0641\u0638\u0629" : "Portfolio"}: ${x.uid ? ar ? "\u0645\u0631\u0628\u0648\u0637\u0629 \u2705" : "linked \u2705" : ar ? "\u0645\u0634 \u0645\u0631\u0628\u0648\u0637\u0629" : "not linked"}`,
     "",
-    `\u{1F9E0} ${ar ? "\u0623\u0633\u0626\u0644\u0629 AI \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI questions a day"}: <b>${ai}</b> \xB7 ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} ${u.q}`,
-    `\u{1F4CA} ${ar ? "\u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI Analysis reports a day"}: <b>${rp}</b> \xB7 ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} ${u.r}`,
+    `\u{1F9E0} ${ar ? "\u0623\u0633\u0626\u0644\u0629 AI \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI questions a day"}: <b>${kk.has ? BYOK_AI : ai}</b>${kk.has ? " \u{1F511}" : ""} \xB7 ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} ${u.q}`,
+    `\u{1F4CA} ${ar ? "\u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u0641\u064A \u0627\u0644\u064A\u0648\u0645" : "AI Analysis reports a day"}: <b>${kk.has ? BYOK_REPORTS : rp}</b>${kk.has ? " \u{1F511}" : ""} \xB7 ${ar ? "\u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647" : "today"} ${u.r}`,
+    ...kk.has ? [ar ? `<i>\u{1F511} \u0637\u0648\u0644 \u0645\u0627 \u0645\u0641\u062A\u0627\u062D\u0647 \u0645\u0648\u062C\u0648\u062F \u062D\u062F\u0648\u062F\u0647 ${BYOK_AI} \u0633\u0624\u0627\u0644 \u0648${BYOK_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 (\u0639\u0644\u0649 \u062D\u0633\u0627\u0628\u0647) \u2014 \u0623\u0632\u0631\u0627\u0631 \u2212 / + \u0628\u062A\u063A\u064A\u0651\u0631 \u062D\u062F\u0648\u062F\u0647 \u0645\u0646 \u063A\u064A\u0631 \u0645\u0641\u062A\u0627\u062D.</i>` : `<i>\u{1F511} While their key is set: ${BYOK_AI} questions and ${BYOK_REPORTS} reports (their bill) \u2014 \u2212 / + change the limits without a key.</i>`] : [],
     "",
     ar ? "<i>\u2606 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632: \u064A\u0634\u064A\u0644 \u0627\u0644\u0645\u0645\u064A\u0632\u0627\u062A \u0628\u0633 \u2014 \u064A\u0641\u0636\u0644 \u0641\u064A \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0639\u0627\u062F\u064A.\n\u23F8 \u0648\u0642\u0651\u0641\u0647: \u0627\u0644\u0628\u0648\u062A \u064A\u0633\u0643\u062A \u0639\u0646\u062F\u0647 (\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0634\u063A\u0627\u0644) \u2014 \u25B6\uFE0F \u064A\u0631\u062C\u0651\u0639\u0647.\n\u{1F5D1} \u0634\u064A\u0644 \u0627\u0644\u0639\u0636\u0648: \u064A\u062E\u0631\u062C \u0645\u0646 \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u2014 \u21A9\uFE0F \u064A\u0631\u062C\u0639 \u062E\u0644\u0627\u0644 60 \u064A\u0648\u0645.</i>" : "<i>\u2606 End premium: removes the extras only \u2014 stays in the bot and the app.\n\u23F8 Pause: the bot goes quiet for them (the app still works) \u2014 \u25B6\uFE0F to resume.\n\u{1F5D1} Remove member: out of the bot and the app \u2014 \u21A9\uFE0F back within 60 days.</i>"
   ];
