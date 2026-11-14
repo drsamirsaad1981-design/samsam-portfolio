@@ -168,7 +168,7 @@
         clearInterval(iv); if (!seen) return;
         setTimeout(function () {   // a second window may follow (the key: asked → saved ✅) — wait for the last one
           if (doc.querySelector('#ssPw,#cpDialog') || $('cpSet')) { if (doc.querySelector('#cpDialog') && !$('cpSet')) backAfter(act); return; }
-          var hs = history.state; if (hs && hs.cpSet === 'win') { history.back(); return; }   // the Back entry goes too (popstate opens Settings)
+          var hs = history.state; if (hs && hs.cpSet === 'win') { selfBack = true; history.back(); return; }   // the Back entry goes too (popstate opens Settings)
           open();
         }, 120);
       }
@@ -330,8 +330,11 @@
     var b = $('cpSet'); if (b) b.remove(); doc.removeEventListener('keydown', esc, true);
     if (!keepHist && b && history.state && history.state.cpSet === 'open') { try { history.back(); } catch (_) {} }   // closed with × / Esc: its Back entry goes too
   }
+  var selfBack = false;
+  function anyWindow() { return Object.keys(OPENS).some(function (k) { return shownNow(OPENS[k]); }); }
   window.addEventListener('popstate', function (e) {
-    var st = e.state || {};
+    var st = e.state || {}, mine = selfBack; selfBack = false;
+    if (mine) { if (st.cpSet === 'sub' && !$('cpSet') && !anyWindow()) open(true); return; }   // our own step back after a window closed: Settings again (unless something else opened meanwhile)
     if ($('cpSet') && st.cpSet !== 'open') { close(true); return; }              // Back on Settings → closed
     if (st.cpSet === 'sub' && !$('cpSet')) {                                       // Back from a window Settings opened → Settings again
       [].forEach.call(doc.querySelectorAll('#cpGuide,#cpAdm,#cpSup,#cpAlerts,#cpWal,#cpRew'), function (x) { x.remove(); });
