@@ -103,6 +103,13 @@ export async function premiumView(env, lang, now = Date.now()) {
   b.push([cb(w.back, 'menu')]);
   return { text: lines.join('\n'), buttons: b };
 }
+// 💳 a payment link for the app's Support card: Telegram's own invoice for THIS member (they pay in Telegram, as in the bot)
+export async function invoiceLink(env, chat, kind, n, lang = 'en') {
+  const w = words(lang);
+  if (kind === 'prem') return tg(env, 'createInvoiceLink', { title: w.invTitle, description: w.invDesc, payload: `prem:${chat}`, currency: 'XTR', prices: [{ label: w.invTitle, amount: price(env) }], subscription_period: 30 * 86400 });
+  if (kind === 'sup' && SUPPORT.includes(+n)) return tg(env, 'createInvoiceLink', { title: w.supTitle, description: w.supDesc, payload: `sup:${chat}:${+n}`, currency: 'XTR', prices: [{ label: w.supTitle, amount: +n }] });
+  return { ok: false };
+}
 // ── /support ──
 export async function supportView(env, lang) {
   const w = words(lang), x = isOwner(env) ? null : await member(env);
@@ -143,7 +150,7 @@ export async function paid(env, chat, sp, lang, now = Date.now()) {
   const O = words(await asChat(env.TELEGRAM_CHAT_ID, () => langOf(env)));
   if (kind === 'prem') {
     const until = sp.subscription_expiration_date ? sp.subscription_expiration_date * 1000 : now + MONTH;
-    if (!owner) await grant(env, chat, until, 'stars', sp.telegram_payment_charge_id);
+    if (!owner) { await grant(env, chat, until, 'stars', sp.telegram_payment_charge_id); await setMember(env, chat, { supporter: true, starsPaid: ((x && x.starsPaid) || 0) + stars }); }   // a premium member is a supporter too
     const renew = !!(sp.is_recurring && !sp.is_first_recurring);
     await tg(env, 'sendMessage', { chat_id: chat, text: renew ? w.renewed(day(until)) : w.paidPrem(day(until)), parse_mode: 'HTML' });
     await tellOwner(renew ? O.ownerRenew(name, stars, day(until)) : O.ownerPrem(name, stars, day(until)));

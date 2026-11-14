@@ -13,15 +13,15 @@ setJoinHandler(async (env, who, body) => {
     body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text: `📱 ${n} (${who.email}) joined from the app with an invite.` }) }).catch(() => {}); }
   return { ok: true, already: !!r.already };
 });
-import { expireRound, premiumNow } from './stars.mjs';
-import { runChannel } from './community.mjs';
+import { expireRound, premiumNow, invoiceLink, price as premPrice, SUPPORT } from './stars.mjs';
+import { runChannel, getCommunity } from './community.mjs';
 import { saveKey, keyInfo, ownKey, deleteKey, validShape, keyWorks, BYOK_REPORTS } from './byok.mjs';
 import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
 import { runDaily, kickPrices } from './daily.mjs';
 import { page, api, cardSend, logo } from './miniapp.mjs';
 import { resetBudget, syncAccess } from './data.mjs';
-import { asChat, activeChats, migrateOwner, memberByEmail, DEF_REPORTS, useAppInvite, accessEmails } from './who.mjs';
+import { asChat, activeChats, migrateOwner, memberByEmail, DEF_REPORTS, useAppInvite, accessEmails, isTgChat } from './who.mjs';
 
 // AI Analysis in the app: people invited through the bot whose e-mail Samir approved — their own daily reports (/users), Sonnet
 setMemberCheck(async (env, email) => {
@@ -43,10 +43,17 @@ setKeyHandler(async (env, email, body) => {
       if (w === 'refused') return { status: 400, error: 'Claude refused this key — check it in console.anthropic.com.' };
       await saveKey(env, k); return { ...(await keyInfo(env)), checked: w === 'ok' };
     }
+    if (a === 'invoice') {   // 💛⭐ from the app's Support card: a Telegram payment link for this member
+      if (!isTgChat(x.chat)) return { status: 409, error: 'link-bot' };
+      if (body.kind === 'prem' && premiumNow(x) && x.premSrc === 'stars') return { status: 409, error: 'already' };
+      const r = await invoiceLink(env, x.chat, body.kind, body.n, x.lang);
+      return r.ok && typeof r.result === 'string' ? { link: r.result } : { status: 502, error: 'Telegram did not make the payment link — try again.' };
+    }
     const st = await keyInfo(env), day = new Date().toISOString().slice(0, 10);   // + the quick-report allowance for the AI Analysis screen
     const limit = x.paused ? 0 : st.has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
     let used = 0; try { used = x.uid && env.RATE ? +(await env.RATE.get(`ai:${x.uid}:${day}`)) || 0 : 0; } catch (_) {}
-    return { ...st, reports: { limit, used, left: Math.max(0, limit - used) }, premium: premiumNow(x), premUntil: x.premUntil || null, premSrc: x.premSrc || null, supporter: !!x.supporter, starsPaid: x.starsPaid || 0 };
+    return { ...st, reports: { limit, used, left: Math.max(0, limit - used) }, premium: premiumNow(x), premUntil: x.premUntil || null, premSrc: x.premSrc || null, supporter: !!x.supporter, starsPaid: x.starsPaid || 0, botLinked: isTgChat(x.chat), price: premPrice(env), amounts: SUPPORT,
+      community: await getCommunity(env).then(c => ({ channel: (c.channel && c.channel.link) || null, group: (c.group && c.group.link) || null })).catch(() => ({})) };
   });
 });
 

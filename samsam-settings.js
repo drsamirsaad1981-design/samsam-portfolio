@@ -74,14 +74,9 @@
   function isMember() { var s = S(); return !!(s && s.isOwner && !s.isOwner()); }
   function loadMemberSt() {
     if (memberAsked || !isMember()) return; memberAsked = true;
-    workerCall({ action: 'status' }).then(function (st) { memberSt = st; draw(); }).catch(function () { memberAsked = false; });
+    workerCall({ action: 'status' }).then(function (st) { memberSt = st; try { localStorage.setItem('cp-support-st', JSON.stringify({ premium: !!st.premium, supporter: !!st.supporter, t: Date.now() })); } catch (_) {} draw(); }).catch(function () { memberAsked = false; });
   }
   function untilTxt(ms) { return new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
-  var PREM_TXT = 'Everything in Cute Portfolio stays free. Premium adds:\n• 🎙 Voice notes — talk to the bot\n• 🧠 20 AI questions a day (instead of 5)\n• 📊 3 quick AI Analysis reports a day here\n\n' +
-    'Price: 350 Telegram Stars a month (about $7). You pay inside Telegram; it renews every 30 days and you can cancel any time (Telegram → Settings → My Stars) — it stays until the paid month ends.\n\n' +
-    'Why it costs anything: the AI is paid per question — this only covers that cost. Cute Portfolio is non-profit.\n\nTelegram Stars are Telegram\'s own coins — you buy them inside Telegram, like any in-app purchase.';
-  var SUP_TXT = 'Optional — a one-time thank-you of any size (50 to 500 Stars, about $1 to $10). Nothing changes in the features: everything stays free.\n\n' +
-    'It helps pay for the servers and the AI, and you get a Supporter 💛 badge here and in the bot. You pay inside Telegram.';
   var ACT = {
     guide: function () {   // 📘 the guide (loaded only when opened)
       if (window.SamsamGuide) { SamsamGuide.open(); return; }
@@ -95,15 +90,11 @@
       var sc = doc.createElement('script'); sc.src = 'samsam-admin.js' + (v ? '?' + v : ''); sc.onload = function () { window.SamsamAdmin && SamsamAdmin.open(); };
       doc.head.appendChild(sc);
     },
-    premium: function () {
-      var st = memberSt, now = st && st.premium ? (st.premUntil ? '✅ You\'re premium until ' + untilTxt(st.premUntil) + (st.premSrc === 'stars' ? ' — it renews by itself.' : ' (a gift).') : '✅ You\'re premium (a gift).') + '\n\n' : '';
-      CPDialog.confirm(now + PREM_TXT, { title: 'Premium', icon: 'star', okText: 'Open in Telegram' })
-        .then(function (go) { if (go) window.open(BOT + '?start=premium', '_blank', 'noopener'); });
-    },
-    support: function () {
-      var st = memberSt, th = st && st.supporter ? '💛 You\'re a Supporter (' + (st.starsPaid || 0) + ' ⭐) — thank you!\n\n' : '';
-      CPDialog.confirm(th + SUP_TXT, { title: 'Support Cute Portfolio', icon: 'heart', okText: 'Open in Telegram' })
-        .then(function (go) { if (go) window.open(BOT + '?start=support', '_blank', 'noopener'); });
+    support: function () {   // 💛 Support Cute Portfolio & Channel (loaded only when opened)
+      if (window.SamsamSupport) { SamsamSupport.open(); return; }
+      var me = doc.querySelector('script[src*="samsam-settings.js"]'), v = me && (me.getAttribute('src').split('?')[1] || '');
+      var sc = doc.createElement('script'); sc.src = 'samsam-support.js' + (v ? '?' + v : ''); sc.onload = function () { window.SamsamSupport && SamsamSupport.open(); };
+      doc.head.appendChild(sc);
     },
     alerts: function () { S().openAlerts(); },
     tglink: function () {   // a one-time code → send it to the bot (or open the bot with it)
@@ -166,8 +157,7 @@
     var s = S(), st = s.getState() || {};
     try {
       if (k === 'account') { var u = s.user(); return (u ? u.email || 'Signed in' : 'Not signed in') + (memberSt && memberSt.premium ? ' · ⭐ Premium' : '') + (memberSt && memberSt.supporter ? ' · 💛 Supporter' : ''); }
-      if (k === 'premium') { var m = memberSt; return m ? (m.premium ? '⭐ Premium' + (m.premUntil ? ' until ' + untilTxt(m.premUntil) : '') : 'Voice notes + more AI · 350 ⭐ a month') : 'Voice notes + more AI · 350 ⭐ a month'; }
-      if (k === 'support') { var m2 = memberSt; return m2 && m2.supporter ? '💛 Supporter · ' + (m2.starsPaid || 0) + ' ⭐ — thank you!' : 'Optional · any amount, one time'; }
+      if (k === 'support') { var m2 = memberSt; return m2 && (m2.premium || m2.supporter) ? (m2.premium ? '⭐ Premium' + (m2.premUntil ? ' until ' + untilTxt(m2.premUntil) : '') + ' · ' : '') + '💛 thank you!' : 'Free & non-profit · optional support · ⭐ Premium'; }
       if (k === 'backup') { var b = lastBackup(); return '<span' + (b.old ? ' class="st-warn"' : '') + '>Last backup: ' + b.text + '</span>'; }
       if (k === 'alerts') {
         var a = s.getAlerts(), keys = ['brief', 'weekly', 'moves', 'signals', 'plan', 'buy', 'tp', 'macro', 'drift', 'dca', 'sentiment', 'etf', 'health'];
@@ -211,7 +201,7 @@
     ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import'], ['wallets', 'wallet', 'Wallets & check', 'wallets'], ['rewards', 'coins', 'Rewards & mining', 'rewards']]],
     ['Alerts', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link the Telegram bot', 'tglink'], ['claudekey', 'key', 'My Claude key', 'claudekey']]],
     ['Admin', [['admin', 'shield', 'Admin dashboard', 'admin']]],
-    ['Premium & support', [['premium', 'star', 'Premium ⭐', 'premium'], ['support', 'heart', 'Support Cute Portfolio 💛', 'support']]],
+    ['Support', [['support', 'heart', 'Support Cute Portfolio & Channel 💛', 'support']]],
     ['Investing rules', [['signal', 'sliders', 'Signal thresholds', 'signal'], ['targets', 'target', 'Target allocation', 'targets'], ['cats', 'note', 'Categories', 'cats'],
       ['baseline', 'history', 'Baseline', 'baseline'], ['exit', 'exit', 'Exit plan', 'exit'], ['dca', 'calc', 'DCA (regular buys)', 'dca']]],
     ['Display', [
@@ -283,7 +273,7 @@
     box.querySelector('.st-body').innerHTML = SECTIONS.map(function (s) {
       var member = !!(S() && S().isOwner && !S().isOwner());   // 🔑 only invited members bring their own key
       var rows = s[1].filter(function (r) { return r.seg || ((r[0] !== 'import' || hasImport) && (r[0] !== 'claudekey' || member) && (r[0] !== 'alerts' || !member)); });   // 🔔 Telegram alerts (GitHub) reach Samir only: hidden for members
-      if (!member) rows = rows.filter(function (r) { return r.seg || (r[0] !== 'premium' && r[0] !== 'support'); });
+      if (!member) rows = rows.filter(function (r) { return r.seg || r[0] !== 'support'; });
       else rows = rows.filter(function (r) { return r.seg || r[0] !== 'admin'; });   // 🛠 the dashboard: Samir only   // ⭐💛 for invited members (Samir: /stats in the bot)
       if (!rows.length) return '';
       return '<div class="st-sec">' + E(s[0]) + '</div><div class="st-list">' + rows.map(function (r) { return r.seg ? choice(r) : line(r); }).join('') + '</div>';
@@ -340,5 +330,5 @@
     history.replaceState(null, '', location.pathname + location.search);
     var tries = 0, iv = setInterval(function () { if (ready() || ++tries > 60) { clearInterval(iv); if (ready()) { ACT[want](); backAfter(want); } } }, 250);
   }
-  window.SamsamSettings = { open: open, close: close };
+  window.SamsamSettings = { open: open, close: close, run: function (a) { var t = top(); if (t) { t.SamsamSettings.run(a); return; } if (ACT[a]) ACT[a](); } };
 })();

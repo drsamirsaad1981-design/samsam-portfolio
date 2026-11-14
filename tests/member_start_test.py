@@ -53,19 +53,31 @@ with sync_playwright() as p:
             pg.fill('#cpDialog #cpdI', 'sk-ant-test-key-wxyz'); pg.click('#cpDialog .cpd-ok')
             pg.wait_for_function("document.querySelector('#cpDialog') && /Saved/.test(document.querySelector('#cpDialog').textContent)", timeout=8000)
             check('member: status asked, then the key sent once with their sign-in token → "Saved (…wxyz)"', [c.get('action') for c in calls][-2:] == ['status', 'set'] and [c.get('action') for c in calls].count('set') == 1 and calls[-1].get('key') == 'sk-ant-test-key-wxyz' and calls[-1].get('idToken'), [c.get('action') for c in calls])
-            # ⭐ Premium & 💛 Support in Settings: a plain explanation, then Telegram (the payment happens there)
-            pg.evaluate("document.getElementById('cpDialog') && document.getElementById('cpDialog').remove(); window.__opened = []; window.open = (u) => { window.__opened.push(u); return null; }; 0")
-            pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stRow_premium')
-            check('member: Settings has "Premium ⭐" and "Support Cute Portfolio 💛"', pg.is_visible('#stRow_premium') and pg.is_visible('#stRow_support'))
-            pg.click('#stRow_premium'); pg.wait_for_selector('#cpDialog')
-            t = pg.inner_text('#cpDialog')
-            check('member: Premium explains what it adds, the price (350 Stars ≈ $7), renewal / cancel, and why (non-profit)', all(w in t for w in ('Voice notes', '20 AI questions', '350 Telegram Stars', 'cancel any time', 'non-profit')), t[:200])
-            pg.click('#cpDialog .cpd-ok'); pg.wait_for_function("window.__opened.length >= 1", timeout=5000)
-            check('member: "Open in Telegram" → the bot\'s premium page', pg.evaluate("window.__opened[0]").endswith('?start=premium'), pg.evaluate("window.__opened"))
-            pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stRow_support'); pg.click('#stRow_support'); pg.wait_for_selector('#cpDialog')
-            t = pg.inner_text('#cpDialog')
-            check('member: Support says optional, one time, any size, nothing changes, Supporter 💛 badge', all(w in t for w in ('Optional', 'one-time', 'Nothing changes', 'Supporter'))); pg.click('#cpDialog .cpd-ok'); pg.wait_for_function("window.__opened.length >= 2", timeout=5000)
-            check('member: → the bot\'s support page', pg.evaluate("window.__opened[1]").endswith('?start=support'))
+            # 💛 Support Cute Portfolio & Channel: one card — free & non-profit, ⭐ premium (also a supporter), 💛 one-time, the channel / group;
+            # each button opens Telegram's own payment for this member (the Worker makes the link)
+            def sup_route(r):
+                body = json.loads(r.request.post_data or '{}'); calls.append(body)
+                out = {'link': 'https://t.me/$pay-' + body.get('kind', '') + str(body.get('n', ''))} if body.get('action') == 'invoice' else \
+                      {'has': False, 'premium': False, 'supporter': False, 'starsPaid': 0, 'botLinked': True, 'price': 350, 'amounts': [50, 100, 250, 500],
+                       'community': {'channel': 'https://t.me/+chan', 'group': 'https://t.me/+grp'}, 'reports': {'limit': 0, 'used': 0, 'left': 0}}
+                r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps(out))
+            ctx.unroute('https://samsam-analysis.dr-samir-saad-1981.workers.dev/key'); ctx.route('https://samsam-analysis.dr-samir-saad-1981.workers.dev/key', sup_route)
+            pg.evaluate("document.getElementById('cpDialog') && document.getElementById('cpDialog').remove(); window.__opened = []; window.open = (u) => { const w = { location: { set href(v) { window.__opened.push(v); } }, close() {} }; if (u) window.__opened.push(u); return w; }; 0")
+            pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stRow_support')
+            check('member: Settings → one "Support Cute Portfolio & Channel 💛" line (no separate Premium line)', pg.is_visible('#stRow_support') and pg.locator('#stRow_premium').count() == 0)
+            pg.click('#stRow_support'); pg.wait_for_selector('#cpSup [data-pay="prem"]', timeout=8000)
+            t = pg.inner_text('#cpSup')
+            check('member: the card says free & non-profit + optional; ⭐ premium (voice, 20 questions, 3 reports, Supporter badge, 350 ⭐ a month); 💛 50 / 100 / 250 / 500; the channel & group',
+                  all(w in t for w in ('completely free and non-profit', 'optional', 'Voice notes', '20 AI questions', 'Supporter badge', '350 ⭐ a month', 'Join the channel', 'Join the group')) and pg.locator('#cpSup [data-pay="sup"]').count() == 4, t[:300])
+            pg.click('#cpSup [data-pay="prem"]'); pg.wait_for_function("window.__opened.length >= 1", timeout=8000)
+            check('member: ⭐ Become premium → straight to Telegram\'s payment (a link made for this member)', pg.evaluate("window.__opened[0]") == 'https://t.me/$pay-prem0' and calls[-1].get('action') == 'invoice' and calls[-1].get('kind') == 'prem', pg.evaluate("window.__opened"))
+            pg.click('#cpSup [data-pay="sup"][data-n="100"]'); pg.wait_for_function("window.__opened.length >= 2", timeout=8000)
+            check('member: 💛 100 ⭐ → a one-time payment link', pg.evaluate("window.__opened[1]") == 'https://t.me/$pay-sup100')
+            pg.evaluate("document.getElementById('cpSup').remove()")
+            pg.wait_for_selector('#cpfSup:not([hidden])', timeout=8000)
+            check('member: a quiet line at the bottom of the page: "💛 Free & non-profit · Support the project"', 'Support the project' in pg.inner_text('#cpfSup'))
+            pg.click('#cpfSup [data-sup]'); pg.wait_for_selector('#cpSup', timeout=8000)
+            check('member: …tapping it opens the Support card', pg.is_visible('#cpSup')); pg.evaluate("document.getElementById('cpSup').remove()")
             # AI Analysis → the quick report: off without their own key (the free Claude-app way stays); with a key → on
             state = {'has': False}
             def key_route2(r):
@@ -86,7 +98,7 @@ with sync_playwright() as p:
             check('owner: Samsam.isOwner() is true', pg.evaluate("Samsam.isOwner()") is True)
             pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#cpSet')
             check('owner: no "My Claude key" in Settings (your key is the Worker\'s)', 'My Claude key' not in pg.inner_text('#cpSet'))
-            check('owner: no Premium / Support rows (members only)', not pg.is_visible('#stRow_premium') and not pg.is_visible('#stRow_support'))
+            check('owner: no Support row (members only), no support line at the bottom', not pg.is_visible('#stRow_support') and pg.locator('#cpfSup[hidden]').count() == 1)
             pg.evaluate("document.getElementById('cpSet') && document.getElementById('cpSet').remove()")
             pg.evaluate("openAnalysis()"); pg.wait_for_selector('#analysisBody .ai-quick'); pg.wait_for_timeout(500)
             check('owner: the quick report stays on (your key)', not pg.is_disabled('#analysisBody .ai-quick'))

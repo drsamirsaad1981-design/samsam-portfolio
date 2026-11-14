@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: aa3703c2dd23e699
+// sources-hash: 1a813a3bf439814a
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1076,6 +1076,12 @@ async function premiumView(env, lang2, now = Date.now()) {
   b.push([cb(w.back, "menu")]);
   return { text: lines.join("\n"), buttons: b };
 }
+async function invoiceLink(env, chat, kind, n, lang2 = "en") {
+  const w = words(lang2);
+  if (kind === "prem") return tg(env, "createInvoiceLink", { title: w.invTitle, description: w.invDesc, payload: `prem:${chat}`, currency: "XTR", prices: [{ label: w.invTitle, amount: price(env) }], subscription_period: 30 * 86400 });
+  if (kind === "sup" && SUPPORT.includes(+n)) return tg(env, "createInvoiceLink", { title: w.supTitle, description: w.supDesc, payload: `sup:${chat}:${+n}`, currency: "XTR", prices: [{ label: w.supTitle, amount: +n }] });
+  return { ok: false };
+}
 async function supportView(env, lang2) {
   const w = words(lang2), x = isOwner(env) ? null : await member(env);
   return {
@@ -1117,7 +1123,10 @@ async function paid(env, chat, sp, lang2, now = Date.now()) {
   const O = words(await asChat(env.TELEGRAM_CHAT_ID, () => langOf(env)));
   if (kind === "prem") {
     const until = sp.subscription_expiration_date ? sp.subscription_expiration_date * 1e3 : now + MONTH;
-    if (!owner2) await grant(env, chat, until, "stars", sp.telegram_payment_charge_id);
+    if (!owner2) {
+      await grant(env, chat, until, "stars", sp.telegram_payment_charge_id);
+      await setMember(env, chat, { supporter: true, starsPaid: (x && x.starsPaid || 0) + stars });
+    }
     const renew = !!(sp.is_recurring && !sp.is_first_recurring);
     await tg(env, "sendMessage", { chat_id: chat, text: renew ? w.renewed(day(until)) : w.paidPrem(day(until)), parse_mode: "HTML" });
     await tellOwner(renew ? O.ownerRenew(name, stars, day(until)) : O.ownerPrem(name, stars, day(until)));
@@ -6589,6 +6598,12 @@ setKeyHandler(async (env, email, body) => {
       await saveKey(env, k);
       return { ...await keyInfo(env), checked: w === "ok" };
     }
+    if (a === "invoice") {
+      if (!isTgChat(x.chat)) return { status: 409, error: "link-bot" };
+      if (body.kind === "prem" && premiumNow(x) && x.premSrc === "stars") return { status: 409, error: "already" };
+      const r = await invoiceLink(env, x.chat, body.kind, body.n, x.lang);
+      return r.ok && typeof r.result === "string" ? { link: r.result } : { status: 502, error: "Telegram did not make the payment link \u2014 try again." };
+    }
     const st = await keyInfo(env), day3 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const limit = x.paused ? 0 : st.has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
     let used2 = 0;
@@ -6596,7 +6611,19 @@ setKeyHandler(async (env, email, body) => {
       used2 = x.uid && env.RATE ? +await env.RATE.get(`ai:${x.uid}:${day3}`) || 0 : 0;
     } catch (_) {
     }
-    return { ...st, reports: { limit, used: used2, left: Math.max(0, limit - used2) }, premium: premiumNow(x), premUntil: x.premUntil || null, premSrc: x.premSrc || null, supporter: !!x.supporter, starsPaid: x.starsPaid || 0 };
+    return {
+      ...st,
+      reports: { limit, used: used2, left: Math.max(0, limit - used2) },
+      premium: premiumNow(x),
+      premUntil: x.premUntil || null,
+      premSrc: x.premSrc || null,
+      supporter: !!x.supporter,
+      starsPaid: x.starsPaid || 0,
+      botLinked: isTgChat(x.chat),
+      price: price(env),
+      amounts: SUPPORT,
+      community: await getCommunity(env).then((c) => ({ channel: c.channel && c.channel.link || null, group: c.group && c.group.link || null })).catch(() => ({}))
+    };
   });
 });
 var worker_default = {

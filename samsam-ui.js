@@ -160,6 +160,7 @@
     '.cp-foot{max-width:1200px;margin:28px auto 0;padding:16px 16px 10px;border-top:1px solid var(--border,rgba(148,163,184,.2));text-align:center;font-size:.72rem;line-height:1.8;color:var(--fg2,#94a3b8);box-sizing:border-box}' +
     '.cp-foot p{margin:0}.cp-foot .cpf-sep{margin:0 8px;opacity:.6}.cp-foot b{font-weight:600;color:var(--fg,inherit)}.cp-foot .ss-ic{margin-right:.35em}' +
     '.cp-foot .cpf-msg{min-height:0;font-size:.7rem;transition:opacity .5s}.cp-foot .cpf-msg:empty{display:none}.cp-foot .cpf-copy{margin-top:2px;opacity:.75}.cp-foot a{color:inherit;text-decoration:none}.cp-foot a:hover{color:var(--accent,#a78bfa)}' +
+    '.cp-foot .cpf-sup{margin-top:4px;font-size:.74rem;font-weight:600;color:#d97706}.cp-foot .cpf-sup[hidden]{display:none}.cp-foot .cpf-sup a{color:#f59e0b;text-decoration:underline;text-underline-offset:2px}[data-theme="dark"] .cp-foot .cpf-sup{color:#fbbf24}' +
     '@media print{.cp-foot .cpf-copy{display:none}}' +
     '[data-theme=light] .ss-dot[data-c=green]{background:#16a34a}[data-theme=light] .ss-dot[data-c=red]{background:#dc2626}' +
     // Theme toggle — one size and style on every page
@@ -826,6 +827,7 @@
     f.className = 'cp-foot';
     f.innerHTML = '<p class="cpf-sync"><span id="cpfSync">' + ic('cloud') + 'Cloud: connecting…</span><span class="cpf-sep" aria-hidden="true">·</span><span>Baseline <b id="footerBaseline">—</b></span></p>' +
       '<p id="footerSyncStatus" class="cpf-msg" aria-live="polite"></p>' +
+      '<p class="cpf-sup" id="cpfSup" hidden></p>' +
       '<p class="cpf-copy">© ' + new Date().getFullYear() + ' Dr. Samir Saad<span class="cpf-sep" aria-hidden="true">·</span><a href="mailto:dr.samir.saad.1981@gmail.com">dr.samir.saad.1981@gmail.com</a></p>';
     var paint = function () {
       var S = window.Samsam; if (!S || !S.getState) return;
@@ -834,8 +836,24 @@
         document.getElementById('cpfSync').innerHTML = ic('cloud') + (t ? 'Synced ' + t.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Cloud: not synced yet');
         var b = st && st.baseline && st.baseline.date;
         if (b) { var d = new Date(b + 'T00:00:00'); document.getElementById('footerBaseline').textContent = isNaN(d) ? b : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+        // 💛 one quiet line for invited members (not Samir): "free & non-profit · support", or "thank you" once they support
+        var sp = document.getElementById('cpfSup'), member = S.isOwner && S.user && S.user() && !S.isOwner();
+        if (sp) {
+          if (!member) sp.hidden = true;
+          else {
+            var k = null; try { k = JSON.parse(localStorage.getItem('cp-support-st') || 'null'); } catch (_) {}
+            var thanks = k && (k.premium || k.supporter);
+            sp.innerHTML = thanks ? '💛 Thank you for supporting Cute Portfolio' + (k.premium ? ' · ⭐ Premium' : '') : '💛 Free &amp; non-profit · <a href="#" data-sup="1">Support the project</a>';
+            sp.hidden = false;
+          }
+        }
       } catch (_) {}
     };
+    f.addEventListener('click', function (e) {
+      if (!e.target.closest('[data-sup]')) return; e.preventDefault();
+      var w = window; try { if (window.parent !== window && window.parent.SamsamSettings) w = window.parent; } catch (_) {}
+      if (w.SamsamSettings && w.SamsamSettings.run) w.SamsamSettings.run('support');
+    });
     var hooked = false, tries = 0;
     (function hook() {
       if (window.Samsam && window.Samsam.onChange) { if (!hooked) { hooked = true; window.Samsam.onChange(paint); paint(); setInterval(paint, 30000); } return; }

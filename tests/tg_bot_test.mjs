@@ -1092,7 +1092,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   const paidMsg = (sp) => post({ update_id: ++UPD, message: { message_id: 9, chat: { id: 888, type: 'private' }, from: { id: 888 }, successful_payment: { currency: 'XTR', ...sp } } }, ENV.TG_SECRET, ENVK);
   sent.length = 0; await paidMsg({ total_amount: 350, invoice_payload: 'prem:888', telegram_payment_charge_id: 'ch1', subscription_expiration_date: exp, is_recurring: true, is_first_recurring: true });
   let x = JSON.parse(kvStore.get('tg:users'))['888'];
-  check('…paid → premium (Stars) until the date Telegram gives, 20 / 3; thanked; you are told', x.premium && x.premSrc === 'stars' && x.premUntil === exp * 1000 && x.ai === 20 && x.reports === 3 && sent.some(m => String(m.b.chat_id) === '888' && /you're premium now/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /subscribed to Premium — 350 ⭐/.test(m.b.text || '')), x);
+  check('…paid → premium (Stars) until the date Telegram gives, 20 / 3, and a 💛 supporter too; thanked; you are told', x.supporter === true && x.starsPaid === 350 && x.premium && x.premSrc === 'stars' && x.premUntil === exp * 1000 && x.ai === 20 && x.reports === 3 && sent.some(m => String(m.b.chat_id) === '888' && /you're premium now/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /subscribed to Premium — 350 ⭐/.test(m.b.text || '')), x);
   sent.length = 0; await paidMsg({ total_amount: 350, invoice_payload: 'prem:888', telegram_payment_charge_id: 'ch2', subscription_expiration_date: exp + 30 * 86400, is_recurring: true, is_first_recurring: false });
   x = JSON.parse(kvStore.get('tg:users'))['888'];
   check('…next month Telegram renews it → "Premium renewed", the end date moves', x.premUntil === (exp + 30 * 86400) * 1000 && sent.some(m => /renewed/.test(m.b.text || '')));
@@ -1105,7 +1105,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('…tap 100 ⭐ → a one-time Stars invoice of 100', si && si.b.currency === 'XTR' && si.b.prices[0].amount === 100 && si.b.payload === 'sup:888:100' && !si.b.subscription_period, si && si.b);
   sent.length = 0; await paidMsg({ total_amount: 100, invoice_payload: 'sup:888:100', telegram_payment_charge_id: 'ch3' });
   x = JSON.parse(kvStore.get('tg:users'))['888'];
-  check('…paid → Supporter 💛 (100 ⭐), thanked, you are told', x.supporter === true && x.starsPaid === 100 && sent.some(m => /Supporter 💛/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /supported the project with 100 ⭐/.test(m.b.text || '')), x);
+  check('…paid → Supporter 💛 (+100 ⭐ on top of the 700 of premium — a premium member counts as a supporter), thanked, you are told', x.supporter === true && x.starsPaid === 800 && sent.some(m => /Supporter 💛/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /supported the project with 100 ⭐/.test(m.b.text || '')), x);
   await paidMsg({ total_amount: 100, invoice_payload: 'sup:888:100', telegram_payment_charge_id: 'ch3' });
   sent.length = 0; await sayAs(555, '/stats');
   check('📈 /stats (you): members, premium now (Stars / gift), supporters, Stars this month and all time (a payment sent twice counts once)', /Premium now: <b>1<\/b> \(Stars 1/.test(last().b.text) && /Supporters: <b>1<\/b>/.test(last().b.text) && /All time: <b>800<\/b>/.test(last().b.text), last().b.text);
@@ -1276,6 +1276,21 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   }
   kvStore.delete('tg:cmdscope'); sent.length = 0; await postK(await fresh(), '/menu');
   check('"/" menu: the general list only in private chats (none in groups)', sent.some(m => m.m === 'deleteMyCommands') && sent.some(m => m.m === 'setMyCommands' && m.b.scope && m.b.scope.type === 'all_private_chats'));
+}
+
+// 💳 the app's Support card asks the Worker for Telegram payment links (members with the bot linked)
+{
+  const KEYR = (email, uid, body) => W.fetch(new Request(HOST + '/key', { method: 'POST', headers: { Origin: 'https://drsamirsaad1981-design.github.io', 'content-type': 'application/json' }, body: JSON.stringify({ idToken: fbToken(email, uid), ...body }) }), ENVA, {});
+  const mm = JSON.parse(kvStore.get('tg:users')); mm['888'] = { ...mm['888'], email: 'pay.me@x.com', premium: undefined, premUntil: undefined, premSrc: undefined }; mm['a:UIDZ'] = { name: 'appy', email: 'appy@x.com', uid: 'UIDZ', joined: Date.now() }; kvStore.set('tg:users', JSON.stringify(mm));
+  let j = await (await KEYR('pay.me@x.com', 'UID2', { action: 'status' })).json();
+  check('💳 status for the Support card: price 350, amounts, supporter, bot linked, the community links', j.price === 350 && j.amounts.join() === '50,100,250,500' && j.botLinked === true && j.supporter === true && 'channel' in j.community, j);
+  sent.length = 0; j = await (await KEYR('pay.me@x.com', 'UID2', { action: 'invoice', kind: 'prem' })).json();
+  const il = sent.find(m => m.m === 'createInvoiceLink');
+  check('…⭐ premium → a Telegram subscription link for THIS member (prem:888, 350, 30 days)', /t\.me/.test(j.link || '') && il && il.b.payload === 'prem:888' && il.b.prices[0].amount === 350 && il.b.subscription_period === 2592000, [j, il && il.b]);
+  sent.length = 0; j = await (await KEYR('pay.me@x.com', 'UID2', { action: 'invoice', kind: 'sup', n: 250 })).json();
+  check('…💛 250 → a one-time link (sup:888:250)', /t\.me/.test(j.link || '') && sent.find(m => m.m === 'createInvoiceLink').b.payload === 'sup:888:250');
+  const r = await KEYR('appy@x.com', 'UIDZ', { action: 'invoice', kind: 'sup', n: 50 });
+  check('…an app-only member (no bot yet) → "link-bot" (Stars are paid from a Telegram account)', r.status === 409 && (await r.json()).error === 'link-bot');
 }
 
 console.log(`${pass}/${pass + fail} passed`);
