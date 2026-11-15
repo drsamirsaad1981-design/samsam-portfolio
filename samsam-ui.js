@@ -167,6 +167,8 @@
     '.cp-foot .cpf-sup[hidden]{display:none}.cp-foot .cpf-sup a{color:inherit;text-decoration:none;font-weight:800}.cp-foot .cpf-sup a:hover{text-decoration:underline;color:inherit}[data-theme="dark"] .cp-foot .cpf-sup{color:#fbbf24;background:rgba(245,158,11,.08)}' +
     '.cp-foot{display:flex;flex-direction:column;align-items:center}' +
     // ⭐ / 💛 next to the page's status line in the header (members who support)
+    // ☀️/🌙 is in Settings → Display now: the header keeps ⚙️ and ☁️ only (the button stays in the page as the anchor ☁️ and ⚙️ sit next to)
+    '[data-theme-toggle]{display:none!important}' +
     // (sits on the logo's corner, so it never pushes or cuts the name)
     '.brand,.cp-brand-logo{position:relative}' +
     '.cp-badge{position:absolute;z-index:2;right:-10px;bottom:-6px;display:inline-flex;align-items:center;gap:1px;padding:1px 5px;border-radius:999px;font-size:.62rem;line-height:1.45;' +

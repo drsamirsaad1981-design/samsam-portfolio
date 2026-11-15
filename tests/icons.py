@@ -25,7 +25,7 @@ with sync_playwright() as p:
             for page in PAGES:
                 pg.goto(SITE + '/' + page); pg.wait_for_timeout(1800)
                 info = pg.evaluate("""() => {
-                  const btns = [...document.querySelectorAll('[data-theme-toggle]')].filter(b => b.offsetParent);
+                  const btns = [...document.querySelectorAll('.ss-set-hdr')].filter(b => b.offsetParent);   /* ☀️/🌙 moved to Settings: the header keeps ⚙️ + ☁️ (same size and place) */
                   const b = btns[0]; const r = b ? b.getBoundingClientRect() : null;
                   const cs = b ? getComputedStyle(b) : null;
                   const dots = [...document.querySelectorAll('.ss-live')].filter(d => d.offsetParent);
@@ -34,7 +34,7 @@ with sync_playwright() as p:
                     nBtn: btns.length, w: r && Math.round(r.width), h: r && Math.round(r.height),
                     right: r && Math.round(document.documentElement.clientWidth - r.right), top: r && Math.round(r.top),
                     radius: cs && cs.borderRadius, icon: b && b.querySelector('svg') ? b.querySelector('svg').innerHTML.slice(0, 20) : null,
-                    btnTheme: b && b.dataset.currentTheme,
+                    btnTheme: (document.querySelector('[data-theme-toggle]') || { dataset: {} }).dataset.currentTheme, themeShown: [...document.querySelectorAll('[data-theme-toggle]')].some(x => x.offsetParent),
                     dots: dots.map(d => { const s = getComputedStyle(d); return [d.dataset.state, s.width, s.backgroundColor]; }),
                     emoji: /🌙|☀|📅|🗓/u.test(document.body.innerText),
                     overflow: document.documentElement.scrollWidth > innerWidth + 1 };
@@ -57,7 +57,7 @@ with sync_playwright() as p:
             check(f'{vp_name}/{theme}: theme button at the top-right of the main page', g['right'] <= 120 and g['top'] < 140, (g['right'], g['top']))
             if theme == 'dark':
                 pg.goto(SITE + '/index.html'); pg.wait_for_timeout(800)
-                pg.click('header [data-theme-toggle]')  # switch to light on the main page → all pages follow
+                pg.evaluate("SamsamUI.toggleTheme()")  # switch to light on the main page → all pages follow
                 check(f'{vp_name}: toggle switches theme and icon', pg.evaluate("document.documentElement.dataset.theme") == 'light'
                       and pg.get_attribute('[data-theme-toggle]', 'data-current-theme') == 'light')
         # date icon on main page
@@ -72,9 +72,9 @@ with sync_playwright() as p:
         pg.evaluate("closeHoldingsView()")
         # two tabs stay in sync
         pg2 = ctx.new_page(); pg2.goto(SITE + '/performance.html'); pg2.wait_for_timeout(800)
-        pg.click('header [data-theme-toggle]'); pg2.wait_for_timeout(400)
+        pg.evaluate("SamsamUI.toggleTheme()"); pg2.wait_for_timeout(400)
         check(f'{vp_name}: theme change in one tab updates other open tab', pg2.evaluate("document.documentElement.dataset.theme") in ('light', 'dark') and pg2.evaluate("document.documentElement.dataset.theme") == pg.evaluate("document.documentElement.dataset.theme"))
-        pg.click('header [data-theme-toggle]')  # back to dark
+        pg.evaluate("SamsamUI.toggleTheme()")  # back to dark
         check(f'{vp_name}: no JavaScript errors', not errors, errors[:3])
         ctx.close()
     br.close()

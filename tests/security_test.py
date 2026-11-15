@@ -36,7 +36,7 @@ with sync_playwright() as p:
     check('recover page reads old data from the vault', 'This device' in pg.inner_text('#txMeta') and '1 coins' in pg.inner_text('#txMeta'), pg.inner_text('#txMeta')[:120])
     # ── 2. Encrypted backup: download → wrong password rejected → correct password restores ──
     pg.goto(S.SITE + '/index.html'); pg.wait_for_function("Samsam.isReady()", timeout=10000); pg.wait_for_timeout(500)
-    pg.click('.ss-sync-hdr'); pg.wait_for_selector('#samsamBk'); pg.click('#samsamBk'); pg.wait_for_selector('#ssPwA')
+    pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stAct_backup'); pg.click('#stAct_backup'); pg.wait_for_selector('#ssPwA')
     pg.fill('#ssPwA', 'short'); pg.fill('#ssPwB', 'short'); pg.click('#ssPw button[type=submit]')
     check('password under 8 characters refused', 'At least 8' in pg.inner_text('#ssPw .e'))
     pg.fill('#ssPwA', 'Samsam-2030!'); pg.fill('#ssPwB', 'Samsam-2030?'); pg.click('#ssPw button[type=submit]')

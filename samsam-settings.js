@@ -247,8 +247,6 @@
       // the coin list (main page) and the Exit Strategy list — phones keep their own choice
       { seg: 'view', title: 'Lists shown as', opts: [['cards', 'Cards'], ['table', 'Table']], get: function () { return get(phone() ? K.viewPhone : K.view, 'cards') === 'table' ? 'table' : 'cards'; },
         set: function (v) { put(phone() ? K.viewPhone : K.view, v); put(K.exitView, v); if (window.applyView) applyView(v); } },
-      { seg: 'fee', title: 'Buying fee in', opts: [['usd', 'USD'], ['coin', 'The coin']], get: function () { return get(K.fee, 'usd') === 'coin' ? 'coin' : 'usd'; },
-        set: function (v) { put(K.fee, v); } },
     ]],
     ['About', [['guide', 'book', 'Guide', 'guide'], ['install', 'download', 'Install the app', 'install'], ['version', 'sparkles', 'Version', null]]],
   ];

@@ -29,10 +29,11 @@ with sync_playwright() as p:
                 pg.evaluate("document.getElementById('samsamSyncPill').click()")
             pg.wait_for_timeout(300)
             items = pg.evaluate("[...document.querySelectorAll('#samsamSyncMenu .samsam-btn')].map(b=>b.innerText.trim())")
-            check(f'{vn} {f}: ☁️ menu = Backup, Settings {items}', items == ['Backup', 'Settings'] and 'Last backup' in pg.inner_text('#samsamSyncMenu'), items)
-            pg.click('#samsamSettings'); pg.wait_for_selector('#cpSet')
+            check(f'{vn} {f}: ☁️ shows the status only (sync, last backup) — Backup lives in Settings {items}', 'Backup' not in items and 'Last backup' in pg.inner_text('#samsamSyncMenu') and 'Cloud sync' in pg.inner_text('#samsamSyncMenu'), items)
+            check(f'{vn} {f}: no ☀️/🌙 button in the header (it is in Settings → Display)', pg.evaluate("[...document.querySelectorAll('[data-theme-toggle]')].every(b => !b.offsetParent)"))
+            pg.keyboard.press('Escape'); pg.evaluate("document.body.click(); SamsamSettings.open()"); pg.wait_for_selector('#cpSet')
             rows = pg.evaluate("[...document.querySelectorAll('#cpSet .st-row b, #cpSet .st-seg-row > b')].map(b=>b.innerText.trim())")
-            want = ['Account', 'Backup', 'Recover Data', 'Telegram alerts', 'Admin dashboard', 'Theme', 'Charts open on', 'Lists shown as', 'Buying fee in', 'Guide', 'Install the app', 'Version']
+            want = ['Account', 'Backup', 'Recover Data', 'Telegram alerts', 'Admin dashboard', 'Theme', 'Charts open on', 'Lists shown as', 'Guide', 'Install the app', 'Version']
             check(f'{vn} {f}: Settings lists every setting', rows == want, rows)
             pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
             check(f'{vn} {f}: Esc closes it', not pg.query_selector('#cpSet'))
@@ -72,16 +73,14 @@ with sync_playwright() as p:
         # Display choices are kept and used
         pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(600)
         opn(pg)
-        pg.click('#cpSet [data-seg="range"][data-v="30d"]'); pg.click('#cpSet [data-seg="fee"][data-v="coin"]'); pg.click('#cpSet [data-seg="view"][data-v="table"]')
+        pg.click('#cpSet [data-seg="range"][data-v="30d"]'); pg.click('#cpSet [data-seg="view"][data-v="table"]')
         th0 = pg.evaluate("SamsamUI.currentTheme()"); other = 'light' if th0 == 'dark' else 'dark'
         pg.click(f'#cpSet [data-seg="theme"][data-v="{other}"]'); pg.wait_for_timeout(200)
         check(f'{vn}: theme switches from Settings', pg.evaluate("SamsamUI.currentTheme()") == other)
         pg.keyboard.press('Escape'); pg.reload(); S.wait_ready(pg); pg.wait_for_timeout(800)
         check(f'{vn}: charts now open on 30d', pg.evaluate("document.querySelector('.holdings-tab.active').dataset.range") == '30d')
         check(f'{vn}: coins shown as Table (phones too)', pg.is_visible('#portfolioTableWrapper') and pg.evaluate("localStorage.getItem('samsam_exit_view')") == 'table')
-        pg.evaluate("openAddTx('buy','BTC')"); pg.wait_for_timeout(200)
-        check(f'{vn}: buying fee starts in the coin', pg.get_attribute('#atxFeeUnitSeg [data-u="coin"]', 'aria-checked') == 'true')
-        pg.evaluate("closeAddTx(); localStorage.removeItem('samsam_chart_range'); localStorage.setItem('samsam_view_pref','cards'); localStorage.removeItem('samsam_view_phone'); localStorage.removeItem('samsam_exit_view'); localStorage.removeItem('samsam_buyfee_unit')")
+        pg.evaluate("localStorage.removeItem('samsam_chart_range'); localStorage.setItem('samsam_view_pref','cards'); localStorage.removeItem('samsam_view_phone'); localStorage.removeItem('samsam_exit_view'); localStorage.removeItem('samsam_buyfee_unit')")
         check(f'{vn}: no JS errors', not errs, errs[:3]); ctx.close()
     br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)

@@ -29,7 +29,7 @@ with sync_playwright() as p:
         check(f'{name}: main page keeps one theme button and one cloud button', main == [1, 1], main)
         # switch theme on the main page → inner pages follow
         before = pg.evaluate("document.documentElement.getAttribute('data-theme')")
-        pg.click('.hdr-btns [data-theme-toggle]'); pg.wait_for_timeout(200)
+        pg.evaluate("SamsamUI.toggleTheme()"); pg.wait_for_timeout(200)
         after = pg.evaluate("document.documentElement.getAttribute('data-theme')")
         check(f'{name}: theme button on the main page switches the theme', before != after, (before, after))
         seen = {}

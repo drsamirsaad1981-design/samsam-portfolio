@@ -39,9 +39,9 @@ with sync_playwright() as p:
     before = json.loads(pg.evaluate(SNAP))
     check(f'set up: fee tx, DCA, targets, alerts, exit steps, watchlist, category name {before}', before['fee'] and before['dca'] == 75 and before['targets'] == 2 and before['lang'] == 'ar' and before['steps'] == '2,4,8' and 'dogecoin' in before['watch'] and before['cat'] == 'My L1s', before)
     # backup from the cloud menu
-    pg.locator('.ss-sync-hdr').first.click(); pg.wait_for_timeout(300)
+    pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stAct_backup')
     with pg.expect_download() as dl:
-        pg.click('#samsamBk'); password(pg)
+        pg.click('#stAct_backup'); password(pg)
     path = dl.value.path(); raw = json.loads(open(path).read())
     check('backup file is encrypted (no readable data inside)', raw.get('cipher') and 'transactions' not in raw and 'backup fee test' not in json.dumps(raw), list(raw.keys())[:6])
     plain = pg.evaluate("j => SamsamVault.decryptBackup(j, %s)" % json.dumps(PW), raw)
@@ -51,6 +51,7 @@ with sync_playwright() as p:
     check('backup holds the DCA schedule', acc and acc[0].get('dca', {}).get('usd') == 75, acc)
     ftx = [t for t in plain.get('transactions', []) if t.get('note') == 'backup fee test']
     check('backup holds the fee in coin', ftx and ftx[0].get('fee') == 0.00005 and ftx[0].get('netFee') == 0.00002, ftx)
+    pg.evaluate("SamsamSettings.close()"); pg.wait_for_timeout(300)
     pg.locator('.ss-sync-hdr').first.click(); pg.wait_for_timeout(300)
     last = pg.inner_text('#samsamSyncMenu')
     check('menu shows the last backup', 'Last backup' in last and ('today' in last or 'just now' in last or 'min' in last), last[-300:])

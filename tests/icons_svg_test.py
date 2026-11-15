@@ -65,7 +65,7 @@ with sync_playwright() as p:
     check('Plan cards: no emoji', a.evaluate(EMO)=='', a.evaluate(EMO))
     pg.screenshot(path=str(shots/'plan_cards_dark.png'))
     # light theme
-    pg.evaluate("document.querySelector('[data-theme-toggle]').click()"); pg.wait_for_timeout(800)
+    pg.evaluate("SamsamUI.toggleTheme()"); pg.wait_for_timeout(800)
     pg.screenshot(path=str(shots/'plan_cards_light.png'))
     pg.click('#cpBnav a[data-k=home]'); pg.wait_for_timeout(700); pg.screenshot(path=str(shots/'main_light.png'))
     pg.evaluate("openHoldingsView(); openCoinTx('BTC')"); pg.wait_for_timeout(1000); pg.screenshot(path=str(shots/'tx_light.png'))

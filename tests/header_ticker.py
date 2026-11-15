@@ -29,7 +29,7 @@ with sync_playwright() as p:
         else:
             check(f'mobile: buttons in the top-right corner, clear of everything {b}', b['n']==3 and b['sameRow'] and not b['overlap'] and b['gapRight']>=14 and b['gapTop']>=14, b)
         pg.screenshot(path=str(SH/f'hdr_{name}.png'), clip={'x':0,'y':0,'width':vp['viewport']['width'],'height':360 if name!='mobile' else 700})
-        pg.locator('#appHead [data-theme-toggle]').click(); pg.wait_for_timeout(200)
+        pg.evaluate("SamsamUI.toggleTheme()"); pg.wait_for_timeout(200)
         check(f'{name}: theme button still works', pg.evaluate("document.documentElement.getAttribute('data-theme')")=='light')
         check(f'{name}: no JS errors', not errs, errs[:3]); ctx.close()
     br.close()

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611151935';
-import * as Hist from './samsam-history.js?v=202611151935';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611151935';
+import * as Core from './samsam-core.js?v=202611152025';
+import * as Hist from './samsam-history.js?v=202611152025';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611152025';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -1463,9 +1463,8 @@ function renderStatus() {
       <div class="muted">Device: ${deviceId.slice(-6)}</div>
       ${S.lastError ? `<div class="err">${UIc('alert')}${esc(S.lastError.label)}: ${esc(S.lastError.message)}</div>` : ''}
       ${S.user && allLoaded() ? (a => '<div class="muted" style="margin-top:10px"' + (a.old ? ' data-old="1"' : '') + '>' + UIc(a.old ? 'alert' : 'lock') + 'Last backup: <b' + (a.old ? ' style="color:#f59e0b"' : '') + '>' + a.text + '</b></div>')(backupAge()) : ''}
-      <div class="row">${S.user && allLoaded() ? '<button class="samsam-btn" id="samsamBk" title="Download an encrypted backup (AES-256)">' + UIc('lock') + 'Backup</button>' +
-        (window.SamsamSettings ? '<button class="samsam-btn" id="samsamSettings" title="Every setting: alerts, rules, data, display">' + UIc('sliders') + 'Settings</button>' : '') : ''}
-      ${S.user ? '' : '<button class="samsam-btn primary" id="samsamIn">Sign in</button>'}</div>
+      ${S.user && allLoaded() && backupAge().old && window.SamsamSettings ? '<div class="row"><button class="samsam-btn" id="samsamSettings" title="Settings → Account & data → Backup">' + UIc('lock') + 'Back up in Settings</button></div>' : ''}
+      ${S.user ? '' : '<div class="row"><button class="samsam-btn primary" id="samsamIn">Sign in</button></div>'}
       ${S.lastError ? '<div class="row"><button class="samsam-btn" id="samsamClr">Dismiss error</button><button class="samsam-btn" id="samsamReload">Reload</button></div>' : ''}`;
     const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
     on('samsamBk', () => { menu.style.display = 'none'; downloadBackup().catch(e => setError(e, 'Backup')); }); on('samsamOut', () => API.signOut()); on('samsamIn', signIn);
