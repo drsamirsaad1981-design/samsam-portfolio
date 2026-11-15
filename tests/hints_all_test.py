@@ -60,7 +60,7 @@ with sync_playwright() as p:
         if page == 'accumulation.html': pg.evaluate("setView('cards')"); pg.wait_for_timeout(500)
         run(pg, label)
     pg.evaluate("setView('table')"); pg.wait_for_timeout(500); run(pg, 'accumulation table', 'table')
-    pg.locator('table .cp-hint[data-hint="buyAt"]').first.tap(); pg.wait_for_timeout(250)
+    pg.locator('table .cp-hint[data-hint="buyAt"]').first.evaluate("b => { b.scrollIntoView({ block: 'center', inline: 'center' }); b.click(); }"); pg.wait_for_timeout(250)   # (for the picture; run() above already tapped every ⓘ for real)
     pg.screenshot(path=str(SH / 'hint-buyat.png')); pg.keyboard.press('Escape')
     check('no page errors', not errs, errs)
     br.close()

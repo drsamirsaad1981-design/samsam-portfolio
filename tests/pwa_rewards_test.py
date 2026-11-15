@@ -31,9 +31,9 @@ with sync_playwright() as p:
         check(f'{vn} no install button in this browser → how to do it ("Install app" / "Add to Home screen")', 'Add to Home' in log or 'Install app' in log, log)
         pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
         # ── Rewards & mining ──
-        pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stRow_rewards')
-        check(f'{vn} Settings → "Rewards & mining"', 'Rewards & mining' in pg.inner_text('#stRow_rewards'))
-        pg.click('#stRow_rewards'); pg.wait_for_selector('#cpRew .rw-body')
+        check(f'{vn} "Rewards & mining" is not in Settings any more (its card is on Performance)', pg.evaluate("(SamsamSettings.open(), !document.querySelector('#stRow_rewards'))"))
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+        pg.evaluate("SamsamRewards.open()"); pg.wait_for_selector('#cpRew .rw-body')
         check(f'{vn} … opens the window (none yet → how to add them)', 'Add Transaction' in pg.inner_text('#cpRew') or 'without buying' in pg.inner_text('#cpRew'))
         pg.keyboard.press('Escape'); pg.wait_for_timeout(500)
         if pg.query_selector('#cpSet'): pg.evaluate("SamsamSettings.close()")

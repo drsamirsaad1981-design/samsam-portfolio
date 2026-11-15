@@ -116,6 +116,7 @@ backup_restore_test.py
 windows_solid_test.py
 menu_same_test.py
 settings_nav_test.py
+moved_settings_test.py
 exit_find_test.py
 market_filter_test.py
 holdings_pct_test.py

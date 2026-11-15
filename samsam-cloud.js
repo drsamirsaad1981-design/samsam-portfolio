@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611151507';
-import * as Hist from './samsam-history.js?v=202611151507';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611151507';
+import * as Core from './samsam-core.js?v=202611151935';
+import * as Hist from './samsam-history.js?v=202611151935';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611151935';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -1601,7 +1601,7 @@ function renderWelcome(el) {
       <button class="samsam-btn primary" id="samsamStartEmpty">${UIc('plus')}Start my portfolio</button>
       <label class="samsam-btn" style="position:relative">${UIc('file')}I have a backup file<input type="file" accept="application/json,.json" id="samsamImpFile" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
     </div>
-    <p class="muted" style="font-size:.8rem">Then add your coins with <b>+</b>, or bring your trades from an exchange: Settings → Import from exchange.</p>
+    <p class="muted" style="font-size:.8rem">Then add your coins with <b>+</b>, or bring your trades from an exchange: Performance → Wallets &amp; exchanges → Import from exchange.</p>
     <div class="msg" id="samsamSetupMsg"></div>`;
   el.style.display = 'block';
   const msg = t => { const m = document.getElementById('samsamSetupMsg'); if (m) m.innerHTML = t; };
@@ -1609,7 +1609,7 @@ function renderWelcome(el) {
     el.dataset.busy = '1'; el.querySelectorAll('button,input').forEach(b => b.disabled = true); msg('Setting up…');
     try {
       await runImport(legacy, source);
-      await startBaseline().catch(() => {});   // the day they start (they can change it in Settings → Baseline)
+      await startBaseline().catch(() => {});   // the day they start (they can change it with the pencil next to Baseline on Overview)
       delete el.dataset.busy; msg('');
     } catch (e) { delete el.dataset.busy; msg(UIc('alert') + esc(friendly(e))); el.querySelectorAll('button,input').forEach(b => b.disabled = false); }
   };

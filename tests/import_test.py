@@ -43,9 +43,8 @@ with sync_playwright() as p:
         pg.evaluate(f"Samsam.addTx('SOL','buy',0.998,100,'my own entry',{{date:new Date('{D}T12:12:30+03:00').toISOString()}})")
         pg.wait_for_function(f"Math.abs({POS}('SOL')[0] - {sol0[0] + 0.998}) < 1e-9")
         # the cloud menu has the button
-        pg.locator('.ss-set-hdr').first.click(); pg.wait_for_selector('#cpSet')
-        check(f'{name}: Settings → Import from exchange', pg.is_visible('#stRow_import'))
-        pg.click('#stRow_import'); pg.wait_for_selector('#impModal', state='visible')
+        check(f'{name}: Import from exchange is ready (it opens from Performance → Wallets & exchanges)', pg.evaluate("!!window.SamsamImport"))
+        pg.evaluate("SamsamImport.open()"); pg.wait_for_selector('#impModal', state='visible')
         files(pg, [(FN_T, TRADES(o, nc)), (FN_W, WITHDRAW(o, nc))])
         fl = pg.inner_text('#impFiles')
         check(f'{name}: both files recognised as Binance', 'Binance · Trades' in fl and 'Binance · Withdrawals' in fl, fl)

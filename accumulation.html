@@ -16,20 +16,20 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611151507"></script>
-<script src="samsam-hints.js?v=202611151507"></script>
-<script src="samsam-vault.js?v=202611151507"></script>
-<script src="samsam-labels.js?v=202611151507"></script>
-<script src="samsam-taxonomy.js?v=202611151507"></script>
-<script src="samsam-coins.js?v=202611151507"></script>
-<script src="samsam-import.js?v=202611151507"></script>
-<script src="samsam-wallets.js?v=202611151507"></script>
-<script src="samsam-rewards.js?v=202611151507"></script>
-<script src="samsam-settings.js?v=202611151507"></script>
-<script src="samsam-dropdown.js?v=202611151507"></script>
-<script src="samsam-market.js?v=202611151507"></script>
-<script src="samsam-exit.js?v=202611151507"></script>
-<script src="samsam-add.js?v=202611151507"></script>
+<script src="samsam-ui.js?v=202611151935"></script>
+<script src="samsam-hints.js?v=202611151935"></script>
+<script src="samsam-vault.js?v=202611151935"></script>
+<script src="samsam-labels.js?v=202611151935"></script>
+<script src="samsam-taxonomy.js?v=202611151935"></script>
+<script src="samsam-coins.js?v=202611151935"></script>
+<script src="samsam-import.js?v=202611151935"></script>
+<script src="samsam-wallets.js?v=202611151935"></script>
+<script src="samsam-rewards.js?v=202611151935"></script>
+<script src="samsam-settings.js?v=202611151935"></script>
+<script src="samsam-dropdown.js?v=202611151935"></script>
+<script src="samsam-market.js?v=202611151935"></script>
+<script src="samsam-exit.js?v=202611151935"></script>
+<script src="samsam-add.js?v=202611151935"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -122,6 +122,8 @@ body {
 .dc-chip.done { color: #22c55e; background: rgba(34,197,94,.13); } .dc-chip.today { color: #f59e0b; background: rgba(245,158,11,.15); }
 .dc-chip.missed { color: #ef4444; background: rgba(239,68,68,.13); } .dc-chip.up { color: var(--fg2); background: rgba(148,163,184,.15); }
 [data-theme="light"] .dc-chip.done { color: #047857; } [data-theme="light"] .dc-chip.today { color: #b45309; } [data-theme="light"] .dc-chip.missed { color: #b91c1c; }
+.dc-new { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px; border-radius: 9px; border: 1px solid rgba(124,58,237,.4); background: rgba(124,58,237,.1); color: #7c3aed; font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; white-space: nowrap; }
+[data-theme="dark"] .dc-new { color: #c4b5fd; } .dc-new .ss-ic { margin: 0; }
 .dc-buy { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px; border-radius: 9px; border: 0; background: #16a34a; color: #fff; font: inherit; font-size: .8rem; font-weight: 800; cursor: pointer; }
 
 /* This plan vs your target allocation */
@@ -877,25 +879,25 @@ table.xv tfoot td:first-child { background: var(--bg3); }
 <!-- Add Coin Modal -->
 <div class="overlay" id="addModal">
   <div class="modal">
-    <h3><span data-ic="plus"></span>Add Coin to Accumulation Plan</h3>
+    <h3 id="addTitle"><span data-ic="plus"></span>Add Coin to Accumulation Plan</h3>
     <div class="form-row">
       <label class="form-label">Search Coin</label>
       <input type="text" class="form-input" id="addSearch" placeholder="e.g. BTC, Ethereum..." oninput="filterAddList()">
       <div class="coin-search-list" id="addList"></div>
     </div>
     <div id="addSelectedInfo" style="display:none;margin-bottom:10px;padding:10px;background:var(--bg3);border-radius:8px;font-size:0.85rem"></div>
-    <div class="form-row">
+    <div class="form-row" id="addTargetRow">
       <label class="form-label">Target Amount</label>
       <input type="number" class="form-input" id="addTarget" placeholder="0.00" min="0" step="any">
     </div>
     <div class="modal-btns">
       <button class="btn" onclick="closeAddModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmAddCoin()">Add to Plan</button>
+      <button class="btn btn-primary" id="addConfirm" onclick="confirmAddCoin()">Add to Plan</button>
     </div>
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611151507"></script>
+<script type="module" src="samsam-cloud.js?v=202611151935"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -980,10 +982,6 @@ function planFocus() {
     const box = document.getElementById(f.k === 'exit' ? 'exitPane' : 'dcaCard');
     const el = box && !box.hidden ? box : null;
     document.body.dataset.planFocus = f.k + (el ? '' : ':none');
-    if (f.k === 'dca' && !el) {   // no regular buy yet → say where to start
-      if (window.CPDialog) CPDialog.alert('No regular buys yet. Tap a coin in your plan → 📅 DCA to give it a regular buy — it then shows here, and the bot reminds you on the day.', { title: 'DCA (regular buys)', icon: 'calendar' });
-      return;
-    }
     if (!el) return;
     if (f.k === 'dca' && !el.classList.contains('open')) { const t = el.querySelector('.pa-tog'); if (t) t.click(); }
     const tgt = document.getElementById(f.k === 'exit' ? 'exitPane' : 'dcaCard');
@@ -1609,7 +1607,14 @@ async function removeCoin(idx) {
 }
 
 // ─── Add Coin Modal ──────────────────────────────────────────────────────────
-function openAddModal() {
+// ➕ Regular buy (the DCA card): pick ANY coin → it joins the plan without a target (set one later on its row / card) → its schedule
+let addForDca = false;
+function openDcaPick() { openAddModal(true); }
+function openAddModal(forDca) {
+  addForDca = forDca === true;
+  document.getElementById('addTitle').innerHTML = SamsamUI.ic(addForDca ? 'calendar' : 'plus') + (addForDca ? 'Regular buy — pick a coin' : 'Add Coin to Accumulation Plan');
+  document.getElementById('addTargetRow').style.display = addForDca ? 'none' : '';
+  document.getElementById('addConfirm').textContent = addForDca ? 'Next: the schedule' : 'Add to Plan';
   selectedAddCoin = null;
   document.getElementById('addSearch').value = '';
   document.getElementById('addTarget').value = '';
@@ -1699,7 +1704,7 @@ function showAddSelected() {
     (c.fromPortfolio ? `<span style="color:var(--fg2);margin-left:8px">Holding: ${fmtQty(c.qty)} ${E(c.sym)}</span>`
       : `<div style="color:#a78bfa;font-size:.78rem;margin-top:4px">Not in your portfolio yet — the plan tracks its live price, and <b>${SamsamUI.ic('plus')}Buy</b> on its card adds it to your portfolio.</div>`);
   document.getElementById('addList').innerHTML = '';
-  document.getElementById('addTarget').focus();
+  (addForDca ? document.getElementById('addConfirm') : document.getElementById('addTarget')).focus();
 }
 
 function confirmAddCoin() {
@@ -1707,12 +1712,12 @@ function confirmAddCoin() {
     CPDialog.alert('Please select a coin first.'); return;
   }
   const c = selectedAddCoin, sym = c.sym;
-  const targetQty = parseFloat(document.getElementById('addTarget').value) || 0;
+  const forDca = addForDca, targetQty = forDca ? 0 : (parseFloat(document.getElementById('addTarget').value) || 0);
 
   // Update existing or add new
   const existing = accumPlan.find(e => e.sym === sym);
   if (existing) {
-    existing.targetQty = targetQty;
+    if (!forDca) existing.targetQty = targetQty;   // a regular buy never touches a target you set
   } else {
     const entry = { sym, name: c.name, logoUrl: c.logoUrl, cgId: c.cgId, targetQty, addedAt: new Date().toISOString() };
     if (!c.fromPortfolio && c.cat) entry.cat = c.cat;
@@ -1723,6 +1728,7 @@ function confirmAddCoin() {
   renderAll();
   saveAccumPlan(true);
   if (!c.fromPortfolio) fetchPlanOnlyPrices();
+  if (forDca) { const i = accumPlan.findIndex(e => e.sym === sym); if (i >= 0) openDcaModal(i); }
 }
 
 // Close modal on overlay click
@@ -1826,7 +1832,12 @@ function renderDcaCard() {
   const box = document.getElementById('dcaCard'); if (!box || !window.Samsam || !Samsam.core.dcaStatus) return;
   const txs = (Samsam.getState().transactions || []), today = todayLocal(), esc = SamsamCoins.esc;
   const list = accumPlan.map((e, idx) => ({ e, idx, s: e.dca ? Samsam.core.dcaStatus(e.dca, e.sym, txs, today) : null })).filter(x => x.s);
-  if (!list.length) { box.hidden = true; box.innerHTML = ''; return; }
+  if (!list.length) {   // always there: this is where a regular buy starts — for any coin, in the plan or not
+    box.hidden = false; box.classList.remove('open');
+    box.innerHTML = `<div class="pa-h"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule</b><button type="button" class="dc-new" onclick="event.stopPropagation();openDcaPick()" title="A regular buy for any coin — it joins your plan">${SamsamUI.ic('plus', { solo: true, size: 13 })}Regular buy</button></div>
+      <div class="pa-sub" style="cursor:default">No regular buys yet. Pick any coin and an amount — the Plan shows each buy day, and Telegram reminds you.</div>`;
+    return;
+  }
   const order = { today: 0, missed: 1, upcoming: 2, done: 3 };
   list.sort((a, b) => order[a.s.state] - order[b.s.state] || String(a.s.next).localeCompare(String(b.s.next)));
   const month = list.reduce((t, x) => t + x.s.perMonth, 0), due = list.filter(x => x.s.state === 'today' || x.s.state === 'missed');
@@ -1840,11 +1851,11 @@ function renderDcaCard() {
         <span class="dc-s">${s.state === 'done' || s.state === 'upcoming' ? 'Next ' + shortDate(s.next) : 'Was due ' + shortDate(s.last)}${s.of ? ` · kept ${s.kept} of ${s.of}` : ''}${left ? ` · target in ${left} buy${left === 1 ? '' : 's'}` : r.pendingQty <= 0 ? ' · target reached' : ''}</span></button>
         ${s.state === 'today' || s.state === 'missed' ? `<button type="button" class="dc-buy" onclick="buyPlanCoin(${idx})">${SamsamUI.ic('plus', { solo: true, size: 14 })}Buy</button>` : ''}</div>`; }).join('');
   box.hidden = false; box.classList.toggle('open', open);
-  box.innerHTML = `<div class="pa-h pa-tog" role="button" tabindex="0" aria-expanded="${open}" aria-controls="dcaRows"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule</b><span class="dc-m">${SamsamFmt.usd(month)}/mo</span><span class="pa-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
+  box.innerHTML = `<div class="pa-h pa-tog" role="button" tabindex="0" aria-expanded="${open}" aria-controls="dcaRows"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule</b><span class="dc-m">${SamsamFmt.usd(month)}/mo</span><button type="button" class="dc-new" onclick="event.stopPropagation();openDcaPick()" title="A regular buy for any coin — it joins your plan">${SamsamUI.ic('plus', { solo: true, size: 13 })}Regular buy</button><span class="pa-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
     <div class="pa-sub">${list.length} regular buy${list.length === 1 ? '' : 's'} · ${sum}</div>
     <div class="dc-rows" id="dcaRows"${open ? '' : ' hidden'}>${rows}</div>`;
   const tog = box.querySelector('.pa-tog'), flip = () => { try { localStorage.setItem('samsam_dca_open', dcaOpen() ? '0' : '1'); } catch (_) {} renderDcaCard(); box.querySelector('.pa-tog').focus(); };
-  tog.onclick = flip; tog.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); flip(); } };
+  tog.onclick = flip; tog.onkeydown = ev => { if (ev.target !== tog) return; if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); flip(); } };
   box.querySelector('.pa-sub').onclick = flip;
 }
 

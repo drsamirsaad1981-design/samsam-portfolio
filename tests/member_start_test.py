@@ -77,6 +77,9 @@ with sync_playwright() as p:
             pg.click('#cpSup [data-pay="sup"][data-n="100"]'); pg.wait_for_function("window.__opened.length >= 2", timeout=8000)
             check('member: 💛 100 ⭐ → a one-time payment link', pg.evaluate("window.__opened[1]") == 'https://t.me/$pay-sup100')
             pg.evaluate("document.getElementById('cpSup').remove()")
+            try: pg.wait_for_selector('#cpSet', timeout=3000)   # the card was opened from Settings → Settings comes back; close it
+            except Exception: pass
+            pg.evaluate("SamsamSettings.close()"); pg.wait_for_timeout(300)
             pg.wait_for_selector('#cpfSup:not([hidden])', timeout=8000)
             check('member: a quiet line at the bottom of the page: "💛 Free & non-profit · Support"', 'Free & non-profit' in pg.inner_text('#cpfSup') and 'Support' in pg.inner_text('#cpfSup'))
             pg.click('#cpfSup [data-sup]'); pg.wait_for_selector('#cpSup', timeout=8000)

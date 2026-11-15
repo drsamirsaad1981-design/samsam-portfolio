@@ -231,14 +231,14 @@
   // ── the screen ──
   // a line: [key, icon, title, action]  ·  a choice: { seg: key, title, opts: [[value, label]], get(), set(v) }
   var SECTIONS = [
-    ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['import', 'upload', 'Import from exchange', 'import'], ['wallets', 'wallet', 'Wallets & check', 'wallets'], ['rewards', 'coins', 'Rewards & mining', 'rewards']]],
+    ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover']]],
+    // (Wallets & check, Import from exchange and Rewards & mining live on Performance; DCA and the Exit plan on the Plan page;
+    //  Signal thresholds, Categories and the Baseline on Overview; Target allocation on Allocation — each where it is used)
     ['Telegram', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link your portfolio to the Telegram bot', 'tglink'],
       ['tgchan', 'megaphone', 'Join Cute Portfolio Signals', 'tgchan'], ['tggroup', 'chat', 'Join Cute Portfolio Community', 'tggroup']]],
     ['AI', [['aiinfo', 'bot', 'AI Analysis & questions', 'aiinfo'], ['claudekey', 'key', 'My Claude key', 'claudekey']]],
     ['Admin', [['admin', 'shield', 'Admin dashboard', 'admin']]],
     ['Support', [['support', 'heart', 'Support Cute Portfolio & Channel 💛', 'support']]],
-    ['Investing rules', [['signal', 'sliders', 'Signal thresholds', 'signal'], ['targets', 'target', 'Target allocation', 'targets'], ['cats', 'note', 'Categories', 'cats'],
-      ['baseline', 'history', 'Baseline', 'baseline'], ['exit', 'exit', 'Exit plan', 'exit'], ['dca', 'calc', 'DCA (regular buys)', 'dca']]],
     ['Display', [
       { seg: 'theme', title: 'Theme', opts: [['light', 'Light'], ['dark', 'Dark']], get: function () { return window.SamsamUI ? SamsamUI.currentTheme() : 'dark'; },
         set: function (v) { if (window.SamsamUI && SamsamUI.currentTheme() !== v) SamsamUI.toggleTheme(); } },
@@ -312,7 +312,7 @@
       else rows = rows.filter(function (r) { return r.seg || r[0] !== 'admin'; });   // 🛠 the dashboard: Samir only   // ⭐💛 for invited members (Samir: /stats in the bot)
       if (!rows.length) return '';
       return '<div class="st-sec">' + E(s[0]) + '</div><div class="st-list">' + rows.map(function (r) { return r.seg ? choice(r) : line(r); }).join('') + '</div>';
-    }).join('') + '<div class="st-later">More settings (app language, AI) will be added here.</div>';
+    }).join('') + '<div class="st-later">Wallets, Import and Rewards are on <b>Performance</b> · DCA and the Exit plan on <b>Plan</b> · Signal thresholds, Categories and the Baseline on <b>Overview</b> · Target allocation on <b>Allocation</b>.</div>';
   }
   // ← Back (the phone's button / the browser's): closes Settings, and from a window Settings opened it comes back to Settings
   function mark(k) { try { history.replaceState(Object.assign({}, history.state, { cpSet: k }), '', location.href); } catch (_) {} }

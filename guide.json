@@ -43,19 +43,19 @@
     "ar": "البرنامج"
    },
    "en": [
-    "<b>Portfolio</b>: your coins, value, profit, charts. Add a coin with <b>+</b>, or bring trades from an exchange: Settings → Import from exchange.",
+    "<b>Portfolio</b>: your coins, value, profit, charts. Add a coin with <b>+</b>, or bring trades from an exchange: Performance → <b>Wallets &amp; exchanges</b> → Import from exchange.",
     "<b>Plan</b>: the accumulation plan (targets, DCA) and the <b>Exit Strategy</b> (take-profit steps).",
     "<b>Market Hub</b>: market cap, Fear &amp; Greed, Altcoin Season, dominance, movers.",
     "<b>AI Analysis</b> (🤖 button): a full report — <i>free</i> with your Claude app (copy → paste), or a quick report here for ⭐ premium members / your own Claude key.",
-    "<b>Settings</b> (⚙️): backup, wallets, baseline, signals, targets, theme, install the app on your phone.",
+    "<b>Settings</b> (⚙️): your account, backup, Telegram, AI, theme, the guide, install the app on your phone. Everything about your coins sits on its own page: wallets, import and rewards on Performance · DCA and the exit plan on Plan · signals, categories and the baseline on Overview · targets on Allocation.",
     "Your data is private: stored in the cloud under your own account — nobody else can read it."
    ],
    "ar": [
-    "<b>Portfolio</b>: عملاتك، القيمة، الربح، الرسوم. ضيف عملة بـ <b>+</b>، أو هات صفقاتك من منصة: الإعدادات ← Import from exchange.",
+    "<b>Portfolio</b>: عملاتك، القيمة، الربح، الرسوم. ضيف عملة بـ <b>+</b>، أو هات صفقاتك من منصة: Performance ← <b>Wallets &amp; exchanges</b> ← Import from exchange.",
     "<b>Plan</b>: خطة التجميع (الأهداف والـ DCA) و<b>خطة الخروج</b> (مراحل جني الربح).",
     "<b>Market Hub</b>: حجم السوق، الخوف والطمع، موسم العملات البديلة، السيطرة، الأكتر حركة.",
     "<b>AI Analysis</b> (زرار 🤖): تقرير كامل — <i>مجاناً</i> مع تطبيق Claude بتاعك (انسخ ← الصق)، أو تقرير سريع هنا للأعضاء المميزين ⭐ أو بمفتاح Claude بتاعك.",
-    "<b>الإعدادات</b> (⚙️): نسخة احتياطية، المحافظ، الـ Baseline، الإشارات، الأهداف، الثيم، وتثبيت البرنامج على الموبايل.",
+    "<b>الإعدادات</b> (⚙️): حسابك، النسخة الاحتياطية، Telegram، الـ AI، الثيم، الدليل، وتثبيت البرنامج على الموبايل. وكل حاجة تخص عملاتك في صفحتها: المحافظ والاستيراد والمكافآت في Performance · الـ DCA وخطة الخروج في Plan · الإشارات والتصنيفات والـ Baseline في Overview · الأهداف في Allocation.",
     "بياناتك خاصة: محفوظة في السحابة على حسابك انت بس — محدش غيرك يقدر يشوفها."
    ],
    "b": {

@@ -1171,7 +1171,7 @@ function renderAccumProgress(plan) {
   })).pct;
   document.getElementById('accumFill').style.width  = pct.toFixed(1) + '%';
   document.getElementById('accumPct').textContent   = pct.toFixed(1) + '% complete';
-  document.getElementById('accumDetail').textContent = completed + ' / ' + plan.length + ' targets met';
+  document.getElementById('accumDetail').textContent = completed + ' / ' + plan.filter(e => (e.targetQty || 0) > 0).length + ' targets met';   // a coin with a regular buy and no target isn't a target
   // card always visible (no display:none needed — it's an <a> block)
 }
 

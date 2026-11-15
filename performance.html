@@ -5,18 +5,18 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-ui.js?v=202611151507"></script>
-<script src="samsam-hints.js?v=202611151507"></script>
-<script src="samsam-vault.js?v=202611151507"></script>
-<script src="samsam-labels.js?v=202611151507"></script>
-<script src="samsam-taxonomy.js?v=202611151507"></script>
-<script src="samsam-dropdown.js?v=202611151507"></script>
-<script src="samsam-coins.js?v=202611151507"></script>
-<script src="samsam-import.js?v=202611151507"></script>
-<script src="samsam-wallets.js?v=202611151507"></script>
-<script src="samsam-rewards.js?v=202611151507"></script>
-<script src="samsam-settings.js?v=202611151507"></script>
-<script src="samsam-chart.js?v=202611151507"></script>
+<script src="samsam-ui.js?v=202611151935"></script>
+<script src="samsam-hints.js?v=202611151935"></script>
+<script src="samsam-vault.js?v=202611151935"></script>
+<script src="samsam-labels.js?v=202611151935"></script>
+<script src="samsam-taxonomy.js?v=202611151935"></script>
+<script src="samsam-dropdown.js?v=202611151935"></script>
+<script src="samsam-coins.js?v=202611151935"></script>
+<script src="samsam-import.js?v=202611151935"></script>
+<script src="samsam-wallets.js?v=202611151935"></script>
+<script src="samsam-rewards.js?v=202611151935"></script>
+<script src="samsam-settings.js?v=202611151935"></script>
+<script src="samsam-chart.js?v=202611151935"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -589,6 +589,16 @@ body {
 .c-links[hidden] { display: none; }
 .coin-row:hover { opacity: 1 !important; }
 .perf-find { max-width: 1200px; margin: 0 auto; padding: 4px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 6px max(var(--gut, 16px), env(safe-area-inset-left,0px)); box-sizing: border-box; }
+.wx-card[hidden] { display: none !important; }
+.wx-card { grid-column: 1/-1; margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); box-sizing: border-box; }
+.wx-h { display: flex; align-items: center; font-size: .78rem; font-weight: 800; color: var(--fg2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.wx-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 0; border: 0; border-top: 1px solid var(--border); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.wx-h + .wx-row { border-top: 0; }
+.wx-ic { width: 34px; height: 34px; flex: none; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: rgba(124,58,237,.12); color: #7c3aed; } [data-theme="dark"] .wx-ic { color: #c4b5fd; } .wx-ic .ss-ic { margin: 0; }
+.wx-t { flex: 1; min-width: 0; } .wx-t b { display: block; font-size: .9rem; } .wx-t small { display: block; font-size: .76rem; color: var(--fg2); line-height: 1.35; }
+.wx-go { opacity: .5; font-size: 1.2rem; } .wx-row:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; border-radius: 8px; }
+.wx-soon { border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 2px; font-size: .72rem; color: var(--fg2); opacity: .85; }
+@media (hover: hover) { .wx-row:hover .wx-t b { color: #7c3aed; } }
 .perf-find { display: flex; gap: 8px; align-items: center; } .perf-find .ss-search { flex: 1; min-width: 0; }
 .perf-find .perf-add { height: 40px; flex: none; }
 @media (max-width: 600px) { .perf-find .perf-add { width: 40px; padding: 0; gap: 0; } .perf-find .perf-add .btn-txt { display: none; } .perf-find .perf-add .cp-add-ic { background: transparent; } }
@@ -702,6 +712,14 @@ body {
     <!-- ── Rewards & mining: coins you got without buying (samsam-rewards.js) ── -->
     <button type="button" class="free-card" id="freeCard" hidden aria-label="Rewards and mining"></button>
 
+    <!-- ── Wallets & exchanges: where your coins really are — compare your wallets with the app, bring in an exchange file ── -->
+    <section class="wx-card" id="wxCard" hidden aria-label="Wallets and exchanges">
+      <div class="wx-h"><span data-ic="wallet"></span>Wallets &amp; exchanges</div>
+      <button type="button" class="wx-row" id="wxWallets"><span class="wx-ic" data-ic="wallet" data-ic-solo></span><span class="wx-t"><b>Wallets &amp; check</b><small id="wxWalletsSub">Compare your real wallets with the app</small></span><span class="wx-go">›</span></button>
+      <button type="button" class="wx-row" id="wxImport"><span class="wx-ic" data-ic="upload" data-ic-solo></span><span class="wx-t"><b>Import from exchange</b><small>A CSV file from Binance, Gate or another exchange → your buys and sells</small></span><span class="wx-go">›</span></button>
+      <div class="wx-soon">Binance · Gate — live balances straight from the exchange: later</div>
+    </section>
+
     <!-- ── P/L Breakdown card — full width ── -->
     <div class="pnl-breakdown-card">
       <div class="pnl-bd-title"><span data-ic="coins"></span>All Time Profit Breakdown</div>
@@ -752,7 +770,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202611151507"></script>
+<script type="module" src="samsam-cloud.js?v=202611151935"></script>
 <script>
 // ── Constants ──
 
@@ -1262,6 +1280,22 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('online', () => _pollPrices());
 window.addEventListener('offline', () => { if (typeof setLiveStatus === 'function') setLiveStatus('offline'); });
+
+// 👛 Wallets & exchanges card: Wallets & check (how many, how many to look at) · Import from an exchange file
+(function () {
+  const card = document.getElementById('wxCard'); if (!card) return;
+  const paint = () => {
+    const s = window.Samsam; if (!s || !s.isReady || !s.isReady()) return;
+    card.hidden = false;
+    document.getElementById('wxImport').hidden = !window.SamsamImport;
+    const ws = s.getWallets ? s.getWallets() : [], L = window.SamsamWallets && SamsamWallets.last(), c = L && SamsamWallets.compare(L);
+    document.getElementById('wxWalletsSub').textContent = !ws.length ? 'Compare your real wallets with the app'
+      : ws.length + ' wallet' + (ws.length === 1 ? '' : 's') + (c ? ' · ' + (c.more.length + c.less.length ? (c.more.length + c.less.length) + ' to look at' : 'all match') : ' · not checked yet');
+  };
+  document.getElementById('wxWallets').addEventListener('click', () => { if (window.SamsamWallets) SamsamWallets.open(); });
+  document.getElementById('wxImport').addEventListener('click', () => { if (window.SamsamImport) SamsamImport.open(); });
+  let n = 0; (function hook() { const s = window.Samsam; if (s && s.onChange && s.isReady && s.isReady()) { s.onChange(paint); paint(); setInterval(paint, 5000); } else if (++n < 200) setTimeout(hook, 300); })();
+})();
 
 // ➕ Add (a new coin, or a Buy for one you hold): the same window as on Overview — opened by the app around this page
 function perfAddCoin() {

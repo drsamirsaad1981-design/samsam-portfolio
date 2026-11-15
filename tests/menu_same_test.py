@@ -32,14 +32,14 @@ with sync_playwright() as p:
             check(f'{vn} {f}: ☁️ menu = Backup, Settings {items}', items == ['Backup', 'Settings'] and 'Last backup' in pg.inner_text('#samsamSyncMenu'), items)
             pg.click('#samsamSettings'); pg.wait_for_selector('#cpSet')
             rows = pg.evaluate("[...document.querySelectorAll('#cpSet .st-row b, #cpSet .st-seg-row > b')].map(b=>b.innerText.trim())")
-            want = ['Account', 'Backup', 'Recover Data', 'Import from exchange', 'Wallets & check', 'Rewards & mining', 'Telegram alerts', 'Admin dashboard', 'Signal thresholds', 'Target allocation', 'Categories', 'Baseline', 'Exit plan', 'DCA (regular buys)', 'Theme', 'Charts open on', 'Lists shown as', 'Buying fee in', 'Guide', 'Install the app', 'Version']
+            want = ['Account', 'Backup', 'Recover Data', 'Telegram alerts', 'Admin dashboard', 'Theme', 'Charts open on', 'Lists shown as', 'Buying fee in', 'Guide', 'Install the app', 'Version']
             check(f'{vn} {f}: Settings lists every setting', rows == want, rows)
             pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
             check(f'{vn} {f}: Esc closes it', not pg.query_selector('#cpSet'))
         # values
         pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(800)
         opn(pg); t = pg.inner_text('#cpSet')
-        check(f'{vn}: values shown (email, last backup, alerts, signals, baseline, exit steps, version)', 'owner@example.com' in t and 'Last backup:' in t and ' on' in pg.inner_text('#stRow_alerts') and 'Reinforce' in pg.inner_text('#stRow_signal') and '2026' in pg.inner_text('#stRow_baseline') and '×' in pg.inner_text('#stRow_exit') and '2026' in t.split('Version')[-1], t[:400])
+        check(f'{vn}: values shown (email, last backup, alerts, signals, baseline, exit steps, version)', 'owner@example.com' in t and 'Last backup:' in t and ' on' in pg.inner_text('#stRow_alerts') and '2026' in t.split('Version')[-1], t[:400])
         pg.screenshot(path=str(SH / f'settings_{vn}.png'))
         pg.evaluate("document.querySelector('#cpSet .st-box').scrollTop = 99999"); pg.wait_for_timeout(200)
         hb, bb = pg.locator('#cpSet .st-h').bounding_box(), pg.locator('#cpSet .st-box').bounding_box()
@@ -51,7 +51,8 @@ with sync_playwright() as p:
         pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
         check(f'{vn}: Esc closes the explanation first', pg.query_selector('.cph') is None and pg.query_selector('#cpSet') is not None)
         # each line opens its window
-        for row, sel in (('alerts', '#cpAlerts'), ('signal', '#sgReinforce'), ('targets', '#tgModal'), ('baseline', '#blDate'), ('cats', '#catMgrModal'), ('import', '#impModal')):
+        check(f'{vn}: the coin settings moved out (wallets, import, rewards, signals, targets, categories, baseline, exit, DCA) — a note says where', not pg.query_selector('#stRow_wallets, #stRow_import, #stRow_rewards, #stRow_signal, #stRow_targets, #stRow_cats, #stRow_baseline, #stRow_exit, #stRow_dca') and 'Performance' in pg.inner_text('#cpSet .st-later') and 'Plan' in pg.inner_text('#cpSet .st-later'))
+        for row, sel in (('alerts', '#cpAlerts'),):
             if not pg.query_selector('#cpSet'): opn(pg)
             pg.click(f'#stRow_{row}'); pg.wait_for_timeout(400)
             check(f'{vn}: {row} → its window opens (Settings closes)', pg.is_visible(sel) and not pg.query_selector('#cpSet'), row)
@@ -59,12 +60,7 @@ with sync_playwright() as p:
             pg.evaluate("for (const id of ['cpAlerts']) document.getElementById(id)?.remove(); try{closeSignalEdit()}catch(e){} try{closeTargets()}catch(e){} try{closeBaselineEdit()}catch(e){} try{closeCatManager()}catch(e){} try{SamsamImport.close()}catch(e){}")
             pg.wait_for_timeout(700)
             check(f'{vn}: {row} closed → back to Settings', pg.query_selector('#cpSet') is not None)
-        # Exit plan / DCA → the Plan page (opened in the app's frame)
-        opn(pg); pg.click('#stRow_exit'); pg.wait_for_timeout(1500)
-        check(f'{vn}: Exit plan → Plan page, Exit Strategy tab', pg.evaluate("(()=>{const f=[...document.querySelectorAll('#cpViews iframe')].find(x=>x.classList.contains('on')); return !!f && /accumulation/.test(f.src) && Samsam.getState().exit.tab==='exit'})()"))
-        pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(600)
-        opn(pg); pg.click('#stRow_dca'); pg.wait_for_timeout(1500)
-        check(f'{vn}: DCA → Plan page, Accumulation tab', pg.evaluate("(()=>{const f=[...document.querySelectorAll('#cpViews iframe')].find(x=>x.classList.contains('on')); return !!f && /accumulation/.test(f.src) && Samsam.getState().exit.tab!=='exit'})()"))
+        pg.evaluate("cpShell.go('accumulation')"); pg.wait_for_timeout(1500)
         # ⚙️ inside the Plan frame opens Settings on the main page (whole screen)
         fr = [f for f in pg.frames if 'accumulation.html' in f.url][0]
         g = fr.locator('.ss-set-hdr >> visible=true')
@@ -86,10 +82,6 @@ with sync_playwright() as p:
         pg.evaluate("openAddTx('buy','BTC')"); pg.wait_for_timeout(200)
         check(f'{vn}: buying fee starts in the coin', pg.get_attribute('#atxFeeUnitSeg [data-u="coin"]', 'aria-checked') == 'true')
         pg.evaluate("closeAddTx(); localStorage.removeItem('samsam_chart_range'); localStorage.setItem('samsam_view_pref','cards'); localStorage.removeItem('samsam_view_phone'); localStorage.removeItem('samsam_exit_view'); localStorage.removeItem('samsam_buyfee_unit')")
-        # a page opened on its own → the main page's editor
-        pg.goto(S.SITE + '/market.html'); pg.wait_for_function("Samsam.isReady()"); pg.wait_for_timeout(800)
-        opn(pg); pg.click('#stRow_signal'); pg.wait_for_url('**/index.html*'); S.wait_ready(pg); pg.wait_for_timeout(1500)
-        check(f'{vn}: Market page on its own → Signal thresholds opens on the main page', pg.is_visible('#sgReinforce') and '#set=' not in pg.url, pg.url)
         check(f'{vn}: no JS errors', not errs, errs[:3]); ctx.close()
     br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)

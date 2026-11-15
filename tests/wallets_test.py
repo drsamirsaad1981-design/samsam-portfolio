@@ -166,9 +166,8 @@ with sync_playwright() as p:
         ctx.route('https://solana-rpc.publicnode.com/**', sol); ctx.route('https://solana-rpc.publicnode.com', sol)
 
         # Settings → Wallets & check
-        pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stRow_wallets')
-        check(f'{vn} Settings has "Wallets & check"', 'Wallets & check' in pg.inner_text('#stRow_wallets'))
-        pg.click('#stRow_wallets'); pg.wait_for_selector('#cpWal #wlAddr')
+        check(f'{vn} "Wallets & check" is ready (it opens from Performance → Wallets & exchanges)', pg.evaluate("!!window.SamsamWallets"))
+        pg.evaluate("SamsamWallets.open()"); pg.wait_for_selector('#cpWal #wlAddr')
         check(f'{vn} empty: a short how-to, Check now disabled', 'No wallet yet' in pg.inner_text('#cpWal') and pg.is_disabled('#wlCheck'))
         pg.fill('#wlAddr', SEED); pg.click('#wlAddBtn'); pg.wait_for_timeout(200)
         check(f'{vn} a recovery phrase is refused (and cleared)', 'recovery phrase' in pg.inner_text('#wlErr') and pg.input_value('#wlAddr') == '' and pg.evaluate("Samsam.getWallets().length") == 0, pg.inner_text('#wlErr'))
@@ -262,8 +261,8 @@ with sync_playwright() as p:
         n_cg = len(cg_calls); pg.click('#wlCheck'); pg.wait_for_function("!document.querySelector('#wlCheck').disabled", timeout=15000)
         check(f'{vn} a second check uses the remembered contracts (only the busy coin asked again)', set(cg_calls[n_cg:]) == {Z['cgId']}, cg_calls[n_cg:])
         pg.keyboard.press('Escape'); pg.wait_for_timeout(300)
-        check(f'{vn} closing the window brings Settings back, with the number of wallets"', pg.is_visible('#stRow_wallets') and f'{nw} wallets' in pg.inner_text('#stRow_wallets'), pg.inner_text('#stRow_wallets') if pg.query_selector('#stRow_wallets') else '')
-        pg.click('#stRow_wallets'); pg.wait_for_selector('#cpWal [data-del]')
+        check(f'{vn} Esc closes the window', not pg.query_selector('#cpWal'))
+        pg.evaluate("SamsamWallets.open()"); pg.wait_for_selector('#cpWal [data-del]')
         pg.click('#cpWal [data-del]'); pg.wait_for_timeout(400)
         check(f'{vn} remove a wallet', len(pg.evaluate("Samsam.getWallets()")) == nw - 1)
         pg.click('#cpWal .wl-w:has(.wl-k:text("EVM")) [data-del]'); pg.wait_for_timeout(400)

@@ -17,7 +17,7 @@ with sync_playwright() as p:
             pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(500)
             pg.goto(S.SITE + '/accumulation.html'); S.wait_ready(pg); pg.wait_for_timeout(1500)
             pg.evaluate("(()=>{accumPlan.forEach(e=>{e.dca=null}); saveAccumPlan(true); renderAll()})()"); pg.wait_for_timeout(1200)
-            check(f'{vn}/{theme}: no schedules → no DCA card', not pg.is_visible('#dcaCard'))
+            check(f'{vn}/{theme}: no schedules → the DCA card says so and offers ➕ Regular buy', 'No regular buys yet' in pg.inner_text('#dcaCard') and pg.is_visible('#dcaCard .dc-new') and not pg.query_selector('#dcaCard .dc-row'))
             # pick a plan coin you hold and don't own fully
             idx = pg.evaluate("accumPlan.findIndex(e=>{const r=calcRow(e); return r.actualQty>0 && r.pendingQty>0 && r.currentPrice>0 && e.sym!=='BTC'})")
             recent = pg.evaluate(f"""(()=>{{const tx=Samsam.getState().transactions||[], d=todayLocal(), lo=new Date(Date.parse(d+'T00:00:00Z')-2*864e5).toISOString().slice(0,10);
@@ -61,7 +61,7 @@ with sync_playwright() as p:
             check(f'{vn}/{theme}: fits the screen', not wide)
             # remove
             pg.click('#dcaCard .dc-main'); pg.wait_for_timeout(200); pg.click('#dcaRemove'); pg.wait_for_timeout(1500)
-            check(f'{vn}/{theme}: Remove schedule → gone from the account and the card', not accum().get(sym, {}).get('dca') and not pg.is_visible('#dcaCard'))
+            check(f'{vn}/{theme}: Remove schedule → gone from the account and the card', not accum().get(sym, {}).get('dca') and not pg.query_selector(f'#dcaCard .dc-row[data-sym="{sym}"]'))
             check(f'{vn}/{theme}: no JS errors', not errs, errs[:3]); ctx.close()
     br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)
