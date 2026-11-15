@@ -16,20 +16,20 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611152202"></script>
-<script src="samsam-hints.js?v=202611152202"></script>
-<script src="samsam-vault.js?v=202611152202"></script>
-<script src="samsam-labels.js?v=202611152202"></script>
-<script src="samsam-taxonomy.js?v=202611152202"></script>
-<script src="samsam-coins.js?v=202611152202"></script>
-<script src="samsam-import.js?v=202611152202"></script>
-<script src="samsam-wallets.js?v=202611152202"></script>
-<script src="samsam-rewards.js?v=202611152202"></script>
-<script src="samsam-settings.js?v=202611152202"></script>
-<script src="samsam-dropdown.js?v=202611152202"></script>
-<script src="samsam-market.js?v=202611152202"></script>
-<script src="samsam-exit.js?v=202611152202"></script>
-<script src="samsam-add.js?v=202611152202"></script>
+<script src="samsam-ui.js?v=202611160042"></script>
+<script src="samsam-hints.js?v=202611160042"></script>
+<script src="samsam-vault.js?v=202611160042"></script>
+<script src="samsam-labels.js?v=202611160042"></script>
+<script src="samsam-taxonomy.js?v=202611160042"></script>
+<script src="samsam-coins.js?v=202611160042"></script>
+<script src="samsam-import.js?v=202611160042"></script>
+<script src="samsam-wallets.js?v=202611160042"></script>
+<script src="samsam-rewards.js?v=202611160042"></script>
+<script src="samsam-settings.js?v=202611160042"></script>
+<script src="samsam-dropdown.js?v=202611160042"></script>
+<script src="samsam-market.js?v=202611160042"></script>
+<script src="samsam-exit.js?v=202611160042"></script>
+<script src="samsam-add.js?v=202611160042"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -644,6 +644,8 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 .xs-badge { display: inline-flex; align-items: center; }
 .xs-badge .ss-ic { width: 1.05em; height: 1.05em; margin-right: .3em; }
 .xs-title { display: inline-flex; align-items: center; }
+.xs-title { white-space: nowrap; } .xs-title .cp-hint, .pa-h b .cp-hint { width: 18px; height: 18px; margin-left: 3px; }
+.xc-pct { white-space: nowrap; } @media (max-width: 380px) { .xc-pct small { display: none; } }   /* tiny phones: "0.0%" alone (the bar's legend says stablecoins) */
 .xs-title .ss-ic { color: #a78bfa; } [data-theme="light"] .xs-title .ss-ic { color: #7c3aed; }
 .xs-btn { display: inline-flex; align-items: center; justify-content: center; }
 .xs-link { display: inline-flex; align-items: center; }
@@ -899,7 +901,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611152202"></script>
+<script type="module" src="samsam-cloud.js?v=202611160042"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1455,7 +1457,7 @@ function renderPlanAlloc() {
   paState = null;
   if (!a) {
     box.hidden = !(window.Samsam && Samsam.isReady && Samsam.isReady());
-    box.innerHTML = `<div class="pa-h"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation</b><a class="pa-open" href="./index.html#allocation" target="_top" onclick="return paOpenAlloc(event)">Set targets ›</a></div>
+    box.innerHTML = `<div class="pa-h"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation<span class="cp-hint" data-hint="planAlloc" role="button" tabindex="0"></span></b><a class="pa-open" href="./index.html#allocation" target="_top" onclick="return paOpenAlloc(event)">Set targets ›</a></div>
       <div class="pa-empty">Set a target allocation (Portfolio → Allocation) to see whether finishing this plan keeps your categories where you want them, and which coins to buy first.</div>`;
     return;
   }
@@ -1471,7 +1473,7 @@ function renderPlanAlloc() {
   box.hidden = false;
   const open = paOpen();
   box.classList.toggle('open', open);
-  box.innerHTML = `<div class="pa-h pa-tog" role="button" tabindex="0" aria-expanded="${open}" aria-controls="paRows" title="${open ? 'Hide' : 'Show'} the categories"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation</b><a class="pa-open" href="./index.html#allocation" target="_top" onclick="event.stopPropagation(); return paOpenAlloc(event)">Allocation ›</a><span class="pa-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
+  box.innerHTML = `<div class="pa-h pa-tog" role="button" tabindex="0" aria-expanded="${open}" aria-controls="paRows" title="${open ? 'Hide' : 'Show'} the categories"><span class="pa-ic">${ic('target')}</span><b>Plan vs target allocation<span class="cp-hint" data-hint="planAlloc" role="button" tabindex="0"></span></b><a class="pa-open" href="./index.html#allocation" target="_top" onclick="event.stopPropagation(); return paOpenAlloc(event)">Allocation ›</a><span class="pa-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
     <div class="pa-sub">${a.toBuy > 0 ? `If you finish this plan (<b>+${SamsamFmt.usd(a.toBuy)}</b> at today's prices): <b>${okAfter} of ${shown.length}</b> categories on target — today ${okNow} of ${shown.length}.` : `Your plan is complete — <b>${okNow} of ${shown.length}</b> categories on target.`} Today → after the plan · band ±${band} pts.</div>
     <div class="pa-rows" id="paRows"${open ? '' : ' hidden'}>${rows}</div>`;
   const tog = box.querySelector('.pa-tog'), flip = () => { try { localStorage.setItem('samsam_pa_open', paOpen() ? '0' : '1'); } catch (_) {} renderPlanAlloc(); box.querySelector('.pa-tog').focus(); };
@@ -1838,7 +1840,7 @@ function renderDcaCard() {
   const list = accumPlan.map((e, idx) => ({ e, idx, s: e.dca ? Samsam.core.dcaStatus(e.dca, e.sym, txs, today) : null })).filter(x => x.s);
   if (!list.length) {   // always there: this is where a regular buy starts — for any coin, in the plan or not
     box.hidden = false; box.classList.remove('open');
-    box.innerHTML = `<div class="pa-h"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule</b><button type="button" class="dc-new" onclick="event.stopPropagation();openDcaPick()" title="A regular buy for any coin — it joins your plan">${SamsamUI.ic('plus', { solo: true, size: 13 })}Regular buy</button></div>
+    box.innerHTML = `<div class="pa-h"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule<span class="cp-hint" data-hint="dca" role="button" tabindex="0"></span></b><button type="button" class="dc-new" onclick="event.stopPropagation();openDcaPick()" title="A regular buy for any coin — it joins your plan">${SamsamUI.ic('plus', { solo: true, size: 13 })}Regular buy</button></div>
       <div class="pa-sub" style="cursor:default">No regular buys yet. Pick any coin and an amount — the Plan shows each buy day, and Telegram reminds you.</div>`;
     return;
   }
@@ -1855,7 +1857,7 @@ function renderDcaCard() {
         <span class="dc-s">${s.state === 'done' || s.state === 'upcoming' ? 'Next ' + shortDate(s.next) : 'Was due ' + shortDate(s.last)}${s.of ? ` · kept ${s.kept} of ${s.of}` : ''}${left ? ` · target in ${left} buy${left === 1 ? '' : 's'}` : r.pendingQty <= 0 ? ' · target reached' : ''}</span></button>
         ${s.state === 'today' || s.state === 'missed' ? `<button type="button" class="dc-buy" onclick="buyPlanCoin(${idx})">${SamsamUI.ic('plus', { solo: true, size: 14 })}Buy</button>` : ''}</div>`; }).join('');
   box.hidden = false; box.classList.toggle('open', open);
-  box.innerHTML = `<div class="pa-h pa-tog" role="button" tabindex="0" aria-expanded="${open}" aria-controls="dcaRows"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule</b><button type="button" class="dc-new" onclick="event.stopPropagation();openDcaPick()" title="A regular buy for any coin — it joins your plan">${SamsamUI.ic('plus', { solo: true, size: 13 })}Regular buy</button><span class="pa-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
+  box.innerHTML = `<div class="pa-h pa-tog" role="button" tabindex="0" aria-expanded="${open}" aria-controls="dcaRows"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule<span class="cp-hint" data-hint="dca" role="button" tabindex="0"></span></b><button type="button" class="dc-new" onclick="event.stopPropagation();openDcaPick()" title="A regular buy for any coin — it joins your plan">${SamsamUI.ic('plus', { solo: true, size: 13 })}Regular buy</button><span class="pa-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
     <div class="pa-sub">${list.length} regular buy${list.length === 1 ? '' : 's'} · <span class="dc-m">${SamsamFmt.usd(month)}/mo</span> · ${sum}</div>
     <div class="dc-rows" id="dcaRows"${open ? '' : ' hidden'}>${rows}</div>`;
   const tog = box.querySelector('.pa-tog'), flip = () => { try { localStorage.setItem('samsam_dca_open', dcaOpen() ? '0' : '1'); } catch (_) {} renderDcaCard(); box.querySelector('.pa-tog').focus(); };

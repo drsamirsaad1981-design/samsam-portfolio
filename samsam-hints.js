@@ -77,6 +77,56 @@
       '<p>Only coins with a target count. A coin above its target counts as 100%: the extra never makes up for coins still below target.</p>'; } },
     planTotals: { title: 'Plan Totals', body: function () { return '<ul><li><b>Total Target Value</b> = Σ Target Amount × Current Price</li><li><b>Current Holdings</b> = Σ Amount held × Current Price (amounts above target included)</li>' +
       '<li><b>Total Pending Cost</b> = Σ Cost to Target</li><li><b>Coins Completed</b> = coins at or above their target</li></ul>'; } },
+    // ── cards that had no ⓘ yet (Performance, Allocation, Plan, Exit Strategy, Market Hub) ──
+    profitBreakdown: { title: 'All Time Profit Breakdown', body: function () { return '<p>Where your profit or loss comes from, for all coins or one category.</p>' +
+      '<div class="cph-f"><b>Unrealized</b><code>Value of the coins you still hold − their Cost Basis</code></div>' +
+      '<div class="cph-f"><b>Realized</b><code>What your sells brought in − the cost of the coins sold − selling fees</code></div>' +
+      '<div class="cph-f"><b>All Time Profit</b><code>Realized + Unrealized</code></div>' +
+      '<p>Unrealized moves with today\'s prices; Realized is locked in and changes only when you sell.</p>'; } },
+    rewards: { title: 'Rewards & mining', body: function () { return '<p>Coins you got <b>without buying</b>: staking rewards, mined coins and airdrops.</p>' +
+      '<p>They come in at <b>$0 cost</b>, so your holdings go up and your average buy price goes down — they are already part of your All Time Profit.</p>' +
+      '<p>The card shows what they are worth at today\'s price. Tap it for the list by coin and by month.</p>' +
+      '<p>Add one from a coin\'s page: <b>+ Add Transaction → Reward</b> (staking can also be booked automatically from an APY).</p>'; } },
+    walletsCheck: { title: 'Wallets & exchanges', body: function () { return '<p><b>Wallets &amp; check</b> compares what the app says you hold with what is really in your wallets.</p>' +
+      '<ul><li>You add each wallet\'s <b>public address</b> only — never a seed phrase or a private key.</li><li>The app reads the balances from the public blockchain and lists coins where the wallet has <b>more</b> or <b>less</b> than the app.</li><li>Nothing is changed by itself: you decide what to correct.</li></ul>' +
+      '<p><b>Import from exchange</b> reads a CSV file of your trades (Binance, Gate and others) and adds the buys and sells. Trades you already entered are recognised and not added twice.</p>'; } },
+    targets: { title: 'Target allocation', body: function () { return '<p>The share of your portfolio you want in each category (Bitcoin included). The shares add up to 100%.</p>' +
+      '<div class="cph-f"><b>Now → target</b><code>Category value ÷ portfolio value × 100, next to the share you chose</code></div>' +
+      '<p>The <b>band</b> (± points) is how far a category may drift. Inside the band it is <b>✓ on target</b>; outside, the card says how much to buy (or trim) to get back, and which of your coins fit.</p>' +
+      '<p class="cph-ok">It is a guide only — nothing is bought or sold for you.</p>'; } },
+    dca: { title: 'DCA schedule (regular buys)', body: function () { return '<p>A fixed amount you buy on a fixed day — every week, every two weeks or every month — whatever the price.</p>' +
+      '<ul><li><b>Today</b>: the buy is due today.</li><li><b>Missed · N days</b>: the day passed and no Buy of that coin was recorded.</li><li><b>✓ Bought</b>: you recorded the Buy for this round.</li><li>A date: the next buy day.</li></ul>' +
+      '<p><b>Kept x of y</b> counts your last rounds (up to 6). <b>Target in N buys</b>: how many more buys reach the coin\'s target.</p>' +
+      '<p><b>➕ Regular buy</b> works for any coin: one that isn\'t in your plan joins it without a target (set one later on its row). Telegram reminds you on the day.</p>'; } },
+    planAlloc: { title: 'Plan vs target allocation', body: function () { return '<p>If you bought everything this plan still needs, at today\'s prices — would your categories match your <b>target allocation</b>?</p>' +
+      '<p>It compares today with "after the plan", category by category, inside your band.</p>' +
+      '<p>Each plan coin gets a chip for its category today:</p><ul><li><b>↓ Priority</b>: the category is below its target — buying this coin moves you toward it.</li><li><b>↑ Over target</b>: already above — it can wait.</li><li><b>✓ On target</b>.</li></ul>'; } },
+    macroExit: { title: 'Macro Exit Indicators', body: function () { return '<p>Three whole-market signs that a cycle top may be near — with <b>your own levels</b>:</p>' +
+      '<ul><li><b>BTC Dominance</b> at or under your level (money has moved from Bitcoin into altcoins).</li><li><b>USDT Dominance</b> inside your range (little cash left on the side).</li><li><b>ETH / BTC</b> at or over your level (altcoins are beating Bitcoin).</li></ul>' +
+      '<p><b>Reached</b> = at the level · <b>Close</b> = within 10% of it · <b>Waiting</b> = not yet. "Signals Hit" counts the ones reached.</p>' +
+      '<p class="cph-ok">The page compares — it doesn\'t predict the top. Change the levels with Edit targets.</p>'; } },
+    cashOut: { title: 'Cash-out Progress', body: function () { return '<p>How much of your portfolio already sits in stablecoins.</p>' +
+      '<div class="cph-f"><b>% in stablecoins</b><code>Value of your stablecoins ÷ value of the whole portfolio × 100</code></div>' +
+      '<p><b>Realized profit</b> is the profit locked in by all your sells. <b>Exit steps done</b> counts the take-profit steps your recorded sells have covered.</p>'; } },
+    exitSteps: { title: 'Exit plan steps', body: function () { return '<p>Each coin in the exit plan is sold in <b>three steps</b>, as its price reaches a multiple of your average buy price.</p>' +
+      '<div class="cph-f"><b>Default</b><code>×2 → sell 25% · ×3 → sell 50% · ×5 → sell 25%</code></div>' +
+      '<p>The sliders button changes your default multiples and shares; any coin can have its own prices.</p>' +
+      '<ul><li><b>Moonbag</b>: 10% of the coin stays out of the plan, to keep.</li><li>A step turns <b>✓ Done</b> by itself when the sells you record (after the coin joined the plan) cover it — steps fill in order.</li><li>Buying more later raises the plan amount.</li></ul>'; } },
+    mcap: { title: 'Total Market Cap', body: function () { return '<p>The value of all coins together, and how it changed in 24 hours.</p>' +
+      '<ul><li><b>Volume 24h</b>: how much was traded in the last 24 hours.</li><li><b>BTC / ETH</b>: price and 24h change.</li><li><b>ETF money, last 7 days</b>: net money into (+) or out of (−) the US spot Bitcoin and Ethereum ETFs.</li></ul>' +
+      '<p>Sources: CoinGecko (market), SoSoValue (ETFs).</p>'; } },
+    fng: { title: 'Fear & Greed', body: function () { return '<p>A 0–100 reading of the market\'s mood, published once a day by alternative.me.</p>' +
+      '<ul><li><b>Low (fear)</b>: people are scared and selling — prices are often cheap.</li><li><b>High (greed)</b>: people are buying eagerly — prices are often stretched.</li></ul>' +
+      '<p>Yesterday and last week show which way the mood is moving.</p>'; } },
+    altSeason: { title: 'Altcoin Season', body: function () { return '<p>Are altcoins beating Bitcoin?</p>' +
+      '<div class="cph-f"><b>Index</b><code>How many of the top 100 coins did better than BTC over the last 90 days</code></div>' +
+      '<p>Stablecoins, wrapped and staked coins are left out. <b>75 or more</b> = Altcoin Season; a low number means Bitcoin is leading.</p>' +
+      '<p>Tap the card for the full page: the coins that beat BTC and the history.</p>'; } },
+    dominance: { title: 'Market Dominance', body: function () { return '<p>Each coin\'s share of the total market cap: Bitcoin, Ethereum, USDT, the next three biggest coins, and all the others together.</p>' +
+      '<div class="cph-f"><b>Dominance</b><code>Coin\'s market cap ÷ total market cap × 100</code></div>' +
+      '<p><b>ETH / BTC</b> is the price of 1 ETH in BTC — rising means Ethereum (and usually altcoins) is beating Bitcoin.</p>'; } },
+    etf: { title: 'ETF Flows (US spot)', body: function () { return '<p>Money going into (+, green) or out of (−, red) the US spot Bitcoin or Ethereum ETFs, per trading day.</p>' +
+      '<p>Big steady inflows mean institutions are buying; outflows mean they are selling. The totals show the last 7 days, the last 30 days and since launch.</p><p>Source: SoSoValue.</p>'; } },
     // ── cloud menu ──
     recover: { title: 'Recover Data', body: function () { return '<p>Compares another copy of your portfolio — data the older app version left on this device, your old JSONBin, or a backup file — with the cloud, coin by coin, and lists the transactions the cloud is missing. You choose what to add; nothing is replaced.</p>'; } },
     backup: { title: 'Encrypted Backup', body: function () { return '<p>Downloads your whole portfolio as a file locked with a password you choose (AES-256). Keep the password safe: <b>it can\'t be recovered</b>, and without it the file can\'t be opened.</p>'; } },
@@ -190,6 +240,11 @@
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.cp-hint[data-hint]');
     if (!b) return; e.preventDefault(); e.stopPropagation(); paint(b.parentNode); show(b.getAttribute('data-hint'), b);
+  }, true);
+  // an ⓘ inside a card that is itself a button / link is a <span role="button">: Enter / Space open it too
+  document.addEventListener('keydown', function (e) {
+    var b = e.target && e.target.matches && e.target.matches('span.cp-hint[data-hint]') ? e.target : null;
+    if (!b || (e.key !== 'Enter' && e.key !== ' ')) return; e.preventDefault(); e.stopPropagation(); show(b.getAttribute('data-hint'), b);
   }, true);
   addCss();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { paint(); }); else paint();

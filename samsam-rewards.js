@@ -125,11 +125,11 @@
     var d = data('all'), m = data('30');
     css(); host.hidden = false;
     if (!d.rows.length) {   // always there, so you know where it is — tap shows how to add them
-      host.innerHTML = '<span class="fc-ic">' + IC('coins', { solo: true }) + '</span><span class="fc-t"><b>Rewards &amp; mining</b><small>None yet — staking rewards, mined BTC and airdrops show here</small></span><span class="fc-v">$0</span><span class="fc-go">›</span>';
+      host.innerHTML = '<span class="fc-ic">' + IC('coins', { solo: true }) + '</span><span class="fc-t"><b>Rewards &amp; mining<span class="cp-hint" data-hint="rewards" role="button" tabindex="0"></span></b><small>None yet — staking rewards, mined BTC and airdrops show here</small></span><span class="fc-v">$0</span><span class="fc-go">›</span>';
       return;
     }
     var top = d.coins.slice(0, 3).map(function (c) { return '+' + qf(c.qty) + ' ' + c.sym; }).join(' · ');
-    host.innerHTML = '<span class="fc-ic">' + IC('coins', { solo: true }) + '</span><span class="fc-t"><b>Rewards &amp; mining</b><small>' + E(top) + (m.tot.all > 0 ? ' · ' + usd(m.tot.all) + ' in 30 days' : '') + '</small></span><span class="fc-v">' + usd(d.tot.all) + '</span><span class="fc-go">›</span>';
+    host.innerHTML = '<span class="fc-ic">' + IC('coins', { solo: true }) + '</span><span class="fc-t"><b>Rewards &amp; mining<span class="cp-hint" data-hint="rewards" role="button" tabindex="0"></span></b><small>' + E(top) + (m.tot.all > 0 ? ' · ' + usd(m.tot.all) + ' in 30 days' : '') + '</small></span><span class="fc-v">' + usd(d.tot.all) + '</span><span class="fc-go">›</span>';
   }
   function hook() {
     var host = $('freeCard'); if (!host || host.__rw) return; host.__rw = true;

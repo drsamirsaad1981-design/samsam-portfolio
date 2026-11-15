@@ -1397,7 +1397,7 @@ function renderHovTargets() {
   const box = document.getElementById('hovTgtCard'); if (!box || hovMode !== 'alloc' || !window.Samsam || !Samsam.core || !Samsam.core.allocationPlan) return;
   const t = Samsam.getTargets ? Samsam.getTargets() : null, ic = n => SamsamUI.ic(n, { solo: true, size: 16 });
   if (!t) {
-    box.innerHTML = `<div class="tg-h"><span class="tg-ic">${ic('target')}</span><b>Target allocation</b></div>
+    box.innerHTML = `<div class="tg-h"><span class="tg-ic">${ic('target')}</span><b>Target allocation<span class="cp-hint" data-hint="targets" role="button" tabindex="0"></span></b></div>
       <div class="tg-empty"><p>Set the share you want for each category (Bitcoin included) — see how far you are from it, and exactly what to buy (or trim) to get back.</p>
       <button type="button" class="tg-go" onclick="openTargets()">${ic('target')}Set my targets</button></div>`;
     return;
@@ -1426,7 +1426,7 @@ function renderHovTargets() {
   // a card: closed it shows the title + how many categories are on target; tap it to open (remembered on this device)
   let tgOpen = false; try { tgOpen = localStorage.getItem('samsam_tg_open') === '1'; } catch (_) {}
   const off = shown.filter(g => g.state !== 'ok').length;
-  box.innerHTML = `<div class="tg-h tg-tap" role="button" tabindex="0" aria-expanded="${tgOpen}" aria-controls="tgBody"><span class="tg-ic">${ic('target')}</span><b>Target allocation</b><button type="button" class="tg-edit" onclick="event.stopPropagation();openTargets()">${SamsamUI.ic('pencil', { solo: true, size: 13 })}Edit</button>
+  box.innerHTML = `<div class="tg-h tg-tap" role="button" tabindex="0" aria-expanded="${tgOpen}" aria-controls="tgBody"><span class="tg-ic">${ic('target')}</span><b>Target allocation<span class="cp-hint" data-hint="targets" role="button" tabindex="0"></span></b><button type="button" class="tg-edit" onclick="event.stopPropagation();openTargets()">${SamsamUI.ic('pencil', { solo: true, size: 13 })}Edit</button>
       <span class="tg-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
     <div class="tg-sub tg-tap2"><b>${plan.onTarget} of ${plan.count}</b> categories on target · band ±${t.band} pts${!tgOpen && off ? ` · <span class="tg-offn">${off} to rebalance</span>` : ''}</div>
     <div class="tg-body" id="tgBody"${tgOpen ? '' : ' hidden'}>

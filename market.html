@@ -15,19 +15,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611152202"></script>
-<script src="samsam-hints.js?v=202611152202"></script>
-<script src="samsam-vault.js?v=202611152202"></script>
-<script src="samsam-labels.js?v=202611152202"></script>
-<script src="samsam-taxonomy.js?v=202611152202"></script>
-<script src="samsam-coins.js?v=202611152202"></script>
-<script src="samsam-import.js?v=202611152202"></script>
-<script src="samsam-wallets.js?v=202611152202"></script>
-<script src="samsam-rewards.js?v=202611152202"></script>
-<script src="samsam-settings.js?v=202611152202"></script>
-<script src="samsam-dropdown.js?v=202611152202"></script>
-<script src="samsam-add.js?v=202611152202"></script>
-<script src="samsam-market.js?v=202611152202"></script>
+<script src="samsam-ui.js?v=202611160042"></script>
+<script src="samsam-hints.js?v=202611160042"></script>
+<script src="samsam-vault.js?v=202611160042"></script>
+<script src="samsam-labels.js?v=202611160042"></script>
+<script src="samsam-taxonomy.js?v=202611160042"></script>
+<script src="samsam-coins.js?v=202611160042"></script>
+<script src="samsam-import.js?v=202611160042"></script>
+<script src="samsam-wallets.js?v=202611160042"></script>
+<script src="samsam-rewards.js?v=202611160042"></script>
+<script src="samsam-settings.js?v=202611160042"></script>
+<script src="samsam-dropdown.js?v=202611160042"></script>
+<script src="samsam-add.js?v=202611160042"></script>
+<script src="samsam-market.js?v=202611160042"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -62,6 +62,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 @media (min-width: 1024px) { .mk-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; } }
 .mk-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 14px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .mk-k { display: flex; align-items: center; font-size: .72rem; font-weight: 700; color: var(--fg2); line-height: 1.2; }
+.mk-k { white-space: nowrap; } .mk-k .cp-hint { width: 18px; height: 18px; margin-left: 3px; }
 .mk-k .ss-ic { color: #a78bfa; } [data-theme="light"] .mk-k .ss-ic { color: #7c3aed; }
 .mk-v { font-size: 1.32rem; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mk-v small { font-size: .74rem; font-weight: 700; color: var(--fg2); margin-left: 2px; }
@@ -403,7 +404,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 
   <section class="mk-grid" aria-label="Market overview">
     <div class="mk-card" id="cardMcap">
-      <div class="mk-k"><span data-ic="globe"></span>Total Market Cap</div>
+      <div class="mk-k"><span data-ic="globe"></span>Total Market Cap<span class="cp-hint" data-hint="mcap" role="button" tabindex="0"></span></div>
       <div class="mk-v" id="mcapV">—</div>
       <span class="mk-pill" id="mcapCh">—</span>
       <div class="mk-foot">
@@ -416,7 +417,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       </div>
     </div>
     <div class="mk-card" id="cardFng">
-      <div class="mk-k"><span data-ic="gauge"></span>Fear &amp; Greed</div>
+      <div class="mk-k"><span data-ic="gauge"></span>Fear &amp; Greed<span class="cp-hint" data-hint="fng" role="button" tabindex="0"></span></div>
       <div class="mk-semi" role="img" id="fngG" aria-label="Fear and Greed gauge">
         <svg viewBox="0 0 120 66" aria-hidden="true">
           <g fill="none" stroke-width="9" stroke-linecap="butt">
@@ -432,7 +433,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       </div>
     </div>
     <a class="mk-card mk-go" id="cardAlt" href="./altseason.html" aria-label="Altcoin Season — open the full page">
-      <div class="mk-k"><span data-ic="activity"></span>Altcoin Season<span class="mk-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></div>
+      <div class="mk-k"><span data-ic="activity"></span>Altcoin Season<span class="cp-hint" data-hint="altSeason" role="button" tabindex="0"></span><span class="mk-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></div>
       <div class="mk-vrow"><div class="mk-v" id="altV">—<small>/100</small></div><div class="mk-tag" id="altL">—</div></div>
       <div class="mk-altnote" id="altNote">Altcoin Season starts at 75.</div>
       <div class="mk-altg"><div class="mk-gauge alt" role="img" id="altG" aria-label="Altcoin season gauge"><i style="left:50%"></i></div>
@@ -443,7 +444,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       </div>
     </a>
     <div class="mk-card" id="cardDom">
-      <div class="mk-k"><span data-ic="bar"></span>Market Dominance</div>
+      <div class="mk-k"><span data-ic="bar"></span>Market Dominance<span class="cp-hint" data-hint="dominance" role="button" tabindex="0"></span></div>
       <div class="mk-domw">
         <svg class="mk-donut" id="domBar" viewBox="0 0 40 40" role="img" aria-label="Market dominance">
           <circle cx="20" cy="20" r="15.9155" stroke="var(--bar-bg)"/>
@@ -465,7 +466,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   <section class="mk-card mk-etf" id="etfCard" hidden aria-label="ETF flows">
     <div class="mk-etf-h">
       <button type="button" class="mk-etf-tog" id="etfTog" aria-expanded="false" aria-controls="etfBody">
-        <span class="mk-k"><span data-ic="bar"></span>ETF Flows <small>US spot</small></span>
+        <span class="mk-k"><span data-ic="bar"></span>ETF Flows <small>US spot</small><span class="cp-hint" data-hint="etf" role="button" tabindex="0"></span></span>
         <span class="mk-etf-sum" id="etfSum"></span>
         <svg class="mk-etf-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </button>
@@ -523,7 +524,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611152202"></script>
+<script type="module" src="samsam-cloud.js?v=202611160042"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';

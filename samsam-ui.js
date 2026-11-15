@@ -836,6 +836,42 @@
       [].forEach.call(h.querySelectorAll('button[data-t]'), function (b) { b.setAttribute('aria-selected', String(b.dataset.t === c)); b.tabIndex = b.dataset.t === c ? 0 : -1; });
     });
   }
+  // ── Swipe left / right (phones) between Overview · Performance · Allocation ──
+  // A quick, mostly-horizontal swipe on a page that shows the three tabs moves to the next / previous one. It never fires
+  // on things you move sideways yourself (wide tables, charts, sliders, text boxes) or while a window is open.
+  (function swipeTabs() {
+    var sx = 0, sy = 0, st = 0, ok = false;
+    function curTab() {   // the tab of the header row shown now (Overview, or the Allocation screen over it, or Performance's own)
+      var hosts = [].slice.call(document.querySelectorAll('[data-ptabs]')).filter(function (h) { return h.offsetParent && h.querySelector('.cp-ptabs'); });
+      if (!hosts.length) return null;
+      var ov = document.getElementById('holdingsOverlay'), inOv = hosts.filter(function (h) { return ov && ov.contains(h); });
+      return (inOv[0] || hosts[0]).getAttribute('data-ptabs');
+    }
+    function blocked(t) {
+      var wins = document.querySelectorAll('[aria-modal="true"], .overlay.active, #cpDialog, .cph, #cpSet, #samsamGate');   // an open window (the ones in the page but hidden don't count)
+      for (var k = 0; k < wins.length; k++) if (wins[k].getClientRects().length && getComputedStyle(wins[k]).visibility !== 'hidden') return true;
+      for (var n = t; n && n.nodeType === 1 && n !== document.body; n = n.parentElement) {
+        if (/^(INPUT|TEXTAREA|SELECT|CANVAS)$/.test(n.tagName) || n.isContentEditable || n.hasAttribute('data-noswipe')) return true;
+        if (n.classList && (n.classList.contains('perf-chart-card') || n.classList.contains('hv-card') || n.classList.contains('cpc') || n.classList.contains('btc-ticker'))) return true;   // charts are scrubbed with a finger
+        var cs = getComputedStyle(n);
+        if ((cs.overflowX === 'auto' || cs.overflowX === 'scroll') && n.scrollWidth > n.clientWidth + 4) return true;   // a wide table / strip scrolls sideways
+      }
+      return false;
+    }
+    document.addEventListener('touchstart', function (e) {
+      ok = e.touches.length === 1 && !!curTab() && !blocked(e.target);
+      if (ok) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now(); }
+    }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (!ok) return; ok = false;
+      var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Date.now() - st > 700 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;
+      var cur = curTab(), i = PTABS.map(function (x) { return x[0]; }).indexOf(cur); if (i < 0) return;
+      var j = i + (dx < 0 ? 1 : -1); if (j < 0 || j >= PTABS.length) return;   // (no wrap-around: the ends stay put)
+      ptabGo(PTABS[j][0]);
+    }, { passive: true });
+    document.addEventListener('touchcancel', function () { ok = false; }, { passive: true });
+  })();
   // ── One footer on every page: sync status · baseline / © line. Fills <footer id="cpFoot"> or adds one at the end. ──
   // A page shown inside the app (a frame) gets the same top inset as the app around it: some browsers give the outer page a
   // safe-area inset and the frame none, which made the header sit lower on Overview / Allocation than on the other tabs.

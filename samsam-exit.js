@@ -237,7 +237,7 @@
       '<div class="xm-edit-btns"><button type="button" class="xs-btn" data-act="tg-reset">' + IC('reset') + 'Reset to defaults</button><button type="button" class="xs-btn pri" data-act="tg-save">' + IC('check') + 'Save</button></div></div>' : '';
     var open = cardOpen('macro') || editTargets;
     return '<section class="xs-card xm-card' + (open ? ' open' : '') + '" aria-label="Macro exit indicators">' +
-      '<div class="xs-head xs-tap" role="button" tabindex="0" data-act="card" data-k="macro" aria-expanded="' + open + '"><div class="xs-title">' + IC('gauge') + 'Macro Exit Indicators</div>' +
+      '<div class="xs-head xs-tap" role="button" tabindex="0" data-act="card" data-k="macro" aria-expanded="' + open + '"><div class="xs-title">' + IC('gauge') + 'Macro Exit Indicators<span class="cp-hint" data-hint="macroExit" role="button" tabindex="0"></span></div>' +
       (open ? '<button type="button" class="xs-link" data-act="tg-edit">' + (editTargets ? 'Close' : IC('pencil') + 'Edit targets') + '</button>' : '') + CHEV + '</div>' +
       '<div class="xm-sum xs-tap ' + (m.hit === 3 ? 'all' : m.hit ? 'some' : '') + '" data-act="card" data-k="macro">Signals Hit: <b>' + m.hit + ' of 3</b></div>' +
       (open ? '<div class="xm-rows">' + rows + '</div>' + ed +
@@ -251,7 +251,7 @@
     plan.forEach(function (e) { var r = calc.coin(e, coinOf(e.sym), st.transactions, cfg); r.steps.forEach(function (s) { if (s.qty > 0) { steps++; if (s.status === 'done') done++; } }); });
     var open = cardOpen('cash');
     return '<section class="xs-card xc-card' + (open ? ' open' : '') + '" aria-label="Cash and stablecoins">' +
-      '<div class="xs-head xs-tap" role="button" tabindex="0" data-act="card" data-k="cash" aria-expanded="' + open + '"><div class="xs-title">' + IC('cash') + 'Cash-out Progress</div><div class="xc-pct">' + c.pct.toFixed(1) + '% <small>in stablecoins</small></div>' + CHEV + '</div>' +
+      '<div class="xs-head xs-tap" role="button" tabindex="0" data-act="card" data-k="cash" aria-expanded="' + open + '"><div class="xs-title">' + IC('cash') + 'Cash-out Progress<span class="cp-hint" data-hint="cashOut" role="button" tabindex="0"></span></div><div class="xc-pct">' + c.pct.toFixed(1) + '% <small>in stablecoins</small></div>' + CHEV + '</div>' +
       '<div class="xc-bar xs-tap" data-act="card" data-k="cash" role="img" aria-label="' + c.pct.toFixed(1) + '% of the portfolio in stablecoins"><i style="width:' + Math.min(100, c.pct).toFixed(2) + '%"></i></div>' +
       (open ? '<div class="xc-leg"><span><i class="s"></i>Stablecoins <b>' + F().usd(c.stable) + '</b></span><span><i class="m"></i>In the market <b>' + F().usd(c.market) + '</b></span></div>' +
       '<div class="xc-foot"><div>Realized profit <b class="' + (c.realized >= 0 ? 'up' : 'down') + '">' + F().usdSigned(c.realized) + '</b></div>' +
@@ -373,7 +373,7 @@
     root.innerHTML = '<div class="xs-top">' + macroHtml() + cashHtml() + '</div>' +
       '<div class="xs-bar"><button type="button" class="cp-add" data-act="pick"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="xs-long"> to Exit Plan</span></span></button>' +
       '<span class="xs-count">' + plan.length + ' coin' + (plan.length === 1 ? '' : 's') + '</span>' +
-      '<button type="button" class="xs-btn xs-steps" data-act="steps" aria-expanded="' + stepsOpen + '" title="Your default steps: ' + cfg.mults.map(multTxt).join(' · ') + '" aria-label="Your default steps ' + cfg.mults.map(multTxt).join(' ') + '">' + IC('sliders') + '<span class="xs-stx">' + cfg.mults.map(multTxt).join(' ') + '</span></button>' +
+      '<button type="button" class="xs-btn xs-steps" data-act="steps" aria-expanded="' + stepsOpen + '" title="Your default steps: ' + cfg.mults.map(multTxt).join(' · ') + '" aria-label="Your default steps ' + cfg.mults.map(multTxt).join(' ') + '">' + IC('sliders') + '<span class="xs-stx">' + cfg.mults.map(multTxt).join(' ') + '</span></button>' + '<span class="cp-hint" data-hint="exitSteps" role="button" tabindex="0"></span>' +
       '<div class="cp-vseg xs-view" role="group" aria-label="View">' +
         '<button type="button" data-act="view" data-v="table" class="' + (v === 'table' ? 'btn-toggle-active' : '') + '" aria-pressed="' + (v === 'table') + '">' + IC('table') + 'Table</button>' +
         '<button type="button" data-act="view" data-v="cards" class="' + (v === 'cards' ? 'btn-toggle-active' : '') + '" aria-pressed="' + (v === 'cards') + '">' + IC('cards') + 'Cards</button></div></div>' +

@@ -139,3 +139,5 @@ edit_tx_test.py
 perf_add_test.py
 header_badge_test.py
 live_status_test.py
+swipe_tabs_test.py
+new_hints_test.py
