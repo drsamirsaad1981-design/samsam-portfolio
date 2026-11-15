@@ -414,13 +414,13 @@ loadTickerMarket(); setInterval(() => { if (!document.hidden) loadTickerMarket()
 function renderBtcTicker() {
   const track = document.getElementById('btcTickerTrack');
   if (!track) return;
-  const live = liveStatus !== 'error';
+  const live = liveStatus !== 'error' && liveStatus !== 'offline';
   const price = btcTicker.price > 0 && Date.now() - btcTicker.t < 5 * 60e3 ? btcTicker.price : btcPrice;
   const btcCoin = portfolio.find(c => c.sym === 'BTC');
   const ch = btcTicker.ch24 != null ? btcTicker.ch24 : (btcCoin && btcCoin.change24h != null ? btcCoin.change24h : null);
   const usd = n => n >= 1000 ? '$' + Math.round(n).toLocaleString('en-US') : SamsamFmt.usd(n);   // whole dollars above $1,000 (keeps the line short)
   const parts = [
-    `<span class="bt-item">${SamsamUI.liveDot(live ? 'ok' : 'error', true)}<span class="bt-live">${live ? 'Live' : 'Offline'}</span></span>`,
+    `<span class="bt-item">${SamsamUI.liveDot(live ? 'ok' : 'error', true)}<span class="bt-live">${live ? 'Live' : navigator.onLine ? 'Saved prices' : 'Offline'}</span></span>`,
     `<span class="bt-item">BTC / USD <strong>${price > 0 ? usd(price) : '—'}</strong></span>`,
   ];
   if (ch != null) parts.push(`<span class="bt-item"><span class="${ch >= 0 ? 'bt-up' : 'bt-down'}">${ch >= 0 ? '▲ +' : '▼ -'}${Math.abs(ch).toFixed(2)}%</span> 24h</span>`);
@@ -986,14 +986,23 @@ async function fetchLivePrices() {
     });
     const btcFresh = typeof fastAt !== 'undefined' && Date.now() - (fastAt.BTC || 0) < 45000;   // a fresher Binance BTC price wins
     if (data['bitcoin'] && data['bitcoin'].usd && !btcFresh) { btcPrice = data['bitcoin'].usd; map.BTC = map.BTC || { usd: btcPrice, ch24: data['bitcoin'].usd_24h_change ?? null }; }
-    lastFetchTime=new Date();
+    lastFetchTime=new Date(); _lastPriceOk = Date.now(); _priceFails = 0;
     setLiveStatus('ok');
     snapshotDue = true;
     fetchBtcTicker();
     whenSamsam(S => S.updatePrices(map)); // re-renders every view via applyCloudState
     fetchMissingLogos(); linkMissingCoinCodex();
-  } catch(e){setLiveStatus(navigator.onLine?'error':'offline');updateLiveIndicator();}
+  } catch(e){
+    // One failed load (the price service is busy for a moment) isn't "saved prices": what you see is at most a couple of
+    // minutes old, and the fast lane (Binance, every 15 s) keeps most coins moving. Stay Live, try again in 15 s (then 30 s);
+    // only when nothing fresh has arrived for 2½ minutes does the line say "Saved prices".
+    _priceFails++;
+    const fresh = Date.now() - Math.max(_lastPriceOk, _lastFastOk) < 150000;
+    setLiveStatus(!navigator.onLine ? 'offline' : fresh ? 'ok' : 'error');
+    if (navigator.onLine && _priceFails <= 4) { clearTimeout(_priceRetry); _priceRetry = setTimeout(() => { if (!document.hidden && navigator.onLine) fetchLivePrices(); }, _priceFails === 1 ? 15000 : 30000); }
+  }
 }
+var _lastPriceOk = 0, _lastFastOk = 0, _priceFails = 0, _priceRetry = null;   // var: fetchLivePrices() runs before this line's neighbours on load
 
 // Chart points are saved once the cloud portfolio and fresh prices are both available.
 function takeSnapshotsIfDue() {
@@ -1135,7 +1144,7 @@ async function fastPrices() {
     map[c.sym] = { usd: p, ch24: ago > 0 ? (p / ago - 1) * 100 : (c.change24h ?? null) }; fastAt[c.sym] = now;
     if (c.sym === 'BTC') btcPrice = p;
   });
-  if (Object.keys(map).length) { lastFetchTime = new Date(); Samsam.updatePrices(map); }
+  if (Object.keys(map).length) { lastFetchTime = new Date(); _lastFastOk = now; if (liveStatus === 'error') setLiveStatus('ok'); Samsam.updatePrices(map); }   // fresh prices arrived → Live again
 }
 setInterval(fastPrices, 15000); setTimeout(fastPrices, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) fastPrices(); });
