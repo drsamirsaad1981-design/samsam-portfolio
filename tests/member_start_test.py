@@ -78,7 +78,7 @@ with sync_playwright() as p:
             check('member: 💛 100 ⭐ → a one-time payment link', pg.evaluate("window.__opened[1]") == 'https://t.me/$pay-sup100')
             pg.evaluate("document.getElementById('cpSup').remove()")
             pg.wait_for_selector('#cpfSup:not([hidden])', timeout=8000)
-            check('member: a quiet line at the bottom of the page: "💛 Free & non-profit · Support the project"', 'Support the project' in pg.inner_text('#cpfSup'))
+            check('member: a quiet line at the bottom of the page: "💛 Free & non-profit · Support"', 'Free & non-profit' in pg.inner_text('#cpfSup') and 'Support' in pg.inner_text('#cpfSup'))
             pg.click('#cpfSup [data-sup]'); pg.wait_for_selector('#cpSup', timeout=8000)
             check('member: …tapping it opens the Support card', pg.is_visible('#cpSup')); pg.evaluate("document.getElementById('cpSup').remove()")
             # AI Analysis → the quick report: off without their own key (the free Claude-app way stays); with a key → on
