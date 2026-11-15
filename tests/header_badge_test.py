@@ -18,6 +18,11 @@ with sync_playwright() as p:
     fr = [f for f in pg.frames if 'performance.html' in f.url][0]
     b = fr.evaluate("(()=>{const n=document.querySelector('.cp-brand-n'),l=document.querySelector('.cp-brand-logo img');return {fs:getComputedStyle(n).fontSize,logo:l.getBoundingClientRect().width}})()")
     check('Performance: the same name size and logo size as Overview', b['fs'] == a['fs'] and abs(b['logo'] - a['logo']) < 1, (a, b))
+    geo = "(q => { const top = document.querySelector(q[3]).getBoundingClientRect().top, r = e => { const x = document.querySelector(e).getBoundingClientRect(); return [Math.round(x.left), Math.round(x.top - top), Math.round(x.width), Math.round(x.height)]; }; return [r(q[0]), r(q[1]), r(q[2]), getComputedStyle(document.querySelector(q[1])).fontFamily.split(',')[0]]; })"
+    gp = fr.evaluate(geo + "(['.cp-brand-logo img', '.cp-brand-n', '.cp-head .ss-set-hdr', '.cp-head'])")
+    pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(600); pg.evaluate("scrollTo(0,0)")
+    go = pg.evaluate(geo + "(['.app-logo', '.brand-name', '.header-top .ss-set-hdr', '.header-top'])")
+    check('Overview and Performance: logo, name and ⚙️ at the very same place, same letters (no jump between tabs)', go == gp, (go, gp))
     pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(500)
     pg.evaluate("setLiveStatus('error')"); pg.wait_for_timeout(100)
     t = pg.inner_text('#liveIndicator')
@@ -31,6 +36,9 @@ with sync_playwright() as p:
     pg.goto(SITE + '/index.html'); pg.click('#samsamSignInBtn'); pg.wait_for_selector('#samsamStartEmpty', state='visible', timeout=15000); pg.click('#samsamStartEmpty')
     pg.wait_for_function("Samsam.isReady()", timeout=15000); pg.wait_for_timeout(1500)
     check('member: ⭐💛 on the logo on Overview', pg.inner_text('.brand > .cp-badge') == '⭐💛' if pg.query_selector('.brand > .cp-badge') else False)
+    pg.evaluate("SamsamUI.ptabGo('allocation')"); pg.wait_for_timeout(1200)
+    check('member: ⭐💛 on the logo on Allocation too', pg.evaluate("document.querySelector('#holdingsOverlay .cp-brand-logo .cp-badge')?.textContent") == '⭐💛')
+    pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(500)
     pg.evaluate("cpShell.go('market')"); pg.wait_for_timeout(2500)
     fr = [f for f in pg.frames if 'market.html' in f.url][0]
     check('member: ⭐💛 on the logo on Market Hub too', fr.evaluate("document.querySelector('.cp-brand-logo .cp-badge')?.textContent") == '⭐💛')

@@ -173,7 +173,7 @@
     '.brand,.cp-brand-logo{position:relative}' +
     '.cp-badge{position:absolute;z-index:2;right:-10px;bottom:-6px;display:inline-flex;align-items:center;gap:1px;padding:1px 5px;border-radius:999px;font-size:.62rem;line-height:1.45;' +
       'background:var(--card-solid,#fff);border:1px solid rgba(245,158,11,.45);box-shadow:0 2px 6px rgba(15,23,42,.18);cursor:pointer;font-family:inherit;white-space:nowrap}' +
-    '.brand > .cp-badge{left:24px;right:auto;top:38px;bottom:auto}' +
+    '.brand > .cp-badge{left:26px;right:auto;bottom:-6px}@media (max-width:380px){.brand > .cp-badge{left:20px}}' +
     '.cp-big.compact .cp-badge{display:none}' +
     '@media print{.cp-foot .cpf-copy{display:none}}' +
     '[data-theme=light] .ss-dot[data-c=green]{background:#16a34a}[data-theme=light] .ss-dot[data-c=red]{background:#dc2626}' +
@@ -239,7 +239,7 @@
     // Page header — one bar for every inner page: Back on the left, title centred, page status on the right.
     // Frosted, sticky, respects the notch. (Theme + cloud live only on the main page.)
     '.cp-head{position:sticky;top:0;z-index:60;display:grid;grid-template-columns:1fr minmax(0,auto) 1fr;align-items:center;column-gap:10px;box-sizing:border-box;min-height:60px;' +
-      'padding:max(10px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));' +
+      'padding:max(10px,var(--cp-sat,env(safe-area-inset-top,0px))) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));' +
       'background:color-mix(in srgb,var(--header-bg,var(--bg,#0b0f17)) 80%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(16px);backdrop-filter:saturate(1.6) blur(16px);' +
       'border-bottom:1px solid var(--border,rgba(148,163,184,.2));transition:box-shadow .2s}' +
     '.cp-head.scrolled{box-shadow:0 6px 18px rgba(2,6,23,.12)}' +
@@ -837,6 +837,16 @@
     });
   }
   // ── One footer on every page: sync status · baseline / © line. Fills <footer id="cpFoot"> or adds one at the end. ──
+  // A page shown inside the app (a frame) gets the same top inset as the app around it: some browsers give the outer page a
+  // safe-area inset and the frame none, which made the header sit lower on Overview / Allocation than on the other tabs.
+  try {
+    if (window.parent !== window && window.parent.document && window.parent.document.body) {
+      var pdoc = window.parent.document, probe = pdoc.createElement('div');
+      probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;visibility:hidden;padding-top:env(safe-area-inset-top,0px)';
+      pdoc.body.appendChild(probe); var sat = window.parent.getComputedStyle(probe).paddingTop; probe.remove();
+      if (parseFloat(sat) > 0) document.documentElement.style.setProperty('--cp-sat', sat);
+    }
+  } catch (_) {}
   function footMount() {
     if (/[?&]shell=1\b/.test(location.search) === false && window.parent !== window) return;   // (not inside foreign frames)
     var f = document.getElementById('cpFoot');
@@ -869,9 +879,9 @@
     };
     // ⭐ / 💛 next to "Cute Portfolio" at the top of every page (members who support) — tap → the Support card
     var badge = function (member) {
-      var name = document.querySelector('.brand, .cp-brand-logo'); if (!name) return;   // the logo's corner, every page
       var k = null; try { k = member ? JSON.parse(localStorage.getItem('cp-support-st') || 'null') : null; } catch (_) {}
       var txt = k ? (k.premium ? '⭐' : '') + (k.supporter || k.premium ? '💛' : '') : '';
+      [].forEach.call(document.querySelectorAll('.brand, .cp-brand-logo'), function (name) {   // the logo's corner, in every header (Overview, Allocation, each page)
       var b = name.querySelector('.cp-badge');
       if (!txt) { if (b) b.remove(); return; }
       if (!b) {
@@ -881,6 +891,7 @@
         name.appendChild(b);
       }
       b.textContent = txt; b.title = k.premium ? 'Premium member & supporter — thank you!' : 'Supporter — thank you!'; b.setAttribute('aria-label', b.title);
+      });
     };
     f.addEventListener('click', function (e) {
       if (!e.target.closest('[data-sup]')) return; e.preventDefault();
