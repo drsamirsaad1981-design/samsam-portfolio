@@ -771,7 +771,9 @@
     if (!Object.keys(errs).length && state()) {   // replay the ledger with this transaction at its date
       var st = state(), doc = st.coins.find(function (c) { return c.sym === atxSym; });
       var t = { id: '__new__', sym: atxSym, type: ledgerType(atxType), qty: qty, price: price, fee: fee, feeUsd: feeUsd, date: date.toISOString(), createdAt: new Date().toISOString() };
-      var all = st.transactions.filter(function (x) { return x.sym === atxSym; }).concat([t]).sort(Samsam.core.compareTx);
+      var old = atxEditId ? st.transactions.filter(function (x) { return x.id === atxEditId; })[0] : null;   // ✏️ editing: the new numbers take the old entry's place
+      if (old && old.createdAt) t.createdAt = old.createdAt;
+      var all = st.transactions.filter(function (x) { return x.sym === atxSym && x.id !== atxEditId; }).concat([t]).sort(Samsam.core.compareTx);
       var pos = { qty: doc && doc.opening ? doc.opening.qty : 0, avg: doc && doc.opening ? doc.opening.avg : 0 }, short = false;
       all.forEach(function (x) {
         var need = x.type === 'sell' ? x.qty : x.type === 'transfer_out' ? x.qty + (+x.fee || 0) : 0;

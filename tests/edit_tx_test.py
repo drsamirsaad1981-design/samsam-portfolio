@@ -23,7 +23,10 @@ with sync_playwright() as p:
         check(f'{vn}: tapping it opens "Edit Buy", filled in (10 @ 2, the note), no type tabs',
               pg.inner_text('#atxTitle') == 'Edit Buy' and pg.input_value('#atxQty') == '10' and pg.input_value('#atxPrice') == '2' and pg.input_value('#atxNote') == 'first try' and not pg.is_visible('#atxForm .atx-types') and pg.inner_text('#atxSave') == 'Save changes',
               [pg.inner_text('#atxTitle'), pg.input_value('#atxQty'), pg.input_value('#atxPrice')])
-        pg.fill('#atxQty', '12'); pg.fill('#atxNote', 'fixed'); pg.click('#atxSave')
+        h0 = pg.evaluate(f"Samsam.getState().portfolio.find(c => c.sym === '{sym}').qty")
+        pg.fill('#atxQty', '12'); pg.wait_for_timeout(150)
+        check(f'{vn}: the preview counts the change, not a second buy (holdings +2, not +12)', abs(float(pg.inner_text('#atxPreview').split('Holdings after: ')[1].split(' ')[0].replace(',', '')) - (h0 + 2)) < 1e-6, [h0, pg.inner_text('#atxPreview')])
+        pg.fill('#atxNote', 'fixed'); pg.click('#atxSave')
         pg.wait_for_function(f"{TX}('{sym}').some(t => t.note === 'fixed')", timeout=8000)
         after = pg.evaluate(f"{TX}('{sym}')")
         check(f'{vn}: saved — same number of transactions, 12 @ 2, the old one gone', len(after) == n0 + 1 and any(t['note'] == 'fixed' and t['qty'] == 12 and t['price'] == 2 for t in after) and not any(t['id'] == tid for t in after), len(after))
@@ -36,6 +39,9 @@ with sync_playwright() as p:
         sid = pg.evaluate(f"{TX}('{sym}').find(t => t.note === 'sold some').id")
         pg.evaluate(f"openEditTx('{sid}')"); pg.wait_for_timeout(200)
         check(f'{vn}: Edit Sell says the USDT follows', pg.inner_text('#atxTitle') == 'Edit Sell' and 'USDT' in pg.inner_text('#atxHint'), pg.inner_text('#atxHint'))
+        hq = pg.evaluate(f"Samsam.getState().portfolio.find(c => c.sym === '{sym}').qty")
+        pg.fill('#atxQty', str(hq + 5)); pg.wait_for_timeout(150)   # everything held before that sell: allowed (the old sell isn't counted twice)
+        check(f'{vn}: a Sell can be changed up to all you held then', pg.inner_text('#atxErr') == '' and 'Holdings after: 0' in pg.inner_text('#atxPreview'), [pg.inner_text('#atxErr'), pg.inner_text('#atxPreview')])
         pg.fill('#atxQty', '4'); pg.click('#atxSave')
         pg.wait_for_function(f"{TX}('{sym}').some(t => t.note === 'sold some' && t.qty === 4)", timeout=8000); pg.wait_for_timeout(300)
         st = pg.evaluate(f"(()=>{{ const all = Samsam.getState().transactions, s = all.find(t => t.sym === '{sym}' && t.note === 'sold some'); return [all.filter(t => t.link === s.id).map(t => [t.sym, t.qty]), all.filter(t => t.sym === 'USDT').length]; }})()")
