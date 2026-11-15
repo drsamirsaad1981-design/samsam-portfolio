@@ -72,6 +72,8 @@
     if (!a || a.target === '_blank' || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey) return;
     const m = /(?:^|\/)(performance|allocation|accumulation|market|altseason)\.html$/.exec(a.getAttribute('href') || '');
     if (!m) return;
+    // the "Accumulation Plan" card on Overview opens the Accumulation tab — also when Exit Strategy was the tab used last
+    if (m[1] === 'accumulation' && a.id === 'accumProgressBar') { try { localStorage.setItem('cp-plan-focus', JSON.stringify({ k: 'plan', t: Date.now() })); } catch (_) {} if (window.Samsam && Samsam.saveExit) Samsam.saveExit({ tab: 'accum' }).catch(() => {}); }
     e.preventDefault(); shell.go(m[1]);
   });
   route();
