@@ -23,6 +23,12 @@ with sync_playwright() as p:
     pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(600); pg.evaluate("scrollTo(0,0)")
     go = pg.evaluate(geo + "(['.app-logo', '.brand-name', '.header-top .ss-set-hdr', '.header-top'])")
     check('Overview and Performance: logo, name and ⚙️ at the very same place, same letters (no jump between tabs)', go == gp, (go, gp))
+    tabs = "(q => { const t = [...document.querySelectorAll(q[1])].filter(x => x.offsetParent)[0].getBoundingClientRect(); return [Math.round(t.top - document.querySelector(q[0]).getBoundingClientRect().bottom), Math.round(t.left), Math.round(t.width)]; })"
+    to = pg.evaluate(tabs + "(['.header-top', '#appHead .cp-ptabs'])"); tp = fr.evaluate(tabs + "(['.cp-head', '.cp-ptabs'])")
+    pg.evaluate("SamsamUI.ptabGo('allocation')"); pg.wait_for_timeout(1200)
+    ta = pg.evaluate(tabs + "(['#holdingsOverlay .cp-head', '#holdingsOverlay .cp-ptabs'])")
+    pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(500)
+    check('Overview · Performance · Allocation: the three tabs sit at the same place under the header', to == tp == ta, (to, tp, ta))
     pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(500)
     pg.evaluate("setLiveStatus('error')"); pg.wait_for_timeout(100)
     t = pg.inner_text('#liveIndicator')

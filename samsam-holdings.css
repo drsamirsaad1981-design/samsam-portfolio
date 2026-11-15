@@ -208,7 +208,7 @@
     @media (min-width: 900px) { #hovTxView { max-width: none; } }
   
     /* ── Allocation: donut ── */
-    .hov-ptabs { margin: 2px 0 14px; }
+    .hov-ptabs { margin: -8px 0 14px; }   /* the tabs sit 12px under the header, exactly like Overview and Performance */
     .hov-alloc-card { display: none; padding: 20px; margin-bottom: 14px; justify-content: center; }
     .hov-tgt-card { display: none; padding: 16px; margin-bottom: 14px; }
     #holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-tgt-card { display: block; }

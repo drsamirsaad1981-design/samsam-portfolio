@@ -1298,6 +1298,6 @@
   @media (max-width: 380px) { .header-top .brand { gap: 10px; } .header-top .brand .btc-icon.app-logo { width: 44px; height: 44px; } }
   @media (min-width: 768px) {
     header.app-head { padding: 0; }
-    .header-top { margin-top: -24px; margin-bottom: 14px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+    .header-top { margin-top: -24px; margin-bottom: 12px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
   }
   .lv-why { border: 0; background: none; color: inherit; opacity: .75; cursor: pointer; padding: 0 2px; font: inherit; line-height: 1; }
