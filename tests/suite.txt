@@ -141,3 +141,4 @@ header_badge_test.py
 live_status_test.py
 swipe_tabs_test.py
 new_hints_test.py
+live_refresh_test.py

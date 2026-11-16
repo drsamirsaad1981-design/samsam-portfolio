@@ -179,8 +179,8 @@
     },
     binanceTopUp: function (rows) {
       var now = Date.now();
-      // one download of Binance's prices every 4 minutes at most, shared by every list that asks
-      if (!API._bn || now - API._bn.at > 4 * 60e3) API._bn = { at: now, p: fetch('https://data-api.binance.vision/api/v3/ticker/price').then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function (list) {
+      // one download of Binance's prices every 50 seconds at most, shared by every list that asks
+      if (!API._bn || now - API._bn.at > 50e3) API._bn = { at: now, p: fetch('https://data-api.binance.vision/api/v3/ticker/price', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function (list) {
         var px = {}; (list || []).forEach(function (t) { if (/USDT$/.test(t.symbol)) px[t.symbol.slice(0, -4)] = +t.price; }); return px; }) };
       return API._bn.p.then(function (px) {
         var n = 0;

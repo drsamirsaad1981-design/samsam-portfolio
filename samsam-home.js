@@ -392,6 +392,13 @@ function renderHeader() {
 // ── Live BTC ticker ──────────────────────────────────────────────────────────
 let btcTicker = { price: 0, ch24: null, high24: null, low24: null, t: 0 };
 async function fetchBtcTicker() {
+  // Binance first (live, no request limit): price, 24h change, high and low — CoinGecko's free limit is kept for the lists
+  try {
+    const rb = await fetch('https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT', { cache: 'no-store' });
+    if (!rb.ok) throw new Error('HTTP ' + rb.status);
+    const b = await rb.json();
+    if (+b.lastPrice > 0) { btcTicker = { price: +b.lastPrice, ch24: +b.priceChangePercent, high24: +b.highPrice, low24: +b.lowPrice, t: Date.now() }; renderBtcTicker(); return; }
+  } catch (_) { /* Binance not reachable → CoinGecko below */ }
   try {
     const r = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin');
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1120,11 +1127,14 @@ fetchLivePrices();
 // poll — no wasted battery, data or CoinGecko rate limit — and catch up as soon as they are visible / online again.
 let _priceTimer = null, _lastPricePoll = Date.now();
 function _pollPrices() { if (document.hidden || !navigator.onLine) return; _lastPricePoll = Date.now(); fetchLivePrices(); }
-function _startPricePolling() { clearInterval(_priceTimer); _priceTimer = setInterval(_pollPrices, 60000); }
+// CoinGecko (every coin, incl. the ones Binance doesn't trade) every 2 minutes; the fast lane below (Binance, every 15 s)
+// keeps the coins it trades live in between — fewer CoinGecko calls, so its free limit isn't hit and Market Hub stays live.
+const PRICE_POLL_MS = 120000;
+function _startPricePolling() { clearInterval(_priceTimer); _priceTimer = setInterval(_pollPrices, PRICE_POLL_MS); }
 _startPricePolling();
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { clearInterval(_priceTimer); _priceTimer = null; return; }
-  if (Date.now() - _lastPricePoll > 60000) _pollPrices();
+  if (Date.now() - _lastPricePoll > PRICE_POLL_MS) _pollPrices();
   _startPricePolling();
 });
 window.addEventListener('online', () => _pollPrices());

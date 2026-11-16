@@ -15,19 +15,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611160042"></script>
-<script src="samsam-hints.js?v=202611160042"></script>
-<script src="samsam-vault.js?v=202611160042"></script>
-<script src="samsam-labels.js?v=202611160042"></script>
-<script src="samsam-taxonomy.js?v=202611160042"></script>
-<script src="samsam-coins.js?v=202611160042"></script>
-<script src="samsam-import.js?v=202611160042"></script>
-<script src="samsam-wallets.js?v=202611160042"></script>
-<script src="samsam-rewards.js?v=202611160042"></script>
-<script src="samsam-settings.js?v=202611160042"></script>
-<script src="samsam-dropdown.js?v=202611160042"></script>
-<script src="samsam-add.js?v=202611160042"></script>
-<script src="samsam-market.js?v=202611160042"></script>
+<script src="samsam-ui.js?v=202611162115"></script>
+<script src="samsam-hints.js?v=202611162115"></script>
+<script src="samsam-vault.js?v=202611162115"></script>
+<script src="samsam-labels.js?v=202611162115"></script>
+<script src="samsam-taxonomy.js?v=202611162115"></script>
+<script src="samsam-coins.js?v=202611162115"></script>
+<script src="samsam-import.js?v=202611162115"></script>
+<script src="samsam-wallets.js?v=202611162115"></script>
+<script src="samsam-rewards.js?v=202611162115"></script>
+<script src="samsam-settings.js?v=202611162115"></script>
+<script src="samsam-dropdown.js?v=202611162115"></script>
+<script src="samsam-add.js?v=202611162115"></script>
+<script src="samsam-market.js?v=202611162115"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -524,7 +524,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611160042"></script>
+<script type="module" src="samsam-cloud.js?v=202611162115"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -1095,6 +1095,17 @@ async function refreshAll(force) {
   busy = false; status(); render();
   if (window.CPSplash) CPSplash.hide();
 }
+// Between CoinGecko's refreshes (every 3 minutes, its free limit): the prices of the coins Binance trades are topped up
+// every minute while this tab is on screen — so the list moves like CoinMarketCap / CoinGecko, not in 3-minute steps.
+let bnTick = 0;
+async function binanceMinute() {
+  if (!onScreen() || busy || !topRows.length || Date.now() - bnTick < 55e3) return; bnTick = Date.now();
+  const lists = [topRows, watchRows, pfExtra, bigRows].filter(l => l && l.length);
+  let n = 0; for (const l of lists) n += await M.binanceTopUp(l);
+  if (n) { lastT = Date.now(); bnAt = lastT; paintMajors(); render(); status(); }
+}
+let bnAt = 0;
+setInterval(binanceMinute, 20e3);
 // keep it fresh while you look at it (every 3 minutes, only when this tab is on screen)
 function onScreen() { if (document.hidden) return false; try { const f = window.frameElement; return !f || getComputedStyle(f).visibility !== 'hidden'; } catch (_) { return true; } }
 setInterval(() => { if (onScreen()) refreshAll(false); }, 3 * 60e3);

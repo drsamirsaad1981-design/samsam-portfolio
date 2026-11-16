@@ -16,20 +16,20 @@
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-ui.js?v=202611160042"></script>
-<script src="samsam-hints.js?v=202611160042"></script>
-<script src="samsam-vault.js?v=202611160042"></script>
-<script src="samsam-labels.js?v=202611160042"></script>
-<script src="samsam-taxonomy.js?v=202611160042"></script>
-<script src="samsam-coins.js?v=202611160042"></script>
-<script src="samsam-import.js?v=202611160042"></script>
-<script src="samsam-wallets.js?v=202611160042"></script>
-<script src="samsam-rewards.js?v=202611160042"></script>
-<script src="samsam-settings.js?v=202611160042"></script>
-<script src="samsam-dropdown.js?v=202611160042"></script>
-<script src="samsam-market.js?v=202611160042"></script>
-<script src="samsam-exit.js?v=202611160042"></script>
-<script src="samsam-add.js?v=202611160042"></script>
+<script src="samsam-ui.js?v=202611162115"></script>
+<script src="samsam-hints.js?v=202611162115"></script>
+<script src="samsam-vault.js?v=202611162115"></script>
+<script src="samsam-labels.js?v=202611162115"></script>
+<script src="samsam-taxonomy.js?v=202611162115"></script>
+<script src="samsam-coins.js?v=202611162115"></script>
+<script src="samsam-import.js?v=202611162115"></script>
+<script src="samsam-wallets.js?v=202611162115"></script>
+<script src="samsam-rewards.js?v=202611162115"></script>
+<script src="samsam-settings.js?v=202611162115"></script>
+<script src="samsam-dropdown.js?v=202611162115"></script>
+<script src="samsam-market.js?v=202611162115"></script>
+<script src="samsam-exit.js?v=202611162115"></script>
+<script src="samsam-add.js?v=202611162115"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -901,7 +901,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611160042"></script>
+<script type="module" src="samsam-cloud.js?v=202611162115"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1107,7 +1107,9 @@ function planPrice(entry, pc) {
   return p && p.usd > 0 ? p.usd : 0;
 }
 let _planPriceT = 0;
-async function fetchPlanOnlyPrices() {
+function planOnScreen() { if (document.hidden) return false; try { const f = window.frameElement; return !f || getComputedStyle(f).visibility !== 'hidden'; } catch (_) { return true; } }
+async function fetchPlanOnlyPrices(first) {
+  if (first !== true && !planOnScreen()) return;   // the Plan tab isn't the one on screen: no CoinGecko call (its free limit is shared by every page)
   const need = accumPlan.filter(e => !getPortfolioCoin(e.sym)).map(e => [e.sym, planCgId(e)]).filter(x => x[1]);
   if (!need.length) return;
   try {
@@ -1119,7 +1121,7 @@ async function fetchPlanOnlyPrices() {
     if (Object.keys(map).length) Samsam.updatePrices(map);   // → onChange → renderAll
   } catch (_) { /* next refresh */ }
 }
-function startPlanPrices() { if (_planPriceT) return; fetchPlanOnlyPrices(); _planPriceT = setInterval(fetchPlanOnlyPrices, 120e3); }
+function startPlanPrices() { if (_planPriceT) return; fetchPlanOnlyPrices(true); _planPriceT = setInterval(fetchPlanOnlyPrices, 120e3); }
 // Category tag + ✎: both open Change category. A coin you hold → saved on the coin (main page and every other page
 // follow); one you don't hold yet → saved with the plan, and Add Coin starts from it on your first Buy.
 function catBadge(entry, idx) {
@@ -1733,7 +1735,7 @@ function confirmAddCoin() {
   closeAddModal();
   renderAll();
   saveAccumPlan(true);
-  if (!c.fromPortfolio) fetchPlanOnlyPrices();
+  if (!c.fromPortfolio) fetchPlanOnlyPrices(true);
   if (forDca) { const i = accumPlan.findIndex(e => e.sym === sym); if (i >= 0) openDcaModal(i); }
 }
 
