@@ -240,6 +240,8 @@
     ['Admin', [['admin', 'shield', 'Admin dashboard', 'admin']]],
     ['Support', [['support', 'heart', 'Support Cute Portfolio & Channel 💛', 'support']]],
     ['Display', [
+      { seg: 'lang', title: 'Language', opts: [['en', 'English'], ['ar', 'العربية']], get: function () { return window.CPLang ? CPLang.lang : 'en'; },
+        set: function (v) { if (window.CPLang) CPLang.set(v); } },
       { seg: 'theme', title: 'Theme', opts: [['light', 'Light'], ['dark', 'Dark']], get: function () { return window.SamsamUI ? SamsamUI.currentTheme() : 'dark'; },
         set: function (v) { if (window.SamsamUI && SamsamUI.currentTheme() !== v) SamsamUI.toggleTheme(); } },
       { seg: 'range', title: 'Charts open on', opts: [['24h', '24h'], ['7d', '7d'], ['30d', '30d'], ['90d', '90d'], ['all', 'All']], get: function () { return get(K.range, 'all'); },

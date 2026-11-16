@@ -867,7 +867,8 @@
       var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
       if (Date.now() - st > 700 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;
       var cur = curTab(), i = PTABS.map(function (x) { return x[0]; }).indexOf(cur); if (i < 0) return;
-      var j = i + (dx < 0 ? 1 : -1); if (j < 0 || j >= PTABS.length) return;   // (no wrap-around: the ends stay put)
+      var rtl = document.documentElement.dir === 'rtl';   // Arabic: the tabs run right → left, so the next tab is reached by swiping right
+      var j = i + ((dx < 0) !== rtl ? 1 : -1); if (j < 0 || j >= PTABS.length) return;   // (no wrap-around: the ends stay put)
       ptabGo(PTABS[j][0]);
     }, { passive: true });
     document.addEventListener('touchcancel', function () { ok = false; }, { passive: true });

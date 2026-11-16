@@ -143,3 +143,4 @@ swipe_tabs_test.py
 new_hints_test.py
 live_refresh_test.py
 market_cmc_test.py
+lang_ar_test.py
