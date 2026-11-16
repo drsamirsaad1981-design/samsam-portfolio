@@ -112,9 +112,12 @@ async function main() {
   // Fear & Greed: CoinMarketCap's (what CoinMarketCap and Binance show); alternative.me's only when it doesn't answer
   const cf = await cmc('/v3/fear-and-greed/latest'), ch = await cmc('/v3/fear-and-greed/historical?start=1&limit=10');
   if (cf && cf.value != null) {
-    const days = (Array.isArray(ch) ? ch : []).filter(x => x && x.value != null).sort((x, y) => Date.parse(y.timestamp) - Date.parse(x.timestamp));
-    const today0 = Math.floor(Date.now() / DAY), dayOf = x => Math.floor(Date.parse(x.timestamp) / DAY);
-    const back = n => { const r = days.find(x => dayOf(x) === today0 - n); return r ? +r.value : null; };
+    // its time can be an ISO date or Unix seconds (as a number or a string) — read both
+    const tOf = x => { const t = x && x.timestamp; const n = +t; return isFinite(n) && n > 0 ? (n < 1e11 ? n * 1000 : n) : Date.parse(t); };
+    const days = (Array.isArray(ch) ? ch : (ch && Array.isArray(ch.data) ? ch.data : [])).filter(x => x && x.value != null && isFinite(tOf(x))).sort((x, y) => tOf(y) - tOf(x));
+    const today0 = Math.floor(Date.now() / DAY), dayOf = x => Math.floor(tOf(x) / DAY);
+    const back = n => { const r = days.find(x => dayOf(x) === today0 - n) || days.find(x => dayOf(x) === today0 - n - 1); return r ? +r.value : null; };
+    if (!days.length) log('fng history: no rows', JSON.stringify(ch).slice(0, 200));
     const v = Math.round(+cf.value);
     snap.fng = { value: v, label: fngLabel(v), prev: back(1), week: back(7), src: 'cmc' }; snap.parts.fng = now; log('fng (CoinMarketCap)', v);
   } else {
@@ -146,8 +149,35 @@ async function main() {
   const ca = await cmc('/v1/altcoin-season-index/latest');
   const official = ca && ca.altcoin_index != null ? Math.round(+ca.altcoin_index) : null;
   if (official != null) log('alt season (CoinMarketCap):', official);
-  let order = null;
-  try { order = await cmcTop100(all.concat(big)); } catch (e) { log('cmc top 100:', e.message); }
+  let order = null, cmcList = [];
+  try { const j = await get(`${CMC_LIST}&start=1&limit=200`, 2); cmcList = (j && j.data && j.data.cryptoCurrencyList) || []; } catch (_) {}
+  try { order = await cmcTop100(all.concat(big), cmcList); } catch (e) { log('cmc top 100:', e.message); }
+  // Total market cap, volume, 24h and Market Dominance the CoinMarketCap way (the numbers CoinMarketCap shows): from its
+  // global metrics; USDT and the next biggest coins = their CoinMarketCap market cap ÷ its total. CoinGecko's own total
+  // and volume are kept beside them (cg) — the app moves CoinMarketCap's numbers live with CoinGecko's between snapshots.
+  try {
+    const gm = await cmc('/v1/global-metrics/quotes/latest');
+    const tot = gm && gm.quote && gm.quote.USD && +gm.quote.USD.total_market_cap;
+    if (gm && gm.btc_dominance > 0 && tot > 0 && snap.global) {
+      const M = appMarket(), mcOf = c => { const q = (c.quotes || []).find(x => x.name === 'USD') || (c.quotes || [])[0] || {}; return +q.marketCap || 0; };
+      const usdt = cmcList.find(c => String(c.symbol).toUpperCase() === 'USDT'), r2 = v => Math.round(v * 1000) / 1000;
+      const top = [];
+      for (const c of cmcList) {
+        const sym = String(c.symbol || '').toUpperCase(); if (/^(BTC|ETH|USDT)$/.test(sym)) continue;
+        const tags = (c.tags || []).map(t => String(t && (t.slug || t) || '').toLowerCase());
+        if (tags.some(t => CMC_SKIP.test(t)) || M.isExcluded({ sym, name: c.name || '', id: c.slug || '', price: (((c.quotes || [])[0]) || {}).price })) continue;
+        const v = mcOf(c) / tot * 100; if (v > 0) top.push([sym, r2(v)]);
+        if (top.length === 5) break;
+      }
+      const U = gm.quote.USD, cgG = { mcap: snap.global.mcap, vol: snap.global.vol, ch: snap.global.mcapCh24 };
+      if (+U.total_volume_24h > 0) snap.global.vol = +U.total_volume_24h;
+      if (U.total_market_cap_yesterday_percentage_change != null) snap.global.mcapCh24 = +U.total_market_cap_yesterday_percentage_change;
+      snap.global.mcap = tot; snap.global.cg = cgG; snap.global.src = 'cmc';
+      log('total market cap (CoinMarketCap):', Math.round(tot / 1e9) + 'B', 'vol', Math.round((snap.global.vol || 0) / 1e9) + 'B', 'ch24', snap.global.mcapCh24, '· CoinGecko', Math.round((cgG.mcap || 0) / 1e9) + 'B');
+      snap.global = { ...snap.global, dom: { btc: r2(+gm.btc_dominance), eth: r2(+gm.eth_dominance || 0), usdt: usdt ? r2(mcOf(usdt) / tot * 100) : (snap.global.dom || {}).usdt || 0 }, domTop: top, domSrc: 'cmc' };
+      snap.parts.dom = now; log('dominance (CoinMarketCap): BTC', snap.global.dom.btc, 'ETH', snap.global.dom.eth, 'USDT', snap.global.dom.usdt, top.map(x => x.join(' ')).join(', '));
+    } else log('dominance: CoinMarketCap no answer, CoinGecko\'s kept');
+  } catch (e) { log('dominance:', e.message); }
   try {
     const alt = await altSeason(all.concat(big.filter(r => !all.some(t => t.id === r.id))), snap.global, order, official);
     const base = alt || old.alt || null;
@@ -294,9 +324,8 @@ function lastPrice(id) {
 // matched to CoinGecko's row (same ticker, market cap within ×2 — tickers are reused). null when it doesn't answer or too
 // few match: then CoinGecko's own order is used.
 const CMC_SKIP = /^(stablecoin|usd-stablecoin|fiat-stablecoin|asset-backed-stablecoin|algorithmic-stablecoin|wrapped-tokens|tokenized-gold|tokenized-commodities|liquid-staking-derivatives|tokenized-stock)$/;
-async function cmcTop100(pool) {
-  const j = await get(`${CMC_LIST}&start=1&limit=200`, 2);
-  const list = (j && j.data && j.data.cryptoCurrencyList) || [];
+async function cmcTop100(pool, list) {
+  list = list || [];
   if (list.length < 120) { log('cmc top 100: no answer'); return null; }
   const M = appMarket(), bySym = new Map();
   for (const r of pool) { const k = String(r.sym || '').toUpperCase(); if (k) (bySym.get(k) || bySym.set(k, []).get(k)).push(r); }

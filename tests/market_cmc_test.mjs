@@ -19,7 +19,8 @@ const srv = http.createServer((q, r) => {
   const u = new URL(q.url, 'http://x'), J = o => { r.writeHead(200, { 'content-type': 'application/json' }); r.end(JSON.stringify(o)); };
   if (u.pathname.startsWith('/cmcpub/')) { hits.cmcPub++; if (!cmcUp) { r.writeHead(403); return r.end('{}'); }
     if (u.pathname.endsWith('/v3/fear-and-greed/latest')) return J({ data: { value: 13, value_classification: 'Extreme fear', update_time: new Date().toISOString() }, status: { error_code: '0' } });
-    if (u.pathname.endsWith('/v3/fear-and-greed/historical')) return J({ data: [0, 1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ timestamp: new Date((today - n) * DAY).toISOString(), value: [13, 11, 15, 20, 22, 25, 27, 31, 33][n] })), status: { error_code: 0 } });
+    if (u.pathname.endsWith('/v3/fear-and-greed/historical')) return J({ data: [0, 1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ timestamp: String((today - n) * 86400), value: [13, 11, 15, 20, 22, 25, 27, 31, 33][n] })), status: { error_code: 0 } });
+    if (u.pathname.endsWith('/v1/global-metrics/quotes/latest')) return J({ data: { btc_dominance: 59.31, eth_dominance: 9.8, quote: { USD: { total_market_cap: 3.3e12, total_volume_24h: 9e10, total_market_cap_yesterday_percentage_change: -1.5 } } }, status: { error_code: 0 } });
     if (u.pathname.endsWith('/v1/altcoin-season-index/latest')) return J({ data: { altcoin_index: 46, snapshot_time: new Date().toISOString() }, status: { error_code: 0 } }); }
   if (u.pathname === '/cmclist') { if (!cmcUp) { r.writeHead(403); return r.end('{}'); } return J({ data: { cryptoCurrencyList: cmcList.map(c => ({ symbol: c.symbol, name: c.name, slug: c.name.toLowerCase().replace(/\W+/g, '-'), tags: c.tags || [], quotes: [{ name: 'USD', marketCap: c.mc }] })) } }); }
   if (u.pathname === '/fng/') return J({ data: [{ value: '10', value_classification: 'Extreme Fear' }, { value: '10' }, {}, {}, {}, {}, {}, { value: '29' }] });
@@ -44,12 +45,58 @@ check('Fear & Greed is CoinMarketCap\'s (13, Extreme Fear), yesterday 11, last w
 check('Altcoin Season is CoinMarketCap\'s official index (46), ready, the app\'s own count kept as "own"', m.alt && m.alt.value === 46 && m.alt.ready && m.alt.src === 'cmc' && m.alt.own != null && m.alt.label === 'Leaning Bitcoin', m.alt);
 check('the page\'s coins are CoinMarketCap\'s top 100: its order, no stablecoin / wrapped, no CoinGecko-only coin', alt.list === 'cmc' && alt.coins.length === 100 && alt.coins[6].id === 'alt8' && alt.coins[7].id === 'alt7' && !alt.coins.some(c => c.id === 'zzz' || c.id === 'tether'), alt.coins.slice(5, 9).map(c => c.id));
 check('…today on the page = the official number; the own count is there too', alt.official === 46 && alt.live[today][0] === 46 && alt.own === 60, [alt.official, alt.live[today], alt.own]);
+check('Market Dominance is CoinMarketCap\'s: BTC 59.31, ETH 9.8, USDT = its cap ÷ its total (4.545), the next coins from its list', m.global.domSrc === 'cmc' && m.global.dom.btc === 59.31 && m.global.dom.eth === 9.8 && m.global.dom.usdt === 4.545 && m.global.domTop[0][0] === 'ALT1' && m.global.domTop[0][1] === 3.03 && !m.global.domTop.some(x => x[0] === 'WBTC'), m.global);
+check('Total market cap, volume and 24h are CoinMarketCap\'s (3.3T, 90B, −1.5%); CoinGecko\'s kept beside them', m.global.mcap === 3.3e12 && m.global.vol === 9e10 && m.global.mcapCh24 === -1.5 && m.global.src === 'cmc' && m.global.cg.mcap === 3e12 && m.global.cg.vol === 1e11, m.global);
 // CoinMarketCap down → as before
 cmcUp = false; fs.rmSync(dir, { recursive: true });
 const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'mkt-'));
 await run(dir2);
 const m2 = JSON.parse(fs.readFileSync(path.join(dir2, 'm/market.json'), 'utf8')), alt2 = JSON.parse(fs.readFileSync(path.join(dir2, 'm/alt.json'), 'utf8'));
 check('CoinMarketCap down → alternative.me\'s Fear & Greed (10)', m2.fng && m2.fng.value === 10 && m2.fng.src === 'alternative.me', m2.fng);
+check('CoinMarketCap down → CoinGecko\'s dominance (58)', m2.global.dom.btc === 58 && m2.global.domSrc !== 'cmc', m2.global);
 check('…and the app\'s own Altcoin Season count from CoinGecko\'s top 100', m2.alt && m2.alt.src === 'own' && m2.alt.value != null && alt2.list === 'coingecko' && alt2.coins.some(c => c.id === 'zzz'), m2.alt);
 fs.rmSync(dir2, { recursive: true }); srv.close();
+// the app (samsam-market.js): CoinMarketCap's numbers from the snapshot, moved live by CoinGecko's change since then
+{
+  const vm = await import('node:vm');
+  const snapG = { mcap: 3.3e12, vol: 9e10, mcapCh24: -1.5, src: 'cmc', cg: { mcap: 3e12, vol: 1e11, ch: -1 }, dom: { btc: 59.31, eth: 9.8, usdt: 4.5 }, domTop: [['BNB', 3.4]], domSrc: 'cmc' };
+  let cgLive = { mcap: 3.03e12, vol: 1.1e11 }, cgUp = true;
+  const fetchF = (url) => {
+    const J = o => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(o) });
+    if (url.includes('market.json')) return J({ updated: new Date().toISOString(), parts: { global: new Date().toISOString(), dom: new Date().toISOString() }, global: snapG });
+    if (url.includes('/global')) return cgUp ? J({ data: { total_market_cap: { usd: cgLive.mcap }, total_volume: { usd: cgLive.vol }, market_cap_change_percentage_24h_usd: 0, market_cap_percentage: { btc: 58, eth: 10, usdt: 5 } } }) : Promise.reject(new Error('busy'));
+    return Promise.reject(new Error('no'));
+  };
+  const store = {}, ctx = { window: { __marketSnap: 'https://x/m/market.json' }, location: { hostname: '', pathname: '/' }, navigator: { onLine: true }, fetch: fetchF,
+    localStorage: { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; }, removeItem: k => { delete store[k]; } }, setTimeout, Promise, Date, JSON, Math };
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'samsam-market.js'), 'utf8'), ctx);
+  const g = (await ctx.window.SamsamMarket.global(true)).data;
+  check('app: CoinGecko\'s total moved +1% since the snapshot → CoinMarketCap\'s 3.3T moves +1% (3.333T); dominance is CoinMarketCap\'s', Math.abs(g.mcap - 3.333e12) < 1e6 && Math.abs(g.vol - 9.9e10) < 1e6 && g.dom.btc === 59.31 && g.domTop[0][0] === 'BNB', g);
+  check('app: …24h follows too (−1.5% → about −0.515%)', Math.abs(g.mcapCh24 - ((1 - 0.015) * 1.01 - 1) * 100) < 1e-9, g.mcapCh24);
+}
+// ETF flows (tools/update-etf.mjs): a fund list saved before every issuer reported (adds up to −143M of the day's −185M)
+// is asked again; once it adds up it isn't asked again
+{
+  let funds = [['IBIT', -143531040], ['FBTC', 0]], calls = 0;
+  const s2 = http.createServer((q, r) => {
+    const u = new URL(q.url, 'http://x'), J = o => { r.writeHead(200, { 'content-type': 'application/json' }); r.end(JSON.stringify({ code: 0, data: o })); };
+    if (u.pathname.endsWith('/etfs/summary-history')) return J([{ date: '2026-11-13', total_net_inflow: -185450233, cum_net_inflow: 1, total_net_assets: 1, total_value_traded: 1 }]);
+    if (u.pathname.endsWith('/etfs')) { calls++; return J(funds.map(([t]) => ({ ticker: t, name: t }))); }
+    const m = /\/etfs\/([A-Z]+)\/market-snapshot/.exec(u.pathname); if (m) { const f = funds.find(x => x[0] === m[1]); return J({ date: '2026-11-13', net_inflow: f[1], cum_inflow: 1, net_assets: 1 }); }
+    r.writeHead(404); r.end('{}');
+  });
+  await new Promise(ok => s2.listen(0, ok));
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'etf-')); fs.mkdirSync(path.join(d, 'm'));
+  fs.writeFileSync(path.join(d, 'm/etf.json'), JSON.stringify({ btc: { days: [['2026-11-13', -185450233, 1, 1, 1]], funds: { date: '2026-11-13', at: Date.now() - 3 * 3600e3, list: [{ t: 'IBIT', net: -143531040 }, { t: 'FBTC', net: 0 }] } }, eth: { days: [] } }));
+  const runEtf = () => new Promise((ok, no) => import('node:child_process').then(({ execFile }) => execFile(process.execPath, [path.join(ROOT, 'tools/update-etf.mjs'), d], { env: { ...process.env, CG_FAST: '1', SOSO_API: 'http://127.0.0.1:' + s2.address().port, SOSO_API_KEY: 'test' }, timeout: 60000 }, (e, so) => e ? no(e) : ok(so))));
+  const realNow = Date.now(); const dayOk = realNow - Date.parse('2026-11-13T00:00:00Z') < 4 * 864e5;
+  funds = [['IBIT', -143531040], ['FBTC', -41919193]];
+  await runEtf();
+  let e = JSON.parse(fs.readFileSync(path.join(d, 'm/etf.json'), 'utf8'));
+  if (dayOk) check('ETF: funds that don\'t add up to the day yet are asked again → FBTC −41.9M now in', e.btc.funds.list.find(f => f.t === 'FBTC').net === -41919193 && calls >= 1, e.btc.funds);
+  else check('ETF: (the test day is older than 4 days — only checks it ran)', !!e.btc.days.length);
+  const c0 = calls; await runEtf();
+  check('ETF: once they add up, the funds aren\'t asked again', calls === c0, calls - c0);
+  s2.close(); fs.rmSync(d, { recursive: true });
+}
 console.log(`${pass}/${pass + fail} passed`); process.exit(fail ? 1 : 0);

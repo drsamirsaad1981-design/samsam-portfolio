@@ -124,6 +124,7 @@
       '<p>Tap the card for the full page: the coins that beat BTC and the history.</p>'; } },
     dominance: { title: 'Market Dominance', body: function () { return '<p>Each coin\'s share of the total market cap: Bitcoin, Ethereum, USDT, the next three biggest coins, and all the others together.</p>' +
       '<div class="cph-f"><b>Dominance</b><code>Coin\'s market cap ÷ total market cap × 100</code></div>' +
+      '<p>The % are <b>CoinMarketCap\'s</b> (the ones most sites show), refreshed about every 30 minutes; the total market cap above is live from CoinGecko.</p>' +
       '<p><b>ETH / BTC</b> is the price of 1 ETH in BTC — rising means Ethereum (and usually altcoins) is beating Bitcoin.</p>'; } },
     etf: { title: 'ETF Flows (US spot)', body: function () { return '<p>Money going into (+, green) or out of (−, red) the US spot Bitcoin or Ethereum ETFs, per trading day.</p>' +
       '<p>Big steady inflows mean institutions are buying; outflows mean they are selling. The totals show the last 7 days, the last 30 days and since launch.</p><p>Source: SoSoValue.</p>'; } },

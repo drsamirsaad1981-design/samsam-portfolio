@@ -52,8 +52,15 @@ async function main() {
       changed = true;
       const latest = cur.days.length ? cur.days[cur.days.length - 1][0] : null;
       log(sym, cur.days.length, 'days, latest', latest);
-      // each fund's numbers for the newest day — only when that day is new
-      if (latest && (!cur.funds || cur.funds.date !== latest)) {
+      // each fund's numbers for the newest day — when that day is new, and again (every ~2 hours, for 3 days) while the
+      // funds don't add up to the day's total yet: some issuers (Grayscale, Bitwise, ARK…) report hours later
+      const fsum = cur.funds && cur.funds.date === latest ? cur.funds.list.reduce((t, f) => t + (f.net || 0), 0) : null;
+      const dayNet = latest ? cur.days[cur.days.length - 1][1] : 0;
+      const short = fsum != null && Math.abs(fsum - dayNet) > Math.max(2e6, Math.abs(dayNet) * 0.02);
+      const fresh = latest && Date.now() - Date.parse(latest + 'T00:00:00Z') < 4 * 864e5;
+      const again = short && fresh && Date.now() - (cur.funds.at || 0) > 2 * 3600e3;
+      if (short) log(sym, 'funds add up to', fsum, 'of', dayNet, again ? '— asking again' : '');
+      if (latest && (!cur.funds || cur.funds.date !== latest || again)) {
         const list = await soso(`/etfs?symbol=${sym}&country_code=US`);
         const funds = [];
         for (const f of list || []) {
@@ -64,7 +71,8 @@ async function main() {
           } catch (e) { log(sym, f.ticker, e.message); }
         }
         const same = funds.filter(f => f.date === latest);
-        if (same.length) { cur.funds = { date: latest, list: same.map(({ date, ...f }) => f).sort((a, b) => b.assets - a.assets) }; log(sym, same.length, 'funds for', latest); }
+        if (same.length) { cur.funds = { date: latest, at: Date.now(), list: same.map(({ date, ...f }) => f).sort((a, b) => b.assets - a.assets) }; log(sym, same.length, 'funds for', latest); }
+        else if (again) cur.funds.at = Date.now();   // (try again in ~2 hours)
         else log(sym, 'funds not updated yet for', latest);
       }
     } catch (e) { log(sym, 'failed:', e.message, '— kept the last one'); }

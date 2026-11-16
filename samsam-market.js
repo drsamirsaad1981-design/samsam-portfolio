@@ -108,7 +108,24 @@
           return { mcap: d.total_market_cap.usd, vol: (d.total_volume || {}).usd, mcapCh24: d.market_cap_change_percentage_24h_usd,
             dom: { btc: p.btc || 0, eth: p.eth || 0, usdt: p.usdt || 0 }, coins: d.active_cryptocurrencies || null };
         });
-      }, force, snapPart('global'));
+      }, force, snapPart('global')).then(function (r) {
+        // CoinMarketCap's numbers (the ones most sites show), saved by GitHub with the snapshot every ~30 min: dominance as
+        // saved (it moves slowly); the total market cap, volume and 24h change moved live by how much CoinGecko's moved since
+        return snapshot().then(function (j) {
+          var sg = j && j.global, at = Date.parse((j.parts && (j.parts.dom || j.parts.global)) || j.updated) || 0;
+          if (!r || !r.data || !sg || sg.src !== 'cmc' || Date.now() - at > 3 * 3600e3) return r;
+          var d = r.data, out = Object.assign({}, d, { dom: sg.dom || d.dom, domTop: sg.domTop || null, domSrc: sg.domSrc || null, src: 'cmc' });
+          var cg = sg.cg || {};
+          if (d === sg || d.src === 'cmc' || !(cg.mcap > 0) || !(d.mcap > 0)) { out.mcap = sg.mcap; out.vol = sg.vol; out.mcapCh24 = sg.mcapCh24; }   // (the snapshot itself)
+          else {
+            var k = d.mcap / cg.mcap;   // how CoinGecko's total moved since the snapshot
+            out.mcap = sg.mcap * k;
+            out.vol = cg.vol > 0 && d.vol > 0 ? sg.vol * (d.vol / cg.vol) : sg.vol;
+            out.mcapCh24 = sg.mcapCh24 != null ? ((1 + sg.mcapCh24 / 100) * k - 1) * 100 : d.mcapCh24;
+          }
+          return { data: out, t: r.t, stale: r.stale };
+        }, function () { return r; });
+      });
     },
     // Fear & Greed: CoinMarketCap's (the number CoinMarketCap and Binance show), saved by GitHub with each snapshot (every
     // ~30 min — it moves slowly). alternative.me's live one only when the snapshot doesn't have CoinMarketCap's.
@@ -234,6 +251,8 @@
       if (/\bgold\b/.test(n) && API.flat(c, 0.08)) return true;   // gold tokens (Kinesis Gold…) follow gold, not crypto
       // tied to a currency by its ticker (EURSAFO, EURQ, GBPT, XSGD, CHFX…)
       if (/^(EUR|GBP|CHF|JPY|SGD|AUD|CAD|TRY|BRL|MXN|XSGD|XCHF|XAU)[A-Z0-9]{0,4}$|^[A-Z]{0,4}(EUR|GBP|CHF|SGD)$/.test(s) && API.flat(c, 0.03)) return true;
+      // a dollar token by its ticker (APXUSD, XUSD…: "…USD" + a price close to $1)
+      if (/USD[A-Z0-9]?$/.test(s) && +c.price >= 0.9 && +c.price <= 1.1) return true;
       // anything whose price hardly moved all week (< 1.5% from low to high) is pegged — no real crypto is that still
       return API.flat(c, 0.015);
     },
