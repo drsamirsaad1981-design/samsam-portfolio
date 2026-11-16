@@ -5,20 +5,21 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-lang.js?v=202611162343"></script>
-<script src="samsam-ar.js?v=202611162343"></script>
-<script src="samsam-ui.js?v=202611162343"></script>
-<script src="samsam-hints.js?v=202611162343"></script>
-<script src="samsam-vault.js?v=202611162343"></script>
-<script src="samsam-labels.js?v=202611162343"></script>
-<script src="samsam-taxonomy.js?v=202611162343"></script>
-<script src="samsam-dropdown.js?v=202611162343"></script>
-<script src="samsam-coins.js?v=202611162343"></script>
-<script src="samsam-import.js?v=202611162343"></script>
-<script src="samsam-wallets.js?v=202611162343"></script>
-<script src="samsam-rewards.js?v=202611162343"></script>
-<script src="samsam-settings.js?v=202611162343"></script>
-<script src="samsam-chart.js?v=202611162343"></script>
+<script src="samsam-lang.js?v=202611170033"></script>
+<script src="samsam-ar.js?v=202611170033"></script>
+<script src="samsam-ui.js?v=202611170033"></script>
+<script src="samsam-hints.js?v=202611170033"></script>
+<script src="samsam-arhints.js?v=202611170033"></script>
+<script src="samsam-vault.js?v=202611170033"></script>
+<script src="samsam-labels.js?v=202611170033"></script>
+<script src="samsam-taxonomy.js?v=202611170033"></script>
+<script src="samsam-dropdown.js?v=202611170033"></script>
+<script src="samsam-coins.js?v=202611170033"></script>
+<script src="samsam-import.js?v=202611170033"></script>
+<script src="samsam-wallets.js?v=202611170033"></script>
+<script src="samsam-rewards.js?v=202611170033"></script>
+<script src="samsam-settings.js?v=202611170033"></script>
+<script src="samsam-chart.js?v=202611170033"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -593,7 +594,7 @@ body {
 .perf-find { max-width: 1200px; margin: 0 auto; padding: 4px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 6px max(var(--gut, 16px), env(safe-area-inset-left,0px)); box-sizing: border-box; }
 .wx-card[hidden] { display: none !important; }
 .wx-card { grid-column: 1/-1; margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); box-sizing: border-box; }
-.wx-h { display: flex; align-items: center; font-size: .78rem; font-weight: 800; color: var(--fg2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.wx-h { display: flex; align-items: center; font-size: .78rem; font-weight: 800; color: var(--fg2); margin-bottom: 4px; }
 .wx-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 0; border: 0; border-top: 1px solid var(--border); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .wx-h + .wx-row { border-top: 0; }
 .wx-ic { width: 34px; height: 34px; flex: none; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: rgba(124,58,237,.12); color: #7c3aed; } [data-theme="dark"] .wx-ic { color: #c4b5fd; } .wx-ic .ss-ic { margin: 0; }
@@ -716,7 +717,7 @@ body {
 
     <!-- ── Wallets & exchanges: where your coins really are — compare your wallets with the app, bring in an exchange file ── -->
     <section class="wx-card" id="wxCard" hidden aria-label="Wallets and exchanges">
-      <div class="wx-h"><span data-ic="wallet"></span>Wallets &amp; exchanges<span class="cp-hint" data-hint="walletsCheck" role="button" tabindex="0"></span></div>
+      <div class="wx-h"><span data-ic="wallet"></span>Wallets &amp; Exchanges<span class="cp-hint" data-hint="walletsCheck" role="button" tabindex="0"></span></div>
       <button type="button" class="wx-row" id="wxWallets"><span class="wx-ic" data-ic="wallet" data-ic-solo></span><span class="wx-t"><b>Wallets &amp; check</b><small id="wxWalletsSub">Compare your real wallets with the app</small></span><span class="wx-go">›</span></button>
       <button type="button" class="wx-row" id="wxImport"><span class="wx-ic" data-ic="upload" data-ic-solo></span><span class="wx-t"><b>Import from exchange</b><small>A CSV file from Binance, Gate or another exchange → your buys and sells</small></span><span class="wx-go">›</span></button>
       <div class="wx-soon">Binance · Gate — live balances straight from the exchange: later</div>
@@ -772,7 +773,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202611162343"></script>
+<script type="module" src="samsam-cloud.js?v=202611170033"></script>
 <script>
 // ── Constants ──
 

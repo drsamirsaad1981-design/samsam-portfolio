@@ -46,11 +46,24 @@
   }
   function tr1(s) {
     if (!s || !/[A-Za-z]/.test(s)) return null;
-    var c = s.replace(/\s+/g, ' ').trim(), lead = /^\s/.test(s) ? ' ' : '', tail = /\s$/.test(s) ? ' ' : '', v = look(c);
+    var c = s.replace(/\s+/g, ' ').trim(), lead = /^\s/.test(s) ? ' ' : '', tail = /\s$/.test(s) ? ' ' : '', v = D[c];
     if (v != null) return lead + v + tail;
-    var m = c.match(SPLIT); if (!m || !m[2] || (m[1] === '' && m[3] === '')) return null;
-    v = look(m[2]); if (v == null) return null;
-    return lead + m[1] + v + m[3] + tail;
+    if (c.indexOf(' · ') > 0) {   // every part known on its own → part by part (a pattern below could swallow the whole line)
+      var ps = c.split(' · '), all = true, any = false;
+      for (var k = 0; k < ps.length && all; k++) { if (!/[A-Za-z]/.test(ps[k])) continue; var q = tr1(ps[k]); if (q == null) all = false; else { ps[k] = q; any = true; } }
+      if (all && any) return lead + ps.join(' · ') + tail;
+    }
+    v = look(c);
+    if (v != null) return lead + v + tail;
+    var m = c.match(SPLIT);
+    if (m && m[2] && (m[1] !== '' || m[3] !== '')) { v = look(m[2]); if (v != null) return lead + m[1] + v + m[3] + tail; }
+    // a line made of parts — "Next Dec 5 · kept 1 of 2 · target in 1 buy": each part on its own
+    if (c.indexOf(' · ') > 0) {
+      var parts = c.split(' · '), hit = false;
+      for (var i = 0; i < parts.length; i++) { var w = tr1(parts[i]); if (w != null) { parts[i] = w; hit = true; } }
+      if (hit) return lead + parts.join(' · ') + tail;
+    }
+    return null;
   }
 
   var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, PRE: 1, NOSCRIPT: 1, CANVAS: 1, svg: 1 };
@@ -74,9 +87,10 @@
     if (!root) return;
     if (root.nodeType === 3) { doText(root); return; }
     if (root.nodeType !== 1 && root.nodeType !== 9 && root.nodeType !== 11) return;
-    if (root.nodeType === 1) { if (skipEl(root)) return; doAttrs(root); }
+    if (root.nodeType === 1) { if (root.nodeName === 'TEXTAREA' && !skipEl(root.parentNode)) { doAttrs(root); return; } if (skipEl(root)) return; doAttrs(root); }
     var it = document.createTreeWalker(root, 5 /* elements + text */, {
-      acceptNode: function (n) { return n.nodeType === 1 && (SKIP[n.nodeName] || n.hasAttribute('data-no-tr') || n.classList.contains('notranslate') || keepCls(n)) ? 2 /* reject subtree */ : 1; }
+      acceptNode: function (n) { if (n.nodeName === 'TEXTAREA') doAttrs(n);   // its placeholder yes, what you typed no
+        return n.nodeType === 1 && (SKIP[n.nodeName] || n.hasAttribute('data-no-tr') || n.classList.contains('notranslate') || keepCls(n)) ? 2 /* reject subtree */ : 1; }
     }), n;
     while ((n = it.nextNode())) { if (n.nodeType === 3) { var v = tr(n.nodeValue); if (v != null && v !== n.nodeValue) n.nodeValue = v; } else doAttrs(n); }
   }
@@ -89,7 +103,7 @@
         var m = ms[i];
         if (m.type === 'childList') { for (var j = 0; j < m.addedNodes.length; j++) walk(m.addedNodes[j]); }
         else if (m.type === 'characterData') doText(m.target);
-        else if (m.type === 'attributes' && m.target.nodeType === 1 && !skipEl(m.target)) doAttrs(m.target);
+        else if (m.type === 'attributes' && m.target.nodeType === 1 && !skipEl(m.target.nodeName === 'TEXTAREA' ? m.target.parentNode : m.target)) doAttrs(m.target);
       }
     });
     obs.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });

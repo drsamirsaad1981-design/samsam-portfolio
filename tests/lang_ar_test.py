@@ -1,12 +1,13 @@
 """العربية: Settings → Display → Language switches the whole app to Arabic (right-to-left) and back.
-Phase 1: header, tabs, Overview, Performance, Allocation, Settings, footer. Numbers and prices stay left-to-right (+$1,234.56)."""
+Phase 1: header, tabs, Overview, Performance, Allocation, Settings, footer. Numbers and prices stay left-to-right (+$1,234.56).
+Phase 2: the Plan (Accumulation, DCA, Exit Strategy), Add / Edit transaction, a coin's History — and the ⓘ explanations."""
 import sys, pathlib
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(pathlib.Path(__file__).parent)); import e2e_setup as S
 res = []
 def check(n, c, d=''): res.append(bool(c)); print(('PASS ' if c else 'FAIL ') + n + ('' if c else f' -> {d}'), flush=True)
 LEFT = r"""(()=>{const out=new Set(),w=document.createTreeWalker(document.body,4);let n;while(n=w.nextNode()){const p=n.parentElement;if(!p||!p.offsetParent||p.closest('script,style,svg,code,[data-no-tr],.brand-name,.cp-brand-n'))continue;const s=n.nodeValue.trim();if(/[a-z]{3}/.test(s)&&!/[\u0600-\u06FF@]/.test(s))out.add(s)}return [...out]})()"""
-OK_EN = {'Staking', 'English', 'Cute', 'Portfolio', 'owner@example.com', 'Claude AI'}
+OK_EN = {'Staking', 'English', 'Cute', 'Portfolio', 'owner@example.com', 'Claude AI', 'Airdrop'}
 with sync_playwright() as p:
     br = p.chromium.launch()
     for vn, vp in (('phone', dict(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)), ('desktop', dict(viewport={'width': 1366, 'height': 900}))):
@@ -36,6 +37,35 @@ with sync_playwright() as p:
         check(f'{vn}: Performance is Arabic and right-to-left too', fr.evaluate("[document.documentElement.dir, getComputedStyle(document.body).direction]") == ['rtl', 'rtl'] and 'تفاصيل إجمالي الربح' in fr.inner_text('body'))
         left = [s for s in fr.evaluate(LEFT) if s not in OK_EN]
         check(f'{vn}: Performance — no English words left', not left, left[:12])
+        pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(500)
+        # ⓘ explanations in Arabic
+        pg.evaluate("CPHint.open('totalPortfolio', null)"); pg.wait_for_timeout(200)
+        h = pg.inner_text('.cph')
+        check(f'{vn}: an ⓘ opens in Arabic (title, text and formula)', 'إجمالي المحفظة' in h and 'قيمة كل عملاتك' in h and 'السعر الحالي' in h, h[:120])
+        pg.evaluate("CPHint.close()")
+        # Phase 2 — Add transaction, a coin's History, the Plan
+        pg.evaluate("openAddTx('sell','SUI')"); pg.wait_for_timeout(400)
+        t = pg.inner_text('#atxBackdrop')
+        check(f'{vn}: Add Sell in Arabic', 'الكمية المباعة' in t and 'رسوم البيع' in t, t[:200])
+        left = [s for s in pg.evaluate(LEFT) if s not in OK_EN]
+        check(f'{vn}: Add transaction — no English words left', not left, left[:12]); pg.evaluate("closeAddTx()")
+        pg.goto(S.SITE + '/index.html#holdings/SUI'); pg.wait_for_function("Samsam.isReady()"); pg.wait_for_timeout(1500)
+        check(f'{vn}: a coin\'s page: معاملات SUI', 'معاملات SUI' in pg.inner_text('body'))
+        left = [s for s in pg.evaluate(LEFT) if s not in OK_EN]
+        check(f'{vn}: coin page — no English words left', not left, left[:12])
+        pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(600)
+        pg.evaluate("cpShell.go('accumulation')"); pg.wait_for_timeout(3000)
+        fr = [f for f in pg.frames if 'accumulation.html' in f.url][0]
+        b = fr.inner_text('body')
+        check(f'{vn}: the Plan in Arabic (التجميع · استراتيجية الخروج · جدول الشراء الدوري)', all(w in b for w in ('التجميع', 'استراتيجية الخروج', 'إجمالي قيمة الأهداف')), b[:200])
+        left = [s for s in fr.evaluate(LEFT) if s not in OK_EN]
+        check(f'{vn}: Plan — no English words left', not left, left[:12])
+        fr.evaluate("setPlanTab('exit')"); pg.wait_for_timeout(2000)
+        b = fr.inner_text('body')
+        check(f'{vn}: Exit Strategy in Arabic', 'مؤشرات الخروج الكبرى' in b and 'تقدّم جني الأرباح' in b, b[:200])
+        left = [s for s in fr.evaluate(LEFT) if s not in OK_EN]
+        check(f'{vn}: Exit Strategy — no English words left', not left, left[:12])
+        fr.evaluate("setPlanTab('accum')"); pg.wait_for_timeout(300)
         pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(500)
         pg.evaluate("SamsamSettings.open()"); pg.wait_for_timeout(300)
         st = pg.inner_text('#cpSet')

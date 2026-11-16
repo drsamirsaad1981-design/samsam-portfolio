@@ -83,22 +83,22 @@
       '<div class="cph-f"><b>Realized</b><code>What your sells brought in − the cost of the coins sold − selling fees</code></div>' +
       '<div class="cph-f"><b>All Time Profit</b><code>Realized + Unrealized</code></div>' +
       '<p>Unrealized moves with today\'s prices; Realized is locked in and changes only when you sell.</p>'; } },
-    rewards: { title: 'Rewards & mining', body: function () { return '<p>Coins you got <b>without buying</b>: staking rewards, mined coins and airdrops.</p>' +
+    rewards: { title: 'Rewards & Mining', body: function () { return '<p>Coins you got <b>without buying</b>: staking rewards, mined coins and airdrops.</p>' +
       '<p>They come in at <b>$0 cost</b>, so your holdings go up and your average buy price goes down — they are already part of your All Time Profit.</p>' +
       '<p>The card shows what they are worth at today\'s price. Tap it for the list by coin and by month.</p>' +
       '<p>Add one from a coin\'s page: <b>+ Add Transaction → Reward</b> (staking can also be booked automatically from an APY).</p>'; } },
-    walletsCheck: { title: 'Wallets & exchanges', body: function () { return '<p><b>Wallets &amp; check</b> compares what the app says you hold with what is really in your wallets.</p>' +
+    walletsCheck: { title: 'Wallets & Exchanges', body: function () { return '<p><b>Wallets &amp; check</b> compares what the app says you hold with what is really in your wallets.</p>' +
       '<ul><li>You add each wallet\'s <b>public address</b> only — never a seed phrase or a private key.</li><li>The app reads the balances from the public blockchain and lists coins where the wallet has <b>more</b> or <b>less</b> than the app.</li><li>Nothing is changed by itself: you decide what to correct.</li></ul>' +
       '<p><b>Import from exchange</b> reads a CSV file of your trades (Binance, Gate and others) and adds the buys and sells. Trades you already entered are recognised and not added twice.</p>'; } },
-    targets: { title: 'Target allocation', body: function () { return '<p>The share of your portfolio you want in each category (Bitcoin included). The shares add up to 100%.</p>' +
+    targets: { title: 'Target Allocation', body: function () { return '<p>The share of your portfolio you want in each category (Bitcoin included). The shares add up to 100%.</p>' +
       '<div class="cph-f"><b>Now → target</b><code>Category value ÷ portfolio value × 100, next to the share you chose</code></div>' +
       '<p>The <b>band</b> (± points) is how far a category may drift. Inside the band it is <b>✓ on target</b>; outside, the card says how much to buy (or trim) to get back, and which of your coins fit.</p>' +
       '<p class="cph-ok">It is a guide only — nothing is bought or sold for you.</p>'; } },
-    dca: { title: 'DCA schedule (regular buys)', body: function () { return '<p>A fixed amount you buy on a fixed day — every week, every two weeks or every month — whatever the price.</p>' +
+    dca: { title: 'DCA Schedule (Regular Buys)', body: function () { return '<p>A fixed amount you buy on a fixed day — every week, every two weeks or every month — whatever the price.</p>' +
       '<ul><li><b>Today</b>: the buy is due today.</li><li><b>Missed · N days</b>: the day passed and no Buy of that coin was recorded.</li><li><b>✓ Bought</b>: you recorded the Buy for this round.</li><li>A date: the next buy day.</li></ul>' +
       '<p><b>Kept x of y</b> counts your last rounds (up to 6). <b>Target in N buys</b>: how many more buys reach the coin\'s target.</p>' +
       '<p><b>➕ Regular buy</b> works for any coin: one that isn\'t in your plan joins it without a target (set one later on its row). Telegram reminds you on the day.</p>'; } },
-    planAlloc: { title: 'Plan vs target allocation', body: function () { return '<p>If you bought everything this plan still needs, at today\'s prices — would your categories match your <b>target allocation</b>?</p>' +
+    planAlloc: { title: 'Plan vs Target Allocation', body: function () { return '<p>If you bought everything this plan still needs, at today\'s prices — would your categories match your <b>target allocation</b>?</p>' +
       '<p>It compares today with "after the plan", category by category, inside your band.</p>' +
       '<p>Each plan coin gets a chip for its category today:</p><ul><li><b>↓ Priority</b>: the category is below its target — buying this coin moves you toward it.</li><li><b>↑ Over target</b>: already above — it can wait.</li><li><b>✓ On target</b>.</li></ul>'; } },
     macroExit: { title: 'Macro Exit Indicators', body: function () { return '<p>Three whole-market signs that a cycle top may be near — with <b>your own levels</b>:</p>' +
@@ -108,7 +108,7 @@
     cashOut: { title: 'Cash-out Progress', body: function () { return '<p>How much of your portfolio already sits in stablecoins.</p>' +
       '<div class="cph-f"><b>% in stablecoins</b><code>Value of your stablecoins ÷ value of the whole portfolio × 100</code></div>' +
       '<p><b>Realized profit</b> is the profit locked in by all your sells. <b>Exit steps done</b> counts the take-profit steps your recorded sells have covered.</p>'; } },
-    exitSteps: { title: 'Exit plan steps', body: function () { return '<p>Each coin in the exit plan is sold in <b>three steps</b>, as its price reaches a multiple of your average buy price.</p>' +
+    exitSteps: { title: 'Exit Plan Steps', body: function () { return '<p>Each coin in the exit plan is sold in <b>three steps</b>, as its price reaches a multiple of your average buy price.</p>' +
       '<div class="cph-f"><b>Default</b><code>×2 → sell 25% · ×3 → sell 50% · ×5 → sell 25%</code></div>' +
       '<p>The sliders button changes your default multiples and shares; any coin can have its own prices.</p>' +
       '<ul><li><b>Moonbag</b>: 10% of the coin stays out of the plan, to keep.</li><li>A step turns <b>✓ Done</b> by itself when the sells you record (after the coin joined the plan) cover it — steps fill in order.</li><li>Buying more later raises the plan amount.</li></ul>'; } },
@@ -168,7 +168,7 @@
     var st = document.createElement('style'); st.id = 'cpHintCss';
     st.textContent =
       // the ⓘ itself — same everywhere
-      '.cp-hint{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0 0 0 4px;padding:0;border:none;border-radius:50%;background:none;color:var(--fg2,#94a3b8);opacity:.8;cursor:pointer;vertical-align:middle;line-height:0;flex-shrink:0;-webkit-tap-highlight-color:transparent;transition:color .15s,opacity .15s,background .15s}' +
+      '.cp-hint{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0;margin-inline-start:4px;padding:0;border:none;border-radius:50%;background:none;color:var(--fg2,#94a3b8);opacity:.8;cursor:pointer;vertical-align:middle;line-height:0;flex-shrink:0;-webkit-tap-highlight-color:transparent;transition:color .15s,opacity .15s,background .15s}' +
       '.cp-hint svg{width:15px;height:15px}.cp-hint:active,.cp-hint[aria-expanded=true]{color:#a78bfa;opacity:1;background:rgba(124,58,237,.14)}' +
       '@media (hover:hover){.cp-hint:hover{color:#a78bfa;opacity:1}}.cp-hint:focus-visible{outline:2px solid #a78bfa;outline-offset:1px;opacity:1}' +
       // the panel
@@ -178,7 +178,7 @@
       '.cph.sheet::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:#475569;margin:0 auto 10px}' +
       '.cph-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}.cph-h h3{flex:1;margin:0;font-size:.98rem;font-weight:800}' +
       '.cph-x{width:30px;height:30px;border-radius:9px;border:1px solid var(--border,#334155);background:none;color:inherit;font-size:1.05rem;line-height:1;cursor:pointer}' +
-      '.cph p{margin:0 0 8px;color:var(--fg2,#cbd5e1)}.cph p b,.cph li b{color:var(--fg,#e5e7eb)}.cph ul{margin:0 0 8px;padding-left:18px;color:var(--fg2,#cbd5e1)}.cph li{margin:2px 0}' +
+      '.cph p{margin:0 0 8px;color:var(--fg2,#cbd5e1)}.cph p b,.cph li b{color:var(--fg,#e5e7eb)}.cph ul{margin:0 0 8px;padding:0;padding-inline-start:18px;color:var(--fg2,#cbd5e1)}.cph li{margin:2px 0}' +
       '.cph-f{margin:4px 0 10px;font-size:.8rem}.cph-f code{display:block;margin-top:3px;padding:7px 9px;border-radius:8px;background:var(--bg3,rgba(148,163,184,.1));font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.75rem;white-space:normal;color:var(--fg,#e5e7eb)}' +
       '.cph-ok{padding:8px 10px;border-radius:9px;background:rgba(34,197,94,.10);color:var(--fg,#e5e7eb)!important}' +
       '.cph-acts{display:flex;gap:8px;margin-top:12px}.cph-acts button{flex:1;min-height:40px;border-radius:10px;border:1px solid var(--border,#334155);background:var(--bg3,#1f2937);color:var(--fg,#e5e7eb);font:inherit;font-weight:700;cursor:pointer}' +
@@ -193,8 +193,10 @@
     document.removeEventListener('keydown', o.key, true); window.removeEventListener('resize', o.onResize);
     o.el.remove(); o.back.remove(); if (o.anchor) { o.anchor.setAttribute('aria-expanded', 'false'); if (refocus) try { o.anchor.focus(); } catch (_) {} }
   }
+  // Arabic: samsam-arhints.js gives each hint its Arabic title and text (window.CP_HINTS_AR); a hint without one stays English
+  function H(key) { return (window.CPLang && CPLang.ar && window.CP_HINTS_AR && CP_HINTS_AR[key]) || HINTS[key]; }
   function show(key, anchor) {
-    var h = HINTS[key]; if (!h) return;
+    var h = H(key); if (!h) return;
     if (open && open.anchor === anchor) { close(true); return; }
     close(false); addCss();
     var sheet = window.matchMedia('(max-width: 600px)').matches;
@@ -234,7 +236,7 @@
     var list = (root || document).querySelectorAll('.cp-hint[data-hint]:not([data-hint-ready])');
     for (var i = 0; i < list.length; i++) {
       var b = list[i]; b.setAttribute('data-hint-ready', ''); if (!b.innerHTML.trim()) b.innerHTML = INFO;
-      if (!b.getAttribute('aria-label')) { var h = HINTS[b.getAttribute('data-hint')]; b.setAttribute('aria-label', 'About ' + (h ? String(typeof h.title === 'function' ? h.title() : h.title).split(':')[0] : 'this')); }
+      if (!b.getAttribute('aria-label')) { var h = H(b.getAttribute('data-hint')); b.setAttribute('aria-label', (window.CPLang && CPLang.ar ? 'عن ' : 'About ') + (h ? String(typeof h.title === 'function' ? h.title() : h.title).split(':')[0] : 'this')); }
       b.setAttribute('aria-haspopup', 'dialog'); b.setAttribute('aria-expanded', 'false'); if (!b.type) b.type = 'button';
     }
   }
@@ -253,5 +255,5 @@
   new MutationObserver(function () { if (queued) return; queued = true; requestAnimationFrame(function () { queued = false; paint(); }); })
     .observe(document.documentElement, { childList: true, subtree: true });
 
-  window.CPHint = { open: show, close: close, paint: paint, HINTS: HINTS, add: function (key, def) { HINTS[key] = def; } };
+  window.CPHint = { open: show, close: close, paint: paint, HINTS: HINTS, util: { esc: esc, money: money, fmtDay: fmtDay, baseline: baseline }, add: function (key, def) { HINTS[key] = def; } };
 })();

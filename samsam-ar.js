@@ -18,6 +18,8 @@
     return null;
   };
   CPLang.date2 = date;
+  // Arabic counting: 1 يوم · 2 يومين · 3–10 أيام · 11+ يوم
+  var pl = function (k, one, two, few, many) { k = +k; return k === 1 ? one : k === 2 ? two : (k % 100 >= 3 && k % 100 <= 10) ? k + ' ' + few : k + ' ' + many; };
 
   // ── times and dates ──
   R(/^(\d{1,2}:\d\d)\s?(AM|PM)$/, function (_, t, p) { return t + ' ' + ampm(p); });
@@ -33,12 +35,12 @@
   R(/^([\d.]+%) complete$/, function (_, p) { return 'مكتمل ' + n(p); });
   R(/^Building charts from real prices… (\d+) \/ (\d+) coins$/, function (_, a, b) { return 'جاري بناء الرسوم من الأسعار الفعلية… ' + a + ' / ' + b + ' عملة'; });
   R(/^Building from real prices… (\d+) \/ (\d+) coins$/, function (_, a, b) { return 'جاري البناء من الأسعار الفعلية… ' + a + ' / ' + b + ' عملة'; });
-  R(/^from (\d+) sells?$/, function (_, a) { return 'من ' + a + (a === '1' ? ' عملية بيع' : ' عمليات بيع'); });
+  R(/^from (\d+) sells?$/, function (_, a) { return 'من ' + pl(a, 'عملية بيع واحدة', 'عمليتين بيع', 'عمليات بيع', 'عملية بيع'); });
   R(/^Cost: (.+)$/, function (_, v) { return 'التكلفة: ' + n(v); });
   R(/^(.+) · (.+) added$/, function (_, a, b) { return n(a) + ' · مضاف ' + n(b); });
   R(/^Value change (\S+) = (\S+) from prices, (\S+) (added|taken out)$/, function (_, a, b, c, w) { return 'تغيّر القيمة ' + n(a) + ' = ' + n(b) + ' من حركة الأسعار، ' + n(c) + (w === 'added' ? ' مضاف' : ' مسحوب'); });
   R(/^(.+) realized ([+−-]) (.+) unrealized = (.+)$/, function (_, a, op, b, c) { return 'محقق ' + n(a) + ' ' + op + ' غير محقق ' + n(b) + ' = ' + n(c); });
-  R(/^(\d+) sells?(?: · after (.+) selling fees)?$/, function (_, a, f) { return a + (a === '1' ? ' عملية بيع' : ' عمليات بيع') + (f ? ' · بعد خصم رسوم بيع ' + n(f) : ''); });
+  R(/^(\d+) sells?(?: · after (.+) selling fees)?$/, function (_, a, f) { return pl(a, 'عملية بيع واحدة', 'عمليتين بيع', 'عمليات بيع', 'عملية بيع') + (f ? ' · بعد خصم رسوم بيع ' + n(f) : ''); });
   R(/^(\d+) of (\d+)$/, '$1 من $2');
   R(/^categories on target · band ±([\d.]+) pts$/, 'تصنيفات على الهدف · الهامش ±$1 نقطة');
   R(/^(\d+) to rebalance$/, function (_, a) { return a + ' محتاج' + (a === '1' ? '' : 'ين') + ' إعادة توازن'; });
@@ -248,7 +250,7 @@
     'Rewards & mining': 'المكافآت والتعدين', 'Rewards and mining': 'المكافآت والتعدين',
     'None yet — staking rewards, mined BTC and airdrops show here': 'لا يوجد بعد — مكافآت الـ Staking والبيتكوين المُعدَّن والـ Airdrops بيظهروا هنا',
     'No rewards or mined coins': 'مفيش مكافآت أو عملات معدّنة', 'Staking rewards': 'مكافآت الـ Staking', 'Airdrops & other free coins': 'الـ Airdrops والعملات المجانية',
-    'Wallets & exchanges': 'المحافظ والمنصات', 'Wallets and exchanges': 'المحافظ والمنصات', 'Wallets & check': 'المحافظ والمطابقة',
+    'Wallets & exchanges': 'المحافظ والمنصات', 'Wallets & Exchanges': 'المحافظ والمنصات', 'Wallets and exchanges': 'المحافظ والمنصات', 'Wallets & check': 'المحافظ والمطابقة',
     'Compare your real wallets with the app': 'قارن محافظك الحقيقية بالبرنامج', 'Import from exchange': 'استيراد من منصة',
     'A CSV file from Binance, Gate or another exchange → your buys and sells': 'ملف CSV من Binance أو Gate أو أي منصة ← عمليات الشراء والبيع',
     'Binance · Gate — live balances straight from the exchange: later': 'Binance · Gate — الأرصدة المباشرة من المنصة: قريباً',
@@ -301,5 +303,158 @@
 
     // ── footer ──
     '© 2026 Dr. Samir Saad': '© 2026 د. سمير سعد', 'Dr. Samir Saad': 'د. سمير سعد',
+  });
+
+  // ════════ Phase 2: the Plan (Accumulation · DCA · Exit Strategy), Add / Edit transaction, a coin's History ════════
+  var DAY = { Sunday: 'الأحد', Monday: 'الاثنين', Tuesday: 'الثلاثاء', Wednesday: 'الأربعاء', Thursday: 'الخميس', Friday: 'الجمعة', Saturday: 'السبت' };
+  var dt = function (s) { return date(s) || s; };
+  R(/^(\$[\d,.]+) every (other )?(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)$/, function (_, a, o, d) { return n(a) + (o ? ' كل أسبوعين يوم ' : ' كل ') + DAY[d]; });
+  R(/^(\$[\d,.]+) on the (\d+)(?:st|nd|rd|th) of each month$/, function (_, a, d) { return n(a) + ' يوم ' + d + ' من كل شهر'; });
+  R(/^Next (.+)$/, function (_, d) { var v = date(d); return v ? 'الجاي ' + v : null; });
+  R(/^on (.+)$/, function (_, d) { var v = date(d); return v ? 'يوم ' + v : null; });
+  R(/^Was due (.+)$/, function (_, d) { return 'كان ميعاده ' + dt(d); });
+  R(/^kept (\d+) of (\d+)$/, 'التزمت بـ $1 من $2');
+  R(/^target in (\d+) buys?$/, function (_, a) { return 'الهدف بعد ' + pl(a, 'مرة شراء واحدة', 'مرتين شراء', 'مرات شراء', 'مرة شراء'); });
+  R(/^(\d+) days?$/, function (_, a) { return pl(a, 'يوم', 'يومين', 'أيام', 'يوم'); });
+  R(/^(\d+) regular buys?$/, function (_, a) { return a + ' شراء دوري'; });
+  R(/^(\d+) to buy now$/, '$1 للشراء الآن');
+  R(/^(\d+) in progress$/, '$1 قيد التنفيذ');
+  R(/^Sell ([\d.,]+) ([A-Z0-9.]+)$/, function (_, q, c) { return 'بيع ' + n(q + ' ' + c); });
+  R(/^Take profit (\d)$/, 'جني الأرباح $1');
+  R(/^moonbag (.+)$/, function (_, q) { return 'Moonbag ' + n(q); });
+  R(/^now (.+)$/, function (_, v) { return 'الآن ' + n(v); });
+  R(/^Target (.+)$/, function (_, v) { return /[a-z]{3}/.test(v) ? null : 'الهدف ' + n(v); });
+  R(/^Progress (.+%)$/, function (_, v) { return 'التقدّم ' + n(v); });
+  R(/^(.+%) vs your Avg\. Buy Price$/, function (_, v) { return n(v) + ' مقابل متوسط سعر شرائك'; });
+  R(/^(\d+) of (\d+) done$/, '$1 من $2 تمت');
+  R(/^(.+%) (above|below) target$/, function (_, v, w) { return n(v) + (w === 'above' ? ' فوق الهدف' : ' تحت الهدف'); });
+  R(/^base (\S+) \((.+)\)$/, function (_, v, d) { return 'الأساس ' + n(v) + ' (' + dt(d) + ')'; });
+  R(/^(\d+) (coins|assets)$/, function (_, a) { return pl(a, 'عملة واحدة', 'عملتين', 'عملات', 'عملة'); });
+  R(/^Auto (×.+)$/, function (_, x) { return 'تلقائي ' + n(x); });
+  R(/^Reserve (\d+)% Moonbag$/, 'الاحتفاظ بـ $1% كـ Moonbag');
+  R(/^holding (.+)$/, function (_, q) { return 'معاك ' + n(q); });
+  R(/^Sort: (.+)$/, function (_, x) { return 'ترتيب: ' + CPLang.t(x); });
+  R(/^([A-Z0-9.]{2,12}) Transactions$/, 'معاملات $1');
+  R(/^Add (Buy|Sell|Transfer In|Transfer Out|Reward)$/, function (_, k) { return 'إضافة ' + CPLang.t(k); });
+  R(/^Edit (Buy|Sell|Transfer In|Transfer Out|Reward)$/, function (_, k) { return 'تعديل ' + CPLang.t(k); });
+  R(/^\(USD, optional — turned into (.+) at the price above\)$/, '(USD، اختياري — بيتحوّل لـ $1 بالسعر اللي فوق)');
+  R(/^\(in ([A-Z0-9.]+), optional\)$/, '(بالـ $1، اختياري)');
+  R(/^(.+)% of the portfolio in stablecoins$/, function (_, v) { return n(v + '%') + ' من المحفظة في عملات مستقرة'; });
+  R(/^Last price update · added to plan (.+)$/, 'آخر تحديث للسعر · اتضافت للخطة $1');
+  R(/^Add a Buy for (.+)$/, 'إضافة شراء لـ $1');
+  R(/^Change the (buy-at percent|target amount|schedule) (?:for|of) (.+)$/, function (_, k, c) { return { 'buy-at percent': 'تعديل نسبة الدخول لـ ', 'target amount': 'تعديل الكمية المستهدفة لـ ', schedule: 'تعديل جدول ' }[k] + c; });
+  R(/^Remove (.+) from (?:the exit )?plan$/, function (s, c) { return 'حذف ' + c + (/exit/.test(s) ? ' من خطة الخروج' : ' من الخطة'); });
+  R(/^(?:DCA )?calculator for (.+)$/, 'حاسبة الشراء الدوري لـ $1');
+  R(/^Your default steps:? (.+)$/, function (_, x) { return 'خطواتك الافتراضية ' + n(x); });
+  R(/^Already following (.+) your average buy price$/, function (_, x) { return 'متابع بالفعل ' + n(x) + ' من متوسط سعر شرائك'; });
+  R(/^You can’t (sell|transfer out) (.+)$/, function (_, k, x) { return (k === 'sell' ? 'ما ينفعش تبيع ' : 'ما ينفعش تسحب ') + x; });
+  R(/^Did you mean \$(.+)\?$/, function (_, x) { return 'تقصد ' + n('$' + x) + '؟'; });
+  R(/^Opening position \(Oct-15 start\)$/, 'المركز الافتتاحي (بداية 15 أكتوبر)');
+  R(/^Holdings after: (.+)$/, function (_, x) { return 'الأصول بعدها: ' + n(x); });
+
+  A({
+    // ── Plan tabs and the four totals ──
+    'In the market': 'في السوق', 'Accumulation': 'التجميع', 'Exit Strategy': 'استراتيجية الخروج', 'Exit plan': 'خطة الخروج', 'Exit Plan': 'خطة الخروج',
+    'Total Target Value': 'إجمالي قيمة الأهداف', 'At current prices': 'بالأسعار الحالية', 'Current Holdings': 'الأصول الحالية', 'In plan': 'ضمن الخطة',
+    'Total Pending Cost': 'إجمالي التكلفة المتبقية', 'To complete plan': 'لإكمال الخطة', 'Coins Completed': 'العملات المكتملة', '— in progress': '— قيد التنفيذ',
+    'Overall Accumulation Progress': 'التقدّم الإجمالي للتجميع', 'the plan totals': 'إجماليات الخطة', 'Plan Totals': 'إجماليات الخطة',
+    'Add to Plan': 'إضافة للخطة', 'Add any coin to your plan — even one you don\'t own yet': 'ضيف أي عملة لخطتك — حتى لو لسه ما عندكش منها',
+    'No coins in your accumulation plan yet.': 'لسه مفيش عملات في خطة التجميع.', 'Click': 'اضغط', 'Tap': 'اضغط', 'to get started.': 'للبداية.', 'to Plan': 'للخطة',
+    'Add Coin to Plan': 'إضافة عملة للخطة', 'Add Coin to Accumulation Plan': 'إضافة عملة لخطة التجميع', 'Search Coin': 'ابحث عن عملة', 'Select coin': 'اختار العملة',
+    'e.g. BTC, Ethereum': 'مثلاً BTC، Ethereum', '(already in plan)': '(موجودة في الخطة)', 'In Portfolio': 'في المحفظة',
+    'Still loading — not saved': 'لسه بيحمّل — ما اتحفظش', 'Not saved — see sync status': 'ما اتحفظش — شوف حالة المزامنة', 'Up to date': 'محدّث',
+    // ── plan table / cards ──
+    'Target Amount': 'الكمية المستهدفة', 'Actual Amount': 'الكمية الحالية', 'Pending Amount': 'الكمية المتبقية', 'Buy At': 'سعر الدخول', 'Buy at %': 'سعر الدخول %',
+    'Cost to Target': 'تكلفة الوصول للهدف', 'Progress': 'التقدّم', 'Price Alert': 'تنبيه سعري', '% of Target': '% من الهدف', 'Set target': 'حدد الهدف', 'Set %': 'حدد %',
+    'Remove from plan': 'حذف من الخطة', 'No price': 'لا يوجد سعر', 'Toggle positive/negative': 'تبديل موجب / سالب', 'Price $': 'السعر $', 'Price': 'السعر',
+    'Alert when price drops to or below this value': 'نبّهني لما السعر ينزل للقيمة دي أو تحتها', 'Clear alert': 'مسح التنبيه', 'Hit!': 'تحقق!', 'Hit': 'تحقق',
+    'Target already reached!': 'الهدف اتحقق بالفعل!', 'Target hit': 'الهدف اتحقق', 'BUY NOW': 'اشترِ الآن', 'Change the target amount': 'تعديل الكمية المستهدفة',
+    'Change the buy-at % (e.g. -20 = buy 20% below the current price)': 'تعديل نسبة الدخول (مثلاً ‎-20 = الشراء تحت السعر الحالي بـ 20%)',
+    "Buy when the price is this % away from today's price. Today's price is saved as the base, so the target stays fixed until you change it.\n-20 = 20% below · 10 = 10% above · empty = none":
+      'اشتري لما السعر يبعد بالنسبة دي عن سعر النهارده. سعر النهارده بيتحفظ كأساس، فالهدف بيفضل ثابت لحد ما تغيّره.\n‎-20 = تحت بـ 20% · 10 = فوق بـ 10% · فاضي = بدون',
+    'I want to buy 20% below current price': 'عاوز أشتري تحت السعر الحالي بـ 20%', 'This does NOT affect your portfolio.': 'ده ما بيأثرش على محفظتك.',
+    'A tool to organise and follow your own plan — not financial advice.': 'أداة لتنظيم ومتابعة خطتك الخاصة — مش نصيحة مالية.',
+    'Last price update': 'آخر تحديث للسعر', '24h change': 'التغيّر في 24 ساعة', 'Open': 'فتح', 'Hide': 'إخفاء', 'Show': 'عرض', 'Enter': 'إدخال', 'Ready': 'جاهز',
+    // ── plan vs target allocation ──
+    'Plan vs target allocation': 'الخطة مقابل التوزيع المستهدف', 'Set targets ›': 'حدد الأهداف ›', 'Set targets': 'حدد الأهداف', 'Allocation ›': 'التوزيع ›',
+    '✓ On target': '✓ على الهدف', 'On target': 'على الهدف', '↓ Priority': '↓ أولوية', '↑ Over target': '↑ فوق الهدف', 'Priority': 'أولوية', 'Over target': 'فوق الهدف',
+    'Set a target allocation (Portfolio → Allocation) to see whether finishing this plan keeps your categories where you want them, and which coins to buy first.':
+      'حدد التوزيع المستهدف (المحفظة ← التوزيع) عشان تشوف هل إكمال الخطة دي هيخلي تصنيفاتك في المكان اللي عاوزه، وأنهي عملات تشتريها الأول.',
+    // ── DCA ──
+    'DCA schedule': 'جدول الشراء الدوري (DCA)', 'DCA — regular buys': 'الشراء الدوري (DCA)', 'DCA schedule (regular buys)': 'الشراء الدوري (DCA)',
+    'Dollar-Cost Averaging plan': 'خطة متوسط التكلفة (DCA)', 'Regular buy': 'شراء دوري', 'Regular buy — pick a coin': 'شراء دوري — اختار العملة', 'Next: the schedule': 'التالي: الجدول',
+    'A regular buy for any coin — it joins your plan': 'شراء دوري لأي عملة — بتدخل خطتك',
+    'No regular buys yet. Pick any coin and an amount — the Plan shows each buy day, and Telegram reminds you.': 'لسه مفيش شراء دوري. اختار أي عملة ومبلغ — والخطة هتعرض كل يوم شراء، وتليجرام هيفكّرك.',
+    'Amount each time (USD)': 'المبلغ كل مرة (USD)', 'How often': 'كل قد إيه', 'Weekly': 'كل أسبوع', 'Every 2 weeks': 'كل أسبوعين', 'Monthly': 'كل شهر',
+    'Day': 'اليوم', 'Day of the month': 'يوم في الشهر', 'Day of the week': 'يوم في الأسبوع',
+    'Sunday': 'الأحد', 'Monday': 'الاثنين', 'Tuesday': 'الثلاثاء', 'Wednesday': 'الأربعاء', 'Thursday': 'الخميس', 'Friday': 'الجمعة', 'Saturday': 'السبت',
+    'Show me over (months)': 'اعرضلي على مدة (شهور)', 'Coins each buy': 'العملات في كل شراء', 'Per month': 'في الشهر', 'Total Coins': 'إجمالي العملات', 'Total Invested': 'إجمالي المستثمر',
+    'First buy': 'أول شراء', 'Time to reach target': 'وقت الوصول للهدف',
+    'Save it as your schedule: the Plan shows each buy day and whether you kept it, and Telegram reminds you on the day.': 'احفظه كجدول ليك: الخطة هتعرض كل يوم شراء وهل التزمت بيه، وتليجرام هيفكّرك في يومه.',
+    'Remove schedule': 'حذف الجدول', 'Save schedule': 'حفظ الجدول', '✓ Bought': '✓ تم الشراء', 'Today': 'النهارده', 'Next': 'الجاي', 'Missed': 'فات', 'Was due': 'كان ميعاده', 'target reached': 'وصلت للهدف',
+    'Change the schedule': 'تعديل الجدول', 'Please select a coin first.': 'اختار عملة الأول.',
+    'Searching CoinGecko': 'جاري البحث في CoinGecko', 'Search failed': 'البحث فشل', 'You are offline — search needs internet.': 'إنت بدون إنترنت — البحث محتاج إنترنت.',
+    'No coins found. Try a different search.': 'مفيش عملات. جرّب بحث تاني.', "Type a coin name or symbol — any coin, even one you don't own yet.": 'اكتب اسم العملة أو رمزها — أي عملة، حتى لو ما عندكش منها.',
+    'CoinGecko is busy — wait a few seconds and type again.': 'CoinGecko مشغول — استنى ثواني واكتب تاني.',
+    // ── Exit Strategy ──
+    'Macro Exit Indicators': 'مؤشرات الخروج الكبرى', 'Macro exit indicators': 'مؤشرات الخروج الكبرى', 'Edit targets': 'تعديل الأهداف', 'Signals Hit': 'الإشارات المتحققة',
+    'USDT Dominance': 'هيمنة USDT', 'ETH / BTC': 'ETH / BTC', 'Waiting': 'انتظار', 'Close': 'إغلاق', 'Reached': 'تحقق', 'Below range': 'تحت النطاق', 'Above range': 'فوق النطاق', 'In range': 'داخل النطاق',
+    'BTC.D at or under (%)': 'هيمنة BTC عند أو تحت (%)', 'USDT.D range — from (%)': 'نطاق هيمنة USDT — من (%)', 'USDT.D range — to (%)': 'نطاق هيمنة USDT — إلى (%)', 'ETH / BTC at or over': 'ETH / BTC عند أو فوق',
+    'Your own levels — the page compares, it doesn’t predict the top.': 'مستوياتك إنت — الصفحة بتقارن، مش بتتوقع القمة.',
+    'Cash-out Progress': 'تقدّم جني الأرباح', 'Cash and stablecoins': 'الكاش والعملات المستقرة', 'in stablecoins': 'في عملات مستقرة', 'Realized profit': 'الربح المحقق',
+    'Exit steps done': 'خطوات الخروج المنفذة', 'Projected cash-out': 'جني الأرباح المتوقع', 'Exit plan steps': 'خطوات خطة الخروج',
+    'No coins in your exit plan yet.': 'لسه مفيش عملات في خطة الخروج.', 'Add to Exit Plan': 'إضافة لخطة الخروج', 'to Exit Plan': 'لخطة الخروج',
+    'and choose the coins you want to take profit on.': 'واختار العملات اللي عاوز تجني أرباحها.',
+    'Search the exit plan': 'ابحث في خطة الخروج', 'Every coin you hold is already in the exit plan.': 'كل العملات اللي معاك موجودة بالفعل في خطة الخروج.',
+    'Your coins and transactions are not touched.': 'عملاتك ومعاملاتك مش هتتلمس.', 'Remove from the exit plan': 'حذف من خطة الخروج',
+    'Plan order': 'ترتيب الخطة', 'Asset A–Z': 'العملة أ–ي', 'Price vs average': 'السعر مقابل المتوسط', 'Closest to TP1': 'الأقرب لـ TP1', 'Closest to TP2': 'الأقرب لـ TP2', 'Closest to TP3': 'الأقرب لـ TP3',
+    'Cash out': 'جني الأرباح', 'Net profit': 'صافي الربح', 'Sort': 'ترتيب', 'Value': 'القيمة',
+    'Target hit — sell': 'الهدف اتحقق — بيع', 'Moonbag kept': 'Moonbag محفوظ', 'Set a price': 'حدد سعر', 'Plan amount': 'كمية الخطة', 'Average buy price': 'متوسط سعر الشراء',
+    'Price you set': 'السعر اللي حددته', 'Sell %': 'نسبة البيع %', 'Tap a row to edit': 'اضغط على أي صف للتعديل',
+    'You now hold': 'معاك دلوقتي', 'Bought since': 'اشتريت من وقتها', 'Sold since': 'بعت من وقتها',
+    'Bought after the coin joined the plan — added to the plan amount': 'اتشترت بعد ما العملة دخلت الخطة — اتضافت لكمية الخطة',
+    'Follows your average buy price — buy more and it moves with it': 'بيتبع متوسط سعر شرائك — لو اشتريت تاني بيتحرك معاه',
+    // ── Add / Edit transaction ──
+    'Add Buy': 'إضافة شراء', 'Add Sell': 'إضافة بيع', 'Add Transfer In': 'إضافة إيداع', 'Add Transfer Out': 'إضافة سحب', 'Add Reward': 'إضافة مكافأة',
+    'Amount bought': 'الكمية المشتراة', 'Amount sold': 'الكمية المباعة', 'Amount transferred in': 'الكمية المودَعة', 'Amount transferred out': 'الكمية المسحوبة', 'Amount received': 'الكمية المستلمة',
+    'Sell price per coin (USD)': 'سعر بيع العملة (USD)', 'Cost / value per coin at transfer (USD)': 'التكلفة / القيمة للعملة وقت التحويل (USD)',
+    'Selling fee': 'رسوم البيع', '(USD, optional — subtracted from Realized Profit)': '(USD، اختياري — بتتخصم من الربح المحقق)',
+    'Raises your holdings and updates the average buy price.': 'بيزوّد أصولك ويحدّث متوسط سعر الشراء.',
+    'Lowers your holdings at the current average cost and records realized profit/loss.': 'بيقلل أصولك بمتوسط التكلفة الحالي ويسجّل الربح / الخسارة المحققة.',
+    'Coins arriving from outside this portfolio. The cost per coin goes into your average buy price (use your original purchase price, or 0 for mined/free coins). The fee is deducted from the amount received.':
+      'عملات جاية من برّه المحفظة دي. تكلفة العملة بتدخل في متوسط سعر شرائك (استخدم سعر شرائك الأصلي، أو 0 للعملات المعدّنة / المجانية). والرسوم بتتخصم من الكمية المستلمة.',
+    'Staking, mining or airdrop coins that arrived in your wallet. They come in at $0 cost, so your holdings go up and the average buy price goes down — the reward is pure profit.':
+      'عملات Staking أو تعدين أو Airdrop وصلت محفظتك. بتدخل بتكلفة صفر، فأصولك بتزيد ومتوسط سعر الشراء بيقل — والمكافأة ربح صافي.',
+    'Coins leaving this portfolio (e.g. to another wallet you don’t track). Average buy price is unchanged and no profit/loss is recorded. The fee is also deducted.':
+      'عملات خارجة من المحفظة دي (مثلاً لمحفظة تانية مش متابعها). متوسط سعر الشراء ما بيتغيرش ومفيش ربح / خسارة بتتسجل. والرسوم بتتخصم كمان.',
+    'Set network & where held': 'حدد الشبكة ومكان الحفظ', 'Network & where held — used by the wallet check': 'الشبكة ومكان الحفظ — بتُستخدم في مطابقة المحافظ',
+    'USDC (new)': 'USDC (جديدة)', '(new)': '(جديدة)', 'Add the money to USDT': 'إضافة الفلوس لـ USDT', 'Not enough': 'مش كفاية', 'now': 'الآن',
+    'Save changes': 'حفظ التعديلات', 'Edit transaction': 'تعديل المعاملة', 'Change transaction': 'تعديل المعاملة', 'Delete transaction': 'حذف المعاملة', 'Delete transaction?': 'حذف المعاملة؟',
+    'Holdings and averages are worked out again.': 'الأصول والمتوسطات بتتحسب من جديد.', 'Holdings, average buy price and profit are worked out again from your history.': 'الأصول ومتوسط سعر الشراء والربح بيتحسبوا من جديد من سجلك.',
+    'Holdings and average cost will be recalculated automatically on all devices.': 'الأصول ومتوسط التكلفة هيتحسبوا تلقائياً على كل الأجهزة.',
+    'Symbol is required.': 'الرمز مطلوب.', 'Pick the coin from the search list (or type only its symbol, e.g. XRP).': 'اختار العملة من قايمة البحث (أو اكتب رمزها بس، مثلاً XRP).',
+    'Enter a valid quantity.': 'اكتب كمية صحيحة.', 'Enter a valid buy price.': 'اكتب سعر شراء صحيح.', 'Enter a quantity greater than 0.': 'اكتب كمية أكبر من صفر.', 'Enter a price greater than 0.': 'اكتب سعر أكبر من صفر.',
+    'Fee cannot be negative.': 'الرسوم ما ينفعش تكون بالسالب.', 'Fee must be smaller than the amount transferred in.': 'الرسوم لازم تكون أقل من الكمية المودَعة.', 'Date cannot be in the future.': 'التاريخ ما ينفعش يكون في المستقبل.',
+    'Enter a valid date.': 'اكتب تاريخ صحيح.', 'The start date cannot be in the future.': 'تاريخ البداية ما ينفعش يكون في المستقبل.', 'The start date can be at most 5 years ago.': 'تاريخ البداية أقصاه من 5 سنين.',
+    'Enter the amount you have staked.': 'اكتب الكمية اللي عاملها Staking.', 'Enter the APY, e.g. 6.5 for 6.5% a year.': 'اكتب العائد السنوي APY، مثلاً 6.5 يعني 6.5% في السنة.',
+    'Enter a quantity and price (0 or more).': 'اكتب الكمية والسعر (صفر أو أكتر).',
+    'CoinGecko ID looks wrong — pick the coin from the search list.': 'معرّف CoinGecko شكله غلط — اختار العملة من قايمة البحث.',
+    'CoinMarketCap page: use lowercase letters, digits and dashes only.': 'صفحة CoinMarketCap: استخدم حروف إنجليزي صغيرة وأرقام وشرطات بس.',
+    'Add without live price?': 'إضافة من غير سعر مباشر؟', 'Add anyway': 'أضف برضه',
+    'Staking reward': 'مكافأة Staking', 'Mining reward': 'مكافأة تعدين', 'Change staking': 'تعديل الـ Staking', 'Amount staked': 'الكمية في الـ Staking', 'Staking since': 'Staking من تاريخ',
+    'Start staking': 'بدء الـ Staking', 'Stop staking': 'إيقاف الـ Staking', 'Staking reward · auto': 'مكافأة Staking · تلقائي', 'Not a reward (plain Transfer In)': 'مش مكافأة (إيداع عادي)',
+    'Could not change it': 'تعذّر التعديل', 'Could not stop it': 'تعذّر الإيقاف', 'staking': 'Staking', 'e.g. SOL staking (Tangem)': 'مثلاً SOL staking (Tangem)',
+    'This coin is not on automatic staking': 'العملة دي مش على Staking تلقائي', 'Enter the amount staked and an APY above 0%': 'اكتب الكمية في الـ Staking وعائد سنوي أكبر من 0%',
+    'Paid': 'المدفوع', 'Pays': 'بيدفع', 'Adds': 'بيضيف', 'Arrives in your wallet': 'هيوصل محفظتك', '· cost added': '· التكلفة اتضافت', '$0 cost': 'تكلفة صفر',
+    'A later sell/transfer would then exceed your holdings.': 'وقتها بيع / سحب بعد كده هيبقى أكبر من أصولك.',
+    // ── a coin's page & History ──
+    'Transactions': 'المعاملات', 'Total Bought': 'إجمالي الشراء', 'Total Sold': 'إجمالي البيع', 'Profit': 'ربح', 'Loss': 'خسارة',
+    'Opening position': 'المركز الافتتاحي', 'Manual edit': 'تعديل يدوي', 'Wallet check': 'مطابقة المحفظة', 'Mining reward · wallet check': 'مكافأة تعدين · مطابقة المحفظة',
+    'You hold none of this coin now': 'ما عندكش من العملة دي دلوقتي', 'BTC is always Hold': 'البيتكوين دايماً احتفاظ', 'Typing': 'بتكتب', 'Saved': 'اتحفظ', 'Not saved —': 'ما اتحفظش —',
+    'Category —': 'التصنيف —', 'Use default': 'استخدم الافتراضي', 'Rename': 'تغيير الاسم',
+    'New name for this category — every coin in it, every filter and chart follow.': 'اسم جديد للتصنيف ده — كل عملاته وكل فلتر ورسم هيتبعوه.',
+    'Name of the new category. Move coins into it with Change Category.': 'اسم التصنيف الجديد. انقل العملات له من تغيير التصنيف.',
+    'Rewards & Mining': 'المكافآت والتعدين', 'Target Allocation': 'التوزيع المستهدف', 'DCA Schedule (Regular Buys)': 'الشراء الدوري (DCA)', 'Plan vs Target Allocation': 'الخطة مقابل التوزيع المستهدف', 'Exit Plan Steps': 'خطوات خطة الخروج',
+    'Initial position': 'المركز الافتتاحي', 'Re-added coin': 'عملة اتضافت تاني', 'Removed from portfolio': 'اتشالت من المحفظة', 'Recovered from backup': 'اترجعت من النسخة الاحتياطية',
   });
 })();
