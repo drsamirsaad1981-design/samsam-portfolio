@@ -35,6 +35,13 @@
   R(/^Building from real prices… (\d+) \/ (\d+) coins$/, function (_, a, b) { return 'جاري البناء من الأسعار الفعلية… ' + a + ' / ' + b + ' عملة'; });
   R(/^from (\d+) sells?$/, function (_, a) { return 'من ' + a + (a === '1' ? ' عملية بيع' : ' عمليات بيع'); });
   R(/^Cost: (.+)$/, function (_, v) { return 'التكلفة: ' + n(v); });
+  R(/^(.+) · (.+) added$/, function (_, a, b) { return n(a) + ' · مضاف ' + n(b); });
+  R(/^Value change (\S+) = (\S+) from prices, (\S+) (added|taken out)$/, function (_, a, b, c, w) { return 'تغيّر القيمة ' + n(a) + ' = ' + n(b) + ' من حركة الأسعار، ' + n(c) + (w === 'added' ? ' مضاف' : ' مسحوب'); });
+  R(/^(.+) realized ([+−-]) (.+) unrealized = (.+)$/, function (_, a, op, b, c) { return 'محقق ' + n(a) + ' ' + op + ' غير محقق ' + n(b) + ' = ' + n(c); });
+  R(/^(\d+) sells?(?: · after (.+) selling fees)?$/, function (_, a, f) { return a + (a === '1' ? ' عملية بيع' : ' عمليات بيع') + (f ? ' · بعد خصم رسوم بيع ' + n(f) : ''); });
+  R(/^(\d+) of (\d+)$/, '$1 من $2');
+  R(/^categories on target · band ±([\d.]+) pts$/, 'تصنيفات على الهدف · الهامش ±$1 نقطة');
+  R(/^(\d+) to rebalance$/, function (_, a) { return a + ' محتاج' + (a === '1' ? '' : 'ين') + ' إعادة توازن'; });
   R(/^(.+) · (.+) taken out$/, function (_, a, b) { return n(a) + ' · مسحوب ' + n(b); });
   R(/^Tap for details — Realized (.+) \+ Unrealized (.+)$/, function (_, a, b) { return 'اضغط للتفاصيل — محقق ' + n(a) + ' + غير محقق ' + n(b); });
   R(/^(Best|Worst) Performer: (.+)$/, function (_, w, v) { return (w === 'Best' ? 'الأفضل أداءً: ' : 'الأسوأ أداءً: ') + n(v); });
@@ -131,7 +138,7 @@
     "Today's Movers": 'الأكثر حركة اليوم', '24h · All Coins': '24 ساعة · كل العملات', 'Best Performer': 'الأفضل أداءً', 'Worst Performer': 'الأسوأ أداءً',
     'Best and worst performer appear once live prices load.': 'الأفضل والأسوأ أداءً يظهروا أول ما الأسعار المباشرة تتحمّل.',
     'Appears once prices load.': 'يظهر بعد تحميل الأسعار.', 'Appears once the BTC price loads.': 'يظهر بعد تحميل سعر البيتكوين.',
-    'Top Performers': 'الأفضل أداءً', 'Top Losers': 'الأكثر خسارة', 'Top Performers · USD': 'الأفضل أداءً · USD',
+    'Top Gainers': 'الأكثر ربحاً', 'Top Performers': 'الأفضل أداءً', 'Top Losers': 'الأكثر خسارة', 'Top Performers · USD': 'الأفضل أداءً · USD',
 
     // ── charts ──
     'Holdings': 'الأصول', 'Holdings — open the Portfolio Value chart (Performance)': 'الأصول — فتح رسم قيمة المحفظة (الأداء)',
@@ -181,7 +188,8 @@
     'Bitcoin': 'بيتكوين', 'Layer 1 Blockchains': 'شبكات الطبقة الأولى (L1)', 'Layer 2 Blockchains': 'شبكات الطبقة الثانية (L2)',
     'Layer 0 & Interoperability': 'الطبقة صفر والربط بين الشبكات', 'AI & DePIN': 'الذكاء الاصطناعي و DePIN', 'DeFi & RWA': 'التمويل اللامركزي و RWA',
     'Oracles & Middleware': 'الأوراكل والبنية الوسيطة', 'Meme & Utility Tokens': 'عملات الميم والمنفعة', 'Web3 & Gaming': 'Web3 والألعاب', 'Launchpad': 'منصات الإطلاق',
-    'Stablecoins': 'العملات المستقرة',
+    'Stablecoins': 'العملات المستقرة', 'Stablecoin': 'عملات مستقرة', 'Layer 1': 'الطبقة الأولى (L1)', 'Layer 2': 'الطبقة الثانية (L2)', 'Layer 0': 'الطبقة صفر (L0)',
+    'DePIN': 'DePIN', 'AI': 'الذكاء الاصطناعي', 'Memes': 'عملات الميم', 'Meme': 'عملات الميم', 'Gaming': 'الألعاب', 'Oracles': 'الأوراكل', 'Privacy': 'الخصوصية', 'Exchange Tokens': 'عملات المنصات',
 
     // ── AI report window ──
     'AI Analysis Report —': 'تقرير تحليل AI —', 'Claude AI': 'Claude AI', 'Regenerate': 'إعادة الإنشاء',
@@ -220,6 +228,20 @@
     'Rebalance with': 'إعادة التوازن بـ', 'New money': 'فلوس جديدة', 'Full rebalance': 'إعادة توازن كاملة', 'Amount to invest': 'المبلغ المراد استثماره',
     'Buy and trim so every group is on target (your total stays the same)': 'شراء وتخفيف لحد ما كل مجموعة توصل لهدفها (الإجمالي بيفضل زي ما هو)',
     'Back to Holdings': 'رجوع للأصول',
+
+    // ── All Time Profit window ──
+    'Realized Profit': 'ربح محقق', 'No sells yet': 'لا يوجد بيع بعد',
+    'Coins you still hold, at today’s price': 'العملات اللي لسه معاك، بسعر النهارده', 'What the coins you hold cost (fees included)': 'تكلفة العملات اللي معاك (شامل الرسوم)',
+    'Realized Profit + Unrealized Profit': 'الربح المحقق + الربح غير المحقق', '(added up over every sell)': '(مجموع كل عمليات البيع)',
+    '(Sell Price − Avg Buy Price) × Amount Sold − Selling Fee': '(سعر البيع − متوسط سعر الشراء) × الكمية المباعة − رسوم البيع',
+    '(Current Price − Avg Buy Price) × Amount Held': '(السعر الحالي − متوسط سعر الشراء) × الكمية المحتفظ بها',
+    'Avg Buy Price × Amount Held': 'متوسط سعر الشراء × الكمية المحتفظ بها', 'Avg Buy Price': 'متوسط سعر الشراء', '(updated on every buy)': '(بيتحدّث مع كل شراء)',
+    '(Amount Held × Avg Buy Price + Buy Price × Amount Bought + Buying Fee) ÷ (Amount Held + Amount Bought)': '(الكمية المحتفظ بها × متوسط سعر الشراء + سعر الشراء × الكمية المشتراة + رسوم الشراء) ÷ (الكمية المحتفظ بها + الكمية المشتراة)',
+    '(on everything invested — coins held and coins already sold)': '(على كل اللي اتستثمر — العملات اللي معاك واللي اتباعت)',
+    'All Time Profit ÷ (Cost Basis + Cost of Coins Sold) × 100': 'إجمالي الربح ÷ (تكلفة الشراء + تكلفة العملات المباعة) × 100',
+    'Sells don’t change the Avg Buy Price. Transfers in add coins at the price you enter; transfers out and network fees only lower the amount held.':
+      'البيع ما بيغيّرش متوسط سعر الشراء. الإيداع بيضيف عملات بالسعر اللي بتكتبه، والسحب ورسوم الشبكة بيقللوا الكمية بس.',
+    'Invest': 'استثمر', 'without selling anything': 'من غير ما تبيع حاجة', 'Edit': 'تعديل',
 
     // ── Performance page ──
     'All Time Profit Breakdown': 'تفاصيل إجمالي الربح', 'Unrealized': 'غير محقق', 'Realized': 'محقق', 'from sells': 'من عمليات البيع', '+ Unrealized': '+ غير محقق',

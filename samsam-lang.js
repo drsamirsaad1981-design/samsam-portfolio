@@ -16,8 +16,8 @@
     'html.cp-ar svg,html.cp-ar canvas{direction:ltr}' +                                   // charts read left → right (time axis), like every trading app
     'html.cp-ar input[type=number],html.cp-ar input[type=date],html.cp-ar input[type=datetime-local],html.cp-ar input[type=email],html.cp-ar input[inputmode=decimal]{direction:ltr;text-align:right}' +
     'html.cp-ar svg:has(>path[d="m9 6 6 6-6 6"]),html.cp-ar svg:has(>path[d="m15 18-6-6 6-6"]){scale:-1 1}' +   // › and ‹ point the other way
-    'html.cp-ar .brand-name,html.cp-ar .cp-brand-n{direction:ltr}' +
-    'html.cp-ar code,html.cp-ar pre{direction:ltr;unicode-bidi:isolate}';
+    'html.cp-ar .brand-name,html.cp-ar .cp-brand-n,html.cp-ar .mini-name{direction:ltr}' +
+    'html.cp-ar pre{direction:ltr;unicode-bidi:isolate}html.cp-ar code{unicode-bidi:plaintext;font-family:inherit;letter-spacing:0}';   // a formula reads in its own language's direction
   try { if (localStorage.getItem(KEY) === 'ar') lang = 'ar'; } catch (_) {}
   var AR = lang === 'ar', H = document.documentElement;
   if (AR) {
@@ -53,14 +53,17 @@
     return lead + m[1] + v + m[3] + tail;
   }
 
-  var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, CODE: 1, PRE: 1, NOSCRIPT: 1, CANVAS: 1, svg: 1 };
+  var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, PRE: 1, NOSCRIPT: 1, CANVAS: 1, svg: 1 };
   function skipEl(el) {
     for (var e = el; e && e.nodeType === 1; e = e.parentNode) {
       if (SKIP[e.nodeName] || e.isContentEditable) return true;
-      if (e.hasAttribute('data-no-tr') || (e.classList && (e.classList.contains('notranslate') || e.classList.contains('brand-name') || e.classList.contains('cp-brand-n')))) return true;
+      if (e.hasAttribute('data-no-tr') || (e.classList && (e.classList.contains('notranslate') || keepCls(e)))) return true;
     }
     return false;
   }
+  // the name "Cute Portfolio" (big header, the small one when scrolled, page headers) is never translated
+  var KEEP = ['brand-name', 'cp-brand-n', 'mini-name'];
+  function keepCls(e) { for (var i = 0; i < KEEP.length; i++) if (e.classList.contains(KEEP[i])) return true; return false; }
   var ATTRS = ['placeholder', 'title', 'aria-label', 'data-tip', 'alt'];
   function doText(n) { if (n.parentNode && !skipEl(n.parentNode)) { var v = tr(n.nodeValue); if (v != null && v !== n.nodeValue) n.nodeValue = v; } }
   function doAttrs(el) {
@@ -73,7 +76,7 @@
     if (root.nodeType !== 1 && root.nodeType !== 9 && root.nodeType !== 11) return;
     if (root.nodeType === 1) { if (skipEl(root)) return; doAttrs(root); }
     var it = document.createTreeWalker(root, 5 /* elements + text */, {
-      acceptNode: function (n) { return n.nodeType === 1 && (SKIP[n.nodeName] || n.hasAttribute('data-no-tr') || n.classList.contains('notranslate') || n.classList.contains('brand-name') || n.classList.contains('cp-brand-n')) ? 2 /* reject subtree */ : 1; }
+      acceptNode: function (n) { return n.nodeType === 1 && (SKIP[n.nodeName] || n.hasAttribute('data-no-tr') || n.classList.contains('notranslate') || keepCls(n)) ? 2 /* reject subtree */ : 1; }
     }), n;
     while ((n = it.nextNode())) { if (n.nodeType === 3) { var v = tr(n.nodeValue); if (v != null && v !== n.nodeValue) n.nodeValue = v; } else doAttrs(n); }
   }
