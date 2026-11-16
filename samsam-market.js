@@ -1,4 +1,5 @@
-// samsam-market.js — Market Hub data (no API keys): CoinGecko public API + alternative.me Fear & Greed.
+// samsam-market.js — Market Hub data (no API keys): CoinGecko public API; Fear & Greed and the Altcoin Season Index are
+// CoinMarketCap's own (saved by GitHub with the snapshot), alternative.me's Fear & Greed only as a fallback.
 //   SamsamMarket.global()        → { mcap, mcapCh24, vol, dom: { btc, eth, usdt }, coins, t }
 //   SamsamMarket.fng()           → { value, label, prev, t }
 //   SamsamMarket.top()           → top 150 coins by market cap (the page shows 100 without stablecoins) (price, 24h %, 30d %, 7d + 24h sparklines)
@@ -109,7 +110,15 @@
         });
       }, force, snapPart('global'));
     },
+    // Fear & Greed: CoinMarketCap's (the number CoinMarketCap and Binance show), saved by GitHub with each snapshot (every
+    // ~30 min — it moves slowly). alternative.me's live one only when the snapshot doesn't have CoinMarketCap's.
     fng: function (force) {
+      return snapPart('fng')().catch(function () { return null; }).then(function (s) {
+        if (s && s.data && s.data.src === 'cmc' && Date.now() - s.t < 3 * 3600e3) return { data: s.data, t: s.t, stale: false };
+        return API._fngLive(force);
+      });
+    },
+    _fngLive: function (force) {
       return cached('fng', TTL.fng, function () {
         return json('https://api.alternative.me/fng/?limit=8').then(function (j) {
           var a = (j && j.data) || []; if (!a.length) throw new Error('No Fear & Greed data');

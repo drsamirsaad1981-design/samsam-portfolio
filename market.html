@@ -15,19 +15,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-ui.js?v=202611162115"></script>
-<script src="samsam-hints.js?v=202611162115"></script>
-<script src="samsam-vault.js?v=202611162115"></script>
-<script src="samsam-labels.js?v=202611162115"></script>
-<script src="samsam-taxonomy.js?v=202611162115"></script>
-<script src="samsam-coins.js?v=202611162115"></script>
-<script src="samsam-import.js?v=202611162115"></script>
-<script src="samsam-wallets.js?v=202611162115"></script>
-<script src="samsam-rewards.js?v=202611162115"></script>
-<script src="samsam-settings.js?v=202611162115"></script>
-<script src="samsam-dropdown.js?v=202611162115"></script>
-<script src="samsam-add.js?v=202611162115"></script>
-<script src="samsam-market.js?v=202611162115"></script>
+<script src="samsam-ui.js?v=202611162203"></script>
+<script src="samsam-hints.js?v=202611162203"></script>
+<script src="samsam-vault.js?v=202611162203"></script>
+<script src="samsam-labels.js?v=202611162203"></script>
+<script src="samsam-taxonomy.js?v=202611162203"></script>
+<script src="samsam-coins.js?v=202611162203"></script>
+<script src="samsam-import.js?v=202611162203"></script>
+<script src="samsam-wallets.js?v=202611162203"></script>
+<script src="samsam-rewards.js?v=202611162203"></script>
+<script src="samsam-settings.js?v=202611162203"></script>
+<script src="samsam-dropdown.js?v=202611162203"></script>
+<script src="samsam-add.js?v=202611162203"></script>
+<script src="samsam-market.js?v=202611162203"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -519,12 +519,12 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     <div id="mkRows"></div>
     <div id="mkMore" class="mk-more"></div>
   </section>
-  <p class="mk-src">Prices: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> (live, plus a snapshot every ~30 min) · coins 101–500 topped up from Binance · Coin pages: CoinMarketCap (CoinGecko for coins it doesn't list) · Predictions: CoinCodex · ETF flows: SoSoValue · Fear &amp; Greed: <a href="https://alternative.me/crypto/fear-and-greed-index/" target="_blank" rel="noopener">alternative.me</a> · Altcoin Season: the top 100 coins (no stablecoins / wrapped / staked) vs BTC over the last 90 days, the CoinMarketCap method.</p>
+  <p class="mk-src">Prices: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> (live, plus a snapshot every ~30 min) · coins 101–500 topped up from Binance · Coin pages: CoinMarketCap (CoinGecko for coins it doesn't list) · Predictions: CoinCodex · ETF flows: SoSoValue · Fear &amp; Greed and the Altcoin Season Index: <a href="https://coinmarketcap.com/charts/" target="_blank" rel="noopener">CoinMarketCap</a> (its own indexes — the numbers CoinMarketCap, Binance and CoinGlass show).</p>
 </main>
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611162115"></script>
+<script type="module" src="samsam-cloud.js?v=202611162203"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';

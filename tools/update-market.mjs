@@ -30,6 +30,16 @@ const histBudget = Date.now() + (process.env.CG_FAST ? 20e3 : 4 * 60e3);   // hi
 const API = process.env.CG_API || 'https://api.coingecko.com/api/v3';
 const BN = process.env.BN_API || 'https://data-api.binance.vision/api/v3';
 const FNG = process.env.FNG_API || 'https://api.alternative.me/fng/?limit=2';
+// CoinMarketCap's own Fear & Greed and Altcoin Season Index (the numbers CoinMarketCap and Binance show) — its keyless
+// public API (no key, cached by CoinMarketCap: Fear & Greed every 15 s, the Altcoin Season Index every 15 minutes)
+const CMC_PUB = process.env.CMC_PUB || 'https://pro-api.coinmarketcap.com/public-api';
+async function cmc(p) {
+  const j = await get(CMC_PUB + p, 2);
+  const ok = j && j.data && (!j.status || +j.status.error_code === 0);
+  if (!ok) log('cmc', p, 'no answer', j && j.status ? JSON.stringify(j.status).slice(0, 160) : '');
+  return ok ? j.data : null;
+}
+const fngLabel = v => v < 20 ? 'Extreme Fear' : v < 40 ? 'Fear' : v < 60 ? 'Neutral' : v < 80 ? 'Greed' : 'Extreme Greed';   // CoinMarketCap's bands
 const sleep = ms => new Promise(r => setTimeout(r, process.env.CG_FAST ? Math.min(ms, 50) : ms));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), '[market]', ...a);
 
@@ -99,10 +109,20 @@ async function main() {
     snap.parts.global = now; log('global ok');
   } else log('global: no answer, kept the last one');
 
-  const f = await get(FNG.replace('limit=2', 'limit=8'), 2);
-  const a = (f && f.data) || [];
-  if (a.length) { snap.fng = { value: +a[0].value, label: a[0].value_classification, prev: a[1] ? +a[1].value : null, week: a[7] ? +a[7].value : null }; snap.parts.fng = now; log('fng', snap.fng.value); }
-  else log('fng: no answer, kept the last one');
+  // Fear & Greed: CoinMarketCap's (what CoinMarketCap and Binance show); alternative.me's only when it doesn't answer
+  const cf = await cmc('/v3/fear-and-greed/latest'), ch = await cmc('/v3/fear-and-greed/historical?start=1&limit=10');
+  if (cf && cf.value != null) {
+    const days = (Array.isArray(ch) ? ch : []).filter(x => x && x.value != null).sort((x, y) => Date.parse(y.timestamp) - Date.parse(x.timestamp));
+    const today0 = Math.floor(Date.now() / DAY), dayOf = x => Math.floor(Date.parse(x.timestamp) / DAY);
+    const back = n => { const r = days.find(x => dayOf(x) === today0 - n); return r ? +r.value : null; };
+    const v = Math.round(+cf.value);
+    snap.fng = { value: v, label: fngLabel(v), prev: back(1), week: back(7), src: 'cmc' }; snap.parts.fng = now; log('fng (CoinMarketCap)', v);
+  } else {
+    const f = await get(FNG.replace('limit=2', 'limit=8'), 2);
+    const a = (f && f.data) || [];
+    if (a.length) { snap.fng = { value: +a[0].value, label: a[0].value_classification, prev: a[1] ? +a[1].value : null, week: a[7] ? +a[7].value : null, src: 'alternative.me' }; snap.parts.fng = now; log('fng (alternative.me)', snap.fng.value); }
+    else log('fng: no answer, kept the last one');
+  }
 
   // Binance bStocks (tokenized US stocks: NVIDIA, Tesla, Circle…) — CoinGecko's "bStocks Ecosystem" category, for the
   // Telegram bot's Market (best / worst 5). Kept from the last run when CoinGecko doesn't answer.
@@ -121,13 +141,25 @@ async function main() {
     snap.parts.sectors = now; log('sectors', snap.sectors.length);
   } else { if (old.sectors) snap.sectors = old.sectors; log('sectors: no answer, kept the last one'); }
 
-  try { const alt = await altSeason(all, snap.global); if (alt) { snap.alt = alt; snap.parts.alt = now; } else if (old.alt) snap.alt = old.alt; }
-  catch (e) { log('alt season:', e.message); if (old.alt) snap.alt = old.alt; }
+  // Altcoin Season: CoinMarketCap's official index (the number CoinMarketCap / CoinGlass show) — and the page's own
+  // breakdown (which coins beat BTC, the history) worked out with CoinMarketCap's own top 100, matched to CoinGecko's prices
+  const ca = await cmc('/v1/altcoin-season-index/latest');
+  const official = ca && ca.altcoin_index != null ? Math.round(+ca.altcoin_index) : null;
+  if (official != null) log('alt season (CoinMarketCap):', official);
+  let order = null;
+  try { order = await cmcTop100(all.concat(big)); } catch (e) { log('cmc top 100:', e.message); }
+  try {
+    const alt = await altSeason(all.concat(big.filter(r => !all.some(t => t.id === r.id))), snap.global, order, official);
+    const base = alt || old.alt || null;
+    if (official != null) { snap.alt = { ...(base || {}), value: official, label: seasonLabel(official), ready: true, src: 'cmc', own: alt && alt.value != null ? alt.value : null, at: ca.snapshot_time || now }; snap.parts.alt = now; }
+    else if (alt) { snap.alt = { ...alt, src: 'own' }; snap.parts.alt = now; }
+    else if (old.alt) snap.alt = old.alt;
+  } catch (e) { log('alt season:', e.message); if (official != null) { snap.alt = { ...(old.alt || {}), value: official, label: seasonLabel(official), ready: true, src: 'cmc' }; snap.parts.alt = now; } else if (old.alt) snap.alt = old.alt; }
 
   if (!snap.top.length && !snap.global) { log('nothing to save yet'); return; }
   fs.writeFileSync(FILE, JSON.stringify(snap));
   log('wrote', FILE);
-  try { await links(snap.top.concat(big.filter(r => !snap.top.some(t => t.id === r.id)))); } catch (e) { log('links:', e.message); }
+  if (!process.env.NO_LINKS) try { await links(snap.top.concat(big.filter(r => !snap.top.some(t => t.id === r.id)))); } catch (e) { log('links:', e.message); }   // (NO_LINKS: tests)
 }
 
 // ── Links that open the right page for every coin (m/links.json) ──
@@ -137,7 +169,7 @@ async function main() {
 //   fut: [SYM, …]                                coins with perpetual futures (OKX, Hyperliquid, Gate, Bitget, KuCoin, MEXC or BingX) — CoinGlass has a
 //        Liquidation Map only for those
 // Any part that fails keeps the last one.
-const CMC_LIST = 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?sortBy=market_cap&sortType=desc&convert=USD&cryptoType=all&tagType=all&audited=false';
+const CMC_LIST = process.env.CMC_LIST || 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?sortBy=market_cap&sortType=desc&convert=USD&cryptoType=all&tagType=all&audited=false';
 const CC_API = process.env.CC_API || 'https://coincodex.com/api/v1/assets/get_asset_list';
 async function links(top) {
   const FILE_L = path.join(OUT, 'links.json');
@@ -258,11 +290,36 @@ function lastPrice(id) {
   } catch (_) {}
   return null;
 }
-async function altSeason(all, glob) {
+// CoinMarketCap's top 100 altcoins (its order, no stablecoins / wrapped / staked — its own tags and the app's rule), each
+// matched to CoinGecko's row (same ticker, market cap within ×2 — tickers are reused). null when it doesn't answer or too
+// few match: then CoinGecko's own order is used.
+const CMC_SKIP = /^(stablecoin|usd-stablecoin|fiat-stablecoin|asset-backed-stablecoin|algorithmic-stablecoin|wrapped-tokens|tokenized-gold|tokenized-commodities|liquid-staking-derivatives|tokenized-stock)$/;
+async function cmcTop100(pool) {
+  const j = await get(`${CMC_LIST}&start=1&limit=200`, 2);
+  const list = (j && j.data && j.data.cryptoCurrencyList) || [];
+  if (list.length < 120) { log('cmc top 100: no answer'); return null; }
+  const M = appMarket(), bySym = new Map();
+  for (const r of pool) { const k = String(r.sym || '').toUpperCase(); if (k) (bySym.get(k) || bySym.set(k, []).get(k)).push(r); }
+  const out = [], used = new Set();
+  for (const c of list) {
+    const sym = String(c.symbol || '').toUpperCase(); if (sym === 'BTC') continue;
+    const tags = (c.tags || []).map(t => String(t && (t.slug || t) || '').toLowerCase());
+    if (tags.some(t => CMC_SKIP.test(t))) continue;
+    const q = (c.quotes || []).find(x => x.name === 'USD') || (c.quotes || [])[0] || {}, mc = +q.marketCap || 0;
+    const cand = (bySym.get(sym) || []).filter(r => !used.has(r.id) && r.mcap > 0 && mc > 0 && r.mcap / mc < 2 && mc / r.mcap < 2)
+      .sort((a, b) => Math.abs(Math.log(a.mcap / mc)) - Math.abs(Math.log(b.mcap / mc)));
+    const r = cand[0]; if (!r || M.isExcluded(r)) continue;
+    used.add(r.id); out.push(r);
+    if (out.length === 100) break;
+  }
+  log('cmc top 100:', out.length, 'matched');
+  return out.length >= 90 ? out : null;
+}
+async function altSeason(all, glob, order, official) {
   if (!all.length) return null;
   const M = appMarket();
   const btc = all.find(c => c.id === 'bitcoin');
-  const alts = all.filter(c => !M.isExcluded(c)).slice(0, 100);
+  const alts = order && order.length ? order : all.filter(c => !M.isExcluded(c)).slice(0, 100);   // CoinMarketCap's top 100 when we have it
   if (!btc || alts.length < 50) return null;
   const today = Math.floor(Date.now() / DAY);
   let hist = {};
@@ -333,7 +390,7 @@ async function altSeason(all, glob) {
       } else log('usdt caps: HTTP', r.status);
     } catch (e) { log('usdt caps:', e.message); }
   }
-  try { altPage(hist, btc, alts, extras, mineSym, today, glob, all, (caps.tether || {}).d || {}); } catch (e) { log('alt page:', e.message); }
+  try { altPage(hist, btc, alts, extras, mineSym, today, glob, all, (caps.tether || {}).d || {}, official, !!(order && order.length)); } catch (e) { log('alt page:', e.message); }
   // change over 90 days: today's price vs the price 90 days ago (a day either side if that day is missing)
   const ch = id => chg(hist, id, today, PERIOD);
   const b90 = ch('bitcoin');
@@ -359,7 +416,7 @@ function chg(hist, id, day, per) {
 //   mine: { id: [7d, 30d, 90d] } the app's own coins outside the top 100 }
 // A past day is worked out with today's top 100 (CoinMarketCap uses each day's own list), so old days can differ a little.
 const ALT_FILE = path.join(OUT, 'alt.json');
-function altPage(hist, btc, alts, extras, mineSym, today, glob, all, usdtCap) {
+function altPage(hist, btc, alts, extras, mineSym, today, glob, all, usdtCap, official, cmcList) {
   let old = {}; try { old = JSON.parse(fs.readFileSync(ALT_FILE, 'utf8')); } catch (_) {}
   const r2 = v => v == null ? null : Math.round(v * 100) / 100;
   const at = (day, per) => {
@@ -372,7 +429,8 @@ function altPage(hist, btc, alts, extras, mineSym, today, glob, all, usdtCap) {
   const idx = [];
   for (let day = today - 365; day <= today; day++) { const a = at(day, PERIOD); if (a) idx.push([day, Math.round(a.beat / a.n * 100), a.n, a.btc]); }
   const live = old.live || {}, now = at(today, PERIOD);
-  if (now) live[today] = [Math.round(now.beat / now.n * 100), now.n, now.btc];
+  if (now) live[today] = [official != null ? official : Math.round(now.beat / now.n * 100), now.n, now.btc];   // today: CoinMarketCap's official number when we have it
+  else if (official != null) live[today] = [official, 100, null];
   for (const k of Object.keys(live)) if (+k < today - 400) delete live[k];
   const ethbtc = [];
   for (let day = today - 365; day <= today; day++) {
@@ -407,6 +465,7 @@ function altPage(hist, btc, alts, extras, mineSym, today, glob, all, usdtCap) {
   const three = id => [7, 30, PERIOD].map(p => r2(chg(hist, id, today, p)));
   const page = {
     updated: new Date().toISOString(), today, idx, live, ethbtc, dom, domEst, domUsdt, usdtEst,
+    official: official != null ? official : null, own: now ? Math.round(now.beat / now.n * 100) : null, list: cmcList ? 'cmc' : 'coingecko',
     breadth: { 7: at(today, 7), 30: at(today, 30), 90: now },
     btc: three('bitcoin'),
     coins: alts.map(c => ({ id: c.id, sym: c.sym, name: c.name, img: c.img, rank: c.rank, p: three(c.id) })),

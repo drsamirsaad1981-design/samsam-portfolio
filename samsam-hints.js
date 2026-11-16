@@ -115,12 +115,12 @@
     mcap: { title: 'Total Market Cap', body: function () { return '<p>The value of all coins together, and how it changed in 24 hours.</p>' +
       '<ul><li><b>Volume 24h</b>: how much was traded in the last 24 hours.</li><li><b>BTC / ETH</b>: price and 24h change.</li><li><b>ETF money, last 7 days</b>: net money into (+) or out of (−) the US spot Bitcoin and Ethereum ETFs.</li></ul>' +
       '<p>Sources: CoinGecko (market), SoSoValue (ETFs).</p>'; } },
-    fng: { title: 'Fear & Greed', body: function () { return '<p>A 0–100 reading of the market\'s mood, published once a day by alternative.me.</p>' +
+    fng: { title: 'Fear & Greed', body: function () { return '<p>A 0–100 reading of the market\'s mood — <b>CoinMarketCap\'s</b> index (the one CoinMarketCap and Binance show), updated through the day.</p>' +
       '<ul><li><b>Low (fear)</b>: people are scared and selling — prices are often cheap.</li><li><b>High (greed)</b>: people are buying eagerly — prices are often stretched.</li></ul>' +
       '<p>Yesterday and last week show which way the mood is moving.</p>'; } },
     altSeason: { title: 'Altcoin Season', body: function () { return '<p>Are altcoins beating Bitcoin?</p>' +
-      '<div class="cph-f"><b>Index</b><code>How many of the top 100 coins did better than BTC over the last 90 days</code></div>' +
-      '<p>Stablecoins, wrapped and staked coins are left out. <b>75 or more</b> = Altcoin Season; a low number means Bitcoin is leading.</p>' +
+      '<div class="cph-f"><b>Index</b><code>How many of CoinMarketCap\'s top 100 coins did better than BTC over the last 90 days</code></div>' +
+      '<p>The number is <b>CoinMarketCap\'s official Altcoin Season Index</b> (the one CoinMarketCap and CoinGlass show). Stablecoins, wrapped and staked coins are left out. <b>75 or more</b> = Altcoin Season; a low number means Bitcoin is leading.</p>' +
       '<p>Tap the card for the full page: the coins that beat BTC and the history.</p>'; } },
     dominance: { title: 'Market Dominance', body: function () { return '<p>Each coin\'s share of the total market cap: Bitcoin, Ethereum, USDT, the next three biggest coins, and all the others together.</p>' +
       '<div class="cph-f"><b>Dominance</b><code>Coin\'s market cap ÷ total market cap × 100</code></div>' +
