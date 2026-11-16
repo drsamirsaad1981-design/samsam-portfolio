@@ -265,7 +265,7 @@ with sync_playwright() as p:
     check('snapshot: first open with CoinGecko busy → numbers from GitHub', seen and v[0] == '$2.60T' and v[1].startswith('34') and v[2] == '60.00%', v)
     check('snapshot: says when (Saved · 12 min ago), no error, no Refresh button', '12 min ago' in v[3] and not pg.query_selector('#mkRefresh') and 'warn' not in v[4], v[3:])
     al = pg.evaluate("[altV.textContent, altL.textContent, altN.innerText, altB.innerText, fngWeek.textContent, altNote.innerText, document.querySelector('.mk-src').innerText]")
-    check('Altcoin Season = the CMC way from GitHub (top 100 · 90d)', al[0].startswith('63') and al[1] == 'Leaning Altcoins' and '54 of 86' in al[2] and 'BTC (90 days)' in al[3] and '-12.40%' in al[3] and al[4] == '41' and al[5] == 'Share of the top 100 coins that beat BTC over the last 90 days. Altcoin Season starts at 75.' and 'top 100 coins' in al[6] and '90 days' in al[6] and '30 days' not in al[6], al)
+    check('Altcoin Season = the CMC way from GitHub (top 100 · 90d)', al[0].startswith('63') and al[1] == 'Leaning Altcoins' and '54 of 86' in al[2] and 'BTC (90 days)' in al[3] and '-12.40%' in al[3] and al[4] == '41' and al[5] == 'Share of the top 100 coins that beat BTC over the last 90 days. Altcoin Season starts at 75.' and 'Altcoin Season Index: <a' not in al[6] and 'Altcoin Season Index' in al[6] and 'CoinMarketCap' in al[6], al)
     pg.screenshot(path=str(shots / 'mkt_snapshot_phone.png'))
     pg.goto(S.SITE + '/index.html'); pg.wait_for_timeout(2500)
     tk2 = pg.evaluate("[...document.querySelectorAll('#btcTickerTrack a.bt-mkt')].map(a=>a.innerText).join(' | ')")
