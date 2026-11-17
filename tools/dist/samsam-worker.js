@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 6320b9d3554bc362
+// sources-hash: 47e478d93c9f6e95
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2820,8 +2820,9 @@ async function setup(env, kind, opt = {}) {
       x.topics = x.topics || {};
       for (const [k, name] of TOPICS) {
         if (!x.topics[k]) continue;
-        const r = await tg3(env, "editForumTopic", { chat_id: x.id, message_thread_id: x.topics[k], name });
-        if (!r.ok && /TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || "")) {
+        const r = opt.reset ? { ok: false, description: "reset" } : await tg3(env, "sendChatAction", { chat_id: x.id, message_thread_id: x.topics[k], action: "typing" });
+        if (!r.ok && !opt.reset && !/TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || "")) notes.push(`\u2139\uFE0F ${name}: ${esc(r.description || "?")}`);
+        if (!r.ok && (opt.reset || /TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || ""))) {
           delete x.topics[k];
           notes.push(`\u267B\uFE0F ${name} was gone \u2014 made again.`);
           if (k === "chat") x.helloPosted = false;
@@ -5337,6 +5338,7 @@ var WORDS = [
   [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, "cm"],
   [/^\/community setup$/i, "cm:setup"],
   [/^\/community guide$/i, "cm:guide"],
+  [/^\/community reset$/i, "cm:reset"],
   [/^\/announce\s+[\s\S]+$/i, "ann"],
   [/^\/start\s+\S+$/i, "menu"],
   [/^\/(report|app)$|^التقرير$/i, "rp"],
@@ -6098,7 +6100,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
     await send2(env, chat, await communityView(env, await getLang(env)));
     return;
   }
-  if (p.act === "cm:setup" || p.act === "ann" || p.act === "cm:guide") {
+  if (p.act === "cm:setup" || p.act === "ann" || p.act === "cm:guide" || p.act === "cm:reset") {
     if (!isOwner(env)) {
       await send2(env, chat, { text: T[await getLang(env)].ownerOnly });
       return;
@@ -6106,6 +6108,10 @@ async function onText(env, chat, text, budget = 36, into = null) {
     if (p.act === "cm:setup") {
       await setup(env, "channel");
       await setup(env, "group");
+      return;
+    }
+    if (p.act === "cm:reset") {
+      await setup(env, "group", { reset: true });
       return;
     }
     if (p.act === "cm:guide") {

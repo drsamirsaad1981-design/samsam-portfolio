@@ -68,7 +68,7 @@ export async function registerForward(env, msg) {
 // make the join link (requests approved by the bot), and for the group: topics + the guide
 export async function setup(env, kind, opt = {}) {
   const c = await getCommunity(env), x = c[kind]; if (!x) return { ok: false };
-  if (opt.reguide) x.reguide = true;
+  if (opt.reguide) x.reguide = true;   // opt.reset (/community reset): forget the topics and make them all again
   const notes = [];
   const link = await tg(env, 'createChatInviteLink', { chat_id: x.id, name: 'Cute Portfolio members', creates_join_request: true });
   if (link.ok) x.link = link.result.invite_link; else notes.push('⚠️ No join link — give me "Invite users via link".');
@@ -82,8 +82,9 @@ export async function setup(env, kind, opt = {}) {
       x.topics = x.topics || {};
       for (const [k, name] of TOPICS) {   // a topic deleted in Telegram (by hand, by mistake) → forget it, so it's made again with its content
         if (!x.topics[k]) continue;
-        const r = await tg(env, 'editForumTopic', { chat_id: x.id, message_thread_id: x.topics[k], name });
-        if (!r.ok && /TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || '')) {
+        const r = opt.reset ? { ok: false, description: 'reset' } : await tg(env, 'sendChatAction', { chat_id: x.id, message_thread_id: x.topics[k], action: 'typing' });   // a silent probe
+        if (!r.ok && !opt.reset && !/TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || '')) notes.push(`ℹ️ ${name}: ${esc(r.description || '?')}`);
+        if (!r.ok && (opt.reset || /TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || ''))) {
           delete x.topics[k]; notes.push(`♻️ ${name} was gone — made again.`);
           if (k === 'chat') x.helloPosted = false;
           if (k === 'guide') { x.guidePosted = -1; delete x.guideSig; delete x.reposting; x.tidy = false; }
