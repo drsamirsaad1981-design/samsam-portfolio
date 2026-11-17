@@ -25,10 +25,10 @@ const KEY = uid => `cex:${uid}`, BAL = uid => `cex:${uid}:bal`;
 
 // ── Binance ──
 // Binance refuses Cloudflare's addresses (451, "restricted location"), so its calls go through a tiny relay on Google Cloud
-// in Dammam (tools/binance-relay — a Firebase function in the same project): this Worker SIGNS each request (the secret
+// in Doha (tools/binance-relay — a Firebase function in the same project): this Worker SIGNS each request (the secret
 // never leaves it), the relay only passes the signed read-only request on (5 fixed paths) for a signed-in app user.
 // No relay yet (not deployed) → straight to Binance.
-export const RELAY = 'https://me-central2-samsam-portfolio.cloudfunctions.net/binanceRelay';
+export const RELAY = 'https://me-central1-samsam-portfolio.cloudfunctions.net/binanceRelay';
 const BN = ['https://api.binance.com', 'https://api-gcp.binance.com', 'https://api1.binance.com'];
 async function viaRelay(k, path, qs, method, token) {
   let r; try { r = await fetch(RELAY, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken: token, path, qs, method, key: k.k }) }); } catch (_) { return null; }

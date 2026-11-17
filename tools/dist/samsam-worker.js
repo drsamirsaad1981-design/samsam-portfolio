@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 8da645bb5f902b78
+// sources-hash: 42b9347ea4c80cbe
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1107,7 +1107,7 @@ var num2 = (v) => {
 };
 var KEY = (uid) => `cex:${uid}`;
 var BAL = (uid) => `cex:${uid}:bal`;
-var RELAY = "https://me-central2-samsam-portfolio.cloudfunctions.net/binanceRelay";
+var RELAY = "https://me-central1-samsam-portfolio.cloudfunctions.net/binanceRelay";
 var BN = ["https://api.binance.com", "https://api-gcp.binance.com", "https://api1.binance.com"];
 async function viaRelay(k, path, qs, method, token) {
   let r;

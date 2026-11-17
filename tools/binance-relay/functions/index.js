@@ -1,4 +1,4 @@
-// binanceRelay — a tiny relay in Google Cloud, Dammam (me-central2), for Cute Portfolio's live Binance balances.
+// binanceRelay — a tiny relay in Google Cloud, Doha (me-central1), for Cute Portfolio's live Binance balances.
 //
 // Binance refuses requests from Cloudflare's addresses (HTTP 451), where the Cute Portfolio server (the Worker) runs.
 // The Worker SIGNS each read-only request itself (the secret key never leaves it) and sends the signed request here;
@@ -22,7 +22,7 @@ const PATHS = {
 };
 const QS = /^[A-Za-z0-9=&._%-]{1,600}&signature=[0-9a-f]{64}$/, KEY = /^[A-Za-z0-9]{16,128}$/;
 
-exports.binanceRelay = onRequest({ region: 'me-central2', maxInstances: 2, concurrency: 20, memory: '256MiB', timeoutSeconds: 20, invoker: 'public' }, async (req, res) => {
+exports.binanceRelay = onRequest({ region: 'me-central1', maxInstances: 2, concurrency: 20, memory: '256MiB', timeoutSeconds: 20, invoker: 'public' }, async (req, res) => {
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
   const b = req.body || {};
   try { await admin.auth().verifyIdToken(String(b.idToken || '')); }

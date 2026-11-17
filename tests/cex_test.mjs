@@ -67,11 +67,11 @@ const realFetch = globalThis.fetch; globalThis.fetch = async () => new Response(
 r = await cexHandler(env, OWNER, { action: 'set', ex: 'binance', key: KEYB, secret: SECB });
 check('a web page (not JSON) with 403 = Binance blocking the server, not your key → "blocked"', r.error === 'blocked' && /not JSON/.test(r.said), r);
 globalThis.fetch = realFetch;
-// 🇸🇦 the relay (Google Cloud, Dammam): Binance answers it while it refuses the Worker (451)
+// 🇸🇦 the relay (Google Cloud, Doha): Binance answers it while it refuses the Worker (451)
 {
   const inner = globalThis.fetch; let relayCalls = [];
   globalThis.fetch = async (url, o = {}) => {
-    if (String(url).startsWith('https://me-central2-samsam-portfolio.cloudfunctions.net/binanceRelay')) {
+    if (String(url).startsWith('https://me-central1-samsam-portfolio.cloudfunctions.net/binanceRelay')) {
       const b = JSON.parse(o.body); relayCalls.push(b);
       const was = status451; status451 = false;
       const r = await inner('https://api.binance.com' + b.path + '?' + b.qs, { method: b.method, headers: { 'X-MBX-APIKEY': b.key } });

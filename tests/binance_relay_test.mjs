@@ -15,7 +15,7 @@ const calls = [];
 globalThis.fetch = async (url, o) => { calls.push({ url, o }); return new Response('{"balances":[]}', { status: 200 }); };
 const run = async body => { let st = 200, out = null; const res = { status(s) { st = s; return this; }, json(j) { out = j; } }; await handler({ method: 'POST', body }, res); return { st, out }; };
 const SIG = 'a'.repeat(64), KEY = 'K'.repeat(64);
-check('runs in Dammam (me-central2), at most 2 instances, 20 s', opts.region === 'me-central2' && opts.maxInstances === 2 && opts.timeoutSeconds === 20);
+check('runs in Doha (me-central1), at most 2 instances, 20 s', opts.region === 'me-central1' && opts.maxInstances === 2 && opts.timeoutSeconds === 20);
 let r = await run({ idToken: 'BAD', path: '/api/v3/account', method: 'GET', qs: `timestamp=1&signature=${SIG}`, key: KEY });
 check('not signed in → 401, nothing sent to Binance', r.st === 401 && !calls.length, r);
 r = await run({ idToken: 'GOOD', path: '/api/v3/order', method: 'POST', qs: `symbol=BTCUSDT&side=BUY&timestamp=1&signature=${SIG}`, key: KEY });
