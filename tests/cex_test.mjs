@@ -67,6 +67,33 @@ const realFetch = globalThis.fetch; globalThis.fetch = async () => new Response(
 r = await cexHandler(env, OWNER, { action: 'set', ex: 'binance', key: KEYB, secret: SECB });
 check('a web page (not JSON) with 403 = Binance blocking the server, not your key → "blocked"', r.error === 'blocked' && /not JSON/.test(r.said), r);
 globalThis.fetch = realFetch;
+// 🇸🇦 the relay (Google Cloud, Dammam): Binance answers it while it refuses the Worker (451)
+{
+  const inner = globalThis.fetch; let relayCalls = [];
+  globalThis.fetch = async (url, o = {}) => {
+    if (String(url).startsWith('https://me-central2-samsam-portfolio.cloudfunctions.net/binanceRelay')) {
+      const b = JSON.parse(o.body); relayCalls.push(b);
+      const was = status451; status451 = false;
+      const r = await inner('https://api.binance.com' + b.path + '?' + b.qs, { method: b.method, headers: { 'X-MBX-APIKEY': b.key } });
+      status451 = was;
+      return new Response(JSON.stringify({ status: r.status, body: await r.text() }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    return inner(url, o);
+  };
+  status451 = true; kv.delete('cex:U1'); kv.delete('cex:U1:bal');
+  const T = { ...OWNER, token: 'ID-TOKEN' };
+  r = await cexHandler(env, T, { action: 'set', ex: 'binance', key: KEYB, secret: SECB });
+  check('Binance blocks the Worker (451) but the relay gets through → connected', r.ok && relayCalls.length >= 1, r);
+  const rc = relayCalls[0] || {};
+  check('…the relay gets the signed-in token, a fixed path, the SIGNED query and the API key — never the secret', rc.idToken === 'ID-TOKEN' && rc.path === '/sapi/v1/account/apiRestrictions' && /&signature=[0-9a-f]{64}$/.test(rc.qs) && rc.key === KEYB && !JSON.stringify(relayCalls).includes(SECB), rc);
+  r = await cexHandler(env, T, { action: 'balances' });
+  check('…balances through the relay too (funding = POST)', r.balances[0].ok && relayCalls.some(x => x.path === '/sapi/v1/asset/get-funding-asset' && x.method === 'POST'), r.balances[0]);
+  globalThis.fetch = async (url, o) => String(url).includes('cloudfunctions.net') ? new Response('Not Found', { status: 404 }) : inner(url, o);
+  status451 = false; kv.delete('cex:U1:bal');
+  r = await cexHandler(env, T, { action: 'balances', fresh: true });
+  check('no relay deployed (404) → straight to Binance, as before', r.balances[0].ok, r.balances[0]);
+  globalThis.fetch = inner; kv.delete('cex:U1'); kv.delete('cex:U1:bal');
+}
 const src = (await import('node:fs')).readFileSync(new URL('../tools/dist/samsam-worker.js', import.meta.url), 'utf8');
 check('the built Worker has the /cex route', /isCex/.test(src) && /cexHandler/.test(src));
 console.log(`${ok}/${n} passed`); process.exit(ok === n ? 0 : 1);

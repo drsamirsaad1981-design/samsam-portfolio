@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 582ccf3aa881b8d4
+// sources-hash: 8da645bb5f902b78
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -72,7 +72,7 @@ var ai_worker_default = {
     }
     if (isCex) {
       if (!cexHandler) return reply(404, { error: "Not found." });
-      const r = await cexHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch(() => ({ status: 500, error: "failed" }));
+      const r = await cexHandler(env, { email: em, uid: user.uid, owners: emails, token }, body).catch(() => ({ status: 500, error: "failed" }));
       return reply(r.status || 200, r);
     }
     if (isKey) {
@@ -1107,14 +1107,28 @@ var num2 = (v) => {
 };
 var KEY = (uid) => `cex:${uid}`;
 var BAL = (uid) => `cex:${uid}:bal`;
+var RELAY = "https://me-central2-samsam-portfolio.cloudfunctions.net/binanceRelay";
 var BN = ["https://api.binance.com", "https://api-gcp.binance.com", "https://api1.binance.com"];
-async function bn(k, path, params = {}, method = "GET") {
+async function viaRelay(k, path, qs, method, token) {
+  let r;
+  try {
+    r = await fetch(RELAY, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idToken: token, path, qs, method, key: k.k }) });
+  } catch (_) {
+    return null;
+  }
+  if (!r.ok) return null;
+  const j = await r.json().catch(() => null);
+  if (!j || typeof j.status !== "number") return null;
+  return { status: j.status, ok: j.status >= 200 && j.status < 300, text: async () => String(j.body || "") };
+}
+async function bn(k, path, params = {}, method = "GET", opt = {}) {
   const qs = new URLSearchParams({ ...params, recvWindow: "10000", timestamp: String(Date.now()) }).toString();
   const sig2 = await hmac("SHA-256", k.s, qs);
   let last = null;
-  for (const base of BN) {
-    let r;
-    try {
+  const relayed = opt.token ? await viaRelay(k, path, `${qs}&signature=${sig2}`, method, opt.token) : null;
+  for (const base of relayed ? ["relay"] : BN) {
+    let r = relayed;
+    if (!r) try {
       r = await fetch(`${base}${path}?${qs}&signature=${sig2}`, { method, headers: { "X-MBX-APIKEY": k.k } });
     } catch (e2) {
       last = { status: 0, msg: "network" };
@@ -1137,12 +1151,12 @@ async function bn(k, path, params = {}, method = "GET") {
   throw e;
 }
 var BN_WRITE = ["enableWithdrawals", "enableInternalTransfer", "permitsUniversalTransfer", "enableVanillaOptions", "enableFutures", "enableMargin", "enableSpotAndMarginTrading", "enablePortfolioMarginTrading", "enableFixApiTrade"];
-async function binancePerms(k) {
-  const r = await bn(k, "/sapi/v1/account/apiRestrictions");
+async function binancePerms(k, opt) {
+  const r = await bn(k, "/sapi/v1/account/apiRestrictions", {}, "GET", opt);
   const extra = BN_WRITE.filter((x) => r && r[x] === true);
   return { readOnly: !extra.length, extra, reading: !!(r && r.enableReading) };
 }
-async function binanceBalances(k) {
+async function binanceBalances(k, opt = {}) {
   const out = {}, notes = [];
   const add = (sym, part, q) => {
     q = num2(q);
@@ -1151,13 +1165,13 @@ async function binanceBalances(k) {
     const o = out[sym] || (out[sym] = { sym, spot: 0, funding: 0, earn: 0 });
     o[part] += q;
   };
-  const acc = await bn(k, "/api/v3/account", { omitZeroBalances: "true" });
-  const flex = await bn(k, "/sapi/v1/simple-earn/flexible/position", { size: "100" }).catch(() => {
+  const acc = await bn(k, "/api/v3/account", { omitZeroBalances: "true" }, "GET", opt);
+  const flex = await bn(k, "/sapi/v1/simple-earn/flexible/position", { size: "100" }, "GET", opt).catch(() => {
     notes.push("earn");
     return null;
   });
-  const locked3 = await bn(k, "/sapi/v1/simple-earn/locked/position", { size: "100" }).catch(() => null);
-  const fund = await bn(k, "/sapi/v1/asset/get-funding-asset", {}, "POST").catch(() => {
+  const locked3 = await bn(k, "/sapi/v1/simple-earn/locked/position", { size: "100" }, "GET", opt).catch(() => null);
+  const fund = await bn(k, "/sapi/v1/asset/get-funding-asset", {}, "POST", opt).catch(() => {
     notes.push("funding");
     return null;
   });
@@ -1235,10 +1249,10 @@ async function cexHandler2(env, who, body) {
     let perms = { readOnly: null };
     try {
       if (ex === "binance") {
-        perms = await binancePerms(k);
+        perms = await binancePerms(k, { token: who.token });
         if (!perms.readOnly) return { status: 400, error: "refused-perms", extra: perms.extra };
       }
-      await READ[ex](k);
+      await READ[ex](k, { token: who.token });
     } catch (e) {
       const w = why(e);
       console.log(JSON.stringify({ cex: "set-failed", ex, said: said(e) }));
@@ -1272,7 +1286,7 @@ async function cexHandler2(env, who, body) {
       const k = await keyOf(env, all[x]);
       if (!k) return { ex: x, name: EXCHANGES[x], ok: false, error: "refused" };
       try {
-        const r = await READ[x](k);
+        const r = await READ[x](k, { token: who.token });
         return { ex: x, name: EXCHANGES[x], ok: true, assets: r.assets, notes: r.notes };
       } catch (e) {
         return { ex: x, name: EXCHANGES[x], ok: false, error: why(e), said: said(e) };

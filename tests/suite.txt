@@ -132,6 +132,7 @@ hv_chart_test.py
 tg_bot_test.py
 cex_test.py
 cex_ui_test.py
+binance_relay_test.py
 member_start_test.py
 admin_dash_test.py
 invite_app_test.py

@@ -81,7 +81,7 @@ export default {
     }
     if (isCex) {   // 🔌 read-only exchange keys: status / set / delete / balances for this signed-in account
       if (!cexHandler) return reply(404, { error: 'Not found.' });
-      const r = await cexHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch(() => ({ status: 500, error: 'failed' }));
+      const r = await cexHandler(env, { email: em, uid: user.uid, owners: emails, token }, body).catch(() => ({ status: 500, error: 'failed' }));
       return reply(r.status || 200, r);
     }
     if (isKey) {   // 🔑 status / set / delete the signed-in member's own Claude key
