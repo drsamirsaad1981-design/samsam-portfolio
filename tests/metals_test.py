@@ -65,7 +65,19 @@ with sync_playwright() as p:
     check('Silver shortcut: XAG, kinesis-silver', pg.evaluate("[acSym.value, acCgId.value]") == ['XAG', 'kinesis-silver'])
     pg.evaluate("closeAddCoin()")
 
-    pg.evaluate("Samsam.removeCoin('XAU')"); pg.wait_for_timeout(600)
+    # Market Hub → Metals: your metals on top
+    pg.goto(S.SITE + '/market.html#metals'); S.wait_ready(pg); pg.wait_for_timeout(2500)
+    mine = pg.locator('#vMetals .as-mine')
+    t = mine.inner_text() if mine.count() else ''
+    check('Metals tab: "Your metals" card with 150 g of gold', 'Your metals' in t and '150' in t and 'Gold 24k' in t, t)
+    check('…with the gram price vs your average and the add buttons', '/' not in '' and 'your avg' in t and mine.locator('[data-add]').count() == 2, t)
+    pg.screenshot(path=str(SH / 'metals-mine.png'), full_page=False)
+    pg.click('#vMetals [data-add="XAG"]'); pg.wait_for_timeout(300)
+    check('Add silver from the Metals tab opens Add Coin on XAG', pg.evaluate("[addCoinModal.classList.contains('show') || getComputedStyle(addCoinModal).display !== 'none', acSym.value]") == [True, 'XAG'])
+    pg.evaluate("closeAddCoin()")
+    pg.evaluate("Samsam.removeCoin('XAU')"); pg.wait_for_timeout(900)
+    t2 = pg.inner_text('#vMetals .as-mine') if pg.locator('#vMetals .as-mine').count() else ''
+    check('no metals held → the card invites you to add gold / silver', 'Add gold' in t2 and 'Add silver' in t2, t2)
     check('no page errors', not errs, errs)
     br.close()
 print(f'metals_test: {sum(res)}/{len(res)} passed')

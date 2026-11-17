@@ -90,11 +90,33 @@
     copper: ['🟠', 'Copper', 'النحاس', false], brent: ['🛢️', 'Brent oil', 'نفط برنت', false],
   };
   var UNIT = { oz: ['/ oz', '/ أونصة'], lb: ['/ lb', '/ رطل'], bbl: ['/ barrel', '/ برميل'] };
+  // 🥇 your gold / silver (added in the portfolio in grams; kept in troy ounces there) — or a button to add some
+  var MINE = { XAU: ['🥇', 'Gold 24k', 'ذهب عيار 24', 'gold'], XAG: ['🥈', 'Silver', 'فضة', 'silver'] };
+  function mineHtml(list) {
+    var S = window.Samsam, d = S && S.getState && S.isReady && S.isReady() ? S.getState() : null;
+    if (!d) return '';
+    var pf = (d.portfolio || []).filter(function (c) { return MINE[c.sym] && c.qty > 1e-12; }), rz = (d.realized && d.realized.bySym) || {};
+    var spot = function (k) { var x = (list || []).filter(function (m) { return m.k === k; })[0]; return x ? x.price : 0; };
+    var g2 = function (oz) { return (oz * OZ).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + T('g', 'جم'); };
+    var add = '<button type="button" class="as-add" data-add="XAU">🥇 ' + T('Add gold', 'أضف ذهب') + '</button><button type="button" class="as-add" data-add="XAG">🥈 ' + T('Add silver', 'أضف فضة') + '</button>';
+    if (!pf.length) return '<div class="as-card as-mine as-mine-empty"><div class="as-k">' + T('Your metals', 'معادنك') + '</div><p class="as-li">' + T('Track the gold and silver you own — in grams, at the live price.', 'تابع الذهب والفضة اللي تملكها — بالجرام وبالسعر الحي.') + '</p><div class="as-adds">' + add + '</div></div>';
+    var tv = 0, tp = 0;
+    var rows = pf.map(function (c) {
+      var m = MINE[c.sym], pr = c.currentPrice > 0 ? c.currentPrice : spot(m[3]), val = c.qty * pr, cost = c.qty * c.basePrice, pnl = val - cost + ((rz[c.sym] || {}).realized || 0);
+      var ch = c.basePrice > 0 && pr > 0 ? (pr / c.basePrice - 1) * 100 : null; tv += val; tp += pnl;
+      return '<div class="as-mrow"><div class="as-mn">' + m[0] + ' <b>' + T(m[1], m[2]) + '</b><small>' + iso(g2(c.qty)) + '</small></div>' +
+        '<div class="as-mv2"><b>' + iso(usd(val, 2)) + '</b><span class="as-pc ' + (pnl >= 0 ? 'up' : 'dn') + '">' + iso((pnl >= 0 ? '+' : '−') + usd(Math.abs(pnl), 2)) + '</span></div>' +
+        '<div class="as-li">' + T('Gram now', 'الجرام الآن') + ' <b>' + iso(usd(pr / OZ, 2)) + '</b> · ' + T('your avg', 'متوسط شرائك') + ' <b>' + iso(usd(c.basePrice / OZ, 2)) + '</b> ' + pct(ch) + '</div></div>';
+    }).join('');
+    return '<div class="as-card as-mine"><div class="as-k">' + T('Your metals', 'معادنك') + '<a class="as-open" href="./index.html">' + T('Open in portfolio ›', 'افتح في المحفظة ›') + '</a></div>' + rows +
+      (pf.length > 1 ? '<div class="as-mtot">' + T('Total', 'الإجمالي') + ' <b>' + iso(usd(tv, 2)) + '</b> <span class="as-pc ' + (tp >= 0 ? 'up' : 'dn') + '">' + iso((tp >= 0 ? '+' : '−') + usd(Math.abs(tp), 2)) + '</span></div>' : '') +
+      '<div class="as-adds">' + add + '</div></div>';
+  }
   function metalsHtml() {
     var list = st.metals;
-    if (!list) return '<p class="as-note">' + (st.err || T('Loading…', 'جارٍ التحميل…')) + '</p>';
+    if (!list) return mineHtml(null) + '<p class="as-note">' + (st.err || T('Loading…', 'جارٍ التحميل…')) + '</p>';
     var g = list.filter(function (x) { return x.k === 'gold'; })[0], s = list.filter(function (x) { return x.k === 'silver'; })[0];
-    var h = '<div class="as-metals">' + list.map(function (x) {
+    var h = mineHtml(list) + '<div class="as-metals">' + list.map(function (x) {
       var d = MET[x.k] || ['•', x.k, x.k, false], u = UNIT[x.unit] || ['', ''];
       return '<div class="as-card as-metal"><div class="as-k">' + d[0] + ' ' + T(d[1], d[2]) + (x.k === 'gold' ? '<span class="cp-hint" data-hint="metals" role="button" tabindex="0"></span>' : '') + '</div>' +
         '<div class="as-v">' + iso(usd(x.price, x.price >= 100 ? 2 : x.price >= 10 ? 2 : 3)) + ' <small>' + T(u[0], u[1]) + '</small></div>' +
@@ -138,6 +160,12 @@
       var k = b.dataset.sort; if (st.sort === k) st.dir = -st.dir; else { st.sort = k; st.dir = k === 'name' ? 1 : -1; } draw();
     };
     $('vStocks').addEventListener('click', area);
+    $('vMetals').addEventListener('click', function (e) {   // ➕ gold / silver → the Add window, already on that metal
+      var b = e.target.closest('[data-add]'); if (!b || !window.openAddCoin || !window.acMetal) return;
+      window.openAddCoin(); window.acMetal(b.dataset.add);
+    });
+    var hook = function (S) { if (S && S.onChange) S.onChange(function () { if (st.view === 'metals') draw(); }); if (st.view === 'metals') draw(); };   // a buy / sell redraws your metals
+    if (window.Samsam) hook(window.Samsam); else window.addEventListener('samsam-ready', function () { hook(window.Samsam); }, { once: true });
     $('vStocks').addEventListener('input', function (e) { if (e.target.id === 'asQ') { st.q = e.target.value; draw(); } });
     var h = (location.hash || '').slice(1), saved = null; try { saved = localStorage.getItem(KEY); } catch (_) {}
     show(VIEWS.indexOf(h) >= 0 ? h : saved || 'crypto', false);
