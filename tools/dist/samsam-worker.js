@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 47183656d2f89b82
+// sources-hash: e2885eb6d968a508
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2743,14 +2743,14 @@ var guide_default = {
       },
       en: [
         "Send a ticker \u2014 <code>btc</code> or <code>sol eth</code> \u2014 for the live price, trend, futures and funding.",
-        "/market \u2014 BTC, dominance, Fear &amp; Greed and ETF flows.",
+        "/market \u2014 BTC, dominance, Fear &amp; Greed and ETF flows; its \u{1F4C8} bStocks and \u{1F947} Metals buttons show US stocks and gold, silver, oil (/stocks \xB7 /metals).",
         "/movers \u2014 the best and worst coins \xB7 /signals \u2014 hold / add / sell for your coins.",
         "/portfolio \xB7 /plan \xB7 /exit \u2014 your own numbers.",
         "/balances \u2014 your Binance / Gate balances, read with a read-only key you connect in the app (Performance \u2192 Wallets &amp; Exchanges \u2192 Exchanges)."
       ],
       ar: [
         "\u0623\u0631\u0633\u0644 \u0631\u0645\u0632 \u0627\u0644\u0639\u0645\u0644\u0629 \u2014 <code>btc</code> \u0623\u0648 <code>sol eth</code> \u2014 \u0644\u062A\u0631\u0649 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0648\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0645\u0648\u064A\u0644.",
-        "/market \u2014 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629 \u0648\u0645\u0624\u0634\u0631 \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639 \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF.",
+        "/market \u2014 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629 \u0648\u0645\u0624\u0634\u0631 \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639 \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF\u061B \u0648\u0632\u0631\u0651\u0627 \u{1F4C8} bStocks \u0648\u{1F947} \u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u064A\u0639\u0631\u0636\u0627\u0646 \u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0648\u0627\u0644\u0646\u0641\u0637 (/stocks \xB7 /metals).",
         "/movers \u2014 \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623 \u0623\u062F\u0627\u0621\u064B \xB7 /signals \u2014 \u0627\u062D\u062A\u0641\u0627\u0638 / \u062A\u0639\u0632\u064A\u0632 / \u0628\u064A\u0639 \u0644\u0639\u0645\u0644\u0627\u062A\u0643.",
         "/portfolio \xB7 /plan \xB7 /exit \u2014 \u0623\u0631\u0642\u0627\u0645\u0643 \u0627\u0644\u062E\u0627\u0635\u0629.",
         "/balances \u2014 \u0623\u0631\u0635\u062F\u062A\u0643 \u0641\u064A Binance \u0648 Gate\u060C \u062A\u064F\u0642\u0631\u0623 \u0628\u0645\u0641\u062A\u0627\u062D \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u062A\u0631\u0628\u0637\u0647 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (\u0627\u0644\u0623\u062F\u0627\u0621 \u2190 \u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A \u2190 \u0627\u0644\u0645\u0646\u0635\u0627\u062A)."
@@ -2778,11 +2778,13 @@ var guide_default = {
       },
       en: [
         "Just say it: <i>tell me if ETH drops below 3000</i> \xB7 <i>alert me if SOL is up 10% in a day</i> \xB7 <i>if my portfolio passes $30k</i>.",
+        "Gold, silver, oil and US stocks too: <i>tell me if gold goes above 4000</i> \xB7 <i>if NVIDIA drops 5% in a day</i> (their prices refresh every ~30 min).",
         "The bot checks every 5 minutes.",
         "Each alert comes once, then it's done."
       ],
       ar: [
         "\u0627\u0643\u062A\u0628\u0647 \u0628\u0643\u0644\u0645\u0627\u062A\u0643: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0646\u0632\u0644 ETH \u062A\u062D\u062A 3000</i> \xB7 <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0627\u0631\u062A\u0641\u0639 SOL 10% \u0641\u064A \u064A\u0648\u0645</i> \xB7 <i>\u0625\u0630\u0627 \u062A\u062C\u0627\u0648\u0632\u062A \u0645\u062D\u0641\u0638\u062A\u064A 30 \u0623\u0644\u0641 \u062F\u0648\u0644\u0627\u0631</i>.",
+        "\u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0648\u0627\u0644\u0646\u0641\u0637 \u0648\u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0623\u064A\u0636\u0627\u064B: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u0630\u0647\u0628 4000</i> \xB7 <i>\u0625\u0630\u0627 \u0646\u0632\u0644 NVIDIA 5% \u0641\u064A \u064A\u0648\u0645</i> (\u0623\u0633\u0639\u0627\u0631\u0647\u0627 \u062A\u064F\u062D\u062F\u064E\u0651\u062B \u0643\u0644 ~30 \u062F\u0642\u064A\u0642\u0629).",
         "\u064A\u062A\u062D\u0642\u0642 \u0627\u0644\u0628\u0648\u062A \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642.",
         "\u064A\u0635\u0644\u0643 \u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u062B\u0645 \u064A\u0646\u062A\u0647\u064A."
       ],
@@ -3552,6 +3554,15 @@ async function currentValue(env, a, cache2 = {}) {
     return d && d.summary ? d.summary.funding_8h_pct_avg : null;
   }
   const key = "p:" + a.sym;
+  if (a.metal || a.stock) {
+    if (!(key in cache2)) {
+      const m = await loadMarket([], []);
+      const r = a.metal ? (m.metals || []).find((x2) => x2.k === a.metal) : (m.stocks || []).find((x2) => x2.id === a.cg || x2.sym === a.sym);
+      cache2[key] = r && r.price > 0 ? { price: r.price, ch24: r.ch24, src: "snapshot" } : null;
+    }
+    const y = cache2[key];
+    return !y ? null : k.what === "price" ? y.price : y.ch24;
+  }
   if (!(key in cache2)) {
     let x2 = await exchangePrice(a.sym).catch(() => null);
     if (!x2) {
@@ -3573,8 +3584,21 @@ async function addAlert(env, input, user) {
   if (KINDS[kind].what !== "portfolio") {
     const q = String(input.coin || "").trim();
     if (!q) return { error: "coin is needed for this kind" };
+    if (KINDS[kind].what === "funding" && metalOf(q)) return { error: "funding is for crypto futures only" };
+    const mk = metalOf(q);
+    if (mk) {
+      a.metal = mk;
+      a.sym = mk.toUpperCase();
+    }
     const m = await loadMarket([], user ? coinsOf(user) : []);
-    const c = await findCoin(q, m, user);
+    const st = !mk && stockOf(q, m.stocks || []);
+    if (st && KINDS[kind].what !== "funding") {
+      a.stock = true;
+      a.sym = st.sym;
+      a.cg = st.id;
+      a.name = String(st.name || "").replace(/\s*bStock$/i, "");
+    }
+    const c = mk || a.stock ? { sym: a.sym, id: a.cg || null } : await findCoin(q, m, user);
     if (!c) return { error: `no coin found for "${q}"` };
     a.sym = c.sym;
     a.cg = c.id || null;
@@ -3601,10 +3625,21 @@ function deleteAlert(env, id) {
   });
 }
 function describe(a) {
-  const k = KINDS[a.kind], v = k.what === "price" ? usd(a.value) : k.what === "portfolio" ? usd(a.value) : k.what === "funding" ? a.value + "% / 8h" : pct(a.value, 1);
-  const what = k.what === "price" ? `${a.sym} price` : k.what === "change_24h" ? `${a.sym} 24h change` : k.what === "funding" ? `${a.sym} funding` : "Portfolio value";
+  const k = KINDS[a.kind], v = k.what === "price" ? usd(a.value) + (a.metal ? "/" + (METAL_UNIT[a.metal] || "oz") : "") : k.what === "portfolio" ? usd(a.value) : k.what === "funding" ? a.value + "% / 8h" : pct(a.value, 1);
+  const who = a.metal ? METAL_NAME[a.metal] || a.sym : a.stock ? `${a.sym}${a.name ? " (" + a.name + ")" : ""}` : a.sym;
+  const what = k.what === "price" ? `${who} price` : k.what === "change_24h" ? `${who} 24h change` : k.what === "funding" ? `${a.sym} funding` : "Portfolio value";
   return `${what} ${k.op} ${v}`;
 }
+var METAL_WORDS = { gold: /^(gold|xau|ذهب|الذهب)$/i, silver: /^(silver|xag|فضة|الفضة)$/i, platinum: /^(platinum|xpt|بلاتين|البلاتين)$/i, copper: /^(copper|نحاس|النحاس)$/i, brent: /^(brent|oil|brent oil|crude|نفط|النفط|برنت|نفط برنت|البترول|بترول)$/i };
+var METAL_NAME = { gold: "Gold", silver: "Silver", platinum: "Platinum", copper: "Copper", brent: "Brent oil" };
+var METAL_UNIT = { gold: "oz", silver: "oz", platinum: "oz", copper: "lb", brent: "barrel" };
+var metalOf = (q) => Object.keys(METAL_WORDS).find((k) => METAL_WORDS[k].test(String(q).trim())) || null;
+function stockOf(q, stocks) {
+  const Q = String(q).trim().toUpperCase(), lq = String(q).trim().toLowerCase();
+  if (!Q) return null;
+  return stocks.find((s) => s.sym === Q) || stocks.find((s) => s.sym === Q + "B") || (lq.length >= 3 ? stocks.find((s) => String(s.name || "").toLowerCase().replace(/\s*bstock$/, "") === lq) || stocks.find((s) => String(s.name || "").toLowerCase().startsWith(lq)) : null) || null;
+}
+var groupOf2 = (a) => KINDS[a.kind].what === "portfolio" ? "pf" : a.metal ? "metal" : a.stock ? "stock" : "coin";
 async function tg4(env, method, body) {
   body = bidiBody(body);
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -3639,11 +3674,11 @@ async function runWatch(env, now = Date.now()) {
   for (const { a, now: v } of fired) {
     const k = KINDS[a.kind], up = k.op === "\u2265";
     const nowTxt = k.what === "price" || k.what === "portfolio" ? usd(v) : k.what === "funding" ? v + "% / 8h" : pct(v, 1);
-    const head = k.what === "portfolio" ? `\u{1F4BC} <b>Portfolio ${up ? "above" : "below"} ${usd(a.value)}</b>` : `${up ? "\u{1F680}" : "\u{1F53B}"} <b>${esc(a.sym)} ${k.what === "price" ? (up ? "above" : "below") + " " + usd(a.value) : k.what === "funding" ? "funding " + k.op + " " + a.value + "%" : "24h " + k.op + " " + pct(a.value, 1)}</b>`;
+    const head = k.what === "portfolio" ? `\u{1F4BC} <b>Portfolio ${up ? "above" : "below"} ${usd(a.value)}</b>` : `${up ? "\u{1F680}" : "\u{1F53B}"} <b>${esc(a.metal ? METAL_NAME[a.metal] : a.sym)} ${k.what === "price" ? (up ? "above" : "below") + " " + usd(a.value) : k.what === "funding" ? "funding " + k.op + " " + a.value + "%" : "24h " + k.op + " " + pct(a.value, 1)}</b>`;
     const text = `\u{1F514} ${head}
 Now: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
 <i>Your alert from ${local(a.created, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} \u2014 done, removed.</i>`;
-    const buttons = a.sym ? [[{ text: "\u{1FA99} " + a.sym, callback_data: "c:" + (a.cg || "x-" + a.sym.toLowerCase()).slice(0, 58) }, { text: "\u{1F525} Liq Map", url: "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=" + encodeURIComponent(a.sym) }]] : [[{ text: "\u{1F4BC} Portfolio", callback_data: "pf" }]];
+    const buttons = a.metal ? [[{ text: "\u{1F947} Metals", callback_data: "mkm" }]] : a.stock ? [[{ text: "\u{1F4C8} bStocks", callback_data: "mks" }]] : a.sym ? [[{ text: "\u{1FA99} " + a.sym, callback_data: "c:" + (a.cg || "x-" + a.sym.toLowerCase()).slice(0, 58) }, { text: "\u{1F525} Liq Map", url: "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=" + encodeURIComponent(a.sym) }]] : [[{ text: "\u{1F4BC} Portfolio", callback_data: "pf" }]];
     const r = await tg4(env, "sendMessage", { chat_id: chatOf(env), text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
     if (!r.ok) keep.push(a);
     else await logEvent(env, "alert", describe(a) + " \u2014 now " + nowTxt);
@@ -3657,11 +3692,23 @@ Now: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
 async function viewAlerts(env, lang2 = "en") {
   const list3 = await listAlerts(env), ar = lang2 === "ar";
   if (!list3.length) return { text: ar ? "\u{1F514} \u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0646\u0628\u064A\u0647\u0627\u062A.\n\u0627\u0643\u062A\u0628 \u0645\u062B\u0644\u0627\u064B: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0646\u0632\u0644 SOL \u062A\u062D\u062A 82</i>" : "\u{1F514} No alerts yet.\nWrite e.g. <i>tell me if SOL drops below 82</i>", buttons: [[{ text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]] };
-  const L = [ar ? `\u{1F514} <b>\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643</b> (${list3.length})` : `\u{1F514} <b>Your alerts</b> (${list3.length})`, ""];
-  list3.forEach((a, i) => L.push(`${i + 1}. ${esc(describe(a))}${a.armed ? "" : ar ? " <i>(\u064A\u0646\u062A\u0638\u0631 \u0639\u0648\u062F\u0629 \u0627\u0644\u0633\u0639\u0631 \u0623\u0648\u0644\u0627\u064B)</i>" : " <i>(waits to reset first)</i>"}`));
-  L.push("", ar ? "<i>\u064A\u062A\u062D\u0642\u0642 \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642 \xB7 \u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629</i>" : "<i>Checked every 5 min \xB7 each fires once</i>");
+  const L = [ar ? `\u{1F514} <b>\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643</b> (${list3.length})` : `\u{1F514} <b>Your alerts</b> (${list3.length})`];
+  const G = [["coin", ar ? "\u{1FA99} \u0627\u0644\u0639\u0645\u0644\u0627\u062A" : "\u{1FA99} Coins"], ["stock", ar ? "\u{1F4C8} \u0627\u0644\u0623\u0633\u0647\u0645 (bStocks)" : "\u{1F4C8} Stocks (bStocks)"], ["metal", ar ? "\u{1F947} \u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0646\u0641\u0637" : "\u{1F947} Metals &amp; oil"], ["pf", ar ? "\u{1F4BC} \u0627\u0644\u0645\u062D\u0641\u0638\u0629" : "\u{1F4BC} Portfolio"]];
+  const groups = G.filter(([g]) => list3.some((a) => groupOf2(a) === g)), several = groups.length > 1;
+  const shown = [];
+  for (const [g, title] of groups) {
+    L.push("", ...several ? [`<b>${title}</b>`] : []);
+    list3.forEach((a) => {
+      if (groupOf2(a) === g) {
+        shown.push(a);
+        L.push(`${shown.length}. ${esc(describe(a))}${a.armed ? "" : ar ? " <i>(\u064A\u0646\u062A\u0638\u0631 \u0639\u0648\u062F\u0629 \u0627\u0644\u0633\u0639\u0631 \u0623\u0648\u0644\u0627\u064B)</i>" : " <i>(waits to reset first)</i>"}`);
+      }
+    });
+  }
+  const slow = list3.some((a) => a.metal || a.stock);
+  L.push("", ar ? "<i>\u064A\u062A\u062D\u0642\u0642 \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642 \xB7 \u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629" + (slow ? " \xB7 \u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0623\u0633\u0647\u0645: \u0623\u0633\u0639\u0627\u0631 \u062A\u064F\u062D\u062F\u064E\u0651\u062B \u0643\u0644 ~30 \u062F\u0642\u064A\u0642\u0629" : "") + "</i>" : "<i>Checked every 5 min \xB7 each fires once" + (slow ? " \xB7 metals &amp; stocks: prices refreshed every ~30 min" : "") + "</i>");
   const buttons = [];
-  for (let i = 0; i < list3.length; i += 3) buttons.push(list3.slice(i, i + 3).map((a, j) => ({ text: `\u{1F5D1} ${i + j + 1}`, callback_data: "ad:" + a.id })));
+  for (let i = 0; i < shown.length; i += 3) buttons.push(shown.slice(i, i + 3).map((a, j) => ({ text: `\u{1F5D1} ${i + j + 1}`, callback_data: "ad:" + a.id })));
   buttons.push([{ text: ar ? "\u{1F504} \u062A\u062D\u062F\u064A\u062B" : "\u{1F504} Refresh", callback_data: "al" }, { text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]);
   return { text: L.join("\n"), buttons };
 }
@@ -4200,7 +4247,7 @@ var TOOLS = [
   },
   {
     name: "set_alert",
-    description: 'Save an alert the user asks for in words ("tell me if SOL drops below 82", "if BTC goes above 100k", "if ETH moves -8% in a day", "if SOL funding turns negative", "if my portfolio goes under 25k"). Checked every 5 minutes; fires once, then removed. kinds: price_below / price_above (USD), change_24h_below / change_24h_above (%), funding_below / funding_above (% per 8 h; "turns negative" = funding_below 0), portfolio_below / portfolio_above (USD, no coin). The result says the value now and already_met (then it waits for the next crossing \u2014 tell the user).',
+    description: 'Save an alert the user asks for in words ("tell me if SOL drops below 82", "if BTC goes above 100k", "if ETH moves -8% in a day", "if SOL funding turns negative", "if my portfolio goes under 25k"). Checked every 5 minutes; fires once, then removed. kinds: price_below / price_above (USD), change_24h_below / change_24h_above (%), funding_below / funding_above (% per 8 h; "turns negative" = funding_below 0), portfolio_below / portfolio_above (USD, no coin). coin can also be a METAL or OIL \u2014 gold, silver, platinum, copper, brent (or oil) \u2014 prices in USD per troy ounce (copper per pound, Brent per barrel; a gram price in SAR \xF7 3.75 \xD7 31.1035 = USD per ounce), or a bStock (Binance tokenized US stock) by its ticker or company name (NVIDIA, Tesla, NVDAB\u2026). Metals and bStocks are checked against prices refreshed every ~30 minutes \u2014 say so. The result says the value now and already_met (then it waits for the next crossing \u2014 tell the user).',
     input_schema: { type: "object", properties: { coin: { type: "string" }, kind: { type: "string", enum: ["price_below", "price_above", "change_24h_below", "change_24h_above", "funding_below", "funding_above", "portfolio_below", "portfolio_above"] }, value: { type: "number" }, note: { type: "string", description: "Optional short reminder shown when it fires" } }, required: ["kind", "value"] }
   },
   { name: "list_alerts", description: "The user's saved alerts (id, what, armed).", input_schema: { type: "object", properties: {} } },

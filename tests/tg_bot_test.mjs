@@ -24,7 +24,7 @@ check('no secret value in the built file', !/sk-ant-|BEGIN PRIVATE KEY|\d{8,}:[A
 const NOW = Date.now(), HR = 3600e3;
 const market = fx('market_snap_fixture.json'), top500 = fx('top500_fixture.json'), alt = fx('alt_fixture.json'), etf = fx('etf_fixture.json');
 market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() };
-market.stocks = [['NVDAB', 2.1], ['TSLAB', -3.4], ['CRCLB', 7.8], ['AAPLB', 0.4], ['GMEB', -6.2], ['MSFTB', 1.1], ['METAB', -0.9], ['AMZNB', 3.3]].map(([sym, ch24], i) => ({ id: sym.toLowerCase() + '-bstock', sym, name: sym, price: 100 + i * 10, ch24 }));
+market.stocks = [['NVDAB', 2.1, 'NVIDIA'], ['TSLAB', -3.4, 'Tesla'], ['CRCLB', 7.8, 'Circle'], ['AAPLB', 0.4, 'Apple'], ['GMEB', -6.2, 'GameStop'], ['MSFTB', 1.1, 'Microsoft'], ['METAB', -0.9, 'Meta'], ['AMZNB', 3.3, 'Amazon']].map(([sym, ch24, n], i) => ({ id: sym.toLowerCase() + '-bstock', sym, name: n + ' bStock', price: 100 + i * 10, ch24 }));
 market.metals = [['gold', 'oz', 2650, 0.76], ['silver', 'oz', 31.2, -0.5], ['platinum', 'oz', 960, 0.1], ['copper', 'lb', 4.35, 1.2], ['brent', 'bbl', 73.4, -1.4]].map(([k, unit, price, ch24]) => ({ k, unit, price, ch24, ch7: ch24 * 2, spark: [price * 0.98, price] })); market.parts = { ...(market.parts || {}), metals: new Date().toISOString() };
 const series = (price, p24, p7) => { const n = 24 * 9, t0 = NOW - (n - 1) * HR; return { t0, step: HR, p: Array.from({ length: n }, (_, i) => i === n - 1 ? price : i >= n - 25 ? p24 : i >= n - 169 ? (p24 + p7) / 2 : p7) }; };
 const LIVE = { bitcoin: { usd: 77000, usd_24h_change: 1.25, usd_market_cap: 1.53e12, usd_24h_vol: 4e10 }, solana: { usd: 150, usd_24h_change: 3.5 }, tether: { usd: 1.0002, usd_24h_change: 0.01 }, chainlink: { usd: 11, usd_24h_change: -4.2 }, pendle: { usd: 3.21, usd_24h_change: 7.7, usd_market_cap: 5e8 } };
@@ -115,6 +115,7 @@ globalThis.fetch = async (input, init = {}) => {
     const q = String(lastM.content);
     if (/keep looking/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tl0', name: 'get_coin', input: { coin: 'btc' } }] });
     if (/price of sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'text', text: 'Let me check.' }, { type: 'tool_use', id: 'tu1', name: 'get_coin', input: { coin: 'sol' } }] });
+    if (/alert me gold/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tg1', name: 'set_alert', input: { coin: 'الذهب', kind: 'price_above', value: 2700 } }, { type: 'tool_use', id: 'tg2', name: 'set_alert', input: { coin: 'Tesla', kind: 'change_24h_below', value: -5 } }, { type: 'tool_use', id: 'tg3', name: 'set_alert', input: { coin: 'oil', kind: 'price_below', value: 70 } }, { type: 'tool_use', id: 'tg4', name: 'set_alert', input: { coin: 'gold', kind: 'funding_below', value: 0 } }] });
     if (/alert me sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'ta1', name: 'set_alert', input: { coin: 'sol', kind: 'price_below', value: 140, note: 'buy zone' } }, { type: 'tool_use', id: 'ta2', name: 'set_alert', input: { coin: 'sol', kind: 'price_above', value: 100 } }, { type: 'tool_use', id: 'ta3', name: 'set_alert', input: { kind: 'portfolio_above', value: 1e9 } }, { type: 'tool_use', id: 'ta4', name: 'set_alert', input: { coin: 'sol', kind: 'nonsense', value: 1 } }] });
     if (/i bought 5 sol/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tr1', name: 'record_trade', input: { side: 'buy', coin: 'sol', amount: 5, price_usd: 140, paid_with: 'USDT' } }] });
     if (/i sold 20 link/i.test(q)) return J({ stop_reason: 'tool_use', content: [{ type: 'tool_use', id: 'tr2', name: 'record_trade', input: { side: 'sell', coin: 'link', amount: 20, price_usd: 18, fee_usd: 1, date: '2026-11-10' } }] });
@@ -460,6 +461,17 @@ await Wk.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-t
 check('🗑 1 → deleted, the list redrawn in place, "🗑 Alert deleted"', JSON.parse(kvStore.get('tg:555:alerts')).length === 0 && last().m === 'editMessageText' && /No alerts yet/.test(last().b.text) && sent.some(x => x.m === 'answerCallbackQuery' && /deleted/.test(x.b.text || '')), [kvStore.get('tg:555:alerts'), last().b.text]);
 sent.length = 0; Wk = await fresh(); await cron(Wk);
 check('cron with no alerts → no outside calls, nothing sent', sent.length === 0);
+// 🥇 / 📈 alerts on metals, oil and bStocks (prices from the snapshot)
+claudeCalls.length = 0; Wk = await fresh(); await postK(Wk, 'alert me gold');
+{ const ga = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
+  check('🥇 set_alert "الذهب" ≥ $2,700 → Gold price ≥ $2,700/oz, now $2,650; "Tesla" → the bStock TSLAB; "oil" → Brent ≤ $70/barrel; funding on gold → refused', ga && ga[0].ok && ga[0].alert === 'Gold price ≥ $2,700/oz' && ga[0].now === 2650 && ga[1].ok && /^TSLAB \(Tesla\) 24h change ≤ −5/.test(ga[1].alert) && ga[2].ok && ga[2].alert === 'Brent oil price ≤ $70.00/barrel' && /crypto futures only/.test(ga[3].error), ga);
+  check('…the tool tells Claude metals and bStocks are checked against ~30-minute prices', /METAL or OIL/.test(JSON.stringify(claudeCalls[0].tools)) && /bStock/.test(JSON.stringify(claudeCalls[0].tools))); }
+sent.length = 0; Wk = await fresh(); await postK(Wk, '/alerts');
+check('/alerts grouped: 📈 Stocks (bStocks) · 🥇 Metals & oil, numbered as shown, with the ~30-minute note', /<b>📈 Stocks \(bStocks\)<\/b>\n1\. TSLAB \(Tesla\)/.test(last().b.text) && /<b>🥇 Metals &amp; oil<\/b>\n2\. Gold price ≥ \$2,700\/oz\n3\. Brent oil price ≤ \$70\.00\/barrel/.test(last().b.text) && /prices refreshed every ~30 min/.test(last().b.text) && okHtml(last().b.text) && btns(last())[0].text === '🗑 1', last().b.text);
+market.metals.find(x => x.k === 'gold').price = 2710; Wk = await fresh(); sent.length = 0; await cron(Wk);
+{ const gf = sent.filter(x => x.m === 'sendMessage' && /Gold above/.test(x.b.text || ''));
+  check('cron: gold $2,710 → the gold alert fires (with a 🥇 Metals button), the others wait', gf.length === 1 && JSON.stringify(gf[0].b.reply_markup).includes('mkm') && JSON.parse(kvStore.get('tg:555:alerts')).length === 2, sent.map(x => (x.b.text || '').slice(0, 40))); }
+market.metals.find(x => x.k === 'gold').price = 2650; kvStore.set('tg:555:alerts', '[]');
 // what-if
 claudeCalls.length = 0; Wk = await fresh(); await postK(Wk, 'what if btc hits 100k');
 const wi = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));

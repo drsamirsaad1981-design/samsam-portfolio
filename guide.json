@@ -222,14 +222,14 @@
    },
    "en": [
     "Send a ticker — <code>btc</code> or <code>sol eth</code> — for the live price, trend, futures and funding.",
-    "/market — BTC, dominance, Fear &amp; Greed and ETF flows.",
+    "/market — BTC, dominance, Fear &amp; Greed and ETF flows; its 📈 bStocks and 🥇 Metals buttons show US stocks and gold, silver, oil (/stocks · /metals).",
     "/movers — the best and worst coins · /signals — hold / add / sell for your coins.",
     "/portfolio · /plan · /exit — your own numbers.",
     "/balances — your Binance / Gate balances, read with a read-only key you connect in the app (Performance → Wallets &amp; Exchanges → Exchanges)."
    ],
    "ar": [
     "أرسل رمز العملة — <code>btc</code> أو <code>sol eth</code> — لترى السعر المباشر والاتجاه والعقود الآجلة ومعدل التمويل.",
-    "/market — البيتكوين والهيمنة ومؤشر الخوف والطمع وتدفقات ETF.",
+    "/market — البيتكوين والهيمنة ومؤشر الخوف والطمع وتدفقات ETF؛ وزرّا 📈 bStocks و🥇 المعادن يعرضان الأسهم الأمريكية والذهب والفضة والنفط (/stocks · /metals).",
     "/movers — الأفضل والأسوأ أداءً · /signals — احتفاظ / تعزيز / بيع لعملاتك.",
     "/portfolio · /plan · /exit — أرقامك الخاصة.",
     "/balances — أرصدتك في Binance و Gate، تُقرأ بمفتاح للقراءة فقط تربطه من التطبيق (الأداء ← المحافظ والمنصات ← المنصات)."
@@ -257,11 +257,13 @@
    },
    "en": [
     "Just say it: <i>tell me if ETH drops below 3000</i> · <i>alert me if SOL is up 10% in a day</i> · <i>if my portfolio passes $30k</i>.",
+    "Gold, silver, oil and US stocks too: <i>tell me if gold goes above 4000</i> · <i>if NVIDIA drops 5% in a day</i> (their prices refresh every ~30 min).",
     "The bot checks every 5 minutes.",
     "Each alert comes once, then it's done."
    ],
    "ar": [
     "اكتبه بكلماتك: <i>نبهني إذا نزل ETH تحت 3000</i> · <i>نبهني إذا ارتفع SOL 10% في يوم</i> · <i>إذا تجاوزت محفظتي 30 ألف دولار</i>.",
+    "والذهب والفضة والنفط والأسهم الأمريكية أيضاً: <i>نبهني إذا تجاوز الذهب 4000</i> · <i>إذا نزل NVIDIA 5% في يوم</i> (أسعارها تُحدَّث كل ~30 دقيقة).",
     "يتحقق البوت كل 5 دقائق.",
     "يصلك كل تنبيه مرة واحدة ثم ينتهي."
    ],

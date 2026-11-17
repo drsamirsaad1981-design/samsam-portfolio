@@ -53,6 +53,14 @@ export async function currentValue(env, a, cache = {}) {
     return d && d.summary ? d.summary.funding_8h_pct_avg : null;
   }
   const key = 'p:' + a.sym;
+  if (a.metal || a.stock) {   // 🥇 a metal / 📈 a bStock: from the market snapshot (GitHub, every ~30 min) — never by ticker on an exchange
+    if (!(key in cache)) {
+      const m = await loadMarket([], []);
+      const r = a.metal ? (m.metals || []).find(x => x.k === a.metal) : (m.stocks || []).find(x => x.id === a.cg || x.sym === a.sym);
+      cache[key] = r && r.price > 0 ? { price: r.price, ch24: r.ch24, src: 'snapshot' } : null;
+    }
+    const y = cache[key]; return !y ? null : k.what === 'price' ? y.price : y.ch24;
+  }
   if (!(key in cache)) {
     let x = await exchangePrice(a.sym).catch(() => null);   // live from the exchanges
     if (!x) {   // else CoinGecko / the snapshot
@@ -76,8 +84,13 @@ export async function addAlert(env, input, user) {
   if (KINDS[kind].what !== 'portfolio') {
     const q = String(input.coin || '').trim();
     if (!q) return { error: 'coin is needed for this kind' };
+    if (KINDS[kind].what === 'funding' && (metalOf(q))) return { error: 'funding is for crypto futures only' };
+    const mk = metalOf(q);
+    if (mk) { a.metal = mk; a.sym = mk.toUpperCase(); }
     const m = await loadMarket([], user ? coinsOf(user) : []);
-    const c = await findCoin(q, m, user);
+    const st = !mk && stockOf(q, m.stocks || []);
+    if (st && KINDS[kind].what !== 'funding') { a.stock = true; a.sym = st.sym; a.cg = st.id; a.name = String(st.name || '').replace(/\s*bStock$/i, ''); }
+    const c = mk || a.stock ? { sym: a.sym, id: a.cg || null } : await findCoin(q, m, user);
     if (!c) return { error: `no coin found for "${q}"` };
     a.sym = c.sym; a.cg = c.id || null;
   }
@@ -101,10 +114,20 @@ export function deleteAlert(env, id) {
   });
 }
 export function describe(a) {
-  const k = KINDS[a.kind], v = k.what === 'price' ? usd(a.value) : k.what === 'portfolio' ? usd(a.value) : k.what === 'funding' ? a.value + '% / 8h' : pct(a.value, 1);
-  const what = k.what === 'price' ? `${a.sym} price` : k.what === 'change_24h' ? `${a.sym} 24h change` : k.what === 'funding' ? `${a.sym} funding` : 'Portfolio value';
+  const k = KINDS[a.kind], v = k.what === 'price' ? usd(a.value) + (a.metal ? '/' + (METAL_UNIT[a.metal] || 'oz') : '') : k.what === 'portfolio' ? usd(a.value) : k.what === 'funding' ? a.value + '% / 8h' : pct(a.value, 1);
+  const who = a.metal ? (METAL_NAME[a.metal] || a.sym) : a.stock ? `${a.sym}${a.name ? ' (' + a.name + ')' : ''}` : a.sym;
+  const what = k.what === 'price' ? `${who} price` : k.what === 'change_24h' ? `${who} 24h change` : k.what === 'funding' ? `${a.sym} funding` : 'Portfolio value';
   return `${what} ${k.op} ${v}`;
 }
+// 🥇 the metals and oil an alert can watch (words in English and Arabic), and 📈 a bStock by its ticker or company name
+const METAL_WORDS = { gold: /^(gold|xau|ذهب|الذهب)$/i, silver: /^(silver|xag|فضة|الفضة)$/i, platinum: /^(platinum|xpt|بلاتين|البلاتين)$/i, copper: /^(copper|نحاس|النحاس)$/i, brent: /^(brent|oil|brent oil|crude|نفط|النفط|برنت|نفط برنت|البترول|بترول)$/i };
+const METAL_NAME = { gold: 'Gold', silver: 'Silver', platinum: 'Platinum', copper: 'Copper', brent: 'Brent oil' }, METAL_UNIT = { gold: 'oz', silver: 'oz', platinum: 'oz', copper: 'lb', brent: 'barrel' };
+export const metalOf = q => Object.keys(METAL_WORDS).find(k => METAL_WORDS[k].test(String(q).trim())) || null;
+export function stockOf(q, stocks) {
+  const Q = String(q).trim().toUpperCase(), lq = String(q).trim().toLowerCase(); if (!Q) return null;
+  return stocks.find(s => s.sym === Q) || stocks.find(s => s.sym === Q + 'B') || (lq.length >= 3 ? stocks.find(s => String(s.name || '').toLowerCase().replace(/\s*bstock$/, '') === lq) || stocks.find(s => String(s.name || '').toLowerCase().startsWith(lq)) : null) || null;
+}
+const groupOf = a => KINDS[a.kind].what === 'portfolio' ? 'pf' : a.metal ? 'metal' : a.stock ? 'stock' : 'coin';
 
 // ── the cron: every 5 minutes ──
 async function tg(env, method, body) {
@@ -128,9 +151,9 @@ export async function runWatch(env, now = Date.now()) {
   for (const { a, now: v } of fired) {
     const k = KINDS[a.kind], up = k.op === '≥';
     const nowTxt = k.what === 'price' || k.what === 'portfolio' ? usd(v) : k.what === 'funding' ? v + '% / 8h' : pct(v, 1);
-    const head = k.what === 'portfolio' ? `💼 <b>Portfolio ${up ? 'above' : 'below'} ${usd(a.value)}</b>` : `${up ? '🚀' : '🔻'} <b>${esc(a.sym)} ${k.what === 'price' ? (up ? 'above' : 'below') + ' ' + usd(a.value) : k.what === 'funding' ? 'funding ' + k.op + ' ' + a.value + '%' : '24h ' + k.op + ' ' + pct(a.value, 1)}</b>`;
+    const head = k.what === 'portfolio' ? `💼 <b>Portfolio ${up ? 'above' : 'below'} ${usd(a.value)}</b>` : `${up ? '🚀' : '🔻'} <b>${esc(a.metal ? METAL_NAME[a.metal] : a.sym)} ${k.what === 'price' ? (up ? 'above' : 'below') + ' ' + usd(a.value) : k.what === 'funding' ? 'funding ' + k.op + ' ' + a.value + '%' : '24h ' + k.op + ' ' + pct(a.value, 1)}</b>`;
     const text = `🔔 ${head}\nNow: <b>${nowTxt}</b>${a.note ? '\n<i>' + esc(a.note) + '</i>' : ''}\n<i>Your alert from ${local(a.created, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} — done, removed.</i>`;
-    const buttons = a.sym ? [[{ text: '🪙 ' + a.sym, callback_data: 'c:' + (a.cg || 'x-' + a.sym.toLowerCase()).slice(0, 58) }, { text: '🔥 Liq Map', url: 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(a.sym) }]] : [[{ text: '💼 Portfolio', callback_data: 'pf' }]];
+    const buttons = a.metal ? [[{ text: '🥇 Metals', callback_data: 'mkm' }]] : a.stock ? [[{ text: '📈 bStocks', callback_data: 'mks' }]] : a.sym ? [[{ text: '🪙 ' + a.sym, callback_data: 'c:' + (a.cg || 'x-' + a.sym.toLowerCase()).slice(0, 58) }, { text: '🔥 Liq Map', url: 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(a.sym) }]] : [[{ text: '💼 Portfolio', callback_data: 'pf' }]];
     const r = await tg(env, 'sendMessage', { chat_id: chatOf(env), text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
     if (!r.ok) keep.push(a);   // Telegram refused: try again next time
     else await logEvent(env, 'alert', describe(a) + ' — now ' + nowTxt);
@@ -146,10 +169,17 @@ export async function runWatch(env, now = Date.now()) {
 export async function viewAlerts(env, lang = 'en') {
   const list = await listAlerts(env), ar = lang === 'ar';
   if (!list.length) return { text: ar ? '🔔 لا توجد تنبيهات.\nاكتب مثلاً: <i>نبهني إذا نزل SOL تحت 82</i>' : '🔔 No alerts yet.\nWrite e.g. <i>tell me if SOL drops below 82</i>', buttons: [[{ text: ar ? '⬅️ القائمة' : '⬅️ Menu', callback_data: 'menu' }]] };
-  const L = [ar ? `🔔 <b>تنبيهاتك</b> (${list.length})` : `🔔 <b>Your alerts</b> (${list.length})`, ''];
-  list.forEach((a, i) => L.push(`${i + 1}. ${esc(describe(a))}${a.armed ? '' : ar ? ' <i>(ينتظر عودة السعر أولاً)</i>' : ' <i>(waits to reset first)</i>'}`));
-  L.push('', ar ? '<i>يتحقق كل 5 دقائق · كل تنبيه مرة واحدة</i>' : '<i>Checked every 5 min · each fires once</i>');
-  const buttons = []; for (let i = 0; i < list.length; i += 3) buttons.push(list.slice(i, i + 3).map((a, j) => ({ text: `🗑 ${i + j + 1}`, callback_data: 'ad:' + a.id })));
+  const L = [ar ? `🔔 <b>تنبيهاتك</b> (${list.length})` : `🔔 <b>Your alerts</b> (${list.length})`];
+  const G = [['coin', ar ? '🪙 العملات' : '🪙 Coins'], ['stock', ar ? '📈 الأسهم (bStocks)' : '📈 Stocks (bStocks)'], ['metal', ar ? '🥇 المعادن والنفط' : '🥇 Metals &amp; oil'], ['pf', ar ? '💼 المحفظة' : '💼 Portfolio']];
+  const groups = G.filter(([g]) => list.some(a => groupOf(a) === g)), several = groups.length > 1;
+  const shown = [];   // grouped (a heading only when there is more than one kind), numbered in the order shown; the number = its 🗑 button
+  for (const [g, title] of groups) {
+    L.push('', ...(several ? [`<b>${title}</b>`] : []));
+    list.forEach(a => { if (groupOf(a) === g) { shown.push(a); L.push(`${shown.length}. ${esc(describe(a))}${a.armed ? '' : ar ? ' <i>(ينتظر عودة السعر أولاً)</i>' : ' <i>(waits to reset first)</i>'}`); } });
+  }
+  const slow = list.some(a => a.metal || a.stock);
+  L.push('', ar ? '<i>يتحقق كل 5 دقائق · كل تنبيه مرة واحدة' + (slow ? ' · المعادن والأسهم: أسعار تُحدَّث كل ~30 دقيقة' : '') + '</i>' : '<i>Checked every 5 min · each fires once' + (slow ? ' · metals &amp; stocks: prices refreshed every ~30 min' : '') + '</i>');
+  const buttons = []; for (let i = 0; i < shown.length; i += 3) buttons.push(shown.slice(i, i + 3).map((a, j) => ({ text: `🗑 ${i + j + 1}`, callback_data: 'ad:' + a.id })));
   buttons.push([{ text: ar ? '🔄 تحديث' : '🔄 Refresh', callback_data: 'al' }, { text: ar ? '⬅️ القائمة' : '⬅️ Menu', callback_data: 'menu' }]);
   return { text: L.join('\n'), buttons };
 }
