@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 8bff3478a52ffb44
+// sources-hash: a569596a2f020ac3
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1303,10 +1303,10 @@ async function cexHandler2(env, who, body) {
 }
 
 // tools/worker/bidi.mjs
-var AR = /[؀-ۿ]/;
+var AR = /[\u0600-\u06FF]/;
 var RLM = "\u200F";
+var LRM = "\u200E";
 var LRI = "\u2066";
-var PDI = "\u2069";
 var RUN = /[A-Za-z0-9$€£%+\-−.,:/_#@×'’]+(?:&amp;|&lt;|&gt;)?(?:[  ]+(?:&amp;|&lt;|&gt;|[A-Za-z0-9$€£%+\-−.,:/_#@×'’])+)*/g;
 var hasWord = (s) => /[A-Za-z0-9]/.test(s);
 function bidiLine(line, all = false) {
@@ -1316,8 +1316,8 @@ function bidiLine(line, all = false) {
     const core = t.replace(/^[.,:\s\u00A0]+|[.,:\s\u00A0]+$/g, "");
     if (!hasWord(core)) return m;
     const i = t.indexOf(core);
-    return t.slice(0, i) + LRI + core + PDI + t.slice(i + core.length) + tail;
-  })).join("");
+    return t.slice(0, i) + LRM + core + LRM + t.slice(i + core.length) + tail;
+  }).replace(/ · /g, " \xB7" + RLM + " ")).join("");
   return RLM + out;
 }
 function bidi(text) {
@@ -3202,14 +3202,14 @@ async function tidy(env, x) {
   if (okAll) x.tidy = true;
   return okAll;
 }
-var LRI2 = "\u2066";
-var PDI2 = "\u2069";
+var LRI2 = "\u200E";
+var PDI = "\u200E";
 var RLM2 = "\u200F";
 var NUM = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3", "9\uFE0F\u20E3"];
 function gLine(l, ar) {
   if (!ar) return l;
-  l = l.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI2}<${t}>${x}</${t}>${PDI2}`);
-  l = l.replace(/(^|[\s(])(\/[a-z]+(?: CODE)?)(?=$|[\s),.؛،])/g, (m, a, c) => `${a}${LRI2}${c}${PDI2}`);
+  l = l.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI2}<${t}>${x}</${t}>${PDI}`);
+  l = l.replace(/(^|[\s(])(\/[a-z]+(?: CODE)?)(?=$|[\s),.؛،])/g, (m, a, c) => `${a}${LRI2}${c}${PDI}`);
   return RLM2 + l;
 }
 function guideCard(s, L) {
@@ -5968,7 +5968,8 @@ async function viewBalances(env, lang2, fresh = false) {
       continue;
     }
     const d = o.q - a, same = p > 0 ? Math.abs(d) * p < 0.5 : Math.abs(d) <= Math.max(a, o.q) * 1e-4;
-    rows.push({ usdv, line: `${same ? "\u2705" : d > 0 ? "\u2795" : "\u25AB\uFE0F"} <b>${esc(o.sym)}</b> ${fq(o.q)}${usdv ? ` \xB7 ${usd(usdv)}` : ""}` + (same ? "" : d > 0 ? ar ? ` \u2014 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (${fq(a)})` : ` \u2014 more than the app (${fq(a)})` : ar ? ` \u2014 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: ${fq(a)}` : ` \u2014 app: ${fq(a)}`) });
+    rows.push({ usdv, line: `${same ? "\u2705" : d > 0 ? "\u2795" : "\u25AB\uFE0F"} <b>${esc(o.sym)}</b> ${fq(o.q)}${usdv ? ` \xB7 ${usd(usdv)}` : ""}` + (same ? "" : `
+      ${d > 0 ? (ar ? "\u0623\u0643\u062B\u0631 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "more than the app") + " \xB7 " : ""}${ar ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "app"}: ${fq(a)}`) });
   }
   rows.sort((x, y) => y.usdv - x.usdv);
   const errs = (r.balances || []).filter((b) => !b.ok).map((b) => `\u26A0\uFE0F ${esc(b.name)}: ${b.error === "blocked" ? ar ? "\u0644\u0627 \u062A\u0633\u062A\u062C\u064A\u0628 \u0627\u0644\u0622\u0646" : "not answering now" : b.error === "refused" || b.error === "noperm" ? ar ? "\u0631\u0641\u0636\u062A \u0627\u0644\u0645\u0641\u062A\u0627\u062D \u2014 \u0631\u0627\u062C\u0639\u0647 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "refused the key \u2014 check it in the app" : ar ? "\u062A\u0639\u0630\u0651\u0631\u062A \u0627\u0644\u0642\u0631\u0627\u0621\u0629" : "could not read"}`);
@@ -5980,7 +5981,16 @@ async function viewBalances(env, lang2, fresh = false) {
     `\u{1F4B0} ${ar ? "\u0639\u0644\u0649 \u0627\u0644\u0645\u0646\u0635\u0627\u062A" : "On exchanges"}: <b>${usd(tot)}</b>`,
     "",
     ...rows.slice(0, 25).map((x) => x.line),
-    ...other.length ? ["", (ar ? "\u{1F195} \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: " : "\u{1F195} Not in the app: ") + other.sort((x, y) => y.q - x.q).slice(0, 15).map((o) => `${esc(o.sym)} ${fq(o.q)}`).join(" \xB7 ")] : [],
+    ...other.length ? [
+      "",
+      ar ? `\u{1F195} <b>\u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> (${other.length})` : `\u{1F195} <b>Not in the app</b> (${other.length})`,
+      ...((o) => {
+        const r3 = [];
+        for (let i = 0; i < o.length; i += 3) r3.push(o.slice(i, i + 3).map((x) => `${esc(x.sym)} ${fq(x.q)}`).join(" \xB7 "));
+        return r3;
+      })(other.sort((x, y) => y.q - x.q).slice(0, 15))
+    ] : [],
+    // 3 a line
     ...errs.length ? ["", ...errs] : [],
     "",
     ar ? "<i>\u2705 \u0645\u0637\u0627\u0628\u0642 \xB7 \u2795 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u25AB\uFE0F \u0627\u0644\u0628\u0627\u0642\u064A \u0641\u064A \u0645\u062D\u0627\u0641\u0638\u0643 \u0623\u0648 \u0645\u0643\u0627\u0646 \u0622\u062E\u0631. \u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u2014 \u0644\u0627 \u064A\u062A\u063A\u064A\u0631 \u0634\u064A\u0621 \u0641\u064A \u0645\u062D\u0641\u0638\u062A\u0643.</i>" : "<i>\u2705 matches \xB7 \u2795 more than the app \xB7 \u25AB\uFE0F the rest is in your wallets or elsewhere. Read-only \u2014 nothing is changed in your portfolio.</i>"

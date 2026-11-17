@@ -1,7 +1,7 @@
 // Arabic Telegram messages read right-to-left (tools/worker/bidi.mjs)
 import { bidi, bidiBody } from '../tools/worker/bidi.mjs';
 let ok = 0, n = 0; const check = (name, c, d) => { n++; if (c) ok++; console.log((c ? 'PASS ' : 'FAIL ') + name + (c ? '' : ' -> ' + JSON.stringify(d))); };
-const R = '‏', I = '⁦', P = '⁩', v = s => s.replace(/⁦/g, '⟨').replace(/⁩/g, '⟩').replace(/‏/g, '«R»');
+const R = '\u200F', I = '\u200E', P = '\u200E', v = s => s.replace(/\u200E/g, '|').replace(/\u200F/g, '«R»');
 let t = bidi('▫️ <b>BTC</b> 0.001 · $75.27 — التطبيق: 0.1479');
 check('a line with Arabic starts right-to-left; the ticker and each number are their own left-to-right island', t.startsWith(R) && t.includes(`<b>${I}BTC${P}</b>`) && t.includes(`${I}$75.27${P}`) && t.includes(`التطبيق: ${I}0.1479${P}`), v(t));
 t = bidi('• VVV TP1: <b>43.40$</b> — أبعد بنحو 114%');
@@ -13,9 +13,10 @@ check('a mostly-Arabic message: the ticker-only rows run right-to-left too', t.s
 t = bidi('👋 <b>Welcome</b>\nChat here · ideas\n\n👋 <b>أهلاً بكم</b>\nالدردشة هنا');
 check('English + Arabic (the group\'s posts): the English lines are left alone', t.split('\n')[0] === '👋 <b>Welcome</b>' && t.split('\n')[1] === 'Chat here · ideas' && t.split('\n')[3].startsWith(R), v(t));
 check('an English message is not touched', bidi('💼 <b>$1,234</b> ▲ 2.1%') === '💼 <b>$1,234</b> ▲ 2.1%');
-const g = R + 'مرحبا ' + I + '/guide' + P;
+const g = R + 'مرحبا \u2066/guide\u2069';
 check('a line already marked (the guide\'s cards) is not marked twice', bidi(g) === g);
 check('HTML tags are never changed', /<a href="https:\/\/x\.com\/a-b">/.test(bidi('افتح <a href="https://x.com/a-b">الرابط</a> الآن')), v(bidi('افتح <a href="https://x.com/a-b">الرابط</a> الآن')));
 const b = bidiBody({ chat_id: 1, text: 'السعر 100$', parse_mode: 'HTML', reply_markup: { x: 1 } });
+check('a list "Binance · Gate · now" runs right-to-left item by item (an RLM after each ·)', bidi('<i>Binance · Gate · الآن</i>').includes(`${I}Binance${P} ·${R} ${I}Gate${P} ·${R} الآن`), v(bidi('<i>Binance · Gate · الآن</i>')));
 check('a Telegram body: only its text changes', b.text.startsWith(R) && b.chat_id === 1 && b.reply_markup.x === 1);
 console.log(`${ok}/${n} passed`); process.exit(ok === n ? 0 : 1);

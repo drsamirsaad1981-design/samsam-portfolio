@@ -4,23 +4,25 @@
 // letter, so the whole line runs left-to-right and the Arabic in it comes out scrambled; "114% أبعد" turns into "% 114".
 // For every line that has Arabic in it:
 //   · it starts with an RLM (right-to-left mark) → the line is right-to-left;
-//   · each run of Latin letters / digits / $ % . , : + − (a ticker, a price, "Fear & Greed: 12") becomes its own
-//     left-to-right island (LRI … PDI), so "$64,950" and "-1.78%" keep their shape inside the Arabic sentence.
+//   · each run of Latin letters / digits / $ % . , : + − (a ticker, a price, "Fear & Greed: 12") is held between two LRMs
+//     (left-to-right marks), so "$64,950" and "-1.78%" keep their shape inside the Arabic sentence (Telegram's apps ignore
+//     the newer isolate marks, LRI / PDI — seen on Android, 17 Nov);
+//   · after each " · " an RLM, so a list ("Binance · Gate · now") runs right-to-left item by item.
 // HTML tags are left alone; a line already marked (the guide's cards) is not touched again. Lines with no Arabic
 // (English messages, the English half of the group's posts) are not touched at all.
-const AR = /[؀-ۿ]/, RLM = '‏', LRI = '⁦', PDI = '⁩';
+const AR = /[\u0600-\u06FF]/, RLM = '\u200F', LRM = '\u200E', LRI = '\u2066';
 const RUN = /[A-Za-z0-9$€£%+\-−.,:/_#@×'’]+(?:&amp;|&lt;|&gt;)?(?:[  ]+(?:&amp;|&lt;|&gt;|[A-Za-z0-9$€£%+\-−.,:/_#@×'’])+)*/g;
 const hasWord = s => /[A-Za-z0-9]/.test(s);
 export function bidiLine(line, all = false) {
-  if (!(all ? /[A-Za-z0-9\u0600-\u06FF]/.test(line) : AR.test(line)) || line.startsWith(RLM) || line.includes(LRI)) return line;
+  if (!(all ? /[A-Za-z0-9\u0600-\u06FF]/.test(line) : AR.test(line)) || line.startsWith(RLM) || line.includes(LRI)) return line;   // (LRI: the guide's own cards)
   const out = line.split(/(<[^>]+>)/).map(part => part.startsWith('<') ? part
     : part.replace(RUN, m => {
       const t = m.replace(/[  ]+$/, ''), tail = m.slice(t.length);
       const core = t.replace(/^[.,:\s\u00A0]+|[.,:\s\u00A0]+$/g, '');   // a full stop / colon at the edge belongs to the Arabic sentence
       if (!hasWord(core)) return m;
       const i = t.indexOf(core);
-      return t.slice(0, i) + LRI + core + PDI + t.slice(i + core.length) + tail;
-    })).join('');
+      return t.slice(0, i) + LRM + core + LRM + t.slice(i + core.length) + tail;
+    }).replace(/ · /g, ' ·' + RLM + ' ')).join('');   // a list "Binance · Gate · now" runs right-to-left, item by item
   return RLM + out;
 }
 // a mostly-Arabic message (more Arabic letters than Latin ones, tags left out): EVERY line runs right-to-left, so the rows

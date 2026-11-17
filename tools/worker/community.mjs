@@ -139,7 +139,7 @@ async function tidy(env, x) {
 // 📘 one part of the guide as a card: the title, a one-line summary, numbered steps, a 💡 tip (bot + group, same look).
 // In Arabic every line starts right-to-left (RLM), and English words / commands stay their own left-to-right island
 // (else "/alerts" shows as "alerts/"). Commands stay plain text, so Telegram makes them tappable.
-const LRI = '\u2066', PDI = '\u2069', RLM = '\u200F';
+const LRI = '\u200E', PDI = '\u200E', RLM = '\u200F';   // LRM marks: Telegram's apps ignore the isolate marks (LRI / PDI)
 const NUM = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
 export function gLine(l, ar) {
   if (!ar) return l;

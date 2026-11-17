@@ -487,7 +487,7 @@ async function viewBalances(env, lang, fresh = false) {
     const p = price[o.sym] || (/^(USDT|USDC|FDUSD|DAI)$/.test(o.sym) ? 1 : 0), a = app[o.sym] || 0, usdv = o.q * p; tot += usdv;
     if (!a) { if (!(p > 0 && usdv < 1)) other.push(o); continue; }
     const d = o.q - a, same = p > 0 ? Math.abs(d) * p < 0.5 : Math.abs(d) <= Math.max(a, o.q) * 1e-4;
-    rows.push({ usdv, line: `${same ? '✅' : d > 0 ? '➕' : '▫️'} <b>${esc(o.sym)}</b> ${fq(o.q)}${usdv ? ` · ${usd(usdv)}` : ''}` + (same ? '' : d > 0 ? (ar ? ` — أكثر من التطبيق (${fq(a)})` : ` — more than the app (${fq(a)})`) : (ar ? ` — التطبيق: ${fq(a)}` : ` — app: ${fq(a)}`)) });
+    rows.push({ usdv, line: `${same ? '✅' : d > 0 ? '➕' : '▫️'} <b>${esc(o.sym)}</b> ${fq(o.q)}${usdv ? ` · ${usd(usdv)}` : ''}` + (same ? '' : `\n      ${d > 0 ? (ar ? 'أكثر من التطبيق' : 'more than the app') + ' · ' : ''}${ar ? 'التطبيق' : 'app'}: ${fq(a)}`) });   // the app's amount on its own line (reads cleanly in Arabic too)
   }
   rows.sort((x, y) => y.usdv - x.usdv);
   const errs = (r.balances || []).filter(b => !b.ok).map(b => `⚠️ ${esc(b.name)}: ${b.error === 'blocked' ? (ar ? 'لا تستجيب الآن' : 'not answering now') : b.error === 'refused' || b.error === 'noperm' ? (ar ? 'رفضت المفتاح — راجعه في التطبيق' : 'refused the key — check it in the app') : (ar ? 'تعذّرت القراءة' : 'could not read')}`);
@@ -495,7 +495,8 @@ async function viewBalances(env, lang, fresh = false) {
   const L = [ar ? '🔌 <b>المنصات · الأرصدة المباشرة</b>' : '🔌 <b>Exchanges · live balances</b>',
     `<i>${esc(r.exchanges.map(x => x.name).join(' · '))} · ${mins ? (ar ? `منذ ${mins} دقيقة` : `${mins} min ago`) : (ar ? 'الآن' : 'just now')}</i>`, '',
     `💰 ${ar ? 'على المنصات' : 'On exchanges'}: <b>${usd(tot)}</b>`, '', ...rows.slice(0, 25).map(x => x.line),
-    ...(other.length ? ['', (ar ? '🆕 غير موجودة في التطبيق: ' : '🆕 Not in the app: ') + other.sort((x, y) => y.q - x.q).slice(0, 15).map(o => `${esc(o.sym)} ${fq(o.q)}`).join(' · ')] : []),
+    ...(other.length ? ['', ar ? `🆕 <b>غير موجودة في التطبيق</b> (${other.length})` : `🆕 <b>Not in the app</b> (${other.length})`,
+      ...(o => { const r = []; for (let i = 0; i < o.length; i += 3) r.push(o.slice(i, i + 3).map(x => `${esc(x.sym)} ${fq(x.q)}`).join(' · ')); return r; })(other.sort((x, y) => y.q - x.q).slice(0, 15))] : []),   // 3 a line
     ...(errs.length ? ['', ...errs] : []),
     '', ar ? '<i>✅ مطابق · ➕ أكثر من التطبيق · ▫️ الباقي في محافظك أو مكان آخر. قراءة فقط — لا يتغير شيء في محفظتك.</i>' : '<i>✅ matches · ➕ more than the app · ▫️ the rest is in your wallets or elsewhere. Read-only — nothing is changed in your portfolio.</i>'];
   return { text: L.join('\n'), buttons: [[cb(ar ? '🔄 تحديث' : '🔄 Refresh', 'bal:r'), open], back] };
