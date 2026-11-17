@@ -22,7 +22,7 @@ with sync_playwright() as p:
         fr = [f for f in pg.frames if 'performance.html' in f.url][0]
         fr.wait_for_selector('#wxCard:not([hidden])', timeout=10000)
         t = fr.inner_text('#wxCard')
-        check(f'{vn}: Performance — a "Wallets & exchanges" card: Wallets & check, Import from exchange, Binance / Gate later', 'Wallets & check' in t and 'Import from exchange' in t and 'Binance' in t and 'Gate' in t, t)
+        check(f'{vn}: Performance — a "Wallets & exchanges" card: Wallets & check, Import from exchange, Exchanges · live balances (Binance / Gate)', 'Wallets & check' in t and 'Import from exchange' in t and 'Binance' in t and 'Gate' in t, t)
         check(f'{vn}: …and the Rewards & mining card next to it', fr.is_visible('#freeCard') and 'Rewards' in fr.inner_text('#freeCard'))
         fr.click('#wxWallets'); fr.wait_for_selector('#cpWal', timeout=5000)
         check(f'{vn}: Wallets & check opens', fr.is_visible('#cpWal'))

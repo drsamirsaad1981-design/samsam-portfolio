@@ -212,13 +212,15 @@
     "The chart: 🔵 <b>All Time Profit %</b> against 🟠 <b>BTC Trend</b> — the same money in Bitcoin. The gap between them is how much better or worse you did.",
     "<b>All Time Profit Breakdown</b>: <b>Realized</b> (locked in by your sells) + <b>Unrealized</b> (moves with today's prices).",
     "<b>Top Performers</b>: your best and worst coin in dollars, or <b>vs BTC</b>.",
-    "<b>Rewards &amp; Mining</b> lists the coins you got without buying, by coin and by month."
+    "<b>Rewards &amp; Mining</b> lists the coins you got without buying, by coin and by month.",
+    "<b>Exchanges · live balances</b>: your Binance / Gate balances, read with a read-only API key, next to the app."
    ],
    "ar": [
     "الرسم: 🔵 <b>إجمالي الربح %</b> مقابل 🟠 <b>اتجاه البيتكوين</b> — نفس المال لو كان في البيتكوين. الفرق بينهما يوضح كم كان أداؤك أفضل أو أسوأ.",
     "<b>تفاصيل إجمالي الربح</b>: <b>المحقق</b> (ثابت بعمليات البيع) + <b>غير المحقق</b> (يتغير مع أسعار اليوم).",
     "<b>الأفضل أداءً</b>: أفضل وأسوأ عملة لديك بالدولار، أو <b>مقابل البيتكوين</b>.",
-    "<b>المكافآت والتعدين</b> تعرض العملات التي حصلت عليها دون شراء، حسب العملة وحسب الشهر."
+    "<b>المكافآت والتعدين</b> تعرض العملات التي حصلت عليها دون شراء، حسب العملة وحسب الشهر.",
+    "<b>المنصات · الأرصدة المباشرة</b>: أرصدتك في Binance و Gate، تُقرأ بمفتاح API للقراءة فقط، بجانب التطبيق."
    ],
    "tip": {
     "en": "<b>Wallets &amp; check</b> compares the app with your real wallets — you add the public address only, never a seed phrase or a private key.",

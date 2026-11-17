@@ -251,7 +251,7 @@
     'None yet — staking rewards, mined BTC and airdrops show here': 'لا يوجد بعد — تظهر هنا مكافآت الـ Staking والبيتكوين المُعدَّن والـ Airdrops',
     'No rewards or mined coins': 'لا توجد مكافآت أو عملات مُعدَّنة', 'Staking rewards': 'مكافآت الـ Staking', 'Airdrops & other free coins': 'الـ Airdrops والعملات المجانية',
     'Wallets & exchanges': 'المحافظ والمنصات', 'Wallets & Exchanges': 'المحافظ والمنصات', 'Wallets and exchanges': 'المحافظ والمنصات', 'Wallets & check': 'المحافظ والمطابقة',
-    'Compare your real wallets with the app': 'قارن محافظك الحقيقية بالبرنامج', 'Import from exchange': 'استيراد من منصة',
+    'Compare your real wallets with the app': 'قارن محافظك الحقيقية بالتطبيق', 'Exchanges · live balances': 'المنصات · الأرصدة المباشرة', 'Import from exchange': 'استيراد من منصة',
     'A CSV file from Binance, Gate or another exchange → your buys and sells': 'ملف CSV من Binance أو Gate أو أي منصة ← عمليات الشراء والبيع',
     'Binance · Gate — live balances straight from the exchange: later': 'Binance · Gate — الأرصدة المباشرة من المنصة: قريباً',
 

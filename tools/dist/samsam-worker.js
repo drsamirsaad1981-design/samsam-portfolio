@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 857ca300042713c0
+// sources-hash: cb46a4db0a2d936c
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -23,6 +23,10 @@ var keyHandler = null;
 function setKeyHandler(fn) {
   keyHandler = fn;
 }
+var cexHandler = null;
+function setCexHandler(fn) {
+  cexHandler = fn;
+}
 var ai_worker_default = {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
@@ -38,8 +42,8 @@ var ai_worker_default = {
     const reply = (status2, obj) => new Response(JSON.stringify(obj), { status: status2, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
     if (request.method === "OPTIONS") return new Response(null, { status: okOrigin ? 204 : 403, headers: cors });
     if (!okOrigin) return reply(403, { error: "This service only answers the Cute Portfolio app." });
-    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path), isJoin = /\/join\/?$/.test(path);
-    if (request.method !== "POST" || !(path.endsWith("/analyze") || isKey || isAdmin || isJoin)) return reply(404, { error: "Not found." });
+    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path), isJoin = /\/join\/?$/.test(path), isCex = /\/cex\/?$/.test(path);
+    if (request.method !== "POST" || !(path.endsWith("/analyze") || isKey || isAdmin || isJoin || isCex)) return reply(404, { error: "Not found." });
     const raw = await request.text();
     if (raw.length > MAX_BODY) return reply(413, { error: "Request too large." });
     let body;
@@ -64,6 +68,11 @@ var ai_worker_default = {
     if (isAdmin) {
       if (!adminHandler) return reply(404, { error: "Not found." });
       const r = await adminHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch((e) => ({ status: 500, error: "Something went wrong \u2014 " + String(e && e.message || e).slice(0, 120) }));
+      return reply(r.status || 200, r);
+    }
+    if (isCex) {
+      if (!cexHandler) return reply(404, { error: "Not found." });
+      const r = await cexHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch(() => ({ status: 500, error: "failed" }));
       return reply(r.status || 200, r);
     }
     if (isKey) {
@@ -306,8 +315,8 @@ function realizedPnl(coins, txs) {
   const openBySym = new Map((coins || []).map((c) => [c.sym, c.opening]));
   let total = 0, sellCount = 0, sellFees = 0, soldCost = 0;
   const perTx = {}, bySymTotal = {};
-  for (const [sym, list2] of bySym) {
-    const r = replay(openBySym.get(sym) || { qty: 0, avg: 0 }, list2);
+  for (const [sym, list3] of bySym) {
+    const r = replay(openBySym.get(sym) || { qty: 0, avg: 0 }, list3);
     total += r.realized;
     sellCount += r.sellCount;
     sellFees += r.sellFees;
@@ -1006,6 +1015,268 @@ async function clearPending(env, chat) {
   await kdel(env, "tg:appreq:" + chat);
 }
 
+// tools/worker/byok.mjs
+var BYOK_AI = 100;
+var BYOK_REPORTS = 10;
+var enc = new TextEncoder();
+var dec = new TextDecoder();
+var b64 = (u) => btoa(String.fromCharCode(...u));
+var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+async function aesKey(env) {
+  let secret = "";
+  try {
+    secret = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || "{}").private_key || "";
+  } catch (_) {
+  }
+  secret = secret || env.TG_SECRET || "";
+  if (secret.length < 16) throw new Error("no secret to encrypt with");
+  const base = await crypto.subtle.importKey("raw", enc.encode(secret), "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: enc.encode("samsam-byok"), info: enc.encode("claude-key-v1") }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+async function seal(env, plain) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await aesKey(env), enc.encode(plain)));
+  return b64(iv) + "." + b64(ct);
+}
+async function unseal(env, sealed) {
+  const [iv, ct] = String(sealed).split(".");
+  return dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(iv) }, await aesKey(env), unb64(ct)));
+}
+var SHAPE = /^sk-a[n]t-[A-Za-z0-9_\-]{20,200}$/;
+var validShape = (k) => SHAPE.test(String(k || "").trim());
+async function keyWorks(key) {
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/models?limit=1", { headers: { "x-api-key": key, "anthropic-version": "2023-06-01" } });
+    return r.ok ? "ok" : r.status === 401 || r.status === 403 ? "refused" : "unsure";
+  } catch (_) {
+    return "unsure";
+  }
+}
+async function saveKey(env, key) {
+  const k = String(key).trim();
+  await env.RATE.put(K(env, "byok"), JSON.stringify({ v: await seal(env, k), tail: k.slice(-4), at: (/* @__PURE__ */ new Date()).toISOString() }));
+}
+async function keyInfo(env) {
+  try {
+    const x = JSON.parse(env.RATE && await env.RATE.get(K(env, "byok")) || "null");
+    return x && x.v ? { has: true, tail: x.tail, at: x.at } : { has: false };
+  } catch (_) {
+    return { has: false };
+  }
+}
+var mem = /* @__PURE__ */ new Map();
+async function ownKey(env) {
+  let x = null;
+  try {
+    x = JSON.parse(env.RATE && await env.RATE.get(K(env, "byok")) || "null");
+  } catch (_) {
+    x = null;
+  }
+  if (!x || !x.v) return null;
+  if (mem.has(x.v)) return mem.get(x.v);
+  let key = null;
+  try {
+    key = await unseal(env, x.v);
+  } catch (_) {
+    key = null;
+  }
+  if (mem.size > 50) mem.clear();
+  mem.set(x.v, key);
+  return key;
+}
+async function deleteKey(env) {
+  try {
+    if (env.RATE) await env.RATE.delete(K(env, "byok"));
+  } catch (_) {
+  }
+}
+
+// tools/worker/cex.mjs
+var EXCHANGES = { binance: "Binance", gate: "Gate" };
+var SHAPE2 = /^[A-Za-z0-9]{16,128}$/;
+var enc2 = new TextEncoder();
+var hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+async function hmac(hash, secret, msg) {
+  const k = await crypto.subtle.importKey("raw", enc2.encode(secret), { name: "HMAC", hash }, false, ["sign"]);
+  return hex(await crypto.subtle.sign("HMAC", k, enc2.encode(msg)));
+}
+var sha512 = async (s) => hex(await crypto.subtle.digest("SHA-512", enc2.encode(s)));
+var num2 = (v) => {
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : 0;
+};
+var KEY = (uid) => `cex:${uid}`;
+var BAL = (uid) => `cex:${uid}:bal`;
+var BN = ["https://api.binance.com", "https://api-gcp.binance.com", "https://api1.binance.com"];
+async function bn(k, path, params = {}, method = "GET") {
+  const qs = new URLSearchParams({ ...params, recvWindow: "10000", timestamp: String(Date.now()) }).toString();
+  const sig2 = await hmac("SHA-256", k.s, qs);
+  let last = null;
+  for (const base of BN) {
+    let r;
+    try {
+      r = await fetch(`${base}${path}?${qs}&signature=${sig2}`, { method, headers: { "X-MBX-APIKEY": k.k } });
+    } catch (e2) {
+      last = { status: 0, msg: "network" };
+      continue;
+    }
+    const j = await r.json().catch(() => null);
+    if (r.ok) return j;
+    last = { status: r.status, msg: j && j.msg || "", code: j && j.code };
+    if (r.status !== 451 && r.status < 500) break;
+  }
+  const e = new Error(last && last.msg || "binance");
+  e.status = last && last.status;
+  e.code = last && last.code;
+  throw e;
+}
+var BN_WRITE = ["enableWithdrawals", "enableInternalTransfer", "permitsUniversalTransfer", "enableVanillaOptions", "enableFutures", "enableMargin", "enableSpotAndMarginTrading", "enablePortfolioMarginTrading", "enableFixApiTrade"];
+async function binancePerms(k) {
+  const r = await bn(k, "/sapi/v1/account/apiRestrictions");
+  const extra = BN_WRITE.filter((x) => r && r[x] === true);
+  return { readOnly: !extra.length, extra, reading: !!(r && r.enableReading) };
+}
+async function binanceBalances(k) {
+  const out = {}, notes = [];
+  const add = (sym, part, q) => {
+    q = num2(q);
+    if (!(q > 0) || !sym) return;
+    sym = String(sym).toUpperCase();
+    const o = out[sym] || (out[sym] = { sym, spot: 0, funding: 0, earn: 0 });
+    o[part] += q;
+  };
+  const acc = await bn(k, "/api/v3/account", { omitZeroBalances: "true" });
+  const flex = await bn(k, "/sapi/v1/simple-earn/flexible/position", { size: "100" }).catch(() => {
+    notes.push("earn");
+    return null;
+  });
+  const locked3 = await bn(k, "/sapi/v1/simple-earn/locked/position", { size: "100" }).catch(() => null);
+  const fund = await bn(k, "/sapi/v1/asset/get-funding-asset", {}, "POST").catch(() => {
+    notes.push("funding");
+    return null;
+  });
+  const inEarn = new Set((flex && flex.rows || []).map((x) => String(x.asset).toUpperCase()));
+  for (const b of acc && acc.balances || []) {
+    const a = String(b.asset || "").toUpperCase();
+    if (/^LD/.test(a) && a !== "LDO" && inEarn.has(a.slice(2))) continue;
+    add(a, "spot", num2(b.free) + num2(b.locked));
+  }
+  for (const x of flex && flex.rows || []) add(x.asset, "earn", x.totalAmount);
+  for (const x of locked3 && locked3.rows || []) add(x.asset, "earn", x.amount);
+  for (const x of fund || []) add(x.asset, "funding", num2(x.free) + num2(x.locked) + num2(x.freeze) + num2(x.withdrawing));
+  return { assets: Object.values(out), notes };
+}
+var GATE = "https://api.gateio.ws";
+var GP = "/api/v4";
+async function gate(k, path, query = "") {
+  const ts = String(Math.floor(Date.now() / 1e3));
+  const sig2 = await hmac("SHA-512", k.s, ["GET", GP + path, query, await sha512(""), ts].join("\n"));
+  const r = await fetch(`${GATE}${GP}${path}${query ? "?" + query : ""}`, { headers: { KEY: k.k, Timestamp: ts, SIGN: sig2, Accept: "application/json" } });
+  const j = await r.json().catch(() => null);
+  if (!r.ok) {
+    const e = new Error(j && (j.message || j.label) || "gate");
+    e.status = r.status;
+    throw e;
+  }
+  return j;
+}
+async function gateBalances(k) {
+  const out = {}, notes = [];
+  const add = (sym, part, q) => {
+    q = num2(q);
+    if (!(q > 0) || !sym) return;
+    sym = String(sym).toUpperCase();
+    const o = out[sym] || (out[sym] = { sym, spot: 0, funding: 0, earn: 0 });
+    o[part] += q;
+  };
+  const spot = await gate(k, "/spot/accounts");
+  const lend = await gate(k, "/earn/uni/lends").catch(() => {
+    notes.push("earn");
+    return null;
+  });
+  for (const b of spot || []) add(b.currency, "spot", num2(b.available) + num2(b.locked));
+  for (const x of lend || []) add(x.currency, "earn", x.amount);
+  return { assets: Object.values(out), notes };
+}
+var READ = { binance: binanceBalances, gate: gateBalances };
+async function load(env, uid) {
+  try {
+    return JSON.parse(await env.RATE.get(KEY(uid)) || "{}") || {};
+  } catch (_) {
+    return {};
+  }
+}
+async function keyOf(env, x) {
+  try {
+    return JSON.parse(await unseal(env, x.v));
+  } catch (_) {
+    return null;
+  }
+}
+var why = (e) => e && e.status === 451 ? "blocked" : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? "refused" : e && e.status === 429 ? "busy" : "failed";
+var list2 = (all) => Object.keys(EXCHANGES).filter((ex) => all[ex]).map((ex) => ({ ex, name: EXCHANGES[ex], tail: all[ex].tail, at: all[ex].at, readOnly: all[ex].readOnly }));
+async function cexHandler2(env, who, body) {
+  const owner2 = (who.owners || []).includes(who.email);
+  if (!owner2 && !await memberByEmail(env, who.email).catch(() => null)) return { status: 403, error: "Only Cute Portfolio members can connect an exchange." };
+  if (!env.RATE || !who.uid) return { status: 500, error: "Storage is not set up." };
+  const a = body && body.action, ex = body && body.ex, all = await load(env, who.uid);
+  if (a === "set") {
+    if (!EXCHANGES[ex]) return { status: 400, error: "Pick Binance or Gate." };
+    const k = { k: String(body.key || "").trim(), s: String(body.secret || "").trim() };
+    if (!SHAPE2.test(k.k) || !SHAPE2.test(k.s)) return { status: 400, error: "That does not look like an API key and secret (letters and digits only)." };
+    let perms = { readOnly: null };
+    try {
+      if (ex === "binance") {
+        perms = await binancePerms(k);
+        if (!perms.readOnly) return { status: 400, error: "refused-perms", extra: perms.extra };
+      }
+      await READ[ex](k);
+    } catch (e) {
+      const w = why(e);
+      return { status: w === "refused" ? 400 : 502, error: w };
+    }
+    all[ex] = { v: await seal(env, JSON.stringify(k)), tail: k.k.slice(-4), at: (/* @__PURE__ */ new Date()).toISOString(), readOnly: perms.readOnly };
+    await env.RATE.put(KEY(who.uid), JSON.stringify(all));
+    await env.RATE.delete(BAL(who.uid)).catch(() => {
+    });
+    return { ok: true, exchanges: list2(all) };
+  }
+  if (a === "delete") {
+    if (all[ex]) {
+      delete all[ex];
+      if (Object.keys(all).length) await env.RATE.put(KEY(who.uid), JSON.stringify(all));
+      else await env.RATE.delete(KEY(who.uid));
+      await env.RATE.delete(BAL(who.uid)).catch(() => {
+      });
+    }
+    return { ok: true, exchanges: list2(all) };
+  }
+  if (a === "balances") {
+    if (!Object.keys(all).length) return { exchanges: [], balances: [] };
+    let c = null;
+    try {
+      c = JSON.parse(await env.RATE.get(BAL(who.uid)) || "null");
+    } catch (_) {
+    }
+    if (c && Date.now() - c.t < (body.fresh ? 6e4 : 5 * 6e4)) return { exchanges: list2(all), balances: c.b, at: c.t, cached: true };
+    const b = await Promise.all(Object.keys(EXCHANGES).filter((x) => all[x]).map(async (x) => {
+      const k = await keyOf(env, all[x]);
+      if (!k) return { ex: x, name: EXCHANGES[x], ok: false, error: "refused" };
+      try {
+        const r = await READ[x](k);
+        return { ex: x, name: EXCHANGES[x], ok: true, assets: r.assets, notes: r.notes };
+      } catch (e) {
+        return { ex: x, name: EXCHANGES[x], ok: false, error: why(e) };
+      }
+    }));
+    const t = Date.now();
+    if (b.some((x) => x.ok)) await env.RATE.put(BAL(who.uid), JSON.stringify({ t, b }), { expirationTtl: 600 }).catch(() => {
+    });
+    return { exchanges: list2(all), balances: b, at: t };
+  }
+  return { exchanges: list2(all) };
+}
+
 // tools/worker/stars.mjs
 var DAY2 = 864e5;
 var MONTH = 30 * DAY2;
@@ -1223,20 +1494,20 @@ async function log(env, e) {
   }
 }
 async function statsView(env, lang2, now = Date.now()) {
-  const ar = lang2 === "ar", m = await members(env), list2 = Object.values(m);
+  const ar = lang2 === "ar", m = await members(env), list3 = Object.values(m);
   let a = [];
   try {
     a = JSON.parse(env.RATE && await env.RATE.get("tg:stars:log") || "[]");
   } catch (_) {
   }
   const month = new Date(now).toISOString().slice(0, 7), sum = (f) => a.filter(f).reduce((s, x) => s + (+x.stars || 0), 0);
-  const prem = list2.filter((x) => premiumNow(x, now)), paidP = prem.filter((x) => x.premSrc === "stars").length;
+  const prem = list3.filter((x) => premiumNow(x, now)), paidP = prem.filter((x) => x.premSrc === "stars").length;
   const L = [
     ar ? "\u{1F4C8} <b>\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A</b>" : "\u{1F4C8} <b>Stats</b>",
     "",
-    `\u{1F465} ${ar ? "\u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "Members"}: <b>${list2.length}</b>${list2.some((x) => x.paused) ? ` \xB7 \u23F8 ${list2.filter((x) => x.paused).length}` : ""}`,
+    `\u{1F465} ${ar ? "\u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "Members"}: <b>${list3.length}</b>${list3.some((x) => x.paused) ? ` \xB7 \u23F8 ${list3.filter((x) => x.paused).length}` : ""}`,
     `\u2B50 ${ar ? "\u0627\u0644\u0645\u0645\u064A\u0632\u0648\u0646 \u0627\u0644\u0622\u0646" : "Premium now"}: <b>${prem.length}</b> (${ar ? "Stars" : "Stars"} ${paidP} \xB7 ${ar ? "\u0647\u062F\u064A\u0629" : "gift"} ${prem.length - paidP})`,
-    `\u{1F49B} ${ar ? "\u0627\u0644\u062F\u0627\u0639\u0645\u0648\u0646" : "Supporters"}: <b>${list2.filter((x) => x.supporter).length}</b>`,
+    `\u{1F49B} ${ar ? "\u0627\u0644\u062F\u0627\u0639\u0645\u0648\u0646" : "Supporters"}: <b>${list3.filter((x) => x.supporter).length}</b>`,
     "",
     `\u2B50 ${ar ? "\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631" : "This month"}: <b>${sum((x) => new Date(x.t).toISOString().slice(0, 7) === month)}</b> \u2B50 (${ar ? "\u0645\u0645\u064A\u0632" : "premium"} ${sum((x) => x.kind === "prem" && new Date(x.t).toISOString().slice(0, 7) === month)} \xB7 ${ar ? "\u062F\u0639\u0645" : "support"} ${sum((x) => x.kind === "sup" && new Date(x.t).toISOString().slice(0, 7) === month)})`,
     `\u2B50 ${ar ? "\u0645\u0646\u0630 \u0627\u0644\u0628\u062F\u0627\u064A\u0629" : "All time"}: <b>${sum(() => true)}</b> \u2B50 (\u2248 ${usdOf(sum(() => true))} ${ar ? "\u062F\u0641\u0639\u0647\u0627 \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "paid by members"})`,
@@ -1269,82 +1540,6 @@ async function addDays(env, chat, days, now = Date.now()) {
   if (!x) return null;
   const from = premiumNow(x, now) && x.premUntil ? x.premUntil : now;
   return grant(env, chat, from + days * DAY2, x.premSrc === "stars" && premiumNow(x, now) ? "stars" : "gift", x.subCharge);
-}
-
-// tools/worker/byok.mjs
-var BYOK_AI = 100;
-var BYOK_REPORTS = 10;
-var enc = new TextEncoder();
-var dec = new TextDecoder();
-var b64 = (u) => btoa(String.fromCharCode(...u));
-var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-async function aesKey(env) {
-  let secret = "";
-  try {
-    secret = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || "{}").private_key || "";
-  } catch (_) {
-  }
-  secret = secret || env.TG_SECRET || "";
-  if (secret.length < 16) throw new Error("no secret to encrypt with");
-  const base = await crypto.subtle.importKey("raw", enc.encode(secret), "HKDF", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: enc.encode("samsam-byok"), info: enc.encode("claude-key-v1") }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
-}
-async function seal(env, plain) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await aesKey(env), enc.encode(plain)));
-  return b64(iv) + "." + b64(ct);
-}
-async function unseal(env, sealed) {
-  const [iv, ct] = String(sealed).split(".");
-  return dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(iv) }, await aesKey(env), unb64(ct)));
-}
-var SHAPE = /^sk-a[n]t-[A-Za-z0-9_\-]{20,200}$/;
-var validShape = (k) => SHAPE.test(String(k || "").trim());
-async function keyWorks(key) {
-  try {
-    const r = await fetch("https://api.anthropic.com/v1/models?limit=1", { headers: { "x-api-key": key, "anthropic-version": "2023-06-01" } });
-    return r.ok ? "ok" : r.status === 401 || r.status === 403 ? "refused" : "unsure";
-  } catch (_) {
-    return "unsure";
-  }
-}
-async function saveKey(env, key) {
-  const k = String(key).trim();
-  await env.RATE.put(K(env, "byok"), JSON.stringify({ v: await seal(env, k), tail: k.slice(-4), at: (/* @__PURE__ */ new Date()).toISOString() }));
-}
-async function keyInfo(env) {
-  try {
-    const x = JSON.parse(env.RATE && await env.RATE.get(K(env, "byok")) || "null");
-    return x && x.v ? { has: true, tail: x.tail, at: x.at } : { has: false };
-  } catch (_) {
-    return { has: false };
-  }
-}
-var mem = /* @__PURE__ */ new Map();
-async function ownKey(env) {
-  let x = null;
-  try {
-    x = JSON.parse(env.RATE && await env.RATE.get(K(env, "byok")) || "null");
-  } catch (_) {
-    x = null;
-  }
-  if (!x || !x.v) return null;
-  if (mem.has(x.v)) return mem.get(x.v);
-  let key = null;
-  try {
-    key = await unseal(env, x.v);
-  } catch (_) {
-    key = null;
-  }
-  if (mem.size > 50) mem.clear();
-  mem.set(x.v, key);
-  return key;
-}
-async function deleteKey(env) {
-  try {
-    if (env.RATE) await env.RATE.delete(K(env, "byok"));
-  } catch (_) {
-  }
 }
 
 // tools/worker/idle.mjs
@@ -1749,12 +1944,12 @@ async function firestore(sa) {
       return !Array.isArray(rows) || rows.some((x) => x.document);
     },
     async set(p, data) {
-      return call(`${base}/${p}`, { method: "PATCH", body: JSON.stringify({ fields: enc2(data) }) });
+      return call(`${base}/${p}`, { method: "PATCH", body: JSON.stringify({ fields: enc3(data) }) });
     },
     // new documents, all or nothing (each must not exist yet — never overwrites)
     async commit(docs) {
       const name = (p) => `projects/${sa.project_id}/databases/(default)/documents/${p}`;
-      return call(base + ":commit", { method: "POST", body: JSON.stringify({ writes: docs.map((d) => ({ update: { name: name(d.path), fields: enc2(d.data) }, currentDocument: { exists: false } })) }) });
+      return call(base + ":commit", { method: "POST", body: JSON.stringify({ writes: docs.map((d) => ({ update: { name: name(d.path), fields: enc3(d.data) }, currentDocument: { exists: false } })) }) });
     }
   };
 }
@@ -1764,9 +1959,9 @@ function encV(v) {
   if (typeof v === "boolean") return { booleanValue: v };
   if (typeof v === "number") return Number.isSafeInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
   if (Array.isArray(v)) return { arrayValue: { values: v.map(encV) } };
-  return { mapValue: { fields: enc2(v) } };
+  return { mapValue: { fields: enc3(v) } };
 }
-var enc2 = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, encV(v)]));
+var enc3 = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, encV(v)]));
 async function commitDocs(env, uid, docs) {
   const sa = serviceAccount(env);
   if (!sa) throw new Error("no service account");
@@ -1918,7 +2113,7 @@ async function rawSeries(id) {
   if (!id || /^x-/.test(id)) return null;
   return cached("raw:" + id, 10 * 6e4, async () => await getJson(RAW + "p/" + id + ".json") || false);
 }
-var num2 = (v) => {
+var num3 = (v) => {
   const n = +v;
   return isFinite(n) ? n : null;
 };
@@ -1939,10 +2134,10 @@ async function okxDeriv(S, now) {
   if (!f && !o) return null;
   const out = { source: "OKX" };
   if (f) {
-    out.funding_8h_pct = num2(f.fundingRate) != null ? +(f.fundingRate * 100).toFixed(4) : null;
+    out.funding_8h_pct = num3(f.fundingRate) != null ? +(f.fundingRate * 100).toFixed(4) : null;
     out.next_funding = f.nextFundingTime ? (/* @__PURE__ */ new Date(+f.nextFundingTime)).toISOString() : null;
   }
-  if (o) out.open_interest_usd = num2(o.oiUsd) != null ? Math.round(+o.oiUsd) : null;
+  if (o) out.open_interest_usd = num3(o.oiUsd) != null ? Math.round(+o.oiUsd) : null;
   const h = oih && Array.isArray(oih.data) ? oih.data.map((x) => [+x[0], +x[1]]).sort((a, b) => a[0] - b[0]) : [];
   if (h.length > 2) {
     const last = h[h.length - 1], prev = h.find((x) => x[0] >= last[0] - 24 * 36e5) || h[0];
@@ -1953,7 +2148,7 @@ async function okxDeriv(S, now) {
     out.long_short_accounts = +r[1].toFixed(2);
     out.long_accounts_pct = +(r[1] / (1 + r[1]) * 100).toFixed(1);
   }
-  const ct = ins && ins.data && ins.data[0] ? num2(ins.data[0].ctVal) || 1 : 1, det = liq && liq.data && liq.data[0] && Array.isArray(liq.data[0].details) ? liq.data[0].details : [];
+  const ct = ins && ins.data && ins.data[0] ? num3(ins.data[0].ctVal) || 1 : 1, det = liq && liq.data && liq.data[0] && Array.isArray(liq.data[0].details) ? liq.data[0].details : [];
   if (det.length) {
     let longs = 0, shorts = 0, n = 0, oldest = now;
     for (const d of det) {
@@ -1984,17 +2179,17 @@ async function binanceDeriv(S) {
     getJson(`${F}/futures/data/globalLongShortAccountRatio?symbol=${p}&period=1h&limit=1`),
     getJson(`${F}/futures/data/topLongShortPositionRatio?symbol=${p}&period=1h&limit=1`)
   ]);
-  const out = { source: "Binance", funding_8h_pct: num2(pi.lastFundingRate) != null ? +(pi.lastFundingRate * 100).toFixed(4) : null, mark_price: num2(pi.markPrice) };
-  if (oi && num2(oi.openInterest) != null && num2(pi.markPrice)) out.open_interest_usd = Math.round(oi.openInterest * pi.markPrice);
+  const out = { source: "Binance", funding_8h_pct: num3(pi.lastFundingRate) != null ? +(pi.lastFundingRate * 100).toFixed(4) : null, mark_price: num3(pi.markPrice) };
+  if (oi && num3(oi.openInterest) != null && num3(pi.markPrice)) out.open_interest_usd = Math.round(oi.openInterest * pi.markPrice);
   if (Array.isArray(oih) && oih.length > 2) {
     const a = +oih[0].sumOpenInterestValue, b = +oih[oih.length - 1].sumOpenInterestValue;
     if (a > 0) out.open_interest_change_24h_pct = +((b / a - 1) * 100).toFixed(2);
   }
   if (Array.isArray(ls) && ls[0]) {
-    out.long_short_accounts = num2(ls[0].longShortRatio);
-    out.long_accounts_pct = num2(ls[0].longAccount) != null ? +(ls[0].longAccount * 100).toFixed(1) : null;
+    out.long_short_accounts = num3(ls[0].longShortRatio);
+    out.long_accounts_pct = num3(ls[0].longAccount) != null ? +(ls[0].longAccount * 100).toFixed(1) : null;
   }
-  if (Array.isArray(top) && top[0]) out.top_traders_long_short_positions = num2(top[0].longShortRatio);
+  if (Array.isArray(top) && top[0]) out.top_traders_long_short_positions = num3(top[0].longShortRatio);
   return out;
 }
 async function hyperliquidDeriv(S) {
@@ -2002,15 +2197,15 @@ async function hyperliquidDeriv(S) {
   if (!Array.isArray(j) || !j[0] || !Array.isArray(j[0].universe)) return null;
   const i = j[0].universe.findIndex((u) => String(u.name).toUpperCase() === S), c = i >= 0 && j[1] && j[1][i];
   if (!c) return null;
-  const px = num2(c.markPx);
-  return { source: "Hyperliquid", funding_8h_pct: num2(c.funding) != null ? +(c.funding * 8 * 100).toFixed(4) : null, open_interest_usd: num2(c.openInterest) != null && px ? Math.round(c.openInterest * px) : null, volume_24h_usd: num2(c.dayNtlVlm) != null ? Math.round(+c.dayNtlVlm) : null, mark_price: px };
+  const px = num3(c.markPx);
+  return { source: "Hyperliquid", funding_8h_pct: num3(c.funding) != null ? +(c.funding * 8 * 100).toFixed(4) : null, open_interest_usd: num3(c.openInterest) != null && px ? Math.round(c.openInterest * px) : null, volume_24h_usd: num3(c.dayNtlVlm) != null ? Math.round(+c.dayNtlVlm) : null, mark_price: px };
 }
 async function derivatives(sym) {
   const S = String(sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (!S) return null;
   return cached("deriv:" + S, 12e4, async () => {
-    const now = Date.now(), [okx, bn, hl] = await Promise.all([okxDeriv(S, now), binanceDeriv(S), hyperliquidDeriv(S)]);
-    const src = [okx, bn, hl].filter(Boolean);
+    const now = Date.now(), [okx, bn2, hl] = await Promise.all([okxDeriv(S, now), binanceDeriv(S), hyperliquidDeriv(S)]);
+    const src = [okx, bn2, hl].filter(Boolean);
     if (!src.length) return null;
     const fr = src.map((x) => x.funding_8h_pct).filter((v) => v != null), oi = src.map((x) => x.open_interest_usd).filter((v) => v > 0);
     const avgF = fr.length ? fr.reduce((a, b) => a + b, 0) / fr.length : null;
@@ -2022,8 +2217,8 @@ async function derivatives(sym) {
         funding_reading: avgF == null ? null : avgF > 0.03 ? "longs paying a lot (crowded longs)" : avgF > 0 ? "longs paying (normal)" : avgF < -0.01 ? "shorts paying (crowded shorts)" : "about neutral",
         open_interest_usd_total: oi.length ? oi.reduce((a, b) => a + b, 0) : null,
         open_interest_note: "sum of the sources listed (not the whole market)",
-        open_interest_change_24h_pct: (okx && okx.open_interest_change_24h_pct) ?? (bn && bn.open_interest_change_24h_pct) ?? null,
-        long_accounts_pct: (bn && bn.long_accounts_pct) ?? (okx && okx.long_accounts_pct) ?? null,
+        open_interest_change_24h_pct: (okx && okx.open_interest_change_24h_pct) ?? (bn2 && bn2.open_interest_change_24h_pct) ?? null,
+        long_accounts_pct: (bn2 && bn2.long_accounts_pct) ?? (okx && okx.long_accounts_pct) ?? null,
         liquidations_24h: okx && okx.liquidations || null
       },
       sources: src
@@ -2064,7 +2259,7 @@ async function botLink(env, code) {
 }
 async function overview(env, now = Date.now()) {
   const m = await members(env), rDay = localParts(now).date, uDay = new Date(now).toISOString().slice(0, 10), reads = await readsToday(env, now);
-  const list2 = await Promise.all(Object.entries(m).map(async ([chat, x]) => {
+  const list3 = await Promise.all(Object.entries(m).map(async ([chat, x]) => {
     const st = await idleState(env, chat, x, now);
     const q = +await kv(env, `tg:${chat}:ai:${rDay}`) || 0, r = x.uid ? +await kv(env, `ai:${x.uid}:${uDay}`) || 0 : 0;
     const k = await asChat(chat, () => keyInfo(env)), pend = await getPending(env, chat);
@@ -2111,19 +2306,19 @@ async function overview(env, now = Date.now()) {
     removeHintDays: REMOVE_HINT_DAYS,
     readsOwner: reads[String(env.TELEGRAM_CHAT_ID)] || 0,
     stats: {
-      members: list2.length,
-      paused: list2.filter((x) => x.paused).length,
-      idle: list2.filter((x) => x.idle).length,
+      members: list3.length,
+      paused: list3.filter((x) => x.paused).length,
+      idle: list3.filter((x) => x.idle).length,
       readsToday: Object.values(reads).reduce((a, b) => a + b, 0),
-      premium: list2.filter((x) => x.premium).length,
-      premiumStars: list2.filter((x) => x.premium && x.premSrc === "stars").length,
-      supporters: list2.filter((x) => x.supporter).length,
+      premium: list3.filter((x) => x.premium).length,
+      premiumStars: list3.filter((x) => x.premium && x.premSrc === "stars").length,
+      supporters: list3.filter((x) => x.supporter).length,
       starsMonth: sum((x) => new Date(x.t).toISOString().slice(0, 7) === month),
       starsAll: sum(() => true),
       starsMonthPremium: sum((x) => x.kind === "prem" && new Date(x.t).toISOString().slice(0, 7) === month),
       starsMonthSupport: sum((x) => x.kind === "sup" && new Date(x.t).toISOString().slice(0, 7) === month)
     },
-    members: list2.sort((a, b) => (b.joined || 0) - (a.joined || 0)),
+    members: list3.sort((a, b) => (b.joined || 0) - (a.joined || 0)),
     removed: (await removedList(env)).map((x) => ({ chat: x.chat, name: x.name, email: x.email || "", removedAt: x.removedAt, premium: !!x.premium, supporter: !!x.supporter })),
     payments: log2.slice(-50).reverse().map((x) => ({ t: x.t, chat: x.chat, name: names[x.chat] || x.chat, kind: x.kind, stars: x.stars, renew: !!x.renew }))
   };
@@ -2715,7 +2910,7 @@ var guide_default = {
 };
 
 // tools/worker/community.mjs
-var KEY = "tg:community";
+var KEY2 = "tg:community";
 async function tg3(env, method, body) {
   let r = await tg1(env, method, body);
   if (r && r.error_code === 429) {
@@ -2735,14 +2930,14 @@ async function tg1(env, method, body) {
 }
 async function getCommunity(env) {
   try {
-    return JSON.parse(env.RATE && await env.RATE.get(KEY) || "{}") || {};
+    return JSON.parse(env.RATE && await env.RATE.get(KEY2) || "{}") || {};
   } catch (_) {
     return {};
   }
 }
 async function putCommunity(env, c) {
   try {
-    if (env.RATE) await env.RATE.put(KEY, JSON.stringify(c));
+    if (env.RATE) await env.RATE.put(KEY2, JSON.stringify(c));
   } catch (_) {
   }
 }
@@ -3120,7 +3315,7 @@ ${esc(text)}`;
 }
 
 // tools/worker/watch.mjs
-var KEY2 = (env) => K(env, "alerts");
+var KEY3 = (env) => K(env, "alerts");
 var MAX = 30;
 var KINDS = {
   price_below: { what: "price", op: "\u2264" },
@@ -3156,14 +3351,14 @@ var locked = (fn) => {
 };
 async function listAlerts(env) {
   try {
-    const a = JSON.parse(await kvGet(env, KEY2(env)) || "[]");
+    const a = JSON.parse(await kvGet(env, KEY3(env)) || "[]");
     return Array.isArray(a) ? a : [];
   } catch (_) {
     return [];
   }
 }
-async function saveAlerts(env, list2) {
-  await kvPut(env, KEY2(env), JSON.stringify(list2.slice(0, MAX)));
+async function saveAlerts(env, list3) {
+  await kvPut(env, KEY3(env), JSON.stringify(list3.slice(0, MAX)));
 }
 async function logEvent(env, type, text, now = Date.now()) {
   const k = K(env, "log:" + localParts(now).date);
@@ -3237,19 +3432,19 @@ async function addAlert(env, input, user) {
   if (now == null) return { error: `no live ${KINDS[kind].what} found for ${a.sym || "the portfolio"} \u2014 alert not set` };
   a.armed = !met(kind, now, value);
   return locked(async () => {
-    const list2 = await listAlerts(env);
-    const same = list2.find((b) => b.kind === a.kind && b.value === a.value && (b.sym || null) === (a.sym || null));
+    const list3 = await listAlerts(env);
+    const same = list3.find((b) => b.kind === a.kind && b.value === a.value && (b.sym || null) === (a.sym || null));
     if (same) return { ok: true, alert: describe(same), id: same.id, now, already_set: true, note: "This exact alert already exists \u2014 nothing added. Tell the user it was already set." };
-    if (list2.length >= MAX) return { error: `you already have ${MAX} alerts \u2014 delete some first` };
-    list2.push(a);
-    await saveAlerts(env, list2);
+    if (list3.length >= MAX) return { error: `you already have ${MAX} alerts \u2014 delete some first` };
+    list3.push(a);
+    await saveAlerts(env, list3);
     return { ok: true, alert: describe(a), id: a.id, now, already_met: !a.armed };
   });
 }
 function deleteAlert(env, id) {
   return locked(async () => {
-    const list2 = await listAlerts(env), next = list2.filter((a) => a.id !== id);
-    if (next.length === list2.length) return false;
+    const list3 = await listAlerts(env), next = list3.filter((a) => a.id !== id);
+    if (next.length === list3.length) return false;
     await saveAlerts(env, next);
     return true;
   });
@@ -3264,11 +3459,11 @@ async function tg4(env, method, body) {
   return r.json().catch(() => ({ ok: false }));
 }
 async function runWatch(env, now = Date.now()) {
-  const list2 = await listAlerts(env);
-  if (!list2.length || !env.TELEGRAM_BOT_TOKEN || !chatOf(env)) return { checked: 0, fired: 0 };
+  const list3 = await listAlerts(env);
+  if (!list3.length || !env.TELEGRAM_BOT_TOKEN || !chatOf(env)) return { checked: 0, fired: 0 };
   resetBudget();
   const cache2 = {}, keep = [], fired = [];
-  for (const a of list2) {
+  for (const a of list3) {
     let now1 = null;
     try {
       now1 = await currentValue(env, a, cache2);
@@ -3302,19 +3497,19 @@ Now: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
     else await logEvent(env, "alert", describe(a) + " \u2014 now " + nowTxt);
   }
   await locked(async () => {
-    const nowList = await listAlerts(env), seen = new Set(list2.map((a) => a.id));
+    const nowList = await listAlerts(env), seen = new Set(list3.map((a) => a.id));
     await saveAlerts(env, [...keep.filter((a) => nowList.some((b) => b.id === a.id)), ...nowList.filter((b) => !seen.has(b.id))]);
   });
-  return { checked: list2.length, fired: fired.length };
+  return { checked: list3.length, fired: fired.length };
 }
 async function viewAlerts(env, lang2 = "en") {
-  const list2 = await listAlerts(env), ar = lang2 === "ar";
-  if (!list2.length) return { text: ar ? "\u{1F514} \u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0646\u0628\u064A\u0647\u0627\u062A.\n\u0627\u0643\u062A\u0628 \u0645\u062B\u0644\u0627\u064B: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0646\u0632\u0644 SOL \u062A\u062D\u062A 82</i>" : "\u{1F514} No alerts yet.\nWrite e.g. <i>tell me if SOL drops below 82</i>", buttons: [[{ text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]] };
-  const L = [ar ? `\u{1F514} <b>\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643</b> (${list2.length})` : `\u{1F514} <b>Your alerts</b> (${list2.length})`, ""];
-  list2.forEach((a, i) => L.push(`${i + 1}. ${esc(describe(a))}${a.armed ? "" : ar ? " <i>(\u064A\u0646\u062A\u0638\u0631 \u0639\u0648\u062F\u0629 \u0627\u0644\u0633\u0639\u0631 \u0623\u0648\u0644\u0627\u064B)</i>" : " <i>(waits to reset first)</i>"}`));
+  const list3 = await listAlerts(env), ar = lang2 === "ar";
+  if (!list3.length) return { text: ar ? "\u{1F514} \u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0646\u0628\u064A\u0647\u0627\u062A.\n\u0627\u0643\u062A\u0628 \u0645\u062B\u0644\u0627\u064B: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0646\u0632\u0644 SOL \u062A\u062D\u062A 82</i>" : "\u{1F514} No alerts yet.\nWrite e.g. <i>tell me if SOL drops below 82</i>", buttons: [[{ text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]] };
+  const L = [ar ? `\u{1F514} <b>\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643</b> (${list3.length})` : `\u{1F514} <b>Your alerts</b> (${list3.length})`, ""];
+  list3.forEach((a, i) => L.push(`${i + 1}. ${esc(describe(a))}${a.armed ? "" : ar ? " <i>(\u064A\u0646\u062A\u0638\u0631 \u0639\u0648\u062F\u0629 \u0627\u0644\u0633\u0639\u0631 \u0623\u0648\u0644\u0627\u064B)</i>" : " <i>(waits to reset first)</i>"}`));
   L.push("", ar ? "<i>\u064A\u062A\u062D\u0642\u0642 \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642 \xB7 \u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629</i>" : "<i>Checked every 5 min \xB7 each fires once</i>");
   const buttons = [];
-  for (let i = 0; i < list2.length; i += 3) buttons.push(list2.slice(i, i + 3).map((a, j) => ({ text: `\u{1F5D1} ${i + j + 1}`, callback_data: "ad:" + a.id })));
+  for (let i = 0; i < list3.length; i += 3) buttons.push(list3.slice(i, i + 3).map((a, j) => ({ text: `\u{1F5D1} ${i + j + 1}`, callback_data: "ad:" + a.id })));
   buttons.push([{ text: ar ? "\u{1F504} \u062A\u062D\u062F\u064A\u062B" : "\u{1F504} Refresh", callback_data: "al" }, { text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]);
   return { text: L.join("\n"), buttons };
 }
@@ -3519,7 +3714,7 @@ async function cancelTrades(env, gid) {
 }
 
 // tools/worker/paper.mjs
-var KEY3 = (env) => K(env, "paper");
+var KEY4 = (env) => K(env, "paper");
 var FEE = 1e-3;
 var START = 1e4;
 var mem4 = /* @__PURE__ */ new Map();
@@ -3551,20 +3746,20 @@ var locked2 = (fn) => {
   });
   return run2;
 };
-async function load(env) {
+async function load2(env) {
   try {
-    const p = JSON.parse(await kvGet3(env, KEY3(env)) || "null");
+    const p = JSON.parse(await kvGet3(env, KEY4(env)) || "null");
     return p && p.pos ? p : null;
   } catch (_) {
     return null;
   }
 }
-var save = (env, p) => kvPut3(env, KEY3(env), JSON.stringify(p));
+var save = (env, p) => kvPut3(env, KEY4(env), JSON.stringify(p));
 async function prices(coins) {
-  const list2 = coins.filter((c) => c && c.sym);
-  const m = await loadMarket(list2.map((c) => c.id).filter(Boolean), list2.map((c) => ({ sym: c.sym, id: c.id || null })));
+  const list3 = coins.filter((c) => c && c.sym);
+  const m = await loadMarket(list3.map((c) => c.id).filter(Boolean), list3.map((c) => ({ sym: c.sym, id: c.id || null })));
   const rows = [...m.top, ...m.top500], out = {};
-  for (const c of list2) {
+  for (const c of list3) {
     const id = c.id || m.idOf[c.sym], r = id && rows.find((x) => x.id === id), s = id && m.series[id];
     const p = r && r.price > 0 ? r.price : s ? s.last : null;
     if (p > 0) out[c.sym] = { price: p, ch24: r ? r.ch24 : null, id: id || null, src: typeof m.live[id] === "string" ? m.live[id] : m.live[id] ? "CoinGecko" : "snapshot" };
@@ -3583,7 +3778,7 @@ async function reset(env, cash = START) {
   });
 }
 async function status(env) {
-  let p = await load(env);
+  let p = await load2(env);
   if (!p) {
     const r = await reset(env);
     if (r.error) return r;
@@ -3604,7 +3799,7 @@ async function paperTrade(env, input) {
   if (side !== "buy" && side !== "sell") return { error: "side must be buy or sell" };
   const q = String(i.coin || "").trim();
   if (!q) return { error: "coin is needed" };
-  let p = await load(env);
+  let p = await load2(env);
   if (!p) {
     const r = await reset(env);
     if (r.error) return r;
@@ -3617,7 +3812,7 @@ async function paperTrade(env, input) {
   const px = await prices([{ sym, id: c.id }]), x = px[sym];
   if (!x) return { error: `no live price for ${sym} right now` };
   return locked2(async () => {
-    p = await load(env) || p;
+    p = await load2(env) || p;
     const held = p.pos[sym] || { qty: 0, avg: 0, id: x.id };
     let qty2 = +i.amount;
     if (!(qty2 > 0) && +i.usd > 0) qty2 = side === "buy" ? +i.usd / (x.price * (1 + FEE)) : +i.usd / x.price;
@@ -3648,7 +3843,7 @@ async function paperTrade(env, input) {
 }
 async function undoLast(env) {
   return locked2(async () => {
-    const p = await load(env);
+    const p = await load2(env);
     if (!p || !p.trades || !p.trades.length || !p.undo) return { error: "nothing to undo" };
     const u = p.undo, t = p.trades[p.trades.length - 1];
     const h = p.pos[u.sym] || { qty: 0, avg: u.avgBefore || 0, id: null };
@@ -3990,7 +4185,7 @@ async function runTool(ctx, name, input) {
     ctx.used.add(srcOf(m, "bitcoin"));
     ctx.used.add("market snapshot (CoinGecko, alternative.me, ETF flows)");
     const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
-    const seen = /* @__PURE__ */ new Set(), list2 = [...m.top, ...m.top500].filter((r) => r.rank && r.rank <= n && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
+    const seen = /* @__PURE__ */ new Set(), list3 = [...m.top, ...m.top500].filter((r) => r.rank && r.rank <= n && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
     const pick = (a, dir) => [...a].sort((x, y) => dir * (y.ch24 - x.ch24)).slice(0, 5).map((r) => ({ ticker: String(r.sym).toUpperCase(), rank: r.rank, price_usd: r62(r.price), change_24h_pct: r23(r.ch24) }));
     const st = (m.stocks || []).filter((r) => r.ch24 != null);
     return {
@@ -4004,8 +4199,8 @@ async function runTool(ctx, name, input) {
       fear_greed: m.fng ? { value: m.fng.value, label: m.fng.label, yesterday: m.fng.prev, week_ago: m.fng.week } : null,
       altcoin_season: m.alt ? { value: m.alt.value, label: m.alt.label } : null,
       etf_flows_latest_day: e ? { date: e.date, btc_usd: e.btc, eth_usd: e.eth } : null,
-      [`top${n}_best_24h`]: pick(list2, 1),
-      [`top${n}_worst_24h`]: pick(list2, -1),
+      [`top${n}_best_24h`]: pick(list3, 1),
+      [`top${n}_worst_24h`]: pick(list3, -1),
       bstocks_best_24h: pick(st, 1).map(({ rank, ...x }) => x),
       bstocks_worst_24h: pick(st, -1).map(({ rank, ...x }) => x)
     };
@@ -4681,13 +4876,13 @@ function radarFindings(s) {
 }
 async function radar(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null), fut = await loadFutures().catch(() => null);
-  let list2 = ["BTC"], idOf = { BTC: "bitcoin" };
+  let list3 = ["BTC"], idOf = { BTC: "bitcoin" };
   if (user) {
     const m = await loadMarket([], coinsOf(user)), sum = summarize(withIds(user, m), m, now);
     idOf = { ...m.idOf, BTC: "bitcoin" };
-    list2 = [.../* @__PURE__ */ new Set(["BTC", ...sum.coins.filter((c) => !isStable(c.sym) && (!fut || fut.has(c.sym))).sort((a, b) => b.value - a.value).slice(0, 3).map((c) => c.sym)])];
+    list3 = [.../* @__PURE__ */ new Set(["BTC", ...sum.coins.filter((c) => !isStable(c.sym) && (!fut || fut.has(c.sym))).sort((a, b) => b.value - a.value).slice(0, 3).map((c) => c.sym)])];
   }
-  const i = (+await kvGet5(env, K(env, "radar:i")) || 0) % list2.length, sym = list2[i];
+  const i = (+await kvGet5(env, K(env, "radar:i")) || 0) % list3.length, sym = list3[i];
   await kvPut5(env, K(env, "radar:i"), String(i + 1));
   const d = await derivatives(sym).catch(() => null);
   if (!d || !d.summary) return { sym, sent: 0 };
@@ -4983,9 +5178,9 @@ var T = {
     txCancelled: "\u274C Cancelled \u2014 nothing was saved.",
     txGone: "This trade was already saved or cancelled.",
     txExpired: "\u231B Over 15 minutes old \u2014 nothing saved. Tell me the trade again.",
-    txChanged: (why) => `\u26A0\uFE0F Not saved \u2014 your portfolio changed since: ${why}. Tell me the trade again.`,
+    txChanged: (why2) => `\u26A0\uFE0F Not saved \u2014 your portfolio changed since: ${why2}. Tell me the trade again.`,
     txNoUser: "Your portfolio is not connected \u2014 nothing saved.",
-    txSaveErr: (why) => `\u26A0\uFE0F Not saved \u2014 Firestore refused it (${why}).${/403/.test(why) ? ' The service account can only read: in Google Cloud \u2192 IAM give it the role "Cloud Datastore User".' : ""}`,
+    txSaveErr: (why2) => `\u26A0\uFE0F Not saved \u2014 Firestore refused it (${why2}).${/403/.test(why2) ? ' The service account can only read: in Google Cloud \u2192 IAM give it the role "Cloud Datastore User".' : ""}`,
     nowHold: "now",
     listening: "\u{1F399}\uFE0F Listening\u2026",
     heard: "\u{1F399}\uFE0F I heard:",
@@ -5125,9 +5320,9 @@ var T = {
     txCancelled: "\u274C \u0623\u064F\u0644\u063A\u064A\u062A \u2014 \u0644\u0645 \u064A\u064F\u062D\u0641\u0638 \u0634\u064A\u0621.",
     txGone: "\u0647\u0630\u0647 \u0627\u0644\u0635\u0641\u0642\u0629 \u062D\u064F\u0641\u0638\u062A \u0623\u0648 \u0623\u064F\u0644\u063A\u064A\u062A \u0645\u0646 \u0642\u0628\u0644.",
     txExpired: "\u231B \u0645\u0631\u0651\u062A \u0623\u0643\u062B\u0631 \u0645\u0646 15 \u062F\u0642\u064A\u0642\u0629 \u2014 \u0644\u0645 \u064A\u064F\u062D\u0641\u0638 \u0634\u064A\u0621. \u0623\u0631\u0633\u0644 \u0627\u0644\u0635\u0641\u0642\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.",
-    txChanged: (why) => `\u26A0\uFE0F \u0644\u0645 \u062A\u064F\u062D\u0641\u0638 \u2014 \u062A\u063A\u064A\u0651\u0631\u062A \u0645\u062D\u0641\u0638\u062A\u0643: ${why}. \u0623\u0631\u0633\u0644 \u0627\u0644\u0635\u0641\u0642\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.`,
+    txChanged: (why2) => `\u26A0\uFE0F \u0644\u0645 \u062A\u064F\u062D\u0641\u0638 \u2014 \u062A\u063A\u064A\u0651\u0631\u062A \u0645\u062D\u0641\u0638\u062A\u0643: ${why2}. \u0623\u0631\u0633\u0644 \u0627\u0644\u0635\u0641\u0642\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.`,
     txNoUser: "\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629 \u2014 \u0644\u0645 \u064A\u064F\u062D\u0641\u0638 \u0634\u064A\u0621.",
-    txSaveErr: (why) => `\u26A0\uFE0F \u0644\u0645 \u062A\u064F\u062D\u0641\u0638 \u2014 \u0631\u0641\u0636 Firestore (${why}).${/403/.test(why) ? ' \u062D\u0633\u0627\u0628 \u0627\u0644\u062E\u062F\u0645\u0629 \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637: \u0645\u0646 Google Cloud \u2192 IAM \u0627\u0645\u0646\u062D\u0647 \u062F\u0648\u0631 "Cloud Datastore User".' : ""}`,
+    txSaveErr: (why2) => `\u26A0\uFE0F \u0644\u0645 \u062A\u064F\u062D\u0641\u0638 \u2014 \u0631\u0641\u0636 Firestore (${why2}).${/403/.test(why2) ? ' \u062D\u0633\u0627\u0628 \u0627\u0644\u062E\u062F\u0645\u0629 \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637: \u0645\u0646 Google Cloud \u2192 IAM \u0627\u0645\u0646\u062D\u0647 \u062F\u0648\u0631 "Cloud Datastore User".' : ""}`,
     nowHold: "\u0627\u0644\u0622\u0646",
     listening: "\u{1F399}\uFE0F \u0623\u0633\u062A\u0645\u0639\u2026",
     heard: "\u{1F399}\uFE0F \u0633\u0645\u0639\u062A:",
@@ -5238,17 +5433,17 @@ function viewExit(t, sum, now) {
     if (!bySym.has(x.sym)) bySym.set(x.sym, []);
     bySym.get(x.sym).push(x);
   });
-  for (const [sym, list2] of [...bySym].slice(0, 8)) {
-    L.push("", `<b>${esc(sym)}</b> \xB7 ${price2(list2[0].price)}`);
-    list2.sort((a, b) => a.n - b.n).forEach((x) => L.push(`${x.to <= 0 ? "\u2705" : "\u2B1C"} TP${x.n} ${price2(x.level)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`));
+  for (const [sym, list3] of [...bySym].slice(0, 8)) {
+    L.push("", `<b>${esc(sym)}</b> \xB7 ${price2(list3[0].price)}`);
+    list3.sort((a, b) => a.n - b.n).forEach((x) => L.push(`${x.to <= 0 ? "\u2705" : "\u2B1C"} TP${x.n} ${price2(x.level)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`));
   }
   if (bySym.size > 8) L.push("", `<i>${t.more(bySym.size - 8)}</i>`);
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "ex"), url2(t.openExit, APP + "accumulation.html#exit")], [cb3(t.pf, "pf"), cb3(t.back, "menu")]] };
 }
 function viewMovers(t, sum) {
-  const list2 = sum.coins.filter((c) => c.value >= 1 && !isStable(c.sym));
+  const list3 = sum.coins.filter((c) => c.value >= 1 && !isStable(c.sym));
   const block = (key, title, dir) => {
-    const rows = list2.filter((c) => c[key] != null).sort((a, b) => dir * (b[key] - a[key])).slice(0, 5).filter((c) => dir > 0 ? c[key] > 0 : c[key] < 0);
+    const rows = list3.filter((c) => c[key] != null).sort((a, b) => dir * (b[key] - a[key])).slice(0, 5).filter((c) => dir > 0 ? c[key] > 0 : c[key] < 0);
     return rows.length ? [``, `${dir > 0 ? "\u{1F4C8}" : "\u{1F4C9}"} <b>${title}</b>`, ...rows.map((c) => `<code>${esc(c.sym.padEnd(6))} ${pct(c[key], 1).padStart(7)}</code>  ${usd(c.value)}`)] : [];
   };
   const L = [`\u{1F3C6} <b>${esc(t.mvT)}</b>  <i>(${t.noStable})</i>`, ...block("ch24", t.best24, 1), ...block("ch24", t.worst24, -1), ...block("ch7", t.best7, 1), ...block("ch7", t.worst7, -1)];
@@ -5556,16 +5751,16 @@ async function stranger(env, u, msg, chat) {
   return ok();
 }
 async function viewUsers(env, lang2) {
-  const m = await members(env), ar = lang2 === "ar", list2 = Object.entries(m);
-  const mx = await maxMembers(env), L = [ar ? `\u{1F465} <b>\u0627\u0644\u0623\u0639\u0636\u0627\u0621</b> (${list2.length}/${mx})` : `\u{1F465} <b>Members</b> (${list2.length}/${mx})`, ""];
-  if (!list2.length) L.push(ar ? "\u0644\u0627 \u064A\u0648\u062C\u062F \u0623\u0639\u0636\u0627\u0621 \u0628\u0639\u062F. \u0627\u0636\u063A\u0637 \u2795 \u0644\u0625\u0646\u0634\u0627\u0621 \u0631\u0645\u0632 \u062F\u0639\u0648\u0629." : "Nobody yet. Tap \u2795 for an invite code.");
-  const used2 = await Promise.all(list2.map(([c, x]) => usedToday(env, c, x)));
-  const keys = await Promise.all(list2.map(([c]) => asChat(c, () => keyInfo(env))));
-  list2.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? "\u23F8 " : ""}${premiumNow(x) ? "\u2B50 " : ""}${x.supporter ? "\u{1F49B} " : ""}${keys[i].has ? "\u{1F511} " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""}
+  const m = await members(env), ar = lang2 === "ar", list3 = Object.entries(m);
+  const mx = await maxMembers(env), L = [ar ? `\u{1F465} <b>\u0627\u0644\u0623\u0639\u0636\u0627\u0621</b> (${list3.length}/${mx})` : `\u{1F465} <b>Members</b> (${list3.length}/${mx})`, ""];
+  if (!list3.length) L.push(ar ? "\u0644\u0627 \u064A\u0648\u062C\u062F \u0623\u0639\u0636\u0627\u0621 \u0628\u0639\u062F. \u0627\u0636\u063A\u0637 \u2795 \u0644\u0625\u0646\u0634\u0627\u0621 \u0631\u0645\u0632 \u062F\u0639\u0648\u0629." : "Nobody yet. Tap \u2795 for an invite code.");
+  const used2 = await Promise.all(list3.map(([c, x]) => usedToday(env, c, x)));
+  const keys = await Promise.all(list3.map(([c]) => asChat(c, () => keyInfo(env))));
+  list3.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? "\u23F8 " : ""}${premiumNow(x) ? "\u2B50 " : ""}${x.supporter ? "\u{1F49B} " : ""}${keys[i].has ? "\u{1F511} " : ""}<b>${esc(x.name)}</b>${x.user ? " @" + esc(x.user) : ""} \xB7 <i>${esc(local(x.joined, { day: "numeric", month: "short" }))}</i>${x.email ? " \xB7 \u{1F4F1}" : ""}${x.uid ? " \xB7 \u{1F517}" : ""}
     ${ar ? "\u0627\u0644\u064A\u0648\u0645" : "today"} \u{1F9E0} ${used2[i].q}/${keys[i].has ? BYOK_AI : Number.isFinite(x.ai) ? x.ai : DEF_AI} \xB7 \u{1F4CA} ${used2[i].r}/${keys[i].has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
-  if (list2.length) L.push("", ar ? "<i>\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0644\u0627\u0633\u0645 \u0644\u062A\u063A\u064A\u064A\u0631 \u062D\u062F\u0648\u062F\u0647 \u0623\u0648 \u0625\u0632\u0627\u0644\u062A\u0647 \xB7 \u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u{1F517} \u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0631\u0628\u0648\u0637\u0629 \xB7 \u{1F511} \u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0647</i>" : "<i>Tap a name to change their limits or remove them \xB7 \u{1F4F1} app \xB7 \u{1F517} portfolio linked \xB7 \u{1F511} own Claude key</i>");
+  if (list3.length) L.push("", ar ? "<i>\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0644\u0627\u0633\u0645 \u0644\u062A\u063A\u064A\u064A\u0631 \u062D\u062F\u0648\u062F\u0647 \u0623\u0648 \u0625\u0632\u0627\u0644\u062A\u0647 \xB7 \u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u{1F517} \u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0645\u0631\u0628\u0648\u0637\u0629 \xB7 \u{1F511} \u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0647</i>" : "<i>Tap a name to change their limits or remove them \xB7 \u{1F4F1} app \xB7 \u{1F517} portfolio linked \xB7 \u{1F511} own Claude key</i>");
   const b = [];
-  for (let i = 0; i < list2.length; i += 3) b.push(list2.slice(i, i + 3).map(([c, x], j) => cb3(`${i + j + 1}. ${x.name.split(" ")[0].slice(0, 12)}${x.uid ? " \u{1F517}" : x.email ? " \u{1F4F1}" : ""}`, "us:m:" + c)));
+  for (let i = 0; i < list3.length; i += 3) b.push(list3.slice(i, i + 3).map(([c, x], j) => cb3(`${i + j + 1}. ${x.name.split(" ")[0].slice(0, 12)}${x.uid ? " \u{1F517}" : x.email ? " \u{1F4F1}" : ""}`, "us:m:" + c)));
   b.push([cb3(ar ? "\u2795 \u062F\u0639\u0648\u0629 \u062C\u062F\u064A\u062F\u0629" : "\u2795 New invite", "us:inv"), cb3(T[lang2].back, "menu")]);
   return { text: L.join("\n"), buttons: b };
 }
@@ -5635,12 +5830,12 @@ function guideView(lang2, k = null) {
   const gs = guideGroups(), b = [];
   for (const g of gs) for (let j = 0; j < g.items.length; j += 2) b.push(g.items.slice(j, j + 2).map((x) => cb3(`${x.e} ${(x.b || x.t)[L]}`, "gd:" + x.k)));
   b.push([cb3(ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", "menu")]);
-  const list2 = gs.map((g) => (g.e ? `${g.e} <b>${g.t[L]}</b>: ` : "") + g.items.map((x) => (x.b || x.t)[L]).join(" \xB7 ")).join("\n");
+  const list3 = gs.map((g) => (g.e ? `${g.e} <b>${g.t[L]}</b>: ` : "") + g.items.map((x) => (x.b || x.t)[L]).join(" \xB7 ")).join("\n");
   return { text: `<b>${guide_default.title[L]}</b>
 
 ${guide_default.intro[L]}
 
-${list2}`, buttons: b };
+${list3}`, buttons: b };
 }
 async function badgeOf(env, t) {
   if (isOwner(env)) return "";
@@ -6855,19 +7050,19 @@ var miniapp_default = `<!doctype html>
 // tools/worker/miniapp.mjs
 var LOGO_HOSTS = /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com)\//;
 var NICE = { btc: "Bitcoin", layer1: "Layer 1", layer2: "Layer 2", defi: "DeFi", stable: "Stablecoins", stables: "Stablecoins", ai: "AI", meme: "Meme", gaming: "Gaming", rwa: "RWA", infra: "Infrastructure", exchange: "Exchange", privacy: "Privacy", storage: "Storage", oracle: "Oracle", other: "Other" };
-var enc3 = new TextEncoder();
-async function hmac(key, data) {
-  const k = await crypto.subtle.importKey("raw", typeof key === "string" ? enc3.encode(key) : key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return new Uint8Array(await crypto.subtle.sign("HMAC", k, enc3.encode(data)));
+var enc4 = new TextEncoder();
+async function hmac2(key, data) {
+  const k = await crypto.subtle.importKey("raw", typeof key === "string" ? enc4.encode(key) : key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, enc4.encode(data)));
 }
-var hex = (b) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+var hex2 = (b) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
 async function verifyInitData(initData, token, now = Date.now(), maxAge = 86400) {
   if (!initData || !token) return { ok: false, why: "missing" };
   const p = new URLSearchParams(initData), hash = p.get("hash");
   if (!hash) return { ok: false, why: "no hash" };
   p.delete("hash");
   const check2 = [...p.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([k, v]) => k + "=" + v).join("\n");
-  const want = hex(await hmac(await hmac("WebAppData", token), check2));
+  const want = hex2(await hmac2(await hmac2("WebAppData", token), check2));
   if (want.length !== hash.length) return { ok: false, why: "bad signature" };
   let diff = 0;
   for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ hash.charCodeAt(i);
@@ -7015,6 +7210,7 @@ async function logo(request) {
 }
 
 // tools/worker/index.mjs
+setCexHandler(cexHandler2);
 setAdminHandler(adminHandler2);
 setJoinHandler(async (env, who, body) => {
   const r = await useAppInvite(env, body && body.code, who.uid, who.email);

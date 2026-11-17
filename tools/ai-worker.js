@@ -36,6 +36,8 @@ let adminHandler = null;   // /admin — the owner's dashboard in the app (tools
 export function setAdminHandler(fn) { adminHandler = fn; }
 let keyHandler = null;   // /key — a member's own Claude key (tools/worker/byok.mjs), set by index.mjs
 export function setKeyHandler(fn) { keyHandler = fn; }
+let cexHandler = null;   // /cex — 🔌 the member's read-only exchange keys and balances (tools/worker/cex.mjs)
+export function setCexHandler(fn) { cexHandler = fn; }
 
 export default {
   async fetch(request, env) {
@@ -53,8 +55,8 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { status: okOrigin ? 204 : 403, headers: cors });
     if (!okOrigin) return reply(403, { error: 'This service only answers the Cute Portfolio app.' });
-    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path), isJoin = /\/join\/?$/.test(path);
-    if (request.method !== 'POST' || !(path.endsWith('/analyze') || isKey || isAdmin || isJoin)) return reply(404, { error: 'Not found.' });
+    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path), isJoin = /\/join\/?$/.test(path), isCex = /\/cex\/?$/.test(path);
+    if (request.method !== 'POST' || !(path.endsWith('/analyze') || isKey || isAdmin || isJoin || isCex)) return reply(404, { error: 'Not found.' });
 
     // body (size-capped)
     const raw = await request.text();
@@ -75,6 +77,11 @@ export default {
     if (isAdmin) {   // 🛠 the owner's dashboard: only the owner's account (checked again inside)
       if (!adminHandler) return reply(404, { error: 'Not found.' });
       const r = await adminHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch(e => ({ status: 500, error: 'Something went wrong — ' + String(e && e.message || e).slice(0, 120) }));
+      return reply(r.status || 200, r);
+    }
+    if (isCex) {   // 🔌 read-only exchange keys: status / set / delete / balances for this signed-in account
+      if (!cexHandler) return reply(404, { error: 'Not found.' });
+      const r = await cexHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch(() => ({ status: 500, error: 'failed' }));
       return reply(r.status || 200, r);
     }
     if (isKey) {   // 🔑 status / set / delete the signed-in member's own Claude key

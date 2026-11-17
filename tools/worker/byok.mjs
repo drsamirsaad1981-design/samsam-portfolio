@@ -20,12 +20,12 @@ async function aesKey(env) {
   const base = await crypto.subtle.importKey('raw', enc.encode(secret), 'HKDF', false, ['deriveKey']);
   return crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: enc.encode('samsam-byok'), info: enc.encode('claude-key-v1') }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 }
-async function seal(env, plain) {
+export async function seal(env, plain) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await aesKey(env), enc.encode(plain)));
   return b64(iv) + '.' + b64(ct);
 }
-async function unseal(env, sealed) {
+export async function unseal(env, sealed) {
   const [iv, ct] = String(sealed).split('.');
   return dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, await aesKey(env), unb64(ct)));
 }

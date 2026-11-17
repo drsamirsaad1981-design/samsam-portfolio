@@ -89,7 +89,8 @@
       '<p>Add one from a coin\'s page: <b>+ Add Transaction → Reward</b> (staking can also be booked automatically from an APY).</p>'; } },
     walletsCheck: { title: 'Wallets & Exchanges', body: function () { return '<p><b>Wallets &amp; check</b> compares what the app says you hold with what is really in your wallets.</p>' +
       '<ul><li>You add each wallet\'s <b>public address</b> only — never a seed phrase or a private key.</li><li>The app reads the balances from the public blockchain and lists coins where the wallet has <b>more</b> or <b>less</b> than the app.</li><li>Nothing is changed by itself: you decide what to correct.</li></ul>' +
-      '<p><b>Import from exchange</b> reads a CSV file of your trades (Binance, Gate and others) and adds the buys and sells. Trades you already entered are recognised and not added twice.</p>'; } },
+      '<p><b>Import from exchange</b> reads a CSV file of your trades (Binance, Gate and others) and adds the buys and sells. Trades you already entered are recognised and not added twice.</p>' +
+      '<p><b>Exchanges · live balances</b> reads your Binance / Gate balances (spot, funding, earn) with a <b>read-only</b> API key and puts them next to the app. A Binance key that can trade or withdraw is refused; the key is kept encrypted on the server and never shown again.</p>'; } },
     targets: { title: 'Target Allocation', body: function () { return '<p>The share of your portfolio you want in each category (Bitcoin included). The shares add up to 100%.</p>' +
       '<div class="cph-f"><b>Now → target</b><code>Category value ÷ portfolio value × 100, next to the share you chose</code></div>' +
       '<p>The <b>band</b> (± points) is how far a category may drift. Inside the band it is <b>✓ on target</b>; outside, the card says how much to buy (or trim) to get back, and which of your coins fit.</p>' +
