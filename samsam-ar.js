@@ -528,7 +528,7 @@
     'Market Dominance': 'الهيمنة السوقية', 'Others': 'أخرى', 'ETF Flows': 'تدفقات صناديق ETF', 'US spot': 'الفورية الأمريكية', 'Since launch': 'منذ الإطلاق',
     'Net money in or out of the US spot ETFs each trading day (no trading on weekends). Source:': 'صافي الأموال الداخلة إلى صناديق ETF الفورية الأمريكية أو الخارجة منها في كل يوم تداول (لا تداول في عطلة نهاية الأسبوع). المصدر:',
     ', saved by GitHub after the US market closes.': '، ويحفظها GitHub بعد إغلاق السوق الأمريكي.',
-    'Watchlist': 'قائمة المتابعة', 'Market watchlist': 'قائمة متابعة السوق', 'In': 'لديك', 'Stablecoins hidden': 'العملات المستقرة مخفية', 'Gainers': 'الأكثر ارتفاعاً', 'Losers': 'الأكثر انخفاضاً',
+    'Watchlist': 'قائمة المتابعة', 'Market watchlist': 'قائمة متابعة السوق', 'In': 'في\u00a0', 'Stablecoins hidden': 'العملات المستقرة مخفية', 'Gainers': 'الأكثر ارتفاعاً', 'Losers': 'الأكثر انخفاضاً',
     'Add Custom Coin': 'إضافة عملة أخرى', 'Type a coin name or symbol — any coin listed on CoinGecko can be followed or added.': 'اكتب اسم العملة أو رمزها — يمكن متابعة أو إضافة أي عملة مدرجة في CoinGecko.',
     'Price /': 'السعر /', 'Prices': 'الأسعار', 'How many coins': 'عدد العملات', 'Period on a phone': 'المدة على الجوال', 'Sort by rank': 'ترتيب حسب الترتيب السوقي',
     '(live, plus a snapshot every ~30 min) · coins 101–500 topped up from Binance · Coin pages: CoinMarketCap (CoinGecko for coins it doesn\'t list) · Predictions: CoinCodex · ETF flows: SoSoValue · Market Dominance, Fear & Greed and the Altcoin Season Index:':
