@@ -1273,6 +1273,12 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
     check('♻️ topics deleted by mistake → /community setup makes all 4 again, the welcome + the whole guide (16) posted, 📘 closed again', made === 4 && gp.length === 16 && g.guidePosted === true && g.guideV === 2 && sent.some(m => m.m === 'sendMessage' && m.b.message_thread_id === g.topics.chat && /Welcome/.test(m.b.text)) && sent.some(m => m.m === 'closeForumTopic' && m.b.message_thread_id === g.topics.guide), { made, gp: gp.length, g });
     sent.length = 0; await sayAs(555, '/community reset');
     check('♻️ /community reset (you) → all 4 topics made again even when Telegram says nothing', sent.filter(m => m.m === 'createForumTopic').length === 4 && sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === JSON.parse(kvStore.get('tg:community')).group.topics.guide).length === 16);
+    const now4 = Object.values(JSON.parse(kvStore.get('tg:community')).group.topics);
+    sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 900, message_thread_id: 3, is_topic_message: true, chat: { id: -1002, type: 'supergroup' }, from: { id: 888 }, text: 'hi in the old chat' } }, ENV.TG_SECRET, ENVK);
+    check('🧹 a message in an old topic → the bot stays quiet, remembers the topic', !sent.some(m => m.m === 'sendMessage') && JSON.parse(kvStore.get('tg:community')).group.strays.includes(3));
+    sent.length = 0; await sayAs(555, '/community clean');
+    const del = sent.filter(m => m.m === 'deleteForumTopic').map(m => m.b.message_thread_id);
+    check('…/community clean → deletes the old topics around it (never the 4 current, never # General)', del.includes(3) && del.includes(6) && !del.some(i => now4.includes(i) || i === 1) && /Deleted/.test(last().b.text) && !JSON.parse(kvStore.get('tg:community')).group.strays.length, del);
     c = JSON.parse(kvStore.get('tg:community'));
   }
   sent.length = 0; await sayAs(888, '/announce hi');

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 47e478d93c9f6e95
+// sources-hash: df473e3f65376071
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2797,6 +2797,29 @@ async function registerForward(env, msg) {
   await setup(env, kind);
   return true;
 }
+async function noteTopic(env, msg) {
+  const c = await getCommunity(env), x = c.group, t = msg.message_thread_id;
+  if (!x || String(x.id) !== String(msg.chat.id) || !msg.is_topic_message || !t || Object.values(x.topics || {}).includes(t)) return;
+  x.strays = [.../* @__PURE__ */ new Set([...x.strays || [], t])].slice(-10);
+  c.group = x;
+  await putCommunity(env, c);
+}
+async function cleanTopics(env) {
+  const c = await getCommunity(env), x = c.group;
+  if (!x) return say(env, "\u2139\uFE0F No group set up.");
+  if (!(x.strays || []).length) return say(env, "\u2139\uFE0F I don't know the old topics yet \u2014 send any message in one of them (from the account that sees them), then /community clean again.");
+  const keep = new Set(Object.values(x.topics || {})), ids = /* @__PURE__ */ new Set();
+  for (const s of x.strays) for (let i = s - 6; i <= s + 6; i++) if (i > 1 && !keep.has(i)) ids.add(i);
+  let n = 0;
+  for (const id of ids) {
+    const r = await tg3(env, "deleteForumTopic", { chat_id: x.id, message_thread_id: id });
+    if (r.ok) n++;
+  }
+  x.strays = [];
+  c.group = x;
+  await putCommunity(env, c);
+  return say(env, n ? `\u{1F9F9} Deleted ${n} old topic${n > 1 ? "s" : ""}. The 4 new ones stay.` : "\u2139\uFE0F No old topic found to delete.");
+}
 async function setup(env, kind, opt = {}) {
   const c = await getCommunity(env), x = c[kind];
   if (!x) return { ok: false };
@@ -5339,6 +5362,7 @@ var WORDS = [
   [/^\/community setup$/i, "cm:setup"],
   [/^\/community guide$/i, "cm:guide"],
   [/^\/community reset$/i, "cm:reset"],
+  [/^\/community clean$/i, "cm:clean"],
   [/^\/announce\s+[\s\S]+$/i, "ann"],
   [/^\/start\s+\S+$/i, "menu"],
   [/^\/(report|app)$|^التقرير$/i, "rp"],
@@ -5445,6 +5469,8 @@ async function handleTelegram(request, env) {
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null) return ok();
+  if (msg && msg.chat && msg.chat.type === "supergroup" && msg.message_thread_id) await noteTopic(env, msg).catch(() => {
+  });
   if (!await allowed(env, chat)) return stranger(env, u, msg, chat);
   if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {
     const x = (await members(env))[String(chat)] || {}, ar = x.lang === "ar";
@@ -6100,7 +6126,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
     await send2(env, chat, await communityView(env, await getLang(env)));
     return;
   }
-  if (p.act === "cm:setup" || p.act === "ann" || p.act === "cm:guide" || p.act === "cm:reset") {
+  if (p.act === "cm:setup" || p.act === "ann" || p.act === "cm:guide" || p.act === "cm:reset" || p.act === "cm:clean") {
     if (!isOwner(env)) {
       await send2(env, chat, { text: T[await getLang(env)].ownerOnly });
       return;
@@ -6108,6 +6134,10 @@ async function onText(env, chat, text, budget = 36, into = null) {
     if (p.act === "cm:setup") {
       await setup(env, "channel");
       await setup(env, "group");
+      return;
+    }
+    if (p.act === "cm:clean") {
+      await cleanTopics(env);
       return;
     }
     if (p.act === "cm:reset") {

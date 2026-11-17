@@ -22,7 +22,7 @@ import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
 import { keyInfo, BYOK_AI, BYOK_REPORTS } from './byok.mjs';
 import GUIDE from '../../guide.json' with { type: 'json' };
-import { onMyChatMember, onJoinRequest, communityView, announce, setup as communitySetup, registerForward, guideCard, guideGroups } from './community.mjs';
+import { onMyChatMember, onJoinRequest, communityView, announce, setup as communitySetup, registerForward, guideCard, guideGroups, noteTopic, cleanTopics } from './community.mjs';
 import { premiumView, supportView, sendSupportInvoice, askGift, preCheckout, paid, statsView, addDays, revoke, premiumNow } from './stars.mjs';
 import { keepTrades, tradeLines, confirmTrades, cancelTrades, money } from './trade.mjs';
 import { viewDaily, setCfg, getCfg, morning, evening, pinUpdate, unpin } from './daily.mjs';
@@ -301,7 +301,7 @@ const WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
-  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, 'cm'], [/^\/community setup$/i, 'cm:setup'], [/^\/community guide$/i, 'cm:guide'], [/^\/community reset$/i, 'cm:reset'], [/^\/announce\s+[\s\S]+$/i, 'ann'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
+  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, 'cm'], [/^\/community setup$/i, 'cm:setup'], [/^\/community guide$/i, 'cm:guide'], [/^\/community reset$/i, 'cm:reset'], [/^\/community clean$/i, 'cm:clean'], [/^\/announce\s+[\s\S]+$/i, 'ann'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -376,6 +376,7 @@ export async function handleTelegram(request, env) {
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null) return ok();
+  if (msg && msg.chat && msg.chat.type === 'supergroup' && msg.message_thread_id) await noteTopic(env, msg).catch(() => {});   // 🧹 a message in an old topic → remembered for /community clean
   if (!(await allowed(env, chat))) return stranger(env, u, msg, chat);   // not (yet) invited: only an invite code works
   if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {   // a member: ⏸ paused → nothing (one note a day); 🌊 too many messages → wait
     const x = (await members(env))[String(chat)] || {}, ar = x.lang === 'ar';
@@ -736,9 +737,10 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
   if (p.act === 'cm') { await send(env, chat, await communityView(env, await getLang(env))); return; }
-  if (p.act === 'cm:setup' || p.act === 'ann' || p.act === 'cm:guide' || p.act === 'cm:reset') {   // Samir only
+  if (p.act === 'cm:setup' || p.act === 'ann' || p.act === 'cm:guide' || p.act === 'cm:reset' || p.act === 'cm:clean') {   // Samir only
     if (!isOwner(env)) { await send(env, chat, { text: T[await getLang(env)].ownerOnly }); return; }
     if (p.act === 'cm:setup') { await communitySetup(env, 'channel'); await communitySetup(env, 'group'); return; }
+    if (p.act === 'cm:clean') { await cleanTopics(env); return; }
     if (p.act === 'cm:reset') { await communitySetup(env, 'group', { reset: true }); return; }
     if (p.act === 'cm:guide') { await communitySetup(env, 'group', { reguide: true }); return; }
     const out = await announce(env, String(text).replace(/^\/announce\s+/i, '').slice(0, 3500));

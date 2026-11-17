@@ -65,6 +65,23 @@ export async function registerForward(env, msg) {
   return true;
 }
 
+// 🧹 old topics left over (made again by /community reset while the old ones still lived): a message in one tells the bot
+// its number; /community clean deletes it and the old topics made right after it (they were made one after another)
+export async function noteTopic(env, msg) {
+  const c = await getCommunity(env), x = c.group, t = msg.message_thread_id;
+  if (!x || String(x.id) !== String(msg.chat.id) || !msg.is_topic_message || !t || Object.values(x.topics || {}).includes(t)) return;
+  x.strays = [...new Set([...(x.strays || []), t])].slice(-10); c.group = x; await putCommunity(env, c);
+}
+export async function cleanTopics(env) {
+  const c = await getCommunity(env), x = c.group; if (!x) return say(env, 'ℹ️ No group set up.');
+  if (!(x.strays || []).length) return say(env, 'ℹ️ I don\'t know the old topics yet — send any message in one of them (from the account that sees them), then /community clean again.');
+  const keep = new Set(Object.values(x.topics || {})), ids = new Set();
+  for (const s of x.strays) for (let i = s - 6; i <= s + 6; i++) if (i > 1 && !keep.has(i)) ids.add(i);
+  let n = 0; for (const id of ids) { const r = await tg(env, 'deleteForumTopic', { chat_id: x.id, message_thread_id: id }); if (r.ok) n++; }
+  x.strays = []; c.group = x; await putCommunity(env, c);
+  return say(env, n ? `🧹 Deleted ${n} old topic${n > 1 ? 's' : ''}. The 4 new ones stay.` : 'ℹ️ No old topic found to delete.');
+}
+
 // make the join link (requests approved by the bot), and for the group: topics + the guide
 export async function setup(env, kind, opt = {}) {
   const c = await getCommunity(env), x = c[kind]; if (!x) return { ok: false };
