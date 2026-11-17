@@ -224,13 +224,15 @@
     "Send a ticker — <code>btc</code> or <code>sol eth</code> — for the live price, trend, futures and funding.",
     "/market — BTC, dominance, Fear &amp; Greed and ETF flows.",
     "/movers — the best and worst coins · /signals — hold / add / sell for your coins.",
-    "/portfolio · /plan · /exit — your own numbers."
+    "/portfolio · /plan · /exit — your own numbers.",
+    "/balances — your Binance / Gate balances, read with a read-only key you connect in the app (Performance → Wallets &amp; Exchanges → Exchanges)."
    ],
    "ar": [
     "أرسل رمز العملة — <code>btc</code> أو <code>sol eth</code> — لترى السعر المباشر والاتجاه والعقود الآجلة ومعدل التمويل.",
     "/market — البيتكوين والهيمنة ومؤشر الخوف والطمع وتدفقات ETF.",
     "/movers — الأفضل والأسوأ أداءً · /signals — احتفاظ / تعزيز / بيع لعملاتك.",
-    "/portfolio · /plan · /exit — أرقامك الخاصة."
+    "/portfolio · /plan · /exit — أرقامك الخاصة.",
+    "/balances — أرصدتك في Binance و Gate، تُقرأ بمفتاح للقراءة فقط تربطه من التطبيق (الأداء ← المحافظ والمنصات ← المنصات)."
    ],
    "tip": {
     "en": "🔄 on any message refreshes it in place.",

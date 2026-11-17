@@ -366,6 +366,32 @@ async function ownerUid(env, db) {
   await db.set('config/owner', { uid: users[0], at: new Date().toISOString() }).catch(() => {});
   return (ownerMem = users[0]);
 }
+// 🔌 the Firebase account of THIS chat (owner: the pinned owner uid; a member: the uid they linked) — for /balances
+export async function chatUid(env) {
+  const sa = serviceAccount(env); if (!sa) return null;
+  if (!isOwner(env)) { const me = await member(env); return (me && me.uid) || null; }
+  try { return await ownerUid(env, await firestore(sa)); } catch (_) { return null; }
+}
+// a Firebase ID token for that account, made by the Worker itself (a custom token signed with the service account, swapped
+// at Google for an ID token): the Binance relay only answers signed-in users, and in the bot there is no app session.
+// Kept in memory only (50 min). The web key is the app's public config key (firebase-config.js), not a secret.
+const WEB_KEY = 'AIzaSyCUvQh7cobgjGVVEYR8vcT76CGFDPsd5Vg', idTok = new Map();
+export async function idTokenFor(env, uid) {
+  const sa = serviceAccount(env); if (!sa || !uid) return null;
+  const c = idTok.get(uid); if (c && c.until > Date.now()) return c.t;
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const body = b64urlJson({ alg: 'RS256', typ: 'JWT' }) + '.' + b64urlJson({ iss: sa.client_email, sub: sa.client_email, aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit', iat: now, exp: now + 3600, uid });
+    const key = await crypto.subtle.importKey('pkcs8', pemBytes(sa.private_key), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(body));
+    const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=' + WEB_KEY, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: body + '.' + b64url(sig), returnSecureToken: true }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.idToken) { console.log(JSON.stringify({ idtoken: 'refused', status: r.status, msg: j.error && j.error.message })); return null; }
+    if (idTok.size > 50) idTok.clear();
+    idTok.set(uid, { t: j.idToken, until: Date.now() + 50 * 60e3 });
+    return j.idToken;
+  } catch (e) { console.log(JSON.stringify({ idtoken: 'failed', msg: String(e && e.message).slice(0, 100) })); return null; }
+}
 // is this Firebase account the owner's? (the e-mail list, else the pinned owner uid) — for the app's admin dashboard
 export async function isOwnerAccount(env, { email, uid, owners }) {
   if (owners && owners.length) return owners.includes(String(email || '').toLowerCase());

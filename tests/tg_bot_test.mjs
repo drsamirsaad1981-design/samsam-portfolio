@@ -634,7 +634,7 @@ LIVE.pendle.usd = 3.21;
 // the "/" menu: every command, refreshed by itself when the list changes (no /start needed)
 kvStore.delete('tg:555:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
 const sc = sent.find(x => x.m === 'setMyCommands'), names = sc ? sc.b.commands.map(c => c.command) : [];
-check('"/" menu sent again by itself: invite, users, stats, start, report, daily, morning, evening, alerts, paper, pin, unpin, guide, community, hide… (25)', names.length === 25 && ['invite', 'users', 'stats', 'guide', 'community', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
+check('"/" menu sent again by itself: invite, users, stats, start, report, daily, morning, evening, alerts, paper, pin, unpin, guide, community, hide… (26, with balances)', names.length === 26 && names.includes('balances') && ['invite', 'users', 'stats', 'guide', 'community', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/menu');
 check('…and only once (remembered in KV)', !sent.some(x => x.m === 'setMyCommands'));
 claudeCalls.length = 0; sent.length = 0;
@@ -1198,6 +1198,22 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   const k = JSON.parse(kvStore.get('fs:pf:UID1')); k.checked -= 11 * 60e3; kvStore.set('fs:pf:UID1', JSON.stringify(k));
   AGG_CALLS = 0; const W11 = await fresh(); const pw4 = []; await W11.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('03:35') }, ENVK, { waitUntil: x => pw4.push(x) }); await Promise.all(pw4);
   check('…11 minutes later the owner\'s portfolio is asked again (members: 30)', AGG_CALLS === 0 || AGG_CALLS === 3, AGG_CALLS);
+}
+
+// 🔌 /balances — the exchanges' live balances next to the app (keys connected in the app; here from the 1-minute cache)
+{
+  const { seal } = await import('../tools/worker/byok.mjs');
+  const ENVB = { ...ENVK, FIREBASE_UID: 'UIDX' };
+  kvStore.set('cex:UIDX', JSON.stringify({ binance: { v: await seal(ENVB, JSON.stringify({ k: 'x', s: 'y' })), tail: 'ab12', at: '2026-11-17', readOnly: true } }));
+  kvStore.set('cex:UIDX:bal', JSON.stringify({ t: Date.now(), b: [{ ex: 'binance', name: 'Binance', ok: true, assets: [{ sym: 'SOL', spot: 4, funding: 0, earn: 6 }, { sym: 'BTC', spot: 0.05, funding: 0, earn: 0 }, { sym: 'ZZZ', spot: 3, funding: 0, earn: 0 }] }] }));
+  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:')) kvStore.delete(k);
+  sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 555, type: 'private' }, from: { id: 555, first_name: 'S', language_code: 'en' }, text: '/balances' } }, ENV.TG_SECRET, ENVB);
+  const bv = sent.filter(m => m.m === 'sendMessage').at(-1);
+  check('🔌 /balances → Binance balances next to the app: SOL 10 (spot 4 + earn 6) vs 15 in the app, BTC ▫️ (the rest elsewhere), ZZZ not in the app', bv && /Exchanges · live balances/.test(bv.b.text) && /<b>SOL<\/b> 10 · \$1,500 — app: 15/.test(bv.b.text) && /▫️ <b>BTC<\/b> 0\.05/.test(bv.b.text) && /Not in the app: ZZZ 3/.test(bv.b.text) && okHtml(bv.b.text) && JSON.stringify(bv.b.reply_markup).includes('bal:r'), bv && bv.b.text);
+  kvStore.delete('cex:UIDX'); kvStore.delete('cex:UIDX:bal');
+  sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 555, type: 'private' }, from: { id: 555, first_name: 'S', language_code: 'en' }, text: '/balances' } }, ENV.TG_SECRET, ENVB);
+  const bn = sent.filter(m => m.m === 'sendMessage').at(-1);
+  check('…no exchange connected → how to connect one in the app (read-only key), with 📱 Open in the app', bn && /No exchange connected/.test(bn.b.text) && /performance\.html/.test(JSON.stringify(bn.b.reply_markup)), bn && bn.b.text);
 }
 
 // 📘 /guide — the same guide as the app (guide.json), both languages, every part opens in place

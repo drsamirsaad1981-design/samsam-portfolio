@@ -103,6 +103,22 @@ const said = e => e ? [e.status || '', e.code != null ? e.code : '', String(e.me
 const why = e => e && /permission/i.test(e.message || '') && /FORBIDDEN|does not have/i.test(e.message || '') ? 'noperm' : e && (e.status === 451 || (e.html && e.status === 403)) ? 'blocked' : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? 'refused' : e && e.status === 429 ? 'busy' : 'failed';
 const list = all => Object.keys(EXCHANGES).filter(ex => all[ex]).map(ex => ({ ex, name: EXCHANGES[ex], tail: all[ex].tail, at: all[ex].at, readOnly: all[ex].readOnly }));
 
+// the balances of one account (the app's /cex and the bot's /balances share it): cached 1 min after a 🔄, else 5 min
+export async function balancesFor(env, uid, token, fresh) {
+  const all = await load(env, uid);
+  if (!Object.keys(all).length) return { exchanges: [], balances: [] };
+  let c = null; try { c = JSON.parse((await env.RATE.get(BAL(uid))) || 'null'); } catch (_) {}
+  if (c && Date.now() - c.t < (fresh ? 60e3 : 5 * 60e3)) return { exchanges: list(all), balances: c.b, at: c.t, cached: true };
+  const b = await Promise.all(Object.keys(EXCHANGES).filter(x => all[x]).map(async x => {
+    const k = await keyOf(env, all[x]); if (!k) return { ex: x, name: EXCHANGES[x], ok: false, error: 'refused' };
+    try { const r = await READ[x](k, { token }); return { ex: x, name: EXCHANGES[x], ok: true, assets: r.assets, notes: r.notes }; }
+    catch (e) { return { ex: x, name: EXCHANGES[x], ok: false, error: why(e), said: said(e) }; }
+  }));
+  const t = Date.now();
+  if (b.some(x => x.ok)) await env.RATE.put(BAL(uid), JSON.stringify({ t, b }), { expirationTtl: 600 }).catch(() => {});
+  return { exchanges: list(all), balances: b, at: t };
+}
+
 // /cex — { action: 'status' | 'set' | 'delete' | 'balances', ex, key, secret, fresh } from a signed-in owner or member
 export async function cexHandler(env, who, body) {
   const owner = (who.owners || []).includes(who.email);
@@ -126,18 +142,6 @@ export async function cexHandler(env, who, body) {
     if (all[ex]) { delete all[ex]; if (Object.keys(all).length) await env.RATE.put(KEY(who.uid), JSON.stringify(all)); else await env.RATE.delete(KEY(who.uid)); await env.RATE.delete(BAL(who.uid)).catch(() => {}); }
     return { ok: true, exchanges: list(all) };
   }
-  if (a === 'balances') {
-    if (!Object.keys(all).length) return { exchanges: [], balances: [] };
-    let c = null; try { c = JSON.parse((await env.RATE.get(BAL(who.uid))) || 'null'); } catch (_) {}
-    if (c && Date.now() - c.t < (body.fresh ? 60e3 : 5 * 60e3)) return { exchanges: list(all), balances: c.b, at: c.t, cached: true };
-    const b = await Promise.all(Object.keys(EXCHANGES).filter(x => all[x]).map(async x => {
-      const k = await keyOf(env, all[x]); if (!k) return { ex: x, name: EXCHANGES[x], ok: false, error: 'refused' };
-      try { const r = await READ[x](k, { token: who.token }); return { ex: x, name: EXCHANGES[x], ok: true, assets: r.assets, notes: r.notes }; }
-      catch (e) { return { ex: x, name: EXCHANGES[x], ok: false, error: why(e), said: said(e) }; }
-    }));
-    const t = Date.now();
-    if (b.some(x => x.ok)) await env.RATE.put(BAL(who.uid), JSON.stringify({ t, b }), { expirationTtl: 600 }).catch(() => {});
-    return { exchanges: list(all), balances: b, at: t };
-  }
+  if (a === 'balances') return balancesFor(env, who.uid, who.token, !!body.fresh);
   return { exchanges: list(all) };
 }

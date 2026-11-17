@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 90ce2611c898ac5a
+// sources-hash: e0cde4dd0dd71965
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1237,6 +1237,30 @@ async function keyOf(env, x) {
 var said = (e) => e ? [e.status || "", e.code != null ? e.code : "", String(e.message || "").slice(0, 140)].filter((x) => x !== "").join(" \xB7 ") : "";
 var why = (e) => e && /permission/i.test(e.message || "") && /FORBIDDEN|does not have/i.test(e.message || "") ? "noperm" : e && (e.status === 451 || e.html && e.status === 403) ? "blocked" : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? "refused" : e && e.status === 429 ? "busy" : "failed";
 var list2 = (all) => Object.keys(EXCHANGES).filter((ex) => all[ex]).map((ex) => ({ ex, name: EXCHANGES[ex], tail: all[ex].tail, at: all[ex].at, readOnly: all[ex].readOnly }));
+async function balancesFor(env, uid, token, fresh) {
+  const all = await load(env, uid);
+  if (!Object.keys(all).length) return { exchanges: [], balances: [] };
+  let c = null;
+  try {
+    c = JSON.parse(await env.RATE.get(BAL(uid)) || "null");
+  } catch (_) {
+  }
+  if (c && Date.now() - c.t < (fresh ? 6e4 : 5 * 6e4)) return { exchanges: list2(all), balances: c.b, at: c.t, cached: true };
+  const b = await Promise.all(Object.keys(EXCHANGES).filter((x) => all[x]).map(async (x) => {
+    const k = await keyOf(env, all[x]);
+    if (!k) return { ex: x, name: EXCHANGES[x], ok: false, error: "refused" };
+    try {
+      const r = await READ[x](k, { token });
+      return { ex: x, name: EXCHANGES[x], ok: true, assets: r.assets, notes: r.notes };
+    } catch (e) {
+      return { ex: x, name: EXCHANGES[x], ok: false, error: why(e), said: said(e) };
+    }
+  }));
+  const t = Date.now();
+  if (b.some((x) => x.ok)) await env.RATE.put(BAL(uid), JSON.stringify({ t, b }), { expirationTtl: 600 }).catch(() => {
+  });
+  return { exchanges: list2(all), balances: b, at: t };
+}
 async function cexHandler2(env, who, body) {
   const owner2 = (who.owners || []).includes(who.email);
   if (!owner2 && !await memberByEmail(env, who.email).catch(() => null)) return { status: 403, error: "Only Cute Portfolio members can connect an exchange." };
@@ -1274,29 +1298,7 @@ async function cexHandler2(env, who, body) {
     }
     return { ok: true, exchanges: list2(all) };
   }
-  if (a === "balances") {
-    if (!Object.keys(all).length) return { exchanges: [], balances: [] };
-    let c = null;
-    try {
-      c = JSON.parse(await env.RATE.get(BAL(who.uid)) || "null");
-    } catch (_) {
-    }
-    if (c && Date.now() - c.t < (body.fresh ? 6e4 : 5 * 6e4)) return { exchanges: list2(all), balances: c.b, at: c.t, cached: true };
-    const b = await Promise.all(Object.keys(EXCHANGES).filter((x) => all[x]).map(async (x) => {
-      const k = await keyOf(env, all[x]);
-      if (!k) return { ex: x, name: EXCHANGES[x], ok: false, error: "refused" };
-      try {
-        const r = await READ[x](k, { token: who.token });
-        return { ex: x, name: EXCHANGES[x], ok: true, assets: r.assets, notes: r.notes };
-      } catch (e) {
-        return { ex: x, name: EXCHANGES[x], ok: false, error: why(e), said: said(e) };
-      }
-    }));
-    const t = Date.now();
-    if (b.some((x) => x.ok)) await env.RATE.put(BAL(who.uid), JSON.stringify({ t, b }), { expirationTtl: 600 }).catch(() => {
-    });
-    return { exchanges: list2(all), balances: b, at: t };
-  }
+  if (a === "balances") return balancesFor(env, who.uid, who.token, !!body.fresh);
   return { exchanges: list2(all) };
 }
 
@@ -2097,6 +2099,45 @@ async function ownerUid(env, db) {
   });
   return ownerMem = users[0];
 }
+async function chatUid(env) {
+  const sa = serviceAccount(env);
+  if (!sa) return null;
+  if (!isOwner(env)) {
+    const me = await member(env);
+    return me && me.uid || null;
+  }
+  try {
+    return await ownerUid(env, await firestore(sa));
+  } catch (_) {
+    return null;
+  }
+}
+var WEB_KEY = "AIzaSyCUvQh7cobgjGVVEYR8vcT76CGFDPsd5Vg";
+var idTok = /* @__PURE__ */ new Map();
+async function idTokenFor(env, uid) {
+  const sa = serviceAccount(env);
+  if (!sa || !uid) return null;
+  const c = idTok.get(uid);
+  if (c && c.until > Date.now()) return c.t;
+  try {
+    const now = Math.floor(Date.now() / 1e3);
+    const body = b64urlJson({ alg: "RS256", typ: "JWT" }) + "." + b64urlJson({ iss: sa.client_email, sub: sa.client_email, aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit", iat: now, exp: now + 3600, uid });
+    const key = await crypto.subtle.importKey("pkcs8", pemBytes(sa.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+    const sig2 = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(body));
+    const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=" + WEB_KEY, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: body + "." + b64url(sig2), returnSecureToken: true }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.idToken) {
+      console.log(JSON.stringify({ idtoken: "refused", status: r.status, msg: j.error && j.error.message }));
+      return null;
+    }
+    if (idTok.size > 50) idTok.clear();
+    idTok.set(uid, { t: j.idToken, until: Date.now() + 50 * 6e4 });
+    return j.idToken;
+  } catch (e) {
+    console.log(JSON.stringify({ idtoken: "failed", msg: String(e && e.message).slice(0, 100) }));
+    return null;
+  }
+}
 async function isOwnerAccount(env, { email, uid, owners }) {
   if (owners && owners.length) return owners.includes(String(email || "").toLowerCase());
   const sa = serviceAccount(env);
@@ -2635,13 +2676,15 @@ var guide_default = {
         "Send a ticker \u2014 <code>btc</code> or <code>sol eth</code> \u2014 for the live price, trend, futures and funding.",
         "/market \u2014 BTC, dominance, Fear &amp; Greed and ETF flows.",
         "/movers \u2014 the best and worst coins \xB7 /signals \u2014 hold / add / sell for your coins.",
-        "/portfolio \xB7 /plan \xB7 /exit \u2014 your own numbers."
+        "/portfolio \xB7 /plan \xB7 /exit \u2014 your own numbers.",
+        "/balances \u2014 your Binance / Gate balances, read with a read-only key you connect in the app (Performance \u2192 Wallets &amp; Exchanges \u2192 Exchanges)."
       ],
       ar: [
         "\u0623\u0631\u0633\u0644 \u0631\u0645\u0632 \u0627\u0644\u0639\u0645\u0644\u0629 \u2014 <code>btc</code> \u0623\u0648 <code>sol eth</code> \u2014 \u0644\u062A\u0631\u0649 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0648\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0645\u0648\u064A\u0644.",
         "/market \u2014 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629 \u0648\u0645\u0624\u0634\u0631 \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639 \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF.",
         "/movers \u2014 \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623 \u0623\u062F\u0627\u0621\u064B \xB7 /signals \u2014 \u0627\u062D\u062A\u0641\u0627\u0638 / \u062A\u0639\u0632\u064A\u0632 / \u0628\u064A\u0639 \u0644\u0639\u0645\u0644\u0627\u062A\u0643.",
-        "/portfolio \xB7 /plan \xB7 /exit \u2014 \u0623\u0631\u0642\u0627\u0645\u0643 \u0627\u0644\u062E\u0627\u0635\u0629."
+        "/portfolio \xB7 /plan \xB7 /exit \u2014 \u0623\u0631\u0642\u0627\u0645\u0643 \u0627\u0644\u062E\u0627\u0635\u0629.",
+        "/balances \u2014 \u0623\u0631\u0635\u062F\u062A\u0643 \u0641\u064A Binance \u0648 Gate\u060C \u062A\u064F\u0642\u0631\u0623 \u0628\u0645\u0641\u062A\u0627\u062D \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u062A\u0631\u0628\u0637\u0647 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (\u0627\u0644\u0623\u062F\u0627\u0621 \u2190 \u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A \u2190 \u0627\u0644\u0645\u0646\u0635\u0627\u062A)."
       ],
       tip: {
         en: "\u{1F504} on any message refreshes it in place.",
@@ -5568,6 +5611,7 @@ var WORDS = [
   [/^\/(new|reset|clear)$|^محادثة جديدة$/i, "new"],
   [/^\/(forget|delete)$|^امسح بياناتي$/i, "fg"],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, "al"],
+  [/^\/(balances|exchanges|cex)$|^أرصدتي$|^المنصات$|^أرصدة المنصات$/i, "bal"],
   [/^\/invite$/i, "inv"],
   [/^\/(users|members)$/i, "us"],
   [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, "link"],
@@ -5843,6 +5887,61 @@ async function usedToday(env, c, x) {
   } catch (_) {
   }
   return { q, r };
+}
+async function viewBalances(env, lang2, fresh = false) {
+  const ar = lang2 === "ar", back = [cb3(ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", "menu")], open = { text: ar ? "\u{1F4F1} \u0627\u0641\u062A\u062D \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "\u{1F4F1} Open in the app", url: APP + "performance.html" };
+  const uid = await chatUid(env);
+  if (!uid) return { text: ar ? "\u{1F50C} \u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u0623\u0648\u0644\u0627\u064B (\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u062A\u0644\u064A\u062C\u0631\u0627\u0645)\u060C \u062B\u0645 \u0627\u0631\u0628\u0637 \u0645\u0646\u0635\u0627\u062A\u0643 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0623\u062F\u0627\u0621 \u2190 \u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A \u2190 \u0627\u0644\u0645\u0646\u0635\u0627\u062A." : "\u{1F50C} Link your portfolio first (app \u2192 Settings \u2192 Telegram), then connect your exchanges in the app: Performance \u2192 Wallets & Exchanges \u2192 Exchanges.", buttons: [back] };
+  const r = await balancesFor(env, uid, await idTokenFor(env, uid), fresh).catch(() => null);
+  if (!r || !r.exchanges.length) return { text: ar ? "\u{1F50C} <b>\u0627\u0644\u0645\u0646\u0635\u0627\u062A \xB7 \u0627\u0644\u0623\u0631\u0635\u062F\u0629 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629</b>\n\n\u0644\u0645 \u062A\u0631\u0628\u0637 \u0623\u064A \u0645\u0646\u0635\u0629 \u0628\u0639\u062F. \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0623\u062F\u0627\u0621 \u2190 \u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A \u2190 <b>\u0627\u0644\u0645\u0646\u0635\u0627\u062A</b> \u2014 \u0628\u0645\u0641\u062A\u0627\u062D API \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 (Binance \xB7 Gate)." : "\u{1F50C} <b>Exchanges \xB7 live balances</b>\n\nNo exchange connected yet. In the app: Performance \u2192 Wallets & Exchanges \u2192 <b>Exchanges</b> \u2014 with a read-only API key (Binance \xB7 Gate).", buttons: [[open], back] };
+  const user = await loadUser(env).catch(() => null), app = {}, price3 = {};
+  if (user) {
+    const m = await loadMarket([], coinsOf(user)).catch(() => null);
+    if (m) {
+      const sum = summarize(withIds(user, m), m, Date.now());
+      for (const c of sum.coins || []) {
+        app[c.sym] = c.qty;
+        if (c.price > 0) price3[c.sym] = c.price;
+      }
+    }
+  }
+  const ex = {};
+  for (const b of r.balances || []) if (b.ok) for (const a of b.assets || []) {
+    const q = (a.spot || 0) + (a.funding || 0) + (a.earn || 0);
+    if (q > 0) {
+      const o = ex[a.sym] || (ex[a.sym] = { sym: a.sym, q: 0 });
+      o.q += q;
+    }
+  }
+  const fq = (n) => parseFloat(Number(n).toPrecision(8)).toLocaleString("en-US", { maximumFractionDigits: 8 });
+  const rows = [], other = [];
+  let tot = 0;
+  for (const o of Object.values(ex)) {
+    const p = price3[o.sym] || (/^(USDT|USDC|FDUSD|DAI)$/.test(o.sym) ? 1 : 0), a = app[o.sym] || 0, usdv = o.q * p;
+    tot += usdv;
+    if (!a) {
+      if (!(p > 0 && usdv < 1)) other.push(o);
+      continue;
+    }
+    const d = o.q - a, same = p > 0 ? Math.abs(d) * p < 0.5 : Math.abs(d) <= Math.max(a, o.q) * 1e-4;
+    rows.push({ usdv, line: `${same ? "\u2705" : d > 0 ? "\u2795" : "\u25AB\uFE0F"} <b>${esc(o.sym)}</b> ${fq(o.q)}${usdv ? ` \xB7 ${usd(usdv)}` : ""}` + (same ? "" : d > 0 ? ar ? ` \u2014 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (${fq(a)})` : ` \u2014 more than the app (${fq(a)})` : ar ? ` \u2014 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: ${fq(a)}` : ` \u2014 app: ${fq(a)}`) });
+  }
+  rows.sort((x, y) => y.usdv - x.usdv);
+  const errs = (r.balances || []).filter((b) => !b.ok).map((b) => `\u26A0\uFE0F ${esc(b.name)}: ${b.error === "blocked" ? ar ? "\u0644\u0627 \u062A\u0633\u062A\u062C\u064A\u0628 \u0627\u0644\u0622\u0646" : "not answering now" : b.error === "refused" || b.error === "noperm" ? ar ? "\u0631\u0641\u0636\u062A \u0627\u0644\u0645\u0641\u062A\u0627\u062D \u2014 \u0631\u0627\u062C\u0639\u0647 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "refused the key \u2014 check it in the app" : ar ? "\u062A\u0639\u0630\u0651\u0631\u062A \u0627\u0644\u0642\u0631\u0627\u0621\u0629" : "could not read"}`);
+  const mins2 = Math.max(0, Math.round((Date.now() - (r.at || Date.now())) / 6e4));
+  const L = [
+    ar ? "\u{1F50C} <b>\u0627\u0644\u0645\u0646\u0635\u0627\u062A \xB7 \u0627\u0644\u0623\u0631\u0635\u062F\u0629 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629</b>" : "\u{1F50C} <b>Exchanges \xB7 live balances</b>",
+    `<i>${esc(r.exchanges.map((x) => x.name).join(" \xB7 "))} \xB7 ${mins2 ? ar ? `\u0645\u0646\u0630 ${mins2} \u062F\u0642\u064A\u0642\u0629` : `${mins2} min ago` : ar ? "\u0627\u0644\u0622\u0646" : "just now"}</i>`,
+    "",
+    `\u{1F4B0} ${ar ? "\u0639\u0644\u0649 \u0627\u0644\u0645\u0646\u0635\u0627\u062A" : "On exchanges"}: <b>${usd(tot)}</b>`,
+    "",
+    ...rows.slice(0, 25).map((x) => x.line),
+    ...other.length ? ["", (ar ? "\u{1F195} \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: " : "\u{1F195} Not in the app: ") + other.sort((x, y) => y.q - x.q).slice(0, 15).map((o) => `${esc(o.sym)} ${fq(o.q)}`).join(" \xB7 ")] : [],
+    ...errs.length ? ["", ...errs] : [],
+    "",
+    ar ? "<i>\u2705 \u0645\u0637\u0627\u0628\u0642 \xB7 \u2795 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u25AB\uFE0F \u0627\u0644\u0628\u0627\u0642\u064A \u0641\u064A \u0645\u062D\u0627\u0641\u0638\u0643 \u0623\u0648 \u0645\u0643\u0627\u0646 \u0622\u062E\u0631. \u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u2014 \u0644\u0627 \u064A\u062A\u063A\u064A\u0631 \u0634\u064A\u0621 \u0641\u064A \u0645\u062D\u0641\u0638\u062A\u0643.</i>" : "<i>\u2705 matches \xB7 \u2795 more than the app \xB7 \u25AB\uFE0F the rest is in your wallets or elsewhere. Read-only \u2014 nothing is changed in your portfolio.</i>"
+  ];
+  return { text: L.join("\n"), buttons: [[cb3(ar ? "\u{1F504} \u062A\u062D\u062F\u064A\u062B" : "\u{1F504} Refresh", "bal:r"), open], back] };
 }
 function guideView(lang2, k = null) {
   const L = lang2 === "ar" ? "ar" : "en", ar = L === "ar", S = guide_default.sections, i = k ? S.findIndex((x) => x.k === k) : -1;
@@ -6207,6 +6306,12 @@ Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} A
         await done(T[await getLang(env)].newDone);
         return ok();
       }
+      if (d === "bal" || d === "bal:r") {
+        const lang2 = await getLang(env);
+        await edit(env, chat, q.message.message_id, await viewBalances(env, lang2, d === "bal:r"));
+        await done(null);
+        return ok();
+      }
       if (d === "al" || d.startsWith("ad:")) {
         const lang2 = await getLang(env);
         if (d.startsWith("ad:")) await deleteAlert(env, d.slice(3));
@@ -6283,6 +6388,12 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (p.act === "al") {
     await send2(env, chat, await viewAlerts(env, await getLang(env)));
+    return;
+  }
+  if (p.act === "bal") {
+    await tg6(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
+    });
+    await send2(env, chat, await viewBalances(env, await getLang(env)));
     return;
   }
   if (p.act === "dy") {
@@ -6498,6 +6609,7 @@ var cmds = (lang2, owner2 = true) => {
     ["movers", a ? "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" : "Best & worst"],
     ["signals", a ? "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" : "Signals"],
     ["alerts", a ? "\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643" : "Your alerts"],
+    ["balances", a ? "\u0623\u0631\u0635\u062F\u0629 \u0627\u0644\u0645\u0646\u0635\u0627\u062A (Binance \xB7 Gate)" : "Exchange balances (Binance \xB7 Gate)"],
     ["paper", a ? "\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A" : "Paper trading"],
     ["daily", a ? "\u0627\u0644\u0635\u0628\u0627\u062D \u0648\u0627\u0644\u0645\u0633\u0627\u0621 \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A" : "Morning, evening, radars"],
     ["morning", a ? "\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A \u0627\u0644\u0622\u0646" : "Smart morning now"],

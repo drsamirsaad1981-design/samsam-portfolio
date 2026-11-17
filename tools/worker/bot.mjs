@@ -16,6 +16,8 @@
 import { markSeen } from './idle.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
+import { chatUid, idTokenFor } from './data.mjs';
+import { balancesFor } from './cex.mjs';
 import { forgetPortfolio, findLinkCode, syncAccess, loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
@@ -301,6 +303,7 @@ const WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
+  [/^\/(balances|exchanges|cex)$|^أرصدتي$|^المنصات$|^أرصدة المنصات$/i, 'bal'],
   [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, 'cm'], [/^\/community setup$/i, 'cm:setup'], [/^\/community guide$/i, 'cm:guide'], [/^\/community reset$/i, 'cm:reset'], [/^\/community clean$/i, 'cm:clean'], [/^\/announce\s+[\s\S]+$/i, 'ann'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
@@ -460,6 +463,40 @@ async function usedToday(env, c, x) {
   let q = 0, r = 0;
   try { if (env.RATE) { q = +(await env.RATE.get(`tg:${c}:ai:${localParts(Date.now()).date}`)) || 0; if (x.uid) r = +(await env.RATE.get(`ai:${x.uid}:${new Date().toISOString().slice(0, 10)}`)) || 0; } } catch (_) {}
   return { q, r };
+}
+
+// 🔌 /balances — your exchanges' live balances (read-only keys connected in the app: Performance → Wallets & Exchanges),
+// next to the app's amounts. Binance goes through the relay, which wants a signed-in token: the Worker makes one for
+// this chat's own account (idTokenFor). Nothing is changed in the portfolio.
+async function viewBalances(env, lang, fresh = false) {
+  const ar = lang === 'ar', back = [cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')], open = { text: ar ? '📱 افتح في التطبيق' : '📱 Open in the app', url: APP + 'performance.html' };
+  const uid = await chatUid(env);
+  if (!uid) return { text: ar ? '🔌 اربط محفظتك أولاً (التطبيق ← الإعدادات ← تليجرام)، ثم اربط منصاتك من التطبيق: الأداء ← المحافظ والمنصات ← المنصات.' : '🔌 Link your portfolio first (app → Settings → Telegram), then connect your exchanges in the app: Performance → Wallets & Exchanges → Exchanges.', buttons: [back] };
+  const r = await balancesFor(env, uid, await idTokenFor(env, uid), fresh).catch(() => null);
+  if (!r || !r.exchanges.length) return { text: ar ? '🔌 <b>المنصات · الأرصدة المباشرة</b>\n\nلم تربط أي منصة بعد. من التطبيق: الأداء ← المحافظ والمنصات ← <b>المنصات</b> — بمفتاح API للقراءة فقط (Binance · Gate).' : '🔌 <b>Exchanges · live balances</b>\n\nNo exchange connected yet. In the app: Performance → Wallets & Exchanges → <b>Exchanges</b> — with a read-only API key (Binance · Gate).', buttons: [[open], back] };
+  const user = await loadUser(env).catch(() => null), app = {}, price = {};
+  if (user) { const m = await loadMarket([], coinsOf(user)).catch(() => null); if (m) { const sum = summarize(withIds(user, m), m, Date.now()); for (const c of sum.coins || []) { app[c.sym] = c.qty; if (c.price > 0) price[c.sym] = c.price; } } }
+  const ex = {};
+  for (const b of r.balances || []) if (b.ok) for (const a of b.assets || []) { const q = (a.spot || 0) + (a.funding || 0) + (a.earn || 0); if (q > 0) { const o = ex[a.sym] || (ex[a.sym] = { sym: a.sym, q: 0 }); o.q += q; } }
+  const fq = n => parseFloat(Number(n).toPrecision(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
+  const rows = [], other = [];
+  let tot = 0;
+  for (const o of Object.values(ex)) {
+    const p = price[o.sym] || (/^(USDT|USDC|FDUSD|DAI)$/.test(o.sym) ? 1 : 0), a = app[o.sym] || 0, usdv = o.q * p; tot += usdv;
+    if (!a) { if (!(p > 0 && usdv < 1)) other.push(o); continue; }
+    const d = o.q - a, same = p > 0 ? Math.abs(d) * p < 0.5 : Math.abs(d) <= Math.max(a, o.q) * 1e-4;
+    rows.push({ usdv, line: `${same ? '✅' : d > 0 ? '➕' : '▫️'} <b>${esc(o.sym)}</b> ${fq(o.q)}${usdv ? ` · ${usd(usdv)}` : ''}` + (same ? '' : d > 0 ? (ar ? ` — أكثر من التطبيق (${fq(a)})` : ` — more than the app (${fq(a)})`) : (ar ? ` — التطبيق: ${fq(a)}` : ` — app: ${fq(a)}`)) });
+  }
+  rows.sort((x, y) => y.usdv - x.usdv);
+  const errs = (r.balances || []).filter(b => !b.ok).map(b => `⚠️ ${esc(b.name)}: ${b.error === 'blocked' ? (ar ? 'لا تستجيب الآن' : 'not answering now') : b.error === 'refused' || b.error === 'noperm' ? (ar ? 'رفضت المفتاح — راجعه في التطبيق' : 'refused the key — check it in the app') : (ar ? 'تعذّرت القراءة' : 'could not read')}`);
+  const mins = Math.max(0, Math.round((Date.now() - (r.at || Date.now())) / 60000));
+  const L = [ar ? '🔌 <b>المنصات · الأرصدة المباشرة</b>' : '🔌 <b>Exchanges · live balances</b>',
+    `<i>${esc(r.exchanges.map(x => x.name).join(' · '))} · ${mins ? (ar ? `منذ ${mins} دقيقة` : `${mins} min ago`) : (ar ? 'الآن' : 'just now')}</i>`, '',
+    `💰 ${ar ? 'على المنصات' : 'On exchanges'}: <b>${usd(tot)}</b>`, '', ...rows.slice(0, 25).map(x => x.line),
+    ...(other.length ? ['', (ar ? '🆕 غير موجودة في التطبيق: ' : '🆕 Not in the app: ') + other.sort((x, y) => y.q - x.q).slice(0, 15).map(o => `${esc(o.sym)} ${fq(o.q)}`).join(' · ')] : []),
+    ...(errs.length ? ['', ...errs] : []),
+    '', ar ? '<i>✅ مطابق · ➕ أكثر من التطبيق · ▫️ الباقي في محافظك أو مكان آخر. قراءة فقط — لا يتغير شيء في محفظتك.</i>' : '<i>✅ matches · ➕ more than the app · ▫️ the rest is in your wallets or elsewhere. Read-only — nothing is changed in your portfolio.</i>'];
+  return { text: L.join('\n'), buttons: [[cb(ar ? '🔄 تحديث' : '🔄 Refresh', 'bal:r'), open], back] };
 }
 
 // 📘 /guide — the same guide as the app's (guide.json): a grouped index of buttons; each part opens in place as a card,
@@ -661,6 +698,11 @@ async function onUpdate(env, u, msg, q, chat) {
         return ok();
       }
       if (d === 'new') { await forget(env); await done(T[await getLang(env)].newDone); return ok(); }
+      if (d === 'bal' || d === 'bal:r') {   // 🔌 the exchanges' live balances; 🔄 reads them again
+        const lang = await getLang(env);
+        await edit(env, chat, q.message.message_id, await viewBalances(env, lang, d === 'bal:r'));
+        await done(null); return ok();
+      }
       if (d === 'al' || d.startsWith('ad:')) {   // 🔔 the alerts list; 🗑 n deletes one and redraws the list
         const lang = await getLang(env);
         if (d.startsWith('ad:')) await deleteAlert(env, d.slice(3));
@@ -722,6 +764,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (/^lang:(ar|en)$/.test(p.act)) { await switchLang(env, chat, p.act.slice(5)); return; }
   if (p.act === 'al') { await send(env, chat, await viewAlerts(env, await getLang(env))); return; }
+  if (p.act === 'bal') { await tg(env, 'sendChatAction', { chat_id: chat, action: 'typing' }).catch(() => {}); await send(env, chat, await viewBalances(env, await getLang(env))); return; }
   if (p.act === 'dy') { await send(env, chat, await viewDaily(env)); return; }
   if (p.act === 'rp') { const t = T[await getLang(env)], b = appBtn(t); await send(env, chat, { text: t.reportT, buttons: b ? [[b]] : [[cb(t.back, 'menu')]] }); return; }
   if (p.act === 'pp') { await send(env, chat, await viewPaper(env, await getLang(env))); return; }
@@ -825,7 +868,7 @@ const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
     ['start', a ? 'ابدأ — الأزرار أسفل المحادثة' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
     ['report', a ? 'التقرير الكامل (صفحة)' : 'Full report (a page)'], ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],
     ['plan', a ? 'خطة التجميع' : 'Accumulation plan'], ['exit', a ? 'خطة الخروج' : 'Exit plan'], ['movers', a ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', a ? 'الإشارات' : 'Signals'],
-    ['alerts', a ? 'تنبيهاتك' : 'Your alerts'], ['paper', a ? 'التداول التجريبي' : 'Paper trading'], ['daily', a ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'],
+    ['alerts', a ? 'تنبيهاتك' : 'Your alerts'], ['balances', a ? 'أرصدة المنصات (Binance · Gate)' : 'Exchange balances (Binance · Gate)'], ['paper', a ? 'التداول التجريبي' : 'Paper trading'], ['daily', a ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'],
     ['morning', a ? 'الصباح الذكي الآن' : 'Smart morning now'], ['evening', a ? 'المساء الذكي الآن' : 'Smart evening now'],
     ['pin', a ? 'الرسالة المثبتة' : 'Live pinned message'], ['unpin', a ? 'إزالة الرسالة المثبتة' : 'Remove the pinned message'],
     ['guide', a ? 'الدليل الكامل 📘' : 'The full guide 📘'], ['community', a ? 'القناة والمجموعة 👥' : 'Channel & group 👥'], ['new', a ? 'محادثة جديدة مع الذكاء الاصطناعي' : 'New AI chat'], ['lang', 'English / عربي'], ['hide', a ? 'إخفاء الأزرار' : 'Hide the buttons'],
