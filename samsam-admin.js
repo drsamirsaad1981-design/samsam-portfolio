@@ -10,6 +10,7 @@
   var E = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var IC = function (n) { return window.SamsamUI && SamsamUI.ic ? SamsamUI.ic(n, { solo: true, size: 16 }) : ''; };
   var day = function (ms) { return ms ? new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
+  var ago = function (ms) { var d = Math.floor((Date.now() - ms) / 864e5); return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'; };
   var usd = function (stars) { return '$' + Math.round((stars || 0) * 0.02); };
 
   function call(body) {
@@ -45,6 +46,7 @@
     '#cpAdm .ad-pay{display:flex;justify-content:space-between;gap:8px;padding:7px 12px;border-top:1px solid var(--border,rgba(148,163,184,.12));font-size:.8rem}' +
     '#cpAdm .ad-help{margin:10px 0 0;padding-inline-start:16px;font-size:.76rem;color:var(--fg2,#94a3b8)}#cpAdm .ad-help li{margin:3px 0}' +
     '#cpAdm .ad-max{font:inherit;font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:6px;border:1px solid rgba(148,163,184,.35);background:transparent;color:inherit;cursor:pointer}#cpAdm .ad-max.on{background:#7c3aed;border-color:#7c3aed;color:#fff}' +
+    '#cpAdm summary .ad-warn{color:#f59e0b;font-weight:700}' +
     '#cpAdm .ad-msg{font-size:.8rem;color:var(--fg2,#94a3b8);margin-top:6px}#cpAdm .ad-err{color:#f87171}';
 
   function badges(m) {
@@ -54,7 +56,9 @@
     var prem = m.premium ? '⭐ Premium' + (m.premUntil ? ' until ' + day(m.premUntil) : '') + (m.premSrc === 'stars' ? ' (Stars)' : ' (gift)') : 'Not premium';
     var b = function (op, label, cls) { return '<button type="button" class="ad-btn' + (cls ? ' ' + cls : '') + '" data-op="' + op + '" data-chat="' + E(m.chat) + '">' + label + '</button>'; };
     return '<details data-chat="' + E(m.chat) + '"' + (openChat === m.chat ? ' open' : '') + '><summary><b>' + E(m.name) + (m.user ? ' <span style="display:inline">@' + E(m.user) + '</span>' : '') + ' ' + badges(m) + '</b>' +
-      '<span>today 🧠 ' + m.usedQ + '/' + m.ai + ' · 📊 ' + m.usedR + '/' + m.reports + ' · since ' + day(m.joined) + '</span></summary><div class="ad-body">' +
+      '<span>today 🧠 ' + m.usedQ + '/' + m.ai + ' · 📊 ' + m.usedR + '/' + m.reports + ' · since ' + day(m.joined) + '</span>' +
+      '<span>' + (m.idle ? '💤 idle since ' + day(m.seen) : 'Last active ' + (m.seen ? ago(m.seen) : '—')) + ' · 📖 ' + (m.reads || 0) + ' reads today</span>' +
+      (m.removeHint ? '<span class="ad-warn">💤 Idle for ' + m.idleDays + ' days — you may remove them</span>' : '') + '</summary><div class="ad-body">' +
       '<p>📱 App: ' + (m.email ? E(m.email) : 'not yet') + (m.linked ? ' · 🔗 portfolio linked' : ' · not linked') + '</p>' +
       (m.pending ? '<p>⏳ Asks to open the app with <b>' + E(m.pending) + '</b></p><div class="ad-row">' + b('approve', '✅ Allow', 'pri') + b('refuse', '❌ No') + '</div>' : '') +
       '<p>' + prem + (m.supporter ? ' · 💛 Supporter (' + m.starsPaid + ' ⭐)' : '') + (m.ownKey ? ' · 🔑 own Claude key (…' + E(m.ownKey) + ')' : '') + (m.paused ? ' · ⏸ paused' : '') + '</p>' +
@@ -75,6 +79,8 @@
         '<div class="ad-card"><span>👥 Members</span><b>' + s.members + '/' + data.max + '</b><i>' + (s.paused ? '⏸ ' + s.paused + ' paused · ' : '') + 'max: ' + (data.maxChoices || [20, 50, 100]).map(function (n) { return '<button type="button" class="ad-max' + (n === data.max ? ' on' : '') + '" data-max="' + n + '">' + n + '</button>'; }).join(' ') + '</i></div>' +
         '<div class="ad-card"><span>⭐ Premium now</span><b>' + s.premium + '</b><i>Stars ' + s.premiumStars + ' · gift ' + (s.premium - s.premiumStars) + '</i></div>' +
         '<div class="ad-card"><span>💛 Supporters</span><b>' + s.supporters + '</b><i>&nbsp;</i></div>' +
+        '<div class="ad-card"><span>💤 Idle</span><b>' + (s.idle || 0) + '</b><i>no use for ' + (data.idleDays || 14) + '+ days</i></div>' +
+        '<div class="ad-card"><span>📖 Reads today</span><b>' + (s.readsToday || 0) + '</b><i>the bot\'s Firebase reads · you ' + (data.readsOwner || 0) + '</i></div>' +
         '<div class="ad-card"><span>⭐ This month</span><b>' + s.starsMonth + '</b><i>premium ' + s.starsMonthPremium + ' · support ' + s.starsMonthSupport + '</i></div>' +
         '<div class="ad-card"><span>⭐ All time</span><b>' + s.starsAll + '</b><i>≈ ' + usd(s.starsAll) + ' paid by members</i></div>' +
         '<div class="ad-card"><span>💲 Premium price</span><b>' + data.price + ' ⭐</b><i>a month ≈ ' + usd(data.price) + '</i></div>' +

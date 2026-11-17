@@ -34,12 +34,14 @@ import { handleTelegram, setup, check } from './bot.mjs';
 import { runWatch } from './watch.mjs';
 import { runDaily, kickPrices } from './daily.mjs';
 import { page, api, cardSend, logo } from './miniapp.mjs';
-import { resetBudget, syncAccess } from './data.mjs';
-import { asChat, activeChats, migrateOwner, memberByEmail, DEF_REPORTS, useAppInvite, accessEmails, isTgChat } from './who.mjs';
+import { resetBudget, syncAccess, takeReads } from './data.mjs';
+import { markSeen, idleState, noteIdle, addReads } from './idle.mjs';
+import { asChat, activeChats, migrateOwner, memberByEmail, DEF_REPORTS, useAppInvite, accessEmails, isTgChat, members } from './who.mjs';
 
 // AI Analysis in the app: people invited through the bot whose e-mail Samir approved — their own daily reports (/users), Sonnet
 setMemberCheck(async (env, email) => {
   const x = await memberByEmail(env, email); if (!x) return null;
+  await markSeen(env, x.chat).catch(() => {});   // 💤 used the app
   const apiKey = x.paused ? null : await asChat(x.chat, () => ownKey(env));   // 🔑 their own Claude key: their bill, 10 a day
   return { limit: x.paused ? 0 : apiKey ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, model: env.MEMBER_MODEL || 'claude-sonnet-5-5', apiKey };
 });
@@ -47,8 +49,10 @@ setMemberCheck(async (env, email) => {
 setKeyHandler(async (env, email, body) => {
   const x = await memberByEmail(env, email);
   if (!x) return { status: 403, error: 'Only invited members can add their own key (the owner\'s key is already set).' };
+  await markSeen(env, x.chat).catch(() => {});   // 💤 the app was opened → active
   return asChat(x.chat, async () => {
     const a = body && body.action;
+    if (a === 'ping') return { ok: true };
     if (a === 'delete') { await deleteKey(env); return { has: false }; }
     if (a === 'set') {
       const k = String((body && body.key) || '').trim();
@@ -94,15 +98,20 @@ export default {
       await kickPrices(env).then(r => { if (r.kick === 'sent' || r.kick === 'refused') console.log(JSON.stringify(r)); }).catch(e => log('kick', e));   // GitHub late → run the market snapshot now
       await expireRound(env, Date.now()).catch(e => log('premium', e));
       await runChannel(env, now).then(r => { if (r.job) console.log(JSON.stringify(r)); }).catch(e => log('channel', e));   // 📢 the market pulse   // ⭐ a premium that ended → standard limits (3-day reminder before)
-      const cenv = { ...env, PF_CHECK_MS: String(30 * 60e3) };
+      const cenv = { ...env, PF_CHECK_MS: String(30 * 60e3) }, mem = await members(env), reads = {};
+      takeReads();
       for (const chat of await activeChats(env)) {   // each person in turn, as themselves: their alerts, then their daily messages
         resetBudget();
+        const st = await idleState(env, chat, mem[chat], now);   // 💤 no bot / app use for 14 days → only the alerts they set
         await asChat(chat, async () => {
           const env = cenv;   // the round asks Firebase "anything new?" at most every 10 (owner) / 30 (members) minutes
           await runWatch(env).then(r => { if (r.fired) console.log(JSON.stringify({ watch: r })); }).catch(e => log('watch', e));
+          if (st.idle) { if (isTgChat(chat)) await noteIdle(env, chat, mem[chat], text => fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text }) }).then(r => r.json())).catch(e => log('idle', e)); return; }
           await runDaily(env, now).then(r => { if (r.job) console.log(JSON.stringify({ daily: r })); }).catch(e => log('daily', e));   // phase 5: morning / evening / radars / pinned
         });
+        reads[chat] = takeReads();   // 📖 this member's Firebase reads in this round
       }
+      await addReads(env, reads, now).catch(e => log('reads', e));
     })());
   },
 };

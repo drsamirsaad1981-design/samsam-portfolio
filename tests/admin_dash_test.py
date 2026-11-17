@@ -9,11 +9,11 @@ def check(n, c, d=''): res.append(bool(c)); print(('PASS ' if c else 'FAIL ') + 
 URL = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/admin'
 NOW = 1794600000000
 OV = {'max': 20, 'price': 350,
-      'stats': {'members': 2, 'paused': 0, 'premium': 1, 'premiumStars': 1, 'supporters': 1, 'starsMonth': 400, 'starsAll': 400, 'starsMonthPremium': 350, 'starsMonthSupport': 50},
+      'stats': {'members': 2, 'paused': 0, 'premium': 1, 'premiumStars': 1, 'supporters': 1, 'starsMonth': 400, 'starsAll': 400, 'starsMonthPremium': 350, 'starsMonthSupport': 50, 'idle': 1, 'readsToday': 120}, 'idleDays': 14, 'readsOwner': 70,
       'members': [{'chat': '111', 'name': 'Ali Friend', 'user': 'ali', 'joined': NOW, 'email': 'ali@x.com', 'pending': '', 'linked': True, 'paused': False, 'premium': True, 'premUntil': NOW + 30 * 864e5,
-                   'premSrc': 'stars', 'supporter': True, 'starsPaid': 50, 'ai': 20, 'reports': 3, 'usedQ': 4, 'usedR': 1, 'ownKey': None, 'lang': 'en'},
+                   'premSrc': 'stars', 'supporter': True, 'starsPaid': 50, 'ai': 20, 'reports': 3, 'usedQ': 4, 'usedR': 1, 'ownKey': None, 'lang': 'en', 'seen': NOW, 'idle': False, 'idleDays': 0, 'removeHint': False, 'reads': 42},
                   {'chat': '222', 'name': 'Mona', 'user': '', 'joined': NOW, 'email': '', 'pending': 'mona@x.com', 'linked': False, 'paused': False, 'premium': False, 'premUntil': None,
-                   'premSrc': None, 'supporter': False, 'starsPaid': 0, 'ai': 5, 'reports': 0, 'usedQ': 0, 'usedR': 0, 'ownKey': None, 'lang': 'ar'}],
+                   'premSrc': None, 'supporter': False, 'starsPaid': 0, 'ai': 5, 'reports': 0, 'usedQ': 0, 'usedR': 0, 'ownKey': None, 'lang': 'ar', 'seen': NOW - 70 * 864e5, 'idle': True, 'idleDays': 70, 'removeHint': True, 'reads': 0}],
       'payments': [{'t': NOW, 'chat': '111', 'name': 'Ali Friend', 'kind': 'sup', 'stars': 50, 'renew': False}, {'t': NOW, 'chat': '111', 'name': 'Ali Friend', 'kind': 'prem', 'stars': 350, 'renew': False}]}
 
 with sync_playwright() as p:
@@ -35,7 +35,10 @@ with sync_playwright() as p:
             else: out = {**OV, 'maxChoices': [20, 50, 100]}
             r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps(out))
         ctx.route(URL, route)
-        ctx.route('https://samsam-analysis.dr-samir-saad-1981.workers.dev/key', lambda r: r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"has":false}'))
+        keys = []
+        def keyroute(r):
+            keys.append(json.loads(r.request.post_data or '{}').get('action')); r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body='{"has":false}')
+        ctx.route('https://samsam-analysis.dr-samir-saad-1981.workers.dev/key', keyroute)
         pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.goto(SITE + '/index.html'); pg.wait_for_selector('#samsamSignInBtn'); pg.click('#samsamSignInBtn')
         pg.wait_for_function("window.Samsam && Samsam.isReady()", timeout=20000)
@@ -43,6 +46,8 @@ with sync_playwright() as p:
         pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#cpSet')
         if who == 'member':
             check('member: no "Admin dashboard" in Settings', 'Admin dashboard' not in pg.inner_text('#cpSet'))
+            pg.evaluate("SamsamSettings.close()"); pg.wait_for_timeout(4500)
+            check('member: opening the app tells the bot once (💤 "ping", not again for 6 h)', keys.count('ping') == 1, keys)
             pg.evaluate("window.SamsamAdmin ? SamsamAdmin.open() : 0"); pg.wait_for_timeout(300)
             check('member: even called directly, the dashboard does not open', not pg.is_visible('#cpAdm'))
         else:
@@ -51,6 +56,7 @@ with sync_playwright() as p:
             t = pg.inner_text('#cpAdm')
             check('owner: the numbers — members 2/20, premium 1 (Stars 1), supporters 1, Stars this month 400 (premium 350 · support 50), price 350 ⭐', all(w in t for w in ('2/20', 'Stars 1 · gift 0', '400', 'premium 350 · support 50', '350 ⭐')), t[:300])
             check('owner: members listed with badges (⭐💛📱🔗 / ⏳📱 waiting) and today\'s use, closed until tapped', 'Ali Friend' in t and 'today 🧠 4/20 · 📊 1/3' in t and pg.locator('#cpAdm details[data-chat="111"][open]').count() == 0)
+            check('owner: 💤 idle members and 📖 today\'s Firebase reads (cards + each member, a remove hint after 60 days)', '💤 Idle' in t and 'no use for 14+ days' in t and '📖 Reads today' in t and '120' in t and '42 reads today' in t and 'Last active' in t and '💤 idle since' in t and 'Idle for 70 days — you may remove them' in t, t[:600])
             pg.fill('#cpAdmQ', 'mona'); pg.wait_for_timeout(200)
             check('owner: search by name / e-mail filters the list', pg.locator('#cpAdm details[data-chat="111"]').count() == 0 and pg.locator('#cpAdm details[data-chat="222"]').count() == 1)
             pg.click('#cpAdm details[data-chat="222"] summary'); pg.wait_for_timeout(200)

@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -1330,6 +1330,34 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 888, type: 'private' }, from: { id: 888, first_name: 'New' }, text: '/start ' + code2 } }, ENV.TG_SECRET, ENVK);
   const r3 = JSON.parse(kvStore.get('tg:users'))['888'];
   check('…no record kept → from the Stars log: supporter (350 ⭐) and this month\'s premium (Stars, 30 days from the payment)', r3.supporter && r3.starsPaid === 350 && r3.premium && r3.premSrc === 'stars' && Math.abs(r3.premUntil - (Date.now() + 29 * 864e5)) < 3600e3, r3);
+}
+
+// 💤 idle members: no bot / app use for 14 days → the round skips their daily messages (one note), any message wakes them;
+// the dashboard shows idle + last activity + 📖 Firebase reads per member today
+{
+  const ADM = (body) => W.fetch(new Request(HOST + '/admin', { method: 'POST', headers: { Origin: 'https://drsamirsaad1981-design.github.io', 'content-type': 'application/json' }, body: JSON.stringify({ idToken: fbToken('dr.samir.saad.1981@gmail.com', 'UID1'), ...body }) }), ENVA, {});
+  const mm = JSON.parse(kvStore.get('tg:users')); mm['888'] = { ...mm['888'], name: 'New', joined: Date.now() - 100 * 864e5, paused: undefined, lang: 'en' }; kvStore.set('tg:users', JSON.stringify(mm));
+  kvStore.set('tg:seen:888', String(Date.now() - 20 * 864e5)); kvStore.delete('tg:idlenote:888');
+  const Wi = await fresh(); sent.length = 0;
+  let p = []; await Wi.scheduled({ cron: '*/5 * * * *', scheduledTime: Date.now() }, ENVK, { waitUntil: x => p.push(x) }); await Promise.all(p);
+  const to888 = sent.filter(x => String(x.b && x.b.chat_id) === '888');
+  check('💤 20 days without use → one note "paused while you\'re away", nothing else from the round', to888.length === 1 && /paused while you're away/.test(to888[0].b.text) && kvStore.has('tg:idlenote:888'), to888.map(x => x.b.text));
+  sent.length = 0; p = []; await Wi.scheduled({ cron: '*/5 * * * *', scheduledTime: Date.now() + 5 * 60e3 }, ENVK, { waitUntil: x => p.push(x) }); await Promise.all(p);
+  check('…the next round: no second note', !sent.some(x => String(x.b && x.b.chat_id) === '888'));
+  let j = await (await ADM({ action: 'overview' })).json();
+  const me = j.members.find(x => x.chat === '888');
+  check('dashboard: 💤 idle, last activity 20 days ago, idle count, 📖 reads today', me && me.idle === true && me.idleDays === 20 && !me.removeHint && j.stats.idle >= 1 && Number.isFinite(j.stats.readsToday) && Number.isFinite(me.reads), me);
+  await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 888, type: 'private' }, from: { id: 888, first_name: 'New' }, text: 'hi' } }, ENV.TG_SECRET, ENVK);
+  check('a message → awake again (note cleared, last activity now)', !kvStore.has('tg:idlenote:888') && Date.now() - +kvStore.get('tg:seen:888') < 60e3);
+  j = await (await ADM({ action: 'overview' })).json();
+  check('…the dashboard says active', j.members.find(x => x.chat === '888').idle === false);
+  kvStore.set('tg:seen:888', String(Date.now() - 70 * 864e5));
+  j = await (await ADM({ action: 'overview' })).json();
+  check('70 days → the dashboard suggests removing (nothing removed by itself)', j.members.find(x => x.chat === '888').removeHint === true && JSON.parse(kvStore.get('tg:users'))['888']);
+  kvStore.set('tg:seen:888', String(Date.now()));
+  const own = String(ENV.TELEGRAM_CHAT_ID); kvStore.set('tg:seen:' + own, String(Date.now() - 90 * 864e5));
+  sent.length = 0; p = []; await Wi.scheduled({ cron: '*/5 * * * *', scheduledTime: Date.now() + 10 * 60e3 }, ENVK, { waitUntil: x => p.push(x) }); await Promise.all(p);
+  check('the owner is never idle (no note)', !sent.some(x => String(x.b && x.b.chat_id) === own && /away/.test(x.b.text || '')));
 }
 
 console.log(`${pass}/${pass + fail} passed`);

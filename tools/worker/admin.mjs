@@ -5,6 +5,7 @@
 import { asChat, members, member, setMember, removeMember, newInvite, accessEmails, getPending, clearPending, maxMembers, setMaxMembers, MAX_CHOICES, isTgChat, DEF_AI, DEF_REPORTS, removedList, undoRemove } from './who.mjs';
 import { premiumNow, addDays, revoke, price } from './stars.mjs';
 import { keyInfo } from './byok.mjs';
+import { idleState, readsToday, IDLE_DAYS, REMOVE_HINT_DAYS } from './idle.mjs';
 import { isOwnerAccount, syncAccess } from './data.mjs';
 import { localParts, local, APP } from '../alerts-core.mjs';
 
@@ -23,20 +24,23 @@ async function botLink(env, code) {
 }
 
 async function overview(env, now = Date.now()) {
-  const m = await members(env), rDay = localParts(now).date, uDay = new Date(now).toISOString().slice(0, 10);
+  const m = await members(env), rDay = localParts(now).date, uDay = new Date(now).toISOString().slice(0, 10), reads = await readsToday(env, now);
   const list = await Promise.all(Object.entries(m).map(async ([chat, x]) => {
+    const st = await idleState(env, chat, x, now);
     const q = +(await kv(env, `tg:${chat}:ai:${rDay}`)) || 0, r = x.uid ? +(await kv(env, `ai:${x.uid}:${uDay}`)) || 0 : 0;
     const k = await asChat(chat, () => keyInfo(env)), pend = await getPending(env, chat);
     return { chat, appOnly: !isTgChat(chat), name: x.name, user: x.user || '', joined: x.joined, email: x.email || '', pending: pend || '', linked: !!x.uid, paused: !!x.paused,
       premium: premiumNow(x, now), premUntil: x.premUntil || null, premSrc: x.premSrc || null, supporter: !!x.supporter, starsPaid: x.starsPaid || 0,
-      ai: Number.isFinite(x.ai) ? x.ai : DEF_AI, reports: Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, usedQ: q, usedR: r, ownKey: k.has ? k.tail : null, lang: x.lang || '' };
+      ai: Number.isFinite(x.ai) ? x.ai : DEF_AI, reports: Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, usedQ: q, usedR: r, ownKey: k.has ? k.tail : null, lang: x.lang || '',
+      seen: st.seen, idle: st.idle, idleDays: st.days, removeHint: !!st.removeHint, reads: reads[chat] || 0 };
   }));
   let log = []; try { log = JSON.parse((await kv(env, 'tg:stars:log')) || '[]'); } catch (_) {}
   const month = new Date(now).toISOString().slice(0, 7), sum = f => log.filter(f).reduce((s, x) => s + (+x.stars || 0), 0);
   const names = Object.fromEntries(Object.entries(m).map(([c, x]) => [c, x.name]));
   return {
     max: await maxMembers(env), maxChoices: MAX_CHOICES, price: price(env),
-    stats: { members: list.length, paused: list.filter(x => x.paused).length, premium: list.filter(x => x.premium).length, premiumStars: list.filter(x => x.premium && x.premSrc === 'stars').length,
+    idleDays: IDLE_DAYS, removeHintDays: REMOVE_HINT_DAYS, readsOwner: reads[String(env.TELEGRAM_CHAT_ID)] || 0,
+    stats: { members: list.length, paused: list.filter(x => x.paused).length, idle: list.filter(x => x.idle).length, readsToday: Object.values(reads).reduce((a, b) => a + b, 0), premium: list.filter(x => x.premium).length, premiumStars: list.filter(x => x.premium && x.premSrc === 'stars').length,
       supporters: list.filter(x => x.supporter).length, starsMonth: sum(x => new Date(x.t).toISOString().slice(0, 7) === month), starsAll: sum(() => true),
       starsMonthPremium: sum(x => x.kind === 'prem' && new Date(x.t).toISOString().slice(0, 7) === month), starsMonthSupport: sum(x => x.kind === 'sup' && new Date(x.t).toISOString().slice(0, 7) === month) },
     members: list.sort((a, b) => (b.joined || 0) - (a.joined || 0)),

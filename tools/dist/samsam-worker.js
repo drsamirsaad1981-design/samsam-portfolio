@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: f434b525e76dd2ad
+// sources-hash: 5fe49892ece96ae5
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1347,6 +1347,78 @@ async function deleteKey(env) {
   }
 }
 
+// tools/worker/idle.mjs
+var IDLE_DAYS = 14;
+var REMOVE_HINT_DAYS = 60;
+var DAY3 = 864e5;
+var kget2 = async (env, k) => {
+  try {
+    return env.RATE ? await env.RATE.get(k) : null;
+  } catch (_) {
+    return null;
+  }
+};
+var kput2 = async (env, k, v, ttl) => {
+  try {
+    if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
+  } catch (_) {
+  }
+};
+var kdel2 = async (env, k) => {
+  try {
+    if (env.RATE) await env.RATE.delete(k);
+  } catch (_) {
+  }
+};
+var isOwnerChat = (env, chat) => String(chat) === String(env.TELEGRAM_CHAT_ID);
+async function markSeen(env, chat, now = Date.now()) {
+  if (chat == null || isOwnerChat(env, chat)) return false;
+  const k = "tg:seen:" + chat, last = +await kget2(env, k) || 0;
+  const woke = !!await kget2(env, "tg:idlenote:" + chat);
+  if (woke) await kdel2(env, "tg:idlenote:" + chat);
+  if (now - last < 36e5 && !woke) return false;
+  await kput2(env, k, String(now));
+  return woke;
+}
+async function lastSeen(env, chat, mem7) {
+  const v = +await kget2(env, "tg:seen:" + chat) || 0;
+  return Math.max(v, mem7 && +mem7.joined || 0) || null;
+}
+async function idleState(env, chat, mem7, now = Date.now()) {
+  if (isOwnerChat(env, chat)) return { idle: false, seen: null, days: 0 };
+  const seen = await lastSeen(env, chat, mem7);
+  const days = seen ? Math.floor((now - seen) / DAY3) : 0;
+  return { idle: !!seen && days >= IDLE_DAYS, seen, days, removeHint: !!seen && days >= REMOVE_HINT_DAYS };
+}
+async function noteIdle(env, chat, mem7, send3) {
+  if (await kget2(env, "tg:idlenote:" + chat)) return false;
+  const ar = mem7 && mem7.lang === "ar";
+  const text = ar ? "\u{1F4A4} \u0623\u0648\u0642\u0641\u0646\u0627 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0645\u0624\u0642\u062A\u0627\u064B \u0644\u0623\u0646\u0643 \u0644\u0645 \u062A\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0628\u0648\u062A \u0623\u0648 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0646\u0630 \u0641\u062A\u0631\u0629.\n\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0627\u0644\u062A\u064A \u0636\u0628\u0637\u062A\u0647\u0627 \u0645\u0627 \u0632\u0627\u0644\u062A \u062A\u0639\u0645\u0644.\n\u0623\u0631\u0633\u0644 \u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u0623\u0648 \u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642\u060C \u0648\u0643\u0644 \u0634\u064A\u0621 \u064A\u0639\u0648\u062F \u0641\u0648\u0631\u0627\u064B \u{1F642}" : "\u{1F4A4} Your daily messages are paused while you're away (no bot or app use for a while).\nThe price alerts you set still work.\nSend anything or open the app and everything comes back at once \u{1F642}";
+  const r = await send3(text).catch(() => null);
+  await kput2(env, "tg:idlenote:" + chat, String(Date.now()));
+  return !!(r && r.ok);
+}
+async function addReads(env, byChat, now = Date.now()) {
+  const pos = Object.entries(byChat).filter(([, n]) => n > 0);
+  if (!pos.length) return;
+  const k = "tg:reads:" + new Date(now).toISOString().slice(0, 10);
+  let m = {};
+  try {
+    m = JSON.parse(await kget2(env, k) || "{}") || {};
+  } catch (_) {
+    m = {};
+  }
+  for (const [c, n] of pos) m[c] = (m[c] || 0) + n;
+  await kput2(env, k, JSON.stringify(m), 3 * 86400);
+}
+async function readsToday(env, now = Date.now()) {
+  try {
+    return JSON.parse(await kget2(env, "tg:reads:" + new Date(now).toISOString().slice(0, 10)) || "{}") || {};
+  } catch (_) {
+    return {};
+  }
+}
+
 // tools/worker/cg-ids.json
 var cg_ids_default = { APT: "aptos", ARB: "arbitrum", ATOM: "cosmos", AVAIL: "avail", AVAX: "avalanche-2", BNB: "binancecoin", BTC: "bitcoin", CRO: "crypto-com-chain", DOGE: "dogecoin", DOT: "polkadot", ENS: "ethereum-name-service", ETH: "ethereum", FLR: "flare-networks", GLMR: "moonbeam", GRAM: "the-open-network", HBAR: "hedera-hashgraph", ICP: "internet-computer", JUP: "jupiter-exchange-solana", KAS: "kaspa", KAVA: "kava", KSM: "kusama", LINK: "chainlink", MNT: "mantle", MON: "monad", MOVR: "moonriver", NEAR: "near", NIGHT: "midnight-3", ONDO: "ondo-finance", OP: "optimism", POL: "polygon-ecosystem-token", PONS: "pons-2", PYTH: "pyth-network", QNT: "quant-network", RENDER: "render-token", SEI: "sei-network", SOL: "solana", STRK: "starknet", SUI: "sui", TAO: "bittensor", VET: "vechain", VTHO: "vethor-token", WLD: "worldcoin-wld", XDC: "xdce-crowd-sale", XPL: "plasma" };
 
@@ -1620,6 +1692,13 @@ function serviceAccount(env) {
     return null;
   }
 }
+var READS = 0;
+var takeReads = () => {
+  const n = READS;
+  READS = 0;
+  return n;
+};
+var nDocs = (rows) => Math.max(1, Array.isArray(rows) ? rows.filter((x) => x && x.document).length : 0);
 async function firestore(sa) {
   const token = await googleToken(sa), base = `https://firestore.googleapis.com/v1/projects/${sa.project_id}/databases/(default)/documents`;
   const call = async (url3, init = {}) => {
@@ -1631,10 +1710,12 @@ async function firestore(sa) {
   return {
     async metaDocs() {
       const rows = await call(base + ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "meta", allDescendants: true }], limit: 1e3 } }) }) || [];
+      READS += nDocs(rows);
       return rows.filter((x) => x.document && x.document.name).map((x) => ({ name: x.document.name, data: fields(x.document.fields) }));
     },
     async users() {
       const rows = await call(base + ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "meta", allDescendants: true }], limit: 200 } }) }) || [];
+      READS += nDocs(rows);
       return [...new Set(rows.map((x) => x.document && x.document.name).filter((n) => n && /\/users\/[^/]+\/meta\/info$/.test(n)).map((n) => n.match(/\/users\/([^/]+)\/meta\/info$/)[1]))];
     },
     async list(p) {
@@ -1642,6 +1723,7 @@ async function firestore(sa) {
       let tok = "";
       do {
         const j = await call(`${base}/${p}?pageSize=300${tok ? "&pageToken=" + encodeURIComponent(tok) : ""}`);
+        READS += Math.max(1, (j && j.documents || []).length);
         if (!j) break;
         (j.documents || []).forEach((d) => out.push(fields(d.fields)));
         tok = j.nextPageToken || "";
@@ -1649,11 +1731,13 @@ async function firestore(sa) {
       return out;
     },
     async get(p) {
+      READS += 1;
       const j = await call(`${base}/${p}`);
       return j ? fields(j.fields) : null;
     },
     // how many documents a collection has — a count costs 1 read per 1000 documents (not 1 per document)
     async count(parent, coll) {
+      READS += 1;
       const j = await call(`${base}/${parent}:runAggregationQuery`, { method: "POST", body: JSON.stringify({ structuredAggregationQuery: { structuredQuery: { from: [{ collectionId: coll }] }, aggregations: [{ alias: "n", count: {} }] } }) });
       const v = j && j[0] && j[0].result && j[0].result.aggregateFields && j[0].result.aggregateFields.n;
       return v && v.integerValue != null ? +v.integerValue : null;
@@ -1661,6 +1745,7 @@ async function firestore(sa) {
     // is any document of the collection newer than `since` (its updatedAt — the app stamps every coin / plan change)? 1 read
     async changedSince(parent, coll, since) {
       const rows = await call(`${base}/${parent}:runQuery`, { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], where: { fieldFilter: { field: { fieldPath: "updatedAt" }, op: "GREATER_THAN", value: { stringValue: since } } }, limit: 1 } }) });
+      READS += nDocs(rows);
       return !Array.isArray(rows) || rows.some((x) => x.document);
     },
     async set(p, data) {
@@ -1978,8 +2063,9 @@ async function botLink(env, code) {
   return bot ? `https://t.me/${bot}?start=${code}` : null;
 }
 async function overview(env, now = Date.now()) {
-  const m = await members(env), rDay = localParts(now).date, uDay = new Date(now).toISOString().slice(0, 10);
+  const m = await members(env), rDay = localParts(now).date, uDay = new Date(now).toISOString().slice(0, 10), reads = await readsToday(env, now);
   const list2 = await Promise.all(Object.entries(m).map(async ([chat, x]) => {
+    const st = await idleState(env, chat, x, now);
     const q = +await kv(env, `tg:${chat}:ai:${rDay}`) || 0, r = x.uid ? +await kv(env, `ai:${x.uid}:${uDay}`) || 0 : 0;
     const k = await asChat(chat, () => keyInfo(env)), pend = await getPending(env, chat);
     return {
@@ -2002,7 +2088,12 @@ async function overview(env, now = Date.now()) {
       usedQ: q,
       usedR: r,
       ownKey: k.has ? k.tail : null,
-      lang: x.lang || ""
+      lang: x.lang || "",
+      seen: st.seen,
+      idle: st.idle,
+      idleDays: st.days,
+      removeHint: !!st.removeHint,
+      reads: reads[chat] || 0
     };
   }));
   let log2 = [];
@@ -2016,9 +2107,14 @@ async function overview(env, now = Date.now()) {
     max: await maxMembers(env),
     maxChoices: MAX_CHOICES,
     price: price(env),
+    idleDays: IDLE_DAYS,
+    removeHintDays: REMOVE_HINT_DAYS,
+    readsOwner: reads[String(env.TELEGRAM_CHAT_ID)] || 0,
     stats: {
       members: list2.length,
       paused: list2.filter((x) => x.paused).length,
+      idle: list2.filter((x) => x.idle).length,
+      readsToday: Object.values(reads).reduce((a, b) => a + b, 0),
       premium: list2.filter((x) => x.premium).length,
       premiumStars: list2.filter((x) => x.premium && x.premSrc === "stars").length,
       supporters: list2.filter((x) => x.supporter).length,
@@ -3419,7 +3515,7 @@ function viewRestart(lang2 = "en") {
 
 // tools/worker/ai.mjs
 var H2 = 36e5;
-var DAY3 = 24 * H2;
+var DAY4 = 24 * H2;
 var MAX_ROUNDS = 8;
 var HISTORY = 10;
 var r23 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
@@ -3800,7 +3896,7 @@ async function runTool(ctx, name, input) {
     const id = c && (c.id || m.idOf[c.sym]);
     const f = id && await rawSeries(id);
     if (!f || !Array.isArray(f.p)) return { error: `no price history kept for "${q}" \u2014 use get_coin for its 7d / 30d change` };
-    const from = now - days * DAY3, pts = f.p.map((p, i) => [f.t0 + i * f.step, p]).filter(([t, p]) => t >= from && p > 0);
+    const from = now - days * DAY4, pts = f.p.map((p, i) => [f.t0 + i * f.step, p]).filter(([t, p]) => t >= from && p > 0);
     if (pts.length < 2) return { error: "not enough history" };
     ctx.used.add("hourly price history (GitHub prices branch)");
     let hi = pts[0], lo = pts[0];
@@ -3996,7 +4092,7 @@ async function transcribe(env, voice) {
 
 // tools/worker/daily.mjs
 var H3 = 36e5;
-var DAY4 = 24 * H3;
+var DAY5 = 24 * H3;
 var DEF = { morning: true, evening: true, radar: true, sectors: true, pin: true, morningAt: "08:45", eveningAt: "21:00" };
 var mem6 = /* @__PURE__ */ new Map();
 async function kvGet5(env, k) {
@@ -4136,7 +4232,7 @@ function marketFacts(m, sum) {
 var pfFacts = (sum) => ({ value_usd: r24(sum.value), change_24h_pct: r24(sum.ch24), change_24h_usd: r24(sum.d24), all_time_profit_usd: r24(sum.total), all_time_profit_pct: r24(sum.pctTotal), vs_holding_btc_pct: r24(sum.vsBtc) });
 function todo(sum, now) {
   const out = [], add = (prio, o) => out.push({ prio, ...o });
-  const tomorrow = localParts(now + DAY4).date;
+  const tomorrow = localParts(now + DAY5).date;
   for (const x of sum.dca || []) {
     if (x.s.state === "today") add(100, { what: "dca_today", coin: x.sym, buy_usd: r24(x.s.usd) });
     else if (x.s.state === "missed") add(90, { what: "dca_missed", coin: x.sym, buy_usd: r24(x.s.usd), days_late: x.s.late });
@@ -4350,7 +4446,7 @@ async function radar(env, now = Date.now()) {
   const d = await derivatives(sym).catch(() => null);
   if (!d || !d.summary) return { sym, sent: 0 };
   const s = d.summary, seen = await jget(env, K(env, "radar:seen"), {});
-  for (const k of Object.keys(seen)) if (now - seen[k] > 2 * DAY4) delete seen[k];
+  for (const k of Object.keys(seen)) if (now - seen[k] > 2 * DAY5) delete seen[k];
   const fresh = radarFindings(s).filter((k) => !(now - (seen[sym + ":" + k] || 0) < 12 * H3));
   if (!fresh.length) {
     await jput(env, K(env, "radar:seen"), seen);
@@ -5145,6 +5241,8 @@ async function handleTelegram(request, env) {
     }
   }
   await migrateOwner(env);
+  await markSeen(env, chat).catch(() => {
+  });
   return asChat(chat, () => onUpdate(env, u, msg, q, chat));
 }
 var STR = {
@@ -6695,14 +6793,19 @@ async function inCommunity(env, chat) {
 setMemberCheck(async (env, email) => {
   const x = await memberByEmail(env, email);
   if (!x) return null;
+  await markSeen(env, x.chat).catch(() => {
+  });
   const apiKey = x.paused ? null : await asChat(x.chat, () => ownKey(env));
   return { limit: x.paused ? 0 : apiKey ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS, model: env.MEMBER_MODEL || "claude-sonnet-5-5", apiKey };
 });
 setKeyHandler(async (env, email, body) => {
   const x = await memberByEmail(env, email);
   if (!x) return { status: 403, error: "Only invited members can add their own key (the owner's key is already set)." };
+  await markSeen(env, x.chat).catch(() => {
+  });
   return asChat(x.chat, async () => {
     const a = body && body.action;
+    if (a === "ping") return { ok: true };
     if (a === "delete") {
       await deleteKey(env);
       return { has: false };
@@ -6771,19 +6874,27 @@ var worker_default = {
       await runChannel(env, now).then((r) => {
         if (r.job) console.log(JSON.stringify(r));
       }).catch((e) => log2("channel", e));
-      const cenv = { ...env, PF_CHECK_MS: String(30 * 6e4) };
+      const cenv = { ...env, PF_CHECK_MS: String(30 * 6e4) }, mem7 = await members(env), reads = {};
+      takeReads();
       for (const chat of await activeChats(env)) {
         resetBudget();
+        const st = await idleState(env, chat, mem7[chat], now);
         await asChat(chat, async () => {
           const env2 = cenv;
           await runWatch(env2).then((r) => {
             if (r.fired) console.log(JSON.stringify({ watch: r }));
           }).catch((e) => log2("watch", e));
+          if (st.idle) {
+            if (isTgChat(chat)) await noteIdle(env2, chat, mem7[chat], (text) => fetch(`https://api.telegram.org/bot${env2.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chat, text }) }).then((r) => r.json())).catch((e) => log2("idle", e));
+            return;
+          }
           await runDaily(env2, now).then((r) => {
             if (r.job) console.log(JSON.stringify({ daily: r }));
           }).catch((e) => log2("daily", e));
         });
+        reads[chat] = takeReads();
       }
+      await addReads(env, reads, now).catch((e) => log2("reads", e));
     })());
   }
 };

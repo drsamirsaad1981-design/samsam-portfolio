@@ -389,5 +389,20 @@
     history.replaceState(null, '', location.pathname + location.search);
     var tries = 0, iv = setInterval(function () { if (ready() || ++tries > 60) { clearInterval(iv); if (ready()) { ACT[want](); backAfter(want); } } }, 250);
   }
+  // 💤 a member's app was opened → the bot knows they're active (it pauses daily messages for members away 14 days).
+  // Once every 6 hours per device, only on the main page, only for invited members (never the owner).
+  (function ping() {
+    if (top()) return;   // a page inside the app: the main page does it
+    var tries = 0, t = setInterval(function () {
+      if (++tries > 60) { clearInterval(t); return; }
+      if (!onMain()) return;
+      var s = S(); if (!s || !s.isReady || !s.isReady() || !s.user || !s.user()) return;
+      clearInterval(t);
+      if (!isMember()) return;
+      var last = +get('cp-ping', 0) || 0; if (Date.now() - last < 6 * 3600e3) return;
+      put('cp-ping', String(Date.now()));
+      workerCall({ action: 'ping' }).catch(function () { put('cp-ping', '0'); });
+    }, 2000);
+  })();
   window.SamsamSettings = { open: open, close: close, run: function (a) { var t = top(); if (t) { t.SamsamSettings.run(a); return; } if (ACT[a]) ACT[a](); } };
 })();

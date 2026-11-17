@@ -218,6 +218,10 @@ export function serviceAccount(env) {
   if (env && env.RATE) KVS = env.RATE;
   try { const sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || ''); return sa && sa.client_email && sa.private_key && sa.project_id ? sa : null; } catch (_) { return null; }
 }
+// 📖 Firestore documents read (Firestore bills per document; an empty answer counts as 1) — the round takes this per member
+let READS = 0;
+export const takeReads = () => { const n = READS; READS = 0; return n; };
+const nDocs = rows => Math.max(1, Array.isArray(rows) ? rows.filter(x => x && x.document).length : 0);
 async function firestore(sa) {
   const token = await googleToken(sa), base = `https://firestore.googleapis.com/v1/projects/${sa.project_id}/databases/(default)/documents`;
   const call = async (url, init = {}) => {
@@ -228,31 +232,33 @@ async function firestore(sa) {
   };
   return {
     async metaDocs() {   // every users/<uid>/meta/<doc> with its fields (the /link code lives in meta/tglink)
-      const rows = await call(base + ':runQuery', { method: 'POST', body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'meta', allDescendants: true }], limit: 1000 } }) }) || [];
+      const rows = await call(base + ':runQuery', { method: 'POST', body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'meta', allDescendants: true }], limit: 1000 } }) }) || []; READS += nDocs(rows);
       return rows.filter(x => x.document && x.document.name).map(x => ({ name: x.document.name, data: fields(x.document.fields) }));
     },
     async users() {
-      const rows = await call(base + ':runQuery', { method: 'POST', body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'meta', allDescendants: true }], limit: 200 } }) }) || [];
+      const rows = await call(base + ':runQuery', { method: 'POST', body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'meta', allDescendants: true }], limit: 200 } }) }) || []; READS += nDocs(rows);
       return [...new Set(rows.map(x => x.document && x.document.name).filter(n => n && /\/users\/[^/]+\/meta\/info$/.test(n)).map(n => n.match(/\/users\/([^/]+)\/meta\/info$/)[1]))];
     },
     async list(p) {
       const out = []; let tok = '';
       do {
         const j = await call(`${base}/${p}?pageSize=300${tok ? '&pageToken=' + encodeURIComponent(tok) : ''}`);
+        READS += Math.max(1, (j && j.documents || []).length);
         if (!j) break; (j.documents || []).forEach(d => out.push(fields(d.fields))); tok = j.nextPageToken || '';
       } while (tok);
       return out;
     },
-    async get(p) { const j = await call(`${base}/${p}`); return j ? fields(j.fields) : null; },
+    async get(p) { READS += 1; const j = await call(`${base}/${p}`); return j ? fields(j.fields) : null; },
     // how many documents a collection has — a count costs 1 read per 1000 documents (not 1 per document)
     async count(parent, coll) {
-      const j = await call(`${base}/${parent}:runAggregationQuery`, { method: 'POST', body: JSON.stringify({ structuredAggregationQuery: { structuredQuery: { from: [{ collectionId: coll }] }, aggregations: [{ alias: 'n', count: {} }] } }) });
+      READS += 1; const j = await call(`${base}/${parent}:runAggregationQuery`, { method: 'POST', body: JSON.stringify({ structuredAggregationQuery: { structuredQuery: { from: [{ collectionId: coll }] }, aggregations: [{ alias: 'n', count: {} }] } }) });
       const v = j && j[0] && j[0].result && j[0].result.aggregateFields && j[0].result.aggregateFields.n;
       return v && v.integerValue != null ? +v.integerValue : null;
     },
     // is any document of the collection newer than `since` (its updatedAt — the app stamps every coin / plan change)? 1 read
     async changedSince(parent, coll, since) {
       const rows = await call(`${base}/${parent}:runQuery`, { method: 'POST', body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], where: { fieldFilter: { field: { fieldPath: 'updatedAt' }, op: 'GREATER_THAN', value: { stringValue: since } } }, limit: 1 } }) });
+      READS += nDocs(rows);
       return !Array.isArray(rows) || rows.some(x => x.document);   // unsure → "changed" (read it all)
     },
     async set(p, data) { return call(`${base}/${p}`, { method: 'PATCH', body: JSON.stringify({ fields: enc(data) }) }); },

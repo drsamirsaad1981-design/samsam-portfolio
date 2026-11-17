@@ -733,4 +733,12 @@
     'Just want to stop them for a while? Use ⏸ Pause instead.': 'تريد إيقافه فترة فقط؟ استخدم ⏸ إيقاف مؤقت بدلاً من ذلك.', 'Remove member': 'إزالة العضو',
     "↩️ Restored — they're back as they were.": '↩️ تم الاسترجاع — عاد كما كان.', 'Copied ✅': 'تم النسخ ✅', 'support': 'دعم', 'premium': 'مميز',
   });
+  // 💤 idle members / 📖 reads (Admin dashboard)
+  R(/^💤 idle since (.+)$/, function (_, d) { return '💤 خامل منذ ' + (date(d) || n(d)); });
+  R(/^Last active (today|yesterday|(\d+) days ago|—)$/, function (_, w, k) { return 'آخر نشاط ' + (w === 'today' ? 'اليوم' : w === 'yesterday' ? 'أمس' : w === '—' ? '—' : 'منذ ' + pl(k, 'يوم', 'يومين', 'أيام', 'يوم')); });
+  R(/^(\d+) reads today$/, function (_, k) { return k + ' قراءة اليوم'; });
+  R(/^💤 Idle for (\d+) days — you may remove them$/, function (_, k) { return '💤 خامل منذ ' + pl(k, 'يوم', 'يومين', 'أيام', 'يوم') + ' — يمكنك إزالته'; });
+  R(/^no use for (\d+)\+ days$/, 'بلا استخدام منذ $1 يوماً أو أكثر');
+  R(/^the bot's Firebase reads · you (\d+)$/, 'قراءات البوت من Firebase · أنت $1');
+  A({ '💤 Idle': '💤 الخاملون', '📖 Reads today': '📖 قراءات اليوم' });
 })();

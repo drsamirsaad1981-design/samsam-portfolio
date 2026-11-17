@@ -13,6 +13,7 @@
 // Worker secrets (Settings → Variables and Secrets): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT,
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
+import { markSeen } from './idle.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
 import { forgetPortfolio, findLinkCode, syncAccess, loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
@@ -384,6 +385,7 @@ export async function handleTelegram(request, env) {
     if (f !== 'ok') { await quiet(); if (f === 'warn') await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '🌊 رسايل كتير ورا بعض — استنى دقيقة وكمّل 🙂' : '🌊 That\'s a lot of messages at once — wait a minute, then carry on 🙂' }).catch(() => {}); return ok(); }
   }
   await migrateOwner(env);
+  await markSeen(env, chat).catch(() => {});   // 💤 any message or button tap → active again (idle.mjs)
   return asChat(chat, () => onUpdate(env, u, msg, q, chat));   // everything below runs as this chat: its own alerts, memory, language…
 }
 // 👋 someone who isn't invited: a valid code (typed, or via the t.me/<bot>?start=CODE link) lets them in; anything else gets
