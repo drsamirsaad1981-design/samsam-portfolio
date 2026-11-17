@@ -21,7 +21,8 @@ export function bidiLine(line, all = false) {
       const core = t.replace(/^[.,:\s\u00A0]+|[.,:\s\u00A0]+$/g, '');   // a full stop / colon at the edge belongs to the Arabic sentence
       if (!hasWord(core)) return m;
       const i = t.indexOf(core);
-      return t.slice(0, i) + LRM + core + LRM + t.slice(i + core.length) + tail;
+      const glued = core.length <= 24 ? core.replace(/ /g, '\u00A0') : core;   // a short run ("BABYDOGE 0.45") never breaks across two lines
+      return t.slice(0, i) + LRM + glued + LRM + t.slice(i + core.length) + tail;
     }).replace(/ · /g, ' ·' + RLM + ' ')).join('');   // a list "Binance · Gate · now" runs right-to-left, item by item
   return RLM + out;
 }

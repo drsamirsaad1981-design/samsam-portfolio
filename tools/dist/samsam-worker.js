@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: b5f13ab028a0e6e1
+// sources-hash: 432e250aa90d07c8
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1316,7 +1316,8 @@ function bidiLine(line, all = false) {
     const core = t.replace(/^[.,:\s\u00A0]+|[.,:\s\u00A0]+$/g, "");
     if (!hasWord(core)) return m;
     const i = t.indexOf(core);
-    return t.slice(0, i) + LRM + core + LRM + t.slice(i + core.length) + tail;
+    const glued = core.length <= 24 ? core.replace(/ /g, "\xA0") : core;
+    return t.slice(0, i) + LRM + glued + LRM + t.slice(i + core.length) + tail;
   }).replace(/ · /g, " \xB7" + RLM + " ")).join("");
   return RLM + out;
 }
@@ -5986,11 +5987,11 @@ async function viewBalances(env, lang2, fresh = false) {
       ar ? `\u{1F195} <b>\u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> (${other.length})` : `\u{1F195} <b>Not in the app</b> (${other.length})`,
       ...((o) => {
         const r3 = [];
-        for (let i = 0; i < o.length; i += 3) r3.push("\u25AA\uFE0F " + o.slice(i, i + 3).map((x) => `${esc(x.sym)} ${fq(x.q)}`).join(" \xB7 "));
+        for (let i = 0; i < o.length; i += 2) r3.push("\u25AA\uFE0F " + o.slice(i, i + 2).map((x) => `${esc(x.sym)}\xA0${fq(x.q)}`).join(" \xB7 "));
         return r3;
-      })(other.sort((x, y) => y.q - x.q).slice(0, 15))
+      })(other.sort((x, y) => y.q - x.q).slice(0, 16))
     ] : [],
-    // 3 a line
+    // 2 a line, a ticker never apart from its amount
     ...errs.length ? ["", ...errs] : [],
     "",
     ar ? "<i>\u2705 \u0645\u0637\u0627\u0628\u0642 \xB7 \u2795 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \xB7 \u25AB\uFE0F \u0627\u0644\u0628\u0627\u0642\u064A \u0641\u064A \u0645\u062D\u0627\u0641\u0638\u0643 \u0623\u0648 \u0645\u0643\u0627\u0646 \u0622\u062E\u0631. \u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u2014 \u0644\u0627 \u064A\u062A\u063A\u064A\u0631 \u0634\u064A\u0621 \u0641\u064A \u0645\u062D\u0641\u0638\u062A\u0643.</i>" : "<i>\u2705 matches \xB7 \u2795 more than the app \xB7 \u25AB\uFE0F the rest is in your wallets or elsewhere. Read-only \u2014 nothing is changed in your portfolio.</i>"
