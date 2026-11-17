@@ -90,7 +90,7 @@ export async function setup(env, kind, opt = {}) {
         x.helloPosted = !!(hr && hr.ok); if (!x.helloPosted) notes.push('⚠️ The welcome in 💬 Chat didn\'t go — send /community setup in a minute.');
       }
       if (x.topics.guide && x.guidePosted !== true) { const done = await postGuide(env, x); x.guidePosted = done === true ? true : done; if (done !== true) notes.push(`⚠️ The guide stopped at part ${done + 1} (Telegram's limit) — send /community setup in a minute to finish it.`); }
-      if (x.guidePosted === true && !x.guideSig) x.guideSig = guideSigs();   // what the posted guide says (for "🆕 updated" later)
+      if (x.guidePosted === true && !x.guideSig) { x.guideSig = guideSigs(); x.guideV = GUIDE.v || 1; }   // what the posted guide says (for "🆕 updated" later)
       // read-only topic: 📘 Guide (only admins — the bot and Samir — post there); # General hidden
       if (!x.tidy && !(await tidy(env, x))) notes.push('⚠️ Could not close 📘 or hide # General — check that I can "Manage topics".');
     } else notes.push('⚠️ Turn on <b>Topics</b> in the group\'s settings, then send /community setup.');
@@ -107,22 +107,49 @@ async function tidy(env, x) {
   if (okAll) x.tidy = true;
   return okAll;
 }
+// 📘 one part of the guide as a card: the title, a one-line summary, numbered steps, a 💡 tip (bot + group, same look).
+// In Arabic every line starts right-to-left (RLM), and English words / commands stay their own left-to-right island
+// (else "/alerts" shows as "alerts/"). Commands stay plain text, so Telegram makes them tappable.
+const LRI = '\u2066', PDI = '\u2069', RLM = '\u200F';
+const NUM = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
+export function gLine(l, ar) {
+  if (!ar) return l;
+  l = l.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI}<${t}>${x}</${t}>${PDI}`);
+  l = l.replace(/(^|[\s(])(\/[a-z]+(?: CODE)?)(?=$|[\s),.؛،])/g, (m, a, c) => `${a}${LRI}${c}${PDI}`);
+  return RLM + l;
+}
+export function guideCard(s, L) {
+  const ar = L === 'ar';
+  return [`${s.e} <b>${s.t[L]}</b>`, s.s ? gLine(`<i>${s.s[L]}</i>`, ar) : null, '',
+    ...s[L].map((l, i) => gLine(`${NUM[i] || '•'} ${l}`, ar)),
+    ...(s.tip ? ['', gLine(`💡 <b>${ar ? 'نصيحة' : 'Tip'}:</b> ${s.tip[L]}`, ar)] : [])].filter(x => x != null).join('\n');
+}
+// the guide's index, by group (🚀 Start · 📅 Daily use · ✨ Extras · 👤 Account)
+export function guideGroups() {
+  const gs = GUIDE.groups || [{ k: null, e: '', t: { en: '', ar: '' } }];
+  return gs.map(g => ({ ...g, items: GUIDE.sections.filter(s => !GUIDE.groups || s.g === g.k) })).filter(g => g.items.length);
+}
 // 📘 the guide changed (a new release): post the parts that changed (🆕) in its topic, refresh nothing else — run from the cron
-const sig = s => { let h = 0; for (const ch of JSON.stringify([s.t, s.en, s.ar])) h = (h * 31 + ch.charCodeAt(0)) | 0; return String(h); };
+const sig = s => { let h = 0; for (const ch of JSON.stringify([s.t, s.s, s.en, s.ar, s.tip])) h = (h * 31 + ch.charCodeAt(0)) | 0; return String(h); };
 const guideSigs = () => Object.fromEntries(GUIDE.sections.map(s => [s.k, sig(s)]));
 export async function guideUpdates(env) {
-  const c = await getCommunity(env), x = c.group; if (!x || !x.topics || !x.topics.guide || x.guidePosted !== true) return { posted: 0 };
+  const c = await getCommunity(env), x = c.group; if (!x || !x.topics || !x.topics.guide || (x.guidePosted !== true && !x.reposting)) return { posted: 0 };
   if (!x.tidy && !x.tidyTried) { x.tidyTried = true; await tidy(env, x); c.group = x; await putCommunity(env, c); }   // a group set up before this: tidy it once
   if (x.topics.updates && !x.merged) { await mergeUpdates(env, x); c.group = x; await putCommunity(env, c); }   // 🛠 Updates → into 📘 Guide (once)
+  if ((x.guideV || 1) !== (GUIDE.v || 1) || x.reposting) {   // a new edition of the whole guide → post it all again (a few rounds if Telegram says wait), not 15 "updated"
+    if (!x.reposting) { x.reposting = true; x.guidePosted = -1; }
+    const done = await postGuide(env, x); x.guidePosted = done === true ? true : done;
+    if (done === true) { delete x.reposting; x.guideV = GUIDE.v || 1; x.guideSig = guideSigs(); }
+    c.group = x; await putCommunity(env, c); return { posted: 'all' };
+  }
   if (!x.guideSig) { x.guideSig = guideSigs(); c.group = x; await putCommunity(env, c); return { posted: 0 }; }   // the guide posted so far = today's
   const now = guideSigs(), changed = GUIDE.sections.filter(s => x.guideSig[s.k] !== now[s.k]);
   if (!changed.length) return { posted: 0 };
-  const line = l => (/^•\s/.test(l) ? '   ◦ ' + l.slice(2) : '• ' + l);
   let n = 0;
   for (const s of changed.slice(0, 5)) {   // a few at a time (Telegram's group limit) — the rest next round
     const isNew = !(s.k in x.guideSig);
     const r = await tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: x.topics.guide, parse_mode: 'HTML', disable_web_page_preview: true,
-      text: `🆕 <b>${isNew ? 'New in the guide · جديد في الدليل' : 'Updated · اتحدّث'}</b>\n\n${s.e} <b>${s.t.en}</b>\n` + s.en.map(line).join('\n') + `\n\n${s.e} <b>${s.t.ar}</b>\n` + s.ar.map(line).join('\n') });
+      text: `🆕 <b>${isNew ? 'New in the guide · جديد في الدليل' : 'Updated · تم التحديث'}</b>\n\n` + guideCard(s, 'en') + '\n\n— — —\n\n' + guideCard(s, 'ar') });
     if (!r.ok) break;
     x.guideSig[s.k] = now[s.k]; n++;
   }
@@ -135,15 +162,14 @@ async function postGuide(env, x) {   // → true when all went, else the number 
   const t = x.topics.guide, send = text => tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: t, text, parse_mode: 'HTML', disable_web_page_preview: true });
   let from = typeof x.guidePosted === 'number' ? x.guidePosted : -1;
   if (from < 0) {
-    const idx = await send(`<b>${GUIDE.title.en}</b>\n${GUIDE.intro.en}\n\n<b>${GUIDE.title.ar}</b>\n${GUIDE.intro.ar}\n\n` + GUIDE.sections.map(s => `${s.e} ${esc((s.b || s.t).en)} · ${esc((s.b || s.t).ar)}`).join('\n'));
+    const idx = await send(`<b>${GUIDE.title.en}</b>\n${GUIDE.intro.en}\n\n<b>${GUIDE.title.ar}</b>\n${GUIDE.intro.ar}\n\n` + guideGroups().map(g => (g.e ? `${g.e} <b>${esc(g.t.en)} · ${esc(g.t.ar)}</b>\n` : '') + g.items.map(s => `${s.e} ${esc((s.b || s.t).en)} · ${esc((s.b || s.t).ar)}`).join('\n')).join('\n\n'));
     if (!idx.ok) return 0;
     await tg(env, 'pinChatMessage', { chat_id: x.id, message_id: idx.result.message_id, disable_notification: true });
     from = 0;
   }
-  const line = l => (/^•\s/.test(l) ? '   ◦ ' + l.slice(2) : '• ' + l);
   for (let i = from; i < GUIDE.sections.length; i++) {
     const s = GUIDE.sections[i];
-    const r = await send(`${s.e} <b>${s.t.en}</b>\n` + s.en.map(line).join('\n') + `\n\n${s.e} <b>${s.t.ar}</b>\n` + s.ar.map(line).join('\n'));
+    const r = await send(guideCard(s, 'en') + '\n\n— — —\n\n' + guideCard(s, 'ar'));
     if (!r.ok) return i;
   }
   return true;

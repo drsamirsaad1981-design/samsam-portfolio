@@ -1210,6 +1210,15 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; await tapAs(555, 'gd:alerts');
   const ed = sent.find(x => x.m === 'editMessageText');
   check('…tap a part → it opens in the same message, with ⬅️ Guide', ed && /🔔/.test(ed.b.text) && JSON.stringify(ed.b.reply_markup).includes('"gd"'), ed && ed.b.text.slice(0, 80));
+  check('…a card: summary in italics, numbered steps 1️⃣ 2️⃣, a 💡 tip, /alerts as plain (tappable) text', ed && /<i>/.test(ed.b.text) && /1️⃣/.test(ed.b.text) && /2️⃣/.test(ed.b.text) && /💡 <b>Tip:<\/b>/.test(ed.b.text) && /\/alerts/.test(ed.b.text) && !/<code>\/alerts/.test(ed.b.text) && okHtml(ed.b.text), ed && ed.b.text);
+  const kb = ed && JSON.stringify(ed.b.reply_markup);
+  check('…◀️ Previous (coins) · 📘 Index · Next ▶️ (trades)', kb && kb.includes('gd:coins') && kb.includes('gd:trades') && /Previous/.test(kb) && /Next/.test(kb), kb);
+  sent.length = 0; await tapAs(555, 'gd:start'); const e1 = sent.find(x => x.m === 'editMessageText');
+  check('…the first part: no Previous', e1 && !/Previous/.test(JSON.stringify(e1.b.reply_markup)) && /Next/.test(JSON.stringify(e1.b.reply_markup)));
+  const bm = await import('../tools/worker/bot.mjs'), va = bm.guideView('ar', 'alerts'), vi = bm.guideView('ar');
+  check('…Arabic: every line starts right-to-left, commands kept as an LTR island, نصيحة, السابق/التالي', va.text.split('\n').filter(l => l && !/^🔔/.test(l)).every(l => l[0] === '\u200F') && va.text.includes('\u2066/alerts\u2069') && /نصيحة/.test(va.text) && /السابق/.test(JSON.stringify(va.buttons)) && /التالي/.test(JSON.stringify(va.buttons)), va.text);
+  check('…the index in groups (🚀 📅 ✨ 👤), each group starts a new row of buttons', /🚀 <b>البداية<\/b>/.test(vi.text) && /👤 <b>الحساب<\/b>/.test(vi.text) && vi.buttons[1].length === 1 && vi.buttons[1][0].callback_data === 'gd:link', vi.buttons.map(r => r.map(x => x.callback_data).join()));
+  check('📘 guide.json: every part has a summary, a tip, a group, 2–5 steps', G.sections.every(x => x.s && x.s.en && x.s.ar && x.tip && x.tip.en && x.tip.ar && G.groups.some(g => g.k === x.g) && x.en.length >= 2 && x.en.length <= 5 && x.en.length === x.ar.length), G.sections.filter(x => !(x.s && x.tip && x.en.length === x.ar.length)).map(x => x.k));
 }
 
 // 👥 the channel + the members' group
@@ -1286,6 +1295,12 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
     const posts = sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === cc.group.topics.guide);
     check('🆕 the guide changed (a part updated, a part new) → just those 2 posted in 📘 ("Updated" / "New in the guide")', posts.length === 2 && posts.some(m => /Updated/.test(m.b.text) && /🔔/.test(m.b.text)) && posts.some(m => /New in the guide/.test(m.b.text)), posts.map(m => m.b.text.slice(0, 40)));
     sent.length = 0; const Wh = await fresh(); const ph = []; await Wh.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:10') }, ENVK, { waitUntil: x => ph.push(x) }); await Promise.all(ph);
+    check('…and not again', !sent.some(m => m.b.message_thread_id === cc.group.topics.guide));
+    const c3 = JSON.parse(kvStore.get('tg:community')); c3.group.guideV = 1; kvStore.set('tg:community', JSON.stringify(c3));
+    sent.length = 0; const Wv = await fresh(); const pv = []; await Wv.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:15') }, ENVK, { waitUntil: x => pv.push(x) }); await Promise.all(pv);
+    const rp = sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === cc.group.topics.guide), g3 = JSON.parse(kvStore.get('tg:community')).group;
+    check('📘 a new edition of the guide → posted again in full once (index + 15 cards), not 15 "Updated"', rp.length === 16 && !rp.some(m => /Updated/.test(m.b.text)) && /1️⃣/.test(rp[1].b.text) && g3.guidePosted === true && !g3.reposting && g3.guideV === 2, rp.length);
+    sent.length = 0; const Wv2 = await fresh(); const pv2 = []; await Wv2.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:20') }, ENVK, { waitUntil: x => pv2.push(x) }); await Promise.all(pv2);
     check('…and not again', !sent.some(m => m.b.message_thread_id === cc.group.topics.guide));
   }
   kvStore.delete('tg:cmdscope'); sent.length = 0; await postK(await fresh(), '/menu');

@@ -19,7 +19,10 @@
     '#cpGuide .gd-intro{color:var(--fg2,#94a3b8);font-size:.86rem;margin:4px 0 8px}' +
     '#cpGuide details{border:1px solid var(--border,rgba(148,163,184,.2));border-radius:12px;margin-top:8px;overflow:hidden}' +
     '#cpGuide summary{list-style:none;cursor:pointer;padding:11px 12px;font-weight:700}#cpGuide summary::-webkit-details-marker{display:none}' +
-    '#cpGuide .gd-body{padding:0 12px 12px;font-size:.88rem}#cpGuide .gd-body p{margin:6px 0}#cpGuide .gd-body ul{margin:4px 0;padding-inline-start:18px}#cpGuide .gd-body li{margin:7px 0;line-height:1.55}#cpGuide .gd-body li.sub{list-style:circle;margin-inline-start:14px}#cpGuide code{font-size:.85em;padding:1px 5px;border-radius:5px;background:rgba(148,163,184,.15)}';
+    '#cpGuide .gd-body{padding:0 12px 12px;font-size:.88rem}#cpGuide .gd-body p{margin:6px 0}#cpGuide .gd-body ul{margin:4px 0;padding-inline-start:18px}#cpGuide .gd-body li{margin:7px 0;line-height:1.55}#cpGuide .gd-body li.sub{list-style:circle;margin-inline-start:14px}#cpGuide .gd-grp{margin:14px 2px 2px;font-size:.74rem;font-weight:800;letter-spacing:.04em;color:var(--fg2,#94a3b8)}' +
+    '#cpGuide .gd-sum{font-style:italic;color:var(--fg2,#94a3b8)}#cpGuide .gd-body ol{margin:6px 0;padding:0;list-style:none;counter-reset:gd}#cpGuide .gd-body ol li{margin:8px 0;line-height:1.55;counter-increment:gd;display:flex;gap:8px;align-items:flex-start}' +
+    '#cpGuide .gd-body ol li::before{content:counter(gd);flex:0 0 20px;height:20px;margin-top:1px;border-radius:50%;background:#7c3aed;color:#fff;font-size:.72rem;font-weight:800;display:flex;align-items:center;justify-content:center}' +
+    '#cpGuide .gd-tip{margin:10px 0 2px;padding:8px 10px;border-radius:10px;background:rgba(124,58,237,.12);border-inline-start:3px solid #7c3aed}#cpGuide code{font-size:.85em;padding:1px 5px;border-radius:5px;background:rgba(148,163,184,.15)}';
 
   function draw() {
     var box = $('cpGuideBody'); if (!box) return;
@@ -27,11 +30,17 @@
     var L = lang, ar = L === 'ar';
     box.setAttribute('dir', ar ? 'rtl' : 'ltr'); box.setAttribute('lang', L);
     if (ar) box.removeAttribute('data-no-tr'); else box.setAttribute('data-no-tr', '');   // the English guide stays English inside the Arabic app
-    box.innerHTML = '<p class="gd-intro">' + E(G.intro[L]) + '</p>' + G.sections.map(function (s) {
+    var isl = function (h) { return ar ? h.replace(/<(code|b|i)>([^<]*)<\/\1>/g, function (m, t, x) { return /[\u0600-\u06FF]/.test(x) ? m : '<bdi>' + m + '</bdi>'; })
+      .replace(/(^|[\s(])(\/[a-z]+(?: CODE)?)(?=$|[\s),.؛،])/g, function (m, a, c) { return a + '<bdi>' + c + '</bdi>'; }) : h; };   // English islands in Arabic
+    var part = function (s) {   // the guide's own text (from this site), not user input
       return '<details data-k="' + E(s.k) + '"><summary>' + s.e + ' ' + E(s.t[L]) + '</summary><div class="gd-body">' +
-        '<ul>' + s[L].map(function (line) { var sub = /^•\s/.test(line); line = sub ? line.slice(2) : line;
-          if (ar) line = line.replace(/<(code|b|i)>([^<]*)<\/\1>/g, function (m, t, x) { return /[\u0600-\u06FF]/.test(x) ? m : '<bdi>' + m + '</bdi>'; });   // English islands in Arabic
-          return '<li' + (sub ? ' class="sub"' : '') + '>' + line + '</li>'; }).join('') + '</ul></div></details>';   // the guide's own text (from this site), not user input
+        (s.s ? '<p class="gd-sum">' + isl(s.s[L]) + '</p>' : '') +
+        '<ol>' + s[L].map(function (line) { return '<li><span>' + isl(line) + '</span></li>'; }).join('') + '</ol>' +
+        (s.tip ? '<p class="gd-tip">💡 <b>' + (ar ? 'نصيحة' : 'Tip') + ':</b> ' + isl(s.tip[L]) + '</p>' : '') + '</div></details>';
+    };
+    var groups = G.groups ? G.groups.map(function (g) { return { g: g, items: G.sections.filter(function (s) { return s.g === g.k; }) }; }).filter(function (x) { return x.items.length; }) : [{ g: null, items: G.sections }];
+    box.innerHTML = '<p class="gd-intro">' + E(G.intro[L]) + '</p>' + groups.map(function (x) {
+      return (x.g ? '<div class="gd-grp">' + x.g.e + ' ' + E(x.g.t[L]) + '</div>' : '') + x.items.map(part).join('');
     }).join('');
     var t = $('cpGuideTitle'); if (t) t.textContent = G.title[L].replace(/^📘\s*/, '');
     doc.querySelectorAll('#cpGuide .gd-lang button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.l === L)); });

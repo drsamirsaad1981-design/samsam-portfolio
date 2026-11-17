@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 5fe49892ece96ae5
+// sources-hash: 6d1e49d310a3ba00
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2192,350 +2192,523 @@ async function adminHandler2(env, who, body) {
 
 // guide.json
 var guide_default = {
-  v: 1,
+  v: 2,
   title: {
     en: "\u{1F4D8} Cute Portfolio \u2014 the guide",
     ar: "\u{1F4D8} \u062F\u0644\u064A\u0644 Cute Portfolio"
   },
   intro: {
     en: "Everything the app and the bot can do, in short steps. Tap a part to open it.",
-    ar: "\u0643\u0644 \u0627\u0644\u0644\u064A \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0648\u0627\u0644\u0628\u0648\u062A \u0628\u064A\u0639\u0645\u0644\u0648\u0647\u060C \u0628\u062E\u0637\u0648\u0627\u062A \u0642\u0635\u064A\u0631\u0629. \u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0623\u064A \u062C\u0632\u0621 \u064A\u0641\u062A\u062D\u0644\u0643."
+    ar: "\u0643\u0644 \u0645\u0627 \u064A\u0642\u062F\u0645\u0647 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0648\u0627\u0644\u0628\u0648\u062A\u060C \u0641\u064A \u062E\u0637\u0648\u0627\u062A \u0642\u0635\u064A\u0631\u0629. \u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0623\u064A \u062C\u0632\u0621 \u0644\u0641\u062A\u062D\u0647."
   },
-  sections: [
+  groups: [
     {
       k: "start",
       e: "\u{1F680}",
       t: {
+        en: "Start",
+        ar: "\u0627\u0644\u0628\u062F\u0627\u064A\u0629"
+      }
+    },
+    {
+      k: "daily",
+      e: "\u{1F4C5}",
+      t: {
+        en: "Daily use",
+        ar: "\u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u064A\u0648\u0645\u064A"
+      }
+    },
+    {
+      k: "extras",
+      e: "\u2728",
+      t: {
+        en: "Extras",
+        ar: "\u0625\u0636\u0627\u0641\u0627\u062A"
+      }
+    },
+    {
+      k: "account",
+      e: "\u{1F464}",
+      t: {
+        en: "Account",
+        ar: "\u0627\u0644\u062D\u0633\u0627\u0628"
+      }
+    }
+  ],
+  sections: [
+    {
+      k: "start",
+      e: "\u{1F680}",
+      g: "start",
+      t: {
         en: "Getting started",
         ar: "\u0627\u0644\u0628\u062F\u0627\u064A\u0629"
       },
-      en: [
-        "You join with an invite from Dr. Samir Saad \u2014 one code, two ways in:",
-        "\u{1F4F1} <b>The app link</b> \u2192 sign in with Google or any e-mail (a sign-in link, no password) \u2192 <b>Start my portfolio</b>.",
-        "\u{1F916} <b>The bot link</b> \u2192 you're in the bot at once; send <code>/app</code> with your e-mail to open the app too.",
-        "Then link the two (see <b>Link the app and the bot</b>) so the bot sees your portfolio.",
-        "Language: \u{1F310} in the bot's menu (English / \u0639\u0631\u0628\u064A); the app's AI report has its own English / \u0627\u0644\u0639\u0631\u0628\u064A\u0629 switch."
-      ],
-      ar: [
-        "\u0628\u062A\u062F\u062E\u0644 \u0628\u062F\u0639\u0648\u0629 \u0645\u0646 Dr. Samir Saad \u2014 \u0643\u0648\u062F \u0648\u0627\u062D\u062F \u0648\u0637\u0631\u064A\u0642\u062A\u064A\u0646:",
-        "\u{1F4F1} <b>\u0644\u064A\u0646\u0643 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C</b> \u2190 \u0627\u062F\u062E\u0644 \u0628\u0640 Google \u0623\u0648 \u0623\u064A \u0625\u064A\u0645\u064A\u0644 (\u0644\u064A\u0646\u0643 \u062F\u062E\u0648\u0644 \u0645\u0646 \u063A\u064A\u0631 \u0628\u0627\u0633\u0648\u0631\u062F) \u2190 <b>Start my portfolio</b>.",
-        "\u{1F916} <b>\u0644\u064A\u0646\u0643 \u0627\u0644\u0628\u0648\u062A</b> \u2190 \u0628\u062A\u062F\u062E\u0644 \u0627\u0644\u0628\u0648\u062A \u0639\u0644\u0649 \u0637\u0648\u0644\u061B \u0627\u0628\u0639\u062A <code>/app</code> \u0628\u0625\u064A\u0645\u064A\u0644\u0643 \u0639\u0634\u0627\u0646 \u062A\u0641\u062A\u062D \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0643\u0645\u0627\u0646.",
-        "\u0648\u0628\u0639\u062F\u064A\u0646 \u0627\u0631\u0628\u0637 \u0627\u0644\u0627\u062A\u0646\u064A\u0646 (\u0634\u0648\u0641 <b>\u0631\u0628\u0637 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0628\u0627\u0644\u0628\u0648\u062A</b>) \u0639\u0634\u0627\u0646 \u0627\u0644\u0628\u0648\u062A \u064A\u0634\u0648\u0641 \u0645\u062D\u0641\u0638\u062A\u0643.",
-        "\u0627\u0644\u0644\u063A\u0629: \u{1F310} \u0641\u064A \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0628\u0648\u062A (English / \u0639\u0631\u0628\u064A)\u061B \u0648\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0640 AI \u0641\u064A \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0644\u064A\u0647 \u0632\u0631\u0627\u0631 English / \u0627\u0644\u0639\u0631\u0628\u064A\u0629."
-      ],
       b: {
         en: "Getting started",
         ar: "\u0627\u0644\u0628\u062F\u0627\u064A\u0629"
+      },
+      s: {
+        en: "Join with an invite \u2014 one code, two ways in.",
+        ar: "\u0627\u0646\u0636\u0645 \u0628\u062F\u0639\u0648\u0629 \u2014 \u0631\u0645\u0632 \u0648\u0627\u062D\u062F \u0648\u0637\u0631\u064A\u0642\u062A\u0627\u0646 \u0644\u0644\u062F\u062E\u0648\u0644."
+      },
+      en: [
+        "Open the invite from Dr. Samir Saad.",
+        "\u{1F4F1} <b>The app link</b> \u2192 sign in with Google or any e-mail (a sign-in link, no password) \u2192 <b>Start my portfolio</b>.",
+        "\u{1F916} <b>The bot link</b> \u2192 you're in the bot at once; send /app with your e-mail to open the app too.",
+        "Link the two (see <b>Link the app and the bot</b>) so the bot sees your portfolio."
+      ],
+      ar: [
+        "\u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0639\u0648\u0629 \u0627\u0644\u062A\u064A \u0623\u0631\u0633\u0644\u0647\u0627 \u0644\u0643 Dr. Samir Saad.",
+        "\u{1F4F1} <b>\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> \u2190 \u0633\u062C\u0651\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u062D\u0633\u0627\u0628 Google \u0623\u0648 \u0628\u0623\u064A \u0628\u0631\u064A\u062F \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A (\u0631\u0627\u0628\u0637 \u062F\u062E\u0648\u0644 \u0628\u062F\u0648\u0646 \u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631) \u2190 <b>Start my portfolio</b>.",
+        "\u{1F916} <b>\u0631\u0627\u0628\u0637 \u0627\u0644\u0628\u0648\u062A</b> \u2190 \u062A\u062F\u062E\u0644 \u0627\u0644\u0628\u0648\u062A \u0645\u0628\u0627\u0634\u0631\u0629\u061B \u0623\u0631\u0633\u0644 /app \u0645\u0639 \u0628\u0631\u064A\u062F\u0643 \u0644\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0623\u064A\u0636\u0627\u064B.",
+        "\u0627\u0631\u0628\u0637 \u0627\u0644\u0627\u062B\u0646\u064A\u0646 (\u0631\u0627\u062C\u0639 <b>\u0631\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0627\u0644\u0628\u0648\u062A</b>) \u0644\u064A\u062A\u0645\u0643\u0646 \u0627\u0644\u0628\u0648\u062A \u0645\u0646 \u0631\u0624\u064A\u0629 \u0645\u062D\u0641\u0638\u062A\u0643."
+      ],
+      tip: {
+        en: "Language: \u{1F310} in the bot's menu, and Settings \u2192 Display \u2192 Language in the app.",
+        ar: "\u0627\u0644\u0644\u063A\u0629: \u{1F310} \u0641\u064A \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0628\u0648\u062A\u060C \u0648\u0645\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u0639\u0631\u0636 \u2190 \u0627\u0644\u0644\u063A\u0629 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642."
       }
     },
     {
       k: "app",
       e: "\u{1F4F1}",
+      g: "start",
       t: {
         en: "The app",
-        ar: "\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C"
+        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642"
       },
-      en: [
-        "<b>Portfolio</b>: your coins, value, profit, charts. Add a coin with <b>+</b>, or bring trades from an exchange: Performance \u2192 <b>Wallets &amp; exchanges</b> \u2192 Import from exchange.",
-        "<b>Plan</b>: the accumulation plan (targets, DCA) and the <b>Exit Strategy</b> (take-profit steps).",
-        "<b>Market Hub</b>: market cap, Fear &amp; Greed, Altcoin Season, dominance, movers.",
-        "<b>AI Analysis</b> (\u{1F916} button): a full report \u2014 <i>free</i> with your Claude app (copy \u2192 paste), or a quick report here for \u2B50 premium members / your own Claude key.",
-        "<b>Settings</b> (\u2699\uFE0F): your account, backup, Telegram, AI, theme, the guide, install the app on your phone. Everything about your coins sits on its own page: wallets, import and rewards on Performance \xB7 DCA and the exit plan on Plan \xB7 signals, categories and the baseline on Overview \xB7 targets on Allocation.",
-        "Your data is private: stored in the cloud under your own account \u2014 nobody else can read it."
-      ],
-      ar: [
-        "<b>Portfolio</b>: \u0639\u0645\u0644\u0627\u062A\u0643\u060C \u0627\u0644\u0642\u064A\u0645\u0629\u060C \u0627\u0644\u0631\u0628\u062D\u060C \u0627\u0644\u0631\u0633\u0648\u0645. \u0636\u064A\u0641 \u0639\u0645\u0644\u0629 \u0628\u0640 <b>+</b>\u060C \u0623\u0648 \u0647\u0627\u062A \u0635\u0641\u0642\u0627\u062A\u0643 \u0645\u0646 \u0645\u0646\u0635\u0629: Performance \u2190 <b>Wallets &amp; exchanges</b> \u2190 Import from exchange.",
-        "<b>Plan</b>: \u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639 (\u0627\u0644\u0623\u0647\u062F\u0627\u0641 \u0648\u0627\u0644\u0640 DCA) \u0648<b>\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C</b> (\u0645\u0631\u0627\u062D\u0644 \u062C\u0646\u064A \u0627\u0644\u0631\u0628\u062D).",
-        "<b>Market Hub</b>: \u062D\u062C\u0645 \u0627\u0644\u0633\u0648\u0642\u060C \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639\u060C \u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629\u060C \u0627\u0644\u0633\u064A\u0637\u0631\u0629\u060C \u0627\u0644\u0623\u0643\u062A\u0631 \u062D\u0631\u0643\u0629.",
-        "<b>AI Analysis</b> (\u0632\u0631\u0627\u0631 \u{1F916}): \u062A\u0642\u0631\u064A\u0631 \u0643\u0627\u0645\u0644 \u2014 <i>\u0645\u062C\u0627\u0646\u0627\u064B</i> \u0645\u0639 \u062A\u0637\u0628\u064A\u0642 Claude \u0628\u062A\u0627\u0639\u0643 (\u0627\u0646\u0633\u062E \u2190 \u0627\u0644\u0635\u0642)\u060C \u0623\u0648 \u062A\u0642\u0631\u064A\u0631 \u0633\u0631\u064A\u0639 \u0647\u0646\u0627 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 \u0623\u0648 \u0628\u0645\u0641\u062A\u0627\u062D Claude \u0628\u062A\u0627\u0639\u0643.",
-        "<b>\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A</b> (\u2699\uFE0F): \u062D\u0633\u0627\u0628\u0643\u060C \u0627\u0644\u0646\u0633\u062E\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629\u060C Telegram\u060C \u0627\u0644\u0640 AI\u060C \u0627\u0644\u062B\u064A\u0645\u060C \u0627\u0644\u062F\u0644\u064A\u0644\u060C \u0648\u062A\u062B\u0628\u064A\u062A \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0639\u0644\u0649 \u0627\u0644\u0645\u0648\u0628\u0627\u064A\u0644. \u0648\u0643\u0644 \u062D\u0627\u062C\u0629 \u062A\u062E\u0635 \u0639\u0645\u0644\u0627\u062A\u0643 \u0641\u064A \u0635\u0641\u062D\u062A\u0647\u0627: \u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0648\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062A \u0641\u064A Performance \xB7 \u0627\u0644\u0640 DCA \u0648\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C \u0641\u064A Plan \xB7 \u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0641\u0627\u062A \u0648\u0627\u0644\u0640 Baseline \u0641\u064A Overview \xB7 \u0627\u0644\u0623\u0647\u062F\u0627\u0641 \u0641\u064A Allocation.",
-        "\u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u062E\u0627\u0635\u0629: \u0645\u062D\u0641\u0648\u0638\u0629 \u0641\u064A \u0627\u0644\u0633\u062D\u0627\u0628\u0629 \u0639\u0644\u0649 \u062D\u0633\u0627\u0628\u0643 \u0627\u0646\u062A \u0628\u0633 \u2014 \u0645\u062D\u062F\u0634 \u063A\u064A\u0631\u0643 \u064A\u0642\u062F\u0631 \u064A\u0634\u0648\u0641\u0647\u0627."
-      ],
       b: {
         en: "The app",
-        ar: "\u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C"
+        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642"
+      },
+      s: {
+        en: "Your portfolio, plan and the market \u2014 on the phone or the computer.",
+        ar: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u0627\u0644\u0633\u0648\u0642 \u2014 \u0639\u0644\u0649 \u0627\u0644\u062C\u0648\u0627\u0644 \u0623\u0648 \u0627\u0644\u0643\u0645\u0628\u064A\u0648\u062A\u0631."
+      },
+      en: [
+        "<b>Portfolio</b>: your coins, value, profit and charts. Add a coin with <b>+</b>, or bring trades from an exchange: Performance \u2192 <b>Wallets &amp; Exchanges</b> \u2192 Import.",
+        "<b>Plan</b>: the accumulation plan (targets, DCA) and the <b>Exit Strategy</b> (take-profit steps).",
+        "<b>Market Hub</b>: market cap, Fear &amp; Greed, Altcoin Season, dominance, ETF flows, top coins.",
+        "<b>AI Analysis</b> (\u{1F916}): a full report \u2014 <i>free</i> with your Claude app (copy \u2192 paste), or a quick report for \u2B50 premium / your own Claude key.",
+        "<b>Settings</b> (\u2699\uFE0F): account, backup, Telegram, AI, display and language, the guide, install on your phone."
+      ],
+      ar: [
+        "<b>\u0627\u0644\u0645\u062D\u0641\u0638\u0629</b>: \u0639\u0645\u0644\u0627\u062A\u0643 \u0648\u0642\u064A\u0645\u062A\u0647\u0627 \u0648\u0627\u0644\u0631\u0628\u062D \u0648\u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629. \u0623\u0636\u0641 \u0639\u0645\u0644\u0629 \u0628\u0632\u0631 <b>+</b>\u060C \u0623\u0648 \u0627\u0633\u062A\u0648\u0631\u062F \u0635\u0641\u0642\u0627\u062A\u0643 \u0645\u0646 \u0645\u0646\u0635\u0629: \u0627\u0644\u0623\u062F\u0627\u0621 \u2190 <b>\u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A</b> \u2190 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F.",
+        "<b>\u0627\u0644\u062E\u0637\u0629</b>: \u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639 (\u0627\u0644\u0623\u0647\u062F\u0627\u0641 \u0648\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A) \u0648<b>\u0627\u0633\u062A\u0631\u0627\u062A\u064A\u062C\u064A\u0629 \u0627\u0644\u062E\u0631\u0648\u062C</b> (\u062E\u0637\u0648\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D).",
+        "<b>\u0645\u0631\u0643\u0632 \u0627\u0644\u0633\u0648\u0642</b>: \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629\u060C \u0648\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639\u060C \u0648\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629\u060C \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629\u060C \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF\u060C \u0648\u0623\u0643\u0628\u0631 \u0627\u0644\u0639\u0645\u0644\u0627\u062A.",
+        "<b>\u062A\u062D\u0644\u064A\u0644 AI</b> (\u{1F916}): \u062A\u0642\u0631\u064A\u0631 \u0643\u0627\u0645\u0644 \u2014 <i>\u0645\u062C\u0627\u0646\u0627\u064B</i> \u0639\u0628\u0631 \u062A\u0637\u0628\u064A\u0642 Claude (\u0646\u0633\u062E \u2190 \u0644\u0635\u0642)\u060C \u0623\u0648 \u062A\u0642\u0631\u064A\u0631 \u0633\u0631\u064A\u0639 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 \u0623\u0648 \u0628\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0643.",
+        "<b>\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A</b> (\u2699\uFE0F): \u0627\u0644\u062D\u0633\u0627\u0628\u060C \u0648\u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u060C \u0648\u062A\u0644\u064A\u062C\u0631\u0627\u0645\u060C \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A\u060C \u0648\u0627\u0644\u0639\u0631\u0636 \u0648\u0627\u0644\u0644\u063A\u0629\u060C \u0648\u0627\u0644\u062F\u0644\u064A\u0644\u060C \u0648\u062A\u062B\u0628\u064A\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0639\u0644\u0649 \u0627\u0644\u062C\u0648\u0627\u0644."
+      ],
+      tip: {
+        en: "Your data is private: stored in the cloud under your own account \u2014 nobody else can read it.",
+        ar: "\u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u062E\u0627\u0635\u0629: \u0645\u062D\u0641\u0648\u0638\u0629 \u0639\u0644\u0649 \u0627\u0644\u0633\u062D\u0627\u0628\u0629 \u0641\u064A \u062D\u0633\u0627\u0628\u0643 \u0623\u0646\u062A \u2014 \u0648\u0644\u0627 \u064A\u0633\u062A\u0637\u064A\u0639 \u0623\u062D\u062F \u063A\u064A\u0631\u0643 \u0642\u0631\u0627\u0621\u062A\u0647\u0627."
       }
     },
     {
       k: "link",
       e: "\u{1F517}",
+      g: "start",
       t: {
         en: "Link the app and the bot",
-        ar: "\u0631\u0628\u0637 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0628\u0627\u0644\u0628\u0648\u062A"
+        ar: "\u0631\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0627\u0644\u0628\u0648\u062A"
       },
-      en: [
-        "In the app: Settings \u2192 <b>Telegram \u2192 Link your portfolio</b> \u2192 <b>Open the bot</b>. That's it \u2014 one tap.",
-        "Or copy the 8-letter code and send <code>/link CODE</code> to the bot (the code works for 10 minutes).",
-        "Once linked: your portfolio, plan and exit plan show in the bot \u2014 only to you \u2014 and the morning, evening and pinned messages start."
-      ],
-      ar: [
-        "\u0641\u064A \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 <b>Telegram \u2192 Link your portfolio</b> \u2190 <b>Open the bot</b>. \u062E\u0644\u0627\u0635 \u2014 \u062F\u0648\u0633\u0629 \u0648\u0627\u062D\u062F\u0629.",
-        "\u0623\u0648 \u0627\u0646\u0633\u062E \u0627\u0644\u0643\u0648\u062F (8 \u062D\u0631\u0648\u0641) \u0648\u0627\u0628\u0639\u062A \u0644\u0644\u0628\u0648\u062A <code>/link CODE</code> (\u0627\u0644\u0643\u0648\u062F \u0634\u063A\u0627\u0644 10 \u062F\u0642\u0627\u064A\u0642).",
-        "\u0628\u0639\u062F \u0627\u0644\u0631\u0628\u0637: \u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C \u0628\u062A\u0638\u0647\u0631 \u0641\u064A \u0627\u0644\u0628\u0648\u062A \u2014 \u0644\u064A\u0643 \u0627\u0646\u062A \u0628\u0633 \u2014 \u0648\u0627\u0644\u0635\u0628\u0627\u062D \u0648\u0627\u0644\u0645\u0633\u0627\u0621 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062A\u062B\u0628\u062A\u0629 \u0628\u064A\u0634\u062A\u063A\u0644\u0648\u0627."
-      ],
       b: {
         en: "Linking",
         ar: "\u0627\u0644\u0631\u0628\u0637"
+      },
+      s: {
+        en: "One tap, and the bot sees your portfolio \u2014 only for you.",
+        ar: "\u0636\u063A\u0637\u0629 \u0648\u0627\u062D\u062F\u0629\u060C \u0648\u064A\u0631\u0649 \u0627\u0644\u0628\u0648\u062A \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 \u0644\u0643 \u0648\u062D\u062F\u0643."
+      },
+      en: [
+        "In the app: Settings \u2192 <b>Telegram</b> \u2192 <b>Link your portfolio</b>.",
+        "Tap <b>Open the bot</b> \u2014 done.",
+        "Your portfolio, plan and exit plan now show in the bot, and the morning, evening and pinned messages start."
+      ],
+      ar: [
+        "\u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 <b>\u062A\u0644\u064A\u062C\u0631\u0627\u0645</b> \u2190 <b>\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u0628\u0628\u0648\u062A \u062A\u0644\u064A\u062C\u0631\u0627\u0645</b>.",
+        "\u0627\u0636\u063A\u0637 <b>\u0627\u0641\u062A\u062D \u0627\u0644\u0628\u0648\u062A</b> \u2014 \u0648\u0627\u0646\u062A\u0647\u0649 \u0627\u0644\u0623\u0645\u0631.",
+        "\u062A\u0638\u0647\u0631 \u0627\u0644\u0622\u0646 \u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C \u0641\u064A \u0627\u0644\u0628\u0648\u062A\u060C \u0648\u062A\u0628\u062F\u0623 \u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0628\u0627\u062D \u0648\u0627\u0644\u0645\u0633\u0627\u0621 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u0628\u062A\u0629."
+      ],
+      tip: {
+        en: "No Telegram on this device? Copy the 8-letter code and send /link CODE to the bot (it works for 10 minutes).",
+        ar: "\u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0644\u064A\u0633 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632\u061F \u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u0645\u0643\u0648\u0651\u0646 \u0645\u0646 8 \u0623\u062D\u0631\u0641 \u0648\u0623\u0631\u0633\u0644 /link CODE \u0625\u0644\u0649 \u0627\u0644\u0628\u0648\u062A (\u0635\u0627\u0644\u062D \u0644\u0645\u062F\u0629 10 \u062F\u0642\u0627\u0626\u0642)."
       }
     },
     {
       k: "ask",
       e: "\u{1F9E0}",
+      g: "daily",
       t: {
         en: "Ask anything",
-        ar: "\u0627\u0633\u0623\u0644 \u0623\u064A \u062D\u0627\u062C\u0629"
+        ar: "\u0627\u0633\u0623\u0644 \u0623\u064A \u0633\u0624\u0627\u0644"
       },
-      en: [
-        "Write to the bot in plain words, English or Arabic \u2014 it answers with live data:",
-        "\u2022 <i>How is my portfolio today?</i>",
-        "\u2022 <i>Is SOL a good buy now?</i>",
-        "\u2022 <i>What if BTC hits 150k?</i>",
-        "\u2022 <i>What if I sell half my ETH?</i>",
-        "Each answer says where its numbers came from, and how many questions you have left today (5 a day; \u2B50 premium 20).",
-        "<code>/new</code> starts a fresh chat (the bot forgets the last messages)."
-      ],
-      ar: [
-        "\u0627\u0643\u062A\u0628 \u0644\u0644\u0628\u0648\u062A \u0639\u0627\u062F\u064A\u060C \u0639\u0631\u0628\u064A \u0623\u0648 \u0625\u0646\u062C\u0644\u064A\u0632\u064A \u2014 \u0628\u064A\u0631\u062F \u0628\u0623\u0631\u0642\u0627\u0645 \u0644\u062D\u0638\u064A\u0629:",
-        "\u2022 <i>\u0645\u062D\u0641\u0638\u062A\u064A \u0639\u0627\u0645\u0644\u0629 \u0625\u064A\u0647 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647\u061F</i>",
-        "\u2022 <i>SOL \u064A\u0646\u0641\u0639 \u0623\u0634\u062A\u0631\u064A \u062F\u0644\u0648\u0642\u062A\u064A\u061F</i>",
-        "\u2022 <i>\u0644\u0648 BTC \u0648\u0635\u0644 150 \u0623\u0644\u0641\u061F</i>",
-        "\u2022 <i>\u0644\u0648 \u0628\u0639\u062A \u0646\u0635 \u0627\u0644\u0640 ETH\u061F</i>",
-        "\u0643\u0644 \u0631\u062F \u0628\u064A\u0642\u0648\u0644 \u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u062C\u0627\u064A\u0629 \u0645\u0646\u064A\u0646\u060C \u0648\u0641\u0627\u0636\u0644\u0643 \u0643\u0627\u0645 \u0633\u0624\u0627\u0644 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647 (5 \u0641\u064A \u0627\u0644\u064A\u0648\u0645\u061B \u0627\u0644\u0645\u0645\u064A\u0632 \u2B50 20).",
-        "<code>/new</code> \u064A\u0628\u062F\u0623 \u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 (\u0627\u0644\u0628\u0648\u062A \u064A\u0646\u0633\u0649 \u0622\u062E\u0631 \u0627\u0644\u0631\u0633\u0627\u064A\u0644)."
-      ],
       b: {
         en: "Ask anything",
-        ar: "\u0627\u0633\u0623\u0644 \u0623\u064A \u062D\u0627\u062C\u0629"
+        ar: "\u0627\u0633\u0623\u0644 \u0623\u064A \u0633\u0624\u0627\u0644"
+      },
+      s: {
+        en: "Write in plain words \u2014 the bot answers with live data.",
+        ar: "\u0627\u0643\u062A\u0628 \u0628\u0643\u0644\u0645\u0627\u062A \u0639\u0627\u062F\u064A\u0629 \u2014 \u0648\u064A\u062C\u064A\u0628\u0643 \u0627\u0644\u0628\u0648\u062A \u0628\u0623\u0631\u0642\u0627\u0645 \u0645\u0628\u0627\u0634\u0631\u0629."
+      },
+      en: [
+        "Write in English or Arabic, for example: <i>How is my portfolio today?</i> \xB7 <i>Is SOL a good buy now?</i>",
+        'Ask "what if": <i>What if BTC hits 150k?</i> \xB7 <i>What if I sell half my ETH?</i>',
+        "Each answer says where its numbers came from and how many questions are left today (5 a day; \u2B50 premium 20)."
+      ],
+      ar: [
+        "\u0627\u0643\u062A\u0628 \u0628\u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0623\u0648 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629\u060C \u0645\u062B\u0644\u0627\u064B: <i>\u0643\u064A\u0641 \u0623\u062F\u0627\u0621 \u0645\u062D\u0641\u0638\u062A\u064A \u0627\u0644\u064A\u0648\u0645\u061F</i> \xB7 <i>\u0647\u0644 \u0627\u0644\u0634\u0631\u0627\u0621 \u0641\u064A SOL \u0645\u0646\u0627\u0633\u0628 \u0627\u0644\u0622\u0646\u061F</i>",
+        '\u0627\u0633\u0623\u0644 "\u0645\u0627\u0630\u0627 \u0644\u0648": <i>\u0645\u0627\u0630\u0627 \u0644\u0648 \u0648\u0635\u0644 BTC \u0625\u0644\u0649 150 \u0623\u0644\u0641\u0627\u064B\u061F</i> \xB7 <i>\u0645\u0627\u0630\u0627 \u0644\u0648 \u0628\u0639\u062A \u0646\u0635\u0641 ETH\u061F</i>',
+        "\u0643\u0644 \u0625\u062C\u0627\u0628\u0629 \u062A\u0648\u0636\u062D \u0645\u0635\u062F\u0631 \u0623\u0631\u0642\u0627\u0645\u0647\u0627\u060C \u0648\u0643\u0645 \u0633\u0624\u0627\u0644\u0627\u064B \u0628\u0642\u064A \u0644\u0643 \u0627\u0644\u064A\u0648\u0645 (5 \u064A\u0648\u0645\u064A\u0627\u064B\u061B \u0648\u0627\u0644\u0645\u0645\u064A\u0632 \u2B50 20)."
+      ],
+      tip: {
+        en: "/new starts a fresh chat (the bot forgets the last messages).",
+        ar: "/new \u064A\u0628\u062F\u0623 \u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 (\u064A\u0646\u0633\u0649 \u0627\u0644\u0628\u0648\u062A \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0633\u0627\u0628\u0642\u0629)."
       }
     },
     {
       k: "voice",
       e: "\u{1F399}",
+      g: "daily",
       t: {
         en: "Voice notes",
-        ar: "\u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629"
+        ar: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629"
       },
-      en: [
-        "Hold the \u{1F399} in Telegram and just talk \u2014 Arabic or English. The bot shows <i>I heard: \u2026</i> and answers as if you typed it.",
-        "Voice notes are for \u2B50 premium members (or with your own Claude key). Up to 2 minutes each."
-      ],
-      ar: [
-        "\u062F\u0648\u0633 \u0639\u0644\u0649 \u{1F399} \u0641\u064A \u062A\u0644\u062C\u0631\u0627\u0645 \u0648\u0627\u062A\u0643\u0644\u0645 \u2014 \u0639\u0631\u0628\u064A \u0623\u0648 \u0625\u0646\u062C\u0644\u064A\u0632\u064A. \u0627\u0644\u0628\u0648\u062A \u0628\u064A\u0643\u062A\u0628 <i>I heard: \u2026</i> \u0648\u0628\u064A\u0631\u062F \u0643\u0623\u0646\u0643 \u0643\u062A\u0628\u062A.",
-        "\u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 (\u0623\u0648 \u0628\u0645\u0641\u062A\u0627\u062D Claude \u0628\u062A\u0627\u0639\u0643). \u0644\u062D\u062F \u062F\u0642\u064A\u0642\u062A\u064A\u0646 \u0644\u0644\u0631\u0633\u0627\u0644\u0629."
-      ],
       b: {
         en: "Voice notes",
         ar: "\u0627\u0644\u0635\u0648\u062A"
+      },
+      s: {
+        en: "Talk instead of typing \u2014 Arabic or English.",
+        ar: "\u062A\u062D\u062F\u0651\u062B \u0628\u062F\u0644\u0627\u064B \u0645\u0646 \u0627\u0644\u0643\u062A\u0627\u0628\u0629 \u2014 \u0628\u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0623\u0648 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629."
+      },
+      en: [
+        "Hold \u{1F399} in Telegram and speak (up to 2 minutes).",
+        "The bot shows <i>I heard: \u2026</i>",
+        "It answers as if you had typed it."
+      ],
+      ar: [
+        "\u0627\u0636\u063A\u0637 \u0645\u0637\u0648\u0644\u0627\u064B \u0639\u0644\u0649 \u{1F399} \u0641\u064A \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0648\u062A\u062D\u062F\u0651\u062B (\u062D\u062A\u0649 \u062F\u0642\u064A\u0642\u062A\u064A\u0646).",
+        "\u064A\u0639\u0631\u0636 \u0627\u0644\u0628\u0648\u062A <i>I heard: \u2026</i>",
+        "\u062B\u0645 \u064A\u062C\u064A\u0628 \u0643\u0645\u0627 \u0644\u0648 \u0623\u0646\u0643 \u0643\u062A\u0628\u062A \u0627\u0644\u0633\u0624\u0627\u0644."
+      ],
+      tip: {
+        en: "Voice notes are for \u2B50 premium members, or with your own Claude key.",
+        ar: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0645\u062A\u0627\u062D\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50\u060C \u0623\u0648 \u0628\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0643."
       }
     },
     {
       k: "coins",
       e: "\u{1FA99}",
+      g: "daily",
       t: {
         en: "Coins and the market",
         ar: "\u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0648\u0627\u0644\u0633\u0648\u0642"
       },
-      en: [
-        "Send a ticker \u2014 <code>btc</code>, <code>sol eth</code> \u2014 for the live price, trend, futures and funding.",
-        "Buttons / commands: <code>/market</code> (BTC, dominance, Fear &amp; Greed, ETF), <code>/movers</code> (best &amp; worst), <code>/signals</code> (hold / add / sell for your coins), <code>/portfolio</code>, <code>/plan</code>, <code>/exit</code>.",
-        "\u{1F504} on any message refreshes it in place."
-      ],
-      ar: [
-        "\u0627\u0628\u0639\u062A \u0631\u0645\u0632 \u0627\u0644\u0639\u0645\u0644\u0629 \u2014 <code>btc</code>\u060C <code>sol eth</code> \u2014 \u0644\u0644\u0633\u0639\u0631 \u0627\u0644\u0644\u062D\u0638\u064A \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0648\u0627\u0644\u0639\u0642\u0648\u062F \u0648\u0627\u0644\u0640 funding.",
-        "\u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u0648\u0627\u0644\u0623\u0648\u0627\u0645\u0631: <code>/market</code> (BTC\u060C \u0627\u0644\u0633\u064A\u0637\u0631\u0629\u060C \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639\u060C \u0627\u0644\u0640 ETF)\u060C <code>/movers</code> (\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623)\u060C <code>/signals</code> (\u0627\u062D\u062A\u0641\u0638 / \u0632\u0648\u0651\u062F / \u0628\u064A\u0639 \u0644\u0639\u0645\u0644\u0627\u062A\u0643)\u060C <code>/portfolio</code>\u060C <code>/plan</code>\u060C <code>/exit</code>.",
-        "\u{1F504} \u0639\u0644\u0649 \u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u0628\u064A\u062D\u062F\u0651\u062B\u0647\u0627 \u0645\u0643\u0627\u0646\u0647\u0627."
-      ],
       b: {
         en: "Coins & market",
         ar: "\u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0648\u0627\u0644\u0633\u0648\u0642"
+      },
+      s: {
+        en: "Live prices, trends and the market in one tap.",
+        ar: "\u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629 \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0648\u062D\u0627\u0644\u0629 \u0627\u0644\u0633\u0648\u0642 \u0628\u0636\u063A\u0637\u0629 \u0648\u0627\u062D\u062F\u0629."
+      },
+      en: [
+        "Send a ticker \u2014 <code>btc</code> or <code>sol eth</code> \u2014 for the live price, trend, futures and funding.",
+        "/market \u2014 BTC, dominance, Fear &amp; Greed and ETF flows.",
+        "/movers \u2014 the best and worst coins \xB7 /signals \u2014 hold / add / sell for your coins.",
+        "/portfolio \xB7 /plan \xB7 /exit \u2014 your own numbers."
+      ],
+      ar: [
+        "\u0623\u0631\u0633\u0644 \u0631\u0645\u0632 \u0627\u0644\u0639\u0645\u0644\u0629 \u2014 <code>btc</code> \u0623\u0648 <code>sol eth</code> \u2014 \u0644\u062A\u0631\u0649 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0648\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0645\u0648\u064A\u0644.",
+        "/market \u2014 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629 \u0648\u0645\u0624\u0634\u0631 \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639 \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF.",
+        "/movers \u2014 \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623 \u0623\u062F\u0627\u0621\u064B \xB7 /signals \u2014 \u0627\u062D\u062A\u0641\u0627\u0638 / \u062A\u0639\u0632\u064A\u0632 / \u0628\u064A\u0639 \u0644\u0639\u0645\u0644\u0627\u062A\u0643.",
+        "/portfolio \xB7 /plan \xB7 /exit \u2014 \u0623\u0631\u0642\u0627\u0645\u0643 \u0627\u0644\u062E\u0627\u0635\u0629."
+      ],
+      tip: {
+        en: "\u{1F504} on any message refreshes it in place.",
+        ar: "\u{1F504} \u0639\u0644\u0649 \u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u064A\u062D\u062F\u0651\u062B\u0647\u0627 \u0641\u064A \u0645\u0643\u0627\u0646\u0647\u0627."
       }
     },
     {
       k: "alerts",
       e: "\u{1F514}",
+      g: "daily",
       t: {
         en: "Alerts in words",
         ar: "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0628\u0627\u0644\u0643\u0644\u0627\u0645"
       },
-      en: [
-        "Just say it: <i>tell me if ETH drops below 3000</i> \xB7 <i>alert me if SOL is up 10% in a day</i> \xB7 <i>if my portfolio passes $30k</i>.",
-        "Checked every 5 minutes; each alert fires once. <code>/alerts</code> lists them, \u{1F5D1} removes one."
-      ],
-      ar: [
-        "\u0642\u0648\u0644\u0647\u0627 \u0639\u0627\u062F\u064A: <i>\u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648 ETH \u0646\u0632\u0644 \u062A\u062D\u062A 3000</i> \xB7 <i>\u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648 SOL \u0637\u0644\u0639 10% \u0641\u064A \u064A\u0648\u0645</i> \xB7 <i>\u0644\u0648 \u0645\u062D\u0641\u0638\u062A\u064A \u0639\u062F\u0651\u062A 30 \u0623\u0644\u0641 \u062F\u0648\u0644\u0627\u0631</i>.",
-        "\u0628\u064A\u062A\u0634\u064A\u0651\u0643 \u0643\u0644 5 \u062F\u0642\u0627\u064A\u0642\u060C \u0648\u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0628\u064A\u062A\u0628\u0639\u062A \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629. <code>/alerts</code> \u0628\u064A\u0639\u0631\u0636\u0647\u0645\u060C \u0648\u{1F5D1} \u064A\u0645\u0633\u062D \u0648\u0627\u062D\u062F."
-      ],
       b: {
         en: "Alerts",
         ar: "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A"
+      },
+      s: {
+        en: "Ask the bot to tell you when something happens.",
+        ar: "\u0627\u0637\u0644\u0628 \u0645\u0646 \u0627\u0644\u0628\u0648\u062A \u0623\u0646 \u064A\u0646\u0628\u0647\u0643 \u0639\u0646\u062F \u062D\u062F\u0648\u062B \u0623\u0645\u0631 \u0645\u0639\u064A\u0646."
+      },
+      en: [
+        "Just say it: <i>tell me if ETH drops below 3000</i> \xB7 <i>alert me if SOL is up 10% in a day</i> \xB7 <i>if my portfolio passes $30k</i>.",
+        "The bot checks every 5 minutes.",
+        "Each alert comes once, then it's done."
+      ],
+      ar: [
+        "\u0627\u0643\u062A\u0628\u0647 \u0628\u0643\u0644\u0645\u0627\u062A\u0643: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0646\u0632\u0644 ETH \u062A\u062D\u062A 3000</i> \xB7 <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0627\u0631\u062A\u0641\u0639 SOL 10% \u0641\u064A \u064A\u0648\u0645</i> \xB7 <i>\u0625\u0630\u0627 \u062A\u062C\u0627\u0648\u0632\u062A \u0645\u062D\u0641\u0638\u062A\u064A 30 \u0623\u0644\u0641 \u062F\u0648\u0644\u0627\u0631</i>.",
+        "\u064A\u062A\u062D\u0642\u0642 \u0627\u0644\u0628\u0648\u062A \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642.",
+        "\u064A\u0635\u0644\u0643 \u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u062B\u0645 \u064A\u0646\u062A\u0647\u064A."
+      ],
+      tip: {
+        en: "/alerts lists your alerts; \u{1F5D1} removes one.",
+        ar: "/alerts \u064A\u0639\u0631\u0636 \u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643\u060C \u0648\u{1F5D1} \u064A\u062D\u0630\u0641 \u0623\u064A\u0627\u064B \u0645\u0646\u0647\u0627."
       }
     },
     {
       k: "trades",
       e: "\u{1F9FE}",
+      g: "daily",
       t: {
         en: "Record a trade in words",
-        ar: "\u0633\u062C\u0651\u0644 \u0635\u0641\u0642\u0629 \u0628\u0627\u0644\u0643\u0644\u0627\u0645"
+        ar: "\u062A\u0633\u062C\u064A\u0644 \u0635\u0641\u0642\u0629 \u0628\u0627\u0644\u0643\u0644\u0627\u0645"
       },
-      en: [
-        "Write <i>bought 0.01 BTC at 95k</i> or <i>sold 5 SOL at 180</i> \u2014 the bot shows what will change (amount, average, profit).",
-        "Nothing is saved until you tap <b>\u2705 Confirm</b> (15 minutes). Then it's in your app too."
-      ],
-      ar: [
-        "\u0627\u0643\u062A\u0628 <i>\u0627\u0634\u062A\u0631\u064A\u062A 0.01 BTC \u0628\u0640 95 \u0623\u0644\u0641</i> \u0623\u0648 <i>\u0628\u0639\u062A 5 SOL \u0628\u0640 180</i> \u2014 \u0627\u0644\u0628\u0648\u062A \u0628\u064A\u0648\u0631\u064A\u0643 \u0627\u0644\u0644\u064A \u0647\u064A\u062A\u063A\u064A\u0631 (\u0627\u0644\u0643\u0645\u064A\u0629\u060C \u0627\u0644\u0645\u062A\u0648\u0633\u0637\u060C \u0627\u0644\u0631\u0628\u062D).",
-        "\u0645\u0641\u064A\u0634 \u062D\u0627\u062C\u0629 \u0628\u062A\u062A\u062D\u0641\u0638 \u063A\u064A\u0631 \u0644\u0645\u0627 \u062A\u062F\u0648\u0633 <b>\u2705 Confirm</b> (\u062E\u0644\u0627\u0644 15 \u062F\u0642\u064A\u0642\u0629). \u0648\u0628\u0639\u062F\u0647\u0627 \u0628\u062A\u0628\u0627\u0646 \u0641\u064A \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0643\u0645\u0627\u0646."
-      ],
       b: {
         en: "Record a trade",
-        ar: "\u0633\u062C\u0651\u0644 \u0635\u0641\u0642\u0629"
+        ar: "\u062A\u0633\u062C\u064A\u0644 \u0635\u0641\u0642\u0629"
+      },
+      s: {
+        en: "Tell the bot what you bought or sold \u2014 it updates your app.",
+        ar: "\u0623\u062E\u0628\u0631 \u0627\u0644\u0628\u0648\u062A \u0628\u0645\u0627 \u0627\u0634\u062A\u0631\u064A\u062A \u0623\u0648 \u0628\u0639\u062A \u2014 \u0648\u064A\u062D\u062F\u0651\u062B \u062A\u0637\u0628\u064A\u0642\u0643."
+      },
+      en: [
+        "Write <i>bought 0.01 BTC at 95k</i> or <i>sold 5 SOL at 180</i>.",
+        "The bot shows what will change: amount, average price and profit.",
+        "Tap <b>\u2705 Confirm</b> within 15 minutes \u2014 then it's in your app too."
+      ],
+      ar: [
+        "\u0627\u0643\u062A\u0628 <i>\u0627\u0634\u062A\u0631\u064A\u062A 0.01 BTC \u0628\u0633\u0639\u0631 95 \u0623\u0644\u0641</i> \u0623\u0648 <i>\u0628\u0639\u062A 5 SOL \u0628\u0633\u0639\u0631 180</i>.",
+        "\u064A\u0639\u0631\u0636 \u0627\u0644\u0628\u0648\u062A \u0645\u0627 \u0633\u064A\u062A\u063A\u064A\u0631: \u0627\u0644\u0643\u0645\u064A\u0629 \u0648\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u0631\u0628\u062D.",
+        "\u0627\u0636\u063A\u0637 <b>\u2705 Confirm</b> \u062E\u0644\u0627\u0644 15 \u062F\u0642\u064A\u0642\u0629 \u2014 \u0641\u062A\u0638\u0647\u0631 \u0627\u0644\u0635\u0641\u0642\u0629 \u0641\u064A \u062A\u0637\u0628\u064A\u0642\u0643 \u0623\u064A\u0636\u0627\u064B."
+      ],
+      tip: {
+        en: "Nothing is saved until you confirm.",
+        ar: "\u0644\u0627 \u064A\u064F\u062D\u0641\u0638 \u0634\u064A\u0621 \u062D\u062A\u0649 \u062A\u0624\u0643\u062F."
       }
     },
     {
       k: "daily",
       e: "\u{1F5D3}",
+      g: "daily",
       t: {
         en: "Daily messages and radars",
-        ar: "\u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A"
+        ar: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A"
       },
-      en: [
-        "\u2600\uFE0F <b>Smart morning</b> (08:45 Riyadh): 3 things to do today. \u{1F319} <b>Smart evening</b> (21:00): what happened and what to watch.",
-        "\u{1F9F2} <b>Leverage radar</b>: crowded longs / shorts on BTC and your biggest coins. \u{1F525} <b>Sector radar</b>: a big sector moving fast.",
-        "\u{1F4CC} <b>Live pinned message</b> at the top of the chat (every 15 min). <code>/pin</code> brings it back, <code>/unpin</code> removes it.",
-        "<code>/daily</code> switches each one on or off."
-      ],
-      ar: [
-        "\u2600\uFE0F <b>\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A</b> (8:45 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636): 3 \u062D\u0627\u062C\u0627\u062A \u062A\u0639\u0645\u0644\u0647\u0627 \u0627\u0644\u0646\u0647\u0627\u0631\u062F\u0647. \u{1F319} <b>\u0627\u0644\u0645\u0633\u0627\u0621 \u0627\u0644\u0630\u0643\u064A</b> (9 \u0628\u0627\u0644\u0644\u064A\u0644): \u0627\u0644\u0644\u064A \u062D\u0635\u0644 \u0648\u062A\u0631\u0627\u0642\u0628 \u0625\u064A\u0647.",
-        "\u{1F9F2} <b>\u0631\u0627\u062F\u0627\u0631 \u0627\u0644\u0631\u0627\u0641\u0639\u0629</b>: \u0632\u062D\u0645\u0629 \u0644\u0648\u0646\u062C \u0623\u0648 \u0634\u0648\u0631\u062A \u0639\u0644\u0649 BTC \u0648\u0623\u0643\u0628\u0631 \u0639\u0645\u0644\u0627\u062A\u0643. \u{1F525} <b>\u0631\u0627\u062F\u0627\u0631 \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A</b>: \u0642\u0637\u0627\u0639 \u0643\u0628\u064A\u0631 \u0628\u064A\u062A\u062D\u0631\u0643 \u0628\u0633\u0631\u0639\u0629.",
-        "\u{1F4CC} <b>\u0631\u0633\u0627\u0644\u0629 \u0645\u062A\u062B\u0628\u062A\u0629 \u0645\u0628\u0627\u0634\u0631\u0629</b> \u0641\u0648\u0642 \u0627\u0644\u0634\u0627\u062A (\u0643\u0644 15 \u062F\u0642\u064A\u0642\u0629). <code>/pin</code> \u064A\u0631\u062C\u0651\u0639\u0647\u0627\u060C \u0648<code>/unpin</code> \u064A\u0634\u064A\u0644\u0647\u0627.",
-        "<code>/daily</code> \u0628\u064A\u0634\u063A\u0651\u0644 \u0623\u0648 \u064A\u0642\u0641\u0644 \u0643\u0644 \u0648\u0627\u062D\u062F\u0629."
-      ],
       b: {
         en: "Daily & radars",
         ar: "\u0627\u0644\u064A\u0648\u0645\u064A \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A"
+      },
+      s: {
+        en: "The bot keeps you up to date, morning to evening.",
+        ar: "\u064A\u0628\u0642\u064A\u0643 \u0627\u0644\u0628\u0648\u062A \u0639\u0644\u0649 \u0627\u0637\u0644\u0627\u0639 \u0645\u0646 \u0627\u0644\u0635\u0628\u0627\u062D \u062D\u062A\u0649 \u0627\u0644\u0645\u0633\u0627\u0621."
+      },
+      en: [
+        "\u2600\uFE0F <b>Smart morning</b> (08:45 Riyadh): 3 things to do today.",
+        "\u{1F319} <b>Smart evening</b> (21:00): what happened and what to watch.",
+        "\u{1F9F2} <b>Leverage radar</b>: crowded longs / shorts on BTC and your biggest coins \xB7 \u{1F525} <b>Sector radar</b>: a big sector moving fast.",
+        "\u{1F4CC} <b>Live pinned message</b> at the top of the chat, refreshed every 15 minutes."
+      ],
+      ar: [
+        "\u2600\uFE0F <b>\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A</b> (08:45 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636): 3 \u0623\u0645\u0648\u0631 \u062A\u0641\u0639\u0644\u0647\u0627 \u0627\u0644\u064A\u0648\u0645.",
+        "\u{1F319} <b>\u0627\u0644\u0645\u0633\u0627\u0621 \u0627\u0644\u0630\u0643\u064A</b> (21:00): \u0645\u0627 \u062D\u062F\u062B \u0648\u0645\u0627 \u064A\u062C\u0628 \u0645\u0631\u0627\u0642\u0628\u062A\u0647.",
+        "\u{1F9F2} <b>\u0631\u0627\u062F\u0627\u0631 \u0627\u0644\u0631\u0627\u0641\u0639\u0629</b>: \u0627\u0632\u062F\u062D\u0627\u0645 \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u0634\u0631\u0627\u0621 \u0623\u0648 \u0627\u0644\u0628\u064A\u0639 \u0639\u0644\u0649 BTC \u0648\u0623\u0643\u0628\u0631 \u0639\u0645\u0644\u0627\u062A\u0643 \xB7 \u{1F525} <b>\u0631\u0627\u062F\u0627\u0631 \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A</b>: \u0642\u0637\u0627\u0639 \u0643\u0628\u064A\u0631 \u064A\u062A\u062D\u0631\u0643 \u0628\u0633\u0631\u0639\u0629.",
+        "\u{1F4CC} <b>\u0631\u0633\u0627\u0644\u0629 \u0645\u062B\u0628\u062A\u0629 \u0645\u0628\u0627\u0634\u0631\u0629</b> \u0623\u0639\u0644\u0649 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u062A\u062A\u062D\u062F\u062B \u0643\u0644 15 \u062F\u0642\u064A\u0642\u0629."
+      ],
+      tip: {
+        en: "/daily turns each one on or off \xB7 /pin brings the pinned message back, /unpin removes it.",
+        ar: "/daily \u064A\u0634\u063A\u0651\u0644 \u0623\u0648 \u064A\u0648\u0642\u0641 \u0643\u0644 \u0648\u0627\u062D\u062F\u0629 \xB7 /pin \u064A\u0639\u064A\u062F \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u0628\u062A\u0629\u060C \u0648/unpin \u064A\u0632\u064A\u0644\u0647\u0627."
       }
     },
     {
       k: "paper",
       e: "\u{1F9EA}",
+      g: "extras",
       t: {
         en: "Paper trading",
         ar: "\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A"
       },
-      en: [
-        "Practice with pretend money at real prices: <code>/paper</code> \u2192 pick $1k / $10k / $100k.",
-        "Say <i>paper buy 0.1 BTC</i> or <i>paper sell half SOL</i>. \u21A9\uFE0F undoes the last one. You see how you'd do against simply holding BTC."
-      ],
-      ar: [
-        "\u0627\u062A\u0645\u0631\u0651\u0646 \u0628\u0641\u0644\u0648\u0633 \u0648\u0647\u0645\u064A\u0629 \u0628\u0623\u0633\u0639\u0627\u0631 \u062D\u0642\u064A\u0642\u064A\u0629: <code>/paper</code> \u2190 \u0627\u062E\u062A\u0627\u0631 $1k / $10k / $100k.",
-        "\u0642\u0648\u0644 <i>\u062A\u062C\u0631\u064A\u0628\u064A \u0627\u0634\u062A\u0631\u064A 0.1 BTC</i> \u0623\u0648 <i>\u062A\u062C\u0631\u064A\u0628\u064A \u0628\u064A\u0639 \u0646\u0635 SOL</i>. \u21A9\uFE0F \u064A\u0644\u063A\u064A \u0622\u062E\u0631 \u0648\u0627\u062D\u062F\u0629. \u0648\u0628\u062A\u0634\u0648\u0641 \u0646\u062A\u064A\u062C\u062A\u0643 \u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0625\u0646\u0643 \u062A\u062D\u062A\u0641\u0638 \u0628\u0640 BTC \u0628\u0633."
-      ],
       b: {
         en: "Paper trading",
         ar: "\u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A"
+      },
+      s: {
+        en: "Practice with pretend money at real prices.",
+        ar: "\u062A\u062F\u0631\u0651\u0628 \u0628\u0623\u0645\u0648\u0627\u0644 \u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0648\u0628\u0623\u0633\u0639\u0627\u0631 \u062D\u0642\u064A\u0642\u064A\u0629."
+      },
+      en: [
+        "Send /paper and pick $1k, $10k or $100k.",
+        "Say <i>paper buy 0.1 BTC</i> or <i>paper sell half SOL</i>.",
+        "See how you do against simply holding BTC."
+      ],
+      ar: [
+        "\u0623\u0631\u0633\u0644 /paper \u0648\u0627\u062E\u062A\u0631 1,000$ \u0623\u0648 10,000$ \u0623\u0648 100,000$.",
+        "\u0627\u0643\u062A\u0628 <i>\u062A\u062C\u0631\u064A\u0628\u064A \u0627\u0634\u062A\u0631\u064A 0.1 BTC</i> \u0623\u0648 <i>\u062A\u062C\u0631\u064A\u0628\u064A \u0628\u064A\u0639 \u0646\u0635\u0641 SOL</i>.",
+        "\u0634\u0627\u0647\u062F \u0623\u062F\u0627\u0621\u0643 \u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0641\u0642\u0637."
+      ],
+      tip: {
+        en: "\u21A9\uFE0F undoes the last paper trade.",
+        ar: "\u21A9\uFE0F \u064A\u0644\u063A\u064A \u0622\u062E\u0631 \u0635\u0641\u0642\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629."
       }
     },
     {
       k: "report",
       e: "\u{1F4CA}",
+      g: "extras",
       t: {
         en: "Full report and image cards",
-        ar: "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644 \u0648\u0643\u0631\u0648\u062A \u0627\u0644\u0635\u0648\u0631"
+        ar: "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644 \u0648\u0628\u0637\u0627\u0642\u0627\u062A \u0627\u0644\u0635\u0648\u0631"
       },
-      en: [
-        "\u{1F4CA} <b>Report</b> (in the menu, or <code>/report</code>) opens a page inside Telegram: value, coins, plan, exit, market, paper, alerts.",
-        `\u{1F4F8} on a card makes a share-ready image (portfolio, a coin, the market) \u2014 with "hide $" if you'd rather not show amounts.`
-      ],
-      ar: [
-        "\u{1F4CA} <b>Report</b> (\u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629\u060C \u0623\u0648 <code>/report</code>) \u0628\u064A\u0641\u062A\u062D \u0635\u0641\u062D\u0629 \u062C\u0648\u0647 \u062A\u0644\u062C\u0631\u0627\u0645: \u0627\u0644\u0642\u064A\u0645\u0629\u060C \u0627\u0644\u0639\u0645\u0644\u0627\u062A\u060C \u0627\u0644\u062E\u0637\u0629\u060C \u0627\u0644\u062E\u0631\u0648\u062C\u060C \u0627\u0644\u0633\u0648\u0642\u060C \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A.",
-        '\u{1F4F8} \u0639\u0644\u0649 \u0623\u064A \u0643\u0627\u0631\u062A \u0628\u064A\u0639\u0645\u0644 \u0635\u0648\u0631\u0629 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629 (\u0627\u0644\u0645\u062D\u0641\u0638\u0629\u060C \u0639\u0645\u0644\u0629\u060C \u0627\u0644\u0633\u0648\u0642) \u2014 \u0648\u0645\u0639\u0627\u0647\u0627 "\u0625\u062E\u0641\u0627\u0621 $" \u0644\u0648 \u0645\u0634 \u0639\u0627\u064A\u0632 \u062A\u0628\u064A\u0651\u0646 \u0627\u0644\u0645\u0628\u0627\u0644\u063A.'
-      ],
       b: {
         en: "Report & cards",
-        ar: "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0648\u0627\u0644\u0643\u0631\u0648\u062A"
+        ar: "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0648\u0627\u0644\u0628\u0637\u0627\u0642\u0627\u062A"
+      },
+      s: {
+        en: "Everything on one page inside Telegram \u2014 and images to share.",
+        ar: "\u0643\u0644 \u0634\u064A\u0621 \u0641\u064A \u0635\u0641\u062D\u0629 \u0648\u0627\u062D\u062F\u0629 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2014 \u0648\u0635\u0648\u0631 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629."
+      },
+      en: [
+        "Tap \u{1F4CA} <b>Report</b> in the menu, or send /report.",
+        "A page opens inside Telegram: value, coins, plan, exit, market, paper and alerts.",
+        "Tap \u{1F4F8} on a card to make a share-ready image (portfolio, a coin or the market)."
+      ],
+      ar: [
+        "\u0627\u0636\u063A\u0637 \u{1F4CA} <b>Report</b> \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629\u060C \u0623\u0648 \u0623\u0631\u0633\u0644 /report.",
+        "\u062A\u064F\u0641\u062A\u062D \u0635\u0641\u062D\u0629 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645: \u0627\u0644\u0642\u064A\u0645\u0629\u060C \u0648\u0627\u0644\u0639\u0645\u0644\u0627\u062A\u060C \u0648\u0627\u0644\u062E\u0637\u0629\u060C \u0648\u0627\u0644\u062E\u0631\u0648\u062C\u060C \u0648\u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0648\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A.",
+        "\u0627\u0636\u063A\u0637 \u{1F4F8} \u0639\u0644\u0649 \u0623\u064A \u0628\u0637\u0627\u0642\u0629 \u0644\u0635\u0646\u0639 \u0635\u0648\u0631\u0629 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629 (\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0623\u0648 \u0639\u0645\u0644\u0629 \u0623\u0648 \u0627\u0644\u0633\u0648\u0642)."
+      ],
+      tip: {
+        en: `Use "hide $" if you'd rather not show amounts.`,
+        ar: '\u0627\u0633\u062A\u062E\u062F\u0645 "\u0625\u062E\u0641\u0627\u0621 $" \u0625\u0630\u0627 \u0643\u0646\u062A \u0644\u0627 \u062A\u0631\u064A\u062F \u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u0645\u0628\u0627\u0644\u063A.'
       }
     },
     {
       k: "premium",
       e: "\u2B50",
+      g: "account",
       t: {
         en: "Premium and support",
-        ar: "\u0627\u0644\u0645\u0645\u064A\u0632 \u0648\u0627\u0644\u062F\u0639\u0645"
+        ar: "\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0648\u0627\u0644\u062F\u0639\u0645"
       },
-      en: [
-        "Everything stays free. \u2B50 <b>Premium</b> adds voice notes, 20 AI questions and 3 quick AI reports a day \u2014 <code>/premium</code> (350 Telegram Stars a month, renews by itself, cancel any time in Telegram \u2192 Settings \u2192 My Stars).",
-        "\u{1F49B} <b>Support</b> is optional: a one-time thank-you of 50\u2013500 Stars \u2014 <code>/support</code> \u2014 and a Supporter \u{1F49B} badge.",
-        "Why it costs anything: the AI is paid per question; this only covers that. Cute Portfolio is non-profit."
-      ],
-      ar: [
-        "\u0643\u0644 \u062D\u0627\u062C\u0629 \u0628\u062A\u0641\u0636\u0644 \u0645\u062C\u0627\u0646\u064A\u0629. \u2B50 <b>\u0627\u0644\u0645\u0645\u064A\u0632</b> \u0628\u064A\u0632\u0648\u0651\u062F \u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629\u060C \u064820 \u0633\u0624\u0627\u0644 AI\u060C \u06483 \u062A\u0642\u0627\u0631\u064A\u0631 \u0633\u0631\u064A\u0639\u0629 \u0641\u064A \u0627\u0644\u064A\u0648\u0645 \u2014 <code>/premium</code> (350 Telegram Stars \u0641\u064A \u0627\u0644\u0634\u0647\u0631\u060C \u0628\u064A\u062A\u062C\u062F\u062F \u0644\u0648\u062D\u062F\u0647\u060C \u0648\u062A\u0644\u063A\u064A\u0647 \u0641\u064A \u0623\u064A \u0648\u0642\u062A \u0645\u0646 \u062A\u0644\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars).",
-        "\u{1F49B} <b>\u0627\u0644\u062F\u0639\u0645</b> \u0627\u062E\u062A\u064A\u0627\u0631\u064A: \u0634\u0643\u0631 \u0644\u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0645\u0646 50 \u0644\u0640 500 Star \u2014 <code>/support</code> \u2014 \u0648\u0648\u0633\u0627\u0645 Supporter \u{1F49B}.",
-        "\u0644\u064A\u0647 \u0628\u0641\u0644\u0648\u0633 \u0623\u0635\u0644\u0627\u064B: \u0627\u0644\u0640 AI \u0628\u064A\u062A\u062D\u0627\u0633\u0628 \u0639\u0644\u0649 \u0643\u0644 \u0633\u0624\u0627\u0644\u060C \u0648\u062F\u0647 \u0628\u064A\u063A\u0637\u064A \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u062F\u064A \u0628\u0633. Cute Portfolio \u0645\u0634 \u0647\u0627\u062F\u0641 \u0644\u0644\u0631\u0628\u062D."
-      ],
       b: {
         en: "Premium & support",
         ar: "\u0627\u0644\u0645\u0645\u064A\u0632 \u0648\u0627\u0644\u062F\u0639\u0645"
+      },
+      s: {
+        en: "Everything stays free \u2014 extras only cover the AI's cost.",
+        ar: "\u0643\u0644 \u0634\u064A\u0621 \u064A\u0628\u0642\u0649 \u0645\u062C\u0627\u0646\u064A\u0627\u064B \u2014 \u0648\u0627\u0644\u0625\u0636\u0627\u0641\u0627\u062A \u062A\u063A\u0637\u064A \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0641\u0642\u0637."
+      },
+      en: [
+        "\u2B50 <b>Premium</b> adds voice notes, 20 AI questions and 3 quick AI reports a day \u2014 /premium (350 Telegram Stars a month, renews by itself).",
+        "Cancel any time: Telegram \u2192 Settings \u2192 My Stars.",
+        "\u{1F49B} <b>Support</b> is optional: a one-time thank-you of 50\u2013500 Stars \u2014 /support \u2014 with a Supporter \u{1F49B} badge."
+      ],
+      ar: [
+        "\u2B50 <b>\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629</b> \u062A\u0636\u064A\u0641 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629\u060C \u064820 \u0633\u0624\u0627\u0644 AI\u060C \u06483 \u062A\u0642\u0627\u0631\u064A\u0631 AI \u0633\u0631\u064A\u0639\u0629 \u064A\u0648\u0645\u064A\u0627\u064B \u2014 /premium (350 Telegram Stars \u0634\u0647\u0631\u064A\u0627\u064B\u060C \u062A\u062A\u062C\u062F\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B).",
+        "\u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u0625\u0644\u063A\u0627\u0621 \u0641\u064A \u0623\u064A \u0648\u0642\u062A: \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars.",
+        "\u{1F49B} <b>\u0627\u0644\u062F\u0639\u0645</b> \u0627\u062E\u062A\u064A\u0627\u0631\u064A: \u0634\u0643\u0631 \u0644\u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0645\u0646 50 \u0625\u0644\u0649 500 Star \u2014 /support \u2014 \u0645\u0639 \u0634\u0627\u0631\u0629 \u062F\u0627\u0639\u0645 \u{1F49B}."
+      ],
+      tip: {
+        en: "Cute Portfolio is non-profit: the AI is paid per question, and this only covers that.",
+        ar: "Cute Portfolio \u063A\u064A\u0631 \u0631\u0628\u062D\u064A: \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u064A\u064F\u062F\u0641\u0639 \u0639\u0646 \u0643\u0644 \u0633\u0624\u0627\u0644\u060C \u0648\u0647\u0630\u0627 \u064A\u063A\u0637\u064A \u062A\u0644\u0643 \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u0641\u0642\u0637."
       }
     },
     {
       k: "key",
       e: "\u{1F511}",
+      g: "account",
       t: {
         en: "Your own Claude key",
-        ar: "\u0645\u0641\u062A\u0627\u062D Claude \u0628\u062A\u0627\u0639\u0643"
+        ar: "\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0643"
       },
-      en: [
-        "Have an Anthropic API key? App \u2192 Settings \u2192 <b>My Claude key</b>. It's checked, then kept encrypted \u2014 nobody can see it again.",
-        "With it: 100 questions a day, voice notes and 10 quick AI reports \u2014 billed to your own Anthropic account. Remove it any time."
-      ],
-      ar: [
-        "\u0645\u0639\u0627\u0643 \u0645\u0641\u062A\u0627\u062D Anthropic API\u061F \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 <b>My Claude key</b>. \u0628\u064A\u062A\u0623\u0643\u062F \u0645\u0646\u0647\u060C \u0648\u0628\u0639\u062F\u064A\u0646 \u0628\u064A\u062A\u062E\u0632\u0646 \u0645\u062A\u0634\u0641\u0651\u0631 \u2014 \u0645\u062D\u062F\u0634 \u064A\u0642\u062F\u0631 \u064A\u0634\u0648\u0641\u0647 \u062A\u0627\u0646\u064A.",
-        "\u0628\u064A\u0647: 100 \u0633\u0624\u0627\u0644 \u0641\u064A \u0627\u0644\u064A\u0648\u0645\u060C \u0648\u0627\u0644\u0631\u0633\u0627\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629\u060C \u064810 \u062A\u0642\u0627\u0631\u064A\u0631 \u0633\u0631\u064A\u0639\u0629 \u2014 \u0639\u0644\u0649 \u062D\u0633\u0627\u0628\u0643 \u0627\u0646\u062A \u0641\u064A Anthropic. \u0648\u062A\u0642\u062F\u0631 \u062A\u0634\u064A\u0644\u0647 \u0641\u064A \u0623\u064A \u0648\u0642\u062A."
-      ],
       b: {
         en: "Claude key",
         ar: "\u0645\u0641\u062A\u0627\u062D Claude"
+      },
+      s: {
+        en: "Have an Anthropic API key? Get more AI, billed to you.",
+        ar: "\u0644\u062F\u064A\u0643 \u0645\u0641\u062A\u0627\u062D Anthropic API\u061F \u0627\u062D\u0635\u0644 \u0639\u0644\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0623\u0643\u0628\u0631 \u0644\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0639\u0644\u0649 \u062D\u0633\u0627\u0628\u0643."
+      },
+      en: [
+        "App \u2192 Settings \u2192 <b>My Claude key</b>, and paste it.",
+        "It's checked, then kept encrypted \u2014 nobody can see it again.",
+        "You get 100 questions a day, voice notes and 10 quick AI reports \u2014 billed to your Anthropic account."
+      ],
+      ar: [
+        "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 <b>\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u064A</b>\u060C \u0648\u0627\u0644\u0635\u0642 \u0627\u0644\u0645\u0641\u062A\u0627\u062D.",
+        "\u064A\u064F\u062A\u062D\u0642\u0642 \u0645\u0646\u0647\u060C \u062B\u0645 \u064A\u064F\u062D\u0641\u0638 \u0645\u0634\u0641\u0651\u0631\u0627\u064B \u2014 \u0648\u0644\u0627 \u064A\u0633\u062A\u0637\u064A\u0639 \u0623\u062D\u062F \u0631\u0624\u064A\u062A\u0647 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.",
+        "\u062A\u062D\u0635\u0644 \u0639\u0644\u0649 100 \u0633\u0624\u0627\u0644 \u064A\u0648\u0645\u064A\u0627\u064B\u060C \u0648\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629\u060C \u064810 \u062A\u0642\u0627\u0631\u064A\u0631 AI \u0633\u0631\u064A\u0639\u0629 \u2014 \u0639\u0644\u0649 \u062D\u0633\u0627\u0628\u0643 \u0641\u064A Anthropic."
+      ],
+      tip: {
+        en: "You can remove it any time.",
+        ar: "\u064A\u0645\u0643\u0646\u0643 \u0625\u0632\u0627\u0644\u062A\u0647 \u0641\u064A \u0623\u064A \u0648\u0642\u062A."
       }
     },
     {
       k: "privacy",
       e: "\u{1F512}",
+      g: "account",
       t: {
         en: "Privacy and your data",
         ar: "\u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629 \u0648\u0628\u064A\u0627\u0646\u0627\u062A\u0643"
       },
-      en: [
-        "Your portfolio is yours alone \u2014 the bot reads it only for you, never for anyone else.",
-        "<code>/forget</code> deletes everything the bot keeps about you (alerts, chat memory, settings, the link) \u2014 your app portfolio stays.",
-        "To keep things fair, the bot takes up to 20 messages a minute."
-      ],
-      ar: [
-        "\u0645\u062D\u0641\u0638\u062A\u0643 \u0644\u064A\u0643 \u0627\u0646\u062A \u0628\u0633 \u2014 \u0627\u0644\u0628\u0648\u062A \u0628\u064A\u0642\u0631\u0627\u0647\u0627 \u0639\u0634\u0627\u0646\u0643 \u0627\u0646\u062A\u060C \u0648\u0644\u0627 \u0644\u062D\u062F \u062A\u0627\u0646\u064A \u0623\u0628\u062F\u0627\u064B.",
-        "<code>/forget</code> \u0628\u064A\u0645\u0633\u062D \u0643\u0644 \u062D\u0627\u062C\u0629 \u0627\u0644\u0628\u0648\u062A \u0634\u0627\u064A\u0644\u0647\u0627 \u0639\u0646\u0643 (\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u060C \u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A\u060C \u0627\u0644\u0631\u0628\u0637) \u2014 \u0648\u0645\u062D\u0641\u0638\u062A\u0643 \u0641\u064A \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0628\u062A\u0641\u0636\u0644 \u0632\u064A \u0645\u0627 \u0647\u064A.",
-        "\u0639\u0634\u0627\u0646 \u0627\u0644\u0639\u062F\u0644 \u0644\u0644\u0643\u0644\u060C \u0627\u0644\u0628\u0648\u062A \u0628\u064A\u0627\u062E\u062F \u0644\u062D\u062F 20 \u0631\u0633\u0627\u0644\u0629 \u0641\u064A \u0627\u0644\u062F\u0642\u064A\u0642\u0629."
-      ],
       b: {
         en: "Privacy",
         ar: "\u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629"
+      },
+      s: {
+        en: "Your portfolio is yours alone.",
+        ar: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0644\u0643 \u0648\u062D\u062F\u0643."
+      },
+      en: [
+        "The bot reads your portfolio only for you \u2014 never for anyone else.",
+        "/forget deletes everything the bot keeps about you (alerts, chat memory, settings, the link) \u2014 your app portfolio stays.",
+        "To keep things fair, the bot takes up to 20 messages a minute."
+      ],
+      ar: [
+        "\u064A\u0642\u0631\u0623 \u0627\u0644\u0628\u0648\u062A \u0645\u062D\u0641\u0638\u062A\u0643 \u0645\u0646 \u0623\u062C\u0644\u0643 \u0641\u0642\u0637 \u2014 \u0648\u0644\u0627 \u064A\u0639\u0631\u0636\u0647\u0627 \u0644\u0623\u064A \u0634\u062E\u0635 \u0622\u062E\u0631.",
+        "/forget \u064A\u062D\u0630\u0641 \u0643\u0644 \u0645\u0627 \u064A\u062D\u0641\u0638\u0647 \u0627\u0644\u0628\u0648\u062A \u0639\u0646\u0643 (\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u060C \u0648\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u0648\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A\u060C \u0648\u0627\u0644\u0631\u0628\u0637) \u2014 \u0648\u062A\u0628\u0642\u0649 \u0645\u062D\u0641\u0638\u062A\u0643 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0643\u0645\u0627 \u0647\u064A.",
+        "\u0644\u0644\u0639\u062F\u0644 \u0628\u064A\u0646 \u0627\u0644\u062C\u0645\u064A\u0639\u060C \u064A\u0633\u062A\u0642\u0628\u0644 \u0627\u0644\u0628\u0648\u062A \u062D\u062A\u0649 20 \u0631\u0633\u0627\u0644\u0629 \u0641\u064A \u0627\u0644\u062F\u0642\u064A\u0642\u0629."
+      ],
+      tip: {
+        en: "Away for two weeks? The daily messages pause by themselves; send anything to bring them back.",
+        ar: "\u063A\u0628\u062A \u0623\u0633\u0628\u0648\u0639\u064A\u0646\u061F \u062A\u062A\u0648\u0642\u0641 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B\u061B \u0623\u0631\u0633\u0644 \u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u0644\u062A\u0639\u0648\u062F."
       }
     },
     {
       k: "help",
       e: "\u{1F4AC}",
+      g: "account",
       t: {
         en: "Help",
         ar: "\u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629"
       },
-      en: [
-        "Stuck? Ask the bot in plain words \u2014 <i>how do I add a coin?</i> \u2014 or write to Dr. Samir Saad.",
-        "<code>/guide</code> opens this guide again any time; in the app: Settings \u2192 Guide."
-      ],
-      ar: [
-        "\u0648\u0642\u0641\u062A \u0641\u064A \u062D\u0627\u062C\u0629\u061F \u0627\u0633\u0623\u0644 \u0627\u0644\u0628\u0648\u062A \u0639\u0627\u062F\u064A \u2014 <i>\u0625\u0632\u0627\u064A \u0623\u0636\u064A\u0641 \u0639\u0645\u0644\u0629\u061F</i> \u2014 \u0623\u0648 \u0643\u0644\u0651\u0645 Dr. Samir Saad.",
-        "<code>/guide</code> \u064A\u0641\u062A\u062D \u0627\u0644\u062F\u0644\u064A\u0644 \u062F\u0647 \u062A\u0627\u0646\u064A \u0641\u064A \u0623\u064A \u0648\u0642\u062A\u061B \u0648\u0641\u064A \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 Guide."
-      ],
       b: {
         en: "Help",
         ar: "\u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629"
+      },
+      s: {
+        en: "Stuck? Just ask.",
+        ar: "\u0648\u0627\u062C\u0647\u062A\u0643 \u0645\u0634\u0643\u0644\u0629\u061F \u0627\u0633\u0623\u0644 \u0641\u0642\u0637."
+      },
+      en: [
+        "Ask the bot in plain words \u2014 <i>how do I add a coin?</i>",
+        "Or write to Dr. Samir Saad.",
+        "/guide opens this guide again any time; in the app: Settings \u2192 Guide."
+      ],
+      ar: [
+        "\u0627\u0633\u0623\u0644 \u0627\u0644\u0628\u0648\u062A \u0628\u0643\u0644\u0645\u0627\u062A\u0643 \u2014 <i>\u0643\u064A\u0641 \u0623\u0636\u064A\u0641 \u0639\u0645\u0644\u0629\u061F</i>",
+        "\u0623\u0648 \u0631\u0627\u0633\u0644 Dr. Samir Saad.",
+        "/guide \u064A\u0641\u062A\u062D \u0647\u0630\u0627 \u0627\u0644\u062F\u0644\u064A\u0644 \u0641\u064A \u0623\u064A \u0648\u0642\u062A\u061B \u0648\u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u062F\u0644\u064A\u0644."
+      ],
+      tip: {
+        en: "The \u{1F465} community group has a Guide topic and a place for questions.",
+        ar: "\u0641\u064A \u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u062C\u062A\u0645\u0639 \u{1F465} \u0642\u0633\u0645 \u0644\u0644\u062F\u0644\u064A\u0644 \u0648\u0645\u0643\u0627\u0646 \u0644\u0644\u0623\u0633\u0626\u0644\u0629."
       }
     }
   ]
@@ -2664,7 +2837,10 @@ async function setup(env, kind, opt = {}) {
         x.guidePosted = done === true ? true : done;
         if (done !== true) notes.push(`\u26A0\uFE0F The guide stopped at part ${done + 1} (Telegram's limit) \u2014 send /community setup in a minute to finish it.`);
       }
-      if (x.guidePosted === true && !x.guideSig) x.guideSig = guideSigs();
+      if (x.guidePosted === true && !x.guideSig) {
+        x.guideSig = guideSigs();
+        x.guideV = guide_default.v || 1;
+      }
       if (!x.tidy && !await tidy(env, x)) notes.push('\u26A0\uFE0F Could not close \u{1F4D8} or hide # General \u2014 check that I can "Manage topics".');
     } else notes.push("\u26A0\uFE0F Turn on <b>Topics</b> in the group's settings, then send /community setup.");
   }
@@ -2685,15 +2861,39 @@ async function tidy(env, x) {
   if (okAll) x.tidy = true;
   return okAll;
 }
+var LRI = "\u2066";
+var PDI = "\u2069";
+var RLM = "\u200F";
+var NUM = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3", "9\uFE0F\u20E3"];
+function gLine(l, ar) {
+  if (!ar) return l;
+  l = l.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI}<${t}>${x}</${t}>${PDI}`);
+  l = l.replace(/(^|[\s(])(\/[a-z]+(?: CODE)?)(?=$|[\s),.؛،])/g, (m, a, c) => `${a}${LRI}${c}${PDI}`);
+  return RLM + l;
+}
+function guideCard(s, L) {
+  const ar = L === "ar";
+  return [
+    `${s.e} <b>${s.t[L]}</b>`,
+    s.s ? gLine(`<i>${s.s[L]}</i>`, ar) : null,
+    "",
+    ...s[L].map((l, i) => gLine(`${NUM[i] || "\u2022"} ${l}`, ar)),
+    ...s.tip ? ["", gLine(`\u{1F4A1} <b>${ar ? "\u0646\u0635\u064A\u062D\u0629" : "Tip"}:</b> ${s.tip[L]}`, ar)] : []
+  ].filter((x) => x != null).join("\n");
+}
+function guideGroups() {
+  const gs = guide_default.groups || [{ k: null, e: "", t: { en: "", ar: "" } }];
+  return gs.map((g) => ({ ...g, items: guide_default.sections.filter((s) => !guide_default.groups || s.g === g.k) })).filter((g) => g.items.length);
+}
 var sig = (s) => {
   let h = 0;
-  for (const ch of JSON.stringify([s.t, s.en, s.ar])) h = h * 31 + ch.charCodeAt(0) | 0;
+  for (const ch of JSON.stringify([s.t, s.s, s.en, s.ar, s.tip])) h = h * 31 + ch.charCodeAt(0) | 0;
   return String(h);
 };
 var guideSigs = () => Object.fromEntries(guide_default.sections.map((s) => [s.k, sig(s)]));
 async function guideUpdates(env) {
   const c = await getCommunity(env), x = c.group;
-  if (!x || !x.topics || !x.topics.guide || x.guidePosted !== true) return { posted: 0 };
+  if (!x || !x.topics || !x.topics.guide || x.guidePosted !== true && !x.reposting) return { posted: 0 };
   if (!x.tidy && !x.tidyTried) {
     x.tidyTried = true;
     await tidy(env, x);
@@ -2705,6 +2905,22 @@ async function guideUpdates(env) {
     c.group = x;
     await putCommunity(env, c);
   }
+  if ((x.guideV || 1) !== (guide_default.v || 1) || x.reposting) {
+    if (!x.reposting) {
+      x.reposting = true;
+      x.guidePosted = -1;
+    }
+    const done = await postGuide(env, x);
+    x.guidePosted = done === true ? true : done;
+    if (done === true) {
+      delete x.reposting;
+      x.guideV = guide_default.v || 1;
+      x.guideSig = guideSigs();
+    }
+    c.group = x;
+    await putCommunity(env, c);
+    return { posted: "all" };
+  }
   if (!x.guideSig) {
     x.guideSig = guideSigs();
     c.group = x;
@@ -2713,7 +2929,6 @@ async function guideUpdates(env) {
   }
   const now = guideSigs(), changed = guide_default.sections.filter((s) => x.guideSig[s.k] !== now[s.k]);
   if (!changed.length) return { posted: 0 };
-  const line = (l) => /^•\s/.test(l) ? "   \u25E6 " + l.slice(2) : "\u2022 " + l;
   let n = 0;
   for (const s of changed.slice(0, 5)) {
     const isNew = !(s.k in x.guideSig);
@@ -2722,13 +2937,9 @@ async function guideUpdates(env) {
       message_thread_id: x.topics.guide,
       parse_mode: "HTML",
       disable_web_page_preview: true,
-      text: `\u{1F195} <b>${isNew ? "New in the guide \xB7 \u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644" : "Updated \xB7 \u0627\u062A\u062D\u062F\u0651\u062B"}</b>
+      text: `\u{1F195} <b>${isNew ? "New in the guide \xB7 \u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644" : "Updated \xB7 \u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B"}</b>
 
-${s.e} <b>${s.t.en}</b>
-` + s.en.map(line).join("\n") + `
-
-${s.e} <b>${s.t.ar}</b>
-` + s.ar.map(line).join("\n")
+` + guideCard(s, "en") + "\n\n\u2014 \u2014 \u2014\n\n" + guideCard(s, "ar")
     });
     if (!r.ok) break;
     x.guideSig[s.k] = now[s.k];
@@ -2748,19 +2959,15 @@ ${guide_default.intro.en}
 <b>${guide_default.title.ar}</b>
 ${guide_default.intro.ar}
 
-` + guide_default.sections.map((s) => `${s.e} ${esc((s.b || s.t).en)} \xB7 ${esc((s.b || s.t).ar)}`).join("\n"));
+` + guideGroups().map((g) => (g.e ? `${g.e} <b>${esc(g.t.en)} \xB7 ${esc(g.t.ar)}</b>
+` : "") + g.items.map((s) => `${s.e} ${esc((s.b || s.t).en)} \xB7 ${esc((s.b || s.t).ar)}`).join("\n")).join("\n\n"));
     if (!idx.ok) return 0;
     await tg3(env, "pinChatMessage", { chat_id: x.id, message_id: idx.result.message_id, disable_notification: true });
     from = 0;
   }
-  const line = (l) => /^•\s/.test(l) ? "   \u25E6 " + l.slice(2) : "\u2022 " + l;
   for (let i = from; i < guide_default.sections.length; i++) {
     const s = guide_default.sections[i];
-    const r = await send3(`${s.e} <b>${s.t.en}</b>
-` + s.en.map(line).join("\n") + `
-
-${s.e} <b>${s.t.ar}</b>
-` + s.ar.map(line).join("\n"));
+    const r = await send3(guideCard(s, "en") + "\n\n\u2014 \u2014 \u2014\n\n" + guideCard(s, "ar"));
     if (!r.ok) return i;
   }
   return true;
@@ -5376,24 +5583,21 @@ async function usedToday(env, c, x) {
   }
   return { q, r };
 }
-var LRI = "\u2066";
-var PDI = "\u2069";
-function gLine(l, ar) {
-  let s = /^•\s/.test(l) ? "\u25E6 " + l.slice(2) : "\u2022 " + l;
-  if (ar) s = s.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI}<${t}>${x}</${t}>${PDI}`);
-  return s;
-}
 function guideView(lang2, k = null) {
-  const L = lang2 === "ar" ? "ar" : "en", ar = L === "ar", s = k && guide_default.sections.find((x) => x.k === k);
-  if (s) return { text: `${s.e} <b>${s.t[L]}</b>
-
-` + s[L].map((l) => gLine(l, ar)).join("\n\n"), buttons: [[cb3(ar ? "\u{1F4D8} \u0627\u0644\u062F\u0644\u064A\u0644" : "\u{1F4D8} Guide", "gd"), cb3(ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", "menu")]] };
-  const b = [];
-  for (let i = 0; i < guide_default.sections.length; i += 2) b.push(guide_default.sections.slice(i, i + 2).map((x) => cb3(`${x.e} ${(x.b || x.t)[L]}`, "gd:" + x.k)));
+  const L = lang2 === "ar" ? "ar" : "en", ar = L === "ar", S = guide_default.sections, i = k ? S.findIndex((x) => x.k === k) : -1;
+  if (i >= 0) {
+    const nav = [i > 0 ? cb3(ar ? "\u25C0\uFE0F \u0627\u0644\u0633\u0627\u0628\u0642" : "\u25C0\uFE0F Previous", "gd:" + S[i - 1].k) : null, cb3(ar ? "\u{1F4D8} \u0627\u0644\u0641\u0647\u0631\u0633" : "\u{1F4D8} Index", "gd"), i < S.length - 1 ? cb3(ar ? "\u0627\u0644\u062A\u0627\u0644\u064A \u25B6\uFE0F" : "Next \u25B6\uFE0F", "gd:" + S[i + 1].k) : null].filter(Boolean);
+    return { text: guideCard(S[i], L), buttons: [nav, [cb3(ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", "menu")]] };
+  }
+  const gs = guideGroups(), b = [];
+  for (const g of gs) for (let j = 0; j < g.items.length; j += 2) b.push(g.items.slice(j, j + 2).map((x) => cb3(`${x.e} ${(x.b || x.t)[L]}`, "gd:" + x.k)));
   b.push([cb3(ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", "menu")]);
+  const list2 = gs.map((g) => (g.e ? `${g.e} <b>${g.t[L]}</b>: ` : "") + g.items.map((x) => (x.b || x.t)[L]).join(" \xB7 ")).join("\n");
   return { text: `<b>${guide_default.title[L]}</b>
 
-${guide_default.intro[L]}`, buttons: b };
+${guide_default.intro[L]}
+
+${list2}`, buttons: b };
 }
 async function badgeOf(env, t) {
   if (isOwner(env)) return "";

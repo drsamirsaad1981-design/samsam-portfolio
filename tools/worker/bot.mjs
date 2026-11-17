@@ -22,7 +22,7 @@ import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
 import { keyInfo, BYOK_AI, BYOK_REPORTS } from './byok.mjs';
 import GUIDE from '../../guide.json' with { type: 'json' };
-import { onMyChatMember, onJoinRequest, communityView, announce, setup as communitySetup, registerForward } from './community.mjs';
+import { onMyChatMember, onJoinRequest, communityView, announce, setup as communitySetup, registerForward, guideCard, guideGroups } from './community.mjs';
 import { premiumView, supportView, sendSupportInvoice, askGift, preCheckout, paid, statsView, addDays, revoke, premiumNow } from './stars.mjs';
 import { keepTrades, tradeLines, confirmTrades, cancelTrades, money } from './trade.mjs';
 import { viewDaily, setCfg, getCfg, morning, evening, pinUpdate, unpin } from './daily.mjs';
@@ -461,21 +461,19 @@ async function usedToday(env, c, x) {
   return { q, r };
 }
 
-// a guide line: a bullet each; in Arabic, English words / commands are kept as their own left-to-right island
-// (else "/alerts" shows as "alerts/" and "Settings → Open the bot" comes out in the wrong order)
-const LRI = '\u2066', PDI = '\u2069';
-function gLine(l, ar) {
-  let s = /^•\s/.test(l) ? '◦ ' + l.slice(2) : '• ' + l;
-  if (ar) s = s.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI}<${t}>${x}</${t}>${PDI}`);
-  return s;
-}
-// 📘 /guide — the same guide as the app's (guide.json): an index of buttons, each part opens in place
+// 📘 /guide — the same guide as the app's (guide.json): a grouped index of buttons; each part opens in place as a card,
+// with ◀️ Previous · 📘 Index · Next ▶️
 export function guideView(lang, k = null) {
-  const L = lang === 'ar' ? 'ar' : 'en', ar = L === 'ar', s = k && GUIDE.sections.find(x => x.k === k);
-  if (s) return { text: `${s.e} <b>${s.t[L]}</b>\n\n` + s[L].map(l => gLine(l, ar)).join('\n\n'), buttons: [[cb(ar ? '📘 الدليل' : '📘 Guide', 'gd'), cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')]] };
-  const b = []; for (let i = 0; i < GUIDE.sections.length; i += 2) b.push(GUIDE.sections.slice(i, i + 2).map(x => cb(`${x.e} ${(x.b || x.t)[L]}`, 'gd:' + x.k)));   // short names: two fit in a row
+  const L = lang === 'ar' ? 'ar' : 'en', ar = L === 'ar', S = GUIDE.sections, i = k ? S.findIndex(x => x.k === k) : -1;
+  if (i >= 0) {
+    const nav = [i > 0 ? cb(ar ? '◀️ السابق' : '◀️ Previous', 'gd:' + S[i - 1].k) : null, cb(ar ? '📘 الفهرس' : '📘 Index', 'gd'), i < S.length - 1 ? cb(ar ? 'التالي ▶️' : 'Next ▶️', 'gd:' + S[i + 1].k) : null].filter(Boolean);
+    return { text: guideCard(S[i], L), buttons: [nav, [cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')]] };
+  }
+  const gs = guideGroups(), b = [];
+  for (const g of gs) for (let j = 0; j < g.items.length; j += 2) b.push(g.items.slice(j, j + 2).map(x => cb(`${x.e} ${(x.b || x.t)[L]}`, 'gd:' + x.k)));   // short names: two fit in a row; each group starts a row
   b.push([cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')]);
-  return { text: `<b>${GUIDE.title[L]}</b>\n\n${GUIDE.intro[L]}`, buttons: b };
+  const list = gs.map(g => (g.e ? `${g.e} <b>${g.t[L]}</b>: ` : '') + g.items.map(x => (x.b || x.t)[L]).join(' · ')).join('\n');
+  return { text: `<b>${GUIDE.title[L]}</b>\n\n${GUIDE.intro[L]}\n\n${list}`, buttons: b };
 }
 
 // ⭐ / 💛 next to a member's hello: "Hi ⭐ — premium member · 💛 Supporter"
