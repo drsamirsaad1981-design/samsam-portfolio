@@ -52,17 +52,20 @@
       var t = (a.spot || 0) + (a.funding || 0) + (a.earn || 0); if (!(t > 0)) return;
       var o = ex[a.sym] || (ex[a.sym] = { sym: a.sym, q: 0, by: [] }); o.q += t; o.by.push({ ex: b.ex, q: t, earn: a.earn || 0, funding: a.funding || 0 });
     }); });
-    var out = [], small = 0;
+    var out = [], small = 0, unpriced = [];
     Object.keys(ex).forEach(function (sym) {
       var r = ex[sym], p = price[sym] || 0, a = app[sym] || 0, w = wal[sym] || 0, seen = r.q + w, d = seen - a;
       r.app = a; r.wal = w; r.usd = r.q * p; r.p = p;
       if (!a && p === 0 && /^(USD|USDT|USDC|FDUSD|BUSD|DAI|TUSD)$/.test(sym)) { r.p = 1; r.usd = r.q; }
       if (!a && r.usd < 1 && (p > 0 || r.q < 1e-6)) { small++; return; }   // dust that isn't in the app
+      if (!a && !(r.p > 0)) { unpriced.push(r); return; }   // not in the app and no price known: one line of chips, not a row each
+      if (r.p > 0) { var keep = r.by.filter(function (x) { return x.q * r.p >= 0.01; }); if (keep.length) r.by = keep; }   // "Gate 0.00000001" crumbs left out
       r.st = !a ? 'new' : (p > 0 ? Math.abs(d) * p < 0.5 : Math.abs(d) <= Math.max(a, seen) * 1e-4) ? 'same' : d > 0 ? 'more' : 'rest';
       r.diff = d; out.push(r);
     });
     out.sort(function (x, y) { return (y.usd || 0) - (x.usd || 0) || y.q - x.q; });
-    return { list: out, small: small, walChecked: !!(L && L.found) };
+    unpriced.sort(function (x, y) { return y.q - x.q; });
+    return { list: out, small: small, unpriced: unpriced, walChecked: !!(L && L.found) };
   }
 
   var CSS =
@@ -123,7 +126,8 @@
               : '<span class="cx-d" style="opacity:.75">' + iso(qf(-r.diff)) + ' ' + T('elsewhere', 'في مكان آخر') + '</span>';
             return '<div class="cx-r"><div class="cx-top"><b>' + E(r.sym) + (r.usd ? ' <span style="font-weight:500;opacity:.7">' + iso(usd(r.usd)) + '</span>' : '') + '</b>' + stt + '</div>' +
               '<div class="cx-nums">' + by + (r.wal ? ' · ' + T('wallets', 'المحافظ') + ' ' + iso(qf(r.wal)) : '') + ' · ' + T('app', 'التطبيق') + ' ' + iso(qf(r.app)) + '</div></div>';
-          }).join('') + '</div>';
+          }).join('') + (R.unpriced.length ? '<div class="cx-r"><div class="cx-top"><b>' + T('Other coins not in the app', 'عملات أخرى غير موجودة في التطبيق') + ' (' + iso(R.unpriced.length) + ')</b></div><div class="cx-nums">' +
+            R.unpriced.map(function (r) { return E(r.sym) + ' ' + iso(qf(r.q)); }).join(' · ') + '</div></div>' : '') + '</div>';
           h += '<p class="cx-note">' + (R.walChecked ? T('“Elsewhere” = the app holds more than these exchanges + your checked wallets (another exchange, staking, or a sell not recorded).', '«في مكان آخر» = التطبيق يسجل أكثر مما في هذه المنصات ومحافظك المفحوصة (منصة أخرى، أو Staking، أو بيع لم يُسجَّل).')
             : T('Tip: run Wallets & check too — then exchanges + wallets are compared with the app together.', 'نصيحة: شغّل «المحافظ والمطابقة» أيضاً — لتُقارَن المنصات والمحافظ معاً بالتطبيق.')) +
             (R.small ? ' ' + T(R.small + ' tiny balance' + (R.small > 1 ? 's' : '') + ' under $1 not shown.', 'لم تُعرض ' + iso(R.small) + ' أرصدة صغيرة أقل من 1$.') : '') + ' ' + T('Nothing is changed in your portfolio — you decide what to correct.', 'لا يتغير شيء في محفظتك — أنت تقرر ما تصححه.') + '</p>';
