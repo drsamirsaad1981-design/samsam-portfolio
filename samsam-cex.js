@@ -88,7 +88,7 @@
     '#cpCex .cx-seg{display:inline-flex;gap:3px;background:rgba(148,163,184,.12);padding:3px;border-radius:10px}#cpCex .cx-seg button{border:none;background:transparent;color:inherit;font:inherit;font-size:.82rem;font-weight:700;padding:6px 14px;border-radius:8px;cursor:pointer;opacity:.7}' +
     '#cpCex .cx-seg button[aria-pressed="true"]{opacity:1;background:#7c3aed;color:#fff}' +
     '#cpCex .cx-how{font-size:.8rem;margin:0;padding-inline-start:20px}#cpCex .cx-how li{margin:3px 0}' +
-    '#cpCex .cx-err{color:#f87171;font-size:.8rem;min-height:1em}[data-theme="light"] #cpCex .cx-err{color:#dc2626}' +
+    '#cpCex .cx-err{color:#f87171;font-size:.8rem;min-height:1em;white-space:pre-line}[data-theme="light"] #cpCex .cx-err{color:#dc2626}' +
     '#cpCex .cx-r{padding:9px 12px;border-top:1px solid var(--border,rgba(148,163,184,.15))}#cpCex .cx-top{display:flex;align-items:center;gap:8px;justify-content:space-between}#cpCex .cx-top b{font-size:.92rem}' +
     '#cpCex .cx-nums{font-size:.78rem;color:var(--fg2,#94a3b8);margin-top:2px}#cpCex .cx-d{font-weight:800;font-size:.8rem;white-space:nowrap}' +
     '#cpCex .cx-tot{display:flex;justify-content:space-between;align-items:baseline;padding:10px 12px;font-weight:800}';
@@ -108,7 +108,7 @@
       }).join('') + '</div>';
       // balances
       h += '<div class="cx-sec"><span>' + T('BALANCES', 'الأرصدة') + (st.at ? ' · ' + ago(st.at) : '') + '</span><button type="button" class="cx-btn2" id="cxRefresh"' + (st.loading ? ' disabled' : '') + '>🔄 ' + (st.loading ? T('Reading…', 'جارٍ القراءة…') : T('Refresh', 'تحديث')) + '</button></div>';
-      (st.balances || []).forEach(function (b) { if (!b.ok) h += '<p class="cx-err">' + E(b.name) + ': ' + E(why(b.error)) + '</p>'; });
+      (st.balances || []).forEach(function (b) { if (!b.ok) h += '<p class="cx-err">' + E(b.name) + ': ' + E(why(b.error)) + (b.said ? '<br><small dir="ltr">(' + E(b.said) + ')</small>' : '') + '</p>'; });
       if (st.balances) {
         var R = rows();
         if (!R.list.length) h += '<p class="cx-note">' + T('No coins on these exchanges.', 'لا توجد عملات على هذه المنصات.') + '</p>';
@@ -166,7 +166,7 @@
     f.busy = true; f.err = ''; draw();
     call({ action: 'set', ex: f.ex, key: k.trim(), secret: s.trim() }).then(function (j) {
       f.busy = false;
-      if (j._status >= 400 || !j.ok) { f.err = why(j.error, j.extra); draw(); return; }
+      if (j._status >= 400 || !j.ok) { f.err = why(j.error, j.extra) + (j.said ? '\n(' + NAMES[f.ex] + ': ' + j.said + ')' : ''); draw(); return; }
       st.exchanges = j.exchanges; st.balances = null; f.err = ''; f.clear = true; draw(); balances(true);
     }).catch(function () { f.busy = false; f.err = why('failed'); draw(); });
   }

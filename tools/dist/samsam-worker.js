@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: cb46a4db0a2d936c
+// sources-hash: 582ccf3aa881b8d4
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1120,14 +1120,20 @@ async function bn(k, path, params = {}, method = "GET") {
       last = { status: 0, msg: "network" };
       continue;
     }
-    const j = await r.json().catch(() => null);
-    if (r.ok) return j;
-    last = { status: r.status, msg: j && j.msg || "", code: j && j.code };
+    const txt = await r.text().catch(() => "");
+    let j = null;
+    try {
+      j = JSON.parse(txt);
+    } catch (_) {
+    }
+    if (r.ok && j) return j;
+    last = { status: r.status, msg: j && j.msg || (j ? "" : "not JSON: " + txt.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80)), code: j && j.code, html: !j };
     if (r.status !== 451 && r.status < 500) break;
   }
   const e = new Error(last && last.msg || "binance");
   e.status = last && last.status;
   e.code = last && last.code;
+  e.html = last && last.html;
   throw e;
 }
 var BN_WRITE = ["enableWithdrawals", "enableInternalTransfer", "permitsUniversalTransfer", "enableVanillaOptions", "enableFutures", "enableMargin", "enableSpotAndMarginTrading", "enablePortfolioMarginTrading", "enableFixApiTrade"];
@@ -1174,8 +1180,9 @@ async function gate(k, path, query = "") {
   const r = await fetch(`${GATE}${GP}${path}${query ? "?" + query : ""}`, { headers: { KEY: k.k, Timestamp: ts, SIGN: sig2, Accept: "application/json" } });
   const j = await r.json().catch(() => null);
   if (!r.ok) {
-    const e = new Error(j && (j.message || j.label) || "gate");
+    const e = new Error(j && (j.label ? j.label + ": " : "") + (j.message || "") || "gate");
     e.status = r.status;
+    e.html = !j;
     throw e;
   }
   return j;
@@ -1213,7 +1220,8 @@ async function keyOf(env, x) {
     return null;
   }
 }
-var why = (e) => e && e.status === 451 ? "blocked" : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? "refused" : e && e.status === 429 ? "busy" : "failed";
+var said = (e) => e ? [e.status || "", e.code != null ? e.code : "", String(e.message || "").slice(0, 140)].filter((x) => x !== "").join(" \xB7 ") : "";
+var why = (e) => e && (e.status === 451 || e.html && e.status === 403) ? "blocked" : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? "refused" : e && e.status === 429 ? "busy" : "failed";
 var list2 = (all) => Object.keys(EXCHANGES).filter((ex) => all[ex]).map((ex) => ({ ex, name: EXCHANGES[ex], tail: all[ex].tail, at: all[ex].at, readOnly: all[ex].readOnly }));
 async function cexHandler2(env, who, body) {
   const owner2 = (who.owners || []).includes(who.email);
@@ -1233,7 +1241,8 @@ async function cexHandler2(env, who, body) {
       await READ[ex](k);
     } catch (e) {
       const w = why(e);
-      return { status: w === "refused" ? 400 : 502, error: w };
+      console.log(JSON.stringify({ cex: "set-failed", ex, said: said(e) }));
+      return { status: w === "refused" ? 400 : 502, error: w, said: said(e) };
     }
     all[ex] = { v: await seal(env, JSON.stringify(k)), tail: k.k.slice(-4), at: (/* @__PURE__ */ new Date()).toISOString(), readOnly: perms.readOnly };
     await env.RATE.put(KEY(who.uid), JSON.stringify(all));
@@ -1266,7 +1275,7 @@ async function cexHandler2(env, who, body) {
         const r = await READ[x](k);
         return { ex: x, name: EXCHANGES[x], ok: true, assets: r.assets, notes: r.notes };
       } catch (e) {
-        return { ex: x, name: EXCHANGES[x], ok: false, error: why(e) };
+        return { ex: x, name: EXCHANGES[x], ok: false, error: why(e), said: said(e) };
       }
     }));
     const t = Date.now();

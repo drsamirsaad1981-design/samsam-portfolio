@@ -31,12 +31,12 @@ async function bn(k, path, params = {}, method = 'GET') {
   let last = null;
   for (const base of BN) {
     let r; try { r = await fetch(`${base}${path}?${qs}&signature=${sig}`, { method, headers: { 'X-MBX-APIKEY': k.k } }); } catch (e) { last = { status: 0, msg: 'network' }; continue; }
-    const j = await r.json().catch(() => null);
-    if (r.ok) return j;
-    last = { status: r.status, msg: (j && j.msg) || '', code: j && j.code };
+    const txt = await r.text().catch(() => ''); let j = null; try { j = JSON.parse(txt); } catch (_) {}
+    if (r.ok && j) return j;
+    last = { status: r.status, msg: (j && j.msg) || (j ? '' : 'not JSON: ' + txt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)), code: j && j.code, html: !j };
     if (r.status !== 451 && r.status < 500) break;   // a real answer (bad key…) — another server says the same
   }
-  const e = new Error(last && last.msg || 'binance'); e.status = last && last.status; e.code = last && last.code; throw e;
+  const e = new Error(last && last.msg || 'binance'); e.status = last && last.status; e.code = last && last.code; e.html = last && last.html; throw e;
 }
 const BN_WRITE = ['enableWithdrawals', 'enableInternalTransfer', 'permitsUniversalTransfer', 'enableVanillaOptions', 'enableFutures', 'enableMargin', 'enableSpotAndMarginTrading', 'enablePortfolioMarginTrading', 'enableFixApiTrade'];
 async function binancePerms(k) {
@@ -70,7 +70,7 @@ async function gate(k, path, query = '') {
   const sig = await hmac('SHA-512', k.s, ['GET', GP + path, query, await sha512(''), ts].join('\n'));
   const r = await fetch(`${GATE}${GP}${path}${query ? '?' + query : ''}`, { headers: { KEY: k.k, Timestamp: ts, SIGN: sig, Accept: 'application/json' } });
   const j = await r.json().catch(() => null);
-  if (!r.ok) { const e = new Error((j && (j.message || j.label)) || 'gate'); e.status = r.status; throw e; }
+  if (!r.ok) { const e = new Error((j && ((j.label ? j.label + ': ' : '') + (j.message || ''))) || 'gate'); e.status = r.status; e.html = !j; throw e; }
   return j;
 }
 async function gateBalances(k) {
@@ -86,7 +86,9 @@ async function gateBalances(k) {
 const READ = { binance: binanceBalances, gate: gateBalances };
 async function load(env, uid) { try { return JSON.parse((await env.RATE.get(KEY(uid))) || '{}') || {}; } catch (_) { return {}; } }
 async function keyOf(env, x) { try { return JSON.parse(await unseal(env, x.v)); } catch (_) { return null; } }
-const why = e => e && e.status === 451 ? 'blocked' : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? 'refused' : e && e.status === 429 ? 'busy' : 'failed';
+// what the exchange said, for the screen (never the key): status · code · message
+const said = e => e ? [e.status || '', e.code != null ? e.code : '', String(e.message || '').slice(0, 140)].filter(x => x !== '').join(' · ') : '';
+const why = e => e && (e.status === 451 || (e.html && e.status === 403)) ? 'blocked' : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? 'refused' : e && e.status === 429 ? 'busy' : 'failed';
 const list = all => Object.keys(EXCHANGES).filter(ex => all[ex]).map(ex => ({ ex, name: EXCHANGES[ex], tail: all[ex].tail, at: all[ex].at, readOnly: all[ex].readOnly }));
 
 // /cex — { action: 'status' | 'set' | 'delete' | 'balances', ex, key, secret, fresh } from a signed-in owner or member
@@ -103,7 +105,7 @@ export async function cexHandler(env, who, body) {
     try {
       if (ex === 'binance') { perms = await binancePerms(k); if (!perms.readOnly) return { status: 400, error: 'refused-perms', extra: perms.extra }; }
       await READ[ex](k);
-    } catch (e) { const w = why(e); return { status: w === 'refused' ? 400 : 502, error: w }; }
+    } catch (e) { const w = why(e); console.log(JSON.stringify({ cex: 'set-failed', ex, said: said(e) })); return { status: w === 'refused' ? 400 : 502, error: w, said: said(e) }; }
     all[ex] = { v: await seal(env, JSON.stringify(k)), tail: k.k.slice(-4), at: new Date().toISOString(), readOnly: perms.readOnly };
     await env.RATE.put(KEY(who.uid), JSON.stringify(all)); await env.RATE.delete(BAL(who.uid)).catch(() => {});
     return { ok: true, exchanges: list(all) };
@@ -119,7 +121,7 @@ export async function cexHandler(env, who, body) {
     const b = await Promise.all(Object.keys(EXCHANGES).filter(x => all[x]).map(async x => {
       const k = await keyOf(env, all[x]); if (!k) return { ex: x, name: EXCHANGES[x], ok: false, error: 'refused' };
       try { const r = await READ[x](k); return { ex: x, name: EXCHANGES[x], ok: true, assets: r.assets, notes: r.notes }; }
-      catch (e) { return { ex: x, name: EXCHANGES[x], ok: false, error: why(e) }; }
+      catch (e) { return { ex: x, name: EXCHANGES[x], ok: false, error: why(e), said: said(e) }; }
     }));
     const t = Date.now();
     if (b.some(x => x.ok)) await env.RATE.put(BAL(who.uid), JSON.stringify({ t, b }), { expirationTtl: 600 }).catch(() => {});
