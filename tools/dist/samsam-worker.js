@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: e2885eb6d968a508
+// sources-hash: f7b9704ccc0b3019
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -6771,7 +6771,8 @@ async function answer(env, chat, question, budget = 36, into = null) {
     return { error: "claude" };
   });
   if (r.error) return show({ text: r.error === "limit" ? t.aiLimit(r.limit) : r.error === "nokey" ? t.aiNoKey : r.error === "ownkey" ? t.aiOwnKey : r.error === "busy" ? t.aiBusy : t.aiErr, buttons: [[cb3(t.back, "menu")]] });
-  const foot = `<i>\u{1F4E1} ${t.data}: ${esc(r.sources.length ? r.sources.join(" \xB7 ") : "general knowledge")}
+  const srcAr = (x) => !isAr(t) ? x : String(x).replace(/^alerts \(checked every 5 min\)$/, "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A (\u062A\u064F\u0641\u062D\u0635 \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642)").replace(/^your portfolio \(Firebase\)$/, "\u0645\u062D\u0641\u0638\u062A\u0643 (Firebase)").replace(/^your plan \(Firebase\)$/, "\u062E\u0637\u062A\u0643 (Firebase)").replace(/^your exit plan \(Firebase\)$/, "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C (Firebase)").replace(/^paper portfolio \(live prices\)$/, "\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 (\u0623\u0633\u0639\u0627\u0631 \u0645\u0628\u0627\u0634\u0631\u0629)").replace(/^what-if \(the app's maths\)$/, "\u062D\u0633\u0627\u0628 \xAB\u0645\u0627\u0630\u0627 \u0644\u0648\xBB (\u062D\u0633\u0627\u0628\u0627\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642)").replace(/^hourly price history \(GitHub prices branch\)$/, "\u0633\u062C\u0644 \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0628\u0627\u0644\u0633\u0627\u0639\u0629 (GitHub)").replace(/^market snapshot \(CoinGecko, alternative\.me, ETF flows\)$/, "\u0644\u0642\u0637\u0629 \u0627\u0644\u0633\u0648\u0642 (CoinGecko \u0648 alternative.me \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF)").replace(/^market snapshot( of .*)?$/, (m0, w) => "\u0644\u0642\u0637\u0629 \u0627\u0644\u0633\u0648\u0642" + (w ? " " + w.replace(/^ of /, "") : "")).replace(/ \(live\)$/, " (\u0645\u0628\u0627\u0634\u0631)").replace(/^futures: /, "\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629: ");
+  const foot = `<i>\u{1F4E1} ${t.data}: ${esc(r.sources.length ? r.sources.map(srcAr).join(" \xB7 ") : isAr(t) ? "\u0645\u0639\u0631\u0641\u0629 \u0639\u0627\u0645\u0629" : "general knowledge")}
 ${t.aiLeft(r.left, r.limit)}</i>`;
   const btns = [];
   if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb3("\u{1FA99} " + sym, "c:" + cid.slice(0, 58))));

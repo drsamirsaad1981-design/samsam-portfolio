@@ -852,7 +852,11 @@ async function answer(env, chat, question, budget = 36, into = null) {
   const show = v => show0({ ...v, text: top + v.text });
   const r = await ask(env, question, lang).catch(e => { console.log(JSON.stringify({ ai: 'crash', message: String(e && e.message).slice(0, 300) })); return { error: 'claude' }; });
   if (r.error) return show({ text: r.error === 'limit' ? t.aiLimit(r.limit) : r.error === 'nokey' ? t.aiNoKey : r.error === 'ownkey' ? t.aiOwnKey : r.error === 'busy' ? t.aiBusy : t.aiErr, buttons: [[cb(t.back, 'menu')]] });
-  const foot = `<i>📡 ${t.data}: ${esc(r.sources.length ? r.sources.join(' · ') : 'general knowledge')}\n${t.aiLeft(r.left, r.limit)}</i>`;
+  const srcAr = x => !isAr(t) ? x : String(x).replace(/^alerts \(checked every 5 min\)$/, 'التنبيهات (تُفحص كل 5 دقائق)').replace(/^your portfolio \(Firebase\)$/, 'محفظتك (Firebase)').replace(/^your plan \(Firebase\)$/, 'خطتك (Firebase)')
+    .replace(/^your exit plan \(Firebase\)$/, 'خطة الخروج (Firebase)').replace(/^paper portfolio \(live prices\)$/, 'المحفظة التجريبية (أسعار مباشرة)').replace(/^what-if \(the app's maths\)$/, 'حساب «ماذا لو» (حسابات التطبيق)')
+    .replace(/^hourly price history \(GitHub prices branch\)$/, 'سجل الأسعار بالساعة (GitHub)').replace(/^market snapshot \(CoinGecko, alternative\.me, ETF flows\)$/, 'لقطة السوق (CoinGecko و alternative.me وتدفقات ETF)')
+    .replace(/^market snapshot( of .*)?$/, (m0, w) => 'لقطة السوق' + (w ? ' ' + w.replace(/^ of /, '') : '')).replace(/ \(live\)$/, ' (مباشر)').replace(/^futures: /, 'العقود الآجلة: ');
+  const foot = `<i>📡 ${t.data}: ${esc(r.sources.length ? r.sources.map(srcAr).join(' · ') : (isAr(t) ? 'معرفة عامة' : 'general knowledge'))}\n${t.aiLeft(r.left, r.limit)}</i>`;
   const btns = [];
   if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb('🪙 ' + sym, 'c:' + cid.slice(0, 58))));
   if (r.coins.length === 1) btns[0].push(url('🔥 Liq Map', LIQ + encodeURIComponent(r.coins[0][1])));
