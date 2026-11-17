@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: fbcf631e4f4d43a4
+// sources-hash: 47183656d2f89b82
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2490,6 +2490,34 @@ async function adminHandler2(env, who, body) {
   return { status: 400, error: "Unknown action." };
 }
 
+// tools/worker/usmarket.mjs
+function ny(d) {
+  const o = {};
+  new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hour12: false }).formatToParts(d).forEach((x) => {
+    o[x.type] = x.value;
+  });
+  return { wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(o.weekday), m: +o.hour % 24 * 60 + +o.minute };
+}
+function usMarket(now = Date.now()) {
+  const p = ny(new Date(now)), wk = p.wd >= 1 && p.wd <= 5, OPEN = 570, CLOSE = 960;
+  const state = !wk ? "closed" : p.m >= OPEN && p.m < CLOSE ? "open" : p.m >= 240 && p.m < OPEN ? "pre" : p.m >= CLOSE && p.m < 1200 ? "after" : "closed";
+  const target = state === "open" ? CLOSE : OPEN;
+  let t = now;
+  for (let i = 0; i < 4 * 24 * 6; i++) {
+    t += 15 * 6e4;
+    const q = ny(new Date(t));
+    if (q.wd >= 1 && q.wd <= 5 && q.m >= target && q.m < target + 15) {
+      t -= (q.m - target) * 6e4;
+      break;
+    }
+  }
+  return { state, next: Math.floor(t / 6e4) * 6e4 };
+}
+var US_STATE = { en: { open: "\u{1F7E2} Open", pre: "\u{1F7E1} Pre-market", after: "\u{1F7E1} After hours", closed: "\u26AA Closed" }, ar: { open: "\u{1F7E2} \u0645\u0641\u062A\u0648\u062D", pre: "\u{1F7E1} \u0645\u0627 \u0642\u0628\u0644 \u0627\u0644\u0627\u0641\u062A\u062A\u0627\u062D", after: "\u{1F7E1} \u0628\u0639\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642", closed: "\u26AA \u0645\u063A\u0644\u0642" } };
+var METAL = { gold: ["\u{1F947}", "Gold", "\u0627\u0644\u0630\u0647\u0628"], silver: ["\u{1F948}", "Silver", "\u0627\u0644\u0641\u0636\u0629"], platinum: ["\u26AA", "Platinum", "\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646"], copper: ["\u{1F7E0}", "Copper", "\u0627\u0644\u0646\u062D\u0627\u0633"], brent: ["\u{1F6E2}\uFE0F", "Brent oil", "\u0646\u0641\u0637 \u0628\u0631\u0646\u062A"] };
+var UNIT = { oz: ["oz", "\u0623\u0648\u0646\u0635\u0629"], lb: ["lb", "\u0631\u0637\u0644"], bbl: ["barrel", "\u0628\u0631\u0645\u064A\u0644"] };
+var gramSar = (ozUsd) => ozUsd / 31.1034768 * 3.75;
+
 // guide.json
 var guide_default = {
   v: 2,
@@ -3366,10 +3394,25 @@ function pulseText(m, now, kind) {
     up.length ? "" : null,
     up.length ? `\u{1F4C8} ${up.map((r) => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(" \xB7 ")}` : null,
     dn.length ? `\u{1F4C9} ${dn.map((r) => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(" \xB7 ")}` : null,
+    ...kind === "move" ? [] : otherMarkets(m, now),
     "",
     `<i>${NOTE.en} \xB7 ${NOTE.ar}</i>`
   ].filter((x) => x != null);
   return L.join("\n");
+}
+function otherMarkets(m, now) {
+  const out = [], met2 = m.metals || [], f = (k) => met2.find((x) => x.k === k);
+  const mt = [["gold", "Gold"], ["silver", "Silver"], ["brent", "Brent"]].map(([k, n]) => {
+    const x = f(k);
+    return x && x.price > 0 ? `${n} <b>${usd(x.price)}</b> ${pct(x.ch24, 1)}` : null;
+  }).filter(Boolean);
+  if (mt.length) out.push(`\u{1F947} ${mt.join(" \xB7 ")}`);
+  const st = (m.stocks || []).filter((r) => r.ch24 != null && r.price > 0);
+  if (st.length) {
+    const u = usMarket(now), b = [...st].sort((a, c) => c.ch24 - a.ch24)[0], w = [...st].sort((a, c) => a.ch24 - c.ch24)[0];
+    out.push(`\u{1F1FA}\u{1F1F8} US stocks ${US_STATE.en[u.state].replace(/^\S+ /, "")} \xB7 ${esc(b.sym)} ${pct(b.ch24, 1)} \xB7 ${esc(w.sym)} ${pct(w.ch24, 1)}`);
+  }
+  return out.length ? ["", ...out] : [];
 }
 function discussUrl(c) {
   const g = c && c.group;
@@ -3421,34 +3464,6 @@ ${esc(text)}`;
   if (th) out.push((await tg3(env, "sendMessage", { chat_id: c.group.id, message_thread_id: th, text: body, parse_mode: "HTML" })).ok ? "\u{1F4AC}" : "\u26A0\uFE0F\u{1F4AC}");
   return out;
 }
-
-// tools/worker/usmarket.mjs
-function ny(d) {
-  const o = {};
-  new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hour12: false }).formatToParts(d).forEach((x) => {
-    o[x.type] = x.value;
-  });
-  return { wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(o.weekday), m: +o.hour % 24 * 60 + +o.minute };
-}
-function usMarket(now = Date.now()) {
-  const p = ny(new Date(now)), wk = p.wd >= 1 && p.wd <= 5, OPEN = 570, CLOSE = 960;
-  const state = !wk ? "closed" : p.m >= OPEN && p.m < CLOSE ? "open" : p.m >= 240 && p.m < OPEN ? "pre" : p.m >= CLOSE && p.m < 1200 ? "after" : "closed";
-  const target = state === "open" ? CLOSE : OPEN;
-  let t = now;
-  for (let i = 0; i < 4 * 24 * 6; i++) {
-    t += 15 * 6e4;
-    const q = ny(new Date(t));
-    if (q.wd >= 1 && q.wd <= 5 && q.m >= target && q.m < target + 15) {
-      t -= (q.m - target) * 6e4;
-      break;
-    }
-  }
-  return { state, next: Math.floor(t / 6e4) * 6e4 };
-}
-var US_STATE = { en: { open: "\u{1F7E2} Open", pre: "\u{1F7E1} Pre-market", after: "\u{1F7E1} After hours", closed: "\u26AA Closed" }, ar: { open: "\u{1F7E2} \u0645\u0641\u062A\u0648\u062D", pre: "\u{1F7E1} \u0645\u0627 \u0642\u0628\u0644 \u0627\u0644\u0627\u0641\u062A\u062A\u0627\u062D", after: "\u{1F7E1} \u0628\u0639\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642", closed: "\u26AA \u0645\u063A\u0644\u0642" } };
-var METAL = { gold: ["\u{1F947}", "Gold", "\u0627\u0644\u0630\u0647\u0628"], silver: ["\u{1F948}", "Silver", "\u0627\u0644\u0641\u0636\u0629"], platinum: ["\u26AA", "Platinum", "\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646"], copper: ["\u{1F7E0}", "Copper", "\u0627\u0644\u0646\u062D\u0627\u0633"], brent: ["\u{1F6E2}\uFE0F", "Brent oil", "\u0646\u0641\u0637 \u0628\u0631\u0646\u062A"] };
-var UNIT = { oz: ["oz", "\u0623\u0648\u0646\u0635\u0629"], lb: ["lb", "\u0631\u0637\u0644"], bbl: ["barrel", "\u0628\u0631\u0645\u064A\u0644"] };
-var gramSar = (ozUsd) => ozUsd / 31.1034768 * 3.75;
 
 // tools/worker/watch.mjs
 var KEY3 = (env) => K(env, "alerts");
@@ -4598,6 +4613,7 @@ async function compose(env, kind, lang2, facts) {
     `You write Samir's ${kind === "morning" ? "SMART MORNING" : "SMART EVENING"} message in Telegram for his Cute Portfolio app (long-term, Bitcoin-first: accumulation plan, DCA, exit plan).`,
     "Every number must come from FACTS (JSON). Never invent a number, price or event. If something is missing, leave it out.",
     kind === "morning" ? 'Shape: line 1 = one emoji + **bold one-line verdict for today**. Then \u{1F3AF} **Today** \u2014 exactly 3 numbered actions (1. 2. 3.) picked from FACTS.todo (most useful first; "nothing to do \u2014 hold" is a valid action when the list is short), each one line with its number. Then \u{1F30D} **Market mood** \u2014 2 bullets. Then \u{1F440} **Watch today** \u2014 1\u20132 bullets (levels / alerts closest to triggering).' : "Shape: line 1 = one emoji + **bold one-line verdict on the day**. Then \u{1F4CA} **Today** \u2014 2\u20133 bullets (portfolio change since the morning, best / worst coin, trades or alerts that happened). Then \u{1F504} **What changed** \u2014 2 bullets (BTC, Fear & Greed, dominance, futures, sectors \u2014 vs the morning when FACTS has it). Then \u{1F440} **Tonight & tomorrow** \u2014 2\u20133 bullets (closest levels / alerts, tomorrow's DCA if any).",
+    "Other markets: only when FACTS.other_markets.notable is true, add ONE bullet about them in the market part (gold / Brent / the biggest bStock move \u2014 tokenized US stocks \u2014 and, if useful, whether the US stock market is open). When notable is false, leave the other markets out.",
     'Bullets: "\u2022 label: **value** \u2014 3\u20136 word note". Short lines (\u2264 40 characters when possible), ~14 lines in all, no tables, no headings with #, no links, no sources line.',
     ar ? "Write in simple Modern Standard Arabic (\u0641\u0635\u062D\u0649 \u0628\u0633\u064A\u0637\u0629), the way crypto investors write; numbers and tickers in Latin characters." : "Write in English."
   ].join("\n");
@@ -4868,7 +4884,8 @@ async function morning(env, now = Date.now(), L = null) {
     todo: tasks,
     closest_levels: nearest(alerts, m, sum),
     signals: sum.counts,
-    plan_progress_pct: r24(sum.prog && sum.prog.pct)
+    plan_progress_pct: r24(sum.prog && sum.prog.pct),
+    other_markets: otherFacts(m, now)
   };
   await jput(env, K(env, "snap:" + localParts(now).date), { t: now, value: sum.value, btc: m.btc && m.btc.price, fng: m.fng && m.fng.value, dom: m.global && m.global.dom && m.global.dom.btc }, 2 * 86400);
   const body = await compose(env, "morning", L, facts) || plainMorning(L, facts);
@@ -4905,7 +4922,8 @@ async function evening(env, now = Date.now(), L = null) {
     trades_today: trades,
     events_today: log2.map((e) => ({ time: local(e.t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }), type: e.type, what: e.text })),
     closest_levels: nearest(alerts, m, sum),
-    tomorrow: todo(sum, now).filter((x) => /dca_tomorrow|near_buy|take_profit_close/.test(x.what))
+    tomorrow: todo(sum, now).filter((x) => /dca_tomorrow|near_buy|take_profit_close/.test(x.what)),
+    other_markets: otherFacts(m, now)
   };
   const body = await compose(env, "evening", L, facts) || plainEvening(L, facts);
   const head = `\u{1F319} <b>${w.evening}</b> \xB7 ${esc(local(now, { weekday: "short", day: "numeric", month: "short" }))}`;
@@ -4941,6 +4959,34 @@ var TODO_TXT = {
     sell_signal: `\u{1F534} ${x.coin} ${pct(x.pct_vs_your_avg, 1)} \u0639\u0646 \u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643 \u2014 \u0628\u064A\u0639 / \u062A\u062D\u0648\u064A\u0644`
   })[x.what]
 };
+function otherFacts(m, now) {
+  const met2 = m.metals || [], f = (k) => {
+    const x = met2.find((y) => y.k === k);
+    return x && x.price > 0 ? { price_usd: r24(x.price), change_24h_pct: r24(x.ch24) } : null;
+  };
+  const st = (m.stocks || []).filter((r) => r.ch24 != null && r.price > 0), u = usMarket(now);
+  const best = [...st].sort((a, b) => b.ch24 - a.ch24)[0], worst = [...st].sort((a, b) => a.ch24 - b.ch24)[0];
+  const gold = f("gold"), brent = f("brent");
+  const notable = !!(gold && Math.abs(gold.change_24h_pct) >= 1.5 || brent && Math.abs(brent.change_24h_pct) >= 2.5 || best && best.ch24 >= 5 || worst && worst.ch24 <= -5);
+  return {
+    notable,
+    us_stock_market: { state: u.state, next_change_riyadh: local(u.next, { weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) },
+    bstock_best_24h: best ? { ticker: best.sym, pct: r24(best.ch24) } : null,
+    bstock_worst_24h: worst ? { ticker: worst.sym, pct: r24(worst.ch24) } : null,
+    gold_per_oz: gold,
+    gold_gram_sar_24k: gold ? r24(gramSar(gold.price_usd)) : null,
+    brent_per_barrel: brent
+  };
+}
+function otherLine(L, o) {
+  if (!o || !o.notable) return null;
+  const ar = L === "ar", parts = [];
+  if (o.gold_per_oz) parts.push(`\u{1F947} ${ar ? "\u0627\u0644\u0630\u0647\u0628" : "Gold"} ${usd(o.gold_per_oz.price_usd)} ${pct(o.gold_per_oz.change_24h_pct, 1)}`);
+  if (o.brent_per_barrel) parts.push(`\u{1F6E2}\uFE0F ${ar ? "\u0628\u0631\u0646\u062A" : "Brent"} ${usd(o.brent_per_barrel.price_usd)} ${pct(o.brent_per_barrel.change_24h_pct, 1)}`);
+  if (o.bstock_best_24h && Math.abs(o.bstock_best_24h.pct) >= Math.abs((o.bstock_worst_24h || {}).pct || 0)) parts.push(`\u{1F1FA}\u{1F1F8} ${esc(o.bstock_best_24h.ticker)} ${pct(o.bstock_best_24h.pct, 1)}`);
+  else if (o.bstock_worst_24h) parts.push(`\u{1F1FA}\u{1F1F8} ${esc(o.bstock_worst_24h.ticker)} ${pct(o.bstock_worst_24h.pct, 1)}`);
+  return parts.join(" \xB7 ");
+}
 function plainMorning(L, f) {
   const ar = L === "ar", p = f.portfolio, mk = f.market;
   const t = f.todo.slice(0, 3).map((x, i) => `${i + 1}. ${esc(TODO_TXT[L](x))}`);
@@ -4951,14 +4997,17 @@ function plainMorning(L, f) {
     `\u{1F3AF} <b>${ar ? "\u0627\u0644\u064A\u0648\u0645" : "Today"}</b>`,
     ...t,
     "",
-    `\u{1F30D} BTC <b>${usd(mk.btc_usd)}</b> ${pct(mk.btc_24h_pct)}${mk.fear_greed ? ` \xB7 F&amp;G <b>${mk.fear_greed.value}</b>` : ""}`
-  ].join("\n");
+    `\u{1F30D} BTC <b>${usd(mk.btc_usd)}</b> ${pct(mk.btc_24h_pct)}${mk.fear_greed ? ` \xB7 F&amp;G <b>${mk.fear_greed.value}</b>` : ""}`,
+    otherLine(L, f.other_markets)
+  ].filter((x) => x != null).join("\n");
 }
 function plainEvening(L, f) {
   const ar = L === "ar", p = f.portfolio, s = f.since_morning, out = [`\u{1F4BC} <b>${usd2(p.value_usd)}</b> ${dot(p.change_24h_pct)} ${pct(p.change_24h_pct)} 24h`];
   if (s) out.push(`${ar ? "\u0645\u0646\u0630 \u0627\u0644\u0635\u0628\u0627\u062D" : "Since the morning"}: <b>${s.portfolio_change_usd >= 0 ? "+" : "\u2212"}${usd2(Math.abs(s.portfolio_change_usd))}</b>`);
   if (f.best_coins_24h.length) out.push(`\u{1F4C8} ${f.best_coins_24h.map((c) => `${esc(c.coin)} ${pct(c.pct, 1)}`).join(" \xB7 ")}`);
   if (f.worst_coins_24h.length) out.push(`\u{1F4C9} ${f.worst_coins_24h.map((c) => `${esc(c.coin)} ${pct(c.pct, 1)}`).join(" \xB7 ")}`);
+  const ol = otherLine(L, f.other_markets);
+  if (ol) out.push(ol);
   if (f.closest_levels.length) out.push("", `\u{1F440} <b>${ar ? "\u0631\u0627\u0642\u0628" : "Watch"}</b>`, ...f.closest_levels.slice(0, 3).map((x) => `\u2022 ${esc(x.alert || x.level)} \u2014 ${x.pct_away}%`));
   return out.join("\n");
 }

@@ -9,6 +9,7 @@
 //   • /announce <text> (Samir): posted to the channel and the 📘 Guide topic (🆕 What's new)
 // Channel readers can send ⭐ Star reactions to posts (Samir turns them on in the channel's settings).
 
+import { usMarket, US_STATE } from './usmarket.mjs';
 import { bidiBody } from './bidi.mjs';
 import { members } from './who.mjs';
 import { loadMarket } from './data.mjs';
@@ -255,8 +256,21 @@ function pulseText(m, now, kind) {
     e ? `🏦 ETF ${esc(e.label)}: BTC ${flow(e.btc)} · ETH ${flow(e.eth)}` : null,
     up.length ? '' : null, up.length ? `📈 ${up.map(r => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(' · ')}` : null,
     dn.length ? `📉 ${dn.map(r => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(' · ')}` : null,
+    ...(kind === 'move' ? [] : otherMarkets(m, now)),
     '', `<i>${NOTE.en} · ${NOTE.ar}</i>`].filter(x => x != null);
   return L.join('\n');
+}
+// the pulse's two extra lines (not on a 🚨 BTC move): 🥇 gold · silver · Brent, and 🇺🇸 the US market (bStocks: best / worst)
+function otherMarkets(m, now) {
+  const out = [], met = m.metals || [], f = k => met.find(x => x.k === k);
+  const mt = [['gold', 'Gold'], ['silver', 'Silver'], ['brent', 'Brent']].map(([k, n]) => { const x = f(k); return x && x.price > 0 ? `${n} <b>${usd(x.price)}</b> ${pct(x.ch24, 1)}` : null; }).filter(Boolean);
+  if (mt.length) out.push(`🥇 ${mt.join(' · ')}`);
+  const st = (m.stocks || []).filter(r => r.ch24 != null && r.price > 0);
+  if (st.length) {
+    const u = usMarket(now), b = [...st].sort((a, c) => c.ch24 - a.ch24)[0], w = [...st].sort((a, c) => a.ch24 - c.ch24)[0];
+    out.push(`🇺🇸 US stocks ${US_STATE.en[u.state].replace(/^\S+ /, '')} · ${esc(b.sym)} ${pct(b.ch24, 1)} · ${esc(w.sym)} ${pct(w.ch24, 1)}`);
+  }
+  return out.length ? ['', ...out] : [];
 }
 // 💬 the group's Chat topic as a link (works for the group's members): t.me/c/<id without -100>/<topic>
 export function discussUrl(c) { const g = c && c.group; return g && g.topics && g.topics.chat ? `https://t.me/c/${String(g.id).replace(/^-100/, '')}/${g.topics.chat}` : null; }

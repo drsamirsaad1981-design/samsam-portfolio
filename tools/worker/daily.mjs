@@ -13,6 +13,7 @@
 // The morning / evening are written by Claude from the facts gathered here (tools/worker/ai.mjs → compose); if Claude
 // can't, the bot's own plain version goes out. They do not count in the 30 questions a day.
 
+import { usMarket, gramSar } from './usmarket.mjs';
 import { bidiBody } from './bidi.mjs';
 import { K, chatOf, isOwner, langOf, member } from './who.mjs';
 import { premiumNow } from './stars.mjs';
@@ -119,7 +120,7 @@ export async function morning(env, now = Date.now(), L = null) {
   if (!g) return send(env, { text: w.noUser });
   const { m, sum } = g, tasks = todo(sum, now), alerts = await listAlerts(env);
   const facts = { time_riyadh: local(now, { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }), portfolio: pfFacts(sum), market: marketFacts(m, sum),
-    todo: tasks, closest_levels: nearest(alerts, m, sum), signals: sum.counts, plan_progress_pct: r2(sum.prog && sum.prog.pct) };
+    todo: tasks, closest_levels: nearest(alerts, m, sum), signals: sum.counts, plan_progress_pct: r2(sum.prog && sum.prog.pct), other_markets: otherFacts(m, now) };
   await jput(env, K(env, 'snap:' + localParts(now).date), { t: now, value: sum.value, btc: m.btc && m.btc.price, fng: m.fng && m.fng.value, dom: m.global && m.global.dom && m.global.dom.btc }, 2 * 86400);   // the evening compares with this
   const body = await compose(env, 'morning', L, facts) || plainMorning(L, facts);
   const head = `☀️ <b>${w.morning}</b> · ${esc(local(now, { weekday: 'short', day: 'numeric', month: 'short' }))}`;
@@ -145,6 +146,7 @@ export async function evening(env, now = Date.now(), L = null) {
     sectors_24h: sectors.length ? { best: sectors.filter(s => s.ch24 > 0).sort((a, b) => b.ch24 - a.ch24).slice(0, 3).map(s => ({ name: s.name, pct: r2(s.ch24) })), worst: sectors.filter(s => s.ch24 < 0).sort((a, b) => a.ch24 - b.ch24).slice(0, 3).map(s => ({ name: s.name, pct: r2(s.ch24) })) } : null,
     trades_today: trades, events_today: log.map(e => ({ time: local(e.t, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }), type: e.type, what: e.text })),
     closest_levels: nearest(alerts, m, sum), tomorrow: todo(sum, now).filter(x => /dca_tomorrow|near_buy|take_profit_close/.test(x.what)),
+    other_markets: otherFacts(m, now),
   };
   const body = await compose(env, 'evening', L, facts) || plainEvening(L, facts);
   const head = `🌙 <b>${w.evening}</b> · ${esc(local(now, { weekday: 'short', day: 'numeric', month: 'short' }))}`;
@@ -163,18 +165,40 @@ const TODO_TXT = {
     exit_conditions: `🚪 الخروج: ${x.met_of_3}/3 مؤشرات تحققت`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — قلّل ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — زوّد ${usd(x.usd_to_fix)}`,
     reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} عن متوسط شرائك — تعزيز`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} عن متوسط شرائك — بيع / تحويل` }[x.what]),
 };
+// 🇺🇸 / 🥇 the other markets for the smart morning / evening: the US stock market's state, the biggest bStock moves, gold and
+// Brent. notable = worth one line today (gold ±1.5%, Brent ±2.5%, a bStock ±5%); otherwise the message leaves it out.
+function otherFacts(m, now) {
+  const met = m.metals || [], f = k => { const x = met.find(y => y.k === k); return x && x.price > 0 ? { price_usd: r2(x.price), change_24h_pct: r2(x.ch24) } : null; };
+  const st = (m.stocks || []).filter(r => r.ch24 != null && r.price > 0), u = usMarket(now);
+  const best = [...st].sort((a, b) => b.ch24 - a.ch24)[0], worst = [...st].sort((a, b) => a.ch24 - b.ch24)[0];
+  const gold = f('gold'), brent = f('brent');
+  const notable = !!((gold && Math.abs(gold.change_24h_pct) >= 1.5) || (brent && Math.abs(brent.change_24h_pct) >= 2.5) || (best && best.ch24 >= 5) || (worst && worst.ch24 <= -5));
+  return { notable, us_stock_market: { state: u.state, next_change_riyadh: local(u.next, { weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) },
+    bstock_best_24h: best ? { ticker: best.sym, pct: r2(best.ch24) } : null, bstock_worst_24h: worst ? { ticker: worst.sym, pct: r2(worst.ch24) } : null,
+    gold_per_oz: gold, gold_gram_sar_24k: gold ? r2(gramSar(gold.price_usd)) : null, brent_per_barrel: brent };
+}
+function otherLine(L, o) {
+  if (!o || !o.notable) return null;
+  const ar = L === 'ar', parts = [];
+  if (o.gold_per_oz) parts.push(`🥇 ${ar ? 'الذهب' : 'Gold'} ${usd(o.gold_per_oz.price_usd)} ${pct(o.gold_per_oz.change_24h_pct, 1)}`);
+  if (o.brent_per_barrel) parts.push(`🛢️ ${ar ? 'برنت' : 'Brent'} ${usd(o.brent_per_barrel.price_usd)} ${pct(o.brent_per_barrel.change_24h_pct, 1)}`);
+  if (o.bstock_best_24h && Math.abs(o.bstock_best_24h.pct) >= Math.abs((o.bstock_worst_24h || {}).pct || 0)) parts.push(`🇺🇸 ${esc(o.bstock_best_24h.ticker)} ${pct(o.bstock_best_24h.pct, 1)}`);
+  else if (o.bstock_worst_24h) parts.push(`🇺🇸 ${esc(o.bstock_worst_24h.ticker)} ${pct(o.bstock_worst_24h.pct, 1)}`);
+  return parts.join(' · ');
+}
 function plainMorning(L, f) {
   const ar = L === 'ar', p = f.portfolio, mk = f.market;
   const t = f.todo.slice(0, 3).map((x, i) => `${i + 1}. ${esc(TODO_TXT[L](x))}`);
   if (!t.length) t.push(ar ? '1. لا شيء مطلوب اليوم — احتفظ ✅' : '1. Nothing to do today — hold ✅');
   return [`💼 <b>${usd2(p.value_usd)}</b> ${dot(p.change_24h_pct)} ${pct(p.change_24h_pct)}`, '', `🎯 <b>${ar ? 'اليوم' : 'Today'}</b>`, ...t, '',
-    `🌍 BTC <b>${usd(mk.btc_usd)}</b> ${pct(mk.btc_24h_pct)}${mk.fear_greed ? ` · F&amp;G <b>${mk.fear_greed.value}</b>` : ''}`].join('\n');
+    `🌍 BTC <b>${usd(mk.btc_usd)}</b> ${pct(mk.btc_24h_pct)}${mk.fear_greed ? ` · F&amp;G <b>${mk.fear_greed.value}</b>` : ''}`, otherLine(L, f.other_markets)].filter(x => x != null).join('\n');
 }
 function plainEvening(L, f) {
   const ar = L === 'ar', p = f.portfolio, s = f.since_morning, out = [`💼 <b>${usd2(p.value_usd)}</b> ${dot(p.change_24h_pct)} ${pct(p.change_24h_pct)} 24h`];
   if (s) out.push(`${ar ? 'منذ الصباح' : 'Since the morning'}: <b>${s.portfolio_change_usd >= 0 ? '+' : '−'}${usd2(Math.abs(s.portfolio_change_usd))}</b>`);
   if (f.best_coins_24h.length) out.push(`📈 ${f.best_coins_24h.map(c => `${esc(c.coin)} ${pct(c.pct, 1)}`).join(' · ')}`);
   if (f.worst_coins_24h.length) out.push(`📉 ${f.worst_coins_24h.map(c => `${esc(c.coin)} ${pct(c.pct, 1)}`).join(' · ')}`);
+  const ol = otherLine(L, f.other_markets); if (ol) out.push(ol);
   if (f.closest_levels.length) out.push('', `👀 <b>${ar ? 'راقب' : 'Watch'}</b>`, ...f.closest_levels.slice(0, 3).map(x => `• ${esc(x.alert || x.level)} — ${x.pct_away}%`));
   return out.join('\n');
 }

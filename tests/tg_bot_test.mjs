@@ -1312,6 +1312,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('📢 09:05 → the market pulse in the channel (BTC, cap, dominance, Fear & Greed, movers, "not financial advice"), pinned', pulse && /Market pulse/.test(pulse.b.text) && /BTC/.test(pulse.b.text) && /Not financial advice/.test(pulse.b.text) && okHtml(pulse.b.text) && sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1001), pulse && pulse.b.text);
   check('…with 🧭 Market Hub and 💬 Discuss (→ the group\'s Chat topic: t.me/c/2/<topic>)', JSON.stringify(pulse.b.reply_markup).includes('Market Hub') && JSON.stringify(pulse.b.reply_markup).includes('t.me/c/2/' + c.group.topics.chat), pulse && pulse.b.reply_markup);
   sent.length = 0; const Wq = await fresh(); const pq = []; await Wq.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('09:10') }, ENVK, { waitUntil: x => pq.push(x) }); await Promise.all(pq);
+  check('…+ 🥇 gold · silver · Brent and 🇺🇸 US stocks (state, best CRCLB, worst GMEB)', /🥇 Gold <b>\$2,650<\/b>/.test(pulse.b.text) && /Brent/.test(pulse.b.text) && /🇺🇸 US stocks (Open|Pre-market|After hours|Closed) · CRCLB \+7\.8% · GMEB −6\.2%/.test(pulse.b.text), pulse.b.text);
   check('…once a morning (09:10 → nothing new)', !sent.some(m => m.b.chat_id === -1001 && /Market pulse/.test(m.b.text || '')));
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: -1002, type: 'supergroup' }, from: { id: 888 }, text: 'hello everyone' } }, ENV.TG_SECRET, ENVK);
   check('💬 people chatting in the group → the bot stays quiet', sent.filter(m => m.m === 'sendMessage').length === 0);
@@ -1324,6 +1325,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; const Wm = await fresh(); const pm = []; await Wm.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('08:45') }, ENVK, { waitUntil: x => pm.push(x) }); await Promise.all(pm);
   const mm = sent.find(m => m.m === 'sendMessage' && /Smart morning|Morning/.test(m.b.text || '') && String(m.b.chat_id) === '555');
   check('☀️ Claude cut off (max_tokens) → the plain morning is sent instead (no half line, no stray **)', mm && !/\*\*/.test(mm.b.text) && !/half/.test(mm.b.text) && /Today|💼/.test(mm.b.text), mm && mm.b.text.slice(0, 120));
+  check('…with the other markets in one line when they moved (CRCLB +7.8% today): gold, Brent, the bStock', mm && /🥇 Gold \$2,650 \+0\.8% · 🛢️ Brent \$73\.40 −1\.4% · 🇺🇸 CRCLB \+7\.8%/.test(mm.b.text), mm && mm.b.text);
   globalThis.__shortMorning = old;
 }
 

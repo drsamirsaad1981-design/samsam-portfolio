@@ -315,6 +315,7 @@ export async function compose(env, kind, lang, facts) {
     kind === 'morning'
       ? 'Shape: line 1 = one emoji + **bold one-line verdict for today**. Then 🎯 **Today** — exactly 3 numbered actions (1. 2. 3.) picked from FACTS.todo (most useful first; "nothing to do — hold" is a valid action when the list is short), each one line with its number. Then 🌍 **Market mood** — 2 bullets. Then 👀 **Watch today** — 1–2 bullets (levels / alerts closest to triggering).'
       : 'Shape: line 1 = one emoji + **bold one-line verdict on the day**. Then 📊 **Today** — 2–3 bullets (portfolio change since the morning, best / worst coin, trades or alerts that happened). Then 🔄 **What changed** — 2 bullets (BTC, Fear & Greed, dominance, futures, sectors — vs the morning when FACTS has it). Then 👀 **Tonight & tomorrow** — 2–3 bullets (closest levels / alerts, tomorrow\'s DCA if any).',
+    'Other markets: only when FACTS.other_markets.notable is true, add ONE bullet about them in the market part (gold / Brent / the biggest bStock move — tokenized US stocks — and, if useful, whether the US stock market is open). When notable is false, leave the other markets out.',
     'Bullets: "• label: **value** — 3–6 word note". Short lines (≤ 40 characters when possible), ~14 lines in all, no tables, no headings with #, no links, no sources line.',
     ar ? 'Write in simple Modern Standard Arabic (فصحى بسيطة), the way crypto investors write; numbers and tickers in Latin characters.' : 'Write in English.',
   ].join('\n');
