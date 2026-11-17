@@ -1209,7 +1209,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:')) kvStore.delete(k);
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 555, type: 'private' }, from: { id: 555, first_name: 'S', language_code: 'en' }, text: '/balances' } }, ENV.TG_SECRET, ENVB);
   const bv = sent.filter(m => m.m === 'sendMessage').at(-1);
-  check('🔌 /balances → Binance balances next to the app: SOL 10 (spot 4 + earn 6) vs 15 in the app, BTC ▫️ (the rest elsewhere), ZZZ not in the app', bv && /Exchanges · live balances/.test(bv.b.text) && /<b>SOL<\/b> 10 · \$1,500\n +app: 15/.test(bv.b.text) && /▫️ <b>BTC<\/b> 0\.05/.test(bv.b.text) && /Not in the app<\/b> \(1\)\nZZZ 3/.test(bv.b.text) && okHtml(bv.b.text) && JSON.stringify(bv.b.reply_markup).includes('bal:r'), bv && bv.b.text);
+  check('🔌 /balances → Binance balances next to the app: SOL 10 (spot 4 + earn 6) vs 15 in the app, BTC ▫️ (the rest elsewhere), ZZZ not in the app', bv && /Exchanges · live balances/.test(bv.b.text) && /<b>SOL<\/b> 10 · \$1,500\n +app: 15/.test(bv.b.text) && /▫️ <b>BTC<\/b> 0\.05/.test(bv.b.text) && /Not in the app<\/b> \(1\)\n▪️ ZZZ 3/.test(bv.b.text) && okHtml(bv.b.text) && JSON.stringify(bv.b.reply_markup).includes('bal:r'), bv && bv.b.text);
   kvStore.delete('cex:UIDX'); kvStore.delete('cex:UIDX:bal');
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 555, type: 'private' }, from: { id: 555, first_name: 'S', language_code: 'en' }, text: '/balances' } }, ENV.TG_SECRET, ENVB);
   const bn = sent.filter(m => m.m === 'sendMessage').at(-1);

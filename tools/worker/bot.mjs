@@ -496,7 +496,7 @@ async function viewBalances(env, lang, fresh = false) {
     `<i>${esc(r.exchanges.map(x => x.name).join(' · '))} · ${mins ? (ar ? `منذ ${mins} دقيقة` : `${mins} min ago`) : (ar ? 'الآن' : 'just now')}</i>`, '',
     `💰 ${ar ? 'على المنصات' : 'On exchanges'}: <b>${usd(tot)}</b>`, '', ...rows.slice(0, 25).map(x => x.line),
     ...(other.length ? ['', ar ? `🆕 <b>غير موجودة في التطبيق</b> (${other.length})` : `🆕 <b>Not in the app</b> (${other.length})`,
-      ...(o => { const r = []; for (let i = 0; i < o.length; i += 3) r.push(o.slice(i, i + 3).map(x => `${esc(x.sym)} ${fq(x.q)}`).join(' · ')); return r; })(other.sort((x, y) => y.q - x.q).slice(0, 15))] : []),   // 3 a line
+      ...(o => { const r = []; for (let i = 0; i < o.length; i += 3) r.push('▪️ ' + o.slice(i, i + 3).map(x => `${esc(x.sym)} ${fq(x.q)}`).join(' · '));   /* a mark first: a line that starts with a ticker came out left-to-right on Android */ return r; })(other.sort((x, y) => y.q - x.q).slice(0, 15))] : []),   // 3 a line
     ...(errs.length ? ['', ...errs] : []),
     '', ar ? '<i>✅ مطابق · ➕ أكثر من التطبيق · ▫️ الباقي في محافظك أو مكان آخر. قراءة فقط — لا يتغير شيء في محفظتك.</i>' : '<i>✅ matches · ➕ more than the app · ▫️ the rest is in your wallets or elsewhere. Read-only — nothing is changed in your portfolio.</i>'];
   return { text: L.join('\n'), buttons: [[cb(ar ? '🔄 تحديث' : '🔄 Refresh', 'bal:r'), open], back] };

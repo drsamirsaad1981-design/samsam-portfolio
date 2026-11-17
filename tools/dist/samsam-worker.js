@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: b71bebfe5afb2cfe
+// sources-hash: b5f13ab028a0e6e1
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5986,7 +5986,7 @@ async function viewBalances(env, lang2, fresh = false) {
       ar ? `\u{1F195} <b>\u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> (${other.length})` : `\u{1F195} <b>Not in the app</b> (${other.length})`,
       ...((o) => {
         const r3 = [];
-        for (let i = 0; i < o.length; i += 3) r3.push(o.slice(i, i + 3).map((x) => `${esc(x.sym)} ${fq(x.q)}`).join(" \xB7 "));
+        for (let i = 0; i < o.length; i += 3) r3.push("\u25AA\uFE0F " + o.slice(i, i + 3).map((x) => `${esc(x.sym)} ${fq(x.q)}`).join(" \xB7 "));
         return r3;
       })(other.sort((x, y) => y.q - x.q).slice(0, 15))
     ] : [],
