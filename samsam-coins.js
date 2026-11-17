@@ -276,7 +276,7 @@
   (function extCss() {
     if (document.getElementById('extGoCss')) return;
     var st = document.createElement('style'); st.id = 'extGoCss';
-    st.textContent = '.ext-go{display:inline-block;margin-left:5px;font-size:.72em;font-weight:700;color:var(--fg2,#94a3b8);opacity:.75;vertical-align:1px;transition:color .15s,opacity .15s,transform .15s;text-decoration:none}' +
+    st.textContent = '.ext-go{display:inline-block;margin-inline-start:5px;font-size:.72em;font-weight:700;color:var(--fg2,#94a3b8);opacity:.75;vertical-align:1px;transition:color .15s,opacity .15s,transform .15s;text-decoration:none}' +
       '@media (hover:hover){.ext-link:hover .ext-go,a:hover>.ext-go,a:hover .coin-sym .ext-go{color:#a78bfa;opacity:1;transform:translate(1px,-1px)}}@media print{.ext-go{display:none!important}}';
     (document.head || document.documentElement).appendChild(st);
   })();
@@ -305,10 +305,10 @@
       '.ast-t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;max-width:100%}.ast-top{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;max-width:100%}' +
       '.ast-sym{display:inline-block;font-size:.92rem;font-weight:800;line-height:1.2;color:var(--fg,inherit);text-decoration:none;white-space:nowrap;max-width:100%}' +
       'a.ast-sym{text-decoration:underline transparent;text-underline-offset:3px;transition:color .15s,text-decoration-color .15s}a.ast-sym:active{color:#60a5fa}@media (hover:hover){a.ast-sym:hover{color:#60a5fa;text-decoration-color:currentColor}}[data-theme=light] a.ast-sym:hover,[data-theme=light] a.ast-sym:active{color:#2563eb}' +
-      '.ast-line{display:flex;flex-wrap:wrap;align-items:center;column-gap:4px;row-gap:1px;font-size:.72rem;font-weight:600;color:var(--fg2,#94a3b8);font-variant-numeric:tabular-nums;line-height:1.3;text-align:left}' +
-      '.ast-chg{display:inline-flex;align-items:center;white-space:nowrap}.ast-dot{opacity:.6;margin-right:3px}.ast-chg .up{color:var(--green,#22c55e);font-weight:700}.ast-chg .down{color:var(--red,#ef4444);font-weight:700}' +
+      '.ast-line{display:flex;flex-wrap:wrap;align-items:center;column-gap:4px;row-gap:1px;font-size:.72rem;font-weight:600;color:var(--fg2,#94a3b8);font-variant-numeric:tabular-nums;line-height:1.3;text-align:start}' +
+      '.ast-chg{display:inline-flex;align-items:center;white-space:nowrap}.ast-dot{opacity:.6;margin-inline-end:3px}.ast-chg .up{color:var(--green,#22c55e);font-weight:700}.ast-chg .down{color:var(--red,#ef4444);font-weight:700}' +
       '.ast-line .val-cell{display:inline-flex;align-items:center}' +
-      '.hold{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0;text-align:right;font-variant-numeric:tabular-nums}.hold-center{align-items:center;text-align:center}.hold-left{align-items:flex-start;text-align:left}' +
+      '.hold{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0;text-align:end;font-variant-numeric:tabular-nums}.hold-center{align-items:center;text-align:center}.hold-left{align-items:flex-start;text-align:start}' +
       '.hold-val{font-size:.92rem;font-weight:700;color:var(--fg,inherit);white-space:nowrap;line-height:1.2}.hold-qty{font-size:.72rem;font-weight:600;color:var(--fg2,#94a3b8);white-space:nowrap;line-height:1.3}';
     document.head.appendChild(st);
   }
@@ -420,11 +420,11 @@
     var st = document.createElement('style');
     st.textContent = '.mv-card{display:grid;grid-template-columns:1fr 1px 1fr;align-items:stretch;background:var(--bg2,#111827);border:1px solid var(--border,#334155);border-radius:16px;padding:14px 4px;box-sizing:border-box}' +
       '.mv-sep{background:var(--border,#334155);margin:6px 0}' +
-      '.mv-half{display:flex;flex-direction:column;gap:6px;min-width:0;padding:4px 16px;border:none;background:none;color:inherit;font:inherit;text-align:left;border-radius:12px;cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent}' +
+      '.mv-half{display:flex;flex-direction:column;gap:6px;min-width:0;padding:4px 16px;border:none;background:none;color:inherit;font:inherit;text-align:start;border-radius:12px;cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent}' +
       '@media (hover:hover){.mv-half:hover{background:rgba(148,163,184,.08)}}.mv-half:active{background:rgba(148,163,184,.1)}.mv-half:focus-visible{outline:2px solid #a78bfa;outline-offset:-2px}.mv-half[aria-disabled=true]{cursor:default;background:none}' +
       '.mv-label{font-size:.78rem;color:var(--label,var(--fg2,#94a3b8));font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
       '.mv-coin{display:flex;align-items:center;gap:10px;min-width:0}.mv-coin .mv-sym{font-size:1.25rem;font-weight:800;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
-      '.mv-val{display:block;font-weight:700;font-size:1rem;line-height:1.35;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}.mv-val svg{display:inline-block;vertical-align:1px;margin-right:6px}.mv-val .mv-t1,.mv-val .mv-t2{white-space:nowrap}.mv-val .mv-t2{opacity:.92}.mv-val.up{color:#34d399}.mv-val.down{color:#f87171}.mv-val.flat{color:var(--fg2,#94a3b8)}' +
+      '.mv-val{display:block;font-weight:700;font-size:1rem;line-height:1.35;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}.mv-val svg{display:inline-block;vertical-align:1px;margin-inline-end:6px}.mv-val .mv-t1,.mv-val .mv-t2{white-space:nowrap}.mv-val .mv-t2{opacity:.92}.mv-val.up{color:#34d399}.mv-val.down{color:#f87171}.mv-val.flat{color:var(--fg2,#94a3b8)}' +
       '.mv-sub{font-size:.76rem;color:var(--fg2,#94a3b8);line-height:1.35;font-variant-numeric:tabular-nums}' +
       '.mv-empty{grid-column:1/-1;padding:6px 16px;color:var(--fg2,#94a3b8);font-size:.85rem}' +
       '.mv-head{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 16px 10px;font-size:.78rem;font-weight:700;letter-spacing: .01em;text-transform: none;color:var(--label,var(--fg2,#94a3b8))}' +
@@ -435,7 +435,7 @@
       '@container (max-width: 190px){.btc-compare-subtext .bcs-sep{display:none}.btc-compare-subtext{flex-direction:column;align-items:flex-start;gap:2px}}' +
       '.mv-half{container-type:inline-size}' +
       // small › on each tappable row (opens the coin) — grey, purple on hover
-      '.mv-go{margin-left:auto;flex-shrink:0;display:flex;color:var(--fg2,#94a3b8);opacity:.7;transition:color .15s,opacity .15s,transform .15s}' +
+      '.mv-go{margin-inline-start:auto;flex-shrink:0;display:flex;color:var(--fg2,#94a3b8);opacity:.7;transition:color .15s,opacity .15s,transform .15s}' +
       '@media (hover:hover){.mv-half:hover .mv-go{color:#a78bfa;opacity:1;transform:translateX(2px)}}.mv-half:active .mv-go,.mv-half:focus-visible .mv-go{color:#a78bfa;opacity:1}' +
       '.btc-compare-subtext b{font-weight:600;color:#cbd5e1}[data-theme=light] .btc-compare-subtext{color:#64748b}[data-theme=light] .btc-compare-subtext b{color:#334155}' +
       '@media (max-width:420px){.mv-half{padding:4px 10px}.mv-coin{gap:8px}.mv-coin .mv-sym{font-size:1.08rem}.mv-val{font-size:.92rem}}';
@@ -472,7 +472,7 @@
   // A coin without futures / without a CoinCodex page gets a plain note instead of a link to nowhere.
   var QL_CSS = '.ql-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:2px 0 4px}' +
     '.ql{display:flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 8px;border-radius:9px;border:1px solid var(--border,rgba(148,163,184,.3));font-size:.8rem;font-weight:700;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}' +
-    '.ql .ss-ic{margin-right:0}.ql .ql-x{opacity:.6;display:inline-flex}' +
+    '.ql .ss-ic{margin-inline-end:0}.ql .ql-x{opacity:.6;display:inline-flex}' +
     '.ql-liq{color:#fb923c;border-color:rgba(251,146,60,.45)}.ql-pred{color:#a78bfa;border-color:rgba(167,139,250,.45)}.ql-cmc{color:#60a5fa;border-color:rgba(96,165,250,.45)}' +
     '[data-theme="light"] .ql-liq{color:#ea580c}[data-theme="light"] .ql-pred{color:#7c3aed}[data-theme="light"] .ql-cmc{color:#2563eb}' +
     '@media (hover:hover){.ql-liq:hover{background:#f97316;color:#fff}.ql-pred:hover{background:#8b5cf6;color:#fff}.ql-cmc:hover{background:#3b82f6;color:#fff}}' +

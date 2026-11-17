@@ -26,6 +26,7 @@
     if (!G) { box.innerHTML = '<p class="gd-intro">Loading…</p>'; return; }
     var L = lang, ar = L === 'ar';
     box.setAttribute('dir', ar ? 'rtl' : 'ltr'); box.setAttribute('lang', L);
+    if (ar) box.removeAttribute('data-no-tr'); else box.setAttribute('data-no-tr', '');   // the English guide stays English inside the Arabic app
     box.innerHTML = '<p class="gd-intro">' + E(G.intro[L]) + '</p>' + G.sections.map(function (s) {
       return '<details data-k="' + E(s.k) + '"><summary>' + s.e + ' ' + E(s.t[L]) + '</summary><div class="gd-body">' +
         '<ul>' + s[L].map(function (line) { var sub = /^•\s/.test(line); line = sub ? line.slice(2) : line;

@@ -608,7 +608,7 @@ function renderTableAndStack() {
       const ap=coinProfit(c); const pnl=ap.total; const pnlPct=ap.pct;
       const pnlCls=pnl>=0?'pnl-positive':'pnl-negative'; const pnlSign=pnl>=0?'+':'';
       html += `<tr>
-        <td style="text-align:left">${assetHtml(c, catTag(c.cat, c.sym))}</td>
+        <td style="text-align:start">${assetHtml(c, catTag(c.cat, c.sym))}</td>
         <td class="ro-num num-r" title="Amount changes only through Buy / Sell / Transfer">${SamsamCoins.holdCell(c.sym, curVal, c.qty)}</td>
         <td class="ro-num num-r" style="color:var(--fg2)" title="${isSoldOut(c) ? 'Sold out — no coins held' : 'Calculated from Buy / Sell / Transfer'}">${avgShown(c)}</td>
         <td class="ro-num num-r" style="color:var(--fg2)">${SamsamFmt.usd(baseVal)}</td>
@@ -866,7 +866,7 @@ function renderDashboard() {
   // ② Larger centre text to match bigger donut
   svgEl.innerHTML=paths+
     `<text id="donutCenter1" x="80" y="74" text-anchor="middle" font-size="16" font-weight="700" fill="var(--fg)">${totalFmt}</text>
-     <text id="donutCenter2" x="80" y="93" text-anchor="middle" font-size="11" fill="var(--fg2)">Total</text>`;
+     <text id="donutCenter2" x="80" y="93" text-anchor="middle" font-size="11" fill="var(--fg2)">${window.CPLang ? CPLang.t('Total') : 'Total'}</text>`;
   // Hover handlers
   window.donutHover=function(label,val,pct,color){
     document.getElementById('donutCenter1').textContent=pct+'%';
@@ -909,7 +909,7 @@ function renderDashboard() {
     const cls=pnl>0?'pnl-positive':pnl<0?'pnl-negative':'';
     const sign=pnl>=0?'+':'';
     return `<div class="pnl-row">
-      <span class="pnl-label"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};margin-right:6px;vertical-align:middle"></span>${CAT_LABELS[cat]||cat}</span>
+      <span class="pnl-label"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};margin-inline-end:6px;vertical-align:middle"></span>${CAT_LABELS[cat]||cat}</span>
       <span class="pnl-val ${cls}">${SamsamFmt.usdSigned(pnl)} (${sign}${pnlPct.toFixed(1)}%)</span>
     </div>`;
   }).join('');
@@ -927,7 +927,7 @@ function renderDashboard() {
     </div>
     <div class="pnl-row pnl-total" style="margin-bottom:10px">
       <span class="pnl-label" style="font-weight:700;color:var(--accent)">${SamsamUI.ic('performance')}Unrealized Profit</span>
-      <div style="text-align:right">
+      <div style="text-align:end">
         <div class="pnl-val ${totalCls}" style="font-size:1.05rem">${SamsamFmt.usdSigned(totalPnl)}</div>
         <div class="${totalCls}" style="font-size:0.75rem;opacity:0.85">${totalSign}${totalPnlPct.toFixed(2)}%</div>
       </div>

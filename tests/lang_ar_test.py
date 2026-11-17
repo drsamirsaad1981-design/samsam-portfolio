@@ -41,7 +41,7 @@ with sync_playwright() as p:
         # ⓘ explanations in Arabic
         pg.evaluate("CPHint.open('totalPortfolio', null)"); pg.wait_for_timeout(200)
         h = pg.inner_text('.cph')
-        check(f'{vn}: an ⓘ opens in Arabic (title, text and formula)', 'إجمالي المحفظة' in h and 'قيمة كل عملاتك' in h and 'السعر الحالي' in h, h[:120])
+        check(f'{vn}: an ⓘ opens in Arabic (title, text and formula)', 'إجمالي المحفظة' in h and 'جميع عملاتك' in h and 'السعر الحالي' in h, h[:120])
         pg.evaluate("CPHint.close()")
         # Phase 2 — Add transaction, a coin's History, the Plan
         pg.evaluate("openAddTx('sell','SUI')"); pg.wait_for_timeout(400)
@@ -66,6 +66,19 @@ with sync_playwright() as p:
         left = [s for s in fr.evaluate(LEFT) if s not in OK_EN]
         check(f'{vn}: Exit Strategy — no English words left', not left, left[:12])
         fr.evaluate("setPlanTab('accum')"); pg.wait_for_timeout(300)
+        # Phase 3 — Market Hub, Altcoin Season
+        pg.evaluate("cpShell.go('market')"); pg.wait_for_timeout(3500)
+        fm = [f for f in pg.frames if 'market.html' in f.url][0]
+        b = fm.inner_text('body')
+        check(f'{vn}: Market Hub in Arabic', all(w in b for w in ('القيمة السوقية الإجمالية', 'الهيمنة السوقية', 'قائمة المتابعة')), b[:200])
+        left = [s for s in fm.evaluate(LEFT) if s not in OK_EN and s not in ('SoSoValue', 'CoinGecko', 'CoinMarketCap', 'USDT', 'ETH / BTC')]
+        check(f'{vn}: Market Hub — no English words left', not left, left[:12])
+        lab = fm.evaluate("[...document.querySelectorAll('.mk-gauge-l span')].map(s=>[s.textContent, Math.round(s.getBoundingClientRect().left)])")
+        check(f'{vn}: the Altcoin gauge reads like its colours (بيتكوين on the orange left)', lab and lab[0][0] == 'بيتكوين' and lab[0][1] < lab[1][1], lab)
+        pg.evaluate("cpShell.go('altseason')"); pg.wait_for_timeout(3000)
+        fa2 = [f for f in pg.frames if 'altseason.html' in f.url][0]
+        left = [s for s in fa2.evaluate(LEFT) if s not in OK_EN and s not in ('CoinGecko', 'CoinMarketCap')]
+        check(f'{vn}: Altcoin Season — no English words left', 'مؤشر موسم العملات البديلة' in fa2.inner_text('body') and not left, left[:12])
         pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(500)
         pg.evaluate("SamsamSettings.open()"); pg.wait_for_timeout(300)
         st = pg.inner_text('#cpSet')

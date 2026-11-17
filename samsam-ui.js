@@ -153,14 +153,14 @@
   css.id = 'samsam-ui-css';
   css.textContent =
     '.ss-icon{display:inline-block;width:1.15em;height:1.15em;flex-shrink:0;vertical-align:-0.2em}' +
-    '.ss-ic{display:inline-block;width:1.1em;height:1.1em;flex-shrink:0;vertical-align:-0.18em;margin-right:.4em}.ss-ic.solo{margin-right:0}' +
+    '.ss-ic{display:inline-block;width:1.1em;height:1.1em;flex-shrink:0;vertical-align:-0.18em;margin-inline-end:.4em}.ss-ic.solo{margin-inline-end:0}' +
     '[data-ic]{display:inline-flex;vertical-align:-0.18em;line-height:0}[data-ic] .ss-ic{vertical-align:0}' +
-    '.ss-dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;flex-shrink:0;vertical-align:.05em;margin-right:.45em;background:#94a3b8}' +
+    '.ss-dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;flex-shrink:0;vertical-align:.05em;margin-inline-end:.45em;background:#94a3b8}' +
     '.ss-dot[data-c=red]{background:#ef4444}.ss-dot[data-c=green]{background:#22c55e}.ss-dot[data-c=blue]{background:#3b82f6}.ss-dot[data-c=orange]{background:#f97316}.ss-dot[data-c=purple]{background:#a855f7}' +
-    '.ss-search{position:relative}.ss-search .ss-search-ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--fg2,#94a3b8);pointer-events:none;z-index:1}.ss-search input{padding-left:36px!important}' +
-    '.ext-mark{opacity:.65;margin-left:-2px}' +
+    '.ss-search{position:relative}.ss-search .ss-search-ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--fg2,#94a3b8);pointer-events:none;z-index:1}.ss-search input{padding-inline-start:36px!important}' +
+    '.ext-mark{opacity:.65;margin-inline-start:-2px}' +
     '.cp-foot{max-width:1200px;margin:28px auto 0;padding:16px 16px 10px;border-top:1px solid var(--border,rgba(148,163,184,.2));text-align:center;font-size:.72rem;line-height:1.8;color:var(--fg2,#94a3b8);box-sizing:border-box}' +
-    '.cp-foot p{margin:0}.cp-foot .cpf-sep{margin:0 8px;opacity:.6}.cp-foot b{font-weight:600;color:var(--fg,inherit)}.cp-foot .ss-ic{margin-right:.35em}' +
+    '.cp-foot p{margin:0}.cp-foot .cpf-sep{margin:0 8px;opacity:.6}.cp-foot b{font-weight:600;color:var(--fg,inherit)}.cp-foot .ss-ic{margin-inline-end:.35em}' +
     '.cp-foot .cpf-msg{min-height:0;font-size:.7rem;transition:opacity .5s}.cp-foot .cpf-msg:empty{display:none}.cp-foot .cpf-copy{margin-top:2px;opacity:.75}.cp-foot a{color:inherit;text-decoration:none}.cp-foot a:hover{color:var(--accent,#a78bfa)}' +
     // 💛 the support line: one small pill above the rest (members) — then the sync line, then ©
     '.cp-foot .cpf-sup{order:-1;margin:0 auto 10px;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:.74rem;font-weight:700;color:#b45309;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25)}' +
@@ -199,7 +199,7 @@
     '@media (prefers-reduced-motion:reduce){.ss-live[data-state=loading],.ss-live.ss-pulse{animation:none}}' +
     // Under every chart while its real price history is still downloading (samsam-history.js)
     '.hist-note{margin:6px 2px 0;font-size:.74rem;font-weight:600;color:var(--fg2,#94a3b8);display:flex;align-items:center;gap:6px;line-height:1.35}.hist-note[hidden]{display:none}' +
-    '.hist-note::before{content:"";width:10px;height:10px;flex-shrink:0;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:histSpin .9s linear infinite}' +
+    '.hist-note::before{content:"";width:10px;height:10px;flex-shrink:0;border-radius:50%;border:2px solid currentColor;border-inline-end-color:transparent;animation:histSpin .9s linear infinite}' +
     '@keyframes histSpin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.hist-note::before{animation:none}}' +
     // ➕ Add — one button on every page (main toolbar, Holdings, a coin's Transactions, Accumulation):
     // brand-violet gradient, the + in a soft chip (like Back's chevron), lifts on hover, presses in on tap.
@@ -248,7 +248,7 @@
     '.cp-head-r{justify-self:end;display:flex;align-items:center;justify-content:flex-end;gap:8px}' +
     '.cp-head-title{margin:0;display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;font:inherit;font-size:1.02rem;font-weight:800;letter-spacing:-.01em;line-height:1.2;color:var(--fg,inherit);white-space:nowrap}' +
     '.cp-head-title .t{overflow:hidden;text-overflow:ellipsis}.cp-head-ic{font-size:1.1rem;line-height:1;flex-shrink:0}' +
-    '@media (min-width:768px){.cp-head{padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}}' +
+    '@media (min-width:768px){.cp-head{padding-inline-start:max(24px,env(safe-area-inset-left,0px));padding-inline-end:max(24px,env(safe-area-inset-right,0px))}}' +
     '@media (max-width:380px){.cp-head-title{font-size:.95rem}.cp-head{column-gap:8px}}' +
     // Big header (pages with the bottom bar): the main page's look — logo + "Cute Portfolio", and under it, where the main page
     // shows "Live", this page's icon + name. Scrolled down it folds into one slim line (small logo + page name).
@@ -435,7 +435,7 @@
         '<div class="cpd-btns' + (kind === 'alert' ? ' one' : '') + '">' + (kind === 'alert' ? '' : '<button type="button" class="cpd-no"></button>') + '<button type="button" class="cpd-ok"></button></div></div>';
       w.querySelector('#cpdT').textContent = o.title || 'Cute Portfolio';
       if (o.icon) w.querySelector('#cpdT').insertAdjacentHTML('afterbegin', ic(o.icon));
-      w.querySelector('#cpdM').textContent = String(msg);
+      w.querySelector('#cpdM').textContent = window.CPLang && CPLang.ar ? String(msg).split('\n').map(function (l) { return CPLang.t(l); }).join('\n') : String(msg);   // Arabic: line by line
       var ok = w.querySelector('.cpd-ok'), no = w.querySelector('.cpd-no'), inp = w.querySelector('#cpdI');
       ok.textContent = o.okText || 'OK'; if (o.danger) ok.classList.add('danger');
       if (no) no.textContent = o.cancelText || 'Cancel';
@@ -476,9 +476,9 @@
         '.cpm.sheet{left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto;max-width:none;border-radius:18px 18px 0 0;padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));animation:cpSheet .2s ease}' +
         '.cpm-title{display:none;padding:10px 8px 6px;font-weight:700;font-size:.95rem}.cpm.sheet .cpm-title{display:block}' +
         '.cpm.sheet::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:#475569;margin:2px auto 4px}' +
-        '.cpm-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;border-radius:8px;background:none;color:inherit;font:inherit;font-size:.9rem;font-weight:600;text-align:left;text-decoration:none;cursor:pointer;box-sizing:border-box}' +
+        '.cpm-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;border-radius:8px;background:none;color:inherit;font:inherit;font-size:.9rem;font-weight:600;text-align:start;text-decoration:none;cursor:pointer;box-sizing:border-box}' +
         '.cpm.sheet .cpm-item{min-height:48px;font-size:1rem}.cpm-item:hover,.cpm-item:focus-visible{background:rgba(59,130,246,.14);outline:none}' +
-        '.cpm-item .cpm-ic{width:22px;display:inline-flex;justify-content:center;flex-shrink:0;color:var(--fg2,#94a3b8)}.cpm-item.danger .cpm-ic{color:inherit}.cpm-item .cpm-ext{display:inline-flex}.cpm-item .cpm-ext{margin-left:auto;color:var(--fg2,#94a3b8);font-size:.8rem}' +
+        '.cpm-item .cpm-ic{width:22px;display:inline-flex;justify-content:center;flex-shrink:0;color:var(--fg2,#94a3b8)}.cpm-item.danger .cpm-ic{color:inherit}.cpm-item .cpm-ext{display:inline-flex}.cpm-item .cpm-ext{margin-inline-start:auto;color:var(--fg2,#94a3b8);font-size:.8rem}' +
         '.cpm-item.danger{color:#f87171}.cpm-item.danger:hover{background:rgba(239,68,68,.14)}.cpm-div{height:1px;margin:4px 6px;background:var(--border,#334155)}' +
         '@keyframes cpSheet{from{transform:translateY(100%)}}@keyframes cpFade{from{opacity:0}}@keyframes cpPop{from{transform:scale(.96);opacity:0}}@media (prefers-reduced-motion:reduce){.cpm,.cpm.sheet,.cpm-back{animation:none}}';
       document.head.appendChild(st);
@@ -643,13 +643,13 @@
       '@media (hover:hover){.card-tap:hover .card-go{background:#7c3aed;border-color:#7c3aed;color:#fff}.card-tap:hover .card-go svg{transform:translateX(2px)}.cp-profit-tap:hover{border-color:rgba(124,58,237,.55)!important}}' +
       '.card-tap:active{transform:scale(.985)}.card-tap:focus-visible{outline:3px solid #a78bfa;outline-offset:2px}' +
       '[data-theme="light"] .card-go{background:rgba(124,58,237,.10);color:#6d28d9}' +
-      '.cp-profit-tap .sum-label,.cp-profit-tap .htx-label{padding-right:30px}.cp-profit-tap .sum-card-icon{display:none}' +
+      '.cp-profit-tap .sum-label,.cp-profit-tap .htx-label{padding-inline-end:30px}.cp-profit-tap .sum-card-icon{display:none}' +
       // compact centred cards (header stats, P/L breakdown): smaller button level with the label, label kept centred
       '.stat-card.cp-profit-tap .card-go,.pnl-bd-stat.cp-profit-tap .card-go{top:3px;right:5px;width:20px;height:20px}.stat-card.cp-profit-tap .card-go svg,.pnl-bd-stat.cp-profit-tap .card-go svg{width:11px;height:11px}' +   // up in the corner: a long value (7 figures) never touches it (the whole card is the tap target)
-      '.cp-profit-tap .stat-label,.cp-profit-tap .pnl-bd-stat-label{padding-left:24px;padding-right:24px}' +
+      '.cp-profit-tap .stat-label,.cp-profit-tap .pnl-bd-stat-label{padding-inline-start:24px;padding-inline-end:24px}' +
       '@media (prefers-reduced-motion:reduce){.card-tap:active{transform:none}.card-tap:hover .card-go svg{transform:none}}' +
       // ✎ next to a value you can change — always visible (not only on hover), same on every page and in cards and tables
-      '.val-edit{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:4px;padding:3px;border:none;border-radius:6px;background:none;color:var(--fg2,#94a3b8);opacity:.75;cursor:pointer;line-height:0;-webkit-tap-highlight-color:transparent;transition:opacity .15s,color .15s,background .15s}' +
+      '.val-edit{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-inline-start:4px;padding:3px;border:none;border-radius:6px;background:none;color:var(--fg2,#94a3b8);opacity:.75;cursor:pointer;line-height:0;-webkit-tap-highlight-color:transparent;transition:opacity .15s,color .15s,background .15s}' +
       '.val-edit .ss-pencil{width:13px;height:13px}.val-edit:active{background:rgba(124,58,237,.14)}.val-edit:focus-visible{outline:2px solid #a78bfa;outline-offset:1px;opacity:1}' +
       '@media (hover:hover){.val-edit:hover{opacity:1;color:#a78bfa}}' +
       '.val-cell{display:inline-flex;align-items:center;gap:0;white-space:nowrap}' +
@@ -714,7 +714,7 @@
       '@media (hover:hover){.cp-bnav a:hover{color:#e2e8f0}[data-theme="light"] .cp-bnav a:hover{color:#0f172a}}' +
       '.cp-bnav a:focus-visible{outline:2px solid #a78bfa;outline-offset:-2px}' +
       // three tabs: every label fits on any phone
-      '@media (max-width:480px){.cp-bnav{gap:0;padding-left:max(4px,env(safe-area-inset-left,0px));padding-right:max(4px,env(safe-area-inset-right,0px))}.cp-bnav a{min-width:0;font-size:10px;letter-spacing:-.01em;border-radius:12px}}' +
+      '@media (max-width:480px){.cp-bnav{gap:0;padding-inline-start:max(4px,env(safe-area-inset-left,0px));padding-inline-end:max(4px,env(safe-area-inset-right,0px))}.cp-bnav a{min-width:0;font-size:10px;letter-spacing:-.01em;border-radius:12px}}' +
       // computer: a floating dock at the bottom centre
       '@media (min-width:1024px){.cp-bnav{left:50%;right:auto;bottom:14px;transform:translateX(-50%);width:auto;height:auto;padding:6px;gap:4px;border:1px solid rgba(255,255,255,.1);border-radius:20px;box-shadow:0 12px 32px rgba(0,0,0,.35)}' +
         '.cp-bnav a{flex:1 1 0;width:140px;flex-direction:row;gap:8px;min-height:40px;padding:0 12px;font-size:.84rem}.cp-bnav a svg{width:20px;height:20px}' +

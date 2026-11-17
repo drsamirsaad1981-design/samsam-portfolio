@@ -30,7 +30,7 @@
     }
     .hov-list-header .hov-h-asset { display:flex; align-items:center; gap:6px; }
     .hov-h-dot { opacity:.6; }
-    .hov-sort { all: unset; cursor: pointer; text-align: right; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; -webkit-tap-highlight-color: transparent; border-radius: 4px; transition: color .15s; }
+    .hov-sort { all: unset; cursor: pointer; text-align: end; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; -webkit-tap-highlight-color: transparent; border-radius: 4px; transition: color .15s; }
     .hov-sort:hover, .hov-sort.active { color: var(--fg); }
     .hov-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .hov-sort i { font-style: normal; font-size: .9em; color: var(--accent); }
@@ -61,7 +61,7 @@
     /* the same small › as the best/worst rows: grey, purple on hover/press, always level with the two lines */
     .hov-go { display:flex; flex-shrink:0; color:var(--fg2); opacity:.7; transition:color .15s, opacity .15s, transform .15s; }
     /* two arrows: › transactions · ⌄ Liq.Map / Prediction / CMC */
-    .hov-arrows { display:flex; flex-direction:column; gap:2px; flex-shrink:0; margin-left:2px; }
+    .hov-arrows { display:flex; flex-direction:column; gap:2px; flex-shrink:0; margin-inline-start:2px; }
     .hov-btn { all:unset; box-sizing:border-box; display:flex; align-items:center; justify-content:center; width:26px; height:22px; border-radius:7px; color:var(--fg2); opacity:.75; cursor:pointer; -webkit-tap-highlight-color:transparent; }
     .hov-btn:focus-visible { outline:2px solid #3b82f6; outline-offset:1px; }
     @media (hover:hover) { .hov-btn:hover { background:var(--bg3); color:#a78bfa; opacity:1; } }
@@ -116,8 +116,8 @@
     .htx-row-type { font-weight:700; font-size:0.92rem; color:var(--fg); white-space:nowrap; }
     .htx-row-note { font-size:0.72rem; color:var(--fg2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     @media (max-width: 600px) { .htx-row-act { flex-direction:column; } .htx-row { gap:10px; } .htx-row-note { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; overflow-wrap:anywhere; } .htx-row-main { min-width:0; flex:1 1 auto; } }
-    .htx-row-amt { text-align:right; flex-shrink:0; }
-    .htx-row-act { flex-shrink:0; margin-left:4px; display:flex; gap:4px; }
+    .htx-row-amt { text-align:end; flex-shrink:0; }
+    .htx-row-act { flex-shrink:0; margin-inline-start:4px; display:flex; gap:4px; }
     .htx-act.htx-edit { border:none; background:none; color:var(--fg2); display:inline-flex; align-items:center; justify-content:center; }
     .htx-act.htx-edit .ss-pencil { width:17px; height:17px; }
     .htx-act.htx-edit:hover, .htx-act.htx-edit:focus-visible { color:var(--accent); }
@@ -128,7 +128,7 @@
     .htx-row-usd { font-size:0.8rem; color:var(--fg2); margin-top:2px; }
     .htx-in { color:#3b82f6; } .htx-out { color:#f59e0b; } .htx-rew { color:#a855f7; } [data-theme="light"] .htx-rew { color:#9333ea; }
     [data-theme="light"] .htx-in { color:#2563eb; } [data-theme="light"] .htx-out { color:#d97706; }
-    .htx-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; vertical-align:1px; }
+    .htx-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-inline-end:7px; vertical-align:1px; }
     .htx-dot-buy { background:#22c55e; } .htx-dot-sell { background:#ef4444; } .htx-dot-transfer_in { background:#3b82f6; }
     .htx-dot-transfer_out { background:#f59e0b; } .htx-dot-adjust { background:#94a3b8; }
     .htx-fab { position:fixed; right:max(16px, env(safe-area-inset-right,0px)); bottom:calc(64px + env(safe-area-inset-bottom,0px)); z-index:10001;
@@ -138,7 +138,7 @@
     .htx-fab:focus-visible { outline:3px solid #93c5fd; outline-offset:3px; }
     .htx-filters { align-items:center; }
     /* Add Transaction: shared ➕ .cp-add look (samsam-ui.js), pushed to the right of the filters */
-    .htx-add-btn { margin-left:auto; }
+    .htx-add-btn { margin-inline-start:auto; }
     /* Phones: one row — type, coin, Add (the word "Transaction" drops on the narrowest screens) */
     @media (max-width: 600px) {
       .htx-filters { flex-wrap:nowrap; gap:8px; }
@@ -179,7 +179,7 @@
     /* Value + chart + range tabs = one card; asset list = one card */
     .hov-card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px; }
     .hov-cat { margin-bottom: 14px; }
-    .hov-cat .cat-picker .sdd-btn { background: var(--card); border-color: var(--border); border-left-color: var(--cat-c); border-radius: 18px; box-shadow: var(--shadow); }
+    .hov-cat .cat-picker .sdd-btn { background: var(--card); border-color: var(--border); border-inline-start-color: var(--cat-c); border-radius: 18px; box-shadow: var(--shadow); }
     .hov-cat .cat-picker .cp-kicker { color: var(--fg2); }
     #holdingsOverlay[data-view="tx"] .hov-cat { display: none; }
     .hov-list-header { background: transparent; padding: 14px 18px 10px; border-bottom: 1px solid var(--border); }
@@ -188,9 +188,9 @@
     @media (hover:hover) { .hov-asset-row:hover { background: var(--bg3); } }
     #holdingsOverlay[data-view="tx"] .hov-card { display: none; }
     /* "ASSET" sits over the coin icons (spans the icon + name columns, left-aligned) */
-    .hov-list-header .hov-h-asset { grid-column: 1 / 3; text-align: left !important; }
+    .hov-list-header .hov-h-asset { grid-column: 1 / 3; text-align: start !important; }
     /* "HOLDINGS" lines up with the numbers, not with the › beside them */
-    .hov-list-header .hov-sort[data-sort="holdings"] { padding-right: 32px; }   /* = the › ⌄ column (26px + 2px + 4px gap) */
+    .hov-list-header .hov-sort[data-sort="holdings"] { padding-inline-end: 32px; }   /* = the › ⌄ column (26px + 2px + 4px gap) */
     /* room at the bottom so the floating Synced badge never covers the last row */
     .hov-container { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
     /* Coin Transactions view inside the same column */
@@ -229,12 +229,12 @@
     .tg-l { display: flex; align-items: center; gap: 8px; font-size: .84rem; } .tg-l .tg-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
     .tg-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
     .tg-v { font-variant-numeric: tabular-nums; color: var(--fg2); white-space: nowrap; } .tg-v b { color: var(--fg); }
-    .tg-d { min-width: 54px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; font-size: .8rem; }
+    .tg-d { min-width: 54px; text-align: end; font-weight: 800; font-variant-numeric: tabular-nums; font-size: .8rem; }
     .tg-d.ok { color: #22c55e; } .tg-d.warn { color: #f59e0b; } .tg-d.off { color: #ef4444; }
     [data-theme="light"] .tg-d.ok { color: #047857; } [data-theme="light"] .tg-d.warn { color: #b45309; } [data-theme="light"] .tg-d.off { color: #b91c1c; }
     .tg-bar { position: relative; height: 7px; border-radius: 5px; background: rgba(148,163,184,.18); margin-top: 6px; overflow: visible; }
     .tg-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; max-width: 100%; }
-    .tg-bar u { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--fg); border-radius: 1px; opacity: .85; }
+    .tg-bar u { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-inline-start: -1px; background: var(--fg); border-radius: 1px; opacity: .85; }
     .tg-rb { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
     .tg-rb-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; } .tg-rb-h b { flex: 1; font-size: .9rem; }
     .tg-seg { display: inline-grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 10px; background: var(--bg3); border: 1px solid var(--border); }
@@ -252,7 +252,7 @@
     .tge-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); } .tge-row:first-child { border-top: 0; }
     .tge-row .tg-n { flex: 1; min-width: 0; font-size: .86rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tge-row .tg-n span { display: block; font-size: .72rem; font-weight: 600; color: var(--fg2); }
     .tge-in { display: flex; align-items: center; height: 38px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg3); padding: 0 8px; } .tge-in:focus-within { border-color: #7c3aed; }
-    .tge-in input { width: 52px; border: 0; background: none; color: var(--fg); font: inherit; font-weight: 800; text-align: right; outline: none; } .tge-in i { font-style: normal; color: var(--fg2); font-weight: 700; margin-left: 2px; }
+    .tge-in input { width: 52px; border: 0; background: none; color: var(--fg); font: inherit; font-weight: 800; text-align: end; outline: none; } .tge-in i { font-style: normal; color: var(--fg2); font-weight: 700; margin-inline-start: 2px; }
     .tge-x { width: 30px; height: 30px; border-radius: 8px; border: 0; background: none; color: var(--fg2); cursor: pointer; line-height: 0; }
     .tge-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
     .tge-tools button, .tge-tools select { height: 36px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-size: .78rem; font-weight: 700; padding: 0 10px; cursor: pointer; }
@@ -270,15 +270,15 @@
     .hov-share { display: flex; align-items: center; gap: 8px; margin-top: 5px; }   /* [bar ────── ] 17.55% */
     .hov-share .alloc-bar-wrap { height: 5px; flex: 1; min-width: 44px; background: var(--bar-bg, var(--bg3)); border-radius: 4px; overflow: hidden; }
     .hov-share .alloc-bar { display: block; height: 100%; border-radius: 4px; transition: width .4s; }
-    .hov-share .coin-pct { font-size: .74rem; font-weight: 700; color: var(--fg); white-space: nowrap; min-width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
+    .hov-share .coin-pct { font-size: .74rem; font-weight: 700; color: var(--fg); white-space: nowrap; min-width: 46px; text-align: end; font-variant-numeric: tabular-nums; }
     @media (max-width: 500px) { .hov-alloc-card .donut-wrap { width: 220px; height: 220px; } }
 
     /* ── phone: more room for the content, like CoinMarketCap — 8px sides, coin lists edge to edge with dividers ── */
     @media (max-width: 759px) {
       :root { --gut: 8px; }
-      body { padding-left: max(8px, env(safe-area-inset-left,0px)); padding-right: max(8px, env(safe-area-inset-right,0px)); }
+      body { padding-inline-start: max(8px, env(safe-area-inset-left,0px)); padding-inline-end: max(8px, env(safe-area-inset-right,0px)); }
       .coin-card { padding: 12px; }
-      .hov-list-card { background: none; box-shadow: none; border-radius: 0; margin-left: -4px; margin-right: -4px; overflow: visible; }
+      .hov-list-card { background: none; box-shadow: none; border-radius: 0; margin-inline-start: -4px; margin-inline-end: -4px; overflow: visible; }
       .hov-list-header { padding: 10px 8px 8px; }
       .hov-asset-row { padding: 12px 8px; }
     }

@@ -16,6 +16,10 @@
     'html.cp-ar svg,html.cp-ar canvas{direction:ltr}' +                                   // charts read left → right (time axis), like every trading app
     'html.cp-ar input[type=number],html.cp-ar input[type=date],html.cp-ar input[type=datetime-local],html.cp-ar input[type=email],html.cp-ar input[inputmode=decimal]{direction:ltr;text-align:right}' +
     'html.cp-ar svg:has(>path[d="m9 6 6 6-6 6"]),html.cp-ar svg:has(>path[d="m15 18-6-6 6-6"]){scale:-1 1}' +   // › and ‹ point the other way
+    'html.cp-ar .mk-gauge,html.cp-ar .mk-gauge-l,html.cp-ar .as-gauge,html.cp-ar .as-gl{direction:ltr}' +   // a scale reads Bitcoin ← → Altcoin like its colours
+    // corner icons and buttons that sit at one side: the other side in Arabic
+    'html.cp-ar .sum-card-icon,html.cp-ar .card-go,html.cp-ar .as-tile .tch,html.cp-ar #portfolioTable .th-sort{right:auto;left:14px}html.cp-ar #portfolioTable .th-sort{left:3px}' +
+    'html.cp-ar .ss-search .ss-search-ic{left:auto;right:12px}html.cp-ar .mk-topmenu{left:auto;right:4px}' +
     'html.cp-ar .brand-name,html.cp-ar .cp-brand-n,html.cp-ar .mini-name{direction:ltr}' +
     'html.cp-ar pre{direction:ltr;unicode-bidi:isolate}html.cp-ar code{unicode-bidi:plaintext;font-family:inherit;letter-spacing:0}';   // a formula reads in its own language's direction
   try { if (localStorage.getItem(KEY) === 'ar') lang = 'ar'; } catch (_) {}

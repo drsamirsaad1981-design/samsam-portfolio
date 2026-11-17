@@ -37,7 +37,7 @@
     '.atx-backdrop{position:fixed;inset:0;z-index:100040;background:rgba(2,6,23,.6);display:none;align-items:flex-end;justify-content:center}' +
     '.atx-backdrop.show{display:flex}' +
     'body.atx-open #samsamSyncPill,body.atx-open #samsamSyncMenu{display:none!important}' +
-    '.atx-modal{width:100%;max-width:480px;max-height:92vh;overflow-y:auto;box-sizing:border-box;background:var(--bg-card,#1e293b);color:#f1f5f9;border:1px solid var(--border-card,#334155);text-align:left;' +
+    '.atx-modal{width:100%;max-width:480px;max-height:92vh;overflow-y:auto;box-sizing:border-box;background:var(--bg-card,#1e293b);color:#f1f5f9;border:1px solid var(--border-card,#334155);text-align:start;' +
       'border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.4);font-family:inherit}' +
     '[data-theme="light"] .atx-modal{background:#fff;color:#0f172a;border-color:#e2e8f0}' +
     '@media (min-width:601px){.atx-backdrop{align-items:center}.atx-modal{border-radius:16px}}' +
@@ -50,11 +50,11 @@
     '[data-theme="light"] .atx-types button[aria-checked="true"]{background:#fff}' +
     '.atx-types button[data-t="reward"]{grid-column:1 / -1}' +   // Buy | Sell · Transfer In | Transfer Out · Reward across
     '@media (max-width:380px){.atx-types button{font-size:.78rem;padding:9px 2px}}' +
-    '.ac-net{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--border,rgba(148,163,184,.3));background:rgba(148,163,184,.06);color:inherit;font:inherit;font-size:.86rem;cursor:pointer}' +
+    '.ac-net{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;text-align:start;padding:10px 12px;border-radius:10px;border:1px solid var(--border,rgba(148,163,184,.3));background:rgba(148,163,184,.06);color:inherit;font:inherit;font-size:.86rem;cursor:pointer}' +
     '.ac-net #acNetTxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ac-net .ac-net-go{opacity:.6;font-size:1.1rem}.ac-net .ss-ic{margin:0}' +
-    '.htx-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}.atx-types button .htx-dot{margin-right:5px}' +
+    '.htx-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:7px;vertical-align:1px}.atx-types button .htx-dot{margin-inline-end:5px}' +
     '.htx-dot-buy{background:#22c55e}.htx-dot-sell{background:#ef4444}.htx-dot-transfer_in{background:#3b82f6}.htx-dot-transfer_out{background:#f59e0b}.htx-dot-adjust{background:#94a3b8}.htx-dot-reward{background:#a855f7}' +
-    '.htx-rw{display:inline-block;font-size:.66rem;font-weight:800;letter-spacing:.02em;padding:1px 6px;border-radius:6px;margin-left:6px;vertical-align:1px;color:#a855f7;background:rgba(168,85,247,.14)}' +
+    '.htx-rw{display:inline-block;font-size:.66rem;font-weight:800;letter-spacing:.02em;padding:1px 6px;border-radius:6px;margin-inline-start:6px;vertical-align:1px;color:#a855f7;background:rgba(168,85,247,.14)}' +
     '.atx-coin{display:flex;align-items:center;gap:8px;font-weight:700;margin:2px 0 10px}.atx-coin small{font-weight:500;color:#94a3b8}' +
     '.atx-coin img{background:transparent!important;border-radius:50%}' +
     '.atx-field{display:block;margin-bottom:10px;font-size:.8rem;font-weight:600;color:#cbd5e1;min-width:0}' +
@@ -100,8 +100,8 @@
     '.ac-suggest img,.ac-noimg{width:24px;height:24px;border-radius:50%;flex-shrink:0;background:transparent}' +
     '.ac-noimg{background:rgba(148,163,184,.25)}' +
     '.ac-sym{font-weight:700}.ac-name{color:#94a3b8;font-size:.85rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
-    '.ac-rank{margin-left:auto;color:#94a3b8;font-size:.75rem;font-variant-numeric:tabular-nums}' +
-    '.ac-own{color:#a78bfa;font-size:.72rem;font-weight:700;white-space:nowrap}.ac-name+.ac-own{margin-left:auto}' +
+    '.ac-rank{margin-inline-start:auto;color:#94a3b8;font-size:.75rem;font-variant-numeric:tabular-nums}' +
+    '.ac-own{color:#a78bfa;font-size:.72rem;font-weight:700;white-space:nowrap}.ac-name+.ac-own{margin-inline-start:auto}' +
     '.ac-msg{padding:10px;color:#94a3b8;font-size:.82rem}' +
     '.ac-linked{margin-top:6px;font-size:.78rem;color:#34d399;line-height:1.4;font-weight:500}.ac-linked[hidden]{display:none}' +
     '.ac-linked.own{color:#a78bfa}' +
@@ -109,14 +109,14 @@
     '[data-theme="light"] .ac-cmc{background:#f8fafc;border-color:#e2e8f0}' +
     '.ac-cmc:focus-within{border-color:#3b82f6}' +
     '.ac-cmc-pre{padding:0 2px 0 12px;color:#94a3b8;font-size:.78rem;font-weight:500;white-space:nowrap;flex-shrink:1;overflow:hidden;text-overflow:ellipsis}' +
-    '.atx-field .ac-cmc input{border:none;background:transparent;margin:0;height:42px;padding-left:2px;min-width:70px;flex:1;box-shadow:none}' +
+    '.atx-field .ac-cmc input{border:none;background:transparent;margin:0;height:42px;padding-inline-start:2px;min-width:70px;flex:1;box-shadow:none}' +
     '.ac-cmc-check{padding:0 12px;color:#60a5fa;font-size:.8rem;font-weight:600;text-decoration:none;white-space:nowrap}.ac-cmc-check[hidden]{display:none}' +
-    '@media (max-width:420px){.ac-cmc-pre{display:none}.atx-field .ac-cmc input{padding-left:12px}}' +
+    '@media (max-width:420px){.ac-cmc-pre{display:none}.atx-field .ac-cmc input{padding-inline-start:12px}}' +
     '.cat-custom[hidden]{display:none}.cat-custom-hint{font-size:.75rem;color:#94a3b8;margin-top:5px;font-weight:500}' +
     '#catEditModal .atx-modal,#catMgrModal .atx-modal{max-width:440px;--atx-c:#7c3aed}' +
     // Change category: a dark list (not the phone's white system picker) — colour dot, name, ✓
     '.ce-list{display:flex;flex-direction:column;gap:2px;max-height:min(52vh,420px);overflow-y:auto;margin:0 0 10px;padding:4px;border:1px solid var(--border-card,#334155);border-radius:12px;background:rgba(255,255,255,.03)}' +
-    '.ce-opt{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:8px 12px;border:none;border-radius:9px;background:none;color:inherit;font:inherit;font-size:.92rem;font-weight:600;text-align:left;cursor:pointer}' +
+    '.ce-opt{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:8px 12px;border:none;border-radius:9px;background:none;color:inherit;font:inherit;font-size:.92rem;font-weight:600;text-align:start;cursor:pointer}' +
     '.ce-opt:hover{background:rgba(148,163,184,.1)}.ce-opt[aria-checked="true"]{background:rgba(124,58,237,.18);color:#c4b5fd}' +
     '.ce-opt .ce-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}.ce-opt .ce-name{flex:1;min-width:0}.ce-opt .ce-ck{visibility:hidden;font-weight:800}.ce-opt[aria-checked="true"] .ce-ck{visibility:visible}' +
     '.ce-group{font-size:.7rem;font-weight:700;color:#94a3b8;padding:8px 12px 2px}' +

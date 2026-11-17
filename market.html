@@ -15,22 +15,22 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-lang.js?v=202611171409"></script>
-<script src="samsam-ar.js?v=202611171409"></script>
-<script src="samsam-ui.js?v=202611171409"></script>
-<script src="samsam-hints.js?v=202611171409"></script>
-<script src="samsam-arhints.js?v=202611171409"></script>
-<script src="samsam-vault.js?v=202611171409"></script>
-<script src="samsam-labels.js?v=202611171409"></script>
-<script src="samsam-taxonomy.js?v=202611171409"></script>
-<script src="samsam-coins.js?v=202611171409"></script>
-<script src="samsam-import.js?v=202611171409"></script>
-<script src="samsam-wallets.js?v=202611171409"></script>
-<script src="samsam-rewards.js?v=202611171409"></script>
-<script src="samsam-settings.js?v=202611171409"></script>
-<script src="samsam-dropdown.js?v=202611171409"></script>
-<script src="samsam-add.js?v=202611171409"></script>
-<script src="samsam-market.js?v=202611171409"></script>
+<script src="samsam-lang.js?v=202611171509"></script>
+<script src="samsam-ar.js?v=202611171509"></script>
+<script src="samsam-ui.js?v=202611171509"></script>
+<script src="samsam-hints.js?v=202611171509"></script>
+<script src="samsam-arhints.js?v=202611171509"></script>
+<script src="samsam-vault.js?v=202611171509"></script>
+<script src="samsam-labels.js?v=202611171509"></script>
+<script src="samsam-taxonomy.js?v=202611171509"></script>
+<script src="samsam-coins.js?v=202611171509"></script>
+<script src="samsam-import.js?v=202611171509"></script>
+<script src="samsam-wallets.js?v=202611171509"></script>
+<script src="samsam-rewards.js?v=202611171509"></script>
+<script src="samsam-settings.js?v=202611171509"></script>
+<script src="samsam-dropdown.js?v=202611171509"></script>
+<script src="samsam-add.js?v=202611171509"></script>
+<script src="samsam-market.js?v=202611171509"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -65,10 +65,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 @media (min-width: 1024px) { .mk-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; } }
 .mk-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 14px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .mk-k { display: flex; align-items: center; font-size: .72rem; font-weight: 700; color: var(--fg2); line-height: 1.2; }
-.mk-k { white-space: nowrap; } .mk-k .cp-hint { width: 18px; height: 18px; margin-left: 3px; }
+.mk-k { white-space: nowrap; } .mk-k .cp-hint { width: 18px; height: 18px; margin-inline-start: 3px; }
 .mk-k .ss-ic { color: #a78bfa; } [data-theme="light"] .mk-k .ss-ic { color: #7c3aed; }
 .mk-v { font-size: 1.32rem; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mk-v small { font-size: .74rem; font-weight: 700; color: var(--fg2); margin-left: 2px; }
+.mk-v small { font-size: .74rem; font-weight: 700; color: var(--fg2); margin-inline-start: 2px; }
 .mk-sub { font-size: .72rem; color: var(--fg2); font-variant-numeric: tabular-nums; line-height: 1.35; }
 .mk-sub b { font-weight: 700; }
 .mk-tag { font-size: .76rem; font-weight: 800; }
@@ -80,7 +80,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 /* closed by default (the Altcoin Season card already shows the last 7 days) — tap the title to open */
 .mk-etf-tog { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; cursor: pointer; border-radius: 9px; }
 .mk-etf-tog:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.mk-etf-sum { margin-left: auto; font-size: .74rem; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mk-etf-sum { margin-inline-start: auto; font-size: .74rem; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .mk-etf-sum.up { color: var(--green); } .mk-etf-sum.down { color: var(--red); }
 .mk-etf-chev { width: 18px; height: 18px; flex: none; color: var(--fg2); transition: transform .2s; }
 .mk-etf-tog[aria-expanded="true"] .mk-etf-chev { transform: rotate(180deg); }
@@ -88,7 +88,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-etf:not(.open) .mk-etf-seg { display: none; }
 .mk-etf-body { display: grid; gap: 10px; } .mk-etf-body[hidden] { display: none; }
 .mk-etf-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.mk-etf-h .mk-k small { font-weight: 700; margin-left: 6px; opacity: .75; }
+.mk-etf-h .mk-k small { font-weight: 700; margin-inline-start: 6px; opacity: .75; }
 .mk-etf-seg { display: inline-grid; grid-auto-flow: column; background: var(--bg3); border: 1px solid var(--border); border-radius: 9px; padding: 2px; gap: 2px; }
 .mk-etf-seg button { all: unset; box-sizing: border-box; padding: 5px 14px; border-radius: 7px; font-size: .74rem; font-weight: 800; color: var(--fg2); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .mk-etf-seg button.on { background: var(--accent); color: #fff; }
@@ -118,7 +118,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 @media (hover: hover) { .mk-go:hover { border-color: rgba(124,58,237,.45); } }
 .mk-go:active { transform: scale(.985); }
 .mk-go:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.mk-chev { margin-left: auto; display: inline-flex; color: var(--fg2); }
+.mk-chev { margin-inline-start: auto; display: inline-flex; color: var(--fg2); }
 .mk-altg { margin: auto 0; padding: 6px 0; }
 .mk-tag.btc-side { color: #f7931a; } .mk-tag.alt-side { color: #60a5fa; }
 [data-theme="light"] .mk-tag.btc-side { color: #d97706; } [data-theme="light"] .mk-tag.alt-side { color: #2563eb; }
@@ -129,7 +129,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-gauge { position: relative; height: 8px; border-radius: 6px; margin: 6px 0 2px; }
 .mk-gauge.fng { background: linear-gradient(90deg, #ef4444 0%, #f97316 25%, #eab308 50%, #84cc16 72%, #22c55e 100%); }
 .mk-gauge.alt { background: linear-gradient(90deg, #f7931a 0%, #f7931a 25%, #94a3b8 50%, #3b82f6 75%, #3b82f6 100%); }
-.mk-gauge i { position: absolute; top: 50%; width: 16px; height: 16px; margin-left: -8px; transform: translateY(-50%); border-radius: 50%; background: #fff; border: 3px solid #1e1b4b; box-shadow: 0 1px 4px rgba(0,0,0,.35); transition: left .5s; }
+.mk-gauge i { position: absolute; top: 50%; width: 16px; height: 16px; margin-inline-start: -8px; transform: translateY(-50%); border-radius: 50%; background: #fff; border: 3px solid #1e1b4b; box-shadow: 0 1px 4px rgba(0,0,0,.35); transition: left .5s; }
 .mk-gauge-l { display: flex; justify-content: space-between; font-size: .62rem; font-weight: 700; color: var(--fg2); }
 .mk-dom { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin: 6px 0 4px; background: var(--bar-bg); }
 .mk-dom span { height: 100%; transition: width .5s; }
@@ -141,7 +141,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-foot { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
 .mk-li { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: .72rem; color: var(--fg2); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 0; }
 .mk-li b { color: var(--fg); font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
-.mk-li .ch { font-weight: 700; margin-left: 4px; }
+.mk-li .ch { font-weight: 700; margin-inline-start: 4px; }
 .mk-pill { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; font-size: .72rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
 .mk-pill.up { background: rgba(34,197,94,.14); } .mk-pill.down { background: rgba(239,68,68,.14); }
 .mk-pill small { font-weight: 700; color: var(--fg2); }
@@ -194,10 +194,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-tabs button { flex: 1; height: 36px; border: 0; border-radius: 9px; background: none; color: var(--fg2); font: inherit; font-size: .84rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .mk-tabs button[aria-selected="true"] { background: var(--card-solid, var(--card)); color: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.18); }
 .mk-tabs button { min-width: 0; white-space: nowrap; }
-@media (max-width: 759px) { .mk-own-v + .nm { display: none; } .mk-tabs .pf-in { display: none; } .mk-tabs button { font-size: .8rem; padding: 0 4px; } .mk-tabs button [data-ic] { margin-right: 0; } .mk-tabs .n { margin-left: 4px; padding: 1px 6px; } }
+@media (max-width: 759px) { .mk-own-v + .nm { display: none; } .mk-tabs .pf-in { display: none; } .mk-tabs button { font-size: .8rem; padding: 0 4px; } .mk-tabs button [data-ic] { margin-inline-end: 0; } .mk-tabs .n { margin-inline-start: 4px; padding: 1px 6px; } }
 .mk-own-v { color: var(--fg); font-weight: 700; }
 .mk-list { position: relative; }
-.mk-tchev { display: inline-flex; margin-left: 4px; opacity: .7; transition: transform .2s; }
+.mk-tchev { display: inline-flex; margin-inline-start: 4px; opacity: .7; transition: transform .2s; }
 #tabTop[aria-expanded="true"] .mk-tchev { transform: rotate(180deg); }
 .mk-topmenu { position: absolute; z-index: 30; top: 50px; left: 4px; min-width: 150px; padding: 6px; border-radius: 12px; background: var(--card-solid, var(--card)); border: 1px solid var(--border); box-shadow: 0 10px 28px rgba(0,0,0,.25); display: grid; gap: 2px; }
 .mk-topmenu[hidden] { display: none; }
@@ -208,7 +208,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 @media (hover: hover) { .mk-topmenu button:hover { background: var(--bg3); } }
 .mk-topmenu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .mk-morerows { height: 40px; display: flex; align-items: center; justify-content: center; font-size: .74rem; color: var(--fg2); }
-.mk-tabs .n { margin-left: 6px; font-size: .7rem; padding: 1px 7px; border-radius: 9px; background: rgba(124,58,237,.18); color: #a78bfa; }
+.mk-tabs .n { margin-inline-start: 6px; font-size: .7rem; padding: 1px 7px; border-radius: 9px; background: rgba(124,58,237,.18); color: #a78bfa; }
 [data-theme="light"] .mk-tabs .n { color: #6d28d9; }
 .mk-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
 .mk-tools .ss-search { flex: 1 1 220px; min-width: 0; }
@@ -217,7 +217,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-chips { display: inline-flex; gap: 4px; }
 .mk-chip { height: 32px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--border); background: none; color: var(--fg2); font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; }
 .mk-chip[aria-pressed="true"] { color: #fff; background: #7c3aed; border-color: #7c3aed; }
-.mk-custom { height: 32px; padding: 0 12px; border-radius: 9px; border: 1px dashed rgba(124,58,237,.6); background: none; color: #a78bfa; font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; margin-left: auto; }
+.mk-custom { height: 32px; padding: 0 12px; border-radius: 9px; border: 1px dashed rgba(124,58,237,.6); background: none; color: #a78bfa; font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; margin-inline-start: auto; }
 [data-theme="light"] .mk-custom { color: #6d28d9; }
 .mk-custom:hover { background: rgba(124,58,237,.12); }
 .mk-note { display: flex; align-items: flex-start; gap: 6px; font-size: .72rem; line-height: 1.45; color: var(--fg2); margin: -2px 2px 10px; }
@@ -239,10 +239,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-head .t-d { display: none; }
 .mk-head button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; padding: 2px 0; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .mk-head button[aria-sort] { color: var(--fg); }
-.mk-head .r { justify-content: flex-end; text-align: right; }
+.mk-head .r { justify-content: flex-end; text-align: end; }
 .mk-head .c-rank, .mk-head .c-ch, .mk-head .c-ch7, .mk-head .c-price, .mk-row .mk-rank, .mk-row .mk-ch, .mk-row .mk-ch7, .mk-asset .mk-ap { display: none; }
 /* phone: one period for the whole list — 24h or 7d (the chart and the % always match) */
-.mk-per { display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; border: 1px solid var(--border); margin-left: auto; }
+.mk-per { display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; border: 1px solid var(--border); margin-inline-start: auto; }
 .mk-per button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: none; color: var(--fg2); font: inherit; font-size: .74rem; font-weight: 800; cursor: pointer; }
 .mk-per button[aria-pressed="true"] { background: #7c3aed; color: #fff; }
 .mk-lsum { width: 100%; display: flex; justify-content: center; gap: 14px; font-size: .74rem; font-weight: 700; color: var(--fg2); font-variant-numeric: tabular-nums; margin-bottom: 2px; }
@@ -271,7 +271,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-sp svg { width: 100%; max-width: 72px; height: 26px; }
 .mk-own .ss-ic { margin: 0; }
 @media (max-width: 759px) { .mk-own { padding: 2px 4px; display: inline-flex; } .mk-own .t { display: none; } .mk-asset { gap: 8px; } }
-.mk-pc { text-align: right; font-variant-numeric: tabular-nums; min-width: 0; }
+.mk-pc { text-align: end; font-variant-numeric: tabular-nums; min-width: 0; }
 .mk-pc b { display: block; font-size: .86rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mk-pc span { font-size: .74rem; font-weight: 700; }
 .mk-pc2 { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 3px; }
@@ -314,7 +314,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
       and a tap on the price opens Liq.Map · Prediction · CMC — so the coin column gets the width ── */
 @media (max-width: 759px) {
   .mk-list { background: none; border: 0; box-shadow: none; border-radius: 0; padding: 0; margin: 0 -10px; }
-  .mk-list > .mk-tabs, .mk-list > .mk-tools, .mk-list > .mk-note, .mk-list > .mk-hint, .mk-list > .mk-src { margin-left: 6px; margin-right: 6px; }
+  .mk-list > .mk-tabs, .mk-list > .mk-tools, .mk-list > .mk-note, .mk-list > .mk-hint, .mk-list > .mk-src { margin-inline-start: 6px; margin-inline-end: 6px; }
   .mk-head, .mk-row { grid-template-columns: 26px minmax(0,1fr) 112px 32px; column-gap: 6px; }
   .mk-pc2 { gap: 4px; flex-wrap: nowrap; } .mk-pc2 svg { width: 46px; }
   .mk-head { padding: 8px 6px; }
@@ -327,7 +327,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   .mk-act { gap: 0; }
   .mk-pc { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 8px; }
   .mk-pc:active { background: var(--bg3); }
-  .mk-caret { display: inline-flex; color: var(--fg2); opacity: .7; margin-left: -2px; transition: transform .2s; }
+  .mk-caret { display: inline-flex; color: var(--fg2); opacity: .7; margin-inline-start: -2px; transition: transform .2s; }
   .mk-row.open .mk-caret { transform: rotate(180deg); color: #a78bfa; opacity: 1; }
   .mk-links { padding: 2px 6px 12px; }
 }
@@ -340,7 +340,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   .mk-head > .c-asset, .mk-head > .c-price, #mkRows .mk-row > .mk-asset { grid-column: 3; } .mk-head > .c-price { justify-self: end; }
   .mk-head > .c-ch, #mkRows .mk-row > .mk-ch { grid-column: 4; } .mk-head > .c-ch7, #mkRows .mk-row > .mk-ch7 { grid-column: 5; }
   .mk-head > .c-sp, #mkRows .mk-row > .mk-sp { grid-column: 6; } .mk-head > :last-child, #mkRows .mk-row > .mk-act { grid-column: 7; }
-  .mk-asset .mk-ap { display: block; margin-left: auto; padding-left: 12px; text-align: right; font-size: .92rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mk-asset .mk-ap { display: block; margin-inline-start: auto; padding-inline-start: 12px; text-align: end; font-size: .92rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .mk-names { flex: 1 1 auto; }
   .mk-sp { justify-content: center; }
   .mk-row .mk-rank { text-align: center; } .mk-head > .c-rank { justify-content: center; }
@@ -362,11 +362,11 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   .mk-pc { display: none; }
   .mk-head .c-pc { display: none; }
   .mk-rank { font-size: .8rem; font-weight: 700; color: var(--fg2); font-variant-numeric: tabular-nums; }
-  .mk-price { text-align: right; font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .mk-ch, .mk-ch7 { text-align: right; font-size: .86rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .mk-price { text-align: end; font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .mk-ch, .mk-ch7 { text-align: end; font-size: .86rem; font-weight: 800; font-variant-numeric: tabular-nums; }
   .mk-sp svg { width: 100%; max-width: none; height: 34px; }   /* fills the 7d column, so its edge lines up with the links */
   .mk-add { width: auto; padding: 0 12px; justify-self: end; }
-  .mk-add .t { display: inline; margin-left: 4px; }
+  .mk-add .t { display: inline; margin-inline-start: 4px; }
   .mk-more .mk-row { grid-template-columns: 34px minmax(0,1fr) 92px; }
   .mk-list { padding: 16px; }
 }
@@ -527,7 +527,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611171409"></script>
+<script type="module" src="samsam-cloud.js?v=202611171509"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';

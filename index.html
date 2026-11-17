@@ -18,23 +18,23 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-lang.js?v=202611171409"></script>
-<script src="samsam-ar.js?v=202611171409"></script>
-<script src="samsam-ui.js?v=202611171409"></script>
-<script src="samsam-hints.js?v=202611171409"></script>
-<script src="samsam-arhints.js?v=202611171409"></script>
-<script src="samsam-vault.js?v=202611171409"></script>
-<script src="samsam-labels.js?v=202611171409"></script>
-<script src="samsam-taxonomy.js?v=202611171409"></script>
-<script src="samsam-coins.js?v=202611171409"></script>
-<script src="samsam-dropdown.js?v=202611171409"></script>
-<script src="samsam-add.js?v=202611171409"></script>
-<script src="samsam-chart.js?v=202611171409"></script>
-<script src="samsam-market.js?v=202611171409"></script>
-<script src="samsam-import.js?v=202611171409"></script>
-<script src="samsam-wallets.js?v=202611171409"></script>
-<script src="samsam-rewards.js?v=202611171409"></script>
-<script src="samsam-settings.js?v=202611171409"></script>
+<script src="samsam-lang.js?v=202611171509"></script>
+<script src="samsam-ar.js?v=202611171509"></script>
+<script src="samsam-ui.js?v=202611171509"></script>
+<script src="samsam-hints.js?v=202611171509"></script>
+<script src="samsam-arhints.js?v=202611171509"></script>
+<script src="samsam-vault.js?v=202611171509"></script>
+<script src="samsam-labels.js?v=202611171509"></script>
+<script src="samsam-taxonomy.js?v=202611171509"></script>
+<script src="samsam-coins.js?v=202611171509"></script>
+<script src="samsam-dropdown.js?v=202611171509"></script>
+<script src="samsam-add.js?v=202611171509"></script>
+<script src="samsam-chart.js?v=202611171509"></script>
+<script src="samsam-market.js?v=202611171509"></script>
+<script src="samsam-import.js?v=202611171509"></script>
+<script src="samsam-wallets.js?v=202611171509"></script>
+<script src="samsam-rewards.js?v=202611171509"></script>
+<script src="samsam-settings.js?v=202611171509"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -44,7 +44,7 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
-<link rel="stylesheet" href="samsam-home.css?v=202611171409">
+<link rel="stylesheet" href="samsam-home.css?v=202611171509">
 </head>
 <body>
 <div id="cpSplash" role="status" aria-live="polite" aria-label="Loading Cute Portfolio" style="position:fixed;inset:0;z-index:100200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0e1a;color:#e5e7eb;font-family:Inter,system-ui,-apple-system,sans-serif;transition:opacity .35s ease,visibility .35s">
@@ -249,7 +249,7 @@
   <table id="portfolioTable">
     <thead>
       <tr>
-        <th class="th-left" data-sort="name" onclick="sortTable('name')" style="text-align:left"><span class="th-in"><span class="th-l">Asset<i class="th-sort" aria-hidden="true"></i></span></span></th>
+        <th class="th-left" data-sort="name" onclick="sortTable('name')" style="text-align:start"><span class="th-in"><span class="th-l">Asset<i class="th-sort" aria-hidden="true"></i></span></span></th>
         <th class="num-r" data-sort="currentValue" onclick="sortTable('currentValue')"><span class="th-in"><span class="th-l"><span>Holdings</span><i class="th-sort" aria-hidden="true"></i></span></span></th>
         <th class="num-r" data-sort="basePrice" onclick="sortTable('basePrice')"><span class="th-in"><span class="th-l th-2"><span data-label="AVG_BUY_PRICE">Avg. Buy Price</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="avgBuy" aria-label="About Avg. Buy Price"></button></span></th>
         <th class="num-r" data-sort="baseValue" onclick="sortTable('baseValue')"><span class="th-in"><span class="th-l th-2"><span data-label="COST_BASIS">Cost Basis</span><i class="th-sort" aria-hidden="true"></i></span><button type="button" class="cp-hint" data-hint="costBasis" aria-label="About Cost Basis"></button></span></th>
@@ -317,11 +317,11 @@
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611171409"></script>
-<script src="samsam-home.js?v=202611171409"></script>
-<script src="samsam-analysis.js?v=202611171409"></script>
-<script src="samsam-coinpage.js?v=202611171409"></script>
-<script src="samsam-hchart.js?v=202611171409"></script>
+<script type="module" src="samsam-cloud.js?v=202611171509"></script>
+<script src="samsam-home.js?v=202611171509"></script>
+<script src="samsam-analysis.js?v=202611171509"></script>
+<script src="samsam-coinpage.js?v=202611171509"></script>
+<script src="samsam-hchart.js?v=202611171509"></script>
 
 <!-- ── Compact bar: appears once the main header scrolls away (logo · name · total) ── -->
 <div class="mini-bar" id="miniBar" aria-hidden="true">
@@ -338,10 +338,10 @@
     border-bottom: 1px solid var(--border); box-shadow: 0 6px 18px rgba(2,6,23,.14); }
   .mini-bar.show { opacity: 1; transform: none; pointer-events: auto; }
   .mini-in { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 1232px; margin: 0 auto; box-sizing: border-box;
-    padding: 9px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 9px max(var(--gut, 16px), env(safe-area-inset-left,0px)); border: none; background: none; color: var(--fg); font: inherit; cursor: pointer; text-align: left; }
+    padding: 9px max(var(--gut, 16px), env(safe-area-inset-right,0px)) 9px max(var(--gut, 16px), env(safe-area-inset-left,0px)); border: none; background: none; color: var(--fg); font: inherit; cursor: pointer; text-align: start; }
   .mini-in img { flex-shrink: 0; }
   .mini-name { font-weight: 900; font-size: 1rem; letter-spacing: -0.01em; white-space: nowrap; }
-  .mini-vals { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .mini-vals { margin-inline-start: auto; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; font-variant-numeric: tabular-nums; }
   .mini-total { font-weight: 800; font-size: .98rem; }
   .mini-pnl { font-size: .72rem; font-weight: 700; }
   .mini-pnl.pos { color: var(--green); } .mini-pnl.neg { color: var(--red); }
@@ -372,7 +372,7 @@
   .bl-acts button { height: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-weight: 800; cursor: pointer; }
   .bl-acts .bl-save { background: linear-gradient(135deg,#7c3aed,#6d28d9); border-color: #6d28d9; color: #fff; } .bl-acts .bl-save:disabled { opacity: .5; cursor: default; }
   .bl-mine { display: flex; align-items: center; gap: 8px; width: 100%; margin: -4px 0 12px; padding: 9px 12px; border-radius: 10px; border: 1px dashed rgba(167,139,250,.55);
-    background: rgba(124,58,237,.08); color: var(--fg); font: inherit; font-size: .82rem; font-weight: 700; text-align: left; cursor: pointer; }
+    background: rgba(124,58,237,.08); color: var(--fg); font: inherit; font-size: .82rem; font-weight: 700; text-align: start; cursor: pointer; }
   .bl-mine b { color: #a78bfa; font-variant-numeric: tabular-nums; } .bl-mine[aria-pressed=true] { border-style: solid; background: rgba(124,58,237,.16); }
   .bl-reset { display: block; margin: 10px auto 0; border: none; background: none; color: #a78bfa; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
 </style>
@@ -415,12 +415,12 @@
   @media (min-width: 1024px) { #cpViews { bottom: 0; } }
   @media print { #cpViews { display: none !important; } }
 </style>
-<script src="samsam-shell.js?v=202611171409"></script>
-<script src="samsam-edits.js?v=202611171409"></script>
+<script src="samsam-shell.js?v=202611171509"></script>
+<script src="samsam-edits.js?v=202611171509"></script>
 
 <!-- ── Holdings Full-Screen Overlay ── -->
 <div id="holdingsOverlay" style="display:none;position:fixed;inset:0;z-index:9999;flex-direction:column;overflow-y:auto;background:var(--bg)">
-  <link rel="stylesheet" href="samsam-holdings.css?v=202611171409">
+  <link rel="stylesheet" href="samsam-holdings.css?v=202611171509">
 
   <!-- Nav bar -->
   <header class="cp-head hov-navbar">

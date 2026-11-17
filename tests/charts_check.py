@@ -12,7 +12,7 @@ with sync_playwright() as p:
         pg.evaluate("openHoldingsView()"); pg.wait_for_timeout(600)
         a = pg.evaluate("""() => { const h = document.querySelector('.hov-h-asset').getBoundingClientRect(); const ic = document.querySelector('#hovAssetList .hov-coin-icon').getBoundingClientRect();
           return [Math.round(h.left), Math.round(ic.left), getComputedStyle(document.querySelector('.hov-h-asset')).textAlign]; }""")
-        check(f'{name}: ASSET left-aligned over coin icons', abs(a[0] - a[1]) <= 2 and a[2] == 'left', a)
+        check(f'{name}: ASSET left-aligned over coin icons', abs(a[0] - a[1]) <= 2 and a[2] in ('left', 'start'), a)
         # Synced badge never covers the last row (scrolled to bottom) on every screen
         pg.evaluate("document.getElementById('holdingsOverlay').scrollTop = 1e6"); pg.wait_for_timeout(300)
         ov = pg.evaluate("""() => { const rows = document.querySelectorAll('#hovAssetList .hov-asset-row'); const last = rows[rows.length-1].getBoundingClientRect(); const pill = document.getElementById('samsamSyncPill').getBoundingClientRect();

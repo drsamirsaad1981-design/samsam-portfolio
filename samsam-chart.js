@@ -198,7 +198,7 @@
       'background:#1e1b3a;color:#f1f5f9;border:1px solid rgba(255,255,255,.1);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.3);padding:7px 10px}' +
       '[data-theme="light"] .cpc-tip{background:#fff;color:#0f172a;border-color:rgba(0,0,0,.08);box-shadow:0 6px 18px rgba(15,23,42,.14)}' +
       '.cpc-tip .d{font-size:11px;font-weight:700;color:#94a3b8}[data-theme="light"] .cpc-tip .d{color:#64748b}.cpc-tip b{font-weight:800}' +
-      '.cpc-tip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}';
+      '.cpc-tip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:6px;vertical-align:0}';
     document.head.appendChild(st);
   }
   // mouse / finger → crosshair + card (the page still scrolls up and down with a finger)

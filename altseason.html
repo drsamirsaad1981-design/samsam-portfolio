@@ -15,22 +15,22 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-lang.js?v=202611171409"></script>
-<script src="samsam-ar.js?v=202611171409"></script>
-<script src="samsam-ui.js?v=202611171409"></script>
-<script src="samsam-hints.js?v=202611171409"></script>
-<script src="samsam-arhints.js?v=202611171409"></script>
-<script src="samsam-vault.js?v=202611171409"></script>
-<script src="samsam-labels.js?v=202611171409"></script>
-<script src="samsam-taxonomy.js?v=202611171409"></script>
-<script src="samsam-coins.js?v=202611171409"></script>
-<script src="samsam-import.js?v=202611171409"></script>
-<script src="samsam-wallets.js?v=202611171409"></script>
-<script src="samsam-rewards.js?v=202611171409"></script>
-<script src="samsam-settings.js?v=202611171409"></script>
-<script src="samsam-dropdown.js?v=202611171409"></script>
-<script src="samsam-add.js?v=202611171409"></script>
-<script src="samsam-market.js?v=202611171409"></script>
+<script src="samsam-lang.js?v=202611171509"></script>
+<script src="samsam-ar.js?v=202611171509"></script>
+<script src="samsam-ui.js?v=202611171509"></script>
+<script src="samsam-hints.js?v=202611171509"></script>
+<script src="samsam-arhints.js?v=202611171509"></script>
+<script src="samsam-vault.js?v=202611171509"></script>
+<script src="samsam-labels.js?v=202611171509"></script>
+<script src="samsam-taxonomy.js?v=202611171509"></script>
+<script src="samsam-coins.js?v=202611171509"></script>
+<script src="samsam-import.js?v=202611171509"></script>
+<script src="samsam-wallets.js?v=202611171509"></script>
+<script src="samsam-rewards.js?v=202611171509"></script>
+<script src="samsam-settings.js?v=202611171509"></script>
+<script src="samsam-dropdown.js?v=202611171509"></script>
+<script src="samsam-add.js?v=202611171509"></script>
+<script src="samsam-market.js?v=202611171509"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }
@@ -51,7 +51,7 @@ html, body { overscroll-behavior-y: none; }
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--fg); min-height: 100vh; padding-bottom: env(safe-area-inset-bottom, 16px); }
 .container { max-width: 860px; margin: 0 auto; padding: 12px max(16px, env(safe-area-inset-right,0px)) 32px max(16px, env(safe-area-inset-left,0px)); }
 @media (min-width: 1024px) { .container { max-width: 1232px; } }
-@media (max-width: 759px) { .container { padding-left: max(10px, env(safe-area-inset-left,0px)); padding-right: max(10px, env(safe-area-inset-right,0px)); } #asP_hist { padding-left: 10px; padding-right: 10px; } }
+@media (max-width: 759px) { .container { padding-inline-start: max(10px, env(safe-area-inset-left,0px)); padding-inline-end: max(10px, env(safe-area-inset-right,0px)); } #asP_hist { padding-inline-start: 10px; padding-inline-end: 10px; } }
 .up { color: var(--green); } .down { color: var(--red); }
 .btc-side { color: var(--btc); } .alt-side { color: var(--alt); }
 
@@ -61,7 +61,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .as-back svg { width: 16px; height: 16px; }
 @media (hover: hover) { .as-back:hover { border-color: rgba(124,58,237,.45); } }
 .as-back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.as-upd { font-size: .72rem; font-weight: 600; color: var(--fg2); text-align: right; font-variant-numeric: tabular-nums; }
+.as-upd { font-size: .72rem; font-weight: 600; color: var(--fg2); text-align: end; font-variant-numeric: tabular-nums; }
 
 .as-card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); padding: 16px; min-width: 0; }
 .as-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -75,13 +75,13 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 /* hero */
 .as-big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .as-big .v { font-size: 3.2rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
-.as-big .v small { font-size: 1rem; font-weight: 700; color: var(--fg2); letter-spacing: 0; margin-left: 2px; }
+.as-big .v small { font-size: 1rem; font-weight: 700; color: var(--fg2); letter-spacing: 0; margin-inline-start: 2px; }
 .as-big .l { font-size: 1.02rem; font-weight: 800; }
 .as-gauge { position: relative; height: 12px; border-radius: 8px; margin: 18px 0 4px; background: linear-gradient(90deg, #f7931a 0%, #f7931a 25%, #94a3b8 50%, #3b82f6 75%, #3b82f6 100%); }
-.as-gauge i { position: absolute; top: 50%; width: 22px; height: 22px; margin-left: -11px; transform: translateY(-50%); border-radius: 50%; background: #fff; border: 4px solid #1e1b4b; box-shadow: 0 2px 6px rgba(0,0,0,.35); transition: left .6s; }
-.as-gauge u { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--card); opacity: .9; }
+.as-gauge i { position: absolute; top: 50%; width: 22px; height: 22px; margin-inline-start: -11px; transform: translateY(-50%); border-radius: 50%; background: #fff; border: 4px solid #1e1b4b; box-shadow: 0 2px 6px rgba(0,0,0,.35); transition: left .6s; }
+.as-gauge u { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-inline-start: -1px; background: var(--card); opacity: .9; }
 .as-gl { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; font-size: .64rem; font-weight: 700; color: var(--fg2); text-align: center; }
-.as-gl span:first-child { text-align: left; } .as-gl span:last-child { text-align: right; }
+.as-gl span:first-child { text-align: start; } .as-gl span:last-child { text-align: end; }
 .as-what { margin-top: 12px; }
 .as-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .as-stat { background: var(--bg3); border-radius: 12px; padding: 10px 11px; min-width: 0; }
@@ -104,7 +104,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .as-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 @media (min-width: 1024px) { .as-tiles { grid-template-columns: repeat(4, 1fr); gap: 12px; } }
 .as-tile { all: unset; box-sizing: border-box; position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px 14px 12px; border-radius: 16px; background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color .15s, box-shadow .15s, transform .15s; }
-.as-tile .tk { display: flex; align-items: center; gap: 6px; padding-right: 18px; font-size: .78rem; font-weight: 800; color: var(--fg); line-height: 1.2; }
+.as-tile .tk { display: flex; align-items: center; gap: 6px; padding-inline-end: 18px; font-size: .78rem; font-weight: 800; color: var(--fg); line-height: 1.2; }
 .as-tile .tk .ss-ic { color: #a78bfa; flex-shrink: 0; } [data-theme="light"] .as-tile .tk .ss-ic { color: #7c3aed; }
 .as-tile .ts { font-size: .72rem; color: var(--fg2); line-height: 1.45; font-variant-numeric: tabular-nums; min-width: 0; }
 .as-tile .ts b { color: var(--fg); font-weight: 800; }
@@ -146,12 +146,12 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .as-br .bar { position: relative; height: 10px; border-radius: 6px; background: var(--bar-bg); overflow: hidden; }
 .as-br .bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; transition: width .5s; }
 .as-br .bar u { position: absolute; left: 75%; top: 0; bottom: 0; width: 2px; background: var(--card); }
-.as-br .c { font-size: .8rem; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.as-br .c { font-size: .8rem; font-weight: 800; font-variant-numeric: tabular-nums; text-align: end; white-space: nowrap; }
 .as-br .c small { font-weight: 700; color: var(--fg2); }
 .as-tbl { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: .74rem; font-variant-numeric: tabular-nums; }
-.as-tbl th { text-align: right; font-weight: 700; color: var(--fg2); padding: 0 0 6px; font-size: .68rem; }
-.as-tbl th:first-child, .as-tbl td:first-child { text-align: left; }
-.as-tbl td { text-align: right; padding: 7px 0; border-top: 1px solid var(--border); font-weight: 700; }
+.as-tbl th { text-align: end; font-weight: 700; color: var(--fg2); padding: 0 0 6px; font-size: .68rem; }
+.as-tbl th:first-child, .as-tbl td:first-child { text-align: start; }
+.as-tbl td { text-align: end; padding: 7px 0; border-top: 1px solid var(--border); font-weight: 700; }
 .as-tbl td:first-child { color: var(--fg2); }
 .as-read { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--bg3); font-size: .76rem; line-height: 1.45; display: flex; gap: 8px; align-items: flex-start; }
 .as-read .ss-ic { flex-shrink: 0; margin-top: 1px; color: #a78bfa; } [data-theme="light"] .as-read .ss-ic { color: #7c3aed; }
@@ -168,7 +168,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .as-rows { display: flex; flex-direction: column; }
 .as-row { display: grid; grid-template-columns: 26px 32px minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; column-gap: 10px; row-gap: 6px; padding: 10px 2px; border-top: 1px solid var(--border); text-decoration: none; color: inherit; }
 .as-row:first-child { border-top: none; }
-.as-row .rk { font-size: .7rem; font-weight: 700; color: var(--fg2); text-align: right; font-variant-numeric: tabular-nums; }
+.as-row .rk { font-size: .7rem; font-weight: 700; color: var(--fg2); text-align: end; font-variant-numeric: tabular-nums; }
 .as-row .ic { display: flex; }
 .as-row .nm { min-width: 0; }
 .as-row .nm b { display: flex; align-items: center; gap: 6px; font-size: .86rem; font-weight: 800; }
@@ -176,16 +176,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .as-row .mine { font-size: .6rem; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: rgba(124,58,237,.16); color: #7c3aed; }
 [data-theme="dark"] .as-row .mine, :root:not([data-theme="light"]) .as-row .mine { color: #c4b5fd; }
 :root[data-theme="light"] .as-row .mine { color: #7c3aed; }
-.as-row .vs { text-align: right; font-variant-numeric: tabular-nums; }
+.as-row .vs { text-align: end; font-variant-numeric: tabular-nums; }
 .as-row .vs b { display: block; font-size: .9rem; font-weight: 800; }
 .as-row .vs span { display: block; font-size: .68rem; color: var(--fg2); font-weight: 600; }
 .as-row .db { grid-column: 3 / 5; position: relative; height: 6px; border-radius: 4px; background: var(--bar-bg); }
 .as-row .db i { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
-.as-row .db u { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--fg2); opacity: .55; border-radius: 1px; }
+.as-row .db u { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-inline-start: -1px; background: var(--fg2); opacity: .55; border-radius: 1px; }
 .as-row.norank { grid-template-columns: 32px minmax(0, 1fr) auto; }
 .as-row.norank .rk { display: none; }
 .as-row.norank .db { grid-column: 2 / 4; }
-.as-row.btc { background: var(--btc-bg); border-radius: 12px; border-top: none; margin: 2px 0; padding-left: 6px; padding-right: 6px; }
+.as-row.btc { background: var(--btc-bg); border-radius: 12px; border-top: none; margin: 2px 0; padding-inline-start: 6px; padding-inline-end: 6px; }
 .as-row.btc + .as-row { border-top: none; }
 @media (hover: hover) { a.as-row:hover .nm b { color: var(--accent); } }
 .as-more { all: unset; box-sizing: border-box; display: block; width: 100%; text-align: center; padding: 10px; margin-top: 6px; border-radius: 10px; background: var(--bg3); font-size: .78rem; font-weight: 700; color: var(--fg); cursor: pointer; }
@@ -289,7 +289,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
   <p class="as-src">Prices: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> and Binance (daily, 00:00 UTC), saved by GitHub with each market snapshot. The index follows the CoinMarketCap method. "vs BTC" = how the coin did against holding BTC over the same days.</p>
 </main>
 
-<script type="module" src="samsam-cloud.js?v=202611171409"></script>
+<script type="module" src="samsam-cloud.js?v=202611171509"></script>
 <script>
 const M = SamsamMarket, C = SamsamCoins, DAY = 864e5;
 let data = null, state = null, range = 365, per = 2, perYou = 2, filter = 'all', query = '', showAll = false, open = null;
@@ -358,7 +358,7 @@ function paintChart(S) {
     <linearGradient id="asLine" x1="0" y1="${Y(100)}" x2="0" y2="${Y(0)}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3b82f6"/><stop offset=".5" stop-color="#a78bfa"/><stop offset="1" stop-color="#f7931a"/></linearGradient>
     <linearGradient id="asFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a78bfa" stop-opacity=".22"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></linearGradient></defs>`;
   svg += `<rect x="${L}" y="${Y(100)}" width="${W - L - R}" height="${Y(75) - Y(100)}" fill="var(--alt-bg)"/><rect x="${L}" y="${Y(25)}" width="${W - L - R}" height="${Y(0) - Y(25)}" fill="var(--btc-bg)"/>`;
-  svg += `<text class="zl" x="${L + 6}" y="${Y(100) + 12}" style="fill:var(--alt)">Altcoin Season</text><text class="zl" x="${L + 6}" y="${Y(0) - 6}" style="fill:var(--btc)">Bitcoin Season</text>`;
+  svg += `<text class="zl" x="${L + 6}" y="${Y(100) + 12}" style="fill:var(--alt)">${window.CPLang ? CPLang.t('Altcoin Season') : 'Altcoin Season'}</text><text class="zl" x="${L + 6}" y="${Y(0) - 6}" style="fill:var(--btc)">${window.CPLang ? CPLang.t('Bitcoin Season') : 'Bitcoin Season'}</text>`;
   [0, 25, 50, 75, 100].forEach(v => { svg += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--border)" ${v === 25 || v === 75 ? 'stroke-dasharray="4 4" stroke="var(--fg2)" stroke-opacity=".35"' : ''}/><text x="${L - 6}" y="${Y(v) + 3.5}" text-anchor="end">${v}</text>`; });
   // date labels
   const n = W < 500 ? 4 : 6;
