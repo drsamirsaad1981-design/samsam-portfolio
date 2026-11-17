@@ -17,6 +17,7 @@
     'html.cp-ar input[type=number],html.cp-ar input[type=date],html.cp-ar input[type=datetime-local],html.cp-ar input[type=email],html.cp-ar input[inputmode=decimal]{direction:ltr;text-align:right}' +
     'html.cp-ar svg:has(>path[d="m9 6 6 6-6 6"]),html.cp-ar svg:has(>path[d="m15 18-6-6 6-6"]){scale:-1 1}' +   // › and ‹ point the other way
     'html.cp-ar #altV,html.cp-ar #asV,html.cp-ar strong:has(>.bt-of){direction:ltr;unicode-bidi:isolate}' +   // 50/100 reads 50/100, not 100/ 50
+    'html.cp-ar .mk-k{white-space:normal;min-width:0}html.cp-ar .mk-k>.ss-ic,html.cp-ar .mk-k>.cp-hint,html.cp-ar .mk-chev{flex-shrink:0}' +   // longer Arabic card titles wrap instead of pushing › and ⓘ out of the card
     'html.cp-ar .mk-gauge,html.cp-ar .mk-gauge-l,html.cp-ar .as-gauge,html.cp-ar .as-gl{direction:ltr}' +   // a scale reads Bitcoin ← → Altcoin like its colours
     // corner icons and buttons that sit at one side: the other side in Arabic
     'html.cp-ar .sum-card-icon,html.cp-ar .card-go,html.cp-ar .as-tile .tch,html.cp-ar #portfolioTable .th-sort{right:auto;left:14px}html.cp-ar #portfolioTable .th-sort{left:3px}' +
