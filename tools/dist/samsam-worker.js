@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: a569596a2f020ac3
+// sources-hash: b71bebfe5afb2cfe
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1320,21 +1320,21 @@ function bidiLine(line, all = false) {
   }).replace(/ · /g, " \xB7" + RLM + " ")).join("");
   return RLM + out;
 }
-function bidi(text) {
+function bidi(text, mode = "auto") {
   if (typeof text !== "string" || !AR.test(text)) return text;
   const plain = text.replace(/<[^>]+>/g, ""), ar = (plain.match(/[\u0600-\u06FF]/g) || []).length, la = (plain.match(/[A-Za-z]/g) || []).length;
-  const all = ar > la;
+  const all = mode !== "lines" && ar * 3 >= la;
   return text.split("\n").map((l) => bidiLine(l, all)).join("\n");
 }
-function bidiBody(body) {
+function bidiBody(body, mode = "auto") {
   if (!body || typeof body !== "object") return body;
   const b = { ...body };
   if (typeof b.text === "string") {
-    const x = bidi(b.text);
+    const x = bidi(b.text, mode);
     if (x.length <= 4096) b.text = x;
   }
   if (typeof b.caption === "string") {
-    const x = bidi(b.caption);
+    const x = bidi(b.caption, mode);
     if (x.length <= 1024) b.caption = x;
   }
   return b;
@@ -3018,7 +3018,7 @@ var guide_default = {
 // tools/worker/community.mjs
 var KEY2 = "tg:community";
 async function tg3(env, method, body) {
-  body = bidiBody(body);
+  body = bidiBody(body, "lines");
   let r = await tg1(env, method, body);
   if (r && r.error_code === 429) {
     const w = Math.min(15, r.parameters && r.parameters.retry_after || 3);

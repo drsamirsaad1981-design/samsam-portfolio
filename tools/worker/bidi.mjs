@@ -25,20 +25,20 @@ export function bidiLine(line, all = false) {
     }).replace(/ · /g, ' ·' + RLM + ' ')).join('');   // a list "Binance · Gate · now" runs right-to-left, item by item
   return RLM + out;
 }
-// a mostly-Arabic message (more Arabic letters than Latin ones, tags left out): EVERY line runs right-to-left, so the rows
-// that are only a ticker and numbers ("✅ QNT 2.237 · $341") line up with the Arabic ones. Otherwise (English, or the
-// group's English + Arabic posts) only the lines with Arabic in them.
-export function bidi(text) {
+// an Arabic message (Arabic letters at least a third of the Latin ones, tags left out): EVERY line runs right-to-left, so the rows
+// that are only a ticker and numbers ("✅ QNT 2.237 · $341") line up with the Arabic ones. Otherwise (English), and always for the
+// group's English + Arabic posts (mode 'lines'), only the lines with Arabic in them.
+export function bidi(text, mode = 'auto') {
   if (typeof text !== 'string' || !AR.test(text)) return text;
   const plain = text.replace(/<[^>]+>/g, ''), ar = (plain.match(/[\u0600-\u06FF]/g) || []).length, la = (plain.match(/[A-Za-z]/g) || []).length;
-  const all = ar > la;
+  const all = mode !== 'lines' && ar * 3 >= la;   // Arabic is the language (a list of tickers can outnumber its letters)
   return text.split('\n').map(l => bidiLine(l, all)).join('\n');
 }
 // a Telegram API body: its text / caption made right-to-left where Arabic (nothing else changes)
-export function bidiBody(body) {
+export function bidiBody(body, mode = 'auto') {
   if (!body || typeof body !== 'object') return body;
   const b = { ...body };
-  if (typeof b.text === 'string') { const x = bidi(b.text); if (x.length <= 4096) b.text = x; }   // Telegram's limit: never longer than it allows
-  if (typeof b.caption === 'string') { const x = bidi(b.caption); if (x.length <= 1024) b.caption = x; }
+  if (typeof b.text === 'string') { const x = bidi(b.text, mode); if (x.length <= 4096) b.text = x; }   // Telegram's limit: never longer than it allows
+  if (typeof b.caption === 'string') { const x = bidi(b.caption, mode); if (x.length <= 1024) b.caption = x; }
   return b;
 }

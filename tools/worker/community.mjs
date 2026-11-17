@@ -18,7 +18,7 @@ import GUIDE from '../../guide.json' with { type: 'json' };
 const KEY = 'tg:community';
 // Telegram allows ~20 messages a minute in a group: on "Too Many Requests" wait what it says (≤ 15 s) and try once more
 async function tg(env, method, body) {
-  body = bidiBody(body);   // Arabic lines read right-to-left (bidi.mjs)
+  body = bidiBody(body, 'lines');   // Arabic lines read right-to-left (bidi.mjs); the English halves stay as they are
   let r = await tg1(env, method, body);
   if (r && r.error_code === 429) { const w = Math.min(15, (r.parameters && r.parameters.retry_after) || 3); await new Promise(z => setTimeout(z, w * 1000)); r = await tg1(env, method, body); }
   return r;
