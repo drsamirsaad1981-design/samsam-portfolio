@@ -96,13 +96,15 @@
     "Tap <b>+</b> (or <b>+ Buy</b> / <b>− Sell</b> on a coin) and pick the type: <b>Buy</b>, <b>Sell</b>, <b>Reward</b>, <b>Transfer In</b> or <b>Transfer Out</b>.",
     "Enter the amount, the price and the fee — fees are counted in your average buy price.",
     "Or bring all your trades at once: Performance → <b>Wallets &amp; Exchanges</b> → <b>Import from exchange</b> (a CSV file from Binance, Gate and others).",
-    "Trades you already entered are recognised and not added twice."
+    "Trades you already entered are recognised and not added twice.",
+    "<b>Gold and silver:</b> in Add New Coin tap <b>🥇 Gold 24k</b> or <b>🥈 Silver</b>, then enter grams and the price per gram in dollars. They sit under <b>Precious Metals</b>, always show Hold, and are not counted with the altcoins."
    ],
    "ar": [
     "اضغط <b>+</b> (أو <b>+ شراء</b> / <b>− بيع</b> على العملة) واختر النوع: <b>شراء</b>، أو <b>بيع</b>، أو <b>مكافأة</b>، أو <b>إيداع</b>، أو <b>سحب</b>.",
     "أدخل الكمية والسعر والرسوم — تُحسب الرسوم ضمن متوسط سعر الشراء.",
     "أو استورد كل صفقاتك دفعة واحدة: الأداء ← <b>المحافظ والمنصات</b> ← <b>استيراد من منصة</b> (ملف CSV من Binance وGate وغيرها).",
-    "الصفقات التي أدخلتها من قبل يتعرف عليها التطبيق ولا يضيفها مرتين."
+    "الصفقات التي أدخلتها من قبل يتعرف عليها التطبيق ولا يضيفها مرتين.",
+    "<b>الذهب والفضة:</b> في إضافة عملة جديدة اضغط <b>🥇 ذهب عيار 24</b> أو <b>🥈 فضة</b>، ثم أدخل الجرامات وسعر الجرام بالدولار. تظهر تحت <b>المعادن الثمينة</b>، وإشارتها دائماً احتفاظ، ولا تُحسب مع العملات البديلة."
    ],
    "tip": {
     "en": "Staking, mining and airdrops go in as a <b>Reward</b>: they come in at $0 cost.",

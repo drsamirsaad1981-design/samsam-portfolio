@@ -263,7 +263,7 @@ async function resetApp() {
 function calcStats() {
   const btcEntry = portfolio.find(c => c.sym === 'BTC');
   const btcQty = btcEntry ? btcEntry.qty : 0;
-  const altTotal = portfolio.filter(c => c.sym !== 'BTC').reduce((s,c) => s + c.qty * c.currentPrice, 0);
+  const altTotal = portfolio.filter(c => c.sym !== 'BTC' && !SamsamCoins.isMetal(c.sym)).reduce((s,c) => s + c.qty * c.currentPrice, 0);
   const btcValue = btcQty * btcPrice;
   return { btcQty, btcValue, altTotal, total: btcValue + altTotal };
 }
@@ -307,7 +307,7 @@ function signalLabel(action, long) {
   return long ? 'Hold' : SamsamUI.dot('grey') + 'Hold';
 }
 // Avg. Buy Price as shown: "—" once the coin is sold out (the old average means nothing then)
-const avgShown = c => isSoldOut(c) ? '—' : SamsamFmt.price(c.basePrice);
+const avgShown = c => isSoldOut(c) ? '—' : SamsamCoins.isMetal(c.sym) ? SamsamFmt.price(c.basePrice / SamsamCoins.GPO) + '/g' : SamsamFmt.price(c.basePrice);   // gold / silver: per gram
 
 // Signal: the coin's price vs its Avg. Buy Price with your thresholds (Signal ✏️ — defaults −5% / −20%), and with Smart on
 // (the default) checked against the coin's 30 / 90 days vs BTC — samsam-core.js → signalFor (the Telegram alerts use the same).
@@ -317,12 +317,12 @@ function signalRules() { return window.Samsam && Samsam.getSignalRules ? Samsam.
 function signalInfo(coin, rules) {
   const r = rules || signalRules(), chg = getCoinPct(coin);
   if (window.Samsam && Samsam.core && Samsam.core.signalFor) return Samsam.core.signalFor({ sym: coin.sym, chg, rules: r, rs: rsFor(coin), smart: r.smart !== false });
-  const a = coin.sym === 'BTC' ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
+  const a = coin.sym === 'BTC' || SamsamCoins.isMetal(coin.sym) ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
   return { action: a, base: a, why: null, rs: null };
 }
 function getAction(sym, perf, coin) {
   if (isSoldOut(coin)) return 'soldout';
-  if (sym === 'BTC') return 'hold';
+  if (sym === 'BTC' || SamsamCoins.isMetal(sym)) return 'hold';   // gold / silver: a store of value, no signal
   if (!coin) { const r = signalRules(); return perf < r.sell ? 'convert' : perf <= r.reinforce ? 'reinforce' : 'hold'; }
   return signalInfo(coin).action;
 }

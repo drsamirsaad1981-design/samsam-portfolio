@@ -303,7 +303,7 @@ export function btcPriceLookup(snaps) {
 export const SMART_WEAK = 15;
 export function signalFor({ sym, chg, rules, rs = null, smart = true }) {
   const r = rules || { reinforce: -5, sell: -20 };
-  const base = sym === 'BTC' ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
+  const base = sym === 'BTC' || sym === 'XAU' || sym === 'XAG' ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
   const ok = smart && sym !== 'BTC' && rs && Number.isFinite(rs.d30) && Number.isFinite(rs.d90);
   if (!ok) return { action: base, base, why: null, rs: rs || null };
   const weak = rs.d30 <= -SMART_WEAK && rs.d90 <= -SMART_WEAK, strong = rs.d30 > 0 && rs.d90 > 0;

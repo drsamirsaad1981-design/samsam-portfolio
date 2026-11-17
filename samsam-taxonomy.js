@@ -13,6 +13,7 @@
     { key: 'launchpad', label: 'Launchpad',                  color: '#f97316', coins: ['PONS'] },
     { key: 'web3',      label: 'Web3 & Gaming',              color: '#84cc16', coins: ['ENS'] },
     { key: 'meme',      label: 'Meme & Utility Tokens',      color: '#ef4444', coins: ['DOGE', 'VTHO'] },
+    { key: 'metals',    label: 'Precious Metals',            color: '#eab308', coins: ['XAU', 'XAG', 'PAXG', 'XAUT', 'KAG'] },   // physical gold / silver (grams) and gold tokens
   ];
   var OTHER = { key: 'other', label: 'Other', color: '#6b7280', coins: [] };
   var BY_SYM = {}, LABELS = {}, COLORS = {};
@@ -34,7 +35,7 @@
   }
   // ── Your own categories (made by choosing "Other" and typing a name) ──
   // Saved on each coin as cat = 'x-…' + catLabel; every page registers them from the cloud data.
-  var ORDER = ['btc', 'layer1', 'layer2', 'ai', 'layer0', 'oracle', 'defi', 'meme', 'launchpad', 'web3'];
+  var ORDER = ['btc', 'metals', 'layer1', 'layer2', 'ai', 'layer0', 'oracle', 'defi', 'meme', 'launchpad', 'web3'];
   var PALETTE = ['#14b8a6', '#e879f9', '#facc15', '#60a5fa', '#fb7185', '#a3e635', '#c084fc', '#38bdf8', '#fdba74', '#4ade80'];
   var CUSTOM = {};
   // ── Your category settings (Manage Categories, saved once in the cloud: users/{uid}/meta/categories) ──

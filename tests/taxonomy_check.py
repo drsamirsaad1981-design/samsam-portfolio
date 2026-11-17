@@ -23,7 +23,7 @@ with sync_playwright() as p:
             check(f'cloud: saved categories updated ({len(saved)} coins)', not bad, bad[:6])
         pg.click('#catPicker .sdd-btn'); pg.wait_for_timeout(250)
         labs=pg.evaluate("[...document.querySelectorAll('.sdd-panel.show .sdd-opt > span:not(.sdd-ico):not(.sdd-sub)')].map(l=>l.innerText.trim())"); pg.keyboard.press('Escape')
-        check(f'{name}: category picker uses the 10 categories {labs[1:]}', labs[0]=='All Coins' and all(l in LABELS for l in labs[1:-1]) and labs[-1]=='Manage Categories', labs)
+        check(f'{name}: category picker uses the 10 categories {labs[1:]}', labs[0]=='All Coins' and all(l in LABELS+['Precious Metals'] for l in labs[1:-1]) and labs[-1]=='Manage Categories', labs)
         tot=pg.evaluate("(() => { const p=Samsam.getState().portfolio; const by={}; p.forEach(c=>by[c.cat]=(by[c.cat]||0)+c.qty*c.currentPrice); return [Object.values(by).reduce((a,b)=>a+b,0), p.reduce((a,c)=>a+c.qty*c.currentPrice,0)]; })()")
         check(f'{name}: category totals add up to the portfolio', abs(tot[0]-tot[1])<1e-6, tot)
         pg.evaluate("applyView('table')"); pg.wait_for_timeout(300)

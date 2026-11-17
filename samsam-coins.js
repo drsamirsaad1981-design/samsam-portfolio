@@ -94,6 +94,7 @@
     "PONS": "https://assets.coingecko.com/coins/images/102174571/standard/jhitvkisdq8fhxvimdkpcw7y3dx5.?1784093932",
   };
   var NAMES = {
+    XAU: 'Gold (24k)', XAG: 'Silver (999)',
     "BTC": "Bitcoin",
     "SOL": "Solana",
     "NEAR": "NEAR Protocol",
@@ -141,6 +142,8 @@
   };
   var CG_IDS = {
     "BTC": "bitcoin",
+    "XAU": "pax-gold",          // 🥇 physical gold (24k), priced as PAX Gold (1 token = 1 troy ounce); held in grams
+    "XAG": "kinesis-silver",    // 🥈 physical silver (999), priced as Kinesis Silver (1 token = 1 troy ounce); held in grams
     "ETH": "ethereum",
     "SOL": "solana",
     "BNB": "binancecoin",
@@ -195,6 +198,7 @@
   // ── Coin pages open on CoinMarketCap (prices still come from CoinGecko's free feed) ──
   // CoinMarketCap page names, each checked on coinmarketcap.com (Oct 2026).
   var CMC_SLUGS = {
+    XAU: 'pax-gold', XAG: 'kinesis-silver',
     BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'bnb', TAO: 'bittensor', SUI: 'sui', NEAR: 'near-protocol', SEI: 'sei',
     ATOM: 'cosmos', APT: 'aptos', AVAX: 'avalanche', ICP: 'internet-computer', KSM: 'kusama', GRAM: 'toncoin', ARB: 'arbitrum',
     MOVR: 'moonriver', GLMR: 'moonbeam', OP: 'optimism-ethereum', WLD: 'worldcoin-org', PYTH: 'pyth-network', JUP: 'jupiter-ag',
@@ -339,19 +343,25 @@
     if (a === 0) return '0';
     return q.toLocaleString('en-US', { maximumFractionDigits: Math.min(10, 4 - Math.floor(Math.log10(a))) });   // 4 significant digits: 0.01204, 0.0006003
   }
+  // 🥇 gold / 🥈 silver are held in troy ounces inside the app (their price is per ounce) and shown in grams
+  var GPO = 31.1034768, METALS = { XAU: 'Gold (24k)', XAG: 'Silver (999)' };
+  function isMetal(sym) { return !!METALS[String(sym || '').toUpperCase()]; }
+  function grams(qty) { return parseFloat(((+qty || 0) * GPO).toFixed(3)).toLocaleString('en-US', { maximumFractionDigits: 3 }) + ' g'; }
   function holdCell(sym, value, qty, o) {
     o = o || {}; assetCss();
+    if (isMetal(sym)) { var vm = window.SamsamFmt ? SamsamFmt.usd(value) : '$' + (+value || 0).toFixed(2); return '<div class="hold' + (o.align ? ' hold-' + o.align : '') + '"><div class="hold-val">' + (o.noValue ? '—' : vm) + '</div><div class="hold-qty" title="' + esc(grams(qty) + ' · ' + fmtAmount(qty) + ' oz') + '">' + grams(qty) + '</div></div>'; }
     var v = window.SamsamFmt ? SamsamFmt.usd(value) : '$' + (+value || 0).toFixed(2);
     return '<div class="hold' + (o.align ? ' hold-' + o.align : '') + '"><div class="hold-val">' + (o.noValue ? '—' : v) + '</div><div class="hold-qty" title="' + esc(fmtAmount(qty) + ' ' + sym) + '">' + fmtAmount(qty) + ' ' + esc(sym) + '</div>' + (o.below || '') + '</div>';
   }
   function assetCell(sym, o) { return '<div class="ast">' + assetIcon(sym, o) + assetText(sym, o) + '</div>'; }
   // CoinGlass liquidation heatmap for a coin (opens in a new tab). Symbol differs on CoinGlass for a few coins.
-  var LIQ_SYMS = { GRAM: 'TON' };
+  var LIQ_SYMS = { GRAM: 'TON', XAU: 'XAUT', XAG: 'XAG' };   // gold: CoinGlass's tokenized-gold futures map (XAUT), silver: XAG
   var LIQ_MAYBE = 'no futures found on the exchanges we check (OKX, Gate, Bitget, KuCoin, MEXC, BingX, Hyperliquid) — CoinGlass may have no map for it, open it to see';
   function liqMapUrl(sym) { var s = LIQ_SYMS[sym] || String(sym || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); return 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(s); }
   // CoinCodex price prediction. CoinCodex uses its own page names (checked against its API, Oct 2026);
   // a coin added later stores its CoinCodex name as coin.ccSlug (looked up when it is added).
   var CC_SLUGS = {
+    XAU: 'pax-gold', XAG: 'kinesis-silver',
     BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binance-coin', TAO: 'bittensor', SUI: 'sui', NEAR: 'near-protocol',
     SEI: 'sei', ATOM: 'cosmos', APT: 'aptos', AVAX: 'avalanche', ICP: 'internet-computer', KSM: 'kusama', GRAM: 'toncoin',
     ARB: 'arbitrum', MOVR: 'moonriver', GLMR: 'moonbeam', OP: 'optimism', WLD: 'worldcoin-org', PYTH: 'pyth-network',
@@ -484,7 +494,8 @@
     var a = function (cls, href, icon, label, title) { return '<a class="ql ' + cls + '" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer" title="' + esc(title) + '">' + I(icon) + label + X + '</a>'; };
     var off = function (icon, label, title) { return '<span class="ql ql-off" title="' + esc(title) + '">' + I(icon) + label + '</span>'; };
     // no futures found → still a link (Binance / Bybit can't be asked from GitHub, so CoinGlass may still have it), marked "Try"
-    var liq = hasFutures(sym) === false ? a('ql-liq ql-maybe', liqMapUrl(sym), 'flame', 'Try Liq.Map', sym + ': ' + LIQ_MAYBE)
+    var liq = sym !== 'XAU' && (sym === 'XAG' || hasFutures(sym) === false) ?   // gold: CoinGlass's XAUT map; silver: may have none
+      a('ql-liq ql-maybe', liqMapUrl(sym), 'flame', 'Try Liq.Map', sym + ': ' + LIQ_MAYBE)
       : a('ql-liq', liqMapUrl(sym), 'flame', 'Liq.Map', 'Open the ' + sym + ' liquidation heatmap on CoinGlass (new tab)');
     var pred = ccSlug(sym, o) ? a('ql-pred', predictionUrl(sym, o), 'sparkles', 'Prediction', 'Open the ' + sym + ' price prediction on CoinCodex (new tab)')
       : off('sparkles', 'No prediction', 'CoinCodex has no price prediction page for ' + sym);
@@ -492,5 +503,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { GPO: GPO, METALS: METALS, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();
