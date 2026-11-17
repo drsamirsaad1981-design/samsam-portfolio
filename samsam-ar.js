@@ -699,4 +699,9 @@
     'Values use today’s price. Rewards come in at $0 cost, so they lower your average buy price — they’re already part of your All Time Profit.': 'القيم بسعر اليوم. تدخل المكافآت بتكلفة صفر، فتخفض متوسط سعر الشراء — وهي محتسبة بالفعل في إجمالي الربح.',
     'iShares Bitcoin Trust': 'iShares Bitcoin Trust',
   });
+  R(/^Show all (\d+)$/, 'عرض الكل ($1)');
+  R(/^@ (.+) · fee (.+)$/, function (_, a, b) { return n('@ ' + a) + ' · رسوم ' + n(b); });
+  R(/^With the amounts you hold today · (\d+) coins? without 90 days of prices left out\. Stablecoins aren't counted as altcoins\.$/, function (_, k) { return 'بالكميات التي تملكها اليوم · استُبعدت ' + pl(k, 'عملة واحدة', 'عملتان', 'عملات', 'عملة') + ' ليس لها أسعار 90 يوماً. ولا تُحتسب العملات المستقرة ضمن العملات البديلة.'; });
+  R(/^With the amounts you hold today\. Stablecoins aren't counted as altcoins\.$/, 'بالكميات التي تملكها اليوم. ولا تُحتسب العملات المستقرة ضمن العملات البديلة.');
+  A({ 'Altcoin Season — Cute Portfolio': 'موسم العملات البديلة — Cute Portfolio', 'Recover — Cute Portfolio': 'استرجاع البيانات — Cute Portfolio' });
 })();
