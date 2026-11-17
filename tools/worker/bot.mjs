@@ -19,6 +19,7 @@ import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, 
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
 import { chatUid, idTokenFor } from './data.mjs';
 import { balancesFor } from './cex.mjs';
+import { usMarket, US_STATE, METAL, UNIT, gramSar } from './usmarket.mjs';
 import { forgetPortfolio, findLinkCode, syncAccess, loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
 import { ask, firstTime, forget, usage } from './ai.mjs';
 import { viewAlerts, deleteAlert } from './watch.mjs';
@@ -260,12 +261,41 @@ export function viewMarket(t, m, now, range = 100) {
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
   if (up.length) L.push('', `📈 <b>${t.topUp(range)}</b>`, ...up.map(line));
   if (dn.length) L.push('', `📉 <b>${t.topDn(range)}</b>`, ...dn.map(line));
-  const st = (m.stocks || []).filter(r => r.ch24 != null && r.price > 0);
-  if (st.length) {
-    const sUp = [...st].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...st].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
-    L.push('', `🏦 <b>${t.stUp}</b>`, ...sUp.map(line), '', `🏦 <b>${t.stDn}</b>`, ...sDn.map(line), `<i>${t.stNote}</i>`);
+  return { text: L.join('\n'), buttons: [mkTabs(t, 'c'), RANGES.map(n => cb((n === range ? '✓ ' : '') + 'Top ' + n, 'mk:' + n)), [cb(t.refresh, 'mk:' + range), url('🧭 Market Hub', APP + 'market.html')], [cb(t.back, 'menu')]] };
+}
+// 🌍 the market's three sections, like the app's Market Hub: 🪙 Crypto · 📈 bStocks · 🥇 Metals (a tap redraws the message)
+const isAr = t => t.otherCode === 'en';
+const mkTabs = (t, on) => [['c', '🪙 ' + (isAr(t) ? 'كريبتو' : 'Crypto'), 'mk'], ['s', '📈 bStocks', 'mks'], ['m', '🥇 ' + (isAr(t) ? 'المعادن' : 'Metals'), 'mkm']].map(([k, l, d]) => cb((k === on ? '✓ ' : '') + l, d));
+const riyadh = (ms, ar) => new Date(ms).toLocaleString(ar ? 'ar-SA-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Riyadh', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+export function viewStocks(t, m, now) {
+  const ar = isAr(t), st = (m.stocks || []).filter(r => r.price > 0), ch = st.filter(r => r.ch24 != null), us = usMarket(now);
+  const L = [`📈 <b>bStocks</b> · ${hm(now)}`, ''];
+  if (!st.length) L.push(ar ? 'لا توجد بيانات bStocks الآن — حاول لاحقاً.' : 'No bStocks data right now — try again later.');
+  else {
+    const up = ch.filter(r => r.ch24 > 0).length, dn = ch.filter(r => r.ch24 < 0).length, avg = ch.length ? ch.reduce((s, r) => s + r.ch24, 0) / ch.length : null;
+    const cap = st.reduce((s, r) => s + (r.mcap || 0), 0), line = r => row(r.sym, r.ch24, price(r.price));
+    L.push(`🇺🇸 ${ar ? 'السوق الأمريكي' : 'US market'}: <b>${US_STATE[ar ? 'ar' : 'en'][us.state]}</b> · ${us.state === 'open' ? (ar ? 'يُغلق' : 'closes') : (ar ? 'يفتح' : 'opens')} ${riyadh(us.next, ar)} ${ar ? 'بتوقيت الرياض' : 'Riyadh'}`,
+      `📊 ${st.length} ${ar ? 'سهماً' : 'stocks'} · ${big(cap)} · 🟢 ${up} / 🔴 ${dn} · ${ar ? 'المتوسط' : 'avg'} ${pct(avg, 2)}`);
+    const sUp = [...ch].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...ch].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
+    L.push('', `📈 <b>${t.stUp}</b>`, ...sUp.map(line), '', `📉 <b>${t.stDn}</b>`, ...sDn.map(line), '',
+      `<i>${t.stNote} · ${ar ? 'التوكن يُتداول 24/7، والسهم الحقيقي وقت سوق نيويورك فقط.' : 'the token trades 24/7, the real share only while New York is open.'}</i>`);
   }
-  return { text: L.join('\n'), buttons: [RANGES.map(n => cb((n === range ? '✓ ' : '') + 'Top ' + n, 'mk:' + n)), [cb(t.refresh, 'mk:' + range), url('🧭 Market Hub', APP + 'market.html')], [cb(t.back, 'menu')]] };
+  return { text: L.join('\n'), buttons: [mkTabs(t, 's'), [cb(t.refresh, 'mks'), url('🧭 Market Hub', APP + 'market.html#stocks')], [cb(t.back, 'menu')]] };
+}
+export function viewMetals(t, m, now) {
+  const ar = isAr(t), list = m.metals || [];
+  const L = [`🥇 <b>${ar ? 'المعادن والنفط' : 'Metals &amp; oil'}</b> · ${hm(now)}`, ''];
+  if (!list.length) L.push(ar ? 'لا توجد بيانات للمعادن الآن — حاول لاحقاً.' : 'No metals data right now — try again later.');
+  for (const x of list) {
+    const d = METAL[x.k] || ['•', x.k, x.k], u = UNIT[x.unit] || ['', ''];
+    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price(x.price)} / ${ar ? u[1] : u[0]} · ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` · ${ar ? '7 أيام' : '7d'} ${pct(x.ch7, 1)}` : ''}`);
+    if (['gold', 'silver', 'platinum'].includes(x.k) && x.unit === 'oz') L.push(`      ${ar ? 'الجرام' : '1 gram'}: <b>${gramSar(x.price).toFixed(2)} ${ar ? 'ريال' : 'SAR'}</b> · ${usd2(x.price / 31.1034768)}`);
+  }
+  const g = list.find(x => x.k === 'gold'), s = list.find(x => x.k === 'silver');
+  if (g && s && s.price > 0) L.push('', `⚖️ ${ar ? 'نسبة الذهب إلى الفضة' : 'Gold / silver ratio'}: <b>${(g.price / s.price).toFixed(1)}</b>`);
+  const at = m.parts && m.parts.metals ? Math.max(1, Math.round((now - Date.parse(m.parts.metals)) / 60e3)) : null;
+  L.push('', `<i>${ar ? 'العقود الآجلة — Yahoo Finance، بتأخير ~15 دقيقة' : 'Futures — Yahoo Finance, ~15 min delayed'}${at ? ` · ${t.snap(at)}` : ''}. ${ar ? 'الجرام: عيار 24 دون مصنعية.' : 'Gram: pure 24k, no making charge.'}</i>`);
+  return { text: L.join('\n'), buttons: [mkTabs(t, 'm'), [cb(t.refresh, 'mkm'), url('🧭 Market Hub', APP + 'market.html#metals')], [cb(t.back, 'menu')]] };
 }
 
 export function viewCoin(t, coin, m, sum, now) {
@@ -302,7 +332,7 @@ const edit = (env, chat, msgId, v) => tg(env, 'editMessageText', { chat_id: chat
 // what you typed → an action
 const WORDS = [
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, 'menu'],
-  [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
+  [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/(stocks|bstocks)$|^الأسهم$/i, 'mks'], [/^\/(metals|gold|oil)$|^المعادن$|^الذهب$/i, 'mkm'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
   [/^\/(balances|exchanges|cex)$|^أرصدتي$|^المنصات$|^أرصدة المنصات$/i, 'bal'],
@@ -355,6 +385,8 @@ async function buildView(env, act, arg, guess) {
   }
   const m = await loadMarket([], mine);
   if (act === 'mk') return { t, views: [viewMarket(t, m, now, await getRange(env))] };
+  if (act === 'mks') return { t, views: [viewStocks(t, m, now)] };
+  if (act === 'mkm') return { t, views: [viewMetals(t, m, now)] };
   const sum = summarize(withIds(user, m), m, now);
   if (act === 'pf') return { t, views: [viewPortfolio(t, cfg, sum, m, now)] };
   if (act === 'mv') return { t, views: [viewMovers(t, sum)] };
@@ -753,7 +785,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   const p = parse(text);
   tg(env, 'sendChatAction', { chat_id: chat, action: 'typing' }).catch(() => {});   // "typing…" while the numbers load
   if (into && p.act !== 'ai') {   // a view: it is drawn into the voice note's message (lists / settings: the heard line stays alone)
-    if (!['menu', 'coin', 'coins', 'pf', 'mk', 'pl', 'mv', 'sg', 'ex'].includes(p.act)) await edit(env, chat, into.id, { text: into.head });
+    if (!['menu', 'coin', 'coins', 'pf', 'mk', 'mks', 'mkm', 'pl', 'mv', 'sg', 'ex'].includes(p.act)) await edit(env, chat, into.id, { text: into.head });
     else {
       const { views, ai } = await run(env, p.act, p.q, p.guess);
       if (ai) { await answer(env, chat, ai, budget, into); return; }
@@ -870,7 +902,7 @@ const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
     ...(owner ? [['invite', a ? 'رمز دعوة لصديقك' : 'Invite code for a friend'], ['users', a ? 'الأعضاء' : 'Members'], ['stats', a ? 'الإحصائيات والـ Stars' : 'Stats & Stars']] : []),
     ['start', a ? 'ابدأ — الأزرار أسفل المحادثة' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
     ['report', a ? 'التقرير الكامل (صفحة)' : 'Full report (a page)'], ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],
-    ['plan', a ? 'خطة التجميع' : 'Accumulation plan'], ['exit', a ? 'خطة الخروج' : 'Exit plan'], ['movers', a ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', a ? 'الإشارات' : 'Signals'],
+    ['stocks', a ? 'الأسهم المرمّزة (bStocks)' : 'Tokenized US stocks (bStocks)'], ['metals', a ? 'الذهب والمعادن والنفط' : 'Gold, metals & oil'], ['plan', a ? 'خطة التجميع' : 'Accumulation plan'], ['exit', a ? 'خطة الخروج' : 'Exit plan'], ['movers', a ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', a ? 'الإشارات' : 'Signals'],
     ['alerts', a ? 'تنبيهاتك' : 'Your alerts'], ['balances', a ? 'أرصدة المنصات (Binance · Gate)' : 'Exchange balances (Binance · Gate)'], ['paper', a ? 'التداول التجريبي' : 'Paper trading'], ['daily', a ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'],
     ['morning', a ? 'الصباح الذكي الآن' : 'Smart morning now'], ['evening', a ? 'المساء الذكي الآن' : 'Smart evening now'],
     ['pin', a ? 'الرسالة المثبتة' : 'Live pinned message'], ['unpin', a ? 'إزالة الرسالة المثبتة' : 'Remove the pinned message'],

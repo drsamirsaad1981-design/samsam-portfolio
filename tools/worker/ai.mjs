@@ -10,6 +10,7 @@
 //   · Telegram sometimes sends the same message twice when an answer is slow — each message is answered once
 //   · the model: BOT_MODEL in the Worker's settings, else Claude Sonnet 5.5; if that name is refused, MODEL (AI Analysis's)
 
+import { usMarket, gramSar } from './usmarket.mjs';
 import { K, isOwner, aiLimitFor } from './who.mjs';
 import { summarize, settings, local, localParts, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries, derivatives } from './data.mjs';
@@ -53,7 +54,7 @@ export const TOOLS = [
     input_schema: { type: 'object', properties: { coin: { type: 'string', description: 'Ticker or name, e.g. "BTC", "sol", "pendle", "Render"' } }, required: ['coin'] } },
   { name: 'get_portfolio', description: "The user's whole portfolio now: total value, 24h / 7d change, all-time profit, result vs holding BTC, and EVERY coin with value, share %, 24h / 7d change, profit vs average buy price, signal, vs_btc_pct (its result minus the same dollars in BTC since bought) and vs_btc_30d_pts / vs_btc_90d_pts (strength vs BTC over 30 / 90 days); signal counts; allocation vs targets. One call answers questions about all coins — no need to call get_coin for each.",
     input_schema: { type: 'object', properties: {} } },
-  { name: 'get_market', description: 'The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), and the best / worst 24h Binance bStocks (tokenized US stocks).',
+  { name: 'get_market', description: 'The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market\'s state (open / closed, the next open or close in Riyadh time), and metals & oil: gold, silver, platinum, copper, Brent (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).',
     input_schema: { type: 'object', properties: { top: { type: 'integer', enum: [100, 200, 300, 500], description: 'Rank range for best / worst (default 100)' } } } },
   { name: 'get_plan', description: "The user's accumulation plan: per-coin target vs held (progress %), overall progress, regular buys (DCA: amount, schedule, next date, late or not), buy-price alerts (alert price vs current price).",
     input_schema: { type: 'object', properties: {} } },
@@ -143,7 +144,11 @@ export async function runTool(ctx, name, input) {
     return { btc_price_usd: m.btc ? r6(m.btc.price) : null, btc_change_24h_pct: m.btc ? r2(m.btc.ch24) : null, total_market_cap_usd: g.mcap ? Math.round(g.mcap) : null, market_cap_change_24h_pct: r2(g.mcapCh24),
       btc_dominance_pct: r2(d.btc), eth_dominance_pct: r2(d.eth), usdt_dominance_pct: r2(d.usdt), fear_greed: m.fng ? { value: m.fng.value, label: m.fng.label, yesterday: m.fng.prev, week_ago: m.fng.week } : null,
       altcoin_season: m.alt ? { value: m.alt.value, label: m.alt.label } : null, etf_flows_latest_day: e ? { date: e.date, btc_usd: e.btc, eth_usd: e.eth } : null,
-      [`top${n}_best_24h`]: pick(list, 1), [`top${n}_worst_24h`]: pick(list, -1), bstocks_best_24h: pick(st, 1).map(({ rank, ...x }) => x), bstocks_worst_24h: pick(st, -1).map(({ rank, ...x }) => x) };
+      [`top${n}_best_24h`]: pick(list, 1), [`top${n}_worst_24h`]: pick(list, -1), bstocks_best_24h: pick(st, 1).map(({ rank, ...x }) => x), bstocks_worst_24h: pick(st, -1).map(({ rank, ...x }) => x),
+      bstocks_summary: st.length ? { count: st.length, up: st.filter(r => r.ch24 > 0).length, down: st.filter(r => r.ch24 < 0).length, avg_change_24h_pct: r2(st.reduce((a, r) => a + r.ch24, 0) / st.length) } : null,
+      us_stock_market: (u => ({ state: u.state, next_change_riyadh: new Date(u.next).toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }), note: 'NYSE/Nasdaq hours, US holidays not counted; bStocks tokens trade 24/7' }))(usMarket()),
+      metals_and_oil: (m.metals || []).map(x => ({ name: x.k, unit: x.unit === 'oz' ? 'USD per troy ounce' : x.unit === 'lb' ? 'USD per pound' : 'USD per barrel', price_usd: r6(x.price), change_24h_pct: r2(x.ch24), change_7d_pct: r2(x.ch7), ...(['gold', 'silver', 'platinum'].includes(x.k) && x.unit === 'oz' ? { gram_sar_24k: r2(gramSar(x.price)), gram_usd: r2(x.price / 31.1034768) } : {}) })),
+      metals_note: 'Futures from Yahoo Finance, ~15 min delayed, saved every ~30 min' };
   }
   if (name === 'get_plan') {
     const x = await ctx.sum(); if (!x) return { error: 'portfolio not connected' };

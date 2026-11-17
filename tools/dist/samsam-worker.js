@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 432e250aa90d07c8
+// sources-hash: fbcf631e4f4d43a4
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1786,7 +1786,7 @@ async function loadMarket(ids = [], coins = []) {
     const s = await cached("p:" + id, 10 * 6e4, async () => priceSeries(await getJson(RAW + "p/" + id + ".json")) || false);
     if (s) series[id] = s;
   }));
-  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], sectors: base.m.sectors || [] };
+  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], sectors: base.m.sectors || [] };
   await liveTopUp(market, all);
   const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
   const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 3);
@@ -3422,6 +3422,34 @@ ${esc(text)}`;
   return out;
 }
 
+// tools/worker/usmarket.mjs
+function ny(d) {
+  const o = {};
+  new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hour12: false }).formatToParts(d).forEach((x) => {
+    o[x.type] = x.value;
+  });
+  return { wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(o.weekday), m: +o.hour % 24 * 60 + +o.minute };
+}
+function usMarket(now = Date.now()) {
+  const p = ny(new Date(now)), wk = p.wd >= 1 && p.wd <= 5, OPEN = 570, CLOSE = 960;
+  const state = !wk ? "closed" : p.m >= OPEN && p.m < CLOSE ? "open" : p.m >= 240 && p.m < OPEN ? "pre" : p.m >= CLOSE && p.m < 1200 ? "after" : "closed";
+  const target = state === "open" ? CLOSE : OPEN;
+  let t = now;
+  for (let i = 0; i < 4 * 24 * 6; i++) {
+    t += 15 * 6e4;
+    const q = ny(new Date(t));
+    if (q.wd >= 1 && q.wd <= 5 && q.m >= target && q.m < target + 15) {
+      t -= (q.m - target) * 6e4;
+      break;
+    }
+  }
+  return { state, next: Math.floor(t / 6e4) * 6e4 };
+}
+var US_STATE = { en: { open: "\u{1F7E2} Open", pre: "\u{1F7E1} Pre-market", after: "\u{1F7E1} After hours", closed: "\u26AA Closed" }, ar: { open: "\u{1F7E2} \u0645\u0641\u062A\u0648\u062D", pre: "\u{1F7E1} \u0645\u0627 \u0642\u0628\u0644 \u0627\u0644\u0627\u0641\u062A\u062A\u0627\u062D", after: "\u{1F7E1} \u0628\u0639\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642", closed: "\u26AA \u0645\u063A\u0644\u0642" } };
+var METAL = { gold: ["\u{1F947}", "Gold", "\u0627\u0644\u0630\u0647\u0628"], silver: ["\u{1F948}", "Silver", "\u0627\u0644\u0641\u0636\u0629"], platinum: ["\u26AA", "Platinum", "\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646"], copper: ["\u{1F7E0}", "Copper", "\u0627\u0644\u0646\u062D\u0627\u0633"], brent: ["\u{1F6E2}\uFE0F", "Brent oil", "\u0646\u0641\u0637 \u0628\u0631\u0646\u062A"] };
+var UNIT = { oz: ["oz", "\u0623\u0648\u0646\u0635\u0629"], lb: ["lb", "\u0631\u0637\u0644"], bbl: ["barrel", "\u0628\u0631\u0645\u064A\u0644"] };
+var gramSar = (ozUsd) => ozUsd / 31.1034768 * 3.75;
+
 // tools/worker/watch.mjs
 var KEY3 = (env) => K(env, "alerts");
 var MAX = 30;
@@ -4137,7 +4165,7 @@ var TOOLS = [
   },
   {
     name: "get_market",
-    description: "The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), and the best / worst 24h Binance bStocks (tokenized US stocks).",
+    description: "The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market's state (open / closed, the next open or close in Riyadh time), and metals & oil: gold, silver, platinum, copper, Brent (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).",
     input_schema: { type: "object", properties: { top: { type: "integer", enum: [100, 200, 300, 500], description: "Rank range for best / worst (default 100)" } } }
   },
   {
@@ -4311,7 +4339,11 @@ async function runTool(ctx, name, input) {
       [`top${n}_best_24h`]: pick(list3, 1),
       [`top${n}_worst_24h`]: pick(list3, -1),
       bstocks_best_24h: pick(st, 1).map(({ rank, ...x }) => x),
-      bstocks_worst_24h: pick(st, -1).map(({ rank, ...x }) => x)
+      bstocks_worst_24h: pick(st, -1).map(({ rank, ...x }) => x),
+      bstocks_summary: st.length ? { count: st.length, up: st.filter((r) => r.ch24 > 0).length, down: st.filter((r) => r.ch24 < 0).length, avg_change_24h_pct: r23(st.reduce((a, r) => a + r.ch24, 0) / st.length) } : null,
+      us_stock_market: ((u) => ({ state: u.state, next_change_riyadh: new Date(u.next).toLocaleString("en-GB", { timeZone: "Asia/Riyadh", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }), note: "NYSE/Nasdaq hours, US holidays not counted; bStocks tokens trade 24/7" }))(usMarket()),
+      metals_and_oil: (m.metals || []).map((x) => ({ name: x.k, unit: x.unit === "oz" ? "USD per troy ounce" : x.unit === "lb" ? "USD per pound" : "USD per barrel", price_usd: r62(x.price), change_24h_pct: r23(x.ch24), change_7d_pct: r23(x.ch7), ...["gold", "silver", "platinum"].includes(x.k) && x.unit === "oz" ? { gram_sar_24k: r23(gramSar(x.price)), gram_usd: r23(x.price / 31.1034768) } : {} })),
+      metals_note: "Futures from Yahoo Finance, ~15 min delayed, saved every ~30 min"
     };
   }
   if (name === "get_plan") {
@@ -5608,12 +5640,50 @@ function viewMarket(t, m, now, range = 100) {
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
   if (up.length) L.push("", `\u{1F4C8} <b>${t.topUp(range)}</b>`, ...up.map(line));
   if (dn.length) L.push("", `\u{1F4C9} <b>${t.topDn(range)}</b>`, ...dn.map(line));
-  const st = (m.stocks || []).filter((r) => r.ch24 != null && r.price > 0);
-  if (st.length) {
-    const sUp = [...st].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...st].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
-    L.push("", `\u{1F3E6} <b>${t.stUp}</b>`, ...sUp.map(line), "", `\u{1F3E6} <b>${t.stDn}</b>`, ...sDn.map(line), `<i>${t.stNote}</i>`);
+  return { text: L.join("\n"), buttons: [mkTabs(t, "c"), RANGES.map((n) => cb3((n === range ? "\u2713 " : "") + "Top " + n, "mk:" + n)), [cb3(t.refresh, "mk:" + range), url2("\u{1F9ED} Market Hub", APP + "market.html")], [cb3(t.back, "menu")]] };
+}
+var isAr = (t) => t.otherCode === "en";
+var mkTabs = (t, on) => [["c", "\u{1FA99} " + (isAr(t) ? "\u0643\u0631\u064A\u0628\u062A\u0648" : "Crypto"), "mk"], ["s", "\u{1F4C8} bStocks", "mks"], ["m", "\u{1F947} " + (isAr(t) ? "\u0627\u0644\u0645\u0639\u0627\u062F\u0646" : "Metals"), "mkm"]].map(([k, l, d]) => cb3((k === on ? "\u2713 " : "") + l, d));
+var riyadh = (ms, ar) => new Date(ms).toLocaleString(ar ? "ar-SA-u-nu-latn" : "en-GB", { timeZone: "Asia/Riyadh", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+function viewStocks(t, m, now) {
+  const ar = isAr(t), st = (m.stocks || []).filter((r) => r.price > 0), ch = st.filter((r) => r.ch24 != null), us = usMarket(now);
+  const L = [`\u{1F4C8} <b>bStocks</b> \xB7 ${hm(now)}`, ""];
+  if (!st.length) L.push(ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A bStocks \u0627\u0644\u0622\u0646 \u2014 \u062D\u0627\u0648\u0644 \u0644\u0627\u062D\u0642\u0627\u064B." : "No bStocks data right now \u2014 try again later.");
+  else {
+    const up = ch.filter((r) => r.ch24 > 0).length, dn = ch.filter((r) => r.ch24 < 0).length, avg = ch.length ? ch.reduce((s, r) => s + r.ch24, 0) / ch.length : null;
+    const cap = st.reduce((s, r) => s + (r.mcap || 0), 0), line = (r) => row(r.sym, r.ch24, price2(r.price));
+    L.push(
+      `\u{1F1FA}\u{1F1F8} ${ar ? "\u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A" : "US market"}: <b>${US_STATE[ar ? "ar" : "en"][us.state]}</b> \xB7 ${us.state === "open" ? ar ? "\u064A\u064F\u063A\u0644\u0642" : "closes" : ar ? "\u064A\u0641\u062A\u062D" : "opens"} ${riyadh(us.next, ar)} ${ar ? "\u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636" : "Riyadh"}`,
+      `\u{1F4CA} ${st.length} ${ar ? "\u0633\u0647\u0645\u0627\u064B" : "stocks"} \xB7 ${big(cap)} \xB7 \u{1F7E2} ${up} / \u{1F534} ${dn} \xB7 ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : "avg"} ${pct(avg, 2)}`
+    );
+    const sUp = [...ch].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...ch].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
+    L.push(
+      "",
+      `\u{1F4C8} <b>${t.stUp}</b>`,
+      ...sUp.map(line),
+      "",
+      `\u{1F4C9} <b>${t.stDn}</b>`,
+      ...sDn.map(line),
+      "",
+      `<i>${t.stNote} \xB7 ${ar ? "\u0627\u0644\u062A\u0648\u0643\u0646 \u064A\u064F\u062A\u062F\u0627\u0648\u0644 24/7\u060C \u0648\u0627\u0644\u0633\u0647\u0645 \u0627\u0644\u062D\u0642\u064A\u0642\u064A \u0648\u0642\u062A \u0633\u0648\u0642 \u0646\u064A\u0648\u064A\u0648\u0631\u0643 \u0641\u0642\u0637." : "the token trades 24/7, the real share only while New York is open."}</i>`
+    );
   }
-  return { text: L.join("\n"), buttons: [RANGES.map((n) => cb3((n === range ? "\u2713 " : "") + "Top " + n, "mk:" + n)), [cb3(t.refresh, "mk:" + range), url2("\u{1F9ED} Market Hub", APP + "market.html")], [cb3(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [mkTabs(t, "s"), [cb3(t.refresh, "mks"), url2("\u{1F9ED} Market Hub", APP + "market.html#stocks")], [cb3(t.back, "menu")]] };
+}
+function viewMetals(t, m, now) {
+  const ar = isAr(t), list3 = m.metals || [];
+  const L = [`\u{1F947} <b>${ar ? "\u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0646\u0641\u0637" : "Metals &amp; oil"}</b> \xB7 ${hm(now)}`, ""];
+  if (!list3.length) L.push(ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u0645\u0639\u0627\u062F\u0646 \u0627\u0644\u0622\u0646 \u2014 \u062D\u0627\u0648\u0644 \u0644\u0627\u062D\u0642\u0627\u064B." : "No metals data right now \u2014 try again later.");
+  for (const x of list3) {
+    const d = METAL[x.k] || ["\u2022", x.k, x.k], u = UNIT[x.unit] || ["", ""];
+    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price2(x.price)} / ${ar ? u[1] : u[0]} \xB7 ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` \xB7 ${ar ? "7 \u0623\u064A\u0627\u0645" : "7d"} ${pct(x.ch7, 1)}` : ""}`);
+    if (["gold", "silver", "platinum"].includes(x.k) && x.unit === "oz") L.push(`      ${ar ? "\u0627\u0644\u062C\u0631\u0627\u0645" : "1 gram"}: <b>${gramSar(x.price).toFixed(2)} ${ar ? "\u0631\u064A\u0627\u0644" : "SAR"}</b> \xB7 ${usd2(x.price / 31.1034768)}`);
+  }
+  const g = list3.find((x) => x.k === "gold"), s = list3.find((x) => x.k === "silver");
+  if (g && s && s.price > 0) L.push("", `\u2696\uFE0F ${ar ? "\u0646\u0633\u0628\u0629 \u0627\u0644\u0630\u0647\u0628 \u0625\u0644\u0649 \u0627\u0644\u0641\u0636\u0629" : "Gold / silver ratio"}: <b>${(g.price / s.price).toFixed(1)}</b>`);
+  const at = m.parts && m.parts.metals ? Math.max(1, Math.round((now - Date.parse(m.parts.metals)) / 6e4)) : null;
+  L.push("", `<i>${ar ? "\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629 \u2014 Yahoo Finance\u060C \u0628\u062A\u0623\u062E\u064A\u0631 ~15 \u062F\u0642\u064A\u0642\u0629" : "Futures \u2014 Yahoo Finance, ~15 min delayed"}${at ? ` \xB7 ${t.snap(at)}` : ""}. ${ar ? "\u0627\u0644\u062C\u0631\u0627\u0645: \u0639\u064A\u0627\u0631 24 \u062F\u0648\u0646 \u0645\u0635\u0646\u0639\u064A\u0629." : "Gram: pure 24k, no making charge."}</i>`);
+  return { text: L.join("\n"), buttons: [mkTabs(t, "m"), [cb3(t.refresh, "mkm"), url2("\u{1F9ED} Market Hub", APP + "market.html#metals")], [cb3(t.back, "menu")]] };
 }
 function viewCoin(t, coin, m, sum, now) {
   const row2 = [...m.top, ...m.top500].find((r) => r.id === coin.id) || {}, s = m.series[coin.id];
@@ -5651,6 +5721,8 @@ var WORDS = [
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, "menu"],
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, "pf"],
   [/^\/?(market|mk)$|السوق/i, "mk"],
+  [/^\/(stocks|bstocks)$|^الأسهم$/i, "mks"],
+  [/^\/(metals|gold|oil)$|^المعادن$|^الذهب$/i, "mkm"],
   [/^\/?(plan|pl)$|الخطة/i, "pl"],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, "hide"],
   [/^\/(new|reset|clear)$|^محادثة جديدة$/i, "new"],
@@ -5737,6 +5809,8 @@ async function buildView(env, act2, arg, guess) {
   }
   const m = await loadMarket([], mine);
   if (act2 === "mk") return { t, views: [viewMarket(t, m, now, await getRange(env))] };
+  if (act2 === "mks") return { t, views: [viewStocks(t, m, now)] };
+  if (act2 === "mkm") return { t, views: [viewMetals(t, m, now)] };
   const sum = summarize(withIds(user, m), m, now);
   if (act2 === "pf") return { t, views: [viewPortfolio(t, cfg, sum, m, now)] };
   if (act2 === "mv") return { t, views: [viewMovers(t, sum)] };
@@ -6419,7 +6493,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   tg6(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
   });
   if (into && p.act !== "ai") {
-    if (!["menu", "coin", "coins", "pf", "mk", "pl", "mv", "sg", "ex"].includes(p.act)) await edit(env, chat, into.id, { text: into.head });
+    if (!["menu", "coin", "coins", "pf", "mk", "mks", "mkm", "pl", "mv", "sg", "ex"].includes(p.act)) await edit(env, chat, into.id, { text: into.head });
     else {
       const { views: views2, ai: ai2 } = await run(env, p.act, p.q, p.guess);
       if (ai2) {
@@ -6659,6 +6733,8 @@ var cmds = (lang2, owner2 = true) => {
     ["portfolio", a ? "\u0645\u062D\u0641\u0638\u062A\u064A" : "My portfolio"],
     ["price", a ? "\u0633\u0639\u0631 \u0639\u0645\u0644\u0629 \u2014 /price btc" : "A coin \u2014 /price btc"],
     ["market", a ? "\u0627\u0644\u0633\u0648\u0642" : "Market"],
+    ["stocks", a ? "\u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0645\u0631\u0645\u0651\u0632\u0629 (bStocks)" : "Tokenized US stocks (bStocks)"],
+    ["metals", a ? "\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0646\u0641\u0637" : "Gold, metals & oil"],
     ["plan", a ? "\u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639" : "Accumulation plan"],
     ["exit", a ? "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" : "Exit plan"],
     ["movers", a ? "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" : "Best & worst"],

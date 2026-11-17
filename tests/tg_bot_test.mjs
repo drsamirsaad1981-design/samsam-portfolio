@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/cex.mjs', 'tools/worker/bidi.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/cex.mjs', 'tools/worker/bidi.mjs', 'tools/worker/usmarket.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -25,6 +25,7 @@ const NOW = Date.now(), HR = 3600e3;
 const market = fx('market_snap_fixture.json'), top500 = fx('top500_fixture.json'), alt = fx('alt_fixture.json'), etf = fx('etf_fixture.json');
 market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() };
 market.stocks = [['NVDAB', 2.1], ['TSLAB', -3.4], ['CRCLB', 7.8], ['AAPLB', 0.4], ['GMEB', -6.2], ['MSFTB', 1.1], ['METAB', -0.9], ['AMZNB', 3.3]].map(([sym, ch24], i) => ({ id: sym.toLowerCase() + '-bstock', sym, name: sym, price: 100 + i * 10, ch24 }));
+market.metals = [['gold', 'oz', 2650, 0.76], ['silver', 'oz', 31.2, -0.5], ['platinum', 'oz', 960, 0.1], ['copper', 'lb', 4.35, 1.2], ['brent', 'bbl', 73.4, -1.4]].map(([k, unit, price, ch24]) => ({ k, unit, price, ch24, ch7: ch24 * 2, spark: [price * 0.98, price] })); market.parts = { ...(market.parts || {}), metals: new Date().toISOString() };
 const series = (price, p24, p7) => { const n = 24 * 9, t0 = NOW - (n - 1) * HR; return { t0, step: HR, p: Array.from({ length: n }, (_, i) => i === n - 1 ? price : i >= n - 25 ? p24 : i >= n - 169 ? (p24 + p7) / 2 : p7) }; };
 const LIVE = { bitcoin: { usd: 77000, usd_24h_change: 1.25, usd_market_cap: 1.53e12, usd_24h_vol: 4e10 }, solana: { usd: 150, usd_24h_change: 3.5 }, tether: { usd: 1.0002, usd_24h_change: 0.01 }, chainlink: { usd: 11, usd_24h_change: -4.2 }, pendle: { usd: 3.21, usd_24h_change: 7.7, usd_market_cap: 5e8 } };
 const { privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -273,14 +274,19 @@ const pick = n => { const T = [...market.top, ...top500.top].filter((r, i, a) =>
 let tops = [...cryptoPart(v.b.text).matchAll(/<code>(\S+)\s/g)].map(x => x[1]);
 check('market best / worst: no stablecoins', tops.length > 0 && !tops.some(isStable), tops);
 check(`market: Top 100 → 5 best + 5 worst ${pick(100)}`, JSON.stringify(tops) === JSON.stringify(pick(100)), { tops, want: pick(100) });
-check('market buttons: ✓ Top 100 · Top 200 · Top 300 · Top 500, then Refresh', JSON.stringify(btns(v).slice(0, 5).map(b => [b.text, b.callback_data])) === JSON.stringify([['✓ Top 100', 'mk:100'], ['Top 200', 'mk:200'], ['Top 300', 'mk:300'], ['Top 500', 'mk:500'], ['🔄 Refresh', 'mk:100']]), btns(v).map(b => b.text));
-const bs = [...v.b.text.split('🏦')[1] ? v.b.text.matchAll(/🏦 <b>bStocks · (best|worst) 24h<\/b>\n((?:<code>.*\n?)+)/g) : []].map(x => [x[1], [...x[2].matchAll(/<code>(\S+)\s/g)].map(y => y[1])]);
-check('bStocks: best 5 (CRCLB, AMZNB, NVDAB, MSFTB, AAPLB) + worst 5 (GMEB, TSLAB, METAB, AAPLB, MSFTB)', JSON.stringify(bs) === JSON.stringify([['best', ['CRCLB', 'AMZNB', 'NVDAB', 'MSFTB', 'AAPLB']], ['worst', ['GMEB', 'TSLAB', 'METAB', 'AAPLB', 'MSFTB']]]) && /tokenized US stocks/.test(v.b.text), bs);
+check('market buttons: 🪙 Crypto · 📈 bStocks · 🥇 Metals, then ✓ Top 100 · Top 200 · Top 300 · Top 500, then Refresh', JSON.stringify(btns(v).slice(0, 8).map(b => [b.text, b.callback_data])) === JSON.stringify([['✓ 🪙 Crypto', 'mk'], ['📈 bStocks', 'mks'], ['🥇 Metals', 'mkm'], ['✓ Top 100', 'mk:100'], ['Top 200', 'mk:200'], ['Top 300', 'mk:300'], ['Top 500', 'mk:500'], ['🔄 Refresh', 'mk:100']]) && !/bStocks · best/.test(v.b.text), btns(v).map(b => b.text));
+sent.length = 0; await tap('mks'); { const sv = last();
+const bs = [...sv.b.text.matchAll(/<b>bStocks · (best|worst) 24h<\/b>\n((?:<code>.*\n?)+)/g)].map(x => [x[1], [...x[2].matchAll(/<code>(\S+)\s/g)].map(y => y[1])]);
+check('📈 tap bStocks → the same message: the US market (open / closed, the next change in Riyadh time), best 5 (CRCLB, AMZNB, NVDAB, MSFTB, AAPLB) + worst 5 (GMEB, TSLAB, METAB, AAPLB, MSFTB)', sv.m === 'editMessageText' && /US market: <b>(🟢|🟡|⚪)/.test(sv.b.text) && /Riyadh/.test(sv.b.text) && JSON.stringify(bs) === JSON.stringify([['best', ['CRCLB', 'AMZNB', 'NVDAB', 'MSFTB', 'AAPLB']], ['worst', ['GMEB', 'TSLAB', 'METAB', 'AAPLB', 'MSFTB']]]) && /tokenized US stocks/.test(sv.b.text) && btns(sv)[1].text === '✓ 📈 bStocks' && okHtml(sv.b.text), sv.b.text); }
+sent.length = 0; await tap('mkm'); { const mv = last();
+check('🥇 tap Metals → gold / silver / platinum / copper / Brent, the gram in SAR, the gold/silver ratio', mv.m === 'editMessageText' && /Gold<\/b> \$2,650 \/ oz/.test(mv.b.text) && /1 gram: <b>319\.50 SAR<\/b>/.test(mv.b.text) && /Brent oil/.test(mv.b.text) && /ratio: <b>84\.9<\/b>/.test(mv.b.text) && btns(mv)[2].text === '✓ 🥇 Metals' && okHtml(mv.b.text), mv.b.text); }
+sent.length = 0; await say('/metals');
+check('…/metals (or "الذهب") opens it straight away', /Metals &amp; oil|Metals & oil/.test(last().b.text), last().b.text.slice(0, 60));
 sent.length = 0; await tap('mk:500');
 v = last(); tops = [...cryptoPart(v.b.text).matchAll(/<code>(\S+)\s/g)].map(x => x[1]);
-check(`tap Top 500 → edited in place, 5 best + 5 worst of the top 500 ${pick(500)}`, v.m === 'editMessageText' && /Top 500 · best 24h/.test(v.b.text) && JSON.stringify(tops) === JSON.stringify(pick(500)) && btns(v)[3].text === '✓ Top 500', { tops, want: pick(500) });
+check(`tap Top 500 → edited in place, 5 best + 5 worst of the top 500 ${pick(500)}`, v.m === 'editMessageText' && /Top 500 · best 24h/.test(v.b.text) && JSON.stringify(tops) === JSON.stringify(pick(500)) && btns(v)[6].text === '✓ Top 500', { tops, want: pick(500) });
 sent.length = 0; await say('/market');
-check('…and Top 500 is remembered next time', /Top 500 · best 24h/.test(last().b.text) && btns(last())[4].callback_data === 'mk:500', last().b.text.slice(0, 40));
+check('…and Top 500 is remembered next time', /Top 500 · best 24h/.test(last().b.text) && btns(last())[7].callback_data === 'mk:500', last().b.text.slice(0, 40));
 sent.length = 0; await tap('mk:100');
 check('back to Top 100', /Top 100 · best 24h/.test(last().b.text));
 const longMk = Math.max(...plain(last().b.text).split('\n').map(l => [...l].length));
@@ -334,6 +340,7 @@ check('…the next question starts fresh (1 message)', claudeCalls[0].messages.l
 sent.length = 0; claudeCalls.length = 0; await say('tell me everything');
 const all = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
 check('5 tools in one turn: portfolio, market (Top 200), plan, exit, 7-day history', all && all.length === 5 && all[0].total_value_usd > 0 && all[1].top200_best_24h && all[1].bstocks_best_24h.length === 5 && all[2].coins.length === 3 && all[3].conditions.length === 3 && all[4].change_pct != null && all[4].high && all[4].daily_closes, all && all.map(x => Object.keys(x).slice(0, 4)));
+check('get_market: metals & oil (gold with the gram in SAR 319.5), the US stock market\'s state and next change, the bStocks summary (8: 5 up, 3 down)', all[1].metals_and_oil.length === 5 && all[1].metals_and_oil[0].name === 'gold' && all[1].metals_and_oil[0].gram_sar_24k === 319.5 && !('gram_sar_24k' in all[1].metals_and_oil[3]) && ['open', 'pre', 'after', 'closed'].includes(all[1].us_stock_market.state) && all[1].us_stock_market.next_change_riyadh && all[1].bstocks_summary.count === 8 && all[1].bstocks_summary.up === 5, { m: all[1].metals_and_oil, u: all[1].us_stock_market, b: all[1].bstocks_summary });
 check('get_portfolio: every coin with share %, profit vs average, signal (USDT marked stablecoin)', all[0].coins.length === 5 && all[0].coins.find(c => c.ticker === 'USDT').stablecoin === true && all[0].coins.every(c => 'signal' in c && 'share_pct' in c), all[0].coins);
 check('get_exit: LINK TP1 $25 at +127% to go, sell 25%', all[3].take_profits[0].ticker === 'LINK' && all[3].take_profits[0].level_usd === 25 && Math.round(all[3].take_profits[0].pct_to_go) === 127 && all[3].take_profits[0].sell_pct === 25, all[3].take_profits[0]);
 check('get_portfolio: each coin\'s result vs BTC (vs_btc_pct) and 30 / 90-day strength vs BTC — one call answers "which coins are weaker than BTC"', all[0].coins.every(c => 'vs_btc_pct' in c && 'vs_btc_30d_pts' in c) && all[0].coins.find(c => c.ticker === 'SOL').vs_btc_pct != null, all[0].coins.map(c => [c.ticker, c.vs_btc_pct]));
@@ -634,7 +641,7 @@ LIVE.pendle.usd = 3.21;
 // the "/" menu: every command, refreshed by itself when the list changes (no /start needed)
 kvStore.delete('tg:555:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
 const sc = sent.find(x => x.m === 'setMyCommands'), names = sc ? sc.b.commands.map(c => c.command) : [];
-check('"/" menu sent again by itself: invite, users, stats, start, report, daily, morning, evening, alerts, paper, pin, unpin, guide, community, hide… (26, with balances)', names.length === 26 && names.includes('balances') && ['invite', 'users', 'stats', 'guide', 'community', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
+check('"/" menu sent again by itself: invite, users, stats, start, report, daily, morning, evening, alerts, paper, pin, unpin, guide, community, hide… (28, with balances, stocks, metals)', names.length === 28 && names.includes('balances') && names.includes('metals') && ['invite', 'users', 'stats', 'guide', 'community', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/menu');
 check('…and only once (remembered in KV)', !sent.some(x => x.m === 'setMyCommands'));
 claudeCalls.length = 0; sent.length = 0;
