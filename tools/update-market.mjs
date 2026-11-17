@@ -13,7 +13,9 @@
 //
 // market.json: { updated, global: { mcap, vol, mcapCh24, dom: { btc, eth, usdt }, coins }, fng: { value, label, prev, week },
 //                alt: { value, label, beat, n, btc90, period: '90d', ready, have },
-//                top: [ { id, sym, name, img, rank, price, mcap, vol, ch24, ch30, spark: [~42 points, 7d], spark24: [25, hourly] } ×150 ] }
+//                top: [ { id, sym, name, img, rank, price, mcap, vol, ch24, ch30, spark: [~42 points, 7d], spark24: [25, hourly] } ×150 ],
+//                stocks: [ { id, sym, name, img, price, ch24, ch7, mcap, vol, spark } — Binance bStocks ],
+//                metals: [ { k: gold|silver|platinum|copper|brent, sym, unit: oz|lb|bbl, price, prev, ch24, ch7, spark, at } ] }
 // top500.json: { updated, from: 101, top: [the same rows for coins 101–500] }
 // Any part that fails keeps the value from the last snapshot.
 
@@ -130,9 +132,38 @@ async function main() {
   // Binance bStocks (tokenized US stocks: NVIDIA, Tesla, Circle…) — CoinGecko's "bStocks Ecosystem" category, for the
   // Telegram bot's Market (best / worst 5). Kept from the last run when CoinGecko doesn't answer.
   await sleep(4000);
-  const bs = await get(`${API}/coins/markets?vs_currency=usd&category=bstocks-ecosystem&order=market_cap_desc&per_page=100&page=1&price_change_percentage=24h`, 2);
-  if (Array.isArray(bs) && bs.length) { snap.stocks = bs.filter(c => c && c.current_price > 0).map(c => ({ id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, price: c.current_price, ch24: c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null, mcap: c.market_cap || null })); snap.parts.stocks = now; log('bstocks', snap.stocks.length); }
+  // (all of them — ~100–130 so far — with logo, 7-day change and a small 7-day line, for the Market Hub's 📈 bStocks tab)
+  const bs = await get(`${API}/coins/markets?vs_currency=usd&category=bstocks-ecosystem&order=market_cap_desc&per_page=250&page=1&sparkline=true&price_change_percentage=24h%2C7d`, 2);
+  const thin = sp => { sp = (sp && sp.price) || []; const st = Math.max(1, Math.floor(sp.length / 24)), o = []; for (let i = 0; i < sp.length; i += st) o.push(+(+sp[i]).toPrecision(6)); if (sp.length && (sp.length - 1) % st) o.push(+(+sp[sp.length - 1]).toPrecision(6)); return o; };
+  if (Array.isArray(bs) && bs.length) { snap.stocks = bs.filter(c => c && c.current_price > 0).map(c => ({ id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, img: c.image || '', price: c.current_price, ch24: c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null, ch7: c.price_change_percentage_7d_in_currency ?? null, mcap: c.market_cap || null, vol: c.total_volume || null, spark: thin(c.sparkline_in_7d) })); snap.parts.stocks = now; log('bstocks', snap.stocks.length); }
   else { if (old.stocks) snap.stocks = old.stocks; log('bstocks: no answer, kept the last one'); }
+
+  // 🥇 metals and oil (the Market Hub's Metals tab): gold, silver, platinum, copper, Brent — Yahoo Finance's public chart
+  // data for the front-month futures (no key; delayed ~10–15 min). Price, the change since the last close, 7 trading days,
+  // and a month of daily closes. Kept from the last run when Yahoo doesn't answer.
+  const METALS = [['gold', 'GC=F', 'oz'], ['silver', 'SI=F', 'oz'], ['platinum', 'PL=F', 'oz'], ['copper', 'HG=F', 'lb'], ['brent', 'BZ=F', 'bbl']];
+  const YH = (process.env.YH_API || 'https://query1.finance.yahoo.com,https://query2.finance.yahoo.com').split(',');
+  async function yahoo(sym) {
+    for (const base of YH) {
+      try {
+        const r = await fetch(`${base}/v8/finance/chart/${encodeURIComponent(sym)}?range=1mo&interval=1d`, { headers: { accept: 'application/json', 'user-agent': 'Mozilla/5.0 (cute-portfolio market snapshot)' } });
+        if (!r.ok) { log('metals', sym, base, r.status); continue; }
+        const res = (await r.json()).chart.result[0], m = res.meta || {};
+        const closes = ((res.indicators && res.indicators.quote && res.indicators.quote[0].close) || []).filter(v => v > 0);
+        const price = m.regularMarketPrice > 0 ? m.regularMarketPrice : closes[closes.length - 1];
+        if (!(price > 0)) continue;
+        const prev = m.previousClose > 0 ? m.previousClose : closes.length > 1 ? closes[closes.length - 2] : null;
+        const wk = closes.length > 6 ? closes[closes.length - 6] : null;
+        return { price, prev, ch24: prev ? (price / prev - 1) * 100 : null, ch7: wk ? (price / wk - 1) * 100 : null, spark: closes.slice(-22).map(v => +v.toPrecision(6)), at: m.regularMarketTime ? new Date(m.regularMarketTime * 1000).toISOString() : null };
+      } catch (e) { log('metals', sym, base, 'failed', String(e && e.message).slice(0, 80)); }
+    }
+    return null;
+  }
+  const metals = [];
+  for (const [k, sym, unit] of METALS) { const v = await yahoo(sym); if (v) metals.push({ k, sym, unit, ...v }); await sleep(800); }
+  const oldM = Array.isArray(old.metals) ? old.metals : [];
+  if (metals.length) { snap.metals = METALS.map(([k]) => metals.find(x => x.k === k) || oldM.find(x => x.k === k)).filter(Boolean); snap.parts.metals = now; log('metals', metals.map(x => x.k + ' ' + x.price).join(', ')); }
+  else { if (oldM.length) snap.metals = oldM; log('metals: no answer, kept the last one'); }
 
   // sectors (CoinGecko categories: market cap + its 24h change + their 3 biggest coins) — the Telegram bot's sector radar
   // and smart evening. Only sectors ≥ $500M; kept from the last run when CoinGecko doesn't answer.

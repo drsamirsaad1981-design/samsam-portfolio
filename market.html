@@ -15,22 +15,23 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-lang.js?v=202611172115"></script>
-<script src="samsam-ar.js?v=202611172115"></script>
-<script src="samsam-ui.js?v=202611172115"></script>
-<script src="samsam-hints.js?v=202611172115"></script>
-<script src="samsam-arhints.js?v=202611172115"></script>
-<script src="samsam-vault.js?v=202611172115"></script>
-<script src="samsam-labels.js?v=202611172115"></script>
-<script src="samsam-taxonomy.js?v=202611172115"></script>
-<script src="samsam-coins.js?v=202611172115"></script>
-<script src="samsam-import.js?v=202611172115"></script>
-<script src="samsam-wallets.js?v=202611172115"></script>
-<script src="samsam-rewards.js?v=202611172115"></script>
-<script src="samsam-settings.js?v=202611172115"></script>
-<script src="samsam-dropdown.js?v=202611172115"></script>
-<script src="samsam-add.js?v=202611172115"></script>
-<script src="samsam-market.js?v=202611172115"></script>
+<script src="samsam-lang.js?v=202611172240"></script>
+<script src="samsam-ar.js?v=202611172240"></script>
+<script src="samsam-ui.js?v=202611172240"></script>
+<script src="samsam-hints.js?v=202611172240"></script>
+<script src="samsam-arhints.js?v=202611172240"></script>
+<script src="samsam-vault.js?v=202611172240"></script>
+<script src="samsam-labels.js?v=202611172240"></script>
+<script src="samsam-taxonomy.js?v=202611172240"></script>
+<script src="samsam-coins.js?v=202611172240"></script>
+<script src="samsam-import.js?v=202611172240"></script>
+<script src="samsam-wallets.js?v=202611172240"></script>
+<script src="samsam-rewards.js?v=202611172240"></script>
+<script src="samsam-settings.js?v=202611172240"></script>
+<script src="samsam-dropdown.js?v=202611172240"></script>
+<script src="samsam-add.js?v=202611172240"></script>
+<script src="samsam-market.js?v=202611172240"></script>
+<script src="samsam-assets.js?v=202611172240"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -375,6 +376,46 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-toast button { background: none; border: 0; color: #c4b5fd; font: inherit; font-weight: 800; cursor: pointer; padding: 0; white-space: nowrap; }
 .mk-src { font-size: .66rem; color: var(--fg2); text-align: center; margin-top: 12px; }
 .mk-src a { color: inherit; }
+
+/* 🪙 Crypto · 📈 bStocks · 🥇 Metals (samsam-assets.js) */
+.as-seg { display: flex; gap: 4px; padding: 4px; margin: 0 0 12px; border-radius: 14px; background: rgba(148,163,184,.12); }
+.as-seg button { flex: 1; border: 0; background: transparent; color: inherit; font: inherit; font-size: .88rem; font-weight: 800; padding: 9px 6px; border-radius: 11px; cursor: pointer; opacity: .7; white-space: nowrap; }
+.as-seg button[aria-selected="true"] { opacity: 1; background: #7c3aed; color: #fff; box-shadow: 0 2px 10px rgba(124,58,237,.35); }
+.as-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.as-card { padding: 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); }
+.as-k { display: flex; align-items: center; gap: 6px; font-size: .74rem; font-weight: 800; color: var(--fg2); letter-spacing: .02em; margin-bottom: 6px; }
+.as-v { font-size: 1.45rem; font-weight: 800; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.as-v small { font-size: .78rem; font-weight: 600; color: var(--fg2); }
+.as-li { display: flex; justify-content: space-between; gap: 8px; font-size: .82rem; color: var(--fg2); margin-top: 6px; flex-wrap: wrap; }
+.as-li b { color: var(--fg); }
+.as-small { font-size: .74rem; line-height: 1.45; }
+.as-pc { font-weight: 800; font-variant-numeric: tabular-nums; } .as-pc.up, .as-li .up { color: #16a34a; } .as-pc.dn, .as-li .dn { color: #dc2626; }
+[data-theme="dark"] .as-pc.up, [data-theme="dark"] .as-li .up { color: #22c55e; } [data-theme="dark"] .as-pc.dn, [data-theme="dark"] .as-li .dn { color: #f87171; }
+.as-dot { width: 10px; height: 10px; border-radius: 50%; background: #94a3b8; display: inline-block; margin-inline-end: 4px; }
+.as-open .as-dot { background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.2); } .as-pre .as-dot, .as-after .as-dot { background: #f59e0b; }
+.as-movers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+.as-movers > div { padding: 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); min-width: 0; }
+.as-mv { display: flex; align-items: center; gap: 8px; padding: 6px 0; color: inherit; text-decoration: none; font-size: .86rem; }
+.as-mv img, .as-n img, .as-ph { width: 22px; height: 22px; border-radius: 50%; flex: none; background: rgba(148,163,184,.2); }
+.as-mv b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.as-list { border: 1px solid var(--border); border-radius: 16px; background: var(--card); overflow: hidden; }
+.as-tools { padding: 10px; } .as-tools .ss-search input { width: 100%; box-sizing: border-box; }
+.as-head, .as-row { display: grid; grid-template-columns: minmax(0, 1.6fr) 1fr .8fr .8fr 1fr; align-items: center; gap: 6px; padding: 9px 12px; }
+.as-head { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.as-head button { all: unset; cursor: pointer; font-size: .72rem; font-weight: 800; color: var(--fg2); text-align: end; }
+.as-head button.l { text-align: start; } .as-head button.on { color: #7c3aed; } [data-theme="dark"] .as-head button.on { color: #c4b5fd; }
+.as-row { color: inherit; text-decoration: none; border-top: 1px solid var(--border); font-size: .85rem; text-align: end; font-variant-numeric: tabular-nums; }
+.as-head + .as-row { border-top: 0; }
+@media (hover: hover) { .as-row:hover { background: rgba(124,58,237,.06); } }
+.as-n { display: flex; align-items: center; gap: 8px; min-width: 0; text-align: start; }
+.as-n span { display: flex; flex-direction: column; min-width: 0; } .as-n b { font-size: .88rem; } .as-n small { font-size: .72rem; color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.as-p { font-weight: 700; } .as-mc { color: var(--fg2); }
+@media (max-width: 560px) { .as-head, .as-row { grid-template-columns: minmax(0, 1.6fr) 1fr .9fr; } .as-head .w, .as-row .w { display: none; } .as-movers { grid-template-columns: 1fr; } }
+.as-metals { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.as-metal .mk-spark { width: 100%; height: 40px; margin-top: 8px; display: block; }
+.as-chs { display: flex; gap: 14px; font-size: .82rem; color: var(--fg2); margin-top: 4px; flex-wrap: wrap; }
+.as-note { font-size: .82rem; color: var(--fg2); margin: 12px 2px; }
+.as-src { font-size: .72rem; color: var(--fg2); opacity: .85; margin: 12px 2px 4px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -401,6 +442,8 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 </header>
 
 <main class="container">
+  <div class="as-seg" id="mkSeg" role="tablist" aria-label="Market sections" data-no-tr></div>
+  <div id="vCrypto">
   <div class="mk-status">
     <span class="msg" id="mkMsg" aria-live="polite">Loading…</span>
   </div>
@@ -523,11 +566,14 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
     <div id="mkMore" class="mk-more"></div>
   </section>
   <p class="mk-src">Prices: <a href="https://www.coingecko.com" target="_blank" rel="noopener">CoinGecko</a> (live, plus a snapshot every ~30 min) · coins 101–500 topped up from Binance · Coin pages: CoinMarketCap (CoinGecko for coins it doesn't list) · Predictions: CoinCodex · ETF flows: SoSoValue · Market Dominance, Fear &amp; Greed and the Altcoin Season Index: <a href="https://coinmarketcap.com/charts/" target="_blank" rel="noopener">CoinMarketCap</a> (its own indexes — the numbers CoinMarketCap, Binance and CoinGlass show).</p>
+  </div>
+  <div id="vStocks" hidden data-no-tr></div>
+  <div id="vMetals" hidden data-no-tr></div>
 </main>
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611172115"></script>
+<script type="module" src="samsam-cloud.js?v=202611172240"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';

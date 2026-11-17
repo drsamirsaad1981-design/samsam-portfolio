@@ -24,6 +24,9 @@ const srv = http.createServer((q, r) => {
     if (u.pathname.endsWith('/v1/altcoin-season-index/latest')) return J({ data: { altcoin_index: 46, snapshot_time: new Date().toISOString() }, status: { error_code: 0 } }); }
   if (u.pathname === '/cmclist') { if (!cmcUp) { r.writeHead(403); return r.end('{}'); } return J({ data: { cryptoCurrencyList: cmcList.map(c => ({ symbol: c.symbol, name: c.name, slug: c.name.toLowerCase().replace(/\W+/g, '-'), tags: c.tags || [], quotes: [{ name: 'USD', marketCap: c.mc }] })) } }); }
   if (u.pathname === '/fng/') return J({ data: [{ value: '10', value_classification: 'Extreme Fear' }, { value: '10' }, {}, {}, {}, {}, {}, { value: '29' }] });
+  if (u.pathname === '/cg/coins/markets' && u.searchParams.get('category') === 'bstocks-ecosystem') { hits.stocksQ = u.search; return J([{ id: 'nvidia-bstock', symbol: 'nvdab', name: 'NVIDIA bStock', image: 'x.png', current_price: 180, market_cap: 5e8, total_volume: 1e7, price_change_percentage_24h_in_currency: 2.5, price_change_percentage_7d_in_currency: -1.2, sparkline_in_7d: { price: Array.from({ length: 168 }, (_, i) => 170 + i / 16) } }]); }
+  if (u.pathname.startsWith('/yh/v8/finance/chart/')) { const sym = decodeURIComponent(u.pathname.split('/').pop()); if (sym === 'HG=F') { r.writeHead(429); return r.end('{}'); }
+    const base = { 'GC=F': 2000, 'SI=F': 25, 'PL=F': 950, 'BZ=F': 80 }[sym]; return J({ chart: { result: [{ meta: { regularMarketPrice: base * 1.01, previousClose: base, regularMarketTime: 1795000000 }, indicators: { quote: [{ close: Array.from({ length: 22 }, (_, i) => base * (0.95 + i * 0.0025)) }] } }] } }); }
   if (u.pathname === '/cg/coins/markets') return J(u.searchParams.get('category') ? [] : u.searchParams.get('page') === '1' ? mk : []);
   if (u.pathname === '/cg/global') return J({ data: { total_market_cap: { usd: 3e12 }, total_volume: { usd: 1e11 }, market_cap_change_percentage_24h_usd: 1, market_cap_percentage: { btc: 58, eth: 10, usdt: 5 }, active_cryptocurrencies: 1 } });
   if (u.pathname === '/cg/coins/categories') return J([]);
@@ -36,7 +39,7 @@ const srv = http.createServer((q, r) => {
   r.writeHead(404); r.end('{}');
 });
 await new Promise(ok => srv.listen(0, ok)); const B = 'http://127.0.0.1:' + srv.address().port;
-const env = { ...process.env, CG_FAST: '1', NO_LINKS: '1', CG_API: B + '/cg', BN_API: B + '/bn', FNG_API: B + '/fng/?limit=2', CMC_PUB: B + '/cmcpub', CMC_LIST: B + '/cmclist?x=1' };
+const env = { ...process.env, CG_FAST: '1', NO_LINKS: '1', CG_API: B + '/cg', BN_API: B + '/bn', FNG_API: B + '/fng/?limit=2', CMC_PUB: B + '/cmcpub', CMC_LIST: B + '/cmclist?x=1', YH_API: B + '/yh' };
 const run = dir => new Promise((ok, no) => { import('node:child_process').then(({ execFile }) => execFile(process.execPath, [path.join(ROOT, 'tools/update-market.mjs'), dir], { env, timeout: 120000 }, (e, so, se) => e ? no(e) : ok(so))); });
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mkt-'));
 const out = await run(dir);
@@ -47,6 +50,9 @@ check('the page\'s coins are CoinMarketCap\'s top 100: its order, no stablecoin 
 check('…today on the page = the official number; the own count is there too', alt.official === 46 && alt.live[today][0] === 46 && alt.own === 60, [alt.official, alt.live[today], alt.own]);
 check('Market Dominance is CoinMarketCap\'s: BTC 59.31, ETH 9.8, USDT = its cap ÷ its total (4.545), the next coins from its list', m.global.domSrc === 'cmc' && m.global.dom.btc === 59.31 && m.global.dom.eth === 9.8 && m.global.dom.usdt === 4.545 && m.global.domTop[0][0] === 'ALT1' && m.global.domTop[0][1] === 3.03 && !m.global.domTop.some(x => x[0] === 'WBTC'), m.global);
 check('Total market cap, volume and 24h are CoinMarketCap\'s (3.3T, 90B, −1.5%); CoinGecko\'s kept beside them', m.global.mcap === 3.3e12 && m.global.vol === 9e10 && m.global.mcapCh24 === -1.5 && m.global.src === 'cmc' && m.global.cg.mcap === 3e12 && m.global.cg.vol === 1e11, m.global);
+check('📈 bStocks: all of them (per_page=250) with logo, 24h and 7d change, a small 7-day line', /per_page=250/.test(hits.stocksQ) && /7d/.test(decodeURIComponent(hits.stocksQ)) && m.stocks && m.stocks[0].sym === 'NVDAB' && m.stocks[0].img === 'x.png' && m.stocks[0].ch7 === -1.2 && m.stocks[0].spark.length >= 20 && m.stocks[0].spark.length <= 30, m.stocks);
+const gold = (m.metals || []).find(x => x.k === 'gold');
+check('🥇 metals: gold, silver, platinum, Brent from Yahoo (price, +1% since the last close, a month of closes); copper refused → left out this time', m.metals && m.metals.map(x => x.k).join() === 'gold,silver,platinum,brent' && gold.unit === 'oz' && Math.abs(gold.price - 2020) < 1e-9 && Math.abs(gold.ch24 - 1) < 1e-9 && gold.spark.length === 22 && gold.ch7 != null && m.metals.find(x => x.k === 'brent').unit === 'bbl', m.metals);
 // CoinMarketCap down → as before
 cmcUp = false; fs.rmSync(dir, { recursive: true });
 const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'mkt-'));

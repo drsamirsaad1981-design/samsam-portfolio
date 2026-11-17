@@ -130,6 +130,12 @@
     etf: { title: 'ETF Flows (US spot)', body: function () { return '<p>Money going into (+, green) or out of (−, red) the US spot Bitcoin or Ethereum ETFs, per trading day.</p>' +
       '<p>Big steady inflows mean institutions are buying; outflows mean they are selling. The totals show the last 7 days, the last 30 days and since launch.</p><p>Source: SoSoValue.</p>'; } },
     // ── cloud menu ──
+    bstocks: { title: 'bStocks', body: function () { return '<p><b>bStocks</b> are Binance\'s <b>tokenized US stocks</b> (NVIDIA, Tesla, Circle…): a token that follows the share\'s price. You hold the token, not the share.</p>' +
+      '<ul><li>The tokens trade <b>24/7</b>, but the real shares move only while the <b>New York</b> market is open (Mon–Fri 9:30–16:00 New York time — 16:30–23:00 Riyadh in winter, 17:30–24:00 in summer). Outside those hours a token\'s price can drift and then snap back at the open.</li>' +
+      '<li>The list is CoinGecko\'s <b>bStocks Ecosystem</b>, saved every ~30 minutes. Tap a stock to open it on CoinGecko.</li></ul><p>US market holidays are not shown. Not financial advice.</p>'; } },
+    metals: { title: 'Metals & oil', body: function () { return '<p>Gold, silver, platinum, copper and Brent oil — the <b>futures</b> prices (front month) from Yahoo Finance, delayed ~10–15 minutes and saved every ~30 minutes.</p>' +
+      '<ul><li><b>Today</b>: the change since the last close. <b>7 days</b>: since 5 trading days ago.</li><li><b>1 gram</b> (gold, silver, platinum): the ounce price ÷ 31.1035 g, in US dollars and × 3.75 in Saudi riyals — pure 24k metal, without the shop\'s making charge.</li>' +
+      '<li><b>Gold / silver ratio</b>: how many ounces of silver buy one ounce of gold.</li></ul><p>Not financial advice.</p>'; } },
     recover: { title: 'Recover Data', body: function () { return '<p>Compares another copy of your portfolio — data the older app version left on this device, your old JSONBin, or a backup file — with the cloud, coin by coin, and lists the transactions the cloud is missing. You choose what to add; nothing is replaced.</p>'; } },
     backup: { title: 'Encrypted Backup', body: function () { return '<p>Downloads your whole portfolio as a file locked with a password you choose (AES-256). Keep the password safe: <b>it can\'t be recovered</b>, and without it the file can\'t be opened.</p>'; } },
     vsBtc: {

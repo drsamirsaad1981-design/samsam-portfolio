@@ -348,20 +348,22 @@
     "ar": "مركز السوق"
    },
    "s": {
-    "en": "The whole crypto market on one page.",
-    "ar": "سوق الكريبتو كله في صفحة واحدة."
+    "en": "The crypto market, US stocks on Binance, and metals — on one page.",
+    "ar": "سوق الكريبتو، والأسهم الأمريكية على Binance، والمعادن — في صفحة واحدة."
    },
    "en": [
     "<b>Total Market Cap</b> and 24h volume, with BTC and ETH.",
     "<b>Fear &amp; Greed</b> (0–100): low = fear, prices often cheap; high = greed, prices often stretched.",
     "<b>Market Dominance</b>: BTC, ETH, USDT and the others' share — plus ETH/BTC.",
-    "<b>ETF Flows</b>: money into (+) or out of (−) the US spot Bitcoin and Ethereum ETFs."
+    "<b>ETF Flows</b>: money into (+) or out of (−) the US spot Bitcoin and Ethereum ETFs.",
+    "At the top, two more sections: <b>📈 bStocks</b> (Binance's tokenized US stocks, with the US market's hours) and <b>🥇 Metals</b> (gold, silver, platinum, copper, Brent — gold also per gram in SAR)."
    ],
    "ar": [
     "<b>القيمة السوقية الإجمالية</b> وحجم التداول خلال 24 ساعة، مع البيتكوين والإيثيريوم.",
     "<b>الخوف والطمع</b> (0–100): منخفض = خوف والأسعار غالباً رخيصة؛ مرتفع = طمع والأسعار غالباً مبالغ فيها.",
     "<b>الهيمنة السوقية</b>: نصيب BTC وETH وUSDT وبقية العملات — إضافة إلى ETH/BTC.",
-    "<b>تدفقات صناديق ETF</b>: الأموال الداخلة (+) أو الخارجة (−) من صناديق البيتكوين والإيثيريوم الفورية في أمريكا."
+    "<b>تدفقات صناديق ETF</b>: الأموال الداخلة (+) أو الخارجة (−) من صناديق البيتكوين والإيثيريوم الفورية في أمريكا.",
+    "في الأعلى قسمان آخران: <b>📈 bStocks</b> (أسهم أمريكية مرمّزة على Binance، مع مواعيد السوق الأمريكي) و<b>🥇 المعادن</b> (الذهب والفضة والبلاتين والنحاس ونفط برنت — والذهب أيضاً بسعر الجرام بالريال)."
    ],
    "tip": {
     "en": "The Market Hub compares and explains — it doesn't predict the market.",

@@ -282,6 +282,8 @@
       return { value: v, n: alts.length, beat: beat, btc30: btc.ch30, label: v >= 75 ? 'Altcoin Season' : v <= 25 ? 'Bitcoin Season' : v >= 50 ? 'Leaning Altcoins' : 'Leaning Bitcoin' };
     },
     day: day,
+    stocks: snapPart('stocks'),   // 📈 Binance bStocks (tokenized US stocks), from the GitHub snapshot
+    metals: snapPart('metals'),   // 🥇 gold, silver, platinum, copper, Brent (Yahoo Finance futures), from the snapshot
     // 7-day change; older saved rows don't have it → from the 7-day line
     ch7: function (c) { if (c.ch7 != null) return c.ch7; var s = c.spark || []; return s.length > 1 && s[0] > 0 ? (s[s.length - 1] / s[0] - 1) * 100 : null; },
     fngColor: function (v) { return v < 25 ? '#ef4444' : v < 45 ? '#f97316' : v <= 55 ? '#eab308' : v <= 75 ? '#84cc16' : '#22c55e'; },
