@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 42b9347ea4c80cbe
+// sources-hash: 90ce2611c898ac5a
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1235,7 +1235,7 @@ async function keyOf(env, x) {
   }
 }
 var said = (e) => e ? [e.status || "", e.code != null ? e.code : "", String(e.message || "").slice(0, 140)].filter((x) => x !== "").join(" \xB7 ") : "";
-var why = (e) => e && (e.status === 451 || e.html && e.status === 403) ? "blocked" : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? "refused" : e && e.status === 429 ? "busy" : "failed";
+var why = (e) => e && /permission/i.test(e.message || "") && /FORBIDDEN|does not have/i.test(e.message || "") ? "noperm" : e && (e.status === 451 || e.html && e.status === 403) ? "blocked" : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? "refused" : e && e.status === 429 ? "busy" : "failed";
 var list2 = (all) => Object.keys(EXCHANGES).filter((ex) => all[ex]).map((ex) => ({ ex, name: EXCHANGES[ex], tail: all[ex].tail, at: all[ex].at, readOnly: all[ex].readOnly }));
 async function cexHandler2(env, who, body) {
   const owner2 = (who.owners || []).includes(who.email);
@@ -1256,7 +1256,7 @@ async function cexHandler2(env, who, body) {
     } catch (e) {
       const w = why(e);
       console.log(JSON.stringify({ cex: "set-failed", ex, said: said(e) }));
-      return { status: w === "refused" ? 400 : 502, error: w, said: said(e) };
+      return { status: w === "refused" || w === "noperm" ? 400 : 502, error: w, said: said(e) };
     }
     all[ex] = { v: await seal(env, JSON.stringify(k)), tail: k.k.slice(-4), at: (/* @__PURE__ */ new Date()).toISOString(), readOnly: perms.readOnly };
     await env.RATE.put(KEY(who.uid), JSON.stringify(all));

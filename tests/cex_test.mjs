@@ -94,6 +94,10 @@ globalThis.fetch = realFetch;
   check('no relay deployed (404) → straight to Binance, as before', r.balances[0].ok, r.balances[0]);
   globalThis.fetch = inner; kv.delete('cex:U1'); kv.delete('cex:U1:bal');
 }
+{ const inner = globalThis.fetch; globalThis.fetch = async () => new Response(JSON.stringify({ label: 'FORBIDDEN', message: 'Request API key does not have spot permission' }), { status: 403 });
+  r = await cexHandler(env, OWNER, { action: 'set', ex: 'gate', key: KEYG, secret: SECG });
+  check('Gate key without Spot permission → "noperm" (fix the key\'s permission), not "refused"', r.status === 400 && r.error === 'noperm' && /spot permission/.test(r.said), r);
+  globalThis.fetch = inner; }
 const src = (await import('node:fs')).readFileSync(new URL('../tools/dist/samsam-worker.js', import.meta.url), 'utf8');
 check('the built Worker has the /cex route', /isCex/.test(src) && /cexHandler/.test(src));
 console.log(`${ok}/${n} passed`); process.exit(ok === n ? 0 : 1);

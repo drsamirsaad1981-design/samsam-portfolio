@@ -100,7 +100,7 @@ async function load(env, uid) { try { return JSON.parse((await env.RATE.get(KEY(
 async function keyOf(env, x) { try { return JSON.parse(await unseal(env, x.v)); } catch (_) { return null; } }
 // what the exchange said, for the screen (never the key): status · code · message
 const said = e => e ? [e.status || '', e.code != null ? e.code : '', String(e.message || '').slice(0, 140)].filter(x => x !== '').join(' · ') : '';
-const why = e => e && (e.status === 451 || (e.html && e.status === 403)) ? 'blocked' : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? 'refused' : e && e.status === 429 ? 'busy' : 'failed';
+const why = e => e && /permission/i.test(e.message || '') && /FORBIDDEN|does not have/i.test(e.message || '') ? 'noperm' : e && (e.status === 451 || (e.html && e.status === 403)) ? 'blocked' : e && (e.status === 401 || e.status === 403 || e.code === -2014 || e.code === -2015 || e.code === -1022) ? 'refused' : e && e.status === 429 ? 'busy' : 'failed';
 const list = all => Object.keys(EXCHANGES).filter(ex => all[ex]).map(ex => ({ ex, name: EXCHANGES[ex], tail: all[ex].tail, at: all[ex].at, readOnly: all[ex].readOnly }));
 
 // /cex — { action: 'status' | 'set' | 'delete' | 'balances', ex, key, secret, fresh } from a signed-in owner or member
@@ -117,7 +117,7 @@ export async function cexHandler(env, who, body) {
     try {
       if (ex === 'binance') { perms = await binancePerms(k, { token: who.token }); if (!perms.readOnly) return { status: 400, error: 'refused-perms', extra: perms.extra }; }
       await READ[ex](k, { token: who.token });
-    } catch (e) { const w = why(e); console.log(JSON.stringify({ cex: 'set-failed', ex, said: said(e) })); return { status: w === 'refused' ? 400 : 502, error: w, said: said(e) }; }
+    } catch (e) { const w = why(e); console.log(JSON.stringify({ cex: 'set-failed', ex, said: said(e) })); return { status: w === 'refused' || w === 'noperm' ? 400 : 502, error: w, said: said(e) }; }
     all[ex] = { v: await seal(env, JSON.stringify(k)), tail: k.k.slice(-4), at: new Date().toISOString(), readOnly: perms.readOnly };
     await env.RATE.put(KEY(who.uid), JSON.stringify(all)); await env.RATE.delete(BAL(who.uid)).catch(() => {});
     return { ok: true, exchanges: list(all) };
