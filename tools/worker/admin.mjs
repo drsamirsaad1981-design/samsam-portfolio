@@ -55,20 +55,20 @@ async function act(env, chat, op) {
   const L = x.lang === 'ar' ? 'ar' : 'en';
   if (op === 'gift30' || op === 'gift365') {
     const y = await addDays(env, chat, op === 'gift30' ? 30 : 365), u = day(y.premUntil);
-    await tell(env, chat, `🎁 Dr. Samir Saad gave you premium as a gift — until ${u}!`, `🎁 Dr. Samir Saad ادّالك المميز هدية لحد ${u}!`, L);
+    await tell(env, chat, `🎁 Dr. Samir Saad gave you premium as a gift — until ${u}!`, `🎁 Dr. Samir Saad منحك العضوية المميزة هديةً حتى ${u}!`, L);
   } else if (op === 'endPrem') {
-    await revoke(env, chat); await tell(env, chat, 'Premium is off — back to the standard limits.', 'العضوية المميزة اتشالت — رجعت للحدود العادية.', L);
+    await revoke(env, chat); await tell(env, chat, 'Premium is off — back to the standard limits.', 'أُلغيت العضوية المميزة — عدت إلى الحدود العادية.', L);
   } else if (op === 'pause' || op === 'resume') {
     await setMember(env, chat, { paused: op === 'pause' ? true : undefined });
-    await tell(env, chat, op === 'pause' ? '⏸ The bot is paused for you for now.' : '▶️ The bot is back on for you.', op === 'pause' ? '⏸ البوت اتوقف عندك مؤقتاً.' : '▶️ البوت رجع يشتغل عندك.', L);
+    await tell(env, chat, op === 'pause' ? '⏸ The bot is paused for you for now.' : '▶️ The bot is back on for you.', op === 'pause' ? '⏸ تم إيقاف البوت لديك مؤقتاً.' : '▶️ عاد البوت للعمل لديك.', L);
   } else if (/^(ai|rp)[+-]$/.test(op)) {
     const f = op.startsWith('ai') ? 'ai' : 'reports', cur = Number.isFinite(x[f]) ? x[f] : (f === 'ai' ? DEF_AI : DEF_REPORTS), max = f === 'ai' ? 50 : 10;
     await setMember(env, chat, { [f]: Math.max(0, Math.min(max, cur + (op.endsWith('+') ? 1 : -1))) });
   } else if (op === 'approve' || op === 'refuse') {   // 📱 an /app request waiting
     const email = await getPending(env, chat); if (!email) return { status: 404, error: 'No request waiting.' };
     await clearPending(env, chat);
-    if (op === 'approve') { await setMember(env, chat, { email }); await syncAccess(env, await accessEmails(env)).catch(() => {}); await tell(env, chat, `✅ You can open the app now with <b>${email}</b>.`, `✅ تقدر تفتح التطبيق دلوقتي بـ <b>${email}</b>.`, L); }
-    else await tell(env, chat, 'Your app request was not approved.', 'طلب التطبيق ما اتوافقش عليه.', L);
+    if (op === 'approve') { await setMember(env, chat, { email }); await syncAccess(env, await accessEmails(env)).catch(() => {}); await tell(env, chat, `✅ You can open the app now with <b>${email}</b>.`, `✅ يمكنك الآن فتح التطبيق بـ <b>${email}</b>.`, L); }
+    else await tell(env, chat, 'Your app request was not approved.', 'لم تتم الموافقة على طلب التطبيق.', L);
   } else if (op === 'remove') {
     const had = await removeMember(env, chat);
     if (had && had.email) await syncAccess(env, await accessEmails(env)).catch(() => {});
@@ -87,7 +87,7 @@ export async function adminHandler(env, who, body) {
     const r = await undoRemove(env, String(body.chat || ''));
     if (!r) return { status: 404, error: 'Nothing to restore.' }; if (r.error) return { status: 409, error: 'Full — raise the maximum first.' };
     if (r.email) await syncAccess(env, await accessEmails(env)).catch(() => {});
-    await tell(env, String(body.chat), '↩️ Your access is back — welcome back!', '↩️ وصولك رجع — أهلاً بيك تاني!', r.lang);
+    await tell(env, String(body.chat), '↩️ Your access is back — welcome back!', '↩️ أُعيد وصولك — أهلاً بك من جديد!', r.lang);
     return { ok: true, overview: await overview(env) };
   }
   if (a === 'member') { const r = await act(env, String(body.chat || ''), String(body.op || '')); return r.ok ? { ...r, overview: await overview(env) } : r; }

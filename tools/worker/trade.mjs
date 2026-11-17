@@ -120,7 +120,7 @@ export async function keepTrades(env, trades, lang = 'en') {
 
 // the bot's own summary of what Confirm will save
 export function tradeLines(trades, ar) {
-  const L = [ar ? '🧾 <b>للحفظ — راجع واضغط تأكيد:</b>' : '🧾 <b>To save — check, then Confirm:</b>'];
+  const L = [ar ? '🧾 <b>للحفظ — راجع ثم اضغط تأكيد:</b>' : '🧾 <b>To save — check, then Confirm:</b>'];
   trades.forEach(({ trade: t }, n) => {
     const d = local(Date.parse(t.date), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
     const buy = t.side === 'buy';
@@ -128,9 +128,9 @@ export function tradeLines(trades, ar) {
     if (ar) {   // Arabic: each line starts with an Arabic word and reads "من X لـ Y" (arrows flip in right-to-left text)
       L.push(`${head}<b>${buy ? 'شراء' : 'بيع'} ${amt(t.qty)} ${esc(t.sym)}</b> بسعر ${money(t.price)} — الإجمالي <b>${money(t.total)}</b>`);
       L.push(`   التاريخ: ${esc(d)}${t.fee ? ` · الرسوم: ${money(t.fee)}` : ''}${t.note ? ' · ' + esc(t.note) : ''}`);
-      if (t.stable) L.push(`   ${buy ? 'مدفوع من' : 'الفلوس رايحة لـ'} ${esc(t.stable)}: ${buy ? '−' : '+'}${cash}`);
-      L.push(`   الكمية: من ${amt(t.held_before)} لـ <b>${amt(t.held_after)}</b> ${esc(t.sym)}`);
-      if (buy && t.avg_after) L.push(`   المتوسط: من ${money(t.avg_before)} لـ <b>${money(t.avg_after)}</b>`);
+      if (t.stable) L.push(`   ${buy ? 'مدفوع من' : 'المبلغ يذهب إلى'} ${esc(t.stable)}: ${buy ? '−' : '+'}${cash}`);
+      L.push(`   الكمية: من ${amt(t.held_before)} إلى <b>${amt(t.held_after)}</b> ${esc(t.sym)}`);
+      if (buy && t.avg_after) L.push(`   المتوسط: من ${money(t.avg_before)} إلى <b>${money(t.avg_after)}</b>`);
       if (t.realized_usd != null) L.push(`   ربح محقق: <b>${t.realized_usd >= 0 ? '+' : '−'}${money(Math.abs(t.realized_usd))}</b>`);
       return;
     }

@@ -143,10 +143,10 @@ export async function runWatch(env, now = Date.now()) {
 // /alerts — the list with a 🗑 per alert
 export async function viewAlerts(env, lang = 'en') {
   const list = await listAlerts(env), ar = lang === 'ar';
-  if (!list.length) return { text: ar ? '🔔 مفيش تنبيهات.\nاكتب مثلاً: <i>نبّهني لو SOL نزل تحت 82</i>' : '🔔 No alerts yet.\nWrite e.g. <i>tell me if SOL drops below 82</i>', buttons: [[{ text: ar ? '⬅️ القائمة' : '⬅️ Menu', callback_data: 'menu' }]] };
+  if (!list.length) return { text: ar ? '🔔 لا توجد تنبيهات.\nاكتب مثلاً: <i>نبهني إذا نزل SOL تحت 82</i>' : '🔔 No alerts yet.\nWrite e.g. <i>tell me if SOL drops below 82</i>', buttons: [[{ text: ar ? '⬅️ القائمة' : '⬅️ Menu', callback_data: 'menu' }]] };
   const L = [ar ? `🔔 <b>تنبيهاتك</b> (${list.length})` : `🔔 <b>Your alerts</b> (${list.length})`, ''];
-  list.forEach((a, i) => L.push(`${i + 1}. ${esc(describe(a))}${a.armed ? '' : ar ? ' <i>(مستني يرجع الأول)</i>' : ' <i>(waits to reset first)</i>'}`));
-  L.push('', ar ? '<i>بيتشيك كل 5 دقايق · كل تنبيه مرة واحدة</i>' : '<i>Checked every 5 min · each fires once</i>');
+  list.forEach((a, i) => L.push(`${i + 1}. ${esc(describe(a))}${a.armed ? '' : ar ? ' <i>(ينتظر عودة السعر أولاً)</i>' : ' <i>(waits to reset first)</i>'}`));
+  L.push('', ar ? '<i>يتحقق كل 5 دقائق · كل تنبيه مرة واحدة</i>' : '<i>Checked every 5 min · each fires once</i>');
   const buttons = []; for (let i = 0; i < list.length; i += 3) buttons.push(list.slice(i, i + 3).map((a, j) => ({ text: `🗑 ${i + j + 1}`, callback_data: 'ad:' + a.id })));
   buttons.push([{ text: ar ? '🔄 تحديث' : '🔄 Refresh', callback_data: 'al' }, { text: ar ? '⬅️ القائمة' : '⬅️ Menu', callback_data: 'menu' }]);
   return { text: L.join('\n'), buttons };

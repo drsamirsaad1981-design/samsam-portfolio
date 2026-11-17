@@ -34,7 +34,7 @@ const TOPICS = [
   ['chat', '💬 Chat · دردشة', 7322096], ['ideas', '💡 Suggestions · اقتراحات', 16766590], ['bugs', '🐞 Bugs & notes · ملاحظات', 16478047],
   ['guide', '📘 Guide · الدليل', 9367192],   // (the 🛠 Updates topic of the first version: merged into the guide — removed by mergeUpdates)
 ];
-const NOTE = { en: 'Not financial advice — for information only.', ar: 'مش نصيحة مالية — للمعلومة بس.' };
+const NOTE = { en: 'Not financial advice — for information only.', ar: 'ليست نصيحة مالية — للمعلومة فقط.' };
 
 // ── the bot was added / removed / promoted somewhere ──
 export async function onMyChatMember(env, u) {
@@ -113,7 +113,7 @@ export async function setup(env, kind, opt = {}) {
         if (r.ok) x.topics[k] = r.result.message_thread_id; else { notes.push('⚠️ Topics not made — give me "Manage topics".'); break; }
       }
       if (x.topics.chat && !x.helloPosted) {   // the welcome first (short), then the guide — each remembered only once it really went
-        const hr = await tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: x.topics.chat, parse_mode: 'HTML', text: '👋 <b>Welcome to the Cute Portfolio community!</b>\nChat here · ideas in 💡 · problems in 🐞 · how-to in 📘 · news in 🛠.\n\n👋 <b>أهلاً بيكم في مجتمع Cute Portfolio!</b>\nالدردشة هنا · الأفكار في 💡 · المشاكل في 🐞 · الشرح في 📘 · الجديد في 🛠.' });
+        const hr = await tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: x.topics.chat, parse_mode: 'HTML', text: '👋 <b>Welcome to the Cute Portfolio community!</b>\nChat here · ideas in 💡 · problems in 🐞 · how-to in 📘 · news in 🛠.\n\n👋 <b>أهلاً بكم في مجتمع Cute Portfolio!</b>\nالدردشة هنا · الأفكار في 💡 · المشكلات في 🐞 · الشرح والجديد في 📘.' });
         x.helloPosted = !!(hr && hr.ok); if (!x.helloPosted) notes.push('⚠️ The welcome in 💬 Chat didn\'t go — send /community setup in a minute.');
       }
       if (x.topics.guide && x.guidePosted !== true) { const done = await postGuide(env, x); x.guidePosted = done === true ? true : done; if (done !== true) notes.push(`⚠️ The guide stopped at part ${done + 1} (Telegram's limit) — send /community setup in a minute to finish it.`); }
@@ -210,7 +210,7 @@ export async function onJoinRequest(env, u) {
   await tg(env, ok ? 'approveChatJoinRequest' : 'declineChatJoinRequest', { chat_id: r.chat.id, user_id: r.from.id });
   if (ok && who !== owner(env)) {
     const ar = m[who].lang === 'ar';
-    await tg(env, 'sendMessage', { chat_id: who, text: ar ? `✅ اتقبلت في ${r.chat.title} — أهلاً بيك 👋` : `✅ You're in ${r.chat.title} — welcome 👋` });
+    await tg(env, 'sendMessage', { chat_id: who, text: ar ? `✅ تم قبولك في ${r.chat.title} — أهلاً بك 👋` : `✅ You're in ${r.chat.title} — welcome 👋` });
   }
 }
 
@@ -222,19 +222,19 @@ async function mergeUpdates(env, x) {
   if (!d.ok) { await tg(env, 'closeForumTopic', { chat_id: x.id, message_thread_id: id }); await tg(env, 'editForumTopic', { chat_id: x.id, message_thread_id: id, name: '💤 Old updates · قديم' }); }
   delete x.topics.updates; x.merged = true;
   await tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: x.topics.guide, parse_mode: 'HTML',
-    text: '🆕 <b>One place for the guide and what\'s new</b>\nEvery new feature now shows up right here, marked 🆕.\n\n🆕 <b>الدليل والجديد في مكان واحد</b>\nأي ميزة جديدة هتنزل هنا، بعلامة 🆕.' });
+    text: '🆕 <b>One place for the guide and what\'s new</b>\nEvery new feature now shows up right here, marked 🆕.\n\n🆕 <b>الدليل والجديد في مكان واحد</b>\nكل ميزة جديدة ستُنشر هنا، بعلامة 🆕.' });
 }
 
 // ── /community (members): the two links ──
 export async function communityView(env, lang) {
   const c = await getCommunity(env), ar = lang === 'ar', b = [];
   if (c.channel && c.channel.link) b.push([{ text: ar ? '📢 قناة الإشارات' : '📢 Signals channel', url: c.channel.link }]);
-  if (c.group && c.group.link) b.push([{ text: ar ? '💬 جروب الأعضاء' : '💬 Members\' group', url: c.group.link }]);
+  if (c.group && c.group.link) b.push([{ text: ar ? '💬 مجموعة الأعضاء' : '💬 Members\' group', url: c.group.link }]);
   b.push([{ text: ar ? '⬅️ القائمة' : '⬅️ Menu', callback_data: 'menu' }]);
   const text = b.length > 1
-    ? (ar ? '👥 <b>مجتمع Cute Portfolio</b> — للأعضاء بس\n\n📢 <b>القناة</b>: نبض السوق مرتين في اليوم والتحركات الكبيرة. تقدر تدّي ⭐ على البوست اللي يعجبك.\n💬 <b>الجروب</b>: دردشة · 💡 اقتراحات · 🐞 ملاحظات · 📘 الدليل والجديد.\n\nاضغط وابعت طلب الانضمام — البوت بيقبلك على طول.'
+    ? (ar ? '👥 <b>مجتمع Cute Portfolio</b> — للأعضاء فقط\n\n📢 <b>القناة</b>: نبض السوق مرتين يومياً والتحركات الكبيرة. يمكنك منح ⭐ للمنشورات التي تعجبك.\n💬 <b>المجموعة</b>: دردشة · 💡 اقتراحات · 🐞 ملاحظات · 📘 الدليل والجديد.\n\nاضغط وأرسل طلب الانضمام — يقبلك البوت فوراً.'
           : '👥 <b>The Cute Portfolio community</b> — members only\n\n📢 <b>The channel</b>: the market pulse twice a day and big moves. You can give ⭐ to posts you like.\n💬 <b>The group</b>: chat · 💡 suggestions · 🐞 bugs & notes · 📘 the guide &amp; what\'s new.\n\nTap, send the join request — the bot lets you in at once.')
-    : (ar ? '👥 المجتمع لسه بيتجهز — قريب.' : '👥 The community is being set up — soon.');
+    : (ar ? '👥 المجتمع قيد التجهيز — قريباً.' : '👥 The community is being set up — soon.');
   return { text, buttons: b };
 }
 

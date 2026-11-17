@@ -351,8 +351,8 @@ check('the prompt asks for the AI Analysis style: verdict line, emoji section ti
 sent.length = 0; claudeCalls.length = 0; await say('keep looking at btc please');
 check('a model that keeps calling tools → after 8 rounds it must answer (tools still declared, tool_choice none) — no error', /Final answer after many rounds/.test(last().b.text) && claudeCalls.length === 9 && claudeCalls.at(-1).tool_choice.type === 'none' && claudeCalls.every(c => c.tools), [claudeCalls.length, last().b.text.slice(0, 60)]);
 await say('/new'); claudeCalls.length = 0; await say('ما هي أفضل عملة؟'); await say('Which coins are weaker than BTC in my portfolio?');
-check('language follows THIS message: Arabic question → "answer in Egyptian Arabic", English after it → "answer in English"', /in Arabic — answer in Egyptian Arabic/.test(claudeCalls[0].system) && /in English — answer in English/.test(claudeCalls.at(-1).system), claudeCalls.map(c => (c.system.match(/latest message is in [^—]+— [^(]+/) || [''])[0]));
-check('…and the note rides on the question itself ("(Reply in English.)"), not kept in the memory', /\(Reply in English\.\)$/.test(claudeCalls.at(-1).messages.at(-1).content) && /جاوب بالعربي/.test(claudeCalls[0].messages.at(-1).content) && !claudeCalls.at(-1).messages.slice(0, -1).some(m => /Reply in English|جاوب بالعربي/.test(String(m.content))), claudeCalls.at(-1).messages.map(m => String(m.content).slice(-30)));
+check('language follows THIS message: Arabic question → "answer in simple Modern Standard Arabic", English after it → "answer in English"', /in Arabic — answer in simple Modern Standard Arabic/.test(claudeCalls[0].system) && /in English — answer in English/.test(claudeCalls.at(-1).system), claudeCalls.map(c => (c.system.match(/latest message is in [^—]+— [^(]+/) || [''])[0]));
+check('…and the note rides on the question itself ("(Reply in English.)"), not kept in the memory', /\(Reply in English\.\)$/.test(claudeCalls.at(-1).messages.at(-1).content) && /أجب بالعربية الفصحى/.test(claudeCalls[0].messages.at(-1).content) && !claudeCalls.at(-1).messages.slice(0, -1).some(m => /Reply in English|جاوب بالعربي/.test(String(m.content))), claudeCalls.at(-1).messages.map(m => String(m.content).slice(-30)));
 sent.length = 0; claudeCalls.length = 0; const dup = UPD + 1;
 await post({ update_id: dup, message: { message_id: 9, chat: { id: 555 }, text: 'what is the price of SOL?' } });
 await post({ update_id: dup, message: { message_id: 9, chat: { id: 555 }, text: 'what is the price of SOL?' } });
@@ -374,7 +374,7 @@ check(`a 5-tool question stays within Cloudflare's 50 calls (${outside} outside 
 sent.length = 0; await say('/menu');
 check('English by default (even with the alerts set to Arabic): menu has "🌐 عربي"', /What would you like/.test(last().b.text) && btnTexts(last()).includes('🌐 عربي'), last().b.text);
 sent.length = 0; await tap('lang:ar');
-check('tap 🌐 عربي → "اللغة: عربي ✅" with the Arabic keyboard, the menu redrawn in Arabic', out().some(x => x.b.text === 'اللغة: عربي ✅' && x.b.reply_markup.keyboard[0][0].text === '💼 محفظتي') && out().some(x => x.m === 'editMessageText' && /تحب تشوف إيه/.test(x.b.text) && btnTexts(x).includes('🌐 English')), out().map(x => x.b.text.slice(0, 30)));
+check('tap 🌐 عربي → "اللغة: عربي ✅" with the Arabic keyboard, the menu redrawn in Arabic', out().some(x => x.b.text === 'اللغة: عربي ✅' && x.b.reply_markup.keyboard[0][0].text === '💼 محفظتي') && out().some(x => x.m === 'editMessageText' && /ماذا تريد أن ترى/.test(x.b.text) && btnTexts(x).includes('🌐 English')), out().map(x => x.b.text.slice(0, 30)));
 sent.length = 0; await say('/portfolio');
 check('…and it stays Arabic', /محفظتك الآن/.test(last().b.text), last().b.text.slice(0, 60));
 sent.length = 0; await say('english');
@@ -390,7 +390,7 @@ check('Arabic: "محفظتك الآن"', /محفظتك الآن/.test(last().b.t
 sent.length = 0; await post({ message: { chat: { id: 555 }, text: '📋 الخطة' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
 check('Arabic keyboard "📋 الخطة" → the plan in Arabic', /خطة التجميع/.test(last().b.text) && okHtml(last().b.text), last().b.text);
 sent.length = 0; await post({ message: { chat: { id: 555 }, text: 'sol' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
-check('Arabic coin card', /معاك <b>10 SOL<\/b>/.test(last().b.text) && /متوسطك/.test(last().b.text), last().b.text);
+check('Arabic coin card', /لديك <b>10 SOL<\/b>/.test(last().b.text) && /متوسط شرائك/.test(last().b.text), last().b.text);
 
 // ── setup link ──
 sent.length = 0;
@@ -470,12 +470,12 @@ const ENVV = { ...ENV, AI: { run: async (model, inp) => { aiRuns.push({ model, i
 const voice = (v, env = ENVV) => post({ update_id: ++UPD, message: { message_id: 3, chat: { id: 555, type: 'private' }, from: { id: 555 }, voice: { file_id: 'VF1', duration: 5, mime_type: 'audio/ogg', file_size: 70000, ...v } } }, ENV.TG_SECRET, env);
 await say('/new'); sent.length = 0; claudeCalls.length = 0; fileGets.length = 0; await voice();
 const vm = sent.filter(x => x.m === 'sendMessage' || x.m === 'editMessageText');
-check('voice → "🎙️ Listening…" at once', vm[0] && vm[0].m === 'sendMessage' && /^🎙️ (Listening|بسمع)…$/.test(vm[0].b.text), vm.map(x => x.b.text));
+check('voice → "🎙️ Listening…" at once', vm[0] && vm[0].m === 'sendMessage' && /^🎙️ (Listening|أستمع)…$/.test(vm[0].b.text), vm.map(x => x.b.text));
 check('…the file is fetched from Telegram (getFile, then the download)', sent.some(x => x.m === 'getFile' && x.b.file_id === 'VF1') && fileGets.length === 1 && fileGets[0].endsWith('/voice/file_9.oga'), fileGets);
 check('…Whisper turbo: first finds the language (no hint), then the whole note again in English with the English crypto words', aiRuns.length === 2 && aiRuns[0].model === '@cf/openai/whisper-large-v3-turbo' && aiRuns[0].inp.audio === Buffer.from(VOICE_BYTES).toString('base64') && !aiRuns[0].inp.initial_prompt && !aiRuns[0].inp.language && aiRuns[1].inp.language === 'en' && /BTC/.test(aiRuns[1].inp.initial_prompt) && !/[\u0600-\u06FF]/.test(aiRuns[1].inp.initial_prompt), aiRuns.map(x => [x.inp.language, x.inp.initial_prompt]));
-check('…that message becomes "🎙️ I heard: <i>…</i>" + "🧠 Thinking…" under it', vm[1] && vm[1].m === 'editMessageText' && vm[1].b.message_id === 7 && /^🎙️ (I heard:|سمعت:) <i>what is the price of SOL\?<\/i>\n🧠 (Thinking|بفكّر)…$/.test(vm[1].b.text) && okHtml(vm[1].b.text), vm[1] && vm[1].b.text);
+check('…that message becomes "🎙️ I heard: <i>…</i>" + "🧠 Thinking…" under it', vm[1] && vm[1].m === 'editMessageText' && vm[1].b.message_id === 7 && /^🎙️ (I heard:|سمعت:) <i>what is the price of SOL\?<\/i>\n🧠 (Thinking|أفكر)…$/.test(vm[1].b.text) && okHtml(vm[1].b.text), vm[1] && vm[1].b.text);
 check('…then answered by Claude exactly like the typed question (tools called, answer about SOL)', claudeCalls.length === 2 && claudeCalls[0].messages.at(-1).content.startsWith('what is the price of SOL?') && /SOL<\/b> is \$/.test(last().b.text), [claudeCalls.length, last().b.text.slice(0, 80)]);
-check('…all in ONE message: one sendMessage, the answer is an edit with "I heard" still on top + the buttons', sent.filter(x => x.m === 'sendMessage').length === 1 && last().m === 'editMessageText' && last().b.message_id === 7 && /^🎙️ (I heard:|سمعت:) <i>what is the price of SOL\?<\/i>\n\n<b>SOL/.test(last().b.text) && /left today|النهارده/.test(last().b.text) && btnTexts(last()).some(x => /SOL/.test(x)) && okHtml(last().b.text), [sent.map(x => x.m), last().b.text.slice(0, 90)]);
+check('…all in ONE message: one sendMessage, the answer is an edit with "I heard" still on top + the buttons', sent.filter(x => x.m === 'sendMessage').length === 1 && last().m === 'editMessageText' && last().b.message_id === 7 && /^🎙️ (I heard:|سمعت:) <i>what is the price of SOL\?<\/i>\n\n<b>SOL/.test(last().b.text) && /left today|اليوم/.test(last().b.text) && btnTexts(last()).some(x => /SOL/.test(x)) && okHtml(last().b.text), [sent.map(x => x.m), last().b.text.slice(0, 90)]);
 HEARD = 'sol'; sent.length = 0; claudeCalls.length = 0; await voice();
 check('voice "sol" → the SOL card in the same message, under "I heard" (no Claude, no question used)', claudeCalls.length === 0 && sent.filter(x => x.m === 'sendMessage').length === 1 && last().m === 'editMessageText' && /^🎙️ (I heard:|سمعت:) <i>sol<\/i>\n\n/.test(last().b.text) && /SOL/.test(last().b.text) && btnTexts(last()).some(x => /Liq Map/.test(x)), [sent.map(x => x.m), last().b.text.slice(0, 60)]);
 HEARD = 'my alerts'; sent.length = 0; claudeCalls.length = 0; await voice();
@@ -487,9 +487,9 @@ check('Arabic voice → "سمعت / I heard" in Arabic letters, then to Claude',
 HEARD = 'tell <b>me</b> & go'; sent.length = 0; await voice();
 check('heard text with < & is escaped (Telegram accepts it)', out().some(x => /I heard:|سمعت:/.test(x.b.text) && okHtml(x.b.text) && x.b.text.includes('&lt;b&gt;')), out().map(x => x.b.text.slice(0, 60)));
 HEARD = ' . '; sent.length = 0; claudeCalls.length = 0; await voice();
-check('silence / no words → "couldn\'t make out any words", nothing asked', /make out|ما سمعتش/.test(last().b.text) && claudeCalls.length === 0, last().b.text);
+check('silence / no words → "couldn\'t make out any words", nothing asked', /make out|لم أسمع/.test(last().b.text) && claudeCalls.length === 0, last().b.text);
 AI_FAIL = true; sent.length = 0; await voice(); AI_FAIL = false;
-check('Whisper fails → "couldn\'t read that voice note", no crash', /read that voice|ما قدرتش أقرا/.test(last().b.text), last().b.text);
+check('Whisper fails → "couldn\'t read that voice note", no crash', /read that voice|لم أستطع قراءة/.test(last().b.text), last().b.text);
 sent.length = 0; aiRuns.length = 0; fileGets.length = 0; await voice({ duration: 300 });
 check('a 5-minute note → "up to 2 min", nothing downloaded', /2 min|2 دقيقة/.test(last().b.text) && aiRuns.length === 0 && fileGets.length === 0, last().b.text);
 sent.length = 0; await voice({}, ENV);
@@ -544,14 +544,14 @@ check('…the USDT doc: sell 700 @ $1, kind pay, link = the Buy\'s id, 1 ms late
 check('…the buttons go at once (✅/❌ removed, the others kept) and "Saved" + SOL now 15 · avg $153.33 (read back from Firestore)', sent[0].m === 'editMessageReplyMarkup' && !JSON.stringify(sent[0].b.reply_markup).includes('tx:') && sent[0].b.reply_markup.inline_keyboard.length === markup.inline_keyboard.length - 1 && /Saved the trade/.test(last().b.text) && /SOL now: <b>15<\/b> · avg \$153\.33/.test(last().b.text), [sent.map(x => x.m), last().b.text]);
 check('…✅ stays well inside Cloudflare\'s 50 calls (portfolio read once, no second read)', confirmCalls <= 20, confirmCalls);
 sent.length = 0; await tapM(tb[0].callback_data, markup);
-check('✅ tapped again → "already saved or cancelled", nothing written twice', commits.length === 1 && /already saved or cancelled|اتحفظت أو اتلغت/.test(last().b.text), last().b.text);
+check('✅ tapped again → "already saved or cancelled", nothing written twice', commits.length === 1 && /already saved or cancelled|حُفظت أو أُلغيت/.test(last().b.text), last().b.text);
 sent.length = 0; claudeCalls.length = 0; await say('I sold 20 LINK at 18');
 tv = last(); tb = btns(tv);
 check('a sell: date 10 Nov, fee $1, realized +$59 ((18−15)×20 − 1), LINK 50 → 30', /Sell 20 LINK<\/b> @ \$18\.00 = <b>\$360\.00<\/b>/.test(tv.b.text) && /10 Nov/.test(tv.b.text) && /fee \$1\.00/.test(tv.b.text) && /Realized: <b>\+\$59\.00<\/b>/.test(tv.b.text) && /LINK 50 → <b>30<\/b>/.test(tv.b.text), tv.b.text);
 sent.length = 0; await tapM(tb[1].callback_data, tv.b.reply_markup);
 check('❌ → cancelled, nothing written; ✅ after that does nothing', /Cancelled/.test(last().b.text) && commits.length === 1, last().b.text);
 sent.length = 0; await tapM(tb[0].callback_data, tv.b.reply_markup);
-check('…(✅ after ❌ → already cancelled)', commits.length === 1 && /already saved or cancelled|اتحفظت أو اتلغت/.test(last().b.text));
+check('…(✅ after ❌ → already cancelled)', commits.length === 1 && /already saved or cancelled|حُفظت أو أُلغيت/.test(last().b.text));
 sent.length = 0; claudeCalls.length = 0; await say('I sold 999 SOL at 150');
 const errs = claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content).error);
 check('checks: sell more than held / a coin not held / no price / a price 100× off / a future date → errors, no buttons', /only 15 SOL held/.test(errs[0]) && /DOGE is not in the portfolio/.test(errs[1]) && /price is missing/.test(errs[2]) && /far from today/.test(errs[3]) && /future/.test(errs[4]) && !btns(last()).some(b => /^tx:/.test(b.callback_data || '')), errs);
@@ -562,9 +562,9 @@ FS_WRITE_403 = true; sent.length = 0; await tapM(tb[0].callback_data, tv.b.reply
 check('Firestore refuses the write (read-only account) → "Not saved" + how to fix it (Cloud Datastore User)', /Not saved/.test(last().b.text) && /Cloud Datastore User/.test(last().b.text) && commits.length === 1, last().b.text);
 sent.length = 0; claudeCalls.length = 0; await say('بعت i sold 20 link بـ 18');
 tv = last(); tb = btns(tv);
-check('Arabic message → the summary + buttons in Arabic (بيع … ربح محقق, ✅ تأكيد)', /للحفظ/.test(tv.b.text) && /بيع 20 LINK<\/b> بسعر \$18\.00/.test(tv.b.text) && /الكمية: من 50 لـ <b>30<\/b> LINK/.test(tv.b.text) && /ربح محقق/.test(tv.b.text) && !/→/.test(tv.b.text) && tb[0].text === '✅ تأكيد', [tv.b.text, tb.map(b => b.text)]);
+check('Arabic message → the summary + buttons in Arabic (بيع … ربح محقق, ✅ تأكيد)', /للحفظ/.test(tv.b.text) && /بيع 20 LINK<\/b> بسعر \$18\.00/.test(tv.b.text) && /الكمية: من 50 إلى <b>30<\/b> LINK/.test(tv.b.text) && /ربح محقق/.test(tv.b.text) && !/→/.test(tv.b.text) && tb[0].text === '✅ تأكيد', [tv.b.text, tb.map(b => b.text)]);
 sent.length = 0; await tapM(tb[1].callback_data, tv.b.reply_markup);
-check('…❌ answered in Arabic too', /اتلغت/.test(last().b.text), last().b.text);
+check('…❌ answered in Arabic too', /أُلغيت/.test(last().b.text), last().b.text);
 // 15 minutes later → nothing saved
 const Wt = await fresh(); sent.length = 0; claudeCalls.length = 0; await postK(Wt, 'I sold 20 LINK at 18');
 const tkey = [...kvStore.keys()].find(k => k.startsWith('tg:tx:')), tg0 = JSON.parse(kvStore.get(tkey)); tg0.created -= 16 * 60e3; kvStore.set(tkey, JSON.stringify(tg0));
@@ -740,7 +740,7 @@ await pg.click('.sheet .more >> nth=0'); await pg.waitForFunction(old => documen
 const pv2 = await pg.$eval('.sheet .prev', i => i.src);
 check('…"hide $" redraws it without the amounts (a different image), remembered', pv2 !== pv1 && (await pg.evaluate(() => localStorage.getItem('cp-priv'))) === '1', [pv1.length, pv2.length, await pg.evaluate(() => localStorage.getItem('cp-priv')), await pg.$$eval('.sheet .more', b => b.map(x => x.textContent))]);
 fs.writeFileSync(path.join(ROOT, 'tests/shots/card_portfolio_hidden.png'), Buffer.from(pv2.split(',')[1], 'base64'));
-sent.length = 0; await pg.click('.sheet .btn'); await pg.waitForFunction(() => /Sent|اتبعتت/.test((document.querySelector('.sheet-st') || {}).textContent || ''), null, { timeout: 5000 });
+sent.length = 0; await pg.click('.sheet .btn'); await pg.waitForFunction(() => /Sent|أُرسلت/.test((document.querySelector('.sheet-st') || {}).textContent || ''), null, { timeout: 5000 });
 const ph = sent.find(x => x.m === 'sendPhoto');
 check('…📤 → the JPEG goes through /tg/card to Telegram as a photo in your chat, with a caption', cardBody && /^\/9j\//.test(cardBody.jpg) && ph && ph.b.chat_id === '555' && ph.b.photoBytes[0] === 0xFF && ph.b.photoBytes[1] === 0xD8 && /Cute Portfolio/.test(ph.b.caption), [cardBody && cardBody.jpg.slice(0, 8), ph && ph.b.caption]);
 await pg.waitForTimeout(1000);

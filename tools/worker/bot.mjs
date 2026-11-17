@@ -72,41 +72,41 @@ const T = {
     vLong: s => `Voice notes up to ${s / 60} min, please — or type it.`, vEmpty: "🎙️ I couldn't make out any words — try again, or type it.", vFail: "🎙️ I couldn't read that voice note — try again, or type it.",
   },
   ar: {
-    hi: 'أهلاً سمير 👋', hiAll: 'أهلاً 👋', menuTitle: 'تحب تشوف إيه؟', pf: '💼 محفظتي', coin: '🪙 عملة', market: '🌍 السوق', plan: '📋 الخطة',
+    hi: 'أهلاً سمير 👋', hiAll: 'أهلاً 👋', menuTitle: 'ماذا تريد أن ترى؟', pf: '💼 محفظتي', coin: '🪙 عملة', market: '🌍 السوق', plan: '📋 الخطة',
     movers: '🏆 الأفضل والأسوأ', signals: '🎯 الإشارات', refresh: '🔄 تحديث', back: '⬅️ القائمة', openApp: '📱 افتح التطبيق', liq: '🔥 Liq Map',
-    chart: '📈 الرسم', inApp: '💼 في التطبيق', pfNow: 'محفظتك الآن', askCoin: 'ابعت رمز العملة أو اسمها — مثلاً <code>btc</code> أو <code>sol eth</code> أو <code>pendle</code>.',
-    notFound: q => `ما لقيتش «${q}». جرّب الرمز (مثلاً <code>sol</code>) أو الاسم كامل.`,
-    noUser: 'المحفظة لسه مش متوصلة (FIREBASE_SERVICE_ACCOUNT ناقص في الـ Worker).', soon: 'الكلام العادي معايا جاي في المرحلة الجاية. دلوقتي: اضغط زرار، أو ابعت رمز عملة زي <code>btc</code>.',
-    err: 'حصلت مشكلة عندي — جرّب تاني بعد دقيقة.', rank: 'الترتيب', cap: 'القيمة السوقية', vol: 'التداول 24س', h24: '24س', d7: '7 أيام', d30: '30 يوم',
-    you: 'معاك', avg: 'متوسطك', signal: 'الإشارة', noHold: 'مش معاك.', live: 'مباشر', snap: m => `من ${m} دقيقة`, src: 'CoinGecko',
-    planT: 'خطة التجميع', overall: 'الإجمالي', done: 'تم', left: 'باقي', dca: 'الشراء المنتظم (DCA)', next: 'التالي', buyAt: 'تنبيهات سعر الشراء', away: 'بعيد',
-    noPlan: 'مفيش أهداف في الخطة لسه — حطها من صفحة Accumulation.', best24: 'الأفضل 24س', worst24: 'الأسوأ 24س', best7: 'الأفضل 7 أيام', worst7: 'الأسوأ 7 أيام',
-    mvT: 'الأفضل والأسوأ (عملاتك)', noStable: 'من غير الـ stablecoins', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل لـ BTC', hold: '⚪ احتفاظ',
-    vsAvg: 'مقابل متوسطك', mkT: 'السوق', topUp: n => `أعلى ${n} · الأفضل 24س`, topDn: n => `أعلى ${n} · الأسوأ 24س`, stUp: 'bStocks · الأفضل 24س', stDn: 'bStocks · الأسوأ 24س', stNote: 'أسهم أمريكية مرمّزة (Binance)', updated: 'اتحدّث', futures: 'Futures', yes: 'أيوه', private: '',
-    welcome: 'البوت اتوصل ✅\nبيرد عليك هنا في أي وقت. اضغط زرار تحت، أو ابعت رمز عملة زي <code>btc</code>.',
-    thinking: '🧠 بفكّر…', aiLimit: n => `خلصت الـ ${n} سؤال بتوع النهارده — بكرة يتجددوا (12 بالليل بتوقيت الرياض). الأزرار والرموز شغالة عادي.`,
-    aiNoKey: 'الـ AI مش متظبط (ANTHROPIC_API_KEY ناقص في الـ Worker).', aiOwnKey: '🔑 Claude رفض مفتاحك (غلط، أو اتشال، أو الرصيد خلص). صلّحه من التطبيق: الإعدادات ← My Claude key.', aiBusy: 'Claude مشغول دلوقتي — جرّب كمان دقيقة.',
-    aiErr: 'ما قدرتش أجاوب دلوقتي — جرّب تاني أو اكتب السؤال بشكل تاني.', newChat: '🆕 محادثة جديدة', newDone: 'محادثة جديدة — نسيت الكلام اللي فات 🧹', aiLeft: (a, n) => `باقي ${a}/${n} النهارده`, data: 'البيانات',
-    ownerOnly: 'ده لصاحب البوت بس.', noLink: 'محفظتك لسه مش مربوطة. من التطبيق: الإعدادات ← Telegram ← 🔗 Link your portfolio (لسه معندكش التطبيق؟ ابعت /app والإيميل). لحد كده السوق، وأي عملة، والتنبيهات، والتجريبي، والأسئلة كلها شغالة.',
-    alertsB: '🔔 التنبيهات', alertGone: '🗑 اتمسح التنبيه', dailyB: '🗓 اليومي', paperB: '🧪 تجريبي', report: '📊 التقرير', reportT: '📊 <b>تقريرك الكامل</b> — بيفتح جوه تليجرام.', working: '⏳ ثواني…', pinOff: 'الرسالة المتثبتة اتقفلت — /pin ترجّعها.',
+    chart: '📈 الرسم', inApp: '💼 في التطبيق', pfNow: 'محفظتك الآن', askCoin: 'أرسل رمز العملة أو اسمها — مثلاً <code>btc</code> أو <code>sol eth</code> أو <code>pendle</code>.',
+    notFound: q => `لم أجد «${q}». جرّب الرمز (مثلاً <code>sol</code>) أو الاسم كاملاً.`,
+    noUser: 'المحفظة غير متصلة بعد (FIREBASE_SERVICE_ACCOUNT غير موجود في الـ Worker).', soon: 'المحادثة الحرة قادمة في المرحلة التالية. الآن: اضغط زراً، أو أرسل رمز عملة مثل <code>btc</code>.',
+    err: 'حدثت مشكلة لدي — حاول مرة أخرى بعد دقيقة.', rank: 'الترتيب', cap: 'القيمة السوقية', vol: 'التداول 24 س', h24: '24س', d7: '7 أيام', d30: '30 يوم',
+    you: 'لديك', avg: 'متوسط شرائك', signal: 'الإشارة', noHold: 'ليست في محفظتك.', live: 'مباشر', snap: m => `منذ ${m} دقيقة`, src: 'CoinGecko',
+    planT: 'خطة التجميع', overall: 'الإجمالي', done: 'تم', left: 'المتبقي', dca: 'الشراء الدوري (DCA)', next: 'التالي', buyAt: 'تنبيهات سعر الشراء', away: 'يبعد',
+    noPlan: 'لا توجد أهداف في الخطة بعد — أضفها من صفحة خطة التجميع في التطبيق.', best24: 'الأفضل 24س', worst24: 'الأسوأ 24س', best7: 'الأفضل 7 أيام', worst7: 'الأسوأ 7 أيام',
+    mvT: 'الأفضل والأسوأ (عملاتك)', noStable: 'دون العملات المستقرة', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل لـ BTC', hold: '⚪ احتفاظ',
+    vsAvg: 'مقارنة بمتوسط شرائك', mkT: 'السوق', topUp: n => `أعلى ${n} · الأفضل 24س`, topDn: n => `أعلى ${n} · الأسوأ 24س`, stUp: 'bStocks · الأفضل 24س', stDn: 'bStocks · الأسوأ 24س', stNote: 'أسهم أمريكية مرمّزة (Binance)', updated: 'تم التحديث', futures: 'Futures', yes: 'نعم', private: '',
+    welcome: 'البوت متصل ✅\nيرد عليك هنا في أي وقت. اضغط زراً بالأسفل، أو أرسل رمز عملة مثل <code>btc</code>.',
+    thinking: '🧠 أفكر…', aiLimit: n => `انتهت أسئلتك الـ ${n} لهذا اليوم — تتجدد غداً (12 منتصف الليل بتوقيت الرياض). الأزرار والرموز تعمل كالمعتاد.`,
+    aiNoKey: 'الذكاء الاصطناعي غير مُعدّ (ANTHROPIC_API_KEY غير موجود في الـ Worker).', aiOwnKey: '🔑 رفض Claude مفتاحك (خاطئ، أو أُلغي، أو نفد الرصيد). أصلحه من التطبيق: الإعدادات ← مفتاح Claude الخاص بي.', aiBusy: 'Claude مشغول الآن — حاول بعد دقيقة.',
+    aiErr: 'لم أستطع الإجابة الآن — حاول مرة أخرى أو اكتب السؤال بصيغة أخرى.', newChat: '🆕 محادثة جديدة', newDone: 'محادثة جديدة — نسيت الرسائل السابقة 🧹', aiLeft: (a, n) => `المتبقي ${a}/${n} اليوم`, data: 'البيانات',
+    ownerOnly: 'هذا لمالك البوت فقط.', noLink: 'محفظتك غير مربوطة بعد. من التطبيق: الإعدادات ← تليجرام ← 🔗 ربط محفظتك ببوت تليجرام (ليس لديك التطبيق؟ أرسل /app مع بريدك). حتى ذلك الحين: السوق، وأي عملة، والتنبيهات، والتداول التجريبي، والأسئلة — كلها تعمل.',
+    alertsB: '🔔 التنبيهات', alertGone: '🗑 حُذف التنبيه', dailyB: '🗓 اليومي', paperB: '🧪 تجريبي', report: '📊 التقرير', reportT: '📊 <b>تقريرك الكامل</b> — يُفتح داخل تليجرام.', working: '⏳ لحظات…', pinOff: 'أُوقفت الرسالة المثبتة — /pin يعيدها.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
-    today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل BTC', beat: (a, n) => `${a}/${n} عملة سبقت BTC`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
-    dom: 'السيطرة', fng: 'الخوف والطمع', altS: 'موسم العملات', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a}/${n} على الهدف`,
+    today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل BTC', beat: (a, n) => `${a}/${n} عملة تفوقت على BTC`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
+    dom: 'الهيمنة', fng: 'الخوف والطمع', altS: 'موسم العملات البديلة', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a}/${n} على الهدف`,
     dcaS: (n, mo) => `${n} شراء · ${mo}/شهر`, exitS: (n) => `الخروج ${n}/3`, nearTp: 'أقرب TP',
-    exitT: 'خطة الخروج', conds: 'شروط الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'سيطرة BTC', usdtD: 'سيطرة USDT', ethBtc: 'ETH/BTC',
-    tpT: 'مستويات جني الأرباح', tpKey: 'السعر · الباقي · البيع', more: n => `+${n} عملة كمان في التطبيق`, toGo: 'باقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'مفيش مستويات جني أرباح لسه — حطها من صفحة Exit Strategy.',
-    openExit: '🚪 افتح Exit Strategy', allExit: 'الشروط الـ 3 اتحققت — منطقة الخروج',
+    exitT: 'خطة الخروج', conds: 'مؤشرات الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC',
+    tpT: 'مستويات جني الأرباح', tpKey: 'السعر · المتبقي · البيع', more: n => `+${n} عملة أخرى في التطبيق`, toGo: 'المتبقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'لا توجد مستويات جني أرباح بعد — أضفها من صفحة استراتيجية الخروج في التطبيق.',
+    openExit: '🚪 افتح استراتيجية الخروج', allExit: 'تحققت المؤشرات الثلاثة — منطقة الخروج',
     kb: { pf: '💼 محفظتي', mk: '🌍 السوق', pl: '📋 الخطة', ex: '🚪 الخروج', mv: '🏆 الأفضل', sg: '🎯 الإشارات' },
     kbOld: { mv: '🏆 الأفضل والأسوأ', ex: '🚪 خطة الخروج' },
-    hidden: 'الأزرار اتخفت ⌨️ — اضغط علامة ⌨️ في خانة الكتابة (أو ابعت /start) عشان ترجع.',
-    txOk: '✅ تأكيد', txNo: '❌ إلغاء', txOkAll: n => `✅ تأكيد الـ ${n}`,
-    txSaved: n => `✅ <b>اتحفظ${n === 1 ? 'ت الصفقة' : 'ت ' + n + ' صفقات'}</b> في محفظتك — هتلاقيها في التطبيق دلوقتي.`, txCancelled: '❌ اتلغت — ما اتحفظش حاجة.',
-    txGone: 'الصفقة دي اتحفظت أو اتلغت قبل كده.', txExpired: '⌛ عدّى أكتر من 15 دقيقة — ما اتحفظش حاجة. قولّي الصفقة تاني.',
-    txChanged: why => `⚠️ ما اتحفظش — محفظتك اتغيرت: ${why}. قولّي الصفقة تاني.`, txNoUser: 'المحفظة مش متوصلة — ما اتحفظش حاجة.',
-    txSaveErr: why => `⚠️ ما اتحفظش — Firestore رفض (${why}).${/403/.test(why) ? ' حساب الخدمة بيقرا بس: من Google Cloud → IAM اديله دور "Cloud Datastore User".' : ''}`,
-    nowHold: 'دلوقتي',
-    listening: '🎙️ بسمع…', heard: '🎙️ سمعت:', vNoAi: 'الرسايل الصوتية لسه مش متظبطة (الـ AI binding ناقص في الـ Worker) — اكتبها لو سمحت.',
-    vLong: s => `الفويس لحد ${s / 60} دقيقة بس — أو اكتبها.`, vEmpty: '🎙️ ما سمعتش كلام واضح — جرّب تاني أو اكتبها.', vFail: '🎙️ ما قدرتش أقرا الفويس ده — جرّب تاني أو اكتبها.',
+    hidden: 'أُخفيت الأزرار ⌨️ — اضغط علامة ⌨️ في خانة الكتابة (أو أرسل /start) لإعادتها.',
+    txOk: '✅ تأكيد', txNo: '❌ إلغاء', txOkAll: n => `✅ تأكيد الصفقات (${n})`,
+    txSaved: n => `✅ <b>${n === 1 ? 'حُفظت الصفقة' : 'حُفظت ' + n + ' صفقات'}</b> في محفظتك — ستجدها في التطبيق الآن.`, txCancelled: '❌ أُلغيت — لم يُحفظ شيء.',
+    txGone: 'هذه الصفقة حُفظت أو أُلغيت من قبل.', txExpired: '⌛ مرّت أكثر من 15 دقيقة — لم يُحفظ شيء. أرسل الصفقة مرة أخرى.',
+    txChanged: why => `⚠️ لم تُحفظ — تغيّرت محفظتك: ${why}. أرسل الصفقة مرة أخرى.`, txNoUser: 'المحفظة غير متصلة — لم يُحفظ شيء.',
+    txSaveErr: why => `⚠️ لم تُحفظ — رفض Firestore (${why}).${/403/.test(why) ? ' حساب الخدمة للقراءة فقط: من Google Cloud → IAM امنحه دور "Cloud Datastore User".' : ''}`,
+    nowHold: 'الآن',
+    listening: '🎙️ أستمع…', heard: '🎙️ سمعت:', vNoAi: 'الرسائل الصوتية غير مُعدّة بعد (الـ AI binding غير موجود في الـ Worker) — اكتبها من فضلك.',
+    vLong: s => `الرسالة الصوتية حتى ${s / 60} دقيقة فقط — أو اكتبها.`, vEmpty: '🎙️ لم أسمع كلاماً واضحاً — حاول مرة أخرى أو اكتبها.', vFail: '🎙️ لم أستطع قراءة هذه الرسالة الصوتية — حاول مرة أخرى أو اكتبها.',
   },
 };
 
@@ -381,9 +381,9 @@ export async function handleTelegram(request, env) {
   if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {   // a member: ⏸ paused → nothing (one note a day); 🌊 too many messages → wait
     const x = (await members(env))[String(chat)] || {}, ar = x.lang === 'ar';
     const quiet = () => q ? tg(env, 'answerCallbackQuery', { callback_query_id: q.id }).catch(() => {}) : null;
-    if (x.paused) { await quiet(); if (await strangerOnce(env, chat)) await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '⏸ البوت متوقف عندك مؤقتاً — كلّم Dr. Samir Saad.' : '⏸ The bot is paused for you for now — ask Dr. Samir Saad.' }).catch(() => {}); return ok(); }
+    if (x.paused) { await quiet(); if (await strangerOnce(env, chat)) await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '⏸ البوت متوقف لديك مؤقتاً — تواصل مع Dr. Samir Saad.' : '⏸ The bot is paused for you for now — ask Dr. Samir Saad.' }).catch(() => {}); return ok(); }
     const f = await flood(env, chat);
-    if (f !== 'ok') { await quiet(); if (f === 'warn') await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '🌊 رسايل كتير ورا بعض — استنى دقيقة وكمّل 🙂' : '🌊 That\'s a lot of messages at once — wait a minute, then carry on 🙂' }).catch(() => {}); return ok(); }
+    if (f !== 'ok') { await quiet(); if (f === 'warn') await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '🌊 رسائل كثيرة متتالية — انتظر دقيقة ثم تابع 🙂' : '🌊 That\'s a lot of messages at once — wait a minute, then carry on 🙂' }).catch(() => {}); return ok(); }
   }
   await migrateOwner(env);
   await markSeen(env, chat).catch(() => {});   // 💤 any message or button tap → active again (idle.mjs)
@@ -394,8 +394,8 @@ export async function handleTelegram(request, env) {
 const STR = {
   en: { private: '🔒 This bot is private. If you have an invite code, send it here.', bad: '❌ That invite code is not valid (or was already used).', full: 'The bot is full right now — ask the owner.',
     welcome: n => `👋 Welcome, ${n}! You're in ✅\nAsk me anything about crypto in plain words, tap a button below, or send a ticker like <code>btc</code>.\nYour portfolio isn't linked yet — that comes next.\n📘 <code>/guide</code> — everything the bot and the app can do.`, joined: (n, u) => `👤 <b>${n}</b>${u ? ' (@' + u + ')' : ''} joined with your invite.` },
-  ar: { private: '🔒 البوت ده خاص. لو معاك كود دعوة ابعته هنا.', bad: '❌ كود الدعوة ده مش صالح (أو اتستعمل قبل كده).', full: 'البوت مليان دلوقتي — كلّم صاحبه.',
-    welcome: n => `👋 أهلاً ${n}! دخلت ✅\nاسألني أي حاجة عن الكريبتو بالكلام، أو اضغط زرار تحت، أو ابعت رمز زي <code>btc</code>.\nمحفظتك لسه مش مربوطة — دي الخطوة الجاية.\n📘 <code>/guide</code> — كل اللي البوت والبرنامج بيعملوه.`, joined: (n, u) => `👤 <b>${n}</b>${u ? ' (@' + u + ')' : ''} دخل بدعوتك.` },
+  ar: { private: '🔒 هذا البوت خاص. إن كان لديك رمز دعوة فأرسله هنا.', bad: '❌ رمز الدعوة غير صالح (أو استُخدم من قبل).', full: 'البوت ممتلئ حالياً — تواصل مع مالكه.',
+    welcome: n => `👋 أهلاً ${n}! تم دخولك ✅\nاسألني أي سؤال عن الكريبتو بكلماتك، أو اضغط زراً بالأسفل، أو أرسل رمزاً مثل <code>btc</code>.\nمحفظتك غير مربوطة بعد — هذه هي الخطوة التالية.\n📘 <code>/guide</code> — كل ما يقدمه البوت والتطبيق.`, joined: (n, u) => `👤 <b>${n}</b>${u ? ' (@' + u + ')' : ''} انضم بدعوتك.` },
 };
 async function stranger(env, u, msg, chat) {
   if (!msg || !msg.chat || msg.chat.type !== 'private' || typeof msg.text !== 'string') return ok();
@@ -415,7 +415,7 @@ async function stranger(env, u, msg, chat) {
   if (code) {
     const r = await useInvite(env, code, chat, msg.from);
     if (r.ok) {
-      await asChat(chat, async () => { await setLang(env, L); const t = T[L]; await send(env, chat, { text: w.welcome(esc(r.member.name)) + (r.restored ? (L === 'ar' ? '\n\n↩️ رجعت — ' + (r.restored.premium ? 'المميز ⭐ و' : '') + (r.restored.supporter ? 'وسام الداعم 💛 ' : '') + 'رجعوا معاك.' : '\n\n↩️ Welcome back — ' + (r.restored.premium ? 'your ⭐ premium' : '') + (r.restored.premium && r.restored.supporter ? ' and ' : '') + (r.restored.supporter ? 'your 💛 supporter badge' : '') + ' came back with you.') : '') }, { reply_markup: replyKb(t) }); await send(env, chat, viewMenu(t, isOwner(env))); });
+      await asChat(chat, async () => { await setLang(env, L); const t = T[L]; await send(env, chat, { text: w.welcome(esc(r.member.name)) + (r.restored ? (L === 'ar' ? '\n\n↩️ أهلاً بعودتك — ' + [r.restored.premium ? 'العضوية المميزة ⭐' : '', r.restored.supporter ? 'شارة الداعم 💛' : ''].filter(Boolean).join(' و') + ' عادت إليك كما كانت.' : '\n\n↩️ Welcome back — ' + (r.restored.premium ? 'your ⭐ premium' : '') + (r.restored.premium && r.restored.supporter ? ' and ' : '') + (r.restored.supporter ? 'your 💛 supporter badge' : '') + ' came back with you.') : '') }, { reply_markup: replyKb(t) }); await send(env, chat, viewMenu(t, isOwner(env))); });
       await asChat(env.TELEGRAM_CHAT_ID, async () => send(env, env.TELEGRAM_CHAT_ID, { text: STR[await getLang(env)].joined(esc(r.member.name), esc(r.member.user)), buttons: [[cb('👥 /users', 'us')]] }));
       return ok();
     }
@@ -430,11 +430,11 @@ async function stranger(env, u, msg, chat) {
 async function viewUsers(env, lang) {
   const m = await members(env), ar = lang === 'ar', list = Object.entries(m);
   const mx = await maxMembers(env), L = [ar ? `👥 <b>الأعضاء</b> (${list.length}/${mx})` : `👥 <b>Members</b> (${list.length}/${mx})`, ''];
-  if (!list.length) L.push(ar ? 'لسه مفيش حد. اضغط ➕ لكود دعوة.' : 'Nobody yet. Tap ➕ for an invite code.');
+  if (!list.length) L.push(ar ? 'لا يوجد أعضاء بعد. اضغط ➕ لإنشاء رمز دعوة.' : 'Nobody yet. Tap ➕ for an invite code.');
   const used = await Promise.all(list.map(([c, x]) => usedToday(env, c, x)));
   const keys = await Promise.all(list.map(([c]) => asChat(c, () => keyInfo(env))));   // 🔑 their own Claude key
-  list.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? '⏸ ' : ''}${premiumNow(x) ? '⭐ ' : ''}${x.supporter ? '💛 ' : ''}${keys[i].has ? '🔑 ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''}\n    ${ar ? 'النهارده' : 'today'} 🧠 ${used[i].q}/${keys[i].has ? BYOK_AI : Number.isFinite(x.ai) ? x.ai : DEF_AI} · 📊 ${used[i].r}/${keys[i].has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
-  if (list.length) L.push('', ar ? '<i>اضغط على اسم عشان تغيّر حدوده أو تشيله · 📱 التطبيق · 🔗 المحفظة مربوطة · 🔑 مفتاح Claude بتاعه</i>' : '<i>Tap a name to change their limits or remove them · 📱 app · 🔗 portfolio linked · 🔑 own Claude key</i>');
+  list.forEach(([c, x], i) => L.push(`${i + 1}. ${x.paused ? '⏸ ' : ''}${premiumNow(x) ? '⭐ ' : ''}${x.supporter ? '💛 ' : ''}${keys[i].has ? '🔑 ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''} · <i>${esc(local(x.joined, { day: 'numeric', month: 'short' }))}</i>${x.email ? ' · 📱' : ''}${x.uid ? ' · 🔗' : ''}\n    ${ar ? 'اليوم' : 'today'} 🧠 ${used[i].q}/${keys[i].has ? BYOK_AI : Number.isFinite(x.ai) ? x.ai : DEF_AI} · 📊 ${used[i].r}/${keys[i].has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS}`));
+  if (list.length) L.push('', ar ? '<i>اضغط على الاسم لتغيير حدوده أو إزالته · 📱 التطبيق · 🔗 المحفظة مربوطة · 🔑 مفتاح Claude الخاص به</i>' : '<i>Tap a name to change their limits or remove them · 📱 app · 🔗 portfolio linked · 🔑 own Claude key</i>');
   const b = []; for (let i = 0; i < list.length; i += 3) b.push(list.slice(i, i + 3).map(([c, x], j) => cb(`${i + j + 1}. ${x.name.split(' ')[0].slice(0, 12)}${x.uid ? ' 🔗' : x.email ? ' 📱' : ''}`, 'us:m:' + c)));
   b.push([cb(ar ? '➕ دعوة جديدة' : '➕ New invite', 'us:inv'), cb(T[lang].back, 'menu')]);
   return { text: L.join('\n'), buttons: b };
@@ -444,16 +444,16 @@ async function inviteMsg(env, lang) {
   let bot = null; try { bot = env.RATE ? await env.RATE.get('tg:botname') : null; } catch (_) {}
   if (!bot) { const me = await tg(env, 'getMe', {}).catch(() => null); bot = me && me.ok && me.result && me.result.username; if (bot) try { if (env.RATE) await env.RATE.put('tg:botname', bot); } catch (_) {} }
   const link = bot ? `https://t.me/${bot}?start=${code}` : null;
-  return { text: (ar ? `🎟 <b>كود دعوة</b> — مرة واحدة، صالح 7 أيام:\n\n<code>${code}</code>` : `🎟 <b>Invite code</b> — works once, for 7 days:\n\n<code>${code}</code>`) +
-    (link ? (ar ? `\n\nأو ابعتله اللينك ده (يفتح البوت ويدخل على طول):\n${link}` : `\n\nOr send this link (opens the bot and lets them in):\n${link}`) : ''), buttons: [[cb(ar ? '👥 الأعضاء' : '👥 Members', 'us')]] };
+  return { text: (ar ? `🎟 <b>رمز دعوة</b> — لمرة واحدة، صالح 7 أيام:\n\n<code>${code}</code>` : `🎟 <b>Invite code</b> — works once, for 7 days:\n\n<code>${code}</code>`) +
+    (link ? (ar ? `\n\nأو أرسل له هذا الرابط (يفتح البوت ويدخله مباشرة):\n${link}` : `\n\nOr send this link (opens the bot and lets them in):\n${link}`) : ''), buttons: [[cb(ar ? '👥 الأعضاء' : '👥 Members', 'us')]] };
 }
 
 // 🧹 /forget
 const FG = {
   en: { ask: '🧹 <b>Delete everything the bot keeps for you?</b>\nYour alerts, chat memory, language, daily settings, pinned message, radars and paper portfolio — and the link to your portfolio.\n\nYour portfolio in the app is NOT touched (it stays yours). You can link again any time.', yes: '✅ Yes, delete', no: '❌ Cancel',
     done: '🧹 Done — the bot has forgotten everything about you. Your app portfolio is untouched.\nTo link again: the app → Settings → Telegram → Link your portfolio.', kept: 'OK — nothing was deleted.', owner: 'That is for invited members. For you: /new clears the AI chat; your settings stay.' },
-  ar: { ask: '🧹 <b>أمسح كل حاجة البوت شايلها عنك؟</b>\nتنبيهاتك، وذاكرة المحادثة، واللغة، وإعدادات اليومي، والرسالة المتثبتة، والرادارات، والتداول التجريبي — وربط محفظتك.\n\nمحفظتك في التطبيق ما تتلمسش (فاضلة بتاعتك). وتقدر تربط تاني في أي وقت.', yes: '✅ أيوه امسح', no: '❌ لأ',
-    done: '🧹 خلاص — البوت نسي كل حاجة عنك. محفظتك في التطبيق زي ما هي.\nعشان تربط تاني: التطبيق ← الإعدادات ← Telegram ← Link your portfolio.', kept: 'تمام — ما اتمسحش حاجة.', owner: 'ده للأعضاء. ليك انت: /new يمسح محادثة الـ AI، وإعداداتك زي ما هي.' },
+  ar: { ask: '🧹 <b>هل تريد حذف كل ما يحفظه البوت عنك؟</b>\nتنبيهاتك، وذاكرة المحادثة، واللغة، وإعدادات الرسائل اليومية، والرسالة المثبتة، والرادارات، والتداول التجريبي — وربط محفظتك.\n\nمحفظتك في التطبيق لن تُمس (تبقى لك). ويمكنك الربط مرة أخرى في أي وقت.', yes: '✅ نعم، احذف', no: '❌ لا',
+    done: '🧹 تم — نسي البوت كل شيء عنك. محفظتك في التطبيق كما هي.\nللربط مرة أخرى: التطبيق ← الإعدادات ← تليجرام ← ربط محفظتك ببوت تليجرام.', kept: 'حسناً — لم يُحذف شيء.', owner: 'هذا للأعضاء. بالنسبة لك: /new يمسح محادثة الذكاء الاصطناعي، وتبقى إعداداتك كما هي.' },
 };
 // what a member used today: AI questions (Riyadh day) and AI Analysis reports (UTC day, counted per app account)
 async function usedToday(env, c, x) {
@@ -483,7 +483,7 @@ async function badgeOf(env, t) {
   const x = await member(env); if (!x) return '';
   const ar = t === T.ar, p = premiumNow(x), s = !!x.supporter, k = (await keyInfo(env)).has;   // 🔑 own Claude key: its own badge (not premium, not supporter)
   if (!p && !s && !k) return '';
-  return [p ? (ar ? '⭐ — عضو مميز' : '⭐ — premium member') : '👋', k ? (ar ? '🔑 مفتاح Claude بتاعك' : '🔑 Your own Claude key') : '', s ? '💛 Supporter' : ''].filter(Boolean).join(' · ');
+  return [p ? (ar ? '⭐ — عضو مميز' : '⭐ — premium member') : '👋', k ? (ar ? '🔑 مفتاح Claude الخاص بك' : '🔑 Your own Claude key') : '', s ? '💛 Supporter' : ''].filter(Boolean).join(' · ');
 }
 
 // 📱 /app you@example.com — an invited person asks to open the app with that e-mail; the owner taps ✅ (or ❌)
@@ -491,9 +491,9 @@ const AW = {
   en: { ask: 'Send the e-mail you will sign in with, like:\n<code>/app you@example.com</code>\n(Google, or any e-mail with a sign-in link.)', sent: '📨 Sent to Dr. Samir Saad for approval — you\'ll get a message here.', owner: '📱 You already have the app 🙂',
     req: (n, e) => `📱 <b>${n}</b> asks to open the app with\n<code>${e}</code>`, ok: e => `✅ You can open the app now with <b>${e}</b>:\n${APP}\nThen Settings → Telegram → 🔗 Link your portfolio, to see your portfolio here.`, no: 'Your app request was not approved.',
     linked: '🔗 Linked ✅ — your portfolio, plan and exit plan now show here (only to you).', badCode: '❌ That code is not valid or is over 10 minutes old — make a new one in the app (Settings → Telegram → Link your portfolio).', notYou: '❌ That code was made by another e-mail than the one approved for you.', ownerLink: 'Your portfolio is already the bot\'s 🙂' },
-  ar: { ask: 'ابعت الإيميل اللي هتدخل بيه، كده:\n<code>/app you@example.com</code>\n(Google، أو أي إيميل بلينك دخول.)', sent: '📨 اتبعت لـ Dr. Samir Saad يوافق — هيوصلك رد هنا.', owner: '📱 التطبيق معاك أصلاً 🙂',
-    req: (n, e) => `📱 <b>${n}</b> عايز يفتح التطبيق بـ\n<code>${e}</code>`, ok: e => `✅ تقدر تفتح التطبيق دلوقتي بـ <b>${e}</b>:\n${APP}\nوبعدين الإعدادات ← Telegram ← 🔗 Link your portfolio عشان محفظتك تظهر هنا.`, no: 'طلب التطبيق ما اتوافقش عليه.',
-    linked: '🔗 اتربطت ✅ — محفظتك وخطتك وخطة الخروج بقت تظهر هنا (ليك انت بس).', badCode: '❌ الكود ده مش صالح أو عدّى عليه 10 دقايق — اعمل واحد جديد من التطبيق (الإعدادات ← Telegram ← Link your portfolio).', notYou: '❌ الكود ده اتعمل بإيميل غير الإيميل اللي اتوافق عليه ليك.', ownerLink: 'محفظتك هي اللي في البوت أصلاً 🙂' },
+  ar: { ask: 'أرسل البريد الإلكتروني الذي ستدخل به، هكذا:\n<code>/app you@example.com</code>\n(حساب Google، أو أي بريد برابط دخول.)', sent: '📨 أُرسل الطلب إلى Dr. Samir Saad للموافقة — سيصلك الرد هنا.', owner: '📱 لديك التطبيق بالفعل 🙂',
+    req: (n, e) => `📱 <b>${n}</b> يريد فتح التطبيق بـ\n<code>${e}</code>`, ok: e => `✅ يمكنك الآن فتح التطبيق بـ <b>${e}</b>:\n${APP}\nثم الإعدادات ← تليجرام ← 🔗 ربط محفظتك ببوت تليجرام لتظهر محفظتك هنا.`, no: 'لم تتم الموافقة على طلب التطبيق.',
+    linked: '🔗 تم الربط ✅ — تظهر الآن محفظتك وخطتك وخطة الخروج هنا (لك وحدك).', badCode: '❌ هذا الرمز غير صالح أو مرّت عليه 10 دقائق — أنشئ رمزاً جديداً من التطبيق (الإعدادات ← تليجرام ← ربط محفظتك ببوت تليجرام).', notYou: '❌ هذا الرمز أُنشئ ببريد غير البريد الذي تمت الموافقة عليه لك.', ownerLink: 'محفظتك هي المربوطة بالبوت بالفعل 🙂' },
 };
 async function appRequest(env, chat, text) {
   const lang = await getLang(env), w = AW[lang];
@@ -504,8 +504,8 @@ async function appRequest(env, chat, text) {
   // the invite was Samir's yes: the app opens for that e-mail at once (he gets a note, and can remove them any time)
   await setMember(env, chat, { email: e }); await clearPending(env, chat);
   const okSync = await syncAccess(env, await accessEmails(env)).catch(() => false);
-  await send(env, chat, { text: okSync ? w.ok(esc(e)) : (lang === 'ar' ? '⚠️ حصل مشكلة — جرّب تاني بعد دقيقة.' : '⚠️ Something went wrong — try again in a minute.') });
-  await asChat(env.TELEGRAM_CHAT_ID, async () => { const L = await getLang(env); await send(env, env.TELEGRAM_CHAT_ID, { text: L === 'ar' ? `📱 <b>${esc(me ? me.name : chat)}</b> فتح التطبيق بـ\n<code>${esc(e)}</code>` : `📱 <b>${esc(me ? me.name : chat)}</b> opened the app with\n<code>${esc(e)}</code>`, buttons: [[cb(L === 'ar' ? '👤 الكارت' : '👤 Their card', 'us:m:' + chat)]] }); });
+  await send(env, chat, { text: okSync ? w.ok(esc(e)) : (lang === 'ar' ? '⚠️ حدثت مشكلة — حاول مرة أخرى بعد دقيقة.' : '⚠️ Something went wrong — try again in a minute.') });
+  await asChat(env.TELEGRAM_CHAT_ID, async () => { const L = await getLang(env); await send(env, env.TELEGRAM_CHAT_ID, { text: L === 'ar' ? `📱 <b>${esc(me ? me.name : chat)}</b> فتح التطبيق بـ\n<code>${esc(e)}</code>` : `📱 <b>${esc(me ? me.name : chat)}</b> opened the app with\n<code>${esc(e)}</code>`, buttons: [[cb(L === 'ar' ? '👤 البطاقة' : '👤 Their card', 'us:m:' + chat)]] }); });
 }
 // /link CODE (or the app's "Open the bot" → /start LCODE): this chat now reads that account's portfolio
 async function linkPortfolio(env, chat, text) {
@@ -525,17 +525,17 @@ async function viewMember(env, lang, c) {
   if (!x) return viewUsers(env, lang);
   const ai = Number.isFinite(x.ai) ? x.ai : DEF_AI, rp = Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
   const u = await usedToday(env, c, x), kk = await asChat(c, () => keyInfo(env));
-  const L = [`👤 ${x.paused ? '⏸ ' : ''}${premiumNow(x) ? '⭐ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}${x.paused ? (ar ? ' — <b>متوقف</b>' : ' — <b>paused</b>') : ''}${premiumNow(x) ? (ar ? ' — <b>مميز</b>' : ' — <b>premium</b>') + (x.premUntil ? ` ${ar ? 'لحد' : 'until'} ${esc(local(x.premUntil, { day: 'numeric', month: 'short', year: 'numeric' }))}${x.premSrc === 'stars' ? ' (Stars)' : ar ? ' (هدية)' : ' (gift)'}` : '') : ''}${x.supporter ? ` · 💛 ${x.starsPaid || ''}⭐` : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
-    ...(kk.has ? [`🔑 ${ar ? 'بيستعمل مفتاح Claude بتاعه' : 'Uses their own Claude key'} (…${esc(kk.tail)}) — ${ar ? 'تكلفته عليه' : 'on their bill'}`] : []),
-    `📱 ${ar ? 'التطبيق' : 'App'}: ${x.email ? '<code>' + esc(x.email) + '</code>' : (ar ? 'لسه' : 'not yet')}`, `🔗 ${ar ? 'المحفظة' : 'Portfolio'}: ${x.uid ? (ar ? 'مربوطة ✅' : 'linked ✅') : (ar ? 'مش مربوطة' : 'not linked')}`, '',
-    `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${kk.has ? BYOK_AI : ai}</b>${kk.has ? ' 🔑' : ''} · ${ar ? 'النهارده' : 'today'} ${u.q}`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${kk.has ? BYOK_REPORTS : rp}</b>${kk.has ? ' 🔑' : ''} · ${ar ? 'النهارده' : 'today'} ${u.r}`,
-    ...(kk.has ? [ar ? `<i>🔑 طول ما مفتاحه موجود حدوده ${BYOK_AI} سؤال و${BYOK_REPORTS} تقارير (على حسابه) — أزرار − / + بتغيّر حدوده من غير مفتاح.</i>` : `<i>🔑 While their key is set: ${BYOK_AI} questions and ${BYOK_REPORTS} reports (their bill) — − / + change the limits without a key.</i>`] : []), '',
-    ar ? '<i>☆ إلغاء المميز: يشيل المميزات بس — يفضل في البوت والبرنامج عادي.\n⏸ وقّفه: البوت يسكت عنده (البرنامج شغال) — ▶️ يرجّعه.\n🗑 شيل العضو: يخرج من البوت والبرنامج — ↩️ يرجع خلال 60 يوم.</i>'
+  const L = [`👤 ${x.paused ? '⏸ ' : ''}${premiumNow(x) ? '⭐ ' : ''}<b>${esc(x.name)}</b>${x.user ? ' @' + esc(x.user) : ''}${x.paused ? (ar ? ' — <b>متوقف</b>' : ' — <b>paused</b>') : ''}${premiumNow(x) ? (ar ? ' — <b>مميز</b>' : ' — <b>premium</b>') + (x.premUntil ? ` ${ar ? 'حتى' : 'until'} ${esc(local(x.premUntil, { day: 'numeric', month: 'short', year: 'numeric' }))}${x.premSrc === 'stars' ? ' (Stars)' : ar ? ' (هدية)' : ' (gift)'}` : '') : ''}${x.supporter ? ` · 💛 ${x.starsPaid || ''}⭐` : ''}`, `${ar ? 'من' : 'Since'} ${esc(local(x.joined, { day: 'numeric', month: 'short', year: 'numeric' }))}`,
+    ...(kk.has ? [`🔑 ${ar ? 'يستخدم مفتاح Claude الخاص به' : 'Uses their own Claude key'} (…${esc(kk.tail)}) — ${ar ? 'التكلفة على حسابه' : 'on their bill'}`] : []),
+    `📱 ${ar ? 'التطبيق' : 'App'}: ${x.email ? '<code>' + esc(x.email) + '</code>' : (ar ? 'ليس بعد' : 'not yet')}`, `🔗 ${ar ? 'المحفظة' : 'Portfolio'}: ${x.uid ? (ar ? 'مربوطة ✅' : 'linked ✅') : (ar ? 'غير مربوطة' : 'not linked')}`, '',
+    `🧠 ${ar ? 'أسئلة AI في اليوم' : 'AI questions a day'}: <b>${kk.has ? BYOK_AI : ai}</b>${kk.has ? ' 🔑' : ''} · ${ar ? 'اليوم' : 'today'} ${u.q}`, `📊 ${ar ? 'تقارير AI Analysis في اليوم' : 'AI Analysis reports a day'}: <b>${kk.has ? BYOK_REPORTS : rp}</b>${kk.has ? ' 🔑' : ''} · ${ar ? 'اليوم' : 'today'} ${u.r}`,
+    ...(kk.has ? [ar ? `<i>🔑 ما دام مفتاحه موجوداً فحدوده ${BYOK_AI} سؤال و${BYOK_REPORTS} تقارير (على حسابه) — أزرار − / + تغيّر حدوده بدون مفتاح.</i>` : `<i>🔑 While their key is set: ${BYOK_AI} questions and ${BYOK_REPORTS} reports (their bill) — − / + change the limits without a key.</i>`] : []), '',
+    ar ? '<i>☆ إلغاء المميز: يزيل المزايا فقط — يبقى في البوت والتطبيق كالمعتاد.\n⏸ إيقاف: يتوقف البوت عنده (التطبيق يعمل) — ▶️ يعيده.\n🗑 إزالة العضو: يخرج من البوت والتطبيق — ↩️ يمكن إعادته خلال 60 يوماً.</i>'
        : '<i>☆ End premium: removes the extras only — stays in the bot and the app.\n⏸ Pause: the bot goes quiet for them (the app still works) — ▶️ to resume.\n🗑 Remove member: out of the bot and the app — ↩️ back within 60 days.</i>'];
   return { text: L.join('\n'), buttons: [[cb('🧠 −', `us:ai:-:${c}`), cb('🧠 +', `us:ai:+:${c}`), cb('📊 −', `us:rp:-:${c}`), cb('📊 +', `us:rp:+:${c}`)],
     [cb(ar ? '🎁 ⭐ +30 يوم' : '🎁 ⭐ +30 days', `us:pd:30:${c}`), cb(ar ? '🎁 ⭐ +365 يوم' : '🎁 ⭐ +365 days', `us:pd:365:${c}`)],
-    [...(premiumNow(x) ? [cb(ar ? '☆ إلغاء المميز' : '☆ End premium', 'us:pr:' + c)] : []), cb(x.paused ? (ar ? '▶️ رجّعه' : '▶️ Resume') : (ar ? '⏸ وقّفه' : '⏸ Pause'), 'us:pz:' + c)],
-    [cb('🗑 ' + (ar ? 'شيل العضو' : 'Remove member'), 'us:del:' + c), cb(ar ? '⬅️ الأعضاء' : '⬅️ Members', 'us')]] };
+    [...(premiumNow(x) ? [cb(ar ? '☆ إلغاء المميز' : '☆ End premium', 'us:pr:' + c)] : []), cb(x.paused ? (ar ? '▶️ إعادة تشغيل' : '▶️ Resume') : (ar ? '⏸ إيقاف' : '⏸ Pause'), 'us:pz:' + c)],
+    [cb('🗑 ' + (ar ? 'إزالة العضو' : 'Remove member'), 'us:del:' + c), cb(ar ? '⬅️ الأعضاء' : '⬅️ Members', 'us')]] };
 }
 
 async function onUpdate(env, u, msg, q, chat) {
@@ -603,9 +603,9 @@ async function onUpdate(env, u, msg, q, chat) {
           const pd = /^us:pd:(\d+):(.+)$/.exec(d), who = pd ? pd[2] : d.slice(6), x = await member(env, who);
           let note = '⭐';
           if (x) {
-            if (!pd && premiumNow(x)) { await revoke(env, who); note = '☆'; await tg(env, 'sendMessage', { chat_id: who, text: x.lang === 'ar' ? 'العضوية المميزة اتشالت — رجعت للحدود العادية.' : 'Premium is off — back to the standard limits.' }).catch(() => {}); }
+            if (!pd && premiumNow(x)) { await revoke(env, who); note = '☆'; await tg(env, 'sendMessage', { chat_id: who, text: x.lang === 'ar' ? 'أُلغيت العضوية المميزة — عدت إلى الحدود العادية.' : 'Premium is off — back to the standard limits.' }).catch(() => {}); }
             else { const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? local(y.premUntil, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-              await tg(env, 'sendMessage', { chat_id: who, parse_mode: 'HTML', text: x.lang === 'ar' ? `🎁 Dr. Samir Saad ادّالك المميز هدية لحد ${until}!\nالرسايل الصوتية 🎙 اشتغلت، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis في اليوم.` : `🎁 Dr. Samir Saad gave you premium as a gift — until ${until}!\nVoice notes 🎙 are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {}); }
+              await tg(env, 'sendMessage', { chat_id: who, parse_mode: 'HTML', text: x.lang === 'ar' ? `🎁 Dr. Samir Saad منحك العضوية المميزة هديةً حتى ${until}!\nفُعّلت الرسائل الصوتية 🎙، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis يومياً.` : `🎁 Dr. Samir Saad gave you premium as a gift — until ${until}!\nVoice notes 🎙 are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {}); }
           }
           const v = await viewMember(env, lang, who), r = await edit(env, chat, q.message.message_id, v);
           if (!r.ok && !/not modified/i.test(r.description || '')) await send(env, chat, v);
@@ -615,7 +615,7 @@ async function onUpdate(env, u, msg, q, chat) {
           const who = d.slice(6), x = await member(env, who);
           if (x) { await setMember(env, who, { paused: x.paused ? undefined : true });
             const ar2 = x.lang === 'ar';
-            await tg(env, 'sendMessage', { chat_id: who, text: x.paused ? (ar2 ? '▶️ البوت رجع يشتغل عندك.' : '▶️ The bot is back on for you.') : (ar2 ? '⏸ البوت اتوقف عندك مؤقتاً.' : '⏸ The bot is paused for you for now.') }).catch(() => {}); }
+            await tg(env, 'sendMessage', { chat_id: who, text: x.paused ? (ar2 ? '▶️ عاد البوت للعمل لديك.' : '▶️ The bot is back on for you.') : (ar2 ? '⏸ تم إيقاف البوت لديك مؤقتاً.' : '⏸ The bot is paused for you for now.') }).catch(() => {}); }
           await edit(env, chat, q.message.message_id, await viewMember(env, lang, who)); await done(x && x.paused ? '▶️' : '⏸'); return ok();
         }
         if (d.startsWith('us:del:')) { const who = d.slice(7), had = await removeMember(env, who); if (had) { note = '🗑'; if (had.email) await syncAccess(env, await accessEmails(env)).catch(() => {}); await tg(env, 'sendMessage', { chat_id: who, text: lang === 'ar' ? 'تم إيقاف وصولك للبوت.' : 'Your access to this bot was removed.' }).catch(() => {}); } }
@@ -677,7 +677,7 @@ async function onUpdate(env, u, msg, q, chat) {
     if (msg && isOwner(env) && (msg.forward_origin || msg.forward_from_chat) && await registerForward(env, msg)) return ok();   // 📢 a channel / group post forwarded by Samir → set it up
     if (msg && msg.successful_payment) { await paid(env, chat, msg.successful_payment, await getLang(env)); return ok(); }   // ⭐💛 paid (also each monthly renewal)
     if (msg && (msg.voice || msg.audio)) {
-      if (!(await isPremium(env)) && !(await keyInfo(env)).has) { const ar = (await getLang(env)) === 'ar'; await send(env, chat, { text: ar ? '🎙 الرسايل الصوتية للأعضاء المميزين ⭐ — اكتبها كتابة، أو اطلب من Dr. Samir Saad.' : '🎙 Voice notes are for ⭐ premium members — type it instead, or ask Dr. Samir Saad.' }); return ok(); }
+      if (!(await isPremium(env)) && !(await keyInfo(env)).has) { const ar = (await getLang(env)) === 'ar'; await send(env, chat, { text: ar ? '🎙 الرسائل الصوتية للأعضاء المميزين ⭐ — اكتب رسالتك، أو اطلبها من Dr. Samir Saad.' : '🎙 Voice notes are for ⭐ premium members — type it instead, or ask Dr. Samir Saad.' }); return ok(); }
       await onVoice(env, chat, msg.voice || msg.audio); return ok();
     }
     if (!msg || typeof msg.text !== 'string') return ok();
@@ -733,7 +733,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (p.act === 'dy:now:m') { await morning(env); return; }
   if (p.act === 'dy:now:e') { await evening(env); return; }
-  if (p.act === 'pin:on') { await setCfg(env, { pin: true }); const r = await pinUpdate(env, Date.now(), true, true).catch(() => null); if (!r || !r.ok) await send(env, chat, { text: (await getLang(env)) === 'ar' ? '⚠️ ما قدرتش أثبّت الرسالة دلوقتي — جرّب تاني بعد دقيقة.' : '⚠️ I couldn\'t pin it right now — try again in a minute.' }); return; }
+  if (p.act === 'pin:on') { await setCfg(env, { pin: true }); const r = await pinUpdate(env, Date.now(), true, true).catch(() => null); if (!r || !r.ok) await send(env, chat, { text: (await getLang(env)) === 'ar' ? '⚠️ لم أستطع تثبيت الرسالة الآن — حاول مرة أخرى بعد دقيقة.' : '⚠️ I couldn\'t pin it right now — try again in a minute.' }); return; }
   if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
   if (p.act === 'cm') { await send(env, chat, await communityView(env, await getLang(env))); return; }
@@ -820,15 +820,15 @@ export const run = (env, act, arg, guess) => act === 'coinById' ? buildById(env,
 
 // the "/" menu in Telegram (set by the setup link and again on /start, so new commands show up)
 const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
-    ...(owner ? [] : [['app', a ? 'افتح التطبيق' : 'Open the app'], ['link', a ? 'اربط محفظتك — /link الكود' : 'Link your portfolio — /link CODE'], ['premium', a ? 'العضوية المميزة ⭐' : 'Premium ⭐'], ['support', a ? 'ادعم المشروع 💛' : 'Support the project 💛'], ['forget', a ? 'امسح بياناتي من البوت' : 'Delete my data from the bot']]),
-    ...(owner ? [['invite', a ? 'كود دعوة لصاحبك' : 'Invite code for a friend'], ['users', a ? 'الأعضاء' : 'Members'], ['stats', a ? 'الإحصائيات والـ Stars' : 'Stats & Stars']] : []),
-    ['start', a ? 'ابدأ — الأزرار تحت الشات' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
+    ...(owner ? [] : [['app', a ? 'افتح التطبيق' : 'Open the app'], ['link', a ? 'اربط محفظتك — /link الرمز' : 'Link your portfolio — /link CODE'], ['premium', a ? 'العضوية المميزة ⭐' : 'Premium ⭐'], ['support', a ? 'ادعم المشروع 💛' : 'Support the project 💛'], ['forget', a ? 'احذف بياناتي من البوت' : 'Delete my data from the bot']]),
+    ...(owner ? [['invite', a ? 'رمز دعوة لصديقك' : 'Invite code for a friend'], ['users', a ? 'الأعضاء' : 'Members'], ['stats', a ? 'الإحصائيات والـ Stars' : 'Stats & Stars']] : []),
+    ['start', a ? 'ابدأ — الأزرار أسفل المحادثة' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
     ['report', a ? 'التقرير الكامل (صفحة)' : 'Full report (a page)'], ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],
     ['plan', a ? 'خطة التجميع' : 'Accumulation plan'], ['exit', a ? 'خطة الخروج' : 'Exit plan'], ['movers', a ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', a ? 'الإشارات' : 'Signals'],
     ['alerts', a ? 'تنبيهاتك' : 'Your alerts'], ['paper', a ? 'التداول التجريبي' : 'Paper trading'], ['daily', a ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'],
-    ['morning', a ? 'الصباح الذكي دلوقتي' : 'Smart morning now'], ['evening', a ? 'المساء الذكي دلوقتي' : 'Smart evening now'],
-    ['pin', a ? 'الرسالة المتثبتة' : 'Live pinned message'], ['unpin', a ? 'شيل الرسالة المتثبتة' : 'Remove the pinned message'],
-    ['guide', a ? 'الدليل الكامل 📘' : 'The full guide 📘'], ['community', a ? 'القناة والجروب 👥' : 'Channel & group 👥'], ['new', a ? 'محادثة جديدة مع الـ AI' : 'New AI chat'], ['lang', 'English / عربي'], ['hide', a ? 'إخفاء الأزرار' : 'Hide the buttons'],
+    ['morning', a ? 'الصباح الذكي الآن' : 'Smart morning now'], ['evening', a ? 'المساء الذكي الآن' : 'Smart evening now'],
+    ['pin', a ? 'الرسالة المثبتة' : 'Live pinned message'], ['unpin', a ? 'إزالة الرسالة المثبتة' : 'Remove the pinned message'],
+    ['guide', a ? 'الدليل الكامل 📘' : 'The full guide 📘'], ['community', a ? 'القناة والمجموعة 👥' : 'Channel & group 👥'], ['new', a ? 'محادثة جديدة مع الذكاء الاصطناعي' : 'New AI chat'], ['lang', 'English / عربي'], ['hide', a ? 'إخفاء الأزرار' : 'Hide the buttons'],
   ].map(([command, description]) => ({ command, description })); };
 // the "/" menu follows the code: when the list (or the language) changed since it was last sent, it is sent again — no /start needed
 async function ensureCmds(env) {
@@ -857,7 +857,7 @@ async function ensureCmdScope(env) {   // once: move the general list to private
 const DESC_V = '2';
 const DESC = {
   en: ['Your private crypto assistant (by invitation). Ask anything in plain words or by voice, live coins and market, alerts in words, smart morning & evening, radars, paper trading, image cards and a full report page. Have an invite code? Send it here.', 'Private crypto assistant · by invitation'],
-  ar: ['مساعدك الخاص في الكريبتو (بدعوة). اسأل أي حاجة بالكلام أو بالفويس، العملات والسوق مباشر، تنبيهات بالكلام، صباح ومساء ذكي، رادارات، تداول تجريبي، كروت صور، وتقرير كامل. معاك كود دعوة؟ ابعته هنا.', 'مساعد كريبتو خاص · بدعوة'],
+  ar: ['مساعدك الخاص في الكريبتو (بدعوة). اسأل أي سؤال كتابةً أو صوتاً، العملات والسوق مباشرة، تنبيهات بالكلام، صباح ومساء ذكي، رادارات، تداول تجريبي، بطاقات صور، وتقرير كامل. لديك رمز دعوة؟ أرسله هنا.', 'مساعد كريبتو خاص · بدعوة'],
 };
 async function ensureDesc(env) {
   let had = null; try { if (env.RATE) had = await env.RATE.get('tg:desc'); } catch (_) {}

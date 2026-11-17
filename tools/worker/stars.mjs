@@ -62,26 +62,26 @@ const W = {
   },
   ar: {
     pTitle: '⭐ <b>Cute Portfolio المميز</b>',
-    pBody: p => `كل حاجة بتفضل <b>مجانية</b> للكل. المميز بيزوّد:\n• 🎙 الرسايل الصوتية — كلّم البوت بصوتك\n• 🧠 ${PREM_AI} سؤال AI في اليوم (بدل ${DEF_AI})\n• 📊 ${PREM_REPORTS} تقارير AI Analysis سريعة في اليوم في التطبيق\n\n<b>السعر:</b> ${p} ⭐ في الشهر (حوالي ${usdOf(p)})، بالـ Telegram Stars.\n• بيتجدد لوحده كل 30 يوم — تقدر تلغيه في أي وقت من تلجرام ← الإعدادات ← My Stars، ويفضل معاك لآخر الشهر المدفوع.\n• ليه بفلوس أصلاً: الـ AI بيتحاسب على كل سؤال، والمبلغ ده بيغطي التكلفة دي بس — Cute Portfolio مش هادف للربح.\n\n<i>الـ Telegram Stars عملة تلجرام نفسه: بتشتريها من جوه تلجرام زي أي شراء من التطبيق.</i>`,
-    isPrem: u => u ? `✅ <b>انت مميز لحد ${u}.</b>` : '✅ <b>انت مميز</b> (هدية من Dr. Samir Saad).',
-    renews: 'بيتجدد لوحده — عشان توقفه: تلجرام ← الإعدادات ← My Stars.',
-    subscribe: p => `⭐ اشترك — ${p} ⭐ في الشهر`, extend: p => `⭐ اشترك — ${p} ⭐ في الشهر (بعد الهدية)`,
-    supportInstead: '💛 ادعم بدل كده', ask: '🎁 اطلب من Dr. Samir Saad', back: '⬅️ القائمة',
+    pBody: p => `كل شيء يبقى <b>مجانياً</b> للجميع. العضوية المميزة تضيف:\n• 🎙 الرسائل الصوتية — تحدّث مع البوت بصوتك\n• 🧠 ${PREM_AI} سؤال AI يومياً (بدلاً من ${DEF_AI})\n• 📊 ${PREM_REPORTS} تقارير AI Analysis سريعة يومياً في التطبيق\n\n<b>السعر:</b> ${p} ⭐ شهرياً (حوالي ${usdOf(p)})، عبر Telegram Stars.\n• تتجدد تلقائياً كل 30 يوماً — يمكنك إلغاؤها في أي وقت من تليجرام ← الإعدادات ← My Stars، وتبقى فعّالة حتى نهاية الشهر المدفوع.\n• لماذا بمقابل: الذكاء الاصطناعي يُحاسب على كل سؤال، وهذا المبلغ يغطي تلك التكلفة فقط — Cute Portfolio غير ربحي.\n\n<i>Telegram Stars هي عملة تليجرام نفسه: تشتريها من داخل تليجرام مثل أي شراء داخل التطبيق.</i>`,
+    isPrem: u => u ? `✅ <b>أنت عضو مميز حتى ${u}.</b>` : '✅ <b>أنت عضو مميز</b> (هدية من Dr. Samir Saad).',
+    renews: 'تتجدد تلقائياً — لإيقافها: تليجرام ← الإعدادات ← My Stars.',
+    subscribe: p => `⭐ اشترك — ${p} ⭐ شهرياً`, extend: p => `⭐ اشترك — ${p} ⭐ شهرياً (بعد الهدية)`,
+    supportInstead: '💛 ادعم بدلاً من ذلك', ask: '🎁 اطلب من Dr. Samir Saad', back: '⬅️ القائمة',
     sTitle: '💛 <b>ادعم Cute Portfolio</b>',
-    sBody: '<b>اختياري</b> — شكر لمرة واحدة بأي مبلغ. المزايا ما بتتغيرش: كل حاجة بتفضل مجانية.\nبيساعد في تكلفة السيرفرات والـ AI، وبتاخد وسام <b>Supporter 💛</b> في البوت والتطبيق.\n\nاختار المبلغ (Telegram Stars):',
-    sThanksBadge: n => `ادّيت ${n} ⭐ لحد دلوقتي — شكراً!`,
-    invTitle: 'Cute Portfolio المميز', invDesc: `رسايل صوتية، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis في اليوم. بيتجدد كل 30 يوم، وتقدر تلغيه في أي وقت.`,
-    supTitle: 'ادعم Cute Portfolio 💛', supDesc: 'شكر لمرة واحدة — بيساعد في تكلفة السيرفرات والـ AI. وبتاخد وسام Supporter 💛.',
-    paidPrem: u => `⭐ <b>شكراً — بقيت عضو مميز!</b>\nالرسايل الصوتية 🎙 اشتغلت، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis في اليوم.\nلحد ${u} — وبيتجدد لوحده (توقفه في أي وقت: تلجرام ← الإعدادات ← My Stars).`,
-    renewed: u => `⭐ المميز اتجدد — لحد ${u}. شكراً!`,
-    paidSup: n => `💛 <b>شكراً!</b> الـ ${n} ⭐ بتوعك بيساعدوا Cute Portfolio يفضل مجاني. بقيت <b>Supporter 💛</b>.`,
-    remind: u => `⭐ المميز بتاعك بيخلص يوم ${u}. لو اشتراك الـ Stars شغال هيتجدد لوحده؛ لو لأ: /premium`,
-    ended: '⭐ المميز خلص — رجعت للحدود العادية. عشان تجدده: /premium',
-    ownerPrem: (n, s, u) => `⭐ <b>${n}</b> اشترك في المميز — ${s} ⭐ (لحد ${u}).`,
-    ownerRenew: (n, s, u) => `⭐ <b>${n}</b> جدد المميز — ${s} ⭐ (لحد ${u}).`,
+    sBody: '<b>اختياري</b> — شكر لمرة واحدة بأي مبلغ. المزايا لا تتغير: كل شيء يبقى مجانياً.\nيساعد في تكلفة الخوادم والذكاء الاصطناعي، وتحصل على شارة <b>Supporter 💛</b> في البوت والتطبيق.\n\nاختر المبلغ (Telegram Stars):',
+    sThanksBadge: n => `قدّمت ${n} ⭐ حتى الآن — شكراً لك!`,
+    invTitle: 'Cute Portfolio المميز', invDesc: `رسائل صوتية، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis يومياً. تتجدد كل 30 يوماً، ويمكنك إلغاؤها في أي وقت.`,
+    supTitle: 'ادعم Cute Portfolio 💛', supDesc: 'شكر لمرة واحدة — يساعد في تكلفة الخوادم والذكاء الاصطناعي. وتحصل على شارة Supporter 💛.',
+    paidPrem: u => `⭐ <b>شكراً — أصبحت عضواً مميزاً!</b>\nفُعّلت الرسائل الصوتية 🎙، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis يومياً.\nحتى ${u} — وتتجدد تلقائياً (أوقفها في أي وقت: تليجرام ← الإعدادات ← My Stars).`,
+    renewed: u => `⭐ تجددت العضوية المميزة — حتى ${u}. شكراً لك!`,
+    paidSup: n => `💛 <b>شكراً لك!</b> نجومك الـ ${n} ⭐ تساعد Cute Portfolio على البقاء مجانياً. أصبحت <b>Supporter 💛</b>.`,
+    remind: u => `⭐ تنتهي عضويتك المميزة يوم ${u}. إن كان اشتراك Stars فعّالاً فستتجدد تلقائياً؛ وإلا: /premium`,
+    ended: '⭐ انتهت العضوية المميزة — عدت إلى الحدود العادية. للتجديد: /premium',
+    ownerPrem: (n, s, u) => `⭐ <b>${n}</b> اشترك في العضوية المميزة — ${s} ⭐ (حتى ${u}).`,
+    ownerRenew: (n, s, u) => `⭐ <b>${n}</b> جدّد العضوية المميزة — ${s} ⭐ (حتى ${u}).`,
     ownerSup: (n, s) => `💛 <b>${n}</b> دعم المشروع بـ ${s} ⭐.`,
-    ownerAsk: n => `🎁 <b>${n}</b> بيطلب منك المميز هدية.`, asked: '🎁 اتبعت لـ Dr. Samir Saad — هيوصلك رد هنا.',
-    ownerP: 'انت مميز أصلاً ⭐ — ده اللي الأعضاء بيشوفوه:',
+    ownerAsk: n => `🎁 <b>${n}</b> يطلب منك العضوية المميزة هديةً.`, asked: '🎁 أُرسل الطلب إلى Dr. Samir Saad — سيصلك الرد هنا.',
+    ownerP: 'أنت عضو مميز بالفعل ⭐ — هذا ما يراه الأعضاء:',
   },
 };
 export const words = lang => W[lang === 'ar' ? 'ar' : 'en'];
@@ -128,7 +128,7 @@ export async function askGift(env, chat, lang) {
   await asChat(env.TELEGRAM_CHAT_ID, async () => {
     const L = await langOf(env), o = words(L);
     await tg(env, 'sendMessage', { chat_id: env.TELEGRAM_CHAT_ID, text: o.ownerAsk(esc(x ? x.name : chat)), parse_mode: 'HTML',
-      reply_markup: { inline_keyboard: [[cb(L === 'ar' ? '🎁 ⭐ +30 يوم' : '🎁 ⭐ +30 days', `us:pd:30:${chat}`), cb(L === 'ar' ? '🎁 ⭐ +365 يوم' : '🎁 ⭐ +365 days', `us:pd:365:${chat}`)], [cb(L === 'ar' ? '👤 الكارت' : '👤 Their card', 'us:m:' + chat)]] } });
+      reply_markup: { inline_keyboard: [[cb(L === 'ar' ? '🎁 ⭐ +30 يوم' : '🎁 ⭐ +30 days', `us:pd:30:${chat}`), cb(L === 'ar' ? '🎁 ⭐ +365 يوم' : '🎁 ⭐ +365 days', `us:pd:365:${chat}`)], [cb(L === 'ar' ? '👤 البطاقة' : '👤 Their card', 'us:m:' + chat)]] } });
   });
 }
 
@@ -179,11 +179,11 @@ export async function statsView(env, lang, now = Date.now()) {
   const prem = list.filter(x => premiumNow(x, now)), paidP = prem.filter(x => x.premSrc === 'stars').length;
   const L = [ar ? '📈 <b>الإحصائيات</b>' : '📈 <b>Stats</b>', '',
     `👥 ${ar ? 'الأعضاء' : 'Members'}: <b>${list.length}</b>${list.some(x => x.paused) ? ` · ⏸ ${list.filter(x => x.paused).length}` : ''}`,
-    `⭐ ${ar ? 'المميزين دلوقتي' : 'Premium now'}: <b>${prem.length}</b> (${ar ? 'Stars' : 'Stars'} ${paidP} · ${ar ? 'هدية' : 'gift'} ${prem.length - paidP})`,
-    `💛 ${ar ? 'الداعمين' : 'Supporters'}: <b>${list.filter(x => x.supporter).length}</b>`, '',
-    `⭐ ${ar ? 'الشهر ده' : 'This month'}: <b>${sum(x => new Date(x.t).toISOString().slice(0, 7) === month)}</b> ⭐ (${ar ? 'مميز' : 'premium'} ${sum(x => x.kind === 'prem' && new Date(x.t).toISOString().slice(0, 7) === month)} · ${ar ? 'دعم' : 'support'} ${sum(x => x.kind === 'sup' && new Date(x.t).toISOString().slice(0, 7) === month)})`,
-    `⭐ ${ar ? 'من الأول' : 'All time'}: <b>${sum(() => true)}</b> ⭐ (≈ ${usdOf(sum(() => true))} ${ar ? 'دفعها الأعضاء' : 'paid by members'})`, '',
-    `<i>${ar ? 'السحب: من حساب البوت في Fragment (انت بنفسك).' : 'Withdraw: from the bot\'s balance via Fragment (yourself).'}</i>`];
+    `⭐ ${ar ? 'المميزون الآن' : 'Premium now'}: <b>${prem.length}</b> (${ar ? 'Stars' : 'Stars'} ${paidP} · ${ar ? 'هدية' : 'gift'} ${prem.length - paidP})`,
+    `💛 ${ar ? 'الداعمون' : 'Supporters'}: <b>${list.filter(x => x.supporter).length}</b>`, '',
+    `⭐ ${ar ? 'هذا الشهر' : 'This month'}: <b>${sum(x => new Date(x.t).toISOString().slice(0, 7) === month)}</b> ⭐ (${ar ? 'مميز' : 'premium'} ${sum(x => x.kind === 'prem' && new Date(x.t).toISOString().slice(0, 7) === month)} · ${ar ? 'دعم' : 'support'} ${sum(x => x.kind === 'sup' && new Date(x.t).toISOString().slice(0, 7) === month)})`,
+    `⭐ ${ar ? 'منذ البداية' : 'All time'}: <b>${sum(() => true)}</b> ⭐ (≈ ${usdOf(sum(() => true))} ${ar ? 'دفعها الأعضاء' : 'paid by members'})`, '',
+    `<i>${ar ? 'السحب: من رصيد البوت عبر Fragment (بنفسك).' : 'Withdraw: from the bot\'s balance via Fragment (yourself).'}</i>`];
   return { text: L.join('\n'), buttons: [[cb(ar ? '👥 الأعضاء' : '👥 Members', 'us'), cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')]] };
 }
 

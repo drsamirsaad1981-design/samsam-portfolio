@@ -229,7 +229,7 @@ function system(now, lang, qLang, owner = true) {
     '- Each new question: call the tools again. Earlier answers in this chat may be stale or wrong — never repeat an earlier "no data" (or any earlier number) without calling the tool now.',
     '- For liquidation / squeeze / leverage / funding questions always call get_derivatives (with get_coin and get_history for the levels).',
     '- "Tell me / alert me / نبّهني if …" → set_alert (then confirm in one short line what was set, the value now, and if already_met that it waits for the next crossing). "What if / لو …" about prices or trades → what_if (with get_coin for a coin he does not hold).',
-    '- "I bought / I sold / اشتريت / بعت …" (a trade he MADE) → record_trade. It is only prepared, and the bot shows the full summary itself — so your whole answer is ONE short line ("🧾 جاهزة — راجع الملخص تحت واضغط ✅ تأكيد" / "🧾 Ready — check the summary below and tap ✅ Confirm"), plus at most one line if something needs attention (e.g. a price far from today\'s). No sections, no repeated numbers. Never say it is saved. A trade he is only thinking about ("should I / what if I sell") → what_if, not record_trade.',
+    '- "I bought / I sold / اشتريت / بعت …" (a trade he MADE) → record_trade. It is only prepared, and the bot shows the full summary itself — so your whole answer is ONE short line ("🧾 جاهزة — راجع الملخص بالأسفل واضغط ✅ تأكيد" / "🧾 Ready — check the summary below and tap ✅ Confirm"), plus at most one line if something needs attention (e.g. a price far from today\'s). No sections, no repeated numbers. Never say it is saved. A trade he is only thinking about ("should I / what if I sell") → what_if, not record_trade.',
     '- paper / practice / pretend / تجريبي / وهمي → paper_trade or get_paper (the pretend portfolio) — never record_trade or the real portfolio. Confirm a paper trade in 1–2 lines (done, price, cash left).',
     '- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.',
     '- About the future: give scenarios, levels and probabilities with reasons — never promises. Not financial advice, but do give a clear, practical view when asked "should I…" (based on his plan and signals).',
@@ -240,7 +240,7 @@ function system(now, lang, qLang, owner = true) {
     '- A blank line between sections. ~16 lines in all unless asked for detail. Phone screen: short lines (aim ≤ 40 characters). No tables, no # headings.',
     '- **bold** only for numbers and verdicts; `code` for tickers in lists. No links (buttons under the answer open coins and the Liq Map).',
     '- Scenarios as bullets with a % each that adds to ~100, and the price level that triggers each.',
-    `- Language: the user's latest message is in ${qLang === 'ar' ? 'Arabic — answer in Egyptian Arabic' : 'English — answer in English'} (whatever language earlier messages were in). Numbers and tickers in Latin characters.`,
+    `- Language: the user's latest message is in ${qLang === 'ar' ? 'Arabic — answer in simple Modern Standard Arabic (فصحى بسيطة), the way crypto investors write' : 'English — answer in English'} (whatever language earlier messages were in). Numbers and tickers in Latin characters.`,
     '- Prefer one call that covers many coins (get_portfolio) over many get_coin calls; call independent tools together in one turn.',
     '- Do not write a sources line — the bot adds one.',
   ].join('\n');
@@ -271,7 +271,7 @@ export async function ask(env, question, lang = 'en') {
   const now = Date.now(), ctx = context(env);
   const qLang = /[\u0600-\u06FF]/.test(String(question)) ? 'ar' : 'en';   // answer in the language of THIS message
   // the language note rides on the question itself (stronger than the system prompt when earlier answers were in the other language)
-  const messages = [...(await history(env)), { role: 'user', content: String(question).slice(0, 2000) + (qLang === 'ar' ? '\n\n(جاوب بالعربي المصري)' : '\n\n(Reply in English.)') }];
+  const messages = [...(await history(env)), { role: 'user', content: String(question).slice(0, 2000) + (qLang === 'ar' ? '\n\n(أجب بالعربية الفصحى البسيطة)' : '\n\n(Reply in English.)') }];
   let model = env.BOT_MODEL || 'claude-sonnet-5-5', fellBack = false, text = '';
   for (let round = 0; round <= MAX_ROUNDS; round++) {
     // the tools stay declared every round (earlier tool turns need them); the last round may not call any more
@@ -311,7 +311,7 @@ export async function compose(env, kind, lang, facts) {
       ? 'Shape: line 1 = one emoji + **bold one-line verdict for today**. Then 🎯 **Today** — exactly 3 numbered actions (1. 2. 3.) picked from FACTS.todo (most useful first; "nothing to do — hold" is a valid action when the list is short), each one line with its number. Then 🌍 **Market mood** — 2 bullets. Then 👀 **Watch today** — 1–2 bullets (levels / alerts closest to triggering).'
       : 'Shape: line 1 = one emoji + **bold one-line verdict on the day**. Then 📊 **Today** — 2–3 bullets (portfolio change since the morning, best / worst coin, trades or alerts that happened). Then 🔄 **What changed** — 2 bullets (BTC, Fear & Greed, dominance, futures, sectors — vs the morning when FACTS has it). Then 👀 **Tonight & tomorrow** — 2–3 bullets (closest levels / alerts, tomorrow\'s DCA if any).',
     'Bullets: "• label: **value** — 3–6 word note". Short lines (≤ 40 characters when possible), ~14 lines in all, no tables, no headings with #, no links, no sources line.',
-    ar ? 'Write in Egyptian Arabic; numbers and tickers in Latin characters.' : 'Write in English.',
+    ar ? 'Write in simple Modern Standard Arabic (فصحى بسيطة), the way crypto investors write; numbers and tickers in Latin characters.' : 'Write in English.',
   ].join('\n');
   const body = { max_tokens: 3000, system: sys, messages: [{ role: 'user', content: 'FACTS:\n' + JSON.stringify(facts).slice(0, 12000) }] };   // 900 cut Arabic mornings short (14 Nov)
   let model = env.BOT_MODEL || 'claude-sonnet-5-5';

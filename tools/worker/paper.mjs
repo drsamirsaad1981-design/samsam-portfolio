@@ -133,8 +133,8 @@ export async function paperFacts(env) {
 const PW = {
   en: { title: '🧪 <b>Paper trading</b>', sub: 'pretend money · real prices', value: 'Value', cash: 'Cash', profit: 'Profit', btc: 'Same money in BTC', beat: 'vs BTC', since: 'since', none: 'No coins yet — write e.g. <i>paper buy 0.05 BTC</i> or <i>paper buy SOL for $500</i>.',
     last: 'Last', undo: '↩️ Undo last', restart: '🔁 Start again', back: '⬅️ Menu', refresh: '🔄', fee: 'fee 0.1% / trade', pick: 'Start again with how much pretend cash? (the current paper portfolio is cleared)', undone: '↩️ Undone', nothing: 'Nothing to undo' },
-  ar: { title: '🧪 <b>التداول التجريبي</b>', sub: 'فلوس وهمية · أسعار حقيقية', value: 'القيمة', cash: 'الكاش', profit: 'الربح', btc: 'نفس الفلوس في BTC', beat: 'مقابل BTC', since: 'من', none: 'مفيش عملات لسه — اكتب مثلاً <i>تجريبي اشتري 0.05 BTC</i> أو <i>تجريبي اشتري SOL بـ 500 دولار</i>.',
-    last: 'آخر صفقة', undo: '↩️ تراجع', restart: '🔁 ابدأ من جديد', back: '⬅️ القائمة', refresh: '🔄', fee: 'رسوم 0.1% للصفقة', pick: 'تبدأ من جديد بكام فلوس وهمية؟ (المحفظة التجريبية الحالية هتتمسح)', undone: '↩️ اتلغت', nothing: 'مفيش حاجة تتلغي' },
+  ar: { title: '🧪 <b>التداول التجريبي</b>', sub: 'أموال افتراضية · أسعار حقيقية', value: 'القيمة', cash: 'النقد', profit: 'الربح', btc: 'نفس المبلغ في BTC', beat: 'مقابل BTC', since: 'من', none: 'لا توجد عملات بعد — اكتب مثلاً <i>تجريبي اشتري 0.05 BTC</i> أو <i>تجريبي اشتري SOL بـ 500 دولار</i>.',
+    last: 'آخر صفقة', undo: '↩️ تراجع', restart: '🔁 ابدأ من جديد', back: '⬅️ القائمة', refresh: '🔄', fee: 'رسوم 0.1% للصفقة', pick: 'بكم تريد أن تبدأ من جديد؟ (ستُحذف المحفظة التجريبية الحالية)', undone: '↩️ أُلغيت', nothing: 'لا يوجد ما يُلغى' },
 };
 export const paperWords = PW;
 export async function viewPaper(env, lang = 'en') {

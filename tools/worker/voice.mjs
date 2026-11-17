@@ -8,7 +8,7 @@ const MODEL = '@cf/openai/whisper-large-v3-turbo';
 // an English note once came back as Arabic letters). So: first find the language, then transcribe with its own hint.
 const HINT = {
   en: 'Bitcoin BTC, Ethereum ETH, Solana SOL, KAVA, LINK, funding, liquidation, alert me if, portfolio, take profit, paper buy.',
-  ar: 'نبّهني لو، محفظتي، السعر، خطة الخروج، تصفيات، تمويل، تجريبي، بيتكوين BTC، إيثيريوم ETH، سولانا SOL، كافا KAVA.',
+  ar: 'نبّهني لو، نبهني إذا، محفظتي، السعر، خطة الخروج، تصفيات، تمويل، تجريبي، بيتكوين BTC، إيثيريوم ETH، سولانا SOL، كافا KAVA.',
 };
 const score = o => { const s = (o && o.segments) || []; const v = s.map(x => +x.avg_logprob).filter(isFinite); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : -9; };
 const clean = o => String((o && o.text) || '').replace(/\s+/g, ' ').trim().slice(0, 1000);

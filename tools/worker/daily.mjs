@@ -48,10 +48,10 @@ const WD = {
     dailyT: '🗓 <b>The bot speaks first</b>', dailyNote: 'Tap to turn on / off.', nowM: '☀️ Morning now', nowE: '🌙 Evening now', back: '⬅️ Menu', plan: '📋 Plan', pf: '💼 Portfolio', mk: '🌍 Market',
     live: 'Live', today: 'today', alerts: n => `${n} alert${n === 1 ? '' : 's'}`, nearest: 'nearest', away: 'away', nextDca: 'Next DCA', exit: 'Exit', planS: 'Plan', fng: 'F&amp;G', updated: 'updated',
     noUser: 'Portfolio not connected.', refresh: '🔄', report: '📊 Full report' },
-  ar: { morning: 'الصباح الذكي', evening: 'المساء الذكي', radar: 'رادار الرافعة', sectors: 'رادار القطاعات', pin: 'الرسالة المتثبتة', on: 'شغال', off: 'مقفول',
-    dailyT: '🗓 <b>البوت بيبدأ الكلام</b>', dailyNote: 'اضغط عشان تشغّل / تقفل.', nowM: '☀️ الصباح دلوقتي', nowE: '🌙 المساء دلوقتي', back: '⬅️ القائمة', plan: '📋 الخطة', pf: '💼 محفظتي', mk: '🌍 السوق',
-    live: 'مباشر', today: 'اليوم', alerts: n => `${n} تنبيه`, nearest: 'الأقرب', away: 'باقي', nextDca: 'الـ DCA الجاي', exit: 'الخروج', planS: 'الخطة', fng: 'الخوف/الطمع', updated: 'اتحدّث',
-    noUser: 'المحفظة مش متوصلة.', refresh: '🔄', report: '📊 التقرير الكامل' },
+  ar: { morning: 'الصباح الذكي', evening: 'المساء الذكي', radar: 'رادار الرافعة', sectors: 'رادار القطاعات', pin: 'الرسالة المثبتة', on: 'يعمل', off: 'متوقف',
+    dailyT: '🗓 <b>رسائل البوت التلقائية</b>', dailyNote: 'اضغط للتشغيل / الإيقاف.', nowM: '☀️ الصباح الآن', nowE: '🌙 المساء الآن', back: '⬅️ القائمة', plan: '📋 الخطة', pf: '💼 محفظتي', mk: '🌍 السوق',
+    live: 'مباشر', today: 'اليوم', alerts: n => `${n} تنبيه`, nearest: 'الأقرب', away: 'المتبقي', nextDca: 'الـ DCA القادم', exit: 'الخروج', planS: 'الخطة', fng: 'الخوف/الطمع', updated: 'تم التحديث',
+    noUser: 'المحفظة غير متصلة.', refresh: '🔄', report: '📊 التقرير الكامل' },
 };
 
 // ── the numbers both reports start from ──
@@ -155,22 +155,22 @@ const TODO_TXT = {
     take_profit_reached: `💰 ${x.coin} reached TP${x.tp} ${usd(x.level_usd)} — sell ${x.sell_pct}%`, take_profit_close: `💰 ${x.coin} ${r2(x.pct_to_go)}% from TP${x.tp} ${usd(x.level_usd)}`,
     exit_conditions: `🚪 Exit: ${x.met_of_3}/3 conditions met`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — trim ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — add ${usd(x.usd_to_fix)}`,
     reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg — Reinforce`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg — Sell / convert` }[x.what]),
-  ar: x => ({ dca_today: `🛒 يوم الـ DCA: اشتري ${x.coin} بـ ${usd(x.buy_usd)}`, dca_missed: `⏰ DCA ${x.coin} متأخر ${x.days_late} يوم (${usd(x.buy_usd)})`, dca_tomorrow: `🛒 بكرة: DCA ${x.coin} ${usd(x.buy_usd)}`,
-    at_buy_price: `🎯 ${x.coin} ${usd(x.price_usd)} — وصل سعر الشراء بتاعك ${usd(x.your_buy_price_usd)}`, near_buy_price: `🎯 ${x.coin} فوق سعر الشراء ${usd(x.your_buy_price_usd)} بـ ${pct(x.pct_above_buy_price, 1)}`,
+  ar: x => ({ dca_today: `🛒 يوم الـ DCA: اشترِ ${x.coin} بـ ${usd(x.buy_usd)}`, dca_missed: `⏰ DCA ${x.coin} متأخر ${x.days_late} يوم (${usd(x.buy_usd)})`, dca_tomorrow: `🛒 غداً: DCA ${x.coin} ${usd(x.buy_usd)}`,
+    at_buy_price: `🎯 ${x.coin} ${usd(x.price_usd)} — وصل إلى سعر الشراء الذي حددته ${usd(x.your_buy_price_usd)}`, near_buy_price: `🎯 ${x.coin} فوق سعر الشراء ${usd(x.your_buy_price_usd)} بـ ${pct(x.pct_above_buy_price, 1)}`,
     take_profit_reached: `💰 ${x.coin} وصل TP${x.tp} ${usd(x.level_usd)} — بيع ${x.sell_pct}%`, take_profit_close: `💰 ${x.coin} باقي ${r2(x.pct_to_go)}% على TP${x.tp} ${usd(x.level_usd)}`,
-    exit_conditions: `🚪 الخروج: ${x.met_of_3}/3 شروط اتحققت`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — قلّل ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — زوّد ${usd(x.usd_to_fix)}`,
-    reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} من متوسطك — تعزيز`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} من متوسطك — بيع / تحويل` }[x.what]),
+    exit_conditions: `🚪 الخروج: ${x.met_of_3}/3 مؤشرات تحققت`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — قلّل ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — زوّد ${usd(x.usd_to_fix)}`,
+    reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} عن متوسط شرائك — تعزيز`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} عن متوسط شرائك — بيع / تحويل` }[x.what]),
 };
 function plainMorning(L, f) {
   const ar = L === 'ar', p = f.portfolio, mk = f.market;
   const t = f.todo.slice(0, 3).map((x, i) => `${i + 1}. ${esc(TODO_TXT[L](x))}`);
-  if (!t.length) t.push(ar ? '1. مفيش حاجة مطلوبة النهارده — احتفظ ✅' : '1. Nothing to do today — hold ✅');
-  return [`💼 <b>${usd2(p.value_usd)}</b> ${dot(p.change_24h_pct)} ${pct(p.change_24h_pct)}`, '', `🎯 <b>${ar ? 'النهارده' : 'Today'}</b>`, ...t, '',
+  if (!t.length) t.push(ar ? '1. لا شيء مطلوب اليوم — احتفظ ✅' : '1. Nothing to do today — hold ✅');
+  return [`💼 <b>${usd2(p.value_usd)}</b> ${dot(p.change_24h_pct)} ${pct(p.change_24h_pct)}`, '', `🎯 <b>${ar ? 'اليوم' : 'Today'}</b>`, ...t, '',
     `🌍 BTC <b>${usd(mk.btc_usd)}</b> ${pct(mk.btc_24h_pct)}${mk.fear_greed ? ` · F&amp;G <b>${mk.fear_greed.value}</b>` : ''}`].join('\n');
 }
 function plainEvening(L, f) {
   const ar = L === 'ar', p = f.portfolio, s = f.since_morning, out = [`💼 <b>${usd2(p.value_usd)}</b> ${dot(p.change_24h_pct)} ${pct(p.change_24h_pct)} 24h`];
-  if (s) out.push(`${ar ? 'من الصبح' : 'Since the morning'}: <b>${s.portfolio_change_usd >= 0 ? '+' : '−'}${usd2(Math.abs(s.portfolio_change_usd))}</b>`);
+  if (s) out.push(`${ar ? 'منذ الصباح' : 'Since the morning'}: <b>${s.portfolio_change_usd >= 0 ? '+' : '−'}${usd2(Math.abs(s.portfolio_change_usd))}</b>`);
   if (f.best_coins_24h.length) out.push(`📈 ${f.best_coins_24h.map(c => `${esc(c.coin)} ${pct(c.pct, 1)}`).join(' · ')}`);
   if (f.worst_coins_24h.length) out.push(`📉 ${f.worst_coins_24h.map(c => `${esc(c.coin)} ${pct(c.pct, 1)}`).join(' · ')}`);
   if (f.closest_levels.length) out.push('', `👀 <b>${ar ? 'راقب' : 'Watch'}</b>`, ...f.closest_levels.slice(0, 3).map(x => `• ${esc(x.alert || x.level)} — ${x.pct_away}%`));
@@ -182,9 +182,9 @@ const RADAR_TXT = {
   en: { hot_longs: 'Crowded longs — funding very positive', hot_shorts: 'Crowded shorts — funding negative', oi_up: 'Leverage piling up — open interest jumped', oi_down: 'Leverage flushed out — open interest fell',
     crowd_long: 'Most accounts are long', crowd_short: 'Most accounts are short', fund: 'Funding', yr: 'yr', oi: 'Open interest 24h', longs: 'Long accounts', liq: 'Liquidations (OKX)', longsW: 'longs', shortsW: 'shorts',
     noteL: 'One-sided longs: a dip can cascade (long squeeze). Check the Liq Map.', noteS: 'One-sided shorts: a pump can cascade (short squeeze). Check the Liq Map.', noteN: 'Leverage changed fast — volatility likely. Check the Liq Map.' },
-  ar: { hot_longs: 'لونجات زحمة — التمويل موجب جداً', hot_shorts: 'شورتات زحمة — التمويل سالب', oi_up: 'الرافعة بتزيد — الـ OI قفز', oi_down: 'الرافعة اتمسحت — الـ OI نزل',
-    crowd_long: 'أغلب الحسابات لونج', crowd_short: 'أغلب الحسابات شورت', fund: 'التمويل', yr: 'سنوي', oi: 'الـ OI في 24س', longs: 'حسابات اللونج', liq: 'التصفيات (OKX)', longsW: 'لونج', shortsW: 'شورت',
-    noteL: 'اللونجات متكدسة: أي نزول ممكن يعمل تصفيات متتالية. شوف الـ Liq Map.', noteS: 'الشورتات متكدسة: أي صعود ممكن يعمل تصفيات متتالية. شوف الـ Liq Map.', noteN: 'الرافعة اتغيرت بسرعة — متوقع تذبذب. شوف الـ Liq Map.' },
+  ar: { hot_longs: 'ازدحام في مراكز الشراء — التمويل موجب جداً', hot_shorts: 'ازدحام في مراكز البيع — التمويل سالب', oi_up: 'الرافعة تزداد — قفز الـ OI', oi_down: 'تم مسح الرافعة — انخفض الـ OI',
+    crowd_long: 'أغلب الحسابات في مراكز شراء', crowd_short: 'أغلب الحسابات في مراكز بيع', fund: 'التمويل', yr: 'سنوي', oi: 'الـ OI في 24س', longs: 'حسابات الشراء', liq: 'التصفيات (OKX)', longsW: 'شراء', shortsW: 'بيع',
+    noteL: 'مراكز الشراء متكدسة: أي هبوط قد يسبب تصفيات متتالية. راجع خريطة التصفيات.', noteS: 'مراكز البيع متكدسة: أي صعود قد يسبب تصفيات متتالية. راجع خريطة التصفيات.', noteN: 'تغيّرت الرافعة بسرعة — يُتوقع تذبذب. راجع خريطة التصفيات.' },
 };
 export function radarFindings(s) {
   const f = [];
@@ -236,7 +236,7 @@ export async function sectorRadar(env, now = Date.now()) {
   const lines = [`🔥 <b>${w.sectors}</b>`, ''];
   for (const s of fresh) {
     const held = (s.top || []).filter(id => mine.has(id)).map(symOf).filter(Boolean);
-    lines.push(`${s.ch24 > 0 ? '🚀' : '🔻'} <b>${esc(s.name)}</b> ${pct(s.ch24, 1)} · ${usd(s.mcap)}${held.length ? `\n   ${ar ? 'معاك من قادته' : 'you hold its leaders'}: <b>${esc(held.join(', '))}</b>` : ''}`);
+    lines.push(`${s.ch24 > 0 ? '🚀' : '🔻'} <b>${esc(s.name)}</b> ${pct(s.ch24, 1)} · ${usd(s.mcap)}${held.length ? `\n   ${ar ? 'تملك من أبرز عملاته' : 'you hold its leaders'}: <b>${esc(held.join(', '))}</b>` : ''}`);
   }
   const r = await send(env, { text: lines.join('\n'), buttons: [[cb(w.mk, 'mk'), cb(w.pf, 'pf')]] });
   if (r && r.ok) { fresh.forEach(s => { seen[s.id] = day; }); for (const k of Object.keys(seen)) if (seen[k] !== day) delete seen[k]; await jput(env, K(env, 'sector:seen'), seen); await logEvent(env, 'sector', fresh.map(s => s.name + ' ' + pct(s.ch24, 1)).join(', '), now); }
