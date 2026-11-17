@@ -1,0 +1,21 @@
+// Arabic Telegram messages read right-to-left (tools/worker/bidi.mjs)
+import { bidi, bidiBody } from '../tools/worker/bidi.mjs';
+let ok = 0, n = 0; const check = (name, c, d) => { n++; if (c) ok++; console.log((c ? 'PASS ' : 'FAIL ') + name + (c ? '' : ' -> ' + JSON.stringify(d))); };
+const R = '‏', I = '⁦', P = '⁩', v = s => s.replace(/⁦/g, '⟨').replace(/⁩/g, '⟩').replace(/‏/g, '«R»');
+let t = bidi('▫️ <b>BTC</b> 0.001 · $75.27 — التطبيق: 0.1479');
+check('a line with Arabic starts right-to-left; the ticker and each number are their own left-to-right island', t.startsWith(R) && t.includes(`<b>${I}BTC${P}</b>`) && t.includes(`${I}$75.27${P}`) && t.includes(`التطبيق: ${I}0.1479${P}`), v(t));
+t = bidi('• VVV TP1: <b>43.40$</b> — أبعد بنحو 114%');
+check('"114%" stays "114%", "43.40$" stays whole', t.includes(`${I}114%${P}`) && t.includes(`${I}43.40$${P}`), v(t));
+t = bidi('• Fear &amp; Greed: <b>12</b> — كان 13، خوف شديد');
+check('"Fear & Greed" (an HTML entity inside) is one island; the colon stays with the sentence', t.includes(`${I}Fear &amp; Greed${P}:`), v(t));
+t = bidi('🔌 <b>المنصات</b>\n✅ <b>QNT</b> 2.237 · $341\nلا يتغير شيء في محفظتك.');
+check('a mostly-Arabic message: the ticker-only rows run right-to-left too', t.split('\n').every(l => l.startsWith(R)), v(t));
+t = bidi('👋 <b>Welcome</b>\nChat here · ideas\n\n👋 <b>أهلاً بكم</b>\nالدردشة هنا');
+check('English + Arabic (the group\'s posts): the English lines are left alone', t.split('\n')[0] === '👋 <b>Welcome</b>' && t.split('\n')[1] === 'Chat here · ideas' && t.split('\n')[3].startsWith(R), v(t));
+check('an English message is not touched', bidi('💼 <b>$1,234</b> ▲ 2.1%') === '💼 <b>$1,234</b> ▲ 2.1%');
+const g = R + 'مرحبا ' + I + '/guide' + P;
+check('a line already marked (the guide\'s cards) is not marked twice', bidi(g) === g);
+check('HTML tags are never changed', /<a href="https:\/\/x\.com\/a-b">/.test(bidi('افتح <a href="https://x.com/a-b">الرابط</a> الآن')), v(bidi('افتح <a href="https://x.com/a-b">الرابط</a> الآن')));
+const b = bidiBody({ chat_id: 1, text: 'السعر 100$', parse_mode: 'HTML', reply_markup: { x: 1 } });
+check('a Telegram body: only its text changes', b.text.startsWith(R) && b.chat_id === 1 && b.reply_markup.x === 1);
+console.log(`${ok}/${n} passed`); process.exit(ok === n ? 0 : 1);

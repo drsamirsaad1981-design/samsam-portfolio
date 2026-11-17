@@ -13,6 +13,7 @@
 // The morning / evening are written by Claude from the facts gathered here (tools/worker/ai.mjs → compose); if Claude
 // can't, the bot's own plain version goes out. They do not count in the 30 questions a day.
 
+import { bidiBody } from './bidi.mjs';
 import { K, chatOf, isOwner, langOf, member } from './who.mjs';
 import { premiumNow } from './stars.mjs';
 import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
@@ -29,6 +30,7 @@ const jget = async (env, k, d) => { try { const v = JSON.parse((await kvGet(env,
 const jput = (env, k, v, ttl) => kvPut(env, k, JSON.stringify(v), ttl);
 const lang = env => langOf(env);
 async function tg(env, method, body) {
+  body = bidiBody(body);   // Arabic lines read right-to-left (bidi.mjs)
   try { const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
   catch (_) { return { ok: false }; }
 }

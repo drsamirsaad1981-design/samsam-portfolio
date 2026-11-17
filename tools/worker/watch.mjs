@@ -7,6 +7,7 @@
 // the next time it becomes true (so "below 82" set at 81 fires after a bounce and a new drop — never at once).
 // Prices: the exchanges first (live, by ticker), then CoinGecko / the market snapshot. Stored in KV (RATE): tg:alerts.
 
+import { bidiBody } from './bidi.mjs';
 import { K, chatOf } from './who.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, exchangePrice, derivatives, findCoin, resetBudget } from './data.mjs';
 import { summarize, usd, pct, esc, local, localParts } from '../alerts-core.mjs';
@@ -107,6 +108,7 @@ export function describe(a) {
 
 // ── the cron: every 5 minutes ──
 async function tg(env, method, body) {
+  body = bidiBody(body);   // Arabic lines read right-to-left (bidi.mjs)
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
 }

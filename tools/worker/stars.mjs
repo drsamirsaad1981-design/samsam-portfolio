@@ -9,6 +9,7 @@
 // Kept with the member (KV tg:users): premium, premUntil (ms), premSrc ('stars' | 'gift'), subCharge, premRemind,
 // supporter, starsPaid. A log of payments (tg:stars:log) feeds /stats.
 
+import { bidiBody } from './bidi.mjs';
 import { asChat, chatOf, isOwner, members, member, setMember, langOf, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS } from './who.mjs';
 import { esc, local } from '../alerts-core.mjs';
 
@@ -18,6 +19,7 @@ export const SUPPORT = [50, 100, 250, 500];
 const usdOf = n => '$' + Math.max(1, Math.round(n * 0.02));   // what the member pays, roughly (≈ 2 cents a Star)
 
 async function tg(env, method, body) {
+  body = bidiBody(body);   // Arabic lines read right-to-left (bidi.mjs)
   try { const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
   catch (_) { return { ok: false }; }
 }

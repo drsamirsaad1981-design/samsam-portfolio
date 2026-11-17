@@ -131,6 +131,7 @@ auto_stake_test.py
 hv_chart_test.py
 tg_bot_test.py
 cex_test.py
+bidi_test.py
 cex_ui_test.py
 binance_relay_test.py
 member_start_test.py

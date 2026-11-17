@@ -2,6 +2,7 @@
 // /users, /invite and /stats: the numbers, every member (search, limits, ⭐ gift / end, ⏸ pause, 🗑 remove), app requests
 // waiting for a ✅, new invite codes, and the Stars log. Only the owner's account (checked here, server-side) can call it.
 
+import { bidiBody } from './bidi.mjs';
 import { asChat, members, member, setMember, removeMember, newInvite, accessEmails, getPending, clearPending, maxMembers, setMaxMembers, MAX_CHOICES, isTgChat, DEF_AI, DEF_REPORTS, removedList, undoRemove } from './who.mjs';
 import { premiumNow, addDays, revoke, price } from './stars.mjs';
 import { keyInfo } from './byok.mjs';
@@ -10,6 +11,7 @@ import { isOwnerAccount, syncAccess } from './data.mjs';
 import { localParts, local, APP } from '../alerts-core.mjs';
 
 async function tg(env, method, body) {
+  body = bidiBody(body);   // Arabic lines read right-to-left (bidi.mjs)
   try { const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
   catch (_) { return { ok: false }; }
 }

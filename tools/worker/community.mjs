@@ -9,6 +9,7 @@
 //   • /announce <text> (Samir): posted to the channel and the 📘 Guide topic (🆕 What's new)
 // Channel readers can send ⭐ Star reactions to posts (Samir turns them on in the channel's settings).
 
+import { bidiBody } from './bidi.mjs';
 import { members } from './who.mjs';
 import { loadMarket } from './data.mjs';
 import { localParts, local, esc, usd, pct, dot, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
@@ -17,6 +18,7 @@ import GUIDE from '../../guide.json' with { type: 'json' };
 const KEY = 'tg:community';
 // Telegram allows ~20 messages a minute in a group: on "Too Many Requests" wait what it says (≤ 15 s) and try once more
 async function tg(env, method, body) {
+  body = bidiBody(body);   // Arabic lines read right-to-left (bidi.mjs)
   let r = await tg1(env, method, body);
   if (r && r.error_code === 429) { const w = Math.min(15, (r.parameters && r.parameters.retry_after) || 3); await new Promise(z => setTimeout(z, w * 1000)); r = await tg1(env, method, body); }
   return r;

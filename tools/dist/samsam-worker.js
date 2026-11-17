@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: e0cde4dd0dd71965
+// sources-hash: 8bff3478a52ffb44
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1302,6 +1302,44 @@ async function cexHandler2(env, who, body) {
   return { exchanges: list2(all) };
 }
 
+// tools/worker/bidi.mjs
+var AR = /[؀-ۿ]/;
+var RLM = "\u200F";
+var LRI = "\u2066";
+var PDI = "\u2069";
+var RUN = /[A-Za-z0-9$€£%+\-−.,:/_#@×'’]+(?:&amp;|&lt;|&gt;)?(?:[  ]+(?:&amp;|&lt;|&gt;|[A-Za-z0-9$€£%+\-−.,:/_#@×'’])+)*/g;
+var hasWord = (s) => /[A-Za-z0-9]/.test(s);
+function bidiLine(line, all = false) {
+  if (!(all ? /[A-Za-z0-9\u0600-\u06FF]/.test(line) : AR.test(line)) || line.startsWith(RLM) || line.includes(LRI)) return line;
+  const out = line.split(/(<[^>]+>)/).map((part) => part.startsWith("<") ? part : part.replace(RUN, (m) => {
+    const t = m.replace(/[  ]+$/, ""), tail = m.slice(t.length);
+    const core = t.replace(/^[.,:\s\u00A0]+|[.,:\s\u00A0]+$/g, "");
+    if (!hasWord(core)) return m;
+    const i = t.indexOf(core);
+    return t.slice(0, i) + LRI + core + PDI + t.slice(i + core.length) + tail;
+  })).join("");
+  return RLM + out;
+}
+function bidi(text) {
+  if (typeof text !== "string" || !AR.test(text)) return text;
+  const plain = text.replace(/<[^>]+>/g, ""), ar = (plain.match(/[\u0600-\u06FF]/g) || []).length, la = (plain.match(/[A-Za-z]/g) || []).length;
+  const all = ar > la;
+  return text.split("\n").map((l) => bidiLine(l, all)).join("\n");
+}
+function bidiBody(body) {
+  if (!body || typeof body !== "object") return body;
+  const b = { ...body };
+  if (typeof b.text === "string") {
+    const x = bidi(b.text);
+    if (x.length <= 4096) b.text = x;
+  }
+  if (typeof b.caption === "string") {
+    const x = bidi(b.caption);
+    if (x.length <= 1024) b.caption = x;
+  }
+  return b;
+}
+
 // tools/worker/stars.mjs
 var DAY2 = 864e5;
 var MONTH = 30 * DAY2;
@@ -1309,6 +1347,7 @@ var price = (env) => Math.max(1, Math.min(1e4, parseInt(env.PREMIUM_STARS || "35
 var SUPPORT = [50, 100, 250, 500];
 var usdOf = (n) => "$" + Math.max(1, Math.round(n * 0.02));
 async function tg(env, method, body) {
+  body = bidiBody(body);
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     return await r.json();
@@ -2292,6 +2331,7 @@ async function derivatives(sym) {
 
 // tools/worker/admin.mjs
 async function tg2(env, method, body) {
+  body = bidiBody(body);
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     return await r.json();
@@ -2978,6 +3018,7 @@ var guide_default = {
 // tools/worker/community.mjs
 var KEY2 = "tg:community";
 async function tg3(env, method, body) {
+  body = bidiBody(body);
   let r = await tg1(env, method, body);
   if (r && r.error_code === 429) {
     const w = Math.min(15, r.parameters && r.parameters.retry_after || 3);
@@ -3161,15 +3202,15 @@ async function tidy(env, x) {
   if (okAll) x.tidy = true;
   return okAll;
 }
-var LRI = "\u2066";
-var PDI = "\u2069";
-var RLM = "\u200F";
+var LRI2 = "\u2066";
+var PDI2 = "\u2069";
+var RLM2 = "\u200F";
 var NUM = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3", "9\uFE0F\u20E3"];
 function gLine(l, ar) {
   if (!ar) return l;
-  l = l.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI}<${t}>${x}</${t}>${PDI}`);
-  l = l.replace(/(^|[\s(])(\/[a-z]+(?: CODE)?)(?=$|[\s),.؛،])/g, (m, a, c) => `${a}${LRI}${c}${PDI}`);
-  return RLM + l;
+  l = l.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI2}<${t}>${x}</${t}>${PDI2}`);
+  l = l.replace(/(^|[\s(])(\/[a-z]+(?: CODE)?)(?=$|[\s),.؛،])/g, (m, a, c) => `${a}${LRI2}${c}${PDI2}`);
+  return RLM2 + l;
 }
 function guideCard(s, L) {
   const ar = L === "ar";
@@ -3521,6 +3562,7 @@ function describe(a) {
   return `${what} ${k.op} ${v}`;
 }
 async function tg4(env, method, body) {
+  body = bidiBody(body);
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
 }
@@ -4630,6 +4672,7 @@ var jget = async (env, k, d) => {
 var jput = (env, k, v, ttl) => kvPut5(env, k, JSON.stringify(v), ttl);
 var lang = (env) => langOf(env);
 async function tg5(env, method, body) {
+  body = bidiBody(body);
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     return await r.json();
@@ -5597,6 +5640,7 @@ function viewCoin(t, coin, m, sum, now) {
   return { text: L.join("\n"), buttons: btns };
 }
 async function tg6(env, method, body) {
+  body = bidiBody(body);
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
 }
