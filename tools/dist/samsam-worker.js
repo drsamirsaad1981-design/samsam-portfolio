@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 6d1e49d310a3ba00
+// sources-hash: 6320b9d3554bc362
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -2818,6 +2818,21 @@ async function setup(env, kind, opt = {}) {
     const info = await tg3(env, "getChat", { chat_id: x.id });
     if (info.ok && info.result.is_forum) {
       x.topics = x.topics || {};
+      for (const [k, name] of TOPICS) {
+        if (!x.topics[k]) continue;
+        const r = await tg3(env, "editForumTopic", { chat_id: x.id, message_thread_id: x.topics[k], name });
+        if (!r.ok && /TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || "")) {
+          delete x.topics[k];
+          notes.push(`\u267B\uFE0F ${name} was gone \u2014 made again.`);
+          if (k === "chat") x.helloPosted = false;
+          if (k === "guide") {
+            x.guidePosted = -1;
+            delete x.guideSig;
+            delete x.reposting;
+            x.tidy = false;
+          }
+        }
+      }
       for (const [k, name, color] of TOPICS) {
         if (x.topics[k]) continue;
         const r = await tg3(env, "createForumTopic", { chat_id: x.id, name, icon_color: color });

@@ -80,6 +80,15 @@ export async function setup(env, kind, opt = {}) {
     const info = await tg(env, 'getChat', { chat_id: x.id });
     if (info.ok && info.result.is_forum) {
       x.topics = x.topics || {};
+      for (const [k, name] of TOPICS) {   // a topic deleted in Telegram (by hand, by mistake) → forget it, so it's made again with its content
+        if (!x.topics[k]) continue;
+        const r = await tg(env, 'editForumTopic', { chat_id: x.id, message_thread_id: x.topics[k], name });
+        if (!r.ok && /TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || '')) {
+          delete x.topics[k]; notes.push(`♻️ ${name} was gone — made again.`);
+          if (k === 'chat') x.helloPosted = false;
+          if (k === 'guide') { x.guidePosted = -1; delete x.guideSig; delete x.reposting; x.tidy = false; }
+        }
+      }
       for (const [k, name, color] of TOPICS) {
         if (x.topics[k]) continue;
         const r = await tg(env, 'createForumTopic', { chat_id: x.id, name, icon_color: color });
