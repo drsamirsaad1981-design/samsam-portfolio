@@ -704,4 +704,33 @@
   R(/^With the amounts you hold today · (\d+) coins? without 90 days of prices left out\. Stablecoins aren't counted as altcoins\.$/, function (_, k) { return 'بالكميات التي تملكها اليوم · استُبعدت ' + pl(k, 'عملة واحدة', 'عملتان', 'عملات', 'عملة') + ' ليس لها أسعار 90 يوماً. ولا تُحتسب العملات المستقرة ضمن العملات البديلة.'; });
   R(/^With the amounts you hold today\. Stablecoins aren't counted as altcoins\.$/, 'بالكميات التي تملكها اليوم. ولا تُحتسب العملات المستقرة ضمن العملات البديلة.');
   A({ 'Altcoin Season — Cute Portfolio': 'موسم العملات البديلة — Cute Portfolio', 'Recover — Cute Portfolio': 'استرجاع البيانات — Cute Portfolio' });
+  // ════════ Admin dashboard (owner only) ════════
+  R(/^today 🧠 (\d+)\/(\d+) · 📊 (\d+)\/(\d+) · since (.+)$/, function (_, a, b, c, d, j) { return 'اليوم 🧠 ' + n(a + '/' + b) + ' · 📊 ' + n(c + '/' + d) + ' · منذ ' + (date(j) || n(j)); });
+  R(/^📱 App: (.+?)( · 🔗 portfolio linked| · not linked)$/, function (_, e, l) { return '📱 التطبيق: ' + (e === 'not yet' ? 'ليس بعد' : n(e)) + (/not linked/.test(l) ? ' · غير مرتبط' : ' · 🔗 المحفظة مرتبطة'); });
+  R(/^(⭐ Premium(?: until (.+?))? \((Stars|gift)\)|Not premium)((?: · .+)?)$/, function (_, p, u, src, rest) {
+    var h = p === 'Not premium' ? 'غير مميز' : '⭐ مميز' + (u ? ' حتى ' + (date(u) || n(u)) : '') + (src === 'Stars' ? ' (Stars)' : ' (هدية)');
+    return h + (rest || '').replace(/ · 💛 Supporter \((\d+) ⭐\)/, ' · 💛 داعم ($1 ⭐)').replace(/ · 🔑 own Claude key \(…(.+?)\)/, ' · 🔑 مفتاح Claude خاص (…$1)').replace(' · ⏸ paused', ' · ⏸ موقوف مؤقتاً');
+  });
+  R(/^⏸ (\d+) paused · max$/, '⏸ $1 موقوف مؤقتاً · الحد الأقصى');
+  R(/^Stars (\d+) · gift (\d+)$/, 'Stars $1 · هدية $2'); R(/^premium (\d+) · support (\d+)$/, 'مميز $1 · دعم $2');
+  R(/^≈ (.+) paid by members$/, function (_, v) { return '≈ ' + n(v) + ' دفعها الأعضاء'; }); R(/^a month ≈ (.+)$/, function (_, v) { return 'شهرياً ≈ ' + n(v); });
+  R(/^Members \((\d+)\)$/, 'الأعضاء ($1)'); R(/^Payments \((\d+)\)$/, 'المدفوعات ($1)');
+  R(/^The same code works in both — one use, (\d+) days\. They can link the other one later \(Settings → Link the Telegram bot\)\.$/, function (_, d) { return 'الرمز نفسه يعمل في الاثنين — استخدام واحد، لمدة ' + pl(d, 'يوم', 'يومين', 'أيام', 'يوم') + '. ويمكنهم ربط الآخر لاحقاً (الإعدادات ← ربط بوت تليجرام).'; });
+  R(/^(.+) · removed (.+)$/, function (_, nm, d) { return nm + ' · أُزيل ' + (date(d) || n(d)); });
+  R(/^Remove (.+)\? They lose the bot AND the app \(their e-mail leaves the access list\)\. Their portfolio data stays in Firebase, and you can ↩️ restore them for 60 days\.$/, 'إزالة $1؟ سيفقد البوت والتطبيق معاً (يُحذف بريده من قائمة الدخول). تبقى بيانات محفظته في Firebase، ويمكنك ↩️ استرجاعه خلال 60 يوماً.');
+  A({
+    'Admin dashboard': 'لوحة الإدارة', 'Refresh': 'تحديث', '👥 Members': '👥 الأعضاء', 'max': 'الحد الأقصى', '⭐ Premium now': '⭐ المميزون الآن', '💛 Supporters': '💛 الداعمون',
+    '⭐ This month': '⭐ هذا الشهر', '⭐ All time': '⭐ منذ البداية', '💲 Premium price': '💲 سعر الاشتراك المميز', 'Invite': 'الدعوة', '➕ New invite code': '➕ رمز دعوة جديد', 'Code': 'الرمز',
+    '📱 Open the app': '📱 فتح التطبيق', '(no Telegram needed)': '(دون الحاجة إلى تليجرام)', '🤖 Open the bot': '🤖 فتح البوت', 'Copy app link': 'نسخ رابط التطبيق', 'Copy bot link': 'نسخ رابط البوت', 'Share…': 'مشاركة…',
+    'Search name, @user or e-mail': 'ابحث بالاسم أو @المستخدم أو البريد', 'No one matches.': 'لا يوجد تطابق.', 'Nobody yet — make an invite code above.': 'لا يوجد أحد بعد — أنشئ رمز دعوة بالأعلى.',
+    'Removed (kept 60 days)': 'المحذوفون (يُحفظون 60 يوماً)', '↩️ Restore': '↩️ استرجاع', 'Stars': 'Stars', 'premium subscriptions, renewals and support': 'الاشتراكات المميزة والتجديدات والدعم',
+    '⭐ renewal': '⭐ تجديد', '⭐ premium': '⭐ مميز', '💛 support': '💛 دعم', 'No payments yet.': 'لا توجد مدفوعات بعد.', "Withdraw the Stars yourself: the bot's balance → Fragment.": 'اسحب الـ Stars بنفسك: رصيد البوت ← Fragment.',
+    '📱 app only': '📱 التطبيق فقط', '⏳ Asks to open the app with': '⏳ يطلب فتح التطبيق بالبريد', '✅ Allow': '✅ سماح', '❌ No': '❌ رفض',
+    '🎁 ⭐ +30 days': '🎁 ⭐ +30 يوماً', '🎁 ⭐ +365 days': '🎁 ⭐ +365 يوماً', '☆ End premium': '☆ إنهاء المميز', '▶️ Resume': '▶️ استئناف', '⏸ Pause': '⏸ إيقاف مؤقت', '🗑 Remove member': '🗑 إزالة العضو',
+    'removes the premium extras only; they keep using the bot and the app (standard limits). Happens by itself when a subscription or gift ends': 'يزيل مزايا المميز فقط؛ ويستمر في استخدام البوت والتطبيق (بالحدود العادية). ويحدث تلقائياً عند انتهاء الاشتراك أو الهدية',
+    'the bot goes quiet for them (no answers, radars or daily messages); the app keeps working. ▶️ Resume brings everything back': 'يتوقف البوت عن الرد عليه (لا إجابات ولا رادارات ولا رسائل يومية)؛ ويستمر التطبيق في العمل. و▶️ استئناف يعيد كل شيء',
+    'out of the bot': 'يخرج من البوت', 'the app; their data stays. ↩️ Restore within 60 days.': 'التطبيق؛ وتبقى بياناته. ويمكن ↩️ استرجاعه خلال 60 يوماً.',
+    'Just want to stop them for a while? Use ⏸ Pause instead.': 'تريد إيقافه فترة فقط؟ استخدم ⏸ إيقاف مؤقت بدلاً من ذلك.', 'Remove member': 'إزالة العضو',
+    "↩️ Restored — they're back as they were.": '↩️ تم الاسترجاع — عاد كما كان.', 'Copied ✅': 'تم النسخ ✅', 'support': 'دعم', 'premium': 'مميز',
+  });
 })();
