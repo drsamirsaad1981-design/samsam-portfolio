@@ -316,7 +316,6 @@
   R(/^kept (\d+) of (\d+)$/, 'التزمت بـ $1 من $2');
   R(/^target in (\d+) buys?$/, function (_, a) { return 'الهدف بعد ' + pl(a, 'مرة شراء واحدة', 'مرتين شراء', 'مرات شراء', 'مرة شراء'); });
   R(/^(\d+) days?$/, function (_, a) { return pl(a, 'يوم', 'يومين', 'أيام', 'يوم'); });
-  R(/^(\d+) regular buys?$/, function (_, a) { return a + ' شراء دوري'; });
   R(/^(\d+) to buy now$/, '$1 للشراء الآن');
   R(/^(\d+) in progress$/, '$1 قيد التنفيذ');
   R(/^Sell ([\d.,]+) ([A-Z0-9.]+)$/, function (_, q, c) { return 'بيع ' + n(q + ' ' + c); });
@@ -456,5 +455,56 @@
     'Name of the new category. Move coins into it with Change Category.': 'اسم التصنيف الجديد. انقل العملات له من تغيير التصنيف.',
     'Rewards & Mining': 'المكافآت والتعدين', 'Target Allocation': 'التوزيع المستهدف', 'DCA Schedule (Regular Buys)': 'الشراء الدوري (DCA)', 'Plan vs Target Allocation': 'الخطة مقابل التوزيع المستهدف', 'Exit Plan Steps': 'خطوات خطة الخروج',
     'Initial position': 'المركز الافتتاحي', 'Re-added coin': 'عملة اتضافت تاني', 'Removed from portfolio': 'اتشالت من المحفظة', 'Recovered from backup': 'اترجعت من النسخة الاحتياطية',
+  });
+  // ════════ Fixes from the real portfolio (17 Nov) ════════
+  R(/^(\$[\d,.]+)\/mo$/, function (_, a) { return n(a) + ' شهرياً'; });
+  R(/^(.+) in (\d+) days$/, function (_, a, d) { return n(a) + ' خلال ' + pl(d, 'يوم', 'يومين', 'أيام', 'يوم'); });
+  R(/^(\d+) wallets?$/, function (_, a) { return pl(a, 'محفظة واحدة', 'محفظتين', 'محافظ', 'محفظة'); });
+  R(/^(\d+) to look at$/, '$1 محتاجة مراجعة');
+  R(/^([A-Z0-9.]{2,12}) \((Reinforce|Hold|Sell \/ Convert)\)$/, function (_, c, k) { return c + ' (' + CPLang.t(k) + ')'; });
+  R(/^target (.+%)$/, function (_, v) { return 'الهدف ' + n(v); });
+  R(/^sold (.+)$/, function (_, q) { return 'اتباع ' + n(q); });
+  R(/^vs BTC (.+) pts \(30d\), (.+) pts \(90d\)$/, function (_, a, b) { return 'مقابل BTC: ' + n(a) + ' نقطة (30 يوم)، ' + n(b) + ' نقطة (90 يوم)'; });
+  R(/^categories on target — today (\d+) of (\d+)\. Today → after the plan · band ±([\d.]+) pts\.$/, 'تصنيفات على الهدف — والنهارده $1 من $2. النهارده ← بعد الخطة · الهامش ±$3 نقطة.');
+  R(/^categories on target\. Today → after the plan · band ±([\d.]+) pts\.$/, 'تصنيفات على الهدف. النهارده ← بعد الخطة · الهامش ±$1 نقطة.');
+  R(/^(.+) is within your target allocation band$/, function (_, c) { return CPLang.t(c) + ' جوه هامش التوزيع المستهدف'; });
+  R(/^(.+) is ([\d.]+) pts above your target allocation — better to wait, or buy below-target categories first$/, function (_, c, p) { return CPLang.t(c) + ' فوق التوزيع المستهدف بـ ' + p + ' نقطة — الأفضل تستنى، أو تشتري من التصنيفات اللي تحت هدفها الأول'; });
+  R(/^(.+) is ([\d.]+) pts below your target allocation — buying (.+) moves you toward it$/, function (_, c, p, x) { return CPLang.t(c) + ' تحت التوزيع المستهدف بـ ' + p + ' نقطة — شراء ' + x + ' بيقرّبك منه'; });
+  R(/^Add (.+) to your portfolio$/, 'إضافة $1 لمحفظتك');
+  R(/^View (.+) transactions$/, 'عرض معاملات $1');
+  R(/^Smart: Hold instead of Sell \/ Convert — (.+) is ahead of BTC over 30 and 90 days$/, 'فحص ذكي: احتفاظ بدل بيع / تحويل — $1 متفوقة على البيتكوين في آخر 30 و 90 يوم');
+  R(/^Smart: Hold instead of Reinforce — (.+) is behind BTC over 30 and 90 days$/, 'فحص ذكي: احتفاظ بدل تعزيز — $1 متأخرة عن البيتكوين في آخر 30 و 90 يوم');
+  R(/^(.+): no futures found on the exchanges we check \((.+)\) — CoinGlass may have no map for it, open it to see$/, '$1: مفيش عقود آجلة على المنصات اللي بنراجعها ($2) — ممكن CoinGlass ما يكونش عنده خريطة ليها، افتحها وشوف');
+  R(/^Change this (Buy|Sell|Transfer In|Transfer Out|Reward)$/, function (_, k) { return 'تعديل ' + CPLang.t(k) + ' ده'; });
+  R(/^Delete this (Buy|Sell|Transfer In|Transfer Out|Reward)$/, function (_, k) { return 'حذف ' + CPLang.t(k) + ' ده'; });
+  // the line under Add transaction
+  R(/^(\$[\d,.]+) in ([A-Z0-9.]+)$/, function (_, a, c) { return n(a) + ' بالـ ' + c; });
+  R(/^(\$[\d,.]+) from ([A-Z0-9.]+)$/, function (_, a, c) { return n(a) + ' من ' + c; });
+  R(/^(.+) left$/, function (_, q) { return /[a-z]{3}/.test(q) ? null : 'متبقي ' + n(q); });
+  R(/^\(≈ (.+) now\)$/, function (_, v) { return '(≈ ' + n(v) + ' الآن)'; });
+  R(/^\((.+) \+ fee (.+)\)$/, function (_, a, b) { return '(' + n(a) + ' + رسوم ' + n(b) + ')'; });
+  R(/^\((.+) − fees? (.+)\)$/, function (_, a, b) { return '(' + n(a) + ' − رسوم ' + n(b) + ')'; });
+  R(/^Not enough (\S+) to pay this \(you have (.+)\) — saved (?:as a plain Buy|without paying from it)\. Tick “Pay from” to use it anyway\.$/, function (_, c, h) { return 'الـ ' + c + ' مش كفاية للدفع (معاك ' + n(h) + ') — اتسجل كشراء عادي. علّم على "الدفع من" لو عاوز تستخدمه برضه.'; });
+  R(/^Not enough (\S+): you have (.+), this (?:buy )?costs (.+)\. Untick “Pay from” to (?:add|record) it without\.$/, function (_, c, h, v) { return 'الـ ' + c + ' مش كفاية: معاك ' + n(h) + ' والشراء ده بـ ' + n(v) + '. شيل العلامة من "الدفع من" عشان تسجله من غيره.'; });
+  R(/^From the start date to now: (\d+) weekly rewards?, \+(.+)$/, function (_, k, q) { return 'من تاريخ البداية لحد دلوقتي: ' + pl(k, 'مكافأة أسبوعية', 'مكافأتين أسبوعيتين', 'مكافآت أسبوعية', 'مكافأة أسبوعية') + '، ' + n('+' + q); });
+  R(/^(\d+) regular buys?$/, function (_, a) { return pl(a, 'شراء دوري واحد', 'عمليتين شراء دوري', 'عمليات شراء دوري', 'عملية شراء دوري'); });
+
+  A({
+    'Rebalance': 'إعادة التوازن', 'no coin in this category yet — pick one to add': 'لسه مفيش عملة في التصنيف ده — اختار واحدة تضيفها',
+    "At today's prices. Coins to use: Reinforce first; to trim, Sell / Convert first. A plan to check, not advice.":
+      'بأسعار النهارده. العملات المقترحة: اللي عليها تعزيز الأول؛ وللتخفيف، اللي عليها بيع / تحويل الأول. خطة تراجعها بنفسك، مش نصيحة.',
+    'points away from your target': 'نقاط البُعد عن هدفك', 'after the plan: points from your target': 'بعد الخطة: البُعد عن هدفك بالنقاط', 'Show the categories': 'عرض التصنيفات',
+    'Altcoin Season — open the Market tab': 'موسم العملات البديلة — فتح مركز السوق', 'Sold out — no coins held': 'اتباعت بالكامل — مفيش عملات معاك',
+    'Top Performers': 'الأفضل والأسوأ أداءً', 'Top Performers · USD': 'الأفضل والأسوأ أداءً · USD',
+    'not checked yet': 'لسه ما اتطابقتش', 'all match': 'كله مطابق',
+    'Your wallet': 'محفظتك', 'Cold wallet': 'محفظة باردة', 'Exchange': 'منصة', 'Hot wallet': 'محفظة ساخنة',
+    'If you finish this plan (': 'لو كمّلت الخطة دي (', "at today's prices):": 'بأسعار النهارده):', 'Your plan is complete —': 'خطتك اكتملت —',
+    'Not Owned Yet': 'لسه مش معاك', 'Change': 'تعديل',
+    // the line under Add transaction
+    'Total cost': 'إجمالي التكلفة', 'Holdings after': 'الأصول بعدها', 'Proceeds': 'حصيلة البيع', 'profit': 'ربح', 'loss': 'خسارة', 'fee': 'رسوم',
+    'Received after fee': 'المستلم بعد الرسوم', 'cost added': 'التكلفة المضافة', 'Leaves portfolio incl. fee': 'الخارج من المحفظة شامل الرسوم',
+    'Arrives in your wallet': 'هيوصل محفظتك', 'to your portfolio': 'لمحفظتك', 'at': 'بـ', 'Cost Basis': 'تكلفة الشراء',
+    'Booked as a': 'بيتسجل كـ', 'at $0 cost every 7 days': 'بتكلفة صفر كل 7 أيام', '— added right away': '— اتضافت على طول',
+    'What was earned so far is booked first at the old APY; the new numbers count from now.': 'اللي اتكسب لحد دلوقتي بيتسجل الأول بالعائد القديم، والأرقام الجديدة بتتحسب من دلوقتي.',
   });
 })();
