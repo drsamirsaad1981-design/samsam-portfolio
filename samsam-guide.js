@@ -2,7 +2,8 @@
 // every part closed until tapped. Loaded only when opened.
 (function () {
   'use strict';
-  var doc = document, G = null, lang = null;
+  var doc = document, GS = {}, G = null, lang = null, which = 'app';   // two guides: 📱 the app (guide-app.json) · 🤖 the bot (guide.json)
+  var FILE = { app: 'guide-app.json', bot: 'guide.json' };
   var $ = function (id) { return doc.getElementById(id); };
   var IC = function (n) { return window.SamsamUI && SamsamUI.ic ? SamsamUI.ic(n, { solo: true, size: 16 }) : ''; };
   var E = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -16,6 +17,8 @@
     '#cpGuide .gd-h b{font-size:1.05rem;flex:1}#cpGuide .gd-x{background:none;border:none;color:inherit;opacity:.75;cursor:pointer;padding:6px;line-height:0}' +
     '#cpGuide .gd-lang{display:inline-flex;gap:3px;background:rgba(148,163,184,.12);padding:3px;border-radius:10px}#cpGuide .gd-lang button{border:none;background:transparent;color:inherit;font:inherit;font-size:.78rem;font-weight:700;padding:5px 10px;border-radius:8px;cursor:pointer;opacity:.7}' +
     '#cpGuide .gd-lang button[aria-pressed="true"]{opacity:1;background:#7c3aed;color:#fff}' +
+    '#cpGuide .gd-tabs{display:flex;gap:6px;margin:4px 0 6px}#cpGuide .gd-tabs button{flex:1;border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:inherit;font:inherit;font-size:.86rem;font-weight:700;padding:8px;border-radius:10px;cursor:pointer;opacity:.75}' +
+    '#cpGuide .gd-tabs button[aria-pressed="true"]{opacity:1;border-color:#7c3aed;background:rgba(124,58,237,.15)}' +
     '#cpGuide .gd-intro{color:var(--fg2,#94a3b8);font-size:.86rem;margin:4px 0 8px}' +
     '#cpGuide details{border:1px solid var(--border,rgba(148,163,184,.2));border-radius:12px;margin-top:8px;overflow:hidden}' +
     '#cpGuide summary{list-style:none;cursor:pointer;padding:11px 12px;font-weight:700}#cpGuide summary::-webkit-details-marker{display:none}' +
@@ -26,7 +29,9 @@
 
   function draw() {
     var box = $('cpGuideBody'); if (!box) return;
-    if (!G) { box.innerHTML = '<p class="gd-intro">Loading…</p>'; return; }
+    G = GS[which] || null;
+    doc.querySelectorAll('#cpGuide .gd-tabs button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.w === which)); b.textContent = b.dataset.w === 'app' ? (lang === 'ar' ? '📱 التطبيق' : '📱 The app') : (lang === 'ar' ? '🤖 البوت' : '🤖 The bot'); });
+    if (!G) { box.innerHTML = '<p class="gd-intro">' + (lang === 'ar' ? 'جارٍ التحميل…' : 'Loading…') + '</p>'; load(which); return; }
     var L = lang, ar = L === 'ar';
     box.setAttribute('dir', ar ? 'rtl' : 'ltr'); box.setAttribute('lang', L);
     if (ar) box.removeAttribute('data-no-tr'); else box.setAttribute('data-no-tr', '');   // the English guide stays English inside the Arabic app
@@ -42,30 +47,34 @@
     box.innerHTML = '<p class="gd-intro">' + E(G.intro[L]) + '</p>' + groups.map(function (x) {
       return (x.g ? '<div class="gd-grp">' + x.g.e + ' ' + E(x.g.t[L]) + '</div>' : '') + x.items.map(part).join('');
     }).join('');
-    var t = $('cpGuideTitle'); if (t) t.textContent = G.title[L].replace(/^📘\s*/, '');
+    var t = $('cpGuideTitle'); if (t) t.textContent = ar ? 'الدليل' : 'Guide';
     doc.querySelectorAll('#cpGuide .gd-lang button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.l === L)); });
   }
   function close() { var b = $('cpGuide'); if (b) b.remove(); doc.removeEventListener('keydown', esc, true); }
   function esc(e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } }
-  function open(l) {
+  function load(w) {
+    if (GS[w] || load[w]) return; load[w] = true;
+    var me = doc.querySelector('script[src*="samsam-settings.js"]'), v = me && (me.getAttribute('src').split('?')[1] || '');
+    fetch(FILE[w] + (v ? '?' + v : '')).then(function (r) { return r.json(); }).then(function (j) { GS[w] = j; load[w] = false; draw(); })
+      .catch(function () { load[w] = false; var bx = $('cpGuideBody'); if (bx && which === w) bx.innerHTML = '<p class="gd-intro">' + (lang === 'ar' ? 'تعذّر تحميل الدليل — تحقق من الإنترنت وحاول مرة أخرى.' : 'Could not load the guide — check the internet and try again.') + '</p>'; });
+  }
+  function open(l, w) {
+    if (w === 'app' || w === 'bot') which = w;
     lang = l || lang || ((doc.documentElement.lang || navigator.language || 'en').slice(0, 2) === 'ar' ? 'ar' : 'en');
     if (!$('cpGuideCss')) { var st = doc.createElement('style'); st.id = 'cpGuideCss'; st.textContent = CSS; doc.head.appendChild(st); }
     close();
     var el = doc.createElement('div'); el.id = 'cpGuide'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Guide');
     el.innerHTML = '<div class="gd-box"><div class="gd-h"><span>📘</span><b id="cpGuideTitle">Guide</b><span class="gd-lang"><button type="button" data-l="en">English</button><button type="button" data-l="ar">العربية</button></span>' +
-      '<button type="button" class="gd-x" aria-label="Close">' + IC('x') + '</button></div><div id="cpGuideBody"></div></div>';
+      '<button type="button" class="gd-x" aria-label="Close">' + IC('x') + '</button></div>' +
+      '<div class="gd-tabs" role="tablist" data-no-tr><button type="button" data-w="app"></button><button type="button" data-w="bot"></button></div><div id="cpGuideBody"></div></div>';
     doc.body.appendChild(el);
     el.addEventListener('click', function (e) {
       if (e.target === el || e.target.closest('.gd-x')) { close(); return; }
       var b = e.target.closest('[data-l]'); if (b) { lang = b.dataset.l; draw(); }
+      var w = e.target.closest('[data-w]'); if (w) { which = w.dataset.w; draw(); var bx = $('cpGuide').querySelector('.gd-box'); if (bx) bx.scrollTop = 0; }
     });
     doc.addEventListener('keydown', esc, true);
     draw();
-    if (!G) {
-      var me = doc.querySelector('script[src*="samsam-settings.js"]'), v = me && (me.getAttribute('src').split('?')[1] || '');
-      fetch('guide.json' + (v ? '?' + v : '')).then(function (r) { return r.json(); }).then(function (j) { G = j; draw(); })
-        .catch(function () { var bx = $('cpGuideBody'); if (bx) bx.innerHTML = '<p class="gd-intro">Could not load the guide — check the internet and try again.</p>'; });
-    }
   }
   window.SamsamGuide = { open: open, close: close };
 })();

@@ -1,0 +1,507 @@
+{
+ "v": 1,
+ "title": {
+  "en": "📱 The app — full guide",
+  "ar": "📱 دليل التطبيق الكامل"
+ },
+ "intro": {
+  "en": "Every screen of Cute Portfolio, step by step. Tap ⓘ anywhere in the app to see how a number is calculated.",
+  "ar": "كل شاشات Cute Portfolio خطوة بخطوة. اضغط ⓘ في أي مكان بالتطبيق لترى كيف يُحسب الرقم."
+ },
+ "groups": [
+  {
+   "k": "start",
+   "e": "🚀",
+   "t": {
+    "en": "Start",
+    "ar": "البداية"
+   }
+  },
+  {
+   "k": "portfolio",
+   "e": "💼",
+   "t": {
+    "en": "Your portfolio",
+    "ar": "محفظتك"
+   }
+  },
+  {
+   "k": "plan",
+   "e": "🎯",
+   "t": {
+    "en": "The plan",
+    "ar": "الخطة"
+   }
+  },
+  {
+   "k": "market",
+   "e": "🌍",
+   "t": {
+    "en": "The market",
+    "ar": "السوق"
+   }
+  },
+  {
+   "k": "more",
+   "e": "⚙️",
+   "t": {
+    "en": "AI, Telegram and settings",
+    "ar": "الذكاء الاصطناعي وتليجرام والإعدادات"
+   }
+  }
+ ],
+ "sections": [
+  {
+   "k": "screen",
+   "e": "🧭",
+   "g": "start",
+   "t": {
+    "en": "Sign in and find your way",
+    "ar": "تسجيل الدخول والتنقل"
+   },
+   "s": {
+    "en": "One account, three tabs and a bottom bar.",
+    "ar": "حساب واحد، وثلاث تبويبات، وشريط سفلي."
+   },
+   "en": [
+    "Sign in with Google or any e-mail (a sign-in link, no password). Your portfolio is saved in the cloud under your account.",
+    "At the top: <b>Overview</b> · <b>Performance</b> · <b>Allocation</b>. Tap a tab, or swipe left and right to move between them.",
+    "At the bottom: <b>Portfolio</b> · <b>Plan</b> · <b>Market Hub</b>.",
+    "⚙️ at the top opens Settings: account, backup, Telegram, AI, display and this guide."
+   ],
+   "ar": [
+    "سجّل الدخول بحساب Google أو بأي بريد إلكتروني (رابط دخول بدون كلمة مرور). تُحفظ محفظتك على السحابة في حسابك.",
+    "في الأعلى: <b>نظرة عامة</b> · <b>الأداء</b> · <b>التوزيع</b>. اضغط على التبويب، أو اسحب يميناً ويساراً للتنقل بينها.",
+    "في الأسفل: <b>المحفظة</b> · <b>الخطة</b> · <b>مركز السوق</b>.",
+    "⚙️ في الأعلى يفتح الإعدادات: الحساب، والنسخ الاحتياطي، وتليجرام، والذكاء الاصطناعي، والعرض، وهذا الدليل."
+   ],
+   "tip": {
+    "en": "Tap ⓘ next to any number to see what it means and how it is calculated.",
+    "ar": "اضغط ⓘ بجانب أي رقم لترى معناه وطريقة حسابه."
+   }
+  },
+  {
+   "k": "addtx",
+   "e": "➕",
+   "g": "start",
+   "t": {
+    "en": "Add your coins and trades",
+    "ar": "إضافة عملاتك وصفقاتك"
+   },
+   "s": {
+    "en": "Every number in the app comes from the trades you record.",
+    "ar": "كل أرقام التطبيق تأتي من الصفقات التي تسجلها."
+   },
+   "en": [
+    "Tap <b>+</b> (or <b>+ Buy</b> / <b>− Sell</b> on a coin) and pick the type: <b>Buy</b>, <b>Sell</b>, <b>Reward</b>, <b>Transfer In</b> or <b>Transfer Out</b>.",
+    "Enter the amount, the price and the fee — fees are counted in your average buy price.",
+    "Or bring all your trades at once: Performance → <b>Wallets &amp; Exchanges</b> → <b>Import from exchange</b> (a CSV file from Binance, Gate and others).",
+    "Trades you already entered are recognised and not added twice."
+   ],
+   "ar": [
+    "اضغط <b>+</b> (أو <b>+ شراء</b> / <b>− بيع</b> على العملة) واختر النوع: <b>شراء</b>، أو <b>بيع</b>، أو <b>مكافأة</b>، أو <b>إيداع</b>، أو <b>سحب</b>.",
+    "أدخل الكمية والسعر والرسوم — تُحسب الرسوم ضمن متوسط سعر الشراء.",
+    "أو استورد كل صفقاتك دفعة واحدة: الأداء ← <b>المحافظ والمنصات</b> ← <b>استيراد من منصة</b> (ملف CSV من Binance وGate وغيرها).",
+    "الصفقات التي أدخلتها من قبل يتعرف عليها التطبيق ولا يضيفها مرتين."
+   ],
+   "tip": {
+    "en": "Staking, mining and airdrops go in as a <b>Reward</b>: they come in at $0 cost.",
+    "ar": "الـ Staking والتعدين والتوزيعات المجانية تُسجَّل كـ <b>مكافأة</b>: تدخل بتكلفة 0$."
+   }
+  },
+  {
+   "k": "overview",
+   "e": "📊",
+   "g": "portfolio",
+   "t": {
+    "en": "Overview",
+    "ar": "نظرة عامة"
+   },
+   "s": {
+    "en": "Your whole portfolio and the market at a glance.",
+    "ar": "محفظتك كلها والسوق في نظرة واحدة."
+   },
+   "en": [
+    "<b>Total Portfolio</b> (also in BTC) and <b>All Time Profit</b>, sells included.",
+    "<b>BTC Accumulated</b> and <b>Altcoins Accumulated</b> — how much is in Bitcoin and how much in the rest.",
+    "The market strip: BTC price, market cap, Fear &amp; Greed and BTC dominance — <b>Explore ↗</b> opens the Market Hub.",
+    "<b>Today's Movers</b> (best and worst coin in 24h) and the <b>Holdings</b> chart: 24h · 7d · 30d · 90d · All."
+   ],
+   "ar": [
+    "<b>إجمالي المحفظة</b> (وبالبيتكوين أيضاً) و<b>إجمالي الربح</b> بما في ذلك عمليات البيع.",
+    "<b>البيتكوين المُجمَّع</b> و<b>العملات البديلة المُجمَّعة</b> — كم في البيتكوين وكم في بقية العملات.",
+    "شريط السوق: سعر البيتكوين، والقيمة السوقية، والخوف والطمع، وهيمنة البيتكوين — <b>استكشف ↗</b> يفتح مركز السوق.",
+    "<b>الأكثر حركة اليوم</b> (أفضل وأسوأ عملة خلال 24 ساعة) ورسم <b>الأصول</b>: 24h · 7d · 30d · 90d · All."
+   ],
+   "tip": {
+    "en": "The <b>Baseline</b> date sets the day your older coins are compared with Bitcoin — tap its ⓘ to change it.",
+    "ar": "<b>تاريخ الأساس</b> يحدد اليوم الذي تُقارَن فيه عملاتك القديمة بالبيتكوين — اضغط ⓘ بجانبه لتغييره."
+   }
+  },
+  {
+   "k": "coins",
+   "e": "🪙",
+   "g": "portfolio",
+   "t": {
+    "en": "Your coin list",
+    "ar": "قائمة عملاتك"
+   },
+   "s": {
+    "en": "Every coin with its profit, average price and signal.",
+    "ar": "كل عملة مع ربحها ومتوسط سعرها وإشارتها."
+   },
+   "en": [
+    "Each coin shows: price and 24h change, category, profit, <b>Holdings</b>, <b>Avg. Buy Price</b>, <b>Cost Basis</b> and <b>Signal</b>.",
+    "Switch between <b>Cards</b> and <b>Table</b>; filter by <b>Category</b> or by signal; sort the table by any column.",
+    "<b>CSV</b> and <b>PDF</b> save the list as a file.",
+    "Tap a coin to open its page: all its transactions, plus links to CoinMarketCap, the liquidation map (CoinGlass) and a price prediction (CoinCodex)."
+   ],
+   "ar": [
+    "تعرض كل عملة: السعر وتغيّر 24 ساعة، والتصنيف، والربح، و<b>الأصول</b>، و<b>متوسط سعر الشراء</b>، و<b>تكلفة الشراء</b>، و<b>الإشارة</b>.",
+    "بدّل بين <b>الكروت</b> و<b>الجدول</b>؛ وصفِّ حسب <b>التصنيف</b> أو حسب الإشارة؛ ورتّب الجدول حسب أي عمود.",
+    "<b>CSV</b> و<b>PDF</b> يحفظان القائمة كملف.",
+    "اضغط على أي عملة لفتح صفحتها: كل معاملاتها، وروابط إلى CoinMarketCap وخريطة التصفيات (CoinGlass) وتوقعات السعر (CoinCodex)."
+   ],
+   "tip": {
+    "en": "A coin with no live price can get a <b>Manual Price</b>; the live price replaces it as soon as one exists.",
+    "ar": "العملة التي ليس لها سعر مباشر يمكن أن تأخذ <b>سعراً يدوياً</b>؛ ويحل السعر المباشر محله فور توفره."
+   }
+  },
+  {
+   "k": "signals",
+   "e": "🚦",
+   "g": "portfolio",
+   "t": {
+    "en": "Signals: Hold · Reinforce · Sell",
+    "ar": "الإشارات: احتفاظ · تعزيز · بيع"
+   },
+   "s": {
+    "en": "A simple reminder: today's price against what you paid.",
+    "ar": "تذكير بسيط: سعر اليوم مقارنة بما دفعته."
+   },
+   "en": [
+    "⚪ <b>Hold</b> — the price is above −5% of your average buy price.",
+    "🟢 <b>Reinforce</b> — between −5% and −20%: cheaper than you paid, a chance to add.",
+    "🔴 <b>Sell / Convert</b> — below −20%: consider moving it into BTC.",
+    "BTC is always Hold. Change the −5% / −20% thresholds from the Signal ⓘ."
+   ],
+   "ar": [
+    "⚪ <b>احتفاظ</b> — السعر أعلى من −5% من متوسط سعر شرائك.",
+    "🟢 <b>تعزيز</b> — بين −5% و−20%: أرخص مما دفعت، فرصة للزيادة.",
+    "🔴 <b>بيع / تحويل</b> — أقل من −20%: فكّر في تحويلها إلى البيتكوين.",
+    "البيتكوين دائماً احتفاظ. غيّر حدود −5% / −20% من ⓘ بجانب الإشارة."
+   ],
+   "tip": {
+    "en": "A signal is a reminder, not financial advice.",
+    "ar": "الإشارة تذكير وليست نصيحة مالية."
+   }
+  },
+  {
+   "k": "performance",
+   "e": "📈",
+   "g": "portfolio",
+   "t": {
+    "en": "Performance",
+    "ar": "الأداء"
+   },
+   "s": {
+    "en": "Is your portfolio beating Bitcoin?",
+    "ar": "هل تتفوق محفظتك على البيتكوين؟"
+   },
+   "en": [
+    "The chart: 🔵 <b>All Time Profit %</b> against 🟠 <b>BTC Trend</b> — the same money in Bitcoin. The gap between them is how much better or worse you did.",
+    "<b>All Time Profit Breakdown</b>: <b>Realized</b> (locked in by your sells) + <b>Unrealized</b> (moves with today's prices).",
+    "<b>Top Performers</b>: your best and worst coin in dollars, or <b>vs BTC</b>.",
+    "<b>Rewards &amp; Mining</b> lists the coins you got without buying, by coin and by month."
+   ],
+   "ar": [
+    "الرسم: 🔵 <b>إجمالي الربح %</b> مقابل 🟠 <b>اتجاه البيتكوين</b> — نفس المال لو كان في البيتكوين. الفرق بينهما يوضح كم كان أداؤك أفضل أو أسوأ.",
+    "<b>تفاصيل إجمالي الربح</b>: <b>المحقق</b> (ثابت بعمليات البيع) + <b>غير المحقق</b> (يتغير مع أسعار اليوم).",
+    "<b>الأفضل أداءً</b>: أفضل وأسوأ عملة لديك بالدولار، أو <b>مقابل البيتكوين</b>.",
+    "<b>المكافآت والتعدين</b> تعرض العملات التي حصلت عليها دون شراء، حسب العملة وحسب الشهر."
+   ],
+   "tip": {
+    "en": "<b>Wallets &amp; check</b> compares the app with your real wallets — you add the public address only, never a seed phrase or a private key.",
+    "ar": "<b>المحافظ والمطابقة</b> تقارن التطبيق بمحافظك الحقيقية — تضيف العنوان العام فقط، ولا تضع أبداً عبارة الاسترداد أو المفتاح الخاص."
+   }
+  },
+  {
+   "k": "allocation",
+   "e": "🥧",
+   "g": "portfolio",
+   "t": {
+    "en": "Allocation and targets",
+    "ar": "التوزيع والأهداف"
+   },
+   "s": {
+    "en": "How your money is spread — and how you want it spread.",
+    "ar": "كيف تتوزع أموالك — وكيف تريد أن تتوزع."
+   },
+   "en": [
+    "The chart shows each category's share of your portfolio.",
+    "<b>Target Allocation</b>: choose the share you want in each category (Bitcoin included) — together 100%.",
+    "Pick a band (± points). Inside it: ✓ on target. Outside it: the card says how much to buy or trim, and which of your coins fit."
+   ],
+   "ar": [
+    "يعرض الرسم نصيب كل تصنيف من محفظتك.",
+    "<b>التوزيع المستهدف</b>: اختر النسبة التي تريدها لكل تصنيف (بما فيها البيتكوين) — المجموع 100%.",
+    "حدد هامشاً (± نقاط). داخل الهامش: ✓ ضمن الهدف. وخارجه: توضح البطاقة كم تشتري أو تخفف، وأي عملاتك مناسبة."
+   ],
+   "tip": {
+    "en": "It is a guide only — nothing is bought or sold for you.",
+    "ar": "هذا للإرشاد فقط — لا يُشترى أو يُباع شيء نيابة عنك."
+   }
+  },
+  {
+   "k": "plan",
+   "e": "🎯",
+   "g": "plan",
+   "t": {
+    "en": "The accumulation plan",
+    "ar": "خطة التجميع"
+   },
+   "s": {
+    "en": "How many coins you want, and how far you are.",
+    "ar": "كم عملة تريد، وإلى أين وصلت."
+   },
+   "en": [
+    "Set a <b>Target Amount</b> for a coin — the total you want to hold, not how many more to buy.",
+    "The plan shows what is still pending, the <b>Cost to Target</b> at today's price, and your progress.",
+    "<b>Buy at %</b>: a buy price relative to today (for example −10%). When the price reaches it, the coin shows <b>BUY NOW</b>.",
+    "<b>Price Alert</b>: a price you want to hear about — your Telegram bot sends one message when it's hit."
+   ],
+   "ar": [
+    "حدد <b>الكمية المستهدفة</b> للعملة — الإجمالي الذي تريد امتلاكه، وليس الكمية الإضافية التي تشتريها.",
+    "تعرض الخطة المتبقي، و<b>تكلفة الوصول للهدف</b> بسعر اليوم، ونسبة تقدمك.",
+    "<b>سعر الدخول %</b>: سعر شراء نسبةً إلى سعر اليوم (مثلاً −10%). عندما يصل السعر إليه، تظهر العملة بعلامة <b>اشترِ الآن</b>.",
+    "<b>تنبيه سعري</b>: سعر تريد أن تُنبَّه عنده — يرسل لك بوت تليجرام رسالة واحدة عند الوصول إليه."
+   ],
+   "tip": {
+    "en": "<b>Overall Progress</b> is the average of every coin's progress; a coin above its target counts as 100%.",
+    "ar": "<b>التقدّم الإجمالي</b> هو متوسط تقدم كل العملات؛ والعملة التي تجاوزت هدفها تُحسب 100%."
+   }
+  },
+  {
+   "k": "dca",
+   "e": "🔁",
+   "g": "plan",
+   "t": {
+    "en": "Regular buys (DCA)",
+    "ar": "الشراء الدوري (DCA)"
+   },
+   "s": {
+    "en": "A fixed amount on a fixed day, whatever the price.",
+    "ar": "مبلغ ثابت في يوم ثابت، مهما كان السعر."
+   },
+   "en": [
+    "On the Plan page tap <b>➕ Regular buy</b>: pick the coin, the amount and every week, two weeks or month.",
+    "Each round shows <b>Today</b>, <b>Missed · N days</b>, <b>✓ Bought</b> or the next buy date.",
+    "<b>Kept x of y</b> counts your last rounds; <b>Target in N buys</b> says how many buys reach the coin's target."
+   ],
+   "ar": [
+    "في صفحة الخطة اضغط <b>➕ شراء دوري</b>: اختر العملة والمبلغ، وكل أسبوع أو أسبوعين أو شهر.",
+    "تظهر كل دورة بحالة <b>اليوم</b>، أو <b>فات موعده · N يوم</b>، أو <b>✓ تم الشراء</b>، أو تاريخ الشراء القادم.",
+    "<b>نُفّذ x من y</b> يعدّ آخر دوراتك؛ و<b>الهدف بعد N مرة شراء</b> يوضح كم مرة شراء تبقّت للوصول للهدف."
+   ],
+   "tip": {
+    "en": "The Telegram bot reminds you on the day.",
+    "ar": "يذكّرك بوت تليجرام في يوم الشراء."
+   }
+  },
+  {
+   "k": "exit",
+   "e": "🏁",
+   "g": "plan",
+   "t": {
+    "en": "Exit strategy",
+    "ar": "استراتيجية الخروج"
+   },
+   "s": {
+    "en": "Take profit in steps, and watch the signs of a market top.",
+    "ar": "اجنِ الأرباح على مراحل، وراقب علامات قمة السوق."
+   },
+   "en": [
+    "Each coin is sold in three steps as its price reaches a multiple of your average buy price: ×2 → 25% · ×3 → 50% · ×5 → 25%.",
+    "10% stays out of the plan as a <b>Moonbag</b>, to keep.",
+    "A step turns <b>✓ Done</b> by itself when the sells you record cover it.",
+    "<b>Macro Exit Indicators</b>: BTC dominance, USDT dominance and ETH/BTC against your own levels; <b>Cash-out Progress</b>: how much already sits in stablecoins."
+   ],
+   "ar": [
+    "تُباع كل عملة على ثلاث مراحل: عند ضعفي متوسط سعر شرائك تبيع 25%، وعند 3 أضعاف تبيع 50%، وعند 5 أضعاف تبيع 25%.",
+    "تبقى 10% خارج الخطة كـ <b>Moonbag</b> للاحتفاظ بها.",
+    "تتحول المرحلة إلى <b>✓ تم</b> تلقائياً عندما تغطيها عمليات البيع التي تسجلها.",
+    "<b>مؤشرات الخروج الكبرى</b>: هيمنة البيتكوين، وهيمنة USDT، وETH/BTC مقارنةً بمستوياتك؛ و<b>تقدّم جني الأرباح</b>: كم أصبح في العملات المستقرة."
+   ],
+   "tip": {
+    "en": "The sliders button changes the default multiples and shares; any coin can have its own prices.",
+    "ar": "زر المنزلقات يغيّر المضاعفات والنسب الافتراضية؛ ويمكن لأي عملة أن تأخذ أسعارها الخاصة."
+   }
+  },
+  {
+   "k": "market",
+   "e": "🌍",
+   "g": "market",
+   "t": {
+    "en": "Market Hub",
+    "ar": "مركز السوق"
+   },
+   "s": {
+    "en": "The whole crypto market on one page.",
+    "ar": "سوق الكريبتو كله في صفحة واحدة."
+   },
+   "en": [
+    "<b>Total Market Cap</b> and 24h volume, with BTC and ETH.",
+    "<b>Fear &amp; Greed</b> (0–100): low = fear, prices often cheap; high = greed, prices often stretched.",
+    "<b>Market Dominance</b>: BTC, ETH, USDT and the others' share — plus ETH/BTC.",
+    "<b>ETF Flows</b>: money into (+) or out of (−) the US spot Bitcoin and Ethereum ETFs."
+   ],
+   "ar": [
+    "<b>القيمة السوقية الإجمالية</b> وحجم التداول خلال 24 ساعة، مع البيتكوين والإيثيريوم.",
+    "<b>الخوف والطمع</b> (0–100): منخفض = خوف والأسعار غالباً رخيصة؛ مرتفع = طمع والأسعار غالباً مبالغ فيها.",
+    "<b>الهيمنة السوقية</b>: نصيب BTC وETH وUSDT وبقية العملات — إضافة إلى ETH/BTC.",
+    "<b>تدفقات صناديق ETF</b>: الأموال الداخلة (+) أو الخارجة (−) من صناديق البيتكوين والإيثيريوم الفورية في أمريكا."
+   ],
+   "tip": {
+    "en": "The Market Hub compares and explains — it doesn't predict the market.",
+    "ar": "مركز السوق يقارن ويشرح — ولا يتوقع اتجاه السوق."
+   }
+  },
+  {
+   "k": "altseason",
+   "e": "🌀",
+   "g": "market",
+   "t": {
+    "en": "Altcoin Season",
+    "ar": "موسم العملات البديلة"
+   },
+   "s": {
+    "en": "Are altcoins beating Bitcoin?",
+    "ar": "هل تتفوق العملات البديلة على البيتكوين؟"
+   },
+   "en": [
+    "The index counts how many of the top 100 coins did better than BTC over the last 90 days.",
+    "75 or more = Altcoin Season; a low number means Bitcoin is leading.",
+    "Tap the card for the full page: the coins that beat BTC, and how the index moved."
+   ],
+   "ar": [
+    "يعدّ المؤشر كم عملة من أكبر 100 عملة تفوقت على البيتكوين خلال آخر 90 يوماً.",
+    "75 أو أكثر = موسم العملات البديلة؛ والرقم المنخفض يعني أن البيتكوين في الصدارة.",
+    "اضغط على البطاقة لفتح الصفحة الكاملة: العملات التي تفوقت على البيتكوين، وحركة المؤشر."
+   ],
+   "tip": {
+    "en": "Stablecoins, wrapped and staked coins are left out of the count.",
+    "ar": "العملات المستقرة والمغلّفة وعملات الـ Staking لا تدخل في الحساب."
+   }
+  },
+  {
+   "k": "ai",
+   "e": "🤖",
+   "g": "more",
+   "t": {
+    "en": "AI Analysis",
+    "ar": "تحليل AI"
+   },
+   "s": {
+    "en": "A full report on your portfolio, in English or Arabic.",
+    "ar": "تقرير كامل عن محفظتك، بالعربية أو الإنجليزية."
+   },
+   "en": [
+    "Tap 🤖 to open <b>AI Analysis</b>.",
+    "<i>Free</i>: copy the prompt and paste it into your own Claude app.",
+    "Or get a quick report right here — for ⭐ premium members or with your own Claude key (Settings → <b>My Claude key</b>)."
+   ],
+   "ar": [
+    "اضغط 🤖 لفتح <b>تحليل AI</b>.",
+    "<i>مجاناً</i>: انسخ الطلب والصقه في تطبيق Claude الخاص بك.",
+    "أو احصل على تقرير سريع هنا — للأعضاء المميزين ⭐ أو بمفتاح Claude الخاص بك (الإعدادات ← <b>مفتاح Claude الخاص بي</b>)."
+   ],
+   "tip": {
+    "en": "The report starts in the app's language; the English / العربية button switches it.",
+    "ar": "يبدأ التقرير بلغة التطبيق؛ وزر English / العربية يغيّرها."
+   }
+  },
+  {
+   "k": "telegram",
+   "e": "✈️",
+   "g": "more",
+   "t": {
+    "en": "Telegram",
+    "ar": "تليجرام"
+   },
+   "s": {
+    "en": "The bot, the channel and the members' group.",
+    "ar": "البوت والقناة ومجموعة الأعضاء."
+   },
+   "en": [
+    "Settings → <b>Telegram</b> → <b>Link your portfolio</b> → <b>Open the bot</b> — one tap.",
+    "<b>Telegram alerts</b>: choose which messages the bot sends you (buy-price alerts, regular buys and more).",
+    "<b>Join Cute Portfolio Signals</b> (the channel) and <b>Join Cute Portfolio Community</b> (the group)."
+   ],
+   "ar": [
+    "الإعدادات ← <b>تليجرام</b> ← <b>ربط محفظتك ببوت تليجرام</b> ← <b>افتح البوت</b> — ضغطة واحدة.",
+    "<b>تنبيهات تليجرام</b>: اختر الرسائل التي يرسلها لك البوت (تنبيهات سعر الشراء، والشراء الدوري، وغيرها).",
+    "<b>انضم لقناة Cute Portfolio Signals</b> و<b>انضم لمجتمع Cute Portfolio</b>."
+   ],
+   "tip": {
+    "en": "Everything the bot can do is in the <b>🤖 The bot</b> tab of this guide.",
+    "ar": "كل ما يقدمه البوت تجده في تبويب <b>🤖 البوت</b> في هذا الدليل."
+   }
+  },
+  {
+   "k": "data",
+   "e": "🔐",
+   "g": "more",
+   "t": {
+    "en": "Your data, backup and recovery",
+    "ar": "بياناتك والنسخ الاحتياطي والاسترجاع"
+   },
+   "s": {
+    "en": "Your portfolio is private — and you can keep your own copy.",
+    "ar": "محفظتك خاصة — ويمكنك الاحتفاظ بنسختك الخاصة."
+   },
+   "en": [
+    "Your portfolio is saved in the cloud under your account; nobody else can read it.",
+    "<b>Backup</b> → <b>Back up now</b> downloads it as a file locked with a password you choose (AES-256).",
+    "<b>Recover Data</b> compares an older copy (a backup file or the old app's data) with the cloud and lists what's missing — you choose what to add; nothing is replaced."
+   ],
+   "ar": [
+    "تُحفظ محفظتك على السحابة في حسابك؛ ولا يستطيع أحد غيرك قراءتها.",
+    "<b>النسخ الاحتياطي</b> ← <b>انسخ الآن</b> ينزّلها كملف مقفل بكلمة مرور تختارها (AES-256).",
+    "<b>استرجاع البيانات</b> يقارن نسخة أقدم (ملف نسخ احتياطي أو بيانات التطبيق القديم) بالسحابة ويعرض الناقص — وأنت تختار ما تضيفه؛ ولا يُستبدل شيء."
+   ],
+   "tip": {
+    "en": "Keep the backup password safe: it can't be recovered.",
+    "ar": "احفظ كلمة مرور النسخة الاحتياطية جيداً: لا يمكن استرجاعها."
+   }
+  },
+  {
+   "k": "display",
+   "e": "🎨",
+   "g": "more",
+   "t": {
+    "en": "Display, language and install",
+    "ar": "العرض واللغة والتثبيت"
+   },
+   "s": {
+    "en": "Make the app yours.",
+    "ar": "اجعل التطبيق على ذوقك."
+   },
+   "en": [
+    "Settings → <b>Display</b>: <b>Language</b> (English / العربية, kept per device) and <b>Theme</b> (light / dark).",
+    "<b>Charts open on</b>: the period charts start with (24h … All).",
+    "<b>Lists shown as</b>: cards or a table — your phone keeps its own choice.",
+    "Settings → <b>Install the app</b> puts Cute Portfolio on your phone's home screen."
+   ],
+   "ar": [
+    "الإعدادات ← <b>العرض</b>: <b>اللغة</b> (English / العربية، لكل جهاز) و<b>المظهر</b> (فاتح / داكن).",
+    "<b>الرسوم تفتح على</b>: الفترة التي تبدأ بها الرسوم البيانية (24h … All).",
+    "<b>عرض القوائم كـ</b>: كروت أو جدول — ويحتفظ جوالك باختياره الخاص.",
+    "الإعدادات ← <b>تثبيت التطبيق</b> يضع Cute Portfolio على الشاشة الرئيسية لجوالك."
+   ],
+   "tip": {
+    "en": "Numbers and tickers stay in Latin digits in Arabic, so prices read the same everywhere.",
+    "ar": "تبقى الأرقام ورموز العملات بالأحرف اللاتينية في العربية، لتُقرأ الأسعار بنفس الشكل في كل مكان."
+   }
+  }
+ ]
+}
