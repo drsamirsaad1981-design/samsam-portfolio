@@ -79,7 +79,7 @@
     return false;
   }
   // the name "Cute Portfolio" (big header, the small one when scrolled, page headers) is never translated
-  var KEEP = ['brand-name', 'cp-brand-n', 'mini-name'];
+  var KEEP = ['brand-name', 'cp-brand-n', 'mini-name', 'nm'];   // (+ coin names in Market Hub / Altcoin Season lists: Bitcoin stays Bitcoin)
   function keepCls(e) { for (var i = 0; i < KEEP.length; i++) if (e.classList.contains(KEEP[i])) return true; return false; }
   var ATTRS = ['placeholder', 'title', 'aria-label', 'data-tip', 'alt'];
   function doText(n) { if (n.parentNode && !skipEl(n.parentNode)) { var v = tr(n.nodeValue); if (v != null && v !== n.nodeValue) n.nodeValue = v; } }

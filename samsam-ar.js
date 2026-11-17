@@ -19,16 +19,16 @@
   };
   CPLang.date2 = date;
   // Arabic counting: 1 يوم · 2 يومين · 3–10 أيام · 11+ يوم
-  var pl = function (k, one, two, few, many) { k = +k; return k === 1 ? one : k === 2 ? two : (k % 100 >= 3 && k % 100 <= 10) ? k + ' ' + few : k + ' ' + many; };
+  var pl = function (k, one, two, few, many) { k = +k; return k === 1 ? one : k === 2 ? two : (k % 100 >= 3 && k % 100 <= 10) ? k + ' ' + few : k + ' ' + (many === 'يوم' && k % 100 >= 11 ? 'يوماً' : many); };
 
   // ── times and dates ──
   R(/^(\d{1,2}:\d\d)\s?(AM|PM)$/, function (_, t, p) { return t + ' ' + ampm(p); });
   R(new RegExp('^' + MRX + ' \\d{1,2}(?:, \\d{4})?(?:, \\d{1,2}:\\d\\d\\s?[AP]M)?$'), function (s) { return date(s); });
   R(new RegExp('^\\d{1,2} ' + MRX + '(?: \\d{4})?$'), function (s) { return date(s); });
   R(/^Live · Updated (.+)$/, function (_, t) { return 'مباشر · آخر تحديث ' + time(t); });
-  R(/^Updated (.+)$/, function (_, t) { return 'آخر تحديث ' + (date(t) || time(t)); });
+  R(/^Updated (.+)$/, function (_, t) { return 'آخر تحديث ' + (date(t) || (/ago$|^just now$/.test(t) ? CPLang.t(t) : time(t))); });
   R(/^Synced (.+)$/, function (_, t) { return 'تمت المزامنة ' + (date(t) || time(t)); });
-  R(/^Last backup: (.+)$/, function (_, t) { return 'آخر نسخة احتياطية: ' + (t === 'Never' ? 'لا توجد' : (date(t) || n(t))); });
+  R(/^Last backup: (.+)$/, function (_, t) { return 'آخر نسخة احتياطية: ' + (t === 'Never' ? 'لا توجد' : (date(t) || (/ago$|^just now$/.test(t) ? CPLang.t(t) : n(t)))); });
   R(/^Use the original baseline \((.+)\)$/, function (_, t) { return 'الرجوع لتاريخ الأساس الأصلي (' + (date(t) || t) + ')'; });
   R(/^(\d+) \/ (\d+) targets met$/, function (_, a, b) { return 'تحقق ' + a + ' من ' + b + ' أهداف'; });
   R(/^— \/ — targets met$/, 'الأهداف المحققة: — / —');
@@ -518,7 +518,7 @@
   R(/^(\d+) of (\d+) questions$/, '$1 من $2 سؤال'); R(/^(\d+) of (\d+) quick reports$/, '$1 من $2 تقرير سريع');
   R(/^Today: (.+)$/, function (_, x) { return 'اليوم: ' + x.split(' · ').map(function (p) { return CPLang.t(p); }).join(' · '); });
   R(/^a month ago → (.+)$/, 'قبل شهر ← $1'); R(/^today$/, 'اليوم');
-  R(/^Last backup: (.+)$/, function (_, t) { return 'آخر نسخة احتياطية: ' + (t === 'Never' ? 'لا توجد' : (date(t) || n(t))); });
+  R(/^Last backup: (.+)$/, function (_, t) { return 'آخر نسخة احتياطية: ' + (t === 'Never' ? 'لا توجد' : (date(t) || (/ago$|^just now$/.test(t) ? CPLang.t(t) : n(t)))); });
 
   A({
     // ── Market Hub ──
@@ -654,5 +654,49 @@
     'Another device is importing right now — wait a minute and reload.': 'جهاز آخر يستورد الآن — انتظر دقيقة ثم أعد التحميل.', 'Permission denied — this account is not allowed by the database rules.': 'تم رفض الإذن — هذا الحساب غير مسموح به في قواعد قاعدة البيانات.',
     'Cloud not configured': 'السحابة غير مُعدّة', 'Offline · saved on device': 'غير متصل · محفوظ على الجهاز',
     'A copy of this device\'s data is saved first, encrypted. Choose a password (8+ characters) — you need it only to open that file.': 'تُحفظ أولاً نسخة مشفّرة من بيانات هذا الجهاز. اختر كلمة مرور (8 أحرف أو أكثر) — تحتاجها فقط لفتح ذلك الملف.',
+  });
+  // ════════ Fixes from the real portfolio (17 Nov, afternoon) ════════
+  R(new RegExp('^' + MRX + ' (\\d{4})$'), function (_, m, y) { return MON[m] + ' ' + y; });
+  R(/^(\d+) days ago$/, function (_, d) { return 'منذ ' + pl(d, 'يوم', 'يومين', 'أيام', 'يوم'); });
+  R(/^Stablecoins hidden \((.+)\)$/, function (_, l) { return 'العملات المستقرة مخفية (' + n(l) + ')'; });
+  R(/^of (\d+)$/, 'من $1');
+  R(/^of (\d+) beat BTC$/, 'من $1 تفوقت على BTC');
+  R(/^of (\d+) ahead of BTC \((\d+) days\)$/, 'من $1 متقدمة على BTC ($2 يوماً)');
+  R(/^\((\d+) days\)$/, '($1 يوماً)');
+  R(/^coin (.+)$/, function (_, v) { return /[a-z]{3}/.test(v) ? null : 'العملة ' + n(v); });
+  R(/^Beat BTC \((\d+) days\)$/, 'تفوقت على BTC ($1 يوماً)');
+  R(/^Your coins \((\d+) days\)$/, 'عملاتك ($1 يوماً)');
+  R(/^Your coins did (.+) better than the same money in BTC over the last (\d+) days\.$/, function (_, v, d) { return 'حققت عملاتك أداءً أفضل بـ ' + n(v) + ' من المبلغ نفسه في BTC خلال آخر ' + d + ' يوماً.'; });
+  R(/^The same money in BTC would have done (.+) better over the last (\d+) days\.$/, function (_, v, d) { return 'كان المبلغ نفسه في BTC سيحقق أداءً أفضل بـ ' + n(v) + ' خلال آخر ' + d + ' يوماً.'; });
+  R(/^(.+) you got without buying$/, '$1 حصلت عليها دون شراء');
+  R(/^(?:coins you got without buying|(.+) you got without buying) · (\d+) times? · at today’s prices$/, function (_, c, k) { return (c ? c + ' حصلت عليها' : 'عملات حصلت عليها') + ' دون شراء · ' + pl(k, 'مرة واحدة', 'مرتين', 'مرات', 'مرة') + ' · بأسعار اليوم'; });
+  R(/^(.+)% of your (\S+) came free$/, function (_, p, c) { return n(p + '%') + ' من ' + c + ' لديك جاءت مجاناً'; });
+  R(/^last (.+)$/, function (_, d) { var v = date(d); return v ? 'آخر مرة ' + v : null; });
+  R(/^(.+) · rewards (.+)$/, function (_, a, b) { return n(a) + ' · مكافآت ' + n(b); });
+  R(/^Today's number is CoinMarketCap's official Altcoin Season Index[\s\S]*$/, function (s) {
+    return s.replace(/^Today's number is CoinMarketCap's official Altcoin Season Index \((\d+)\); the coin lists below are worked out from (?:CoinMarketCap's|the) top 100 with CoinGecko's prices(?: \((\d+) by that count\))?\. ?/, function (_, a, b) { return 'رقم اليوم هو مؤشر موسم العملات البديلة الرسمي من CoinMarketCap (' + a + ')؛ وقوائم العملات أدناه محسوبة من أكبر 100 عملة بأسعار CoinGecko' + (b ? ' (' + b + ' بهذا الحساب)' : '') + '. '; })
+      .replace("Past days are worked out with today's top 100 coins (CoinMarketCap uses each day's own list), so older days can differ a little. From now on every day is saved with that day's list.", 'تُحسب الأيام السابقة بقائمة أكبر 100 عملة اليوم (بينما تستخدم CoinMarketCap قائمة كل يوم)، لذا قد تختلف الأيام القديمة قليلاً. ومن الآن يُحفظ كل يوم بقائمته الخاصة.')
+      .replace(/ ?BTC and USDT Dominance before (.+?) are estimated from prices and USDT's market cap \(the real figures are saved every day since\)\./, function (_, d) { return ' هيمنة BTC و USDT قبل ' + (date(d) || d) + ' مقدّرة من الأسعار والقيمة السوقية لـ USDT (والأرقام الفعلية تُحفظ يومياً منذ ذلك الحين).'; });
+  });
+  // tooltips on Market Hub
+  R(/^Add (.+) to Watchlist$/, 'إضافة $1 إلى قائمة المتابعة'); R(/^Remove (.+) from Watchlist$/, 'إزالة $1 من قائمة المتابعة');
+  R(/^Add (.+) to your portfolio or plan$/, 'إضافة $1 إلى محفظتك أو خطتك');
+  R(/^(.+) — show Liq\.Map, Prediction and CoinMarketCap$/, '$1 — عرض خريطة التصفيات والتوقعات و CoinMarketCap');
+  R(/^(.+) links: Liquidation Map, Prediction, CoinMarketCap$/, 'روابط $1: خريطة التصفيات، التوقعات، CoinMarketCap');
+  R(/^Fear and Greed (\d+) of 100: (.+)$/, function (_, v, l) { return 'الخوف والطمع ' + v + ' من 100: ' + CPLang.t(l); });
+  R(/^Altcoin [Ss]eason (\d+) of 100: (.+)$/, function (_, v, l) { return 'موسم العملات البديلة ' + v + ' من 100: ' + CPLang.t(l); });
+  R(/^(\d+) of (\d+) beat BTC over (\d+) days$/, '$1 من $2 تفوقت على BTC خلال $3 يوماً');
+
+  A({
+    'Share of the top 100 coins that beat BTC over the last 90 days. Altcoin Season starts at': 'نسبة العملات من أكبر 100 عملة التي تفوقت على BTC خلال آخر 90 يوماً. يبدأ موسم العملات البديلة عند',
+    'In portfolio': 'في المحفظة', 'In your portfolio': 'في محفظتك', 'In your Accumulation Plan': 'في خطة التجميع', 'Filter': 'تصفية',
+    'Year high': 'أعلى قراءة خلال السنة', 'Year low': 'أدنى قراءة خلال السنة', 'a month ago →': 'قبل شهر ←', 'You': 'أنت', 'the best ·': 'الأفضل ·', 'the yardstick': 'المرجع',
+    'of 100, over 7 · 30 · 90 days': 'من 100، خلال 7 · 30 · 90 يوماً', 'of your altcoins': 'من عملاتك البديلة',
+    'Over the last 7 days': 'خلال آخر 7 أيام تفوقت', 'Over the last 7 days only': 'خلال آخر 7 أيام تفوقت فقط', 'of the coins beat BTC, against': 'من العملات على BTC، مقابل',
+    'over 90 days — altcoins are gaining on BTC lately.': 'خلال 90 يوماً — العملات البديلة تقترب من BTC مؤخراً.', 'over 90 days — BTC has been pulling ahead lately.': 'خلال 90 يوماً — BTC يبتعد بالصدارة مؤخراً.',
+    'The last 7 days (': 'آخر 7 أيام (', 'beat BTC) look like the last 90 days (': 'تفوقت على BTC) تشبه آخر 90 يوماً (', ') — no change of direction yet.': ') — لا تغيّر في الاتجاه بعد.',
+    'Airdrops': 'Airdrops', 'you hold none now': 'لا تملك منها حالياً',
+    'Values use today’s price. Rewards come in at $0 cost, so they lower your average buy price — they’re already part of your All Time Profit.': 'القيم بسعر اليوم. تدخل المكافآت بتكلفة صفر، فتخفض متوسط سعر الشراء — وهي محتسبة بالفعل في إجمالي الربح.',
+    'iShares Bitcoin Trust': 'iShares Bitcoin Trust',
   });
 })();
