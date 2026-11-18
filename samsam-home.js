@@ -1306,16 +1306,15 @@ function drawPerfChart(pc) {   // pc: { canvas, height } — the PDF's copy (lig
 
   // Performance (cumulative): All Time Profit % at every point vs BTC Trend since the baseline (samsam-core.js → perfChartSeries).
   // The line ends on "now" so it finishes exactly on the numbers of the All Time Profit card.
-  const st = Samsam.getState(), ap = allTimeProfitData();
+  const st = Samsam.getState(); let ap = allTimeProfitData();
   const live = { t: Date.now(), v: calcStats().total, b: btcPrice };
   // computed over the whole history (the BTC benchmark needs every buy/sell), then cut to the range shown
   const hist = allPerf.length ? allPerf : snaps;
   const pts = live.v > 0 && live.b > 0 && live.t > hist[hist.length - 1].t ? hist.concat([live]) : hist;
   // ✨ Gold Trend: the same money in gold (its price history arrives once, kept 1 hour; then the chart draws again)
   // (and 🥈 Silver Trend) — each comparison line on / off from its legend row (the PDF copy follows the same choice)
-  const TL = SamsamCoins.trendLines();
-  const goldAt = TL.gold ? SamsamCoins.metalFor('XAU', pts[0].t, () => drawPerfChart()) : null, silverAt = TL.silver ? SamsamCoins.metalFor('XAG', pts[0].t, () => drawPerfChart()) : null;
-  const full = Samsam.core.perfChartSeries(pts, st.coins, st.transactions, { baselineBtc: baselineState.btcPrice, goldAt, silverAt });
+  // Whole portfolio | Altcoins only (no BTC, gold or silver: the blue line is the altcoins' own profit)
+  const { full, TL, scope } = SamsamCoins.trendSeries(pts, st, { baselineBtc: baselineState.btcPrice, redraw: () => drawPerfChart() });
   const t0 = snaps[0].t, inR = p => p.t >= t0, cut = a => { const x = (a || []).filter(inR); return x.length >= 2 ? x : (a || []).slice(-2); };
   const ser = { port: full.port.filter(inR), btc: full.btc.filter(inR), gold: cut(full.gold), silver: cut(full.silver) };
   if (ser.port.length < 2) { ser.port = full.port.slice(-2); ser.btc = full.btc.slice(-2); }
@@ -1328,6 +1327,9 @@ function drawPerfChart(pc) {   // pc: { canvas, height } — the PDF's copy (lig
   const tri = n => (n >= 0 ? '▲ ' : '▼ ') + Math.abs(n).toFixed(2) + '%';
   const btcTrend = ser.btc.length ? ser.btc[ser.btc.length - 1].v : 0;   // BTC benchmark now (same money, in BTC)
   if (pc) return { btcTrend, ap };
+  document.querySelectorAll('.perf-scope [data-sc]').forEach(b => b.classList.toggle('active', b.dataset.sc === scope));
+  const pn = document.getElementById('perfPortName'); if (pn) pn.textContent = scope === 'alt' ? (window.CPLang && CPLang.ar ? 'ربح العملات البديلة: ' : 'Altcoins profit: ') : (window.CPLang && CPLang.ar ? 'إجمالي الربح: ' : 'All Time Profit: ');
+  if (scope === 'alt' && full.profit.length) ap = { total: full.profit[full.profit.length - 1], pct: full.port.length ? full.port[full.port.length - 1].v : 0 };
   const setV = (id, text, n) => { const e = document.getElementById(id); if (e) { e.textContent = text; e.className = 'perf-legend-val ' + (n >= 0 ? 'up' : 'down'); } };
   setV('perfPortfolioLabel', (ap.total >= 0 ? '+' : '−') + SamsamFmt.usd(Math.abs(ap.total)), ap.total);
   setV('perfPortfolioPct', tri(ap.pct), ap.total);
@@ -1344,6 +1346,7 @@ function drawPerfChart(pc) {   // pc: { canvas, height } — the PDF's copy (lig
   if (ev === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
   e.preventDefault(); e.stopPropagation(); SamsamCoins.toggleTrend(row.dataset.tl); drawPerfChart();
 }, true));
+function setPerfScope(v) { SamsamCoins.setPerfScope(v); drawPerfChart(); }
 function updatePerfChart() {
   // Called after live prices load — save snapshot then redraw
   const { total } = calcStats();

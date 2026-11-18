@@ -434,6 +434,23 @@
   var TL_KEY = 'samsam_trend_lines', TL_DEF = { btc: true, gold: true, silver: false };
   function trendLines() { var o = {}; try { o = JSON.parse(localStorage.getItem(TL_KEY) || '{}') || {}; } catch (_) {} return { btc: o.btc !== undefined ? !!o.btc : TL_DEF.btc, gold: o.gold !== undefined ? !!o.gold : TL_DEF.gold, silver: o.silver !== undefined ? !!o.silver : TL_DEF.silver }; }
   function toggleTrend(k) { var o = trendLines(); o[k] = !o[k]; try { localStorage.setItem(TL_KEY, JSON.stringify(o)); } catch (_) {} return o; }
+  // Portfolio vs BTC: the whole portfolio, or the altcoins only (no BTC, gold or silver) — remembered on this device
+  var SC_KEY = 'samsam_perf_scope';
+  function perfScope() { try { return localStorage.getItem(SC_KEY) === 'alt' ? 'alt' : 'all'; } catch (_) { return 'all'; } }
+  function setPerfScope(v) { try { localStorage.setItem(SC_KEY, v === 'alt' ? 'alt' : 'all'); } catch (_) {} }
+  // the chart's lines for both pages: pts = saved points ending on "now", st = Samsam.getState()
+  function trendSeries(pts, st, o) {
+    var C = window.Samsam && Samsam.core, TL = trendLines(), sc = perfScope(), redraw = o.redraw, P = pts, coins = st.coins, txs = st.transactions;
+    if (sc === 'alt') {
+      var mp = {}, now = { BTC: st.btcPrice };
+      (st.portfolio || []).forEach(function (c) { now[c.sym] = c.currentPrice; });
+      ['XAU', 'XAG'].forEach(function (m) { if ((st.transactions || []).some(function (t) { return t.sym === m; })) { var f = metalFor(m, pts[0].t, redraw); if (f) mp[m] = f; } });
+      var a = C.altOnly(pts, coins, txs, { prices: mp, now: now }); P = a.snaps; coins = a.coins; txs = a.txs;
+    }
+    var goldAt = TL.gold ? metalFor('XAU', pts[0].t, redraw) : null, silverAt = TL.silver ? metalFor('XAG', pts[0].t, redraw) : null;
+    var full = C.perfChartSeries(P, coins, txs, { baselineBtc: o.baselineBtc, goldAt: goldAt, silverAt: silverAt });
+    return { full: full, TL: TL, scope: sc };
+  }
   function holdCell(sym, value, qty, o) {
     o = o || {}; assetCss();
     if (isMetal(sym)) { var vm = window.SamsamFmt ? SamsamFmt.usd(value) : '$' + (+value || 0).toFixed(2); return '<div class="hold' + (o.align ? ' hold-' + o.align : '') + '"><div class="hold-val">' + (o.noValue ? '—' : vm) + '</div><div class="hold-qty" title="' + esc(grams(qty) + ' · ' + fmtAmount(qty) + ' oz') + '">' + grams(qty) + '</div></div>'; }
@@ -590,5 +607,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { perfScope: perfScope, setPerfScope: setPerfScope, trendSeries: trendSeries, metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

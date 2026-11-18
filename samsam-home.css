@@ -1319,3 +1319,7 @@
   .perf-legend [data-tl] { cursor: pointer; }
   .perf-legend .tl-off { opacity: .45; }
   .perf-legend .tl-off .perf-legend-dot { background: transparent !important; box-shadow: inset 0 0 0 1.5px currentColor; }
+
+  /* Portfolio vs BTC: Whole portfolio | Altcoins only */
+  .perf-scope { margin-top: 0; }
+  .perf-scope .holdings-tab { flex: 1; }

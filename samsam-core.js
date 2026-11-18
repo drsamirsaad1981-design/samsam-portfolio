@@ -258,6 +258,33 @@ export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0, goldAt = n
   return { port: f(port), btc: f(btc), gold: gold.length ? f(gold) : [], silver: silver.length ? f(silver) : [], profit: f(profit), btcProfit: f(btcProfit), cost: f(cost), dropped: keep.filter(k => !k).length, first: pts[0], last: pts[pts.length - 1] };
 }
 
+// "Altcoins only" view of the same chart: the saved points with BTC, gold and silver taken out of the value
+// (their amount at that moment × their price then), and the coins / transactions without them — so the blue line is
+// the altcoins' own profit and the Trend lines are the same altcoin money in BTC / gold / silver.
+//   prices: { BTC: t → $ (default: the point's own b), XAU: t → $/oz, XAG: t → $/oz }, now: { sym: $ } as a fallback
+export const ALT_EXCLUDE = ['BTC', 'XAU', 'XAG'];
+export function altOnly(snaps, coins, txs, { prices = {}, now = {} } = {}) {
+  const ex = new Set(ALT_EXCLUDE), sorted = [...(txs || [])].sort(compareTx);
+  const track = (coins || []).filter(c => ex.has(c.sym)).map(c => {
+    const steps = [], pos0 = { qty: Math.max(0, num(c.opening && c.opening.qty)), avg: Math.max(0, num(c.opening && c.opening.avg)) };
+    let pos = pos0;
+    for (const x of sorted) if (x.sym === c.sym) { const r = applyTx(pos, x); pos = { qty: r.qty, avg: r.avg }; steps.push([Date.parse(x.date) || 0, pos.qty]); }
+    const gone = c.removed && c.removedAt ? Date.parse(c.removedAt) || 0 : 0;
+    return { sym: c.sym, q0: pos0.qty, steps, gone };
+  });
+  const qtyAt = (tr, t) => { if (tr.gone && t >= tr.gone) return 0; let q = tr.q0; for (const [st, qq] of tr.steps) { if (st > t) break; q = qq; } return q; };
+  const out = (snaps || []).map(s => {
+    let v = s.v;
+    for (const tr of track) {
+      const q = qtyAt(tr, s.t); if (!(q > 0)) continue;
+      const p = tr.sym === 'BTC' ? (prices.BTC ? prices.BTC(s.t) : s.b) || now.BTC || 0 : (prices[tr.sym] ? prices[tr.sym](s.t) : 0) || now[tr.sym] || 0;
+      v -= q * p;
+    }
+    return { ...s, v: Math.max(0, v) };
+  });
+  return { snaps: out, coins: (coins || []).filter(c => !ex.has(c.sym)), txs: (txs || []).filter(x => !ex.has(x.sym)) };
+}
+
 // ── Portfolio vs BTC, per coin ────────────────────────────────────────────────
 // "Did this coin do better than the same money in Bitcoin?"
 //   Every buy of the coin is replayed as buying BTC for the same dollars at that moment; every sell as selling BTC
