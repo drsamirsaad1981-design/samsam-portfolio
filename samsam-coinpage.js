@@ -282,8 +282,10 @@ function renderCoinTx() {
   const coin = portfolio.find(c => c.sym === sym);
   const doc = st.coins.find(c => c.sym === sym);
   const usd = (n, d = 2) => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
-  const priceFmt = n => SamsamFmt.price(n);
-  const qtyFmt = n => parseFloat(Number(n).toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
+  // 🥇 gold / 🥈 silver are kept in troy ounces: everything here in grams and $ per gram
+  const MT = SamsamCoins.isMetal(sym), GPO = SamsamCoins.GPO, unit = MT ? 'g' : sym;
+  const priceFmt = n => MT ? SamsamFmt.price(n / GPO) + '/g' : SamsamFmt.price(n);
+  const qtyFmt = n => MT ? parseFloat((Number(n) * GPO).toFixed(3)).toLocaleString('en-US', { maximumFractionDigits: 3 }) : parseFloat(Number(n).toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
 
   // ── Summary cards ──
   const qty = coin ? coin.qty : 0, avg = coin ? coin.basePrice : 0, price = coin ? coin.currentPrice : 0;
@@ -304,11 +306,16 @@ function renderCoinTx() {
   document.getElementById('htxHoldings').innerHTML = SamsamCoins.esc(usd(value)) + (ch == null ? '' : ` <span class="htx-h24 ${ch >= 0 ? 'htx-pos' : 'htx-neg'}" title="24h change">• ${ch >= 0 ? '+' : '−'}${Math.abs(ch).toFixed(2)}%</span>`);
   const h24 = document.getElementById('htxHoldings24');
   const rewQty = coinTxs.filter(t => t.type === 'transfer_in' && t.kind === 'reward').reduce((s, t) => s + (+t.qty || 0) - (+t.fee || 0), 0);
-  h24.textContent = qtyFmt(qty) + ' ' + sym + (rewQty > 0 ? ` · rewards +${qtyFmt(rewQty)}` : ''); h24.className = 'htx-sub htx-muted';
+  h24.textContent = qtyFmt(qty) + ' ' + unit + (rewQty > 0 ? ` · rewards +${qtyFmt(rewQty)}` : ''); h24.className = 'htx-sub htx-muted';
   // Network & where held (the wallet check reads the coin there) — tap to change
   let netEl = document.getElementById('htxNet');
   if (!netEl && window.SamsamWallets) { netEl = document.createElement('button'); netEl.type = 'button'; netEl.id = 'htxNet'; netEl.className = 'htx-net'; h24.insertAdjacentElement('afterend', netEl); }
-  if (netEl) {
+  if (netEl && MT) {   // 🥇 gold / silver: where it is kept (no network) and its zakat
+    const v = SamsamCoins.vaultOf(doc), z = SamsamCoins.zakat(sym, st);
+    netEl.innerHTML = '<span>' + (v ? v.e + ' ' + SamsamCoins.esc(v.label) : '🏦 Set where it is kept') + '</span>' +
+      (z ? '<span class="htx-zk"> · 🕌 ' + (z.due ? 'Zakat due: ' + qtyFmt(z.zakatOz) + ' g ≈ ' + usd(z.zakatOz * price) : z.meets ? 'Zakat: hawl in ' + z.daysLeft + ' days' : 'Below nisab (' + z.nisab + ' g)') + '</span>' : '');
+    netEl.classList.toggle('htx-net-empty', !v); netEl.title = 'Where it is kept — tap to change'; netEl.onclick = () => CPAdd.openVault(sym);
+  } else if (netEl) {
     const nt = SamsamWallets.placeText(sym);
     netEl.innerHTML = SamsamUI.ic('link') + '<span>' + SamsamCoins.esc(nt || 'Set network & where held') + '</span>';
     netEl.classList.toggle('htx-net-empty', !nt); netEl.title = 'Network & where held — used by the wallet check'; netEl.onclick = () => SamsamWallets.editCoin(sym);
@@ -329,7 +336,7 @@ function renderCoinTx() {
     }
   }
   h24.onclick = rewQty > 0 && window.SamsamRewards ? () => SamsamRewards.open({ sym }) : null; h24.style.cursor = h24.onclick ? 'pointer' : '';
-  h24.title = rewQty > 0 ? `${qtyFmt(rewQty)} ${sym} came from staking / mining rewards (≈ ${usd(rewQty * price)} now, $0 cost)` : '';
+  h24.title = rewQty > 0 ? `${qtyFmt(rewQty)} ${unit} came from staking / mining rewards (≈ ${usd(rewQty * price)} now, $0 cost)` : '';
   // Signal (your thresholds) + why
   const sigEl = document.getElementById('htxSignal');
   if (coin) {
@@ -373,7 +380,7 @@ function renderCoinTx() {
       const feeU = +t.feeUsd || 0;   // buy: added to the cost · sell: taken off the proceeds
       const feeQ = t.type === 'buy' ? (+t.fee || 0) : 0;   // buy: coins taken as a fee / network fee to your wallet
       entries.push({ id: t.id, kind: t.type, label: t.type === 'buy' ? 'Buy' : t.kind === 'pay' ? 'Paid' : 'Sell', qty: t.qty - feeQ, usd: (t.total ?? t.qty * t.price) + (t.type === 'buy' ? feeU : -feeU),
-        note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (feeQ ? ' · fee ' + qtyFmt(feeQ) + ' ' + sym : '') + (t.type === 'sell' && t.kind !== 'pay' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
+        note: (t.note ? t.note + ' · ' : '') + '@ ' + priceFmt(t.price) + (feeU ? ' · fee ' + usd(feeU) : '') + (feeQ ? ' · fee ' + qtyFmt(feeQ) + ' ' + unit : '') + (t.type === 'sell' && t.kind !== 'pay' && r && r.realized != null ? ` · ${r.realized >= 0 ? 'profit' : 'loss'} ${usd(Math.abs(r.realized))}` : ''),
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'transfer_in' && t.kind === 'reward') {
       // the label already says Mining / Staking / Airdrop, so the app's own note ("Mining reward · wallet check") is shortened
@@ -386,11 +393,11 @@ function renderCoinTx() {
       const isIn = t.type === 'transfer_in', fee = +t.fee || 0;
       entries.push({ id: t.id, kind: t.type, tag: isIn && !(+t.price > 0), label: isIn ? SAMSAM_LABELS.TRANSFER_IN : SAMSAM_LABELS.TRANSFER_OUT,
         qty: isIn ? t.qty - fee : t.qty + fee, usd: isIn ? t.qty * t.price : (t.qty + fee) * (price || 0),
-        note: [t.note, isIn && t.price ? '@ ' + priceFmt(t.price) : '', fee ? 'fee ' + qtyFmt(fee) + ' ' + sym : ''].filter(Boolean).join(' · '),
+        note: [t.note, isIn && t.price ? '@ ' + priceFmt(t.price) : '', fee ? 'fee ' + qtyFmt(fee) + ' ' + unit : ''].filter(Boolean).join(' · '),
         date: t.date, order: t.createdAt || '' });
     } else if (t.type === 'adjust') {
       const parts = [];
-      if (t.setQty != null) parts.push(SAMSAM_LABELS.AMOUNT + ' → ' + qtyFmt(t.setQty) + ' ' + sym);
+      if (t.setQty != null) parts.push(SAMSAM_LABELS.AMOUNT + ' → ' + qtyFmt(t.setQty) + ' ' + unit);
       if (t.setAvg != null) parts.push(SAMSAM_LABELS.AVG_BUY_PRICE + ' → ' + priceFmt(+t.setAvg));
       entries.push({ id: t.id, kind: 'adjust', label: 'Edit', note: (t.note || 'Manual edit') + (parts.length ? ' · ' + parts.join(', ') : ''), date: t.date, order: t.createdAt || '' });
     }
@@ -411,7 +418,7 @@ function renderCoinTx() {
     const plus = e.kind === 'buy' || e.kind === 'transfer_in' || e.kind === 'reward';
     const qCls = { buy: 'htx-pos', sell: 'htx-neg', transfer_in: 'htx-in', transfer_out: 'htx-out', reward: 'htx-rew' }[e.kind];
     const amt = e.kind === 'adjust' ? '' :
-      `<div class="htx-row-qty ${qCls}">${plus ? '+' : '-'}${qtyFmt(e.qty)} ${sym}</div><div class="htx-row-usd">${usd(e.usd)}</div>`;
+      `<div class="htx-row-qty ${qCls}">${plus ? '+' : '-'}${qtyFmt(e.qty)} ${unit}</div><div class="htx-row-usd">${usd(e.usd)}</div>`;
     html += `<div class="htx-row${e.id && e.kind !== 'adjust' ? ' htx-editable' : ''}"${e.id && e.kind !== 'adjust' ? ` data-edit="${e.id}" role="button" tabindex="0" aria-label="Change this ${e.label}"` : ''}>
       <span class="htx-row-icon">${icon}</span>
       <div class="htx-row-main"><div class="htx-row-type"><span class="htx-dot htx-dot-${e.kind}"></span>${e.label}</div><div class="htx-row-note">${String(e.note).replace(/</g, '&lt;')}</div></div>

@@ -347,6 +347,35 @@
   var GPO = 31.1034768, METALS = { XAU: 'Gold (24k)', XAG: 'Silver (999)' };
   function isMetal(sym) { return !!METALS[String(sym || '').toUpperCase()]; }
   function grams(qty) { return parseFloat(((+qty || 0) * GPO).toFixed(3)).toLocaleString('en-US', { maximumFractionDigits: 3 }) + ' g'; }
+  // Where your gold / silver is kept (coin.vault, coin.vaultLabel for "Other") — instead of a network
+  var VAULTS = [
+    { k: 'home', e: '🏠', en: 'Home safe', ar: 'خزنة المنزل' },
+    { k: 'bank', e: '🏦', en: 'Bank safe box', ar: 'خزنة البنك' },
+    { k: 'dealer', e: '🏪', en: 'With the dealer', ar: 'عند التاجر' },
+    { k: 'digital', e: '📱', en: 'Digital (app / token)', ar: 'رقمي (تطبيق / توكن)' },
+    { k: 'carry', e: '👜', en: 'With me', ar: 'معي' },
+    { k: 'other', e: '📍', en: 'Other', ar: 'مكان آخر' }];
+  function vaultOf(doc, ar) {
+    var v = doc && VAULTS.filter(function (x) { return x.k === doc.vault; })[0]; if (!v) return null;
+    return { k: v.k, e: v.e, label: v.k === 'other' && doc.vaultLabel ? doc.vaultLabel : (ar ? v.ar : v.en) };
+  }
+  // 🕌 Zakat: 2.5% once your holding has stayed at or above the nisab (85 g gold / 595 g silver) for a full hijri year.
+  // st = Samsam.getState(); the year counts from the last time the holding reached the nisab (it restarts if it dropped below).
+  var NISAB = { XAU: 85, XAG: 595 }, HAWL = 354.367 * 864e5;
+  function zakat(sym, st, now) {
+    sym = String(sym || '').toUpperCase(); var C = st && st.core || (window.Samsam && Samsam.core); if (!NISAB[sym] || !st || !C) return null;
+    var doc = (st.coins || []).filter(function (c) { return c.sym === sym; })[0];
+    var pos = { qty: doc && doc.opening ? +doc.opening.qty || 0 : 0, avg: doc && doc.opening ? +doc.opening.avg || 0 : 0 }, since = null, nis = NISAB[sym] / GPO;
+    if (pos.qty >= nis - 1e-9) since = Date.parse(doc && doc.addedAt) || null;
+    (st.transactions || []).filter(function (t) { return t.sym === sym; }).sort(C.compareTx).forEach(function (t) {
+      var r = C.applyTx(pos, t); pos = { qty: r.qty, avg: r.avg };
+      if (pos.qty >= nis - 1e-9) { if (since == null) since = Date.parse(t.date); } else since = null;
+    });
+    now = now || Date.now();
+    var g = pos.qty * GPO, meets = g >= NISAB[sym] - 1e-6, due = meets && since != null && now - since >= HAWL;
+    return { grams: g, nisab: NISAB[sym], meets: meets, since: since, due: due,
+      daysLeft: meets && since != null && !due ? Math.ceil((since + HAWL - now) / 864e5) : null, zakatG: g * 0.025, zakatOz: pos.qty * 0.025 };
+  }
   function holdCell(sym, value, qty, o) {
     o = o || {}; assetCss();
     if (isMetal(sym)) { var vm = window.SamsamFmt ? SamsamFmt.usd(value) : '$' + (+value || 0).toFixed(2); return '<div class="hold' + (o.align ? ' hold-' + o.align : '') + '"><div class="hold-val">' + (o.noValue ? '—' : vm) + '</div><div class="hold-qty" title="' + esc(grams(qty) + ' · ' + fmtAmount(qty) + ' oz') + '">' + grams(qty) + '</div></div>'; }
@@ -503,5 +532,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { GPO: GPO, METALS: METALS, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

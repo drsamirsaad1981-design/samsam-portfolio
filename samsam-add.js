@@ -132,6 +132,9 @@
     '.cm-pal{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;padding:6px 0 4px}.cm-pal[hidden]{display:none}' +
     '.cm-pal button{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}.cm-pal button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px #7c3aed}' +
     '.cm-group{font-size:.72rem;font-weight:800;color:#94a3b8;margin:14px 0 2px}.cm-note{font-size:.76rem;color:#94a3b8;margin:4px 0 12px;line-height:1.45}' +
+    '.ac-mbox{display:grid;gap:8px;padding:10px;border:1px solid rgba(234,179,8,.35);border-radius:12px}.ac-mbox[hidden]{display:none}.ac-seg{display:flex;gap:4px;background:rgba(148,163,184,.1);border-radius:10px;padding:3px}.ac-seg button{flex:1;border:0;background:transparent;color:inherit;font:inherit;font-size:.8rem;padding:6px;border-radius:8px;cursor:pointer}.ac-seg button[aria-checked=true]{background:#eab308;color:#111;font-weight:700}' +
+    '.ac-chips{display:flex;gap:6px;flex-wrap:wrap}.ac-chips[hidden]{display:none}.ac-chips button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:999px;padding:3px 10px;font:inherit;font-size:.76rem;cursor:pointer}#acVaultLabel{width:100%;box-sizing:border-box}' +
+    '.vlt-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 10px}.vlt-list button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:12px;padding:10px;font:inherit;font-size:.86rem;cursor:pointer;text-align:start}.vlt-list button[aria-checked=true]{border-color:#eab308;background:rgba(234,179,8,.15);font-weight:700}#vaultLabel{width:100%;box-sizing:border-box;margin-bottom:10px}' +
     '.ac-metals{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}.ac-metals button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:999px;padding:4px 10px;font:inherit;font-size:.78rem;cursor:pointer}.ac-metals small{opacity:.6;font-size:.72rem}' +
     '.cat-reset{display:block;margin:0 0 10px;padding:0;border:none;background:none;color:#60a5fa;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer}.cat-reset[hidden]{display:none}';
 
@@ -145,16 +148,24 @@
           ' oninput="this.value=this.value.toUpperCase().replace(/\\s+/g,\' \').trimStart(); acSearchInput()" onkeydown="acSearchKey(event)">' +
           '<ul class="ac-suggest" id="acSuggest" role="listbox" hidden></ul><div class="ac-linked" id="acLinked" hidden></div>' +
           '<div class="ac-metals"><button type="button" onclick="acMetal(\'XAU\')">🥇 Gold 24k</button><button type="button" onclick="acMetal(\'XAG\')">🥈 Silver</button><small>held in grams</small></div></div>' +
+        '<div class="ac-full ac-mbox" id="acMetalBox" hidden>' +
+          '<div class="ac-seg" role="radiogroup" aria-label="Amount in"><button type="button" data-u="g" onclick="acSetUnit(\'g\')">⚖️ Grams</button><button type="button" data-u="oz" onclick="acSetUnit(\'oz\')">🪙 Tokens / oz</button></div>' +
+          '<div class="ac-chips" id="acChips"></div>' +
+          '<div class="ac-seg" role="radiogroup" aria-label="Price"><button type="button" data-pm="unit" onclick="acSetPm(\'unit\')" id="acPmUnit">Price per gram</button><button type="button" data-pm="total" onclick="acSetPm(\'total\')">🧾 Total paid</button></div>' +
+          '<label class="atx-field"><span>Where is it kept?</span><select id="acVault" onchange="acVaultPick()"></select></label>' +
+          '<input type="text" id="acVaultLabel" maxlength="40" placeholder="e.g. My office safe" autocomplete="off" hidden>' +
+        '</div>' +
         '<label class="atx-field ac-full"><span>Full Name</span><input type="text" id="acName" placeholder="Filled by search"></label>' +
         '<label class="atx-field"><span id="acQtyLbl">Amount <span style="color:#ef4444">*</span></span><input type="number" id="acQty" placeholder="0.00" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span id="acPriceLbl">Avg. Buy Price <span style="color:#ef4444">*</span></span><input type="number" id="acPrice" placeholder="USD" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
+        '<label class="atx-field"><span>Buy date</span><input type="date" id="acDate" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span>Fee (USD)</span><input type="number" id="acFeeUsd" placeholder="Optional" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span>CoinGecko ID</span><input type="text" id="acCgId" placeholder="Auto" autocomplete="off" spellcheck="false"></label>' +
         '<div class="atx-field ac-full"><label for="acCmc">CoinMarketCap Page</label><div class="ac-cmc"><span class="ac-cmc-pre">coinmarketcap.com/currencies/</span>' +
           '<input type="text" id="acCmc" placeholder="auto" autocomplete="off" spellcheck="false" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,\'\');acCmcCheck()">' +
           '<a id="acCmcCheck" class="ac-cmc-check" href="#" target="_blank" rel="noopener noreferrer" hidden>Check' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</a></div></div>' +
         '<div class="atx-cash ac-full" id="acPayRow"><label><input type="checkbox" id="acPayOn" onchange="this.dataset.manual=\'1\';previewAddCoin()"><span>Pay from</span></label><select id="acPaySym" aria-label="Stablecoin the buy is paid from" onchange="previewAddCoin()"></select></div>' +
-        '<div class="atx-field ac-full"><span>Network &amp; where held</span><button type="button" class="ac-net" id="acNet" onclick="acEditNet()">' + SamsamUI.ic('link') + '<span id="acNetTxt">Pick the coin first</span><span class="ac-net-go">›</span></button></div>' +
+        '<div class="atx-field ac-full" id="acNetRow"><span>Network &amp; where held</span><button type="button" class="ac-net" id="acNet" onclick="acEditNet()">' + SamsamUI.ic('link') + '<span id="acNetTxt">Pick the coin first</span><span class="ac-net-go">›</span></button></div>' +
         '<label class="atx-field ac-full"><span>Category</span><select id="acCat" onchange="syncCatCustom(this,\'acCatCustomBox\')"></select></label>' +
         '<div class="atx-field ac-full cat-custom" id="acCatCustomBox" hidden><label for="acCatCustom">New Category Name</label>' +
           '<input type="text" id="acCatCustom" maxlength="40" placeholder="Enter Custom Category..." autocomplete="off"><div class="cat-custom-hint">Saved for this coin and added to the category filters.</div></div>' +
@@ -230,10 +241,36 @@
     if (!$('atxBackdrop')) document.body.insertAdjacentHTML('beforeend', HTML_TX);
     if (!$('catEditModal')) document.body.insertAdjacentHTML('beforeend', HTML_CAT);
     if (!$('catMgrModal')) document.body.insertAdjacentHTML('beforeend', HTML_MGR);
+    if (!$('vaultModal')) document.body.insertAdjacentHTML('beforeend', HTML_VAULT);
     return true;
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
-  function anyOpen() { return !!document.querySelector('#addCoinModal.show, #atxBackdrop.show, #catEditModal.show, #catMgrModal.show'); }
+  function anyOpen() { return !!document.querySelector('#addCoinModal.show, #atxBackdrop.show, #catEditModal.show, #catMgrModal.show, #vaultModal.show'); }
+  // 🏦 Where is it kept? (gold / silver) — from the coin page and the metals cards
+  var HTML_VAULT = '<div class="atx-backdrop" id="vaultModal" onclick="if(event.target===this)closeVault()"><form class="atx-modal" id="vaultForm" onsubmit="event.preventDefault();saveVault()" role="dialog" aria-modal="true" aria-labelledby="vaultTitle">' +
+    '<div class="atx-head"><h3 id="vaultTitle">🏦 Where is it kept?</h3><button type="button" class="atx-x" onclick="closeVault()" aria-label="Close">×</button></div>' +
+    '<div class="vlt-list" id="vaultList" role="radiogroup"></div><input type="text" id="vaultLabel" maxlength="40" placeholder="e.g. My office safe" autocomplete="off" hidden>' +
+    '<button type="submit" class="atx-save" id="vaultSave">Save</button></form></div>';
+  var vaultSym = null, vaultPick = '';
+  function openVault(sym) {
+    if (!mount() || !requireCloud()) return;
+    vaultSym = String(sym).toUpperCase();
+    var doc = (Samsam.getState().coins || []).filter(function (c) { return c.sym === vaultSym; })[0] || {};
+    vaultPick = doc.vault || ''; $('vaultLabel').value = doc.vaultLabel || '';
+    $('vaultTitle').textContent = '🏦 Where is your ' + ((METAL_PICK[vaultSym] || {}).name || vaultSym) + ' kept?';
+    vaultDraw(); setOpen($('vaultModal'), true);
+  }
+  function vaultDraw() {
+    $('vaultList').innerHTML = SamsamCoins.VAULTS.map(function (v) { return '<button type="button" role="radio" aria-checked="' + (v.k === vaultPick) + '" onclick="vaultChoose(\'' + v.k + '\')">' + v.e + ' ' + E(v.en) + '</button>'; }).join('');
+    $('vaultLabel').hidden = vaultPick !== 'other';
+  }
+  function vaultChoose(k) { vaultPick = k; vaultDraw(); if (k === 'other') $('vaultLabel').focus(); }
+  function closeVault() { var m = $('vaultModal'); if (m) setOpen(m, false); }
+  function saveVault() {
+    if (!vaultSym) return;
+    write(Samsam.updateCoin(vaultSym, { vault: vaultPick || null, vaultLabel: vaultPick === 'other' ? $('vaultLabel').value.trim() || null : null }));
+    closeVault();
+  }
   function setOpen(el, on) { el.classList.toggle('show', on); document.body.classList.toggle('atx-open', on || anyOpen()); }
 
   // ── Category choice (Add Coin + Change category): built-in list, your own categories, and "Other" ──
@@ -400,13 +437,44 @@
     $('acSym').value = sym; $('acName').value = m.name; $('acCgId').value = m.cgId; $('acCmc').value = m.cmcSlug; acCmcCheck();
     acShow([]); acLink({ sym: sym, name: m.name, id: m.cgId }); acLogo = null;
     fillCatSelect($('acCat'), 'metals'); syncCatCustom($('acCat'), 'acCatCustomBox');
-    coinInfo(m.cgId).then(function (d) { var el = $('acLinkedPrice'); if (d.usd > 0 && el && $('acSym').value === sym) el.textContent = ' · now ' + SamsamFmt.price(d.usd / GPO) + '/g'; });
-    acUnits(); previewAddCoin(); $('acQty').focus();
+    acSpot = 0; var mine = (Samsam.getState().coins || []).filter(function (c) { return c.sym === sym; })[0];
+    acUnits(); $('acVault').value = mine && mine.vault || ''; $('acVaultLabel').value = mine && mine.vaultLabel || ''; acVaultPick();
+    coinInfo(m.cgId).then(function (d) { var el = $('acLinkedPrice'); if (d.usd > 0 && $('acSym').value === sym) { acSpot = d.usd; if (el) el.textContent = ' · now ' + SamsamFmt.price(d.usd / GPO) + '/g'; previewAddCoin(); } });
+    previewAddCoin(); $('acQty').focus();
   }
+  // the metal box: amount in grams or tokens (PAXG / XAUT / KAG: 1 token = 1 troy ounce), price per unit or the invoice total,
+  // ready weights, and where it is kept
+  var acU = 'g', acPM = 'unit', acSpot = 0, CHIPS = [1, 5, 10, 20, 50, 100, 250, 1000];
+  function acSetUnit(u) { acU = u === 'oz' ? 'oz' : 'g'; acUnits(); previewAddCoin(); }
+  function acSetPm(m) { acPM = m === 'total' ? 'total' : 'unit'; acUnits(); previewAddCoin(); }
+  function acChip(g) { $('acQty').value = String(g); previewAddCoin(); }
+  function acVaultPick() { var v = $('acVault').value; $('acVaultLabel').hidden = v !== 'other'; if (v === 'digital' && acU !== 'oz') acSetUnit('oz'); }
   function acUnits() {
-    var m = isMetal($('acSym').value.trim().toUpperCase());
-    $('acQtyLbl').innerHTML = (m ? 'Amount (grams)' : 'Amount') + ' <span style="color:#ef4444">*</span>';
-    $('acPriceLbl').innerHTML = (m ? 'Buy price per gram' : 'Avg. Buy Price') + ' <span style="color:#ef4444">*</span>';
+    var m = isMetal($('acSym').value.trim().toUpperCase()), R = ' <span style="color:#ef4444">*</span>';
+    $('acMetalBox').hidden = !m; $('acNetRow').hidden = m || !window.SamsamWallets;
+    if (!m) { $('acQtyLbl').innerHTML = 'Amount' + R; $('acPriceLbl').innerHTML = 'Avg. Buy Price' + R; return; }
+    document.querySelectorAll('#acMetalBox [data-u]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.u === acU)); });
+    document.querySelectorAll('#acMetalBox [data-pm]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.pm === acPM)); });
+    $('acPmUnit').textContent = acU === 'g' ? 'Price per gram' : 'Price per token';
+    $('acQtyLbl').innerHTML = (acU === 'g' ? 'Amount (grams)' : 'Amount (tokens)') + R;
+    $('acPriceLbl').innerHTML = (acPM === 'total' ? 'Total paid (USD)' : acU === 'g' ? 'Buy price per gram' : 'Buy price per token') + R;
+    var ch = $('acChips'); ch.hidden = acU !== 'g';
+    if (!ch.innerHTML) ch.innerHTML = CHIPS.map(function (g) { return '<button type="button" onclick="acChip(' + g + ')">' + (g >= 1000 ? g / 1000 + ' kg' : g + ' g') + '</button>'; }).join('') + '<button type="button" onclick="acChip(31.1034768)">1 oz</button>';
+    var vs = $('acVault');
+    if (!vs.options.length) vs.innerHTML = '<option value="">—</option>' + SamsamCoins.VAULTS.map(function (v) { return '<option value="' + v.k + '">' + v.e + ' ' + E(v.en) + '</option>'; }).join('');
+  }
+  // what you typed → stored units: troy ounces and $ per ounce (other coins: as typed)
+  function acRead() {
+    var sym = $('acSym').value.trim().toUpperCase(), q = parseFloat($('acQty').value), p = parseFloat($('acPrice').value);
+    if (!isMetal(sym)) return { qty: q, price: p, metal: false };
+    var oz = acU === 'g' ? q / GPO : q, po = acPM === 'total' ? (oz > 0 ? p / oz : NaN) : acU === 'g' ? perOz(p) : p;
+    return { qty: oz, price: po, metal: true, grams: oz * GPO, total: oz * po };
+  }
+  function acDateIso() {   // the buy date you picked — the time is now for today, noon for an earlier day
+    var v = $('acDate').value; if (!v) return null;
+    var d = new Date(v + 'T12:00'), today = localDateTimeValue(new Date()).slice(0, 10);
+    if (v === today) return null;
+    return isNaN(d.getTime()) ? 'bad' : d.getTime() > Date.now() ? 'future' : d.toISOString();
   }
   function openAddCoin(prefill) {
     if (!mount()) return;
@@ -419,7 +487,8 @@
     fillCatSelect(catSel, (p && p.cat) || 'layer1');
     $('acCatCustom').value = p && p.catLabel && SamsamTaxonomy.isCustom(p.cat) && catSel.value === 'other' ? p.catLabel : '';
     syncCatCustom(catSel, 'acCatCustomBox');
-    $('acPreview').innerHTML = ''; $('acError').textContent = ''; acUnits();
+    $('acPreview').innerHTML = ''; $('acError').textContent = ''; acU = 'g'; acPM = 'unit'; acSpot = 0;
+    $('acDate').value = ''; $('acDate').max = localDateTimeValue(new Date()).slice(0, 10); $('acVault').value = ''; $('acVaultLabel').value = ''; $('acVaultLabel').hidden = true; acUnits();
     if (p && p.sym) {   // coming from a plan / a coin you picked elsewhere: already linked, just add the amount
       $('acSym').value = String(p.sym).toUpperCase(); $('acName').value = p.name || '';
       if (p.cgId) {
@@ -455,7 +524,7 @@
     acPayFill();
     var row = $('acPayRow'), on = $('acPayOn'), out = { sym: null, cost: 0, short: '', err: '' };
     if (row.style.display === 'none') return out;
-    var qty = parseFloat($('acQty').value) || 0, price = parseFloat($('acPrice').value) || 0, fee = Math.max(0, parseFloat($('acFeeUsd').value) || 0);
+    var rd = acRead(), qty = rd.qty || 0, price = rd.price || 0, fee = Math.max(0, parseFloat($('acFeeUsd').value) || 0);
     var s = $('acPaySym').value, have = (held(s) || {}).qty || 0; out.cost = qty * price + fee;
     var enough = !(out.cost > have + 1e-9);
     if (!on.dataset.manual) {
@@ -468,9 +537,14 @@
   }
   function previewAddCoin() {
     acUnits();
-    var qty = parseFloat($('acQty').value), price = parseFloat($('acPrice').value);
+    var rd = acRead(), qty = rd.qty, price = rd.price;
     var fee = Math.max(0, parseFloat($('acFeeUsd').value) || 0), py = acPay(), L = [];
+    if (rd.metal && qty > 0 && price > 0) {
+      L.push((acU === 'oz' ? '= <b>' + SamsamCoins.grams(qty) + '</b> · ' : '') + '<b>' + SamsamFmt.price(price / GPO) + '/g</b> · total <b>' + SamsamFmt.usd(qty * price) + '</b>');
+      if (acSpot > 0) { var prem = (price / acSpot - 1) * 100; L.push('🧾 You paid <b>' + (prem >= 0 ? '+' : '−') + Math.abs(prem).toFixed(1) + '%</b> ' + (prem >= 0 ? 'over' : 'under') + ' the live price (' + SamsamFmt.price(acSpot / GPO) + '/g)'); }
+    }
     if (qty > 0 && price > 0) L.push('Cost Basis: <b>' + SamsamFmt.usd(qty * price + fee) + '</b>');
+    var di = acDateIso(); if (di === 'future') L.push('<span style="color:#f87171">' + SamsamUI.ic('alert') + 'The buy date can’t be in the future.</span>');
     if (py.sym && py.cost > 0) L.push(SamsamUI.ic('cash') + 'Pays <b>' + SamsamFmt.usd(py.cost) + ' from ' + E(py.sym) + '</b> · ' + fmtQty(py.have - py.cost) + ' ' + E(py.sym) + ' left');
     if (py.short && qty > 0) L.push('<span style="color:#f59e0b">' + SamsamUI.ic('alert') + E(py.short) + '</span>');
     if (py.err && qty > 0) L.push('<span style="color:#f87171">' + SamsamUI.ic('alert') + E(py.err) + '</span>');
@@ -479,20 +553,22 @@
   function acErr(msg) { $('acError').textContent = msg; }
   async function applyAddCoin() {
     var sym = $('acSym').value.trim().toUpperCase();
-    var qty = parseFloat($('acQty').value), price = parseFloat($('acPrice').value), shown = fmtQty(qty) + ' ' + sym;
+    var rd = acRead(), qty = rd.qty, price = rd.price, shown = rd.metal ? SamsamCoins.grams(qty) + ' of ' + (METAL_PICK[sym] || {}).name : fmtQty(qty) + ' ' + sym;
+    var when = acDateIso(), vault = rd.metal ? $('acVault').value || null : null, vaultLabel = vault === 'other' ? $('acVaultLabel').value.trim() || null : null;
     acErr('');
     if (!sym) return acErr('Symbol is required.');
     if (!/^[A-Z0-9._-]{1,20}$/.test(sym)) return acErr('Pick the coin from the search list (or type only its symbol, e.g. XRP).');
     if (!qty || qty <= 0) return acErr('Enter a valid quantity.');
     if (!price || price <= 0) return acErr('Enter a valid buy price.');
+    if (when === 'bad' || when === 'future') return acErr(when === 'future' ? 'The buy date can’t be in the future.' : 'Enter a valid buy date.');
     if (!requireCloud()) return;
     var feeUsd = Math.max(0, parseFloat($('acFeeUsd').value) || 0), py = acPay();
-    if (isMetal(sym)) { shown = fmtQty(qty) + ' g of ' + (METAL_PICK[sym] || {}).name; qty = toOz(qty); price = perOz(price); }   // stored in troy ounces
     if (py.err) return acErr(py.err);
     if ($('acPayOn').dataset.manual && $('acPayRow').style.display !== 'none') { try { localStorage.setItem(PAY_KEY, JSON.stringify({ on: $('acPayOn').checked, sym: $('acPaySym').value })); } catch (_) {} }
     if (held(sym)) {   // one Add button for everything: a coin you already hold gets this as a Buy
       if (!(await CPDialog.confirm(sym + ' is already in your portfolio.\nAdd ' + shown + ' at ' + (isMetal(sym) ? SamsamFmt.price(price / GPO) + '/g' : SamsamFmt.price(price)) + ' as a Buy?', { title: 'Add as a Buy?', okText: 'Add Buy' }))) return;
-      var bx = { date: new Date().toISOString(), fee: 0, feeUsd: feeUsd };
+      var bx = { date: when || new Date().toISOString(), fee: 0, feeUsd: feeUsd };
+      if (rd.metal && vault) write(Samsam.updateCoin(sym, { vault: vault, vaultLabel: vaultLabel }));
       write(py.sym && Samsam.buyFromStable ? Samsam.buyFromStable(sym, qty, price, '', bx, py.sym) : Samsam.addTx(sym, 'buy', qty, price, '', bx));
       closeAddCoin(); emit('tx', { sym: sym, type: 'buy' }); if (py.sym) emit('tx', { sym: py.sym, type: 'sell' }); return;
     }
@@ -508,7 +584,8 @@
     SamsamCoins.registerCoin(sym, { cmcSlug: cmcSlug, name: name });
     // One atomic cloud write: coin settings + its opening buy
     write(Samsam.addCoin({ sym: sym, name: name, cat: cat, catLabel: catCh.label, catLocked: true, cgId: cgId, cmcSlug: cmcSlug, logoUrl: acLogo,
-      nets: acNet.nets && acNet.nets.length ? acNet.nets : undefined, at: acNet.at.length ? acNet.at : undefined }, { qty: qty, price: price, feeUsd: feeUsd, pay: py.sym || null }));
+      nets: !rd.metal && acNet.nets && acNet.nets.length ? acNet.nets : undefined, at: !rd.metal && acNet.at.length ? acNet.at : undefined, vault: vault || undefined, vaultLabel: vaultLabel || undefined },
+      { qty: qty, price: price, feeUsd: feeUsd, pay: py.sym || null, date: when || null }));
     if (py.sym) emit('tx', { sym: py.sym, type: 'sell' });
     linkCodex(sym, { cgId: cgId, name: name });
     closeAddCoin();
@@ -1030,7 +1107,7 @@
   }
 
   var API = {
-    openCoin: openAddCoin, closeCoin: closeAddCoin, openTx: openAddTx, closeTx: closeAddTx, openStake: openStake, buy: buy, editCategory: openCatEdit, manageCategories: openCatManager,
+    openVault: openVault, openCoin: openAddCoin, closeCoin: closeAddCoin, openTx: openAddTx, closeTx: closeAddTx, openStake: openStake, buy: buy, editCategory: openCatEdit, manageCategories: openCatManager,
     search: search, coinInfo: coinInfo, categoryFrom: categoryFrom, linkCodex: linkCodex, fetchLogoAndPrice: fetchLogoAndPrice,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
     on: function (k, fn) { if (hooks[k]) hooks[k].push(fn); }, defaultTxSym: null
@@ -1038,7 +1115,7 @@
   window.CPAdd = API;
   // the names the pages (and inline handlers) already use
   var G = { openAddCoin: function () { openAddCoin(); }, closeAddCoin: closeAddCoin, previewAddCoin: previewAddCoin, applyAddCoin: applyAddCoin,
-    acMetal: acMetal, acSearchInput: acSearchInput, acSearchKey: acSearchKey, acPick: acPick, acCmcCheck: acCmcCheck, acEditNet: acEditNet,
+    openVault: openVault, vaultChoose: vaultChoose, closeVault: closeVault, saveVault: saveVault, acMetal: acMetal, acSetUnit: acSetUnit, acSetPm: acSetPm, acChip: acChip, acVaultPick: acVaultPick, acSearchInput: acSearchInput, acSearchKey: acSearchKey, acPick: acPick, acCmcCheck: acCmcCheck, acEditNet: acEditNet,
     openAddTx: openAddTx, openEditTx: openEditTx, closeAddTx: closeAddTx, setAddTxType: setAddTxType, readAddTx: readAddTx, previewAddTx: previewAddTx, saveAddTx: saveAddTx,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
     openCatEdit: function (sym) { openCatEdit(sym); }, closeCatEdit: closeCatEdit, saveCatEdit: saveCatEdit,

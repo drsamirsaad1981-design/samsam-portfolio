@@ -396,13 +396,17 @@ function renderHeader() {
       const rz = (realizedState && realizedState.bySym) || {}, G = SamsamCoins.GPO;
       const sgn = (v, f) => (v >= 0 ? '+' : '−') + f(Math.abs(v)), cls = v => v >= 0 ? 'stat-pos' : 'stat-neg';
       const nm = { XAU: ['🥇', AR ? 'ذهب' : 'Gold'], XAG: ['🥈', AR ? 'فضة' : 'Silver'] };
+      const st = Samsam.getState(), docs = {}; (st.coins || []).forEach(d => { docs[d.sym] = d; });
       let val = 0, cost = 0, pnl = 0;
       const rows = mets.map(c => {
         const v = c.qty * c.currentPrice, k = c.qty * c.basePrice, p = v - k + ((rz[c.sym] || {}).realized || 0), pc = k > 0 ? p / k * 100 : 0;
         val += v; cost += k; pnl += p;
-        return `<div class="mt-row"><span>${nm[c.sym][0]} ${nm[c.sym][1]} <b>⁦${(c.qty * G).toLocaleString('en-US', { maximumFractionDigits: 1 })} ${AR ? 'جم' : 'g'}⁩</b></span>` +
-          `<span class="mt-pl ${cls(p)}">⁦${sgn(p, fmtUsd)} (${sgn(pc, x => x.toFixed(1))}%)⁩</span>` +
-          `<span class="mt-px">${AR ? 'الشراء' : 'Bought'} <b>⁦${SamsamFmt.price(c.basePrice / G)}/g⁩</b> · ${AR ? 'الآن' : 'now'} <b>⁦${SamsamFmt.price(c.currentPrice / G)}/g⁩</b></span></div>`;
+        const vt = SamsamCoins.vaultOf(docs[c.sym], AR), z = SamsamCoins.zakat(c.sym, st);
+        const zk = !z ? '' : z.due ? `🕌 ${AR ? 'الزكاة مستحقة' : 'Zakat due'} <b>⁦${(z.zakatG).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${AR ? 'جم' : 'g'} ≈ ${fmtUsd(z.zakatOz * c.currentPrice)}⁩</b>`
+          : z.meets ? `🕌 ${AR ? 'يكتمل الحول بعد' : 'Zakat: hawl in'} <b>⁦${z.daysLeft}⁩</b> ${AR ? 'يوم' : 'days'}` : '';
+        return `<button type="button" class="mt-row" onclick="openCoinTx('${c.sym}')" title="${AR ? 'السجل: تعديل أو حذف' : 'History — edit or delete'}"><span>${nm[c.sym][0]} ${nm[c.sym][1]} <b>⁦${(c.qty * G).toLocaleString('en-US', { maximumFractionDigits: 1 })} ${AR ? 'جم' : 'g'}⁩</b>${vt ? ` <small class="mt-vault">${vt.e} ${SamsamCoins.esc(vt.label)}</small>` : ''}</span>` +
+          `<span class="mt-pl ${cls(p)}">⁦${sgn(p, fmtUsd)} (${sgn(pc, x => x.toFixed(1))}%)⁩ ›</span>` +
+          `<span class="mt-px">${AR ? 'الشراء' : 'Bought'} <b>⁦${SamsamFmt.price(c.basePrice / G)}/g⁩</b> · ${AR ? 'الآن' : 'now'} <b>⁦${SamsamFmt.price(c.currentPrice / G)}/g⁩</b>${zk ? ' · ' + zk : ''}</span></button>`;
       }).join('');
       const pct = cost > 0 ? pnl / cost * 100 : 0;
       document.getElementById('metalsUsd').textContent = fmtUsd(val);

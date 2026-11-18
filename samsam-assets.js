@@ -92,6 +92,14 @@
   var UNIT = { oz: ['/ oz', '/ أونصة'], lb: ['/ lb', '/ رطل'], bbl: ['/ barrel', '/ برميل'] };
   // 🥇 your gold / silver (added in the portfolio in grams; kept in troy ounces there) — or a button to add some
   var MINE = { XAU: ['🥇', 'Gold 24k', 'ذهب عيار 24', 'gold'], XAG: ['🥈', 'Silver', 'فضة', 'silver'] };
+  // 🕌 zakat: due (2.5%), the days left in the hijri year, or below the nisab
+  function zkLine(c, d, pr) {
+    var z = SamsamCoins.zakat(c.sym, d); if (!z) return '';
+    var g = function (n) { return iso(n.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + T('g', 'جم')); };
+    return '<div class="as-zk">🕌 ' + (z.due ? T('Zakat due', 'الزكاة مستحقة') + ': <b>' + g(z.zakatG) + '</b> ≈ <b>' + iso(usd(z.zakatOz * pr, 2)) + '</b> <small>(2.5%)</small>'
+      : z.meets ? T('Above the nisab — the hijri year completes in', 'فوق النصاب — يكتمل الحول بعد') + ' <b>' + iso(z.daysLeft) + '</b> ' + T('days', 'يوم')
+      : T('Below the nisab', 'أقل من النصاب') + ' (' + g(z.nisab) + ') — ' + T('no zakat', 'لا زكاة')) + '</div>';
+  }
   function mineHtml(list) {
     var S = window.Samsam, d = null; try { d = S && S.getState ? S.getState() : null; } catch (_) {}
     if (!d || !d.portfolio) return '';
@@ -100,17 +108,19 @@
     var g2 = function (oz) { return (oz * OZ).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + T('g', 'جم'); };
     var add = '<button type="button" class="as-add" data-add="XAU">🥇 ' + T('Add gold', 'أضف ذهب') + '</button><button type="button" class="as-add" data-add="XAG">🥈 ' + T('Add silver', 'أضف فضة') + '</button>';
     if (!pf.length) return '<div class="as-card as-mine as-mine-empty"><div class="as-k">' + T('Your metals', 'معادنك') + '</div><p class="as-li">' + T('Track the gold and silver you own — in grams, at the live price.', 'تابع الذهب والفضة اللي تملكها — بالجرام وبالسعر الحي.') + '</p><div class="as-adds">' + add + '</div></div>';
-    var tv = 0, tp = 0;
+    var tv = 0, tp = 0, docs = {}; (d.coins || []).forEach(function (x) { docs[x.sym] = x; });
     var rows = pf.map(function (c) {
-      var m = MINE[c.sym], pr = c.currentPrice > 0 ? c.currentPrice : spot(m[3]), val = c.qty * pr, cost = c.qty * c.basePrice, pnl = val - cost + ((rz[c.sym] || {}).realized || 0);
+      var vt = SamsamCoins.vaultOf(docs[c.sym], ar()), m = MINE[c.sym], pr = c.currentPrice > 0 ? c.currentPrice : spot(m[3]), val = c.qty * pr, cost = c.qty * c.basePrice, pnl = val - cost + ((rz[c.sym] || {}).realized || 0);
       var ch = c.basePrice > 0 && pr > 0 ? (pr / c.basePrice - 1) * 100 : null; tv += val; tp += pnl;
       return '<div class="as-mrow"><div class="as-mn">' + m[0] + ' <b>' + T(m[1], m[2]) + '</b><small>' + iso(g2(c.qty)) + '</small></div>' +
         '<div class="as-mv2"><b>' + iso(usd(val, 2)) + '</b><span class="as-pc ' + (pnl >= 0 ? 'up' : 'dn') + '">' + iso((pnl >= 0 ? '+' : '−') + usd(Math.abs(pnl), 2)) + '</span></div>' +
-        '<div class="as-li">' + T('Gram now', 'الجرام الآن') + ' <b>' + iso(usd(pr / OZ, 2)) + '</b> · ' + T('your avg', 'متوسط شرائك') + ' <b>' + iso(usd(c.basePrice / OZ, 2)) + '</b> ' + pct(ch) + '</div></div>';
+        '<div class="as-li">' + T('Gram now', 'الجرام الآن') + ' <b>' + iso(usd(pr / OZ, 2)) + '</b> · ' + T('your avg', 'متوسط شرائك') + ' <b>' + iso(usd(c.basePrice / OZ, 2)) + '</b> ' + pct(ch) + '</div>' +
+        zkLine(c, d, pr) +
+        '<div class="as-macts"><button type="button" data-vault="' + c.sym + '">' + (vt ? vt.e + ' ' + E(vt.label) : '🏦 ' + T('Where is it kept?', 'أين تحفظه؟')) + '</button><button type="button" data-hist="' + c.sym + '">📜 ' + T('History · edit', 'السجل · تعديل') + '</button></div></div>';
     }).join('');
     return '<div class="as-card as-mine"><div class="as-k">' + T('Your metals', 'معادنك') + '<a class="as-open" href="./index.html">' + T('Open in portfolio ›', 'افتح في المحفظة ›') + '</a></div>' + rows +
       (pf.length > 1 ? '<div class="as-mtot">' + T('Total', 'الإجمالي') + ' <b>' + iso(usd(tv, 2)) + '</b> <span class="as-pc ' + (tp >= 0 ? 'up' : 'dn') + '">' + iso((tp >= 0 ? '+' : '−') + usd(Math.abs(tp), 2)) + '</span></div>' : '') +
-      '<div class="as-adds">' + add + '</div></div>';
+      '<div class="as-adds">' + add + '</div><p class="as-zn">🕌 ' + T('Zakat: 2.5% once you have held at least the nisab (85 g gold · 595 g silver) for a full hijri year. An estimate — check with a scholar.', 'الزكاة: 2.5% إذا بلغ ما تملكه النصاب (85 جم ذهب · 595 جم فضة) ومرّ عليه عام هجري كامل. تقدير تقريبي — راجع أهل العلم.') + '</p></div>';
   }
   function metalsHtml() {
     var list = st.metals;
@@ -161,6 +171,9 @@
     };
     $('vStocks').addEventListener('click', area);
     $('vMetals').addEventListener('click', function (e) {   // ➕ gold / silver → the Add window, already on that metal
+      var v = e.target.closest('[data-vault]'), hs = e.target.closest('[data-hist]');
+      if (v && window.CPAdd && CPAdd.openVault) return CPAdd.openVault(v.dataset.vault);
+      if (hs && window.SamsamUI) return SamsamUI.openCoin(hs.dataset.hist);   // its History: edit or delete a buy
       var b = e.target.closest('[data-add]'); if (!b || !window.openAddCoin || !window.acMetal) return;
       window.openAddCoin(); window.acMetal(b.dataset.add);
     });

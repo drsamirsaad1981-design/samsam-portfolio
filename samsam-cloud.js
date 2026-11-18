@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611181653';
-import * as Hist from './samsam-history.js?v=202611181653';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611181653';
+import * as Core from './samsam-core.js?v=202611181728';
+import * as Hist from './samsam-history.js?v=202611181728';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611181728';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -85,6 +85,8 @@ function cleanCoin(c) {
   if ('catLocked' in o) o.catLocked = o.catLocked === true;
   if ('nets' in o) o.nets = cleanNets(o.nets);
   if ('at' in o) o.at = cleanPlaces(o.at);
+  if ('vault' in o) o.vault = Clean.key(o.vault) || null;              // 🥇 where gold / silver is kept
+  if ('vaultLabel' in o) o.vaultLabel = Clean.label(o.vaultLabel, 40) || null;
   if (o.opening) o.opening = { qty: Clean.num(o.opening.qty), avg: Clean.num(o.opening.avg) };
   return o;
 }
@@ -944,10 +946,13 @@ const API = {
     if ('logoUrl' in fields) fields.logoUrl = Clean.url(fields.logoUrl);
     if ('nets' in fields) fields.nets = cleanNets(fields.nets);
     if ('at' in fields) fields.at = cleanPlaces(fields.at);
+    if ('vault' in fields) fields.vault = Clean.key(fields.vault) || null;
+    if ('vaultLabel' in fields) fields.vaultLabel = Clean.label(fields.vaultLabel, 40) || null;
     if ('lastPrice' in fields && !(Number(fields.lastPrice) > 0 && Number.isFinite(Number(fields.lastPrice)))) delete fields.lastPrice;
     return commit((b, ref, fs) => b.set(ref('coins', safeId(sym)), clean({ ...fields, updatedAt: new Date().toISOString() }), { merge: true }), `Update ${sym}`);
   },
-  addCoin(coin, { qty, price, note, feeUsd, link, pay } = {}) {
+  addCoin(coin, { qty, price, note, feeUsd, link, pay, date } = {}) {
+    const when = date && Date.parse(date) && Date.parse(date) <= Date.now() + 60e3 ? new Date(date).toISOString() : null;   // the buy date you picked (else now)
     const rawSym = String(coin.sym == null ? '' : coin.sym).trim().toUpperCase();
     coin = cleanCoin({ ...coin, cat: coin.cat || 'other' });
     const sym = coin.sym;
@@ -967,7 +972,7 @@ const API = {
       b.set(ref('coins', safeId(sym)), clean({
         sym, name: coin.name || sym, cat: coin.cat || 'other', catLocked: coin.catLocked === true, catLabel: coin.catLabel || null,
         cgId: coin.cgId || null, cmcSlug: coin.cmcSlug || null, logoUrl: coin.logoUrl || null,
-        ...(coin.nets ? { nets: coin.nets } : {}), ...(coin.at ? { at: coin.at } : {}),
+        ...(coin.nets ? { nets: coin.nets } : {}), ...(coin.at ? { at: coin.at } : {}), ...(coin.vault ? { vault: coin.vault, vaultLabel: coin.vaultLabel || null } : {}),
         notes: coin.notes || '', isCustom: true, removed: false, removedAt: null, order, lastPrice: price || null,
         opening: existing && existing.opening ? existing.opening : { qty: 0, avg: 0 },
         addedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
@@ -975,11 +980,11 @@ const API = {
       if (left > 1e-12) b.set(ref('txs', Core.newId('tx_')), txDoc(sym, 'transfer_out', left, 0, 'Removed from portfolio', { date: removedAt }));
       const id = Core.newId('tx_');
       // Every new or re-added coin starts with an ordinary Buy (no manual corrections).
-      b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position'), { feeUsd, link }));
+      b.set(ref('txs', id), txDoc(sym, 'buy', qty, price, note || (hasHistory ? 'Re-added coin' : 'Initial position'), { feeUsd, link, ...(when ? { date: when } : {}) }));
       // paid from a stablecoin you hold: it goes out at $1 in the same write, linked to this Buy
       const ps = pay && Clean.sym(String(pay).toUpperCase()), cost = (Number(qty) || 0) * (Number(price) || 0) + (Number(feeUsd) || 0);
       if (ps && ps !== sym && S.coins.has(ps) && !S.coins.get(ps).removed && cost > 0)
-        b.set(ref('txs', Core.newId('tx_')), txDoc(ps, 'sell', cost, 1, 'Paid for buying ' + (+Number(qty).toPrecision(8)) + ' ' + sym, { date: new Date(Date.now() + 1).toISOString(), link: id, kind: 'pay' }));
+        b.set(ref('txs', Core.newId('tx_')), txDoc(ps, 'sell', cost, 1, 'Paid for buying ' + (+Number(qty).toPrecision(8)) + ' ' + sym, { date: new Date((when ? Date.parse(when) : Date.now()) + 1).toISOString(), link: id, kind: 'pay' }));
     }, `Add ${sym}`);
   },
   // ── Manage Categories: one settings doc (users/{uid}/meta/categories) every page and device applies ──
