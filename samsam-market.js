@@ -190,25 +190,87 @@
     // when Binance's price is within 25% of the saved one (tickers are reused by different coins). Returns how many.
     // Live prices every few seconds from Binance's public market data (no key) for the coins you hold that trade against
     // USDT: { SYM: price }. The first call learns which USDT pairs exist (once a session); then only those are asked for.
+    // Which coins trade against USDT on Binance: the full list (thousands of pairs) is downloaded once a day per device
+    // and kept here (just the tickers), not on every page open. → Promise of { SYM: 1 }
+    bnPairs: function () {
+      if (API._bnPairs) return API._bnPairs;
+      var K = 'samsam_bn_pairs', DAYMS = 864e5;
+      try { var c = JSON.parse(localStorage.getItem(K) || 'null'); if (c && c.s && Date.now() - c.t < DAYMS) { var set0 = {}; c.s.split(',').forEach(function (x) { if (x) set0[x] = 1; }); return (API._bnPairs = Promise.resolve(set0)); } } catch (_) {}
+      return (API._bnPairs = fetch('https://data-api.binance.vision/api/v3/ticker/price').then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (list) {
+          var set = {}; (list || []).forEach(function (t) { if (/USDT$/.test(t.symbol) && +t.price > 0) set[t.symbol.slice(0, -4)] = 1; });
+          try { localStorage.setItem(K, JSON.stringify({ t: Date.now(), s: Object.keys(set).join(',') })); } catch (_) {}
+          return set;
+        }, function (e) { API._bnPairs = null; throw e; }));
+    },
+    // Binance prices for just these tickers (only the ones it trades), ≤100 per request; each price is reused for 50 s
+    // by every list that asks. → Promise of { SYM: price }
+    bnPrices: function (syms) {
+      var want = {}; (syms || []).forEach(function (s) { s = String(s || '').toUpperCase(); if (/^[A-Z0-9]{2,15}$/.test(s)) want[s] = 1; });
+      var keys = Object.keys(want); if (!keys.length) return Promise.resolve({});
+      var C = API._bnPx || (API._bnPx = {}), now = Date.now();
+      return API.bnPairs().then(function (set) {
+        var px = {}, ask = [];
+        keys.forEach(function (s) { if (!set[s]) return; var c = C[s]; if (c && now - c.t < 50e3) px[s] = c.p; else ask.push(s); });
+        var batches = []; for (var i = 0; i < ask.length; i += 100) batches.push(ask.slice(i, i + 100));
+        return Promise.all(batches.map(function (b) {
+          return fetch('https://data-api.binance.vision/api/v3/ticker/price?symbols=' + encodeURIComponent(JSON.stringify(b.map(function (s) { return s + 'USDT'; }))), { cache: 'no-store' })
+            .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(function (list) { (list || []).forEach(function (t) { var p = +t.price; if (p > 0) { var k = t.symbol.slice(0, -4); px[k] = p; C[k] = { p: p, t: Date.now() }; } }); }, function () {});
+        })).then(function () { return px; });
+      }).catch(function () { return {}; });
+    },
+    // Live prices every few seconds from Binance's public market data (no key) for the coins you hold that trade against
+    // USDT: { SYM: price }.
     fastPrices: function (syms) {
       var want = (syms || []).map(function (s) { return String(s || '').toUpperCase(); }).filter(function (s) { return /^[A-Z0-9]{2,15}$/.test(s) && !API.isStable({ sym: s, name: '' }); });
       if (!want.length) return Promise.resolve({});
-      var known = API._bnPairs || (API._bnPairs = fetch('https://data-api.binance.vision/api/v3/ticker/price').then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(function (list) { var set = {}; (list || []).forEach(function (t) { if (/USDT$/.test(t.symbol)) set[t.symbol.slice(0, -4)] = 1; }); return set; }, function (e) { API._bnPairs = null; throw e; }));
-      return known.then(function (set) {
-        var q = want.filter(function (s) { return set[s]; }).slice(0, 100).map(function (s) { return s + 'USDT'; });
-        if (!q.length) return {};
-        return fetch('https://data-api.binance.vision/api/v3/ticker/price?symbols=' + encodeURIComponent(JSON.stringify(q)), { cache: 'no-store' })
-          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-          .then(function (list) { var px = {}; (list || []).forEach(function (t) { if (+t.price > 0) px[t.symbol.slice(0, -4)] = +t.price; }); return px; });
-      }).catch(function () { return {}; });
+      return API.bnPrices(want.slice(0, 100));
+    },
+    // ⚡ A live line to Binance (WebSocket, market data only): each coin's price as it trades, about once a second,
+    // over one connection — instead of asking every 15 s. onTick({ SYM: { price, ch24, high, low } }) at most every
+    // `every` ms. Stops while the page is hidden and comes back when it is shown; after a drop it reconnects (2 s → 1 min);
+    // after 6 failed tries in a row it stops for this visit (the 15-second asking takes over). → { set(syms), alive(), stop() }
+    stream: function (onTick, every) {
+      every = every || 2000;
+      var WS = window.__bnWs || 'wss://data-stream.binance.vision/stream?streams=';
+      var syms = [], ws = null, last = 0, buf = {}, timer = null, retry = 0, wait = null, stopped = false, key = '';
+      var DELAY = [2e3, 5e3, 15e3, 30e3, 60e3, 60e3];
+      function flush() { timer = null; var b = buf; buf = {}; if (Object.keys(b).length) try { onTick(b); } catch (_) {} }
+      function close() { if (ws) { var w = ws; ws = null; try { w.onclose = w.onerror = w.onmessage = null; w.close(); } catch (_) {} } clearTimeout(wait); wait = null; }
+      function open() {
+        close();
+        if (stopped || document.hidden || !syms.length || !window.WebSocket || retry >= DELAY.length) return;
+        try { ws = new WebSocket(WS + syms.map(function (s) { return s.toLowerCase() + 'usdt@miniTicker'; }).join('/')); } catch (_) { ws = null; return; }
+        ws.onmessage = function (ev) {
+          var d; try { d = JSON.parse(ev.data); d = d && d.data || d; } catch (_) { return; }
+          if (!d || !d.s || !/USDT$/.test(d.s)) return;
+          var c = +d.c, o = +d.o; if (!(c > 0)) return;
+          last = Date.now(); retry = 0;
+          buf[d.s.slice(0, -4)] = { price: c, ch24: o > 0 ? (c / o - 1) * 100 : null, high: +d.h || null, low: +d.l || null };
+          if (!timer) timer = setTimeout(flush, every);
+        };
+        ws.onclose = ws.onerror = function () { var w = ws; ws = null; if (w) try { w.onclose = w.onerror = null; } catch (_) {} if (stopped || document.hidden) return; clearTimeout(wait); wait = setTimeout(open, DELAY[Math.min(retry++, DELAY.length - 1)]); };
+      }
+      document.addEventListener('visibilitychange', function () { if (document.hidden) close(); else if (!ws) { retry = Math.min(retry, DELAY.length - 1); open(); } });
+      window.addEventListener('online', function () { if (!ws) { retry = 0; open(); } });
+      return {
+        set: function (list) {   // the tickers to follow (only the ones Binance trades, ≤ 60); reconnects only when they change
+          var want = (list || []).map(function (s) { return String(s || '').toUpperCase(); }).filter(function (s, i, a) { return /^[A-Z0-9]{2,15}$/.test(s) && a.indexOf(s) === i && !API.isStable({ sym: s, name: '' }); });
+          return API.bnPairs().then(function (set) {
+            var next = want.filter(function (s) { return set[s]; }).sort().slice(0, 60), k = next.join(',');
+            if (k === key) return; key = k; syms = next; retry = 0; open();
+          }).catch(function () {});
+        },
+        alive: function () { return !!ws && Date.now() - last < 20e3; },   // a price came in the last 20 s
+        stop: function () { stopped = true; close(); },
+      };
     },
     binanceTopUp: function (rows) {
-      var now = Date.now();
-      // one download of Binance's prices every 50 seconds at most, shared by every list that asks
-      if (!API._bn || now - API._bn.at > 50e3) API._bn = { at: now, p: fetch('https://data-api.binance.vision/api/v3/ticker/price', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function (list) {
-        var px = {}; (list || []).forEach(function (t) { if (/USDT$/.test(t.symbol)) px[t.symbol.slice(0, -4)] = +t.price; }); return px; }) };
-      return API._bn.p.then(function (px) {
+      var now = Date.now(), syms = [];
+      (rows || []).forEach(function (c) { if (c && c.sym && c.price > 0 && !API.isStable(c)) syms.push(String(c.sym).toUpperCase()); });
+      // only the tickers in these rows (≤100 per request), not Binance's whole list; shared for 50 s by every list
+      return API.bnPrices(syms).then(function (px) {
         var n = 0;
         (rows || []).forEach(function (c) {
           var p = px[String(c.sym || '').toUpperCase()]; if (!(p > 0) || !(c.price > 0)) return;

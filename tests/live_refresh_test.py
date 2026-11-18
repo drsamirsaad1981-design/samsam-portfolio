@@ -8,7 +8,7 @@ res = []
 def check(n, c, d=''): res.append(bool(c)); print(('PASS ' if c else 'FAIL ') + n + ('' if c else f' -> {d}'), flush=True)
 with sync_playwright() as p:
     br = p.chromium.launch(); ctx = br.new_context(viewport={'width': 1366, 'height': 900}); S.setup(ctx)
-    cg = []; state = {'btc': 0}
+    cg = []; state = {'btc': 1}   # (a pair priced 0 is a halted one — left out of the pair list)
     ctx.on('request', lambda r: cg.append(r.url) if 'api.coingecko.com' in r.url else None)
     def bn_all(r): r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps([{'symbol': 'BTCUSDT', 'price': str(state['btc'])}, {'symbol': 'ETHUSDT', 'price': '1'}]))
     def bn_24(r): r.fulfill(status=200, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps({'symbol': 'BTCUSDT', 'lastPrice': '101234.5', 'priceChangePercent': '1.25', 'highPrice': '102000', 'lowPrice': '99000'}))
@@ -24,12 +24,12 @@ with sync_playwright() as p:
     state['btc'] = round(p0 * 1.01, 2)
     fm.wait_for_function("!busy", timeout=15000)
     fm.evaluate("topRows.find(r => r.id === 'bitcoin').sym = 'BTC'")   # (the test's market rows carry no ticker)
-    fm.evaluate("bnTick = 0; SamsamMarket._bn = null; binanceMinute()"); pg.wait_for_timeout(1200)
+    fm.evaluate("bnTick = 0; SamsamMarket._bnPx = {}; binanceMinute()"); pg.wait_for_timeout(1200)
     p1 = fm.evaluate("topRows.find(r => r.id === 'bitcoin').price")
     check('Market Hub: Binance\'s newer BTC price reaches the list between CoinGecko refreshes', abs(p1 - state['btc']) < 0.01 and p1 != p0, (p0, p1))
     check('…and the status line says Live, just now', 'Live' in fm.inner_text('#mkMsg') and 'just now' in fm.inner_text('#mkMsg'), fm.inner_text('#mkMsg'))
     pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(600)
-    fm.evaluate("bnTick = 0; SamsamMarket._bn = null"); state['btc'] = round(p0 * 1.02, 2)
+    fm.evaluate("bnTick = 0; SamsamMarket._bnPx = {}"); state['btc'] = round(p0 * 1.02, 2)
     fm.evaluate("binanceMinute()"); pg.wait_for_timeout(800)
     check('Market Hub off screen: no top-up (nothing is downloaded for a tab you are not looking at)', fm.evaluate("topRows.find(r => r.id === 'bitcoin').price") == p1)
     # Plan: plan-only prices only while the Plan tab is on screen

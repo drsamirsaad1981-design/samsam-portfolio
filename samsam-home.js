@@ -420,6 +420,7 @@ function renderHeader() {
 // ── Live BTC ticker ──────────────────────────────────────────────────────────
 let btcTicker = { price: 0, ch24: null, high24: null, low24: null, t: 0 };
 async function fetchBtcTicker() {
+  if (typeof liveLine !== 'undefined' && liveLine && liveLine.alive() && Date.now() - btcTicker.t < 20e3) return;   // ⚡ the live line keeps it current
   // Binance first (live, no request limit): price, 24h change, high and low — CoinGecko's free limit is kept for the lists
   try {
     const rb = await fetch('https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT', { cache: 'no-store' });
@@ -437,7 +438,7 @@ async function fetchBtcTicker() {
     }
   } catch (e) { /* keep the price from the regular price refresh */ }
 }
-let _tickerKey = '';
+let _tickerKey = '', _tickerShape = '';
 // market numbers for the ticker: cached / GitHub snapshot (no extra CoinGecko calls from Home), every 3 minutes
 var tickerMkt = {};
 function loadTickerMarket() {
@@ -454,11 +455,15 @@ function renderBtcTicker() {
   const btcCoin = portfolio.find(c => c.sym === 'BTC');
   const ch = btcTicker.ch24 != null ? btcTicker.ch24 : (btcCoin && btcCoin.change24h != null ? btcCoin.change24h : null);
   const usd = n => n >= 1000 ? '$' + Math.round(n).toLocaleString('en-US') : SamsamFmt.usd(n);   // whole dollars above $1,000 (keeps the line short)
+  // the price and the 24h change are marked (bt-px / bt-ch): when only they change (the live line, every 2 s) they are
+  // updated in place, so the moving line keeps moving instead of starting over
+  const pxTxt = price > 0 ? usd(price) : '—', chCls = ch != null && ch >= 0 ? 'bt-up' : 'bt-down', chTxt = ch != null ? (ch >= 0 ? '▲ +' : '▼ -') + Math.abs(ch).toFixed(2) + '%' : '';
+  const build = (P, K, C) => {
   const parts = [
     `<span class="bt-item">${SamsamUI.liveDot(live ? 'ok' : 'error', true)}<span class="bt-live">${live ? 'Live' : navigator.onLine ? 'Saved prices' : 'Offline'}</span></span>`,
-    `<span class="bt-item">BTC / USD <strong>${price > 0 ? usd(price) : '—'}</strong></span>`,
+    `<span class="bt-item">BTC / USD <strong class="bt-px">${P}</strong></span>`,
   ];
-  if (ch != null) parts.push(`<span class="bt-item"><span class="${ch >= 0 ? 'bt-up' : 'bt-down'}">${ch >= 0 ? '▲ +' : '▼ -'}${Math.abs(ch).toFixed(2)}%</span> 24h</span>`);
+  if (ch != null) parts.push(`<span class="bt-item"><span class="bt-ch ${K}">${C}</span> 24h</span>`);
   // the market (same numbers as the Market tab) — any of these opens the Market tab
   const M = window.SamsamMarket, tm = tickerMkt || {}, g = tm.g, f = tm.f, a = tm.alt;
   if (M && (g || f)) {
@@ -469,9 +474,17 @@ function renderBtcTicker() {
     if (a) parts.push(go(`Altcoin Season <strong>${a.value}<span class="bt-of">/100</span></strong>`, 'Altcoin Season'));
     parts.push(go(`<span class="bt-explore">Explore ↗</span>`, 'Explore the market'));
   }
-  const group = parts.join('<span class="bt-sep"></span>') + '<span class="bt-sep"></span>';
+  return parts.join('<span class="bt-sep"></span>') + '<span class="bt-sep"></span>';
+  };
+  const group = build(pxTxt, chCls, chTxt), shape = build('\u0001', '\u0002', '\u0003');
   if (group === _tickerKey) return; // unchanged → don't restart the animation
-  _tickerKey = group;
+  if (shape === _tickerShape && track.firstElementChild) {   // only the price / 24h moved → change those words, keep moving
+    _tickerKey = group;
+    track.querySelectorAll('.bt-px').forEach(e => { e.textContent = pxTxt; });
+    track.querySelectorAll('.bt-ch').forEach(e => { e.className = 'bt-ch ' + chCls; e.textContent = chTxt; });
+    return;
+  }
+  _tickerKey = group; _tickerShape = shape;
   // Two identical copies → seamless loop (animation moves exactly one copy's width)
   track.innerHTML = `<div class="btc-ticker-group">${group}</div><div class="btc-ticker-group" aria-hidden="true">${group}</div>`;
   fitBtcTicker();
@@ -1171,19 +1184,34 @@ window.addEventListener('online', () => _pollPrices());
 // a minute or more). A Binance price is used only when it is within 25% of the CoinGecko one (the same ticker can be a
 // different coin), and the 24h % keeps CoinGecko's price of 24 h ago. Coins Binance doesn't have stay on CoinGecko.
 var fastAt = {};   // var: fetchLivePrices() runs before this line on load
-async function fastPrices() {
-  if (document.hidden || !navigator.onLine || !window.SamsamMarket || !SamsamMarket.fastPrices || !(window.Samsam && Samsam.isReady())) return;
-  const held = portfolio.filter(c => c.qty > 0 && c.currentPrice > 0);
-  const px = await SamsamMarket.fastPrices(held.map(c => c.sym));
+// apply Binance prices { SYM: { price, ch24?, high?, low? } } to the coins you hold (the same 25% check as before)
+function applyFast(px, fromStream) {
   const map = {}, now = Date.now();
-  held.forEach(c => {
-    const p = px[c.sym]; if (!(p > 0) || Math.abs(p / c.currentPrice - 1) > 0.25) return;
+  portfolio.filter(c => c.qty > 0 && c.currentPrice > 0).forEach(c => {
+    const x = px[c.sym], p = x && (typeof x === 'number' ? x : x.price); if (!(p > 0) || Math.abs(p / c.currentPrice - 1) > 0.25) return;
     const ago = c.change24h != null ? c.currentPrice / (1 + c.change24h / 100) : null;
     map[c.sym] = { usd: p, ch24: ago > 0 ? (p / ago - 1) * 100 : (c.change24h ?? null) }; fastAt[c.sym] = now;
     if (c.sym === 'BTC') btcPrice = p;
   });
+  const b = px.BTC;   // ⚡ the moving line: Binance's own 24 h numbers for BTC
+  if (b && typeof b === 'object' && b.price > 0) { btcTicker = { price: b.price, ch24: b.ch24 != null ? b.ch24 : btcTicker.ch24, high24: b.high || btcTicker.high24, low24: b.low || btcTicker.low24, t: now }; renderBtcTicker(); }
   if (Object.keys(map).length) { lastFetchTime = new Date(); _lastFastOk = now; if (liveStatus === 'error') setLiveStatus('ok'); Samsam.updatePrices(map); }   // fresh prices arrived → Live again
 }
+async function fastPrices() {
+  if (document.hidden || !navigator.onLine || !window.SamsamMarket || !SamsamMarket.fastPrices || !(window.Samsam && Samsam.isReady())) return;
+  if (liveLine && liveLine.alive()) return;   // ⚡ the live line already brings these prices every couple of seconds
+  const held = portfolio.filter(c => c.qty > 0 && c.currentPrice > 0);
+  applyFast(await SamsamMarket.fastPrices(held.map(c => c.sym)));
+}
+// ⚡ Live line: Binance pushes the price of each coin you hold (and BTC) as it trades — shown every 2 s, over one
+// connection, instead of asking every 15 s. If the line drops, the 15-second asking above carries on by itself.
+var liveLine = null;
+function followLive() {
+  if (!window.SamsamMarket || !SamsamMarket.stream || !(window.Samsam && Samsam.isReady())) return;
+  if (!liveLine) liveLine = SamsamMarket.stream(px => applyFast(px, true), 2000);
+  liveLine.set(['BTC', ...portfolio.filter(c => c.qty > 0 && c.currentPrice > 0).map(c => c.sym)]);
+}
+setInterval(followLive, 30000); setTimeout(followLive, 3000);
 setInterval(fastPrices, 15000); setTimeout(fastPrices, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) fastPrices(); });
 window.addEventListener('offline', () => { if (typeof setLiveStatus === 'function') setLiveStatus('offline'); });

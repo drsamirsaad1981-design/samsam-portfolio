@@ -34,6 +34,8 @@ def _strip_csp(route):
     route.fulfill(response=r, body=body)
 
 def setup(ctx, keep_csp=False):
+    # ⚡ Binance's live line (WebSocket) points nowhere in tests (no real prices sneak in); live_stream_test.py fakes it
+    ctx.add_init_script("if (window.__bnWs === undefined) window.__bnWs = 'ws://127.0.0.1:9/?streams=';")
     ctx.add_init_script("window.__cpAutoAnswer = (kind, msg, o) => { (window.__cpLog = window.__cpLog || []).push(msg); return kind === 'prompt' ? (o && o.value != null ? String(o.value) : '') : true; };")   # in-app dialogs (CPDialog) answer OK in tests
     # cards that open on a tap (Target allocation, Exit Strategy's Macro + Cash-out) start open in the older tests;
     # a test of the closed state clears these keys first
