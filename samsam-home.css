@@ -101,6 +101,12 @@
   .stat-metals { grid-column: 1 / -1; text-decoration: none; color: inherit; cursor: pointer; }   /* phone: its own full row */
   .stat-metals[hidden] { display: none !important; }
   .stat-gold { color: #eab308; }
+  .stat-metals .stat-sub { width: 100%; }
+  .stat-metals .mt-tot { margin: 2px 0 6px; }
+  .stat-metals .mt-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 6px 0; border-top: 1px solid rgba(148,163,184,.15); font-size: .8rem; text-align: start; }
+  .stat-metals .mt-pl { text-align: end; font-weight: 600; }
+  .stat-metals .mt-px { grid-column: 1 / -1; opacity: .75; font-size: .74rem; }
+  .stat-metals .mt-row b { font-weight: 600; }
 
   .stat-card {
     background: rgba(255,255,255,0.04);

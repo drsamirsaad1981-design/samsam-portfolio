@@ -57,7 +57,7 @@ with sync_playwright() as p:
     check('Total Portfolio includes the gold (metals not with altcoins, but in the total)', abs(tt[0] - tt[1]) < 1e-6 and tt[2] > 0, tt)
     hide0 = pg.evaluate("metalsCard.hidden")
     mt = pg.evaluate("[metalsCard.hidden, metalsSub.textContent, metalsCard.getAttribute('href')]")
-    check('Overview: 🥇 Precious Metals card shows 150 g of gold and opens the Metals page', mt[0] is False and '150 g gold' in mt[1].replace('\u2066','').replace('\u2069','') and mt[2].endswith('#metals'), mt)
+    check('Overview: 🥇 Precious Metals card shows 150 g of gold and opens the Metals page', mt[0] is False and all(x in mt[1].replace('\u2066','').replace('\u2069','') for x in ('Gold', '150 g', 'Bought $83.33/g', 'Cost', 'Profit')) and mt[2].endswith('#metals'), mt)
     pg.locator('#metalsCard').scroll_into_view_if_needed(); pg.screenshot(path=str(SH / 'metals-overview.png'))
     ql = pg.evaluate("SamsamCoins.quickLinks('XAU')")
     check('links: CoinGlass XAUT map, CoinCodex pax-gold, CMC pax-gold',

@@ -393,11 +393,20 @@ function renderHeader() {
     const mets = portfolio.filter(c => SamsamCoins.isMetal(c.sym) && c.qty > 1e-12), AR = !!(window.CPLang && CPLang.ar);
     mc.hidden = !mets.length;
     if (mets.length) {
-      const val = mets.reduce((s, c) => s + c.qty * c.currentPrice, 0), cost = mets.reduce((s, c) => s + c.qty * c.basePrice, 0), ch = cost > 0 ? (val / cost - 1) * 100 : null;
-      const nm = { XAU: AR ? 'ذهب' : 'gold', XAG: AR ? 'فضة' : 'silver' };
+      const rz = (realizedState && realizedState.bySym) || {}, G = SamsamCoins.GPO;
+      const sgn = (v, f) => (v >= 0 ? '+' : '−') + f(Math.abs(v)), cls = v => v >= 0 ? 'stat-pos' : 'stat-neg';
+      const nm = { XAU: ['🥇', AR ? 'ذهب' : 'Gold'], XAG: ['🥈', AR ? 'فضة' : 'Silver'] };
+      let val = 0, cost = 0, pnl = 0;
+      const rows = mets.map(c => {
+        const v = c.qty * c.currentPrice, k = c.qty * c.basePrice, p = v - k + ((rz[c.sym] || {}).realized || 0), pc = k > 0 ? p / k * 100 : 0;
+        val += v; cost += k; pnl += p;
+        return `<div class="mt-row"><span>${nm[c.sym][0]} ${nm[c.sym][1]} <b>⁦${(c.qty * G).toLocaleString('en-US', { maximumFractionDigits: 1 })} ${AR ? 'جم' : 'g'}⁩</b></span>` +
+          `<span class="mt-pl ${cls(p)}">⁦${sgn(p, fmtUsd)} (${sgn(pc, x => x.toFixed(1))}%)⁩</span>` +
+          `<span class="mt-px">${AR ? 'الشراء' : 'Bought'} <b>⁦${SamsamFmt.price(c.basePrice / G)}/g⁩</b> · ${AR ? 'الآن' : 'now'} <b>⁦${SamsamFmt.price(c.currentPrice / G)}/g⁩</b></span></div>`;
+      }).join('');
+      const pct = cost > 0 ? pnl / cost * 100 : 0;
       document.getElementById('metalsUsd').textContent = fmtUsd(val);
-      document.getElementById('metalsSub').textContent = mets.map(c => '⁦' + (c.qty * SamsamCoins.GPO).toLocaleString('en-US', { maximumFractionDigits: 1 }) + (AR ? ' جم' : ' g') + '⁩ ' + nm[c.sym]).join(' · ') +
-        (ch != null ? ' · ⁦' + (ch >= 0 ? '+' : '−') + Math.abs(ch).toFixed(1) + '%⁩' : '');
+      document.getElementById('metalsSub').innerHTML = `<div class="mt-tot">${AR ? 'التكلفة' : 'Cost'} <b>⁦${fmtUsd(cost)}⁩</b> · <span class="${cls(pnl)}">${AR ? 'الربح' : 'Profit'} <b>⁦${sgn(pnl, fmtUsd)} (${sgn(pct, x => x.toFixed(1))}%)⁩</b></span></div>` + rows;
     }
   }
 
