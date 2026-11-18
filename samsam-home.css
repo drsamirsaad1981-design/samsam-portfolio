@@ -158,6 +158,10 @@
   a.bt-mkt:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
   .bt-explore { color: #a78bfa; font-weight: 800; } [data-theme="light"] .bt-explore { color: #6d28d9; }
   @keyframes btcTickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  /* Arabic (right-to-left): the track starts at the right edge and its copy sits on its left, so it moves
+     left → right (like Arabic news tickers) — sliding left there left the bar empty for half of each loop */
+  @keyframes btcTickerScrollRtl { from { transform: translateX(0); } to { transform: translateX(50%); } }
+  [dir="rtl"] .btc-ticker-track { animation-name: btcTickerScrollRtl; }
   .btc-ticker.static { justify-content: center; -webkit-mask-image: none; mask-image: none; }
   .btc-ticker.static .btc-ticker-track { animation: none; transform: none; width: auto; }
   .btc-ticker.static .btc-ticker-group[aria-hidden] { display: none; }

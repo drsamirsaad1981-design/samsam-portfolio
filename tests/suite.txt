@@ -60,6 +60,7 @@ sync_test.py
 table_check.py
 taxonomy_check.py
 ticker.py
+ticker_rtl_test.py
 title_check.py
 toolbar_check.py
 tx_align.py

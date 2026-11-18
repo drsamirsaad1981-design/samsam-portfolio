@@ -34,7 +34,7 @@ with sync_playwright() as p:
         check(f'{name}: BTC price card + old label removed', not info['oldCards'])
         check(f'{name}: P&L format +$X (+X.XX%)', info['pnl'][0] in '+-' and info['pnl'][1] == '$' and info['pnlSub'].startswith('(') and '%)' in info['pnlSub'], (info['pnl'], info['pnlSub']))
         check(f'{name}: ticker shows live, price, 24h change — no High / Low', all(k in info['tickerText'] for k in ('Live', 'BTC / USD', '$100,000', '+2.45%')) and 'High' not in info['tickerText'] and 'Low ' not in info['tickerText'], info['tickerText'][:200])
-        check(f'{name}: ticker animates (or holds still when it fits), under cards, 8px radius, soft background', (info['anim'] == 'btcTickerScroll' or pg.evaluate("document.getElementById('btcTicker').classList.contains('static')")) and info['tickerBelowCards'] and info['radius'] == '8px' and info['bg'] == 'rgba(255, 255, 255, 0.03)', (info['anim'], info['radius'], info['bg']))
+        check(f'{name}: ticker animates (or holds still when it fits), under cards, 8px radius, soft background', (info['anim'] in ('btcTickerScroll', 'btcTickerScrollRtl') or pg.evaluate("document.getElementById('btcTicker').classList.contains('static')")) and info['tickerBelowCards'] and info['radius'] == '8px' and info['bg'] == 'rgba(255, 255, 255, 0.03)', (info['anim'], info['radius'], info['bg']))
         check(f'{name}: pulsing green Live dot', info['pulse'])
         check(f'{name}: no horizontal overflow', not info['overflow'])
         # P&L matches the Performance page's Total P&L
