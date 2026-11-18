@@ -53,6 +53,8 @@ with sync_playwright() as p:
     check('holdings shown in grams', '150 g' in hc, hc)
     av = pg.evaluate("avgShown(portfolio.find(c => c.sym === 'XAU'))")
     check('Avg. Buy Price shown per gram', av.endswith('/g') and '83.3' in av, av)
+    tt = pg.evaluate("(() => { const s = calcStats(); return [s.total, portfolio.reduce((a, c) => a + c.qty * (c.sym === 'BTC' ? btcPrice : c.currentPrice), 0), s.metalTotal]; })()")
+    check('Total Portfolio includes the gold (metals not with altcoins, but in the total)', abs(tt[0] - tt[1]) < 1e-6 and tt[2] > 0, tt)
     hide0 = pg.evaluate("metalsCard.hidden")
     mt = pg.evaluate("[metalsCard.hidden, metalsSub.textContent, metalsCard.getAttribute('href')]")
     check('Overview: 🥇 Precious Metals card shows 150 g of gold and opens the Metals page', mt[0] is False and '150 g gold' in mt[1].replace('\u2066','').replace('\u2069','') and mt[2].endswith('#metals'), mt)

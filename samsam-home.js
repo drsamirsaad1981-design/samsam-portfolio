@@ -264,8 +264,9 @@ function calcStats() {
   const btcEntry = portfolio.find(c => c.sym === 'BTC');
   const btcQty = btcEntry ? btcEntry.qty : 0;
   const altTotal = portfolio.filter(c => c.sym !== 'BTC' && !SamsamCoins.isMetal(c.sym)).reduce((s,c) => s + c.qty * c.currentPrice, 0);
+  const metalTotal = portfolio.filter(c => SamsamCoins.isMetal(c.sym)).reduce((s,c) => s + c.qty * c.currentPrice, 0);   // 🥇 gold / silver: in the total, not with the altcoins
   const btcValue = btcQty * btcPrice;
-  return { btcQty, btcValue, altTotal, total: btcValue + altTotal };
+  return { btcQty, btcValue, altTotal, metalTotal, total: btcValue + altTotal + metalTotal };
 }
 
 // All Time Profit for the whole portfolio — the header card, the chart legend and the details sheet all read this.
