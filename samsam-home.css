@@ -103,6 +103,7 @@
   .stat-metals .mt-open { position: absolute; inset-inline-end: 0; font-size: .74rem; font-weight: 600; color: #60a5fa; text-decoration: none; }
   .stat-metals button.mt-row { width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; color: inherit; font: inherit; cursor: pointer; }
   .stat-metals .mt-vault { opacity: .7; font-size: .72rem; }
+  .stat-metals .mt-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 28px; width: 100%; }   /* wide screens: gold and silver side by side */
   .stat-metals[hidden] { display: none !important; }
   .stat-gold { color: #eab308; }
   .stat-metals .stat-sub { width: 100%; }

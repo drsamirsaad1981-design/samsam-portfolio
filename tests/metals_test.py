@@ -83,6 +83,7 @@ with sync_playwright() as p:
     mt = pg.evaluate("[metalsCard.hidden, metalsSub.textContent, document.querySelector('#metalsCard .mt-open').getAttribute('href')]")
     check('Overview: 🥇 Precious Metals card shows 150 g of gold and opens the Metals page', mt[0] is False and all(x in mt[1].replace('\u2066','').replace('\u2069','') for x in ('Gold', '150 g', 'Bought $83.33/g', 'Cost', 'Profit')) and mt[2].endswith('#metals'), mt)
     pg.locator('#metalsCard').scroll_into_view_if_needed(); pg.screenshot(path=str(SH / 'metals-overview.png'))
+    pg.set_viewport_size({'width': 1400, 'height': 900}); pg.wait_for_timeout(400); pg.locator('#metalsCard').scroll_into_view_if_needed(); pg.screenshot(path=str(SH / 'metals-overview-desktop.png')); pg.set_viewport_size({'width': 390, 'height': 844}); pg.wait_for_timeout(300)
     ql = pg.evaluate("SamsamCoins.quickLinks('XAU')")
     check('links: CoinGlass XAUT map, CoinCodex pax-gold, CMC pax-gold',
           'coin=XAUT' in ql and 'pax-gold' in ql and 'coinmarketcap.com/currencies/pax-gold' in ql and 'Try Liq' not in ql, ql)

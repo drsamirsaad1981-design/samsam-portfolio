@@ -410,7 +410,7 @@ function renderHeader() {
       }).join('');
       const pct = cost > 0 ? pnl / cost * 100 : 0;
       document.getElementById('metalsUsd').textContent = fmtUsd(val);
-      document.getElementById('metalsSub').innerHTML = `<div class="mt-tot">${AR ? 'التكلفة' : 'Cost'} <b>⁦${fmtUsd(cost)}⁩</b> · <span class="${cls(pnl)}">${AR ? 'الربح' : 'Profit'} <b>⁦${sgn(pnl, fmtUsd)} (${sgn(pct, x => x.toFixed(1))}%)⁩</b></span></div>` + rows;
+      document.getElementById('metalsSub').innerHTML = `<div class="mt-tot">${AR ? 'التكلفة' : 'Cost'} <b>⁦${fmtUsd(cost)}⁩</b> · <span class="${cls(pnl)}">${AR ? 'الربح' : 'Profit'} <b>⁦${sgn(pnl, fmtUsd)} (${sgn(pct, x => x.toFixed(1))}%)⁩</b></span></div><div class="mt-rows">` + rows + '</div>';
     }
   }
 
