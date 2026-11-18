@@ -20,7 +20,7 @@
   function usd(n) { return window.SamsamFmt ? SamsamFmt.usd(n) : '$' + Number(n).toFixed(2); }
   var NAMES = { binance: 'Binance', gate: 'Gate' };
 
-  var st = { exchanges: null, balances: null, at: 0, busy: false, err: '', form: { ex: 'binance', err: '', busy: false }, loading: false };
+  var st = { gen: 0, exchanges: null, balances: null, at: 0, busy: false, err: '', form: { ex: 'binance', err: '', busy: false }, loading: false };
 
   function call(body) {
     var s = S(); if (!s || !s.idToken) return Promise.reject(new Error('signin'));
@@ -161,9 +161,10 @@
   function balances(fresh) {
     if (!(st.exchanges || []).length) { draw(); return Promise.resolve(); }
     st.loading = true; draw();
-    return call({ action: 'balances', fresh: !!fresh }).then(function (j) { if (j._status >= 400) throw new Error(j.error || 'failed'); st.balances = j.balances || []; st.at = j.at || Date.now(); st.exchanges = j.exchanges || st.exchanges; })
-      .catch(function (e) { st.balances = [{ ok: false, name: '', error: e.message }]; })
-      .then(function () { st.loading = false; draw(); paintCard(); });
+    var gen = st.gen;   // an answer that arrives after a Remove / a new key belongs to the old list → dropped
+    return call({ action: 'balances', fresh: !!fresh }).then(function (j) { if (gen !== st.gen) return; if (j._status >= 400) throw new Error(j.error || 'failed'); st.balances = j.balances || []; st.at = j.at || Date.now(); st.exchanges = j.exchanges || st.exchanges; })
+      .catch(function (e) { if (gen === st.gen) st.balances = [{ ok: false, name: '', error: e.message }]; })
+      .then(function () { if (gen !== st.gen) return; st.loading = false; draw(); paintCard(); });
   }
   function connect() {
     var f = st.form, k = ($('cxKey') || {}).value || '', s = ($('cxSecret') || {}).value || '';
@@ -172,11 +173,11 @@
     call({ action: 'set', ex: f.ex, key: k.trim(), secret: s.trim() }).then(function (j) {
       f.busy = false;
       if (j._status >= 400 || !j.ok) { f.err = why(j.error, j.extra) + (j.said ? '\n(' + NAMES[f.ex] + ': ' + j.said + ')' : ''); draw(); return; }
-      st.exchanges = j.exchanges; st.balances = null; f.err = ''; f.clear = true; draw(); balances(true);
+      st.gen++; st.exchanges = j.exchanges; st.balances = null; f.err = ''; f.clear = true; draw(); balances(true);
     }).catch(function () { f.busy = false; f.err = why('failed'); draw(); });
   }
   function remove(ex) {
-    var go = function () { call({ action: 'delete', ex: ex }).then(function (j) { st.exchanges = j.exchanges || []; st.balances = null; draw(); balances(); paintCard(); }); };
+    var go = function () { call({ action: 'delete', ex: ex }).then(function (j) { st.gen++; st.exchanges = j.exchanges || []; st.balances = null; draw(); balances(); paintCard(); }); };
     if (window.CPDialog && CPDialog.confirm) CPDialog.confirm(T('Remove ' + NAMES[ex] + '? Its key is deleted from the server. (You can also delete the key on ' + NAMES[ex] + '.)', 'إزالة ' + NAMES[ex] + '؟ يُحذف مفتاحها من الخادم. (ويمكنك أيضاً حذف المفتاح من ' + NAMES[ex] + '.)'), { okText: T('Remove', 'إزالة'), danger: true, title: T('Remove ' + NAMES[ex] + '?', 'إزالة ' + NAMES[ex] + '؟') }).then(function (y) { if (y) go(); });
     else go();
   }

@@ -45,6 +45,8 @@ with sync_playwright() as p:
         check(f'{name}: balances: SOL 10 (spot 4 + earn 6) next to the app, a coin not in the app flagged, total on exchanges', 'SOL' in t and '10' in t and 'ZZNEW' in t and ('not in the app' in t or 'غير موجودة في التطبيق' in t) and ('On exchanges' in t or 'على المنصات' in t), t[:600])
         pg.screenshot(path=str(pathlib.Path(__file__).parent / 'shots' / f'cex_{name}_bal.png'))
         pg.click('#cpCex [data-del="binance"]'); pg.wait_for_selector('#cpCex #cxKey', timeout=5000)
+        try: pg.wait_for_function("!document.querySelector('#cpCex [data-del]')", timeout=5000)   # (#cxKey is already there for Gate — wait for the Remove itself)
+        except Exception: pass
         check(f'{name}: Remove → asks, then the exchange is gone (the connect form is back)', any(b.get('action') == 'delete' for b in state['bodies']) and pg.locator('#cpCex [data-del]').count() == 0)
         pg.screenshot(path=str(pathlib.Path(__file__).parent / 'shots' / f'cex_{name}.png'))
         check(f'{name}: no page errors', not errs, errs[:3])
