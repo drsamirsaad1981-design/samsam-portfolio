@@ -15,6 +15,8 @@ with sync_playwright() as p:
     ctx.route('**/api/v3/klines**', kl)
     pg = ctx.new_page(); pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(2500)
+    # a gold history saved earlier that only covers the last 2 days (the chart starts weeks ago) → asked again, line drawn
+    pg.evaluate(f"localStorage.setItem('samsam_gold_hist', JSON.stringify({{ at: Date.now(), list: [[{now} - 2*864e5, 3900], [{now}, 3950]] }}))")
     pg.goto(S.SITE + '/performance.html'); S.wait_ready(pg); pg.wait_for_timeout(3000)
     g = pg.evaluate("[document.getElementById('pccGoldRow').hidden, document.getElementById('pccGold').textContent]")
     check('Performance: Gold Trend legend shown with a value', g[0] is False and '%' in g[1], g)

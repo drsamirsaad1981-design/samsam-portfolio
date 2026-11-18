@@ -1312,8 +1312,7 @@ function drawPerfChart(pc) {   // pc: { canvas, height } — the PDF's copy (lig
   const hist = allPerf.length ? allPerf : snaps;
   const pts = live.v > 0 && live.b > 0 && live.t > hist[hist.length - 1].t ? hist.concat([live]) : hist;
   // ✨ Gold Trend: the same money in gold (its price history arrives once, kept 1 hour; then the chart draws again)
-  const goldAt = SamsamCoins.goldCached(pts[0].t);
-  if (!goldAt && !window.__goldWait) { window.__goldWait = 1; SamsamCoins.goldHistory(pts[0].t).then(f => { if (f) try { drawPerfChart(); } catch (_) {} }); }
+  const goldAt = SamsamCoins.goldFor(pts[0].t, () => drawPerfChart());
   const full = Samsam.core.perfChartSeries(pts, st.coins, st.transactions, { baselineBtc: baselineState.btcPrice, goldAt });
   const t0 = snaps[0].t, inR = p => p.t >= t0;
   const ser = { port: full.port.filter(inR), btc: full.btc.filter(inR), gold: (full.gold || []).filter(inR) };

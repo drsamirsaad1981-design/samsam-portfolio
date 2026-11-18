@@ -394,7 +394,7 @@
     from = Math.max(0, +from || 0);
     var fresh = ghMem && Date.now() - ghMem.at < 3600e3 && goldCached(from);
     if (fresh) return Promise.resolve(fresh);
-    if (ghWait) return ghWait;
+    if (ghWait && ghWait.from <= from) return ghWait;   // a request already on its way covers this
     var span = Date.now() - from, iv = span <= 40 * 864e5 ? '1h' : span <= 160 * 864e5 ? '4h' : '1d';
     var save = function (list) { if (!list || !list.length) return null; ghMem = { at: Date.now(), list: list }; try { localStorage.setItem(GH_KEY, JSON.stringify(ghMem)); } catch (_) {} return ghLookup(list); };
     ghWait = fetch('https://data-api.binance.vision/api/v3/klines?symbol=PAXGUSDT&interval=' + iv + '&limit=1000&startTime=' + Math.floor(from - 864e5))
@@ -408,7 +408,16 @@
           .catch(function () { return goldCached(from); });
       })
       .then(function (f) { ghWait = null; return f; });
+    ghWait.from = from;
     return ghWait;
+  }
+  // for the charts: the gold lookup to draw with now, and (once) a request for the history the chart still lacks → redraw
+  var ghAsked = Infinity;
+  function goldFor(from, redraw) {
+    var f = goldCached(from);
+    if (!f && from >= ghAsked && !ghWait && ghMem && ghMem.list && ghMem.list.length) f = ghLookup(ghMem.list);   // asked already: draw with what there is
+    if (!f && from < ghAsked) { ghAsked = from; goldHistory(from).then(function (g) { if (g && redraw) try { redraw(); } catch (_) {} }); }
+    return f;
   }
   function holdCell(sym, value, qty, o) {
     o = o || {}; assetCss();
@@ -566,5 +575,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();
