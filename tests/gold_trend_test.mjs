@@ -22,4 +22,8 @@ check('your gold is gold: Gold Trend follows the gold price (+10%)', Math.abs(s.
 // 5. no gold prices → no line; BTC line unchanged
 s = C.perfChartSeries(snaps, coins, [tx('ETH', 'buy', 1, 1000, T0)], {});
 check('no gold prices → no Gold line, BTC line still there', s.gold.length === 0 && s.btc.length === 4, s);
+// 6. silver line the same way (your silver counts as silver)
+const sv = t => t < T0 + 2 * D ? 40 : 50;
+s = C.perfChartSeries(snaps, coins, [tx('ETH', 'buy', 1, 1000, T0)], { goldAt: g2, silverAt: sv });
+check('silver +25% → Silver Trend +25%, gold still +10%', Math.abs(s.silver[3].v - 25) < 1e-9 && Math.abs(s.gold[3].v - 10) < 1e-9, [s.silver, s.gold]);
 console.log(`gold_trend_test: ${ok}/${n} passed`); process.exit(ok === n ? 0 : 1);

@@ -159,7 +159,7 @@
           '<div class="cph-f"><b>%</b><code>All Time Profit ÷ Cost Basis × 100</code></div>' +
           '<p><b>Orange — BTC Trend</b>: the same money in Bitcoin. Every buy, sell and transfer you made is replayed as buying or selling BTC at that moment\'s price (what you held on the baseline date, ' + esc(fmtDay(b.date)) + ', at ' + esc(money(b.btcPrice)) + ').</p>' +
           '<div class="cph-f"><b>BTC Trend</b><code>(BTC bought with the same money × BTC price now − net invested) ÷ Cost Basis × 100</code></div>' +
-          '<p><b>Gold — Gold Trend ✨</b>: the same money in gold, worked out the same way with the gold price (PAX Gold, 1 troy ounce). Gold you hold counts as gold.</p>' +
+          '<p><b>Gold — Gold Trend ✨</b>: the same money in gold, worked out the same way with the gold price (PAX Gold, 1 troy ounce). Gold you hold counts as gold. <b>Silver Trend</b> is the same with silver (Kinesis Silver). Tap a line\'s name under the chart to show or hide it.</p>' +
           '<div class="cph-f"><b>Net invested</b><code>buying costs + fees − selling proceeds</code></div>' +
           '<p>So both lines use the same money and the same scale: the gap between them is how much better or worse your coins did than Bitcoin.</p>' +
           '<p>Both lines are measured from the start, so 24h / 7d / 30d / 90d only zoom in. The last point is right now and matches the All Time Profit card.</p>' +

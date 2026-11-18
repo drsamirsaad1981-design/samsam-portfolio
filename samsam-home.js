@@ -1312,14 +1312,17 @@ function drawPerfChart(pc) {   // pc: { canvas, height } — the PDF's copy (lig
   const hist = allPerf.length ? allPerf : snaps;
   const pts = live.v > 0 && live.b > 0 && live.t > hist[hist.length - 1].t ? hist.concat([live]) : hist;
   // ✨ Gold Trend: the same money in gold (its price history arrives once, kept 1 hour; then the chart draws again)
-  const goldAt = SamsamCoins.goldFor(pts[0].t, () => drawPerfChart());
-  const full = Samsam.core.perfChartSeries(pts, st.coins, st.transactions, { baselineBtc: baselineState.btcPrice, goldAt });
-  const t0 = snaps[0].t, inR = p => p.t >= t0;
-  const ser = { port: full.port.filter(inR), btc: full.btc.filter(inR), gold: (full.gold || []).filter(inR) };
-  if (ser.port.length < 2) { ser.port = full.port.slice(-2); ser.btc = full.btc.slice(-2); ser.gold = (full.gold || []).slice(-2); }
+  // (and 🥈 Silver Trend) — each comparison line on / off from its legend row (the PDF copy follows the same choice)
+  const TL = SamsamCoins.trendLines();
+  const goldAt = TL.gold ? SamsamCoins.metalFor('XAU', pts[0].t, () => drawPerfChart()) : null, silverAt = TL.silver ? SamsamCoins.metalFor('XAG', pts[0].t, () => drawPerfChart()) : null;
+  const full = Samsam.core.perfChartSeries(pts, st.coins, st.transactions, { baselineBtc: baselineState.btcPrice, goldAt, silverAt });
+  const t0 = snaps[0].t, inR = p => p.t >= t0, cut = a => { const x = (a || []).filter(inR); return x.length >= 2 ? x : (a || []).slice(-2); };
+  const ser = { port: full.port.filter(inR), btc: full.btc.filter(inR), gold: cut(full.gold), silver: cut(full.silver) };
+  if (ser.port.length < 2) { ser.port = full.port.slice(-2); ser.btc = full.btc.slice(-2); }
   SamsamChart.draw(canvas, { height: pc ? pc.height : TRIO_CHART_H(), format: 'pct', timeMode: timeModeFor(holdingsRange), theme: pc ? 'light' : undefined, series: [
+    ...(ser.silver.length ? [{ points: ser.silver, color: '#cbd5e1', width: 1.5 }] : []),   // 🥈 Silver Trend
     ...(ser.gold.length ? [{ points: ser.gold, color: '#eab308', width: 1.7 }] : []),   // ✨ Gold Trend
-    { points: ser.btc, color: '#f0a060', width: 2 },                         // BTC Trend
+    ...(TL.btc ? [{ points: ser.btc, color: '#f0a060', width: 2 }] : []),               // BTC Trend
     { points: ser.port, color: '#3b82f6', width: 2.4, fill: true },          // All Time Profit %
   ] });
   const tri = n => (n >= 0 ? '▲ ' : '▼ ') + Math.abs(n).toFixed(2) + '%';
@@ -1328,11 +1331,19 @@ function drawPerfChart(pc) {   // pc: { canvas, height } — the PDF's copy (lig
   const setV = (id, text, n) => { const e = document.getElementById(id); if (e) { e.textContent = text; e.className = 'perf-legend-val ' + (n >= 0 ? 'up' : 'down'); } };
   setV('perfPortfolioLabel', (ap.total >= 0 ? '+' : '−') + SamsamFmt.usd(Math.abs(ap.total)), ap.total);
   setV('perfPortfolioPct', tri(ap.pct), ap.total);
-  setV('perfBtcLabel', tri(btcTrend), btcTrend);
-  const gr = document.getElementById('perfGoldRow'), gt = ser.gold.length ? ser.gold[ser.gold.length - 1].v : null;
-  if (gr) { gr.hidden = gt == null; if (gt != null) setV('perfGoldLabel', tri(gt), gt); }
+  [['btc', ser.btc, 'perfBtcLabel'], ['gold', ser.gold, 'perfGoldLabel'], ['silver', ser.silver, 'perfSilverLabel']].forEach(([k, a, id]) => {
+    const row = document.querySelector('.perf-legend [data-tl="' + k + '"]'); if (!row) return;
+    row.classList.toggle('tl-off', !TL[k]); row.setAttribute('aria-pressed', String(!!TL[k]));
+    if (TL[k] && a.length) { const v = a[a.length - 1].v; setV(id, tri(v), v); } else { const e = document.getElementById(id); e.textContent = TL[k] ? '…' : '—'; e.className = 'perf-legend-val'; }
+  });
 }
 
+// tap BTC / Gold / Silver Trend under the chart: that line on / off (the card itself is a link — this tap stays here)
+['click', 'keydown'].forEach(ev => document.addEventListener(ev, e => {
+  const row = e.target.closest && e.target.closest('.perf-legend [data-tl]'); if (!row || e.target.closest('.cp-hint')) return;
+  if (ev === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault(); e.stopPropagation(); SamsamCoins.toggleTrend(row.dataset.tl); drawPerfChart();
+}, true));
 function updatePerfChart() {
   // Called after live prices load — save snapshot then redraw
   const { total } = calcStats();

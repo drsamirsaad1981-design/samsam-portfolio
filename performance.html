@@ -5,22 +5,22 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; connect-src 'self' https: wss: http://127.0.0.1:* http://localhost:*; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-lang.js?v=202611181826"></script>
-<script src="samsam-ar.js?v=202611181826"></script>
-<script src="samsam-ui.js?v=202611181826"></script>
-<script src="samsam-hints.js?v=202611181826"></script>
-<script src="samsam-arhints.js?v=202611181826"></script>
-<script src="samsam-vault.js?v=202611181826"></script>
-<script src="samsam-labels.js?v=202611181826"></script>
-<script src="samsam-taxonomy.js?v=202611181826"></script>
-<script src="samsam-dropdown.js?v=202611181826"></script>
-<script src="samsam-coins.js?v=202611181826"></script>
-<script src="samsam-import.js?v=202611181826"></script>
-<script src="samsam-wallets.js?v=202611181826"></script>
-<script src="samsam-cex.js?v=202611181826"></script>
-<script src="samsam-rewards.js?v=202611181826"></script>
-<script src="samsam-settings.js?v=202611181826"></script>
-<script src="samsam-chart.js?v=202611181826"></script>
+<script src="samsam-lang.js?v=202611181837"></script>
+<script src="samsam-ar.js?v=202611181837"></script>
+<script src="samsam-ui.js?v=202611181837"></script>
+<script src="samsam-hints.js?v=202611181837"></script>
+<script src="samsam-arhints.js?v=202611181837"></script>
+<script src="samsam-vault.js?v=202611181837"></script>
+<script src="samsam-labels.js?v=202611181837"></script>
+<script src="samsam-taxonomy.js?v=202611181837"></script>
+<script src="samsam-dropdown.js?v=202611181837"></script>
+<script src="samsam-coins.js?v=202611181837"></script>
+<script src="samsam-import.js?v=202611181837"></script>
+<script src="samsam-wallets.js?v=202611181837"></script>
+<script src="samsam-cex.js?v=202611181837"></script>
+<script src="samsam-rewards.js?v=202611181837"></script>
+<script src="samsam-settings.js?v=202611181837"></script>
+<script src="samsam-chart.js?v=202611181837"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -155,6 +155,8 @@ body {
 .pcc-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-inline-end: 6px; vertical-align: 0; }
 .pcc-legend b { font-weight: 800; }
 .pcc-legend b.pos { color: var(--green); } .pcc-legend b.neg { color: var(--red); }
+.pcc-tl { border: 0; background: transparent; color: inherit; font: inherit; padding: 2px 0; cursor: pointer; }
+.pcc-tl.off { opacity: .45; } .pcc-tl.off i { background: transparent !important; box-shadow: inset 0 0 0 1.5px currentColor; }
 @media (min-width: 700px) { .perf-chart-card { padding: 18px 18px 16px; } }
 .pnl-breakdown-card {
   background: var(--card);
@@ -709,8 +711,9 @@ body {
       <div class="pcc-empty" id="perfFullEmpty" hidden><span data-ic="hourglass"></span>Collecting data… the chart fills in as hourly snapshots are recorded.</div>
       <div class="pcc-legend">
         <span><i style="background:#3b82f6"></i>All Time Profit <b id="pccPortUsd">—</b> <b id="pccPort">—</b></span>
-        <span><i style="background:#f0a060"></i>BTC Trend <b id="pccBtc">—</b></span>
-        <span id="pccGoldRow" hidden><i style="background:#eab308"></i>Gold Trend ✨ <b id="pccGold">—</b></span>
+        <button type="button" class="pcc-tl" data-tl="btc" title="Show / hide this line"><i style="background:#f0a060"></i>BTC Trend <b id="pccBtc">—</b></button>
+        <button type="button" class="pcc-tl" data-tl="gold" id="pccGoldRow" title="Show / hide this line"><i style="background:#eab308"></i>Gold Trend ✨ <b id="pccGold">—</b></button>
+        <button type="button" class="pcc-tl" data-tl="silver" id="pccSilverRow" title="Show / hide this line"><i style="background:#cbd5e1"></i>Silver Trend <b id="pccSilver">—</b></button>
       </div>
     </div>
 
@@ -775,7 +778,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202611181826"></script>
+<script type="module" src="samsam-cloud.js?v=202611181837"></script>
 <script>
 // ── Constants ──
 
@@ -832,26 +835,33 @@ function drawPerfFull() {
   const hist = perfSnaps.length ? perfSnaps : snaps;
   const pts = live.v > 0 && live.b > 0 && live.t > hist[hist.length - 1].t ? hist.concat([live]) : hist;
   // ✨ Gold Trend: the same money in gold — its price history arrives once (kept 1 hour), then the chart draws again
-  const goldAt = SamsamCoins.goldFor(pts[0].t, drawPerfFull);
-  const full = Samsam.core.perfChartSeries(pts, st.coins, st.transactions, { baselineBtc: bl.btcPrice, goldAt });
-  const t0 = snaps[0].t, inR = p => p.t >= t0;
-  const ser = { port: full.port.filter(inR), btc: full.btc.filter(inR), gold: (full.gold || []).filter(inR) };
-  if (ser.port.length < 2) { ser.port = full.port.slice(-2); ser.btc = full.btc.slice(-2); ser.gold = (full.gold || []).slice(-2); }
+  // (and 🥈 Silver Trend) — each line on / off from its legend row
+  const TL = SamsamCoins.trendLines();
+  const goldAt = TL.gold ? SamsamCoins.metalFor('XAU', pts[0].t, drawPerfFull) : null, silverAt = TL.silver ? SamsamCoins.metalFor('XAG', pts[0].t, drawPerfFull) : null;
+  const full = Samsam.core.perfChartSeries(pts, st.coins, st.transactions, { baselineBtc: bl.btcPrice, goldAt, silverAt });
+  const t0 = snaps[0].t, inR = p => p.t >= t0, cut = a => { const x = (a || []).filter(inR); return x.length >= 2 ? x : (a || []).slice(-2); };
+  const ser = { port: full.port.filter(inR), btc: full.btc.filter(inR), gold: cut(full.gold), silver: cut(full.silver) };
+  if (ser.port.length < 2) { ser.port = full.port.slice(-2); ser.btc = full.btc.slice(-2); }
   const h = window.innerWidth >= 900 ? 320 : window.innerWidth >= 600 ? 260 : 220;
   SamsamChart.draw(canvas, { height: h, format: 'pct', hover: true, timeMode: perfRange === '24h' ? 'hours' : 'days', series: [
+    ...(ser.silver.length ? [{ points: ser.silver, color: '#cbd5e1', width: 1.6, name: 'Silver' }] : []),
     ...(ser.gold.length ? [{ points: ser.gold, color: '#eab308', width: 1.8, name: 'Gold' }] : []),
-    { points: ser.btc, color: '#f0a060', width: 2, name: 'BTC' },
+    ...(TL.btc ? [{ points: ser.btc, color: '#f0a060', width: 2, name: 'BTC' }] : []),
     { points: ser.port, color: '#3b82f6', width: 2.6, fill: true, name: 'Your portfolio' },
   ] });
 
   const lv = ap.pct, lb = ser.btc.length ? ser.btc[ser.btc.length - 1].v : 0;   // BTC benchmark now (same money, in BTC)
   const f = (n, el) => { el.textContent = (n >= 0 ? '▲ ' : '▼ ') + Math.abs(n).toFixed(2) + '%'; el.className = n >= 0 ? 'pos' : 'neg'; };
   f(lv, document.getElementById('pccPort')); f(lb, document.getElementById('pccBtc'));
-  document.getElementById('pccGoldRow').hidden = !ser.gold.length;
-  if (ser.gold.length) f(ser.gold[ser.gold.length - 1].v, document.getElementById('pccGold'));
+  [['btc', ser.btc, 'pccBtc'], ['gold', ser.gold, 'pccGold'], ['silver', ser.silver, 'pccSilver']].forEach(([k, a, id]) => {
+    const row = document.querySelector('#perfChartCard [data-tl="' + k + '"]'), el = document.getElementById(id);
+    row.classList.toggle('off', !TL[k]); row.setAttribute('aria-pressed', String(!!TL[k]));
+    if (TL[k] && a.length) f(a[a.length - 1].v, el); else { el.textContent = TL[k] ? '…' : '—'; el.className = ''; }
+  });
   const u = document.getElementById('pccPortUsd'); u.textContent = (ap.total >= 0 ? '+' : '−') + fmtUSD(Math.abs(ap.total)); u.className = ap.total >= 0 ? 'pos' : 'neg';
 }
 document.addEventListener('click', e => {
+  const tl = e.target.closest && e.target.closest('#perfChartCard [data-tl]'); if (tl) { SamsamCoins.toggleTrend(tl.dataset.tl); drawPerfFull(); return; }
   const b = e.target.closest && e.target.closest('#perfChartCard .pcc-tabs button'); if (!b) return;
   perfRange = b.dataset.r;
   document.querySelectorAll('#perfChartCard .pcc-tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));

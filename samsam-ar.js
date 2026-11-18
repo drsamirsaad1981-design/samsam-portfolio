@@ -146,7 +146,7 @@
     'Holdings': 'الأصول', 'Holdings — open the Portfolio Value chart (Performance)': 'الأصول — فتح رسم قيمة المحفظة (الأداء)',
     'the holdings change': 'تغيّر قيمة الأصول', 'Portfolio Performance': 'أداء المحفظة', 'Portfolio Allocation': 'توزيع المحفظة',
     'Portfolio allocation by category': 'توزيع المحفظة حسب التصنيف', 'How is this chart calculated?': 'كيف يُحسب هذا الرسم؟', 'How is it calculated?': 'كيف يُحسب؟',
-    'BTC Trend': 'اتجاه البيتكوين', 'Gold Trend ✨': 'اتجاه الذهب ✨', 'Gold Trend ✨:': 'اتجاه الذهب ✨:', 'BTC Trend %': 'اتجاه البيتكوين %', 'All Time Profit %': 'إجمالي الربح %',
+    'BTC Trend': 'اتجاه البيتكوين', 'Gold Trend ✨': 'اتجاه الذهب ✨', 'Silver Trend': 'اتجاه الفضة', 'Silver Trend:': 'اتجاه الفضة:', 'Show / hide this line': 'إظهار / إخفاء هذا الخط', 'Gold Trend ✨:': 'اتجاه الذهب ✨:', 'BTC Trend %': 'اتجاه البيتكوين %', 'All Time Profit %': 'إجمالي الربح %',
     'Collecting data… chart appears after first price update': 'جاري جمع البيانات… سيظهر الرسم بعد أول تحديث للأسعار',
     'Collecting data… the chart fills in as snapshots are recorded.': 'جاري جمع البيانات… سيكتمل الرسم مع تسجيل اللقطات.',
     'Collecting data… the chart fills in as hourly snapshots are recorded.': 'جاري جمع البيانات… سيكتمل الرسم مع تسجيل لقطة كل ساعة.',

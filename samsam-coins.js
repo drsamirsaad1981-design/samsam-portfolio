@@ -376,8 +376,10 @@
     return { grams: g, nisab: NISAB[sym], meets: meets, since: since, due: due,
       daysLeft: meets && since != null && !due ? Math.ceil((since + HAWL - now) / 864e5) : null, zakatG: g * 0.025, zakatOz: pos.qty * 0.025 };
   }
-  // ✨ Gold Trend: gold's price over time (PAX Gold = 1 troy ounce) from Binance (CoinGecko if not reachable), kept 1 hour
-  var GH_KEY = 'samsam_gold_hist', ghMem = null, ghWait = null;
+  // ✨ Gold / Silver Trend: the metal's price over time, per troy ounce — gold from Binance PAXGUSDT (CoinGecko PAX Gold if
+  // not reachable), silver from CoinGecko Kinesis Silver (KAG); each kept 1 hour on this device
+  var MH = { XAU: { key: 'samsam_gold_hist', bn: 'PAXGUSDT', cg: 'pax-gold' }, XAG: { key: 'samsam_silver_hist', bn: null, cg: 'kinesis-silver' } };
+  var mhMem = {}, mhWait = {}, mhAsked = {};
   function ghLookup(list) {
     var w = (list || []).filter(function (x) { return x && x[1] > 0; });
     return function (t) {
@@ -386,39 +388,52 @@
       var a = w[Math.max(0, lo - 1)], b = w[lo]; return Math.abs(a[0] - t) <= Math.abs(b[0] - t) ? a[1] : b[1];
     };
   }
-  function goldCached(from) {   // the lookup now (null if nothing saved that covers `from`)
-    if (!ghMem) { try { ghMem = JSON.parse(localStorage.getItem(GH_KEY) || 'null'); } catch (_) { ghMem = null; } }
-    return ghMem && ghMem.list && ghMem.list.length && ghMem.list[0][0] <= from + 864e5 ? ghLookup(ghMem.list) : null;
+  function mem(sym) {
+    if (!(sym in mhMem)) { try { mhMem[sym] = JSON.parse(localStorage.getItem(MH[sym].key) || 'null'); } catch (_) { mhMem[sym] = null; } }
+    return mhMem[sym];
   }
-  function goldHistory(from) {   // → Promise of a lookup t → $ per ounce (or null)
+  function metalCached(sym, from) {   // the lookup now (null if nothing saved that covers `from`)
+    var m = MH[sym] && mem(sym);
+    return m && m.list && m.list.length && m.list[0][0] <= from + 864e5 ? ghLookup(m.list) : null;
+  }
+  function metalHistory(sym, from) {   // → Promise of a lookup t → $ per ounce (or null)
+    var M = MH[sym]; if (!M) return Promise.resolve(null);
     from = Math.max(0, +from || 0);
-    var fresh = ghMem && Date.now() - ghMem.at < 3600e3 && goldCached(from);
+    var m = mem(sym), fresh = m && Date.now() - m.at < 3600e3 && metalCached(sym, from);
     if (fresh) return Promise.resolve(fresh);
-    if (ghWait && ghWait.from <= from) return ghWait;   // a request already on its way covers this
+    if (mhWait[sym] && mhWait[sym].from <= from) return mhWait[sym];   // a request already on its way covers this
     var span = Date.now() - from, iv = span <= 40 * 864e5 ? '1h' : span <= 160 * 864e5 ? '4h' : '1d';
-    var save = function (list) { if (!list || !list.length) return null; ghMem = { at: Date.now(), list: list }; try { localStorage.setItem(GH_KEY, JSON.stringify(ghMem)); } catch (_) {} return ghLookup(list); };
-    ghWait = fetch('https://data-api.binance.vision/api/v3/klines?symbol=PAXGUSDT&interval=' + iv + '&limit=1000&startTime=' + Math.floor(from - 864e5))
+    var save = function (list) { if (!list || !list.length) return null; mhMem[sym] = { at: Date.now(), list: list }; try { localStorage.setItem(M.key, JSON.stringify(mhMem[sym])); } catch (_) {} return ghLookup(list); };
+    var cg = function () {
+      var days = Math.min(365, Math.max(2, Math.ceil(span / 864e5) + 1));
+      return fetch('https://api.coingecko.com/api/v3/coins/' + M.cg + '/market_chart?vs_currency=usd&days=' + days)
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (d) { return save((d.prices || []).map(function (x) { return [+x[0], +x[1]]; })); })
+        .catch(function () { return metalCached(sym, from); });
+    };
+    var p = M.bn ? fetch('https://data-api.binance.vision/api/v3/klines?symbol=' + M.bn + '&interval=' + iv + '&limit=1000&startTime=' + Math.floor(from - 864e5))
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (k) { return save(k.map(function (x) { return [+x[0], +x[4]]; })); })
-      .catch(function () {
-        var days = Math.min(365, Math.max(2, Math.ceil(span / 864e5) + 1));
-        return fetch('https://api.coingecko.com/api/v3/coins/pax-gold/market_chart?vs_currency=usd&days=' + days)
-          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-          .then(function (d) { return save((d.prices || []).map(function (x) { return [+x[0], +x[1]]; })); })
-          .catch(function () { return goldCached(from); });
-      })
-      .then(function (f) { ghWait = null; return f; });
-    ghWait.from = from;
-    return ghWait;
+      .catch(cg) : cg();
+    mhWait[sym] = p.then(function (f) { mhWait[sym] = null; return f; });
+    mhWait[sym].from = from;
+    return mhWait[sym];
   }
-  // for the charts: the gold lookup to draw with now, and (once) a request for the history the chart still lacks → redraw
-  var ghAsked = Infinity;
-  function goldFor(from, redraw) {
-    var f = goldCached(from);
-    if (!f && from >= ghAsked && !ghWait && ghMem && ghMem.list && ghMem.list.length) f = ghLookup(ghMem.list);   // asked already: draw with what there is
-    if (!f && from < ghAsked) { ghAsked = from; goldHistory(from).then(function (g) { if (g && redraw) try { redraw(); } catch (_) {} }); }
+  // for the charts: the lookup to draw with now, and (once) a request for the history the chart still lacks → redraw
+  function metalFor(sym, from, redraw) {
+    if (!MH[sym]) return null;
+    var f = metalCached(sym, from), m = mem(sym), asked = sym in mhAsked ? mhAsked[sym] : Infinity;
+    if (!f && from >= asked && !mhWait[sym] && m && m.list && m.list.length) f = ghLookup(m.list);   // asked already: draw with what there is
+    if (!f && from < asked) { mhAsked[sym] = from; metalHistory(sym, from).then(function (g) { if (g && redraw) try { redraw(); } catch (_) {} }); }
     return f;
   }
+  function goldFor(from, redraw) { return metalFor('XAU', from, redraw); }
+  function goldCached(from) { return metalCached('XAU', from); }
+  function goldHistory(from) { return metalHistory('XAU', from); }
+  // which comparison lines the Portfolio vs BTC charts show (tap a legend row) — remembered on this device
+  var TL_KEY = 'samsam_trend_lines', TL_DEF = { btc: true, gold: true, silver: false };
+  function trendLines() { var o = {}; try { o = JSON.parse(localStorage.getItem(TL_KEY) || '{}') || {}; } catch (_) {} return { btc: o.btc !== undefined ? !!o.btc : TL_DEF.btc, gold: o.gold !== undefined ? !!o.gold : TL_DEF.gold, silver: o.silver !== undefined ? !!o.silver : TL_DEF.silver }; }
+  function toggleTrend(k) { var o = trendLines(); o[k] = !o[k]; try { localStorage.setItem(TL_KEY, JSON.stringify(o)); } catch (_) {} return o; }
   function holdCell(sym, value, qty, o) {
     o = o || {}; assetCss();
     if (isMetal(sym)) { var vm = window.SamsamFmt ? SamsamFmt.usd(value) : '$' + (+value || 0).toFixed(2); return '<div class="hold' + (o.align ? ' hold-' + o.align : '') + '"><div class="hold-val">' + (o.noValue ? '—' : vm) + '</div><div class="hold-qty" title="' + esc(grams(qty) + ' · ' + fmtAmount(qty) + ' oz') + '">' + grams(qty) + '</div></div>'; }
@@ -575,5 +590,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();
