@@ -119,8 +119,8 @@ export function describe(a) {
   const what = k.what === 'price' ? `${who} price` : k.what === 'change_24h' ? `${who} 24h change` : k.what === 'funding' ? `${a.sym} funding` : 'Portfolio value';
   return `${what} ${k.op} ${v}`;
 }
-// 🥇 the metals and oil an alert can watch (words in English and Arabic), and 📈 a bStock by its ticker or company name
-const METAL_WORDS = { gold: /^(gold|xau|ذهب|الذهب)$/i, silver: /^(silver|xag|فضة|الفضة)$/i, platinum: /^(platinum|xpt|بلاتين|البلاتين)$/i, copper: /^(copper|نحاس|النحاس)$/i, brent: /^(brent|oil|brent oil|crude|نفط|النفط|برنت|نفط برنت|البترول|بترول)$/i };
+// 🥇 the metals an alert can watch (words in English and Arabic), and 📈 a bStock by its ticker or company name
+const METAL_WORDS = { gold: /^(gold|xau|ذهب|الذهب)$/i, silver: /^(silver|xag|فضة|الفضة)$/i, platinum: /^(platinum|xpt|بلاتين|البلاتين)$/i, copper: /^(copper|نحاس|النحاس)$/i };   // (no oil alerts any more)
 const METAL_NAME = { gold: 'Gold', silver: 'Silver', platinum: 'Platinum', copper: 'Copper', brent: 'Brent oil' }, METAL_UNIT = { gold: 'oz', silver: 'oz', platinum: 'oz', copper: 'lb', brent: 'barrel' };
 export const metalOf = q => Object.keys(METAL_WORDS).find(k => METAL_WORDS[k].test(String(q).trim())) || null;
 export function stockOf(q, stocks) {
@@ -170,7 +170,7 @@ export async function viewAlerts(env, lang = 'en') {
   const list = await listAlerts(env), ar = lang === 'ar';
   if (!list.length) return { text: ar ? '🔔 لا توجد تنبيهات.\nاكتب مثلاً: <i>نبهني إذا نزل SOL تحت 82</i>' : '🔔 No alerts yet.\nWrite e.g. <i>tell me if SOL drops below 82</i>', buttons: [[{ text: ar ? '⬅️ القائمة' : '⬅️ Menu', callback_data: 'menu' }]] };
   const L = [ar ? `🔔 <b>تنبيهاتك</b> (${list.length})` : `🔔 <b>Your alerts</b> (${list.length})`];
-  const G = [['coin', ar ? '🪙 العملات' : '🪙 Coins'], ['stock', ar ? '📈 الأسهم (bStocks)' : '📈 Stocks (bStocks)'], ['metal', ar ? '🥇 المعادن والنفط' : '🥇 Metals &amp; oil'], ['pf', ar ? '💼 المحفظة' : '💼 Portfolio']];
+  const G = [['coin', ar ? '🪙 العملات' : '🪙 Coins'], ['stock', ar ? '📈 الأسهم (bStocks)' : '📈 Stocks (bStocks)'], ['metal', ar ? '🥇 المعادن' : '🥇 Metals'], ['pf', ar ? '💼 المحفظة' : '💼 Portfolio']];
   const groups = G.filter(([g]) => list.some(a => groupOf(a) === g)), several = groups.length > 1;
   const shown = [];   // grouped (a heading only when there is more than one kind), numbered in the order shown; the number = its 🗑 button
   for (const [g, title] of groups) {

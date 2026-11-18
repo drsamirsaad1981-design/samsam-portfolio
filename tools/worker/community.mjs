@@ -260,10 +260,10 @@ function pulseText(m, now, kind) {
     '', `<i>${NOTE.en} · ${NOTE.ar}</i>`].filter(x => x != null);
   return L.join('\n');
 }
-// the pulse's two extra lines (not on a 🚨 BTC move): 🥇 gold · silver · Brent, and 🇺🇸 the US market (bStocks: best / worst)
+// the pulse's two extra lines (not on a 🚨 BTC move): 🥇 gold · silver, and 🇺🇸 the US market (bStocks: best / worst)
 function otherMarkets(m, now) {
   const out = [], met = m.metals || [], f = k => met.find(x => x.k === k);
-  const mt = [['gold', 'Gold'], ['silver', 'Silver'], ['brent', 'Brent']].map(([k, n]) => { const x = f(k); return x && x.price > 0 ? `${n} <b>${usd(x.price)}</b> ${pct(x.ch24, 1)}` : null; }).filter(Boolean);
+  const mt = [['gold', 'Gold'], ['silver', 'Silver']].map(([k, n]) => { const x = f(k); return x && x.price > 0 ? `${n} <b>${usd(x.price)}</b> ${pct(x.ch24, 1)}` : null; }).filter(Boolean);
   if (mt.length) out.push(`🥇 ${mt.join(' · ')}`);
   const st = (m.stocks || []).filter(r => r.ch24 != null && r.price > 0);
   if (st.length) {

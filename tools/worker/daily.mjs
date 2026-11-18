@@ -166,22 +166,21 @@ const TODO_TXT = {
     reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} عن متوسط شرائك — تعزيز`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} عن متوسط شرائك — بيع / تحويل` }[x.what]),
 };
 // 🇺🇸 / 🥇 the other markets for the smart morning / evening: the US stock market's state, the biggest bStock moves, gold and
-// Brent. notable = worth one line today (gold ±1.5%, Brent ±2.5%, a bStock ±5%); otherwise the message leaves it out.
+// silver. notable = worth one line today (gold ±1.5%, a bStock ±5%); otherwise the message leaves it out.
 function otherFacts(m, now) {
   const met = m.metals || [], f = k => { const x = met.find(y => y.k === k); return x && x.price > 0 ? { price_usd: r2(x.price), change_24h_pct: r2(x.ch24) } : null; };
   const st = (m.stocks || []).filter(r => r.ch24 != null && r.price > 0), u = usMarket(now);
   const best = [...st].sort((a, b) => b.ch24 - a.ch24)[0], worst = [...st].sort((a, b) => a.ch24 - b.ch24)[0];
-  const gold = f('gold'), brent = f('brent');
-  const notable = !!((gold && Math.abs(gold.change_24h_pct) >= 1.5) || (brent && Math.abs(brent.change_24h_pct) >= 2.5) || (best && best.ch24 >= 5) || (worst && worst.ch24 <= -5));
+  const gold = f('gold');
+  const notable = !!((gold && Math.abs(gold.change_24h_pct) >= 1.5) || (best && best.ch24 >= 5) || (worst && worst.ch24 <= -5));
   return { notable, us_stock_market: { state: u.state, next_change_riyadh: local(u.next, { weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) },
     bstock_best_24h: best ? { ticker: best.sym, pct: r2(best.ch24) } : null, bstock_worst_24h: worst ? { ticker: worst.sym, pct: r2(worst.ch24) } : null,
-    gold_per_oz: gold, gold_gram_sar_24k: gold ? r2(gramSar(gold.price_usd)) : null, brent_per_barrel: brent };
+    gold_per_oz: gold, gold_gram_sar_24k: gold ? r2(gramSar(gold.price_usd)) : null };
 }
 function otherLine(L, o) {
   if (!o || !o.notable) return null;
   const ar = L === 'ar', parts = [];
   if (o.gold_per_oz) parts.push(`🥇 ${ar ? 'الذهب' : 'Gold'} ${usd(o.gold_per_oz.price_usd)} ${pct(o.gold_per_oz.change_24h_pct, 1)}`);
-  if (o.brent_per_barrel) parts.push(`🛢️ ${ar ? 'برنت' : 'Brent'} ${usd(o.brent_per_barrel.price_usd)} ${pct(o.brent_per_barrel.change_24h_pct, 1)}`);
   if (o.bstock_best_24h && Math.abs(o.bstock_best_24h.pct) >= Math.abs((o.bstock_worst_24h || {}).pct || 0)) parts.push(`🇺🇸 ${esc(o.bstock_best_24h.ticker)} ${pct(o.bstock_best_24h.pct, 1)}`);
   else if (o.bstock_worst_24h) parts.push(`🇺🇸 ${esc(o.bstock_worst_24h.ticker)} ${pct(o.bstock_worst_24h.pct, 1)}`);
   return parts.join(' · ');

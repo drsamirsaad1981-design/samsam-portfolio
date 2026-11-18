@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: f7b9704ccc0b3019
+// sources-hash: c99f4dc48e262cb8
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -361,7 +361,7 @@ function vsBtcByCoin(coins, txs, { prices: prices2 = {}, btcNow = 0, btcAt = nul
 var SMART_WEAK = 15;
 function signalFor({ sym, chg, rules, rs = null, smart = true }) {
   const r = rules || { reinforce: -5, sell: -20 };
-  const base = sym === "BTC" ? "hold" : chg < r.sell ? "convert" : chg <= r.reinforce ? "reinforce" : "hold";
+  const base = sym === "BTC" || sym === "XAU" || sym === "XAG" ? "hold" : chg < r.sell ? "convert" : chg <= r.reinforce ? "reinforce" : "hold";
   const ok2 = smart && sym !== "BTC" && rs && Number.isFinite(rs.d30) && Number.isFinite(rs.d90);
   if (!ok2) return { action: base, base, why: null, rs: rs || null };
   const weak = rs.d30 <= -SMART_WEAK && rs.d90 <= -SMART_WEAK, strong = rs.d30 > 0 && rs.d90 > 0;
@@ -1680,7 +1680,7 @@ async function readsToday(env, now = Date.now()) {
 }
 
 // tools/worker/cg-ids.json
-var cg_ids_default = { APT: "aptos", ARB: "arbitrum", ATOM: "cosmos", AVAIL: "avail", AVAX: "avalanche-2", BNB: "binancecoin", BTC: "bitcoin", CRO: "crypto-com-chain", DOGE: "dogecoin", DOT: "polkadot", ENS: "ethereum-name-service", ETH: "ethereum", FLR: "flare-networks", GLMR: "moonbeam", GRAM: "the-open-network", HBAR: "hedera-hashgraph", ICP: "internet-computer", JUP: "jupiter-exchange-solana", KAS: "kaspa", KAVA: "kava", KSM: "kusama", LINK: "chainlink", MNT: "mantle", MON: "monad", MOVR: "moonriver", NEAR: "near", NIGHT: "midnight-3", ONDO: "ondo-finance", OP: "optimism", POL: "polygon-ecosystem-token", PONS: "pons-2", PYTH: "pyth-network", QNT: "quant-network", RENDER: "render-token", SEI: "sei-network", SOL: "solana", STRK: "starknet", SUI: "sui", TAO: "bittensor", VET: "vechain", VTHO: "vethor-token", WLD: "worldcoin-wld", XDC: "xdce-crowd-sale", XPL: "plasma" };
+var cg_ids_default = { APT: "aptos", ARB: "arbitrum", ATOM: "cosmos", AVAIL: "avail", AVAX: "avalanche-2", BNB: "binancecoin", BTC: "bitcoin", CRO: "crypto-com-chain", DOGE: "dogecoin", DOT: "polkadot", ENS: "ethereum-name-service", ETH: "ethereum", FLR: "flare-networks", GLMR: "moonbeam", GRAM: "the-open-network", HBAR: "hedera-hashgraph", ICP: "internet-computer", JUP: "jupiter-exchange-solana", KAS: "kaspa", KAVA: "kava", KSM: "kusama", LINK: "chainlink", MNT: "mantle", MON: "monad", MOVR: "moonriver", NEAR: "near", NIGHT: "midnight-3", ONDO: "ondo-finance", OP: "optimism", POL: "polygon-ecosystem-token", PONS: "pons-2", PYTH: "pyth-network", QNT: "quant-network", RENDER: "render-token", SEI: "sei-network", SOL: "solana", STRK: "starknet", SUI: "sui", TAO: "bittensor", VET: "vechain", VTHO: "vethor-token", WLD: "worldcoin-wld", XAG: "kinesis-silver", XAU: "pax-gold", XDC: "xdce-crowd-sale", XPL: "plasma" };
 
 // tools/worker/data.mjs
 var RAW = "https://raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/";
@@ -2743,14 +2743,14 @@ var guide_default = {
       },
       en: [
         "Send a ticker \u2014 <code>btc</code> or <code>sol eth</code> \u2014 for the live price, trend, futures and funding.",
-        "/market \u2014 BTC, dominance, Fear &amp; Greed and ETF flows; its \u{1F4C8} bStocks and \u{1F947} Metals buttons show US stocks and gold, silver, oil (/stocks \xB7 /metals).",
+        "/market \u2014 BTC, dominance, Fear &amp; Greed and ETF flows; its \u{1F4C8} bStocks and \u{1F947} Metals buttons show US stocks and gold, silver, platinum, copper (/stocks \xB7 /metals).",
         "/movers \u2014 the best and worst coins \xB7 /signals \u2014 hold / add / sell for your coins.",
         "/portfolio \xB7 /plan \xB7 /exit \u2014 your own numbers.",
         "/balances \u2014 your Binance / Gate balances, read with a read-only key you connect in the app (Performance \u2192 Wallets &amp; Exchanges \u2192 Exchanges)."
       ],
       ar: [
         "\u0623\u0631\u0633\u0644 \u0631\u0645\u0632 \u0627\u0644\u0639\u0645\u0644\u0629 \u2014 <code>btc</code> \u0623\u0648 <code>sol eth</code> \u2014 \u0644\u062A\u0631\u0649 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0648\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0645\u0648\u064A\u0644.",
-        "/market \u2014 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629 \u0648\u0645\u0624\u0634\u0631 \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639 \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF\u061B \u0648\u0632\u0631\u0651\u0627 \u{1F4C8} bStocks \u0648\u{1F947} \u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u064A\u0639\u0631\u0636\u0627\u0646 \u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0648\u0627\u0644\u0646\u0641\u0637 (/stocks \xB7 /metals).",
+        "/market \u2014 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629 \u0648\u0645\u0624\u0634\u0631 \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639 \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF\u061B \u0648\u0632\u0631\u0651\u0627 \u{1F4C8} bStocks \u0648\u{1F947} \u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u064A\u0639\u0631\u0636\u0627\u0646 \u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0648\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646 \u0648\u0627\u0644\u0646\u062D\u0627\u0633 (/stocks \xB7 /metals).",
         "/movers \u2014 \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623 \u0623\u062F\u0627\u0621\u064B \xB7 /signals \u2014 \u0627\u062D\u062A\u0641\u0627\u0638 / \u062A\u0639\u0632\u064A\u0632 / \u0628\u064A\u0639 \u0644\u0639\u0645\u0644\u0627\u062A\u0643.",
         "/portfolio \xB7 /plan \xB7 /exit \u2014 \u0623\u0631\u0642\u0627\u0645\u0643 \u0627\u0644\u062E\u0627\u0635\u0629.",
         "/balances \u2014 \u0623\u0631\u0635\u062F\u062A\u0643 \u0641\u064A Binance \u0648 Gate\u060C \u062A\u064F\u0642\u0631\u0623 \u0628\u0645\u0641\u062A\u0627\u062D \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u062A\u0631\u0628\u0637\u0647 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (\u0627\u0644\u0623\u062F\u0627\u0621 \u2190 \u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A \u2190 \u0627\u0644\u0645\u0646\u0635\u0627\u062A)."
@@ -2778,13 +2778,13 @@ var guide_default = {
       },
       en: [
         "Just say it: <i>tell me if ETH drops below 3000</i> \xB7 <i>alert me if SOL is up 10% in a day</i> \xB7 <i>if my portfolio passes $30k</i>.",
-        "Gold, silver, oil and US stocks too: <i>tell me if gold goes above 4000</i> \xB7 <i>if NVIDIA drops 5% in a day</i> (their prices refresh every ~30 min).",
+        "Gold, silver, platinum, copper and US stocks too: <i>tell me if gold goes above 4000</i> \xB7 <i>if NVIDIA drops 5% in a day</i> (their prices refresh every ~30 min).",
         "The bot checks every 5 minutes.",
         "Each alert comes once, then it's done."
       ],
       ar: [
         "\u0627\u0643\u062A\u0628\u0647 \u0628\u0643\u0644\u0645\u0627\u062A\u0643: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0646\u0632\u0644 ETH \u062A\u062D\u062A 3000</i> \xB7 <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0627\u0631\u062A\u0641\u0639 SOL 10% \u0641\u064A \u064A\u0648\u0645</i> \xB7 <i>\u0625\u0630\u0627 \u062A\u062C\u0627\u0648\u0632\u062A \u0645\u062D\u0641\u0638\u062A\u064A 30 \u0623\u0644\u0641 \u062F\u0648\u0644\u0627\u0631</i>.",
-        "\u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0648\u0627\u0644\u0646\u0641\u0637 \u0648\u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0623\u064A\u0636\u0627\u064B: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u0630\u0647\u0628 4000</i> \xB7 <i>\u0625\u0630\u0627 \u0646\u0632\u0644 NVIDIA 5% \u0641\u064A \u064A\u0648\u0645</i> (\u0623\u0633\u0639\u0627\u0631\u0647\u0627 \u062A\u064F\u062D\u062F\u064E\u0651\u062B \u0643\u0644 ~30 \u062F\u0642\u064A\u0642\u0629).",
+        "\u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0648\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646 \u0648\u0627\u0644\u0646\u062D\u0627\u0633 \u0648\u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0623\u064A\u0636\u0627\u064B: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u0630\u0647\u0628 4000</i> \xB7 <i>\u0625\u0630\u0627 \u0646\u0632\u0644 NVIDIA 5% \u0641\u064A \u064A\u0648\u0645</i> (\u0623\u0633\u0639\u0627\u0631\u0647\u0627 \u062A\u064F\u062D\u062F\u064E\u0651\u062B \u0643\u0644 ~30 \u062F\u0642\u064A\u0642\u0629).",
         "\u064A\u062A\u062D\u0642\u0642 \u0627\u0644\u0628\u0648\u062A \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642.",
         "\u064A\u0635\u0644\u0643 \u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u062B\u0645 \u064A\u0646\u062A\u0647\u064A."
       ],
@@ -3404,7 +3404,7 @@ function pulseText(m, now, kind) {
 }
 function otherMarkets(m, now) {
   const out = [], met2 = m.metals || [], f = (k) => met2.find((x) => x.k === k);
-  const mt = [["gold", "Gold"], ["silver", "Silver"], ["brent", "Brent"]].map(([k, n]) => {
+  const mt = [["gold", "Gold"], ["silver", "Silver"]].map(([k, n]) => {
     const x = f(k);
     return x && x.price > 0 ? `${n} <b>${usd(x.price)}</b> ${pct(x.ch24, 1)}` : null;
   }).filter(Boolean);
@@ -3630,7 +3630,7 @@ function describe(a) {
   const what = k.what === "price" ? `${who} price` : k.what === "change_24h" ? `${who} 24h change` : k.what === "funding" ? `${a.sym} funding` : "Portfolio value";
   return `${what} ${k.op} ${v}`;
 }
-var METAL_WORDS = { gold: /^(gold|xau|ذهب|الذهب)$/i, silver: /^(silver|xag|فضة|الفضة)$/i, platinum: /^(platinum|xpt|بلاتين|البلاتين)$/i, copper: /^(copper|نحاس|النحاس)$/i, brent: /^(brent|oil|brent oil|crude|نفط|النفط|برنت|نفط برنت|البترول|بترول)$/i };
+var METAL_WORDS = { gold: /^(gold|xau|ذهب|الذهب)$/i, silver: /^(silver|xag|فضة|الفضة)$/i, platinum: /^(platinum|xpt|بلاتين|البلاتين)$/i, copper: /^(copper|نحاس|النحاس)$/i };
 var METAL_NAME = { gold: "Gold", silver: "Silver", platinum: "Platinum", copper: "Copper", brent: "Brent oil" };
 var METAL_UNIT = { gold: "oz", silver: "oz", platinum: "oz", copper: "lb", brent: "barrel" };
 var metalOf = (q) => Object.keys(METAL_WORDS).find((k) => METAL_WORDS[k].test(String(q).trim())) || null;
@@ -3693,7 +3693,7 @@ async function viewAlerts(env, lang2 = "en") {
   const list3 = await listAlerts(env), ar = lang2 === "ar";
   if (!list3.length) return { text: ar ? "\u{1F514} \u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0646\u0628\u064A\u0647\u0627\u062A.\n\u0627\u0643\u062A\u0628 \u0645\u062B\u0644\u0627\u064B: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0646\u0632\u0644 SOL \u062A\u062D\u062A 82</i>" : "\u{1F514} No alerts yet.\nWrite e.g. <i>tell me if SOL drops below 82</i>", buttons: [[{ text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]] };
   const L = [ar ? `\u{1F514} <b>\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643</b> (${list3.length})` : `\u{1F514} <b>Your alerts</b> (${list3.length})`];
-  const G = [["coin", ar ? "\u{1FA99} \u0627\u0644\u0639\u0645\u0644\u0627\u062A" : "\u{1FA99} Coins"], ["stock", ar ? "\u{1F4C8} \u0627\u0644\u0623\u0633\u0647\u0645 (bStocks)" : "\u{1F4C8} Stocks (bStocks)"], ["metal", ar ? "\u{1F947} \u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0646\u0641\u0637" : "\u{1F947} Metals &amp; oil"], ["pf", ar ? "\u{1F4BC} \u0627\u0644\u0645\u062D\u0641\u0638\u0629" : "\u{1F4BC} Portfolio"]];
+  const G = [["coin", ar ? "\u{1FA99} \u0627\u0644\u0639\u0645\u0644\u0627\u062A" : "\u{1FA99} Coins"], ["stock", ar ? "\u{1F4C8} \u0627\u0644\u0623\u0633\u0647\u0645 (bStocks)" : "\u{1F4C8} Stocks (bStocks)"], ["metal", ar ? "\u{1F947} \u0627\u0644\u0645\u0639\u0627\u062F\u0646" : "\u{1F947} Metals"], ["pf", ar ? "\u{1F4BC} \u0627\u0644\u0645\u062D\u0641\u0638\u0629" : "\u{1F4BC} Portfolio"]];
   const groups = G.filter(([g]) => list3.some((a) => groupOf2(a) === g)), several = groups.length > 1;
   const shown = [];
   for (const [g, title] of groups) {
@@ -4227,7 +4227,7 @@ var TOOLS = [
   },
   {
     name: "get_market",
-    description: "The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market's state (open / closed, the next open or close in Riyadh time), and metals & oil: gold, silver, platinum, copper, Brent (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).",
+    description: "The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market's state (open / closed, the next open or close in Riyadh time), and metals: gold, silver, platinum, copper (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).",
     input_schema: { type: "object", properties: { top: { type: "integer", enum: [100, 200, 300, 500], description: "Rank range for best / worst (default 100)" } } }
   },
   {
@@ -4247,7 +4247,7 @@ var TOOLS = [
   },
   {
     name: "set_alert",
-    description: 'Save an alert the user asks for in words ("tell me if SOL drops below 82", "if BTC goes above 100k", "if ETH moves -8% in a day", "if SOL funding turns negative", "if my portfolio goes under 25k"). Checked every 5 minutes; fires once, then removed. kinds: price_below / price_above (USD), change_24h_below / change_24h_above (%), funding_below / funding_above (% per 8 h; "turns negative" = funding_below 0), portfolio_below / portfolio_above (USD, no coin). coin can also be a METAL or OIL \u2014 gold, silver, platinum, copper, brent (or oil) \u2014 prices in USD per troy ounce (copper per pound, Brent per barrel; a gram price in SAR \xF7 3.75 \xD7 31.1035 = USD per ounce), or a bStock (Binance tokenized US stock) by its ticker or company name (NVIDIA, Tesla, NVDAB\u2026). Metals and bStocks are checked against prices refreshed every ~30 minutes \u2014 say so. The result says the value now and already_met (then it waits for the next crossing \u2014 tell the user).',
+    description: 'Save an alert the user asks for in words ("tell me if SOL drops below 82", "if BTC goes above 100k", "if ETH moves -8% in a day", "if SOL funding turns negative", "if my portfolio goes under 25k"). Checked every 5 minutes; fires once, then removed. kinds: price_below / price_above (USD), change_24h_below / change_24h_above (%), funding_below / funding_above (% per 8 h; "turns negative" = funding_below 0), portfolio_below / portfolio_above (USD, no coin). coin can also be a METAL \u2014 gold, silver, platinum, copper \u2014 prices in USD per troy ounce (copper per pound; a gram price in SAR \xF7 3.75 \xD7 31.1035 = USD per ounce), or a bStock (Binance tokenized US stock) by its ticker or company name (NVIDIA, Tesla, NVDAB\u2026). Metals and bStocks are checked against prices refreshed every ~30 minutes \u2014 say so. The result says the value now and already_met (then it waits for the next crossing \u2014 tell the user).',
     input_schema: { type: "object", properties: { coin: { type: "string" }, kind: { type: "string", enum: ["price_below", "price_above", "change_24h_below", "change_24h_above", "funding_below", "funding_above", "portfolio_below", "portfolio_above"] }, value: { type: "number" }, note: { type: "string", description: "Optional short reminder shown when it fires" } }, required: ["kind", "value"] }
   },
   { name: "list_alerts", description: "The user's saved alerts (id, what, armed).", input_schema: { type: "object", properties: {} } },
@@ -4404,7 +4404,7 @@ async function runTool(ctx, name, input) {
       bstocks_worst_24h: pick(st, -1).map(({ rank, ...x }) => x),
       bstocks_summary: st.length ? { count: st.length, up: st.filter((r) => r.ch24 > 0).length, down: st.filter((r) => r.ch24 < 0).length, avg_change_24h_pct: r23(st.reduce((a, r) => a + r.ch24, 0) / st.length) } : null,
       us_stock_market: ((u) => ({ state: u.state, next_change_riyadh: new Date(u.next).toLocaleString("en-GB", { timeZone: "Asia/Riyadh", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }), note: "NYSE/Nasdaq hours, US holidays not counted; bStocks tokens trade 24/7" }))(usMarket()),
-      metals_and_oil: (m.metals || []).map((x) => ({ name: x.k, unit: x.unit === "oz" ? "USD per troy ounce" : x.unit === "lb" ? "USD per pound" : "USD per barrel", price_usd: r62(x.price), change_24h_pct: r23(x.ch24), change_7d_pct: r23(x.ch7), ...["gold", "silver", "platinum"].includes(x.k) && x.unit === "oz" ? { gram_sar_24k: r23(gramSar(x.price)), gram_usd: r23(x.price / 31.1034768) } : {} })),
+      metals: (m.metals || []).filter((x) => x.k !== "brent").map((x) => ({ name: x.k, unit: x.unit === "oz" ? "USD per troy ounce" : x.unit === "lb" ? "USD per pound" : "USD per barrel", price_usd: r62(x.price), change_24h_pct: r23(x.ch24), change_7d_pct: r23(x.ch7), ...["gold", "silver", "platinum"].includes(x.k) && x.unit === "oz" ? { gram_sar_24k: r23(gramSar(x.price)), gram_usd: r23(x.price / 31.1034768) } : {} })),
       metals_note: "Futures from Yahoo Finance, ~15 min delayed, saved every ~30 min"
     };
   }
@@ -4660,7 +4660,7 @@ async function compose(env, kind, lang2, facts) {
     `You write Samir's ${kind === "morning" ? "SMART MORNING" : "SMART EVENING"} message in Telegram for his Cute Portfolio app (long-term, Bitcoin-first: accumulation plan, DCA, exit plan).`,
     "Every number must come from FACTS (JSON). Never invent a number, price or event. If something is missing, leave it out.",
     kind === "morning" ? 'Shape: line 1 = one emoji + **bold one-line verdict for today**. Then \u{1F3AF} **Today** \u2014 exactly 3 numbered actions (1. 2. 3.) picked from FACTS.todo (most useful first; "nothing to do \u2014 hold" is a valid action when the list is short), each one line with its number. Then \u{1F30D} **Market mood** \u2014 2 bullets. Then \u{1F440} **Watch today** \u2014 1\u20132 bullets (levels / alerts closest to triggering).' : "Shape: line 1 = one emoji + **bold one-line verdict on the day**. Then \u{1F4CA} **Today** \u2014 2\u20133 bullets (portfolio change since the morning, best / worst coin, trades or alerts that happened). Then \u{1F504} **What changed** \u2014 2 bullets (BTC, Fear & Greed, dominance, futures, sectors \u2014 vs the morning when FACTS has it). Then \u{1F440} **Tonight & tomorrow** \u2014 2\u20133 bullets (closest levels / alerts, tomorrow's DCA if any).",
-    "Other markets: only when FACTS.other_markets.notable is true, add ONE bullet about them in the market part (gold / Brent / the biggest bStock move \u2014 tokenized US stocks \u2014 and, if useful, whether the US stock market is open). When notable is false, leave the other markets out.",
+    "Other markets: only when FACTS.other_markets.notable is true, add ONE bullet about them in the market part (gold / the biggest bStock move \u2014 tokenized US stocks \u2014 and, if useful, whether the US stock market is open). When notable is false, leave the other markets out.",
     'Bullets: "\u2022 label: **value** \u2014 3\u20136 word note". Short lines (\u2264 40 characters when possible), ~14 lines in all, no tables, no headings with #, no links, no sources line.',
     ar ? "Write in simple Modern Standard Arabic (\u0641\u0635\u062D\u0649 \u0628\u0633\u064A\u0637\u0629), the way crypto investors write; numbers and tickers in Latin characters." : "Write in English."
   ].join("\n");
@@ -5013,23 +5013,21 @@ function otherFacts(m, now) {
   };
   const st = (m.stocks || []).filter((r) => r.ch24 != null && r.price > 0), u = usMarket(now);
   const best = [...st].sort((a, b) => b.ch24 - a.ch24)[0], worst = [...st].sort((a, b) => a.ch24 - b.ch24)[0];
-  const gold = f("gold"), brent = f("brent");
-  const notable = !!(gold && Math.abs(gold.change_24h_pct) >= 1.5 || brent && Math.abs(brent.change_24h_pct) >= 2.5 || best && best.ch24 >= 5 || worst && worst.ch24 <= -5);
+  const gold = f("gold");
+  const notable = !!(gold && Math.abs(gold.change_24h_pct) >= 1.5 || best && best.ch24 >= 5 || worst && worst.ch24 <= -5);
   return {
     notable,
     us_stock_market: { state: u.state, next_change_riyadh: local(u.next, { weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) },
     bstock_best_24h: best ? { ticker: best.sym, pct: r24(best.ch24) } : null,
     bstock_worst_24h: worst ? { ticker: worst.sym, pct: r24(worst.ch24) } : null,
     gold_per_oz: gold,
-    gold_gram_sar_24k: gold ? r24(gramSar(gold.price_usd)) : null,
-    brent_per_barrel: brent
+    gold_gram_sar_24k: gold ? r24(gramSar(gold.price_usd)) : null
   };
 }
 function otherLine(L, o) {
   if (!o || !o.notable) return null;
   const ar = L === "ar", parts = [];
   if (o.gold_per_oz) parts.push(`\u{1F947} ${ar ? "\u0627\u0644\u0630\u0647\u0628" : "Gold"} ${usd(o.gold_per_oz.price_usd)} ${pct(o.gold_per_oz.change_24h_pct, 1)}`);
-  if (o.brent_per_barrel) parts.push(`\u{1F6E2}\uFE0F ${ar ? "\u0628\u0631\u0646\u062A" : "Brent"} ${usd(o.brent_per_barrel.price_usd)} ${pct(o.brent_per_barrel.change_24h_pct, 1)}`);
   if (o.bstock_best_24h && Math.abs(o.bstock_best_24h.pct) >= Math.abs((o.bstock_worst_24h || {}).pct || 0)) parts.push(`\u{1F1FA}\u{1F1F8} ${esc(o.bstock_best_24h.ticker)} ${pct(o.bstock_best_24h.pct, 1)}`);
   else if (o.bstock_worst_24h) parts.push(`\u{1F1FA}\u{1F1F8} ${esc(o.bstock_worst_24h.ticker)} ${pct(o.bstock_worst_24h.pct, 1)}`);
   return parts.join(" \xB7 ");
@@ -5767,8 +5765,8 @@ function viewStocks(t, m, now) {
   return { text: L.join("\n"), buttons: [mkTabs(t, "s"), [cb3(t.refresh, "mks"), url2("\u{1F9ED} Market Hub", APP + "market.html#stocks")], [cb3(t.back, "menu")]] };
 }
 function viewMetals(t, m, now) {
-  const ar = isAr(t), list3 = m.metals || [];
-  const L = [`\u{1F947} <b>${ar ? "\u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0646\u0641\u0637" : "Metals &amp; oil"}</b> \xB7 ${hm(now)}`, ""];
+  const ar = isAr(t), list3 = (m.metals || []).filter((x) => x.k !== "brent");
+  const L = [`\u{1F947} <b>${ar ? "\u0627\u0644\u0645\u0639\u0627\u062F\u0646" : "Metals"}</b> \xB7 ${hm(now)}`, ""];
   if (!list3.length) L.push(ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u0645\u0639\u0627\u062F\u0646 \u0627\u0644\u0622\u0646 \u2014 \u062D\u0627\u0648\u0644 \u0644\u0627\u062D\u0642\u0627\u064B." : "No metals data right now \u2014 try again later.");
   for (const x of list3) {
     const d = METAL[x.k] || ["\u2022", x.k, x.k], u = UNIT[x.unit] || ["", ""];
@@ -5818,7 +5816,7 @@ var WORDS = [
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, "pf"],
   [/^\/?(market|mk)$|السوق/i, "mk"],
   [/^\/(stocks|bstocks)$|^الأسهم$/i, "mks"],
-  [/^\/(metals|gold|oil)$|^المعادن$|^الذهب$/i, "mkm"],
+  [/^\/(metals|gold)$|^المعادن$|^الذهب$/i, "mkm"],
   [/^\/?(plan|pl)$|الخطة/i, "pl"],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, "hide"],
   [/^\/(new|reset|clear)$|^محادثة جديدة$/i, "new"],
@@ -6831,7 +6829,7 @@ var cmds = (lang2, owner2 = true) => {
     ["price", a ? "\u0633\u0639\u0631 \u0639\u0645\u0644\u0629 \u2014 /price btc" : "A coin \u2014 /price btc"],
     ["market", a ? "\u0627\u0644\u0633\u0648\u0642" : "Market"],
     ["stocks", a ? "\u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0645\u0631\u0645\u0651\u0632\u0629 (bStocks)" : "Tokenized US stocks (bStocks)"],
-    ["metals", a ? "\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0646\u0641\u0637" : "Gold, metals & oil"],
+    ["metals", a ? "\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0645\u0639\u0627\u062F\u0646" : "Gold & metals"],
     ["plan", a ? "\u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639" : "Accumulation plan"],
     ["exit", a ? "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" : "Exit plan"],
     ["movers", a ? "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623" : "Best & worst"],

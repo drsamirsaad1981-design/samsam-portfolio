@@ -283,8 +283,8 @@ export function viewStocks(t, m, now) {
   return { text: L.join('\n'), buttons: [mkTabs(t, 's'), [cb(t.refresh, 'mks'), url('🧭 Market Hub', APP + 'market.html#stocks')], [cb(t.back, 'menu')]] };
 }
 export function viewMetals(t, m, now) {
-  const ar = isAr(t), list = m.metals || [];
-  const L = [`🥇 <b>${ar ? 'المعادن والنفط' : 'Metals &amp; oil'}</b> · ${hm(now)}`, ''];
+  const ar = isAr(t), list = (m.metals || []).filter(x => x.k !== 'brent');   // metals only (no oil)
+  const L = [`🥇 <b>${ar ? 'المعادن' : 'Metals'}</b> · ${hm(now)}`, ''];
   if (!list.length) L.push(ar ? 'لا توجد بيانات للمعادن الآن — حاول لاحقاً.' : 'No metals data right now — try again later.');
   for (const x of list) {
     const d = METAL[x.k] || ['•', x.k, x.k], u = UNIT[x.unit] || ['', ''];
@@ -332,7 +332,7 @@ const edit = (env, chat, msgId, v) => tg(env, 'editMessageText', { chat_id: chat
 // what you typed → an action
 const WORDS = [
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, 'menu'],
-  [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/(stocks|bstocks)$|^الأسهم$/i, 'mks'], [/^\/(metals|gold|oil)$|^المعادن$|^الذهب$/i, 'mkm'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
+  [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/(stocks|bstocks)$|^الأسهم$/i, 'mks'], [/^\/(metals|gold)$|^المعادن$|^الذهب$/i, 'mkm'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
   [/^\/(balances|exchanges|cex)$|^أرصدتي$|^المنصات$|^أرصدة المنصات$/i, 'bal'],
@@ -906,7 +906,7 @@ const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
     ...(owner ? [['invite', a ? 'رمز دعوة لصديقك' : 'Invite code for a friend'], ['users', a ? 'الأعضاء' : 'Members'], ['stats', a ? 'الإحصائيات والـ Stars' : 'Stats & Stars']] : []),
     ['start', a ? 'ابدأ — الأزرار أسفل المحادثة' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
     ['report', a ? 'التقرير الكامل (صفحة)' : 'Full report (a page)'], ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],
-    ['stocks', a ? 'الأسهم المرمّزة (bStocks)' : 'Tokenized US stocks (bStocks)'], ['metals', a ? 'الذهب والمعادن والنفط' : 'Gold, metals & oil'], ['plan', a ? 'خطة التجميع' : 'Accumulation plan'], ['exit', a ? 'خطة الخروج' : 'Exit plan'], ['movers', a ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', a ? 'الإشارات' : 'Signals'],
+    ['stocks', a ? 'الأسهم المرمّزة (bStocks)' : 'Tokenized US stocks (bStocks)'], ['metals', a ? 'الذهب والمعادن' : 'Gold & metals'], ['plan', a ? 'خطة التجميع' : 'Accumulation plan'], ['exit', a ? 'خطة الخروج' : 'Exit plan'], ['movers', a ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', a ? 'الإشارات' : 'Signals'],
     ['alerts', a ? 'تنبيهاتك' : 'Your alerts'], ['balances', a ? 'أرصدة المنصات (Binance · Gate)' : 'Exchange balances (Binance · Gate)'], ['paper', a ? 'التداول التجريبي' : 'Paper trading'], ['daily', a ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'],
     ['morning', a ? 'الصباح الذكي الآن' : 'Smart morning now'], ['evening', a ? 'المساء الذكي الآن' : 'Smart evening now'],
     ['pin', a ? 'الرسالة المثبتة' : 'Live pinned message'], ['unpin', a ? 'إزالة الرسالة المثبتة' : 'Remove the pinned message'],
