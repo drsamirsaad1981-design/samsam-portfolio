@@ -416,7 +416,7 @@ sent.length = 0; await tap('pl');
   check('Arabic plan: shorter bar (7) and "باقي" with a short amount, DCA "… شهرياً" (no "/mo")', /▱{1,7} \d+%  باقي [\d.]+/.test(tx) && !/▱{8}|▰{8}/.test(tx) && !/\/mo/.test(tx), tx.slice(0, 400)); }
 sent.length = 0; await tap('mkm');
 { const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
-  check('Arabic metals: short lines "الذهب $2,650 · 🟢 +0.76% · أسبوع …", the unit said once ("الأسعار للأونصة (النحاس للرطل)"), no slash', /<b>الذهب<\/b> \$2,650 · 🟢 \+0\.76% · أسبوع/.test(tx) && /الأسعار للأونصة \(النحاس للرطل\)/.test(tx) && !/ \/ أونصة/.test(tx), tx); }
+  check('Arabic metals: short lines "الذهب $2,650 · اليوم +0.8% · أسبوع …", the unit said once ("الأسعار للأونصة (النحاس للرطل)"), no slash', /<b>الذهب<\/b> \$2,650 · اليوم \+0\.8% · أسبوع/.test(tx) && /الأسعار للأونصة \(النحاس للرطل\)/.test(tx) && !/ \/ أونصة/.test(tx), tx); }
 sent.length = 0;
 await post({ message: { chat: { id: 555 }, text: '/portfolio' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
 check('Arabic: "محفظتك الآن"', /محفظتك الآن/.test(last().b.text) && btnTexts(last()).includes('🔄 تحديث'), last().b.text.slice(0, 120));

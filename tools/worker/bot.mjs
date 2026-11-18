@@ -296,7 +296,9 @@ export function viewMetals(t, m, now) {
   for (const x of list) {
     const d = METAL[x.k] || ['•', x.k, x.k], u = UNIT[x.unit] || ['', ''];
     // Arabic: no unit on the line (it is said once below) and "أسبوع" — so the line fits a phone without wrapping
-    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price(x.price)}${ar ? '' : ' / ' + u[0]} · ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` · ${ar ? 'أسبوع' : '7d'} ${pct(x.ch7, 1)}` : ''}`);
+    // (and no 🟢 / 🔴 dot, one decimal: "البلاتين $1,364 · اليوم −4.3% · أسبوع −11.3%" still fits)
+    L.push(ar ? `${d[0]} <b>${d[2]}</b> ${price(x.price)} · اليوم ${pct(x.ch24, 1)}${x.ch7 != null ? ` · أسبوع ${pct(x.ch7, 1)}` : ''}`
+      : `${d[0]} <b>${d[1]}</b> ${price(x.price)} / ${u[0]} · ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` · 7d ${pct(x.ch7, 1)}` : ''}`);
     if (['gold', 'silver', 'platinum'].includes(x.k) && x.unit === 'oz') L.push(`      ${ar ? 'الجرام' : '1 gram'}: <b>${gramSar(x.price).toFixed(2)} ${ar ? 'ريال' : 'SAR'}</b> · ${usd2(x.price / 31.1034768)}`);
   }
   const g = list.find(x => x.k === 'gold'), s = list.find(x => x.k === 'silver');

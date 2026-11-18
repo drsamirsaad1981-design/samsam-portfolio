@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 4a935221c29c0854
+// sources-hash: 57520a0b83d8c856
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5775,7 +5775,7 @@ function viewMetals(t, m, now) {
   if (!list3.length) L.push(ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u0645\u0639\u0627\u062F\u0646 \u0627\u0644\u0622\u0646 \u2014 \u062D\u0627\u0648\u0644 \u0644\u0627\u062D\u0642\u0627\u064B." : "No metals data right now \u2014 try again later.");
   for (const x of list3) {
     const d = METAL[x.k] || ["\u2022", x.k, x.k], u = UNIT[x.unit] || ["", ""];
-    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price2(x.price)}${ar ? "" : " / " + u[0]} \xB7 ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` \xB7 ${ar ? "\u0623\u0633\u0628\u0648\u0639" : "7d"} ${pct(x.ch7, 1)}` : ""}`);
+    L.push(ar ? `${d[0]} <b>${d[2]}</b> ${price2(x.price)} \xB7 \u0627\u0644\u064A\u0648\u0645 ${pct(x.ch24, 1)}${x.ch7 != null ? ` \xB7 \u0623\u0633\u0628\u0648\u0639 ${pct(x.ch7, 1)}` : ""}` : `${d[0]} <b>${d[1]}</b> ${price2(x.price)} / ${u[0]} \xB7 ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` \xB7 7d ${pct(x.ch7, 1)}` : ""}`);
     if (["gold", "silver", "platinum"].includes(x.k) && x.unit === "oz") L.push(`      ${ar ? "\u0627\u0644\u062C\u0631\u0627\u0645" : "1 gram"}: <b>${gramSar(x.price).toFixed(2)} ${ar ? "\u0631\u064A\u0627\u0644" : "SAR"}</b> \xB7 ${usd2(x.price / 31.1034768)}`);
   }
   const g = list3.find((x) => x.k === "gold"), s = list3.find((x) => x.k === "silver");
