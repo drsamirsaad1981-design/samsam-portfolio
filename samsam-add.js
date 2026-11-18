@@ -132,6 +132,7 @@
     '.cm-pal{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;padding:6px 0 4px}.cm-pal[hidden]{display:none}' +
     '.cm-pal button{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}.cm-pal button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px #7c3aed}' +
     '.cm-group{font-size:.72rem;font-weight:800;color:#94a3b8;margin:14px 0 2px}.cm-note{font-size:.76rem;color:#94a3b8;margin:4px 0 12px;line-height:1.45}' +
+    '#acNetRow[hidden]{display:none}' +
     '.ac-mbox{display:grid;gap:8px;padding:10px;border:1px solid rgba(234,179,8,.35);border-radius:12px}.ac-mbox[hidden]{display:none}.ac-seg{display:flex;gap:4px;background:rgba(148,163,184,.1);border-radius:10px;padding:3px}.ac-seg button{flex:1;border:0;background:transparent;color:inherit;font:inherit;font-size:.8rem;padding:6px;border-radius:8px;cursor:pointer}.ac-seg button[aria-checked=true]{background:#eab308;color:#111;font-weight:700}' +
     '.ac-chips{display:flex;gap:6px;flex-wrap:wrap}.ac-chips[hidden]{display:none}.ac-chips button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:999px;padding:3px 10px;font:inherit;font-size:.76rem;cursor:pointer}#acVaultLabel{width:100%;box-sizing:border-box}' +
     '.vlt-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 10px}.vlt-list button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:12px;padding:10px;font:inherit;font-size:.86rem;cursor:pointer;text-align:start}.vlt-list button[aria-checked=true]{border-color:#eab308;background:rgba(234,179,8,.15);font-weight:700}#vaultLabel{width:100%;box-sizing:border-box;margin-bottom:10px}' +
@@ -438,6 +439,7 @@
     acShow([]); acLink({ sym: sym, name: m.name, id: m.cgId }); acLogo = null;
     fillCatSelect($('acCat'), 'metals'); syncCatCustom($('acCat'), 'acCatCustomBox');
     acSpot = 0; var mine = (Samsam.getState().coins || []).filter(function (c) { return c.sym === sym; })[0];
+    if (held(sym)) { $('acTitle').innerHTML = SamsamUI.ic('plus') + E((sym === 'XAU' ? '🥇 Buy ' : '🥈 Buy ') + m.name); $('acSave').innerHTML = SamsamUI.ic('plus') + 'Add Buy'; }
     acUnits(); $('acVault').value = mine && mine.vault || ''; $('acVaultLabel').value = mine && mine.vaultLabel || ''; acVaultPick();
     coinInfo(m.cgId).then(function (d) { var el = $('acLinkedPrice'); if (d.usd > 0 && $('acSym').value === sym) { acSpot = d.usd; if (el) el.textContent = ' · now ' + SamsamFmt.price(d.usd / GPO) + '/g'; previewAddCoin(); } });
     previewAddCoin(); $('acQty').focus();
@@ -487,6 +489,7 @@
     fillCatSelect(catSel, (p && p.cat) || 'layer1');
     $('acCatCustom').value = p && p.catLabel && SamsamTaxonomy.isCustom(p.cat) && catSel.value === 'other' ? p.catLabel : '';
     syncCatCustom(catSel, 'acCatCustomBox');
+    $('acTitle').innerHTML = SamsamUI.ic('plus') + 'Add New Coin'; $('acSave').innerHTML = SamsamUI.ic('plus') + 'Add to Portfolio';
     $('acPreview').innerHTML = ''; $('acError').textContent = ''; acU = 'g'; acPM = 'unit'; acSpot = 0;
     $('acDate').value = ''; $('acDate').max = localDateTimeValue(new Date()).slice(0, 10); $('acVault').value = ''; $('acVaultLabel').value = ''; $('acVaultLabel').hidden = true; acUnits();
     if (p && p.sym) {   // coming from a plan / a coin you picked elsewhere: already linked, just add the amount
@@ -566,7 +569,7 @@
     if (py.err) return acErr(py.err);
     if ($('acPayOn').dataset.manual && $('acPayRow').style.display !== 'none') { try { localStorage.setItem(PAY_KEY, JSON.stringify({ on: $('acPayOn').checked, sym: $('acPaySym').value })); } catch (_) {} }
     if (held(sym)) {   // one Add button for everything: a coin you already hold gets this as a Buy
-      if (!(await CPDialog.confirm(sym + ' is already in your portfolio.\nAdd ' + shown + ' at ' + (isMetal(sym) ? SamsamFmt.price(price / GPO) + '/g' : SamsamFmt.price(price)) + ' as a Buy?', { title: 'Add as a Buy?', okText: 'Add Buy' }))) return;
+      if (!rd.metal && !(await CPDialog.confirm(sym + ' is already in your portfolio.\nAdd ' + shown + ' at ' + (isMetal(sym) ? SamsamFmt.price(price / GPO) + '/g' : SamsamFmt.price(price)) + ' as a Buy?', { title: 'Add as a Buy?', okText: 'Add Buy' }))) return;
       var bx = { date: when || new Date().toISOString(), fee: 0, feeUsd: feeUsd };
       if (rd.metal && vault) write(Samsam.updateCoin(sym, { vault: vault, vaultLabel: vaultLabel }));
       write(py.sym && Samsam.buyFromStable ? Samsam.buyFromStable(sym, qty, price, '', bx, py.sym) : Samsam.addTx(sym, 'buy', qty, price, '', bx));
@@ -663,14 +666,14 @@
     atxSym = sym || (API.defaultTxSym && API.defaultTxSym()) || null;
     if (!atxSym || !requireCloud()) return;
     var coin = held(atxSym);
-    $('atxCoin').innerHTML = icon(atxSym, 24) + '<span>' + E(atxSym) + '</span><small>' + E(coinName(atxSym)) + (coin ? ' · holding ' + parseFloat(coin.qty.toFixed(8)) : '') + '</small>';
+    $('atxCoin').innerHTML = icon(atxSym, 24) + '<span>' + E(atxSym) + '</span><small>' + E(coinName(atxSym)) + (coin ? ' · holding ' + (isMetal(atxSym) ? SamsamCoins.grams(coin.qty) : parseFloat(coin.qty.toFixed(8))) : '') + '</small>';
     ['atxQty', 'atxFee', 'atxNetFee', 'atxNote', 'atxApy'].forEach(function (id) { var el = $(id); el.value = ''; el.classList.remove('bad'); });
     if (!stkEdit) stkMode = modePref();
     if (Samsam.getStake && Samsam.getStake(atxSym) && !stkEdit) stkMode = 'manual';   // already on automatic: change it from the coin page
     $('atxDate').value = localDateTimeValue(new Date());
     $('atxDate').max = localDateTimeValue(new Date(Date.now() + 60e3));
     delete $('atxPrice').dataset.touched; delete $('atxDate').dataset.touched;
-    setAddTxType(ATX[type] ? type : 'buy');
+    if (setAddTxType(ATX[type] ? type : 'buy') === false) return;   // gold / silver Buy → the Add window
     if (pre && pre.qty > 0) { $('atxQty').value = fmtInput(isMetal(atxSym) ? toG(pre.qty) : pre.qty); if (pre.note) $('atxNote').value = String(pre.note).slice(0, 200); previewAddTx(); }
     setOpen($('atxBackdrop'), true);
     setTimeout(function () { focusFirst('atxForm', 'atxQty'); }, 50);
@@ -685,7 +688,7 @@
     var type = t.type === 'transfer_in' && t.kind === 'reward' ? 'reward' : t.type;
     if (t.kind === 'reward' && t.src && SRC_NOTE[t.src]) rwSrc = t.src;
     stkMode = 'manual';
-    openAddTx(type, t.sym);
+    openingEdit = true; try { openAddTx(type, t.sym); } finally { openingEdit = false; }
     if (!$('atxBackdrop') || atxSym !== t.sym) return;
     atxEditId = t.id;
     var fee = +t.fee || 0, net = +t.netFee || 0, trade = Math.max(0, fee - net);
@@ -709,7 +712,11 @@
     $('atxHint').textContent = pair ? (pair.kind === 'pay' ? 'The ' + pair.sym + ' it was paid with follows the new numbers.' : 'The ' + pair.sym + ' added from this sell follows the new numbers.') + ' Holdings and averages are worked out again.' : 'Holdings, average buy price and profit are worked out again from your history.';
     previewAddTx();
   }
+  var openingEdit = false;
   function setAddTxType(t) {
+    if (t === 'buy' && isMetal(atxSym) && !atxEditId && !openingEdit) {   // 🥇 one Buy form for gold / silver: grams or tokens, total paid, date, where kept
+      var ms = atxSym; closeAddTx(); openAddCoin(); acMetal(ms); return false;
+    }
     atxType = t; var cfg = ATX[t];
     document.querySelectorAll('.atx-types button').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.t === t)); });
     $('atxForm').style.setProperty('--atx-c', cfg.color);
@@ -719,13 +726,14 @@
     $('atxPriceLabel').textContent = mt ? cfg.price.replace('per coin', 'per gram') : cfg.price;
     $('atxFeeRow').style.display = cfg.fee ? '' : 'none';
     $('atxFeeUsdRow').style.display = (t === 'buy' || t === 'sell') ? '' : 'none';
-    $('atxNetFeeRow').style.display = t === 'buy' ? '' : 'none';
-    $('atxFeeUnitSeg').style.display = t === 'buy' ? '' : 'none';
+    var mtF = isMetal(atxSym);   // gold / silver: no network fee, fees in dollars
+    $('atxNetFeeRow').style.display = t === 'buy' && !mtF ? '' : 'none';
+    $('atxFeeUnitSeg').style.display = t === 'buy' && !mtF ? '' : 'none';
     $('atxSrcRow').style.display = t === 'reward' ? '' : 'none';
     $('atxImp').hidden = !window.SamsamImport || !(t === 'buy' || t === 'sell');   // an exchange file holds trades only
     $('atxFeeUnitCoin').textContent = atxSym;
     $('atxNetUnitCoin').textContent = atxSym;
-    setFeeUnit(t === 'buy' ? feeUnitPref() : 'usd', true);
+    setFeeUnit(t === 'buy' && !mtF ? feeUnitPref() : 'usd', true);
     setNetUnit(netUnitPref(), true);
     fillCashRow();
     feeLabel();
