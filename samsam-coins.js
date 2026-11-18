@@ -376,6 +376,40 @@
     return { grams: g, nisab: NISAB[sym], meets: meets, since: since, due: due,
       daysLeft: meets && since != null && !due ? Math.ceil((since + HAWL - now) / 864e5) : null, zakatG: g * 0.025, zakatOz: pos.qty * 0.025 };
   }
+  // ✨ Gold Trend: gold's price over time (PAX Gold = 1 troy ounce) from Binance (CoinGecko if not reachable), kept 1 hour
+  var GH_KEY = 'samsam_gold_hist', ghMem = null, ghWait = null;
+  function ghLookup(list) {
+    var w = (list || []).filter(function (x) { return x && x[1] > 0; });
+    return function (t) {
+      if (!w.length) return 0; var lo = 0, hi = w.length - 1;
+      while (lo < hi) { var m = (lo + hi) >> 1; if (w[m][0] < t) lo = m + 1; else hi = m; }
+      var a = w[Math.max(0, lo - 1)], b = w[lo]; return Math.abs(a[0] - t) <= Math.abs(b[0] - t) ? a[1] : b[1];
+    };
+  }
+  function goldCached(from) {   // the lookup now (null if nothing saved that covers `from`)
+    if (!ghMem) { try { ghMem = JSON.parse(localStorage.getItem(GH_KEY) || 'null'); } catch (_) { ghMem = null; } }
+    return ghMem && ghMem.list && ghMem.list.length && ghMem.list[0][0] <= from + 864e5 ? ghLookup(ghMem.list) : null;
+  }
+  function goldHistory(from) {   // → Promise of a lookup t → $ per ounce (or null)
+    from = Math.max(0, +from || 0);
+    var fresh = ghMem && Date.now() - ghMem.at < 3600e3 && goldCached(from);
+    if (fresh) return Promise.resolve(fresh);
+    if (ghWait) return ghWait;
+    var span = Date.now() - from, iv = span <= 40 * 864e5 ? '1h' : span <= 160 * 864e5 ? '4h' : '1d';
+    var save = function (list) { if (!list || !list.length) return null; ghMem = { at: Date.now(), list: list }; try { localStorage.setItem(GH_KEY, JSON.stringify(ghMem)); } catch (_) {} return ghLookup(list); };
+    ghWait = fetch('https://data-api.binance.vision/api/v3/klines?symbol=PAXGUSDT&interval=' + iv + '&limit=1000&startTime=' + Math.floor(from - 864e5))
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (k) { return save(k.map(function (x) { return [+x[0], +x[4]]; })); })
+      .catch(function () {
+        var days = Math.min(365, Math.max(2, Math.ceil(span / 864e5) + 1));
+        return fetch('https://api.coingecko.com/api/v3/coins/pax-gold/market_chart?vs_currency=usd&days=' + days)
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(function (d) { return save((d.prices || []).map(function (x) { return [+x[0], +x[1]]; })); })
+          .catch(function () { return goldCached(from); });
+      })
+      .then(function (f) { ghWait = null; return f; });
+    return ghWait;
+  }
   function holdCell(sym, value, qty, o) {
     o = o || {}; assetCss();
     if (isMetal(sym)) { var vm = window.SamsamFmt ? SamsamFmt.usd(value) : '$' + (+value || 0).toFixed(2); return '<div class="hold' + (o.align ? ' hold-' + o.align : '') + '"><div class="hold-val">' + (o.noValue ? '—' : vm) + '</div><div class="hold-qty" title="' + esc(grams(qty) + ' · ' + fmtAmount(qty) + ' oz') + '">' + grams(qty) + '</div></div>'; }
@@ -532,5 +566,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

@@ -181,7 +181,7 @@ export function realizedPnl(coins, txs) {
 //   BTC benchmark: every change in N (a buy, a sell, a transfer, a coin removed) is treated as buying or selling
 //   BTC at that moment's price instead — "what if this money had gone into Bitcoin".
 // Coins removed from the portfolio stop counting from the moment they were removed.
-export function profitSeries(coins, txs, times, { btcAt = null, startBtc = 0 } = {}) {
+export function profitSeries(coins, txs, times, { btcAt = null, startBtc = 0, bench = 'BTC' } = {}) {   // bench: 'BTC', or 'XAU' for the Gold Trend
   const ts = (times || []).map(Number);
   const order = ts.map((t, i) => i).sort((a, b) => ts[a] - ts[b]);
   const pos = new Map(), removedAt = new Map();
@@ -201,19 +201,19 @@ export function profitSeries(coins, txs, times, { btcAt = null, startBtc = 0 } =
   const price = t => { const b = btcAt ? btcAt(t) : 0; return b > 0 ? b : startBtc; };
   // What you held at the start: your BTC is BTC; every other coin's cost is counted as BTC bought on the start day.
   let N = costNow(), shadow = 0;
-  for (const [sym, p] of pos) shadow += sym === 'BTC' ? p.qty : (startBtc > 0 ? p.qty * p.avg / startBtc : 0);
+  for (const [sym, p] of pos) shadow += sym === bench ? p.qty : (startBtc > 0 ? p.qty * p.avg / startBtc : 0);
   const cost = new Array(ts.length).fill(0), realizedArr = new Array(ts.length).fill(0), invested = new Array(ts.length).fill(0), btcQty = new Array(ts.length).fill(0);
   for (const e of ev) {
     if (e.k === 0) {
       const x = e.x, p = pos.get(x.sym) || { qty: 0, avg: 0 };
-      if (x.sym === 'BTC') e.btcBefore = p.qty;
+      if (x.sym === bench) e.btcBefore = p.qty;
       const r = applyTx(p, x); pos.set(x.sym, { qty: r.qty, avg: r.avg });
       if (x.type === 'sell') realized += r.realized;
     } else if (e.k === 1) gone.add(e.sym);
     if (e.k !== 2) {
       const n2 = costNow() - realized, dN = n2 - N; N = n2;
-      if (e.k === 0 && e.x.sym === 'BTC') shadow += (pos.get('BTC') || { qty: 0 }).qty - (e.btcBefore || 0);   // real BTC moved
-      else if (e.k === 1 && e.sym === 'BTC') shadow -= (pos.get('BTC') || { qty: 0 }).qty;
+      if (e.k === 0 && e.x.sym === bench) shadow += (pos.get(bench) || { qty: 0 }).qty - (e.btcBefore || 0);   // real BTC moved
+      else if (e.k === 1 && e.sym === bench) shadow -= (pos.get(bench) || { qty: 0 }).qty;
       else { const bp = price(e.t); if (dN && bp > 0) shadow += dN / bp; }
       continue;
     }
@@ -228,7 +228,7 @@ export function profitSeries(coins, txs, times, { btcAt = null, startBtc = 0 } =
 //   Orange — BTC Trend %         = (BTC benchmark value − Net invested) ÷ Cost Basis
 //            the same money, bought and sold as BTC at the same moments — so both lines move on the same scale.
 // The range tabs only zoom in; the last point is "now".
-export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0 } = {}) {
+export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0, goldAt = null } = {}) {
   const pts = (snaps || []).filter(s => s && s.v > 0).sort((a, b) => a.t - b.t);
   if (!pts.length) return { port: [], btc: [], profit: [], cost: [], first: null, last: null };
   const withB = pts.filter(s => s.b > 0);
@@ -239,6 +239,12 @@ export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0 } = {}) {
   const port = pts.map((s, i) => ({ t: s.t, v: cost[i] > 0 ? profit[i] / cost[i] * 100 : 0 }));
   const btcProfit = pts.map((s, i) => (s.b > 0 ? btcQty[i] * s.b : invested[i]) - invested[i]);
   const btc = pts.map((s, i) => ({ t: s.t, v: cost[i] > 0 ? btcProfit[i] / cost[i] * 100 : 0 }));
+  // ✨ Gold Trend: the same money bought and sold as gold (per troy ounce) at the same moments — your own gold counts as gold
+  let gold = [];
+  if (goldAt && goldAt(pts[0].t) > 0) {
+    const gs = profitSeries(coins, txs, pts.map(s => s.t), { btcAt: goldAt, startBtc: goldAt(pts[0].t), bench: 'XAU' });
+    gold = pts.map((s, i) => { const g = goldAt(s.t); return { t: s.t, v: cost[i] > 0 ? ((g > 0 ? gs.btcQty[i] * g : invested[i]) - invested[i]) / cost[i] * 100 : 0 }; });
+  }
   // A single saved point taken while prices were still loading (one coin missing or at a stale price) shows as a lone
   // spike that the next point undoes. Leave such isolated outliers out so the scale follows the real trend.
   const keep = port.map((p, i) => {
@@ -247,7 +253,7 @@ export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0 } = {}) {
     return !(Math.abs(b - a) < 3 && Math.abs(d1) > 10 && Math.abs(d2) > 10 && Math.sign(d1) === Math.sign(d2));
   });
   const f = arr => arr.filter((_, i) => keep[i]);
-  return { port: f(port), btc: f(btc), profit: f(profit), btcProfit: f(btcProfit), cost: f(cost), dropped: keep.filter(k => !k).length, first: pts[0], last: pts[pts.length - 1] };
+  return { port: f(port), btc: f(btc), gold: gold.length ? f(gold) : [], profit: f(profit), btcProfit: f(btcProfit), cost: f(cost), dropped: keep.filter(k => !k).length, first: pts[0], last: pts[pts.length - 1] };
 }
 
 // ── Portfolio vs BTC, per coin ────────────────────────────────────────────────

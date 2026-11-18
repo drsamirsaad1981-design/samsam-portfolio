@@ -150,3 +150,5 @@ live_refresh_test.py
 market_cmc_test.py
 lang_ar_test.py
 metals_test.py
+gold_trend_test.py
+gold_trend_ui.py
