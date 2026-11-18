@@ -98,6 +98,9 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
+  .stat-metals { grid-column: 1 / -1; text-decoration: none; color: inherit; cursor: pointer; }   /* phone: its own full row */
+  .stat-metals[hidden] { display: none !important; }
+  .stat-gold { color: #eab308; }
 
   .stat-card {
     background: rgba(255,255,255,0.04);

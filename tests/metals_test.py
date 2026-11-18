@@ -53,6 +53,10 @@ with sync_playwright() as p:
     check('holdings shown in grams', '150 g' in hc, hc)
     av = pg.evaluate("avgShown(portfolio.find(c => c.sym === 'XAU'))")
     check('Avg. Buy Price shown per gram', av.endswith('/g') and '83.3' in av, av)
+    hide0 = pg.evaluate("metalsCard.hidden")
+    mt = pg.evaluate("[metalsCard.hidden, metalsSub.textContent, metalsCard.getAttribute('href')]")
+    check('Overview: 🥇 Precious Metals card shows 150 g of gold and opens the Metals page', mt[0] is False and '150 g gold' in mt[1].replace('\u2066','').replace('\u2069','') and mt[2].endswith('#metals'), mt)
+    pg.locator('#metalsCard').scroll_into_view_if_needed(); pg.screenshot(path=str(SH / 'metals-overview.png'))
     ql = pg.evaluate("SamsamCoins.quickLinks('XAU')")
     check('links: CoinGlass XAUT map, CoinCodex pax-gold, CMC pax-gold',
           'coin=XAUT' in ql and 'pax-gold' in ql and 'coinmarketcap.com/currencies/pax-gold' in ql and 'Try Liq' not in ql, ql)
@@ -78,6 +82,8 @@ with sync_playwright() as p:
     pg.evaluate("Samsam.removeCoin('XAU')"); pg.wait_for_timeout(900)
     t2 = pg.inner_text('#vMetals .as-mine') if pg.locator('#vMetals .as-mine').count() else ''
     check('no metals held → the card invites you to add gold / silver', 'Add gold' in t2 and 'Add silver' in t2, t2)
+    pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(1200)
+    check('Overview: no metals → no metals card', pg.evaluate("metalsCard.hidden") is True)
     check('no page errors', not errs, errs)
     br.close()
 print(f'metals_test: {sum(res)}/{len(res)} passed')

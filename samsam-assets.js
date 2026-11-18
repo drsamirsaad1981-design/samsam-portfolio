@@ -93,8 +93,8 @@
   // 🥇 your gold / silver (added in the portfolio in grams; kept in troy ounces there) — or a button to add some
   var MINE = { XAU: ['🥇', 'Gold 24k', 'ذهب عيار 24', 'gold'], XAG: ['🥈', 'Silver', 'فضة', 'silver'] };
   function mineHtml(list) {
-    var S = window.Samsam, d = S && S.getState && S.isReady && S.isReady() ? S.getState() : null;
-    if (!d) return '';
+    var S = window.Samsam, d = null; try { d = S && S.getState ? S.getState() : null; } catch (_) {}
+    if (!d || !d.portfolio) return '';
     var pf = (d.portfolio || []).filter(function (c) { return MINE[c.sym] && c.qty > 1e-12; }), rz = (d.realized && d.realized.bySym) || {};
     var spot = function (k) { var x = (list || []).filter(function (m) { return m.k === k; })[0]; return x ? x.price : 0; };
     var g2 = function (oz) { return (oz * OZ).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + T('g', 'جم'); };

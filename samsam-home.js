@@ -386,6 +386,20 @@ function renderHeader() {
   document.getElementById('altUsd').textContent = fmtUsd(altTotal);
   document.getElementById('altUsdBtc').textContent = btcPrice > 0 ? '(' + fmtBtc(altTotal) + ')' : '—';
 
+  // Card 5: 🥇 Precious Metals — only when you hold gold / silver (kept in troy ounces, shown in grams); opens the Metals page
+  const mc = document.getElementById('metalsCard');
+  if (mc) {
+    const mets = portfolio.filter(c => SamsamCoins.isMetal(c.sym) && c.qty > 1e-12), AR = !!(window.CPLang && CPLang.ar);
+    mc.hidden = !mets.length;
+    if (mets.length) {
+      const val = mets.reduce((s, c) => s + c.qty * c.currentPrice, 0), cost = mets.reduce((s, c) => s + c.qty * c.basePrice, 0), ch = cost > 0 ? (val / cost - 1) * 100 : null;
+      const nm = { XAU: AR ? 'ذهب' : 'gold', XAG: AR ? 'فضة' : 'silver' };
+      document.getElementById('metalsUsd').textContent = fmtUsd(val);
+      document.getElementById('metalsSub').textContent = mets.map(c => '⁦' + (c.qty * SamsamCoins.GPO).toLocaleString('en-US', { maximumFractionDigits: 1 }) + (AR ? ' جم' : ' g') + '⁩ ' + nm[c.sym]).join(' · ') +
+        (ch != null ? ' · ⁦' + (ch >= 0 ? '+' : '−') + Math.abs(ch).toFixed(1) + '%⁩' : '');
+    }
+  }
+
   renderBtcTicker();
 }
 
