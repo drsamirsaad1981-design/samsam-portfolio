@@ -94,7 +94,7 @@ const T = {
     ownerOnly: 'هذا لمالك البوت فقط.', noLink: 'محفظتك غير مربوطة بعد. من التطبيق: الإعدادات ← تليجرام ← 🔗 ربط محفظتك ببوت تليجرام (ليس لديك التطبيق؟ أرسل /app مع بريدك). حتى ذلك الحين: السوق، وأي عملة، والتنبيهات، والتداول التجريبي، والأسئلة — كلها تعمل.',
     alertsB: '🔔 التنبيهات', alertGone: '🗑 حُذف التنبيه', dailyB: '🗓 اليومي', paperB: '🧪 تجريبي', report: '📊 التقرير', reportT: '📊 <b>تقريرك الكامل</b> — يُفتح داخل تليجرام.', working: '⏳ لحظات…', pinOff: 'أُوقفت الرسالة المثبتة — /pin يعيدها.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
-    today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل البيتكوين', beat: (a, n) => `${a} من ${n} عملات تفوقت على البيتكوين`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
+    today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل البيتكوين', beat: (a, n) => `${a} من ${n} تفوقت`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
     dom: 'الهيمنة', fng: 'الخوف والطمع', altS: 'موسم العملات البديلة', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a} من ${n} على الهدف`,
     dcaS: (n, mo) => `${n} شراء · ${mo} شهرياً`, exitS: (n) => `الخروج ${n} من 3`, nearTp: 'أقرب هدف ربح',
     exitT: 'خطة الخروج', conds: 'مؤشرات الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC',
@@ -228,7 +228,7 @@ export function viewSignals(t, sum) {
   for (const k of ['reinforce', 'sell', 'hold']) {
     if (!by[k].length) continue;
     const ar = isAr(t);
-    L.push('', `<b>${t[k]}</b> (${by[k].length})${ar ? ' · <i>مقارنة بمتوسط شرائك</i>' : ''}`);
+    L.push('', `<b>${t[k]}</b> (${by[k].length})${ar ? ' · <i>مقارنة بمتوسطك</i>' : ''}`);
     by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach(c => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? 'المتوسط' : t.vsAvg} ${price(c.avg)}`));
     if (by[k].length > 12) L.push('…');
   }
@@ -281,7 +281,7 @@ export function viewStocks(t, m, now) {
     const up = ch.filter(r => r.ch24 > 0).length, dn = ch.filter(r => r.ch24 < 0).length, avg = ch.length ? ch.reduce((s, r) => s + r.ch24, 0) / ch.length : null;
     const cap = st.reduce((s, r) => s + (r.mcap || 0), 0), line = r => row(r.sym, r.ch24, price(r.price));
     L.push(`🇺🇸 ${ar ? 'السوق الأمريكي' : 'US market'}: <b>${US_STATE[ar ? 'ar' : 'en'][us.state]}</b> · ${us.state === 'open' ? (ar ? 'يُغلق' : 'closes') : (ar ? 'يفتح' : 'opens')} ${riyadh(us.next, ar)} ${ar ? 'بتوقيت الرياض' : 'Riyadh'}`,
-      ar ? `📊 عدد الأسهم ${st.length}${cap > 0 ? ` · القيمة السوقية ${big(cap)}` : ''} · 🟢 صاعد ${up} · 🔴 هابط ${dn} · المتوسط ${pct(avg, 2)}`
+      ar ? `📊 عدد الأسهم ${st.length}${cap > 0 ? ` · القيمة السوقية ${big(cap)}` : ''}\n🟢 صاعد ${up} · 🔴 هابط ${dn} · المتوسط ${pct(avg, 2)}`
         : `📊 ${st.length} stocks${cap > 0 ? ` · ${big(cap)}` : ''} · 🟢 ${up} / 🔴 ${dn} · avg ${pct(avg, 2)}`);
     const sUp = [...ch].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...ch].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
     L.push('', `📈 <b>${t.stUp}</b>`, ...sUp.map(line), '', `📉 <b>${t.stDn}</b>`, ...sDn.map(line), '',
@@ -297,9 +297,15 @@ export function viewMetals(t, m, now) {
     const d = METAL[x.k] || ['•', x.k, x.k], u = UNIT[x.unit] || ['', ''];
     // Arabic: no unit on the line (it is said once below) and "أسبوع" — so the line fits a phone without wrapping
     // (and no 🟢 / 🔴 dot, one decimal: "البلاتين $1,364 · اليوم −4.3% · أسبوع −11.3%" still fits)
-    L.push(ar ? `${d[0]} <b>${d[2]}</b> ${price(x.price)} · اليوم ${pct(x.ch24, 1)}${x.ch7 != null ? ` · أسبوع ${pct(x.ch7, 1)}` : ''}`
-      : `${d[0]} <b>${d[1]}</b> ${price(x.price)} / ${u[0]} · ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` · 7d ${pct(x.ch7, 1)}` : ''}`);
-    if (['gold', 'silver', 'platinum'].includes(x.k) && x.unit === 'oz') L.push(`      ${ar ? 'الجرام' : '1 gram'}: <b>${gramSar(x.price).toFixed(2)} ${ar ? 'ريال' : 'SAR'}</b> · ${usd2(x.price / 31.1034768)}`);
+    const gram = ['gold', 'silver', 'platinum'].includes(x.k) && x.unit === 'oz';
+    if (ar) {   // two short lines: the price and today; then the week and the gram (a phone fits each on one line)
+      L.push(`${d[0]} <b>${d[2]}</b> ${price(x.price)} · اليوم ${pct(x.ch24, 1)}`);
+      const l2 = [x.ch7 != null ? `أسبوع ${pct(x.ch7, 1)}` : null, gram ? `الجرام <b>${gramSar(x.price).toFixed(2)} ريال</b>` : null].filter(Boolean);
+      if (l2.length) L.push('      ' + l2.join(' · '));
+    } else {
+      L.push(`${d[0]} <b>${d[1]}</b> ${price(x.price)} / ${u[0]} · ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` · 7d ${pct(x.ch7, 1)}` : ''}`);
+      if (gram) L.push(`      1 gram: <b>${gramSar(x.price).toFixed(2)} SAR</b> · ${usd2(x.price / 31.1034768)}`);
+    }
   }
   const g = list.find(x => x.k === 'gold'), s = list.find(x => x.k === 'silver');
   if (g && s && s.price > 0) L.push('', `⚖️ ${ar ? 'نسبة الذهب إلى الفضة' : 'Gold / silver ratio'}: <b>${(g.price / s.price).toFixed(1)}</b>`);

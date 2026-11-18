@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 57520a0b83d8c856
+// sources-hash: 0d3c7876951d75a4
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5519,7 +5519,7 @@ var T = {
     today: "\u0627\u0644\u064A\u0648\u0645",
     profit: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0628\u062D",
     vsBtcS: "\u0645\u0642\u0627\u0628\u0644 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
-    beat: (a, n) => `${a} \u0645\u0646 ${n} \u0639\u0645\u0644\u0627\u062A \u062A\u0641\u0648\u0642\u062A \u0639\u0644\u0649 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646`,
+    beat: (a, n) => `${a} \u0645\u0646 ${n} \u062A\u0641\u0648\u0642\u062A`,
     bestT: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0627\u0644\u064A\u0648\u0645",
     worstT: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0627\u0644\u064A\u0648\u0645",
     dom: "\u0627\u0644\u0647\u064A\u0645\u0646\u0629",
@@ -5696,7 +5696,7 @@ function viewSignals(t, sum) {
   for (const k of ["reinforce", "sell", "hold"]) {
     if (!by[k].length) continue;
     const ar = isAr(t);
-    L.push("", `<b>${t[k]}</b> (${by[k].length})${ar ? " \xB7 <i>\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643</i>" : ""}`);
+    L.push("", `<b>${t[k]}</b> (${by[k].length})${ar ? " \xB7 <i>\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0645\u062A\u0648\u0633\u0637\u0643</i>" : ""}`);
     by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : t.vsAvg} ${price2(c.avg)}`));
     if (by[k].length > 12) L.push("\u2026");
   }
@@ -5753,7 +5753,8 @@ function viewStocks(t, m, now) {
     const cap = st.reduce((s, r) => s + (r.mcap || 0), 0), line = (r) => row(r.sym, r.ch24, price2(r.price));
     L.push(
       `\u{1F1FA}\u{1F1F8} ${ar ? "\u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A" : "US market"}: <b>${US_STATE[ar ? "ar" : "en"][us.state]}</b> \xB7 ${us.state === "open" ? ar ? "\u064A\u064F\u063A\u0644\u0642" : "closes" : ar ? "\u064A\u0641\u062A\u062D" : "opens"} ${riyadh(us.next, ar)} ${ar ? "\u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636" : "Riyadh"}`,
-      ar ? `\u{1F4CA} \u0639\u062F\u062F \u0627\u0644\u0623\u0633\u0647\u0645 ${st.length}${cap > 0 ? ` \xB7 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629 ${big(cap)}` : ""} \xB7 \u{1F7E2} \u0635\u0627\u0639\u062F ${up} \xB7 \u{1F534} \u0647\u0627\u0628\u0637 ${dn} \xB7 \u0627\u0644\u0645\u062A\u0648\u0633\u0637 ${pct(avg, 2)}` : `\u{1F4CA} ${st.length} stocks${cap > 0 ? ` \xB7 ${big(cap)}` : ""} \xB7 \u{1F7E2} ${up} / \u{1F534} ${dn} \xB7 avg ${pct(avg, 2)}`
+      ar ? `\u{1F4CA} \u0639\u062F\u062F \u0627\u0644\u0623\u0633\u0647\u0645 ${st.length}${cap > 0 ? ` \xB7 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629 ${big(cap)}` : ""}
+\u{1F7E2} \u0635\u0627\u0639\u062F ${up} \xB7 \u{1F534} \u0647\u0627\u0628\u0637 ${dn} \xB7 \u0627\u0644\u0645\u062A\u0648\u0633\u0637 ${pct(avg, 2)}` : `\u{1F4CA} ${st.length} stocks${cap > 0 ? ` \xB7 ${big(cap)}` : ""} \xB7 \u{1F7E2} ${up} / \u{1F534} ${dn} \xB7 avg ${pct(avg, 2)}`
     );
     const sUp = [...ch].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...ch].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
     L.push(
@@ -5775,8 +5776,15 @@ function viewMetals(t, m, now) {
   if (!list3.length) L.push(ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u0645\u0639\u0627\u062F\u0646 \u0627\u0644\u0622\u0646 \u2014 \u062D\u0627\u0648\u0644 \u0644\u0627\u062D\u0642\u0627\u064B." : "No metals data right now \u2014 try again later.");
   for (const x of list3) {
     const d = METAL[x.k] || ["\u2022", x.k, x.k], u = UNIT[x.unit] || ["", ""];
-    L.push(ar ? `${d[0]} <b>${d[2]}</b> ${price2(x.price)} \xB7 \u0627\u0644\u064A\u0648\u0645 ${pct(x.ch24, 1)}${x.ch7 != null ? ` \xB7 \u0623\u0633\u0628\u0648\u0639 ${pct(x.ch7, 1)}` : ""}` : `${d[0]} <b>${d[1]}</b> ${price2(x.price)} / ${u[0]} \xB7 ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` \xB7 7d ${pct(x.ch7, 1)}` : ""}`);
-    if (["gold", "silver", "platinum"].includes(x.k) && x.unit === "oz") L.push(`      ${ar ? "\u0627\u0644\u062C\u0631\u0627\u0645" : "1 gram"}: <b>${gramSar(x.price).toFixed(2)} ${ar ? "\u0631\u064A\u0627\u0644" : "SAR"}</b> \xB7 ${usd2(x.price / 31.1034768)}`);
+    const gram = ["gold", "silver", "platinum"].includes(x.k) && x.unit === "oz";
+    if (ar) {
+      L.push(`${d[0]} <b>${d[2]}</b> ${price2(x.price)} \xB7 \u0627\u0644\u064A\u0648\u0645 ${pct(x.ch24, 1)}`);
+      const l2 = [x.ch7 != null ? `\u0623\u0633\u0628\u0648\u0639 ${pct(x.ch7, 1)}` : null, gram ? `\u0627\u0644\u062C\u0631\u0627\u0645 <b>${gramSar(x.price).toFixed(2)} \u0631\u064A\u0627\u0644</b>` : null].filter(Boolean);
+      if (l2.length) L.push("      " + l2.join(" \xB7 "));
+    } else {
+      L.push(`${d[0]} <b>${d[1]}</b> ${price2(x.price)} / ${u[0]} \xB7 ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` \xB7 7d ${pct(x.ch7, 1)}` : ""}`);
+      if (gram) L.push(`      1 gram: <b>${gramSar(x.price).toFixed(2)} SAR</b> \xB7 ${usd2(x.price / 31.1034768)}`);
+    }
   }
   const g = list3.find((x) => x.k === "gold"), s = list3.find((x) => x.k === "silver");
   if (g && s && s.price > 0) L.push("", `\u2696\uFE0F ${ar ? "\u0646\u0633\u0628\u0629 \u0627\u0644\u0630\u0647\u0628 \u0625\u0644\u0649 \u0627\u0644\u0641\u0636\u0629" : "Gold / silver ratio"}: <b>${(g.price / s.price).toFixed(1)}</b>`);
