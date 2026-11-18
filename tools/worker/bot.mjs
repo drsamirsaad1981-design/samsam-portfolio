@@ -86,7 +86,7 @@ const T = {
     planT: 'خطة التجميع', overall: 'الإجمالي', done: 'تم', left: 'المتبقي', dca: 'الشراء الدوري (DCA)', next: 'التالي', buyAt: 'تنبيهات سعر الشراء', away: 'يبعد',
     noPlan: 'لا توجد أهداف في الخطة بعد — أضفها من صفحة خطة التجميع في التطبيق.', best24: 'الأفضل 24س', worst24: 'الأسوأ 24س', best7: 'الأفضل 7 أيام', worst7: 'الأسوأ 7 أيام',
     mvT: 'الأفضل والأسوأ (عملاتك)', noStable: 'دون العملات المستقرة', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل لـ BTC', hold: '⚪ احتفاظ',
-    vsAvg: 'مقارنة بمتوسط شرائك', mkT: 'السوق', topUp: n => `أعلى ${n} · الأفضل 24س`, topDn: n => `أعلى ${n} · الأسوأ 24س`, stUp: 'bStocks · الأفضل 24س', stDn: 'bStocks · الأسوأ 24س', stNote: 'أسهم أمريكية مرمّزة (Binance)', updated: 'تم التحديث', futures: 'Futures', yes: 'نعم', private: '',
+    vsAvg: 'مقارنة بمتوسط شرائك', mkT: 'السوق', topUp: n => `أعلى ${n} · الأفضل 24س`, topDn: n => `أعلى ${n} · الأسوأ 24س`, stUp: 'الأفضل في bStocks · 24س', stDn: 'الأسوأ في bStocks · 24س', stNote: 'أسهم أمريكية مرمّزة (Binance)', updated: 'تم التحديث', futures: 'Futures', yes: 'نعم', private: '',
     welcome: 'البوت متصل ✅\nيرد عليك هنا في أي وقت. اضغط زراً بالأسفل، أو أرسل رمز عملة مثل <code>btc</code>.',
     thinking: '🧠 أفكر…', aiLimit: n => `انتهت أسئلتك الـ ${n} لهذا اليوم — تتجدد غداً (12 منتصف الليل بتوقيت الرياض). الأزرار والرموز تعمل كالمعتاد.`,
     aiNoKey: 'الذكاء الاصطناعي غير مُعدّ (ANTHROPIC_API_KEY غير موجود في الـ Worker).', aiOwnKey: '🔑 رفض Claude مفتاحك (خاطئ، أو أُلغي، أو نفد الرصيد). أصلحه من التطبيق: الإعدادات ← مفتاح Claude الخاص بي.', aiBusy: 'Claude مشغول الآن — حاول بعد دقيقة.',
@@ -94,9 +94,9 @@ const T = {
     ownerOnly: 'هذا لمالك البوت فقط.', noLink: 'محفظتك غير مربوطة بعد. من التطبيق: الإعدادات ← تليجرام ← 🔗 ربط محفظتك ببوت تليجرام (ليس لديك التطبيق؟ أرسل /app مع بريدك). حتى ذلك الحين: السوق، وأي عملة، والتنبيهات، والتداول التجريبي، والأسئلة — كلها تعمل.',
     alertsB: '🔔 التنبيهات', alertGone: '🗑 حُذف التنبيه', dailyB: '🗓 اليومي', paperB: '🧪 تجريبي', report: '📊 التقرير', reportT: '📊 <b>تقريرك الكامل</b> — يُفتح داخل تليجرام.', working: '⏳ لحظات…', pinOff: 'أُوقفت الرسالة المثبتة — /pin يعيدها.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
-    today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل BTC', beat: (a, n) => `${a}/${n} عملة تفوقت على BTC`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
-    dom: 'الهيمنة', fng: 'الخوف والطمع', altS: 'موسم العملات البديلة', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a}/${n} على الهدف`,
-    dcaS: (n, mo) => `${n} شراء · ${mo}/شهر`, exitS: (n) => `الخروج ${n}/3`, nearTp: 'أقرب TP',
+    today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل البيتكوين', beat: (a, n) => `${a} من ${n} عملات تفوقت على البيتكوين`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
+    dom: 'الهيمنة', fng: 'الخوف والطمع', altS: 'موسم العملات البديلة', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a} من ${n} على الهدف`,
+    dcaS: (n, mo) => `${n} شراء · ${mo} شهرياً`, exitS: (n) => `الخروج ${n} من 3`, nearTp: 'أقرب هدف ربح',
     exitT: 'خطة الخروج', conds: 'مؤشرات الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC',
     tpT: 'مستويات جني الأرباح', tpKey: 'السعر · المتبقي · البيع', more: n => `+${n} عملة أخرى في التطبيق`, toGo: 'المتبقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'لا توجد مستويات جني أرباح بعد — أضفها من صفحة استراتيجية الخروج في التطبيق.',
     openExit: '🚪 افتح استراتيجية الخروج', allExit: 'تحققت المؤشرات الثلاثة — منطقة الخروج',
@@ -156,13 +156,18 @@ const row = (sym, v, extra) => `<code>${esc(String(sym).toUpperCase().padEnd(6))
 function moverRows(sum, key, dir, n = 5) {
   return sum.coins.filter(c => c[key] != null && c.value >= 1 && !isStable(c.sym)).sort((a, b) => dir * (b[key] - a[key])).slice(0, n).filter(c => dir > 0 ? c[key] > 0 : c[key] < 0);
 }
+// Arabic: every part of a line starts with an Arabic word, so Telegram keeps the parts in order right-to-left
+// (two Latin runs side by side — "BTC 59.8% · USDT 6.95%" — could swap places)
+export const FNG_AR = { 'Extreme Fear': 'خوف شديد', Fear: 'خوف', Neutral: 'محايد', Greed: 'طمع', 'Extreme Greed': 'طمع شديد' };
+export const SEASON_AR = { 'Altcoin Season': 'موسم العملات البديلة', 'Bitcoin Season': 'موسم البيتكوين', 'Leaning Altcoins': 'يميل للعملات البديلة', 'Leaning Bitcoin': 'يميل للبيتكوين' };
+const arDay = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('ar-SA-u-nu-latn-ca-gregory', { month: 'long', day: 'numeric', timeZone: 'UTC' });
 function marketShort(t, m) {
-  const g = m.global || {}, d = g.dom || {}, out = [];
-  if (m.btc) out.push(`BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
-  if (d.btc != null) out.push(`${t.dom} BTC ${d.btc.toFixed(1)}% · USDT ${(d.usdt || 0).toFixed(2)}%`);
-  if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> · ${esc(m.fng.label)}`);
-  if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> · ${esc(m.alt.label)}`);
-  const e = etfDay(m.etf); if (e) out.push(`${t.etf} ${e.label} · BTC ${flow(e.btc)} · ETH ${flow(e.eth)}`);
+  const g = m.global || {}, d = g.dom || {}, out = [], ar = isAr(t);
+  if (m.btc) out.push(`${ar ? 'البيتكوين' : 'BTC'} <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
+  if (d.btc != null) out.push(ar ? `${t.dom}: البيتكوين ${d.btc.toFixed(1)}% · التيثر ${(d.usdt || 0).toFixed(2)}%` : `${t.dom} BTC ${d.btc.toFixed(1)}% · USDT ${(d.usdt || 0).toFixed(2)}%`);
+  if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> · ${esc(ar ? FNG_AR[m.fng.label] || m.fng.label : m.fng.label)}`);
+  if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> · ${esc(ar ? SEASON_AR[m.alt.label] || m.alt.label : m.alt.label)}`);
+  const e = etfDay(m.etf); if (e) out.push(ar ? `تدفقات ETF (${arDay(e.date)}): BTC ${flow(e.btc)} · ETH ${flow(e.eth)}` : `${t.etf} ${e.label} · BTC ${flow(e.btc)} · ETH ${flow(e.eth)}`);
   return out;
 }
 const nearestTp = sum => (sum.tps || []).filter(x => x.price < x.level).map(x => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to)[0];
@@ -176,7 +181,7 @@ export function viewPortfolio(t, cfg, sum, m, now) {
   if (dn.length) L.push('', `📉 <b>${t.worstT}</b>`, ...dn.map(c => row(c.sym, c.ch24, usd(c.value))));
   const mk = marketShort(t, m); if (mk.length) L.push('', `🌍 <b>${t.mkT}</b>`, ...mk);
   L.push('', `🎯 ${t.sigT} 🟢 ${sum.counts.reinforce} · 🔴 ${sum.counts.sell} · ⚪ ${sum.counts.hold}`);
-  if (sum.plan.length) L.push(`📋 ${t.planS} <b>${sum.prog.pct.toFixed(1)}%</b> · ${sum.prog.completed}/${sum.prog.counted} ✅`);
+  if (sum.plan.length) L.push(`📋 ${t.planS} <b>${sum.prog.pct.toFixed(1)}%</b> · ${isAr(t) ? `${sum.prog.completed} من ${sum.prog.counted}` : `${sum.prog.completed}/${sum.prog.counted}`} ✅`);
   if (sum.alloc) L.push(`⚖️ ${t.allocS} ${t.onT(sum.alloc.onTarget, sum.alloc.count)}`);
   if ((sum.dca || []).length) L.push(`🛒 DCA ${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
   const mc = sum.macro.filter(x => x.met).length, tp = nearestTp(sum);
@@ -269,13 +274,14 @@ const mkTabs = (t, on) => [['c', '🪙 ' + (isAr(t) ? 'كريبتو' : 'Crypto')
 const riyadh = (ms, ar) => new Date(ms).toLocaleString(ar ? 'ar-SA-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Riyadh', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
 export function viewStocks(t, m, now) {
   const ar = isAr(t), st = (m.stocks || []).filter(r => r.price > 0), ch = st.filter(r => r.ch24 != null), us = usMarket(now);
-  const L = [`📈 <b>bStocks</b> · ${hm(now)}`, ''];
+  const L = [`📈 <b>${ar ? 'الأسهم المرمّزة (bStocks)' : 'bStocks'}</b> · ${hm(now)}`, ''];
   if (!st.length) L.push(ar ? 'لا توجد بيانات bStocks الآن — حاول لاحقاً.' : 'No bStocks data right now — try again later.');
   else {
     const up = ch.filter(r => r.ch24 > 0).length, dn = ch.filter(r => r.ch24 < 0).length, avg = ch.length ? ch.reduce((s, r) => s + r.ch24, 0) / ch.length : null;
     const cap = st.reduce((s, r) => s + (r.mcap || 0), 0), line = r => row(r.sym, r.ch24, price(r.price));
     L.push(`🇺🇸 ${ar ? 'السوق الأمريكي' : 'US market'}: <b>${US_STATE[ar ? 'ar' : 'en'][us.state]}</b> · ${us.state === 'open' ? (ar ? 'يُغلق' : 'closes') : (ar ? 'يفتح' : 'opens')} ${riyadh(us.next, ar)} ${ar ? 'بتوقيت الرياض' : 'Riyadh'}`,
-      `📊 ${st.length} ${ar ? 'سهماً' : 'stocks'} · ${big(cap)} · 🟢 ${up} / 🔴 ${dn} · ${ar ? 'المتوسط' : 'avg'} ${pct(avg, 2)}`);
+      ar ? `📊 عدد الأسهم ${st.length}${cap > 0 ? ` · القيمة السوقية ${big(cap)}` : ''} · 🟢 صاعد ${up} · 🔴 هابط ${dn} · المتوسط ${pct(avg, 2)}`
+        : `📊 ${st.length} stocks${cap > 0 ? ` · ${big(cap)}` : ''} · 🟢 ${up} / 🔴 ${dn} · avg ${pct(avg, 2)}`);
     const sUp = [...ch].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...ch].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
     L.push('', `📈 <b>${t.stUp}</b>`, ...sUp.map(line), '', `📉 <b>${t.stDn}</b>`, ...sDn.map(line), '',
       `<i>${t.stNote} · ${ar ? 'التوكن يُتداول 24/7، والسهم الحقيقي وقت سوق نيويورك فقط.' : 'the token trades 24/7, the real share only while New York is open.'}</i>`);
@@ -288,7 +294,7 @@ export function viewMetals(t, m, now) {
   if (!list.length) L.push(ar ? 'لا توجد بيانات للمعادن الآن — حاول لاحقاً.' : 'No metals data right now — try again later.');
   for (const x of list) {
     const d = METAL[x.k] || ['•', x.k, x.k], u = UNIT[x.unit] || ['', ''];
-    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price(x.price)} / ${ar ? u[1] : u[0]} · ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` · ${ar ? '7 أيام' : '7d'} ${pct(x.ch7, 1)}` : ''}`);
+    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price(x.price)} ${ar ? 'لل' + u[1] : '/ ' + u[0]} · ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` · ${ar ? '7 أيام' : '7d'} ${pct(x.ch7, 1)}` : ''}`);
     if (['gold', 'silver', 'platinum'].includes(x.k) && x.unit === 'oz') L.push(`      ${ar ? 'الجرام' : '1 gram'}: <b>${gramSar(x.price).toFixed(2)} ${ar ? 'ريال' : 'SAR'}</b> · ${usd2(x.price / 31.1034768)}`);
   }
   const g = list.find(x => x.k === 'gold'), s = list.find(x => x.k === 'silver');

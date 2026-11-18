@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: c99f4dc48e262cb8
+// sources-hash: 1a2a733a8c8663a7
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5483,8 +5483,8 @@ var T = {
     mkT: "\u0627\u0644\u0633\u0648\u0642",
     topUp: (n) => `\u0623\u0639\u0644\u0649 ${n} \xB7 \u0627\u0644\u0623\u0641\u0636\u0644 24\u0633`,
     topDn: (n) => `\u0623\u0639\u0644\u0649 ${n} \xB7 \u0627\u0644\u0623\u0633\u0648\u0623 24\u0633`,
-    stUp: "bStocks \xB7 \u0627\u0644\u0623\u0641\u0636\u0644 24\u0633",
-    stDn: "bStocks \xB7 \u0627\u0644\u0623\u0633\u0648\u0623 24\u0633",
+    stUp: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0641\u064A bStocks \xB7 24\u0633",
+    stDn: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0641\u064A bStocks \xB7 24\u0633",
     stNote: "\u0623\u0633\u0647\u0645 \u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0645\u0631\u0645\u0651\u0632\u0629 (Binance)",
     updated: "\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B",
     futures: "Futures",
@@ -5517,8 +5517,8 @@ var T = {
     exit: "\u{1F6AA} \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
     today: "\u0627\u0644\u064A\u0648\u0645",
     profit: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0628\u062D",
-    vsBtcS: "\u0645\u0642\u0627\u0628\u0644 BTC",
-    beat: (a, n) => `${a}/${n} \u0639\u0645\u0644\u0629 \u062A\u0641\u0648\u0642\u062A \u0639\u0644\u0649 BTC`,
+    vsBtcS: "\u0645\u0642\u0627\u0628\u0644 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
+    beat: (a, n) => `${a} \u0645\u0646 ${n} \u0639\u0645\u0644\u0627\u062A \u062A\u0641\u0648\u0642\u062A \u0639\u0644\u0649 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646`,
     bestT: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0627\u0644\u064A\u0648\u0645",
     worstT: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0627\u0644\u064A\u0648\u0645",
     dom: "\u0627\u0644\u0647\u064A\u0645\u0646\u0629",
@@ -5527,10 +5527,10 @@ var T = {
     etf: "ETF",
     planS: "\u0627\u0644\u062E\u0637\u0629",
     allocS: "\u0627\u0644\u062A\u0648\u0632\u064A\u0639",
-    onT: (a, n) => `${a}/${n} \u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641`,
-    dcaS: (n, mo) => `${n} \u0634\u0631\u0627\u0621 \xB7 ${mo}/\u0634\u0647\u0631`,
-    exitS: (n) => `\u0627\u0644\u062E\u0631\u0648\u062C ${n}/3`,
-    nearTp: "\u0623\u0642\u0631\u0628 TP",
+    onT: (a, n) => `${a} \u0645\u0646 ${n} \u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641`,
+    dcaS: (n, mo) => `${n} \u0634\u0631\u0627\u0621 \xB7 ${mo} \u0634\u0647\u0631\u064A\u0627\u064B`,
+    exitS: (n) => `\u0627\u0644\u062E\u0631\u0648\u062C ${n} \u0645\u0646 3`,
+    nearTp: "\u0623\u0642\u0631\u0628 \u0647\u062F\u0641 \u0631\u0628\u062D",
     exitT: "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
     conds: "\u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u062E\u0631\u0648\u062C",
     met3: (n) => `\u062A\u062D\u0642\u0642 ${n} \u0645\u0646 3`,
@@ -5624,14 +5624,17 @@ var row = (sym, v, extra) => `<code>${esc(String(sym).toUpperCase().padEnd(6))}$
 function moverRows(sum, key, dir, n = 5) {
   return sum.coins.filter((c) => c[key] != null && c.value >= 1 && !isStable(c.sym)).sort((a, b) => dir * (b[key] - a[key])).slice(0, n).filter((c) => dir > 0 ? c[key] > 0 : c[key] < 0);
 }
+var FNG_AR = { "Extreme Fear": "\u062E\u0648\u0641 \u0634\u062F\u064A\u062F", Fear: "\u062E\u0648\u0641", Neutral: "\u0645\u062D\u0627\u064A\u062F", Greed: "\u0637\u0645\u0639", "Extreme Greed": "\u0637\u0645\u0639 \u0634\u062F\u064A\u062F" };
+var SEASON_AR = { "Altcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629", "Bitcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646", "Leaning Altcoins": "\u064A\u0645\u064A\u0644 \u0644\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629", "Leaning Bitcoin": "\u064A\u0645\u064A\u0644 \u0644\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646" };
+var arDay = (iso) => (/* @__PURE__ */ new Date(iso + "T12:00:00Z")).toLocaleDateString("ar-SA-u-nu-latn-ca-gregory", { month: "long", day: "numeric", timeZone: "UTC" });
 function marketShort(t, m) {
-  const g = m.global || {}, d = g.dom || {}, out = [];
-  if (m.btc) out.push(`BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
-  if (d.btc != null) out.push(`${t.dom} BTC ${d.btc.toFixed(1)}% \xB7 USDT ${(d.usdt || 0).toFixed(2)}%`);
-  if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> \xB7 ${esc(m.fng.label)}`);
-  if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> \xB7 ${esc(m.alt.label)}`);
+  const g = m.global || {}, d = g.dom || {}, out = [], ar = isAr(t);
+  if (m.btc) out.push(`${ar ? "\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646" : "BTC"} <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
+  if (d.btc != null) out.push(ar ? `${t.dom}: \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 ${d.btc.toFixed(1)}% \xB7 \u0627\u0644\u062A\u064A\u062B\u0631 ${(d.usdt || 0).toFixed(2)}%` : `${t.dom} BTC ${d.btc.toFixed(1)}% \xB7 USDT ${(d.usdt || 0).toFixed(2)}%`);
+  if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> \xB7 ${esc(ar ? FNG_AR[m.fng.label] || m.fng.label : m.fng.label)}`);
+  if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> \xB7 ${esc(ar ? SEASON_AR[m.alt.label] || m.alt.label : m.alt.label)}`);
   const e = etfDay(m.etf);
-  if (e) out.push(`${t.etf} ${e.label} \xB7 BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}`);
+  if (e) out.push(ar ? `\u062A\u062F\u0641\u0642\u0627\u062A ETF (${arDay(e.date)}): BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}` : `${t.etf} ${e.label} \xB7 BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}`);
   return out;
 }
 var nearestTp = (sum) => (sum.tps || []).filter((x) => x.price < x.level).map((x) => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to)[0];
@@ -5646,7 +5649,7 @@ function viewPortfolio(t, cfg, sum, m, now) {
   const mk = marketShort(t, m);
   if (mk.length) L.push("", `\u{1F30D} <b>${t.mkT}</b>`, ...mk);
   L.push("", `\u{1F3AF} ${t.sigT} \u{1F7E2} ${sum.counts.reinforce} \xB7 \u{1F534} ${sum.counts.sell} \xB7 \u26AA ${sum.counts.hold}`);
-  if (sum.plan.length) L.push(`\u{1F4CB} ${t.planS} <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${sum.prog.completed}/${sum.prog.counted} \u2705`);
+  if (sum.plan.length) L.push(`\u{1F4CB} ${t.planS} <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${isAr(t) ? `${sum.prog.completed} \u0645\u0646 ${sum.prog.counted}` : `${sum.prog.completed}/${sum.prog.counted}`} \u2705`);
   if (sum.alloc) L.push(`\u2696\uFE0F ${t.allocS} ${t.onT(sum.alloc.onTarget, sum.alloc.count)}`);
   if ((sum.dca || []).length) L.push(`\u{1F6D2} DCA ${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
   const mc = sum.macro.filter((x) => x.met).length, tp = nearestTp(sum);
@@ -5741,14 +5744,14 @@ var mkTabs = (t, on) => [["c", "\u{1FA99} " + (isAr(t) ? "\u0643\u0631\u064A\u06
 var riyadh = (ms, ar) => new Date(ms).toLocaleString(ar ? "ar-SA-u-nu-latn" : "en-GB", { timeZone: "Asia/Riyadh", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false });
 function viewStocks(t, m, now) {
   const ar = isAr(t), st = (m.stocks || []).filter((r) => r.price > 0), ch = st.filter((r) => r.ch24 != null), us = usMarket(now);
-  const L = [`\u{1F4C8} <b>bStocks</b> \xB7 ${hm(now)}`, ""];
+  const L = [`\u{1F4C8} <b>${ar ? "\u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0645\u0631\u0645\u0651\u0632\u0629 (bStocks)" : "bStocks"}</b> \xB7 ${hm(now)}`, ""];
   if (!st.length) L.push(ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A bStocks \u0627\u0644\u0622\u0646 \u2014 \u062D\u0627\u0648\u0644 \u0644\u0627\u062D\u0642\u0627\u064B." : "No bStocks data right now \u2014 try again later.");
   else {
     const up = ch.filter((r) => r.ch24 > 0).length, dn = ch.filter((r) => r.ch24 < 0).length, avg = ch.length ? ch.reduce((s, r) => s + r.ch24, 0) / ch.length : null;
     const cap = st.reduce((s, r) => s + (r.mcap || 0), 0), line = (r) => row(r.sym, r.ch24, price2(r.price));
     L.push(
       `\u{1F1FA}\u{1F1F8} ${ar ? "\u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A" : "US market"}: <b>${US_STATE[ar ? "ar" : "en"][us.state]}</b> \xB7 ${us.state === "open" ? ar ? "\u064A\u064F\u063A\u0644\u0642" : "closes" : ar ? "\u064A\u0641\u062A\u062D" : "opens"} ${riyadh(us.next, ar)} ${ar ? "\u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636" : "Riyadh"}`,
-      `\u{1F4CA} ${st.length} ${ar ? "\u0633\u0647\u0645\u0627\u064B" : "stocks"} \xB7 ${big(cap)} \xB7 \u{1F7E2} ${up} / \u{1F534} ${dn} \xB7 ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : "avg"} ${pct(avg, 2)}`
+      ar ? `\u{1F4CA} \u0639\u062F\u062F \u0627\u0644\u0623\u0633\u0647\u0645 ${st.length}${cap > 0 ? ` \xB7 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629 ${big(cap)}` : ""} \xB7 \u{1F7E2} \u0635\u0627\u0639\u062F ${up} \xB7 \u{1F534} \u0647\u0627\u0628\u0637 ${dn} \xB7 \u0627\u0644\u0645\u062A\u0648\u0633\u0637 ${pct(avg, 2)}` : `\u{1F4CA} ${st.length} stocks${cap > 0 ? ` \xB7 ${big(cap)}` : ""} \xB7 \u{1F7E2} ${up} / \u{1F534} ${dn} \xB7 avg ${pct(avg, 2)}`
     );
     const sUp = [...ch].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...ch].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
     L.push(
@@ -5770,7 +5773,7 @@ function viewMetals(t, m, now) {
   if (!list3.length) L.push(ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u0645\u0639\u0627\u062F\u0646 \u0627\u0644\u0622\u0646 \u2014 \u062D\u0627\u0648\u0644 \u0644\u0627\u062D\u0642\u0627\u064B." : "No metals data right now \u2014 try again later.");
   for (const x of list3) {
     const d = METAL[x.k] || ["\u2022", x.k, x.k], u = UNIT[x.unit] || ["", ""];
-    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price2(x.price)} / ${ar ? u[1] : u[0]} \xB7 ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` \xB7 ${ar ? "7 \u0623\u064A\u0627\u0645" : "7d"} ${pct(x.ch7, 1)}` : ""}`);
+    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price2(x.price)} ${ar ? "\u0644\u0644" + u[1] : "/ " + u[0]} \xB7 ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` \xB7 ${ar ? "7 \u0623\u064A\u0627\u0645" : "7d"} ${pct(x.ch7, 1)}` : ""}`);
     if (["gold", "silver", "platinum"].includes(x.k) && x.unit === "oz") L.push(`      ${ar ? "\u0627\u0644\u062C\u0631\u0627\u0645" : "1 gram"}: <b>${gramSar(x.price).toFixed(2)} ${ar ? "\u0631\u064A\u0627\u0644" : "SAR"}</b> \xB7 ${usd2(x.price / 31.1034768)}`);
   }
   const g = list3.find((x) => x.k === "gold"), s = list3.find((x) => x.k === "silver");

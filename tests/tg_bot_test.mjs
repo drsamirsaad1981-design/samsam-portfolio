@@ -393,6 +393,25 @@ check('/lang → the two choices', JSON.stringify(btns(last()).map(b => b.callba
 // ── Arabic ──
 await tap('lang:ar');   // the Arabic checks below
 sent.length = 0;
+if (process.env.DUMP_AR) {   // a look at the Arabic views as Telegram gets them (raw, marks included) → /tmp/ar_dump.txt
+  const out = [];
+  for (const d of ['menu', 'mk', 'mks', 'mkm', 'pf', 'bal', 'alerts', 'plan']) { sent.length = 0; await tap(d); const x = sent.filter(y => y.b && typeof y.b.raw === 'string' && /editMessageText|sendMessage/.test(y.m) && !/تم التحديث/.test(y.b.raw)).pop(); out.push('=== ' + d + '\n' + (x ? x.b.raw : '(none)')); }
+  for (const t of ['/market', '/stocks', '/metals', '/alerts', '/analyze']) { sent.length = 0; await say(t); const x = sent.filter(y => y.b && typeof y.b.raw === 'string').pop(); out.push('=== ' + t + '\n' + (x ? x.b.raw : '(none)')); }
+  fs.writeFileSync('/tmp/ar_dump.txt', out.join('\n\n')); sent.length = 0;
+}
+// Arabic lines built so each part starts with an Arabic word (Telegram keeps them in order right-to-left)
+sent.length = 0; await tap('mk');
+{ const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
+  check('Arabic market: "الهيمنة: البيتكوين 59.8% · التيثر 6.95%", Fear & Greed and Altcoin Season in Arabic, ETF "تدفقات ETF (6 نوفمبر)"',
+    /الهيمنة: البيتكوين 59\.8% · التيثر 6\.95%/.test(tx) && /الخوف والطمع <b>28<\/b> · خوف/.test(tx) && /· يميل للعملات البديلة/.test(tx) && /تدفقات ETF \(\d+ [\u0600-\u06FF]+\): BTC/.test(tx) && !/Fear|Leaning|Nov/.test(tx), tx); }
+sent.length = 0; await tap('mks');
+{ const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
+  check('Arabic bStocks: "📊 عدد الأسهم 8 · 🟢 صاعد 5 · 🔴 هابط 3 · المتوسط", no empty "—", headers start in Arabic',
+    /📊 عدد الأسهم 8 · 🟢 صاعد 5 · 🔴 هابط 3 · المتوسط \+0\.53%/.test(tx) && !/ — ·/.test(tx) && /الأفضل في bStocks/.test(tx), tx); }
+sent.length = 0; await tap('mkm');
+{ const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
+  check('Arabic metals: "$2,650 للأونصة" (no slash between the number and the unit), copper "للرطل"', /\$2,650 للأونصة/.test(tx) && /للرطل/.test(tx) && !/ \/ أونصة/.test(tx), tx); }
+sent.length = 0;
 await post({ message: { chat: { id: 555 }, text: '/portfolio' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
 check('Arabic: "محفظتك الآن"', /محفظتك الآن/.test(last().b.text) && btnTexts(last()).includes('🔄 تحديث'), last().b.text.slice(0, 120));
 sent.length = 0; await post({ message: { chat: { id: 555 }, text: '📋 الخطة' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
