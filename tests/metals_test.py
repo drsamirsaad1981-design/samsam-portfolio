@@ -112,6 +112,7 @@ with sync_playwright() as p:
     check('Metals tab: "Your metals" card with 150 g of gold', 'Your metals' in t and '150' in t and 'Gold 24k' in t, t)
     check('…with the gram price vs your average and the add buttons', '/' not in '' and 'your avg' in t and mine.locator('[data-add]').count() == 2, t)
     pg.screenshot(path=str(SH / 'metals-mine.png'), full_page=False)
+    pg.set_viewport_size({'width': 1400, 'height': 900}); pg.wait_for_timeout(400); pg.screenshot(path=str(SH / 'metals-mine-desktop.png')); pg.set_viewport_size({'width': 390, 'height': 844}); pg.wait_for_timeout(300)
     pg.click('#vMetals [data-add="XAG"]'); pg.wait_for_timeout(300)
     check('Add silver from the Metals tab opens Add Coin on XAG', pg.evaluate("[addCoinModal.classList.contains('show') || getComputedStyle(addCoinModal).display !== 'none', acSym.value]") == [True, 'XAG'])
     pg.evaluate("closeAddCoin()")

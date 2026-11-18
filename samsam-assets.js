@@ -4,7 +4,7 @@
 // saves every ~30 minutes (tools/update-market.mjs): a summary (how many, their total market cap, up / down today), the US
 // stock market's hours (the tokens trade 24/7, the real shares only while New York is open), the best and worst today,
 // and the full list — search, sort, a tap opens the coin on CoinGecko.
-// Metals: gold, silver, platinum, copper and Brent oil — Yahoo Finance's front-month futures (delayed ~10–15 min), with
+// Metals: gold, silver, platinum and copper (the snapshot also has Brent oil, not shown here) — Yahoo Finance's front-month futures (delayed ~10–15 min), with
 // the change since the last close, 7 days, a month's line; gold / silver / platinum also per gram in Saudi riyals.
 // The choice of section is remembered on this device (and #stocks / #metals open one directly).
 (function () {
@@ -65,7 +65,7 @@
         '<div class="as-li">' + T('Today', 'اليوم') + ' <b><span class="up">▲ ' + iso(up) + '</span> · <span class="dn">▼ ' + iso(dn) + '</span></b></div>' +
         '<div class="as-li">' + T('Average 24h', 'متوسط 24 ساعة') + ' <b>' + pct(avg) + '</b></div></div>' +
       '<div class="as-card as-us as-' + mk.state + '"><div class="as-k">🇺🇸 ' + T('US stock market', 'السوق الأمريكي') + '</div><div class="as-v"><i class="as-dot"></i>' + stLbl + '</div>' +
-        '<div class="as-li">' + nextLbl + ' <b>' + E(riyadh(mk.next)) + '</b> <small>' + T('Riyadh', 'بتوقيت الرياض') + '</small></div>' +
+        '<div class="as-li as-left">' + nextLbl + ' <b>' + E(riyadh(mk.next)) + '</b> <small>' + T('Riyadh', 'بتوقيت الرياض') + '</small></div>' +
         '<div class="as-li as-small">' + T('The tokens trade 24/7; the real shares move only while New York is open (9:30–16:00 New York, holidays not shown).', 'التوكنات تُتداول على مدار الساعة؛ أما الأسهم الحقيقية فتتحرك فقط أثناء فتح سوق نيويورك (9:30–16:00 بتوقيت نيويورك، دون احتساب العطل).') + '</div></div>' +
       '</div>' +
       '<div class="as-movers"><div><div class="as-k">' + T('Best today', 'الأفضل اليوم') + '</div>' + best.map(chip).join('') + '</div><div><div class="as-k">' + T('Worst today', 'الأسوأ اليوم') + '</div>' + worst.map(chip).join('') + '</div></div>';
@@ -114,17 +114,18 @@
       var ch = c.basePrice > 0 && pr > 0 ? (pr / c.basePrice - 1) * 100 : null; tv += val; tp += pnl;
       return '<div class="as-mrow"><div class="as-mn">' + m[0] + ' <b>' + T(m[1], m[2]) + '</b><small>' + iso(g2(c.qty)) + '</small></div>' +
         '<div class="as-mv2"><b>' + iso(usd(val, 2)) + '</b><span class="as-pc ' + (pnl >= 0 ? 'up' : 'dn') + '">' + iso((pnl >= 0 ? '+' : '−') + usd(Math.abs(pnl), 2)) + '</span></div>' +
-        '<div class="as-li">' + T('Gram now', 'الجرام الآن') + ' <b>' + iso(usd(pr / OZ, 2)) + '</b> · ' + T('your avg', 'متوسط شرائك') + ' <b>' + iso(usd(c.basePrice / OZ, 2)) + '</b> ' + pct(ch) + '</div>' +
+        '<div class="as-li as-left">' + T('Gram now', 'الجرام الآن') + ' <b>' + iso(usd(pr / OZ, 2)) + '</b> · ' + T('your avg', 'متوسط شرائك') + ' <b>' + iso(usd(c.basePrice / OZ, 2)) + '</b> ' + pct(ch) + '</div>' +
         zkLine(c, d, pr) +
         '<div class="as-macts"><button type="button" data-vault="' + c.sym + '">' + (vt ? vt.e + ' ' + E(vt.label) : '🏦 ' + T('Where is it kept?', 'أين تحفظه؟')) + '</button><button type="button" data-hist="' + c.sym + '">📜 ' + T('History · edit', 'السجل · تعديل') + '</button></div></div>';
     }).join('');
-    return '<div class="as-card as-mine"><div class="as-k">' + T('Your metals', 'معادنك') + '<a class="as-open" href="./index.html">' + T('Open in portfolio ›', 'افتح في المحفظة ›') + '</a></div>' + rows +
+    return '<div class="as-card as-mine"><div class="as-k">' + T('Your metals', 'معادنك') + '<a class="as-mopen" href="./index.html">' + T('Open in portfolio ›', 'افتح في المحفظة ›') + '</a></div><div class="as-mrows">' + rows + '</div>' +
       (pf.length > 1 ? '<div class="as-mtot">' + T('Total', 'الإجمالي') + ' <b>' + iso(usd(tv, 2)) + '</b> <span class="as-pc ' + (tp >= 0 ? 'up' : 'dn') + '">' + iso((tp >= 0 ? '+' : '−') + usd(Math.abs(tp), 2)) + '</span></div>' : '') +
       '<div class="as-adds">' + add + '</div><p class="as-zn">🕌 ' + T('Zakat: 2.5% once you have held at least the nisab (85 g gold · 595 g silver) for a full hijri year. An estimate — check with a scholar.', 'الزكاة: 2.5% إذا بلغ ما تملكه النصاب (85 جم ذهب · 595 جم فضة) ومرّ عليه عام هجري كامل. تقدير تقريبي — راجع أهل العلم.') + '</p></div>';
   }
   function metalsHtml() {
     var list = st.metals;
     if (!list) return mineHtml(null) + '<p class="as-note">' + (st.err || T('Loading…', 'جارٍ التحميل…')) + '</p>';
+    list = list.filter(function (x) { return x.k !== 'brent'; });   // metals only (no oil)
     var g = list.filter(function (x) { return x.k === 'gold'; })[0], s = list.filter(function (x) { return x.k === 'silver'; })[0];
     var h = mineHtml(list) + '<div class="as-metals">' + list.map(function (x) {
       var d = MET[x.k] || ['•', x.k, x.k, false], u = UNIT[x.unit] || ['', ''];
