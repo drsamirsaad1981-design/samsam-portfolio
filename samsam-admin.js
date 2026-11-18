@@ -33,6 +33,7 @@
     '#cpAdm .ad-sec{margin:16px 0 6px;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--fg2,#94a3b8)}' +
     '#cpAdm .ad-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}@media (min-width:560px){#cpAdm .ad-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}' +
     '#cpAdm .ad-card{border:1px solid var(--border,rgba(148,163,184,.2));border-radius:12px;padding:10px 12px;min-width:0}' +
+    '#cpAdm .ad-card.ad-warm{border-color:rgba(245,158,11,.6)}#cpAdm .ad-card.ad-hot{border-color:rgba(239,68,68,.7)}#cpAdm .ad-card.ad-hot b{color:var(--red,#ef4444)}' +
     '#cpAdm .ad-card span{display:block;font-size:.74rem;color:var(--fg2,#94a3b8)}#cpAdm .ad-card b{display:block;font-size:1.25rem;margin-top:2px}#cpAdm .ad-card i{display:block;font-style:normal;font-size:.72rem;color:var(--fg2,#94a3b8);margin-top:2px}' +
     '#cpAdm .ad-btn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:.8rem;font-weight:700;padding:7px 11px;border-radius:9px;border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:inherit;cursor:pointer}' +
     '#cpAdm .ad-btn.pri{background:#7c3aed;border-color:#7c3aed;color:#fff}#cpAdm .ad-btn.warn{border-color:rgba(239,68,68,.6);color:#f87171}#cpAdm .ad-btn:disabled{opacity:.5;cursor:default}' +
@@ -69,6 +70,24 @@
         '<li><b>⏸ Pause</b> — the bot goes quiet for them (no answers, radars or daily messages); the app keeps working. ▶️ Resume brings everything back.</li>' +
         '<li><b>🗑 Remove member</b> — out of the bot <i>and</i> the app; their data stays. ↩️ Restore within 60 days.</li></ul></div></details>';
   }
+  function N(n) { return (+n || 0).toLocaleString('en-US'); }
+  // 📊 what gets used — commands, buttons, voice, the Mini App and the app's screens (counts only, today · 7 days)
+  var FEAT = { 'text': '💬 Questions / tickers typed', 'voice': '🎙️ Voice notes', 'photo': '🖼️ Photos', 'miniapp:open': '📊 Mini App opened', 'miniapp:card': '📸 Image cards sent', 'other': 'Other' };
+  function featName(k) {
+    if (FEAT[k]) return FEAT[k];
+    var m = /^(cmd|btn|kb):(.+)$/.exec(k); if (m) return (m[1] === 'cmd' ? '🤖 /' : m[1] === 'btn' ? '🤖 button ' : '🤖 keyboard ') + m[2];
+    m = /^app:page:(.+)$/.exec(k); if (m) return '📱 screen ' + m[1];
+    m = /^app:(.+)$/.exec(k); if (m) return '📱 ' + m[1];
+    return k;
+  }
+  function useHtml() {
+    var u = data.use; if (!u) return '';
+    var row = function (x) { return '<div class="ad-pay"><span>' + E(featName(x.name)) + '</span><b>' + N(x.n) + '</b></div>'; };
+    var wk = u.week || [], td = {}; (u.today || []).forEach(function (x) { td[x.name] = x.n; });
+    return '<div class="ad-sec">📊 What gets used</div><details' + (openChat === '__use' ? ' open' : '') + ' data-chat="__use"><summary><b>Last 7 days (' + wk.length + ')</b><span>commands, buttons, voice, Mini App and app screens — counts only</span></summary>' +
+      (wk.length ? wk.map(function (x) { return '<div class="ad-pay"><span>' + E(featName(x.name)) + '</span><span>today ' + N(td[x.name] || 0) + ' · <b>' + N(x.n) + '</b></span></div>'; }).join('') : '<p class="ad-msg" style="padding:0 12px 10px">Nothing counted yet — counts start with this update.</p>') +
+      '</details>';
+  }
   function draw(msg, err) {
     var box = $('cpAdmBody'); if (!box) return;
     if (!data) { box.innerHTML = '<p class="ad-msg' + (err ? ' ad-err' : '') + '">' + E(msg || 'Loading…') + '</p>'; return; }
@@ -80,7 +99,8 @@
         '<div class="ad-card"><span>⭐ Premium now</span><b>' + s.premium + '</b><i>Stars ' + s.premiumStars + ' · gift ' + (s.premium - s.premiumStars) + '</i></div>' +
         '<div class="ad-card"><span>💛 Supporters</span><b>' + s.supporters + '</b><i>&nbsp;</i></div>' +
         '<div class="ad-card"><span>💤 Idle</span><b>' + (s.idle || 0) + '</b><i>no use for ' + (data.idleDays || 14) + '+ days</i></div>' +
-        '<div class="ad-card"><span>📖 Reads today</span><b>' + (s.readsToday || 0) + '</b><i>the bot\'s Firebase reads · you ' + (data.readsOwner || 0) + '</i></div>' +
+        (data.fsReads ? '<div class="ad-card' + (data.fsReads.pct >= 80 ? ' ad-hot' : data.fsReads.pct >= 60 ? ' ad-warm' : '') + '"><span>📖 Firebase reads today</span><b>' + N(data.fsReads.total) + ' · ' + data.fsReads.pct + '%</b><i>of ' + N(data.fsReads.limit) + ' · 📱 app ' + N(data.fsReads.app) + ' · 🤖 round ' + N(data.fsReads.round) + ' · ⚙️ bot ' + N(data.fsReads.worker) + '</i></div>'
+          : '<div class="ad-card"><span>📖 Reads today</span><b>' + (s.readsToday || 0) + '</b><i>the bot\'s Firebase reads · you ' + (data.readsOwner || 0) + '</i></div>') +
         '<div class="ad-card"><span>⭐ This month</span><b>' + s.starsMonth + '</b><i>premium ' + s.starsMonthPremium + ' · support ' + s.starsMonthSupport + '</i></div>' +
         '<div class="ad-card"><span>⭐ All time</span><b>' + s.starsAll + '</b><i>≈ ' + usd(s.starsAll) + ' paid by members</i></div>' +
         '<div class="ad-card"><span>💲 Premium price</span><b>' + data.price + ' ⭐</b><i>a month ≈ ' + usd(data.price) + '</i></div>' +
@@ -94,6 +114,7 @@
       (list.length ? list.map(memberHtml).join('') : '<p class="ad-msg">' + (data.members.length ? 'No one matches.' : 'Nobody yet — make an invite code above.') + '</p>') +
       (data.removed && data.removed.length ? '<div class="ad-sec">Removed (kept 60 days)</div>' + data.removed.map(function (x) {
         return '<div class="ad-pay"><span>' + E(x.name) + (x.premium ? ' ⭐' : '') + (x.supporter ? ' 💛' : '') + ' · removed ' + day(x.removedAt) + '</span><button type="button" class="ad-btn" data-restore="' + E(x.chat) + '">↩️ Restore</button></div>'; }).join('') : '') +
+      useHtml() +
       '<div class="ad-sec">Stars</div><details' + (openChat === '__pay' ? ' open' : '') + ' data-chat="__pay"><summary><b>Payments (' + data.payments.length + ')</b><span>premium subscriptions, renewals and support</span></summary>' +
         (data.payments.length ? data.payments.map(function (p) { return '<div class="ad-pay"><span>' + day(p.t) + ' · ' + E(p.name) + '</span><span>' + (p.kind === 'prem' ? (p.renew ? '⭐ renewal' : '⭐ premium') : '💛 support') + ' · <b>' + p.stars + ' ⭐</b></span></div>'; }).join('') : '<p class="ad-msg" style="padding:0 12px 10px">No payments yet.</p>') +
       '</details><p class="ad-msg">Withdraw the Stars yourself: the bot\'s balance → Fragment.</p>' + (msg ? '<p class="ad-msg' + (err ? ' ad-err' : '') + '">' + E(msg) + '</p>' : '');

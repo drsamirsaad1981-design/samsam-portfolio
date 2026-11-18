@@ -1,6 +1,8 @@
 // tools/worker/index.mjs — the one Cloudflare Worker: AI Analysis (/analyze, tools/ai-worker.js) + the Telegram bot (/tg).
 // Built into a single file by tools/build-worker.mjs → tools/dist/samsam-worker.js (that file is what you paste).
-import ai, { setMemberCheck, setKeyHandler, setAdminHandler, setJoinHandler, setCexHandler } from '../ai-worker.js';
+import ai, { setMemberCheck, setKeyHandler, setAdminHandler, setJoinHandler, setCexHandler, setUseHandler } from '../ai-worker.js';
+import { bidiBody } from './bidi.mjs';
+import { note, noteApp, addWorkerReads, flush, readsAlert } from './usage.mjs';
 import { cexHandler } from './cex.mjs';
 setCexHandler(cexHandler);   // 🔌 live exchange balances (read-only keys)
 import { adminHandler } from './admin.mjs';
@@ -32,7 +34,7 @@ async function inCommunity(env, chat) {
   return out;
 }
 import { saveKey, keyInfo, ownKey, deleteKey, validShape, keyWorks, BYOK_REPORTS } from './byok.mjs';
-import { handleTelegram, setup, check } from './bot.mjs';
+import { handleTelegram, setup, check, getLang } from './bot.mjs';
 import { runWatch } from './watch.mjs';
 import { runDaily, kickPrices } from './daily.mjs';
 import { page, api, cardSend, logo } from './miniapp.mjs';
@@ -79,17 +81,36 @@ setKeyHandler(async (env, email, body) => {
   });
 });
 
+// 📖📊 the app's report (at most every 3 hours per device): its Firebase reads today + which screens / actions were used
+setUseHandler(async (env, who, body) => {
+  const x = who.owners.includes(who.email) ? null : await memberByEmail(env, who.email);
+  if (!who.owners.includes(who.email) && !x) return { status: 403, error: 'Not allowed.' };
+  if (x) await markSeen(env, x.chat).catch(() => {});   // 💤 the app was opened → active
+  noteApp(who.uid, body && body.reads, body && body.feats, body && body.dev);
+  return { ok: true };
+});
+
+// the Worker's addresses: the bot, its Mini App, then the app's AI / key / admin / join / cex / use calls
+async function route(request, env, ctx) {
+  const p = new URL(request.url).pathname.replace(/\/+$/, '');
+  if (p.endsWith('/tg/app')) note('miniapp:open'); else if (p.endsWith('/tg/card')) note('miniapp:card');
+  if (p.endsWith('/tg/setup')) return setup(request, env);
+  if (p.endsWith('/tg/check')) return check(request, env);
+  if (p.endsWith('/tg/app')) return page();          // the Mini App page (phase 7)
+  if (p.endsWith('/tg/api')) return api(request, env); // its data, only with Telegram's signature for your account
+  if (p.endsWith('/tg/logo')) return logo(request);   // a coin logo from this site (the image cards draw it)
+  if (p.endsWith('/tg/card')) return cardSend(request, env); // 📸 an image card drawn in the Mini App → a photo in your chat
+  if (p.endsWith('/tg')) return handleTelegram(request, env, ctx);
+  return ai.fetch(request, env, ctx);
+}
+
 export default {
   async fetch(request, env, ctx) {
-    const p = new URL(request.url).pathname.replace(/\/+$/, '');
-    if (p.endsWith('/tg/setup')) return setup(request, env);
-    if (p.endsWith('/tg/check')) return check(request, env);
-    if (p.endsWith('/tg/app')) return page();          // the Mini App page (phase 7)
-    if (p.endsWith('/tg/api')) return api(request, env); // its data, only with Telegram's signature for your account
-    if (p.endsWith('/tg/logo')) return logo(request);   // a coin logo from this site (the image cards draw it)
-    if (p.endsWith('/tg/card')) return cardSend(request, env); // 📸 an image card drawn in the Mini App → a photo in your chat
-    if (p.endsWith('/tg')) return handleTelegram(request, env, ctx);
-    return ai.fetch(request, env, ctx);
+    const res = await route(request, env, ctx);
+    // 📖📊 counts waited in memory; written at most every 10 minutes (Cloudflare's free plan: 1,000 KV writes a day)
+    const job = flush(env, { reads: takeReads() }).catch(() => {});
+    if (ctx && ctx.waitUntil) ctx.waitUntil(job);
+    return res;
   },
   // every 5 minutes (tools/worker/wrangler.toml → crons): the alerts you set in words, then the bot's own messages (phase 5)
   async scheduled(event, env, ctx) {
@@ -101,7 +122,7 @@ export default {
       await expireRound(env, Date.now()).catch(e => log('premium', e));
       await runChannel(env, now).then(r => { if (r.job) console.log(JSON.stringify(r)); }).catch(e => log('channel', e));   // 📢 the market pulse   // ⭐ a premium that ended → standard limits (3-day reminder before)
       const cenv = { ...env, PF_CHECK_MS: String(30 * 60e3) }, mem = await members(env), reads = {};
-      takeReads();
+      addWorkerReads(takeReads());   // reads before the round (owner migration, channel…) → the Worker's own count
       for (const chat of await activeChats(env)) {   // each person in turn, as themselves: their alerts, then their daily messages
         resetBudget();
         const st = await idleState(env, chat, mem[chat], now);   // 💤 no bot / app use for 14 days → only the alerts they set
@@ -114,6 +135,11 @@ export default {
         reads[chat] = takeReads();   // 📖 this member's Firebase reads in this round
       }
       await addReads(env, reads, now).catch(e => log('reads', e));
+      await flush(env, { now }).catch(e => log('use', e));   // at most every 10 minutes
+      // ⚠️ all of today's Firebase reads (round + bot + app) at 60% / 80% of the free allowance → one message to you
+      const owner = env.TELEGRAM_CHAT_ID;
+      if (owner) await asChat(owner, async () => readsAlert(env, async text => (await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(bidiBody({ chat_id: owner, text, parse_mode: 'HTML' })) })).json(), await getLang(env), now))
+        .then(r => { if (r.sent) console.log(JSON.stringify({ readsAlert: r.level, total: r.total })); }).catch(e => log('readsAlert', e));
     })());
   },
 };

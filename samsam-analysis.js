@@ -602,6 +602,7 @@ async function runAnalysis() {
     try { idToken = window.Samsam && Samsam.idToken ? await Samsam.idToken() : null; } catch (_) {}
     if (!idToken) { renderAnalysisError('Sign in first', 'The AI report is only for signed-in accounts. Sign in, then try again.'); return; }
 
+    try { if (window.Samsam && Samsam.hit) Samsam.hit('ai_report'); } catch (_) {}   // 📊 counts only
     const res = await fetch(ANALYSIS_WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

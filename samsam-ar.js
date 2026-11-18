@@ -742,4 +742,11 @@
   R(/^no use for (\d+)\+ days$/, 'بلا استخدام منذ $1 يوماً أو أكثر');
   R(/^the bot's Firebase reads · you (\d+)$/, 'قراءات البوت من Firebase · أنت $1');
   A({ '💤 Idle': '💤 الخاملون', '📖 Reads today': '📖 قراءات اليوم' });
+  // 📖 all of today's Firebase reads / 📊 what gets used (Admin dashboard)
+  R(/^of ([\d,]+) · 📱 app ([\d,]+) · 🤖 round ([\d,]+) · ⚙️ bot ([\d,]+)$/, function (_, l, a, r, w) { return 'من ' + n(l) + ' · 📱 التطبيق ' + n(a) + ' · 🤖 جولة البوت ' + n(r) + ' · ⚙️ باقي البوت ' + n(w); });
+  R(/^Last 7 days \((\d+)\)$/, 'آخر 7 أيام ($1)'); R(/^today ([\d,]+)$/, 'اليوم $1');
+  R(/^🤖 button (.+)$/, '🤖 زر $1'); R(/^🤖 keyboard (.+)$/, '🤖 لوحة الأزرار $1'); R(/^📱 screen (.+)$/, '📱 شاشة $1');
+  A({ '📖 Firebase reads today': '📖 قراءات Firebase اليوم', '📊 What gets used': '📊 ما الذي يُستخدم', 'commands, buttons, voice, Mini App and app screens — counts only': 'الأوامر والأزرار والصوت والـ Mini App وشاشات التطبيق — أعداد فقط',
+    '💬 Questions / tickers typed': '💬 أسئلة ورموز مكتوبة', '🎙️ Voice notes': '🎙️ رسائل صوتية', '🖼️ Photos': '🖼️ صور', '📊 Mini App opened': '📊 فتح الـ Mini App', '📸 Image cards sent': '📸 بطاقات صور أُرسلت',
+    'Nothing counted yet — counts start with this update.': 'لا توجد أعداد بعد — يبدأ العدّ مع هذا التحديث.' });
 })();

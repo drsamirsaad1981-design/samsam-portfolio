@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611182308';
-import * as Hist from './samsam-history.js?v=202611182308';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611182308';
+import * as Core from './samsam-core.js?v=202611182349';
+import * as Hist from './samsam-history.js?v=202611182349';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611182349';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -486,7 +486,7 @@ function emailAllowed(user) {   // the owner(s) in firebase-config.js; everyone 
 // someone invited through the Telegram bot: their e-mail is in Firestore config/access, which only the rules can read.
 // One read of their own (empty) settings tells: allowed → in; "permission denied" → not (yet) invited.
 async function probeAccess(user) {
-  try { await (fb.fs.getDocFromServer || fb.fs.getDoc)(fb.fs.doc(fb.db, 'users', user.uid, 'meta', 'info')); return true; }
+  try { Use.reads(1); await (fb.fs.getDocFromServer || fb.fs.getDoc)(fb.fs.doc(fb.db, 'users', user.uid, 'meta', 'info')); return true; }
   catch (e) { return !/permission-denied/.test((e && e.code) || ''); }   // offline etc. → let them in; the rules still guard every read
 }
 
@@ -512,6 +512,59 @@ async function redeemInvite(user, code) {
   } catch (e) { return { ok: false, error: 'Could not reach the server — check the internet and try again.' }; }
 }
 
+// ── 📖📊 this device's Firebase reads and which screens are used → the Worker (/use), at most every 3 hours ──────
+// Firestore bills each document a listener gets from the server; coming back within 30 minutes only the changed ones.
+// This is an estimate of that (the real figure is in Firebase → Usage), kept per Pacific day — the day the free
+// allowance (50,000 reads, the whole project) follows. Counts only: no coin, amount or name ever leaves.
+const USE_URL = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/use';
+const Use = (() => {
+  const KR = 'cp-fsreads', KF = 'cp-feats', KT = 'cp-use-sent', KS = 'cp-fs-seen', KD = 'cp-dev', SEND_MS = 3 * 3600e3;
+  const pday = ms => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+  const jget = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (_) { return {}; } };
+  const jput = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} };
+  const seenAt = +(() => { try { return localStorage.getItem(KS); } catch (_) { return 0; } })() || 0;
+  const warm = Date.now() - seenAt < 30 * 60e3;   // back within 30 minutes → Firestore re-sends only what changed
+  let seenPut = 0;
+  function reads(n) {
+    if (!(n > 0)) return;
+    const m = jget(KR), d = pday(Date.now()), old = pday(Date.now() - 3 * 864e5);
+    m[d] = (m[d] || 0) + n; Object.keys(m).forEach(k => { if (k < old) delete m[k]; }); jput(KR, m);
+    if (Date.now() - seenPut > 60e3) { seenPut = Date.now(); try { localStorage.setItem(KS, String(seenPut)); } catch (_) {} }
+  }
+  // one listener's snapshot: the first one from the server = all its documents (or only the changed ones when warm)
+  function snap(st, sn, isQuery) {   // never lets counting break the app
+    try {
+      if (!sn || !sn.metadata || sn.metadata.fromCache || sn.metadata.hasPendingWrites) return;
+      const changed = isQuery && typeof sn.docChanges === 'function' ? sn.docChanges().filter(c => c.type !== 'removed').length : 0;
+      if (!st.first) { st.first = true; reads(isQuery ? Math.max(1, warm ? changed : (sn.size || 0)) : 1); }
+      else if (changed) reads(changed);
+    } catch (_) {}
+  }
+  function hit(name) {
+    name = String(name || '').toLowerCase().replace(/[^a-z0-9_:]/g, '').slice(0, 20); if (!name) return;
+    const m = jget(KF); if (!(name in m) && Object.keys(m).length >= 50) return;
+    m[name] = (m[name] || 0) + 1; jput(KF, m);
+  }
+  function dev() {
+    try { let d = localStorage.getItem(KD); if (!/^[a-z0-9]{8}$/.test(d || '')) { d = Math.random().toString(36).slice(2, 10).padEnd(8, '0'); localStorage.setItem(KD, d); } return d; } catch (_) { return 'nodevice'; }
+  }
+  async function send(force) {
+    const u = S.user; if (!u || !u.getIdToken) return false;
+    const last = +(() => { try { return localStorage.getItem(KT); } catch (_) { return 0; } })() || 0;
+    if (!force && Date.now() - last < SEND_MS) return false;
+    try { localStorage.setItem(KT, String(Date.now())); } catch (_) {}
+    const feats = jget(KF);
+    try {
+      const r = await fetch(USE_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken: await u.getIdToken(), dev: dev(), reads: jget(KR), feats }) });
+      if (!r.ok) throw new Error(String(r.status));
+      const m = jget(KF); Object.keys(feats).forEach(k => { m[k] = (m[k] || 0) - feats[k]; if (m[k] <= 0) delete m[k]; }); jput(KF, m);   // sent → off the device
+      return true;
+    } catch (_) { try { localStorage.setItem(KT, String(last)); } catch (_) {} return false; }
+  }
+  return { reads, snap, hit, send, pday };
+})();
+try { Use.hit('page:' + ((location.pathname.split('/').pop() || 'index.html').replace(/\.html$/, '') || 'index')); } catch (_) {}
+
 async function onUser(user) {
   S.authResolved = true;
   S.unsub.forEach(u => { try { u(); } catch (_) {} }); S.unsub = [];
@@ -528,6 +581,7 @@ async function onUser(user) {
   hideGate();
   listen();
   renderStatus();
+  setTimeout(() => { Use.send().catch(() => {}); }, 8000);   // 📖📊 counts → the Worker (at most every 3 hours)
 }
 
 function userPath(...parts) { return ['users', S.user.uid, ...parts]; }
@@ -537,25 +591,25 @@ function listen() {
   const opt = { includeMetadataChanges: true };
   const onErr = what => e => { setError(e, `Could not load ${what}`); };
   const track = snap => { S.fromCache = snap.metadata.fromCache; if (!snap.metadata.fromCache && !snap.metadata.hasPendingWrites) S.lastSyncedAt = new Date(); };
-  const coll = (name, map, key, fix) => fs.onSnapshot(fs.collection(db, ...userPath(name)), opt, snap => {
-    track(snap);
+  const coll = (name, map, key, fix, st = {}) => fs.onSnapshot(fs.collection(db, ...userPath(name)), opt, snap => {
+    track(snap); Use.snap(st, snap, true);
     map.clear(); snap.forEach(d => { try { map.set(d.id, fix({ ...d.data(), id: d.id })); } catch (e) { console.warn('[Samsam] skipped unreadable', name, d.id, e); } });
     S.loaded[key] = true; emit();
   }, onErr(name));
   S.unsub.push(coll('coins', S.coins, 'coins', cleanCoin));
   S.unsub.push(coll('txs', S.txs, 'txs', cleanTx));
   S.unsub.push(coll('accum', S.accum, 'accum', cleanAccum));
-  const cutoff = Core.dayId(Date.now() - 120 * 86400e3);
+  const cutoff = Core.dayId(Date.now() - 120 * 86400e3), stS = {}, stC = {}, stM = {};
   S.unsub.push(fs.onSnapshot(
     fs.query(fs.collection(db, ...userPath('snaps')), fs.where(fs.documentId(), '>=', cutoff)), opt, snap => {
-      track(snap); S.snapDocs.clear(); snap.forEach(d => S.snapDocs.set(d.id, { ...d.data(), id: d.id }));
+      track(snap); Use.snap(stS, snap, true); S.snapDocs.clear(); snap.forEach(d => S.snapDocs.set(d.id, { ...d.data(), id: d.id }));
       S.loaded.snaps = true; emit();
     }, onErr('chart history')));
   S.unsub.push(fs.onSnapshot(fs.doc(db, ...userPath('meta', 'categories')), opt, snap => {
-    track(snap); S.catCfg = snap.exists() ? snap.data() : null; S.loaded.cats = true; emit();
+    track(snap); Use.snap(stC, snap, false); S.catCfg = snap.exists() ? snap.data() : null; S.loaded.cats = true; emit();
   }, e => { S.loaded.cats = true; emit(); onErr('categories')(e); }));   // never hold the app back over the settings
   S.unsub.push(fs.onSnapshot(fs.doc(db, ...userPath('meta', 'info')), opt, snap => {
-    track(snap); S.meta = snap.exists() ? snap.data() : null; S.loaded.meta = true; emit();
+    track(snap); Use.snap(stM, snap, false); S.meta = snap.exists() ? snap.data() : null; S.loaded.meta = true; emit();
   }, onErr('settings')));
 }
 
@@ -789,7 +843,7 @@ const API = {
 
   // ledger
   addTx(sym, type, qty, price, note = '', extra = {}) {
-    const id = Core.newId('tx_');
+    const id = Core.newId('tx_'); Use.hit('tx:' + String(type).replace(/[^a-z]/gi, '').slice(0, 10));   // 📊 counts only
     return commit((b, ref) => b.set(ref('txs', id), txDoc(sym, type, qty, price, note, extra)), `Save ${type} ${sym}`).then(() => id);
   },
   adjust(sym, { setQty, setAvg }, note) {
@@ -1104,6 +1158,10 @@ const API = {
   user: () => S.user,
   // A fresh Firebase ID token (proves who is signed in) — the AI analysis Worker checks it before running
   idToken: () => (S.user && S.user.getIdToken ? S.user.getIdToken() : Promise.resolve(null)),
+  // 📊 one use of a screen or action (counts only) · this device's Firebase reads today (estimate)
+  hit: name => Use.hit(name),
+  readsToday: () => { try { return (JSON.parse(localStorage.getItem('cp-fsreads') || '{}') || {})[Use.pday(Date.now())] || 0; } catch (_) { return 0; } },
+  sendUse: force => Use.send(force),
   downloadBackup: (o) => downloadBackup(o),
   readBackupFile: f => readBackupFile(f),
 };

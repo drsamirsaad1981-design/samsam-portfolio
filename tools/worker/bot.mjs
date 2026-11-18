@@ -15,6 +15,7 @@
 
 import { bidiBody } from './bidi.mjs';
 import { markSeen } from './idle.mjs';
+import { note } from './usage.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
 import { chatUid, idTokenFor } from './data.mjs';
@@ -440,7 +441,20 @@ export async function handleTelegram(request, env) {
   }
   await migrateOwner(env);
   await markSeen(env, chat).catch(() => {});   // 💤 any message or button tap → active again (idle.mjs)
+  note(featureOf(msg, q));   // 📊 which command / button / kind of message (counts only — usage.mjs)
   return asChat(chat, () => onUpdate(env, u, msg, q, chat));   // everything below runs as this chat: its own alerts, memory, language…
+}
+// 📊 a short name for what this update used: cmd:<command> · btn:<button group> · voice · photo · text (a question or a ticker)
+export function featureOf(msg, q) {
+  if (q) return 'btn:' + String(q.data || '').split(':')[0].slice(0, 16);
+  if (!msg) return 'other';
+  if (msg.voice || msg.audio) return 'voice';
+  if (msg.photo || msg.document) return 'photo';
+  const t = typeof msg.text === 'string' ? msg.text.trim() : '';
+  const c = /^\/([A-Za-z_]{1,16})/.exec(t);
+  if (c) return 'cmd:' + c[1].toLowerCase();
+  const kb = t && KB_ACT()[t];   // a button of the keyboard under the chat
+  return kb ? 'kb:' + String(kb).slice(0, 16) : t ? 'text' : 'other';
 }
 // 👋 someone who isn't invited: a valid code (typed, or via the t.me/<bot>?start=CODE link) lets them in; anything else gets
 // one polite answer a day. Only private chats (no groups).

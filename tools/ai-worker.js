@@ -38,6 +38,8 @@ let keyHandler = null;   // /key — a member's own Claude key (tools/worker/byo
 export function setKeyHandler(fn) { keyHandler = fn; }
 let cexHandler = null;   // /cex — 🔌 the member's read-only exchange keys and balances (tools/worker/cex.mjs)
 export function setCexHandler(fn) { cexHandler = fn; }
+let useHandler = null;   // /use — 📖📊 the app's own Firebase reads and feature counts (tools/worker/usage.mjs)
+export function setUseHandler(fn) { useHandler = fn; }
 
 export default {
   async fetch(request, env) {
@@ -55,8 +57,8 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { status: okOrigin ? 204 : 403, headers: cors });
     if (!okOrigin) return reply(403, { error: 'This service only answers the Cute Portfolio app.' });
-    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path), isJoin = /\/join\/?$/.test(path), isCex = /\/cex\/?$/.test(path);
-    if (request.method !== 'POST' || !(path.endsWith('/analyze') || isKey || isAdmin || isJoin || isCex)) return reply(404, { error: 'Not found.' });
+    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path), isJoin = /\/join\/?$/.test(path), isCex = /\/cex\/?$/.test(path), isUse = /\/use\/?$/.test(path);
+    if (request.method !== 'POST' || !(path.endsWith('/analyze') || isKey || isAdmin || isJoin || isCex || isUse)) return reply(404, { error: 'Not found.' });
 
     // body (size-capped)
     const raw = await request.text();
@@ -77,6 +79,11 @@ export default {
     if (isAdmin) {   // 🛠 the owner's dashboard: only the owner's account (checked again inside)
       if (!adminHandler) return reply(404, { error: 'Not found.' });
       const r = await adminHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch(e => ({ status: 500, error: 'Something went wrong — ' + String(e && e.message || e).slice(0, 120) }));
+      return reply(r.status || 200, r);
+    }
+    if (isUse) {   // 📖📊 signed-in app users only (owner or member) — counts, nothing else
+      if (!useHandler) return reply(404, { error: 'Not found.' });
+      const r = await useHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch(() => ({ status: 500, error: 'failed' }));
       return reply(r.status || 200, r);
     }
     if (isCex) {   // 🔌 read-only exchange keys: status / set / delete / balances for this signed-in account

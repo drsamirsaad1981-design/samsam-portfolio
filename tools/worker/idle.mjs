@@ -9,6 +9,7 @@
 
 export const IDLE_DAYS = 14, REMOVE_HINT_DAYS = 60;
 const DAY = 864e5;
+import { pday } from './usage.mjs';   // the Pacific day: Firestore's free allowance starts again at its midnight
 const kget = async (env, k) => { try { return env.RATE ? await env.RATE.get(k) : null; } catch (_) { return null; } };
 const kput = async (env, k, v, ttl) => { try { if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : undefined); } catch (_) {} };
 const kdel = async (env, k) => { try { if (env.RATE) await env.RATE.delete(k); } catch (_) {} };
@@ -48,14 +49,14 @@ export async function noteIdle(env, chat, mem, send) {
   return !!(r && r.ok);
 }
 
-// 📖 Firebase reads per member per day (the round's own reads), kept 3 days
+// 📖 Firebase reads per member per (Pacific) day (the round's own reads), kept 3 days
 export async function addReads(env, byChat, now = Date.now()) {
   const pos = Object.entries(byChat).filter(([, n]) => n > 0); if (!pos.length) return;
-  const k = 'tg:reads:' + new Date(now).toISOString().slice(0, 10);
+  const k = 'tg:reads:' + pday(now);
   let m = {}; try { m = JSON.parse((await kget(env, k)) || '{}') || {}; } catch (_) { m = {}; }
   for (const [c, n] of pos) m[c] = (m[c] || 0) + n;
   await kput(env, k, JSON.stringify(m), 3 * 86400);
 }
 export async function readsToday(env, now = Date.now()) {
-  try { return JSON.parse((await kget(env, 'tg:reads:' + new Date(now).toISOString().slice(0, 10))) || '{}') || {}; } catch (_) { return {}; }
+  try { return JSON.parse((await kget(env, 'tg:reads:' + pday(now))) || '{}') || {}; } catch (_) { return {}; }
 }

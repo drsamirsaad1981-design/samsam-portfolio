@@ -8,6 +8,7 @@ import { premiumNow, addDays, revoke, price } from './stars.mjs';
 import { keyInfo } from './byok.mjs';
 import { idleState, readsToday, IDLE_DAYS, REMOVE_HINT_DAYS } from './idle.mjs';
 import { isOwnerAccount, syncAccess } from './data.mjs';
+import { readsTotal, features } from './usage.mjs';
 import { localParts, local, APP } from '../alerts-core.mjs';
 
 async function tg(env, method, body) {
@@ -42,6 +43,8 @@ async function overview(env, now = Date.now()) {
   return {
     max: await maxMembers(env), maxChoices: MAX_CHOICES, price: price(env),
     idleDays: IDLE_DAYS, removeHintDays: REMOVE_HINT_DAYS, readsOwner: reads[String(env.TELEGRAM_CHAT_ID)] || 0,
+    fsReads: await readsTotal(env, now),   // 📖 all of today's Firebase reads (round + bot + app) against the free allowance
+    use: await features(env, now),          // 📊 which commands / buttons / screens were used (today · 7 days)
     stats: { members: list.length, paused: list.filter(x => x.paused).length, idle: list.filter(x => x.idle).length, readsToday: Object.values(reads).reduce((a, b) => a + b, 0), premium: list.filter(x => x.premium).length, premiumStars: list.filter(x => x.premium && x.premSrc === 'stars').length,
       supporters: list.filter(x => x.supporter).length, starsMonth: sum(x => new Date(x.t).toISOString().slice(0, 7) === month), starsAll: sum(() => true),
       starsMonthPremium: sum(x => x.kind === 'prem' && new Date(x.t).toISOString().slice(0, 7) === month), starsMonthSupport: sum(x => x.kind === 'sup' && new Date(x.t).toISOString().slice(0, 7) === month) },
