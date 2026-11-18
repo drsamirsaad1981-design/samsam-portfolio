@@ -839,8 +839,17 @@
   // ── Swipe left / right (phones) between Overview · Performance · Allocation ──
   // A quick, mostly-horizontal swipe on a page that shows the three tabs moves to the next / previous one. It never fires
   // on things you move sideways yourself (wide tables, charts, sliders, text boxes) or while a window is open.
+  // Other pages hand their own tab row in: SamsamUI.swipeGroup({ tabs: ['a', 'b'], cur: () => 'a', go: t => … })
+  // (Plan: Accumulation · Exit Strategy; Market Hub: Crypto · bStocks · Metals) — same gesture, same rules.
+  var swipeGroups = [];
+  function swipeGroup(g) { if (g && g.tabs && g.cur && g.go) swipeGroups.push(g); }
   (function swipeTabs() {
     var sx = 0, sy = 0, st = 0, ok = false;
+    function group() {   // the tab row the swipe moves along: the portfolio tabs, or the page's own
+      var c = curTab(); if (c) return { tabs: PTABS.map(function (x) { return x[0]; }), cur: c, go: ptabGo };
+      for (var k = 0; k < swipeGroups.length; k++) { var g = swipeGroups[k], cc = g.cur(); if (cc && g.tabs.indexOf(cc) >= 0) return { tabs: g.tabs, cur: cc, go: g.go }; }
+      return null;
+    }
     function curTab() {   // the tab of the header row shown now (Overview, or the Allocation screen over it, or Performance's own)
       var hosts = [].slice.call(document.querySelectorAll('[data-ptabs]')).filter(function (h) { return h.offsetParent && h.querySelector('.cp-ptabs'); });
       if (!hosts.length) return null;
@@ -859,17 +868,18 @@
       return false;
     }
     document.addEventListener('touchstart', function (e) {
-      ok = e.touches.length === 1 && !!curTab() && !blocked(e.target);
+      ok = e.touches.length === 1 && !!group() && !blocked(e.target);
       if (ok) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now(); }
     }, { passive: true });
     document.addEventListener('touchend', function (e) {
       if (!ok) return; ok = false;
       var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
       if (Date.now() - st > 700 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;
-      var cur = curTab(), i = PTABS.map(function (x) { return x[0]; }).indexOf(cur); if (i < 0) return;
+      var G = group(); if (!G) return;
+      var i = G.tabs.indexOf(G.cur); if (i < 0) return;
       var rtl = document.documentElement.dir === 'rtl';   // Arabic: the tabs run right → left, so the next tab is reached by swiping right
-      var j = i + ((dx < 0) !== rtl ? 1 : -1); if (j < 0 || j >= PTABS.length) return;   // (no wrap-around: the ends stay put)
-      ptabGo(PTABS[j][0]);
+      var j = i + ((dx < 0) !== rtl ? 1 : -1); if (j < 0 || j >= G.tabs.length) return;   // (no wrap-around: the ends stay put)
+      G.go(G.tabs[j]);
     }, { passive: true });
     document.addEventListener('touchcancel', function () { ok = false; }, { passive: true });
   })();
@@ -1093,6 +1103,6 @@
     try { sessionStorage.setItem('cpReturn', JSON.stringify({ sym: String(sym).toUpperCase(), t: Date.now() })); } catch (_) {}
     location.href = 'index.html#holdings/' + encodeURIComponent(sym);
   }
-  window.SamsamUI = { ptabs: ptabs, ptabGo: ptabGo, fabScrolling: fabScrolling, goHtml: goHtml, openCoin: openCoin, navIcon: navIconSvg, navPaint: navPaint, inShell: IN_SHELL, icons: ICONS, icon: function (n) { return ICONS[n] || ic(n, { solo: true }); }, ic: ic, dot: dot, fillIcons: fillIcons, liveDot: liveDot,
+  window.SamsamUI = { swipeGroup: swipeGroup, ptabs: ptabs, ptabGo: ptabGo, fabScrolling: fabScrolling, goHtml: goHtml, openCoin: openCoin, navIcon: navIconSvg, navPaint: navPaint, inShell: IN_SHELL, icons: ICONS, icon: function (n) { return ICONS[n] || ic(n, { solo: true }); }, ic: ic, dot: dot, fillIcons: fillIcons, liveDot: liveDot,
     toggleTheme: toggleTheme, applyTheme: applyTheme, currentTheme: current, refresh: init };
 })();

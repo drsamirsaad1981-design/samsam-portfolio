@@ -183,6 +183,8 @@
     var h = (location.hash || '').slice(1), saved = null; try { saved = localStorage.getItem(KEY); } catch (_) {}
     show(VIEWS.indexOf(h) >= 0 ? h : saved || 'crypto', false);
     setInterval(function () { if (st.view === 'stocks') draw(); }, 60e3);
+    // swipe left / right (phones) between Crypto · bStocks · Metals, like the portfolio tabs
+    if (window.SamsamUI && SamsamUI.swipeGroup) SamsamUI.swipeGroup({ tabs: VIEWS, cur: function () { return st.view; }, go: function (v) { show(v, true); window.scrollTo({ top: 0, behavior: 'instant' }); } });
     window.addEventListener('hashchange', function () { var x = (location.hash || '').slice(1); if (VIEWS.indexOf(x) >= 0 && x !== st.view) show(x, true); });   // the market's open / closed line keeps up
   }
   window.SamsamAssets = { show: show, usMarket: usMarket, _st: st };

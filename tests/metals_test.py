@@ -67,6 +67,8 @@ with sync_playwright() as p:
     z = pg.evaluate("SamsamCoins.zakat('XAU', Samsam.getState())")
     check('zakat: 150 g ≥ 85 g nisab, held since Jun 2025 → due, 3.75 g', z and z['due'] and abs(z['zakatG'] - 3.75) < 1e-6, z)
     hide0 = pg.evaluate("metalsCard.hidden")
+    order = pg.evaluate("[!!(document.getElementById('btcTicker').compareDocumentPosition(metalsCard) & Node.DOCUMENT_POSITION_FOLLOWING), document.querySelector('.header-stats').contains(metalsCard)]")
+    check('Overview: the moving line stays right under the four cards, metals card after it', order == [True, False], order)
     ov = pg.inner_text('#metalsSub')
     check('Overview metals row: 🏠 Home safe and zakat due', 'Home safe' in ov and 'Zakat due' in ov, ov)
     pg.click('#metalsSub .mt-row'); pg.wait_for_timeout(900)

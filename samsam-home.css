@@ -98,7 +98,7 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
-  .stat-metals { grid-column: 1 / -1; }   /* phone: its own full row */
+  .stat-metals { margin-top: 12px; width: 100%; box-sizing: border-box; }   /* its own full-width card under the moving line */
   .stat-metals .stat-label { width: 100%; justify-content: center; position: relative; }
   .stat-metals .mt-open { position: absolute; inset-inline-end: 0; font-size: .74rem; font-weight: 600; color: #60a5fa; text-decoration: none; }
   .stat-metals button.mt-row { width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; color: inherit; font: inherit; cursor: pointer; }
@@ -949,11 +949,11 @@
   thead { background: var(--bg3); position: sticky; top: 0; z-index: 2; }
   /* Asset column stays put while the table scrolls sideways (like Exit Strategy) — frosted so it matches the page in both themes */
   #portfolioTable tbody td { background-color: rgb(240,244,248); }   /* every cell one colour, so the fixed Asset column matches the rest of the row */
-  #portfolioTable tbody td:first-child { position: sticky; left: 0; z-index: 1; }
+  #portfolioTable tbody td:first-child { position: sticky; inset-inline-start: 0; z-index: 1; }
   html[data-theme="dark"] #portfolioTable tbody td { background-color: rgb(18,16,46); }
   @media (hover: hover) { #portfolioTable tbody tr:hover td { background-image: linear-gradient(rgba(124,58,237,.05), rgba(124,58,237,.05)); } }
   #portfolioTable thead tr th { background-color: var(--bg3); }   /* the whole header row one colour, the fixed Asset title included */
-  #portfolioTable thead tr th:first-child { position: sticky; left: 0; z-index: 4; background: var(--bg3); }
+  #portfolioTable thead tr th:first-child { position: sticky; inset-inline-start: 0; z-index: 4; background: var(--bg3); }
   th { padding: 11px 12px; font-size: 0.7rem; color: var(--fg2); text-align: center; border-bottom: 2px solid var(--border); cursor: pointer; text-transform: none; letter-spacing: .01em; font-weight: 700; }
   /* Main table header: every label the same way — up to two balanced lines, ⓘ beside it (never dropped below),
      the sorted column lit with ▲/▼, one row height */

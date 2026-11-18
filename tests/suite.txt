@@ -152,3 +152,4 @@ lang_ar_test.py
 metals_test.py
 gold_trend_test.py
 gold_trend_ui.py
+rtl_sticky_test.py

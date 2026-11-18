@@ -1,5 +1,6 @@
 """Phones: a quick swipe left / right moves between Overview · Performance · Allocation (no wrap at the ends); it does
-nothing on a chart, in a wide table, or while a window is open — and nothing on the Plan page (no Portfolio tabs there)."""
+nothing on a chart, in a wide table, or while a window is open. The Plan page swipes Accumulation ↔ Exit Strategy and
+Market Hub swipes Crypto · bStocks · Metals the same way."""
 import sys, pathlib
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(pathlib.Path(__file__).parent)); import e2e_setup as S
@@ -39,7 +40,23 @@ with sync_playwright() as p:
     check('Performance, swipe right → Overview', where(pg) == 'overview', where(pg))
     pg.evaluate("cpShell.go('accumulation')"); pg.wait_for_timeout(2500)
     fa = [f for f in pg.frames if 'accumulation.html' in f.url][0]
+    fa.evaluate("setPlanTab('accum')"); pg.wait_for_timeout(300)
+    fa.evaluate(SWIPE + "({ sel: '.dashboard', dx: 120 })"); pg.wait_for_timeout(400)
+    check('Plan: swipe right on Accumulation → stays (first tab)', fa.evaluate("planTab") == 'accum')
     fa.evaluate(SWIPE + "({ sel: '.dashboard', dx: -120 })"); pg.wait_for_timeout(600)
-    check('Plan page: a swipe does nothing', pg.evaluate("cpShell.cur") == 'accumulation')
+    check('Plan: swipe left → Exit Strategy (same page)', fa.evaluate("planTab") == 'exit' and pg.evaluate("cpShell.cur") == 'accumulation', fa.evaluate("planTab"))
+    fa.evaluate(SWIPE + "({ sel: '.xs-tabs', dx: 120 })"); pg.wait_for_timeout(600)
+    check('Plan: swipe right → back to Accumulation', fa.evaluate("planTab") == 'accum')
+    pg.evaluate("cpShell.go('market')"); pg.wait_for_timeout(2500)
+    fm = [f for f in pg.frames if 'market.html' in f.url][0]
+    fm.evaluate("SamsamAssets.show('crypto', true)"); pg.wait_for_timeout(300)
+    fm.evaluate(SWIPE + "({ sel: '#mkSeg', dx: -120 })"); pg.wait_for_timeout(500)
+    check('Market: swipe left → bStocks', fm.evaluate("SamsamAssets._st.view") == 'stocks', fm.evaluate("SamsamAssets._st.view"))
+    fm.evaluate(SWIPE + "({ sel: '#mkSeg', dx: -120 })"); pg.wait_for_timeout(500)
+    check('Market: swipe left → Metals', fm.evaluate("SamsamAssets._st.view") == 'metals')
+    fm.evaluate(SWIPE + "({ sel: '#mkSeg', dx: -120 })"); pg.wait_for_timeout(500)
+    check('Market: swipe left on Metals → stays (last tab)', fm.evaluate("SamsamAssets._st.view") == 'metals')
+    fm.evaluate(SWIPE + "({ sel: '#mkSeg', dx: 120 })"); fm.evaluate(SWIPE + "({ sel: '#mkSeg', dx: 120 })"); pg.wait_for_timeout(500)
+    check('Market: swipe right twice → Crypto', fm.evaluate("SamsamAssets._st.view") == 'crypto')
     check('no JS errors', not errs, errs[:3]); br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)
