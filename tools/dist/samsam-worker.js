@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 1a2a733a8c8663a7
+// sources-hash: 25a7bdd05c5094d4
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1316,9 +1316,10 @@ function bidiLine(line, all = false) {
     const core = t.replace(/^[.,:\s\u00A0]+|[.,:\s\u00A0]+$/g, "");
     if (!hasWord(core)) return m;
     const i = t.indexOf(core);
-    const glued = core.length <= 24 ? core.replace(/ /g, "\xA0") : core;
+    let glued = core.length <= 24 ? core.replace(/ /g, "\xA0") : core;
+    glued = glued.replace(/([+\-−])\$/g, "$1\u2060$");
     return t.slice(0, i) + LRM + glued + LRM + t.slice(i + core.length) + tail;
-  }).replace(/ · /g, " \xB7" + RLM + " ")).join("");
+  }).replace(/ · /g, " \xB7" + RLM + " ").replace(/([🟢🔴⚪🟡]) /gu, "$1 " + RLM)).join("");
   return RLM + out;
 }
 function bidi(text, mode = "auto") {
@@ -5629,7 +5630,7 @@ var SEASON_AR = { "Altcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639
 var arDay = (iso) => (/* @__PURE__ */ new Date(iso + "T12:00:00Z")).toLocaleDateString("ar-SA-u-nu-latn-ca-gregory", { month: "long", day: "numeric", timeZone: "UTC" });
 function marketShort(t, m) {
   const g = m.global || {}, d = g.dom || {}, out = [], ar = isAr(t);
-  if (m.btc) out.push(`${ar ? "\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646" : "BTC"} <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
+  if (m.btc) out.push(ar ? `\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 <b>${usd(m.btc.price)}</b> \xB7 ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}` : `BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
   if (d.btc != null) out.push(ar ? `${t.dom}: \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 ${d.btc.toFixed(1)}% \xB7 \u0627\u0644\u062A\u064A\u062B\u0631 ${(d.usdt || 0).toFixed(2)}%` : `${t.dom} BTC ${d.btc.toFixed(1)}% \xB7 USDT ${(d.usdt || 0).toFixed(2)}%`);
   if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> \xB7 ${esc(ar ? FNG_AR[m.fng.label] || m.fng.label : m.fng.label)}`);
   if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> \xB7 ${esc(ar ? SEASON_AR[m.alt.label] || m.alt.label : m.alt.label)}`);
@@ -5694,8 +5695,9 @@ function viewSignals(t, sum) {
   const L = [`\u{1F3AF} <b>${t.sigT}</b>`];
   for (const k of ["reinforce", "sell", "hold"]) {
     if (!by[k].length) continue;
-    L.push("", `<b>${t[k]}</b> (${by[k].length})`);
-    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${t.vsAvg} ${price2(c.avg)}`));
+    const ar = isAr(t);
+    L.push("", `<b>${t[k]}</b> (${by[k].length})${ar ? " \xB7 <i>\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643</i>" : ""}`);
+    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : t.vsAvg} ${price2(c.avg)}`));
     if (by[k].length > 12) L.push("\u2026");
   }
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "sg"), cb3(t.pf, "pf")], [cb3(t.back, "menu")]] };
@@ -5707,18 +5709,18 @@ ${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb3(t.back,
   const L = [`\u{1F4CB} <b>${t.planT}</b>`];
   if (sum.plan.length) {
     L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${sum.prog.completed}/${sum.prog.counted} \u2705`, "");
-    const bar = (p) => {
-      const n = Math.round(Math.min(1, p) * 10);
-      return "\u25B0".repeat(n) + "\u25B1".repeat(10 - n);
+    const BL = isAr(t) ? 8 : 10, bar = (p) => {
+      const n = Math.round(Math.min(1, p) * BL);
+      return "\u25B0".repeat(n) + "\u25B1".repeat(BL - n);
     };
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach((p) => {
       const f = p.target > 0 ? p.actual / p.target : 0;
-      L.push(`<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : `  ${t.left} ${qty(p.target - p.actual)}`}`);
+      L.push(`<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : `  ${isAr(t) ? "\u0628\u0627\u0642\u064A" : t.left} ${qty(p.target - p.actual)}`}`);
     });
   }
   if ((sum.dca || []).length) {
     L.push("", `\u{1F6D2} <b>${t.dca}</b>`);
-    sum.dca.forEach((x) => L.push(`<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}/mo${x.s.next ? ` \xB7 ${t.next} ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}`));
+    sum.dca.forEach((x) => L.push(`<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}${isAr(t) ? " \u0634\u0647\u0631\u064A\u0627\u064B" : "/mo"}${x.s.next ? ` \xB7 ${t.next} ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}`));
   }
   if ((sum.buyAt || []).length) {
     L.push("", `\u{1F514} <b>${t.buyAt}</b>`);

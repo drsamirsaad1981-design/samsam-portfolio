@@ -7,7 +7,8 @@
 //   · each run of Latin letters / digits / $ % . , : + − (a ticker, a price, "Fear & Greed: 12") is held between two LRMs
 //     (left-to-right marks), so "$64,950" and "-1.78%" keep their shape inside the Arabic sentence (Telegram's apps ignore
 //     the newer isolate marks, LRI / PDI — seen on Android, 17 Nov);
-//   · after each " · " an RLM, so a list ("Binance · Gate · now") runs right-to-left item by item.
+//   · after each " · " (and after a 🟢 / 🔴 dot) an RLM, so a list ("Binance · Gate · now") runs right-to-left item by item;
+//   · "−$29M" gets a word joiner after the sign, so the line never breaks between "−" and "$".
 // HTML tags are left alone; a line already marked (the guide's cards) is not touched again. Lines with no Arabic
 // (English messages, the English half of the group's posts) are not touched at all.
 const AR = /[\u0600-\u06FF]/, RLM = '\u200F', LRM = '\u200E', LRI = '\u2066';
@@ -21,9 +22,10 @@ export function bidiLine(line, all = false) {
       const core = t.replace(/^[.,:\s\u00A0]+|[.,:\s\u00A0]+$/g, '');   // a full stop / colon at the edge belongs to the Arabic sentence
       if (!hasWord(core)) return m;
       const i = t.indexOf(core);
-      const glued = core.length <= 24 ? core.replace(/ /g, '\u00A0') : core;   // a short run ("BABYDOGE 0.45") never breaks across two lines
+      let glued = core.length <= 24 ? core.replace(/ /g, '\u00A0') : core;   // a short run ("BABYDOGE 0.45") never breaks across two lines
+      glued = glued.replace(/([+\-−])\$/g, '$1\u2060$');   // "−$29M": no line break between the sign and the $ (a word joiner)
       return t.slice(0, i) + LRM + glued + LRM + t.slice(i + core.length) + tail;
-    }).replace(/ · /g, ' ·' + RLM + ' ')).join('');   // a list "Binance · Gate · now" runs right-to-left, item by item
+    }).replace(/ · /g, ' ·' + RLM + ' ').replace(/([🟢🔴⚪🟡]) /gu, '$1 ' + RLM)).join('');   // after a 🟢 / 🔴 dot too: "$63,129 🔴 −1.09%" stays two parts, not one left-to-right run   // a list "Binance · Gate · now" runs right-to-left, item by item
   return RLM + out;
 }
 // an Arabic message (Arabic letters at least a third of the Latin ones, tags left out): EVERY line runs right-to-left, so the rows

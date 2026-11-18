@@ -22,4 +22,8 @@ const b = bidiBody({ chat_id: 1, text: 'السعر 100$', parse_mode: 'HTML', re
 check('a short run never breaks across two lines (no-break spaces inside: "BABYDOGE 0.45")', bidi('عملات: BABYDOGE 0.45163086').includes(`${I}BABYDOGE\u00A00.45163086${P}`), v(bidi('عملات: BABYDOGE 0.45163086')));
 check('a list "Binance · Gate · now" runs right-to-left item by item (an RLM after each ·)', bidi('<i>Binance · Gate · الآن</i>').includes(`${I}Binance${P} ·${R} ${I}Gate${P} ·${R} الآن`), v(bidi('<i>Binance · Gate · الآن</i>')));
 check('a Telegram body: only its text changes', b.text.startsWith(R) && b.chat_id === 1 && b.reply_markup.x === 1);
+const dl = bidi('البيتكوين <b>$63,129</b> 🔴 −1.09%');
+check('after a 🔴 / 🟢 dot an RLM: "$63,129 🔴 −1.09%" stays two parts (else one left-to-right run, read backwards)', dl.includes('🔴 ' + R + I + '−1.09%'), v(dl));
+const wj = bidi('تدفقات ETF: BTC −$240M · ETH −$29M');
+check('"−$29M": a word joiner between the sign and the $ (no line break there)', wj.includes('−\u2060$29M') && wj.includes('−\u2060$240M'), v(wj));
 console.log(`${ok}/${n} passed`); process.exit(ok === n ? 0 : 1);

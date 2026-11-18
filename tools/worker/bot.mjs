@@ -163,7 +163,7 @@ export const SEASON_AR = { 'Altcoin Season': 'موسم العملات البدي
 const arDay = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('ar-SA-u-nu-latn-ca-gregory', { month: 'long', day: 'numeric', timeZone: 'UTC' });
 function marketShort(t, m) {
   const g = m.global || {}, d = g.dom || {}, out = [], ar = isAr(t);
-  if (m.btc) out.push(`${ar ? 'البيتكوين' : 'BTC'} <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
+  if (m.btc) out.push(ar ? `البيتكوين <b>${usd(m.btc.price)}</b> · ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}` : `BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
   if (d.btc != null) out.push(ar ? `${t.dom}: البيتكوين ${d.btc.toFixed(1)}% · التيثر ${(d.usdt || 0).toFixed(2)}%` : `${t.dom} BTC ${d.btc.toFixed(1)}% · USDT ${(d.usdt || 0).toFixed(2)}%`);
   if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> · ${esc(ar ? FNG_AR[m.fng.label] || m.fng.label : m.fng.label)}`);
   if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> · ${esc(ar ? SEASON_AR[m.alt.label] || m.alt.label : m.alt.label)}`);
@@ -227,8 +227,9 @@ export function viewSignals(t, sum) {
   const L = [`🎯 <b>${t.sigT}</b>`];
   for (const k of ['reinforce', 'sell', 'hold']) {
     if (!by[k].length) continue;
-    L.push('', `<b>${t[k]}</b> (${by[k].length})`);
-    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach(c => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${t.vsAvg} ${price(c.avg)}`));
+    const ar = isAr(t);
+    L.push('', `<b>${t[k]}</b> (${by[k].length})${ar ? ' · <i>مقارنة بمتوسط شرائك</i>' : ''}`);
+    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach(c => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? 'المتوسط' : t.vsAvg} ${price(c.avg)}`));
     if (by[k].length > 12) L.push('…');
   }
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'sg'), cb(t.pf, 'pf')], [cb(t.back, 'menu')]] };
@@ -239,15 +240,15 @@ export function viewPlan(t, sum, now) {
   const L = [`📋 <b>${t.planT}</b>`];
   if (sum.plan.length) {
     L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> · ${sum.prog.completed}/${sum.prog.counted} ✅`, '');
-    const bar = p => { const n = Math.round(Math.min(1, p) * 10); return '▰'.repeat(n) + '▱'.repeat(10 - n); };
+    const BL = isAr(t) ? 8 : 10, bar = p => { const n = Math.round(Math.min(1, p) * BL); return '▰'.repeat(n) + '▱'.repeat(BL - n); };   // Arabic: a shorter bar, so "باقي 9.82" fits the line
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach(p => {
       const f = p.target > 0 ? p.actual / p.target : 0;
-      L.push(`<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : `  ${t.left} ${qty(p.target - p.actual)}`}`);
+      L.push(`<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : `  ${isAr(t) ? 'باقي' : t.left} ${qty(p.target - p.actual)}`}`);
     });
   }
   if ((sum.dca || []).length) {
     L.push('', `🛒 <b>${t.dca}</b>`);
-    sum.dca.forEach(x => L.push(`<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}/mo${x.s.next ? ` · ${t.next} ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`));
+    sum.dca.forEach(x => L.push(`<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}${isAr(t) ? ' شهرياً' : '/mo'}${x.s.next ? ` · ${t.next} ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`));
   }
   if ((sum.buyAt || []).length) {
     L.push('', `🔔 <b>${t.buyAt}</b>`);
