@@ -15,23 +15,23 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-lang.js?v=202611182110"></script>
-<script src="samsam-ar.js?v=202611182110"></script>
-<script src="samsam-ui.js?v=202611182110"></script>
-<script src="samsam-hints.js?v=202611182110"></script>
-<script src="samsam-arhints.js?v=202611182110"></script>
-<script src="samsam-vault.js?v=202611182110"></script>
-<script src="samsam-labels.js?v=202611182110"></script>
-<script src="samsam-taxonomy.js?v=202611182110"></script>
-<script src="samsam-coins.js?v=202611182110"></script>
-<script src="samsam-import.js?v=202611182110"></script>
-<script src="samsam-wallets.js?v=202611182110"></script>
-<script src="samsam-rewards.js?v=202611182110"></script>
-<script src="samsam-settings.js?v=202611182110"></script>
-<script src="samsam-dropdown.js?v=202611182110"></script>
-<script src="samsam-add.js?v=202611182110"></script>
-<script src="samsam-market.js?v=202611182110"></script>
-<script src="samsam-assets.js?v=202611182110"></script>
+<script src="samsam-lang.js?v=202611182119"></script>
+<script src="samsam-ar.js?v=202611182119"></script>
+<script src="samsam-ui.js?v=202611182119"></script>
+<script src="samsam-hints.js?v=202611182119"></script>
+<script src="samsam-arhints.js?v=202611182119"></script>
+<script src="samsam-vault.js?v=202611182119"></script>
+<script src="samsam-labels.js?v=202611182119"></script>
+<script src="samsam-taxonomy.js?v=202611182119"></script>
+<script src="samsam-coins.js?v=202611182119"></script>
+<script src="samsam-import.js?v=202611182119"></script>
+<script src="samsam-wallets.js?v=202611182119"></script>
+<script src="samsam-rewards.js?v=202611182119"></script>
+<script src="samsam-settings.js?v=202611182119"></script>
+<script src="samsam-dropdown.js?v=202611182119"></script>
+<script src="samsam-add.js?v=202611182119"></script>
+<script src="samsam-market.js?v=202611182119"></script>
+<script src="samsam-assets.js?v=202611182119"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -413,6 +413,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 @media (max-width: 560px) { .as-head, .as-row { grid-template-columns: minmax(0, 1.6fr) 1fr .9fr; } .as-head .w, .as-row .w { display: none; } .as-movers { grid-template-columns: 1fr; } }
 .as-mine { margin-bottom: 12px; border-color: rgba(234,179,8,.45); }
 .as-mine .as-k { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.as-flag { border-radius: 2px; flex: none; box-shadow: 0 0 0 .5px rgba(0,0,0,.15); }
 .as-mopen { font-size: .78rem; font-weight: 600; color: #60a5fa; text-decoration: none; }
 .as-li.as-left { justify-content: flex-start; column-gap: 6px; } .as-li.as-left .as-pc { margin-inline-start: 4px; }
 .as-mrows { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); column-gap: 28px; }   /* wide screens: metals side by side, each a card-width column */
@@ -589,7 +590,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611182110"></script>
+<script type="module" src="samsam-cloud.js?v=202611182119"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';

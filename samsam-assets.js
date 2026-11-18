@@ -14,6 +14,8 @@
   var ar = function () { return !!(window.CPLang && CPLang.ar); };
   var T = function (en, a) { return ar() ? a : en; };
   var iso = function (s) { return '⁦' + s + '⁩'; };
+  // 🇺🇸 drawn, not an emoji: Windows shows flag emoji as the letters "US"
+  var US_FLAG = '<svg class="as-flag" viewBox="0 0 19 10" width="19" height="10" aria-hidden="true"><rect width="19" height="10" fill="#b22234"/><path d="M0 1.15h19M0 2.7h19M0 4.23h19M0 5.77h19M0 7.3h19M0 8.85h19" stroke="#fff" stroke-width=".77"/><rect width="7.6" height="5.38" fill="#3c3b6e"/><g fill="#fff"><circle cx="1.3" cy="1.1" r=".35"/><circle cx="3.8" cy="1.1" r=".35"/><circle cx="6.3" cy="1.1" r=".35"/><circle cx="2.55" cy="2.7" r=".35"/><circle cx="5.05" cy="2.7" r=".35"/><circle cx="1.3" cy="4.3" r=".35"/><circle cx="3.8" cy="4.3" r=".35"/><circle cx="6.3" cy="4.3" r=".35"/></g></svg>';
   var KEY = 'samsam_mk_view', VIEWS = ['crypto', 'stocks', 'metals'];
   var M = function () { return window.SamsamMarket; };
   var SAR = 3.75, OZ = 31.1034768;   // the riyal is pegged to the dollar; a troy ounce in grams
@@ -64,7 +66,7 @@
         '<div class="as-li">' + T('Market cap', 'القيمة السوقية') + ' <b>' + iso(M() ? M().fmtBig(cap) : usd(cap)) + '</b></div>' +
         '<div class="as-li">' + T('Today', 'اليوم') + ' <b><span class="up">▲ ' + iso(up) + '</span> · <span class="dn">▼ ' + iso(dn) + '</span></b></div>' +
         '<div class="as-li">' + T('Average 24h', 'متوسط 24 ساعة') + ' <b>' + pct(avg) + '</b></div></div>' +
-      '<div class="as-card as-us as-' + mk.state + '"><div class="as-k">🇺🇸 ' + T('US stock market', 'السوق الأمريكي') + '</div><div class="as-v"><i class="as-dot"></i>' + stLbl + '</div>' +
+      '<div class="as-card as-us as-' + mk.state + '"><div class="as-k">' + US_FLAG + ' ' + T('US stock market', 'السوق الأمريكي') + '</div><div class="as-v"><i class="as-dot"></i>' + stLbl + '</div>' +
         '<div class="as-li as-left">' + nextLbl + ' <b>' + E(riyadh(mk.next)) + '</b> <small>' + T('Riyadh', 'بتوقيت الرياض') + '</small></div>' +
         '<div class="as-li as-small">' + T('The tokens trade 24/7; the real shares move only while New York is open (9:30–16:00 New York, holidays not shown).', 'التوكنات تُتداول على مدار الساعة؛ أما الأسهم الحقيقية فتتحرك فقط أثناء فتح سوق نيويورك (9:30–16:00 بتوقيت نيويورك، دون احتساب العطل).') + '</div></div>' +
       '</div>' +

@@ -42,6 +42,8 @@ with sync_playwright() as p:
         pg.click('#mkSeg [data-v="metals"]'); pg.wait_for_selector('#vMetals .as-metal')
         t = pg.inner_text('#vMetals'); pg.screenshot(path=str(pathlib.Path(__file__).parent / 'shots' / f'market_metals_{vn}.png'), full_page=True)
         gram = round(2650 / 31.1034768 * 3.75, 2)
+        fl = pg.evaluate("(() => { const v = SamsamAssets._st.view; SamsamAssets.show('stocks'); const k = document.querySelector('.as-us .as-k'); const r = [!!(k && k.querySelector('svg.as-flag')), !!k && !k.textContent.includes('🇺🇸')]; SamsamAssets.show(v); return r; })()")
+        check(f'{vn}: US market card shows a drawn flag (not the emoji, which Windows shows as "US")', fl == [True, True], fl)
         check(f'{vn}: metals → gold, silver, platinum, copper (no oil); gold per gram {gram} SAR; the gold/silver ratio', pg.locator('#vMetals .as-metal').count() == 4 and f'{gram:.2f} SAR' in t and ('84.9' in t) and 'Brent' not in t and 'برنت' not in t, t[:400])
         pg.reload(); pg.wait_for_selector('#vMetals .as-metal')
         check(f'{vn}: the section is remembered (Metals again after a reload)', pg.is_visible('#vMetals') and pg.get_attribute('#mkSeg [data-v="metals"]', 'aria-selected') == 'true')
