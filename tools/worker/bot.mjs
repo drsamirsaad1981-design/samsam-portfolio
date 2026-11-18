@@ -240,10 +240,10 @@ export function viewPlan(t, sum, now) {
   const L = [`📋 <b>${t.planT}</b>`];
   if (sum.plan.length) {
     L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> · ${sum.prog.completed}/${sum.prog.counted} ✅`, '');
-    const BL = isAr(t) ? 8 : 10, bar = p => { const n = Math.round(Math.min(1, p) * BL); return '▰'.repeat(n) + '▱'.repeat(BL - n); };   // Arabic: a shorter bar, so "باقي 9.82" fits the line
+    const BL = isAr(t) ? 7 : 10, bar = p => { const n = Math.round(Math.min(1, p) * BL); return '▰'.repeat(n) + '▱'.repeat(BL - n); };   // Arabic: a shorter bar, so "باقي 9.82" fits the line
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach(p => {
       const f = p.target > 0 ? p.actual / p.target : 0;
-      L.push(`<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : `  ${isAr(t) ? 'باقي' : t.left} ${qty(p.target - p.actual)}`}`);
+      L.push(`<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : `  ${isAr(t) ? 'باقي' : t.left} ${isAr(t) ? +Number(p.target - p.actual).toPrecision(4) : qty(p.target - p.actual)}`}`);
     });
   }
   if ((sum.dca || []).length) {
@@ -295,13 +295,14 @@ export function viewMetals(t, m, now) {
   if (!list.length) L.push(ar ? 'لا توجد بيانات للمعادن الآن — حاول لاحقاً.' : 'No metals data right now — try again later.');
   for (const x of list) {
     const d = METAL[x.k] || ['•', x.k, x.k], u = UNIT[x.unit] || ['', ''];
-    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price(x.price)} ${ar ? 'لل' + u[1] : '/ ' + u[0]} · ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` · ${ar ? '7 أيام' : '7d'} ${pct(x.ch7, 1)}` : ''}`);
+    // Arabic: no unit on the line (it is said once below) and "أسبوع" — so the line fits a phone without wrapping
+    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price(x.price)}${ar ? '' : ' / ' + u[0]} · ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` · ${ar ? 'أسبوع' : '7d'} ${pct(x.ch7, 1)}` : ''}`);
     if (['gold', 'silver', 'platinum'].includes(x.k) && x.unit === 'oz') L.push(`      ${ar ? 'الجرام' : '1 gram'}: <b>${gramSar(x.price).toFixed(2)} ${ar ? 'ريال' : 'SAR'}</b> · ${usd2(x.price / 31.1034768)}`);
   }
   const g = list.find(x => x.k === 'gold'), s = list.find(x => x.k === 'silver');
   if (g && s && s.price > 0) L.push('', `⚖️ ${ar ? 'نسبة الذهب إلى الفضة' : 'Gold / silver ratio'}: <b>${(g.price / s.price).toFixed(1)}</b>`);
   const at = m.parts && m.parts.metals ? Math.max(1, Math.round((now - Date.parse(m.parts.metals)) / 60e3)) : null;
-  L.push('', `<i>${ar ? 'العقود الآجلة — Yahoo Finance، بتأخير ~15 دقيقة' : 'Futures — Yahoo Finance, ~15 min delayed'}${at ? ` · ${t.snap(at)}` : ''}. ${ar ? 'الجرام: عيار 24 دون مصنعية.' : 'Gram: pure 24k, no making charge.'}</i>`);
+  L.push('', `<i>${ar ? 'العقود الآجلة — Yahoo Finance، بتأخير ~15 دقيقة' : 'Futures — Yahoo Finance, ~15 min delayed'}${at ? ` · ${t.snap(at)}` : ''}. ${ar ? 'الأسعار للأونصة (النحاس للرطل). الجرام: عيار 24 دون مصنعية.' : 'Gram: pure 24k, no making charge.'}</i>`);
   return { text: L.join('\n'), buttons: [mkTabs(t, 'm'), [cb(t.refresh, 'mkm'), url('🧭 Market Hub', APP + 'market.html#metals')], [cb(t.back, 'menu')]] };
 }
 

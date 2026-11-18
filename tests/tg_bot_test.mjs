@@ -413,10 +413,10 @@ sent.length = 0; await tap('sg');
   check('Arabic signals: "مقارنة بمتوسط شرائك" once in each group header, rows short ("المتوسط $…") so they do not wrap', /\(\d+\) · <i>مقارنة بمتوسط شرائك<\/i>/.test(tx) && /<\/code>  المتوسط \$/.test(tx) && !/<\/code>  مقارنة بمتوسط/.test(tx), tx.slice(0, 300)); }
 sent.length = 0; await tap('pl');
 { const x = sent.filter(y => y.m === 'editMessageText').pop(), tx = x ? x.b.text : '';
-  check('Arabic plan: shorter bar (8) and "باقي", DCA "… شهرياً" (no "/mo")', /▱{1,8} \d+%  باقي /.test(tx) && !/▰▱{9}|▱{9}/.test(tx) && !/\/mo/.test(tx), tx.slice(0, 400)); }
+  check('Arabic plan: shorter bar (7) and "باقي" with a short amount, DCA "… شهرياً" (no "/mo")', /▱{1,7} \d+%  باقي [\d.]+/.test(tx) && !/▱{8}|▰{8}/.test(tx) && !/\/mo/.test(tx), tx.slice(0, 400)); }
 sent.length = 0; await tap('mkm');
 { const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
-  check('Arabic metals: "$2,650 للأونصة" (no slash between the number and the unit), copper "للرطل"', /\$2,650 للأونصة/.test(tx) && /للرطل/.test(tx) && !/ \/ أونصة/.test(tx), tx); }
+  check('Arabic metals: short lines "الذهب $2,650 · 🟢 +0.76% · أسبوع …", the unit said once ("الأسعار للأونصة (النحاس للرطل)"), no slash', /<b>الذهب<\/b> \$2,650 · 🟢 \+0\.76% · أسبوع/.test(tx) && /الأسعار للأونصة \(النحاس للرطل\)/.test(tx) && !/ \/ أونصة/.test(tx), tx); }
 sent.length = 0;
 await post({ message: { chat: { id: 555 }, text: '/portfolio' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
 check('Arabic: "محفظتك الآن"', /محفظتك الآن/.test(last().b.text) && btnTexts(last()).includes('🔄 تحديث'), last().b.text.slice(0, 120));

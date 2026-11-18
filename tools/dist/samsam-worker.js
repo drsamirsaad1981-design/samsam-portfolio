@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 25a7bdd05c5094d4
+// sources-hash: 4a935221c29c0854
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5709,13 +5709,13 @@ ${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb3(t.back,
   const L = [`\u{1F4CB} <b>${t.planT}</b>`];
   if (sum.plan.length) {
     L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${sum.prog.completed}/${sum.prog.counted} \u2705`, "");
-    const BL = isAr(t) ? 8 : 10, bar = (p) => {
+    const BL = isAr(t) ? 7 : 10, bar = (p) => {
       const n = Math.round(Math.min(1, p) * BL);
       return "\u25B0".repeat(n) + "\u25B1".repeat(BL - n);
     };
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach((p) => {
       const f = p.target > 0 ? p.actual / p.target : 0;
-      L.push(`<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : `  ${isAr(t) ? "\u0628\u0627\u0642\u064A" : t.left} ${qty(p.target - p.actual)}`}`);
+      L.push(`<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : `  ${isAr(t) ? "\u0628\u0627\u0642\u064A" : t.left} ${isAr(t) ? +Number(p.target - p.actual).toPrecision(4) : qty(p.target - p.actual)}`}`);
     });
   }
   if ((sum.dca || []).length) {
@@ -5775,13 +5775,13 @@ function viewMetals(t, m, now) {
   if (!list3.length) L.push(ar ? "\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u0645\u0639\u0627\u062F\u0646 \u0627\u0644\u0622\u0646 \u2014 \u062D\u0627\u0648\u0644 \u0644\u0627\u062D\u0642\u0627\u064B." : "No metals data right now \u2014 try again later.");
   for (const x of list3) {
     const d = METAL[x.k] || ["\u2022", x.k, x.k], u = UNIT[x.unit] || ["", ""];
-    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price2(x.price)} ${ar ? "\u0644\u0644" + u[1] : "/ " + u[0]} \xB7 ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` \xB7 ${ar ? "7 \u0623\u064A\u0627\u0645" : "7d"} ${pct(x.ch7, 1)}` : ""}`);
+    L.push(`${d[0]} <b>${ar ? d[2] : d[1]}</b> ${price2(x.price)}${ar ? "" : " / " + u[0]} \xB7 ${dot(x.ch24)} ${pct(x.ch24, 2)}${x.ch7 != null ? ` \xB7 ${ar ? "\u0623\u0633\u0628\u0648\u0639" : "7d"} ${pct(x.ch7, 1)}` : ""}`);
     if (["gold", "silver", "platinum"].includes(x.k) && x.unit === "oz") L.push(`      ${ar ? "\u0627\u0644\u062C\u0631\u0627\u0645" : "1 gram"}: <b>${gramSar(x.price).toFixed(2)} ${ar ? "\u0631\u064A\u0627\u0644" : "SAR"}</b> \xB7 ${usd2(x.price / 31.1034768)}`);
   }
   const g = list3.find((x) => x.k === "gold"), s = list3.find((x) => x.k === "silver");
   if (g && s && s.price > 0) L.push("", `\u2696\uFE0F ${ar ? "\u0646\u0633\u0628\u0629 \u0627\u0644\u0630\u0647\u0628 \u0625\u0644\u0649 \u0627\u0644\u0641\u0636\u0629" : "Gold / silver ratio"}: <b>${(g.price / s.price).toFixed(1)}</b>`);
   const at = m.parts && m.parts.metals ? Math.max(1, Math.round((now - Date.parse(m.parts.metals)) / 6e4)) : null;
-  L.push("", `<i>${ar ? "\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629 \u2014 Yahoo Finance\u060C \u0628\u062A\u0623\u062E\u064A\u0631 ~15 \u062F\u0642\u064A\u0642\u0629" : "Futures \u2014 Yahoo Finance, ~15 min delayed"}${at ? ` \xB7 ${t.snap(at)}` : ""}. ${ar ? "\u0627\u0644\u062C\u0631\u0627\u0645: \u0639\u064A\u0627\u0631 24 \u062F\u0648\u0646 \u0645\u0635\u0646\u0639\u064A\u0629." : "Gram: pure 24k, no making charge."}</i>`);
+  L.push("", `<i>${ar ? "\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629 \u2014 Yahoo Finance\u060C \u0628\u062A\u0623\u062E\u064A\u0631 ~15 \u062F\u0642\u064A\u0642\u0629" : "Futures \u2014 Yahoo Finance, ~15 min delayed"}${at ? ` \xB7 ${t.snap(at)}` : ""}. ${ar ? "\u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0644\u0644\u0623\u0648\u0646\u0635\u0629 (\u0627\u0644\u0646\u062D\u0627\u0633 \u0644\u0644\u0631\u0637\u0644). \u0627\u0644\u062C\u0631\u0627\u0645: \u0639\u064A\u0627\u0631 24 \u062F\u0648\u0646 \u0645\u0635\u0646\u0639\u064A\u0629." : "Gram: pure 24k, no making charge."}</i>`);
   return { text: L.join("\n"), buttons: [mkTabs(t, "m"), [cb3(t.refresh, "mkm"), url2("\u{1F9ED} Market Hub", APP + "market.html#metals")], [cb3(t.back, "menu")]] };
 }
 function viewCoin(t, coin, m, sum, now) {
