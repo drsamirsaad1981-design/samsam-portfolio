@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 58d0384bf5f8f5c3
+// sources-hash: 5f12dbf8fd1aaf87
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -232,6 +232,7 @@ function bidiBody(body, mode = "auto") {
   }
   return b;
 }
+var NOT_ADVICE = { en: "<i>\u26A0\uFE0F Not financial advice \u2014 reminders of your own plan.</i>", ar: "<i>\u26A0\uFE0F \u0644\u064A\u0633\u062A \u0646\u0635\u064A\u062D\u0629 \u0645\u0627\u0644\u064A\u0629 \u2014 \u062A\u0630\u0643\u064A\u0631 \u0628\u062E\u0637\u062A\u0643 \u0623\u0646\u062A.</i>" };
 
 // tools/worker/usage.mjs
 var READ_LIMIT = 5e4;
@@ -5054,7 +5055,7 @@ async function morning(env, now = Date.now(), L = null) {
   await jput(env, K(env, "snap:" + localParts(now).date), { t: now, value: sum.value, btc: m.btc && m.btc.price, fng: m.fng && m.fng.value, dom: m.global && m.global.dom && m.global.dom.btc }, 2 * 86400);
   const body = await compose(env, "morning", L, facts) || plainMorning(L, facts);
   const head = `\u2600\uFE0F <b>${w.morning}</b> \xB7 ${esc(local(now, { weekday: "short", day: "numeric", month: "short" }))}`;
-  return send(env, { text: head + "\n\n" + body, buttons: [[cb2(w.plan, "pl"), cb2(w.pf, "pf"), cb2(w.mk, "mk")]] });
+  return send(env, { text: head + "\n\n" + body + "\n\n" + NOT_ADVICE[L === "ar" ? "ar" : "en"], buttons: [[cb2(w.plan, "pl"), cb2(w.pf, "pf"), cb2(w.mk, "mk")]] });
 }
 async function evening(env, now = Date.now(), L = null) {
   L = L || await lang(env);
@@ -5091,7 +5092,7 @@ async function evening(env, now = Date.now(), L = null) {
   };
   const body = await compose(env, "evening", L, facts) || plainEvening(L, facts);
   const head = `\u{1F319} <b>${w.evening}</b> \xB7 ${esc(local(now, { weekday: "short", day: "numeric", month: "short" }))}`;
-  return send(env, { text: head + "\n\n" + body, buttons: [[cb2(w.pf, "pf"), cb2(w.mk, "mk")]] });
+  return send(env, { text: head + "\n\n" + body + "\n\n" + NOT_ADVICE[L === "ar" ? "ar" : "en"], buttons: [[cb2(w.pf, "pf"), cb2(w.mk, "mk")]] });
 }
 var TODO_TXT = {
   en: (x) => ({
@@ -5816,6 +5817,7 @@ function viewSignals(t, sum) {
     by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : t.vsAvg} ${price2(c.avg)}`));
     if (by[k].length > 12) L.push("\u2026");
   }
+  L.push("", isAr(t) ? NOT_ADVICE.ar : NOT_ADVICE.en);
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "sg"), cb3(t.pf, "pf")], [cb3(t.back, "menu")]] };
 }
 function viewPlan(t, sum, now) {

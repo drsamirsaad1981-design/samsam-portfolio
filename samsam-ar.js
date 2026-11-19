@@ -778,6 +778,7 @@
     // the browser's own words for "no connection"
     'Failed to fetch': 'تعذّر الاتصال بالخادم — تحقق من الإنترنت وحاول مرة أخرى.', 'Load failed': 'تعذّر الاتصال بالخادم — تحقق من الإنترنت وحاول مرة أخرى.',
   });
+  A({ 'Signals are reminders of your own rules — not financial advice.': 'الإشارات تذكير بقواعدك أنت — وليست نصيحة مالية.' });
   // 📖 all of today's Firebase reads / 📊 what gets used (Admin dashboard)
   R(/^of ([\d,]+) · 📱 app ([\d,]+) · 🤖 round ([\d,]+) · ⚙️ bot ([\d,]+)$/, function (_, l, a, r, w) { return 'من ' + n(l) + ' · 📱 التطبيق ' + n(a) + ' · 🤖 جولة البوت ' + n(r) + ' · ⚙️ باقي البوت ' + n(w); });
   R(/^Last 7 days \((\d+)\)$/, 'آخر 7 أيام ($1)'); R(/^today ([\d,]+)$/, 'اليوم $1');

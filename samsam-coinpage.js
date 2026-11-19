@@ -349,6 +349,10 @@ function renderCoinTx() {
     sigEl.innerHTML = `<span>Signal</span><span class="action-badge action-${act}">${lab}</span><span class="htx-sig-why">${why}</span>` +
       `<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button><button type="button" class="val-edit" onclick="openSignalEdit()" title="Change the Signal thresholds" aria-label="Change the Signal thresholds">${SamsamUI.icon('pencil')}</button>`;
   } else sigEl.innerHTML = '';
+  // ⚠️ under the coin's signal: a reminder of your own rules, not advice
+  let sgN = document.getElementById('htxSigNote');
+  if (!sgN) { sgN = document.createElement('p'); sgN.id = 'htxSigNote'; sgN.className = 'sig-note'; sgN.textContent = 'Signals are reminders of your own rules — not financial advice.'; sigEl.insertAdjacentElement('afterend', sgN); }
+  sgN.hidden = !coin || sym === 'BTC';
   // Asset Strategy & Notes: the coin's note (same one as ⋯ → Note and the 📝) — never overwritten while you type
   const nEl = document.getElementById('htxNote');
   if (nEl && (document.activeElement !== nEl || nEl.dataset.sym !== sym)) {

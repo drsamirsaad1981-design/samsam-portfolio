@@ -2,7 +2,7 @@
 // Sell / Convert happen when the app's own rules say so, the Smart check turns a weak coin's Reinforce into Hold.
 import { fileURLToPath } from 'node:url'; import path from 'node:path';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { simulate, report } = await import(path.join(ROOT, 'tools/backtest.mjs'));
+const { simulate, report, luckTest } = await import(path.join(ROOT, 'tools/backtest.mjs'));
 let pass = 0, fail = 0; const check = (n, c, d = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' -> ' + JSON.stringify(d))); };
 const DAY = 864e5, N = 200, t0 = Date.UTC(2026, 0, 1);
 const mk = f => Array.from({ length: N }, (_, i) => [t0 + i * DAY, f(i)]);
@@ -30,4 +30,13 @@ check('after a Sell / Convert: the coin\'s and BTC\'s moves to the end are measu
 const md = report(r);
 check('the report: a table of the 4 strategies, vs BTC, worst drop', ['BTC only', 'Altcoins, hold', 'Classic signal', 'Smart signal', 'vs BTC only', 'Worst drop'].every(w => md.includes(w)), md.slice(0, 300));
 check('the report says the test is kind to today\'s coins (survivorship) and names its period', md.includes('kinder') && /\d{4}-\d\d-\d\d → \d{4}-\d\d-\d\d/.test(md));
+// 🎲 luck test: 9 flat coins + one that crashes and keeps falling → the signal sells the right one, random picks mostly don't
+const L2 = { bitcoin: mk(() => 100) }, alts2 = [];
+for (let k = 0; k < 9; k++) { L2['f' + k] = mk(() => 3 + k); alts2.push({ sym: 'F' + k, id: 'f' + k }); }
+L2.down = mk(i => i < 100 ? 10 : Math.max(2, 7 - (i - 100) * 0.05)); alts2.push({ sym: 'DOWN', id: 'down' });
+const k2 = luckTest(L2, alts2, { start: 90, runs: 300 });
+check('luck test: the signal sells the crashing coin (1 sell), and every random try makes the same number of sells in the same week', k2.sells === 1 && k2.runs === 300, k2);
+check('…selling the right coin beats most random picks (value and sells that helped)', k2.beats > 80 && k2.signal.helped === 100 && k2.random.helpedAvg < 30, k2);
+const r2 = simulate(L2, alts2, { start: 90 }); r2.luck = k2; const md2 = report(r2);
+check('the report has the luck table and a clear "Not financial advice" warning', md2.includes('Better than luck') && md2.includes('Not financial advice'), md2.slice(-500));
 console.log(`backtest_test: ${pass}/${pass + fail} passed`); process.exit(fail ? 1 : 0);

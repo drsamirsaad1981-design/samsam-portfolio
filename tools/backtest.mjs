@@ -80,6 +80,40 @@ export function simulate(series, alts, { start = 90, initial = 10000, weekly = 1
   return { from: T[start], to: T[n - 1], days: n - start, coins: coins.map(c => c.sym), left: alts.filter(a => !coins.includes(a)).map(a => a.sym), strategies: out, converts: notes };
 }
 
+// 🎲 Is the Sell / Convert signal better than luck? The signal's sells only (no Reinforce buys; the weekly $100 into BTC),
+// next to `runs` tries that sell the SAME number of coins in the SAME weeks — but picked at random among the coins
+// still held. If the signal beats most random tries, its choice of WHICH coin to sell is worth something; if it sits in
+// the middle, the market did the work (most altcoins lost to BTC anyway).
+export function luckTest(series, alts, { start = 90, initial = 10000, weekly = 100, rules = RULES, runs = 500, seed = 7 } = {}) {
+  const btc = series.bitcoin, n = btc.length, px = (id, i) => series[id][i][1];
+  const coins = alts.filter(a => series[a.id] && series[a.id].length === n && px(a.id, start) > 0);
+  let rnd = seed >>> 0; const rand = () => { rnd = (rnd * 1664525 + 1013904223) >>> 0; return rnd / 4294967296; };
+  const play = pick => {   // pick(i, active, schedule) → the coins to sell this week
+    const each = initial / coins.length, qty = {}, act = new Set(coins.map(c => c.id)); let btcQty = 0; const sold = [], sched = {};
+    coins.forEach(c => { qty[c.id] = each * (1 - FEE) / px(c.id, start); });
+    for (let i = start + 7; i < n; i += 7) {
+      btcQty += weekly * (1 - FEE) / px('bitcoin', i);
+      const list = pick(i, coins.filter(c => act.has(c.id)));
+      list.forEach(c => { btcQty += qty[c.id] * px(c.id, i) * (1 - FEE) / px('bitcoin', i); act.delete(c.id);
+        sold.push({ sym: c.sym, i, helped: px('bitcoin', n - 1) / px('bitcoin', i) > px(c.id, n - 1) / px(c.id, i) }); });
+      if (list.length) sched[i] = list.length;
+    }
+    const final = btcQty * px('bitcoin', n - 1) + [...act].reduce((s, id) => s + qty[id] * px(id, n - 1), 0);
+    return { final, sold, sched, helped: sold.length ? sold.filter(x => x.helped).length / sold.length * 100 : 0 };
+  };
+  const sig = play((i, active) => active.filter(c => (px(c.id, i) / px(c.id, start) - 1) * 100 < rules.sell));
+  const tries = [];
+  for (let k = 0; k < runs; k++) tries.push(play((i, active) => {
+    const want = sig.sched[i] || 0, pool = active.slice(), out = [];
+    while (out.length < want && pool.length) out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
+    return out;
+  }));
+  const fin = tries.map(t => t.final).sort((a, b) => a - b), hp = tries.map(t => t.helped).sort((a, b) => a - b);
+  const q = (a, p) => a[Math.min(a.length - 1, Math.floor(p * a.length))];
+  return { sells: sig.sold.length, signal: { final: sig.final, helped: sig.helped }, random: { median: q(fin, 0.5), p5: q(fin, 0.05), p95: q(fin, 0.95), helpedAvg: hp.reduce((s, x) => s + x, 0) / hp.length },
+    beats: fin.filter(v => v < sig.final).length / fin.length * 100, beatsHelped: hp.filter(v => v < sig.helped).length / hp.length * 100, runs };
+}
+
 export function report(r) {
   const d = t => new Date(t).toISOString().slice(0, 10), usd = v => '$' + Math.round(v).toLocaleString('en-US'), pc = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
   const S = r.strategies, b = S.btc;
@@ -94,8 +128,17 @@ export function report(r) {
       '| Coin | Signal | Sold on | Coin after | BTC after | Helped? |', '|---|---|---|---|---|---|');
     conv.sort((a, b) => a.t - b.t).forEach(c => L.push(`| ${c.sym} | ${c.k} | ${d(c.t)} | ${pc(c.coinAfter)} | ${pc(c.btcAfter)} | ${c.helped ? '✅' : '❌'} |`));
   }
+  if (r.luck) {
+    const k = r.luck;
+    L.push('', `**🎲 Better than luck?** The signal's ${k.sells} sells (no Reinforce buys) vs ${k.runs} tries selling the same number of coins in the same weeks, picked at random:`,
+      '', '| | Signal | Random (middle) | Random (5% – 95%) |', '|---|---|---|---|',
+      `| Worth at the end | ${usd(k.signal.final)} | ${usd(k.random.median)} | ${usd(k.random.p5)} – ${usd(k.random.p95)} |`,
+      `| Sells that helped | ${k.signal.helped.toFixed(0)}% | ${k.random.helpedAvg.toFixed(0)}% (average) | |`,
+      '', `The signal did better than **${k.beats.toFixed(0)}%** of the random tries (value) and **${k.beatsHelped.toFixed(0)}%** (sells that helped). Around 50% = luck; 90%+ = the signal picks the right coins.`);
+  }
   if (r.left.length) L.push('', `Left out (less than a year of prices): ${r.left.join(', ')}`);
-  L.push('', '_The coins are the ones in the app today — coins that made it into a portfolio, so the test is kinder to them than a real year was. Past prices don\'t promise future ones._');
+  L.push('', '_The coins are the ones in the app today — coins that made it into a portfolio, so the test is kinder to them than a real year was. Past prices don\'t promise future ones._',
+    '', '> ⚠️ **Not financial advice.** A test of the app\'s own rules on past prices, for information only — not a recommendation to buy or sell anything.');
   return L.join('\n');
 }
 
@@ -122,7 +165,7 @@ async function main() {
     console.log(id, series[id] ? 'ok' : 'left out'); await sleep(7000);
   }
   if (!series.bitcoin) throw new Error('no BTC prices');
-  const r = simulate(series, alts), md = report(r);
+  const r = simulate(series, alts); r.luck = luckTest(series, alts); const md = report(r);
   console.log('\n' + md);
   if (process.argv[2]) fs.writeFileSync(process.argv[2], md);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + '\n');

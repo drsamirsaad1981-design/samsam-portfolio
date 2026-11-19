@@ -13,6 +13,7 @@
 // The morning / evening are written by Claude from the facts gathered here (tools/worker/ai.mjs → compose); if Claude
 // can't, the bot's own plain version goes out. They do not count in the 30 questions a day.
 
+import { NOT_ADVICE } from './bidi.mjs';
 import { usMarket, gramSar } from './usmarket.mjs';
 import { bidiBody } from './bidi.mjs';
 import { K, chatOf, isOwner, langOf, member } from './who.mjs';
@@ -124,7 +125,7 @@ export async function morning(env, now = Date.now(), L = null) {
   await jput(env, K(env, 'snap:' + localParts(now).date), { t: now, value: sum.value, btc: m.btc && m.btc.price, fng: m.fng && m.fng.value, dom: m.global && m.global.dom && m.global.dom.btc }, 2 * 86400);   // the evening compares with this
   const body = await compose(env, 'morning', L, facts) || plainMorning(L, facts);
   const head = `☀️ <b>${w.morning}</b> · ${esc(local(now, { weekday: 'short', day: 'numeric', month: 'short' }))}`;
-  return send(env, { text: head + '\n\n' + body, buttons: [[cb(w.plan, 'pl'), cb(w.pf, 'pf'), cb(w.mk, 'mk')]] });
+  return send(env, { text: head + '\n\n' + body + '\n\n' + NOT_ADVICE[L === 'ar' ? 'ar' : 'en'], buttons: [[cb(w.plan, 'pl'), cb(w.pf, 'pf'), cb(w.mk, 'mk')]] });
 }
 export async function evening(env, now = Date.now(), L = null) {
   L = L || await lang(env); const w = WD[L];
@@ -150,7 +151,7 @@ export async function evening(env, now = Date.now(), L = null) {
   };
   const body = await compose(env, 'evening', L, facts) || plainEvening(L, facts);
   const head = `🌙 <b>${w.evening}</b> · ${esc(local(now, { weekday: 'short', day: 'numeric', month: 'short' }))}`;
-  return send(env, { text: head + '\n\n' + body, buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk')]] });
+  return send(env, { text: head + '\n\n' + body + '\n\n' + NOT_ADVICE[L === 'ar' ? 'ar' : 'en'], buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk')]] });
 }
 // when Claude can't write it: the facts, plainly
 const TODO_TXT = {

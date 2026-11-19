@@ -45,3 +45,6 @@ export function bidiBody(body, mode = 'auto') {
   if (typeof b.caption === 'string') { const x = bidi(b.caption, mode); if (x.length <= 1024) b.caption = x; }
   return b;
 }
+
+// ⚠️ under the signals and the daily messages: they follow your own plan — not financial advice
+export const NOT_ADVICE = { en: '<i>⚠️ Not financial advice — reminders of your own plan.</i>', ar: '<i>⚠️ ليست نصيحة مالية — تذكير بخطتك أنت.</i>' };
