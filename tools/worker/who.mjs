@@ -126,10 +126,23 @@ export async function activeChats(env) { const m = await members(env); return (a
 export const FLOOD_PER_MIN = 20;
 export async function flood(env, chat) {
   if (String(chat) === String(env.TELEGRAM_CHAT_ID)) return 'ok';
-  const k = `tg:rl:${chat}:${Math.floor(Date.now() / 60e3)}`, n = (+(await kget(env, k)) || 0) + 1;
-  await kput(env, k, String(n), 120);
+  const n = await bump('flood', chat, 60e3);   // (counted in Cloudflare's cache, not KV: no KV write per message)
   return n <= FLOOD_PER_MIN ? 'ok' : n === FLOOD_PER_MIN + 1 ? 'warn' : 'drop';
 }
+// 🛡 a counter per chat and time window, kept in Cloudflare's cache (free, no KV writes) + this copy's memory —
+// for limits that must cost nothing to check: a member's messages a minute, a stranger's tries an hour
+const bumps = new Map();
+export async function bump(kind, chat, windowMs, now = Date.now()) {
+  const slot = Math.floor(now / windowMs), id = `${kind}:${chat}:${slot}`;
+  const cache = typeof caches !== 'undefined' && caches.default ? caches.default : null, key = cache && new Request('https://limit.cache/' + encodeURIComponent(id));
+  let n = cache ? 0 : (bumps.get(id) || 0);   // the cache is the count (shared by every copy); memory only without it
+  if (cache) { try { const r = await cache.match(key); if (r) n = +(await r.text()) || 0; } catch (_) { n = bumps.get(id) || 0; } }
+  n++;
+  bumps.set(id, n); if (bumps.size > 2000) bumps.clear();
+  if (cache) { try { await cache.put(key, new Response(String(n), { headers: { 'cache-control': 'max-age=' + Math.ceil(windowMs / 1000 + 60) } })); } catch (_) {} }
+  return n;
+}
+export const STRANGER_MSGS_PER_HOUR = 20, STRANGER_CODES_PER_HOUR = 5;
 // /forget: everything the bot keeps for this chat (alerts, chat memory, language, daily switches, pinned message, radars,
 // paper portfolio…) — not today's AI counter (a fresh start must not mean fresh questions)
 export async function forgetChat(env, chat) {

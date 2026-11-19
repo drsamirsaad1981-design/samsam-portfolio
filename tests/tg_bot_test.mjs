@@ -44,6 +44,10 @@ const USER = () => ({
 });
 const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = [], pinWrites = [], accessWrites = [], tglinkWrites = []; let TGLINK = null, TGLINK_UID = 'UID2'; let OWNER_PIN = 'UID1', ACCOUNTS = ['UID1']; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
+// Cloudflare's cache (caches.default), as the Worker sees it: the 🛡 limits (flood, strangers) count there, shared by every Worker copy
+const cacheStore = new Map();
+globalThis.caches = { default: { match: async r => cacheStore.has(r.url) ? new Response(cacheStore.get(r.url)) : undefined, put: async (r, res) => { cacheStore.set(r.url, await res.text()); } } };
+const limitKey = (kind, chat, ms) => 'https://limit.cache/' + encodeURIComponent(`${kind}:${chat}:${Math.floor(Date.now() / ms)}`);
 globalThis.fetch = async (input, init = {}) => {
   const u = typeof input === 'string' ? input : input.url, body = init.body;
   if (!u.startsWith('https://api.telegram.org/')) outside++;
@@ -154,7 +158,8 @@ globalThis.fetch = async (input, init = {}) => {
 const W = (await import('../tools/dist/samsam-worker.js')).default;
 const ENV = { ANTHROPIC_API_KEY: 'sk-test', TELEGRAM_BOT_TOKEN: '123:fake', TELEGRAM_CHAT_ID: '555', TG_SECRET: 'test_secret_0123456789', FIREBASE_SERVICE_ACCOUNT: JSON.stringify(SA) };
 const HOST = 'https://samsam-analysis.example.workers.dev';
-const post = (upd, secret = ENV.TG_SECRET, env = ENV) => W.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', ...(secret ? { 'X-Telegram-Bot-Api-Secret-Token': secret } : {}) }, body: JSON.stringify(upd) }), env, {});
+let LIMITS = false;   // the 🛡 limits (flood / strangers) count only in the tests made for them — the rest send many messages fast
+const post = (upd, secret = ENV.TG_SECRET, env = ENV) => (LIMITS || [...cacheStore.keys()].forEach(k => { if (k.startsWith('https://limit.cache/')) cacheStore.delete(k); }), W.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-type': 'application/json', ...(secret ? { 'X-Telegram-Bot-Api-Secret-Token': secret } : {}) }, body: JSON.stringify(upd) }), env, {}));
 let UPD = 100;
 const say = (text, chat = 555) => post({ update_id: ++UPD, message: { message_id: 1, chat: { id: chat, type: 'private' }, from: { id: chat }, text } });
 const tap = data => post({ update_id: ++UPD, callback_query: { id: 'q1', data, from: { id: 555 }, message: { message_id: 42, chat: { id: 555 } } } });
@@ -884,6 +889,15 @@ const tapAs = (chat, data) => post({ update_id: ++UPD, callback_query: { id: 'qq
 kvStore.delete('tg:users'); for (const k of [...kvStore.keys()]) if (/^tg:(nope|inv):/.test(k)) kvStore.delete(k);
 sent.length = 0; await sayAs(777, 'hello'); await sayAs(777, 'hello again'); await sayAs(777, '/portfolio');
 check('a stranger → one polite "private, send your invite code" a day — then silence (no data, no AI)', sent.filter(x => x.m === 'sendMessage').length === 1 && /private/.test(sent.find(x => x.m === 'sendMessage').b.text) && String(sent.find(x => x.m === 'sendMessage').b.chat_id) === '777', sent.map(x => x.m));
+// 🛡 a stranger guessing codes: 5 tries an hour, then nothing — no Firebase read (a /link code is checked against Firebase)
+{ LIMITS = true; let fs0 = 0; const of = globalThis.fetch; globalThis.fetch = (i, o) => { const u = typeof i === 'string' ? i : i.url; if (/firestore\.googleapis\.com/.test(u)) fs0++; return of(i, o); };
+  const w0 = kvStore.size;
+  for (let i = 0; i < 8; i++) await sayAs(4242, '/link ZZZZZZZ' + i);
+  const fsReads = fs0; fs0 = 0;
+  for (let i = 0; i < 25; i++) await sayAs(4243, 'hi ' + i);
+  globalThis.fetch = of; LIMITS = false;
+  check('🛡 a stranger trying /link codes: only 5 tries an hour reach Firebase (8 sent)', fsReads > 0 && fsReads <= 5 * 4, fsReads);
+  check('🛡 a stranger sending 25 messages: no Firebase, and the bot\'s memory (KV) grows by at most a couple of keys', fs0 === 0 && kvStore.size - w0 <= 4, [fs0, kvStore.size - w0]); }
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/invite');
 const code = (/<code>([A-Z2-9]{8})<\/code>/.exec(last().b.text) || [])[1];
 check('/invite (owner) → an 8-letter one-time code', !!code && !/[01IO]/.test(code), last().b.text);
@@ -1046,11 +1060,12 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   await tapAs(555, 'us:pz:888');
   check('▶️ Resume → active again', !JSON.parse(kvStore.get('tg:users'))['888'].paused);
   // 🌊 flood: 20 a minute
-  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
-  kvStore.set(`tg:rl:888:${Math.floor(Date.now() / 60e3)}`, '20'); sent.length = 0;
-  await sayAs(888, '/menu'); await sayAs(888, '/menu');
+  for (const k of [...cacheStore.keys()]) if (k.includes('flood%3A888')) cacheStore.delete(k);
+  cacheStore.set(limitKey('flood', 888, 60e3), '20'); sent.length = 0; LIMITS = true;
+  await sayAs(888, '/menu'); await sayAs(888, '/menu'); LIMITS = false;
   const to888 = sent.filter(x => String(x.b.chat_id) === '888' && x.m === 'sendMessage');
   check('🌊 the 21st message in a minute → one "wait a minute", the 22nd → nothing', to888.length === 1 && /wait a minute/.test(to888[0].b.text), to888.map(x => x.b.text.slice(0, 40)));
+  for (const k of [...cacheStore.keys()]) if (k.includes('flood%3A888')) cacheStore.delete(k);   // (a new minute for what follows)
   for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:888:')) kvStore.delete(k);
   sent.length = 0; for (let i = 0; i < 25; i++) await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: 555, type: 'private' }, from: { id: 555, first_name: 'Samir' }, text: '/menu' } }, ENV.TG_SECRET, ENVK);
   check('…the owner has no such limit', !sent.some(x => /wait a minute/.test(x.b.text || '')));

@@ -16,7 +16,7 @@ import PAGE from './miniapp.html';
 import { groupOf } from '../../samsam-core.js';
 
 // coin logos: your saved logo, else CoinGecko's from the market snapshot — only from these hosts (the page's CSP allows them)
-const LOGO_HOSTS = /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com)\//;
+const LOGO_HOSTS = /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com\/drsamirsaad1981-design)\//;   // (GitHub: only this repo's owner — not an open image proxy)
 const NICE = { btc: 'Bitcoin', layer1: 'Layer 1', layer2: 'Layer 2', defi: 'DeFi', stable: 'Stablecoins', stables: 'Stablecoins', ai: 'AI', meme: 'Meme', gaming: 'Gaming', rwa: 'RWA', infra: 'Infrastructure', exchange: 'Exchange', privacy: 'Privacy', storage: 'Storage', oracle: 'Oracle', other: 'Other' };
 
 const enc = new TextEncoder();

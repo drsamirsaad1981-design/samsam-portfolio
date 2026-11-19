@@ -16,7 +16,7 @@
 import { bidiBody, NOT_ADVICE } from './bidi.mjs';
 import { markSeen } from './idle.mjs';
 import { note } from './usage.mjs';
-import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember } from './who.mjs';
+import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
 import { chatUid, idTokenFor } from './data.mjs';
 import { balancesFor } from './cex.mjs';
@@ -419,9 +419,11 @@ async function buildView(env, act, arg, guess) {
 
 // ── the webhook ──
 const ok = () => new Response('ok', { headers: { 'content-type': 'text/plain' } });
+// a secret compared in the same time whatever its first letters are (nothing to learn from how long a wrong one takes)
+function same(a, b) { a = String(a || ''); b = String(b || ''); let d = a.length ^ b.length; for (let i = 0; i < b.length; i++) d |= (a.charCodeAt(i) || 0) ^ b.charCodeAt(i); return d === 0; }
 export async function handleTelegram(request, env) {
   if (request.method !== 'POST') return new Response('Not found', { status: 404 });
-  if (!env.TG_SECRET || request.headers.get('X-Telegram-Bot-Api-Secret-Token') !== env.TG_SECRET) return new Response('Forbidden', { status: 403 });
+  if (!env.TG_SECRET || !same(request.headers.get('X-Telegram-Bot-Api-Secret-Token'), env.TG_SECRET)) return new Response('Forbidden', { status: 403 });
   resetBudget();   // a fresh allowance of outside calls for this message
   const origin = new URL(request.url).origin;
   if (ORIGIN !== origin) { ORIGIN = origin; try { if (env.RATE) await env.RATE.put('tg:origin', origin); } catch (_) {} }
@@ -435,7 +437,11 @@ export async function handleTelegram(request, env) {
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null) return ok();
   if (msg && msg.chat && msg.chat.type === 'supergroup' && msg.message_thread_id) await noteTopic(env, msg).catch(() => {});   // 🧹 a message in an old topic → remembered for /community clean
-  if (!(await allowed(env, chat))) return stranger(env, u, msg, chat);   // not (yet) invited: only an invite code works
+  if (!(await allowed(env, chat))) {   // not (yet) invited: only an invite code works
+    // 🛡 a stranger can't make the bot work for them: 20 messages an hour, then nothing at all (no KV, no Firebase)
+    if ((await bump('stranger', chat, 3600e3)) > STRANGER_MSGS_PER_HOUR) return ok();
+    return stranger(env, u, msg, chat);
+  }
   if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {   // a member: ⏸ paused → nothing (one note a day); 🌊 too many messages → wait
     const x = (await members(env))[String(chat)] || {}, ar = x.lang === 'ar';
     const quiet = () => q ? tg(env, 'answerCallbackQuery', { callback_query_id: q.id }).catch(() => {}) : null;
@@ -470,9 +476,13 @@ const STR = {
 };
 async function stranger(env, u, msg, chat) {
   if (!msg || !msg.chat || msg.chat.type !== 'private' || typeof msg.text !== 'string') return ok();
-  if (!(await firstTime(env, u.update_id))) return ok();
+  if (u.update_id != null && (await bump('upd', u.update_id, 3600e3)) > 1) return ok();   // Telegram sent it twice (no KV write for a stranger)
   const L = /^ar/.test((msg.from && msg.from.language_code) || '') ? 'ar' : 'en', w = STR[L];
   const lk = (/^\/(?:start\s+L|link\s*)([A-Za-z0-9]{8})$/i.exec(msg.text.trim()) || [])[1];
+  const anyCode = lk || /^\/start\s+[A-Za-z0-9]{8}\b|^[A-Za-z0-9]{8}$/.test(msg.text.trim());
+  // 🛡 codes (invite / link) — 5 tries an hour per chat: a link code is checked against Firebase, and guessing must
+  // never be able to use up the free daily reads (or the KV writes)
+  if (anyCode && (await bump('code', chat, 3600e3)) > STRANGER_CODES_PER_HOUR) return ok();
   if (lk) {   // 📱 someone who joined from the APP links the bot: their app's code → they're in, portfolio linked, in one step
     const hit = await findLinkCode(env, lk.toUpperCase()), x = hit && await moveAppMember(env, hit.uid, chat, msg.from);
     if (x) {
@@ -1001,7 +1011,7 @@ async function ensureHook(env, request) {
 // ── one-time setup: GET /tg/setup?key=<TG_SECRET> ──
 export async function setup(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { 'content-type': 'application/json' } });
-  if (!env.TG_SECRET || u.searchParams.get('key') !== env.TG_SECRET) return json(403, { ok: false, error: 'Wrong or missing key.' });
+  if (!env.TG_SECRET || !same(u.searchParams.get('key'), env.TG_SECRET)) return json(403, { ok: false, error: 'Wrong or missing key.' });
   const missing = ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'TG_SECRET'].filter(k => !env[k]);
   if (missing.length) return json(400, { ok: false, missing });
   if (!/^[A-Za-z0-9_-]{16,256}$/.test(env.TG_SECRET)) return json(400, { ok: false, error: 'TG_SECRET must be 16+ letters, digits, _ or - (Telegram rule).' });
@@ -1021,7 +1031,7 @@ export async function setup(request, env) {
 // every outside call it made (host, path, status). Shows no keys and no portfolio data.
 export async function check(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { 'content-type': 'application/json' } });
-  if (!env.TG_SECRET || u.searchParams.get('key') !== env.TG_SECRET) return json(403, { ok: false, error: 'Wrong or missing key.' });
+  if (!env.TG_SECRET || !same(u.searchParams.get('key'), env.TG_SECRET)) return json(403, { ok: false, error: 'Wrong or missing key.' });
   const sym = String(u.searchParams.get('coin') || 'BTC').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
   clearCache(); resetBudget(); startTrace();
   if (u.searchParams.get('what') === 'price') {   // /tg/check?key=…&coin=KAVA&what=price — where a coin's price comes from right now

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 53aabcdb0779d446
+// sources-hash: 6cb97f93d4f4275e
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1078,10 +1078,35 @@ async function activeChats(env) {
 var FLOOD_PER_MIN = 20;
 async function flood(env, chat) {
   if (String(chat) === String(env.TELEGRAM_CHAT_ID)) return "ok";
-  const k = `tg:rl:${chat}:${Math.floor(Date.now() / 6e4)}`, n = (+await kget2(env, k) || 0) + 1;
-  await kput2(env, k, String(n), 120);
+  const n = await bump("flood", chat, 6e4);
   return n <= FLOOD_PER_MIN ? "ok" : n === FLOOD_PER_MIN + 1 ? "warn" : "drop";
 }
+var bumps = /* @__PURE__ */ new Map();
+async function bump(kind, chat, windowMs, now = Date.now()) {
+  const slot = Math.floor(now / windowMs), id = `${kind}:${chat}:${slot}`;
+  const cache2 = typeof caches !== "undefined" && caches.default ? caches.default : null, key = cache2 && new Request("https://limit.cache/" + encodeURIComponent(id));
+  let n = cache2 ? 0 : bumps.get(id) || 0;
+  if (cache2) {
+    try {
+      const r = await cache2.match(key);
+      if (r) n = +await r.text() || 0;
+    } catch (_) {
+      n = bumps.get(id) || 0;
+    }
+  }
+  n++;
+  bumps.set(id, n);
+  if (bumps.size > 2e3) bumps.clear();
+  if (cache2) {
+    try {
+      await cache2.put(key, new Response(String(n), { headers: { "cache-control": "max-age=" + Math.ceil(windowMs / 1e3 + 60) } }));
+    } catch (_) {
+    }
+  }
+  return n;
+}
+var STRANGER_MSGS_PER_HOUR = 20;
+var STRANGER_CODES_PER_HOUR = 5;
 async function forgetChat(env, chat) {
   const pre = `tg:${chat}:`;
   let names = [];
@@ -3738,8 +3763,8 @@ async function addAlert(env, input, user) {
   a.armed = !met(kind, now, value);
   return locked(async () => {
     const list3 = await listAlerts(env);
-    const same = list3.find((b) => b.kind === a.kind && b.value === a.value && (b.sym || null) === (a.sym || null));
-    if (same) return { ok: true, alert: describe(same), id: same.id, now, already_set: true, note: "This exact alert already exists \u2014 nothing added. Tell the user it was already set." };
+    const same2 = list3.find((b) => b.kind === a.kind && b.value === a.value && (b.sym || null) === (a.sym || null));
+    if (same2) return { ok: true, alert: describe(same2), id: same2.id, now, already_set: true, note: "This exact alert already exists \u2014 nothing added. Tell the user it was already set." };
     if (list3.length >= MAX) return { error: `you already have ${MAX} alerts \u2014 delete some first` };
     list3.push(a);
     await saveAlerts(env, list3);
@@ -6088,9 +6113,16 @@ async function buildView(env, act2, arg, guess) {
   return { t, views: [viewMenu(t, isOwner(env), await badgeOf(env, t))] };
 }
 var ok = () => new Response("ok", { headers: { "content-type": "text/plain" } });
+function same(a, b) {
+  a = String(a || "");
+  b = String(b || "");
+  let d = a.length ^ b.length;
+  for (let i = 0; i < b.length; i++) d |= (a.charCodeAt(i) || 0) ^ b.charCodeAt(i);
+  return d === 0;
+}
 async function handleTelegram(request, env) {
   if (request.method !== "POST") return new Response("Not found", { status: 404 });
-  if (!env.TG_SECRET || request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TG_SECRET) return new Response("Forbidden", { status: 403 });
+  if (!env.TG_SECRET || !same(request.headers.get("X-Telegram-Bot-Api-Secret-Token"), env.TG_SECRET)) return new Response("Forbidden", { status: 403 });
   resetBudget();
   const origin = new URL(request.url).origin;
   if (ORIGIN !== origin) {
@@ -6120,7 +6152,10 @@ async function handleTelegram(request, env) {
   if (chat == null) return ok();
   if (msg && msg.chat && msg.chat.type === "supergroup" && msg.message_thread_id) await noteTopic(env, msg).catch(() => {
   });
-  if (!await allowed(env, chat)) return stranger(env, u, msg, chat);
+  if (!await allowed(env, chat)) {
+    if (await bump("stranger", chat, 36e5) > STRANGER_MSGS_PER_HOUR) return ok();
+    return stranger(env, u, msg, chat);
+  }
   if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {
     const x = (await members(env))[String(chat)] || {}, ar = x.lang === "ar";
     const quiet = () => q ? tg6(env, "answerCallbackQuery", { callback_query_id: q.id }).catch(() => {
@@ -6180,9 +6215,11 @@ Your portfolio isn't linked yet \u2014 that comes next.
 };
 async function stranger(env, u, msg, chat) {
   if (!msg || !msg.chat || msg.chat.type !== "private" || typeof msg.text !== "string") return ok();
-  if (!await firstTime(env, u.update_id)) return ok();
+  if (u.update_id != null && await bump("upd", u.update_id, 36e5) > 1) return ok();
   const L = /^ar/.test(msg.from && msg.from.language_code || "") ? "ar" : "en", w = STR[L];
   const lk = (/^\/(?:start\s+L|link\s*)([A-Za-z0-9]{8})$/i.exec(msg.text.trim()) || [])[1];
+  const anyCode = lk || /^\/start\s+[A-Za-z0-9]{8}\b|^[A-Za-z0-9]{8}$/.test(msg.text.trim());
+  if (anyCode && await bump("code", chat, 36e5) > STRANGER_CODES_PER_HOUR) return ok();
   if (lk) {
     const hit = await findLinkCode(env, lk.toUpperCase()), x = hit && await moveAppMember(env, hit.uid, chat, msg.from);
     if (x) {
@@ -6322,8 +6359,8 @@ async function viewBalances(env, lang2, fresh = false) {
       if (!(p > 0 && usdv < 1)) other.push(o);
       continue;
     }
-    const d = o.q - a, same = p > 0 ? Math.abs(d) * p < 0.5 : Math.abs(d) <= Math.max(a, o.q) * 1e-4;
-    rows.push({ usdv, line: `${same ? "\u2705" : d > 0 ? "\u2795" : "\u25AB\uFE0F"} <b>${esc(o.sym)}</b> ${fq(o.q)}${usdv ? ` \xB7 ${usd(usdv)}` : ""}` + (same ? "" : `
+    const d = o.q - a, same2 = p > 0 ? Math.abs(d) * p < 0.5 : Math.abs(d) <= Math.max(a, o.q) * 1e-4;
+    rows.push({ usdv, line: `${same2 ? "\u2705" : d > 0 ? "\u2795" : "\u25AB\uFE0F"} <b>${esc(o.sym)}</b> ${fq(o.q)}${usdv ? ` \xB7 ${usd(usdv)}` : ""}` + (same2 ? "" : `
       ${d > 0 ? (ar ? "\u0623\u0643\u062B\u0631 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "more than the app") + " \xB7 " : ""}${ar ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "app"}: ${fq(a)}`) });
   }
   rows.sort((x, y) => y.usdv - x.usdv);
@@ -7130,7 +7167,7 @@ async function ensureHook(env, request) {
 }
 async function setup2(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { "content-type": "application/json" } });
-  if (!env.TG_SECRET || u.searchParams.get("key") !== env.TG_SECRET) return json(403, { ok: false, error: "Wrong or missing key." });
+  if (!env.TG_SECRET || !same(u.searchParams.get("key"), env.TG_SECRET)) return json(403, { ok: false, error: "Wrong or missing key." });
   const missing = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TG_SECRET"].filter((k) => !env[k]);
   if (missing.length) return json(400, { ok: false, missing });
   if (!/^[A-Za-z0-9_-]{16,256}$/.test(env.TG_SECRET)) return json(400, { ok: false, error: "TG_SECRET must be 16+ letters, digits, _ or - (Telegram rule)." });
@@ -7147,7 +7184,7 @@ async function setup2(request, env) {
 }
 async function check(request, env) {
   const u = new URL(request.url), json = (s, o) => new Response(JSON.stringify(o, null, 2), { status: s, headers: { "content-type": "application/json" } });
-  if (!env.TG_SECRET || u.searchParams.get("key") !== env.TG_SECRET) return json(403, { ok: false, error: "Wrong or missing key." });
+  if (!env.TG_SECRET || !same(u.searchParams.get("key"), env.TG_SECRET)) return json(403, { ok: false, error: "Wrong or missing key." });
   const sym = String(u.searchParams.get("coin") || "BTC").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
   clearCache();
   resetBudget();
@@ -7595,7 +7632,7 @@ var miniapp_default = `<!doctype html>
 `;
 
 // tools/worker/miniapp.mjs
-var LOGO_HOSTS = /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com)\//;
+var LOGO_HOSTS = /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com\/drsamirsaad1981-design)\//;
 var NICE = { btc: "Bitcoin", layer1: "Layer 1", layer2: "Layer 2", defi: "DeFi", stable: "Stablecoins", stables: "Stablecoins", ai: "AI", meme: "Meme", gaming: "Gaming", rwa: "RWA", infra: "Infrastructure", exchange: "Exchange", privacy: "Privacy", storage: "Storage", oracle: "Oracle", other: "Other" };
 var enc4 = new TextEncoder();
 async function hmac2(key, data) {
