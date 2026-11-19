@@ -70,6 +70,8 @@
         '<li><b>⏸ Pause</b> — the bot goes quiet for them (no answers, radars or daily messages); the app keeps working. ▶️ Resume brings everything back.</li>' +
         '<li><b>🗑 Remove member</b> — out of the bot <i>and</i> the app; their data stays. ↩️ Restore within 60 days.</li></ul></div></details>';
   }
+  // the browser's own words for "no connection" (Failed to fetch / Load failed) → plain words
+  function errMsg(e) { var m = String((e && e.message) || e); return /Failed to fetch|Load failed|NetworkError/i.test(m) ? 'Could not reach the server — check the internet and try again.' : m; }
   function N(n) { return (+n || 0).toLocaleString('en-US'); }
   // 📊 what gets used — commands, buttons, voice, the Mini App and the app's screens (counts only, today · 7 days)
   var FEAT = { 'text': '💬 Questions / tickers typed', 'voice': '🎙️ Voice notes', 'photo': '🖼️ Photos', 'miniapp:open': '📊 Mini App opened', 'miniapp:card': '📸 Image cards sent', 'other': 'Other' };
@@ -122,13 +124,13 @@
   }
   function load(msg) {
     draw(msg || 'Loading…');
-    call({ action: 'overview' }).then(function (j) { data = j; draw(); }).catch(function (e) { data = null; draw(String(e.message || e), true); });
+    call({ action: 'overview' }).then(function (j) { data = j; draw(); }).catch(function (e) { data = null; draw(errMsg(e), true); });
   }
   function op(chat, what) {
     if (busy) return; busy = true; openChat = chat;
     var go = function () {
       return call({ action: 'member', chat: chat, op: what }).then(function (j) { if (j.overview) data = j.overview; busy = false; draw(); })
-        .catch(function (e) { busy = false; draw(String(e.message || e), true); });
+        .catch(function (e) { busy = false; draw(errMsg(e), true); });
     };
     if (what === 'remove') {
       var m = data && data.members.filter(function (x) { return x.chat === chat; })[0];
@@ -140,7 +142,7 @@
   }
   function invite() {
     if (busy) return; busy = true;
-    call({ action: 'invite' }).then(function (j) { lastInvite = j; busy = false; draw(); }).catch(function (e) { busy = false; draw(String(e.message || e), true); });
+    call({ action: 'invite' }).then(function (j) { lastInvite = j; busy = false; draw(); }).catch(function (e) { busy = false; draw(errMsg(e), true); });
   }
   function close() { var b = $('cpAdm'); if (b) b.remove(); doc.removeEventListener('keydown', esc, true); }
   function esc(e) { if (e.key === 'Escape' && !doc.querySelector('#cpDialog')) { e.stopPropagation(); close(); } }
@@ -157,12 +159,12 @@
       var b = e.target.closest('[data-op]'); if (b) { op(b.dataset.chat, b.dataset.op); return; }
       if (e.target.closest('[data-inv]')) { invite(); return; }
       var rs = e.target.closest('[data-restore]');
-      if (rs) { if (busy) return; busy = true; call({ action: 'restore', chat: rs.dataset.restore }).then(function (j) { data = j.overview || data; busy = false; draw('↩️ Restored — they\'re back as they were.'); }).catch(function (er) { busy = false; draw(String(er.message || er), true); }); return; }
+      if (rs) { if (busy) return; busy = true; call({ action: 'restore', chat: rs.dataset.restore }).then(function (j) { data = j.overview || data; busy = false; draw('↩️ Restored — they\'re back as they were.'); }).catch(function (er) { busy = false; draw(errMsg(er), true); }); return; }
       var cp = e.target.closest('[data-copy]'), sh = e.target.closest('[data-share]'), mx = e.target.closest('[data-max]');
       var linkOf = function (w) { return w === 'app' ? lastInvite.appLink : lastInvite.link || lastInvite.code; };
       if (cp && lastInvite) { try { navigator.clipboard.writeText(linkOf(cp.dataset.copy)); draw('Copied ✅'); } catch (_) {} return; }
       if (sh && lastInvite) { navigator.share({ title: 'Cute Portfolio', text: (sh.dataset.share === 'app' ? 'Join me on Cute Portfolio: ' : 'Join my Cute Portfolio bot: ') + linkOf(sh.dataset.share) }).catch(function () {}); return; }
-      if (mx) { if (busy) return; busy = true; call({ action: 'setMax', max: +mx.dataset.max }).then(function (j) { data = j; busy = false; draw(); }).catch(function (er) { busy = false; draw(String(er.message || er), true); }); return; }
+      if (mx) { if (busy) return; busy = true; call({ action: 'setMax', max: +mx.dataset.max }).then(function (j) { data = j; busy = false; draw(); }).catch(function (er) { busy = false; draw(errMsg(er), true); }); return; }
       var sm = e.target.closest('summary'); if (sm) { var d = sm.parentElement; openChat = d.open ? null : d.dataset.chat; }
     });
     el.addEventListener('input', function (e) { if (e.target.id === 'cpAdmQ') { query = e.target.value; var pos = e.target.selectionStart; draw(); var q = $('cpAdmQ'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (_) {} } } });

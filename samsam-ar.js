@@ -515,7 +515,6 @@
   R(/^Updated (\d+ (?:min|h|d) ago|just now)$/, function (_, x) { return 'آخر تحديث ' + (x === 'just now' ? 'الآن' : CPLang.t(x)); });
   R(/^Top (\d+)$/, 'أكبر $1');
   R(/^(.+%) to go$/, function (_, v) { return 'متبقي ' + n(v); });
-  R(/^Networks: (.+)\. Staked coins are counted on Sui and the Cosmos family \(NEAR staked in a pool isn’t\)\.$/, function (_, l) { return 'الشبكات: ' + n(l) + '. تُحتسب العملات المرهونة (Staked) على Sui وعائلة Cosmos (ولا يُحتسب NEAR المرهون في Pool).'; });
   R(/^(\d+) of (\d+) questions$/, '$1 من $2 سؤال'); R(/^(\d+) of (\d+) quick reports$/, '$1 من $2 تقرير سريع');
   R(/^Today: (.+)$/, function (_, x) { return 'اليوم: ' + x.split(' · ').map(function (p) { return CPLang.t(p); }).join(' · '); });
   R(/^a month ago → (.+)$/, 'قبل شهر ← $1'); R(/^today$/, 'اليوم');
@@ -742,6 +741,43 @@
   R(/^no use for (\d+)\+ days$/, 'بلا استخدام منذ $1 يوماً أو أكثر');
   R(/^the bot's Firebase reads · you (\d+)$/, 'قراءات البوت من Firebase · أنت $1');
   A({ '💤 Idle': '💤 الخاملون', '📖 Reads today': '📖 قراءات اليوم' });
+  // ════════ found by the Arabic sweep (tests/ar_sweep_test.py) ════════
+  // a coin's history: the profit of a sell / the realized total next to the % change
+  R(/^(profit|loss) ([+−-]?\$[\d,.]+)$/, function (_, w, v) { return (w === 'profit' ? 'ربح ' : 'خسارة ') + n(v); });
+  R(/^realized ([+−-]?\$[\d,.]+)$/, function (_, v) { return 'محقق ' + n(v); });
+  R(/^fee (.+)$/, function (_, v) { return 'رسوم ' + n(v); });
+  // Signal settings: how many coins each zone has now
+  R(/^Hold: above (.+) —$/, function (_, a) { return 'احتفاظ: أعلى من ' + n(a) + ' —'; });
+  R(/^Reinforce: (.+) to (.+) —$/, function (_, a, b) { return 'تعزيز: من ' + n(a) + ' إلى ' + n(b) + ' —'; });
+  R(/^Sell \/ Convert: below (.+) —$/, function (_, a) { return 'بيع / تحويل: أقل من ' + n(a) + ' —'; });
+  // Target allocation: what's left to place
+  R(/^Total ([\d.]+)% — ([\d.]+)% left to place$/, function (_, a, b) { return 'المجموع ' + n(a + '%') + ' — باقي ' + n(b + '%') + ' للتوزيع'; });
+  R(/^Total ([\d.]+)% — ([\d.]+)% too much$/, function (_, a, b) { return 'المجموع ' + n(a + '%') + ' — زيادة ' + n(b + '%'); });
+  R(/^(\d+) coins?$/, function (_, k) { return pl(k, 'عملة واحدة', 'عملتان', 'عملات', 'عملة'); });
+  // the wallets' list of networks: the names stay, the words around them in Arabic
+  R(/^Networks: (.+)\. Staked coins are counted on Sui and the Cosmos family \(NEAR staked in a pool isn’t\)\.$/, function (_, l) {
+    l = l.replace(/\(\+ its tokens\)/g, '(+ عملاتها)').replace(/\(\+ their tokens\)/g, '(+ عملاتها)').replace(/\(\+ jettons like (\w+)\)/g, '(+ عملات Jetton مثل $1)').replace(/\(you pick\)/g, '(تختار أنت)');
+    return 'الشبكات: ' + l + '. تُحتسب العملات المرهونة (Staked) على Sui وعائلة Cosmos (ولا يُحتسب NEAR المرهون في Pool).'; });
+  A({
+    'Total 100% ✓': 'المجموع 100% ✓',
+    'coins': 'عملات', 'coin': 'عملة', 'Smart keeps': 'الوضع الذكي يُبقي', 'coins on Hold': 'عملات على الاحتفاظ', 'coin on Hold': 'عملة على الاحتفاظ',
+    // Baseline
+    'Original baseline': 'تاريخ الأساس الأصلي', 'Entered by hand': 'أُدخل يدوياً', 'From CoinGecko (daily price, 00:00 UTC)': 'من CoinGecko (سعر اليوم، 00:00 UTC)',
+    'Use my BTC buy price on that day': 'استخدم سعر شرائي للبيتكوين في ذلك اليوم', 'This is the baseline you have now.': 'هذا هو تاريخ الأساس الحالي.',
+    // Categories
+    'Built-in': 'الأساسية', 'Your Categories': 'تصنيفاتك', 'None yet — tap': 'لا يوجد بعد — اضغط',
+    // Watchlist
+    'Your Watchlist is empty.': 'قائمة المتابعة فارغة.', 'Tap the star next to any coin to follow it here, or use': 'اضغط النجمة بجانب أي عملة لمتابعتها هنا، أو استخدم',
+    'for coins outside the Top 100.': 'للعملات خارج أفضل 100.',
+    // the backup password window
+    'Encrypt backup': 'تشفير النسخة الاحتياطية', 'Backup password': 'كلمة مرور النسخة الاحتياطية', 'Encrypt & download': 'تشفير وتنزيل', 'Unlock': 'فتح',
+    'Choose a password (8+ characters). You will need it to restore this file — it cannot be recovered.': 'اختر كلمة مرور (8 أحرف أو أكثر). ستحتاجها لاسترجاع هذا الملف — ولا يمكن استعادتها إن نسيتها.',
+    'Enter the password used when this backup was made.': 'أدخل كلمة المرور التي استُخدمت عند إنشاء هذه النسخة.',
+    'Backup before upload': 'نسخة احتياطية قبل الرفع', 'A copy of this device\'s data is saved first, encrypted. Choose a password (8+ characters) — you need it only to open that file.': 'تُحفظ أولاً نسخة مشفّرة من بيانات هذا الجهاز. اختر كلمة مرور (8 أحرف أو أكثر) — تحتاجها فقط لفتح ذلك الملف.',
+    'Safety backup first': 'نسخة احتياطية للأمان أولاً', 'Your current cloud data is saved to an encrypted file before anything changes. Choose a password (8+ characters).': 'تُحفظ بياناتك الحالية في السحابة في ملف مشفّر قبل أي تغيير. اختر كلمة مرور (8 أحرف أو أكثر).',
+    // the browser's own words for "no connection"
+    'Failed to fetch': 'تعذّر الاتصال بالخادم — تحقق من الإنترنت وحاول مرة أخرى.', 'Load failed': 'تعذّر الاتصال بالخادم — تحقق من الإنترنت وحاول مرة أخرى.',
+  });
   // 📖 all of today's Firebase reads / 📊 what gets used (Admin dashboard)
   R(/^of ([\d,]+) · 📱 app ([\d,]+) · 🤖 round ([\d,]+) · ⚙️ bot ([\d,]+)$/, function (_, l, a, r, w) { return 'من ' + n(l) + ' · 📱 التطبيق ' + n(a) + ' · 🤖 جولة البوت ' + n(r) + ' · ⚙️ باقي البوت ' + n(w); });
   R(/^Last 7 days \((\d+)\)$/, 'آخر 7 أيام ($1)'); R(/^today ([\d,]+)$/, 'اليوم $1');

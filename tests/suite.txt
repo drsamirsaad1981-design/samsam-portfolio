@@ -157,3 +157,4 @@ rtl_sticky_test.py
 usage_worker_test.py
 usage_app_test.py
 live_stream_test.py
+ar_sweep_test.py
