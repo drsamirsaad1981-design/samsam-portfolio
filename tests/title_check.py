@@ -12,12 +12,13 @@ JS = r"""() => { const out = [], up = [];
   const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n;
   while ((n = w.nextNode())) { const e = n.parentElement; if (e && e.getClientRects().length && /[A-Za-z]{2}/.test(n.textContent) && getComputedStyle(e).textTransform === 'uppercase') up.push(n.textContent.trim()); }
   return { out, up }; }"""
+BRANDS = {'bStocks'}   # names written this way by their owners (Binance's bStocks)
 MINOR = {'a','an','the','and','or','of','to','in','on','at','by','for','vs','per','from','with','as','nor','but','via'}
 def bad(t):
     t = re.sub(r'\(.*?\)', ' ', t)
     words = re.findall(r"[A-Za-z][A-Za-z'.\-]*", t)
     for i, w in enumerate(words):
-        if w[0].isupper(): continue
+        if w[0].isupper() or w in BRANDS: continue
         if i > 0 and w.lower() in MINOR: continue
         return True
     return False

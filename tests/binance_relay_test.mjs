@@ -10,7 +10,7 @@ Module._load = function (req, ...a) {
   return orig.call(this, req, ...a);
 };
 const require = Module.createRequire(import.meta.url);
-require(path.resolve('tools/binance-relay/functions/index.js'));
+require(path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', 'tools/binance-relay/functions/index.js'));   // from the repo, wherever the test is run from
 const calls = [];
 globalThis.fetch = async (url, o) => { calls.push({ url, o }); return new Response('{"balances":[]}', { status: 200 }); };
 const run = async body => { let st = 200, out = null; const res = { status(s) { st = s; return this; }, json(j) { out = j; } }; await handler({ method: 'POST', body }, res); return { st, out }; };

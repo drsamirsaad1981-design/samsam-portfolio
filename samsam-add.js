@@ -159,7 +159,7 @@
         '<label class="atx-field ac-full"><span>Full Name</span><input type="text" id="acName" placeholder="Filled by search"></label>' +
         '<label class="atx-field"><span id="acQtyLbl">Amount <span style="color:#ef4444">*</span></span><input type="number" id="acQty" placeholder="0.00" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span id="acPriceLbl">Avg. Buy Price <span style="color:#ef4444">*</span></span><input type="number" id="acPrice" placeholder="USD" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
-        '<label class="atx-field"><span>Buy date</span><input type="date" id="acDate" oninput="previewAddCoin()"></label>' +
+        '<label class="atx-field"><span>Buy Date</span><input type="date" id="acDate" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span>Fee (USD)</span><input type="number" id="acFeeUsd" placeholder="Optional" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span>CoinGecko ID</span><input type="text" id="acCgId" placeholder="Auto" autocomplete="off" spellcheck="false"></label>' +
         '<div class="atx-field ac-full"><label for="acCmc">CoinMarketCap Page</label><div class="ac-cmc"><span class="ac-cmc-pre">coinmarketcap.com/currencies/</span>' +
