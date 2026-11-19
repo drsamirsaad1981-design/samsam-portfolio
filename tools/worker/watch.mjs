@@ -3,7 +3,7 @@
 //   "tell me if SOL drops below 82" · "if BTC goes above 100k" · "if ETH moves more than 8% in a day" ·
 //   "if SOL funding turns negative" · "if my portfolio goes under 25k"
 // Claude turns the words into an alert (tools set_alert / list_alerts / delete_alert); /alerts lists them with 🗑 buttons.
-// Each alert fires once, then it is gone. One that is already true when you set it waits until it isn't, then fires
+// Each alert fires once — after it held on two checks in a row (not a wick) — then it is gone; a round's alerts come in one message. One that is already true when you set it waits until it isn't, then fires
 // the next time it becomes true (so "below 82" set at 81 fires after a bounce and a new drop — never at once).
 // Prices: the exchanges first (live, by ticker), then CoinGecko / the market snapshot. Stored in KV (RATE): tg:alerts.
 
@@ -135,34 +135,49 @@ async function tg(env, method, body) {
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
 }
+// ⏳ an alert fires only when its condition is still true on the NEXT check too (the cron runs every 5 minutes): a price
+// that dips for a few seconds — the wick of a candle — and comes back is never an alert. All the alerts confirmed in one
+// round come in ONE message (fewer messages; each alert still says what it was).
+export const CONFIRM_MS = 4 * 60e3;   // two checks in a row (5 min apart; a little less, for the cron's own jitter)
 export async function runWatch(env, now = Date.now()) {
   const list = await listAlerts(env);
   if (!list.length || !env.TELEGRAM_BOT_TOKEN || !chatOf(env)) return { checked: 0, fired: 0 };
   resetBudget();
   const cache = {}, keep = [], fired = [];
+  let waiting = 0;
   for (const a of list) {
     let now1 = null; try { now1 = await currentValue(env, a, cache); } catch (_) {}
     if (now1 == null) { keep.push(a); continue; }
     const on = met(a.kind, now1, a.value);
     if (!a.armed) { keep.push(on ? a : { ...a, armed: true }); continue; }   // was already true: arm once it isn't
-    if (!on) { keep.push(a); continue; }
+    if (!on) { const { since, ...rest } = a; keep.push(since ? rest : a); continue; }   // back the other side (a wick): starts over
+    if (!a.since) { keep.push({ ...a, since: now }); waiting++; continue; }          // true for the first time: wait for the next check
+    if (now - a.since < CONFIRM_MS) { keep.push(a); waiting++; continue; }
     fired.push({ a, now: now1 });
   }
-  for (const { a, now: v } of fired) {
-    const k = KINDS[a.kind], up = k.op === '≥';
-    const nowTxt = k.what === 'price' || k.what === 'portfolio' ? usd(v) : k.what === 'funding' ? v + '% / 8h' : pct(v, 1);
-    const head = k.what === 'portfolio' ? `💼 <b>Portfolio ${up ? 'above' : 'below'} ${usd(a.value)}</b>` : `${up ? '🚀' : '🔻'} <b>${esc(a.metal ? METAL_NAME[a.metal] : a.sym)} ${k.what === 'price' ? (up ? 'above' : 'below') + ' ' + usd(a.value) : k.what === 'funding' ? 'funding ' + k.op + ' ' + a.value + '%' : '24h ' + k.op + ' ' + pct(a.value, 1)}</b>`;
-    const text = `🔔 ${head}\nNow: <b>${nowTxt}</b>${a.note ? '\n<i>' + esc(a.note) + '</i>' : ''}\n<i>Your alert from ${local(a.created, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} — done, removed.</i>`;
-    const buttons = a.metal ? [[{ text: '🥇 Metals', callback_data: 'mkm' }]] : a.stock ? [[{ text: '📈 bStocks', callback_data: 'mks' }]] : a.sym ? [[{ text: '🪙 ' + a.sym, callback_data: 'c:' + (a.cg || 'x-' + a.sym.toLowerCase()).slice(0, 58) }, { text: '🔥 Liq Map', url: 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(a.sym) }]] : [[{ text: '💼 Portfolio', callback_data: 'pf' }]];
-    const r = await tg(env, 'sendMessage', { chat_id: chatOf(env), text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
-    if (!r.ok) keep.push(a);   // Telegram refused: try again next time
-    else await logEvent(env, 'alert', describe(a) + ' — now ' + nowTxt);
+  if (fired.length) {
+    const block = ({ a, now: v }) => {
+      const k = KINDS[a.kind], up = k.op === '≥';
+      const nowTxt = k.what === 'price' || k.what === 'portfolio' ? usd(v) : k.what === 'funding' ? v + '% / 8h' : pct(v, 1);
+      const head = k.what === 'portfolio' ? `💼 <b>Portfolio ${up ? 'above' : 'below'} ${usd(a.value)}</b>` : `${up ? '🚀' : '🔻'} <b>${esc(a.metal ? METAL_NAME[a.metal] : a.sym)} ${k.what === 'price' ? (up ? 'above' : 'below') + ' ' + usd(a.value) : k.what === 'change_24h' ? '24h ' + (up ? '≥' : '≤') + ' ' + pct(a.value, 1) : 'funding ' + (up ? '≥' : '≤') + ' ' + a.value + '%'}</b>`;
+      return { nowTxt, text: `${head}\nNow: <b>${nowTxt}</b>${a.note ? '\n<i>' + esc(a.note) + '</i>' : ''}\n<i>Your alert from ${local(a.created, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} — held on two checks (not a wick), done, removed.</i>` };
+    };
+    const blocks = fired.map(block);
+    const text = fired.length === 1 ? '🔔 ' + blocks[0].text : `🔔 <b>${fired.length} alerts</b>\n\n` + blocks.map(b => b.text).join('\n\n');
+    const btn = a => a.metal ? { text: '🥇 Metals', callback_data: 'mkm' } : a.stock ? { text: '📈 bStocks', callback_data: 'mks' } : a.sym ? { text: '🪙 ' + a.sym, callback_data: 'c:' + (a.cg || 'x-' + a.sym.toLowerCase()).slice(0, 58) } : { text: '💼 Portfolio', callback_data: 'pf' };
+    const seenB = new Set(), row = [];
+    fired.forEach(({ a }) => { const b = btn(a); if (!seenB.has(b.callback_data) && row.length < 3) { seenB.add(b.callback_data); row.push(b); } });
+    const one = fired.length === 1 && fired[0].a.sym && !fired[0].a.metal && !fired[0].a.stock;
+    const buttons = [one ? [row[0], { text: '🔥 Liq Map', url: 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(fired[0].a.sym) }] : row, [{ text: '🔔 /alerts', callback_data: 'al' }]];
+    const r = await tg(env, 'sendMessage', { chat_id: chatOf(env), text: text.slice(0, 4000), parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
+    if (!r.ok) fired.forEach(({ a }) => keep.push(a));   // Telegram refused: all try again next time
+    else for (let i = 0; i < fired.length; i++) await logEvent(env, 'alert', describe(fired[i].a) + ' — now ' + blocks[i].nowTxt);
   }
   await locked(async () => {   // alerts added while this ran stay; the fired ones go
     const nowList = await listAlerts(env), seen = new Set(list.map(a => a.id));
     await saveAlerts(env, [...keep.filter(a => nowList.some(b => b.id === a.id)), ...nowList.filter(b => !seen.has(b.id))]);
   });
-  return { checked: list.length, fired: fired.length };
+  return { checked: list.length, fired: fired.length, waiting };
 }
 
 // /alerts — the list with a 🗑 per alert
@@ -178,7 +193,7 @@ export async function viewAlerts(env, lang = 'en') {
     list.forEach(a => { if (groupOf(a) === g) { shown.push(a); L.push(`${shown.length}. ${esc(describe(a))}${a.armed ? '' : ar ? ' <i>(ينتظر عودة السعر أولاً)</i>' : ' <i>(waits to reset first)</i>'}`); } });
   }
   const slow = list.some(a => a.metal || a.stock);
-  L.push('', ar ? '<i>يتحقق كل 5 دقائق · كل تنبيه مرة واحدة' + (slow ? ' · المعادن والأسهم: أسعار تُحدَّث كل ~30 دقيقة' : '') + '</i>' : '<i>Checked every 5 min · each fires once' + (slow ? ' · metals &amp; stocks: prices refreshed every ~30 min' : '') + '</i>');
+  L.push('', ar ? '<i>يتحقق كل 5 دقائق · يُرسل بعد فحصين متتاليين (ليس ذيل شمعة) · كل تنبيه مرة واحدة' + (slow ? ' · المعادن والأسهم: أسعار تُحدَّث كل ~30 دقيقة' : '') + '</i>' : '<i>Checked every 5 min · sent after two checks in a row (not a wick) · each fires once' + (slow ? ' · metals &amp; stocks: prices refreshed every ~30 min' : '') + '</i>');
   const buttons = []; for (let i = 0; i < shown.length; i += 3) buttons.push(shown.slice(i, i + 3).map((a, j) => ({ text: `🗑 ${i + j + 1}`, callback_data: 'ad:' + a.id })));
   buttons.push([{ text: ar ? '🔄 تحديث' : '🔄 Refresh', callback_data: 'al' }, { text: ar ? '⬅️ القائمة' : '⬅️ Menu', callback_data: 'menu' }]);
   return { text: L.join('\n'), buttons };

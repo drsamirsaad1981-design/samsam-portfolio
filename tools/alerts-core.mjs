@@ -40,7 +40,7 @@ export const W = {
     buyDca: 'Today is also your regular (DCA) buy day',
     reinforce: 'Reinforce', sell: 'Sell / Convert to BTC', hold: 'Hold', open: 'Open portfolio', hub: 'Market Hub', planBtn: 'Open the plan',
     coinBtn: s => `Open ${s}`, seasonBtn: 'Altcoin Season', btcMove: (pct, h) => `BTC ${pct} in ${h}`, pfMove: (pct, h) => `Your portfolio ${pct} in ${h}`,
-    since: 'since the last alert', yourPf: 'Your portfolio', h24: '24h', sig: s => `Signal change · ${s}`, vsAvg: 'vs your avg',
+    since: 'since the last alert', yourPf: 'Your portfolio', h24: '24h', sig: s => `Signal change · ${s}`, sigsT: n => n === 1 ? 'Signal confirmed at the daily close' : `${n} signals confirmed at the daily close`, onClose: 'Decided on the daily close (03:00 Riyadh) — a short wick never changes them.', notAdvice: '⚠️ Not financial advice — reminders of your own plan.', vsAvg: 'vs your avg',
     holding: 'Holding', targetHit: s => `Plan target reached · ${s}`, planNow: 'Plan', tpHit: (n, s) => `Take-profit ${n} reached · ${s}`,
     tpLine: (n, p, x, pct) => `Price ${p} ≥ TP${n} ${x}${pct ? ` · your plan sells ${pct}% here` : ''}`, macro: 'Exit level reached',
     btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC', of3: n => `${n} of 3 of your exit conditions are met`, allExit: 'All 3 exit conditions are met — your exit zone',
@@ -64,7 +64,7 @@ export const W = {
     fng: 'الخوف والطمع', alt: 'موسم العملات البديلة', etf: 'تدفقات ETF', signals: 'الإشارات', plan: 'الخطة', met: 'أهداف تحققت',
     reinforce: 'تعزيز', sell: 'بيع / تحويل لـ BTC', hold: 'احتفاظ', open: 'افتح المحفظة', hub: 'Market Hub', planBtn: 'افتح الخطة',
     coinBtn: s => `افتح ${s}`, seasonBtn: 'موسم العملات البديلة', btcMove: (pct, h) => `BTC ${pct} خلال ${h}`, pfMove: (pct, h) => `محفظتك ${pct} خلال ${h}`,
-    since: 'منذ آخر تنبيه', yourPf: 'محفظتك', h24: '24 ساعة', sig: s => `تغيّر الإشارة · ${s}`, vsAvg: 'مقارنة بمتوسط شرائك',
+    since: 'منذ آخر تنبيه', yourPf: 'محفظتك', h24: '24 ساعة', sig: s => `تغيّر الإشارة · ${s}`, sigsT: n => n === 1 ? 'إشارة تأكدت على قفلة اليوم' : `${n} إشارات تأكدت على قفلة اليوم`, onClose: 'تُحسب على قفلة اليوم (03:00 بتوقيت الرياض) — ذيل شمعة قصير لا يغيّرها.', notAdvice: '⚠️ ليست نصيحة مالية — تذكير بخطتك أنت.', vsAvg: 'مقارنة بمتوسط شرائك',
     holding: 'قيمة ما تملكه', targetHit: s => `تحقق هدف الخطة · ${s}`, planNow: 'الخطة', tpHit: (n, s) => `وصل جني الأرباح ${n} · ${s}`,
     tpLine: (n, p, x, pct) => `السعر ${p} ≥ TP${n} ${x}${pct ? ` · خطتك تبيع ${pct}% هنا` : ''}`, macro: 'تحقق مستوى خروج',
     btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC', of3: n => `تحقق ${n} من 3 من شروط الخروج`, allExit: 'تحققت شروط الخروج الثلاثة — منطقة الخروج',
@@ -164,11 +164,15 @@ export function summarize(user, market, now = Date.now()) {
   const rule = meta.signal && isFinite(meta.signal.reinforce) && isFinite(meta.signal.sell) ? meta.signal : DEFAULT_SIGNAL;
   const smart = meta.signalSmart !== false, rsMap = C.strengthMap(market.altPage);
   const signal = {}, coinRows = [];
+  // ⏳ decided on the daily close (market.close: { id: price at 00:00 UTC }, p/close.json); the live price only marks "pending"
+  const pending = {}, toS = a => a === 'convert' ? 'sell' : a;
   for (const c of pf) {
+    const id = info[c.sym].id, close = id && market.close && market.close[id];
+    const si = C.confirmedSignal({ sym: c.sym, avg: c.basePrice, live: c.currentPrice, close, rules: rule, rs: id ? rsMap[id] : null, smart });
     const chg = c.basePrice > 0 ? (c.currentPrice / c.basePrice - 1) * 100 : 0;
-    const si = C.signalFor({ sym: c.sym, chg, rules: rule, rs: info[c.sym].id ? rsMap[info[c.sym].id] : null, smart });
-    signal[c.sym] = si.action === 'convert' ? 'sell' : si.action;
-    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
+    signal[c.sym] = toS(si.action);
+    if (si.pending) pending[c.sym] = toS(si.pending);
+    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, chgClose: si.onClose ? si.chg : null, close: close || null, pending: si.pending ? toS(si.pending) : null, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
   }
   const sigMode = JSON.stringify({ r: rule.reinforce, s: rule.sell, smart });
   const counts = { reinforce: 0, sell: 0, hold: 0 }; Object.values(signal).forEach(s => counts[s]++);
@@ -230,7 +234,7 @@ export function summarize(user, market, now = Date.now()) {
     alloc, dca, free,
     value, cost, total, invested, pctTotal: invested > 0 ? total / invested * 100 : 0,
     ch24: value24 > 0 ? (value / value24 - 1) * 100 : null, d24: value - value24, ch7: value7 > 0 ? (value / value7 - 1) * 100 : null, d7: value - value7,
-    vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, sigMode, counts, plan, prog, tps, macro, btcNow, buyAt,
+    vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, pending, sigMode, counts, plan, prog, tps, macro, btcNow, buyAt,
     btc24: btcRow ? btcRow.ch24 : null, btc7: btcRow ? btcRow.ch7 : null,
   };
 }
@@ -311,18 +315,24 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       }
     }
   }
-  // 2. signals that changed
+  // 2. signals that changed — ⏳ decided on the daily close (see summarize), so they change at most once a day; all the
+  // changes in ONE message, sent from 07:00 on (never at 3 in the night, when the close comes in)
   if (cfg.signals) {
     const names = { reinforce: t.reinforce, sell: t.sell, hold: t.hold }, icon = { reinforce: '🟢', sell: '🔴', hold: '⚪' };
     const reset = st.sigMode !== sum.sigMode; st.sigMode = sum.sigMode;   // you changed the thresholds or Smart: start again, silently
+    const ch = [];
     for (const c of sum.coins) {
       const now1 = sum.signal[c.sym], was = st.sig[c.sym];
       if (first || !was || reset) { st.sig[c.sym] = now1; continue; }
-      if (was === now1) continue;
+      if (was !== now1) ch.push({ c, was, now1 });
+    }
+    if (ch.length && lp.hour >= 7) {   // (the close comes at 03:00 — the changes wait for the morning)
       const pts = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(0);
-      const vsB = c.rs ? `\n${t.vsBtc30(pts(c.rs.d30), pts(c.rs.d90))}${c.why === 'weak' ? ' · ' + t.smartWeak : c.why === 'strong' ? ' · ' + t.smartStrong : ''}` : '';
-      const text = `${icon[now1]} <b>${t.sig(esc(c.sym))}</b>\n${names[was]} → <b>${names[now1]}</b>\n${usd(c.price)} · ${pct(c.chg, 1)} ${t.vsAvg} ${usd(c.avg)}${vsB}\n${t.holding}: ${usd(c.value)}`;
-      if (push({ key: 'sig-' + c.sym, text, buttons: [[btn(t.coinBtn(c.sym), 'index.html#holdings/' + encodeURIComponent(c.sym))]] })) st.sig[c.sym] = now1;
+      const lines = ch.map(({ c, was, now1 }) => `${icon[now1]} <b>${esc(c.sym)}</b>  ${names[was]} → <b>${names[now1]}</b> · ${pct(c.chgClose != null ? c.chgClose : c.chg, 1)} ${t.vsAvg}` +
+        (c.rs && (c.why === 'weak' || c.why === 'strong') ? `\n    ${t.vsBtc30(pts(c.rs.d30), pts(c.rs.d90))} · ${c.why === 'weak' ? t.smartWeak : t.smartStrong}` : ''));
+      const text = `🎯 <b>${t.sigsT(ch.length)}</b>\n${lines.join('\n')}\n<i>${t.onClose}</i>\n<i>${t.notAdvice}</i>`;
+      const buttons = [ch.slice(0, 3).map(({ c }) => btn(t.coinBtn(c.sym), 'index.html#holdings/' + encodeURIComponent(c.sym)))];
+      if (push({ key: 'sig-day', text, buttons })) ch.forEach(({ c, now1 }) => { st.sig[c.sym] = now1; });
     }
     for (const s of Object.keys(st.sig)) if (!sum.signal[s]) delete st.sig[s];
   }
@@ -442,5 +452,15 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
     if (cfg.weekly && lp.weekday === 'Fri' && st.weekDay !== isoWeek(lp.date) && lp.hm >= '09:00') { out.push({ ...brief(sum, m, cfg, now, true), urgent: true }); st.weekDay = isoWeek(lp.date); }
   }
   st.t = now;
-  return { messages: out, state: st };
+  return { messages: out, state: st };   // (tools/alerts.mjs sends them together: combine())
+}
+// 🔔 one message per run instead of one per coin / alert: everything except the morning brief and the weekly report
+// (long on their own) is put together, in the order it came; up to 2 rows of buttons, no button twice
+export function combine(out) {
+  const big = x => x.key === 'brief' || x.key === 'weekly', rest = out.filter(x => !big(x));
+  if (rest.length < 2) return out;
+  const seen = new Set(), row1 = [], row2 = [];
+  rest.forEach(x => (x.buttons || []).flat().forEach(b => { const k = b.text + '|' + (b.url || b.callback_data || ''); if (seen.has(k)) return; seen.add(k); (row1.length < 3 ? row1 : row2.length < 3 ? row2 : []).push(b); }));
+  const one = { key: 'all-' + rest.map(x => x.key).join('+').slice(0, 60), urgent: rest.some(x => x.urgent), text: rest.map(x => x.text).join('\n\n━━━━━━━━\n\n').slice(0, 4000), buttons: [row1, row2].filter(r => r.length) };
+  return [...out.filter(big), one];
 }

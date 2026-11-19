@@ -160,3 +160,5 @@ live_stream_test.py
 ar_sweep_test.py
 backtest_unit_test.py
 disclaimer_test.py
+signal_close_test.py
+close_file_unit_test.py

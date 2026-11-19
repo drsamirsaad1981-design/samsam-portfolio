@@ -779,6 +779,12 @@
     'Failed to fetch': 'تعذّر الاتصال بالخادم — تحقق من الإنترنت وحاول مرة أخرى.', 'Load failed': 'تعذّر الاتصال بالخادم — تحقق من الإنترنت وحاول مرة أخرى.',
   });
   A({ 'Signals are reminders of your own rules — not financial advice.': 'الإشارات تذكير بقواعدك أنت — وليست نصيحة مالية.' });
+  // ⏳ Signals decided on the daily close
+  var SIGAR = function (x) { return { 'Hold': 'احتفاظ', 'Reinforce': 'تعزيز', 'Sell / Convert to BTC': 'بيع / تحويل إلى BTC', 'Sell / Convert': 'بيع / تحويل' }[x] || x; };
+  R(/^Pending ⏳ — the live price says (.+); confirmed at the daily close \(03:00 Riyadh\)$/, function (_, a) { return 'قيد التأكيد ⏳ — السعر اللحظي يشير إلى ' + SIGAR(a) + '؛ تتأكد على قفلة اليوم (03:00 بتوقيت الرياض)'; });
+  R(/^⏳ Pending: (.+) on the live price \((.+)\) — confirmed at the daily close \(03:00 Riyadh\)$/, function (_, a, b) { return '⏳ قيد التأكيد: ' + SIGAR(a) + ' على السعر اللحظي (' + n(b) + ') — تتأكد على قفلة اليوم (03:00 بتوقيت الرياض)'; });
+  R(/^([+−-][\d.]+%) vs your Avg\. Buy Price$/, function (_, a) { return n(a) + ' عن متوسط سعر الشراء'; });
+  A({ 'on the daily close': 'على قفلة اليوم' });
   // 📖 all of today's Firebase reads / 📊 what gets used (Admin dashboard)
   R(/^of ([\d,]+) · 📱 app ([\d,]+) · 🤖 round ([\d,]+) · ⚙️ bot ([\d,]+)$/, function (_, l, a, r, w) { return 'من ' + n(l) + ' · 📱 التطبيق ' + n(a) + ' · 🤖 جولة البوت ' + n(r) + ' · ⚙️ باقي البوت ' + n(w); });
   R(/^Last 7 days \((\d+)\)$/, 'آخر 7 أيام ($1)'); R(/^today ([\d,]+)$/, 'اليوم $1');

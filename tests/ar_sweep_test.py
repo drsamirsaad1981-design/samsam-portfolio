@@ -45,6 +45,7 @@ with sync_playwright() as p:
         pg.evaluate("try{applyView('cards')}catch(e){}"); look(f'{vn} · Overview (cards)', pg, 600); pg.evaluate("try{applyView('table')}catch(e){}")
         pg.evaluate("SamsamUI.ptabGo('allocation')"); look(f'{vn} · Allocation', pg, 1200)
         pg.evaluate("try{openCoinTx('BTC')}catch(e){}"); look(f'{vn} · Coin transactions (BTC)', pg, 1200)
+        pg.evaluate("try{openCoinTx('SOL')}catch(e){}"); look(f'{vn} · Coin transactions (SOL)', pg, 1200)
         pg.evaluate("try{hovBack()}catch(e){}; try{hovBack()}catch(e){}"); pg.wait_for_timeout(400)
         pg.evaluate("SamsamUI.ptabGo('overview')"); pg.wait_for_timeout(500)
         # windows on the main page

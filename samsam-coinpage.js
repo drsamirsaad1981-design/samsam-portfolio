@@ -345,7 +345,10 @@ function renderCoinTx() {
     const pts = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(0) + ' pts';
     const vsB = si && si.rs ? ` · vs BTC ${pts(si.rs.d30)} (30d), ${pts(si.rs.d90)} (90d)` : '';
     const smartWhy = !si ? '' : si.why === 'weak' ? ' — Smart: not adding, it keeps losing to BTC' : si.why === 'strong' ? ' — Smart: holding, it is beating BTC (the market dipped)' : si.why === 'confirmed' ? ' — confirmed vs BTC' : '';
-    const why = act === 'soldout' ? 'You hold none of this coin now' : sym === 'BTC' ? 'BTC is always Hold' : `${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}% vs your Avg. Buy Price${vsB}${smartWhy}`;
+    // ⏳ decided on the daily close: the % shown is the close's; when the live price says something else → "pending"
+    const cp = si && si.onClose ? si.chg : pct, pend = si && si.pending ? si.pending : null;
+    const pendTxt = pend ? ` · ⏳ Pending: ${signalLabel(pend, true)} on the live price (${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%) — confirmed at the daily close (03:00 Riyadh)` : si && si.onClose ? ' · on the daily close' : '';
+    const why = act === 'soldout' ? 'You hold none of this coin now' : sym === 'BTC' ? 'BTC is always Hold' : `${cp >= 0 ? '+' : '−'}${Math.abs(cp).toFixed(1)}% vs your Avg. Buy Price${vsB}${smartWhy}${pendTxt}`;
     sigEl.innerHTML = `<span>Signal</span><span class="action-badge action-${act}">${lab}</span><span class="htx-sig-why">${why}</span>` +
       `<button type="button" class="cp-hint" data-hint="signal" aria-label="About Signal"></button><button type="button" class="val-edit" onclick="openSignalEdit()" title="Change the Signal thresholds" aria-label="Change the Signal thresholds">${SamsamUI.icon('pencil')}</button>`;
   } else sigEl.innerHTML = '';

@@ -346,6 +346,18 @@ export function signalFor({ sym, chg, rules, rs = null, smart = true }) {
   if (base === 'convert' && strong) return { action: 'hold', base, why: 'strong', rs };
   return { action: base, base, why: base !== 'hold' && (weak || strong) ? 'confirmed' : null, rs };
 }
+// ⏳ The signal decided on the DAILY CLOSE (00:00 UTC = 03:00 Riyadh), not on the live price: a wick that pushes the
+// price past a threshold for a few seconds or minutes never flips it. `close` = the coin's price at the last daily
+// close (null: not known yet → the live price decides, as before). Returns signalFor's answer for the close, plus
+//   live:    what the live price alone would say
+//   pending: that live signal when it differs — shown as "pending ⏳" until a close confirms it (or the price comes back)
+export function confirmedSignal({ sym, avg, live, close, rules, rs = null, smart = true }) {
+  const pctOf = p => avg > 0 && p > 0 ? (p / avg - 1) * 100 : 0;
+  const L = signalFor({ sym, chg: pctOf(live), rules, rs, smart });
+  if (!(close > 0)) return { ...L, chg: pctOf(live), live: L.action, pending: null, onClose: false };
+  const C = signalFor({ sym, chg: pctOf(close), rules, rs, smart });
+  return { ...C, chg: pctOf(close), live: L.action, pending: L.action !== C.action ? L.action : null, onClose: true };
+}
 // 30 / 90-day strength vs BTC for every coin, from the Altcoin Season file (m/alt.json: top 100 + the app's other coins)
 export function strengthMap(alt) {
   const out = {}, b = alt && alt.btc;

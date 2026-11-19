@@ -266,6 +266,19 @@
         stop: function () { stopped = true; close(); },
       };
     },
+    // ⏳ every coin's last daily close (00:00 UTC), written by GitHub each hour (prices branch, p/close.json) — the Signals
+    // are decided on it. Kept on this device; asked again only after the next close is due (and at most every 20 min).
+    closes: function () {
+      var K = 'samsam_close', c = null; try { c = JSON.parse(localStorage.getItem(K) || 'null'); } catch (_) {}
+      var day = new Date(Math.floor(Date.now() / 864e5) * 864e5).toISOString().slice(0, 10);
+      if (c && c.p && c.day === day) return Promise.resolve(c);
+      if (c && c.p && Date.now() - (c.at || 0) < 20 * 60e3) return Promise.resolve(c);   // today's not written yet: yesterday's stands
+      if (API._closeP) return API._closeP;
+      return (API._closeP = fetch(SNAP.replace(/m\/market\.json$/, 'p/close.json'), { cache: 'no-cache' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) { API._closeP = null; if (!j || !j.p) return c; j.at = Date.now(); try { localStorage.setItem(K, JSON.stringify(j)); } catch (_) {} return j; },
+              function () { API._closeP = null; return c; }));
+    },
     binanceTopUp: function (rows) {
       var now = Date.now(), syms = [];
       (rows || []).forEach(function (c) { if (c && c.sym && c.price > 0 && !API.isStable(c)) syms.push(String(c.sym).toUpperCase()); });

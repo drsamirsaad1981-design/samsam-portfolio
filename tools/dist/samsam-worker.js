@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 5f12dbf8fd1aaf87
+// sources-hash: 53aabcdb0779d446
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -522,6 +522,13 @@ function signalFor({ sym, chg, rules, rs = null, smart = true }) {
   if (base === "convert" && strong) return { action: "hold", base, why: "strong", rs };
   return { action: base, base, why: base !== "hold" && (weak || strong) ? "confirmed" : null, rs };
 }
+function confirmedSignal({ sym, avg, live, close, rules, rs = null, smart = true }) {
+  const pctOf = (p) => avg > 0 && p > 0 ? (p / avg - 1) * 100 : 0;
+  const L = signalFor({ sym, chg: pctOf(live), rules, rs, smart });
+  if (!(close > 0)) return { ...L, chg: pctOf(live), live: L.action, pending: null, onClose: false };
+  const C = signalFor({ sym, chg: pctOf(close), rules, rs, smart });
+  return { ...C, chg: pctOf(close), live: L.action, pending: L.action !== C.action ? L.action : null, onClose: true };
+}
 function strengthMap(alt) {
   const out = {}, b = alt && alt.btc;
   if (!b || !Number.isFinite(b[1]) || !Number.isFinite(b[2])) return out;
@@ -763,11 +770,14 @@ function summarize(user, market, now = Date.now()) {
   const rule = meta.signal && isFinite(meta.signal.reinforce) && isFinite(meta.signal.sell) ? meta.signal : DEFAULT_SIGNAL;
   const smart = meta.signalSmart !== false, rsMap = strengthMap(market.altPage);
   const signal = {}, coinRows = [];
+  const pending = {}, toS = (a) => a === "convert" ? "sell" : a;
   for (const c of pf) {
+    const id = info[c.sym].id, close = id && market.close && market.close[id];
+    const si = confirmedSignal({ sym: c.sym, avg: c.basePrice, live: c.currentPrice, close, rules: rule, rs: id ? rsMap[id] : null, smart });
     const chg = c.basePrice > 0 ? (c.currentPrice / c.basePrice - 1) * 100 : 0;
-    const si = signalFor({ sym: c.sym, chg, rules: rule, rs: info[c.sym].id ? rsMap[info[c.sym].id] : null, smart });
-    signal[c.sym] = si.action === "convert" ? "sell" : si.action;
-    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
+    signal[c.sym] = toS(si.action);
+    if (si.pending) pending[c.sym] = toS(si.pending);
+    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, chgClose: si.onClose ? si.chg : null, close: close || null, pending: si.pending ? toS(si.pending) : null, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
   }
   const sigMode = JSON.stringify({ r: rule.reinforce, s: rule.sell, smart });
   const counts = { reinforce: 0, sell: 0, hold: 0 };
@@ -846,6 +856,7 @@ function summarize(user, market, now = Date.now()) {
     alts,
     coins: coinRows,
     signal,
+    pending,
     sigMode,
     counts,
     plan,
@@ -1900,7 +1911,8 @@ async function loadMarket(ids = [], coins = []) {
     const s = await cached("p:" + id, 10 * 6e4, async () => priceSeries(await getJson(RAW + "p/" + id + ".json")) || false);
     if (s) series[id] = s;
   }));
-  const market = { top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], sectors: base.m.sectors || [] };
+  const closeF = await cached("close", 10 * 6e4, async () => await getJson(RAW + "p/close.json") || false);
+  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], sectors: base.m.sectors || [] };
   await liveTopUp(market, all);
   const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
   const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 3);
@@ -3763,11 +3775,13 @@ async function tg4(env, method, body) {
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
 }
+var CONFIRM_MS = 4 * 6e4;
 async function runWatch(env, now = Date.now()) {
   const list3 = await listAlerts(env);
   if (!list3.length || !env.TELEGRAM_BOT_TOKEN || !chatOf(env)) return { checked: 0, fired: 0 };
   resetBudget();
   const cache2 = {}, keep = [], fired = [];
+  let waiting = 0;
   for (const a of list3) {
     let now1 = null;
     try {
@@ -3784,28 +3798,55 @@ async function runWatch(env, now = Date.now()) {
       continue;
     }
     if (!on) {
+      const { since, ...rest } = a;
+      keep.push(since ? rest : a);
+      continue;
+    }
+    if (!a.since) {
+      keep.push({ ...a, since: now });
+      waiting++;
+      continue;
+    }
+    if (now - a.since < CONFIRM_MS) {
       keep.push(a);
+      waiting++;
       continue;
     }
     fired.push({ a, now: now1 });
   }
-  for (const { a, now: v } of fired) {
-    const k = KINDS[a.kind], up = k.op === "\u2265";
-    const nowTxt = k.what === "price" || k.what === "portfolio" ? usd(v) : k.what === "funding" ? v + "% / 8h" : pct(v, 1);
-    const head = k.what === "portfolio" ? `\u{1F4BC} <b>Portfolio ${up ? "above" : "below"} ${usd(a.value)}</b>` : `${up ? "\u{1F680}" : "\u{1F53B}"} <b>${esc(a.metal ? METAL_NAME[a.metal] : a.sym)} ${k.what === "price" ? (up ? "above" : "below") + " " + usd(a.value) : k.what === "funding" ? "funding " + k.op + " " + a.value + "%" : "24h " + k.op + " " + pct(a.value, 1)}</b>`;
-    const text = `\u{1F514} ${head}
+  if (fired.length) {
+    const block = ({ a, now: v }) => {
+      const k = KINDS[a.kind], up = k.op === "\u2265";
+      const nowTxt = k.what === "price" || k.what === "portfolio" ? usd(v) : k.what === "funding" ? v + "% / 8h" : pct(v, 1);
+      const head = k.what === "portfolio" ? `\u{1F4BC} <b>Portfolio ${up ? "above" : "below"} ${usd(a.value)}</b>` : `${up ? "\u{1F680}" : "\u{1F53B}"} <b>${esc(a.metal ? METAL_NAME[a.metal] : a.sym)} ${k.what === "price" ? (up ? "above" : "below") + " " + usd(a.value) : k.what === "change_24h" ? "24h " + (up ? "\u2265" : "\u2264") + " " + pct(a.value, 1) : "funding " + (up ? "\u2265" : "\u2264") + " " + a.value + "%"}</b>`;
+      return { nowTxt, text: `${head}
 Now: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
-<i>Your alert from ${local(a.created, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} \u2014 done, removed.</i>`;
-    const buttons = a.metal ? [[{ text: "\u{1F947} Metals", callback_data: "mkm" }]] : a.stock ? [[{ text: "\u{1F4C8} bStocks", callback_data: "mks" }]] : a.sym ? [[{ text: "\u{1FA99} " + a.sym, callback_data: "c:" + (a.cg || "x-" + a.sym.toLowerCase()).slice(0, 58) }, { text: "\u{1F525} Liq Map", url: "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=" + encodeURIComponent(a.sym) }]] : [[{ text: "\u{1F4BC} Portfolio", callback_data: "pf" }]];
-    const r = await tg4(env, "sendMessage", { chat_id: chatOf(env), text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
-    if (!r.ok) keep.push(a);
-    else await logEvent(env, "alert", describe(a) + " \u2014 now " + nowTxt);
+<i>Your alert from ${local(a.created, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} \u2014 held on two checks (not a wick), done, removed.</i>` };
+    };
+    const blocks = fired.map(block);
+    const text = fired.length === 1 ? "\u{1F514} " + blocks[0].text : `\u{1F514} <b>${fired.length} alerts</b>
+
+` + blocks.map((b) => b.text).join("\n\n");
+    const btn = (a) => a.metal ? { text: "\u{1F947} Metals", callback_data: "mkm" } : a.stock ? { text: "\u{1F4C8} bStocks", callback_data: "mks" } : a.sym ? { text: "\u{1FA99} " + a.sym, callback_data: "c:" + (a.cg || "x-" + a.sym.toLowerCase()).slice(0, 58) } : { text: "\u{1F4BC} Portfolio", callback_data: "pf" };
+    const seenB = /* @__PURE__ */ new Set(), row2 = [];
+    fired.forEach(({ a }) => {
+      const b = btn(a);
+      if (!seenB.has(b.callback_data) && row2.length < 3) {
+        seenB.add(b.callback_data);
+        row2.push(b);
+      }
+    });
+    const one = fired.length === 1 && fired[0].a.sym && !fired[0].a.metal && !fired[0].a.stock;
+    const buttons = [one ? [row2[0], { text: "\u{1F525} Liq Map", url: "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=" + encodeURIComponent(fired[0].a.sym) }] : row2, [{ text: "\u{1F514} /alerts", callback_data: "al" }]];
+    const r = await tg4(env, "sendMessage", { chat_id: chatOf(env), text: text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
+    if (!r.ok) fired.forEach(({ a }) => keep.push(a));
+    else for (let i = 0; i < fired.length; i++) await logEvent(env, "alert", describe(fired[i].a) + " \u2014 now " + blocks[i].nowTxt);
   }
   await locked(async () => {
     const nowList = await listAlerts(env), seen = new Set(list3.map((a) => a.id));
     await saveAlerts(env, [...keep.filter((a) => nowList.some((b) => b.id === a.id)), ...nowList.filter((b) => !seen.has(b.id))]);
   });
-  return { checked: list3.length, fired: fired.length };
+  return { checked: list3.length, fired: fired.length, waiting };
 }
 async function viewAlerts(env, lang2 = "en") {
   const list3 = await listAlerts(env), ar = lang2 === "ar";
@@ -3824,7 +3865,7 @@ async function viewAlerts(env, lang2 = "en") {
     });
   }
   const slow = list3.some((a) => a.metal || a.stock);
-  L.push("", ar ? "<i>\u064A\u062A\u062D\u0642\u0642 \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642 \xB7 \u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629" + (slow ? " \xB7 \u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0623\u0633\u0647\u0645: \u0623\u0633\u0639\u0627\u0631 \u062A\u064F\u062D\u062F\u064E\u0651\u062B \u0643\u0644 ~30 \u062F\u0642\u064A\u0642\u0629" : "") + "</i>" : "<i>Checked every 5 min \xB7 each fires once" + (slow ? " \xB7 metals &amp; stocks: prices refreshed every ~30 min" : "") + "</i>");
+  L.push("", ar ? "<i>\u064A\u062A\u062D\u0642\u0642 \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642 \xB7 \u064A\u064F\u0631\u0633\u0644 \u0628\u0639\u062F \u0641\u062D\u0635\u064A\u0646 \u0645\u062A\u062A\u0627\u0644\u064A\u064A\u0646 (\u0644\u064A\u0633 \u0630\u064A\u0644 \u0634\u0645\u0639\u0629) \xB7 \u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629" + (slow ? " \xB7 \u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0623\u0633\u0647\u0645: \u0623\u0633\u0639\u0627\u0631 \u062A\u064F\u062D\u062F\u064E\u0651\u062B \u0643\u0644 ~30 \u062F\u0642\u064A\u0642\u0629" : "") + "</i>" : "<i>Checked every 5 min \xB7 sent after two checks in a row (not a wick) \xB7 each fires once" + (slow ? " \xB7 metals &amp; stocks: prices refreshed every ~30 min" : "") + "</i>");
   const buttons = [];
   for (let i = 0; i < shown.length; i += 3) buttons.push(shown.slice(i, i + 3).map((a, j) => ({ text: `\u{1F5D1} ${i + j + 1}`, callback_data: "ad:" + a.id })));
   buttons.push([{ text: ar ? "\u{1F504} \u062A\u062D\u062F\u064A\u062B" : "\u{1F504} Refresh", callback_data: "al" }, { text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]);
@@ -5814,9 +5855,11 @@ function viewSignals(t, sum) {
     if (!by[k].length) continue;
     const ar = isAr(t);
     L.push("", `<b>${t[k]}</b> (${by[k].length})${ar ? " \xB7 <i>\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0645\u062A\u0648\u0633\u0637\u0643</i>" : ""}`);
-    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : t.vsAvg} ${price2(c.avg)}`));
+    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : t.vsAvg} ${price2(c.avg)}${c.pending ? " \u23F3" : ""}`));
     if (by[k].length > 12) L.push("\u2026");
   }
+  if (sum.coins.some((c) => c.pending)) L.push("", isAr(t) ? "<i>\u23F3 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0644\u062D\u0638\u064A \u064A\u0634\u064A\u0631 \u0644\u063A\u064A\u0631 \u0630\u0644\u0643 \u2014 \u062A\u062A\u0623\u0643\u062F \u0639\u0644\u0649 \u0642\u0641\u0644\u0629 \u0627\u0644\u064A\u0648\u0645 (03:00)</i>" : "<i>\u23F3 the live price says otherwise \u2014 confirmed at the daily close (03:00 Riyadh)</i>");
+  else L.push("", isAr(t) ? "<i>\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A \u0639\u0644\u0649 \u0642\u0641\u0644\u0629 \u0627\u0644\u064A\u0648\u0645 (03:00 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636)</i>" : "<i>Signals on the daily close (03:00 Riyadh)</i>");
   L.push("", isAr(t) ? NOT_ADVICE.ar : NOT_ADVICE.en);
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "sg"), cb3(t.pf, "pf")], [cb3(t.back, "menu")]] };
 }
@@ -7853,7 +7896,7 @@ var worker_default = {
         const st = await idleState(env, chat, mem7[chat], now);
         await asChat(chat, async () => {
           const env2 = cenv;
-          await runWatch(env2).then((r) => {
+          await runWatch(env2, now).then((r) => {
             if (r.fired) console.log(JSON.stringify({ watch: r }));
           }).catch((e) => log2("watch", e));
           if (st.idle) {

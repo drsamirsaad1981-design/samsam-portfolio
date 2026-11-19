@@ -469,15 +469,20 @@ sent.length = 0; await postK(Wk, '/alerts');
 let av = last();
 check('/alerts: the 3 alerts listed, the one already true marked "waits to reset first", a 🗑 per alert', /Your alerts<\/b> \(3\)/.test(av.b.text) && /SOL price ≤ \$140/.test(av.b.text) && /waits to reset first/.test(av.b.text) && btns(av).filter(b => /^🗑/.test(b.text)).length === 3, av.b.text);
 LIVE.solana.usd = 139; Wk = await fresh(); sent.length = 0; await cron(Wk);
+check('⏳ cron: SOL $139 the first time → nothing yet (could be a wick), the alert notes when it became true', sent.filter(x => x.m === 'sendMessage').length === 0 && JSON.parse(kvStore.get('tg:555:alerts')).find(a => a.value === 140).since > 0, sent.map(x => x.b.text));
+LIVE.solana.usd = 141; Wk = await fresh(); await cron(Wk, RIYADH('03:12'));
+check('⏳ …back above $140 on the next check (a wick) → nothing sent, and it starts over', sent.filter(x => x.m === 'sendMessage').length === 0 && !JSON.parse(kvStore.get('tg:555:alerts')).find(a => a.value === 140).since);
+LIVE.solana.usd = 139; Wk = await fresh(); await cron(Wk, RIYADH('03:17'));
+Wk = await fresh(); sent.length = 0; await cron(Wk, RIYADH('03:22'));
 const fired = sent.filter(x => x.m === 'sendMessage');
-check('cron: SOL $139 → "🔔 🔻 SOL below $140", now $139, the note, buttons SOL + Liq Map', fired.length === 1 && /🔔 🔻 <b>SOL below \$140<\/b>/.test(fired[0].b.text) && /Now: <b>\$139<\/b>/.test(fired[0].b.text) && /buy zone/.test(fired[0].b.text) && btns(fired[0])[0].text === '🪙 SOL', fired.map(x => x.b.text));
+check('cron: SOL $139 on two checks in a row → "🔔 🔻 SOL below $140", now $139, the note, "not a wick", buttons SOL + Liq Map', fired.length === 1 && /🔔 🔻 <b>SOL below \$140<\/b>/.test(fired[0].b.text) && /Now: <b>\$139<\/b>/.test(fired[0].b.text) && /buy zone/.test(fired[0].b.text) && /not a wick/.test(fired[0].b.text) && btns(fired[0])[0].text === '🪙 SOL', fired.map(x => x.b.text));
 const left = JSON.parse(kvStore.get('tg:555:alerts'));
 check('…and it is removed; the waiting one is still waiting (still above $100)', left.length === 2 && !left.some(a => a.value === 140) && left.find(a => a.value === 100).armed === false, left);
 sent.length = 0; Wk = await fresh(); await cron(Wk);
 check('next cron: nothing fires again', sent.filter(x => x.m === 'sendMessage').length === 0, sent.map(x => x.b.text));
 LIVE.solana.usd = 95; Wk = await fresh(); await cron(Wk);
 check('SOL drops to $95 → the "≥ $100" alert is now armed (no message)', JSON.parse(kvStore.get('tg:555:alerts')).find(a => a.value === 100).armed === true && sent.filter(x => x.m === 'sendMessage').length === 0);
-LIVE.solana.usd = 105; Wk = await fresh(); sent.length = 0; await cron(Wk);
+LIVE.solana.usd = 105; Wk = await fresh(); sent.length = 0; await cron(Wk); Wk = await fresh(); await cron(Wk, RIYADH('03:27'));
 check('…back above $100 → "🚀 SOL above $100" fires', sent.some(x => x.m === 'sendMessage' && /🚀 <b>SOL above \$100<\/b>/.test(x.b.text)), sent.map(x => x.b.text));
 LIVE.solana.usd = 150;
 sent.length = 0; Wk = await fresh(); await postK(Wk, '/alerts');
@@ -486,6 +491,12 @@ await Wk.fetch(new Request(HOST + '/tg', { method: 'POST', headers: { 'content-t
 check('🗑 1 → deleted, the list redrawn in place, "🗑 Alert deleted"', JSON.parse(kvStore.get('tg:555:alerts')).length === 0 && last().m === 'editMessageText' && /No alerts yet/.test(last().b.text) && sent.some(x => x.m === 'answerCallbackQuery' && /deleted/.test(x.b.text || '')), [kvStore.get('tg:555:alerts'), last().b.text]);
 sent.length = 0; Wk = await fresh(); await cron(Wk);
 check('cron with no alerts → no outside calls, nothing sent', sent.length === 0);
+// 🔔 several alerts confirmed in the same round → ONE message (fewer messages), each alert still on its own lines
+kvStore.set('tg:555:alerts', JSON.stringify([{ id: 'g1', kind: 'price_below', value: 140, sym: 'SOL', cg: 'solana', armed: true, created: NOW, since: 1 }, { id: 'g2', kind: 'price_above', value: 1000, sym: 'BTC', cg: 'bitcoin', armed: true, created: NOW, since: 1 }]));
+LIVE.solana.usd = 139; sent.length = 0; Wk = await fresh(); await cron(Wk);
+{ const ms = sent.filter(x => x.m === 'sendMessage');
+  check('🔔 two alerts confirmed together → one message "2 alerts" with both, a button for each coin + 🔔 /alerts; both removed', ms.length === 1 && /🔔 <b>2 alerts<\/b>/.test(ms[0].b.text) && /SOL below \$140/.test(ms[0].b.text) && /BTC above \$1,000/.test(ms[0].b.text) && okHtml(ms[0].b.text) && btns(ms[0]).map(b => b.text).join(' ') === '🪙 SOL 🪙 BTC 🔔 /alerts' && JSON.parse(kvStore.get('tg:555:alerts')).length === 0, ms.map(x => [x.b.text, btns(x).map(b => b.text)])); }
+LIVE.solana.usd = 150;
 // 🥇 / 📈 alerts on metals and bStocks (no oil any more) (prices from the snapshot)
 claudeCalls.length = 0; Wk = await fresh(); await postK(Wk, 'alert me gold');
 { const ga = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
@@ -493,7 +504,7 @@ claudeCalls.length = 0; Wk = await fresh(); await postK(Wk, 'alert me gold');
   check('…the tool tells Claude metals and bStocks are checked against ~30-minute prices', /a METAL — gold, silver, platinum, copper/.test(JSON.stringify(claudeCalls[0].tools)) && !/brent/i.test(JSON.stringify(claudeCalls[0].tools)) && /bStock/.test(JSON.stringify(claudeCalls[0].tools))); }
 sent.length = 0; Wk = await fresh(); await postK(Wk, '/alerts');
 check('/alerts grouped: 📈 Stocks (bStocks) · 🥇 Metals, numbered as shown, with the ~30-minute note', /<b>📈 Stocks \(bStocks\)<\/b>\n1\. TSLAB \(Tesla\)/.test(last().b.text) && /<b>🥇 Metals<\/b>\n2\. Gold price ≥ \$2,700\/oz\n3\. Platinum price ≤ \$950/.test(last().b.text) && /prices refreshed every ~30 min/.test(last().b.text) && okHtml(last().b.text) && btns(last())[0].text === '🗑 1', last().b.text);
-market.metals.find(x => x.k === 'gold').price = 2710; Wk = await fresh(); sent.length = 0; await cron(Wk);
+market.metals.find(x => x.k === 'gold').price = 2710; Wk = await fresh(); sent.length = 0; await cron(Wk); Wk = await fresh(); await cron(Wk, RIYADH('03:12'));
 { const gf = sent.filter(x => x.m === 'sendMessage' && /Gold above/.test(x.b.text || ''));
   check('cron: gold $2,710 → the gold alert fires (with a 🥇 Metals button), the others wait', gf.length === 1 && JSON.stringify(gf[0].b.reply_markup).includes('mkm') && JSON.parse(kvStore.get('tg:555:alerts')).length === 2, sent.map(x => (x.b.text || '').slice(0, 40))); }
 market.metals.find(x => x.k === 'gold').price = 2650; kvStore.set('tg:555:alerts', '[]');
@@ -893,7 +904,7 @@ check('…his AI limit is 5 a day (yours 30)', /\d+\/5 left today/.test(last().b
 check('…and Claude is told he is an invited user (not Samir)', /invited/.test(claudeCalls[0].system) && !/one private user, Samir/.test(claudeCalls[0].system));
 check('…his "/" menu has no /invite or /users', c7 && !c7.b.commands.some(c => /invite|users/.test(c.command)), c7 && c7.b.commands.map(c => c.command));
 check('Mini App for Ali (signed by him) → his report, no portfolio (connected: false)', await (async () => { const r = await apiCall({ initData: initData(777) }); const j = await r.json(); return r.status === 200 && j.report.connected === false; })());
-LIVE.solana.usd = 130; kvStore.set('tg:777:alerts', JSON.stringify([{ id: 'a7', kind: 'price_below', value: 140, sym: 'SOL', cg: 'solana', armed: true, created: NOW }]));
+LIVE.solana.usd = 130; kvStore.set('tg:777:alerts', JSON.stringify([{ id: 'a7', kind: 'price_below', value: 140, sym: 'SOL', cg: 'solana', armed: true, created: NOW, since: 1 }]));   // (already true on the check before)
 sent.length = 0; Wd = await fresh(); await cron(Wd); LIVE.solana.usd = 150;
 check('cron: Ali\'s alert fires to Ali (chat 777), not to you', sent.some(x => x.m === 'sendMessage' && String(x.b.chat_id) === '777' && /SOL below/.test(x.b.text)) && !sent.some(x => x.m === 'sendMessage' && String(x.b.chat_id) === '555' && /SOL below \$140/.test(x.b.text)), sent.map(x => [x.b.chat_id, (x.b.text || '').slice(0, 30)]));
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/users');

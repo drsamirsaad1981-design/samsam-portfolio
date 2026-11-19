@@ -6,7 +6,7 @@
 //   node tools/update-prices.mjs <dir>     <dir> = a checkout of the prices branch (files are written to <dir>/p/)
 //
 // File per coin: p/<coingecko-id>.json  { id, t0, step: 3600000, p: [usd, …], updated }  — p[i] is the price at t0 + i·step.
-// p/index.json lists every coin with its first and last hour.
+// p/index.json lists every coin with its first and last hour. p/close.json: every coin's last daily close (00:00 UTC).
 // No API key: CoinGecko's keyless API (≈10–30 calls a minute). Each run makes 1 call for all coins (last 7 days,
 // hourly) plus, only for coins whose history doesn't reach START yet, one call per coin (paced, retried, time-boxed —
 // whatever isn't done is finished on the next run).
@@ -126,6 +126,15 @@ async function main() {
     index.coins[id] = [f.t0, f.t0 + (f.p.length - 1) * H];
   }
   fs.writeFileSync(path.join(DIR, 'index.json'), JSON.stringify(index));
-  log('wrote', Object.keys(index.coins).length, 'files');
+  // ⏳ the daily close (00:00 UTC = 03:00 Riyadh) of every coin, in one small file: the app and the bot decide the
+  // Signals on it (not on a live price that a wick can push for a few seconds)
+  const day = Math.floor(Date.now() / 864e5) * 864e5, close = { day: new Date(day).toISOString().slice(0, 10), t: day, updated: index.updated, p: {} };
+  for (const [id, m] of maps) {
+    const f = toFile(id, m, full.has(id)); if (!f) continue;
+    const i = Math.round((day - f.t0) / H);
+    for (const k of [i, i - 1, i + 1]) { const v = f.p[k]; if (v > 0 && k >= 0) { close.p[id] = +(+v).toPrecision(8); break; } }
+  }
+  fs.writeFileSync(path.join(DIR, 'close.json'), JSON.stringify(close));
+  log('wrote', Object.keys(index.coins).length, 'files', '+ close for', Object.keys(close.p).length);
 }
 main().catch(e => { console.error(e); process.exit(1); });

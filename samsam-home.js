@@ -315,8 +315,18 @@ const avgShown = c => isSoldOut(c) ? '—' : SamsamCoins.isMetal(c.sym) ? Samsam
 let rsMap = {};   // 30 / 90-day strength vs BTC per CoinGecko id (m/alt.json, written by GitHub with each market snapshot)
 function rsFor(c) { const id = c && (c.cgId || (SamsamCoins.CG_IDS || {})[c.sym]); return (id && rsMap[id]) || null; }
 function signalRules() { return window.Samsam && Samsam.getSignalRules ? Samsam.getSignalRules() : { reinforce: -5, sell: -20, smart: true }; }
+// ⏳ every coin's last daily close (00:00 UTC = 03:00 Riyadh, from GitHub's p/close.json): the Signal is decided on it, so a
+// wick of a few seconds or minutes never flips it; the live price only marks "pending ⏳" (and the price keeps moving)
+var closeP = null;
+function loadCloses() {
+  if (!window.SamsamMarket || !SamsamMarket.closes) return;
+  SamsamMarket.closes().then(c => { const was = JSON.stringify(closeP); closeP = c && c.p ? c.p : null; if (JSON.stringify(closeP) !== was) { try { renderAll(); } catch (_) {} } }, () => {});
+}
+setTimeout(loadCloses, 500); setInterval(() => { if (!document.hidden) loadCloses(); }, 20 * 60e3);
+function closeOf(coin) { const id = coin && (coin.cgId || (SamsamCoins.CG_IDS || {})[coin.sym]); return (id && closeP && closeP[id]) || null; }
 function signalInfo(coin, rules) {
   const r = rules || signalRules(), chg = getCoinPct(coin);
+  if (window.Samsam && Samsam.core && Samsam.core.confirmedSignal) return Samsam.core.confirmedSignal({ sym: coin.sym, avg: coin.basePrice, live: coin.currentPrice, close: closeOf(coin), rules: r, rs: rsFor(coin), smart: r.smart !== false });
   if (window.Samsam && Samsam.core && Samsam.core.signalFor) return Samsam.core.signalFor({ sym: coin.sym, chg, rules: r, rs: rsFor(coin), smart: r.smart !== false });
   const a = coin.sym === 'BTC' || SamsamCoins.isMetal(coin.sym) ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
   return { action: a, base: a, why: null, rs: null };
@@ -332,7 +342,9 @@ function sigBadge(c, action) {
   const i = action === 'soldout' || !c || c.sym === 'BTC' ? null : signalInfo(c);
   const changed = i && (i.why === 'weak' || i.why === 'strong');
   const tip = changed ? (i.why === 'weak' ? `Smart: Hold instead of Reinforce — ${c.sym} is behind BTC over 30 and 90 days` : `Smart: Hold instead of Sell / Convert — ${c.sym} is ahead of BTC over 30 and 90 days`) : '';
-  return `<span class="action-badge action-${action}${changed ? ' sig-smart' : ''}"${tip ? ` title="${SamsamCoins.esc(tip)}"` : ''}>${signalLabel(action)}${changed ? SamsamUI.ic('sparkles', { solo: true, size: 11 }) : ''}</span>`;
+  const pend = i && i.pending && action !== 'soldout' ? i.pending : null;
+  const tipP = pend ? `Pending ⏳ — the live price says ${signalLabel(pend, true)}; confirmed at the daily close (03:00 Riyadh)` : '';
+  return `<span class="action-badge action-${action}${changed ? ' sig-smart' : ''}${pend ? ' sig-pend' : ''}"${tip || tipP ? ` title="${SamsamCoins.esc([tip, tipP].filter(Boolean).join(' · '))}"` : ''}>${signalLabel(action)}${pend ? '<i class="sig-p" aria-label="pending">⏳</i>' : ''}${changed ? SamsamUI.ic('sparkles', { solo: true, size: 11 }) : ''}</span>`;
 }
 whenSamsam(() => {
   const M = window.SamsamMarket; if (!M || !M.altPage) return;

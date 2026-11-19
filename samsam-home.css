@@ -1332,3 +1332,6 @@
   /* ⚠️ the signals are reminders, not advice — one quiet line under the coins, the coin's signal and Signal settings */
   .sig-note { margin: 8px 2px 0; font-size: .72rem; color: var(--fg2); opacity: .85; display: flex; align-items: center; gap: 6px; line-height: 1.35; }
   .sig-note [data-ic] { flex-shrink: 0; opacity: .8; }
+
+  /* ⏳ a signal the live price disagrees with — confirmed at the daily close */
+  .action-badge .sig-p { font-style: normal; font-size: .85em; margin-inline-start: 3px; opacity: .85; }

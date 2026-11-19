@@ -230,9 +230,12 @@ export function viewSignals(t, sum) {
     if (!by[k].length) continue;
     const ar = isAr(t);
     L.push('', `<b>${t[k]}</b> (${by[k].length})${ar ? ' · <i>مقارنة بمتوسطك</i>' : ''}`);
-    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach(c => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? 'المتوسط' : t.vsAvg} ${price(c.avg)}`));
+    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach(c => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? 'المتوسط' : t.vsAvg} ${price(c.avg)}${c.pending ? ' ⏳' : ''}`));
     if (by[k].length > 12) L.push('…');
   }
+  // ⏳ decided on the daily close; a coin whose live price says something else is marked, not moved
+  if (sum.coins.some(c => c.pending)) L.push('', isAr(t) ? '<i>⏳ السعر اللحظي يشير لغير ذلك — تتأكد على قفلة اليوم (03:00)</i>' : '<i>⏳ the live price says otherwise — confirmed at the daily close (03:00 Riyadh)</i>');
+  else L.push('', isAr(t) ? '<i>الإشارات على قفلة اليوم (03:00 بتوقيت الرياض)</i>' : '<i>Signals on the daily close (03:00 Riyadh)</i>');
   L.push('', isAr(t) ? NOT_ADVICE.ar : NOT_ADVICE.en);
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'sg'), cb(t.pf, 'pf')], [cb(t.back, 'menu')]] };
 }

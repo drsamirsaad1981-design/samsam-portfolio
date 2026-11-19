@@ -16,7 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { summarize, evaluate, settings, priceSeries } from './alerts-core.mjs';
+import { summarize, evaluate, settings, priceSeries, combine } from './alerts-core.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const args = process.argv.slice(2), opt = n => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null; };
@@ -105,6 +105,7 @@ function market(ids) {
   const btc = (m.top || []).find(r => r.id === 'bitcoin');
   return { top: m.top || [], top500: t5.top || [], global: m.global, fng: m.fng, alt: m.alt, parts: m.parts, series,
     altPage: readJson(path.join(DIR, 'm', 'alt.json')), etf: readJson(path.join(DIR, 'm', 'etf.json')),
+    close: (readJson(path.join(DIR, 'p', 'close.json')) || {}).p || null,   // ⏳ each coin's daily close: the Signals are decided on it
     btc: btc ? { price: btc.price, ch24: btc.ch24 } : series.bitcoin ? { price: series.bitcoin.last, ch24: null } : null,
     priceT: series.bitcoin ? series.bitcoin.lastT : null };
 }
@@ -173,7 +174,7 @@ async function main() {
     return;
   }
   let sent = 0, failed = 0, retry = false;
-  for (const x of messages) {
+  for (const x of combine(messages)) {   // 🔔 one message per run (the briefs on their own), not one per coin
     const r = await send(tg.token, tg.chat, x);
     if (r.ok) sent++; else { failed++; if (r.retry) retry = true; log('a message was refused by Telegram (' + r.status + ')'); }
     await new Promise(res => setTimeout(res, 400));

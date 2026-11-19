@@ -1,6 +1,6 @@
 // Telegram alerts (tools/alerts-core.mjs): the numbers, each alert once, quiet hours, the brief / weekly timing,
 // English + Arabic, and text Telegram accepts (HTML with only <b> <i> <code>, every & < > escaped).
-import { summarize, evaluate, settings, priceSeries, brief } from '../tools/alerts-core.mjs';
+import { summarize, evaluate, settings, priceSeries, brief, combine } from '../tools/alerts-core.mjs';
 import { signalFor, strengthMap } from '../samsam-core.js';
 let pass = 0, fail = 0;
 const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' -> ' + JSON.stringify(d).slice(0, 300))); };
@@ -56,10 +56,10 @@ check('same price later → not again', !r.messages.some(x => x.key === 'move-bt
 // SEI falls under −20% → signal change Reinforce → Sell / Convert, with a button to the coin
 const t3 = t2 + H, m3 = mk({ now: t3, btc: 84800, sei: 0.045 }), s3 = summarize(user(), m3, t3);
 r = evaluate(s3, m3, st, cfg, t3);
-const sg = r.messages.find(x => x.key === 'sig-SEI');
-check('SEI Reinforce → Sell / Convert alert', sg && /Reinforce → <b>Sell \/ Convert to BTC<\/b>/.test(sg.text) && sg.buttons[0][0].url.endsWith('#holdings/SEI'), sg); st = r.state;
+const sg = r.messages.find(x => x.key === 'sig-day');
+check('SEI Reinforce → Sell / Convert alert (one message for the day\'s changes, decided on the close, not advice)', sg && /SEI<\/b>  Reinforce → <b>Sell \/ Convert to BTC<\/b>/.test(sg.text) && /daily close/.test(sg.text) && /Not financial advice/.test(sg.text) && sg.buttons[0][0].url.endsWith('#holdings/SEI'), sg); st = r.state;
 r = evaluate(s3, m3, st, cfg, t3 + 1800e3);
-check('…only once', !r.messages.some(x => x.key === 'sig-SEI')); st = r.state;
+check('…only once', !r.messages.some(x => x.key === 'sig-day')); st = r.state;
 
 // LINK reaches TP1 $25 → take-profit alert once; macro: BTC.D under your 45.9 → exit level alert
 const t4 = t3 + H, m4 = mk({ now: t4, btc: 84800, sei: 0.045, link: 25.5, dom: 45 }), s4 = summarize(user(), m4, t4);
@@ -87,7 +87,7 @@ r = evaluate(summarize(u5, mq, tq), mq, st, cfg, tq);
 check('quiet hours: the signal change waits', !r.messages.some(x => x.key.startsWith('sig-')) && r.state.sig.SEI === st.sig.SEI, r.messages.map(m => m.key));
 const tw = Date.parse('2026-11-08T04:10:00Z'), mw = mk({ now: tw, btc: 84800, sei: 0.06, link: 25.5, dom: 45, fng: 15, alt: 80 }); mw.etf.btc.days[0][0] = '2026-11-06';
 r = evaluate(summarize(u5, mw, tw), mw, r.state, cfg, tw);
-check('07:10 → the held signal change is sent', r.messages.some(x => x.key === 'sig-SEI'), r.messages.map(m => m.key));
+check('07:10 → the held signal change is sent', r.messages.some(x => x.key === 'sig-day'), r.messages.map(m => m.key));
 const mh = mk({ now: tq, btc: 95000, sei: 0.06, link: 25.5, dom: 45, fng: 15, alt: 80 }); mh.etf.btc.days[0][0] = '2026-11-06';
 r = evaluate(summarize(u5, mh, tq), mh, st, cfg, tq);
 check('quiet hours: BTC +12% (≥ 2× 5%) still alerts', r.messages.some(x => x.key === 'move-btc' && x.urgent), r.messages.map(m => m.key));
@@ -123,7 +123,7 @@ const ar = settings({ alerts: { lang: 'ar' } });
 const ba = brief(s, mk(), ar, T0).text;
 check('Arabic brief: Arabic words, Latin numbers, safe HTML', /ملخص الصباح/.test(ba) && /إجمالي الربح/.test(ba) && /\$8,450\.00/.test(ba) && okHtml(ba), ba);
 r = evaluate(s3, m3, { ...st, sig: { ...st.sig, SEI: 'reinforce' } }, ar, t3);
-check('Arabic signal alert', r.messages.some(x => x.key === 'sig-SEI' && /تغيّر الإشارة/.test(x.text) && /بيع \/ تحويل لـ BTC/.test(x.text)), r.messages.map(m => m.text));
+check('Arabic signal alert', r.messages.some(x => x.key === 'sig-day' && /تأكدت على قفلة اليوم/.test(x.text) && /بيع \/ تحويل لـ BTC/.test(x.text)), r.messages.map(m => m.text));
 
 // data health: market file 5 h old → one warning a day
 const mo = mk({ now: T0 + 3 * H }); mo.parts.top = new Date(T0 - 2 * H).toISOString();
@@ -149,7 +149,7 @@ const sS = summarize(user(), mS, T0);
 check('alerts use Smart: SEI Reinforce → Hold (behind BTC)', sS.signal.SEI === 'hold' && sS.coins.find(c => c.sym === 'SEI').why === 'weak', sS.signal);
 const r1 = evaluate(summarize(user(), mk(), T0), mk(), {}, cfg, T0).state;
 const r2 = evaluate(sS, mS, { ...r1, sigMode: r1.sigMode }, cfg, T0 + 1800e3);
-check('signal turned by Smart → a signal alert with the vs BTC points', r2.messages.some(x => x.key === 'sig-SEI' && /vs BTC −30 pts \(30d\)/.test(x.text) && /Smart: not adding/.test(x.text)), r2.messages.map(m => m.text));
+check('signal turned by Smart → a signal alert with the vs BTC points', r2.messages.some(x => x.key === 'sig-day' && /vs BTC −30 pts \(30d\)/.test(x.text) && /Smart: not adding/.test(x.text)), r2.messages.map(m => m.text));
 const u3 = user({ signal: { reinforce: -2, sell: -30 } });
 const r3 = evaluate(summarize(u3, mk(), T0), mk(), r1, cfg, T0 + 1800e3);
 check('you change the thresholds → no flood of signal alerts (memory starts again)', !r3.messages.some(x => x.key.startsWith('sig-')) && r3.state.sigMode !== r1.sigMode, r3.messages.map(m => m.key));
@@ -213,6 +213,17 @@ check('Arabic', arBP && /وصلت لسعر الشراء/.test(arBP.text) && /ا�
 check('switched off → nothing', !evaluate(sBP, mBP(), { ...fBP.state, buy: {} }, settings({ alerts: { buy: false } }), T0).messages.some(x => x.key.startsWith('buy-')));
 check('a new alert price → a new alert (old one forgotten)', (() => { const u2 = JSON.parse(JSON.stringify(uBP)); u2.accum[0].alertPrice = 0.052; const r = evaluate(summarize(u2, mBP(), T0), mBP(), eBP.state, cfg, T0 + 900e3); return r.messages.some(x => x.key === 'buy-SEI:0.052') && !r.state.buy['SEI:0.055']; })());
 
+// ⏳ decided on the daily close: SEI's live price 25% under its average, but its close at the average → still Reinforce?
+{ const mc = mk({ now: t3, btc: 84800, sei: 0.045 }), avg = summarize(user(), mc, t3).coins.find(c => c.sym === 'SEI').avg;
+  mc.close = { sei: avg };   // (the test market's id for SEI)
+  const sc = summarize(user(), mc, t3), row = sc.coins.find(c => c.sym === 'SEI');
+  check('⏳ a wick 25% under the average with the close at it → the Signal on the close (Hold), "pending: sell" is noted', sc.signal.SEI === 'hold' && sc.pending.SEI === 'sell' && row.pending === 'sell' && Math.abs(row.chgClose) < 1e-6, [sc.signal.SEI, sc.pending, row.chgClose]);
+  mc.close = null; const sl = summarize(user(), mc, t3);
+  check('⏳ …no close file → the live price decides (as before)', sl.signal.SEI === 'sell' && !sl.pending.SEI, [sl.signal.SEI, sl.pending]); }
+// 🔔 one message per run: the alerts of a run put together, the morning brief on its own
+{ const c = combine([{ key: 'brief', text: '☀️ brief' }, { key: 'move-btc', text: 'A', buttons: [[{ text: 'Open', url: 'u1' }]] }, { key: 'tp-LINK:1', text: 'B', buttons: [[{ text: 'Open', url: 'u1' }, { text: 'Plan', url: 'u2' }]] }]);
+  check('🔔 combine: brief stays on its own; the other alerts become one message with both texts and no button twice', c.length === 2 && c[0].key === 'brief' && /A[\s\S]*━[\s\S]*B/.test(c[1].text) && c[1].buttons.flat().map(b => b.text).join() === 'Open,Plan', c);
+  check('🔔 combine: a single alert is sent as it is', combine([{ key: 'x', text: 'only' }]).length === 1 && combine([{ key: 'x', text: 'only' }])[0].key === 'x'); }
 // every message ever made here is Telegram-safe
 const all = [b, ba, mv.text, sg.text, bSP.text, bDP.text, arBP.text];
 check('all texts Telegram-safe', all.every(okHtml));
