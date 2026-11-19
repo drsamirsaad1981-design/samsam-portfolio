@@ -1,0 +1,23 @@
+# 🧪 The app's signals replayed on a year of real prices, next to putting the same money in BTC (tools/backtest.mjs).
+# Run it by hand: Actions → Backtest → Run workflow. The report is in the run's summary (and backtest.md / .json to download).
+name: Backtest
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/backtest.mjs backtest.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backtest
+          path: |
+            backtest.md
+            backtest.json

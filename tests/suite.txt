@@ -158,3 +158,4 @@ usage_worker_test.py
 usage_app_test.py
 live_stream_test.py
 ar_sweep_test.py
+backtest_unit_test.py
