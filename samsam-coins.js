@@ -376,10 +376,28 @@
     return { grams: g, nisab: NISAB[sym], meets: meets, since: since, due: due,
       daysLeft: meets && since != null && !due ? Math.ceil((since + HAWL - now) / 864e5) : null, zakatG: g * 0.025, zakatOz: pos.qty * 0.025 };
   }
-  // ✨ Gold / Silver Trend: the metal's price over time, per troy ounce — gold from Binance PAXGUSDT (CoinGecko PAX Gold if
-  // not reachable), silver from CoinGecko Kinesis Silver (KAG); each kept 1 hour on this device
+  // ✨ Gold / Silver Trend: the metal's price over time, per troy ounce — from the shared hourly files on GitHub (PAX Gold,
+  // Kinesis Silver); if those don't cover it: gold from Binance PAXGUSDT, then CoinGecko; each kept 1 hour on this device
   var MH = { XAU: { key: 'samsam_gold_hist', bn: 'PAXGUSDT', cg: 'pax-gold' }, XAG: { key: 'samsam_silver_hist', bn: null, cg: 'kinesis-silver' } };
+  // one CoinGecko price-history request per coin and period, shared by everything on this page that asks within a minute
+  // (the charts' history and the Gold / Silver Trend — also in the Performance / Plan frames — can want the same one) → Promise of CoinGecko's JSON; an error has .status
+  var cgAsked = {};
+  function cgChart(id, days) {
+    // a page inside the app (Performance, Plan… in their frames): the main page keeps the one list for all of them
+    try { if (window.top !== window && window.top.SamsamCoins && window.top.SamsamCoins.cgChart) return window.top.SamsamCoins.cgChart(id, days); } catch (_) {}
+    var k = id + '|' + days, c = cgAsked[k];
+    if (c && Date.now() - c.t < 60e3) return c.p;
+    var p = fetch('https://api.coingecko.com/api/v3/coins/' + encodeURIComponent(id) + '/market_chart?vs_currency=usd&days=' + days)
+      .then(function (r) { if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; } return r.json(); });
+    cgAsked[k] = { t: Date.now(), p: p };
+    p.catch(function () { if (cgAsked[k] && cgAsked[k].p === p) delete cgAsked[k]; });   // a failure is not kept: the next ask tries again
+    return p;
+  }
   var mhMem = {}, mhWait = {}, mhAsked = {};
+  var SHARED_P = window.__sharedPrices || (function () {
+    var m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname), repo = location.pathname.split('/')[1];
+    return 'https://raw.githubusercontent.com/' + (m ? m[1] : 'drsamirsaad1981-design') + '/' + (m && repo ? repo : 'samsam-portfolio') + '/prices/p/';
+  })();
   function ghLookup(list) {
     var w = (list || []).filter(function (x) { return x && x[1] > 0; });
     return function (t) {
@@ -406,15 +424,27 @@
     var save = function (list) { if (!list || !list.length) return null; mhMem[sym] = { at: Date.now(), list: list }; try { localStorage.setItem(M.key, JSON.stringify(mhMem[sym])); } catch (_) {} return ghLookup(list); };
     var cg = function () {
       var days = Math.min(365, Math.max(2, Math.ceil(span / 864e5) + 1));
-      return fetch('https://api.coingecko.com/api/v3/coins/' + M.cg + '/market_chart?vs_currency=usd&days=' + days)
-        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      return cgChart(M.cg, days)
         .then(function (d) { return save((d.prices || []).map(function (x) { return [+x[0], +x[1]]; })); })
         .catch(function () { return metalCached(sym, from); });
     };
-    var p = M.bn ? fetch('https://data-api.binance.vision/api/v3/klines?symbol=' + M.bn + '&interval=' + iv + '&limit=1000&startTime=' + Math.floor(from - 864e5))
+    var bn = function () {
+      return M.bn ? fetch('https://data-api.binance.vision/api/v3/klines?symbol=' + M.bn + '&interval=' + iv + '&limit=1000&startTime=' + Math.floor(from - 864e5))
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (k) { return save(k.map(function (x) { return [+x[0], +x[4]]; })); })
+        .catch(cg) : cg();
+    };
+    // 1st: the shared hourly file GitHub keeps for every coin (prices branch) — one small file, nothing asked of
+    // CoinGecko or Binance; only when it doesn't reach back far enough (or isn't there) → Binance, then CoinGecko
+    var p = fetch(SHARED_P + M.cg + '.json?h=' + Math.floor(Date.now() / 36e5), { cache: 'no-cache' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (k) { return save(k.map(function (x) { return [+x[0], +x[4]]; })); })
-      .catch(cg) : cg();
+      .then(function (f) {
+        var t0 = +f.t0, step = +f.step || 36e5, list = [];
+        (f.p || []).forEach(function (v, i) { if (+v > 0) list.push([t0 + i * step, +v]); });
+        if (!list.length || list[0][0] > from + 864e5 || Date.now() - list[list.length - 1][0] > 6 * 36e5) throw new Error('short');
+        return save(list);
+      })
+      .catch(bn);
     mhWait[sym] = p.then(function (f) { mhWait[sym] = null; return f; });
     mhWait[sym].from = from;
     return mhWait[sym];
@@ -607,5 +637,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { perfScope: perfScope, setPerfScope: setPerfScope, trendSeries: trendSeries, metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { cgChart: cgChart, perfScope: perfScope, setPerfScope: setPerfScope, trendSeries: trendSeries, metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

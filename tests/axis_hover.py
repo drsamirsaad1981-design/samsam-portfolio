@@ -24,7 +24,7 @@ with sync_playwright() as p:
                 pg.locator(f'{card} .holdings-tab[data-range="{r}"]').click(); pg.wait_for_timeout(250)
                 opened=pg.evaluate("getComputedStyle(document.getElementById('holdingsOverlay')).display==='flex'")
                 check(f'{name}: {card} {r} tab changes filter only (no navigation)', pg.url==url0 and not opened, (pg.url,opened))
-                act=pg.evaluate("[...document.querySelectorAll('.holdings-tab.active')].map(b=>b.dataset.range)")
+                act=pg.evaluate("[...document.querySelectorAll('.holdings-tab.active[data-range]')].map(b=>b.dataset.range)")   # (the Whole portfolio | Altcoins only switch uses the same look — not a range)
                 check(f'{name}: both cards show {r} active', act==[r,r], act)
                 hl,pl=pg.evaluate("[document.getElementById('holdingsCanvas').dataset.xLabels, document.getElementById('perfChartCanvas').dataset.xLabels]")
                 rx=HOURS if r=='24h' else DATES

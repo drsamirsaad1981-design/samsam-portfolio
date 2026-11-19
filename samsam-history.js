@@ -141,12 +141,22 @@ function merge(old, add) {
 
 async function fetchChart(id, days) {
   const url = `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}/market_chart?vs_currency=usd&days=${days}`;
-  let r;
-  try { r = await fetch(url); }
-  catch (_) { const e = new Error('network'); e.retry = true; throw e; }   // a refused 429 often has no CORS header → looks like this
-  if (r.status === 429 || r.status >= 500) { const e = new Error('rate'); e.retry = true; throw e; }
-  if (!r.ok) throw new Error('HTTP ' + r.status);                          // 404: CoinGecko doesn't know this id
-  const j = await r.json();
+  let j;
+  if (window.SamsamCoins && SamsamCoins.cgChart) {   // shared with the Gold / Silver Trend: the same request is made once
+    try { j = await SamsamCoins.cgChart(id, days); }
+    catch (x) {
+      if (!x.status) { const e = new Error('network'); e.retry = true; throw e; }   // a refused 429 often has no CORS header → looks like this
+      if (x.status === 429 || x.status >= 500) { const e = new Error('rate'); e.retry = true; throw e; }
+      throw new Error('HTTP ' + x.status);                                    // 404: CoinGecko doesn't know this id
+    }
+  } else {
+    let r;
+    try { r = await fetch(url); }
+    catch (_) { const e = new Error('network'); e.retry = true; throw e; }
+    if (r.status === 429 || r.status >= 500) { const e = new Error('rate'); e.retry = true; throw e; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    j = await r.json();
+  }
   return (j.prices || []).filter(p => Array.isArray(p) && p[0] > 0 && p[1] > 0).map(p => [Math.round(p[0]), +p[1]]);
 }
 

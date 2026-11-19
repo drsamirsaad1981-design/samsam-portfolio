@@ -8,7 +8,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent)); import e2e_setup as S
 res = []; SH = pathlib.Path(__file__).parent / 'shots'
 def check(n, c, d=''): res.append(bool(c)); print(('PASS ' if c else 'FAIL ') + n + ('' if c else f' -> {d}'), flush=True)
 START = 1792022400000   # 2026-10-15T00:00:00Z
-calls = []; refused = []
+calls = []; refused = []; metal = []
 def chart_route(route):
     m = re.search(r'/coins/([^/]+)/market_chart\?.*days=(\d+)', route.request.url)
     cid, days = m.group(1), int(m.group(2))
@@ -17,7 +17,8 @@ def chart_route(route):
         if len(refused) == 1: route.fulfill(status=429, body='busy', headers={'access-control-allow-origin': '*'})
         else: route.abort()
         return
-    calls.append((cid, days))
+    if cid in ('pax-gold', 'kinesis-silver') and days <= 3: metal.append(cid)   # the Gold / Silver Trend's own short line (here the shared files and Binance are off) — not the history
+    else: calls.append((cid, days))
     now = int(time.time() * 1000); t0 = now - days * 864e5
     base = 100000.0 if cid == 'bitcoin' else 2.0
     pts, t = [], int(t0 // 3600e3 * 3600e3)
@@ -45,7 +46,7 @@ with sync_playwright() as p:
     check('while it builds, the charts say so (with progress)', any(re.search(r'Building charts from real prices… \d+ / \d+ coins', n) for n in notes), sorted(notes)[:5])
     check('CoinGecko busy (429 / refused) → waits and tries again, BTC still arrives', len(refused) == 2 and 'bitcoin' in ids and any('busy' in n for n in notes), (refused, sorted(notes)[:6]))
     check('when done the progress line goes away', pg.evaluate("[...document.querySelectorAll('[data-hist-note]')].every(n => n.hidden)"))
-    check('every coin\'s price history is fetched once (plus BTC)', 'bitcoin' in ids and len(calls) == len(ids), calls[:30])
+    check('every coin\'s price history is fetched once (plus BTC)', 'bitcoin' in ids and len(calls) == len(ids), ([c for c in ids if sum(1 for x, _ in calls if x == c) > 1], len(calls), len(ids)))
     check('chart history starts on Oct 15 00:00 UTC (not when the app was opened)', h and h[0][0] == START, h[:2])
     gaps = [b[0] - a[0] for a, b in zip(h, h[1:]) if b[0] - a[0] > 3600e3 + 1]
     check('one point every hour, no gaps', len(h) > 200 and not gaps, gaps[:5])
@@ -73,6 +74,8 @@ with sync_playwright() as p:
     check('a back-dated Buy changes the chart from its own hour on (not before)', abs(new[tb_prev] - old[tb_prev]) < 1e-6 and abs((new[tb_next] - old[tb_next]) - 100 * sol) < 1e-6, (new[tb_prev] - old[tb_prev], new[tb_next] - old[tb_next], 100 * sol))
     n_calls = len(calls)
     pg.reload(); S.wait_ready(pg); pg.wait_for_timeout(2500)
+    try: pg.wait_for_function(f"Samsam.getState().holdingsSnaps.length && Samsam.getState().holdingsSnaps[0].t === {START}", timeout=10000)   # (a slow machine needs a moment to redraw from the cache)
+    except Exception: pass
     check('after a reload the prices come from the device cache (no new downloads)', len(calls) == n_calls and pg.evaluate("Samsam.getState().holdingsSnaps[0].t") == START, (n_calls, len(calls)))
     # charts
     pg.evaluate("document.querySelector('#holdingsTabs [data-range=\"all\"], .hold-tabs [data-r=\"all\"]') && 0"); pg.wait_for_timeout(200)

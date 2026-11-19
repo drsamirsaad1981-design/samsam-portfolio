@@ -5,7 +5,9 @@ from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(pathlib.Path(__file__).parent)); import e2e_setup as S
 res=[]
 def check(n,c,d=''): res.append(bool(c)); print(('PASS ' if c else 'FAIL ')+n+('' if c else f' -> {d}'), flush=True)
-EMO = r"(document.body.innerText.match(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}\u{2B06}]/gu)||[]).join('')"
+# the few emoji that are part of a label on purpose (✨ Gold / Silver Trend, 🔌 Exchanges, 🪙 Crypto · 📈 bStocks · 🥇🥈 Metals tabs) —
+# every other icon must be a line SVG
+EMO = r"(document.body.innerText.replace(/[\u2728\u{1F50C}\u{1FA99}\u{1F4C8}\u{1F947}\u{1F948}]/gu, '').match(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B50}\u{2B06}]/gu)||[]).join('')"
 UNFILLED = "document.querySelectorAll('[data-ic]:not([data-ic-done])').length + [...document.querySelectorAll('[data-ic]')].filter(e=>!e.querySelector('svg')).length"
 shots = pathlib.Path(__file__).parent / 'shots'; shots.mkdir(exist_ok=True)
 with sync_playwright() as p:
