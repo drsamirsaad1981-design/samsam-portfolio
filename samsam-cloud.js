@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611202001';
-import * as Hist from './samsam-history.js?v=202611202001';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611202001';
+import * as Core from './samsam-core.js?v=202611202050';
+import * as Hist from './samsam-history.js?v=202611202050';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611202050';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -847,6 +847,12 @@ const API = {
   setAlerts(a) {
     const { isDefault, ...c } = cleanAlerts(a);
     return commit((bt, ref) => bt.set(ref('meta', 'info'), { alerts: { ...c, setAt: new Date().toISOString() } }, { merge: true }), 'Alerts');
+  },
+  // 🕌 the value your crypto had on 1 Ramadan (kept once a hijri year, so the zakat is worked out on that day's value on every device)
+  getZakat() { const z = S.meta && S.meta.zakat; return z && Number.isFinite(+z.hy) && Number.isFinite(+z.value) && +z.nisabUsd > 0 ? { hy: +z.hy, value: +z.value, nisabUsd: +z.nisabUsd, date: String(z.date || '').slice(0, 10) } : null; },
+  setZakat(z) {
+    if (!z || !Number.isFinite(+z.hy) || !(+z.value >= 0) || !(+z.nisabUsd > 0)) return Promise.resolve();
+    return commit((bt, ref) => bt.set(ref('meta', 'info'), { zakat: { hy: Math.round(+z.hy), value: Math.round(+z.value * 100) / 100, nisabUsd: Math.round(+z.nisabUsd * 100) / 100, date: String(z.date || '').slice(0, 10), at: new Date().toISOString() } }, { merge: true }), 'Zakat');
   },
   saveWatchlist(list) {
     const w = cleanWatch(list);

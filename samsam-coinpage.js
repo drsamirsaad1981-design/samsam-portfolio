@@ -313,7 +313,7 @@ function renderCoinTx() {
   if (netEl && MT) {   // 🥇 gold / silver: where it is kept (no network) and its zakat
     const v = SamsamCoins.vaultOf(doc), z = SamsamCoins.zakat(sym, st);
     netEl.innerHTML = '<span>' + (v ? v.e + ' ' + SamsamCoins.esc(v.label) : '🏦 Set where it is kept') + '</span>' +
-      (z ? '<span class="htx-zk"> · 🕌 ' + (z.due ? 'Zakat due: ' + qtyFmt(z.zakatOz) + ' g ≈ ' + usd(z.zakatOz * price) : z.meets ? 'Zakat: hawl in ' + z.daysLeft + ' days' : 'Below nisab (' + z.nisab + ' g)') + '</span>' : '');
+      (z ? '<span class="htx-zk"> · 🕌 ' + (z.due ? 'Zakat due: ' + qtyFmt(z.zakatOz) + ' g ≈ ' + usd(z.zakatOz * price) : z.meets ? 'Zakat on 1 Ramadan, in ' + z.daysLeft + ' days' : 'Below nisab (' + z.nisab + ' g)') + '</span>' : '');
     netEl.classList.toggle('htx-net-empty', !v); netEl.title = 'Where it is kept — tap to change'; netEl.onclick = () => CPAdd.openVault(sym);
   } else if (netEl) {
     const nt = SamsamWallets.placeText(sym);

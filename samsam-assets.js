@@ -99,7 +99,7 @@
     var z = SamsamCoins.zakat(c.sym, d); if (!z) return '';
     var g = function (n) { return iso(n.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + T('g', 'جم')); };
     return '<div class="as-zk">🕌 ' + (z.due ? T('Zakat due', 'الزكاة مستحقة') + ': <b>' + g(z.zakatG) + '</b> ≈ <b>' + iso(usd(z.zakatOz * pr, 2)) + '</b> <small>(2.5%)</small>'
-      : z.meets ? T('Above the nisab — the hijri year completes in', 'فوق النصاب — يكتمل الحول بعد') + ' <b>' + iso(z.daysLeft) + '</b> ' + T('days', 'يوم')
+      : z.meets ? T('Above the nisab — zakat on 1 Ramadan, in', 'فوق النصاب — الزكاة في 1 رمضان، بعد') + ' <b>' + iso(z.daysLeft) + '</b> ' + T('days', 'يوم')
       : T('Below the nisab', 'أقل من النصاب') + ' (' + g(z.nisab) + ') — ' + T('no zakat', 'لا زكاة')) + '</div>';
   }
   function mineHtml(list) {
@@ -122,7 +122,7 @@
     }).join('');
     return '<div class="as-card as-mine"><div class="as-k">' + T('Your metals', 'معادنك') + '<a class="as-mopen" href="./index.html">' + T('Open in portfolio ›', 'افتح في المحفظة ›') + '</a></div><div class="as-mrows">' + rows + '</div>' +
       (pf.length > 1 ? '<div class="as-mtot">' + T('Total', 'الإجمالي') + ' <b>' + iso(usd(tv, 2)) + '</b> <span class="as-pc ' + (tp >= 0 ? 'up' : 'dn') + '">' + iso((tp >= 0 ? '+' : '−') + usd(Math.abs(tp), 2)) + '</span></div>' : '') +
-      '<div class="as-adds">' + add + '</div><p class="as-zn">🕌 ' + T('Zakat: 2.5% once you have held at least the nisab (85 g gold · 595 g silver) for a full hijri year. An estimate — check with a scholar.', 'الزكاة: 2.5% إذا بلغ ما تملكه النصاب (85 جم ذهب · 595 جم فضة) ومرّ عليه عام هجري كامل. تقدير تقريبي — راجع أهل العلم.') + '</p></div>';
+      '<div class="as-adds">' + add + '</div><p class="as-zn">🕌 ' + T('Zakat: once a year on 1 Ramadan — 2.5% of what you hold that day when it is at least the nisab (85 g gold · 595 g silver). An estimate — check with a scholar.', 'الزكاة: مرة كل عام في 1 رمضان — 2.5% مما تملكه في ذلك اليوم إذا بلغ النصاب (85 جم ذهب · 595 جم فضة). تقدير تقريبي — راجع أهل العلم.') + '</p></div>';
   }
   function metalsHtml() {
     var list = st.metals;

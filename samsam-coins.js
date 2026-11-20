@@ -359,22 +359,51 @@
     var v = doc && VAULTS.filter(function (x) { return x.k === doc.vault; })[0]; if (!v) return null;
     return { k: v.k, e: v.e, label: v.k === 'other' && doc.vaultLabel ? doc.vaultLabel : (ar ? v.ar : v.en) };
   }
-  // 🕌 Zakat: 2.5% once your holding has stayed at or above the nisab (85 g gold / 595 g silver) for a full hijri year.
-  // st = Samsam.getState(); the year counts from the last time the holding reached the nisab (it restarts if it dropped below).
-  var NISAB = { XAU: 85, XAG: 595 }, HAWL = 354.367 * 864e5;
+  // 🕌 Zakat — ONE date a year for everything: 1 Ramadan (the Umm al-Qura calendar, Riyadh's day). On that day, 2.5% of:
+  //   gold when you hold ≥ 85 g · silver when ≥ 595 g · all your crypto together (stablecoins too) when it is worth ≥ 85 g of gold.
+  // "Due" from 1 Ramadan for 30 days (the month); before it: how many days are left, and an estimate at today's value.
+  // An estimate, not a ruling — the app says so next to it.
+  var NISAB = { XAU: 85, XAG: 595 }, DAYMS = 864e5, ZK_DAYS = 30, hijriFmt = null, zkMemo = {};
+  function hijri(t) {
+    try {
+      hijriFmt = hijriFmt || new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'numeric', year: 'numeric', timeZone: 'Asia/Riyadh' });
+      var o = {}; hijriFmt.formatToParts(new Date(t)).forEach(function (p) { if (p.type === 'day' || p.type === 'month' || p.type === 'year') o[p.type] = parseInt(p.value, 10); });
+      return o.month ? o : null;
+    } catch (_) { return null; }
+  }
+  var riyadhDay = function (t) { return new Date(t + 3 * 36e5).toISOString().slice(0, 10); };
+  // → { last, next (ms), hy (the hijri year of the last 1 Ramadan), since (days since it), daysLeft, due, lastDate, nextDate } | null
+  function zakatWhen(now) {
+    now = now || Date.now(); var key = riyadhDay(now); if (zkMemo[key]) return zkMemo[key];
+    if (!hijri(now)) return null;
+    var since = null, left = null, a, i;
+    for (i = 0; i <= 390 && since == null; i++) { a = hijri(now - i * DAYMS); if (a && a.month === 9 && a.day === 1) since = i; }
+    for (i = 1; i <= 390 && left == null; i++) { a = hijri(now + i * DAYMS); if (a && a.month === 9 && a.day === 1) left = i; }
+    if (since == null || left == null) return null;
+    var last = now - since * DAYMS, next = now + left * DAYMS, hl = hijri(last), hn = hijri(next);
+    return (zkMemo[key] = { last: last, next: next, hy: hl.year, nextHy: hn.year, since: since, daysLeft: left, due: since < ZK_DAYS, lastDate: riyadhDay(last), nextDate: riyadhDay(next) });
+  }
+  // gold / silver: st = Samsam.getState(). While due, the amount is what you held on 1 Ramadan (the trades since are left out).
   function zakat(sym, st, now) {
     sym = String(sym || '').toUpperCase(); var C = st && st.core || (window.Samsam && Samsam.core); if (!NISAB[sym] || !st || !C) return null;
+    now = now || Date.now(); var w = zakatWhen(now); if (!w) return null;
     var doc = (st.coins || []).filter(function (c) { return c.sym === sym; })[0];
-    var pos = { qty: doc && doc.opening ? +doc.opening.qty || 0 : 0, avg: doc && doc.opening ? +doc.opening.avg || 0 : 0 }, since = null, nis = NISAB[sym] / GPO;
-    if (pos.qty >= nis - 1e-9) since = Date.parse(doc && doc.addedAt) || null;
-    (st.transactions || []).filter(function (t) { return t.sym === sym; }).sort(C.compareTx).forEach(function (t) {
-      var r = C.applyTx(pos, t); pos = { qty: r.qty, avg: r.avg };
-      if (pos.qty >= nis - 1e-9) { if (since == null) since = Date.parse(t.date); } else since = null;
-    });
-    now = now || Date.now();
-    var g = pos.qty * GPO, meets = g >= NISAB[sym] - 1e-6, due = meets && since != null && now - since >= HAWL;
-    return { grams: g, nisab: NISAB[sym], meets: meets, since: since, due: due,
-      daysLeft: meets && since != null && !due ? Math.ceil((since + HAWL - now) / 864e5) : null, zakatG: g * 0.025, zakatOz: pos.qty * 0.025 };
+    var pos = { qty: doc && doc.opening ? +doc.opening.qty || 0 : 0, avg: doc && doc.opening ? +doc.opening.avg || 0 : 0 }, cut = w.due ? Date.parse(w.lastDate + 'T21:00:00Z') : Infinity;   // (the end of that day in Riyadh)
+    (st.transactions || []).filter(function (t) { return t.sym === sym && (Date.parse(t.date) || 0) <= cut; }).sort(C.compareTx).forEach(function (t) { var r = C.applyTx(pos, t); pos = { qty: r.qty, avg: r.avg }; });
+    var g = pos.qty * GPO, meets = g >= NISAB[sym] - 1e-6;
+    return { grams: g, nisab: NISAB[sym], meets: meets, due: meets && w.due, daysLeft: meets && !w.due ? w.daysLeft : null, date: w.due ? w.lastDate : w.nextDate, hy: w.due ? w.hy : w.nextHy,
+      zakatG: g * 0.025, zakatOz: pos.qty * 0.025 };
+  }
+  // all the crypto together: goldOz = the price of an ounce of gold now; snap = the value kept on 1 Ramadan ({ hy, value, nisabUsd, date })
+  // — while due, that kept value is the one that counts (not today's price)
+  function zakatCrypto(st, goldOz, now, snap) {
+    now = now || Date.now(); var w = zakatWhen(now); if (!w || !st) return null;
+    var value = (st.portfolio || []).reduce(function (a, c) { return a + (isMetal(c.sym) ? 0 : (+c.qty || 0) * (+c.currentPrice || 0)); }, 0);
+    var nisabUsd = goldOz > 0 ? NISAB.XAU / GPO * goldOz : null, fixed = !!(w.due && snap && snap.hy === w.hy && snap.value >= 0 && snap.nisabUsd > 0);
+    if (fixed) { value = +snap.value; nisabUsd = +snap.nisabUsd; }
+    if (!(nisabUsd > 0)) return null;
+    var meets = value >= nisabUsd;
+    return { value: value, nisabUsd: nisabUsd, meets: meets, due: meets && w.due, inWindow: w.due, fixed: fixed, daysLeft: w.due ? null : w.daysLeft, date: w.due ? w.lastDate : w.nextDate, hy: w.due ? w.hy : w.nextHy, zakatUsd: value * 0.025 };
   }
   // ✨ Gold / Silver Trend: the metal's price over time, per troy ounce — from the shared hourly files on GitHub (PAX Gold,
   // Kinesis Silver); if those don't cover it: gold from Binance PAXGUSDT, then CoinGecko; each kept 1 hour on this device
@@ -637,5 +666,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { cgChart: cgChart, perfScope: perfScope, setPerfScope: setPerfScope, trendSeries: trendSeries, metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { zakatWhen: zakatWhen, zakatCrypto: zakatCrypto, cgChart: cgChart, perfScope: perfScope, setPerfScope: setPerfScope, trendSeries: trendSeries, metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

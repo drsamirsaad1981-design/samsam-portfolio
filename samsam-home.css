@@ -1335,3 +1335,7 @@
 
   /* ⏳ a signal the live price disagrees with — confirmed at the daily close */
   .action-badge .sig-p { font-style: normal; font-size: .85em; margin-inline-start: 3px; opacity: .85; }
+
+/* 🕌 the crypto's zakat: one quiet line under the cards (every width) */
+.zk-line { margin-top: 10px; width: 100%; box-sizing: border-box; text-align: center; font-size: .82rem; line-height: 1.5; color: var(--text-secondary, #a5b4cf); }   /* 🕌 the crypto's zakat: one quiet line under the cards */
+.zk-line b { color: var(--text-primary, #e8ecf8); } .zk-line small { opacity: .8; font-size: .92em; } .zk-line[hidden] { display: none; }
