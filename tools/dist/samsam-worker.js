@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 9cd410e6ca697ce5
+// sources-hash: bb8946049cfb0952
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -211,7 +211,7 @@ function bidiLine(line, all = false) {
     glued = glued.replace(/([+\-−])\$/g, "$1\u2060$");
     return t.slice(0, i) + LRM + glued + LRM + RLM + t.slice(i + core.length) + tail;
   }).replace(/ · /g, " \xB7" + RLM + " ").replace(/([🟢🔴⚪🟡]) /gu, "$1 " + RLM)).join("");
-  return RLM + out;
+  return (RLM + out).replace(/^(\u200F(?:<(?!code|pre)[^>]+>)+)(?=\u200E)/, "$1" + RLM);
 }
 function bidi(text, mode = "auto") {
   if (typeof text !== "string" || !AR.test(text)) return text;
@@ -5854,7 +5854,7 @@ function viewExit(t, sum, now) {
   const mc = sum.macro.filter((x) => x.met).length, name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc };
   const L = [`\u{1F6AA} <b>${t.exitT}</b> \xB7 ${hm(now)}`, "", `\u{1F9ED} <b>${t.conds}</b> \xB7 ${t.met3(mc)}`];
   for (const x of sum.macro) {
-    const v = (n) => n == null ? "\u2014" : n.toFixed(x.dp) + x.unit;
+    const v = (n2) => n2 == null ? "\u2014" : n2.toFixed(x.dp) + x.unit;
     L.push(`${x.met ? "\u2705" : "\u2B1C"} ${name[x.k]}: ${v(x.now)} \u2192 ${x.op} ${v(x.lvl)}`);
   }
   if (mc === 3) L.push(`\u{1F514} <b>${t.allExit}</b>`);
@@ -5866,12 +5866,21 @@ function viewExit(t, sum, now) {
     if (!bySym.has(x.sym)) bySym.set(x.sym, []);
     bySym.get(x.sym).push(x);
   });
-  for (const [sym, list3] of [...bySym].slice(0, 8)) {
-    L.push("", `<b>${esc(sym)}</b> \xB7 ${price2(list3[0].price)}`);
-    list3.sort((a, b) => a.n - b.n).forEach((x) => L.push(`${x.to <= 0 ? "\u2705" : "\u2B1C"} TP${x.n} ${price2(x.level)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`));
+  const block = ([sym, list3]) => [
+    "",
+    isAr(t) ? `<b>${esc(sym)}</b>: ${price2(list3[0].price)}` : `<b>${esc(sym)}</b> \xB7 ${price2(list3[0].price)}`,
+    ...list3.sort((a, b) => a.n - b.n).map((x) => `${x.to <= 0 ? "\u2705" : "\u2B1C"} TP${x.n} ${price2(x.level)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`)
+  ];
+  const all = [...bySym];
+  let n = Math.min(8, all.length), text;
+  for (; ; ) {
+    const M = [...L, ...all.slice(0, n).flatMap(block)];
+    if (all.length > n) M.push("", `<i>${t.more(all.length - n)}</i>`);
+    text = M.join("\n");
+    if (n <= 1 || bidi(text).length <= 4e3) break;
+    n--;
   }
-  if (bySym.size > 8) L.push("", `<i>${t.more(bySym.size - 8)}</i>`);
-  return { text: L.join("\n"), buttons: [[cb3(t.refresh, "ex"), url2(t.openExit, APP + "accumulation.html#exit")], [cb3(t.pf, "pf"), cb3(t.back, "menu")]] };
+  return { text, buttons: [[cb3(t.refresh, "ex"), url2(t.openExit, APP + "accumulation.html#exit")], [cb3(t.pf, "pf"), cb3(t.back, "menu")]] };
 }
 function viewMovers(t, sum) {
   const list3 = sum.coins.filter((c) => c.value >= 1 && !isStable(c.sym));
@@ -5890,7 +5899,7 @@ function viewSignals(t, sum) {
     if (!by[k].length) continue;
     const ar = isAr(t);
     L.push("", `<b>${t[k]}</b> (${by[k].length})${ar ? " \xB7 <i>\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0645\u062A\u0648\u0633\u0637\u0643</i>" : ""}`);
-    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : t.vsAvg} ${price2(c.avg)}${c.pending ? " \u23F3" : ""}`));
+    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(ar ? `<b>${esc(c.sym)}</b> ${pct(c.chg, 1)} \xB7 \u0645\u062A\u0648\u0633\u0637\u0643 ${price2(c.avg)}${c.pending ? " \u23F3" : ""}` : `<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${t.vsAvg} ${price2(c.avg)}${c.pending ? " \u23F3" : ""}`));
     if (by[k].length > 12) L.push("\u2026");
   }
   if (sum.coins.some((c) => c.pending)) L.push("", isAr(t) ? "<i>\u23F3 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u064A\u0648\u0645\u064A (03:00 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636)</i>" : "<i>\u23F3 waiting for the daily close to confirm (03:00 Riyadh)</i>");

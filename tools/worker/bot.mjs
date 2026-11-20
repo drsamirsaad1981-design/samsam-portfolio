@@ -13,7 +13,7 @@
 // Worker secrets (Settings → Variables and Secrets): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, FIREBASE_SERVICE_ACCOUNT,
 // TG_SECRET (any long random text of letters, digits, _ and -). Nothing secret is in this file.
 
-import { bidiBody, NOT_ADVICE } from './bidi.mjs';
+import { bidi, bidiBody, NOT_ADVICE } from './bidi.mjs';
 import { markSeen } from './idle.mjs';
 import { note } from './usage.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR } from './who.mjs';
@@ -204,12 +204,19 @@ export function viewExit(t, sum, now) {
   if (!tps.length) L.push(t.noExit);
   const bySym = new Map(); tps.forEach(x => { if (!bySym.has(x.sym)) bySym.set(x.sym, []); bySym.get(x.sym).push(x); });
   // one short line per level (fits a phone): ⬜ TP1 $0.5529 · +93% · 25%  — the 8 coins closest to a take-profit
-  for (const [sym, list] of [...bySym].slice(0, 8)) {
-    L.push('', `<b>${esc(sym)}</b> · ${price(list[0].price)}`);
-    list.sort((a, b) => a.n - b.n).forEach(x => L.push(`${x.to <= 0 ? '✅' : '⬜'} TP${x.n} ${price(x.level)} · ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` · ${x.pct}%` : ''}`));
+  // as many coins as fit: the Arabic marks (bidi.mjs) make a message longer, and past Telegram's 4,096 it would go out unmarked (scrambled)
+  const block = ([sym, list]) => ['', isAr(t) ? `<b>${esc(sym)}</b>: ${price(list[0].price)}` : `<b>${esc(sym)}</b> · ${price(list[0].price)}`,
+    ...list.sort((a, b) => a.n - b.n).map(x => `${x.to <= 0 ? '✅' : '⬜'} TP${x.n} ${price(x.level)} · ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` · ${x.pct}%` : ''}`)];
+  const all = [...bySym];
+  let n = Math.min(8, all.length), text;
+  for (;;) {
+    const M = [...L, ...all.slice(0, n).flatMap(block)];
+    if (all.length > n) M.push('', `<i>${t.more(all.length - n)}</i>`);
+    text = M.join('\n');
+    if (n <= 1 || bidi(text).length <= 4000) break;
+    n--;
   }
-  if (bySym.size > 8) L.push('', `<i>${t.more(bySym.size - 8)}</i>`);
-  return { text: L.join('\n'), buttons: [[cb(t.refresh, 'ex'), url(t.openExit, APP + 'accumulation.html#exit')], [cb(t.pf, 'pf'), cb(t.back, 'menu')]] };
+  return { text, buttons: [[cb(t.refresh, 'ex'), url(t.openExit, APP + 'accumulation.html#exit')], [cb(t.pf, 'pf'), cb(t.back, 'menu')]] };
 }
 
 export function viewMovers(t, sum) {
@@ -230,7 +237,9 @@ export function viewSignals(t, sum) {
     if (!by[k].length) continue;
     const ar = isAr(t);
     L.push('', `<b>${t[k]}</b> (${by[k].length})${ar ? ' · <i>مقارنة بمتوسطك</i>' : ''}`);
-    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach(c => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? 'المتوسط' : t.vsAvg} ${price(c.avg)}${c.pending ? ' ⏳' : ''}`));
+    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach(c => L.push(ar   // Arabic: no fixed-width block (it mixes with the Arabic word): "JUP −27.2% · متوسطك $0.309"
+      ? `<b>${esc(c.sym)}</b> ${pct(c.chg, 1)} · متوسطك ${price(c.avg)}${c.pending ? ' ⏳' : ''}`
+      : `<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${t.vsAvg} ${price(c.avg)}${c.pending ? ' ⏳' : ''}`));
     if (by[k].length > 12) L.push('…');
   }
   // ⏳ decided on the daily close; a coin whose live price says something else is marked, not moved

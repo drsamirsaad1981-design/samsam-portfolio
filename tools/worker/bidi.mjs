@@ -27,7 +27,9 @@ export function bidiLine(line, all = false) {
       glued = glued.replace(/([+\-−])\$/g, '$1\u2060$');   // "−$29M": no line break between the sign and the $ (a word joiner)
       return t.slice(0, i) + LRM + glued + LRM + RLM + t.slice(i + core.length) + tail;   // RLM after: a bracket / space that follows belongs to the Arabic ("BTC (39)" never turns into "(39) BTC")
     }).replace(/ · /g, ' ·' + RLM + ' ').replace(/([🟢🔴⚪🟡]) /gu, '$1 ' + RLM)).join('');   // after a 🟢 / 🔴 dot too: "$63,129 🔴 −1.09%" stays two parts, not one left-to-right run   // a list "Binance · Gate · now" runs right-to-left, item by item
-  return RLM + out;
+  // a line that opens with a tag and then a Latin piece ("<b>POL</b> · $0.078", "<i>+37 …</i>"): one more RLM just inside the tag —
+  // Telegram showed those left-to-right (seen 20 Nov), as if the mark before the tag did not count
+  return (RLM + out).replace(/^(\u200F(?:<(?!code|pre)[^>]+>)+)(?=\u200E)/, '$1' + RLM)   // (not a <code> row: the tables stay as they are);
 }
 // an Arabic message (Arabic letters at least a third of the Latin ones, tags left out): EVERY line runs right-to-left, so the rows
 // that are only a ticker and numbers ("✅ QNT 2.237 · $341") line up with the Arabic ones. Otherwise (English), and always for the

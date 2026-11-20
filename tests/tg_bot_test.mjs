@@ -415,7 +415,7 @@ sent.length = 0; await tap('mks');
     /📊 عدد الأسهم 8\n🟢 صاعد 5 · 🔴 هابط 3 · المتوسط \+0\.53%/.test(tx) && !/ — ·/.test(tx) && /الأفضل في bStocks/.test(tx), tx); }
 sent.length = 0; await tap('sg');
 { const x = sent.filter(y => y.m === 'editMessageText').pop(), tx = x ? x.b.text : '';
-  check('Arabic signals: "مقارنة بمتوسط شرائك" once in each group header, rows short ("المتوسط $…") so they do not wrap', /\(\d+\) · <i>مقارنة بمتوسطك<\/i>/.test(tx) && /<\/code>  المتوسط \$/.test(tx) && !/<\/code>  مقارنة بمتوسط/.test(tx), tx.slice(0, 300)); }
+  check('Arabic signals: "مقارنة بمتوسط شرائك" once in each group header, rows short ("SOL −6.3% · متوسطك $…", no fixed-width block mixed with Arabic)', /\(\d+\) · <i>مقارنة بمتوسطك<\/i>/.test(tx) && /<b>SOL<\/b> −6\.3% · متوسطك \$/.test(tx) && !/<code>/.test(tx), tx.slice(0, 300)); }
 sent.length = 0; await tap('pl');
 { const x = sent.filter(y => y.m === 'editMessageText').pop(), tx = x ? x.b.text : '';
   check('Arabic plan: shorter bar (7) and "باقي" with a short amount, DCA "… شهرياً" (no "/mo")', /▱{1,7} \d+%  باقي [\d.]+/.test(tx) && !/▱{8}|▰{8}/.test(tx) && !/\/mo/.test(tx), tx.slice(0, 400)); }
