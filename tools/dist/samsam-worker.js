@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 05d1c82e71a302f2
+// sources-hash: c3eef4d61469b970
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5712,7 +5712,7 @@ var T = {
     today: "\u0627\u0644\u064A\u0648\u0645",
     profit: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0628\u062D",
     vsBtcS: "\u0645\u0642\u0627\u0628\u0644 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
-    beat: (a, n) => `${a} \u0645\u0646 ${n} \u062A\u0641\u0648\u0642\u062A`,
+    beat: (a, n) => `${a} \u0645\u0646 ${n} \u0639\u0645\u0644\u0629 \u062A\u0641\u0648\u0642\u062A \u0639\u0644\u064A\u0647`,
     bestT: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0627\u0644\u064A\u0648\u0645",
     worstT: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0627\u0644\u064A\u0648\u0645",
     dom: "\u0627\u0644\u0647\u064A\u0645\u0646\u0629",
@@ -5835,9 +5835,15 @@ function marketShort(t, m) {
 var nearestTp = (sum) => (sum.tps || []).filter((x) => x.price < x.level).map((x) => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to)[0];
 function viewPortfolio(t, cfg, sum, m, now) {
   const L = [`\u{1F4BC} <b>${t.pfNow}</b> \xB7 ${hm(now)}`, "", isAr(t) ? `\u{1F4B5} \u0627\u0644\u0642\u064A\u0645\u0629: <b>${usd2(sum.value)}</b>` : `<b>${usd2(sum.value)}</b>`];
-  if (sum.ch24 != null) L.push(`${dot(sum.ch24)} ${pct(sum.ch24)} \xB7 ${signed(sum.d24)} ${t.today}`);
-  L.push(`${t.profit} <b>${signed(sum.total)}</b> \xB7 ${pct(sum.pctTotal, 1)}`);
-  if (sum.vsBtc != null) L.push(`${t.vsBtcS} ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} \xB7 ${t.beat(sum.beat, sum.alts)}`);
+  if (isAr(t)) {
+    if (sum.ch24 != null) L.push(`\u{1F4C5} \u0627\u0644\u064A\u0648\u0645: <b>${signed(sum.d24)}</b> (${pct(sum.ch24)}) ${dot(sum.ch24)}`);
+    L.push(`\u{1F4B0} ${t.profit}: <b>${signed(sum.total)}</b> (${pct(sum.pctTotal, 1)})`);
+    if (sum.vsBtc != null) L.push(`\u{1F19A} ${t.vsBtcS}: <b>${pct(sum.vsBtc)}</b> ${dot(sum.vsBtc)} \xB7 ${t.beat(sum.beat, sum.alts)}`);
+  } else {
+    if (sum.ch24 != null) L.push(`${dot(sum.ch24)} ${pct(sum.ch24)} \xB7 ${signed(sum.d24)} ${t.today}`);
+    L.push(`${t.profit} <b>${signed(sum.total)}</b> \xB7 ${pct(sum.pctTotal, 1)}`);
+    if (sum.vsBtc != null) L.push(`${t.vsBtcS} ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} \xB7 ${t.beat(sum.beat, sum.alts)}`);
+  }
   const up = moverRows(sum, "ch24", 1), dn = moverRows(sum, "ch24", -1);
   if (up.length) L.push("", `\u{1F4C8} <b>${t.bestT}</b>`, ...up.map((c) => row(c.sym, c.ch24, usd(c.value))));
   if (dn.length) L.push("", `\u{1F4C9} <b>${t.worstT}</b>`, ...dn.map((c) => row(c.sym, c.ch24, usd(c.value))));

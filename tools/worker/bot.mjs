@@ -95,7 +95,7 @@ const T = {
     ownerOnly: 'هذا لمالك البوت فقط.', noLink: 'محفظتك غير مربوطة بعد. من التطبيق: الإعدادات ← تليجرام ← 🔗 ربط محفظتك ببوت تليجرام (ليس لديك التطبيق؟ أرسل /app مع بريدك). حتى ذلك الحين: السوق، وأي عملة، والتنبيهات، والتداول التجريبي، والأسئلة — كلها تعمل.',
     alertsB: '🔔 التنبيهات', alertGone: '🗑 حُذف التنبيه', dailyB: '🗓 اليومي', paperB: '🧪 تجريبي', report: '📊 التقرير', reportT: '📊 <b>تقريرك الكامل</b> — يُفتح داخل تليجرام.', working: '⏳ لحظات…', pinOff: 'أُوقفت الرسالة المثبتة — /pin يعيدها.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
-    today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل البيتكوين', beat: (a, n) => `${a} من ${n} تفوقت`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
+    today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل البيتكوين', beat: (a, n) => `${a} من ${n} عملة تفوقت عليه`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
     dom: 'الهيمنة', fng: 'الخوف والطمع', altS: 'موسم العملات البديلة', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a} من ${n} على الهدف`,
     dcaS: (n, mo) => `${n === 1 ? 'عملية شراء دوري واحدة' : n === 2 ? 'عمليتا شراء دوري' : n + ' عمليات شراء دوري'} (DCA) · ${mo} شهرياً`, exitS: (n) => `الخروج ${n} من 3`, nearTp: 'أقرب هدف ربح',
     exitT: 'خطة الخروج', conds: 'مؤشرات الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC',
@@ -175,9 +175,15 @@ const nearestTp = sum => (sum.tps || []).filter(x => x.price < x.level).map(x =>
 export function viewPortfolio(t, cfg, sum, m, now) {
   // Arabic: the value line starts with a label (a line that opens with "$" shows left-to-right in Telegram)
   const L = [`💼 <b>${t.pfNow}</b> · ${hm(now)}`, '', isAr(t) ? `💵 القيمة: <b>${usd2(sum.value)}</b>` : `<b>${usd2(sum.value)}</b>`];
-  if (sum.ch24 != null) L.push(`${dot(sum.ch24)} ${pct(sum.ch24)} · ${signed(sum.d24)} ${t.today}`);
-  L.push(`${t.profit} <b>${signed(sum.total)}</b> · ${pct(sum.pctTotal, 1)}`);
-  if (sum.vsBtc != null) L.push(`${t.vsBtcS} ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} · ${t.beat(sum.beat, sum.alts)}`);
+  if (isAr(t)) {   // Arabic: every line "label: amount (percent)", like the value line — read right-to-left in one go
+    if (sum.ch24 != null) L.push(`📅 اليوم: <b>${signed(sum.d24)}</b> (${pct(sum.ch24)}) ${dot(sum.ch24)}`);
+    L.push(`💰 ${t.profit}: <b>${signed(sum.total)}</b> (${pct(sum.pctTotal, 1)})`);
+    if (sum.vsBtc != null) L.push(`🆚 ${t.vsBtcS}: <b>${pct(sum.vsBtc)}</b> ${dot(sum.vsBtc)} · ${t.beat(sum.beat, sum.alts)}`);
+  } else {
+    if (sum.ch24 != null) L.push(`${dot(sum.ch24)} ${pct(sum.ch24)} · ${signed(sum.d24)} ${t.today}`);
+    L.push(`${t.profit} <b>${signed(sum.total)}</b> · ${pct(sum.pctTotal, 1)}`);
+    if (sum.vsBtc != null) L.push(`${t.vsBtcS} ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} · ${t.beat(sum.beat, sum.alts)}`);
+  }
   const up = moverRows(sum, 'ch24', 1), dn = moverRows(sum, 'ch24', -1);
   if (up.length) L.push('', `📈 <b>${t.bestT}</b>`, ...up.map(c => row(c.sym, c.ch24, usd(c.value))));
   if (dn.length) L.push('', `📉 <b>${t.worstT}</b>`, ...dn.map(c => row(c.sym, c.ch24, usd(c.value))));
