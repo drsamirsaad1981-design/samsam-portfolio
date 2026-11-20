@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611201713';
-import * as Hist from './samsam-history.js?v=202611201713';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611201713';
+import * as Core from './samsam-core.js?v=202611201721';
+import * as Hist from './samsam-history.js?v=202611201721';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611201721';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -262,16 +262,7 @@ export const DEFAULT_ALERTS = Object.freeze({ lang: 'en', brief: true, briefTime
   tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true, buy: true });
 // 🌐 the Telegram alerts (tools/alerts.mjs) speak the app's language — unless you picked one in Alerts settings yourself.
 // Checked when your settings arrive from the server; written once (only when they differ), never in a loop.
-let alertsLangDone = false;
-function alertsFollowLang() {
-  if (alertsLangDone || !S.user || !S.loaded.meta || !window.CPLang || S.fromCache) return;
-  alertsLangDone = true;
-  const a = (S.meta && S.meta.alerts) || null, want = CPLang.ar ? 'ar' : 'en';
-  if (a && a.langPicked) return;                                      // you chose it in Alerts settings: that stays
-  if ((a && a.lang === 'ar' ? 'ar' : 'en') === want) return;           // already the same
-  if (!a && want === 'en') return;                                     // nothing saved yet and English: the default already
-  try { API.setAlerts({ ...cleanAlerts(a), lang: want }).catch(() => { alertsLangDone = false; }); } catch (_) { alertsLangDone = false; }
-}
+// (the Telegram alerts' language follows the BOT's language — /lang there; the Worker writes it: tools/worker/data.mjs → setAlertsLang)
 function cleanAlerts(a) {
   const d = DEFAULT_ALERTS, out = { ...d };
   if (!a || typeof a !== 'object') return { ...out, isDefault: true };
@@ -673,7 +664,7 @@ function listen() {
     track(snap); Use.snap(stC, snap, false); S.catCfg = snap.exists() ? snap.data() : null; S.loaded.cats = true; emit();
   }, e => { S.loaded.cats = true; emit(); onErr('categories')(e); }));   // never hold the app back over the settings
   S.unsub.push(fs.onSnapshot(fs.doc(db, ...userPath('meta', 'info')), opt, snap => {
-    track(snap); Use.snap(stM, snap, false); S.meta = snap.exists() ? snap.data() : null; S.loaded.meta = true; emit(); alertsFollowLang();
+    track(snap); Use.snap(stM, snap, false); S.meta = snap.exists() ? snap.data() : null; S.loaded.meta = true; emit();
   }, onErr('settings')));
 }
 

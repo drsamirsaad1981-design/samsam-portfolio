@@ -264,6 +264,8 @@ async function firestore(sa) {
       return !Array.isArray(rows) || rows.some(x => x.document);   // unsure → "changed" (read it all)
     },
     async set(p, data) { return call(`${base}/${p}`, { method: 'PATCH', body: JSON.stringify({ fields: enc(data) }) }); },
+    // only the named fields change ("alerts.lang"): the rest of the document stays as it is
+    async patch(p, data, paths) { return call(`${base}/${p}?` + paths.map(x => 'updateMask.fieldPaths=' + encodeURIComponent(x)).join('&'), { method: 'PATCH', body: JSON.stringify({ fields: enc(data) }) }); },
     // new documents, all or nothing (each must not exist yet — never overwrites)
     async commit(docs) {
       const name = p => `projects/${sa.project_id}/databases/(default)/documents/${p}`;
@@ -374,6 +376,13 @@ export async function chatUid(env) {
   if (!isOwner(env)) { const me = await member(env); return (me && me.uid) || null; }
   if (env.FIREBASE_UID) return env.FIREBASE_UID;   // (set: no need to ask Firestore)
   try { return await ownerUid(env, await firestore(sa)); } catch (_) { return null; }
+}
+// 🌐 the Telegram alerts sent by GitHub (tools/alerts.mjs reads meta/info → alerts.lang) speak the bot's language: written
+// here when the bot's language is picked (/lang) — only those two fields, the other alert settings stay as they are
+export async function setAlertsLang(env, lang) {
+  const sa = serviceAccount(env), uid = await chatUid(env).catch(() => null); if (!sa || !uid || !/^(ar|en)$/.test(lang)) return false;
+  try { const db = await firestore(sa); await db.patch(`users/${uid}/meta/info`, { alerts: { lang, langPicked: true } }, ['alerts.lang', 'alerts.langPicked']); return true; }
+  catch (e) { console.log(JSON.stringify({ alertslang: 'failed', msg: String(e && e.message).slice(0, 100) })); return false; }
 }
 // a Firebase ID token for that account, made by the Worker itself (a custom token signed with the service account, swapped
 // at Google for an ID token): the Binance relay only answers signed-in users, and in the bot there is no app session.

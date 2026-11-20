@@ -78,6 +78,7 @@ globalThis.fetch = async (input, init = {}) => {
     const U = USER();
     if (u.endsWith('/documents/config/access')) { accessWrites.push(JSON.parse(body)); return J({}); }
     if (new RegExp('/users/' + TGLINK_UID + '/meta/tglink$').test(u) && init.method === 'PATCH') { tglinkWrites.push(JSON.parse(body)); TGLINK = null; return J({}); }
+    if (/\/meta\/info\?updateMask/.test(u) && init.method === 'PATCH') { (globalThis.__alertsLang = globalThis.__alertsLang || []).push({ u, body: JSON.parse(body) }); return J({}); }   // 🌐 alerts.lang ← the bot's language
     if (u.endsWith('/documents/config/owner')) { if (init.method === 'PATCH') { pinWrites.push(JSON.parse(body)); OWNER_PIN = JSON.parse(body).fields.uid.stringValue; return J({}); } return OWNER_PIN ? J(doc({ uid: OWNER_PIN })) : J({}, 404); }
     if (u.endsWith(':runAggregationQuery')) { AGG_CALLS++; const c = JSON.parse(body).structuredAggregationQuery.structuredQuery.from[0].collectionId, uid = (/\/users\/(\w+):/.exec(u) || [])[1];
       const n = uid === 'UID1' ? (c === 'txs' ? committed.length : c === 'coins' ? U.coins.length : U.accum.length) : (c === 'coins' ? 1 : 0); return J([{ result: { aggregateFields: { n: { integerValue: String(n) } } } }]); }
@@ -397,6 +398,8 @@ check('/lang → the two choices', JSON.stringify(btns(last()).map(b => b.callba
 
 // ── Arabic ──
 await tap('lang:ar');   // the Arabic checks below
+{ const w = (globalThis.__alertsLang || []).pop();
+  check('🌐 /lang → عربي: GitHub\'s alerts follow — the Worker writes alerts.lang = ar (+ langPicked) to your settings, ONLY those two fields (masked)', w && /users\/UID1\/meta\/info\?updateMask\.fieldPaths=alerts\.lang&updateMask\.fieldPaths=alerts\.langPicked$/.test(w.u) && w.body.fields.alerts.mapValue.fields.lang.stringValue === 'ar' && w.body.fields.alerts.mapValue.fields.langPicked.booleanValue === true && Object.keys(w.body.fields).join() === 'alerts', w); }
 sent.length = 0;
 if (process.env.DUMP_AR) {   // a look at the Arabic views as Telegram gets them (raw, marks included) → /tmp/ar_dump.txt
   const out = [];

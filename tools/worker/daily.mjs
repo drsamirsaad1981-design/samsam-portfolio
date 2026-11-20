@@ -19,7 +19,7 @@ import { bidiBody } from './bidi.mjs';
 import { K, chatOf, isOwner, langOf, member } from './who.mjs';
 import { premiumNow } from './stars.mjs';
 import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
-import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures } from './data.mjs';
+import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures, setAlertsLang } from './data.mjs';
 import { compose } from './ai.mjs';
 import { listAlerts, describe, KINDS, logEvent, todayLog } from './watch.mjs';
 
@@ -330,6 +330,10 @@ export async function runDaily(env, now = Date.now()) {
   const done = async k => { sent[k] = lp.date; await jput(env, K(env, 'daily:sent'), sent); };
   if (due(c.morning, c.morningAt, 'morning')) { await done('morning'); await morning(env, now); return { job: 'morning' }; }   // marked first: never twice
   if (due(c.evening, c.eveningAt, 'evening')) { await done('evening'); await evening(env, now); return { job: 'evening' }; }
+  if (min % 60 === 40) {   // 🌐 once per language: GitHub's alerts speak the bot's language (people who picked it before 20 Nov)
+    const L = await lang(env), had = await kvGet(env, K(env, 'alsync'));
+    if (had !== L && await setAlertsLang(env, L).catch(() => false)) await kvPut(env, K(env, 'alsync'), L);
+  }
   if (c.pin && min % 15 === 0) { await pinUpdate(env, now); return { job: 'pin' }; }
   if (c.radar && min % 30 === 10) return { job: 'radar', ...(await radar(env, now)) };
   if (c.sectors && min % 60 === 25) return { job: 'sectors', ...(await sectorRadar(env, now)) };

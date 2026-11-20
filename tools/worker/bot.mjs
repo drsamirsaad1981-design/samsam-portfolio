@@ -18,7 +18,7 @@ import { markSeen } from './idle.mjs';
 import { note } from './usage.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
-import { chatUid, idTokenFor } from './data.mjs';
+import { chatUid, idTokenFor, setAlertsLang } from './data.mjs';
 import { balancesFor } from './cex.mjs';
 import { usMarket, US_STATE, METAL, UNIT, gramSar } from './usmarket.mjs';
 import { forgetPortfolio, findLinkCode, syncAccess, loadMarket, loadUser, findCoin, exchangePrice, setStale, serviceAccount, resetBudget, coinsOf, withIds, derivatives, startTrace, stopTrace, clearCache } from './data.mjs';
@@ -148,7 +148,8 @@ export async function getLang(env) {
 const memRange = new Map();
 async function getRange(env) { let v = memRange.get(chatOf(env)); try { if (env.RATE) v = +(await env.RATE.get(K(env, 'mk'))) || v; } catch (_) {} return RANGES.includes(+v) ? +v : 100; }
 async function setRange(env, v) { memRange.set(chatOf(env), v); try { if (env.RATE) await env.RATE.put(K(env, 'mk'), String(v)); } catch (_) {} }
-async function setLang(env, v) { memLang.set(chatOf(env), v); try { if (env.RATE) await env.RATE.put(K(env, 'lang'), v); } catch (_) {} if (!isOwner(env)) await setMember(env, chatOf(env), { lang: v }).catch(() => {}); }
+async function setLang(env, v) { memLang.set(chatOf(env), v); await setAlertsLang(env, v).then(ok => ok && env.RATE ? env.RATE.put(K(env, 'alsync'), v) : null).catch(() => {});   // GitHub's alerts follow
+  try { if (env.RATE) await env.RATE.put(K(env, 'lang'), v); } catch (_) {} if (!isOwner(env)) await setMember(env, chatOf(env), { lang: v }).catch(() => {}); }
 
 // ── views: each returns { text, buttons } ──
 export function viewMenu(t, owner = true, badge = '') { return { text: `${owner ? t.hi : badge ? t.hiAll.replace('👋', badge) : t.hiAll}\n${t.menuTitle}`, buttons: menuRows(t) }; }   // "Hi Samir" only for Samir

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 24bfc6a5bda7301d
+// sources-hash: 5e27f9e02346e81e
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1473,6 +1473,10 @@ async function firestore(sa) {
     async set(p, data) {
       return call(`${base}/${p}`, { method: "PATCH", body: JSON.stringify({ fields: enc2(data) }) });
     },
+    // only the named fields change ("alerts.lang"): the rest of the document stays as it is
+    async patch(p, data, paths) {
+      return call(`${base}/${p}?` + paths.map((x) => "updateMask.fieldPaths=" + encodeURIComponent(x)).join("&"), { method: "PATCH", body: JSON.stringify({ fields: enc2(data) }) });
+    },
     // new documents, all or nothing (each must not exist yet — never overwrites)
     async commit(docs) {
       const name = (p) => `projects/${sa.project_id}/databases/(default)/documents/${p}`;
@@ -1613,6 +1617,18 @@ async function chatUid(env) {
     return await ownerUid(env, await firestore(sa));
   } catch (_) {
     return null;
+  }
+}
+async function setAlertsLang(env, lang2) {
+  const sa = serviceAccount(env), uid = await chatUid(env).catch(() => null);
+  if (!sa || !uid || !/^(ar|en)$/.test(lang2)) return false;
+  try {
+    const db = await firestore(sa);
+    await db.patch(`users/${uid}/meta/info`, { alerts: { lang: lang2, langPicked: true } }, ["alerts.lang", "alerts.langPicked"]);
+    return true;
+  } catch (e) {
+    console.log(JSON.stringify({ alertslang: "failed", msg: String(e && e.message).slice(0, 100) }));
+    return false;
   }
 }
 var WEB_KEY = "AIzaSyCUvQh7cobgjGVVEYR8vcT76CGFDPsd5Vg";
@@ -5406,6 +5422,10 @@ async function runDaily(env, now = Date.now()) {
     await evening(env, now);
     return { job: "evening" };
   }
+  if (min % 60 === 40) {
+    const L = await lang(env), had = await kvGet5(env, K(env, "alsync"));
+    if (had !== L && await setAlertsLang(env, L).catch(() => false)) await kvPut5(env, K(env, "alsync"), L);
+  }
   if (c.pin && min % 15 === 0) {
     await pinUpdate(env, now);
     return { job: "pin" };
@@ -5762,6 +5782,8 @@ async function setRange(env, v) {
 }
 async function setLang(env, v) {
   memLang.set(chatOf(env), v);
+  await setAlertsLang(env, v).then((ok2) => ok2 && env.RATE ? env.RATE.put(K(env, "alsync"), v) : null).catch(() => {
+  });
   try {
     if (env.RATE) await env.RATE.put(K(env, "lang"), v);
   } catch (_) {
