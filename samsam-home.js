@@ -322,7 +322,7 @@ function renderZakatLine(portfolio) {
   const el = document.getElementById('zakatLine'); if (!el || !window.SamsamCoins || !SamsamCoins.zakatCrypto) return;
   const AR = !!(window.CPLang && CPLang.ar), xau = portfolio.find(c => c.sym === 'XAU' && c.currentPrice > 0);
   const gold = xau ? xau.currentPrice : zkGold;
-  if (!gold && !zkAsked && window.SamsamMarket && SamsamMarket.metals) { zkAsked = true; SamsamMarket.metals().then(m => { const g = (m || []).find(x => x.k === 'gold'); if (g && g.price > 0) { zkGold = g.price; try { renderAll(); } catch (_) {} } }, () => {}); }
+  if (!gold && !zkAsked && window.SamsamMarket && SamsamMarket.metals) { zkAsked = true; SamsamMarket.metals().then(m => { const g = ((m && m.data) || []).find(x => x.k === 'gold'); if (g && g.price > 0) { zkGold = g.price; try { renderAll(); } catch (_) {} } }, () => {}); }
   const st = Samsam.getState(), snap = Samsam.getZakat ? Samsam.getZakat() : null, z = gold > 0 ? SamsamCoins.zakatCrypto(st, gold, Date.now(), snap) : null;
   if (!z || !(z.value > 0)) { el.hidden = true; return; }
   if (z.inWindow && !z.fixed && !zkSaving && Samsam.setZakat && portfolio.every(c => c.qty <= 0 || c.currentPrice > 0)) {   // 1 Ramadan (or the first visit after it): keep that value

@@ -72,7 +72,7 @@
       '<div class="cph-f"><b>Target price</b><code>Base price × (1 + Buy at % ÷ 100)</code></div>' +
       '<ul><li>−10% from a $100 base → buy at <b>$90</b>: <b>BUY NOW</b> when the price is at or below $90</li><li>+10% → buy at <b>$110</b> (a breakout): <b>BUY NOW</b> at or above $110</li></ul><p>Changing the % saves today\'s price as the new base.</p>'; } },
     priceAlert: { title: 'Price Alert', body: function () { return '<p>A price you want to hear about. When the current price is <b>at or below</b> it, the coin shows <b>Hit</b> and your Telegram bot sends you one message (again only after the price went 3% back above it). Turn it on or off in Settings → Telegram alerts → Buy-price alerts.</p>'; } },
-    zakatCrypto: { title: 'Zakat on your crypto', body: function () { return '<p>One date a year for everything: <b>1 Ramadan</b> (the Umm al-Qura calendar).</p>' +
+    zakatCrypto: { title: 'Zakat on Your Crypto', body: function () { return '<p>One date a year for everything: <b>1 Ramadan</b> (the Umm al-Qura calendar).</p>' +
       '<p>On that day all your crypto together (stablecoins too) is measured against the <b>nisab</b>: the value of 85 g of gold. At or above it, the zakat is <b>2.5%</b> of that day\'s value. Gold (85 g) and silver (595 g) are counted on their own, on the same day.</p>' +
       '<p>Before 1 Ramadan the line shows the days left and an estimate at today\'s value; from 1 Ramadan it shows the amount for a month, worked out on that day\'s value.</p>' +
       '<p><i>An estimate, not a ruling — scholars differ on crypto, and the month may start a day earlier or later than the calendar. Check with a scholar.</i></p>'; } },
