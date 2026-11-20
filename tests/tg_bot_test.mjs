@@ -418,7 +418,7 @@ sent.length = 0; await tap('sg');
   check('Arabic signals: "مقارنة بمتوسط شرائك" once in each group header, rows short ("SOL −6.3% · متوسطك $…", no fixed-width block mixed with Arabic)', /\(\d+\) · <i>مقارنة بمتوسطك<\/i>/.test(tx) && /<b>SOL<\/b> −6\.3% · متوسطك \$/.test(tx) && !/<code>/.test(tx), tx.slice(0, 300)); }
 sent.length = 0; await tap('pl');
 { const x = sent.filter(y => y.m === 'editMessageText').pop(), tx = x ? x.b.text : '';
-  check('Arabic plan: shorter bar (7) and "باقي" with a short amount, DCA "… شهرياً" (no "/mo")', /▱{1,7} \d+%  باقي [\d.]+/.test(tx) && !/▱{8}|▰{8}/.test(tx) && !/\/mo/.test(tx), tx.slice(0, 400)); }
+  check('Arabic plan: shorter bar (7) and "باقي" with a short amount, DCA "… شهرياً" (no "/mo")', /▱{1,7} \d+% · باقي [\d.]+/.test(tx) && !/▱{8}|▰{8}/.test(tx) && !/\/mo/.test(tx), tx.slice(0, 400)); }
 sent.length = 0; await tap('mkm');
 { const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
   check('Arabic metals: short lines "الذهب $2,650 · اليوم +0.8% · أسبوع …", the unit said once ("الأسعار للأونصة (النحاس للرطل)"), no slash', /<b>الذهب<\/b> \$2,650 · اليوم \+0\.8%\n +أسبوع \+1\.5% · الجرام <b>319\.50 ريال<\/b>/.test(tx) && /الأسعار للأونصة \(النحاس للرطل\)/.test(tx) && !/ \/ أونصة/.test(tx), tx); }

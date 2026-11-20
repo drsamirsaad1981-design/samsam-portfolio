@@ -20,11 +20,11 @@ check('a line already marked (the guide\'s cards) is not marked twice', bidi(g) 
 check('HTML tags are never changed', /<a href="https:\/\/x\.com\/a-b">/.test(bidi('افتح <a href="https://x.com/a-b">الرابط</a> الآن')), v(bidi('افتح <a href="https://x.com/a-b">الرابط</a> الآن')));
 const b = bidiBody({ chat_id: 1, text: 'السعر 100$', parse_mode: 'HTML', reply_markup: { x: 1 } });
 check('a short run never breaks across two lines (no-break spaces inside: "BABYDOGE 0.45")', bidi('عملات: BABYDOGE 0.45163086').includes(`${I}BABYDOGE\u00A00.45163086${P}`), v(bidi('عملات: BABYDOGE 0.45163086')));
-check('a list "Binance · Gate · now" runs right-to-left item by item (an RLM after each ·)', bidi('<i>Binance · Gate · الآن</i>').includes(`${I}Binance${P} ·${R} ${I}Gate${P} ·${R} الآن`), v(bidi('<i>Binance · Gate · الآن</i>')));
+check('a list "Binance · Gate · now" runs right-to-left item by item (an RLM after each ·)', bidi('<i>Binance · Gate · الآن</i>').includes(`Binance${P} ·${R} ${I}Gate${P} ·${R} الآن`), v(bidi('<i>Binance · Gate · الآن</i>')));
 check('an island ends with an RLM: a bracket after it stays with the Arabic ("BTC (39)", never "(39) BTC")', bidi('<b>بيع / تحويل إلى BTC</b> (39)').includes(`${I}BTC${P}</b> (${I}39${P})`), v(bidi('<b>بيع / تحويل إلى BTC</b> (39)')));
 check('"58.7% → ≤ 45.9%" is ONE left-to-right island (the ≤ never mirrors, the arrow keeps its way)', bidi('هيمنة BTC: 58.7% → ≤ 45.9%').includes('58.7%\u00A0→\u00A0≤\u00A045.9%'), v(bidi('هيمنة BTC: 58.7% → ≤ 45.9%')));
 check('money: the sign before the $ ("$-1,392" → "−$1,392", "$-582M" → "−$582M"), in English too', bidiBody({ text: 'P&L $-1,392 · ETF $-582M' }).text === 'P&L −$1,392 · ETF −$582M' && bidiBody({ text: 'الربح $-1,392' }).text.includes('−\u2060$1,392'), [bidiBody({ text: 'P&L $-1,392 · ETF $-582M' }).text]);
-check('a line that opens with a tag and a Latin piece gets an RLM inside the tag too ("<b>POL</b> · $0.078", "<i>+37 …</i>")', bidi('<b>POL</b> · $0.078\nعربي').startsWith(`${R}<b>${R}${I}POL`) && bidi('<i>+37 عملة أخرى</i>').startsWith(`${R}<i>${R}${I}+37`), v(bidi('<i>+37 عملة أخرى</i>')));
+check('a line that opens with a tag and a Latin piece: the marks go before the tag ("<b>POL</b> · $0.078", "<i>+37 …</i>")', bidi('<b>POL</b> · $0.078\nعربي').startsWith(`${R}${I}<b>POL`) && bidi('<i>+37 عملة أخرى</i>').startsWith(`${R}${I}<i>+37`), v(bidi('<i>+37 عملة أخرى</i>')));
 check('a <code> table row is left as it was (no RLM inside the code)', bidi('<code>CYBER  +31.3% $269</code>\nعربي').startsWith(`${R}<code>${I}`), v(bidi('<code>CYBER  +31.3% $269</code>\nعربي')));
 check('a Telegram body: only its text changes', b.text.startsWith(R) && b.chat_id === 1 && b.reply_markup.x === 1);
 const dl = bidi('البيتكوين <b>$63,129</b> 🔴 −1.09%');

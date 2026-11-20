@@ -99,7 +99,7 @@ const T = {
     dom: 'الهيمنة', fng: 'الخوف والطمع', altS: 'موسم العملات البديلة', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a} من ${n} على الهدف`,
     dcaS: (n, mo) => `${n === 1 ? 'عملية شراء دوري واحدة' : n === 2 ? 'عمليتا شراء دوري' : n + ' عمليات شراء دوري'} (DCA) · ${mo} شهرياً`, exitS: (n) => `الخروج ${n} من 3`, nearTp: 'أقرب هدف ربح',
     exitT: 'خطة الخروج', conds: 'مؤشرات الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC',
-    tpT: 'مستويات جني الأرباح', tpKey: 'السعر · المتبقي · البيع', more: n => `+${n} عملة أخرى في التطبيق`, toGo: 'المتبقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'لا توجد مستويات جني أرباح بعد — أضفها من صفحة استراتيجية الخروج في التطبيق.',
+    tpT: 'مستويات جني الأرباح', tpKey: 'السعر · المتبقي · البيع', more: n => `و${n} عملة أخرى في التطبيق`, toGo: 'المتبقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'لا توجد مستويات جني أرباح بعد — أضفها من صفحة استراتيجية الخروج في التطبيق.',
     openExit: '🚪 افتح استراتيجية الخروج', allExit: 'تحققت المؤشرات الثلاثة — منطقة الخروج',
     kb: { pf: '💼 محفظتي', mk: '🌍 السوق', pl: '📋 الخطة', ex: '🚪 الخروج', mv: '🏆 الأفضل', sg: '🎯 الإشارات' },
     kbOld: { mv: '🏆 الأفضل والأسوأ', ex: '🚪 خطة الخروج' },
@@ -257,7 +257,9 @@ export function viewPlan(t, sum, now) {
     const BL = isAr(t) ? 7 : 10, bar = p => { const n = Math.round(Math.min(1, p) * BL); return '▰'.repeat(n) + '▱'.repeat(BL - n); };   // Arabic: a shorter bar, so "باقي 9.82" fits the line
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach(p => {
       const f = p.target > 0 ? p.actual / p.target : 0;
-      L.push(`<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : `  ${isAr(t) ? 'باقي' : t.left} ${isAr(t) ? +Number(p.target - p.actual).toPrecision(4) : qty(p.target - p.actual)}`}`);
+      L.push(isAr(t)   // Arabic: no fixed-width block next to Arabic words (it reads backwards right-to-left)
+        ? `<b>${esc(p.sym)}</b> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : ` · باقي ${+Number(p.target - p.actual).toPrecision(4)}`}`
+        : `<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : `  ${t.left} ${qty(p.target - p.actual)}`}`);
     });
   }
   if ((sum.dca || []).length) {
@@ -268,7 +270,7 @@ export function viewPlan(t, sum, now) {
   }
   if ((sum.buyAt || []).length) {
     L.push('', `🔔 <b>${t.buyAt}</b>`);
-    sum.buyAt.forEach(x => { const d = (x.price / x.at - 1) * 100; L.push(`<code>${esc(x.sym.padEnd(6))}</code> ${price(x.at)} · ${price(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : '✅'}`); });
+    sum.buyAt.forEach(x => { const d = (x.price / x.at - 1) * 100; L.push(`${isAr(t) ? `<b>${esc(x.sym)}</b>` : `<code>${esc(x.sym.padEnd(6))}</code>`} ${price(x.at)} · ${price(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : '✅'}`); });
   }
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pl'), url(t.openApp, APP + 'accumulation.html')], [cb(t.back, 'menu')]] };
 }

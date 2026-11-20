@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: bb8946049cfb0952
+// sources-hash: e8501158135b7bfd
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -211,7 +211,7 @@ function bidiLine(line, all = false) {
     glued = glued.replace(/([+\-−])\$/g, "$1\u2060$");
     return t.slice(0, i) + LRM + glued + LRM + RLM + t.slice(i + core.length) + tail;
   }).replace(/ · /g, " \xB7" + RLM + " ").replace(/([🟢🔴⚪🟡]) /gu, "$1 " + RLM)).join("");
-  return (RLM + out).replace(/^(\u200F(?:<(?!code|pre)[^>]+>)+)(?=\u200E)/, "$1" + RLM);
+  return (RLM + out).replace(/^\u200F((?:<(?!code|pre)[^>]+>)+)\u200E/, RLM + LRM + "$1");
 }
 function bidi(text, mode = "auto") {
   if (typeof text !== "string" || !AR.test(text)) return text;
@@ -5733,7 +5733,7 @@ var T = {
     ethBtc: "ETH/BTC",
     tpT: "\u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D",
     tpKey: "\u0627\u0644\u0633\u0639\u0631 \xB7 \u0627\u0644\u0645\u062A\u0628\u0642\u064A \xB7 \u0627\u0644\u0628\u064A\u0639",
-    more: (n) => `+${n} \u0639\u0645\u0644\u0629 \u0623\u062E\u0631\u0649 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642`,
+    more: (n) => `\u0648${n} \u0639\u0645\u0644\u0629 \u0623\u062E\u0631\u0649 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642`,
     toGo: "\u0627\u0644\u0645\u062A\u0628\u0642\u064A",
     sellP: (p) => `\u0628\u064A\u0639 ${p}%`,
     reached: "\u0648\u0635\u0644",
@@ -5920,7 +5920,7 @@ ${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb3(t.back,
     };
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach((p) => {
       const f = p.target > 0 ? p.actual / p.target : 0;
-      L.push(`<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : `  ${isAr(t) ? "\u0628\u0627\u0642\u064A" : t.left} ${isAr(t) ? +Number(p.target - p.actual).toPrecision(4) : qty(p.target - p.actual)}`}`);
+      L.push(isAr(t) ? `<b>${esc(p.sym)}</b> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : ` \xB7 \u0628\u0627\u0642\u064A ${+Number(p.target - p.actual).toPrecision(4)}`}` : `<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : `  ${t.left} ${qty(p.target - p.actual)}`}`);
     });
   }
   if ((sum.dca || []).length) {
@@ -5931,7 +5931,7 @@ ${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb3(t.back,
     L.push("", `\u{1F514} <b>${t.buyAt}</b>`);
     sum.buyAt.forEach((x) => {
       const d = (x.price / x.at - 1) * 100;
-      L.push(`<code>${esc(x.sym.padEnd(6))}</code> ${price2(x.at)} \xB7 ${price2(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : "\u2705"}`);
+      L.push(`${isAr(t) ? `<b>${esc(x.sym)}</b>` : `<code>${esc(x.sym.padEnd(6))}</code>`} ${price2(x.at)} \xB7 ${price2(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : "\u2705"}`);
     });
   }
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pl"), url2(t.openApp, APP + "accumulation.html")], [cb3(t.back, "menu")]] };
