@@ -185,7 +185,7 @@
     "VTHO": "vethor-token",
     "VET": "vechain",
     "MON": "monad",
-    "PONS": "pons-2",
+    "PONS": "pons",   // (CoinGecko's id today — its markets list and our price files use it; "pons-2" was its first id and no longer answers)
     "XPL": "plasma",
   };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -611,7 +611,7 @@
   }
   function signedPct(p, d) { d = d == null ? 2 : d; return (p > 0 ? '+' : p < 0 ? '−' : '') + Math.abs(p).toFixed(d) + '%'; }
   // other CoinGecko ids a coin is also listed under (the first one may lack price history)
-  var CG_ALT = { PONS: ['pons'] };
+  var CG_ALT = { PONS: ['pons-2'] };
   // The three outside links of a coin (same as the coin page): Liq.Map (CoinGlass) · Prediction (CoinCodex) · CMC.
   // A coin without futures / without a CoinCodex page gets a plain note instead of a link to nowhere.
   var QL_CSS = '.ql-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:2px 0 4px}' +
