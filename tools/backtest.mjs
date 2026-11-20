@@ -165,6 +165,9 @@ async function main() {
     console.log(id, series[id] ? 'ok' : 'left out'); await sleep(7000);
   }
   if (!series.bitcoin) throw new Error('no BTC prices');
+  // the prices themselves, for trying other rules on the same data (tools/backtest-lab.mjs): a file + one log line per coin
+  fs.writeFileSync('series.json', JSON.stringify({ day0, ids: Object.fromEntries(alts.map(a => [a.id, a.sym])), p: Object.fromEntries(Object.entries(series).map(([id, s]) => [id, s.map(x => x[1])])) }));
+  for (const [id, s] of Object.entries(series)) console.log('SERIES ' + id + ' ' + day0 + ' ' + s.map(x => +x[1].toPrecision(7)).join(','));
   const r = simulate(series, alts); r.luck = luckTest(series, alts); const md = report(r);
   console.log('\n' + md);
   if (process.argv[2]) fs.writeFileSync(process.argv[2], md);

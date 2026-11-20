@@ -21,3 +21,4 @@ jobs:
           path: |
             backtest.md
             backtest.json
+            series.json
