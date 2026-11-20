@@ -98,7 +98,7 @@ export async function setup(env, kind, opt = {}) {
 // has buttons (seen 20 Nov — the guide post had no comments). The bot's own link to the guide: t.me/<bot>?start=guide
 async function guideLink(env) {
   const me = await tg(env, 'getMe', {}); const u = me.ok && me.result && me.result.username;
-  return u ? `📘 <a href="https://t.me/${u}?start=guide">Open the guide · افتح الدليل</a>` : '';
+  return u ? `📘 <a href="https://t.me/${u}?start=guide">Open the guide</a>\n📘 <a href="https://t.me/${u}?start=guide">افتح الدليل</a>` : '';   // two lines: English and Arabic never share one
 }
 // 📘 the channel's guide post (pinned): what is in the guide, in both languages; its link opens it in the bot.
 // Posted again (/community guide): the old one is unpinned and deleted

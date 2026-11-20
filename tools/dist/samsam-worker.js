@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 1dbd97df92c175f1
+// sources-hash: 4e90f82a7902b95e
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3394,7 +3394,8 @@ Join link (members only \u2014 I approve each request): ${x.link}` : "") + (note
 async function guideLink(env) {
   const me = await tg3(env, "getMe", {});
   const u = me.ok && me.result && me.result.username;
-  return u ? `\u{1F4D8} <a href="https://t.me/${u}?start=guide">Open the guide \xB7 \u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0644\u064A\u0644</a>` : "";
+  return u ? `\u{1F4D8} <a href="https://t.me/${u}?start=guide">Open the guide</a>
+\u{1F4D8} <a href="https://t.me/${u}?start=guide">\u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0644\u064A\u0644</a>` : "";
 }
 async function postGuidePost(env, ch) {
   const text = `<b>${guide_default.title.en} \xB7 ${guide_default.title.ar}</b>
