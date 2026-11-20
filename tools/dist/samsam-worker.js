@@ -1821,7 +1821,7 @@ async function tgLogin(request, env) {
   const v = await verifyInitData(String(body.initData || ""), env.TELEGRAM_BOT_TOKEN, Date.now(), MAX_AGE);
   if (!v.ok) return reply(401, { error: v.why === "too old" ? "expired" : "signature" });
   const tgId = String(v.user.id);
-  if (await bump("tglogin", tgId, 36e5) > 20) return reply(429, { error: "busy" });
+  if (await bump("tglogin", tgId, 36e5) > 30) return reply(429, { error: "busy" });
   const isOwner2 = tgId === String(env.TELEGRAM_CHAT_ID), m = isOwner2 ? null : (await members(env))[tgId];
   if (!isOwner2 && !m) return reply(403, { error: "not-member" });
   if (m && m.paused) return reply(403, { error: "paused" });
@@ -1830,7 +1830,7 @@ async function tgLogin(request, env) {
   const token = await customTokenFor(env, uid);
   if (!token) return reply(503, { error: "token" });
   console.log(JSON.stringify({ tglogin: isOwner2 ? "owner" : "member" }));
-  return reply(200, { token });
+  return reply(200, { token, uid });
 }
 
 // tools/worker/usage.mjs

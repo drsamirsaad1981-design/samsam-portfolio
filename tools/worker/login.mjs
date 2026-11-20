@@ -7,7 +7,7 @@
 //   2. the Telegram user must be Samir (→ his pinned account) or a member of the bot with a linked portfolio (/link);
 //   3. the Worker signs a 1-hour custom token for THAT account only; the app calls signInWithCustomToken with it.
 // Nobody else gets a token: not linked → { error: 'not-linked' } (the app shows how to link), paused → 'paused'.
-// At most 20 tries an hour per Telegram user. Only the app's own site may call it (CORS, as the app's other calls).
+// At most 30 tries an hour per Telegram user. Only the app's own site may call it (CORS, as the app's other calls).
 import { verifyInitData } from './tginit.mjs';
 import { asChat, members, bump } from './who.mjs';
 import { chatUid, customTokenFor } from './data.mjs';
@@ -27,7 +27,7 @@ export async function tgLogin(request, env) {
   const v = await verifyInitData(String(body.initData || ''), env.TELEGRAM_BOT_TOKEN, Date.now(), MAX_AGE);
   if (!v.ok) return reply(401, { error: v.why === 'too old' ? 'expired' : 'signature' });
   const tgId = String(v.user.id);
-  if (await bump('tglogin', tgId, 3600e3) > 20) return reply(429, { error: 'busy' });
+  if (await bump('tglogin', tgId, 3600e3) > 30) return reply(429, { error: 'busy' });
   const isOwner = tgId === String(env.TELEGRAM_CHAT_ID), m = isOwner ? null : (await members(env))[tgId];
   if (!isOwner && !m) return reply(403, { error: 'not-member' });
   if (m && m.paused) return reply(403, { error: 'paused' });
@@ -36,5 +36,5 @@ export async function tgLogin(request, env) {
   const token = await customTokenFor(env, uid);
   if (!token) return reply(503, { error: 'token' });
   console.log(JSON.stringify({ tglogin: isOwner ? 'owner' : 'member' }));
-  return reply(200, { token });
+  return reply(200, { token, uid });   // uid: the app keeps a session only when it is THIS account's (one phone, several Telegram accounts)
 }

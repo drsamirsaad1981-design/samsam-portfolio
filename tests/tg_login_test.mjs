@@ -27,7 +27,7 @@ const claims = t => JSON.parse(Buffer.from(t.split('.')[1], 'base64url').toStrin
 const verifies = t => { const [h, p, s] = t.split('.'); return crypto.verify('RSA-SHA256', Buffer.from(h + '.' + p), publicKey, Buffer.from(s, 'base64url')); };
 
 let r = await call({ initData: initData({ id: 555, first_name: 'Samir' }) });
-check('Samir (the owner) → a custom token for HIS account, signed with the service account, 1 hour', r.status === 200 && claims(r.j.token).uid === 'uid-samir' && verifies(r.j.token) && claims(r.j.token).exp - claims(r.j.token).iat === 3600 && /identitytoolkit/.test(claims(r.j.token).aud), r);
+check('Samir (the owner) → a custom token for HIS account (+ its uid), signed with the service account, 1 hour', r.status === 200 && r.j.uid === 'uid-samir' && claims(r.j.token).uid === 'uid-samir' && verifies(r.j.token) && claims(r.j.token).exp - claims(r.j.token).iat === 3600 && /identitytoolkit/.test(claims(r.j.token).aud), r);
 r = await call({ initData: initData({ id: 888, first_name: 'Ali' }) });
 check('a member with a linked portfolio → a token for the account he linked (never Samir\'s)', r.status === 200 && claims(r.j.token).uid === 'uid-ali', r.j);
 r = await call({ initData: initData({ id: 777 }) });
@@ -49,8 +49,8 @@ r = await call({ initData: initData({ id: 555 }) }, 'https://evil.example');
 check('another site → 403 (only the app\'s own origin)', r.status === 403 && !r.j.token, r);
 r = await call(null, APPO, 'OPTIONS');
 check('CORS pre-flight from the app → 204, allows the app\'s origin', r.status === 204 && r.h.get('Access-Control-Allow-Origin') === APPO);
-let last = null; for (let i = 0; i < 21; i++) last = await call({ initData: initData({ id: 888 }) });
-check('more than 20 tries an hour for one Telegram user → 429', last.status === 429, last.status);
+let last = null; for (let i = 0; i < 31; i++) last = await call({ initData: initData({ id: 888 }) });
+check('more than 30 tries an hour for one Telegram user → 429', last.status === 429, last.status);
 
 console.log(`\n${ok}/${n} passed`);
 if (ok !== n) process.exit(1);

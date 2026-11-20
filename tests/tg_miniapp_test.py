@@ -14,15 +14,18 @@ LOGIN = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/tg/login'
 
 with sync_playwright() as p:
     br = p.chromium.launch()
-    for case in ('owner', 'not-linked'):
+    for case in ('owner', 'not-linked', 'other-account', 'stranger'):
         ctx = br.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
         S.setup(ctx); sent = []
         def login(r):   # (one argument: Playwright passes the request too when a handler takes two)
             if r.request.method == 'OPTIONS': return r.fulfill(status=204, headers={'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type'})
             sent.append(json.loads(r.request.post_data or '{}'))
-            body, st = ({'token': 'fake-custom:owner@example.com'}, 200) if case == 'owner' else ({'error': 'not-linked'}, 403)
+            body, st = {'owner': ({'token': 'fake-custom:owner@example.com', 'uid': 'uid_samir'}, 200), 'other-account': ({'token': 'fake-custom:friend@icloud.com', 'uid': 'uid_tg'}, 200),
+                        'not-linked': ({'error': 'not-linked'}, 403), 'stranger': ({'error': 'not-member'}, 403)}[case]
             r.fulfill(status=st, content_type='application/json', headers={'access-control-allow-origin': '*'}, body=json.dumps(body))
         ctx.route(LOGIN, login)
+        if case in ('other-account', 'stranger'):   # ⚠️ Samir's session left on this phone by his own Telegram account
+            ctx.add_init_script("if (!sessionStorage.getItem('__seeded')) { sessionStorage.setItem('__seeded', '1'); localStorage.setItem('__fake_user', JSON.stringify({ uid: 'uid_samir', email: 'owner@example.com' })); }")
         pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.goto(SITE + '/index.html' + HASH)
         if case == 'owner':
@@ -33,6 +36,12 @@ with sync_playwright() as p:
             check('…the page knows it is in Telegram (html.in-tg)', pg.evaluate("document.documentElement.classList.contains('in-tg')"))
             pg.goto(SITE + '/accumulation.html'); pg.wait_for_timeout(2500)
             check('…another page of the app: still signed in (no gate), no second sign-in call', len(sent) == 1 and not pg.is_visible('#samsamSignInBtn'), sent)
+        elif case == 'other-account':
+            pg.wait_for_function("(JSON.parse(localStorage.getItem('__fake_user') || 'null') || {}).email === 'friend@icloud.com'", timeout=20000)
+            check('⚠️ another Telegram account on the same phone (Samir\'s session left there) → Samir signed out, THIS account signed in', pg.evaluate("JSON.parse(localStorage.getItem('__fake_user')).uid") == 'uid_tg')
+        elif case == 'stranger':
+            pg.wait_for_selector('#samsamGate', state='visible', timeout=20000)
+            check('⚠️ a Telegram account that is not a member, with Samir\'s session left on the phone → signed out, never sees his portfolio', pg.evaluate("localStorage.getItem('__fake_user')") is None and 'not a member' in pg.inner_text('#samsamGate'), pg.inner_text('#samsamGate'))
         else:
             pg.wait_for_selector('#samsamGate', state='visible', timeout=20000)
             t = pg.inner_text('#samsamGate')

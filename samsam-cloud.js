@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611201543';
-import * as Hist from './samsam-history.js?v=202611201543';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611201543';
+import * as Core from './samsam-core.js?v=202611201602';
+import * as Hist from './samsam-history.js?v=202611201602';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611201602';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -512,16 +512,42 @@ const JOIN_URL = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/join';
 // (tools/worker/login.mjs). Already signed in on this device → nothing to do.
 const TG_LOGIN_URL = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/tg/login';
 function tgInit() { try { return sessionStorage.getItem('cp-tg-init') || ''; } catch (_) { return ''; } }
+// ⚠️ Telegram keeps ONE web storage for all the accounts on a phone: a session left by one Telegram account must never
+// open for another (seen 20 Nov: a second account opened Samir's portfolio). So the Worker is asked every time the app
+// opens in Telegram, and its answer decides: the same account → kept; another one → signed out, then this one signed in;
+// not allowed → signed out. Only with no connection, a session already signed in for THIS Telegram user is kept.
+function tgUserId() { try { return String(JSON.parse(new URLSearchParams(tgInit()).get('user') || '{}').id || ''); } catch (_) { return ''; } }
 async function tgSignIn() {
-  const { au, auth } = fb;
+  const { au, auth } = fb, tgId = tgUserId(), mapKey = 'cp-tg-uid:' + tgId;
   try { if (auth.authStateReady) await auth.authStateReady(); } catch (_) {}
-  if (auth.currentUser) return;
+  const cur = auth.currentUser;
+  let ok = ''; try { ok = sessionStorage.getItem('cp-tg-ok') || ''; } catch (_) {}
+  if (cur && ok && ok === cur.uid) { S.tgErr = null; return; }   // already checked in this Telegram window (the other pages of the app)
+  let j = null;
   try {
     const r = await fetch(TG_LOGIN_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ initData: tgInit() }) });
-    const j = await r.json().catch(() => ({}));
-    if (j.token) { await au.signInWithCustomToken(auth, j.token); S.tgErr = null; return; }
-    S.tgErr = j.error || 'failed';
-  } catch (e) { S.tgErr = navigator.onLine ? 'failed' : 'offline'; }
+    j = await r.json().catch(() => ({}));
+  } catch (e) {
+    let known = ''; try { known = localStorage.getItem(mapKey) || ''; } catch (_) {}
+    if (cur && known && cur.uid === known) { S.tgErr = null; return; }   // offline, but this session is this Telegram user's
+    if (cur) { try { await au.signOut(auth); } catch (_) {} }
+    S.tgErr = navigator.onLine ? 'failed' : 'offline'; return;
+  }
+  if (j && j.token && j.uid) {
+    try { sessionStorage.setItem('cp-tg-ok', j.uid); } catch (_) {}
+    if (cur && cur.uid === j.uid) { S.tgErr = null; return; }
+    if (cur) { try { await au.signOut(auth); } catch (_) {} }
+    try { await au.signInWithCustomToken(auth, j.token); }
+    catch (e) {   // Telegram Web shows the app in a frame: some browsers block its stored session there → a session in memory only
+      try { await au.setPersistence(auth, au.inMemoryPersistence); await au.signInWithCustomToken(auth, j.token); }
+      catch (e2) { S.tgErr = 'signin'; S.tgCode = (e2 && e2.code) || ''; return; }
+    }
+    S.tgErr = null; try { localStorage.setItem(mapKey, j.uid); } catch (_) {}
+    return;
+  }
+  if (cur) { try { await au.signOut(auth); } catch (_) {} }   // not allowed (not a member, not linked, paused…): nobody stays signed in
+  try { localStorage.removeItem(mapKey); } catch (_) {}
+  S.tgErr = (j && j.error) || 'failed';
 }
 const TG_WHY = {
   'not-linked': 'Your Telegram is not linked to a portfolio yet. Open Cute Portfolio once in your browser → Settings → "Link your portfolio to the Telegram bot", then open it here again.',
@@ -529,6 +555,7 @@ const TG_WHY = {
   'paused': 'Your access is paused for now.',
   'expired': 'This window has been open too long — close it and open the app again from the bot.',
   'offline': 'You are offline — check the connection and open the app again.',
+  'busy': 'Too many tries — wait a few minutes, then open the app again from the bot.',
 };
 (function keepInvite() {
   try {
@@ -1459,7 +1486,7 @@ function showGate(kind) {
     `<p style="margin:10px 0 6px">🎟 Have an invite code?</p><input id="samsamInvite" autocapitalize="characters" autocomplete="off" maxlength="12" placeholder="e.g. 2NS782A9" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(127,127,140,.35);font:inherit;margin-bottom:8px;letter-spacing:.08em;text-transform:uppercase">` +
     `<button class="samsam-btn primary" id="samsamJoinBtn">Join</button><p id="samsamGateErr" style="color:#ef4444">${esc(S.inviteErr || '')}</p>` +
     `<button class="samsam-btn" id="samsamOtherBtn" style="margin-top:6px">Use another account</button>`;
-  else if (tgInit()) body.innerHTML = `<p style="font-weight:700">📱 Cute Portfolio in Telegram</p><p>${esc(TG_WHY[S.tgErr] || 'Telegram could not sign you in right now — close this window and open the app again from the bot.')}</p>`;   // no Google / e-mail sign-in in here: neither works inside Telegram
+  else if (tgInit()) body.innerHTML = `<p style="font-weight:700">📱 Cute Portfolio in Telegram</p><p>${esc(TG_WHY[S.tgErr] || 'Telegram could not sign you in right now — close this window and open the app again from the bot.')}</p>${S.tgErr && !TG_WHY[S.tgErr] ? `<p style="opacity:.55;font-size:12px">(${esc(S.tgErr)}${S.tgCode ? ' · ' + esc(S.tgCode) : ''})</p>` : ''}`;   // no Google / e-mail sign-in in here: neither works inside Telegram
   else body.innerHTML = (pendingInvite() ? `<p style="font-weight:700">🎟 You're invited to Cute Portfolio — sign in to join.</p>` : '') + `<p>${S.emailLinkPending ? 'Type the e-mail address the sign-in link was sent to.' : 'Sign in to load your portfolio. Your data is stored privately in the cloud and stays the same on every device.'}</p>` +
     (S.emailLinkPending ? '' : `<button class="samsam-btn primary" id="samsamSignInBtn">Sign in with Google</button><p class="samsam-or" style="margin:14px 0 8px;opacity:.7">or with any e-mail (iCloud, Outlook…) — no password</p>`) +
     `<input id="samsamEmail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(127,127,140,.35);font:inherit;margin-bottom:8px">` +

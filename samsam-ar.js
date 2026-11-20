@@ -283,6 +283,7 @@
     'Your Telegram is not linked to a portfolio yet. Open Cute Portfolio once in your browser → Settings → "Link your portfolio to the Telegram bot", then open it here again.': 'حساب تليجرام هذا غير مربوط بمحفظة بعد. افتح Cute Portfolio مرة واحدة من المتصفح ← الإعدادات ← «ربط محفظتك ببوت تليجرام»، ثم افتحه هنا مرة أخرى.',
     'This Telegram account is not a member of the bot yet — ask Dr. Samir Saad for an invite.': 'حساب تليجرام هذا ليس عضواً في البوت بعد — اطلب دعوة من د. سمير سعد.',
     'Your access is paused for now.': 'وصولك موقوف مؤقتاً.',
+    'Too many tries — wait a few minutes, then open the app again from the bot.': 'محاولات كثيرة — انتظر بضع دقائق ثم افتح التطبيق من البوت مرة أخرى.',
     'This window has been open too long — close it and open the app again from the bot.': 'هذه النافذة مفتوحة منذ وقت طويل — أغلقها وافتح التطبيق مرة أخرى من البوت.',
     'You are offline — check the connection and open the app again.': 'لا يوجد اتصال — تحقق من الإنترنت وافتح التطبيق مرة أخرى.',
     'Telegram could not sign you in right now — close this window and open the app again from the bot.': 'تعذّر تسجيل دخولك عبر تليجرام الآن — أغلق النافذة وافتح التطبيق مرة أخرى من البوت.',
