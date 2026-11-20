@@ -322,13 +322,15 @@
    "en": [
     "☀️ <b>Smart morning</b> (08:45 Riyadh): 3 things to do today.",
     "🌙 <b>Smart evening</b> (21:00): what happened and what to watch.",
-    "🧲 <b>Leverage radar</b>: crowded longs / shorts on BTC and your biggest coins · 🔥 <b>Sector radar</b>: a big sector moving fast.",
+    "📡 <b>Radar digest</b> (12:00 · 16:00 · 20:00): one message with 🧲 crowded leverage on BTC and your biggest coins, 🔥 big sectors moving fast and 🐋 what the biggest winning traders hold. Nothing found → no message.",
+    "🔔 Alerts that can wait come together at the same hours; a price you set, a take-profit and the day's signals still come at once.",
     "📌 <b>Live pinned message</b> at the top of the chat, refreshed every 15 minutes."
    ],
    "ar": [
     "☀️ <b>الصباح الذكي</b> (08:45 بتوقيت الرياض): 3 أمور تفعلها اليوم.",
     "🌙 <b>المساء الذكي</b> (21:00): ما حدث وما يجب مراقبته.",
-    "🧲 <b>رادار الرافعة</b>: ازدحام مراكز الشراء أو البيع على BTC وأكبر عملاتك · 🔥 <b>رادار القطاعات</b>: قطاع كبير يتحرك بسرعة.",
+    "📡 <b>ملخص الرادارات</b> (12:00 · 16:00 · 20:00): رسالة واحدة فيها 🧲 ازدحام الرافعة على BTC وأكبر عملاتك، و🔥 القطاعات الكبيرة التي تتحرك بسرعة، و🐋 مراكز أكبر المتداولين الرابحين. لا جديد ← لا رسالة.",
+    "🔔 التنبيهات غير العاجلة تصل مجمّعة في نفس المواعيد؛ أما السعر الذي حددته، وهدف جني الأرباح، وإشارات اليوم فتصل فوراً.",
     "📌 <b>رسالة مثبتة مباشرة</b> أعلى المحادثة، تتحدث كل 15 دقيقة."
    ],
    "tip": {
@@ -518,8 +520,8 @@
     "/guide يفتح هذا الدليل في أي وقت؛ وفي التطبيق: الإعدادات ← الدليل."
    ],
    "tip": {
-    "en": "📢 Cute Portfolio Signals: talk with the other members in the comments under each post (/community).",
-    "ar": "📢 قناة Cute Portfolio Signals: تحدّث مع الأعضاء في التعليقات تحت كل منشور (/community)."
+    "en": "📢 Cute Portfolio Signals: the market pulse (09:00 · 21:05), the sector map (13:00) and leverage &amp; whales (17:30) — talk in the comments under each post (/community).",
+    "ar": "📢 قناة Cute Portfolio Signals: نبض السوق (09:00 · 21:05)، وخريطة القطاعات (13:00)، والرافعة والحيتان (17:30) — والنقاش في التعليقات تحت كل منشور (/community)."
    }
   }
  ]

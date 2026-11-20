@@ -234,18 +234,13 @@ export async function radar(env, now = Date.now()) {
   for (const k of Object.keys(seen)) if (now - seen[k] > 2 * DAY) delete seen[k];
   const fresh = radarFindings(s).filter(k => !(now - (seen[sym + ':' + k] || 0) < 12 * H));
   if (!fresh.length) { await jput(env, K(env, 'radar:seen'), seen); return { sym, sent: 0 }; }
-  const L = await lang(env), w = RADAR_TXT[L], ww = WD[L];
-  const lines = [`🧲 <b>${ww.radar} · ${esc(sym)}</b>`, ...fresh.map(k => `⚠️ <b>${w[k]}</b>`), ''];
-  if (s.funding_8h_pct_avg != null) lines.push(`• ${w.fund}: <b>${s.funding_8h_pct_avg > 0 ? '+' : ''}${s.funding_8h_pct_avg}%</b> / 8h (≈ ${s.funding_annualized_pct > 0 ? '+' : ''}${s.funding_annualized_pct}% ${w.yr})`);
-  if (s.open_interest_change_24h_pct != null) lines.push(`• ${w.oi}: <b>${pct(s.open_interest_change_24h_pct, 1)}</b>${s.open_interest_usd_total ? ' (' + usd(s.open_interest_usd_total) + ')' : ''}`);
-  if (s.long_accounts_pct != null) lines.push(`• ${w.longs}: <b>${r2(s.long_accounts_pct)}%</b>`);
-  if (s.liquidations_24h) lines.push(`• ${w.liq}: ${w.longsW} ${usd(s.liquidations_24h.longs_usd)} · ${w.shortsW} ${usd(s.liquidations_24h.shorts_usd)}`);
-  const longSide = fresh.some(k => /hot_longs|crowd_long/.test(k)), shortSide = fresh.some(k => /hot_shorts|crowd_short/.test(k));
-  lines.push('', `<i>${longSide && !shortSide ? w.noteL : shortSide && !longSide ? w.noteS : w.noteN}</i>`);
-  const r = await send(env, { text: lines.join('\n'), buttons: [[url('🔥 Liq Map', LIQ + encodeURIComponent(sym)), cb('🪙 ' + sym, 'c:' + String(idOf[sym] || 'x-' + sym.toLowerCase()).slice(0, 58))]] });
-  if (r && r.ok) { fresh.forEach(k => { seen[sym + ':' + k] = now; }); await logEvent(env, 'radar', sym + ': ' + fresh.map(k => RADAR_TXT.en[k]).join(', '), now); }
+  // 📡 not a message of its own any more: kept for the next radar digest (12:00 · 16:00 · 20:00) — one focused message
+  const q = await jget(env, K(env, 'digest'), {}); q.lev = q.lev || {};
+  q.lev[sym] = { t: now, finds: [...new Set([...(q.lev[sym] ? q.lev[sym].finds : []), ...fresh])], fund: s.funding_8h_pct_avg, oi: s.open_interest_change_24h_pct, longs: s.long_accounts_pct, top: s.top_traders_long_pct ?? null, id: idOf[sym] || null };
+  await jput(env, K(env, 'digest'), q);
+  fresh.forEach(k => { seen[sym + ':' + k] = now; }); await logEvent(env, 'radar', sym + ': ' + fresh.map(k => RADAR_TXT.en[k]).join(', '), now);
   await jput(env, K(env, 'radar:seen'), seen);
-  return { sym, sent: r && r.ok ? 1 : 0 };
+  return { sym, queued: fresh.length };
 }
 
 // ── 🔥 sector radar: CoinGecko's sectors (m/market.json → sectors, from tools/update-market.mjs) ──
@@ -258,15 +253,12 @@ export async function sectorRadar(env, now = Date.now()) {
   const fresh = big.filter(s => seen[s.id] !== day).sort((a, b) => Math.abs(b.ch24) - Math.abs(a.ch24)).slice(0, 3);
   if (!fresh.length) return { sent: 0 };
   const mine = new Set(user ? Object.values(m.idOf).filter(Boolean) : []), symOf = id => (Object.entries(m.idOf).find(([, v]) => v === id) || [])[0];
-  const L = await lang(env), ar = L === 'ar', w = WD[L];
-  const lines = [`🔥 <b>${w.sectors}</b>`, ''];
-  for (const s of fresh) {
-    const held = (s.top || []).filter(id => mine.has(id)).map(symOf).filter(Boolean);
-    lines.push(`${s.ch24 > 0 ? '🚀' : '🔻'} <b>${esc(s.name)}</b> ${pct(s.ch24, 1)} · ${usd(s.mcap)}${held.length ? `\n   ${ar ? 'تملك من أبرز عملاته' : 'you hold its leaders'}: <b>${esc(held.join(', '))}</b>` : ''}`);
-  }
-  const r = await send(env, { text: lines.join('\n'), buttons: [[cb(w.mk, 'mk'), cb(w.pf, 'pf')]] });
-  if (r && r.ok) { fresh.forEach(s => { seen[s.id] = day; }); for (const k of Object.keys(seen)) if (seen[k] !== day) delete seen[k]; await jput(env, K(env, 'sector:seen'), seen); await logEvent(env, 'sector', fresh.map(s => s.name + ' ' + pct(s.ch24, 1)).join(', '), now); }
-  return { sent: r && r.ok ? 1 : 0 };
+  const q = await jget(env, K(env, 'digest'), {}); q.sec = q.sec || {};
+  for (const x of fresh) q.sec[x.id] = { t: now, name: x.name, ch24: x.ch24, mcap: x.mcap, held: (x.top || []).filter(id => mine.has(id)).map(symOf).filter(Boolean) };
+  await jput(env, K(env, 'digest'), q);   // 📡 for the next radar digest
+  fresh.forEach(x => { seen[x.id] = day; }); for (const k of Object.keys(seen)) if (seen[k] !== day) delete seen[k]; await jput(env, K(env, 'sector:seen'), seen);
+  await logEvent(env, 'sector', fresh.map(x => x.name + ' ' + pct(x.ch24, 1)).join(', '), now);
+  return { queued: fresh.length };
 }
 
 // ── 📌 the live message, pinned ──
@@ -317,9 +309,53 @@ export async function unpin(env) {
 export async function viewDaily(env) {
   const L = await lang(env), w = WD[L], c = await getCfg(env);
   const row = k => cb(`${c[k] ? '✅' : '⬜'} ${w[k]}`, 'dy:' + k);
-  const at = { morning: c.morningAt, evening: c.eveningAt, radar: L === 'ar' ? 'كل 30 دقيقة' : 'every 30 min', sectors: L === 'ar' ? 'كل ساعة' : 'hourly', pin: L === 'ar' ? 'كل 15 دقيقة' : 'every 15 min' };
+  const at = { morning: c.morningAt, evening: c.eveningAt, radar: L === 'ar' ? 'في ملخص 12:00 · 16:00 · 20:00' : 'in the 12:00 · 16:00 · 20:00 digest', sectors: L === 'ar' ? 'في نفس الملخص' : 'in the same digest', pin: L === 'ar' ? 'كل 15 دقيقة' : 'every 15 min' };
   const lines = [w.dailyT, '', ...['morning', 'evening', 'radar', 'sectors', 'pin'].map(k => `${c[k] ? '✅' : '⬜'} ${w[k]} · <i>${at[k]}</i>`), '', `<i>${w.dailyNote}</i>`];
   return { text: lines.join('\n'), buttons: [[row('morning'), row('evening')], [row('radar'), row('sectors')], [row('pin')], [cb(w.nowM, 'dy:now:m'), cb(w.nowE, 'dy:now:e')], [cb(w.back, 'menu')]] };
+}
+
+// ── 📡 the radar digest (12:00 · 16:00 · 20:00): everything the leverage radar and the sector radar found since the last
+// one, plus 🐋 what the big winning traders hold — ONE message. Nothing found and no whale flip → no message. ──
+export const DIGEST_AT = ['12:00', '16:00', '20:00'];
+const big$ = v => v >= 1e9 ? '$' + (v / 1e9).toFixed(2) + 'B' : v >= 1e6 ? '$' + (v / 1e6).toFixed(0) + 'M' : '$' + Math.round(v / 1e3) + 'K';
+// 🐋 one line per coin: "BTC: 14 long · 6 short — $310M vs $120M" (+ 🔄 when they changed side in the last 24 h)
+export function whaleLines(wh, syms, ar, now = Date.now()) {
+  if (!wh || !wh.coins || !(now - Date.parse(wh.t) < 12 * H)) return [];
+  const side = { long: ar ? 'شراء' : 'long', short: ar ? 'بيع' : 'short', mixed: ar ? 'منقسمون' : 'split' };
+  return syms.filter(x => wh.coins[x] && wh.coins[x].long + wh.coins[x].short >= 3).map(x => {
+    const c = wh.coins[x], flip = c.was && c.flipT && now - Date.parse(c.flipT) < 24 * H;
+    return ar ? `• <b>${esc(x)}</b>: ${c.long} شراء · ${c.short} بيع — ${big$(c.longUsd)} مقابل ${big$(c.shortUsd)}${flip ? ` · 🔄 انقلبوا من ${side[c.was]} إلى ${side[c.side]}` : ''}`
+      : `• <b>${esc(x)}</b>: ${c.long} long · ${c.short} short — ${big$(c.longUsd)} vs ${big$(c.shortUsd)}${flip ? ` · 🔄 flipped ${side[c.was]} → ${side[c.side]}` : ''}`;
+  });
+}
+export async function radarDigest(env, now = Date.now(), slot = '') {
+  const q = await jget(env, K(env, 'digest'), {}), lev = Object.entries(q.lev || {}), sec = Object.entries(q.sec || {});
+  const user = await loadUser(env).catch(() => null), m = await loadMarket([], user ? coinsOf(user) : []).catch(() => null);
+  const L = await lang(env), ar = L === 'ar', w = RADAR_TXT[L];
+  let held = []; if (user && m) { try { held = summarize(withIds(user, m), m, now).coins.filter(c => !isStable(c.sym)).sort((a, b) => b.value - a.value).map(c => c.sym); } catch (_) {} }
+  const wh = m && m.whales, flips = wh && wh.coins ? Object.keys(wh.coins).filter(x => (['BTC', 'ETH', 'SOL'].includes(x) || held.includes(x)) && wh.coins[x].flipT && Date.parse(wh.coins[x].flipT) > (q.last || 0)) : [];
+  if (!lev.length && !sec.length && !flips.length) { await jput(env, K(env, 'digest'), { last: q.last || 0 }); return { sent: 0 }; }
+  const lines = [`📡 <b>${ar ? 'ملخص الرادارات' : 'Radar digest'}</b>${slot ? ' · ' + slot : ''}`];
+  if (lev.length) {
+    lines.push('', `🧲 <b>${ar ? 'الرافعة' : 'Leverage'}</b>`);
+    for (const [sym, x] of lev) {
+      lines.push(`• <b>${esc(sym)}</b>: ${x.finds.map(k => w[k]).join(' · ')}`);
+      const d = [x.fund != null ? `${w.fund} ${x.fund > 0 ? '+' : ''}${x.fund}% / 8h` : null, x.oi != null ? `${w.oi} ${pct(x.oi, 1)}` : null, x.longs != null ? `${w.longs} ${r2(x.longs)}%` : null].filter(Boolean);
+      if (d.length) lines.push(`   ${d.join(' · ')}`);
+    }
+  }
+  if (sec.length) {
+    lines.push('', `🔥 <b>${ar ? 'القطاعات' : 'Sectors'}</b>`);
+    for (const [, x] of sec.sort((a, b) => Math.abs(b[1].ch24) - Math.abs(a[1].ch24)).slice(0, 6))
+      lines.push(`${x.ch24 > 0 ? '🚀' : '🔻'} <b>${esc(x.name)}</b> ${pct(x.ch24, 1)} · ${usd(x.mcap)}${x.held && x.held.length ? ` · ${ar ? 'تملك' : 'you hold'}: <b>${esc(x.held.join(', '))}</b>` : ''}`);
+  }
+  const wl = whaleLines(wh, [...new Set(['BTC', 'ETH', 'SOL', ...lev.map(([s2]) => s2), ...flips])].slice(0, 6), ar, now);
+  if (wl.length) lines.push('', `🐋 <b>${ar ? 'الحيتان' : 'Whales'}</b> <i>(${ar ? `أكبر ${wh.n} متداول رابح على Hyperliquid` : `the ${wh.n} biggest winning traders on Hyperliquid`})</i>`, ...wl);
+  lines.push('', `<i>${ar ? 'الرافعة المتكدسة تعني تقلباً أعلى — والحيتان يتحوّطون ويخسرون أيضاً.' : 'Crowded leverage means more volatility — and whales hedge, and lose too.'}</i>`, NOT_ADVICE[ar ? 'ar' : 'en']);
+  const first = lev[0], btns = [[cb(WD[L].mk, 'mk'), cb(WD[L].pf, 'pf'), ...(first ? [url('🔥 Liq Map', LIQ + encodeURIComponent(first[0]))] : [])]];
+  const r = await send(env, { text: lines.join('\n'), buttons: btns });
+  if (r && r.ok) await jput(env, K(env, 'digest'), { last: now });
+  return { sent: r && r.ok ? 1 : 0 };
 }
 
 // ── the cron (every 5 min, after the alerts): one bigger job per run ──
@@ -333,6 +369,10 @@ export async function runDaily(env, now = Date.now()) {
   if (min % 60 === 40) {   // 🌐 once per language: GitHub's alerts speak the bot's language (people who picked it before 20 Nov)
     const L = await lang(env), had = await kvGet(env, K(env, 'alsync'));
     if (had !== L && await setAlertsLang(env, L).catch(() => false)) await kvPut(env, K(env, 'alsync'), L);
+  }
+  if ((c.radar || c.sectors) && min % 15 === 5) {   // 📡 the radar digest: once per slot (up to 2 h late), at :05 / :20 / :35 / :50 — a minute no other job uses
+    const slot = DIGEST_AT.find(at => { const late = mins(lp.hm) - mins(at); return late >= 0 && late < 120 && sent['dg' + at] !== lp.date; });
+    if (slot) { await done('dg' + slot); return { job: 'digest', ...(await radarDigest(env, now, slot)) }; }
   }
   if (c.pin && min % 15 === 0) { await pinUpdate(env, now); return { job: 'pin' }; }
   if (c.radar && min % 30 === 10) return { job: 'radar', ...(await radar(env, now)) };

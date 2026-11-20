@@ -176,7 +176,7 @@ async function main() {
   } else { if (old.sectors) snap.sectors = old.sectors; log('sectors: no answer, kept the last one'); }
 
   // 🐋 smart money: the biggest winning traders on Hyperliquid (a perp exchange whose positions are public) — are they long
-  // or short on each coin, and with how much? Refreshed every 3 hours (25 small calls); kept when it does not answer.
+  // or short on each coin, and with how much? Refreshed every 3 hours (40 small calls); kept when it does not answer.
   if (old.whales && old.parts && old.parts.whales && Date.parse(now) - Date.parse(old.parts.whales) < 3 * 3600e3) { snap.whales = old.whales; snap.parts.whales = old.parts.whales; }
   else {
     const w = await whales(old.whales).catch(e => { log('whales failed', String(e && e.message).slice(0, 100)); return null; });
@@ -241,21 +241,22 @@ async function main() {
 // Any part that fails keeps the last one.
 const CMC_LIST = process.env.CMC_LIST || 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?sortBy=market_cap&sortType=desc&convert=USD&cryptoType=all&tagType=all&audited=false';
 const CC_API = process.env.CC_API || 'https://coincodex.com/api/v1/assets/get_asset_list';
-// 🐋 Hyperliquid's leaderboard (public, no key) → the 25 traders with the biggest all-time profit and ≥ $1M in the account
+// 🐋 Hyperliquid's leaderboard (public, no key) → the 40 traders with the biggest all-time profit and ≥ $1M in the account
 // → each one's open positions → per coin: how many are long / short and the dollars on each side. `prev` = the last snapshot
 // (a coin's side then: "long" / "short" / "mixed"), so a flip can be told. Not a signal: whales hedge, and lose too.
+const HL_BOARD = process.env.HL_BOARD || 'https://stats-data.hyperliquid.xyz/Mainnet/leaderboard', HL_INFO = process.env.HL_INFO || 'https://api.hyperliquid.xyz/info';   // (tests point them at a local server)
 const sideOf = c => { const t = c.longUsd + c.shortUsd; return t <= 0 ? 'mixed' : c.longUsd / t >= 0.6 ? 'long' : c.shortUsd / t >= 0.6 ? 'short' : 'mixed'; };
 async function whales(prev) {
-  const r = await fetch('https://stats-data.hyperliquid.xyz/Mainnet/leaderboard', { headers: { accept: 'application/json' } });
+  const r = await fetch(HL_BOARD, { headers: { accept: 'application/json' } });
   if (!r.ok) throw new Error('leaderboard ' + r.status);
   const rows = ((await r.json()) || {}).leaderboardRows; if (!Array.isArray(rows) || !rows.length) throw new Error('leaderboard empty');
   const perf = (x, win) => { const p = (x.windowPerformances || []).find(a => a && a[0] === win); return p && p[1] ? +p[1].pnl || 0 : 0; };
-  const top = rows.filter(x => x && /^0x[0-9a-fA-F]{40}$/.test(x.ethAddress || '') && +x.accountValue >= 1e6).sort((a, b) => perf(b, 'allTime') - perf(a, 'allTime')).slice(0, 25);
+  const top = rows.filter(x => x && /^0x[0-9a-fA-F]{40}$/.test(x.ethAddress || '') && +x.accountValue >= 1e6).sort((a, b) => perf(b, 'allTime') - perf(a, 'allTime')).slice(0, 40);
   if (top.length < 10) throw new Error('too few traders: ' + top.length);
   const coins = {}; let n = 0;
   for (const t of top) {
     let j = null;
-    try { const q = await fetch('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'clearinghouseState', user: t.ethAddress }) }); if (q.ok) j = await q.json(); } catch (_) {}
+    try { const q = await fetch(HL_INFO, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'clearinghouseState', user: t.ethAddress }) }); if (q.ok) j = await q.json(); } catch (_) {}
     await sleep(250);
     if (!j || !Array.isArray(j.assetPositions)) continue;
     n++;

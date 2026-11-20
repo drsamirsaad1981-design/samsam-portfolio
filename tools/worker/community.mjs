@@ -15,7 +15,8 @@
 import { usMarket, US_STATE } from './usmarket.mjs';
 import { bidiBody } from './bidi.mjs';
 import { members } from './who.mjs';
-import { loadMarket } from './data.mjs';
+import { loadMarket, derivatives, resetBudget } from './data.mjs';
+import { whaleLines } from './daily.mjs';
 import { localParts, local, esc, usd, pct, dot, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
 import GUIDE from '../../guide.json' with { type: 'json' };
 
@@ -181,8 +182,8 @@ export async function communityView(env, lang) {
   const has = b.length > 0;
   b.push([{ text: ar ? '⬅️ القائمة' : '⬅️ Menu', callback_data: 'menu' }]);
   const text = has
-    ? (ar ? '👥 <b>مجتمع Cute Portfolio</b> — للأعضاء فقط\n\n📢 <b>القناة</b>: نبض السوق مرتين يومياً، والتحركات الكبيرة، والجديد في الدليل.\n💬 <b>النقاش</b>: علّق تحت أي منشور — التعليقات هي مكان المجتمع.\n💡 اقتراح أو 🐞 مشكلة؟ أرسل /feedback ثم رسالتك.\n\nاضغط وأرسل طلب الانضمام — يقبلك البوت فوراً.'
-          : '👥 <b>The Cute Portfolio community</b> — members only\n\n📢 <b>The channel</b>: the market pulse twice a day, big moves and what\'s new in the guide.\n💬 <b>Talk</b>: comment under any post — the comments are the community.\n💡 An idea or 🐞 a bug? Send /feedback and your message.\n\nTap, send the join request — the bot lets you in at once.')
+    ? (ar ? '👥 <b>مجتمع Cute Portfolio</b> — للأعضاء فقط\n\n📢 <b>القناة</b>: نبض السوق صباحاً ومساءً، وخريطة القطاعات (13:00)، والرافعة والحيتان (17:30)، والتحركات الكبيرة.\n💬 <b>النقاش</b>: علّق تحت أي منشور — التعليقات هي مكان المجتمع.\n💡 اقتراح أو 🐞 مشكلة؟ أرسل /feedback ثم رسالتك.\n\nاضغط وأرسل طلب الانضمام — يقبلك البوت فوراً.'
+          : '👥 <b>The Cute Portfolio community</b> — members only\n\n📢 <b>The channel</b>: the market pulse morning and evening, the sector map (13:00), leverage &amp; whales (17:30) and big moves.\n💬 <b>Talk</b>: comment under any post — the comments are the community.\n💡 An idea or 🐞 a bug? Send /feedback and your message.\n\nTap, send the join request — the bot lets you in at once.')
     : (ar ? '👥 المجتمع قيد التجهيز — قريباً.' : '👥 The community is being set up — soon.');
   return { text, buttons: b };
 }
@@ -219,6 +220,39 @@ function otherMarkets(m, now) {
   }
   return out.length ? ['', ...out] : [];
 }
+// ── 🔥 13:00 the sector map: where the money moved in 24 h (CoinGecko's sectors ≥ $1B, with each one's leaders) ──
+export function sectorText(m, now) {
+  const all = (m.sectors || []).filter(x => x && x.mcap >= 1e9 && x.ch24 != null); if (all.length < 2) return null;
+  const symOf = Object.fromEntries((m.top || []).filter(r => r && r.id && r.sym).map(r => [r.id, r.sym]));
+  const row = x => { const lead = (x.top || []).map(id => symOf[id]).filter(Boolean).slice(0, 3); return `${x.ch24 > 0 ? '🚀' : '🔻'} <b>${esc(x.name)}</b> ${pct(x.ch24, 1)} · ${usd(x.mcap)}${lead.length ? ' · ' + esc(lead.join(', ')) : ''}`; };
+  const up = [...all].sort((a, b) => b.ch24 - a.ch24).slice(0, 3).filter(x => x.ch24 > 0), dn = [...all].sort((a, b) => a.ch24 - b.ch24).slice(0, 3).filter(x => x.ch24 < 0);
+  if (!up.length && !dn.length) return null;
+  return [`🔥 <b>Sector map · خريطة القطاعات</b> · ${local(now, { day: 'numeric', month: 'short' })}`, '',
+    ...(up.length ? ['📈 <b>Strongest 24h · الأقوى</b>', ...up.map(row), ''] : []),
+    ...(dn.length ? ['📉 <b>Weakest 24h · الأضعف</b>', ...dn.map(row), ''] : []),
+    '<i>Where the money moved in the last 24 hours (sectors above $1B, with their leaders).</i>', '<i>أين تحركت السيولة خلال 24 ساعة (القطاعات فوق مليار دولار مع أبرز عملاتها).</i>',
+    '', `<i>${NOTE.en}</i>`, `<i>${NOTE.ar}</i>`].join('\n');
+}
+// ── 🧲 17:30 leverage & whales: funding, open interest, the long share (everyone / the big accounts) for BTC · ETH · SOL,
+// what the biggest winning traders on Hyperliquid hold, and the US market's state (it opens about then) ──
+export async function leverageText(m, now) {
+  const rows = [];
+  for (const sym of ['BTC', 'ETH', 'SOL']) {
+    resetBudget(); const d = await derivatives(sym).catch(() => null), x = d && d.summary; if (!x) continue;
+    const p = [x.funding_8h_pct_avg != null ? `funding ${x.funding_8h_pct_avg > 0 ? '+' : ''}${x.funding_8h_pct_avg}%/8h` : null, x.open_interest_change_24h_pct != null ? `OI 24h ${pct(x.open_interest_change_24h_pct, 1)}` : null,
+      x.long_accounts_pct != null ? `longs ${Math.round(x.long_accounts_pct)}%` : null, x.top_traders_long_pct != null ? `big accounts ${Math.round(x.top_traders_long_pct)}%` : null].filter(Boolean);
+    if (p.length) rows.push(`<b>${sym}</b> · ${p.join(' · ')}`);
+    if (sym === 'BTC' && x.liquidations_24h) rows.push(`💥 Liquidations 24h (OKX): longs ${usd(x.liquidations_24h.longs_usd)} · shorts ${usd(x.liquidations_24h.shorts_usd)}`);
+  }
+  const wl = whaleLines(m.whales, ['BTC', 'ETH', 'SOL'], false, now);
+  if (!rows.length && !wl.length) return null;
+  const u = usMarket(now);
+  return [`🧲 <b>Leverage &amp; whales · الرافعة والحيتان</b> · ${local(now, { day: 'numeric', month: 'short' })}`, '', ...rows,
+    ...(wl.length ? ['', `🐋 <b>Whales · الحيتان</b> <i>(the ${m.whales.n} biggest winning traders on Hyperliquid)</i>`, ...wl] : []),
+    '', `🇺🇸 US market: ${US_STATE.en[u.state].replace(/^\S+ /, '')}`,
+    '', '<i>High positive funding and longs above 70% = crowded longs (a dip can cascade). Whales hedge, and lose too.</i>', '<i>تمويل موجب مرتفع ونسبة شراء فوق 70% = ازدحام في الشراء (أي هبوط قد يتسلسل). والحيتان يتحوّطون ويخسرون أيضاً.</i>',
+    '', `<i>${NOTE.en}</i>`, `<i>${NOTE.ar}</i>`].join('\n');
+}
 export async function runChannel(env, now = Date.now()) {
   await guideUpdates(env).catch(() => {});   // 📘 a new release changed the guide → the changed parts in the guide topic
   const c = await getCommunity(env), ch = c.channel; if (!ch) return { job: null };
@@ -226,12 +260,16 @@ export async function runChannel(env, now = Date.now()) {
   let kind = null;
   if (hm >= 9 * 60 && hm < 9 * 60 + 20 && sent.am !== today) kind = 'am';
   else if (hm >= 21 * 60 + 5 && hm < 21 * 60 + 25 && sent.pm !== today) kind = 'pm';
+  else if (hm >= 13 * 60 && hm < 13 * 60 + 20 && sent.sec !== today) kind = 'sec';         // 🔥 the sector map
+  else if (hm >= 17 * 60 + 30 && hm < 17 * 60 + 50 && sent.lev !== today) kind = 'lev';   // 🧲 leverage & whales
   const m = kind || sent.move !== today ? await loadMarket([], []).catch(() => null) : null;
   if (!kind && m && m.btc && Math.abs(m.btc.ch24 || 0) >= 5 && sent.move !== today) kind = 'move';
   if (!kind || !m) return { job: null };
-  const r = await tg(env, 'sendMessage', { chat_id: ch.id, text: pulseText(m, now, kind), parse_mode: 'HTML', disable_web_page_preview: true });   // (no buttons: they would hide the comments)
+  const text = kind === 'sec' ? sectorText(m, now) : kind === 'lev' ? await leverageText(m, now).catch(() => null) : pulseText(m, now, kind);
+  if (!text) { sent[kind] = today; c.sent = sent; await putCommunity(env, c); return { job: 'channel:' + kind, ok: false, skipped: true }; }   // no data today: skipped, not retried all window
+  const r = await tg(env, 'sendMessage', { chat_id: ch.id, text, parse_mode: 'HTML', disable_web_page_preview: true });   // (no buttons: they would hide the comments)
   if (r.ok) {
-    if (kind !== 'move') { if (ch.pinned) await tg(env, 'unpinChatMessage', { chat_id: ch.id, message_id: ch.pinned }); await tg(env, 'pinChatMessage', { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true }); ch.pinned = r.result.message_id; }
+    if (kind === 'am' || kind === 'pm') { if (ch.pinned) await tg(env, 'unpinChatMessage', { chat_id: ch.id, message_id: ch.pinned }); await tg(env, 'pinChatMessage', { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true }); ch.pinned = r.result.message_id; }
     sent[kind] = today; c.sent = sent; c.channel = ch; await putCommunity(env, c);
   }
   return { job: 'channel:' + kind, ok: !!r.ok };

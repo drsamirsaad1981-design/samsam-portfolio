@@ -29,6 +29,10 @@ const srv = http.createServer((q, r) => {
     const base = { 'GC=F': 2000, 'SI=F': 25, 'PL=F': 950, 'BZ=F': 80 }[sym]; return J({ chart: { result: [{ meta: { regularMarketPrice: base * 1.01, previousClose: base, regularMarketTime: 1795000000 }, indicators: { quote: [{ close: Array.from({ length: 22 }, (_, i) => base * (0.95 + i * 0.0025)) }] } }] } }); }
   if (u.pathname === '/cg/coins/markets') return J(u.searchParams.get('category') ? [] : u.searchParams.get('page') === '1' ? mk : []);
   if (u.pathname === '/cg/global') return J({ data: { total_market_cap: { usd: 3e12 }, total_volume: { usd: 1e11 }, market_cap_change_percentage_24h_usd: 1, market_cap_percentage: { btc: 58, eth: 10, usdt: 5 }, active_cryptocurrencies: 1 } });
+  // 🐋 Hyperliquid: a leaderboard of 14 traders (2 too small, 1 bad address) and each one's positions
+  if (u.pathname === '/hl/board') return J({ leaderboardRows: Array.from({ length: 14 }, (_, i) => ({ ethAddress: i === 13 ? 'nope' : '0x' + String(i + 1).padStart(40, '0'), accountValue: String(i >= 11 ? 5e5 : 5e6), windowPerformances: [['day', { pnl: '1' }], ['allTime', { pnl: String(1e6 * (20 - i)) }]] })) });
+  if (u.pathname === '/hl/info') { let b = ''; q.on('data', c => { b += c; }); return q.on('end', () => { const n = +JSON.parse(b).user.slice(-2); hits.hl = (hits.hl || 0) + 1;
+    J({ assetPositions: [{ position: { coin: 'BTC', szi: n <= 8 ? '1.5' : '-2', positionValue: '3000000' } }, { position: { coin: 'kPEPE', szi: '-100', positionValue: '50000' } }, { position: { coin: 'DUST', szi: '1', positionValue: '500' } }] }); }); }
   if (u.pathname === '/cg/coins/categories') return J([]);
   if (u.pathname.startsWith('/cg/coins/')) return J({ prices: [], market_caps: [] });
   if (u.pathname === '/bn/klines') {   // 100 daily candles; alts 1–60 doubled over 90 days, the rest flat; BTC +10%
@@ -39,7 +43,7 @@ const srv = http.createServer((q, r) => {
   r.writeHead(404); r.end('{}');
 });
 await new Promise(ok => srv.listen(0, ok)); const B = 'http://127.0.0.1:' + srv.address().port;
-const env = { ...process.env, CG_FAST: '1', NO_LINKS: '1', CG_API: B + '/cg', BN_API: B + '/bn', FNG_API: B + '/fng/?limit=2', CMC_PUB: B + '/cmcpub', CMC_LIST: B + '/cmclist?x=1', YH_API: B + '/yh' };
+const env = { ...process.env, CG_FAST: '1', NO_LINKS: '1', CG_API: B + '/cg', BN_API: B + '/bn', FNG_API: B + '/fng/?limit=2', CMC_PUB: B + '/cmcpub', CMC_LIST: B + '/cmclist?x=1', YH_API: B + '/yh', HL_BOARD: B + '/hl/board', HL_INFO: B + '/hl/info' };
 const run = dir => new Promise((ok, no) => { import('node:child_process').then(({ execFile }) => execFile(process.execPath, [path.join(ROOT, 'tools/update-market.mjs'), dir], { env, timeout: 120000 }, (e, so, se) => e ? no(e) : ok(so))); });
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mkt-'));
 const out = await run(dir);
@@ -53,6 +57,8 @@ check('Total market cap, volume and 24h are CoinMarketCap\'s (3.3T, 90B, −1.5%
 check('📈 bStocks: all of them (per_page=250) with logo, 24h and 7d change, a small 7-day line', /per_page=250/.test(hits.stocksQ) && /7d/.test(decodeURIComponent(hits.stocksQ)) && m.stocks && m.stocks[0].sym === 'NVDAB' && m.stocks[0].img === 'x.png' && m.stocks[0].ch7 === -1.2 && m.stocks[0].spark.length >= 20 && m.stocks[0].spark.length <= 30, m.stocks);
 const gold = (m.metals || []).find(x => x.k === 'gold');
 check('🥇 metals: gold, silver, platinum, Brent from Yahoo (price, +1% since the last close, a month of closes); copper refused → left out this time', m.metals && m.metals.map(x => x.k).join() === 'gold,silver,platinum,brent' && gold.unit === 'oz' && Math.abs(gold.price - 2020) < 1e-9 && Math.abs(gold.ch24 - 1) < 1e-9 && gold.spark.length === 22 && gold.ch7 != null && m.metals.find(x => x.k === 'brent').unit === 'bbl', m.metals);
+check('🐋 whales: the biggest winners with ≥ $1M (11 of 14: two too small, one bad address) → per coin how many are long / short and the dollars: BTC 8 long · 3 short ($24M vs $9M) = "long"; kPEPE counted as PEPE; positions under $10k left out',
+  m.whales && m.whales.n === 11 && hits.hl === 11 && m.whales.coins.BTC.long === 8 && m.whales.coins.BTC.short === 3 && m.whales.coins.BTC.longUsd === 24e6 && m.whales.coins.BTC.shortUsd === 9e6 && m.whales.coins.BTC.side === 'long' && m.whales.coins.PEPE.side === 'short' && !m.whales.coins.DUST && m.parts.whales, m.whales);
 // CoinMarketCap down → as before
 cmcUp = false; fs.rmSync(dir, { recursive: true });
 const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'mkt-'));

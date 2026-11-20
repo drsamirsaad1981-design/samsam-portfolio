@@ -1,6 +1,6 @@
 // Telegram alerts (tools/alerts-core.mjs): the numbers, each alert once, quiet hours, the brief / weekly timing,
 // English + Arabic, and text Telegram accepts (HTML with only <b> <i> <code>, every & < > escaped).
-import { summarize, evaluate, settings, priceSeries, brief, combine } from '../tools/alerts-core.mjs';
+import { summarize, evaluate, settings, priceSeries, brief, combine, NOW_KEYS } from '../tools/alerts-core.mjs';
 import { signalFor, strengthMap } from '../samsam-core.js';
 let pass = 0, fail = 0;
 const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' -> ' + JSON.stringify(d).slice(0, 300))); };
@@ -20,7 +20,7 @@ const user = (meta = {}) => ({
   meta: { baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }], ...meta },
 });
 const okHtml = t => !/&(?!amp;|lt;|gt;)/.test(t) && !/<(?!\/?(b|i|code)>)/.test(t);
-const cfg = settings({});
+const cfg = settings({ alerts: { digest: false } });   // (each alert at once: the digest has its own checks below)
 
 // the numbers
 const s = summarize(user(), mk(), T0);
@@ -52,6 +52,26 @@ const mv = r.messages.find(x => x.key === 'move-btc');
 check('BTC +6% → a move alert', mv && /BTC \+6\.0%/.test(mv.text) && okHtml(mv.text), r.messages.map(m => m.key)); st = r.state;
 r = evaluate(s2, m2, st, cfg, t2 + 1800e3);
 check('same price later → not again', !r.messages.some(x => x.key === 'move-btc')); st = r.state;
+
+// 🔔 the digest (on by default): what can wait is held and sent together at 12:00 · 16:00 · 20:00
+{
+  const dg = settings({}), d0 = evaluate(s, mk(), {}, dg, T0).state;
+  let d = evaluate(s2, m2, d0, dg, t2);   // 10:40 — BTC +6%
+  check('digest: BTC +6% at 10:40 → no message yet, held for the next slot', !d.messages.length && d.state.held.some(x => x.key === 'move-btc'), [d.messages.map(x => x.key), d.state.held.map(x => x.key)]);
+  const nHeld = d.state.held.length;
+  d = evaluate(s2, m2, d.state, dg, t2 + 1800e3);
+  check('…still quiet at 11:10 (held once, not twice)', !d.messages.length && d.state.held.length === nHeld, d.state.held.map(x => x.key));
+  const tn = T0 + 3.5 * H, mn = mk({ now: tn, btc: 84800 }); d = evaluate(summarize(user(), mn, tn), mn, d.state, dg, tn);   // 12:10
+  const dm = d.messages.find(x => x.key === 'digest');
+  check('…12:10 → ONE "Portfolio digest · 12:00" with the BTC move inside, nothing left held', d.messages.length === 1 && dm && /Portfolio digest<\/b> · 12:00/.test(dm.text) && /BTC \+6\.0%/.test(dm.text) && okHtml(dm.text) && !d.state.held.length, d.messages.map(x => x.key));
+  d = evaluate(summarize(user(), mn, tn), mn, d.state, dg, tn + 1800e3);
+  check('…12:40 → nothing (the slot went)', !d.messages.length, d.messages.map(x => x.key));
+  const t16 = T0 + 7.5 * H, m16 = mk({ now: t16, btc: 84800 }); d = evaluate(summarize(user(), m16, t16), m16, d.state, dg, t16);
+  check('…16:10 with nothing held → no empty digest', !d.messages.length, d.messages.map(x => x.key));
+  const tb = t16 + H, mb = mk({ now: tb, btc: 97000 }); d = evaluate(summarize(user(), mb, tb), mb, d.state, dg, tb);   // +14% from 84,800: twice the threshold
+  check('…a violent move (≥ 2× your %) is not held — sent at once', d.messages.some(x => x.key === 'move-btc') && !(d.state.held || []).length, [d.messages.map(x => x.key), d.state.held]);
+  check('…sent at once whatever the hour: a buy price, a take-profit, the exit conditions, the signals, DCA', ['buy-SOL', 'tp-LINK-1', 'macro-btcD', 'sig-day', 'dca-day'].every(k => NOW_KEYS.test(k)) && !['move-btc', 'plan-LINK', 'fng', 'season', 'etf', 'drift', 'health-top'].some(k => NOW_KEYS.test(k)));
+}
 
 // SEI falls under −20% → signal change Reinforce → Sell / Convert, with a button to the coin
 const t3 = t2 + H, m3 = mk({ now: t3, btc: 84800, sei: 0.045 }), s3 = summarize(user(), m3, t3);
@@ -108,18 +128,18 @@ r = evaluate(sf, mk({ now: fri }), { ...st, briefDay: '2026-11-12' }, cfg, fri);
 const wk = r.messages.find(x => x.key === 'weekly'), bf = r.messages.find(x => x.key === 'brief');
 check('weekly report: "🎁 Rewards & mining this week +… BTC · +0.5 LINK (≈ $…)"', wk && /🎁 <b>Rewards &amp; mining this week<\/b>|🎁 <b>Rewards & mining this week<\/b>/.test(wk.text) && /\+0\.5 LINK/.test(wk.text) && /\+0\.001 BTC/.test(wk.text) && okHtml(wk.text), wk && wk.text);
 check('…not in the daily brief', bf && !/🎁/.test(bf.text));
-const rar = evaluate(sf, mk({ now: fri }), { ...st, briefDay: '2026-11-12' }, settings({ alerts: { lang: 'ar' } }), fri).messages.find(x => x.key === 'weekly');
+const rar = evaluate(sf, mk({ now: fri }), { ...st, briefDay: '2026-11-12' }, settings({ alerts: { digest: false, lang: 'ar' } }), fri).messages.find(x => x.key === 'weekly');
 check('weekly report in Arabic: "المكافآت والتعدين هذا الأسبوع"', rar && rar.text.includes('المكافآت والتعدين هذا الأسبوع'));
 const early = Date.parse('2026-11-13T04:00:00Z');   // 07:00 — before 08:30
 r = evaluate(s, mk({ now: early }), { ...st, briefDay: '2026-11-12' }, cfg, early);
 check('07:00 → no brief yet', !r.messages.some(x => x.key === 'brief'));
 
 // switched off in the settings → silent
-r = evaluate(s3, m3, { ...st, sig: { ...st.sig, SEI: 'hold' } }, settings({ alerts: { signals: false } }), t3);
+r = evaluate(s3, m3, { ...st, sig: { ...st.sig, SEI: 'hold' } }, settings({ alerts: { digest: false, signals: false } }), t3);
 check('signals switched off → no signal alert', !r.messages.some(x => x.key.startsWith('sig-')));
 
 // Arabic
-const ar = settings({ alerts: { lang: 'ar' } });
+const ar = settings({ alerts: { digest: false, lang: 'ar' } });
 const ba = brief(s, mk(), ar, T0).text;
 check('Arabic brief: Arabic words, Latin numbers, safe HTML', /ملخص الصباح/.test(ba) && /إجمالي الربح/.test(ba) && /\$8,450\.00/.test(ba) && okHtml(ba), ba);
 r = evaluate(s3, m3, { ...st, sig: { ...st.sig, SEI: 'reinforce' } }, ar, t3);
@@ -190,7 +210,7 @@ check('…once', !evaluate(sM, mk({ now: mon }), lD.state, cfg, mon + 1800e3).me
 const uB = user(); uB.accum = uD.accum; uB.txs = [{ id: 'b1', sym: 'SEI', type: 'buy', qty: 2000, price: 0.05, date: '2026-11-07T09:00:00Z' }];
 const sB = summarize(uB, mk({ now: mon }), mon);
 check('bought on Saturday → done, no reminder', sB.dca[0].s.state === 'done' && !evaluate(sB, mk({ now: mon }), dD.state, cfg, mon).messages.some(x => x.key.startsWith('dca-')), sB.dca[0].s);
-check('DCA reminders switched off → nothing', !evaluate(sD, mk(), { ...fD.state, dcaDay: {} }, settings({ alerts: { dca: false } }), T0).messages.some(x => x.key.startsWith('dca-')));
+check('DCA reminders switched off → nothing', !evaluate(sD, mk(), { ...fD.state, dcaDay: {} }, settings({ alerts: { digest: false, dca: false } }), T0).messages.some(x => x.key.startsWith('dca-')));
 
 // buy-price alerts: the alert price on a plan coin (owned or not), once, again after 3% back above, DCA day noted, Arabic, off switch
 const uBP = user(); uBP.accum = [{ sym: 'SEI', targetQty: 6000, alertPrice: 0.055, dca: { usd: 100, every: 'week', day: 6, since: '2026-10-01' } },
@@ -208,9 +228,9 @@ check('…not again while it stays there', !evaluate(sBP, mBP(), eBP.state, cfg,
 const up = evaluate(summarize(uBP, mBP(0.0575), T0), mBP(0.0575), eBP.state, cfg, T0 + 3600e3);
 check('3% back above → re-armed', !up.state.buy['SEI:0.055']);
 check('…drops again → a new message', evaluate(sBP, mBP(), up.state, cfg, T0 + 7200e3).messages.some(x => x.key === 'buy-SEI:0.055'));
-const arBP = evaluate(sBP, mBP(), { ...fBP.state, buy: {} }, settings({ alerts: { lang: 'ar' } }), T0).messages.find(x => x.key === 'buy-SEI:0.055');
+const arBP = evaluate(sBP, mBP(), { ...fBP.state, buy: {} }, settings({ alerts: { digest: false, lang: 'ar' } }), T0).messages.find(x => x.key === 'buy-SEI:0.055');
 check('Arabic', arBP && /وصلت لسعر الشراء/.test(arBP.text) && /المتبقي للخطة/.test(arBP.text), arBP && arBP.text);
-check('switched off → nothing', !evaluate(sBP, mBP(), { ...fBP.state, buy: {} }, settings({ alerts: { buy: false } }), T0).messages.some(x => x.key.startsWith('buy-')));
+check('switched off → nothing', !evaluate(sBP, mBP(), { ...fBP.state, buy: {} }, settings({ alerts: { digest: false, buy: false } }), T0).messages.some(x => x.key.startsWith('buy-')));
 check('a new alert price → a new alert (old one forgotten)', (() => { const u2 = JSON.parse(JSON.stringify(uBP)); u2.accum[0].alertPrice = 0.052; const r = evaluate(summarize(u2, mBP(), T0), mBP(), eBP.state, cfg, T0 + 900e3); return r.messages.some(x => x.key === 'buy-SEI:0.052') && !r.state.buy['SEI:0.055']; })());
 
 // ⏳ decided on the daily close: SEI's live price 25% under its average, but its close at the average → still Reinforce?

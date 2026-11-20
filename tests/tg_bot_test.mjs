@@ -693,19 +693,27 @@ sent.length = 0; await cron(Wd, RIYADH('12:30'));
 check('…15 min later, nothing changed → not redrawn (no Telegram call at all)', sent.length === 0, sent.map(x => x.m));
 LIVE.bitcoin.usd = 78000; Wd = await fresh(); sent.length = 0; await cron(Wd, RIYADH('12:45')); LIVE.bitcoin.usd = 77000;
 check('…a number changed → the same message is edited (not a new one)', sent.length === 1 && sent[0].m === 'editMessageText' && sent[0].b.message_id === 7 && /78,000/.test(sent[0].b.text), sent.map(x => x.m));
-// 🧲 radar: BTC, then SOL (your biggest coins), one per run
+// 🧲 radar: BTC, then SOL (your biggest coins), one per run — kept for the 📡 digest (12:00 · 16:00 · 20:00), no message of its own
 HOT = true; Wd = await fresh(); sent.length = 0; await cron(Wd, RIYADH('13:10')); await cron(Wd, RIYADH('13:40'));
-const rm = sent.find(x => x.m === 'sendMessage' && /🧲/.test(x.b.text));
-check('🧲 :10 / :40 → one coin each (BTC, then SOL): SOL funding hot → "Crowded longs" + Liq Map, once', rm && /SOL/.test(rm.b.text) && /(Crowded longs|لونجات زحمة)/.test(rm.b.text) && btns(rm).some(b => /Liq Map/.test(b.text)) && btns(rm).some(b => b.callback_data === 'c:solana') && okHtml(rm.b.text), rm && rm.b.text);
+check('🧲 :10 / :40 → one coin each (BTC, then SOL): SOL funding hot → kept for the digest, NO message now', !sent.some(x => x.m === 'sendMessage') && JSON.parse(kvStore.get('tg:555:digest')).lev.SOL.finds.includes('hot_longs'), [sent.map(x => x.m), kvStore.get('tg:555:digest')]);
 sent.length = 0; for (const hm of ['14:10', '14:40', '15:10', '15:40']) { Wd = await fresh(); await cron(Wd, RIYADH(hm)); }
-check('…not again within 12 h (the next rounds stay quiet)', !sent.some(x => x.m === 'sendMessage' && /🧲.*SOL/s.test(x.b.text)), sent.filter(x => x.m === 'sendMessage').map(x => x.b.text.slice(0, 40)));
+check('…the next rounds stay quiet too', !sent.some(x => x.m === 'sendMessage'), sent.filter(x => x.m === 'sendMessage').map(x => x.b.text.slice(0, 40)));
 HOT = false;
-// 🔥 sectors
-sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('16:25'));
-const secm = sent.find(x => x.m === 'sendMessage' && /🔥/.test(x.b.text));
-check('🔥 :25 hourly → sectors ≥ $1B moving ≥ 10%: AI +14.2% (you hold its leader SOL) and Meme −11.5%; tiny / calm ones left out', secm && /AI<\/b> \+14\.2%/.test(secm.b.text) && /SOL/.test(secm.b.text) && /Meme<\/b> −11\.5%/.test(secm.b.text) && !/Tiny|Calm/.test(secm.b.text), secm && secm.b.text);
-sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('17:25'));
-check('…once a day each', !sent.some(x => x.m === 'sendMessage' && /🔥/.test(x.b.text)));
+market.whales = { t: new Date(RIYADH('15:00')).toISOString(), src: 'Hyperliquid', n: 25, coins: { BTC: { long: 14, short: 6, longUsd: 3.1e8, shortUsd: 1.2e8, side: 'long' }, SOL: { long: 3, short: 9, longUsd: 2e7, shortUsd: 9e7, side: 'short', was: 'long', flipT: new Date(RIYADH('15:00')).toISOString() }, DOGE: { long: 1, short: 1, longUsd: 1e5, shortUsd: 1e5, side: 'mixed' } } };
+sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('16:05'));
+const dgm = sent.find(x => x.m === 'sendMessage' && /📡/.test(x.b.text));
+check('📡 16:05 → ONE radar digest: 🧲 SOL "Crowded longs" with its numbers + Liq Map', sent.filter(x => x.m === 'sendMessage').length === 1 && dgm && /Radar digest<\/b> · 16:00/.test(dgm.b.text) && /<b>SOL<\/b>: .*Crowded longs/.test(dgm.b.text) && /Funding \+/.test(dgm.b.text) && btns(dgm).some(b => /Liq Map/.test(b.text)) && okHtml(dgm.b.text), dgm && dgm.b.text);
+check('…🐋 whales: the 25 biggest winning traders — BTC 14 long · 6 short ($310M vs $120M), SOL flipped long → short; a coin with too few traders left out; "not financial advice"', dgm && /the 25 biggest winning traders on Hyperliquid/.test(dgm.b.text) && /<b>BTC<\/b>: 14 long · 6 short — \$310M vs \$120M/.test(dgm.b.text) && /<b>SOL<\/b>: 3 long · 9 short — \$20M vs \$90M · 🔄 flipped long → short/.test(dgm.b.text) && !/DOGE/.test(dgm.b.text) && /Not financial advice/.test(dgm.b.text), dgm && dgm.b.text);
+sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('16:20'));
+check('…once per slot (16:20 → nothing)', !sent.some(x => x.m === 'sendMessage'));
+// 🔥 sectors → the next digest
+sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('16:25')); await cron(Wd, RIYADH('17:25'));
+check('🔥 :25 hourly → sectors ≥ $1B moving ≥ 10% are kept for the digest (no message now)', !sent.some(x => x.m === 'sendMessage') && Object.keys(JSON.parse(kvStore.get('tg:555:digest')).sec || {}).length === 2, kvStore.get('tg:555:digest'));
+sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('20:05'));
+const secm = sent.find(x => x.m === 'sendMessage' && /📡/.test(x.b.text));
+check('📡 20:05 → the digest: AI +14.2% (you hold its leader SOL) and Meme −11.5%; tiny / calm ones left out; no 🧲 part (nothing new)', secm && /AI<\/b> \+14\.2%/.test(secm.b.text) && /you hold: <b>SOL<\/b>/.test(secm.b.text) && /Meme<\/b> −11\.5%/.test(secm.b.text) && !/Tiny|Calm/.test(secm.b.text) && !/🧲/.test(secm.b.text) && okHtml(secm.b.text), secm && secm.b.text);
+kvStore.delete('tg:555:daily:sent'); sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('12:05'));
+check('…a slot with nothing found and no whale flip → no message at all', !sent.some(x => x.m === 'sendMessage' && /📡/.test(x.b.text)), sent.filter(x => x.m === 'sendMessage').map(x => x.b.text.slice(0, 50)));
 check('today\'s log keeps what happened (radar, sector) for the evening', /radar/.test(kvStore.get('tg:555:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || '') && /sector/.test(kvStore.get('tg:555:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || ''));
 // /daily
 Wd = await fresh(); sent.length = 0; await postK(Wd, '/daily');
@@ -1279,6 +1287,17 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; const Wq = await fresh(); const pq = []; await Wq.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('09:10') }, ENVK, { waitUntil: x => pq.push(x) }); await Promise.all(pq);
   check('…+ 🥇 gold · silver (no Brent) and 🇺🇸 US stocks (state, best CRCLB, worst GMEB)', /🥇 Gold <b>\$2,650<\/b>/.test(pulse.b.text) && /Silver/.test(pulse.b.text) && !/Brent/.test(pulse.b.text) && /🇺🇸 US stocks (Open|Pre-market|After hours|Closed) · CRCLB \+7\.8% · GMEB −6\.2%/.test(pulse.b.text), pulse.b.text);
   check('…once a morning (09:10 → nothing new)', !sent.some(m => m.b.chat_id === -1001 && /Market pulse/.test(m.b.text || '')));
+  // 🔥 13:00 the sector map · 🧲 17:30 leverage & whales — two more posts between the morning and the evening pulse
+  sent.length = 0; { const Ws = await fresh(), ps = []; await Ws.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('13:05') }, ENVK, { waitUntil: x => ps.push(x) }); await Promise.all(ps); }
+  const secP = sent.find(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
+  check('🔥 13:05 → "Sector map" in the channel: strongest / weakest sectors (≥ $1B) with their leaders, both languages, no buttons (comments stay), not pinned', secP && /Sector map · خريطة القطاعات/.test(secP.b.text) && /Strongest 24h/.test(secP.b.text) && /AI<\/b> \+14\.2%/.test(secP.b.text) && /Weakest 24h/.test(secP.b.text) && /Meme<\/b> −11\.5%/.test(secP.b.text) && !/Tiny/.test(secP.b.text) && /Not financial advice/.test(secP.b.text) && !secP.b.reply_markup && okHtml(secP.b.text) && !sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1001), secP && secP.b.text);
+  sent.length = 0; { const Ws = await fresh(), ps = []; await Ws.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('13:10') }, ENVK, { waitUntil: x => ps.push(x) }); await Promise.all(ps); }
+  check('…once a day', !sent.some(m => m.m === 'sendMessage' && m.b.chat_id === -1001));
+  market.whales = { t: new Date(RIYADH('15:00')).toISOString(), src: 'Hyperliquid', n: 25, coins: { BTC: { long: 14, short: 6, longUsd: 3.1e8, shortUsd: 1.2e8, side: 'long' }, ETH: { long: 5, short: 11, longUsd: 4e7, shortUsd: 1.5e8, side: 'short' } } };
+  sent.length = 0; { const Ws = await fresh(), ps = []; await Ws.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('17:35') }, ENVK, { waitUntil: x => ps.push(x) }); await Promise.all(ps); }
+  const levP = sent.find(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
+  check('🧲 17:35 → "Leverage & whales": BTC · ETH · SOL funding / OI / longs, 🐋 the 25 biggest winning traders (BTC 14 long · 6 short), the US market, both languages', levP && /Leverage &amp; whales · الرافعة والحيتان/.test(levP.b.text) && /<b>BTC<\/b> · funding/.test(levP.b.text) && /<b>SOL<\/b> · /.test(levP.b.text) && /the 25 biggest winning traders on Hyperliquid/.test(levP.b.text) && /<b>BTC<\/b>: 14 long · 6 short — \$310M vs \$120M/.test(levP.b.text) && /<b>ETH<\/b>: 5 long · 11 short/.test(levP.b.text) && /🇺🇸 US market: /.test(levP.b.text) && /الحيتان يتحوّطون/.test(levP.b.text) && !levP.b.reply_markup && okHtml(levP.b.text), levP && levP.b.text);
+  delete market.whales;
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: -1002, type: 'supergroup' }, from: { id: 888 }, text: 'hello everyone' } }, ENV.TG_SECRET, ENVK);
   check('💬 people commenting (the discussion group) → the bot stays quiet', sent.filter(m => m.m === 'sendMessage').length === 0);
 }

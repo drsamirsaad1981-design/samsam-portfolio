@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 057700b78e8186af
+// sources-hash: 42c2eaa3e14b650c
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -598,7 +598,9 @@ var DEFAULTS = Object.freeze({
   health: true,
   drift: true,
   dca: true,
-  buy: true
+  buy: true,
+  digest: true
+  // 🔔 what can wait is kept and sent together at 12:00 · 16:00 · 20:00 (SLOTS); what can't goes at once (NOW_KEYS)
 });
 var DEFAULT_SIGNAL = { reinforce: -5, sell: -20 };
 var DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085 };
@@ -2781,833 +2783,8 @@ var METAL = { gold: ["\u{1F947}", "Gold", "\u0627\u0644\u0630\u0647\u0628"], sil
 var UNIT = { oz: ["oz", "\u0623\u0648\u0646\u0635\u0629"], lb: ["lb", "\u0631\u0637\u0644"], bbl: ["barrel", "\u0628\u0631\u0645\u064A\u0644"] };
 var gramSar = (ozUsd) => ozUsd / 31.1034768 * 3.75;
 
-// guide.json
-var guide_default = {
-  v: 2,
-  title: {
-    en: "\u{1F4D8} Cute Portfolio \u2014 the guide",
-    ar: "\u{1F4D8} \u062F\u0644\u064A\u0644 Cute Portfolio"
-  },
-  intro: {
-    en: "Everything the app and the bot can do, in short steps. Tap a part to open it.",
-    ar: "\u0643\u0644 \u0645\u0627 \u064A\u0642\u062F\u0645\u0647 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0648\u0627\u0644\u0628\u0648\u062A\u060C \u0641\u064A \u062E\u0637\u0648\u0627\u062A \u0642\u0635\u064A\u0631\u0629. \u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0623\u064A \u062C\u0632\u0621 \u0644\u0641\u062A\u062D\u0647."
-  },
-  groups: [
-    {
-      k: "start",
-      e: "\u{1F680}",
-      t: {
-        en: "Start",
-        ar: "\u0627\u0644\u0628\u062F\u0627\u064A\u0629"
-      }
-    },
-    {
-      k: "daily",
-      e: "\u{1F4C5}",
-      t: {
-        en: "Daily use",
-        ar: "\u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u064A\u0648\u0645\u064A"
-      }
-    },
-    {
-      k: "extras",
-      e: "\u2728",
-      t: {
-        en: "Extras",
-        ar: "\u0625\u0636\u0627\u0641\u0627\u062A"
-      }
-    },
-    {
-      k: "account",
-      e: "\u{1F464}",
-      t: {
-        en: "Account",
-        ar: "\u0627\u0644\u062D\u0633\u0627\u0628"
-      }
-    }
-  ],
-  sections: [
-    {
-      k: "start",
-      e: "\u{1F680}",
-      g: "start",
-      t: {
-        en: "Getting started",
-        ar: "\u0627\u0644\u0628\u062F\u0627\u064A\u0629"
-      },
-      b: {
-        en: "Getting started",
-        ar: "\u0627\u0644\u0628\u062F\u0627\u064A\u0629"
-      },
-      s: {
-        en: "Join with an invite \u2014 one code, two ways in.",
-        ar: "\u0627\u0646\u0636\u0645 \u0628\u062F\u0639\u0648\u0629 \u2014 \u0631\u0645\u0632 \u0648\u0627\u062D\u062F \u0648\u0637\u0631\u064A\u0642\u062A\u0627\u0646 \u0644\u0644\u062F\u062E\u0648\u0644."
-      },
-      en: [
-        "Open the invite from Dr. Samir Saad.",
-        "\u{1F4F1} <b>The app link</b> \u2192 sign in with Google or any e-mail (a sign-in link, no password) \u2192 <b>Start my portfolio</b>.",
-        "\u{1F916} <b>The bot link</b> \u2192 you're in the bot at once; send /app with your e-mail to open the app too.",
-        "Link the two (see <b>Link the app and the bot</b>) so the bot sees your portfolio."
-      ],
-      ar: [
-        "\u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0639\u0648\u0629 \u0627\u0644\u062A\u064A \u0623\u0631\u0633\u0644\u0647\u0627 \u0644\u0643 Dr. Samir Saad.",
-        "\u{1F4F1} <b>\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> \u2190 \u0633\u062C\u0651\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u062D\u0633\u0627\u0628 Google \u0623\u0648 \u0628\u0623\u064A \u0628\u0631\u064A\u062F \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A (\u0631\u0627\u0628\u0637 \u062F\u062E\u0648\u0644 \u0628\u062F\u0648\u0646 \u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631) \u2190 <b>Start my portfolio</b>.",
-        "\u{1F916} <b>\u0631\u0627\u0628\u0637 \u0627\u0644\u0628\u0648\u062A</b> \u2190 \u062A\u062F\u062E\u0644 \u0627\u0644\u0628\u0648\u062A \u0645\u0628\u0627\u0634\u0631\u0629\u061B \u0623\u0631\u0633\u0644 /app \u0645\u0639 \u0628\u0631\u064A\u062F\u0643 \u0644\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0623\u064A\u0636\u0627\u064B.",
-        "\u0627\u0631\u0628\u0637 \u0627\u0644\u0627\u062B\u0646\u064A\u0646 (\u0631\u0627\u062C\u0639 <b>\u0631\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0627\u0644\u0628\u0648\u062A</b>) \u0644\u064A\u062A\u0645\u0643\u0646 \u0627\u0644\u0628\u0648\u062A \u0645\u0646 \u0631\u0624\u064A\u0629 \u0645\u062D\u0641\u0638\u062A\u0643."
-      ],
-      tip: {
-        en: "Language: \u{1F310} in the bot's menu, and Settings \u2192 Display \u2192 Language in the app.",
-        ar: "\u0627\u0644\u0644\u063A\u0629: \u{1F310} \u0641\u064A \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0628\u0648\u062A\u060C \u0648\u0645\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u0639\u0631\u0636 \u2190 \u0627\u0644\u0644\u063A\u0629 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642."
-      }
-    },
-    {
-      k: "app",
-      e: "\u{1F4F1}",
-      g: "start",
-      t: {
-        en: "The app",
-        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642"
-      },
-      b: {
-        en: "The app",
-        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642"
-      },
-      s: {
-        en: "Your portfolio, plan and the market \u2014 on the phone or the computer.",
-        ar: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u0627\u0644\u0633\u0648\u0642 \u2014 \u0639\u0644\u0649 \u0627\u0644\u062C\u0648\u0627\u0644 \u0623\u0648 \u0627\u0644\u0643\u0645\u0628\u064A\u0648\u062A\u0631."
-      },
-      en: [
-        "<b>Portfolio</b>: your coins, value, profit and charts. Add a coin with <b>+</b>, or bring trades from an exchange: Performance \u2192 <b>Wallets &amp; Exchanges</b> \u2192 Import.",
-        "<b>Plan</b>: the accumulation plan (targets, DCA) and the <b>Exit Strategy</b> (take-profit steps).",
-        "<b>Market Hub</b>: market cap, Fear &amp; Greed, Altcoin Season, dominance, ETF flows, top coins.",
-        "<b>AI Analysis</b> (\u{1F916}): a full report \u2014 <i>free</i> with your Claude app (copy \u2192 paste), or a quick report for \u2B50 premium / your own Claude key.",
-        "<b>Settings</b> (\u2699\uFE0F): account, backup, Telegram, AI, display and language, the guide, install on your phone."
-      ],
-      ar: [
-        "<b>\u0627\u0644\u0645\u062D\u0641\u0638\u0629</b>: \u0639\u0645\u0644\u0627\u062A\u0643 \u0648\u0642\u064A\u0645\u062A\u0647\u0627 \u0648\u0627\u0644\u0631\u0628\u062D \u0648\u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629. \u0623\u0636\u0641 \u0639\u0645\u0644\u0629 \u0628\u0632\u0631 <b>+</b>\u060C \u0623\u0648 \u0627\u0633\u062A\u0648\u0631\u062F \u0635\u0641\u0642\u0627\u062A\u0643 \u0645\u0646 \u0645\u0646\u0635\u0629: \u0627\u0644\u0623\u062F\u0627\u0621 \u2190 <b>\u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A</b> \u2190 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F.",
-        "<b>\u0627\u0644\u062E\u0637\u0629</b>: \u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639 (\u0627\u0644\u0623\u0647\u062F\u0627\u0641 \u0648\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A) \u0648<b>\u0627\u0633\u062A\u0631\u0627\u062A\u064A\u062C\u064A\u0629 \u0627\u0644\u062E\u0631\u0648\u062C</b> (\u062E\u0637\u0648\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D).",
-        "<b>\u0645\u0631\u0643\u0632 \u0627\u0644\u0633\u0648\u0642</b>: \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629\u060C \u0648\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639\u060C \u0648\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629\u060C \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629\u060C \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF\u060C \u0648\u0623\u0643\u0628\u0631 \u0627\u0644\u0639\u0645\u0644\u0627\u062A.",
-        "<b>\u062A\u062D\u0644\u064A\u0644 AI</b> (\u{1F916}): \u062A\u0642\u0631\u064A\u0631 \u0643\u0627\u0645\u0644 \u2014 <i>\u0645\u062C\u0627\u0646\u0627\u064B</i> \u0639\u0628\u0631 \u062A\u0637\u0628\u064A\u0642 Claude (\u0646\u0633\u062E \u2190 \u0644\u0635\u0642)\u060C \u0623\u0648 \u062A\u0642\u0631\u064A\u0631 \u0633\u0631\u064A\u0639 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 \u0623\u0648 \u0628\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0643.",
-        "<b>\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A</b> (\u2699\uFE0F): \u0627\u0644\u062D\u0633\u0627\u0628\u060C \u0648\u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u060C \u0648\u062A\u0644\u064A\u062C\u0631\u0627\u0645\u060C \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A\u060C \u0648\u0627\u0644\u0639\u0631\u0636 \u0648\u0627\u0644\u0644\u063A\u0629\u060C \u0648\u0627\u0644\u062F\u0644\u064A\u0644\u060C \u0648\u062A\u062B\u0628\u064A\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0639\u0644\u0649 \u0627\u0644\u062C\u0648\u0627\u0644."
-      ],
-      tip: {
-        en: "Your data is private: stored in the cloud under your own account \u2014 nobody else can read it.",
-        ar: "\u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u062E\u0627\u0635\u0629: \u0645\u062D\u0641\u0648\u0638\u0629 \u0639\u0644\u0649 \u0627\u0644\u0633\u062D\u0627\u0628\u0629 \u0641\u064A \u062D\u0633\u0627\u0628\u0643 \u0623\u0646\u062A \u2014 \u0648\u0644\u0627 \u064A\u0633\u062A\u0637\u064A\u0639 \u0623\u062D\u062F \u063A\u064A\u0631\u0643 \u0642\u0631\u0627\u0621\u062A\u0647\u0627."
-      }
-    },
-    {
-      k: "link",
-      e: "\u{1F517}",
-      g: "start",
-      t: {
-        en: "Link the app and the bot",
-        ar: "\u0631\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0627\u0644\u0628\u0648\u062A"
-      },
-      b: {
-        en: "Linking",
-        ar: "\u0627\u0644\u0631\u0628\u0637"
-      },
-      s: {
-        en: "One tap, and the bot sees your portfolio \u2014 only for you.",
-        ar: "\u0636\u063A\u0637\u0629 \u0648\u0627\u062D\u062F\u0629\u060C \u0648\u064A\u0631\u0649 \u0627\u0644\u0628\u0648\u062A \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 \u0644\u0643 \u0648\u062D\u062F\u0643."
-      },
-      en: [
-        "In the app: Settings \u2192 <b>Telegram</b> \u2192 <b>Link your portfolio</b>.",
-        "Tap <b>Open the bot</b> \u2014 done.",
-        "Your portfolio, plan and exit plan now show in the bot, and the morning, evening and pinned messages start."
-      ],
-      ar: [
-        "\u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 <b>\u062A\u0644\u064A\u062C\u0631\u0627\u0645</b> \u2190 <b>\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u0628\u0628\u0648\u062A \u062A\u0644\u064A\u062C\u0631\u0627\u0645</b>.",
-        "\u0627\u0636\u063A\u0637 <b>\u0627\u0641\u062A\u062D \u0627\u0644\u0628\u0648\u062A</b> \u2014 \u0648\u0627\u0646\u062A\u0647\u0649 \u0627\u0644\u0623\u0645\u0631.",
-        "\u062A\u0638\u0647\u0631 \u0627\u0644\u0622\u0646 \u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C \u0641\u064A \u0627\u0644\u0628\u0648\u062A\u060C \u0648\u062A\u0628\u062F\u0623 \u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0628\u0627\u062D \u0648\u0627\u0644\u0645\u0633\u0627\u0621 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u0628\u062A\u0629."
-      ],
-      tip: {
-        en: "No Telegram on this device? Copy the 8-letter code and send /link CODE to the bot (it works for 10 minutes).",
-        ar: "\u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0644\u064A\u0633 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632\u061F \u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u0645\u0643\u0648\u0651\u0646 \u0645\u0646 8 \u0623\u062D\u0631\u0641 \u0648\u0623\u0631\u0633\u0644 /link CODE \u0625\u0644\u0649 \u0627\u0644\u0628\u0648\u062A (\u0635\u0627\u0644\u062D \u0644\u0645\u062F\u0629 10 \u062F\u0642\u0627\u0626\u0642)."
-      }
-    },
-    {
-      k: "ask",
-      e: "\u{1F9E0}",
-      g: "daily",
-      t: {
-        en: "Ask anything",
-        ar: "\u0627\u0633\u0623\u0644 \u0623\u064A \u0633\u0624\u0627\u0644"
-      },
-      b: {
-        en: "Ask anything",
-        ar: "\u0627\u0633\u0623\u0644 \u0623\u064A \u0633\u0624\u0627\u0644"
-      },
-      s: {
-        en: "Write in plain words \u2014 the bot answers with live data.",
-        ar: "\u0627\u0643\u062A\u0628 \u0628\u0643\u0644\u0645\u0627\u062A \u0639\u0627\u062F\u064A\u0629 \u2014 \u0648\u064A\u062C\u064A\u0628\u0643 \u0627\u0644\u0628\u0648\u062A \u0628\u0623\u0631\u0642\u0627\u0645 \u0645\u0628\u0627\u0634\u0631\u0629."
-      },
-      en: [
-        "Write in English or Arabic, for example: <i>How is my portfolio today?</i> \xB7 <i>Is SOL a good buy now?</i>",
-        'Ask "what if": <i>What if BTC hits 150k?</i> \xB7 <i>What if I sell half my ETH?</i>',
-        "Each answer says where its numbers came from and how many questions are left today (5 a day; \u2B50 premium 20)."
-      ],
-      ar: [
-        "\u0627\u0643\u062A\u0628 \u0628\u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0623\u0648 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629\u060C \u0645\u062B\u0644\u0627\u064B: <i>\u0643\u064A\u0641 \u0623\u062F\u0627\u0621 \u0645\u062D\u0641\u0638\u062A\u064A \u0627\u0644\u064A\u0648\u0645\u061F</i> \xB7 <i>\u0647\u0644 \u0627\u0644\u0634\u0631\u0627\u0621 \u0641\u064A SOL \u0645\u0646\u0627\u0633\u0628 \u0627\u0644\u0622\u0646\u061F</i>",
-        '\u0627\u0633\u0623\u0644 "\u0645\u0627\u0630\u0627 \u0644\u0648": <i>\u0645\u0627\u0630\u0627 \u0644\u0648 \u0648\u0635\u0644 BTC \u0625\u0644\u0649 150 \u0623\u0644\u0641\u0627\u064B\u061F</i> \xB7 <i>\u0645\u0627\u0630\u0627 \u0644\u0648 \u0628\u0639\u062A \u0646\u0635\u0641 ETH\u061F</i>',
-        "\u0643\u0644 \u0625\u062C\u0627\u0628\u0629 \u062A\u0648\u0636\u062D \u0645\u0635\u062F\u0631 \u0623\u0631\u0642\u0627\u0645\u0647\u0627\u060C \u0648\u0643\u0645 \u0633\u0624\u0627\u0644\u0627\u064B \u0628\u0642\u064A \u0644\u0643 \u0627\u0644\u064A\u0648\u0645 (5 \u064A\u0648\u0645\u064A\u0627\u064B\u061B \u0648\u0627\u0644\u0645\u0645\u064A\u0632 \u2B50 20)."
-      ],
-      tip: {
-        en: "/new starts a fresh chat (the bot forgets the last messages).",
-        ar: "/new \u064A\u0628\u062F\u0623 \u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 (\u064A\u0646\u0633\u0649 \u0627\u0644\u0628\u0648\u062A \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0633\u0627\u0628\u0642\u0629)."
-      }
-    },
-    {
-      k: "voice",
-      e: "\u{1F399}",
-      g: "daily",
-      t: {
-        en: "Voice notes",
-        ar: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629"
-      },
-      b: {
-        en: "Voice notes",
-        ar: "\u0627\u0644\u0635\u0648\u062A"
-      },
-      s: {
-        en: "Talk instead of typing \u2014 Arabic or English.",
-        ar: "\u062A\u062D\u062F\u0651\u062B \u0628\u062F\u0644\u0627\u064B \u0645\u0646 \u0627\u0644\u0643\u062A\u0627\u0628\u0629 \u2014 \u0628\u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0623\u0648 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629."
-      },
-      en: [
-        "Hold \u{1F399} in Telegram and speak (up to 2 minutes).",
-        "The bot shows <i>I heard: \u2026</i>",
-        "It answers as if you had typed it."
-      ],
-      ar: [
-        "\u0627\u0636\u063A\u0637 \u0645\u0637\u0648\u0644\u0627\u064B \u0639\u0644\u0649 \u{1F399} \u0641\u064A \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0648\u062A\u062D\u062F\u0651\u062B (\u062D\u062A\u0649 \u062F\u0642\u064A\u0642\u062A\u064A\u0646).",
-        "\u064A\u0639\u0631\u0636 \u0627\u0644\u0628\u0648\u062A <i>I heard: \u2026</i>",
-        "\u062B\u0645 \u064A\u062C\u064A\u0628 \u0643\u0645\u0627 \u0644\u0648 \u0623\u0646\u0643 \u0643\u062A\u0628\u062A \u0627\u0644\u0633\u0624\u0627\u0644."
-      ],
-      tip: {
-        en: "Voice notes are for \u2B50 premium members, or with your own Claude key.",
-        ar: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0645\u062A\u0627\u062D\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50\u060C \u0623\u0648 \u0628\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0643."
-      }
-    },
-    {
-      k: "coins",
-      e: "\u{1FA99}",
-      g: "daily",
-      t: {
-        en: "Coins and the market",
-        ar: "\u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0648\u0627\u0644\u0633\u0648\u0642"
-      },
-      b: {
-        en: "Coins & market",
-        ar: "\u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0648\u0627\u0644\u0633\u0648\u0642"
-      },
-      s: {
-        en: "Live prices, trends and the market in one tap.",
-        ar: "\u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629 \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0648\u062D\u0627\u0644\u0629 \u0627\u0644\u0633\u0648\u0642 \u0628\u0636\u063A\u0637\u0629 \u0648\u0627\u062D\u062F\u0629."
-      },
-      en: [
-        "Send a ticker \u2014 <code>btc</code> or <code>sol eth</code> \u2014 for the live price, trend, futures and funding.",
-        "/market \u2014 BTC, dominance, Fear &amp; Greed and ETF flows; its \u{1F4C8} bStocks and \u{1F947} Metals buttons show US stocks and gold, silver, platinum, copper (/stocks \xB7 /metals).",
-        "/movers \u2014 the best and worst coins \xB7 /signals \u2014 hold / add / sell for your coins.",
-        "/portfolio \xB7 /plan \xB7 /exit \u2014 your own numbers.",
-        "/balances \u2014 your Binance / Gate balances, read with a read-only key you connect in the app (Performance \u2192 Wallets &amp; Exchanges \u2192 Exchanges)."
-      ],
-      ar: [
-        "\u0623\u0631\u0633\u0644 \u0631\u0645\u0632 \u0627\u0644\u0639\u0645\u0644\u0629 \u2014 <code>btc</code> \u0623\u0648 <code>sol eth</code> \u2014 \u0644\u062A\u0631\u0649 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0648\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0645\u0648\u064A\u0644.",
-        "/market \u2014 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629 \u0648\u0645\u0624\u0634\u0631 \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639 \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF\u061B \u0648\u0632\u0631\u0651\u0627 \u{1F4C8} bStocks \u0648\u{1F947} \u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u064A\u0639\u0631\u0636\u0627\u0646 \u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0648\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646 \u0648\u0627\u0644\u0646\u062D\u0627\u0633 (/stocks \xB7 /metals).",
-        "/movers \u2014 \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623 \u0623\u062F\u0627\u0621\u064B \xB7 /signals \u2014 \u0627\u062D\u062A\u0641\u0627\u0638 / \u062A\u0639\u0632\u064A\u0632 / \u0628\u064A\u0639 \u0644\u0639\u0645\u0644\u0627\u062A\u0643.",
-        "/portfolio \xB7 /plan \xB7 /exit \u2014 \u0623\u0631\u0642\u0627\u0645\u0643 \u0627\u0644\u062E\u0627\u0635\u0629.",
-        "/balances \u2014 \u0623\u0631\u0635\u062F\u062A\u0643 \u0641\u064A Binance \u0648 Gate\u060C \u062A\u064F\u0642\u0631\u0623 \u0628\u0645\u0641\u062A\u0627\u062D \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u062A\u0631\u0628\u0637\u0647 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (\u0627\u0644\u0623\u062F\u0627\u0621 \u2190 \u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A \u2190 \u0627\u0644\u0645\u0646\u0635\u0627\u062A)."
-      ],
-      tip: {
-        en: "\u{1F504} on any message refreshes it in place.",
-        ar: "\u{1F504} \u0639\u0644\u0649 \u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u064A\u062D\u062F\u0651\u062B\u0647\u0627 \u0641\u064A \u0645\u0643\u0627\u0646\u0647\u0627."
-      }
-    },
-    {
-      k: "alerts",
-      e: "\u{1F514}",
-      g: "daily",
-      t: {
-        en: "Alerts in words",
-        ar: "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0628\u0627\u0644\u0643\u0644\u0627\u0645"
-      },
-      b: {
-        en: "Alerts",
-        ar: "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A"
-      },
-      s: {
-        en: "Ask the bot to tell you when something happens.",
-        ar: "\u0627\u0637\u0644\u0628 \u0645\u0646 \u0627\u0644\u0628\u0648\u062A \u0623\u0646 \u064A\u0646\u0628\u0647\u0643 \u0639\u0646\u062F \u062D\u062F\u0648\u062B \u0623\u0645\u0631 \u0645\u0639\u064A\u0646."
-      },
-      en: [
-        "Just say it: <i>tell me if ETH drops below 3000</i> \xB7 <i>alert me if SOL is up 10% in a day</i> \xB7 <i>if my portfolio passes $30k</i>.",
-        "Gold, silver, platinum, copper and US stocks too: <i>tell me if gold goes above 4000</i> \xB7 <i>if NVIDIA drops 5% in a day</i> (their prices refresh every ~30 min).",
-        "The bot checks every 5 minutes.",
-        "Each alert comes once, then it's done."
-      ],
-      ar: [
-        "\u0627\u0643\u062A\u0628\u0647 \u0628\u0643\u0644\u0645\u0627\u062A\u0643: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0646\u0632\u0644 ETH \u062A\u062D\u062A 3000</i> \xB7 <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0627\u0631\u062A\u0641\u0639 SOL 10% \u0641\u064A \u064A\u0648\u0645</i> \xB7 <i>\u0625\u0630\u0627 \u062A\u062C\u0627\u0648\u0632\u062A \u0645\u062D\u0641\u0638\u062A\u064A 30 \u0623\u0644\u0641 \u062F\u0648\u0644\u0627\u0631</i>.",
-        "\u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0648\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646 \u0648\u0627\u0644\u0646\u062D\u0627\u0633 \u0648\u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0623\u064A\u0636\u0627\u064B: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u0630\u0647\u0628 4000</i> \xB7 <i>\u0625\u0630\u0627 \u0646\u0632\u0644 NVIDIA 5% \u0641\u064A \u064A\u0648\u0645</i> (\u0623\u0633\u0639\u0627\u0631\u0647\u0627 \u062A\u064F\u062D\u062F\u064E\u0651\u062B \u0643\u0644 ~30 \u062F\u0642\u064A\u0642\u0629).",
-        "\u064A\u062A\u062D\u0642\u0642 \u0627\u0644\u0628\u0648\u062A \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642.",
-        "\u064A\u0635\u0644\u0643 \u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u062B\u0645 \u064A\u0646\u062A\u0647\u064A."
-      ],
-      tip: {
-        en: "/alerts lists your alerts; \u{1F5D1} removes one.",
-        ar: "/alerts \u064A\u0639\u0631\u0636 \u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643\u060C \u0648\u{1F5D1} \u064A\u062D\u0630\u0641 \u0623\u064A\u0627\u064B \u0645\u0646\u0647\u0627."
-      }
-    },
-    {
-      k: "trades",
-      e: "\u{1F9FE}",
-      g: "daily",
-      t: {
-        en: "Record a trade in words",
-        ar: "\u062A\u0633\u062C\u064A\u0644 \u0635\u0641\u0642\u0629 \u0628\u0627\u0644\u0643\u0644\u0627\u0645"
-      },
-      b: {
-        en: "Record a trade",
-        ar: "\u062A\u0633\u062C\u064A\u0644 \u0635\u0641\u0642\u0629"
-      },
-      s: {
-        en: "Tell the bot what you bought or sold \u2014 it updates your app.",
-        ar: "\u0623\u062E\u0628\u0631 \u0627\u0644\u0628\u0648\u062A \u0628\u0645\u0627 \u0627\u0634\u062A\u0631\u064A\u062A \u0623\u0648 \u0628\u0639\u062A \u2014 \u0648\u064A\u062D\u062F\u0651\u062B \u062A\u0637\u0628\u064A\u0642\u0643."
-      },
-      en: [
-        "Write <i>bought 0.01 BTC at 95k</i> or <i>sold 5 SOL at 180</i>.",
-        "The bot shows what will change: amount, average price and profit.",
-        "Tap <b>\u2705 Confirm</b> within 15 minutes \u2014 then it's in your app too."
-      ],
-      ar: [
-        "\u0627\u0643\u062A\u0628 <i>\u0627\u0634\u062A\u0631\u064A\u062A 0.01 BTC \u0628\u0633\u0639\u0631 95 \u0623\u0644\u0641</i> \u0623\u0648 <i>\u0628\u0639\u062A 5 SOL \u0628\u0633\u0639\u0631 180</i>.",
-        "\u064A\u0639\u0631\u0636 \u0627\u0644\u0628\u0648\u062A \u0645\u0627 \u0633\u064A\u062A\u063A\u064A\u0631: \u0627\u0644\u0643\u0645\u064A\u0629 \u0648\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u0631\u0628\u062D.",
-        "\u0627\u0636\u063A\u0637 <b>\u2705 Confirm</b> \u062E\u0644\u0627\u0644 15 \u062F\u0642\u064A\u0642\u0629 \u2014 \u0641\u062A\u0638\u0647\u0631 \u0627\u0644\u0635\u0641\u0642\u0629 \u0641\u064A \u062A\u0637\u0628\u064A\u0642\u0643 \u0623\u064A\u0636\u0627\u064B."
-      ],
-      tip: {
-        en: "Nothing is saved until you confirm.",
-        ar: "\u0644\u0627 \u064A\u064F\u062D\u0641\u0638 \u0634\u064A\u0621 \u062D\u062A\u0649 \u062A\u0624\u0643\u062F."
-      }
-    },
-    {
-      k: "daily",
-      e: "\u{1F5D3}",
-      g: "daily",
-      t: {
-        en: "Daily messages and radars",
-        ar: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A"
-      },
-      b: {
-        en: "Daily & radars",
-        ar: "\u0627\u0644\u064A\u0648\u0645\u064A \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A"
-      },
-      s: {
-        en: "The bot keeps you up to date, morning to evening.",
-        ar: "\u064A\u0628\u0642\u064A\u0643 \u0627\u0644\u0628\u0648\u062A \u0639\u0644\u0649 \u0627\u0637\u0644\u0627\u0639 \u0645\u0646 \u0627\u0644\u0635\u0628\u0627\u062D \u062D\u062A\u0649 \u0627\u0644\u0645\u0633\u0627\u0621."
-      },
-      en: [
-        "\u2600\uFE0F <b>Smart morning</b> (08:45 Riyadh): 3 things to do today.",
-        "\u{1F319} <b>Smart evening</b> (21:00): what happened and what to watch.",
-        "\u{1F9F2} <b>Leverage radar</b>: crowded longs / shorts on BTC and your biggest coins \xB7 \u{1F525} <b>Sector radar</b>: a big sector moving fast.",
-        "\u{1F4CC} <b>Live pinned message</b> at the top of the chat, refreshed every 15 minutes."
-      ],
-      ar: [
-        "\u2600\uFE0F <b>\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A</b> (08:45 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636): 3 \u0623\u0645\u0648\u0631 \u062A\u0641\u0639\u0644\u0647\u0627 \u0627\u0644\u064A\u0648\u0645.",
-        "\u{1F319} <b>\u0627\u0644\u0645\u0633\u0627\u0621 \u0627\u0644\u0630\u0643\u064A</b> (21:00): \u0645\u0627 \u062D\u062F\u062B \u0648\u0645\u0627 \u064A\u062C\u0628 \u0645\u0631\u0627\u0642\u0628\u062A\u0647.",
-        "\u{1F9F2} <b>\u0631\u0627\u062F\u0627\u0631 \u0627\u0644\u0631\u0627\u0641\u0639\u0629</b>: \u0627\u0632\u062F\u062D\u0627\u0645 \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u0634\u0631\u0627\u0621 \u0623\u0648 \u0627\u0644\u0628\u064A\u0639 \u0639\u0644\u0649 BTC \u0648\u0623\u0643\u0628\u0631 \u0639\u0645\u0644\u0627\u062A\u0643 \xB7 \u{1F525} <b>\u0631\u0627\u062F\u0627\u0631 \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A</b>: \u0642\u0637\u0627\u0639 \u0643\u0628\u064A\u0631 \u064A\u062A\u062D\u0631\u0643 \u0628\u0633\u0631\u0639\u0629.",
-        "\u{1F4CC} <b>\u0631\u0633\u0627\u0644\u0629 \u0645\u062B\u0628\u062A\u0629 \u0645\u0628\u0627\u0634\u0631\u0629</b> \u0623\u0639\u0644\u0649 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u062A\u062A\u062D\u062F\u062B \u0643\u0644 15 \u062F\u0642\u064A\u0642\u0629."
-      ],
-      tip: {
-        en: "/daily turns each one on or off \xB7 /pin brings the pinned message back, /unpin removes it.",
-        ar: "/daily \u064A\u0634\u063A\u0651\u0644 \u0623\u0648 \u064A\u0648\u0642\u0641 \u0643\u0644 \u0648\u0627\u062D\u062F\u0629 \xB7 /pin \u064A\u0639\u064A\u062F \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u0628\u062A\u0629\u060C \u0648/unpin \u064A\u0632\u064A\u0644\u0647\u0627."
-      }
-    },
-    {
-      k: "paper",
-      e: "\u{1F9EA}",
-      g: "extras",
-      t: {
-        en: "Paper trading",
-        ar: "\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A"
-      },
-      b: {
-        en: "Paper trading",
-        ar: "\u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A"
-      },
-      s: {
-        en: "Practice with pretend money at real prices.",
-        ar: "\u062A\u062F\u0631\u0651\u0628 \u0628\u0623\u0645\u0648\u0627\u0644 \u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0648\u0628\u0623\u0633\u0639\u0627\u0631 \u062D\u0642\u064A\u0642\u064A\u0629."
-      },
-      en: [
-        "Send /paper and pick $1k, $10k or $100k.",
-        "Say <i>paper buy 0.1 BTC</i> or <i>paper sell half SOL</i>.",
-        "See how you do against simply holding BTC."
-      ],
-      ar: [
-        "\u0623\u0631\u0633\u0644 /paper \u0648\u0627\u062E\u062A\u0631 1,000$ \u0623\u0648 10,000$ \u0623\u0648 100,000$.",
-        "\u0627\u0643\u062A\u0628 <i>\u062A\u062C\u0631\u064A\u0628\u064A \u0627\u0634\u062A\u0631\u064A 0.1 BTC</i> \u0623\u0648 <i>\u062A\u062C\u0631\u064A\u0628\u064A \u0628\u064A\u0639 \u0646\u0635\u0641 SOL</i>.",
-        "\u0634\u0627\u0647\u062F \u0623\u062F\u0627\u0621\u0643 \u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0641\u0642\u0637."
-      ],
-      tip: {
-        en: "\u21A9\uFE0F undoes the last paper trade.",
-        ar: "\u21A9\uFE0F \u064A\u0644\u063A\u064A \u0622\u062E\u0631 \u0635\u0641\u0642\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629."
-      }
-    },
-    {
-      k: "report",
-      e: "\u{1F4F1}",
-      g: "extras",
-      t: {
-        en: "The full app in Telegram",
-        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u0643\u0627\u0645\u0644 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645"
-      },
-      b: {
-        en: "The app in Telegram",
-        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0641\u064A \u062A\u0644\u064A\u062C\u0631\u0627\u0645"
-      },
-      s: {
-        en: "Cute Portfolio itself opens inside Telegram \u2014 signed in by Telegram.",
-        ar: "\u064A\u064F\u0641\u062A\u062D Cute Portfolio \u0646\u0641\u0633\u0647 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2014 \u0648\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0639\u0628\u0631 \u062A\u0644\u064A\u062C\u0631\u0627\u0645."
-      },
-      en: [
-        "Tap \u{1F4F1} <b>Open the app</b> in the menu (or under your portfolio), or send /report.",
-        "The real app opens inside Telegram, already signed in to <i>your</i> portfolio \u2014 no password, no Google page.",
-        "Every page works there: Portfolio, Plan, Market Hub, Settings \u2014 always the latest version."
-      ],
-      ar: [
-        "\u0627\u0636\u063A\u0637 \u{1F4F1} <b>\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629 (\u0623\u0648 \u062A\u062D\u062A \u0645\u062D\u0641\u0638\u062A\u0643)\u060C \u0623\u0648 \u0623\u0631\u0633\u0644 /report.",
-        "\u064A\u064F\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u062D\u0642\u064A\u0642\u064A \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645\u060C \u0648\u0623\u0646\u062A \u0645\u0633\u062C\u0651\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0625\u0644\u0649 \u0645\u062D\u0641\u0638\u062A\u0643 <i>\u0623\u0646\u062A</i> \u2014 \u0628\u0644\u0627 \u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631 \u0648\u0644\u0627 \u0635\u0641\u062D\u0629 Google.",
-        "\u0643\u0644 \u0627\u0644\u0635\u0641\u062D\u0627\u062A \u062A\u0639\u0645\u0644 \u0647\u0646\u0627\u0643: \u0627\u0644\u0645\u062D\u0641\u0638\u0629\u060C \u0648\u0627\u0644\u062E\u0637\u0629\u060C \u0648\u0645\u0631\u0643\u0632 \u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2014 \u062F\u0627\u0626\u0645\u0627\u064B \u0628\u0623\u062D\u062F\u062B \u0646\u0633\u062E\u0629."
-      ],
-      tip: {
-        en: "First time? Link your portfolio once: app \u2192 Settings \u2192 Telegram \u2192 Link your portfolio.",
-        ar: "\u0623\u0648\u0644 \u0645\u0631\u0629\u061F \u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629: \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643."
-      }
-    },
-    {
-      k: "premium",
-      e: "\u2B50",
-      g: "account",
-      t: {
-        en: "Premium and support",
-        ar: "\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0648\u0627\u0644\u062F\u0639\u0645"
-      },
-      b: {
-        en: "Premium & support",
-        ar: "\u0627\u0644\u0645\u0645\u064A\u0632 \u0648\u0627\u0644\u062F\u0639\u0645"
-      },
-      s: {
-        en: "Everything stays free \u2014 extras only cover the AI's cost.",
-        ar: "\u0643\u0644 \u0634\u064A\u0621 \u064A\u0628\u0642\u0649 \u0645\u062C\u0627\u0646\u064A\u0627\u064B \u2014 \u0648\u0627\u0644\u0625\u0636\u0627\u0641\u0627\u062A \u062A\u063A\u0637\u064A \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0641\u0642\u0637."
-      },
-      en: [
-        "\u2B50 <b>Premium</b> adds voice notes, 20 AI questions and 3 quick AI reports a day \u2014 /premium (350 Telegram Stars a month, renews by itself).",
-        "Cancel any time: Telegram \u2192 Settings \u2192 My Stars.",
-        "\u{1F49B} <b>Support</b> is optional: a one-time thank-you of 50\u2013500 Stars \u2014 /support \u2014 with a Supporter \u{1F49B} badge."
-      ],
-      ar: [
-        "\u2B50 <b>\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629</b> \u062A\u0636\u064A\u0641 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629\u060C \u064820 \u0633\u0624\u0627\u0644 AI\u060C \u06483 \u062A\u0642\u0627\u0631\u064A\u0631 AI \u0633\u0631\u064A\u0639\u0629 \u064A\u0648\u0645\u064A\u0627\u064B \u2014 /premium (350 Telegram Stars \u0634\u0647\u0631\u064A\u0627\u064B\u060C \u062A\u062A\u062C\u062F\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B).",
-        "\u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u0625\u0644\u063A\u0627\u0621 \u0641\u064A \u0623\u064A \u0648\u0642\u062A: \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars.",
-        "\u{1F49B} <b>\u0627\u0644\u062F\u0639\u0645</b> \u0627\u062E\u062A\u064A\u0627\u0631\u064A: \u0634\u0643\u0631 \u0644\u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0645\u0646 50 \u0625\u0644\u0649 500 Star \u2014 /support \u2014 \u0645\u0639 \u0634\u0627\u0631\u0629 \u062F\u0627\u0639\u0645 \u{1F49B}."
-      ],
-      tip: {
-        en: "Cute Portfolio is non-profit: the AI is paid per question, and this only covers that.",
-        ar: "Cute Portfolio \u063A\u064A\u0631 \u0631\u0628\u062D\u064A: \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u064A\u064F\u062F\u0641\u0639 \u0639\u0646 \u0643\u0644 \u0633\u0624\u0627\u0644\u060C \u0648\u0647\u0630\u0627 \u064A\u063A\u0637\u064A \u062A\u0644\u0643 \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u0641\u0642\u0637."
-      }
-    },
-    {
-      k: "key",
-      e: "\u{1F511}",
-      g: "account",
-      t: {
-        en: "Your own Claude key",
-        ar: "\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0643"
-      },
-      b: {
-        en: "Claude key",
-        ar: "\u0645\u0641\u062A\u0627\u062D Claude"
-      },
-      s: {
-        en: "Have an Anthropic API key? Get more AI, billed to you.",
-        ar: "\u0644\u062F\u064A\u0643 \u0645\u0641\u062A\u0627\u062D Anthropic API\u061F \u0627\u062D\u0635\u0644 \u0639\u0644\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0623\u0643\u0628\u0631 \u0644\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0639\u0644\u0649 \u062D\u0633\u0627\u0628\u0643."
-      },
-      en: [
-        "App \u2192 Settings \u2192 <b>My Claude key</b>, and paste it.",
-        "It's checked, then kept encrypted \u2014 nobody can see it again.",
-        "You get 100 questions a day, voice notes and 10 quick AI reports \u2014 billed to your Anthropic account."
-      ],
-      ar: [
-        "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 <b>\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u064A</b>\u060C \u0648\u0627\u0644\u0635\u0642 \u0627\u0644\u0645\u0641\u062A\u0627\u062D.",
-        "\u064A\u064F\u062A\u062D\u0642\u0642 \u0645\u0646\u0647\u060C \u062B\u0645 \u064A\u064F\u062D\u0641\u0638 \u0645\u0634\u0641\u0651\u0631\u0627\u064B \u2014 \u0648\u0644\u0627 \u064A\u0633\u062A\u0637\u064A\u0639 \u0623\u062D\u062F \u0631\u0624\u064A\u062A\u0647 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.",
-        "\u062A\u062D\u0635\u0644 \u0639\u0644\u0649 100 \u0633\u0624\u0627\u0644 \u064A\u0648\u0645\u064A\u0627\u064B\u060C \u0648\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629\u060C \u064810 \u062A\u0642\u0627\u0631\u064A\u0631 AI \u0633\u0631\u064A\u0639\u0629 \u2014 \u0639\u0644\u0649 \u062D\u0633\u0627\u0628\u0643 \u0641\u064A Anthropic."
-      ],
-      tip: {
-        en: "You can remove it any time.",
-        ar: "\u064A\u0645\u0643\u0646\u0643 \u0625\u0632\u0627\u0644\u062A\u0647 \u0641\u064A \u0623\u064A \u0648\u0642\u062A."
-      }
-    },
-    {
-      k: "privacy",
-      e: "\u{1F512}",
-      g: "account",
-      t: {
-        en: "Privacy and your data",
-        ar: "\u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629 \u0648\u0628\u064A\u0627\u0646\u0627\u062A\u0643"
-      },
-      b: {
-        en: "Privacy",
-        ar: "\u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629"
-      },
-      s: {
-        en: "Your portfolio is yours alone.",
-        ar: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0644\u0643 \u0648\u062D\u062F\u0643."
-      },
-      en: [
-        "The bot reads your portfolio only for you \u2014 never for anyone else.",
-        "/forget deletes everything the bot keeps about you (alerts, chat memory, settings, the link) \u2014 your app portfolio stays.",
-        "To keep things fair, the bot takes up to 20 messages a minute."
-      ],
-      ar: [
-        "\u064A\u0642\u0631\u0623 \u0627\u0644\u0628\u0648\u062A \u0645\u062D\u0641\u0638\u062A\u0643 \u0645\u0646 \u0623\u062C\u0644\u0643 \u0641\u0642\u0637 \u2014 \u0648\u0644\u0627 \u064A\u0639\u0631\u0636\u0647\u0627 \u0644\u0623\u064A \u0634\u062E\u0635 \u0622\u062E\u0631.",
-        "/forget \u064A\u062D\u0630\u0641 \u0643\u0644 \u0645\u0627 \u064A\u062D\u0641\u0638\u0647 \u0627\u0644\u0628\u0648\u062A \u0639\u0646\u0643 (\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u060C \u0648\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u0648\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A\u060C \u0648\u0627\u0644\u0631\u0628\u0637) \u2014 \u0648\u062A\u0628\u0642\u0649 \u0645\u062D\u0641\u0638\u062A\u0643 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0643\u0645\u0627 \u0647\u064A.",
-        "\u0644\u0644\u0639\u062F\u0644 \u0628\u064A\u0646 \u0627\u0644\u062C\u0645\u064A\u0639\u060C \u064A\u0633\u062A\u0642\u0628\u0644 \u0627\u0644\u0628\u0648\u062A \u062D\u062A\u0649 20 \u0631\u0633\u0627\u0644\u0629 \u0641\u064A \u0627\u0644\u062F\u0642\u064A\u0642\u0629."
-      ],
-      tip: {
-        en: "Away for two weeks? The daily messages pause by themselves; send anything to bring them back.",
-        ar: "\u063A\u0628\u062A \u0623\u0633\u0628\u0648\u0639\u064A\u0646\u061F \u062A\u062A\u0648\u0642\u0641 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B\u061B \u0623\u0631\u0633\u0644 \u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u0644\u062A\u0639\u0648\u062F."
-      }
-    },
-    {
-      k: "help",
-      e: "\u{1F4AC}",
-      g: "account",
-      t: {
-        en: "Help",
-        ar: "\u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629"
-      },
-      b: {
-        en: "Help",
-        ar: "\u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629"
-      },
-      s: {
-        en: "Stuck? Just ask.",
-        ar: "\u0648\u0627\u062C\u0647\u062A\u0643 \u0645\u0634\u0643\u0644\u0629\u061F \u0627\u0633\u0623\u0644 \u0641\u0642\u0637."
-      },
-      en: [
-        "Ask the bot in plain words \u2014 <i>how do I add a coin?</i>",
-        "An idea or a bug? Send <b>/feedback</b> and your message \u2014 it goes straight to Dr. Samir Saad.",
-        "/guide opens this guide again any time; in the app: Settings \u2192 Guide."
-      ],
-      ar: [
-        "\u0627\u0633\u0623\u0644 \u0627\u0644\u0628\u0648\u062A \u0628\u0643\u0644\u0645\u0627\u062A\u0643 \u2014 <i>\u0643\u064A\u0641 \u0623\u0636\u064A\u0641 \u0639\u0645\u0644\u0629\u061F</i>",
-        "\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 <b>/feedback</b> \u062B\u0645 \u0631\u0633\u0627\u0644\u062A\u0643 \u2014 \u062A\u0635\u0644 \u0645\u0628\u0627\u0634\u0631\u0629 \u0625\u0644\u0649 Dr. Samir Saad.",
-        "/guide \u064A\u0641\u062A\u062D \u0647\u0630\u0627 \u0627\u0644\u062F\u0644\u064A\u0644 \u0641\u064A \u0623\u064A \u0648\u0642\u062A\u061B \u0648\u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u062F\u0644\u064A\u0644."
-      ],
-      tip: {
-        en: "\u{1F4E2} Cute Portfolio Signals: talk with the other members in the comments under each post (/community).",
-        ar: "\u{1F4E2} \u0642\u0646\u0627\u0629 Cute Portfolio Signals: \u062A\u062D\u062F\u0651\u062B \u0645\u0639 \u0627\u0644\u0623\u0639\u0636\u0627\u0621 \u0641\u064A \u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A \u062A\u062D\u062A \u0643\u0644 \u0645\u0646\u0634\u0648\u0631 (/community)."
-      }
-    }
-  ]
-};
-
-// tools/worker/community.mjs
-var KEY2 = "tg:community";
-async function tg3(env, method, body) {
-  body = bidiBody(body, "lines");
-  let r = await tg1(env, method, body);
-  if (r && r.error_code === 429) {
-    const w = Math.min(15, r.parameters && r.parameters.retry_after || 3);
-    await new Promise((z) => setTimeout(z, w * 1e3));
-    r = await tg1(env, method, body);
-  }
-  return r;
-}
-async function tg1(env, method, body) {
-  try {
-    const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    return await r.json();
-  } catch (_) {
-    return { ok: false };
-  }
-}
-async function getCommunity(env) {
-  try {
-    return JSON.parse(env.RATE && await env.RATE.get(KEY2) || "{}") || {};
-  } catch (_) {
-    return {};
-  }
-}
-async function putCommunity(env, c) {
-  try {
-    if (env.RATE) await env.RATE.put(KEY2, JSON.stringify(c));
-  } catch (_) {
-  }
-}
-var owner = (env) => String(env.TELEGRAM_CHAT_ID);
-var say = (env, text) => tg3(env, "sendMessage", { chat_id: owner(env), text, parse_mode: "HTML", disable_web_page_preview: true });
-var NOTE = { en: "Not financial advice \u2014 for information only.", ar: "\u0644\u064A\u0633\u062A \u0646\u0635\u064A\u062D\u0629 \u0645\u0627\u0644\u064A\u0629 \u2014 \u0644\u0644\u0645\u0639\u0644\u0648\u0645\u0629 \u0641\u0642\u0637." };
-async function onMyChatMember(env, u) {
-  const m = u.my_chat_member, chat = m && m.chat;
-  if (!chat) return;
-  const by = String(m.from && m.from.id), isAdmin = m.new_chat_member && m.new_chat_member.status === "administrator";
-  const gone = m.new_chat_member && ["left", "kicked"].includes(m.new_chat_member.status);
-  if (chat.type === "private") return;
-  if (by !== owner(env) && !gone) {
-    await tg3(env, "leaveChat", { chat_id: chat.id });
-    return;
-  }
-  const c = await getCommunity(env), kind = chat.type === "channel" ? "channel" : "group";
-  if (gone) {
-    if (c[kind] && String(c[kind].id) === String(chat.id)) {
-      delete c[kind];
-      await putCommunity(env, c);
-      await say(env, `\u2139\uFE0F The bot left ${esc(chat.title || "")}.`);
-    }
-    return;
-  }
-  if (!isAdmin) {
-    await say(env, `\u2139\uFE0F I'm in <b>${esc(chat.title || "")}</b> \u2014 make me an <b>admin</b> there to finish the setup.`);
-    return;
-  }
-  c[kind] = { id: chat.id, title: chat.title || "", at: Date.now() };
-  await putCommunity(env, c);
-  await setup(env, kind);
-}
-async function registerForward(env, msg) {
-  const o = msg.forward_origin, ch = o && (o.chat || o.sender_chat) || msg.forward_from_chat;
-  if (!ch || !ch.id) return false;
-  const me = await tg3(env, "getMe", {}), st = me.ok ? await tg3(env, "getChatMember", { chat_id: ch.id, user_id: me.result.id }) : null;
-  if (!st || !st.ok || st.result.status !== "administrator") {
-    await say(env, `\u2139\uFE0F I'm not an admin in <b>${esc(ch.title || "")}</b> yet \u2014 add me as admin there first.`);
-    return true;
-  }
-  const c = await getCommunity(env), kind = ch.type === "channel" ? "channel" : "group";
-  c[kind] = { ...c[kind] && String(c[kind].id) === String(ch.id) ? c[kind] : {}, id: ch.id, title: ch.title || "", at: Date.now() };
-  await putCommunity(env, c);
-  await setup(env, kind);
-  return true;
-}
-async function setup(env, kind, opt = {}) {
-  const c = await getCommunity(env), x = c[kind];
-  if (!x) return { ok: false };
-  const notes = [];
-  if (kind === "channel") {
-    if (!x.link) {
-      const link = await tg3(env, "createChatInviteLink", { chat_id: x.id, name: "Cute Portfolio members", creates_join_request: true });
-      if (link.ok) x.link = link.result.invite_link;
-      else notes.push('\u26A0\uFE0F No join link \u2014 give me "Invite users via link".');
-    }
-    if (!x.guideMsg || opt.reguide) {
-      const id = await postGuidePost(env, x);
-      if (id) {
-        x.guideMsg = id;
-        x.guideSig = guideSigs();
-        x.guideV = guide_default.v || 1;
-        x.guidePostV = POST_V;
-      } else notes.push("\u26A0\uFE0F The \u{1F4D8} guide post did not go \u2014 let me post and pin messages.");
-    }
-  }
-  const ch = c.channel, g = c.group;
-  if (ch && g) {
-    const info = await tg3(env, "getChat", { chat_id: ch.id });
-    g.linked = !!(info.ok && info.result && String(info.result.linked_chat_id) === String(g.id));
-    if (g.linked) {
-      delete g.topics;
-      delete g.strays;
-    }
-    notes.push(g.linked ? "\u{1F4AC} Comments are on \u2014 members talk under each channel post." : `\u26A0\uFE0F Link the group to the channel: channel \u2192 \u270F\uFE0F Edit \u2192 <b>Discussion</b> \u2192 pick <b>${esc(g.title)}</b> (if Telegram refuses, turn <b>Topics</b> off in the group first). Then /community setup.`);
-  } else if (kind === "group") notes.push("\u2139\uFE0F Add me to the channel too, and link this group to it (channel \u2192 Edit \u2192 Discussion).");
-  c[kind] = x;
-  await putCommunity(env, c);
-  await say(env, `\u2705 <b>${esc(x.title)}</b> is set up (${kind === "channel" ? "\u{1F4E2} channel" : "\u{1F4AC} comments group"}).` + (kind === "channel" && x.link ? `
-Join link (members only \u2014 I approve each request): ${x.link}` : "") + (notes.length ? "\n" + notes.join("\n") : ""));
-  return { ok: true };
-}
-async function guideLink(env) {
-  const me = await tg3(env, "getMe", {});
-  const u = me.ok && me.result && me.result.username;
-  return u ? `\u{1F4D8} <a href="https://t.me/${u}?start=guide">Open the guide</a>
-\u{1F4D8} <a href="https://t.me/${u}?start=guide">\u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0644\u064A\u0644</a>` : "";
-}
-async function postGuidePost(env, ch) {
-  const text = `<b>${guide_default.title.en}</b>
-${guide_default.intro.en}
-
-<b>${guide_default.title.ar}</b>
-${guide_default.intro.ar}
-
-` + guideGroups().map((g) => g.items.map((s) => `${s.e} ${esc((s.b || s.t).en)} \xB7 ${esc((s.b || s.t).ar)}`).join("\n")).join("\n\n") + "\n\n\u{1F4A1} <i>Ideas or a bug? Send /feedback to the bot.</i>\n\u{1F4A1} <i>\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 /feedback \u0644\u0644\u0628\u0648\u062A.</i>";
-  const link = await guideLink(env);
-  const r = await tg3(env, "sendMessage", { chat_id: ch.id, text: text + (link ? "\n\n" + link : ""), parse_mode: "HTML", disable_web_page_preview: true });
-  if (!r.ok) return null;
-  if (ch.guideMsg && ch.guideMsg !== r.result.message_id) {
-    await tg3(env, "unpinChatMessage", { chat_id: ch.id, message_id: ch.guideMsg });
-    await tg3(env, "deleteMessage", { chat_id: ch.id, message_id: ch.guideMsg });
-  }
-  await tg3(env, "pinChatMessage", { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true });
-  return r.result.message_id;
-}
-var LRI2 = "\u200E";
-var PDI = "\u200E";
-var RLM2 = "\u200F";
-var NUM = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3", "9\uFE0F\u20E3"];
-function gLine(l, ar) {
-  if (!ar) return l;
-  l = l.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI2}<${t}>${x}</${t}>${PDI}`);
-  l = l.replace(/(^|[\s(])(\/[a-z]+(?: CODE)?)(?=$|[\s),.؛،])/g, (m, a, c) => `${a}${LRI2}${c}${PDI}`);
-  return RLM2 + l;
-}
-function guideCard(s, L) {
-  const ar = L === "ar";
-  return [
-    `${s.e} <b>${s.t[L]}</b>`,
-    s.s ? gLine(`<i>${s.s[L]}</i>`, ar) : null,
-    "",
-    ...s[L].map((l, i) => gLine(`${NUM[i] || "\u2022"} ${l}`, ar)),
-    ...s.tip ? ["", gLine(`\u{1F4A1} <b>${ar ? "\u0646\u0635\u064A\u062D\u0629" : "Tip"}:</b> ${s.tip[L]}`, ar)] : []
-  ].filter((x) => x != null).join("\n");
-}
-function guideGroups() {
-  const gs = guide_default.groups || [{ k: null, e: "", t: { en: "", ar: "" } }];
-  return gs.map((g) => ({ ...g, items: guide_default.sections.filter((s) => !guide_default.groups || s.g === g.k) })).filter((g) => g.items.length);
-}
-var sig = (s) => {
-  let h = 0;
-  for (const ch of JSON.stringify([s.t, s.s, s.en, s.ar, s.tip])) h = h * 31 + ch.charCodeAt(0) | 0;
-  return String(h);
-};
-var guideSigs = () => Object.fromEntries(guide_default.sections.map((s) => [s.k, sig(s)]));
-var POST_V = 2;
-async function guideUpdates(env) {
-  const c = await getCommunity(env), x = c.channel;
-  if (!x || !x.guideMsg) return { posted: 0 };
-  if ((x.guidePostV || 1) !== POST_V) {
-    const id = await postGuidePost(env, x);
-    if (id) {
-      x.guideMsg = id;
-      x.guidePostV = POST_V;
-      c.channel = x;
-      await putCommunity(env, c);
-    }
-    return { posted: "post" };
-  }
-  const now = guideSigs(), edition = (x.guideV || 1) !== (guide_default.v || 1);
-  if (!x.guideSig) {
-    x.guideSig = now;
-    x.guideV = guide_default.v || 1;
-    c.channel = x;
-    await putCommunity(env, c);
-    return { posted: 0 };
-  }
-  const changed = guide_default.sections.filter((s) => x.guideSig[s.k] !== now[s.k]);
-  if (!changed.length && !edition) return { posted: 0 };
-  const lines = edition ? ["\u{1F4D8} <b>A new edition of the guide \xB7 \u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0627\u0644\u062F\u0644\u064A\u0644</b>"] : ["\u{1F195} <b>New in the guide \xB7 \u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644</b>", "", ...changed.slice(0, 10).map((s) => `${s.k in x.guideSig ? "\u270F\uFE0F" : "\u{1F195}"} ${s.e} ${esc(s.t.en)} \xB7 ${esc(s.t.ar)}`)];
-  const link = await guideLink(env);
-  if (link) lines.push("", link);
-  const r = await tg3(env, "sendMessage", { chat_id: x.id, text: lines.join("\n"), parse_mode: "HTML", disable_web_page_preview: true });
-  if (!r.ok) return { posted: 0 };
-  x.guideSig = now;
-  x.guideV = guide_default.v || 1;
-  c.channel = x;
-  await putCommunity(env, c);
-  return { posted: edition ? "all" : changed.length };
-}
-async function onJoinRequest(env, u) {
-  const r = u.chat_join_request, c = await getCommunity(env);
-  const ours = [c.channel, c.group].some((x) => x && String(x.id) === String(r.chat.id));
-  if (!ours) return;
-  const who = String(r.from.id), m = await members(env), ok2 = who === owner(env) || m[who] && !m[who].paused;
-  await tg3(env, ok2 ? "approveChatJoinRequest" : "declineChatJoinRequest", { chat_id: r.chat.id, user_id: r.from.id });
-  if (ok2 && who !== owner(env)) {
-    const ar = m[who].lang === "ar";
-    await tg3(env, "sendMessage", { chat_id: who, text: ar ? `\u2705 \u062A\u0645 \u0642\u0628\u0648\u0644\u0643 \u0641\u064A ${r.chat.title} \u2014 \u0623\u0647\u0644\u0627\u064B \u0628\u0643 \u{1F44B}` : `\u2705 You're in ${r.chat.title} \u2014 welcome \u{1F44B}` });
-  }
-}
-async function communityView(env, lang2) {
-  const c = await getCommunity(env), ar = lang2 === "ar", b = [];
-  if (c.channel && c.channel.link) b.push([{ text: ar ? "\u{1F4E2} \u0642\u0646\u0627\u0629 Cute Portfolio" : "\u{1F4E2} The Cute Portfolio channel", url: c.channel.link }]);
-  const has = b.length > 0;
-  b.push([{ text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]);
-  const text = has ? ar ? "\u{1F465} <b>\u0645\u062C\u062A\u0645\u0639 Cute Portfolio</b> \u2014 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0641\u0642\u0637\n\n\u{1F4E2} <b>\u0627\u0644\u0642\u0646\u0627\u0629</b>: \u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642 \u0645\u0631\u062A\u064A\u0646 \u064A\u0648\u0645\u064A\u0627\u064B\u060C \u0648\u0627\u0644\u062A\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0643\u0628\u064A\u0631\u0629\u060C \u0648\u0627\u0644\u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644.\n\u{1F4AC} <b>\u0627\u0644\u0646\u0642\u0627\u0634</b>: \u0639\u0644\u0651\u0642 \u062A\u062D\u062A \u0623\u064A \u0645\u0646\u0634\u0648\u0631 \u2014 \u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A \u0647\u064A \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062C\u062A\u0645\u0639.\n\u{1F4A1} \u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u{1F41E} \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 /feedback \u062B\u0645 \u0631\u0633\u0627\u0644\u062A\u0643.\n\n\u0627\u0636\u063A\u0637 \u0648\u0623\u0631\u0633\u0644 \u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u2014 \u064A\u0642\u0628\u0644\u0643 \u0627\u0644\u0628\u0648\u062A \u0641\u0648\u0631\u0627\u064B." : "\u{1F465} <b>The Cute Portfolio community</b> \u2014 members only\n\n\u{1F4E2} <b>The channel</b>: the market pulse twice a day, big moves and what's new in the guide.\n\u{1F4AC} <b>Talk</b>: comment under any post \u2014 the comments are the community.\n\u{1F4A1} An idea or \u{1F41E} a bug? Send /feedback and your message.\n\nTap, send the join request \u2014 the bot lets you in at once." : ar ? "\u{1F465} \u0627\u0644\u0645\u062C\u062A\u0645\u0639 \u0642\u064A\u062F \u0627\u0644\u062A\u062C\u0647\u064A\u0632 \u2014 \u0642\u0631\u064A\u0628\u0627\u064B." : "\u{1F465} The community is being set up \u2014 soon.";
-  return { text, buttons: b };
-}
-function pulseText(m, now, kind) {
-  const g = m.global || {}, d = g.dom || {}, btc = m.btc || {}, e = etfDay(m.etf);
-  const seen = /* @__PURE__ */ new Set(), top = [...m.top || []].filter((r) => r.rank && r.rank <= 100 && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
-  const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 3), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 3);
-  const head = kind === "move" ? `\u{1F6A8} <b>BTC ${btc.ch24 > 0 ? "+" : ""}${pct(btc.ch24, 1)} in 24h</b>` : `${kind === "am" ? "\u2600\uFE0F" : "\u{1F319}"} <b>Market pulse \xB7 \u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642</b> \xB7 ${local(now, { day: "numeric", month: "short" })}`;
-  const L = [
-    head,
-    "",
-    `\u20BF BTC <b>${usd(btc.price)}</b> ${dot(btc.ch24)} ${pct(btc.ch24, 2)}`,
-    g.mcap ? `\u{1F310} Market cap <b>$${(g.mcap / 1e12).toFixed(2)}T</b> ${dot(g.mcapCh24)} ${pct(g.mcapCh24, 2)}` : null,
-    d.btc != null ? `\u{1F451} BTC dominance <b>${d.btc.toFixed(1)}%</b>${d.usdt != null ? ` \xB7 USDT ${d.usdt.toFixed(2)}%` : ""}` : null,
-    m.fng ? `\u{1F628} Fear &amp; Greed <b>${m.fng.value}</b> \u2014 ${esc(m.fng.label || "")}` : null,
-    m.alt && m.alt.value != null ? `\u{1F300} Altcoin season <b>${m.alt.value}</b>` : null,
-    e ? `\u{1F3E6} ETF ${esc(e.label)}: BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}` : null,
-    up.length ? "" : null,
-    up.length ? `\u{1F4C8} ${up.map((r) => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(" \xB7 ")}` : null,
-    dn.length ? `\u{1F4C9} ${dn.map((r) => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(" \xB7 ")}` : null,
-    ...kind === "move" ? [] : otherMarkets(m, now),
-    "",
-    `\u{1F9ED} <a href="${APP}market.html">Market Hub</a>`,
-    // a link in the text, not a button: a button hides the post's comments
-    "",
-    `<i>${NOTE.en}</i>`,
-    `<i>${NOTE.ar}</i>`
-  ].filter((x) => x != null);
-  return L.join("\n");
-}
-function otherMarkets(m, now) {
-  const out = [], met2 = m.metals || [], f = (k) => met2.find((x) => x.k === k);
-  const mt = [["gold", "Gold"], ["silver", "Silver"]].map(([k, n]) => {
-    const x = f(k);
-    return x && x.price > 0 ? `${n} <b>${usd(x.price)}</b> ${pct(x.ch24, 1)}` : null;
-  }).filter(Boolean);
-  if (mt.length) out.push(`\u{1F947} ${mt.join(" \xB7 ")}`);
-  const st = (m.stocks || []).filter((r) => r.ch24 != null && r.price > 0);
-  if (st.length) {
-    const u = usMarket(now), b = [...st].sort((a, c) => c.ch24 - a.ch24)[0], w = [...st].sort((a, c) => a.ch24 - c.ch24)[0];
-    out.push(`\u{1F1FA}\u{1F1F8} US stocks ${US_STATE.en[u.state].replace(/^\S+ /, "")} \xB7 ${esc(b.sym)} ${pct(b.ch24, 1)} \xB7 ${esc(w.sym)} ${pct(w.ch24, 1)}`);
-  }
-  return out.length ? ["", ...out] : [];
-}
-async function runChannel(env, now = Date.now()) {
-  await guideUpdates(env).catch(() => {
-  });
-  const c = await getCommunity(env), ch = c.channel;
-  if (!ch) return { job: null };
-  const lp = localParts(now), today2 = lp.date, hm2 = lp.hour * 60 + (+lp.hm.slice(3) || 0), sent = c.sent || {};
-  let kind = null;
-  if (hm2 >= 9 * 60 && hm2 < 9 * 60 + 20 && sent.am !== today2) kind = "am";
-  else if (hm2 >= 21 * 60 + 5 && hm2 < 21 * 60 + 25 && sent.pm !== today2) kind = "pm";
-  const m = kind || sent.move !== today2 ? await loadMarket([], []).catch(() => null) : null;
-  if (!kind && m && m.btc && Math.abs(m.btc.ch24 || 0) >= 5 && sent.move !== today2) kind = "move";
-  if (!kind || !m) return { job: null };
-  const r = await tg3(env, "sendMessage", { chat_id: ch.id, text: pulseText(m, now, kind), parse_mode: "HTML", disable_web_page_preview: true });
-  if (r.ok) {
-    if (kind !== "move") {
-      if (ch.pinned) await tg3(env, "unpinChatMessage", { chat_id: ch.id, message_id: ch.pinned });
-      await tg3(env, "pinChatMessage", { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true });
-      ch.pinned = r.result.message_id;
-    }
-    sent[kind] = today2;
-    c.sent = sent;
-    c.channel = ch;
-    await putCommunity(env, c);
-  }
-  return { job: "channel:" + kind, ok: !!r.ok };
-}
-async function announce(env, text) {
-  const c = await getCommunity(env), out = [];
-  const body = `\u{1F195} <b>What's new \xB7 \u0627\u0644\u062C\u062F\u064A\u062F</b>
-
-${esc(text)}`;
-  if (c.channel) out.push((await tg3(env, "sendMessage", { chat_id: c.channel.id, text: body, parse_mode: "HTML" })).ok ? "\u{1F4E2}" : "\u26A0\uFE0F\u{1F4E2}");
-  return out;
-}
-
 // tools/worker/watch.mjs
-var KEY3 = (env) => K(env, "alerts");
+var KEY2 = (env) => K(env, "alerts");
 var MAX = 30;
 var KINDS = {
   price_below: { what: "price", op: "\u2264" },
@@ -3643,14 +2820,14 @@ var locked = (fn) => {
 };
 async function listAlerts(env) {
   try {
-    const a = JSON.parse(await kvGet(env, KEY3(env)) || "[]");
+    const a = JSON.parse(await kvGet(env, KEY2(env)) || "[]");
     return Array.isArray(a) ? a : [];
   } catch (_) {
     return [];
   }
 }
 async function saveAlerts(env, list3) {
-  await kvPut(env, KEY3(env), JSON.stringify(list3.slice(0, MAX)));
+  await kvPut(env, KEY2(env), JSON.stringify(list3.slice(0, MAX)));
 }
 async function logEvent(env, type, text, now = Date.now()) {
   const k = K(env, "log:" + localParts(now).date);
@@ -3779,7 +2956,7 @@ function stockOf(q, stocks) {
   return stocks.find((s) => s.sym === Q) || stocks.find((s) => s.sym === Q + "B") || (lq.length >= 3 ? stocks.find((s) => String(s.name || "").toLowerCase().replace(/\s*bstock$/, "") === lq) || stocks.find((s) => String(s.name || "").toLowerCase().startsWith(lq)) : null) || null;
 }
 var groupOf2 = (a) => KINDS[a.kind].what === "portfolio" ? "pf" : a.metal ? "metal" : a.stock ? "stock" : "coin";
-async function tg4(env, method, body) {
+async function tg3(env, method, body) {
   body = bidiBody(body);
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
@@ -3847,7 +3024,7 @@ Now: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
     });
     const one = fired.length === 1 && fired[0].a.sym && !fired[0].a.metal && !fired[0].a.stock;
     const buttons = [one ? [row2[0], { text: "\u{1F525} Liq Map", url: "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=" + encodeURIComponent(fired[0].a.sym) }] : row2, [{ text: "\u{1F514} /alerts", callback_data: "al" }]];
-    const r = await tg4(env, "sendMessage", { chat_id: chatOf(env), text: text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
+    const r = await tg3(env, "sendMessage", { chat_id: chatOf(env), text: text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
     if (!r.ok) fired.forEach(({ a }) => keep.push(a));
     else for (let i = 0; i < fired.length; i++) await logEvent(env, "alert", describe(fired[i].a) + " \u2014 now " + blocks[i].nowTxt);
   }
@@ -4081,7 +3258,7 @@ async function cancelTrades(env, gid) {
 }
 
 // tools/worker/paper.mjs
-var KEY4 = (env) => K(env, "paper");
+var KEY3 = (env) => K(env, "paper");
 var FEE = 1e-3;
 var START = 1e4;
 var mem4 = /* @__PURE__ */ new Map();
@@ -4115,13 +3292,13 @@ var locked2 = (fn) => {
 };
 async function load2(env) {
   try {
-    const p = JSON.parse(await kvGet3(env, KEY4(env)) || "null");
+    const p = JSON.parse(await kvGet3(env, KEY3(env)) || "null");
     return p && p.pos ? p : null;
   } catch (_) {
     return null;
   }
 }
-var save = (env, p) => kvPut3(env, KEY4(env), JSON.stringify(p));
+var save = (env, p) => kvPut3(env, KEY3(env), JSON.stringify(p));
 async function prices(coins) {
   const list3 = coins.filter((c) => c && c.sym);
   const m = await loadMarket(list3.map((c) => c.id).filter(Boolean), list3.map((c) => ({ sym: c.sym, id: c.id || null })));
@@ -4852,58 +4029,6 @@ async function compose(env, kind, lang2, facts) {
   return toHtml(text);
 }
 
-// tools/worker/voice.mjs
-var MAX_SEC = 120;
-var MODEL = "@cf/openai/whisper-large-v3-turbo";
-var HINT = {
-  en: "Bitcoin BTC, Ethereum ETH, Solana SOL, KAVA, LINK, funding, liquidation, alert me if, portfolio, take profit, paper buy.",
-  ar: "\u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648\u060C \u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627\u060C \u0645\u062D\u0641\u0638\u062A\u064A\u060C \u0627\u0644\u0633\u0639\u0631\u060C \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C\u060C \u062A\u0635\u0641\u064A\u0627\u062A\u060C \u062A\u0645\u0648\u064A\u0644\u060C \u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0628\u064A\u062A\u0643\u0648\u064A\u0646 BTC\u060C \u0625\u064A\u062B\u064A\u0631\u064A\u0648\u0645 ETH\u060C \u0633\u0648\u0644\u0627\u0646\u0627 SOL\u060C \u0643\u0627\u0641\u0627 KAVA."
-};
-var score = (o) => {
-  const s = o && o.segments || [];
-  const v = s.map((x) => +x.avg_logprob).filter(isFinite);
-  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : -9;
-};
-var clean = (o) => String(o && o.text || "").replace(/\s+/g, " ").trim().slice(0, 1e3);
-var odd = (t) => /[^\p{Script=Latin}\p{Script=Arabic}\p{M}\p{N}\p{P}\p{S}\s]/u.test(t);
-function b642(buf) {
-  const u8 = new Uint8Array(buf);
-  let s = "";
-  for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
-  return btoa(s);
-}
-async function transcribe(env, voice) {
-  if (!env.AI || typeof env.AI.run !== "function") return { error: "noai" };
-  if (!voice || !voice.file_id) return { error: "fail" };
-  if ((voice.duration || 0) > MAX_SEC || (voice.file_size || 0) > 1e7) return { error: "long" };
-  try {
-    const f = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ file_id: voice.file_id }) }).then((r) => r.json());
-    const p = f && f.ok && f.result && f.result.file_path;
-    if (!p) return { error: "fail" };
-    const audio = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${p}`);
-    if (!audio.ok) return { error: "fail" };
-    const a = b642(await audio.arrayBuffer());
-    const run2 = (language, hint) => env.AI.run(MODEL, { audio: a, vad_filter: true, ...language ? { language } : {}, ...hint ? { initial_prompt: hint } : {} });
-    const first = await run2(null, null), info = first && first.transcription_info || {}, lang2 = info.language, prob = +info.language_probability || 0;
-    let best;
-    if ((lang2 === "en" || lang2 === "ar") && prob >= 0.7) best = { o: await run2(lang2, HINT[lang2]), lang: lang2 };
-    else {
-      const [en, ar] = await Promise.all([run2("en", HINT.en), run2("ar", HINT.ar)]);
-      const c = [{ o: en, lang: "en" }, { o: ar, lang: "ar" }].filter((x) => clean(x.o)).sort((x, y) => odd(clean(x.o)) - odd(clean(y.o)) || score(y.o) - score(x.o));
-      best = c[0] || { o: first, lang: lang2 };
-    }
-    let text = clean(best.o);
-    if (!text || odd(text)) {
-      const t0 = clean(first);
-      if (t0 && !odd(t0)) text = t0;
-    }
-    return text.replace(/[\p{P}\s]/gu, "").length < 2 ? { error: "empty" } : { text, lang: best.lang };
-  } catch (e) {
-    console.log(JSON.stringify({ voice: "fail", message: String(e && e.message).slice(0, 300) }));
-    return { error: "fail" };
-  }
-}
-
 // tools/worker/daily.mjs
 var H3 = 36e5;
 var DAY5 = 24 * H3;
@@ -4936,7 +4061,7 @@ var jget2 = async (env, k, d) => {
 };
 var jput = (env, k, v, ttl) => kvPut5(env, k, JSON.stringify(v), ttl);
 var lang = (env) => langOf(env);
-async function tg5(env, method, body) {
+async function tg4(env, method, body) {
   body = bidiBody(body);
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -4945,7 +4070,7 @@ async function tg5(env, method, body) {
     return { ok: false };
   }
 }
-var send = (env, v, extra = {}) => tg5(env, "sendMessage", { chat_id: chatOf(env), text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
+var send = (env, v, extra = {}) => tg4(env, "sendMessage", { chat_id: chatOf(env), text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
 var cb2 = (text, data) => ({ text, callback_data: data });
 var url = (text, u) => ({ text, url: u });
 var LIQ = "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=";
@@ -5302,23 +4427,16 @@ async function radar(env, now = Date.now()) {
     await jput(env, K(env, "radar:seen"), seen);
     return { sym, sent: 0 };
   }
-  const L = await lang(env), w = RADAR_TXT[L], ww = WD[L];
-  const lines = [`\u{1F9F2} <b>${ww.radar} \xB7 ${esc(sym)}</b>`, ...fresh.map((k) => `\u26A0\uFE0F <b>${w[k]}</b>`), ""];
-  if (s.funding_8h_pct_avg != null) lines.push(`\u2022 ${w.fund}: <b>${s.funding_8h_pct_avg > 0 ? "+" : ""}${s.funding_8h_pct_avg}%</b> / 8h (\u2248 ${s.funding_annualized_pct > 0 ? "+" : ""}${s.funding_annualized_pct}% ${w.yr})`);
-  if (s.open_interest_change_24h_pct != null) lines.push(`\u2022 ${w.oi}: <b>${pct(s.open_interest_change_24h_pct, 1)}</b>${s.open_interest_usd_total ? " (" + usd(s.open_interest_usd_total) + ")" : ""}`);
-  if (s.long_accounts_pct != null) lines.push(`\u2022 ${w.longs}: <b>${r24(s.long_accounts_pct)}%</b>`);
-  if (s.liquidations_24h) lines.push(`\u2022 ${w.liq}: ${w.longsW} ${usd(s.liquidations_24h.longs_usd)} \xB7 ${w.shortsW} ${usd(s.liquidations_24h.shorts_usd)}`);
-  const longSide = fresh.some((k) => /hot_longs|crowd_long/.test(k)), shortSide = fresh.some((k) => /hot_shorts|crowd_short/.test(k));
-  lines.push("", `<i>${longSide && !shortSide ? w.noteL : shortSide && !longSide ? w.noteS : w.noteN}</i>`);
-  const r = await send(env, { text: lines.join("\n"), buttons: [[url("\u{1F525} Liq Map", LIQ + encodeURIComponent(sym)), cb2("\u{1FA99} " + sym, "c:" + String(idOf[sym] || "x-" + sym.toLowerCase()).slice(0, 58))]] });
-  if (r && r.ok) {
-    fresh.forEach((k) => {
-      seen[sym + ":" + k] = now;
-    });
-    await logEvent(env, "radar", sym + ": " + fresh.map((k) => RADAR_TXT.en[k]).join(", "), now);
-  }
+  const q = await jget2(env, K(env, "digest"), {});
+  q.lev = q.lev || {};
+  q.lev[sym] = { t: now, finds: [.../* @__PURE__ */ new Set([...q.lev[sym] ? q.lev[sym].finds : [], ...fresh])], fund: s.funding_8h_pct_avg, oi: s.open_interest_change_24h_pct, longs: s.long_accounts_pct, top: s.top_traders_long_pct ?? null, id: idOf[sym] || null };
+  await jput(env, K(env, "digest"), q);
+  fresh.forEach((k) => {
+    seen[sym + ":" + k] = now;
+  });
+  await logEvent(env, "radar", sym + ": " + fresh.map((k) => RADAR_TXT.en[k]).join(", "), now);
   await jput(env, K(env, "radar:seen"), seen);
-  return { sym, sent: r && r.ok ? 1 : 0 };
+  return { sym, queued: fresh.length };
 }
 async function sectorRadar(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null);
@@ -5329,23 +4447,17 @@ async function sectorRadar(env, now = Date.now()) {
   const fresh = big2.filter((s) => seen[s.id] !== day3).sort((a, b) => Math.abs(b.ch24) - Math.abs(a.ch24)).slice(0, 3);
   if (!fresh.length) return { sent: 0 };
   const mine = new Set(user ? Object.values(m.idOf).filter(Boolean) : []), symOf = (id) => (Object.entries(m.idOf).find(([, v]) => v === id) || [])[0];
-  const L = await lang(env), ar = L === "ar", w = WD[L];
-  const lines = [`\u{1F525} <b>${w.sectors}</b>`, ""];
-  for (const s of fresh) {
-    const held = (s.top || []).filter((id) => mine.has(id)).map(symOf).filter(Boolean);
-    lines.push(`${s.ch24 > 0 ? "\u{1F680}" : "\u{1F53B}"} <b>${esc(s.name)}</b> ${pct(s.ch24, 1)} \xB7 ${usd(s.mcap)}${held.length ? `
-   ${ar ? "\u062A\u0645\u0644\u0643 \u0645\u0646 \u0623\u0628\u0631\u0632 \u0639\u0645\u0644\u0627\u062A\u0647" : "you hold its leaders"}: <b>${esc(held.join(", "))}</b>` : ""}`);
-  }
-  const r = await send(env, { text: lines.join("\n"), buttons: [[cb2(w.mk, "mk"), cb2(w.pf, "pf")]] });
-  if (r && r.ok) {
-    fresh.forEach((s) => {
-      seen[s.id] = day3;
-    });
-    for (const k of Object.keys(seen)) if (seen[k] !== day3) delete seen[k];
-    await jput(env, K(env, "sector:seen"), seen);
-    await logEvent(env, "sector", fresh.map((s) => s.name + " " + pct(s.ch24, 1)).join(", "), now);
-  }
-  return { sent: r && r.ok ? 1 : 0 };
+  const q = await jget2(env, K(env, "digest"), {});
+  q.sec = q.sec || {};
+  for (const x of fresh) q.sec[x.id] = { t: now, name: x.name, ch24: x.ch24, mcap: x.mcap, held: (x.top || []).filter((id) => mine.has(id)).map(symOf).filter(Boolean) };
+  await jput(env, K(env, "digest"), q);
+  fresh.forEach((x) => {
+    seen[x.id] = day3;
+  });
+  for (const k of Object.keys(seen)) if (seen[k] !== day3) delete seen[k];
+  await jput(env, K(env, "sector:seen"), seen);
+  await logEvent(env, "sector", fresh.map((x) => x.name + " " + pct(x.ch24, 1)).join(", "), now);
+  return { queued: fresh.length };
 }
 async function pinView(env, now = Date.now()) {
   const L = await lang(env), w = WD[L], g = await gather(env, now);
@@ -5372,8 +4484,8 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const body = v.text.split("\n").slice(1).join("\n");
   if (!force && st.id && st.body === body && now - (st.t || 0) < H3) return { ok: true, same: true };
   if (st.id && !fresh) {
-    const r3 = await tg5(env, "editMessageText", { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: "HTML", reply_markup: { inline_keyboard: v.buttons } });
-    if ((r3.ok || /not modified/i.test(r3.description || "")) && force) await tg5(env, "pinChatMessage", { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {
+    const r3 = await tg4(env, "editMessageText", { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: "HTML", reply_markup: { inline_keyboard: v.buttons } });
+    if ((r3.ok || /not modified/i.test(r3.description || "")) && force) await tg4(env, "pinChatMessage", { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {
     });
     if (r3.ok || /not modified/i.test(r3.description || "")) {
       await jput(env, K(env, "pin"), { id: st.id, body, t: now });
@@ -5383,11 +4495,11 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const r = await send(env, v, { disable_notification: true });
   const id = r && r.ok && r.result && r.result.message_id;
   if (!id) return { ok: false };
-  await tg5(env, "pinChatMessage", { chat_id: chatOf(env), message_id: id, disable_notification: true });
+  await tg4(env, "pinChatMessage", { chat_id: chatOf(env), message_id: id, disable_notification: true });
   if (st.id) {
-    await tg5(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
+    await tg4(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
     });
-    if (fresh) await tg5(env, "deleteMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
+    if (fresh) await tg4(env, "deleteMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
     });
   }
   await jput(env, K(env, "pin"), { id, body, t: now });
@@ -5395,15 +4507,63 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
 }
 async function unpin(env) {
   const st = await jget2(env, K(env, "pin"), {});
-  if (st.id) await tg5(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id });
+  if (st.id) await tg4(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id });
   await jput(env, K(env, "pin"), {});
 }
 async function viewDaily(env) {
   const L = await lang(env), w = WD[L], c = await getCfg(env);
   const row2 = (k) => cb2(`${c[k] ? "\u2705" : "\u2B1C"} ${w[k]}`, "dy:" + k);
-  const at = { morning: c.morningAt, evening: c.eveningAt, radar: L === "ar" ? "\u0643\u0644 30 \u062F\u0642\u064A\u0642\u0629" : "every 30 min", sectors: L === "ar" ? "\u0643\u0644 \u0633\u0627\u0639\u0629" : "hourly", pin: L === "ar" ? "\u0643\u0644 15 \u062F\u0642\u064A\u0642\u0629" : "every 15 min" };
+  const at = { morning: c.morningAt, evening: c.eveningAt, radar: L === "ar" ? "\u0641\u064A \u0645\u0644\u062E\u0635 12:00 \xB7 16:00 \xB7 20:00" : "in the 12:00 \xB7 16:00 \xB7 20:00 digest", sectors: L === "ar" ? "\u0641\u064A \u0646\u0641\u0633 \u0627\u0644\u0645\u0644\u062E\u0635" : "in the same digest", pin: L === "ar" ? "\u0643\u0644 15 \u062F\u0642\u064A\u0642\u0629" : "every 15 min" };
   const lines = [w.dailyT, "", ...["morning", "evening", "radar", "sectors", "pin"].map((k) => `${c[k] ? "\u2705" : "\u2B1C"} ${w[k]} \xB7 <i>${at[k]}</i>`), "", `<i>${w.dailyNote}</i>`];
   return { text: lines.join("\n"), buttons: [[row2("morning"), row2("evening")], [row2("radar"), row2("sectors")], [row2("pin")], [cb2(w.nowM, "dy:now:m"), cb2(w.nowE, "dy:now:e")], [cb2(w.back, "menu")]] };
+}
+var DIGEST_AT = ["12:00", "16:00", "20:00"];
+var big$ = (v) => v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + "B" : v >= 1e6 ? "$" + (v / 1e6).toFixed(0) + "M" : "$" + Math.round(v / 1e3) + "K";
+function whaleLines(wh, syms, ar, now = Date.now()) {
+  if (!wh || !wh.coins || !(now - Date.parse(wh.t) < 12 * H3)) return [];
+  const side = { long: ar ? "\u0634\u0631\u0627\u0621" : "long", short: ar ? "\u0628\u064A\u0639" : "short", mixed: ar ? "\u0645\u0646\u0642\u0633\u0645\u0648\u0646" : "split" };
+  return syms.filter((x) => wh.coins[x] && wh.coins[x].long + wh.coins[x].short >= 3).map((x) => {
+    const c = wh.coins[x], flip = c.was && c.flipT && now - Date.parse(c.flipT) < 24 * H3;
+    return ar ? `\u2022 <b>${esc(x)}</b>: ${c.long} \u0634\u0631\u0627\u0621 \xB7 ${c.short} \u0628\u064A\u0639 \u2014 ${big$(c.longUsd)} \u0645\u0642\u0627\u0628\u0644 ${big$(c.shortUsd)}${flip ? ` \xB7 \u{1F504} \u0627\u0646\u0642\u0644\u0628\u0648\u0627 \u0645\u0646 ${side[c.was]} \u0625\u0644\u0649 ${side[c.side]}` : ""}` : `\u2022 <b>${esc(x)}</b>: ${c.long} long \xB7 ${c.short} short \u2014 ${big$(c.longUsd)} vs ${big$(c.shortUsd)}${flip ? ` \xB7 \u{1F504} flipped ${side[c.was]} \u2192 ${side[c.side]}` : ""}`;
+  });
+}
+async function radarDigest(env, now = Date.now(), slot = "") {
+  const q = await jget2(env, K(env, "digest"), {}), lev = Object.entries(q.lev || {}), sec = Object.entries(q.sec || {});
+  const user = await loadUser(env).catch(() => null), m = await loadMarket([], user ? coinsOf(user) : []).catch(() => null);
+  const L = await lang(env), ar = L === "ar", w = RADAR_TXT[L];
+  let held = [];
+  if (user && m) {
+    try {
+      held = summarize(withIds(user, m), m, now).coins.filter((c) => !isStable(c.sym)).sort((a, b) => b.value - a.value).map((c) => c.sym);
+    } catch (_) {
+    }
+  }
+  const wh = m && m.whales, flips = wh && wh.coins ? Object.keys(wh.coins).filter((x) => (["BTC", "ETH", "SOL"].includes(x) || held.includes(x)) && wh.coins[x].flipT && Date.parse(wh.coins[x].flipT) > (q.last || 0)) : [];
+  if (!lev.length && !sec.length && !flips.length) {
+    await jput(env, K(env, "digest"), { last: q.last || 0 });
+    return { sent: 0 };
+  }
+  const lines = [`\u{1F4E1} <b>${ar ? "\u0645\u0644\u062E\u0635 \u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A" : "Radar digest"}</b>${slot ? " \xB7 " + slot : ""}`];
+  if (lev.length) {
+    lines.push("", `\u{1F9F2} <b>${ar ? "\u0627\u0644\u0631\u0627\u0641\u0639\u0629" : "Leverage"}</b>`);
+    for (const [sym, x] of lev) {
+      lines.push(`\u2022 <b>${esc(sym)}</b>: ${x.finds.map((k) => w[k]).join(" \xB7 ")}`);
+      const d = [x.fund != null ? `${w.fund} ${x.fund > 0 ? "+" : ""}${x.fund}% / 8h` : null, x.oi != null ? `${w.oi} ${pct(x.oi, 1)}` : null, x.longs != null ? `${w.longs} ${r24(x.longs)}%` : null].filter(Boolean);
+      if (d.length) lines.push(`   ${d.join(" \xB7 ")}`);
+    }
+  }
+  if (sec.length) {
+    lines.push("", `\u{1F525} <b>${ar ? "\u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A" : "Sectors"}</b>`);
+    for (const [, x] of sec.sort((a, b) => Math.abs(b[1].ch24) - Math.abs(a[1].ch24)).slice(0, 6))
+      lines.push(`${x.ch24 > 0 ? "\u{1F680}" : "\u{1F53B}"} <b>${esc(x.name)}</b> ${pct(x.ch24, 1)} \xB7 ${usd(x.mcap)}${x.held && x.held.length ? ` \xB7 ${ar ? "\u062A\u0645\u0644\u0643" : "you hold"}: <b>${esc(x.held.join(", "))}</b>` : ""}`);
+  }
+  const wl = whaleLines(wh, [.../* @__PURE__ */ new Set(["BTC", "ETH", "SOL", ...lev.map(([s2]) => s2), ...flips])].slice(0, 6), ar, now);
+  if (wl.length) lines.push("", `\u{1F40B} <b>${ar ? "\u0627\u0644\u062D\u064A\u062A\u0627\u0646" : "Whales"}</b> <i>(${ar ? `\u0623\u0643\u0628\u0631 ${wh.n} \u0645\u062A\u062F\u0627\u0648\u0644 \u0631\u0627\u0628\u062D \u0639\u0644\u0649 Hyperliquid` : `the ${wh.n} biggest winning traders on Hyperliquid`})</i>`, ...wl);
+  lines.push("", `<i>${ar ? "\u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u0627\u0644\u0645\u062A\u0643\u062F\u0633\u0629 \u062A\u0639\u0646\u064A \u062A\u0642\u0644\u0628\u0627\u064B \u0623\u0639\u0644\u0649 \u2014 \u0648\u0627\u0644\u062D\u064A\u062A\u0627\u0646 \u064A\u062A\u062D\u0648\u0651\u0637\u0648\u0646 \u0648\u064A\u062E\u0633\u0631\u0648\u0646 \u0623\u064A\u0636\u0627\u064B." : "Crowded leverage means more volatility \u2014 and whales hedge, and lose too."}</i>`, NOT_ADVICE[ar ? "ar" : "en"]);
+  const first = lev[0], btns = [[cb2(WD[L].mk, "mk"), cb2(WD[L].pf, "pf"), ...first ? [url("\u{1F525} Liq Map", LIQ + encodeURIComponent(first[0]))] : []]];
+  const r = await send(env, { text: lines.join("\n"), buttons: btns });
+  if (r && r.ok) await jput(env, K(env, "digest"), { last: now });
+  return { sent: r && r.ok ? 1 : 0 };
 }
 async function runDaily(env, now = Date.now()) {
   if (!env.TELEGRAM_BOT_TOKEN || !chatOf(env)) return { job: null };
@@ -5430,6 +4590,16 @@ async function runDaily(env, now = Date.now()) {
     const L = await lang(env), had = await kvGet5(env, K(env, "alsync"));
     if (had !== L && await setAlertsLang(env, L).catch(() => false)) await kvPut5(env, K(env, "alsync"), L);
   }
+  if ((c.radar || c.sectors) && min % 15 === 5) {
+    const slot = DIGEST_AT.find((at) => {
+      const late = mins(lp.hm) - mins(at);
+      return late >= 0 && late < 120 && sent["dg" + at] !== lp.date;
+    });
+    if (slot) {
+      await done("dg" + slot);
+      return { job: "digest", ...await radarDigest(env, now, slot) };
+    }
+  }
   if (c.pin && min % 15 === 0) {
     await pinUpdate(env, now);
     return { job: "pin" };
@@ -5454,6 +4624,949 @@ async function kickPrices(env, now = Date.now()) {
   const ok2 = !!(r && r.status === 204);
   if (!ok2) console.log(JSON.stringify({ kick: "refused", status: r && r.status }));
   return { kick: ok2 ? "sent" : "refused", age_min: Math.round((now - t) / 6e4) };
+}
+
+// guide.json
+var guide_default = {
+  v: 2,
+  title: {
+    en: "\u{1F4D8} Cute Portfolio \u2014 the guide",
+    ar: "\u{1F4D8} \u062F\u0644\u064A\u0644 Cute Portfolio"
+  },
+  intro: {
+    en: "Everything the app and the bot can do, in short steps. Tap a part to open it.",
+    ar: "\u0643\u0644 \u0645\u0627 \u064A\u0642\u062F\u0645\u0647 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0648\u0627\u0644\u0628\u0648\u062A\u060C \u0641\u064A \u062E\u0637\u0648\u0627\u062A \u0642\u0635\u064A\u0631\u0629. \u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0623\u064A \u062C\u0632\u0621 \u0644\u0641\u062A\u062D\u0647."
+  },
+  groups: [
+    {
+      k: "start",
+      e: "\u{1F680}",
+      t: {
+        en: "Start",
+        ar: "\u0627\u0644\u0628\u062F\u0627\u064A\u0629"
+      }
+    },
+    {
+      k: "daily",
+      e: "\u{1F4C5}",
+      t: {
+        en: "Daily use",
+        ar: "\u0627\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u064A\u0648\u0645\u064A"
+      }
+    },
+    {
+      k: "extras",
+      e: "\u2728",
+      t: {
+        en: "Extras",
+        ar: "\u0625\u0636\u0627\u0641\u0627\u062A"
+      }
+    },
+    {
+      k: "account",
+      e: "\u{1F464}",
+      t: {
+        en: "Account",
+        ar: "\u0627\u0644\u062D\u0633\u0627\u0628"
+      }
+    }
+  ],
+  sections: [
+    {
+      k: "start",
+      e: "\u{1F680}",
+      g: "start",
+      t: {
+        en: "Getting started",
+        ar: "\u0627\u0644\u0628\u062F\u0627\u064A\u0629"
+      },
+      b: {
+        en: "Getting started",
+        ar: "\u0627\u0644\u0628\u062F\u0627\u064A\u0629"
+      },
+      s: {
+        en: "Join with an invite \u2014 one code, two ways in.",
+        ar: "\u0627\u0646\u0636\u0645 \u0628\u062F\u0639\u0648\u0629 \u2014 \u0631\u0645\u0632 \u0648\u0627\u062D\u062F \u0648\u0637\u0631\u064A\u0642\u062A\u0627\u0646 \u0644\u0644\u062F\u062E\u0648\u0644."
+      },
+      en: [
+        "Open the invite from Dr. Samir Saad.",
+        "\u{1F4F1} <b>The app link</b> \u2192 sign in with Google or any e-mail (a sign-in link, no password) \u2192 <b>Start my portfolio</b>.",
+        "\u{1F916} <b>The bot link</b> \u2192 you're in the bot at once; send /app with your e-mail to open the app too.",
+        "Link the two (see <b>Link the app and the bot</b>) so the bot sees your portfolio."
+      ],
+      ar: [
+        "\u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0639\u0648\u0629 \u0627\u0644\u062A\u064A \u0623\u0631\u0633\u0644\u0647\u0627 \u0644\u0643 Dr. Samir Saad.",
+        "\u{1F4F1} <b>\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> \u2190 \u0633\u062C\u0651\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u062D\u0633\u0627\u0628 Google \u0623\u0648 \u0628\u0623\u064A \u0628\u0631\u064A\u062F \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A (\u0631\u0627\u0628\u0637 \u062F\u062E\u0648\u0644 \u0628\u062F\u0648\u0646 \u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631) \u2190 <b>Start my portfolio</b>.",
+        "\u{1F916} <b>\u0631\u0627\u0628\u0637 \u0627\u0644\u0628\u0648\u062A</b> \u2190 \u062A\u062F\u062E\u0644 \u0627\u0644\u0628\u0648\u062A \u0645\u0628\u0627\u0634\u0631\u0629\u061B \u0623\u0631\u0633\u0644 /app \u0645\u0639 \u0628\u0631\u064A\u062F\u0643 \u0644\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0623\u064A\u0636\u0627\u064B.",
+        "\u0627\u0631\u0628\u0637 \u0627\u0644\u0627\u062B\u0646\u064A\u0646 (\u0631\u0627\u062C\u0639 <b>\u0631\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0627\u0644\u0628\u0648\u062A</b>) \u0644\u064A\u062A\u0645\u0643\u0646 \u0627\u0644\u0628\u0648\u062A \u0645\u0646 \u0631\u0624\u064A\u0629 \u0645\u062D\u0641\u0638\u062A\u0643."
+      ],
+      tip: {
+        en: "Language: \u{1F310} in the bot's menu, and Settings \u2192 Display \u2192 Language in the app.",
+        ar: "\u0627\u0644\u0644\u063A\u0629: \u{1F310} \u0641\u064A \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0628\u0648\u062A\u060C \u0648\u0645\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u0639\u0631\u0636 \u2190 \u0627\u0644\u0644\u063A\u0629 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642."
+      }
+    },
+    {
+      k: "app",
+      e: "\u{1F4F1}",
+      g: "start",
+      t: {
+        en: "The app",
+        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642"
+      },
+      b: {
+        en: "The app",
+        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642"
+      },
+      s: {
+        en: "Your portfolio, plan and the market \u2014 on the phone or the computer.",
+        ar: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u0627\u0644\u0633\u0648\u0642 \u2014 \u0639\u0644\u0649 \u0627\u0644\u062C\u0648\u0627\u0644 \u0623\u0648 \u0627\u0644\u0643\u0645\u0628\u064A\u0648\u062A\u0631."
+      },
+      en: [
+        "<b>Portfolio</b>: your coins, value, profit and charts. Add a coin with <b>+</b>, or bring trades from an exchange: Performance \u2192 <b>Wallets &amp; Exchanges</b> \u2192 Import.",
+        "<b>Plan</b>: the accumulation plan (targets, DCA) and the <b>Exit Strategy</b> (take-profit steps).",
+        "<b>Market Hub</b>: market cap, Fear &amp; Greed, Altcoin Season, dominance, ETF flows, top coins.",
+        "<b>AI Analysis</b> (\u{1F916}): a full report \u2014 <i>free</i> with your Claude app (copy \u2192 paste), or a quick report for \u2B50 premium / your own Claude key.",
+        "<b>Settings</b> (\u2699\uFE0F): account, backup, Telegram, AI, display and language, the guide, install on your phone."
+      ],
+      ar: [
+        "<b>\u0627\u0644\u0645\u062D\u0641\u0638\u0629</b>: \u0639\u0645\u0644\u0627\u062A\u0643 \u0648\u0642\u064A\u0645\u062A\u0647\u0627 \u0648\u0627\u0644\u0631\u0628\u062D \u0648\u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629. \u0623\u0636\u0641 \u0639\u0645\u0644\u0629 \u0628\u0632\u0631 <b>+</b>\u060C \u0623\u0648 \u0627\u0633\u062A\u0648\u0631\u062F \u0635\u0641\u0642\u0627\u062A\u0643 \u0645\u0646 \u0645\u0646\u0635\u0629: \u0627\u0644\u0623\u062F\u0627\u0621 \u2190 <b>\u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A</b> \u2190 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F.",
+        "<b>\u0627\u0644\u062E\u0637\u0629</b>: \u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639 (\u0627\u0644\u0623\u0647\u062F\u0627\u0641 \u0648\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A) \u0648<b>\u0627\u0633\u062A\u0631\u0627\u062A\u064A\u062C\u064A\u0629 \u0627\u0644\u062E\u0631\u0648\u062C</b> (\u062E\u0637\u0648\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D).",
+        "<b>\u0645\u0631\u0643\u0632 \u0627\u0644\u0633\u0648\u0642</b>: \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629\u060C \u0648\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639\u060C \u0648\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629\u060C \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629\u060C \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF\u060C \u0648\u0623\u0643\u0628\u0631 \u0627\u0644\u0639\u0645\u0644\u0627\u062A.",
+        "<b>\u062A\u062D\u0644\u064A\u0644 AI</b> (\u{1F916}): \u062A\u0642\u0631\u064A\u0631 \u0643\u0627\u0645\u0644 \u2014 <i>\u0645\u062C\u0627\u0646\u0627\u064B</i> \u0639\u0628\u0631 \u062A\u0637\u0628\u064A\u0642 Claude (\u0646\u0633\u062E \u2190 \u0644\u0635\u0642)\u060C \u0623\u0648 \u062A\u0642\u0631\u064A\u0631 \u0633\u0631\u064A\u0639 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 \u0623\u0648 \u0628\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0643.",
+        "<b>\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A</b> (\u2699\uFE0F): \u0627\u0644\u062D\u0633\u0627\u0628\u060C \u0648\u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u060C \u0648\u062A\u0644\u064A\u062C\u0631\u0627\u0645\u060C \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A\u060C \u0648\u0627\u0644\u0639\u0631\u0636 \u0648\u0627\u0644\u0644\u063A\u0629\u060C \u0648\u0627\u0644\u062F\u0644\u064A\u0644\u060C \u0648\u062A\u062B\u0628\u064A\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0639\u0644\u0649 \u0627\u0644\u062C\u0648\u0627\u0644."
+      ],
+      tip: {
+        en: "Your data is private: stored in the cloud under your own account \u2014 nobody else can read it.",
+        ar: "\u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u062E\u0627\u0635\u0629: \u0645\u062D\u0641\u0648\u0638\u0629 \u0639\u0644\u0649 \u0627\u0644\u0633\u062D\u0627\u0628\u0629 \u0641\u064A \u062D\u0633\u0627\u0628\u0643 \u0623\u0646\u062A \u2014 \u0648\u0644\u0627 \u064A\u0633\u062A\u0637\u064A\u0639 \u0623\u062D\u062F \u063A\u064A\u0631\u0643 \u0642\u0631\u0627\u0621\u062A\u0647\u0627."
+      }
+    },
+    {
+      k: "link",
+      e: "\u{1F517}",
+      g: "start",
+      t: {
+        en: "Link the app and the bot",
+        ar: "\u0631\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0627\u0644\u0628\u0648\u062A"
+      },
+      b: {
+        en: "Linking",
+        ar: "\u0627\u0644\u0631\u0628\u0637"
+      },
+      s: {
+        en: "One tap, and the bot sees your portfolio \u2014 only for you.",
+        ar: "\u0636\u063A\u0637\u0629 \u0648\u0627\u062D\u062F\u0629\u060C \u0648\u064A\u0631\u0649 \u0627\u0644\u0628\u0648\u062A \u0645\u062D\u0641\u0638\u062A\u0643 \u2014 \u0644\u0643 \u0648\u062D\u062F\u0643."
+      },
+      en: [
+        "In the app: Settings \u2192 <b>Telegram</b> \u2192 <b>Link your portfolio</b>.",
+        "Tap <b>Open the bot</b> \u2014 done.",
+        "Your portfolio, plan and exit plan now show in the bot, and the morning, evening and pinned messages start."
+      ],
+      ar: [
+        "\u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 <b>\u062A\u0644\u064A\u062C\u0631\u0627\u0645</b> \u2190 <b>\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u0628\u0628\u0648\u062A \u062A\u0644\u064A\u062C\u0631\u0627\u0645</b>.",
+        "\u0627\u0636\u063A\u0637 <b>\u0627\u0641\u062A\u062D \u0627\u0644\u0628\u0648\u062A</b> \u2014 \u0648\u0627\u0646\u062A\u0647\u0649 \u0627\u0644\u0623\u0645\u0631.",
+        "\u062A\u0638\u0647\u0631 \u0627\u0644\u0622\u0646 \u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C \u0641\u064A \u0627\u0644\u0628\u0648\u062A\u060C \u0648\u062A\u0628\u062F\u0623 \u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0628\u0627\u062D \u0648\u0627\u0644\u0645\u0633\u0627\u0621 \u0648\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u0628\u062A\u0629."
+      ],
+      tip: {
+        en: "No Telegram on this device? Copy the 8-letter code and send /link CODE to the bot (it works for 10 minutes).",
+        ar: "\u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0644\u064A\u0633 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632\u061F \u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u0645\u0643\u0648\u0651\u0646 \u0645\u0646 8 \u0623\u062D\u0631\u0641 \u0648\u0623\u0631\u0633\u0644 /link CODE \u0625\u0644\u0649 \u0627\u0644\u0628\u0648\u062A (\u0635\u0627\u0644\u062D \u0644\u0645\u062F\u0629 10 \u062F\u0642\u0627\u0626\u0642)."
+      }
+    },
+    {
+      k: "ask",
+      e: "\u{1F9E0}",
+      g: "daily",
+      t: {
+        en: "Ask anything",
+        ar: "\u0627\u0633\u0623\u0644 \u0623\u064A \u0633\u0624\u0627\u0644"
+      },
+      b: {
+        en: "Ask anything",
+        ar: "\u0627\u0633\u0623\u0644 \u0623\u064A \u0633\u0624\u0627\u0644"
+      },
+      s: {
+        en: "Write in plain words \u2014 the bot answers with live data.",
+        ar: "\u0627\u0643\u062A\u0628 \u0628\u0643\u0644\u0645\u0627\u062A \u0639\u0627\u062F\u064A\u0629 \u2014 \u0648\u064A\u062C\u064A\u0628\u0643 \u0627\u0644\u0628\u0648\u062A \u0628\u0623\u0631\u0642\u0627\u0645 \u0645\u0628\u0627\u0634\u0631\u0629."
+      },
+      en: [
+        "Write in English or Arabic, for example: <i>How is my portfolio today?</i> \xB7 <i>Is SOL a good buy now?</i>",
+        'Ask "what if": <i>What if BTC hits 150k?</i> \xB7 <i>What if I sell half my ETH?</i>',
+        "Each answer says where its numbers came from and how many questions are left today (5 a day; \u2B50 premium 20)."
+      ],
+      ar: [
+        "\u0627\u0643\u062A\u0628 \u0628\u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0623\u0648 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629\u060C \u0645\u062B\u0644\u0627\u064B: <i>\u0643\u064A\u0641 \u0623\u062F\u0627\u0621 \u0645\u062D\u0641\u0638\u062A\u064A \u0627\u0644\u064A\u0648\u0645\u061F</i> \xB7 <i>\u0647\u0644 \u0627\u0644\u0634\u0631\u0627\u0621 \u0641\u064A SOL \u0645\u0646\u0627\u0633\u0628 \u0627\u0644\u0622\u0646\u061F</i>",
+        '\u0627\u0633\u0623\u0644 "\u0645\u0627\u0630\u0627 \u0644\u0648": <i>\u0645\u0627\u0630\u0627 \u0644\u0648 \u0648\u0635\u0644 BTC \u0625\u0644\u0649 150 \u0623\u0644\u0641\u0627\u064B\u061F</i> \xB7 <i>\u0645\u0627\u0630\u0627 \u0644\u0648 \u0628\u0639\u062A \u0646\u0635\u0641 ETH\u061F</i>',
+        "\u0643\u0644 \u0625\u062C\u0627\u0628\u0629 \u062A\u0648\u0636\u062D \u0645\u0635\u062F\u0631 \u0623\u0631\u0642\u0627\u0645\u0647\u0627\u060C \u0648\u0643\u0645 \u0633\u0624\u0627\u0644\u0627\u064B \u0628\u0642\u064A \u0644\u0643 \u0627\u0644\u064A\u0648\u0645 (5 \u064A\u0648\u0645\u064A\u0627\u064B\u061B \u0648\u0627\u0644\u0645\u0645\u064A\u0632 \u2B50 20)."
+      ],
+      tip: {
+        en: "/new starts a fresh chat (the bot forgets the last messages).",
+        ar: "/new \u064A\u0628\u062F\u0623 \u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 (\u064A\u0646\u0633\u0649 \u0627\u0644\u0628\u0648\u062A \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0633\u0627\u0628\u0642\u0629)."
+      }
+    },
+    {
+      k: "voice",
+      e: "\u{1F399}",
+      g: "daily",
+      t: {
+        en: "Voice notes",
+        ar: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629"
+      },
+      b: {
+        en: "Voice notes",
+        ar: "\u0627\u0644\u0635\u0648\u062A"
+      },
+      s: {
+        en: "Talk instead of typing \u2014 Arabic or English.",
+        ar: "\u062A\u062D\u062F\u0651\u062B \u0628\u062F\u0644\u0627\u064B \u0645\u0646 \u0627\u0644\u0643\u062A\u0627\u0628\u0629 \u2014 \u0628\u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0623\u0648 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629."
+      },
+      en: [
+        "Hold \u{1F399} in Telegram and speak (up to 2 minutes).",
+        "The bot shows <i>I heard: \u2026</i>",
+        "It answers as if you had typed it."
+      ],
+      ar: [
+        "\u0627\u0636\u063A\u0637 \u0645\u0637\u0648\u0644\u0627\u064B \u0639\u0644\u0649 \u{1F399} \u0641\u064A \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0648\u062A\u062D\u062F\u0651\u062B (\u062D\u062A\u0649 \u062F\u0642\u064A\u0642\u062A\u064A\u0646).",
+        "\u064A\u0639\u0631\u0636 \u0627\u0644\u0628\u0648\u062A <i>I heard: \u2026</i>",
+        "\u062B\u0645 \u064A\u062C\u064A\u0628 \u0643\u0645\u0627 \u0644\u0648 \u0623\u0646\u0643 \u0643\u062A\u0628\u062A \u0627\u0644\u0633\u0624\u0627\u0644."
+      ],
+      tip: {
+        en: "Voice notes are for \u2B50 premium members, or with your own Claude key.",
+        ar: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0645\u062A\u0627\u062D\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50\u060C \u0623\u0648 \u0628\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0643."
+      }
+    },
+    {
+      k: "coins",
+      e: "\u{1FA99}",
+      g: "daily",
+      t: {
+        en: "Coins and the market",
+        ar: "\u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0648\u0627\u0644\u0633\u0648\u0642"
+      },
+      b: {
+        en: "Coins & market",
+        ar: "\u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0648\u0627\u0644\u0633\u0648\u0642"
+      },
+      s: {
+        en: "Live prices, trends and the market in one tap.",
+        ar: "\u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629 \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0648\u062D\u0627\u0644\u0629 \u0627\u0644\u0633\u0648\u0642 \u0628\u0636\u063A\u0637\u0629 \u0648\u0627\u062D\u062F\u0629."
+      },
+      en: [
+        "Send a ticker \u2014 <code>btc</code> or <code>sol eth</code> \u2014 for the live price, trend, futures and funding.",
+        "/market \u2014 BTC, dominance, Fear &amp; Greed and ETF flows; its \u{1F4C8} bStocks and \u{1F947} Metals buttons show US stocks and gold, silver, platinum, copper (/stocks \xB7 /metals).",
+        "/movers \u2014 the best and worst coins \xB7 /signals \u2014 hold / add / sell for your coins.",
+        "/portfolio \xB7 /plan \xB7 /exit \u2014 your own numbers.",
+        "/balances \u2014 your Binance / Gate balances, read with a read-only key you connect in the app (Performance \u2192 Wallets &amp; Exchanges \u2192 Exchanges)."
+      ],
+      ar: [
+        "\u0623\u0631\u0633\u0644 \u0631\u0645\u0632 \u0627\u0644\u0639\u0645\u0644\u0629 \u2014 <code>btc</code> \u0623\u0648 <code>sol eth</code> \u2014 \u0644\u062A\u0631\u0649 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631 \u0648\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0648\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629 \u0648\u0645\u0639\u062F\u0644 \u0627\u0644\u062A\u0645\u0648\u064A\u0644.",
+        "/market \u2014 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u0644\u0647\u064A\u0645\u0646\u0629 \u0648\u0645\u0624\u0634\u0631 \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639 \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF\u061B \u0648\u0632\u0631\u0651\u0627 \u{1F4C8} bStocks \u0648\u{1F947} \u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u064A\u0639\u0631\u0636\u0627\u0646 \u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0648\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646 \u0648\u0627\u0644\u0646\u062D\u0627\u0633 (/stocks \xB7 /metals).",
+        "/movers \u2014 \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623 \u0623\u062F\u0627\u0621\u064B \xB7 /signals \u2014 \u0627\u062D\u062A\u0641\u0627\u0638 / \u062A\u0639\u0632\u064A\u0632 / \u0628\u064A\u0639 \u0644\u0639\u0645\u0644\u0627\u062A\u0643.",
+        "/portfolio \xB7 /plan \xB7 /exit \u2014 \u0623\u0631\u0642\u0627\u0645\u0643 \u0627\u0644\u062E\u0627\u0635\u0629.",
+        "/balances \u2014 \u0623\u0631\u0635\u062F\u062A\u0643 \u0641\u064A Binance \u0648 Gate\u060C \u062A\u064F\u0642\u0631\u0623 \u0628\u0645\u0641\u062A\u0627\u062D \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637 \u062A\u0631\u0628\u0637\u0647 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 (\u0627\u0644\u0623\u062F\u0627\u0621 \u2190 \u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A \u2190 \u0627\u0644\u0645\u0646\u0635\u0627\u062A)."
+      ],
+      tip: {
+        en: "\u{1F504} on any message refreshes it in place.",
+        ar: "\u{1F504} \u0639\u0644\u0649 \u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u064A\u062D\u062F\u0651\u062B\u0647\u0627 \u0641\u064A \u0645\u0643\u0627\u0646\u0647\u0627."
+      }
+    },
+    {
+      k: "alerts",
+      e: "\u{1F514}",
+      g: "daily",
+      t: {
+        en: "Alerts in words",
+        ar: "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0628\u0627\u0644\u0643\u0644\u0627\u0645"
+      },
+      b: {
+        en: "Alerts",
+        ar: "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A"
+      },
+      s: {
+        en: "Ask the bot to tell you when something happens.",
+        ar: "\u0627\u0637\u0644\u0628 \u0645\u0646 \u0627\u0644\u0628\u0648\u062A \u0623\u0646 \u064A\u0646\u0628\u0647\u0643 \u0639\u0646\u062F \u062D\u062F\u0648\u062B \u0623\u0645\u0631 \u0645\u0639\u064A\u0646."
+      },
+      en: [
+        "Just say it: <i>tell me if ETH drops below 3000</i> \xB7 <i>alert me if SOL is up 10% in a day</i> \xB7 <i>if my portfolio passes $30k</i>.",
+        "Gold, silver, platinum, copper and US stocks too: <i>tell me if gold goes above 4000</i> \xB7 <i>if NVIDIA drops 5% in a day</i> (their prices refresh every ~30 min).",
+        "The bot checks every 5 minutes.",
+        "Each alert comes once, then it's done."
+      ],
+      ar: [
+        "\u0627\u0643\u062A\u0628\u0647 \u0628\u0643\u0644\u0645\u0627\u062A\u0643: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0646\u0632\u0644 ETH \u062A\u062D\u062A 3000</i> \xB7 <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u0627\u0631\u062A\u0641\u0639 SOL 10% \u0641\u064A \u064A\u0648\u0645</i> \xB7 <i>\u0625\u0630\u0627 \u062A\u062C\u0627\u0648\u0632\u062A \u0645\u062D\u0641\u0638\u062A\u064A 30 \u0623\u0644\u0641 \u062F\u0648\u0644\u0627\u0631</i>.",
+        "\u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0648\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646 \u0648\u0627\u0644\u0646\u062D\u0627\u0633 \u0648\u0627\u0644\u0623\u0633\u0647\u0645 \u0627\u0644\u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0623\u064A\u0636\u0627\u064B: <i>\u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627 \u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u0630\u0647\u0628 4000</i> \xB7 <i>\u0625\u0630\u0627 \u0646\u0632\u0644 NVIDIA 5% \u0641\u064A \u064A\u0648\u0645</i> (\u0623\u0633\u0639\u0627\u0631\u0647\u0627 \u062A\u064F\u062D\u062F\u064E\u0651\u062B \u0643\u0644 ~30 \u062F\u0642\u064A\u0642\u0629).",
+        "\u064A\u062A\u062D\u0642\u0642 \u0627\u0644\u0628\u0648\u062A \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642.",
+        "\u064A\u0635\u0644\u0643 \u0643\u0644 \u062A\u0646\u0628\u064A\u0647 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u062B\u0645 \u064A\u0646\u062A\u0647\u064A."
+      ],
+      tip: {
+        en: "/alerts lists your alerts; \u{1F5D1} removes one.",
+        ar: "/alerts \u064A\u0639\u0631\u0636 \u062A\u0646\u0628\u064A\u0647\u0627\u062A\u0643\u060C \u0648\u{1F5D1} \u064A\u062D\u0630\u0641 \u0623\u064A\u0627\u064B \u0645\u0646\u0647\u0627."
+      }
+    },
+    {
+      k: "trades",
+      e: "\u{1F9FE}",
+      g: "daily",
+      t: {
+        en: "Record a trade in words",
+        ar: "\u062A\u0633\u062C\u064A\u0644 \u0635\u0641\u0642\u0629 \u0628\u0627\u0644\u0643\u0644\u0627\u0645"
+      },
+      b: {
+        en: "Record a trade",
+        ar: "\u062A\u0633\u062C\u064A\u0644 \u0635\u0641\u0642\u0629"
+      },
+      s: {
+        en: "Tell the bot what you bought or sold \u2014 it updates your app.",
+        ar: "\u0623\u062E\u0628\u0631 \u0627\u0644\u0628\u0648\u062A \u0628\u0645\u0627 \u0627\u0634\u062A\u0631\u064A\u062A \u0623\u0648 \u0628\u0639\u062A \u2014 \u0648\u064A\u062D\u062F\u0651\u062B \u062A\u0637\u0628\u064A\u0642\u0643."
+      },
+      en: [
+        "Write <i>bought 0.01 BTC at 95k</i> or <i>sold 5 SOL at 180</i>.",
+        "The bot shows what will change: amount, average price and profit.",
+        "Tap <b>\u2705 Confirm</b> within 15 minutes \u2014 then it's in your app too."
+      ],
+      ar: [
+        "\u0627\u0643\u062A\u0628 <i>\u0627\u0634\u062A\u0631\u064A\u062A 0.01 BTC \u0628\u0633\u0639\u0631 95 \u0623\u0644\u0641</i> \u0623\u0648 <i>\u0628\u0639\u062A 5 SOL \u0628\u0633\u0639\u0631 180</i>.",
+        "\u064A\u0639\u0631\u0636 \u0627\u0644\u0628\u0648\u062A \u0645\u0627 \u0633\u064A\u062A\u063A\u064A\u0631: \u0627\u0644\u0643\u0645\u064A\u0629 \u0648\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u0631\u0628\u062D.",
+        "\u0627\u0636\u063A\u0637 <b>\u2705 Confirm</b> \u062E\u0644\u0627\u0644 15 \u062F\u0642\u064A\u0642\u0629 \u2014 \u0641\u062A\u0638\u0647\u0631 \u0627\u0644\u0635\u0641\u0642\u0629 \u0641\u064A \u062A\u0637\u0628\u064A\u0642\u0643 \u0623\u064A\u0636\u0627\u064B."
+      ],
+      tip: {
+        en: "Nothing is saved until you confirm.",
+        ar: "\u0644\u0627 \u064A\u064F\u062D\u0641\u0638 \u0634\u064A\u0621 \u062D\u062A\u0649 \u062A\u0624\u0643\u062F."
+      }
+    },
+    {
+      k: "daily",
+      e: "\u{1F5D3}",
+      g: "daily",
+      t: {
+        en: "Daily messages and radars",
+        ar: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A"
+      },
+      b: {
+        en: "Daily & radars",
+        ar: "\u0627\u0644\u064A\u0648\u0645\u064A \u0648\u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A"
+      },
+      s: {
+        en: "The bot keeps you up to date, morning to evening.",
+        ar: "\u064A\u0628\u0642\u064A\u0643 \u0627\u0644\u0628\u0648\u062A \u0639\u0644\u0649 \u0627\u0637\u0644\u0627\u0639 \u0645\u0646 \u0627\u0644\u0635\u0628\u0627\u062D \u062D\u062A\u0649 \u0627\u0644\u0645\u0633\u0627\u0621."
+      },
+      en: [
+        "\u2600\uFE0F <b>Smart morning</b> (08:45 Riyadh): 3 things to do today.",
+        "\u{1F319} <b>Smart evening</b> (21:00): what happened and what to watch.",
+        "\u{1F4E1} <b>Radar digest</b> (12:00 \xB7 16:00 \xB7 20:00): one message with \u{1F9F2} crowded leverage on BTC and your biggest coins, \u{1F525} big sectors moving fast and \u{1F40B} what the biggest winning traders hold. Nothing found \u2192 no message.",
+        "\u{1F514} Alerts that can wait come together at the same hours; a price you set, a take-profit and the day's signals still come at once.",
+        "\u{1F4CC} <b>Live pinned message</b> at the top of the chat, refreshed every 15 minutes."
+      ],
+      ar: [
+        "\u2600\uFE0F <b>\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A</b> (08:45 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636): 3 \u0623\u0645\u0648\u0631 \u062A\u0641\u0639\u0644\u0647\u0627 \u0627\u0644\u064A\u0648\u0645.",
+        "\u{1F319} <b>\u0627\u0644\u0645\u0633\u0627\u0621 \u0627\u0644\u0630\u0643\u064A</b> (21:00): \u0645\u0627 \u062D\u062F\u062B \u0648\u0645\u0627 \u064A\u062C\u0628 \u0645\u0631\u0627\u0642\u0628\u062A\u0647.",
+        "\u{1F4E1} <b>\u0645\u0644\u062E\u0635 \u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A</b> (12:00 \xB7 16:00 \xB7 20:00): \u0631\u0633\u0627\u0644\u0629 \u0648\u0627\u062D\u062F\u0629 \u0641\u064A\u0647\u0627 \u{1F9F2} \u0627\u0632\u062F\u062D\u0627\u0645 \u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u0639\u0644\u0649 BTC \u0648\u0623\u0643\u0628\u0631 \u0639\u0645\u0644\u0627\u062A\u0643\u060C \u0648\u{1F525} \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A \u0627\u0644\u0643\u0628\u064A\u0631\u0629 \u0627\u0644\u062A\u064A \u062A\u062A\u062D\u0631\u0643 \u0628\u0633\u0631\u0639\u0629\u060C \u0648\u{1F40B} \u0645\u0631\u0627\u0643\u0632 \u0623\u0643\u0628\u0631 \u0627\u0644\u0645\u062A\u062F\u0627\u0648\u0644\u064A\u0646 \u0627\u0644\u0631\u0627\u0628\u062D\u064A\u0646. \u0644\u0627 \u062C\u062F\u064A\u062F \u2190 \u0644\u0627 \u0631\u0633\u0627\u0644\u0629.",
+        "\u{1F514} \u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u063A\u064A\u0631 \u0627\u0644\u0639\u0627\u062C\u0644\u0629 \u062A\u0635\u0644 \u0645\u062C\u0645\u0651\u0639\u0629 \u0641\u064A \u0646\u0641\u0633 \u0627\u0644\u0645\u0648\u0627\u0639\u064A\u062F\u061B \u0623\u0645\u0627 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0630\u064A \u062D\u062F\u062F\u062A\u0647\u060C \u0648\u0647\u062F\u0641 \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D\u060C \u0648\u0625\u0634\u0627\u0631\u0627\u062A \u0627\u0644\u064A\u0648\u0645 \u0641\u062A\u0635\u0644 \u0641\u0648\u0631\u0627\u064B.",
+        "\u{1F4CC} <b>\u0631\u0633\u0627\u0644\u0629 \u0645\u062B\u0628\u062A\u0629 \u0645\u0628\u0627\u0634\u0631\u0629</b> \u0623\u0639\u0644\u0649 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u062A\u062A\u062D\u062F\u062B \u0643\u0644 15 \u062F\u0642\u064A\u0642\u0629."
+      ],
+      tip: {
+        en: "/daily turns each one on or off \xB7 /pin brings the pinned message back, /unpin removes it.",
+        ar: "/daily \u064A\u0634\u063A\u0651\u0644 \u0623\u0648 \u064A\u0648\u0642\u0641 \u0643\u0644 \u0648\u0627\u062D\u062F\u0629 \xB7 /pin \u064A\u0639\u064A\u062F \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u0628\u062A\u0629\u060C \u0648/unpin \u064A\u0632\u064A\u0644\u0647\u0627."
+      }
+    },
+    {
+      k: "paper",
+      e: "\u{1F9EA}",
+      g: "extras",
+      t: {
+        en: "Paper trading",
+        ar: "\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A"
+      },
+      b: {
+        en: "Paper trading",
+        ar: "\u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A"
+      },
+      s: {
+        en: "Practice with pretend money at real prices.",
+        ar: "\u062A\u062F\u0631\u0651\u0628 \u0628\u0623\u0645\u0648\u0627\u0644 \u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0648\u0628\u0623\u0633\u0639\u0627\u0631 \u062D\u0642\u064A\u0642\u064A\u0629."
+      },
+      en: [
+        "Send /paper and pick $1k, $10k or $100k.",
+        "Say <i>paper buy 0.1 BTC</i> or <i>paper sell half SOL</i>.",
+        "See how you do against simply holding BTC."
+      ],
+      ar: [
+        "\u0623\u0631\u0633\u0644 /paper \u0648\u0627\u062E\u062A\u0631 1,000$ \u0623\u0648 10,000$ \u0623\u0648 100,000$.",
+        "\u0627\u0643\u062A\u0628 <i>\u062A\u062C\u0631\u064A\u0628\u064A \u0627\u0634\u062A\u0631\u064A 0.1 BTC</i> \u0623\u0648 <i>\u062A\u062C\u0631\u064A\u0628\u064A \u0628\u064A\u0639 \u0646\u0635\u0641 SOL</i>.",
+        "\u0634\u0627\u0647\u062F \u0623\u062F\u0627\u0621\u0643 \u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0641\u0642\u0637."
+      ],
+      tip: {
+        en: "\u21A9\uFE0F undoes the last paper trade.",
+        ar: "\u21A9\uFE0F \u064A\u0644\u063A\u064A \u0622\u062E\u0631 \u0635\u0641\u0642\u0629 \u062A\u062C\u0631\u064A\u0628\u064A\u0629."
+      }
+    },
+    {
+      k: "report",
+      e: "\u{1F4F1}",
+      g: "extras",
+      t: {
+        en: "The full app in Telegram",
+        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u0643\u0627\u0645\u0644 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645"
+      },
+      b: {
+        en: "The app in Telegram",
+        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0641\u064A \u062A\u0644\u064A\u062C\u0631\u0627\u0645"
+      },
+      s: {
+        en: "Cute Portfolio itself opens inside Telegram \u2014 signed in by Telegram.",
+        ar: "\u064A\u064F\u0641\u062A\u062D Cute Portfolio \u0646\u0641\u0633\u0647 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2014 \u0648\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0639\u0628\u0631 \u062A\u0644\u064A\u062C\u0631\u0627\u0645."
+      },
+      en: [
+        "Tap \u{1F4F1} <b>Open the app</b> in the menu (or under your portfolio), or send /report.",
+        "The real app opens inside Telegram, already signed in to <i>your</i> portfolio \u2014 no password, no Google page.",
+        "Every page works there: Portfolio, Plan, Market Hub, Settings \u2014 always the latest version."
+      ],
+      ar: [
+        "\u0627\u0636\u063A\u0637 \u{1F4F1} <b>\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629 (\u0623\u0648 \u062A\u062D\u062A \u0645\u062D\u0641\u0638\u062A\u0643)\u060C \u0623\u0648 \u0623\u0631\u0633\u0644 /report.",
+        "\u064A\u064F\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u062D\u0642\u064A\u0642\u064A \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645\u060C \u0648\u0623\u0646\u062A \u0645\u0633\u062C\u0651\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0625\u0644\u0649 \u0645\u062D\u0641\u0638\u062A\u0643 <i>\u0623\u0646\u062A</i> \u2014 \u0628\u0644\u0627 \u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631 \u0648\u0644\u0627 \u0635\u0641\u062D\u0629 Google.",
+        "\u0643\u0644 \u0627\u0644\u0635\u0641\u062D\u0627\u062A \u062A\u0639\u0645\u0644 \u0647\u0646\u0627\u0643: \u0627\u0644\u0645\u062D\u0641\u0638\u0629\u060C \u0648\u0627\u0644\u062E\u0637\u0629\u060C \u0648\u0645\u0631\u0643\u0632 \u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2014 \u062F\u0627\u0626\u0645\u0627\u064B \u0628\u0623\u062D\u062F\u062B \u0646\u0633\u062E\u0629."
+      ],
+      tip: {
+        en: "First time? Link your portfolio once: app \u2192 Settings \u2192 Telegram \u2192 Link your portfolio.",
+        ar: "\u0623\u0648\u0644 \u0645\u0631\u0629\u061F \u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629: \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643."
+      }
+    },
+    {
+      k: "premium",
+      e: "\u2B50",
+      g: "account",
+      t: {
+        en: "Premium and support",
+        ar: "\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0648\u0627\u0644\u062F\u0639\u0645"
+      },
+      b: {
+        en: "Premium & support",
+        ar: "\u0627\u0644\u0645\u0645\u064A\u0632 \u0648\u0627\u0644\u062F\u0639\u0645"
+      },
+      s: {
+        en: "Everything stays free \u2014 extras only cover the AI's cost.",
+        ar: "\u0643\u0644 \u0634\u064A\u0621 \u064A\u0628\u0642\u0649 \u0645\u062C\u0627\u0646\u064A\u0627\u064B \u2014 \u0648\u0627\u0644\u0625\u0636\u0627\u0641\u0627\u062A \u062A\u063A\u0637\u064A \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0641\u0642\u0637."
+      },
+      en: [
+        "\u2B50 <b>Premium</b> adds voice notes, 20 AI questions and 3 quick AI reports a day \u2014 /premium (350 Telegram Stars a month, renews by itself).",
+        "Cancel any time: Telegram \u2192 Settings \u2192 My Stars.",
+        "\u{1F49B} <b>Support</b> is optional: a one-time thank-you of 50\u2013500 Stars \u2014 /support \u2014 with a Supporter \u{1F49B} badge."
+      ],
+      ar: [
+        "\u2B50 <b>\u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629</b> \u062A\u0636\u064A\u0641 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629\u060C \u064820 \u0633\u0624\u0627\u0644 AI\u060C \u06483 \u062A\u0642\u0627\u0631\u064A\u0631 AI \u0633\u0631\u064A\u0639\u0629 \u064A\u0648\u0645\u064A\u0627\u064B \u2014 /premium (350 Telegram Stars \u0634\u0647\u0631\u064A\u0627\u064B\u060C \u062A\u062A\u062C\u062F\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B).",
+        "\u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u0625\u0644\u063A\u0627\u0621 \u0641\u064A \u0623\u064A \u0648\u0642\u062A: \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars.",
+        "\u{1F49B} <b>\u0627\u0644\u062F\u0639\u0645</b> \u0627\u062E\u062A\u064A\u0627\u0631\u064A: \u0634\u0643\u0631 \u0644\u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0645\u0646 50 \u0625\u0644\u0649 500 Star \u2014 /support \u2014 \u0645\u0639 \u0634\u0627\u0631\u0629 \u062F\u0627\u0639\u0645 \u{1F49B}."
+      ],
+      tip: {
+        en: "Cute Portfolio is non-profit: the AI is paid per question, and this only covers that.",
+        ar: "Cute Portfolio \u063A\u064A\u0631 \u0631\u0628\u062D\u064A: \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u064A\u064F\u062F\u0641\u0639 \u0639\u0646 \u0643\u0644 \u0633\u0624\u0627\u0644\u060C \u0648\u0647\u0630\u0627 \u064A\u063A\u0637\u064A \u062A\u0644\u0643 \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u0641\u0642\u0637."
+      }
+    },
+    {
+      k: "key",
+      e: "\u{1F511}",
+      g: "account",
+      t: {
+        en: "Your own Claude key",
+        ar: "\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u0643"
+      },
+      b: {
+        en: "Claude key",
+        ar: "\u0645\u0641\u062A\u0627\u062D Claude"
+      },
+      s: {
+        en: "Have an Anthropic API key? Get more AI, billed to you.",
+        ar: "\u0644\u062F\u064A\u0643 \u0645\u0641\u062A\u0627\u062D Anthropic API\u061F \u0627\u062D\u0635\u0644 \u0639\u0644\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0623\u0643\u0628\u0631 \u0644\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u0639\u0644\u0649 \u062D\u0633\u0627\u0628\u0643."
+      },
+      en: [
+        "App \u2192 Settings \u2192 <b>My Claude key</b>, and paste it.",
+        "It's checked, then kept encrypted \u2014 nobody can see it again.",
+        "You get 100 questions a day, voice notes and 10 quick AI reports \u2014 billed to your Anthropic account."
+      ],
+      ar: [
+        "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 <b>\u0645\u0641\u062A\u0627\u062D Claude \u0627\u0644\u062E\u0627\u0635 \u0628\u064A</b>\u060C \u0648\u0627\u0644\u0635\u0642 \u0627\u0644\u0645\u0641\u062A\u0627\u062D.",
+        "\u064A\u064F\u062A\u062D\u0642\u0642 \u0645\u0646\u0647\u060C \u062B\u0645 \u064A\u064F\u062D\u0641\u0638 \u0645\u0634\u0641\u0651\u0631\u0627\u064B \u2014 \u0648\u0644\u0627 \u064A\u0633\u062A\u0637\u064A\u0639 \u0623\u062D\u062F \u0631\u0624\u064A\u062A\u0647 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.",
+        "\u062A\u062D\u0635\u0644 \u0639\u0644\u0649 100 \u0633\u0624\u0627\u0644 \u064A\u0648\u0645\u064A\u0627\u064B\u060C \u0648\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629\u060C \u064810 \u062A\u0642\u0627\u0631\u064A\u0631 AI \u0633\u0631\u064A\u0639\u0629 \u2014 \u0639\u0644\u0649 \u062D\u0633\u0627\u0628\u0643 \u0641\u064A Anthropic."
+      ],
+      tip: {
+        en: "You can remove it any time.",
+        ar: "\u064A\u0645\u0643\u0646\u0643 \u0625\u0632\u0627\u0644\u062A\u0647 \u0641\u064A \u0623\u064A \u0648\u0642\u062A."
+      }
+    },
+    {
+      k: "privacy",
+      e: "\u{1F512}",
+      g: "account",
+      t: {
+        en: "Privacy and your data",
+        ar: "\u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629 \u0648\u0628\u064A\u0627\u0646\u0627\u062A\u0643"
+      },
+      b: {
+        en: "Privacy",
+        ar: "\u0627\u0644\u062E\u0635\u0648\u0635\u064A\u0629"
+      },
+      s: {
+        en: "Your portfolio is yours alone.",
+        ar: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0644\u0643 \u0648\u062D\u062F\u0643."
+      },
+      en: [
+        "The bot reads your portfolio only for you \u2014 never for anyone else.",
+        "/forget deletes everything the bot keeps about you (alerts, chat memory, settings, the link) \u2014 your app portfolio stays.",
+        "To keep things fair, the bot takes up to 20 messages a minute."
+      ],
+      ar: [
+        "\u064A\u0642\u0631\u0623 \u0627\u0644\u0628\u0648\u062A \u0645\u062D\u0641\u0638\u062A\u0643 \u0645\u0646 \u0623\u062C\u0644\u0643 \u0641\u0642\u0637 \u2014 \u0648\u0644\u0627 \u064A\u0639\u0631\u0636\u0647\u0627 \u0644\u0623\u064A \u0634\u062E\u0635 \u0622\u062E\u0631.",
+        "/forget \u064A\u062D\u0630\u0641 \u0643\u0644 \u0645\u0627 \u064A\u062D\u0641\u0638\u0647 \u0627\u0644\u0628\u0648\u062A \u0639\u0646\u0643 (\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A\u060C \u0648\u0630\u0627\u0643\u0631\u0629 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u0648\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A\u060C \u0648\u0627\u0644\u0631\u0628\u0637) \u2014 \u0648\u062A\u0628\u0642\u0649 \u0645\u062D\u0641\u0638\u062A\u0643 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0643\u0645\u0627 \u0647\u064A.",
+        "\u0644\u0644\u0639\u062F\u0644 \u0628\u064A\u0646 \u0627\u0644\u062C\u0645\u064A\u0639\u060C \u064A\u0633\u062A\u0642\u0628\u0644 \u0627\u0644\u0628\u0648\u062A \u062D\u062A\u0649 20 \u0631\u0633\u0627\u0644\u0629 \u0641\u064A \u0627\u0644\u062F\u0642\u064A\u0642\u0629."
+      ],
+      tip: {
+        en: "Away for two weeks? The daily messages pause by themselves; send anything to bring them back.",
+        ar: "\u063A\u0628\u062A \u0623\u0633\u0628\u0648\u0639\u064A\u0646\u061F \u062A\u062A\u0648\u0642\u0641 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u064A\u0648\u0645\u064A\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B\u061B \u0623\u0631\u0633\u0644 \u0623\u064A \u0631\u0633\u0627\u0644\u0629 \u0644\u062A\u0639\u0648\u062F."
+      }
+    },
+    {
+      k: "help",
+      e: "\u{1F4AC}",
+      g: "account",
+      t: {
+        en: "Help",
+        ar: "\u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629"
+      },
+      b: {
+        en: "Help",
+        ar: "\u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629"
+      },
+      s: {
+        en: "Stuck? Just ask.",
+        ar: "\u0648\u0627\u062C\u0647\u062A\u0643 \u0645\u0634\u0643\u0644\u0629\u061F \u0627\u0633\u0623\u0644 \u0641\u0642\u0637."
+      },
+      en: [
+        "Ask the bot in plain words \u2014 <i>how do I add a coin?</i>",
+        "An idea or a bug? Send <b>/feedback</b> and your message \u2014 it goes straight to Dr. Samir Saad.",
+        "/guide opens this guide again any time; in the app: Settings \u2192 Guide."
+      ],
+      ar: [
+        "\u0627\u0633\u0623\u0644 \u0627\u0644\u0628\u0648\u062A \u0628\u0643\u0644\u0645\u0627\u062A\u0643 \u2014 <i>\u0643\u064A\u0641 \u0623\u0636\u064A\u0641 \u0639\u0645\u0644\u0629\u061F</i>",
+        "\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 <b>/feedback</b> \u062B\u0645 \u0631\u0633\u0627\u0644\u062A\u0643 \u2014 \u062A\u0635\u0644 \u0645\u0628\u0627\u0634\u0631\u0629 \u0625\u0644\u0649 Dr. Samir Saad.",
+        "/guide \u064A\u0641\u062A\u062D \u0647\u0630\u0627 \u0627\u0644\u062F\u0644\u064A\u0644 \u0641\u064A \u0623\u064A \u0648\u0642\u062A\u061B \u0648\u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u062F\u0644\u064A\u0644."
+      ],
+      tip: {
+        en: "\u{1F4E2} Cute Portfolio Signals: the market pulse (09:00 \xB7 21:05), the sector map (13:00) and leverage &amp; whales (17:30) \u2014 talk in the comments under each post (/community).",
+        ar: "\u{1F4E2} \u0642\u0646\u0627\u0629 Cute Portfolio Signals: \u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642 (09:00 \xB7 21:05)\u060C \u0648\u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A (13:00)\u060C \u0648\u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u0648\u0627\u0644\u062D\u064A\u062A\u0627\u0646 (17:30) \u2014 \u0648\u0627\u0644\u0646\u0642\u0627\u0634 \u0641\u064A \u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A \u062A\u062D\u062A \u0643\u0644 \u0645\u0646\u0634\u0648\u0631 (/community)."
+      }
+    }
+  ]
+};
+
+// tools/worker/community.mjs
+var KEY4 = "tg:community";
+async function tg5(env, method, body) {
+  body = bidiBody(body, "lines");
+  let r = await tg1(env, method, body);
+  if (r && r.error_code === 429) {
+    const w = Math.min(15, r.parameters && r.parameters.retry_after || 3);
+    await new Promise((z) => setTimeout(z, w * 1e3));
+    r = await tg1(env, method, body);
+  }
+  return r;
+}
+async function tg1(env, method, body) {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    return await r.json();
+  } catch (_) {
+    return { ok: false };
+  }
+}
+async function getCommunity(env) {
+  try {
+    return JSON.parse(env.RATE && await env.RATE.get(KEY4) || "{}") || {};
+  } catch (_) {
+    return {};
+  }
+}
+async function putCommunity(env, c) {
+  try {
+    if (env.RATE) await env.RATE.put(KEY4, JSON.stringify(c));
+  } catch (_) {
+  }
+}
+var owner = (env) => String(env.TELEGRAM_CHAT_ID);
+var say = (env, text) => tg5(env, "sendMessage", { chat_id: owner(env), text, parse_mode: "HTML", disable_web_page_preview: true });
+var NOTE = { en: "Not financial advice \u2014 for information only.", ar: "\u0644\u064A\u0633\u062A \u0646\u0635\u064A\u062D\u0629 \u0645\u0627\u0644\u064A\u0629 \u2014 \u0644\u0644\u0645\u0639\u0644\u0648\u0645\u0629 \u0641\u0642\u0637." };
+async function onMyChatMember(env, u) {
+  const m = u.my_chat_member, chat = m && m.chat;
+  if (!chat) return;
+  const by = String(m.from && m.from.id), isAdmin = m.new_chat_member && m.new_chat_member.status === "administrator";
+  const gone = m.new_chat_member && ["left", "kicked"].includes(m.new_chat_member.status);
+  if (chat.type === "private") return;
+  if (by !== owner(env) && !gone) {
+    await tg5(env, "leaveChat", { chat_id: chat.id });
+    return;
+  }
+  const c = await getCommunity(env), kind = chat.type === "channel" ? "channel" : "group";
+  if (gone) {
+    if (c[kind] && String(c[kind].id) === String(chat.id)) {
+      delete c[kind];
+      await putCommunity(env, c);
+      await say(env, `\u2139\uFE0F The bot left ${esc(chat.title || "")}.`);
+    }
+    return;
+  }
+  if (!isAdmin) {
+    await say(env, `\u2139\uFE0F I'm in <b>${esc(chat.title || "")}</b> \u2014 make me an <b>admin</b> there to finish the setup.`);
+    return;
+  }
+  c[kind] = { id: chat.id, title: chat.title || "", at: Date.now() };
+  await putCommunity(env, c);
+  await setup(env, kind);
+}
+async function registerForward(env, msg) {
+  const o = msg.forward_origin, ch = o && (o.chat || o.sender_chat) || msg.forward_from_chat;
+  if (!ch || !ch.id) return false;
+  const me = await tg5(env, "getMe", {}), st = me.ok ? await tg5(env, "getChatMember", { chat_id: ch.id, user_id: me.result.id }) : null;
+  if (!st || !st.ok || st.result.status !== "administrator") {
+    await say(env, `\u2139\uFE0F I'm not an admin in <b>${esc(ch.title || "")}</b> yet \u2014 add me as admin there first.`);
+    return true;
+  }
+  const c = await getCommunity(env), kind = ch.type === "channel" ? "channel" : "group";
+  c[kind] = { ...c[kind] && String(c[kind].id) === String(ch.id) ? c[kind] : {}, id: ch.id, title: ch.title || "", at: Date.now() };
+  await putCommunity(env, c);
+  await setup(env, kind);
+  return true;
+}
+async function setup(env, kind, opt = {}) {
+  const c = await getCommunity(env), x = c[kind];
+  if (!x) return { ok: false };
+  const notes = [];
+  if (kind === "channel") {
+    if (!x.link) {
+      const link = await tg5(env, "createChatInviteLink", { chat_id: x.id, name: "Cute Portfolio members", creates_join_request: true });
+      if (link.ok) x.link = link.result.invite_link;
+      else notes.push('\u26A0\uFE0F No join link \u2014 give me "Invite users via link".');
+    }
+    if (!x.guideMsg || opt.reguide) {
+      const id = await postGuidePost(env, x);
+      if (id) {
+        x.guideMsg = id;
+        x.guideSig = guideSigs();
+        x.guideV = guide_default.v || 1;
+        x.guidePostV = POST_V;
+      } else notes.push("\u26A0\uFE0F The \u{1F4D8} guide post did not go \u2014 let me post and pin messages.");
+    }
+  }
+  const ch = c.channel, g = c.group;
+  if (ch && g) {
+    const info = await tg5(env, "getChat", { chat_id: ch.id });
+    g.linked = !!(info.ok && info.result && String(info.result.linked_chat_id) === String(g.id));
+    if (g.linked) {
+      delete g.topics;
+      delete g.strays;
+    }
+    notes.push(g.linked ? "\u{1F4AC} Comments are on \u2014 members talk under each channel post." : `\u26A0\uFE0F Link the group to the channel: channel \u2192 \u270F\uFE0F Edit \u2192 <b>Discussion</b> \u2192 pick <b>${esc(g.title)}</b> (if Telegram refuses, turn <b>Topics</b> off in the group first). Then /community setup.`);
+  } else if (kind === "group") notes.push("\u2139\uFE0F Add me to the channel too, and link this group to it (channel \u2192 Edit \u2192 Discussion).");
+  c[kind] = x;
+  await putCommunity(env, c);
+  await say(env, `\u2705 <b>${esc(x.title)}</b> is set up (${kind === "channel" ? "\u{1F4E2} channel" : "\u{1F4AC} comments group"}).` + (kind === "channel" && x.link ? `
+Join link (members only \u2014 I approve each request): ${x.link}` : "") + (notes.length ? "\n" + notes.join("\n") : ""));
+  return { ok: true };
+}
+async function guideLink(env) {
+  const me = await tg5(env, "getMe", {});
+  const u = me.ok && me.result && me.result.username;
+  return u ? `\u{1F4D8} <a href="https://t.me/${u}?start=guide">Open the guide</a>
+\u{1F4D8} <a href="https://t.me/${u}?start=guide">\u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0644\u064A\u0644</a>` : "";
+}
+async function postGuidePost(env, ch) {
+  const text = `<b>${guide_default.title.en}</b>
+${guide_default.intro.en}
+
+<b>${guide_default.title.ar}</b>
+${guide_default.intro.ar}
+
+` + guideGroups().map((g) => g.items.map((s) => `${s.e} ${esc((s.b || s.t).en)} \xB7 ${esc((s.b || s.t).ar)}`).join("\n")).join("\n\n") + "\n\n\u{1F4A1} <i>Ideas or a bug? Send /feedback to the bot.</i>\n\u{1F4A1} <i>\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 /feedback \u0644\u0644\u0628\u0648\u062A.</i>";
+  const link = await guideLink(env);
+  const r = await tg5(env, "sendMessage", { chat_id: ch.id, text: text + (link ? "\n\n" + link : ""), parse_mode: "HTML", disable_web_page_preview: true });
+  if (!r.ok) return null;
+  if (ch.guideMsg && ch.guideMsg !== r.result.message_id) {
+    await tg5(env, "unpinChatMessage", { chat_id: ch.id, message_id: ch.guideMsg });
+    await tg5(env, "deleteMessage", { chat_id: ch.id, message_id: ch.guideMsg });
+  }
+  await tg5(env, "pinChatMessage", { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true });
+  return r.result.message_id;
+}
+var LRI2 = "\u200E";
+var PDI = "\u200E";
+var RLM2 = "\u200F";
+var NUM = ["1\uFE0F\u20E3", "2\uFE0F\u20E3", "3\uFE0F\u20E3", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3", "9\uFE0F\u20E3"];
+function gLine(l, ar) {
+  if (!ar) return l;
+  l = l.replace(/<(code|b|i)>([^<]*)<\/\1>/g, (m, t, x) => /[\u0600-\u06FF]/.test(x) ? m : `${LRI2}<${t}>${x}</${t}>${PDI}`);
+  l = l.replace(/(^|[\s(])(\/[a-z]+(?: CODE)?)(?=$|[\s),.؛،])/g, (m, a, c) => `${a}${LRI2}${c}${PDI}`);
+  return RLM2 + l;
+}
+function guideCard(s, L) {
+  const ar = L === "ar";
+  return [
+    `${s.e} <b>${s.t[L]}</b>`,
+    s.s ? gLine(`<i>${s.s[L]}</i>`, ar) : null,
+    "",
+    ...s[L].map((l, i) => gLine(`${NUM[i] || "\u2022"} ${l}`, ar)),
+    ...s.tip ? ["", gLine(`\u{1F4A1} <b>${ar ? "\u0646\u0635\u064A\u062D\u0629" : "Tip"}:</b> ${s.tip[L]}`, ar)] : []
+  ].filter((x) => x != null).join("\n");
+}
+function guideGroups() {
+  const gs = guide_default.groups || [{ k: null, e: "", t: { en: "", ar: "" } }];
+  return gs.map((g) => ({ ...g, items: guide_default.sections.filter((s) => !guide_default.groups || s.g === g.k) })).filter((g) => g.items.length);
+}
+var sig = (s) => {
+  let h = 0;
+  for (const ch of JSON.stringify([s.t, s.s, s.en, s.ar, s.tip])) h = h * 31 + ch.charCodeAt(0) | 0;
+  return String(h);
+};
+var guideSigs = () => Object.fromEntries(guide_default.sections.map((s) => [s.k, sig(s)]));
+var POST_V = 2;
+async function guideUpdates(env) {
+  const c = await getCommunity(env), x = c.channel;
+  if (!x || !x.guideMsg) return { posted: 0 };
+  if ((x.guidePostV || 1) !== POST_V) {
+    const id = await postGuidePost(env, x);
+    if (id) {
+      x.guideMsg = id;
+      x.guidePostV = POST_V;
+      c.channel = x;
+      await putCommunity(env, c);
+    }
+    return { posted: "post" };
+  }
+  const now = guideSigs(), edition = (x.guideV || 1) !== (guide_default.v || 1);
+  if (!x.guideSig) {
+    x.guideSig = now;
+    x.guideV = guide_default.v || 1;
+    c.channel = x;
+    await putCommunity(env, c);
+    return { posted: 0 };
+  }
+  const changed = guide_default.sections.filter((s) => x.guideSig[s.k] !== now[s.k]);
+  if (!changed.length && !edition) return { posted: 0 };
+  const lines = edition ? ["\u{1F4D8} <b>A new edition of the guide \xB7 \u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0627\u0644\u062F\u0644\u064A\u0644</b>"] : ["\u{1F195} <b>New in the guide \xB7 \u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644</b>", "", ...changed.slice(0, 10).map((s) => `${s.k in x.guideSig ? "\u270F\uFE0F" : "\u{1F195}"} ${s.e} ${esc(s.t.en)} \xB7 ${esc(s.t.ar)}`)];
+  const link = await guideLink(env);
+  if (link) lines.push("", link);
+  const r = await tg5(env, "sendMessage", { chat_id: x.id, text: lines.join("\n"), parse_mode: "HTML", disable_web_page_preview: true });
+  if (!r.ok) return { posted: 0 };
+  x.guideSig = now;
+  x.guideV = guide_default.v || 1;
+  c.channel = x;
+  await putCommunity(env, c);
+  return { posted: edition ? "all" : changed.length };
+}
+async function onJoinRequest(env, u) {
+  const r = u.chat_join_request, c = await getCommunity(env);
+  const ours = [c.channel, c.group].some((x) => x && String(x.id) === String(r.chat.id));
+  if (!ours) return;
+  const who = String(r.from.id), m = await members(env), ok2 = who === owner(env) || m[who] && !m[who].paused;
+  await tg5(env, ok2 ? "approveChatJoinRequest" : "declineChatJoinRequest", { chat_id: r.chat.id, user_id: r.from.id });
+  if (ok2 && who !== owner(env)) {
+    const ar = m[who].lang === "ar";
+    await tg5(env, "sendMessage", { chat_id: who, text: ar ? `\u2705 \u062A\u0645 \u0642\u0628\u0648\u0644\u0643 \u0641\u064A ${r.chat.title} \u2014 \u0623\u0647\u0644\u0627\u064B \u0628\u0643 \u{1F44B}` : `\u2705 You're in ${r.chat.title} \u2014 welcome \u{1F44B}` });
+  }
+}
+async function communityView(env, lang2) {
+  const c = await getCommunity(env), ar = lang2 === "ar", b = [];
+  if (c.channel && c.channel.link) b.push([{ text: ar ? "\u{1F4E2} \u0642\u0646\u0627\u0629 Cute Portfolio" : "\u{1F4E2} The Cute Portfolio channel", url: c.channel.link }]);
+  const has = b.length > 0;
+  b.push([{ text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]);
+  const text = has ? ar ? "\u{1F465} <b>\u0645\u062C\u062A\u0645\u0639 Cute Portfolio</b> \u2014 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0641\u0642\u0637\n\n\u{1F4E2} <b>\u0627\u0644\u0642\u0646\u0627\u0629</b>: \u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642 \u0635\u0628\u0627\u062D\u0627\u064B \u0648\u0645\u0633\u0627\u0621\u064B\u060C \u0648\u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A (13:00)\u060C \u0648\u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u0648\u0627\u0644\u062D\u064A\u062A\u0627\u0646 (17:30)\u060C \u0648\u0627\u0644\u062A\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0643\u0628\u064A\u0631\u0629.\n\u{1F4AC} <b>\u0627\u0644\u0646\u0642\u0627\u0634</b>: \u0639\u0644\u0651\u0642 \u062A\u062D\u062A \u0623\u064A \u0645\u0646\u0634\u0648\u0631 \u2014 \u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A \u0647\u064A \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062C\u062A\u0645\u0639.\n\u{1F4A1} \u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u{1F41E} \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 /feedback \u062B\u0645 \u0631\u0633\u0627\u0644\u062A\u0643.\n\n\u0627\u0636\u063A\u0637 \u0648\u0623\u0631\u0633\u0644 \u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u2014 \u064A\u0642\u0628\u0644\u0643 \u0627\u0644\u0628\u0648\u062A \u0641\u0648\u0631\u0627\u064B." : "\u{1F465} <b>The Cute Portfolio community</b> \u2014 members only\n\n\u{1F4E2} <b>The channel</b>: the market pulse morning and evening, the sector map (13:00), leverage &amp; whales (17:30) and big moves.\n\u{1F4AC} <b>Talk</b>: comment under any post \u2014 the comments are the community.\n\u{1F4A1} An idea or \u{1F41E} a bug? Send /feedback and your message.\n\nTap, send the join request \u2014 the bot lets you in at once." : ar ? "\u{1F465} \u0627\u0644\u0645\u062C\u062A\u0645\u0639 \u0642\u064A\u062F \u0627\u0644\u062A\u062C\u0647\u064A\u0632 \u2014 \u0642\u0631\u064A\u0628\u0627\u064B." : "\u{1F465} The community is being set up \u2014 soon.";
+  return { text, buttons: b };
+}
+function pulseText(m, now, kind) {
+  const g = m.global || {}, d = g.dom || {}, btc = m.btc || {}, e = etfDay(m.etf);
+  const seen = /* @__PURE__ */ new Set(), top = [...m.top || []].filter((r) => r.rank && r.rank <= 100 && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
+  const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 3), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 3);
+  const head = kind === "move" ? `\u{1F6A8} <b>BTC ${btc.ch24 > 0 ? "+" : ""}${pct(btc.ch24, 1)} in 24h</b>` : `${kind === "am" ? "\u2600\uFE0F" : "\u{1F319}"} <b>Market pulse \xB7 \u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642</b> \xB7 ${local(now, { day: "numeric", month: "short" })}`;
+  const L = [
+    head,
+    "",
+    `\u20BF BTC <b>${usd(btc.price)}</b> ${dot(btc.ch24)} ${pct(btc.ch24, 2)}`,
+    g.mcap ? `\u{1F310} Market cap <b>$${(g.mcap / 1e12).toFixed(2)}T</b> ${dot(g.mcapCh24)} ${pct(g.mcapCh24, 2)}` : null,
+    d.btc != null ? `\u{1F451} BTC dominance <b>${d.btc.toFixed(1)}%</b>${d.usdt != null ? ` \xB7 USDT ${d.usdt.toFixed(2)}%` : ""}` : null,
+    m.fng ? `\u{1F628} Fear &amp; Greed <b>${m.fng.value}</b> \u2014 ${esc(m.fng.label || "")}` : null,
+    m.alt && m.alt.value != null ? `\u{1F300} Altcoin season <b>${m.alt.value}</b>` : null,
+    e ? `\u{1F3E6} ETF ${esc(e.label)}: BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}` : null,
+    up.length ? "" : null,
+    up.length ? `\u{1F4C8} ${up.map((r) => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(" \xB7 ")}` : null,
+    dn.length ? `\u{1F4C9} ${dn.map((r) => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(" \xB7 ")}` : null,
+    ...kind === "move" ? [] : otherMarkets(m, now),
+    "",
+    `\u{1F9ED} <a href="${APP}market.html">Market Hub</a>`,
+    // a link in the text, not a button: a button hides the post's comments
+    "",
+    `<i>${NOTE.en}</i>`,
+    `<i>${NOTE.ar}</i>`
+  ].filter((x) => x != null);
+  return L.join("\n");
+}
+function otherMarkets(m, now) {
+  const out = [], met2 = m.metals || [], f = (k) => met2.find((x) => x.k === k);
+  const mt = [["gold", "Gold"], ["silver", "Silver"]].map(([k, n]) => {
+    const x = f(k);
+    return x && x.price > 0 ? `${n} <b>${usd(x.price)}</b> ${pct(x.ch24, 1)}` : null;
+  }).filter(Boolean);
+  if (mt.length) out.push(`\u{1F947} ${mt.join(" \xB7 ")}`);
+  const st = (m.stocks || []).filter((r) => r.ch24 != null && r.price > 0);
+  if (st.length) {
+    const u = usMarket(now), b = [...st].sort((a, c) => c.ch24 - a.ch24)[0], w = [...st].sort((a, c) => a.ch24 - c.ch24)[0];
+    out.push(`\u{1F1FA}\u{1F1F8} US stocks ${US_STATE.en[u.state].replace(/^\S+ /, "")} \xB7 ${esc(b.sym)} ${pct(b.ch24, 1)} \xB7 ${esc(w.sym)} ${pct(w.ch24, 1)}`);
+  }
+  return out.length ? ["", ...out] : [];
+}
+function sectorText(m, now) {
+  const all = (m.sectors || []).filter((x) => x && x.mcap >= 1e9 && x.ch24 != null);
+  if (all.length < 2) return null;
+  const symOf = Object.fromEntries((m.top || []).filter((r) => r && r.id && r.sym).map((r) => [r.id, r.sym]));
+  const row2 = (x) => {
+    const lead = (x.top || []).map((id) => symOf[id]).filter(Boolean).slice(0, 3);
+    return `${x.ch24 > 0 ? "\u{1F680}" : "\u{1F53B}"} <b>${esc(x.name)}</b> ${pct(x.ch24, 1)} \xB7 ${usd(x.mcap)}${lead.length ? " \xB7 " + esc(lead.join(", ")) : ""}`;
+  };
+  const up = [...all].sort((a, b) => b.ch24 - a.ch24).slice(0, 3).filter((x) => x.ch24 > 0), dn = [...all].sort((a, b) => a.ch24 - b.ch24).slice(0, 3).filter((x) => x.ch24 < 0);
+  if (!up.length && !dn.length) return null;
+  return [
+    `\u{1F525} <b>Sector map \xB7 \u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A</b> \xB7 ${local(now, { day: "numeric", month: "short" })}`,
+    "",
+    ...up.length ? ["\u{1F4C8} <b>Strongest 24h \xB7 \u0627\u0644\u0623\u0642\u0648\u0649</b>", ...up.map(row2), ""] : [],
+    ...dn.length ? ["\u{1F4C9} <b>Weakest 24h \xB7 \u0627\u0644\u0623\u0636\u0639\u0641</b>", ...dn.map(row2), ""] : [],
+    "<i>Where the money moved in the last 24 hours (sectors above $1B, with their leaders).</i>",
+    "<i>\u0623\u064A\u0646 \u062A\u062D\u0631\u0643\u062A \u0627\u0644\u0633\u064A\u0648\u0644\u0629 \u062E\u0644\u0627\u0644 24 \u0633\u0627\u0639\u0629 (\u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A \u0641\u0648\u0642 \u0645\u0644\u064A\u0627\u0631 \u062F\u0648\u0644\u0627\u0631 \u0645\u0639 \u0623\u0628\u0631\u0632 \u0639\u0645\u0644\u0627\u062A\u0647\u0627).</i>",
+    "",
+    `<i>${NOTE.en}</i>`,
+    `<i>${NOTE.ar}</i>`
+  ].join("\n");
+}
+async function leverageText(m, now) {
+  const rows = [];
+  for (const sym of ["BTC", "ETH", "SOL"]) {
+    resetBudget();
+    const d = await derivatives(sym).catch(() => null), x = d && d.summary;
+    if (!x) continue;
+    const p = [
+      x.funding_8h_pct_avg != null ? `funding ${x.funding_8h_pct_avg > 0 ? "+" : ""}${x.funding_8h_pct_avg}%/8h` : null,
+      x.open_interest_change_24h_pct != null ? `OI 24h ${pct(x.open_interest_change_24h_pct, 1)}` : null,
+      x.long_accounts_pct != null ? `longs ${Math.round(x.long_accounts_pct)}%` : null,
+      x.top_traders_long_pct != null ? `big accounts ${Math.round(x.top_traders_long_pct)}%` : null
+    ].filter(Boolean);
+    if (p.length) rows.push(`<b>${sym}</b> \xB7 ${p.join(" \xB7 ")}`);
+    if (sym === "BTC" && x.liquidations_24h) rows.push(`\u{1F4A5} Liquidations 24h (OKX): longs ${usd(x.liquidations_24h.longs_usd)} \xB7 shorts ${usd(x.liquidations_24h.shorts_usd)}`);
+  }
+  const wl = whaleLines(m.whales, ["BTC", "ETH", "SOL"], false, now);
+  if (!rows.length && !wl.length) return null;
+  const u = usMarket(now);
+  return [
+    `\u{1F9F2} <b>Leverage &amp; whales \xB7 \u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u0648\u0627\u0644\u062D\u064A\u062A\u0627\u0646</b> \xB7 ${local(now, { day: "numeric", month: "short" })}`,
+    "",
+    ...rows,
+    ...wl.length ? ["", `\u{1F40B} <b>Whales \xB7 \u0627\u0644\u062D\u064A\u062A\u0627\u0646</b> <i>(the ${m.whales.n} biggest winning traders on Hyperliquid)</i>`, ...wl] : [],
+    "",
+    `\u{1F1FA}\u{1F1F8} US market: ${US_STATE.en[u.state].replace(/^\S+ /, "")}`,
+    "",
+    "<i>High positive funding and longs above 70% = crowded longs (a dip can cascade). Whales hedge, and lose too.</i>",
+    "<i>\u062A\u0645\u0648\u064A\u0644 \u0645\u0648\u062C\u0628 \u0645\u0631\u062A\u0641\u0639 \u0648\u0646\u0633\u0628\u0629 \u0634\u0631\u0627\u0621 \u0641\u0648\u0642 70% = \u0627\u0632\u062F\u062D\u0627\u0645 \u0641\u064A \u0627\u0644\u0634\u0631\u0627\u0621 (\u0623\u064A \u0647\u0628\u0648\u0637 \u0642\u062F \u064A\u062A\u0633\u0644\u0633\u0644). \u0648\u0627\u0644\u062D\u064A\u062A\u0627\u0646 \u064A\u062A\u062D\u0648\u0651\u0637\u0648\u0646 \u0648\u064A\u062E\u0633\u0631\u0648\u0646 \u0623\u064A\u0636\u0627\u064B.</i>",
+    "",
+    `<i>${NOTE.en}</i>`,
+    `<i>${NOTE.ar}</i>`
+  ].join("\n");
+}
+async function runChannel(env, now = Date.now()) {
+  await guideUpdates(env).catch(() => {
+  });
+  const c = await getCommunity(env), ch = c.channel;
+  if (!ch) return { job: null };
+  const lp = localParts(now), today2 = lp.date, hm2 = lp.hour * 60 + (+lp.hm.slice(3) || 0), sent = c.sent || {};
+  let kind = null;
+  if (hm2 >= 9 * 60 && hm2 < 9 * 60 + 20 && sent.am !== today2) kind = "am";
+  else if (hm2 >= 21 * 60 + 5 && hm2 < 21 * 60 + 25 && sent.pm !== today2) kind = "pm";
+  else if (hm2 >= 13 * 60 && hm2 < 13 * 60 + 20 && sent.sec !== today2) kind = "sec";
+  else if (hm2 >= 17 * 60 + 30 && hm2 < 17 * 60 + 50 && sent.lev !== today2) kind = "lev";
+  const m = kind || sent.move !== today2 ? await loadMarket([], []).catch(() => null) : null;
+  if (!kind && m && m.btc && Math.abs(m.btc.ch24 || 0) >= 5 && sent.move !== today2) kind = "move";
+  if (!kind || !m) return { job: null };
+  const text = kind === "sec" ? sectorText(m, now) : kind === "lev" ? await leverageText(m, now).catch(() => null) : pulseText(m, now, kind);
+  if (!text) {
+    sent[kind] = today2;
+    c.sent = sent;
+    await putCommunity(env, c);
+    return { job: "channel:" + kind, ok: false, skipped: true };
+  }
+  const r = await tg5(env, "sendMessage", { chat_id: ch.id, text, parse_mode: "HTML", disable_web_page_preview: true });
+  if (r.ok) {
+    if (kind === "am" || kind === "pm") {
+      if (ch.pinned) await tg5(env, "unpinChatMessage", { chat_id: ch.id, message_id: ch.pinned });
+      await tg5(env, "pinChatMessage", { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true });
+      ch.pinned = r.result.message_id;
+    }
+    sent[kind] = today2;
+    c.sent = sent;
+    c.channel = ch;
+    await putCommunity(env, c);
+  }
+  return { job: "channel:" + kind, ok: !!r.ok };
+}
+async function announce(env, text) {
+  const c = await getCommunity(env), out = [];
+  const body = `\u{1F195} <b>What's new \xB7 \u0627\u0644\u062C\u062F\u064A\u062F</b>
+
+${esc(text)}`;
+  if (c.channel) out.push((await tg5(env, "sendMessage", { chat_id: c.channel.id, text: body, parse_mode: "HTML" })).ok ? "\u{1F4E2}" : "\u26A0\uFE0F\u{1F4E2}");
+  return out;
+}
+
+// tools/worker/voice.mjs
+var MAX_SEC = 120;
+var MODEL = "@cf/openai/whisper-large-v3-turbo";
+var HINT = {
+  en: "Bitcoin BTC, Ethereum ETH, Solana SOL, KAVA, LINK, funding, liquidation, alert me if, portfolio, take profit, paper buy.",
+  ar: "\u0646\u0628\u0651\u0647\u0646\u064A \u0644\u0648\u060C \u0646\u0628\u0647\u0646\u064A \u0625\u0630\u0627\u060C \u0645\u062D\u0641\u0638\u062A\u064A\u060C \u0627\u0644\u0633\u0639\u0631\u060C \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C\u060C \u062A\u0635\u0641\u064A\u0627\u062A\u060C \u062A\u0645\u0648\u064A\u0644\u060C \u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0628\u064A\u062A\u0643\u0648\u064A\u0646 BTC\u060C \u0625\u064A\u062B\u064A\u0631\u064A\u0648\u0645 ETH\u060C \u0633\u0648\u0644\u0627\u0646\u0627 SOL\u060C \u0643\u0627\u0641\u0627 KAVA."
+};
+var score = (o) => {
+  const s = o && o.segments || [];
+  const v = s.map((x) => +x.avg_logprob).filter(isFinite);
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : -9;
+};
+var clean = (o) => String(o && o.text || "").replace(/\s+/g, " ").trim().slice(0, 1e3);
+var odd = (t) => /[^\p{Script=Latin}\p{Script=Arabic}\p{M}\p{N}\p{P}\p{S}\s]/u.test(t);
+function b642(buf) {
+  const u8 = new Uint8Array(buf);
+  let s = "";
+  for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+  return btoa(s);
+}
+async function transcribe(env, voice) {
+  if (!env.AI || typeof env.AI.run !== "function") return { error: "noai" };
+  if (!voice || !voice.file_id) return { error: "fail" };
+  if ((voice.duration || 0) > MAX_SEC || (voice.file_size || 0) > 1e7) return { error: "long" };
+  try {
+    const f = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getFile`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ file_id: voice.file_id }) }).then((r) => r.json());
+    const p = f && f.ok && f.result && f.result.file_path;
+    if (!p) return { error: "fail" };
+    const audio = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${p}`);
+    if (!audio.ok) return { error: "fail" };
+    const a = b642(await audio.arrayBuffer());
+    const run2 = (language, hint) => env.AI.run(MODEL, { audio: a, vad_filter: true, ...language ? { language } : {}, ...hint ? { initial_prompt: hint } : {} });
+    const first = await run2(null, null), info = first && first.transcription_info || {}, lang2 = info.language, prob = +info.language_probability || 0;
+    let best;
+    if ((lang2 === "en" || lang2 === "ar") && prob >= 0.7) best = { o: await run2(lang2, HINT[lang2]), lang: lang2 };
+    else {
+      const [en, ar] = await Promise.all([run2("en", HINT.en), run2("ar", HINT.ar)]);
+      const c = [{ o: en, lang: "en" }, { o: ar, lang: "ar" }].filter((x) => clean(x.o)).sort((x, y) => odd(clean(x.o)) - odd(clean(y.o)) || score(y.o) - score(x.o));
+      best = c[0] || { o: first, lang: lang2 };
+    }
+    let text = clean(best.o);
+    if (!text || odd(text)) {
+      const t0 = clean(first);
+      if (t0 && !odd(t0)) text = t0;
+    }
+    return text.replace(/[\p{P}\s]/gu, "").length < 2 ? { error: "empty" } : { text, lang: best.lang };
+  } catch (e) {
+    console.log(JSON.stringify({ voice: "fail", message: String(e && e.message).slice(0, 300) }));
+    return { error: "fail" };
+  }
 }
 
 // tools/worker/bot.mjs

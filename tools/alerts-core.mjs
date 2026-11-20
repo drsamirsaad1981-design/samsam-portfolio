@@ -14,7 +14,10 @@ export const TZ = 'Asia/Riyadh';
 export const DEFAULTS = Object.freeze({
   lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
   tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true, buy: true,
+  digest: true,   // 🔔 what can wait is kept and sent together at 12:00 · 16:00 · 20:00 (SLOTS); what can't goes at once (NOW_KEYS)
 });
+// sent at once: a price you asked for, a take-profit, the exit conditions, the day's signals, today's DCA — and anything marked urgent
+export const SLOTS = ['12:00', '16:00', '20:00'], NOW_KEYS = /^(buy-|tp-|macro-|sig-|dca-)/;
 const DEFAULT_SIGNAL = { reinforce: -5, sell: -20 };
 const DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085 };
 const DEFAULT_EXIT_STEPS = { mults: [2, 3, 5], pcts: [25, 50, 25] };
@@ -33,7 +36,7 @@ export function settings(meta) {
 // ── words (English / Arabic; numbers, tickers and $ stay Latin) ──
 export const W = {
   en: {
-    brief: 'Morning brief', weekly: 'Weekly report', today: 'today', week: 'this week', profit: 'All Time Profit', vsBtc: 'vs holding BTC',
+    digestT: 'Portfolio digest', brief: 'Morning brief', weekly: 'Weekly report', today: 'today', week: 'this week', profit: 'All Time Profit', vsBtc: 'vs holding BTC',
     best: 'Best today', worst: 'Worst today', bestW: 'Best this week', worstW: 'Worst this week', market: 'Market', dom: 'Dominance',
     fng: 'Fear & Greed', alt: 'Altcoin Season', etf: 'ETF flows', signals: 'Signals', plan: 'Plan', met: 'targets met',
     buyHit: s => `${s} reached your buy price`, buyLine: (p, a) => `Price ${p} ≤ your alert ${a}`, buyLeft: (q, s) => `Still to buy for the plan: ${q} ${s}`,
@@ -57,7 +60,7 @@ export const W = {
     dcaLine: (n, mo, nx) => `${n} regular buy${n === 1 ? '' : 's'} · ${mo}/mo · next ${nx}`, smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
   },
   ar: {
-    brief: 'ملخص الصباح', weekly: 'التقرير الأسبوعي', today: 'اليوم', week: 'هذا الأسبوع', profit: 'إجمالي الربح', vsBtc: 'مقارنة بالاحتفاظ بـ BTC',
+    digestT: 'ملخص المحفظة', brief: 'ملخص الصباح', weekly: 'التقرير الأسبوعي', today: 'اليوم', week: 'هذا الأسبوع', profit: 'إجمالي الربح', vsBtc: 'مقارنة بالاحتفاظ بـ BTC',
     best: 'الأفضل اليوم', worst: 'الأسوأ اليوم', bestW: 'الأفضل هذا الأسبوع', worstW: 'الأسوأ هذا الأسبوع', market: 'السوق', dom: 'الهيمنة',
     buyHit: s => `${s} وصلت لسعر الشراء`, buyLine: (p, a) => `السعر ${p} ≤ تنبيهك ${a}`, buyLeft: (q, s) => `المتبقي للخطة: ${q} ${s}`,
     buyDca: 'واليوم أيضاً يوم الشراء الدوري (DCA)',
@@ -316,7 +319,12 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
   const first = !st.v;
   st.v = 1; st.sig = st.sig || {}; st.plan = st.plan || {}; st.tp = st.tp || {}; st.macro = st.macro || {}; st.health = st.health || {};
   const quiet = cfg.quiet && lp.hour < 7;
-  const push = (msg, urgent = false) => { if (quiet && !urgent) return false; out.push({ ...msg, urgent }); return true; };
+  // 🔔 one focused message instead of many: an alert that can wait is held (in the state) until the next slot
+  const push = (msg, urgent = false) => {
+    if (quiet && !urgent) return false;
+    if (cfg.digest && !first && !urgent && !NOW_KEYS.test(msg.key)) { st.held = (st.held || []).filter(x => x.key !== msg.key).concat({ key: msg.key, text: msg.text, buttons: msg.buttons || null }).slice(-15); return true; }
+    out.push({ ...msg, urgent }); return true;
+  };
 
   // 1. moves (BTC, your portfolio): from the price at the last alert (or the first run), so a slow slide still alerts once per step
   if (cfg.moves) {
@@ -468,13 +476,24 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
     if (cfg.brief && st.briefDay !== lp.date && lp.hm >= cfg.briefTime) { out.unshift({ ...brief(sum, m, cfg, now), urgent: true }); st.briefDay = lp.date; }
     if (cfg.weekly && lp.weekday === 'Fri' && st.weekDay !== isoWeek(lp.date) && lp.hm >= '09:00') { out.push({ ...brief(sum, m, cfg, now, true), urgent: true }); st.weekDay = isoWeek(lp.date); }
   }
+  // the slot (12:00 · 16:00 · 20:00): everything held since the last one, as ONE message — nothing held → no message
+  const slot = [...SLOTS].reverse().find(x => lp.hm >= x), slotKey = slot ? lp.date + ' ' + slot : null;
+  if (cfg.digest && slotKey && st.slot !== slotKey) {
+    st.slot = slotKey;
+    const held = st.held || []; st.held = [];
+    if (held.length) {
+      const seen = new Set(), row = [];
+      held.forEach(x => (x.buttons || []).flat().forEach(b => { const k = b.text + '|' + (b.url || ''); if (!seen.has(k) && row.length < 3) { seen.add(k); row.push(b); } }));
+      out.push({ key: 'digest', urgent: false, text: `🔔 <b>${t.digestT}</b> · ${slot}\n\n` + held.map(x => x.text).join('\n\n━━━━━━━━\n\n').slice(0, 3800), buttons: row.length ? [row] : undefined });
+    }
+  }
   st.t = now;
   return { messages: out, state: st };   // (tools/alerts.mjs sends them together: combine())
 }
 // 🔔 one message per run instead of one per coin / alert: everything except the morning brief and the weekly report
 // (long on their own) is put together, in the order it came; up to 2 rows of buttons, no button twice
 export function combine(out) {
-  const big = x => x.key === 'brief' || x.key === 'weekly', rest = out.filter(x => !big(x));
+  const big = x => x.key === 'brief' || x.key === 'weekly' || x.key === 'digest', rest = out.filter(x => !big(x));
   if (rest.length < 2) return out;
   const seen = new Set(), row1 = [], row2 = [];
   rest.forEach(x => (x.buttons || []).flat().forEach(b => { const k = b.text + '|' + (b.url || b.callback_data || ''); if (seen.has(k)) return; seen.add(k); (row1.length < 3 ? row1 : row2.length < 3 ? row2 : []).push(b); }));
