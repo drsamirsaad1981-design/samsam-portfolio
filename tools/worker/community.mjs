@@ -94,18 +94,22 @@ export async function setup(env, kind, opt = {}) {
   await say(env, `✅ <b>${esc(x.title)}</b> is set up (${kind === 'channel' ? '📢 channel' : '💬 comments group'}).` + (kind === 'channel' && x.link ? `\nJoin link (members only — I approve each request): ${x.link}` : '') + (notes.length ? '\n' + notes.join('\n') : ''));
   return { ok: true };
 }
-// the bot's own link to the guide (t.me/<bot>?start=guide) — one button under the channel's guide posts
-async function guideButton(env) {
+// ⚠️ channel posts carry their links IN the text, never as buttons: Telegram shows no "Leave a comment" under a post that
+// has buttons (seen 20 Nov — the guide post had no comments). The bot's own link to the guide: t.me/<bot>?start=guide
+async function guideLink(env) {
   const me = await tg(env, 'getMe', {}); const u = me.ok && me.result && me.result.username;
-  return u ? { inline_keyboard: [[{ text: '📘 Open the guide · افتح الدليل', url: `https://t.me/${u}?start=guide` }]] } : undefined;
+  return u ? `📘 <a href="https://t.me/${u}?start=guide">Open the guide · افتح الدليل</a>` : '';
 }
-// 📘 the channel's guide post (pinned): what is in the guide, in both languages; the button opens it in the bot
+// 📘 the channel's guide post (pinned): what is in the guide, in both languages; its link opens it in the bot.
+// Posted again (/community guide): the old one is unpinned and deleted
 async function postGuidePost(env, ch) {
-  const text = `📘 <b>${GUIDE.title.en} · ${GUIDE.title.ar}</b>\n${GUIDE.intro.en}\n${GUIDE.intro.ar}\n\n`
+  const text = `<b>${GUIDE.title.en} · ${GUIDE.title.ar}</b>\n${GUIDE.intro.en}\n${GUIDE.intro.ar}\n\n`
     + guideGroups().map(g => g.items.map(s => `${s.e} ${esc((s.b || s.t).en)} · ${esc((s.b || s.t).ar)}`).join('\n')).join('\n\n')
     + '\n\n💡 <i>Ideas or a bug? Send /feedback to the bot.</i>\n💡 <i>اقتراح أو مشكلة؟ أرسل /feedback للبوت.</i>';
-  const r = await tg(env, 'sendMessage', { chat_id: ch.id, text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: await guideButton(env) });
+  const link = await guideLink(env);
+  const r = await tg(env, 'sendMessage', { chat_id: ch.id, text: text + (link ? '\n\n' + link : ''), parse_mode: 'HTML', disable_web_page_preview: true });
   if (!r.ok) return null;
+  if (ch.guideMsg && ch.guideMsg !== r.result.message_id) { await tg(env, 'unpinChatMessage', { chat_id: ch.id, message_id: ch.guideMsg }); await tg(env, 'deleteMessage', { chat_id: ch.id, message_id: ch.guideMsg }); }
   await tg(env, 'pinChatMessage', { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true });
   return r.result.message_id;
 }
@@ -144,7 +148,8 @@ export async function guideUpdates(env) {
   if (!changed.length && !edition) return { posted: 0 };
   const lines = edition ? ['📘 <b>A new edition of the guide · نسخة جديدة من الدليل</b>']
     : ['🆕 <b>New in the guide · جديد في الدليل</b>', '', ...changed.slice(0, 10).map(s => `${s.k in x.guideSig ? '✏️' : '🆕'} ${s.e} ${esc(s.t.en)} · ${esc(s.t.ar)}`)];
-  const r = await tg(env, 'sendMessage', { chat_id: x.id, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: await guideButton(env) });
+  const link = await guideLink(env); if (link) lines.push('', link);
+  const r = await tg(env, 'sendMessage', { chat_id: x.id, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true });
   if (!r.ok) return { posted: 0 };
   x.guideSig = now; x.guideV = GUIDE.v || 1; c.channel = x; await putCommunity(env, c);
   return { posted: edition ? 'all' : changed.length };
@@ -191,6 +196,7 @@ function pulseText(m, now, kind) {
     up.length ? '' : null, up.length ? `📈 ${up.map(r => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(' · ')}` : null,
     dn.length ? `📉 ${dn.map(r => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(' · ')}` : null,
     ...(kind === 'move' ? [] : otherMarkets(m, now)),
+    '', `🧭 <a href="${APP}market.html">Market Hub</a>`,   // a link in the text, not a button: a button hides the post's comments
     '', `<i>${NOTE.en}</i>`, `<i>${NOTE.ar}</i>`].filter(x => x != null);   // two lines: the English and the Arabic never share one (their dots and dashes mixed)
   return L.join('\n');
 }
@@ -206,8 +212,6 @@ function otherMarkets(m, now) {
   }
   return out.length ? ['', ...out] : [];
 }
-// the post's button: 🧭 Market Hub (the comments come with every post — no "Discuss" link needed)
-const channelButtons = (extra = []) => ({ inline_keyboard: [extra].filter(r => r.length) });
 export async function runChannel(env, now = Date.now()) {
   await guideUpdates(env).catch(() => {});   // 📘 a new release changed the guide → the changed parts in the guide topic
   const c = await getCommunity(env), ch = c.channel; if (!ch) return { job: null };
@@ -218,8 +222,7 @@ export async function runChannel(env, now = Date.now()) {
   const m = kind || sent.move !== today ? await loadMarket([], []).catch(() => null) : null;
   if (!kind && m && m.btc && Math.abs(m.btc.ch24 || 0) >= 5 && sent.move !== today) kind = 'move';
   if (!kind || !m) return { job: null };
-  const r = await tg(env, 'sendMessage', { chat_id: ch.id, text: pulseText(m, now, kind), parse_mode: 'HTML', disable_web_page_preview: true,
-    reply_markup: channelButtons([{ text: '🧭 Market Hub', url: APP + 'market.html' }]) });
+  const r = await tg(env, 'sendMessage', { chat_id: ch.id, text: pulseText(m, now, kind), parse_mode: 'HTML', disable_web_page_preview: true });   // (no buttons: they would hide the comments)
   if (r.ok) {
     if (kind !== 'move') { if (ch.pinned) await tg(env, 'unpinChatMessage', { chat_id: ch.id, message_id: ch.pinned }); await tg(env, 'pinChatMessage', { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true }); ch.pinned = r.result.message_id; }
     sent[kind] = today; c.sent = sent; c.channel = ch; await putCommunity(env, c);

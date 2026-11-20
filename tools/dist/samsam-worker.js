@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 6c5ea4f213b1515c
+// sources-hash: 1dbd97df92c175f1
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3391,19 +3391,24 @@ async function setup(env, kind, opt = {}) {
 Join link (members only \u2014 I approve each request): ${x.link}` : "") + (notes.length ? "\n" + notes.join("\n") : ""));
   return { ok: true };
 }
-async function guideButton(env) {
+async function guideLink(env) {
   const me = await tg3(env, "getMe", {});
   const u = me.ok && me.result && me.result.username;
-  return u ? { inline_keyboard: [[{ text: "\u{1F4D8} Open the guide \xB7 \u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0644\u064A\u0644", url: `https://t.me/${u}?start=guide` }]] } : void 0;
+  return u ? `\u{1F4D8} <a href="https://t.me/${u}?start=guide">Open the guide \xB7 \u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0644\u064A\u0644</a>` : "";
 }
 async function postGuidePost(env, ch) {
-  const text = `\u{1F4D8} <b>${guide_default.title.en} \xB7 ${guide_default.title.ar}</b>
+  const text = `<b>${guide_default.title.en} \xB7 ${guide_default.title.ar}</b>
 ${guide_default.intro.en}
 ${guide_default.intro.ar}
 
 ` + guideGroups().map((g) => g.items.map((s) => `${s.e} ${esc((s.b || s.t).en)} \xB7 ${esc((s.b || s.t).ar)}`).join("\n")).join("\n\n") + "\n\n\u{1F4A1} <i>Ideas or a bug? Send /feedback to the bot.</i>\n\u{1F4A1} <i>\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 /feedback \u0644\u0644\u0628\u0648\u062A.</i>";
-  const r = await tg3(env, "sendMessage", { chat_id: ch.id, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: await guideButton(env) });
+  const link = await guideLink(env);
+  const r = await tg3(env, "sendMessage", { chat_id: ch.id, text: text + (link ? "\n\n" + link : ""), parse_mode: "HTML", disable_web_page_preview: true });
   if (!r.ok) return null;
+  if (ch.guideMsg && ch.guideMsg !== r.result.message_id) {
+    await tg3(env, "unpinChatMessage", { chat_id: ch.id, message_id: ch.guideMsg });
+    await tg3(env, "deleteMessage", { chat_id: ch.id, message_id: ch.guideMsg });
+  }
   await tg3(env, "pinChatMessage", { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true });
   return r.result.message_id;
 }
@@ -3451,7 +3456,9 @@ async function guideUpdates(env) {
   const changed = guide_default.sections.filter((s) => x.guideSig[s.k] !== now[s.k]);
   if (!changed.length && !edition) return { posted: 0 };
   const lines = edition ? ["\u{1F4D8} <b>A new edition of the guide \xB7 \u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0627\u0644\u062F\u0644\u064A\u0644</b>"] : ["\u{1F195} <b>New in the guide \xB7 \u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644</b>", "", ...changed.slice(0, 10).map((s) => `${s.k in x.guideSig ? "\u270F\uFE0F" : "\u{1F195}"} ${s.e} ${esc(s.t.en)} \xB7 ${esc(s.t.ar)}`)];
-  const r = await tg3(env, "sendMessage", { chat_id: x.id, text: lines.join("\n"), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: await guideButton(env) });
+  const link = await guideLink(env);
+  if (link) lines.push("", link);
+  const r = await tg3(env, "sendMessage", { chat_id: x.id, text: lines.join("\n"), parse_mode: "HTML", disable_web_page_preview: true });
   if (!r.ok) return { posted: 0 };
   x.guideSig = now;
   x.guideV = guide_default.v || 1;
@@ -3497,6 +3504,9 @@ function pulseText(m, now, kind) {
     dn.length ? `\u{1F4C9} ${dn.map((r) => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(" \xB7 ")}` : null,
     ...kind === "move" ? [] : otherMarkets(m, now),
     "",
+    `\u{1F9ED} <a href="${APP}market.html">Market Hub</a>`,
+    // a link in the text, not a button: a button hides the post's comments
+    "",
     `<i>${NOTE.en}</i>`,
     `<i>${NOTE.ar}</i>`
   ].filter((x) => x != null);
@@ -3516,7 +3526,6 @@ function otherMarkets(m, now) {
   }
   return out.length ? ["", ...out] : [];
 }
-var channelButtons = (extra = []) => ({ inline_keyboard: [extra].filter((r) => r.length) });
 async function runChannel(env, now = Date.now()) {
   await guideUpdates(env).catch(() => {
   });
@@ -3529,13 +3538,7 @@ async function runChannel(env, now = Date.now()) {
   const m = kind || sent.move !== today2 ? await loadMarket([], []).catch(() => null) : null;
   if (!kind && m && m.btc && Math.abs(m.btc.ch24 || 0) >= 5 && sent.move !== today2) kind = "move";
   if (!kind || !m) return { job: null };
-  const r = await tg3(env, "sendMessage", {
-    chat_id: ch.id,
-    text: pulseText(m, now, kind),
-    parse_mode: "HTML",
-    disable_web_page_preview: true,
-    reply_markup: channelButtons([{ text: "\u{1F9ED} Market Hub", url: APP + "market.html" }])
-  });
+  const r = await tg3(env, "sendMessage", { chat_id: ch.id, text: pulseText(m, now, kind), parse_mode: "HTML", disable_web_page_preview: true });
   if (r.ok) {
     if (kind !== "move") {
       if (ch.pinned) await tg3(env, "unpinChatMessage", { chat_id: ch.id, message_id: ch.pinned });

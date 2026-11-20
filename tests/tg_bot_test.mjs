@@ -165,7 +165,7 @@ const say = (text, chat = 555) => post({ update_id: ++UPD, message: { message_id
 const tap = data => post({ update_id: ++UPD, callback_query: { id: 'q1', data, from: { id: 555 }, message: { message_id: 42, chat: { id: 555 } } } });
 const out = () => sent.filter(x => x.m === 'sendMessage' || x.m === 'editMessageText');
 const last = () => out().slice(-1)[0];
-const okHtml = t => { const tags = [...t.matchAll(/<\/?([a-z]+)[^>]*>/g)].map(m => m[1]); const stray = t.replace(/<\/?(b|i|code)>/g, '').match(/[<>]|&(?!amp;|lt;|gt;)/); return tags.every(x => ['b', 'i', 'code'].includes(x)) && !stray; };
+const okHtml = t => { const tags = [...t.matchAll(/<\/?([a-z]+)[^>]*>/g)].map(m => m[1]); const stray = t.replace(/<\/?(b|i|code)>|<a href="https:\/\/[^"<>]+">|<\/a>/g, '').match(/[<>]|&(?!amp;|lt;|gt;)/); return tags.every(x => ['b', 'i', 'code', 'a'].includes(x)) && !stray; };   // (<a href="https://…">: the channel's links)
 const btnTexts = v => (v.b.reply_markup && v.b.reply_markup.inline_keyboard || []).flat().map(b => b.text);
 const btns = v => (v.b.reply_markup && v.b.reply_markup.inline_keyboard || []).flat();
 
@@ -1318,7 +1318,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   let c = JSON.parse(kvStore.get('tg:community') || '{}');
   check('📢 you add it to the channel as admin → remembered, a join link that needs approval, you get the link', c.channel && c.channel.id === -1001 && c.channel.link && sent.some(m => m.m === 'createChatInviteLink' && m.b.creates_join_request === true) && sent.some(m => String(m.b.chat_id) === '555' && /is set up/.test(m.b.text || '')), c);
   const gp = sent.find(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
-  check('📘 …and a guide post in the channel (both languages, /feedback), pinned, its button opens the guide in the bot', gp && /Getting started · البداية/.test(gp.b.text) && /\/feedback/.test(gp.b.text) && okHtml(gp.b.text) && JSON.stringify(gp.b.reply_markup).includes('t.me/samsam_portfolio_bot?start=guide') && sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1001) && c.channel.guideMsg, gp && gp.b);
+  check('📘 …and a guide post in the channel (both languages, /feedback), pinned; its LINK (no buttons: they hide the comments) opens the guide in the bot', gp && /Getting started · البداية/.test(gp.b.text) && /\/feedback/.test(gp.b.text) && okHtml(gp.b.text) && gp.b.text.includes('href="https://t.me/samsam_portfolio_bot?start=guide"') && !gp.b.reply_markup && sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1001) && c.channel.guideMsg, gp && gp.b);
   check('…no forum topics any more', !sent.some(m => /Forum/.test(m.m)));
   globalThis.__unlinked = true;
   sent.length = 0; await added({ id: -1002, type: 'supergroup', title: 'Cute Portfolio Community' }, 555);
@@ -1357,7 +1357,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; const Wp = await fresh(); const pp = []; await Wp.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('09:05') }, ENVK, { waitUntil: x => pp.push(x) }); await Promise.all(pp);
   const pulse = sent.find(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
   check('📢 09:05 → the market pulse in the channel (BTC, cap, dominance, Fear & Greed, movers, "not financial advice"), pinned', pulse && /Market pulse/.test(pulse.b.text) && /BTC/.test(pulse.b.text) && /Not financial advice/.test(pulse.b.text) && okHtml(pulse.b.text) && sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1001), pulse && pulse.b.text);
-  check('…with 🧭 Market Hub (no "Discuss" link: the comments come with the post)', JSON.stringify(pulse.b.reply_markup).includes('Market Hub') && !/Discuss/.test(JSON.stringify(pulse.b.reply_markup)), pulse && pulse.b.reply_markup);
+  check('…with a 🧭 Market Hub link in the text and NO buttons (Telegram hides the comments of a post with buttons)', /<a href="https:\/\/drsamirsaad1981-design\.github\.io\/samsam-portfolio\/market\.html">Market Hub<\/a>/.test(pulse.b.text) && !pulse.b.reply_markup, pulse && pulse.b);
   check('…the English and Arabic "not financial advice" on two lines', /Not financial advice — for information only\.<\/i>\n<i>/.test(pulse.b.text), pulse && pulse.b.text.slice(-160));
   sent.length = 0; const Wq = await fresh(); const pq = []; await Wq.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('09:10') }, ENVK, { waitUntil: x => pq.push(x) }); await Promise.all(pq);
   check('…+ 🥇 gold · silver (no Brent) and 🇺🇸 US stocks (state, best CRCLB, worst GMEB)', /🥇 Gold <b>\$2,650<\/b>/.test(pulse.b.text) && /Silver/.test(pulse.b.text) && !/Brent/.test(pulse.b.text) && /🇺🇸 US stocks (Open|Pre-market|After hours|Closed) · CRCLB \+7\.8% · GMEB −6\.2%/.test(pulse.b.text), pulse.b.text);
@@ -1384,7 +1384,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
     cc.channel.guideSig = { ...cc.channel.guideSig, alerts: 'old' }; delete cc.channel.guideSig.help; kvStore.set('tg:community', JSON.stringify(cc));
     sent.length = 0; const Wg = await fresh(); const pg2 = []; await Wg.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:05') }, ENVK, { waitUntil: x => pg2.push(x) }); await Promise.all(pg2);
     const posts = sent.filter(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
-    check('🆕 the guide changed (a part updated, a part new) → one post in the channel: ✏️ + 🆕, with the guide button', posts.length === 1 && /New in the guide/.test(posts[0].b.text) && /✏️ 🔔/.test(posts[0].b.text) && /🆕/.test(posts[0].b.text) && JSON.stringify(posts[0].b.reply_markup).includes('start=guide'), posts.map(m => m.b.text));
+    check('🆕 the guide changed (a part updated, a part new) → one post in the channel: ✏️ + 🆕, with the guide button', posts.length === 1 && /New in the guide/.test(posts[0].b.text) && /✏️ 🔔/.test(posts[0].b.text) && /🆕/.test(posts[0].b.text) && posts[0].b.text.includes('start=guide') && !posts[0].b.reply_markup, posts.map(m => m.b.text));
     sent.length = 0; const Wh = await fresh(); const ph = []; await Wh.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:10') }, ENVK, { waitUntil: x => ph.push(x) }); await Promise.all(ph);
     check('…and not again', !sent.some(m => m.m === 'sendMessage' && m.b.chat_id === -1001));
     const c3 = JSON.parse(kvStore.get('tg:community')); c3.channel.guideV = 1; kvStore.set('tg:community', JSON.stringify(c3));
