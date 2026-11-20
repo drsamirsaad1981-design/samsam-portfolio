@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 3718e02f530db581
+// sources-hash: 057700b78e8186af
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1248,7 +1248,7 @@ async function loadMarket(ids = [], coins = []) {
     if (s) series[id] = s;
   }));
   const closeF = await cached("close", 10 * 6e4, async () => await getJson(RAW + "p/close.json") || false);
-  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], sectors: base.m.sectors || [] };
+  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], sectors: base.m.sectors || [], whales: base.m.whales || null };
   await liveTopUp(market, all);
   const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
   const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 3);
@@ -1786,7 +1786,10 @@ async function binanceDeriv(S) {
     out.long_short_accounts = num2(ls[0].longShortRatio);
     out.long_accounts_pct = num2(ls[0].longAccount) != null ? +(ls[0].longAccount * 100).toFixed(1) : null;
   }
-  if (Array.isArray(top) && top[0]) out.top_traders_long_short_positions = num2(top[0].longShortRatio);
+  if (Array.isArray(top) && top[0]) {
+    out.top_traders_long_short_positions = num2(top[0].longShortRatio);
+    out.top_traders_long_pct = num2(top[0].longAccount) != null ? +(top[0].longAccount * 100).toFixed(1) : null;
+  }
   return out;
 }
 async function hyperliquidDeriv(S) {
@@ -1816,6 +1819,7 @@ async function derivatives(sym) {
         open_interest_note: "sum of the sources listed (not the whole market)",
         open_interest_change_24h_pct: (okx && okx.open_interest_change_24h_pct) ?? (bn2 && bn2.open_interest_change_24h_pct) ?? null,
         long_accounts_pct: (bn2 && bn2.long_accounts_pct) ?? (okx && okx.long_accounts_pct) ?? null,
+        top_traders_long_pct: (bn2 && bn2.top_traders_long_pct) ?? null,
         liquidations_24h: okx && okx.liquidations || null
       },
       sources: src

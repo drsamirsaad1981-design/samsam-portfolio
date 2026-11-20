@@ -84,7 +84,7 @@ export async function loadMarket(ids = [], coins = []) {
   await Promise.all(need.map(async id => { const s = await cached('p:' + id, 10 * 60e3, async () => priceSeries(await getJson(RAW + 'p/' + id + '.json')) || false); if (s) series[id] = s; }));
   // ⏳ every coin's daily close (00:00 UTC), one small file: the Signals are decided on it (data.mjs → summarize)
   const closeF = await cached('close', 10 * 60e3, async () => (await getJson(RAW + 'p/close.json')) || false);
-  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: CG_IDS, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], sectors: base.m.sectors || [] };
+  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: CG_IDS, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], sectors: base.m.sectors || [], whales: base.m.whales || null };
   await liveTopUp(market, all);
   // still no price (CoinGecko busy, not in the top 500, no price file) → the exchanges, by ticker (3 coins at most)
   const rows = new Map([...market.top, ...market.top500].map(r => [r.id, r]));
@@ -505,7 +505,7 @@ async function binanceDeriv(S) {
   if (oi && num(oi.openInterest) != null && num(pi.markPrice)) out.open_interest_usd = Math.round(oi.openInterest * pi.markPrice);
   if (Array.isArray(oih) && oih.length > 2) { const a = +oih[0].sumOpenInterestValue, b = +oih[oih.length - 1].sumOpenInterestValue; if (a > 0) out.open_interest_change_24h_pct = +((b / a - 1) * 100).toFixed(2); }
   if (Array.isArray(ls) && ls[0]) { out.long_short_accounts = num(ls[0].longShortRatio); out.long_accounts_pct = num(ls[0].longAccount) != null ? +(ls[0].longAccount * 100).toFixed(1) : null; }
-  if (Array.isArray(top) && top[0]) out.top_traders_long_short_positions = num(top[0].longShortRatio);
+  if (Array.isArray(top) && top[0]) { out.top_traders_long_short_positions = num(top[0].longShortRatio); out.top_traders_long_pct = num(top[0].longAccount) != null ? +(top[0].longAccount * 100).toFixed(1) : null; }   // the big accounts' own long share
   return out;
 }
 async function hyperliquidDeriv(S) {
@@ -533,6 +533,7 @@ export async function derivatives(sym) {
         open_interest_usd_total: oi.length ? oi.reduce((a, b) => a + b, 0) : null, open_interest_note: 'sum of the sources listed (not the whole market)',
         open_interest_change_24h_pct: (okx && okx.open_interest_change_24h_pct) ?? (bn && bn.open_interest_change_24h_pct) ?? null,
         long_accounts_pct: (bn && bn.long_accounts_pct) ?? (okx && okx.long_accounts_pct) ?? null,
+        top_traders_long_pct: (bn && bn.top_traders_long_pct) ?? null,
         liquidations_24h: okx && okx.liquidations || null,
       },
       sources: src,

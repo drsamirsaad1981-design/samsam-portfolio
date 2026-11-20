@@ -175,6 +175,15 @@ async function main() {
     snap.parts.sectors = now; log('sectors', snap.sectors.length);
   } else { if (old.sectors) snap.sectors = old.sectors; log('sectors: no answer, kept the last one'); }
 
+  // 🐋 smart money: the biggest winning traders on Hyperliquid (a perp exchange whose positions are public) — are they long
+  // or short on each coin, and with how much? Refreshed every 3 hours (25 small calls); kept when it does not answer.
+  if (old.whales && old.parts && old.parts.whales && Date.parse(now) - Date.parse(old.parts.whales) < 3 * 3600e3) { snap.whales = old.whales; snap.parts.whales = old.parts.whales; }
+  else {
+    const w = await whales(old.whales).catch(e => { log('whales failed', String(e && e.message).slice(0, 100)); return null; });
+    if (w) { snap.whales = w; snap.parts.whales = now; log('whales', w.n, 'traders,', Object.keys(w.coins).length, 'coins'); }
+    else if (old.whales) { snap.whales = old.whales; if (old.parts && old.parts.whales) snap.parts.whales = old.parts.whales; log('whales: no answer, kept the last one'); }
+  }
+
   // Altcoin Season: CoinMarketCap's official index (the number CoinMarketCap / CoinGlass show) — and the page's own
   // breakdown (which coins beat BTC, the history) worked out with CoinMarketCap's own top 100, matched to CoinGecko's prices
   const ca = await cmc('/v1/altcoin-season-index/latest');
@@ -232,6 +241,41 @@ async function main() {
 // Any part that fails keeps the last one.
 const CMC_LIST = process.env.CMC_LIST || 'https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing?sortBy=market_cap&sortType=desc&convert=USD&cryptoType=all&tagType=all&audited=false';
 const CC_API = process.env.CC_API || 'https://coincodex.com/api/v1/assets/get_asset_list';
+// 🐋 Hyperliquid's leaderboard (public, no key) → the 25 traders with the biggest all-time profit and ≥ $1M in the account
+// → each one's open positions → per coin: how many are long / short and the dollars on each side. `prev` = the last snapshot
+// (a coin's side then: "long" / "short" / "mixed"), so a flip can be told. Not a signal: whales hedge, and lose too.
+const sideOf = c => { const t = c.longUsd + c.shortUsd; return t <= 0 ? 'mixed' : c.longUsd / t >= 0.6 ? 'long' : c.shortUsd / t >= 0.6 ? 'short' : 'mixed'; };
+async function whales(prev) {
+  const r = await fetch('https://stats-data.hyperliquid.xyz/Mainnet/leaderboard', { headers: { accept: 'application/json' } });
+  if (!r.ok) throw new Error('leaderboard ' + r.status);
+  const rows = ((await r.json()) || {}).leaderboardRows; if (!Array.isArray(rows) || !rows.length) throw new Error('leaderboard empty');
+  const perf = (x, win) => { const p = (x.windowPerformances || []).find(a => a && a[0] === win); return p && p[1] ? +p[1].pnl || 0 : 0; };
+  const top = rows.filter(x => x && /^0x[0-9a-fA-F]{40}$/.test(x.ethAddress || '') && +x.accountValue >= 1e6).sort((a, b) => perf(b, 'allTime') - perf(a, 'allTime')).slice(0, 25);
+  if (top.length < 10) throw new Error('too few traders: ' + top.length);
+  const coins = {}; let n = 0;
+  for (const t of top) {
+    let j = null;
+    try { const q = await fetch('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'clearinghouseState', user: t.ethAddress }) }); if (q.ok) j = await q.json(); } catch (_) {}
+    await sleep(250);
+    if (!j || !Array.isArray(j.assetPositions)) continue;
+    n++;
+    for (const a of j.assetPositions) {
+      const p = a && a.position, sz = p && +p.szi, v = p && Math.abs(+p.positionValue); if (!p || !sz || !(v >= 1e4)) continue;   // positions under $10k: noise
+      const sym = String(p.coin || '').toUpperCase().replace(/^K(?=PEPE|SHIB|BONK|FLOKI)/, ''), c = coins[sym] || (coins[sym] = { long: 0, short: 0, longUsd: 0, shortUsd: 0 });
+      if (sz > 0) { c.long++; c.longUsd += v; } else { c.short++; c.shortUsd += v; }
+    }
+  }
+  if (n < 10) throw new Error('too few answers: ' + n);
+  const out = {};
+  for (const [sym, c] of Object.entries(coins).sort((a, b) => (b[1].longUsd + b[1].shortUsd) - (a[1].longUsd + a[1].shortUsd)).slice(0, 60)) {
+    const side = sideOf(c), old = prev && prev.coins && prev.coins[sym], nowT = new Date().toISOString();
+    // a flip (long ↔ short) is kept for 24 hours with its time, so the next digest still tells it
+    const flip = old && old.side !== side && old.side !== 'mixed' && side !== 'mixed' ? { was: old.side, flipT: nowT }
+      : old && old.side === side && old.flipT && Date.now() - Date.parse(old.flipT) < 24 * 3600e3 ? { was: old.was, flipT: old.flipT } : {};
+    out[sym] = { long: c.long, short: c.short, longUsd: Math.round(c.longUsd), shortUsd: Math.round(c.shortUsd), side, ...flip };
+  }
+  return { t: new Date().toISOString(), src: 'Hyperliquid', n, coins: out };
+}
 async function links(top) {
   const FILE_L = path.join(OUT, 'links.json');
   let old = {}; try { old = JSON.parse(fs.readFileSync(FILE_L, 'utf8')); } catch (_) {}
