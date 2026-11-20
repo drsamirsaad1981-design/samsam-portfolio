@@ -123,7 +123,7 @@ const ar = settings({ alerts: { lang: 'ar' } });
 const ba = brief(s, mk(), ar, T0).text;
 check('Arabic brief: Arabic words, Latin numbers, safe HTML', /ملخص الصباح/.test(ba) && /إجمالي الربح/.test(ba) && /\$8,450\.00/.test(ba) && okHtml(ba), ba);
 r = evaluate(s3, m3, { ...st, sig: { ...st.sig, SEI: 'reinforce' } }, ar, t3);
-check('Arabic signal alert', r.messages.some(x => x.key === 'sig-day' && /تأكدت على قفلة اليوم/.test(x.text) && /بيع \/ تحويل لـ BTC/.test(x.text)), r.messages.map(m => m.text));
+check('Arabic signal alert', r.messages.some(x => x.key === 'sig-day' && /تأكدت على قفلة اليوم/.test(x.text) && /بيع \/ تحويل إلى BTC/.test(x.text)), r.messages.map(m => m.text));
 
 // data health: market file 5 h old → one warning a day
 const mo = mk({ now: T0 + 3 * H }); mo.parts.top = new Date(T0 - 2 * H).toISOString();

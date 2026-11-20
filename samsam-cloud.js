@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611191725';
-import * as Hist from './samsam-history.js?v=202611191725';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611191725';
+import * as Core from './samsam-core.js?v=202611201308';
+import * as Hist from './samsam-history.js?v=202611201308';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611201308';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -260,11 +260,24 @@ function cleanWallets(w) {
 // ── Telegram alerts settings, saved in users/{uid}/meta/info.alerts (read by tools/alerts.mjs on GitHub every 30 min) ──
 export const DEFAULT_ALERTS = Object.freeze({ lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
   tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true, buy: true });
+// 🌐 the Telegram alerts (tools/alerts.mjs) speak the app's language — unless you picked one in Alerts settings yourself.
+// Checked when your settings arrive from the server; written once (only when they differ), never in a loop.
+let alertsLangDone = false;
+function alertsFollowLang() {
+  if (alertsLangDone || !S.user || !S.loaded.meta || !window.CPLang || S.fromCache) return;
+  alertsLangDone = true;
+  const a = (S.meta && S.meta.alerts) || null, want = CPLang.ar ? 'ar' : 'en';
+  if (a && a.langPicked) return;                                      // you chose it in Alerts settings: that stays
+  if ((a && a.lang === 'ar' ? 'ar' : 'en') === want) return;           // already the same
+  if (!a && want === 'en') return;                                     // nothing saved yet and English: the default already
+  try { API.setAlerts({ ...cleanAlerts(a), lang: want }).catch(() => { alertsLangDone = false; }); } catch (_) { alertsLangDone = false; }
+}
 function cleanAlerts(a) {
   const d = DEFAULT_ALERTS, out = { ...d };
   if (!a || typeof a !== 'object') return { ...out, isDefault: true };
   for (const k of Object.keys(d)) if (typeof d[k] === 'boolean' && typeof a[k] === 'boolean') out[k] = a[k];
   out.lang = a.lang === 'ar' ? 'ar' : 'en';
+  if (a.langPicked === true) out.langPicked = true;   // chosen in Alerts settings (else it follows the app's language)
   out.briefTime = typeof a.briefTime === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(a.briefTime) ? a.briefTime : d.briefTime;
   out.movePct = numIn(a.movePct, 1, 50) ?? d.movePct;
   out.etfMin = numIn(a.etfMin, 50, 10000) ?? d.etfMin;
@@ -609,7 +622,7 @@ function listen() {
     track(snap); Use.snap(stC, snap, false); S.catCfg = snap.exists() ? snap.data() : null; S.loaded.cats = true; emit();
   }, e => { S.loaded.cats = true; emit(); onErr('categories')(e); }));   // never hold the app back over the settings
   S.unsub.push(fs.onSnapshot(fs.doc(db, ...userPath('meta', 'info')), opt, snap => {
-    track(snap); Use.snap(stM, snap, false); S.meta = snap.exists() ? snap.data() : null; S.loaded.meta = true; emit();
+    track(snap); Use.snap(stM, snap, false); S.meta = snap.exists() ? snap.data() : null; S.loaded.meta = true; emit(); alertsFollowLang();
   }, onErr('settings')));
 }
 
@@ -1581,7 +1594,7 @@ function openAlertsSheet() {
   el.querySelector('.al-x').onclick = close; el.querySelector('[data-act=cancel]').onclick = close;
   el.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => el.querySelectorAll('[data-lang]').forEach(x => x.setAttribute('aria-pressed', String(x === b))));
   el.querySelector('[data-act=save]').onclick = async () => {
-    const v = { lang: el.querySelector('[data-lang][aria-pressed="true"]').dataset.lang };
+    const v = { lang: el.querySelector('[data-lang][aria-pressed="true"]').dataset.lang, langPicked: true };
     el.querySelectorAll('input[data-k]').forEach(i => { v[i.dataset.k] = i.checked; });
     el.querySelectorAll('select[data-k]').forEach(s => { v[s.dataset.k] = s.dataset.k === 'briefTime' ? s.value : +s.value; });
     const msg = el.querySelector('.al-msg'); msg.className = 'al-msg'; msg.textContent = 'Saving…';

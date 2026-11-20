@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 6cb97f93d4f4275e
+// sources-hash: 9cd410e6ca697ce5
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -198,7 +198,7 @@ var AR = /[\u0600-\u06FF]/;
 var RLM = "\u200F";
 var LRM = "\u200E";
 var LRI = "\u2066";
-var RUN = /[A-Za-z0-9$€£%+\-−.,:/_#@×'’]+(?:&amp;|&lt;|&gt;)?(?:[  ]+(?:&amp;|&lt;|&gt;|[A-Za-z0-9$€£%+\-−.,:/_#@×'’])+)*/g;
+var RUN = /[A-Za-z0-9$€£%+\-−.,:/_#@×'’]+(?:&amp;|&lt;|&gt;)?(?:[  ]+(?:&amp;|&lt;|&gt;|[A-Za-z0-9$€£%+\-−.,:/_#@×'’→←≤≥])+)*/g;
 var hasWord = (s) => /[A-Za-z0-9]/.test(s);
 function bidiLine(line, all = false) {
   if (!(all ? /[A-Za-z0-9\u0600-\u06FF]/.test(line) : AR.test(line)) || line.startsWith(RLM) || line.includes(LRI)) return line;
@@ -209,7 +209,7 @@ function bidiLine(line, all = false) {
     const i = t.indexOf(core);
     let glued = core.length <= 24 ? core.replace(/ /g, "\xA0") : core;
     glued = glued.replace(/([+\-−])\$/g, "$1\u2060$");
-    return t.slice(0, i) + LRM + glued + LRM + t.slice(i + core.length) + tail;
+    return t.slice(0, i) + LRM + glued + LRM + RLM + t.slice(i + core.length) + tail;
   }).replace(/ · /g, " \xB7" + RLM + " ").replace(/([🟢🔴⚪🟡]) /gu, "$1 " + RLM)).join("");
   return RLM + out;
 }
@@ -219,9 +219,12 @@ function bidi(text, mode = "auto") {
   const all = mode !== "lines" && ar * 3 >= la;
   return text.split("\n").map((l) => bidiLine(l, all)).join("\n");
 }
+var signFirst = (s) => typeof s === "string" ? s.replace(/\$\s?[-−](?=\d)/g, "\u2212$") : s;
 function bidiBody(body, mode = "auto") {
   if (!body || typeof body !== "object") return body;
   const b = { ...body };
+  if (typeof b.text === "string") b.text = signFirst(b.text);
+  if (typeof b.caption === "string") b.caption = signFirst(b.caption);
   if (typeof b.text === "string") {
     const x = bidi(b.text, mode);
     if (x.length <= 4096) b.text = x;
@@ -3553,7 +3556,8 @@ function pulseText(m, now, kind) {
     dn.length ? `\u{1F4C9} ${dn.map((r) => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(" \xB7 ")}` : null,
     ...kind === "move" ? [] : otherMarkets(m, now),
     "",
-    `<i>${NOTE.en} \xB7 ${NOTE.ar}</i>`
+    `<i>${NOTE.en}</i>`,
+    `<i>${NOTE.ar}</i>`
   ].filter((x) => x != null);
   return L.join("\n");
 }
@@ -4846,7 +4850,8 @@ async function compose(env, kind, lang2, facts) {
     kind === "morning" ? 'Shape: line 1 = one emoji + **bold one-line verdict for today**. Then \u{1F3AF} **Today** \u2014 exactly 3 numbered actions (1. 2. 3.) picked from FACTS.todo (most useful first; "nothing to do \u2014 hold" is a valid action when the list is short), each one line with its number. Then \u{1F30D} **Market mood** \u2014 2 bullets. Then \u{1F440} **Watch today** \u2014 1\u20132 bullets (levels / alerts closest to triggering).' : "Shape: line 1 = one emoji + **bold one-line verdict on the day**. Then \u{1F4CA} **Today** \u2014 2\u20133 bullets (portfolio change since the morning, best / worst coin, trades or alerts that happened). Then \u{1F504} **What changed** \u2014 2 bullets (BTC, Fear & Greed, dominance, futures, sectors \u2014 vs the morning when FACTS has it). Then \u{1F440} **Tonight & tomorrow** \u2014 2\u20133 bullets (closest levels / alerts, tomorrow's DCA if any).",
     "Other markets: only when FACTS.other_markets.notable is true, add ONE bullet about them in the market part (gold / the biggest bStock move \u2014 tokenized US stocks \u2014 and, if useful, whether the US stock market is open). When notable is false, leave the other markets out.",
     'Bullets: "\u2022 label: **value** \u2014 3\u20136 word note". Short lines (\u2264 40 characters when possible), ~14 lines in all, no tables, no headings with #, no links, no sources line.',
-    ar ? "Write in simple Modern Standard Arabic (\u0641\u0635\u062D\u0649 \u0628\u0633\u064A\u0637\u0629), the way crypto investors write; numbers and tickers in Latin characters." : "Write in English."
+    ar ? 'Write in simple Modern Standard Arabic (\u0641\u0635\u062D\u0649 \u0628\u0633\u064A\u0637\u0629), the way crypto investors write; numbers and tickers in Latin characters. Words to use: open interest = "\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629"; long share = "\u0646\u0633\u0628\u0629 \u0627\u0644\u0634\u0631\u0627\u0621 (Long)"; DCA = "\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A (DCA)"; daily close = "\u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u064A\u0648\u0645\u064A". A ticker comes before its number ("BTC (39)", never "(39) BTC").' : "Write in English.",
+    "Money: the minus sign goes before the dollar sign (\u2212$1,392, \u2212$582M \u2014 never $-1,392)."
   ].join("\n");
   const body = { max_tokens: 3e3, system: sys, messages: [{ role: "user", content: "FACTS:\n" + JSON.stringify(facts).slice(0, 12e3) }] };
   let model = env.BOT_MODEL || "claude-sonnet-5-5";
@@ -4996,6 +5001,8 @@ var WD = {
     pf: "\u{1F4BC} Portfolio",
     mk: "\u{1F30D} Market",
     live: "Live",
+    pfS: "Portfolio",
+    btcS: "BTC",
     today: "today",
     alerts: (n) => `${n} alert${n === 1 ? "" : "s"}`,
     nearest: "nearest",
@@ -5019,21 +5026,23 @@ var WD = {
     off: "\u0645\u062A\u0648\u0642\u0641",
     dailyT: "\u{1F5D3} <b>\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0628\u0648\u062A \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629</b>",
     dailyNote: "\u0627\u0636\u063A\u0637 \u0644\u0644\u062A\u0634\u063A\u064A\u0644 / \u0627\u0644\u0625\u064A\u0642\u0627\u0641.",
-    nowM: "\u2600\uFE0F \u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0622\u0646",
-    nowE: "\u{1F319} \u0627\u0644\u0645\u0633\u0627\u0621 \u0627\u0644\u0622\u0646",
+    nowM: "\u2600\uFE0F \u0625\u0631\u0633\u0627\u0644 \u0645\u0644\u062E\u0635 \u0627\u0644\u0635\u0628\u0627\u062D",
+    nowE: "\u{1F319} \u0625\u0631\u0633\u0627\u0644 \u0645\u0644\u062E\u0635 \u0627\u0644\u0645\u0633\u0627\u0621",
     back: "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629",
     plan: "\u{1F4CB} \u0627\u0644\u062E\u0637\u0629",
     pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A",
     mk: "\u{1F30D} \u0627\u0644\u0633\u0648\u0642",
     live: "\u0645\u0628\u0627\u0634\u0631",
+    pfS: "\u0627\u0644\u0645\u062D\u0641\u0638\u0629",
+    btcS: "\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
     today: "\u0627\u0644\u064A\u0648\u0645",
     alerts: (n) => `${n} \u062A\u0646\u0628\u064A\u0647`,
     nearest: "\u0627\u0644\u0623\u0642\u0631\u0628",
     away: "\u0627\u0644\u0645\u062A\u0628\u0642\u064A",
-    nextDca: "\u0627\u0644\u0640 DCA \u0627\u0644\u0642\u0627\u062F\u0645",
+    nextDca: "\u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A \u0627\u0644\u0642\u0627\u062F\u0645",
     exit: "\u0627\u0644\u062E\u0631\u0648\u062C",
     planS: "\u0627\u0644\u062E\u0637\u0629",
-    fng: "\u0627\u0644\u062E\u0648\u0641/\u0627\u0644\u0637\u0645\u0639",
+    fng: "\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639",
     updated: "\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B",
     noUser: "\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629.",
     refresh: "\u{1F504}",
@@ -5176,7 +5185,7 @@ var TODO_TXT = {
     sell_signal: `\u{1F534} ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg \u2014 Sell / convert`
   })[x.what],
   ar: (x) => ({
-    dca_today: `\u{1F6D2} \u064A\u0648\u0645 \u0627\u0644\u0640 DCA: \u0627\u0634\u062A\u0631\u0650 ${x.coin} \u0628\u0640 ${usd(x.buy_usd)}`,
+    dca_today: `\u{1F6D2} \u064A\u0648\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A (DCA): \u0627\u0634\u062A\u0631\u0650 ${x.coin} \u0628\u0640 ${usd(x.buy_usd)}`,
     dca_missed: `\u23F0 DCA ${x.coin} \u0645\u062A\u0623\u062E\u0631 ${x.days_late} \u064A\u0648\u0645 (${usd(x.buy_usd)})`,
     dca_tomorrow: `\u{1F6D2} \u063A\u062F\u0627\u064B: DCA ${x.coin} ${usd(x.buy_usd)}`,
     at_buy_price: `\u{1F3AF} ${x.coin} ${usd(x.price_usd)} \u2014 \u0648\u0635\u0644 \u0625\u0644\u0649 \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0630\u064A \u062D\u062F\u062F\u062A\u0647 ${usd(x.your_buy_price_usd)}`,
@@ -5262,14 +5271,14 @@ var RADAR_TXT = {
   ar: {
     hot_longs: "\u0627\u0632\u062F\u062D\u0627\u0645 \u0641\u064A \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u0634\u0631\u0627\u0621 \u2014 \u0627\u0644\u062A\u0645\u0648\u064A\u0644 \u0645\u0648\u062C\u0628 \u062C\u062F\u0627\u064B",
     hot_shorts: "\u0627\u0632\u062F\u062D\u0627\u0645 \u0641\u064A \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u0628\u064A\u0639 \u2014 \u0627\u0644\u062A\u0645\u0648\u064A\u0644 \u0633\u0627\u0644\u0628",
-    oi_up: "\u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u062A\u0632\u062F\u0627\u062F \u2014 \u0642\u0641\u0632 \u0627\u0644\u0640 OI",
-    oi_down: "\u062A\u0645 \u0645\u0633\u062D \u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u2014 \u0627\u0646\u062E\u0641\u0636 \u0627\u0644\u0640 OI",
+    oi_up: "\u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u062A\u0632\u062F\u0627\u062F \u2014 \u0642\u0641\u0632\u062A \u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629",
+    oi_down: "\u062A\u0645 \u0645\u0633\u062D \u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u2014 \u0627\u0646\u062E\u0641\u0636\u062A \u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629",
     crowd_long: "\u0623\u063A\u0644\u0628 \u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A \u0641\u064A \u0645\u0631\u0627\u0643\u0632 \u0634\u0631\u0627\u0621",
     crowd_short: "\u0623\u063A\u0644\u0628 \u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A \u0641\u064A \u0645\u0631\u0627\u0643\u0632 \u0628\u064A\u0639",
     fund: "\u0627\u0644\u062A\u0645\u0648\u064A\u0644",
     yr: "\u0633\u0646\u0648\u064A",
-    oi: "\u0627\u0644\u0640 OI \u0641\u064A 24\u0633",
-    longs: "\u062D\u0633\u0627\u0628\u0627\u062A \u0627\u0644\u0634\u0631\u0627\u0621",
+    oi: "\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629 (24\u0633)",
+    longs: "\u0646\u0633\u0628\u0629 \u0627\u0644\u0634\u0631\u0627\u0621 (Long)",
     liq: "\u0627\u0644\u062A\u0635\u0641\u064A\u0627\u062A (OKX)",
     longsW: "\u0634\u0631\u0627\u0621",
     shortsW: "\u0628\u064A\u0639",
@@ -5367,9 +5376,10 @@ async function pinView(env, now = Date.now()) {
   const me = isOwner(env) ? null : await member(env), star = me && premiumNow(me) ? " \u2B50" : "", heart = me && me.supporter ? " \u{1F49B}" : "";
   const L1 = [
     `\u{1F4CC} <b>${w.live}</b>${star}${heart} \xB7 ${w.updated} ${local(now, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`,
-    `\u{1F4BC} <b>${usd2(sum.value)}</b>  ${dot(sum.ch24)} ${pct(sum.ch24)} ${w.today}`,
-    m.btc ? `\u{1FA99} BTC <b>${usd(m.btc.price)}</b>  ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}${m.fng ? ` \xB7 ${w.fng} <b>${m.fng.value}</b>` : ""}` : null,
-    `\u{1F4CB} ${w.planS} <b>${sum.prog ? sum.prog.pct.toFixed(1) : "0"}%</b> \xB7 \u{1F6AA} ${w.exit} <b>${met2}/3</b>`,
+    `\u{1F4BC} ${w.pfS}: <b>${usd2(sum.value)}</b> ${dot(sum.ch24)} (${pct(sum.ch24)} ${w.today})`,
+    // 💼 المحفظة: $33,143.94 (−3.95% اليوم)
+    m.btc ? `\u{1FA99} ${w.btcS}: <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} (${pct(m.btc.ch24)})${m.fng ? ` \xB7 ${w.fng}: <b>${m.fng.value}</b>` : ""}` : null,
+    `\u{1F4CB} ${w.planS}: <b>${sum.prog ? sum.prog.pct.toFixed(1) : "0"}%</b> \xB7 \u{1F6AA} ${w.exit}: <b>${met2}/3</b>`,
     dca ? `\u{1F6D2} ${w.nextDca}: <b>${esc(dca.sym)}</b> \xB7 ${esc((/* @__PURE__ */ new Date(dca.s.next + "T12:00:00Z")).toLocaleDateString("en-US", { month: "short", day: "numeric" }))}` : null,
     alerts.length ? `\u{1F514} ${w.alerts(alerts.length)}${near ? ` \xB7 ${w.nearest}: ${esc(near.alert)} (${near.pct_away}% ${w.away})` : ""}` : null
   ].filter(Boolean);
@@ -5657,11 +5667,11 @@ var T = {
     worst24: "\u0627\u0644\u0623\u0633\u0648\u0623 24\u0633",
     best7: "\u0627\u0644\u0623\u0641\u0636\u0644 7 \u0623\u064A\u0627\u0645",
     worst7: "\u0627\u0644\u0623\u0633\u0648\u0623 7 \u0623\u064A\u0627\u0645",
-    mvT: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623 (\u0639\u0645\u0644\u0627\u062A\u0643)",
-    noStable: "\u062F\u0648\u0646 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0642\u0631\u0629",
+    mvT: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623 \u0641\u064A \u0645\u062D\u0641\u0638\u062A\u0643",
+    noStable: "\u0628\u0627\u0633\u062A\u062B\u0646\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u0642\u0631\u0629",
     sigT: "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A",
     reinforce: "\u{1F7E2} \u062A\u0639\u0632\u064A\u0632",
-    sell: "\u{1F534} \u0628\u064A\u0639 / \u062A\u062D\u0648\u064A\u0644 \u0644\u0640 BTC",
+    sell: "\u{1F534} \u0628\u064A\u0639 / \u062A\u062D\u0648\u064A\u0644 \u0625\u0644\u0649 BTC",
     hold: "\u26AA \u0627\u062D\u062A\u0641\u0627\u0638",
     vsAvg: "\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643",
     mkT: "\u0627\u0644\u0633\u0648\u0642",
@@ -5712,7 +5722,7 @@ var T = {
     planS: "\u0627\u0644\u062E\u0637\u0629",
     allocS: "\u0627\u0644\u062A\u0648\u0632\u064A\u0639",
     onT: (a, n) => `${a} \u0645\u0646 ${n} \u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641`,
-    dcaS: (n, mo) => `${n} \u0634\u0631\u0627\u0621 \xB7 ${mo} \u0634\u0647\u0631\u064A\u0627\u064B`,
+    dcaS: (n, mo) => `${n === 1 ? "\u0639\u0645\u0644\u064A\u0629 \u0634\u0631\u0627\u0621 \u062F\u0648\u0631\u064A \u0648\u0627\u062D\u062F\u0629" : n === 2 ? "\u0639\u0645\u0644\u064A\u062A\u0627 \u0634\u0631\u0627\u0621 \u062F\u0648\u0631\u064A" : n + " \u0639\u0645\u0644\u064A\u0627\u062A \u0634\u0631\u0627\u0621 \u062F\u0648\u0631\u064A"} (DCA) \xB7 ${mo} \u0634\u0647\u0631\u064A\u0627\u064B`,
     exitS: (n) => `\u0627\u0644\u062E\u0631\u0648\u062C ${n} \u0645\u0646 3`,
     nearTp: "\u0623\u0642\u0631\u0628 \u0647\u062F\u0641 \u0631\u0628\u062D",
     exitT: "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
@@ -5835,7 +5845,7 @@ function viewPortfolio(t, cfg, sum, m, now) {
   L.push("", `\u{1F3AF} ${t.sigT} \u{1F7E2} ${sum.counts.reinforce} \xB7 \u{1F534} ${sum.counts.sell} \xB7 \u26AA ${sum.counts.hold}`);
   if (sum.plan.length) L.push(`\u{1F4CB} ${t.planS} <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${isAr(t) ? `${sum.prog.completed} \u0645\u0646 ${sum.prog.counted}` : `${sum.prog.completed}/${sum.prog.counted}`} \u2705`);
   if (sum.alloc) L.push(`\u2696\uFE0F ${t.allocS} ${t.onT(sum.alloc.onTarget, sum.alloc.count)}`);
-  if ((sum.dca || []).length) L.push(`\u{1F6D2} DCA ${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
+  if ((sum.dca || []).length) L.push(`\u{1F6D2} ${isAr(t) ? "" : "DCA "}${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
   const mc = sum.macro.filter((x) => x.met).length, tp = nearestTp(sum);
   L.push(`\u{1F6AA} ${t.exitS(mc)}${tp ? ` \xB7 ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ""}`);
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pf"), cb3(t.movers, "mv")], [cb3(t.plan, "pl"), cb3(t.exit, "ex")], [cb3(t.signals, "sg"), url2(t.openApp, APP)], [cb3(t.back, "menu")]] };
@@ -5845,7 +5855,7 @@ function viewExit(t, sum, now) {
   const L = [`\u{1F6AA} <b>${t.exitT}</b> \xB7 ${hm(now)}`, "", `\u{1F9ED} <b>${t.conds}</b> \xB7 ${t.met3(mc)}`];
   for (const x of sum.macro) {
     const v = (n) => n == null ? "\u2014" : n.toFixed(x.dp) + x.unit;
-    L.push(`${x.met ? "\u2705" : "\u2B1C"} ${name[x.k]} ${v(x.now)} \u2192 ${x.op} ${v(x.lvl)}`);
+    L.push(`${x.met ? "\u2705" : "\u2B1C"} ${name[x.k]}: ${v(x.now)} \u2192 ${x.op} ${v(x.lvl)}`);
   }
   if (mc === 3) L.push(`\u{1F514} <b>${t.allExit}</b>`);
   const tps = (sum.tps || []).map((x) => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
@@ -5883,7 +5893,7 @@ function viewSignals(t, sum) {
     by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(`<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${ar ? "\u0627\u0644\u0645\u062A\u0648\u0633\u0637" : t.vsAvg} ${price2(c.avg)}${c.pending ? " \u23F3" : ""}`));
     if (by[k].length > 12) L.push("\u2026");
   }
-  if (sum.coins.some((c) => c.pending)) L.push("", isAr(t) ? "<i>\u23F3 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0644\u062D\u0638\u064A \u064A\u0634\u064A\u0631 \u0644\u063A\u064A\u0631 \u0630\u0644\u0643 \u2014 \u062A\u062A\u0623\u0643\u062F \u0639\u0644\u0649 \u0642\u0641\u0644\u0629 \u0627\u0644\u064A\u0648\u0645 (03:00)</i>" : "<i>\u23F3 the live price says otherwise \u2014 confirmed at the daily close (03:00 Riyadh)</i>");
+  if (sum.coins.some((c) => c.pending)) L.push("", isAr(t) ? "<i>\u23F3 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u064A\u0648\u0645\u064A (03:00 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636)</i>" : "<i>\u23F3 waiting for the daily close to confirm (03:00 Riyadh)</i>");
   else L.push("", isAr(t) ? "<i>\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A \u0639\u0644\u0649 \u0642\u0641\u0644\u0629 \u0627\u0644\u064A\u0648\u0645 (03:00 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636)</i>" : "<i>Signals on the daily close (03:00 Riyadh)</i>");
   L.push("", isAr(t) ? NOT_ADVICE.ar : NOT_ADVICE.en);
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "sg"), cb3(t.pf, "pf")], [cb3(t.back, "menu")]] };
@@ -5906,7 +5916,7 @@ ${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb3(t.back,
   }
   if ((sum.dca || []).length) {
     L.push("", `\u{1F6D2} <b>${t.dca}</b>`);
-    sum.dca.forEach((x) => L.push(`<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}${isAr(t) ? " \u0634\u0647\u0631\u064A\u0627\u064B" : "/mo"}${x.s.next ? ` \xB7 ${t.next} ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}`));
+    sum.dca.forEach((x) => L.push(isAr(t) ? `${esc(x.sym)}: ${usd(x.s.perMonth)} \u0634\u0647\u0631\u064A\u0627\u064B${x.s.next ? ` \xB7 \u0627\u0644\u0642\u0627\u062F\u0645 ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}` : `<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}/mo${x.s.next ? ` \xB7 ${t.next} ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}`));
   }
   if ((sum.buyAt || []).length) {
     L.push("", `\u{1F514} <b>${t.buyAt}</b>`);
@@ -7937,7 +7947,7 @@ var worker_default = {
             if (r.fired) console.log(JSON.stringify({ watch: r }));
           }).catch((e) => log2("watch", e));
           if (st.idle) {
-            if (isTgChat(chat)) await noteIdle(env2, chat, mem7[chat], (text) => fetch(`https://api.telegram.org/bot${env2.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ chat_id: chat, text }) }).then((r) => r.json())).catch((e) => log2("idle", e));
+            if (isTgChat(chat)) await noteIdle(env2, chat, mem7[chat], (text) => fetch(`https://api.telegram.org/bot${env2.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(bidiBody({ chat_id: chat, text })) }).then((r) => r.json())).catch((e) => log2("idle", e));
             return;
           }
           await runDaily(env2, now).then((r) => {

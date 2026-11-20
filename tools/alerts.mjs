@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { summarize, evaluate, settings, priceSeries, combine } from './alerts-core.mjs';
+import { bidiBody } from './worker/bidi.mjs';   // Arabic alerts read right-to-left, like the bot's
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const args = process.argv.slice(2), opt = n => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null; };
@@ -92,7 +93,7 @@ function firestore(sa, token) {
 async function send(token, chat, msg) {
   const body = { chat_id: chat, text: msg.text.slice(0, 4000), parse_mode: 'HTML', disable_web_page_preview: true };
   if (msg.buttons) body.reply_markup = { inline_keyboard: msg.buttons };
-  const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(bidiBody(body)) });
   const j = await r.json().catch(() => ({}));
   return { ok: !!j.ok, status: r.status, retry: r.status === 429 || r.status >= 500 };
 }

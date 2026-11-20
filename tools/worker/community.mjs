@@ -257,7 +257,7 @@ function pulseText(m, now, kind) {
     up.length ? '' : null, up.length ? `📈 ${up.map(r => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(' · ')}` : null,
     dn.length ? `📉 ${dn.map(r => `${esc(r.sym)} ${pct(r.ch24, 1)}`).join(' · ')}` : null,
     ...(kind === 'move' ? [] : otherMarkets(m, now)),
-    '', `<i>${NOTE.en} · ${NOTE.ar}</i>`].filter(x => x != null);
+    '', `<i>${NOTE.en}</i>`, `<i>${NOTE.ar}</i>`].filter(x => x != null);   // two lines: the English and the Arabic never share one (their dots and dashes mixed)
   return L.join('\n');
 }
 // the pulse's two extra lines (not on a 🚨 BTC move): 🥇 gold · silver, and 🇺🇸 the US market (bStocks: best / worst)

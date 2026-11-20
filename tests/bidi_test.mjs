@@ -1,7 +1,7 @@
 // Arabic Telegram messages read right-to-left (tools/worker/bidi.mjs)
 import { bidi, bidiBody } from '../tools/worker/bidi.mjs';
 let ok = 0, n = 0; const check = (name, c, d) => { n++; if (c) ok++; console.log((c ? 'PASS ' : 'FAIL ') + name + (c ? '' : ' -> ' + JSON.stringify(d))); };
-const R = '\u200F', I = '\u200E', P = '\u200E', v = s => s.replace(/\u200E/g, '|').replace(/\u200F/g, '«R»');
+const R = '\u200F', I = '\u200E', P = '\u200E\u200F', v = s => s.replace(/\u200E/g, '|').replace(/\u200F/g, '«R»');
 let t = bidi('▫️ <b>BTC</b> 0.001 · $75.27 — التطبيق: 0.1479');
 check('a line with Arabic starts right-to-left; the ticker and each number are their own left-to-right island', t.startsWith(R) && t.includes(`<b>${I}BTC${P}</b>`) && t.includes(`${I}$75.27${P}`) && t.includes(`التطبيق: ${I}0.1479${P}`), v(t));
 t = bidi('• VVV TP1: <b>43.40$</b> — أبعد بنحو 114%');
@@ -21,6 +21,9 @@ check('HTML tags are never changed', /<a href="https:\/\/x\.com\/a-b">/.test(bid
 const b = bidiBody({ chat_id: 1, text: 'السعر 100$', parse_mode: 'HTML', reply_markup: { x: 1 } });
 check('a short run never breaks across two lines (no-break spaces inside: "BABYDOGE 0.45")', bidi('عملات: BABYDOGE 0.45163086').includes(`${I}BABYDOGE\u00A00.45163086${P}`), v(bidi('عملات: BABYDOGE 0.45163086')));
 check('a list "Binance · Gate · now" runs right-to-left item by item (an RLM after each ·)', bidi('<i>Binance · Gate · الآن</i>').includes(`${I}Binance${P} ·${R} ${I}Gate${P} ·${R} الآن`), v(bidi('<i>Binance · Gate · الآن</i>')));
+check('an island ends with an RLM: a bracket after it stays with the Arabic ("BTC (39)", never "(39) BTC")', bidi('<b>بيع / تحويل إلى BTC</b> (39)').includes(`${I}BTC${P}</b> (${I}39${P})`), v(bidi('<b>بيع / تحويل إلى BTC</b> (39)')));
+check('"58.7% → ≤ 45.9%" is ONE left-to-right island (the ≤ never mirrors, the arrow keeps its way)', bidi('هيمنة BTC: 58.7% → ≤ 45.9%').includes('58.7%\u00A0→\u00A0≤\u00A045.9%'), v(bidi('هيمنة BTC: 58.7% → ≤ 45.9%')));
+check('money: the sign before the $ ("$-1,392" → "−$1,392", "$-582M" → "−$582M"), in English too', bidiBody({ text: 'P&L $-1,392 · ETF $-582M' }).text === 'P&L −$1,392 · ETF −$582M' && bidiBody({ text: 'الربح $-1,392' }).text.includes('−\u2060$1,392'), [bidiBody({ text: 'P&L $-1,392 · ETF $-582M' }).text]);
 check('a Telegram body: only its text changes', b.text.startsWith(R) && b.chat_id === 1 && b.reply_markup.x === 1);
 const dl = bidi('البيتكوين <b>$63,129</b> 🔴 −1.09%');
 check('after a 🔴 / 🟢 dot an RLM: "$63,129 🔴 −1.09%" stays two parts (else one left-to-right run, read backwards)', dl.includes('🔴 ' + R + I + '−1.09%'), v(dl));

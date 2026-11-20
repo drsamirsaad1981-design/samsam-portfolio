@@ -129,7 +129,7 @@ export default {
         await asChat(chat, async () => {
           const env = cenv;   // the round asks Firebase "anything new?" at most every 10 (owner) / 30 (members) minutes
           await runWatch(env, now).then(r => { if (r.fired) console.log(JSON.stringify({ watch: r })); }).catch(e => log('watch', e));
-          if (st.idle) { if (isTgChat(chat)) await noteIdle(env, chat, mem[chat], text => fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text }) }).then(r => r.json())).catch(e => log('idle', e)); return; }
+          if (st.idle) { if (isTgChat(chat)) await noteIdle(env, chat, mem[chat], text => fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(bidiBody({ chat_id: chat, text })) }).then(r => r.json())).catch(e => log('idle', e)); return; }
           await runDaily(env, now).then(r => { if (r.job) console.log(JSON.stringify({ daily: r })); }).catch(e => log('daily', e));   // phase 5: morning / evening / radars / pinned
         });
         reads[chat] = takeReads();   // 📖 this member's Firebase reads in this round

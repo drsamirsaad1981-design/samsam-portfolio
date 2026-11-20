@@ -50,11 +50,11 @@ export async function setCfg(env, patch) { const c = { ...(await getCfg(env)), .
 const WD = {
   en: { morning: 'Smart morning', evening: 'Smart evening', radar: 'Leverage radar', sectors: 'Sector radar', pin: 'Live pinned message', on: 'on', off: 'off',
     dailyT: '🗓 <b>The bot speaks first</b>', dailyNote: 'Tap to turn on / off.', nowM: '☀️ Morning now', nowE: '🌙 Evening now', back: '⬅️ Menu', plan: '📋 Plan', pf: '💼 Portfolio', mk: '🌍 Market',
-    live: 'Live', today: 'today', alerts: n => `${n} alert${n === 1 ? '' : 's'}`, nearest: 'nearest', away: 'away', nextDca: 'Next DCA', exit: 'Exit', planS: 'Plan', fng: 'F&amp;G', updated: 'updated',
+    live: 'Live', pfS: 'Portfolio', btcS: 'BTC', today: 'today', alerts: n => `${n} alert${n === 1 ? '' : 's'}`, nearest: 'nearest', away: 'away', nextDca: 'Next DCA', exit: 'Exit', planS: 'Plan', fng: 'F&amp;G', updated: 'updated',
     noUser: 'Portfolio not connected.', refresh: '🔄', report: '📊 Full report' },
   ar: { morning: 'الصباح الذكي', evening: 'المساء الذكي', radar: 'رادار الرافعة', sectors: 'رادار القطاعات', pin: 'الرسالة المثبتة', on: 'يعمل', off: 'متوقف',
-    dailyT: '🗓 <b>رسائل البوت التلقائية</b>', dailyNote: 'اضغط للتشغيل / الإيقاف.', nowM: '☀️ الصباح الآن', nowE: '🌙 المساء الآن', back: '⬅️ القائمة', plan: '📋 الخطة', pf: '💼 محفظتي', mk: '🌍 السوق',
-    live: 'مباشر', today: 'اليوم', alerts: n => `${n} تنبيه`, nearest: 'الأقرب', away: 'المتبقي', nextDca: 'الـ DCA القادم', exit: 'الخروج', planS: 'الخطة', fng: 'الخوف/الطمع', updated: 'تم التحديث',
+    dailyT: '🗓 <b>رسائل البوت التلقائية</b>', dailyNote: 'اضغط للتشغيل / الإيقاف.', nowM: '☀️ إرسال ملخص الصباح', nowE: '🌙 إرسال ملخص المساء', back: '⬅️ القائمة', plan: '📋 الخطة', pf: '💼 محفظتي', mk: '🌍 السوق',
+    live: 'مباشر', pfS: 'المحفظة', btcS: 'البيتكوين', today: 'اليوم', alerts: n => `${n} تنبيه`, nearest: 'الأقرب', away: 'المتبقي', nextDca: 'الشراء الدوري القادم', exit: 'الخروج', planS: 'الخطة', fng: 'الخوف والطمع', updated: 'تم التحديث',
     noUser: 'المحفظة غير متصلة.', refresh: '🔄', report: '📊 التقرير الكامل' },
 };
 
@@ -160,7 +160,7 @@ const TODO_TXT = {
     take_profit_reached: `💰 ${x.coin} reached TP${x.tp} ${usd(x.level_usd)} — sell ${x.sell_pct}%`, take_profit_close: `💰 ${x.coin} ${r2(x.pct_to_go)}% from TP${x.tp} ${usd(x.level_usd)}`,
     exit_conditions: `🚪 Exit: ${x.met_of_3}/3 conditions met`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — trim ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — add ${usd(x.usd_to_fix)}`,
     reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg — Reinforce`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg — Sell / convert` }[x.what]),
-  ar: x => ({ dca_today: `🛒 يوم الـ DCA: اشترِ ${x.coin} بـ ${usd(x.buy_usd)}`, dca_missed: `⏰ DCA ${x.coin} متأخر ${x.days_late} يوم (${usd(x.buy_usd)})`, dca_tomorrow: `🛒 غداً: DCA ${x.coin} ${usd(x.buy_usd)}`,
+  ar: x => ({ dca_today: `🛒 يوم الشراء الدوري (DCA): اشترِ ${x.coin} بـ ${usd(x.buy_usd)}`, dca_missed: `⏰ DCA ${x.coin} متأخر ${x.days_late} يوم (${usd(x.buy_usd)})`, dca_tomorrow: `🛒 غداً: DCA ${x.coin} ${usd(x.buy_usd)}`,
     at_buy_price: `🎯 ${x.coin} ${usd(x.price_usd)} — وصل إلى سعر الشراء الذي حددته ${usd(x.your_buy_price_usd)}`, near_buy_price: `🎯 ${x.coin} فوق سعر الشراء ${usd(x.your_buy_price_usd)} بـ ${pct(x.pct_above_buy_price, 1)}`,
     take_profit_reached: `💰 ${x.coin} وصل TP${x.tp} ${usd(x.level_usd)} — بيع ${x.sell_pct}%`, take_profit_close: `💰 ${x.coin} باقي ${r2(x.pct_to_go)}% على TP${x.tp} ${usd(x.level_usd)}`,
     exit_conditions: `🚪 الخروج: ${x.met_of_3}/3 مؤشرات تحققت`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — قلّل ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — زوّد ${usd(x.usd_to_fix)}`,
@@ -208,8 +208,8 @@ const RADAR_TXT = {
   en: { hot_longs: 'Crowded longs — funding very positive', hot_shorts: 'Crowded shorts — funding negative', oi_up: 'Leverage piling up — open interest jumped', oi_down: 'Leverage flushed out — open interest fell',
     crowd_long: 'Most accounts are long', crowd_short: 'Most accounts are short', fund: 'Funding', yr: 'yr', oi: 'Open interest 24h', longs: 'Long accounts', liq: 'Liquidations (OKX)', longsW: 'longs', shortsW: 'shorts',
     noteL: 'One-sided longs: a dip can cascade (long squeeze). Check the Liq Map.', noteS: 'One-sided shorts: a pump can cascade (short squeeze). Check the Liq Map.', noteN: 'Leverage changed fast — volatility likely. Check the Liq Map.' },
-  ar: { hot_longs: 'ازدحام في مراكز الشراء — التمويل موجب جداً', hot_shorts: 'ازدحام في مراكز البيع — التمويل سالب', oi_up: 'الرافعة تزداد — قفز الـ OI', oi_down: 'تم مسح الرافعة — انخفض الـ OI',
-    crowd_long: 'أغلب الحسابات في مراكز شراء', crowd_short: 'أغلب الحسابات في مراكز بيع', fund: 'التمويل', yr: 'سنوي', oi: 'الـ OI في 24س', longs: 'حسابات الشراء', liq: 'التصفيات (OKX)', longsW: 'شراء', shortsW: 'بيع',
+  ar: { hot_longs: 'ازدحام في مراكز الشراء — التمويل موجب جداً', hot_shorts: 'ازدحام في مراكز البيع — التمويل سالب', oi_up: 'الرافعة تزداد — قفزت العقود المفتوحة', oi_down: 'تم مسح الرافعة — انخفضت العقود المفتوحة',
+    crowd_long: 'أغلب الحسابات في مراكز شراء', crowd_short: 'أغلب الحسابات في مراكز بيع', fund: 'التمويل', yr: 'سنوي', oi: 'العقود المفتوحة (24س)', longs: 'نسبة الشراء (Long)', liq: 'التصفيات (OKX)', longsW: 'شراء', shortsW: 'بيع',
     noteL: 'مراكز الشراء متكدسة: أي هبوط قد يسبب تصفيات متتالية. راجع خريطة التصفيات.', noteS: 'مراكز البيع متكدسة: أي صعود قد يسبب تصفيات متتالية. راجع خريطة التصفيات.', noteN: 'تغيّرت الرافعة بسرعة — يُتوقع تذبذب. راجع خريطة التصفيات.' },
 };
 export function radarFindings(s) {
@@ -278,9 +278,9 @@ export async function pinView(env, now = Date.now()) {
   const met = (sum.macro || []).filter(x => x.met).length;
   const me = isOwner(env) ? null : await member(env), star = me && premiumNow(me) ? ' ⭐' : '', heart = me && me.supporter ? ' 💛' : '';   // a member's badges
   const L1 = [`📌 <b>${w.live}</b>${star}${heart} · ${w.updated} ${local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`,
-    `💼 <b>${usd2(sum.value)}</b>  ${dot(sum.ch24)} ${pct(sum.ch24)} ${w.today}`,
-    m.btc ? `🪙 BTC <b>${usd(m.btc.price)}</b>  ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}${m.fng ? ` · ${w.fng} <b>${m.fng.value}</b>` : ''}` : null,
-    `📋 ${w.planS} <b>${sum.prog ? sum.prog.pct.toFixed(1) : '0'}%</b> · 🚪 ${w.exit} <b>${met}/3</b>`,
+    `💼 ${w.pfS}: <b>${usd2(sum.value)}</b> ${dot(sum.ch24)} (${pct(sum.ch24)} ${w.today})`,   // 💼 المحفظة: $33,143.94 (−3.95% اليوم)
+    m.btc ? `🪙 ${w.btcS}: <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} (${pct(m.btc.ch24)})${m.fng ? ` · ${w.fng}: <b>${m.fng.value}</b>` : ''}` : null,
+    `📋 ${w.planS}: <b>${sum.prog ? sum.prog.pct.toFixed(1) : '0'}%</b> · 🚪 ${w.exit}: <b>${met}/3</b>`,
     dca ? `🛒 ${w.nextDca}: <b>${esc(dca.sym)}</b> · ${esc(new Date(dca.s.next + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}` : null,
     alerts.length ? `🔔 ${w.alerts(alerts.length)}${near ? ` · ${w.nearest}: ${esc(near.alert)} (${near.pct_away}% ${w.away})` : ''}` : null].filter(Boolean);
   const origin = await kvGet(env, 'tg:origin');   // 📊 the Mini App, when the bot knows its own address

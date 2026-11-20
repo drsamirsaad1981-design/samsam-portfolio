@@ -86,7 +86,7 @@ const T = {
     you: 'لديك', avg: 'متوسط شرائك', signal: 'الإشارة', noHold: 'ليست في محفظتك.', live: 'مباشر', snap: m => `منذ ${m} دقيقة`, src: 'CoinGecko',
     planT: 'خطة التجميع', overall: 'الإجمالي', done: 'تم', left: 'المتبقي', dca: 'الشراء الدوري (DCA)', next: 'التالي', buyAt: 'تنبيهات سعر الشراء', away: 'يبعد',
     noPlan: 'لا توجد أهداف في الخطة بعد — أضفها من صفحة خطة التجميع في التطبيق.', best24: 'الأفضل 24س', worst24: 'الأسوأ 24س', best7: 'الأفضل 7 أيام', worst7: 'الأسوأ 7 أيام',
-    mvT: 'الأفضل والأسوأ (عملاتك)', noStable: 'دون العملات المستقرة', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل لـ BTC', hold: '⚪ احتفاظ',
+    mvT: 'الأفضل والأسوأ في محفظتك', noStable: 'باستثناء المستقرة', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل إلى BTC', hold: '⚪ احتفاظ',
     vsAvg: 'مقارنة بمتوسط شرائك', mkT: 'السوق', topUp: n => `أعلى ${n} · الأفضل 24س`, topDn: n => `أعلى ${n} · الأسوأ 24س`, stUp: 'الأفضل في bStocks · 24س', stDn: 'الأسوأ في bStocks · 24س', stNote: 'أسهم أمريكية مرمّزة (Binance)', updated: 'تم التحديث', futures: 'Futures', yes: 'نعم', private: '',
     welcome: 'البوت متصل ✅\nيرد عليك هنا في أي وقت. اضغط زراً بالأسفل، أو أرسل رمز عملة مثل <code>btc</code>.',
     thinking: '🧠 أفكر…', aiLimit: n => `انتهت أسئلتك الـ ${n} لهذا اليوم — تتجدد غداً (12 منتصف الليل بتوقيت الرياض). الأزرار والرموز تعمل كالمعتاد.`,
@@ -97,7 +97,7 @@ const T = {
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
     today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل البيتكوين', beat: (a, n) => `${a} من ${n} تفوقت`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
     dom: 'الهيمنة', fng: 'الخوف والطمع', altS: 'موسم العملات البديلة', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a} من ${n} على الهدف`,
-    dcaS: (n, mo) => `${n} شراء · ${mo} شهرياً`, exitS: (n) => `الخروج ${n} من 3`, nearTp: 'أقرب هدف ربح',
+    dcaS: (n, mo) => `${n === 1 ? 'عملية شراء دوري واحدة' : n === 2 ? 'عمليتا شراء دوري' : n + ' عمليات شراء دوري'} (DCA) · ${mo} شهرياً`, exitS: (n) => `الخروج ${n} من 3`, nearTp: 'أقرب هدف ربح',
     exitT: 'خطة الخروج', conds: 'مؤشرات الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC',
     tpT: 'مستويات جني الأرباح', tpKey: 'السعر · المتبقي · البيع', more: n => `+${n} عملة أخرى في التطبيق`, toGo: 'المتبقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'لا توجد مستويات جني أرباح بعد — أضفها من صفحة استراتيجية الخروج في التطبيق.',
     openExit: '🚪 افتح استراتيجية الخروج', allExit: 'تحققت المؤشرات الثلاثة — منطقة الخروج',
@@ -184,7 +184,7 @@ export function viewPortfolio(t, cfg, sum, m, now) {
   L.push('', `🎯 ${t.sigT} 🟢 ${sum.counts.reinforce} · 🔴 ${sum.counts.sell} · ⚪ ${sum.counts.hold}`);
   if (sum.plan.length) L.push(`📋 ${t.planS} <b>${sum.prog.pct.toFixed(1)}%</b> · ${isAr(t) ? `${sum.prog.completed} من ${sum.prog.counted}` : `${sum.prog.completed}/${sum.prog.counted}`} ✅`);
   if (sum.alloc) L.push(`⚖️ ${t.allocS} ${t.onT(sum.alloc.onTarget, sum.alloc.count)}`);
-  if ((sum.dca || []).length) L.push(`🛒 DCA ${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
+  if ((sum.dca || []).length) L.push(`🛒 ${isAr(t) ? '' : 'DCA '}${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
   const mc = sum.macro.filter(x => x.met).length, tp = nearestTp(sum);
   L.push(`🚪 ${t.exitS(mc)}${tp ? ` · ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ''}`);
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pf'), cb(t.movers, 'mv')], [cb(t.plan, 'pl'), cb(t.exit, 'ex')], [cb(t.signals, 'sg'), url(t.openApp, APP)], [cb(t.back, 'menu')]] };
@@ -196,7 +196,7 @@ export function viewExit(t, sum, now) {
   const L = [`🚪 <b>${t.exitT}</b> · ${hm(now)}`, '', `🧭 <b>${t.conds}</b> · ${t.met3(mc)}`];
   for (const x of sum.macro) {
     const v = n => n == null ? '—' : n.toFixed(x.dp) + x.unit;
-    L.push(`${x.met ? '✅' : '⬜'} ${name[x.k]} ${v(x.now)} → ${x.op} ${v(x.lvl)}`);
+    L.push(`${x.met ? '✅' : '⬜'} ${name[x.k]}: ${v(x.now)} → ${x.op} ${v(x.lvl)}`);   // (one left-to-right piece in Arabic: "58.7% → ≤ 45.9%")
   }
   if (mc === 3) L.push(`🔔 <b>${t.allExit}</b>`);
   const tps = (sum.tps || []).map(x => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
@@ -234,7 +234,7 @@ export function viewSignals(t, sum) {
     if (by[k].length > 12) L.push('…');
   }
   // ⏳ decided on the daily close; a coin whose live price says something else is marked, not moved
-  if (sum.coins.some(c => c.pending)) L.push('', isAr(t) ? '<i>⏳ السعر اللحظي يشير لغير ذلك — تتأكد على قفلة اليوم (03:00)</i>' : '<i>⏳ the live price says otherwise — confirmed at the daily close (03:00 Riyadh)</i>');
+  if (sum.coins.some(c => c.pending)) L.push('', isAr(t) ? '<i>⏳ بانتظار تأكيد الإغلاق اليومي (03:00 بتوقيت الرياض)</i>' : '<i>⏳ waiting for the daily close to confirm (03:00 Riyadh)</i>');
   else L.push('', isAr(t) ? '<i>الإشارات على قفلة اليوم (03:00 بتوقيت الرياض)</i>' : '<i>Signals on the daily close (03:00 Riyadh)</i>');
   L.push('', isAr(t) ? NOT_ADVICE.ar : NOT_ADVICE.en);
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'sg'), cb(t.pf, 'pf')], [cb(t.back, 'menu')]] };
@@ -253,7 +253,9 @@ export function viewPlan(t, sum, now) {
   }
   if ((sum.dca || []).length) {
     L.push('', `🛒 <b>${t.dca}</b>`);
-    sum.dca.forEach(x => L.push(`<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}${isAr(t) ? ' شهرياً' : '/mo'}${x.s.next ? ` · ${t.next} ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`));
+    sum.dca.forEach(x => L.push(isAr(t)   // Arabic: "BTC: $3,000 شهرياً · القادم 2026-12-01" (no padded code block: it reads backwards right-to-left)
+      ? `${esc(x.sym)}: ${usd(x.s.perMonth)} شهرياً${x.s.next ? ` · القادم ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`
+      : `<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}/mo${x.s.next ? ` · ${t.next} ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`));
   }
   if ((sum.buyAt || []).length) {
     L.push('', `🔔 <b>${t.buyAt}</b>`);
