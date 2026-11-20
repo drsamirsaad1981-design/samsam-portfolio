@@ -195,7 +195,7 @@ function pulseText(m, now, kind) {
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 3), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 3);
   const head = kind === 'move' ? `🚨 <b>BTC ${btc.ch24 > 0 ? '+' : ''}${pct(btc.ch24, 1)} in 24h</b>` : `${kind === 'am' ? '☀️' : '🌙'} <b>Market pulse · نبض السوق</b> · ${local(now, { day: 'numeric', month: 'short' })}`;
   const L = [head, '',
-    `₿ BTC <b>${usd(btc.price)}</b> ${dot(btc.ch24)} ${pct(btc.ch24, 2)}`,
+    `🪙 BTC <b>${usd(btc.price)}</b> ${dot(btc.ch24)} ${pct(btc.ch24, 2)}`,
     g.mcap ? `🌐 Market cap <b>$${(g.mcap / 1e12).toFixed(2)}T</b> ${dot(g.mcapCh24)} ${pct(g.mcapCh24, 2)}` : null,
     d.btc != null ? `👑 BTC dominance <b>${d.btc.toFixed(1)}%</b>${d.usdt != null ? ` · USDT ${d.usdt.toFixed(2)}%` : ''}` : null,
     m.fng ? `😨 Fear &amp; Greed <b>${m.fng.value}</b> — ${esc(m.fng.label || '')}` : null,

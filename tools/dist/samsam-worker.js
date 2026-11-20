@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 42c2eaa3e14b650c
+// sources-hash: 84f6288f2e0ed283
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5385,7 +5385,7 @@ function pulseText(m, now, kind) {
   const L = [
     head,
     "",
-    `\u20BF BTC <b>${usd(btc.price)}</b> ${dot(btc.ch24)} ${pct(btc.ch24, 2)}`,
+    `\u{1FA99} BTC <b>${usd(btc.price)}</b> ${dot(btc.ch24)} ${pct(btc.ch24, 2)}`,
     g.mcap ? `\u{1F310} Market cap <b>$${(g.mcap / 1e12).toFixed(2)}T</b> ${dot(g.mcapCh24)} ${pct(g.mcapCh24, 2)}` : null,
     d.btc != null ? `\u{1F451} BTC dominance <b>${d.btc.toFixed(1)}%</b>${d.usdt != null ? ` \xB7 USDT ${d.usdt.toFixed(2)}%` : ""}` : null,
     m.fng ? `\u{1F628} Fear &amp; Greed <b>${m.fng.value}</b> \u2014 ${esc(m.fng.label || "")}` : null,
