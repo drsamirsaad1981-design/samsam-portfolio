@@ -211,7 +211,7 @@
         return standalone() ? 'On your home screen' + off : installEvt ? 'Add it to your home screen — opens like an app' : isIOS() ? 'Safari: Share → Add to Home Screen' : 'Browser menu → Install app';
       }
       if (k === 'tglink') return memberSt ? (memberSt.botLinked ? '✅ Linked — the bot reads your portfolio (only for you)' : 'One tap — then the bot shows your portfolio, alerts, morning & evening') : 'One tap — the bot shows your portfolio';
-      if (k === 'tgchan') { var tc = memberSt && memberSt.tgIn && memberSt.tgIn.channel; return tc ? '✅ You\'re in' : 'The market pulse twice a day · ⭐ on posts you like'; }
+      if (k === 'tgchan') { var tc = memberSt && memberSt.tgIn && memberSt.tgIn.channel; return tc ? '✅ You\'re in' : 'The market pulse twice a day · talk in the comments'; }
       if (k === 'tggroup') { var tg2 = memberSt && memberSt.tgIn && memberSt.tgIn.group; return tg2 ? '✅ You\'re in' : 'Chat · suggestions · bugs · the guide · news'; }
       if (k === 'claudekey') return memberSt && memberSt.has ? '🔑 Set (…' + memberSt.tail + ') · 100 questions & 10 reports a day — on your Claude bill' : 'Optional · your own key = 100 questions & 10 reports a day';
       if (k === 'aiinfo') { var qq = memberSt && memberSt.questions, rr = memberSt && memberSt.reports; return qq ? (memberSt.has ? '🔑 Your own key · ' : memberSt.premium ? '⭐ Premium · ' : '') + 'Today: 🧠 ' + qq.used + '/' + qq.limit + ' questions · 📊 ' + (rr ? rr.used + '/' + rr.limit : '0/0') + ' quick reports' : 'Why there are limits · free ways · more'; }
@@ -235,7 +235,7 @@
     // (Wallets & check, Import from exchange and Rewards & mining live on Performance; DCA and the Exit plan on the Plan page;
     //  Signal thresholds, Categories and the Baseline on Overview; Target allocation on Allocation — each where it is used)
     ['Telegram', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link your portfolio to the Telegram bot', 'tglink'],
-      ['tgchan', 'megaphone', 'Join Cute Portfolio Signals', 'tgchan'], ['tggroup', 'chat', 'Join Cute Portfolio Community', 'tggroup']]],
+      ['tgchan', 'megaphone', 'Join Cute Portfolio Signals', 'tgchan']]],   // one place since 20 Nov: the channel, with comments (the group is only its discussion)
     ['AI', [['aiinfo', 'bot', 'AI Analysis & questions', 'aiinfo'], ['claudekey', 'key', 'My Claude key', 'claudekey']]],
     ['Admin', [['admin', 'shield', 'Admin dashboard', 'admin']]],
     ['Support', [['support', 'heart', 'Support Cute Portfolio & Channel 💛', 'support']]],

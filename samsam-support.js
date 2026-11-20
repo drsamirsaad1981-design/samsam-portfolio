@@ -56,8 +56,7 @@
         amts.map(function (n) { return '<button type="button" class="sp-btn" data-pay="sup" data-n="' + n + '">' + n + ' ⭐ <span style="opacity:.7;font-weight:600">≈' + usd(n) + '</span></button>'; }).join('') + '</div></div>' +
       '<div class="sp-card"><h4>📢 The channel &amp; 💬 the group</h4><p>The market pulse twice a day, the news, and a place to chat, suggest and report problems. You can give ⭐ to channel posts you like.</p><div class="sp-row">' +
         (comm.channel ? '<a class="sp-btn" href="' + E(comm.channel) + '" target="_blank" rel="noopener">📢 Join the channel</a>' : '') +
-        (comm.group ? '<a class="sp-btn" href="' + E(comm.group) + '" target="_blank" rel="noopener">💬 Join the group</a>' : '') +
-        (!comm.channel && !comm.group ? '<a class="sp-btn" href="' + BOT + '?start=community" target="_blank" rel="noopener">👥 Open in the bot</a>' : '') + '</div></div>' +
+        (!comm.channel ? '<a class="sp-btn" href="' + BOT + '?start=community" target="_blank" rel="noopener">👥 Open in the bot</a>' : '') + '</div></div>' +
       '<p class="sp-msg">Payments happen inside Telegram with Telegram Stars (Telegram\'s own coins, bought in Telegram like any in-app purchase).</p>' +
       (msg ? '<p class="sp-msg' + (err ? ' sp-err' : '') + '">' + E(msg) + '</p>' : '');
   }

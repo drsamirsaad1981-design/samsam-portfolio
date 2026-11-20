@@ -75,7 +75,7 @@ setKeyHandler(async (env, email, body) => {
     const limit = x.paused ? 0 : st.has ? BYOK_REPORTS : Number.isFinite(x.reports) ? x.reports : DEF_REPORTS;
     let used = 0; try { used = x.uid && env.RATE ? +(await env.RATE.get(`ai:${x.uid}:${day}`)) || 0 : 0; } catch (_) {}
     return { ...st, reports: { limit, used, left: Math.max(0, limit - used) }, premium: premiumNow(x), premUntil: x.premUntil || null, premSrc: x.premSrc || null, supporter: !!x.supporter, starsPaid: x.starsPaid || 0, botLinked: isTgChat(x.chat), price: premPrice(env), amounts: SUPPORT,
-      community: await getCommunity(env).then(c => ({ channel: (c.channel && c.channel.link) || null, group: (c.group && c.group.link) || null })).catch(() => ({})),
+      community: await getCommunity(env).then(c => ({ channel: (c.channel && c.channel.link) || null, group: null })).catch(() => ({})),   // one place: the channel (its comments are the group)
       questions: await usage(env).then(u => ({ used: u.used, limit: u.limit })).catch(() => null),   // 🧠 today's AI questions (bot)
       tgIn: await inCommunity(env, x.chat) };   // ✅ already in the channel / the group?
   });

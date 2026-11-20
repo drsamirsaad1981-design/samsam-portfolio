@@ -280,7 +280,7 @@
     'Account & data': 'الحساب والبيانات', 'Account': 'الحساب', 'Backup': 'النسخ الاحتياطي', 'backup': 'النسخ الاحتياطي', 'Back up now': 'انسخ الآن', 'Recover Data': 'استرجاع البيانات', 'recover': 'استرجاع البيانات',
     'Telegram': 'تليجرام', 'Telegram alerts': 'تنبيهات تليجرام', 'Link your portfolio to the Telegram bot': 'ربط محفظتك ببوت تليجرام', 'Link the Telegram bot': 'ربط بوت تليجرام',
     'Join Cute Portfolio Signals': 'انضم لقناة Cute Portfolio Signals', 'Join Cute Portfolio Community': 'انضم لمجتمع Cute Portfolio',
-    'The market pulse twice a day · ⭐ on posts you like': 'نبض السوق مرتين يومياً · ⭐ على المنشورات التي تعجبك', 'Chat · suggestions · bugs · the guide · news': 'دردشة · اقتراحات · مشاكل · الدليل · الأخبار',
+    'The market pulse twice a day · ⭐ on posts you like': 'نبض السوق مرتين يومياً · ⭐ على المنشورات التي تعجبك', 'The market pulse twice a day · talk in the comments': 'نبض السوق مرتين يومياً · النقاش في التعليقات', 'Chat · suggestions · bugs · the guide · news': 'دردشة · اقتراحات · مشاكل · الدليل · الأخبار',
     'One tap — the bot shows your portfolio': 'ضغطة واحدة — ويعرض البوت محفظتك', 'One tap — then the bot shows your portfolio, alerts, morning & evening': 'ضغطة واحدة — ويعرض البوت محفظتك والتنبيهات صباحاً ومساءً',
     'Open the bot': 'افتح البوت', 'Your code (10 minutes)': 'رمزك (10 دقائق)', 'Could not make a code —': 'تعذّر إنشاء رمز —',
     '— or tap “Open the bot”. The bot then reads this portfolio for you (only you).': '— أو اضغط "افتح البوت". سيقرأ البوت بعدها هذه المحفظة لك (لك وحدك).',

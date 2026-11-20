@@ -56,7 +56,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (/^https:\/\/(coin-images|assets)\.coingecko\.com\//.test(u)) { logoFetches++; return /tether|325/.test(u) ? new Response('nf', { status: 404 }) : /notimage/.test(u) ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : new Response(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'), { headers: { 'content-type': 'image/png' } }); }
   if (u === 'https://api.github.com/repos/drsamirsaad1981-design/samsam-portfolio/actions/workflows/prices.yml/dispatches') { kicks.push({ auth: init.headers.authorization, body: JSON.parse(body) }); return new Response(null, { status: 204 }); }
   if (u.startsWith('https://api.telegram.org/bot') && body instanceof FormData) { const m = u.split('/').pop(); const ph = body.get('photo'); sent.push({ m, b: { chat_id: body.get('chat_id'), caption: body.get('caption'), photoBytes: ph ? new Uint8Array(await ph.arrayBuffer()) : null } }); return J({ ok: true, result: { message_id: 8 } }); }
-  if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); if (typeof b.text === 'string') { b.raw = b.text; b.text = b.text.replace(/[\u200E\u200F\u2060\u2066\u2069]/g, '').replace(/\u00A0/g, ' '); } sent.push({ m, b }); if (m === 'createInvoiceLink') return J({ ok: true, result: 'https://t.me/$inv-' + b.payload }); if (m === 'createChatInviteLink') return J({ ok: true, result: { invite_link: 'https://t.me/+join' + b.chat_id } }); if (m === 'createForumTopic') return J({ ok: true, result: { message_thread_id: 100 + sent.filter(x => x.m === 'createForumTopic').length } }); if (m === 'sendChatAction' && (globalThis.__goneTopics || []).includes(b.message_thread_id)) return J({ ok: false, description: 'Bad Request: message thread not found' }); if (m === 'getChat') return J({ ok: true, result: { id: b.chat_id, is_forum: b.chat_id === -1002 } }); if (m === 'getMe') return J({ ok: true, result: { id: 1, username: 'samsam_portfolio_bot' } }); if (m === 'getChatMember') return J({ ok: true, result: { status: b.chat_id === -1003 ? 'administrator' : 'left' } }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
+  if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); if (typeof b.text === 'string') { b.raw = b.text; b.text = b.text.replace(/[\u200E\u200F\u2060\u2066\u2069]/g, '').replace(/\u00A0/g, ' '); } sent.push({ m, b }); if (m === 'createInvoiceLink') return J({ ok: true, result: 'https://t.me/$inv-' + b.payload }); if (m === 'createChatInviteLink') return J({ ok: true, result: { invite_link: 'https://t.me/+join' + b.chat_id } }); if (m === 'createForumTopic') return J({ ok: true, result: { message_thread_id: 100 + sent.filter(x => x.m === 'createForumTopic').length } }); if (m === 'sendChatAction' && (globalThis.__goneTopics || []).includes(b.message_thread_id)) return J({ ok: false, description: 'Bad Request: message thread not found' }); if (m === 'getChat') return J({ ok: true, result: { id: b.chat_id, is_forum: false, ...(b.chat_id === -1001 && !globalThis.__unlinked ? { linked_chat_id: -1002 } : {}) } }); if (m === 'getMe') return J({ ok: true, result: { id: 1, username: 'samsam_portfolio_bot' } }); if (m === 'getChatMember') return J({ ok: true, result: { status: b.chat_id === -1003 ? 'administrator' : 'left' } }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
   if (u.includes('raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/')) {
     const f = u.split('/prices/')[1];
     if (f === 'm/market.json') return J(market); if (f === 'm/top500.json') return J(top500); if (f === 'm/alt.json') return J(alt); if (f === 'm/etf.json') return J(etf);
@@ -694,7 +694,7 @@ LIVE.pendle.usd = 3.21;
 // the "/" menu: every command, refreshed by itself when the list changes (no /start needed)
 kvStore.delete('tg:555:cmdv'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/menu');
 const sc = sent.find(x => x.m === 'setMyCommands'), names = sc ? sc.b.commands.map(c => c.command) : [];
-check('"/" menu sent again by itself: invite, users, stats, start, report, daily, morning, evening, alerts, paper, pin, unpin, guide, community, hide… (28, with balances, stocks, metals)', names.length === 28 && names.includes('balances') && names.includes('metals') && ['invite', 'users', 'stats', 'guide', 'community', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide'].every(n => names.includes(n)), names);
+check('"/" menu sent again by itself: invite, users, stats, start, report, daily, morning, evening, alerts, paper, pin, unpin, guide, community, hide, feedback… (29, with balances, stocks, metals)', names.length === 29 && names.includes('balances') && names.includes('metals') && ['invite', 'users', 'stats', 'guide', 'community', 'start', 'report', 'paper', 'menu', 'portfolio', 'price', 'market', 'plan', 'exit', 'movers', 'signals', 'alerts', 'daily', 'morning', 'evening', 'pin', 'unpin', 'new', 'lang', 'hide', 'feedback'].every(n => names.includes(n)), names);
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/menu');
 check('…and only once (remembered in KV)', !sent.some(x => x.m === 'setMyCommands'));
 claudeCalls.length = 0; sent.length = 0;
@@ -1307,7 +1307,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('📘 guide.json: every part has a summary, a tip, a group, 2–5 steps', G.sections.every(x => x.s && x.s.en && x.s.ar && x.tip && x.tip.en && x.tip.ar && G.groups.some(g => g.k === x.g) && x.en.length >= 2 && x.en.length <= 5 && x.en.length === x.ar.length), G.sections.filter(x => !(x.s && x.tip && x.en.length === x.ar.length)).map(x => x.k));
 }
 
-// 👥 the channel + the members' group
+// 👥 the channel + its comments (the discussion group) — one place since 20 Nov
 {
   const upd = o => post({ update_id: ++UPD, ...o }, ENV.TG_SECRET, ENVK);
   const added = (chatObj, from, status = 'administrator') => upd({ my_chat_member: { chat: chatObj, from: { id: from }, date: 1, old_chat_member: { status: 'left', user: { id: 1 } }, new_chat_member: { status, user: { id: 1 } } } });
@@ -1317,68 +1317,53 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; await added({ id: -1001, type: 'channel', title: 'Cute Portfolio Signals' }, 555);
   let c = JSON.parse(kvStore.get('tg:community') || '{}');
   check('📢 you add it to the channel as admin → remembered, a join link that needs approval, you get the link', c.channel && c.channel.id === -1001 && c.channel.link && sent.some(m => m.m === 'createChatInviteLink' && m.b.creates_join_request === true) && sent.some(m => String(m.b.chat_id) === '555' && /is set up/.test(m.b.text || '')), c);
+  const gp = sent.find(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
+  check('📘 …and a guide post in the channel (both languages, /feedback), pinned, its button opens the guide in the bot', gp && /Getting started · البداية/.test(gp.b.text) && /\/feedback/.test(gp.b.text) && okHtml(gp.b.text) && JSON.stringify(gp.b.reply_markup).includes('t.me/samsam_portfolio_bot?start=guide') && sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1001) && c.channel.guideMsg, gp && gp.b);
+  check('…no forum topics any more', !sent.some(m => /Forum/.test(m.m)));
+  globalThis.__unlinked = true;
   sent.length = 0; await added({ id: -1002, type: 'supergroup', title: 'Cute Portfolio Community' }, 555);
+  check('💬 the group, not linked to the channel yet → you are told how (channel → Edit → Discussion)', /Discussion/.test(last().b.text) && !JSON.parse(kvStore.get('tg:community')).group.linked && !sent.some(m => m.m === 'createChatInviteLink'), last().b.text);
+  globalThis.__unlinked = false;
+  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:')) kvStore.delete(k);
+  sent.length = 0; await sayAs(555, '/community setup');
   c = JSON.parse(kvStore.get('tg:community'));
-  const tps = sent.filter(m => m.m === 'createForumTopic').map(m => m.b.name);
-  check('💬 the group (topics on) → 4 topics: Chat, Suggestions, Bugs, Guide (the guide and what\'s new in one)', tps.length === 4 && /Chat/.test(tps[0]) && /Guide/.test(tps[3]) && c.group.topics.guide && !c.group.topics.updates, tps);
-  const gd = sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === c.group.topics.guide);
-  check('…📘 the guide posted in its topic: an index (pinned) + a message per part, English + Arabic', gd.length === 1 + 15 && /Getting started · البداية/.test(gd[0].b.text) && sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1002) && gd.every(m => okHtml(m.b.text)), gd.length);
-  check('🔒 📘 Guide closed (read-only for members), # General hidden', sent.filter(m => m.m === 'closeForumTopic').map(m => m.b.message_thread_id).join() === String(c.group.topics.guide) && sent.some(m => m.m === 'hideGeneralForumTopic'), sent.filter(m => /Forum/.test(m.m)).map(m => m.m));
-  check('…a welcome in 💬 Chat', sent.some(m => m.m === 'sendMessage' && m.b.message_thread_id === c.group.topics.chat && /Welcome/.test(m.b.text)));
+  check('…linked in Telegram → /community setup: "comments are on", the group remembered as the channel\'s discussion', c.group.linked === true && sent.some(m => /Comments are on/.test(m.b.text || '')) && !sent.some(m => m.m === 'sendMessage' && m.b.chat_id === -1001), sent.map(m => m.m));
   kvStore.set('tg:community', JSON.stringify({ ...JSON.parse(kvStore.get('tg:community')), channel: undefined }));
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 5, chat: { id: 555, type: 'private' }, from: { id: 555 }, forward_origin: { type: 'channel', chat: { id: -1003, type: 'channel', title: 'Signals 2' }, message_id: 1 }, text: 'hi' } }, ENV.TG_SECRET, ENVK);
   check('📢 you forward a channel post to the bot (it\'s admin there) → that channel is set up', JSON.parse(kvStore.get('tg:community')).channel.id === -1003 && sent.some(m => /is set up/.test(m.b.text || '')));
   kvStore.set('tg:community', JSON.stringify({ ...JSON.parse(kvStore.get('tg:community')), channel: c.channel }));
   // join requests
-  const req = (chatId, from) => upd({ chat_join_request: { chat: { id: chatId, type: 'supergroup', title: 'Cute Portfolio Community' }, from: { id: from }, user_chat_id: from, date: 1 } });
-  sent.length = 0; await req(-1002, 888);
+  const req = (chatId, from) => upd({ chat_join_request: { chat: { id: chatId, type: 'channel', title: 'Cute Portfolio Signals' }, from: { id: from }, user_chat_id: from, date: 1 } });
+  sent.length = 0; await req(-1001, 888);
   check('🚪 a member asks to join → approved (+ a welcome DM)', sent.some(m => m.m === 'approveChatJoinRequest' && m.b.user_id === 888) && sent.some(m => String(m.b.chat_id) === '888' && /You're in/.test(m.b.text || '')));
-  sent.length = 0; await req(-1002, 31337);
+  sent.length = 0; await req(-1001, 31337);
   check('…a stranger → declined', sent.some(m => m.m === 'declineChatJoinRequest' && m.b.user_id === 31337) && !sent.some(m => m.m === 'approveChatJoinRequest'));
   for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:')) kvStore.delete(k);
   sent.length = 0; await sayAs(888, '/community');
-  check('👥 /community (members) → both links, what each is for', /members only/.test(last().b.text) && JSON.stringify(last().b.reply_markup).includes('+join-1001') && JSON.stringify(last().b.reply_markup).includes('+join-1002'), last().b.text);
+  check('👥 /community (members) → the channel\'s link only; talk in the comments, ideas via /feedback', /members only/.test(last().b.text) && /comment/.test(last().b.text) && /\/feedback/.test(last().b.text) && JSON.stringify(last().b.reply_markup).includes('+join-1001') && !JSON.stringify(last().b.reply_markup).includes('+join-1002'), last().b.text);
   sent.length = 0; await sayAs(555, '/announce The app now speaks Arabic!');
-  check('📣 /announce (you) → the channel and the 📘 Guide topic (🆕 What\'s new)', sent.some(m => m.b.chat_id === -1001 && /speaks Arabic/.test(m.b.text || '')) && sent.some(m => m.b.chat_id === -1002 && m.b.message_thread_id === c.group.topics.guide && /🆕/.test(m.b.text)) && /📢 💬/.test(last().b.text));
-  {   // a group made by the first version (with 🛠 Updates): the next round merges it into 📘 Guide, once
-    const cc = JSON.parse(kvStore.get('tg:community')); cc.group.topics.updates = 4242; delete cc.group.merged; kvStore.set('tg:community', JSON.stringify(cc));
-    const cm = await import('../tools/worker/community.mjs');
-    sent.length = 0; await cm.guideUpdates(ENVK);
-    const after = JSON.parse(kvStore.get('tg:community')).group;
-    check('🔀 an old 🛠 Updates topic → deleted, a note in 📘 Guide, forgotten', sent.some(m => m.m === 'deleteForumTopic' && m.b.message_thread_id === 4242) && sent.some(m => m.b.message_thread_id === after.topics.guide && /One place for the guide/.test(m.b.text || '')) && !after.topics.updates && after.merged, sent.map(m => m.m));
-    sent.length = 0; await cm.guideUpdates(ENVK);
-    check('…only once', !sent.some(m => m.m === 'deleteForumTopic' || /One place/.test(m.b.text || '')));
-  }
-  {   // the topics deleted in Telegram by mistake → /community setup makes them again, with the welcome and the whole guide
-    const before = JSON.parse(kvStore.get('tg:community')).group.topics;
-    globalThis.__goneTopics = Object.values(before);
-    for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:')) kvStore.delete(k);
-    sent.length = 0; await sayAs(555, '/community setup'); globalThis.__goneTopics = [];
-    const g = JSON.parse(kvStore.get('tg:community')).group, made = sent.filter(m => m.m === 'createForumTopic').length;
-    const gp = sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === g.topics.guide);
-    check('♻️ topics deleted by mistake → /community setup makes all 4 again, the welcome + the whole guide (16) posted, 📘 closed again', made === 4 && gp.length === 16 && g.guidePosted === true && g.guideV === 2 && sent.some(m => m.m === 'sendMessage' && m.b.message_thread_id === g.topics.chat && /Welcome/.test(m.b.text)) && sent.some(m => m.m === 'closeForumTopic' && m.b.message_thread_id === g.topics.guide), { made, gp: gp.length, g });
-    sent.length = 0; await sayAs(555, '/community reset');
-    check('♻️ /community reset (you) → all 4 topics made again even when Telegram says nothing', sent.filter(m => m.m === 'createForumTopic').length === 4 && sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === JSON.parse(kvStore.get('tg:community')).group.topics.guide).length === 16);
-    const now4 = Object.values(JSON.parse(kvStore.get('tg:community')).group.topics);
-    sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 900, message_thread_id: 3, is_topic_message: true, chat: { id: -1002, type: 'supergroup' }, from: { id: 888 }, text: 'hi in the old chat' } }, ENV.TG_SECRET, ENVK);
-    check('🧹 a message in an old topic → the bot stays quiet, remembers the topic', !sent.some(m => m.m === 'sendMessage') && JSON.parse(kvStore.get('tg:community')).group.strays.includes(3));
-    sent.length = 0; await sayAs(555, '/community clean');
-    const del = sent.filter(m => m.m === 'deleteForumTopic').map(m => m.b.message_thread_id);
-    check('…/community clean → deletes the old topics around it (never the 4 current, never # General)', del.includes(3) && del.includes(6) && !del.some(i => now4.includes(i) || i === 1) && /Deleted/.test(last().b.text) && !JSON.parse(kvStore.get('tg:community')).group.strays.length, del);
-    c = JSON.parse(kvStore.get('tg:community'));
-  }
+  check('📣 /announce (you) → the channel (🆕 What\'s new)', sent.some(m => m.b.chat_id === -1001 && /speaks Arabic/.test(m.b.text || '') && /🆕/.test(m.b.text)) && !sent.some(m => m.b.chat_id === -1002) && /📢/.test(last().b.text));
+  // 💡 /feedback
+  for (const k of [...kvStore.keys()]) if (k.startsWith('tg:rl:')) kvStore.delete(k);
+  sent.length = 0; await sayAs(888, '/feedback المحفظة ما تفتح على الآيفون');
+  check('💡 /feedback <text> (a member) → to you with who sent it; the member is thanked (never read as "portfolio")', sent.some(m => String(m.b.chat_id) === '555' && /Feedback/.test(m.b.text || '') && /المحفظة ما تفتح/.test(m.b.text)) && /Samir|سمير/.test(last().b.text) && String(last().b.chat_id) === '888', sent.map(m => [m.b.chat_id, (m.b.text || '').slice(0, 40)]));
+  sent.length = 0; await sayAs(888, '/feedback');
+  check('…/feedback alone → how to use it (nothing sent to you)', /\/feedback/.test(last().b.text) && !sent.some(m => String(m.b.chat_id) === '555'));
+  sent.length = 0; await sayAs(888, '/start guide');
+  check('📘 /start guide (the channel post\'s button) → the guide', JSON.stringify(last().b.reply_markup || {}).includes('gd:'), last().b.text);
   sent.length = 0; await sayAs(888, '/announce hi');
   check('…members can\'t announce', /Only the bot owner/.test(last().b.text) && !sent.some(m => m.b.chat_id === -1001));
   // the market pulse at 09:00 Riyadh, once, pinned
   sent.length = 0; const Wp = await fresh(); const pp = []; await Wp.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('09:05') }, ENVK, { waitUntil: x => pp.push(x) }); await Promise.all(pp);
   const pulse = sent.find(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
   check('📢 09:05 → the market pulse in the channel (BTC, cap, dominance, Fear & Greed, movers, "not financial advice"), pinned', pulse && /Market pulse/.test(pulse.b.text) && /BTC/.test(pulse.b.text) && /Not financial advice/.test(pulse.b.text) && okHtml(pulse.b.text) && sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1001), pulse && pulse.b.text);
-  check('…with 🧭 Market Hub and 💬 Discuss (→ the group\'s Chat topic: t.me/c/2/<topic>)', JSON.stringify(pulse.b.reply_markup).includes('Market Hub') && JSON.stringify(pulse.b.reply_markup).includes('t.me/c/2/' + c.group.topics.chat), pulse && pulse.b.reply_markup);
+  check('…with 🧭 Market Hub (no "Discuss" link: the comments come with the post)', JSON.stringify(pulse.b.reply_markup).includes('Market Hub') && !/Discuss/.test(JSON.stringify(pulse.b.reply_markup)), pulse && pulse.b.reply_markup);
+  check('…the English and Arabic "not financial advice" on two lines', /Not financial advice — for information only\.<\/i>\n<i>/.test(pulse.b.text), pulse && pulse.b.text.slice(-160));
   sent.length = 0; const Wq = await fresh(); const pq = []; await Wq.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('09:10') }, ENVK, { waitUntil: x => pq.push(x) }); await Promise.all(pq);
   check('…+ 🥇 gold · silver (no Brent) and 🇺🇸 US stocks (state, best CRCLB, worst GMEB)', /🥇 Gold <b>\$2,650<\/b>/.test(pulse.b.text) && /Silver/.test(pulse.b.text) && !/Brent/.test(pulse.b.text) && /🇺🇸 US stocks (Open|Pre-market|After hours|Closed) · CRCLB \+7\.8% · GMEB −6\.2%/.test(pulse.b.text), pulse.b.text);
   check('…once a morning (09:10 → nothing new)', !sent.some(m => m.b.chat_id === -1001 && /Market pulse/.test(m.b.text || '')));
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: -1002, type: 'supergroup' }, from: { id: 888 }, text: 'hello everyone' } }, ENV.TG_SECRET, ENVK);
-  check('💬 people chatting in the group → the bot stays quiet', sent.filter(m => m.m === 'sendMessage').length === 0);
+  check('💬 people commenting (the discussion group) → the bot stays quiet', sent.filter(m => m.m === 'sendMessage').length === 0);
 }
 
 // ☀️ a smart morning cut short by Claude (max_tokens) → the plain morning, never half a message
@@ -1392,22 +1377,22 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   globalThis.__shortMorning = old;
 }
 
-// 📘 a new release changed one part of the guide → only that part is posted (🆕) in the guide topic, once
+// 📘 a new release changed the guide → ONE short post in the channel naming the parts (🆕 new / ✏️ updated), once
 {
   const cc = JSON.parse(kvStore.get('tg:community'));
-  if (cc.group) {
-    cc.group.guideSig = { ...cc.group.guideSig, alerts: 'old' }; delete cc.group.guideSig.help; kvStore.set('tg:community', JSON.stringify(cc));
+  if (cc.channel) {
+    cc.channel.guideSig = { ...cc.channel.guideSig, alerts: 'old' }; delete cc.channel.guideSig.help; kvStore.set('tg:community', JSON.stringify(cc));
     sent.length = 0; const Wg = await fresh(); const pg2 = []; await Wg.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:05') }, ENVK, { waitUntil: x => pg2.push(x) }); await Promise.all(pg2);
-    const posts = sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === cc.group.topics.guide);
-    check('🆕 the guide changed (a part updated, a part new) → just those 2 posted in 📘 ("Updated" / "New in the guide")', posts.length === 2 && posts.some(m => /Updated/.test(m.b.text) && /🔔/.test(m.b.text)) && posts.some(m => /New in the guide/.test(m.b.text)), posts.map(m => m.b.text.slice(0, 40)));
+    const posts = sent.filter(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
+    check('🆕 the guide changed (a part updated, a part new) → one post in the channel: ✏️ + 🆕, with the guide button', posts.length === 1 && /New in the guide/.test(posts[0].b.text) && /✏️ 🔔/.test(posts[0].b.text) && /🆕/.test(posts[0].b.text) && JSON.stringify(posts[0].b.reply_markup).includes('start=guide'), posts.map(m => m.b.text));
     sent.length = 0; const Wh = await fresh(); const ph = []; await Wh.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:10') }, ENVK, { waitUntil: x => ph.push(x) }); await Promise.all(ph);
-    check('…and not again', !sent.some(m => m.b.message_thread_id === cc.group.topics.guide));
-    const c3 = JSON.parse(kvStore.get('tg:community')); c3.group.guideV = 1; kvStore.set('tg:community', JSON.stringify(c3));
+    check('…and not again', !sent.some(m => m.m === 'sendMessage' && m.b.chat_id === -1001));
+    const c3 = JSON.parse(kvStore.get('tg:community')); c3.channel.guideV = 1; kvStore.set('tg:community', JSON.stringify(c3));
     sent.length = 0; const Wv = await fresh(); const pv = []; await Wv.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:15') }, ENVK, { waitUntil: x => pv.push(x) }); await Promise.all(pv);
-    const rp = sent.filter(m => m.m === 'sendMessage' && m.b.message_thread_id === cc.group.topics.guide), g3 = JSON.parse(kvStore.get('tg:community')).group;
-    check('📘 a new edition of the guide → posted again in full once (index + 15 cards), not 15 "Updated"', rp.length === 16 && !rp.some(m => /Updated/.test(m.b.text)) && /1️⃣/.test(rp[1].b.text) && g3.guidePosted === true && !g3.reposting && g3.guideV === 2, rp.length);
+    const rp = sent.filter(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
+    check('📘 a new edition of the guide → one "new edition" post (not 15)', rp.length === 1 && /new edition/i.test(rp[0].b.text), rp.map(m => m.b.text));
     sent.length = 0; const Wv2 = await fresh(); const pv2 = []; await Wv2.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:20') }, ENVK, { waitUntil: x => pv2.push(x) }); await Promise.all(pv2);
-    check('…and not again', !sent.some(m => m.b.message_thread_id === cc.group.topics.guide));
+    check('…and not again', !sent.some(m => m.m === 'sendMessage' && m.b.chat_id === -1001));
   }
   kvStore.delete('tg:cmdscope'); sent.length = 0; await postK(await fresh(), '/menu');
   check('"/" menu: the general list only in private chats (none in groups)', sent.some(m => m.m === 'deleteMyCommands') && sent.some(m => m.m === 'setMyCommands' && m.b.scope && m.b.scope.type === 'all_private_chats'));

@@ -27,7 +27,7 @@ import { viewAlerts, deleteAlert } from './watch.mjs';
 import { transcribe, MAX_SEC } from './voice.mjs';
 import { keyInfo, BYOK_AI, BYOK_REPORTS } from './byok.mjs';
 import GUIDE from '../../guide.json' with { type: 'json' };
-import { onMyChatMember, onJoinRequest, communityView, announce, setup as communitySetup, registerForward, guideCard, guideGroups, noteTopic, cleanTopics } from './community.mjs';
+import { onMyChatMember, onJoinRequest, communityView, announce, setup as communitySetup, registerForward, guideCard, guideGroups } from './community.mjs';
 import { premiumView, supportView, sendSupportInvoice, askGift, preCheckout, paid, statsView, addDays, revoke, premiumNow } from './stars.mjs';
 import { keepTrades, tradeLines, confirmTrades, cancelTrades, money } from './trade.mjs';
 import { viewDaily, setCfg, getCfg, morning, evening, pinUpdate, unpin } from './daily.mjs';
@@ -374,12 +374,13 @@ const edit = (env, chat, msgId, v) => tg(env, 'editMessageText', { chat_id: chat
 
 // what you typed → an action
 const WORDS = [
+  [/^\/(feedback|bug|idea)(@\w+)?(\s+[\s\S]+)?$/i, 'fb'],   // first: its text may hold any word ("/feedback المحفظة …")
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, 'menu'],
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, 'pf'], [/^\/?(market|mk)$|السوق/i, 'mk'], [/^\/(stocks|bstocks)$|^الأسهم$/i, 'mks'], [/^\/(metals|gold)$|^المعادن$|^الذهب$/i, 'mkm'], [/^\/?(plan|pl)$|الخطة/i, 'pl'],
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
   [/^\/(balances|exchanges|cex)$|^أرصدتي$|^المنصات$|^أرصدة المنصات$/i, 'bal'],
-  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, 'cm'], [/^\/community setup$/i, 'cm:setup'], [/^\/community guide$/i, 'cm:guide'], [/^\/community reset$/i, 'cm:reset'], [/^\/community clean$/i, 'cm:clean'], [/^\/announce\s+[\s\S]+$/i, 'ann'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
+  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, 'cm'], [/^\/community setup$/i, 'cm:setup'], [/^\/community guide$/i, 'cm:guide'], [/^\/announce\s+[\s\S]+$/i, 'ann'], [/^\/start\s+guide$/i, 'gd'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -458,7 +459,6 @@ export async function handleTelegram(request, env) {
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null) return ok();
-  if (msg && msg.chat && msg.chat.type === 'supergroup' && msg.message_thread_id) await noteTopic(env, msg).catch(() => {});   // 🧹 a message in an old topic → remembered for /community clean
   if (!(await allowed(env, chat))) {   // not (yet) invited: only an invite code works
     // 🛡 a stranger can't make the bot work for them: 20 messages an hour, then nothing at all (no KV, no Firebase)
     if ((await bump('stranger', chat, 3600e3)) > STRANGER_MSGS_PER_HOUR) return ok();
@@ -845,6 +845,16 @@ async function onVoice(env, chat, voice) {
   return onText(env, chat, r.text, 32, id ? { id, head } : null);   // 4 calls went on the voice note → a little less for the data
 }
 
+// 💡 /feedback <text> — an idea or a bug, straight to Samir (the group's 💡 / 🐞 topics before 20 Nov)
+async function feedback(env, chat, text) {
+  const ar = (await getLang(env)) === 'ar', body = String(text || '').replace(/^\/(feedback|bug|idea)(@\w+)?/i, '').trim().slice(0, 2000);
+  if (!body) return { text: ar ? '💡 اكتب <code>/feedback</code> ثم اقتراحك أو المشكلة في نفس الرسالة — تصل لسمير مباشرة.' : '💡 Send <code>/feedback</code> and your idea or the bug in the same message — it goes straight to Samir.' };
+  if (isOwner(env)) return { text: 'ℹ️ That\'s for members — their /feedback comes to you here.' };
+  const m = (await members(env))[String(chat)] || {};
+  const r = await tg(env, 'sendMessage', { chat_id: env.TELEGRAM_CHAT_ID, parse_mode: 'HTML', disable_web_page_preview: true,
+    text: `💡 <b>Feedback</b> · ${esc(m.name || 'member')}${m.user ? ' @' + esc(m.user) : ''} (<code>${esc(String(chat))}</code>)\n\n${esc(body)}` });
+  return { text: r && r.ok ? (ar ? '✅ وصلت رسالتك لسمير — شكراً لك 💛' : '✅ Sent to Samir — thank you 💛') : (ar ? '⚠️ لم تصل الرسالة — حاول بعد قليل.' : '⚠️ It did not go — try again in a moment.') };
+}
 // a typed message (or a voice note's words) → a view, or a question for Claude
 // into = { id, head }: a voice note's message — the answer goes into it, under what it heard
 async function onText(env, chat, text, budget = 36, into = null) {
@@ -881,14 +891,13 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'pin:off') { await setCfg(env, { pin: false }); await unpin(env); await send(env, chat, { text: T[await getLang(env)].pinOff }); return; }
   if (p.act === 'new') { await forget(env); await send(env, chat, { text: T[await getLang(env)].newDone }); return; }
   if (p.act === 'cm') { await send(env, chat, await communityView(env, await getLang(env))); return; }
-  if (p.act === 'cm:setup' || p.act === 'ann' || p.act === 'cm:guide' || p.act === 'cm:reset' || p.act === 'cm:clean') {   // Samir only
+  if (p.act === 'fb') { await send(env, chat, await feedback(env, chat, text)); return; }
+  if (p.act === 'cm:setup' || p.act === 'ann' || p.act === 'cm:guide') {   // Samir only
     if (!isOwner(env)) { await send(env, chat, { text: T[await getLang(env)].ownerOnly }); return; }
     if (p.act === 'cm:setup') { await communitySetup(env, 'channel'); await communitySetup(env, 'group'); return; }
-    if (p.act === 'cm:clean') { await cleanTopics(env); return; }
-    if (p.act === 'cm:reset') { await communitySetup(env, 'group', { reset: true }); return; }
-    if (p.act === 'cm:guide') { await communitySetup(env, 'group', { reguide: true }); return; }
+    if (p.act === 'cm:guide') { await communitySetup(env, 'channel', { reguide: true }); return; }   // the 📘 guide post again (pinned)
     const out = await announce(env, String(text).replace(/^\/announce\s+/i, '').slice(0, 3500));
-    await send(env, chat, { text: out.length ? '📣 ' + out.join(' ') : 'ℹ️ No channel / group yet.' }); return;
+    await send(env, chat, { text: out.length ? '📣 ' + out.join(' ') : 'ℹ️ No channel yet.' }); return;
   }
   if (p.act === 'gd') { await send(env, chat, guideView(await getLang(env))); return; }
   if (p.act === 'prem') { await send(env, chat, await premiumView(env, await getLang(env))); return; }   // ⭐ what premium is, the price, Subscribe
@@ -976,7 +985,7 @@ const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
     ['alerts', a ? 'تنبيهاتك' : 'Your alerts'], ['balances', a ? 'أرصدة المنصات (Binance · Gate)' : 'Exchange balances (Binance · Gate)'], ['paper', a ? 'التداول التجريبي' : 'Paper trading'], ['daily', a ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'],
     ['morning', a ? 'الصباح الذكي الآن' : 'Smart morning now'], ['evening', a ? 'المساء الذكي الآن' : 'Smart evening now'],
     ['pin', a ? 'الرسالة المثبتة' : 'Live pinned message'], ['unpin', a ? 'إزالة الرسالة المثبتة' : 'Remove the pinned message'],
-    ['guide', a ? 'الدليل الكامل 📘' : 'The full guide 📘'], ['community', a ? 'القناة والمجموعة 👥' : 'Channel & group 👥'], ['new', a ? 'محادثة جديدة مع الذكاء الاصطناعي' : 'New AI chat'], ['lang', 'English / عربي'], ['hide', a ? 'إخفاء الأزرار' : 'Hide the buttons'],
+    ['guide', a ? 'الدليل الكامل 📘' : 'The full guide 📘'], ['community', a ? 'القناة والنقاش 👥' : 'Channel & comments 👥'], ['feedback', a ? 'اقتراح أو مشكلة 💡' : 'An idea or a bug 💡'], ['new', a ? 'محادثة جديدة مع الذكاء الاصطناعي' : 'New AI chat'], ['lang', 'English / عربي'], ['hide', a ? 'إخفاء الأزرار' : 'Hide the buttons'],
   ].map(([command, description]) => ({ command, description })); };
 // the "/" menu follows the code: when the list (or the language) changed since it was last sent, it is sent again — no /start needed
 async function ensureCmds(env) {

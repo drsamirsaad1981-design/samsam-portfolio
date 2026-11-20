@@ -47,7 +47,7 @@ with sync_playwright() as p:
             pg.evaluate("document.getElementById('blModal').classList.remove('show')")
             pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#cpSet')
             check('member: Settings has "My Claude key"', 'My Claude key' in pg.inner_text('#cpSet'))
-            check('member: no "Telegram alerts" in Settings (they reach Samir only); a Telegram section: link the bot, join the channel, join the group', 'Telegram alerts' not in pg.inner_text('#cpSet') and all(w in pg.inner_text('#cpSet') for w in ('Link your portfolio to the Telegram bot', 'Join Cute Portfolio Signals', 'Join Cute Portfolio Community')))
+            check('member: no "Telegram alerts" in Settings (they reach Samir only); a Telegram section: link the bot, join the channel (one place: no group row)', 'Telegram alerts' not in pg.inner_text('#cpSet') and all(w in pg.inner_text('#cpSet') for w in ('Link your portfolio to the Telegram bot', 'Join Cute Portfolio Signals')) and 'Join Cute Portfolio Community' not in pg.inner_text('#cpSet'))
             check('member: an AI section: "AI Analysis & questions" + "My Claude key"', pg.is_visible('#stRow_aiinfo') and pg.is_visible('#stRow_claudekey'))
             pg.evaluate("window.__cpAutoAnswer = null")
             pg.click('#stRow_claudekey')
@@ -71,7 +71,7 @@ with sync_playwright() as p:
             pg.click('#stRow_support'); pg.wait_for_selector('#cpSup [data-pay="prem"]', timeout=8000)
             t = pg.inner_text('#cpSup')
             check('member: the card says free & non-profit + optional; ⭐ premium (voice, 20 questions, 3 reports, Supporter badge, 350 ⭐ a month); 💛 50 / 100 / 250 / 500; the channel & group',
-                  all(w in t for w in ('completely free and non-profit', 'optional', 'Voice notes', '20 AI questions', 'Supporter badge', '350 ⭐ a month', 'Join the channel', 'Join the group')) and pg.locator('#cpSup [data-pay="sup"]').count() == 4, t[:300])
+                  all(w in t for w in ('completely free and non-profit', 'optional', 'Voice notes', '20 AI questions', 'Supporter badge', '350 ⭐ a month', 'Join the channel')) and 'Join the group' not in t and pg.locator('#cpSup [data-pay="sup"]').count() == 4, t[:300])
             pg.click('#cpSup [data-pay="prem"]'); pg.wait_for_function("window.__opened.length >= 1", timeout=8000)
             check('member: ⭐ Become premium → straight to Telegram\'s payment (a link made for this member)', pg.evaluate("window.__opened[0]") == 'https://t.me/$pay-prem0' and calls[-1].get('action') == 'invoice' and calls[-1].get('kind') == 'prem', pg.evaluate("window.__opened"))
             pg.click('#cpSup [data-pay="sup"][data-n="100"]'); pg.wait_for_function("window.__opened.length >= 2", timeout=8000)

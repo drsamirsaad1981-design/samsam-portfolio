@@ -1,12 +1,15 @@
-// tools/worker/community.mjs — 📢 the members' channel + 💬 their discussion group (Telegram forum with topics).
+// tools/worker/community.mjs — 📢 the members' channel, with 💬 comments under each post (since 20 Nov: one place, not two).
 //
-// Samir creates both in Telegram and adds the bot as an admin; the bot notices (my_chat_member), remembers them, makes
-// join links that need approval, creates the group's topics (💬 Chat · 💡 Suggestions · 🐞 Bugs & notes · 📘 Guide —
-// the guide and what's new in one place), posts the guide there, and from then on:
-//   • approves a join request only from a member of the bot (strangers are declined) — /community gives members the links
+// Samir adds the bot as an admin to the channel and to its discussion group (the group Telegram uses for the comments —
+// linked in the channel's settings → Discussion). The bot notices (my_chat_member), remembers them, makes a join link that
+// needs approval, posts a pinned 📘 guide post (its button opens the full guide in the bot), and from then on:
+//   • approves a join request only from a member of the bot (strangers are declined) — /community gives members the link
 //   • posts a market pulse to the channel twice a day (09:00 and 21:05 Riyadh) and pins the latest; a "big move" post
-//     when BTC moves ±5% in 24 h (once a day)
-//   • /announce <text> (Samir): posted to the channel and the 📘 Guide topic (🆕 What's new)
+//     when BTC moves ±5% in 24 h (once a day) — members discuss each one in its comments
+//   • a new release changed the guide → one short 🆕 post listing the parts that changed
+//   • /announce <text> (Samir): posted to the channel
+// Suggestions and bug reports go to the bot (/feedback), not to a group topic. The old forum topics (💬 Chat · 💡 · 🐞 · 📘)
+// are gone: a forum group can't be a channel's discussion group.
 // Channel readers can send ⭐ Star reactions to posts (Samir turns them on in the channel's settings).
 
 import { usMarket, US_STATE } from './usmarket.mjs';
@@ -33,11 +36,9 @@ async function putCommunity(env, c) { try { if (env.RATE) await env.RATE.put(KEY
 const owner = env => String(env.TELEGRAM_CHAT_ID);
 const say = (env, text) => tg(env, 'sendMessage', { chat_id: owner(env), text, parse_mode: 'HTML', disable_web_page_preview: true });
 
-const TOPICS = [
-  ['chat', '💬 Chat · دردشة', 7322096], ['ideas', '💡 Suggestions · اقتراحات', 16766590], ['bugs', '🐞 Bugs & notes · ملاحظات', 16478047],
-  ['guide', '📘 Guide · الدليل', 9367192],   // (the 🛠 Updates topic of the first version: merged into the guide — removed by mergeUpdates)
-];
+
 const NOTE = { en: 'Not financial advice — for information only.', ar: 'ليست نصيحة مالية — للمعلومة فقط.' };
+
 
 // ── the bot was added / removed / promoted somewhere ──
 export async function onMyChatMember(env, u) {
@@ -68,75 +69,47 @@ export async function registerForward(env, msg) {
   return true;
 }
 
-// 🧹 old topics left over (made again by /community reset while the old ones still lived): a message in one tells the bot
-// its number; /community clean deletes it and the old topics made right after it (they were made one after another)
-export async function noteTopic(env, msg) {
-  const c = await getCommunity(env), x = c.group, t = msg.message_thread_id;
-  if (!x || String(x.id) !== String(msg.chat.id) || !msg.is_topic_message || !t || Object.values(x.topics || {}).includes(t)) return;
-  x.strays = [...new Set([...(x.strays || []), t])].slice(-10); c.group = x; await putCommunity(env, c);
-}
-export async function cleanTopics(env) {
-  const c = await getCommunity(env), x = c.group; if (!x) return say(env, 'ℹ️ No group set up.');
-  if (!(x.strays || []).length) return say(env, 'ℹ️ I don\'t know the old topics yet — send any message in one of them (from the account that sees them), then /community clean again.');
-  const keep = new Set(Object.values(x.topics || {})), ids = new Set();
-  for (const s of x.strays) for (let i = s - 6; i <= s + 6; i++) if (i > 1 && !keep.has(i)) ids.add(i);
-  let n = 0; for (const id of ids) { const r = await tg(env, 'deleteForumTopic', { chat_id: x.id, message_thread_id: id }); if (r.ok) n++; }
-  x.strays = []; c.group = x; await putCommunity(env, c);
-  return say(env, n ? `🧹 Deleted ${n} old topic${n > 1 ? 's' : ''}. The 4 new ones stay.` : 'ℹ️ No old topic found to delete.');
-}
-
-// make the join link (requests approved by the bot), and for the group: topics + the guide
+// the channel: a join link (requests approved by the bot) + the pinned 📘 guide post. The group: is it the channel's
+// discussion (its comments)? — Telegram says so in the channel's linked_chat_id.
 export async function setup(env, kind, opt = {}) {
   const c = await getCommunity(env), x = c[kind]; if (!x) return { ok: false };
-  if (opt.reguide) x.reguide = true;   // opt.reset (/community reset): forget the topics and make them all again
   const notes = [];
-  const link = await tg(env, 'createChatInviteLink', { chat_id: x.id, name: 'Cute Portfolio members', creates_join_request: true });
-  if (link.ok) x.link = link.result.invite_link; else notes.push('⚠️ No join link — give me "Invite users via link".');
-  if (kind === 'group' && !x.v2) {   // set up by the first version (14 Nov): its welcome and the guide's last part didn't go (Telegram's limit)
-    if (x.guidePosted === true) x.guidePosted = 14; x.helloPosted = false; x.v2 = true;
+  if (kind === 'channel') {
+    const link = await tg(env, 'createChatInviteLink', { chat_id: x.id, name: 'Cute Portfolio members', creates_join_request: true });
+    if (link.ok) x.link = link.result.invite_link; else notes.push('⚠️ No join link — give me "Invite users via link".');
+    if (!x.guideMsg || opt.reguide) {
+      const id = await postGuidePost(env, x);
+      if (id) { x.guideMsg = id; x.guideSig = guideSigs(); x.guideV = GUIDE.v || 1; } else notes.push('⚠️ The 📘 guide post did not go — let me post and pin messages.');
+    }
   }
-  if (kind === 'group' && x.reguide) { x.guidePosted = -1; delete x.reguide; }   // /community guide: post it all again
-  if (kind === 'group') {
-    const info = await tg(env, 'getChat', { chat_id: x.id });
-    if (info.ok && info.result.is_forum) {
-      x.topics = x.topics || {};
-      for (const [k, name] of TOPICS) {   // a topic deleted in Telegram (by hand, by mistake) → forget it, so it's made again with its content
-        if (!x.topics[k]) continue;
-        const r = opt.reset ? { ok: false, description: 'reset' } : await tg(env, 'sendChatAction', { chat_id: x.id, message_thread_id: x.topics[k], action: 'typing' });   // a silent probe
-        if (!r.ok && !opt.reset && !/TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || '')) notes.push(`ℹ️ ${name}: ${esc(r.description || '?')}`);
-        if (!r.ok && (opt.reset || /TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || ''))) {
-          delete x.topics[k]; notes.push(`♻️ ${name} was gone — made again.`);
-          if (k === 'chat') x.helloPosted = false;
-          if (k === 'guide') { x.guidePosted = -1; delete x.guideSig; delete x.reposting; x.tidy = false; }
-        }
-      }
-      for (const [k, name, color] of TOPICS) {
-        if (x.topics[k]) continue;
-        const r = await tg(env, 'createForumTopic', { chat_id: x.id, name, icon_color: color });
-        if (r.ok) x.topics[k] = r.result.message_thread_id; else { notes.push('⚠️ Topics not made — give me "Manage topics".'); break; }
-      }
-      if (x.topics.chat && !x.helloPosted) {   // the welcome first (short), then the guide — each remembered only once it really went
-        const hr = await tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: x.topics.chat, parse_mode: 'HTML', text: '👋 <b>Welcome to the Cute Portfolio community!</b>\nChat here · ideas in 💡 · problems in 🐞 · how-to in 📘 · news in 🛠.\n\n👋 <b>أهلاً بكم في مجتمع Cute Portfolio!</b>\nالدردشة هنا · الأفكار في 💡 · المشكلات في 🐞 · الشرح والجديد في 📘.' });
-        x.helloPosted = !!(hr && hr.ok); if (!x.helloPosted) notes.push('⚠️ The welcome in 💬 Chat didn\'t go — send /community setup in a minute.');
-      }
-      if (x.topics.guide && x.guidePosted !== true) { const done = await postGuide(env, x); x.guidePosted = done === true ? true : done; if (done !== true) notes.push(`⚠️ The guide stopped at part ${done + 1} (Telegram's limit) — send /community setup in a minute to finish it.`); }
-      if (x.guidePosted === true && !x.guideSig) { x.guideSig = guideSigs(); x.guideV = GUIDE.v || 1; }   // what the posted guide says (for "🆕 updated" later)
-      // read-only topic: 📘 Guide (only admins — the bot and Samir — post there); # General hidden
-      if (!x.tidy && !(await tidy(env, x))) notes.push('⚠️ Could not close 📘 or hide # General — check that I can "Manage topics".');
-    } else notes.push('⚠️ Turn on <b>Topics</b> in the group\'s settings, then send /community setup.');
-  }
+  const ch = c.channel, g = c.group;
+  if (ch && g) {
+    const info = await tg(env, 'getChat', { chat_id: ch.id });
+    g.linked = !!(info.ok && info.result && String(info.result.linked_chat_id) === String(g.id));
+    if (g.linked) { delete g.topics; delete g.strays; }   // the forum of before: forgotten
+    notes.push(g.linked ? '💬 Comments are on — members talk under each channel post.'
+      : `⚠️ Link the group to the channel: channel → ✏️ Edit → <b>Discussion</b> → pick <b>${esc(g.title)}</b> (if Telegram refuses, turn <b>Topics</b> off in the group first). Then /community setup.`);
+  } else if (kind === 'group') notes.push('ℹ️ Add me to the channel too, and link this group to it (channel → Edit → Discussion).');
   c[kind] = x; await putCommunity(env, c);
-  await say(env, `✅ <b>${esc(x.title)}</b> is set up (${kind === 'channel' ? '📢 channel' : '💬 group'}).` + (x.link ? `\nJoin link (members only — I approve each request): ${x.link}` : '') + (notes.length ? '\n' + notes.join('\n') : ''));
+  await say(env, `✅ <b>${esc(x.title)}</b> is set up (${kind === 'channel' ? '📢 channel' : '💬 comments group'}).` + (kind === 'channel' && x.link ? `\nJoin link (members only — I approve each request): ${x.link}` : '') + (notes.length ? '\n' + notes.join('\n') : ''));
   return { ok: true };
 }
-
-async function tidy(env, x) {
-  let okAll = true;
-  for (const k of ['guide']) if (x.topics && x.topics[k]) { const r = await tg(env, 'closeForumTopic', { chat_id: x.id, message_thread_id: x.topics[k] }); if (!r.ok && !/TOPIC_NOT_MODIFIED/.test(r.description || '')) okAll = false; }
-  const h = await tg(env, 'hideGeneralForumTopic', { chat_id: x.id }); if (!h.ok && !/not modified|TOPIC_NOT_MODIFIED/i.test(h.description || '')) okAll = false;
-  if (okAll) x.tidy = true;
-  return okAll;
+// the bot's own link to the guide (t.me/<bot>?start=guide) — one button under the channel's guide posts
+async function guideButton(env) {
+  const me = await tg(env, 'getMe', {}); const u = me.ok && me.result && me.result.username;
+  return u ? { inline_keyboard: [[{ text: '📘 Open the guide · افتح الدليل', url: `https://t.me/${u}?start=guide` }]] } : undefined;
 }
+// 📘 the channel's guide post (pinned): what is in the guide, in both languages; the button opens it in the bot
+async function postGuidePost(env, ch) {
+  const text = `📘 <b>${GUIDE.title.en} · ${GUIDE.title.ar}</b>\n${GUIDE.intro.en}\n${GUIDE.intro.ar}\n\n`
+    + guideGroups().map(g => g.items.map(s => `${s.e} ${esc((s.b || s.t).en)} · ${esc((s.b || s.t).ar)}`).join('\n')).join('\n\n')
+    + '\n\n💡 <i>Ideas or a bug? Send /feedback to the bot.</i>\n💡 <i>اقتراح أو مشكلة؟ أرسل /feedback للبوت.</i>';
+  const r = await tg(env, 'sendMessage', { chat_id: ch.id, text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: await guideButton(env) });
+  if (!r.ok) return null;
+  await tg(env, 'pinChatMessage', { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true });
+  return r.result.message_id;
+}
+
 // 📘 one part of the guide as a card: the title, a one-line summary, numbered steps, a 💡 tip (bot + group, same look).
 // In Arabic every line starts right-to-left (RLM), and English words / commands stay their own left-to-right island
 // (else "/alerts" shows as "alerts/"). Commands stay plain text, so Telegram makes them tappable.
@@ -159,50 +132,22 @@ export function guideGroups() {
   const gs = GUIDE.groups || [{ k: null, e: '', t: { en: '', ar: '' } }];
   return gs.map(g => ({ ...g, items: GUIDE.sections.filter(s => !GUIDE.groups || s.g === g.k) })).filter(g => g.items.length);
 }
-// 📘 the guide changed (a new release): post the parts that changed (🆕) in its topic, refresh nothing else — run from the cron
+// 📘 the guide changed (a new release): ONE short post in the channel naming the parts that changed (🆕 new / ✏️ updated),
+// with the button to read them in the bot — run from the cron
 const sig = s => { let h = 0; for (const ch of JSON.stringify([s.t, s.s, s.en, s.ar, s.tip])) h = (h * 31 + ch.charCodeAt(0)) | 0; return String(h); };
 const guideSigs = () => Object.fromEntries(GUIDE.sections.map(s => [s.k, sig(s)]));
 export async function guideUpdates(env) {
-  const c = await getCommunity(env), x = c.group; if (!x || !x.topics || !x.topics.guide || (x.guidePosted !== true && !x.reposting)) return { posted: 0 };
-  if (!x.tidy && !x.tidyTried) { x.tidyTried = true; await tidy(env, x); c.group = x; await putCommunity(env, c); }   // a group set up before this: tidy it once
-  if (x.topics.updates && !x.merged) { await mergeUpdates(env, x); c.group = x; await putCommunity(env, c); }   // 🛠 Updates → into 📘 Guide (once)
-  if ((x.guideV || 1) !== (GUIDE.v || 1) || x.reposting) {   // a new edition of the whole guide → post it all again (a few rounds if Telegram says wait), not 15 "updated"
-    if (!x.reposting) { x.reposting = true; x.guidePosted = -1; }
-    const done = await postGuide(env, x); x.guidePosted = done === true ? true : done;
-    if (done === true) { delete x.reposting; x.guideV = GUIDE.v || 1; x.guideSig = guideSigs(); }
-    c.group = x; await putCommunity(env, c); return { posted: 'all' };
-  }
-  if (!x.guideSig) { x.guideSig = guideSigs(); c.group = x; await putCommunity(env, c); return { posted: 0 }; }   // the guide posted so far = today's
-  const now = guideSigs(), changed = GUIDE.sections.filter(s => x.guideSig[s.k] !== now[s.k]);
-  if (!changed.length) return { posted: 0 };
-  let n = 0;
-  for (const s of changed.slice(0, 5)) {   // a few at a time (Telegram's group limit) — the rest next round
-    const isNew = !(s.k in x.guideSig);
-    const r = await tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: x.topics.guide, parse_mode: 'HTML', disable_web_page_preview: true,
-      text: `🆕 <b>${isNew ? 'New in the guide · جديد في الدليل' : 'Updated · تم التحديث'}</b>\n\n` + guideCard(s, 'en') + '\n\n— — —\n\n' + guideCard(s, 'ar') });
-    if (!r.ok) break;
-    x.guideSig[s.k] = now[s.k]; n++;
-  }
-  c.group = x; await putCommunity(env, c);
-  return { posted: n };
-}
-
-// 📘 the guide in its topic: an index message (pinned) + one message per part, in both languages
-async function postGuide(env, x) {   // → true when all went, else the number of parts posted (to go on from there)
-  const t = x.topics.guide, send = text => tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: t, text, parse_mode: 'HTML', disable_web_page_preview: true });
-  let from = typeof x.guidePosted === 'number' ? x.guidePosted : -1;
-  if (from < 0) {
-    const idx = await send(`<b>${GUIDE.title.en}</b>\n${GUIDE.intro.en}\n\n<b>${GUIDE.title.ar}</b>\n${GUIDE.intro.ar}\n\n` + guideGroups().map(g => (g.e ? `${g.e} <b>${esc(g.t.en)} · ${esc(g.t.ar)}</b>\n` : '') + g.items.map(s => `${s.e} ${esc((s.b || s.t).en)} · ${esc((s.b || s.t).ar)}`).join('\n')).join('\n\n'));
-    if (!idx.ok) return 0;
-    await tg(env, 'pinChatMessage', { chat_id: x.id, message_id: idx.result.message_id, disable_notification: true });
-    from = 0;
-  }
-  for (let i = from; i < GUIDE.sections.length; i++) {
-    const s = GUIDE.sections[i];
-    const r = await send(guideCard(s, 'en') + '\n\n— — —\n\n' + guideCard(s, 'ar'));
-    if (!r.ok) return i;
-  }
-  return true;
+  const c = await getCommunity(env), x = c.channel; if (!x || !x.guideMsg) return { posted: 0 };
+  const now = guideSigs(), edition = (x.guideV || 1) !== (GUIDE.v || 1);
+  if (!x.guideSig) { x.guideSig = now; x.guideV = GUIDE.v || 1; c.channel = x; await putCommunity(env, c); return { posted: 0 }; }
+  const changed = GUIDE.sections.filter(s => x.guideSig[s.k] !== now[s.k]);
+  if (!changed.length && !edition) return { posted: 0 };
+  const lines = edition ? ['📘 <b>A new edition of the guide · نسخة جديدة من الدليل</b>']
+    : ['🆕 <b>New in the guide · جديد في الدليل</b>', '', ...changed.slice(0, 10).map(s => `${s.k in x.guideSig ? '✏️' : '🆕'} ${s.e} ${esc(s.t.en)} · ${esc(s.t.ar)}`)];
+  const r = await tg(env, 'sendMessage', { chat_id: x.id, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: await guideButton(env) });
+  if (!r.ok) return { posted: 0 };
+  x.guideSig = now; x.guideV = GUIDE.v || 1; c.channel = x; await putCommunity(env, c);
+  return { posted: edition ? 'all' : changed.length };
 }
 
 // ── a join request: members of the bot (and Samir) in, everyone else declined ──
@@ -217,26 +162,15 @@ export async function onJoinRequest(env, u) {
   }
 }
 
-// 🛠 Updates and 📘 Guide become one: every new thing is posted in the guide's topic (🆕), so the Updates topic goes
-// (deleted — the bot made it; if Telegram refuses, it is closed and hidden from the list's top by renaming it 💤).
-async function mergeUpdates(env, x) {
-  const id = x.topics.updates;
-  const d = await tg(env, 'deleteForumTopic', { chat_id: x.id, message_thread_id: id });
-  if (!d.ok) { await tg(env, 'closeForumTopic', { chat_id: x.id, message_thread_id: id }); await tg(env, 'editForumTopic', { chat_id: x.id, message_thread_id: id, name: '💤 Old updates · قديم' }); }
-  delete x.topics.updates; x.merged = true;
-  await tg(env, 'sendMessage', { chat_id: x.id, message_thread_id: x.topics.guide, parse_mode: 'HTML',
-    text: '🆕 <b>One place for the guide and what\'s new</b>\nEvery new feature now shows up right here, marked 🆕.\n\n🆕 <b>الدليل والجديد في مكان واحد</b>\nكل ميزة جديدة ستُنشر هنا، بعلامة 🆕.' });
-}
-
-// ── /community (members): the two links ──
+// ── /community (members): the channel's link — the comments under its posts are the members' place to talk ──
 export async function communityView(env, lang) {
   const c = await getCommunity(env), ar = lang === 'ar', b = [];
-  if (c.channel && c.channel.link) b.push([{ text: ar ? '📢 قناة الإشارات' : '📢 Signals channel', url: c.channel.link }]);
-  if (c.group && c.group.link) b.push([{ text: ar ? '💬 مجموعة الأعضاء' : '💬 Members\' group', url: c.group.link }]);
+  if (c.channel && c.channel.link) b.push([{ text: ar ? '📢 قناة Cute Portfolio' : '📢 The Cute Portfolio channel', url: c.channel.link }]);
+  const has = b.length > 0;
   b.push([{ text: ar ? '⬅️ القائمة' : '⬅️ Menu', callback_data: 'menu' }]);
-  const text = b.length > 1
-    ? (ar ? '👥 <b>مجتمع Cute Portfolio</b> — للأعضاء فقط\n\n📢 <b>القناة</b>: نبض السوق مرتين يومياً والتحركات الكبيرة. يمكنك منح ⭐ للمنشورات التي تعجبك.\n💬 <b>المجموعة</b>: دردشة · 💡 اقتراحات · 🐞 ملاحظات · 📘 الدليل والجديد.\n\nاضغط وأرسل طلب الانضمام — يقبلك البوت فوراً.'
-          : '👥 <b>The Cute Portfolio community</b> — members only\n\n📢 <b>The channel</b>: the market pulse twice a day and big moves. You can give ⭐ to posts you like.\n💬 <b>The group</b>: chat · 💡 suggestions · 🐞 bugs & notes · 📘 the guide &amp; what\'s new.\n\nTap, send the join request — the bot lets you in at once.')
+  const text = has
+    ? (ar ? '👥 <b>مجتمع Cute Portfolio</b> — للأعضاء فقط\n\n📢 <b>القناة</b>: نبض السوق مرتين يومياً، والتحركات الكبيرة، والجديد في الدليل.\n💬 <b>النقاش</b>: علّق تحت أي منشور — التعليقات هي مكان المجتمع.\n💡 اقتراح أو 🐞 مشكلة؟ أرسل /feedback ثم رسالتك.\n\nاضغط وأرسل طلب الانضمام — يقبلك البوت فوراً.'
+          : '👥 <b>The Cute Portfolio community</b> — members only\n\n📢 <b>The channel</b>: the market pulse twice a day, big moves and what\'s new in the guide.\n💬 <b>Talk</b>: comment under any post — the comments are the community.\n💡 An idea or 🐞 a bug? Send /feedback and your message.\n\nTap, send the join request — the bot lets you in at once.')
     : (ar ? '👥 المجتمع قيد التجهيز — قريباً.' : '👥 The community is being set up — soon.');
   return { text, buttons: b };
 }
@@ -272,9 +206,8 @@ function otherMarkets(m, now) {
   }
   return out.length ? ['', ...out] : [];
 }
-// 💬 the group's Chat topic as a link (works for the group's members): t.me/c/<id without -100>/<topic>
-export function discussUrl(c) { const g = c && c.group; return g && g.topics && g.topics.chat ? `https://t.me/c/${String(g.id).replace(/^-100/, '')}/${g.topics.chat}` : null; }
-const channelButtons = (c, extra = []) => { const d = discussUrl(c); return { inline_keyboard: [[...extra, ...(d ? [{ text: '💬 Discuss · ناقشها', url: d }] : [])]].filter(r => r.length) }; };
+// the post's button: 🧭 Market Hub (the comments come with every post — no "Discuss" link needed)
+const channelButtons = (extra = []) => ({ inline_keyboard: [extra].filter(r => r.length) });
 export async function runChannel(env, now = Date.now()) {
   await guideUpdates(env).catch(() => {});   // 📘 a new release changed the guide → the changed parts in the guide topic
   const c = await getCommunity(env), ch = c.channel; if (!ch) return { job: null };
@@ -286,7 +219,7 @@ export async function runChannel(env, now = Date.now()) {
   if (!kind && m && m.btc && Math.abs(m.btc.ch24 || 0) >= 5 && sent.move !== today) kind = 'move';
   if (!kind || !m) return { job: null };
   const r = await tg(env, 'sendMessage', { chat_id: ch.id, text: pulseText(m, now, kind), parse_mode: 'HTML', disable_web_page_preview: true,
-    reply_markup: channelButtons(c, [{ text: '🧭 Market Hub', url: APP + 'market.html' }]) });
+    reply_markup: channelButtons([{ text: '🧭 Market Hub', url: APP + 'market.html' }]) });
   if (r.ok) {
     if (kind !== 'move') { if (ch.pinned) await tg(env, 'unpinChatMessage', { chat_id: ch.id, message_id: ch.pinned }); await tg(env, 'pinChatMessage', { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true }); ch.pinned = r.result.message_id; }
     sent[kind] = today; c.sent = sent; c.channel = ch; await putCommunity(env, c);
@@ -294,13 +227,11 @@ export async function runChannel(env, now = Date.now()) {
   return { job: 'channel:' + kind, ok: !!r.ok };
 }
 
-// ── /announce <text> (Samir): to the channel and the 📘 Guide topic (the guide and what's new, one place) ──
+// ── /announce <text> (Samir): to the channel ──
 export async function announce(env, text) {
   const c = await getCommunity(env), out = [];
   const body = `🆕 <b>What's new · الجديد</b>\n\n${esc(text)}`;
-  if (c.channel) out.push((await tg(env, 'sendMessage', { chat_id: c.channel.id, text: body, parse_mode: 'HTML', reply_markup: channelButtons(c) })).ok ? '📢' : '⚠️📢');
-  const th = c.group && c.group.topics && (c.group.topics.guide || c.group.topics.updates);
-  if (th) out.push((await tg(env, 'sendMessage', { chat_id: c.group.id, message_thread_id: th, text: body, parse_mode: 'HTML' })).ok ? '💬' : '⚠️💬');
+  if (c.channel) out.push((await tg(env, 'sendMessage', { chat_id: c.channel.id, text: body, parse_mode: 'HTML' })).ok ? '📢' : '⚠️📢');
   return out;
 }
 export const isCommunityChat = async (env, id) => { const c = await getCommunity(env); return [c.channel, c.group].some(x => x && String(x.id) === String(id)); };

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: c3eef4d61469b970
+// sources-hash: ad144a22169a5eaf
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3239,13 +3239,6 @@ async function putCommunity(env, c) {
 }
 var owner = (env) => String(env.TELEGRAM_CHAT_ID);
 var say = (env, text) => tg3(env, "sendMessage", { chat_id: owner(env), text, parse_mode: "HTML", disable_web_page_preview: true });
-var TOPICS = [
-  ["chat", "\u{1F4AC} Chat \xB7 \u062F\u0631\u062F\u0634\u0629", 7322096],
-  ["ideas", "\u{1F4A1} Suggestions \xB7 \u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A", 16766590],
-  ["bugs", "\u{1F41E} Bugs & notes \xB7 \u0645\u0644\u0627\u062D\u0638\u0627\u062A", 16478047],
-  ["guide", "\u{1F4D8} Guide \xB7 \u0627\u0644\u062F\u0644\u064A\u0644", 9367192]
-  // (the 🛠 Updates topic of the first version: merged into the guide — removed by mergeUpdates)
-];
 var NOTE = { en: "Not financial advice \u2014 for information only.", ar: "\u0644\u064A\u0633\u062A \u0646\u0635\u064A\u062D\u0629 \u0645\u0627\u0644\u064A\u0629 \u2014 \u0644\u0644\u0645\u0639\u0644\u0648\u0645\u0629 \u0641\u0642\u0637." };
 async function onMyChatMember(env, u) {
   const m = u.my_chat_member, chat = m && m.chat;
@@ -3288,108 +3281,54 @@ async function registerForward(env, msg) {
   await setup(env, kind);
   return true;
 }
-async function noteTopic(env, msg) {
-  const c = await getCommunity(env), x = c.group, t = msg.message_thread_id;
-  if (!x || String(x.id) !== String(msg.chat.id) || !msg.is_topic_message || !t || Object.values(x.topics || {}).includes(t)) return;
-  x.strays = [.../* @__PURE__ */ new Set([...x.strays || [], t])].slice(-10);
-  c.group = x;
-  await putCommunity(env, c);
-}
-async function cleanTopics(env) {
-  const c = await getCommunity(env), x = c.group;
-  if (!x) return say(env, "\u2139\uFE0F No group set up.");
-  if (!(x.strays || []).length) return say(env, "\u2139\uFE0F I don't know the old topics yet \u2014 send any message in one of them (from the account that sees them), then /community clean again.");
-  const keep = new Set(Object.values(x.topics || {})), ids = /* @__PURE__ */ new Set();
-  for (const s of x.strays) for (let i = s - 6; i <= s + 6; i++) if (i > 1 && !keep.has(i)) ids.add(i);
-  let n = 0;
-  for (const id of ids) {
-    const r = await tg3(env, "deleteForumTopic", { chat_id: x.id, message_thread_id: id });
-    if (r.ok) n++;
-  }
-  x.strays = [];
-  c.group = x;
-  await putCommunity(env, c);
-  return say(env, n ? `\u{1F9F9} Deleted ${n} old topic${n > 1 ? "s" : ""}. The 4 new ones stay.` : "\u2139\uFE0F No old topic found to delete.");
-}
 async function setup(env, kind, opt = {}) {
   const c = await getCommunity(env), x = c[kind];
   if (!x) return { ok: false };
-  if (opt.reguide) x.reguide = true;
   const notes = [];
-  const link = await tg3(env, "createChatInviteLink", { chat_id: x.id, name: "Cute Portfolio members", creates_join_request: true });
-  if (link.ok) x.link = link.result.invite_link;
-  else notes.push('\u26A0\uFE0F No join link \u2014 give me "Invite users via link".');
-  if (kind === "group" && !x.v2) {
-    if (x.guidePosted === true) x.guidePosted = 14;
-    x.helloPosted = false;
-    x.v2 = true;
-  }
-  if (kind === "group" && x.reguide) {
-    x.guidePosted = -1;
-    delete x.reguide;
-  }
-  if (kind === "group") {
-    const info = await tg3(env, "getChat", { chat_id: x.id });
-    if (info.ok && info.result.is_forum) {
-      x.topics = x.topics || {};
-      for (const [k, name] of TOPICS) {
-        if (!x.topics[k]) continue;
-        const r = opt.reset ? { ok: false, description: "reset" } : await tg3(env, "sendChatAction", { chat_id: x.id, message_thread_id: x.topics[k], action: "typing" });
-        if (!r.ok && !opt.reset && !/TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || "")) notes.push(`\u2139\uFE0F ${name}: ${esc(r.description || "?")}`);
-        if (!r.ok && (opt.reset || /TOPIC_ID_INVALID|TOPIC_DELETED|thread not found/i.test(r.description || ""))) {
-          delete x.topics[k];
-          notes.push(`\u267B\uFE0F ${name} was gone \u2014 made again.`);
-          if (k === "chat") x.helloPosted = false;
-          if (k === "guide") {
-            x.guidePosted = -1;
-            delete x.guideSig;
-            delete x.reposting;
-            x.tidy = false;
-          }
-        }
-      }
-      for (const [k, name, color] of TOPICS) {
-        if (x.topics[k]) continue;
-        const r = await tg3(env, "createForumTopic", { chat_id: x.id, name, icon_color: color });
-        if (r.ok) x.topics[k] = r.result.message_thread_id;
-        else {
-          notes.push('\u26A0\uFE0F Topics not made \u2014 give me "Manage topics".');
-          break;
-        }
-      }
-      if (x.topics.chat && !x.helloPosted) {
-        const hr = await tg3(env, "sendMessage", { chat_id: x.id, message_thread_id: x.topics.chat, parse_mode: "HTML", text: "\u{1F44B} <b>Welcome to the Cute Portfolio community!</b>\nChat here \xB7 ideas in \u{1F4A1} \xB7 problems in \u{1F41E} \xB7 how-to in \u{1F4D8} \xB7 news in \u{1F6E0}.\n\n\u{1F44B} <b>\u0623\u0647\u0644\u0627\u064B \u0628\u0643\u0645 \u0641\u064A \u0645\u062C\u062A\u0645\u0639 Cute Portfolio!</b>\n\u0627\u0644\u062F\u0631\u062F\u0634\u0629 \u0647\u0646\u0627 \xB7 \u0627\u0644\u0623\u0641\u0643\u0627\u0631 \u0641\u064A \u{1F4A1} \xB7 \u0627\u0644\u0645\u0634\u0643\u0644\u0627\u062A \u0641\u064A \u{1F41E} \xB7 \u0627\u0644\u0634\u0631\u062D \u0648\u0627\u0644\u062C\u062F\u064A\u062F \u0641\u064A \u{1F4D8}." });
-        x.helloPosted = !!(hr && hr.ok);
-        if (!x.helloPosted) notes.push("\u26A0\uFE0F The welcome in \u{1F4AC} Chat didn't go \u2014 send /community setup in a minute.");
-      }
-      if (x.topics.guide && x.guidePosted !== true) {
-        const done = await postGuide(env, x);
-        x.guidePosted = done === true ? true : done;
-        if (done !== true) notes.push(`\u26A0\uFE0F The guide stopped at part ${done + 1} (Telegram's limit) \u2014 send /community setup in a minute to finish it.`);
-      }
-      if (x.guidePosted === true && !x.guideSig) {
+  if (kind === "channel") {
+    const link = await tg3(env, "createChatInviteLink", { chat_id: x.id, name: "Cute Portfolio members", creates_join_request: true });
+    if (link.ok) x.link = link.result.invite_link;
+    else notes.push('\u26A0\uFE0F No join link \u2014 give me "Invite users via link".');
+    if (!x.guideMsg || opt.reguide) {
+      const id = await postGuidePost(env, x);
+      if (id) {
+        x.guideMsg = id;
         x.guideSig = guideSigs();
         x.guideV = guide_default.v || 1;
-      }
-      if (!x.tidy && !await tidy(env, x)) notes.push('\u26A0\uFE0F Could not close \u{1F4D8} or hide # General \u2014 check that I can "Manage topics".');
-    } else notes.push("\u26A0\uFE0F Turn on <b>Topics</b> in the group's settings, then send /community setup.");
+      } else notes.push("\u26A0\uFE0F The \u{1F4D8} guide post did not go \u2014 let me post and pin messages.");
+    }
   }
+  const ch = c.channel, g = c.group;
+  if (ch && g) {
+    const info = await tg3(env, "getChat", { chat_id: ch.id });
+    g.linked = !!(info.ok && info.result && String(info.result.linked_chat_id) === String(g.id));
+    if (g.linked) {
+      delete g.topics;
+      delete g.strays;
+    }
+    notes.push(g.linked ? "\u{1F4AC} Comments are on \u2014 members talk under each channel post." : `\u26A0\uFE0F Link the group to the channel: channel \u2192 \u270F\uFE0F Edit \u2192 <b>Discussion</b> \u2192 pick <b>${esc(g.title)}</b> (if Telegram refuses, turn <b>Topics</b> off in the group first). Then /community setup.`);
+  } else if (kind === "group") notes.push("\u2139\uFE0F Add me to the channel too, and link this group to it (channel \u2192 Edit \u2192 Discussion).");
   c[kind] = x;
   await putCommunity(env, c);
-  await say(env, `\u2705 <b>${esc(x.title)}</b> is set up (${kind === "channel" ? "\u{1F4E2} channel" : "\u{1F4AC} group"}).` + (x.link ? `
+  await say(env, `\u2705 <b>${esc(x.title)}</b> is set up (${kind === "channel" ? "\u{1F4E2} channel" : "\u{1F4AC} comments group"}).` + (kind === "channel" && x.link ? `
 Join link (members only \u2014 I approve each request): ${x.link}` : "") + (notes.length ? "\n" + notes.join("\n") : ""));
   return { ok: true };
 }
-async function tidy(env, x) {
-  let okAll = true;
-  for (const k of ["guide"]) if (x.topics && x.topics[k]) {
-    const r = await tg3(env, "closeForumTopic", { chat_id: x.id, message_thread_id: x.topics[k] });
-    if (!r.ok && !/TOPIC_NOT_MODIFIED/.test(r.description || "")) okAll = false;
-  }
-  const h = await tg3(env, "hideGeneralForumTopic", { chat_id: x.id });
-  if (!h.ok && !/not modified|TOPIC_NOT_MODIFIED/i.test(h.description || "")) okAll = false;
-  if (okAll) x.tidy = true;
-  return okAll;
+async function guideButton(env) {
+  const me = await tg3(env, "getMe", {});
+  const u = me.ok && me.result && me.result.username;
+  return u ? { inline_keyboard: [[{ text: "\u{1F4D8} Open the guide \xB7 \u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0644\u064A\u0644", url: `https://t.me/${u}?start=guide` }]] } : void 0;
+}
+async function postGuidePost(env, ch) {
+  const text = `\u{1F4D8} <b>${guide_default.title.en} \xB7 ${guide_default.title.ar}</b>
+${guide_default.intro.en}
+${guide_default.intro.ar}
+
+` + guideGroups().map((g) => g.items.map((s) => `${s.e} ${esc((s.b || s.t).en)} \xB7 ${esc((s.b || s.t).ar)}`).join("\n")).join("\n\n") + "\n\n\u{1F4A1} <i>Ideas or a bug? Send /feedback to the bot.</i>\n\u{1F4A1} <i>\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 /feedback \u0644\u0644\u0628\u0648\u062A.</i>";
+  const r = await tg3(env, "sendMessage", { chat_id: ch.id, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: await guideButton(env) });
+  if (!r.ok) return null;
+  await tg3(env, "pinChatMessage", { chat_id: ch.id, message_id: r.result.message_id, disable_notification: true });
+  return r.result.message_id;
 }
 var LRI2 = "\u200E";
 var PDI = "\u200E";
@@ -3422,85 +3361,26 @@ var sig = (s) => {
 };
 var guideSigs = () => Object.fromEntries(guide_default.sections.map((s) => [s.k, sig(s)]));
 async function guideUpdates(env) {
-  const c = await getCommunity(env), x = c.group;
-  if (!x || !x.topics || !x.topics.guide || x.guidePosted !== true && !x.reposting) return { posted: 0 };
-  if (!x.tidy && !x.tidyTried) {
-    x.tidyTried = true;
-    await tidy(env, x);
-    c.group = x;
-    await putCommunity(env, c);
-  }
-  if (x.topics.updates && !x.merged) {
-    await mergeUpdates(env, x);
-    c.group = x;
-    await putCommunity(env, c);
-  }
-  if ((x.guideV || 1) !== (guide_default.v || 1) || x.reposting) {
-    if (!x.reposting) {
-      x.reposting = true;
-      x.guidePosted = -1;
-    }
-    const done = await postGuide(env, x);
-    x.guidePosted = done === true ? true : done;
-    if (done === true) {
-      delete x.reposting;
-      x.guideV = guide_default.v || 1;
-      x.guideSig = guideSigs();
-    }
-    c.group = x;
-    await putCommunity(env, c);
-    return { posted: "all" };
-  }
+  const c = await getCommunity(env), x = c.channel;
+  if (!x || !x.guideMsg) return { posted: 0 };
+  const now = guideSigs(), edition = (x.guideV || 1) !== (guide_default.v || 1);
   if (!x.guideSig) {
-    x.guideSig = guideSigs();
-    c.group = x;
+    x.guideSig = now;
+    x.guideV = guide_default.v || 1;
+    c.channel = x;
     await putCommunity(env, c);
     return { posted: 0 };
   }
-  const now = guideSigs(), changed = guide_default.sections.filter((s) => x.guideSig[s.k] !== now[s.k]);
-  if (!changed.length) return { posted: 0 };
-  let n = 0;
-  for (const s of changed.slice(0, 5)) {
-    const isNew = !(s.k in x.guideSig);
-    const r = await tg3(env, "sendMessage", {
-      chat_id: x.id,
-      message_thread_id: x.topics.guide,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-      text: `\u{1F195} <b>${isNew ? "New in the guide \xB7 \u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644" : "Updated \xB7 \u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B"}</b>
-
-` + guideCard(s, "en") + "\n\n\u2014 \u2014 \u2014\n\n" + guideCard(s, "ar")
-    });
-    if (!r.ok) break;
-    x.guideSig[s.k] = now[s.k];
-    n++;
-  }
-  c.group = x;
+  const changed = guide_default.sections.filter((s) => x.guideSig[s.k] !== now[s.k]);
+  if (!changed.length && !edition) return { posted: 0 };
+  const lines = edition ? ["\u{1F4D8} <b>A new edition of the guide \xB7 \u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0627\u0644\u062F\u0644\u064A\u0644</b>"] : ["\u{1F195} <b>New in the guide \xB7 \u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644</b>", "", ...changed.slice(0, 10).map((s) => `${s.k in x.guideSig ? "\u270F\uFE0F" : "\u{1F195}"} ${s.e} ${esc(s.t.en)} \xB7 ${esc(s.t.ar)}`)];
+  const r = await tg3(env, "sendMessage", { chat_id: x.id, text: lines.join("\n"), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: await guideButton(env) });
+  if (!r.ok) return { posted: 0 };
+  x.guideSig = now;
+  x.guideV = guide_default.v || 1;
+  c.channel = x;
   await putCommunity(env, c);
-  return { posted: n };
-}
-async function postGuide(env, x) {
-  const t = x.topics.guide, send3 = (text) => tg3(env, "sendMessage", { chat_id: x.id, message_thread_id: t, text, parse_mode: "HTML", disable_web_page_preview: true });
-  let from = typeof x.guidePosted === "number" ? x.guidePosted : -1;
-  if (from < 0) {
-    const idx = await send3(`<b>${guide_default.title.en}</b>
-${guide_default.intro.en}
-
-<b>${guide_default.title.ar}</b>
-${guide_default.intro.ar}
-
-` + guideGroups().map((g) => (g.e ? `${g.e} <b>${esc(g.t.en)} \xB7 ${esc(g.t.ar)}</b>
-` : "") + g.items.map((s) => `${s.e} ${esc((s.b || s.t).en)} \xB7 ${esc((s.b || s.t).ar)}`).join("\n")).join("\n\n"));
-    if (!idx.ok) return 0;
-    await tg3(env, "pinChatMessage", { chat_id: x.id, message_id: idx.result.message_id, disable_notification: true });
-    from = 0;
-  }
-  for (let i = from; i < guide_default.sections.length; i++) {
-    const s = guide_default.sections[i];
-    const r = await send3(guideCard(s, "en") + "\n\n\u2014 \u2014 \u2014\n\n" + guideCard(s, "ar"));
-    if (!r.ok) return i;
-  }
-  return true;
+  return { posted: edition ? "all" : changed.length };
 }
 async function onJoinRequest(env, u) {
   const r = u.chat_join_request, c = await getCommunity(env);
@@ -3513,28 +3393,12 @@ async function onJoinRequest(env, u) {
     await tg3(env, "sendMessage", { chat_id: who, text: ar ? `\u2705 \u062A\u0645 \u0642\u0628\u0648\u0644\u0643 \u0641\u064A ${r.chat.title} \u2014 \u0623\u0647\u0644\u0627\u064B \u0628\u0643 \u{1F44B}` : `\u2705 You're in ${r.chat.title} \u2014 welcome \u{1F44B}` });
   }
 }
-async function mergeUpdates(env, x) {
-  const id = x.topics.updates;
-  const d = await tg3(env, "deleteForumTopic", { chat_id: x.id, message_thread_id: id });
-  if (!d.ok) {
-    await tg3(env, "closeForumTopic", { chat_id: x.id, message_thread_id: id });
-    await tg3(env, "editForumTopic", { chat_id: x.id, message_thread_id: id, name: "\u{1F4A4} Old updates \xB7 \u0642\u062F\u064A\u0645" });
-  }
-  delete x.topics.updates;
-  x.merged = true;
-  await tg3(env, "sendMessage", {
-    chat_id: x.id,
-    message_thread_id: x.topics.guide,
-    parse_mode: "HTML",
-    text: "\u{1F195} <b>One place for the guide and what's new</b>\nEvery new feature now shows up right here, marked \u{1F195}.\n\n\u{1F195} <b>\u0627\u0644\u062F\u0644\u064A\u0644 \u0648\u0627\u0644\u062C\u062F\u064A\u062F \u0641\u064A \u0645\u0643\u0627\u0646 \u0648\u0627\u062D\u062F</b>\n\u0643\u0644 \u0645\u064A\u0632\u0629 \u062C\u062F\u064A\u062F\u0629 \u0633\u062A\u064F\u0646\u0634\u0631 \u0647\u0646\u0627\u060C \u0628\u0639\u0644\u0627\u0645\u0629 \u{1F195}."
-  });
-}
 async function communityView(env, lang2) {
   const c = await getCommunity(env), ar = lang2 === "ar", b = [];
-  if (c.channel && c.channel.link) b.push([{ text: ar ? "\u{1F4E2} \u0642\u0646\u0627\u0629 \u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" : "\u{1F4E2} Signals channel", url: c.channel.link }]);
-  if (c.group && c.group.link) b.push([{ text: ar ? "\u{1F4AC} \u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "\u{1F4AC} Members' group", url: c.group.link }]);
+  if (c.channel && c.channel.link) b.push([{ text: ar ? "\u{1F4E2} \u0642\u0646\u0627\u0629 Cute Portfolio" : "\u{1F4E2} The Cute Portfolio channel", url: c.channel.link }]);
+  const has = b.length > 0;
   b.push([{ text: ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", callback_data: "menu" }]);
-  const text = b.length > 1 ? ar ? "\u{1F465} <b>\u0645\u062C\u062A\u0645\u0639 Cute Portfolio</b> \u2014 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0641\u0642\u0637\n\n\u{1F4E2} <b>\u0627\u0644\u0642\u0646\u0627\u0629</b>: \u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642 \u0645\u0631\u062A\u064A\u0646 \u064A\u0648\u0645\u064A\u0627\u064B \u0648\u0627\u0644\u062A\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0643\u0628\u064A\u0631\u0629. \u064A\u0645\u0643\u0646\u0643 \u0645\u0646\u062D \u2B50 \u0644\u0644\u0645\u0646\u0634\u0648\u0631\u0627\u062A \u0627\u0644\u062A\u064A \u062A\u0639\u062C\u0628\u0643.\n\u{1F4AC} <b>\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629</b>: \u062F\u0631\u062F\u0634\u0629 \xB7 \u{1F4A1} \u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A \xB7 \u{1F41E} \u0645\u0644\u0627\u062D\u0638\u0627\u062A \xB7 \u{1F4D8} \u0627\u0644\u062F\u0644\u064A\u0644 \u0648\u0627\u0644\u062C\u062F\u064A\u062F.\n\n\u0627\u0636\u063A\u0637 \u0648\u0623\u0631\u0633\u0644 \u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u2014 \u064A\u0642\u0628\u0644\u0643 \u0627\u0644\u0628\u0648\u062A \u0641\u0648\u0631\u0627\u064B." : "\u{1F465} <b>The Cute Portfolio community</b> \u2014 members only\n\n\u{1F4E2} <b>The channel</b>: the market pulse twice a day and big moves. You can give \u2B50 to posts you like.\n\u{1F4AC} <b>The group</b>: chat \xB7 \u{1F4A1} suggestions \xB7 \u{1F41E} bugs & notes \xB7 \u{1F4D8} the guide &amp; what's new.\n\nTap, send the join request \u2014 the bot lets you in at once." : ar ? "\u{1F465} \u0627\u0644\u0645\u062C\u062A\u0645\u0639 \u0642\u064A\u062F \u0627\u0644\u062A\u062C\u0647\u064A\u0632 \u2014 \u0642\u0631\u064A\u0628\u0627\u064B." : "\u{1F465} The community is being set up \u2014 soon.";
+  const text = has ? ar ? "\u{1F465} <b>\u0645\u062C\u062A\u0645\u0639 Cute Portfolio</b> \u2014 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0641\u0642\u0637\n\n\u{1F4E2} <b>\u0627\u0644\u0642\u0646\u0627\u0629</b>: \u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642 \u0645\u0631\u062A\u064A\u0646 \u064A\u0648\u0645\u064A\u0627\u064B\u060C \u0648\u0627\u0644\u062A\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0643\u0628\u064A\u0631\u0629\u060C \u0648\u0627\u0644\u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644.\n\u{1F4AC} <b>\u0627\u0644\u0646\u0642\u0627\u0634</b>: \u0639\u0644\u0651\u0642 \u062A\u062D\u062A \u0623\u064A \u0645\u0646\u0634\u0648\u0631 \u2014 \u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A \u0647\u064A \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062C\u062A\u0645\u0639.\n\u{1F4A1} \u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u{1F41E} \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 /feedback \u062B\u0645 \u0631\u0633\u0627\u0644\u062A\u0643.\n\n\u0627\u0636\u063A\u0637 \u0648\u0623\u0631\u0633\u0644 \u0637\u0644\u0628 \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u2014 \u064A\u0642\u0628\u0644\u0643 \u0627\u0644\u0628\u0648\u062A \u0641\u0648\u0631\u0627\u064B." : "\u{1F465} <b>The Cute Portfolio community</b> \u2014 members only\n\n\u{1F4E2} <b>The channel</b>: the market pulse twice a day, big moves and what's new in the guide.\n\u{1F4AC} <b>Talk</b>: comment under any post \u2014 the comments are the community.\n\u{1F4A1} An idea or \u{1F41E} a bug? Send /feedback and your message.\n\nTap, send the join request \u2014 the bot lets you in at once." : ar ? "\u{1F465} \u0627\u0644\u0645\u062C\u062A\u0645\u0639 \u0642\u064A\u062F \u0627\u0644\u062A\u062C\u0647\u064A\u0632 \u2014 \u0642\u0631\u064A\u0628\u0627\u064B." : "\u{1F465} The community is being set up \u2014 soon.";
   return { text, buttons: b };
 }
 function pulseText(m, now, kind) {
@@ -3575,14 +3439,7 @@ function otherMarkets(m, now) {
   }
   return out.length ? ["", ...out] : [];
 }
-function discussUrl(c) {
-  const g = c && c.group;
-  return g && g.topics && g.topics.chat ? `https://t.me/c/${String(g.id).replace(/^-100/, "")}/${g.topics.chat}` : null;
-}
-var channelButtons = (c, extra = []) => {
-  const d = discussUrl(c);
-  return { inline_keyboard: [[...extra, ...d ? [{ text: "\u{1F4AC} Discuss \xB7 \u0646\u0627\u0642\u0634\u0647\u0627", url: d }] : []]].filter((r) => r.length) };
-};
+var channelButtons = (extra = []) => ({ inline_keyboard: [extra].filter((r) => r.length) });
 async function runChannel(env, now = Date.now()) {
   await guideUpdates(env).catch(() => {
   });
@@ -3600,7 +3457,7 @@ async function runChannel(env, now = Date.now()) {
     text: pulseText(m, now, kind),
     parse_mode: "HTML",
     disable_web_page_preview: true,
-    reply_markup: channelButtons(c, [{ text: "\u{1F9ED} Market Hub", url: APP + "market.html" }])
+    reply_markup: channelButtons([{ text: "\u{1F9ED} Market Hub", url: APP + "market.html" }])
   });
   if (r.ok) {
     if (kind !== "move") {
@@ -3620,9 +3477,7 @@ async function announce(env, text) {
   const body = `\u{1F195} <b>What's new \xB7 \u0627\u0644\u062C\u062F\u064A\u062F</b>
 
 ${esc(text)}`;
-  if (c.channel) out.push((await tg3(env, "sendMessage", { chat_id: c.channel.id, text: body, parse_mode: "HTML", reply_markup: channelButtons(c) })).ok ? "\u{1F4E2}" : "\u26A0\uFE0F\u{1F4E2}");
-  const th = c.group && c.group.topics && (c.group.topics.guide || c.group.topics.updates);
-  if (th) out.push((await tg3(env, "sendMessage", { chat_id: c.group.id, message_thread_id: th, text: body, parse_mode: "HTML" })).ok ? "\u{1F4AC}" : "\u26A0\uFE0F\u{1F4AC}");
+  if (c.channel) out.push((await tg3(env, "sendMessage", { chat_id: c.channel.id, text: body, parse_mode: "HTML" })).ok ? "\u{1F4E2}" : "\u26A0\uFE0F\u{1F4E2}");
   return out;
 }
 
@@ -6037,6 +5892,8 @@ async function tg6(env, method, body) {
 var send2 = (env, chat, v, extra = {}) => tg6(env, "sendMessage", { chat_id: chat, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
 var edit = (env, chat, msgId, v) => tg6(env, "editMessageText", { chat_id: chat, message_id: msgId, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {} });
 var WORDS = [
+  [/^\/(feedback|bug|idea)(@\w+)?(\s+[\s\S]+)?$/i, "fb"],
+  // first: its text may hold any word ("/feedback المحفظة …")
   [/^\/?(start|menu|help|القائمة|مساعدة|ابدأ)$/i, "menu"],
   [/^\/?(portfolio|pf|wallet)$|محفظتي|المحفظة/i, "pf"],
   [/^\/?(market|mk)$|السوق/i, "mk"],
@@ -6059,9 +5916,8 @@ var WORDS = [
   [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, "cm"],
   [/^\/community setup$/i, "cm:setup"],
   [/^\/community guide$/i, "cm:guide"],
-  [/^\/community reset$/i, "cm:reset"],
-  [/^\/community clean$/i, "cm:clean"],
   [/^\/announce\s+[\s\S]+$/i, "ann"],
+  [/^\/start\s+guide$/i, "gd"],
   [/^\/start\s+\S+$/i, "menu"],
   [/^\/(report|app)$|^التقرير$/i, "rp"],
   [/^\/(daily|settings)$|^اليومي$/i, "dy"],
@@ -6176,8 +6032,6 @@ async function handleTelegram(request, env) {
   const msg = u.message || u.edited_message, q = u.callback_query;
   const chat = msg ? msg.chat && msg.chat.id : q && q.message && q.message.chat && q.message.chat.id;
   if (chat == null) return ok();
-  if (msg && msg.chat && msg.chat.type === "supergroup" && msg.message_thread_id) await noteTopic(env, msg).catch(() => {
-  });
   if (!await allowed(env, chat)) {
     if (await bump("stranger", chat, 36e5) > STRANGER_MSGS_PER_HOUR) return ok();
     return stranger(env, u, msg, chat);
@@ -6831,6 +6685,21 @@ async function onVoice(env, chat, voice) {
   if (!id) await send2(env, chat, { text: head });
   return onText(env, chat, r.text, 32, id ? { id, head } : null);
 }
+async function feedback(env, chat, text) {
+  const ar = await getLang(env) === "ar", body = String(text || "").replace(/^\/(feedback|bug|idea)(@\w+)?/i, "").trim().slice(0, 2e3);
+  if (!body) return { text: ar ? "\u{1F4A1} \u0627\u0643\u062A\u0628 <code>/feedback</code> \u062B\u0645 \u0627\u0642\u062A\u0631\u0627\u062D\u0643 \u0623\u0648 \u0627\u0644\u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0646\u0641\u0633 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u2014 \u062A\u0635\u0644 \u0644\u0633\u0645\u064A\u0631 \u0645\u0628\u0627\u0634\u0631\u0629." : "\u{1F4A1} Send <code>/feedback</code> and your idea or the bug in the same message \u2014 it goes straight to Samir." };
+  if (isOwner(env)) return { text: "\u2139\uFE0F That's for members \u2014 their /feedback comes to you here." };
+  const m = (await members(env))[String(chat)] || {};
+  const r = await tg6(env, "sendMessage", {
+    chat_id: env.TELEGRAM_CHAT_ID,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    text: `\u{1F4A1} <b>Feedback</b> \xB7 ${esc(m.name || "member")}${m.user ? " @" + esc(m.user) : ""} (<code>${esc(String(chat))}</code>)
+
+${esc(body)}`
+  });
+  return { text: r && r.ok ? ar ? "\u2705 \u0648\u0635\u0644\u062A \u0631\u0633\u0627\u0644\u062A\u0643 \u0644\u0633\u0645\u064A\u0631 \u2014 \u0634\u0643\u0631\u0627\u064B \u0644\u0643 \u{1F49B}" : "\u2705 Sent to Samir \u2014 thank you \u{1F49B}" : ar ? "\u26A0\uFE0F \u0644\u0645 \u062A\u0635\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u2014 \u062D\u0627\u0648\u0644 \u0628\u0639\u062F \u0642\u0644\u064A\u0644." : "\u26A0\uFE0F It did not go \u2014 try again in a moment." };
+}
 async function onText(env, chat, text, budget = 36, into = null) {
   const p = parse(text);
   tg6(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
@@ -6927,7 +6796,11 @@ async function onText(env, chat, text, budget = 36, into = null) {
     await send2(env, chat, await communityView(env, await getLang(env)));
     return;
   }
-  if (p.act === "cm:setup" || p.act === "ann" || p.act === "cm:guide" || p.act === "cm:reset" || p.act === "cm:clean") {
+  if (p.act === "fb") {
+    await send2(env, chat, await feedback(env, chat, text));
+    return;
+  }
+  if (p.act === "cm:setup" || p.act === "ann" || p.act === "cm:guide") {
     if (!isOwner(env)) {
       await send2(env, chat, { text: T[await getLang(env)].ownerOnly });
       return;
@@ -6937,20 +6810,12 @@ async function onText(env, chat, text, budget = 36, into = null) {
       await setup(env, "group");
       return;
     }
-    if (p.act === "cm:clean") {
-      await cleanTopics(env);
-      return;
-    }
-    if (p.act === "cm:reset") {
-      await setup(env, "group", { reset: true });
-      return;
-    }
     if (p.act === "cm:guide") {
-      await setup(env, "group", { reguide: true });
+      await setup(env, "channel", { reguide: true });
       return;
     }
     const out = await announce(env, String(text).replace(/^\/announce\s+/i, "").slice(0, 3500));
-    await send2(env, chat, { text: out.length ? "\u{1F4E3} " + out.join(" ") : "\u2139\uFE0F No channel / group yet." });
+    await send2(env, chat, { text: out.length ? "\u{1F4E3} " + out.join(" ") : "\u2139\uFE0F No channel yet." });
     return;
   }
   if (p.act === "gd") {
@@ -7092,7 +6957,8 @@ var cmds = (lang2, owner2 = true) => {
     ["pin", a ? "\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u0628\u062A\u0629" : "Live pinned message"],
     ["unpin", a ? "\u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u0628\u062A\u0629" : "Remove the pinned message"],
     ["guide", a ? "\u0627\u0644\u062F\u0644\u064A\u0644 \u0627\u0644\u0643\u0627\u0645\u0644 \u{1F4D8}" : "The full guide \u{1F4D8}"],
-    ["community", a ? "\u0627\u0644\u0642\u0646\u0627\u0629 \u0648\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u{1F465}" : "Channel & group \u{1F465}"],
+    ["community", a ? "\u0627\u0644\u0642\u0646\u0627\u0629 \u0648\u0627\u0644\u0646\u0642\u0627\u0634 \u{1F465}" : "Channel & comments \u{1F465}"],
+    ["feedback", a ? "\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629 \u{1F4A1}" : "An idea or a bug \u{1F4A1}"],
     ["new", a ? "\u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0639 \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A" : "New AI chat"],
     ["lang", "English / \u0639\u0631\u0628\u064A"],
     ["hide", a ? "\u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0623\u0632\u0631\u0627\u0631" : "Hide the buttons"]
@@ -7903,7 +7769,8 @@ setKeyHandler(async (env, email, body) => {
       botLinked: isTgChat(x.chat),
       price: price(env),
       amounts: SUPPORT,
-      community: await getCommunity(env).then((c) => ({ channel: c.channel && c.channel.link || null, group: c.group && c.group.link || null })).catch(() => ({})),
+      community: await getCommunity(env).then((c) => ({ channel: c.channel && c.channel.link || null, group: null })).catch(() => ({})),
+      // one place: the channel (its comments are the group)
       questions: await usage(env).then((u) => ({ used: u.used, limit: u.limit })).catch(() => null),
       // 🧠 today's AI questions (bot)
       tgIn: await inCommunity(env, x.chat)
