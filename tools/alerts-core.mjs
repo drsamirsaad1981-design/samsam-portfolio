@@ -251,8 +251,20 @@ function movers(sum, key, n = 3) {
   const line = c => `<code>${esc(c.sym.padEnd(6))} ${pct(c[key], 1).padStart(7)}</code>  ${usd(c.value)}`;
   return { up: up.map(line), dn: dn.map(line) };
 }
+// Arabic words for the market's labels and dates (the bot's views use the same)
+export const FNG_AR = { 'Extreme Fear': 'خوف شديد', Fear: 'خوف', Neutral: 'محايد', Greed: 'طمع', 'Extreme Greed': 'طمع شديد' };
+export const SEASON_AR = { 'Altcoin Season': 'موسم العملات البديلة', 'Bitcoin Season': 'موسم البيتكوين', 'Leaning Altcoins': 'يميل للعملات البديلة', 'Leaning Bitcoin': 'يميل للبيتكوين' };
+export const arDay = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('ar-SA-u-nu-latn-ca-gregory', { month: 'long', day: 'numeric', timeZone: 'UTC' });
 export function marketLines(t, m) {
   const g = m.global || {}, d = g.dom || {}, out = [];
+  if (t === W.ar) {   // Arabic: every line starts with an Arabic word (a line that opens with "BTC" or "$" shows left-to-right in Telegram)
+    if (m.btc) out.push(`البيتكوين: <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
+    if (d.btc != null) out.push(`${t.dom}: البيتكوين ${d.btc.toFixed(1)}% · التيثر ${(d.usdt || 0).toFixed(2)}%`);
+    if (m.fng) out.push(`${esc(t.fng)}: <b>${m.fng.value}</b> · ${esc(FNG_AR[m.fng.label] || m.fng.label)}`);
+    if (m.alt && m.alt.value != null) out.push(`${t.alt}: <b>${m.alt.value}</b> · ${esc(SEASON_AR[m.alt.label] || m.alt.label)}`);
+    const e = etfDay(m.etf); if (e) out.push(`تدفقات ETF (${arDay(e.date)}):`, `• BTC ${flow(e.btc)} · ETH ${flow(e.eth)}`);
+    return out;
+  }
   if (m.btc) out.push(`BTC  <b>${usd(m.btc.price)}</b>  ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
   if (d.btc != null) out.push(`${t.dom}  BTC ${d.btc.toFixed(1)}% · USDT ${(d.usdt || 0).toFixed(2)}%`);
   if (m.fng) out.push(`${esc(t.fng)}  <b>${m.fng.value}</b> · ${esc(m.fng.label)}`);
@@ -270,21 +282,26 @@ export function etfDay(etf) {
 export function brief(sum, m, cfg, now, weekly = false) {
   const t = W[cfg.lang], key = weekly ? 'ch7' : 'ch24', mv = movers(sum, key);
   const head = `${weekly ? '🗓' : '☀️'} <b>${weekly ? t.weekly : t.brief}</b> · ${local(now, { weekday: 'short', day: 'numeric', month: 'short' })}`;
-  const ch = weekly ? sum.ch7 : sum.ch24, dv = weekly ? sum.d7 : sum.d24;
-  const L = [head, '',
+  const ch = weekly ? sum.ch7 : sum.ch24, dv = weekly ? sum.d7 : sum.d24, ar = cfg.lang === 'ar';
+  // Arabic: "label: amount (percent)" on every line, the date in Arabic — each line starts with an Arabic word
+  const L = ar ? [`${weekly ? '🗓' : '☀️'} <b>${weekly ? t.weekly : t.brief}</b> · ${arDay(localParts(now).date)}`, '',
+    `💵 القيمة: <b>${usd2(sum.value)}</b>`,
+    `📅 ${weekly ? t.week : t.today}: <b>${signed(dv)}</b> (${pct(ch)}) ${dot(ch)}`,
+    `💰 ${t.profit}: <b>${signed(sum.total)}</b> (${pct(sum.pctTotal, 1)})`]
+    : [head, '',
     `💼 <b>${usd2(sum.value)}</b>   ${dot(ch)} ${pct(ch)} (${signed(dv)}) ${weekly ? t.week : t.today}`,
     `${t.profit}  <b>${signed(sum.total)}</b> (${pct(sum.pctTotal, 1)})`];
-  if (sum.vsBtc != null) L.push(`${t.vsBtc}  ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} · ${t.beatBtc(sum.beat, sum.alts)}`);
+  if (sum.vsBtc != null) L.push(ar ? `🆚 مقابل البيتكوين: <b>${pct(sum.vsBtc)}</b> ${dot(sum.vsBtc)} · ${t.beatBtc(sum.beat, sum.alts)}` : `${t.vsBtc}  ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} · ${t.beatBtc(sum.beat, sum.alts)}`);
   if (mv.up.length) L.push('', `📈 <b>${weekly ? t.bestW : t.best}</b>`, ...mv.up);
   if (mv.dn.length) L.push('', `📉 <b>${weekly ? t.worstW : t.worst}</b>`, ...mv.dn);
   const ml = marketLines(t, m); if (ml.length) L.push('', `🌍 <b>${t.market}</b>`, ...ml);
-  L.push('', `🎯 <b>${t.signals}</b>  ${sum.counts.reinforce} ${t.reinforce} · ${sum.counts.sell} ${t.sell.split(' /')[0]} · ${sum.counts.hold} ${t.hold}`);
-  if (sum.plan.length) L.push(`📋 <b>${t.plan}</b>  ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`);
+  L.push('', `🎯 <b>${t.signals}</b>${ar ? ':' : ' '} ${sum.counts.reinforce} ${t.reinforce} · ${sum.counts.sell} ${t.sell.split(' /')[0]} · ${sum.counts.hold} ${t.hold}`);
+  if (sum.plan.length) L.push(ar ? `📋 <b>${t.plan}</b>: ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed} من ${sum.prog.counted} ${t.met}` : `📋 <b>${t.plan}</b>  ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`);
   const mc = sum.macro.filter(x => x.met).length; if (mc) L.push(`🧭 ${t.of3(mc)}`);
   if (sum.alloc) L.push(`⚖️ <b>${t.allocation}</b>  ${t.onTarget(sum.alloc.onTarget, sum.alloc.count)}`);
   if (sum.dca && sum.dca.length) {
     const nx = [...sum.dca].filter(x => x.s.next).sort((a, b) => a.s.next.localeCompare(b.s.next))[0], mo = sum.dca.reduce((a, x) => a + x.s.perMonth, 0);
-    L.push(`🛒 <b>DCA</b>  ${t.dcaLine(sum.dca.length, usd(mo), nx ? esc(nx.sym) + ' ' + shortD(nx.s.next) : '—')}`);
+    L.push(ar ? `🛒 ${t.dcaLine(sum.dca.length, usd(mo), nx ? esc(nx.sym) + ' · ' + arDay(nx.s.next) : '—')}` : `🛒 <b>DCA</b>  ${t.dcaLine(sum.dca.length, usd(mo), nx ? esc(nx.sym) + ' ' + shortD(nx.s.next) : '—')}`);
   }
   if (weekly && sum.free && sum.free.length) {
     const tot = sum.free.reduce((a, f) => a + f.usd, 0), q = n => String(+Number(n).toPrecision(6));

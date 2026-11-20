@@ -134,6 +134,7 @@ hv_chart_test.py
 tg_bot_test.py
 tg_login_test.py
 tg_miniapp_test.py
+bot_app_parity_test.py
 cex_test.py
 bidi_test.py
 cex_ui_test.py

@@ -13,7 +13,9 @@
 // HTML tags are left alone; a line already marked (the guide's cards) is not touched again. Lines with no Arabic
 // (English messages, the English half of the group's posts) are not touched at all.
 const AR = /[\u0600-\u06FF]/, RLM = '\u200F', LRM = '\u200E', LRI = '\u2066';
-const RUN = /[A-Za-z0-9$€£%+\-−.,:/_#@×'’]+(?:&amp;|&lt;|&gt;)?(?:[  ]+(?:&amp;|&lt;|&gt;|[A-Za-z0-9$€£%+\-−.,:/_#@×'’→←≤≥])+)*/g;   // (→ ≤ ≥ inside a run: "58.7% → ≤ 45.9%" stays one left-to-right piece)
+const TOK = "[A-Za-z0-9$€£%+\\-−.,:/_#@×'’→←≤≥]";
+// a run: a Latin / number piece, then more pieces after spaces — also a bracket that is all Latin ("Automated Market Maker (AMM)")
+const RUN = new RegExp("[A-Za-z0-9$€£%+\\-−.,:/_#@×'’]+(?:&amp;|&lt;|&gt;)?(?:[  ]+(?:\\([A-Za-z0-9$€£%+\\-−.,:/_#@×'’ ]+\\)|(?:&amp;|&lt;|&gt;|" + TOK + ")+))*", 'g');
 const hasWord = s => /[A-Za-z0-9]/.test(s);
 export function bidiLine(line, all = false) {
   if (!(all ? /[A-Za-z0-9\u0600-\u06FF]/.test(line) : AR.test(line)) || line.startsWith(RLM) || line.includes(LRI)) return line;   // (LRI: the guide's own cards)
@@ -29,7 +31,14 @@ export function bidiLine(line, all = false) {
     }).replace(/ · /g, ' ·' + RLM + ' ').replace(/([🟢🔴⚪🟡]) /gu, '$1 ' + RLM)).join('');   // after a 🟢 / 🔴 dot too: "$63,129 🔴 −1.09%" stays two parts, not one left-to-right run   // a list "Binance · Gate · now" runs right-to-left, item by item
   // a line that opens with a tag and then a Latin piece ("<b>POL</b> · $0.078", "<i>+37 …</i>"): the marks go BEFORE the tag —
   // Telegram drops invisible marks at the edge of a bold / italic piece, and those lines came out left-to-right (seen 20 Nov, twice)
-  return (RLM + out).replace(/^\u200F((?:<(?!code|pre)[^>]+>)+)\u200E/, RLM + LRM + '$1')   // (not a <code> row: the tables stay as they are);
+  // 🛟 the safety net (an Arabic message only): Telegram reads a line that STARTS with a Latin letter, a digit or "$ + − ("
+  // left-to-right whatever marks it carries (seen 20 Nov, on every view that began with a ticker or an amount). Such a line
+  // gets a "• " in front — the views are written not to need it; this catches Claude's own words and anything new.
+  // Not the fixed-width tables (<code> rows: left-to-right on purpose), not a link alone on its line, not an English sentence.
+  const vis = line.replace(/<[^>]+>/g, '').replace(/[\u200E\u200F\u2060\u00A0\s]/g, '');
+  const prose = !AR.test(line) && (line.replace(/<[^>]+>/g, '').match(/\b[a-z]{2,}\b/g) || []).length >= 1;   // an English sentence (a voice note answered in English): left alone
+  const lead = all && !prose && /^[A-Za-z0-9$€£+\-−(]/.test(vis) && !/^\s*<(code|pre)>/.test(line) && !/^https?:\/\/\S+$/.test(vis) ? '• ' : '';
+  return (RLM + lead + out).replace(/^\u200F((?:<(?!code|pre)[^>]+>)+)\u200E/, RLM + LRM + '$1');
 }
 // an Arabic message (Arabic letters at least a third of the Latin ones, tags left out): EVERY line runs right-to-left, so the rows
 // that are only a ticker and numbers ("✅ QNT 2.237 · $341") line up with the Arabic ones. Otherwise (English), and always for the
@@ -37,7 +46,10 @@ export function bidiLine(line, all = false) {
 export function bidi(text, mode = 'auto') {
   if (typeof text !== 'string' || !AR.test(text)) return text;
   const plain = text.replace(/<[^>]+>/g, ''), ar = (plain.match(/[\u0600-\u06FF]/g) || []).length, la = (plain.match(/[A-Za-z]/g) || []).length;
-  const all = mode !== 'lines' && ar * 3 >= la;   // Arabic is the language (a list of tickers can outnumber its letters)
+  // Arabic is the language: its letters are at least a third of the Latin ones (a list of tickers can outnumber them) — or the
+  // first line (the title) is Arabic: "🔥 رادار القطاعات" over long English sector names was read as English (seen 20 Nov)
+  const l1 = plain.split('\n')[0], a1 = (l1.match(/[\u0600-\u06FF]/g) || []).length, b1 = (l1.match(/[A-Za-z]/g) || []).length;
+  const all = mode !== 'lines' && (ar * 3 >= la || (a1 >= 4 && a1 > b1));
   return text.split('\n').map(l => bidiLine(l, all)).join('\n');
 }
 // a Telegram API body: its text / caption made right-to-left where Arabic (nothing else changes)

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: ddafd02eb0d648a1
+// sources-hash: 24bfc6a5bda7301d
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -198,7 +198,8 @@ var AR = /[\u0600-\u06FF]/;
 var RLM = "\u200F";
 var LRM = "\u200E";
 var LRI = "\u2066";
-var RUN = /[A-Za-z0-9$€£%+\-−.,:/_#@×'’]+(?:&amp;|&lt;|&gt;)?(?:[  ]+(?:&amp;|&lt;|&gt;|[A-Za-z0-9$€£%+\-−.,:/_#@×'’→←≤≥])+)*/g;
+var TOK = "[A-Za-z0-9$\u20AC\xA3%+\\-\u2212.,:/_#@\xD7'\u2019\u2192\u2190\u2264\u2265]";
+var RUN = new RegExp("[A-Za-z0-9$\u20AC\xA3%+\\-\u2212.,:/_#@\xD7'\u2019]+(?:&amp;|&lt;|&gt;)?(?:[ \xA0]+(?:\\([A-Za-z0-9$\u20AC\xA3%+\\-\u2212.,:/_#@\xD7'\u2019 ]+\\)|(?:&amp;|&lt;|&gt;|" + TOK + ")+))*", "g");
 var hasWord = (s) => /[A-Za-z0-9]/.test(s);
 function bidiLine(line, all = false) {
   if (!(all ? /[A-Za-z0-9\u0600-\u06FF]/.test(line) : AR.test(line)) || line.startsWith(RLM) || line.includes(LRI)) return line;
@@ -211,12 +212,16 @@ function bidiLine(line, all = false) {
     glued = glued.replace(/([+\-−])\$/g, "$1\u2060$");
     return t.slice(0, i) + LRM + glued + LRM + RLM + t.slice(i + core.length) + tail;
   }).replace(/ · /g, " \xB7" + RLM + " ").replace(/([🟢🔴⚪🟡]) /gu, "$1 " + RLM)).join("");
-  return (RLM + out).replace(/^\u200F((?:<(?!code|pre)[^>]+>)+)\u200E/, RLM + LRM + "$1");
+  const vis = line.replace(/<[^>]+>/g, "").replace(/[\u200E\u200F\u2060\u00A0\s]/g, "");
+  const prose = !AR.test(line) && (line.replace(/<[^>]+>/g, "").match(/\b[a-z]{2,}\b/g) || []).length >= 1;
+  const lead = all && !prose && /^[A-Za-z0-9$€£+\-−(]/.test(vis) && !/^\s*<(code|pre)>/.test(line) && !/^https?:\/\/\S+$/.test(vis) ? "\u2022 " : "";
+  return (RLM + lead + out).replace(/^\u200F((?:<(?!code|pre)[^>]+>)+)\u200E/, RLM + LRM + "$1");
 }
 function bidi(text, mode = "auto") {
   if (typeof text !== "string" || !AR.test(text)) return text;
   const plain = text.replace(/<[^>]+>/g, ""), ar = (plain.match(/[\u0600-\u06FF]/g) || []).length, la = (plain.match(/[A-Za-z]/g) || []).length;
-  const all = mode !== "lines" && ar * 3 >= la;
+  const l1 = plain.split("\n")[0], a1 = (l1.match(/[\u0600-\u06FF]/g) || []).length, b1 = (l1.match(/[A-Za-z]/g) || []).length;
+  const all = mode !== "lines" && (ar * 3 >= la || a1 >= 4 && a1 > b1);
   return text.split("\n").map((l) => bidiLine(l, all)).join("\n");
 }
 var signFirst = (s) => typeof s === "string" ? s.replace(/\$\s?[-−](?=\d)/g, "\u2212$") : s;
@@ -799,6 +804,9 @@ function summarize(user, market, now = Date.now()) {
 }
 var STABLE_RX = /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD)$/;
 var isStable = (sym) => STABLE_RX.test(String(sym || "").toUpperCase());
+var FNG_AR = { "Extreme Fear": "\u062E\u0648\u0641 \u0634\u062F\u064A\u062F", Fear: "\u062E\u0648\u0641", Neutral: "\u0645\u062D\u0627\u064A\u062F", Greed: "\u0637\u0645\u0639", "Extreme Greed": "\u0637\u0645\u0639 \u0634\u062F\u064A\u062F" };
+var SEASON_AR = { "Altcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629", "Bitcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646", "Leaning Altcoins": "\u064A\u0645\u064A\u0644 \u0644\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629", "Leaning Bitcoin": "\u064A\u0645\u064A\u0644 \u0644\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646" };
+var arDay = (iso) => (/* @__PURE__ */ new Date(iso + "T12:00:00Z")).toLocaleDateString("ar-SA-u-nu-latn-ca-gregory", { month: "long", day: "numeric", timeZone: "UTC" });
 function etfDay(etf) {
   if (!etf || !etf.btc || !etf.btc.days || !etf.btc.days.length) return null;
   const b = etf.btc.days[etf.btc.days.length - 1], e = etf.eth && etf.eth.days && etf.eth.days.find((x) => x[0] === b[0]);
@@ -2309,7 +2317,7 @@ Until ${u} \u2014 it renews by itself (stop any time: Telegram \u2192 Settings \
 \u2022 \u062A\u062A\u062C\u062F\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0643\u0644 30 \u064A\u0648\u0645\u0627\u064B \u2014 \u064A\u0645\u0643\u0646\u0643 \u0625\u0644\u063A\u0627\u0624\u0647\u0627 \u0641\u064A \u0623\u064A \u0648\u0642\u062A \u0645\u0646 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars\u060C \u0648\u062A\u0628\u0642\u0649 \u0641\u0639\u0651\u0627\u0644\u0629 \u062D\u062A\u0649 \u0646\u0647\u0627\u064A\u0629 \u0627\u0644\u0634\u0647\u0631 \u0627\u0644\u0645\u062F\u0641\u0648\u0639.
 \u2022 \u0644\u0645\u0627\u0630\u0627 \u0628\u0645\u0642\u0627\u0628\u0644: \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u064A\u064F\u062D\u0627\u0633\u0628 \u0639\u0644\u0649 \u0643\u0644 \u0633\u0624\u0627\u0644\u060C \u0648\u0647\u0630\u0627 \u0627\u0644\u0645\u0628\u0644\u063A \u064A\u063A\u0637\u064A \u062A\u0644\u0643 \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u0641\u0642\u0637 \u2014 Cute Portfolio \u063A\u064A\u0631 \u0631\u0628\u062D\u064A.
 
-<i>Telegram Stars \u0647\u064A \u0639\u0645\u0644\u0629 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0646\u0641\u0633\u0647: \u062A\u0634\u062A\u0631\u064A\u0647\u0627 \u0645\u0646 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0645\u062B\u0644 \u0623\u064A \u0634\u0631\u0627\u0621 \u062F\u0627\u062E\u0644 \u0627\u0644\u062A\u0637\u0628\u064A\u0642.</i>`,
+<i>\u2B50 \u0646\u062C\u0648\u0645 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 (Telegram Stars) \u0647\u064A \u0639\u0645\u0644\u0629 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0646\u0641\u0633\u0647: \u062A\u0634\u062A\u0631\u064A\u0647\u0627 \u0645\u0646 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0645\u062B\u0644 \u0623\u064A \u0634\u0631\u0627\u0621 \u062F\u0627\u062E\u0644 \u0627\u0644\u062A\u0637\u0628\u064A\u0642.</i>`,
     isPrem: (u) => u ? `\u2705 <b>\u0623\u0646\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632 \u062D\u062A\u0649 ${u}.</b>` : "\u2705 <b>\u0623\u0646\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632</b> (\u0647\u062F\u064A\u0629 \u0645\u0646 Dr. Samir Saad).",
     renews: "\u062A\u062A\u062C\u062F\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u2014 \u0644\u0625\u064A\u0642\u0627\u0641\u0647\u0627: \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars.",
     subscribe: (p) => `\u2B50 \u0627\u0634\u062A\u0631\u0643 \u2014 ${p} \u2B50 \u0634\u0647\u0631\u064A\u0627\u064B`,
@@ -5770,9 +5778,6 @@ var row = (sym, v, extra) => `<code>${esc(String(sym).toUpperCase().padEnd(6))}$
 function moverRows(sum, key, dir, n = 5) {
   return sum.coins.filter((c) => c[key] != null && c.value >= 1 && !isStable(c.sym)).sort((a, b) => dir * (b[key] - a[key])).slice(0, n).filter((c) => dir > 0 ? c[key] > 0 : c[key] < 0);
 }
-var FNG_AR = { "Extreme Fear": "\u062E\u0648\u0641 \u0634\u062F\u064A\u062F", Fear: "\u062E\u0648\u0641", Neutral: "\u0645\u062D\u0627\u064A\u062F", Greed: "\u0637\u0645\u0639", "Extreme Greed": "\u0637\u0645\u0639 \u0634\u062F\u064A\u062F" };
-var SEASON_AR = { "Altcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629", "Bitcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646", "Leaning Altcoins": "\u064A\u0645\u064A\u0644 \u0644\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629", "Leaning Bitcoin": "\u064A\u0645\u064A\u0644 \u0644\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646" };
-var arDay = (iso) => (/* @__PURE__ */ new Date(iso + "T12:00:00Z")).toLocaleDateString("ar-SA-u-nu-latn-ca-gregory", { month: "long", day: "numeric", timeZone: "UTC" });
 function marketShort(t, m) {
   const g = m.global || {}, d = g.dom || {}, out = [], ar = isAr(t);
   if (m.btc) out.push(ar ? `\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 <b>${usd(m.btc.price)}</b> \xB7 ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}` : `BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
@@ -5975,7 +5980,7 @@ function viewCoin(t, coin, m, sum, now) {
   else if (sum) L.push("", `\u{1F45B} ${t.noHold}`);
   const lv = m.live[coin.id], src = typeof lv === "string" ? lv : t.src;
   const age = lv ? t.live : m.parts && m.parts.top ? t.snap(Math.max(1, Math.round((now - Date.parse(m.parts.top)) / 6e4))) : "";
-  L.push("", `<i>${src}${age ? " \xB7 " + age : ""}</i>`);
+  L.push("", `<i>${isAr(t) ? "\u0627\u0644\u0645\u0635\u062F\u0631: " : ""}${src}${age ? " \xB7 " + age : ""}</i>`);
   const btns = [[cb3(t.refresh, "c:" + coin.id.slice(0, 58)), url2(t.liq, LIQ2 + encodeURIComponent(sym))], [url2(t.chart, /^x-/.test(coin.id) ? "https://www.tradingview.com/symbols/" + encodeURIComponent(sym) + "USDT/" : "https://www.coingecko.com/en/coins/" + encodeURIComponent(coin.id))]];
   if (mine) btns[1].push(url2(t.inApp, APP + "index.html#holdings/" + encodeURIComponent(sym)));
   btns.push([cb3(t.back, "menu")]);

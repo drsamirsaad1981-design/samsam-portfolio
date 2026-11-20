@@ -56,7 +56,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (/^https:\/\/(coin-images|assets)\.coingecko\.com\//.test(u)) { logoFetches++; return /tether|325/.test(u) ? new Response('nf', { status: 404 }) : /notimage/.test(u) ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : new Response(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'), { headers: { 'content-type': 'image/png' } }); }
   if (u === 'https://api.github.com/repos/drsamirsaad1981-design/samsam-portfolio/actions/workflows/prices.yml/dispatches') { kicks.push({ auth: init.headers.authorization, body: JSON.parse(body) }); return new Response(null, { status: 204 }); }
   if (u.startsWith('https://api.telegram.org/bot') && body instanceof FormData) { const m = u.split('/').pop(); const ph = body.get('photo'); sent.push({ m, b: { chat_id: body.get('chat_id'), caption: body.get('caption'), photoBytes: ph ? new Uint8Array(await ph.arrayBuffer()) : null } }); return J({ ok: true, result: { message_id: 8 } }); }
-  if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); if (typeof b.text === 'string') { b.raw = b.text; b.text = b.text.replace(/[\u200E\u200F\u2060\u2066\u2069]/g, '').replace(/\u00A0/g, ' '); } sent.push({ m, b }); if (m === 'createInvoiceLink') return J({ ok: true, result: 'https://t.me/$inv-' + b.payload }); if (m === 'createChatInviteLink') return J({ ok: true, result: { invite_link: 'https://t.me/+join' + b.chat_id } }); if (m === 'createForumTopic') return J({ ok: true, result: { message_thread_id: 100 + sent.filter(x => x.m === 'createForumTopic').length } }); if (m === 'sendChatAction' && (globalThis.__goneTopics || []).includes(b.message_thread_id)) return J({ ok: false, description: 'Bad Request: message thread not found' }); if (m === 'getChat') return J({ ok: true, result: { id: b.chat_id, is_forum: false, ...(b.chat_id === -1001 && !globalThis.__unlinked ? { linked_chat_id: -1002 } : {}) } }); if (m === 'getMe') return J({ ok: true, result: { id: 1, username: 'samsam_portfolio_bot' } }); if (m === 'getChatMember') return J({ ok: true, result: { status: b.chat_id === -1003 ? 'administrator' : 'left' } }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
+  if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); if (typeof b.text === 'string') { b.raw = b.text; b.text = b.text.replace(/[\u200E\u200F\u2060\u2066\u2069]/g, '').replace(/\u00A0/g, ' '); (globalThis.__all = globalThis.__all || []).push(b.raw); } sent.push({ m, b }); if (m === 'createInvoiceLink') return J({ ok: true, result: 'https://t.me/$inv-' + b.payload }); if (m === 'createChatInviteLink') return J({ ok: true, result: { invite_link: 'https://t.me/+join' + b.chat_id } }); if (m === 'createForumTopic') return J({ ok: true, result: { message_thread_id: 100 + sent.filter(x => x.m === 'createForumTopic').length } }); if (m === 'sendChatAction' && (globalThis.__goneTopics || []).includes(b.message_thread_id)) return J({ ok: false, description: 'Bad Request: message thread not found' }); if (m === 'getChat') return J({ ok: true, result: { id: b.chat_id, is_forum: false, ...(b.chat_id === -1001 && !globalThis.__unlinked ? { linked_chat_id: -1002 } : {}) } }); if (m === 'getMe') return J({ ok: true, result: { id: 1, username: 'samsam_portfolio_bot' } }); if (m === 'getChatMember') return J({ ok: true, result: { status: b.chat_id === -1003 ? 'administrator' : 'left' } }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
   if (u.includes('raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/')) {
     const f = u.split('/prices/')[1];
     if (f === 'm/market.json') return J(market); if (f === 'm/top500.json') return J(top500); if (f === 'm/alt.json') return J(alt); if (f === 'm/etf.json') return J(etf);
@@ -422,6 +422,32 @@ sent.length = 0; await tap('pl');
 sent.length = 0; await tap('mkm');
 { const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
   check('Arabic metals: short lines "الذهب $2,650 · اليوم +0.8% · أسبوع …", the unit said once ("الأسعار للأونصة (النحاس للرطل)"), no slash', /<b>الذهب<\/b> \$2,650 · اليوم \+0\.8%\n +أسبوع \+1\.5% · الجرام <b>319\.50 ريال<\/b>/.test(tx) && /الأسعار للأونصة \(النحاس للرطل\)/.test(tx) && !/ \/ أونصة/.test(tx), tx); }
+// 🔎 Arabic sweep: every view and command, in Arabic — no line may read left-to-right by mistake. Telegram takes a line's
+// direction from its first visible character, whatever marks it carries (seen 20 Nov): so in an Arabic message a line must
+// not START with a Latin letter, a digit or "$ + − (" — and a fixed-width <code> row must not hold Arabic words
+// (the tables of tickers and numbers only, "CYBER +31.3% $269", stay left-to-right on purpose).
+const rtlBad = raw => {
+  const AR = /[؀-ۿ]/, plain = raw.replace(/<[^>]+>/g, ''), ar = (plain.match(/[؀-ۿ]/g) || []).length, la = (plain.match(/[A-Za-z]/g) || []).length;
+  if (!ar || ar * 3 < la) return [];   // not an Arabic message
+  return raw.split('\n').filter(line => {
+    const bare = line.replace(/[‎‏⁠]/g, ''), vis = bare.replace(/<[^>]+>/g, '').replace(/[ \s]/g, '');
+    if (!vis) return false;
+    const code = /^\s*<code>/.test(bare), inCode = (bare.match(/<code>([\s\S]*?)<\/code>/) || [])[1] || '';
+    if (code) return AR.test(vis) && /[A-Za-z0-9]/.test(inCode);   // a ticker / number table row with Arabic beside it
+    if (/^https?:\/\/\S+$/.test(vis) || /^\d\uFE0F?\u20E3/.test(vis)) return false;   // a link alone on its line; a numbered step (1️⃣ — an emoji)
+    return /^[A-Za-z0-9$+\-−(]/.test(vis);
+  });
+};
+{
+  const seen = [], grab = () => { for (const y of sent) if (y.b && typeof y.b.raw === 'string' && String(y.b.chat_id) === '555') seen.push(y.b.raw); sent.length = 0; };
+  sent.length = 0;
+  for (const t of ['/start', '/menu', '/portfolio', '/market', '/stocks', '/metals', '/plan', '/exit', '/movers', '/signals', '/alerts', '/daily', '/paper', '/report', '/guide', '/community', '/premium', '/support', '/lang', '/hide', '/pin', '/balances', '/coin', 'btc', 'sol link', '/feedback', '/users', '/invite', '/stats', '/new', '/morning', '/evening']) {
+    await say(t); grab();
+  }
+  for (const d of ['pf', 'mk', 'mks', 'mkm', 'pl', 'ex', 'mv', 'sg', 'al', 'dy', 'pp', 'rp', 'coin', 'menu', 'pin:r', ...JSON.parse(fs.readFileSync(path.join(ROOT, 'guide.json'), 'utf8')).sections.map(x => 'gd:' + x.k)]) { await tap(d); grab(); }
+  const bad = []; for (const raw of seen) for (const l of rtlBad(raw)) bad.push(l.replace(/[‎‏⁠]/g, '').replace(/ /g, ' ').slice(0, 90));
+  check(`🔎 Arabic sweep: ${seen.length} messages (every command and button) — no line starts left-to-right, no Arabic inside a ticker table`, seen.length > 60 && !bad.length, [...new Set(bad)].slice(0, 40));
+}
 sent.length = 0;
 await post({ message: { chat: { id: 555 }, text: '/portfolio' } }, ENV.TG_SECRET, { ...ENV, BOT_LANG: 'ar' });
 check('Arabic: "محفظتك الآن"', /محفظتك الآن/.test(last().b.text) && btnTexts(last()).includes('🔄 تحديث'), last().b.text.slice(0, 120));
@@ -1466,5 +1492,6 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('the owner is never idle (no note)', !sent.some(x => String(x.b && x.b.chat_id) === own && /away/.test(x.b.text || '')));
 }
 
+if (process.env.DUMP_TEXTS) fs.writeFileSync(process.env.DUMP_TEXTS, JSON.stringify(globalThis.__all || []));
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

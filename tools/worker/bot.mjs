@@ -17,7 +17,7 @@ import { bidi, bidiBody, NOT_ADVICE } from './bidi.mjs';
 import { markSeen } from './idle.mjs';
 import { note } from './usage.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR } from './who.mjs';
-import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
+import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
 import { chatUid, idTokenFor } from './data.mjs';
 import { balancesFor } from './cex.mjs';
 import { usMarket, US_STATE, METAL, UNIT, gramSar } from './usmarket.mjs';
@@ -161,9 +161,7 @@ function moverRows(sum, key, dir, n = 5) {
 }
 // Arabic: every part of a line starts with an Arabic word, so Telegram keeps the parts in order right-to-left
 // (two Latin runs side by side — "BTC 59.8% · USDT 6.95%" — could swap places)
-export const FNG_AR = { 'Extreme Fear': 'خوف شديد', Fear: 'خوف', Neutral: 'محايد', Greed: 'طمع', 'Extreme Greed': 'طمع شديد' };
-export const SEASON_AR = { 'Altcoin Season': 'موسم العملات البديلة', 'Bitcoin Season': 'موسم البيتكوين', 'Leaning Altcoins': 'يميل للعملات البديلة', 'Leaning Bitcoin': 'يميل للبيتكوين' };
-const arDay = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('ar-SA-u-nu-latn-ca-gregory', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+export { FNG_AR, SEASON_AR };   // (the words live in alerts-core.mjs: the GitHub brief uses them too)
 function marketShort(t, m) {
   const g = m.global || {}, d = g.dom || {}, out = [], ar = isAr(t);
   if (m.btc) out.push(ar ? `البيتكوين <b>${usd(m.btc.price)}</b> · ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}` : `BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
@@ -358,7 +356,7 @@ export function viewCoin(t, coin, m, sum, now) {
   else if (sum) L.push('', `👛 ${t.noHold}`);
   const lv = m.live[coin.id], src = typeof lv === 'string' ? lv : t.src;   // CoinGecko, or the exchange that answered
   const age = lv ? t.live : (m.parts && m.parts.top ? t.snap(Math.max(1, Math.round((now - Date.parse(m.parts.top)) / 60e3))) : '');
-  L.push('', `<i>${src}${age ? ' · ' + age : ''}</i>`);
+  L.push('', `<i>${isAr(t) ? 'المصدر: ' : ''}${src}${age ? ' · ' + age : ''}</i>`);   // (Arabic: the line starts with an Arabic word, not "CoinGecko")
   const btns = [[cb(t.refresh, 'c:' + coin.id.slice(0, 58)), url(t.liq, LIQ + encodeURIComponent(sym))], [url(t.chart, /^x-/.test(coin.id) ? 'https://www.tradingview.com/symbols/' + encodeURIComponent(sym) + 'USDT/' : 'https://www.coingecko.com/en/coins/' + encodeURIComponent(coin.id))]];
   if (mine) btns[1].push(url(t.inApp, APP + 'index.html#holdings/' + encodeURIComponent(sym)));
   btns.push([cb(t.back, 'menu')]);
