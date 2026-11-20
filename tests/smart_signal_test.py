@@ -48,7 +48,7 @@ with sync_playwright() as p:
             check(f'{vn}/{theme}: Signal Thresholds has Smart on', pg.is_checked('#sgSmart') and 'Smart keeps' in pg.inner_text('#sgPrev'), pg.inner_text('#sgPrev'))
             pg.locator('.sg-smart').first.screenshot(path=str(SH / f'smartsheet_{vn}_{theme}.png'))
             pg.uncheck('#sgSmart'); pg.wait_for_timeout(150)
-            check(f'{vn}/{theme}: switching it off → the preview shows the classic counts', 'Smart keeps' not in pg.inner_text('#sgPrev') and f"— {cl['reinforce']} coins" in pg.inner_text('#sgPrev').replace('\n', ' '), pg.inner_text('#sgPrev'))
+            check(f'{vn}/{theme}: switching it off → the preview shows the classic counts', 'Smart keeps' not in pg.inner_text('#sgPrev') and f"— {cl['reinforce']} coin" in pg.inner_text('#sgPrev').replace('\n', ' '), pg.inner_text('#sgPrev'))
             pg.click('#sgSave'); pg.wait_for_timeout(1800)
             check(f'{vn}/{theme}: saved (signalSmart false) and the table is classic again', meta().get('signalSmart') is False and pg.evaluate(COUNT)['reinforce'] == cl['reinforce'] and not pg.evaluate("[...document.querySelectorAll('.action-badge.sig-smart')].some(e=>e.offsetParent)"), (meta().get('signalSmart'), pg.evaluate(COUNT)))
             # 🌙 Calm mode: off at first; on → a Reinforce on a coin down 5%+ in 7 days waits on Hold, with the reason
@@ -60,7 +60,7 @@ with sync_playwright() as p:
             check(f'{vn}/{theme}: there are coins on Reinforce to try it on ({cl}, {nod} without 7-day data)', cl['reinforce'] > nod and cl['convert'] > 0, cl)
             check(f'{vn}/{theme}: Calm mode is off at first and the falling coins keep Reinforce', not pg.is_checked('#sgCalm') and 'Calm mode keeps' not in pg.inner_text('#sgPrev') and pg.evaluate(COUNT)['reinforce'] == cl['reinforce'], pg.inner_text('#sgPrev'))
             pg.check('#sgCalm'); pg.wait_for_timeout(150)
-            check(f'{vn}/{theme}: Calm on → the preview says how many coins wait', f"Calm mode keeps {cl['reinforce'] - nod} coin" in pg.inner_text('#sgPrev').replace('\n', ' ') and f"— {nod} coins" in pg.inner_text('#sgPrev').replace('\n', ' '), pg.inner_text('#sgPrev'))
+            check(f'{vn}/{theme}: Calm on → the preview says how many coins wait', f"Calm mode keeps {cl['reinforce'] - nod} coin" in pg.inner_text('#sgPrev').replace('\n', ' ') and f"— {nod} coin" in pg.inner_text('#sgPrev').replace('\n', ' '), pg.inner_text('#sgPrev'))
             pg.locator('.sg-smart').nth(1).screenshot(path=str(SH / f'calmsheet_{vn}_{theme}.png'))
             pg.click('#sgSave'); pg.wait_for_timeout(1800)
             tips = pg.evaluate("[...document.querySelectorAll('.action-badge.sig-smart')].filter(e=>e.offsetParent).map(e=>e.title)")
