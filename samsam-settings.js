@@ -192,7 +192,7 @@
         var on = keys.filter(function (x) { return a[x]; }).length;
         return (a.lang === 'ar' ? 'العربية' : 'English') + ' · ' + on + ' of ' + keys.length + ' on' + (a.brief ? ' · brief ' + a.briefTime : '');
       }
-      if (k === 'signal') { var r = s.getSignalRules(); return 'Reinforce ' + r.reinforce + '% · Sell ' + r.sell + '%' + (r.smart ? ' · Smart on' : ''); }
+      if (k === 'signal') { var r = s.getSignalRules(); return 'Reinforce ' + r.reinforce + '% · Sell ' + r.sell + '%' + (r.smart ? ' · Smart on' : '') + (r.calm ? ' · Calm on' : ''); }
       if (k === 'targets') { var t = s.getTargets(); return t ? Object.keys(t.cats).length + ' categories · ±' + t.band + '%' : 'Not set'; }
       if (k === 'baseline') { var bl = s.getBaseline(); return bl && bl.date ? new Date(bl.date + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—'; }
       if (k === 'cats') { var T = window.SamsamTaxonomy, n = T ? Object.keys(T.labels).filter(function (x) { return !T.isRemoved(x); }).length : 0; return n ? n + ' categories · names & colours' : ''; }

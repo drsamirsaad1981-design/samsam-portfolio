@@ -359,8 +359,8 @@ setTimeout(loadCloses, 500); setInterval(() => { if (!document.hidden) loadClose
 function closeOf(coin) { const id = coin && (coin.cgId || (SamsamCoins.CG_IDS || {})[coin.sym]); return (id && closeP && closeP[id]) || null; }
 function signalInfo(coin, rules) {
   const r = rules || signalRules(), chg = getCoinPct(coin);
-  if (window.Samsam && Samsam.core && Samsam.core.confirmedSignal) return Samsam.core.confirmedSignal({ sym: coin.sym, avg: coin.basePrice, live: coin.currentPrice, close: closeOf(coin), rules: r, rs: rsFor(coin), smart: r.smart !== false });
-  if (window.Samsam && Samsam.core && Samsam.core.signalFor) return Samsam.core.signalFor({ sym: coin.sym, chg, rules: r, rs: rsFor(coin), smart: r.smart !== false });
+  if (window.Samsam && Samsam.core && Samsam.core.confirmedSignal) return Samsam.core.confirmedSignal({ sym: coin.sym, avg: coin.basePrice, live: coin.currentPrice, close: closeOf(coin), rules: r, rs: rsFor(coin), smart: r.smart !== false, calm: r.calm === true });
+  if (window.Samsam && Samsam.core && Samsam.core.signalFor) return Samsam.core.signalFor({ sym: coin.sym, chg, rules: r, rs: rsFor(coin), smart: r.smart !== false, calm: r.calm === true });
   const a = coin.sym === 'BTC' || SamsamCoins.isMetal(coin.sym) ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
   return { action: a, base: a, why: null, rs: null };
 }
@@ -373,8 +373,8 @@ function getAction(sym, perf, coin) {
 // the Signal badge; when Smart changed the classic signal, a small mark and the reason on hover / long-press
 function sigBadge(c, action) {
   const i = action === 'soldout' || !c || c.sym === 'BTC' ? null : signalInfo(c);
-  const changed = i && (i.why === 'weak' || i.why === 'strong');
-  const tip = changed ? (i.why === 'weak' ? `Smart: Hold instead of Reinforce — ${c.sym} is behind BTC over 30 and 90 days` : `Smart: Hold instead of Sell / Convert — ${c.sym} is ahead of BTC over 30 and 90 days`) : '';
+  const changed = i && (i.why === 'weak' || i.why === 'strong' || i.why === 'falling');
+  const tip = changed ? (i.why === 'falling' ? `Calm mode: Hold instead of Reinforce — ${c.sym} fell more than 5% in the last 7 days` : i.why === 'weak' ? `Smart: Hold instead of Reinforce — ${c.sym} is behind BTC over 30 and 90 days` : `Smart: Hold instead of Sell / Convert — ${c.sym} is ahead of BTC over 30 and 90 days`) : '';
   const pend = i && i.pending && action !== 'soldout' ? i.pending : null;
   const tipP = pend ? `Pending ⏳ — the live price says ${signalLabel(pend, true)}; confirmed at the daily close (03:00 Riyadh)` : '';
   return `<span class="action-badge action-${action}${changed ? ' sig-smart' : ''}${pend ? ' sig-pend' : ''}"${tip || tipP ? ` title="${SamsamCoins.esc([tip, tipP].filter(Boolean).join(' · '))}"` : ''}>${signalLabel(action)}${pend ? '<i class="sig-p" aria-label="pending">⏳</i>' : ''}${changed ? SamsamUI.ic('sparkles', { solo: true, size: 11 }) : ''}</span>`;

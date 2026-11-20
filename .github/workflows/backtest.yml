@@ -15,6 +15,8 @@ jobs:
         with:
           node-version: 22
       - run: node tools/backtest.mjs backtest.md
+      # 🔬 other signal rules on the same prices (tools/lab — an experiment; the app's rule is not changed by it)
+      - run: node tools/lab/backtest-lab.mjs series.json lab.md
       - uses: actions/upload-artifact@v4
         with:
           name: backtest
@@ -22,3 +24,5 @@ jobs:
             backtest.md
             backtest.json
             series.json
+            lab.md
+            lab.json

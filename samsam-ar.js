@@ -216,6 +216,9 @@
     'Sell / Convert to BTC — when it is more than this much below': 'بيع / تحويل لبيتكوين — عندما يكون أقل بأكثر من هذه النسبة',
     'Sell / Convert: percent below your Avg. Buy Price': 'بيع / تحويل: النسبة تحت متوسط سعر الشراء',
     'Smart check vs BTC': 'فحص ذكي مقابل البيتكوين',
+    'Calm mode — fewer Reinforce signals': 'الوضع الهادئ — إشارات تعزيز أقل',
+    "Optional. Reinforce waits while the coin is still falling: down more than 5% over its last 7 days stays Hold until it steadies. Fewer signals and alerts; Sell / Convert does not change.":
+      'اختياري. التعزيز ينتظر ما دامت العملة ما زالت تهبط: إذا نزلت أكثر من 5% في آخر 7 أيام تبقى على الاحتفاظ حتى تتماسك. إشارات وتنبيهات أقل، وإشارة البيع / التحويل لا تتغير.',
     "Also looks at the coin's last 30 and 90 days vs BTC: no Reinforce for a coin that keeps losing to BTC (15+ points behind on both), no Sell / Convert for one that is beating BTC on both — those stay Hold.":
       'يراعي أيضاً أداء العملة خلال آخر 30 و 90 يوماً مقابل البيتكوين: لا تعزيز لعملة تتراجع أمام البيتكوين باستمرار (متأخرة 15 نقطة أو أكثر في الفترتين)، ولا بيع / تحويل لعملة متفوقة على البيتكوين في الفترتين — تبقى هذه على احتفاظ.',
     'Use the defaults (−5% / −20%)': 'استخدام الافتراضي (−5% / −20%)',
@@ -483,6 +486,7 @@
   R(/^Add (.+) to your portfolio$/, 'إضافة $1 لمحفظتك');
   R(/^View (.+) transactions$/, 'عرض معاملات $1');
   R(/^Smart: Hold instead of Sell \/ Convert — (.+) is ahead of BTC over 30 and 90 days$/, 'فحص ذكي: احتفاظ بدل بيع / تحويل — $1 متفوقة على البيتكوين في آخر 30 و 90 يوم');
+  R(/^Calm mode: Hold instead of Reinforce — (.+) fell more than 5% in the last 7 days$/, 'الوضع الهادئ: احتفاظ بدل تعزيز — $1 نزلت أكثر من 5% في آخر 7 أيام');
   R(/^Smart: Hold instead of Reinforce — (.+) is behind BTC over 30 and 90 days$/, 'فحص ذكي: احتفاظ بدل تعزيز — $1 متأخرة عن البيتكوين في آخر 30 و 90 يوم');
   R(/^(.+): no futures found on the exchanges we check \((.+)\) — CoinGlass may have no map for it, open it to see$/, '$1: لا توجد عقود آجلة على المنصات التي نراجعها ($2) — قد لا تتوفر لها خريطة في CoinGlass، افتحها للتحقق');
   R(/^Change this (Buy|Sell|Transfer In|Transfer Out|Reward)$/, function (_, k) { return 'تعديل ' + CPLang.t(k) + ''; });
@@ -769,7 +773,7 @@
     return 'الشبكات: ' + l + '. تُحتسب العملات المرهونة (Staked) على Sui وعائلة Cosmos (ولا يُحتسب NEAR المرهون في Pool).'; });
   A({
     'Total 100% ✓': 'المجموع 100% ✓',
-    'coins': 'عملات', 'coin': 'عملة', 'Smart keeps': 'الوضع الذكي يُبقي', 'coins on Hold': 'عملات على الاحتفاظ', 'coin on Hold': 'عملة على الاحتفاظ',
+    'coins': 'عملات', 'coin': 'عملة', 'Smart keeps': 'الوضع الذكي يُبقي', 'Calm mode keeps': 'الوضع الهادئ يُبقي', 'coins on Hold': 'عملات على الاحتفاظ', 'coin on Hold': 'عملة على الاحتفاظ',
     // Baseline
     'Original baseline': 'تاريخ الأساس الأصلي', 'Entered by hand': 'أُدخل يدوياً', 'From CoinGecko (daily price, 00:00 UTC)': 'من CoinGecko (سعر اليوم، 00:00 UTC)',
     'Use my BTC buy price on that day': 'استخدم سعر شرائي للبيتكوين في ذلك اليوم', 'This is the baseline you have now.': 'هذا هو تاريخ الأساس الحالي.',

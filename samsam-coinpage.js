@@ -344,7 +344,7 @@ function renderCoinTx() {
     const lab = signalLabel(act, false), si = act === 'soldout' || sym === 'BTC' ? null : signalInfo(coin);
     const pts = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(0) + ' pts';
     const vsB = si && si.rs ? ` · vs BTC ${pts(si.rs.d30)} (30d), ${pts(si.rs.d90)} (90d)` : '';
-    const smartWhy = !si ? '' : si.why === 'weak' ? ' — Smart: not adding, it keeps losing to BTC' : si.why === 'strong' ? ' — Smart: holding, it is beating BTC (the market dipped)' : si.why === 'confirmed' ? ' — confirmed vs BTC' : '';
+    const smartWhy = !si ? '' : si.why === 'weak' ? ' — Smart: not adding, it keeps losing to BTC' : si.why === 'strong' ? ' — Smart: holding, it is beating BTC (the market dipped)' : si.why === 'falling' ? ' — Calm mode: not adding yet, it fell more than 5% in 7 days' : si.why === 'confirmed' ? ' — confirmed vs BTC' : '';
     // ⏳ decided on the daily close: the % shown is the close's; when the live price says something else → "pending"
     const cp = si && si.onClose ? si.chg : pct, pend = si && si.pending ? si.pending : null;
     const pendTxt = pend ? ` · ⏳ Pending: ${signalLabel(pend, true)} on the live price (${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%) — confirmed at the daily close (03:00 Riyadh)` : si && si.onClose ? ' · on the daily close' : '';

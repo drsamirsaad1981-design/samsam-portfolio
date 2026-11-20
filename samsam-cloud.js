@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611202244';
-import * as Hist from './samsam-history.js?v=202611202244';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611202244';
+import * as Core from './samsam-core.js?v=202611210151';
+import * as Hist from './samsam-history.js?v=202611210151';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611210151';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -275,8 +275,8 @@ function cleanAlerts(a) {
   return { ...out, isDefault: false };
 }
 function currentSignal() {
-  const s = cleanSignal(S.meta && S.meta.signal), smart = !(S.meta && S.meta.signalSmart === false);
-  return s ? { ...s, smart, isDefault: false } : { ...DEFAULT_SIGNAL, smart, isDefault: true };
+  const s = cleanSignal(S.meta && S.meta.signal), smart = !(S.meta && S.meta.signalSmart === false), calm = !!(S.meta && S.meta.signalCalm === true);
+  return s ? { ...s, smart, calm, isDefault: false } : { ...DEFAULT_SIGNAL, smart, calm, isDefault: true };
 }
 function currentBaseline() {
   const b = cleanBaseline(S.meta && S.meta.baseline);
@@ -870,6 +870,8 @@ const API = {
   },
   // Smart signal on / off (users/{uid}/meta/info.signalSmart; missing = on)
   setSignalSmart(on) { return commit((bt, ref) => bt.set(ref('meta', 'info'), { signalSmart: !!on }, { merge: true }), 'Signal'); },
+  // 🌙 Calm mode on / off (meta/info.signalCalm; missing = off): Reinforce waits while the coin is down 5%+ over 7 days
+  setSignalCalm(on) { return commit((bt, ref) => bt.set(ref('meta', 'info'), { signalCalm: !!on }, { merge: true }), 'Signal'); },
   // Change the baseline (date + BTC price on that date). Only the comparison with BTC changes —
   // holdings, transactions and profit stay exactly as they are.
   setBaseline({ date, btcPrice, source } = {}) {
@@ -1336,7 +1338,7 @@ function downloadJson(obj, name) {
 }
 function stamp() { return new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-'); }
 // Your settings (meta/info) — everything except the setup bookkeeping — and the category names/colours (meta/categories)
-const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps', 'wallets'];
+const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'signalCalm', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps', 'wallets'];
 function settingsNow() {
   const m = S.meta || {}, info = {};
   for (const k of SETTING_KEYS) if (m[k] !== undefined) info[k] = m[k];

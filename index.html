@@ -21,23 +21,23 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-lang.js?v=202611202244"></script>
-<script src="samsam-ar.js?v=202611202244"></script>
-<script src="samsam-ui.js?v=202611202244"></script>
-<script src="samsam-hints.js?v=202611202244"></script>
-<script src="samsam-arhints.js?v=202611202244"></script>
-<script src="samsam-vault.js?v=202611202244"></script>
-<script src="samsam-labels.js?v=202611202244"></script>
-<script src="samsam-taxonomy.js?v=202611202244"></script>
-<script src="samsam-coins.js?v=202611202244"></script>
-<script src="samsam-dropdown.js?v=202611202244"></script>
-<script src="samsam-add.js?v=202611202244"></script>
-<script src="samsam-chart.js?v=202611202244"></script>
-<script src="samsam-market.js?v=202611202244"></script>
-<script src="samsam-import.js?v=202611202244"></script>
-<script src="samsam-wallets.js?v=202611202244"></script>
-<script src="samsam-rewards.js?v=202611202244"></script>
-<script src="samsam-settings.js?v=202611202244"></script>
+<script src="samsam-lang.js?v=202611210151"></script>
+<script src="samsam-ar.js?v=202611210151"></script>
+<script src="samsam-ui.js?v=202611210151"></script>
+<script src="samsam-hints.js?v=202611210151"></script>
+<script src="samsam-arhints.js?v=202611210151"></script>
+<script src="samsam-vault.js?v=202611210151"></script>
+<script src="samsam-labels.js?v=202611210151"></script>
+<script src="samsam-taxonomy.js?v=202611210151"></script>
+<script src="samsam-coins.js?v=202611210151"></script>
+<script src="samsam-dropdown.js?v=202611210151"></script>
+<script src="samsam-add.js?v=202611210151"></script>
+<script src="samsam-chart.js?v=202611210151"></script>
+<script src="samsam-market.js?v=202611210151"></script>
+<script src="samsam-import.js?v=202611210151"></script>
+<script src="samsam-wallets.js?v=202611210151"></script>
+<script src="samsam-rewards.js?v=202611210151"></script>
+<script src="samsam-settings.js?v=202611210151"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -47,7 +47,7 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
-<link rel="stylesheet" href="samsam-home.css?v=202611202244">
+<link rel="stylesheet" href="samsam-home.css?v=202611210151">
 </head>
 <body>
 <div id="cpSplash" role="status" aria-live="polite" aria-label="Loading Cute Portfolio" style="position:fixed;inset:0;z-index:100200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0e1a;color:#e5e7eb;font-family:Inter,system-ui,-apple-system,sans-serif;transition:opacity .35s ease,visibility .35s">
@@ -344,11 +344,11 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611202244"></script>
-<script src="samsam-home.js?v=202611202244"></script>
-<script src="samsam-analysis.js?v=202611202244"></script>
-<script src="samsam-coinpage.js?v=202611202244"></script>
-<script src="samsam-hchart.js?v=202611202244"></script>
+<script type="module" src="samsam-cloud.js?v=202611210151"></script>
+<script src="samsam-home.js?v=202611210151"></script>
+<script src="samsam-analysis.js?v=202611210151"></script>
+<script src="samsam-coinpage.js?v=202611210151"></script>
+<script src="samsam-hchart.js?v=202611210151"></script>
 
 <!-- ── Compact bar: appears once the main header scrolls away (logo · name · total) ── -->
 <div class="mini-bar" id="miniBar" aria-hidden="true">
@@ -425,6 +425,8 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
       <span class="sg-num"><b aria-hidden="true">−</b><input type="text" inputmode="decimal" id="sgSell" placeholder="20" oninput="sgPreview()" autocomplete="off" aria-label="Sell / Convert: percent below your Avg. Buy Price"><i aria-hidden="true">%</i></span></label>
     <label class="sg-smart"><input type="checkbox" id="sgSmart" onchange="sgPreview()"><span><b><span data-ic="sparkles"></span>Smart check vs BTC</b>
       <i>Also looks at the coin's last 30 and 90 days vs BTC: no Reinforce for a coin that keeps losing to BTC (15+ points behind on both), no Sell / Convert for one that is beating BTC on both — those stay Hold.</i></span></label>
+    <label class="sg-smart"><input type="checkbox" id="sgCalm" onchange="sgPreview()"><span><b><span data-ic="moon"></span>Calm mode — fewer Reinforce signals</b>
+      <i>Optional. Reinforce waits while the coin is still falling: down more than 5% over its last 7 days stays Hold until it steadies. Fewer signals and alerts; Sell / Convert does not change.</i></span></label>
     <div class="bl-prev" id="sgPrev" aria-live="polite"></div>
     <p class="sig-note">Signals are reminders of your own rules — not financial advice.</p>
     <div class="bl-acts"><button type="button" onclick="closeSignalEdit()">Cancel</button><button type="button" class="bl-save" id="sgSave" onclick="saveSignalEdit()">Save</button></div>
@@ -443,12 +445,12 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
   @media (min-width: 1024px) { #cpViews { bottom: 0; } }
   @media print { #cpViews { display: none !important; } }
 </style>
-<script src="samsam-shell.js?v=202611202244"></script>
-<script src="samsam-edits.js?v=202611202244"></script>
+<script src="samsam-shell.js?v=202611210151"></script>
+<script src="samsam-edits.js?v=202611210151"></script>
 
 <!-- ── Holdings Full-Screen Overlay ── -->
 <div id="holdingsOverlay" style="display:none;position:fixed;inset:0;z-index:9999;flex-direction:column;overflow-y:auto;background:var(--bg)">
-  <link rel="stylesheet" href="samsam-holdings.css?v=202611202244">
+  <link rel="stylesheet" href="samsam-holdings.css?v=202611210151">
 
   <!-- Nav bar -->
   <header class="cp-head hov-navbar">

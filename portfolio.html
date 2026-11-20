@@ -401,6 +401,8 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
       <span class="sg-num"><b aria-hidden="true">−</b><input type="text" inputmode="decimal" id="sgSell" placeholder="20" oninput="sgPreview()" autocomplete="off" aria-label="Sell / Convert: percent below your Avg. Buy Price"><i aria-hidden="true">%</i></span></label>
     <label class="sg-smart"><input type="checkbox" id="sgSmart" onchange="sgPreview()"><span><b><span data-ic="sparkles"></span>Smart check vs BTC</b>
       <i>Also looks at the coin's last 30 and 90 days vs BTC: no Reinforce for a coin that keeps losing to BTC (15+ points behind on both), no Sell / Convert for one that is beating BTC on both — those stay Hold.</i></span></label>
+    <label class="sg-smart"><input type="checkbox" id="sgCalm" onchange="sgPreview()"><span><b><span data-ic="moon"></span>Calm mode — fewer Reinforce signals</b>
+      <i>Optional. Reinforce waits while the coin is still falling: down more than 5% over its last 7 days stays Hold until it steadies. Fewer signals and alerts; Sell / Convert does not change.</i></span></label>
     <div class="bl-prev" id="sgPrev" aria-live="polite"></div>
     <div class="bl-acts"><button type="button" onclick="closeSignalEdit()">Cancel</button><button type="button" class="bl-save" id="sgSave" onclick="saveSignalEdit()">Save</button></div>
     <button type="button" class="bl-reset" id="sgReset" onclick="sgUseDefault()">Use the defaults (−5% / −20%)</button>

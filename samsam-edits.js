@@ -18,6 +18,7 @@ function openSignalEdit() {
   document.getElementById('sgReinforce').value = sgShow(r.reinforce); document.getElementById('sgSell').value = sgShow(r.sell);
   document.getElementById('sgReset').style.display = r.isDefault ? 'none' : '';
   document.getElementById('sgSmart').checked = r.smart !== false;
+  document.getElementById('sgCalm').checked = r.calm === true;
   document.getElementById('sgModal').classList.add('show'); sgPreview();
   setTimeout(() => document.getElementById('sgReinforce').focus(), 30);
   document.addEventListener('keydown', sgKey, true);
@@ -31,10 +32,10 @@ function sgPreview() {
   const v = sgRead(), box = document.getElementById('sgPrev'), save = document.getElementById('sgSave');
   save.disabled = !v.ok;
   if (!v.ok) { box.innerHTML = '<span style="color:#f87171">' + SamsamUI.ic('alert') + 'Sell / Convert must be further below than Reinforce (e.g. 5 and 20), up to 99.</span>'; return; }
-  const n = { hold: 0, reinforce: 0, convert: 0 }, smart = document.getElementById('sgSmart').checked; let changed = 0;
-  portfolio.forEach(c => { if (isSoldOut(c)) return; if (c.sym === 'BTC') { n.hold++; return; } const i = signalInfo(c, { reinforce: v.reinforce, sell: v.sell, smart }); n[i.action]++; if (i.why === 'weak' || i.why === 'strong') changed++; });
+  const n = { hold: 0, reinforce: 0, convert: 0 }, smart = document.getElementById('sgSmart').checked, calm = document.getElementById('sgCalm').checked; let changed = 0, quiet = 0;
+  portfolio.forEach(c => { if (isSoldOut(c)) return; if (c.sym === 'BTC') { n.hold++; return; } const i = signalInfo(c, { reinforce: v.reinforce, sell: v.sell, smart, calm }); n[i.action]++; if (i.why === 'weak' || i.why === 'strong') changed++; if (i.why === 'falling') quiet++; });
   const f = x => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x) + '%';
-  box.innerHTML = `<div>${SamsamUI.dot('grey')}Hold: above ${f(v.reinforce)} — <b>${n.hold}</b> coins</div><div>${SamsamUI.dot('green')}Reinforce: ${f(v.reinforce)} to ${f(v.sell)} — <b>${n.reinforce}</b> coins</div><div>${SamsamUI.dot('red')}Sell / Convert: below ${f(v.sell)} — <b>${n.convert}</b> coins</div>` + (smart ? `<div class="sg-sm">${SamsamUI.ic('sparkles')}Smart keeps <b>${changed}</b> coin${changed === 1 ? '' : 's'} on Hold</div>` : '');
+  box.innerHTML = `<div>${SamsamUI.dot('grey')}Hold: above ${f(v.reinforce)} — <b>${n.hold}</b> coins</div><div>${SamsamUI.dot('green')}Reinforce: ${f(v.reinforce)} to ${f(v.sell)} — <b>${n.reinforce}</b> coins</div><div>${SamsamUI.dot('red')}Sell / Convert: below ${f(v.sell)} — <b>${n.convert}</b> coins</div>` + (smart ? `<div class="sg-sm">${SamsamUI.ic('sparkles')}Smart keeps <b>${changed}</b> coin${changed === 1 ? '' : 's'} on Hold</div>` : '') + (calm ? `<div class="sg-sm">${SamsamUI.ic('moon')}Calm mode keeps <b>${quiet}</b> coin${quiet === 1 ? '' : 's'} on Hold</div>` : '');
 }
 async function saveSignalEdit() {
   const v = sgRead(); if (!v.ok) return;
@@ -43,6 +44,8 @@ async function saveSignalEdit() {
     await Samsam.setSignalRules(v.reinforce === -5 && v.sell === -20 ? null : { reinforce: v.reinforce, sell: v.sell });
     const smart = document.getElementById('sgSmart').checked;
     if (smart !== (Samsam.getSignalRules().smart !== false)) await Samsam.setSignalSmart(smart);
+    const calm = document.getElementById('sgCalm').checked;
+    if (calm !== (Samsam.getSignalRules().calm === true)) await Samsam.setSignalCalm(calm);
     closeSignalEdit();
   }
   catch (e) { document.getElementById('sgPrev').innerHTML = '<span style="color:#f87171">' + SamsamUI.ic('alert') + SamsamCoins.esc((e && e.message) || e) + '</span>'; }

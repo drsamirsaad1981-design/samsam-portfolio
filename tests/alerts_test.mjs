@@ -160,8 +160,16 @@ check('smart: Sell / Convert on a weak coin → stays, confirmed', (x => x.actio
 check('smart: mixed (30d behind, 90d ahead) → the classic signal', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: -20, d90: 5 } }).action === 'reinforce');
 check('smart: no 30 / 90-day data → the classic signal', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: null }).action === 'reinforce');
 check('smart off → the classic signal', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: -20, d90: -30 }, smart: false }).action === 'reinforce');
+check('calm off (the default): a falling coin still gets Reinforce', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: 0, d90: 0, c7: -12 } }).action === 'reinforce');
+check('calm on: Reinforce on a coin down more than 5% in 7 days → Hold (falling)', (x => x.action === 'hold' && x.base === 'reinforce' && x.why === 'falling')(signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: 0, d90: 0, c7: -5.1 }, calm: true })));
+check('calm on: a steady coin (−5% or better in 7 days) keeps Reinforce', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: 0, d90: 0, c7: -5 }, calm: true }).action === 'reinforce' && signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: 0, d90: 0, c7: 3 }, calm: true }).action === 'reinforce');
+check('calm on: Sell / Convert is untouched', signalFor({ sym: 'SEI', chg: -25, rules: R, rs: { d30: -1, d90: -1, c7: -30 }, calm: true }).action === 'convert');
+check('calm on: no 7-day data → the usual signal', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: 0, d90: 0 }, calm: true }).action === 'reinforce' && signalFor({ sym: 'SEI', chg: -10, rules: R, rs: null, calm: true }).action === 'reinforce');
+check('calm on, Smart off: still waits on a falling coin', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: 0, d90: 0, c7: -9 }, smart: false, calm: true }).why === 'falling');
+check('calm + Smart: a weak coin keeps the Smart reason', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: -20, d90: -30, c7: -9 }, calm: true }).why === 'weak');
 check('BTC is always Hold', signalFor({ sym: 'BTC', chg: -40, rules: R, rs: { d30: -50, d90: -50 } }).action === 'hold');
 const sm = strengthMap({ btc: [1, -10, 20], coins: [{ id: 'sei', p: [0, -30, -5] }], mine: { kava: [0, 5, 30] } });
+check('strength map: carries the coin\'s own 7-day change', strengthMap({ btc: [1, -10, 20], coins: [{ id: 'sei', p: [-7.5, -30, -5] }] }).sei.c7 === -7.5);
 check('strength map: points vs BTC from the Altcoin Season file', sm.sei.d30 === -20 && sm.sei.d90 === -25 && sm.kava.d30 === 15 && sm.kava.d90 === 10, sm);
 // in the alerts: SEI −16.7% (Reinforce) but far behind BTC → Hold, with the reason in the alert
 const mS = mk(); mS.altPage = { ethbtc: [[1, 0.03]], btc: [0, 0, 0], coins: [{ id: 'sei', p: [0, -30, -40] }] };
@@ -170,6 +178,19 @@ check('alerts use Smart: SEI Reinforce → Hold (behind BTC)', sS.signal.SEI ===
 const r1 = evaluate(summarize(user(), mk(), T0), mk(), {}, cfg, T0).state;
 const r2 = evaluate(sS, mS, { ...r1, sigMode: r1.sigMode }, cfg, T0 + 1800e3);
 check('signal turned by Smart → a signal alert with the vs BTC points', r2.messages.some(x => x.key === 'sig-day' && /vs BTC −30 pts \(30d\)/.test(x.text) && /Smart: not adding/.test(x.text)), r2.messages.map(m => m.text));
+// 🌙 Calm mode (meta.signalCalm, off unless switched on): Reinforce waits while the coin is down 5%+ over 7 days
+const mC = mk(); mC.altPage = { ethbtc: [[1, 0.03]], btc: [0, 0, 0], coins: [{ id: 'sei', p: [-12, 0, 0] }] };
+const mC0 = mk(); mC0.altPage = { ethbtc: [[1, 0.03]], btc: [0, 0, 0], coins: [{ id: 'sei', p: [1, 0, 0] }] };
+const uC = user({ signalCalm: true });
+check('calm is off by default: the falling SEI stays Reinforce', summarize(user(), mC, T0).signal.SEI === 'reinforce', summarize(user(), mC, T0).signal);
+const sC = summarize(uC, mC, T0);
+check('calm on: SEI Reinforce → Hold (falling); a steady week keeps Reinforce', sC.signal.SEI === 'hold' && sC.coins.find(c => c.sym === 'SEI').why === 'falling' && summarize(uC, mC0, T0).signal.SEI === 'reinforce', sC.signal);
+check('calm changes the signal mode (so switching it never floods alerts)', sC.sigMode !== summarize(user(), mC, T0).sigMode && summarize(user(), mk(), T0).sigMode === r1.sigMode);
+const rc1 = evaluate(summarize(uC, mC0, T0), mC0, {}, cfg, T0).state;
+const rc2 = evaluate(sC, mC, rc1, cfg, T0 + 1800e3);
+check('signal turned by Calm mode → the alert says why', rc2.messages.some(x => x.key === 'sig-day' && /Calm mode: not adding yet, −12\.0% in 7 days/.test(x.text)), rc2.messages.map(m => m.text));
+const rc3 = evaluate(summarize(uC, mC, T0), mC, rc1, { ...cfg, lang: 'ar' }, T0 + 1800e3);
+check('… and in Arabic', rc3.messages.some(x => x.key === 'sig-day' && /الوضع الهادئ: لا تعزيز الآن، −12\.0% في 7 أيام/.test(x.text)), rc3.messages.map(m => m.text));
 const u3 = user({ signal: { reinforce: -2, sell: -30 } });
 const r3 = evaluate(summarize(u3, mk(), T0), mk(), r1, cfg, T0 + 1800e3);
 check('you change the thresholds → no flood of signal alerts (memory starts again)', !r3.messages.some(x => x.key.startsWith('sig-')) && r3.state.sigMode !== r1.sigMode, r3.messages.map(m => m.key));

@@ -336,13 +336,19 @@ export function btcPriceLookup(snaps) {
 //   Sell / Convert on a coin that is beating BTC on both                                    → Hold, it's the market's dip
 // Without 30 / 90-day data for the coin, the classic signal stands.
 export const SMART_WEAK = 15;
-export function signalFor({ sym, chg, rules, rs = null, smart = true }) {
+// 🌙 Calm mode (optional, off unless you switch it on in Signal ✏️): a Reinforce waits while the coin is still falling —
+// down more than CALM_MIN % over its last 7 days → Hold ('falling'). Fewer Reinforce signals; Sell / Convert is untouched.
+// (tools/lab: on a year of prices it cut the trades by about a third for about 1% less at the end — not a better rule, a quieter one.)
+export const CALM_MIN = -5;
+export function signalFor({ sym, chg, rules, rs = null, smart = true, calm = false }) {
   const r = rules || { reinforce: -5, sell: -20 };
   const base = sym === 'BTC' || sym === 'XAU' || sym === 'XAG' ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
   const ok = smart && sym !== 'BTC' && rs && Number.isFinite(rs.d30) && Number.isFinite(rs.d90);
-  if (!ok) return { action: base, base, why: null, rs: rs || null };
+  const falling = calm && base === 'reinforce' && rs && Number.isFinite(rs.c7) && rs.c7 < CALM_MIN;
+  if (!ok) return falling ? { action: 'hold', base, why: 'falling', rs } : { action: base, base, why: null, rs: rs || null };
   const weak = rs.d30 <= -SMART_WEAK && rs.d90 <= -SMART_WEAK, strong = rs.d30 > 0 && rs.d90 > 0;
   if (base === 'reinforce' && weak) return { action: 'hold', base, why: 'weak', rs };
+  if (falling) return { action: 'hold', base, why: 'falling', rs };
   if (base === 'convert' && strong) return { action: 'hold', base, why: 'strong', rs };
   return { action: base, base, why: base !== 'hold' && (weak || strong) ? 'confirmed' : null, rs };
 }
@@ -351,18 +357,18 @@ export function signalFor({ sym, chg, rules, rs = null, smart = true }) {
 // close (null: not known yet → the live price decides, as before). Returns signalFor's answer for the close, plus
 //   live:    what the live price alone would say
 //   pending: that live signal when it differs — shown as "pending ⏳" until a close confirms it (or the price comes back)
-export function confirmedSignal({ sym, avg, live, close, rules, rs = null, smart = true }) {
+export function confirmedSignal({ sym, avg, live, close, rules, rs = null, smart = true, calm = false }) {
   const pctOf = p => avg > 0 && p > 0 ? (p / avg - 1) * 100 : 0;
-  const L = signalFor({ sym, chg: pctOf(live), rules, rs, smart });
+  const L = signalFor({ sym, chg: pctOf(live), rules, rs, smart, calm });
   if (!(close > 0)) return { ...L, chg: pctOf(live), live: L.action, pending: null, onClose: false };
-  const C = signalFor({ sym, chg: pctOf(close), rules, rs, smart });
+  const C = signalFor({ sym, chg: pctOf(close), rules, rs, smart, calm });
   return { ...C, chg: pctOf(close), live: L.action, pending: L.action !== C.action ? L.action : null, onClose: true };
 }
 // 30 / 90-day strength vs BTC for every coin, from the Altcoin Season file (m/alt.json: top 100 + the app's other coins)
 export function strengthMap(alt) {
   const out = {}, b = alt && alt.btc;
   if (!b || !Number.isFinite(b[1]) || !Number.isFinite(b[2])) return out;
-  const put = (id, p) => { if (id && Array.isArray(p) && Number.isFinite(p[1]) && Number.isFinite(p[2])) out[id] = { d30: p[1] - b[1], d90: p[2] - b[2], c30: p[1], c90: p[2] }; };
+  const put = (id, p) => { if (id && Array.isArray(p) && Number.isFinite(p[1]) && Number.isFinite(p[2])) out[id] = { d30: p[1] - b[1], d90: p[2] - b[2], c30: p[1], c90: p[2], c7: Number.isFinite(p[0]) ? p[0] : null }; };
   (alt.coins || []).forEach(c => put(c.id, c.p));
   Object.entries(alt.mine || {}).forEach(([id, p]) => put(id, p));
   out.__btc = { c30: b[1], c90: b[2] };

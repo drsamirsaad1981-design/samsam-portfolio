@@ -1,7 +1,7 @@
-// tools/backtest-lab.mjs — 🔬 other signal rules tried on the same year of daily prices (an experiment; the app's live
+// tools/lab/backtest-lab.mjs — 🔬 other signal rules tried on the same year of daily prices (an experiment; the app's live
 // rule in samsam-core.js signalFor is NOT changed by this file).
 //
-//   node tools/backtest-lab.mjs series.json [out.md]      (series.json comes from tools/backtest.mjs — the Backtest workflow)
+//   node tools/lab/backtest-lab.mjs series.json [out.md]      (series.json comes from tools/backtest.mjs — the Backtest workflow)
 //
 // The money is the same as in tools/backtest.mjs: $10,000 split equally over the altcoins on day 1 + $100 every week.
 // Every week each coin's signal is followed: Reinforce → the $100 goes to those coins · Sell → the whole coin into BTC.
@@ -107,7 +107,7 @@ export const RULES = [
   ['D', 'D · A + B15 (30+90)', { ...base, mode: 'weak', regime: 15 }],
   ['D30', 'D30 · A30 + B15 (30 only)', { ...base, mode: 'weak30', regime: 15 }],
   ['E0', 'E · reinforce if 7d ≥ 0%', { ...base, mode: 'smart', firm: 0 }],
-  ['E5', 'E · reinforce if 7d ≥ −5%', { ...base, mode: 'smart', firm: -5 }],
+  ['E5', 'E · reinforce if 7d ≥ −5% (the app\'s optional Calm mode)', { ...base, mode: 'smart', firm: -5 }],
   ['DE', 'D + E (all together)', { ...base, mode: 'weak', regime: 15, firm: 0 }],
 ];
 export const GRID = [-5, -10, -15].flatMap(r => [-20, -30, -40].map(s => [`C ${r}/${s}`, `C · reinforce ${r}% · sell ${s}%`, { reinforce: r, sell: s, mode: 'smart' }]));
@@ -148,7 +148,7 @@ export function load(file) {   // series.json, or a saved Actions log with "SERI
 }
 
 function main() {
-  const ROOT = new URL('..', import.meta.url).pathname;
+  const ROOT = new URL('../..', import.meta.url).pathname;
   const src = fs.readFileSync(ROOT + 'samsam-coins.js', 'utf8'), map = {};
   for (const m of src.match(/var CG_IDS = \{([\s\S]*?)\};/)[1].matchAll(/"([A-Z0-9]+)"\s*:\s*"([a-z0-9-]+)"/g)) map[m[1]] = m[2];
   const { day0, series } = load(process.argv[2] || 'series.json');
@@ -157,6 +157,7 @@ function main() {
   const rows = lab(series, alts), md = report(rows, { from: d(90), to: d(n - 1), coins: rows[1].coins });
   console.log(md);
   if (process.argv[3]) fs.writeFileSync(process.argv[3], md);
+  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '\n\n' + md + '\n');
   fs.writeFileSync('lab.json', JSON.stringify(rows.map(({ sells, sched, ...r }) => ({ ...r, sold: sells.map(s => [s.sym, d(s.i), s.helped]) }))));
 }
 if (import.meta.url === 'file://' + process.argv[1]) main();

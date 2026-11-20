@@ -185,13 +185,15 @@
     "⚪ <b>Hold</b> — the price is above −5% of your average buy price.",
     "🟢 <b>Reinforce</b> — between −5% and −20%: cheaper than you paid, a chance to add.",
     "🔴 <b>Sell / Convert</b> — below −20%: consider moving it into BTC.",
-    "BTC is always Hold. Change the −5% / −20% thresholds from the Signal ⓘ."
+    "BTC is always Hold. Change the −5% / −20% thresholds from the Signal ⓘ.",
+    "🌙 <b>Calm mode</b> (optional, off at first — in the same Signal ⓘ window): Reinforce waits while the coin is still falling (down more than 5% in 7 days). Fewer signals and alerts."
    ],
    "ar": [
     "⚪ <b>احتفاظ</b> — السعر أعلى من −5% من متوسط سعر شرائك.",
     "🟢 <b>تعزيز</b> — بين −5% و−20%: أرخص مما دفعت، فرصة للزيادة.",
     "🔴 <b>بيع / تحويل</b> — أقل من −20%: فكّر في تحويلها إلى البيتكوين.",
-    "البيتكوين دائماً احتفاظ. غيّر حدود −5% / −20% من ⓘ بجانب الإشارة."
+    "البيتكوين دائماً احتفاظ. غيّر حدود −5% / −20% من ⓘ بجانب الإشارة.",
+    "🌙 <b>الوضع الهادئ</b> (اختياري ومعطّل في البداية — في نفس نافذة ⓘ بجانب الإشارة): التعزيز ينتظر ما دامت العملة ما زالت تهبط (نزلت أكثر من 5% في 7 أيام). إشارات وتنبيهات أقل."
    ],
    "tip": {
     "en": "A signal is a reminder, not financial advice.",

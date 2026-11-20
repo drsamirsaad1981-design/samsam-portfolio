@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: cd45ada2616e5791
+// sources-hash: a05af04381fe93f1
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -445,28 +445,31 @@ function vsBtcByCoin(coins, txs, { prices: prices2 = {}, btcNow = 0, btcAt = nul
   return out;
 }
 var SMART_WEAK = 15;
-function signalFor({ sym, chg, rules, rs = null, smart = true }) {
+var CALM_MIN = -5;
+function signalFor({ sym, chg, rules, rs = null, smart = true, calm = false }) {
   const r = rules || { reinforce: -5, sell: -20 };
   const base = sym === "BTC" || sym === "XAU" || sym === "XAG" ? "hold" : chg < r.sell ? "convert" : chg <= r.reinforce ? "reinforce" : "hold";
   const ok2 = smart && sym !== "BTC" && rs && Number.isFinite(rs.d30) && Number.isFinite(rs.d90);
-  if (!ok2) return { action: base, base, why: null, rs: rs || null };
+  const falling = calm && base === "reinforce" && rs && Number.isFinite(rs.c7) && rs.c7 < CALM_MIN;
+  if (!ok2) return falling ? { action: "hold", base, why: "falling", rs } : { action: base, base, why: null, rs: rs || null };
   const weak = rs.d30 <= -SMART_WEAK && rs.d90 <= -SMART_WEAK, strong = rs.d30 > 0 && rs.d90 > 0;
   if (base === "reinforce" && weak) return { action: "hold", base, why: "weak", rs };
+  if (falling) return { action: "hold", base, why: "falling", rs };
   if (base === "convert" && strong) return { action: "hold", base, why: "strong", rs };
   return { action: base, base, why: base !== "hold" && (weak || strong) ? "confirmed" : null, rs };
 }
-function confirmedSignal({ sym, avg, live, close, rules, rs = null, smart = true }) {
+function confirmedSignal({ sym, avg, live, close, rules, rs = null, smart = true, calm = false }) {
   const pctOf = (p) => avg > 0 && p > 0 ? (p / avg - 1) * 100 : 0;
-  const L = signalFor({ sym, chg: pctOf(live), rules, rs, smart });
+  const L = signalFor({ sym, chg: pctOf(live), rules, rs, smart, calm });
   if (!(close > 0)) return { ...L, chg: pctOf(live), live: L.action, pending: null, onClose: false };
-  const C = signalFor({ sym, chg: pctOf(close), rules, rs, smart });
+  const C = signalFor({ sym, chg: pctOf(close), rules, rs, smart, calm });
   return { ...C, chg: pctOf(close), live: L.action, pending: L.action !== C.action ? L.action : null, onClose: true };
 }
 function strengthMap(alt) {
   const out = {}, b = alt && alt.btc;
   if (!b || !Number.isFinite(b[1]) || !Number.isFinite(b[2])) return out;
   const put = (id, p) => {
-    if (id && Array.isArray(p) && Number.isFinite(p[1]) && Number.isFinite(p[2])) out[id] = { d30: p[1] - b[1], d90: p[2] - b[2], c30: p[1], c90: p[2] };
+    if (id && Array.isArray(p) && Number.isFinite(p[1]) && Number.isFinite(p[2])) out[id] = { d30: p[1] - b[1], d90: p[2] - b[2], c30: p[1], c90: p[2], c7: Number.isFinite(p[0]) ? p[0] : null };
   };
   (alt.coins || []).forEach((c) => put(c.id, c.p));
   Object.entries(alt.mine || {}).forEach(([id, p]) => put(id, p));
@@ -750,18 +753,18 @@ function summarize(user, market, now = Date.now()) {
     }
   }
   const rule = meta.signal && isFinite(meta.signal.reinforce) && isFinite(meta.signal.sell) ? meta.signal : DEFAULT_SIGNAL;
-  const smart = meta.signalSmart !== false, rsMap = strengthMap(market.altPage);
+  const smart = meta.signalSmart !== false, calm = meta.signalCalm === true, rsMap = strengthMap(market.altPage);
   const signal = {}, coinRows = [];
   const pending = {}, toS = (a) => a === "convert" ? "sell" : a;
   for (const c of pf) {
     const id = info[c.sym].id, close = id && market.close && market.close[id];
-    const si = confirmedSignal({ sym: c.sym, avg: c.basePrice, live: c.currentPrice, close, rules: rule, rs: id ? rsMap[id] : null, smart });
+    const si = confirmedSignal({ sym: c.sym, avg: c.basePrice, live: c.currentPrice, close, rules: rule, rs: id ? rsMap[id] : null, smart, calm });
     const chg = c.basePrice > 0 ? (c.currentPrice / c.basePrice - 1) * 100 : 0;
     signal[c.sym] = toS(si.action);
     if (si.pending) pending[c.sym] = toS(si.pending);
     coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, chgClose: si.onClose ? si.chg : null, close: close || null, pending: si.pending ? toS(si.pending) : null, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
   }
-  const sigMode = JSON.stringify({ r: rule.reinforce, s: rule.sell, smart });
+  const sigMode = JSON.stringify(calm ? { r: rule.reinforce, s: rule.sell, smart, calm } : { r: rule.reinforce, s: rule.sell, smart });
   const counts = { reinforce: 0, sell: 0, hold: 0 };
   Object.values(signal).forEach((s) => counts[s]++);
   const held = Object.fromEntries(pf.map((c) => [c.sym.toUpperCase(), c.qty]));

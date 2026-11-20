@@ -57,7 +57,7 @@ export const W = {
     trim: v => `To get back: trim about ${v}, or add to the other categories`, add: v => `To get back: add about ${v}`, allocBtn: 'Open Allocation',
     dcaDay: 'DCA day — your regular buys', dcaTotal: v => `Total today: ${v}`, dcaLate: 'DCA reminder — not bought yet', dcaWasDue: (d, n) => `was due ${d} (${n} days ago)`, dcaNext: 'Buy when you can, or skip — the next one is on schedule.',
     freeW: 'Rewards & mining this week',
-    dcaLine: (n, mo, nx) => `${n} regular buy${n === 1 ? '' : 's'} · ${mo}/mo · next ${nx}`, smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
+    dcaLine: (n, mo, nx) => `${n} regular buy${n === 1 ? '' : 's'} · ${mo}/mo · next ${nx}`, calmFall: p => `Calm mode: not adding yet, ${p} in 7 days`, smartWeak: 'Smart: not adding, it keeps losing to BTC', smartStrong: 'Smart: holding, it is beating BTC',
   },
   ar: {
     digestT: 'ملخص المحفظة', brief: 'ملخص الصباح', weekly: 'التقرير الأسبوعي', today: 'اليوم', week: 'هذا الأسبوع', profit: 'إجمالي الربح', vsBtc: 'مقارنة بالاحتفاظ بـ BTC',
@@ -81,7 +81,7 @@ export const W = {
     trim: v => `للعودة: خفّض حوالي ${v}، أو أضف للفئات الأخرى`, add: v => `للعودة: أضف حوالي ${v}`, allocBtn: 'افتح التوزيع',
     dcaDay: 'يوم الشراء الدوري (DCA)', dcaTotal: v => `الإجمالي اليوم: ${v}`, dcaLate: 'تذكير DCA — لم يتم الشراء بعد', dcaWasDue: (d, n) => `كان موعده ${d} (منذ ${n} أيام)`, dcaNext: 'اشترِ عندما تستطيع أو تجاوزه — الموعد التالي في وقته.',
     freeW: 'المكافآت والتعدين هذا الأسبوع',
-    dcaLine: (n, mo, nx) => `${n === 1 ? 'عملية شراء دوري واحدة' : n === 2 ? 'عمليتا شراء دوري' : n + ' عمليات شراء دوري'} (DCA) · ${mo} شهريًا · القادم ${nx}`, smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
+    dcaLine: (n, mo, nx) => `${n === 1 ? 'عملية شراء دوري واحدة' : n === 2 ? 'عمليتا شراء دوري' : n + ' عمليات شراء دوري'} (DCA) · ${mo} شهريًا · القادم ${nx}`, calmFall: p => `الوضع الهادئ: لا تعزيز الآن، ${p} في 7 أيام`, smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
   },
 };
 
@@ -165,19 +165,19 @@ export function summarize(user, market, now = Date.now()) {
   // signals (the app's rule: price vs your average buy price; BTC is always Hold)
   // (the app's rule, samsam-core.js → signalFor: price vs your average buy price, Smart-checked vs BTC over 30 / 90 days)
   const rule = meta.signal && isFinite(meta.signal.reinforce) && isFinite(meta.signal.sell) ? meta.signal : DEFAULT_SIGNAL;
-  const smart = meta.signalSmart !== false, rsMap = C.strengthMap(market.altPage);
+  const smart = meta.signalSmart !== false, calm = meta.signalCalm === true, rsMap = C.strengthMap(market.altPage);
   const signal = {}, coinRows = [];
   // ⏳ decided on the daily close (market.close: { id: price at 00:00 UTC }, p/close.json); the live price only marks "pending"
   const pending = {}, toS = a => a === 'convert' ? 'sell' : a;
   for (const c of pf) {
     const id = info[c.sym].id, close = id && market.close && market.close[id];
-    const si = C.confirmedSignal({ sym: c.sym, avg: c.basePrice, live: c.currentPrice, close, rules: rule, rs: id ? rsMap[id] : null, smart });
+    const si = C.confirmedSignal({ sym: c.sym, avg: c.basePrice, live: c.currentPrice, close, rules: rule, rs: id ? rsMap[id] : null, smart, calm });
     const chg = c.basePrice > 0 ? (c.currentPrice / c.basePrice - 1) * 100 : 0;
     signal[c.sym] = toS(si.action);
     if (si.pending) pending[c.sym] = toS(si.pending);
     coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, chgClose: si.onClose ? si.chg : null, close: close || null, pending: si.pending ? toS(si.pending) : null, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
   }
-  const sigMode = JSON.stringify({ r: rule.reinforce, s: rule.sell, smart });
+  const sigMode = JSON.stringify(calm ? { r: rule.reinforce, s: rule.sell, smart, calm } : { r: rule.reinforce, s: rule.sell, smart });
   const counts = { reinforce: 0, sell: 0, hold: 0 }; Object.values(signal).forEach(s => counts[s]++);
   // accumulation plan
   const held = Object.fromEntries(pf.map(c => [c.sym.toUpperCase(), c.qty]));
@@ -354,7 +354,7 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
     if (ch.length && lp.hour >= 7) {   // (the close comes at 03:00 — the changes wait for the morning)
       const pts = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(0);
       const lines = ch.map(({ c, was, now1 }) => `${icon[now1]} <b>${esc(c.sym)}</b>  ${names[was]} → <b>${names[now1]}</b> · ${pct(c.chgClose != null ? c.chgClose : c.chg, 1)} ${t.vsAvg}` +
-        (c.rs && (c.why === 'weak' || c.why === 'strong') ? `\n    ${t.vsBtc30(pts(c.rs.d30), pts(c.rs.d90))} · ${c.why === 'weak' ? t.smartWeak : t.smartStrong}` : ''));
+        (c.rs && (c.why === 'weak' || c.why === 'strong') ? `\n    ${t.vsBtc30(pts(c.rs.d30), pts(c.rs.d90))} · ${c.why === 'weak' ? t.smartWeak : t.smartStrong}` : c.rs && c.why === 'falling' ? `\n    ${t.calmFall((c.rs.c7 >= 0 ? '+' : '−') + Math.abs(c.rs.c7).toFixed(1) + '%')}` : ''));
       const text = `🎯 <b>${t.sigsT(ch.length)}</b>\n${lines.join('\n')}\n<i>${t.onClose}</i>\n<i>${t.notAdvice}</i>`;
       const buttons = [ch.slice(0, 3).map(({ c }) => btn(t.coinBtn(c.sym), 'index.html#holdings/' + encodeURIComponent(c.sym)))];
       if (push({ key: 'sig-day', text, buttons })) ch.forEach(({ c, now1 }) => { st.sig[c.sym] = now1; });
