@@ -196,7 +196,7 @@ export function viewExit(t, sum, now) {
   const L = [`🚪 <b>${t.exitT}</b> · ${hm(now)}`, '', `🧭 <b>${t.conds}</b> · ${t.met3(mc)}`];
   for (const x of sum.macro) {
     const v = n => n == null ? '—' : n.toFixed(x.dp) + x.unit;
-    L.push(`${x.met ? '✅' : '⬜'} ${name[x.k]}: ${v(x.now)} → ${x.op} ${v(x.lvl)}`);   // (one left-to-right piece in Arabic: "58.7% → ≤ 45.9%")
+    L.push(`${x.met ? '✅' : '⏳'} ${name[x.k]}: ${v(x.now)} → ${x.op} ${v(x.lvl)}`);   // (one left-to-right piece in Arabic: "58.7% → ≤ 45.9%")
   }
   if (mc === 3) L.push(`🔔 <b>${t.allExit}</b>`);
   const tps = (sum.tps || []).map(x => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
@@ -204,9 +204,11 @@ export function viewExit(t, sum, now) {
   if (!tps.length) L.push(t.noExit);
   const bySym = new Map(); tps.forEach(x => { if (!bySym.has(x.sym)) bySym.set(x.sym, []); bySym.get(x.sym).push(x); });
   // one short line per level (fits a phone): ⬜ TP1 $0.5529 · +93% · 25%  — the 8 coins closest to a take-profit
+  // Arabic: a line whose first visible letter is Latin shows left-to-right in Telegram whatever marks it carries (seen 20 Nov) —
+  // so those rows start with a sign (• / 🔹 / ⏳), like the ⬜ / ✅ rows that always came out right
   // as many coins as fit: the Arabic marks (bidi.mjs) make a message longer, and past Telegram's 4,096 it would go out unmarked (scrambled)
-  const block = ([sym, list]) => ['', isAr(t) ? `<b>${esc(sym)}</b>: ${price(list[0].price)}` : `<b>${esc(sym)}</b> · ${price(list[0].price)}`,
-    ...list.sort((a, b) => a.n - b.n).map(x => `${x.to <= 0 ? '✅' : '⬜'} TP${x.n} ${price(x.level)} · ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` · ${x.pct}%` : ''}`)];
+  const block = ([sym, list]) => ['', isAr(t) ? `🔹 <b>${esc(sym)}</b>: ${price(list[0].price)}` : `<b>${esc(sym)}</b> · ${price(list[0].price)}`,
+    ...list.sort((a, b) => a.n - b.n).map(x => `${x.to <= 0 ? '✅' : '⏳'} TP${x.n} ${price(x.level)} · ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` · ${x.pct}%` : ''}`)];
   const all = [...bySym];
   let n = Math.min(8, all.length), text;
   for (;;) {
@@ -238,7 +240,7 @@ export function viewSignals(t, sum) {
     const ar = isAr(t);
     L.push('', `<b>${t[k]}</b> (${by[k].length})${ar ? ' · <i>مقارنة بمتوسطك</i>' : ''}`);
     by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach(c => L.push(ar   // Arabic: no fixed-width block (it mixes with the Arabic word): "JUP −27.2% · متوسطك $0.309"
-      ? `<b>${esc(c.sym)}</b> ${pct(c.chg, 1)} · متوسطك ${price(c.avg)}${c.pending ? ' ⏳' : ''}`
+      ? `• <b>${esc(c.sym)}</b> ${pct(c.chg, 1)} · متوسطك ${price(c.avg)}${c.pending ? ' ⏳' : ''}`
       : `<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${t.vsAvg} ${price(c.avg)}${c.pending ? ' ⏳' : ''}`));
     if (by[k].length > 12) L.push('…');
   }
@@ -258,19 +260,19 @@ export function viewPlan(t, sum, now) {
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach(p => {
       const f = p.target > 0 ? p.actual / p.target : 0;
       L.push(isAr(t)   // Arabic: no fixed-width block next to Arabic words (it reads backwards right-to-left)
-        ? `<b>${esc(p.sym)}</b> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : ` · باقي ${+Number(p.target - p.actual).toPrecision(4)}`}`
+        ? `• <b>${esc(p.sym)}</b> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : ` · باقي ${+Number(p.target - p.actual).toPrecision(4)}`}`
         : `<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : `  ${t.left} ${qty(p.target - p.actual)}`}`);
     });
   }
   if ((sum.dca || []).length) {
     L.push('', `🛒 <b>${t.dca}</b>`);
     sum.dca.forEach(x => L.push(isAr(t)   // Arabic: "BTC: $3,000 شهرياً · القادم 2026-12-01" (no padded code block: it reads backwards right-to-left)
-      ? `${esc(x.sym)}: ${usd(x.s.perMonth)} شهرياً${x.s.next ? ` · القادم ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`
+      ? `• ${esc(x.sym)}: ${usd(x.s.perMonth)} شهرياً${x.s.next ? ` · القادم: ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`
       : `<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}/mo${x.s.next ? ` · ${t.next} ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`));
   }
   if ((sum.buyAt || []).length) {
     L.push('', `🔔 <b>${t.buyAt}</b>`);
-    sum.buyAt.forEach(x => { const d = (x.price / x.at - 1) * 100; L.push(`${isAr(t) ? `<b>${esc(x.sym)}</b>` : `<code>${esc(x.sym.padEnd(6))}</code>`} ${price(x.at)} · ${price(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : '✅'}`); });
+    sum.buyAt.forEach(x => { const d = (x.price / x.at - 1) * 100; L.push(`${isAr(t) ? `• <b>${esc(x.sym)}</b>` : `<code>${esc(x.sym.padEnd(6))}</code>`} ${price(x.at)} · ${price(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : '✅'}`); });
   }
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pl'), url(t.openApp, APP + 'accumulation.html')], [cb(t.back, 'menu')]] };
 }

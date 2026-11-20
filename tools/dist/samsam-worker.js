@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: e8501158135b7bfd
+// sources-hash: 0d0bebe72ab70c21
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5855,7 +5855,7 @@ function viewExit(t, sum, now) {
   const L = [`\u{1F6AA} <b>${t.exitT}</b> \xB7 ${hm(now)}`, "", `\u{1F9ED} <b>${t.conds}</b> \xB7 ${t.met3(mc)}`];
   for (const x of sum.macro) {
     const v = (n2) => n2 == null ? "\u2014" : n2.toFixed(x.dp) + x.unit;
-    L.push(`${x.met ? "\u2705" : "\u2B1C"} ${name[x.k]}: ${v(x.now)} \u2192 ${x.op} ${v(x.lvl)}`);
+    L.push(`${x.met ? "\u2705" : "\u23F3"} ${name[x.k]}: ${v(x.now)} \u2192 ${x.op} ${v(x.lvl)}`);
   }
   if (mc === 3) L.push(`\u{1F514} <b>${t.allExit}</b>`);
   const tps = (sum.tps || []).map((x) => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
@@ -5868,8 +5868,8 @@ function viewExit(t, sum, now) {
   });
   const block = ([sym, list3]) => [
     "",
-    isAr(t) ? `<b>${esc(sym)}</b>: ${price2(list3[0].price)}` : `<b>${esc(sym)}</b> \xB7 ${price2(list3[0].price)}`,
-    ...list3.sort((a, b) => a.n - b.n).map((x) => `${x.to <= 0 ? "\u2705" : "\u2B1C"} TP${x.n} ${price2(x.level)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`)
+    isAr(t) ? `\u{1F539} <b>${esc(sym)}</b>: ${price2(list3[0].price)}` : `<b>${esc(sym)}</b> \xB7 ${price2(list3[0].price)}`,
+    ...list3.sort((a, b) => a.n - b.n).map((x) => `${x.to <= 0 ? "\u2705" : "\u23F3"} TP${x.n} ${price2(x.level)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`)
   ];
   const all = [...bySym];
   let n = Math.min(8, all.length), text;
@@ -5899,7 +5899,7 @@ function viewSignals(t, sum) {
     if (!by[k].length) continue;
     const ar = isAr(t);
     L.push("", `<b>${t[k]}</b> (${by[k].length})${ar ? " \xB7 <i>\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0645\u062A\u0648\u0633\u0637\u0643</i>" : ""}`);
-    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(ar ? `<b>${esc(c.sym)}</b> ${pct(c.chg, 1)} \xB7 \u0645\u062A\u0648\u0633\u0637\u0643 ${price2(c.avg)}${c.pending ? " \u23F3" : ""}` : `<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${t.vsAvg} ${price2(c.avg)}${c.pending ? " \u23F3" : ""}`));
+    by[k].sort((a, b) => a.chg - b.chg).slice(0, 12).forEach((c) => L.push(ar ? `\u2022 <b>${esc(c.sym)}</b> ${pct(c.chg, 1)} \xB7 \u0645\u062A\u0648\u0633\u0637\u0643 ${price2(c.avg)}${c.pending ? " \u23F3" : ""}` : `<code>${esc(c.sym.padEnd(6))} ${pct(c.chg, 1).padStart(7)}</code>  ${t.vsAvg} ${price2(c.avg)}${c.pending ? " \u23F3" : ""}`));
     if (by[k].length > 12) L.push("\u2026");
   }
   if (sum.coins.some((c) => c.pending)) L.push("", isAr(t) ? "<i>\u23F3 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u064A\u0648\u0645\u064A (03:00 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636)</i>" : "<i>\u23F3 waiting for the daily close to confirm (03:00 Riyadh)</i>");
@@ -5920,18 +5920,18 @@ ${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb3(t.back,
     };
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach((p) => {
       const f = p.target > 0 ? p.actual / p.target : 0;
-      L.push(isAr(t) ? `<b>${esc(p.sym)}</b> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : ` \xB7 \u0628\u0627\u0642\u064A ${+Number(p.target - p.actual).toPrecision(4)}`}` : `<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : `  ${t.left} ${qty(p.target - p.actual)}`}`);
+      L.push(isAr(t) ? `\u2022 <b>${esc(p.sym)}</b> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : ` \xB7 \u0628\u0627\u0642\u064A ${+Number(p.target - p.actual).toPrecision(4)}`}` : `<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : `  ${t.left} ${qty(p.target - p.actual)}`}`);
     });
   }
   if ((sum.dca || []).length) {
     L.push("", `\u{1F6D2} <b>${t.dca}</b>`);
-    sum.dca.forEach((x) => L.push(isAr(t) ? `${esc(x.sym)}: ${usd(x.s.perMonth)} \u0634\u0647\u0631\u064A\u0627\u064B${x.s.next ? ` \xB7 \u0627\u0644\u0642\u0627\u062F\u0645 ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}` : `<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}/mo${x.s.next ? ` \xB7 ${t.next} ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}`));
+    sum.dca.forEach((x) => L.push(isAr(t) ? `\u2022 ${esc(x.sym)}: ${usd(x.s.perMonth)} \u0634\u0647\u0631\u064A\u0627\u064B${x.s.next ? ` \xB7 \u0627\u0644\u0642\u0627\u062F\u0645: ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}` : `<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}/mo${x.s.next ? ` \xB7 ${t.next} ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}`));
   }
   if ((sum.buyAt || []).length) {
     L.push("", `\u{1F514} <b>${t.buyAt}</b>`);
     sum.buyAt.forEach((x) => {
       const d = (x.price / x.at - 1) * 100;
-      L.push(`${isAr(t) ? `<b>${esc(x.sym)}</b>` : `<code>${esc(x.sym.padEnd(6))}</code>`} ${price2(x.at)} \xB7 ${price2(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : "\u2705"}`);
+      L.push(`${isAr(t) ? `\u2022 <b>${esc(x.sym)}</b>` : `<code>${esc(x.sym.padEnd(6))}</code>`} ${price2(x.at)} \xB7 ${price2(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : "\u2705"}`);
     });
   }
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pl"), url2(t.openApp, APP + "accumulation.html")], [cb3(t.back, "menu")]] };
