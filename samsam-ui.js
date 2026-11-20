@@ -12,6 +12,11 @@
   try { framed = window.top !== window.self && window.top.location.origin !== window.location.origin; }
   catch (_) { framed = true; }   // reading a foreign top page throws → a foreign site framed us
   if (!framed) return;
+  // 📱 Telegram Web shows the bot's Mini App in a frame of its own: allowed for Telegram's own web sites only
+  try {
+    var anc = (location.ancestorOrigins && location.ancestorOrigins.length) ? location.ancestorOrigins[location.ancestorOrigins.length - 1] : (document.referrer ? new URL(document.referrer).origin : '');
+    if (/^https:\/\/(web|webk|webz|webk2)\.telegram\.org$/.test(anc) && (sessionStorage.getItem('cp-tg-init') || /tgWebAppData=/.test(location.hash))) return;
+  } catch (_) {}
   document.documentElement.style.setProperty('display', 'none', 'important');
   try { window.top.location.href = window.location.href; } catch (_) {}
 })();
