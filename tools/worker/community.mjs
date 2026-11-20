@@ -75,8 +75,10 @@ export async function setup(env, kind, opt = {}) {
   const c = await getCommunity(env), x = c[kind]; if (!x) return { ok: false };
   const notes = [];
   if (kind === 'channel') {
-    const link = await tg(env, 'createChatInviteLink', { chat_id: x.id, name: 'Cute Portfolio members', creates_join_request: true });
-    if (link.ok) x.link = link.result.invite_link; else notes.push('⚠️ No join link — give me "Invite users via link".');
+    if (!x.link) {   // one join link, kept: a new one on every setup would leave old links alive beside it
+      const link = await tg(env, 'createChatInviteLink', { chat_id: x.id, name: 'Cute Portfolio members', creates_join_request: true });
+      if (link.ok) x.link = link.result.invite_link; else notes.push('⚠️ No join link — give me "Invite users via link".');
+    }
     if (!x.guideMsg || opt.reguide) {
       const id = await postGuidePost(env, x);
       if (id) { x.guideMsg = id; x.guideSig = guideSigs(); x.guideV = GUIDE.v || 1; } else notes.push('⚠️ The 📘 guide post did not go — let me post and pin messages.');

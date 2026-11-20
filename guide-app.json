@@ -435,18 +435,18 @@
     "ar": "تليجرام"
    },
    "s": {
-    "en": "The bot, the channel and the members' group.",
-    "ar": "البوت والقناة ومجموعة الأعضاء."
+    "en": "The bot, the app inside Telegram and the channel.",
+    "ar": "البوت، والتطبيق داخل تليجرام، والقناة."
    },
    "en": [
     "Settings → <b>Telegram</b> → <b>Link your portfolio</b> → <b>Open the bot</b> — one tap.",
     "<b>Telegram alerts</b>: choose which messages the bot sends you (buy-price alerts, regular buys and more).",
-    "<b>Join Cute Portfolio Signals</b> (the channel) and <b>Join Cute Portfolio Community</b> (the group)."
+    "<b>Join Cute Portfolio Signals</b> (the channel) — talk with the members in the comments under each post. In the bot, 📱 <b>Open the app</b> opens this app inside Telegram, signed in by Telegram."
    ],
    "ar": [
     "الإعدادات ← <b>تليجرام</b> ← <b>ربط محفظتك ببوت تليجرام</b> ← <b>افتح البوت</b> — ضغطة واحدة.",
     "<b>تنبيهات تليجرام</b>: اختر الرسائل التي يرسلها لك البوت (تنبيهات سعر الشراء، والشراء الدوري، وغيرها).",
-    "<b>انضم لقناة Cute Portfolio Signals</b> و<b>انضم لمجتمع Cute Portfolio</b>."
+    "<b>انضم لقناة Cute Portfolio Signals</b> — وتحدّث مع الأعضاء في التعليقات تحت كل منشور. وفي البوت، زر 📱 <b>افتح التطبيق</b> يفتح هذا التطبيق داخل تليجرام بتسجيل دخول تلقائي."
    ],
    "tip": {
     "en": "Everything the bot can do is in the <b>🤖 The bot</b> tab of this guide.",

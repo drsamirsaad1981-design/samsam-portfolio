@@ -369,33 +369,33 @@
   },
   {
    "k": "report",
-   "e": "📊",
+   "e": "📱",
    "g": "extras",
    "t": {
-    "en": "Full report and image cards",
-    "ar": "التقرير الكامل وبطاقات الصور"
+    "en": "The full app in Telegram",
+    "ar": "التطبيق الكامل داخل تليجرام"
    },
    "b": {
-    "en": "Report & cards",
-    "ar": "التقرير والبطاقات"
+    "en": "The app in Telegram",
+    "ar": "التطبيق في تليجرام"
    },
    "s": {
-    "en": "Everything on one page inside Telegram — and images to share.",
-    "ar": "كل شيء في صفحة واحدة داخل تليجرام — وصور جاهزة للمشاركة."
+    "en": "Cute Portfolio itself opens inside Telegram — signed in by Telegram.",
+    "ar": "يُفتح Cute Portfolio نفسه داخل تليجرام — وتسجيل الدخول عبر تليجرام."
    },
    "en": [
-    "Tap 📊 <b>Report</b> in the menu, or send /report.",
-    "A page opens inside Telegram: value, coins, plan, exit, market, paper and alerts.",
-    "Tap 📸 on a card to make a share-ready image (portfolio, a coin or the market)."
+    "Tap 📱 <b>Open the app</b> in the menu (or under your portfolio), or send /report.",
+    "The real app opens inside Telegram, already signed in to <i>your</i> portfolio — no password, no Google page.",
+    "Every page works there: Portfolio, Plan, Market Hub, Settings — always the latest version."
    ],
    "ar": [
-    "اضغط 📊 <b>Report</b> في القائمة، أو أرسل /report.",
-    "تُفتح صفحة داخل تليجرام: القيمة، والعملات، والخطة، والخروج، والسوق، والتجريبي، والتنبيهات.",
-    "اضغط 📸 على أي بطاقة لصنع صورة جاهزة للمشاركة (المحفظة أو عملة أو السوق)."
+    "اضغط 📱 <b>افتح التطبيق</b> في القائمة (أو تحت محفظتك)، أو أرسل /report.",
+    "يُفتح التطبيق الحقيقي داخل تليجرام، وأنت مسجّل الدخول إلى محفظتك <i>أنت</i> — بلا كلمة مرور ولا صفحة Google.",
+    "كل الصفحات تعمل هناك: المحفظة، والخطة، ومركز السوق، والإعدادات — دائماً بأحدث نسخة."
    ],
    "tip": {
-    "en": "Use \"hide $\" if you'd rather not show amounts.",
-    "ar": "استخدم \"إخفاء $\" إذا كنت لا تريد إظهار المبالغ."
+    "en": "First time? Link your portfolio once: app → Settings → Telegram → Link your portfolio.",
+    "ar": "أول مرة؟ اربط محفظتك مرة واحدة: التطبيق ← الإعدادات ← تليجرام ← ربط محفظتك."
    }
   },
   {
@@ -509,17 +509,17 @@
    },
    "en": [
     "Ask the bot in plain words — <i>how do I add a coin?</i>",
-    "Or write to Dr. Samir Saad.",
+    "An idea or a bug? Send <b>/feedback</b> and your message — it goes straight to Dr. Samir Saad.",
     "/guide opens this guide again any time; in the app: Settings → Guide."
    ],
    "ar": [
     "اسأل البوت بكلماتك — <i>كيف أضيف عملة؟</i>",
-    "أو راسل Dr. Samir Saad.",
+    "اقتراح أو مشكلة؟ أرسل <b>/feedback</b> ثم رسالتك — تصل مباشرة إلى Dr. Samir Saad.",
     "/guide يفتح هذا الدليل في أي وقت؛ وفي التطبيق: الإعدادات ← الدليل."
    ],
    "tip": {
-    "en": "The 👥 community group has a Guide topic and a place for questions.",
-    "ar": "في مجموعة المجتمع 👥 قسم للدليل ومكان للأسئلة."
+    "en": "📢 Cute Portfolio Signals: talk with the other members in the comments under each post (/community).",
+    "ar": "📢 قناة Cute Portfolio Signals: تحدّث مع الأعضاء في التعليقات تحت كل منشور (/community)."
    }
   }
  ]

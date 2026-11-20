@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 4e90f82a7902b95e
+// sources-hash: d091be127768d3d5
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3125,33 +3125,33 @@ var guide_default = {
     },
     {
       k: "report",
-      e: "\u{1F4CA}",
+      e: "\u{1F4F1}",
       g: "extras",
       t: {
-        en: "Full report and image cards",
-        ar: "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644 \u0648\u0628\u0637\u0627\u0642\u0627\u062A \u0627\u0644\u0635\u0648\u0631"
+        en: "The full app in Telegram",
+        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u0643\u0627\u0645\u0644 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645"
       },
       b: {
-        en: "Report & cards",
-        ar: "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0648\u0627\u0644\u0628\u0637\u0627\u0642\u0627\u062A"
+        en: "The app in Telegram",
+        ar: "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0641\u064A \u062A\u0644\u064A\u062C\u0631\u0627\u0645"
       },
       s: {
-        en: "Everything on one page inside Telegram \u2014 and images to share.",
-        ar: "\u0643\u0644 \u0634\u064A\u0621 \u0641\u064A \u0635\u0641\u062D\u0629 \u0648\u0627\u062D\u062F\u0629 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2014 \u0648\u0635\u0648\u0631 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629."
+        en: "Cute Portfolio itself opens inside Telegram \u2014 signed in by Telegram.",
+        ar: "\u064A\u064F\u0641\u062A\u062D Cute Portfolio \u0646\u0641\u0633\u0647 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2014 \u0648\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0639\u0628\u0631 \u062A\u0644\u064A\u062C\u0631\u0627\u0645."
       },
       en: [
-        "Tap \u{1F4CA} <b>Report</b> in the menu, or send /report.",
-        "A page opens inside Telegram: value, coins, plan, exit, market, paper and alerts.",
-        "Tap \u{1F4F8} on a card to make a share-ready image (portfolio, a coin or the market)."
+        "Tap \u{1F4F1} <b>Open the app</b> in the menu (or under your portfolio), or send /report.",
+        "The real app opens inside Telegram, already signed in to <i>your</i> portfolio \u2014 no password, no Google page.",
+        "Every page works there: Portfolio, Plan, Market Hub, Settings \u2014 always the latest version."
       ],
       ar: [
-        "\u0627\u0636\u063A\u0637 \u{1F4CA} <b>Report</b> \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629\u060C \u0623\u0648 \u0623\u0631\u0633\u0644 /report.",
-        "\u062A\u064F\u0641\u062A\u062D \u0635\u0641\u062D\u0629 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645: \u0627\u0644\u0642\u064A\u0645\u0629\u060C \u0648\u0627\u0644\u0639\u0645\u0644\u0627\u062A\u060C \u0648\u0627\u0644\u062E\u0637\u0629\u060C \u0648\u0627\u0644\u062E\u0631\u0648\u062C\u060C \u0648\u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u060C \u0648\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A.",
-        "\u0627\u0636\u063A\u0637 \u{1F4F8} \u0639\u0644\u0649 \u0623\u064A \u0628\u0637\u0627\u0642\u0629 \u0644\u0635\u0646\u0639 \u0635\u0648\u0631\u0629 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629 (\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0623\u0648 \u0639\u0645\u0644\u0629 \u0623\u0648 \u0627\u0644\u0633\u0648\u0642)."
+        "\u0627\u0636\u063A\u0637 \u{1F4F1} <b>\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629 (\u0623\u0648 \u062A\u062D\u062A \u0645\u062D\u0641\u0638\u062A\u0643)\u060C \u0623\u0648 \u0623\u0631\u0633\u0644 /report.",
+        "\u064A\u064F\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u062D\u0642\u064A\u0642\u064A \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645\u060C \u0648\u0623\u0646\u062A \u0645\u0633\u062C\u0651\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0625\u0644\u0649 \u0645\u062D\u0641\u0638\u062A\u0643 <i>\u0623\u0646\u062A</i> \u2014 \u0628\u0644\u0627 \u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631 \u0648\u0644\u0627 \u0635\u0641\u062D\u0629 Google.",
+        "\u0643\u0644 \u0627\u0644\u0635\u0641\u062D\u0627\u062A \u062A\u0639\u0645\u0644 \u0647\u0646\u0627\u0643: \u0627\u0644\u0645\u062D\u0641\u0638\u0629\u060C \u0648\u0627\u0644\u062E\u0637\u0629\u060C \u0648\u0645\u0631\u0643\u0632 \u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2014 \u062F\u0627\u0626\u0645\u0627\u064B \u0628\u0623\u062D\u062F\u062B \u0646\u0633\u062E\u0629."
       ],
       tip: {
-        en: `Use "hide $" if you'd rather not show amounts.`,
-        ar: '\u0627\u0633\u062A\u062E\u062F\u0645 "\u0625\u062E\u0641\u0627\u0621 $" \u0625\u0630\u0627 \u0643\u0646\u062A \u0644\u0627 \u062A\u0631\u064A\u062F \u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u0645\u0628\u0627\u0644\u063A.'
+        en: "First time? Link your portfolio once: app \u2192 Settings \u2192 Telegram \u2192 Link your portfolio.",
+        ar: "\u0623\u0648\u0644 \u0645\u0631\u0629\u061F \u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629: \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643."
       }
     },
     {
@@ -3265,17 +3265,17 @@ var guide_default = {
       },
       en: [
         "Ask the bot in plain words \u2014 <i>how do I add a coin?</i>",
-        "Or write to Dr. Samir Saad.",
+        "An idea or a bug? Send <b>/feedback</b> and your message \u2014 it goes straight to Dr. Samir Saad.",
         "/guide opens this guide again any time; in the app: Settings \u2192 Guide."
       ],
       ar: [
         "\u0627\u0633\u0623\u0644 \u0627\u0644\u0628\u0648\u062A \u0628\u0643\u0644\u0645\u0627\u062A\u0643 \u2014 <i>\u0643\u064A\u0641 \u0623\u0636\u064A\u0641 \u0639\u0645\u0644\u0629\u061F</i>",
-        "\u0623\u0648 \u0631\u0627\u0633\u0644 Dr. Samir Saad.",
+        "\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 <b>/feedback</b> \u062B\u0645 \u0631\u0633\u0627\u0644\u062A\u0643 \u2014 \u062A\u0635\u0644 \u0645\u0628\u0627\u0634\u0631\u0629 \u0625\u0644\u0649 Dr. Samir Saad.",
         "/guide \u064A\u0641\u062A\u062D \u0647\u0630\u0627 \u0627\u0644\u062F\u0644\u064A\u0644 \u0641\u064A \u0623\u064A \u0648\u0642\u062A\u061B \u0648\u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u062F\u0644\u064A\u0644."
       ],
       tip: {
-        en: "The \u{1F465} community group has a Guide topic and a place for questions.",
-        ar: "\u0641\u064A \u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u062C\u062A\u0645\u0639 \u{1F465} \u0642\u0633\u0645 \u0644\u0644\u062F\u0644\u064A\u0644 \u0648\u0645\u0643\u0627\u0646 \u0644\u0644\u0623\u0633\u0626\u0644\u0629."
+        en: "\u{1F4E2} Cute Portfolio Signals: talk with the other members in the comments under each post (/community).",
+        ar: "\u{1F4E2} \u0642\u0646\u0627\u0629 Cute Portfolio Signals: \u062A\u062D\u062F\u0651\u062B \u0645\u0639 \u0627\u0644\u0623\u0639\u0636\u0627\u0621 \u0641\u064A \u0627\u0644\u062A\u0639\u0644\u064A\u0642\u0627\u062A \u062A\u062D\u062A \u0643\u0644 \u0645\u0646\u0634\u0648\u0631 (/community)."
       }
     }
   ]
@@ -3363,9 +3363,11 @@ async function setup(env, kind, opt = {}) {
   if (!x) return { ok: false };
   const notes = [];
   if (kind === "channel") {
-    const link = await tg3(env, "createChatInviteLink", { chat_id: x.id, name: "Cute Portfolio members", creates_join_request: true });
-    if (link.ok) x.link = link.result.invite_link;
-    else notes.push('\u26A0\uFE0F No join link \u2014 give me "Invite users via link".');
+    if (!x.link) {
+      const link = await tg3(env, "createChatInviteLink", { chat_id: x.id, name: "Cute Portfolio members", creates_join_request: true });
+      if (link.ok) x.link = link.result.invite_link;
+      else notes.push('\u26A0\uFE0F No join link \u2014 give me "Invite users via link".');
+    }
     if (!x.guideMsg || opt.reguide) {
       const id = await postGuidePost(env, x);
       if (id) {
