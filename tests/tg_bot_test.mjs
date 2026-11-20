@@ -408,7 +408,7 @@ if (process.env.DUMP_AR) {   // a look at the Arabic views as Telegram gets them
 sent.length = 0; await tap('mk');
 { const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
   check('Arabic market: "الهيمنة: البيتكوين 59.8% · التيثر 6.95%", Fear & Greed and Altcoin Season in Arabic, ETF "تدفقات ETF (6 نوفمبر)"',
-    /الهيمنة: البيتكوين 59\.8% · التيثر 6\.95%/.test(tx) && /الخوف والطمع <b>28<\/b> · خوف/.test(tx) && /· يميل للعملات البديلة/.test(tx) && /تدفقات ETF \(\d+ [\u0600-\u06FF]+\): BTC/.test(tx) && !/Fear|Leaning|Nov/.test(tx), tx); }
+    /الهيمنة: البيتكوين 59\.8% · التيثر 6\.95%/.test(tx) && /الخوف والطمع <b>28<\/b> · خوف/.test(tx) && /· يميل للعملات البديلة/.test(tx) && /تدفقات ETF \(\d+ [\u0600-\u06FF]+\):\n• BTC/.test(tx) && !/Fear|Leaning|Nov/.test(tx), tx); }
 sent.length = 0; await tap('mks');
 { const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
   check('Arabic bStocks: "📊 عدد الأسهم 8 · 🟢 صاعد 5 · 🔴 هابط 3 · المتوسط", no empty "—", headers start in Arabic',

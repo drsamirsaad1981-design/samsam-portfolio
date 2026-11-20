@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 0d0bebe72ab70c21
+// sources-hash: 05d1c82e71a302f2
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5828,12 +5828,13 @@ function marketShort(t, m) {
   if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> \xB7 ${esc(ar ? FNG_AR[m.fng.label] || m.fng.label : m.fng.label)}`);
   if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> \xB7 ${esc(ar ? SEASON_AR[m.alt.label] || m.alt.label : m.alt.label)}`);
   const e = etfDay(m.etf);
-  if (e) out.push(ar ? `\u062A\u062F\u0641\u0642\u0627\u062A ETF (${arDay(e.date)}): BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}` : `${t.etf} ${e.label} \xB7 BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}`);
+  if (e) out.push(ar ? `\u062A\u062F\u0641\u0642\u0627\u062A ETF (${arDay(e.date)}):
+\u2022 BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}` : `${t.etf} ${e.label} \xB7 BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}`);
   return out;
 }
 var nearestTp = (sum) => (sum.tps || []).filter((x) => x.price < x.level).map((x) => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to)[0];
 function viewPortfolio(t, cfg, sum, m, now) {
-  const L = [`\u{1F4BC} <b>${t.pfNow}</b> \xB7 ${hm(now)}`, "", `<b>${usd2(sum.value)}</b>`];
+  const L = [`\u{1F4BC} <b>${t.pfNow}</b> \xB7 ${hm(now)}`, "", isAr(t) ? `\u{1F4B5} \u0627\u0644\u0642\u064A\u0645\u0629: <b>${usd2(sum.value)}</b>` : `<b>${usd2(sum.value)}</b>`];
   if (sum.ch24 != null) L.push(`${dot(sum.ch24)} ${pct(sum.ch24)} \xB7 ${signed(sum.d24)} ${t.today}`);
   L.push(`${t.profit} <b>${signed(sum.total)}</b> \xB7 ${pct(sum.pctTotal, 1)}`);
   if (sum.vsBtc != null) L.push(`${t.vsBtcS} ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} \xB7 ${t.beat(sum.beat, sum.alts)}`);

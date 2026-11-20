@@ -168,12 +168,13 @@ function marketShort(t, m) {
   if (d.btc != null) out.push(ar ? `${t.dom}: البيتكوين ${d.btc.toFixed(1)}% · التيثر ${(d.usdt || 0).toFixed(2)}%` : `${t.dom} BTC ${d.btc.toFixed(1)}% · USDT ${(d.usdt || 0).toFixed(2)}%`);
   if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> · ${esc(ar ? FNG_AR[m.fng.label] || m.fng.label : m.fng.label)}`);
   if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> · ${esc(ar ? SEASON_AR[m.alt.label] || m.alt.label : m.alt.label)}`);
-  const e = etfDay(m.etf); if (e) out.push(ar ? `تدفقات ETF (${arDay(e.date)}): BTC ${flow(e.btc)} · ETH ${flow(e.eth)}` : `${t.etf} ${e.label} · BTC ${flow(e.btc)} · ETH ${flow(e.eth)}`);
+  const e = etfDay(m.etf); if (e) out.push(ar ? `تدفقات ETF (${arDay(e.date)}):\n• BTC ${flow(e.btc)} · ETH ${flow(e.eth)}` : `${t.etf} ${e.label} · BTC ${flow(e.btc)} · ETH ${flow(e.eth)}`);
   return out;
 }
 const nearestTp = sum => (sum.tps || []).filter(x => x.price < x.level).map(x => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to)[0];
 export function viewPortfolio(t, cfg, sum, m, now) {
-  const L = [`💼 <b>${t.pfNow}</b> · ${hm(now)}`, '', `<b>${usd2(sum.value)}</b>`];
+  // Arabic: the value line starts with a label (a line that opens with "$" shows left-to-right in Telegram)
+  const L = [`💼 <b>${t.pfNow}</b> · ${hm(now)}`, '', isAr(t) ? `💵 القيمة: <b>${usd2(sum.value)}</b>` : `<b>${usd2(sum.value)}</b>`];
   if (sum.ch24 != null) L.push(`${dot(sum.ch24)} ${pct(sum.ch24)} · ${signed(sum.d24)} ${t.today}`);
   L.push(`${t.profit} <b>${signed(sum.total)}</b> · ${pct(sum.pctTotal, 1)}`);
   if (sum.vsBtc != null) L.push(`${t.vsBtcS} ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} · ${t.beat(sum.beat, sum.alts)}`);
