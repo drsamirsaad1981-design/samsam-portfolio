@@ -51,11 +51,11 @@ const WD = {
   en: { morning: 'Smart morning', evening: 'Smart evening', radar: 'Leverage radar', sectors: 'Sector radar', pin: 'Live pinned message', on: 'on', off: 'off',
     dailyT: '🗓 <b>The bot speaks first</b>', dailyNote: 'Tap to turn on / off.', nowM: '☀️ Morning now', nowE: '🌙 Evening now', back: '⬅️ Menu', plan: '📋 Plan', pf: '💼 Portfolio', mk: '🌍 Market',
     live: 'Live', pfS: 'Portfolio', btcS: 'BTC', today: 'today', alerts: n => `${n} alert${n === 1 ? '' : 's'}`, nearest: 'nearest', away: 'away', nextDca: 'Next DCA', exit: 'Exit', planS: 'Plan', fng: 'F&amp;G', updated: 'updated',
-    noUser: 'Portfolio not connected.', refresh: '🔄', report: '📊 Full report' },
+    noUser: 'Portfolio not connected.', refresh: '🔄', report: '📱 Open the app' },
   ar: { morning: 'الصباح الذكي', evening: 'المساء الذكي', radar: 'رادار الرافعة', sectors: 'رادار القطاعات', pin: 'الرسالة المثبتة', on: 'يعمل', off: 'متوقف',
     dailyT: '🗓 <b>رسائل البوت التلقائية</b>', dailyNote: 'اضغط للتشغيل / الإيقاف.', nowM: '☀️ إرسال ملخص الصباح', nowE: '🌙 إرسال ملخص المساء', back: '⬅️ القائمة', plan: '📋 الخطة', pf: '💼 محفظتي', mk: '🌍 السوق',
     live: 'مباشر', pfS: 'المحفظة', btcS: 'البيتكوين', today: 'اليوم', alerts: n => `${n} تنبيه`, nearest: 'الأقرب', away: 'المتبقي', nextDca: 'الشراء الدوري القادم', exit: 'الخروج', planS: 'الخطة', fng: 'الخوف والطمع', updated: 'تم التحديث',
-    noUser: 'المحفظة غير متصلة.', refresh: '🔄', report: '📊 التقرير الكامل' },
+    noUser: 'المحفظة غير متصلة.', refresh: '🔄', report: '📱 افتح التطبيق' },
 };
 
 // ── the numbers both reports start from ──
@@ -283,8 +283,7 @@ export async function pinView(env, now = Date.now()) {
     `📋 ${w.planS}: <b>${sum.prog ? sum.prog.pct.toFixed(1) : '0'}%</b> · 🚪 ${w.exit}: <b>${met}/3</b>`,
     dca ? `🛒 ${w.nextDca}: <b>${esc(dca.sym)}</b> · ${esc(new Date(dca.s.next + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}` : null,
     alerts.length ? `🔔 ${w.alerts(alerts.length)}${near ? ` · ${w.nearest}: ${esc(near.alert)} (${near.pct_away}% ${w.away})` : ''}` : null].filter(Boolean);
-  const origin = await kvGet(env, 'tg:origin');   // 📊 the Mini App, when the bot knows its own address
-  return { text: L1.join('\n'), buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk'), cb(w.refresh, 'pin:r')], ...(origin ? [[{ text: w.report, web_app: { url: origin + '/tg/app' } }]] : [])] };
+  return { text: L1.join('\n'), buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk'), cb(w.refresh, 'pin:r')], [{ text: w.report, web_app: { url: APP + 'index.html' } }]] };   // 📱 the full app inside Telegram
 }
 // fresh = /pin (or switching it on): always a NEW message, pinned — the old one may have been deleted in Telegram
 // ("delete for me" keeps the bot's copy, so editing it "works" but nobody sees it); the old one is removed

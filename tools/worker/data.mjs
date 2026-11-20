@@ -372,12 +372,25 @@ async function ownerUid(env, db) {
 export async function chatUid(env) {
   const sa = serviceAccount(env); if (!sa) return null;
   if (!isOwner(env)) { const me = await member(env); return (me && me.uid) || null; }
+  if (env.FIREBASE_UID) return env.FIREBASE_UID;   // (set: no need to ask Firestore)
   try { return await ownerUid(env, await firestore(sa)); } catch (_) { return null; }
 }
 // a Firebase ID token for that account, made by the Worker itself (a custom token signed with the service account, swapped
 // at Google for an ID token): the Binance relay only answers signed-in users, and in the bot there is no app session.
 // Kept in memory only (50 min). The web key is the app's public config key (firebase-config.js), not a secret.
 const WEB_KEY = 'AIzaSyCUvQh7cobgjGVVEYR8vcT76CGFDPsd5Vg', idTok = new Map();
+// a Firebase custom token for this account (1 hour), signed with the service account — the app signs in with it inside
+// Telegram's Mini App (Google's sign-in page refuses to open inside apps). Only login.mjs hands it out, after Telegram's check.
+export async function customTokenFor(env, uid) {
+  const sa = serviceAccount(env); if (!sa || !uid) return null;
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const body = b64urlJson({ alg: 'RS256', typ: 'JWT' }) + '.' + b64urlJson({ iss: sa.client_email, sub: sa.client_email, aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit', iat: now, exp: now + 3600, uid });
+    const key = await crypto.subtle.importKey('pkcs8', pemBytes(sa.private_key), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(body));
+    return body + '.' + b64url(sig);
+  } catch (e) { console.log(JSON.stringify({ customtoken: 'failed', msg: String(e && e.message).slice(0, 100) })); return null; }
+}
 export async function idTokenFor(env, uid) {
   const sa = serviceAccount(env); if (!sa || !uid) return null;
   const c = idTok.get(uid); if (c && c.until > Date.now()) return c.t;

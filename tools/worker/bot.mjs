@@ -56,7 +56,7 @@ const T = {
     aiNoKey: 'The AI is not set up (ANTHROPIC_API_KEY is missing in the Worker).', aiOwnKey: '🔑 Claude refused your own API key (wrong, removed, or out of credit). Fix it in the app: Settings → My Claude key.', aiBusy: 'Claude is busy right now — try again in a minute.',
     aiErr: "I couldn't answer that just now — try again, or rephrase.", newChat: '🆕 New chat', newDone: 'New chat — I forgot the earlier messages 🧹', aiLeft: (a, n) => `${a}/${n} left today`, data: 'Data',
     ownerOnly: 'Only the bot owner can do that.', noLink: 'Your portfolio isn\'t linked yet. In the app: Settings → Telegram → 🔗 Link your portfolio (no app yet? send /app with your e-mail). Meanwhile the market, any coin, alerts, paper trading and questions all work.',
-    alertsB: '🔔 Alerts', alertGone: '🗑 Alert deleted', dailyB: '🗓 Daily', paperB: '🧪 Paper', report: '📊 Report', reportT: '📊 <b>Your full report</b> — opens inside Telegram.', working: '⏳ On it…', pinOff: 'Pinned message off — /pin brings it back.',
+    alertsB: '🔔 Alerts', alertGone: '🗑 Alert deleted', dailyB: '🗓 Daily', paperB: '🧪 Paper', report: '📊 Report', reportT: '📱 <b>Cute Portfolio</b> — the full app, right here in Telegram. You\'re signed in by Telegram.', working: '⏳ On it…', pinOff: 'Pinned message off — /pin brings it back.',
     other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅', exit: '🚪 Exit plan',
     today: 'today', profit: 'All Time Profit', vsBtcS: 'vs BTC', beat: (a, n) => `${a}/${n} coins beat BTC`, bestT: 'Best today', worstT: 'Worst today',
     dom: 'Dominance', fng: 'Fear & Greed', altS: 'Altcoin Season', etf: 'ETF', planS: 'Plan', allocS: 'Allocation', onT: (a, n) => `${a}/${n} on target`,
@@ -93,7 +93,7 @@ const T = {
     aiNoKey: 'الذكاء الاصطناعي غير مُعدّ (ANTHROPIC_API_KEY غير موجود في الـ Worker).', aiOwnKey: '🔑 رفض Claude مفتاحك (خاطئ، أو أُلغي، أو نفد الرصيد). أصلحه من التطبيق: الإعدادات ← مفتاح Claude الخاص بي.', aiBusy: 'Claude مشغول الآن — حاول بعد دقيقة.',
     aiErr: 'لم أستطع الإجابة الآن — حاول مرة أخرى أو اكتب السؤال بصيغة أخرى.', newChat: '🆕 محادثة جديدة', newDone: 'محادثة جديدة — نسيت الرسائل السابقة 🧹', aiLeft: (a, n) => `المتبقي ${a}/${n} اليوم`, data: 'البيانات',
     ownerOnly: 'هذا لمالك البوت فقط.', noLink: 'محفظتك غير مربوطة بعد. من التطبيق: الإعدادات ← تليجرام ← 🔗 ربط محفظتك ببوت تليجرام (ليس لديك التطبيق؟ أرسل /app مع بريدك). حتى ذلك الحين: السوق، وأي عملة، والتنبيهات، والتداول التجريبي، والأسئلة — كلها تعمل.',
-    alertsB: '🔔 التنبيهات', alertGone: '🗑 حُذف التنبيه', dailyB: '🗓 اليومي', paperB: '🧪 تجريبي', report: '📊 التقرير', reportT: '📊 <b>تقريرك الكامل</b> — يُفتح داخل تليجرام.', working: '⏳ لحظات…', pinOff: 'أُوقفت الرسالة المثبتة — /pin يعيدها.',
+    alertsB: '🔔 التنبيهات', alertGone: '🗑 حُذف التنبيه', dailyB: '🗓 اليومي', paperB: '🧪 تجريبي', report: '📊 التقرير', reportT: '📱 <b>Cute Portfolio</b> — التطبيق الكامل هنا داخل تليجرام. يتم تسجيل دخولك تلقائياً عبر تليجرام.', working: '⏳ لحظات…', pinOff: 'أُوقفت الرسالة المثبتة — /pin يعيدها.',
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
     today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل البيتكوين', beat: (a, n) => `${a} من ${n} عملة تفوقت عليه`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
     dom: 'الهيمنة', fng: 'الخوف والطمع', altS: 'موسم العملات البديلة', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a} من ${n} على الهدف`,
@@ -119,7 +119,9 @@ const T = {
 const cb = (text, data) => ({ text, callback_data: data });
 // 📊 the Mini App (phase 7): this Worker's own address + /tg/app (learnt from the webhook's request, kept in KV for the cron)
 let ORIGIN = null;
-export const appBtn = (t, origin = ORIGIN) => origin ? { text: t.report, web_app: { url: origin + '/tg/app' } } : null;
+// 📱 the full app inside Telegram (a Mini App button): the real Cute Portfolio, signed in by Telegram (login.mjs) — one app, not two
+export const webApp = (text, page = 'index.html') => ({ text, web_app: { url: APP + page } });
+export const appBtn = t => webApp(t.openApp);
 const url = (text, u) => ({ text, url: u });
 const price = v => !(v > 0) ? '—' : v >= 1000 ? usd2(v).replace(/\.\d\d$/, '') : v >= 1 ? usd2(v) : '$' + (+v.toPrecision(4)).toString();
 const big = v => !(v > 0) ? '—' : v >= 1e12 ? '$' + (v / 1e12).toFixed(2) + 'T' : v >= 1e9 ? '$' + (v / 1e9).toFixed(2) + 'B' : v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : usd(v);
@@ -194,7 +196,7 @@ export function viewPortfolio(t, cfg, sum, m, now) {
   if ((sum.dca || []).length) L.push(`🛒 ${isAr(t) ? '' : 'DCA '}${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
   const mc = sum.macro.filter(x => x.met).length, tp = nearestTp(sum);
   L.push(`🚪 ${t.exitS(mc)}${tp ? ` · ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ''}`);
-  return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pf'), cb(t.movers, 'mv')], [cb(t.plan, 'pl'), cb(t.exit, 'ex')], [cb(t.signals, 'sg'), url(t.openApp, APP)], [cb(t.back, 'menu')]] };
+  return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pf'), cb(t.movers, 'mv')], [cb(t.plan, 'pl'), cb(t.exit, 'ex')], [cb(t.signals, 'sg'), webApp(t.openApp)], [cb(t.back, 'menu')]] };
 }
 
 // 🚪 the exit plan: the 3 market conditions (BTC / USDT dominance, ETH/BTC) and your take-profit levels, nearest first
@@ -259,7 +261,7 @@ export function viewSignals(t, sum) {
 }
 
 export function viewPlan(t, sum, now) {
-  if (!sum.plan.length && !(sum.dca || []).length && !(sum.buyAt || []).length) return { text: `📋 <b>${t.planT}</b>\n\n${t.noPlan}`, buttons: [[url(t.openApp, APP + 'accumulation.html'), cb(t.back, 'menu')]] };
+  if (!sum.plan.length && !(sum.dca || []).length && !(sum.buyAt || []).length) return { text: `📋 <b>${t.planT}</b>\n\n${t.noPlan}`, buttons: [[webApp(t.openApp, 'accumulation.html'), cb(t.back, 'menu')]] };
   const L = [`📋 <b>${t.planT}</b>`];
   if (sum.plan.length) {
     L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> · ${sum.prog.completed}/${sum.prog.counted} ✅`, '');
@@ -281,7 +283,7 @@ export function viewPlan(t, sum, now) {
     L.push('', `🔔 <b>${t.buyAt}</b>`);
     sum.buyAt.forEach(x => { const d = (x.price / x.at - 1) * 100; L.push(`${isAr(t) ? `• <b>${esc(x.sym)}</b>` : `<code>${esc(x.sym.padEnd(6))}</code>`} ${price(x.at)} · ${price(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : '✅'}`); });
   }
-  return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pl'), url(t.openApp, APP + 'accumulation.html')], [cb(t.back, 'menu')]] };
+  return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pl'), webApp(t.openApp, 'accumulation.html')], [cb(t.back, 'menu')]] };
 }
 
 // 🌍 the market: BTC, dominance, Fear & Greed…, then the best / worst 5 of the Top 100 · 200 · 300 · 500 (the buttons
@@ -569,7 +571,7 @@ async function usedToday(env, c, x) {
 // next to the app's amounts. Binance goes through the relay, which wants a signed-in token: the Worker makes one for
 // this chat's own account (idTokenFor). Nothing is changed in the portfolio.
 async function viewBalances(env, lang, fresh = false) {
-  const ar = lang === 'ar', back = [cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')], open = { text: ar ? '📱 افتح في التطبيق' : '📱 Open in the app', url: APP + 'performance.html' };
+  const ar = lang === 'ar', back = [cb(ar ? '⬅️ القائمة' : '⬅️ Menu', 'menu')], open = webApp(ar ? '📱 افتح في التطبيق' : '📱 Open in the app', 'performance.html');
   const uid = await chatUid(env);
   if (!uid) return { text: ar ? '🔌 اربط محفظتك أولاً (التطبيق ← الإعدادات ← تليجرام)، ثم اربط منصاتك من التطبيق: الأداء ← المحافظ والمنصات ← المنصات.' : '🔌 Link your portfolio first (app → Settings → Telegram), then connect your exchanges in the app: Performance → Wallets & Exchanges → Exchanges.', buttons: [back] };
   const r = await balancesFor(env, uid, await idTokenFor(env, uid), fresh).catch(() => null);
@@ -980,7 +982,7 @@ const cmds = (lang, owner = true) => { const a = lang === 'ar'; return [
     ...(owner ? [] : [['app', a ? 'افتح التطبيق' : 'Open the app'], ['link', a ? 'اربط محفظتك — /link الرمز' : 'Link your portfolio — /link CODE'], ['premium', a ? 'العضوية المميزة ⭐' : 'Premium ⭐'], ['support', a ? 'ادعم المشروع 💛' : 'Support the project 💛'], ['forget', a ? 'احذف بياناتي من البوت' : 'Delete my data from the bot']]),
     ...(owner ? [['invite', a ? 'رمز دعوة لصديقك' : 'Invite code for a friend'], ['users', a ? 'الأعضاء' : 'Members'], ['stats', a ? 'الإحصائيات والـ Stars' : 'Stats & Stars']] : []),
     ['start', a ? 'ابدأ — الأزرار أسفل المحادثة' : 'Start — the buttons under the chat'], ['menu', a ? 'القائمة' : 'Menu'],
-    ['report', a ? 'التقرير الكامل (صفحة)' : 'Full report (a page)'], ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],
+    ['report', a ? 'افتح التطبيق داخل تليجرام 📱' : 'Open the app in Telegram 📱'], ['portfolio', a ? 'محفظتي' : 'My portfolio'], ['price', a ? 'سعر عملة — /price btc' : 'A coin — /price btc'], ['market', a ? 'السوق' : 'Market'],
     ['stocks', a ? 'الأسهم المرمّزة (bStocks)' : 'Tokenized US stocks (bStocks)'], ['metals', a ? 'الذهب والمعادن' : 'Gold & metals'], ['plan', a ? 'خطة التجميع' : 'Accumulation plan'], ['exit', a ? 'خطة الخروج' : 'Exit plan'], ['movers', a ? 'الأفضل والأسوأ' : 'Best & worst'], ['signals', a ? 'الإشارات' : 'Signals'],
     ['alerts', a ? 'تنبيهاتك' : 'Your alerts'], ['balances', a ? 'أرصدة المنصات (Binance · Gate)' : 'Exchange balances (Binance · Gate)'], ['paper', a ? 'التداول التجريبي' : 'Paper trading'], ['daily', a ? 'الصباح والمساء والرادارات' : 'Morning, evening, radars'],
     ['morning', a ? 'الصباح الذكي الآن' : 'Smart morning now'], ['evening', a ? 'المساء الذكي الآن' : 'Smart evening now'],

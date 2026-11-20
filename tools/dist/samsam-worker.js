@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: ad144a22169a5eaf
+// sources-hash: 6c5ea4f213b1515c
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -237,107 +237,32 @@ function bidiBody(body, mode = "auto") {
 }
 var NOT_ADVICE = { en: "<i>\u26A0\uFE0F Not financial advice \u2014 reminders of your own plan.</i>", ar: "<i>\u26A0\uFE0F \u0644\u064A\u0633\u062A \u0646\u0635\u064A\u062D\u0629 \u0645\u0627\u0644\u064A\u0629 \u2014 \u062A\u0630\u0643\u064A\u0631 \u0628\u062E\u0637\u062A\u0643 \u0623\u0646\u062A.</i>" };
 
-// tools/worker/usage.mjs
-var READ_LIMIT = 5e4;
-var FLUSH_MS = 10 * 6e4;
-var ALERT_AT = [60, 80];
-var FEAT_OK = /^[a-z0-9_:]{1,24}$/;
-var MAX_FEATS = 150;
-var kget = async (env, k) => {
+// tools/worker/tginit.mjs
+var enc = new TextEncoder();
+async function hmac(key, data) {
+  const k = await crypto.subtle.importKey("raw", typeof key === "string" ? enc.encode(key) : key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, enc.encode(data)));
+}
+var hex = (b) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+async function verifyInitData(initData, token, now = Date.now(), maxAge = 86400) {
+  if (!initData || !token) return { ok: false, why: "missing" };
+  const p = new URLSearchParams(initData), hash = p.get("hash");
+  if (!hash) return { ok: false, why: "no hash" };
+  p.delete("hash");
+  const check2 = [...p.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([k, v]) => k + "=" + v).join("\n");
+  const want = hex(await hmac(await hmac("WebAppData", token), check2));
+  if (want.length !== hash.length) return { ok: false, why: "bad signature" };
+  let diff = 0;
+  for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ hash.charCodeAt(i);
+  if (diff) return { ok: false, why: "bad signature" };
+  const at = +p.get("auth_date") * 1e3;
+  if (!(at > 0) || now - at > maxAge * 1e3) return { ok: false, why: "too old" };
+  let user = null;
   try {
-    return env.RATE ? await env.RATE.get(k) : null;
-  } catch (_) {
-    return null;
-  }
-};
-var kput = async (env, k, v, ttl) => {
-  try {
-    if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
+    user = JSON.parse(p.get("user") || "null");
   } catch (_) {
   }
-};
-var jget = async (env, k) => {
-  try {
-    return JSON.parse(await kget(env, k) || "{}") || {};
-  } catch (_) {
-    return {};
-  }
-};
-var pday = (ms = Date.now()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
-var limitOf = (env) => Math.max(1e3, +(env && env.FS_READ_LIMIT) || READ_LIMIT);
-var P = { wr: 0, app: {}, f: {} };
-var lastFlush = 0;
-var empty = () => !P.wr && !Object.keys(P.app).length && !Object.keys(P.f).length;
-function note(name, n = 1) {
-  name = String(name || "").toLowerCase().replace(/[^a-z0-9_:]/g, "").slice(0, 24);
-  if (!FEAT_OK.test(name) || !(n > 0)) return;
-  if (!(name in P.f) && Object.keys(P.f).length >= MAX_FEATS) return;
-  P.f[name] = (P.f[name] || 0) + Math.min(n, 1e3);
-}
-function addWorkerReads(n) {
-  if (n > 0) P.wr += n;
-}
-function noteApp(uid, reads, feats, dev) {
-  const today2 = pday();
-  if (uid) uid = String(uid).slice(0, 40) + ":" + (/^[a-z0-9]{1,12}$/.test(String(dev || "")) ? dev : "x");
-  if (uid && reads && typeof reads === "object") {
-    const n = +reads[today2];
-    if (Number.isFinite(n) && n > 0) P.app[uid] = Math.max(P.app[uid] || 0, Math.min(Math.round(n), 2e5));
-  }
-  if (feats && typeof feats === "object") for (const [k, v] of Object.entries(feats).slice(0, 60)) note("app:" + k, Math.round(+v) || 0);
-}
-async function flush(env, { force = false, now = Date.now(), reads = 0 } = {}) {
-  addWorkerReads(reads);
-  if (empty() || !force && now - lastFlush < FLUSH_MS) return false;
-  lastFlush = now;
-  const take = P;
-  P = { wr: 0, app: {}, f: {} };
-  const k = "use:" + pday(now), cur = await jget(env, k);
-  cur.wr = (+cur.wr || 0) + take.wr;
-  cur.app = cur.app || {};
-  for (const [u, n] of Object.entries(take.app)) cur.app[u] = Math.max(+cur.app[u] || 0, n);
-  cur.f = cur.f || {};
-  for (const [f, n] of Object.entries(take.f)) if (f in cur.f || Object.keys(cur.f).length < MAX_FEATS) cur.f[f] = (+cur.f[f] || 0) + n;
-  await kput(env, k, JSON.stringify(cur), 8 * 86400);
-  return true;
-}
-async function readsTotal(env, now = Date.now()) {
-  const d = pday(now), round = Object.values(await jget(env, "tg:reads:" + d)).reduce((a, b) => a + (+b || 0), 0);
-  const u = await jget(env, "use:" + d), worker = (+u.wr || 0) + P.wr;
-  const appMap = { ...u.app || {} };
-  for (const [x, n] of Object.entries(P.app)) appMap[x] = Math.max(+appMap[x] || 0, n);
-  const app = Object.values(appMap).reduce((a, b) => a + (+b || 0), 0), total = round + worker + app, limit = limitOf(env);
-  return { day: d, round, worker, app, total, limit, pct: Math.round(total / limit * 100) };
-}
-async function features(env, now = Date.now()) {
-  const days = [...new Set(Array.from({ length: 7 }, (_, i) => pday(now - i * 864e5)))];
-  const maps = await Promise.all(days.map((d) => jget(env, "use:" + d).then((u) => u.f || {})));
-  const add = (o, m) => {
-    for (const [k, v] of Object.entries(m)) o[k] = (o[k] || 0) + (+v || 0);
-    return o;
-  };
-  const today2 = add({}, maps[0]);
-  add(today2, P.f);
-  const week = maps.reduce(add, {});
-  add(week, P.f);
-  const sort = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([name, n]) => ({ name, n }));
-  return { today: sort(today2), week: sort(week) };
-}
-async function readsAlert(env, send3, lang2 = "en", now = Date.now()) {
-  const t = await readsTotal(env, now), key = "tg:rdalert:" + t.day, done = +await kget(env, key) || 0;
-  const lvl = [...ALERT_AT].reverse().find((a) => t.pct >= a);
-  if (!lvl || lvl <= done) return { sent: false, ...t };
-  const ar = lang2 === "ar", n = (x) => x.toLocaleString("en-US");
-  const text = ar ? `\u26A0\uFE0F <b>\u0642\u0631\u0627\u0621\u0627\u062A Firebase \u0648\u0635\u0644\u062A ${t.pct}% \u0645\u0646 \u062D\u062F \u0627\u0644\u064A\u0648\u0645</b>
-${n(t.total)} \u0645\u0646 ${n(t.limit)}
-\u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 ${n(t.app)} \xB7 \u{1F916} \u062C\u0648\u0644\u0629 \u0627\u0644\u0628\u0648\u062A ${n(t.round)} \xB7 \u2699\uFE0F \u0628\u0627\u0642\u064A \u0627\u0644\u0628\u0648\u062A ${n(t.worker)}
-\u064A\u0628\u062F\u0623 \u0627\u0644\u062D\u062F \u0645\u0646 \u062C\u062F\u064A\u062F \u0627\u0644\u0633\u0627\u0639\u0629 11:00 \u0635\u0628\u0627\u062D\u0627\u064B \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636.` : `\u26A0\uFE0F <b>Firebase reads at ${t.pct}% of today's allowance</b>
-${n(t.total)} of ${n(t.limit)}
-\u{1F4F1} app ${n(t.app)} \xB7 \u{1F916} bot round ${n(t.round)} \xB7 \u2699\uFE0F rest of the bot ${n(t.worker)}
-The allowance starts again at 11:00 Riyadh time.`;
-  const r = await send3(text).catch(() => null);
-  if (r && r.ok !== false) await kput(env, key, String(lvl), 2 * 86400);
-  return { sent: !!(r && r.ok !== false), level: lvl, ...t };
+  return user && user.id ? { ok: true, user } : { ok: false, why: "no user" };
 }
 
 // tools/worker/who.mjs
@@ -890,7 +815,7 @@ var chatOf = (env) => {
 var isOwner = (env) => chatOf(env) === String(env.TELEGRAM_CHAT_ID);
 var K = (env, name) => `tg:${chatOf(env)}:${name}`;
 var memKV = /* @__PURE__ */ new Map();
-var kget2 = async (env, k) => {
+var kget = async (env, k) => {
   if (env.RATE) {
     try {
       return await env.RATE.get(k);
@@ -899,7 +824,7 @@ var kget2 = async (env, k) => {
   }
   return memKV.has(k) ? memKV.get(k) : null;
 };
-var kput2 = async (env, k, v, ttl) => {
+var kput = async (env, k, v, ttl) => {
   memKV.set(k, v);
   try {
     if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
@@ -916,18 +841,18 @@ var kdel = async (env, k) => {
 var MAX_MEMBERS = 20;
 var MAX_CHOICES = [20, 50, 100];
 async function maxMembers(env) {
-  const v = +await kget2(env, "tg:max");
+  const v = +await kget(env, "tg:max");
   return MAX_CHOICES.includes(v) ? v : MAX_MEMBERS;
 }
 async function setMaxMembers(env, n) {
   if (!MAX_CHOICES.includes(+n)) return false;
-  await kput2(env, "tg:max", String(+n));
+  await kput(env, "tg:max", String(+n));
   return true;
 }
 var isTgChat = (c) => /^-?\d+$/.test(String(c));
 async function members(env) {
   try {
-    const m = JSON.parse(await kget2(env, "tg:users") || "{}");
+    const m = JSON.parse(await kget(env, "tg:users") || "{}");
     return m && typeof m === "object" ? m : {};
   } catch (_) {
     return {};
@@ -942,13 +867,13 @@ async function allowed(env, chat) {
 var ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 async function newInvite(env, note2 = "") {
   const b = crypto.getRandomValues(new Uint8Array(8)), code = [...b].map((x) => ABC[x % ABC.length]).join("");
-  await kput2(env, "tg:inv:" + code, JSON.stringify({ created: Date.now(), note: String(note2).slice(0, 40) }), 7 * 86400);
+  await kput(env, "tg:inv:" + code, JSON.stringify({ created: Date.now(), note: String(note2).slice(0, 40) }), 7 * 86400);
   return code;
 }
 async function useInvite(env, code, chat, from) {
   const C = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (C.length !== 8) return { error: "bad" };
-  const raw = await kget2(env, "tg:inv:" + C);
+  const raw = await kget(env, "tg:inv:" + C);
   if (!raw) return { error: "bad" };
   const m = await members(env);
   if (Object.keys(m).length >= await maxMembers(env)) return { error: "full" };
@@ -961,7 +886,7 @@ async function useInvite(env, code, chat, from) {
       return "";
     }
   })() };
-  await kput2(env, "tg:users", JSON.stringify(m));
+  await kput(env, "tg:users", JSON.stringify(m));
   const back = await restoreRecord(env, chat);
   return { ok: true, member: (await members(env))[String(chat)], restored: back };
 }
@@ -971,7 +896,7 @@ async function useAppInvite(env, code, uid, email) {
   const m = await members(env), had = Object.entries(m).find(([, x]) => x.email === e || x.uid === uid);
   if (had) return { ok: true, already: true, member: had[1] };
   if (C.length !== 8) return { error: "bad" };
-  const raw = await kget2(env, "tg:inv:" + C);
+  const raw = await kget(env, "tg:inv:" + C);
   if (!raw) return { error: "bad" };
   if (Object.keys(m).length >= await maxMembers(env)) return { error: "full" };
   await kdel(env, "tg:inv:" + C);
@@ -982,7 +907,7 @@ async function useAppInvite(env, code, uid, email) {
       return "";
     }
   })() };
-  await kput2(env, "tg:users", JSON.stringify(m));
+  await kput(env, "tg:users", JSON.stringify(m));
   return { ok: true, member: m["a:" + uid] };
 }
 async function moveAppMember(env, uid, chat, from) {
@@ -992,10 +917,10 @@ async function moveAppMember(env, uid, chat, from) {
   m[String(chat)] = { ...x, name, user: from && from.username ? String(from.username).slice(0, 32) : "", appOnly: void 0 };
   delete m[String(chat)].appOnly;
   delete m[key];
-  await kput2(env, "tg:users", JSON.stringify(m));
-  const k = await kget2(env, `tg:${key}:byok`);
+  await kput(env, "tg:users", JSON.stringify(m));
+  const k = await kget(env, `tg:${key}:byok`);
   if (k) {
-    await kput2(env, `tg:${chat}:byok`, k);
+    await kput(env, `tg:${chat}:byok`, k);
     await kdel(env, `tg:${key}:byok`);
   }
   await restoreRecord(env, chat);
@@ -1006,9 +931,9 @@ async function removeMember(env, chat) {
   if (!m[String(chat)]) return false;
   const had = m[String(chat)];
   delete m[String(chat)];
-  await kput2(env, "tg:users", JSON.stringify(m));
+  await kput(env, "tg:users", JSON.stringify(m));
   await kdel(env, `tg:${chat}:byok`);
-  await kput2(env, "tg:removed:" + chat, JSON.stringify({ ...had, removedAt: Date.now() }), 60 * 86400);
+  await kput(env, "tg:removed:" + chat, JSON.stringify({ ...had, removedAt: Date.now() }), 60 * 86400);
   return had;
 }
 async function restoreRecord(env, chat) {
@@ -1016,7 +941,7 @@ async function restoreRecord(env, chat) {
   if (!m[c]) return null;
   let old = null;
   try {
-    old = JSON.parse(await kget2(env, "tg:removed:" + c) || "null");
+    old = JSON.parse(await kget(env, "tg:removed:" + c) || "null");
   } catch (_) {
   }
   const back = {};
@@ -1026,7 +951,7 @@ async function restoreRecord(env, chat) {
   } else {
     let log2 = [];
     try {
-      log2 = JSON.parse(await kget2(env, "tg:stars:log") || "[]");
+      log2 = JSON.parse(await kget(env, "tg:stars:log") || "[]");
     } catch (_) {
     }
     const mine = log2.filter((x) => x.chat === c);
@@ -1039,7 +964,7 @@ async function restoreRecord(env, chat) {
   }
   if (!Object.keys(back).length) return null;
   m[c] = { ...m[c], ...back };
-  await kput2(env, "tg:users", JSON.stringify(m));
+  await kput(env, "tg:users", JSON.stringify(m));
   return back;
 }
 async function removedList(env) {
@@ -1062,7 +987,7 @@ async function undoRemove(env, chat) {
   const c = String(chat);
   let old = null;
   try {
-    old = JSON.parse(await kget2(env, "tg:removed:" + c) || "null");
+    old = JSON.parse(await kget(env, "tg:removed:" + c) || "null");
   } catch (_) {
   }
   if (!old) return null;
@@ -1070,7 +995,7 @@ async function undoRemove(env, chat) {
   if (Object.keys(m).length >= await maxMembers(env)) return { error: "full" };
   const { removedAt, ...rec } = old;
   m[c] = rec;
-  await kput2(env, "tg:users", JSON.stringify(m));
+  await kput(env, "tg:users", JSON.stringify(m));
   await kdel(env, "tg:removed:" + c);
   return rec;
 }
@@ -1129,8 +1054,8 @@ async function forgetChat(env, chat) {
 }
 async function strangerOnce(env, chat) {
   const k = "tg:nope:" + chat;
-  if (await kget2(env, k)) return false;
-  await kput2(env, k, "1", 86400);
+  if (await kget(env, k)) return false;
+  await kput(env, k, "1", 86400);
   return true;
 }
 var LEGACY = ["alerts", "hist", "lang", "mk", "daily", "daily:sent", "pin", "radar:i", "radar:seen", "sector:seen", "paper"];
@@ -1161,7 +1086,7 @@ async function setMember(env, chat, patch) {
   if (!m[c]) return null;
   m[c] = { ...m[c], ...patch };
   for (const k of Object.keys(m[c])) if (m[c][k] === void 0) delete m[c][k];
-  await kput2(env, "tg:users", JSON.stringify(m));
+  await kput(env, "tg:users", JSON.stringify(m));
   return m[c];
 }
 async function memberByEmail(env, email) {
@@ -1201,17 +1126,821 @@ async function langOf(env, mem7 = null) {
   return x && (x.lang === "ar" || x.lang === "en") ? x.lang : "en";
 }
 async function getPending(env, chat) {
-  return kget2(env, "tg:appreq:" + chat);
+  return kget(env, "tg:appreq:" + chat);
 }
 async function clearPending(env, chat) {
   await kdel(env, "tg:appreq:" + chat);
 }
 
+// tools/worker/cg-ids.json
+var cg_ids_default = { APT: "aptos", ARB: "arbitrum", ATOM: "cosmos", AVAIL: "avail", AVAX: "avalanche-2", BNB: "binancecoin", BTC: "bitcoin", CRO: "crypto-com-chain", DOGE: "dogecoin", DOT: "polkadot", ENS: "ethereum-name-service", ETH: "ethereum", FLR: "flare-networks", GLMR: "moonbeam", GRAM: "the-open-network", HBAR: "hedera-hashgraph", ICP: "internet-computer", JUP: "jupiter-exchange-solana", KAS: "kaspa", KAVA: "kava", KSM: "kusama", LINK: "chainlink", MNT: "mantle", MON: "monad", MOVR: "moonriver", NEAR: "near", NIGHT: "midnight-3", ONDO: "ondo-finance", OP: "optimism", POL: "polygon-ecosystem-token", PONS: "pons-2", PYTH: "pyth-network", QNT: "quant-network", RENDER: "render-token", SEI: "sei-network", SOL: "solana", STRK: "starknet", SUI: "sui", TAO: "bittensor", VET: "vechain", VTHO: "vethor-token", WLD: "worldcoin-wld", XAG: "kinesis-silver", XAU: "pax-gold", XDC: "xdce-crowd-sale", XPL: "plasma" };
+
+// tools/worker/data.mjs
+var RAW = "https://raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/";
+var CG = "https://api.coingecko.com/api/v3";
+var STALE = 20 * 6e4;
+var setStale = (ms) => {
+  const old = STALE;
+  STALE = ms;
+  return old;
+};
+var cache = /* @__PURE__ */ new Map();
+var inflight = /* @__PURE__ */ new Map();
+async function cached(key, ms, make) {
+  const hit = cache.get(key);
+  if (hit && Date.now() < hit.until) return hit.value;
+  if (inflight.has(key)) return inflight.get(key);
+  const run2 = (async () => {
+    const before = refused;
+    const value = await make();
+    if (!(refused > before && !value)) cache.set(key, { until: Date.now() + ms, value });
+    return value;
+  })();
+  inflight.set(key, run2);
+  try {
+    return await run2;
+  } finally {
+    inflight.delete(key);
+  }
+}
+var refused = 0;
+function clearCache() {
+  cache.clear();
+  tokenCache = null;
+}
+var BUDGET = 42;
+var used = 0;
+function resetBudget(n = BUDGET) {
+  used = BUDGET - n;
+}
+var RESERVE = 10;
+var isFutures = (url3) => /okx\.com\/api\/v5\/(public|rubik)\/|fapi\.binance\.com\/|api\.hyperliquid\.xyz\//.test(String(url3));
+async function xfetch(url3, init) {
+  const cap = isFutures(url3) ? BUDGET : BUDGET - RESERVE;
+  if (used >= cap) {
+    refused++;
+    throw new Error("budget");
+  }
+  used++;
+  return fetch(url3, init);
+}
+var trace = null;
+function startTrace() {
+  trace = [];
+}
+function stopTrace() {
+  const t = trace;
+  trace = null;
+  return t;
+}
+async function getJson(url3, init) {
+  return (await getJsonS(url3, init)).j;
+}
+async function getJsonS(url3, init) {
+  const tag = () => {
+    try {
+      const u = new URL(url3);
+      return u.host + u.pathname;
+    } catch (_) {
+      return "?";
+    }
+  };
+  try {
+    const r = await xfetch(url3, init);
+    if (trace) trace.push([tag(), r.status]);
+    return { s: r.status, j: r.ok ? await r.json() : null };
+  } catch (e) {
+    if (trace) trace.push([tag(), String(e && e.message).slice(0, 60)]);
+    return { s: 0, j: null };
+  }
+}
+async function loadMarket(ids = [], coins = []) {
+  const base = await cached("market", 6e4, async () => {
+    const [m, t5, alt, etf] = await Promise.all(["m/market.json", "m/top500.json", "m/alt.json", "m/etf.json"].map((f) => getJson(RAW + f)));
+    return m && t5 ? { m, t5, alt, etf } : null;
+  }) || { m: {}, t5: {}, alt: null, etf: null };
+  if (!base.m.top) cache.delete("market");
+  const top = (base.m.top || []).map((r) => ({ ...r })), top500 = (base.t5.top || []).map((r) => ({ ...r }));
+  const byId = /* @__PURE__ */ new Map(), bySym = {};
+  for (const r of [...top, ...top500]) {
+    if (!byId.has(r.id)) byId.set(r.id, r);
+    const S = String(r.sym || "").toUpperCase();
+    if (S && (!bySym[S] || (r.rank || 1e9) < (bySym[S].rank || 1e9))) bySym[S] = r;
+  }
+  const idOf = {};
+  for (const c of coins) {
+    const S = String(c.sym || "").toUpperCase();
+    if (S) idOf[S] = c.id || cg_ids_default[S] || bySym[S] && bySym[S].id || null;
+  }
+  const all = [...new Set(["bitcoin", ...ids, ...Object.values(idOf)].filter(Boolean))];
+  const series = {};
+  const need = ["bitcoin", ...all.filter((id) => id !== "bitcoin" && !byId.has(id)).slice(0, 5)];
+  await Promise.all(need.map(async (id) => {
+    const s = await cached("p:" + id, 10 * 6e4, async () => priceSeries(await getJson(RAW + "p/" + id + ".json")) || false);
+    if (s) series[id] = s;
+  }));
+  const closeF = await cached("close", 10 * 6e4, async () => await getJson(RAW + "p/close.json") || false);
+  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], sectors: base.m.sectors || [] };
+  await liveTopUp(market, all);
+  const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
+  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 3);
+  await Promise.all(missing.map(async ([S, id]) => {
+    const x = await exchangePrice(S);
+    if (!x) return;
+    const key = id || "x-" + S.toLowerCase(), r = rows.get(key);
+    if (r) {
+      r.price = x.price;
+      if (x.ch24 != null) r.ch24 = x.ch24;
+    } else market.top500.push({ id: key, sym: S, name: S, price: x.price, ch24: x.ch24, extra: true });
+    market.live[key] = x.src;
+    idOf[S] = key;
+  }));
+  const snapT = Date.parse(market.parts && market.parts.top) || 0;
+  if (Date.now() - snapT > STALE) {
+    const want = [.../* @__PURE__ */ new Set(["bitcoin", ...ids])].filter((id) => !market.live[id] && rows.get(id) && rows.get(id).price > 0).slice(0, 3);
+    await Promise.all(want.map(async (id) => {
+      const r = rows.get(id), S = String(r.sym || Object.keys(idOf).find((k) => idOf[k] === id) || "").toUpperCase();
+      const x = S && await exchangePrice(S).catch(() => null);
+      if (!x || !(x.price > r.price / 1.5 && x.price < r.price * 1.5)) return;
+      r.price = x.price;
+      if (x.ch24 != null) r.ch24 = x.ch24;
+      market.live[id] = x.src;
+    }));
+  }
+  const btc = market.top.find((r) => r.id === "bitcoin");
+  market.btc = btc ? { price: btc.price, ch24: btc.ch24 } : series.bitcoin ? { price: series.bitcoin.last, ch24: null } : null;
+  market.priceT = Date.now();
+  return market;
+}
+var EX = [
+  ["Binance", (S) => `https://data-api.binance.vision/api/v3/ticker/24hr?symbol=${S}USDT`, (j) => j && j.lastPrice && { price: +j.lastPrice, ch24: +j.priceChangePercent }],
+  ["OKX", (S) => `https://www.okx.com/api/v5/market/ticker?instId=${S}-USDT`, (j) => {
+    const d = j && j.data && j.data[0];
+    return d && { price: +d.last, ch24: +d.open24h > 0 ? (d.last / d.open24h - 1) * 100 : null };
+  }],
+  ["Gate", (S) => `https://api.gateio.ws/api/v4/spot/tickers?currency_pair=${S}_USDT`, (j) => {
+    const d = Array.isArray(j) && j[0];
+    return d && { price: +d.last, ch24: d.change_percentage != null ? +d.change_percentage : null };
+  }]
+];
+async function exchangePrice(sym) {
+  const S = String(sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!S || /^(USDT|USD)$/.test(S)) return null;
+  const miss = cache.get("exmiss:" + S);
+  if (miss && Date.now() < miss.until) return null;
+  const x = await cached("ex:" + S, 45e3, async () => {
+    for (const [src, url3, read] of EX) {
+      const off = cache.get("ex-off:" + src);
+      if (off && Date.now() < off.until) continue;
+      const { s: st, j } = await getJsonS(url3(S));
+      if (st === 403 || st === 451) cache.set("ex-off:" + src, { until: Date.now() + 30 * 6e4, value: 1 });
+      const x2 = read(j);
+      if (x2 && x2.price > 0 && isFinite(x2.price)) return { price: x2.price, ch24: isFinite(x2.ch24) ? x2.ch24 : null, src };
+      if (used >= BUDGET) return null;
+    }
+    return "none";
+  });
+  if (x === "none") {
+    cache.delete("ex:" + S);
+    cache.set("exmiss:" + S, { until: Date.now() + 30 * 6e4, value: 1 });
+    return null;
+  }
+  return x;
+}
+async function liveTopUp(market, ids) {
+  if (!ids.length) return;
+  const key = "live:" + ids.slice().sort().join(",");
+  const j = await cached(key, 45e3, () => getJson(`${CG}/simple/price?ids=${encodeURIComponent(ids.slice(0, 250).join(","))}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: { accept: "application/json" } }));
+  if (!j) {
+    market.liveOk = false;
+    return;
+  }
+  market.liveOk = true;
+  const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
+  for (const [id, v] of Object.entries(j)) {
+    if (!v || !(v.usd > 0)) continue;
+    market.live[id] = true;
+    const r = rows.get(id);
+    if (r) {
+      r.price = v.usd;
+      if (v.usd_24h_change != null) r.ch24 = v.usd_24h_change;
+      if (v.usd_market_cap) r.mcap = v.usd_market_cap;
+      if (v.usd_24h_vol) r.vol = v.usd_24h_vol;
+    } else market.top500.push({ id, sym: "", name: "", price: v.usd, ch24: v.usd_24h_change, mcap: v.usd_market_cap, vol: v.usd_24h_vol, extra: true });
+  }
+}
+async function findCoin(q, market, user) {
+  const s = String(q || "").trim(), S = s.toUpperCase().replace(/^\$/, "");
+  if (!S) return null;
+  const mine = (user && user.coins || []).find((c2) => c2 && String(c2.sym || "").toUpperCase() === S && !c2.removed);
+  if (mine && (mine.cgId || cg_ids_default[S])) return { id: mine.cgId || cg_ids_default[S], sym: S, name: mine.name || "" };
+  const rows = [...market.top, ...market.top500].filter((r) => r.sym);
+  const bySym = rows.filter((r) => String(r.sym).toUpperCase() === S).sort((a, b) => (a.rank || 1e9) - (b.rank || 1e9))[0];
+  if (cg_ids_default[S]) {
+    const r = rows.find((x) => x.id === cg_ids_default[S]);
+    return { id: cg_ids_default[S], sym: S, name: r ? r.name : "" };
+  }
+  if (bySym) return { id: bySym.id, sym: S, name: bySym.name };
+  const byName = rows.find((r) => String(r.name || "").toLowerCase() === s.toLowerCase() || r.id === s.toLowerCase());
+  if (byName) return { id: byName.id, sym: String(byName.sym).toUpperCase(), name: byName.name };
+  const j = await cached("search:" + s.toLowerCase(), 36e5, () => getJson(`${CG}/search?query=${encodeURIComponent(s)}`));
+  const c = j && (j.coins || []).sort((a, b) => (String(b.symbol).toUpperCase() === S) - (String(a.symbol).toUpperCase() === S) || (a.market_cap_rank || 1e9) - (b.market_cap_rank || 1e9))[0];
+  if (c) return { id: c.id, sym: String(c.symbol || "").toUpperCase(), name: c.name, rank: c.market_cap_rank };
+  return /^[A-Z0-9]{2,12}$/.test(S) ? { id: null, sym: S, name: "" } : null;
+}
+var tokenCache = null;
+var b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+var b64urlJson = (o) => b64url(new TextEncoder().encode(JSON.stringify(o)));
+function pemBytes(pem) {
+  const b = atob(String(pem).replace(/-----[^-]+-----/g, "").replace(/\\n/g, "").replace(/\s+/g, ""));
+  return Uint8Array.from(b, (c) => c.charCodeAt(0));
+}
+var KVS = null;
+async function googleToken(sa) {
+  if (tokenCache && tokenCache.until > Date.now() && tokenCache.email === sa.client_email) return tokenCache.token;
+  if (KVS) {
+    try {
+      const k = JSON.parse(await KVS.get("fs:gtok") || "null");
+      if (k && k.until > Date.now() && k.email === sa.client_email) {
+        tokenCache = k;
+        return k.token;
+      }
+    } catch (_) {
+    }
+  }
+  const now = Math.floor(Date.now() / 1e3), aud = sa.token_uri || "https://oauth2.googleapis.com/token";
+  const body = b64urlJson({ alg: "RS256", typ: "JWT" }) + "." + b64urlJson({ iss: sa.client_email, scope: "https://www.googleapis.com/auth/datastore", aud, iat: now, exp: now + 3600 });
+  const key = await crypto.subtle.importKey("pkcs8", pemBytes(sa.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const sig2 = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(body));
+  const r = await xfetch(aud, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: body + "." + b64url(sig2) }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.access_token) throw new Error("Firebase sign-in refused (" + r.status + ")");
+  tokenCache = { token: j.access_token, until: Date.now() + 50 * 6e4, email: sa.client_email };
+  if (KVS) {
+    try {
+      await KVS.put("fs:gtok", JSON.stringify(tokenCache), { expirationTtl: 50 * 60 });
+    } catch (_) {
+    }
+  }
+  return j.access_token;
+}
+function dec(v) {
+  if (!v || typeof v !== "object") return null;
+  if ("stringValue" in v) return v.stringValue;
+  if ("integerValue" in v) return Number(v.integerValue);
+  if ("doubleValue" in v) return Number(v.doubleValue);
+  if ("booleanValue" in v) return v.booleanValue;
+  if ("nullValue" in v) return null;
+  if ("timestampValue" in v) return v.timestampValue;
+  if ("mapValue" in v) return fields(v.mapValue.fields);
+  if ("arrayValue" in v) return (v.arrayValue.values || []).map(dec);
+  return null;
+}
+var fields = (f) => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, dec(v)]));
+function serviceAccount(env) {
+  if (env && env.RATE) KVS = env.RATE;
+  try {
+    const sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || "");
+    return sa && sa.client_email && sa.private_key && sa.project_id ? sa : null;
+  } catch (_) {
+    return null;
+  }
+}
+var READS = 0;
+var takeReads = () => {
+  const n = READS;
+  READS = 0;
+  return n;
+};
+var nDocs = (rows) => Math.max(1, Array.isArray(rows) ? rows.filter((x) => x && x.document).length : 0);
+async function firestore(sa) {
+  const token = await googleToken(sa), base = `https://firestore.googleapis.com/v1/projects/${sa.project_id}/databases/(default)/documents`;
+  const call = async (url3, init = {}) => {
+    const r = await xfetch(url3, { ...init, headers: { authorization: "Bearer " + token, "content-type": "application/json", ...init.headers || {} } });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error("Firestore " + r.status);
+    return r.json();
+  };
+  return {
+    async metaDocs() {
+      const rows = await call(base + ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "meta", allDescendants: true }], limit: 1e3 } }) }) || [];
+      READS += nDocs(rows);
+      return rows.filter((x) => x.document && x.document.name).map((x) => ({ name: x.document.name, data: fields(x.document.fields) }));
+    },
+    async users() {
+      const rows = await call(base + ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "meta", allDescendants: true }], limit: 200 } }) }) || [];
+      READS += nDocs(rows);
+      return [...new Set(rows.map((x) => x.document && x.document.name).filter((n) => n && /\/users\/[^/]+\/meta\/info$/.test(n)).map((n) => n.match(/\/users\/([^/]+)\/meta\/info$/)[1]))];
+    },
+    async list(p) {
+      const out = [];
+      let tok = "";
+      do {
+        const j = await call(`${base}/${p}?pageSize=300${tok ? "&pageToken=" + encodeURIComponent(tok) : ""}`);
+        READS += Math.max(1, (j && j.documents || []).length);
+        if (!j) break;
+        (j.documents || []).forEach((d) => out.push(fields(d.fields)));
+        tok = j.nextPageToken || "";
+      } while (tok);
+      return out;
+    },
+    async get(p) {
+      READS += 1;
+      const j = await call(`${base}/${p}`);
+      return j ? fields(j.fields) : null;
+    },
+    // how many documents a collection has — a count costs 1 read per 1000 documents (not 1 per document)
+    async count(parent, coll) {
+      READS += 1;
+      const j = await call(`${base}/${parent}:runAggregationQuery`, { method: "POST", body: JSON.stringify({ structuredAggregationQuery: { structuredQuery: { from: [{ collectionId: coll }] }, aggregations: [{ alias: "n", count: {} }] } }) });
+      const v = j && j[0] && j[0].result && j[0].result.aggregateFields && j[0].result.aggregateFields.n;
+      return v && v.integerValue != null ? +v.integerValue : null;
+    },
+    // is any document of the collection newer than `since` (its updatedAt — the app stamps every coin / plan change)? 1 read
+    async changedSince(parent, coll, since) {
+      const rows = await call(`${base}/${parent}:runQuery`, { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], where: { fieldFilter: { field: { fieldPath: "updatedAt" }, op: "GREATER_THAN", value: { stringValue: since } } }, limit: 1 } }) });
+      READS += nDocs(rows);
+      return !Array.isArray(rows) || rows.some((x) => x.document);
+    },
+    async set(p, data) {
+      return call(`${base}/${p}`, { method: "PATCH", body: JSON.stringify({ fields: enc2(data) }) });
+    },
+    // new documents, all or nothing (each must not exist yet — never overwrites)
+    async commit(docs) {
+      const name = (p) => `projects/${sa.project_id}/databases/(default)/documents/${p}`;
+      return call(base + ":commit", { method: "POST", body: JSON.stringify({ writes: docs.map((d) => ({ update: { name: name(d.path), fields: enc2(d.data) }, currentDocument: { exists: false } })) }) });
+    }
+  };
+}
+function encV(v) {
+  if (v == null) return { nullValue: null };
+  if (typeof v === "string") return { stringValue: v };
+  if (typeof v === "boolean") return { booleanValue: v };
+  if (typeof v === "number") return Number.isSafeInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(encV) } };
+  return { mapValue: { fields: enc2(v) } };
+}
+var enc2 = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, encV(v)]));
+async function commitDocs(env, uid, docs) {
+  const sa = serviceAccount(env);
+  if (!sa) throw new Error("no service account");
+  const db = await firestore(sa);
+  await db.commit(docs.map((d) => ({ path: `users/${uid}/${d.path}`, data: d.data })));
+  cache.delete("user");
+  cache.delete("user:" + uid);
+  await forgetPortfolio(env, uid);
+  return { ok: true };
+}
+var PF_FULL_MS = 6 * 36e5;
+var pfStats = { full: 0, probe: 0 };
+var maxUpd = (rows) => rows.reduce((m, r) => r && typeof r.updatedAt === "string" && r.updatedAt > m ? r.updatedAt : m, "");
+async function readPortfolio(env, db, uid, fresh) {
+  const kvKey = "fs:pf:" + uid, parent = "users/" + uid;
+  let kept = null;
+  if (!fresh && env.RATE) {
+    try {
+      kept = JSON.parse(await env.RATE.get(kvKey) || "null");
+    } catch (_) {
+      kept = null;
+    }
+  }
+  const quiet = +env.PF_CHECK_MS ? isOwner(env) ? Math.min(+env.PF_CHECK_MS, 10 * 6e4) : +env.PF_CHECK_MS : 0;
+  if (kept && kept.data && quiet && Date.now() - (kept.checked || kept.at) < quiet && Date.now() - kept.at < PF_FULL_MS) {
+    pfStats.skip = (pfStats.skip || 0) + 1;
+    return kept.data;
+  }
+  if (kept && kept.data && Date.now() - kept.at < PF_FULL_MS) {
+    try {
+      const [nt, nc, na, cc, ca, meta2] = await Promise.all([
+        db.count(parent, "txs"),
+        db.count(parent, "coins"),
+        db.count(parent, "accum"),
+        kept.seen ? db.changedSince(parent, "coins", kept.seen) : true,
+        kept.seen ? db.changedSince(parent, "accum", kept.seen) : true,
+        db.get(parent + "/meta/info")
+      ]);
+      if (nt === kept.n.txs && nc === kept.n.coins && na === kept.n.accum && !cc && !ca) {
+        pfStats.probe++;
+        const m = meta2 || {};
+        kept.data.meta = m;
+        kept.checked = Date.now();
+        try {
+          await env.RATE.put(kvKey, JSON.stringify(kept));
+        } catch (_) {
+        }
+        return kept.data;
+      }
+    } catch (_) {
+    }
+  }
+  const [coins, txs, accum, meta] = await Promise.all([db.list(`${parent}/coins`), db.list(`${parent}/txs`), db.list(`${parent}/accum`), db.get(`${parent}/meta/info`)]);
+  pfStats.full++;
+  const data = { coins, txs, accum, meta: meta || {}, uid };
+  if (env.RATE) {
+    try {
+      await env.RATE.put(kvKey, JSON.stringify({ at: Date.now(), checked: Date.now(), seen: maxUpd([...coins, ...accum]), n: { txs: txs.length, coins: coins.length, accum: accum.length }, data }));
+    } catch (_) {
+    }
+  }
+  return data;
+}
+async function forgetPortfolio(env, uid) {
+  try {
+    if (env.RATE && uid) await env.RATE.delete("fs:pf:" + uid);
+  } catch (_) {
+  }
+}
+async function loadMemberUser(env, sa, fresh) {
+  const me = await member(env);
+  if (!me || !me.uid) return null;
+  const key = "user:" + me.uid;
+  if (fresh) cache.delete(key);
+  return cached(key, 12e4, async () => {
+    const db = await firestore(sa);
+    return readPortfolio(env, db, me.uid, fresh);
+  });
+}
+async function findLinkCode(env, code) {
+  const sa = serviceAccount(env);
+  if (!sa) return null;
+  const db = await firestore(sa), C = String(code || "").toUpperCase();
+  const hit = (await db.metaDocs()).find((d) => /\/users\/[^/]+\/meta\/tglink$/.test(d.name) && d.data.code === C);
+  if (!hit || !(Date.parse(hit.data.exp) > Date.now())) return null;
+  const uid = hit.name.match(/\/users\/([^/]+)\/meta\/tglink$/)[1];
+  await db.set(`users/${uid}/meta/tglink`, { linked: "telegram", at: (/* @__PURE__ */ new Date()).toISOString() }).catch(() => {
+  });
+  return { uid, email: String(hit.data.email || "").toLowerCase() };
+}
+async function syncAccess(env, emails) {
+  const sa = serviceAccount(env);
+  if (!sa) return false;
+  const db = await firestore(sa);
+  await db.set("config/access", { emails, at: (/* @__PURE__ */ new Date()).toISOString() });
+  return true;
+}
+var ownerMem = null;
+async function ownerUid(env, db) {
+  if (env.FIREBASE_UID) return env.FIREBASE_UID;
+  if (ownerMem) return ownerMem;
+  const pin = await db.get("config/owner").catch(() => null);
+  if (pin && pin.uid) return ownerMem = pin.uid;
+  const users = await db.users();
+  if (users.length !== 1) {
+    console.log(JSON.stringify({ owner: "not pinned", accounts: users.length }));
+    return null;
+  }
+  await db.set("config/owner", { uid: users[0], at: (/* @__PURE__ */ new Date()).toISOString() }).catch(() => {
+  });
+  return ownerMem = users[0];
+}
+async function chatUid(env) {
+  const sa = serviceAccount(env);
+  if (!sa) return null;
+  if (!isOwner(env)) {
+    const me = await member(env);
+    return me && me.uid || null;
+  }
+  if (env.FIREBASE_UID) return env.FIREBASE_UID;
+  try {
+    return await ownerUid(env, await firestore(sa));
+  } catch (_) {
+    return null;
+  }
+}
+var WEB_KEY = "AIzaSyCUvQh7cobgjGVVEYR8vcT76CGFDPsd5Vg";
+var idTok = /* @__PURE__ */ new Map();
+async function customTokenFor(env, uid) {
+  const sa = serviceAccount(env);
+  if (!sa || !uid) return null;
+  try {
+    const now = Math.floor(Date.now() / 1e3);
+    const body = b64urlJson({ alg: "RS256", typ: "JWT" }) + "." + b64urlJson({ iss: sa.client_email, sub: sa.client_email, aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit", iat: now, exp: now + 3600, uid });
+    const key = await crypto.subtle.importKey("pkcs8", pemBytes(sa.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+    const sig2 = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(body));
+    return body + "." + b64url(sig2);
+  } catch (e) {
+    console.log(JSON.stringify({ customtoken: "failed", msg: String(e && e.message).slice(0, 100) }));
+    return null;
+  }
+}
+async function idTokenFor(env, uid) {
+  const sa = serviceAccount(env);
+  if (!sa || !uid) return null;
+  const c = idTok.get(uid);
+  if (c && c.until > Date.now()) return c.t;
+  try {
+    const now = Math.floor(Date.now() / 1e3);
+    const body = b64urlJson({ alg: "RS256", typ: "JWT" }) + "." + b64urlJson({ iss: sa.client_email, sub: sa.client_email, aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit", iat: now, exp: now + 3600, uid });
+    const key = await crypto.subtle.importKey("pkcs8", pemBytes(sa.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+    const sig2 = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(body));
+    const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=" + WEB_KEY, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: body + "." + b64url(sig2), returnSecureToken: true }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.idToken) {
+      console.log(JSON.stringify({ idtoken: "refused", status: r.status, msg: j.error && j.error.message }));
+      return null;
+    }
+    if (idTok.size > 50) idTok.clear();
+    idTok.set(uid, { t: j.idToken, until: Date.now() + 50 * 6e4 });
+    return j.idToken;
+  } catch (e) {
+    console.log(JSON.stringify({ idtoken: "failed", msg: String(e && e.message).slice(0, 100) }));
+    return null;
+  }
+}
+async function isOwnerAccount(env, { email, uid, owners }) {
+  if (owners && owners.length) return owners.includes(String(email || "").toLowerCase());
+  const sa = serviceAccount(env);
+  if (!sa) return false;
+  try {
+    const db = await firestore(sa);
+    return !!uid && uid === await ownerUid(env, db);
+  } catch (_) {
+    return false;
+  }
+}
+async function loadUser(env, fresh = false) {
+  const sa = serviceAccount(env);
+  if (!sa) return null;
+  if (!isOwner(env)) return loadMemberUser(env, sa, fresh);
+  if (fresh) cache.delete("user");
+  return cached("user", 12e4, async () => {
+    const db = await firestore(sa);
+    const uid = await ownerUid(env, db);
+    if (!uid) return null;
+    return readPortfolio(env, db, uid, fresh);
+  });
+}
+var coinsOf = (user) => user ? [...(user.coins || []).filter((c) => c && !c.removed), ...(user.accum || []).filter((a) => a && +a.alertPrice > 0)].map((c) => ({ sym: String(c.sym || "").toUpperCase(), id: c.cgId || null })) : [];
+var withIds = (user, m) => ({
+  ...user,
+  coins: (user.coins || []).map((c) => c && c.sym && m.idOf[String(c.sym).toUpperCase()] ? { ...c, cgId: m.idOf[String(c.sym).toUpperCase()] } : c),
+  accum: (user.accum || []).map((a) => a && a.sym && m.idOf[String(a.sym).toUpperCase()] ? { ...a, cgId: m.idOf[String(a.sym).toUpperCase()] } : a)
+});
+async function loadFutures() {
+  return cached("fut", 10 * 6e4, async () => {
+    const j = await getJson(RAW + "m/links.json");
+    return j && Array.isArray(j.fut) ? new Set(j.fut) : null;
+  });
+}
+async function rawSeries(id) {
+  if (!id || /^x-/.test(id)) return null;
+  return cached("raw:" + id, 10 * 6e4, async () => await getJson(RAW + "p/" + id + ".json") || false);
+}
+var num2 = (v) => {
+  const n = +v;
+  return isFinite(n) ? n : null;
+};
+async function postJson(url3, body) {
+  return getJson(url3, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+}
+async function okxDeriv(S, now) {
+  const O = "https://www.okx.com/api/v5", inst = `${S}-USDT-SWAP`;
+  const [fr, oi, oih, ls, liq, ins] = await Promise.all([
+    getJson(`${O}/public/funding-rate?instId=${inst}`),
+    getJson(`${O}/public/open-interest?instType=SWAP&instId=${inst}`),
+    getJson(`${O}/rubik/stat/contracts/open-interest-volume?ccy=${S}&period=1H`),
+    getJson(`${O}/rubik/stat/contracts/long-short-account-ratio?ccy=${S}&period=1H`),
+    getJson(`${O}/public/liquidation-orders?instType=SWAP&uly=${S}-USDT&state=filled&limit=100`),
+    cached("okx-ins:" + S, 864e5, () => getJson(`${O}/public/instruments?instType=SWAP&instId=${inst}`))
+  ]);
+  const f = fr && fr.data && fr.data[0], o = oi && oi.data && oi.data[0];
+  if (!f && !o) return null;
+  const out = { source: "OKX" };
+  if (f) {
+    out.funding_8h_pct = num2(f.fundingRate) != null ? +(f.fundingRate * 100).toFixed(4) : null;
+    out.next_funding = f.nextFundingTime ? (/* @__PURE__ */ new Date(+f.nextFundingTime)).toISOString() : null;
+  }
+  if (o) out.open_interest_usd = num2(o.oiUsd) != null ? Math.round(+o.oiUsd) : null;
+  const h = oih && Array.isArray(oih.data) ? oih.data.map((x) => [+x[0], +x[1]]).sort((a, b) => a[0] - b[0]) : [];
+  if (h.length > 2) {
+    const last = h[h.length - 1], prev = h.find((x) => x[0] >= last[0] - 24 * 36e5) || h[0];
+    if (prev[1] > 0) out.open_interest_change_24h_pct = +((last[1] / prev[1] - 1) * 100).toFixed(2);
+  }
+  const r = ls && Array.isArray(ls.data) && ls.data.length ? ls.data.map((x) => [+x[0], +x[1]]).sort((a, b) => b[0] - a[0])[0] : null;
+  if (r && r[1] > 0) {
+    out.long_short_accounts = +r[1].toFixed(2);
+    out.long_accounts_pct = +(r[1] / (1 + r[1]) * 100).toFixed(1);
+  }
+  const ct = ins && ins.data && ins.data[0] ? num2(ins.data[0].ctVal) || 1 : 1, det = liq && liq.data && liq.data[0] && Array.isArray(liq.data[0].details) ? liq.data[0].details : [];
+  if (det.length) {
+    let longs = 0, shorts = 0, n = 0, oldest = now;
+    for (const d of det) {
+      const t = +d.ts;
+      if (!(t > now - 24 * 36e5)) continue;
+      const usd3 = (+d.sz || 0) * ct * (+d.bkPx || 0);
+      n++;
+      oldest = Math.min(oldest, t);
+      if ((d.posSide || "") === "long" || d.side === "sell") longs += usd3;
+      else shorts += usd3;
+    }
+    out.liquidations = { orders: n, longs_usd: Math.round(longs), shorts_usd: Math.round(shorts), since: new Date(oldest).toISOString(), note: "OKX only, its last 100 liquidation orders" };
+  }
+  return out;
+}
+async function binanceDeriv(S) {
+  const F = "https://fapi.binance.com", p = `${S}USDT`;
+  const off = cache.get("bn-off");
+  if (off && Date.now() < off.until) return null;
+  const pi = await getJson(`${F}/fapi/v1/premiumIndex?symbol=${p}`);
+  if (!pi || pi.code) {
+    if (!pi) cache.set("bn-off", { until: Date.now() + 30 * 6e4, value: 1 });
+    return null;
+  }
+  const [oi, oih, ls, top] = await Promise.all([
+    getJson(`${F}/fapi/v1/openInterest?symbol=${p}`),
+    getJson(`${F}/futures/data/openInterestHist?symbol=${p}&period=1h&limit=25`),
+    getJson(`${F}/futures/data/globalLongShortAccountRatio?symbol=${p}&period=1h&limit=1`),
+    getJson(`${F}/futures/data/topLongShortPositionRatio?symbol=${p}&period=1h&limit=1`)
+  ]);
+  const out = { source: "Binance", funding_8h_pct: num2(pi.lastFundingRate) != null ? +(pi.lastFundingRate * 100).toFixed(4) : null, mark_price: num2(pi.markPrice) };
+  if (oi && num2(oi.openInterest) != null && num2(pi.markPrice)) out.open_interest_usd = Math.round(oi.openInterest * pi.markPrice);
+  if (Array.isArray(oih) && oih.length > 2) {
+    const a = +oih[0].sumOpenInterestValue, b = +oih[oih.length - 1].sumOpenInterestValue;
+    if (a > 0) out.open_interest_change_24h_pct = +((b / a - 1) * 100).toFixed(2);
+  }
+  if (Array.isArray(ls) && ls[0]) {
+    out.long_short_accounts = num2(ls[0].longShortRatio);
+    out.long_accounts_pct = num2(ls[0].longAccount) != null ? +(ls[0].longAccount * 100).toFixed(1) : null;
+  }
+  if (Array.isArray(top) && top[0]) out.top_traders_long_short_positions = num2(top[0].longShortRatio);
+  return out;
+}
+async function hyperliquidDeriv(S) {
+  const j = await cached("hl-ctx", 6e4, () => postJson("https://api.hyperliquid.xyz/info", { type: "metaAndAssetCtxs" }));
+  if (!Array.isArray(j) || !j[0] || !Array.isArray(j[0].universe)) return null;
+  const i = j[0].universe.findIndex((u) => String(u.name).toUpperCase() === S), c = i >= 0 && j[1] && j[1][i];
+  if (!c) return null;
+  const px = num2(c.markPx);
+  return { source: "Hyperliquid", funding_8h_pct: num2(c.funding) != null ? +(c.funding * 8 * 100).toFixed(4) : null, open_interest_usd: num2(c.openInterest) != null && px ? Math.round(c.openInterest * px) : null, volume_24h_usd: num2(c.dayNtlVlm) != null ? Math.round(+c.dayNtlVlm) : null, mark_price: px };
+}
+async function derivatives(sym) {
+  const S = String(sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!S) return null;
+  return cached("deriv:" + S, 12e4, async () => {
+    const now = Date.now(), [okx, bn2, hl] = await Promise.all([okxDeriv(S, now), binanceDeriv(S), hyperliquidDeriv(S)]);
+    const src = [okx, bn2, hl].filter(Boolean);
+    if (!src.length) return null;
+    const fr = src.map((x) => x.funding_8h_pct).filter((v) => v != null), oi = src.map((x) => x.open_interest_usd).filter((v) => v > 0);
+    const avgF = fr.length ? fr.reduce((a, b) => a + b, 0) / fr.length : null;
+    return {
+      coin: S,
+      summary: {
+        funding_8h_pct_avg: avgF != null ? +avgF.toFixed(4) : null,
+        funding_annualized_pct: avgF != null ? +(avgF * 3 * 365).toFixed(1) : null,
+        funding_reading: avgF == null ? null : avgF > 0.03 ? "longs paying a lot (crowded longs)" : avgF > 0 ? "longs paying (normal)" : avgF < -0.01 ? "shorts paying (crowded shorts)" : "about neutral",
+        open_interest_usd_total: oi.length ? oi.reduce((a, b) => a + b, 0) : null,
+        open_interest_note: "sum of the sources listed (not the whole market)",
+        open_interest_change_24h_pct: (okx && okx.open_interest_change_24h_pct) ?? (bn2 && bn2.open_interest_change_24h_pct) ?? null,
+        long_accounts_pct: (bn2 && bn2.long_accounts_pct) ?? (okx && okx.long_accounts_pct) ?? null,
+        liquidations_24h: okx && okx.liquidations || null
+      },
+      sources: src
+    };
+  });
+}
+
+// tools/worker/login.mjs
+var MAX_AGE = 30 * 60;
+async function tgLogin(request, env) {
+  const origin = request.headers.get("Origin") || "";
+  const allowed2 = String(env.ALLOWED_ORIGINS || "https://drsamirsaad1981-design.github.io").split(",").map((s) => s.trim()).filter(Boolean);
+  const ok2 = allowed2.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) && env.ALLOW_LOCAL === "1";
+  const cors = { "Access-Control-Allow-Origin": ok2 ? origin : allowed2[0] || "", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400", "Vary": "Origin" };
+  const reply = (status2, obj) => new Response(JSON.stringify(obj), { status: status2, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
+  if (request.method === "OPTIONS") return new Response(null, { status: ok2 ? 204 : 403, headers: cors });
+  if (!ok2) return reply(403, { error: "origin" });
+  if (request.method !== "POST") return reply(405, { error: "method" });
+  const raw = await request.text();
+  if (raw.length > 8e3) return reply(413, { error: "big" });
+  let body;
+  try {
+    body = JSON.parse(raw);
+  } catch (_) {
+    return reply(400, { error: "bad" });
+  }
+  const v = await verifyInitData(String(body.initData || ""), env.TELEGRAM_BOT_TOKEN, Date.now(), MAX_AGE);
+  if (!v.ok) return reply(401, { error: v.why === "too old" ? "expired" : "signature" });
+  const tgId = String(v.user.id);
+  if (await bump("tglogin", tgId, 36e5) > 20) return reply(429, { error: "busy" });
+  const isOwner2 = tgId === String(env.TELEGRAM_CHAT_ID), m = isOwner2 ? null : (await members(env))[tgId];
+  if (!isOwner2 && !m) return reply(403, { error: "not-member" });
+  if (m && m.paused) return reply(403, { error: "paused" });
+  const uid = await asChat(tgId, () => chatUid(env)).catch(() => null);
+  if (!uid) return reply(403, { error: "not-linked" });
+  const token = await customTokenFor(env, uid);
+  if (!token) return reply(503, { error: "token" });
+  console.log(JSON.stringify({ tglogin: isOwner2 ? "owner" : "member" }));
+  return reply(200, { token });
+}
+
+// tools/worker/usage.mjs
+var READ_LIMIT = 5e4;
+var FLUSH_MS = 10 * 6e4;
+var ALERT_AT = [60, 80];
+var FEAT_OK = /^[a-z0-9_:]{1,24}$/;
+var MAX_FEATS = 150;
+var kget2 = async (env, k) => {
+  try {
+    return env.RATE ? await env.RATE.get(k) : null;
+  } catch (_) {
+    return null;
+  }
+};
+var kput2 = async (env, k, v, ttl) => {
+  try {
+    if (env.RATE) await env.RATE.put(k, v, ttl ? { expirationTtl: ttl } : void 0);
+  } catch (_) {
+  }
+};
+var jget = async (env, k) => {
+  try {
+    return JSON.parse(await kget2(env, k) || "{}") || {};
+  } catch (_) {
+    return {};
+  }
+};
+var pday = (ms = Date.now()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
+var limitOf = (env) => Math.max(1e3, +(env && env.FS_READ_LIMIT) || READ_LIMIT);
+var P = { wr: 0, app: {}, f: {} };
+var lastFlush = 0;
+var empty = () => !P.wr && !Object.keys(P.app).length && !Object.keys(P.f).length;
+function note(name, n = 1) {
+  name = String(name || "").toLowerCase().replace(/[^a-z0-9_:]/g, "").slice(0, 24);
+  if (!FEAT_OK.test(name) || !(n > 0)) return;
+  if (!(name in P.f) && Object.keys(P.f).length >= MAX_FEATS) return;
+  P.f[name] = (P.f[name] || 0) + Math.min(n, 1e3);
+}
+function addWorkerReads(n) {
+  if (n > 0) P.wr += n;
+}
+function noteApp(uid, reads, feats, dev) {
+  const today2 = pday();
+  if (uid) uid = String(uid).slice(0, 40) + ":" + (/^[a-z0-9]{1,12}$/.test(String(dev || "")) ? dev : "x");
+  if (uid && reads && typeof reads === "object") {
+    const n = +reads[today2];
+    if (Number.isFinite(n) && n > 0) P.app[uid] = Math.max(P.app[uid] || 0, Math.min(Math.round(n), 2e5));
+  }
+  if (feats && typeof feats === "object") for (const [k, v] of Object.entries(feats).slice(0, 60)) note("app:" + k, Math.round(+v) || 0);
+}
+async function flush(env, { force = false, now = Date.now(), reads = 0 } = {}) {
+  addWorkerReads(reads);
+  if (empty() || !force && now - lastFlush < FLUSH_MS) return false;
+  lastFlush = now;
+  const take = P;
+  P = { wr: 0, app: {}, f: {} };
+  const k = "use:" + pday(now), cur = await jget(env, k);
+  cur.wr = (+cur.wr || 0) + take.wr;
+  cur.app = cur.app || {};
+  for (const [u, n] of Object.entries(take.app)) cur.app[u] = Math.max(+cur.app[u] || 0, n);
+  cur.f = cur.f || {};
+  for (const [f, n] of Object.entries(take.f)) if (f in cur.f || Object.keys(cur.f).length < MAX_FEATS) cur.f[f] = (+cur.f[f] || 0) + n;
+  await kput2(env, k, JSON.stringify(cur), 8 * 86400);
+  return true;
+}
+async function readsTotal(env, now = Date.now()) {
+  const d = pday(now), round = Object.values(await jget(env, "tg:reads:" + d)).reduce((a, b) => a + (+b || 0), 0);
+  const u = await jget(env, "use:" + d), worker = (+u.wr || 0) + P.wr;
+  const appMap = { ...u.app || {} };
+  for (const [x, n] of Object.entries(P.app)) appMap[x] = Math.max(+appMap[x] || 0, n);
+  const app = Object.values(appMap).reduce((a, b) => a + (+b || 0), 0), total = round + worker + app, limit = limitOf(env);
+  return { day: d, round, worker, app, total, limit, pct: Math.round(total / limit * 100) };
+}
+async function features(env, now = Date.now()) {
+  const days = [...new Set(Array.from({ length: 7 }, (_, i) => pday(now - i * 864e5)))];
+  const maps = await Promise.all(days.map((d) => jget(env, "use:" + d).then((u) => u.f || {})));
+  const add = (o, m) => {
+    for (const [k, v] of Object.entries(m)) o[k] = (o[k] || 0) + (+v || 0);
+    return o;
+  };
+  const today2 = add({}, maps[0]);
+  add(today2, P.f);
+  const week = maps.reduce(add, {});
+  add(week, P.f);
+  const sort = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([name, n]) => ({ name, n }));
+  return { today: sort(today2), week: sort(week) };
+}
+async function readsAlert(env, send3, lang2 = "en", now = Date.now()) {
+  const t = await readsTotal(env, now), key = "tg:rdalert:" + t.day, done = +await kget2(env, key) || 0;
+  const lvl = [...ALERT_AT].reverse().find((a) => t.pct >= a);
+  if (!lvl || lvl <= done) return { sent: false, ...t };
+  const ar = lang2 === "ar", n = (x) => x.toLocaleString("en-US");
+  const text = ar ? `\u26A0\uFE0F <b>\u0642\u0631\u0627\u0621\u0627\u062A Firebase \u0648\u0635\u0644\u062A ${t.pct}% \u0645\u0646 \u062D\u062F \u0627\u0644\u064A\u0648\u0645</b>
+${n(t.total)} \u0645\u0646 ${n(t.limit)}
+\u{1F4F1} \u0627\u0644\u062A\u0637\u0628\u064A\u0642 ${n(t.app)} \xB7 \u{1F916} \u062C\u0648\u0644\u0629 \u0627\u0644\u0628\u0648\u062A ${n(t.round)} \xB7 \u2699\uFE0F \u0628\u0627\u0642\u064A \u0627\u0644\u0628\u0648\u062A ${n(t.worker)}
+\u064A\u0628\u062F\u0623 \u0627\u0644\u062D\u062F \u0645\u0646 \u062C\u062F\u064A\u062F \u0627\u0644\u0633\u0627\u0639\u0629 11:00 \u0635\u0628\u0627\u062D\u0627\u064B \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636.` : `\u26A0\uFE0F <b>Firebase reads at ${t.pct}% of today's allowance</b>
+${n(t.total)} of ${n(t.limit)}
+\u{1F4F1} app ${n(t.app)} \xB7 \u{1F916} bot round ${n(t.round)} \xB7 \u2699\uFE0F rest of the bot ${n(t.worker)}
+The allowance starts again at 11:00 Riyadh time.`;
+  const r = await send3(text).catch(() => null);
+  if (r && r.ok !== false) await kput2(env, key, String(lvl), 2 * 86400);
+  return { sent: !!(r && r.ok !== false), level: lvl, ...t };
+}
+
 // tools/worker/byok.mjs
 var BYOK_AI = 100;
 var BYOK_REPORTS = 10;
-var enc = new TextEncoder();
-var dec = new TextDecoder();
+var enc3 = new TextEncoder();
+var dec2 = new TextDecoder();
 var b64 = (u) => btoa(String.fromCharCode(...u));
 var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 async function aesKey(env) {
@@ -1222,17 +1951,17 @@ async function aesKey(env) {
   }
   secret = secret || env.TG_SECRET || "";
   if (secret.length < 16) throw new Error("no secret to encrypt with");
-  const base = await crypto.subtle.importKey("raw", enc.encode(secret), "HKDF", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: enc.encode("samsam-byok"), info: enc.encode("claude-key-v1") }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  const base = await crypto.subtle.importKey("raw", enc3.encode(secret), "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt: enc3.encode("samsam-byok"), info: enc3.encode("claude-key-v1") }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 }
 async function seal(env, plain) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await aesKey(env), enc.encode(plain)));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await aesKey(env), enc3.encode(plain)));
   return b64(iv) + "." + b64(ct);
 }
 async function unseal(env, sealed) {
   const [iv, ct] = String(sealed).split(".");
-  return dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(iv) }, await aesKey(env), unb64(ct)));
+  return dec2.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(iv) }, await aesKey(env), unb64(ct)));
 }
 var SHAPE = /^sk-a[n]t-[A-Za-z0-9_\-]{20,200}$/;
 var validShape = (k) => SHAPE.test(String(k || "").trim());
@@ -1286,14 +2015,14 @@ async function deleteKey(env) {
 // tools/worker/cex.mjs
 var EXCHANGES = { binance: "Binance", gate: "Gate" };
 var SHAPE2 = /^[A-Za-z0-9]{16,128}$/;
-var enc2 = new TextEncoder();
-var hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
-async function hmac(hash, secret, msg) {
-  const k = await crypto.subtle.importKey("raw", enc2.encode(secret), { name: "HMAC", hash }, false, ["sign"]);
-  return hex(await crypto.subtle.sign("HMAC", k, enc2.encode(msg)));
+var enc4 = new TextEncoder();
+var hex2 = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+async function hmac2(hash, secret, msg) {
+  const k = await crypto.subtle.importKey("raw", enc4.encode(secret), { name: "HMAC", hash }, false, ["sign"]);
+  return hex2(await crypto.subtle.sign("HMAC", k, enc4.encode(msg)));
 }
-var sha512 = async (s) => hex(await crypto.subtle.digest("SHA-512", enc2.encode(s)));
-var num2 = (v) => {
+var sha512 = async (s) => hex2(await crypto.subtle.digest("SHA-512", enc4.encode(s)));
+var num3 = (v) => {
   const n = parseFloat(v);
   return Number.isFinite(n) ? n : 0;
 };
@@ -1315,7 +2044,7 @@ async function viaRelay(k, path, qs, method, token) {
 }
 async function bn(k, path, params = {}, method = "GET", opt = {}) {
   const qs = new URLSearchParams({ ...params, recvWindow: "10000", timestamp: String(Date.now()) }).toString();
-  const sig2 = await hmac("SHA-256", k.s, qs);
+  const sig2 = await hmac2("SHA-256", k.s, qs);
   let last = null;
   const relayed = opt.token ? await viaRelay(k, path, `${qs}&signature=${sig2}`, method, opt.token) : null;
   for (const base of relayed ? ["relay"] : BN) {
@@ -1351,7 +2080,7 @@ async function binancePerms(k, opt) {
 async function binanceBalances(k, opt = {}) {
   const out = {}, notes = [];
   const add = (sym, part, q) => {
-    q = num2(q);
+    q = num3(q);
     if (!(q > 0) || !sym) return;
     sym = String(sym).toUpperCase();
     const o = out[sym] || (out[sym] = { sym, spot: 0, funding: 0, earn: 0 });
@@ -1371,18 +2100,18 @@ async function binanceBalances(k, opt = {}) {
   for (const b of acc && acc.balances || []) {
     const a = String(b.asset || "").toUpperCase();
     if (/^LD/.test(a) && a !== "LDO" && inEarn.has(a.slice(2))) continue;
-    add(a, "spot", num2(b.free) + num2(b.locked));
+    add(a, "spot", num3(b.free) + num3(b.locked));
   }
   for (const x of flex && flex.rows || []) add(x.asset, "earn", x.totalAmount);
   for (const x of locked3 && locked3.rows || []) add(x.asset, "earn", x.amount);
-  for (const x of fund || []) add(x.asset, "funding", num2(x.free) + num2(x.locked) + num2(x.freeze) + num2(x.withdrawing));
+  for (const x of fund || []) add(x.asset, "funding", num3(x.free) + num3(x.locked) + num3(x.freeze) + num3(x.withdrawing));
   return { assets: Object.values(out), notes };
 }
 var GATE = "https://api.gateio.ws";
 var GP = "/api/v4";
 async function gate(k, path, query = "") {
   const ts = String(Math.floor(Date.now() / 1e3));
-  const sig2 = await hmac("SHA-512", k.s, ["GET", GP + path, query, await sha512(""), ts].join("\n"));
+  const sig2 = await hmac2("SHA-512", k.s, ["GET", GP + path, query, await sha512(""), ts].join("\n"));
   const r = await fetch(`${GATE}${GP}${path}${query ? "?" + query : ""}`, { headers: { KEY: k.k, Timestamp: ts, SIGN: sig2, Accept: "application/json" } });
   const j = await r.json().catch(() => null);
   if (!r.ok) {
@@ -1396,7 +2125,7 @@ async function gate(k, path, query = "") {
 async function gateBalances(k) {
   const out = {}, notes = [];
   const add = (sym, part, q) => {
-    q = num2(q);
+    q = num3(q);
     if (!(q > 0) || !sym) return;
     sym = String(sym).toUpperCase();
     const o = out[sym] || (out[sym] = { sym, spot: 0, funding: 0, earn: 0 });
@@ -1407,7 +2136,7 @@ async function gateBalances(k) {
     notes.push("earn");
     return null;
   });
-  for (const b of spot || []) add(b.currency, "spot", num2(b.available) + num2(b.locked));
+  for (const b of spot || []) add(b.currency, "spot", num3(b.available) + num3(b.locked));
   for (const x of lend || []) add(x.currency, "earn", x.amount);
   return { assets: Object.values(out), notes };
 }
@@ -1830,658 +2559,6 @@ async function readsToday(env, now = Date.now()) {
   } catch (_) {
     return {};
   }
-}
-
-// tools/worker/cg-ids.json
-var cg_ids_default = { APT: "aptos", ARB: "arbitrum", ATOM: "cosmos", AVAIL: "avail", AVAX: "avalanche-2", BNB: "binancecoin", BTC: "bitcoin", CRO: "crypto-com-chain", DOGE: "dogecoin", DOT: "polkadot", ENS: "ethereum-name-service", ETH: "ethereum", FLR: "flare-networks", GLMR: "moonbeam", GRAM: "the-open-network", HBAR: "hedera-hashgraph", ICP: "internet-computer", JUP: "jupiter-exchange-solana", KAS: "kaspa", KAVA: "kava", KSM: "kusama", LINK: "chainlink", MNT: "mantle", MON: "monad", MOVR: "moonriver", NEAR: "near", NIGHT: "midnight-3", ONDO: "ondo-finance", OP: "optimism", POL: "polygon-ecosystem-token", PONS: "pons-2", PYTH: "pyth-network", QNT: "quant-network", RENDER: "render-token", SEI: "sei-network", SOL: "solana", STRK: "starknet", SUI: "sui", TAO: "bittensor", VET: "vechain", VTHO: "vethor-token", WLD: "worldcoin-wld", XAG: "kinesis-silver", XAU: "pax-gold", XDC: "xdce-crowd-sale", XPL: "plasma" };
-
-// tools/worker/data.mjs
-var RAW = "https://raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/";
-var CG = "https://api.coingecko.com/api/v3";
-var STALE = 20 * 6e4;
-var setStale = (ms) => {
-  const old = STALE;
-  STALE = ms;
-  return old;
-};
-var cache = /* @__PURE__ */ new Map();
-var inflight = /* @__PURE__ */ new Map();
-async function cached(key, ms, make) {
-  const hit = cache.get(key);
-  if (hit && Date.now() < hit.until) return hit.value;
-  if (inflight.has(key)) return inflight.get(key);
-  const run2 = (async () => {
-    const before = refused;
-    const value = await make();
-    if (!(refused > before && !value)) cache.set(key, { until: Date.now() + ms, value });
-    return value;
-  })();
-  inflight.set(key, run2);
-  try {
-    return await run2;
-  } finally {
-    inflight.delete(key);
-  }
-}
-var refused = 0;
-function clearCache() {
-  cache.clear();
-  tokenCache = null;
-}
-var BUDGET = 42;
-var used = 0;
-function resetBudget(n = BUDGET) {
-  used = BUDGET - n;
-}
-var RESERVE = 10;
-var isFutures = (url3) => /okx\.com\/api\/v5\/(public|rubik)\/|fapi\.binance\.com\/|api\.hyperliquid\.xyz\//.test(String(url3));
-async function xfetch(url3, init) {
-  const cap = isFutures(url3) ? BUDGET : BUDGET - RESERVE;
-  if (used >= cap) {
-    refused++;
-    throw new Error("budget");
-  }
-  used++;
-  return fetch(url3, init);
-}
-var trace = null;
-function startTrace() {
-  trace = [];
-}
-function stopTrace() {
-  const t = trace;
-  trace = null;
-  return t;
-}
-async function getJson(url3, init) {
-  return (await getJsonS(url3, init)).j;
-}
-async function getJsonS(url3, init) {
-  const tag = () => {
-    try {
-      const u = new URL(url3);
-      return u.host + u.pathname;
-    } catch (_) {
-      return "?";
-    }
-  };
-  try {
-    const r = await xfetch(url3, init);
-    if (trace) trace.push([tag(), r.status]);
-    return { s: r.status, j: r.ok ? await r.json() : null };
-  } catch (e) {
-    if (trace) trace.push([tag(), String(e && e.message).slice(0, 60)]);
-    return { s: 0, j: null };
-  }
-}
-async function loadMarket(ids = [], coins = []) {
-  const base = await cached("market", 6e4, async () => {
-    const [m, t5, alt, etf] = await Promise.all(["m/market.json", "m/top500.json", "m/alt.json", "m/etf.json"].map((f) => getJson(RAW + f)));
-    return m && t5 ? { m, t5, alt, etf } : null;
-  }) || { m: {}, t5: {}, alt: null, etf: null };
-  if (!base.m.top) cache.delete("market");
-  const top = (base.m.top || []).map((r) => ({ ...r })), top500 = (base.t5.top || []).map((r) => ({ ...r }));
-  const byId = /* @__PURE__ */ new Map(), bySym = {};
-  for (const r of [...top, ...top500]) {
-    if (!byId.has(r.id)) byId.set(r.id, r);
-    const S = String(r.sym || "").toUpperCase();
-    if (S && (!bySym[S] || (r.rank || 1e9) < (bySym[S].rank || 1e9))) bySym[S] = r;
-  }
-  const idOf = {};
-  for (const c of coins) {
-    const S = String(c.sym || "").toUpperCase();
-    if (S) idOf[S] = c.id || cg_ids_default[S] || bySym[S] && bySym[S].id || null;
-  }
-  const all = [...new Set(["bitcoin", ...ids, ...Object.values(idOf)].filter(Boolean))];
-  const series = {};
-  const need = ["bitcoin", ...all.filter((id) => id !== "bitcoin" && !byId.has(id)).slice(0, 5)];
-  await Promise.all(need.map(async (id) => {
-    const s = await cached("p:" + id, 10 * 6e4, async () => priceSeries(await getJson(RAW + "p/" + id + ".json")) || false);
-    if (s) series[id] = s;
-  }));
-  const closeF = await cached("close", 10 * 6e4, async () => await getJson(RAW + "p/close.json") || false);
-  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], sectors: base.m.sectors || [] };
-  await liveTopUp(market, all);
-  const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
-  const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 3);
-  await Promise.all(missing.map(async ([S, id]) => {
-    const x = await exchangePrice(S);
-    if (!x) return;
-    const key = id || "x-" + S.toLowerCase(), r = rows.get(key);
-    if (r) {
-      r.price = x.price;
-      if (x.ch24 != null) r.ch24 = x.ch24;
-    } else market.top500.push({ id: key, sym: S, name: S, price: x.price, ch24: x.ch24, extra: true });
-    market.live[key] = x.src;
-    idOf[S] = key;
-  }));
-  const snapT = Date.parse(market.parts && market.parts.top) || 0;
-  if (Date.now() - snapT > STALE) {
-    const want = [.../* @__PURE__ */ new Set(["bitcoin", ...ids])].filter((id) => !market.live[id] && rows.get(id) && rows.get(id).price > 0).slice(0, 3);
-    await Promise.all(want.map(async (id) => {
-      const r = rows.get(id), S = String(r.sym || Object.keys(idOf).find((k) => idOf[k] === id) || "").toUpperCase();
-      const x = S && await exchangePrice(S).catch(() => null);
-      if (!x || !(x.price > r.price / 1.5 && x.price < r.price * 1.5)) return;
-      r.price = x.price;
-      if (x.ch24 != null) r.ch24 = x.ch24;
-      market.live[id] = x.src;
-    }));
-  }
-  const btc = market.top.find((r) => r.id === "bitcoin");
-  market.btc = btc ? { price: btc.price, ch24: btc.ch24 } : series.bitcoin ? { price: series.bitcoin.last, ch24: null } : null;
-  market.priceT = Date.now();
-  return market;
-}
-var EX = [
-  ["Binance", (S) => `https://data-api.binance.vision/api/v3/ticker/24hr?symbol=${S}USDT`, (j) => j && j.lastPrice && { price: +j.lastPrice, ch24: +j.priceChangePercent }],
-  ["OKX", (S) => `https://www.okx.com/api/v5/market/ticker?instId=${S}-USDT`, (j) => {
-    const d = j && j.data && j.data[0];
-    return d && { price: +d.last, ch24: +d.open24h > 0 ? (d.last / d.open24h - 1) * 100 : null };
-  }],
-  ["Gate", (S) => `https://api.gateio.ws/api/v4/spot/tickers?currency_pair=${S}_USDT`, (j) => {
-    const d = Array.isArray(j) && j[0];
-    return d && { price: +d.last, ch24: d.change_percentage != null ? +d.change_percentage : null };
-  }]
-];
-async function exchangePrice(sym) {
-  const S = String(sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (!S || /^(USDT|USD)$/.test(S)) return null;
-  const miss = cache.get("exmiss:" + S);
-  if (miss && Date.now() < miss.until) return null;
-  const x = await cached("ex:" + S, 45e3, async () => {
-    for (const [src, url3, read] of EX) {
-      const off = cache.get("ex-off:" + src);
-      if (off && Date.now() < off.until) continue;
-      const { s: st, j } = await getJsonS(url3(S));
-      if (st === 403 || st === 451) cache.set("ex-off:" + src, { until: Date.now() + 30 * 6e4, value: 1 });
-      const x2 = read(j);
-      if (x2 && x2.price > 0 && isFinite(x2.price)) return { price: x2.price, ch24: isFinite(x2.ch24) ? x2.ch24 : null, src };
-      if (used >= BUDGET) return null;
-    }
-    return "none";
-  });
-  if (x === "none") {
-    cache.delete("ex:" + S);
-    cache.set("exmiss:" + S, { until: Date.now() + 30 * 6e4, value: 1 });
-    return null;
-  }
-  return x;
-}
-async function liveTopUp(market, ids) {
-  if (!ids.length) return;
-  const key = "live:" + ids.slice().sort().join(",");
-  const j = await cached(key, 45e3, () => getJson(`${CG}/simple/price?ids=${encodeURIComponent(ids.slice(0, 250).join(","))}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`, { headers: { accept: "application/json" } }));
-  if (!j) {
-    market.liveOk = false;
-    return;
-  }
-  market.liveOk = true;
-  const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
-  for (const [id, v] of Object.entries(j)) {
-    if (!v || !(v.usd > 0)) continue;
-    market.live[id] = true;
-    const r = rows.get(id);
-    if (r) {
-      r.price = v.usd;
-      if (v.usd_24h_change != null) r.ch24 = v.usd_24h_change;
-      if (v.usd_market_cap) r.mcap = v.usd_market_cap;
-      if (v.usd_24h_vol) r.vol = v.usd_24h_vol;
-    } else market.top500.push({ id, sym: "", name: "", price: v.usd, ch24: v.usd_24h_change, mcap: v.usd_market_cap, vol: v.usd_24h_vol, extra: true });
-  }
-}
-async function findCoin(q, market, user) {
-  const s = String(q || "").trim(), S = s.toUpperCase().replace(/^\$/, "");
-  if (!S) return null;
-  const mine = (user && user.coins || []).find((c2) => c2 && String(c2.sym || "").toUpperCase() === S && !c2.removed);
-  if (mine && (mine.cgId || cg_ids_default[S])) return { id: mine.cgId || cg_ids_default[S], sym: S, name: mine.name || "" };
-  const rows = [...market.top, ...market.top500].filter((r) => r.sym);
-  const bySym = rows.filter((r) => String(r.sym).toUpperCase() === S).sort((a, b) => (a.rank || 1e9) - (b.rank || 1e9))[0];
-  if (cg_ids_default[S]) {
-    const r = rows.find((x) => x.id === cg_ids_default[S]);
-    return { id: cg_ids_default[S], sym: S, name: r ? r.name : "" };
-  }
-  if (bySym) return { id: bySym.id, sym: S, name: bySym.name };
-  const byName = rows.find((r) => String(r.name || "").toLowerCase() === s.toLowerCase() || r.id === s.toLowerCase());
-  if (byName) return { id: byName.id, sym: String(byName.sym).toUpperCase(), name: byName.name };
-  const j = await cached("search:" + s.toLowerCase(), 36e5, () => getJson(`${CG}/search?query=${encodeURIComponent(s)}`));
-  const c = j && (j.coins || []).sort((a, b) => (String(b.symbol).toUpperCase() === S) - (String(a.symbol).toUpperCase() === S) || (a.market_cap_rank || 1e9) - (b.market_cap_rank || 1e9))[0];
-  if (c) return { id: c.id, sym: String(c.symbol || "").toUpperCase(), name: c.name, rank: c.market_cap_rank };
-  return /^[A-Z0-9]{2,12}$/.test(S) ? { id: null, sym: S, name: "" } : null;
-}
-var tokenCache = null;
-var b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-var b64urlJson = (o) => b64url(new TextEncoder().encode(JSON.stringify(o)));
-function pemBytes(pem) {
-  const b = atob(String(pem).replace(/-----[^-]+-----/g, "").replace(/\\n/g, "").replace(/\s+/g, ""));
-  return Uint8Array.from(b, (c) => c.charCodeAt(0));
-}
-var KVS = null;
-async function googleToken(sa) {
-  if (tokenCache && tokenCache.until > Date.now() && tokenCache.email === sa.client_email) return tokenCache.token;
-  if (KVS) {
-    try {
-      const k = JSON.parse(await KVS.get("fs:gtok") || "null");
-      if (k && k.until > Date.now() && k.email === sa.client_email) {
-        tokenCache = k;
-        return k.token;
-      }
-    } catch (_) {
-    }
-  }
-  const now = Math.floor(Date.now() / 1e3), aud = sa.token_uri || "https://oauth2.googleapis.com/token";
-  const body = b64urlJson({ alg: "RS256", typ: "JWT" }) + "." + b64urlJson({ iss: sa.client_email, scope: "https://www.googleapis.com/auth/datastore", aud, iat: now, exp: now + 3600 });
-  const key = await crypto.subtle.importKey("pkcs8", pemBytes(sa.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
-  const sig2 = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(body));
-  const r = await xfetch(aud, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: body + "." + b64url(sig2) }) });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.access_token) throw new Error("Firebase sign-in refused (" + r.status + ")");
-  tokenCache = { token: j.access_token, until: Date.now() + 50 * 6e4, email: sa.client_email };
-  if (KVS) {
-    try {
-      await KVS.put("fs:gtok", JSON.stringify(tokenCache), { expirationTtl: 50 * 60 });
-    } catch (_) {
-    }
-  }
-  return j.access_token;
-}
-function dec2(v) {
-  if (!v || typeof v !== "object") return null;
-  if ("stringValue" in v) return v.stringValue;
-  if ("integerValue" in v) return Number(v.integerValue);
-  if ("doubleValue" in v) return Number(v.doubleValue);
-  if ("booleanValue" in v) return v.booleanValue;
-  if ("nullValue" in v) return null;
-  if ("timestampValue" in v) return v.timestampValue;
-  if ("mapValue" in v) return fields(v.mapValue.fields);
-  if ("arrayValue" in v) return (v.arrayValue.values || []).map(dec2);
-  return null;
-}
-var fields = (f) => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, dec2(v)]));
-function serviceAccount(env) {
-  if (env && env.RATE) KVS = env.RATE;
-  try {
-    const sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || "");
-    return sa && sa.client_email && sa.private_key && sa.project_id ? sa : null;
-  } catch (_) {
-    return null;
-  }
-}
-var READS = 0;
-var takeReads = () => {
-  const n = READS;
-  READS = 0;
-  return n;
-};
-var nDocs = (rows) => Math.max(1, Array.isArray(rows) ? rows.filter((x) => x && x.document).length : 0);
-async function firestore(sa) {
-  const token = await googleToken(sa), base = `https://firestore.googleapis.com/v1/projects/${sa.project_id}/databases/(default)/documents`;
-  const call = async (url3, init = {}) => {
-    const r = await xfetch(url3, { ...init, headers: { authorization: "Bearer " + token, "content-type": "application/json", ...init.headers || {} } });
-    if (r.status === 404) return null;
-    if (!r.ok) throw new Error("Firestore " + r.status);
-    return r.json();
-  };
-  return {
-    async metaDocs() {
-      const rows = await call(base + ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "meta", allDescendants: true }], limit: 1e3 } }) }) || [];
-      READS += nDocs(rows);
-      return rows.filter((x) => x.document && x.document.name).map((x) => ({ name: x.document.name, data: fields(x.document.fields) }));
-    },
-    async users() {
-      const rows = await call(base + ":runQuery", { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "meta", allDescendants: true }], limit: 200 } }) }) || [];
-      READS += nDocs(rows);
-      return [...new Set(rows.map((x) => x.document && x.document.name).filter((n) => n && /\/users\/[^/]+\/meta\/info$/.test(n)).map((n) => n.match(/\/users\/([^/]+)\/meta\/info$/)[1]))];
-    },
-    async list(p) {
-      const out = [];
-      let tok = "";
-      do {
-        const j = await call(`${base}/${p}?pageSize=300${tok ? "&pageToken=" + encodeURIComponent(tok) : ""}`);
-        READS += Math.max(1, (j && j.documents || []).length);
-        if (!j) break;
-        (j.documents || []).forEach((d) => out.push(fields(d.fields)));
-        tok = j.nextPageToken || "";
-      } while (tok);
-      return out;
-    },
-    async get(p) {
-      READS += 1;
-      const j = await call(`${base}/${p}`);
-      return j ? fields(j.fields) : null;
-    },
-    // how many documents a collection has — a count costs 1 read per 1000 documents (not 1 per document)
-    async count(parent, coll) {
-      READS += 1;
-      const j = await call(`${base}/${parent}:runAggregationQuery`, { method: "POST", body: JSON.stringify({ structuredAggregationQuery: { structuredQuery: { from: [{ collectionId: coll }] }, aggregations: [{ alias: "n", count: {} }] } }) });
-      const v = j && j[0] && j[0].result && j[0].result.aggregateFields && j[0].result.aggregateFields.n;
-      return v && v.integerValue != null ? +v.integerValue : null;
-    },
-    // is any document of the collection newer than `since` (its updatedAt — the app stamps every coin / plan change)? 1 read
-    async changedSince(parent, coll, since) {
-      const rows = await call(`${base}/${parent}:runQuery`, { method: "POST", body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], where: { fieldFilter: { field: { fieldPath: "updatedAt" }, op: "GREATER_THAN", value: { stringValue: since } } }, limit: 1 } }) });
-      READS += nDocs(rows);
-      return !Array.isArray(rows) || rows.some((x) => x.document);
-    },
-    async set(p, data) {
-      return call(`${base}/${p}`, { method: "PATCH", body: JSON.stringify({ fields: enc3(data) }) });
-    },
-    // new documents, all or nothing (each must not exist yet — never overwrites)
-    async commit(docs) {
-      const name = (p) => `projects/${sa.project_id}/databases/(default)/documents/${p}`;
-      return call(base + ":commit", { method: "POST", body: JSON.stringify({ writes: docs.map((d) => ({ update: { name: name(d.path), fields: enc3(d.data) }, currentDocument: { exists: false } })) }) });
-    }
-  };
-}
-function encV(v) {
-  if (v == null) return { nullValue: null };
-  if (typeof v === "string") return { stringValue: v };
-  if (typeof v === "boolean") return { booleanValue: v };
-  if (typeof v === "number") return Number.isSafeInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
-  if (Array.isArray(v)) return { arrayValue: { values: v.map(encV) } };
-  return { mapValue: { fields: enc3(v) } };
-}
-var enc3 = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, encV(v)]));
-async function commitDocs(env, uid, docs) {
-  const sa = serviceAccount(env);
-  if (!sa) throw new Error("no service account");
-  const db = await firestore(sa);
-  await db.commit(docs.map((d) => ({ path: `users/${uid}/${d.path}`, data: d.data })));
-  cache.delete("user");
-  cache.delete("user:" + uid);
-  await forgetPortfolio(env, uid);
-  return { ok: true };
-}
-var PF_FULL_MS = 6 * 36e5;
-var pfStats = { full: 0, probe: 0 };
-var maxUpd = (rows) => rows.reduce((m, r) => r && typeof r.updatedAt === "string" && r.updatedAt > m ? r.updatedAt : m, "");
-async function readPortfolio(env, db, uid, fresh) {
-  const kvKey = "fs:pf:" + uid, parent = "users/" + uid;
-  let kept = null;
-  if (!fresh && env.RATE) {
-    try {
-      kept = JSON.parse(await env.RATE.get(kvKey) || "null");
-    } catch (_) {
-      kept = null;
-    }
-  }
-  const quiet = +env.PF_CHECK_MS ? isOwner(env) ? Math.min(+env.PF_CHECK_MS, 10 * 6e4) : +env.PF_CHECK_MS : 0;
-  if (kept && kept.data && quiet && Date.now() - (kept.checked || kept.at) < quiet && Date.now() - kept.at < PF_FULL_MS) {
-    pfStats.skip = (pfStats.skip || 0) + 1;
-    return kept.data;
-  }
-  if (kept && kept.data && Date.now() - kept.at < PF_FULL_MS) {
-    try {
-      const [nt, nc, na, cc, ca, meta2] = await Promise.all([
-        db.count(parent, "txs"),
-        db.count(parent, "coins"),
-        db.count(parent, "accum"),
-        kept.seen ? db.changedSince(parent, "coins", kept.seen) : true,
-        kept.seen ? db.changedSince(parent, "accum", kept.seen) : true,
-        db.get(parent + "/meta/info")
-      ]);
-      if (nt === kept.n.txs && nc === kept.n.coins && na === kept.n.accum && !cc && !ca) {
-        pfStats.probe++;
-        const m = meta2 || {};
-        kept.data.meta = m;
-        kept.checked = Date.now();
-        try {
-          await env.RATE.put(kvKey, JSON.stringify(kept));
-        } catch (_) {
-        }
-        return kept.data;
-      }
-    } catch (_) {
-    }
-  }
-  const [coins, txs, accum, meta] = await Promise.all([db.list(`${parent}/coins`), db.list(`${parent}/txs`), db.list(`${parent}/accum`), db.get(`${parent}/meta/info`)]);
-  pfStats.full++;
-  const data = { coins, txs, accum, meta: meta || {}, uid };
-  if (env.RATE) {
-    try {
-      await env.RATE.put(kvKey, JSON.stringify({ at: Date.now(), checked: Date.now(), seen: maxUpd([...coins, ...accum]), n: { txs: txs.length, coins: coins.length, accum: accum.length }, data }));
-    } catch (_) {
-    }
-  }
-  return data;
-}
-async function forgetPortfolio(env, uid) {
-  try {
-    if (env.RATE && uid) await env.RATE.delete("fs:pf:" + uid);
-  } catch (_) {
-  }
-}
-async function loadMemberUser(env, sa, fresh) {
-  const me = await member(env);
-  if (!me || !me.uid) return null;
-  const key = "user:" + me.uid;
-  if (fresh) cache.delete(key);
-  return cached(key, 12e4, async () => {
-    const db = await firestore(sa);
-    return readPortfolio(env, db, me.uid, fresh);
-  });
-}
-async function findLinkCode(env, code) {
-  const sa = serviceAccount(env);
-  if (!sa) return null;
-  const db = await firestore(sa), C = String(code || "").toUpperCase();
-  const hit = (await db.metaDocs()).find((d) => /\/users\/[^/]+\/meta\/tglink$/.test(d.name) && d.data.code === C);
-  if (!hit || !(Date.parse(hit.data.exp) > Date.now())) return null;
-  const uid = hit.name.match(/\/users\/([^/]+)\/meta\/tglink$/)[1];
-  await db.set(`users/${uid}/meta/tglink`, { linked: "telegram", at: (/* @__PURE__ */ new Date()).toISOString() }).catch(() => {
-  });
-  return { uid, email: String(hit.data.email || "").toLowerCase() };
-}
-async function syncAccess(env, emails) {
-  const sa = serviceAccount(env);
-  if (!sa) return false;
-  const db = await firestore(sa);
-  await db.set("config/access", { emails, at: (/* @__PURE__ */ new Date()).toISOString() });
-  return true;
-}
-var ownerMem = null;
-async function ownerUid(env, db) {
-  if (env.FIREBASE_UID) return env.FIREBASE_UID;
-  if (ownerMem) return ownerMem;
-  const pin = await db.get("config/owner").catch(() => null);
-  if (pin && pin.uid) return ownerMem = pin.uid;
-  const users = await db.users();
-  if (users.length !== 1) {
-    console.log(JSON.stringify({ owner: "not pinned", accounts: users.length }));
-    return null;
-  }
-  await db.set("config/owner", { uid: users[0], at: (/* @__PURE__ */ new Date()).toISOString() }).catch(() => {
-  });
-  return ownerMem = users[0];
-}
-async function chatUid(env) {
-  const sa = serviceAccount(env);
-  if (!sa) return null;
-  if (!isOwner(env)) {
-    const me = await member(env);
-    return me && me.uid || null;
-  }
-  try {
-    return await ownerUid(env, await firestore(sa));
-  } catch (_) {
-    return null;
-  }
-}
-var WEB_KEY = "AIzaSyCUvQh7cobgjGVVEYR8vcT76CGFDPsd5Vg";
-var idTok = /* @__PURE__ */ new Map();
-async function idTokenFor(env, uid) {
-  const sa = serviceAccount(env);
-  if (!sa || !uid) return null;
-  const c = idTok.get(uid);
-  if (c && c.until > Date.now()) return c.t;
-  try {
-    const now = Math.floor(Date.now() / 1e3);
-    const body = b64urlJson({ alg: "RS256", typ: "JWT" }) + "." + b64urlJson({ iss: sa.client_email, sub: sa.client_email, aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit", iat: now, exp: now + 3600, uid });
-    const key = await crypto.subtle.importKey("pkcs8", pemBytes(sa.private_key), { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
-    const sig2 = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(body));
-    const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=" + WEB_KEY, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: body + "." + b64url(sig2), returnSecureToken: true }) });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.idToken) {
-      console.log(JSON.stringify({ idtoken: "refused", status: r.status, msg: j.error && j.error.message }));
-      return null;
-    }
-    if (idTok.size > 50) idTok.clear();
-    idTok.set(uid, { t: j.idToken, until: Date.now() + 50 * 6e4 });
-    return j.idToken;
-  } catch (e) {
-    console.log(JSON.stringify({ idtoken: "failed", msg: String(e && e.message).slice(0, 100) }));
-    return null;
-  }
-}
-async function isOwnerAccount(env, { email, uid, owners }) {
-  if (owners && owners.length) return owners.includes(String(email || "").toLowerCase());
-  const sa = serviceAccount(env);
-  if (!sa) return false;
-  try {
-    const db = await firestore(sa);
-    return !!uid && uid === await ownerUid(env, db);
-  } catch (_) {
-    return false;
-  }
-}
-async function loadUser(env, fresh = false) {
-  const sa = serviceAccount(env);
-  if (!sa) return null;
-  if (!isOwner(env)) return loadMemberUser(env, sa, fresh);
-  if (fresh) cache.delete("user");
-  return cached("user", 12e4, async () => {
-    const db = await firestore(sa);
-    const uid = await ownerUid(env, db);
-    if (!uid) return null;
-    return readPortfolio(env, db, uid, fresh);
-  });
-}
-var coinsOf = (user) => user ? [...(user.coins || []).filter((c) => c && !c.removed), ...(user.accum || []).filter((a) => a && +a.alertPrice > 0)].map((c) => ({ sym: String(c.sym || "").toUpperCase(), id: c.cgId || null })) : [];
-var withIds = (user, m) => ({
-  ...user,
-  coins: (user.coins || []).map((c) => c && c.sym && m.idOf[String(c.sym).toUpperCase()] ? { ...c, cgId: m.idOf[String(c.sym).toUpperCase()] } : c),
-  accum: (user.accum || []).map((a) => a && a.sym && m.idOf[String(a.sym).toUpperCase()] ? { ...a, cgId: m.idOf[String(a.sym).toUpperCase()] } : a)
-});
-async function loadFutures() {
-  return cached("fut", 10 * 6e4, async () => {
-    const j = await getJson(RAW + "m/links.json");
-    return j && Array.isArray(j.fut) ? new Set(j.fut) : null;
-  });
-}
-async function rawSeries(id) {
-  if (!id || /^x-/.test(id)) return null;
-  return cached("raw:" + id, 10 * 6e4, async () => await getJson(RAW + "p/" + id + ".json") || false);
-}
-var num3 = (v) => {
-  const n = +v;
-  return isFinite(n) ? n : null;
-};
-async function postJson(url3, body) {
-  return getJson(url3, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-}
-async function okxDeriv(S, now) {
-  const O = "https://www.okx.com/api/v5", inst = `${S}-USDT-SWAP`;
-  const [fr, oi, oih, ls, liq, ins] = await Promise.all([
-    getJson(`${O}/public/funding-rate?instId=${inst}`),
-    getJson(`${O}/public/open-interest?instType=SWAP&instId=${inst}`),
-    getJson(`${O}/rubik/stat/contracts/open-interest-volume?ccy=${S}&period=1H`),
-    getJson(`${O}/rubik/stat/contracts/long-short-account-ratio?ccy=${S}&period=1H`),
-    getJson(`${O}/public/liquidation-orders?instType=SWAP&uly=${S}-USDT&state=filled&limit=100`),
-    cached("okx-ins:" + S, 864e5, () => getJson(`${O}/public/instruments?instType=SWAP&instId=${inst}`))
-  ]);
-  const f = fr && fr.data && fr.data[0], o = oi && oi.data && oi.data[0];
-  if (!f && !o) return null;
-  const out = { source: "OKX" };
-  if (f) {
-    out.funding_8h_pct = num3(f.fundingRate) != null ? +(f.fundingRate * 100).toFixed(4) : null;
-    out.next_funding = f.nextFundingTime ? (/* @__PURE__ */ new Date(+f.nextFundingTime)).toISOString() : null;
-  }
-  if (o) out.open_interest_usd = num3(o.oiUsd) != null ? Math.round(+o.oiUsd) : null;
-  const h = oih && Array.isArray(oih.data) ? oih.data.map((x) => [+x[0], +x[1]]).sort((a, b) => a[0] - b[0]) : [];
-  if (h.length > 2) {
-    const last = h[h.length - 1], prev = h.find((x) => x[0] >= last[0] - 24 * 36e5) || h[0];
-    if (prev[1] > 0) out.open_interest_change_24h_pct = +((last[1] / prev[1] - 1) * 100).toFixed(2);
-  }
-  const r = ls && Array.isArray(ls.data) && ls.data.length ? ls.data.map((x) => [+x[0], +x[1]]).sort((a, b) => b[0] - a[0])[0] : null;
-  if (r && r[1] > 0) {
-    out.long_short_accounts = +r[1].toFixed(2);
-    out.long_accounts_pct = +(r[1] / (1 + r[1]) * 100).toFixed(1);
-  }
-  const ct = ins && ins.data && ins.data[0] ? num3(ins.data[0].ctVal) || 1 : 1, det = liq && liq.data && liq.data[0] && Array.isArray(liq.data[0].details) ? liq.data[0].details : [];
-  if (det.length) {
-    let longs = 0, shorts = 0, n = 0, oldest = now;
-    for (const d of det) {
-      const t = +d.ts;
-      if (!(t > now - 24 * 36e5)) continue;
-      const usd3 = (+d.sz || 0) * ct * (+d.bkPx || 0);
-      n++;
-      oldest = Math.min(oldest, t);
-      if ((d.posSide || "") === "long" || d.side === "sell") longs += usd3;
-      else shorts += usd3;
-    }
-    out.liquidations = { orders: n, longs_usd: Math.round(longs), shorts_usd: Math.round(shorts), since: new Date(oldest).toISOString(), note: "OKX only, its last 100 liquidation orders" };
-  }
-  return out;
-}
-async function binanceDeriv(S) {
-  const F = "https://fapi.binance.com", p = `${S}USDT`;
-  const off = cache.get("bn-off");
-  if (off && Date.now() < off.until) return null;
-  const pi = await getJson(`${F}/fapi/v1/premiumIndex?symbol=${p}`);
-  if (!pi || pi.code) {
-    if (!pi) cache.set("bn-off", { until: Date.now() + 30 * 6e4, value: 1 });
-    return null;
-  }
-  const [oi, oih, ls, top] = await Promise.all([
-    getJson(`${F}/fapi/v1/openInterest?symbol=${p}`),
-    getJson(`${F}/futures/data/openInterestHist?symbol=${p}&period=1h&limit=25`),
-    getJson(`${F}/futures/data/globalLongShortAccountRatio?symbol=${p}&period=1h&limit=1`),
-    getJson(`${F}/futures/data/topLongShortPositionRatio?symbol=${p}&period=1h&limit=1`)
-  ]);
-  const out = { source: "Binance", funding_8h_pct: num3(pi.lastFundingRate) != null ? +(pi.lastFundingRate * 100).toFixed(4) : null, mark_price: num3(pi.markPrice) };
-  if (oi && num3(oi.openInterest) != null && num3(pi.markPrice)) out.open_interest_usd = Math.round(oi.openInterest * pi.markPrice);
-  if (Array.isArray(oih) && oih.length > 2) {
-    const a = +oih[0].sumOpenInterestValue, b = +oih[oih.length - 1].sumOpenInterestValue;
-    if (a > 0) out.open_interest_change_24h_pct = +((b / a - 1) * 100).toFixed(2);
-  }
-  if (Array.isArray(ls) && ls[0]) {
-    out.long_short_accounts = num3(ls[0].longShortRatio);
-    out.long_accounts_pct = num3(ls[0].longAccount) != null ? +(ls[0].longAccount * 100).toFixed(1) : null;
-  }
-  if (Array.isArray(top) && top[0]) out.top_traders_long_short_positions = num3(top[0].longShortRatio);
-  return out;
-}
-async function hyperliquidDeriv(S) {
-  const j = await cached("hl-ctx", 6e4, () => postJson("https://api.hyperliquid.xyz/info", { type: "metaAndAssetCtxs" }));
-  if (!Array.isArray(j) || !j[0] || !Array.isArray(j[0].universe)) return null;
-  const i = j[0].universe.findIndex((u) => String(u.name).toUpperCase() === S), c = i >= 0 && j[1] && j[1][i];
-  if (!c) return null;
-  const px = num3(c.markPx);
-  return { source: "Hyperliquid", funding_8h_pct: num3(c.funding) != null ? +(c.funding * 8 * 100).toFixed(4) : null, open_interest_usd: num3(c.openInterest) != null && px ? Math.round(c.openInterest * px) : null, volume_24h_usd: num3(c.dayNtlVlm) != null ? Math.round(+c.dayNtlVlm) : null, mark_price: px };
-}
-async function derivatives(sym) {
-  const S = String(sym || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (!S) return null;
-  return cached("deriv:" + S, 12e4, async () => {
-    const now = Date.now(), [okx, bn2, hl] = await Promise.all([okxDeriv(S, now), binanceDeriv(S), hyperliquidDeriv(S)]);
-    const src = [okx, bn2, hl].filter(Boolean);
-    if (!src.length) return null;
-    const fr = src.map((x) => x.funding_8h_pct).filter((v) => v != null), oi = src.map((x) => x.open_interest_usd).filter((v) => v > 0);
-    const avgF = fr.length ? fr.reduce((a, b) => a + b, 0) / fr.length : null;
-    return {
-      coin: S,
-      summary: {
-        funding_8h_pct_avg: avgF != null ? +avgF.toFixed(4) : null,
-        funding_annualized_pct: avgF != null ? +(avgF * 3 * 365).toFixed(1) : null,
-        funding_reading: avgF == null ? null : avgF > 0.03 ? "longs paying a lot (crowded longs)" : avgF > 0 ? "longs paying (normal)" : avgF < -0.01 ? "shorts paying (crowded shorts)" : "about neutral",
-        open_interest_usd_total: oi.length ? oi.reduce((a, b) => a + b, 0) : null,
-        open_interest_note: "sum of the sources listed (not the whole market)",
-        open_interest_change_24h_pct: (okx && okx.open_interest_change_24h_pct) ?? (bn2 && bn2.open_interest_change_24h_pct) ?? null,
-        long_accounts_pct: (bn2 && bn2.long_accounts_pct) ?? (okx && okx.long_accounts_pct) ?? null,
-        liquidations_24h: okx && okx.liquidations || null
-      },
-      sources: src
-    };
-  });
 }
 
 // tools/worker/admin.mjs
@@ -4869,7 +4946,7 @@ var WD = {
     updated: "updated",
     noUser: "Portfolio not connected.",
     refresh: "\u{1F504}",
-    report: "\u{1F4CA} Full report"
+    report: "\u{1F4F1} Open the app"
   },
   ar: {
     morning: "\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A",
@@ -4901,7 +4978,7 @@ var WD = {
     updated: "\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B",
     noUser: "\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u063A\u064A\u0631 \u0645\u062A\u0635\u0644\u0629.",
     refresh: "\u{1F504}",
-    report: "\u{1F4CA} \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644"
+    report: "\u{1F4F1} \u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642"
   }
 };
 async function gather(env, now) {
@@ -5238,8 +5315,7 @@ async function pinView(env, now = Date.now()) {
     dca ? `\u{1F6D2} ${w.nextDca}: <b>${esc(dca.sym)}</b> \xB7 ${esc((/* @__PURE__ */ new Date(dca.s.next + "T12:00:00Z")).toLocaleDateString("en-US", { month: "short", day: "numeric" }))}` : null,
     alerts.length ? `\u{1F514} ${w.alerts(alerts.length)}${near ? ` \xB7 ${w.nearest}: ${esc(near.alert)} (${near.pct_away}% ${w.away})` : ""}` : null
   ].filter(Boolean);
-  const origin = await kvGet5(env, "tg:origin");
-  return { text: L1.join("\n"), buttons: [[cb2(w.pf, "pf"), cb2(w.mk, "mk"), cb2(w.refresh, "pin:r")], ...origin ? [[{ text: w.report, web_app: { url: origin + "/tg/app" } }]] : []] };
+  return { text: L1.join("\n"), buttons: [[cb2(w.pf, "pf"), cb2(w.mk, "mk"), cb2(w.refresh, "pin:r")], [{ text: w.report, web_app: { url: APP + "index.html" } }]] };
 }
 async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const v = await pinView(env, now);
@@ -5415,7 +5491,7 @@ var T = {
     dailyB: "\u{1F5D3} Daily",
     paperB: "\u{1F9EA} Paper",
     report: "\u{1F4CA} Report",
-    reportT: "\u{1F4CA} <b>Your full report</b> \u2014 opens inside Telegram.",
+    reportT: "\u{1F4F1} <b>Cute Portfolio</b> \u2014 the full app, right here in Telegram. You're signed in by Telegram.",
     working: "\u23F3 On it\u2026",
     pinOff: "Pinned message off \u2014 /pin brings it back.",
     other: "\u{1F310} \u0639\u0631\u0628\u064A",
@@ -5557,7 +5633,7 @@ var T = {
     dailyB: "\u{1F5D3} \u0627\u0644\u064A\u0648\u0645\u064A",
     paperB: "\u{1F9EA} \u062A\u062C\u0631\u064A\u0628\u064A",
     report: "\u{1F4CA} \u0627\u0644\u062A\u0642\u0631\u064A\u0631",
-    reportT: "\u{1F4CA} <b>\u062A\u0642\u0631\u064A\u0631\u0643 \u0627\u0644\u0643\u0627\u0645\u0644</b> \u2014 \u064A\u064F\u0641\u062A\u062D \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645.",
+    reportT: "\u{1F4F1} <b>Cute Portfolio</b> \u2014 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u0643\u0627\u0645\u0644 \u0647\u0646\u0627 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645. \u064A\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u062F\u062E\u0648\u0644\u0643 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0639\u0628\u0631 \u062A\u0644\u064A\u062C\u0631\u0627\u0645.",
     working: "\u23F3 \u0644\u062D\u0638\u0627\u062A\u2026",
     pinOff: "\u0623\u064F\u0648\u0642\u0641\u062A \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u062B\u0628\u062A\u0629 \u2014 /pin \u064A\u0639\u064A\u062F\u0647\u0627.",
     other: "\u{1F310} English",
@@ -5619,7 +5695,8 @@ var T = {
 };
 var cb3 = (text, data) => ({ text, callback_data: data });
 var ORIGIN = null;
-var appBtn = (t, origin = ORIGIN) => origin ? { text: t.report, web_app: { url: origin + "/tg/app" } } : null;
+var webApp = (text, page2 = "index.html") => ({ text, web_app: { url: APP + page2 } });
+var appBtn = (t) => webApp(t.openApp);
 var url2 = (text, u) => ({ text, url: u });
 var price2 = (v) => !(v > 0) ? "\u2014" : v >= 1e3 ? usd2(v).replace(/\.\d\d$/, "") : v >= 1 ? usd2(v) : "$" + (+v.toPrecision(4)).toString();
 var big = (v) => !(v > 0) ? "\u2014" : v >= 1e12 ? "$" + (v / 1e12).toFixed(2) + "T" : v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + "B" : v >= 1e6 ? "$" + (v / 1e6).toFixed(1) + "M" : usd(v);
@@ -5710,7 +5787,7 @@ function viewPortfolio(t, cfg, sum, m, now) {
   if ((sum.dca || []).length) L.push(`\u{1F6D2} ${isAr(t) ? "" : "DCA "}${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
   const mc = sum.macro.filter((x) => x.met).length, tp = nearestTp(sum);
   L.push(`\u{1F6AA} ${t.exitS(mc)}${tp ? ` \xB7 ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ""}`);
-  return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pf"), cb3(t.movers, "mv")], [cb3(t.plan, "pl"), cb3(t.exit, "ex")], [cb3(t.signals, "sg"), url2(t.openApp, APP)], [cb3(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pf"), cb3(t.movers, "mv")], [cb3(t.plan, "pl"), cb3(t.exit, "ex")], [cb3(t.signals, "sg"), webApp(t.openApp)], [cb3(t.back, "menu")]] };
 }
 function viewExit(t, sum, now) {
   const mc = sum.macro.filter((x) => x.met).length, name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc };
@@ -5772,7 +5849,7 @@ function viewSignals(t, sum) {
 function viewPlan(t, sum, now) {
   if (!sum.plan.length && !(sum.dca || []).length && !(sum.buyAt || []).length) return { text: `\u{1F4CB} <b>${t.planT}</b>
 
-${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb3(t.back, "menu")]] };
+${t.noPlan}`, buttons: [[webApp(t.openApp, "accumulation.html"), cb3(t.back, "menu")]] };
   const L = [`\u{1F4CB} <b>${t.planT}</b>`];
   if (sum.plan.length) {
     L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${sum.prog.completed}/${sum.prog.counted} \u2705`, "");
@@ -5796,7 +5873,7 @@ ${t.noPlan}`, buttons: [[url2(t.openApp, APP + "accumulation.html"), cb3(t.back,
       L.push(`${isAr(t) ? `\u2022 <b>${esc(x.sym)}</b>` : `<code>${esc(x.sym.padEnd(6))}</code>`} ${price2(x.at)} \xB7 ${price2(x.price)} ${d > 0 ? `(${pct(d, 1)} ${t.away})` : "\u2705"}`);
     });
   }
-  return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pl"), url2(t.openApp, APP + "accumulation.html")], [cb3(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pl"), webApp(t.openApp, "accumulation.html")], [cb3(t.back, "menu")]] };
 }
 var RANGES = [100, 200, 300, 500];
 function viewMarket(t, m, now, range = 100) {
@@ -6205,7 +6282,7 @@ async function usedToday(env, c, x) {
   return { q, r };
 }
 async function viewBalances(env, lang2, fresh = false) {
-  const ar = lang2 === "ar", back = [cb3(ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", "menu")], open = { text: ar ? "\u{1F4F1} \u0627\u0641\u062A\u062D \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "\u{1F4F1} Open in the app", url: APP + "performance.html" };
+  const ar = lang2 === "ar", back = [cb3(ar ? "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "\u2B05\uFE0F Menu", "menu")], open = webApp(ar ? "\u{1F4F1} \u0627\u0641\u062A\u062D \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642" : "\u{1F4F1} Open in the app", "performance.html");
   const uid = await chatUid(env);
   if (!uid) return { text: ar ? "\u{1F50C} \u0627\u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u0623\u0648\u0644\u0627\u064B (\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u062A\u0644\u064A\u062C\u0631\u0627\u0645)\u060C \u062B\u0645 \u0627\u0631\u0628\u0637 \u0645\u0646\u0635\u0627\u062A\u0643 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0623\u062F\u0627\u0621 \u2190 \u0627\u0644\u0645\u062D\u0627\u0641\u0638 \u0648\u0627\u0644\u0645\u0646\u0635\u0627\u062A \u2190 \u0627\u0644\u0645\u0646\u0635\u0627\u062A." : "\u{1F50C} Link your portfolio first (app \u2192 Settings \u2192 Telegram), then connect your exchanges in the app: Performance \u2192 Wallets & Exchanges \u2192 Exchanges.", buttons: [back] };
   const r = await balancesFor(env, uid, await idTokenFor(env, uid), fresh).catch(() => null);
@@ -6938,7 +7015,7 @@ var cmds = (lang2, owner2 = true) => {
     ...owner2 ? [["invite", a ? "\u0631\u0645\u0632 \u062F\u0639\u0648\u0629 \u0644\u0635\u062F\u064A\u0642\u0643" : "Invite code for a friend"], ["users", a ? "\u0627\u0644\u0623\u0639\u0636\u0627\u0621" : "Members"], ["stats", a ? "\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0648\u0627\u0644\u0640 Stars" : "Stats & Stars"]] : [],
     ["start", a ? "\u0627\u0628\u062F\u0623 \u2014 \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u0623\u0633\u0641\u0644 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629" : "Start \u2014 the buttons under the chat"],
     ["menu", a ? "\u0627\u0644\u0642\u0627\u0626\u0645\u0629" : "Menu"],
-    ["report", a ? "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644 (\u0635\u0641\u062D\u0629)" : "Full report (a page)"],
+    ["report", a ? "\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u{1F4F1}" : "Open the app in Telegram \u{1F4F1}"],
     ["portfolio", a ? "\u0645\u062D\u0641\u0638\u062A\u064A" : "My portfolio"],
     ["price", a ? "\u0633\u0639\u0631 \u0639\u0645\u0644\u0629 \u2014 /price btc" : "A coin \u2014 /price btc"],
     ["market", a ? "\u0627\u0644\u0633\u0648\u0642" : "Market"],
@@ -7526,32 +7603,6 @@ var miniapp_default = `<!doctype html>
 // tools/worker/miniapp.mjs
 var LOGO_HOSTS = /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com\/drsamirsaad1981-design)\//;
 var NICE = { btc: "Bitcoin", layer1: "Layer 1", layer2: "Layer 2", defi: "DeFi", stable: "Stablecoins", stables: "Stablecoins", ai: "AI", meme: "Meme", gaming: "Gaming", rwa: "RWA", infra: "Infrastructure", exchange: "Exchange", privacy: "Privacy", storage: "Storage", oracle: "Oracle", other: "Other" };
-var enc4 = new TextEncoder();
-async function hmac2(key, data) {
-  const k = await crypto.subtle.importKey("raw", typeof key === "string" ? enc4.encode(key) : key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return new Uint8Array(await crypto.subtle.sign("HMAC", k, enc4.encode(data)));
-}
-var hex2 = (b) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
-async function verifyInitData(initData, token, now = Date.now(), maxAge = 86400) {
-  if (!initData || !token) return { ok: false, why: "missing" };
-  const p = new URLSearchParams(initData), hash = p.get("hash");
-  if (!hash) return { ok: false, why: "no hash" };
-  p.delete("hash");
-  const check2 = [...p.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([k, v]) => k + "=" + v).join("\n");
-  const want = hex2(await hmac2(await hmac2("WebAppData", token), check2));
-  if (want.length !== hash.length) return { ok: false, why: "bad signature" };
-  let diff = 0;
-  for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ hash.charCodeAt(i);
-  if (diff) return { ok: false, why: "bad signature" };
-  const at = +p.get("auth_date") * 1e3;
-  if (!(at > 0) || now - at > maxAge * 1e3) return { ok: false, why: "too old" };
-  let user = null;
-  try {
-    user = JSON.parse(p.get("user") || "null");
-  } catch (_) {
-  }
-  return user && user.id ? { ok: true, user } : { ok: false, why: "no user" };
-}
 var r25 = (v) => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
 var r64 = (v) => v == null || !isFinite(v) ? null : +Number(v).toPrecision(6);
 async function report(env, now = Date.now()) {
@@ -7791,6 +7842,7 @@ async function route(request, env, ctx) {
   else if (p.endsWith("/tg/card")) note("miniapp:card");
   if (p.endsWith("/tg/setup")) return setup2(request, env);
   if (p.endsWith("/tg/check")) return check(request, env);
+  if (p.endsWith("/tg/login")) return tgLogin(request, env);
   if (p.endsWith("/tg/app")) return page();
   if (p.endsWith("/tg/api")) return api(request, env);
   if (p.endsWith("/tg/logo")) return logo(request);

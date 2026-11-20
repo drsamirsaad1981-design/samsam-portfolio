@@ -2,6 +2,7 @@
 // Built into a single file by tools/build-worker.mjs → tools/dist/samsam-worker.js (that file is what you paste).
 import ai, { setMemberCheck, setKeyHandler, setAdminHandler, setJoinHandler, setCexHandler, setUseHandler } from '../ai-worker.js';
 import { bidiBody } from './bidi.mjs';
+import { tgLogin } from './login.mjs';
 import { note, noteApp, addWorkerReads, flush, readsAlert } from './usage.mjs';
 import { cexHandler } from './cex.mjs';
 setCexHandler(cexHandler);   // 🔌 live exchange balances (read-only keys)
@@ -96,6 +97,7 @@ async function route(request, env, ctx) {
   if (p.endsWith('/tg/app')) note('miniapp:open'); else if (p.endsWith('/tg/card')) note('miniapp:card');
   if (p.endsWith('/tg/setup')) return setup(request, env);
   if (p.endsWith('/tg/check')) return check(request, env);
+  if (p.endsWith('/tg/login')) return tgLogin(request, env);   // 📱 the full app inside Telegram: Telegram's signature → a sign-in for that account
   if (p.endsWith('/tg/app')) return page();          // the Mini App page (phase 7)
   if (p.endsWith('/tg/api')) return api(request, env); // its data, only with Telegram's signature for your account
   if (p.endsWith('/tg/logo')) return logo(request);   // a coin logo from this site (the image cards draw it)

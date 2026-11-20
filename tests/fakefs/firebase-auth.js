@@ -3,7 +3,7 @@ const KEY = '__fake_user';
 const subs = new Set();
 const cur = () => { try { const u = JSON.parse(localStorage.getItem(KEY)); if (u) u.getIdToken = async () => 'fake-id-token.' + u.uid; return u; } catch (_) { return null; } };
 const fire = () => subs.forEach(cb => cb(cur()));
-export function getAuth() { return {}; }
+export function getAuth() { return { get currentUser() { return cur(); }, authStateReady: async () => {} }; }   // (a session kept on this device, as Firebase keeps it)
 export class GoogleAuthProvider { setCustomParameters() {} }
 export async function signInWithPopup() {
   localStorage.setItem(KEY, JSON.stringify({ uid: 'uid_samir', email: window.__FAKE_EMAIL || 'owner@example.com' })); fire();
@@ -17,3 +17,8 @@ export async function signOut() { localStorage.removeItem(KEY); fire(); }
 export function isSignInWithEmailLink() { return false; }
 export async function sendSignInLinkToEmail() {}
 export async function signInWithEmailLink() { throw Object.assign(new Error('not in tests'), { code: 'auth/invalid-action-code' }); }
+// 📱 inside Telegram: the Worker's custom token (tests: "fake-custom:<e-mail>") signs that account in
+export async function signInWithCustomToken(auth, t) {
+  const email = String(t || '').split(':')[1] || 'owner@example.com';
+  localStorage.setItem(KEY, JSON.stringify({ uid: email === 'owner@example.com' ? 'uid_samir' : 'uid_tg', email })); fire();
+}

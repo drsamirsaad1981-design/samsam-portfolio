@@ -202,7 +202,7 @@ const longest = Math.max(...plain(pf).split('\n').map(l => [...l].length));
 check(`portfolio: every line fits a phone (longest ${longest} ≤ 40 characters)`, longest <= 40, plain(pf).split('\n').filter(l => [...l].length > 40));
 check('portfolio: the exit line — Exit 0/3 · next TP LINK +127%', /🚪 Exit 0\/3 · next TP LINK \+127%/.test(pf), pf.slice(-200));
 check('portfolio: best / worst today up to 5 each, no stablecoin', !/USDT\s/.test(pf.split('🌍')[0]) && (pf.match(/📈 <b>Best today<\/b>\n((?:<code>.*\n?)+)/) || ['', ''])[1].trim().split('\n').length <= 5, pf);
-check('"Open the app" is a link to the site', btns(v).find(b => b.text === '📱 Open the app').url === 'https://drsamirsaad1981-design.github.io/samsam-portfolio/');
+check('"Open the app" opens the full app inside Telegram (a Mini App button → the site)', (btns(v).find(b => b.text === '📱 Open the app').web_app || {}).url === 'https://drsamirsaad1981-design.github.io/samsam-portfolio/index.html');
 check('one Google sign-in for several questions (token cached)', tokenCalls === 1, tokenCalls);
 
 // ── buttons redraw the same message ──
@@ -314,7 +314,7 @@ check('tap 🚪 Exit plan → edited in place', last().m === 'editMessageText' &
 sent.length = 0; await say('/signals');
 check('signals: grouped, Telegram-safe', /Signals/.test(last().b.text) && okHtml(last().b.text), last().b.text);
 sent.length = 0; await say('/start');
-check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent === false && btnTexts(out()[1]).length === 12 && btnTexts(out()[1]).includes('🗓 Daily') && btnTexts(out()[1]).includes('🧪 Paper') && btns(out()[1]).some(b => b.text === '📊 Report' && b.web_app && b.web_app.url === HOST + '/tg/app') && btnTexts(out()[1]).includes('🔔 Alerts') && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
+check('/start → the welcome with the keyboard under the chat, then the menu', out().length === 2 && out()[0].b.reply_markup.keyboard && out()[0].b.reply_markup.is_persistent === false && btnTexts(out()[1]).length === 12 && btnTexts(out()[1]).includes('🗓 Daily') && btnTexts(out()[1]).includes('🧪 Paper') && btns(out()[1]).some(b => b.text === '📱 Open the app' && b.web_app && b.web_app.url === 'https://drsamirsaad1981-design.github.io/samsam-portfolio/index.html') && btnTexts(out()[1]).includes('🔔 Alerts') && btnTexts(out()[1]).includes('🌐 عربي') && btnTexts(out()[1]).includes('🚪 Exit plan'), out().map(x => Object.keys(x.b.reply_markup || {})));
 check('the keyboard under the chat: 6 short buttons in 2 rows, not pinned (the ⌨️ icon hides / shows it)', JSON.stringify(out()[0].b.reply_markup.keyboard.map(r => r.map(b => b.text))) === JSON.stringify([['💼 Portfolio', '🌍 Market', '📋 Plan'], ['🚪 Exit', '🏆 Movers', '🎯 Signals']]) && out()[0].b.reply_markup.is_persistent === false, out()[0].b.reply_markup);
 sent.length = 0; await say('/hide');
 check('/hide → the buttons go away (remove_keyboard) with a note how to bring them back', last().b.reply_markup && last().b.reply_markup.remove_keyboard === true && /⌨️/.test(last().b.text), last().b);
