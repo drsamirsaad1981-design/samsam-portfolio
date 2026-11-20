@@ -117,7 +117,7 @@ const T = {
 
 // ── small helpers ──
 const cb = (text, data) => ({ text, callback_data: data });
-// 📊 the Mini App (phase 7): this Worker's own address + /tg/app (learnt from the webhook's request, kept in KV for the cron)
+// (this Worker's own address, learnt from the webhook's request and kept in KV for the cron)
 let ORIGIN = null;
 // 📱 the full app inside Telegram (a Mini App button): the real Cute Portfolio, signed in by Telegram (login.mjs) — one app, not two
 export const webApp = (text, page = 'index.html') => ({ text, web_app: { url: APP + page } });

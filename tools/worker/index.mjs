@@ -38,7 +38,6 @@ import { saveKey, keyInfo, ownKey, deleteKey, validShape, keyWorks, BYOK_REPORTS
 import { handleTelegram, setup, check, getLang } from './bot.mjs';
 import { runWatch } from './watch.mjs';
 import { runDaily, kickPrices } from './daily.mjs';
-import { page, api, cardSend, logo } from './miniapp.mjs';
 import { resetBudget, syncAccess, takeReads } from './data.mjs';
 import { markSeen, idleState, noteIdle, addReads } from './idle.mjs';
 import { asChat, activeChats, migrateOwner, memberByEmail, DEF_REPORTS, useAppInvite, accessEmails, isTgChat, members } from './who.mjs';
@@ -94,14 +93,10 @@ setUseHandler(async (env, who, body) => {
 // the Worker's addresses: the bot, its Mini App, then the app's AI / key / admin / join / cex / use calls
 async function route(request, env, ctx) {
   const p = new URL(request.url).pathname.replace(/\/+$/, '');
-  if (p.endsWith('/tg/app')) note('miniapp:open'); else if (p.endsWith('/tg/card')) note('miniapp:card');
   if (p.endsWith('/tg/setup')) return setup(request, env);
   if (p.endsWith('/tg/check')) return check(request, env);
   if (p.endsWith('/tg/login')) return tgLogin(request, env);   // 📱 the full app inside Telegram: Telegram's signature → a sign-in for that account
-  if (p.endsWith('/tg/app')) return page();          // the Mini App page (phase 7)
-  if (p.endsWith('/tg/api')) return api(request, env); // its data, only with Telegram's signature for your account
-  if (p.endsWith('/tg/logo')) return logo(request);   // a coin logo from this site (the image cards draw it)
-  if (p.endsWith('/tg/card')) return cardSend(request, env); // 📸 an image card drawn in the Mini App → a photo in your chat
+  // (the old report page — /tg/app, /tg/api, /tg/card, /tg/logo — is gone since 20 Nov: 📱 opens the full app instead)
   if (p.endsWith('/tg')) return handleTelegram(request, env, ctx);
   return ai.fetch(request, env, ctx);
 }

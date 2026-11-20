@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/miniapp.mjs', 'tools/worker/miniapp.html', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/cex.mjs', 'tools/worker/bidi.mjs', 'tools/worker/usmarket.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/cex.mjs', 'tools/worker/bidi.mjs', 'tools/worker/usmarket.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -760,119 +760,8 @@ pp = JSON.parse(kvStore.get('tg:555:paper'));
 check('…$1,000 → a fresh paper portfolio from BTC $84,700', pp.cash === 1000 && pp.startCash === 1000 && !Object.keys(pp.pos).length && pp.btcStart === 84700 && /\$1,000\.00/.test(last().b.text), pp);
 LIVE.bitcoin.usd = 77000;
 
-// ── 📊 phase 7: the Mini App — the page holds no data; /tg/api answers only Telegram-signed requests from your account ──
-const initData = (userId, ageS = 60, token = ENV.TELEGRAM_BOT_TOKEN) => {
-  const p = new URLSearchParams({ auth_date: String(Math.floor(Date.now() / 1000) - ageS), query_id: 'AAE1', user: JSON.stringify({ id: userId, first_name: 'Samir' }) });
-  const dcs = [...p.entries()].sort(([a], [b]) => a < b ? -1 : 1).map(([k, v]) => k + '=' + v).join('\n');
-  const secret = crypto.createHmac('sha256', 'WebAppData').update(token).digest();
-  p.set('hash', crypto.createHmac('sha256', secret).update(dcs).digest('hex')); return p.toString();
-};
-const apiCall = (body, env = ENVK) => W.fetch(new Request(HOST + '/tg/api', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }), env, {});
-let ar0 = await W.fetch(new Request(HOST + '/tg/app'), ENVK, {}), html = await ar0.text();
-check('/tg/app → the page (HTML, no data in it, a strict CSP, Telegram\'s script)', ar0.status === 200 && /text\/html/.test(ar0.headers.get('content-type')) && /telegram-web-app\.js/.test(html) && /frame-ancestors/.test(ar0.headers.get('content-security-policy')) && !/77,?000|UID1|samir@/i.test(html), ar0.headers.get('content-security-policy'));
-check('/tg/api: no signature → 401', (await apiCall({})).status === 401);
-check('…a forged signature (another bot token) → 401', (await apiCall({ initData: initData(555, 60, '999:other') })).status === 401);
-check('…a signature older than 24 h → 401', (await apiCall({ initData: initData(555, 90000) })).status === 401);
-check('…signed, but someone else (not your chat id) → 403', (await apiCall({ initData: initData(999) })).status === 403);
-check('…GET → 405', (await W.fetch(new Request(HOST + '/tg/api'), ENVK, {})).status === 405);
-let ar1 = await apiCall({ initData: initData(555) }), rj = await ar1.json();
-check('…you, signed → the report: value / coins / plan / exit / market / today / alerts / paper', ar1.status === 200 && rj.ok && rj.report.connected && rj.report.pf.value > 0 && rj.report.coins[0].sym === 'BTC' && rj.report.plan.items.length === 3 && rj.report.exit.macro.length === 3 && rj.report.market.btc.price === 77000 && Array.isArray(rj.report.todo) && Array.isArray(rj.report.alerts) && rj.report.paper && rj.report.paper.start_cash_usd === 1000, rj.report && Object.keys(rj.report));
-check('…coin shares add up to 100% and match the value', Math.abs(rj.report.coins.reduce((a, c) => a + c.share, 0) - 100) < 0.1 && Math.abs(rj.report.coins.reduce((a, c) => a + c.value, 0) - rj.report.pf.value) < 0.05);
-// the page itself, in a browser: a fake Telegram + the real report
-let PW = null; try { PW = (await import('node:module')).createRequire(import.meta.url)('playwright'); } catch (_) { console.log('SKIP the page in a browser (no Playwright here — GitHub\'s deploy check)'); }
-if (PW) {
-const { chromium } = PW;
-const br = await chromium.launch(), pg = await br.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
-const perr = []; pg.on('pageerror', e => perr.push(String(e))); pg.on('console', m => { if (m.type() === 'error') perr.push(m.text()); });
-let REP = rj.report;
-await pg.route('https://telegram.org/**', r => r.fulfill({ contentType: 'text/javascript', body: 'window.Telegram={WebApp:{initData:"signed",ready(){},expand(){},HapticFeedback:{selectionChanged(){}}}};' }));
-await pg.route(HOST + '/tg/app', r => r.fulfill({ contentType: 'text/html', body: html }));
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-await pg.route(/https:\/\/(coin-images|assets)\.coingecko\.com\/.*/, r => /tether|usdt|325/i.test(r.request().url()) ? r.fulfill({ status: 404, body: '' }) : r.fulfill({ contentType: 'image/png', body: PNG }));   // USDT's logo "broken" → letters
-let apiBody = null; await pg.route(HOST + '/tg/api', r => { apiBody = r.request().postData(); r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, report: REP }) }); });
-await pg.goto(HOST + '/tg/app'); await pg.waitForSelector('.hero');
-const txt0 = await pg.innerText('body');
-check('page: sends Telegram\'s initData, shows the value, today\'s list, the coins tab (allocation + holdings)', JSON.parse(apiBody).initData === 'signed' && txt0.includes(new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(REP.pf.value)) && /Today/.test(txt0) && /Allocation/.test(txt0) && /Holdings/.test(txt0) && /BTC/.test(txt0), txt0.slice(0, 300));
-await pg.waitForTimeout(200);
-check('report sends real logos (CoinGecko) for your coins; only from allowed hosts', rj.report.logos.BTC && /^https:\/\/(coin-images|assets)\.coingecko\.com\//.test(rj.report.logos.BTC) && Object.values(rj.report.logos).every(u => /^https:\/\/(assets\.coingecko\.com|coin-images\.coingecko\.com|s2\.coinmarketcap\.com|raw\.githubusercontent\.com)\//.test(u)), rj.report.logos);
-check('page shows them as images; a logo that fails becomes the coin\'s letters (USDT)', (await pg.$$('.ic.logo img')).length >= 3 && (await pg.$$eval('.ic:not(.logo)', a => a.map(x => x.textContent))).includes('USDT'), await pg.$$eval('.ic', a => a.map(x => x.className + ':' + x.textContent)));
-check('allocation by the app\'s groups (no targets set → now only: Bitcoin first)', rj.report.alloc && !rj.report.alloc.targets && rj.report.alloc.groups[0].key === 'btc' && /Bitcoin/.test(await pg.innerText('body')), rj.report.alloc);
-await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_coins.png'), fullPage: true });
-REP = { ...rj.report, alloc: { targets: true, band: 5, groups: [{ key: 'btc', name: 'Bitcoin', now: 62, target: 50, drift: 12, usd: 6800, fix: -1300, state: 'off' }, { key: 'layer1', name: 'Layer 1', now: 25, target: 30, drift: -5, usd: 2700, fix: 550, state: 'ok' }, { key: 'defi', name: 'DeFi', now: 13, target: 20, drift: -7, usd: 1400, fix: 770, state: 'warn' }] } };
-await pg.click('.btn'); await pg.waitForTimeout(150);
-const at = await pg.innerText('body');
-check('with targets → now vs target, a target mark, "1/3 on target", trim $1,300 / add $770', /1\/3 on target/.test(at) && /trim \$1,300/.test(at) && /add \$770/.test(at) && /target 50%/.test(at) && (await pg.$$('.tmark')).length === 3, at.slice(0, 600));
-await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_alloc.png'), fullPage: false });
-REP = rj.report;
-const tabTexts = await pg.$$eval('.tab', a => a.map(x => x.textContent));
-for (const [i, want] of [[1, /Overall/], [2, /Exit conditions[\s\S]*now[\s\S]*target/], [3, /Fear & Greed|Market/], [4, /Paper/], [5, /Alerts/]]) {
-  await pg.click(`.tab >> nth=${i}`); const tt = await pg.innerText('body');
-  check(`page tab ${tabTexts[i]} → ${want}`, want.test(tt), tt.slice(0, 200));
-  if (i === 2 || i === 3) await pg.screenshot({ path: path.join(ROOT, `tests/shots/miniapp_${i === 2 ? 'exit' : 'market'}.png`), fullPage: true });
-}
-REP = { ...rj.report, lang: 'ar' }; await pg.click('.btn'); await pg.waitForTimeout(150);
-const txtAr = await pg.innerText('body');
-check('page in Arabic (right to left) after 🔄 with the bot in Arabic', (await pg.getAttribute('html', 'dir')) === 'rtl' && /القيمة الكلية/.test(txtAr), txtAr.slice(0, 120));
-await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_ar.png'), fullPage: true });
-REP = { ...rj.report, coins: [{ sym: '<img src=x onerror=alert(1)>', name: '', qty: 1, price: 1, avg: 1, value: 50, share: 100, ch24: 1, ch7: 1, pnl: 1, signal: 'hold', stable: false }], lang: 'en' };
-await pg.click('.btn'); await pg.waitForTimeout(150); await pg.click('.tab >> nth=0');
-check('page never runs data as HTML (a coin named <img onerror> is shown as text)', (await pg.$$('img')).length === 0 && (await pg.innerText('body')).includes('<img'));
-// 📸 image cards: drawn in the page, previewed, sent through /tg/card
-REP = rj.report; await pg.click('.btn'); await pg.waitForTimeout(150);
-await pg.route(HOST + '/tg/logo**', async r => { const res = await W.fetch(new Request(r.request().url()), ENVK, {}); r.fulfill({ status: res.status, contentType: res.headers.get('content-type') || 'text/plain', body: Buffer.from(await res.arrayBuffer()) }); });
-let cardBody = null; await pg.route(HOST + '/tg/card', async r => { cardBody = JSON.parse(r.request().postData()); const res = await W.fetch(new Request(HOST + '/tg/card', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...cardBody, initData: initData(555) }) }), ENVK, {}); r.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() }); });
-await pg.click('.hero .cam'); await pg.waitForFunction(() => { const i = document.querySelector('.sheet .prev'); return i && i.naturalWidth === 1080; }, null, { timeout: 5000 });
-check('…the card draws the real logos (fetched through /tg/logo)', logoFetches >= 3, logoFetches);
-check('📸 on the value card → a preview of a 1080×1350 portfolio card', (await pg.$eval('.sheet .prev', i => [i.naturalWidth, i.naturalHeight].join('x'))) === '1080x1350');
-const pv1 = await pg.$eval('.sheet .prev', i => i.src); fs.writeFileSync(path.join(ROOT, 'tests/shots/card_portfolio.png'), Buffer.from(pv1.split(',')[1], 'base64'));
-await pg.click('.sheet .more >> nth=0'); await pg.waitForFunction(old => document.querySelector('.sheet .prev').src !== old, pv1, { timeout: 5000 }).catch(() => {});
-const pv2 = await pg.$eval('.sheet .prev', i => i.src);
-check('…"hide $" redraws it without the amounts (a different image), remembered', pv2 !== pv1 && (await pg.evaluate(() => localStorage.getItem('cp-priv'))) === '1', [pv1.length, pv2.length, await pg.evaluate(() => localStorage.getItem('cp-priv')), await pg.$$eval('.sheet .more', b => b.map(x => x.textContent))]);
-fs.writeFileSync(path.join(ROOT, 'tests/shots/card_portfolio_hidden.png'), Buffer.from(pv2.split(',')[1], 'base64'));
-sent.length = 0; await pg.click('.sheet .btn'); await pg.waitForFunction(() => /Sent|أُرسلت/.test((document.querySelector('.sheet-st') || {}).textContent || ''), null, { timeout: 5000 });
-const ph = sent.find(x => x.m === 'sendPhoto');
-check('…📤 → the JPEG goes through /tg/card to Telegram as a photo in your chat, with a caption', cardBody && /^\/9j\//.test(cardBody.jpg) && ph && ph.b.chat_id === '555' && ph.b.photoBytes[0] === 0xFF && ph.b.photoBytes[1] === 0xD8 && /Cute Portfolio/.test(ph.b.caption), [cardBody && cardBody.jpg.slice(0, 8), ph && ph.b.caption]);
-await pg.waitForTimeout(1000);
-await pg.evaluate(() => localStorage.setItem('cp-priv', '0'));
-await pg.click('.tab >> nth=0'); await pg.click('.row.tap >> nth=1'); await pg.waitForFunction(() => { const i = document.querySelector('.sheet .prev'); return i && i.naturalWidth === 1080; }, null, { timeout: 5000 });
-fs.writeFileSync(path.join(ROOT, 'tests/shots/card_coin.png'), Buffer.from((await pg.$eval('.sheet .prev', i => i.src)).split(',')[1], 'base64'));
-check('tap a coin in Holdings → its own card (SOL)', !!(await pg.$('.sheet .prev')));
-await pg.click('.sheet .more >> text=Close');
-await pg.click('.tab >> nth=3'); await pg.click('h2 .cam'); await pg.waitForFunction(() => { const i = document.querySelector('.sheet .prev'); return i && i.naturalWidth === 1080; }, null, { timeout: 5000 });
-fs.writeFileSync(path.join(ROOT, 'tests/shots/card_market.png'), Buffer.from((await pg.$eval('.sheet .prev', i => i.src)).split(',')[1], 'base64'));
-check('📸 on Market → the market card (no "hide $" there)', (await pg.$$('.sheet .more')).length === 1);
-await pg.click('.sheet .more >> text=Close');
-const many = Array.from({ length: 20 }, (_, i) => ({ sym: 'C' + i, name: '', qty: 1, price: 1, avg: 1, value: 1000 - i * 10, share: 5, ch24: 1, ch7: 1, pnl: 1, signal: 'hold', stable: false }));
-REP = { ...rj.report, lang: 'en', coins: many, plan: { pct: 80, completed: 6, counted: 9, items: [...Array.from({ length: 6 }, (_, i) => ({ sym: 'D' + i, actual: 10, target: 10, pct: 100 })), { sym: 'ETH', actual: 0, target: 1, pct: 0 }, { sym: 'BTC', actual: 0.13, target: 1, pct: 13 }, { sym: 'SOL', actual: 9, target: 10, pct: 90 }] } };
-await pg.click('.btn'); await pg.waitForTimeout(150); await pg.click('.tab >> nth=0');
-const holdVisible = async () => pg.$$eval('section.card', cs => { const c = cs.find(x => /Holdings/.test(x.textContent)); return [...c.querySelectorAll('.row')].filter(r => r.getBoundingClientRect().height > 0 && r.closest('.fold') == null || (r.closest('.fold') && r.closest('.fold').getBoundingClientRect().height > 0)).length; });
-check('a long list (20 coins) shows 8 + "▾ Show all 20"', (await holdVisible()) === 8 && (await pg.$$eval('.more', b => b.map(x => x.textContent))).includes('▾ Show all 20'), [await holdVisible(), await pg.$$eval('.more', b => b.map(x => x.textContent))]);
-await pg.click('.more >> text=Show all 20'); await pg.waitForTimeout(400);
-check('…tap → slides open to all 20, the button says "▴ Show less"', (await holdVisible()) === 20 && (await pg.$$eval('.more', b => b.map(x => x.textContent))).includes('▴ Show less'));
-await pg.click('.tab >> nth=1'); await pg.waitForTimeout(100);
-const planOrder = await pg.$$eval('section.card', cs => { const c = cs.find(x => /Overall/.test(x.textContent)); return [...c.querySelectorAll('.row')].filter(r => !r.closest('.fold') || r.closest('.fold').getBoundingClientRect().height > 0).map(r => r.textContent.trim().slice(0, 30)); });
-check('plan: still-to-buy first, furthest first (ETH 0% → BTC 13% → SOL 90%); the 6 met fold into "✅ 6 targets met"', /Overall/.test(planOrder[0]) && /ETH/.test(planOrder[1]) && /BTC/.test(planOrder[2]) && /SOL/.test(planOrder[3]) && planOrder.length === 4 && (await pg.$$eval('.more', b => b.map(x => x.textContent))).includes('▾ ✅ 6 targets met'), planOrder);
-await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_plan_fold.png') });
-await pg.click('.tab >> nth=0'); await pg.waitForTimeout(100);
-check('…an opened list stays open when you come back to the tab', (await holdVisible()) === 20);
-await pg.screenshot({ path: path.join(ROOT, 'tests/shots/miniapp_fold.png') });
-REP = rj.report;
-check('page: no script errors', perr.filter(e => !/Failed to load resource/.test(e)).length === 0, perr);
-await br.close();
-}
-
-// /tg/card directly: the same checks as /tg/api, and only a JPEG goes on
-const cardCall = body => W.fetch(new Request(HOST + '/tg/card', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }), ENVK, {});
-const JPG = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3]).toString('base64');
-check('/tg/card: no signature → 401 · someone else → 403 · not a JPEG → 400', (await cardCall({ jpg: JPG })).status === 401 && (await cardCall({ initData: initData(999), jpg: JPG })).status === 403 && (await cardCall({ initData: initData(555), jpg: Buffer.from('<svg/>').toString('base64') })).status === 400);
-sent.length = 0; const cr = await cardCall({ initData: initData(555), jpg: JPG, kind: 'coin', sym: 'sol' });
-check('…you + a JPEG → sendPhoto to your chat, caption "🪙 SOL · Cute Portfolio"', cr.status === 200 && sent.some(x => x.m === 'sendPhoto' && x.b.caption === '🪙 SOL · Cute Portfolio' && x.b.chat_id === '555'));
-
-// /tg/logo: only coin-logo hosts, only images
-const lg = u => W.fetch(new Request(HOST + '/tg/logo?u=' + encodeURIComponent(u)), ENVK, {});
-let lr = await lg('https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png');
-check('/tg/logo → the logo from this site (an image, cached a week)', lr.status === 200 && lr.headers.get('content-type') === 'image/png' && /max-age=604800/.test(lr.headers.get('cache-control')));
-check('…another host → 400 · not https → 400 · not an image → 404', (await lg('https://evil.example.com/x.png')).status === 400 && (await lg('http://coin-images.coingecko.com/x.png')).status === 400 && (await lg('https://assets.coingecko.com/notimage')).status === 404);
+// the old report page is gone (20 Nov): 📱 opens the full app, signed in by Telegram (tests/tg_login_test.mjs, tg_miniapp_test.py)
+for (const pth of ['/tg/app', '/tg/api', '/tg/card', '/tg/logo']) { const r = await W.fetch(new Request(HOST + pth, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }), ENVK, {}); check(`the old report page's ${pth} no longer answers`, r.status >= 400, r.status); }
 
 // GitHub late with the market snapshot → the Worker's cron asks GitHub to run it now (needs GH_DISPATCH_TOKEN)
 const ENVG = { ...ENVK, GH_DISPATCH_TOKEN: 'github_pat_test' };
@@ -946,7 +835,6 @@ check('Ali sets alerts → stored under his chat only; yours untouched', JSON.pa
 check('…his AI limit is 5 a day (yours 30)', /\d+\/5 left today/.test(last().b.text), last().b.text.slice(-60));
 check('…and Claude is told he is an invited user (not Samir)', /invited/.test(claudeCalls[0].system) && !/one private user, Samir/.test(claudeCalls[0].system));
 check('…his "/" menu has no /invite or /users', c7 && !c7.b.commands.some(c => /invite|users/.test(c.command)), c7 && c7.b.commands.map(c => c.command));
-check('Mini App for Ali (signed by him) → his report, no portfolio (connected: false)', await (async () => { const r = await apiCall({ initData: initData(777) }); const j = await r.json(); return r.status === 200 && j.report.connected === false; })());
 LIVE.solana.usd = 130; kvStore.set('tg:777:alerts', JSON.stringify([{ id: 'a7', kind: 'price_below', value: 140, sym: 'SOL', cg: 'solana', armed: true, created: NOW, since: 1 }]));   // (already true on the check before)
 sent.length = 0; Wd = await fresh(); await cron(Wd); LIVE.solana.usd = 150;
 check('cron: Ali\'s alert fires to Ali (chat 777), not to you', sent.some(x => x.m === 'sendMessage' && String(x.b.chat_id) === '777' && /SOL below/.test(x.b.text)) && !sent.some(x => x.m === 'sendMessage' && String(x.b.chat_id) === '555' && /SOL below \$140/.test(x.b.text)), sent.map(x => [x.b.chat_id, (x.b.text || '').slice(0, 30)]));
