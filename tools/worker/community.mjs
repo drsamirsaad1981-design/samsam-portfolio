@@ -81,7 +81,7 @@ export async function setup(env, kind, opt = {}) {
     }
     if (!x.guideMsg || opt.reguide) {
       const id = await postGuidePost(env, x);
-      if (id) { x.guideMsg = id; x.guideSig = guideSigs(); x.guideV = GUIDE.v || 1; } else notes.push('⚠️ The 📘 guide post did not go — let me post and pin messages.');
+      if (id) { x.guideMsg = id; x.guideSig = guideSigs(); x.guideV = GUIDE.v || 1; x.guidePostV = POST_V; } else notes.push('⚠️ The 📘 guide post did not go — let me post and pin messages.');
     }
   }
   const ch = c.channel, g = c.group;
@@ -105,7 +105,7 @@ async function guideLink(env) {
 // 📘 the channel's guide post (pinned): what is in the guide, in both languages; its link opens it in the bot.
 // Posted again (/community guide): the old one is unpinned and deleted
 async function postGuidePost(env, ch) {
-  const text = `<b>${GUIDE.title.en} · ${GUIDE.title.ar}</b>\n${GUIDE.intro.en}\n${GUIDE.intro.ar}\n\n`
+  const text = `<b>${GUIDE.title.en}</b>\n${GUIDE.intro.en}\n\n<b>${GUIDE.title.ar}</b>\n${GUIDE.intro.ar}\n\n`   // each language: its title, then its line (never both titles on one line)
     + guideGroups().map(g => g.items.map(s => `${s.e} ${esc((s.b || s.t).en)} · ${esc((s.b || s.t).ar)}`).join('\n')).join('\n\n')
     + '\n\n💡 <i>Ideas or a bug? Send /feedback to the bot.</i>\n💡 <i>اقتراح أو مشكلة؟ أرسل /feedback للبوت.</i>';
   const link = await guideLink(env);
@@ -142,8 +142,13 @@ export function guideGroups() {
 // with the button to read them in the bot — run from the cron
 const sig = s => { let h = 0; for (const ch of JSON.stringify([s.t, s.s, s.en, s.ar, s.tip])) h = (h * 31 + ch.charCodeAt(0)) | 0; return String(h); };
 const guideSigs = () => Object.fromEntries(GUIDE.sections.map(s => [s.k, sig(s)]));
+const POST_V = 2;   // the layout of the channel's guide post (2: the two titles on their own lines)
 export async function guideUpdates(env) {
   const c = await getCommunity(env), x = c.channel; if (!x || !x.guideMsg) return { posted: 0 };
+  if ((x.guidePostV || 1) !== POST_V) {   // the guide post's own layout changed → posted again once (the old one deleted), pinned
+    const id = await postGuidePost(env, x); if (id) { x.guideMsg = id; x.guidePostV = POST_V; c.channel = x; await putCommunity(env, c); }
+    return { posted: 'post' };
+  }
   const now = guideSigs(), edition = (x.guideV || 1) !== (GUIDE.v || 1);
   if (!x.guideSig) { x.guideSig = now; x.guideV = GUIDE.v || 1; c.channel = x; await putCommunity(env, c); return { posted: 0 }; }
   const changed = GUIDE.sections.filter(s => x.guideSig[s.k] !== now[s.k]);

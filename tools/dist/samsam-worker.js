@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: d091be127768d3d5
+// sources-hash: ddafd02eb0d648a1
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -3374,6 +3374,7 @@ async function setup(env, kind, opt = {}) {
         x.guideMsg = id;
         x.guideSig = guideSigs();
         x.guideV = guide_default.v || 1;
+        x.guidePostV = POST_V;
       } else notes.push("\u26A0\uFE0F The \u{1F4D8} guide post did not go \u2014 let me post and pin messages.");
     }
   }
@@ -3400,8 +3401,10 @@ async function guideLink(env) {
 \u{1F4D8} <a href="https://t.me/${u}?start=guide">\u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0644\u064A\u0644</a>` : "";
 }
 async function postGuidePost(env, ch) {
-  const text = `<b>${guide_default.title.en} \xB7 ${guide_default.title.ar}</b>
+  const text = `<b>${guide_default.title.en}</b>
 ${guide_default.intro.en}
+
+<b>${guide_default.title.ar}</b>
 ${guide_default.intro.ar}
 
 ` + guideGroups().map((g) => g.items.map((s) => `${s.e} ${esc((s.b || s.t).en)} \xB7 ${esc((s.b || s.t).ar)}`).join("\n")).join("\n\n") + "\n\n\u{1F4A1} <i>Ideas or a bug? Send /feedback to the bot.</i>\n\u{1F4A1} <i>\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 /feedback \u0644\u0644\u0628\u0648\u062A.</i>";
@@ -3445,9 +3448,20 @@ var sig = (s) => {
   return String(h);
 };
 var guideSigs = () => Object.fromEntries(guide_default.sections.map((s) => [s.k, sig(s)]));
+var POST_V = 2;
 async function guideUpdates(env) {
   const c = await getCommunity(env), x = c.channel;
   if (!x || !x.guideMsg) return { posted: 0 };
+  if ((x.guidePostV || 1) !== POST_V) {
+    const id = await postGuidePost(env, x);
+    if (id) {
+      x.guideMsg = id;
+      x.guidePostV = POST_V;
+      c.channel = x;
+      await putCommunity(env, c);
+    }
+    return { posted: "post" };
+  }
   const now = guideSigs(), edition = (x.guideV || 1) !== (guide_default.v || 1);
   if (!x.guideSig) {
     x.guideSig = now;
