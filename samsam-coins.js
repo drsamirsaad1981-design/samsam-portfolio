@@ -359,30 +359,14 @@
     var v = doc && VAULTS.filter(function (x) { return x.k === doc.vault; })[0]; if (!v) return null;
     return { k: v.k, e: v.e, label: v.k === 'other' && doc.vaultLabel ? doc.vaultLabel : (ar ? v.ar : v.en) };
   }
-  // 🕌 Zakat — ONE date a year for everything: 1 Ramadan (the Umm al-Qura calendar, Riyadh's day). On that day, 2.5% of:
+  // 🕌 Zakat — ONE date a year for everything: a hijri day you choose (1 Ramadan by default; Umm al-Qura, Riyadh's day). On that day, 2.5% of:
   //   gold when you hold ≥ 85 g · silver when ≥ 595 g · all your crypto together (stablecoins too) when it is worth ≥ 85 g of gold.
   // "Due" from 1 Ramadan for 30 days (the month); before it: how many days are left, and an estimate at today's value.
   // An estimate, not a ruling — the app says so next to it.
-  var NISAB = { XAU: 85, XAG: 595 }, DAYMS = 864e5, ZK_DAYS = 30, hijriFmt = null, zkMemo = {};
-  function hijri(t) {
-    try {
-      hijriFmt = hijriFmt || new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'numeric', year: 'numeric', timeZone: 'Asia/Riyadh' });
-      var o = {}; hijriFmt.formatToParts(new Date(t)).forEach(function (p) { if (p.type === 'day' || p.type === 'month' || p.type === 'year') o[p.type] = parseInt(p.value, 10); });
-      return o.month ? o : null;
-    } catch (_) { return null; }
-  }
-  var riyadhDay = function (t) { return new Date(t + 3 * 36e5).toISOString().slice(0, 10); };
-  // → { last, next (ms), hy (the hijri year of the last 1 Ramadan), since (days since it), daysLeft, due, lastDate, nextDate } | null
-  function zakatWhen(now) {
-    now = now || Date.now(); var key = riyadhDay(now); if (zkMemo[key]) return zkMemo[key];
-    if (!hijri(now)) return null;
-    var since = null, left = null, a, i;
-    for (i = 0; i <= 390 && since == null; i++) { a = hijri(now - i * DAYMS); if (a && a.month === 9 && a.day === 1) since = i; }
-    for (i = 1; i <= 390 && left == null; i++) { a = hijri(now + i * DAYMS); if (a && a.month === 9 && a.day === 1) left = i; }
-    if (since == null || left == null) return null;
-    var last = now - since * DAYMS, next = now + left * DAYMS, hl = hijri(last), hn = hijri(next);
-    return (zkMemo[key] = { last: last, next: next, hy: hl.year, nextHy: hn.year, since: since, daysLeft: left, due: since < ZK_DAYS, lastDate: riyadhDay(last), nextDate: riyadhDay(next) });
-  }
+  var NISAB = { XAU: 85, XAG: 595 };
+  // the day is yours to choose (Samsam.getZakatDay — a hijri day and month; 1 Ramadan when not set): samsam-core.js → zakatWhen
+  function zakatWhen(now) { var S = window.Samsam; return S && S.core && S.core.zakatWhen ? S.core.zakatWhen(now || Date.now(), S.getZakatDay ? S.getZakatDay() : null) : null; }
+  function zakatDayLabel(ar, day) { var S = window.Samsam, z = day || (S && S.getZakatDay ? S.getZakatDay() : { m: 9, d: 1 }), M = S && S.core && S.core.HIJRI_MONTHS; return z.d + ' ' + (M ? M[ar ? 'ar' : 'en'][z.m - 1] : 'Ramadan'); }
   // gold / silver: st = Samsam.getState(). While due, the amount is what you held on 1 Ramadan (the trades since are left out).
   function zakat(sym, st, now) {
     sym = String(sym || '').toUpperCase(); var C = st && st.core || (window.Samsam && Samsam.core); if (!NISAB[sym] || !st || !C) return null;
@@ -666,5 +650,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { zakatWhen: zakatWhen, zakatCrypto: zakatCrypto, cgChart: cgChart, perfScope: perfScope, setPerfScope: setPerfScope, trendSeries: trendSeries, metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { zakatWhen: zakatWhen, zakatCrypto: zakatCrypto, zakatDayLabel: zakatDayLabel, cgChart: cgChart, perfScope: perfScope, setPerfScope: setPerfScope, trendSeries: trendSeries, metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();

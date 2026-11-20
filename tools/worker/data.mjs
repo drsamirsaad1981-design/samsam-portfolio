@@ -384,6 +384,12 @@ export async function setAlertsLang(env, lang) {
   try { const db = await firestore(sa); await db.patch(`users/${uid}/meta/info`, { alerts: { lang, langPicked: true } }, ['alerts.lang', 'alerts.langPicked']); return true; }
   catch (e) { console.log(JSON.stringify({ alertslang: 'failed', msg: String(e && e.message).slice(0, 100) })); return false; }
 }
+// 🕌 the value of the crypto on the zakat day, kept in the account's settings (the app shows the month's amount from it) —
+// only that field changes
+export async function setZakatSnap(env, snap) {
+  const sa = serviceAccount(env), uid = await chatUid(env).catch(() => null); if (!sa || !uid || !snap) return false;
+  try { const db = await firestore(sa); await db.patch(`users/${uid}/meta/info`, { zakat: snap }, ['zakat']); return true; } catch (_) { return false; }
+}
 // a Firebase ID token for that account, made by the Worker itself (a custom token signed with the service account, swapped
 // at Google for an ID token): the Binance relay only answers signed-in users, and in the bot there is no app session.
 // Kept in memory only (50 min). The web key is the app's public config key (firebase-config.js), not a secret.

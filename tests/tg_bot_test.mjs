@@ -40,7 +40,7 @@ const USER = () => ({
     { sym: 'NOID', name: 'No Id Coin', opening: { qty: 100, avg: 2 } },   // saved without a CoinGecko id, not in the top 500 — like PONS / CYBER
     ...Array.from({ length: MANY }, (_, i) => ({ sym: 'ZZ' + i, cgId: 'zz-coin-' + i, opening: { qty: 1, avg: 1 } }))],
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
-  meta: { alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
+  meta: { ...(globalThis.__zakatDay ? { zakatDay: globalThis.__zakatDay } : {}), alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
 const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = [], pinWrites = [], accessWrites = [], tglinkWrites = []; let TGLINK = null, TGLINK_UID = 'UID2'; let OWNER_PIN = 'UID1', ACCOUNTS = ['UID1']; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
@@ -714,6 +714,26 @@ const secm = sent.find(x => x.m === 'sendMessage' && /📡/.test(x.b.text));
 check('📡 20:05 → the digest: AI +14.2% (you hold its leader SOL) and Meme −11.5%; tiny / calm ones left out; no 🧲 part (nothing new)', secm && /AI<\/b> \+14\.2%/.test(secm.b.text) && /you hold: <b>SOL<\/b>/.test(secm.b.text) && /Meme<\/b> −11\.5%/.test(secm.b.text) && !/Tiny|Calm/.test(secm.b.text) && !/🧲/.test(secm.b.text) && okHtml(secm.b.text), secm && secm.b.text);
 kvStore.delete('tg:555:daily:sent'); sent.length = 0; Wd = await fresh(); await cron(Wd, RIYADH('12:05'));
 check('…a slot with nothing found and no whale flip → no message at all', !sent.some(x => x.m === 'sendMessage' && /📡/.test(x.b.text)), sent.filter(x => x.m === 'sendMessage').map(x => x.b.text.slice(0, 50)));
+// 🕌 zakat: a reminder a week before your zakat day (a hijri day chosen in the app), and the amounts on the day itself
+{
+  const hj = t => { const o = {}; new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'numeric', year: 'numeric', timeZone: 'Asia/Riyadh' }).formatToParts(new Date(t)).forEach(p => { o[p.type] = parseInt(p.value, 10); }); return o; };
+  const at = RIYADH('10:00'), td = hj(at), wk = hj(at + 7 * 24 * HR), again = () => { const d = JSON.parse(kvStore.get('tg:555:daily:sent') || '{}'); delete d.zk; d.morning = new Date(NOW + 3 * HR).toISOString().slice(0, 10); kvStore.set('tg:555:daily:sent', JSON.stringify(d)); kvStore.delete('fs:pf:UID1'); };   // (the portfolio kept in KV: read again, with the new zakat day)
+  const zmsg = () => sent.find(x => x.m === 'sendMessage' && /🕌/.test(x.b.text));
+  globalThis.__zakatDay = { m: wk.month, d: wk.day }; again(); kvStore.delete('tg:555:zakat:sent'); globalThis.__alertsLang = [];
+  sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  check('🕌 a week before your zakat day (10:00) → one reminder: the day, the crypto against the value of 85 g of gold, an estimate, "not a ruling"', zmsg() && /zakat day is in 7 days/.test(zmsg().b.text) && new RegExp(wk.day + ' ').test(zmsg().b.text) && /Crypto: /.test(zmsg().b.text) && /check with a scholar/.test(zmsg().b.text) && okHtml(zmsg().b.text), zmsg() ? zmsg().b.text : sent.map(x => x.m));
+  check('…no value kept yet (that is for the day itself)', !(globalThis.__alertsLang || []).some(w => /fieldPaths=zakat/.test(w.u)));
+  again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at + 30 * 60e3);
+  check('…once (asked again → nothing)', !zmsg(), zmsg() && zmsg().b.text);
+  globalThis.__zakatDay = { m: td.month, d: td.day }; again();
+  sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  const zw = (globalThis.__alertsLang || []).find(w => /fieldPaths=zakat$/.test(w.u));
+  check('🕌 on the day → "Today is your zakat day" with the amounts (2.5%), a button to the app', zmsg() && /Today is your zakat day/.test(zmsg().b.text) && new RegExp(String(td.year)).test(zmsg().b.text) && /Crypto: (<b>\$[\d,.]+<\/b> — 2\.5% of|below the nisab)/.test(zmsg().b.text) && btns(zmsg()).some(b => b.web_app) && okHtml(zmsg().b.text), zmsg() ? zmsg().b.text : sent.map(x => x.m));
+  check('…and the day\'s crypto value + the nisab are kept in your settings (only the "zakat" field), for the app', zw && zw.body.fields.zakat.mapValue.fields.hy.integerValue === String(td.year) && +(zw.body.fields.zakat.mapValue.fields.nisabUsd.doubleValue || zw.body.fields.zakat.mapValue.fields.nisabUsd.integerValue) > 7000 && Object.keys(zw.body.fields).join() === 'zakat', zw);
+  globalThis.__zakatDay = { m: (td.month + 5) % 12 + 1, d: 15 }; again(); kvStore.delete('tg:555:zakat:sent'); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  check('…any other day → nothing', !zmsg(), zmsg() && zmsg().b.text);
+  delete globalThis.__zakatDay;
+}
 check('today\'s log keeps what happened (radar, sector) for the evening', /radar/.test(kvStore.get('tg:555:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || '') && /sector/.test(kvStore.get('tg:555:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || ''));
 // /daily
 Wd = await fresh(); sent.length = 0; await postK(Wd, '/daily');

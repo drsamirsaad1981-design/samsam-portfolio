@@ -19,7 +19,8 @@ import { bidiBody } from './bidi.mjs';
 import { K, chatOf, isOwner, langOf, member } from './who.mjs';
 import { premiumNow } from './stars.mjs';
 import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
-import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures, setAlertsLang } from './data.mjs';
+import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures, setAlertsLang, setZakatSnap } from './data.mjs';
+import { zakatWhen, HIJRI_MONTHS } from '../../samsam-core.js';
 import { compose } from './ai.mjs';
 import { listAlerts, describe, KINDS, logEvent, todayLog } from './watch.mjs';
 
@@ -358,6 +359,45 @@ export async function radarDigest(env, now = Date.now(), slot = '') {
   return { sent: r && r.ok ? 1 : 0 };
 }
 
+// ── 🕌 zakat: your zakat day (a hijri day you chose in the app; 1 Ramadan when not set) — a reminder a week before, and
+// on the day itself the amounts: all the crypto together against the value of 85 g of gold, gold (85 g), silver (595 g).
+// The day's crypto value is kept in your settings, so the app shows the same amount all month. Once each, per hijri year. ──
+const GPO = 31.1034768;
+export function zakatFacts(user, m, now) {
+  const w = zakatWhen(now, user && user.meta && user.meta.zakatDay); if (!w || !user || !m) return null;
+  const sum = summarize(withIds(user, m), m, now), by = Object.fromEntries(sum.coins.map(c => [c.sym, c]));
+  const goldOz = (by.XAU && by.XAU.price) || ((m.metals || []).find(x => x.k === 'gold') || {}).price || 0;
+  const crypto = sum.coins.filter(c => c.sym !== 'XAU' && c.sym !== 'XAG').reduce((a, c) => a + c.value, 0);
+  const nisabUsd = goldOz > 0 ? 85 / GPO * goldOz : 0, metal = (sym, nis) => { const c = by[sym]; if (!c || !(c.qty > 0)) return null; const g = c.qty * GPO; return { g, meets: g >= nis - 1e-6, zakatG: g * 0.025, zakatUsd: c.value * 0.025 }; };
+  return { w, crypto, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto >= nisabUsd, cryptoZakat: crypto * 0.025, gold: metal('XAU', 85), silver: metal('XAG', 595) };
+}
+export async function zakatAlert(env, now = Date.now()) {
+  const user = await loadUser(env).catch(() => null); if (!user) return { sent: 0 };
+  const w0 = zakatWhen(now, user.meta && user.meta.zakatDay); if (!w0) return { sent: 0 };
+  const kind = w0.since === 0 ? 'day' : w0.daysLeft === 7 ? 'week' : null; if (!kind) return { sent: 0 };
+  const key = (kind === 'day' ? w0.hy : w0.nextHy) + ':' + kind, had = await jget(env, K(env, 'zakat:sent'), {});
+  if (had[key]) return { sent: 0 };
+  const m = await loadMarket([], coinsOf(user)).catch(() => null), f = m && zakatFacts(user, m, now); if (!f) return { sent: 0 };
+  const L = await lang(env), ar = L === 'ar', day = `${f.w.d} ${HIJRI_MONTHS[ar ? 'ar' : 'en'][f.w.m - 1]}`, g = v => (+v.toFixed(2)).toLocaleString('en-US');
+  const any = f.cryptoMeets || (f.gold && f.gold.meets) || (f.silver && f.silver.meets);
+  if (kind === 'week' && !any) { had[key] = 1; await jput(env, K(env, 'zakat:sent'), had); return { sent: 0 }; }   // nothing reaches the nisab: no reminder
+  const lines = [kind === 'day' ? `🕌 <b>${ar ? 'اليوم يوم زكاتك' : 'Today is your zakat day'}</b> · ${day} ${f.w.hy}` : `🕌 <b>${ar ? 'زكاتك بعد 7 أيام' : 'Your zakat day is in 7 days'}</b> · ${day} ${f.w.nextHy}`, ''];
+  const est = kind === 'week' ? (ar ? ' (تقدير بقيمة اليوم)' : ' (an estimate at today\'s value)') : '';
+  if (f.nisabUsd > 0) lines.push(f.cryptoMeets
+    ? (ar ? `• الكريبتو: <b>${usd2(f.cryptoZakat)}</b> — 2.5% من ${usd2(f.crypto)}${est}` : `• Crypto: <b>${usd2(f.cryptoZakat)}</b> — 2.5% of ${usd2(f.crypto)}${est}`)
+    : (ar ? `• الكريبتو: أقل من النصاب (${usd2(f.nisabUsd)} = 85 جم ذهب) — لا زكاة` : `• Crypto: below the nisab (${usd2(f.nisabUsd)} = 85 g of gold) — none`));
+  for (const [x, name, nis] of [[f.gold, ar ? 'الذهب' : 'Gold', 85], [f.silver, ar ? 'الفضة' : 'Silver', 595]]) {
+    if (!x) continue;
+    lines.push(x.meets ? (ar ? `• ${name}: <b>${g(x.zakatG)} جم</b> ≈ ${usd2(x.zakatUsd)} — 2.5% من ${g(x.g)} جم` : `• ${name}: <b>${g(x.zakatG)} g</b> ≈ ${usd2(x.zakatUsd)} — 2.5% of ${g(x.g)} g`)
+      : (ar ? `• ${name}: ${g(x.g)} جم — أقل من النصاب (${nis} جم)` : `• ${name}: ${g(x.g)} g — below the nisab (${nis} g)`));
+  }
+  lines.push('', `<i>${ar ? 'تقدير حسابي وليس فتوى — راجع أهل العلم. قد يبدأ الشهر قبل التقويم أو بعده بيوم. يوم الزكاة يُغيَّر من علامة ✎ في التطبيق.' : 'An estimate, not a ruling — check with a scholar. The month may start a day earlier or later than the calendar. Change the day with the ✎ in the app.'}</i>`);
+  if (kind === 'day' && f.nisabUsd > 0) await setZakatSnap(env, { hy: f.w.hy, value: Math.round(f.crypto * 100) / 100, nisabUsd: Math.round(f.nisabUsd * 100) / 100, date: f.w.lastDate, at: new Date(now).toISOString() });
+  const r = await send(env, { text: lines.join('\n'), buttons: [[{ text: WD[L].report, web_app: { url: APP + 'index.html' } }]] });
+  if (r && r.ok) { had[key] = 1; for (const k of Object.keys(had)) if (+k.split(':')[0] < f.w.hy - 1) delete had[k]; await jput(env, K(env, 'zakat:sent'), had); }
+  return { sent: r && r.ok ? 1 : 0, kind };
+}
+
 // ── the cron (every 5 min, after the alerts): one bigger job per run ──
 export async function runDaily(env, now = Date.now()) {
   if (!env.TELEGRAM_BOT_TOKEN || !chatOf(env)) return { job: null };
@@ -369,6 +409,9 @@ export async function runDaily(env, now = Date.now()) {
   if (min % 60 === 40) {   // 🌐 once per language: GitHub's alerts speak the bot's language (people who picked it before 20 Nov)
     const L = await lang(env), had = await kvGet(env, K(env, 'alsync'));
     if (had !== L && await setAlertsLang(env, L).catch(() => false)) await kvPut(env, K(env, 'alsync'), L);
+  }
+  if (lp.hm >= '09:30' && lp.hm < '12:00' && min % 30 === 0 && sent.zk !== lp.date) {   // 🕌 zakat: looked at once a day (the message itself: once a year each)
+    await done('zk'); const z = await zakatAlert(env, now).catch(e => { console.log(JSON.stringify({ zakat: 'error', message: String(e && e.message).slice(0, 200) })); return { sent: 0 }; }); if (z.sent) return { job: 'zakat', ...z };
   }
   if ((c.radar || c.sectors) && min % 15 === 5) {   // 📡 the radar digest: once per slot (up to 2 h late), at :05 / :20 / :35 / :50 — a minute no other job uses
     const slot = DIGEST_AT.find(at => { const late = mins(lp.hm) - mins(at); return late >= 0 && late < 120 && sent['dg' + at] !== lp.date; });

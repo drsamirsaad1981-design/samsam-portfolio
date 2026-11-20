@@ -81,6 +81,12 @@ with sync_playwright() as p:
     pg.evaluate('renderAll()'); pg.wait_for_timeout(300)
     zl = pg.inner_text('#zakatLine') if pg.is_visible('#zakatLine') else ''
     check('Overview: one 🕌 line for the crypto under the cards (gold price from your own gold)', 'Crypto zakat' in zl, zl)
+    check('…with a ✎ to choose your own zakat day', pg.locator('#zakatLine .zk-edit').count() == 1 and '1 Ramadan' in zl, zl)
+    pg.evaluate("Samsam.setZakatDay({ m: 6, d: 10 })"); pg.wait_for_function("Samsam.getZakatDay().m === 6", timeout=8000); pg.evaluate('renderAll()'); pg.wait_for_timeout(300)
+    w2 = pg.evaluate("SamsamCoins.zakatWhen(Date.parse('2026-11-20T12:00:00Z'))")
+    check('your own zakat day (10 Jumada II): on 20 Nov 2026 it is today → due; the line, gold and silver all follow it', w2 and w2['due'] and w2['since'] == 0 and w2['lastDate'] == '2026-11-20' and '10 Jumada II' in pg.inner_text('#zakatLine') and pg.evaluate("SamsamCoins.zakat('XAU', Samsam.getState(), Date.parse('2026-11-20T12:00:00Z')).due"), [w2, pg.inner_text('#zakatLine')])
+    check('…a wrong day is refused (back to 1 Ramadan)', pg.evaluate("JSON.stringify(Samsam.core.cleanZakatDay({ m: 13, d: 40 }))") == '{"m":9,"d":1}')
+    pg.evaluate("Samsam.setZakatDay({ m: 9, d: 1 })"); pg.wait_for_function("Samsam.getZakatDay().m === 9", timeout=8000); pg.evaluate('renderAll()'); pg.wait_for_timeout(300)
     hide0 = pg.evaluate("metalsCard.hidden")
     order = pg.evaluate("[!!(document.getElementById('btcTicker').compareDocumentPosition(metalsCard) & Node.DOCUMENT_POSITION_FOLLOWING), document.querySelector('.header-stats').contains(metalsCard)]")
     check('Overview: the moving line stays right under the four cards, metals card after it', order == [True, False], order)

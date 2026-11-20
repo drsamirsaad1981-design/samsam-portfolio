@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: a2c876239a0f04a4
+// sources-hash: cd45ada2616e5791
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -575,6 +575,53 @@ function overallProgress(rows) {
   if (!valid.length) return { pct: 0, counted: 0, completed: 0 };
   const each = valid.map((r) => Math.min(Math.max(num(r.actual), 0) / num(r.target), 1));
   return { pct: each.reduce((a, b) => a + b, 0) / valid.length * 100, counted: valid.length, completed: each.filter((x) => x >= 1).length };
+}
+var ZAKAT_DAY = Object.freeze({ m: 9, d: 1 });
+var ZAKAT_WINDOW = 30;
+var HIJRI_MONTHS = Object.freeze({
+  en: ["Muharram", "Safar", "Rabi I", "Rabi II", "Jumada I", "Jumada II", "Rajab", "Shaban", "Ramadan", "Shawwal", "Dhul Qadah", "Dhul Hijjah"],
+  ar: ["\u0645\u062D\u0631\u0645", "\u0635\u0641\u0631", "\u0631\u0628\u064A\u0639 \u0627\u0644\u0623\u0648\u0644", "\u0631\u0628\u064A\u0639 \u0627\u0644\u0622\u062E\u0631", "\u062C\u0645\u0627\u062F\u0649 \u0627\u0644\u0623\u0648\u0644\u0649", "\u062C\u0645\u0627\u062F\u0649 \u0627\u0644\u0622\u062E\u0631\u0629", "\u0631\u062C\u0628", "\u0634\u0639\u0628\u0627\u0646", "\u0631\u0645\u0636\u0627\u0646", "\u0634\u0648\u0627\u0644", "\u0630\u0648 \u0627\u0644\u0642\u0639\u062F\u0629", "\u0630\u0648 \u0627\u0644\u062D\u062C\u0629"]
+});
+function cleanZakatDay(z) {
+  const m = Math.round(+(z && z.m)), d = Math.round(+(z && z.d));
+  return m >= 1 && m <= 12 && d >= 1 && d <= 30 ? { m, d } : { ...ZAKAT_DAY };
+}
+var hijriFmt = null;
+var zkMemo = /* @__PURE__ */ new Map();
+function hijri(t) {
+  try {
+    hijriFmt = hijriFmt || new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "numeric", year: "numeric", timeZone: "Asia/Riyadh" });
+    const o = {};
+    for (const p of hijriFmt.formatToParts(new Date(t))) if (p.type === "day" || p.type === "month" || p.type === "year") o[p.type] = parseInt(p.value, 10);
+    return o.month && o.year > 1300 ? o : null;
+  } catch (_) {
+    return null;
+  }
+}
+var riyadhDay = (t) => new Date(t + 3 * 36e5).toISOString().slice(0, 10);
+function zakatWhen(now = Date.now(), day3 = ZAKAT_DAY) {
+  const { m, d } = cleanZakatDay(day3), key = riyadhDay(now) + "|" + m + "|" + d;
+  if (zkMemo.has(key)) return zkMemo.get(key);
+  if (!hijri(now)) return null;
+  const is = (t) => {
+    const a = hijri(t);
+    if (!a) return false;
+    if (a.month === m && a.day === d) return true;
+    if (d === 30 && a.day === 1 && a.month === m % 12 + 1) {
+      const y = hijri(t - DAYMS);
+      return !!y && y.day === 29;
+    }
+    return false;
+  };
+  let since = null, left = null;
+  for (let i = 0; i <= 390 && since == null; i++) if (is(now - i * DAYMS)) since = i;
+  for (let i = 1; i <= 390 && left == null; i++) if (is(now + i * DAYMS)) left = i;
+  if (since == null || left == null) return null;
+  const last = now - since * DAYMS, next = now + left * DAYMS;
+  const out = { last, next, hy: hijri(last).year, nextHy: hijri(next).year, since, daysLeft: left, due: since < ZAKAT_WINDOW, lastDate: riyadhDay(last), nextDate: riyadhDay(next), m, d };
+  if (zkMemo.size > 50) zkMemo.clear();
+  zkMemo.set(key, out);
+  return out;
 }
 
 // tools/alerts-core.mjs
@@ -1630,6 +1677,17 @@ async function setAlertsLang(env, lang2) {
     return true;
   } catch (e) {
     console.log(JSON.stringify({ alertslang: "failed", msg: String(e && e.message).slice(0, 100) }));
+    return false;
+  }
+}
+async function setZakatSnap(env, snap) {
+  const sa = serviceAccount(env), uid = await chatUid(env).catch(() => null);
+  if (!sa || !uid || !snap) return false;
+  try {
+    const db = await firestore(sa);
+    await db.patch(`users/${uid}/meta/info`, { zakat: snap }, ["zakat"]);
+    return true;
+  } catch (_) {
     return false;
   }
 }
@@ -4565,6 +4623,56 @@ async function radarDigest(env, now = Date.now(), slot = "") {
   if (r && r.ok) await jput(env, K(env, "digest"), { last: now });
   return { sent: r && r.ok ? 1 : 0 };
 }
+var GPO = 31.1034768;
+function zakatFacts(user, m, now) {
+  const w = zakatWhen(now, user && user.meta && user.meta.zakatDay);
+  if (!w || !user || !m) return null;
+  const sum = summarize(withIds(user, m), m, now), by = Object.fromEntries(sum.coins.map((c) => [c.sym, c]));
+  const goldOz = by.XAU && by.XAU.price || ((m.metals || []).find((x) => x.k === "gold") || {}).price || 0;
+  const crypto2 = sum.coins.filter((c) => c.sym !== "XAU" && c.sym !== "XAG").reduce((a, c) => a + c.value, 0);
+  const nisabUsd = goldOz > 0 ? 85 / GPO * goldOz : 0, metal = (sym, nis) => {
+    const c = by[sym];
+    if (!c || !(c.qty > 0)) return null;
+    const g = c.qty * GPO;
+    return { g, meets: g >= nis - 1e-6, zakatG: g * 0.025, zakatUsd: c.value * 0.025 };
+  };
+  return { w, crypto: crypto2, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto2 >= nisabUsd, cryptoZakat: crypto2 * 0.025, gold: metal("XAU", 85), silver: metal("XAG", 595) };
+}
+async function zakatAlert(env, now = Date.now()) {
+  const user = await loadUser(env).catch(() => null);
+  if (!user) return { sent: 0 };
+  const w0 = zakatWhen(now, user.meta && user.meta.zakatDay);
+  if (!w0) return { sent: 0 };
+  const kind = w0.since === 0 ? "day" : w0.daysLeft === 7 ? "week" : null;
+  if (!kind) return { sent: 0 };
+  const key = (kind === "day" ? w0.hy : w0.nextHy) + ":" + kind, had = await jget2(env, K(env, "zakat:sent"), {});
+  if (had[key]) return { sent: 0 };
+  const m = await loadMarket([], coinsOf(user)).catch(() => null), f = m && zakatFacts(user, m, now);
+  if (!f) return { sent: 0 };
+  const L = await lang(env), ar = L === "ar", day3 = `${f.w.d} ${HIJRI_MONTHS[ar ? "ar" : "en"][f.w.m - 1]}`, g = (v) => (+v.toFixed(2)).toLocaleString("en-US");
+  const any = f.cryptoMeets || f.gold && f.gold.meets || f.silver && f.silver.meets;
+  if (kind === "week" && !any) {
+    had[key] = 1;
+    await jput(env, K(env, "zakat:sent"), had);
+    return { sent: 0 };
+  }
+  const lines = [kind === "day" ? `\u{1F54C} <b>${ar ? "\u0627\u0644\u064A\u0648\u0645 \u064A\u0648\u0645 \u0632\u0643\u0627\u062A\u0643" : "Today is your zakat day"}</b> \xB7 ${day3} ${f.w.hy}` : `\u{1F54C} <b>${ar ? "\u0632\u0643\u0627\u062A\u0643 \u0628\u0639\u062F 7 \u0623\u064A\u0627\u0645" : "Your zakat day is in 7 days"}</b> \xB7 ${day3} ${f.w.nextHy}`, ""];
+  const est = kind === "week" ? ar ? " (\u062A\u0642\u062F\u064A\u0631 \u0628\u0642\u064A\u0645\u0629 \u0627\u0644\u064A\u0648\u0645)" : " (an estimate at today's value)" : "";
+  if (f.nisabUsd > 0) lines.push(f.cryptoMeets ? ar ? `\u2022 \u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648: <b>${usd2(f.cryptoZakat)}</b> \u2014 2.5% \u0645\u0646 ${usd2(f.crypto)}${est}` : `\u2022 Crypto: <b>${usd2(f.cryptoZakat)}</b> \u2014 2.5% of ${usd2(f.crypto)}${est}` : ar ? `\u2022 \u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648: \u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u0646\u0635\u0627\u0628 (${usd2(f.nisabUsd)} = 85 \u062C\u0645 \u0630\u0647\u0628) \u2014 \u0644\u0627 \u0632\u0643\u0627\u0629` : `\u2022 Crypto: below the nisab (${usd2(f.nisabUsd)} = 85 g of gold) \u2014 none`);
+  for (const [x, name, nis] of [[f.gold, ar ? "\u0627\u0644\u0630\u0647\u0628" : "Gold", 85], [f.silver, ar ? "\u0627\u0644\u0641\u0636\u0629" : "Silver", 595]]) {
+    if (!x) continue;
+    lines.push(x.meets ? ar ? `\u2022 ${name}: <b>${g(x.zakatG)} \u062C\u0645</b> \u2248 ${usd2(x.zakatUsd)} \u2014 2.5% \u0645\u0646 ${g(x.g)} \u062C\u0645` : `\u2022 ${name}: <b>${g(x.zakatG)} g</b> \u2248 ${usd2(x.zakatUsd)} \u2014 2.5% of ${g(x.g)} g` : ar ? `\u2022 ${name}: ${g(x.g)} \u062C\u0645 \u2014 \u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u0646\u0635\u0627\u0628 (${nis} \u062C\u0645)` : `\u2022 ${name}: ${g(x.g)} g \u2014 below the nisab (${nis} g)`);
+  }
+  lines.push("", `<i>${ar ? "\u062A\u0642\u062F\u064A\u0631 \u062D\u0633\u0627\u0628\u064A \u0648\u0644\u064A\u0633 \u0641\u062A\u0648\u0649 \u2014 \u0631\u0627\u062C\u0639 \u0623\u0647\u0644 \u0627\u0644\u0639\u0644\u0645. \u0642\u062F \u064A\u0628\u062F\u0623 \u0627\u0644\u0634\u0647\u0631 \u0642\u0628\u0644 \u0627\u0644\u062A\u0642\u0648\u064A\u0645 \u0623\u0648 \u0628\u0639\u062F\u0647 \u0628\u064A\u0648\u0645. \u064A\u0648\u0645 \u0627\u0644\u0632\u0643\u0627\u0629 \u064A\u064F\u063A\u064A\u064E\u0651\u0631 \u0645\u0646 \u0639\u0644\u0627\u0645\u0629 \u270E \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642." : "An estimate, not a ruling \u2014 check with a scholar. The month may start a day earlier or later than the calendar. Change the day with the \u270E in the app."}</i>`);
+  if (kind === "day" && f.nisabUsd > 0) await setZakatSnap(env, { hy: f.w.hy, value: Math.round(f.crypto * 100) / 100, nisabUsd: Math.round(f.nisabUsd * 100) / 100, date: f.w.lastDate, at: new Date(now).toISOString() });
+  const r = await send(env, { text: lines.join("\n"), buttons: [[{ text: WD[L].report, web_app: { url: APP + "index.html" } }]] });
+  if (r && r.ok) {
+    had[key] = 1;
+    for (const k of Object.keys(had)) if (+k.split(":")[0] < f.w.hy - 1) delete had[k];
+    await jput(env, K(env, "zakat:sent"), had);
+  }
+  return { sent: r && r.ok ? 1 : 0, kind };
+}
 async function runDaily(env, now = Date.now()) {
   if (!env.TELEGRAM_BOT_TOKEN || !chatOf(env)) return { job: null };
   const c = await getCfg(env), lp = localParts(now), sent = await jget2(env, K(env, "daily:sent"), {}), min = new Date(now).getUTCMinutes();
@@ -4589,6 +4697,14 @@ async function runDaily(env, now = Date.now()) {
   if (min % 60 === 40) {
     const L = await lang(env), had = await kvGet5(env, K(env, "alsync"));
     if (had !== L && await setAlertsLang(env, L).catch(() => false)) await kvPut5(env, K(env, "alsync"), L);
+  }
+  if (lp.hm >= "09:30" && lp.hm < "12:00" && min % 30 === 0 && sent.zk !== lp.date) {
+    await done("zk");
+    const z = await zakatAlert(env, now).catch((e) => {
+      console.log(JSON.stringify({ zakat: "error", message: String(e && e.message).slice(0, 200) }));
+      return { sent: 0 };
+    });
+    if (z.sent) return { job: "zakat", ...z };
   }
   if ((c.radar || c.sectors) && min % 15 === 5) {
     const slot = DIGEST_AT.find((at) => {

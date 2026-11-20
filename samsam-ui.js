@@ -427,6 +427,7 @@
         '#cpDialog button{height:44px;border-radius:10px;border:1px solid var(--border,#334155);background:var(--metric-bg,#1f2937);color:var(--fg,#e5e7eb);font:inherit;font-weight:700;cursor:pointer}' +
         '#cpDialog .cpd-ok{background:linear-gradient(135deg,#7c3aed,#6d28d9);border-color:#6d28d9;color:#fff}#cpDialog .cpd-ok.danger{background:#dc2626;border-color:#dc2626}' +
         '#cpDialog button:focus-visible{outline:3px solid #a78bfa;outline-offset:2px}' +
+        '#cpDialog .cpd-sel{display:flex;gap:10px;margin:4px 0 14px}#cpDialog .cpd-sel label{flex:1;display:flex;flex-direction:column;gap:5px;font-size:.78rem;font-weight:600;color:var(--fg2,#94a3b8)}#cpDialog .cpd-sel select{width:100%;height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--border,#334155);background:var(--bg,#0b1220);color:var(--fg,#e5e7eb);font:inherit;font-size:.95rem}' +
         '@keyframes cpFade{from{opacity:0}}@keyframes cpPop{from{transform:scale(.96);opacity:0}}@media (prefers-reduced-motion:reduce){#cpDialog,#cpDialog .cpd{animation:none}}';
       document.head.appendChild(st);
     }
@@ -436,21 +437,28 @@
       var w = document.createElement('div'); w.id = 'cpDialog';
       w.innerHTML = '<div class="cpd" role="' + (kind === 'alert' ? 'alertdialog' : 'dialog') + '" aria-modal="true" aria-labelledby="cpdT" aria-describedby="cpdM">' +
         '<div class="cpd-head"><img src="./logo-mark.svg?v=1" alt=""><h3 id="cpdT"></h3></div><p id="cpdM"></p>' +
-        (kind === 'prompt' ? '<input id="cpdI" autocomplete="off">' : '') +
+        (kind === 'prompt' ? (o.selects ? '<div class="cpd-sel" id="cpdS"></div>' : '<input id="cpdI" autocomplete="off">') : '') +
         '<div class="cpd-btns' + (kind === 'alert' ? ' one' : '') + '">' + (kind === 'alert' ? '' : '<button type="button" class="cpd-no"></button>') + '<button type="button" class="cpd-ok"></button></div></div>';
       w.querySelector('#cpdT').textContent = o.title || 'Cute Portfolio';
       if (o.icon) w.querySelector('#cpdT').insertAdjacentHTML('afterbegin', ic(o.icon));
       w.querySelector('#cpdM').textContent = window.CPLang && CPLang.ar ? String(msg).split('\n').map(function (l) { return CPLang.t(l); }).join('\n') : String(msg);   // Arabic: line by line
+      // opts.selects: [{ label, value, options: [[value, text], …] }, …] → drop-downs instead of the text box; the answer is the list of chosen values
+      var selBox = w.querySelector('#cpdS'), sels = [];
+      if (selBox) (o.selects || []).forEach(function (q) {
+        var lab = document.createElement('label'), sp = document.createElement('span'), se = document.createElement('select');
+        sp.textContent = q.label || ''; (q.options || []).forEach(function (op) { var e = document.createElement('option'); e.value = String(op[0]); e.textContent = String(op[1]); if (String(op[0]) === String(q.value)) e.selected = true; se.appendChild(e); });
+        lab.appendChild(sp); lab.appendChild(se); selBox.appendChild(lab); sels.push(se);
+      });
       var ok = w.querySelector('.cpd-ok'), no = w.querySelector('.cpd-no'), inp = w.querySelector('#cpdI');
       ok.textContent = o.okText || 'OK'; if (o.danger) ok.classList.add('danger');
       if (no) no.textContent = o.cancelText || 'Cancel';
       if (inp) { inp.value = o.value == null ? '' : String(o.value); if (o.placeholder) inp.placeholder = o.placeholder; if (o.inputMode) inp.inputMode = o.inputMode; if (o.secret) { inp.type = 'password'; inp.spellcheck = false; inp.setAttribute('autocapitalize', 'off'); } }
       var done = function (v) { document.removeEventListener('keydown', key, true); w.remove(); try { back && back.focus && back.focus(); } catch (_) {} resolve(v); };
-      var yes = function () { done(kind === 'prompt' ? inp.value : true); }, cancel = function () { done(kind === 'prompt' ? null : kind === 'alert' ? undefined : false); };
+      var yes = function () { done(kind === 'prompt' ? (selBox ? sels.map(function (x) { return x.value; }) : inp.value) : true); }, cancel = function () { done(kind === 'prompt' ? null : kind === 'alert' ? undefined : false); };
       var key = function (e) {
         if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
         else if (e.key === 'Enter' && (kind === 'prompt' || document.activeElement === ok || document.activeElement === document.body)) { e.preventDefault(); yes(); }
-        else if (e.key === 'Tab') { var f = [inp, no, ok].filter(Boolean), i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); }
+        else if (e.key === 'Tab') { var f = [inp].concat(sels, [no, ok]).filter(Boolean), i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); }
       };
       ok.onclick = yes; if (no) no.onclick = cancel;
       w.addEventListener('click', function (e) { if (e.target === w) cancel(); });

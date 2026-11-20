@@ -328,14 +328,25 @@ function renderZakatLine(portfolio) {
   if (z.inWindow && !z.fixed && !zkSaving && Samsam.setZakat && portfolio.every(c => c.qty <= 0 || c.currentPrice > 0)) {   // 1 Ramadan (or the first visit after it): keep that value
     zkSaving = true; Samsam.setZakat({ hy: z.hy, value: z.value, nisabUsd: z.nisabUsd, date: new Date().toISOString().slice(0, 10) }).catch(() => { zkSaving = false; });
   }
-  const fmtUsd = n => SamsamFmt.usd(n), iso = x => '\u2066' + x + '\u2069', hint = '<button type="button" class="cp-hint" data-hint="zakatCrypto" aria-label="About zakat"></button>';
+  const fmtUsd = n => SamsamFmt.usd(n), iso = x => '⁦' + x + '⁩', hint = '<button type="button" class="cp-hint" data-hint="zakatCrypto" aria-label="About zakat"></button>';
+  const day = SamsamCoins.zakatDayLabel(AR), edit = `<button type="button" class="zk-edit" onclick="editZakatDay()" title="${AR ? 'تغيير يوم الزكاة' : 'Change your zakat day'}">${SamsamUI.icon('pencil')}</button>`;
   el.hidden = false;
   el.innerHTML = '🕌 ' + (z.due
-    ? `${AR ? 'زكاة الكريبتو مستحقة' : 'Crypto zakat due'} (${AR ? '1 رمضان' : '1 Ramadan'} ${iso(z.hy)}): <b>${iso(fmtUsd(z.zakatUsd))}</b> <small>${AR ? '2.5% من' : '2.5% of'} ${iso(fmtUsd(z.value))}</small>`
-    : z.inWindow ? `${AR ? 'زكاة الكريبتو' : 'Crypto zakat'} (${AR ? '1 رمضان' : '1 Ramadan'} ${iso(z.hy)}): ${AR ? 'أقل من النصاب — لا زكاة' : 'below the nisab — none'} <small>(${iso(fmtUsd(z.nisabUsd))})</small>`
-    : z.meets ? `${AR ? 'زكاة الكريبتو في 1 رمضان، بعد' : 'Crypto zakat on 1 Ramadan, in'} <b>${iso(z.daysLeft)}</b> ${AR ? 'يوم' : 'days'} · ${AR ? 'تقدير اليوم' : 'at today\'s value'} <b>${iso(fmtUsd(z.zakatUsd))}</b>`
-    : `${AR ? 'زكاة الكريبتو: أقل من النصاب' : 'Crypto zakat: below the nisab'} <small>(${iso(fmtUsd(z.nisabUsd))} = ${AR ? '85 جم ذهب' : '85 g of gold'})</small>`) + hint;
+    ? `${AR ? 'زكاة الكريبتو مستحقة' : 'Crypto zakat due'} (${day} ${iso(z.hy)}): <b>${iso(fmtUsd(z.zakatUsd))}</b> <small>${AR ? '2.5% من' : '2.5% of'} ${iso(fmtUsd(z.value))}</small>`
+    : z.inWindow ? `${AR ? 'زكاة الكريبتو' : 'Crypto zakat'} (${day} ${iso(z.hy)}): ${AR ? 'أقل من النصاب — لا زكاة' : 'below the nisab — none'} <small>(${iso(fmtUsd(z.nisabUsd))})</small>`
+    : z.meets ? `${AR ? 'زكاة الكريبتو في' : 'Crypto zakat on'} ${day}${AR ? '، بعد' : ', in'} <b>${iso(z.daysLeft)}</b> ${AR ? 'يوم' : 'days'} · ${AR ? 'تقدير اليوم' : 'at today\'s value'} <b>${iso(fmtUsd(z.zakatUsd))}</b>`
+    : `${AR ? 'زكاة الكريبتو' : 'Crypto zakat'} (${day}): ${AR ? 'أقل من النصاب' : 'below the nisab'} <small>(${iso(fmtUsd(z.nisabUsd))} = ${AR ? '85 جم ذهب' : '85 g of gold'})</small>`) + edit + hint;
 }
+// ✏️ your zakat day: a hijri day and month (everyone's year starts on a different day) — crypto, gold and silver all follow it
+async function editZakatDay() {
+  const AR = !!(window.CPLang && CPLang.ar), cur = Samsam.getZakatDay(), M = Samsam.core.HIJRI_MONTHS[AR ? 'ar' : 'en'];
+  const v = await CPDialog.prompt('The hijri day your zakat year ends — crypto, gold and silver are all counted on it, once a year.', { title: 'Your Zakat Day', okText: 'Save',
+    selects: [{ label: AR ? 'اليوم' : 'Day', value: cur.d, options: Array.from({ length: 30 }, (_, i) => [i + 1, i + 1]) }, { label: AR ? 'الشهر الهجري' : 'Hijri month', value: cur.m, options: M.map((n, i) => [i + 1, n]) }] });
+  if (!Array.isArray(v)) return;
+  await Samsam.setZakatDay({ d: +v[0], m: +v[1] });
+  try { renderAll(); } catch (_) {}
+}
+window.editZakatDay = editZakatDay;
 function signalRules() { return window.Samsam && Samsam.getSignalRules ? Samsam.getSignalRules() : { reinforce: -5, sell: -20, smart: true }; }
 // ⏳ every coin's last daily close (00:00 UTC = 03:00 Riyadh, from GitHub's p/close.json): the Signal is decided on it, so a
 // wick of a few seconds or minutes never flips it; the live price only marks "pending ⏳" (and the price keeps moving)
@@ -438,7 +449,7 @@ function renderHeader() {
         val += v; cost += k; pnl += p;
         const vt = SamsamCoins.vaultOf(docs[c.sym], AR), z = SamsamCoins.zakat(c.sym, st);
         const zk = !z ? '' : z.due ? `🕌 ${AR ? 'الزكاة مستحقة' : 'Zakat due'} <b>⁦${(z.zakatG).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${AR ? 'جم' : 'g'} ≈ ${fmtUsd(z.zakatOz * c.currentPrice)}⁩</b>`
-          : z.meets ? `🕌 ${AR ? 'الزكاة في 1 رمضان، بعد' : 'Zakat on 1 Ramadan, in'} <b>⁦${z.daysLeft}⁩</b> ${AR ? 'يوم' : 'days'}` : '';
+          : z.meets ? `🕌 ${AR ? 'الزكاة في' : 'Zakat on'} ${SamsamCoins.zakatDayLabel(AR)}${AR ? '، بعد' : ', in'} <b>⁦${z.daysLeft}⁩</b> ${AR ? 'يوم' : 'days'}` : '';
         return `<button type="button" class="mt-row" onclick="openCoinTx('${c.sym}')" title="${AR ? 'السجل: تعديل أو حذف' : 'History — edit or delete'}"><span>${nm[c.sym][0]} ${nm[c.sym][1]} <b>⁦${(c.qty * G).toLocaleString('en-US', { maximumFractionDigits: 1 })} ${AR ? 'جم' : 'g'}⁩</b>${vt ? ` <small class="mt-vault">${vt.e} ${SamsamCoins.esc(vt.label)}</small>` : ''}</span>` +
           `<span class="mt-pl ${cls(p)}">⁦${sgn(p, fmtUsd)} (${sgn(pc, x => x.toFixed(1))}%)⁩ ›</span>` +
           `<span class="mt-px">${AR ? 'الشراء' : 'Bought'} <b>⁦${SamsamFmt.price(c.basePrice / G)}/g⁩</b> · ${AR ? 'الآن' : 'now'} <b>⁦${SamsamFmt.price(c.currentPrice / G)}/g⁩</b>${zk ? ' · ' + zk : ''}</span></button>`;

@@ -1339,3 +1339,4 @@
 /* 🕌 the crypto's zakat: one quiet line under the cards (every width) */
 .zk-line { margin-top: 10px; width: 100%; box-sizing: border-box; text-align: center; font-size: .82rem; line-height: 1.5; color: var(--text-secondary, #a5b4cf); }   /* 🕌 the crypto's zakat: one quiet line under the cards */
 .zk-line b { color: var(--text-primary, #e8ecf8); } .zk-line small { opacity: .8; font-size: .92em; } .zk-line[hidden] { display: none; }
+.zk-edit { background: none; border: none; padding: 0 4px; margin-inline-start: 4px; color: inherit; opacity: .75; cursor: pointer; vertical-align: middle; }

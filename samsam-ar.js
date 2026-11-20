@@ -279,6 +279,7 @@
     // ── Settings ──
     'Account & data': 'الحساب والبيانات', 'Account': 'الحساب', 'Backup': 'النسخ الاحتياطي', 'backup': 'النسخ الاحتياطي', 'Back up now': 'انسخ الآن', 'Recover Data': 'استرجاع البيانات', 'recover': 'استرجاع البيانات',
     'Telegram': 'تليجرام', 'Telegram alerts': 'تنبيهات تليجرام', 'Link your portfolio to the Telegram bot': 'ربط محفظتك ببوت تليجرام', 'Link the Telegram bot': 'ربط بوت تليجرام',
+    'Your Zakat Day': 'يوم زكاتك', 'The hijri day your zakat year ends — crypto, gold and silver are all counted on it, once a year.': 'اليوم الهجري الذي يكتمل فيه حول زكاتك — تُحسب فيه زكاة الكريبتو والذهب والفضة معاً، مرة كل عام.',
     'Join Cute Portfolio Signals': 'انضم لقناة Cute Portfolio Signals', '📱 Cute Portfolio in Telegram': '📱 Cute Portfolio داخل تليجرام',
     'Your Telegram is not linked to a portfolio yet. Open Cute Portfolio once in your browser → Settings → "Link your portfolio to the Telegram bot", then open it here again.': 'حساب تليجرام هذا غير مربوط بمحفظة بعد. افتح Cute Portfolio مرة واحدة من المتصفح ← الإعدادات ← «ربط محفظتك ببوت تليجرام»، ثم افتحه هنا مرة أخرى.',
     'This Telegram account is not a member of the bot yet — ask Dr. Samir Saad for an invite.': 'حساب تليجرام هذا ليس عضواً في البوت بعد — اطلب دعوة من د. سمير سعد.',

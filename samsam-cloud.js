@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611202145';
-import * as Hist from './samsam-history.js?v=202611202145';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611202145';
+import * as Core from './samsam-core.js?v=202611202244';
+import * as Hist from './samsam-history.js?v=202611202244';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611202244';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -848,6 +848,9 @@ const API = {
     const { isDefault, ...c } = cleanAlerts(a);
     return commit((bt, ref) => bt.set(ref('meta', 'info'), { alerts: { ...c, setAt: new Date().toISOString() } }, { merge: true }), 'Alerts');
   },
+  // 🕌 your zakat day: a hijri day and month ({ m: 1–12, d: 1–30 }); 1 Ramadan until you choose
+  getZakatDay() { return Core.cleanZakatDay(S.meta && S.meta.zakatDay); },
+  setZakatDay(z) { const c = Core.cleanZakatDay(z); return commit((bt, ref) => bt.set(ref('meta', 'info'), { zakatDay: c }, { merge: true }), 'Zakat day'); },
   // 🕌 the value your crypto had on 1 Ramadan (kept once a hijri year, so the zakat is worked out on that day's value on every device)
   getZakat() { const z = S.meta && S.meta.zakat; return z && Number.isFinite(+z.hy) && Number.isFinite(+z.value) && +z.nisabUsd > 0 ? { hy: +z.hy, value: +z.value, nisabUsd: +z.nisabUsd, date: String(z.date || '').slice(0, 10) } : null; },
   setZakat(z) {

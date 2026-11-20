@@ -575,3 +575,37 @@ export function newId(prefix) {
     : Math.random().toString(36).slice(2, 14);
   return `${prefix}${Date.now()}_${r}`;
 }
+
+// ── 🕌 Zakat: one date a year, a hijri day of your own choice (default 1 Ramadan), by the Umm al-Qura calendar in Riyadh's day.
+// zakatWhen(now, { m, d }) → { last, next (ms), hy / nextHy (hijri years), since (days since the last one), daysLeft,
+//   due (from that day for 30 days), lastDate, nextDate ("YYYY-MM-DD"), m, d } | null (no hijri calendar on this device)
+// The 30th of a month that has 29 days counts on the 1st of the next month.
+export const ZAKAT_DAY = Object.freeze({ m: 9, d: 1 }), ZAKAT_WINDOW = 30;
+export const HIJRI_MONTHS = Object.freeze({
+  en: ['Muharram', 'Safar', 'Rabi I', 'Rabi II', 'Jumada I', 'Jumada II', 'Rajab', 'Shaban', 'Ramadan', 'Shawwal', 'Dhul Qadah', 'Dhul Hijjah'],
+  ar: ['محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'] });
+export function cleanZakatDay(z) { const m = Math.round(+(z && z.m)), d = Math.round(+(z && z.d)); return m >= 1 && m <= 12 && d >= 1 && d <= 30 ? { m, d } : { ...ZAKAT_DAY }; }
+let hijriFmt = null; const zkMemo = new Map();
+export function hijri(t) {
+  try {
+    hijriFmt = hijriFmt || new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'numeric', year: 'numeric', timeZone: 'Asia/Riyadh' });
+    const o = {}; for (const p of hijriFmt.formatToParts(new Date(t))) if (p.type === 'day' || p.type === 'month' || p.type === 'year') o[p.type] = parseInt(p.value, 10);
+    return o.month && o.year > 1300 ? o : null;   // (a device without this calendar answers in Gregorian: year 2026 → null)
+  } catch (_) { return null; }
+}
+const riyadhDay = t => new Date(t + 3 * 36e5).toISOString().slice(0, 10);
+export function zakatWhen(now = Date.now(), day = ZAKAT_DAY) {
+  const { m, d } = cleanZakatDay(day), key = riyadhDay(now) + '|' + m + '|' + d;
+  if (zkMemo.has(key)) return zkMemo.get(key);
+  if (!hijri(now)) return null;
+  const is = t => { const a = hijri(t); if (!a) return false; if (a.month === m && a.day === d) return true;
+    if (d === 30 && a.day === 1 && a.month === (m % 12) + 1) { const y = hijri(t - DAYMS); return !!y && y.day === 29; } return false; };
+  let since = null, left = null;
+  for (let i = 0; i <= 390 && since == null; i++) if (is(now - i * DAYMS)) since = i;
+  for (let i = 1; i <= 390 && left == null; i++) if (is(now + i * DAYMS)) left = i;
+  if (since == null || left == null) return null;
+  const last = now - since * DAYMS, next = now + left * DAYMS;
+  const out = { last, next, hy: hijri(last).year, nextHy: hijri(next).year, since, daysLeft: left, due: since < ZAKAT_WINDOW, lastDate: riyadhDay(last), nextDate: riyadhDay(next), m, d };
+  if (zkMemo.size > 50) zkMemo.clear(); zkMemo.set(key, out);
+  return out;
+}
