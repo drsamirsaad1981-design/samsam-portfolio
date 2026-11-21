@@ -31,6 +31,9 @@ const DAY = 864e5, PERIOD = 90, DEEP = 460, KEEP_DAYS = DEEP + 2;   // DEEP: a y
 const histBudget = Date.now() + (process.env.CG_FAST ? 20e3 : 4 * 60e3);   // history filling: at most ~4 minutes a run (the job has 20)
 const API = process.env.CG_API || 'https://api.coingecko.com/api/v3';
 const BN = process.env.BN_API || 'https://data-api.binance.vision/api/v3';
+const GT = process.env.GT_API || 'https://api.geckoterminal.com/api/v2';   // on-chain prices (CoinGecko's DEX data, no key)
+// bStocks that are live but not in CoinGecko's coin list yet — by contract (looked up until the list carries them)
+const BSTOCK_NEW = [{ sym: 'ANTB', name: 'Anthropic (bStocks Tokenized Stock)', chain: 'binance-smart-chain', gt: 'bsc', addr: '0x38dd26788cf2d901e3abf04efe3007d459d0fc53', url: 'https://www.coingecko.com/en/stocks/anthropic' }];
 const FNG = process.env.FNG_API || 'https://api.alternative.me/fng/?limit=2';
 // CoinMarketCap's own Fear & Greed and Altcoin Season Index (the numbers CoinMarketCap and Binance show) — its keyless
 // public API (no key, cached by CoinMarketCap: Fear & Greed every 15 s, the Altcoin Season Index every 15 minutes)
@@ -158,6 +161,36 @@ async function main() {
       if (add.length) { snap.stocks = snap.stocks.concat(add); log('bstocks: +' + add.length + ' not in the category yet (' + add.map(c => c.sym).join(', ') + ')'); }
     }
   } catch (e) { log('bstocks extra:', e.message); }
+  // 🆕🆕 …and one CoinGecko's coin list doesn't carry at all yet (Anthropic · ANTB: on CoinMarketCap and on BNB Chain,
+  // not in CoinGecko's API): by its contract — CoinGecko first (it joins the list above once it is there), then
+  // Binance's own price, then the on-chain price (GeckoTerminal). Dropped from here by itself once the list has it.
+  try {
+    const haveSym = new Set((snap.stocks || []).map(c => c.sym));
+    for (const n of BSTOCK_NEW) {
+      if (!snap.stocks || haveSym.has(n.sym)) continue;
+      await sleep(2500);
+      const cg = await get(`${API}/coins/${n.chain}/contract/${n.addr}`, 1);
+      if (cg && cg.id && cg.market_data && cg.market_data.current_price && cg.market_data.current_price.usd > 0) {
+        const md = cg.market_data;
+        snap.stocks.push({ id: cg.id, sym: n.sym, name: cg.name || n.name, img: (cg.image && (cg.image.large || cg.image.small)) || '', price: md.current_price.usd, ch24: sane(md.price_change_percentage_24h ?? null, 60), ch7: sane(md.price_change_percentage_7d ?? null, 85), mcap: (md.market_cap && md.market_cap.usd) || null, vol: (md.total_volume && md.total_volume.usd) || null, spark: [], fresh: true });
+        if (snap.stockExtra && !snap.stockExtra.ids.includes(cg.id)) snap.stockExtra.ids.push(cg.id);
+        log('bstocks: +' + n.sym + ' (CoinGecko, by contract)'); continue;
+      }
+      const bn = await get(`${BN}/ticker/24hr?symbol=${n.sym}USDT`, 1);
+      if (bn && +bn.lastPrice > 0) {
+        snap.stocks.push({ id: 'bn:' + n.sym, sym: n.sym, name: n.name, img: '', price: +bn.lastPrice, ch24: sane(Number.isFinite(+bn.priceChangePercent) ? +bn.priceChangePercent : null, 60), ch7: null, mcap: null, vol: +bn.quoteVolume || null, spark: [], fresh: true, src: 'binance', url: n.url });
+        log('bstocks: +' + n.sym + ' (Binance)'); continue;
+      }
+      const gt = await get(`${GT}/networks/${n.gt}/tokens/${n.addr}?include=top_pools`, 1), a = gt && gt.data && gt.data.attributes;
+      if (a && +a.price_usd > 0) {
+        const pool = ((gt.included || []).find(x => x && x.attributes && x.attributes.price_change_percentage) || {}).attributes || {};
+        const ch = pool.price_change_percentage ? +pool.price_change_percentage.h24 : NaN;
+        snap.stocks.push({ id: n.gt + ':' + n.addr, sym: n.sym, name: n.name, img: a.image_url && /^https?:/.test(a.image_url) ? a.image_url : '', price: +a.price_usd, ch24: sane(Number.isFinite(ch) ? ch : null, 60), ch7: null, mcap: +a.market_cap_usd || +a.fdv_usd || null, vol: (a.volume_usd && +a.volume_usd.h24) || null, spark: [], fresh: true, src: 'dex', url: n.url });
+        log('bstocks: +' + n.sym + ' (on-chain price)'); continue;
+      }
+      log('bstocks: ' + n.sym + ' not found anywhere yet');
+    }
+  } catch (e) { log('bstocks new:', e.message); }
 
   // 🥇 metals and oil (the Market Hub's Metals tab): gold, silver, platinum, copper, Brent — Yahoo Finance's public chart
   // data for the front-month futures (no key; delayed ~10–15 min). Price, the change since the last close, 7 trading days,

@@ -60,7 +60,7 @@
     var nextLbl = mk.state === 'open' ? T('closes', 'يُغلق') : T('opens', 'يفتح');
     var by = function (f, n) { return withCh.slice().sort(f).slice(0, n); };
     var best = by(function (a, b) { return b.ch24 - a.ch24; }, 3), worst = by(function (a, b) { return a.ch24 - b.ch24; }, 3);
-    var chip = function (x) { return '<a class="as-mv" href="https://www.coingecko.com/en/coins/' + encodeURIComponent(x.id) + '" target="_blank" rel="noopener">' + (x.img ? '<img src="' + E(x.img) + '" alt="" loading="lazy">' : '') + '<b>' + E(x.sym) + '</b>' + pct(x.ch24) + '</a>'; };
+    var chip = function (x) { return '<a class="as-mv" href="' + E(x.url && /^https:\/\//.test(x.url) ? x.url : 'https://www.coingecko.com/en/coins/' + encodeURIComponent(x.id)) + '" target="_blank" rel="noopener">' + (x.img ? '<img src="' + E(x.img) + '" alt="" loading="lazy">' : '') + '<b>' + E(x.sym) + '</b>' + pct(x.ch24) + '</a>'; };
     var h = '<div class="as-grid">' +
       '<div class="as-card"><div class="as-k">📈 bStocks<span class="cp-hint" data-hint="bstocks" role="button" tabindex="0"></span></div><div class="as-v">' + iso(list.length) + ' <small>' + T('stocks', 'سهماً') + '</small></div>' +
         '<div class="as-li">' + T('Market cap', 'القيمة السوقية') + ' <b>' + iso(M() ? M().fmtBig(cap) : usd(cap)) + '</b></div>' +
@@ -78,7 +78,7 @@
     h += '<div class="as-list"><div class="mk-tools as-tools"><div class="ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo data-ic-size="16"></span><input type="search" id="asQ" placeholder="' + E(T('Search stock…', 'ابحث عن سهم…')) + '" value="' + E(st.q) + '" autocomplete="off" aria-label="Search"></div></div>' +
       '<div class="as-head">' + head('name', T('Stock', 'السهم'), 'l') + head('price', T('Price', 'السعر')) + head('ch24', '24h') + head('ch7', '7d', 'w') + head('mcap', T('Market cap', 'القيمة السوقية'), 'w') + '</div>' +
       (rows.length ? rows.map(function (x) {
-        return '<a class="as-row" href="https://www.coingecko.com/en/coins/' + encodeURIComponent(x.id) + '" target="_blank" rel="noopener"><span class="as-n">' + (x.img ? '<img src="' + E(x.img) + '" alt="" loading="lazy">' : '<i class="as-ph"></i>') +
+        return '<a class="as-row" href="' + E(x.url && /^https:\/\//.test(x.url) ? x.url : 'https://www.coingecko.com/en/coins/' + encodeURIComponent(x.id)) + '" target="_blank" rel="noopener"><span class="as-n">' + (x.img ? '<img src="' + E(x.img) + '" alt="" loading="lazy">' : '<i class="as-ph"></i>') +
           '<span><b>' + E(x.sym) + '</b><small>' + E(String(x.name || '').replace(/\s*bStock$/i, '')) + '</small></span></span>' +
           '<span class="as-p">' + iso(usd(x.price)) + '</span><span>' + pct(x.ch24) + '</span><span class="w">' + pct(x.ch7) + '</span><span class="w as-mc">' + iso(M() ? M().fmtBig(x.mcap) : '') + '</span></a>';
       }).join('') : '<p class="as-note">' + T('No stock matches.', 'لا يوجد سهم مطابق.') + '</p>') + '</div>' +
