@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: a05af04381fe93f1
+// sources-hash: ed9cabf37689a6f2
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -466,8 +466,14 @@ function confirmedSignal({ sym, avg, live, close, rules, rs = null, smart = true
   return { ...C, chg: pctOf(close), live: L.action, pending: L.action !== C.action ? L.action : null, onClose: true };
 }
 function strengthMap(alt) {
-  const out = {}, b = alt && alt.btc;
+  const cl = alt && alt.closed && Array.isArray(alt.closed.btc) && Number.isFinite(alt.closed.btc[1]) && Number.isFinite(alt.closed.btc[2]) && alt.closed.p ? alt.closed : null;
+  const out = {}, b = cl ? cl.btc : alt && alt.btc;
   if (!b || !Number.isFinite(b[1]) || !Number.isFinite(b[2])) return out;
+  if (cl) {
+    for (const [id, p] of Object.entries(cl.p)) if (Array.isArray(p) && Number.isFinite(p[1]) && Number.isFinite(p[2])) out[id] = { d30: p[1] - b[1], d90: p[2] - b[2], c30: p[1], c90: p[2], c7: Number.isFinite(p[0]) ? p[0] : null };
+    out.__btc = { c30: b[1], c90: b[2] };
+    return out;
+  }
   const put = (id, p) => {
     if (id && Array.isArray(p) && Number.isFinite(p[1]) && Number.isFinite(p[2])) out[id] = { d30: p[1] - b[1], d90: p[2] - b[2], c30: p[1], c90: p[2], c7: Number.isFinite(p[0]) ? p[0] : null };
   };
@@ -4609,7 +4615,7 @@ async function radarDigest(env, now = Date.now(), slot = "") {
     lines.push("", `\u{1F9F2} <b>${ar ? "\u0627\u0644\u0631\u0627\u0641\u0639\u0629" : "Leverage"}</b>`);
     for (const [sym, x] of lev) {
       lines.push(`\u2022 <b>${esc(sym)}</b>: ${x.finds.map((k) => w[k]).join(" \xB7 ")}`);
-      const d = [x.fund != null ? `${w.fund} ${x.fund > 0 ? "+" : ""}${x.fund}% / 8h` : null, x.oi != null ? `${w.oi} ${pct(x.oi, 1)}` : null, x.longs != null ? `${w.longs} ${r24(x.longs)}%` : null].filter(Boolean);
+      const d = [x.fund != null ? `${w.fund} ${x.fund > 0 ? "+" : x.fund < 0 ? "\u2212" : ""}${Math.abs(x.fund)}% / 8h` : null, x.oi != null ? `${w.oi} ${pct(x.oi, 1)}` : null, x.longs != null ? `${w.longs} ${r24(x.longs)}%` : null].filter(Boolean);
       if (d.length) lines.push(`   ${d.join(" \xB7 ")}`);
     }
   }

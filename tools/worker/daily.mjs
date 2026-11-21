@@ -341,7 +341,7 @@ export async function radarDigest(env, now = Date.now(), slot = '') {
     lines.push('', `🧲 <b>${ar ? 'الرافعة' : 'Leverage'}</b>`);
     for (const [sym, x] of lev) {
       lines.push(`• <b>${esc(sym)}</b>: ${x.finds.map(k => w[k]).join(' · ')}`);
-      const d = [x.fund != null ? `${w.fund} ${x.fund > 0 ? '+' : ''}${x.fund}% / 8h` : null, x.oi != null ? `${w.oi} ${pct(x.oi, 1)}` : null, x.longs != null ? `${w.longs} ${r2(x.longs)}%` : null].filter(Boolean);
+      const d = [x.fund != null ? `${w.fund} ${x.fund > 0 ? '+' : x.fund < 0 ? '−' : ''}${Math.abs(x.fund)}% / 8h` : null, x.oi != null ? `${w.oi} ${pct(x.oi, 1)}` : null, x.longs != null ? `${w.longs} ${r2(x.longs)}%` : null].filter(Boolean);
       if (d.length) lines.push(`   ${d.join(' · ')}`);
     }
   }

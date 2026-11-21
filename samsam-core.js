@@ -366,8 +366,12 @@ export function confirmedSignal({ sym, avg, live, close, rules, rs = null, smart
 }
 // 30 / 90-day strength vs BTC for every coin, from the Altcoin Season file (m/alt.json: top 100 + the app's other coins)
 export function strengthMap(alt) {
-  const out = {}, b = alt && alt.btc;
+  // as of the last daily close when the file has it (alt.closed) — the Signal is decided on the close, so its strength
+  // check must not flip during the day; older files: the live numbers
+  const cl = alt && alt.closed && Array.isArray(alt.closed.btc) && Number.isFinite(alt.closed.btc[1]) && Number.isFinite(alt.closed.btc[2]) && alt.closed.p ? alt.closed : null;
+  const out = {}, b = cl ? cl.btc : alt && alt.btc;
   if (!b || !Number.isFinite(b[1]) || !Number.isFinite(b[2])) return out;
+  if (cl) { for (const [id, p] of Object.entries(cl.p)) if (Array.isArray(p) && Number.isFinite(p[1]) && Number.isFinite(p[2])) out[id] = { d30: p[1] - b[1], d90: p[2] - b[2], c30: p[1], c90: p[2], c7: Number.isFinite(p[0]) ? p[0] : null }; out.__btc = { c30: b[1], c90: b[2] }; return out; }
   const put = (id, p) => { if (id && Array.isArray(p) && Number.isFinite(p[1]) && Number.isFinite(p[2])) out[id] = { d30: p[1] - b[1], d90: p[2] - b[2], c30: p[1], c90: p[2], c7: Number.isFinite(p[0]) ? p[0] : null }; };
   (alt.coins || []).forEach(c => put(c.id, c.p));
   Object.entries(alt.mine || {}).forEach(([id, p]) => put(id, p));

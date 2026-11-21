@@ -64,6 +64,15 @@ check('same price later → not again', !r.messages.some(x => x.key === 'move-bt
   const tn = T0 + 3.5 * H, mn = mk({ now: tn, btc: 84800 }); d = evaluate(summarize(user(), mn, tn), mn, d.state, dg, tn);   // 12:10
   const dm = d.messages.find(x => x.key === 'digest');
   check('…12:10 → ONE "Portfolio digest · 12:00" with the BTC move inside, nothing left held', d.messages.length === 1 && dm && /Portfolio digest<\/b> · 12:00/.test(dm.text) && /BTC \+6\.0%/.test(dm.text) && okHtml(dm.text) && !d.state.held.length, d.messages.map(x => x.key));
+  { // held in Arabic, then the language changed → two digests, each in ONE language, the same button once
+    const dAr = settings({ alerts: { lang: 'ar' } }), a0 = evaluate(s, mk(), {}, dAr, T0).state, a1 = evaluate(s2, m2, a0, dAr, t2).state;
+    const mix = { ...a1, held: a1.held.concat({ key: 'x-en', text: '🔻 <b>Your portfolio −6.8% in 24h</b>', buttons: [[{ text: 'Open portfolio', url: a1.held[0].buttons ? a1.held[0].buttons[0][0].url : 'https://x/' }]], lang: 'en' }) };
+    const dd = evaluate(summarize(user(), mn, tn), mn, mix, settings({}), tn).messages.filter(x => x.key.startsWith('digest'));
+    const hasAr = x => /[\u0600-\u06FF]/.test(x.text);
+    check('digest after a language change: one message per language (never a mixed one)', dd.length === 2 && dd.filter(hasAr).length === 1 && /ملخص المحفظة/.test(dd.find(hasAr).text) && /Portfolio digest/.test(dd.find(x => !hasAr(x)).text) && /Your portfolio/.test(dd.find(x => !hasAr(x)).text), dd.map(x => x.text.slice(0, 80)));
+    const one = evaluate(summarize(user(), mn, tn), mn, { ...a1, held: [{ key: 'a', text: 'A', buttons: [[{ text: 'افتح المحفظة', url: 'https://x/p' }]], lang: 'en' }, { key: 'b', text: 'B', buttons: [[{ text: 'Open portfolio', url: 'https://x/p' }]], lang: 'en' }] }, settings({}), tn).messages.find(x => x.key === 'digest');
+    check('digest buttons: the same target once, whatever its label', one && one.buttons[0].length === 1, one && one.buttons);
+  }
   d = evaluate(summarize(user(), mn, tn), mn, d.state, dg, tn + 1800e3);
   check('…12:40 → nothing (the slot went)', !d.messages.length, d.messages.map(x => x.key));
   const t16 = T0 + 7.5 * H, m16 = mk({ now: t16, btc: 84800 }); d = evaluate(summarize(user(), m16, t16), m16, d.state, dg, t16);
@@ -169,6 +178,12 @@ check('calm on, Smart off: still waits on a falling coin', signalFor({ sym: 'SEI
 check('calm + Smart: a weak coin keeps the Smart reason', signalFor({ sym: 'SEI', chg: -10, rules: R, rs: { d30: -20, d90: -30, c7: -9 }, calm: true }).why === 'weak');
 check('BTC is always Hold', signalFor({ sym: 'BTC', chg: -40, rules: R, rs: { d30: -50, d90: -50 } }).action === 'hold');
 const sm = strengthMap({ btc: [1, -10, 20], coins: [{ id: 'sei', p: [0, -30, -5] }], mine: { kava: [0, 5, 30] } });
+{ // ⏳ decided on the close: the map uses the changes as of the last daily close when the file has them, not the moving ones
+  const live = { btc: [1, -10, 20], coins: [{ id: 'sei', p: [-5.5, -30, -5] }], mine: { kava: [0, 5, 30] } };
+  const cm = strengthMap({ ...live, closed: { day: 1, btc: [0, -8, 18], p: { sei: [-4.9, -20, -2], kava: [1, 2, 20] } } });
+  check('strength map: as of the daily close when the file has it (a 7-day change hovering at −5% no longer flips the signal)', cm.sei.c7 === -4.9 && cm.sei.d30 === -12 && cm.sei.d90 === -20 && cm.kava.d30 === 10 && cm.__btc.c30 === -8, cm);
+  check('strength map: an old file (no close) → the live numbers', strengthMap(live).sei.c7 === -5.5 && strengthMap({ ...live, closed: null }).sei.d30 === -20);
+}
 check('strength map: carries the coin\'s own 7-day change', strengthMap({ btc: [1, -10, 20], coins: [{ id: 'sei', p: [-7.5, -30, -5] }] }).sei.c7 === -7.5);
 check('strength map: points vs BTC from the Altcoin Season file', sm.sei.d30 === -20 && sm.sei.d90 === -25 && sm.kava.d30 === 15 && sm.kava.d90 === 10, sm);
 // in the alerts: SEI −16.7% (Reinforce) but far behind BTC → Hold, with the reason in the alert

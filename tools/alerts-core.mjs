@@ -322,7 +322,7 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
   // 🔔 one focused message instead of many: an alert that can wait is held (in the state) until the next slot
   const push = (msg, urgent = false) => {
     if (quiet && !urgent) return false;
-    if (cfg.digest && !first && !urgent && !NOW_KEYS.test(msg.key)) { st.held = (st.held || []).filter(x => x.key !== msg.key).concat({ key: msg.key, text: msg.text, buttons: msg.buttons || null }).slice(-15); return true; }
+    if (cfg.digest && !first && !urgent && !NOW_KEYS.test(msg.key)) { st.held = (st.held || []).filter(x => x.key !== msg.key).concat({ key: msg.key, text: msg.text, buttons: msg.buttons || null, lang: cfg.lang }).slice(-15); return true; }
     out.push({ ...msg, urgent }); return true;
   };
 
@@ -481,10 +481,14 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
   if (cfg.digest && slotKey && st.slot !== slotKey) {
     st.slot = slotKey;
     const held = st.held || []; st.held = [];
-    if (held.length) {
-      const seen = new Set(), row = [];
-      held.forEach(x => (x.buttons || []).flat().forEach(b => { const k = b.text + '|' + (b.url || ''); if (!seen.has(k) && row.length < 3) { seen.add(k); row.push(b); } }));
-      out.push({ key: 'digest', urgent: false, text: `🔔 <b>${t.digestT}</b> · ${slot}\n\n` + held.map(x => x.text).join('\n\n━━━━━━━━\n\n').slice(0, 3800), buttons: row.length ? [row] : undefined });
+    // one language per message: what was held before you changed the language goes in its own message, in its own
+    // language (a mixed one reads badly — the direction of the whole message follows its first lines)
+    const langs = [...new Set(held.map(x => x.lang || cfg.lang))].sort((a, b) => (a === cfg.lang) - (b === cfg.lang));
+    for (const lg of langs) {
+      const part = held.filter(x => (x.lang || cfg.lang) === lg), seen = new Set(), row = [];
+      const target = b => b.url || (b.web_app && b.web_app.url) || b.callback_data || b.text;   // the same button once, whatever its label
+      part.forEach(x => (x.buttons || []).flat().forEach(b => { const k = target(b); if (!seen.has(k) && row.length < 3) { seen.add(k); row.push(b); } }));
+      out.push({ key: langs.length > 1 && lg !== cfg.lang ? 'digest-' + lg : 'digest', urgent: false, text: `🔔 <b>${(W[lg] || t).digestT}</b> · ${slot}\n\n` + part.map(x => x.text).join('\n\n━━━━━━━━\n\n').slice(0, 3800), buttons: row.length ? [row] : undefined });
     }
   }
   st.t = now;
@@ -493,7 +497,7 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
 // 🔔 one message per run instead of one per coin / alert: everything except the morning brief and the weekly report
 // (long on their own) is put together, in the order it came; up to 2 rows of buttons, no button twice
 export function combine(out) {
-  const big = x => x.key === 'brief' || x.key === 'weekly' || x.key === 'digest', rest = out.filter(x => !big(x));
+  const big = x => x.key === 'brief' || x.key === 'weekly' || x.key.startsWith('digest'), rest = out.filter(x => !big(x));
   if (rest.length < 2) return out;
   const seen = new Set(), row1 = [], row2 = [];
   rest.forEach(x => (x.buttons || []).flat().forEach(b => { const k = b.text + '|' + (b.url || b.callback_data || ''); if (seen.has(k)) return; seen.add(k); (row1.length < 3 ? row1 : row2.length < 3 ? row2 : []).push(b); }));

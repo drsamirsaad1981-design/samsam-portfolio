@@ -129,13 +129,16 @@ async function main() {
     else log('fng: no answer, kept the last one');
   }
 
+  // a stock does not lose 91% in a day: a move past the limit is a split, a re-denomination or a bad print → no % (null),
+  // so it never tops a "best / worst" list or fires an alert (the price itself stays)
+  const sane = (v, max) => v != null && Math.abs(v) <= max ? v : null;
   // Binance bStocks (tokenized US stocks: NVIDIA, Tesla, Circle…) — CoinGecko's "bStocks Ecosystem" category, for the
   // Telegram bot's Market (best / worst 5). Kept from the last run when CoinGecko doesn't answer.
   await sleep(4000);
   // (all of them — ~100–130 so far — with logo, 7-day change and a small 7-day line, for the Market Hub's 📈 bStocks tab)
   const bs = await get(`${API}/coins/markets?vs_currency=usd&category=bstocks-ecosystem&order=market_cap_desc&per_page=250&page=1&sparkline=true&price_change_percentage=24h%2C7d`, 2);
   const thin = sp => { sp = (sp && sp.price) || []; const st = Math.max(1, Math.floor(sp.length / 24)), o = []; for (let i = 0; i < sp.length; i += st) o.push(+(+sp[i]).toPrecision(6)); if (sp.length && (sp.length - 1) % st) o.push(+(+sp[sp.length - 1]).toPrecision(6)); return o; };
-  if (Array.isArray(bs) && bs.length) { snap.stocks = bs.filter(c => c && c.current_price > 0).map(c => ({ id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, img: c.image || '', price: c.current_price, ch24: c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null, ch7: c.price_change_percentage_7d_in_currency ?? null, mcap: c.market_cap || null, vol: c.total_volume || null, spark: thin(c.sparkline_in_7d) })); snap.parts.stocks = now; log('bstocks', snap.stocks.length); }
+  if (Array.isArray(bs) && bs.length) { snap.stocks = bs.filter(c => c && c.current_price > 0).map(c => ({ id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, img: c.image || '', price: c.current_price, ch24: sane(c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null, 60), ch7: sane(c.price_change_percentage_7d_in_currency ?? null, 85), mcap: c.market_cap || null, vol: c.total_volume || null, spark: thin(c.sparkline_in_7d) })); snap.parts.stocks = now; log('bstocks', snap.stocks.length); }
   else { if (old.stocks) snap.stocks = old.stocks; log('bstocks: no answer, kept the last one'); }
 
   // 🥇 metals and oil (the Market Hub's Metals tab): gold, silver, platinum, copper, Brent — Yahoo Finance's public chart
@@ -518,7 +521,8 @@ function chg(hist, id, day, per) {
 //   (what was saved on that day with that day's top 100 — used over the worked-out value), ethbtc: [[day, ratio], …],
 //   dom: { day: btcDominance } (saved from today on), breadth: { 7: {beat, n, btc, med}, 30: …, 90: … },
 //   btc: [7d, 30d, 90d], coins: [{ id, sym, name, img, rank, p: [7d, 30d, 90d] }] the index's 100 coins,
-//   mine: { id: [7d, 30d, 90d] } the app's own coins outside the top 100 }
+//   mine: { id: [7d, 30d, 90d] } the app's own coins outside the top 100,
+//   closed: { day, btc: [7d, 30d, 90d], p: { id: [7d, 30d, 90d] } } the same changes as of the last daily close — what the Signal uses }
 // A past day is worked out with today's top 100 (CoinMarketCap uses each day's own list), so old days can differ a little.
 const ALT_FILE = path.join(OUT, 'alt.json');
 function altPage(hist, btc, alts, extras, mineSym, today, glob, all, usdtCap, official, cmcList) {
@@ -568,6 +572,11 @@ function altPage(hist, btc, alts, extras, mineSym, today, glob, all, usdtCap, of
   if (glob && glob.dom && glob.dom.usdt > 0) domUsdt[today] = r2(glob.dom.usdt);
   for (const o of [dom, domUsdt]) for (const k of Object.keys(o)) if (+k < today - 400) delete o[k];
   const three = id => [7, 30, PERIOD].map(p => r2(chg(hist, id, today, p)));
+  // ⏳ the same three as of the last daily close (yesterday's last price): the Signal is decided on the close, so the
+  // strength it checks (Smart: 30 / 90 days vs BTC · Calm mode: 7 days) must not move during the day either
+  const closed3 = id => [7, 30, PERIOD].map(p => r2(chg(hist, id, today - 1, p)));
+  const closedP = {}; for (const id of [...alts.map(c => c.id), ...extras]) { const p3 = closed3(id); if (p3[1] != null && p3[2] != null) closedP[id] = p3; }
+  const closedBtc = closed3('bitcoin');
   const page = {
     updated: new Date().toISOString(), today, idx, live, ethbtc, dom, domEst, domUsdt, usdtEst,
     official: official != null ? official : null, own: now ? Math.round(now.beat / now.n * 100) : null, list: cmcList ? 'cmc' : 'coingecko',
@@ -575,6 +584,7 @@ function altPage(hist, btc, alts, extras, mineSym, today, glob, all, usdtCap, of
     btc: three('bitcoin'),
     coins: alts.map(c => ({ id: c.id, sym: c.sym, name: c.name, img: c.img, rank: c.rank, p: three(c.id) })),
     mine: Object.fromEntries(extras.map(id => [id, three(id)]).filter(([, p]) => p.some(v => v != null))),
+    closed: closedBtc[1] != null && closedBtc[2] != null ? { day: today - 1, btc: closedBtc, p: closedP } : null,
   };
   fs.writeFileSync(ALT_FILE, JSON.stringify(page));
   log('alt page:', idx.length, 'days of the index,', Object.keys(page.mine).length, 'of your coins outside the top 100');
