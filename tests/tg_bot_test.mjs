@@ -56,7 +56,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (/^https:\/\/(coin-images|assets)\.coingecko\.com\//.test(u)) { logoFetches++; return /tether|325/.test(u) ? new Response('nf', { status: 404 }) : /notimage/.test(u) ? new Response('<html>', { headers: { 'content-type': 'text/html' } }) : new Response(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'), { headers: { 'content-type': 'image/png' } }); }
   if (u === 'https://api.github.com/repos/drsamirsaad1981-design/samsam-portfolio/actions/workflows/prices.yml/dispatches') { kicks.push({ auth: init.headers.authorization, body: JSON.parse(body) }); return new Response(null, { status: 204 }); }
   if (u.startsWith('https://api.telegram.org/bot') && body instanceof FormData) { const m = u.split('/').pop(); const ph = body.get('photo'); sent.push({ m, b: { chat_id: body.get('chat_id'), caption: body.get('caption'), photoBytes: ph ? new Uint8Array(await ph.arrayBuffer()) : null } }); return J({ ok: true, result: { message_id: 8 } }); }
-  if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); if (typeof b.text === 'string') { b.raw = b.text; b.text = b.text.replace(/[\u200E\u200F\u2060\u2066\u2069]/g, '').replace(/\u00A0/g, ' '); (globalThis.__all = globalThis.__all || []).push(b.raw); } sent.push({ m, b }); if (m === 'createInvoiceLink') return J({ ok: true, result: 'https://t.me/$inv-' + b.payload }); if (m === 'createChatInviteLink') return J({ ok: true, result: { invite_link: 'https://t.me/+join' + b.chat_id } }); if (m === 'createForumTopic') return J({ ok: true, result: { message_thread_id: 100 + sent.filter(x => x.m === 'createForumTopic').length } }); if (m === 'sendChatAction' && (globalThis.__goneTopics || []).includes(b.message_thread_id)) return J({ ok: false, description: 'Bad Request: message thread not found' }); if (m === 'getChat') return J({ ok: true, result: { id: b.chat_id, is_forum: false, ...(b.chat_id === -1001 && !globalThis.__unlinked ? { linked_chat_id: -1002 } : {}) } }); if (m === 'getMe') return J({ ok: true, result: { id: 1, username: 'samsam_portfolio_bot' } }); if (m === 'getChatMember') return J({ ok: true, result: { status: b.chat_id === -1003 ? 'administrator' : 'left' } }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
+  if (u.startsWith('https://api.telegram.org/bot')) { const m = u.split('/').pop(); const b = JSON.parse(body); if (typeof b.text === 'string') { try { const lg = kvStore.get(`tg:${b.chat_id}:lang`); if (lg && +b.chat_id > 0) (globalThis.__byLang = globalThis.__byLang || []).push({ lang: lg, chat: b.chat_id, text: b.text, kb: JSON.stringify((b.reply_markup && (b.reply_markup.inline_keyboard || b.reply_markup.keyboard)) || '') }); } catch (_) {} b.raw = b.text; b.text = b.text.replace(/[\u200E\u200F\u2060\u2066\u2069]/g, '').replace(/\u00A0/g, ' '); (globalThis.__all = globalThis.__all || []).push(b.raw); } sent.push({ m, b }); if (m === 'createInvoiceLink') return J({ ok: true, result: 'https://t.me/$inv-' + b.payload }); if (m === 'createChatInviteLink') return J({ ok: true, result: { invite_link: 'https://t.me/+join' + b.chat_id } }); if (m === 'createForumTopic') return J({ ok: true, result: { message_thread_id: 100 + sent.filter(x => x.m === 'createForumTopic').length } }); if (m === 'sendChatAction' && (globalThis.__goneTopics || []).includes(b.message_thread_id)) return J({ ok: false, description: 'Bad Request: message thread not found' }); if (m === 'getChat') return J({ ok: true, result: { id: b.chat_id, is_forum: false, ...(b.chat_id === -1001 && !globalThis.__unlinked ? { linked_chat_id: -1002 } : {}) } }); if (m === 'getMe') return J({ ok: true, result: { id: 1, username: 'samsam_portfolio_bot' } }); if (m === 'getChatMember') return J({ ok: true, result: { status: b.chat_id === -1003 ? 'administrator' : 'left' } }); return J(m === 'editMessageText' && b.text === sent.lastEdit ? { ok: false, description: 'Bad Request: message is not modified' } : { ok: true, result: { message_id: 7 } }); }
   if (u.includes('raw.githubusercontent.com/drsamirsaad1981-design/samsam-portfolio/prices/')) {
     const f = u.split('/prices/')[1];
     if (f === 'm/market.json') return J(market); if (f === 'm/top500.json') return J(top500); if (f === 'm/alt.json') return J(alt); if (f === 'm/etf.json') return J(etf);
@@ -93,7 +93,7 @@ globalThis.fetch = async (input, init = {}) => {
     if (u.includes('/users/UID1/txs?')) return J({ documents: committed.map(w => ({ name: w.update.name, fields: w.update.fields })) });
     if (u.endsWith('/documents:commit')) { if (FS_WRITE_403) return J({ error: { code: 403, message: 'Missing or insufficient permissions.' } }, 403); const b = JSON.parse(body); commits.push(b); committed.push(...b.writes); return J({ writeResults: b.writes.map(() => ({ updateTime: new Date().toISOString() })), commitTime: new Date().toISOString() }); }
     if (u.includes('/users/UID1/accum?')) return J({ documents: U.accum.map(doc) });
-    if (u.endsWith('/users/UID1/meta/info')) return J(doc(U.meta));
+    if (u.endsWith('/users/UID1/meta/info')) return J(doc(globalThis.__metaOver || U.meta));
     return J({}, 404);
   }
   if (u.startsWith('https://www.googleapis.com/service_accounts')) return J({ keys: [{ ...crypto.createPublicKey(privateKey).export({ format: 'jwk' }), kid: 'k1', alg: 'RS256', use: 'sig' }] });
@@ -384,6 +384,10 @@ check('no Anthropic key → says so, no crash', /not set up/.test(last().b.text)
 sent.length = 0; outside = 0; claudeCalls.length = 0; await say('tell me everything');
 check(`a 5-tool question stays within Cloudflare's 50 calls (${outside} outside + ${sent.length} Telegram)`, outside + sent.length <= 50, [outside, sent.length]);
 
+// 🌐 English mode = English only: not one Arabic letter in anything the bot sent so far (every command, button view and
+// alert above ran in English) — the user's own words echoed back aside
+{ const AR = /[\u0600-\u06FF]/, bad = [...new Set((globalThis.__all || []).filter(t => AR.test(t) && !/A general answer about/.test(t)).map(t => (t.split('\n').find(l => AR.test(l)) || '').replace(/<[^>]+>/g, '').slice(0, 90)))];
+  check(`English mode: no Arabic in any of the ${(globalThis.__all || []).length} messages sent in English`, (globalThis.__all || []).length > 50 && !bad.length, bad.slice(0, 8)); }
 // ── language: English by default, 🌐 switches (and back) ──
 sent.length = 0; await say('/menu');
 check('English by default (even with the alerts set to Arabic): menu has "🌐 عربي"', /What would you like/.test(last().b.text) && btnTexts(last()).includes('🌐 عربي'), last().b.text);
@@ -1310,16 +1314,37 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   // 🔥 13:00 the sector map · 🧲 17:30 leverage & whales — two more posts between the morning and the evening pulse
   sent.length = 0; { const Ws = await fresh(), ps = []; await Ws.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('13:05') }, ENVK, { waitUntil: x => ps.push(x) }); await Promise.all(ps); }
   const secP = sent.find(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
-  check('🔥 13:05 → "Sector map" in the channel: strongest / weakest sectors (≥ $1B) with their leaders, both languages, no buttons (comments stay), not pinned', secP && /Sector map · خريطة القطاعات/.test(secP.b.text) && /Strongest 24h/.test(secP.b.text) && /AI<\/b> \+14\.2%/.test(secP.b.text) && /Weakest 24h/.test(secP.b.text) && /Meme<\/b> −11\.5%/.test(secP.b.text) && !/Tiny/.test(secP.b.text) && /Not financial advice/.test(secP.b.text) && !secP.b.reply_markup && okHtml(secP.b.text) && !sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1001), secP && secP.b.text);
+  check('🔥 13:05 → "Sector map" in the channel: strongest / weakest sectors (≥ $1B) with their leaders, both languages, no buttons (comments stay), not pinned', secP && /Sector map<\/b> · \d+ \w+\n🔥 <b>خريطة القطاعات<\/b>/.test(secP.b.text) && /Strongest 24h/.test(secP.b.text) && /AI<\/b> \+14\.2%/.test(secP.b.text) && /Weakest 24h/.test(secP.b.text) && /Meme<\/b> −11\.5%/.test(secP.b.text) && !/Tiny/.test(secP.b.text) && /Not financial advice/.test(secP.b.text) && !secP.b.reply_markup && okHtml(secP.b.text) && !sent.some(m => m.m === 'pinChatMessage' && m.b.chat_id === -1001), secP && secP.b.text);
   sent.length = 0; { const Ws = await fresh(), ps = []; await Ws.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('13:10') }, ENVK, { waitUntil: x => ps.push(x) }); await Promise.all(ps); }
   check('…once a day', !sent.some(m => m.m === 'sendMessage' && m.b.chat_id === -1001));
   market.whales = { t: new Date(RIYADH('15:00')).toISOString(), src: 'Hyperliquid', n: 25, coins: { BTC: { long: 14, short: 6, longUsd: 3.1e8, shortUsd: 1.2e8, side: 'long' }, ETH: { long: 5, short: 11, longUsd: 4e7, shortUsd: 1.5e8, side: 'short' } } };
   sent.length = 0; { const Ws = await fresh(), ps = []; await Ws.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('17:35') }, ENVK, { waitUntil: x => ps.push(x) }); await Promise.all(ps); }
   const levP = sent.find(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
-  check('🧲 17:35 → "Leverage & whales": BTC · ETH · SOL funding / OI / longs, 🐋 the 25 biggest winning traders (BTC 14 long · 6 short), the US market, both languages', levP && /Leverage &amp; whales · الرافعة والحيتان/.test(levP.b.text) && /<b>BTC<\/b> · funding/.test(levP.b.text) && /<b>SOL<\/b> · /.test(levP.b.text) && /the 25 biggest winning traders on Hyperliquid/.test(levP.b.text) && /<b>BTC<\/b>: 14 long · 6 short — \$310M vs \$120M/.test(levP.b.text) && /<b>ETH<\/b>: 5 long · 11 short/.test(levP.b.text) && /🇺🇸 US market: /.test(levP.b.text) && /الحيتان يتحوّطون/.test(levP.b.text) && !levP.b.reply_markup && okHtml(levP.b.text), levP && levP.b.text);
+  check('🧲 17:35 → "Leverage & whales": BTC · ETH · SOL funding / OI / longs, 🐋 the 25 biggest winning traders (BTC 14 long · 6 short), the US market, both languages', levP && /Leverage &amp; whales<\/b> · \d+ \w+\n🧲 <b>الرافعة والحيتان<\/b>/.test(levP.b.text) && /<b>BTC<\/b> · funding/.test(levP.b.text) && /<b>SOL<\/b> · /.test(levP.b.text) && /the 25 biggest winning traders on Hyperliquid/.test(levP.b.text) && /<b>BTC<\/b>: 14 long · 6 short — \$310M vs \$120M/.test(levP.b.text) && /<b>ETH<\/b>: 5 long · 11 short/.test(levP.b.text) && /🇺🇸 US market: /.test(levP.b.text) && /الحيتان يتحوّطون/.test(levP.b.text) && !levP.b.reply_markup && okHtml(levP.b.text), levP && levP.b.text);
+  { // 📢 two languages in the channel = an English line and an Arabic line; a line never starts in one and carries the other
+    const mixed = t => String(t || '').split('\n').map(l => l.replace(/<[^>]+>/g, '')).filter(l => { const ar = (l.match(/[\u0600-\u06FF]/g) || []).length, first = (l.match(/[A-Za-z\u0600-\u06FF]/) || [''])[0]; return ar > 0 && /[A-Za-z]/.test(first); });
+    const bad = [pulse, secP, levP].filter(Boolean).flatMap(x => mixed(x.b.text));
+    check('📢 channel posts: every line is English OR Arabic (an Arabic line starts in Arabic) — the two never run into each other', pulse && secP && levP && !bad.length && /Market pulse<\/b> · \d+ \w+\n[^<]+<b>نبض السوق<\/b>/.test(pulse.b.text), bad);
+  }
   delete market.whales;
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 1, chat: { id: -1002, type: 'supergroup' }, from: { id: 888 }, text: 'hello everyone' } }, ENV.TG_SECRET, ENVK);
   check('💬 people commenting (the discussion group) → the bot stays quiet', sent.filter(m => m.m === 'sendMessage').length === 0);
+}
+
+// 🌐 ONE language everywhere: the bot's language and the alerts' language (app → Alerts) are the same setting
+{
+  const C = ENV.TELEGRAM_CHAT_ID, LK = `tg:${C}:lang`, SK = `tg:${C}:alsync`, TK = SK + 'T', at = RIYADH('03:10'), keep = USER().meta, keepL = kvStore.get(LK);
+  const set = (bot, sync, ago, alerts) => { kvStore.delete('fs:pf:UID1'); kvStore.set(LK, bot); kvStore.set(SK, sync); kvStore.set(TK, String(at - ago)); globalThis.__metaOver = { ...keep, alerts: { ...(keep && keep.alerts), ...alerts } }; globalThis.__alertsLang = []; };
+  const wrote = () => (globalThis.__alertsLang || []).filter(w => /users\/UID1\//.test(w.u)).map(w => w.body.fields.alerts.mapValue.fields.lang.stringValue);
+  set('en', 'en', 2 * 3600e3, { lang: 'ar', langPicked: true }); await cronG(ENVK, at);
+  check('🌐 Arabic picked in the app (Alerts → Language) → the bot speaks Arabic too, nothing overwritten', kvStore.get(LK) === 'ar' && kvStore.get(SK) === 'ar' && !wrote().length, [kvStore.get(LK), wrote()]);
+  set('en', 'en', 5 * 60e3, { lang: 'ar', langPicked: true }); await cronG(ENVK, at);
+  check('🌐 /lang English a moment ago (the settings copy may be old) → never undone: the alerts are set to English', kvStore.get(LK) === 'en' && wrote().join() === 'en', [kvStore.get(LK), wrote()]);
+  set('ar', 'en', 2 * 3600e3, { lang: 'en', langPicked: true }); await cronG(ENVK, at);
+  check('🌐 the bot is Arabic, the alerts still English → the alerts become Arabic', kvStore.get(LK) === 'ar' && wrote().join() === 'ar' && kvStore.get(SK) === 'ar', [kvStore.get(LK), wrote()]);
+  set('en', 'en', 2 * 3600e3, { lang: 'en', langPicked: true }); await cronG(ENVK, at);
+  check('🌐 the same language on both sides → nothing written', kvStore.get(LK) === 'en' && !wrote().length, wrote());
+  delete globalThis.__metaOver; if (keepL == null) kvStore.delete(LK); else kvStore.set(LK, keepL);
 }
 
 // ☀️ a smart morning cut short by Claude (max_tokens) → the plain morning, never half a message
@@ -1422,6 +1447,7 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('the owner is never idle (no note)', !sent.some(x => String(x.b && x.b.chat_id) === own && /away/.test(x.b.text || '')));
 }
 
+if (process.env.DUMP_LANG) fs.writeFileSync(process.env.DUMP_LANG, JSON.stringify(globalThis.__byLang || []));
 if (process.env.DUMP_TEXTS) fs.writeFileSync(process.env.DUMP_TEXTS, JSON.stringify(globalThis.__all || []));
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

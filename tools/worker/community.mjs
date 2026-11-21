@@ -154,8 +154,8 @@ export async function guideUpdates(env) {
   if (!x.guideSig) { x.guideSig = now; x.guideV = GUIDE.v || 1; c.channel = x; await putCommunity(env, c); return { posted: 0 }; }
   const changed = GUIDE.sections.filter(s => x.guideSig[s.k] !== now[s.k]);
   if (!changed.length && !edition) return { posted: 0 };
-  const lines = edition ? ['📘 <b>A new edition of the guide · نسخة جديدة من الدليل</b>']
-    : ['🆕 <b>New in the guide · جديد في الدليل</b>', '', ...changed.slice(0, 10).map(s => `${s.k in x.guideSig ? '✏️' : '🆕'} ${s.e} ${esc(s.t.en)} · ${esc(s.t.ar)}`)];
+  const lines = edition ? ['📘 <b>A new edition of the guide</b>', '📘 <b>نسخة جديدة من الدليل</b>']
+    : ['🆕 <b>New in the guide</b>', '🆕 <b>جديد في الدليل</b>', '', ...changed.slice(0, 10).flatMap(s => { const mk = s.k in x.guideSig ? '✏️' : '🆕'; return [`${mk} ${s.e} ${esc(s.t.en)}`, `${mk} ${s.e} ${esc(s.t.ar)}`]; })];
   const link = await guideLink(env); if (link) lines.push('', link);
   const r = await tg(env, 'sendMessage', { chat_id: x.id, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true });
   if (!r.ok) return { posted: 0 };
@@ -193,7 +193,7 @@ function pulseText(m, now, kind) {
   const g = m.global || {}, d = g.dom || {}, btc = m.btc || {}, e = etfDay(m.etf);
   const seen = new Set(), top = [...(m.top || [])].filter(r => r.rank && r.rank <= 100 && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 3), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 3);
-  const head = kind === 'move' ? `🚨 <b>BTC ${btc.ch24 > 0 ? '+' : ''}${pct(btc.ch24, 1)} in 24h</b>` : `${kind === 'am' ? '☀️' : '🌙'} <b>Market pulse · نبض السوق</b> · ${local(now, { day: 'numeric', month: 'short' })}`;
+  const head = kind === 'move' ? `🚨 <b>BTC ${btc.ch24 > 0 ? '+' : ''}${pct(btc.ch24, 1)} in 24h</b>\n🚨 <b>تحرك كبير للبيتكوين خلال 24 ساعة</b>` : `${kind === 'am' ? '☀️' : '🌙'} <b>Market pulse</b> · ${local(now, { day: 'numeric', month: 'short' })}\n${kind === 'am' ? '☀️' : '🌙'} <b>نبض السوق</b>`;
   const L = [head, '',
     `🪙 BTC <b>${usd(btc.price)}</b> ${dot(btc.ch24)} ${pct(btc.ch24, 2)}`,
     g.mcap ? `🌐 Market cap <b>$${(g.mcap / 1e12).toFixed(2)}T</b> ${dot(g.mcapCh24)} ${pct(g.mcapCh24, 2)}` : null,
@@ -227,9 +227,9 @@ export function sectorText(m, now) {
   const row = x => { const lead = (x.top || []).map(id => symOf[id]).filter(Boolean).slice(0, 3); return `${x.ch24 > 0 ? '🚀' : '🔻'} <b>${esc(x.name)}</b> ${pct(x.ch24, 1)} · ${usd(x.mcap)}${lead.length ? ' · ' + esc(lead.join(', ')) : ''}`; };
   const up = [...all].sort((a, b) => b.ch24 - a.ch24).slice(0, 3).filter(x => x.ch24 > 0), dn = [...all].sort((a, b) => a.ch24 - b.ch24).slice(0, 3).filter(x => x.ch24 < 0);
   if (!up.length && !dn.length) return null;
-  return [`🔥 <b>Sector map · خريطة القطاعات</b> · ${local(now, { day: 'numeric', month: 'short' })}`, '',
-    ...(up.length ? ['📈 <b>Strongest 24h · الأقوى</b>', ...up.map(row), ''] : []),
-    ...(dn.length ? ['📉 <b>Weakest 24h · الأضعف</b>', ...dn.map(row), ''] : []),
+  return [`🔥 <b>Sector map</b> · ${local(now, { day: 'numeric', month: 'short' })}`, '🔥 <b>خريطة القطاعات</b>', '',
+    ...(up.length ? ['📈 <b>Strongest 24h</b>', '📈 <b>الأقوى خلال 24 ساعة</b>', ...up.map(row), ''] : []),
+    ...(dn.length ? ['📉 <b>Weakest 24h</b>', '📉 <b>الأضعف خلال 24 ساعة</b>', ...dn.map(row), ''] : []),
     '<i>Where the money moved in the last 24 hours (sectors above $1B, with their leaders).</i>', '<i>أين تحركت السيولة خلال 24 ساعة (القطاعات فوق مليار دولار مع أبرز عملاتها).</i>',
     '', `<i>${NOTE.en}</i>`, `<i>${NOTE.ar}</i>`].join('\n');
 }
@@ -247,8 +247,8 @@ export async function leverageText(m, now) {
   const wl = whaleLines(m.whales, ['BTC', 'ETH', 'SOL'], false, now);
   if (!rows.length && !wl.length) return null;
   const u = usMarket(now);
-  return [`🧲 <b>Leverage &amp; whales · الرافعة والحيتان</b> · ${local(now, { day: 'numeric', month: 'short' })}`, '', ...rows,
-    ...(wl.length ? ['', `🐋 <b>Whales · الحيتان</b> <i>(the ${m.whales.n} biggest winning traders on Hyperliquid)</i>`, ...wl] : []),
+  return [`🧲 <b>Leverage &amp; whales</b> · ${local(now, { day: 'numeric', month: 'short' })}`, '🧲 <b>الرافعة والحيتان</b>', '', ...rows,
+    ...(wl.length ? ['', `🐋 <b>Whales</b> <i>(the ${m.whales.n} biggest winning traders on Hyperliquid)</i>`, `🐋 <b>الحيتان</b> <i>(أكبر ${m.whales.n} متداولاً رابحاً على منصة Hyperliquid)</i>`, ...wl] : []),
     '', `🇺🇸 US market: ${US_STATE.en[u.state].replace(/^\S+ /, '')}`,
     '', '<i>High positive funding and longs above 70% = crowded longs (a dip can cascade). Whales hedge, and lose too.</i>', '<i>تمويل موجب مرتفع ونسبة شراء فوق 70% = ازدحام في الشراء (أي هبوط قد يتسلسل). والحيتان يتحوّطون ويخسرون أيضاً.</i>',
     '', `<i>${NOTE.en}</i>`, `<i>${NOTE.ar}</i>`].join('\n');
@@ -278,7 +278,7 @@ export async function runChannel(env, now = Date.now()) {
 // ── /announce <text> (Samir): to the channel ──
 export async function announce(env, text) {
   const c = await getCommunity(env), out = [];
-  const body = `🆕 <b>What's new · الجديد</b>\n\n${esc(text)}`;
+  const body = `🆕 <b>What's new</b>\n🆕 <b>الجديد</b>\n\n${esc(text)}`;
   if (c.channel) out.push((await tg(env, 'sendMessage', { chat_id: c.channel.id, text: body, parse_mode: 'HTML' })).ok ? '📢' : '⚠️📢');
   return out;
 }

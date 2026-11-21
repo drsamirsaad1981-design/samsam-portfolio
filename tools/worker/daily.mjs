@@ -16,7 +16,7 @@
 import { NOT_ADVICE } from './bidi.mjs';
 import { usMarket, gramSar } from './usmarket.mjs';
 import { bidiBody } from './bidi.mjs';
-import { K, chatOf, isOwner, langOf, member } from './who.mjs';
+import { K, chatOf, isOwner, langOf, member, setMember } from './who.mjs';
 import { premiumNow } from './stars.mjs';
 import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures, setAlertsLang, setZakatSnap } from './data.mjs';
@@ -58,6 +58,26 @@ const WD = {
     live: 'مباشر', pfS: 'المحفظة', btcS: 'البيتكوين', today: 'اليوم', alerts: n => `${n} تنبيه`, nearest: 'الأقرب', away: 'المتبقي', nextDca: 'الشراء الدوري القادم', exit: 'الخروج', planS: 'الخطة', fng: 'الخوف والطمع', updated: 'تم التحديث',
     noUser: 'المحفظة غير متصلة.', refresh: '🔄', report: '📱 افتح التطبيق' },
 };
+
+// 🌐 ONE language everywhere: the bot's language (/lang) and the alerts' language (the app → Alerts → Language, what the
+// brief, the digests and the signal alerts are written in) are the same setting. Looked at every 10 minutes:
+//   · the alerts' differ from the bot's, and it was the app that changed them (not our own last write) → the bot follows
+//   · anything else that differs → the alerts are set to the bot's language
+// (the settings we read can be up to 30 minutes old, so "the app changed them" is only believed 45 minutes after the
+// bot's own last change — else a /lang would be undone by its own stale copy)
+export async function oneLanguage(env, now = Date.now()) {
+  const L = await lang(env), had = await kvGet(env, K(env, 'alsync')), hadT = +(await kvGet(env, K(env, 'alsyncT'))) || 0;
+  const user = await loadUser(env).catch(() => null), al = user && user.meta && user.meta.alerts;
+  const cur = al && (al.lang === 'ar' || al.lang === 'en') ? al.lang : null;
+  const mark = async v => { await kvPut(env, K(env, 'alsync'), v); await kvPut(env, K(env, 'alsyncT'), String(now)); };
+  if (cur === L) { if (had !== L) await mark(L); return { lang: L, did: null }; }
+  if (cur && al.langPicked === true && had === L && now - hadT > 45 * 60e3) {   // picked in the app → the bot speaks it too
+    await kvPut(env, K(env, 'lang'), cur); if (!isOwner(env)) await setMember(env, chatOf(env), { lang: cur }).catch(() => {});
+    await mark(cur); return { lang: cur, did: 'bot' };
+  }
+  if (await setAlertsLang(env, L).catch(() => false)) { await mark(L); return { lang: L, did: 'alerts' }; }
+  return { lang: L, did: null };
+}
 
 // ── the numbers both reports start from ──
 async function gather(env, now) {
@@ -406,10 +426,7 @@ export async function runDaily(env, now = Date.now()) {
   const done = async k => { sent[k] = lp.date; await jput(env, K(env, 'daily:sent'), sent); };
   if (due(c.morning, c.morningAt, 'morning')) { await done('morning'); await morning(env, now); return { job: 'morning' }; }   // marked first: never twice
   if (due(c.evening, c.eveningAt, 'evening')) { await done('evening'); await evening(env, now); return { job: 'evening' }; }
-  if (min % 60 === 40) {   // 🌐 once per language: GitHub's alerts speak the bot's language (people who picked it before 20 Nov)
-    const L = await lang(env), had = await kvGet(env, K(env, 'alsync'));
-    if (had !== L && await setAlertsLang(env, L).catch(() => false)) await kvPut(env, K(env, 'alsync'), L);
-  }
+  if (min % 10 === 0) await oneLanguage(env, now).catch(() => {});
   if (lp.hm >= '09:30' && lp.hm < '12:00' && min % 30 === 0 && sent.zk !== lp.date) {   // 🕌 zakat: looked at once a day (the message itself: once a year each)
     await done('zk'); const z = await zakatAlert(env, now).catch(e => { console.log(JSON.stringify({ zakat: 'error', message: String(e && e.message).slice(0, 200) })); return { sent: 0 }; }); if (z.sent) return { job: 'zakat', ...z };
   }

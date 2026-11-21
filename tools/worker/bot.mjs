@@ -148,7 +148,7 @@ export async function getLang(env) {
 const memRange = new Map();
 async function getRange(env) { let v = memRange.get(chatOf(env)); try { if (env.RATE) v = +(await env.RATE.get(K(env, 'mk'))) || v; } catch (_) {} return RANGES.includes(+v) ? +v : 100; }
 async function setRange(env, v) { memRange.set(chatOf(env), v); try { if (env.RATE) await env.RATE.put(K(env, 'mk'), String(v)); } catch (_) {} }
-async function setLang(env, v) { memLang.set(chatOf(env), v); await setAlertsLang(env, v).then(ok => ok && env.RATE ? env.RATE.put(K(env, 'alsync'), v) : null).catch(() => {});   // GitHub's alerts follow
+async function setLang(env, v) { memLang.set(chatOf(env), v); await setAlertsLang(env, v).then(ok => ok && env.RATE ? Promise.all([env.RATE.put(K(env, 'alsync'), v), env.RATE.put(K(env, 'alsyncT'), String(Date.now()))]) : null).catch(() => {});   // the alerts follow
   try { if (env.RATE) await env.RATE.put(K(env, 'lang'), v); } catch (_) {} if (!isOwner(env)) await setMember(env, chatOf(env), { lang: v }).catch(() => {}); }
 
 // ── views: each returns { text, buttons } ──

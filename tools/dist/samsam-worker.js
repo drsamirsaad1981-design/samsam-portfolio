@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: ed9cabf37689a6f2
+// sources-hash: f00ed614fd3ac401
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -4221,6 +4221,31 @@ var WD = {
     report: "\u{1F4F1} \u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642"
   }
 };
+async function oneLanguage(env, now = Date.now()) {
+  const L = await lang(env), had = await kvGet5(env, K(env, "alsync")), hadT = +await kvGet5(env, K(env, "alsyncT")) || 0;
+  const user = await loadUser(env).catch(() => null), al = user && user.meta && user.meta.alerts;
+  const cur = al && (al.lang === "ar" || al.lang === "en") ? al.lang : null;
+  const mark = async (v) => {
+    await kvPut5(env, K(env, "alsync"), v);
+    await kvPut5(env, K(env, "alsyncT"), String(now));
+  };
+  if (cur === L) {
+    if (had !== L) await mark(L);
+    return { lang: L, did: null };
+  }
+  if (cur && al.langPicked === true && had === L && now - hadT > 45 * 6e4) {
+    await kvPut5(env, K(env, "lang"), cur);
+    if (!isOwner(env)) await setMember(env, chatOf(env), { lang: cur }).catch(() => {
+    });
+    await mark(cur);
+    return { lang: cur, did: "bot" };
+  }
+  if (await setAlertsLang(env, L).catch(() => false)) {
+    await mark(L);
+    return { lang: L, did: "alerts" };
+  }
+  return { lang: L, did: null };
+}
 async function gather(env, now) {
   const user = await loadUser(env).catch(() => null);
   if (!user) return null;
@@ -4703,10 +4728,8 @@ async function runDaily(env, now = Date.now()) {
     await evening(env, now);
     return { job: "evening" };
   }
-  if (min % 60 === 40) {
-    const L = await lang(env), had = await kvGet5(env, K(env, "alsync"));
-    if (had !== L && await setAlertsLang(env, L).catch(() => false)) await kvPut5(env, K(env, "alsync"), L);
-  }
+  if (min % 10 === 0) await oneLanguage(env, now).catch(() => {
+  });
   if (lp.hm >= "09:30" && lp.hm < "12:00" && min % 30 === 0 && sent.zk !== lp.date) {
     await done("zk");
     const z = await zakatAlert(env, now).catch((e) => {
@@ -5472,7 +5495,10 @@ async function guideUpdates(env) {
   }
   const changed = guide_default.sections.filter((s) => x.guideSig[s.k] !== now[s.k]);
   if (!changed.length && !edition) return { posted: 0 };
-  const lines = edition ? ["\u{1F4D8} <b>A new edition of the guide \xB7 \u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0627\u0644\u062F\u0644\u064A\u0644</b>"] : ["\u{1F195} <b>New in the guide \xB7 \u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644</b>", "", ...changed.slice(0, 10).map((s) => `${s.k in x.guideSig ? "\u270F\uFE0F" : "\u{1F195}"} ${s.e} ${esc(s.t.en)} \xB7 ${esc(s.t.ar)}`)];
+  const lines = edition ? ["\u{1F4D8} <b>A new edition of the guide</b>", "\u{1F4D8} <b>\u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0627\u0644\u062F\u0644\u064A\u0644</b>"] : ["\u{1F195} <b>New in the guide</b>", "\u{1F195} <b>\u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644</b>", "", ...changed.slice(0, 10).flatMap((s) => {
+    const mk = s.k in x.guideSig ? "\u270F\uFE0F" : "\u{1F195}";
+    return [`${mk} ${s.e} ${esc(s.t.en)}`, `${mk} ${s.e} ${esc(s.t.ar)}`];
+  })];
   const link = await guideLink(env);
   if (link) lines.push("", link);
   const r = await tg5(env, "sendMessage", { chat_id: x.id, text: lines.join("\n"), parse_mode: "HTML", disable_web_page_preview: true });
@@ -5506,7 +5532,9 @@ function pulseText(m, now, kind) {
   const g = m.global || {}, d = g.dom || {}, btc = m.btc || {}, e = etfDay(m.etf);
   const seen = /* @__PURE__ */ new Set(), top = [...m.top || []].filter((r) => r.rank && r.rank <= 100 && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 3), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 3);
-  const head = kind === "move" ? `\u{1F6A8} <b>BTC ${btc.ch24 > 0 ? "+" : ""}${pct(btc.ch24, 1)} in 24h</b>` : `${kind === "am" ? "\u2600\uFE0F" : "\u{1F319}"} <b>Market pulse \xB7 \u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642</b> \xB7 ${local(now, { day: "numeric", month: "short" })}`;
+  const head = kind === "move" ? `\u{1F6A8} <b>BTC ${btc.ch24 > 0 ? "+" : ""}${pct(btc.ch24, 1)} in 24h</b>
+\u{1F6A8} <b>\u062A\u062D\u0631\u0643 \u0643\u0628\u064A\u0631 \u0644\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u062E\u0644\u0627\u0644 24 \u0633\u0627\u0639\u0629</b>` : `${kind === "am" ? "\u2600\uFE0F" : "\u{1F319}"} <b>Market pulse</b> \xB7 ${local(now, { day: "numeric", month: "short" })}
+${kind === "am" ? "\u2600\uFE0F" : "\u{1F319}"} <b>\u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642</b>`;
   const L = [
     head,
     "",
@@ -5554,10 +5582,11 @@ function sectorText(m, now) {
   const up = [...all].sort((a, b) => b.ch24 - a.ch24).slice(0, 3).filter((x) => x.ch24 > 0), dn = [...all].sort((a, b) => a.ch24 - b.ch24).slice(0, 3).filter((x) => x.ch24 < 0);
   if (!up.length && !dn.length) return null;
   return [
-    `\u{1F525} <b>Sector map \xB7 \u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A</b> \xB7 ${local(now, { day: "numeric", month: "short" })}`,
+    `\u{1F525} <b>Sector map</b> \xB7 ${local(now, { day: "numeric", month: "short" })}`,
+    "\u{1F525} <b>\u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A</b>",
     "",
-    ...up.length ? ["\u{1F4C8} <b>Strongest 24h \xB7 \u0627\u0644\u0623\u0642\u0648\u0649</b>", ...up.map(row2), ""] : [],
-    ...dn.length ? ["\u{1F4C9} <b>Weakest 24h \xB7 \u0627\u0644\u0623\u0636\u0639\u0641</b>", ...dn.map(row2), ""] : [],
+    ...up.length ? ["\u{1F4C8} <b>Strongest 24h</b>", "\u{1F4C8} <b>\u0627\u0644\u0623\u0642\u0648\u0649 \u062E\u0644\u0627\u0644 24 \u0633\u0627\u0639\u0629</b>", ...up.map(row2), ""] : [],
+    ...dn.length ? ["\u{1F4C9} <b>Weakest 24h</b>", "\u{1F4C9} <b>\u0627\u0644\u0623\u0636\u0639\u0641 \u062E\u0644\u0627\u0644 24 \u0633\u0627\u0639\u0629</b>", ...dn.map(row2), ""] : [],
     "<i>Where the money moved in the last 24 hours (sectors above $1B, with their leaders).</i>",
     "<i>\u0623\u064A\u0646 \u062A\u062D\u0631\u0643\u062A \u0627\u0644\u0633\u064A\u0648\u0644\u0629 \u062E\u0644\u0627\u0644 24 \u0633\u0627\u0639\u0629 (\u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A \u0641\u0648\u0642 \u0645\u0644\u064A\u0627\u0631 \u062F\u0648\u0644\u0627\u0631 \u0645\u0639 \u0623\u0628\u0631\u0632 \u0639\u0645\u0644\u0627\u062A\u0647\u0627).</i>",
     "",
@@ -5584,10 +5613,11 @@ async function leverageText(m, now) {
   if (!rows.length && !wl.length) return null;
   const u = usMarket(now);
   return [
-    `\u{1F9F2} <b>Leverage &amp; whales \xB7 \u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u0648\u0627\u0644\u062D\u064A\u062A\u0627\u0646</b> \xB7 ${local(now, { day: "numeric", month: "short" })}`,
+    `\u{1F9F2} <b>Leverage &amp; whales</b> \xB7 ${local(now, { day: "numeric", month: "short" })}`,
+    "\u{1F9F2} <b>\u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u0648\u0627\u0644\u062D\u064A\u062A\u0627\u0646</b>",
     "",
     ...rows,
-    ...wl.length ? ["", `\u{1F40B} <b>Whales \xB7 \u0627\u0644\u062D\u064A\u062A\u0627\u0646</b> <i>(the ${m.whales.n} biggest winning traders on Hyperliquid)</i>`, ...wl] : [],
+    ...wl.length ? ["", `\u{1F40B} <b>Whales</b> <i>(the ${m.whales.n} biggest winning traders on Hyperliquid)</i>`, `\u{1F40B} <b>\u0627\u0644\u062D\u064A\u062A\u0627\u0646</b> <i>(\u0623\u0643\u0628\u0631 ${m.whales.n} \u0645\u062A\u062F\u0627\u0648\u0644\u0627\u064B \u0631\u0627\u0628\u062D\u0627\u064B \u0639\u0644\u0649 \u0645\u0646\u0635\u0629 Hyperliquid)</i>`, ...wl] : [],
     "",
     `\u{1F1FA}\u{1F1F8} US market: ${US_STATE.en[u.state].replace(/^\S+ /, "")}`,
     "",
@@ -5635,7 +5665,8 @@ async function runChannel(env, now = Date.now()) {
 }
 async function announce(env, text) {
   const c = await getCommunity(env), out = [];
-  const body = `\u{1F195} <b>What's new \xB7 \u0627\u0644\u062C\u062F\u064A\u062F</b>
+  const body = `\u{1F195} <b>What's new</b>
+\u{1F195} <b>\u0627\u0644\u062C\u062F\u064A\u062F</b>
 
 ${esc(text)}`;
   if (c.channel) out.push((await tg5(env, "sendMessage", { chat_id: c.channel.id, text: body, parse_mode: "HTML" })).ok ? "\u{1F4E2}" : "\u26A0\uFE0F\u{1F4E2}");
@@ -6024,7 +6055,7 @@ async function setRange(env, v) {
 }
 async function setLang(env, v) {
   memLang.set(chatOf(env), v);
-  await setAlertsLang(env, v).then((ok2) => ok2 && env.RATE ? env.RATE.put(K(env, "alsync"), v) : null).catch(() => {
+  await setAlertsLang(env, v).then((ok2) => ok2 && env.RATE ? Promise.all([env.RATE.put(K(env, "alsync"), v), env.RATE.put(K(env, "alsyncT"), String(Date.now()))]) : null).catch(() => {
   });
   try {
     if (env.RATE) await env.RATE.put(K(env, "lang"), v);
