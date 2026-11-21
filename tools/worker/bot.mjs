@@ -16,7 +16,7 @@
 import { bidi, bidiBody, NOT_ADVICE } from './bidi.mjs';
 import { markSeen } from './idle.mjs';
 import { note } from './usage.mjs';
-import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR } from './who.mjs';
+import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR, askInvite, askedInvite, closeAsk, ASKS_PER_HOUR } from './who.mjs';
 import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
 import { chatUid, idTokenFor, setAlertsLang } from './data.mjs';
 import { balancesFor } from './cex.mjs';
@@ -492,9 +492,9 @@ export function featureOf(msg, q) {
 // 👋 someone who isn't invited: a valid code (typed, or via the t.me/<bot>?start=CODE link) lets them in; anything else gets
 // one polite answer a day. Only private chats (no groups).
 const STR = {
-  en: { private: '🔒 This bot is private. If you have an invite code, send it here.', bad: '❌ That invite code is not valid (or was already used).', full: 'The bot is full right now — ask the owner.',
+  en: { private: '🔒 This bot is private. If you have an invite code, send it here.\nNo code yet? Send the word <b>invite</b> and your request goes to Dr. Samir Saad.', asked: '✅ Your request reached Dr. Samir Saad. If he accepts, you will get a message here.', askedAgain: '⏳ Your request is already with Dr. Samir Saad.', ask: (n, u) => `🙋 <b>${n}</b>${u ? ' (@' + u + ')' : ''} is asking for an invite.`, askOk: '✅ Accepted — they are in.', askNo: '✖️ Declined.', askFull: 'The bot is full — raise the limit first (the dashboard in the app).', askOver: 'This request is already closed.', bad: '❌ That invite code is not valid (or was already used).', full: 'The bot is full right now — ask the owner.',
     welcome: n => `👋 Welcome, ${n}! You're in ✅\nAsk me anything about crypto in plain words, tap a button below, or send a ticker like <code>btc</code>.\nYour portfolio isn't linked yet — that comes next.\n📘 <code>/guide</code> — everything the bot and the app can do.`, joined: (n, u) => `👤 <b>${n}</b>${u ? ' (@' + u + ')' : ''} joined with your invite.` },
-  ar: { private: '🔒 هذا البوت خاص. إن كان لديك رمز دعوة فأرسله هنا.', bad: '❌ رمز الدعوة غير صالح (أو استُخدم من قبل).', full: 'البوت ممتلئ حالياً — تواصل مع مالكه.',
+  ar: { private: '🔒 هذا البوت خاص. إن كان لديك رمز دعوة فأرسله هنا.\nليس لديك رمز؟ أرسل كلمة <b>دعوة</b> ليصل طلبك إلى د. سمير سعد.', asked: '✅ وصل طلبك إلى د. سمير سعد. إن قبله ستصلك رسالة هنا.', askedAgain: '⏳ طلبك موجود بالفعل لدى د. سمير سعد.', ask: (n, u) => `🙋 <b>${n}</b>${u ? ' (@' + u + ')' : ''} يطلب دعوة.`, askOk: '✅ تم القبول — أصبح عضواً.', askNo: '✖️ تم الرفض.', askFull: 'البوت ممتلئ — ارفع الحد أولاً (لوحة التحكم في التطبيق).', askOver: 'هذا الطلب أُغلق من قبل.', bad: '❌ رمز الدعوة غير صالح (أو استُخدم من قبل).', full: 'البوت ممتلئ حالياً — تواصل مع مالكه.',
     welcome: n => `👋 أهلاً ${n}! تم دخولك ✅\nاسألني أي سؤال عن الكريبتو بكلماتك، أو اضغط زراً بالأسفل، أو أرسل رمزاً مثل <code>btc</code>.\nمحفظتك غير مربوطة بعد — هذه هي الخطوة التالية.\n📘 <code>/guide</code> — كل ما يقدمه البوت والتطبيق.`, joined: (n, u) => `👤 <b>${n}</b>${u ? ' (@' + u + ')' : ''} انضم بدعوتك.` },
 };
 async function stranger(env, u, msg, chat) {
@@ -524,6 +524,16 @@ async function stranger(env, u, msg, chat) {
       return ok();
     }
     if (await strangerOnce(env, chat)) await send(env, chat, { text: r.error === 'full' ? w.full : w.bad });
+    return ok();
+  }
+  // 🙋 no code, but they ask for an invite ("invite" / "دعوة", or the welcome page's link: /start invite): the ask goes to
+  // the owner once, with ✅ / ✖️ — accepted → they are in at once, no code to copy
+  if (/^\/start\s+(invite|request)$/i.test(msg.text.trim()) || /\b(invite|invitation|join)\b|دعو[ةه]|انضم|أنضم/i.test(msg.text)) {
+    if ((await bump('ask', 'all', 3600e3)) > ASKS_PER_HOUR) return ok();
+    const r = await askInvite(env, chat, msg.from, L);
+    if (!r) { if (await strangerOnce(env, chat)) await send(env, chat, { text: w.askedAgain }); return ok(); }
+    await send(env, chat, { text: w.asked });
+    await asChat(env.TELEGRAM_CHAT_ID, async () => { const ol = await getLang(env); await send(env, env.TELEGRAM_CHAT_ID, { text: STR[ol].ask(esc(r.name), esc(r.user)), buttons: [[cb(ol === 'ar' ? '✅ قبول' : '✅ Accept', 'rq:ok:' + chat), cb(ol === 'ar' ? '✖️ رفض' : '✖️ Decline', 'rq:no:' + chat)]] }); });
     return ok();
   }
   if (await strangerOnce(env, chat)) await send(env, chat, { text: w.private });
@@ -724,6 +734,19 @@ async function onUpdate(env, u, msg, q, chat) {
         }
         await asChat(who, async () => { const L = await getLang(env); await send(env, who, { text: AW[L].no }); });
         await done('❌'); return ok();
+      }
+      if (/^rq:(ok|no):-?\d+$/.test(d)) {   // 🙋 owner only: an ask for an invite → ✅ they are in at once · ✖️ declined (they are not told)
+        if (!isOwner(env)) { await done(); return ok(); }
+        const [, act, who] = d.split(':'), lang = await getLang(env), S = STR[lang], r = await askedInvite(env, who);
+        if (!r || r.done) { await done(S.askOver); return ok(); }
+        const head = S.ask(esc(r.name), esc(r.user));
+        if (act === 'no') { await closeAsk(env, who, 'no'); await edit(env, chat, q.message.message_id, { text: head + '\n' + S.askNo, buttons: [[cb('👥 /users', 'us')]] }); await done(); return ok(); }
+        if (Object.keys(await members(env)).length >= await maxMembers(env)) { await done(S.askFull); return ok(); }
+        const res = await useInvite(env, await newInvite(env, 'asked'), who, { first_name: r.name, username: r.user });
+        if (!res.ok) { await done(res.error === 'full' ? S.askFull : '—'); return ok(); }
+        await closeAsk(env, who, 'ok');
+        await asChat(who, async () => { await setLang(env, r.lang); const t = T[r.lang]; await send(env, who, { text: STR[r.lang].welcome(esc(res.member.name)) }, { reply_markup: replyKb(t) }); await send(env, who, viewMenu(t, false)); });
+        await edit(env, chat, q.message.message_id, { text: head + '\n' + S.askOk, buttons: [[cb('👥 /users', 'us')]] }); await done('✅'); return ok();
       }
       if (d === 'us' || /^us:/.test(d)) {   // 👥 owner only: members, remove, new invite
         const lang = await getLang(env);

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 166381efc6e95c27
+// sources-hash: ce2ca1c43d030caa
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -930,6 +930,28 @@ async function chats(env) {
 async function allowed(env, chat) {
   return (await chats(env)).includes(String(chat));
 }
+var ASK_TTL = 14 * 86400;
+async function askInvite(env, chat, from, lang2) {
+  const k = "tg:req:" + chat;
+  if (await kget(env, k)) return null;
+  const r = { name: [from && from.first_name, from && from.last_name].filter(Boolean).join(" ").slice(0, 40) || "Friend", user: from && from.username ? String(from.username).slice(0, 32) : "", lang: lang2 === "ar" ? "ar" : "en", t: Date.now() };
+  await kput(env, k, JSON.stringify(r), ASK_TTL);
+  return r;
+}
+async function askedInvite(env, chat) {
+  try {
+    return JSON.parse(await kget(env, "tg:req:" + chat) || "null");
+  } catch (_) {
+    return null;
+  }
+}
+async function closeAsk(env, chat, how) {
+  const r = await askedInvite(env, chat);
+  if (!r) return;
+  r.done = how;
+  await kput(env, "tg:req:" + chat, JSON.stringify(r), ASK_TTL);
+}
+var ASKS_PER_HOUR = 6;
 var ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 async function newInvite(env, note2 = "") {
   const b = crypto.getRandomValues(new Uint8Array(8)), code = [...b].map((x) => ABC[x % ABC.length]).join("");
@@ -5289,12 +5311,14 @@ var guide_default = {
       en: [
         "Ask the bot in plain words \u2014 <i>how do I add a coin?</i>",
         "An idea or a bug? Send <b>/feedback</b> and your message \u2014 it goes straight to Dr. Samir Saad.",
-        "/guide opens this guide again any time; in the app: Settings \u2192 Guide."
+        "/guide opens this guide again any time; in the app: Settings \u2192 Guide.",
+        "\u{1F195} When the guide changes, the bot tells you which parts are new or updated \u2014 one message, at most once a day \u2014 and the channel gets a post."
       ],
       ar: [
         "\u0627\u0633\u0623\u0644 \u0627\u0644\u0628\u0648\u062A \u0628\u0643\u0644\u0645\u0627\u062A\u0643 \u2014 <i>\u0643\u064A\u0641 \u0623\u0636\u064A\u0641 \u0639\u0645\u0644\u0629\u061F</i>",
         "\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 <b>/feedback</b> \u062B\u0645 \u0631\u0633\u0627\u0644\u062A\u0643 \u2014 \u062A\u0635\u0644 \u0645\u0628\u0627\u0634\u0631\u0629 \u0625\u0644\u0649 Dr. Samir Saad.",
-        "/guide \u064A\u0641\u062A\u062D \u0647\u0630\u0627 \u0627\u0644\u062F\u0644\u064A\u0644 \u0641\u064A \u0623\u064A \u0648\u0642\u062A\u061B \u0648\u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u062F\u0644\u064A\u0644."
+        "/guide \u064A\u0641\u062A\u062D \u0647\u0630\u0627 \u0627\u0644\u062F\u0644\u064A\u0644 \u0641\u064A \u0623\u064A \u0648\u0642\u062A\u061B \u0648\u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u062F\u0644\u064A\u0644.",
+        "\u{1F195} \u0639\u0646\u062F \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062F\u0644\u064A\u0644 \u064A\u062E\u0628\u0631\u0643 \u0627\u0644\u0628\u0648\u062A \u0628\u0627\u0644\u0623\u062C\u0632\u0627\u0621 \u0627\u0644\u062C\u062F\u064A\u062F\u0629 \u0623\u0648 \u0627\u0644\u0645\u0639\u062F\u064E\u0651\u0644\u0629 \u2014 \u0631\u0633\u0627\u0644\u0629 \u0648\u0627\u062D\u062F\u0629\u060C \u0645\u0631\u0629 \u0641\u064A \u0627\u0644\u064A\u0648\u0645 \u0639\u0644\u0649 \u0627\u0644\u0623\u0643\u062B\u0631 \u2014 \u0648\u064A\u0646\u0632\u0644 \u0645\u0646\u0634\u0648\u0631 \u0641\u064A \u0627\u0644\u0642\u0646\u0627\u0629."
       ],
       tip: {
         en: "\u{1F4E2} Cute Portfolio Signals: the market pulse (09:00 \xB7 21:05), the sector map (13:00) and leverage &amp; whales (17:30) \u2014 talk in the comments under each post (/community).",
@@ -5503,11 +5527,26 @@ async function guideUpdates(env) {
   if (link) lines.push("", link);
   const r = await tg5(env, "sendMessage", { chat_id: x.id, text: lines.join("\n"), parse_mode: "HTML", disable_web_page_preview: true });
   if (!r.ok) return { posted: 0 };
+  const old = x.guideSig, dm = Date.now() - (x.guideDm || 0) >= GUIDE_DM_EVERY;
   x.guideSig = now;
   x.guideV = guide_default.v || 1;
+  if (dm) x.guideDm = Date.now();
   c.channel = x;
   await putCommunity(env, c);
+  if (dm) await guideNews(env, changed, edition, old).catch(() => {
+  });
   return { posted: edition ? "all" : changed.length };
+}
+var GUIDE_DM_EVERY = 24 * 36e5;
+async function guideNews(env, changed, edition, old) {
+  for (const chat of await activeChats(env)) await asChat(chat, async () => {
+    const L = await langOf(env), ar = L === "ar";
+    const text = edition ? ar ? "\u{1F4D8} <b>\u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0627\u0644\u062F\u0644\u064A\u0644</b>\n\u0643\u0644 \u0645\u0627 \u064A\u0642\u062F\u0645\u0647 \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0644\u062A\u0637\u0628\u064A\u0642\u060C \u0645\u062D\u062F\u064E\u0651\u062B\u0627\u064B." : "\u{1F4D8} <b>A new edition of the guide</b>\nEverything the bot and the app can do, up to date." : [ar ? "\u{1F195} <b>\u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644</b>" : "\u{1F195} <b>New in the guide</b>", "", ...changed.slice(0, 10).map((s) => `${s.k in old ? "\u270F\uFE0F" : "\u{1F195}"} ${s.e} ${esc(s.t[L])}`)].join("\n");
+    const rows = edition ? [] : changed.slice(0, 6).map((s) => [{ text: `${s.e} ${s.t[L]}`.slice(0, 40), callback_data: "gd:" + s.k }]);
+    rows.push([{ text: ar ? "\u{1F4D8} \u0627\u0644\u062F\u0644\u064A\u0644 \u0643\u0627\u0645\u0644\u0627\u064B" : "\u{1F4D8} The full guide", callback_data: "gd" }]);
+    await tg5(env, "sendMessage", { chat_id: chat, text, parse_mode: "HTML", reply_markup: { inline_keyboard: rows } }).catch(() => {
+    });
+  });
 }
 async function onJoinRequest(env, u) {
   const r = u.chat_join_request, c = await getCommunity(env);
@@ -6501,7 +6540,14 @@ function featureOf(msg, q) {
 }
 var STR = {
   en: {
-    private: "\u{1F512} This bot is private. If you have an invite code, send it here.",
+    private: "\u{1F512} This bot is private. If you have an invite code, send it here.\nNo code yet? Send the word <b>invite</b> and your request goes to Dr. Samir Saad.",
+    asked: "\u2705 Your request reached Dr. Samir Saad. If he accepts, you will get a message here.",
+    askedAgain: "\u23F3 Your request is already with Dr. Samir Saad.",
+    ask: (n, u) => `\u{1F64B} <b>${n}</b>${u ? " (@" + u + ")" : ""} is asking for an invite.`,
+    askOk: "\u2705 Accepted \u2014 they are in.",
+    askNo: "\u2716\uFE0F Declined.",
+    askFull: "The bot is full \u2014 raise the limit first (the dashboard in the app).",
+    askOver: "This request is already closed.",
     bad: "\u274C That invite code is not valid (or was already used).",
     full: "The bot is full right now \u2014 ask the owner.",
     welcome: (n) => `\u{1F44B} Welcome, ${n}! You're in \u2705
@@ -6511,7 +6557,14 @@ Your portfolio isn't linked yet \u2014 that comes next.
     joined: (n, u) => `\u{1F464} <b>${n}</b>${u ? " (@" + u + ")" : ""} joined with your invite.`
   },
   ar: {
-    private: "\u{1F512} \u0647\u0630\u0627 \u0627\u0644\u0628\u0648\u062A \u062E\u0627\u0635. \u0625\u0646 \u0643\u0627\u0646 \u0644\u062F\u064A\u0643 \u0631\u0645\u0632 \u062F\u0639\u0648\u0629 \u0641\u0623\u0631\u0633\u0644\u0647 \u0647\u0646\u0627.",
+    private: "\u{1F512} \u0647\u0630\u0627 \u0627\u0644\u0628\u0648\u062A \u062E\u0627\u0635. \u0625\u0646 \u0643\u0627\u0646 \u0644\u062F\u064A\u0643 \u0631\u0645\u0632 \u062F\u0639\u0648\u0629 \u0641\u0623\u0631\u0633\u0644\u0647 \u0647\u0646\u0627.\n\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0631\u0645\u0632\u061F \u0623\u0631\u0633\u0644 \u0643\u0644\u0645\u0629 <b>\u062F\u0639\u0648\u0629</b> \u0644\u064A\u0635\u0644 \u0637\u0644\u0628\u0643 \u0625\u0644\u0649 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F.",
+    asked: "\u2705 \u0648\u0635\u0644 \u0637\u0644\u0628\u0643 \u0625\u0644\u0649 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F. \u0625\u0646 \u0642\u0628\u0644\u0647 \u0633\u062A\u0635\u0644\u0643 \u0631\u0633\u0627\u0644\u0629 \u0647\u0646\u0627.",
+    askedAgain: "\u23F3 \u0637\u0644\u0628\u0643 \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644 \u0644\u062F\u0649 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F.",
+    ask: (n, u) => `\u{1F64B} <b>${n}</b>${u ? " (@" + u + ")" : ""} \u064A\u0637\u0644\u0628 \u062F\u0639\u0648\u0629.`,
+    askOk: "\u2705 \u062A\u0645 \u0627\u0644\u0642\u0628\u0648\u0644 \u2014 \u0623\u0635\u0628\u062D \u0639\u0636\u0648\u0627\u064B.",
+    askNo: "\u2716\uFE0F \u062A\u0645 \u0627\u0644\u0631\u0641\u0636.",
+    askFull: "\u0627\u0644\u0628\u0648\u062A \u0645\u0645\u062A\u0644\u0626 \u2014 \u0627\u0631\u0641\u0639 \u0627\u0644\u062D\u062F \u0623\u0648\u0644\u0627\u064B (\u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642).",
+    askOver: "\u0647\u0630\u0627 \u0627\u0644\u0637\u0644\u0628 \u0623\u064F\u063A\u0644\u0642 \u0645\u0646 \u0642\u0628\u0644.",
     bad: "\u274C \u0631\u0645\u0632 \u0627\u0644\u062F\u0639\u0648\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D (\u0623\u0648 \u0627\u0633\u062A\u064F\u062E\u062F\u0645 \u0645\u0646 \u0642\u0628\u0644).",
     full: "\u0627\u0644\u0628\u0648\u062A \u0645\u0645\u062A\u0644\u0626 \u062D\u0627\u0644\u064A\u0627\u064B \u2014 \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u0645\u0627\u0644\u0643\u0647.",
     welcome: (n) => `\u{1F44B} \u0623\u0647\u0644\u0627\u064B ${n}! \u062A\u0645 \u062F\u062E\u0648\u0644\u0643 \u2705
@@ -6556,6 +6609,20 @@ async function stranger(env, u, msg, chat) {
       return ok();
     }
     if (await strangerOnce(env, chat)) await send2(env, chat, { text: r.error === "full" ? w.full : w.bad });
+    return ok();
+  }
+  if (/^\/start\s+(invite|request)$/i.test(msg.text.trim()) || /\b(invite|invitation|join)\b|دعو[ةه]|انضم|أنضم/i.test(msg.text)) {
+    if (await bump("ask", "all", 36e5) > ASKS_PER_HOUR) return ok();
+    const r = await askInvite(env, chat, msg.from, L);
+    if (!r) {
+      if (await strangerOnce(env, chat)) await send2(env, chat, { text: w.askedAgain });
+      return ok();
+    }
+    await send2(env, chat, { text: w.asked });
+    await asChat(env.TELEGRAM_CHAT_ID, async () => {
+      const ol = await getLang(env);
+      await send2(env, env.TELEGRAM_CHAT_ID, { text: STR[ol].ask(esc(r.name), esc(r.user)), buttons: [[cb3(ol === "ar" ? "\u2705 \u0642\u0628\u0648\u0644" : "\u2705 Accept", "rq:ok:" + chat), cb3(ol === "ar" ? "\u2716\uFE0F \u0631\u0641\u0636" : "\u2716\uFE0F Decline", "rq:no:" + chat)]] });
+    });
     return ok();
   }
   if (await strangerOnce(env, chat)) await send2(env, chat, { text: w.private });
@@ -6907,6 +6974,43 @@ async function onUpdate(env, u, msg, q, chat) {
           await send2(env, who, { text: AW[L].no });
         });
         await done("\u274C");
+        return ok();
+      }
+      if (/^rq:(ok|no):-?\d+$/.test(d)) {
+        if (!isOwner(env)) {
+          await done();
+          return ok();
+        }
+        const [, act2, who] = d.split(":"), lang2 = await getLang(env), S = STR[lang2], r3 = await askedInvite(env, who);
+        if (!r3 || r3.done) {
+          await done(S.askOver);
+          return ok();
+        }
+        const head = S.ask(esc(r3.name), esc(r3.user));
+        if (act2 === "no") {
+          await closeAsk(env, who, "no");
+          await edit(env, chat, q.message.message_id, { text: head + "\n" + S.askNo, buttons: [[cb3("\u{1F465} /users", "us")]] });
+          await done();
+          return ok();
+        }
+        if (Object.keys(await members(env)).length >= await maxMembers(env)) {
+          await done(S.askFull);
+          return ok();
+        }
+        const res = await useInvite(env, await newInvite(env, "asked"), who, { first_name: r3.name, username: r3.user });
+        if (!res.ok) {
+          await done(res.error === "full" ? S.askFull : "\u2014");
+          return ok();
+        }
+        await closeAsk(env, who, "ok");
+        await asChat(who, async () => {
+          await setLang(env, r3.lang);
+          const t2 = T[r3.lang];
+          await send2(env, who, { text: STR[r3.lang].welcome(esc(res.member.name)) }, { reply_markup: replyKb(t2) });
+          await send2(env, who, viewMenu(t2, false));
+        });
+        await edit(env, chat, q.message.message_id, { text: head + "\n" + S.askOk, buttons: [[cb3("\u{1F465} /users", "us")]] });
+        await done("\u2705");
         return ok();
       }
       if (d === "us" || /^us:/.test(d)) {

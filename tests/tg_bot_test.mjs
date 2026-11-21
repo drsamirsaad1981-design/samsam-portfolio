@@ -848,6 +848,24 @@ check('a stranger → one polite "private, send your invite code" a day — then
   globalThis.fetch = of; LIMITS = false;
   check('🛡 a stranger trying /link codes: only 5 tries an hour reach Firebase (8 sent)', fsReads > 0 && fsReads <= 5 * 4, fsReads);
   check('🛡 a stranger sending 25 messages: no Firebase, and the bot\'s memory (KV) grows by at most a couple of keys', fs0 === 0 && kvStore.size - w0 <= 4, [fs0, kvStore.size - w0]); }
+// 🙋 no code: a stranger asks for an invite → the owner gets ONE message with ✅ / ✖️; accepted → they are in at once
+{ for (const k of [...kvStore.keys()]) if (/^tg:(nope|req):/.test(k)) kvStore.delete(k);
+  sent.length = 0; await sayAs(9001, 'hello', { first_name: 'Huda', username: 'huda', language_code: 'ar' });
+  check('🙋 a stranger is told how to ask: "send the word invite / دعوة"', /دعوة/.test(last().b.text) && String(last().b.chat_id) === '9001', last().b.text);
+  sent.length = 0; await sayAs(9001, 'أريد دعوة', { first_name: 'Huda', username: 'huda', language_code: 'ar' });
+  const toOwner = sent.find(x => x.m === 'sendMessage' && String(x.b.chat_id) === '555'), toHer = sent.find(x => x.m === 'sendMessage' && String(x.b.chat_id) === '9001');
+  check('🙋 "أريد دعوة" → she is told it arrived, and the owner gets her name with ✅ Accept / ✖️ Decline', !!toHer && /وصل طلبك/.test(toHer.b.text) && !!toOwner && /Huda/.test(toOwner.b.text) && /@huda/.test(toOwner.b.text) && btns(toOwner).some(b => b.callback_data === 'rq:ok:9001') && btns(toOwner).some(b => b.callback_data === 'rq:no:9001'), sent.map(x => [x.b.chat_id, x.b.text]));
+  sent.length = 0; await sayAs(9001, 'invite please', { first_name: 'Huda', language_code: 'ar' }); await sayAs(9001, 'دعوة', { first_name: 'Huda', language_code: 'ar' });
+  check('…asking again: the owner is not messaged a second time', !sent.some(x => x.m === 'sendMessage' && String(x.b.chat_id) === '555'), sent.map(x => [x.b.chat_id, x.b.text]));
+  sent.length = 0; await tapAs(9001, 'rq:ok:9001'); await tapAs(777000, 'rq:ok:9001');
+  check('…only the owner can accept (her own tap, or a stranger\'s, does nothing)', !JSON.parse(kvStore.get('tg:users') || '{}')['9001']);
+  sent.length = 0; await tapAs(555, 'rq:ok:9001');
+  check('✅ Accept → she is a member at once, welcomed in Arabic, and the owner\'s message says so', !!JSON.parse(kvStore.get('tg:users'))['9001'] && sent.some(x => String(x.b.chat_id) === '9001' && /أهلاً Huda/.test(x.b.text || '')) && sent.some(x => x.m === 'editMessageText' && /Accepted/.test(x.b.text || '')), sent.map(x => [x.m, x.b.chat_id, (x.b.text || '').slice(0, 60)]));
+  sent.length = 0; await tapAs(555, 'rq:ok:9001');
+  check('…a second tap changes nothing (the request is closed)', !sent.some(x => x.m === 'sendMessage'));
+  sent.length = 0; await sayAs(9002, '/start invite', { first_name: 'Omar', language_code: 'en' }); await tapAs(555, 'rq:no:9002');
+  check('✖️ Decline (from the welcome page\'s link, /start invite) → not a member, not told; the owner\'s message says Declined', !JSON.parse(kvStore.get('tg:users'))['9002'] && sent.some(x => x.m === 'editMessageText' && /Declined/.test(x.b.text || '')) && sent.filter(x => x.m === 'sendMessage' && String(x.b.chat_id) === '9002').length === 1, sent.map(x => [x.m, x.b.chat_id, (x.b.text || '').slice(0, 60)]));
+  const u = JSON.parse(kvStore.get('tg:users')); delete u['9001']; kvStore.set('tg:users', JSON.stringify(u)); for (const k of [...kvStore.keys()]) if (/^tg:(nope|req|9001):/.test(k)) kvStore.delete(k); }
 sent.length = 0; Wd = await fresh(); await postK(Wd, '/invite');
 const code = (/<code>([A-Z2-9]{8})<\/code>/.exec(last().b.text) || [])[1];
 check('/invite (owner) → an 8-letter one-time code', !!code && !/[01IO]/.test(code), last().b.text);
@@ -1374,11 +1392,14 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
     sent.length = 0; const Wg = await fresh(); const pg2 = []; await Wg.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:05') }, ENVK, { waitUntil: x => pg2.push(x) }); await Promise.all(pg2);
     const posts = sent.filter(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
     check('🆕 the guide changed (a part updated, a part new) → one post in the channel: ✏️ + 🆕, with the guide button', posts.length === 1 && /New in the guide/.test(posts[0].b.text) && /✏️ 🔔/.test(posts[0].b.text) && /🆕/.test(posts[0].b.text) && posts[0].b.text.includes('start=guide') && !posts[0].b.reply_markup, posts.map(m => m.b.text));
+    { const dms = sent.filter(m => m.m === 'sendMessage' && m.b.chat_id !== -1001 && /New in the guide|جديد في الدليل/.test(m.b.text || '')), own = dms.find(m => String(m.b.chat_id) === '555');
+      check('🔔 …and each member hears it in the bot too: the changed parts, with buttons that open them (gd:alerts) and the full guide', !!own && /✏️ 🔔/.test(own.b.text) && JSON.stringify(own.b.reply_markup).includes('"gd:alerts"') && JSON.stringify(own.b.reply_markup).includes('"gd"') && new Set(dms.map(m => String(m.b.chat_id))).size === dms.length, dms.map(m => [m.b.chat_id, m.b.text])); }
     sent.length = 0; const Wh = await fresh(); const ph = []; await Wh.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:10') }, ENVK, { waitUntil: x => ph.push(x) }); await Promise.all(ph);
     check('…and not again', !sent.some(m => m.m === 'sendMessage' && m.b.chat_id === -1001));
     const c3 = JSON.parse(kvStore.get('tg:community')); c3.channel.guideV = 1; kvStore.set('tg:community', JSON.stringify(c3));
     sent.length = 0; const Wv = await fresh(); const pv = []; await Wv.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:15') }, ENVK, { waitUntil: x => pv.push(x) }); await Promise.all(pv);
     const rp = sent.filter(m => m.m === 'sendMessage' && m.b.chat_id === -1001);
+    check('🔔 …a second change the same day: the channel hears it, the members are not messaged again (once a day)', !sent.some(m => m.m === 'sendMessage' && m.b.chat_id !== -1001 && m.b.reply_markup && JSON.stringify(m.b.reply_markup).includes('"gd"')));
     check('📘 a new edition of the guide → one "new edition" post (not 15)', rp.length === 1 && /new edition/i.test(rp[0].b.text), rp.map(m => m.b.text));
     sent.length = 0; const Wv2 = await fresh(); const pv2 = []; await Wv2.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH('04:20') }, ENVK, { waitUntil: x => pv2.push(x) }); await Promise.all(pv2);
     check('…and not again', !sent.some(m => m.m === 'sendMessage' && m.b.chat_id === -1001));

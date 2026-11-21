@@ -1190,6 +1190,8 @@
   .asset-note-box textarea:focus { outline: none; border-color: #7c3aed; }
   .htx-note-st { font-size: .74rem; color: var(--fg2); margin-top: 5px; min-height: 1em; text-align: end; }
   @media (max-width: 380px) { .quick-links-row { gap: 6px; } .quick-links-row .htx-liq { padding: 0 5px; font-size: .74rem; gap: 4px; } }
+  /* a very narrow phone: each button takes the width its own label needs, so no icon is pushed out */
+  @media (max-width: 340px) { .quick-links-row .htx-liq { flex: 1 1 auto; padding: 0 4px; } }
   @media print { .btn-liq, .btn-pred, .htx-links { display: none !important; } }
   /* Category cards (All Coins, Layer 1…): solid surface, readable labels */
   .summary-card { background: var(--card-solid); }
@@ -1337,6 +1339,6 @@
   .action-badge .sig-p { font-style: normal; font-size: .85em; margin-inline-start: 3px; opacity: .85; }
 
 /* 🕌 the crypto's zakat: one quiet line under the cards (every width) */
-.zk-line { margin-top: 10px; width: 100%; box-sizing: border-box; text-align: center; font-size: .82rem; line-height: 1.5; color: var(--text-secondary, #a5b4cf); }   /* 🕌 the crypto's zakat: one quiet line under the cards */
-.zk-line b { color: var(--text-primary, #e8ecf8); } .zk-line small { opacity: .8; font-size: .92em; } .zk-line[hidden] { display: none; }
+.zk-line { margin-top: 10px; width: 100%; box-sizing: border-box; text-align: center; font-size: .82rem; line-height: 1.5; color: var(--fg2); }   /* 🕌 the crypto's zakat: one quiet line under the cards */
+.zk-line b { color: var(--fg); } .zk-line small { opacity: .8; font-size: .92em; } .zk-line[hidden] { display: none; }
 .zk-edit { background: none; border: none; padding: 0 4px; margin-inline-start: 4px; color: inherit; opacity: .75; cursor: pointer; vertical-align: middle; }

@@ -6,7 +6,8 @@
 //   • approves a join request only from a member of the bot (strangers are declined) — /community gives members the link
 //   • posts a market pulse to the channel twice a day (09:00 and 21:05 Riyadh) and pins the latest; a "big move" post
 //     when BTC moves ±5% in 24 h (once a day) — members discuss each one in its comments
-//   • a new release changed the guide → one short 🆕 post listing the parts that changed
+//   • a new release changed the guide → one short 🆕 post listing the parts that changed (and, at most once a day, the same
+//     news to each member in the bot, in their language)
 //   • /announce <text> (Samir): posted to the channel
 // Suggestions and bug reports go to the bot (/feedback), not to a group topic. The old forum topics (💬 Chat · 💡 · 🐞 · 📘)
 // are gone: a forum group can't be a channel's discussion group.
@@ -14,7 +15,7 @@
 
 import { usMarket, US_STATE } from './usmarket.mjs';
 import { bidiBody } from './bidi.mjs';
-import { members } from './who.mjs';
+import { members, activeChats, asChat, langOf } from './who.mjs';
 import { loadMarket, derivatives, resetBudget } from './data.mjs';
 import { whaleLines } from './daily.mjs';
 import { localParts, local, esc, usd, pct, dot, isStable, etfDay, flow, APP } from '../alerts-core.mjs';
@@ -159,8 +160,23 @@ export async function guideUpdates(env) {
   const link = await guideLink(env); if (link) lines.push('', link);
   const r = await tg(env, 'sendMessage', { chat_id: x.id, text: lines.join('\n'), parse_mode: 'HTML', disable_web_page_preview: true });
   if (!r.ok) return { posted: 0 };
-  x.guideSig = now; x.guideV = GUIDE.v || 1; c.channel = x; await putCommunity(env, c);
+  const old = x.guideSig, dm = Date.now() - (x.guideDm || 0) >= GUIDE_DM_EVERY;
+  x.guideSig = now; x.guideV = GUIDE.v || 1; if (dm) x.guideDm = Date.now(); c.channel = x; await putCommunity(env, c);
+  if (dm) await guideNews(env, changed, edition, old).catch(() => {});
   return { posted: edition ? 'all' : changed.length };
+}
+// 🔔 …and every member hears it in the bot too, in their own language: the parts that changed as buttons (each opens in
+// place). At most once a day — several releases in one day still mean one message (the channel post names each change).
+const GUIDE_DM_EVERY = 24 * 3600e3;
+async function guideNews(env, changed, edition, old) {
+  for (const chat of await activeChats(env)) await asChat(chat, async () => {
+    const L = await langOf(env), ar = L === 'ar';
+    const text = edition ? (ar ? '📘 <b>نسخة جديدة من الدليل</b>\nكل ما يقدمه البوت والتطبيق، محدَّثاً.' : '📘 <b>A new edition of the guide</b>\nEverything the bot and the app can do, up to date.')
+      : [ar ? '🆕 <b>جديد في الدليل</b>' : '🆕 <b>New in the guide</b>', '', ...changed.slice(0, 10).map(s => `${s.k in old ? '✏️' : '🆕'} ${s.e} ${esc(s.t[L])}`)].join('\n');
+    const rows = edition ? [] : changed.slice(0, 6).map(s => [{ text: `${s.e} ${s.t[L]}`.slice(0, 40), callback_data: 'gd:' + s.k }]);
+    rows.push([{ text: ar ? '📘 الدليل كاملاً' : '📘 The full guide', callback_data: 'gd' }]);
+    await tg(env, 'sendMessage', { chat_id: chat, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } }).catch(() => {});
+  });
 }
 
 // ── a join request: members of the bot (and Samir) in, everyone else declined ──

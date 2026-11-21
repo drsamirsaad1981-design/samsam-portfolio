@@ -512,12 +512,14 @@
    "en": [
     "Ask the bot in plain words — <i>how do I add a coin?</i>",
     "An idea or a bug? Send <b>/feedback</b> and your message — it goes straight to Dr. Samir Saad.",
-    "/guide opens this guide again any time; in the app: Settings → Guide."
+    "/guide opens this guide again any time; in the app: Settings → Guide.",
+    "🆕 When the guide changes, the bot tells you which parts are new or updated — one message, at most once a day — and the channel gets a post."
    ],
    "ar": [
     "اسأل البوت بكلماتك — <i>كيف أضيف عملة؟</i>",
     "اقتراح أو مشكلة؟ أرسل <b>/feedback</b> ثم رسالتك — تصل مباشرة إلى Dr. Samir Saad.",
-    "/guide يفتح هذا الدليل في أي وقت؛ وفي التطبيق: الإعدادات ← الدليل."
+    "/guide يفتح هذا الدليل في أي وقت؛ وفي التطبيق: الإعدادات ← الدليل.",
+    "🆕 عند تحديث الدليل يخبرك البوت بالأجزاء الجديدة أو المعدَّلة — رسالة واحدة، مرة في اليوم على الأكثر — وينزل منشور في القناة."
    ],
    "tip": {
     "en": "📢 Cute Portfolio Signals: the market pulse (09:00 · 21:05), the sector map (13:00) and leverage &amp; whales (17:30) — talk in the comments under each post (/community).",

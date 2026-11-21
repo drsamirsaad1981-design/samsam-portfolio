@@ -30,6 +30,17 @@ export async function members(env) { try { const m = JSON.parse((await kget(env,
 export async function chats(env) { return env.TELEGRAM_CHAT_ID ? [String(env.TELEGRAM_CHAT_ID), ...Object.keys(await members(env)).filter(c => c !== String(env.TELEGRAM_CHAT_ID) && isTgChat(c))] : []; }
 export async function allowed(env, chat) { return (await chats(env)).includes(String(chat)); }
 
+// 🙋 someone without an invite asks for one in the bot: one ask per chat in 14 days (KV tg:req:<chat>), kept until the
+// owner accepts or declines — a closed ask stays for the same 14 days, so it can't be sent again and again
+const ASK_TTL = 14 * 86400;
+export async function askInvite(env, chat, from, lang) {
+  const k = 'tg:req:' + chat; if (await kget(env, k)) return null;
+  const r = { name: [from && from.first_name, from && from.last_name].filter(Boolean).join(' ').slice(0, 40) || 'Friend', user: from && from.username ? String(from.username).slice(0, 32) : '', lang: lang === 'ar' ? 'ar' : 'en', t: Date.now() };
+  await kput(env, k, JSON.stringify(r), ASK_TTL); return r;
+}
+export async function askedInvite(env, chat) { try { return JSON.parse((await kget(env, 'tg:req:' + chat)) || 'null'); } catch (_) { return null; } }
+export async function closeAsk(env, chat, how) { const r = await askedInvite(env, chat); if (!r) return; r.done = how; await kput(env, 'tg:req:' + chat, JSON.stringify(r), ASK_TTL); }
+export const ASKS_PER_HOUR = 6;   // 🛡 asks from everyone together: the owner is never flooded, and KV writes stay few
 // /invite → a one-time code (8 letters, no look-alikes), good for 7 days
 const ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export async function newInvite(env, note = '') {
