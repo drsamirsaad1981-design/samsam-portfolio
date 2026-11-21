@@ -13,7 +13,7 @@
     'html.cp-ar body,html.cp-ar button,html.cp-ar input,html.cp-ar select,html.cp-ar textarea{font-family:"Inter","Cairo",system-ui,-apple-system,"Segoe UI",sans-serif}' +
     'html.cp-ar #cpSet .st-box{font-family:"Inter","Cairo",system-ui,sans-serif}' +
     'html.cp-ar body{direction:rtl}' +
-    'html.cp-ar svg,html.cp-ar canvas{direction:ltr}html.cp-ar .ss-ic{margin-inline-end:0;margin-right:0;margin-left:.4em}html.cp-ar .ss-ic.solo{margin-left:0}html.cp-ar .cp-foot .ss-ic{margin-left:.35em}' +                                   // charts read left → right (time axis), like every trading app
+    'html.cp-ar svg,html.cp-ar canvas{direction:ltr}html.cp-ar .ss-ic{margin-inline-end:0;margin-right:0;margin-left:.4em}html.cp-ar .ss-ic.solo{margin-left:0}html.cp-ar .cp-foot .ss-ic{margin-left:.35em}html.cp-ar .mk-links a,html.cp-ar .mk-links .off,html.cp-ar .quick-links-row .htx-liq{flex:1 1 auto}' +                                   // charts read left → right (time axis), like every trading app
     'html.cp-ar input[type=number],html.cp-ar input[type=date],html.cp-ar input[type=datetime-local],html.cp-ar input[type=email],html.cp-ar input[inputmode=decimal]{direction:ltr;text-align:right}' +
     'html.cp-ar svg:has(>path[d="m9 6 6 6-6 6"]),html.cp-ar svg:has(>path[d="m15 18-6-6 6-6"]){scale:-1 1}' +   // › and ‹ point the other way
     'html.cp-ar #altV,html.cp-ar #asV,html.cp-ar strong:has(>.bt-of){direction:ltr;unicode-bidi:isolate}' +   // 50/100 reads 50/100, not 100/ 50

@@ -336,6 +336,7 @@
   R(/^Sell ([\d.,]+) ([A-Z0-9.]+)$/, function (_, q, c) { return 'بيع ' + n(q + ' ' + c); });
   R(/^Take profit (\d)$/, 'جني الأرباح $1');
   R(/^moonbag (.+)$/, function (_, q) { return 'Moonbag ' + n(q); });
+  R(/^Target hit — sell (.+?)( more)?$/, function (_, q, more) { return 'تحقق الهدف — بِع ' + n(q) + (more ? ' أخرى' : ''); });
   R(/^now (.+)$/, function (_, v) { return 'الآن ' + n(v); });
   R(/^Target (.+)$/, function (_, v) { return /[a-z]{3}/.test(v) ? null : 'الهدف ' + n(v); });
   R(/^Progress (.+%)$/, function (_, v) { return 'التقدّم ' + n(v); });
