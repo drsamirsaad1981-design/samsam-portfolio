@@ -386,7 +386,7 @@ check(`a 5-tool question stays within Cloudflare's 50 calls (${outside} outside 
 
 // 🌐 English mode = English only: not one Arabic letter in anything the bot sent so far (every command, button view and
 // alert above ran in English) — the user's own words echoed back aside
-{ const AR = /[\u0600-\u06FF]/, bad = [...new Set((globalThis.__all || []).filter(t => AR.test(t) && !/A general answer about/.test(t)).map(t => (t.split('\n').find(l => AR.test(l)) || '').replace(/<[^>]+>/g, '').slice(0, 90)))];
+{ const AR = /[\u0600-\u06FF]/, bad = [...new Set((globalThis.__all || []).filter(t => AR.test(t) && !/A.general.answer.about/.test(t.replace(/[\u200E\u200F\u2060\u2066\u2069]/g, ''))).map(t => (t.split('\n').find(l => AR.test(l)) || '').replace(/<[^>]+>/g, '').slice(0, 90)))];
   check(`English mode: no Arabic in any of the ${(globalThis.__all || []).length} messages sent in English`, (globalThis.__all || []).length > 50 && !bad.length, bad.slice(0, 8)); }
 // ── language: English by default, 🌐 switches (and back) ──
 sent.length = 0; await say('/menu');
