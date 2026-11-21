@@ -1316,18 +1316,18 @@ function updateSyncFooter() {
 //   Added       = Net invested(end) − Net invested(start)   (buys + fees − sells)
 // Value change = From prices + Added. The green/red and the % follow the price part only.
 // % = the price part ÷ (value at the start + money added) · "All" = the All Time Profit card (same $ and %).
-function holdingsChangeText(snaps) {
+function holdingsChangeText(snaps, alt) {   // alt: { coins, txs, at } on "Altcoins only"
   const a = snaps[0], z = snaps[snaps.length - 1];
   if (!(window.Samsam && Samsam.isReady())) { const d = z.v - a.v, p = a.v > 0 ? d / a.v * 100 : 0; return { text: `${d >= 0 ? '+' : '−'}${SamsamFmt.usd(Math.abs(d))}  (${d >= 0 ? '+' : '−'}${Math.abs(p).toFixed(2)}%)`, up: d >= 0, title: '' }; }
   const st = Samsam.getState();
-  const s = Samsam.core.profitSeries(st.coins, st.transactions, [a.t, z.t]);
+  const s = Samsam.core.profitSeries(alt ? alt.coins : st.coins, alt ? alt.txs : st.transactions, [a.t, z.t]);
   const priceGain = (z.v - s.cost[1] + s.realized[1]) - (a.v - s.cost[0] + s.realized[0]);
   let gain = priceGain;
   const added = (s.cost[1] - s.realized[1]) - (s.cost[0] - s.realized[0]);
   // % of the money at work in the range: what you held at the start + what you added (a $20k top-up is not a loss or a gain).
   // "All" = the All Time Profit card exactly (profit since you bought, ÷ everything invested).
   let pct = (a.v + Math.max(0, added)) > 0 ? gain / (a.v + Math.max(0, added)) * 100 : 0;
-  if (holdingsRange === 'all') { const at = allTimeProfitData(); gain = at.total; pct = at.pct; }
+  if (holdingsRange === 'all') { const at = alt ? alt.at : allTimeProfitData(); if (at) { gain = at.total; pct = at.pct; } }
   const sg = n => n >= 0 ? '+' : '−';
   let text = `${sg(gain)}${SamsamFmt.usd(Math.abs(gain))}  (${sg(pct)}${Math.abs(pct).toFixed(2)}%)`;
   if (Math.abs(added) >= 1) text += ` · ${added > 0 ? '+' : '−'}${SamsamFmt.usd(Math.abs(added))} ${added > 0 ? 'added' : 'taken out'}`;
@@ -1420,7 +1420,20 @@ function drawPerfChart(pc) {   // pc: { canvas, height } — the PDF's copy (lig
   if (ev === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
   e.preventDefault(); e.stopPropagation(); SamsamCoins.toggleTrend(row.dataset.tl); drawPerfChart();
 }, true));
-function setPerfScope(v) { SamsamCoins.setPerfScope(v); drawPerfChart(); }
+function setPerfScope(v) { SamsamCoins.setPerfScope(v); drawPerfChart(); try { drawHoldingsChart(); } catch (_) {} }   // one switch for both cards
+// Holdings card on "Altcoins only": the value over time without your BTC, gold and silver (from the Performance points,
+// which carry BTC's price at each moment), ending on the altcoins' value now; the profit = the Performance card's blue line
+function altHoldings(cutoff) {
+  const allPerf = loadPerfSnapshots(); if (!allPerf.length || !(window.Samsam && Samsam.isReady())) return null;
+  const st = Samsam.getState(), live = { t: Date.now(), v: calcStats().total, b: btcPrice };
+  const pts = live.v > 0 && live.b > 0 && live.t > allPerf[allPerf.length - 1].t ? allPerf.concat([live]) : allPerf;
+  const redraw = () => { try { drawHoldingsChart(); } catch (_) {} };
+  const a = SamsamCoins.altSnaps(pts, st, redraw), { full } = SamsamCoins.trendSeries(pts, st, { baselineBtc: baselineState.btcPrice, redraw });
+  let snaps = a.snaps.filter(s => s.t >= cutoff).map(s => ({ t: s.t, v: s.v }));
+  if (!snaps.length) snaps = a.snaps.slice(-1).map(s => ({ t: s.t, v: s.v }));
+  if (snaps.length === 1) snaps = [snaps[0], { ...snaps[0], t: snaps[0].t + 1 }];
+  return { snaps, coins: a.coins, txs: a.txs, at: full.profit.length ? { total: full.profit[full.profit.length - 1], pct: full.port.length ? full.port[full.port.length - 1].v : 0 } : null };
+}
 function updatePerfChart() {
   // Called after live prices load — save snapshot then redraw
   const { total } = calcStats();

@@ -216,6 +216,7 @@
     'Sell / Convert to BTC — when it is more than this much below': 'بيع / تحويل لبيتكوين — عندما يكون أقل بأكثر من هذه النسبة',
     'Sell / Convert: percent below your Avg. Buy Price': 'بيع / تحويل: النسبة تحت متوسط سعر الشراء',
     'Smart check vs BTC': 'فحص ذكي مقابل البيتكوين',
+    'Whole portfolio or altcoins only': 'المحفظة كاملة أو العملات البديلة فقط',
     'One language for the bot and its alerts: changing it here changes the bot too (within about 10 minutes), and /lang in the bot changes it here.': 'لغة واحدة للبوت وتنبيهاته: تغييرها هنا يغيّر لغة البوت أيضاً (خلال 10 دقائق تقريباً)، وتغييرها من البوت يغيّرها هنا.',
     'Calm mode — fewer Reinforce signals': 'الوضع الهادئ — إشارات تعزيز أقل',
     "Optional. Reinforce waits while the coin is still falling: down more than 5% over its last 7 days stays Hold until it steadies. Fewer signals and alerts; Sell / Convert does not change.":

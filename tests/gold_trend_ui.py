@@ -1,6 +1,6 @@
 """✨ Gold Trend line on the Portfolio vs BTC charts (Performance page and the main page): drawn once gold's
 price history arrives (Binance PAXGUSDT, stubbed here), with its own legend value."""
-import sys, pathlib, json, time
+import re, sys, pathlib, json, time
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(pathlib.Path(__file__).parent)); import e2e_setup as S
 res = []; SH = pathlib.Path(__file__).parent / 'shots'
@@ -41,8 +41,18 @@ with sync_playwright() as p:
     check('main page chart: Gold Trend legend too (kept history, no new request needed)', h[0] is False and '%' in h[1], h)
     hm = pg.evaluate("[document.querySelector('.perf-scope [data-sc=alt]').classList.contains('active'), document.getElementById('perfPortName').textContent]")
     check('main page: Altcoins only active too, legend says Altcoins profit', hm[0] and 'Altcoins profit' in hm[1], hm)
+    # one switch, in both cards: on "Altcoins only" the Holdings card shows the altcoins' own value (no BTC, gold, silver)
+    money = "t => +String(t).replace(/[^0-9.]/g, '')"
+    hv = pg.evaluate(f"(() => {{ const m = {money}, ex = ['BTC','XAU','XAG'], alt = portfolio.filter(c => !isSoldOut(c) && !ex.includes(c.sym)).reduce((s, c) => s + c.qty * c.currentPrice, 0); return {{ rows: document.querySelectorAll('.perf-scope').length, both: [...document.querySelectorAll('.perf-scope [data-sc=alt]')].every(b => b.classList.contains('active')), inPerf: !!document.querySelector('#perfChartWrap .perf-scope'), shown: m(document.getElementById('holdingsTotal').textContent), alt, total: calcStats().total, chg: document.getElementById('holdingsChange').textContent, leg: document.getElementById('perfPortfolioPct').textContent }} }})()")
+    check('main page: the switch is in both cards (Holdings and Portfolio Performance), both on Altcoins only', hv['rows'] == 2 and hv['both'] and hv['inPerf'], hv)
+    check(f"main page: Holdings on Altcoins only shows the altcoins' value ({hv['shown']:.2f} = {hv['alt']:.2f}, whole {hv['total']:.2f})", abs(hv['shown'] - hv['alt']) < 0.02 and hv['alt'] < hv['total'] - 1, hv)
+    pct = lambda t: (re.search(r'(\d+\.\d+)%', t) or [None, None])[1]
+    check('…and its profit % is the Performance card\'s Altcoins profit %', pct(hv['chg']) is not None and pct(hv['chg']) == pct(hv['leg']), [hv['chg'], hv['leg']])
+    pg.locator('#mainTrio').screenshot(path=str(SH / 'alt-scope-cards.png'))
     href1 = pg.url
-    pg.click('.perf-scope [data-sc="all"]'); pg.wait_for_timeout(400)
+    pg.click('#perfChartWrap .perf-scope [data-sc="all"]'); pg.wait_for_timeout(400)
+    back = pg.evaluate(f"(() => {{ const m = {money}; return [m(document.getElementById('holdingsTotal').textContent), calcStats().total] }})()")
+    check('main page: Whole portfolio again → Holdings shows the whole value', abs(back[0] - back[1]) < 0.02, back)
     check('main page: back to Whole portfolio without leaving the page', pg.url == href1 and 'All Time Profit' in pg.evaluate("document.getElementById('perfPortName').textContent"))
     hs = pg.evaluate("[document.getElementById('perfSilverLabel').textContent, document.querySelector('.perf-legend [data-tl=btc]').classList.contains('tl-off')]")
     check('main page follows the same choice: silver on, BTC off', '%' in hs[0] and hs[1], hs)

@@ -140,6 +140,24 @@ async function main() {
   const thin = sp => { sp = (sp && sp.price) || []; const st = Math.max(1, Math.floor(sp.length / 24)), o = []; for (let i = 0; i < sp.length; i += st) o.push(+(+sp[i]).toPrecision(6)); if (sp.length && (sp.length - 1) % st) o.push(+(+sp[sp.length - 1]).toPrecision(6)); return o; };
   if (Array.isArray(bs) && bs.length) { snap.stocks = bs.filter(c => c && c.current_price > 0).map(c => ({ id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, img: c.image || '', price: c.current_price, ch24: sane(c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null, 60), ch7: sane(c.price_change_percentage_7d_in_currency ?? null, 85), mcap: c.market_cap || null, vol: c.total_volume || null, spark: thin(c.sparkline_in_7d) })); snap.parts.stocks = now; log('bstocks', snap.stocks.length); }
   else { if (old.stocks) snap.stocks = old.stocks; log('bstocks: no answer, kept the last one'); }
+  // 🆕 a bStock that just listed is on CoinGecko days before it joins the category (Anthropic's ANTB, Nov 2026): looked
+  // for by name every 6 hours ("… (bStocks Tokenized Stock / ETF)"), then priced with the rest on every run
+  try {
+    const have = new Set((snap.stocks || []).map(c => c.id)), ex = old.stockExtra && Array.isArray(old.stockExtra.ids) ? old.stockExtra : { t: 0, ids: [] };
+    let ids = ex.ids.filter(id => !have.has(id)), t = +ex.t || 0; const ms = Date.now();
+    if (ms - t > 6 * 3600e3) {
+      const found = [];
+      for (const q of ['bStocks Tokenized', 'Anthropic bStocks']) { await sleep(2500); const r = await get(`${API}/search?query=${encodeURIComponent(q)}`, 1); for (const c of (r && r.coins) || []) if (c && c.id && /\(bStocks Tokenized (Stock|ETF)\)\s*$/i.test(c.name || '') && !have.has(c.id)) found.push(c.id); }
+      ids = [...new Set([...ids, ...found])].slice(0, 40); t = ms;
+    }
+    snap.stockExtra = { t, ids };
+    if (ids.length && snap.stocks) {
+      await sleep(2500);
+      const more = await get(`${API}/coins/markets?vs_currency=usd&ids=${ids.join('%2C')}&sparkline=true&price_change_percentage=24h%2C7d`, 1);
+      const add = (Array.isArray(more) ? more : []).filter(c => c && c.current_price > 0 && !have.has(c.id)).map(c => ({ id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, img: c.image || '', price: c.current_price, ch24: sane(c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null, 60), ch7: sane(c.price_change_percentage_7d_in_currency ?? null, 85), mcap: c.market_cap || null, vol: c.total_volume || null, spark: thin(c.sparkline_in_7d), fresh: true }));
+      if (add.length) { snap.stocks = snap.stocks.concat(add); log('bstocks: +' + add.length + ' not in the category yet (' + add.map(c => c.sym).join(', ') + ')'); }
+    }
+  } catch (e) { log('bstocks extra:', e.message); }
 
   // 🥇 metals and oil (the Market Hub's Metals tab): gold, silver, platinum, copper, Brent — Yahoo Finance's public chart
   // data for the front-month futures (no key; delayed ~10–15 min). Price, the change since the last close, 7 trading days,

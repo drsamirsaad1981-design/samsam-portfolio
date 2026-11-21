@@ -33,6 +33,9 @@ function drawHoldingsChart(pc) {   // pc: { canvas, height } — the PDF's copy 
   const rangeMs = { '24h': 86400000, '7d': 604800000, '30d': 2592000000, '90d': 7776000000, 'all': Infinity };
   const cutoff  = holdingsRange === 'all' ? 0 : now - rangeMs[holdingsRange];
   let snaps = allSnaps.filter(s => s.t >= cutoff);
+  // "Altcoins only" (the switch under the range, one for both cards): the card shows the altcoins' own value and profit
+  const alt = !pc && window.SamsamCoins && SamsamCoins.perfScope() === 'alt' && typeof altHoldings === 'function' ? altHoldings(cutoff) : null;
+  if (alt) snaps = alt.snaps;
 
   if (pc && !snaps.length) return null;
   // Need at least 1 point — if only 1 snapshot duplicate it so chart renders as a flat baseline
@@ -45,13 +48,13 @@ function drawHoldingsChart(pc) {   // pc: { canvas, height } — the PDF's copy 
     if (changeEl) { changeEl.textContent = ''; }
     return;
   }
-  snaps = withLiveTotal(snaps);
+  if (!alt) snaps = withLiveTotal(snaps);
   if (snaps.length === 1) snaps = [snaps[0], snaps[0]];
   if (noData) noData.style.display = 'none';
   canvas.style.display = '';
 
   const last  = snaps[snaps.length - 1].v;
-  const hc = holdingsChangeText(snaps), isPos = hc.up;
+  const hc = holdingsChangeText(snaps, alt), isPos = hc.up;
   const color = isPos ? '#22c55e' : '#f43f5e'; // green when prices took it up, red when down
   if (pc) { SamsamChart.draw(canvas, { height: pc.height, format: 'usd', timeMode: timeModeFor(holdingsRange), theme: 'light', series: [{ points: snaps, color: isPos ? '#16a34a' : '#e11d48', width: 2.2, fill: true }] }); return hc; }
 
