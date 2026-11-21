@@ -8,8 +8,13 @@ with sync_playwright() as p:
     for name,vp in (('mobile',dict(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)),('desktop',dict(viewport={'width':1440,'height':900}))):
         ctx=br.new_context(**vp); S.setup(ctx); pg=ctx.new_page(); errs=[]
         pg.on('pageerror',lambda e: errs.append(str(e)))
-        pg.goto(S.SITE+'/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(5000)
+        pg.goto(S.SITE+'/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg)
         fr=lambda k: pg.frame(url=lambda u: k+'.html' in u)
+        check(f'{name}: the other tabs are not loaded on top of the start (one at a time, when the page is quiet)', sum(1 for k in ('performance','accumulation','market') if fr(k)) <= 1)
+        for _ in range(60):
+            if all(fr(k) for k in ('performance','accumulation','market')): break
+            pg.wait_for_timeout(500)
+        pg.wait_for_timeout(1500)
         check(f'{name}: 3 views preloaded (Allocation lives in Holdings now)', all(fr(k) for k in ('performance','accumulation','market')) and not fr('allocation'))
         pg.evaluate('window.__mark=1')
         t=time.time(); pg.evaluate("SamsamUI.ptabGo('performance')"); pg.wait_for_function("document.querySelector('#cpViews').classList.contains('on')"); dt=time.time()-t

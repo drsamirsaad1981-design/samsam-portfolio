@@ -60,7 +60,26 @@
       applyHoldingsRoute(); if (window.SamsamUI) SamsamUI.navPaint();
     },
     // open the other tabs quietly in the background, one after another
-    preload() { Object.keys(VIEWS).filter(k => k !== 'altseason').forEach((k, i) => setTimeout(() => frame(k), i * 1500)); },   // Altcoin Season opens when asked
+    // One at a time, and only while you are not using the page: each tab is a whole page (its scripts, its data), and
+    // loading three of them right after the start made a phone stutter for the first seconds. The next one starts when
+    // the one before has loaded AND nothing was touched / scrolled for a moment. Data saver on → none (a tab loads when opened).
+    preload() {
+      const todo = Object.keys(VIEWS).filter(k => k !== 'altseason');   // Altcoin Season opens when asked
+      const conn = navigator.connection || {}; if (conn.saveData) return;
+      let last = Date.now(); const touch = () => { last = Date.now(); };
+      ['touchstart', 'pointerdown', 'scroll', 'keydown', 'wheel'].forEach(ev => window.addEventListener(ev, touch, { passive: true, capture: true }));
+      const QUIET = 1500, idle = cb => (window.requestIdleCallback ? requestIdleCallback(cb, { timeout: 4000 }) : setTimeout(cb, 300));
+      const next = () => {
+        const k = todo.find(n => !frames[n]); if (!k) return;
+        if (document.hidden || Date.now() - last < QUIET) { setTimeout(next, 700); return; }
+        idle(() => {
+          if (frames[k]) return next();
+          const f = frame(k); let went = false; const on = () => { if (went) return; went = true; setTimeout(next, QUIET); };
+          f.addEventListener('load', on, { once: true }); setTimeout(on, 12000);   // (a tab that never finishes doesn't hold the others)
+        });
+      };
+      next();
+    },
   };
   window.addEventListener('popstate', route);
   // closing Holdings (Home on the bar, its Back) shows whatever is under it

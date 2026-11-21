@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611211534';
-import * as Hist from './samsam-history.js?v=202611211534';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611211534';
+import * as Core from './samsam-core.js?v=202611211617';
+import * as Hist from './samsam-history.js?v=202611211617';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611211617';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -1631,6 +1631,7 @@ function openAlertsSheet() {
     <p class="al-sub">Sent by your bot. GitHub checks every 30 minutes, after the market update.</p>
     <div class="al-sec">Language</div>
     <div class="al-seg" role="group" aria-label="Language"><button type="button" data-lang="en" aria-pressed="${a.lang === 'en'}">English</button><button type="button" data-lang="ar" aria-pressed="${a.lang === 'ar'}">العربية</button></div>
+    <p class="al-sub al-lang-note">One language for the bot and its alerts: changing it here changes the bot too (within about 10 minutes), and /lang in the bot changes it here.</p>
     <div class="al-sec">Reports</div>
     ${sw('brief', 'Morning brief', 'Your portfolio, movers and the market, every day', sel('briefTime', times, v => v))}
     ${sw('weekly', 'Weekly report', 'Friday morning: the week vs BTC')}

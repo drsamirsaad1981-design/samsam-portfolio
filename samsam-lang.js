@@ -50,8 +50,15 @@
   function tr(s) {
     var r = tr1(s); return r == null ? iso(s) : (iso(r) || r);
   }
+  // the same wordings come back on every redraw (coin names, labels, "Hold"…): each one is worked out once and remembered
+  // — a miss costs a pass over every pattern, and a redraw has hundreds of them (¼ of the page's start in Arabic on a phone)
+  var MEMO = new Map(), MEMO_MAX = 6000;
   function tr1(s) {
     if (!s || !/[A-Za-z]/.test(s)) return null;
+    var hit = MEMO.get(s); if (hit !== undefined) return hit;
+    var r = tr1x(s); if (MEMO.size >= MEMO_MAX) MEMO.clear(); MEMO.set(s, r); return r;
+  }
+  function tr1x(s) {
     var c = s.replace(/\s+/g, ' ').trim(), lead = /^\s/.test(s) ? ' ' : '', tail = /\s$/.test(s) ? ' ' : '', v = D[c];
     if (v != null) return lead + v + tail;
     if (c.indexOf(' · ') > 0) {   // every part known on its own → part by part (a pattern below could swallow the whole line)
@@ -117,8 +124,8 @@
 
   window.CPLang = {
     lang: lang, ar: AR,
-    add: function (map) { for (var k in map) D[k] = map[k]; },
-    rx: function (re, to) { RX.push([re, to]); },
+    add: function (map) { for (var k in map) D[k] = map[k]; MEMO.clear(); },
+    rx: function (re, to) { RX.push([re, to]); MEMO.clear(); },
     t: function (s) { if (!AR) return s; var v = tr1(s); return v == null ? s : v; },   // in code: CPLang.t('Buy')
     has: function (s) { return D[s] != null; },
     apply: function (root) { if (AR) walk(root || document.body); },
