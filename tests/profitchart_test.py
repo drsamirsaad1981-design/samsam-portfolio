@@ -45,7 +45,17 @@ with sync_playwright() as p:
         pg.click('#perfChartWrap .cp-hint'); pg.wait_for_timeout(300)
         h = pg.inner_text('.cph') if pg.query_selector('.cph') else ''
         check(f'{name}: ⓘ shows the formulas (and does not open Performance)', 'Holdings × latest price + selling proceeds − buying costs − fees' in h and 'BTC bought with the same money' in h and 'index.html' in pg.url, (h[:80], pg.url))
+        # the ⓘ sits beside the card's title (not down in the legend), and its window is whole on the screen: never past
+        # the bottom (a long text scrolls inside, with the title and × staying in view)
+        fit = pg.evaluate("(() => { const e = document.querySelector('.cph'), r = e.getBoundingClientRect(), x = e.querySelector('.cph-x').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: innerHeight, inTitle: !!document.querySelector('#perfChartWrap .alloc-mini-title .cp-hint[data-hint=perfChart]'), inLegend: !!document.querySelector('#perfChartWrap .perf-legend .cp-hint'), hold: !!document.querySelector('#holdingsCard .holdings-title .cp-hint[data-hint=holdingsChange]'), xTop: x.top, xBottom: x.bottom } })()")
+        check(f'{name}: the ⓘ is beside the title (Portfolio Performance and Holdings), none left in the legend', fit['inTitle'] and fit['hold'] and not fit['inLegend'], fit)
+        check(f'{name}: the ⓘ window is whole on the screen', fit['top'] >= 0 and fit['bottom'] <= fit['h'] + 0.5, fit)
         pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
+        vp0 = pg.viewport_size; pg.set_viewport_size({'width': vp0['width'], 'height': 420}); pg.wait_for_timeout(300)
+        pg.locator('#perfChartWrap .cp-hint').scroll_into_view_if_needed(); pg.click('#perfChartWrap .cp-hint'); pg.wait_for_timeout(300)
+        sm = pg.evaluate("(() => { const e = document.querySelector('.cph'); if (!e) return null; e.scrollTop = e.scrollHeight; const r = e.getBoundingClientRect(), x = e.querySelector('.cph-x').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: innerHeight, scrolls: e.scrollHeight > e.clientHeight + 1, xIn: x.top >= r.top - 1 && x.bottom <= r.bottom, end: e.innerText.trim().slice(-40) } })()")
+        check(f'{name}: on a short screen the long text scrolls inside the window — all of it reachable, the × still there', sm and sm['top'] >= 0 and sm['bottom'] <= sm['h'] + 0.5 and sm['scrolls'] and sm['xIn'], sm)
+        pg.keyboard.press('Escape'); pg.set_viewport_size(vp0); pg.wait_for_timeout(300)
         pg.locator('#perfChartWrap').screenshot(path=str(SH / f'profitchart-main-{name}.png'))
         card_pct = pg.evaluate("allTimeProfitData().pct")
         pg.goto(S.SITE + '/performance.html'); S.wait_ready(pg); pg.wait_for_timeout(2000)
