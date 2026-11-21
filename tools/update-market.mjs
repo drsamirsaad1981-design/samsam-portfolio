@@ -145,12 +145,12 @@ async function main() {
   try {
     const have = new Set((snap.stocks || []).map(c => c.id)), ex = old.stockExtra && Array.isArray(old.stockExtra.ids) ? old.stockExtra : { t: 0, ids: [] };
     let ids = ex.ids.filter(id => !have.has(id)), t = +ex.t || 0; const ms = Date.now();
-    if (ms - t > 6 * 3600e3) {
+    if (ms - t > 6 * 3600e3 || ex.v !== 2) {   // (v: the way of looking changed → look again now)
       const found = [];
       for (const q of ['bStocks Tokenized', 'Anthropic bStocks']) { await sleep(2500); const r = await get(`${API}/search?query=${encodeURIComponent(q)}`, 1); for (const c of (r && r.coins) || []) if (c && c.id && /\bbstocks?\b/i.test(c.name || '') && /tokenized/i.test(c.name || '') && !have.has(c.id)) found.push(c.id); }
       ids = [...new Set([...ids, ...found])].slice(0, 40); t = ms;
     }
-    snap.stockExtra = { t, ids };
+    snap.stockExtra = { t, ids, v: 2 };
     if (ids.length && snap.stocks) {
       await sleep(2500);
       const more = await get(`${API}/coins/markets?vs_currency=usd&ids=${ids.join('%2C')}&sparkline=true&price_change_percentage=24h%2C7d`, 1);
