@@ -3,7 +3,7 @@
 //   · the app's own files (js / css / icons, with ?v=…) and the Firebase library: kept once, used from the phone after that
 //   · prices, CoinGecko, Firestore, Telegram… are never kept here (your portfolio itself is kept by Firestore on the device)
 // VERSION is changed by stamp-version.py on every release, so old copies are cleared.
-const VERSION = 'cp-202611220036';
+const VERSION = 'cp-202611220058';
 const PAGES = ['./', './index.html', './portfolio.html', './accumulation.html', './performance.html', './market.html', './altseason.html', './recover.html'];
 
 self.addEventListener('install', e => {
@@ -20,6 +20,7 @@ const FILE = u => /\.(js|css|png|svg|ico|webp|woff2?|json)$/.test(u.pathname) &&
 self.addEventListener('fetch', e => {
   const req = e.request; if (req.method !== 'GET') return;
   const u = new URL(req.url);
+  if (SAME(u) && u.pathname.includes('/welcome/')) return;   // the public welcome page is not part of the app: always straight from the network
   if (SAME(u) && (req.mode === 'navigate' || u.pathname.endsWith('.html') || u.pathname.endsWith('/'))) { e.respondWith(page(req)); return; }
   if ((SAME(u) && FILE(u)) || LIB(u)) { e.respondWith(kept(req)); return; }
   // anything else: straight to the network, untouched
