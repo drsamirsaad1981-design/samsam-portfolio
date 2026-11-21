@@ -71,13 +71,18 @@
       const QUIET = 1500, idle = cb => (window.requestIdleCallback ? requestIdleCallback(cb, { timeout: 4000 }) : setTimeout(cb, 300));
       const next = () => {
         const k = todo.find(n => !frames[n]); if (!k) return;
-        if (document.hidden || Date.now() - last < QUIET) { setTimeout(next, 700); return; }
+        if (document.hidden || navigator.onLine === false || Date.now() - last < QUIET) { setTimeout(next, 700); return; }
         idle(() => {
           if (frames[k]) return next();
-          const f = frame(k); let went = false; const on = () => { if (went) return; went = true; setTimeout(next, QUIET); };
-          f.addEventListener('load', on, { once: true }); setTimeout(on, 12000);   // (a tab that never finishes doesn't hold the others)
+          if (navigator.onLine === false) { setTimeout(next, 700); return; }
+          const f = frame(k); let went = false; const on = () => { if (went) return; went = true; loading = null; setTimeout(next, QUIET); };
+          loading = k; f.addEventListener('load', () => { f.dataset.ready = '1'; on(); }, { once: true }); setTimeout(on, 12000);   // (a tab that never finishes doesn't hold the others)
         });
       };
+      // the connection dropped while a tab was still loading in the background: a half-loaded page is worse than none —
+      // it is taken away (unless you are looking at it) and loaded again when the connection is back
+      let loading = null;
+      window.addEventListener('offline', () => { const k = loading, f = k && frames[k]; if (f && !f.dataset.ready && shell.cur !== k) { f.remove(); delete frames[k]; loading = null; setTimeout(next, 700); } });
       next();
     },
   };
