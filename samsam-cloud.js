@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611211509';
-import * as Hist from './samsam-history.js?v=202611211509';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611211509';
+import * as Core from './samsam-core.js?v=202611211522';
+import * as Hist from './samsam-history.js?v=202611211522';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611211522';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -568,31 +568,43 @@ async function redeemInvite(user, code) {
 }
 
 // ── 📖📊 this device's Firebase reads and which screens are used → the Worker (/use), at most every 3 hours ──────
-// Firestore bills each document a listener gets from the server; coming back within 30 minutes only the changed ones.
+// Firestore bills each document a listener gets from the server; coming back within 30 minutes only the changed ones,
+// and the app's several frames share one connection (counted once, not once per frame).
 // This is an estimate of that (the real figure is in Firebase → Usage), kept per Pacific day — the day the free
 // allowance (50,000 reads, the whole project) follows. Counts only: no coin, amount or name ever leaves.
 const USE_URL = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/use';
 const Use = (() => {
-  const KR = 'cp-fsreads', KF = 'cp-feats', KT = 'cp-use-sent', KS = 'cp-fs-seen', KD = 'cp-dev', SEND_MS = 3 * 3600e3;
+  const KR = 'cp-fsreads', KF = 'cp-feats', KT = 'cp-use-sent', KD = 'cp-dev', SEND_MS = 3 * 3600e3;
   const pday = ms => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
   const jget = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (_) { return {}; } };
   const jput = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} };
-  const seenAt = +(() => { try { return localStorage.getItem(KS); } catch (_) { return 0; } })() || 0;
-  const warm = Date.now() - seenAt < 30 * 60e3;   // back within 30 minutes → Firestore re-sends only what changed
-  let seenPut = 0;
+  // Firestore bills a listener's documents once: a second frame of the app (the shell keeps several pages open, and they
+  // share ONE connection) or a page opened again within 30 minutes gets them without a new bill. So each listener is
+  // stamped here, for all the frames of this device: fresh stamp → nothing counted again (only what really changed).
+  const KL = 'cp-fs-l', KC = 'cp-fs-c', RESUME_MS = 30 * 60e3, live = new Set();
+  const stamp = name => { const m = jget(KL), now = Date.now(); Object.keys(m).forEach(k => { if (now - m[k] > 2 * RESUME_MS) delete m[k]; }); m[name] = now; jput(KL, m); };
+  const fresh = name => Date.now() - (+jget(KL)[name] || 0) < RESUME_MS;
+  const dup = (name, n) => { const m = jget(KC), was = m[name], now = Date.now(); if (was && was[1] === n && now - was[0] < 5000) return true; m[name] = [now, n]; jput(KC, m); return false; };   // the same change seen by another frame
+  try { setInterval(() => { if (!document.hidden) live.forEach(stamp); }, 5 * 60e3); } catch (_) {}   // still listening → still fresh
   function reads(n) {
     if (!(n > 0)) return;
     const m = jget(KR), d = pday(Date.now()), old = pday(Date.now() - 3 * 864e5);
     m[d] = (m[d] || 0) + n; Object.keys(m).forEach(k => { if (k < old) delete m[k]; }); jput(KR, m);
-    if (Date.now() - seenPut > 60e3) { seenPut = Date.now(); try { localStorage.setItem(KS, String(seenPut)); } catch (_) {} }
   }
-  // one listener's snapshot: the first one from the server = all its documents (or only the changed ones when warm)
-  function snap(st, sn, isQuery) {   // never lets counting break the app
+  // one listener's snapshot from the server: a new query = all its documents; resumed / shared = only the changed ones
+  function snap(st, sn, isQuery, what) {   // never lets counting break the app
     try {
-      if (!sn || !sn.metadata || sn.metadata.fromCache || sn.metadata.hasPendingWrites) return;
+      if (!sn || !sn.metadata) return;
+      if (sn.metadata.fromCache) { st.cache = true; return; }
+      if (sn.metadata.hasPendingWrites) return;
+      const name = ((S.user && S.user.uid) || '').slice(0, 8) + ':' + (what || 'x');
       const changed = isQuery && typeof sn.docChanges === 'function' ? sn.docChanges().filter(c => c.type !== 'removed').length : 0;
-      if (!st.first) { st.first = true; reads(isQuery ? Math.max(1, warm ? changed : (sn.size || 0)) : 1); }
-      else if (changed) reads(changed);
+      if (!st.first) {
+        st.first = true; live.add(name);
+        if (!fresh(name)) reads(isQuery ? Math.max(1, sn.size || 0) : 1);
+        else if (st.cache && changed && !dup(name, changed)) reads(changed);
+      } else if (changed && !dup(name, changed)) reads(changed);
+      stamp(name);
     } catch (_) {}
   }
   function hit(name) {
@@ -647,7 +659,7 @@ function listen() {
   const onErr = what => e => { setError(e, `Could not load ${what}`); };
   const track = snap => { S.fromCache = snap.metadata.fromCache; if (!snap.metadata.fromCache && !snap.metadata.hasPendingWrites) S.lastSyncedAt = new Date(); };
   const coll = (name, map, key, fix, st = {}) => fs.onSnapshot(fs.collection(db, ...userPath(name)), opt, snap => {
-    track(snap); Use.snap(st, snap, true);
+    track(snap); Use.snap(st, snap, true, name);
     map.clear(); snap.forEach(d => { try { map.set(d.id, fix({ ...d.data(), id: d.id })); } catch (e) { console.warn('[Samsam] skipped unreadable', name, d.id, e); } });
     S.loaded[key] = true; emit();
   }, onErr(name));
@@ -657,14 +669,14 @@ function listen() {
   const cutoff = Core.dayId(Date.now() - 120 * 86400e3), stS = {}, stC = {}, stM = {};
   S.unsub.push(fs.onSnapshot(
     fs.query(fs.collection(db, ...userPath('snaps')), fs.where(fs.documentId(), '>=', cutoff)), opt, snap => {
-      track(snap); Use.snap(stS, snap, true); S.snapDocs.clear(); snap.forEach(d => S.snapDocs.set(d.id, { ...d.data(), id: d.id }));
+      track(snap); Use.snap(stS, snap, true, 'snaps'); S.snapDocs.clear(); snap.forEach(d => S.snapDocs.set(d.id, { ...d.data(), id: d.id }));
       S.loaded.snaps = true; emit();
     }, onErr('chart history')));
   S.unsub.push(fs.onSnapshot(fs.doc(db, ...userPath('meta', 'categories')), opt, snap => {
-    track(snap); Use.snap(stC, snap, false); S.catCfg = snap.exists() ? snap.data() : null; S.loaded.cats = true; emit();
+    track(snap); Use.snap(stC, snap, false, 'cats'); S.catCfg = snap.exists() ? snap.data() : null; S.loaded.cats = true; emit();
   }, e => { S.loaded.cats = true; emit(); onErr('categories')(e); }));   // never hold the app back over the settings
   S.unsub.push(fs.onSnapshot(fs.doc(db, ...userPath('meta', 'info')), opt, snap => {
-    track(snap); Use.snap(stM, snap, false); S.meta = snap.exists() ? snap.data() : null; S.loaded.meta = true; emit();
+    track(snap); Use.snap(stM, snap, false, 'meta'); S.meta = snap.exists() ? snap.data() : null; S.loaded.meta = true; emit();
   }, onErr('settings')));
 }
 
