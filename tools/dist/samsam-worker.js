@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: f00ed614fd3ac401
+// sources-hash: 166381efc6e95c27
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5520,6 +5520,36 @@ async function onJoinRequest(env, u) {
     await tg5(env, "sendMessage", { chat_id: who, text: ar ? `\u2705 \u062A\u0645 \u0642\u0628\u0648\u0644\u0643 \u0641\u064A ${r.chat.title} \u2014 \u0623\u0647\u0644\u0627\u064B \u0628\u0643 \u{1F44B}` : `\u2705 You're in ${r.chat.title} \u2014 welcome \u{1F44B}` });
   }
 }
+async function revokeLinks(env, text) {
+  const c = await getCommunity(env), ch = c.channel;
+  if (!ch || !ch.id) {
+    await say(env, "\u2139\uFE0F No channel is set up yet.");
+    return { done: 0 };
+  }
+  const cur = String(ch.link || "").split("+").pop();
+  const codes = [...new Set((String(text || "").match(/\+[A-Za-z0-9_-]{10,}/g) || []).map((s) => s.slice(1)))].slice(0, 20);
+  if (!codes.length) {
+    await say(env, "\u2139\uFE0F Send the old links after the command: <code>/community revoke https://t.me/+\u2026 https://t.me/+\u2026</code>");
+    return { done: 0 };
+  }
+  const lines = [];
+  let done = 0;
+  for (const code of codes) {
+    const tail = "\u2026" + esc(code.slice(-4));
+    if (cur && code === cur) {
+      lines.push(`\u23ED ${tail} \u2014 the current join link, kept`);
+      continue;
+    }
+    const r = await tg5(env, "revokeChatInviteLink", { chat_id: ch.id, invite_link: "https://t.me/+" + code });
+    if (r.ok) {
+      done++;
+      lines.push(`\u2705 ${tail} \u2014 switched off`);
+    } else lines.push(`\u26A0\uFE0F ${tail} \u2014 ${esc(String(r.description || "not revoked").slice(0, 80))}`);
+  }
+  await say(env, `\u{1F9F9} <b>Old join links</b>
+${lines.join("\n")}`);
+  return { done };
+}
 async function communityView(env, lang2) {
   const c = await getCommunity(env), ar = lang2 === "ar", b = [];
   if (c.channel && c.channel.link) b.push([{ text: ar ? "\u{1F4E2} \u0642\u0646\u0627\u0629 Cute Portfolio" : "\u{1F4E2} The Cute Portfolio channel", url: c.channel.link }]);
@@ -5601,7 +5631,7 @@ async function leverageText(m, now) {
     const d = await derivatives(sym).catch(() => null), x = d && d.summary;
     if (!x) continue;
     const p = [
-      x.funding_8h_pct_avg != null ? `funding ${x.funding_8h_pct_avg > 0 ? "+" : ""}${x.funding_8h_pct_avg}%/8h` : null,
+      x.funding_8h_pct_avg != null ? `funding ${x.funding_8h_pct_avg > 0 ? "+" : x.funding_8h_pct_avg < 0 ? "\u2212" : ""}${Math.abs(x.funding_8h_pct_avg)}%/8h` : null,
       x.open_interest_change_24h_pct != null ? `OI 24h ${pct(x.open_interest_change_24h_pct, 1)}` : null,
       x.long_accounts_pct != null ? `longs ${Math.round(x.long_accounts_pct)}%` : null,
       x.top_traders_long_pct != null ? `big accounts ${Math.round(x.top_traders_long_pct)}%` : null
@@ -5617,7 +5647,7 @@ async function leverageText(m, now) {
     "\u{1F9F2} <b>\u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u0648\u0627\u0644\u062D\u064A\u062A\u0627\u0646</b>",
     "",
     ...rows,
-    ...wl.length ? ["", `\u{1F40B} <b>Whales</b> <i>(the ${m.whales.n} biggest winning traders on Hyperliquid)</i>`, `\u{1F40B} <b>\u0627\u0644\u062D\u064A\u062A\u0627\u0646</b> <i>(\u0623\u0643\u0628\u0631 ${m.whales.n} \u0645\u062A\u062F\u0627\u0648\u0644\u0627\u064B \u0631\u0627\u0628\u062D\u0627\u064B \u0639\u0644\u0649 \u0645\u0646\u0635\u0629 Hyperliquid)</i>`, ...wl] : [],
+    ...wl.length ? ["", `\u{1F40B} <b>Whales</b> <i>(the ${m.whales.n} biggest winning traders on Hyperliquid)</i>`, `\u{1F40B} <b>\u0627\u0644\u062D\u064A\u062A\u0627\u0646</b> <i>(\u0623\u0643\u0628\u0631 ${m.whales.n} \u0645\u062A\u062F\u0627\u0648\u0644\u0627\u064B \u0631\u0627\u0628\u062D\u0627\u064B \u0639\u0644\u0649 \u0627\u0644\u0645\u0646\u0635\u0629)</i>`, ...wl] : [],
     "",
     `\u{1F1FA}\u{1F1F8} US market: ${US_STATE.en[u.state].replace(/^\S+ /, "")}`,
     "",
@@ -6312,6 +6342,7 @@ var WORDS = [
   [/^\/guide$|^الدليل$|^دليل$/i, "gd"],
   [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, "cm"],
   [/^\/community setup$/i, "cm:setup"],
+  [/^\/community revoke\b/i, "cm:revoke"],
   [/^\/community guide$/i, "cm:guide"],
   [/^\/announce\s+[\s\S]+$/i, "ann"],
   [/^\/start\s+guide$/i, "gd"],
@@ -7197,7 +7228,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
     await send2(env, chat, await feedback(env, chat, text));
     return;
   }
-  if (p.act === "cm:setup" || p.act === "ann" || p.act === "cm:guide") {
+  if (p.act === "cm:setup" || p.act === "ann" || p.act === "cm:guide" || p.act === "cm:revoke") {
     if (!isOwner(env)) {
       await send2(env, chat, { text: T[await getLang(env)].ownerOnly });
       return;
@@ -7209,6 +7240,10 @@ async function onText(env, chat, text, budget = 36, into = null) {
     }
     if (p.act === "cm:guide") {
       await setup(env, "channel", { reguide: true });
+      return;
+    }
+    if (p.act === "cm:revoke") {
+      await revokeLinks(env, text);
       return;
     }
     const out = await announce(env, String(text).replace(/^\/announce\s+/i, "").slice(0, 3500));

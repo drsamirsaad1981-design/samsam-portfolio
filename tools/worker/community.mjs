@@ -175,6 +175,26 @@ export async function onJoinRequest(env, u) {
   }
 }
 
+// 🧹 /community revoke <links…> (Samir): old join links of the channel made by the bot are switched off — only the bot
+// can revoke its own links (Telegram refuses the owner in its apps), and it has no way to list them, so they are given.
+// The current join link (the one /community hands out) is never revoked.
+export async function revokeLinks(env, text) {
+  const c = await getCommunity(env), ch = c.channel;
+  if (!ch || !ch.id) { await say(env, 'ℹ️ No channel is set up yet.'); return { done: 0 }; }
+  const cur = String(ch.link || '').split('+').pop();
+  const codes = [...new Set((String(text || '').match(/\+[A-Za-z0-9_-]{10,}/g) || []).map(s => s.slice(1)))].slice(0, 20);
+  if (!codes.length) { await say(env, 'ℹ️ Send the old links after the command: <code>/community revoke https://t.me/+… https://t.me/+…</code>'); return { done: 0 }; }
+  const lines = []; let done = 0;
+  for (const code of codes) {
+    const tail = '…' + esc(code.slice(-4));
+    if (cur && code === cur) { lines.push(`⏭ ${tail} — the current join link, kept`); continue; }
+    const r = await tg(env, 'revokeChatInviteLink', { chat_id: ch.id, invite_link: 'https://t.me/+' + code });
+    if (r.ok) { done++; lines.push(`✅ ${tail} — switched off`); } else lines.push(`⚠️ ${tail} — ${esc(String(r.description || 'not revoked').slice(0, 80))}`);
+  }
+  await say(env, `🧹 <b>Old join links</b>\n${lines.join('\n')}`);
+  return { done };
+}
+
 // ── /community (members): the channel's link — the comments under its posts are the members' place to talk ──
 export async function communityView(env, lang) {
   const c = await getCommunity(env), ar = lang === 'ar', b = [];
@@ -239,7 +259,7 @@ export async function leverageText(m, now) {
   const rows = [];
   for (const sym of ['BTC', 'ETH', 'SOL']) {
     resetBudget(); const d = await derivatives(sym).catch(() => null), x = d && d.summary; if (!x) continue;
-    const p = [x.funding_8h_pct_avg != null ? `funding ${x.funding_8h_pct_avg > 0 ? '+' : ''}${x.funding_8h_pct_avg}%/8h` : null, x.open_interest_change_24h_pct != null ? `OI 24h ${pct(x.open_interest_change_24h_pct, 1)}` : null,
+    const p = [x.funding_8h_pct_avg != null ? `funding ${x.funding_8h_pct_avg > 0 ? '+' : x.funding_8h_pct_avg < 0 ? '−' : ''}${Math.abs(x.funding_8h_pct_avg)}%/8h` : null, x.open_interest_change_24h_pct != null ? `OI 24h ${pct(x.open_interest_change_24h_pct, 1)}` : null,
       x.long_accounts_pct != null ? `longs ${Math.round(x.long_accounts_pct)}%` : null, x.top_traders_long_pct != null ? `big accounts ${Math.round(x.top_traders_long_pct)}%` : null].filter(Boolean);
     if (p.length) rows.push(`<b>${sym}</b> · ${p.join(' · ')}`);
     if (sym === 'BTC' && x.liquidations_24h) rows.push(`💥 Liquidations 24h (OKX): longs ${usd(x.liquidations_24h.longs_usd)} · shorts ${usd(x.liquidations_24h.shorts_usd)}`);
@@ -248,7 +268,7 @@ export async function leverageText(m, now) {
   if (!rows.length && !wl.length) return null;
   const u = usMarket(now);
   return [`🧲 <b>Leverage &amp; whales</b> · ${local(now, { day: 'numeric', month: 'short' })}`, '🧲 <b>الرافعة والحيتان</b>', '', ...rows,
-    ...(wl.length ? ['', `🐋 <b>Whales</b> <i>(the ${m.whales.n} biggest winning traders on Hyperliquid)</i>`, `🐋 <b>الحيتان</b> <i>(أكبر ${m.whales.n} متداولاً رابحاً على منصة Hyperliquid)</i>`, ...wl] : []),
+    ...(wl.length ? ['', `🐋 <b>Whales</b> <i>(the ${m.whales.n} biggest winning traders on Hyperliquid)</i>`, `🐋 <b>الحيتان</b> <i>(أكبر ${m.whales.n} متداولاً رابحاً على المنصة)</i>`, ...wl] : []),
     '', `🇺🇸 US market: ${US_STATE.en[u.state].replace(/^\S+ /, '')}`,
     '', '<i>High positive funding and longs above 70% = crowded longs (a dip can cascade). Whales hedge, and lose too.</i>', '<i>تمويل موجب مرتفع ونسبة شراء فوق 70% = ازدحام في الشراء (أي هبوط قد يتسلسل). والحيتان يتحوّطون ويخسرون أيضاً.</i>',
     '', `<i>${NOTE.en}</i>`, `<i>${NOTE.ar}</i>`].join('\n');

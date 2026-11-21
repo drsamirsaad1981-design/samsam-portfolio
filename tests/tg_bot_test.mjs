@@ -1277,6 +1277,14 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; await sayAs(555, '/community setup');
   c = JSON.parse(kvStore.get('tg:community'));
   check('…linked in Telegram → /community setup: "comments are on", the group remembered as the channel\'s discussion', c.group.linked === true && sent.some(m => /Comments are on/.test(m.b.text || '')) && !sent.some(m => m.m === 'sendMessage' && m.b.chat_id === -1001), sent.map(m => m.m));
+  { // 🧹 /community revoke: the bot switches off the old join links it made — never the current one; members can't
+    const cur = 'https://t.me/+CURlink000000000A', code = cur.split('+').pop(); kvStore.set('tg:community', JSON.stringify({ ...c, channel: { ...c.channel, link: cur } }));
+    sent.length = 0; await sayAs(555, `/community revoke https://t.me/+OLDlink0000000001 t.me/+OLDlink0000000002 ${cur}`);
+    const rv = sent.filter(m => m.m === 'revokeChatInviteLink');
+    check('🧹 /community revoke <links> → each old link revoked by the bot in the channel, the current join link kept, one summary', rv.length === 2 && rv.every(m => m.b.chat_id === c.channel.id) && rv[0].b.invite_link === 'https://t.me/+OLDlink0000000001' && !rv.some(m => m.b.invite_link.endsWith(code)) && /Old join links/.test(last().b.text) && /the current join link, kept/.test(last().b.text) && JSON.parse(kvStore.get('tg:community')).channel.link === cur, [rv.map(m => m.b), last().b.text]);
+    sent.length = 0; await sayAs(888, '/community revoke https://t.me/+OLDlink0000000003');
+    check('…members can\'t', !sent.some(m => m.m === 'revokeChatInviteLink') && /Only the bot owner/.test(last().b.text), last().b.text);
+  }
   kvStore.set('tg:community', JSON.stringify({ ...JSON.parse(kvStore.get('tg:community')), channel: undefined }));
   sent.length = 0; await post({ update_id: ++UPD, message: { message_id: 5, chat: { id: 555, type: 'private' }, from: { id: 555 }, forward_origin: { type: 'channel', chat: { id: -1003, type: 'channel', title: 'Signals 2' }, message_id: 1 }, text: 'hi' } }, ENV.TG_SECRET, ENVK);
   check('📢 you forward a channel post to the bot (it\'s admin there) → that channel is set up', JSON.parse(kvStore.get('tg:community')).channel.id === -1003 && sent.some(m => /is set up/.test(m.b.text || '')));
