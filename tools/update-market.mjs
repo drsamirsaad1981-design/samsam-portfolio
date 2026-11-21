@@ -141,13 +141,13 @@ async function main() {
   if (Array.isArray(bs) && bs.length) { snap.stocks = bs.filter(c => c && c.current_price > 0).map(c => ({ id: c.id, sym: String(c.symbol || '').toUpperCase(), name: c.name, img: c.image || '', price: c.current_price, ch24: sane(c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? null, 60), ch7: sane(c.price_change_percentage_7d_in_currency ?? null, 85), mcap: c.market_cap || null, vol: c.total_volume || null, spark: thin(c.sparkline_in_7d) })); snap.parts.stocks = now; log('bstocks', snap.stocks.length); }
   else { if (old.stocks) snap.stocks = old.stocks; log('bstocks: no answer, kept the last one'); }
   // 🆕 a bStock that just listed is on CoinGecko days before it joins the category (Anthropic's ANTB, Nov 2026): looked
-  // for by name every 6 hours ("… (bStocks Tokenized Stock / ETF)"), then priced with the rest on every run
+  // for by name every 6 hours ("… (bStocks Tokenized Stock)", "… Tokenized bStocks"), then priced with the rest on every run
   try {
     const have = new Set((snap.stocks || []).map(c => c.id)), ex = old.stockExtra && Array.isArray(old.stockExtra.ids) ? old.stockExtra : { t: 0, ids: [] };
     let ids = ex.ids.filter(id => !have.has(id)), t = +ex.t || 0; const ms = Date.now();
     if (ms - t > 6 * 3600e3) {
       const found = [];
-      for (const q of ['bStocks Tokenized', 'Anthropic bStocks']) { await sleep(2500); const r = await get(`${API}/search?query=${encodeURIComponent(q)}`, 1); for (const c of (r && r.coins) || []) if (c && c.id && /\(bStocks Tokenized (Stock|ETF)\)\s*$/i.test(c.name || '') && !have.has(c.id)) found.push(c.id); }
+      for (const q of ['bStocks Tokenized', 'Anthropic bStocks']) { await sleep(2500); const r = await get(`${API}/search?query=${encodeURIComponent(q)}`, 1); for (const c of (r && r.coins) || []) if (c && c.id && /\bbstocks?\b/i.test(c.name || '') && /tokenized/i.test(c.name || '') && !have.has(c.id)) found.push(c.id); }
       ids = [...new Set([...ids, ...found])].slice(0, 40); t = ms;
     }
     snap.stockExtra = { t, ids };
