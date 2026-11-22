@@ -5,6 +5,7 @@ from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(pathlib.Path(__file__).parent)); import e2e_setup as S
 SITE = 'http://127.0.0.1:8000'; SH = pathlib.Path(__file__).parent / 'shots'; res = []
 def check(n, c, d=''): res.append(bool(c)); print(('PASS ' if c else 'FAIL ') + n + ('' if c else f' -> {d}'), flush=True)
+PW = 'correct horse 42'
 def mine(): return [k for k in S.srv('/dump') if k.startswith('users/uid_samir/')]
 AUTO = """window.__word = ''; window.__cpAutoAnswer = (kind, msg, o) => { (window.__cpLog = window.__cpLog || []).push(kind + ': ' + msg);
   if (kind === 'prompt') return /Type DELETE/.test(msg) ? window.__word : '';
@@ -31,6 +32,14 @@ with sync_playwright() as p:
     pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.goto(SITE + '/index.html'); pg.click('#samsamSignInBtn'); pg.wait_for_function("Samsam.isReady() && Samsam.getState().portfolio.length > 0")
     pg.wait_for_function("Samsam.autoCopies().length === 1", timeout=15000)
+    # what they set up, and their own encrypted backup file
+    pg.evaluate("""(async()=>{ await Samsam.setBaseline({date:'2026-11-13', btcPrice: 61234, source:'coingecko'});
+      await Samsam.setTargets({cats:{btc:{pct:60},layer1:{pct:40}},band:5}); await Samsam.saveWatchlist([{id:'dogecoin',sym:'DOGE',name:'Dogecoin'}]); })()"""); pg.wait_for_timeout(900)
+    held = pg.evaluate("Samsam.getState().portfolio.filter(c=>c.qty>0).length")
+    pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stAct_backup')
+    with pg.expect_download() as dl:
+        pg.click('#stAct_backup'); pg.wait_for_selector('#ssPwA'); pg.fill('#ssPwA', PW); pg.fill('#ssPwB', PW); pg.click('#ssPw button[type=submit]')
+    path = dl.value.path(); pg.evaluate("SamsamSettings.close()"); pg.wait_for_timeout(300)
     before = mine()
     check(f'a member with a portfolio and an automatic copy ({len(before)} documents)', len(before) > 10 and any('/snaps/0copy' in k for k in before) and any('/txs/' in k for k in before))
     pg.evaluate("SamsamSettings.open()"); pg.wait_for_selector('#stRow_delacct')
@@ -50,5 +59,12 @@ with sync_playwright() as p:
     txt = pg.inner_text('#cpGone')
     check('a plain last screen: deleted, thank you, Close → the welcome page', 'Your account is deleted' in txt and 'Thank you' in txt and pg.get_attribute('#cpGoneGo', 'href') == 'welcome/en.html', txt)
     pg.screenshot(path=str(SH / 'delete_account_done.png'))
+    # invited again later: "I have a backup file" brings back the portfolio AND its settings (the baseline stays theirs)
+    pg.goto(SITE + '/index.html'); pg.wait_for_selector('#samsamSignInBtn'); pg.click('#samsamSignInBtn')
+    pg.wait_for_selector('#samsamImpFile', state='attached', timeout=15000)
+    pg.set_input_files('#samsamImpFile', path); pg.wait_for_selector('#ssPwA'); pg.fill('#ssPwA', PW); pg.click('#ssPw button[type=submit]')
+    pg.wait_for_function("Samsam.isReady() && Samsam.getState().portfolio.some(c=>c.qty>0)", timeout=20000); pg.wait_for_timeout(1500)
+    got = pg.evaluate("[Samsam.getState().portfolio.filter(c=>c.qty>0).length, Samsam.getBaseline().date, Samsam.getBaseline().btcPrice, Samsam.getTargets() ? Object.keys(Samsam.getTargets().cats).length : 0, (Samsam.getState().watchlist||[]).map(w=>w.id).join(',')]")
+    check(f'coming back with the backup file: the coins return, and the settings with them — the baseline (13 Nov, not today), targets, watchlist {got}', got == [held, '2026-11-13', 61234, 2, 'dogecoin'], [got, held])
     check('no JS errors', not errs, errs[:3]); ctx.close(); br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)

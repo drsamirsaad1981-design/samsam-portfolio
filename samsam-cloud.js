@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611222252';
-import * as Hist from './samsam-history.js?v=202611222252';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611222252';
+import * as Core from './samsam-core.js?v=202611222255';
+import * as Hist from './samsam-history.js?v=202611222255';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611222255';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -1822,7 +1822,7 @@ function renderSetup(d) {
     <div class="msg" id="samsamSetupMsg"></div>`;
   el.style.display = 'block';
   const msg = t => { const m = document.getElementById('samsamSetupMsg'); if (m) m.innerHTML = t; };
-  const go = async (legacy, source, backupFirst) => {
+  const go = async (legacy, source, backupFirst, set) => {
     el.dataset.busy = '1';
     el.querySelectorAll('button,input').forEach(b => b.disabled = true);
     try {
@@ -1832,6 +1832,7 @@ function renderSetup(d) {
       }
       msg('Uploading…');
       const r = await runImport(legacy, source);
+      await putBackSettings(set);
       msg(`${UIc('checkCircle')}Done — ${r.coins.length} coins and ${r.txs.length} transactions are now in the cloud.` + (r.adjusted.length ? ` (${r.adjusted.length} coin(s) had manual edits; an “Imported” correction keeps their figures exactly as before.)` : ''));
       delete el.dataset.busy;
     } catch (e) { delete el.dataset.busy; msg(UIc('alert') + esc(friendly(e))); el.querySelectorAll('button,input').forEach(b => b.disabled = false); }
@@ -1849,7 +1850,7 @@ function renderSetup(d) {
       const legacy = j.legacy || (j.portfolioData ? { ...j.portfolioData, accumPlan: j.accumPlan, perfSnaps: j.perfSnaps } : j);
       if (!legacy || !Array.isArray(legacy.coins)) throw new Error('This file is not a Cute Portfolio backup.');
       if (!(await CPDialog.confirm(`${legacy.coins.length} coins and ${(legacy.transactions || []).length} transactions from “${f.name}”.`, { title: 'Import this backup?', okText: 'Import' }))) return;
-      go(legacy, 'file:' + f.name, false);
+      go(legacy, 'file:' + f.name, false, j.settings);
     } catch (e) { msg(UIc('alert') + esc(friendly(e))); }
   };
 }
@@ -1866,11 +1867,12 @@ function renderWelcome(el) {
     <div class="msg" id="samsamSetupMsg"></div>`;
   el.style.display = 'block';
   const msg = t => { const m = document.getElementById('samsamSetupMsg'); if (m) m.innerHTML = t; };
-  const go = async (legacy, source) => {
+  const go = async (legacy, source, set) => {
     el.dataset.busy = '1'; el.querySelectorAll('button,input').forEach(b => b.disabled = true); msg('Setting up…');
     try {
       await runImport(legacy, source);
-      await startBaseline().catch(() => {});   // the day they start (they can change it with the pencil next to Baseline on Overview)
+      const had = await putBackSettings(set);   // a backup file brings its settings too: baseline, targets, exit plan, alerts, watchlist, category names
+      if (!had.baseline) await startBaseline().catch(() => {});   // no baseline in the file → the day they start (the pencil next to Baseline on Overview changes it)
       delete el.dataset.busy; msg('');
     } catch (e) { delete el.dataset.busy; msg(UIc('alert') + esc(friendly(e))); el.querySelectorAll('button,input').forEach(b => b.disabled = false); }
   };
@@ -1883,9 +1885,19 @@ function renderWelcome(el) {
       const legacy = j.legacy || (j.portfolioData ? { ...j.portfolioData, accumPlan: j.accumPlan, perfSnaps: j.perfSnaps } : j);
       if (!legacy || !Array.isArray(legacy.coins)) throw new Error('This file is not a Cute Portfolio backup.');
       if (!(await CPDialog.confirm(`${legacy.coins.length} coins and ${(legacy.transactions || []).length} transactions from “${f.name}”.`, { title: 'Import this backup?', okText: 'Import' }))) return;
-      go(legacy, 'file:' + f.name);
+      go(legacy, 'file:' + f.name, j.settings);
     } catch (e) { msg(UIc('alert') + esc(friendly(e))); }
   };
+}
+// The settings saved in a backup file, put back after a first-visit import (the file's own values; nothing else is touched).
+// → { baseline: true } when the file held a baseline. A file without settings (an old one) changes nothing.
+async function putBackSettings(set) {
+  if (!set || typeof set !== 'object' || !set.info || typeof set.info !== 'object') return {};
+  const info = {}; for (const k of SETTING_KEYS) if (set.info[k] != null) info[k] = set.info[k];
+  const cats = set.categories && typeof set.categories === 'object' ? set.categories : undefined;
+  if (!Object.keys(info).length && cats === undefined) return {};
+  try { await API.restoreSettings({ info, categories: cats }); } catch (e) { console.warn('[Samsam] the backup\'s settings were not restored', e); return {}; }
+  return { baseline: !!info.baseline };
 }
 // a member's baseline: today, at today's BTC price (live; else yesterday's close)
 async function startBaseline() {
