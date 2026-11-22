@@ -39,6 +39,7 @@ import { saveKey, keyInfo, ownKey, deleteKey, validShape, keyWorks, BYOK_REPORTS
 import { handleTelegram, setup, check, getLang } from './bot.mjs';
 import { runWatch } from './watch.mjs';
 import { runDaily, kickPrices } from './daily.mjs';
+import { runStall } from './stall.mjs';
 import { resetBudget, syncAccess, takeReads } from './data.mjs';
 import { markSeen, idleState, noteIdle, addReads } from './idle.mjs';
 import { asChat, activeChats, migrateOwner, memberByEmail, DEF_REPORTS, useAppInvite, accessEmails, isTgChat, members } from './who.mjs';
@@ -116,7 +117,8 @@ export default {
     ctx.waitUntil((async () => {
       resetBudget();   // one allowance of outside calls for the whole run (Cloudflare counts per run)
       await migrateOwner(env);
-      await kickPrices(env).then(r => { if (r.kick === 'sent' || r.kick === 'refused') console.log(JSON.stringify(r)); }).catch(e => log('kick', e));   // GitHub late → run the market snapshot now
+      const kick = await kickPrices(env).then(r => { if (r.kick === 'sent' || r.kick === 'refused') console.log(JSON.stringify(r)); return r; }).catch(e => { log('kick', e); return null; });   // GitHub late → run the market snapshot now
+      await runStall(env, Date.now(), kick).then(r => { if (r.job) console.log(JSON.stringify(r)); }).catch(e => log('stall', e));   // 🛠 still stopped after 90 min → the owner is told
       await expireRound(env, Date.now()).catch(e => log('premium', e));
       await runChannel(env, now).then(r => { if (r.job) console.log(JSON.stringify(r)); }).catch(e => log('channel', e));
       await runXPost(env, now).then(r => { if (r.job) console.log(JSON.stringify(r)); }).catch(e => log('xpost', e));   // 📣 the owner's daily post for X (he posts it himself)   // 📢 the market pulse   // ⭐ a premium that ended → standard limits (3-day reminder before)

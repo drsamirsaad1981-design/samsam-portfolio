@@ -445,16 +445,17 @@ export async function runDaily(env, now = Date.now()) {
 // Needs the Worker secret GH_DISPATCH_TOKEN: a fine-grained GitHub token for this repo only, "Actions: Read and write".
 const REPO = 'drsamirsaad1981-design/samsam-portfolio';
 export async function kickPrices(env, now = Date.now()) {
-  if (!env.GH_DISPATCH_TOKEN) return { kick: 'no token' };
-  const m = await loadMarket([], []).catch(() => null), t = m && m.parts && Date.parse(m.parts.top);
-  if (!t || now - t < 25 * 60e3) return { kick: 'fresh' };
+  // (t — the snapshot's time, 0 when it cannot be read — goes back with every answer: stall.mjs reports a long stop to the owner)
+  const m = await loadMarket([], []).catch(() => null), t = (m && m.parts && Date.parse(m.parts.top)) || 0;
+  if (!env.GH_DISPATCH_TOKEN) return { kick: 'no token', t };
+  if (!t || now - t < 25 * 60e3) return { kick: 'fresh', t };
   const last = +(await kvGet(env, 'tg:kick')) || 0;
-  if (now - last < 20 * 60e3) return { kick: 'waiting' };
+  if (now - last < 20 * 60e3) return { kick: 'waiting', t };
   await kvPut(env, 'tg:kick', String(now), 3600);
   const r = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/prices.yml/dispatches`, { method: 'POST',
     headers: { authorization: 'Bearer ' + env.GH_DISPATCH_TOKEN, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28', 'user-agent': 'samsam-worker', 'content-type': 'application/json' },
     body: JSON.stringify({ ref: 'main' }) }).catch(() => null);
   const ok = !!(r && r.status === 204);
   if (!ok) console.log(JSON.stringify({ kick: 'refused', status: r && r.status }));
-  return { kick: ok ? 'sent' : 'refused', age_min: Math.round((now - t) / 60e3) };
+  return { kick: ok ? 'sent' : 'refused', age_min: Math.round((now - t) / 60e3), t };
 }

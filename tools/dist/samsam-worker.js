@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 58a0dba7e8c07a02
+// sources-hash: 0370c3e61146eb0f
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -490,17 +490,17 @@ function groupOf(c) {
 function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
   const keys = [.../* @__PURE__ */ new Set([...Object.keys(values || {}), ...Object.keys(targets || {})])];
   const total = keys.reduce((s, k) => s + Math.max(0, num(values[k])), 0), T2 = total + Math.max(0, num(cash));
-  const tg8 = (k) => targets && targets[k] ? num(targets[k].pct) / 100 : 0;
+  const tg9 = (k) => targets && targets[k] ? num(targets[k].pct) / 100 : 0;
   const groups = keys.map((k) => {
-    const v = Math.max(0, num(values[k])), now = total > 0 ? v / total * 100 : 0, target = tg8(k) * 100;
+    const v = Math.max(0, num(values[k])), now = total > 0 ? v / total * 100 : 0, target = tg9(k) * 100;
     return {
       key: k,
       value: v,
       now,
       target,
       drift: now - target,
-      full: tg8(k) * total - v,
-      need: Math.max(0, tg8(k) * T2 - v),
+      full: tg9(k) * total - v,
+      need: Math.max(0, tg9(k) * T2 - v),
       add: 0,
       state: Math.abs(now - target) <= band ? "ok" : Math.abs(now - target) <= 2 * band ? "warn" : "off"
     };
@@ -513,7 +513,7 @@ function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
     else {
       const rest = money3 - need;
       groups.forEach((g) => {
-        g.add = g.need + tg8(g.key) * rest;
+        g.add = g.need + tg9(g.key) * rest;
       });
     }
   }
@@ -808,19 +808,19 @@ function summarize(user, market, now = Date.now()) {
     return { sym, at: +a.alertPrice, price: price3, left: p ? Math.max(0, p.target - p.actual) : null, dcaToday: !!(dc && dc.s.state === "today") };
   }).filter((x) => x.price > 0);
   let alloc = null;
-  const tg8 = meta.targets && typeof meta.targets === "object" ? meta.targets : null;
-  const tlist = tg8 && Array.isArray(tg8.list) ? tg8.list : [];
+  const tg9 = meta.targets && typeof meta.targets === "object" ? meta.targets : null;
+  const tlist = tg9 && Array.isArray(tg9.list) ? tg9.list : [];
   if (tlist.length) {
     const cats = Object.fromEntries(tlist.filter((x) => x && x.g && x.pct > 0).map((x) => [x.g, { pct: +x.pct }]));
-    const names = Object.fromEntries([...Array.isArray(tg8.names) ? tg8.names : [], ...tlist].filter((x) => x && x.g).map((x) => [x.g, x.label || x.g]));
+    const names = Object.fromEntries([...Array.isArray(tg9.names) ? tg9.names : [], ...tlist].filter((x) => x && x.g).map((x) => [x.g, x.label || x.g]));
     const vals = {};
     for (const c of pf) {
       const g2 = groupOf(c);
       vals[g2] = (vals[g2] || 0) + c.qty * c.currentPrice;
     }
-    const plan2 = allocationPlan(vals, cats, { band: +tg8.band || 5 });
+    const plan2 = allocationPlan(vals, cats, { band: +tg9.band || 5 });
     const shown = plan2.groups.filter((g2) => g2.target > 0 || g2.now >= 0.05);
-    alloc = { band: plan2.band, groups: shown, onTarget: shown.filter((g2) => g2.state === "ok").length, count: shown.length, names, key: JSON.stringify([tlist, tg8.band]) };
+    alloc = { band: plan2.band, groups: shown, onTarget: shown.filter((g2) => g2.state === "ok").length, count: shown.length, names, key: JSON.stringify([tlist, tg9.band]) };
   }
   const free7 = {};
   for (const r of freeCoins(user.txs, new Date(now - 7 * DAY).toISOString())) {
@@ -4780,11 +4780,11 @@ async function runDaily(env, now = Date.now()) {
 }
 var REPO = "drsamirsaad1981-design/samsam-portfolio";
 async function kickPrices(env, now = Date.now()) {
-  if (!env.GH_DISPATCH_TOKEN) return { kick: "no token" };
-  const m = await loadMarket([], []).catch(() => null), t = m && m.parts && Date.parse(m.parts.top);
-  if (!t || now - t < 25 * 6e4) return { kick: "fresh" };
+  const m = await loadMarket([], []).catch(() => null), t = m && m.parts && Date.parse(m.parts.top) || 0;
+  if (!env.GH_DISPATCH_TOKEN) return { kick: "no token", t };
+  if (!t || now - t < 25 * 6e4) return { kick: "fresh", t };
   const last = +await kvGet5(env, "tg:kick") || 0;
-  if (now - last < 20 * 6e4) return { kick: "waiting" };
+  if (now - last < 20 * 6e4) return { kick: "waiting", t };
   await kvPut5(env, "tg:kick", String(now), 3600);
   const r = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/prices.yml/dispatches`, {
     method: "POST",
@@ -4793,7 +4793,7 @@ async function kickPrices(env, now = Date.now()) {
   }).catch(() => null);
   const ok2 = !!(r && r.status === 204);
   if (!ok2) console.log(JSON.stringify({ kick: "refused", status: r && r.status }));
-  return { kick: ok2 ? "sent" : "refused", age_min: Math.round((now - t) / 6e4) };
+  return { kick: ok2 ? "sent" : "refused", age_min: Math.round((now - t) / 6e4), t };
 }
 
 // guide.json
@@ -7741,6 +7741,104 @@ async function check(request, env) {
   return json(200, { coin: sym, ms: Date.now() - t0, colo: request.cf && request.cf.colo || null, country: request.cf && request.cf.country || null, result: d, calls: stopTrace() });
 }
 
+// tools/worker/stall.mjs
+var KEY6 = "tg:stall";
+var LIMIT = 90 * 6e4;
+var AGAIN = 6 * 36e5;
+var FRESH = 45 * 6e4;
+var RUNS = "https://github.com/drsamirsaad1981-design/samsam-portfolio/actions/workflows/prices.yml";
+var kv3 = { get: async (env) => {
+  try {
+    return JSON.parse(env.RATE && await env.RATE.get(KEY6) || "{}") || {};
+  } catch (_) {
+    return {};
+  }
+}, put: async (env, v) => {
+  try {
+    if (env.RATE) await env.RATE.put(KEY6, JSON.stringify(v));
+  } catch (_) {
+  }
+} };
+var tg8 = async (env, method, body) => {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    return await r.json();
+  } catch (_) {
+    return { ok: false };
+  }
+};
+function span(ms, ar) {
+  const min = Math.max(1, Math.round(ms / 6e4)), h = Math.floor(min / 60), m = min % 60;
+  if (!ar) return h ? h + " h" + (m ? " " + m + " min" : "") : m + " min";
+  const hs = h === 1 ? "\u0633\u0627\u0639\u0629" : h === 2 ? "\u0633\u0627\u0639\u062A\u064A\u0646" : h <= 10 ? h + " \u0633\u0627\u0639\u0627\u062A" : h + " \u0633\u0627\u0639\u0629";
+  return h ? hs + (m ? " \u0648" + m + " \u062F\u0642\u064A\u0642\u0629" : "") : m + " \u062F\u0642\u064A\u0642\u0629";
+}
+var tried = (kick, ar) => kick === "no token" ? ar ? "\u0627\u0644\u0628\u0648\u062A \u0644\u0627 \u064A\u0633\u062A\u0637\u064A\u0639 \u0625\u0639\u0627\u062F\u0629 \u062A\u0634\u063A\u064A\u0644\u0647 \u0628\u0646\u0641\u0633\u0647: \u0645\u0641\u062A\u0627\u062D GitHub \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0639\u0646\u062F\u0647." : "The bot cannot restart it by itself: it has no GitHub key." : kick === "refused" ? ar ? "\u0627\u0644\u0628\u0648\u062A \u0637\u0644\u0628 \u0645\u0646 GitHub \u062A\u0634\u063A\u064A\u0644\u0647 \u0627\u0644\u0622\u0646\u060C \u0648GitHub \u0631\u0641\u0636 \u0627\u0644\u0637\u0644\u0628 (\u0631\u0627\u062C\u0639 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0645\u0641\u062A\u0627\u062D)." : "The bot asked GitHub to run it now, and GitHub refused (check the key)." : ar ? "\u0627\u0644\u0628\u0648\u062A \u064A\u0637\u0644\u0628 \u0645\u0646 GitHub \u062A\u0634\u063A\u064A\u0644\u0647 \u0643\u0644 20 \u062F\u0642\u064A\u0642\u0629\u060C \u0648\u0644\u0645 \u064A\u0635\u0644 \u0634\u064A\u0621 \u0628\u0639\u062F." : "The bot has been asking GitHub to run it every 20 minutes; nothing has come back yet.";
+function stallMessage({ age, unread, kick, again }, lang2) {
+  const ar = lang2 === "ar";
+  const text = ar ? [
+    "\u{1F6E0} <b>" + (again ? "\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0645\u0627 \u0632\u0627\u0644 \u0645\u062A\u0648\u0642\u0641\u0627\u064B" : "\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u062A\u0648\u0642\u0641") + "</b>",
+    unread ? "\u0644\u0642\u0637\u0629 \u0627\u0644\u0633\u0648\u0642 \u0644\u0627 \u062A\u064F\u0642\u0631\u0623 \u0645\u0646\u0630 " + span(age, true) + "." : "\u0622\u062E\u0631 \u0644\u0642\u0637\u0629 \u0644\u0644\u0633\u0648\u0642 \u0639\u0645\u0631\u0647\u0627 " + span(age, true) + " (\u0627\u0644\u0645\u0639\u062A\u0627\u062F: \u0643\u0644 30 \u062F\u0642\u064A\u0642\u0629).",
+    "",
+    "\u2022 " + tried(kick, true),
+    "\u2022 \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629 \u062A\u0639\u0645\u0644. \u0627\u0644\u0630\u064A \u064A\u0646\u062A\u0638\u0631 \u0627\u0644\u0644\u0642\u0637\u0629: \u0635\u0641\u062D\u0627\u062A \u0627\u0644\u0633\u0648\u0642\u060C \u0648\u0633\u062C\u0644 \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0628\u0627\u0644\u0633\u0627\u0639\u0629\u060C \u0648\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0627\u0644\u0645\u062C\u062F\u0648\u0644\u0629.",
+    "",
+    "\u0627\u0641\u062A\u062D \u0633\u062C\u0644 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0644\u062A\u0631\u0649 \u0633\u0628\u0628 \u0627\u0644\u062A\u0648\u0642\u0641."
+  ] : [
+    "\u{1F6E0} <b>" + (again ? "Price updates are still stopped" : "Price updates stopped") + "</b>",
+    unread ? "The market snapshot has been unreadable for " + span(age) + "." : "The last market snapshot is " + span(age) + " old (normally: every 30 minutes).",
+    "",
+    "\u2022 " + tried(kick),
+    "\u2022 Live prices still work. What waits for the snapshot: the market pages, the hourly price history and the scheduled alerts.",
+    "",
+    "Open the runs to see what stopped it."
+  ];
+  return { text: text.join("\n"), buttons: [[{ text: ar ? "\u{1F6E0} \u0633\u062C\u0644 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0639\u0644\u0649 GitHub" : "\u{1F6E0} The runs on GitHub", url: RUNS }]] };
+}
+var backMessage = (ms, lang2) => lang2 === "ar" ? "\u2705 <b>\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0639\u0627\u062F</b>\n\u0648\u0635\u0644\u062A \u0644\u0642\u0637\u0629 \u062C\u062F\u064A\u062F\u0629 \u0644\u0644\u0633\u0648\u0642 \u0628\u0639\u062F \u062A\u0648\u0642\u0641 " + span(ms, true) + "." : "\u2705 <b>Price updates are back</b>\nA fresh market snapshot arrived after " + span(ms) + " without one.";
+async function runStall(env, now = Date.now(), seen = null) {
+  if (!env.TELEGRAM_CHAT_ID || !env.RATE) return { job: null };
+  let t = seen && seen.t;
+  if (t === void 0) {
+    const m = await loadMarket([], []).catch(() => null);
+    t = m && m.parts && Date.parse(m.parts.top);
+  }
+  t = t > 0 ? t : 0;
+  const s = await kv3.get(env);
+  if (!t && !s.unk) {
+    s.unk = now;
+    await kv3.put(env, s);
+    return { job: null };
+  }
+  if (t && s.unk && !s.at) {
+    await kv3.put(env, {});
+    return { job: null };
+  }
+  const age = t ? now - t : now - s.unk;
+  const send3 = async (v) => {
+    let lang2 = null;
+    try {
+      lang2 = await env.RATE.get(`tg:${env.TELEGRAM_CHAT_ID}:lang`);
+    } catch (_) {
+    }
+    lang2 = lang2 === "ar" || lang2 === "en" ? lang2 : env.BOT_LANG === "ar" ? "ar" : "en";
+    const x = v(lang2), r = await tg8(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: x.text, parse_mode: "HTML", disable_web_page_preview: true, ...x.buttons ? { reply_markup: { inline_keyboard: x.buttons } } : {} });
+    return !!(r && r.ok);
+  };
+  if (age > LIMIT) {
+    if (s.at && now - s.at < AGAIN) return { job: null };
+    const ok2 = await send3((lang2) => stallMessage({ age, unread: !t, kick: seen && seen.kick, again: !!s.at }, lang2));
+    if (ok2) await kv3.put(env, { ...s, at: now, from: s.from || t || s.unk, n: (s.n || 0) + 1 });
+    return { job: "stall", ok: ok2, age_min: Math.round(age / 6e4) };
+  }
+  if (s.at && t && now - t < FRESH) {
+    const ok2 = await send3((lang2) => ({ text: backMessage(Math.max(0, t - (s.from || s.at)), lang2) }));
+    if (ok2) await kv3.put(env, {});
+    return { job: "stall-back", ok: ok2 };
+  }
+  return { job: null };
+}
+
 // tools/worker/index.mjs
 setCexHandler(cexHandler2);
 setAdminHandler(adminHandler2);
@@ -7863,9 +7961,16 @@ var worker_default = {
     ctx.waitUntil((async () => {
       resetBudget();
       await migrateOwner(env);
-      await kickPrices(env).then((r) => {
+      const kick = await kickPrices(env).then((r) => {
         if (r.kick === "sent" || r.kick === "refused") console.log(JSON.stringify(r));
-      }).catch((e) => log2("kick", e));
+        return r;
+      }).catch((e) => {
+        log2("kick", e);
+        return null;
+      });
+      await runStall(env, Date.now(), kick).then((r) => {
+        if (r.job) console.log(JSON.stringify(r));
+      }).catch((e) => log2("stall", e));
       await expireRound(env, Date.now()).catch((e) => log2("premium", e));
       await runChannel(env, now).then((r) => {
         if (r.job) console.log(JSON.stringify(r));

@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/cex.mjs', 'tools/worker/bidi.mjs', 'tools/worker/usmarket.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs', 'tools/worker/xpost.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/cex.mjs', 'tools/worker/bidi.mjs', 'tools/worker/usmarket.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs', 'tools/worker/xpost.mjs', 'tools/worker/stall.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -809,6 +809,37 @@ check('…70 min old + the token → GitHub runs the snapshot now (workflow_disp
 await cronG(ENVG, RIYADH('03:22'));
 check('…and not again for 20 min', kicks.length === 1);
 check('built file holds no GitHub token', !/github_pat_|ghp_[A-Za-z0-9]{20}/.test(built));
+market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() };
+
+// 🛠 price updates stopped: the snapshot over 90 min old → ONE message to the owner (never a member), a reminder only
+// after 6 h, and one "back" message when a fresh snapshot arrives
+{
+  const stall = () => sent.filter(m => m.m === 'sendMessage' && /Price updates|تحديث الأسعار/.test(m.b.text || ''));
+  kvStore.delete('tg:stall'); kvStore.delete('tg:kick'); sent.length = 0;
+  market.parts = { top: new Date(NOW - 70 * 60e3).toISOString() }; await cronG(ENVG, RIYADH('03:27'));
+  check('🛠 snapshot 70 min old → no "stopped" message yet (GitHub is only asked to run it)', stall().length === 0 && !kvStore.get('tg:stall'), stall().map(m => m.b.text));
+  market.parts = { top: new Date(Date.now() - 95 * 60e3).toISOString() }; await cronG(ENVG, RIYADH('03:32'));
+  const s1 = stall();
+  check('🛠 95 min old → the owner gets ONE "Price updates stopped" with the age, what the bot tried, and a button to the runs on GitHub',
+    s1.length === 1 && String(s1[0].b.chat_id) === '555' && /Price updates stopped/.test(s1[0].b.text) && /1 h 35 min old/.test(s1[0].b.text) && /asking GitHub/.test(s1[0].b.text)
+    && btns(s1[0]).length === 1 && /github\.com\/.+\/actions\/workflows\/prices\.yml$/.test(btns(s1[0])[0].url), s1.map(m => [m.b.chat_id, m.b.text]));
+  await cronG(ENVG, RIYADH('03:37')); await cronG(ENVG, RIYADH('03:42'));
+  check('…and not again on the next runs', stall().length === 1);
+  const st = JSON.parse(kvStore.get('tg:stall')); kvStore.set('tg:stall', JSON.stringify({ ...st, at: Date.now() - 6.1 * 3600e3 }));
+  market.parts = { top: new Date(Date.now() - 8 * 3600e3).toISOString() }; await cronG(ENVK, RIYADH('03:47'));
+  const s2 = stall();
+  check('…6 h later, still stopped → one reminder ("still stopped"; without the GitHub key it says so)', s2.length === 2 && /still stopped/.test(s2[1].b.text) && /8 h old/.test(s2[1].b.text) && /no GitHub key/.test(s2[1].b.text), s2.map(m => m.b.text));
+  market.parts = { top: new Date(Date.now() - 3 * 60e3).toISOString() }; await cronG(ENVG, RIYADH('03:52'));
+  const s3 = stall();
+  check('…a fresh snapshot → one "Price updates are back", and the record is cleared', s3.length === 3 && /are back/.test(s3[2].b.text) && /after \d+ h/.test(s3[2].b.text) && kvStore.get('tg:stall') === '{}', [s3.map(m => m.b.text), kvStore.get('tg:stall')]);
+  await cronG(ENVG, RIYADH('03:57'));
+  check('…and then silence', stall().length === 3);
+  const St = await import('../tools/worker/stall.mjs');
+  const ar = St.stallMessage({ age: 125 * 60e3, kick: 'refused' }, 'ar');
+  check('🛠 in Arabic: the title, the age in Arabic counting, and the refused request', /تحديث الأسعار توقف/.test(ar.text) && /ساعتين و5 دقيقة/.test(ar.text) && /رفض الطلب/.test(ar.text) && !/[A-Za-z]{4,}(?<!GitHub)/.test(ar.text.replace(/GitHub/g, '')), ar.text);
+  check('🛠 an unreadable snapshot is told as such', /unreadable for 1 h 40 min/.test(St.stallMessage({ age: 100 * 60e3, unread: true }, 'en').text));
+  kvStore.delete('tg:stall'); kvStore.delete('tg:kick'); sent.length = 0; kicks.length = 0;
+}
 market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() };
 
 // the same alert twice (e.g. said again by voice) → kept once
