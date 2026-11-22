@@ -118,6 +118,8 @@
     'Use this only if no device has your real data.': 'استخدم هذا فقط إذا لم يكن أي جهاز يحمل بياناتك الحقيقية.',
     'This portfolio is already set up in the cloud.': 'هذه المحفظة مُعدّة على السحابة بالفعل.',
     'Your portfolio is new and private — only you can see it.': 'محفظتك جديدة وخاصة — لا يراها أحد غيرك.',
+    '👋 Welcome to Cute Portfolio': '👋 أهلاً بك في Cute Portfolio', 'Start my portfolio': 'ابدأ محفظتي', 'I have a backup file': 'عندي ملف نسخة احتياطية', 'Setting up…': 'جاري التجهيز…',
+    ', or bring your trades from an exchange: Performance → Wallets & exchanges → Import from exchange.': '، أو أحضر صفقاتك من منصة: الأداء ← المحافظ والمنصات ← استيراد من منصة.',
     'Then add your coins with': 'ثم أضف عملاتك من',
     'One-time setup needed': 'يلزم إعداد لمرة واحدة', 'Your cloud portfolio is empty. Open the main': 'محفظتك على السحابة فارغة. افتح صفحة',
     'Portfolio page': 'المحفظة الرئيسية', 'to import your data.': 'لاستيراد بياناتك.',
