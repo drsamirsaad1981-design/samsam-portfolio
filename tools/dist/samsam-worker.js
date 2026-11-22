@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 2aa7c537b0492aca
+// sources-hash: 58a0dba7e8c07a02
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -5744,13 +5744,12 @@ ${esc(text)}`;
 
 // tools/worker/xpost.mjs
 var KEY5 = "tg:xpost";
-var PAGE = "https://drsamirsaad1981-design.github.io/samsam-portfolio/welcome/";
-var NOTE2 = { ar: "\u0644\u0644\u0645\u0639\u0644\u0648\u0645\u0629 \u0641\u0642\u0637\u060C \u0648\u0644\u064A\u0633\u062A \u062A\u0648\u0635\u064A\u0629.", en: "For information only, not advice." };
+var PAGE = "https://drsamirsaad1981-design.github.io/samsam-portfolio/welcome";
 var FEATURES = [
-  { ar: "\u0647\u0644 \u0642\u0631\u0627\u0631\u0627\u062A\u0643 \u0641\u064A \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0623\u0641\u0636\u0644 \u0645\u0646 \u0648\u0636\u0639 \u0627\u0644\u0645\u0628\u0644\u063A \u0646\u0641\u0633\u0647 \u0641\u064A \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0623\u0648 \u0627\u0644\u0630\u0647\u0628\u061F Cute Portfolio \u064A\u062C\u064A\u0628\u0643 \u0628\u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u0645\u0646 \u0635\u0641\u0642\u0627\u062A\u0643 \u0623\u0646\u062A.", en: "Are your crypto decisions better than putting the same money in Bitcoin or gold? Cute Portfolio answers in numbers, from your own trades." },
-  { ar: "\u062E\u0637\u0629 \u062E\u0631\u0648\u062C \u062A\u0636\u0639\u0647\u0627 \u0648\u0623\u0646\u062A \u0647\u0627\u062F\u0626: \u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0623\u0631\u0628\u0627\u062D \u0639\u0646\u062F \u0645\u0636\u0627\u0639\u0641\u0627\u062A \u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643\u060C \u0648\u062A\u0646\u0628\u064A\u0647 \u062D\u064A\u0646 \u064A\u062A\u062D\u0642\u0642 \u0627\u0644\u0647\u062F\u0641.", en: "An exit plan you set while you are calm: take-profit levels at multiples of your average buy price, and an alert when a target is hit." },
-  { ar: "\u0630\u0647\u0628\u0643 \u0648\u0641\u0636\u062A\u0643 \u0628\u0627\u0644\u063A\u0631\u0627\u0645 \u0641\u064A \u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0646\u0641\u0633\u0647\u0627 \u0645\u0639 \u0639\u0645\u0644\u0627\u062A\u0643\u060C \u0648\u0632\u0643\u0627\u062A\u0647\u0627 \u0645\u062D\u0633\u0648\u0628\u0629 \u0628\u0646\u0635\u0627\u0628\u0647\u0627.", en: "Your gold and silver, in grams, in the same portfolio as your coins, with zakat calculated by its own threshold." },
-  { ar: "\u0633\u062C\u0651\u0644 \u0635\u0641\u0642\u062A\u0643 \u0628\u0627\u0644\u0643\u0644\u0627\u0645 \u0641\u064A \u062A\u064A\u0644\u064A\u062C\u0631\u0627\u0645: \xAB\u0627\u0634\u062A\u0631\u064A\u062A 0.01 BTC \u0628\u0633\u0639\u0631 95 \u0623\u0644\u0641\xBB\u060C \u0641\u062A\u0638\u0647\u0631 \u0641\u064A \u0645\u062D\u0641\u0638\u062A\u0643 \u0628\u0639\u062F \u062A\u0623\u0643\u064A\u062F\u0643.", en: 'Record a trade in plain words on Telegram: "bought 0.01 BTC at 95k", and it is in your portfolio once you confirm.' },
+  { ar: "\u0647\u0644 \u0642\u0631\u0627\u0631\u0627\u062A\u0643 \u0641\u064A \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0623\u0641\u0636\u0644 \u0645\u0646 \u0648\u0636\u0639 \u0627\u0644\u0645\u0628\u0644\u063A \u0646\u0641\u0633\u0647 \u0641\u064A \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0623\u0648 \u0627\u0644\u0630\u0647\u0628\u061F \u0627\u0644\u062C\u0648\u0627\u0628 \u0628\u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u0645\u0646 \u0635\u0641\u0642\u0627\u062A\u0643.", en: "Are your crypto decisions better than the same money in Bitcoin or gold? The answer, in numbers, from your own trades." },
+  { ar: "\u062E\u0637\u0629 \u062E\u0631\u0648\u062C \u062A\u0636\u0639\u0647\u0627 \u0648\u0623\u0646\u062A \u0647\u0627\u062F\u0626: \u062C\u0646\u064A \u0623\u0631\u0628\u0627\u062D \u0639\u0646\u062F \u0645\u0636\u0627\u0639\u0641\u0627\u062A \u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643\u060C \u0648\u062A\u0646\u0628\u064A\u0647 \u0639\u0646\u062F \u0627\u0644\u0647\u062F\u0641.", en: "An exit plan set while you are calm: take profit at multiples of your average buy price, with an alert at each target." },
+  { ar: "\u0630\u0647\u0628\u0643 \u0648\u0641\u0636\u062A\u0643 \u0628\u0627\u0644\u063A\u0631\u0627\u0645 \u0641\u064A \u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0646\u0641\u0633\u0647\u0627 \u0645\u0639 \u0639\u0645\u0644\u0627\u062A\u0643\u060C \u0648\u0632\u0643\u0627\u062A\u0647\u0627 \u0645\u062D\u0633\u0648\u0628\u0629 \u0628\u0646\u0635\u0627\u0628\u0647\u0627.", en: "Your gold and silver, in grams, in the same portfolio as your coins, with zakat by its own threshold." },
+  { ar: "\u0633\u062C\u0651\u0644 \u0635\u0641\u0642\u062A\u0643 \u0628\u0627\u0644\u0643\u0644\u0627\u0645 \u0641\u064A \u062A\u064A\u0644\u064A\u062C\u0631\u0627\u0645\u060C \u0641\u062A\u0638\u0647\u0631 \u0641\u064A \u0645\u062D\u0641\u0638\u062A\u0643 \u0628\u0639\u062F \u062A\u0623\u0643\u064A\u062F\u0643.", en: "Record a trade in plain words on Telegram; it is in your portfolio once you confirm." },
   { ar: "\u0625\u0634\u0627\u0631\u0627\u062A \u0627\u0646\u0636\u0628\u0627\u0637 \u0645\u0646 \u0642\u0648\u0627\u0639\u062F\u0643 \u0623\u0646\u062A: \u0627\u062D\u062A\u0641\u0627\u0638\u060C \u062A\u0639\u0632\u064A\u0632\u060C \u0623\u0648 \u062A\u062D\u0648\u064A\u0644. \u062A\u0630\u0643\u064A\u0631 \u0628\u062E\u0637\u062A\u0643\u060C \u0648\u0644\u064A\u0633\u062A \u062A\u0648\u0635\u064A\u0627\u062A.", en: "Discipline signals from your own rules: Hold, Reinforce or Convert. A reminder of your plan, not tips." }
 ];
 var kv2 = { get: async (env) => {
@@ -5774,40 +5773,38 @@ var tg6 = async (env, method, body) => {
   }
 };
 var ch = (v) => v == null || !isFinite(v) ? "" : ` (${pct(v, 1)})`;
+var dotJoin = (a) => a.filter(Boolean).join(" \xB7 ");
+var xLen = (t) => [...String(t).replace(/https?:\/\/\S+/g, "x".repeat(23))].reduce((n, c) => n + (c.codePointAt(0) > 8192 && !(c.codePointAt(0) >= 8208 && c.codePointAt(0) <= 8223) ? 2 : 1), 0);
 function xDraft(m, now) {
   const dayN = Math.floor((now + 3 * 36e5) / 864e5), angle = dayN % 4;
   const g = m && m.global || {}, d = g.dom || {}, btc = m && m.btc || {}, met2 = m && m.metals || [], f = (k) => met2.find((x) => x.k === k), e = m && etfDay(m.etf);
   let ar = null, en = null;
   if (angle === 0 && btc.price > 0) {
-    ar = ["\u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u064A\u0648\u0645 \u{1F4CA}", `\u2022 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 ${usd(btc.price)}${ch(btc.ch24)}`, m.fng ? `\u2022 \u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639: ${m.fng.value} (${FNG_AR[m.fng.label] || m.fng.label})` : null, m.alt && m.alt.value != null ? `\u2022 \u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629: ${m.alt.value}/100` : null, d.btc != null ? `\u2022 \u0647\u064A\u0645\u0646\u0629 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646: ${d.btc.toFixed(1)}%` : null];
-    en = ["Market pulse today \u{1F4CA}", `\u2022 Bitcoin ${usd(btc.price)}${ch(btc.ch24)}`, m.fng ? `\u2022 Fear & Greed: ${m.fng.value} (${m.fng.label})` : null, m.alt && m.alt.value != null ? `\u2022 Altcoin season: ${m.alt.value}/100` : null, d.btc != null ? `\u2022 BTC dominance: ${d.btc.toFixed(1)}%` : null];
+    ar = ["\u0646\u0628\u0636 \u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u064A\u0648\u0645 \u{1F4CA}", `\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 ${usd(btc.price)}${ch(btc.ch24)}`, dotJoin([m.fng ? `\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639 ${m.fng.value}` : null, m.alt && m.alt.value != null ? `\u0645\u0648\u0633\u0645 \u0627\u0644\u0628\u062F\u0627\u0626\u0644 ${m.alt.value}` : null, d.btc != null ? `\u0627\u0644\u0647\u064A\u0645\u0646\u0629 ${d.btc.toFixed(1)}%` : null])];
+    en = ["Market pulse today", `Bitcoin ${usd(btc.price)}${ch(btc.ch24)}`, dotJoin([m.fng ? `Fear & Greed ${m.fng.value}` : null, m.alt && m.alt.value != null ? `Altseason ${m.alt.value}` : null, d.btc != null ? `Dominance ${d.btc.toFixed(1)}%` : null])];
   } else if (angle === 1 && btc.price > 0 && f("gold") && f("gold").price > 0) {
     const go = f("gold"), si = f("silver");
-    ar = ["\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u0627\u0644\u064A\u0648\u0645 \u{1F947}", `\u2022 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 ${usd(btc.price)}${ch(btc.ch24)}`, `\u2022 \u0627\u0644\u0630\u0647\u0628 ${usd(go.price)} \u0644\u0644\u0623\u0648\u0646\u0635\u0629${ch(go.ch24)}`, si && si.price > 0 ? `\u2022 \u0627\u0644\u0641\u0636\u0629 ${usd(si.price)}${ch(si.ch24)}` : null, "\u0647\u0644 \u062A\u0639\u0631\u0641 \u0643\u064A\u0641 \u0643\u0627\u0646 \u0623\u062F\u0627\u0621 \u0645\u062D\u0641\u0638\u062A\u0643 \u0623\u0645\u0627\u0645\u0647\u0627\u061F"];
-    en = ["Bitcoin, gold and silver today \u{1F947}", `\u2022 Bitcoin ${usd(btc.price)}${ch(btc.ch24)}`, `\u2022 Gold ${usd(go.price)} an ounce${ch(go.ch24)}`, si && si.price > 0 ? `\u2022 Silver ${usd(si.price)}${ch(si.ch24)}` : null, "Do you know how your portfolio has done against them?"];
+    ar = ["\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0648\u0627\u0644\u0630\u0647\u0628 \u0648\u0627\u0644\u0641\u0636\u0629 \u{1F947}", dotJoin([`\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 ${usd(btc.price)}`, `\u0627\u0644\u0630\u0647\u0628 ${usd(go.price)}`, si && si.price > 0 ? `\u0627\u0644\u0641\u0636\u0629 ${usd(si.price)}` : null]), "\u0648\u0643\u064A\u0641 \u0623\u062F\u0627\u0621 \u0645\u062D\u0641\u0638\u062A\u0643 \u0623\u0645\u0627\u0645\u0647\u0627\u061F"];
+    en = ["Bitcoin, gold and silver", dotJoin([`Bitcoin ${usd(btc.price)}`, `Gold ${usd(go.price)}`, si && si.price > 0 ? `Silver ${usd(si.price)}` : null]), "And your portfolio against them?"];
   } else if (angle === 2 && e && g.mcap) {
-    ar = ["\u0623\u064A\u0646 \u062A\u062A\u062D\u0631\u0643 \u0627\u0644\u0633\u064A\u0648\u0644\u0629\u061F \u{1F3E6}", `\u2022 \u0635\u0646\u0627\u062F\u064A\u0642 ETF (${e.label}): \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 ${flow(e.btc)} \xB7 \u0627\u0644\u0625\u064A\u062B\u064A\u0631\u064A\u0648\u0645 ${flow(e.eth)}`, `\u2022 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629: $${(g.mcap / 1e12).toFixed(2)}T${ch(g.mcapCh24)}`, d.usdt != null ? `\u2022 \u0647\u064A\u0645\u0646\u0629 USDT: ${d.usdt.toFixed(2)}%` : null];
-    en = ["Where is the money moving? \u{1F3E6}", `\u2022 ETFs (${e.label}): BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}`, `\u2022 Market cap: $${(g.mcap / 1e12).toFixed(2)}T${ch(g.mcapCh24)}`, d.usdt != null ? `\u2022 USDT dominance: ${d.usdt.toFixed(2)}%` : null];
+    ar = ["\u0623\u064A\u0646 \u062A\u062A\u062D\u0631\u0643 \u0627\u0644\u0633\u064A\u0648\u0644\u0629\u061F \u{1F3E6}", `\u0635\u0646\u0627\u062F\u064A\u0642 ETF: \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 ${flow(e.btc)} \xB7 \u0627\u0644\u0625\u064A\u062B\u064A\u0631\u064A\u0648\u0645 ${flow(e.eth)}`, `\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629 $${(g.mcap / 1e12).toFixed(2)}T${ch(g.mcapCh24)}`];
+    en = ["Where is the money moving?", `ETFs: BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}`, `Market cap $${(g.mcap / 1e12).toFixed(2)}T${ch(g.mcapCh24)}`];
   }
   if (!ar) {
     const x = FEATURES[Math.floor(dayN / 4) % FEATURES.length];
-    return { angle: 3, ar: `${x.ar}
-
-\u0645\u062C\u0627\u0646\u064A \u0648\u063A\u064A\u0631 \u0631\u0628\u062D\u064A\u060C \u0648\u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u062F\u0639\u0648\u0629:
-${PAGE}`, en: `${x.en}
-
-Free and non-profit, by invitation:
-${PAGE}en.html` };
+    return { angle: 3, text: [x.ar, "", x.en, "", PAGE].join("\n") };
   }
-  return { angle, ar: [...ar.filter(Boolean), "", NOTE2.ar, `Cute Portfolio: ${PAGE}`].join("\n"), en: [...en.filter(Boolean), "", NOTE2.en, `Cute Portfolio: ${PAGE}en.html`].join("\n") };
+  const build = (n, note2) => [...ar.filter(Boolean).slice(0, n), ...note2 ? ["\u0644\u0644\u0645\u0639\u0644\u0648\u0645\u0629 \u0641\u0642\u0637\u060C \u0644\u064A\u0633\u062A \u062A\u0648\u0635\u064A\u0629."] : [], "", ...en.filter(Boolean).slice(0, n), ...note2 ? ["For information only, not advice."] : [], "", PAGE].join("\n");
+  const text = [build(3, true), build(2, true), build(2, false)].find((t) => xLen(t) <= 280) || build(1, false);
+  return { angle, text };
 }
 var esc2 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 var intent = (t) => "https://x.com/intent/post?text=" + encodeURIComponent(t);
 function xMessage(dr, lang2) {
   const ar = lang2 === "ar";
   return {
-    text: [ar ? "\u{1F4E3} <b>\u0645\u0646\u0634\u0648\u0631 X \u0644\u0644\u064A\u0648\u0645</b> \u2014 \u0627\u0636\u063A\u0637 \u0627\u0644\u0632\u0631\u060C \u0631\u0627\u062C\u0639 \u0627\u0644\u0646\u0635\u060C \u062B\u0645 Post" : "\u{1F4E3} <b>Today's post for X</b> \u2014 tap a button, read it, then Post", "", "\u{1F1F8}\u{1F1E6}", esc2(dr.ar), "", "\u{1F1EC}\u{1F1E7}", esc2(dr.en), "", ar ? "<i>\u0644\u0627 \u064A\u064F\u0646\u0634\u0631 \u0634\u064A\u0621 \u0625\u0644\u0627 \u0628\u0636\u063A\u0637\u062A\u0643. /xpost off \u0644\u0625\u064A\u0642\u0627\u0641 \u0647\u0630\u0647 \u0627\u0644\u0631\u0633\u0627\u0644\u0629.</i>" : "<i>Nothing is posted without your tap. /xpost off stops this message.</i>"].join("\n"),
-    buttons: [[{ text: ar ? "\u{1F1F8}\u{1F1E6} \u0627\u0646\u0634\u0631 \u0627\u0644\u0639\u0631\u0628\u064A" : "\u{1F1F8}\u{1F1E6} Post the Arabic", url: intent(dr.ar) }], [{ text: ar ? "\u{1F1EC}\u{1F1E7} \u0627\u0646\u0634\u0631 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A" : "\u{1F1EC}\u{1F1E7} Post the English", url: intent(dr.en) }]]
+    text: [ar ? "\u{1F4E3} <b>\u0645\u0646\u0634\u0648\u0631 X \u0644\u0644\u064A\u0648\u0645</b> (\u0639\u0631\u0628\u064A \u0648\u0625\u0646\u062C\u0644\u064A\u0632\u064A \u0645\u0639\u0627\u064B) \u2014 \u0627\u0636\u063A\u0637 \u0627\u0644\u0632\u0631\u060C \u0631\u0627\u062C\u0639 \u0627\u0644\u0646\u0635\u060C \u062B\u0645 Post" : "\u{1F4E3} <b>Today's post for X</b> (Arabic and English together) \u2014 tap the button, read it, then Post", "", esc2(dr.text), "", ar ? "<i>\u0644\u0627 \u064A\u064F\u0646\u0634\u0631 \u0634\u064A\u0621 \u0625\u0644\u0627 \u0628\u0636\u063A\u0637\u062A\u0643. /xpost off \u0644\u0625\u064A\u0642\u0627\u0641 \u0647\u0630\u0647 \u0627\u0644\u0631\u0633\u0627\u0644\u0629.</i>" : "<i>Nothing is posted without your tap. /xpost off stops this message.</i>"].join("\n"),
+    buttons: [[{ text: ar ? "\u{1F4E3} \u0627\u0646\u0634\u0631 \u0639\u0644\u0649 X" : "\u{1F4E3} Post on X", url: intent(dr.text) }]]
   };
 }
 async function sendDraft(env, now, lang2) {

@@ -1391,11 +1391,11 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   const xmsg = () => sent.filter(m => m.m === 'sendMessage' && String(m.b.chat_id) === '555' && /post for X|منشور X/.test(m.b.text || ''));
   const cron = async hm => { const W = await fresh(); const ps = []; await W.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH(hm) }, ENVK, { waitUntil: x => ps.push(x) }); await Promise.all(ps); };
   sent.length = 0; await cron('10:05');
-  const xm = xmsg(), urls = xm.length ? btns(xm[0]).map(b => b.url) : [];
-  check('📣 10:05 → the owner gets ONE "post for X" message with two buttons that open X with the text written', xm.length === 1 && urls.length === 2 && urls.every(u => /^https:\/\/x\.com\/intent\/post\?text=/.test(u)), xm.map(m => m.b.text));
-  const texts = urls.map(u => decodeURIComponent(u.split('text=')[1])), xlen = t => [...t.replace(/https?:\/\/\S+/g, 'x'.repeat(23))].length;
-  check('…each text fits a post (≤ 280 by X\'s count), carries the welcome page link, and gives no advice (no buy / sell / اشترِ / بع)', texts.length === 2 && texts.every(t => xlen(t) <= 280 && /samsam-portfolio\/welcome\//.test(t) && !/\b(buy now|sell now)\b|اشتر الآن|بِع الآن/i.test(t)) && /[؀-ۿ]/.test(texts[0]) && !/[؀-ۿ]/.test(texts[1]) && /en\.html/.test(texts[1]), texts.map(t => [xlen(t), t]));
-  check('…and the buttons\' links are short enough for Telegram (< 2,000 characters)', urls.every(u => u.length < 2000), urls.map(u => u.length));
+  const xm = xmsg(), urls = xm.length ? btns(xm[0]).map(b => b.url) : [], X = await import('../tools/worker/xpost.mjs');
+  check('📣 10:05 → the owner gets ONE "post for X" message with one button that opens X with the text written', xm.length === 1 && urls.length === 1 && /^https:\/\/x\.com\/intent\/post\?text=/.test(urls[0]), xm.map(m => m.b.text));
+  const txt = urls.length ? decodeURIComponent(urls[0].split('text=')[1]) : '', lines = txt.split('\n');
+  check('…one post with both languages (Arabic lines, then English lines — never one line with both words), within 280 by X\'s count, one link, no advice', X.xLen(txt) <= 280 && /[؀-ۿ]/.test(txt) && /[A-Za-z]{4,} [A-Za-z]{3,}/.test(txt) && (txt.match(/https:\/\//g) || []).length === 1 && /samsam-portfolio\/welcome$/.test(txt) && !/\b(buy now|sell now)\b|اشتر الآن|بِع الآن/i.test(txt) && !lines.some(l => !/^https/.test(l) && /[؀-ۿ]{3,}/.test(l) && /[A-Za-z]{4,} [A-Za-z]{4,}/.test(l)), [X.xLen(txt), txt]);
+  check('…and the button\'s link is short enough for Telegram (< 2,000 characters)', urls.every(u => u.length < 2000), urls.map(u => u.length));
   check('…only the owner hears it (no member, not the channel)', !sent.some(m => m.m === 'sendMessage' && String(m.b.chat_id) !== '555' && /post for X|منشور X/.test(m.b.text || '')));
   sent.length = 0; await cron('10:10');
   check('…once a day (10:10 → nothing more)', xmsg().length === 0);
@@ -1404,8 +1404,9 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   sent.length = 0; await postK(await fresh(), '/xpost off'); kvStore.set('tg:xpost', JSON.stringify({ ...JSON.parse(kvStore.get('tg:xpost')), day: '2000-01-01' })); await cron('10:05');
   check('/xpost off → confirmed, and the next 10:05 sends nothing', sent.some(m => /is off|أوقفت/.test(m.b.text || '')) && xmsg().length === 0, sent.map(m => m.b.text));
   sent.length = 0; await postK(await fresh(), '/xpost on'); check('/xpost on → back on', /is on|يعمل/.test(last().b.text || ''));
-  { const X = await import('../tools/worker/xpost.mjs'); const seen = new Set(); for (let d = 0; d < 8; d++) { const dr = X.xDraft({ btc: { price: 60000, ch24: 1.2 }, global: { mcap: 2.06e12, mcapCh24: 1.7, dom: { btc: 58.7, usdt: 8.5 } }, fng: { value: 8, label: 'Extreme Fear' }, alt: { value: 45 }, metals: [{ k: 'gold', price: 3515, ch24: -4.6 }, { k: 'silver', price: 41, ch24: -7.3 }], etf: null }, Date.UTC(2026, 10, 22) + d * 86400e3); seen.add(dr.angle + ':' + dr.ar.slice(0, 30)); if ([...dr.ar.replace(/https?:\/\/\S+/g, 'x'.repeat(23))].length > 280 || [...dr.en.replace(/https?:\/\/\S+/g, 'x'.repeat(23))].length > 280) seen.add('TOO LONG ' + d); }
-    check('…a different angle each day (pulse, metals, a feature…), none too long', seen.size >= 4 && ![...seen].some(x => /TOO LONG/.test(x)), [...seen]); }
+  { const seen = new Set(), M = { btc: { price: 123456, ch24: -11.2 }, global: { mcap: 2.06e12, mcapCh24: -10.7, dom: { btc: 58.7, usdt: 8.5 } }, fng: { value: 8, label: 'Extreme Fear' }, alt: { value: 45 }, metals: [{ k: 'gold', price: 3515.25, ch24: -4.6 }, { k: 'silver', price: 41.07, ch24: -7.3 }], etf: { days: [] } };
+    for (let d = 0; d < 24; d++) { const dr = X.xDraft(M, Date.UTC(2026, 10, 22) + d * 86400e3); seen.add(dr.angle + ':' + dr.text.slice(0, 24)); if (X.xLen(dr.text) > 280) seen.add('TOO LONG ' + d + ' ' + X.xLen(dr.text)); }
+    check('…a different angle each day (pulse, metals, a feature…), every one within 280', seen.size >= 5 && ![...seen].some(x => /TOO LONG/.test(x)), [...seen]); }
   kvStore.delete('tg:xpost');
 }
 
