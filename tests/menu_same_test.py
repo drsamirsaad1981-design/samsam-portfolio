@@ -33,7 +33,7 @@ with sync_playwright() as p:
             check(f'{vn} {f}: no ☀️/🌙 button in the header (it is in Settings → Display)', pg.evaluate("[...document.querySelectorAll('[data-theme-toggle]')].every(b => !b.offsetParent)"))
             pg.keyboard.press('Escape'); pg.evaluate("document.body.click(); SamsamSettings.open()"); pg.wait_for_selector('#cpSet')
             rows = pg.evaluate("[...document.querySelectorAll('#cpSet .st-row b, #cpSet .st-seg-row > b')].map(b=>b.innerText.trim())")
-            want = ['Account', 'Backup', 'Recover Data', 'Telegram alerts', 'Admin dashboard', 'Language', 'Theme', 'Charts open on', 'Lists shown as', 'Guide', 'Install the app', 'Version']
+            want = ['Account', 'Backup', 'Recover Data', 'Telegram alerts', 'Admin dashboard', 'Language', 'Theme', 'Charts open on', 'Lists shown as', 'Guide', 'Privacy & terms', 'Install the app', 'Version']
             check(f'{vn} {f}: Settings lists every setting', rows == want, rows)
             pg.keyboard.press('Escape'); pg.wait_for_timeout(150)
             check(f'{vn} {f}: Esc closes it', not pg.query_selector('#cpSet'))

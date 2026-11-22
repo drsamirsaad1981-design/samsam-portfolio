@@ -391,6 +391,25 @@ export function zakatFacts(user, m, now) {
   const nisabUsd = goldOz > 0 ? 85 / GPO * goldOz : 0, metal = (sym, nis) => { const c = by[sym]; if (!c || !(c.qty > 0)) return null; const g = c.qty * GPO; return { g, meets: g >= nis - 1e-6, zakatG: g * 0.025, zakatUsd: c.value * 0.025 }; };
   return { w, crypto, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto >= nisabUsd, cryptoZakat: crypto * 0.025, gold: metal('XAU', 85), silver: metal('XAG', 595) };
 }
+// 🔐 the encrypted backup file: a reminder when the last one is over 30 days old — or was never made and the portfolio is
+// over a week old. At most once every 30 days. The app's weekly automatic copy covers a mistake inside the app; the file
+// is the only copy outside the account, so it is worth one message a month. KV tg:<chat>:bk:rem = when the last one went.
+export async function backupReminder(env, now = Date.now()) {
+  const user = await loadUser(env).catch(() => null); if (!user || !((user.txs || []).length || (user.coins || []).length)) return { sent: 0 };
+  const last = Date.parse(user.meta && user.meta.lastBackupAt) || 0, DAY = 864e5;
+  const first = Math.min(now, ...(user.txs || []).map(t => Date.parse(t.date) || now), ...(user.coins || []).map(c => Date.parse(c.createdAt || c.updatedAt) || now));   // how old the portfolio is, as far as it says
+  const days = last ? Math.floor((now - last) / DAY) : null;
+  if (last ? days < 30 : now - first < 7 * DAY) return { sent: 0 };
+  const told = +(await kvGet(env, K(env, 'bk:rem'))) || 0; if (now - told < 30 * DAY) return { sent: 0 };
+  const L = await lang(env), ar = L === 'ar';
+  const text = ar ? [`🔐 <b>نسختك الاحتياطية بالملف ${last ? 'قديمة' : 'لم تُعمل بعد'}</b>`, last ? `آخر ملف نزّلته كان منذ ${days} يوماً.` : 'لم تنزّل ملف نسخة احتياطية من محفظتك حتى الآن.', '',
+    'النسخة التلقائية الأسبوعية تحميك من خطأ داخل التطبيق. أما الملف المشفّر فهو النسخة الوحيدة خارج حسابك.', 'من التطبيق: الإعدادات ← النسخ الاحتياطي ← انسخ الآن.']
+    : [`🔐 <b>Your backup file is ${last ? 'getting old' : 'not made yet'}</b>`, last ? `The last file you downloaded was ${days} days ago.` : 'You have not downloaded a backup file of your portfolio yet.', '',
+      'The weekly automatic copy covers a mistake inside the app. The encrypted file is the only copy outside your account.', 'In the app: Settings → Backup → Back up now.'];
+  const r = await send(env, { text: text.join('\n'), buttons: [[{ text: WD[L].report, web_app: { url: APP + 'index.html' } }]] });
+  if (!r || r.ok !== false) await kvPut(env, K(env, 'bk:rem'), String(now));
+  return { sent: 1 };
+}
 export async function zakatAlert(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null); if (!user) return { sent: 0 };
   const w0 = zakatWhen(now, user.meta && user.meta.zakatDay); if (!w0) return { sent: 0 };
@@ -429,6 +448,9 @@ export async function runDaily(env, now = Date.now()) {
   if (min % 10 === 0) await oneLanguage(env, now).catch(() => {});
   if (lp.hm >= '09:30' && lp.hm < '12:00' && min % 30 === 0 && sent.zk !== lp.date) {   // 🕌 zakat: looked at once a day (the message itself: once a year each)
     await done('zk'); const z = await zakatAlert(env, now).catch(e => { console.log(JSON.stringify({ zakat: 'error', message: String(e && e.message).slice(0, 200) })); return { sent: 0 }; }); if (z.sent) return { job: 'zakat', ...z };
+  }
+  if (lp.hm >= '12:30' && lp.hm < '14:30' && min % 30 === 0 && sent.bk !== lp.date) {   // 🔐 the backup file: looked at once a day (the message: at most once in 30 days)
+    await done('bk'); const b = await backupReminder(env, now).catch(() => ({ sent: 0 })); if (b.sent) return { job: 'backup', ...b };
   }
   if ((c.radar || c.sectors) && min % 15 === 5) {   // 📡 the radar digest: once per slot (up to 2 h late), at :05 / :20 / :35 / :50 — a minute no other job uses
     const slot = DIGEST_AT.find(at => { const late = mins(lp.hm) - mins(at); return late >= 0 && late < 120 && sent['dg' + at] !== lp.date; });

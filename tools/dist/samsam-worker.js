@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 550fd10a7b1563ff
+// sources-hash: 1b9ea147fe5fcbb6
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -4773,6 +4773,33 @@ function zakatFacts(user, m, now) {
   };
   return { w, crypto: crypto2, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto2 >= nisabUsd, cryptoZakat: crypto2 * 0.025, gold: metal("XAU", 85), silver: metal("XAG", 595) };
 }
+async function backupReminder(env, now = Date.now()) {
+  const user = await loadUser(env).catch(() => null);
+  if (!user || !((user.txs || []).length || (user.coins || []).length)) return { sent: 0 };
+  const last = Date.parse(user.meta && user.meta.lastBackupAt) || 0, DAY6 = 864e5;
+  const first = Math.min(now, ...(user.txs || []).map((t) => Date.parse(t.date) || now), ...(user.coins || []).map((c) => Date.parse(c.createdAt || c.updatedAt) || now));
+  const days = last ? Math.floor((now - last) / DAY6) : null;
+  if (last ? days < 30 : now - first < 7 * DAY6) return { sent: 0 };
+  const told = +await kvGet5(env, K(env, "bk:rem")) || 0;
+  if (now - told < 30 * DAY6) return { sent: 0 };
+  const L = await lang(env), ar = L === "ar";
+  const text = ar ? [
+    `\u{1F510} <b>\u0646\u0633\u062E\u062A\u0643 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u0628\u0627\u0644\u0645\u0644\u0641 ${last ? "\u0642\u062F\u064A\u0645\u0629" : "\u0644\u0645 \u062A\u064F\u0639\u0645\u0644 \u0628\u0639\u062F"}</b>`,
+    last ? `\u0622\u062E\u0631 \u0645\u0644\u0641 \u0646\u0632\u0651\u0644\u062A\u0647 \u0643\u0627\u0646 \u0645\u0646\u0630 ${days} \u064A\u0648\u0645\u0627\u064B.` : "\u0644\u0645 \u062A\u0646\u0632\u0651\u0644 \u0645\u0644\u0641 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u0645\u0646 \u0645\u062D\u0641\u0638\u062A\u0643 \u062D\u062A\u0649 \u0627\u0644\u0622\u0646.",
+    "",
+    "\u0627\u0644\u0646\u0633\u062E\u0629 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A\u0629 \u0627\u0644\u0623\u0633\u0628\u0648\u0639\u064A\u0629 \u062A\u062D\u0645\u064A\u0643 \u0645\u0646 \u062E\u0637\u0623 \u062F\u0627\u062E\u0644 \u0627\u0644\u062A\u0637\u0628\u064A\u0642. \u0623\u0645\u0627 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0645\u0634\u0641\u0651\u0631 \u0641\u0647\u0648 \u0627\u0644\u0646\u0633\u062E\u0629 \u0627\u0644\u0648\u062D\u064A\u062F\u0629 \u062E\u0627\u0631\u062C \u062D\u0633\u0627\u0628\u0643.",
+    "\u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A \u2190 \u0627\u0646\u0633\u062E \u0627\u0644\u0622\u0646."
+  ] : [
+    `\u{1F510} <b>Your backup file is ${last ? "getting old" : "not made yet"}</b>`,
+    last ? `The last file you downloaded was ${days} days ago.` : "You have not downloaded a backup file of your portfolio yet.",
+    "",
+    "The weekly automatic copy covers a mistake inside the app. The encrypted file is the only copy outside your account.",
+    "In the app: Settings \u2192 Backup \u2192 Back up now."
+  ];
+  const r = await send(env, { text: text.join("\n"), buttons: [[{ text: WD[L].report, web_app: { url: APP + "index.html" } }]] });
+  if (!r || r.ok !== false) await kvPut5(env, K(env, "bk:rem"), String(now));
+  return { sent: 1 };
+}
 async function zakatAlert(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null);
   if (!user) return { sent: 0 };
@@ -4838,6 +4865,11 @@ async function runDaily(env, now = Date.now()) {
       return { sent: 0 };
     });
     if (z.sent) return { job: "zakat", ...z };
+  }
+  if (lp.hm >= "12:30" && lp.hm < "14:30" && min % 30 === 0 && sent.bk !== lp.date) {
+    await done("bk");
+    const b = await backupReminder(env, now).catch(() => ({ sent: 0 }));
+    if (b.sent) return { job: "backup", ...b };
   }
   if ((c.radar || c.sectors) && min % 15 === 5) {
     const slot = DIGEST_AT.find((at) => {

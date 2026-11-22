@@ -40,7 +40,7 @@ const USER = () => ({
     { sym: 'NOID', name: 'No Id Coin', opening: { qty: 100, avg: 2 } },   // saved without a CoinGecko id, not in the top 500 — like PONS / CYBER
     ...Array.from({ length: MANY }, (_, i) => ({ sym: 'ZZ' + i, cgId: 'zz-coin-' + i, opening: { qty: 1, avg: 1 } }))],
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
-  meta: { ...(globalThis.__zakatDay ? { zakatDay: globalThis.__zakatDay } : {}), alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
+  meta: { ...(globalThis.__zakatDay ? { zakatDay: globalThis.__zakatDay } : {}), ...(globalThis.__lastBackupAt === null ? {} : { lastBackupAt: globalThis.__lastBackupAt || new Date().toISOString() }), alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
 const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = [], pinWrites = [], accessWrites = [], tglinkWrites = []; let TGLINK = null, TGLINK_UID = 'UID2'; let OWNER_PIN = 'UID1', ACCOUNTS = ['UID1']; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
@@ -1564,6 +1564,27 @@ if (process.env.DUMP_TEXTS) fs.writeFileSync(process.env.DUMP_TEXTS, JSON.string
   globalThis.__signins = null;
   r = await LEAVE('zed@x.com', 'UIDZ');
   check('…asking again (already gone) → still fine, nothing to remove', r.status === 200 && (await r.json()).member === false);
+}
+
+// 🔐 the backup file: one reminder when the last file is over 30 days old (or never made, portfolio over a week old),
+// then quiet for 30 days
+{
+  const bmsg = () => sent.filter(x => x.m === 'sendMessage' && /🔐/.test(x.b.text || '') && String(x.b.chat_id) === '555');
+  const again = () => { const d = JSON.parse(kvStore.get('tg:555:daily:sent') || '{}'); delete d.bk; kvStore.set('tg:555:daily:sent', JSON.stringify(d)); kvStore.delete('fs:pf:UID1'); };
+  const at = RIYADH('13:00'); kvStore.delete('tg:555:bk:rem');
+  again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  check('🔐 a backup file made lately → no reminder', bmsg().length === 0, bmsg().map(x => x.b.text));
+  globalThis.__lastBackupAt = new Date(Date.now() - 41 * 864e5).toISOString(); again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  check('🔐 the last file is 41 days old → one reminder: how old, why the file matters, where the button is, and a button to the app', bmsg().length === 1 && /41 days ago/.test(bmsg()[0].b.text) && /only copy outside your account/.test(bmsg()[0].b.text) && /Settings → Backup → Back up now/.test(bmsg()[0].b.text) && btns(bmsg()[0]).length === 1, bmsg().map(x => x.b.text));
+  again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at + 30 * 60e3);
+  check('…and not again (quiet for 30 days)', bmsg().length === 0);
+  kvStore.set('tg:555:bk:rem', String(Date.now() - 31 * 864e5)); again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  check('…31 days later, still no new file → one more', bmsg().length === 1);
+  kvStore.delete('tg:555:bk:rem'); globalThis.__lastBackupAt = null; const cu = COIN_UPD; COIN_UPD = new Date(Date.now() - 2 * 864e5).toISOString(); again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  check('🔐 never backed up, but the portfolio is 2 days old → not yet', bmsg().length === 0, bmsg().map(x => x.b.text));
+  COIN_UPD = new Date(Date.now() - 20 * 864e5).toISOString(); again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  check('🔐 never backed up and the portfolio is 20 days old → "not made yet"', bmsg().length === 1 && /not made yet/.test(bmsg()[0].b.text), bmsg().map(x => x.b.text));
+  COIN_UPD = cu; globalThis.__lastBackupAt = undefined; kvStore.delete('tg:555:bk:rem'); again(); sent.length = 0;
 }
 
 // /link with no code → a fixed "how to link" answer, never an AI question
