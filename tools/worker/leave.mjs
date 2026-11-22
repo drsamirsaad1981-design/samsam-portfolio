@@ -3,11 +3,11 @@
 // The app first deletes every document of the portfolio itself (it is the member's own data, and the rules let only them
 // do it), then calls this with its sign-in: the bot forgets everything it keeps for that person — the member record (not
 // kept for "restore": this is their own wish, so it is final), the chat's alerts / memory / settings / Claude key, the
-// read-only exchange keys, the portfolio cache — and their e-mail leaves the app's access list, so the account can no
-// longer sign in. Coming back needs a new invitation. The owner is told (name only matters to him); the owner's own
+// read-only exchange keys, the portfolio cache — and their e-mail leaves the app's access list, and the sign-in itself is deleted
+// (deleteSignIn), so nothing of the account is left. Coming back needs a new invitation. The owner is told (name only matters to him); the owner's own
 // account can never be deleted here. The log of Stars payments (tg:stars:log — a financial record) stays, as the privacy page says.
 import { members, accessEmails, forgetChat, isTgChat, removeMember } from './who.mjs';
-import { syncAccess, forgetPortfolio } from './data.mjs';
+import { syncAccess, forgetPortfolio, deleteSignIn } from './data.mjs';
 
 const kdel = async (env, k) => { try { if (env.RATE) await env.RATE.delete(k); } catch (_) {} };
 const tg = async (env, body) => { try { await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); } catch (_) {} };
@@ -32,5 +32,6 @@ export async function leaveHandler(env, who, body) {
     let ol = null; try { ol = env.RATE && await env.RATE.get(`tg:${env.TELEGRAM_CHAT_ID}:lang`); } catch (_) {}
     await tg(env, { chat_id: env.TELEGRAM_CHAT_ID, parse_mode: 'HTML', text: ol === 'ar' ? `🗑 <b>عضو حذف حسابه بنفسه</b>\n${esc(name)}${hit ? '' : ' (لم يكن في قائمة الأعضاء)'}\nحُذفت بياناته من التطبيق والبوت، وخرج بريده من قائمة الدخول.` : `🗑 <b>A member deleted their own account</b>\n${esc(name)}${hit ? '' : ' (was not in the members list)'}\nTheir data is gone from the app and the bot, and their e-mail left the access list.` });
   }
-  return { ok: true, member: !!hit };
+  const signin = await deleteSignIn(env, who.uid).catch(() => false);   // the sign-in itself (the app then only signs out)
+  return { ok: true, member: !!hit, signin };
 }

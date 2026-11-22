@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 28a7783ab3c31103
+// sources-hash: c3434ae71d234e16
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1747,6 +1747,19 @@ async function customTokenFor(env, uid) {
     return null;
   }
 }
+async function deleteSignIn(env, uid) {
+  idTok.delete(uid);
+  const t = await idTokenFor(env, uid);
+  idTok.delete(uid);
+  if (!t) return false;
+  try {
+    const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:delete?key=" + WEB_KEY, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idToken: t }) });
+    if (!r.ok) console.log(JSON.stringify({ signin: "not deleted", status: r.status }));
+    return r.ok;
+  } catch (_) {
+    return false;
+  }
+}
 async function idTokenFor(env, uid) {
   const sa = serviceAccount(env);
   if (!sa || !uid) return null;
@@ -2404,7 +2417,8 @@ ${esc2(name)}${hit ? "" : " (\u0644\u0645 \u064A\u0643\u0646 \u0641\u064A \u0642
 ${esc2(name)}${hit ? "" : " (was not in the members list)"}
 Their data is gone from the app and the bot, and their e-mail left the access list.` });
   }
-  return { ok: true, member: !!hit };
+  const signin = await deleteSignIn(env, who.uid).catch(() => false);
+  return { ok: true, member: !!hit, signin };
 }
 
 // tools/worker/stars.mjs

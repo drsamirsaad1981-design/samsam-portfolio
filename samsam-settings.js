@@ -158,7 +158,7 @@
           if (String(word == null ? '' : word).trim().toUpperCase() !== 'DELETE') { if (word != null && word !== false) D.alert('Nothing was deleted.', { title: T, icon: 'trash' }); return; }
           close();
           var box = doc.createElement('div'); box.id = 'cpGone';
-          box.style.cssText = 'position:fixed;inset:0;z-index:100300;background:var(--bg,#0b1020);color:var(--fg,#e5e7eb);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;font:600 1rem system-ui,sans-serif';
+          box.style.cssText = 'position:fixed;inset:0;z-index:100300;background:var(--bg,#0b1020);color:var(--fg,#e5e7eb);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;font-weight:600;font-size:1rem';
           box.innerHTML = '<div id="cpGoneT">Deleting your data…</div><div id="cpGoneS" style="font-weight:400;font-size:.88rem;color:var(--fg2,#94a3b8);max-width:420px"></div>';
           doc.body.appendChild(box);
           return s.deleteAccount().then(function (r) {

@@ -406,6 +406,18 @@ export async function customTokenFor(env, uid) {
     return body + '.' + b64url(sig);
   } catch (e) { console.log(JSON.stringify({ customtoken: 'failed', msg: String(e && e.message).slice(0, 100) })); return null; }
 }
+// 🗑 Delete my account (leave.mjs): the sign-in itself is deleted. Firebase only deletes with a FRESH sign-in, and the
+// member's own may be days old — so a new one is made here for that account (as idTokenFor does), used once, to delete it.
+export async function deleteSignIn(env, uid) {
+  idTok.delete(uid);
+  const t = await idTokenFor(env, uid); idTok.delete(uid);
+  if (!t) return false;
+  try {
+    const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:delete?key=' + WEB_KEY, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken: t }) });
+    if (!r.ok) console.log(JSON.stringify({ signin: 'not deleted', status: r.status }));
+    return r.ok;
+  } catch (_) { return false; }
+}
 export async function idTokenFor(env, uid) {
   const sa = serviceAccount(env); if (!sa || !uid) return null;
   const c = idTok.get(uid); if (c && c.until > Date.now()) return c.t;

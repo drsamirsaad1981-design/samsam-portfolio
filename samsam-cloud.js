@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611222213';
-import * as Hist from './samsam-history.js?v=202611222213';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611222213';
+import * as Core from './samsam-core.js?v=202611222229';
+import * as Hist from './samsam-history.js?v=202611222229';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611222229';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -1440,15 +1440,14 @@ async function deleteAccount(onStep = () => {}) {
     for (let i = 0; i < refs.length; i += 400) { const b = fs.writeBatch(db); refs.slice(i, i + 400).forEach(r => b.delete(r)); await b.commit(); n += Math.min(400, refs.length - i); }
   }
   onStep('bot');
-  let bot = false;
+  let bot = false, signin = false;
   try {
     const r = await fetch(LEAVE_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken: token, confirm: 'DELETE' }) });
-    bot = r.ok;
+    bot = r.ok; if (bot) { const j = await r.json().catch(() => ({})); signin = !!(j && j.signin); }   // the Worker deletes the sign-in too (it can make the fresh sign-in Firebase asks for)
   } catch (_) {}
   onStep('signin');
-  let signin = false;
-  try { if (au.deleteUser) { await au.deleteUser(user); signin = true; } } catch (_) {}
-  if (!signin) { try { await au.signOut(auth); } catch (_) {} }
+  if (!signin) { try { if (au.deleteUser) { await au.deleteUser(user); signin = true; } } catch (_) {} }
+  try { await au.signOut(auth); } catch (_) {}
   try { await fs.terminate(db); await fs.clearIndexedDbPersistence(db); } catch (_) {}
   try { localStorage.removeItem(PRICE_KEY); } catch (_) {}
   return { docs: n, bot, signin };
