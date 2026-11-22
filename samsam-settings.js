@@ -79,6 +79,8 @@
   }
   function untilTxt(ms) { return new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
   var ACT = {
+    // 🛡 the privacy & terms page (the public one, in the app's language) opens beside the app
+    privacy: function () { window.open('welcome/privacy' + (window.CPLang && CPLang.lang === 'ar' ? '' : '-en') + '.html', '_blank', 'noopener'); },
     guide: function () {   // 📘 the guide (loaded only when opened)
       if (window.SamsamGuide) { SamsamGuide.open(); return; }
       var me = doc.querySelector('script[src*="samsam-settings.js"]'), v = me && (me.getAttribute('src').split('?')[1] || '');
@@ -220,6 +222,7 @@
       if (k === 'claudekey') return memberSt && memberSt.has ? '🔑 Set (…' + memberSt.tail + ') · 100 questions & 10 reports a day — on your Claude bill' : 'Optional · your own key = 100 questions & 10 reports a day';
       if (k === 'aiinfo') { var qq = memberSt && memberSt.questions, rr = memberSt && memberSt.reports; return qq ? (memberSt.has ? '🔑 Your own key · ' : memberSt.premium ? '⭐ Premium · ' : '') + 'Today: 🧠 ' + qq.used + '/' + qq.limit + ' questions · 📊 ' + (rr ? rr.used + '/' + rr.limit : '0/0') + ' quick reports' : 'Why there are limits · free ways · more'; }
       if (k === 'guide') return 'How the app and the bot work · English / العربية';
+      if (k === 'privacy') return 'What we keep, who can see it, how to delete it';
       if (k === 'dca') { var n2 = (st.accumPlan || []).filter(function (x) { return x.dca && x.dca.usd > 0; }).length; return n2 ? n2 + ' coin' + (n2 === 1 ? '' : 's') + ' with a regular buy' : 'None yet'; }
     } catch (_) {}
     return '';
@@ -254,7 +257,7 @@
       { seg: 'view', title: 'Lists shown as', opts: [['cards', 'Cards'], ['table', 'Table']], get: function () { return get(phone() ? K.viewPhone : K.view, 'cards') === 'table' ? 'table' : 'cards'; },
         set: function (v) { put(phone() ? K.viewPhone : K.view, v); put(K.exitView, v); if (window.applyView) applyView(v); } },
     ]],
-    ['About', [['guide', 'book', 'Guide', 'guide'], ['install', 'download', 'Install the app', 'install'], ['version', 'sparkles', 'Version', null]]],
+    ['About', [['guide', 'book', 'Guide', 'guide'], ['privacy', 'shield', 'Privacy & terms', 'privacy'], ['install', 'download', 'Install the app', 'install'], ['version', 'sparkles', 'Version', null]]],
   ];
   var CSS =
     '#cpSet{position:fixed;inset:0;z-index:99994;background:rgba(2,6,23,.55);display:flex;align-items:flex-end;justify-content:center}' +
@@ -322,7 +325,7 @@
   function mark(k) { try { history.replaceState(Object.assign({}, history.state, { cpSet: k }), '', location.href); } catch (_) {} }
   function push(k) { try { history.pushState(Object.assign({}, history.state, { cpSet: k }), '', location.href); } catch (_) {} }
   function run(act) {
-    var keep = act === 'backup' || act === 'install' || act === 'tgchan' || act === 'tggroup';   // these stay on Settings
+    var keep = act === 'backup' || act === 'install' || act === 'privacy' || act === 'tgchan' || act === 'tggroup';   // these stay on Settings
     if (keep) { ACT[act](); setTimeout(draw, 1500); return; }
     close(true);
     var page = act === 'exit' || act === 'dca' || (!onMain() && !OPENS[act]);

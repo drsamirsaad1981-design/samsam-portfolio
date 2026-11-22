@@ -307,7 +307,7 @@
     'It is sent once, checked with Claude, then kept encrypted — nobody can see it again. Remove it any time.': 'يُرسل مرة واحدة ويُتحقق منه مع Claude، ثم يُحفظ مشفّراً — لا يمكن لأحد رؤيته مرة أخرى. يمكنك إزالته في أي وقت.',
     'Admin': 'الإدارة', 'Admin dashboard': 'لوحة الإدارة', 'Support': 'الدعم', 'Support Cute Portfolio & Channel 💛': 'ادعم Cute Portfolio والقناة 💛',
     'Display': 'العرض', 'Language': 'اللغة', 'Theme': 'المظهر', 'Light': 'فاتح', 'Dark': 'داكن', 'Charts open on': 'الرسوم تفتح على', 'Lists shown as': 'عرض القوائم كـ',
-    'About': 'حول', 'Guide': 'الدليل', 'How the app and the bot work · English / العربية': 'كيف يعمل التطبيق والبوت · English / العربية',
+    'About': 'حول', 'Privacy & terms': 'الخصوصية والشروط', 'What we keep, who can see it, how to delete it': 'ما نحفظه، ومن يراه، وكيف تحذفه', 'Guide': 'الدليل', 'How the app and the bot work · English / العربية': 'كيف يعمل التطبيق والبوت · English / العربية',
     'Install the app': 'تثبيت التطبيق', 'Browser menu → Install app': 'قائمة المتصفح ← تثبيت التطبيق', 'Add it to your home screen — opens like an app': 'أضفه إلى الشاشة الرئيسية — يفتح كتطبيق',
     'On your home screen': 'على الشاشة الرئيسية', '· works offline': '· يعمل دون إنترنت', 'Safari: Share → Add to Home Screen': 'Safari: مشاركة ← إضافة للشاشة الرئيسية',
     'Cute Portfolio is already on your home screen — it opens like an app, also without internet (with your last numbers).': 'Cute Portfolio موجود بالفعل على الشاشة الرئيسية — يفتح كتطبيق، وكذلك دون إنترنت (بآخر أرقامك).',
