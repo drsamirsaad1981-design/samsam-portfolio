@@ -460,6 +460,7 @@ function renderHeader() {
     }
   }
 
+  try { if (window.SamsamCash) SamsamCash.render(total); } catch (e) { console.warn('[cash]', e); }   // 🏦 Cash & certificates + 💼 Net worth (never part of the totals above)
   renderBtcTicker();
 }
 

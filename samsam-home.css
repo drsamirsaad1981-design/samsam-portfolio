@@ -112,6 +112,21 @@
   .stat-metals .mt-pl { text-align: end; font-weight: 600; }
   .stat-metals .mt-px { grid-column: 1 / -1; opacity: .75; font-size: .74rem; }
   .stat-metals .mt-row b { font-weight: 600; }
+  /* 🏦 Cash & certificates (the same full-width card as the metals) and the 💼 Net worth line above it */
+  .stat-cash .ch-add { border: 0; background: transparent; cursor: pointer; font-family: inherit; padding: 2px 0; }
+  .stat-cash .ch-rate { font-size: .74rem; opacity: .75; margin: 2px 0 6px; }
+  .stat-cash .ch-warn { color: #f59e0b; opacity: 1; }
+  .stat-cash .ch-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 28px; width: 100%; }
+  .stat-cash button.ch-row { display: grid; grid-template-columns: 1fr auto auto; gap: 2px 8px; align-items: baseline; width: 100%; padding: 7px 0; background: transparent; border: 0; border-top: 1px solid rgba(148,163,184,.15); color: inherit; font: inherit; font-size: .8rem; text-align: start; cursor: pointer; }
+  .stat-cash .ch-main b { font-weight: 700; }
+  .stat-cash .ch-tag { font-style: normal; font-size: .66rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: rgba(96,165,250,.16); color: #60a5fa; }
+  .stat-cash .ch-usd { font-weight: 600; opacity: .85; white-space: nowrap; }
+  .stat-cash .ch-sub { grid-column: 1 / -1; opacity: .75; font-size: .74rem; line-height: 1.5; }
+  .stat-cash .ch-due { color: #f59e0b; }
+  .nw-line { margin-top: 12px; width: 100%; box-sizing: border-box; text-align: center; font-size: .9rem; line-height: 1.5; color: var(--fg); }
+  .nw-line b { font-size: 1.05rem; font-weight: 800; }
+  .nw-line span { color: var(--fg2); font-size: .78rem; display: inline-block; }
+  .nw-line[hidden] { display: none !important; }
 
   .stat-card {
     background: rgba(255,255,255,0.04);

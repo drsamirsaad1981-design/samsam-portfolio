@@ -358,6 +358,7 @@
     },
     day: day,
     stocks: snapPart('stocks'),   // 📈 Binance bStocks (tokenized US stocks), from the GitHub snapshot
+    fx: snapPart('fx'),   // 💱 how many EGP / SAR one US dollar buys (official rate, Yahoo Finance), from the snapshot — Cash & certificates
     metals: snapPart('metals'),   // 🥇 gold, silver, platinum, copper, Brent (Yahoo Finance futures), from the snapshot
     // 7-day change; older saved rows don't have it → from the 7-day line
     ch7: function (c) { if (c.ch7 != null) return c.ch7; var s = c.spark || []; return s.length > 1 && s[0] > 0 ? (s[s.length - 1] / s[0] - 1) * 100 : null; },

@@ -619,3 +619,62 @@ export function zakatWhen(now = Date.now(), day = ZAKAT_DAY) {
   if (zkMemo.size > 50) zkMemo.clear(); zkMemo.set(key, out);
   return out;
 }
+
+// ── 🏦 Cash & certificates: bank balances and investment certificates, in US dollars, Egyptian pounds or Saudi riyals ──
+// Entered by hand (never a bank connection, never an account number): { id, kind: 'cash' | 'cert', cur, amount, label }
+// and, for a certificate, { rate (% a year), start (YYYY-MM-DD), months (its term), pay: how the return is paid }.
+// Their value is counted in "Net worth" only — the portfolio's own totals and profit are never mixed with them.
+export const CASH_CURS = ['USD', 'EGP', 'SAR'];
+export const CASH_PAYS = ['month', 'quarter', 'year', 'end'];   // the return is paid monthly / quarterly / yearly / at maturity
+export function cleanCash(list) {
+  const out = [];
+  for (const x of Array.isArray(list) ? list : []) {
+    if (!x || typeof x !== 'object' || out.length >= 40) continue;
+    const cur = CASH_CURS.includes(x.cur) ? x.cur : null, amount = +x.amount;
+    if (!cur || !(amount > 0) || !Number.isFinite(amount) || amount > 1e13) continue;
+    const it = { id: String(x.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || ('c' + out.length + Math.round(amount)), kind: x.kind === 'cert' ? 'cert' : 'cash', cur,
+      amount: Math.round(amount * 100) / 100, label: String(x.label == null ? '' : x.label).replace(/[<>"'`\\]/g, '').trim().slice(0, 40) };
+    if (it.kind === 'cert') {
+      const rate = +x.rate, mo = Math.round(+x.months);
+      it.rate = rate >= 0 && rate <= 100 ? Math.round(rate * 1000) / 1000 : 0;
+      it.start = /^\d{4}-\d\d-\d\d$/.test(x.start || '') && Date.parse(x.start + 'T00:00:00Z') > 0 ? x.start : null;
+      it.months = mo >= 1 && mo <= 600 ? mo : null;
+      it.pay = CASH_PAYS.includes(x.pay) ? x.pay : 'month';
+    }
+    out.push(it);
+  }
+  return out;
+}
+const addMonthsUtc = (ms, n) => { const d = new Date(ms), day = d.getUTCDate(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + n); d.setUTCDate(Math.min(day, new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate())); return d.getTime(); };
+// One entry, worked out. fx = how many units of each currency one US dollar buys: { EGP: 54.37, SAR: 3.75 } (USD is 1).
+// A certificate: simple interest (rate × days / 365). Paid at maturity → the return builds up inside the certificate until
+// then and is part of its value; paid monthly / quarterly / yearly → each payment goes to your account (a balance you
+// enter yourself), so the certificate stays worth what you put in — as the bank's own statement shows it.
+// → { ...item, value (its currency), accrued, usd | null (no rate for that currency yet), yearly, income (per payment),
+//     maturity ('YYYY-MM-DD' | null), daysLeft, matured }
+export function cashFacts(item, fx, now = Date.now()) {
+  const it = cleanCash([item])[0]; if (!it) return null;
+  const DAY = 864e5, per1 = it.cur === 'USD' ? 1 : fx && +fx[it.cur] > 0 ? +fx[it.cur] : null;
+  let accrued = 0, yearly = 0, income = null, maturity = null, daysLeft = null, matured = false;
+  if (it.kind === 'cert') {
+    yearly = it.amount * it.rate / 100;
+    const step = { month: 1, quarter: 3, year: 12 }[it.pay] || 0;
+    income = step ? yearly * step / 12 : null;
+    const start = it.start ? Date.parse(it.start + 'T00:00:00Z') : 0, end = start && it.months ? addMonthsUtc(start, it.months) : 0;
+    if (end) { maturity = new Date(end).toISOString().slice(0, 10); daysLeft = Math.ceil((end - now) / DAY); matured = now >= end; }
+    if (start && now > start) {
+      if (!step) accrued = Math.max(0, yearly * ((end ? Math.min(now, end) : now) - start) / DAY / 365);
+    }
+  }
+  const value = it.amount + accrued;
+  return { ...it, value, accrued, usd: per1 ? value / per1 : null, yearly, income, maturity, daysLeft, matured };
+}
+// All of them: → { items (cashFacts each), usd (those with a rate), missing: currencies with no rate yet, byCur: { EGP: { value, usd } } }
+export function cashTotals(list, fx, now = Date.now()) {
+  const items = cleanCash(list).map(x => cashFacts(x, fx, now)).filter(Boolean), byCur = {}, missing = new Set(); let usd = 0;
+  for (const x of items) {
+    const b = byCur[x.cur] || (byCur[x.cur] = { value: 0, usd: 0 }); b.value += x.value;
+    if (x.usd == null) missing.add(x.cur); else { b.usd += x.usd; usd += x.usd; }
+  }
+  return { items, usd, missing: [...missing], byCur };
+}

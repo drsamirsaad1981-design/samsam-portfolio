@@ -136,7 +136,7 @@
     '.ac-mbox{display:grid;gap:8px;padding:10px;border:1px solid rgba(234,179,8,.35);border-radius:12px}.ac-mbox[hidden]{display:none}.ac-seg{display:flex;gap:4px;background:rgba(148,163,184,.1);border-radius:10px;padding:3px}.ac-seg button{flex:1;border:0;background:transparent;color:inherit;font:inherit;font-size:.8rem;padding:6px;border-radius:8px;cursor:pointer}.ac-seg button[aria-checked=true]{background:#eab308;color:#111;font-weight:700}' +
     '.ac-chips{display:flex;gap:6px;flex-wrap:wrap}.ac-chips[hidden]{display:none}.ac-chips button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:999px;padding:3px 10px;font:inherit;font-size:.76rem;cursor:pointer}#acVaultLabel{width:100%;box-sizing:border-box}' +
     '.vlt-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 10px}.vlt-list button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:12px;padding:10px;font:inherit;font-size:.86rem;cursor:pointer;text-align:start}.vlt-list button[aria-checked=true]{border-color:#eab308;background:rgba(234,179,8,.15);font-weight:700}#vaultLabel{width:100%;box-sizing:border-box;margin-bottom:10px}' +
-    '.ac-metals{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}.ac-metals button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:999px;padding:4px 10px;font:inherit;font-size:.78rem;cursor:pointer}.ac-metals small{opacity:.6;font-size:.72rem}' +
+    '.ac-metals,.ac-cash{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}.ac-metals button,.ac-cash button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:999px;padding:4px 10px;font:inherit;font-size:.78rem;cursor:pointer}.ac-metals small,.ac-cash small{opacity:.6;font-size:.72rem}' +
     '.cat-reset{display:block;margin:0 0 10px;padding:0;border:none;background:none;color:#60a5fa;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer}.cat-reset[hidden]{display:none}';
 
   var HTML_COIN =
@@ -148,7 +148,8 @@
           '<input type="text" id="acSym" placeholder="e.g. XRP or Ripple" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acSuggest"' +
           ' oninput="this.value=this.value.toUpperCase().replace(/\\s+/g,\' \').trimStart(); acSearchInput()" onkeydown="acSearchKey(event)">' +
           '<ul class="ac-suggest" id="acSuggest" role="listbox" hidden></ul><div class="ac-linked" id="acLinked" hidden></div>' +
-          '<div class="ac-metals"><button type="button" onclick="acMetal(\'XAU\')">🥇 Gold 24k</button><button type="button" onclick="acMetal(\'XAG\')">🥈 Silver</button><small>held in grams</small></div></div>' +
+          '<div class="ac-metals"><button type="button" onclick="acMetal(\'XAU\')">🥇 Gold 24k</button><button type="button" onclick="acMetal(\'XAG\')">🥈 Silver</button><small>held in grams</small></div>' +
+          '<div class="ac-cash"><button type="button" data-cash-add onclick="closeAddCoin()">🏦 Cash or a certificate</button><small>bank balance · USD, EGP, SAR</small></div></div>' +
         '<div class="ac-full ac-mbox" id="acMetalBox" hidden>' +
           '<div class="ac-seg" role="radiogroup" aria-label="Amount in"><button type="button" data-u="g" onclick="acSetUnit(\'g\')">⚖️ Grams</button><button type="button" data-u="oz" onclick="acSetUnit(\'oz\')">🪙 Tokens / oz</button></div>' +
           '<div class="ac-chips" id="acChips"></div>' +

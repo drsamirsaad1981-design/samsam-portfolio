@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611222307';
-import * as Hist from './samsam-history.js?v=202611222307';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611222307';
+import * as Core from './samsam-core.js?v=202611230149';
+import * as Hist from './samsam-history.js?v=202611230149';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611230149';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -918,6 +918,13 @@ const API = {
   getAlerts() { return cleanAlerts(S.meta && S.meta.alerts); },
   getTargets() { return cleanTargets(S.meta && S.meta.targets); },
   getWallets() { return cleanWallets(S.meta && S.meta.wallets); },
+  // 🏦 Cash & certificates (meta/info.cash): bank balances and investment certificates in USD / EGP / SAR, entered by hand.
+  // Counted in "Net worth" only; in every backup and automatic copy.
+  getCash() { return Core.cleanCash(S.meta && S.meta.cash); },
+  setCash(list) {
+    const c = Core.cleanCash(list);
+    return commit((bt, ref) => bt.set(ref('meta', 'info'), { cash: c }, { merge: true }), 'Cash & certificates').then(() => c);
+  },
   // Network & where held of many coins in one cloud write: { SYM: { nets?, at? } } — only for coins you have
   setCoinPlaces(map) {
     const rows = Object.entries(map || {}).filter(([sym]) => S.coins.has(sym)).map(([sym, v]) => {
@@ -1485,7 +1492,7 @@ function downloadJson(obj, name) {
 }
 function stamp() { return new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-'); }
 // Your settings (meta/info) — everything except the setup bookkeeping — and the category names/colours (meta/categories)
-const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'signalCalm', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps', 'wallets'];
+const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'signalCalm', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps', 'wallets', 'cash'];
 function settingsNow() {
   const m = S.meta || {}, info = {};
   for (const k of SETTING_KEYS) if (m[k] !== undefined) info[k] = m[k];
