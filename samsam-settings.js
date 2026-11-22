@@ -186,7 +186,11 @@
     try {
       if (k === 'account') { var u = s.user(); return (u ? u.email || 'Signed in' : 'Not signed in') + (memberSt && memberSt.premium ? ' · ⭐ Premium' : '') + (memberSt && memberSt.supporter ? ' · 💛 Supporter' : '') + (memberSt && memberSt.has ? ' · 🔑 own key' : ''); }
       if (k === 'support') { var m2 = memberSt; return m2 && (m2.premium || m2.supporter) ? (m2.premium ? '⭐ Premium' + (m2.premUntil ? ' until ' + untilTxt(m2.premUntil) : '') + ' · ' : '') + '💛 thank you!' : 'Free & non-profit · optional support · ⭐ Premium'; }
-      if (k === 'backup') { var b = lastBackup(); return '<span' + (b.old ? ' class="st-warn"' : '') + '>Last backup: ' + b.text + '</span>'; }
+      if (k === 'backup') {
+        var b = lastBackup(), ac = s.autoCopies ? s.autoCopies() : [], ad = ac.length ? Math.floor((Date.now() - Date.parse(ac[0].at)) / 864e5) : -1;
+        return '<span' + (b.old ? ' class="st-warn"' : '') + '>Last backup: ' + b.text + '</span>' +
+          '<span class="st-auto">Automatic copy: ' + (ad < 0 ? 'Not yet' : ad <= 0 ? 'Today' : ad === 1 ? 'Yesterday' : ad + ' days ago') + '</span>';
+      }
       if (k === 'alerts') {
         var a = s.getAlerts(), keys = ['brief', 'weekly', 'moves', 'signals', 'plan', 'buy', 'tp', 'macro', 'drift', 'dca', 'sentiment', 'etf', 'health'];
         var on = keys.filter(function (x) { return a[x]; }).length;
@@ -273,7 +277,7 @@
     '#cpSet .st-row.st-static{cursor:default}' +
     '#cpSet .st-ic{width:30px;height:30px;flex:none;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;background:rgba(148,163,184,.12)}#cpSet .st-ic .ss-ic{margin:0}' +
     '#cpSet .st-t{flex:1;min-width:0;display:flex;flex-direction:column}#cpSet .st-t b{font-weight:700;font-size:.92rem}' +
-    '#cpSet .st-t span{font-size:.78rem;color:var(--fg2,#94a3b8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#cpSet .st-warn{color:#f59e0b!important}' +
+    '#cpSet .st-t span{font-size:.78rem;color:var(--fg2,#94a3b8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#cpSet .st-warn{color:#f59e0b!important}#cpSet .st-t .st-auto{display:block}' +
     '#cpSet .st-chev{width:16px;height:16px;flex:none;opacity:.5}' +
     '#cpSet .st-act{flex:none;font-size:.76rem;font-weight:700;padding:6px 10px;border-radius:8px;border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:inherit;cursor:pointer;font-family:inherit}' +
     '#cpSet .st-seg-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--border,rgba(148,163,184,.15))}' +

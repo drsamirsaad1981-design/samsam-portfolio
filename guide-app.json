@@ -470,11 +470,13 @@
    "en": [
     "Your portfolio is saved in the cloud under your account; nobody else can read it.",
     "<b>Backup</b> → <b>Back up now</b> downloads it as a file locked with a password you choose (AES-256).",
+    "<b>Automatic copy</b>: once a week, while you use the app, a copy is also saved inside your account — the last 4 are kept (Recover Data → <b>Automatic copies</b>).",
     "<b>Recover Data</b> compares an older copy (a backup file or the old app's data) with the cloud and lists what's missing — you choose what to add; nothing is replaced."
    ],
    "ar": [
     "تُحفظ محفظتك على السحابة في حسابك؛ ولا يستطيع أحد غيرك قراءتها.",
     "<b>النسخ الاحتياطي</b> ← <b>انسخ الآن</b> ينزّلها كملف مقفل بكلمة مرور تختارها (AES-256).",
+    "<b>النسخة التلقائية</b>: مرة كل أسبوع، وأنت تستخدم التطبيق، تُحفظ نسخة داخل حسابك أيضاً — ويبقى آخر 4 نسخ (استرجاع البيانات ← <b>النسخ التلقائية</b>).",
     "<b>استرجاع البيانات</b> يقارن نسخة أقدم (ملف نسخ احتياطي أو بيانات التطبيق القديم) بالسحابة ويعرض الناقص — وأنت تختار ما تضيفه؛ ولا يُستبدل شيء."
    ],
    "tip": {

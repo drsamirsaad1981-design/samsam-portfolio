@@ -141,7 +141,7 @@
       '<ul><li><b>Today</b>: the change since the last close. <b>7 days</b>: since 5 trading days ago.</li><li><b>1 gram</b> (gold, silver, platinum): the ounce price ÷ 31.1035 g, in US dollars and × 3.75 in Saudi riyals — pure 24k metal, without the shop\'s making charge.</li>' +
       '<li><b>Gold / silver ratio</b>: how many ounces of silver buy one ounce of gold.</li></ul><p>Not financial advice.</p>'; } },
     recover: { title: 'Recover Data', body: function () { return '<p>Compares another copy of your portfolio — data the older app version left on this device, your old JSONBin, or a backup file — with the cloud, coin by coin, and lists the transactions the cloud is missing. You choose what to add; nothing is replaced.</p>'; } },
-    backup: { title: 'Encrypted Backup', body: function () { return '<p>Downloads your whole portfolio as a file locked with a password you choose (AES-256). Keep the password safe: <b>it can\'t be recovered</b>, and without it the file can\'t be opened.</p>'; } },
+    backup: { title: 'Encrypted Backup', body: function () { return '<p>Downloads your whole portfolio as a file locked with a password you choose (AES-256). Keep the password safe: <b>it can\'t be recovered</b>, and without it the file can\'t be opened.</p><p><b>Automatic copy:</b> once a week, while you use the app, a copy of your portfolio is also saved inside your own account — the last 4 are kept. <b>Recover Data → Automatic copies</b> brings back anything missing.</p>'; } },
     vsBtc: {
       title: 'Portfolio vs BTC',
       body: function () {

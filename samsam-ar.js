@@ -28,7 +28,10 @@
   R(/^Live · Updated (.+)$/, function (_, t) { return 'مباشر · آخر تحديث ' + time(t); });
   R(/^Updated (.+)$/, function (_, t) { return 'آخر تحديث ' + (date(t) || (/ago$|^just now$/.test(t) ? CPLang.t(t) : time(t))); });
   R(/^Synced (.+)$/, function (_, t) { return 'تمت المزامنة ' + (date(t) || time(t)); });
-  R(/^Last backup: (.+)$/, function (_, t) { return 'آخر نسخة احتياطية: ' + (t === 'Never' ? 'لا توجد' : (date(t) || (/ago$|^just now$/.test(t) ? CPLang.t(t) : n(t)))); });
+  R(/^Last backup: (.+)$/, function (_, t) { return 'آخر نسخة احتياطية: ' + (t === 'Never' ? 'لا توجد' : t === 'Today' ? 'اليوم' : t === 'Yesterday' ? 'أمس' : (date(t) || (/ago$|^just now$/.test(t) ? CPLang.t(t) : n(t)))); });
+  R(/^Automatic copy: (.+)$/, function (_, t) { return 'النسخة التلقائية: ' + (t === 'Not yet' ? 'لم تُحفظ بعد' : t === 'Today' ? 'اليوم' : t === 'Yesterday' ? 'أمس' : CPLang.t(t)); });
+  R(/^Automatic copy \((.+)\)$/, function (_, t) { return 'نسخة تلقائية (' + (date(t) || t) + ')'; });
+  R(/^(\d+) coins, (\d+) transactions$/, function (_, c, x) { return pl(c, 'عملة واحدة', 'عملتان', 'عملات', 'عملة') + '، ' + pl(x, 'معاملة واحدة', 'معاملتان', 'معاملات', 'معاملة'); });
   R(/^Use the original baseline \((.+)\)$/, function (_, t) { return 'الرجوع لتاريخ الأساس الأصلي (' + (date(t) || t) + ')'; });
   R(/^(\d+) \/ (\d+) targets met$/, function (_, a, b) { return 'تحقق ' + a + ' من ' + b + ' أهداف'; });
   R(/^— \/ — targets met$/, 'الأهداف المحققة: — / —');
@@ -534,7 +537,7 @@
   R(/^(\d+) of (\d+) questions$/, '$1 من $2 سؤال'); R(/^(\d+) of (\d+) quick reports$/, '$1 من $2 تقرير سريع');
   R(/^Today: (.+)$/, function (_, x) { return 'اليوم: ' + x.split(' · ').map(function (p) { return CPLang.t(p); }).join(' · '); });
   R(/^a month ago → (.+)$/, 'قبل شهر ← $1'); R(/^today$/, 'اليوم');
-  R(/^Last backup: (.+)$/, function (_, t) { return 'آخر نسخة احتياطية: ' + (t === 'Never' ? 'لا توجد' : (date(t) || (/ago$|^just now$/.test(t) ? CPLang.t(t) : n(t)))); });
+  R(/^Last backup: (.+)$/, function (_, t) { return 'آخر نسخة احتياطية: ' + (t === 'Never' ? 'لا توجد' : t === 'Today' ? 'اليوم' : t === 'Yesterday' ? 'أمس' : (date(t) || (/ago$|^just now$/.test(t) ? CPLang.t(t) : n(t)))); });
 
   A({
     // ── Market Hub ──
@@ -645,6 +648,9 @@
     // ── Recover ──
     "Find Changes That Didn't Reach the Cloud": 'البحث عن تغييرات لم تصل إلى السحابة', 'Pick a source. This page compares it with your cloud portfolio coin by coin and lists any transactions the cloud is missing.': 'اختر مصدراً. تقارنه هذه الصفحة بمحفظتك على السحابة عملةً عملة، وتعرض أي معاملات ناقصة في السحابة.',
     'Nothing changes until you press “Restore selected”': 'لا يتغير شيء حتى تضغط "استرجاع المحدد"', ', and a backup of the cloud is downloaded first.': '، ويتم أولاً تنزيل نسخة احتياطية من السحابة.',
+    'Automatic copies': 'النسخ التلقائية', 'Compare': 'مقارنة', 'Once a week, while you use the app, a copy of your portfolio is saved inside your own account. The last 4 are kept. Pick one to compare with what you have now.': 'مرة كل أسبوع، وأنت تستخدم التطبيق، تُحفظ نسخة من محفظتك داخل حسابك. ويبقى آخر 4 نسخ. اختر واحدة لمقارنتها بما لديك الآن.',
+    'No automatic copy yet. The first one is saved shortly after you start using the app.': 'لا توجد نسخة تلقائية بعد. تُحفظ أول نسخة بعد قليل من بدء استخدامك للتطبيق.', 'This copy is empty.': 'هذه النسخة فارغة.',
+    'That copy is no longer there.': 'هذه النسخة لم تعد موجودة.', 'This copy is incomplete — pick another one.': 'هذه النسخة غير مكتملة — اختر نسخة أخرى.',
     'This device': 'هذا الجهاز', 'Old cloud (JSONBin)': 'السحابة القديمة (JSONBin)', 'Backup file': 'ملف نسخة احتياطية', 'Data this browser saved with the previous version of the app (kept on this device, encrypted). Run this on': 'بيانات حفظها هذا المتصفح مع الإصدار السابق من التطبيق (محفوظة على هذا الجهاز ومشفّرة). نفّذ هذا على',
     'each': 'كل', 'phone and computer you used.': 'جوال وكمبيوتر استخدمته.', 'Compare this device': 'مقارنة هذا الجهاز', 'The old app saved to JSONBin. Paste your JSONBin': 'كان التطبيق القديم يحفظ في JSONBin. الصق',
     'Master Key': 'Master Key', '(JSONBin dashboard → API Keys). It is used once, only in this browser, and is not saved.': 'الخاص بك (لوحة JSONBin ← API Keys). يُستخدم مرة واحدة في هذا المتصفح فقط ولا يُحفظ.',

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611220058';
-import * as Hist from './samsam-history.js?v=202611220058';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611220058';
+import * as Core from './samsam-core.js?v=202611222127';
+import * as Hist from './samsam-history.js?v=202611222127';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611222127';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -415,6 +415,83 @@ function sealLegacy() {
   SamsamVault.sealKeys(Object.values(LEGACY)).then(n => { if (n) console.info(`[Samsam] encrypted ${n} item(s) of old local data`); })
     .catch(e => { sealDone = false; console.warn('[Samsam] could not encrypt local data', e); });
 }
+// ── Automatic weekly copy ──
+// Once a week, while the app is open, the whole portfolio (coins, transactions, plans, settings) is saved as a copy
+// inside your own account: users/<uid>/snaps/0copy<slot>p<n> (gzip, in parts under Firestore's 1 MB a document — the
+// chart-history listener starts at a date, so it never loads them). The last 4 are kept and listed in meta/info.copies;
+// Recover Data → "Automatic copies" compares any of them with the cloud. An empty portfolio is never copied, so
+// an accidental wipe cannot replace a good copy. It is written quietly: no "Saving…", and a failure waits for next time.
+const COPY = { every: 7 * 864e5, keep: 4, part: 700000, maxParts: 8, wait: 20000 };
+const copyId = (slot, i) => `0copy${slot}p${i}`;
+function copiesNow() {
+  const l = S.meta && Array.isArray(S.meta.copies) ? S.meta.copies : [];
+  return l.filter(c => c && Number.isInteger(c.s) && c.s >= 0 && c.s < COPY.keep && Date.parse(c.at) > 0 && c.parts >= 1)
+    .map(c => ({ s: c.s, at: c.at, coins: +c.coins || 0, txs: +c.txs || 0, parts: +c.parts, gz: !!c.gz })).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+}
+const b64of = bytes => { let t = ''; for (let i = 0; i < bytes.length; i += 0x8000) t += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(t); };
+const bytesOf = b64 => { const t = atob(b64), u = new Uint8Array(t.length); for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); return u; };
+async function packCopy(obj) {
+  const raw = new TextEncoder().encode(JSON.stringify(obj));
+  if (typeof CompressionStream !== 'function') return { gz: false, d: b64of(raw) };
+  const z = await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+  return { gz: true, d: b64of(new Uint8Array(z)) };
+}
+async function unpackCopy(d, gz) {
+  let u = bytesOf(d);
+  if (gz) u = new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+  return JSON.parse(new TextDecoder().decode(u));
+}
+function copyObject() {
+  const d = API.getState();
+  return { app: 'samsam-portfolio', kind: 'auto-copy', exportedAt: new Date().toISOString(), accumPlan: d.accumPlan, settings: settingsNow(),
+    legacy: { coins: d.portfolio.map(c => ({ ...c })), transactions: d.transactions, archivedCoins: d.archivedCoins, customCoins: d.customCoins, accumPlan: d.accumPlan } };
+}
+let copyState = 0;   // 0 not looked at yet · 1 waiting / writing · 2 done for this visit
+function copyDue() {
+  if (!S.user || !allLoaded() || !(S.coins.size || S.txs.size)) return false;
+  const l = copiesNow();
+  return !l.length || Date.now() - Date.parse(l[0].at) >= COPY.every;
+}
+function autoCopy() {
+  if (copyState || !copyDue()) return;
+  copyState = 1;
+  setTimeout(() => { writeCopy().then(ok => { copyState = ok ? 2 : 0; }).catch(e => { copyState = 2; console.warn('[Samsam] automatic copy not saved', e); }); }, typeof window.__copyWait === 'number' ? window.__copyWait : COPY.wait);   // (tests shorten the wait)
+}
+async function writeCopy(force) {
+  if (!force) {
+    if (!copyDue() || S.pending || isEditing()) return false;
+    // one open page writes it, not every tab at once
+    try { const k = 'samsam.copyLock', t = +localStorage.getItem(k) || 0; if (Date.now() - t < 60e3) return false; localStorage.setItem(k, String(Date.now())); } catch (_) {}
+  } else requireUser();
+  const { db, fs } = fb, at = new Date().toISOString(), list = copiesNow();
+  const pk = await packCopy(copyObject()), parts = [];
+  for (let i = 0; i < pk.d.length; i += COPY.part) parts.push(pk.d.slice(i, i + COPY.part));
+  if (!parts.length || parts.length > COPY.maxParts) return false;
+  const used = new Set(list.map(c => c.s));
+  let slot = [...Array(COPY.keep).keys()].find(i => !used.has(i));
+  if (slot == null) slot = list[list.length - 1].s;   // all four used → the oldest is replaced
+  const old = list.find(c => c.s === slot), ref = (...x) => fs.doc(db, ...userPath(...x)), b = fs.writeBatch(db);
+  parts.forEach((d, i) => b.set(ref('snaps', copyId(slot, i)), { copy: 1, at, i, n: parts.length, gz: pk.gz, d }));
+  for (let i = parts.length; i < (old ? old.parts : 0); i++) b.delete(ref('snaps', copyId(slot, i)));
+  const entry = { s: slot, at, coins: S.coins.size, txs: S.txs.size, parts: parts.length, gz: pk.gz };
+  b.set(ref('meta', 'info'), { copies: [entry, ...list.filter(c => c.s !== slot)] }, { merge: true });
+  await b.commit();
+  return true;
+}
+// One saved copy, read back from the server (Recover Data).
+async function readCopy(slot) {
+  requireUser();
+  const c = copiesNow().find(x => x.s === +slot); if (!c) throw new Error('That copy is no longer there.');
+  const { db, fs } = fb, get = fs.getDocFromServer || fs.getDoc; let d = '';
+  for (let i = 0; i < c.parts; i++) {
+    Use.reads(1);
+    const snap = await get(fs.doc(db, ...userPath('snaps', copyId(c.s, i))));
+    const x = snap.exists() ? snap.data() : null;
+    if (!x || x.at !== c.at || typeof x.d !== 'string') throw new Error('This copy is incomplete — pick another one.');
+    d += x.d;
+  }
+  return unpackCopy(d, c.gz);
+}
 // ── One price feed for every open page ──
 // Live prices are saved on the device; when any open page (another tab, or a tab of the app shell)
 // saves fresher ones, every other page takes them at once — the same Total Value everywhere.
@@ -431,6 +508,7 @@ window.addEventListener('storage', e => {
 function emit() {
   setTimeout(syncCategories, 0);
   setTimeout(sealLegacy, 0);
+  setTimeout(autoCopy, 0);
   setTimeout(autoBookStakes, 0);
   if (emitTimer) return;
   emitTimer = setTimeout(() => {
@@ -1057,6 +1135,10 @@ const API = {
   // Settings saved in a backup (recover.html): the ones you tick are put back as they were
   settingsNow: () => settingsNow(),
   lastBackupAt: () => (S.meta && S.meta.lastBackupAt) || null,
+  // the automatic weekly copies kept in your account, newest first: [{ s, at, coins, txs }]
+  autoCopies: () => copiesNow().map(c => ({ s: c.s, at: c.at, coins: c.coins, txs: c.txs })),
+  readAutoCopy: s => readCopy(s),
+  autoCopyNow: () => writeCopy(true),
   restoreSettings({ info = {}, categories } = {}) {
     const d = {}; for (const k of SETTING_KEYS) if (k in info) d[k] = info[k] === undefined ? null : info[k];
     return commit((b, ref) => {

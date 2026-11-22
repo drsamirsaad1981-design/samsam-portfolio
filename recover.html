@@ -18,19 +18,19 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-lang.js?v=202611220058"></script>
-<script src="samsam-ar.js?v=202611220058"></script>
-<script src="samsam-ui.js?v=202611220058"></script>
-<script src="samsam-hints.js?v=202611220058"></script>
-<script src="samsam-arhints.js?v=202611220058"></script>
-<script src="samsam-vault.js?v=202611220058"></script>
-<script src="samsam-labels.js?v=202611220058"></script>
-<script src="samsam-taxonomy.js?v=202611220058"></script>
-<script src="samsam-coins.js?v=202611220058"></script>
-<script src="samsam-import.js?v=202611220058"></script>
-<script src="samsam-wallets.js?v=202611220058"></script>
-<script src="samsam-rewards.js?v=202611220058"></script>
-<script src="samsam-settings.js?v=202611220058"></script>
+<script src="samsam-lang.js?v=202611222127"></script>
+<script src="samsam-ar.js?v=202611222127"></script>
+<script src="samsam-ui.js?v=202611222127"></script>
+<script src="samsam-hints.js?v=202611222127"></script>
+<script src="samsam-arhints.js?v=202611222127"></script>
+<script src="samsam-vault.js?v=202611222127"></script>
+<script src="samsam-labels.js?v=202611222127"></script>
+<script src="samsam-taxonomy.js?v=202611222127"></script>
+<script src="samsam-coins.js?v=202611222127"></script>
+<script src="samsam-import.js?v=202611222127"></script>
+<script src="samsam-wallets.js?v=202611222127"></script>
+<script src="samsam-rewards.js?v=202611222127"></script>
+<script src="samsam-settings.js?v=202611222127"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 :root { --bg:#f5f5f7; --card:#fff; --fg:#1a1a1e; --fg2:#6e6e73; --border:rgba(0,0,0,.08); --accent:#3b82f6; --header-bg:#fff;
@@ -66,6 +66,10 @@ input[type=checkbox] { width:18px; height:18px; accent-color:#2563eb; }
 .sum { position:sticky; bottom:0; background:var(--card); border-top:1px solid var(--border); padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));
   display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap; box-shadow:0 -6px 20px rgba(0,0,0,.15); }
 .sum .txt { font-size:.85rem; font-weight:600; }
+.auto-list { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.auto-list button { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; text-align:start; padding:10px 12px; border-radius:12px;
+  border:1px solid var(--border); background:var(--bg); color:var(--fg); font:inherit; cursor:pointer; }
+.auto-list button:hover { border-color:#3b82f6; } .auto-list button b { font-size:.9rem; } .auto-list button .go { font-size:.8rem; font-weight:700; color:#3b82f6; white-space:nowrap; }
 .hidden { display:none !important; }
 #samsamSyncPill { bottom: calc(84px + env(safe-area-inset-bottom,0px)) !important; }
 body:not(.show-all) tr.same-row { display:none; }
@@ -109,9 +113,14 @@ body:not(.show-all) tr.same-row { display:none; }
     <p>Pick a source. This page compares it with your cloud portfolio coin by coin and lists any transactions the cloud is missing.
       <strong>Nothing changes until you press “Restore selected”</strong>, and a backup of the cloud is downloaded first.</p>
     <div class="src-tabs" role="group" aria-label="Source">
+      <button type="button" data-src="auto" aria-pressed="false">Automatic copies</button>
       <button type="button" data-src="device" aria-pressed="true">This device</button>
       <button type="button" data-src="jsonbin" aria-pressed="false">Old cloud (JSONBin)</button>
       <button type="button" data-src="file" aria-pressed="false">Backup file</button>
+    </div>
+    <div id="srcAuto" class="hidden">
+      <p>Once a week, while you use the app, a copy of your portfolio is saved inside your own account. The last 4 are kept. Pick one to compare with what you have now.</p>
+      <div id="autoList" class="auto-list"></div>
     </div>
     <div id="srcDevice">
       <p>Data this browser saved with the previous version of the app (kept on this device, encrypted). Run this on <strong>each</strong> phone and computer you used.</p>
@@ -163,7 +172,7 @@ body:not(.show-all) tr.same-row { display:none; }
   <button class="btn primary" id="applyBtn">Restore selected</button>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611220058"></script>
+<script type="module" src="samsam-cloud.js?v=202611222127"></script>
 <script>
 const $ = id => document.getElementById(id);
 const LEG = { pf:'samsam_pf_v4', tx:'samsam_tx_v1', custom:'samsam_custom_v1', archived:'samsam_archived_v1', acc:'samsam_acc_v1' };
@@ -334,13 +343,43 @@ $('applyBtn').onclick = async () => {
 };
 
 // ── source pickers ───────────────────────────────────────────────────────────
-document.querySelectorAll('.src-tabs button').forEach(b => b.onclick = () => {
+let tabPicked = false;
+function showTab(k) {
+  const b = document.querySelector(`.src-tabs [data-src="${k}"]`);
   document.querySelectorAll('.src-tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-  $('srcDevice').classList.toggle('hidden', b.dataset.src !== 'device');
-  $('srcJsonbin').classList.toggle('hidden', b.dataset.src !== 'jsonbin');
-  $('srcFile').classList.toggle('hidden', b.dataset.src !== 'file');
+  $('srcAuto').classList.toggle('hidden', k !== 'auto');
+  $('srcDevice').classList.toggle('hidden', k !== 'device');
+  $('srcJsonbin').classList.toggle('hidden', k !== 'jsonbin');
+  $('srcFile').classList.toggle('hidden', k !== 'file');
+  if (k === 'auto') autoList();
   msg('');
+}
+// The weekly copies kept in the account, newest first
+const copyWhen = at => new Date(at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+function autoList() {
+  const l = window.Samsam && Samsam.isReady() && Samsam.autoCopies ? Samsam.autoCopies() : [];
+  $('autoList').innerHTML = l.length ? l.map(c => `<button type="button" data-copy="${c.s}"><span><b>${esc(copyWhen(c.at))}</b><span class="small">${c.coins} coins, ${c.txs} transactions</span></span><span class="go">Compare</span></button>`).join('')
+    : '<p class="small">No automatic copy yet. The first one is saved shortly after you start using the app.</p>';
+}
+$('autoList').onclick = e => {
+  const b = e.target.closest('[data-copy]'); if (!b) return;
+  whenReady(async () => {
+    const c = Samsam.autoCopies().find(x => String(x.s) === b.dataset.copy); if (!c) { autoList(); return; }
+    msg('Loading…');
+    try {
+      const s2 = normalise(await Samsam.readAutoCopy(c.s), 'Automatic copy (' + copyWhen(c.at) + ')');
+      if (!s2.coins.length && !s2.transactions.length) throw new Error('This copy is empty.');
+      src = s2; msg(''); compare();
+    } catch (e2) { msg(SamsamUI.ic('alert') + esc(e2 && e2.message || e2), 'err'); }
+  });
+};
+// An account that has automatic copies opens on them — unless this browser still holds the old app's data, or you picked a tab
+whenReady(async () => {
+  if (!Samsam.autoCopies || !Samsam.autoCopies().length) return;
+  const old = await fromDevice().catch(() => null);
+  if (!old && !tabPicked) showTab('auto');
 });
+document.querySelectorAll('.src-tabs button').forEach(b => b.onclick = () => { tabPicked = true; showTab(b.dataset.src); });
 $('loadDevice').onclick = () => whenReady(async () => {
   const s = await fromDevice();
   if (!s) { msg('This browser has no data saved by the previous version of the app. Try your other device, the old cloud or a backup file.', 'err'); return; }
