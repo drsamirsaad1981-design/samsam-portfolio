@@ -382,7 +382,7 @@ const WORDS = [
   [/^\/?(hide|اخفي|إخفاء|اخفاء)$/i, 'hide'], [/^\/(new|reset|clear)$|^محادثة جديدة$/i, 'new'], [/^\/(forget|delete)$|^امسح بياناتي$/i, 'fg'],
   [/^\/?(alerts|al)$|^التنبيهات$|^تنبيهاتي$/i, 'al'],
   [/^\/(balances|exchanges|cex)$|^أرصدتي$|^المنصات$|^أرصدة المنصات$/i, 'bal'],
-  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, 'cm'], [/^\/community setup$/i, 'cm:setup'], [/^\/community revoke\b/i, 'cm:revoke'], [/^\/community guide$/i, 'cm:guide'], [/^\/announce\s+[\s\S]+$/i, 'ann'], [/^\/xpost(\s+(on|off))?$/i, 'xp'], [/^\/start\s+guide$/i, 'gd'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
+  [/^\/invite$/i, 'inv'], [/^\/(users|members)$/i, 'us'], [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, 'link'], [/^\/link$/i, 'linkhow'], [/^\/app(\s+\S+)?$/i, 'app'], [/^\/(start\s+)?premium$|^المميز$/i, 'prem'], [/^\/(start\s+)?support$|^ادعم$/i, 'sup'], [/^\/stats$/i, 'stats'], [/^\/guide$|^الدليل$|^دليل$/i, 'gd'], [/^\/(community|group|channel)$|^المجتمع$|^الجروب$/i, 'cm'], [/^\/community setup$/i, 'cm:setup'], [/^\/community revoke\b/i, 'cm:revoke'], [/^\/community guide$/i, 'cm:guide'], [/^\/announce\s+[\s\S]+$/i, 'ann'], [/^\/xpost(\s+(on|off))?$/i, 'xp'], [/^\/start\s+guide$/i, 'gd'], [/^\/start\s+\S+$/i, 'menu'], [/^\/(report|app)$|^التقرير$/i, 'rp'], [/^\/(daily|settings)$|^اليومي$/i, 'dy'], [/^\/(paper|practice)$|^تجريبي$/i, 'pp'], [/^\/morning$/i, 'dy:now:m'], [/^\/evening$/i, 'dy:now:e'], [/^\/pin$/i, 'pin:on'], [/^\/unpin$/i, 'pin:off'],
   [/^\/?(lang|language|لغة|اللغة)$/i, 'lang'], [/^(عربي|arabic)$/i, 'lang:ar'], [/^(english|انجليزي|إنجليزي)$/i, 'lang:en'],
   [/^\/?(exit|ex)$|خطة الخروج|الخروج/i, 'ex'],
   [/^\/?(movers|mv|best)$|الأفضل/i, 'mv'], [/^\/?(signals|sg)$|الإشارات/i, 'sg'], [/^\/?(coin|price)$/i, 'coin'],
@@ -906,6 +906,11 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'pp') { await send(env, chat, await viewPaper(env, await getLang(env))); return; }
   if (p.act === 'app') { await appRequest(env, chat, text); return; }
   if (p.act === 'link') { await linkPortfolio(env, chat, text); return; }
+  if (p.act === 'linkhow') {   // /link with no code: how to get one — a fixed answer (never an AI question)
+    const lang = await getLang(env), me = await member(env), ar = lang === 'ar';
+    await send(env, chat, { text: isOwner(env) ? AW[lang].ownerLink : me && me.uid ? (ar ? '🔗 محفظتك مربوطة بالفعل ✅' : '🔗 Your portfolio is already linked ✅') : '🔗 ' + T[lang].noLink + (ar ? '\n\nثم أرسل هنا: <code>/link الرمز</code>' : '\n\nThen send here: <code>/link CODE</code>'), buttons: [[cb(T[lang].back, 'menu')]] });
+    return;
+  }
   if (p.act === 'inv' || p.act === 'us') {   // owner only
     if (!isOwner(env)) { const t = T[await getLang(env)]; await send(env, chat, { text: t.ownerOnly }); return; }
     await send(env, chat, p.act === 'inv' ? await inviteMsg(env, await getLang(env)) : await viewUsers(env, await getLang(env))); return;

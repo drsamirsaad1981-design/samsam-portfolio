@@ -1565,5 +1565,16 @@ if (process.env.DUMP_TEXTS) fs.writeFileSync(process.env.DUMP_TEXTS, JSON.string
   check('…asking again (already gone) → still fine, nothing to remove', r.status === 200 && (await r.json()).member === false);
 }
 
+// /link with no code → a fixed "how to link" answer, never an AI question
+{
+  const mm = JSON.parse(kvStore.get('tg:users')); mm['8888'] = { name: 'Nolink', joined: Date.now() }; mm['8889'] = { name: 'Linked', joined: Date.now(), uid: 'UID2', email: 'l@x.com' }; kvStore.set('tg:users', JSON.stringify(mm));
+  sent.length = 0; claudeCalls.length = 0; await sayAs(8888, '/link');
+  const a1 = sent.filter(m => String(m.b.chat_id) === '8888' && m.m === 'sendMessage');
+  check('/link with no code (not linked) → how to get the code, and "/link CODE" — no AI question used', a1.length === 1 && /isn't linked yet/.test(a1[0].b.text) && /\/link CODE/.test(a1[0].b.text) && claudeCalls.length === 0, [a1.map(m => m.b.text), claudeCalls.length]);
+  sent.length = 0; await sayAs(8889, '/link');
+  check('/link with no code (already linked) → "already linked ✅"', sent.some(m => String(m.b.chat_id) === '8889' && /already linked/.test(m.b.text || '')) && claudeCalls.length === 0, sent.map(m => m.b.text));
+  const m2 = JSON.parse(kvStore.get('tg:users')); delete m2['8888']; delete m2['8889']; kvStore.set('tg:users', JSON.stringify(m2));
+}
+
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: c3434ae71d234e16
+// sources-hash: bb001a4f9651acce
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -6553,6 +6553,7 @@ var WORDS = [
   [/^\/invite$/i, "inv"],
   [/^\/(users|members)$/i, "us"],
   [/^\/(link|start\s+L)\s*[A-Za-z0-9]{8}$/i, "link"],
+  [/^\/link$/i, "linkhow"],
   [/^\/app(\s+\S+)?$/i, "app"],
   [/^\/(start\s+)?premium$|^المميز$/i, "prem"],
   [/^\/(start\s+)?support$|^ادعم$/i, "sup"],
@@ -7468,6 +7469,11 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (p.act === "link") {
     await linkPortfolio(env, chat, text);
+    return;
+  }
+  if (p.act === "linkhow") {
+    const lang2 = await getLang(env), me = await member(env), ar = lang2 === "ar";
+    await send2(env, chat, { text: isOwner(env) ? AW[lang2].ownerLink : me && me.uid ? ar ? "\u{1F517} \u0645\u062D\u0641\u0638\u062A\u0643 \u0645\u0631\u0628\u0648\u0637\u0629 \u0628\u0627\u0644\u0641\u0639\u0644 \u2705" : "\u{1F517} Your portfolio is already linked \u2705" : "\u{1F517} " + T[lang2].noLink + (ar ? "\n\n\u062B\u0645 \u0623\u0631\u0633\u0644 \u0647\u0646\u0627: <code>/link \u0627\u0644\u0631\u0645\u0632</code>" : "\n\nThen send here: <code>/link CODE</code>"), buttons: [[cb3(T[lang2].back, "menu")]] });
     return;
   }
   if (p.act === "inv" || p.act === "us") {
