@@ -639,10 +639,10 @@ async function badgeOf(env, t) {
 // 📱 /app you@example.com — an invited person asks to open the app with that e-mail; the owner taps ✅ (or ❌)
 const AW = {
   en: { ask: 'Send the e-mail you will sign in with, like:\n<code>/app you@example.com</code>\n(Google, or any e-mail with a sign-in link.)', sent: '📨 Sent to Dr. Samir Saad for approval — you\'ll get a message here.', owner: '📱 You already have the app 🙂',
-    req: (n, e) => `📱 <b>${n}</b> asks to open the app with\n<code>${e}</code>`, ok: e => `✅ You can open the app now with <b>${e}</b>:\n${APP}\nThen Settings → Telegram → 🔗 Link your portfolio, to see your portfolio here.`, no: 'Your app request was not approved.',
+    req: (n, e) => `📱 <b>${n}</b> asks to open the app with\n<code>${e}</code>`, ok: (e, t) => `✅ You can open the app now with <b>${e}</b>:\n${APP}${t ? '?for=' + t : ''}\nThen Settings → Telegram → 🔗 Link your portfolio, to see your portfolio here.`, no: 'Your app request was not approved.',
     linked: '🔗 Linked ✅ — your portfolio, plan and exit plan now show here (only to you).', badCode: '❌ That code is not valid or is over 10 minutes old — make a new one in the app (Settings → Telegram → Link your portfolio).', notYou: '❌ That code was made by another e-mail than the one approved for you.', ownerLink: 'Your portfolio is already the bot\'s 🙂' },
   ar: { ask: 'أرسل البريد الإلكتروني الذي ستدخل به، هكذا:\n<code>/app you@example.com</code>\n(حساب Google، أو أي بريد برابط دخول.)', sent: '📨 أُرسل الطلب إلى Dr. Samir Saad للموافقة — سيصلك الرد هنا.', owner: '📱 لديك التطبيق بالفعل 🙂',
-    req: (n, e) => `📱 <b>${n}</b> يريد فتح التطبيق بـ\n<code>${e}</code>`, ok: e => `✅ يمكنك الآن فتح التطبيق بـ <b>${e}</b>:\n${APP}\nثم الإعدادات ← تليجرام ← 🔗 ربط محفظتك ببوت تليجرام لتظهر محفظتك هنا.`, no: 'لم تتم الموافقة على طلب التطبيق.',
+    req: (n, e) => `📱 <b>${n}</b> يريد فتح التطبيق بـ\n<code>${e}</code>`, ok: (e, t) => `✅ يمكنك الآن فتح التطبيق بـ <b>${e}</b>:\n${APP}${t ? '?for=' + t : ''}\nثم الإعدادات ← تليجرام ← 🔗 ربط محفظتك ببوت تليجرام لتظهر محفظتك هنا.`, no: 'لم تتم الموافقة على طلب التطبيق.',
     linked: '🔗 تم الربط ✅ — تظهر الآن محفظتك وخطتك وخطة الخروج هنا (لك وحدك).', badCode: '❌ هذا الرمز غير صالح أو مرّت عليه 10 دقائق — أنشئ رمزاً جديداً من التطبيق (الإعدادات ← تليجرام ← ربط محفظتك ببوت تليجرام).', notYou: '❌ هذا الرمز أُنشئ ببريد غير البريد الذي تمت الموافقة عليه لك.', ownerLink: 'محفظتك هي المربوطة بالبوت بالفعل 🙂' },
 };
 async function appRequest(env, chat, text) {
@@ -654,8 +654,13 @@ async function appRequest(env, chat, text) {
   // the invite was Samir's yes: the app opens for that e-mail at once (he gets a note, and can remove them any time)
   await setMember(env, chat, { email: e }); await clearPending(env, chat);
   const okSync = await syncAccess(env, await accessEmails(env)).catch(() => false);
-  await send(env, chat, { text: okSync ? w.ok(esc(e)) : (lang === 'ar' ? '⚠️ حدثت مشكلة — حاول مرة أخرى بعد دقيقة.' : '⚠️ Something went wrong — try again in a minute.') });
+  await send(env, chat, { text: okSync ? w.ok(esc(e), await forTag(e)) : (lang === 'ar' ? '⚠️ حدثت مشكلة — حاول مرة أخرى بعد دقيقة.' : '⚠️ Something went wrong — try again in a minute.') });
   await asChat(env.TELEGRAM_CHAT_ID, async () => { const L = await getLang(env); await send(env, env.TELEGRAM_CHAT_ID, { text: L === 'ar' ? `📱 <b>${esc(me ? me.name : chat)}</b> فتح التطبيق بـ\n<code>${esc(e)}</code>` : `📱 <b>${esc(me ? me.name : chat)}</b> opened the app with\n<code>${esc(e)}</code>`, buttons: [[cb(L === 'ar' ? '👤 البطاقة' : '👤 Their card', 'us:m:' + chat)]] }); });
+}
+// the app link in "you can open the app now" says which e-mail it is for — as 8 hex of its SHA-256, never the e-mail:
+// the app compares it with whoever is signed in on that browser (samsam-cloud.js forCheck) and warns when it is someone else
+async function forTag(email) {
+  try { const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(email).toLowerCase().trim()))); return [...h.slice(0, 4)].map(b => b.toString(16).padStart(2, '0')).join(''); } catch (_) { return ''; }
 }
 // /link CODE (or the app's "Open the bot" → /start LCODE): this chat now reads that account's portfolio
 async function linkPortfolio(env, chat, text) {
@@ -730,7 +735,7 @@ async function onUpdate(env, u, msg, q, chat) {
         if (d.startsWith('ap:ok:')) {
           await setMember(env, who, { email });
           const okSync = await syncAccess(env, await accessEmails(env)).catch(() => false);
-          await asChat(who, async () => { const L = await getLang(env); await send(env, who, { text: AW[L].ok(esc(email)) }); });
+          await asChat(who, async () => { const L = await getLang(env); await send(env, who, { text: AW[L].ok(esc(email), await forTag(email)) }); });
           await done(okSync ? '✅' : '⚠️ Firestore'); return ok();
         }
         await asChat(who, async () => { const L = await getLang(env); await send(env, who, { text: AW[L].no }); });
@@ -908,7 +913,8 @@ async function onText(env, chat, text, budget = 36, into = null) {
   if (p.act === 'link') { await linkPortfolio(env, chat, text); return; }
   if (p.act === 'linkhow') {   // /link with no code: how to get one — a fixed answer (never an AI question)
     const lang = await getLang(env), me = await member(env), ar = lang === 'ar';
-    await send(env, chat, { text: isOwner(env) ? AW[lang].ownerLink : me && me.uid ? (ar ? '🔗 محفظتك مربوطة بالفعل ✅' : '🔗 Your portfolio is already linked ✅') : '🔗 ' + T[lang].noLink + (ar ? '\n\nثم أرسل هنا: <code>/link الرمز</code>' : '\n\nThen send here: <code>/link CODE</code>'), buttons: [[cb(T[lang].back, 'menu')]] });
+    await send(env, chat, { text: isOwner(env) ? AW[lang].ownerLink : me && me.uid ? (ar ? '🔗 محفظتك مربوطة بالفعل ✅' : '🔗 Your portfolio is already linked ✅') : (ar ? '🔗 <b>محفظتك غير مربوطة بعد.</b>\n1. من التطبيق: الإعدادات ← تليجرام ← 🔗 ربط محفظتك ببوت تليجرام (لا تطبيق بعد؟ أرسل /app مع بريدك).\n2. أرسل الرمز هنا: <code>/link الرمز</code>\n\nوإلى ذلك الحين يعمل السوق وأي عملة والتنبيهات والتداول التجريبي والأسئلة.'
+      : '🔗 <b>Your portfolio isn\'t linked yet.</b>\n1. In the app: Settings → Telegram → 🔗 Link your portfolio (no app yet? send /app with your e-mail).\n2. Send the code here: <code>/link CODE</code>\n\nMeanwhile the market, any coin, alerts, paper trading and questions all work.'), buttons: [[cb(T[lang].back, 'menu')]] });
     return;
   }
   if (p.act === 'inv' || p.act === 'us') {   // owner only

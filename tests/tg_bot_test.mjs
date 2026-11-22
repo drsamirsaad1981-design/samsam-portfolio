@@ -950,6 +950,7 @@ check('…then just the e-mail on its own (as people do) → handled as /app (no
 sent.length = 0; accessWrites.length = 0; await sayAs(777, '/app Ali.Friend@iCloud.com');
 const req = sent.find(x => String(x.b.chat_id) === '555' && /opened the app/.test(x.b.text || ''));
 check('/app ali.friend@icloud.com → an invited member: the app opens for that e-mail at once (config/access), he gets the link, you get a note', accessWrites.length === 1 && JSON.stringify(accessWrites[0]).includes('ali.friend@icloud.com') && sent.some(x => String(x.b.chat_id) === '777' && /drsamirsaad1981-design\.github\.io/.test(x.b.text || '')) && req && /ali\.friend@icloud\.com/.test(req.b.text), sent.map(x => [x.m, x.b.chat_id, (x.b.text || '').slice(0, 40)]));
+check('…the link says which e-mail it is for as 8 hex of its SHA-256 (?for=9762675f) — never the e-mail itself in the link', sent.some(x => String(x.b.chat_id) === '777' && /samsam-portfolio\/\?for=9762675f\n/.test(x.b.text || '') && !/\?for=[^\n]*@/.test(x.b.text)), sent.map(x => x.b.text));
 // (✅ / ❌ buttons stay for old pending requests)
 check('…his record carries the approved e-mail', JSON.parse(kvStore.get('tg:users'))['777'].email === 'ali.friend@icloud.com');
 sent.length = 0; await sayAs(777, '/link ABCDEFGH');

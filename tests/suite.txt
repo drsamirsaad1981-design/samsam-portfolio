@@ -117,6 +117,7 @@ import_test.py
 backup_restore_test.py
 auto_copy_test.py
 delete_account_test.py
+for_account_test.py
 windows_solid_test.py
 menu_same_test.py
 settings_nav_test.py

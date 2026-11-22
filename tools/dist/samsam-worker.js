@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: bb001a4f9651acce
+// sources-hash: 550fd10a7b1563ff
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -6976,8 +6976,8 @@ var AW = {
     owner: "\u{1F4F1} You already have the app \u{1F642}",
     req: (n, e) => `\u{1F4F1} <b>${n}</b> asks to open the app with
 <code>${e}</code>`,
-    ok: (e) => `\u2705 You can open the app now with <b>${e}</b>:
-${APP}
+    ok: (e, t) => `\u2705 You can open the app now with <b>${e}</b>:
+${APP}${t ? "?for=" + t : ""}
 Then Settings \u2192 Telegram \u2192 \u{1F517} Link your portfolio, to see your portfolio here.`,
     no: "Your app request was not approved.",
     linked: "\u{1F517} Linked \u2705 \u2014 your portfolio, plan and exit plan now show here (only to you).",
@@ -6991,8 +6991,8 @@ Then Settings \u2192 Telegram \u2192 \u{1F517} Link your portfolio, to see your 
     owner: "\u{1F4F1} \u0644\u062F\u064A\u0643 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0627\u0644\u0641\u0639\u0644 \u{1F642}",
     req: (n, e) => `\u{1F4F1} <b>${n}</b> \u064A\u0631\u064A\u062F \u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0640
 <code>${e}</code>`,
-    ok: (e) => `\u2705 \u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u0622\u0646 \u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0640 <b>${e}</b>:
-${APP}
+    ok: (e, t) => `\u2705 \u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u0622\u0646 \u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0640 <b>${e}</b>:
+${APP}${t ? "?for=" + t : ""}
 \u062B\u0645 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u{1F517} \u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u0628\u0628\u0648\u062A \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0644\u062A\u0638\u0647\u0631 \u0645\u062D\u0641\u0638\u062A\u0643 \u0647\u0646\u0627.`,
     no: "\u0644\u0645 \u062A\u062A\u0645 \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629 \u0639\u0644\u0649 \u0637\u0644\u0628 \u0627\u0644\u062A\u0637\u0628\u064A\u0642.",
     linked: "\u{1F517} \u062A\u0645 \u0627\u0644\u0631\u0628\u0637 \u2705 \u2014 \u062A\u0638\u0647\u0631 \u0627\u0644\u0622\u0646 \u0645\u062D\u0641\u0638\u062A\u0643 \u0648\u062E\u0637\u062A\u0643 \u0648\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C \u0647\u0646\u0627 (\u0644\u0643 \u0648\u062D\u062F\u0643).",
@@ -7016,13 +7016,21 @@ async function appRequest(env, chat, text) {
   await setMember(env, chat, { email: e });
   await clearPending(env, chat);
   const okSync = await syncAccess(env, await accessEmails(env)).catch(() => false);
-  await send2(env, chat, { text: okSync ? w.ok(esc(e)) : lang2 === "ar" ? "\u26A0\uFE0F \u062D\u062F\u062B\u062A \u0645\u0634\u0643\u0644\u0629 \u2014 \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649 \u0628\u0639\u062F \u062F\u0642\u064A\u0642\u0629." : "\u26A0\uFE0F Something went wrong \u2014 try again in a minute." });
+  await send2(env, chat, { text: okSync ? w.ok(esc(e), await forTag(e)) : lang2 === "ar" ? "\u26A0\uFE0F \u062D\u062F\u062B\u062A \u0645\u0634\u0643\u0644\u0629 \u2014 \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649 \u0628\u0639\u062F \u062F\u0642\u064A\u0642\u0629." : "\u26A0\uFE0F Something went wrong \u2014 try again in a minute." });
   await asChat(env.TELEGRAM_CHAT_ID, async () => {
     const L = await getLang(env);
     await send2(env, env.TELEGRAM_CHAT_ID, { text: L === "ar" ? `\u{1F4F1} <b>${esc(me ? me.name : chat)}</b> \u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0640
 <code>${esc(e)}</code>` : `\u{1F4F1} <b>${esc(me ? me.name : chat)}</b> opened the app with
 <code>${esc(e)}</code>`, buttons: [[cb3(L === "ar" ? "\u{1F464} \u0627\u0644\u0628\u0637\u0627\u0642\u0629" : "\u{1F464} Their card", "us:m:" + chat)]] });
   });
+}
+async function forTag(email) {
+  try {
+    const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(email).toLowerCase().trim())));
+    return [...h.slice(0, 4)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch (_) {
+    return "";
+  }
 }
 async function linkPortfolio(env, chat, text) {
   const lang2 = await getLang(env), w = AW[lang2], code = (/([A-Za-z0-9]{8})\s*$/.exec(text) || [])[1];
@@ -7145,7 +7153,7 @@ async function onUpdate(env, u, msg, q, chat) {
           const okSync = await syncAccess(env, await accessEmails(env)).catch(() => false);
           await asChat(who, async () => {
             const L = await getLang(env);
-            await send2(env, who, { text: AW[L].ok(esc(email)) });
+            await send2(env, who, { text: AW[L].ok(esc(email), await forTag(email)) });
           });
           await done(okSync ? "\u2705" : "\u26A0\uFE0F Firestore");
           return ok();
@@ -7473,7 +7481,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
   }
   if (p.act === "linkhow") {
     const lang2 = await getLang(env), me = await member(env), ar = lang2 === "ar";
-    await send2(env, chat, { text: isOwner(env) ? AW[lang2].ownerLink : me && me.uid ? ar ? "\u{1F517} \u0645\u062D\u0641\u0638\u062A\u0643 \u0645\u0631\u0628\u0648\u0637\u0629 \u0628\u0627\u0644\u0641\u0639\u0644 \u2705" : "\u{1F517} Your portfolio is already linked \u2705" : "\u{1F517} " + T[lang2].noLink + (ar ? "\n\n\u062B\u0645 \u0623\u0631\u0633\u0644 \u0647\u0646\u0627: <code>/link \u0627\u0644\u0631\u0645\u0632</code>" : "\n\nThen send here: <code>/link CODE</code>"), buttons: [[cb3(T[lang2].back, "menu")]] });
+    await send2(env, chat, { text: isOwner(env) ? AW[lang2].ownerLink : me && me.uid ? ar ? "\u{1F517} \u0645\u062D\u0641\u0638\u062A\u0643 \u0645\u0631\u0628\u0648\u0637\u0629 \u0628\u0627\u0644\u0641\u0639\u0644 \u2705" : "\u{1F517} Your portfolio is already linked \u2705" : ar ? "\u{1F517} <b>\u0645\u062D\u0641\u0638\u062A\u0643 \u063A\u064A\u0631 \u0645\u0631\u0628\u0648\u0637\u0629 \u0628\u0639\u062F.</b>\n1. \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u{1F517} \u0631\u0628\u0637 \u0645\u062D\u0641\u0638\u062A\u0643 \u0628\u0628\u0648\u062A \u062A\u0644\u064A\u062C\u0631\u0627\u0645 (\u0644\u0627 \u062A\u0637\u0628\u064A\u0642 \u0628\u0639\u062F\u061F \u0623\u0631\u0633\u0644 /app \u0645\u0639 \u0628\u0631\u064A\u062F\u0643).\n2. \u0623\u0631\u0633\u0644 \u0627\u0644\u0631\u0645\u0632 \u0647\u0646\u0627: <code>/link \u0627\u0644\u0631\u0645\u0632</code>\n\n\u0648\u0625\u0644\u0649 \u0630\u0644\u0643 \u0627\u0644\u062D\u064A\u0646 \u064A\u0639\u0645\u0644 \u0627\u0644\u0633\u0648\u0642 \u0648\u0623\u064A \u0639\u0645\u0644\u0629 \u0648\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0648\u0627\u0644\u062A\u062F\u0627\u0648\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A \u0648\u0627\u0644\u0623\u0633\u0626\u0644\u0629." : "\u{1F517} <b>Your portfolio isn't linked yet.</b>\n1. In the app: Settings \u2192 Telegram \u2192 \u{1F517} Link your portfolio (no app yet? send /app with your e-mail).\n2. Send the code here: <code>/link CODE</code>\n\nMeanwhile the market, any coin, alerts, paper trading and questions all work.", buttons: [[cb3(T[lang2].back, "menu")]] });
     return;
   }
   if (p.act === "inv" || p.act === "us") {

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611222255';
-import * as Hist from './samsam-history.js?v=202611222255';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611222255';
+import * as Core from './samsam-core.js?v=202611222307';
+import * as Hist from './samsam-history.js?v=202611222307';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611222307';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -630,6 +630,10 @@ const TG_WHY = {
   try {
     const u = new URL(location.href), c = (u.searchParams.get('invite') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (c.length === 8) { localStorage.setItem('cp-invite', c); u.searchParams.delete('invite'); history.replaceState(null, '', u.pathname + (u.search || '') + u.hash); }
+    // 📱 the bot's "you can open the app now with <e-mail>" link carries ?for=<8 hex of that e-mail's SHA-256> (never the
+    // e-mail itself): kept for this visit, compared after sign-in (forCheck) — a browser signed in as someone else is told
+    const f = (u.searchParams.get('for') || '').toLowerCase();
+    if (/^[0-9a-f]{8}$/.test(f)) { sessionStorage.setItem('cp-for', f); u.searchParams.delete('for'); history.replaceState(null, '', u.pathname + (u.search || '') + u.hash); }
   } catch (_) {}
 })();
 const pendingInvite = () => { try { return localStorage.getItem('cp-invite') || ''; } catch (_) { return ''; } };
@@ -710,6 +714,17 @@ const Use = (() => {
 })();
 try { Use.hit('page:' + ((location.pathname.split('/').pop() || 'index.html').replace(/\.html$/, '') || 'index')); } catch (_) {}
 
+// The link was sent for one e-mail and this browser is signed in with another (one phone, two accounts): say so, once,
+// and offer to switch — otherwise the person looks at the wrong portfolio and thinks it is the new account's.
+async function forCheck(user) {
+  let tag = ''; try { tag = sessionStorage.getItem('cp-for') || ''; sessionStorage.removeItem('cp-for'); } catch (_) {}
+  if (!tag || !user || !user.email || tgInit() || !(window.crypto && crypto.subtle)) return;
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(user.email).toLowerCase().trim())));
+  const mine = [...h.slice(0, 4)].map(b => b.toString(16).padStart(2, '0')).join('');
+  if (mine === tag || !window.CPDialog) return;
+  const go = await CPDialog.confirm(`You are signed in here as ${user.email}.\nThe link you opened was sent for another e-mail — the one you gave the bot.`, { title: 'A different account', icon: 'alert', okText: 'Switch account', cancelText: 'Stay here' });
+  if (go) signOutAndClear();
+}
 async function onUser(user) {
   S.authResolved = true;
   S.unsub.forEach(u => { try { u(); } catch (_) {} }); S.unsub = [];
@@ -726,6 +741,7 @@ async function onUser(user) {
   hideGate();
   listen();
   renderStatus();
+  setTimeout(() => { forCheck(user).catch(() => {}); }, 1200);
   setTimeout(() => { Use.send().catch(() => {}); }, 8000);   // 📖📊 counts → the Worker (at most every 3 hours)
 }
 
