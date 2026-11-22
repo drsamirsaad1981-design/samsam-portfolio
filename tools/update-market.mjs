@@ -219,6 +219,19 @@ async function main() {
   if (metals.length) { snap.metals = METALS.map(([k]) => metals.find(x => x.k === k) || oldM.find(x => x.k === k)).filter(Boolean); snap.parts.metals = now; log('metals', metals.map(x => x.k + ' ' + x.price).join(', ')); }
   else { if (oldM.length) snap.metals = oldM; log('metals: no answer, kept the last one'); }
 
+  // 💱 currencies for the "Cash & certificates" card: how many Egyptian pounds and Saudi riyals one US dollar buys — the
+  // official (interbank) rate, from the same Yahoo Finance chart data as the metals (EGP=X, SAR=X; it is the rate Google
+  // shows too — Google itself has no feed to read). Kept from the last run when Yahoo doesn't answer.
+  const FX = [['EGP', 'EGP=X'], ['SAR', 'SAR=X']];
+  const fx = {}, oldFx = old.fx && typeof old.fx === 'object' ? old.fx : {};
+  for (const [cur, sym] of FX) {
+    const v = await yahoo(sym); await sleep(800);
+    if (v && v.price > 0) fx[cur] = { rate: +v.price.toPrecision(7), prev: v.prev ? +v.prev.toPrecision(7) : null, ch24: v.ch24, ch7: v.ch7, spark: v.spark, at: v.at };
+    else if (oldFx[cur]) fx[cur] = oldFx[cur];
+  }
+  if (Object.keys(fx).length) { snap.fx = fx; if (FX.some(([c]) => fx[c] && fx[c] !== oldFx[c])) snap.parts.fx = now; log('fx', Object.entries(fx).map(([c, x]) => c + ' ' + x.rate).join(', ')); }
+  else log('fx: no answer');
+
   // sectors (CoinGecko categories: market cap + its 24h change + their 3 biggest coins) — the Telegram bot's sector radar
   // and smart evening. Only sectors ≥ $500M; kept from the last run when CoinGecko doesn't answer.
   await sleep(4000);
