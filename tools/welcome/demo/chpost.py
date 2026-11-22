@@ -1,0 +1,8 @@
+from playwright.sync_api import sync_playwright
+from PIL import Image
+H = """🌙&nbsp;<strong>Market pulse</strong>&nbsp;· 21 Nov<br>‏🌙&nbsp;<strong>نبض السوق</strong><br><br>🪙&nbsp;BTC <strong>$60,005</strong>&nbsp;🟢&nbsp;+1.79%<br>🌐&nbsp;Market cap <strong>$2.06T</strong>&nbsp;🟢&nbsp;+1.70%<br>👑&nbsp;BTC dominance <strong>58.7%</strong>&nbsp;· USDT 8.48%<br>😨&nbsp;Fear &amp; Greed <strong>8</strong>&nbsp;— Extreme Fear<br>🌀&nbsp;Altcoin season <strong>45</strong><br>🏦&nbsp;ETF Nov 19: BTC −$582M · ETH −$131M<br><br>📈&nbsp;A7A5 +190.6% · PIEVERSE +31.9% · VVV +19.6%<br>📉&nbsp;M −9.7% · GRAM −2.9% · ICP −2.8%<br><br>🥇&nbsp;Gold <strong>$3,515</strong>&nbsp;−4.6% · Silver <strong>$41.07</strong>&nbsp;−7.3%<br>🇺🇸&nbsp;US stocks Closed · ANTB +8.1% · CRWDB −6.3%<br><br>🧭&nbsp;<a href="#" dir="auto">Market Hub</a><br><br><em>Not financial advice — for information only.</em><br>‏<em>ليست نصيحة مالية — للمعلومة فقط.</em>"""
+doc = f"<!doctype html><meta charset=utf-8><body style='margin:0;background:#212121'><div id=m dir=auto style=\"width:585px;box-sizing:border-box;padding:12px 14px 16px;background:#212121;color:#fff;font:20px/1.36 Roboto,'Helvetica Neue',Arial,'Noto Sans Arabic','Noto Color Emoji',sans-serif;unicode-bidi:plaintext\">{H}</div><style>a{{color:#8774e1;text-decoration:none}}</style>"
+with sync_playwright() as p:
+    br = p.chromium.launch(); pg = br.new_page(viewport={'width': 585, 'height': 900}, device_scale_factor=2); pg.set_content(doc); pg.wait_for_timeout(600)
+    pg.locator('#m').screenshot(path='_ch2.png'); br.close()
+im = Image.open('_ch2.png').convert('RGB'); print(im.size); im = im.resize((585, im.size[1] * 585 // im.size[0]), Image.LANCZOS); im.save('web/channel-pulse.webp', quality=88); im.save('_ch2s.png')

@@ -1,0 +1,308 @@
+{
+ "en": [
+  {
+   "label": "portfolio",
+   "text": "💼 <b>Your portfolio now</b> · 20:07\n\n<b>$30,148.47</b>\n🟢 +0.84% · +$252 today\nAll Time Profit <b>−$6,287</b> · −17.3%\nvs BTC 🟢 +6.16% · 11/12 coins beat BTC\n\n📈 <b>Best today</b>\n<code>RENDER  +2.8%</code> $546\n<code>LINK    +2.2%</code> $1,459\n<code>ETH     +2.2%</code> $4,535\n<code>SOL     +1.6%</code> $2,535\n<code>DOGE    +1.4%</code> $494\n\n📉 <b>Worst today</b>\n<code>ATOM    −2.2%</code> $452\n<code>SUI     −2.1%</code> $1,030\n<code>NEAR    −0.8%</code> $625\n<code>DOT     −0.8%</code> $590\n<code>XAG     −0.2%</code> $1,038\n\n🌍 <b>Market</b>\nBTC <b>$59,878</b> 🟢 +0.72%\nDominance BTC 58.7% · USDT 8.50%\nFear &amp; Greed <b>8</b> · Extreme Fear\nAltcoin Season <b>46</b> · Leaning Bitcoin\nETF Nov 19 · BTC −$582M · ETH −$131M\n\n🎯 Signals 🟢 7 · 🔴 2 · ⚪ 4\n📋 Plan <b>57.7%</b> · 1/6 ✅\n🛒 DCA 2 buys · $517/mo\n🚪 Exit 0/3 · next TP SUI +60%",
+   "buttons": [
+    [
+     "🔄 Refresh",
+     "🏆 Best & worst"
+    ],
+    [
+     "📋 Plan",
+     "🚪 Exit plan"
+    ],
+    [
+     "🎯 Signals",
+     "📱 Open the app"
+    ],
+    [
+     "⬅️ Menu"
+    ]
+   ]
+  },
+  {
+   "label": "signals",
+   "text": "🎯 <b>Signals</b>\n\n<b>🟢 Reinforce</b> (7)\n<code>ETH     −17.1%</code>  vs your avg $2,024\n<code>SOL     −16.2%</code>  vs your avg $84.08\n<code>LINK    −16.1%</code>  vs your avg $10.23\n<code>SUI     −10.6%</code>  vs your avg $0.7197\n<code>AVAX     −7.6%</code>  vs your avg $7.14\n<code>DOGE     −7.3%</code>  vs your avg $0.05924\n<code>RENDER   −6.5%</code>  vs your avg $1.39\n\n<b>🔴 Sell / convert to BTC</b> (2)\n<code>DOT     −41.6%</code>  vs your avg $1.12\n<code>NEAR    −24.5%</code>  vs your avg $3.76\n\n<b>⚪ Hold</b> (4)\n<code>XAG     −20.4%</code>  vs your avg $52.17\n<code>BTC     −19.1%</code>  vs your avg $74,008\n<code>XAU     −11.0%</code>  vs your avg $3,981\n<code>ATOM     −6.3%</code>  vs your avg $1.27 ⏳\n\n<i>⏳ waiting for the daily close to confirm (03:00 Riyadh)</i>\n\n<i>⚠️ Not financial advice — reminders of your own plan.</i>",
+   "buttons": [
+    [
+     "🔄 Refresh",
+     "💼 Portfolio"
+    ],
+    [
+     "⬅️ Menu"
+    ]
+   ]
+  },
+  {
+   "label": "market",
+   "text": "🌍 <b>Market</b> · 20:07\n\nBTC <b>$59,878</b> 🟢 +0.72%\nDominance BTC 58.7% · USDT 8.50%\nFear &amp; Greed <b>8</b> · Extreme Fear\nAltcoin Season <b>46</b> · Leaning Bitcoin\nETF Nov 19 · BTC −$582M · ETH −$131M\n\n📈 <b>Top 100 · best 24h</b>\n<code>A7A5  +190.6%</code> $0.01194\n<code>VVV    +17.6%</code> $23.22\n<code>PIEVERSE +14.9%</code> $3.11\n<code>XMR     +7.5%</code> $480.04\n<code>ETHFI   +6.5%</code> $0.4692\n\n📉 <b>Top 100 · worst 24h</b>\n<code>M       −9.6%</code> $0.7672\n<code>ICP     −5.3%</code> $1.92\n<code>PEARL   −4.8%</code> $1.86\n<code>GRAM    −4.1%</code> $0.9582\n<code>XDC     −3.3%</code> $0.02645",
+   "buttons": [
+    [
+     "✓ 🪙 Crypto",
+     "📈 bStocks",
+     "🥇 Metals"
+    ],
+    [
+     "✓ Top 100",
+     "Top 200",
+     "Top 300",
+     "Top 500"
+    ],
+    [
+     "🔄 Refresh",
+     "🧭 Market Hub"
+    ],
+    [
+     "⬅️ Menu"
+    ]
+   ]
+  },
+  {
+   "label": "plan",
+   "text": "📋 <b>Accumulation plan</b>\nOverall: <b>57.7%</b> · 1/6 ✅\n\n<code>LINK  </code> ▰▰▰▰▰▰▰▰▰▰ 100% ✅\n<code>SOL   </code> ▰▰▰▰▰▰▱▱▱▱ 60%  left 24\n<code>ETH   </code> ▰▰▰▰▰▱▱▱▱▱ 54%  left 2.3\n<code>XAU   </code> ▰▰▰▰▰▱▱▱▱▱ 50%  left 1\n<code>BTC   </code> ▰▰▰▰▱▱▱▱▱▱ 42%  left 0.29\n<code>SUI   </code> ▰▰▰▰▱▱▱▱▱▱ 40%  left 2400\n\n🛒 <b>Regular buys (DCA)</b>\n<code>BTC   </code> $300/mo · next 2026-12-01\n<code>SOL   </code> $217/mo · next 2026-11-23",
+   "buttons": [
+    [
+     "🔄 Refresh",
+     "📱 Open the app"
+    ],
+    [
+     "⬅️ Menu"
+    ]
+   ]
+  },
+  {
+   "label": "movers",
+   "text": "🏆 <b>Best &amp; worst (your coins)</b>  <i>(stablecoins left out)</i>\n\n📈 <b>Best 24h</b>\n<code>RENDER   +2.8%</code>  $546\n<code>LINK     +2.2%</code>  $1,459\n<code>ETH      +2.2%</code>  $4,535\n<code>SOL      +1.6%</code>  $2,535\n<code>DOGE     +1.4%</code>  $494\n\n📉 <b>Worst 24h</b>\n<code>ATOM     −2.2%</code>  $452\n<code>SUI      −2.1%</code>  $1,030\n<code>NEAR     −0.8%</code>  $625\n<code>DOT      −0.8%</code>  $590\n<code>XAG      −0.2%</code>  $1,038\n\n📉 <b>Worst 7d</b>\n<code>XAG     −14.5%</code>  $1,038\n<code>DOT     −14.5%</code>  $590\n<code>AVAX    −13.8%</code>  $726\n<code>SUI     −13.3%</code>  $1,030\n<code>RENDER  −11.8%</code>  $546",
+   "buttons": [
+    [
+     "🔄 Refresh",
+     "💼 Portfolio"
+    ],
+    [
+     "⬅️ Menu"
+    ]
+   ]
+  },
+  {
+   "label": "exit",
+   "text": "🚪 <b>Exit plan</b> · 20:07\n\n🧭 <b>Exit conditions</b> · 0 of 3 met\n⏳ BTC dominance: 58.7% → ≤ 45.9%\n⏳ USDT dominance: 8.50% → ≤ 3.73%\n⏳ ETH/BTC: 0.0280 → ≥ 0.0850\n\n🎯 <b>Take-profit levels</b>\n<i>level · to go · sell</i>\n\n<b>SUI</b> · $0.6436\n⏳ TP1 $1.03 · +60% · 25%\n⏳ TP2 $1.42 · +121% · 50%\n⏳ TP3 $2.26 · +251% · 25%\n\n<b>SOL</b> · $70.43\n⏳ TP1 $112.88 · +60% · 25%\n⏳ TP2 $155.21 · +120% · 50%\n⏳ TP3 $246.92 · +251% · 25%\n\n<b>ETH</b> · $1,679\n⏳ TP1 $2,693 · +60% · 25%\n⏳ TP2 $3,703 · +121% · 50%\n⏳ TP3 $5,891 · +251% · 25%\n\n<b>LINK</b> · $8.58\n⏳ TP1 $13.76 · +60% · 25%\n⏳ TP2 $18.92 · +121% · 50%\n⏳ TP3 $30.10 · +251% · 25%",
+   "buttons": [
+    [
+     "🔄 Refresh",
+     "🚪 Open Exit Strategy"
+    ],
+    [
+     "💼 Portfolio",
+     "⬅️ Menu"
+    ]
+   ]
+  },
+  {
+   "label": "metals",
+   "text": "🥇 <b>Metals</b> · 20:07\n\n🥇 <b>Gold</b> $3,515 / oz · 🔴 −4.62% · 7d −9.5%\n      1 gram: <b>423.84 SAR</b> · $113.02\n🥈 <b>Silver</b> $41.07 / oz · 🔴 −7.33% · 7d −16.2%\n      1 gram: <b>4.95 SAR</b> · $1.32\n⚪ <b>Platinum</b> $1,289 / oz · 🔴 −4.30% · 7d −13.4%\n      1 gram: <b>155.48 SAR</b> · $41.46\n🟠 <b>Copper</b> $5.49 / lb · 🔴 −2.49% · 7d −9.8%\n\n⚖️ Gold / silver ratio: <b>85.6</b>\n\n<i>Futures — Yahoo Finance, ~15 min delayed · snapshot 22 min old. Gram: pure 24k, no making charge.</i>",
+   "buttons": [
+    [
+     "🪙 Crypto",
+     "📈 bStocks",
+     "✓ 🥇 Metals"
+    ],
+    [
+     "🔄 Refresh",
+     "🧭 Market Hub"
+    ],
+    [
+     "⬅️ Menu"
+    ]
+   ]
+  },
+  {
+   "label": "stocks",
+   "text": "📈 <b>bStocks</b> · 20:07\n\n🇺🇸 US market: <b>⚪ Closed</b> · opens Mon 17:30 Riyadh\n📊 112 stocks · $1.07B · 🟢 55 / 🔴 57 · avg −0.12%\n\n📈 <b>bStocks · best 24h</b>\n<code>BOTB    +6.5%</code> $18.80\n<code>COHRB   +5.5%</code> $193.18\n<code>UVXYB   +4.6%</code> $28.84\n<code>AXTIB   +4.5%</code> $31.52\n<code>WDCB    +4.3%</code> $270.18\n\n📉 <b>bStocks · worst 24h</b>\n<code>DJTB    −5.8%</code> $3.82\n<code>CRWDB   −5.6%</code> $218.16\n<code>KORUB   −4.1%</code> $5.03\n<code>NVDAB   −4.1%</code> $130.11\n<code>FWDIB   −4.1%</code> $3.38\n\n<i>tokenized US stocks (Binance) · the token trades 24/7, the real share only while New York is open.</i>",
+   "buttons": [
+    [
+     "🪙 Crypto",
+     "✓ 📈 bStocks",
+     "🥇 Metals"
+    ],
+    [
+     "🔄 Refresh",
+     "🧭 Market Hub"
+    ],
+    [
+     "⬅️ Menu"
+    ]
+   ]
+  },
+  {
+   "label": "sol",
+   "text": "🪙 <b>Solana</b> (SOL) · #7\n\n💲 <b>$70.43</b>   🟢 +1.6% 24h · 🔴 −5.1% 7d\n<code>▇▅▅▆▅▅▇██▆█▇▆▃▁▄</code>  7d\n📊 Cap $41.68B · Vol 24h $4.58B\n\n👛 You hold <b>36 SOL</b> = $2,535.48\navg $84.08 · 🔴 −16.2% · Signal: 🟢 Reinforce\n\n<i>CoinGecko · live</i>",
+   "buttons": [
+    [
+     "🔄 Refresh",
+     "🔥 Liq Map"
+    ],
+    [
+     "📈 Chart",
+     "💼 In the app"
+    ],
+    [
+     "⬅️ Menu"
+    ]
+   ]
+  }
+ ],
+ "ar": [
+  {
+   "label": "portfolio",
+   "text": "💼 <b>محفظتك الآن</b> · 20:07\n\n💵 القيمة: <b>$30,148.47</b>\n📅 اليوم: <b>+$252</b> (+0.84%) 🟢\n💰 إجمالي الربح: <b>−$6,287</b> (−17.3%)\n🆚 مقابل البيتكوين: <b>+6.16%</b> 🟢 · 11 من 12 عملة تفوقت عليه\n\n📈 <b>الأفضل اليوم</b>\n<code>RENDER  +2.8%</code> $546\n<code>LINK    +2.2%</code> $1,459\n<code>ETH     +2.2%</code> $4,535\n<code>SOL     +1.6%</code> $2,535\n<code>DOGE    +1.4%</code> $494\n\n📉 <b>الأسوأ اليوم</b>\n<code>ATOM    −2.2%</code> $452\n<code>SUI     −2.1%</code> $1,030\n<code>NEAR    −0.8%</code> $625\n<code>DOT     −0.8%</code> $590\n<code>XAG     −0.2%</code> $1,038\n\n🌍 <b>السوق</b>\nالبيتكوين <b>$59,878</b> · 🟢 +0.72%\nالهيمنة: البيتكوين 58.7% · التيثر 8.50%\nالخوف والطمع <b>8</b> · خوف شديد\nموسم العملات البديلة <b>46</b> · يميل للبيتكوين\nتدفقات ETF (19 نوفمبر):\n• BTC −$582M · ETH −$131M\n\n🎯 الإشارات 🟢 7 · 🔴 2 · ⚪ 4\n📋 الخطة <b>57.7%</b> · 1 من 6 ✅\n🛒 عمليتا شراء دوري (DCA) · $517 شهرياً\n🚪 الخروج 0 من 3 · أقرب هدف ربح SUI +60%",
+   "buttons": [
+    [
+     "🔄 تحديث",
+     "🏆 الأفضل والأسوأ"
+    ],
+    [
+     "📋 الخطة",
+     "🚪 خطة الخروج"
+    ],
+    [
+     "🎯 الإشارات",
+     "📱 افتح التطبيق"
+    ],
+    [
+     "⬅️ القائمة"
+    ]
+   ]
+  },
+  {
+   "label": "signals",
+   "text": "🎯 <b>الإشارات</b>\n\n<b>🟢 تعزيز</b> (7) · <i>مقارنة بمتوسطك</i>\n• <b>ETH</b> −17.1% · متوسطك $2,024\n• <b>SOL</b> −16.2% · متوسطك $84.08\n• <b>LINK</b> −16.1% · متوسطك $10.23\n• <b>SUI</b> −10.6% · متوسطك $0.7197\n• <b>AVAX</b> −7.6% · متوسطك $7.14\n• <b>DOGE</b> −7.3% · متوسطك $0.05924\n• <b>RENDER</b> −6.5% · متوسطك $1.39\n\n<b>🔴 بيع / تحويل إلى BTC</b> (2) · <i>مقارنة بمتوسطك</i>\n• <b>DOT</b> −41.6% · متوسطك $1.12\n• <b>NEAR</b> −24.5% · متوسطك $3.76\n\n<b>⚪ احتفاظ</b> (4) · <i>مقارنة بمتوسطك</i>\n• <b>XAG</b> −20.4% · متوسطك $52.17\n• <b>BTC</b> −19.1% · متوسطك $74,008\n• <b>XAU</b> −11.0% · متوسطك $3,981\n• <b>ATOM</b> −6.3% · متوسطك $1.27 ⏳\n\n<i>⏳ بانتظار تأكيد الإغلاق اليومي (03:00 بتوقيت الرياض)</i>\n\n<i>⚠️ ليست نصيحة مالية — تذكير بخطتك أنت.</i>",
+   "buttons": [
+    [
+     "🔄 تحديث",
+     "💼 محفظتي"
+    ],
+    [
+     "⬅️ القائمة"
+    ]
+   ]
+  },
+  {
+   "label": "market",
+   "text": "🌍 <b>السوق</b> · 20:07\n\nالبيتكوين <b>$59,878</b> · 🟢 +0.72%\nالهيمنة: البيتكوين 58.7% · التيثر 8.50%\nالخوف والطمع <b>8</b> · خوف شديد\nموسم العملات البديلة <b>46</b> · يميل للبيتكوين\nتدفقات ETF (19 نوفمبر):\n• BTC −$582M · ETH −$131M\n\n📈 <b>أعلى 100 · الأفضل 24س</b>\n<code>A7A5  +190.6%</code> $0.01194\n<code>VVV    +17.6%</code> $23.22\n<code>PIEVERSE +14.9%</code> $3.11\n<code>XMR     +7.5%</code> $480.04\n<code>ETHFI   +6.5%</code> $0.4692\n\n📉 <b>أعلى 100 · الأسوأ 24س</b>\n<code>M       −9.6%</code> $0.7672\n<code>ICP     −5.3%</code> $1.92\n<code>PEARL   −4.8%</code> $1.86\n<code>GRAM    −4.1%</code> $0.9582\n<code>XDC     −3.3%</code> $0.02645",
+   "buttons": [
+    [
+     "✓ 🪙 كريبتو",
+     "📈 bStocks",
+     "🥇 المعادن"
+    ],
+    [
+     "✓ Top 100",
+     "Top 200",
+     "Top 300",
+     "Top 500"
+    ],
+    [
+     "🔄 تحديث",
+     "🧭 Market Hub"
+    ],
+    [
+     "⬅️ القائمة"
+    ]
+   ]
+  },
+  {
+   "label": "plan",
+   "text": "📋 <b>خطة التجميع</b>\nالإجمالي: <b>57.7%</b> · 1/6 ✅\n\n• <b>LINK</b> ▰▰▰▰▰▰▰ 100% ✅\n• <b>SOL</b> ▰▰▰▰▱▱▱ 60% · باقي 24\n• <b>ETH</b> ▰▰▰▰▱▱▱ 54% · باقي 2.3\n• <b>XAU</b> ▰▰▰▰▱▱▱ 50% · باقي 1\n• <b>BTC</b> ▰▰▰▱▱▱▱ 42% · باقي 0.29\n• <b>SUI</b> ▰▰▰▱▱▱▱ 40% · باقي 2400\n\n🛒 <b>الشراء الدوري (DCA)</b>\n• BTC: $300 شهرياً · القادم: 2026-12-01\n• SOL: $217 شهرياً · القادم: 2026-11-23",
+   "buttons": [
+    [
+     "🔄 تحديث",
+     "📱 افتح التطبيق"
+    ],
+    [
+     "⬅️ القائمة"
+    ]
+   ]
+  },
+  {
+   "label": "movers",
+   "text": "🏆 <b>الأفضل والأسوأ في محفظتك</b>  <i>(باستثناء المستقرة)</i>\n\n📈 <b>الأفضل 24س</b>\n<code>RENDER   +2.8%</code>  $546\n<code>LINK     +2.2%</code>  $1,459\n<code>ETH      +2.2%</code>  $4,535\n<code>SOL      +1.6%</code>  $2,535\n<code>DOGE     +1.4%</code>  $494\n\n📉 <b>الأسوأ 24س</b>\n<code>ATOM     −2.2%</code>  $452\n<code>SUI      −2.1%</code>  $1,030\n<code>NEAR     −0.8%</code>  $625\n<code>DOT      −0.8%</code>  $590\n<code>XAG      −0.2%</code>  $1,038\n\n📉 <b>الأسوأ 7 أيام</b>\n<code>XAG     −14.5%</code>  $1,038\n<code>DOT     −14.5%</code>  $590\n<code>AVAX    −13.8%</code>  $726\n<code>SUI     −13.3%</code>  $1,030\n<code>RENDER  −11.8%</code>  $546",
+   "buttons": [
+    [
+     "🔄 تحديث",
+     "💼 محفظتي"
+    ],
+    [
+     "⬅️ القائمة"
+    ]
+   ]
+  },
+  {
+   "label": "exit",
+   "text": "🚪 <b>خطة الخروج</b> · 20:07\n\n🧭 <b>مؤشرات الخروج</b> · تحقق 0 من 3\n⏳ هيمنة BTC: 58.7% → ≤ 45.9%\n⏳ هيمنة USDT: 8.50% → ≤ 3.73%\n⏳ ETH/BTC: 0.0280 → ≥ 0.0850\n\n🎯 <b>مستويات جني الأرباح</b>\n<i>السعر · المتبقي · البيع</i>\n\n🔹 <b>SUI</b>: $0.6436\n⏳ TP1 $1.03 · +60% · 25%\n⏳ TP2 $1.42 · +121% · 50%\n⏳ TP3 $2.26 · +251% · 25%\n\n🔹 <b>SOL</b>: $70.43\n⏳ TP1 $112.88 · +60% · 25%\n⏳ TP2 $155.21 · +120% · 50%\n⏳ TP3 $246.92 · +251% · 25%\n\n🔹 <b>ETH</b>: $1,679\n⏳ TP1 $2,693 · +60% · 25%\n⏳ TP2 $3,703 · +121% · 50%\n⏳ TP3 $5,891 · +251% · 25%\n\n🔹 <b>LINK</b>: $8.58\n⏳ TP1 $13.76 · +60% · 25%\n⏳ TP2 $18.92 · +121% · 50%\n⏳ TP3 $30.10 · +251% · 25%",
+   "buttons": [
+    [
+     "🔄 تحديث",
+     "🚪 افتح استراتيجية الخروج"
+    ],
+    [
+     "💼 محفظتي",
+     "⬅️ القائمة"
+    ]
+   ]
+  },
+  {
+   "label": "metals",
+   "text": "🥇 <b>المعادن</b> · 20:07\n\n🥇 <b>الذهب</b> $3,515 · اليوم −4.6%\n      أسبوع −9.5% · الجرام <b>423.84 ريال</b>\n🥈 <b>الفضة</b> $41.07 · اليوم −7.3%\n      أسبوع −16.2% · الجرام <b>4.95 ريال</b>\n⚪ <b>البلاتين</b> $1,289 · اليوم −4.3%\n      أسبوع −13.4% · الجرام <b>155.48 ريال</b>\n🟠 <b>النحاس</b> $5.49 · اليوم −2.5%\n      أسبوع −9.8%\n\n⚖️ نسبة الذهب إلى الفضة: <b>85.6</b>\n\n<i>العقود الآجلة — Yahoo Finance، بتأخير ~15 دقيقة · منذ 22 دقيقة. الأسعار للأونصة (النحاس للرطل). الجرام: عيار 24 دون مصنعية.</i>",
+   "buttons": [
+    [
+     "🪙 كريبتو",
+     "📈 bStocks",
+     "✓ 🥇 المعادن"
+    ],
+    [
+     "🔄 تحديث",
+     "🧭 Market Hub"
+    ],
+    [
+     "⬅️ القائمة"
+    ]
+   ]
+  },
+  {
+   "label": "stocks",
+   "text": "📈 <b>الأسهم المرمّزة (bStocks)</b> · 20:07\n\n🇺🇸 السوق الأمريكي: <b>⚪ مغلق</b> · يفتح الاثنين 17:30 بتوقيت الرياض\n📊 عدد الأسهم 112 · القيمة السوقية $1.07B\n🟢 صاعد 55 · 🔴 هابط 57 · المتوسط −0.12%\n\n📈 <b>الأفضل في bStocks · 24س</b>\n<code>BOTB    +6.5%</code> $18.80\n<code>COHRB   +5.5%</code> $193.18\n<code>UVXYB   +4.6%</code> $28.84\n<code>AXTIB   +4.5%</code> $31.52\n<code>WDCB    +4.3%</code> $270.18\n\n📉 <b>الأسوأ في bStocks · 24س</b>\n<code>DJTB    −5.8%</code> $3.82\n<code>CRWDB   −5.6%</code> $218.16\n<code>KORUB   −4.1%</code> $5.03\n<code>NVDAB   −4.1%</code> $130.11\n<code>FWDIB   −4.1%</code> $3.38\n\n<i>أسهم أمريكية مرمّزة (Binance) · التوكن يُتداول 24/7، والسهم الحقيقي وقت سوق نيويورك فقط.</i>",
+   "buttons": [
+    [
+     "🪙 كريبتو",
+     "✓ 📈 bStocks",
+     "🥇 المعادن"
+    ],
+    [
+     "🔄 تحديث",
+     "🧭 Market Hub"
+    ],
+    [
+     "⬅️ القائمة"
+    ]
+   ]
+  },
+  {
+   "label": "sol",
+   "text": "🪙 <b>Solana</b> (SOL) · #7\n\n💲 <b>$70.43</b>   🟢 +1.6% 24س · 🔴 −5.1% 7 أيام\n<code>▇▅▅▆▅▅▇██▆█▇▆▃▁▄</code>  7 أيام\n📊 القيمة السوقية $41.68B · التداول 24 س $4.58B\n\n👛 لديك <b>36 SOL</b> = $2,535.48\nمتوسط شرائك $84.08 · 🔴 −16.2% · الإشارة: 🟢 تعزيز\n\n<i>المصدر: CoinGecko · مباشر</i>",
+   "buttons": [
+    [
+     "🔄 تحديث",
+     "🔥 Liq Map"
+    ],
+    [
+     "📈 الرسم",
+     "💼 في التطبيق"
+    ],
+    [
+     "⬅️ القائمة"
+    ]
+   ]
+  }
+ ]
+}

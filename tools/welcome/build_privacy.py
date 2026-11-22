@@ -1,0 +1,71 @@
+"""Build the privacy & terms page: welcome/privacy.html (Arabic) and welcome/privacy-en.html (English)."""
+import pathlib, html
+HERE = pathlib.Path(__file__).resolve().parent; ROOT = HERE.parent.parent   # tools/welcome → the repo
+OUT = ROOT / 'welcome'
+TG, X = 'https://t.me/smsaad2010', 'https://x.com/DrSamirSaad1'
+AR = dict(lang='ar', dir='rtl', file='privacy.html', other=('privacy-en.html', 'English'), home=('./', 'صفحة التعريف'),
+ title='الخصوصية والشروط — Cute Portfolio', h1='الخصوصية والشروط', updated='آخر تحديث: 22 نوفمبر 2026',
+ lead='بكلام واضح: ما الذي نحفظه عنك، وأين، ومن يراه، وكيف تحذفه، وما الذي تتفق عليه حين تستخدم البرنامج.',
+ secs=[
+ ('من نحن', ['Cute Portfolio برنامج شخصي غير ربحي يبنيه ويديره د. سمير سعد. ليس شركة، ولا منصة تداول، ولا يقدّم نصائح مالية.', f'للتواصل: تيليجرام <a href="{TG}" dir="ltr">@smsaad2010</a> أو X <a href="{X}" dir="ltr">@DrSamirSaad1</a>، أو أمر <bdi dir="ltr">/feedback</bdi> داخل البوت.']),
+ ('ما الذي نحفظه', ['<b>حسابك:</b> بريدك الإلكتروني الذي تدخل به (حساب Google أو رابط يصلك على البريد). لا توجد كلمة سر عندنا.', '<b>محفظتك:</b> عملاتك وصفقاتك وخطتك وإعداداتك وملاحظاتك التي تكتبها بنفسك.', '<b>نسخة تلقائية:</b> مرة كل أسبوع تُحفظ نسخة من محفظتك داخل حسابك نفسه، ويبقى آخر 4 نسخ، لتسترجع منها ما يُحذف بالخطأ. ما تحذفه قد يبقى في هذه النسخ إلى أن تحل محلها نسخ أحدث، وتُحذف كلها مع حسابك.', '<b>في تيليجرام:</b> رقم محادثتك واسمك واسم المستخدم ولغتك، وتنبيهاتك، وإعدادات الرسائل. ويتذكر البوت آخر 10 رسائل في المحادثة لمدة 6 ساعات فقط ليفهم سياق سؤالك.', '<b>مفاتيح القراءة:</b> مفتاح المنصة (Binance أو Gate) للقراءة فقط، ومفتاح Claude الخاص إن أضفته. يُحفظان مشفّرين بتشفير <bdi dir="ltr">AES-256</bdi>، ولا يظهران لأحد بعد حفظهما، ولا لصاحب البرنامج.', '<b>أرقام استخدام:</b> عدد مرات قراءة قاعدة البيانات وأي المزايا تُستخدم. أرقام فقط، بدون محتوى محفظتك.']),
+ ('ما لا نحفظه ولا نفعله', ['لا نطلب ولا نحفظ عبارة الاسترداد ولا المفتاح الخاص لأي محفظة. العنوان العام فقط.', 'لا نقبل مفتاح منصة يستطيع التداول أو السحب.', 'لا إعلانات، ولا أدوات تتبع، ولا بيع أو مشاركة لبياناتك مع أي جهة تسويقية.', 'لا نحتفظ بالتسجيل الصوتي: يُحوَّل إلى نص ثم يُترك.', 'النسخة الاحتياطية ملف ينزل على جهازك أنت، مشفّراً بكلمة سر تختارها. لا نحتفظ بنسخة منه ولا بكلمة السر.']),
+ ('أين تُحفظ البيانات، وما الجهات التي تمر بها', ['<b>Google Firebase:</b> تسجيل الدخول وقاعدة بيانات محفظتك.', '<b>Cloudflare:</b> خادم البوت وبياناته في تيليجرام، وتحويل الرسائل الصوتية إلى نص.', '<b>GitHub Pages:</b> استضافة صفحات البرنامج.', '<b>Telegram:</b> رسائلك مع البوت تمر عبر تيليجرام، والعضوية المميزة تُدفع بنجوم تيليجرام من خلاله.', '<b>Anthropic (Claude):</b> حين تسأل الذكاء الاصطناعي أو تطلب تحليلاً، يُرسل سؤالك وأرقام محفظتك اللازمة للإجابة إلى Claude. إن لم تستخدم هذه الميزة فلا يُرسل شيء.', '<b>مصادر الأسعار:</b> CoinGecko و Binance و CoinMarketCap وغيرها. متصفحك يطلب الأسعار منها مباشرة، فترى عنوان اتصالك كما يراه أي موقع تزوره. لا نرسل لها محفظتك.', 'الروابط الخارجية (مثل CoinGlass و CoinCodex) تفتح مواقع لها سياساتها الخاصة.']),
+ ('من يستطيع رؤية بياناتك', ['قواعد قاعدة البيانات تجعل كل عضو يقرأ ويكتب بياناته هو فقط.', 'البوت يقرأ محفظتك ليجيبك أنت، ولا يعرضها لأي عضو آخر.', 'بصراحة: صاحب البرنامج يدير الخوادم، فيستطيع تقنياً الوصول إلى قاعدة البيانات. لا يطّلع على محفظة أي عضو إلا لإصلاح مشكلة يبلّغ عنها العضو نفسه.']),
+ ('كيف تحذف بياناتك', ['أمر <bdi dir="ltr">/forget</bdi> في البوت يحذف كل ما يحتفظ به البوت عنك: التنبيهات، وذاكرة المحادثة، والإعدادات، والربط.', 'في التطبيق تحذف أي عملة أو صفقة بنفسك، وتحذف مفتاح المنصة أو مفتاح Claude من الإعدادات.', '<b>لحذف حسابك وكل بياناتك نهائياً:</b> في التطبيق، الإعدادات ← حذف حسابي. يحذف محفظتك ونسخها التلقائية، وما يحفظه البوت عنك، وعضويتك، وتسجيل دخولك. لا يمكن التراجع عنه، والعودة تحتاج دعوة جديدة.', 'الذي يبقى بعد الحذف: سجل مدفوعات النجوم إن دفعت (المبلغ والتاريخ ورقم محادثتك في تيليجرام)، لأنه سجل مالي. وبه، إن عدت بدعوة جديدة قبل انتهاء مدة العضوية المميزة التي دفعتها، تعود لك حتى نهايتها.']),
+ ('شروط الاستخدام', ['<b>ليست نصيحة مالية.</b> الإشارات والتقارير والأرقام تذكير بقواعدك أنت ومعلومات عامة. قراراتك ومسؤوليتها لك وحدك.', '<b>بدون ضمان.</b> البرنامج يُقدَّم كما هو. الأسعار والحسابات قد تتأخر أو تخطئ، فراجع أرقامك المهمة من مصدرها قبل أي قرار.', '<b>لا ينفّذ شيئاً عنك.</b> لا شراء ولا بيع ولا تحويل.', '<b>الدخول بدعوة.</b> يمكن إيقاف عضوية من يسيء استخدام البرنامج أو يحاول الإضرار به أو بأعضائه.', '<b>العضوية المميزة اختيارية</b> وتُدفع بنجوم تيليجرام، وتلغيها متى شئت من إعدادات تيليجرام. الاسترداد يتبع سياسة تيليجرام.', '<b>قد يتغير البرنامج أو يتوقف.</b> هو برنامج شخصي. إن توقف فسأخبر الأعضاء قبلها، وتستطيع تنزيل نسختك الاحتياطية في أي وقت.', '<b>للبالغين.</b> البرنامج لمن أتم 18 عاماً.']),
+ ('تغيير هذه الصفحة', ['إن تغيّر شيء مهم هنا فسيتغير تاريخ التحديث أعلى الصفحة، وسأخبر الأعضاء في القناة.'])])
+EN = dict(lang='en', dir='ltr', file='privacy-en.html', other=('privacy.html', 'العربية'), home=('en.html', 'The welcome page'),
+ title='Privacy and terms — Cute Portfolio', h1='Privacy and terms', updated='Last updated: 22 November 2026',
+ lead='In plain words: what we keep about you, where, who can see it, how to delete it, and what you agree to when you use the program.',
+ secs=[
+ ('Who we are', ['Cute Portfolio is a personal, non-profit program built and run by Dr. Samir Saad. It is not a company or an exchange, and it gives no financial advice.', f'Contact: Telegram <a href="{TG}">@smsaad2010</a> or X <a href="{X}">@DrSamirSaad1</a>, or /feedback inside the bot.']),
+ ('What we keep', ['<b>Your account:</b> the email you sign in with (Google, or a link sent to your email). We hold no password.', '<b>Your portfolio:</b> your coins, trades, plan, settings and the notes you write yourself.', '<b>Automatic copy:</b> once a week a copy of your portfolio is saved inside your own account, and the last 4 are kept, so you can bring back anything deleted by mistake. Something you delete can stay in these copies until newer ones replace them, and they are all deleted with your account.', '<b>On Telegram:</b> your chat number, name, username and language, your alerts, and your message settings. The bot remembers the last 10 messages of the chat for 6 hours only, to follow the thread of your question.', '<b>Read-only keys:</b> your exchange key (Binance or Gate), read-only, and your own Claude key if you add one. Both are kept encrypted with AES-256 and are shown to nobody once saved, the owner included.', '<b>Usage numbers:</b> how many times the database is read and which features get used. Numbers only, never the contents of your portfolio.']),
+ ('What we do not keep or do', ['We never ask for or keep the seed phrase or private key of any wallet. The public address only.', 'We refuse an exchange key that can trade or withdraw.', 'No ads, no trackers, and no selling or sharing of your data with any marketing party.', 'Voice recordings are not kept: they are turned into text and then dropped.', 'A backup is a file downloaded to your own device, encrypted with a password you choose. We keep no copy of it and do not know the password.']),
+ ('Where the data lives, and who it passes through', ['<b>Google Firebase:</b> sign-in and the database of your portfolio.', '<b>Cloudflare:</b> the bot\'s server and its Telegram data, and turning voice notes into text.', '<b>GitHub Pages:</b> hosting the program\'s pages.', '<b>Telegram:</b> your messages with the bot pass through Telegram, and Premium is paid with Telegram Stars through it.', '<b>Anthropic (Claude):</b> when you ask the AI or request an analysis, your question and the portfolio numbers needed to answer it are sent to Claude. If you do not use that feature, nothing is sent.', '<b>Price sources:</b> CoinGecko, Binance, CoinMarketCap and others. Your browser asks them for prices directly, so they see your connection address as any site you visit does. We do not send them your portfolio.', 'Outside links (such as CoinGlass and CoinCodex) open sites with their own policies.']),
+ ('Who can see your data', ['The database rules let each member read and write only their own data.', 'The bot reads your portfolio to answer you, and never shows it to another member.', 'Frankly: the owner runs the servers, so he can technically reach the database. He does not look at any member\'s portfolio except to fix a problem that member reports.']),
+ ('How to delete your data', ['/forget in the bot deletes everything the bot keeps about you: alerts, chat memory, settings and the link.', 'In the app you delete any coin or trade yourself, and remove your exchange key or Claude key from Settings.', '<b>To delete your account and all your data for good:</b> in the app, Settings → Delete my account. It deletes your portfolio and its automatic copies, what the bot keeps about you, your membership and your sign-in. It cannot be undone, and coming back needs a new invitation.', 'What stays after deletion: the record of Stars payments, if you paid (the amount, the date and your Telegram chat number), because it is a financial record. With it, if you come back with a new invitation before the premium you paid for has run out, you get it back until it ends.']),
+ ('Terms of use', ['<b>Not financial advice.</b> The signals, reports and numbers are reminders of your own rules and general information. Your decisions, and the responsibility for them, are yours alone.', '<b>No warranty.</b> The program is provided as it is. Prices and calculations can be late or wrong, so check the numbers that matter at their source before any decision.', '<b>It does nothing on your behalf.</b> No buying, selling or moving.', '<b>Entry is by invitation.</b> Membership can be stopped for anyone who misuses the program or tries to harm it or its members.', '<b>Premium is optional</b> and paid with Telegram Stars; cancel any time in Telegram\'s settings. Refunds follow Telegram\'s policy.', '<b>The program may change or stop.</b> It is a personal program. If it stops, I will tell members beforehand, and you can download your backup at any time.', '<b>For adults.</b> The program is for people aged 18 and over.']),
+ ('Changes to this page', ['If something important changes here, the date at the top changes and I will tell members in the channel.'])])
+LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="66 66 380 380" width="34" height="34" role="img" aria-label="Cute Portfolio"><path d="M267.77,106.46 A150,150 0 0 1 318.20,392.49" stroke="#f7931a" stroke-width="64" fill="none"/><path d="M296.09,400.54 A150,150 0 0 1 110.78,293.56" stroke="#a78bfa" stroke-width="64" fill="none"/><path d="M106.69,270.38 A150,150 0 0 1 244.23,106.46" stroke="#2dd4bf" stroke-width="64" fill="none"/><path d="M256,300.8 C182.4,257.9 216.3,200.3 256,234.2 C295.7,200.3 329.6,257.9 256,300.8 Z" fill="#fbbf24"/></svg>'
+for t in (AR, EN):
+    secs = ''.join(f'<section><h2>{h}</h2><ul>{"".join(f"<li>{x}</li>" for x in items)}</ul></section>' for h, items in t['secs'])
+    page = f'''<!doctype html>
+<html lang="{t['lang']}" dir="{t['dir']}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{t['title']}</title>
+<meta name="description" content="{html.escape(t['lead'])}">
+<meta name="theme-color" content="#0a0e1a">
+<link rel="alternate" hreflang="ar" href="https://drsamirsaad1981-design.github.io/samsam-portfolio/welcome/privacy.html">
+<link rel="alternate" hreflang="en" href="https://drsamirsaad1981-design.github.io/samsam-portfolio/welcome/privacy-en.html">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png?v=2">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700;800&display=swap">
+<style>
+body{{margin:0;background:#0a0e1a;color:#e8ecf5;font-family:'Cairo','Inter',system-ui,sans-serif;line-height:1.85}}
+a{{color:#c4b5fd}}a:hover{{color:#ddd6fe}}
+.wrap{{max-width:820px;margin:0 auto;padding:20px 24px 56px;box-sizing:border-box}}
+header{{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:28px}}
+.brand{{display:flex;align-items:center;gap:10px;font-family:Inter,sans-serif;font-weight:800;font-size:19px;color:#e8ecf5;text-decoration:none}}
+nav{{display:flex;gap:18px;font-weight:700;font-size:15px}}nav a{{text-decoration:none;min-height:44px;display:inline-flex;align-items:center}}
+h1{{font-size:34px;line-height:1.25;margin:0 0 6px}}.upd{{color:#a8b3c9;font-size:14.5px;margin:0 0 14px}}.lead{{color:#a8b3c9;font-size:18px;margin:0 0 26px}}
+section{{background:#131a2e;border:1px solid #263048;border-radius:18px;padding:22px 24px;margin:0 0 16px}}
+h2{{font-size:21px;margin:0 0 10px;color:#e8ecf5}}ul{{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}}
+li{{color:#c9d2e3;font-size:16px;padding-inline-start:18px;position:relative}}li::before{{content:"";position:absolute;inset-inline-start:0;top:.8em;width:6px;height:6px;border-radius:50%;background:#a78bfa}}
+li b{{color:#e8ecf5}}footer{{color:#a8b3c9;font-size:14.5px;margin-top:22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><a class="brand" href="{t['home'][0]}">{LOGO}<span>Cute Portfolio</span></a><nav><a href="{t['home'][0]}">{t['home'][1]}</a><a href="{t['other'][0]}">{t['other'][1]}</a></nav></header>
+<h1>{t['h1']}</h1>
+<p class="upd">{t['updated']}</p>
+<p class="lead">{t['lead']}</p>
+{secs}
+</div>
+</body>
+</html>
+'''
+    (OUT / t['file']).write_text(page, encoding='utf8'); print(t['file'], len(page))

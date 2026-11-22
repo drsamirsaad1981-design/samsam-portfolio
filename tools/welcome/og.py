@@ -1,0 +1,16 @@
+import re, base64, pathlib
+HERE = pathlib.Path(__file__).resolve().parent; ROOT = HERE.parent.parent   # tools/welcome → the repo
+from playwright.sync_api import sync_playwright
+W = (pathlib.Path('/home/claude/demo/web') if pathlib.Path('/home/claude/demo/web').exists() else ROOT / 'welcome' / 'img'); FONTS = pathlib.Path('/tmp/demo/npm/node_modules/@fontsource/cairo/files'); OUT = ROOT / 'welcome' / 'img'
+def b64(p, mime): return f'data:{mime};base64,' + base64.b64encode(p.read_bytes()).decode()
+LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="66 66 380 380" width="64" height="64"><path d="M267.77,106.46 A150,150 0 0 1 318.20,392.49" stroke="#f7931a" stroke-width="64" fill="none"/><path d="M296.09,400.54 A150,150 0 0 1 110.78,293.56" stroke="#a78bfa" stroke-width="64" fill="none"/><path d="M106.69,270.38 A150,150 0 0 1 244.23,106.46" stroke="#2dd4bf" stroke-width="64" fill="none"/><path d="M256,300.8 C182.4,257.9 216.3,200.3 256,234.2 C295.7,200.3 329.6,257.9 256,300.8 Z" fill="#fbbf24"/></svg>'
+T = {'ar': ('rtl', 'تابع محفظتك الرقمية بهدوء وانضباط', 'قارنها بالبيتكوين والذهب والفضة', 'مجاني · غير ربحي · بالدعوة'), 'en': ('ltr', 'Follow your crypto portfolio calmly, by your own rules', 'Compare it with Bitcoin, gold and silver', 'Free · Non-profit · By invitation')}
+face = ''.join(f"@font-face{{font-family:Cairo;font-weight:{w};src:url({b64(FONTS / f'cairo-{sub}-{w}-normal.woff2', 'font/woff2')}) format('woff2');unicode-range:{rng}}}" for w in (600, 800) for sub, rng in (('arabic', 'U+0600-06FF,U+FB50-FDFF,U+FE70-FEFF'), ('latin', 'U+0000-00FF,U+2000-206F')))
+with sync_playwright() as p:
+    br = p.chromium.launch()
+    for l, (d, h, sub, tag) in T.items():
+        imgs = ''.join(f'<img src="{b64(W / f"phone-{l}-{n}.webp", "image/webp")}" style="width:210px;border-radius:20px;border:1px solid #263048;box-shadow:0 20px 50px #0008;transform:translateY({y}px)">' for n, y in (('01-overview', 40), ('13-hub', 0), ('03-signals', 70)))
+        doc = f"<!doctype html><meta charset=utf-8><style>{face}body{{margin:0}}</style><div dir={d} style=\"width:1200px;height:630px;overflow:hidden;background:radial-gradient(900px 500px at 80% 0%,#2a1f5c 0%,#0a0e1a 60%);color:#e8ecf5;font-family:Cairo,sans-serif;display:flex;align-items:center;gap:40px;padding:0 64px;box-sizing:border-box\"><div style='flex:1;min-width:0'><div style='display:flex;align-items:center;gap:14px;margin-bottom:26px'>{LOGO}<span style='font-weight:800;font-size:34px' dir=ltr>Cute Portfolio</span></div><div style='font-weight:800;font-size:{52 if l == 'ar' else 46}px;line-height:1.25;margin-bottom:18px'>{h}</div><div style='font-weight:600;font-size:27px;color:#fbbf24;margin-bottom:26px'>{sub}</div><span style='display:inline-block;border:1px solid #2dd4bf;color:#5eead4;border-radius:999px;padding:6px 20px;font-weight:600;font-size:21px'>{tag}</span></div><div dir=ltr style='flex:none;display:flex;gap:18px;align-items:flex-start;height:630px;padding-top:70px;box-sizing:border-box'>{imgs}</div></div>"
+        pg = br.new_page(viewport={'width': 1200, 'height': 630}); pg.set_content(doc); pg.wait_for_timeout(900); pg.screenshot(path=str(OUT / f'og-{l}.png')); pg.close()
+    br.close()
+print([(f.name, f.stat().st_size // 1024) for f in OUT.glob('og-*.png')])
