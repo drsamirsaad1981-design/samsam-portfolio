@@ -121,3 +121,8 @@ export async function runTransaction(db, fn) {
   }
   throw new Error('transaction failed');
 }
+// every document of one collection, once (Delete my account)
+export async function getDocs(ref) {
+  const v = view(), docs = [...v.entries()].filter(([p]) => p.startsWith(ref.path + '/') && !p.slice(ref.path.length + 1).includes('/')).map(([p, d]) => ({ id: p.split('/').pop(), data: () => JSON.parse(JSON.stringify(d)) }));
+  return { forEach: f => docs.forEach(f), size: docs.length, docs };
+}

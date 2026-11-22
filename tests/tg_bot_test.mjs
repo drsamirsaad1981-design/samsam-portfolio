@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/cex.mjs', 'tools/worker/bidi.mjs', 'tools/worker/usmarket.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs', 'tools/worker/xpost.mjs', 'tools/worker/stall.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/cex.mjs', 'tools/worker/bidi.mjs', 'tools/worker/usmarket.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs', 'tools/worker/xpost.mjs', 'tools/worker/stall.mjs', 'tools/worker/leave.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -1535,5 +1535,30 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
 
 if (process.env.DUMP_LANG) fs.writeFileSync(process.env.DUMP_LANG, JSON.stringify(globalThis.__byLang || []));
 if (process.env.DUMP_TEXTS) fs.writeFileSync(process.env.DUMP_TEXTS, JSON.stringify(globalThis.__all || []));
+// 🗑 /leave: a member deletes their own account from the app — the bot forgets them for good, the e-mail leaves the access
+// list, the owner is told; never the owner's own account, never without the typed confirmation
+{
+  const H = { Origin: 'https://drsamirsaad1981-design.github.io', 'content-type': 'application/json' };
+  const ADM = body => W.fetch(new Request(HOST + '/admin', { method: 'POST', headers: H, body: JSON.stringify({ idToken: fbToken('dr.samir.saad.1981@gmail.com', 'UID1'), ...body }) }), ENVA, {});
+  const JOIN = (email, uid, code) => W.fetch(new Request(HOST + '/join', { method: 'POST', headers: H, body: JSON.stringify({ idToken: fbToken(email, uid), code }) }), ENVA, {});
+  const LEAVE = (email, uid, body = { confirm: 'DELETE' }) => W.fetch(new Request(HOST + '/leave', { method: 'POST', headers: H, body: JSON.stringify({ idToken: fbToken(email, uid), ...body }) }), ENVA, {});
+  const inv = await (await ADM({ action: 'invite' })).json(); await JOIN('zed@x.com', 'UIDZ', inv.code);
+  // …who then linked Telegram (chat 7777) and left things behind
+  const m0 = JSON.parse(kvStore.get('tg:users')); m0['7777'] = { ...m0['a:UIDZ'], name: 'Zed', appOnly: undefined }; delete m0['a:UIDZ']; kvStore.set('tg:users', JSON.stringify(m0));
+  kvStore.set('tg:7777:alerts', '[{"id":1}]'); kvStore.set('tg:7777:hist', '[]'); kvStore.set('tg:7777:byok', '{}'); kvStore.set('cex:UIDZ', '{}'); kvStore.set('fs:pf:UIDZ', '{}');
+  let r = await LEAVE('dr.samir.saad.1981@gmail.com', 'UID1');
+  check('🗑 /leave from the owner\'s account → 403, nothing happens', r.status === 403 && JSON.parse(kvStore.get('tg:users'))['7777']);
+  r = await LEAVE('zed@x.com', 'UIDZ', {});
+  check('🗑 /leave without the typed confirmation → 400, nothing happens', r.status === 400 && JSON.parse(kvStore.get('tg:users'))['7777'] && kvStore.has('tg:7777:alerts'));
+  accessWrites.length = 0; sent.length = 0;
+  r = await LEAVE('zed@x.com', 'UIDZ'); const lj = await r.json();
+  const left = [...kvStore.keys()].filter(k => k.startsWith('tg:7777:') || k === 'cex:UIDZ' || k === 'fs:pf:UIDZ' || k === 'tg:removed:7777');
+  check('🗑 /leave → the member record is gone for good (no "restore" copy), with their alerts, chat memory, Claude key, exchange keys and cache', r.status === 200 && lj.ok && lj.member === true && !JSON.parse(kvStore.get('tg:users'))['7777'] && left.length === 0, [r.status, lj, left]);
+  check('…their e-mail leaves the app\'s access list', accessWrites.length === 1 && !JSON.stringify(accessWrites[0]).includes('zed@x.com'), accessWrites);
+  check('…they get one goodbye in Telegram, and the owner is told who left', sent.some(m => String(m.b.chat_id) === '7777' && /deleted, as you asked/.test(m.b.text || '')) && sent.some(m => String(m.b.chat_id) === '555' && /deleted their own account/.test(m.b.text || '') && /Zed/.test(m.b.text)), sent.map(m => [m.b.chat_id, m.b.text]));
+  r = await LEAVE('zed@x.com', 'UIDZ');
+  check('…asking again (already gone) → still fine, nothing to remove', r.status === 200 && (await r.json()).member === false);
+}
+
 console.log(`${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

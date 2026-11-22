@@ -1,11 +1,13 @@
 // tools/worker/index.mjs — the one Cloudflare Worker: AI Analysis (/analyze, tools/ai-worker.js) + the Telegram bot (/tg).
 // Built into a single file by tools/build-worker.mjs → tools/dist/samsam-worker.js (that file is what you paste).
-import ai, { setMemberCheck, setKeyHandler, setAdminHandler, setJoinHandler, setCexHandler, setUseHandler } from '../ai-worker.js';
+import ai, { setMemberCheck, setKeyHandler, setAdminHandler, setJoinHandler, setCexHandler, setUseHandler, setLeaveHandler } from '../ai-worker.js';
 import { bidiBody } from './bidi.mjs';
 import { tgLogin } from './login.mjs';
 import { note, noteApp, addWorkerReads, flush, readsAlert } from './usage.mjs';
 import { cexHandler } from './cex.mjs';
 setCexHandler(cexHandler);   // 🔌 live exchange balances (read-only keys)
+import { leaveHandler } from './leave.mjs';
+setLeaveHandler(leaveHandler);   // 🗑 a member deletes their own account
 import { adminHandler } from './admin.mjs';
 setAdminHandler(adminHandler);   // 🛠 the owner's dashboard in the app
 // 📱 an invite code opened in the app (?invite=CODE): that account is in — its e-mail joins the access list the rules read

@@ -22,3 +22,5 @@ export async function signInWithCustomToken(auth, t) {
   const email = String(t || '').split(':')[1] || 'owner@example.com';
   localStorage.setItem(KEY, JSON.stringify({ uid: email === 'owner@example.com' ? 'uid_samir' : 'uid_tg', email })); fire();
 }
+// 🗑 Delete my account: the sign-in itself goes (tests can refuse it like Firebase does after an old sign-in: window.__FAKE_OLD_LOGIN)
+export async function deleteUser() { if (window.__FAKE_OLD_LOGIN) throw Object.assign(new Error('recent login needed'), { code: 'auth/requires-recent-login' }); window.__fakeUserDeleted = true; localStorage.removeItem(KEY); fire(); }

@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611222151';
-import * as Hist from './samsam-history.js?v=202611222151';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611222151';
+import * as Core from './samsam-core.js?v=202611222213';
+import * as Hist from './samsam-history.js?v=202611222213';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611222213';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -1139,6 +1139,8 @@ const API = {
   autoCopies: () => copiesNow().map(c => ({ s: c.s, at: c.at, coins: c.coins, txs: c.txs })),
   readAutoCopy: s => readCopy(s),
   autoCopyNow: () => writeCopy(true),
+  // 🗑 the member's own account and data, for good → { docs, bot, signin }
+  deleteAccount: onStep => deleteAccount(onStep),
   restoreSettings({ info = {}, categories } = {}) {
     const d = {}; for (const k of SETTING_KEYS) if (k in info) d[k] = info[k] === undefined ? null : info[k];
     return commit((b, ref) => {
@@ -1414,6 +1416,42 @@ async function runImport(legacy, source) {
   for (const [sym, pr] of Object.entries(imp.prices)) if (!(S.prices[sym] && S.prices[sym].usd > 0)) missing[sym] = pr;
   API.updatePrices(missing);
   return imp;
+}
+
+// 🗑 Delete my account (Settings → Account & data; members only — never the owner's account).
+// 1. every document of the portfolio is deleted here, by the member (the rules let only them do it);
+// 2. the Worker (/leave) forgets what the bot keeps and takes the e-mail off the access list;
+// 3. the sign-in itself is deleted when Firebase allows it (a recent sign-in), and this device's copy is cleared.
+// Nothing can be brought back afterwards — the caller offers the encrypted backup first.
+const LEAVE_URL = 'https://samsam-analysis.dr-samir-saad-1981.workers.dev/leave';
+async function deleteAccount(onStep = () => {}) {
+  requireUser();
+  if (isMainOwner()) throw new Error('The owner account cannot be deleted here.');
+  if (S.pending) throw new Error('Still saving — try again in a moment.');
+  const { db, fs, au, auth } = fb, user = S.user;
+  const token = await user.getIdToken(true);
+  copyState = 2;                                             // no automatic copy while it goes
+  S.unsub.forEach(u => { try { u(); } catch (_) {} }); S.unsub = [];   // the pages stop following the data that is going
+  let n = 0;
+  for (const c of ['txs', 'coins', 'accum', 'snaps', 'meta']) {
+    onStep(c);
+    const snap = await fs.getDocs(fs.collection(db, ...userPath(c))); Use.reads(Math.max(1, snap.size || 0));
+    const refs = []; snap.forEach(d => refs.push(fs.doc(db, ...userPath(c, d.id))));
+    for (let i = 0; i < refs.length; i += 400) { const b = fs.writeBatch(db); refs.slice(i, i + 400).forEach(r => b.delete(r)); await b.commit(); n += Math.min(400, refs.length - i); }
+  }
+  onStep('bot');
+  let bot = false;
+  try {
+    const r = await fetch(LEAVE_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken: token, confirm: 'DELETE' }) });
+    bot = r.ok;
+  } catch (_) {}
+  onStep('signin');
+  let signin = false;
+  try { if (au.deleteUser) { await au.deleteUser(user); signin = true; } } catch (_) {}
+  if (!signin) { try { await au.signOut(auth); } catch (_) {} }
+  try { await fs.terminate(db); await fs.clearIndexedDbPersistence(db); } catch (_) {}
+  try { localStorage.removeItem(PRICE_KEY); } catch (_) {}
+  return { docs: n, bot, signin };
 }
 
 // Signing out removes this device's offline copy of the portfolio (Firestore's IndexedDB cache),

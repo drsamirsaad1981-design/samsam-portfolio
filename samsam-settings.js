@@ -144,6 +144,37 @@
     rewards: function () { if (window.SamsamRewards) SamsamRewards.open(); else goMain('rewards'); },
     wallets: function () { if (window.SamsamWallets) SamsamWallets.open(); else goMain('wallets'); },
     backup: function () { S().downloadBackup().catch(function () {}); },
+    // 🗑 Delete my account (members): what goes, a last chance to back up, the word DELETE typed — then it is final
+    delacct: function () {
+      var D = window.CPDialog, s = S(); if (!D || !s || !s.deleteAccount || (s.isOwner && s.isOwner())) return;
+      var T = 'Delete my account';
+      return D.confirm('This deletes, for good:\n• your portfolio: coins, transactions, plans, settings and the automatic copies\n• everything the Telegram bot keeps for you, and your membership\n• your sign-in\n\nIt cannot be undone, and coming back needs a new invitation.', { title: T, icon: 'trash', okText: 'Continue' }).then(function (go) {
+        if (!go) return;
+        return D.confirm('Download an encrypted backup of your portfolio first? It is the only copy you will have.', { title: T, icon: 'lock', okText: 'Back up first', cancelText: 'No backup' }).then(function (bk) {
+          return bk ? s.downloadBackup().catch(function () { return false; }) : true;
+        }).then(function () {
+          return D.prompt('Type DELETE to delete your account and all your data.', { title: T, icon: 'trash', okText: 'Delete for good', danger: true, value: '' });
+        }).then(function (word) {
+          if (String(word == null ? '' : word).trim().toUpperCase() !== 'DELETE') { if (word != null && word !== false) D.alert('Nothing was deleted.', { title: T, icon: 'trash' }); return; }
+          close();
+          var box = doc.createElement('div'); box.id = 'cpGone';
+          box.style.cssText = 'position:fixed;inset:0;z-index:100300;background:var(--bg,#0b1020);color:var(--fg,#e5e7eb);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;font:600 1rem system-ui,sans-serif';
+          box.innerHTML = '<div id="cpGoneT">Deleting your data…</div><div id="cpGoneS" style="font-weight:400;font-size:.88rem;color:var(--fg2,#94a3b8);max-width:420px"></div>';
+          doc.body.appendChild(box);
+          return s.deleteAccount().then(function (r) {
+            doc.getElementById('cpGoneT').textContent = 'Your account is deleted';
+            doc.getElementById('cpGoneS').textContent = r.bot ? (r.signin ? 'Your portfolio, the bot\'s data and your sign-in are gone. Thank you for trying Cute Portfolio.' : 'Your portfolio and the bot\'s data are gone, and this account can no longer open the app. Thank you for trying Cute Portfolio.')
+              : 'Your portfolio is deleted. The bot could not be reached to remove your membership — please tell the owner so he removes it.';
+            var a = doc.createElement('a'); a.href = 'welcome/' + (window.CPLang && CPLang.lang === 'ar' ? '' : 'en.html'); a.textContent = 'Close'; a.id = 'cpGoneGo';
+            a.style.cssText = 'margin-top:8px;padding:10px 22px;border-radius:999px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700';
+            box.appendChild(a);
+          }).catch(function (e) {
+            doc.getElementById('cpGoneT').textContent = 'The deletion did not finish';
+            doc.getElementById('cpGoneS').textContent = String((e && e.message) || e) + ' — reload the app and try again.';
+          });
+        });
+      });
+    },
     recover: function () { location.href = 'recover.html'; },
     install: function () { installApp(); },
     signout: function () { S().signOut(); },
@@ -222,6 +253,7 @@
       if (k === 'claudekey') return memberSt && memberSt.has ? '🔑 Set (…' + memberSt.tail + ') · 100 questions & 10 reports a day — on your Claude bill' : 'Optional · your own key = 100 questions & 10 reports a day';
       if (k === 'aiinfo') { var qq = memberSt && memberSt.questions, rr = memberSt && memberSt.reports; return qq ? (memberSt.has ? '🔑 Your own key · ' : memberSt.premium ? '⭐ Premium · ' : '') + 'Today: 🧠 ' + qq.used + '/' + qq.limit + ' questions · 📊 ' + (rr ? rr.used + '/' + rr.limit : '0/0') + ' quick reports' : 'Why there are limits · free ways · more'; }
       if (k === 'guide') return 'How the app and the bot work · English / العربية';
+      if (k === 'delacct') return 'Your portfolio, the bot\'s data and your sign-in — for good';
       if (k === 'privacy') return 'What we keep, who can see it, how to delete it';
       if (k === 'dca') { var n2 = (st.accumPlan || []).filter(function (x) { return x.dca && x.dca.usd > 0; }).length; return n2 ? n2 + ' coin' + (n2 === 1 ? '' : 's') + ' with a regular buy' : 'None yet'; }
     } catch (_) {}
@@ -238,7 +270,7 @@
   // ── the screen ──
   // a line: [key, icon, title, action]  ·  a choice: { seg: key, title, opts: [[value, label]], get(), set(v) }
   var SECTIONS = [
-    ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover']]],
+    ['Account & data', [['account', 'cloud', 'Account', 'signout', 'Sign out'], ['backup', 'lock', 'Backup', 'backup', 'Back up now'], ['recover', 'lifebuoy', 'Recover Data', 'recover'], ['delacct', 'trash', 'Delete my account', 'delacct']]],   // (🗑 members only)
     // (Wallets & check, Import from exchange and Rewards & mining live on Performance; DCA and the Exit plan on the Plan page;
     //  Signal thresholds, Categories and the Baseline on Overview; Target allocation on Allocation — each where it is used)
     ['Telegram', [['alerts', 'bell', 'Telegram alerts', 'alerts'], ['tglink', 'link', 'Link your portfolio to the Telegram bot', 'tglink'],
@@ -315,7 +347,7 @@
     box.querySelector('.st-body').innerHTML = SECTIONS.map(function (s) {
       var member = !!(S() && S().isOwner && !S().isOwner());   // 🔑 only invited members bring their own key
       var rows = s[1].filter(function (r) { return r.seg || ((r[0] !== 'import' || hasImport) && (['claudekey', 'aiinfo', 'tglink', 'tgchan', 'tggroup'].indexOf(r[0]) < 0 || member) && (r[0] !== 'alerts' || !member)); });   // members: the bot, the channel / group, AI; Samir: Telegram alerts (GitHub) — his bot reads his portfolio already   // 🔔 Telegram alerts (GitHub) reach Samir only: hidden for members
-      if (!member) rows = rows.filter(function (r) { return r.seg || r[0] !== 'support'; });
+      if (!member) rows = rows.filter(function (r) { return r.seg || (r[0] !== 'support' && r[0] !== 'delacct'); });
       else rows = rows.filter(function (r) { return r.seg || r[0] !== 'admin'; });   // 🛠 the dashboard: Samir only   // ⭐💛 for invited members (Samir: /stats in the bot)
       if (!rows.length) return '';
       return '<div class="st-sec">' + E(s[0]) + '</div><div class="st-list">' + rows.map(function (r) { return r.seg ? choice(r) : line(r); }).join('') + '</div>';

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 0370c3e61146eb0f
+// sources-hash: 28a7783ab3c31103
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -27,6 +27,10 @@ var cexHandler = null;
 function setCexHandler(fn) {
   cexHandler = fn;
 }
+var leaveHandler = null;
+function setLeaveHandler(fn) {
+  leaveHandler = fn;
+}
 var useHandler = null;
 function setUseHandler(fn) {
   useHandler = fn;
@@ -46,8 +50,8 @@ var ai_worker_default = {
     const reply = (status2, obj) => new Response(JSON.stringify(obj), { status: status2, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
     if (request.method === "OPTIONS") return new Response(null, { status: okOrigin ? 204 : 403, headers: cors });
     if (!okOrigin) return reply(403, { error: "This service only answers the Cute Portfolio app." });
-    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path), isJoin = /\/join\/?$/.test(path), isCex = /\/cex\/?$/.test(path), isUse = /\/use\/?$/.test(path);
-    if (request.method !== "POST" || !(path.endsWith("/analyze") || isKey || isAdmin || isJoin || isCex || isUse)) return reply(404, { error: "Not found." });
+    const path = new URL(request.url).pathname, isKey = /\/key\/?$/.test(path), isAdmin = /\/admin\/?$/.test(path), isJoin = /\/join\/?$/.test(path), isCex = /\/cex\/?$/.test(path), isUse = /\/use\/?$/.test(path), isLeave = /\/leave\/?$/.test(path);
+    if (request.method !== "POST" || !(path.endsWith("/analyze") || isKey || isAdmin || isJoin || isCex || isUse || isLeave)) return reply(404, { error: "Not found." });
     const raw = await request.text();
     if (raw.length > MAX_BODY) return reply(413, { error: "Request too large." });
     let body;
@@ -72,6 +76,11 @@ var ai_worker_default = {
     if (isAdmin) {
       if (!adminHandler) return reply(404, { error: "Not found." });
       const r = await adminHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch((e) => ({ status: 500, error: "Something went wrong \u2014 " + String(e && e.message || e).slice(0, 120) }));
+      return reply(r.status || 200, r);
+    }
+    if (isLeave) {
+      if (!leaveHandler) return reply(404, { error: "Not found." });
+      const r = await leaveHandler(env, { email: em, uid: user.uid, owners: emails }, body).catch(() => ({ status: 500, error: "Something went wrong \u2014 try again." }));
       return reply(r.status || 200, r);
     }
     if (isUse) {
@@ -490,17 +499,17 @@ function groupOf(c) {
 function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
   const keys = [.../* @__PURE__ */ new Set([...Object.keys(values || {}), ...Object.keys(targets || {})])];
   const total = keys.reduce((s, k) => s + Math.max(0, num(values[k])), 0), T2 = total + Math.max(0, num(cash));
-  const tg9 = (k) => targets && targets[k] ? num(targets[k].pct) / 100 : 0;
+  const tg10 = (k) => targets && targets[k] ? num(targets[k].pct) / 100 : 0;
   const groups = keys.map((k) => {
-    const v = Math.max(0, num(values[k])), now = total > 0 ? v / total * 100 : 0, target = tg9(k) * 100;
+    const v = Math.max(0, num(values[k])), now = total > 0 ? v / total * 100 : 0, target = tg10(k) * 100;
     return {
       key: k,
       value: v,
       now,
       target,
       drift: now - target,
-      full: tg9(k) * total - v,
-      need: Math.max(0, tg9(k) * T2 - v),
+      full: tg10(k) * total - v,
+      need: Math.max(0, tg10(k) * T2 - v),
       add: 0,
       state: Math.abs(now - target) <= band ? "ok" : Math.abs(now - target) <= 2 * band ? "warn" : "off"
     };
@@ -513,7 +522,7 @@ function allocationPlan(values, targets, { band = 5, cash = 0 } = {}) {
     else {
       const rest = money3 - need;
       groups.forEach((g) => {
-        g.add = g.need + tg9(g.key) * rest;
+        g.add = g.need + tg10(g.key) * rest;
       });
     }
   }
@@ -808,19 +817,19 @@ function summarize(user, market, now = Date.now()) {
     return { sym, at: +a.alertPrice, price: price3, left: p ? Math.max(0, p.target - p.actual) : null, dcaToday: !!(dc && dc.s.state === "today") };
   }).filter((x) => x.price > 0);
   let alloc = null;
-  const tg9 = meta.targets && typeof meta.targets === "object" ? meta.targets : null;
-  const tlist = tg9 && Array.isArray(tg9.list) ? tg9.list : [];
+  const tg10 = meta.targets && typeof meta.targets === "object" ? meta.targets : null;
+  const tlist = tg10 && Array.isArray(tg10.list) ? tg10.list : [];
   if (tlist.length) {
     const cats = Object.fromEntries(tlist.filter((x) => x && x.g && x.pct > 0).map((x) => [x.g, { pct: +x.pct }]));
-    const names = Object.fromEntries([...Array.isArray(tg9.names) ? tg9.names : [], ...tlist].filter((x) => x && x.g).map((x) => [x.g, x.label || x.g]));
+    const names = Object.fromEntries([...Array.isArray(tg10.names) ? tg10.names : [], ...tlist].filter((x) => x && x.g).map((x) => [x.g, x.label || x.g]));
     const vals = {};
     for (const c of pf) {
       const g2 = groupOf(c);
       vals[g2] = (vals[g2] || 0) + c.qty * c.currentPrice;
     }
-    const plan2 = allocationPlan(vals, cats, { band: +tg9.band || 5 });
+    const plan2 = allocationPlan(vals, cats, { band: +tg10.band || 5 });
     const shown = plan2.groups.filter((g2) => g2.target > 0 || g2.now >= 0.05);
-    alloc = { band: plan2.band, groups: shown, onTarget: shown.filter((g2) => g2.state === "ok").length, count: shown.length, names, key: JSON.stringify([tlist, tg9.band]) };
+    alloc = { band: plan2.band, groups: shown, onTarget: shown.filter((g2) => g2.state === "ok").length, count: shown.length, names, key: JSON.stringify([tlist, tg10.band]) };
   }
   const free7 = {};
   for (const r of freeCoins(user.txs, new Date(now - 7 * DAY).toISOString())) {
@@ -2342,13 +2351,69 @@ async function cexHandler2(env, who, body) {
   return { exchanges: list2(all) };
 }
 
+// tools/worker/leave.mjs
+var kdel2 = async (env, k) => {
+  try {
+    if (env.RATE) await env.RATE.delete(k);
+  } catch (_) {
+  }
+};
+var tg = async (env, body) => {
+  try {
+    await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  } catch (_) {
+  }
+};
+var esc2 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+async function leaveHandler2(env, who, body) {
+  if (!who || !who.uid || !who.email) return { status: 400, error: "Bad request." };
+  if ((who.owners || []).includes(who.email)) return { status: 403, error: "The owner account cannot be deleted from the app." };
+  if (!body || body.confirm !== "DELETE") return { status: 400, error: "Not confirmed." };
+  const m = await members(env), hit = Object.entries(m).find(([, x]) => x && (x.uid === who.uid || x.email && x.email === who.email));
+  let name = who.email, chat = null, lang2 = "en";
+  if (hit) {
+    chat = hit[0];
+    name = hit[1].name || who.email;
+    lang2 = hit[1].lang === "ar" ? "ar" : "en";
+    if (isTgChat(chat)) {
+      try {
+        const l = env.RATE && await env.RATE.get(`tg:${chat}:lang`);
+        if (l === "ar" || l === "en") lang2 = l;
+      } catch (_) {
+      }
+      await forgetChat(env, chat);
+    }
+    if (!await removeMember(env, chat)) return { status: 500, error: "Could not remove the membership \u2014 try again." };
+    await kdel2(env, "tg:removed:" + chat);
+    await syncAccess(env, await accessEmails(env)).catch(() => {
+    });
+  }
+  await kdel2(env, `cex:${who.uid}`);
+  await kdel2(env, `cex:${who.uid}:bal`);
+  await forgetPortfolio(env, who.uid);
+  if (chat && isTgChat(chat)) await tg(env, { chat_id: chat, text: lang2 === "ar" ? "\u{1F5D1} \u062D\u064F\u0630\u0641 \u062D\u0633\u0627\u0628\u0643 \u0648\u0643\u0644 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0628\u0637\u0644\u0628\u0643. \u0634\u0643\u0631\u0627\u064B \u0644\u0623\u0646\u0643 \u062C\u0631\u0651\u0628\u062A Cute Portfolio \u2014 \u0648\u0644\u0644\u0639\u0648\u062F\u0629 \u064A\u0648\u0645\u0627\u064B \u0645\u0627 \u062A\u062D\u062A\u0627\u062C \u062F\u0639\u0648\u0629 \u062C\u062F\u064A\u062F\u0629." : "\u{1F5D1} Your account and all your data were deleted, as you asked. Thank you for trying Cute Portfolio \u2014 coming back one day needs a new invitation." });
+  if (env.TELEGRAM_CHAT_ID) {
+    let ol = null;
+    try {
+      ol = env.RATE && await env.RATE.get(`tg:${env.TELEGRAM_CHAT_ID}:lang`);
+    } catch (_) {
+    }
+    await tg(env, { chat_id: env.TELEGRAM_CHAT_ID, parse_mode: "HTML", text: ol === "ar" ? `\u{1F5D1} <b>\u0639\u0636\u0648 \u062D\u0630\u0641 \u062D\u0633\u0627\u0628\u0647 \u0628\u0646\u0641\u0633\u0647</b>
+${esc2(name)}${hit ? "" : " (\u0644\u0645 \u064A\u0643\u0646 \u0641\u064A \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0623\u0639\u0636\u0627\u0621)"}
+\u062D\u064F\u0630\u0641\u062A \u0628\u064A\u0627\u0646\u0627\u062A\u0647 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0648\u0627\u0644\u0628\u0648\u062A\u060C \u0648\u062E\u0631\u062C \u0628\u0631\u064A\u062F\u0647 \u0645\u0646 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062F\u062E\u0648\u0644.` : `\u{1F5D1} <b>A member deleted their own account</b>
+${esc2(name)}${hit ? "" : " (was not in the members list)"}
+Their data is gone from the app and the bot, and their e-mail left the access list.` });
+  }
+  return { ok: true, member: !!hit };
+}
+
 // tools/worker/stars.mjs
 var DAY2 = 864e5;
 var MONTH = 30 * DAY2;
 var price = (env) => Math.max(1, Math.min(1e4, parseInt(env.PREMIUM_STARS || "350", 10) || 350));
 var SUPPORT = [50, 100, 250, 500];
 var usdOf = (n) => "$" + Math.max(1, Math.round(n * 0.02));
-async function tg(env, method, body) {
+async function tg2(env, method, body) {
   body = bidiBody(body);
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -2466,7 +2531,7 @@ async function premiumView(env, lang2, now = Date.now()) {
   if (on) lines.push("", w.isPrem(x.premUntil ? day(x.premUntil) : null), ...x.premSrc === "stars" ? [w.renews] : []);
   const b = [];
   if (!own && !(on && x.premSrc === "stars")) {
-    const link = await tg(env, "createInvoiceLink", {
+    const link = await tg2(env, "createInvoiceLink", {
       title: w.invTitle,
       description: w.invDesc,
       payload: `prem:${chatOf(env)}`,
@@ -2483,8 +2548,8 @@ async function premiumView(env, lang2, now = Date.now()) {
 }
 async function invoiceLink(env, chat, kind, n, lang2 = "en") {
   const w = words(lang2);
-  if (kind === "prem") return tg(env, "createInvoiceLink", { title: w.invTitle, description: w.invDesc, payload: `prem:${chat}`, currency: "XTR", prices: [{ label: w.invTitle, amount: price(env) }], subscription_period: 30 * 86400 });
-  if (kind === "sup" && SUPPORT.includes(+n)) return tg(env, "createInvoiceLink", { title: w.supTitle, description: w.supDesc, payload: `sup:${chat}:${+n}`, currency: "XTR", prices: [{ label: w.supTitle, amount: +n }] });
+  if (kind === "prem") return tg2(env, "createInvoiceLink", { title: w.invTitle, description: w.invDesc, payload: `prem:${chat}`, currency: "XTR", prices: [{ label: w.invTitle, amount: price(env) }], subscription_period: 30 * 86400 });
+  if (kind === "sup" && SUPPORT.includes(+n)) return tg2(env, "createInvoiceLink", { title: w.supTitle, description: w.supDesc, payload: `sup:${chat}:${+n}`, currency: "XTR", prices: [{ label: w.supTitle, amount: +n }] });
   return { ok: false };
 }
 async function supportView(env, lang2) {
@@ -2497,14 +2562,14 @@ async function supportView(env, lang2) {
 async function sendSupportInvoice(env, chat, n, lang2) {
   const w = words(lang2);
   if (!SUPPORT.includes(n)) return { ok: false };
-  return tg(env, "sendInvoice", { chat_id: chat, title: w.supTitle, description: w.supDesc, payload: `sup:${chat}:${n}`, currency: "XTR", prices: [{ label: w.supTitle, amount: n }] });
+  return tg2(env, "sendInvoice", { chat_id: chat, title: w.supTitle, description: w.supDesc, payload: `sup:${chat}:${n}`, currency: "XTR", prices: [{ label: w.supTitle, amount: n }] });
 }
 async function askGift(env, chat, lang2) {
   const x = await member(env), w = words(lang2);
-  await tg(env, "sendMessage", { chat_id: chat, text: w.asked });
+  await tg2(env, "sendMessage", { chat_id: chat, text: w.asked });
   await asChat(env.TELEGRAM_CHAT_ID, async () => {
     const L = await langOf(env), o = words(L);
-    await tg(env, "sendMessage", {
+    await tg2(env, "sendMessage", {
       chat_id: env.TELEGRAM_CHAT_ID,
       text: o.ownerAsk(esc(x ? x.name : chat)),
       parse_mode: "HTML",
@@ -2515,7 +2580,7 @@ async function askGift(env, chat, lang2) {
 async function preCheckout(env, q) {
   const m = /^(prem|sup):(-?\d+)(?::(\d+))?$/.exec(String(q.invoice_payload || "")), all = await members(env);
   const okPay = !!m && String(m[2]) === String(q.from && q.from.id) && (all[m[2]] || String(m[2]) === String(env.TELEGRAM_CHAT_ID)) && q.currency === "XTR" && (m[1] === "prem" ? q.total_amount === price(env) : SUPPORT.includes(q.total_amount));
-  await tg(env, "answerPreCheckoutQuery", { pre_checkout_query_id: q.id, ok: okPay, ...okPay ? {} : { error_message: "This payment is not valid any more \u2014 open /premium or /support again." } });
+  await tg2(env, "answerPreCheckoutQuery", { pre_checkout_query_id: q.id, ok: okPay, ...okPay ? {} : { error_message: "This payment is not valid any more \u2014 open /premium or /support again." } });
   return okPay;
 }
 async function paid(env, chat, sp, lang2, now = Date.now()) {
@@ -2523,7 +2588,7 @@ async function paid(env, chat, sp, lang2, now = Date.now()) {
   await log(env, { t: now, chat: String(chat), kind, stars, charge: sp.telegram_payment_charge_id, renew: !!(sp.is_recurring && !sp.is_first_recurring) });
   const name = esc(x && x.name || String(chat)), owner2 = String(chat) === String(env.TELEGRAM_CHAT_ID);
   const tellOwner = async (text) => {
-    if (!owner2) await tg(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: "HTML" });
+    if (!owner2) await tg2(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: "HTML" });
   };
   const O = words(await asChat(env.TELEGRAM_CHAT_ID, () => langOf(env)));
   if (kind === "prem") {
@@ -2533,13 +2598,13 @@ async function paid(env, chat, sp, lang2, now = Date.now()) {
       await setMember(env, chat, { supporter: true, starsPaid: (x && x.starsPaid || 0) + stars });
     }
     const renew = !!(sp.is_recurring && !sp.is_first_recurring);
-    await tg(env, "sendMessage", { chat_id: chat, text: renew ? w.renewed(day(until)) : w.paidPrem(day(until)), parse_mode: "HTML" });
+    await tg2(env, "sendMessage", { chat_id: chat, text: renew ? w.renewed(day(until)) : w.paidPrem(day(until)), parse_mode: "HTML" });
     await tellOwner(renew ? O.ownerRenew(name, stars, day(until)) : O.ownerPrem(name, stars, day(until)));
     return { kind, until };
   }
   if (kind === "sup") {
     if (!owner2) await setMember(env, chat, { supporter: true, starsPaid: (x && x.starsPaid || 0) + stars });
-    await tg(env, "sendMessage", { chat_id: chat, text: w.paidSup(stars), parse_mode: "HTML" });
+    await tg2(env, "sendMessage", { chat_id: chat, text: w.paidSup(stars), parse_mode: "HTML" });
     await tellOwner(O.ownerSup(name, stars));
     return { kind, stars, n };
   }
@@ -2590,13 +2655,13 @@ async function expireRound(env, now = Date.now()) {
     const L = x.lang === "ar" ? "ar" : "en", w = words(L);
     if (x.premUntil <= now) {
       await revoke(env, chat);
-      await tg(env, "sendMessage", { chat_id: chat, text: w.ended });
+      await tg2(env, "sendMessage", { chat_id: chat, text: w.ended });
       ended++;
       continue;
     }
     if (x.premUntil - now < 3 * DAY2 && !x.premRemind && x.premSrc !== "stars") {
       await setMember(env, chat, { premRemind: true });
-      await tg(env, "sendMessage", { chat_id: chat, text: w.remind(day(x.premUntil)) });
+      await tg2(env, "sendMessage", { chat_id: chat, text: w.remind(day(x.premUntil)) });
     }
   }
   return { ended };
@@ -2625,7 +2690,7 @@ var kput3 = async (env, k, v, ttl) => {
   } catch (_) {
   }
 };
-var kdel2 = async (env, k) => {
+var kdel3 = async (env, k) => {
   try {
     if (env.RATE) await env.RATE.delete(k);
   } catch (_) {
@@ -2636,7 +2701,7 @@ async function markSeen(env, chat, now = Date.now()) {
   if (chat == null || isOwnerChat(env, chat)) return false;
   const k = "tg:seen:" + chat, last = +await kget3(env, k) || 0;
   const woke = !!await kget3(env, "tg:idlenote:" + chat);
-  if (woke) await kdel2(env, "tg:idlenote:" + chat);
+  if (woke) await kdel3(env, "tg:idlenote:" + chat);
   if (now - last < 36e5 && !woke) return false;
   await kput3(env, k, String(now));
   return woke;
@@ -2681,7 +2746,7 @@ async function readsToday(env, now = Date.now()) {
 }
 
 // tools/worker/admin.mjs
-async function tg2(env, method, body) {
+async function tg3(env, method, body) {
   body = bidiBody(body);
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -2697,13 +2762,13 @@ var kv = async (env, k) => {
     return null;
   }
 };
-var tell = (env, chat, en, ar, lang2) => !isTgChat(chat) ? null : tg2(env, "sendMessage", { chat_id: chat, text: lang2 === "ar" ? ar : en, parse_mode: "HTML" }).catch(() => {
+var tell = (env, chat, en, ar, lang2) => !isTgChat(chat) ? null : tg3(env, "sendMessage", { chat_id: chat, text: lang2 === "ar" ? ar : en, parse_mode: "HTML" }).catch(() => {
 });
 var day2 = (ms) => local(ms, { day: "numeric", month: "short", year: "numeric" });
 async function botLink(env, code) {
   let bot = await kv(env, "tg:botname");
   if (!bot) {
-    const me = await tg2(env, "getMe", {});
+    const me = await tg3(env, "getMe", {});
     bot = me && me.ok && me.result && me.result.username;
     if (bot) try {
       await env.RATE.put("tg:botname", bot);
@@ -3045,7 +3110,7 @@ function stockOf(q, stocks) {
   return stocks.find((s) => s.sym === Q) || stocks.find((s) => s.sym === Q + "B") || (lq.length >= 3 ? stocks.find((s) => String(s.name || "").toLowerCase().replace(/\s*bstock$/, "") === lq) || stocks.find((s) => String(s.name || "").toLowerCase().startsWith(lq)) : null) || null;
 }
 var groupOf2 = (a) => KINDS[a.kind].what === "portfolio" ? "pf" : a.metal ? "metal" : a.stock ? "stock" : "coin";
-async function tg3(env, method, body) {
+async function tg4(env, method, body) {
   body = bidiBody(body);
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
@@ -3113,7 +3178,7 @@ Now: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
     });
     const one = fired.length === 1 && fired[0].a.sym && !fired[0].a.metal && !fired[0].a.stock;
     const buttons = [one ? [row2[0], { text: "\u{1F525} Liq Map", url: "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=" + encodeURIComponent(fired[0].a.sym) }] : row2, [{ text: "\u{1F514} /alerts", callback_data: "al" }]];
-    const r = await tg3(env, "sendMessage", { chat_id: chatOf(env), text: text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
+    const r = await tg4(env, "sendMessage", { chat_id: chatOf(env), text: text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
     if (!r.ok) fired.forEach(({ a }) => keep.push(a));
     else for (let i = 0; i < fired.length; i++) await logEvent(env, "alert", describe(fired[i].a) + " \u2014 now " + blocks[i].nowTxt);
   }
@@ -4150,7 +4215,7 @@ var jget2 = async (env, k, d) => {
 };
 var jput = (env, k, v, ttl) => kvPut5(env, k, JSON.stringify(v), ttl);
 var lang = (env) => langOf(env);
-async function tg4(env, method, body) {
+async function tg5(env, method, body) {
   body = bidiBody(body);
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -4159,7 +4224,7 @@ async function tg4(env, method, body) {
     return { ok: false };
   }
 }
-var send = (env, v, extra = {}) => tg4(env, "sendMessage", { chat_id: chatOf(env), text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
+var send = (env, v, extra = {}) => tg5(env, "sendMessage", { chat_id: chatOf(env), text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
 var cb2 = (text, data) => ({ text, callback_data: data });
 var url = (text, u) => ({ text, url: u });
 var LIQ = "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=";
@@ -4598,8 +4663,8 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const body = v.text.split("\n").slice(1).join("\n");
   if (!force && st.id && st.body === body && now - (st.t || 0) < H3) return { ok: true, same: true };
   if (st.id && !fresh) {
-    const r3 = await tg4(env, "editMessageText", { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: "HTML", reply_markup: { inline_keyboard: v.buttons } });
-    if ((r3.ok || /not modified/i.test(r3.description || "")) && force) await tg4(env, "pinChatMessage", { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {
+    const r3 = await tg5(env, "editMessageText", { chat_id: chatOf(env), message_id: st.id, text: v.text, parse_mode: "HTML", reply_markup: { inline_keyboard: v.buttons } });
+    if ((r3.ok || /not modified/i.test(r3.description || "")) && force) await tg5(env, "pinChatMessage", { chat_id: chatOf(env), message_id: st.id, disable_notification: true }).catch(() => {
     });
     if (r3.ok || /not modified/i.test(r3.description || "")) {
       await jput(env, K(env, "pin"), { id: st.id, body, t: now });
@@ -4609,11 +4674,11 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
   const r = await send(env, v, { disable_notification: true });
   const id = r && r.ok && r.result && r.result.message_id;
   if (!id) return { ok: false };
-  await tg4(env, "pinChatMessage", { chat_id: chatOf(env), message_id: id, disable_notification: true });
+  await tg5(env, "pinChatMessage", { chat_id: chatOf(env), message_id: id, disable_notification: true });
   if (st.id) {
-    await tg4(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
+    await tg5(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
     });
-    if (fresh) await tg4(env, "deleteMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
+    if (fresh) await tg5(env, "deleteMessage", { chat_id: chatOf(env), message_id: st.id }).catch(() => {
     });
   }
   await jput(env, K(env, "pin"), { id, body, t: now });
@@ -4621,7 +4686,7 @@ async function pinUpdate(env, now = Date.now(), force = false, fresh = false) {
 }
 async function unpin(env) {
   const st = await jget2(env, K(env, "pin"), {});
-  if (st.id) await tg4(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id });
+  if (st.id) await tg5(env, "unpinChatMessage", { chat_id: chatOf(env), message_id: st.id });
   await jput(env, K(env, "pin"), {});
 }
 async function viewDaily(env) {
@@ -5330,7 +5395,7 @@ var guide_default = {
 
 // tools/worker/community.mjs
 var KEY4 = "tg:community";
-async function tg5(env, method, body) {
+async function tg6(env, method, body) {
   body = bidiBody(body, "lines");
   let r = await tg1(env, method, body);
   if (r && r.error_code === 429) {
@@ -5362,7 +5427,7 @@ async function putCommunity(env, c) {
   }
 }
 var owner = (env) => String(env.TELEGRAM_CHAT_ID);
-var say = (env, text) => tg5(env, "sendMessage", { chat_id: owner(env), text, parse_mode: "HTML", disable_web_page_preview: true });
+var say = (env, text) => tg6(env, "sendMessage", { chat_id: owner(env), text, parse_mode: "HTML", disable_web_page_preview: true });
 var NOTE = { en: "Not financial advice \u2014 for information only.", ar: "\u0644\u064A\u0633\u062A \u0646\u0635\u064A\u062D\u0629 \u0645\u0627\u0644\u064A\u0629 \u2014 \u0644\u0644\u0645\u0639\u0644\u0648\u0645\u0629 \u0641\u0642\u0637." };
 async function onMyChatMember(env, u) {
   const m = u.my_chat_member, chat = m && m.chat;
@@ -5371,7 +5436,7 @@ async function onMyChatMember(env, u) {
   const gone = m.new_chat_member && ["left", "kicked"].includes(m.new_chat_member.status);
   if (chat.type === "private") return;
   if (by !== owner(env) && !gone) {
-    await tg5(env, "leaveChat", { chat_id: chat.id });
+    await tg6(env, "leaveChat", { chat_id: chat.id });
     return;
   }
   const c = await getCommunity(env), kind = chat.type === "channel" ? "channel" : "group";
@@ -5394,7 +5459,7 @@ async function onMyChatMember(env, u) {
 async function registerForward(env, msg) {
   const o = msg.forward_origin, ch2 = o && (o.chat || o.sender_chat) || msg.forward_from_chat;
   if (!ch2 || !ch2.id) return false;
-  const me = await tg5(env, "getMe", {}), st = me.ok ? await tg5(env, "getChatMember", { chat_id: ch2.id, user_id: me.result.id }) : null;
+  const me = await tg6(env, "getMe", {}), st = me.ok ? await tg6(env, "getChatMember", { chat_id: ch2.id, user_id: me.result.id }) : null;
   if (!st || !st.ok || st.result.status !== "administrator") {
     await say(env, `\u2139\uFE0F I'm not an admin in <b>${esc(ch2.title || "")}</b> yet \u2014 add me as admin there first.`);
     return true;
@@ -5411,7 +5476,7 @@ async function setup(env, kind, opt = {}) {
   const notes = [];
   if (kind === "channel") {
     if (!x.link) {
-      const link = await tg5(env, "createChatInviteLink", { chat_id: x.id, name: "Cute Portfolio members", creates_join_request: true });
+      const link = await tg6(env, "createChatInviteLink", { chat_id: x.id, name: "Cute Portfolio members", creates_join_request: true });
       if (link.ok) x.link = link.result.invite_link;
       else notes.push('\u26A0\uFE0F No join link \u2014 give me "Invite users via link".');
     }
@@ -5427,7 +5492,7 @@ async function setup(env, kind, opt = {}) {
   }
   const ch2 = c.channel, g = c.group;
   if (ch2 && g) {
-    const info = await tg5(env, "getChat", { chat_id: ch2.id });
+    const info = await tg6(env, "getChat", { chat_id: ch2.id });
     g.linked = !!(info.ok && info.result && String(info.result.linked_chat_id) === String(g.id));
     if (g.linked) {
       delete g.topics;
@@ -5442,7 +5507,7 @@ Join link (members only \u2014 I approve each request): ${x.link}` : "") + (note
   return { ok: true };
 }
 async function guideLink(env) {
-  const me = await tg5(env, "getMe", {});
+  const me = await tg6(env, "getMe", {});
   const u = me.ok && me.result && me.result.username;
   return u ? `\u{1F4D8} <a href="https://t.me/${u}?start=guide">Open the guide</a>
 \u{1F4D8} <a href="https://t.me/${u}?start=guide">\u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0644\u064A\u0644</a>` : "";
@@ -5456,13 +5521,13 @@ ${guide_default.intro.ar}
 
 ` + guideGroups().map((g) => g.items.map((s) => `${s.e} ${esc((s.b || s.t).en)} \xB7 ${esc((s.b || s.t).ar)}`).join("\n")).join("\n\n") + "\n\n\u{1F4A1} <i>Ideas or a bug? Send /feedback to the bot.</i>\n\u{1F4A1} <i>\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 /feedback \u0644\u0644\u0628\u0648\u062A.</i>";
   const link = await guideLink(env);
-  const r = await tg5(env, "sendMessage", { chat_id: ch2.id, text: text + (link ? "\n\n" + link : ""), parse_mode: "HTML", disable_web_page_preview: true });
+  const r = await tg6(env, "sendMessage", { chat_id: ch2.id, text: text + (link ? "\n\n" + link : ""), parse_mode: "HTML", disable_web_page_preview: true });
   if (!r.ok) return null;
   if (ch2.guideMsg && ch2.guideMsg !== r.result.message_id) {
-    await tg5(env, "unpinChatMessage", { chat_id: ch2.id, message_id: ch2.guideMsg });
-    await tg5(env, "deleteMessage", { chat_id: ch2.id, message_id: ch2.guideMsg });
+    await tg6(env, "unpinChatMessage", { chat_id: ch2.id, message_id: ch2.guideMsg });
+    await tg6(env, "deleteMessage", { chat_id: ch2.id, message_id: ch2.guideMsg });
   }
-  await tg5(env, "pinChatMessage", { chat_id: ch2.id, message_id: r.result.message_id, disable_notification: true });
+  await tg6(env, "pinChatMessage", { chat_id: ch2.id, message_id: r.result.message_id, disable_notification: true });
   return r.result.message_id;
 }
 var LRI2 = "\u200E";
@@ -5525,7 +5590,7 @@ async function guideUpdates(env) {
   })];
   const link = await guideLink(env);
   if (link) lines.push("", link);
-  const r = await tg5(env, "sendMessage", { chat_id: x.id, text: lines.join("\n"), parse_mode: "HTML", disable_web_page_preview: true });
+  const r = await tg6(env, "sendMessage", { chat_id: x.id, text: lines.join("\n"), parse_mode: "HTML", disable_web_page_preview: true });
   if (!r.ok) return { posted: 0 };
   const old = x.guideSig, dm = Date.now() - (x.guideDm || 0) >= GUIDE_DM_EVERY;
   x.guideSig = now;
@@ -5544,7 +5609,7 @@ async function guideNews(env, changed, edition, old) {
     const text = edition ? ar ? "\u{1F4D8} <b>\u0646\u0633\u062E\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0627\u0644\u062F\u0644\u064A\u0644</b>\n\u0643\u0644 \u0645\u0627 \u064A\u0642\u062F\u0645\u0647 \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0644\u062A\u0637\u0628\u064A\u0642\u060C \u0645\u062D\u062F\u064E\u0651\u062B\u0627\u064B." : "\u{1F4D8} <b>A new edition of the guide</b>\nEverything the bot and the app can do, up to date." : [ar ? "\u{1F195} <b>\u062C\u062F\u064A\u062F \u0641\u064A \u0627\u0644\u062F\u0644\u064A\u0644</b>" : "\u{1F195} <b>New in the guide</b>", "", ...changed.slice(0, 10).map((s) => `${s.k in old ? "\u270F\uFE0F" : "\u{1F195}"} ${s.e} ${esc(s.t[L])}`)].join("\n");
     const rows = edition ? [] : changed.slice(0, 6).map((s) => [{ text: `${s.e} ${s.t[L]}`.slice(0, 40), callback_data: "gd:" + s.k }]);
     rows.push([{ text: ar ? "\u{1F4D8} \u0627\u0644\u062F\u0644\u064A\u0644 \u0643\u0627\u0645\u0644\u0627\u064B" : "\u{1F4D8} The full guide", callback_data: "gd" }]);
-    await tg5(env, "sendMessage", { chat_id: chat, text, parse_mode: "HTML", reply_markup: { inline_keyboard: rows } }).catch(() => {
+    await tg6(env, "sendMessage", { chat_id: chat, text, parse_mode: "HTML", reply_markup: { inline_keyboard: rows } }).catch(() => {
     });
   });
 }
@@ -5553,10 +5618,10 @@ async function onJoinRequest(env, u) {
   const ours = [c.channel, c.group].some((x) => x && String(x.id) === String(r.chat.id));
   if (!ours) return;
   const who = String(r.from.id), m = await members(env), ok2 = who === owner(env) || m[who] && !m[who].paused;
-  await tg5(env, ok2 ? "approveChatJoinRequest" : "declineChatJoinRequest", { chat_id: r.chat.id, user_id: r.from.id });
+  await tg6(env, ok2 ? "approveChatJoinRequest" : "declineChatJoinRequest", { chat_id: r.chat.id, user_id: r.from.id });
   if (ok2 && who !== owner(env)) {
     const ar = m[who].lang === "ar";
-    await tg5(env, "sendMessage", { chat_id: who, text: ar ? `\u2705 \u062A\u0645 \u0642\u0628\u0648\u0644\u0643 \u0641\u064A ${r.chat.title} \u2014 \u0623\u0647\u0644\u0627\u064B \u0628\u0643 \u{1F44B}` : `\u2705 You're in ${r.chat.title} \u2014 welcome \u{1F44B}` });
+    await tg6(env, "sendMessage", { chat_id: who, text: ar ? `\u2705 \u062A\u0645 \u0642\u0628\u0648\u0644\u0643 \u0641\u064A ${r.chat.title} \u2014 \u0623\u0647\u0644\u0627\u064B \u0628\u0643 \u{1F44B}` : `\u2705 You're in ${r.chat.title} \u2014 welcome \u{1F44B}` });
   }
 }
 async function revokeLinks(env, text) {
@@ -5579,7 +5644,7 @@ async function revokeLinks(env, text) {
       lines.push(`\u23ED ${tail} \u2014 the current join link, kept`);
       continue;
     }
-    const r = await tg5(env, "revokeChatInviteLink", { chat_id: ch2.id, invite_link: "https://t.me/+" + code });
+    const r = await tg6(env, "revokeChatInviteLink", { chat_id: ch2.id, invite_link: "https://t.me/+" + code });
     if (r.ok) {
       done++;
       lines.push(`\u2705 ${tail} \u2014 switched off`);
@@ -5718,11 +5783,11 @@ async function runChannel(env, now = Date.now()) {
     await putCommunity(env, c);
     return { job: "channel:" + kind, ok: false, skipped: true };
   }
-  const r = await tg5(env, "sendMessage", { chat_id: ch2.id, text, parse_mode: "HTML", disable_web_page_preview: true });
+  const r = await tg6(env, "sendMessage", { chat_id: ch2.id, text, parse_mode: "HTML", disable_web_page_preview: true });
   if (r.ok) {
     if (kind === "am" || kind === "pm") {
-      if (ch2.pinned) await tg5(env, "unpinChatMessage", { chat_id: ch2.id, message_id: ch2.pinned });
-      await tg5(env, "pinChatMessage", { chat_id: ch2.id, message_id: r.result.message_id, disable_notification: true });
+      if (ch2.pinned) await tg6(env, "unpinChatMessage", { chat_id: ch2.id, message_id: ch2.pinned });
+      await tg6(env, "pinChatMessage", { chat_id: ch2.id, message_id: r.result.message_id, disable_notification: true });
       ch2.pinned = r.result.message_id;
     }
     sent[kind] = today2;
@@ -5738,7 +5803,7 @@ async function announce(env, text) {
 \u{1F195} <b>\u0627\u0644\u062C\u062F\u064A\u062F</b>
 
 ${esc(text)}`;
-  if (c.channel) out.push((await tg5(env, "sendMessage", { chat_id: c.channel.id, text: body, parse_mode: "HTML" })).ok ? "\u{1F4E2}" : "\u26A0\uFE0F\u{1F4E2}");
+  if (c.channel) out.push((await tg6(env, "sendMessage", { chat_id: c.channel.id, text: body, parse_mode: "HTML" })).ok ? "\u{1F4E2}" : "\u26A0\uFE0F\u{1F4E2}");
   return out;
 }
 
@@ -5764,7 +5829,7 @@ var kv2 = { get: async (env) => {
   } catch (_) {
   }
 } };
-var tg6 = async (env, method, body) => {
+var tg7 = async (env, method, body) => {
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     return await r.json();
@@ -5798,18 +5863,18 @@ function xDraft(m, now) {
   const text = [build(3, true), build(2, true), build(2, false)].find((t) => xLen(t) <= 280) || build(1, false);
   return { angle, text };
 }
-var esc2 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+var esc3 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 var intent = (t) => "https://x.com/intent/post?text=" + encodeURIComponent(t);
 function xMessage(dr, lang2) {
   const ar = lang2 === "ar";
   return {
-    text: [ar ? "\u{1F4E3} <b>\u0645\u0646\u0634\u0648\u0631 X \u0644\u0644\u064A\u0648\u0645</b> (\u0639\u0631\u0628\u064A \u0648\u0625\u0646\u062C\u0644\u064A\u0632\u064A \u0645\u0639\u0627\u064B) \u2014 \u0627\u0636\u063A\u0637 \u0627\u0644\u0632\u0631\u060C \u0631\u0627\u062C\u0639 \u0627\u0644\u0646\u0635\u060C \u062B\u0645 Post" : "\u{1F4E3} <b>Today's post for X</b> (Arabic and English together) \u2014 tap the button, read it, then Post", "", esc2(dr.text), "", ar ? "<i>\u0644\u0627 \u064A\u064F\u0646\u0634\u0631 \u0634\u064A\u0621 \u0625\u0644\u0627 \u0628\u0636\u063A\u0637\u062A\u0643. /xpost off \u0644\u0625\u064A\u0642\u0627\u0641 \u0647\u0630\u0647 \u0627\u0644\u0631\u0633\u0627\u0644\u0629.</i>" : "<i>Nothing is posted without your tap. /xpost off stops this message.</i>"].join("\n"),
+    text: [ar ? "\u{1F4E3} <b>\u0645\u0646\u0634\u0648\u0631 X \u0644\u0644\u064A\u0648\u0645</b> (\u0639\u0631\u0628\u064A \u0648\u0625\u0646\u062C\u0644\u064A\u0632\u064A \u0645\u0639\u0627\u064B) \u2014 \u0627\u0636\u063A\u0637 \u0627\u0644\u0632\u0631\u060C \u0631\u0627\u062C\u0639 \u0627\u0644\u0646\u0635\u060C \u062B\u0645 Post" : "\u{1F4E3} <b>Today's post for X</b> (Arabic and English together) \u2014 tap the button, read it, then Post", "", esc3(dr.text), "", ar ? "<i>\u0644\u0627 \u064A\u064F\u0646\u0634\u0631 \u0634\u064A\u0621 \u0625\u0644\u0627 \u0628\u0636\u063A\u0637\u062A\u0643. /xpost off \u0644\u0625\u064A\u0642\u0627\u0641 \u0647\u0630\u0647 \u0627\u0644\u0631\u0633\u0627\u0644\u0629.</i>" : "<i>Nothing is posted without your tap. /xpost off stops this message.</i>"].join("\n"),
     buttons: [[{ text: ar ? "\u{1F4E3} \u0627\u0646\u0634\u0631 \u0639\u0644\u0649 X" : "\u{1F4E3} Post on X", url: intent(dr.text) }]]
   };
 }
 async function sendDraft(env, now, lang2) {
   const m = await loadMarket([], []).catch(() => null), dr = xDraft(m, now), v = xMessage(dr, lang2);
-  return tg6(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: v.text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: v.buttons } });
+  return tg7(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: v.text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: v.buttons } });
 }
 async function runXPost(env, now = Date.now()) {
   if (!env.TELEGRAM_CHAT_ID) return { job: null };
@@ -6450,13 +6515,13 @@ function viewCoin(t, coin, m, sum, now) {
   btns.push([cb3(t.back, "menu")]);
   return { text: L.join("\n"), buttons: btns };
 }
-async function tg7(env, method, body) {
+async function tg8(env, method, body) {
   body = bidiBody(body);
   const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return r.json().catch(() => ({ ok: false }));
 }
-var send2 = (env, chat, v, extra = {}) => tg7(env, "sendMessage", { chat_id: chat, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
-var edit = (env, chat, msgId, v) => tg7(env, "editMessageText", { chat_id: chat, message_id: msgId, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {} });
+var send2 = (env, chat, v, extra = {}) => tg8(env, "sendMessage", { chat_id: chat, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {}, ...extra });
+var edit = (env, chat, msgId, v) => tg8(env, "editMessageText", { chat_id: chat, message_id: msgId, text: v.text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, ...v.buttons ? { reply_markup: { inline_keyboard: v.buttons } } : {} });
 var WORDS = [
   [/^\/(feedback|bug|idea)(@\w+)?(\s+[\s\S]+)?$/i, "fb"],
   // first: its text may hold any word ("/feedback المحفظة …")
@@ -6606,18 +6671,18 @@ async function handleTelegram(request, env) {
   }
   if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {
     const x = (await members(env))[String(chat)] || {}, ar = x.lang === "ar";
-    const quiet = () => q ? tg7(env, "answerCallbackQuery", { callback_query_id: q.id }).catch(() => {
+    const quiet = () => q ? tg8(env, "answerCallbackQuery", { callback_query_id: q.id }).catch(() => {
     }) : null;
     if (x.paused) {
       await quiet();
-      if (await strangerOnce(env, chat)) await tg7(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0644\u062F\u064A\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 Dr. Samir Saad." : "\u23F8 The bot is paused for you for now \u2014 ask Dr. Samir Saad." }).catch(() => {
+      if (await strangerOnce(env, chat)) await tg8(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0644\u062F\u064A\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 Dr. Samir Saad." : "\u23F8 The bot is paused for you for now \u2014 ask Dr. Samir Saad." }).catch(() => {
       });
       return ok();
     }
     const f = await flood(env, chat);
     if (f !== "ok") {
       await quiet();
-      if (f === "warn") await tg7(env, "sendMessage", { chat_id: chat, text: ar ? "\u{1F30A} \u0631\u0633\u0627\u0626\u0644 \u0643\u062B\u064A\u0631\u0629 \u0645\u062A\u062A\u0627\u0644\u064A\u0629 \u2014 \u0627\u0646\u062A\u0638\u0631 \u062F\u0642\u064A\u0642\u0629 \u062B\u0645 \u062A\u0627\u0628\u0639 \u{1F642}" : "\u{1F30A} That's a lot of messages at once \u2014 wait a minute, then carry on \u{1F642}" }).catch(() => {
+      if (f === "warn") await tg8(env, "sendMessage", { chat_id: chat, text: ar ? "\u{1F30A} \u0631\u0633\u0627\u0626\u0644 \u0643\u062B\u064A\u0631\u0629 \u0645\u062A\u062A\u0627\u0644\u064A\u0629 \u2014 \u0627\u0646\u062A\u0638\u0631 \u062F\u0642\u064A\u0642\u0629 \u062B\u0645 \u062A\u0627\u0628\u0639 \u{1F642}" : "\u{1F30A} That's a lot of messages at once \u2014 wait a minute, then carry on \u{1F642}" }).catch(() => {
       });
       return ok();
     }
@@ -6751,7 +6816,7 @@ async function inviteMsg(env, lang2) {
   } catch (_) {
   }
   if (!bot) {
-    const me = await tg7(env, "getMe", {}).catch(() => null);
+    const me = await tg8(env, "getMe", {}).catch(() => null);
     bot = me && me.ok && me.result && me.result.username;
     if (bot) try {
       if (env.RATE) await env.RATE.put("tg:botname", bot);
@@ -6997,7 +7062,7 @@ async function onUpdate(env, u, msg, q, chat) {
   try {
     if (q) {
       const d = String(q.data || "");
-      const done = (text) => tg7(env, "answerCallbackQuery", { callback_query_id: q.id, ...text ? { text } : {} }).catch(() => {
+      const done = (text) => tg8(env, "answerCallbackQuery", { callback_query_id: q.id, ...text ? { text } : {} }).catch(() => {
       });
       if (d === "gd" || /^gd:[a-z]+$/.test(d)) {
         const v = guideView(await getLang(env), d.slice(3) || null), r3 = await edit(env, chat, q.message.message_id, v);
@@ -7026,7 +7091,7 @@ async function onUpdate(env, u, msg, q, chat) {
           const st = env.RATE ? JSON.parse(await env.RATE.get(K(env, "pin")) || "{}") : {};
           await unpin(env).catch(() => {
           });
-          if (st.id) await tg7(env, "deleteMessage", { chat_id: chat, message_id: st.id });
+          if (st.id) await tg8(env, "deleteMessage", { chat_id: chat, message_id: st.id });
         } catch (_) {
         }
         const me = await member(env);
@@ -7053,7 +7118,7 @@ async function onUpdate(env, u, msg, q, chat) {
           return ok();
         }
         const email = await getPending(env, who);
-        await tg7(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {
+        await tg8(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {
         });
         if (!email || !await member(env, who)) {
           await done("\u2014");
@@ -7149,11 +7214,11 @@ async function onUpdate(env, u, msg, q, chat) {
             if (!pd && premiumNow(x)) {
               await revoke(env, who);
               note3 = "\u2606";
-              await tg7(env, "sendMessage", { chat_id: who, text: x.lang === "ar" ? "\u0623\u064F\u0644\u063A\u064A\u062A \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u2014 \u0639\u062F\u062A \u0625\u0644\u0649 \u0627\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629." : "Premium is off \u2014 back to the standard limits." }).catch(() => {
+              await tg8(env, "sendMessage", { chat_id: who, text: x.lang === "ar" ? "\u0623\u064F\u0644\u063A\u064A\u062A \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u2014 \u0639\u062F\u062A \u0625\u0644\u0649 \u0627\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629." : "Premium is off \u2014 back to the standard limits." }).catch(() => {
               });
             } else {
               const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? local(y.premUntil, { day: "numeric", month: "short", year: "numeric" }) : "";
-              await tg7(env, "sendMessage", { chat_id: who, parse_mode: "HTML", text: x.lang === "ar" ? `\u{1F381} Dr. Samir Saad \u0645\u0646\u062D\u0643 \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0647\u062F\u064A\u0629\u064B \u062D\u062A\u0649 ${until}!
+              await tg8(env, "sendMessage", { chat_id: who, parse_mode: "HTML", text: x.lang === "ar" ? `\u{1F381} Dr. Samir Saad \u0645\u0646\u062D\u0643 \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0647\u062F\u064A\u0629\u064B \u062D\u062A\u0649 ${until}!
 \u0641\u064F\u0639\u0651\u0644\u062A \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u{1F399}\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u064A\u0648\u0645\u064A\u0627\u064B.` : `\u{1F381} Dr. Samir Saad gave you premium as a gift \u2014 until ${until}!
 Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {
               });
@@ -7169,7 +7234,7 @@ Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} A
           if (x) {
             await setMember(env, who, { paused: x.paused ? void 0 : true });
             const ar2 = x.lang === "ar";
-            await tg7(env, "sendMessage", { chat_id: who, text: x.paused ? ar2 ? "\u25B6\uFE0F \u0639\u0627\u062F \u0627\u0644\u0628\u0648\u062A \u0644\u0644\u0639\u0645\u0644 \u0644\u062F\u064A\u0643." : "\u25B6\uFE0F The bot is back on for you." : ar2 ? "\u23F8 \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0628\u0648\u062A \u0644\u062F\u064A\u0643 \u0645\u0624\u0642\u062A\u0627\u064B." : "\u23F8 The bot is paused for you for now." }).catch(() => {
+            await tg8(env, "sendMessage", { chat_id: who, text: x.paused ? ar2 ? "\u25B6\uFE0F \u0639\u0627\u062F \u0627\u0644\u0628\u0648\u062A \u0644\u0644\u0639\u0645\u0644 \u0644\u062F\u064A\u0643." : "\u25B6\uFE0F The bot is back on for you." : ar2 ? "\u23F8 \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0628\u0648\u062A \u0644\u062F\u064A\u0643 \u0645\u0624\u0642\u062A\u0627\u064B." : "\u23F8 The bot is paused for you for now." }).catch(() => {
             });
           }
           await edit(env, chat, q.message.message_id, await viewMember(env, lang2, who));
@@ -7182,7 +7247,7 @@ Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} A
             note2 = "\u{1F5D1}";
             if (had.email) await syncAccess(env, await accessEmails(env)).catch(() => {
             });
-            await tg7(env, "sendMessage", { chat_id: who, text: lang2 === "ar" ? "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0648\u0635\u0648\u0644\u0643 \u0644\u0644\u0628\u0648\u062A." : "Your access to this bot was removed." }).catch(() => {
+            await tg8(env, "sendMessage", { chat_id: who, text: lang2 === "ar" ? "\u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0648\u0635\u0648\u0644\u0643 \u0644\u0644\u0628\u0648\u062A." : "Your access to this bot was removed." }).catch(() => {
             });
           }
         }
@@ -7238,7 +7303,7 @@ Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} A
       if (/^tx:(ok|no):\w+$/.test(d)) {
         const lang2 = await getLang(env), t2 = T[lang2], gid = d.slice(6);
         const kb = ((q.message.reply_markup || {}).inline_keyboard || []).map((r4) => r4.filter((b) => !/^tx:/.test(b.callback_data || ""))).filter((r4) => r4.length);
-        await tg7(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: kb } }).catch(() => {
+        await tg8(env, "editMessageReplyMarkup", { chat_id: chat, message_id: q.message.message_id, reply_markup: { inline_keyboard: kb } }).catch(() => {
         });
         if (d.startsWith("tx:no:")) {
           const was = await cancelTrades(env, gid);
@@ -7323,7 +7388,7 @@ async function feedback(env, chat, text) {
   if (!body) return { text: ar ? "\u{1F4A1} \u0627\u0643\u062A\u0628 <code>/feedback</code> \u062B\u0645 \u0627\u0642\u062A\u0631\u0627\u062D\u0643 \u0623\u0648 \u0627\u0644\u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0646\u0641\u0633 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u2014 \u062A\u0635\u0644 \u0644\u0633\u0645\u064A\u0631 \u0645\u0628\u0627\u0634\u0631\u0629." : "\u{1F4A1} Send <code>/feedback</code> and your idea or the bug in the same message \u2014 it goes straight to Samir." };
   if (isOwner(env)) return { text: "\u2139\uFE0F That's for members \u2014 their /feedback comes to you here." };
   const m = (await members(env))[String(chat)] || {};
-  const r = await tg7(env, "sendMessage", {
+  const r = await tg8(env, "sendMessage", {
     chat_id: env.TELEGRAM_CHAT_ID,
     parse_mode: "HTML",
     disable_web_page_preview: true,
@@ -7335,7 +7400,7 @@ ${esc(body)}`
 }
 async function onText(env, chat, text, budget = 36, into = null) {
   const p = parse(text);
-  tg7(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
+  tg8(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
   });
   if (into && p.act !== "ai") {
     if (!["menu", "coin", "coins", "pf", "mk", "mks", "mkm", "pl", "mv", "sg", "ex"].includes(p.act)) await edit(env, chat, into.id, { text: into.head });
@@ -7365,7 +7430,7 @@ async function onText(env, chat, text, budget = 36, into = null) {
     return;
   }
   if (p.act === "bal") {
-    await tg7(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
+    await tg8(env, "sendChatAction", { chat_id: chat, action: "typing" }).catch(() => {
     });
     await send2(env, chat, await viewBalances(env, await getLang(env)));
     return;
@@ -7623,7 +7688,7 @@ async function ensureCmds(env) {
     cmdMem.set(c, v);
     return;
   }
-  const r = await tg7(env, "setMyCommands", { commands: cmds(lang2, own), scope: { type: "chat", chat_id: +c || c } }).catch(() => ({}));
+  const r = await tg8(env, "setMyCommands", { commands: cmds(lang2, own), scope: { type: "chat", chat_id: +c || c } }).catch(() => ({}));
   if (r && r.ok) {
     cmdMem.set(c, v);
     try {
@@ -7635,9 +7700,9 @@ async function ensureCmds(env) {
 var cmdMem = /* @__PURE__ */ new Map();
 async function privateCmds(env, lang2 = null) {
   lang2 = lang2 || await getLang(env);
-  await tg7(env, "deleteMyCommands", {}).catch(() => {
+  await tg8(env, "deleteMyCommands", {}).catch(() => {
   });
-  return tg7(env, "setMyCommands", { commands: cmds(lang2, false), scope: { type: "all_private_chats" } }).catch(() => ({ ok: false }));
+  return tg8(env, "setMyCommands", { commands: cmds(lang2, false), scope: { type: "all_private_chats" } }).catch(() => ({ ok: false }));
 }
 var cmdScopeDone = false;
 async function ensureCmdScope(env) {
@@ -7670,9 +7735,9 @@ async function ensureDesc(env) {
   if (had === DESC_V || descMem === DESC_V) return;
   descMem = DESC_V;
   for (const [lc, [long, short]] of Object.entries(DESC)) {
-    await tg7(env, "setMyDescription", { description: long, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
+    await tg8(env, "setMyDescription", { description: long, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
     });
-    await tg7(env, "setMyShortDescription", { short_description: short, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
+    await tg8(env, "setMyShortDescription", { short_description: short, ...lc === "en" ? {} : { language_code: lc } }).catch(() => {
     });
   }
   try {
@@ -7695,7 +7760,7 @@ async function ensureHook(env, request) {
     hookMem = HOOK_V;
     return;
   }
-  const u = new URL(request.url), r = await tg7(env, "setWebhook", { url: u.origin + u.pathname, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: false });
+  const u = new URL(request.url), r = await tg8(env, "setWebhook", { url: u.origin + u.pathname, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: false });
   if (r && r.ok) {
     hookMem = HOOK_V;
     try {
@@ -7711,7 +7776,7 @@ async function setup2(request, env) {
   if (missing.length) return json(400, { ok: false, missing });
   if (!/^[A-Za-z0-9_-]{16,256}$/.test(env.TG_SECRET)) return json(400, { ok: false, error: "TG_SECRET must be 16+ letters, digits, _ or - (Telegram rule)." });
   const hook = u.origin + u.pathname.replace(/\/setup$/, "");
-  const a = await tg7(env, "setWebhook", { url: hook, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: true });
+  const a = await tg8(env, "setWebhook", { url: hook, secret_token: env.TG_SECRET, allowed_updates: HOOK_UPDATES, drop_pending_updates: true });
   resetBudget();
   return asChat(env.TELEGRAM_CHAT_ID, async () => {
     const user = await loadUser(env).catch(() => null), lang2 = await getLang(env), t = T[lang2];
@@ -7759,7 +7824,7 @@ var kv3 = { get: async (env) => {
   } catch (_) {
   }
 } };
-var tg8 = async (env, method, body) => {
+var tg9 = async (env, method, body) => {
   try {
     const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     return await r.json();
@@ -7822,7 +7887,7 @@ async function runStall(env, now = Date.now(), seen = null) {
     } catch (_) {
     }
     lang2 = lang2 === "ar" || lang2 === "en" ? lang2 : env.BOT_LANG === "ar" ? "ar" : "en";
-    const x = v(lang2), r = await tg8(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: x.text, parse_mode: "HTML", disable_web_page_preview: true, ...x.buttons ? { reply_markup: { inline_keyboard: x.buttons } } : {} });
+    const x = v(lang2), r = await tg9(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text: x.text, parse_mode: "HTML", disable_web_page_preview: true, ...x.buttons ? { reply_markup: { inline_keyboard: x.buttons } } : {} });
     return !!(r && r.ok);
   };
   if (age > LIMIT) {
@@ -7841,6 +7906,7 @@ async function runStall(env, now = Date.now(), seen = null) {
 
 // tools/worker/index.mjs
 setCexHandler(cexHandler2);
+setLeaveHandler(leaveHandler2);
 setAdminHandler(adminHandler2);
 setJoinHandler(async (env, who, body) => {
   const r = await useAppInvite(env, body && body.code, who.uid, who.email);
