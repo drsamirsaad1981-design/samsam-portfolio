@@ -20,6 +20,7 @@ setJoinHandler(async (env, who, body) => {
 });
 import { expireRound, premiumNow, invoiceLink, price as premPrice, SUPPORT } from './stars.mjs';
 import { runChannel, getCommunity } from './community.mjs';
+import { runXPost } from './xpost.mjs';
 import { usage } from './ai.mjs';
 // is this member in the channel / the group? (Telegram tells the bot, an admin there) → { channel, group }: true / false / null
 async function inCommunity(env, chat) {
@@ -117,7 +118,8 @@ export default {
       await migrateOwner(env);
       await kickPrices(env).then(r => { if (r.kick === 'sent' || r.kick === 'refused') console.log(JSON.stringify(r)); }).catch(e => log('kick', e));   // GitHub late → run the market snapshot now
       await expireRound(env, Date.now()).catch(e => log('premium', e));
-      await runChannel(env, now).then(r => { if (r.job) console.log(JSON.stringify(r)); }).catch(e => log('channel', e));   // 📢 the market pulse   // ⭐ a premium that ended → standard limits (3-day reminder before)
+      await runChannel(env, now).then(r => { if (r.job) console.log(JSON.stringify(r)); }).catch(e => log('channel', e));
+      await runXPost(env, now).then(r => { if (r.job) console.log(JSON.stringify(r)); }).catch(e => log('xpost', e));   // 📣 the owner's daily post for X (he posts it himself)   // 📢 the market pulse   // ⭐ a premium that ended → standard limits (3-day reminder before)
       const cenv = { ...env, PF_CHECK_MS: String(30 * 60e3) }, mem = await members(env), reads = {};
       addWorkerReads(takeReads());   // reads before the round (owner migration, channel…) → the Worker's own count
       for (const chat of await activeChats(env)) {   // each person in turn, as themselves: their alerts, then their daily messages

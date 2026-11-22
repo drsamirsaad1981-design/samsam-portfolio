@@ -14,7 +14,7 @@ const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? '
 const fx = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', f), 'utf8'));
 
 // ── the built file is current ──
-const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/cex.mjs', 'tools/worker/bidi.mjs', 'tools/worker/usmarket.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs'];
+const SOURCES = ['tools/ai-worker.js', 'tools/alerts-core.mjs', 'samsam-core.js', 'tools/worker/index.mjs', 'tools/worker/idle.mjs', 'tools/worker/bot.mjs', 'tools/worker/data.mjs', 'tools/worker/cg-ids.json', 'tools/worker/ai.mjs', 'tools/worker/watch.mjs', 'tools/worker/voice.mjs', 'tools/worker/trade.mjs', 'tools/worker/daily.mjs', 'tools/worker/paper.mjs', 'tools/worker/who.mjs', 'tools/worker/byok.mjs', 'tools/worker/cex.mjs', 'tools/worker/bidi.mjs', 'tools/worker/usmarket.mjs', 'tools/worker/stars.mjs', 'tools/worker/admin.mjs', 'guide.json', 'tools/worker/community.mjs', 'tools/worker/xpost.mjs'];
 const h = crypto.createHash('sha256'); for (const f of SOURCES) h.update(fs.readFileSync(path.join(ROOT, f)));
 const built = fs.readFileSync(path.join(ROOT, 'tools/dist/samsam-worker.js'), 'utf8');
 check('the built Worker is up to date with its sources (else: node tools/build-worker.mjs)', built.includes('sources-hash: ' + h.digest('hex').slice(0, 16)));
@@ -1382,6 +1382,31 @@ check('firestore.rules: own data only; Samir always; invited e-mails from config
   check('☀️ Claude cut off (max_tokens) → the plain morning is sent instead (no half line, no stray **)', mm && !/\*\*/.test(mm.b.text) && !/half/.test(mm.b.text) && /Today|💼/.test(mm.b.text), mm && mm.b.text.slice(0, 120));
   check('…with the other markets in one line when they moved (CRCLB +7.8% today): gold and the bStock (no Brent)', mm && /🥇 Gold \$2,650 \+0\.8% · 🇺🇸 CRCLB \+7\.8%/.test(mm.b.text) && !/Brent/.test(mm.b.text), mm && mm.b.text);
   globalThis.__shortMorning = old;
+}
+
+// 📣 the owner's daily post for X: one message at 10:00 with the Arabic and the English text and a button for each that
+// opens X with the text written — the bot never posts on X itself
+{
+  kvStore.delete('tg:xpost');
+  const xmsg = () => sent.filter(m => m.m === 'sendMessage' && String(m.b.chat_id) === '555' && /post for X|منشور X/.test(m.b.text || ''));
+  const cron = async hm => { const W = await fresh(); const ps = []; await W.scheduled({ cron: '*/5 * * * *', scheduledTime: RIYADH(hm) }, ENVK, { waitUntil: x => ps.push(x) }); await Promise.all(ps); };
+  sent.length = 0; await cron('10:05');
+  const xm = xmsg(), urls = xm.length ? btns(xm[0]).map(b => b.url) : [];
+  check('📣 10:05 → the owner gets ONE "post for X" message with two buttons that open X with the text written', xm.length === 1 && urls.length === 2 && urls.every(u => /^https:\/\/x\.com\/intent\/post\?text=/.test(u)), xm.map(m => m.b.text));
+  const texts = urls.map(u => decodeURIComponent(u.split('text=')[1])), xlen = t => [...t.replace(/https?:\/\/\S+/g, 'x'.repeat(23))].length;
+  check('…each text fits a post (≤ 280 by X\'s count), carries the welcome page link, and gives no advice (no buy / sell / اشترِ / بع)', texts.length === 2 && texts.every(t => xlen(t) <= 280 && /samsam-portfolio\/welcome\//.test(t) && !/\b(buy now|sell now)\b|اشتر الآن|بِع الآن/i.test(t)) && /[؀-ۿ]/.test(texts[0]) && !/[؀-ۿ]/.test(texts[1]) && /en\.html/.test(texts[1]), texts.map(t => [xlen(t), t]));
+  check('…and the buttons\' links are short enough for Telegram (< 2,000 characters)', urls.every(u => u.length < 2000), urls.map(u => u.length));
+  check('…only the owner hears it (no member, not the channel)', !sent.some(m => m.m === 'sendMessage' && String(m.b.chat_id) !== '555' && /post for X|منشور X/.test(m.b.text || '')));
+  sent.length = 0; await cron('10:10');
+  check('…once a day (10:10 → nothing more)', xmsg().length === 0);
+  sent.length = 0; await postK(await fresh(), '/xpost');
+  check('/xpost → today\'s post again, now', xmsg().length === 1);
+  sent.length = 0; await postK(await fresh(), '/xpost off'); kvStore.set('tg:xpost', JSON.stringify({ ...JSON.parse(kvStore.get('tg:xpost')), day: '2000-01-01' })); await cron('10:05');
+  check('/xpost off → confirmed, and the next 10:05 sends nothing', sent.some(m => /is off|أوقفت/.test(m.b.text || '')) && xmsg().length === 0, sent.map(m => m.b.text));
+  sent.length = 0; await postK(await fresh(), '/xpost on'); check('/xpost on → back on', /is on|يعمل/.test(last().b.text || ''));
+  { const X = await import('../tools/worker/xpost.mjs'); const seen = new Set(); for (let d = 0; d < 8; d++) { const dr = X.xDraft({ btc: { price: 60000, ch24: 1.2 }, global: { mcap: 2.06e12, mcapCh24: 1.7, dom: { btc: 58.7, usdt: 8.5 } }, fng: { value: 8, label: 'Extreme Fear' }, alt: { value: 45 }, metals: [{ k: 'gold', price: 3515, ch24: -4.6 }, { k: 'silver', price: 41, ch24: -7.3 }], etf: null }, Date.UTC(2026, 10, 22) + d * 86400e3); seen.add(dr.angle + ':' + dr.ar.slice(0, 30)); if ([...dr.ar.replace(/https?:\/\/\S+/g, 'x'.repeat(23))].length > 280 || [...dr.en.replace(/https?:\/\/\S+/g, 'x'.repeat(23))].length > 280) seen.add('TOO LONG ' + d); }
+    check('…a different angle each day (pulse, metals, a feature…), none too long', seen.size >= 4 && ![...seen].some(x => /TOO LONG/.test(x)), [...seen]); }
+  kvStore.delete('tg:xpost');
 }
 
 // 📘 a new release changed the guide → ONE short post in the channel naming the parts (🆕 new / ✏️ updated), once
