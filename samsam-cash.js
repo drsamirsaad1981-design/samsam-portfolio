@@ -41,18 +41,19 @@
   }
 
   // ── the card and the Net worth line ──
-  var lastTotal = null;
+  var lastTotal = null, lastCash = null;   // lastCash: what Net worth adds (Overview: samsam-home.js → renderNetWorth)
   function render(portfolioTotal) {
     if (portfolioTotal != null) lastTotal = +portfolioTotal;
     var card = $('cashCard'), nw = $('netWorthLine'), s = S();
     if (!card || !s || !s.isReady || !s.isReady() || !s.core || !s.core.cashTotals) { if (card) card.hidden = true; if (nw) nw.hidden = true; return; }
     var list = s.getCash();
     card.hidden = !list.length; if (nw) nw.hidden = !list.length;
-    if (!list.length) return;
+    if (!list.length) { lastCash = { usd: 0, missing: [], n: 0 }; if (window.onCashRender) window.onCashRender(lastCash); return; }
     loadFx();
     var t = s.core.cashTotals(list, fx || {}, Date.now()), ar = AR();
     var tt = card.querySelector('[data-cash-t]'), ta = card.querySelector('[data-cash-a]'); if (tt) tt.textContent = T('Cash & certificates', 'نقد وشهادات'); if (ta) ta.textContent = T('Add', 'إضافة');
     $('cashUsd').textContent = t.usd > 0 || !t.missing.length ? usd(t.usd) : '$—';
+    lastCash = { usd: t.usd, missing: t.missing, n: list.length };
     var rateLine = ['EGP', 'SAR'].filter(function (c) { return t.byCur[c] && fx && fx[c] > 0; }).map(function (c) { return '$1 = ' + num(fx[c], c === 'SAR' ? 4 : 2) + ' ' + c; }).join(' · ');
     var rows = t.items.map(function (x) {
       var c = CUR[x.cur], name = x.label || (x.kind === 'cert' ? T('Certificate', 'شهادة') : T('Balance', 'رصيد'));
@@ -72,6 +73,7 @@
     $('cashSub').innerHTML = (rateLine ? '<div class="ch-rate">' + T('Official rate', 'السعر الرسمي') + ': ' + LTR(rateLine) + '</div>' : '') +
       (t.missing.length ? '<div class="ch-rate ch-warn">' + T('No rate yet for ', 'لا يوجد سعر بعد لـ ') + t.missing.join(', ') + T(' — not in the total.', ' — غير محسوب في الإجمالي.') + '</div>' : '') +
       '<div class="ch-rows">' + rows + '</div>';
+    if (window.onCashRender) try { window.onCashRender(lastCash); } catch (_) {}
     if (nw) {
       var have = lastTotal != null && lastTotal >= 0;
       nw.innerHTML = '💼 ' + T('Net worth', 'صافي الثروة') + ' <b>' + LTR(have ? usd(lastTotal + t.usd) : '$—') + '</b> <span>= ' + T('portfolio', 'المحفظة') + ' ' + LTR(have ? usd(lastTotal) : '$—') + ' + ' + T('cash', 'النقد') + ' ' + LTR(usd(t.usd)) + '</span>';
@@ -181,5 +183,5 @@
   });
   doc.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('cpCash') && !doc.getElementById('cpDialog')) { e.stopPropagation(); close(); } }, true);
 
-  window.SamsamCash = { render: render, open: open, embed: embed, close: close, rates: function () { return fx ? Object.assign({ t: fxAt }, fx) : null; } };
+  window.SamsamCash = { last: function () { return lastCash; }, render: render, open: open, embed: embed, close: close, rates: function () { return fx ? Object.assign({ t: fxAt }, fx) : null; } };
 })();

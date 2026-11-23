@@ -21,24 +21,24 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-lang.js?v=202611232101"></script>
-<script src="samsam-ar.js?v=202611232101"></script>
-<script src="samsam-ui.js?v=202611232101"></script>
-<script src="samsam-hints.js?v=202611232101"></script>
-<script src="samsam-arhints.js?v=202611232101"></script>
-<script src="samsam-vault.js?v=202611232101"></script>
-<script src="samsam-labels.js?v=202611232101"></script>
-<script src="samsam-taxonomy.js?v=202611232101"></script>
-<script src="samsam-coins.js?v=202611232101"></script>
-<script src="samsam-dropdown.js?v=202611232101"></script>
-<script src="samsam-add.js?v=202611232101"></script>
-<script src="samsam-chart.js?v=202611232101"></script>
-<script src="samsam-market.js?v=202611232101"></script>
-<script src="samsam-import.js?v=202611232101"></script>
-<script src="samsam-wallets.js?v=202611232101"></script>
-<script src="samsam-cash.js?v=202611232101"></script>
-<script src="samsam-rewards.js?v=202611232101"></script>
-<script src="samsam-settings.js?v=202611232101"></script>
+<script src="samsam-lang.js?v=202611232135"></script>
+<script src="samsam-ar.js?v=202611232135"></script>
+<script src="samsam-ui.js?v=202611232135"></script>
+<script src="samsam-hints.js?v=202611232135"></script>
+<script src="samsam-arhints.js?v=202611232135"></script>
+<script src="samsam-vault.js?v=202611232135"></script>
+<script src="samsam-labels.js?v=202611232135"></script>
+<script src="samsam-taxonomy.js?v=202611232135"></script>
+<script src="samsam-coins.js?v=202611232135"></script>
+<script src="samsam-dropdown.js?v=202611232135"></script>
+<script src="samsam-add.js?v=202611232135"></script>
+<script src="samsam-chart.js?v=202611232135"></script>
+<script src="samsam-market.js?v=202611232135"></script>
+<script src="samsam-import.js?v=202611232135"></script>
+<script src="samsam-wallets.js?v=202611232135"></script>
+<script src="samsam-cash.js?v=202611232135"></script>
+<script src="samsam-rewards.js?v=202611232135"></script>
+<script src="samsam-settings.js?v=202611232135"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -48,7 +48,7 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
-<link rel="stylesheet" href="samsam-home.css?v=202611232101">
+<link rel="stylesheet" href="samsam-home.css?v=202611232135">
 </head>
 <body>
 <div id="cpSplash" role="status" aria-live="polite" aria-label="Loading Cute Portfolio" style="position:fixed;inset:0;z-index:100200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0e1a;color:#e5e7eb;font-family:Inter,system-ui,-apple-system,sans-serif;transition:opacity .35s ease,visibility .35s">
@@ -97,9 +97,19 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
   <div class="cp-ptabs-host" data-ptabs="overview"></div>
   <div class="head-meta">
     <span class="hm-item ss-date-label" id="currentDate"></span>
+    <span class="hm-item hm-pulse" id="hmPulse" data-no-tr hidden></span>
     <span class="hm-item hm-baseline"><span class="hm-k">Baseline</span> <b id="baselineLabel">Oct 15, 2026</b><button type="button" class="cp-hint" data-hint="baseline" aria-label="What is the baseline?"></button><button type="button" class="val-edit" onclick="openBaselineEdit()" title="Change the baseline date" aria-label="Change the baseline date"></button></span>
   </div>
 
+  <!-- Top-down: 🕌 zakat when it is due (until ✓ Paid) → 💼 Net worth → the portfolio (total + profit) → what it is made of
+       (they add up to the total) → the moving line → 🥇 metals and 🏦 cash in detail (folded) → 🕌 the zakat line, last -->
+  <div class="zk-slot" id="zakatTop"></div>
+  <!-- 💼 Net worth = the portfolio + cash & certificates (only when you have any) — the SAME portfolio number as the card below -->
+  <div class="nw-card" id="netWorthCard" data-no-tr hidden>
+    <div class="nw-top"><span class="nw-k">💼 <span id="nwLbl">Net worth</span></span><b class="nw-v" id="nwUsd">$—.——</b></div>
+    <div class="nw-bar" aria-hidden="true"><i class="nw-pf" id="nwBarPf"></i><i class="nw-cash" id="nwBarCash"></i></div>
+    <div class="nw-legend"><span class="nw-a"><i></i><span id="nwPfTxt">—</span></span><span class="nw-b"><i></i><span id="nwCashTxt">—</span></span></div>
+  </div>
   <div class="header-stats">
     <div class="stat-card">
       <div class="stat-label">Total Portfolio<button type="button" class="cp-hint" data-hint="totalPortfolio" aria-label="About Total Portfolio"></button></div>
@@ -111,15 +121,28 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
       <div class="stat-value" id="totalPnlCard">$—.——</div>
       <div class="stat-sub" id="totalPnlSub">—</div>
     </div>
-    <div class="stat-card">
+  </div>
+  <!-- what the portfolio is made of: BTC · Altcoins · Metals · Shares (only what you hold) — they add up to Total Portfolio -->
+  <div class="pf-parts" id="pfParts" data-n="2">
+    <div class="stat-card pf-part">
       <div class="stat-label">BTC Accumulated<button type="button" class="cp-hint" data-hint="btcAccum" aria-label="About BTC Accumulated"></button></div>
       <div class="stat-value stat-btc" id="totalBtc">—.—— BTC</div>
       <div class="stat-sub" id="totalBtcUsd">—</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card pf-part">
       <div class="stat-label">Altcoins Accumulated<button type="button" class="cp-hint" data-hint="altAccum" aria-label="About Altcoins Accumulated"></button></div>
       <div class="stat-value stat-blue" id="altUsd">$—.——</div>
       <div class="stat-sub" id="altUsdBtc">—</div>
+    </div>
+    <div class="stat-card pf-part" id="partMetals" hidden>
+      <div class="stat-label">Metals</div>
+      <div class="stat-value stat-gold" id="partMetalsUsd">$—.——</div>
+      <div class="stat-sub" id="partMetalsSub">—</div>
+    </div>
+    <div class="stat-card pf-part" id="partStocks" hidden>
+      <div class="stat-label">Shares (bStocks)</div>
+      <div class="stat-value stat-sky" id="partStocksUsd">$—.——</div>
+      <div class="stat-sub" id="partStocksSub">—</div>
     </div>
   </div>
 
@@ -128,22 +151,18 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
     <div class="btc-ticker-track" id="btcTickerTrack"></div>
   </div>
 
-  <!-- 🥇 Precious Metals: only when you hold gold / silver (under the moving line, so that stays right under the four cards) -->
-  <div class="stat-card stat-metals" id="metalsCard" hidden>
-      <div class="stat-label">🥇 Precious Metals <a class="mt-open" href="./market.html#metals" title="Your gold and silver — open the Metals page">Metals ›</a></div>
-      <div class="stat-value stat-gold" id="metalsUsd">$—.——</div>
-      <div class="stat-sub" id="metalsSub" data-no-tr>—</div>
+  <!-- 🥇 Metals in detail: only when you hold some — folded to one line; tap to open (remembered on this device) -->
+  <div class="stat-card stat-metals fold-card" id="metalsCard" hidden>
+      <div class="stat-label"><button type="button" class="fold-t" data-fold="metals" aria-expanded="false">🥇 <span>Precious Metals</span> <b class="fold-v" id="metalsUsd">$—.——</b><span class="fold-chev" aria-hidden="true"></span></button><a class="mt-open" href="./market.html#metals" title="Your metals — open the Metals page">Metals ›</a></div>
+      <div class="stat-sub fold-body" id="metalsSub" data-no-tr>—</div>
     </div>
-  <!-- 💼 Net worth = the portfolio + cash & certificates (only when you have any; the portfolio's own totals never include them) -->
-  <div class="nw-line" id="netWorthLine" data-no-tr hidden></div>
-  <!-- 🏦 Cash & certificates: bank balances and investment certificates in USD / EGP / SAR (samsam-cash.js) -->
-  <div class="stat-card stat-metals stat-cash" id="cashCard" data-no-tr hidden>
-      <div class="stat-label">🏦 <span data-cash-t>Cash &amp; certificates</span> <button type="button" class="mt-open ch-add" data-cash-add>+ <span data-cash-a>Add</span></button></div>
-      <div class="stat-value stat-blue" id="cashUsd">$—.——</div>
-      <div class="stat-sub" id="cashSub">—</div>
+  <!-- 🏦 Cash & certificates in detail: bank balances and certificates in USD / EGP / SAR (samsam-cash.js) — folded too -->
+  <div class="stat-card stat-metals stat-cash fold-card" id="cashCard" data-no-tr hidden>
+      <div class="stat-label"><button type="button" class="fold-t" data-fold="cash" aria-expanded="false">🏦 <span data-cash-t>Cash &amp; certificates</span> <b class="fold-v" id="cashUsd">$—.——</b><span class="fold-chev" aria-hidden="true"></span></button><button type="button" class="mt-open ch-add" data-cash-add>+ <span data-cash-a>Add</span></button></div>
+      <div class="stat-sub fold-body" id="cashSub">—</div>
     </div>
-  <!-- 🕌 zakat of the crypto (all of it together, on 1 Ramadan): due / days left with an estimate / below the nisab -->
-  <div class="zk-line" id="zakatLine" data-no-tr hidden></div>
+  <!-- 🕌 zakat: one pool (crypto + metals + cash + shares if counted) — this line, last; while it is due it moves to the top -->
+  <div class="zk-slot" id="zakatBottom"><div class="zk-line" id="zakatLine" data-no-tr hidden></div></div>
 </header>
 
 <!-- Best / worst performer of the last 24h — right under the totals, seen in the first seconds (follows the Category filter) -->
@@ -356,11 +375,11 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611232101"></script>
-<script src="samsam-home.js?v=202611232101"></script>
-<script src="samsam-analysis.js?v=202611232101"></script>
-<script src="samsam-coinpage.js?v=202611232101"></script>
-<script src="samsam-hchart.js?v=202611232101"></script>
+<script type="module" src="samsam-cloud.js?v=202611232135"></script>
+<script src="samsam-home.js?v=202611232135"></script>
+<script src="samsam-analysis.js?v=202611232135"></script>
+<script src="samsam-coinpage.js?v=202611232135"></script>
+<script src="samsam-hchart.js?v=202611232135"></script>
 
 <!-- ── Compact bar: appears once the main header scrolls away (logo · name · total) ── -->
 <div class="mini-bar" id="miniBar" aria-hidden="true">
@@ -457,12 +476,12 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
   @media (min-width: 1024px) { #cpViews { bottom: 0; } }
   @media print { #cpViews { display: none !important; } }
 </style>
-<script src="samsam-shell.js?v=202611232101"></script>
-<script src="samsam-edits.js?v=202611232101"></script>
+<script src="samsam-shell.js?v=202611232135"></script>
+<script src="samsam-edits.js?v=202611232135"></script>
 
 <!-- ── Holdings Full-Screen Overlay ── -->
 <div id="holdingsOverlay" style="display:none;position:fixed;inset:0;z-index:9999;flex-direction:column;overflow-y:auto;background:var(--bg)">
-  <link rel="stylesheet" href="samsam-holdings.css?v=202611232101">
+  <link rel="stylesheet" href="samsam-holdings.css?v=202611232135">
 
   <!-- Nav bar -->
   <header class="cp-head hov-navbar">

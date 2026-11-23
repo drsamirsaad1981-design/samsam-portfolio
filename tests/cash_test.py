@@ -23,7 +23,7 @@ with sync_playwright() as p:
     pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.goto(SITE + '/index.html'); pg.click('#samsamSignInBtn'); pg.wait_for_function("Samsam.isReady() && Samsam.getState().portfolio.some(c=>c.qty>0)"); pg.wait_for_timeout(1500)
     total0 = usd(pg, '#totalUsd'); pnl0 = pg.inner_text('#totalPnlCard')
-    check('with nothing entered there is no card and no Net worth line', not pg.is_visible('#cashCard') and not pg.is_visible('#netWorthLine'))
+    check('with nothing entered there is no card and no Net worth line', not pg.is_visible('#cashCard') and not pg.is_visible('#netWorthCard'))
     # ➕ Add → 🏦
     pg.evaluate("openAddCoin()"); pg.wait_for_selector('#acTabs [data-tab="cash"]', state='visible')
     pg.click('#acTabs [data-tab="cash"]'); pg.wait_for_selector('#acCashPane #ccAmt', state='visible')
@@ -37,8 +37,8 @@ with sync_playwright() as p:
     check('Save → the entry is kept and the window closes', pg.evaluate("Samsam.getCash().length") == 1)
     card = clean(pg.inner_text('#cashCard'))
     check('a balance of 100,000 EGP → the card: its name, the amount, ≈ $2,000 at $1 = 50 EGP (the official rate, shown)', pg.is_visible('#cashCard') and 'CIB savings' in card and '100,000 EGP' in card and '≈ $2,000.00' in card and '$1 = 50 EGP' in card and usd(pg, '#cashUsd') == 2000, card)
-    nw = clean(pg.inner_text('#netWorthLine'))
-    check('💼 Net worth = portfolio + cash, on its own line', 'Net worth' in nw and f'{total0 + 2000:,.2f}' in nw and f'{total0:,.2f}' in nw and '$2,000.00' in nw, [nw, total0])
+    nw = clean(pg.inner_text('#netWorthCard'))
+    check('💼 Net worth = portfolio + cash, its own card on top', 'Net worth' in nw and f'{total0 + 2000:,.2f}' in nw and f'{total0:,.2f}' in nw and '$2,000.00' in nw, [nw, total0])
     check('…and the portfolio\'s own total and profit are unchanged', usd(pg, '#totalUsd') == total0 and pg.inner_text('#totalPnlCard') == pnl0, [usd(pg, '#totalUsd'), total0])
     # a certificate, paid monthly, started 31 days ago
     start = (NOW - datetime.timedelta(days=45)).strftime('%Y-%m-%d')
@@ -87,7 +87,7 @@ with sync_playwright() as p:
     state['ok'] = True
     # Arabic
     pg.evaluate("localStorage.setItem('cp-lang','ar')"); pg.reload(); pg.wait_for_function("Samsam.isReady() && Samsam.getState().portfolio.some(c=>c.qty>0)"); pg.wait_for_timeout(2500)
-    card = clean(pg.inner_text('#cashCard')); nw = clean(pg.inner_text('#netWorthLine'))
+    card = clean(pg.inner_text('#cashCard')); nw = clean(pg.inner_text('#netWorthCard'))
     check('Arabic: the card, the certificate line and Net worth', 'نقد وشهادات' in card and 'السعر الرسمي' in card and 'شهادة' in card and 'سنوياً' in card and 'تستحق' in card and 'العائد حتى الآن' in card and '(غير محسوب)' in card and 'صافي الثروة' in nw and 'matures' not in card and 'Official' not in card, [card, nw])
     pg.evaluate("openAddCoin()"); pg.wait_for_selector('#acTabs [data-tab="cash"]', state='visible'); pg.wait_for_timeout(400)
     tabs = pg.evaluate("[...document.querySelectorAll('#acTabs [data-tab]')].map(b => b.textContent.trim())")

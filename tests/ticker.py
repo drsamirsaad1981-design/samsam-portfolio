@@ -14,7 +14,7 @@ with sync_playwright() as p:
         pg.wait_for_function("window.Samsam && Samsam.isReady() && Samsam.getState().portfolio.length > 5", timeout=10000)
         pg.wait_for_timeout(2500)
         info = pg.evaluate("""() => {
-          const cards = [...document.querySelectorAll('.header-stats .stat-card')].filter(c => c.offsetParent);
+          const cards = [...document.querySelectorAll('.header-stats .stat-card, .pf-parts .stat-card')].filter(c => c.offsetParent);
           const rects = cards.map(c => { const r = c.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top)]; });
           const tk = document.getElementById('btcTicker'), tr = document.getElementById('btcTickerTrack');
           const cs = getComputedStyle(tk);
@@ -28,9 +28,9 @@ with sync_playwright() as p:
         }""")
         check(f'{name}: card order', info['labels'] == ['Total Portfolio', 'All Time Profit', 'BTC Accumulated', 'Altcoins Accumulated'], info['labels'])
         if name == 'mobile':
-            r = info['rects']; check('mobile: 2x2 grid', r[0][1] == r[1][1] and r[2][1] == r[3][1] and r[2][1] > r[0][1] and r[0][0] == r[2][0], r)
+            r = info['rects']; check('mobile: 2x2 grid (Total + Profit, then the parts)', r[0][1] == r[1][1] and r[2][1] == r[3][1] and r[2][1] > r[0][1] and r[0][0] == r[2][0], r)
         else:
-            r = info['rects']; check('desktop: one row of 4', len({y for _, y in r}) == 1, r)
+            r = info['rects']; check('desktop: Total + Profit on one row, its parts (BTC · Altcoins) on the next', r[0][1] == r[1][1] and r[2][1] == r[3][1] and r[2][1] > r[0][1], r)
         check(f'{name}: BTC price card + old label removed', not info['oldCards'])
         check(f'{name}: P&L format +$X (+X.XX%)', info['pnl'][0] in '+-' and info['pnl'][1] == '$' and info['pnlSub'].startswith('(') and '%)' in info['pnlSub'], (info['pnl'], info['pnlSub']))
         check(f'{name}: ticker shows live, price, 24h change — no High / Low', all(k in info['tickerText'] for k in ('Live', 'BTC / USD', '$100,000', '+2.45%')) and 'High' not in info['tickerText'] and 'Low ' not in info['tickerText'], info['tickerText'][:200])

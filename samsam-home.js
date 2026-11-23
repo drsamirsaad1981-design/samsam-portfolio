@@ -342,6 +342,7 @@ function renderZakatLine(portfolio) {
   const day = SamsamCoins.zakatDayLabel(AR), edit = `<button type="button" class="zk-edit" onclick="editZakatDay()" title="${AR ? 'تغيير يوم الزكاة' : 'Change your zakat day'}">${SamsamUI.icon('pencil')}</button>`;
   const mix = z.state === 'upcoming' || z.state === 'under' ? parts.map(x => `${x[1]} ${iso(fmtUsd(x[0]))}`).join(' · ') : '';
   el.hidden = false; el.classList.toggle('zk-due', z.state === 'due'); el.dataset.state = z.state;
+  const slot = document.getElementById(z.state === 'due' ? 'zakatTop' : 'zakatBottom'); if (slot && el.parentElement !== slot) slot.appendChild(el);   // due → at the very top until ✓ Paid
   el.innerHTML = '🕌 ' + (z.state === 'due'
     ? `<span class="zk-t">${ZL} ${AR ? 'مستحقة' : 'due'} · ${day} ${iso(z.hy)}: <b>${iso(fmtUsd(z.zakatUsd))}</b> <small>${AR ? '2.5% من' : '2.5% of'} ${iso(fmtUsd(z.value))}${z.fixed ? '' : (AR ? ' (بقيمة اليوم)' : ' (today\'s value)')}</small></span><button type="button" class="zk-paid" onclick="zakatPaidNow()">✓ ${AR ? 'دفعت' : 'Paid'}</button>`
     : z.state === 'paid' ? `${ZL} ${iso(z.hy)} ${AR ? 'مدفوعة' : 'paid'} ✓ <b>${iso(z.paid.cur === 'USD' ? fmtUsd(z.paid.paid) : Math.round(z.paid.paid).toLocaleString('en-US') + ' ' + z.paid.cur)}</b> <small>${iso(z.paid.at)}</small> · ${AR ? 'القادمة' : 'next'} ${day} ${iso(z.nextHy)}${AR ? '، بعد' : ', in'} <b>${iso(z.daysLeft)}</b> ${AR ? 'يوم' : 'days'}<button type="button" class="zk-undo" onclick="zakatUnpay(${z.hy})" title="${AR ? 'تراجع: لم أدفع بعد' : 'Undo: not paid yet'}">↶</button>`
@@ -436,7 +437,8 @@ function renderHeader() {
     const b = document.getElementById('totalBtc'); if (b) b.textContent = '—.—— BTC';
     return;
   }
-  const { btcQty, btcValue, altTotal, total } = calcStats();
+  const { btcQty, btcValue, altTotal, metalTotal, stockTotal, total } = calcStats();
+  nwPortfolio = total;   // 💼 Net worth reads THIS number — the same one as Total Portfolio
   const fmtUsd = n => SamsamFmt.usd(n);
   const fmtBtc = n => (btcPrice > 0 ? parseFloat((n / btcPrice).toFixed(8)).toString() : '—') + ' BTC';
 
@@ -492,10 +494,55 @@ function renderHeader() {
     }
   }
 
-  try { if (window.SamsamCash) SamsamCash.render(total); } catch (e) { console.warn('[cash]', e); }   // 🏦 Cash & certificates + 💼 Net worth (never part of the totals above)
+  // what the portfolio is made of — BTC · Altcoins · Metals · Shares (only those you hold); they add up to Total Portfolio
+  try {
+    const pctOf = v => total > 0 ? (v / total * 100).toFixed(1) + '%' : '—', AR = !!(window.CPLang && CPLang.ar);
+    const pm = document.getElementById('partMetals'), ps = document.getElementById('partStocks');
+    if (pm) { pm.hidden = !(metalTotal > 0); document.getElementById('partMetalsUsd').textContent = fmtUsd(metalTotal); document.getElementById('partMetalsSub').textContent = pctOf(metalTotal) + (AR ? ' من المحفظة' : ' of the portfolio'); }
+    if (ps) { ps.hidden = !(stockTotal > 0); document.getElementById('partStocksUsd').textContent = fmtUsd(stockTotal); document.getElementById('partStocksSub').textContent = pctOf(stockTotal) + (AR ? ' من المحفظة' : ' of the portfolio'); }
+    const pp = document.getElementById('pfParts'); if (pp) pp.dataset.n = String(2 + (metalTotal > 0) + (stockTotal > 0));
+  } catch (e) { console.warn('[parts]', e); }
+  try { if (window.SamsamCash) SamsamCash.render(total); } catch (e) { console.warn('[cash]', e); }   // 🏦 Cash & certificates (never part of the totals above)
+  renderNetWorth();
+  foldCards();
   renderBtcTicker();
 }
 
+// 💼 Net worth = Total Portfolio (the very number on its card) + cash & certificates, with the split as a thin bar.
+// Drawn again when the cash card has news (its rates arrive later): SamsamCash → window.onCashRender.
+var nwPortfolio = null;
+function renderNetWorth() {
+  const card = document.getElementById('netWorthCard'); if (!card) return;
+  const c = window.SamsamCash && SamsamCash.last ? SamsamCash.last() : null, AR = !!(window.CPLang && CPLang.ar);
+  if (!c || !c.n || nwPortfolio == null) { card.hidden = true; return; }
+  const pf = nwPortfolio, cash = c.usd || 0, all = pf + cash, ppf = all > 0 ? pf / all * 100 : 0, iso = x => '⁦' + x + '⁩';
+  card.hidden = false;
+  document.getElementById('nwLbl').textContent = AR ? 'صافي الثروة' : 'Net worth';
+  document.getElementById('nwUsd').textContent = SamsamFmt.usd(all);
+  document.getElementById('nwBarPf').style.width = ppf.toFixed(2) + '%'; document.getElementById('nwBarCash').style.width = (100 - ppf).toFixed(2) + '%';
+  document.getElementById('nwPfTxt').textContent = (AR ? 'المحفظة ' : 'Portfolio ') + iso(SamsamFmt.usd(pf)) + ' · ' + iso(Math.round(ppf) + '%');
+  document.getElementById('nwCashTxt').textContent = (AR ? 'النقد والشهادات ' : 'Cash & certificates ') + iso(SamsamFmt.usd(cash)) + ' · ' + iso((100 - Math.round(ppf)) + '%') + (c.missing && c.missing.length ? ' *' : '');
+  card.title = c.missing && c.missing.length ? (AR ? '* لا يوجد سعر بعد لـ ' : '* No rate yet for ') + c.missing.join(', ') : '';
+}
+window.onCashRender = () => renderNetWorth();
+// 🥇 / 🏦 detail cards: folded to one line (name + value) until you open them — your choice is kept on this device
+function foldCards() {
+  document.querySelectorAll('.fold-card').forEach(card => {
+    const b = card.querySelector('.fold-t'); if (!b) return;
+    const k = 'cp-fold-' + b.dataset.fold; let open = false; try { open = localStorage.getItem(k) === '1'; } catch (_) {}
+    card.classList.toggle('open', open); b.setAttribute('aria-expanded', String(open));
+    if (!b.onclick) b.onclick = () => { let o = false; try { o = localStorage.getItem(k) !== '1'; localStorage.setItem(k, o ? '1' : '0'); } catch (_) {} card.classList.toggle('open', o); b.setAttribute('aria-expanded', String(o)); };
+  });
+}
+
+// 📈 the market's pulse, in the date line: total market cap (24h) and Fear & Greed — no extra row above your numbers
+function renderPulse() {
+  const el = document.getElementById('hmPulse'), M = window.SamsamMarket; if (!el || !M || typeof tickerMkt === 'undefined' || !tickerMkt) return;
+  const g = tickerMkt.g, f = tickerMkt.f, AR = !!(window.CPLang && CPLang.ar), iso = x => '⁦' + x + '⁩', out = [];
+  if (g && g.mcap > 0) { const ch = g.mcapCh24; out.push(`<span class="pc" title="${AR ? 'القيمة السوقية للكريبتو' : 'Crypto market cap'}">${AR ? 'السوق' : 'Mkt'} <b>${iso(M.fmtBig(g.mcap))}</b>${ch != null ? ` <span class="${ch >= 0 ? 'stat-pos' : 'stat-neg'}">${iso((ch >= 0 ? '+' : '−') + Math.abs(ch).toFixed(1) + '%')}</span>` : ''}</span>`); }
+  if (f && f.value != null) out.push(`<span class="pc" title="${AR ? 'مؤشر الخوف والطمع' : 'Fear & Greed'}"><i style="background:${M.fngColor(f.value)}"></i>${AR ? 'الخوف/الطمع' : 'F&amp;G'} <b>${iso(f.value)}</b></span>`);
+  el.innerHTML = out.join(''); el.hidden = !out.length;
+}
 // ── Live BTC ticker ──────────────────────────────────────────────────────────
 let btcTicker = { price: 0, ch24: null, high24: null, low24: null, t: 0 };
 async function fetchBtcTicker() {
@@ -523,7 +570,7 @@ var tickerMkt = {};
 function loadTickerMarket() {
   const M = window.SamsamMarket; if (!M) return;
   const val = p => p.then(r => r && 'data' in r ? r.data : r, () => null);
-  Promise.all([val(M.global()), val(M.fng()), val(M.alt90())]).then(([g, f, alt]) => { tickerMkt = { g, f, alt }; renderBtcTicker(); });
+  Promise.all([val(M.global()), val(M.fng()), val(M.alt90())]).then(([g, f, alt]) => { tickerMkt = { g, f, alt }; renderBtcTicker(); renderPulse(); });
 }
 loadTickerMarket(); setInterval(() => { if (!document.hidden) loadTickerMarket(); }, 3 * 60e3);
 function renderBtcTicker() {

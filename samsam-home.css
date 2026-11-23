@@ -1364,3 +1364,45 @@
 .zk-undo { border: 0; background: transparent; color: var(--fg2); font: inherit; cursor: pointer; padding: 0 4px; margin-inline-start: 4px; }
 .zk-line .zk-mix { display: block; margin-top: 2px; opacity: .75; }
 .zk-edit { background: none; border: none; padding: 0 4px; margin-inline-start: 4px; color: inherit; opacity: .75; cursor: pointer; vertical-align: middle; }
+
+/* ── Overview, top-down (Nov 2026): 💼 Net worth → the portfolio → its parts → details (folded) → 🕌 zakat ── */
+.stat-sky { color: #38bdf8; }
+.zk-slot:empty { display: none; }
+#zakatTop .zk-line { margin: 0 0 12px; }
+.nw-card { margin: 0 0 10px; padding: 14px 16px 12px; border-radius: 14px; border: 1px solid var(--border); background: linear-gradient(135deg, rgba(124,58,237,.14), rgba(34,197,94,.08)); }
+.nw-card[hidden] { display: none !important; }
+.nw-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.nw-k { font-size: .82rem; font-weight: 700; color: var(--fg2); }
+.nw-v { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--fg); }
+.nw-bar { display: flex; height: 7px; border-radius: 6px; overflow: hidden; margin: 10px 0 8px; background: var(--bg3); }
+.nw-bar i { display: block; height: 100%; transition: width .4s; }
+.nw-pf, .nw-a i { background: #8b5cf6; } .nw-cash, .nw-b i { background: #22c55e; }
+.nw-legend { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .74rem; color: var(--fg2); font-variant-numeric: tabular-nums; }
+.nw-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.nw-legend i { width: 8px; height: 8px; border-radius: 3px; display: inline-block; }
+.pf-parts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+.pf-parts[data-n="3"] { grid-template-columns: repeat(3, 1fr); }
+.pf-parts[data-n="3"] .stat-value { font-size: .9rem; }
+.pf-parts[data-n="3"] .stat-label { font-size: .64rem; }
+.pf-part[hidden] { display: none !important; }
+@media (min-width: 900px) {
+  .pf-parts { display: flex; gap: 14px; margin-top: 14px; }
+  .pf-parts .stat-card { flex: 1 1 0; }
+  .pf-parts[data-n="3"] .stat-value { font-size: inherit; } .pf-parts[data-n="3"] .stat-label { font-size: inherit; }
+  .header-stats { margin-top: 0; }
+}
+/* folded detail cards: one line (name + value), tap to open */
+.fold-card .stat-label { display: flex; align-items: center; margin-bottom: 0; }
+.fold-t { flex: 1; display: flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: .86rem; font-weight: 700; cursor: pointer; padding: 2px 0; text-align: start; }
+.fold-t .fold-v { margin-inline-start: auto; font-variant-numeric: tabular-nums; }
+.fold-t .fold-v.stat-gold, #metalsUsd { color: #eab308; } #cashUsd { color: var(--blue); }
+.fold-chev { width: 9px; height: 9px; border-inline-end: 2px solid var(--fg2); border-bottom: 2px solid var(--fg2); transform: rotate(45deg); margin: -3px 6px 0 8px; transition: transform .2s; flex-shrink: 0; }
+.fold-card.open .fold-chev { transform: rotate(225deg); margin-top: 4px; }
+.fold-card:not(.open) .fold-body { display: none; }
+.fold-card .stat-label .mt-open { position: static; margin-inline-start: 8px; }
+.fold-card.open .fold-body { margin-top: 8px; }
+/* 📈 market pulse in the date line: market cap and Fear & Greed, two small chips */
+.hm-pulse { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.hm-pulse .pc { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: rgba(148,163,184,.10); font-size: .74rem; }
+.hm-pulse .pc b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.hm-pulse .pc i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
