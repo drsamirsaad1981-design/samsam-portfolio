@@ -394,7 +394,8 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       if (!met) { delete st.plan[p.sym]; continue; }
       if (st.plan[p.sym] || first) { st.plan[p.sym] = 1; continue; }
       const ar = cfg.lang === 'ar', name = planName(p, ar);
-      const text = `🎯 <b>${t.targetHit(esc(name))}</b>\n${planAmt(p, p.actual, ar)} / ${planAmt(p, p.target, ar)} ✅\n${t.planNow}: ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`;
+      const amt = (p.kind || 'coin') === 'coin' ? `${+p.actual.toFixed(6)} / ${+p.target.toFixed(6)} ${esc(p.sym)}` : `${planAmt(p, p.actual, ar)} / ${planAmt(p, p.target, ar)}`;   // coins as before: 6500 / 6000 SEI
+      const text = `🎯 <b>${t.targetHit(esc(name))}</b>\n${amt} ✅\n${t.planNow}: ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`;
       if (push({ key: 'plan-' + p.sym, text, buttons: [[btn(t.planBtn, 'accumulation.html')]] })) st.plan[p.sym] = 1;
     }
   }
