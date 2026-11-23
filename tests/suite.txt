@@ -171,3 +171,4 @@ signal_close_test.py
 close_file_unit_test.py
 asset_classes_unit_test.py
 asset_classes_app_test.py
+add_stocks_test.py

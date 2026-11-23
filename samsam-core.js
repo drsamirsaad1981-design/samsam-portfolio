@@ -691,13 +691,15 @@ export function cashTotals(list, fx, now = Date.now()) {
 //   metal  · physical gold / silver, kept in grams (XAU, XAG) → held; no Signal; zakat on its own nisab (85 g / 595 g)
 //   cash   · bank balances and certificates (meta/info.cash, never a coin) → Net worth only; always in zakat
 // Gold TOKENS (PAXG, XAUT, KAG) are coins: they trade like any token (their category is still Precious Metals).
-// Nothing is migrated: a holding's class comes from what it already is — XAU / XAG, a CoinGecko id ending "-bstock" —
+// Nothing is migrated: a holding's class comes from what it already is — XAU / XAG, a CoinGecko id with "bstock(s)" in it —
 // or from its own `cls` when one was saved (the Add window's tabs save it). Callers that only have a symbol get the class
 // the coins and plan rows taught (learnAssets), else crypto.
 export const CLASSES = ['crypto', 'stock', 'metal', 'cash'];
 const METAL_SYMS = new Set(['XAU', 'XAG']);
+// CoinGecko's bStocks ids: nvidia-bstocks · circle-internet-group-bstock · tesla-bstocks-tokenized-stock · intel-tokenized-bstocks
+export const BSTOCK_ID = /(^|-)b?bstocks?(-|$)|^bn:/i;   // (+ …-bbstocks-tokenized-etf, and a share priced by the exchange: bn:ANTB)
 const learnedClass = new Map();
-const classOfDoc = d => d && typeof d === 'object' ? (d.cls === 'stock' || d.cls === 'metal' || d.cls === 'crypto' ? d.cls : /-bstock$/i.test(String(d.cgId || '')) ? 'stock' : null) : null;
+const classOfDoc = d => d && typeof d === 'object' ? (d.cls === 'stock' || d.cls === 'metal' || d.cls === 'crypto' ? d.cls : BSTOCK_ID.test(String(d.cgId || '')) ? 'stock' : null) : null;
 export function learnAssets(list) {
   for (const d of Array.isArray(list) ? list : []) { const s = d && String(d.sym || '').toUpperCase(), k = classOfDoc(d); if (s && k && k !== 'crypto') learnedClass.set(s, k); }
   if (learnedClass.size > 5000) learnedClass.clear();

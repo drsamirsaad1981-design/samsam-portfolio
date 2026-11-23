@@ -5,7 +5,7 @@ let pass = 0, fail = 0;
 const check = (n, c, d = '') => { if (c) { pass++; console.log('PASS ' + n); } else { fail++; console.log('FAIL ' + n + ' -> ' + JSON.stringify(d)); } };
 check('the four classes', JSON.stringify(C.CLASSES) === '["crypto","stock","metal","cash"]');
 check('a coin is crypto; gold and silver (grams) are metal; gold TOKENS stay crypto', ['BTC', 'SOL', 'XAU', 'XAG', 'PAXG', 'XAUT'].map(C.assetClass).join() === 'crypto,crypto,metal,metal,crypto,crypto');
-check('a bStock is known by its CoinGecko id (…-bstock), or by its own cls', C.assetClass({ sym: 'NVDAB', cgId: 'nvidia-bstock' }) === 'stock' && C.assetClass({ sym: 'TSLAB', cls: 'stock' }) === 'stock' && C.assetClass({ sym: 'ABC', cgId: 'abc' }) === 'crypto');
+check('a bStock is known by its CoinGecko id (as CoinGecko writes them: nvidia-bstocks, circle-internet-group-bstock, tesla-bstocks-tokenized-stock, intel-tokenized-bstocks), or by its own cls', ['nvidia-bstocks', 'circle-internet-group-bstock', 'tesla-bstocks-tokenized-stock', 'intel-tokenized-bstocks'].every(id => C.assetClass({ sym: 'X', cgId: id }) === 'stock') && C.assetClass({ sym: 'NVDAB', cgId: 'nvidia-bstock' }) === 'stock' && C.assetClass({ sym: 'TSLAB', cls: 'stock' }) === 'stock' && C.assetClass({ sym: 'ABC', cgId: 'abc' }) === 'crypto');
 check('a symbol alone is crypto until the coins teach it…', C.assetClass('NVDAB') === 'crypto');
 C.learnAssets([{ sym: 'NVDAB', cgId: 'nvidia-bstock' }, { sym: 'SOL', cgId: 'solana' }, { sym: 'XAU' }]);
 check('…then the symbol alone is a stock (and a plain coin stays crypto)', C.assetClass('NVDAB') === 'stock' && C.assetClass('SOL') === 'crypto');

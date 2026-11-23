@@ -14,7 +14,7 @@ with sync_playwright() as p:
 
     pg.evaluate("openAddCoin()"); pg.wait_for_timeout(200)
     tabs = pg.evaluate("[...document.querySelectorAll('#acTabs [data-tab]')].filter(b => !b.hidden).map(b => b.textContent.trim() + (b.getAttribute('aria-selected') === 'true' ? '*' : ''))")
-    check('➕ Add opens on three tabs: Coins (first) · Metals · Cash & Certificate', tabs == ['Coins*', 'Metals', 'Cash & Certificate'] and pg.is_visible('#acSym') and not pg.is_visible('#acMetalPick') and pg.inner_text('#acTitle').strip() == 'Add', tabs)
+    check('➕ Add opens on four tabs: Coins (first) · bStocks · Metals · Cash & CDs', tabs == ['Coins*', 'bStocks', 'Metals', 'Cash & CDs'] and pg.is_visible('#acSym') and not pg.is_visible('#acMetalPick') and pg.inner_text('#acTitle').strip() == 'Add', tabs)
     pg.click('#acTabs [data-tab="metal"]'); pg.wait_for_timeout(300)
     vis = pg.evaluate("['acSym','acName','acCgId','acCmc','acCat','acQty','acPrice','acDate','acVault'].map(i => document.getElementById(i).offsetParent !== null)")
     check('Metals tab: Gold 24k / Silver to pick (gold first), and only the metal\'s own fields — amount, price, date, where it is kept', pg.locator('.ac-metals button').count() == 2 and pg.get_attribute('#acMetalPick [data-m="XAU"]', 'aria-checked') == 'true' and vis == [False, False, False, False, False, True, True, True, True], vis)

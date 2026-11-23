@@ -136,10 +136,10 @@
     '.ac-mbox{display:grid;gap:8px;padding:10px;border:1px solid rgba(234,179,8,.35);border-radius:12px}.ac-mbox[hidden]{display:none}.ac-seg{display:flex;gap:4px;background:rgba(148,163,184,.1);border-radius:10px;padding:3px}.ac-seg button{flex:1;border:0;background:transparent;color:inherit;font:inherit;font-size:.8rem;padding:6px;border-radius:8px;cursor:pointer}.ac-seg button[aria-checked=true]{background:#eab308;color:#111;font-weight:700}' +
     '.ac-chips{display:flex;gap:6px;flex-wrap:wrap}.ac-chips[hidden]{display:none}.ac-chips button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:999px;padding:3px 10px;font:inherit;font-size:.76rem;cursor:pointer}#acVaultLabel{width:100%;box-sizing:border-box}' +
     '.vlt-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 10px}.vlt-list button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:12px;padding:10px;font:inherit;font-size:.86rem;cursor:pointer;text-align:start}.vlt-list button[aria-checked=true]{border-color:#eab308;background:rgba(234,179,8,.15);font-weight:700}#vaultLabel{width:100%;box-sizing:border-box;margin-bottom:10px}' +
-    '.ac-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;border-radius:12px;background:var(--bg3,#1f2937);border:1px solid var(--border,#334155);box-sizing:border-box;margin:0 0 12px}' +
+    '.ac-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:3px;border-radius:12px;background:var(--bg3,#1f2937);border:1px solid var(--border,#334155);box-sizing:border-box;margin:0 0 12px}' +
     '.ac-tabs button{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:36px;padding:6px 4px;border-radius:9px;font:700 .78rem/1.15 Inter,system-ui,sans-serif;color:var(--fg2,#94a3b8);cursor:pointer;-webkit-tap-highlight-color:transparent}' +
     '.ac-tabs button[aria-selected=true]{background:#7c3aed;color:#fff;box-shadow:0 1px 4px rgba(124,58,237,.35)}.ac-tabs button:focus-visible{outline:2px solid #a78bfa;outline-offset:1px}.ac-tabs button[hidden]{display:none}' +
-    '#acForm[data-tab=metal] .ac-find,#acForm[data-tab=metal] .ac-coinonly,#acForm[data-tab=cash] .ac-grid,#acForm[data-tab=cash] #acPreview,#acForm[data-tab=cash] #acError,#acForm[data-tab=cash] #acSave{display:none!important}' +
+    '#acForm[data-tab=stock] .ac-coinonly,#acForm[data-tab=stock] #acNetRow,#acForm[data-tab=metal] .ac-find,#acForm[data-tab=metal] .ac-coinonly,#acForm[data-tab=cash] .ac-grid,#acForm[data-tab=cash] #acPreview,#acForm[data-tab=cash] #acError,#acForm[data-tab=cash] #acSave{display:none!important}' +
     '#acMetalPick[hidden],#acCashPane[hidden]{display:none}#acMetalPick{margin-top:0}#acMetalPick button{padding:8px 14px;font-size:.86rem;font-weight:600}#acMetalPick button[aria-checked=true]{border-color:#eab308;background:rgba(234,179,8,.16)}' +
     '#acCashPane .cc-btns{margin-top:14px}' +
     '.ac-metals,.ac-cash{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}.ac-metals button,.ac-cash button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:999px;padding:4px 10px;font:inherit;font-size:.78rem;cursor:pointer}.ac-metals small,.ac-cash small{opacity:.6;font-size:.72rem}' +
@@ -152,10 +152,11 @@
       // what is being added: a coin · gold or silver · cash or a certificate — each tab shows its own fields only
       '<div class="ac-tabs" id="acTabs" role="tablist" aria-label="What to add">' +
         '<button type="button" role="tab" data-tab="coin" aria-selected="true" onclick="acSetTab(\'coin\')">Coins</button>' +
+        '<button type="button" role="tab" data-tab="stock" aria-selected="false" onclick="acSetTab(\'stock\')">bStocks</button>' +
         '<button type="button" role="tab" data-tab="metal" aria-selected="false" onclick="acSetTab(\'metal\')">Metals</button>' +
-        '<button type="button" role="tab" data-tab="cash" aria-selected="false" onclick="acSetTab(\'cash\')">Cash &amp; Certificate</button></div>' +
+        '<button type="button" role="tab" data-tab="cash" aria-selected="false" onclick="acSetTab(\'cash\')">Cash &amp; CDs</button></div>' +
       '<div class="ac-grid">' +
-        '<div class="atx-field ac-find ac-full"><label for="acSym">Coin <span style="color:#ef4444">*</span> <small class="form-sub">— search by symbol or name</small></label>' +
+        '<div class="atx-field ac-find ac-full"><label for="acSym"><span id="acFindLbl">Coin</span> <span style="color:#ef4444">*</span> <small class="form-sub" id="acFindSub">— search by symbol or name</small></label>' +
           '<input type="text" id="acSym" placeholder="e.g. XRP or Ripple" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acSuggest"' +
           ' oninput="this.value=this.value.toUpperCase().replace(/\\s+/g,\' \').trimStart(); acSearchInput()" onkeydown="acSearchKey(event)">' +
           '<ul class="ac-suggest" id="acSuggest" role="listbox" hidden></ul><div class="ac-linked" id="acLinked" hidden></div>' +
@@ -350,7 +351,24 @@
     if (q.length < 2) { acShow([]); return; }
     acTimer = setTimeout(function () { acSearch(q); }, 280);
   }
+  // 📈 Binance's tokenized US shares, from the market snapshot (GitHub, every ~30 min): searched here, no CoinGecko call
+  var stockList = null;
+  function stocks() {
+    if (stockList) return Promise.resolve(stockList);
+    var M = window.SamsamMarket; if (!M || !M.stocks) return Promise.resolve([]);
+    return M.stocks().then(function (r) { stockList = ((r && r.data) || []).filter(function (x) { return x && x.id && x.sym; }); return stockList; }, function () { return []; });
+  }
+  async function acSearchStocks(q) {
+    var seq = ++acSeq, box = $('acSuggest'), Q = q.toUpperCase();
+    box.hidden = false; box.innerHTML = '<li class="ac-msg">Searching bStocks…</li>';
+    var list = await stocks(); if (seq !== acSeq) return;
+    var hits = list.filter(function (x) { return x.sym.indexOf(Q) >= 0 || String(x.name || '').toUpperCase().indexOf(Q) >= 0; })
+      .sort(function (a, b) { return (a.sym.indexOf(Q) === 0 ? 0 : 1) - (b.sym.indexOf(Q) === 0 ? 0 : 1) || (b.mcap || 0) - (a.mcap || 0); }).slice(0, 12)
+      .map(function (x) { return { id: x.id, sym: x.sym, name: String(x.name || x.sym).replace(/\s*\(bStocks Tokenized (Stock|ETF)\)\s*$/i, ''), thumb: x.img || '', price: x.price || 0, stock: true }; });
+    acShow(hits, hits.length ? '' : list.length ? 'No bStock found. Try the company name or the ticker (e.g. NVDAB).' : 'The list of bStocks is not loaded yet — try again in a moment.');
+  }
   async function acSearch(q) {
+    if (acTab === 'stock') return acSearchStocks(q);
     var seq = ++acSeq, box = $('acSuggest');
     box.hidden = false; box.innerHTML = '<li class="ac-msg">Searching CoinGecko…</li>';
     try {
@@ -391,6 +409,13 @@
     acShow([]); acLink(c);
     $('acCmc').value = SamsamCoins.CMC_SLUGS[c.sym] || SamsamCoins.cmcGuess(c.name) || ''; acCmcCheck();
     $('acQty').focus();
+    if (c.stock) {   // a share: its category is US Stocks, its price is the snapshot's
+      fillCatSelect($('acCat'), 'stocks'); syncCatCustom($('acCat'), 'acCatCustomBox'); $('acCmc').value = ''; acCmcCheck();
+      if (/^bn:/.test(c.id)) $('acCgId').value = '';
+      var lp = $('acLinkedPrice'); if (lp && c.price > 0) lp.textContent = ' · now ' + SamsamFmt.price(c.price);
+      if (c.price > 0) { var pm = {}; pm[c.sym] = { usd: c.price }; try { Samsam.updatePrices(pm); } catch (_) {} }
+      return;
+    }
     try {   // category suggestion from CoinGecko's own categories (you can still change it) + today's price
       var d = await coinInfo(c.id);
       if ($('acCgId').value !== c.id) return;
@@ -429,6 +454,7 @@
     el.classList.toggle('own', !!own);
     el.innerHTML = own
       ? SamsamUI.ic('star') + '<strong>' + E(c.sym) + '</strong> is already in your portfolio — saving adds this as a <strong>Buy</strong>.'
+      : c.stock ? SamsamUI.ic('check') + 'bStock: <strong>' + E(c.name) + '</strong><span id="acLinkedPrice"></span> — a tokenized US share: live price and logo ready. It counts in your Portfolio total (not with the altcoins) and has no Signal.'
       : SamsamUI.ic('check') + 'Linked to CoinGecko: <strong>' + E(c.name) + '</strong> (' + E(c.id) + ')<span id="acLinkedPrice"></span> — live price, logo, CoinMarketCap link, Liquidation Map and Price Prediction ready';
     el.hidden = false;
   }
@@ -469,7 +495,7 @@
   function acUnits() {
     var m = isMetal($('acSym').value.trim().toUpperCase()), R = ' <span style="color:#ef4444">*</span>';
     $('acMetalBox').hidden = !m; $('acNetRow').hidden = m || !window.SamsamWallets;
-    if (!m) { $('acQtyLbl').innerHTML = 'Amount' + R; $('acPriceLbl').innerHTML = 'Avg. Buy Price' + R; return; }
+    if (!m) { var sh = acTab === 'stock'; $('acQtyLbl').innerHTML = (sh ? 'Amount (shares)' : 'Amount') + R; $('acPriceLbl').innerHTML = (sh ? 'Buy price per share' : 'Avg. Buy Price') + R; return; }
     document.querySelectorAll('#acMetalBox [data-u]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.u === acU)); });
     document.querySelectorAll('#acMetalBox [data-pm]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.pm === acPM)); });
     $('acPmUnit').textContent = acU === 'g' ? 'Price per gram' : 'Price per token';
@@ -505,7 +531,9 @@
     $('acCatCustom').value = p && p.catLabel && SamsamTaxonomy.isCustom(p.cat) && catSel.value === 'other' ? p.catLabel : '';
     syncCatCustom(catSel, 'acCatCustomBox');
     $('acTitle').innerHTML = SamsamUI.ic('plus') + 'Add'; $('acSave').innerHTML = SamsamUI.ic('plus') + 'Add to Portfolio';
-    acTabUI(p && p.sym && isMetal(String(p.sym).toUpperCase()) ? 'metal' : 'coin', p && p.sym ? String(p.sym).toUpperCase() : '');
+    var pCls = p && p.sym && Samsam.core && Samsam.core.assetClass ? Samsam.core.assetClass({ sym: p.sym, cgId: p.cgId, cls: p.cls }) : null;
+    acTabUI(p && p.tab === 'stock' || pCls === 'stock' ? 'stock' : p && p.sym && isMetal(String(p.sym).toUpperCase()) ? 'metal' : 'coin', p && p.sym ? String(p.sym).toUpperCase() : '');
+    if (acTab === 'stock') fillCatSelect(catSel, 'stocks');
     $('acPreview').innerHTML = ''; $('acError').textContent = ''; acU = 'g'; acPM = 'unit'; acSpot = 0;
     $('acDate').value = ''; $('acDate').max = localDateTimeValue(new Date()).slice(0, 10); $('acVault').value = ''; $('acVaultLabel').value = ''; $('acVaultLabel').hidden = true; acUnits();
     if (p && p.sym) {   // coming from a plan / a coin you picked elsewhere: already linked, just add the amount
@@ -530,6 +558,9 @@
   function acTabUI(tab, sym) {
     acTab = tab; var f = $('acForm'); if (!f) return;
     f.dataset.tab = tab;
+    var st = tab === 'stock';   // 📈 bStocks: the same search box, over Binance's tokenized US shares only
+    $('acFindLbl').textContent = st ? 'Share' : 'Coin'; $('acFindSub').textContent = st ? '— search NVIDIA, Tesla, SPY…' : '— search by symbol or name';
+    $('acSym').placeholder = st ? 'e.g. NVDAB or Tesla' : 'e.g. XRP or Ripple';
     document.querySelectorAll('#acTabs [data-tab]').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); if (b.dataset.tab === 'cash') b.hidden = !(window.SamsamCash && SamsamCash.embed); });
     $('acMetalPick').hidden = tab !== 'metal'; $('acCashPane').hidden = tab !== 'cash';
     document.querySelectorAll('#acMetalPick [data-m]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.m === sym)); });
@@ -544,7 +575,7 @@
       return;
     }
     if (tab === 'metal') { var cur = $('acSym').value.trim().toUpperCase(); acMetal(isMetal(cur) ? cur : 'XAU'); return; }
-    openAddCoin();   // Coins: a clean coin form (whatever was typed for a metal is not a coin)
+    openAddCoin(tab === 'stock' ? { tab: 'stock' } : null);   // Coins / bStocks: a clean form (what was typed for another tab is not this)
   }
   // put the cursor in the first field — unless you've already started typing somewhere in the form
   function focusFirst(formId, fieldId) {
@@ -599,8 +630,9 @@
     var rd = acRead(), qty = rd.qty, price = rd.price, shown = rd.metal ? SamsamCoins.grams(qty) + ' of ' + (METAL_PICK[sym] || {}).name : fmtQty(qty) + ' ' + sym;
     var when = acDateIso(), vault = rd.metal ? $('acVault').value || null : null, vaultLabel = vault === 'other' ? $('acVaultLabel').value.trim() || null : null;
     acErr('');
-    if (!sym) return acErr('Symbol is required.');
+    if (!sym) return acErr(acTab === 'stock' ? 'Pick the share from the search list.' : 'Symbol is required.');
     if (!/^[A-Z0-9._-]{1,20}$/.test(sym)) return acErr('Pick the coin from the search list (or type only its symbol, e.g. XRP).');
+    if (acTab === 'stock' && !held(sym) && !$('acLinked').textContent) return acErr('Pick the share from the search list.');
     if (!qty || qty <= 0) return acErr('Enter a valid quantity.');
     if (!price || price <= 0) return acErr('Enter a valid buy price.');
     if (when === 'bad' || when === 'future') return acErr(when === 'future' ? 'The buy date can’t be in the future.' : 'Enter a valid buy date.');
@@ -620,13 +652,15 @@
     if (cgId && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cgId)) return acErr('CoinGecko ID looks wrong — pick the coin from the search list.');
     var cmcSlug = $('acCmc').value.trim() || null;
     if (cmcSlug && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cmcSlug)) return acErr('CoinMarketCap page: use lowercase letters, digits and dashes only.');
-    if (!cgId && !SamsamCoins.CG_IDS[sym] && !(await CPDialog.confirm(sym + ' is not linked to CoinGecko, so it will have no live price or logo.\n\nTip: type its name in the Coin box and pick it from the list.', { title: 'Add without live price?', okText: 'Add anyway' }))) return;
+    if (!cgId && acTab !== 'stock' && !SamsamCoins.CG_IDS[sym] && !(await CPDialog.confirm(sym + ' is not linked to CoinGecko, so it will have no live price or logo.\n\nTip: type its name in the Coin box and pick it from the list.', { title: 'Add without live price?', okText: 'Add anyway' }))) return;
     var name = $('acName').value.trim() || sym;
     var catCh = readCatChoice($('acCat'), 'acCatCustom'), cat = catCh.key;
     if (catCh.label) SamsamTaxonomy.register(cat, catCh.label);
     SamsamCoins.registerCoin(sym, { cmcSlug: cmcSlug, name: name });
     // One atomic cloud write: coin settings + its opening buy
-    write(Samsam.addCoin({ sym: sym, name: name, cat: cat, catLabel: catCh.label, catLocked: true, cgId: cgId, cmcSlug: cmcSlug, logoUrl: acLogo,
+    var asStock = acTab === 'stock';
+    if (asStock) { cat = 'stocks'; catCh = { key: 'stocks', label: null }; }
+    write(Samsam.addCoin({ sym: sym, name: name, cat: cat, catLabel: catCh.label, catLocked: true, cgId: cgId, cmcSlug: cmcSlug, logoUrl: acLogo, cls: asStock ? 'stock' : undefined,
       nets: !rd.metal && acNet.nets && acNet.nets.length ? acNet.nets : undefined, at: !rd.metal && acNet.at.length ? acNet.at : undefined, vault: vault || undefined, vaultLabel: vaultLabel || undefined },
       { qty: qty, price: price, feeUsd: feeUsd, pay: py.sym || null, date: when || null }));
     if (py.sym) emit('tx', { sym: py.sym, type: 'sell' });
@@ -1162,7 +1196,7 @@
   };
   window.CPAdd = API;
   // the names the pages (and inline handlers) already use
-  var G = { openAddCoin: function () { openAddCoin(); }, closeAddCoin: closeAddCoin, previewAddCoin: previewAddCoin, applyAddCoin: applyAddCoin,
+  var G = { openAddCoin: function (p) { openAddCoin(p && !(p instanceof Event) ? p : undefined); }, closeAddCoin: closeAddCoin, previewAddCoin: previewAddCoin, applyAddCoin: applyAddCoin,
     openVault: openVault, vaultChoose: vaultChoose, closeVault: closeVault, saveVault: saveVault, acMetal: acMetal, acSetTab: acSetTab, acSetUnit: acSetUnit, acSetPm: acSetPm, acChip: acChip, acVaultPick: acVaultPick, acSearchInput: acSearchInput, acSearchKey: acSearchKey, acPick: acPick, acCmcCheck: acCmcCheck, acEditNet: acEditNet,
     openAddTx: openAddTx, openEditTx: openEditTx, closeAddTx: closeAddTx, setAddTxType: setAddTxType, readAddTx: readAddTx, previewAddTx: previewAddTx, saveAddTx: saveAddTx,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,

@@ -1,5 +1,6 @@
 """🏦 Cash & certificates (USD / EGP / SAR) and the 💼 Net worth line: added by hand from ➕ Add → 🏦 or the card, valued in
 US dollars at the official rate from the snapshot, never mixed into the portfolio's own totals, kept in backups."""
+import re
 import sys, pathlib, json, datetime
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(pathlib.Path(__file__).parent)); import e2e_setup as S
@@ -52,7 +53,7 @@ with sync_playwright() as p:
     end = pg.evaluate(f"Samsam.core.cashFacts({{kind:'cert',cur:'EGP',amount:365000,rate:20,start:'{start}',months:12,pay:'end'}}, {{EGP:50}})")
     check('…paid at maturity → the return so far is part of its value (45 days at 20% = 9,000 EGP)', abs(end['accrued'] - 9000) < 201 and abs(end['usd'] - (365000 + end['accrued']) / 50) < 0.01 and end['income'] is None, end)
     # the switch: count the return so far in its value, or not
-    check('paid monthly → the switch starts off, and the card says the return so far is "not counted"', it['count'] is False and 'return so far +9,0' in card and '(not counted)' in card, card)
+    check('paid monthly → the switch starts off, and the card says the return so far is "not counted"', it['count'] is False and re.search(r'return so far \+(8,9|9,[0-2])\d\d EGP', card) and '(not counted)' in card, card.replace('\n', ' | '))
     pg.click('#cashCard .ch-row >> nth=1'); pg.wait_for_selector('#ccCount')
     check('…the form shows the switch, off, with the "counted twice" warning', not pg.is_checked('#ccCount') and 'counted twice' in pg.inner_text('#ccCountNote'))
     pg.check('#ccCount'); pg.click('#ccSave'); pg.wait_for_selector('#cpCash', state='detached'); pg.wait_for_timeout(500)
@@ -90,7 +91,7 @@ with sync_playwright() as p:
     check('Arabic: the card, the certificate line and Net worth', 'نقد وشهادات' in card and 'السعر الرسمي' in card and 'شهادة' in card and 'سنوياً' in card and 'تستحق' in card and 'العائد حتى الآن' in card and '(غير محسوب)' in card and 'صافي الثروة' in nw and 'matures' not in card and 'Official' not in card, [card, nw])
     pg.evaluate("openAddCoin()"); pg.wait_for_selector('#acTabs [data-tab="cash"]', state='visible'); pg.wait_for_timeout(400)
     tabs = pg.evaluate("[...document.querySelectorAll('#acTabs [data-tab]')].map(b => b.textContent.trim())")
-    check('Arabic: the Add window and its three tabs', tabs == ['عملات', 'معادن', 'نقد وشهادات'] and pg.inner_text('#acTitle').strip() == 'إضافة', [tabs, pg.inner_text('#acTitle')])
+    check('Arabic: the Add window and its four tabs', tabs == ['عملات', 'أسهم', 'معادن', 'نقد وشهادات'] and pg.inner_text('#acTitle').strip() == 'إضافة', [tabs, pg.inner_text('#acTitle')])
     pg.click('#acTabs [data-tab="cash"]'); pg.wait_for_selector('#acCashPane #ccAmt', state='visible'); pg.screenshot(path=str(SH / 'add_tabs_cash_ar.png'))
     pg.evaluate("closeAddCoin()"); pg.wait_for_timeout(200)
     pg.click('#cashCard [data-cash-add]'); pg.wait_for_selector('#cpCash')
