@@ -41,7 +41,7 @@ with sync_playwright() as p:
         # ⓘ explanations in Arabic
         pg.evaluate("CPHint.open('totalPortfolio', null)"); pg.wait_for_timeout(200)
         h = pg.inner_text('.cph')
-        check(f'{vn}: an ⓘ opens in Arabic (title, text and formula)', 'إجمالي المحفظة' in h and 'جميع عملاتك' in h and 'السعر الحالي' in h, h[:120])
+        check(f'{vn}: an ⓘ opens in Arabic (title, text and formula)', 'إجمالي المحفظة' in h and 'العملات والمعادن والأسهم' in h and 'البيتكوين + العملات البديلة' in h, h[:120])
         pg.evaluate("CPHint.close()")
         # Phase 2 — Add transaction, a coin's History, the Plan
         pg.evaluate("openAddTx('sell','SUI')"); pg.wait_for_timeout(400)

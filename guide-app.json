@@ -1,5 +1,5 @@
 {
- "v": 1,
+ "v": 2,
  "title": {
   "en": "📱 The app — full guide",
   "ar": "📱 دليل التطبيق الكامل"
@@ -93,18 +93,18 @@
     "ar": "كل أرقام التطبيق تأتي من الصفقات التي تسجلها."
    },
    "en": [
-    "Tap <b>+</b> (or <b>+ Buy</b> / <b>− Sell</b> on a coin) and pick the type: <b>Buy</b>, <b>Sell</b>, <b>Reward</b>, <b>Transfer In</b> or <b>Transfer Out</b>.",
-    "Enter the amount, the price and the fee — fees are counted in your average buy price.",
-    "Or bring all your trades at once: Performance → <b>Wallets &amp; Exchanges</b> → <b>Import from exchange</b> (a CSV file from Binance, Gate and others).",
-    "Trades you already entered are recognised and not added twice.",
-    "<b>Gold and silver:</b> in Add New Coin tap <b>🥇 Gold 24k</b> or <b>🥈 Silver</b>. Enter grams (or tokens / oz for digital gold), the price per gram or the <b>🧾 total paid</b>, the buy date and <b>where it is kept</b>. Tap a metal in the Precious Metals card to see its History and edit or delete a buy; the card also shows the <b>🕌 zakat</b>."
+    "Tap <b>+</b> and pick what you add: <b>Coins</b> · <b>bStocks</b> · <b>Metals</b> · <b>Cash &amp; CDs</b>. On a coin you hold, <b>+ Buy</b> / <b>− Sell</b> opens the right one.",
+    "<b>Coins</b>: search any coin; enter the amount, the price and the fee — fees are counted in your average buy price. Pick the type: <b>Buy</b>, <b>Sell</b>, <b>Reward</b>, <b>Transfer In</b> or <b>Transfer Out</b>. Or bring all your trades at once: Performance → <b>Wallets &amp; Exchanges</b> → <b>Import from exchange</b> (never added twice).",
+    "<b>bStocks</b>: Binance's tokenized US shares (NVIDIA, Tesla, SPY…) — the number of shares and the price per share. They count in your total, never with the altcoins, and have no Signal.",
+    "<b>Metals</b>: 🥇 gold, 🥈 silver, ⚪ platinum, 🟠 copper — in grams (or tokens / oz for digital gold), the price per gram or the <b>🧾 total paid</b>, the date and <b>where it is kept</b>. Platinum and copper use the world price.",
+    "<b>Cash &amp; CDs</b>: a bank balance or a certificate in USD, EGP or SAR (amount, a name you choose; a certificate's yearly return, start, term and how it pays)."
    ],
    "ar": [
-    "اضغط <b>+</b> (أو <b>+ شراء</b> / <b>− بيع</b> على العملة) واختر النوع: <b>شراء</b>، أو <b>بيع</b>، أو <b>مكافأة</b>، أو <b>إيداع</b>، أو <b>سحب</b>.",
-    "أدخل الكمية والسعر والرسوم — تُحسب الرسوم ضمن متوسط سعر الشراء.",
-    "أو استورد كل صفقاتك دفعة واحدة: الأداء ← <b>المحافظ والمنصات</b> ← <b>استيراد من منصة</b> (ملف CSV من Binance وGate وغيرها).",
-    "الصفقات التي أدخلتها من قبل يتعرف عليها التطبيق ولا يضيفها مرتين.",
-    "<b>الذهب والفضة:</b> في إضافة عملة جديدة اضغط <b>🥇 ذهب عيار 24</b> أو <b>🥈 فضة</b>. أدخل الجرامات (أو التوكن / الأونصة للذهب الرقمي)، وسعر الجرام أو <b>🧾 المبلغ الإجمالي</b>، وتاريخ الشراء و<b>مكان الحفظ</b>. اضغط على المعدن في بطاقة المعادن الثمينة لترى سجله وتعدّل أو تحذف أي شراء، وتعرض البطاقة أيضاً <b>🕌 الزكاة</b>."
+    "اضغط <b>+</b> واختر ما تضيفه: <b>عملات</b> · <b>أسهم</b> · <b>معادن</b> · <b>نقد وشهادات</b>. وعلى أي أصل تملكه، <b>+ شراء</b> / <b>− بيع</b> يفتح التبويب المناسب.",
+    "<b>العملات</b>: ابحث عن أي عملة؛ أدخل الكمية والسعر والرسوم — تُحسب الرسوم في متوسط سعر الشراء. واختر النوع: <b>شراء</b> أو <b>بيع</b> أو <b>مكافأة</b> أو <b>تحويل وارد</b> أو <b>تحويل صادر</b>. أو أدخل كل معاملاتك مرة واحدة: الأداء ← <b>المحافظ والمنصات</b> ← <b>استيراد من منصة</b> (بلا تكرار).",
+    "<b>الأسهم</b>: الأسهم الأمريكية المرمّزة من Binance (NVIDIA وTesla وSPY…) — عدد الأسهم وسعر السهم. تدخل في إجمالي محفظتك، ولا تُحسب مع العملات البديلة، ولا إشارة لها.",
+    "<b>المعادن</b>: 🥇 ذهب، 🥈 فضة، ⚪ بلاتين، 🟠 نحاس — بالجرام (أو بالتوكن / الأونصة للذهب الرقمي)، وسعر الجرام أو <b>🧾 إجمالي ما دفعت</b>، والتاريخ و<b>مكان الحفظ</b>. البلاتين والنحاس بالسعر العالمي.",
+    "<b>النقد والشهادات</b>: رصيد بنكي أو شهادة بالدولار أو الجنيه أو الريال (المبلغ واسم تختاره؛ وللشهادة عائدها السنوي وبدايتها ومدتها وطريقة صرف العائد)."
    ],
    "tip": {
     "en": "Staking, mining and airdrops go in as a <b>Reward</b>: they come in at $0 cost.",
@@ -124,18 +124,18 @@
     "ar": "محفظتك كلها والسوق في نظرة واحدة."
    },
    "en": [
-    "<b>Total Portfolio</b> (also in BTC) and <b>All Time Profit</b>, sells included.",
-    "<b>BTC Accumulated</b> and <b>Altcoins Accumulated</b> — how much is in Bitcoin and how much in the rest.",
-    "The market strip: BTC price, market cap, Fear &amp; Greed and BTC dominance — <b>Explore ↗</b> opens the Market Hub.",
-    "<b>Today's Movers</b> (best and worst coin in 24h) and the <b>Holdings</b> chart: 24h · 7d · 30d · 90d · All.",
-    "<b>🏦 Cash & certificates</b>: bank balances and certificates in USD, EGP or SAR, added by hand from ➕ Add → the Cash & Certificate tab. Valued in dollars at the official rate and counted in <b>💼 Net worth</b> only — the portfolio's totals stay as they are."
+    "From the big picture down: <b>💼 Net worth</b> first (when you have cash): your portfolio + cash &amp; certificates, with a thin bar of the split.",
+    "<b>Total Portfolio</b> (also in BTC) and <b>All Time Profit</b>, sells included — Net worth's portfolio is exactly this number.",
+    "What it is made of: <b>BTC</b> · <b>Altcoins</b> · <b>Metals</b> · <b>Shares</b> (only what you hold) — they add up to Total Portfolio.",
+    "<b>🥇 Metals</b> and <b>🏦 Cash &amp; certificates</b> in detail — folded to one line; tap to open. Cash is valued at the official rate and counted in Net worth only.",
+    "Market cap and Fear &amp; Greed sit in the date line; <b>Today's Movers</b> and the <b>Holdings</b> chart follow. The <b>🕌 zakat</b> line is last — and moves to the top while it is due."
    ],
    "ar": [
-    "<b>إجمالي المحفظة</b> (وبالبيتكوين أيضاً) و<b>إجمالي الربح</b> بما في ذلك عمليات البيع.",
-    "<b>البيتكوين المُجمَّع</b> و<b>العملات البديلة المُجمَّعة</b> — كم في البيتكوين وكم في بقية العملات.",
-    "شريط السوق: سعر البيتكوين، والقيمة السوقية، والخوف والطمع، وهيمنة البيتكوين — <b>استكشف ↗</b> يفتح مركز السوق.",
-    "<b>الأكثر حركة اليوم</b> (أفضل وأسوأ عملة خلال 24 ساعة) ورسم <b>الأصول</b>: 24h · 7d · 30d · 90d · All.",
-    "<b>🏦 نقد وشهادات</b>: أرصدة البنك والشهادات بالدولار أو الجنيه أو الريال، تضيفها يدوياً من ➕ إضافة ← تبويب «نقد وشهادات». تُقيَّم بالدولار بالسعر الرسمي وتُحسب في <b>💼 صافي الثروة</b> فقط — وإجمالي المحفظة يبقى كما هو."
+    "من الصورة الكبرى إلى التفاصيل: <b>💼 صافي الثروة</b> أولاً (إن كان لديك نقد): محفظتك + النقد والشهادات، مع شريط رفيع يبيّن النسبة.",
+    "<b>إجمالي المحفظة</b> (وبالبيتكوين أيضاً) و<b>إجمالي الربح</b> شاملاً المبيعات — ورقم المحفظة في صافي الثروة هو هذا الرقم نفسه.",
+    "مكوّناتها: <b>البيتكوين</b> · <b>العملات البديلة</b> · <b>المعادن</b> · <b>الأسهم</b> (ما تملكه فقط) — ومجموعها يساوي إجمالي المحفظة.",
+    "<b>🥇 المعادن</b> و<b>🏦 النقد والشهادات</b> بالتفصيل — مطويّة في سطر واحد؛ اضغط لفتحها. النقد بالسعر الرسمي ويُحسب في صافي الثروة فقط.",
+    "القيمة السوقية والخوف والطمع في سطر التاريخ؛ ثم <b>أبرز المتحركين اليوم</b> ورسم <b>الأصول</b>. وسطر <b>🕌 الزكاة</b> في الآخر — ويصعد للأعلى ما دامت مستحقة."
    ],
    "tip": {
     "en": "The <b>Baseline</b> date sets the day your older coins are compared with Bitcoin — tap its ⓘ to change it.",
@@ -187,14 +187,14 @@
     "⚪ <b>Hold</b> — the price is above −5% of your average buy price.",
     "🟢 <b>Reinforce</b> — between −5% and −20%: cheaper than you paid, a chance to add.",
     "🔴 <b>Sell / Convert</b> — below −20%: consider moving it into BTC.",
-    "BTC is always Hold. Change the −5% / −20% thresholds from the Signal ⓘ.",
+    "BTC is always Hold — and so are shares and metals (Signals are for coins only; they still have price alerts and plans). Change the −5% / −20% thresholds from the Signal ⓘ.",
     "🌙 <b>Calm mode</b> (optional, off at first — in the same Signal ⓘ window): Reinforce waits while the coin is still falling (down more than 5% in 7 days). Fewer signals and alerts."
    ],
    "ar": [
     "⚪ <b>احتفاظ</b> — السعر أعلى من −5% من متوسط سعر شرائك.",
     "🟢 <b>تعزيز</b> — بين −5% و−20%: أرخص مما دفعت، فرصة للزيادة.",
     "🔴 <b>بيع / تحويل</b> — أقل من −20%: فكّر في تحويلها إلى البيتكوين.",
-    "البيتكوين دائماً احتفاظ. غيّر حدود −5% / −20% من ⓘ بجانب الإشارة.",
+    "البيتكوين دائماً «احتفاظ» — وكذلك الأسهم والمعادن (الإشارات للعملات فقط؛ ولها تنبيهات الأسعار والخطط). غيّر حدّي −5% / −20% من ⓘ الإشارة.",
     "🌙 <b>الوضع الهادئ</b> (اختياري ومعطّل في البداية — في نفس نافذة ⓘ بجانب الإشارة): التعزيز ينتظر ما دامت العملة ما زالت تهبط (نزلت أكثر من 5% في 7 أيام). إشارات وتنبيهات أقل."
    ],
    "tip": {
@@ -246,18 +246,47 @@
     "ar": "كيف تتوزع أموالك — وكيف تريد أن تتوزع."
    },
    "en": [
-    "The chart shows each category's share of your portfolio.",
-    "<b>Target Allocation</b>: choose the share you want in each category (Bitcoin included) — together 100%.",
-    "Pick a band (± points). Inside it: ✓ on target. Outside it: the card says how much to buy or trim, and which of your coins fit."
+    "When you hold more than one kind, the chart has two rings: inside <b>Crypto · Stocks · Metals</b>, outside their categories — Metals split into <b>Gold · Silver · Platinum · Copper</b>. Tap a slice, or a line under the chart, to filter.",
+    "The category list works the same way: a class, then its categories under it.",
+    "<b>Target Allocation</b>: choose the share you want in each category (Bitcoin included) — together 100%. Pick a band (± points); outside it the card says how much to buy or trim."
    ],
    "ar": [
-    "يعرض الرسم نصيب كل تصنيف من محفظتك.",
-    "<b>التوزيع المستهدف</b>: اختر النسبة التي تريدها لكل تصنيف (بما فيها البيتكوين) — المجموع 100%.",
-    "حدد هامشاً (± نقاط). داخل الهامش: ✓ ضمن الهدف. وخارجه: توضح البطاقة كم تشتري أو تخفف، وأي عملاتك مناسبة."
+    "إذا كان لديك أكثر من نوع، يصبح الرسم حلقتين: في الداخل <b>كريبتو · أسهم · معادن</b>، وفي الخارج فئاتها — والمعادن مقسّمة <b>ذهب · فضة · بلاتين · نحاس</b>. اضغط شريحة، أو سطراً تحت الرسم، للتصفية.",
+    "قائمة الفئات بالطريقة نفسها: النوع، ثم فئاته تحته.",
+    "<b>التوزيع المستهدف</b>: اختر النسبة التي تريدها لكل فئة (والبيتكوين معها) — مجموعها 100%. واختر هامشاً (± نقاط)؛ وخارجه يخبرك الكارت كم تشتري أو تخفّف."
    ],
    "tip": {
     "en": "It is a guide only — nothing is bought or sold for you.",
     "ar": "هذا للإرشاد فقط — لا يُشترى أو يُباع شيء نيابة عنك."
+   }
+  },
+  {
+   "k": "zakat",
+   "e": "🕌",
+   "g": "portfolio",
+   "t": {
+    "en": "Zakat",
+    "ar": "الزكاة"
+   },
+   "s": {
+    "en": "One pool, once a hijri year, until you tap ✓ Paid.",
+    "ar": "وعاء واحد، مرة في السنة الهجرية، حتى تضغط ✓ دفعت."
+   },
+   "en": [
+    "One date a year: <b>your zakat day</b> (1 Ramadan, or the hijri day you choose with the ✎).",
+    "<b>One pool</b>: all your crypto, all your metals at market value, your cash &amp; certificates, and your shares if you count them — against one nisab, the value of 85 g of gold. At or above it: <b>2.5%</b>.",
+    "That day's pool is kept, and the zakat stays <b>due</b> at the top of Overview until you tap <b>✓ Paid</b> (type the amount, also in EGP / SAR; ↶ undoes it). Paying late never moves your zakat day.",
+    "The bot reminds you a week before, on the day, and every week while it is still due."
+   ],
+   "ar": [
+    "تاريخ واحد في السنة: <b>يوم زكاتك</b> (1 رمضان، أو اليوم الهجري الذي تختاره من علامة ✎).",
+    "<b>وعاء واحد</b>: كل عملاتك الرقمية، وكل معادنك بقيمتها السوقية، ونقدك وشهاداتك، وأسهمك إن اخترت حسابها — مقابل نصاب واحد هو قيمة 85 جم من الذهب. إذا بلغه: <b>2.5%</b>.",
+    "يُحفظ وعاء ذلك اليوم، وتبقى الزكاة <b>مستحقة</b> أعلى نظرة عامة حتى تضغط <b>✓ دفعت</b> (اكتب المبلغ، وبالجنيه أو الريال أيضاً؛ و↶ للتراجع). التأخر في الدفع لا يغيّر يوم زكاتك.",
+    "يذكّرك البوت قبله بأسبوع، وفي اليوم نفسه، وكل أسبوع ما دامت مستحقة."
+   ],
+   "tip": {
+    "en": "An estimate, not a ruling — check with a scholar. Tap the line's ⓘ for the details.",
+    "ar": "تقدير حسابي وليس فتوى — راجع أهل العلم. اضغط ⓘ السطر للتفاصيل."
    }
   },
   {
@@ -273,16 +302,16 @@
     "ar": "كم عملة تريد، وإلى أين وصلت."
    },
    "en": [
-    "Set a <b>Target Amount</b> for a coin — the total you want to hold, not how many more to buy.",
-    "The plan shows what is still pending, the <b>Cost to Target</b> at today's price, and your progress.",
-    "<b>Buy at %</b>: a buy price relative to today (for example −10%). When the price reaches it, the coin shows <b>BUY NOW</b>.",
-    "<b>Price Alert</b>: a price you want to hear about — your Telegram bot sends one message when it's hit."
+    "<b>Add to Plan</b> has the same four tabs: a coin, a share, gold / silver / platinum / copper, or a <b>savings goal</b> in USD, EGP or SAR.",
+    "Set a <b>Target Amount</b> in its own unit — coins, shares, grams or the currency — the total you want to hold, not how many more to buy.",
+    "The plan shows what is still pending, the <b>Cost to Target</b> at today's price (in dollars), and your progress. A savings goal counts your cash &amp; certificates in that currency.",
+    "<b>Buy at %</b> and <b>Price Alert</b> (coins, shares, metals): a buy price relative to today, or a price you want to hear about on Telegram."
    ],
    "ar": [
-    "حدد <b>الكمية المستهدفة</b> للعملة — الإجمالي الذي تريد امتلاكه، وليس الكمية الإضافية التي تشتريها.",
-    "تعرض الخطة المتبقي، و<b>تكلفة الوصول للهدف</b> بسعر اليوم، ونسبة تقدمك.",
-    "<b>سعر الدخول %</b>: سعر شراء نسبةً إلى سعر اليوم (مثلاً −10%). عندما يصل السعر إليه، تظهر العملة بعلامة <b>اشترِ الآن</b>.",
-    "<b>تنبيه سعري</b>: سعر تريد أن تُنبَّه عنده — يرسل لك بوت تليجرام رسالة واحدة عند الوصول إليه."
+    "<b>إضافة للخطة</b> فيها التبويبات الأربعة نفسها: عملة، أو سهم، أو ذهب / فضة / بلاتين / نحاس، أو <b>هدف ادخار</b> بالدولار أو الجنيه أو الريال.",
+    "حدّد <b>الكمية المستهدفة</b> بوحدتها — عملات أو أسهم أو جرامات أو العملة — الإجمالي الذي تريد امتلاكه، لا كم ستشتري بعد.",
+    "تعرض الخطة المتبقي، و<b>تكلفة الوصول للهدف</b> بسعر اليوم (بالدولار)، وتقدّمك. وهدف الادخار يُحسب من نقدك وشهاداتك بتلك العملة.",
+    "<b>سعر الدخول %</b> و<b>تنبيه السعر</b> (للعملات والأسهم والمعادن): سعر شراء نسبةً لسعر اليوم، أو سعر تريد أن يصلك خبره على تيليجرام."
    ],
    "tip": {
     "en": "<b>Overall Progress</b> is the average of every coin's progress; a coin above its target counts as 100%.",
@@ -302,18 +331,18 @@
     "ar": "مبلغ ثابت في يوم ثابت، مهما كان السعر."
    },
    "en": [
-    "On the Plan page tap <b>➕ Regular buy</b>: pick the coin, the amount and every week, two weeks or month.",
-    "Each round shows <b>Today</b>, <b>Missed · N days</b>, <b>✓ Bought</b> or the next buy date.",
-    "<b>Kept x of y</b> counts your last rounds; <b>Target in N buys</b> says how many buys reach the coin's target."
+    "On the Plan page tap <b>➕ Regular buy</b>: a coin, a share or a metal (an amount in dollars) — or a savings goal (a <b>regular saving</b> in its own currency) — every week, two weeks or month.",
+    "Each round shows <b>Today</b>, <b>Missed · N days</b>, <b>✓ Bought</b> / <b>✓ Saved</b> or the next date. A saving has no buy to see: tap <b>✓ Saved</b> when you put it aside.",
+    "<b>Kept x of y</b> counts your last rounds; <b>Target in N</b> says how many rounds reach the target. The month's total is in dollars."
    ],
    "ar": [
-    "في صفحة الخطة اضغط <b>➕ شراء دوري</b>: اختر العملة والمبلغ، وكل أسبوع أو أسبوعين أو شهر.",
-    "تظهر كل دورة بحالة <b>اليوم</b>، أو <b>فات موعده · N يوم</b>، أو <b>✓ تم الشراء</b>، أو تاريخ الشراء القادم.",
-    "<b>نُفّذ x من y</b> يعدّ آخر دوراتك؛ و<b>الهدف بعد N مرة شراء</b> يوضح كم مرة شراء تبقّت للوصول للهدف."
+    "في صفحة الخطة اضغط <b>➕ شراء دوري</b>: عملة أو سهم أو معدن (مبلغ بالدولار) — أو هدف ادخار (<b>ادخار دوري</b> بعملته) — كل أسبوع أو أسبوعين أو شهر.",
+    "كل موعد يظهر <b>اليوم</b> أو <b>فات · N يوم</b> أو <b>✓ تم الشراء</b> / <b>✓ تم الادخار</b> أو الموعد القادم. والادخار لا شراء فيه يُرى: اضغط <b>✓ تم الادخار</b> عندما تضعه جانباً.",
+    "<b>التزمت بـ x من y</b> يعدّ آخر مواعيدك؛ و<b>الهدف بعد N</b> يقول كم موعداً يوصلك للهدف. وإجمالي الشهر بالدولار."
    ],
    "tip": {
-    "en": "The Telegram bot reminds you on the day.",
-    "ar": "يذكّرك بوت تليجرام في يوم الشراء."
+    "en": "The Telegram bot reminds you on the day — a saving in its own currency (5,000 EGP).",
+    "ar": "بوت تيليجرام يذكّرك في الموعد — والادخار بعملته (5,000 EGP)."
    }
   },
   {

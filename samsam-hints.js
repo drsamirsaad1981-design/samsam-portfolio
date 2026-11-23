@@ -35,11 +35,11 @@
       actions: function () { return typeof window.openBaselineEdit === 'function' ? [{ label: 'Change date', primary: true, onClick: window.openBaselineEdit }] : []; },
     },
     // ── main page ──
-    totalPortfolio: { title: 'Total Portfolio', body: function () { return '<p>What all your coins are worth right now.</p>' +
-      '<div class="cph-f"><b>Total Portfolio</b><code>Σ (Amount × Current Price) for every coin</code></div>' +
-      '<p>In brackets: the same value in BTC (÷ BTC price).</p>'; } },
+    totalPortfolio: { title: 'Total Portfolio', body: function () { return '<p>What everything in your portfolio is worth right now: coins, metals and shares.</p>' +
+      '<div class="cph-f"><b>Total Portfolio</b><code>BTC + Altcoins + Metals + Shares</code></div>' +
+      '<p>The cards under it are those parts — they add up to this number. In brackets: the same value in BTC (÷ BTC price).</p><p>Cash &amp; certificates are not in it: they count in <b>💼 Net worth</b> (this number + your cash), above.</p>'; } },
     btcAccum: { title: 'BTC Accumulated', body: function () { return '<p>How much Bitcoin you hold.</p><div class="cph-f"><b>Below it</b><code>BTC Amount × BTC price</code></div>'; } },
-    altAccum: { title: 'Altcoins Accumulated', body: function () { return '<p>What all your coins except Bitcoin are worth.</p>' +
+    altAccum: { title: 'Altcoins Accumulated', body: function () { return '<p>What all your coins except Bitcoin are worth — shares and metals have their own cards.</p>' +
       '<div class="cph-f"><b>Altcoins</b><code>Σ (Amount × Current Price), every coin except BTC</code></div><p>In brackets: the same value in BTC.</p>'; } },
     movers24h: { title: "Today's Movers", body: function () { return '<p>The coin that went up the most and the one that went down the most in the <b>last 24 hours</b> (price change from CoinGecko).</p>' +
       '<p>Coins worth less than $1 or less than 0.1% of your portfolio are left out, so a tiny holding can\'t win. It follows the category you picked.</p>'; } },
