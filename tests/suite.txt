@@ -175,3 +175,4 @@ add_stocks_test.py
 alloc_classes_test.py
 plan_kinds_test.py
 phase5_test.py
+zakat_pool_test.py

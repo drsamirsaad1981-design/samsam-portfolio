@@ -23,5 +23,5 @@ const rows = [{ sym: 'SOL', value: 3000 }, { sym: 'NVDAB', cgId: 'nvidia-bstock'
 const on = C.zakatPool(rows, { cashUsd: 4000 }), off = C.zakatPool(rows, { cashUsd: 4000, stocks: false });
 check('zakat pool: coins (stablecoins too) + shares + cash', on.value === 9500 && on.crypto === 3500 && on.stock === 2000 && on.cash === 4000 && on.stocksCounted === true, on);
 check('…shares switched off → left out (the rest stays)', off.value === 7500 && off.stocksCounted === false, off);
-check('…gold / silver rows are never in it (their own nisab)', C.zakatPool([{ sym: 'XAU', value: 9000 }]).value === 0);
+check('…metals are in the one pool (gold, platinum… at market value)', C.zakatPool([{ sym: 'XAU', value: 9000 }, { sym: 'XPT', value: 1000 }]).value === 10000 && C.zakatPool([{ sym: 'XAU', value: 9000 }]).metal === 9000);
 console.log(`${pass}/${pass + fail} passed`); process.exit(fail ? 1 : 0);

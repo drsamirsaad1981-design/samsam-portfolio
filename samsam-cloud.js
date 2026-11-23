@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611231908';
-import * as Hist from './samsam-history.js?v=202611231908';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611231908';
+import * as Core from './samsam-core.js?v=202611232101';
+import * as Hist from './samsam-history.js?v=202611232101';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611232101';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -975,6 +975,16 @@ const API = {
     if (!z || !Number.isFinite(+z.hy) || !(+z.value >= 0) || !(+z.nisabUsd > 0)) return Promise.resolve();
     return commit((bt, ref) => bt.set(ref('meta', 'info'), { zakat: { hy: Math.round(+z.hy), value: Math.round(+z.value * 100) / 100, nisabUsd: Math.round(+z.nisabUsd * 100) / 100, date: String(z.date || '').slice(0, 10), at: new Date().toISOString() } }, { merge: true }), 'Zakat');
   },
+  // ✓ zakat paid, one line per hijri year (samsam-core.js → cleanZakatPaid); paying closes that year, the next zakat day stays put
+  getZakatPaid() { return Core.cleanZakatPaid(S.meta && S.meta.zakatPaid); },
+  markZakatPaid(rec) {
+    const list = Core.cleanZakatPaid([...(Core.cleanZakatPaid(S.meta && S.meta.zakatPaid)), rec]);
+    return commit((bt, ref) => bt.set(ref('meta', 'info'), { zakatPaid: list }, { merge: true }), 'Zakat');
+  },
+  unmarkZakatPaid(hy) {
+    const list = Core.cleanZakatPaid(S.meta && S.meta.zakatPaid).filter(x => x.hy !== +hy);
+    return commit((bt, ref) => bt.set(ref('meta', 'info'), { zakatPaid: list }, { merge: true }), 'Zakat');
+  },
   saveWatchlist(list) {
     const w = cleanWatch(list);
     return commit((bt, ref) => bt.set(ref('meta', 'info'), { watch: w }, { merge: true }), 'Watchlist');
@@ -1498,7 +1508,7 @@ function downloadJson(obj, name) {
 }
 function stamp() { return new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-'); }
 // Your settings (meta/info) — everything except the setup bookkeeping — and the category names/colours (meta/categories)
-const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'signalCalm', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps', 'wallets', 'cash', 'zakatStocks', 'zakatDay'];
+const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'signalCalm', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps', 'wallets', 'cash', 'zakatStocks', 'zakatDay', 'zakat', 'zakatPaid'];
 function settingsNow() {
   const m = S.meta || {}, info = {};
   for (const k of SETTING_KEYS) if (m[k] !== undefined) info[k] = m[k];

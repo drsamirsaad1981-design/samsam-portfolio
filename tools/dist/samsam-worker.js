@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 2ce29529b971fc22
+// sources-hash: 9e192ced4663d784
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -740,15 +740,48 @@ function assetClass(x) {
 }
 var hasSignal = (x) => assetClass(x) === "crypto" && String((x && typeof x === "object" ? x.sym : x) || "").toUpperCase() !== "BTC";
 function zakatPool(rows, { cashUsd = 0, stocks = true } = {}) {
-  let crypto2 = 0, stock = 0;
+  let crypto2 = 0, stock = 0, metal = 0;
   for (const r of rows || []) {
     const k = assetClass(r), v = +r.value || 0;
     if (!(v > 0)) continue;
     if (k === "crypto") crypto2 += v;
     else if (k === "stock") stock += v;
+    else if (k === "metal") metal += v;
   }
   const cash = cashUsd > 0 ? +cashUsd : 0;
-  return { crypto: crypto2, stock, cash, stocksCounted: stocks !== false, value: crypto2 + (stocks !== false ? stock : 0) + cash };
+  return { crypto: crypto2, stock, metal, cash, stocksCounted: stocks !== false, value: crypto2 + metal + (stocks !== false ? stock : 0) + cash };
+}
+function cleanZakatPaid(list3) {
+  const by = /* @__PURE__ */ new Map(), n2 = (v) => Math.round((+v || 0) * 100) / 100;
+  for (const x of Array.isArray(list3) ? list3 : []) {
+    const hy = Math.round(+(x && x.hy));
+    if (!(hy >= 1400 && hy <= 1600)) continue;
+    by.set(hy, {
+      hy,
+      value: n2(x.value),
+      nisabUsd: n2(x.nisabUsd),
+      zakat: n2(x.zakat),
+      paid: n2(x.paid),
+      cur: CASH_CURS.includes(x.cur) ? x.cur : "USD",
+      at: typeof x.at === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.at) ? x.at : isoD(Date.now())
+    });
+  }
+  return [...by.values()].sort((a, b) => a.hy - b.hy).slice(-30);
+}
+function zakatYear(w, now, snap, paid2) {
+  if (!w) return null;
+  const P2 = cleanZakatPaid(paid2), rec = P2.find((p) => p.hy === w.hy) || null;
+  const fixed = !!(snap && +snap.hy === w.hy && +snap.value >= 0 && +snap.nisabUsd > 0);
+  const day3 = fixed ? { value: +snap.value, nisabUsd: +snap.nisabUsd } : w.due ? now : null;
+  const est = { value: +now.value || 0, nisabUsd: +now.nisabUsd || 0 }, nextMeets = est.nisabUsd > 0 && est.value >= est.nisabUsd;
+  const base = { fixed, hy: w.hy, nextHy: w.nextHy, daysLeft: w.daysLeft, nextDate: w.nextDate, lastDate: w.lastDate, since: w.since, paid: rec, history: P2 };
+  if (day3 && day3.nisabUsd > 0) {
+    if (rec) return { ...base, state: "paid", value: day3.value, nisabUsd: day3.nisabUsd, zakatUsd: rec.zakat || day3.value * 0.025 };
+    if (day3.value >= day3.nisabUsd) return { ...base, state: "due", value: day3.value, nisabUsd: day3.nisabUsd, zakatUsd: day3.value * 0.025 };
+    if (w.due) return { ...base, state: "below", value: day3.value, nisabUsd: day3.nisabUsd, zakatUsd: 0 };
+  }
+  if (!(est.nisabUsd > 0)) return null;
+  return { ...base, state: nextMeets ? "upcoming" : "under", value: est.value, nisabUsd: est.nisabUsd, zakatUsd: est.value * 0.025 };
 }
 var CASH_PLAN = /^CASH-(USD|EGP|SAR)$/;
 var GRAMS_PER_OZ = 31.1034768;
@@ -4932,18 +4965,14 @@ function zakatFacts(user, m, now) {
   learnAssets(user.coins);
   learnAssets(user.accum);
   const docs = Object.fromEntries((user.coins || []).filter((c) => c && c.sym).map((c) => [c.sym, c]));
-  const rows = sum.coins.filter((c) => c.sym !== "XAU" && c.sym !== "XAG").map((c) => ({ sym: c.sym, cgId: (docs[c.sym] || {}).cgId, cls: (docs[c.sym] || {}).cls, value: c.value }));
+  const rows = sum.coins.map((c) => ({ sym: c.sym, cgId: (docs[c.sym] || {}).cgId, cls: (docs[c.sym] || {}).cls, value: c.value }));
   const fx = {};
   for (const [k, v] of Object.entries(m.fx || {})) if (v && +v.rate > 0) fx[k] = +v.rate;
   const pool = zakatPool(rows, { cashUsd: cashTotals((user.meta || {}).cash, fx, now).usd, stocks: (user.meta || {}).zakatStocks !== false });
   const crypto2 = pool.value;
-  const nisabUsd = goldOz > 0 ? 85 / GPO * goldOz : 0, metal = (sym, nis) => {
-    const c = by[sym];
-    if (!c || !(c.qty > 0)) return null;
-    const g = c.qty * GPO;
-    return { g, meets: g >= nis - 1e-6, zakatG: g * 0.025, zakatUsd: c.value * 0.025 };
-  };
-  return { w, crypto: crypto2, pool, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto2 >= nisabUsd, cryptoZakat: crypto2 * 0.025, gold: metal("XAU", 85), silver: metal("XAG", 595) };
+  const nisabUsd = goldOz > 0 ? 85 / GPO * goldOz : 0;
+  const y = zakatYear(w, { value: crypto2, nisabUsd }, (user.meta || {}).zakat, (user.meta || {}).zakatPaid);
+  return { w, y, crypto: crypto2, pool, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto2 >= nisabUsd, cryptoZakat: crypto2 * 0.025 };
 }
 async function backupReminder(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null);
@@ -4973,7 +5002,7 @@ async function backupReminder(env, now = Date.now()) {
   return { sent: 1 };
 }
 var poolName = (P2, ar) => {
-  const parts = [ar ? "\u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648" : "Crypto"].concat(P2 && P2.stock > 0 && P2.stocksCounted ? [ar ? "\u0627\u0644\u0623\u0633\u0647\u0645" : "shares"] : [], P2 && P2.cash > 0 ? [ar ? "\u0627\u0644\u0646\u0642\u062F" : "cash"] : []);
+  const parts = [ar ? "\u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648" : "Crypto"].concat(P2 && P2.metal > 0 ? [ar ? "\u0627\u0644\u0645\u0639\u0627\u062F\u0646" : "metals"] : [], P2 && P2.stock > 0 && P2.stocksCounted ? [ar ? "\u0627\u0644\u0623\u0633\u0647\u0645" : "shares"] : [], P2 && P2.cash > 0 ? [ar ? "\u0627\u0644\u0646\u0642\u062F" : "cash"] : []);
   return parts.join(" + ");
 };
 async function zakatAlert(env, now = Date.now()) {
@@ -4981,27 +5010,34 @@ async function zakatAlert(env, now = Date.now()) {
   if (!user) return { sent: 0 };
   const w0 = zakatWhen(now, user.meta && user.meta.zakatDay);
   if (!w0) return { sent: 0 };
-  const kind = w0.since === 0 ? "day" : w0.daysLeft === 7 ? "week" : null;
+  let kind = w0.since === 0 ? "day" : w0.daysLeft === 7 ? "week" : w0.since >= 7 && w0.since % 7 === 0 ? "late" : null;
   if (!kind) return { sent: 0 };
-  const key = (kind === "day" ? w0.hy : w0.nextHy) + ":" + kind, had = await jget2(env, K(env, "zakat:sent"), {});
+  const key = (kind === "week" ? w0.nextHy : w0.hy) + ":" + kind + (kind === "late" ? ":" + w0.since : ""), had = await jget2(env, K(env, "zakat:sent"), {});
   if (had[key]) return { sent: 0 };
   const m = await loadMarket([], coinsOf(user)).catch(() => null), f = m && zakatFacts(user, m, now);
   if (!f) return { sent: 0 };
-  const L = await lang(env), ar = L === "ar", day3 = `${f.w.d} ${HIJRI_MONTHS[ar ? "ar" : "en"][f.w.m - 1]}`, g = (v) => (+v.toFixed(2)).toLocaleString("en-US");
-  const any = f.cryptoMeets || f.gold && f.gold.meets || f.silver && f.silver.meets;
-  if (kind === "week" && !any) {
+  if (kind === "late" && !(f.y && f.y.state === "due")) return { sent: 0 };
+  const L = await lang(env), ar = L === "ar", day3 = `${f.w.d} ${HIJRI_MONTHS[ar ? "ar" : "en"][f.w.m - 1]}`;
+  if (kind === "week" && !f.cryptoMeets) {
     had[key] = 1;
     await jput(env, K(env, "zakat:sent"), had);
     return { sent: 0 };
   }
-  const lines = [kind === "day" ? `\u{1F54C} <b>${ar ? "\u0627\u0644\u064A\u0648\u0645 \u064A\u0648\u0645 \u0632\u0643\u0627\u062A\u0643" : "Today is your zakat day"}</b> \xB7 ${day3} ${f.w.hy}` : `\u{1F54C} <b>${ar ? "\u0632\u0643\u0627\u062A\u0643 \u0628\u0639\u062F 7 \u0623\u064A\u0627\u0645" : "Your zakat day is in 7 days"}</b> \xB7 ${day3} ${f.w.nextHy}`, ""];
-  const est = kind === "week" ? ar ? " (\u062A\u0642\u062F\u064A\u0631 \u0628\u0642\u064A\u0645\u0629 \u0627\u0644\u064A\u0648\u0645)" : " (an estimate at today's value)" : "";
-  if (f.nisabUsd > 0) lines.push(f.cryptoMeets ? ar ? `\u2022 ${poolName(f.pool, true)}: <b>${usd2(f.cryptoZakat)}</b> \u2014 2.5% \u0645\u0646 ${usd2(f.crypto)}${est}` : `\u2022 ${poolName(f.pool, false)}: <b>${usd2(f.cryptoZakat)}</b> \u2014 2.5% of ${usd2(f.crypto)}${est}` : ar ? `\u2022 ${poolName(f.pool, true)}: \u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u0646\u0635\u0627\u0628 (${usd2(f.nisabUsd)} = 85 \u062C\u0645 \u0630\u0647\u0628) \u2014 \u0644\u0627 \u0632\u0643\u0627\u0629` : `\u2022 ${poolName(f.pool, false)}: below the nisab (${usd2(f.nisabUsd)} = 85 g of gold) \u2014 none`);
-  for (const [x, name, nis] of [[f.gold, ar ? "\u0627\u0644\u0630\u0647\u0628" : "Gold", 85], [f.silver, ar ? "\u0627\u0644\u0641\u0636\u0629" : "Silver", 595]]) {
-    if (!x) continue;
-    lines.push(x.meets ? ar ? `\u2022 ${name}: <b>${g(x.zakatG)} \u062C\u0645</b> \u2248 ${usd2(x.zakatUsd)} \u2014 2.5% \u0645\u0646 ${g(x.g)} \u062C\u0645` : `\u2022 ${name}: <b>${g(x.zakatG)} g</b> \u2248 ${usd2(x.zakatUsd)} \u2014 2.5% of ${g(x.g)} g` : ar ? `\u2022 ${name}: ${g(x.g)} \u062C\u0645 \u2014 \u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u0646\u0635\u0627\u0628 (${nis} \u062C\u0645)` : `\u2022 ${name}: ${g(x.g)} g \u2014 below the nisab (${nis} g)`);
+  const P2 = f.pool || {}, part = (v, en, a) => v > 0 ? `${ar ? a : en} ${usd2(v)}` : null;
+  const mix = [part(P2.crypto, "crypto", "\u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648"), part(P2.metal, "metals", "\u0627\u0644\u0645\u0639\u0627\u062F\u0646"), part(P2.stocksCounted ? P2.stock : 0, "shares", "\u0627\u0644\u0623\u0633\u0647\u0645"), part(P2.cash, "cash", "\u0627\u0644\u0646\u0642\u062F")].filter(Boolean).join(" \xB7 ");
+  const lines = kind === "late" ? [
+    `\u{1F54C} <b>${ar ? "\u0632\u0643\u0627\u062A\u0643 \u0644\u0633\u0646\u0629" : "Your zakat for"} ${f.w.hy} ${ar ? "\u0645\u0627 \u0632\u0627\u0644\u062A \u0645\u0633\u062A\u062D\u0642\u0629" : "is still due"}</b>`,
+    "",
+    ar ? `\u2022 \u0627\u0644\u0645\u0628\u0644\u063A: <b>${usd2(f.y.zakatUsd)}</b> \u2014 2.5% \u0645\u0646 ${usd2(f.y.value)} (${day3} ${f.w.hy})` : `\u2022 Amount: <b>${usd2(f.y.zakatUsd)}</b> \u2014 2.5% of ${usd2(f.y.value)} (${day3} ${f.w.hy})`,
+    ar ? "\u0628\u0639\u062F \u0627\u0644\u062F\u0641\u0639 \u0627\u0636\u063A\u0637 \xAB\u2713 \u062F\u0641\u0639\u062A\xBB \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u2014 \u064A\u062A\u0648\u0642\u0641 \u0627\u0644\u062A\u0630\u0643\u064A\u0631\u060C \u0648\u064A\u0628\u0642\u0649 \u064A\u0648\u0645 \u0632\u0643\u0627\u062A\u0643 \u0627\u0644\u0642\u0627\u062F\u0645 \u0643\u0645\u0627 \u0647\u0648." : 'Once paid, tap "\u2713 Paid" in the app \u2014 the reminders stop, and your next zakat day stays the same.'
+  ] : [kind === "day" ? `\u{1F54C} <b>${ar ? "\u0627\u0644\u064A\u0648\u0645 \u064A\u0648\u0645 \u0632\u0643\u0627\u062A\u0643" : "Today is your zakat day"}</b> \xB7 ${day3} ${f.w.hy}` : `\u{1F54C} <b>${ar ? "\u0632\u0643\u0627\u062A\u0643 \u0628\u0639\u062F 7 \u0623\u064A\u0627\u0645" : "Your zakat day is in 7 days"}</b> \xB7 ${day3} ${f.w.nextHy}`, ""];
+  if (kind !== "late") {
+    const est = kind === "week" ? ar ? " (\u062A\u0642\u062F\u064A\u0631 \u0628\u0642\u064A\u0645\u0629 \u0627\u0644\u064A\u0648\u0645)" : " (an estimate at today's value)" : "";
+    if (f.nisabUsd > 0) lines.push(f.cryptoMeets ? ar ? `\u2022 ${poolName(P2, true)}: <b>${usd2(f.cryptoZakat)}</b> \u2014 2.5% \u0645\u0646 ${usd2(f.crypto)}${est}` : `\u2022 ${poolName(P2, false)}: <b>${usd2(f.cryptoZakat)}</b> \u2014 2.5% of ${usd2(f.crypto)}${est}` : ar ? `\u2022 ${poolName(P2, true)}: \u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u0646\u0635\u0627\u0628 (${usd2(f.nisabUsd)} = 85 \u062C\u0645 \u0630\u0647\u0628) \u2014 \u0644\u0627 \u0632\u0643\u0627\u0629` : `\u2022 ${poolName(P2, false)}: below the nisab (${usd2(f.nisabUsd)} = 85 g of gold) \u2014 none`);
+    if (mix) lines.push(`<i>${mix}</i>`);
+    if (kind === "day" && f.cryptoMeets) lines.push("", ar ? "\u0628\u0639\u062F \u0627\u0644\u062F\u0641\u0639 \u0627\u0636\u063A\u0637 \xAB\u2713 \u062F\u0641\u0639\u062A\xBB \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642." : 'Once paid, tap "\u2713 Paid" in the app.');
   }
-  lines.push("", `<i>${ar ? "\u062A\u0642\u062F\u064A\u0631 \u062D\u0633\u0627\u0628\u064A \u0648\u0644\u064A\u0633 \u0641\u062A\u0648\u0649 \u2014 \u0631\u0627\u062C\u0639 \u0623\u0647\u0644 \u0627\u0644\u0639\u0644\u0645. \u0642\u062F \u064A\u0628\u062F\u0623 \u0627\u0644\u0634\u0647\u0631 \u0642\u0628\u0644 \u0627\u0644\u062A\u0642\u0648\u064A\u0645 \u0623\u0648 \u0628\u0639\u062F\u0647 \u0628\u064A\u0648\u0645. \u064A\u0648\u0645 \u0627\u0644\u0632\u0643\u0627\u0629 \u064A\u064F\u063A\u064A\u064E\u0651\u0631 \u0645\u0646 \u0639\u0644\u0627\u0645\u0629 \u270E \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642." : "An estimate, not a ruling \u2014 check with a scholar. The month may start a day earlier or later than the calendar. Change the day with the \u270E in the app."}</i>`);
+  lines.push("", `<i>${ar ? "\u062A\u0642\u062F\u064A\u0631 \u062D\u0633\u0627\u0628\u064A \u0648\u0644\u064A\u0633 \u0641\u062A\u0648\u0649 \u2014 \u0631\u0627\u062C\u0639 \u0623\u0647\u0644 \u0627\u0644\u0639\u0644\u0645. \u0648\u0639\u0627\u0621 \u0648\u0627\u062D\u062F: \u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648 \u0648\u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0646\u0642\u062F (\u0648\u0627\u0644\u0623\u0633\u0647\u0645 \u0625\u0646 \u0627\u062E\u062A\u0631\u062A) \u0645\u0642\u0627\u0628\u0644 \u0646\u0635\u0627\u0628 85 \u062C\u0645 \u0630\u0647\u0628. \u064A\u0648\u0645 \u0627\u0644\u0632\u0643\u0627\u0629 \u064A\u064F\u063A\u064A\u064E\u0651\u0631 \u0645\u0646 \u0639\u0644\u0627\u0645\u0629 \u270E \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642." : "An estimate, not a ruling \u2014 check with a scholar. One pool: crypto, metals and cash (and shares if you chose) against a nisab of 85 g of gold. Change your zakat day with the \u270E in the app."}</i>`);
   if (kind === "day" && f.nisabUsd > 0) await setZakatSnap(env, { hy: f.w.hy, value: Math.round(f.crypto * 100) / 100, nisabUsd: Math.round(f.nisabUsd * 100) / 100, date: f.w.lastDate, at: new Date(now).toISOString() });
   const r = await send(env, { text: lines.join("\n"), buttons: [[{ text: WD[L].report, web_app: { url: APP + "index.html" } }]] });
   if (r && r.ok) {

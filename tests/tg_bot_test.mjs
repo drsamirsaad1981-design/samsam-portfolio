@@ -755,6 +755,23 @@ check('…a slot with nothing found and no whale flip → no message at all', !s
     check('…the day\'s message names the pool: "Crypto + shares + cash"', zmsg() && /Crypto \+ shares \+ cash: /.test(zmsg().b.text), zmsg() && zmsg().b.text);
     delete globalThis.__extraCoins; delete globalThis.__metaExtra;
   }
+  // ✓ Paid: still due two weeks after the day (the day's pool kept) → a weekly reminder; marked paid in the app → none
+  {
+    const ago = hj(at - 14 * 24 * HR);
+    globalThis.__zakatDay = { m: ago.month, d: ago.day };
+    globalThis.__metaExtra = { zakat: { hy: ago.year, value: 50000, nisabUsd: 9000, date: '2026-01-01' } };
+    again(); kvStore.delete('tg:555:zakat:sent'); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+    check('🕌 14 days after the day, not marked paid → "still due": $1,250.00 (2.5% of $50,000 kept that day), tap ✓ Paid', zmsg() && /still due/.test(zmsg().b.text) && /\$1,250\.00/.test(zmsg().b.text) && /✓ Paid/.test(zmsg().b.text), zmsg() && zmsg().b.text);
+    globalThis.__metaExtra = { ...globalThis.__metaExtra, zakatPaid: [{ hy: ago.year, paid: 1250, zakat: 1250, cur: 'USD', at: '2026-01-02' }] };
+    again(); kvStore.delete('tg:555:zakat:sent'); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+    check('…marked ✓ Paid in the app → no reminder', !zmsg(), zmsg() && zmsg().b.text);
+    const D = await import('../tools/worker/daily.mjs');
+    const m0 = { ...market, top: market.top || [], top500: Array.isArray(top500) ? top500 : (top500.rows || top500.top || []), idOf: {}, cgIds: {}, metals: [{ k: 'gold', price: 3000 }, { k: 'platinum', price: 1000 }], fx: {} };
+    globalThis.__extraCoins = [{ sym: 'XPT', opening: { qty: 2, avg: 900 } }];
+    const f = D.zakatFacts(USER(), m0, at);
+    check('🕌 one pool: platinum ($2,000) is in it as metals; the year reads "paid"', f.pool.metal === 2000 && f.y.state === 'paid', [f.pool, f.y && f.y.state]);
+    delete globalThis.__extraCoins; delete globalThis.__metaExtra;
+  }
   delete globalThis.__zakatDay;
 }
 check('today\'s log keeps what happened (radar, sector) for the evening', /radar/.test(kvStore.get('tg:555:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || '') && /sector/.test(kvStore.get('tg:555:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || ''));

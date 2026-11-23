@@ -401,14 +401,16 @@
   function zakatCrypto(st, goldOz, now, snap, o) {
     now = now || Date.now(); var w = zakatWhen(now); if (!w || !st) return null; o = o || {};
     var C = st.core || (window.Samsam && Samsam.core);
-    var rows = (st.portfolio || []).filter(function (c) { return !isMetal(c.sym); }).map(function (c) { return { sym: c.sym, cgId: c.cgId, cls: c.cls, value: (+c.qty || 0) * (+c.currentPrice || 0) }; });
-    var pool = C && C.zakatPool ? C.zakatPool(rows, { cashUsd: o.cashUsd || 0, stocks: o.stocks !== false }) : { value: rows.reduce(function (a, r) { return a + r.value; }, 0), crypto: 0, stock: 0, cash: 0 };
-    var value = pool.value;
-    var nisabUsd = goldOz > 0 ? NISAB.XAU / GPO * goldOz : null, fixed = !!(w.due && snap && snap.hy === w.hy && snap.value >= 0 && snap.nisabUsd > 0);
-    if (fixed) { value = +snap.value; nisabUsd = +snap.nisabUsd; }
-    if (!(nisabUsd > 0)) return null;
-    var meets = value >= nisabUsd;
-    return { pool: pool, value: value, nisabUsd: nisabUsd, meets: meets, due: meets && w.due, inWindow: w.due, fixed: fixed, daysLeft: w.due ? null : w.daysLeft, date: w.due ? w.lastDate : w.nextDate, hy: w.due ? w.hy : w.nextHy, zakatUsd: value * 0.025 };
+    // 🕌 ONE pool: every coin, every metal (gold, silver, platinum, copper — at market value), cash & certificates, shares if counted
+    var rows = (st.portfolio || []).map(function (c) { return { sym: c.sym, cgId: c.cgId, cls: c.cls, value: (+c.qty || 0) * (+c.currentPrice || 0) }; });
+    var pool = C && C.zakatPool ? C.zakatPool(rows, { cashUsd: o.cashUsd || 0, stocks: o.stocks !== false }) : { value: rows.reduce(function (a, r) { return a + r.value; }, 0), crypto: 0, stock: 0, metal: 0, cash: 0 };
+    var nisabUsd = goldOz > 0 ? NISAB.XAU / GPO * goldOz : null;
+    if (!(nisabUsd > 0) || !C || !C.zakatYear) return null;
+    var paid = o.paid || (window.Samsam && Samsam.getZakatPaid ? Samsam.getZakatPaid() : []);
+    var y = C.zakatYear(w, { value: pool.value, nisabUsd: nisabUsd }, snap, paid); if (!y) return null;
+    var open = y.state === 'due' || y.state === 'paid' || y.state === 'below';   // about the year that ended on the last zakat day
+    return Object.assign({}, y, { pool: pool, today: pool.value, todayNisab: nisabUsd, inWindow: w.due, due: y.state === 'due', meets: y.value >= y.nisabUsd,
+      daysLeft: w.daysLeft, date: open ? w.lastDate : w.nextDate, hy: open ? w.hy : w.nextHy });
   }
   // ✨ Gold / Silver Trend: the metal's price over time, per troy ounce — from the shared hourly files on GitHub (PAX Gold,
   // Kinesis Silver); if those don't cover it: gold from Binance PAXGUSDT, then CoinGecko; each kept 1 hour on this device

@@ -330,22 +330,44 @@ function renderZakatLine(portfolio) {
   let cashUsd = 0; try { if (Samsam.getCash && Samsam.getCash().length && Samsam.core.cashTotals) { const r = window.SamsamCash && SamsamCash.rates ? SamsamCash.rates() : null; cashUsd = Samsam.core.cashTotals(Samsam.getCash(), r || {}).usd || 0; } } catch (_) {}
   const zStocks = Samsam.getZakatStocks ? Samsam.getZakatStocks() : true;
   const st = Samsam.getState(), snap = Samsam.getZakat ? Samsam.getZakat() : null, z = gold > 0 ? SamsamCoins.zakatCrypto(st, gold, Date.now(), snap, { cashUsd, stocks: zStocks }) : null;
-  if (!z || !(z.value > 0)) { el.hidden = true; return; }
-  if (z.inWindow && !z.fixed && !zkSaving && Samsam.setZakat && portfolio.every(c => c.qty <= 0 || c.currentPrice > 0)) {   // 1 Ramadan (or the first visit after it): keep that value
-    zkSaving = true; Samsam.setZakat({ hy: z.hy, value: z.value, nisabUsd: z.nisabUsd, date: new Date().toISOString().slice(0, 10) }).catch(() => { zkSaving = false; });
+  zkNow = z;
+  if (!z || !(z.today > 0 || z.value > 0)) { el.hidden = true; el.classList.remove('zk-due'); return; }
+  if (z.inWindow && !z.fixed && !zkSaving && Samsam.setZakat && portfolio.every(c => c.qty <= 0 || c.currentPrice > 0)) {   // your zakat day (or the first visit in its month): keep that day's pool
+    zkSaving = true; Samsam.setZakat({ hy: z.hy, value: z.today, nisabUsd: z.todayNisab, date: new Date().toISOString().slice(0, 10) }).catch(() => { zkSaving = false; });
   }
-  // what is in it, by name: "Crypto zakat" / "Zakat (crypto + shares + cash)"
-  const P = z.pool || {}, parts = [AR ? 'الكريبتو' : 'crypto'].concat(P.stock > 0 && P.stocksCounted ? [AR ? 'الأسهم' : 'shares'] : [], P.cash > 0 ? [AR ? 'النقد' : 'cash'] : []);
-  const ZL = parts.length === 1 ? (AR ? 'زكاة الكريبتو' : 'Crypto zakat') : (AR ? 'الزكاة (' + parts.join(' + ') + ')' : 'Zakat (' + parts.join(' + ') + ')');
-  const fmtUsd = n => SamsamFmt.usd(n), iso = x => '⁦' + x + '⁩', hint = '<button type="button" class="cp-hint" data-hint="zakatCrypto" aria-label="About zakat"></button>';
+  // what is in the pool, by name and amount: crypto · metals · shares · cash
+  const P = z.pool || {}, fmtUsd = n => SamsamFmt.usd(n), iso = x => '⁦' + x + '⁩';
+  const parts = [[P.crypto, AR ? 'الكريبتو' : 'crypto'], [P.metal, AR ? 'المعادن' : 'metals'], [P.stocksCounted ? P.stock : 0, AR ? 'الأسهم' : 'shares'], [P.cash, AR ? 'النقد' : 'cash']].filter(x => x[0] > 0);
+  const ZL = AR ? 'الزكاة' : 'Zakat', hint = '<button type="button" class="cp-hint" data-hint="zakatCrypto" aria-label="About zakat"></button>';
   const day = SamsamCoins.zakatDayLabel(AR), edit = `<button type="button" class="zk-edit" onclick="editZakatDay()" title="${AR ? 'تغيير يوم الزكاة' : 'Change your zakat day'}">${SamsamUI.icon('pencil')}</button>`;
-  el.hidden = false;
-  el.innerHTML = '🕌 ' + (z.due
-    ? `${ZL} ${AR ? 'مستحقة' : 'due'} (${day} ${iso(z.hy)}): <b>${iso(fmtUsd(z.zakatUsd))}</b> <small>${AR ? '2.5% من' : '2.5% of'} ${iso(fmtUsd(z.value))}</small>`
-    : z.inWindow ? `${ZL} (${day} ${iso(z.hy)}): ${AR ? 'أقل من النصاب — لا زكاة' : 'below the nisab — none'} <small>(${iso(fmtUsd(z.nisabUsd))})</small>`
-    : z.meets ? `${ZL} ${AR ? 'في' : 'on'} ${day}${AR ? '، بعد' : ', in'} <b>${iso(z.daysLeft)}</b> ${AR ? 'يوم' : 'days'} · ${AR ? 'تقدير اليوم' : 'at today\'s value'} <b>${iso(fmtUsd(z.zakatUsd))}</b>`
-    : `${ZL} (${day}): ${AR ? 'أقل من النصاب' : 'below the nisab'} <small>(${iso(fmtUsd(z.nisabUsd))} = ${AR ? '85 جم ذهب' : '85 g of gold'})</small>`) + edit + hint;
+  const mix = z.state === 'upcoming' || z.state === 'under' ? parts.map(x => `${x[1]} ${iso(fmtUsd(x[0]))}`).join(' · ') : '';
+  el.hidden = false; el.classList.toggle('zk-due', z.state === 'due'); el.dataset.state = z.state;
+  el.innerHTML = '🕌 ' + (z.state === 'due'
+    ? `<span class="zk-t">${ZL} ${AR ? 'مستحقة' : 'due'} · ${day} ${iso(z.hy)}: <b>${iso(fmtUsd(z.zakatUsd))}</b> <small>${AR ? '2.5% من' : '2.5% of'} ${iso(fmtUsd(z.value))}${z.fixed ? '' : (AR ? ' (بقيمة اليوم)' : ' (today\'s value)')}</small></span><button type="button" class="zk-paid" onclick="zakatPaidNow()">✓ ${AR ? 'دفعت' : 'Paid'}</button>`
+    : z.state === 'paid' ? `${ZL} ${iso(z.hy)} ${AR ? 'مدفوعة' : 'paid'} ✓ <b>${iso(z.paid.cur === 'USD' ? fmtUsd(z.paid.paid) : Math.round(z.paid.paid).toLocaleString('en-US') + ' ' + z.paid.cur)}</b> <small>${iso(z.paid.at)}</small> · ${AR ? 'القادمة' : 'next'} ${day} ${iso(z.nextHy)}${AR ? '، بعد' : ', in'} <b>${iso(z.daysLeft)}</b> ${AR ? 'يوم' : 'days'}<button type="button" class="zk-undo" onclick="zakatUnpay(${z.hy})" title="${AR ? 'تراجع: لم أدفع بعد' : 'Undo: not paid yet'}">↶</button>`
+    : z.state === 'below' ? `${ZL} (${day} ${iso(z.hy)}): ${AR ? 'أقل من النصاب — لا زكاة' : 'below the nisab — none'} <small>(${iso(fmtUsd(z.nisabUsd))})</small>`
+    : z.state === 'upcoming' ? `${ZL} ${AR ? 'في' : 'on'} ${day}${AR ? '، بعد' : ', in'} <b>${iso(z.daysLeft)}</b> ${AR ? 'يوم' : 'days'} · ${AR ? 'تقدير اليوم' : 'at today\'s value'} <b>${iso(fmtUsd(z.zakatUsd))}</b><small class="zk-mix">${mix}</small>`
+    : `${ZL} (${day}): ${AR ? 'أقل من النصاب' : 'below the nisab'} <small>(${iso(fmtUsd(z.nisabUsd))} = ${AR ? '85 جم ذهب' : '85 g of gold'})</small><small class="zk-mix">${mix}</small>`) + edit + hint;
 }
+var zkNow = null;
+// ✓ Paid: the amount (the due one, ready — or what you paid, also "25000 EGP"); it closes that hijri year; the next zakat day stays put
+async function zakatPaidNow() {
+  const z = zkNow; if (!z || z.state !== 'due') return;
+  const AR = !!(window.CPLang && CPLang.ar);
+  const v = await CPDialog.prompt(AR ? `المبلغ الذي دفعته لزكاة ${z.hy} (بالدولار — أو اكتب مثلاً 25000 EGP). سنة الزكاة القادمة تبقى في يومها.` : `The amount you paid for your ${z.hy} zakat (in dollars — or type e.g. 25000 EGP). Your next zakat day stays the same.`,
+    { title: (AR ? '✓ دفعت الزكاة — ' : '✓ Zakat paid — ') + z.hy, value: (Math.round(z.zakatUsd * 100) / 100).toFixed(2), inputMode: 'text', okText: AR ? 'تسجيل' : 'Save' });
+  if (v == null) return;
+  const m = String(v).toUpperCase().replace(/[,\s]/g, '').match(/^\$?([0-9]+(?:\.[0-9]+)?)(USD|EGP|SAR)?$/);
+  if (!m) { CPDialog.alert(AR ? 'اكتب رقماً، مثل 1250 أو 25000 EGP.' : 'Type a number, like 1250 or 25000 EGP.', { title: AR ? 'الزكاة' : 'Zakat' }); return; }
+  await Samsam.markZakatPaid({ hy: z.hy, value: z.value, nisabUsd: z.nisabUsd, zakat: z.zakatUsd, paid: +m[1], cur: m[2] || 'USD', at: new Date().toLocaleDateString('en-CA') });
+  try { renderAll(); } catch (_) {}
+}
+async function zakatUnpay(hy) {
+  const AR = !!(window.CPLang && CPLang.ar);
+  if (!(await CPDialog.confirm(AR ? `زكاة ${hy} ترجع «مستحقة».` : `Your ${hy} zakat goes back to "due".`, { title: AR ? 'تراجع عن «دفعت»؟' : 'Undo "Paid"?', okText: AR ? 'تراجع' : 'Undo' }))) return;
+  await Samsam.unmarkZakatPaid(hy); try { renderAll(); } catch (_) {}
+}
+window.zakatPaidNow = zakatPaidNow; window.zakatUnpay = zakatUnpay;
 // ✏️ your zakat day: a hijri day and month (everyone's year starts on a different day) — crypto, gold and silver all follow it
 async function editZakatDay() {
   const AR = !!(window.CPLang && CPLang.ar), cur = Samsam.getZakatDay(), M = Samsam.core.HIJRI_MONTHS[AR ? 'ar' : 'en'];
@@ -459,9 +481,7 @@ function renderHeader() {
       const rows = mets.map(c => {
         const v = c.qty * c.currentPrice, k = c.qty * c.basePrice, p = v - k + ((rz[c.sym] || {}).realized || 0), pc = k > 0 ? p / k * 100 : 0;
         val += v; cost += k; pnl += p;
-        const vt = SamsamCoins.vaultOf(docs[c.sym], AR), z = SamsamCoins.zakat(c.sym, st);
-        const zk = !z ? '' : z.due ? `🕌 ${AR ? 'الزكاة مستحقة' : 'Zakat due'} <b>⁦${(z.zakatG).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${AR ? 'جم' : 'g'} ≈ ${fmtUsd(z.zakatOz * c.currentPrice)}⁩</b>`
-          : z.meets ? `🕌 ${AR ? 'الزكاة في' : 'Zakat on'} ${SamsamCoins.zakatDayLabel(AR)}${AR ? '، بعد' : ', in'} <b>⁦${z.daysLeft}⁩</b> ${AR ? 'يوم' : 'days'}` : '';
+        const vt = SamsamCoins.vaultOf(docs[c.sym], AR), zk = '';   // 🕌 metals are in the one zakat pool (the zakat line), not on their own
         return `<button type="button" class="mt-row" onclick="openCoinTx('${c.sym}')" title="${AR ? 'السجل: تعديل أو حذف' : 'History — edit or delete'}"><span>${nm[c.sym][0]} ${nm[c.sym][1]} <b>⁦${(c.qty * G).toLocaleString('en-US', { maximumFractionDigits: 1 })} ${AR ? 'جم' : 'g'}⁩</b>${vt ? ` <small class="mt-vault">${vt.e} ${SamsamCoins.esc(vt.label)}</small>` : ''}</span>` +
           `<span class="mt-pl ${cls(p)}">⁦${sgn(p, fmtUsd)} (${sgn(pc, x => x.toFixed(1))}%)⁩ ›</span>` +
           `<span class="mt-px">${AR ? 'الشراء' : 'Bought'} <b>⁦${SamsamFmt.price(c.basePrice / G)}/g⁩</b> · ${AR ? 'الآن' : 'now'} <b>⁦${SamsamFmt.price(c.currentPrice / G)}/g⁩</b>${zk ? ' · ' + zk : ''}</span></button>`;

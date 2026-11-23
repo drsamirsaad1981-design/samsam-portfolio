@@ -727,11 +727,47 @@ export const hasSignal = x => assetClass(x) === 'crypto' && String((x && typeof 
 export const isAltcoin = hasSignal;   // "Altcoins": every coin but BTC — no shares, no metals
 // 🕌 the money pool zakat counts against the nisab of 85 g of gold: coins (stablecoins too), shares when you count them,
 // and cash & certificates (in dollars). rows: [{ sym, cgId?, cls?, value }] — gold and silver are not in it (their own nisab).
+// One pool for everything (Samir's rule, Nov 2026): coins + metals (gold, silver, platinum, copper at market value) + cash &
+// certificates + shares when you count them — against ONE nisab, the value of 85 g of gold on your zakat day. (Joining gold and
+// silver to money to complete the nisab is the majority view; the Shafi'is keep them apart — the hint says so.)
 export function zakatPool(rows, { cashUsd = 0, stocks = true } = {}) {
-  let crypto = 0, stock = 0;
-  for (const r of rows || []) { const k = assetClass(r), v = +r.value || 0; if (!(v > 0)) continue; if (k === 'crypto') crypto += v; else if (k === 'stock') stock += v; }
+  let crypto = 0, stock = 0, metal = 0;
+  for (const r of rows || []) { const k = assetClass(r), v = +r.value || 0; if (!(v > 0)) continue; if (k === 'crypto') crypto += v; else if (k === 'stock') stock += v; else if (k === 'metal') metal += v; }
   const cash = cashUsd > 0 ? +cashUsd : 0;
-  return { crypto, stock, cash, stocksCounted: stocks !== false, value: crypto + (stocks !== false ? stock : 0) + cash };
+  return { crypto, stock, metal, cash, stocksCounted: stocks !== false, value: crypto + metal + (stocks !== false ? stock : 0) + cash };
+}
+// ✓ the zakat you paid, one line per hijri year (meta/info.zakatPaid; in every backup): { hy, value, nisabUsd, zakat ($ due),
+// paid (the amount you paid), cur (its currency), at (YYYY-MM-DD) }
+export function cleanZakatPaid(list) {
+  const by = new Map(), n2 = v => Math.round((+v || 0) * 100) / 100;
+  for (const x of Array.isArray(list) ? list : []) {
+    const hy = Math.round(+(x && x.hy)); if (!(hy >= 1400 && hy <= 1600)) continue;
+    by.set(hy, { hy, value: n2(x.value), nisabUsd: n2(x.nisabUsd), zakat: n2(x.zakat), paid: n2(x.paid), cur: CASH_CURS.includes(x.cur) ? x.cur : 'USD',
+      at: typeof x.at === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.at) ? x.at : isoD(Date.now()) });
+  }
+  return [...by.values()].sort((a, b) => a.hy - b.hy).slice(-30);
+}
+// Where your zakat year stands — the app's line and the bot agree on it.
+//   w = zakatWhen(…) · now = { value, nisabUsd } today's pool · snap = the pool kept on the last zakat day ({ hy, value, nisabUsd })
+//   paid = cleanZakatPaid list
+// The year is fixed on your hijri day: the pool kept that day decides it, and it stays DUE (past the month too) until you
+// tap ✓ Paid; paying late never moves the next zakat day.
+//   state: 'due' (pay this) · 'paid' (this year's is paid) · 'below' (the day's pool was under the nisab) · 'upcoming' / 'under'
+//   (no open year: today's estimate for the next day reaches / misses the nisab)
+export function zakatYear(w, now, snap, paid) {
+  if (!w) return null;
+  const P = cleanZakatPaid(paid), rec = P.find(p => p.hy === w.hy) || null;
+  const fixed = !!(snap && +snap.hy === w.hy && +snap.value >= 0 && +snap.nisabUsd > 0);
+  const day = fixed ? { value: +snap.value, nisabUsd: +snap.nisabUsd } : (w.due ? now : null);   // the day's pool (or today's, still in its month)
+  const est = { value: +now.value || 0, nisabUsd: +now.nisabUsd || 0 }, nextMeets = est.nisabUsd > 0 && est.value >= est.nisabUsd;
+  const base = { fixed, hy: w.hy, nextHy: w.nextHy, daysLeft: w.daysLeft, nextDate: w.nextDate, lastDate: w.lastDate, since: w.since, paid: rec, history: P };
+  if (day && day.nisabUsd > 0) {
+    if (rec) return { ...base, state: 'paid', value: day.value, nisabUsd: day.nisabUsd, zakatUsd: rec.zakat || day.value * 0.025 };
+    if (day.value >= day.nisabUsd) return { ...base, state: 'due', value: day.value, nisabUsd: day.nisabUsd, zakatUsd: day.value * 0.025 };
+    if (w.due) return { ...base, state: 'below', value: day.value, nisabUsd: day.nisabUsd, zakatUsd: 0 };
+  }
+  if (!(est.nisabUsd > 0)) return null;
+  return { ...base, state: nextMeets ? 'upcoming' : 'under', value: est.value, nisabUsd: est.nisabUsd, zakatUsd: est.value * 0.025 };
 }
 
 // ── 🎯 The plan, for all four: coins · shares · metals · cash & certificates ──

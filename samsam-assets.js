@@ -96,6 +96,7 @@
   var MINE = { XAU: ['🥇', 'Gold 24k', 'ذهب عيار 24', 'gold'], XAG: ['🥈', 'Silver', 'فضة', 'silver'], XPT: ['⚪', 'Platinum', 'بلاتين', 'platinum'], XCU: ['🟠', 'Copper', 'نحاس', null] };   // (copper's spot is per pound: its own price, from the app)
   // 🕌 zakat: due (2.5%), the days left in the hijri year, or below the nisab
   function zkLine(c, d, pr) {
+    return '';   // 🕌 gold, silver, platinum and copper are counted in your one zakat pool (Portfolio → the zakat line)
     var z = SamsamCoins.zakat(c.sym, d); if (!z) return '';
     var g = function (n) { return iso(n.toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + T('g', 'جم')); };
     return '<div class="as-zk">🕌 ' + (z.due ? T('Zakat due', 'الزكاة مستحقة') + ': <b>' + g(z.zakatG) + '</b> ≈ <b>' + iso(usd(z.zakatOz * pr, 2)) + '</b> <small>(2.5%)</small>'
