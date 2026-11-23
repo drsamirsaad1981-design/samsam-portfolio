@@ -1570,21 +1570,23 @@ if (process.env.DUMP_TEXTS) fs.writeFileSync(process.env.DUMP_TEXTS, JSON.string
 // then quiet for 30 days
 {
   const bmsg = () => sent.filter(x => x.m === 'sendMessage' && /🔐/.test(x.b.text || '') && String(x.b.chat_id) === '555');
-  const again = () => { const d = JSON.parse(kvStore.get('tg:555:daily:sent') || '{}'); delete d.bk; kvStore.set('tg:555:daily:sent', JSON.stringify(d)); kvStore.delete('fs:pf:UID1'); };
-  const at = RIYADH('13:00'); kvStore.delete('tg:555:bk:rem');
-  again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  const again = async () => { await new Promise(r => setTimeout(r, 300));   // (a late write of the run before must land first)
+    const d = JSON.parse(kvStore.get('tg:555:daily:sent') || '{}'); delete d.bk; kvStore.set('tg:555:daily:sent', JSON.stringify(d)); for (const k of [...kvStore.keys()]) if (k.startsWith('fs:pf:')) kvStore.delete(k); };
+  // (the file's age is counted from the run's own clock, so the test passes at any hour of the day)
+  const at = RIYADH('13:00'), at2 = RIYADH('13:30'), at3 = RIYADH('14:00'); kvStore.delete('tg:555:bk:rem');
+  await again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
   check('🔐 a backup file made lately → no reminder', bmsg().length === 0, bmsg().map(x => x.b.text));
-  globalThis.__lastBackupAt = new Date(at - 41.5 * 864e5).toISOString(); again();   // (from the run's own clock: the test passes at any hour) sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  globalThis.__lastBackupAt = new Date(at2 - 41.5 * 864e5).toISOString(); await again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at2);
   check('🔐 the last file is 41 days old → one reminder: how old, why the file matters, where the button is, and a button to the app', bmsg().length === 1 && /41 days ago/.test(bmsg()[0].b.text) && /only copy outside your account/.test(bmsg()[0].b.text) && /Settings → Backup → Back up now/.test(bmsg()[0].b.text) && btns(bmsg()[0]).length === 1, bmsg().map(x => x.b.text));
-  again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at + 30 * 60e3);
+  await again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at3);
   check('…and not again (quiet for 30 days)', bmsg().length === 0);
-  kvStore.set('tg:555:bk:rem', String(Date.now() - 31 * 864e5)); again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  kvStore.set('tg:555:bk:rem', String(Date.now() - 31 * 864e5)); await again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
   check('…31 days later, still no new file → one more', bmsg().length === 1);
-  kvStore.delete('tg:555:bk:rem'); globalThis.__lastBackupAt = null; const cu = COIN_UPD; COIN_UPD = new Date(Date.now() - 2 * 864e5).toISOString(); again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  kvStore.delete('tg:555:bk:rem'); globalThis.__lastBackupAt = null; const cu = COIN_UPD; COIN_UPD = new Date(Date.now() - 2 * 864e5).toISOString(); await again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at2);
   check('🔐 never backed up, but the portfolio is 2 days old → not yet', bmsg().length === 0, bmsg().map(x => x.b.text));
-  COIN_UPD = new Date(Date.now() - 20 * 864e5).toISOString(); again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  COIN_UPD = new Date(Date.now() - 20 * 864e5).toISOString(); await again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at3);
   check('🔐 never backed up and the portfolio is 20 days old → "not made yet"', bmsg().length === 1 && /not made yet/.test(bmsg()[0].b.text), bmsg().map(x => x.b.text));
-  COIN_UPD = cu; globalThis.__lastBackupAt = undefined; kvStore.delete('tg:555:bk:rem'); again(); sent.length = 0;
+  COIN_UPD = cu; globalThis.__lastBackupAt = undefined; kvStore.delete('tg:555:bk:rem'); await again(); sent.length = 0;
 }
 
 // /link with no code → a fixed "how to link" answer, never an AI question
