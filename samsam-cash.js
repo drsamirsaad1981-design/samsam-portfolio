@@ -60,12 +60,12 @@
       if (x.kind === 'cert') {
         var bits = [LTR(num(x.rate, 2) + '%') + ' ' + T('a year', 'سنوياً')];
         if (x.income != null) bits.push(LTR('+' + money(x.income, x.cur)) + ' ' + (ar ? PAY[x.pay][1] : PAY[x.pay][0].toLowerCase()));
-        else if (x.accrued > 0) bits.push(T('return so far', 'العائد حتى الآن') + ' ' + LTR('+' + money(x.accrued, x.cur)));
+        if (x.earned > 0) bits.push(T('return so far', 'العائد حتى الآن') + ' ' + LTR('+' + money(x.earned, x.cur)) + ' ' + (x.count ? T('(counted)', '(محسوب)') : T('(not counted)', '(غير محسوب)')));
         if (x.maturity) bits.push(x.matured ? '<b class="ch-due">' + T('matured', 'استحقت') + ' ' + E(dateTxt(x.maturity)) + '</b>'
           : T('matures', 'تستحق') + ' ' + E(dateTxt(x.maturity)) + ' (' + (ar ? 'بعد ' + LTR(x.daysLeft) + ' يوم' : 'in ' + x.daysLeft + ' days') + ')');
         sub = '<span class="ch-sub">' + bits.join(' · ') + '</span>';
       }
-      return '<button type="button" class="ch-row" data-cash="' + E(x.id) + '" title="' + T('Edit or delete', 'تعديل أو حذف') + '"><span class="ch-main">' + c.flag + ' ' + E(name) + ' <b>' + LTR(money(x.amount, x.cur)) + '</b>' +
+      return '<button type="button" class="ch-row" data-cash="' + E(x.id) + '" title="' + T('Edit or delete', 'تعديل أو حذف') + '"><span class="ch-main">' + c.flag + ' ' + E(name) + ' <b>' + LTR(money(x.value, x.cur)) + '</b>' +
         (x.kind === 'cert' ? ' <i class="ch-tag">' + T('certificate', 'شهادة') + '</i>' : '') + '</span>' + right + ' ›' + sub + '</button>';
     }).join('');
     $('cashSub').innerHTML = (rateLine ? '<div class="ch-rate">' + T('Official rate', 'السعر الرسمي') + ': ' + LTR(rateLine) + '</div>' : '') +
@@ -91,6 +91,7 @@
     '#cpCash label{display:block;font-size:.78rem;font-weight:600;color:var(--fg2,#94a3b8);margin:10px 0 4px}' +
     '#cpCash input,#cpCash select{width:100%;box-sizing:border-box;height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--border,#334155);background:var(--bg3,#1f2937);color:inherit;font:inherit}' +
     '#cpCash input:focus,#cpCash select:focus{outline:none;border-color:#3b82f6}' +
+    '#cpCash label.cc-chk{display:flex;align-items:center;gap:10px;margin:14px 0 0;font-size:.9rem;color:inherit;cursor:pointer}#cpCash label.cc-chk input{width:20px;height:20px;flex:0 0 auto;accent-color:#7c3aed}' +
     '#cpCash .cc-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}#cpCash .cc-cert[hidden]{display:none}' +
     '#cpCash .cc-note{font-size:.76rem;color:var(--fg2,#94a3b8);margin-top:10px;line-height:1.5}#cpCash .cc-err{color:#f87171;font-size:.82rem;min-height:1.2em;margin-top:8px}' +
     '#cpCash .cc-btns{display:flex;gap:10px;margin-top:12px}#cpCash .cc-btns button{flex:1;height:46px;border-radius:12px;border:1px solid var(--border,#334155);background:var(--metric-bg,#1f2937);color:inherit;font:inherit;font-weight:700;cursor:pointer}' +
@@ -117,6 +118,8 @@
         '<div><label for="ccPay">' + T('Return is paid', 'صرف العائد') + '</label><select id="ccPay">' + opt(['month', 'quarter', 'year', 'end'].map(function (p) { return [p, ar ? PAY[p][1] : PAY[p][0]]; }), v.pay || 'month') + '</select></div></div>' +
         '<div class="cc-two"><div><label for="ccStart">' + T('Start date', 'تاريخ البداية') + '</label><input id="ccStart" type="date" value="' + E(v.start || today) + '"></div>' +
         '<div><label for="ccMonths">' + T('Term, months', 'المدة بالشهور') + '</label><input id="ccMonths" inputmode="numeric" autocomplete="off" dir="ltr" value="' + E(v.months == null ? '' : String(v.months)) + '" placeholder="36"></div></div>' +
+        '<label class="cc-chk"><input type="checkbox" id="ccCount"' + ((typeof v.count === 'boolean' ? v.count : (v.pay || 'month') === 'end') ? ' checked' : '') + '><span>' + T('Count the return so far in its value', 'احسب العائد حتى الآن ضمن قيمتها') + '</span></label>' +
+        '<div class="cc-note" id="ccCountNote">' + T('On: value = the amount + the return since the start date. Turn it off when the payments reach an account you already enter here as a balance — otherwise they are counted twice.', 'مفعّل: القيمة = المبلغ + العائد منذ تاريخ البداية. أوقفه إذا كان العائد ينزل على حساب تُدخله هنا كرصيد — وإلا حُسب مرتين.') + '</div>' +
       '</div>' +
       '<div class="cc-note">' + T('Counted in Net worth only — your portfolio\'s totals and profit stay as they are. Valued in US dollars at the official rate.', 'يُحسب في صافي الثروة فقط — وإجمالي محفظتك وأرباحها تبقى كما هي. القيمة بالدولار بالسعر الرسمي.') + '</div>' +
       '<div class="cc-err" id="ccErr" role="alert"></div>' +
@@ -126,6 +129,9 @@
     w.querySelectorAll('[data-kind]').forEach(function (b) { b.onclick = function () { kind = b.dataset.kind; w.querySelectorAll('[data-kind]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); }); $('ccCert').hidden = kind !== 'cert'; }; });
     w.addEventListener('click', function (e) { if (e.target === w) close(); });
     $('ccX').onclick = close; $('ccNo').onclick = close;
+    // the switch follows "Return is paid" (at maturity → on, paid out → off) until you set it yourself
+    var touched = !!it; $('ccCount').onchange = function () { touched = true; };
+    $('ccPay').onchange = function () { if (!touched) $('ccCount').checked = $('ccPay').value === 'end'; };
     var n = function (el) { return parseFloat(String($(el).value || '').replace(/,/g, '').replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); }).trim()); };
     var err = function (t) { $('ccErr').textContent = t; };
     $('ccSave').onclick = function () {
@@ -137,7 +143,7 @@
         if (!(rate >= 0 && rate <= 100)) return err(T('Enter the yearly return, 0 to 100%.', 'اكتب العائد السنوي، من 0 إلى 100%.'));
         if (!/^\d{4}-\d\d-\d\d$/.test(start)) return err(T('Choose the start date.', 'اختر تاريخ البداية.'));
         if (!(months >= 1 && months <= 600)) return err(T('Enter the term in months (1 to 600).', 'اكتب المدة بالشهور (من 1 إلى 600).'));
-        x.rate = rate; x.months = months; x.start = start; x.pay = $('ccPay').value;
+        x.rate = rate; x.months = months; x.start = start; x.pay = $('ccPay').value; x.count = !!$('ccCount').checked;
       }
       var now = S().getCash(), next = editing ? now.map(function (o) { return o.id === editing ? x : o; }) : now.concat([x]);
       if (next.length > 40) return err(T('That is the most entries (40).', 'هذا أقصى عدد (40).'));

@@ -640,6 +640,9 @@ export function cleanCash(list) {
       it.start = /^\d{4}-\d\d-\d\d$/.test(x.start || '') && Date.parse(x.start + 'T00:00:00Z') > 0 ? x.start : null;
       it.months = mo >= 1 && mo <= 600 ? mo : null;
       it.pay = CASH_PAYS.includes(x.pay) ? x.pay : 'month';
+      // count the return so far in its value? Your choice per certificate; unset → yes when it is paid at maturity (it builds
+      // up inside the certificate), no when it is paid out (the payments reach your account, a balance you enter yourself)
+      it.count = typeof x.count === 'boolean' ? x.count : it.pay === 'end';
     }
     out.push(it);
   }
@@ -647,15 +650,15 @@ export function cleanCash(list) {
 }
 const addMonthsUtc = (ms, n) => { const d = new Date(ms), day = d.getUTCDate(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + n); d.setUTCDate(Math.min(day, new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate())); return d.getTime(); };
 // One entry, worked out. fx = how many units of each currency one US dollar buys: { EGP: 54.37, SAR: 3.75 } (USD is 1).
-// A certificate: simple interest (rate × days / 365). Paid at maturity → the return builds up inside the certificate until
-// then and is part of its value; paid monthly / quarterly / yearly → each payment goes to your account (a balance you
-// enter yourself), so the certificate stays worth what you put in — as the bank's own statement shows it.
-// → { ...item, value (its currency), accrued, usd | null (no rate for that currency yet), yearly, income (per payment),
+// A certificate: simple interest (rate × days / 365) from its start to today (never past its maturity). Whether that return
+// is counted in its value is the entry's own switch (count): on → value = amount + the return so far; off → the amount
+// only. Off suits a return that is paid out to an account you already enter as a balance (so it is never counted twice).
+// → { ...item, value (its currency), accrued (counted in value), earned (the return so far, counted or not), usd | null (no rate for that currency yet), yearly, income (per payment),
 //     maturity ('YYYY-MM-DD' | null), daysLeft, matured }
 export function cashFacts(item, fx, now = Date.now()) {
   const it = cleanCash([item])[0]; if (!it) return null;
   const DAY = 864e5, per1 = it.cur === 'USD' ? 1 : fx && +fx[it.cur] > 0 ? +fx[it.cur] : null;
-  let accrued = 0, yearly = 0, income = null, maturity = null, daysLeft = null, matured = false;
+  let accrued = 0, earned = 0, yearly = 0, income = null, maturity = null, daysLeft = null, matured = false;
   if (it.kind === 'cert') {
     yearly = it.amount * it.rate / 100;
     const step = { month: 1, quarter: 3, year: 12 }[it.pay] || 0;
@@ -663,11 +666,12 @@ export function cashFacts(item, fx, now = Date.now()) {
     const start = it.start ? Date.parse(it.start + 'T00:00:00Z') : 0, end = start && it.months ? addMonthsUtc(start, it.months) : 0;
     if (end) { maturity = new Date(end).toISOString().slice(0, 10); daysLeft = Math.ceil((end - now) / DAY); matured = now >= end; }
     if (start && now > start) {
-      if (!step) accrued = Math.max(0, yearly * ((end ? Math.min(now, end) : now) - start) / DAY / 365);
+      earned = Math.max(0, yearly * ((end ? Math.min(now, end) : now) - start) / DAY / 365);
+      if (it.count) accrued = earned;
     }
   }
   const value = it.amount + accrued;
-  return { ...it, value, accrued, usd: per1 ? value / per1 : null, yearly, income, maturity, daysLeft, matured };
+  return { ...it, value, accrued, earned, usd: per1 ? value / per1 : null, yearly, income, maturity, daysLeft, matured };
 }
 // All of them: → { items (cashFacts each), usd (those with a rate), missing: currencies with no rate yet, byCur: { EGP: { value, usd } } }
 export function cashTotals(list, fx, now = Date.now()) {
