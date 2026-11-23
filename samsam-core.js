@@ -258,14 +258,14 @@ export function perfChartSeries(snaps, coins, txs, { baselineBtc = 0, goldAt = n
   return { port: f(port), btc: f(btc), gold: gold.length ? f(gold) : [], silver: silver.length ? f(silver) : [], profit: f(profit), btcProfit: f(btcProfit), cost: f(cost), dropped: keep.filter(k => !k).length, first: pts[0], last: pts[pts.length - 1] };
 }
 
-// "Altcoins only" view of the same chart: the saved points with BTC, gold and silver taken out of the value
+// "Altcoins only" view of the same chart: the saved points with BTC, shares, gold and silver taken out of the value
 // (their amount at that moment × their price then), and the coins / transactions without them — so the blue line is
 // the altcoins' own profit and the Trend lines are the same altcoin money in BTC / gold / silver.
 //   prices: { BTC: t → $ (default: the point's own b), XAU: t → $/oz, XAG: t → $/oz }, now: { sym: $ } as a fallback
-export const ALT_EXCLUDE = ['BTC', 'XAU', 'XAG'];
+export const ALT_EXCLUDE = ['BTC', 'XAU', 'XAG'];   // (kept for older callers; altOnly asks isAltcoin, which also takes out shares)
 export function altOnly(snaps, coins, txs, { prices = {}, now = {} } = {}) {
-  const ex = new Set(ALT_EXCLUDE), sorted = [...(txs || [])].sort(compareTx);
-  const track = (coins || []).filter(c => ex.has(c.sym)).map(c => {
+  const sorted = [...(txs || [])].sort(compareTx);
+  const track = (coins || []).filter(c => !isAltcoin(c)).map(c => {   // BTC, shares, gold / silver: taken out
     const steps = [], pos0 = { qty: Math.max(0, num(c.opening && c.opening.qty)), avg: Math.max(0, num(c.opening && c.opening.avg)) };
     let pos = pos0;
     for (const x of sorted) if (x.sym === c.sym) { const r = applyTx(pos, x); pos = { qty: r.qty, avg: r.avg }; steps.push([Date.parse(x.date) || 0, pos.qty]); }
@@ -282,6 +282,7 @@ export function altOnly(snaps, coins, txs, { prices = {}, now = {} } = {}) {
     }
     return { ...s, v: Math.max(0, v) };
   });
+  const ex = new Set(track.map(t => t.sym));
   return { snaps: out, coins: (coins || []).filter(c => !ex.has(c.sym)), txs: (txs || []).filter(x => !ex.has(x.sym)) };
 }
 
@@ -342,8 +343,8 @@ export const SMART_WEAK = 15;
 export const CALM_MIN = -5;
 export function signalFor({ sym, chg, rules, rs = null, smart = true, calm = false }) {
   const r = rules || { reinforce: -5, sell: -20 };
-  const base = sym === 'BTC' || sym === 'XAU' || sym === 'XAG' ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
-  const ok = smart && sym !== 'BTC' && rs && Number.isFinite(rs.d30) && Number.isFinite(rs.d90);
+  const base = !hasSignal(sym) ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';   // BTC, shares, gold / silver: held
+  const ok = smart && hasSignal(sym) && rs && Number.isFinite(rs.d30) && Number.isFinite(rs.d90);
   const falling = calm && base === 'reinforce' && rs && Number.isFinite(rs.c7) && rs.c7 < CALM_MIN;
   if (!ok) return falling ? { action: 'hold', base, why: 'falling', rs } : { action: base, base, why: null, rs: rs || null };
   const weak = rs.d30 <= -SMART_WEAK && rs.d90 <= -SMART_WEAK, strong = rs.d30 > 0 && rs.d90 > 0;
@@ -681,4 +682,39 @@ export function cashTotals(list, fx, now = Date.now()) {
     if (x.usd == null) missing.add(x.cur); else { b.usd += x.usd; usd += x.usd; }
   }
   return { items, usd, missing: [...missing], byCur };
+}
+
+// ── 🧭 Asset classes: what each holding IS — the one answer every screen asks (Add, the Plan, DCA, categories, totals,
+// signals, zakat) and the Telegram bot / GitHub alerts too, so they always agree ──
+//   crypto · a coin (the default)                         → its own Signal; an altcoin unless it is BTC
+//   stock  · a tokenized US share (Binance bStocks)       → held; no Signal; zakat by your choice (meta/info.zakatStocks)
+//   metal  · physical gold / silver, kept in grams (XAU, XAG) → held; no Signal; zakat on its own nisab (85 g / 595 g)
+//   cash   · bank balances and certificates (meta/info.cash, never a coin) → Net worth only; always in zakat
+// Gold TOKENS (PAXG, XAUT, KAG) are coins: they trade like any token (their category is still Precious Metals).
+// Nothing is migrated: a holding's class comes from what it already is — XAU / XAG, a CoinGecko id ending "-bstock" —
+// or from its own `cls` when one was saved (the Add window's tabs save it). Callers that only have a symbol get the class
+// the coins and plan rows taught (learnAssets), else crypto.
+export const CLASSES = ['crypto', 'stock', 'metal', 'cash'];
+const METAL_SYMS = new Set(['XAU', 'XAG']);
+const learnedClass = new Map();
+const classOfDoc = d => d && typeof d === 'object' ? (d.cls === 'stock' || d.cls === 'metal' || d.cls === 'crypto' ? d.cls : /-bstock$/i.test(String(d.cgId || '')) ? 'stock' : null) : null;
+export function learnAssets(list) {
+  for (const d of Array.isArray(list) ? list : []) { const s = d && String(d.sym || '').toUpperCase(), k = classOfDoc(d); if (s && k && k !== 'crypto') learnedClass.set(s, k); }
+  if (learnedClass.size > 5000) learnedClass.clear();
+}
+// x: a symbol, or a coin / plan row ({ sym, cgId, cls })
+export function assetClass(x) {
+  const sym = String((x && typeof x === 'object' ? x.sym : x) || '').toUpperCase();
+  if (METAL_SYMS.has(sym)) return 'metal';
+  return classOfDoc(x) || learnedClass.get(sym) || 'crypto';
+}
+export const hasSignal = x => assetClass(x) === 'crypto' && String((x && typeof x === 'object' ? x.sym : x) || '').toUpperCase() !== 'BTC';
+export const isAltcoin = hasSignal;   // "Altcoins": every coin but BTC — no shares, no metals
+// 🕌 the money pool zakat counts against the nisab of 85 g of gold: coins (stablecoins too), shares when you count them,
+// and cash & certificates (in dollars). rows: [{ sym, cgId?, cls?, value }] — gold and silver are not in it (their own nisab).
+export function zakatPool(rows, { cashUsd = 0, stocks = true } = {}) {
+  let crypto = 0, stock = 0;
+  for (const r of rows || []) { const k = assetClass(r), v = +r.value || 0; if (!(v > 0)) continue; if (k === 'crypto') crypto += v; else if (k === 'stock') stock += v; }
+  const cash = cashUsd > 0 ? +cashUsd : 0;
+  return { crypto, stock, cash, stocksCounted: stocks !== false, value: crypto + (stocks !== false ? stock : 0) + cash };
 }

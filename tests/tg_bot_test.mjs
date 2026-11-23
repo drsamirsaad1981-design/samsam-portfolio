@@ -38,9 +38,9 @@ const USER = () => ({
   coins: [{ sym: 'BTC', cgId: 'bitcoin', opening: { qty: 0.1, avg: 70000 }, ...(COIN_UPD ? { updatedAt: COIN_UPD } : {}) }, { sym: 'SOL', cgId: 'solana', opening: { qty: 10, avg: 160 } },
     { sym: 'LINK', cgId: 'chainlink', opening: { qty: 50, avg: 15 } }, { sym: 'USDT', cgId: 'tether', opening: { qty: 900, avg: 0.5 } },
     { sym: 'NOID', name: 'No Id Coin', opening: { qty: 100, avg: 2 } },   // saved without a CoinGecko id, not in the top 500 — like PONS / CYBER
-    ...Array.from({ length: MANY }, (_, i) => ({ sym: 'ZZ' + i, cgId: 'zz-coin-' + i, opening: { qty: 1, avg: 1 } }))],
+    ...Array.from({ length: MANY }, (_, i) => ({ sym: 'ZZ' + i, cgId: 'zz-coin-' + i, opening: { qty: 1, avg: 1 } })), ...(globalThis.__extraCoins || [])],
   txs: [], accum: [{ sym: 'SOL', targetQty: 20 }, { sym: 'LINK', targetQty: 50 }, { sym: 'PENDLE', targetQty: 100, alertPrice: 3, cgId: 'pendle' }],
-  meta: { ...(globalThis.__zakatDay ? { zakatDay: globalThis.__zakatDay } : {}), ...(globalThis.__lastBackupAt === null ? {} : { lastBackupAt: globalThis.__lastBackupAt || new Date().toISOString() }), alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
+  meta: { ...(globalThis.__zakatDay ? { zakatDay: globalThis.__zakatDay } : {}), ...(globalThis.__metaExtra || {}), ...(globalThis.__lastBackupAt === null ? {} : { lastBackupAt: globalThis.__lastBackupAt || new Date().toISOString() }), alerts: { lang: LANG }, baseline: { btcPrice: 70000 }, exitPlan: [{ sym: 'LINK', tps: [{ price: 25, pct: 25, lock: true }, { price: 0, pct: 50, lock: false }, { price: 0, pct: 25, lock: false }] }] },
 });
 const sent = [], claudeCalls = [], fileGets = [], VOICE_BYTES = new Uint8Array(70000).map((_, i) => (i * 7) % 256); const commits = [], committed = [], composeCalls = []; let COMPOSE_FAIL = false, HOT = false; const kicks = [], pinWrites = [], accessWrites = [], tglinkWrites = []; let TGLINK = null, TGLINK_UID = 'UID2'; let OWNER_PIN = 'UID1', ACCOUNTS = ['UID1']; let FS_WRITE_403 = false, logoFetches = 0, BN403 = false, bnCalls = 0, EXLIVE = {}, tokenCalls = 0, cgDown = false, MANY = 0, outside = 0;
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json' } });
@@ -738,6 +738,23 @@ check('…a slot with nothing found and no whale flip → no message at all', !s
   check('…and the day\'s crypto value + the nisab are kept in your settings (only the "zakat" field), for the app', zw && zw.body.fields.zakat.mapValue.fields.hy.integerValue === String(td.year) && +(zw.body.fields.zakat.mapValue.fields.nisabUsd.doubleValue || zw.body.fields.zakat.mapValue.fields.nisabUsd.integerValue) > 7000 && Object.keys(zw.body.fields).join() === 'zakat', zw);
   globalThis.__zakatDay = { m: (td.month + 5) % 12 + 1, d: 15 }; again(); kvStore.delete('tg:555:zakat:sent'); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
   check('…any other day → nothing', !zmsg(), zmsg() && zmsg().b.text);
+  // 🧭 the money pool, as the app counts it: coins + a share (bStock) + cash & certificates at the official rate; shares switchable
+  {
+    const D = await import('../tools/worker/daily.mjs'), CORE = await import('../samsam-core.js');
+    const m0 = { ...market, top: market.top || [], top500: Array.isArray(top500) ? top500 : (top500.rows || top500.top || []), idOf: {}, cgIds: {}, metals: market.metals, fx: { EGP: { rate: 50 }, SAR: { rate: 3.75 } } };
+    const base = D.zakatFacts(USER(), m0, at);
+    globalThis.__extraCoins = [{ sym: 'NVDAB', cgId: 'nvidia-bstock', opening: { qty: 10, avg: 150 }, lastPrice: 200 }];
+    globalThis.__metaExtra = { cash: [{ id: 'c1', kind: 'cash', cur: 'EGP', amount: 250000, label: 'Bank' }, { id: 'c2', kind: 'cash', cur: 'USD', amount: 1000 }] };
+    const withAll = D.zakatFacts(USER(), m0, at);
+    check('🕌🧭 the bot\'s zakat pool: + the share ($2,000) + cash (250,000 EGP at 50 = $5,000, + $1,000), as the app', Math.abs(withAll.crypto - base.crypto - 2000 - 6000) < 0.01 && withAll.pool.stock === 2000 && withAll.pool.cash === 6000, [base.crypto, withAll.pool]);
+    globalThis.__metaExtra = { ...globalThis.__metaExtra, zakatStocks: false };
+    const noSh = D.zakatFacts(USER(), m0, at);
+    check('…shares switched off in the app → the bot leaves them out too', Math.abs(noSh.crypto - base.crypto - 6000) < 0.01 && noSh.pool.stocksCounted === false, noSh.pool);
+    check('…and the bot\'s Signal for the share is Hold (learned from its coin)', CORE.assetClass('NVDAB') === 'stock' && CORE.signalFor({ sym: 'NVDAB', chg: -60, rules: { reinforce: -5, sell: -20 } }).action === 'hold');
+    globalThis.__zakatDay = { m: td.month, d: td.day }; globalThis.__metaExtra = { ...globalThis.__metaExtra, zakatStocks: true }; again(); kvStore.delete('tg:555:zakat:sent'); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+    check('…the day\'s message names the pool: "Crypto + shares + cash"', zmsg() && /Crypto \+ shares \+ cash: /.test(zmsg().b.text), zmsg() && zmsg().b.text);
+    delete globalThis.__extraCoins; delete globalThis.__metaExtra;
+  }
   delete globalThis.__zakatDay;
 }
 check('today\'s log keeps what happened (radar, sector) for the evening', /radar/.test(kvStore.get('tg:555:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || '') && /sector/.test(kvStore.get('tg:555:log:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)) || ''));

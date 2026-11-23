@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 03687997bdb807b8
+// sources-hash: 488474ed6b451165
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -457,8 +457,8 @@ var SMART_WEAK = 15;
 var CALM_MIN = -5;
 function signalFor({ sym, chg, rules, rs = null, smart = true, calm = false }) {
   const r = rules || { reinforce: -5, sell: -20 };
-  const base = sym === "BTC" || sym === "XAU" || sym === "XAG" ? "hold" : chg < r.sell ? "convert" : chg <= r.reinforce ? "reinforce" : "hold";
-  const ok2 = smart && sym !== "BTC" && rs && Number.isFinite(rs.d30) && Number.isFinite(rs.d90);
+  const base = !hasSignal(sym) ? "hold" : chg < r.sell ? "convert" : chg <= r.reinforce ? "reinforce" : "hold";
+  const ok2 = smart && hasSignal(sym) && rs && Number.isFinite(rs.d30) && Number.isFinite(rs.d90);
   const falling = calm && base === "reinforce" && rs && Number.isFinite(rs.c7) && rs.c7 < CALM_MIN;
   if (!ok2) return falling ? { action: "hold", base, why: "falling", rs } : { action: base, base, why: null, rs: rs || null };
   const weak = rs.d30 <= -SMART_WEAK && rs.d90 <= -SMART_WEAK, strong = rs.d30 > 0 && rs.d90 > 0;
@@ -641,6 +641,104 @@ function zakatWhen(now = Date.now(), day3 = ZAKAT_DAY) {
   zkMemo.set(key, out);
   return out;
 }
+var CASH_CURS = ["USD", "EGP", "SAR"];
+var CASH_PAYS = ["month", "quarter", "year", "end"];
+function cleanCash(list3) {
+  const out = [];
+  for (const x of Array.isArray(list3) ? list3 : []) {
+    if (!x || typeof x !== "object" || out.length >= 40) continue;
+    const cur = CASH_CURS.includes(x.cur) ? x.cur : null, amount = +x.amount;
+    if (!cur || !(amount > 0) || !Number.isFinite(amount) || amount > 1e13) continue;
+    const it = {
+      id: String(x.id || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 24) || "c" + out.length + Math.round(amount),
+      kind: x.kind === "cert" ? "cert" : "cash",
+      cur,
+      amount: Math.round(amount * 100) / 100,
+      label: String(x.label == null ? "" : x.label).replace(/[<>"'`\\]/g, "").trim().slice(0, 40)
+    };
+    if (it.kind === "cert") {
+      const rate = +x.rate, mo = Math.round(+x.months);
+      it.rate = rate >= 0 && rate <= 100 ? Math.round(rate * 1e3) / 1e3 : 0;
+      it.start = /^\d{4}-\d\d-\d\d$/.test(x.start || "") && Date.parse(x.start + "T00:00:00Z") > 0 ? x.start : null;
+      it.months = mo >= 1 && mo <= 600 ? mo : null;
+      it.pay = CASH_PAYS.includes(x.pay) ? x.pay : "month";
+      it.count = typeof x.count === "boolean" ? x.count : it.pay === "end";
+    }
+    out.push(it);
+  }
+  return out;
+}
+var addMonthsUtc = (ms, n) => {
+  const d = new Date(ms), day3 = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + n);
+  d.setUTCDate(Math.min(day3, new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate()));
+  return d.getTime();
+};
+function cashFacts(item, fx, now = Date.now()) {
+  const it = cleanCash([item])[0];
+  if (!it) return null;
+  const DAY6 = 864e5, per1 = it.cur === "USD" ? 1 : fx && +fx[it.cur] > 0 ? +fx[it.cur] : null;
+  let accrued = 0, earned = 0, yearly = 0, income = null, maturity = null, daysLeft = null, matured = false;
+  if (it.kind === "cert") {
+    yearly = it.amount * it.rate / 100;
+    const step = { month: 1, quarter: 3, year: 12 }[it.pay] || 0;
+    income = step ? yearly * step / 12 : null;
+    const start = it.start ? Date.parse(it.start + "T00:00:00Z") : 0, end = start && it.months ? addMonthsUtc(start, it.months) : 0;
+    if (end) {
+      maturity = new Date(end).toISOString().slice(0, 10);
+      daysLeft = Math.ceil((end - now) / DAY6);
+      matured = now >= end;
+    }
+    if (start && now > start) {
+      earned = Math.max(0, yearly * ((end ? Math.min(now, end) : now) - start) / DAY6 / 365);
+      if (it.count) accrued = earned;
+    }
+  }
+  const value = it.amount + accrued;
+  return { ...it, value, accrued, earned, usd: per1 ? value / per1 : null, yearly, income, maturity, daysLeft, matured };
+}
+function cashTotals(list3, fx, now = Date.now()) {
+  const items = cleanCash(list3).map((x) => cashFacts(x, fx, now)).filter(Boolean), byCur = {}, missing = /* @__PURE__ */ new Set();
+  let usd3 = 0;
+  for (const x of items) {
+    const b = byCur[x.cur] || (byCur[x.cur] = { value: 0, usd: 0 });
+    b.value += x.value;
+    if (x.usd == null) missing.add(x.cur);
+    else {
+      b.usd += x.usd;
+      usd3 += x.usd;
+    }
+  }
+  return { items, usd: usd3, missing: [...missing], byCur };
+}
+var METAL_SYMS = /* @__PURE__ */ new Set(["XAU", "XAG"]);
+var learnedClass = /* @__PURE__ */ new Map();
+var classOfDoc = (d) => d && typeof d === "object" ? d.cls === "stock" || d.cls === "metal" || d.cls === "crypto" ? d.cls : /-bstock$/i.test(String(d.cgId || "")) ? "stock" : null : null;
+function learnAssets(list3) {
+  for (const d of Array.isArray(list3) ? list3 : []) {
+    const s = d && String(d.sym || "").toUpperCase(), k = classOfDoc(d);
+    if (s && k && k !== "crypto") learnedClass.set(s, k);
+  }
+  if (learnedClass.size > 5e3) learnedClass.clear();
+}
+function assetClass(x) {
+  const sym = String((x && typeof x === "object" ? x.sym : x) || "").toUpperCase();
+  if (METAL_SYMS.has(sym)) return "metal";
+  return classOfDoc(x) || learnedClass.get(sym) || "crypto";
+}
+var hasSignal = (x) => assetClass(x) === "crypto" && String((x && typeof x === "object" ? x.sym : x) || "").toUpperCase() !== "BTC";
+function zakatPool(rows, { cashUsd = 0, stocks = true } = {}) {
+  let crypto2 = 0, stock = 0;
+  for (const r of rows || []) {
+    const k = assetClass(r), v = +r.value || 0;
+    if (!(v > 0)) continue;
+    if (k === "crypto") crypto2 += v;
+    else if (k === "stock") stock += v;
+  }
+  const cash = cashUsd > 0 ? +cashUsd : 0;
+  return { crypto: crypto2, stock, cash, stocksCounted: stocks !== false, value: crypto2 + (stocks !== false ? stock : 0) + cash };
+}
 
 // tools/alerts-core.mjs
 var APP = "https://drsamirsaad1981-design.github.io/samsam-portfolio/";
@@ -720,6 +818,8 @@ function priceSeries(file) {
   };
 }
 function summarize(user, market, now = Date.now()) {
+  learnAssets(user.coins);
+  learnAssets(user.accum);
   const meta = user.meta || {}, rows = [...market.top || [], ...market.top500 || []];
   const byId = new Map(rows.map((r) => [r.id, r]));
   const idOf = (c) => c.cgId || (market.cgIds || {})[c.sym] || null;
@@ -1337,7 +1437,7 @@ async function loadMarket(ids = [], coins = []) {
     if (s) series[id] = s;
   }));
   const closeF = await cached("close", 10 * 6e4, async () => await getJson(RAW + "p/close.json") || false);
-  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], sectors: base.m.sectors || [], whales: base.m.whales || null };
+  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
   await liveTopUp(market, all);
   const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
   const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 3);
@@ -4764,14 +4864,21 @@ function zakatFacts(user, m, now) {
   if (!w || !user || !m) return null;
   const sum = summarize(withIds(user, m), m, now), by = Object.fromEntries(sum.coins.map((c) => [c.sym, c]));
   const goldOz = by.XAU && by.XAU.price || ((m.metals || []).find((x) => x.k === "gold") || {}).price || 0;
-  const crypto2 = sum.coins.filter((c) => c.sym !== "XAU" && c.sym !== "XAG").reduce((a, c) => a + c.value, 0);
+  learnAssets(user.coins);
+  learnAssets(user.accum);
+  const docs = Object.fromEntries((user.coins || []).filter((c) => c && c.sym).map((c) => [c.sym, c]));
+  const rows = sum.coins.filter((c) => c.sym !== "XAU" && c.sym !== "XAG").map((c) => ({ sym: c.sym, cgId: (docs[c.sym] || {}).cgId, cls: (docs[c.sym] || {}).cls, value: c.value }));
+  const fx = {};
+  for (const [k, v] of Object.entries(m.fx || {})) if (v && +v.rate > 0) fx[k] = +v.rate;
+  const pool = zakatPool(rows, { cashUsd: cashTotals((user.meta || {}).cash, fx, now).usd, stocks: (user.meta || {}).zakatStocks !== false });
+  const crypto2 = pool.value;
   const nisabUsd = goldOz > 0 ? 85 / GPO * goldOz : 0, metal = (sym, nis) => {
     const c = by[sym];
     if (!c || !(c.qty > 0)) return null;
     const g = c.qty * GPO;
     return { g, meets: g >= nis - 1e-6, zakatG: g * 0.025, zakatUsd: c.value * 0.025 };
   };
-  return { w, crypto: crypto2, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto2 >= nisabUsd, cryptoZakat: crypto2 * 0.025, gold: metal("XAU", 85), silver: metal("XAG", 595) };
+  return { w, crypto: crypto2, pool, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto2 >= nisabUsd, cryptoZakat: crypto2 * 0.025, gold: metal("XAU", 85), silver: metal("XAG", 595) };
 }
 async function backupReminder(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null);
@@ -4800,6 +4907,10 @@ async function backupReminder(env, now = Date.now()) {
   if (!r || r.ok !== false) await kvPut5(env, K(env, "bk:rem"), String(now));
   return { sent: 1 };
 }
+var poolName = (P2, ar) => {
+  const parts = [ar ? "\u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648" : "Crypto"].concat(P2 && P2.stock > 0 && P2.stocksCounted ? [ar ? "\u0627\u0644\u0623\u0633\u0647\u0645" : "shares"] : [], P2 && P2.cash > 0 ? [ar ? "\u0627\u0644\u0646\u0642\u062F" : "cash"] : []);
+  return parts.join(" + ");
+};
 async function zakatAlert(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null);
   if (!user) return { sent: 0 };
@@ -4820,7 +4931,7 @@ async function zakatAlert(env, now = Date.now()) {
   }
   const lines = [kind === "day" ? `\u{1F54C} <b>${ar ? "\u0627\u0644\u064A\u0648\u0645 \u064A\u0648\u0645 \u0632\u0643\u0627\u062A\u0643" : "Today is your zakat day"}</b> \xB7 ${day3} ${f.w.hy}` : `\u{1F54C} <b>${ar ? "\u0632\u0643\u0627\u062A\u0643 \u0628\u0639\u062F 7 \u0623\u064A\u0627\u0645" : "Your zakat day is in 7 days"}</b> \xB7 ${day3} ${f.w.nextHy}`, ""];
   const est = kind === "week" ? ar ? " (\u062A\u0642\u062F\u064A\u0631 \u0628\u0642\u064A\u0645\u0629 \u0627\u0644\u064A\u0648\u0645)" : " (an estimate at today's value)" : "";
-  if (f.nisabUsd > 0) lines.push(f.cryptoMeets ? ar ? `\u2022 \u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648: <b>${usd2(f.cryptoZakat)}</b> \u2014 2.5% \u0645\u0646 ${usd2(f.crypto)}${est}` : `\u2022 Crypto: <b>${usd2(f.cryptoZakat)}</b> \u2014 2.5% of ${usd2(f.crypto)}${est}` : ar ? `\u2022 \u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648: \u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u0646\u0635\u0627\u0628 (${usd2(f.nisabUsd)} = 85 \u062C\u0645 \u0630\u0647\u0628) \u2014 \u0644\u0627 \u0632\u0643\u0627\u0629` : `\u2022 Crypto: below the nisab (${usd2(f.nisabUsd)} = 85 g of gold) \u2014 none`);
+  if (f.nisabUsd > 0) lines.push(f.cryptoMeets ? ar ? `\u2022 ${poolName(f.pool, true)}: <b>${usd2(f.cryptoZakat)}</b> \u2014 2.5% \u0645\u0646 ${usd2(f.crypto)}${est}` : `\u2022 ${poolName(f.pool, false)}: <b>${usd2(f.cryptoZakat)}</b> \u2014 2.5% of ${usd2(f.crypto)}${est}` : ar ? `\u2022 ${poolName(f.pool, true)}: \u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u0646\u0635\u0627\u0628 (${usd2(f.nisabUsd)} = 85 \u062C\u0645 \u0630\u0647\u0628) \u2014 \u0644\u0627 \u0632\u0643\u0627\u0629` : `\u2022 ${poolName(f.pool, false)}: below the nisab (${usd2(f.nisabUsd)} = 85 g of gold) \u2014 none`);
   for (const [x, name, nis] of [[f.gold, ar ? "\u0627\u0644\u0630\u0647\u0628" : "Gold", 85], [f.silver, ar ? "\u0627\u0644\u0641\u0636\u0629" : "Silver", 595]]) {
     if (!x) continue;
     lines.push(x.meets ? ar ? `\u2022 ${name}: <b>${g(x.zakatG)} \u062C\u0645</b> \u2248 ${usd2(x.zakatUsd)} \u2014 2.5% \u0645\u0646 ${g(x.g)} \u062C\u0645` : `\u2022 ${name}: <b>${g(x.zakatG)} g</b> \u2248 ${usd2(x.zakatUsd)} \u2014 2.5% of ${g(x.g)} g` : ar ? `\u2022 ${name}: ${g(x.g)} \u062C\u0645 \u2014 \u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u0646\u0635\u0627\u0628 (${nis} \u062C\u0645)` : `\u2022 ${name}: ${g(x.g)} g \u2014 below the nisab (${nis} g)`);

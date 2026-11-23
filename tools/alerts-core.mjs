@@ -122,6 +122,7 @@ export function priceSeries(file) {   // p/<id>.json → { at(t), last, lastT }
 // ── the numbers ──
 // user: { coins, txs, accum, meta }; market: { top: [rows], top500: [rows], series: { id: priceSeries }, global, fng, alt, altPage, etf, parts, cgIds }
 export function summarize(user, market, now = Date.now()) {
+  C.learnAssets(user.coins); C.learnAssets(user.accum);   // 🧭 shares known by their coin → their Signal is Hold, as in the app
   const meta = user.meta || {}, rows = [...(market.top || []), ...(market.top500 || [])];
   const byId = new Map(rows.map(r => [r.id, r]));
   const idOf = c => c.cgId || (market.cgIds || {})[c.sym] || null;

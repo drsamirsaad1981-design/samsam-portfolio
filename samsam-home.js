@@ -263,10 +263,13 @@ async function resetApp() {
 function calcStats() {
   const btcEntry = portfolio.find(c => c.sym === 'BTC');
   const btcQty = btcEntry ? btcEntry.qty : 0;
-  const altTotal = portfolio.filter(c => c.sym !== 'BTC' && !SamsamCoins.isMetal(c.sym)).reduce((s,c) => s + c.qty * c.currentPrice, 0);
+  const isAlt = c => window.Samsam && Samsam.core && Samsam.core.isAltcoin ? Samsam.core.isAltcoin(c) : c.sym !== 'BTC' && !SamsamCoins.isMetal(c.sym);   // 🧭 coins only: no BTC, no shares, no gold / silver
+  const altTotal = portfolio.filter(isAlt).reduce((s,c) => s + c.qty * c.currentPrice, 0);
   const metalTotal = portfolio.filter(c => SamsamCoins.isMetal(c.sym)).reduce((s,c) => s + c.qty * c.currentPrice, 0);   // 🥇 gold / silver: in the total, not with the altcoins
+  const cls = c => window.Samsam && Samsam.core && Samsam.core.assetClass ? Samsam.core.assetClass(c) : 'crypto';
+  const stockTotal = portfolio.filter(c => cls(c) === 'stock').reduce((s,c) => s + c.qty * c.currentPrice, 0);   // 📈 shares: in the total, not with the altcoins
   const btcValue = btcQty * btcPrice;
-  return { btcQty, btcValue, altTotal, metalTotal, total: btcValue + altTotal + metalTotal };
+  return { btcQty, btcValue, altTotal, metalTotal, stockTotal, total: btcValue + altTotal + metalTotal + stockTotal };
 }
 
 // All Time Profit for the whole portfolio — the header card, the chart legend and the details sheet all read this.
@@ -323,27 +326,36 @@ function renderZakatLine(portfolio) {
   const AR = !!(window.CPLang && CPLang.ar), xau = portfolio.find(c => c.sym === 'XAU' && c.currentPrice > 0);
   const gold = xau ? xau.currentPrice : zkGold;
   if (!gold && !zkAsked && window.SamsamMarket && SamsamMarket.metals) { zkAsked = true; SamsamMarket.metals().then(m => { const g = ((m && m.data) || []).find(x => x.k === 'gold'); if (g && g.price > 0) { zkGold = g.price; try { renderAll(); } catch (_) {} } }, () => {}); }
-  const st = Samsam.getState(), snap = Samsam.getZakat ? Samsam.getZakat() : null, z = gold > 0 ? SamsamCoins.zakatCrypto(st, gold, Date.now(), snap) : null;
+  // 🕌 the money pool: coins + cash & certificates (in dollars, at the official rate) + shares when you count them
+  let cashUsd = 0; try { if (Samsam.getCash && Samsam.getCash().length && Samsam.core.cashTotals) { const r = window.SamsamCash && SamsamCash.rates ? SamsamCash.rates() : null; cashUsd = Samsam.core.cashTotals(Samsam.getCash(), r || {}).usd || 0; } } catch (_) {}
+  const zStocks = Samsam.getZakatStocks ? Samsam.getZakatStocks() : true;
+  const st = Samsam.getState(), snap = Samsam.getZakat ? Samsam.getZakat() : null, z = gold > 0 ? SamsamCoins.zakatCrypto(st, gold, Date.now(), snap, { cashUsd, stocks: zStocks }) : null;
   if (!z || !(z.value > 0)) { el.hidden = true; return; }
   if (z.inWindow && !z.fixed && !zkSaving && Samsam.setZakat && portfolio.every(c => c.qty <= 0 || c.currentPrice > 0)) {   // 1 Ramadan (or the first visit after it): keep that value
     zkSaving = true; Samsam.setZakat({ hy: z.hy, value: z.value, nisabUsd: z.nisabUsd, date: new Date().toISOString().slice(0, 10) }).catch(() => { zkSaving = false; });
   }
+  // what is in it, by name: "Crypto zakat" / "Zakat (crypto + shares + cash)"
+  const P = z.pool || {}, parts = [AR ? 'الكريبتو' : 'crypto'].concat(P.stock > 0 && P.stocksCounted ? [AR ? 'الأسهم' : 'shares'] : [], P.cash > 0 ? [AR ? 'النقد' : 'cash'] : []);
+  const ZL = parts.length === 1 ? (AR ? 'زكاة الكريبتو' : 'Crypto zakat') : (AR ? 'الزكاة (' + parts.join(' + ') + ')' : 'Zakat (' + parts.join(' + ') + ')');
   const fmtUsd = n => SamsamFmt.usd(n), iso = x => '⁦' + x + '⁩', hint = '<button type="button" class="cp-hint" data-hint="zakatCrypto" aria-label="About zakat"></button>';
   const day = SamsamCoins.zakatDayLabel(AR), edit = `<button type="button" class="zk-edit" onclick="editZakatDay()" title="${AR ? 'تغيير يوم الزكاة' : 'Change your zakat day'}">${SamsamUI.icon('pencil')}</button>`;
   el.hidden = false;
   el.innerHTML = '🕌 ' + (z.due
-    ? `${AR ? 'زكاة الكريبتو مستحقة' : 'Crypto zakat due'} (${day} ${iso(z.hy)}): <b>${iso(fmtUsd(z.zakatUsd))}</b> <small>${AR ? '2.5% من' : '2.5% of'} ${iso(fmtUsd(z.value))}</small>`
-    : z.inWindow ? `${AR ? 'زكاة الكريبتو' : 'Crypto zakat'} (${day} ${iso(z.hy)}): ${AR ? 'أقل من النصاب — لا زكاة' : 'below the nisab — none'} <small>(${iso(fmtUsd(z.nisabUsd))})</small>`
-    : z.meets ? `${AR ? 'زكاة الكريبتو في' : 'Crypto zakat on'} ${day}${AR ? '، بعد' : ', in'} <b>${iso(z.daysLeft)}</b> ${AR ? 'يوم' : 'days'} · ${AR ? 'تقدير اليوم' : 'at today\'s value'} <b>${iso(fmtUsd(z.zakatUsd))}</b>`
-    : `${AR ? 'زكاة الكريبتو' : 'Crypto zakat'} (${day}): ${AR ? 'أقل من النصاب' : 'below the nisab'} <small>(${iso(fmtUsd(z.nisabUsd))} = ${AR ? '85 جم ذهب' : '85 g of gold'})</small>`) + edit + hint;
+    ? `${ZL} ${AR ? 'مستحقة' : 'due'} (${day} ${iso(z.hy)}): <b>${iso(fmtUsd(z.zakatUsd))}</b> <small>${AR ? '2.5% من' : '2.5% of'} ${iso(fmtUsd(z.value))}</small>`
+    : z.inWindow ? `${ZL} (${day} ${iso(z.hy)}): ${AR ? 'أقل من النصاب — لا زكاة' : 'below the nisab — none'} <small>(${iso(fmtUsd(z.nisabUsd))})</small>`
+    : z.meets ? `${ZL} ${AR ? 'في' : 'on'} ${day}${AR ? '، بعد' : ', in'} <b>${iso(z.daysLeft)}</b> ${AR ? 'يوم' : 'days'} · ${AR ? 'تقدير اليوم' : 'at today\'s value'} <b>${iso(fmtUsd(z.zakatUsd))}</b>`
+    : `${ZL} (${day}): ${AR ? 'أقل من النصاب' : 'below the nisab'} <small>(${iso(fmtUsd(z.nisabUsd))} = ${AR ? '85 جم ذهب' : '85 g of gold'})</small>`) + edit + hint;
 }
 // ✏️ your zakat day: a hijri day and month (everyone's year starts on a different day) — crypto, gold and silver all follow it
 async function editZakatDay() {
   const AR = !!(window.CPLang && CPLang.ar), cur = Samsam.getZakatDay(), M = Samsam.core.HIJRI_MONTHS[AR ? 'ar' : 'en'];
-  const v = await CPDialog.prompt('The hijri day your zakat year ends — crypto, gold and silver are all counted on it, once a year.', { title: 'Your Zakat Day', okText: 'Save',
-    selects: [{ label: AR ? 'اليوم' : 'Day', value: cur.d, options: Array.from({ length: 30 }, (_, i) => [i + 1, i + 1]) }, { label: AR ? 'الشهر الهجري' : 'Hijri month', value: cur.m, options: M.map((n, i) => [i + 1, n]) }] });
+  const sOn = Samsam.getZakatStocks ? Samsam.getZakatStocks() : true;
+  const v = await CPDialog.prompt('The hijri day your zakat year ends — crypto, cash, gold and silver are all counted on it, once a year.\nShares (bStocks): count them when you hold them to trade (2.5% of their market value); for a long-term holding it is your choice.', { title: 'Your Zakat Day', okText: 'Save',
+    selects: [{ label: AR ? 'اليوم' : 'Day', value: cur.d, options: Array.from({ length: 30 }, (_, i) => [i + 1, i + 1]) }, { label: AR ? 'الشهر الهجري' : 'Hijri month', value: cur.m, options: M.map((n, i) => [i + 1, n]) },
+      { label: AR ? 'الأسهم (bStocks)' : 'Shares (bStocks)', value: sOn ? 'on' : 'off', options: [['on', AR ? 'تُحسب' : 'Counted'], ['off', AR ? 'لا تُحسب' : 'Not counted']] }] });
   if (!Array.isArray(v)) return;
   await Samsam.setZakatDay({ d: +v[0], m: +v[1] });
+  if (Samsam.setZakatStocks && (v[2] === 'on') !== sOn) await Samsam.setZakatStocks(v[2] === 'on');
   try { renderAll(); } catch (_) {}
 }
 window.editZakatDay = editZakatDay;
@@ -361,12 +373,12 @@ function signalInfo(coin, rules) {
   const r = rules || signalRules(), chg = getCoinPct(coin);
   if (window.Samsam && Samsam.core && Samsam.core.confirmedSignal) return Samsam.core.confirmedSignal({ sym: coin.sym, avg: coin.basePrice, live: coin.currentPrice, close: closeOf(coin), rules: r, rs: rsFor(coin), smart: r.smart !== false, calm: r.calm === true });
   if (window.Samsam && Samsam.core && Samsam.core.signalFor) return Samsam.core.signalFor({ sym: coin.sym, chg, rules: r, rs: rsFor(coin), smart: r.smart !== false, calm: r.calm === true });
-  const a = coin.sym === 'BTC' || SamsamCoins.isMetal(coin.sym) ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
+  const a = !(Samsam.core && Samsam.core.hasSignal ? Samsam.core.hasSignal(coin) : coin.sym !== 'BTC' && !SamsamCoins.isMetal(coin.sym)) ? 'hold' : chg < r.sell ? 'convert' : chg <= r.reinforce ? 'reinforce' : 'hold';
   return { action: a, base: a, why: null, rs: null };
 }
 function getAction(sym, perf, coin) {
   if (isSoldOut(coin)) return 'soldout';
-  if (sym === 'BTC' || SamsamCoins.isMetal(sym)) return 'hold';   // gold / silver: a store of value, no signal
+  if (window.Samsam && Samsam.core && Samsam.core.hasSignal ? !Samsam.core.hasSignal(sym) : sym === 'BTC' || SamsamCoins.isMetal(sym)) return 'hold';   // BTC, shares, gold / silver   // gold / silver: a store of value, no signal
   if (!coin) { const r = signalRules(); return perf < r.sell ? 'convert' : perf <= r.reinforce ? 'reinforce' : 'hold'; }
   return signalInfo(coin).action;
 }

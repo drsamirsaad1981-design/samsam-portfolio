@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611231359';
-import * as Hist from './samsam-history.js?v=202611231359';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611231359';
+import * as Core from './samsam-core.js?v=202611231424';
+import * as Hist from './samsam-history.js?v=202611231424';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611231424';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -87,6 +87,7 @@ function cleanCoin(c) {
   if ('at' in o) o.at = cleanPlaces(o.at);
   if ('vault' in o) o.vault = Clean.key(o.vault) || null;              // 🥇 where gold / silver is kept
   if ('vaultLabel' in o) o.vaultLabel = Clean.label(o.vaultLabel, 40) || null;
+  if ('cls' in o) o.cls = Core.CLASSES.includes(o.cls) && o.cls !== 'cash' ? o.cls : null;   // 🧭 what it is (samsam-core.js → assetClass); unset → from the coin itself
   if (o.opening) o.opening = { qty: Clean.num(o.opening.qty), avg: Clean.num(o.opening.avg) };
   return o;
 }
@@ -755,6 +756,7 @@ function listen() {
   const coll = (name, map, key, fix, st = {}) => fs.onSnapshot(fs.collection(db, ...userPath(name)), opt, snap => {
     track(snap); Use.snap(st, snap, true, name);
     map.clear(); snap.forEach(d => { try { map.set(d.id, fix({ ...d.data(), id: d.id })); } catch (e) { console.warn('[Samsam] skipped unreadable', name, d.id, e); } });
+    if (name === 'coins' || name === 'accum') Core.learnAssets([...map.values()]);   // 🧭 shares known by their coin → every screen and the signals know them
     S.loaded[key] = true; emit();
   }, onErr(name));
   S.unsub.push(coll('coins', S.coins, 'coins', cleanCoin));
@@ -963,6 +965,9 @@ const API = {
   },
   // 🕌 your zakat day: a hijri day and month ({ m: 1–12, d: 1–30 }); 1 Ramadan until you choose
   getZakatDay() { return Core.cleanZakatDay(S.meta && S.meta.zakatDay); },
+  // 🕌 shares in the zakat pool? Your intention decides (trade → yes, at market value; a long-term holding → your choice). Default: counted.
+  getZakatStocks() { return !(S.meta && S.meta.zakatStocks === false); },
+  setZakatStocks(on) { return commit((bt, ref) => bt.set(ref('meta', 'info'), { zakatStocks: on !== false }, { merge: true }), 'Zakat'); },
   setZakatDay(z) { const c = Core.cleanZakatDay(z); return commit((bt, ref) => bt.set(ref('meta', 'info'), { zakatDay: c }, { merge: true }), 'Zakat day'); },
   // 🕌 the value your crypto had on 1 Ramadan (kept once a hijri year, so the zakat is worked out on that day's value on every device)
   getZakat() { const z = S.meta && S.meta.zakat; return z && Number.isFinite(+z.hy) && Number.isFinite(+z.value) && +z.nisabUsd > 0 ? { hy: +z.hy, value: +z.value, nisabUsd: +z.nisabUsd, date: String(z.date || '').slice(0, 10) } : null; },
@@ -974,7 +979,7 @@ const API = {
     const w = cleanWatch(list);
     return commit((bt, ref) => bt.set(ref('meta', 'info'), { watch: w }, { merge: true }), 'Watchlist');
   },
-  signalOf(pct, sym) { const r = currentSignal(); if (sym === 'BTC' || sym === 'XAU' || sym === 'XAG') return 'hold'; return pct < r.sell ? 'convert' : pct <= r.reinforce ? 'reinforce' : 'hold'; },
+  signalOf(pct, sym) { const r = currentSignal(); if (!Core.hasSignal(sym)) return 'hold'; return pct < r.sell ? 'convert' : pct <= r.reinforce ? 'reinforce' : 'hold'; },
   // null → back to the defaults (−5% / −20%)
   setSignalRules(rules) {
     const s = rules == null ? null : cleanSignal(rules);
@@ -1492,7 +1497,7 @@ function downloadJson(obj, name) {
 }
 function stamp() { return new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-'); }
 // Your settings (meta/info) — everything except the setup bookkeeping — and the category names/colours (meta/categories)
-const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'signalCalm', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps', 'wallets', 'cash'];
+const SETTING_KEYS = ['targets', 'alerts', 'watch', 'signal', 'signalSmart', 'signalCalm', 'baseline', 'exitTab', 'exitTargets', 'exitPlan', 'exitSteps', 'wallets', 'cash', 'zakatStocks', 'zakatDay'];
 function settingsNow() {
   const m = S.meta || {}, info = {};
   for (const k of SETTING_KEYS) if (m[k] !== undefined) info[k] = m[k];

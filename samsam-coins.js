@@ -360,7 +360,8 @@
     return { k: v.k, e: v.e, label: v.k === 'other' && doc.vaultLabel ? doc.vaultLabel : (ar ? v.ar : v.en) };
   }
   // 🕌 Zakat — ONE date a year for everything: a hijri day you choose (1 Ramadan by default; Umm al-Qura, Riyadh's day). On that day, 2.5% of:
-  //   gold when you hold ≥ 85 g · silver when ≥ 595 g · all your crypto together (stablecoins too) when it is worth ≥ 85 g of gold.
+  //   gold when you hold ≥ 85 g · silver when ≥ 595 g · your money together — every coin (stablecoins too), cash & certificates,
+  //   and shares if you count them — when it is worth ≥ 85 g of gold.
   // "Due" from 1 Ramadan for 30 days (the month); before it: how many days are left, and an estimate at today's value.
   // An estimate, not a ruling — the app says so next to it.
   var NISAB = { XAU: 85, XAG: 595 };
@@ -380,14 +381,18 @@
   }
   // all the crypto together: goldOz = the price of an ounce of gold now; snap = the value kept on 1 Ramadan ({ hy, value, nisabUsd, date })
   // — while due, that kept value is the one that counts (not today's price)
-  function zakatCrypto(st, goldOz, now, snap) {
-    now = now || Date.now(); var w = zakatWhen(now); if (!w || !st) return null;
-    var value = (st.portfolio || []).reduce(function (a, c) { return a + (isMetal(c.sym) ? 0 : (+c.qty || 0) * (+c.currentPrice || 0)); }, 0);
+  // o: { cashUsd: cash & certificates in dollars, stocks: count the shares (Samsam.getZakatStocks) } — samsam-core.js → zakatPool
+  function zakatCrypto(st, goldOz, now, snap, o) {
+    now = now || Date.now(); var w = zakatWhen(now); if (!w || !st) return null; o = o || {};
+    var C = st.core || (window.Samsam && Samsam.core);
+    var rows = (st.portfolio || []).filter(function (c) { return !isMetal(c.sym); }).map(function (c) { return { sym: c.sym, cgId: c.cgId, cls: c.cls, value: (+c.qty || 0) * (+c.currentPrice || 0) }; });
+    var pool = C && C.zakatPool ? C.zakatPool(rows, { cashUsd: o.cashUsd || 0, stocks: o.stocks !== false }) : { value: rows.reduce(function (a, r) { return a + r.value; }, 0), crypto: 0, stock: 0, cash: 0 };
+    var value = pool.value;
     var nisabUsd = goldOz > 0 ? NISAB.XAU / GPO * goldOz : null, fixed = !!(w.due && snap && snap.hy === w.hy && snap.value >= 0 && snap.nisabUsd > 0);
     if (fixed) { value = +snap.value; nisabUsd = +snap.nisabUsd; }
     if (!(nisabUsd > 0)) return null;
     var meets = value >= nisabUsd;
-    return { value: value, nisabUsd: nisabUsd, meets: meets, due: meets && w.due, inWindow: w.due, fixed: fixed, daysLeft: w.due ? null : w.daysLeft, date: w.due ? w.lastDate : w.nextDate, hy: w.due ? w.hy : w.nextHy, zakatUsd: value * 0.025 };
+    return { pool: pool, value: value, nisabUsd: nisabUsd, meets: meets, due: meets && w.due, inWindow: w.due, fixed: fixed, daysLeft: w.due ? null : w.daysLeft, date: w.due ? w.lastDate : w.nextDate, hy: w.due ? w.hy : w.nextHy, zakatUsd: value * 0.025 };
   }
   // ✨ Gold / Silver Trend: the metal's price over time, per troy ounce — from the shared hourly files on GitHub (PAX Gold,
   // Kinesis Silver); if those don't cover it: gold from Binance PAXGUSDT, then CoinGecko; each kept 1 hour on this device

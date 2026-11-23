@@ -20,7 +20,7 @@ import { K, chatOf, isOwner, langOf, member, setMember } from './who.mjs';
 import { premiumNow } from './stars.mjs';
 import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures, setAlertsLang, setZakatSnap } from './data.mjs';
-import { zakatWhen, HIJRI_MONTHS } from '../../samsam-core.js';
+import { zakatWhen, HIJRI_MONTHS, zakatPool, cashTotals, learnAssets } from '../../samsam-core.js';
 import { compose } from './ai.mjs';
 import { listAlerts, describe, KINDS, logEvent, todayLog } from './watch.mjs';
 
@@ -387,9 +387,16 @@ export function zakatFacts(user, m, now) {
   const w = zakatWhen(now, user && user.meta && user.meta.zakatDay); if (!w || !user || !m) return null;
   const sum = summarize(withIds(user, m), m, now), by = Object.fromEntries(sum.coins.map(c => [c.sym, c]));
   const goldOz = (by.XAU && by.XAU.price) || ((m.metals || []).find(x => x.k === 'gold') || {}).price || 0;
-  const crypto = sum.coins.filter(c => c.sym !== 'XAU' && c.sym !== 'XAG').reduce((a, c) => a + c.value, 0);
+  // 🕌 the money pool, as the app counts it (samsam-core.js → zakatPool): coins + shares (unless you turned them off) +
+  // cash & certificates at the official rate from the snapshot (a currency with no rate yet is left out, as in the app)
+  learnAssets(user.coins); learnAssets(user.accum);
+  const docs = Object.fromEntries((user.coins || []).filter(c => c && c.sym).map(c => [c.sym, c]));
+  const rows = sum.coins.filter(c => c.sym !== 'XAU' && c.sym !== 'XAG').map(c => ({ sym: c.sym, cgId: (docs[c.sym] || {}).cgId, cls: (docs[c.sym] || {}).cls, value: c.value }));
+  const fx = {}; for (const [k, v] of Object.entries(m.fx || {})) if (v && +v.rate > 0) fx[k] = +v.rate;
+  const pool = zakatPool(rows, { cashUsd: cashTotals((user.meta || {}).cash, fx, now).usd, stocks: (user.meta || {}).zakatStocks !== false });
+  const crypto = pool.value;
   const nisabUsd = goldOz > 0 ? 85 / GPO * goldOz : 0, metal = (sym, nis) => { const c = by[sym]; if (!c || !(c.qty > 0)) return null; const g = c.qty * GPO; return { g, meets: g >= nis - 1e-6, zakatG: g * 0.025, zakatUsd: c.value * 0.025 }; };
-  return { w, crypto, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto >= nisabUsd, cryptoZakat: crypto * 0.025, gold: metal('XAU', 85), silver: metal('XAG', 595) };
+  return { w, crypto, pool, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto >= nisabUsd, cryptoZakat: crypto * 0.025, gold: metal('XAU', 85), silver: metal('XAG', 595) };
 }
 // 🔐 the encrypted backup file: a reminder when the last one is over 30 days old — or was never made and the portfolio is
 // over a week old. At most once every 30 days. The app's weekly automatic copy covers a mistake inside the app; the file
@@ -410,6 +417,8 @@ export async function backupReminder(env, now = Date.now()) {
   if (!r || r.ok !== false) await kvPut(env, K(env, 'bk:rem'), String(now));
   return { sent: 1 };
 }
+// what the money pool holds, by name: "Crypto" · "Crypto + shares + cash" (as the app's zakat line)
+const poolName = (P, ar) => { const parts = [ar ? 'الكريبتو' : 'Crypto'].concat(P && P.stock > 0 && P.stocksCounted ? [ar ? 'الأسهم' : 'shares'] : [], P && P.cash > 0 ? [ar ? 'النقد' : 'cash'] : []); return parts.join(' + '); };
 export async function zakatAlert(env, now = Date.now()) {
   const user = await loadUser(env).catch(() => null); if (!user) return { sent: 0 };
   const w0 = zakatWhen(now, user.meta && user.meta.zakatDay); if (!w0) return { sent: 0 };
@@ -423,8 +432,8 @@ export async function zakatAlert(env, now = Date.now()) {
   const lines = [kind === 'day' ? `🕌 <b>${ar ? 'اليوم يوم زكاتك' : 'Today is your zakat day'}</b> · ${day} ${f.w.hy}` : `🕌 <b>${ar ? 'زكاتك بعد 7 أيام' : 'Your zakat day is in 7 days'}</b> · ${day} ${f.w.nextHy}`, ''];
   const est = kind === 'week' ? (ar ? ' (تقدير بقيمة اليوم)' : ' (an estimate at today\'s value)') : '';
   if (f.nisabUsd > 0) lines.push(f.cryptoMeets
-    ? (ar ? `• الكريبتو: <b>${usd2(f.cryptoZakat)}</b> — 2.5% من ${usd2(f.crypto)}${est}` : `• Crypto: <b>${usd2(f.cryptoZakat)}</b> — 2.5% of ${usd2(f.crypto)}${est}`)
-    : (ar ? `• الكريبتو: أقل من النصاب (${usd2(f.nisabUsd)} = 85 جم ذهب) — لا زكاة` : `• Crypto: below the nisab (${usd2(f.nisabUsd)} = 85 g of gold) — none`));
+    ? (ar ? `• ${poolName(f.pool, true)}: <b>${usd2(f.cryptoZakat)}</b> — 2.5% من ${usd2(f.crypto)}${est}` : `• ${poolName(f.pool, false)}: <b>${usd2(f.cryptoZakat)}</b> — 2.5% of ${usd2(f.crypto)}${est}`)
+    : (ar ? `• ${poolName(f.pool, true)}: أقل من النصاب (${usd2(f.nisabUsd)} = 85 جم ذهب) — لا زكاة` : `• ${poolName(f.pool, false)}: below the nisab (${usd2(f.nisabUsd)} = 85 g of gold) — none`));
   for (const [x, name, nis] of [[f.gold, ar ? 'الذهب' : 'Gold', 85], [f.silver, ar ? 'الفضة' : 'Silver', 595]]) {
     if (!x) continue;
     lines.push(x.meets ? (ar ? `• ${name}: <b>${g(x.zakatG)} جم</b> ≈ ${usd2(x.zakatUsd)} — 2.5% من ${g(x.g)} جم` : `• ${name}: <b>${g(x.zakatG)} g</b> ≈ ${usd2(x.zakatUsd)} — 2.5% of ${g(x.g)} g`)
