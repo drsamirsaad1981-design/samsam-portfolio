@@ -445,6 +445,7 @@ function renderHeader() {
   // Card 1: Total Portfolio
   document.getElementById('totalUsd').textContent = fmtUsd(total);
   document.getElementById('totalUsdBtc').textContent = btcPrice > 0 ? '(' + fmtBtc(total) + ')' : '—';
+  try { renderNetWorth(); } catch (e) { console.warn('[net worth]', e); }   // 💼 drawn with the SAME number, right here — nothing later in this render can leave it behind
 
   // Card 2: All Time Profit = Realized + Unrealized — one definition on every page (CPProfit.calc in samsam-ui.js).
   const ap = allTimeProfitData();
