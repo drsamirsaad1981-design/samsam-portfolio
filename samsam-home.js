@@ -453,7 +453,7 @@ function renderHeader() {
     if (mets.length) {
       const rz = (realizedState && realizedState.bySym) || {}, G = SamsamCoins.GPO;
       const sgn = (v, f) => (v >= 0 ? '+' : '−') + f(Math.abs(v)), cls = v => v >= 0 ? 'stat-pos' : 'stat-neg';
-      const nm = { XAU: ['🥇', AR ? 'ذهب' : 'Gold'], XAG: ['🥈', AR ? 'فضة' : 'Silver'] };
+      const nm = { XAU: ['🥇', AR ? 'ذهب' : 'Gold'], XAG: ['🥈', AR ? 'فضة' : 'Silver'], XPT: ['⚪', AR ? 'بلاتين' : 'Platinum'], XCU: ['🟠', AR ? 'نحاس' : 'Copper'] };
       const st = Samsam.getState(), docs = {}; (st.coins || []).forEach(d => { docs[d.sym] = d; });
       let val = 0, cost = 0, pnl = 0;
       const rows = mets.map(c => {

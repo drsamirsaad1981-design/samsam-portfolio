@@ -423,7 +423,11 @@ export function cleanDca(s) {
   if (!(usd > 0 && usd <= 1e9) || !every) return null;
   if (every === 'month' ? !(day >= 1 && day <= 28) : !(day >= 0 && day <= 6)) return null;
   const since = typeof s.since === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.since) ? s.since : isoD(Date.now());
-  return { usd: Math.round(usd * 100) / 100, every, day, since };
+  // a savings goal (CASH-…) has no buys to see: the days you said "✓ Saved" (the last 24)
+  const paid = Array.isArray(s.paid) ? [...new Set(s.paid.filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().slice(-24) : [];
+  const out = { usd: Math.round(usd * 100) / 100, every, day, since };
+  if (paid.length) out.paid = paid;
+  return out;
 }
 // every due date from `from` to `to` (both included)
 export function dcaDue(s, from, to) {
@@ -445,14 +449,22 @@ function dcaNextAfter(c, d) { const n = dcaDue(c, isoD(dOf(d) + DAYMS), isoD(dOf
 export function dcaStatus(s, sym, txs, today) {
   const c = cleanDca(s); if (!c) return null;
   const S = String(sym || '').toUpperCase();
-  const buys = (txs || []).filter(t => t && t.type === 'buy' && String(t.sym || '').toUpperCase() === S && t.date).map(t => String(t.date).slice(0, 10)).sort();
+  // what counts as done: a buy of it (coins, shares, metals) — or, for a savings goal, a day you marked "✓ Saved"
+  //   (c.usd is then an amount in that currency: CASH-EGP 5000 = 5,000 EGP each time)
+  const cash = CASH_PLAN.test(S);
+  const buys = cash ? (c.paid || []) : (txs || []).filter(t => t && t.type === 'buy' && String(t.sym || '').toUpperCase() === S && t.date).map(t => String(t.date).slice(0, 10)).sort();
   const boughtFor = d => { const lo = isoD(dOf(d) - 2 * DAYMS), hi = dcaNextAfter(c, d) || '9999-12-31'; return buys.some(b => b >= lo && b < hi); };
   const past = dcaDue(c, c.since, today), last = past.length ? past[past.length - 1] : null;
   const recent = past.slice(-6), kept = recent.filter(boughtFor).length;
   const done = last ? boughtFor(last) : false;
   const late = last && !done ? Math.round((dOf(today) - dOf(last)) / DAYMS) : 0;
   const next = last === today && !done ? today : dcaNextAfter(c, today);   // the coming due date (today when today is one and not bought yet)
-  return { ...c, last, done, next, state: !last ? 'upcoming' : done ? 'done' : late === 0 ? 'today' : 'missed', late, kept, of: recent.length, perMonth: c.usd * DCA_PER_MONTH[c.every] };
+  return { ...c, last, done, next, state: !last ? 'upcoming' : done ? 'done' : late === 0 ? 'today' : 'missed', late, kept, of: recent.length, perMonth: c.usd * DCA_PER_MONTH[c.every], cur: cash ? S.slice(5) : 'USD' };
+}
+// a regular buy / saving in dollars (a savings goal's amount is in its currency: × dollars per unit; null while no rate)
+export function dcaUsd(amount, sym, fx) {
+  if (!CASH_PLAN.test(String(sym || '').toUpperCase())) return +amount || 0;
+  const px = planCashPrice(sym, fx); return px == null ? null : (+amount || 0) * px;
 }
 
 // ── Accumulation plan: Overall Progress ──────────────────────────────────────
@@ -695,7 +707,7 @@ export function cashTotals(list, fx, now = Date.now()) {
 // or from its own `cls` when one was saved (the Add window's tabs save it). Callers that only have a symbol get the class
 // the coins and plan rows taught (learnAssets), else crypto.
 export const CLASSES = ['crypto', 'stock', 'metal', 'cash'];
-const METAL_SYMS = new Set(['XAU', 'XAG']);
+const METAL_SYMS = new Set(['XAU', 'XAG', 'XPT', 'XCU']);   // gold · silver · platinum · copper (held in troy ounces, shown in grams)
 // CoinGecko's bStocks ids: nvidia-bstocks · circle-internet-group-bstock · tesla-bstocks-tokenized-stock · intel-tokenized-bstocks
 export const BSTOCK_ID = /(^|-)b?bstocks?(-|$)|^bn:/i;   // (+ …-bbstocks-tokenized-etf, and a share priced by the exchange: bn:ANTB)
 const learnedClass = new Map();

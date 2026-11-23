@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: a1d78e7ac8adfb08
+// sources-hash: 2ce29529b971fc22
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -540,7 +540,10 @@ function cleanDca(s) {
   if (!(usd3 > 0 && usd3 <= 1e9) || !every) return null;
   if (every === "month" ? !(day3 >= 1 && day3 <= 28) : !(day3 >= 0 && day3 <= 6)) return null;
   const since = typeof s.since === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s.since) ? s.since : isoD(Date.now());
-  return { usd: Math.round(usd3 * 100) / 100, every, day: day3, since };
+  const paid2 = Array.isArray(s.paid) ? [...new Set(s.paid.filter((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().slice(-24) : [];
+  const out = { usd: Math.round(usd3 * 100) / 100, every, day: day3, since };
+  if (paid2.length) out.paid = paid2;
+  return out;
 }
 function dcaDue(s, from, to) {
   const c = cleanDca(s);
@@ -576,7 +579,8 @@ function dcaStatus(s, sym, txs, today2) {
   const c = cleanDca(s);
   if (!c) return null;
   const S = String(sym || "").toUpperCase();
-  const buys = (txs || []).filter((t) => t && t.type === "buy" && String(t.sym || "").toUpperCase() === S && t.date).map((t) => String(t.date).slice(0, 10)).sort();
+  const cash = CASH_PLAN.test(S);
+  const buys = cash ? c.paid || [] : (txs || []).filter((t) => t && t.type === "buy" && String(t.sym || "").toUpperCase() === S && t.date).map((t) => String(t.date).slice(0, 10)).sort();
   const boughtFor = (d) => {
     const lo = isoD(dOf(d) - 2 * DAYMS), hi = dcaNextAfter(c, d) || "9999-12-31";
     return buys.some((b) => b >= lo && b < hi);
@@ -586,7 +590,12 @@ function dcaStatus(s, sym, txs, today2) {
   const done = last ? boughtFor(last) : false;
   const late = last && !done ? Math.round((dOf(today2) - dOf(last)) / DAYMS) : 0;
   const next = last === today2 && !done ? today2 : dcaNextAfter(c, today2);
-  return { ...c, last, done, next, state: !last ? "upcoming" : done ? "done" : late === 0 ? "today" : "missed", late, kept, of: recent.length, perMonth: c.usd * DCA_PER_MONTH[c.every] };
+  return { ...c, last, done, next, state: !last ? "upcoming" : done ? "done" : late === 0 ? "today" : "missed", late, kept, of: recent.length, perMonth: c.usd * DCA_PER_MONTH[c.every], cur: cash ? S.slice(5) : "USD" };
+}
+function dcaUsd(amount, sym, fx) {
+  if (!CASH_PLAN.test(String(sym || "").toUpperCase())) return +amount || 0;
+  const px = planCashPrice(sym, fx);
+  return px == null ? null : (+amount || 0) * px;
 }
 function overallProgress(rows) {
   const valid = (rows || []).filter((r) => num(r && r.target) > 0);
@@ -712,7 +721,7 @@ function cashTotals(list3, fx, now = Date.now()) {
   }
   return { items, usd: usd3, missing: [...missing], byCur };
 }
-var METAL_SYMS = /* @__PURE__ */ new Set(["XAU", "XAG"]);
+var METAL_SYMS = /* @__PURE__ */ new Set(["XAU", "XAG", "XPT", "XCU"]);
 var BSTOCK_ID = /(^|-)b?bstocks?(-|$)|^bn:/i;
 var learnedClass = /* @__PURE__ */ new Map();
 var classOfDoc = (d) => d && typeof d === "object" ? d.cls === "stock" || d.cls === "metal" || d.cls === "crypto" ? d.cls : BSTOCK_ID.test(String(d.cgId || "")) ? "stock" : null : null;
@@ -751,6 +760,11 @@ function planActual(e, heldQty, cash, now = Date.now()) {
   if (planKind(e) !== "cash") return +heldQty || 0;
   const cur = String(e.sym).toUpperCase().slice(5), b = cashTotals(cash || [], null, now).byCur[cur];
   return b ? b.value : 0;
+}
+function planCashPrice(sym, fx) {
+  const cur = String(sym || "").toUpperCase().slice(5);
+  if (cur === "USD") return 1;
+  return fx && +fx[cur] > 0 ? 1 / +fx[cur] : null;
 }
 function planUnits(e, qty2, ar = false) {
   const k = planKind(e), q = +qty2 || 0, sym = String(e && e.sym || "").toUpperCase();
@@ -837,9 +851,20 @@ function priceSeries(file) {
     }
   };
 }
+var WORLD_METAL = { XPT: ["platinum", 1], XCU: ["copper", 31.1034768 / 453.59237] };
+function worldMetal(market, sym) {
+  const w = WORLD_METAL[String(sym || "").toUpperCase()];
+  if (!w) return null;
+  const x = (market && market.metals || []).find((y) => y && y.k === w[0]);
+  return x && x.price > 0 ? { usd: x.price * w[1], ch24: x.ch24 == null ? null : +x.ch24, ch7: x.ch7 == null ? null : +x.ch7 } : null;
+}
+function dcaAmt(x, v) {
+  const cur = x.s && x.s.cur || "USD";
+  return cur === "USD" ? usd(v) : `${Math.round(+v || 0).toLocaleString("en-US")} ${cur}`;
+}
 function planName(p, ar) {
   const k = p.kind || planKind(p);
-  if (k === "metal") return p.sym === "XAU" ? ar ? "\u0627\u0644\u0630\u0647\u0628" : "Gold" : ar ? "\u0627\u0644\u0641\u0636\u0629" : "Silver";
+  if (k === "metal") return ({ XAU: ["Gold", "\u0627\u0644\u0630\u0647\u0628"], XAG: ["Silver", "\u0627\u0644\u0641\u0636\u0629"], XPT: ["Platinum", "\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646"], XCU: ["Copper", "\u0627\u0644\u0646\u062D\u0627\u0633"] }[p.sym] || [p.sym, p.sym])[ar ? 1 : 0];
   if (k === "cash") return (ar ? "\u0627\u062F\u062E\u0627\u0631 " : "Savings ") + p.sym.slice(5);
   return p.sym;
 }
@@ -857,10 +882,11 @@ function summarize(user, market, now = Date.now()) {
   for (const c of user.coins || []) {
     if (!c || !c.sym || c.removed) continue;
     const id = idOf(c), r = id && byId.get(id), s = id && market.series && market.series[id];
-    const price3 = r && r.price > 0 ? r.price : s ? s.last : c.lastPrice > 0 ? c.lastPrice : null;
+    const wm = !r && !s ? worldMetal(market, c.sym) : null;
+    const price3 = r && r.price > 0 ? r.price : s ? s.last : wm ? wm.usd : c.lastPrice > 0 ? c.lastPrice : null;
     const p24 = s && s.at(now - DAY), p7 = s && s.at(now - 7 * DAY);
-    const ch24 = r && r.ch24 != null ? r.ch24 : price3 && p24 ? (price3 / p24 - 1) * 100 : null;
-    const ch7 = r && r.ch7 != null ? r.ch7 : price3 && p7 ? (price3 / p7 - 1) * 100 : null;
+    const ch24 = r && r.ch24 != null ? r.ch24 : wm ? wm.ch24 : price3 && p24 ? (price3 / p24 - 1) * 100 : null;
+    const ch7 = r && r.ch7 != null ? r.ch7 : wm ? wm.ch7 : price3 && p7 ? (price3 / p7 - 1) * 100 : null;
     if (price3) prices2[c.sym] = { usd: price3, ch24 };
     info[c.sym] = { id, ch24, ch7, p24: ch24 != null && price3 ? price3 / (1 + ch24 / 100) : null, p7: ch7 != null && price3 ? price3 / (1 + ch7 / 100) : null };
   }
@@ -935,7 +961,11 @@ function summarize(user, market, now = Date.now()) {
     { k: "ethBtc", now: ethbtc, lvl: T2.ethBtc, met: ethbtc != null && ethbtc >= T2.ethBtc, op: "\u2265", dp: 4, unit: "" }
   ];
   const today2 = localParts(now).date;
-  const dca = (user.accum || []).filter((a) => a && a.sym && a.dca).map((a) => ({ sym: String(a.sym).toUpperCase(), s: dcaStatus(a.dca, a.sym, user.txs, today2) })).filter((x) => x.s);
+  const fxR = Object.fromEntries(Object.entries(market.fx || {}).map(([k, v]) => [k, +(v && v.rate) || 0]).filter((x) => x[1] > 0));
+  const dca = (user.accum || []).filter((a) => a && a.sym && a.dca).map((a) => {
+    const s = dcaStatus(a.dca, a.sym, user.txs, today2);
+    return s && { sym: String(a.sym).toUpperCase(), kind: planKind(a), s, usdMo: dcaUsd(s.perMonth, a.sym, fxR) };
+  }).filter(Boolean);
   const buyAt = (user.accum || []).filter((a) => a && a.sym && +a.alertPrice > 0).map((a) => {
     const sym = String(a.sym).toUpperCase();
     let price3 = prices2[sym] && prices2[sym].usd;
@@ -971,6 +1001,7 @@ function summarize(user, market, now = Date.now()) {
   return {
     alloc,
     dca,
+    fxR,
     free,
     value,
     cost,
@@ -4059,8 +4090,12 @@ async function runTool(ctx, name, input) {
     return {
       overall_progress_pct: r23(s.prog.pct),
       targets_met: `${s.prog.completed} of ${s.prog.counted}`,
-      coins: s.plan.map((p) => ({ ticker: p.sym, held: r62(p.actual), target: r62(p.target), progress_pct: p.target > 0 ? r23(p.actual / p.target * 100) : null })),
-      regular_buys: (s.dca || []).map((dc) => ({ ticker: dc.sym, per_month_usd: r23(dc.s.perMonth), next: dc.s.next || null, state: dc.s.state })),
+      // amounts in each row's own unit: coins in the coin, shares, metals in grams, a savings goal (CASH-EGP…) in its currency
+      coins: s.plan.map((p) => {
+        const u = planUnits(p, 1).u, k = planUnits(p, p.target).n / (p.target || 1);
+        return { ticker: p.sym, kind: p.kind, unit: u, held: r62(p.actual * k), target: r62(p.target * k), progress_pct: p.target > 0 ? r23(p.actual / p.target * 100) : null };
+      }),
+      regular_buys: (s.dca || []).map((dc) => ({ ticker: dc.sym, kind: dc.kind, per_month: r23(dc.s.perMonth), currency: dc.s.cur || "USD", per_month_usd: dc.usdMo == null ? null : r23(dc.usdMo), next: dc.s.next || null, state: dc.s.state })),
       buy_price_alerts: (s.buyAt || []).map((b) => ({ ticker: b.sym, alert_price_usd: r62(b.at), price_now_usd: r62(b.price), pct_above_alert: r23((b.price / b.at - 1) * 100), still_to_buy: r62(b.left) }))
     };
   }
@@ -6605,7 +6640,7 @@ ${t.noPlan}`, buttons: [[webApp(t.openApp, "accumulation.html"), cb3(t.back, "me
   }
   if ((sum.dca || []).length) {
     L.push("", `\u{1F6D2} <b>${t.dca}</b>`);
-    sum.dca.forEach((x) => L.push(isAr(t) ? `\u2022 ${esc(x.sym)}: ${usd(x.s.perMonth)} \u0634\u0647\u0631\u064A\u0627\u064B${x.s.next ? ` \xB7 \u0627\u0644\u0642\u0627\u062F\u0645: ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}` : `<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}/mo${x.s.next ? ` \xB7 ${t.next} ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}`));
+    sum.dca.forEach((x) => L.push(isAr(t) ? `\u2022 ${esc(planName(x, true))}: ${dcaAmt(x, x.s.perMonth)} \u0634\u0647\u0631\u064A\u0627\u064B${x.s.next ? ` \xB7 \u0627\u0644\u0642\u0627\u062F\u0645: ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}` : `<code>${esc(planName(x, false).padEnd(6))}</code> ${dcaAmt(x, x.s.perMonth)}/mo${x.s.next ? ` \xB7 ${t.next} ${x.s.next}` : ""}${x.s.state === "today" ? " \xB7 \u23F0" : ""}`));
   }
   if ((sum.buyAt || []).length) {
     L.push("", `\u{1F514} <b>${t.buyAt}</b>`);

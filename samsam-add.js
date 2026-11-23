@@ -161,7 +161,7 @@
           ' oninput="this.value=this.value.toUpperCase().replace(/\\s+/g,\' \').trimStart(); acSearchInput()" onkeydown="acSearchKey(event)">' +
           '<ul class="ac-suggest" id="acSuggest" role="listbox" hidden></ul><div class="ac-linked" id="acLinked" hidden></div>' +
           '</div>' +
-        '<div class="ac-metals ac-full" id="acMetalPick" role="radiogroup" aria-label="Metal" hidden><button type="button" role="radio" data-m="XAU" onclick="acMetal(\'XAU\')">🥇 Gold 24k</button><button type="button" role="radio" data-m="XAG" onclick="acMetal(\'XAG\')">🥈 Silver</button><small>held in grams</small></div>' +
+        '<div class="ac-metals ac-full" id="acMetalPick" role="radiogroup" aria-label="Metal" hidden><button type="button" role="radio" data-m="XAU" onclick="acMetal(\'XAU\')">🥇 Gold 24k</button><button type="button" role="radio" data-m="XAG" onclick="acMetal(\'XAG\')">🥈 Silver</button><button type="button" role="radio" data-m="XPT" onclick="acMetal(\'XPT\')">⚪ Platinum</button><button type="button" role="radio" data-m="XCU" onclick="acMetal(\'XCU\')">🟠 Copper</button><small>held in grams</small></div>' +
         '<div class="ac-full ac-mbox" id="acMetalBox" hidden>' +
           '<div class="ac-seg" role="radiogroup" aria-label="Amount in"><button type="button" data-u="g" onclick="acSetUnit(\'g\')">⚖️ Grams</button><button type="button" data-u="oz" onclick="acSetUnit(\'oz\')">🪙 Tokens / oz</button></div>' +
           '<div class="ac-chips" id="acChips"></div>' +
@@ -477,18 +477,27 @@
   function perOz(pg) { return pg * GPO; }
   function toG(oz) { return +(oz * GPO).toFixed(6); }
   function perG(po) { return +(po / GPO).toFixed(6); }
-  var METAL_PICK = { XAU: { name: 'Gold (24k)', cgId: 'pax-gold', cmcSlug: 'pax-gold' }, XAG: { name: 'Silver (999)', cgId: 'kinesis-silver', cmcSlug: 'kinesis-silver' } };
+  // gold / silver: priced as their tokens on CoinGecko · platinum / copper: the world price from the market snapshot (samsam-coins.js)
+  var METAL_PICK = { XAU: { name: 'Gold (24k)', cgId: 'pax-gold', cmcSlug: 'pax-gold', e: '🥇' }, XAG: { name: 'Silver (999)', cgId: 'kinesis-silver', cmcSlug: 'kinesis-silver', e: '🥈' },
+    XPT: { name: 'Platinum', cgId: '', cmcSlug: '', e: '⚪', snap: 'platinum', per: 1 }, XCU: { name: 'Copper', cgId: '', cmcSlug: '', e: '🟠', snap: 'copper', per: 31.1034768 / 453.59237 } };
+  function metalSpot(sym) {   // $ per troy ounce now
+    var m = METAL_PICK[sym]; if (!m) return Promise.resolve(0);
+    if (m.cgId) return coinInfo(m.cgId).then(function (d) { return d.usd || 0; }, function () { return 0; });
+    var p = window.Samsam && Samsam.getPrices ? Samsam.getPrices()[sym] : null; if (p && p.usd > 0) return Promise.resolve(p.usd);
+    var M = window.SamsamMarket; if (!M || !M.metals) return Promise.resolve(0);
+    return M.metals().then(function (r) { var x = ((r && r.data) || []).filter(function (y) { return y && y.k === m.snap; })[0]; return x && x.price > 0 ? x.price * m.per : 0; }, function () { return 0; });
+  }
   function acMetal(sym) {   // the 🥇 / 🥈 shortcut: linked, in grams, under Precious Metals
     var m = METAL_PICK[sym]; if (!m) return;
     acTabUI('metal', sym);
     $('acSym').value = sym; $('acName').value = m.name; $('acCgId').value = m.cgId; $('acCmc').value = m.cmcSlug; acCmcCheck();
-    acShow([]); acLink({ sym: sym, name: m.name, id: m.cgId }); acLogo = null;
+    acShow([]); if (m.cgId) acLink({ sym: sym, name: m.name, id: m.cgId }); else acLink(null); acLogo = null;
     fillCatSelect($('acCat'), 'metals'); syncCatCustom($('acCat'), 'acCatCustomBox');
     acSpot = 0; var mine = (Samsam.getState().coins || []).filter(function (c) { return c.sym === sym; })[0];
-    if (held(sym)) { $('acTitle').innerHTML = SamsamUI.ic('plus') + E((sym === 'XAU' ? '🥇 Buy ' : '🥈 Buy ') + m.name); $('acSave').innerHTML = SamsamUI.ic('plus') + 'Add Buy'; }
+    if (held(sym)) { $('acTitle').innerHTML = SamsamUI.ic('plus') + E(m.e + ' Buy ' + m.name); $('acSave').innerHTML = SamsamUI.ic('plus') + 'Add Buy'; }
     else { $('acTitle').innerHTML = SamsamUI.ic('plus') + 'Add'; $('acSave').innerHTML = SamsamUI.ic('plus') + 'Add to Portfolio'; }
     acUnits(); $('acVault').value = mine && mine.vault || ''; $('acVaultLabel').value = mine && mine.vaultLabel || ''; acVaultPick();
-    coinInfo(m.cgId).then(function (d) { var el = $('acLinkedPrice'); if (d.usd > 0 && $('acSym').value === sym) { acSpot = d.usd; if (el) el.textContent = ' · now ' + SamsamFmt.price(d.usd / GPO) + '/g'; previewAddCoin(); } });
+    metalSpot(sym).then(function (usd) { var el = $('acLinkedPrice'); if (usd > 0 && $('acSym').value === sym) { acSpot = usd; if (el) el.textContent = ' · now ' + SamsamFmt.price(usd / GPO) + '/g'; else { var lk = $('acLinked'); lk.hidden = false; lk.innerHTML = '<span>' + E(m.e + ' ' + m.name) + ' — world price:</span> <span>now ' + SamsamFmt.price(usd / GPO) + '/g</span>'; } previewAddCoin(); } });
     previewAddCoin(); $('acQty').focus();
   }
   // the metal box: amount in grams or tokens (PAXG / XAUT / KAG: 1 token = 1 troy ounce), price per unit or the invoice total,
@@ -658,7 +667,7 @@
     if (cgId && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cgId)) return acErr('CoinGecko ID looks wrong — pick the coin from the search list.');
     var cmcSlug = $('acCmc').value.trim() || null;
     if (cmcSlug && !/^[a-z0-9][a-z0-9-]{0,99}$/.test(cmcSlug)) return acErr('CoinMarketCap page: use lowercase letters, digits and dashes only.');
-    if (!cgId && acTab !== 'stock' && !SamsamCoins.CG_IDS[sym] && !(await CPDialog.confirm(sym + ' is not linked to CoinGecko, so it will have no live price or logo.\n\nTip: type its name in the Coin box and pick it from the list.', { title: 'Add without live price?', okText: 'Add anyway' }))) return;
+    if (!cgId && acTab !== 'stock' && !(METAL_PICK[sym] && METAL_PICK[sym].snap) && !SamsamCoins.CG_IDS[sym] && !(await CPDialog.confirm(sym + ' is not linked to CoinGecko, so it will have no live price or logo.\n\nTip: type its name in the Coin box and pick it from the list.', { title: 'Add without live price?', okText: 'Add anyway' }))) return;
     var name = $('acName').value.trim() || sym;
     var catCh = readCatChoice($('acCat'), 'acCatCustom'), cat = catCh.key;
     if (catCh.label) SamsamTaxonomy.register(cat, catCh.label);

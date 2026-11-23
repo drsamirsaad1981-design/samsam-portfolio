@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { summarize, priceSeries, isStable, planName, planAmt } from '../tools/alerts-core.mjs';
+import { summarize, priceSeries, isStable, planName, planAmt, evaluate, settings as alertCfg } from '../tools/alerts-core.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 let pass = 0, fail = 0;
@@ -1631,6 +1631,29 @@ if (process.env.DUMP_TEXTS) fs.writeFileSync(process.env.DUMP_TEXTS, JSON.string
     [planAmt(by['CASH-EGP'], 250000, false), planAmt(by.XAU, 100 / GPO, false), planAmt(by.NVDAB, 20, false)]);
   check('…names: Gold / الذهب · Savings EGP / ادخار EGP', planName(by.XAU, false) === 'Gold' && planName(by.XAU, true) === 'الذهب' && planName(by['CASH-EGP'], false) === 'Savings EGP' && planName(by['CASH-EGP'], true) === 'ادخار EGP' && planAmt(by.XAU, 100 / GPO, true) === '100 جم');
   check('…the overall progress uses them (SOL 20% · cash 50% · gold 0% · shares 0% → 17.5%)', Math.abs(s.prog.pct - 17.5) < 0.01, s.prog);
+
+  // 🪙 platinum / copper: priced from the world price (copper $/lb → $/troy oz)
+  const m2 = { ...mk, metals: [{ k: 'platinum', price: 1000, ch24: 1 }, { k: 'copper', price: 4.5, ch24: -2 }], fx: { EGP: { rate: 50 } } };
+  const s3 = summarize({ coins: [{ sym: 'XPT', opening: { qty: 1, avg: 900 } }, { sym: 'XCU', opening: { qty: 100, avg: 0.3 } }], txs: [], accum: [{ sym: 'XPT', targetQty: 2 }], meta: {} }, m2, Date.now());
+  const px = Object.fromEntries(s3.coins.map(c => [c.sym, c.price]));
+  check('🪙 platinum $1,000/oz and copper $4.50/lb → $0.3086/oz, both priced, Signal Hold, named in the plan', px.XPT === 1000 && Math.abs(px.XCU - 4.5 * 31.1034768 / 453.59237) < 1e-9 && planName(s3.plan[0], false) === 'Platinum' && planName(s3.plan[0], true) === 'البلاتين' && s3.coins.every(c => !s3.signal || s3.signal[c.sym] !== 'reinforce' && s3.signal[c.sym] !== 'sell'), px);
+  // 🏦 a regular saving: 5,000 EGP monthly on today's date → the DCA day message names it in EGP, the total in dollars
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date());
+  const dd = +today.slice(8, 10);
+  if (dd <= 28) {
+    const u = { coins: [{ sym: 'SOL', cgId: 'solana', opening: { qty: 1, avg: 80 } }], txs: [], meta: {},
+      accum: [{ sym: 'CASH-EGP', kind: 'cash', targetQty: 100000, dca: { usd: 5000, every: 'month', day: dd, since: '2026-01-01' } }, { sym: 'SOL', targetQty: 5, dca: { usd: 100, every: 'month', day: dd, since: '2026-01-01' } }] };
+    const s4 = summarize(u, m2, Date.now());
+    const eg = s4.dca.find(x => x.sym === 'CASH-EGP');
+    check('🏦 a regular saving: 5,000 EGP a month = $100/mo at 50, state today', eg && eg.s.cur === 'EGP' && eg.usdMo === 100 && eg.s.state === 'today', eg);
+    const cfg = { ...alertCfg({}), dca: true };
+    const noon = Date.parse(today + 'T09:00:00Z');   // 12:00 in Riyadh: after the brief time, out of the quiet hours
+    const r0 = evaluate(s4, m2, { v: 1, sig: {}, plan: {}, tp: {}, macro: {}, health: {}, dcaDay: {}, dcaMiss: {} }, { ...cfg, digest: false }, noon);
+    const txt = (r0.messages || []).map(o => o.text).join('\n'), all = txt;
+    check('…the DCA-day message: "🏦 Savings EGP 5,000 EGP", SOL $100, total $200', /Savings EGP\s+<b>5,000 EGP<\/b>/.test(txt) && /SOL\s+<b>\$100/.test(txt) && /\$200/.test(txt), txt.slice(0, 400) || all.slice(0, 300));
+    const sv = summarize({ ...u, accum: [{ ...u.accum[0], dca: { ...u.accum[0].dca, paid: [today] } }] }, m2, Date.now()).dca[0];
+    check('…marked "✓ Saved" today → done', sv.s.state === 'done', sv.s);
+  }
 }
 
 console.log(`${pass}/${pass + fail} passed`);

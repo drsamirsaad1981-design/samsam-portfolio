@@ -13,7 +13,7 @@
     { key: 'launchpad', label: 'Launchpad',                  color: '#f97316', coins: ['PONS'] },
     { key: 'web3',      label: 'Web3 & Gaming',              color: '#84cc16', coins: ['ENS'] },
     { key: 'meme',      label: 'Meme & Utility Tokens',      color: '#ef4444', coins: ['DOGE', 'VTHO'] },
-    { key: 'metals',    label: 'Precious Metals',            color: '#eab308', coins: ['XAU', 'XAG', 'PAXG', 'XAUT', 'KAG'] },   // physical gold / silver (grams) and gold tokens
+    { key: 'metals',    label: 'Precious Metals',            color: '#eab308', coins: ['XAU', 'XAG', 'XPT', 'XCU', 'PAXG', 'XAUT', 'KAG'] },   // physical gold / silver (grams) and gold tokens
     { key: 'stocks',    label: 'US Stocks (bStocks)',        color: '#38bdf8', coins: [] },   // 📈 tokenized US shares — the Add window's bStocks tab saves them here
   ];
   var OTHER = { key: 'other', label: 'Other', color: '#6b7280', coins: [] };

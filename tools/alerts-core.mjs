@@ -122,9 +122,19 @@ export function priceSeries(file) {   // p/<id>.json → { at(t), last, lastT }
 // ── the numbers ──
 // user: { coins, txs, accum, meta }; market: { top: [rows], top500: [rows], series: { id: priceSeries }, global, fng, alt, altPage, etf, parts, cgIds }
 // 🎯 a plan row by name and in its own unit: coins "0.5 ETH" · shares "20 shares NVDAB" · metals "100 g" of gold · savings "500,000 EGP"
+// 🪙 platinum (PL=F, per troy ounce) and copper (HG=F, per pound → per troy ounce) from the market snapshot — as the app does
+const WORLD_METAL = { XPT: ['platinum', 1], XCU: ['copper', 31.1034768 / 453.59237] };
+export function worldMetal(market, sym) {
+  const w = WORLD_METAL[String(sym || '').toUpperCase()]; if (!w) return null;
+  const x = ((market && market.metals) || []).find(y => y && y.k === w[0]);
+  return x && x.price > 0 ? { usd: x.price * w[1], ch24: x.ch24 == null ? null : +x.ch24, ch7: x.ch7 == null ? null : +x.ch7 } : null;
+}
+// a regular buy's amount: dollars — a saving in its own currency ("5,000 EGP")
+export function dcaAmt(x, v) { const cur = x.s && x.s.cur || 'USD'; return cur === 'USD' ? usd(v) : `${Math.round(+v || 0).toLocaleString('en-US')} ${cur}`; }
+const fxOf = sum => sum.fxR || {};
 export function planName(p, ar) {
   const k = p.kind || C.planKind(p);
-  if (k === 'metal') return p.sym === 'XAU' ? (ar ? 'الذهب' : 'Gold') : (ar ? 'الفضة' : 'Silver');
+  if (k === 'metal') return ({ XAU: ['Gold', 'الذهب'], XAG: ['Silver', 'الفضة'], XPT: ['Platinum', 'البلاتين'], XCU: ['Copper', 'النحاس'] }[p.sym] || [p.sym, p.sym])[ar ? 1 : 0];
   if (k === 'cash') return (ar ? 'ادخار ' : 'Savings ') + p.sym.slice(5);
   return p.sym;
 }
@@ -141,10 +151,11 @@ export function summarize(user, market, now = Date.now()) {
   for (const c of user.coins || []) {
     if (!c || !c.sym || c.removed) continue;
     const id = idOf(c), r = id && byId.get(id), s = id && market.series && market.series[id];
-    const price = r && r.price > 0 ? r.price : s ? s.last : (c.lastPrice > 0 ? c.lastPrice : null);
+    const wm = !r && !s ? worldMetal(market, c.sym) : null;   // platinum / copper: the world price (snapshot), $ per troy ounce
+    const price = r && r.price > 0 ? r.price : s ? s.last : wm ? wm.usd : (c.lastPrice > 0 ? c.lastPrice : null);
     const p24 = s && s.at(now - DAY), p7 = s && s.at(now - 7 * DAY);
-    const ch24 = r && r.ch24 != null ? r.ch24 : (price && p24 ? (price / p24 - 1) * 100 : null);
-    const ch7 = r && r.ch7 != null ? r.ch7 : (price && p7 ? (price / p7 - 1) * 100 : null);
+    const ch24 = r && r.ch24 != null ? r.ch24 : wm ? wm.ch24 : (price && p24 ? (price / p24 - 1) * 100 : null);
+    const ch7 = r && r.ch7 != null ? r.ch7 : wm ? wm.ch7 : (price && p7 ? (price / p7 - 1) * 100 : null);
     if (price) prices[c.sym] = { usd: price, ch24 };
     info[c.sym] = { id, ch24, ch7, p24: ch24 != null && price ? price / (1 + ch24 / 100) : null, p7: ch7 != null && price ? price / (1 + ch7 / 100) : null };
   }
@@ -218,7 +229,9 @@ export function summarize(user, market, now = Date.now()) {
   ];
   // DCA: the plan coins' regular buys (samsam-core.js → dcaStatus), today = Riyadh's calendar day
   const today = localParts(now).date;
-  const dca = (user.accum || []).filter(a => a && a.sym && a.dca).map(a => ({ sym: String(a.sym).toUpperCase(), s: C.dcaStatus(a.dca, a.sym, user.txs, today) })).filter(x => x.s);
+  // (a savings goal's amount is in its currency: `usdMo` is the month in dollars at the official rate, null with no rate)
+  const fxR = Object.fromEntries(Object.entries(market.fx || {}).map(([k, v]) => [k, +(v && v.rate) || 0]).filter(x => x[1] > 0));
+  const dca = (user.accum || []).filter(a => a && a.sym && a.dca).map(a => { const s = C.dcaStatus(a.dca, a.sym, user.txs, today); return s && { sym: String(a.sym).toUpperCase(), kind: C.planKind(a), s, usdMo: C.dcaUsd(s.perMonth, a.sym, fxR) }; }).filter(Boolean);
   // buy-price alerts: the alert price you set on a plan coin (also coins you don't own yet — priced by their CoinGecko id)
   const buyAt = (user.accum || []).filter(a => a && a.sym && +a.alertPrice > 0).map(a => {
     const sym = String(a.sym).toUpperCase();
@@ -247,7 +260,7 @@ export function summarize(user, market, now = Date.now()) {
   }
   const free = Object.values(free7).sort((a, b) => b.usd - a.usd);
   return {
-    alloc, dca, free,
+    alloc, dca, fxR, free,
     value, cost, total, invested, pctTotal: invested > 0 ? total / invested * 100 : 0,
     ch24: value24 > 0 ? (value / value24 - 1) * 100 : null, d24: value - value24, ch7: value7 > 0 ? (value / value7 - 1) * 100 : null, d7: value - value7,
     vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, pending, sigMode, counts, plan, prog, tps, macro, btcNow, buyAt,
@@ -316,8 +329,8 @@ export function brief(sum, m, cfg, now, weekly = false) {
   const mc = sum.macro.filter(x => x.met).length; if (mc) L.push(`🧭 ${t.of3(mc)}`);
   if (sum.alloc) L.push(`⚖️ <b>${t.allocation}</b>  ${t.onTarget(sum.alloc.onTarget, sum.alloc.count)}`);
   if (sum.dca && sum.dca.length) {
-    const nx = [...sum.dca].filter(x => x.s.next).sort((a, b) => a.s.next.localeCompare(b.s.next))[0], mo = sum.dca.reduce((a, x) => a + x.s.perMonth, 0);
-    L.push(ar ? `🛒 ${t.dcaLine(sum.dca.length, usd(mo), nx ? esc(nx.sym) + ' · ' + arDay(nx.s.next) : '—')}` : `🛒 <b>DCA</b>  ${t.dcaLine(sum.dca.length, usd(mo), nx ? esc(nx.sym) + ' ' + shortD(nx.s.next) : '—')}`);
+    const nx = [...sum.dca].filter(x => x.s.next).sort((a, b) => a.s.next.localeCompare(b.s.next))[0], mo = sum.dca.reduce((a, x) => a + (x.usdMo || 0), 0);
+    L.push(ar ? `🛒 ${t.dcaLine(sum.dca.length, usd(mo), nx ? esc(planName(nx, true)) + ' · ' + arDay(nx.s.next) : '—')}` : `🛒 <b>DCA</b>  ${t.dcaLine(sum.dca.length, usd(mo), nx ? esc(planName(nx, false)) + ' ' + shortD(nx.s.next) : '—')}`);
   }
   if (weekly && sum.free && sum.free.length) {
     const tot = sum.free.reduce((a, f) => a + f.usd, 0), q = n => String(+Number(n).toPrecision(6));
@@ -475,11 +488,13 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
     if (first) { sum.dca.forEach(x => { if (x.s.last) { st.dcaDay[x.sym] = x.s.last; if (x.s.state === 'missed') st.dcaMiss[x.sym] = x.s.last; } }); }
     else {
       if (day.length && lp.hm >= cfg.briefTime) {
-        const text = `🛒 <b>${t.dcaDay}</b>\n${day.map(x => `${esc(x.sym)}  <b>${usd(x.s.usd)}</b>`).join('\n')}\n${t.dcaTotal(usd(day.reduce((a, x) => a + x.s.usd, 0)))}`;
+        const ar = cfg.lang === 'ar', amt = x => dcaAmt(x, x.s.usd), tot = day.reduce((a, x) => a + (C.dcaUsd(x.s.usd, x.sym, fxOf(sum)) || 0), 0);
+        const text = `🛒 <b>${t.dcaDay}</b>\n${day.map(x => `${x.kind === 'cash' ? '🏦 ' : ''}${esc(planName(x, ar))}  <b>${amt(x)}</b>`).join('\n')}\n${t.dcaTotal(usd(tot))}`;
         if (push({ key: 'dca-day', text, buttons: [[btn(t.planBtn, 'accumulation.html')]] })) day.forEach(x => { st.dcaDay[x.sym] = x.s.last; });
       }
       if (late.length && lp.hm >= cfg.briefTime) {
-        const text = `⏰ <b>${t.dcaLate}</b>\n${late.map(x => `${esc(x.sym)}  ${usd(x.s.usd)} · ${t.dcaWasDue(shortD(x.s.last), x.s.late)}`).join('\n')}\n${t.dcaNext}`;
+        const ar = cfg.lang === 'ar';
+        const text = `⏰ <b>${t.dcaLate}</b>\n${late.map(x => `${x.kind === 'cash' ? '🏦 ' : ''}${esc(planName(x, ar))}  ${dcaAmt(x, x.s.usd)} · ${t.dcaWasDue(shortD(x.s.last), x.s.late)}`).join('\n')}\n${t.dcaNext}`;
         if (push({ key: 'dca-late', text, buttons: [[btn(t.planBtn, 'accumulation.html')]] })) late.forEach(x => { st.dcaMiss[x.sym] = x.s.last; });
       }
     }

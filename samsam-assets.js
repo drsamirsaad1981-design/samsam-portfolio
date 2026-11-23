@@ -93,7 +93,7 @@
   };
   var UNIT = { oz: ['/ oz', '/ أونصة'], lb: ['/ lb', '/ رطل'], bbl: ['/ barrel', '/ برميل'] };
   // 🥇 your gold / silver (added in the portfolio in grams; kept in troy ounces there) — or a button to add some
-  var MINE = { XAU: ['🥇', 'Gold 24k', 'ذهب عيار 24', 'gold'], XAG: ['🥈', 'Silver', 'فضة', 'silver'] };
+  var MINE = { XAU: ['🥇', 'Gold 24k', 'ذهب عيار 24', 'gold'], XAG: ['🥈', 'Silver', 'فضة', 'silver'], XPT: ['⚪', 'Platinum', 'بلاتين', 'platinum'], XCU: ['🟠', 'Copper', 'نحاس', null] };   // (copper's spot is per pound: its own price, from the app)
   // 🕌 zakat: due (2.5%), the days left in the hijri year, or below the nisab
   function zkLine(c, d, pr) {
     var z = SamsamCoins.zakat(c.sym, d); if (!z) return '';

@@ -53,7 +53,7 @@ with sync_playwright() as p:
     check('TSLAB card: amounts in shares', '20 shares' in ts.replace('\n', ' ') and 'Buy' in ts and 'DCA' in ts, ts)
     check('Gold card: amounts in grams (100 g), its price per gram', '100 g' in au.replace('\n', ' ') and '/g' in au, au)
     check('Savings card: EGP, have 200,000 of 500,000 (40%), $1 = 50 EGP, Cost to Target $6,000', all(w in eg.replace('\n', ' ') for w in ('500,000 EGP', '200,000 EGP', '300,000 EGP', '$1 = 50', '40.0%', '$6,000.00')), eg)
-    check('…no Buy at %, no price alert, no DCA; "Add" instead of "Buy"; tag Cash & CDs', 'Buy at' not in eg and 'Price Alert' not in eg and 'DCA' not in eg and 'Add' in eg and 'Cash & CDs' in eg, eg)
+    check('…no Buy at %, no price alert; "Add" instead of "Buy"; DCA (a regular saving); tag Cash & CDs', 'Buy at' not in eg and 'Price Alert' not in eg and 'DCA' in eg and 'Add' in eg and 'Cash & CDs' in eg, eg)
     # target edit in grams
     pg.locator('.acc-card', has=pg.locator('.ast-sym:text-is("XAU")')).first.locator('.card-target-input').first.fill('150')
     pg.locator('.acc-card', has=pg.locator('.ast-sym:text-is("XAU")')).first.locator('.card-target-input').first.blur(); pg.wait_for_timeout(500)

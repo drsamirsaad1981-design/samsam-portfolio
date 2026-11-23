@@ -17,7 +17,7 @@ import { bidi, bidiBody, NOT_ADVICE } from './bidi.mjs';
 import { markSeen } from './idle.mjs';
 import { note } from './usage.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR, askInvite, askedInvite, closeAsk, ASKS_PER_HOUR } from './who.mjs';
-import { summarize, planName, planAmt, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
+import { summarize, planName, planAmt, dcaAmt, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
 import { chatUid, idTokenFor, setAlertsLang } from './data.mjs';
 import { balancesFor } from './cex.mjs';
 import { usMarket, US_STATE, METAL, UNIT, gramSar } from './usmarket.mjs';
@@ -276,8 +276,8 @@ export function viewPlan(t, sum, now) {
   if ((sum.dca || []).length) {
     L.push('', `🛒 <b>${t.dca}</b>`);
     sum.dca.forEach(x => L.push(isAr(t)   // Arabic: "BTC: $3,000 شهرياً · القادم 2026-12-01" (no padded code block: it reads backwards right-to-left)
-      ? `• ${esc(x.sym)}: ${usd(x.s.perMonth)} شهرياً${x.s.next ? ` · القادم: ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`
-      : `<code>${esc(x.sym.padEnd(6))}</code> ${usd(x.s.perMonth)}/mo${x.s.next ? ` · ${t.next} ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`));
+      ? `• ${esc(planName(x, true))}: ${dcaAmt(x, x.s.perMonth)} شهرياً${x.s.next ? ` · القادم: ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`
+      : `<code>${esc(planName(x, false).padEnd(6))}</code> ${dcaAmt(x, x.s.perMonth)}/mo${x.s.next ? ` · ${t.next} ${x.s.next}` : ''}${x.s.state === 'today' ? ' · ⏰' : ''}`));
   }
   if ((sum.buyAt || []).length) {
     L.push('', `🔔 <b>${t.buyAt}</b>`);

@@ -10,6 +10,7 @@
 //   · Telegram sometimes sends the same message twice when an answer is slow — each message is answered once
 //   · the model: BOT_MODEL in the Worker's settings, else Claude Sonnet 5.5; if that name is refused, MODEL (AI Analysis's)
 
+import * as C from '../../samsam-core.js';
 import { usMarket, gramSar } from './usmarket.mjs';
 import { K, isOwner, aiLimitFor } from './who.mjs';
 import { summarize, settings, local, localParts, isStable, etfDay, APP } from '../alerts-core.mjs';
@@ -154,8 +155,9 @@ export async function runTool(ctx, name, input) {
     const x = await ctx.sum(); if (!x) return { error: 'portfolio not connected' };
     const { s } = x; ctx.used.add('your plan (Firebase)');
     return { overall_progress_pct: r2(s.prog.pct), targets_met: `${s.prog.completed} of ${s.prog.counted}`,
-      coins: s.plan.map(p => ({ ticker: p.sym, held: r6(p.actual), target: r6(p.target), progress_pct: p.target > 0 ? r2(p.actual / p.target * 100) : null })),
-      regular_buys: (s.dca || []).map(dc => ({ ticker: dc.sym, per_month_usd: r2(dc.s.perMonth), next: dc.s.next || null, state: dc.s.state })),
+      // amounts in each row's own unit: coins in the coin, shares, metals in grams, a savings goal (CASH-EGP…) in its currency
+      coins: s.plan.map(p => { const u = C.planUnits(p, 1).u, k = C.planUnits(p, p.target).n / (p.target || 1); return { ticker: p.sym, kind: p.kind, unit: u, held: r6(p.actual * k), target: r6(p.target * k), progress_pct: p.target > 0 ? r2(p.actual / p.target * 100) : null }; }),
+      regular_buys: (s.dca || []).map(dc => ({ ticker: dc.sym, kind: dc.kind, per_month: r2(dc.s.perMonth), currency: dc.s.cur || 'USD', per_month_usd: dc.usdMo == null ? null : r2(dc.usdMo), next: dc.s.next || null, state: dc.s.state })),
       buy_price_alerts: (s.buyAt || []).map(b => ({ ticker: b.sym, alert_price_usd: r6(b.at), price_now_usd: r6(b.price), pct_above_alert: r2((b.price / b.at - 1) * 100), still_to_buy: r6(b.left) })) };
   }
   if (name === 'get_exit') {

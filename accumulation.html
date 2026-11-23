@@ -19,24 +19,24 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-lang.js?v=202611231747"></script>
-<script src="samsam-ar.js?v=202611231747"></script>
-<script src="samsam-ui.js?v=202611231747"></script>
-<script src="samsam-hints.js?v=202611231747"></script>
-<script src="samsam-arhints.js?v=202611231747"></script>
-<script src="samsam-vault.js?v=202611231747"></script>
-<script src="samsam-labels.js?v=202611231747"></script>
-<script src="samsam-taxonomy.js?v=202611231747"></script>
-<script src="samsam-coins.js?v=202611231747"></script>
-<script src="samsam-import.js?v=202611231747"></script>
-<script src="samsam-wallets.js?v=202611231747"></script>
-<script src="samsam-rewards.js?v=202611231747"></script>
-<script src="samsam-settings.js?v=202611231747"></script>
-<script src="samsam-dropdown.js?v=202611231747"></script>
-<script src="samsam-market.js?v=202611231747"></script>
-<script src="samsam-exit.js?v=202611231747"></script>
-<script src="samsam-add.js?v=202611231747"></script>
-<script src="samsam-cash.js?v=202611231747"></script>
+<script src="samsam-lang.js?v=202611231908"></script>
+<script src="samsam-ar.js?v=202611231908"></script>
+<script src="samsam-ui.js?v=202611231908"></script>
+<script src="samsam-hints.js?v=202611231908"></script>
+<script src="samsam-arhints.js?v=202611231908"></script>
+<script src="samsam-vault.js?v=202611231908"></script>
+<script src="samsam-labels.js?v=202611231908"></script>
+<script src="samsam-taxonomy.js?v=202611231908"></script>
+<script src="samsam-coins.js?v=202611231908"></script>
+<script src="samsam-import.js?v=202611231908"></script>
+<script src="samsam-wallets.js?v=202611231908"></script>
+<script src="samsam-rewards.js?v=202611231908"></script>
+<script src="samsam-settings.js?v=202611231908"></script>
+<script src="samsam-dropdown.js?v=202611231908"></script>
+<script src="samsam-market.js?v=202611231908"></script>
+<script src="samsam-exit.js?v=202611231908"></script>
+<script src="samsam-add.js?v=202611231908"></script>
+<script src="samsam-cash.js?v=202611231908"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -771,7 +771,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
     <h3 id="dcaTitle"><span data-ic="calc"></span>DCA — regular buys</h3>
     <div class="dca-sub" id="dcaSub">Dollar-Cost Averaging plan</div>
     <div class="dca-field">
-      <label for="dcaMonthly"><span data-ic="cash"></span>Amount each time (USD)</label>
+      <label for="dcaMonthly"><span data-ic="cash"></span><span id="dcaAmtLbl">Amount each time (USD)</span></label>
       <input type="text" inputmode="decimal" id="dcaMonthly" placeholder="100" oninput="calcDca()">
     </div>
     <div class="dca-field">
@@ -789,12 +789,12 @@ table.xv tfoot td:first-child { background: var(--bg3); }
       <input type="number" id="dcaMonths" placeholder="12" min="1" max="120" oninput="calcDca()">
     </div>
     <div class="dca-result" id="dcaResult" style="display:none">
-      <div class="dca-result-item"><div class="rlbl">Coins each buy</div><div class="rval" id="dcaPerMonth">—</div></div>
+      <div class="dca-result-item"><div class="rlbl" id="dcaEachLbl">Coins each buy</div><div class="rval" id="dcaPerMonth">—</div></div>
       <div class="dca-result-item"><div class="rlbl">Per month</div><div class="rval" id="dcaMonthUsd">—</div></div>
-      <div class="dca-result-item"><div class="rlbl">Total Coins</div><div class="rval" id="dcaTotalCoins">—</div></div>
-      <div class="dca-result-item"><div class="rlbl">Total Invested</div><div class="rval" id="dcaTotalInvested">—</div></div>
+      <div class="dca-result-item"><div class="rlbl" id="dcaTotLbl">Total Coins</div><div class="rval" id="dcaTotalCoins">—</div></div>
+      <div class="dca-result-item"><div class="rlbl" id="dcaInvLbl">Total Invested</div><div class="rval" id="dcaTotalInvested">—</div></div>
       <div class="dca-result-item"><div class="rlbl">% of Target</div><div class="rval" id="dcaTargetPct">—</div></div>
-      <div class="dca-result-item"><div class="rlbl">First buy</div><div class="rval" id="dcaFirst">—</div></div>
+      <div class="dca-result-item"><div class="rlbl" id="dcaFirstLbl">First buy</div><div class="rval" id="dcaFirst">—</div></div>
       <div class="dca-result-item full"><div class="rlbl">Time to reach target</div><div class="rval" id="dcaMonthsToTarget">—</div></div>
     </div>
     <div class="dca-note" id="dcaNote">Save it as your schedule: the Plan shows each buy day and whether you kept it, and Telegram reminds you on the day.</div>
@@ -914,6 +914,8 @@ table.xv tfoot td:first-child { background: var(--bg3); }
     <div class="ap-pick two" id="apMetal" role="radiogroup" aria-label="Metal" hidden>
       <button type="button" role="radio" data-m="XAU" aria-checked="false" onclick="pickApMetal('XAU')"><span class="ap-e">🥇</span>Gold<small>24k · grams</small></button>
       <button type="button" role="radio" data-m="XAG" aria-checked="false" onclick="pickApMetal('XAG')"><span class="ap-e">🥈</span>Silver<small>999 · grams</small></button>
+      <button type="button" role="radio" data-m="XPT" aria-checked="false" onclick="pickApMetal('XPT')"><span class="ap-e">⚪</span>Platinum<small>world price · grams</small></button>
+      <button type="button" role="radio" data-m="XCU" aria-checked="false" onclick="pickApMetal('XCU')"><span class="ap-e">🟠</span>Copper<small>world price · grams</small></button>
     </div>
     <div class="ap-pick" id="apCash" role="radiogroup" aria-label="Currency" hidden>
       <button type="button" role="radio" data-cur="EGP" aria-checked="false" onclick="pickApCash('EGP')"><span class="ap-e">🇪🇬</span>EGP<small>Egyptian pound</small></button>
@@ -937,7 +939,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611231747"></script>
+<script type="module" src="samsam-cloud.js?v=202611231908"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1373,7 +1375,7 @@ function renderTable() {
         <div class="prog-label">${r.progress.toFixed(1)}%</div>
       </td>
       <td>
-        <span style="white-space:nowrap"><button type="button" class="row-buy" onclick="buyPlanCoin(${idx})" title="${buyTitle(entry, r)}">${SamsamUI.ic('plus')}${r.cash ? 'Add' : 'Buy'}</button>${r.cash ? '' : `<button type="button" class="row-dca" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">${SamsamUI.ic('calc')}DCA</button>`}<button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan" aria-label="Remove from plan">${SamsamUI.ic('trash', { solo: true })}</button></span>
+        <span style="white-space:nowrap"><button type="button" class="row-buy" onclick="buyPlanCoin(${idx})" title="${buyTitle(entry, r)}">${SamsamUI.ic('plus')}${r.cash ? 'Add' : 'Buy'}</button><button type="button" class="row-dca" onclick="openDcaModal(${idx})" title="${r.cash ? 'Regular saving' : 'DCA calculator'} for ${entry.sym}">${SamsamUI.ic('calc')}DCA</button><button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan" aria-label="Remove from plan">${SamsamUI.ic('trash', { solo: true })}</button></span>
       </td>
     </tr>`;
   }).join('');
@@ -1471,7 +1473,7 @@ function renderCards() {
       <div class="coin-card-footer"><span>#${i + 1}</span><span title="Last price update${entry.addedAt && /^\d{4}-/.test(entry.addedAt) ? ' · added to plan ' + entry.addedAt.slice(0, 10) : ''}">${(getPortfolioCoin(entry.sym) || {}).lastUpdate || (entry.addedAt && /^\d{4}-/.test(entry.addedAt) ? entry.addedAt.slice(0, 10) : '')}</span></div>
       <div class="card-act">
         <button class="btn-buy" onclick="buyPlanCoin(${idx})" title="${buyTitle(entry, r)}">${SamsamUI.ic('plus')}${r.cash ? 'Add' : 'Buy'}</button>
-        ${r.cash ? '' : `<button class="btn-history" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">${SamsamUI.ic('calc')}DCA</button>`}
+        <button class="btn-history" onclick="openDcaModal(${idx})" title="${r.cash ? 'Regular saving' : 'DCA calculator'} for ${entry.sym}">${SamsamUI.ic('calc')}DCA</button>
         <button class="btn-remove" onclick="removeCoin(${idx})" title="Remove ${entry.sym} from plan">${SamsamUI.ic('trash')}Remove</button>
       </div>
     </div>`;
@@ -1597,9 +1599,9 @@ function commitTarget(idx, val) {
 // Table: value + ✎ (same as the main page); tapping ✎ asks for the new value in the app's own dialog.
 async function promptTarget(idx) {
   const e = accumPlan[idx]; if (!e) return;
-  const k = kindOf(e), nm = k === 'cash' ? e.sym.slice(5) : k === 'metal' ? (e.sym === 'XAU' ? 'gold' : 'silver') : e.sym;
+  const k = kindOf(e), nm = k === 'cash' ? e.sym.slice(5) : k === 'metal' ? ((CPAdd.metals || {})[e.sym] || { name: e.sym }).name.split(' ')[0].toLowerCase() : e.sym;
   const ask = { coin: `How many ${e.sym} do you want to hold in total?`, stock: `How many ${e.sym} shares do you want to hold in total?`, metal: `How many grams of ${nm} do you want to hold in total?`, cash: `How much do you want to save in ${nm} in total?` }[k];
-  const v = await CPDialog.prompt(ask, { title: `Target amount — ${k === 'metal' ? (e.sym === 'XAU' ? 'Gold' : 'Silver') : nm}`, value: e.targetQty ? +toUnit(e, e.targetQty).toFixed(k === 'metal' ? 2 : 8) : '', inputMode: 'decimal', placeholder: 'e.g. 500', okText: 'Save' });
+  const v = await CPDialog.prompt(ask, { title: `Target amount — ${k === 'metal' ? metalLabel(e.sym) : nm}`, value: e.targetQty ? +toUnit(e, e.targetQty).toFixed(k === 'metal' ? 2 : 8) : '', inputMode: 'decimal', placeholder: 'e.g. 500', okText: 'Save' });
   if (v == null) return;
   const n = parseFloat(String(v).replace(/[,\s]/g, ''));
   if (String(v).trim() !== '' && !(n >= 0)) { CPDialog.alert('Enter a number (0 or more).', { title: 'Target amount' }); return; }
@@ -1709,10 +1711,9 @@ const kindOf = e => coreOK() ? Samsam.core.planKind(e) : 'coin';
 const clsOfRow = c => coreOK() ? Samsam.core.assetClass(c) : 'crypto';
 function openAddModal(forDca, tab) {
   addForDca = forDca === true;
-  document.getElementById('addTitle').innerHTML = SamsamUI.ic(addForDca ? 'calendar' : 'plus') + (addForDca ? 'Regular buy — pick a coin' : 'Add to Plan');
+  document.getElementById('addTitle').innerHTML = SamsamUI.ic(addForDca ? 'calendar' : 'plus') + (addForDca ? 'Regular buy — pick what to buy or save' : 'Add to Plan');
   document.getElementById('addTargetRow').style.display = addForDca ? 'none' : '';
   document.getElementById('addConfirm').textContent = addForDca ? 'Next: the schedule' : 'Add to Plan';
-  document.getElementById('apTabs').hidden = addForDca;   // a regular buy: coins (the other kinds come with the DCA update)
   document.getElementById('addModal').classList.add('active');
   setApTab(addForDca ? 'coin' : (tab || 'coin'), true);
 }
@@ -1819,7 +1820,8 @@ async function selectAddCg(i) {
     showAddSelected();
   } catch (_) { /* the page fetches its price after it's added */ }
 }
-// 🥇 / 🥈: gold or silver, its target in grams
+const metalLabel = sym => { const m = (CPAdd.metals || {})[sym]; return m ? m.e + ' ' + m.name.split(' ')[0] : sym; };
+// 🥇 / 🥈 / ⚪ / 🟠: gold, silver, platinum or copper — its target in grams
 function pickApMetal(sym) {
   const m = (CPAdd.metals || {})[sym]; if (!m) return;
   document.querySelectorAll('#apMetal [data-m]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === sym)));
@@ -1843,7 +1845,7 @@ function showAddSelected() {
        <span style="color:var(--fg2);margin-inline-start:8px"><span>You have:</span> ${qtyHtml(c, c.qty)}</span>
        <div style="color:#a78bfa;font-size:.78rem;margin-top:4px">Counts your cash &amp; certificates in ${E(c.cur)} (their value today). It stays out of your portfolio total — Net worth only.</div>`;
   } else {
-    box.innerHTML = `<strong>${E(k === 'metal' ? (c.sym === 'XAU' ? '🥇 Gold' : '🥈 Silver') : c.sym)}</strong> — ${E(c.name)}
+    box.innerHTML = `<strong>${E(k === 'metal' ? metalLabel(c.sym) : c.sym)}</strong> — ${E(c.name)}
        <span style="color:var(--fg2);margin-inline-start:8px">Current: ${c.currentPrice > 0 ? (k === 'metal' ? SamsamFmt.price(c.currentPrice / Samsam.core.GRAMS_PER_OZ) + '/g' : '$' + fmtUSD(c.currentPrice)) : '…'}</span>` +
       (c.fromPortfolio ? `<span style="color:var(--fg2);margin-inline-start:8px">Holding: ${qtyHtml(c, c.qty)}</span>`
         : `<div style="color:#a78bfa;font-size:.78rem;margin-top:4px">Not in your portfolio yet — the plan tracks its live price, and <b>${SamsamUI.ic('plus')}Buy</b> on its card adds it to your portfolio.</div>`);
@@ -1875,6 +1877,7 @@ function confirmAddCoin() {
   renderAll();
   saveAccumPlan(true);
   if (!c.fromPortfolio) fetchPlanOnlyPrices(true);
+  if (window.SamsamCoins && SamsamCoins.feedSnapMetals) SamsamCoins.feedSnapMetals(true);   // platinum / copper: their world price now
   if (forDca) { const i = accumPlan.findIndex(e => e.sym === sym); if (i >= 0) openDcaModal(i); }
 }
 
@@ -1907,7 +1910,10 @@ const DCA_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 const ord = n => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
 const todayLocal = () => new Date().toLocaleDateString('en-CA');   // YYYY-MM-DD on this device
 let dcaEvery = 'month';
-function dcaText(d) { return `${SamsamFmt.usd(d.usd)} ${d.every === 'week' ? 'every ' + DCA_DAYS[d.day] : d.every === '2weeks' ? 'every other ' + DCA_DAYS[d.day] : 'on the ' + ord(d.day) + ' of each month'}`; }
+// an amount of a regular buy: dollars — or, for a savings goal, its own currency (5,000 EGP)
+const isCashSym = sym => /^CASH-(USD|EGP|SAR)$/.test(String(sym || ''));
+function dcaMoney(sym, v) { const cur = isCashSym(sym) ? sym.slice(5) : 'USD'; return cur === 'USD' ? SamsamFmt.usd(v) : Math.round(v).toLocaleString('en-US') + ' ' + cur; }
+function dcaText(d, sym) { return `${dcaMoney(sym, d.usd)} ${d.every === 'week' ? 'every ' + DCA_DAYS[d.day] : d.every === '2weeks' ? 'every other ' + DCA_DAYS[d.day] : 'on the ' + ord(d.day) + ' of each month'}`; }
 const shortDate = d => d ? new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
 function setDcaEvery(v, day) {
   dcaEvery = v;
@@ -1921,8 +1927,15 @@ function setDcaEvery(v, day) {
 }
 function openDcaModal(idx) {
   dcaIdx = idx;
-  const entry = accumPlan[idx], r = calcRow(entry), d = entry.dca && Samsam.core.cleanDca(entry.dca);
-  document.getElementById('dcaSub').textContent = `${entry.name || entry.sym} (${entry.sym}) — Current: $${fmtUSD(r.currentPrice)}` + (d ? ` · now ${dcaText(d)}` : '');
+  const entry = accumPlan[idx], r = calcRow(entry), d = entry.dca && Samsam.core.cleanDca(entry.dca), k = kindOf(entry);
+  const now = k === 'cash' ? (r.cur === 'USD' || !(r.currentPrice > 0) ? '' : `$1 = ${+(1 / r.currentPrice).toFixed(2)} ${r.cur}`) : k === 'metal' ? SamsamFmt.price(r.currentPrice / Samsam.core.GRAMS_PER_OZ) + '/g' : '$' + fmtUSD(r.currentPrice);
+  document.getElementById('dcaSub').textContent = (k === 'cash' ? `Savings goal · ${r.cur}` : k === 'metal' ? metalLabel(entry.sym) : `${entry.name || entry.sym} (${entry.sym})`) + (now ? ` — Current: ${now}` : '') + (d ? ` · now ${dcaText(d, entry.sym)}` : '');
+  document.getElementById('dcaTitle').innerHTML = SamsamUI.ic('calc') + (k === 'cash' ? 'Regular saving' : 'DCA — regular buys');
+  document.getElementById('dcaAmtLbl').textContent = `Amount each time (${k === 'cash' ? r.cur : 'USD'})`;
+  document.getElementById('dcaEachLbl').textContent = { coin: 'Coins each buy', stock: 'Shares each buy', metal: 'Grams each buy', cash: 'In dollars each time' }[k];
+  document.getElementById('dcaTotLbl').textContent = { coin: 'Total Coins', stock: 'Total shares', metal: 'Total grams', cash: 'Total saved' }[k];
+  document.getElementById('dcaInvLbl').textContent = k === 'cash' ? 'In dollars' : 'Total Invested';
+  document.getElementById('dcaFirstLbl').textContent = k === 'cash' ? 'First saving' : 'First buy';
   document.getElementById('dcaMonthly').value = d ? d.usd : '';
   document.getElementById('dcaMonths').value = '12';
   document.getElementById('dcaRemove').hidden = !d;
@@ -1942,29 +1955,31 @@ function dcaForm() {
 function calcDca() {
   if (dcaIdx < 0) return;
   const entry = accumPlan[dcaIdx], r = calcRow(entry), res = document.getElementById('dcaResult');
-  const d = dcaForm(), months = parseInt(document.getElementById('dcaMonths').value) || 12;
+  const d = dcaForm(), months = parseInt(document.getElementById('dcaMonths').value) || 12, cash = !!r.cash;
   document.getElementById('dcaSave').disabled = !d;
-  if (!d || r.currentPrice <= 0) { res.style.display = 'none'; return; }
-  const per = Samsam.core.DCA_PER_MONTH[d.every], coinsEach = d.usd / r.currentPrice, buys = Math.round(months * per);
+  if (!d || (!cash && r.currentPrice <= 0)) { res.style.display = 'none'; return; }
+  // each time: coins / shares / ounces of metal for the dollars — a saving adds its own amount of the currency
+  const per = Samsam.core.DCA_PER_MONTH[d.every], coinsEach = cash ? d.usd : d.usd / r.currentPrice, buys = Math.round(months * per);
   const totalCoins = coinsEach * buys, pending = r.pendingQty, targetQty = entry.targetQty || 0;
   const buysNeeded = pending > 0 ? Math.ceil(pending / coinsEach) : 0, monthsNeeded = buysNeeded / per;
-  document.getElementById('dcaPerMonth').textContent = fmtQty(coinsEach) + ' ' + entry.sym;
-  document.getElementById('dcaMonthUsd').textContent = SamsamFmt.usd(d.usd * per);
-  document.getElementById('dcaTotalCoins').textContent = fmtQty(totalCoins) + ' ' + entry.sym + ` (${buys} buys)`;
-  document.getElementById('dcaTotalInvested').textContent = SamsamFmt.usd(d.usd * buys);
+  const inUsd = v => r.currentPrice > 0 ? SamsamFmt.usd(v * r.currentPrice) : '—', u = q => { const x = unitNum(entry, q); return x.t + ' ' + x.u; };
+  document.getElementById('dcaPerMonth').textContent = cash ? inUsd(d.usd) : u(coinsEach);
+  document.getElementById('dcaMonthUsd').textContent = dcaMoney(entry.sym, d.usd * per);
+  document.getElementById('dcaTotalCoins').textContent = u(totalCoins) + ` (${buys} ${cash ? 'times' : 'buys'})`;
+  document.getElementById('dcaTotalInvested').textContent = cash ? inUsd(d.usd * buys) : SamsamFmt.usd(d.usd * buys);
   const tp = targetQty > 0 && pending > 0 ? totalCoins / pending * 100 : null;
   document.getElementById('dcaTargetPct').textContent = tp == null ? '—' : tp >= 100 ? '100% ✓ covered' : tp.toFixed(1) + '%';
   document.getElementById('dcaFirst').textContent = shortDate(Samsam.core.dcaDue(d, d.since, '2099-12-31')[0]);
   document.getElementById('dcaMonthsToTarget').textContent = pending <= 0 ? 'Target already reached!'
     : (() => { const pl = (n, w) => n + ' ' + w + (n === 1 ? '' : 's'), wk = Math.max(1, Math.round(monthsNeeded * 4.35));
-        return `${pl(buysNeeded, 'buy')} — about ${monthsNeeded < 1.5 ? pl(wk, 'week') : pl(Math.round(monthsNeeded), 'month')} at ${dcaText(d)}`; })();
+        return `${pl(buysNeeded, cash ? 'saving' : 'buy')} — about ${monthsNeeded < 1.5 ? pl(wk, 'week') : pl(Math.round(monthsNeeded), 'month')} at ${dcaText(d, entry.sym)}`; })();
   res.style.display = 'grid';
 }
 function saveDca() {
   if (dcaIdx < 0) return;
   const d = dcaForm(); if (!d) return;
   const e = accumPlan[dcaIdx], old = e.dca && Samsam.core.cleanDca(e.dca);
-  e.dca = old && old.every === d.every && old.day === d.day ? { ...d, since: old.since } : d;   // same rhythm: keep its history
+  e.dca = old && old.every === d.every && old.day === d.day ? { ...d, since: old.since, ...(old.paid ? { paid: old.paid } : {}) } : d;   // same rhythm: keep its history
   saveAccumPlan(true); closeDcaModal(); renderAll();
 }
 function removeDca() {
@@ -1974,6 +1989,14 @@ function removeDca() {
 }
 
 // ── DCA schedule card: every plan coin with a regular buy — this time bought or not, the next date, how many kept ──
+// ✓ Saved: a savings goal has no buy to see — this marks the last due day done (and the cash itself: ➕ Add on its card)
+function dcaSaved(idx) {
+  const e = accumPlan[idx]; if (!e || !e.dca) return;
+  const s = Samsam.core.dcaStatus(e.dca, e.sym, [], todayLocal()); if (!s || !s.last) return;
+  e.dca = Samsam.core.cleanDca({ ...e.dca, paid: [...(e.dca.paid || []), s.last] });
+  saveAccumPlan(true); renderAll();
+  CPDialog.alert(`Marked as saved. Add the money to your cash & certificates too, so your savings goal moves.`, { title: `✓ Saved — ${e.sym.slice(5)}`, okText: 'OK' });
+}
 function dcaOpen() { try { return localStorage.getItem('samsam_dca_open') !== '0'; } catch (_) { return true; } }
 function renderDcaCard() {
   const box = document.getElementById('dcaCard'); if (!box || !window.Samsam || !Samsam.core.dcaStatus) return;
@@ -1981,24 +2004,26 @@ function renderDcaCard() {
   const list = accumPlan.map((e, idx) => ({ e, idx, s: e.dca ? Samsam.core.dcaStatus(e.dca, e.sym, txs, today) : null })).filter(x => x.s);
   if (!list.length) {   // always there: this is where a regular buy starts — for any coin, in the plan or not
     box.hidden = false; box.classList.remove('open');
-    box.innerHTML = `<div class="pa-h"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule<span class="cp-hint" data-hint="dca" role="button" tabindex="0"></span></b><button type="button" class="dc-new" onclick="event.stopPropagation();openDcaPick()" title="A regular buy for any coin — it joins your plan">${SamsamUI.ic('plus', { solo: true, size: 13 })}Regular buy</button></div>
-      <div class="pa-sub" style="cursor:default">No regular buys yet. Pick any coin and an amount — the Plan shows each buy day, and Telegram reminds you.</div>`;
+    box.innerHTML = `<div class="pa-h"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule<span class="cp-hint" data-hint="dca" role="button" tabindex="0"></span></b><button type="button" class="dc-new" onclick="event.stopPropagation();openDcaPick()" title="A regular buy or saving — a coin, a share, a metal or cash; it joins your plan">${SamsamUI.ic('plus', { solo: true, size: 13 })}Regular buy</button></div>
+      <div class="pa-sub" style="cursor:default">No regular buys yet. Pick a coin, a share, a metal or a savings goal and an amount — the Plan shows each day, and Telegram reminds you.</div>`;
     return;
   }
   const order = { today: 0, missed: 1, upcoming: 2, done: 3 };
   list.sort((a, b) => order[a.s.state] - order[b.s.state] || String(a.s.next).localeCompare(String(b.s.next)));
-  const month = list.reduce((t, x) => t + x.s.perMonth, 0), due = list.filter(x => x.s.state === 'today' || x.s.state === 'missed');
-  const first = list[0], open = dcaOpen();
-  const sum = due.length ? `<b>${due.length} to buy now:</b> ${esc(due.map(x => x.e.sym + ' ' + SamsamFmt.usd(x.s.usd)).join(' · '))}` : `Next: <b>${esc(first.e.sym)}</b> on ${shortDate(first.s.next)}`;
-  const chip = s => s.state === 'done' ? `<span class="dc-chip done">✓ Bought</span>` : s.state === 'today' ? `<span class="dc-chip today">Today</span>`
+  // the month in dollars: savings goals at the official rate (one with no rate yet is left out)
+  const month = list.reduce((t, x) => t + (Samsam.core.dcaUsd(x.s.perMonth, x.e.sym, planFx) || 0), 0), due = list.filter(x => x.s.state === 'today' || x.s.state === 'missed');
+  if (list.some(x => isCashSym(x.e.sym) && x.e.sym !== 'CASH-USD') && !planFx) loadPlanFx();
+  const first = list[0], open = dcaOpen(), nm = e => isCashSym(e.sym) ? 'Savings ' + e.sym.slice(5) : kindOf(e) === 'metal' ? metalLabel(e.sym) : e.sym;
+  const sum = due.length ? `<b>${due.length} due now:</b> ${esc(due.map(x => nm(x.e) + ' ' + dcaMoney(x.e.sym, x.s.usd)).join(' · '))}` : `Next: <b>${esc(nm(first.e))}</b> on ${shortDate(first.s.next)}`;
+  const chip = (s, e) => s.state === 'done' ? `<span class="dc-chip done">✓ ${isCashSym(e.sym) ? 'Saved' : 'Bought'}</span>` : s.state === 'today' ? `<span class="dc-chip today">Today</span>`
     : s.state === 'missed' ? `<span class="dc-chip missed">Missed · ${s.late} day${s.late === 1 ? '' : 's'}</span>` : `<span class="dc-chip up">${shortDate(s.next)}</span>`;
-  const rows = list.map(({ e, idx, s }) => { const r = calcRow(e), each = r.currentPrice > 0 ? s.usd / r.currentPrice : 0, left = each > 0 && r.pendingQty > 0 ? Math.ceil(r.pendingQty / each) : 0;
+  const rows = list.map(({ e, idx, s }) => { const r = calcRow(e), each = r.cash ? s.usd : r.currentPrice > 0 ? s.usd / r.currentPrice : 0, left = each > 0 && r.pendingQty > 0 ? Math.ceil(r.pendingQty / each) : 0;
     return `<div class="dc-row" data-sym="${esc(e.sym)}"><button type="button" class="dc-main" onclick="openDcaModal(${idx})" title="Change the schedule of ${esc(e.sym)}">
-        <span class="dc-n"><b>${esc(e.sym)}</b> ${chip(s)}</span><span class="dc-s">${esc(dcaText(s))}</span>
-        <span class="dc-s">${s.state === 'done' || s.state === 'upcoming' ? 'Next ' + shortDate(s.next) : 'Was due ' + shortDate(s.last)}${s.of ? ` · kept ${s.kept} of ${s.of}` : ''}${left ? ` · target in ${left} buy${left === 1 ? '' : 's'}` : r.pendingQty <= 0 ? ' · target reached' : ''}</span></button>
-        ${s.state === 'today' || s.state === 'missed' ? `<button type="button" class="dc-buy" onclick="buyPlanCoin(${idx})">${SamsamUI.ic('plus', { solo: true, size: 14 })}Buy</button>` : ''}</div>`; }).join('');
+        <span class="dc-n"><b>${esc(nm(e))}</b> ${chip(s, e)}</span><span class="dc-s">${esc(dcaText(s, e.sym))}</span>
+        <span class="dc-s">${s.state === 'done' || s.state === 'upcoming' ? 'Next ' + shortDate(s.next) : 'Was due ' + shortDate(s.last)}${s.of ? ` · kept ${s.kept} of ${s.of}` : ''}${left ? ` · target in ${left} ${r.cash ? 'saving' : 'buy'}${left === 1 ? '' : 's'}` : r.pendingQty <= 0 ? ' · target reached' : ''}</span></button>
+        ${s.state === 'today' || s.state === 'missed' ? (r.cash ? `<button type="button" class="dc-buy" onclick="dcaSaved(${idx})" title="I put this saving aside">✓ Saved</button>` : `<button type="button" class="dc-buy" onclick="buyPlanCoin(${idx})">${SamsamUI.ic('plus', { solo: true, size: 14 })}Buy</button>`) : ''}</div>`; }).join('');
   box.hidden = false; box.classList.toggle('open', open);
-  box.innerHTML = `<div class="pa-h pa-tog" role="button" tabindex="0" aria-expanded="${open}" aria-controls="dcaRows"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule<span class="cp-hint" data-hint="dca" role="button" tabindex="0"></span></b><button type="button" class="dc-new" onclick="event.stopPropagation();openDcaPick()" title="A regular buy for any coin — it joins your plan">${SamsamUI.ic('plus', { solo: true, size: 13 })}Regular buy</button><span class="pa-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
+  box.innerHTML = `<div class="pa-h pa-tog" role="button" tabindex="0" aria-expanded="${open}" aria-controls="dcaRows"><span class="pa-ic">${SamsamUI.ic('calendar', { solo: true, size: 16 }) || SamsamUI.ic('clock', { solo: true, size: 16 })}</span><b>DCA schedule<span class="cp-hint" data-hint="dca" role="button" tabindex="0"></span></b><button type="button" class="dc-new" onclick="event.stopPropagation();openDcaPick()" title="A regular buy or saving — a coin, a share, a metal or cash; it joins your plan">${SamsamUI.ic('plus', { solo: true, size: 13 })}Regular buy</button><span class="pa-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
     <div class="pa-sub">${list.length} regular buy${list.length === 1 ? '' : 's'} · <span class="dc-m">${SamsamFmt.usd(month)}/mo</span> · ${sum}</div>
     <div class="dc-rows" id="dcaRows"${open ? '' : ' hidden'}>${rows}</div>`;
   const tog = box.querySelector('.pa-tog'), flip = () => { try { localStorage.setItem('samsam_dca_open', dcaOpen() ? '0' : '1'); } catch (_) {} renderDcaCard(); box.querySelector('.pa-tog').focus(); };

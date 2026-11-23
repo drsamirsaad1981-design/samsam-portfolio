@@ -94,7 +94,7 @@
     "PONS": "https://assets.coingecko.com/coins/images/102174571/standard/jhitvkisdq8fhxvimdkpcw7y3dx5.?1784093932",
   };
   var NAMES = {
-    XAU: 'Gold (24k)', XAG: 'Silver (999)',
+    XAU: 'Gold (24k)', XAG: 'Silver (999)', XPT: 'Platinum', XCU: 'Copper',
     "BTC": "Bitcoin",
     "SOL": "Solana",
     "NEAR": "NEAR Protocol",
@@ -344,7 +344,23 @@
     return q.toLocaleString('en-US', { maximumFractionDigits: Math.min(10, 4 - Math.floor(Math.log10(a))) });   // 4 significant digits: 0.01204, 0.0006003
   }
   // 🥇 gold / 🥈 silver are held in troy ounces inside the app (their price is per ounce) and shown in grams
-  var GPO = 31.1034768, METALS = { XAU: 'Gold (24k)', XAG: 'Silver (999)' };
+  var GPO = 31.1034768, METALS = { XAU: 'Gold (24k)', XAG: 'Silver (999)', XPT: 'Platinum', XCU: 'Copper' };
+  // 🪙 platinum and copper have no coin to price them on CoinGecko: their price is the world price (Yahoo Finance futures PL=F per
+  // troy ounce, HG=F per pound — copper turned into $ per troy ounce here) from the market snapshot, every 10 minutes while
+  // you hold or plan them. Zakat: not counted (only gold and silver have a nisab here).
+  var SNAP_METAL = { XPT: { k: 'platinum', per: 1 }, XCU: { k: 'copper', per: GPO / 453.59237 } }, metalT = 0;
+  function feedSnapMetals(now) {
+    var S = window.Samsam, M = window.SamsamMarket; if (!S || !S.isReady || !S.isReady() || !M || !M.metals || !S.updatePrices) return;
+    var st = S.getState(), want = Object.keys(SNAP_METAL).filter(function (m) { return (st.coins || []).some(function (c) { return c.sym === m; }) || (st.accum || st.accumPlan || []).some(function (e) { return e && e.sym === m; }); });
+    if (!want.length || (!now && Date.now() - metalT < 10 * 60e3)) return;
+    metalT = Date.now();
+    M.metals().then(function (r) {
+      var rows = (r && r.data) || [], map = {};
+      want.forEach(function (m) { var x = rows.filter(function (y) { return y && y.k === SNAP_METAL[m].k; })[0]; if (x && x.price > 0) map[m] = { usd: x.price * SNAP_METAL[m].per, ch24: x.ch24 == null ? null : +x.ch24 }; });
+      if (Object.keys(map).length) S.updatePrices(map);
+    }, function () { metalT = 0; });
+  }
+  setTimeout(feedSnapMetals, 2500); setInterval(feedSnapMetals, 60e3);
   function isMetal(sym) { return !!METALS[String(sym || '').toUpperCase()]; }
   function grams(qty) { return parseFloat(((+qty || 0) * GPO).toFixed(3)).toLocaleString('en-US', { maximumFractionDigits: 3 }) + ' g'; }
   // Where your gold / silver is kept (coin.vault, coin.vaultLabel for "Other") — instead of a network
@@ -658,5 +674,5 @@
     var cmc = u ? a('ql-cmc', u, 'bar', cg ? 'CoinGecko' : 'CMC', cg ? sym + ' isn\'t listed on CoinMarketCap — open it on CoinGecko (new tab)' : 'Open ' + sym + ' on CoinMarketCap (new tab)') : off('bar', 'No page', 'No market page for ' + sym);
     return '<div class="ql-row">' + liq + pred + cmc + '</div>';
   }
-  window.SamsamCoins = { zakatWhen: zakatWhen, zakatCrypto: zakatCrypto, zakatDayLabel: zakatDayLabel, cgChart: cgChart, perfScope: perfScope, setPerfScope: setPerfScope, altSnaps: altSnaps, trendSeries: trendSeries, metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
+  window.SamsamCoins = { feedSnapMetals: feedSnapMetals, zakatWhen: zakatWhen, zakatCrypto: zakatCrypto, zakatDayLabel: zakatDayLabel, cgChart: cgChart, perfScope: perfScope, setPerfScope: setPerfScope, altSnaps: altSnaps, trendSeries: trendSeries, metalFor: metalFor, metalHistory: metalHistory, trendLines: trendLines, toggleTrend: toggleTrend, goldFor: goldFor, goldHistory: goldHistory, goldCached: goldCached, GPO: GPO, METALS: METALS, VAULTS: VAULTS, vaultOf: vaultOf, zakat: zakat, NISAB: NISAB, isMetal: isMetal, grams: grams, quickLinks: quickLinks, hasFutures: hasFutures, links: function () { return LINKS; }, holdCell: holdCell, fmtAmount: fmtAmount, assetCell: assetCell, assetText: assetText, assetIcon: assetIcon, CG_ALT: CG_ALT, EXT: EXT, esc: esc, pickMovers: pickMovers, isStable: isStable, moversCard: moversCard, signedPct: signedPct, cmcUrl: cmcUrl, cmcSlug: cmcSlug, cmcGuess: cmcGuess, registerCoin: registerCoin, CMC_SLUGS: CMC_SLUGS, coingeckoUrl: coingeckoUrl, liqMapUrl: liqMapUrl, LIQ_MAYBE: LIQ_MAYBE, predictionUrl: predictionUrl, ccSlug: ccSlug, findCcSlug: findCcSlug, CC_SLUGS: CC_SLUGS, COLORS: COLORS, ICONS: ICONS, NAMES: NAMES, CG_IDS: CG_IDS, cgUrl: cgUrl, icon: icon, iconLinked: iconLinked, nameLinked: nameLinked, fallback: fallback, imgErr: imgErr };
 })();
