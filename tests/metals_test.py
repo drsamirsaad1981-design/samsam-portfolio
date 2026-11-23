@@ -13,7 +13,11 @@ with sync_playwright() as p:
     pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(1200)
 
     pg.evaluate("openAddCoin()"); pg.wait_for_timeout(200)
-    check('Add Coin has the 🥇 Gold / 🥈 Silver shortcuts', pg.locator('.ac-metals button').count() == 2)
+    tabs = pg.evaluate("[...document.querySelectorAll('#acTabs [data-tab]')].filter(b => !b.hidden).map(b => b.textContent.trim() + (b.getAttribute('aria-selected') === 'true' ? '*' : ''))")
+    check('➕ Add opens on three tabs: Coins (first) · Metals · Cash & Certificate', tabs == ['Coins*', 'Metals', 'Cash & Certificate'] and pg.is_visible('#acSym') and not pg.is_visible('#acMetalPick') and pg.inner_text('#acTitle').strip() == 'Add', tabs)
+    pg.click('#acTabs [data-tab="metal"]'); pg.wait_for_timeout(300)
+    vis = pg.evaluate("['acSym','acName','acCgId','acCmc','acCat','acQty','acPrice','acDate','acVault'].map(i => document.getElementById(i).offsetParent !== null)")
+    check('Metals tab: Gold 24k / Silver to pick (gold first), and only the metal\'s own fields — amount, price, date, where it is kept', pg.locator('.ac-metals button').count() == 2 and pg.get_attribute('#acMetalPick [data-m="XAU"]', 'aria-checked') == 'true' and vis == [False, False, False, False, False, True, True, True, True], vis)
     pg.click('.ac-metals button >> nth=0'); pg.wait_for_timeout(300)
     f = pg.evaluate("[acSym.value, acCgId.value, acCmc.value, acCat.value, acQtyLbl.textContent, acPriceLbl.textContent]")
     check('Gold shortcut: XAU, pax-gold, Precious Metals', f[:4] == ['XAU', 'pax-gold', 'pax-gold', 'metals'], f)
@@ -113,7 +117,7 @@ with sync_playwright() as p:
     check('Precious Metals category exists', pg.evaluate("SamsamTaxonomy.label ? SamsamTaxonomy.label('metals') : JSON.stringify(SamsamTaxonomy)").find('Precious Metals') >= 0)
 
     # silver shortcut: digital, in tokens, invoice total
-    pg.evaluate("openAddCoin()"); pg.click('.ac-metals button >> nth=1'); pg.wait_for_timeout(200)
+    pg.evaluate("openAddCoin()"); pg.click('#acTabs [data-tab="metal"]'); pg.click('.ac-metals button >> nth=1'); pg.wait_for_timeout(200)
     check('Silver shortcut: XAG, kinesis-silver', pg.evaluate("[acSym.value, acCgId.value]") == ['XAG', 'kinesis-silver'])
     pg.select_option('#acVault', 'digital'); pg.wait_for_timeout(100)
     check('📱 digital → amount in tokens', 'tokens' in pg.inner_text('#acQtyLbl'))

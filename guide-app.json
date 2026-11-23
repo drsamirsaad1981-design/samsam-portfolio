@@ -128,14 +128,14 @@
     "<b>BTC Accumulated</b> and <b>Altcoins Accumulated</b> — how much is in Bitcoin and how much in the rest.",
     "The market strip: BTC price, market cap, Fear &amp; Greed and BTC dominance — <b>Explore ↗</b> opens the Market Hub.",
     "<b>Today's Movers</b> (best and worst coin in 24h) and the <b>Holdings</b> chart: 24h · 7d · 30d · 90d · All.",
-    "<b>🏦 Cash & certificates</b>: bank balances and certificates in USD, EGP or SAR, added by hand from ➕ Add → 🏦. Valued in dollars at the official rate and counted in <b>💼 Net worth</b> only — the portfolio's totals stay as they are."
+    "<b>🏦 Cash & certificates</b>: bank balances and certificates in USD, EGP or SAR, added by hand from ➕ Add → the Cash & Certificate tab. Valued in dollars at the official rate and counted in <b>💼 Net worth</b> only — the portfolio's totals stay as they are."
    ],
    "ar": [
     "<b>إجمالي المحفظة</b> (وبالبيتكوين أيضاً) و<b>إجمالي الربح</b> بما في ذلك عمليات البيع.",
     "<b>البيتكوين المُجمَّع</b> و<b>العملات البديلة المُجمَّعة</b> — كم في البيتكوين وكم في بقية العملات.",
     "شريط السوق: سعر البيتكوين، والقيمة السوقية، والخوف والطمع، وهيمنة البيتكوين — <b>استكشف ↗</b> يفتح مركز السوق.",
     "<b>الأكثر حركة اليوم</b> (أفضل وأسوأ عملة خلال 24 ساعة) ورسم <b>الأصول</b>: 24h · 7d · 30d · 90d · All.",
-    "<b>🏦 نقد وشهادات</b>: أرصدة البنك والشهادات بالدولار أو الجنيه أو الريال، تضيفها يدوياً من ➕ إضافة ← 🏦. تُقيَّم بالدولار بالسعر الرسمي وتُحسب في <b>💼 صافي الثروة</b> فقط — وإجمالي المحفظة يبقى كما هو."
+    "<b>🏦 نقد وشهادات</b>: أرصدة البنك والشهادات بالدولار أو الجنيه أو الريال، تضيفها يدوياً من ➕ إضافة ← تبويب «نقد وشهادات». تُقيَّم بالدولار بالسعر الرسمي وتُحسب في <b>💼 صافي الثروة</b> فقط — وإجمالي المحفظة يبقى كما هو."
    ],
    "tip": {
     "en": "The <b>Baseline</b> date sets the day your older coins are compared with Bitcoin — tap its ⓘ to change it.",

@@ -136,20 +136,31 @@
     '.ac-mbox{display:grid;gap:8px;padding:10px;border:1px solid rgba(234,179,8,.35);border-radius:12px}.ac-mbox[hidden]{display:none}.ac-seg{display:flex;gap:4px;background:rgba(148,163,184,.1);border-radius:10px;padding:3px}.ac-seg button{flex:1;border:0;background:transparent;color:inherit;font:inherit;font-size:.8rem;padding:6px;border-radius:8px;cursor:pointer}.ac-seg button[aria-checked=true]{background:#eab308;color:#111;font-weight:700}' +
     '.ac-chips{display:flex;gap:6px;flex-wrap:wrap}.ac-chips[hidden]{display:none}.ac-chips button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:999px;padding:3px 10px;font:inherit;font-size:.76rem;cursor:pointer}#acVaultLabel{width:100%;box-sizing:border-box}' +
     '.vlt-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 10px}.vlt-list button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:12px;padding:10px;font:inherit;font-size:.86rem;cursor:pointer;text-align:start}.vlt-list button[aria-checked=true]{border-color:#eab308;background:rgba(234,179,8,.15);font-weight:700}#vaultLabel{width:100%;box-sizing:border-box;margin-bottom:10px}' +
+    '.ac-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;border-radius:12px;background:var(--bg3,#1f2937);border:1px solid var(--border,#334155);box-sizing:border-box;margin:0 0 12px}' +
+    '.ac-tabs button{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;min-height:36px;padding:6px 4px;border-radius:9px;font:700 .78rem/1.15 Inter,system-ui,sans-serif;color:var(--fg2,#94a3b8);cursor:pointer;-webkit-tap-highlight-color:transparent}' +
+    '.ac-tabs button[aria-selected=true]{background:#7c3aed;color:#fff;box-shadow:0 1px 4px rgba(124,58,237,.35)}.ac-tabs button:focus-visible{outline:2px solid #a78bfa;outline-offset:1px}.ac-tabs button[hidden]{display:none}' +
+    '#acForm[data-tab=metal] .ac-find,#acForm[data-tab=metal] .ac-coinonly,#acForm[data-tab=cash] .ac-grid,#acForm[data-tab=cash] #acPreview,#acForm[data-tab=cash] #acError,#acForm[data-tab=cash] #acSave{display:none!important}' +
+    '#acMetalPick[hidden],#acCashPane[hidden]{display:none}#acMetalPick{margin-top:0}#acMetalPick button{padding:8px 14px;font-size:.86rem;font-weight:600}#acMetalPick button[aria-checked=true]{border-color:#eab308;background:rgba(234,179,8,.16)}' +
+    '#acCashPane .cc-btns{margin-top:14px}' +
     '.ac-metals,.ac-cash{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}.ac-metals button,.ac-cash button{border:1px solid var(--border,#334155);background:transparent;color:inherit;border-radius:999px;padding:4px 10px;font:inherit;font-size:.78rem;cursor:pointer}.ac-metals small,.ac-cash small{opacity:.6;font-size:.72rem}' +
     '.cat-reset{display:block;margin:0 0 10px;padding:0;border:none;background:none;color:#60a5fa;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer}.cat-reset[hidden]{display:none}';
 
   var HTML_COIN =
     '<div class="atx-backdrop" id="addCoinModal" onclick="if(event.target===this)closeAddCoin()">' +
     '<form class="atx-modal" id="acForm" onsubmit="event.preventDefault();applyAddCoin()" role="dialog" aria-modal="true" aria-labelledby="acTitle" novalidate>' +
-      '<div class="atx-head"><h3 id="acTitle">' + SamsamUI.ic('plus') + 'Add New Coin</h3><button type="button" class="atx-x" onclick="closeAddCoin()" aria-label="Close">×</button></div>' +
+      '<div class="atx-head"><h3 id="acTitle">' + SamsamUI.ic('plus') + 'Add</h3><button type="button" class="atx-x" onclick="closeAddCoin()" aria-label="Close">×</button></div>' +
+      // what is being added: a coin · gold or silver · cash or a certificate — each tab shows its own fields only
+      '<div class="ac-tabs" id="acTabs" role="tablist" aria-label="What to add">' +
+        '<button type="button" role="tab" data-tab="coin" aria-selected="true" onclick="acSetTab(\'coin\')">Coins</button>' +
+        '<button type="button" role="tab" data-tab="metal" aria-selected="false" onclick="acSetTab(\'metal\')">Metals</button>' +
+        '<button type="button" role="tab" data-tab="cash" aria-selected="false" onclick="acSetTab(\'cash\')">Cash &amp; Certificate</button></div>' +
       '<div class="ac-grid">' +
         '<div class="atx-field ac-find ac-full"><label for="acSym">Coin <span style="color:#ef4444">*</span> <small class="form-sub">— search by symbol or name</small></label>' +
           '<input type="text" id="acSym" placeholder="e.g. XRP or Ripple" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acSuggest"' +
           ' oninput="this.value=this.value.toUpperCase().replace(/\\s+/g,\' \').trimStart(); acSearchInput()" onkeydown="acSearchKey(event)">' +
           '<ul class="ac-suggest" id="acSuggest" role="listbox" hidden></ul><div class="ac-linked" id="acLinked" hidden></div>' +
-          '<div class="ac-metals"><button type="button" onclick="acMetal(\'XAU\')">🥇 Gold 24k</button><button type="button" onclick="acMetal(\'XAG\')">🥈 Silver</button><small>held in grams</small></div>' +
-          '<div class="ac-cash"><button type="button" data-cash-add onclick="closeAddCoin()">🏦 Cash or a certificate</button><small>bank balance · USD, EGP, SAR</small></div></div>' +
+          '</div>' +
+        '<div class="ac-metals ac-full" id="acMetalPick" role="radiogroup" aria-label="Metal" hidden><button type="button" role="radio" data-m="XAU" onclick="acMetal(\'XAU\')">🥇 Gold 24k</button><button type="button" role="radio" data-m="XAG" onclick="acMetal(\'XAG\')">🥈 Silver</button><small>held in grams</small></div>' +
         '<div class="ac-full ac-mbox" id="acMetalBox" hidden>' +
           '<div class="ac-seg" role="radiogroup" aria-label="Amount in"><button type="button" data-u="g" onclick="acSetUnit(\'g\')">⚖️ Grams</button><button type="button" data-u="oz" onclick="acSetUnit(\'oz\')">🪙 Tokens / oz</button></div>' +
           '<div class="ac-chips" id="acChips"></div>' +
@@ -157,21 +168,22 @@
           '<label class="atx-field"><span>Where is it kept?</span><select id="acVault" onchange="acVaultPick()"></select></label>' +
           '<input type="text" id="acVaultLabel" maxlength="40" placeholder="e.g. My office safe" autocomplete="off" hidden>' +
         '</div>' +
-        '<label class="atx-field ac-full"><span>Full Name</span><input type="text" id="acName" placeholder="Filled by search"></label>' +
+        '<label class="atx-field ac-full ac-coinonly"><span>Full Name</span><input type="text" id="acName" placeholder="Filled by search"></label>' +
         '<label class="atx-field"><span id="acQtyLbl">Amount <span style="color:#ef4444">*</span></span><input type="number" id="acQty" placeholder="0.00" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span id="acPriceLbl">Avg. Buy Price <span style="color:#ef4444">*</span></span><input type="number" id="acPrice" placeholder="USD" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span>Buy Date</span><input type="date" id="acDate" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span>Fee (USD)</span><input type="number" id="acFeeUsd" placeholder="Optional" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
-        '<label class="atx-field"><span>CoinGecko ID</span><input type="text" id="acCgId" placeholder="Auto" autocomplete="off" spellcheck="false"></label>' +
-        '<div class="atx-field ac-full"><label for="acCmc">CoinMarketCap Page</label><div class="ac-cmc"><span class="ac-cmc-pre">coinmarketcap.com/currencies/</span>' +
+        '<label class="atx-field ac-coinonly"><span>CoinGecko ID</span><input type="text" id="acCgId" placeholder="Auto" autocomplete="off" spellcheck="false"></label>' +
+        '<div class="atx-field ac-full ac-coinonly"><label for="acCmc">CoinMarketCap Page</label><div class="ac-cmc"><span class="ac-cmc-pre">coinmarketcap.com/currencies/</span>' +
           '<input type="text" id="acCmc" placeholder="auto" autocomplete="off" spellcheck="false" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,\'\');acCmcCheck()">' +
           '<a id="acCmcCheck" class="ac-cmc-check" href="#" target="_blank" rel="noopener noreferrer" hidden>Check' + SamsamUI.ic('ext', { solo: true, size: 12 }) + '</a></div></div>' +
         '<div class="atx-cash ac-full" id="acPayRow"><label><input type="checkbox" id="acPayOn" onchange="this.dataset.manual=\'1\';previewAddCoin()"><span>Pay from</span></label><select id="acPaySym" aria-label="Stablecoin the buy is paid from" onchange="previewAddCoin()"></select></div>' +
         '<div class="atx-field ac-full" id="acNetRow"><span>Network &amp; where held</span><button type="button" class="ac-net" id="acNet" onclick="acEditNet()">' + SamsamUI.ic('link') + '<span id="acNetTxt">Pick the coin first</span><span class="ac-net-go">›</span></button></div>' +
-        '<label class="atx-field ac-full"><span>Category</span><select id="acCat" onchange="syncCatCustom(this,\'acCatCustomBox\')"></select></label>' +
-        '<div class="atx-field ac-full cat-custom" id="acCatCustomBox" hidden><label for="acCatCustom">New Category Name</label>' +
+        '<label class="atx-field ac-full ac-coinonly"><span>Category</span><select id="acCat" onchange="syncCatCustom(this,\'acCatCustomBox\')"></select></label>' +
+        '<div class="atx-field ac-full cat-custom ac-coinonly" id="acCatCustomBox" hidden><label for="acCatCustom">New Category Name</label>' +
           '<input type="text" id="acCatCustom" maxlength="40" placeholder="Enter Custom Category..." autocomplete="off"><div class="cat-custom-hint">Saved for this coin and added to the category filters.</div></div>' +
       '</div>' +
+      '<div id="acCashPane" hidden></div>' +
       '<div class="atx-preview" id="acPreview"></div>' +
       '<div class="atx-err" id="acError" role="alert"></div>' +
       '<button type="submit" class="atx-save" id="acSave">' + SamsamUI.ic('plus') + 'Add to Portfolio</button>' +
@@ -436,11 +448,13 @@
   var METAL_PICK = { XAU: { name: 'Gold (24k)', cgId: 'pax-gold', cmcSlug: 'pax-gold' }, XAG: { name: 'Silver (999)', cgId: 'kinesis-silver', cmcSlug: 'kinesis-silver' } };
   function acMetal(sym) {   // the 🥇 / 🥈 shortcut: linked, in grams, under Precious Metals
     var m = METAL_PICK[sym]; if (!m) return;
+    acTabUI('metal', sym);
     $('acSym').value = sym; $('acName').value = m.name; $('acCgId').value = m.cgId; $('acCmc').value = m.cmcSlug; acCmcCheck();
     acShow([]); acLink({ sym: sym, name: m.name, id: m.cgId }); acLogo = null;
     fillCatSelect($('acCat'), 'metals'); syncCatCustom($('acCat'), 'acCatCustomBox');
     acSpot = 0; var mine = (Samsam.getState().coins || []).filter(function (c) { return c.sym === sym; })[0];
     if (held(sym)) { $('acTitle').innerHTML = SamsamUI.ic('plus') + E((sym === 'XAU' ? '🥇 Buy ' : '🥈 Buy ') + m.name); $('acSave').innerHTML = SamsamUI.ic('plus') + 'Add Buy'; }
+    else { $('acTitle').innerHTML = SamsamUI.ic('plus') + 'Add'; $('acSave').innerHTML = SamsamUI.ic('plus') + 'Add to Portfolio'; }
     acUnits(); $('acVault').value = mine && mine.vault || ''; $('acVaultLabel').value = mine && mine.vaultLabel || ''; acVaultPick();
     coinInfo(m.cgId).then(function (d) { var el = $('acLinkedPrice'); if (d.usd > 0 && $('acSym').value === sym) { acSpot = d.usd; if (el) el.textContent = ' · now ' + SamsamFmt.price(d.usd / GPO) + '/g'; previewAddCoin(); } });
     previewAddCoin(); $('acQty').focus();
@@ -490,7 +504,8 @@
     fillCatSelect(catSel, (p && p.cat) || 'layer1');
     $('acCatCustom').value = p && p.catLabel && SamsamTaxonomy.isCustom(p.cat) && catSel.value === 'other' ? p.catLabel : '';
     syncCatCustom(catSel, 'acCatCustomBox');
-    $('acTitle').innerHTML = SamsamUI.ic('plus') + 'Add New Coin'; $('acSave').innerHTML = SamsamUI.ic('plus') + 'Add to Portfolio';
+    $('acTitle').innerHTML = SamsamUI.ic('plus') + 'Add'; $('acSave').innerHTML = SamsamUI.ic('plus') + 'Add to Portfolio';
+    acTabUI(p && p.sym && isMetal(String(p.sym).toUpperCase()) ? 'metal' : 'coin', p && p.sym ? String(p.sym).toUpperCase() : '');
     $('acPreview').innerHTML = ''; $('acError').textContent = ''; acU = 'g'; acPM = 'unit'; acSpot = 0;
     $('acDate').value = ''; $('acDate').max = localDateTimeValue(new Date()).slice(0, 10); $('acVault').value = ''; $('acVaultLabel').value = ''; $('acVaultLabel').hidden = true; acUnits();
     if (p && p.sym) {   // coming from a plan / a coin you picked elsewhere: already linked, just add the amount
@@ -505,7 +520,31 @@
       acUnits();
     }
     setOpen($('addCoinModal'), true);
+    if (p && p.tab === 'cash') { acSetTab('cash'); return; }
+    if (p && p.tab === 'metal') { acSetTab('metal'); return; }
     setTimeout(function () { focusFirst('acForm', p && p.sym ? 'acQty' : 'acSym'); }, 50);
+  }
+  // ── the three tabs: Coins · Metals · Cash & Certificate ──
+  // acTabUI only shows the right fields; acSetTab is the tap: it also fills the tab (gold picked first, the cash form drawn)
+  var acTab = 'coin';
+  function acTabUI(tab, sym) {
+    acTab = tab; var f = $('acForm'); if (!f) return;
+    f.dataset.tab = tab;
+    document.querySelectorAll('#acTabs [data-tab]').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); if (b.dataset.tab === 'cash') b.hidden = !(window.SamsamCash && SamsamCash.embed); });
+    $('acMetalPick').hidden = tab !== 'metal'; $('acCashPane').hidden = tab !== 'cash';
+    document.querySelectorAll('#acMetalPick [data-m]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.m === sym)); });
+    if (tab !== 'cash' && window.SamsamCash && $('acCashPane').innerHTML) SamsamCash.close();
+  }
+  function acSetTab(tab) {
+    if (tab === acTab && tab !== 'cash') return;
+    if (tab === 'cash') {
+      if (!(window.SamsamCash && SamsamCash.embed)) return;
+      acTabUI('cash'); $('acTitle').innerHTML = SamsamUI.ic('plus') + 'Add';
+      if (!SamsamCash.embed($('acCashPane'), { onDone: closeAddCoin })) acTabUI('coin');
+      return;
+    }
+    if (tab === 'metal') { var cur = $('acSym').value.trim().toUpperCase(); acMetal(isMetal(cur) ? cur : 'XAU'); return; }
+    openAddCoin();   // Coins: a clean coin form (whatever was typed for a metal is not a coin)
   }
   // put the cursor in the first field — unless you've already started typing somewhere in the form
   function focusFirst(formId, fieldId) {
@@ -513,7 +552,7 @@
     if (f && a && f.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return;
     $(fieldId).focus();
   }
-  function closeAddCoin() { var m = $('addCoinModal'); if (m) setOpen(m, false); }
+  function closeAddCoin() { var m = $('addCoinModal'); if (m) setOpen(m, false); if (window.SamsamCash && $('acCashPane') && $('acCashPane').innerHTML) SamsamCash.close(); }
   // "Pay from" a stablecoin you hold — the same choice as in Buy (remembered together); ticks itself only when it covers the cost
   function acPayFill() {
     var row = $('acPayRow'), sym = $('acSym').value.trim().toUpperCase();
@@ -1124,7 +1163,7 @@
   window.CPAdd = API;
   // the names the pages (and inline handlers) already use
   var G = { openAddCoin: function () { openAddCoin(); }, closeAddCoin: closeAddCoin, previewAddCoin: previewAddCoin, applyAddCoin: applyAddCoin,
-    openVault: openVault, vaultChoose: vaultChoose, closeVault: closeVault, saveVault: saveVault, acMetal: acMetal, acSetUnit: acSetUnit, acSetPm: acSetPm, acChip: acChip, acVaultPick: acVaultPick, acSearchInput: acSearchInput, acSearchKey: acSearchKey, acPick: acPick, acCmcCheck: acCmcCheck, acEditNet: acEditNet,
+    openVault: openVault, vaultChoose: vaultChoose, closeVault: closeVault, saveVault: saveVault, acMetal: acMetal, acSetTab: acSetTab, acSetUnit: acSetUnit, acSetPm: acSetPm, acChip: acChip, acVaultPick: acVaultPick, acSearchInput: acSearchInput, acSearchKey: acSearchKey, acPick: acPick, acCmcCheck: acCmcCheck, acEditNet: acEditNet,
     openAddTx: openAddTx, openEditTx: openEditTx, closeAddTx: closeAddTx, setAddTxType: setAddTxType, readAddTx: readAddTx, previewAddTx: previewAddTx, saveAddTx: saveAddTx,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
     openCatEdit: function (sym) { openCatEdit(sym); }, closeCatEdit: closeCatEdit, saveCatEdit: saveCatEdit,

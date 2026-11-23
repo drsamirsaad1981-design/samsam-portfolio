@@ -19,23 +19,24 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-lang.js?v=202611231300"></script>
-<script src="samsam-ar.js?v=202611231300"></script>
-<script src="samsam-ui.js?v=202611231300"></script>
-<script src="samsam-hints.js?v=202611231300"></script>
-<script src="samsam-arhints.js?v=202611231300"></script>
-<script src="samsam-vault.js?v=202611231300"></script>
-<script src="samsam-labels.js?v=202611231300"></script>
-<script src="samsam-taxonomy.js?v=202611231300"></script>
-<script src="samsam-coins.js?v=202611231300"></script>
-<script src="samsam-import.js?v=202611231300"></script>
-<script src="samsam-wallets.js?v=202611231300"></script>
-<script src="samsam-rewards.js?v=202611231300"></script>
-<script src="samsam-settings.js?v=202611231300"></script>
-<script src="samsam-dropdown.js?v=202611231300"></script>
-<script src="samsam-market.js?v=202611231300"></script>
-<script src="samsam-exit.js?v=202611231300"></script>
-<script src="samsam-add.js?v=202611231300"></script>
+<script src="samsam-lang.js?v=202611231336"></script>
+<script src="samsam-ar.js?v=202611231336"></script>
+<script src="samsam-ui.js?v=202611231336"></script>
+<script src="samsam-hints.js?v=202611231336"></script>
+<script src="samsam-arhints.js?v=202611231336"></script>
+<script src="samsam-vault.js?v=202611231336"></script>
+<script src="samsam-labels.js?v=202611231336"></script>
+<script src="samsam-taxonomy.js?v=202611231336"></script>
+<script src="samsam-coins.js?v=202611231336"></script>
+<script src="samsam-import.js?v=202611231336"></script>
+<script src="samsam-wallets.js?v=202611231336"></script>
+<script src="samsam-cash.js?v=202611231336"></script>
+<script src="samsam-rewards.js?v=202611231336"></script>
+<script src="samsam-settings.js?v=202611231336"></script>
+<script src="samsam-dropdown.js?v=202611231336"></script>
+<script src="samsam-market.js?v=202611231336"></script>
+<script src="samsam-exit.js?v=202611231336"></script>
+<script src="samsam-add.js?v=202611231336"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -365,7 +366,10 @@ tr:hover td { background: rgba(255,255,255,.02); }
 @media (max-width: 767px) {   /* Add (left) · Table/Cards (right), search on its own row underneath */
   .toolbar .search-box { order: 3; flex: 1 1 100%; }
 }
-@media (max-width: 420px) { .toolbar .cp-add .lbl-long { display: none; } }   /* "Add to Plan" so it fits beside Table · Cards */
+@media (max-width: 420px) { .toolbar .cp-add .lbl-long { display: none; } }
+/* ➕ Add to Portfolio (a coin, gold or silver, cash or a certificate): the same window as on Overview — quieter than "Add to Plan" */
+.toolbar .cp-add.pl-own { background: transparent; color: var(--fg); border: 1px solid var(--border); box-shadow: none; }
+@media (max-width: 759px) { .toolbar .cp-add.pl-own { width: 40px; padding: 0; gap: 0; justify-content: center; } .toolbar .cp-add.pl-own .pl-own-t { display: none; } .toolbar .cp-add.pl-own .cp-add-ic { background: transparent; } }   /* "Add to Plan" so it fits beside Table · Cards */
 
 /* ── Responsive ── */
 @media(max-width:600px) {
@@ -849,6 +853,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
 <!-- Toolbar -->
 <div class="toolbar">
   <button type="button" class="cp-add" onclick="openAddModal()" title="Add any coin to your plan — even one you don't own yet"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="lbl-long"> Coin</span> to Plan</span></button>
+  <button type="button" class="cp-add pl-own" id="planOwnAdd" onclick="planAddAsset()" title="Add to your portfolio: a coin, gold or silver, cash or a certificate" aria-label="Add to Portfolio"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="pl-own-t">Add to Portfolio</span></button>
   <input type="text" class="search-box" id="searchBox" placeholder="Search coin..." oninput="renderAll()">
   <div class="view-toggle cp-vseg" role="group" aria-label="View">
     <button type="button" id="btnTable" data-view="table" onclick="setView('table')"><span data-ic="table"></span>Table</button>
@@ -907,7 +912,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611231300"></script>
+<script type="module" src="samsam-cloud.js?v=202611231336"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1627,6 +1632,13 @@ async function removeCoin(idx) {
 // ➕ Regular buy (the DCA card): pick ANY coin → it joins the plan without a target (set one later on its row / card) → its schedule
 let addForDca = false;
 function openDcaPick() { openAddModal(true); }
+// ➕ Add to Portfolio: the Add window with its three tabs (Coins · Metals · Cash & Certificate) — the app's own when this
+// page runs inside it, this page's otherwise
+function planAddAsset() {
+  try { if (window.parent !== window && typeof window.parent.openAddCoin === 'function') { window.parent.openAddCoin(); return; } } catch (_) {}
+  if (typeof window.openAddCoin === 'function') { window.openAddCoin(); return; }
+  location.href = 'index.html#add';
+}
 function openAddModal(forDca) {
   addForDca = forDca === true;
   document.getElementById('addTitle').innerHTML = SamsamUI.ic(addForDca ? 'calendar' : 'plus') + (addForDca ? 'Regular buy — pick a coin' : 'Add Coin to Accumulation Plan');

@@ -7,7 +7,8 @@
 // OFFICIAL rate (how many EGP / SAR one dollar buys: Yahoo Finance EGP=X / SAR=X, saved with the market snapshot every
 // ~30 min; the last rates are kept on the device, so the card also draws at once and offline).
 // The portfolio's own totals and profit never include these: they only add up in "Net worth".
-// Saved in the cloud (meta/info.cash), in every backup and automatic copy. Opened from the card, or from ➕ Add → 🏦.
+// Saved in the cloud (meta/info.cash), in every backup and automatic copy. Edited from the card; a new entry also from
+// ➕ Add → the "Cash & certificate" tab (the same form, shown inside that window: SamsamCash.embed).
 (function () {
   'use strict';
   var doc = document, $ = function (id) { return doc.getElementById(id); };
@@ -83,34 +84,52 @@
     '@media (min-width:640px){#cpCash{align-items:center;padding:16px}}' +
     '#cpCash .cc-box{width:min(460px,100%);max-height:92vh;overflow:auto;background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));box-sizing:border-box}' +
     '@media (min-width:640px){#cpCash .cc-box{border-radius:18px}}' +
-    '#cpCash h3{margin:0 0 12px;font-size:1.05rem;display:flex;align-items:center;gap:8px}#cpCash h3 span{flex:1}' +
-    '#cpCash .cc-x{border:0;background:transparent;color:inherit;font-size:1.3rem;cursor:pointer;width:36px;height:36px;border-radius:10px}' +
-    '#cpCash .cc-seg{display:flex;gap:6px;background:var(--bg3,#1f2937);padding:4px;border-radius:12px;margin-bottom:10px}' +
-    '#cpCash .cc-seg button{flex:1;height:38px;border:0;border-radius:9px;background:transparent;color:var(--fg2,#94a3b8);font:inherit;font-weight:700;cursor:pointer}' +
-    '#cpCash .cc-seg button[aria-pressed=true]{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff}' +
-    '#cpCash label{display:block;font-size:.78rem;font-weight:600;color:var(--fg2,#94a3b8);margin:10px 0 4px}' +
-    '#cpCash input,#cpCash select{width:100%;box-sizing:border-box;height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--border,#334155);background:var(--bg3,#1f2937);color:inherit;font:inherit}' +
-    '#cpCash input:focus,#cpCash select:focus{outline:none;border-color:#3b82f6}' +
-    '#cpCash label.cc-chk{display:flex;align-items:center;gap:10px;margin:14px 0 0;font-size:.9rem;color:inherit;cursor:pointer}#cpCash label.cc-chk input{width:20px;height:20px;flex:0 0 auto;accent-color:#7c3aed}' +
-    '#cpCash .cc-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}#cpCash .cc-cert[hidden]{display:none}' +
-    '#cpCash .cc-note{font-size:.76rem;color:var(--fg2,#94a3b8);margin-top:10px;line-height:1.5}#cpCash .cc-err{color:#f87171;font-size:.82rem;min-height:1.2em;margin-top:8px}' +
-    '#cpCash .cc-btns{display:flex;gap:10px;margin-top:12px}#cpCash .cc-btns button{flex:1;height:46px;border-radius:12px;border:1px solid var(--border,#334155);background:var(--metric-bg,#1f2937);color:inherit;font:inherit;font-weight:700;cursor:pointer}' +
-    '#cpCash .cc-save{background:linear-gradient(135deg,#7c3aed,#6d28d9)!important;border-color:#6d28d9!important;color:#fff!important}#cpCash .cc-del{flex:0 0 auto!important;padding:0 14px;color:#f87171!important}';
+    '.cc-form h3{margin:0 0 12px;font-size:1.05rem;display:flex;align-items:center;gap:8px}.cc-form h3 span{flex:1}' +
+    '.cc-form .cc-x{border:0;background:transparent;color:inherit;font-size:1.3rem;cursor:pointer;width:36px;height:36px;border-radius:10px}' +
+    '.cc-form .cc-seg{display:flex;gap:6px;background:var(--bg3,#1f2937);padding:4px;border-radius:12px;margin-bottom:10px}' +
+    '.cc-form .cc-seg button{flex:1;height:38px;border:0;border-radius:9px;background:transparent;color:var(--fg2,#94a3b8);font:inherit;font-weight:700;cursor:pointer}' +
+    '.cc-form .cc-seg button[aria-pressed=true]{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff}' +
+    '.cc-form label{display:block;font-size:.78rem;font-weight:600;color:var(--fg2,#94a3b8);margin:10px 0 4px}' +
+    '.cc-form input,.cc-form select{width:100%;box-sizing:border-box;height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--border,#334155);background:var(--bg3,#1f2937);color:inherit;font:inherit}' +
+    '.cc-form input:focus,.cc-form select:focus{outline:none;border-color:#3b82f6}' +
+    '.cc-form label.cc-chk{display:flex;align-items:center;gap:10px;margin:14px 0 0;font-size:.9rem;color:inherit;cursor:pointer}.cc-form label.cc-chk input{width:20px;height:20px;flex:0 0 auto;accent-color:#7c3aed}' +
+    '.cc-form .cc-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cc-form .cc-cert[hidden]{display:none}' +
+    '.cc-form .cc-note{font-size:.76rem;color:var(--fg2,#94a3b8);margin-top:10px;line-height:1.5}.cc-form .cc-err{color:#f87171;font-size:.82rem;min-height:1.2em;margin-top:8px}' +
+    '.cc-form .cc-btns{display:flex;gap:10px;margin-top:12px}.cc-form .cc-btns button{flex:1;height:46px;border-radius:12px;border:1px solid var(--border,#334155);background:var(--metric-bg,#1f2937);color:inherit;font:inherit;font-weight:700;cursor:pointer}' +
+    '.cc-form .cc-save{background:linear-gradient(135deg,#7c3aed,#6d28d9)!important;border-color:#6d28d9!important;color:#fff!important}.cc-form .cc-del{flex:0 0 auto!important;padding:0 14px;color:#f87171!important}';
   var cssDone = false, editing = null;
-  function close() { var m = $('cpCash'); if (m) m.remove(); editing = null; }
+  function close() { var m = $('cpCash'); if (m) m.remove(); var e = doc.querySelector('.cc-form.cc-embed'); if (e) { e.innerHTML = ''; e.classList.remove('cc-form', 'cc-embed'); } editing = null; }
+  // its own window (from the card: add or edit one entry)
   function open(id) {
     var s = S(); if (!s || !s.isReady || !s.isReady()) return;
-    if (!cssDone) { cssDone = true; var st = doc.createElement('style'); st.textContent = CSS; doc.head.appendChild(st); }
     close();
+    var w = doc.createElement('div'); w.id = 'cpCash'; w.setAttribute('data-no-tr', '');
+    w.innerHTML = '<div class="cc-box" role="dialog" aria-modal="true" aria-labelledby="ccT"></div>';
+    doc.body.appendChild(w);
+    w.addEventListener('click', function (e) { if (e.target === w) close(); });
+    form(w.firstChild, id, { onClose: close });
+  }
+  // inside another window (➕ Add → the "Cash & certificate" tab): the same form, a new entry; opts.onDone after a save
+  function embed(el, opts) {
+    var s = S(); if (!el || !s || !s.isReady || !s.isReady()) return false;
+    close(); el.setAttribute('data-no-tr', ''); el.classList.add('cc-embed');
+    form(el, null, { embed: true, onClose: function (saved) { if (saved && opts && opts.onDone) opts.onDone(); } });
+    return true;
+  }
+  function form(root, id, o) {
+    var s = S();
+    if (!cssDone) { cssDone = true; var st = doc.createElement('style'); st.textContent = CSS; doc.head.appendChild(st); }
+    root.classList.add('cc-form');
+    var done = function (saved) { if (o.embed) { root.innerHTML = ''; root.classList.remove('cc-form', 'cc-embed'); editing = null; } o.onClose(saved); };
     var list = s.getCash(), it = id ? list.filter(function (x) { return x.id === id; })[0] : null, ar = AR();
     editing = it ? it.id : null;
     var today = new Date().toISOString().slice(0, 10);
     var v = it || { kind: 'cash', cur: 'EGP', amount: '', label: '', rate: '', start: today, months: 36, pay: 'month' };
     var opt = function (list2, cur) { return list2.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + E(o[1]) + '</option>'; }).join(''); };
-    var w = doc.createElement('div'); w.id = 'cpCash'; w.setAttribute('data-no-tr', '');
-    w.innerHTML = '<div class="cc-box" role="dialog" aria-modal="true" aria-labelledby="ccT"><h3><span id="ccT">🏦 ' + (it ? T('Edit', 'تعديل') : T('Cash & certificates', 'نقد وشهادات')) + '</span><button type="button" class="cc-x" id="ccX" aria-label="' + T('Close', 'إغلاق') + '">✕</button></h3>' +
+    var w = root;
+    w.innerHTML = (o.embed ? '' : '<h3><span id="ccT">🏦 ' + (it ? T('Edit', 'تعديل') : T('Cash & certificates', 'نقد وشهادات')) + '</span><button type="button" class="cc-x" id="ccX" aria-label="' + T('Close', 'إغلاق') + '">✕</button></h3>') +
       '<div class="cc-seg" role="group"><button type="button" data-kind="cash" aria-pressed="' + (v.kind !== 'cert') + '">' + T('Balance', 'رصيد') + '</button><button type="button" data-kind="cert" aria-pressed="' + (v.kind === 'cert') + '">' + T('Certificate', 'شهادة') + '</button></div>' +
-      '<div class="cc-two"><div><label for="ccCur">' + T('Currency', 'العملة') + '</label><select id="ccCur">' + opt(['EGP', 'USD', 'SAR'].map(function (c) { return [c, CUR[c].flag + ' ' + c + ' · ' + (ar ? CUR[c].ar.split(' ')[0] : CUR[c].en)]; }), v.cur) + '</select></div>' +
+      '<div class="cc-two"><div><label for="ccCur">' + T('Currency', 'العملة') + '</label><select id="ccCur">' + opt(['EGP', 'USD', 'SAR'].map(function (c) { return [c, CUR[c].flag + ' ' + c + ' · ' + (ar ? CUR[c].ar.split(' ')[0] : CUR[c].en.split(' ').pop())]; }), v.cur) + '</select></div>' +
       '<div><label for="ccAmt">' + T('Amount', 'المبلغ') + '</label><input id="ccAmt" inputmode="decimal" autocomplete="off" dir="ltr" value="' + E(v.amount === '' ? '' : String(v.amount)) + '" placeholder="100000"></div></div>' +
       '<label for="ccLabel">' + T('Name (your choice — never an account number)', 'الاسم (كما تحب — ليس رقم الحساب أبداً)') + '</label><input id="ccLabel" maxlength="40" autocomplete="off" value="' + E(v.label || '') + '" placeholder="' + T('e.g. CIB savings', 'مثال: توفير البنك الأهلي') + '">' +
       '<div class="cc-cert" id="ccCert"' + (v.kind === 'cert' ? '' : ' hidden') + '>' +
@@ -123,12 +142,10 @@
       '</div>' +
       '<div class="cc-note">' + T('Counted in Net worth only — your portfolio\'s totals and profit stay as they are. Valued in US dollars at the official rate.', 'يُحسب في صافي الثروة فقط — وإجمالي محفظتك وأرباحها تبقى كما هي. القيمة بالدولار بالسعر الرسمي.') + '</div>' +
       '<div class="cc-err" id="ccErr" role="alert"></div>' +
-      '<div class="cc-btns">' + (it ? '<button type="button" class="cc-del" id="ccDel">' + T('Delete', 'حذف') + '</button>' : '') + '<button type="button" id="ccNo">' + T('Cancel', 'إلغاء') + '</button><button type="button" class="cc-save" id="ccSave">' + T('Save', 'حفظ') + '</button></div></div>';
-    doc.body.appendChild(w);
+      '<div class="cc-btns">' + (it ? '<button type="button" class="cc-del" id="ccDel">' + T('Delete', 'حذف') + '</button>' : '') + (o.embed ? '' : '<button type="button" id="ccNo">' + T('Cancel', 'إلغاء') + '</button>') + '<button type="button" class="cc-save" id="ccSave">' + T('Save', 'حفظ') + '</button></div>';
     var kind = v.kind === 'cert' ? 'cert' : 'cash';
     w.querySelectorAll('[data-kind]').forEach(function (b) { b.onclick = function () { kind = b.dataset.kind; w.querySelectorAll('[data-kind]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); }); $('ccCert').hidden = kind !== 'cert'; }; });
-    w.addEventListener('click', function (e) { if (e.target === w) close(); });
-    $('ccX').onclick = close; $('ccNo').onclick = close;
+    if ($('ccX')) $('ccX').onclick = function () { done(false); }; if ($('ccNo')) $('ccNo').onclick = function () { done(false); };
     // the switch follows "Return is paid" (at maturity → on, paid out → off) until you set it yourself
     var touched = !!it; $('ccCount').onchange = function () { touched = true; };
     $('ccPay').onchange = function () { if (!touched) $('ccCount').checked = $('ccPay').value === 'end'; };
@@ -148,21 +165,21 @@
       var now = S().getCash(), next = editing ? now.map(function (o) { return o.id === editing ? x : o; }) : now.concat([x]);
       if (next.length > 40) return err(T('That is the most entries (40).', 'هذا أقصى عدد (40).'));
       $('ccSave').disabled = true;
-      S().setCash(next).then(function () { close(); render(); }, function (e) { $('ccSave').disabled = false; err(String((e && e.message) || e)); });
+      S().setCash(next).then(function () { done(true); render(); }, function (e) { $('ccSave').disabled = false; err(String((e && e.message) || e)); });
     };
     if (it) $('ccDel').onclick = function () {
       var D = window.CPDialog, go = D ? D.confirm(T('Delete this entry?', 'حذف هذا البند؟'), { title: T('Cash & certificates', 'نقد وشهادات'), okText: T('Delete', 'حذف'), danger: true }) : Promise.resolve(true);
-      go.then(function (ok) { if (!ok) return; S().setCash(S().getCash().filter(function (o) { return o.id !== editing; })).then(function () { close(); render(); }, function (e) { err(String((e && e.message) || e)); }); });
+      go.then(function (ok) { if (!ok) return; S().setCash(S().getCash().filter(function (o) { return o.id !== editing; })).then(function () { done(true); render(); }, function (e) { err(String((e && e.message) || e)); }); });
     };
-    setTimeout(function () { try { $('ccAmt').focus(); } catch (_) {} }, 50);
+    if (!o.embed) setTimeout(function () { try { $('ccAmt').focus(); } catch (_) {} }, 50);
   }
 
   doc.addEventListener('click', function (e) {
     var t = e.target && e.target.closest ? e.target.closest('[data-cash],[data-cash-add]') : null;
-    if (!t || !t.closest('#cashCard, #addCoinModal')) return;
+    if (!t || !t.closest('#cashCard')) return;
     e.preventDefault(); open(t.hasAttribute('data-cash-add') ? null : t.getAttribute('data-cash'));
   });
   doc.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('cpCash') && !doc.getElementById('cpDialog')) { e.stopPropagation(); close(); } }, true);
 
-  window.SamsamCash = { render: render, open: open, close: close, rates: function () { return fx ? Object.assign({ t: fxAt }, fx) : null; } };
+  window.SamsamCash = { render: render, open: open, embed: embed, close: close, rates: function () { return fx ? Object.assign({ t: fxAt }, fx) : null; } };
 })();
