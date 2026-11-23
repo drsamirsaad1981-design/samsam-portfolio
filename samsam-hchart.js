@@ -122,12 +122,9 @@ function setHovCat(cat) {
 function renderHovCatPicker() {
   const host = document.getElementById('hovCatHost'), T = SamsamTaxonomy;
   if (!host || !window.SamsamDropdown) return;
-  const totals = {}; let all = 0;
-  portfolio.forEach(c => { const v = c.qty * c.currentPrice, k = c.cat || 'other'; totals[k] = (totals[k] || 0) + v; all += v; });
-  const keys = T.pickerKeys(totals);
-  const sub = v => SamsamFmt.usd(v) + (hovMode === 'alloc' ? ' · ' + (all > 0 ? v / all * 100 : 0).toFixed(1) + '%' : '');
-  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(all), icon: '<span class="cp-globe">' + SamsamUI.ic('globe', { solo: true }) + '</span>' }]
-    .concat(keys.map(k => ({ value: k, label: T.label(k), sub: sub(totals[k] || 0), icon: `<span class="cp-dot" style="background:${T.color(k)}"></span>` })));
+  const sub = (v, all) => SamsamFmt.usd(v) + ' · ' + (all > 0 ? v / all * 100 : 0).toFixed(1) + '%';
+  const pk = T.pickerOptions(portfolio.map(c => ({ sym: c.sym, cat: c.cat, v: c.qty * c.currentPrice })), { sub });
+  const options = [{ value: 'all', label: pk.classes.length > 1 ? 'All' : 'All Coins', sub: SamsamFmt.usd(pk.all), icon: '<span class="cp-globe">' + SamsamUI.ic('globe', { solo: true }) + '</span>' }].concat(pk.options);
   if (!hovCatDD) {
     host.innerHTML = '<div class="cat-picker" id="hovCatPicker"><div id="hovCatDD"></div></div>';
     hovCatDD = SamsamDropdown.create(document.getElementById('hovCatDD'), {
@@ -158,21 +155,44 @@ function paintHovMode() {
     if (ic && window.SamsamUI) ic.innerHTML = SamsamUI.navIcon('allocation');
   }
 }
+// Two rings when you hold more than one class: inside, Crypto · Stocks · Metals; outside, the categories of each,
+// lined up under their class. One class → one ring of categories, as before. Tap a slice → that class / category.
 function renderHovDonut() {
   const svg = document.getElementById('hovDonut'); if (!svg || hovMode !== 'alloc') return;
-  const T = SamsamTaxonomy, totals = {}; let all = 0;
-  portfolio.forEach(c => { const v = c.qty * c.currentPrice, k = c.cat || 'other'; if (v > 0) { totals[k] = (totals[k] || 0) + v; all += v; } });
-  const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
-  const cx = 100, cy = 100, R = 88, r = 58; let a0 = -Math.PI / 2;
-  svg.innerHTML = entries.map(([k, v]) => {
-    const ang = Math.min(v / all * Math.PI * 2, Math.PI * 2 - 1e-4), a1 = a0 + ang, L = ang > Math.PI ? 1 : 0;
-    const P = (rad, a) => (cx + rad * Math.cos(a)).toFixed(2) + ',' + (cy + rad * Math.sin(a)).toFixed(2);
-    const d = `M${P(r, a0)} L${P(R, a0)} A${R},${R} 0 ${L},1 ${P(R, a1)} L${P(r, a1)} A${r},${r} 0 ${L},0 ${P(r, a0)} Z`; a0 = a1;
-    const on = !hovCat || hovCat === k;
-    return `<path class="donut-slice" data-cat="${k}" d="${d}" fill="${T.color(k)}" opacity="${!hovCat ? .92 : on ? 1 : .35}" style="${hovCat && on ? 'transform:scale(1.04)' : ''}"><title>${T.label(k)} · ${(v / all * 100).toFixed(1)}%</title></path>`;
-  }).join('');
+  const T = SamsamTaxonomy;
+  const t = T.tree(portfolio.filter(c => c.qty * c.currentPrice > 0).map(c => ({ sym: c.sym, cat: c.cat, v: c.qty * c.currentPrice })));
+  const all = t.all, two = t.classes.length > 1;
+  const cx = 100, cy = 100, P = (rad, a) => (cx + rad * Math.cos(a)).toFixed(2) + ',' + (cy + rad * Math.sin(a)).toFixed(2);
+  const arc = (r, R, a0, a1) => { const L = a1 - a0 > Math.PI ? 1 : 0; return `M${P(r, a0)} L${P(R, a0)} A${R},${R} 0 ${L},1 ${P(R, a1)} L${P(r, a1)} A${r},${r} 0 ${L},0 ${P(r, a0)} Z`; };
+  const on = (k, g) => !hovCat || hovCat === k || (T.isClassKey(hovCat) && hovCat === 'c:' + g);
+  const slice = (k, g, r, R, a0, a1, v, cls) => `<path class="donut-slice${cls}" data-cat="${k}" d="${arc(r, R, a0, a1)}" fill="${T.color(k)}" opacity="${!hovCat ? .92 : on(k, g) ? 1 : .3}" style="${hovCat && hovCat === k ? 'transform:scale(1.04)' : ''}"><title>${T.label(k)} · ${(v / all * 100).toFixed(1)}%</title></path>`;
+  const ang = v => Math.min(v / all * Math.PI * 2, Math.PI * 2 - 1e-4);
+  let a0 = -Math.PI / 2, out = '';
+  // biggest class first, and inside it its biggest category first
+  t.classes.slice().sort((a, b) => b.v - a.v).forEach(c => {
+    const c0 = a0;
+    c.cats.filter(k => k.v > 0).sort((a, b) => b.v - a.v).forEach(k => { const a1 = a0 + ang(k.v); out += slice(k.key, c.key, two ? 66 : 58, 88, a0, a1, k.v, ''); a0 = a1; });
+    if (two) out += slice('c:' + c.key, c.key, 50, 62, c0, Math.min(c0 + ang(c.v), a0), c.v, ' donut-cls');
+  });
+  svg.innerHTML = all > 0 ? out : '';
+  svg.setAttribute('aria-label', two ? 'Portfolio allocation by class (inner ring) and by category (outer ring)' : 'Portfolio allocation by category');
   svg.onclick = e => { const p = e.target.closest('.donut-slice'); if (!p) return; const k = p.dataset.cat === hovCat ? '' : p.dataset.cat; setHovCat(k); };
   const cv = document.getElementById('hovDonutVal'), cl = document.getElementById('hovDonutLbl');
-  if (hovCat) { cv.textContent = (all > 0 ? (totals[hovCat] || 0) / all * 100 : 0).toFixed(1) + '%'; cv.style.color = T.color(hovCat); cl.textContent = T.label(hovCat); }
+  document.getElementById('hovAllocCard').classList.toggle('two-rings', two);
+  if (hovCat) {
+    let v = 0; t.classes.forEach(c => { if (hovCat === 'c:' + c.key) v += c.v; else c.cats.forEach(k => { if (k.key === hovCat) v += k.v; }); });
+    cv.textContent = (all > 0 ? v / all * 100 : 0).toFixed(1) + '%'; cv.style.color = T.color(hovCat); cl.textContent = T.label(hovCat);
+  }
   else { cv.textContent = SamsamFmt.usd(all); cv.style.color = ''; cl.textContent = 'Total'; }
+  renderHovClassBar(t);
+}
+// Under the donut (two classes or more): one line per class — its colour, name, value and share; tap → filter to it
+function renderHovClassBar(t) {
+  const card = document.getElementById('hovAllocCard'); if (!card) return;
+  let bar = document.getElementById('hovClsBar');
+  if (t.classes.length < 2) { if (bar) bar.remove(); return; }
+  if (!bar) { bar = document.createElement('div'); bar.id = 'hovClsBar'; bar.className = 'hov-cls-bar'; card.appendChild(bar);
+    bar.onclick = e => { const b = e.target.closest('[data-cls]'); if (b) setHovCat(hovCat === b.dataset.cls ? '' : b.dataset.cls); }; }
+  bar.innerHTML = t.classes.map(c => { const k = 'c:' + c.key;
+    return `<button type="button" class="hov-cls" data-cls="${k}" aria-pressed="${hovCat === k}" style="--c:${c.color}"><span class="cp-cls" style="--c:${c.color}"></span><b>${c.label}</b><span>${SamsamFmt.usd(c.v)}</span><i>${(t.all > 0 ? c.v / t.all * 100 : 0).toFixed(1)}%</i></button>`; }).join('');
 }

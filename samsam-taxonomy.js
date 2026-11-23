@@ -87,8 +87,65 @@
   // Filter lists: the built-in order, then your own categories that have coins, then Other.
   function pickerKeys(totals) {
     totals = totals || {};
-    return ORDER.concat(customs().map(function (c) { return c.key; }).filter(function (k) { return totals[k] != null; }), totals.other ? ['other'] : []);
+    // US Stocks only when you hold a share in it (a crypto-only portfolio keeps its list as it was)
+    return ORDER.filter(function (k) { return k !== 'stocks' || totals.stocks != null; }).concat(customs().map(function (c) { return c.key; }).filter(function (k) { return totals[k] != null; }), totals.other ? ['other'] : []);
   }
+  // ── The level above categories: the asset class (Crypto · Stocks · Metals) ──
+  // A holding's class comes from the asset itself (samsam-core assetClass: a bStock share → Stocks, gold / silver grams →
+  // Metals); a gold token (PAXG, XAUT…) sits in Metals here too, by its category — it is gold you own, priced as a token.
+  // Filters use 'c:<class>' for a whole class and the category key for one category.
+  var CLASSES = [
+    { key: 'crypto', label: 'Crypto', color: '#8b5cf6' },
+    { key: 'stock',  label: 'Stocks', color: '#38bdf8' },
+    { key: 'metal',  label: 'Metals', color: '#eab308' },
+  ];
+  var CLS = {}; CLASSES.forEach(function (c) { CLS[c.key] = c; });
+  function groupOf(sym, cat) {
+    var core = window.Samsam && window.Samsam.core, k = core && core.assetClass ? core.assetClass(String(sym || '').toUpperCase()) : null;
+    if (k === 'stock' || k === 'metal') return k;
+    if (cat === 'metals') return 'metal';
+    if (cat === 'stocks' && !k) return 'stock';
+    return 'crypto';
+  }
+  function isClassKey(f) { return /^c:(crypto|stock|metal)$/.test(String(f || '')); }
+  // does a holding pass the filter? '' → all · 'c:stock' → its class · else → its category
+  function matches(filter, sym, cat) {
+    if (!filter) return true;
+    if (isClassKey(filter)) return groupOf(sym, cat) === filter.slice(2);
+    return (cat || 'other') === filter;
+  }
+  // rows: [{ sym, cat, v }] → the classes that hold something, each with its categories (in the usual order)
+  function tree(rows) {
+    var by = {}, all = 0;
+    (rows || []).forEach(function (r) {
+      var v = +r.v || 0, cat = r.cat || 'other', g = groupOf(r.sym, cat);
+      var n = by[g] || (by[g] = { key: g, v: 0, cats: {} });
+      n.v += v; n.cats[cat] = (n.cats[cat] || 0) + v; all += v;
+    });
+    return { all: all, classes: CLASSES.filter(function (c) { return by[c.key]; }).map(function (c) {
+      var n = by[c.key];
+      return { key: c.key, label: c.label, color: c.color, v: n.v, cats: pickerKeys(n.cats).filter(function (k) { return n.cats[k] != null; }).map(function (k) { return { key: k, v: n.cats[k] }; }) };
+    }) };
+  }
+  // The category dropdown's options. One class only (most portfolios) → the same flat list as before;
+  // more than one → each class (a line above it), then its categories indented under it.
+  function pickerOptions(rows, o) {
+    o = o || {};
+    var t = tree(rows), sub = o.sub || function (v) { return String(v); }, dot = function (c) { return '<span class="cp-dot" style="background:' + c + '"></span>'; };
+    var out = [];
+    if (t.classes.length > 1) t.classes.forEach(function (c) {
+      out.push({ value: 'c:' + c.key, label: c.label, sub: sub(c.v, t.all), icon: '<span class="cp-cls" style="--c:' + c.color + '"></span>', head: true });
+      c.cats.forEach(function (k) { out.push({ value: k.key, label: label(k.key), sub: sub(k.v, t.all), icon: dot(color(k.key)), indent: true }); });
+    });
+    else {
+      var cats = {}; (t.classes[0] ? t.classes[0].cats : []).forEach(function (k) { cats[k.key] = k.v; });
+      pickerKeys(cats).forEach(function (k) { out.push({ value: k, label: label(k), sub: sub(cats[k] || 0, t.all), icon: dot(color(k)) }); });
+    }
+    return { all: t.all, options: out, classes: t.classes };
+  }
+  function label(key) { return isClassKey(key) ? CLS[key.slice(2)].label : LABELS[key] || LABELS.other; }
+  function color(key) { return isClassKey(key) ? CLS[key.slice(2)].color : COLORS[key] || COLORS.other; }
+
   window.SamsamTaxonomy = Object.freeze({
     list: LIST,   // live: names / colours follow your settings
     labels: LABELS, colors: COLORS,   // live maps: your own categories are added to them
@@ -98,8 +155,8 @@
     isRemoved: function (key) { return !!SET.removed[key]; }, customKey: customKey, customs: customs, pickerKeys: pickerKeys,
     defaultOf: function (sym) { return BY_SYM[String(sym || '').toUpperCase()] || null; },
     categoryOf: categoryOf,
-    label: function (key) { return LABELS[key] || LABELS.other; },
-    color: function (key) { return COLORS[key] || COLORS.other; },
+    label: label, color: color,
+    CLASSES: CLASSES, groupOf: groupOf, isClassKey: isClassKey, matches: matches, tree: tree, pickerOptions: pickerOptions,
     // Same shape as the snippet in the request: ASSET_TAXONOMY + getCoinCategory(symbol) → label
     ASSET_TAXONOMY: Object.freeze(CATS.reduce(function (o, c) { o[c.label] = c.coins.slice(); return o; }, {})),
     getCoinCategory: function (sym) { return LABELS[categoryOf(sym)]; },

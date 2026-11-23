@@ -1241,6 +1241,7 @@
   .cat-picker .sdd-chev { grid-column: 4; grid-row: 1 / 3; width: 20px; height: 20px; }
   .cat-picker .sdd-btn:hover { border-color: var(--cat-c); }
   .cp-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+  .cp-cls { display: inline-block; width: 13px; height: 13px; border-radius: 4px; background: var(--c); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 30%, transparent); }
   .cp-globe { font-size: 14px; line-height: 1; }
   #summaryGrid { display: block; }
   @media (max-width: 420px) { .cat-picker .cp-val { font-size: 1.1rem; } .cat-picker .sdd-btn { padding: 12px 14px; } }

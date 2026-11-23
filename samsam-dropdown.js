@@ -7,7 +7,7 @@
 //
 // Usage:
 //   const dd = SamsamDropdown.create(hostEl, {
-//     options: [{ value, label, sub?, subTone? ('pos' | 'neg' → green / red), icon? (html) }], value, searchable, searchPlaceholder, maxHeight (desktop list, px),
+//     options: [{ value, label, sub?, subTone? ('pos' | 'neg' → green / red), icon? (html), head? (a group: a line above it), indent? (inside the group above) }], value, searchable, searchPlaceholder, maxHeight (desktop list, px),
 //     ariaLabel, title (sheet title on mobile), onChange(value) });
 //   dd.setOptions([...]); dd.setValue(v); dd.value; dd.open(); dd.close();
 (function () {
@@ -48,6 +48,8 @@
     '.sdd-opt .sdd-sub + .sdd-check{margin-inline-start:8px}',
     '.sdd-opt .sdd-sub.pos{color:#22c55e;font-weight:700}.sdd-opt .sdd-sub.neg{color:#ef4444;font-weight:700}',
     '.sdd-opt:not(:has(.sdd-sub)) .sdd-check{margin-inline-start:auto}',
+    '.sdd-opt.sdd-in{padding-inline-start:28px;font-weight:500}.sdd-panel.sheet .sdd-opt.sdd-in{padding-inline-start:30px}',
+    '.sdd-opt.sdd-head{margin-top:4px;border-top:1px solid rgba(148,163,184,.18);border-radius:0 0 8px 8px}.sdd-opt.sdd-head:first-child{margin-top:0;border-top:0}',
     '.sdd-empty{padding:16px;text-align:center;color:#94a3b8;font-size:.85rem}',
     // mobile bottom sheet
     '.sdd-backdrop{position:fixed;inset:0;z-index:100049;background:rgba(2,6,23,.6);display:none}',
@@ -109,7 +111,7 @@
       if (!state.filtered.length) { list.innerHTML = '<li class="sdd-empty">No matches</li>'; state.active = -1; return; }
       list.innerHTML = state.filtered.map(function (o, i) {
         var sel = String(o.value) === String(state.value);
-        return '<li class="sdd-opt" role="option" id="' + id + '-' + i + '" data-i="' + i + '" aria-selected="' + sel + '">' +
+        return '<li class="sdd-opt' + (o.indent ? ' sdd-in' : '') + (o.head ? ' sdd-head' : '') + '" role="option" id="' + id + '-' + i + '" data-i="' + i + '" aria-selected="' + sel + '">' +
           (o.icon ? '<span class="sdd-ico">' + o.icon + '</span>' : '') + '<span>' + esc(o.label) + '</span>' +
           (o.sub ? '<span class="sdd-sub' + (o.subTone === 'pos' || o.subTone === 'neg' ? ' ' + o.subTone : '') + '">' + esc(o.sub) + '</span>' : '') + CHECK + '</li>';
       }).join('');

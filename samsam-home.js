@@ -591,13 +591,11 @@ function animateCoinList() {
 let catPickerDD = null;
 function renderSummary() {
   const T = SamsamTaxonomy;
-  const catTotals = {};
-  portfolio.forEach(c => { const k = c.cat || 'other'; catTotals[k] = (catTotals[k] || 0) + c.qty * c.currentPrice; });
-  const allTotal = portfolio.reduce((s, c) => s + c.qty * c.currentPrice, 0);
-  const dot = color => `<span class="cp-dot" style="background:${color}"></span>`;
-  const keys = T.pickerKeys(catTotals);
-  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(allTotal), icon: '<span class="cp-globe">' + SamsamUI.ic('globe', { solo: true }) + '</span>' }]
-    .concat(keys.map(k => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(catTotals[k] || 0), icon: dot(T.color(k)) })))
+  // Crypto · Stocks · Metals, each with its categories under it (one class only → the plain list of categories)
+  const pk = T.pickerOptions(portfolio.map(c => ({ sym: c.sym, cat: c.cat, v: c.qty * c.currentPrice })), { sub: v => SamsamFmt.usd(v) });
+  const allTotal = pk.all;
+  const options = [{ value: 'all', label: pk.classes.length > 1 ? 'All' : 'All Coins', sub: SamsamFmt.usd(allTotal), icon: '<span class="cp-globe">' + SamsamUI.ic('globe', { solo: true }) + '</span>' }]
+    .concat(pk.options)
     .concat([{ value: '__manage', label: 'Manage Categories', sub: 'rename · colour · add', icon: '<span class="cp-globe">' + SamsamUI.ic('pencil', { solo: true }) + '</span>' }]);
   const grid = document.getElementById('summaryGrid');
   if (!catPickerDD) {
@@ -629,7 +627,7 @@ function getFilteredSorted() {
   if (filter === 'gainers' || filter === 'losers') {
     let rows = portfolio.filter(c => {
       if (search && !c.sym.toLowerCase().includes(search) && !(COIN_NAMES[c.sym]||'').toLowerCase().includes(search)) return false;
-      if (activeCatFilter && (c.cat || 'other') !== activeCatFilter) return false;
+      if (!SamsamTaxonomy.matches(activeCatFilter, c.sym, c.cat)) return false;
       return true;
     });
     // Sort by P&L%: gainers = highest profit first, losers = highest loss first
@@ -644,7 +642,7 @@ function getFilteredSorted() {
   let rows = portfolio.filter(c => {
     if (search && !c.sym.toLowerCase().includes(search) && !(COIN_NAMES[c.sym]||'').toLowerCase().includes(search)) return false;
     if (filter) { const perf=getPerf(c); const action=getAction(c.sym,perf,c); if(action!==filter) return false; }
-    if (activeCatFilter && (c.cat || 'other') !== activeCatFilter) return false;
+    if (!SamsamTaxonomy.matches(activeCatFilter, c.sym, c.cat)) return false;
     return true;
   });
   rows.sort((a,b) => {
@@ -670,7 +668,7 @@ function renderMovers() {
   const host = document.getElementById('moversCard'); if (!host) return;
   const C = SamsamCoins, T = SamsamTaxonomy;
   const total = portfolio.reduce((s, c) => s + c.qty * c.currentPrice, 0);
-  const rows = portfolio.filter(c => !activeCatFilter || (c.cat || 'other') === activeCatFilter)
+  const rows = portfolio.filter(c => SamsamTaxonomy.matches(activeCatFilter, c.sym, c.cat))
     .map(c => ({ sym: c.sym, name: c.name, logoUrl: c.logoUrl, value: c.qty * c.currentPrice, score: typeof c.change24h === 'number' ? c.change24h : NaN }));
   const m = C.pickMovers(rows, total);
   const head = { title: "Today's Movers", badge: '24h · ' + (activeCatFilter ? T.label(activeCatFilter) : 'All Coins'), hint: 'movers24h' };
@@ -1041,7 +1039,9 @@ function renderDashboard() {
 function renderAllocMiniCard(catTotals, totalVal) {
   const card = document.getElementById('allocMiniCard');
   if (!card) return;
-  const entries = Object.entries(catTotals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  // more than one class (crypto + shares / metals) → the card shows the classes; else the categories, as before
+  const tr = SamsamTaxonomy.tree(portfolio.map(c => ({ sym: c.sym, cat: c.cat, v: c.qty * c.currentPrice })));
+  const entries = (tr.classes.length > 1 ? tr.classes.map(c => ['c:' + c.key, c.v]) : Object.entries(catTotals)).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
   if (!entries.length || totalVal <= 0) return;
   card.style.display = 'flex';
 
@@ -1055,7 +1055,7 @@ function renderAllocMiniCard(catTotals, totalVal) {
     const ix1=cx+rInner*Math.cos(startAngle),iy1=cy+rInner*Math.sin(startAngle);
     const ix2=cx+rInner*Math.cos(endAngle),iy2=cy+rInner*Math.sin(endAngle);
     const large=angle>Math.PI?1:0;
-    paths+=`<path d="M${ix1},${iy1} L${x1},${y1} A${rOuter},${rOuter} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${rInner},${rInner} 0 ${large},0 ${ix1},${iy1} Z" fill="${CAT_COLORS[cat]||'#6b7280'}" opacity="0.92"/>`;
+    paths+=`<path d="M${ix1},${iy1} L${x1},${y1} A${rOuter},${rOuter} 0 ${large},1 ${x2},${y2} L${ix2},${iy2} A${rInner},${rInner} 0 ${large},0 ${ix1},${iy1} Z" fill="${SamsamTaxonomy.color(cat)}" opacity="0.92"/>`;
     startAngle=endAngle;
   });
   document.getElementById('allocMiniSvg').innerHTML=paths;
@@ -1063,8 +1063,8 @@ function renderAllocMiniCard(catTotals, totalVal) {
   // All categories
   document.getElementById('allocMiniCats').innerHTML=entries.map(([cat,val])=>{
     const pct=(val/totalVal*100).toFixed(1);
-    const color=CAT_COLORS[cat]||'#6b7280';
-    const label=CAT_LABELS[cat]||cat;
+    const color=SamsamTaxonomy.color(cat);
+    const label=SamsamTaxonomy.label(cat);
     return `<div class="alloc-mini-cat"><span class="alloc-mini-dot" style="background:${color}"></span>${label} <span style="color:var(--fg2);font-weight:400">${pct}%</span></div>`;
   }).join('');
 }
@@ -1678,9 +1678,9 @@ function renderHoldingsAssetList() {
   renderHovDonut();
   renderHovTargets();
   const allVal = portfolio.reduce((s, c) => s + (c.qty * c.currentPrice || 0), 0);
-  const maxVal = hovMode === 'alloc' ? portfolio.filter(c => !hovCat || (c.cat || 'other') === hovCat).reduce((m, c) => Math.max(m, c.qty * c.currentPrice || 0), 0) : 0;
+  const maxVal = hovMode === 'alloc' ? portfolio.filter(c => SamsamTaxonomy.matches(hovCat, c.sym, c.cat)).reduce((m, c) => Math.max(m, c.qty * c.currentPrice || 0), 0) : 0;
   const val = c => hovSort.key === 'asset' ? c.sym : hovSort.key === 'price' ? (c.currentPrice || 0) : c.holdingVal;
-  const sorted = portfolio.filter(c => !hovCat || (c.cat || 'other') === hovCat)
+  const sorted = portfolio.filter(c => SamsamTaxonomy.matches(hovCat, c.sym, c.cat))
     .filter(c => !hovQuery || c.sym.includes(hovQuery) || String(COIN_NAMES[c.sym] || c.name || '').toUpperCase().includes(hovQuery))
     .map(c => ({ ...c, holdingVal: c.qty * c.currentPrice }))
     .sort((a, b) => { const x = val(a), y = val(b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * hovSort.dir || b.holdingVal - a.holdingVal; });
