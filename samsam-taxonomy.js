@@ -107,11 +107,22 @@
     if (cat === 'stocks' && !k) return 'stock';
     return 'crypto';
   }
+  // Inside Metals, each metal on its own (gold, silver — platinum / copper ready for later): grams and its tokens together
+  var METAL_KINDS = [
+    { key: 'gold',     label: 'Gold',     color: '#eab308', syms: ['XAU', 'PAXG', 'XAUT'] },
+    { key: 'silver',   label: 'Silver',   color: '#cbd5e1', syms: ['XAG', 'KAG'] },
+    { key: 'platinum', label: 'Platinum', color: '#a5b4fc', syms: ['XPT'] },
+    { key: 'copper',   label: 'Copper',   color: '#ea580c', syms: ['XCU'] },
+  ];
+  var MK = {}, MK_SYM = {}; METAL_KINDS.forEach(function (m) { MK[m.key] = m; m.syms.forEach(function (s) { MK_SYM[s] = m.key; }); });
+  function metalOf(sym) { return MK_SYM[String(sym || '').toUpperCase()] || null; }
+  function isMetalKey(f) { return /^m:[a-z]+$/.test(String(f || '')) && !!MK[String(f).slice(2)]; }
   function isClassKey(f) { return /^c:(crypto|stock|metal)$/.test(String(f || '')); }
   // does a holding pass the filter? '' → all · 'c:stock' → its class · else → its category
   function matches(filter, sym, cat) {
     if (!filter) return true;
     if (isClassKey(filter)) return groupOf(sym, cat) === filter.slice(2);
+    if (isMetalKey(filter)) return metalOf(sym) === filter.slice(2);
     return (cat || 'other') === filter;
   }
   // rows: [{ sym, cat, v }] → the classes that hold something, each with its categories (in the usual order)
@@ -119,12 +130,13 @@
     var by = {}, all = 0;
     (rows || []).forEach(function (r) {
       var v = +r.v || 0, cat = r.cat || 'other', g = groupOf(r.sym, cat);
+      if (g === 'metal' && metalOf(r.sym)) cat = 'm:' + metalOf(r.sym);   // Metals → Gold · Silver …
       var n = by[g] || (by[g] = { key: g, v: 0, cats: {} });
       n.v += v; n.cats[cat] = (n.cats[cat] || 0) + v; all += v;
     });
     return { all: all, classes: CLASSES.filter(function (c) { return by[c.key]; }).map(function (c) {
       var n = by[c.key];
-      return { key: c.key, label: c.label, color: c.color, v: n.v, cats: pickerKeys(n.cats).filter(function (k) { return n.cats[k] != null; }).map(function (k) { return { key: k, v: n.cats[k] }; }) };
+      return { key: c.key, label: c.label, color: c.color, v: n.v, cats: METAL_KINDS.map(function (m) { return 'm:' + m.key; }).concat(pickerKeys(n.cats)).filter(function (k) { return n.cats[k] != null; }).map(function (k) { return { key: k, v: n.cats[k] }; }) };
     }) };
   }
   // The category dropdown's options. One class only (most portfolios) → the same flat list as before;
@@ -139,12 +151,13 @@
     });
     else {
       var cats = {}; (t.classes[0] ? t.classes[0].cats : []).forEach(function (k) { cats[k.key] = k.v; });
-      pickerKeys(cats).forEach(function (k) { out.push({ value: k, label: label(k), sub: sub(cats[k] || 0, t.all), icon: dot(color(k)) }); });
+      var only = t.classes[0];
+      (only && only.key === 'metal' ? only.cats.map(function (k) { return k.key; }) : pickerKeys(cats)).forEach(function (k) { out.push({ value: k, label: label(k), sub: sub(cats[k] || 0, t.all), icon: dot(color(k)) }); });
     }
     return { all: t.all, options: out, classes: t.classes };
   }
-  function label(key) { return isClassKey(key) ? CLS[key.slice(2)].label : LABELS[key] || LABELS.other; }
-  function color(key) { return isClassKey(key) ? CLS[key.slice(2)].color : COLORS[key] || COLORS.other; }
+  function label(key) { return isClassKey(key) ? CLS[key.slice(2)].label : isMetalKey(key) ? MK[key.slice(2)].label : LABELS[key] || LABELS.other; }
+  function color(key) { return isClassKey(key) ? CLS[key.slice(2)].color : isMetalKey(key) ? MK[key.slice(2)].color : COLORS[key] || COLORS.other; }
 
   window.SamsamTaxonomy = Object.freeze({
     list: LIST,   // live: names / colours follow your settings
@@ -156,7 +169,7 @@
     defaultOf: function (sym) { return BY_SYM[String(sym || '').toUpperCase()] || null; },
     categoryOf: categoryOf,
     label: label, color: color,
-    CLASSES: CLASSES, groupOf: groupOf, isClassKey: isClassKey, matches: matches, tree: tree, pickerOptions: pickerOptions,
+    CLASSES: CLASSES, groupOf: groupOf, isClassKey: isClassKey, METAL_KINDS: METAL_KINDS, metalOf: metalOf, isMetalKey: isMetalKey, matches: matches, tree: tree, pickerOptions: pickerOptions,
     // Same shape as the snippet in the request: ASSET_TAXONOMY + getCoinCategory(symbol) → label
     ASSET_TAXONOMY: Object.freeze(CATS.reduce(function (o, c) { o[c.label] = c.coins.slice(); return o; }, {})),
     getCoinCategory: function (sym) { return LABELS[categoryOf(sym)]; },

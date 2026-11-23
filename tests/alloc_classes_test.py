@@ -14,26 +14,31 @@ with sync_playwright() as p:
     pg.goto(SITE + '/index.html'); pg.click('#samsamSignInBtn'); pg.wait_for_function("Samsam.isReady() && Samsam.getState().portfolio.some(c=>c.qty>0)"); pg.wait_for_timeout(1000)
     pg.evaluate("Samsam.addCoin({ sym: 'NVDAB', name: 'NVIDIA', cgId: 'nvidia-bstocks', cat: 'stocks', cls: 'stock' }, { qty: 10, price: 1 })")
     pg.evaluate("Samsam.addCoin({ sym: 'PAXG', name: 'PAX Gold', cgId: 'pax-gold', cat: 'metals' }, { qty: 5, price: 1 })")
-    pg.wait_for_function("['NVDAB','PAXG'].every(s => Samsam.getState().portfolio.some(c => c.sym === s && c.currentPrice > 0))", timeout=15000)
+    pg.evaluate("Samsam.addCoin({ sym: 'KAG', name: 'Kinesis Silver', cgId: 'kinesis-silver', cat: 'metals' }, { qty: 3, price: 1 })")
+    pg.wait_for_function("['NVDAB','PAXG','KAG'].every(s => Samsam.getState().portfolio.some(c => c.sym === s && c.currentPrice > 0))", timeout=15000)
     pg.evaluate("renderAll()"); pg.wait_for_timeout(800)
     T = pg.evaluate("""(() => { const T = SamsamTaxonomy, pf = Samsam.getState().portfolio, rows = pf.map(c => ({ sym: c.sym, cat: c.cat, v: c.qty * c.currentPrice }));
       const t = T.tree(rows); return { cls: t.classes.map(c => [c.key, +c.v.toFixed(2), c.cats.map(k => k.key)]), all: t.all,
         nv: pf.find(c => c.sym === 'NVDAB'), px: pf.find(c => c.sym === 'PAXG'), g: [T.groupOf('NVDAB','stocks'), T.groupOf('PAXG','metals'), T.groupOf('ETH','layer1')] }; })()""")
     nvV, pxV = T['nv']['qty'] * T['nv']['currentPrice'], T['px']['qty'] * T['px']['currentPrice']
     keys = [c[0] for c in T['cls']]
-    check('the tree: Crypto · Stocks · Metals, the share under Stocks and the gold token under Metals', keys == ['crypto', 'stock', 'metal'] and T['g'] == ['stock', 'metal', 'crypto'] and T['cls'][1][2] == ['stocks'] and 'metals' in T['cls'][2][2] and 'metals' not in T['cls'][0][2], T)
+    check('the tree: Crypto · Stocks · Metals, the share under Stocks and the gold token under Metals', keys == ['crypto', 'stock', 'metal'] and T['g'] == ['stock', 'metal', 'crypto'] and T['cls'][1][2] == ['stocks'] and T['cls'][2][2] == ['m:gold', 'm:silver'] and 'metals' not in T['cls'][0][2], T)
+    check('…Metals split by metal: the gold token under Gold, the silver token under Silver', pg.evaluate("[SamsamTaxonomy.metalOf('PAXG'), SamsamTaxonomy.metalOf('KAG'), SamsamTaxonomy.metalOf('XAU'), SamsamTaxonomy.metalOf('XAG'), SamsamTaxonomy.label('m:gold'), SamsamTaxonomy.label('m:silver')]") == ['gold', 'silver', 'gold', 'silver', 'Gold', 'Silver'])
     check('…the classes add up to the whole', abs(sum(c[1] for c in T['cls']) - T['all']) < 0.05)
     # ── Performance list: the picker
     pg.evaluate("SamsamUI.ptabGo('performance')"); pg.wait_for_timeout(800)
     opts = pg.evaluate("catPickerDD.options || null") or pg.evaluate("(() => { catPickerDD.open(); const o = [...document.querySelectorAll('.sdd-panel.show .sdd-opt')].map(li => [li.textContent.trim(), li.className]); catPickerDD.close(); return o; })()")
     heads = [o[0] for o in opts if 'sdd-head' in o[1]]; ins = [o[0] for o in opts if 'sdd-in' in o[1]]
-    check('Performance picker: All, then each class (a line above it) with its categories indented', opts[0][0].startswith('All') and [h.split('$')[0] for h in heads] == ['Crypto', 'Stocks', 'Metals'] and any(i.startswith('US Stocks (bStocks)') for i in ins) and any(i.startswith('Layer 1') for i in ins), opts)
+    check('Performance picker: All, then each class (a line above it) with its categories indented', opts[0][0].startswith('All') and [h.split('$')[0] for h in heads] == ['Crypto', 'Stocks', 'Metals'] and any(i.startswith('US Stocks (bStocks)') for i in ins) and any(i.startswith('Gold') for i in ins) and any(i.startswith('Silver') for i in ins) and not any(i.startswith('Precious Metals') for i in ins) and any(i.startswith('Layer 1') for i in ins), opts)
     pg.evaluate("setCatFilter('c:stock', true)"); pg.wait_for_timeout(400)
     rows = pg.evaluate("getFilteredSorted().map(c => c.sym)")
     check('Stocks → the list shows only the share', rows == ['NVDAB'], rows)
     pg.evaluate("setCatFilter('c:metal', true)"); pg.wait_for_timeout(300)
     rows = pg.evaluate("getFilteredSorted().map(c => c.sym)")
-    check('Metals → the gold token (and any gold / silver you hold)', 'PAXG' in rows and 'NVDAB' not in rows and all(r in ('PAXG', 'XAU', 'XAG', 'XAUT', 'KAG') for r in rows), rows)
+    check('Metals → the gold token (and any gold / silver you hold)', 'PAXG' in rows and 'KAG' in rows and 'NVDAB' not in rows and all(r in ('PAXG', 'XAU', 'XAG', 'XAUT', 'KAG') for r in rows), rows)
+    pg.evaluate("setCatFilter('m:silver', true)"); pg.wait_for_timeout(300)
+    rows = pg.evaluate("getFilteredSorted().map(c => c.sym)")
+    check('Silver → the silver token (and any silver grams), no gold', 'KAG' in rows and 'PAXG' not in rows and all(r in ('KAG', 'XAG') for r in rows), rows)
     pg.evaluate("setCatFilter('c:crypto', true)"); pg.wait_for_timeout(300)
     rows = pg.evaluate("getFilteredSorted().map(c => c.sym)")
     check('Crypto → everything else (BTC in, the share and the gold token out)', 'BTC' in rows and 'NVDAB' not in rows and 'PAXG' not in rows, rows)
@@ -51,6 +56,11 @@ with sync_playwright() as p:
     check('tap Stocks → the list is the share alone; the middle shows Stocks and its share', len(lst) == 1 and 'NVDAB' in lst[0] and ctr[1] == 'Stocks' and abs(float(ctr[0].rstrip('%')) - nvV / T['all'] * 100) < 0.1, [lst, ctr])
     check('…and the Allocation picker says Stocks too', 'Stocks' in pg.inner_text('#hovCatHost'), pg.inner_text('#hovCatHost'))
     pg.click('#hovClsBar [data-cls="c:stock"]'); pg.wait_for_timeout(300)
+    ring = pg.evaluate("[...document.querySelectorAll('#hovDonut .donut-slice:not(.donut-cls)')].map(p => p.dataset.cat)")
+    check('the outer ring shows Gold and Silver (not one Precious Metals slice)', 'm:gold' in ring and 'm:silver' in ring and 'metals' not in ring, ring)
+    pg.evaluate("setHovCat('m:gold')"); pg.wait_for_timeout(400)
+    check('pick Gold → the middle says Gold and its share', pg.inner_text('#hovDonutLbl') == 'Gold' and pg.inner_text('#hovDonutVal').endswith('%'), [pg.inner_text('#hovDonutLbl'), pg.inner_text('#hovDonutVal')])
+    pg.evaluate("setHovCat('')"); pg.wait_for_timeout(200)
     check('tap it again → back to all', pg.inner_text('#hovDonutLbl') == 'Total')
     pg.screenshot(path=str(SH / 'alloc_classes.png'))
     # ── Overview's mini card: the classes
