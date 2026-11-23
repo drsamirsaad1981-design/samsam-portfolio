@@ -18,7 +18,10 @@ with sync_playwright() as p:
     pg.wait_for_function("Samsam.isReady() && Samsam.getState().portfolio.some(c=>c.qty>0)")
     pg.evaluate("Samsam.addTx('BTC','buy',0.01,80000,'auto copy test')"); pg.wait_for_timeout(600)
     pg.wait_for_function("Samsam.autoCopies().length === 1", timeout=20000)
-    c = copies(); m = info().get('copies') or []
+    for _ in range(40):   # the copy's parts reach the database a moment after its line in meta: wait for both
+        c = copies(); m = info().get('copies') or []
+        if c and m: break
+        pg.wait_for_timeout(250)
     check(f'a copy is saved by itself ({len(c)} part, {len(json.dumps(c))} bytes)', len(c) == 1 and len(m) == 1 and m[0]['coins'] > 0 and m[0]['txs'] > 0, [list(c), m])
     check('it is compressed, and nothing readable sits in the index', m[0].get('gz') is True and 'auto copy test' not in json.dumps(c) and 'd' not in m[0], m)
     st = pg.evaluate("(() => { const s = Samsam.getState(); return [JSON.stringify(s.perfSnaps||[]).includes('copy'), JSON.stringify(s.holdingsSnaps||[]).includes('0copy')] })()")
