@@ -30,7 +30,7 @@ with sync_playwright() as p:
         if name == 'mobile':
             r = info['rects']; check('mobile: 2x2 grid (Total + Profit, then the parts)', r[0][1] == r[1][1] and r[2][1] == r[3][1] and r[2][1] > r[0][1] and r[0][0] == r[2][0], r)
         else:
-            r = info['rects']; check('desktop: Total + Profit on one row, its parts (BTC · Altcoins) on the next', r[0][1] == r[1][1] and r[2][1] == r[3][1] and r[2][1] > r[0][1], r)
+            r = info['rects']; check('desktop: one row — Total, Profit, then its parts (BTC · Altcoins)', len({y for _, y in r}) == 1, r)
         check(f'{name}: BTC price card + old label removed', not info['oldCards'])
         check(f'{name}: P&L format +$X (+X.XX%)', info['pnl'][0] in '+-' and info['pnl'][1] == '$' and info['pnlSub'].startswith('(') and '%)' in info['pnlSub'], (info['pnl'], info['pnlSub']))
         check(f'{name}: ticker shows live, price, 24h change — no High / Low', all(k in info['tickerText'] for k in ('Live', 'BTC / USD', '$100,000', '+2.45%')) and 'High' not in info['tickerText'] and 'Low ' not in info['tickerText'], info['tickerText'][:200])

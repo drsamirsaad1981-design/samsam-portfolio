@@ -10,7 +10,7 @@ BOX = """(sel) => { const e = document.querySelector(sel), cs = getComputedStyle
 with sync_playwright() as p:
     br = p.chromium.launch()
     for w in (1366, 1920):
-        ctx = br.new_context(viewport={'width': w, 'height': 900}); S.setup(ctx); pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+        ctx = br.new_context(viewport={'width': w, 'height': 900}); S.setup(ctx); ctx.add_init_script("['cp-fold-metals', 'cp-fold-cash', 'cp-fold-zakat'].forEach(k => localStorage.setItem(k, '0'))"); pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(1000)
         pg.evaluate("applyView('table')"); pg.wait_for_timeout(400); t = pg.evaluate(BOX, '#portfolioTableWrapper')
         check(f'{w}px table: contained box ≤ screen height, scrolls inside', t['scrolls'] and t['h'] <= t['vh'] and t['oy'] == 'auto', t)

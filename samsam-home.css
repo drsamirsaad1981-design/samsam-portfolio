@@ -1388,7 +1388,7 @@
 @media (min-width: 900px) {
   .pf-parts { display: flex; gap: 14px; margin-top: 14px; }
   .pf-parts .stat-card { flex: 1 1 0; }
-  .pf-parts[data-n="3"] .stat-value { font-size: inherit; } .pf-parts[data-n="3"] .stat-label { font-size: inherit; }
+  .pf-parts .stat-value, .pf-parts[data-n="3"] .stat-value { font-size: 1.45rem; } .pf-parts .stat-label, .pf-parts[data-n="3"] .stat-label { font-size: 0.7rem; }   /* the same as Total / Profit */
   .header-stats { margin-top: 0; }
 }
 /* folded detail cards: one line (name + value), tap to open */
@@ -1439,3 +1439,11 @@
 .nw-li .nw-u { grid-column: 2 / -1; font-size: .7rem; opacity: .85; }
 .nw-foot { margin-top: 8px; font-size: .72rem; color: var(--fg2); text-align: center; font-variant-numeric: tabular-nums; }
 .head-meta .hm-item[hidden] { display: none !important; }
+@media (min-width: 900px) {
+  .pf-row { display: flex; gap: 14px; align-items: stretch; }
+  .pf-row > .header-stats { flex: 2 1 0; min-width: 0; }
+  .pf-row > .pf-parts { flex: 2 1 0; margin-top: 0; min-width: 0; }
+  .pf-row > .pf-parts[data-n="3"] { flex: 3 1 0; } .pf-row > .pf-parts[data-n="4"] { flex: 4 1 0; }
+  .nw-card { padding: 12px 16px 10px; }
+  .nw-legend { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
