@@ -1406,3 +1406,7 @@
 .hm-pulse .pc { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: rgba(148,163,184,.10); font-size: .74rem; }
 .hm-pulse .pc b { color: var(--fg); font-variant-numeric: tabular-nums; }
 .hm-pulse .pc i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.pf-parts .stat-value, .pf-parts .stat-sub { white-space: nowrap; overflow: hidden; word-break: normal; max-width: 100%; }
+.pf-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pf-parts[data-n="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pf-parts .stat-card { min-width: 0; padding-inline: 6px; }

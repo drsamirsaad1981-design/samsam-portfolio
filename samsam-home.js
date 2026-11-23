@@ -501,6 +501,8 @@ function renderHeader() {
     if (pm) { pm.hidden = !(metalTotal > 0); document.getElementById('partMetalsUsd').textContent = fmtUsd(metalTotal); document.getElementById('partMetalsSub').textContent = pctOf(metalTotal) + (AR ? ' من المحفظة' : ' of the portfolio'); }
     if (ps) { ps.hidden = !(stockTotal > 0); document.getElementById('partStocksUsd').textContent = fmtUsd(stockTotal); document.getElementById('partStocksSub').textContent = pctOf(stockTotal) + (AR ? ' من المحفظة' : ' of the portfolio'); }
     const pp = document.getElementById('pfParts'); if (pp) pp.dataset.n = String(2 + (metalTotal > 0) + (stockTotal > 0));
+    // a long number never wraps: its font shrinks until it fits its card
+    if (pp) requestAnimationFrame(() => pp.querySelectorAll('.stat-value, .stat-sub').forEach(el => { el.style.fontSize = ''; let f = parseFloat(getComputedStyle(el).fontSize) || 14; while (el.scrollWidth > el.clientWidth + 1 && f > 9) { f -= 0.5; el.style.fontSize = f + 'px'; } }));
   } catch (e) { console.warn('[parts]', e); }
   try { if (window.SamsamCash) SamsamCash.render(total); } catch (e) { console.warn('[cash]', e); }   // 🏦 Cash & certificates (never part of the totals above)
   renderNetWorth();
