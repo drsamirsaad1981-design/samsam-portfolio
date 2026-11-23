@@ -15,7 +15,7 @@ with sync_playwright() as p:
         pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(1000)
         # Overview: what was already here
         check(f'{vn}: Overview — Signal Thresholds in the signals menu, Manage Categories in the category menu, the Baseline pencil',
-              pg.evaluate("typeof openSignalEdit === 'function' && !!document.querySelector('.hm-baseline .val-edit')") and 'Manage Categories' in pg.evaluate("(catPickerDD.button.click(), document.body.innerText)"))
+              pg.evaluate("typeof openSignalEdit === 'function' && !!document.querySelector('#cpFoot .cpf-bl .val-edit')") and 'Manage Categories' in pg.evaluate("(catPickerDD.button.click(), document.body.innerText)"))
         pg.keyboard.press('Escape')
         # Performance: the card
         pg.evaluate("cpShell.go('performance')"); pg.wait_for_timeout(2500)

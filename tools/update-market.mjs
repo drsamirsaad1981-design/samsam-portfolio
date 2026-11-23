@@ -115,7 +115,9 @@ async function main() {
   } else log('global: no answer, kept the last one');
 
   // Fear & Greed: CoinMarketCap's (what CoinMarketCap and Binance show); alternative.me's only when it doesn't answer
-  const cf = await cmc('/v3/fear-and-greed/latest'), ch = await cmc('/v3/fear-and-greed/historical?start=1&limit=10');
+  // (the history only when the latest answered: one request less when CoinMarketCap is busy — it says 429 often)
+  const cf = await cmc('/v3/fear-and-greed/latest'), ch = cf && cf.value != null ? await cmc('/v3/fear-and-greed/historical?start=1&limit=10') : null;
+  const oldF = old.fng, oldAt = Date.parse((oldF && oldF.at) || (old.parts && old.parts.fng) || 0) || 0;
   if (cf && cf.value != null) {
     // its time can be an ISO date or Unix seconds (as a number or a string) — read both
     const tOf = x => { const t = x && x.timestamp; const n = +t; return isFinite(n) && n > 0 ? (n < 1e11 ? n * 1000 : n) : Date.parse(t); };
@@ -124,7 +126,10 @@ async function main() {
     const back = n => { const r = days.find(x => dayOf(x) === today0 - n) || days.find(x => dayOf(x) === today0 - n - 1); return r ? +r.value : null; };
     if (!days.length) log('fng history: no rows', JSON.stringify(ch).slice(0, 200));
     const v = Math.round(+cf.value);
-    snap.fng = { value: v, label: fngLabel(v), prev: back(1), week: back(7), src: 'cmc' }; snap.parts.fng = now; log('fng (CoinMarketCap)', v);
+    snap.fng = { value: v, label: fngLabel(v), prev: back(1), week: back(7), src: 'cmc', at: now }; snap.parts.fng = now; log('fng (CoinMarketCap)', v);
+  } else if (oldF && oldF.src === 'cmc' && Date.now() - oldAt < 6 * 3600e3) {
+    // CoinMarketCap busy: keep ITS last number (under 6 h old — the index moves slowly) instead of jumping to another source
+    snap.fng = { ...oldF, at: oldF.at || new Date(oldAt).toISOString() }; log('fng: CoinMarketCap busy, kept its last one', oldF.value);
   } else {
     const f = await get(FNG.replace('limit=2', 'limit=8'), 2);
     const a = (f && f.data) || [];

@@ -10,7 +10,7 @@ with sync_playwright() as p:
     pg = ctx.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
     pg.goto(S.SITE + '/index.html'); pg.click('#samsamSignInBtn'); S.wait_ready(pg); pg.wait_for_timeout(1500)
     exp = pg.evaluate("(() => { const d = Samsam.getState().coins.find(c => c.sym === 'BTC'); return d.opening.avg; })()")
-    pg.click('.hm-baseline .val-edit'); pg.wait_for_timeout(400)
+    pg.click('#cpFoot .cpf-bl .val-edit'); pg.wait_for_timeout(400)
     t = pg.inner_text('#blMine') if pg.is_visible('#blMine') else ''
     check('editor offers my own BTC price for Oct 15 (opening position)', f'${exp:,.2f}' in t, (t, exp))
     pg.click('#blMine'); pg.wait_for_timeout(200)
@@ -21,7 +21,7 @@ with sync_playwright() as p:
     check('saved: Oct 15 at my price, source = manual', b['date'] == '2026-10-15' and abs(b['btcPrice'] - exp) < 0.005 and b['source'] == 'manual', b)
     v = pg.evaluate("getPerf(portfolio.find(c => c.sym === 'BTC'))")
     check('BTC still 0 vs BTC', abs(v) < 1e-9, v)
-    pg.click('.hm-baseline .cp-hint'); pg.wait_for_timeout(300)
+    pg.click('#cpFoot .cpf-bl .cp-hint'); pg.wait_for_timeout(300)
     check('baseline ⓘ explains daily price vs the price you paid', 'price you actually paid' in pg.inner_text('.cph') and 'entered by hand' in pg.inner_text('.cph'))
     pg.keyboard.press('Escape')
     pg.evaluate("Samsam.setBaseline({ date: '2026-10-15', btcPrice: 81162, source: 'coingecko' })"); pg.wait_for_timeout(500)

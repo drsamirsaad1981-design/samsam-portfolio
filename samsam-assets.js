@@ -47,7 +47,25 @@
   }
   function riyadh(d) { return d.toLocaleString(ar() ? 'ar-SA-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Riyadh', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }); }
 
-  var st = { view: 'crypto', stocks: null, stT: 0, metals: null, meT: 0, q: '', sort: 'mcap', dir: -1, err: '' };
+  var st = { view: 'crypto', stocks: null, stT: 0, metals: null, meT: 0, q: '', sort: 'mcap', dir: -1, err: '', tab: (function () { try { var t = localStorage.getItem('samsam_bs_tab'); return t === 'watch' || t === 'mine' ? t : 'all'; } catch (_) { return 'all'; } })() };
+  // ⭐ the Watchlist is the one in your settings (the Crypto page shows its coins, this page its shares); a share's id is
+  // CoinGecko's, or "bn.<ticker>" for one only the exchange prices
+  var S = function () { return window.Samsam && Samsam.isReady && Samsam.isReady() ? Samsam : null; };
+  var wid = function (x) { return String(x.id || '').toLowerCase().replace(':', '.'); };
+  function watched() { var s = S(); var set = {}; (s && s.getWatchlist ? s.getWatchlist() : []).forEach(function (w) { set[w.id] = 1; }); return set; }
+  // your shares, by symbol: { qty, value, cost, pnl }
+  function mine() {
+    var s = S(), out = {}; if (!s) return out;
+    (s.getState().portfolio || []).forEach(function (c) { if (c.qty > 1e-12 && s.core.assetClass(c) === 'stock') out[c.sym] = { qty: c.qty, value: c.qty * c.currentPrice, cost: c.qty * c.basePrice, cgId: c.cgId }; });
+    return out;
+  }
+  function toggleStar(id) {
+    var s = S(); if (!s) { if (window.CPDialog) CPDialog.alert(T('Sign in to keep a Watchlist — it syncs to all your devices.', 'سجّل الدخول لتحفظ قائمة المتابعة — تُزامَن على كل أجهزتك.')); return; }
+    var x = (st.stocks || []).filter(function (r) { return wid(r) === id; })[0]; if (!x) return;
+    var list = s.getWatchlist().slice(), i = list.findIndex(function (w) { return w.id === id; });
+    if (i >= 0) list.splice(i, 1); else list.unshift({ id: id, sym: x.sym, name: String(x.name || '').replace(/\s*\(bStocks Tokenized (Stock|ETF)\)\s*$/i, ''), img: x.img && /^https:\/\//.test(x.img) ? x.img : '' });
+    s.saveWatchlist(list).then(draw, function (e) { if (window.CPDialog) CPDialog.alert(String(e && e.message || e)); });
+  }
 
   // ── 📈 bStocks ──
   function stocksHtml() {
@@ -71,17 +89,26 @@
         '<div class="as-li as-small">' + T('The tokens trade 24/7; the real shares move only while New York is open (9:30–16:00 New York, holidays not shown).', 'التوكنات تُتداول على مدار الساعة؛ أما الأسهم الحقيقية فتتحرك فقط أثناء فتح سوق نيويورك (9:30–16:00 بتوقيت نيويورك، دون احتساب العطل).') + '</div></div>' +
       '</div>' +
       '<div class="as-movers"><div><div class="as-k">' + T('Best today', 'الأفضل اليوم') + '</div>' + best.map(chip).join('') + '</div><div><div class="as-k">' + T('Worst today', 'الأسوأ اليوم') + '</div>' + worst.map(chip).join('') + '</div></div>';
-    // the list
-    var q = st.q.trim().toLowerCase(), rows = list.filter(function (x) { return !q || x.sym.toLowerCase().indexOf(q) >= 0 || String(x.name || '').toLowerCase().indexOf(q) >= 0; });
+    // the list: All · ⭐ Watchlist · My shares (like the Crypto page)
+    var W = watched(), MY = mine(), nW = list.filter(function (x) { return W[wid(x)]; }).length, nM = list.filter(function (x) { return MY[x.sym]; }).length;
+    var tabs = '<div class="as-tabs" role="tablist">' + [['all', T('All', 'الكل') + ' <small>' + iso(list.length) + '</small>'], ['watch', '⭐ ' + T('Watchlist', 'المتابعة') + ' <small>' + iso(nW) + '</small>'], ['mine', T('My shares', 'أسهمي') + ' <small>' + iso(nM) + '</small>']]
+      .map(function (t) { return '<button type="button" role="tab" data-tab="' + t[0] + '" aria-selected="' + (st.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div>';
+    var q = st.q.trim().toLowerCase(), rows = list.filter(function (x) { return (st.tab === 'all' || (st.tab === 'watch' ? W[wid(x)] : MY[x.sym])) && (!q || x.sym.toLowerCase().indexOf(q) >= 0 || String(x.name || '').toLowerCase().indexOf(q) >= 0); });
+    var myTot = 0, myCost = 0; Object.keys(MY).forEach(function (k) { myTot += MY[k].value; myCost += MY[k].cost; });
+    var mySum = st.tab === 'mine' && nM ? '<div class="as-mysum">' + T('Your shares', 'أسهمك') + ' <b>' + iso(usd(myTot, 2)) + '</b> · ' + T('Profit', 'الربح') + ' <b class="' + (myTot - myCost >= 0 ? 'up' : 'dn') + '">' + iso((myTot - myCost >= 0 ? '+' : '−') + usd(Math.abs(myTot - myCost), 2)) + (myCost > 0 ? ' (' + ((myTot - myCost) / myCost * 100).toFixed(1) + '%)' : '') + '</b></div>' : '';
+    var starIc = window.SamsamUI && SamsamUI.ic ? SamsamUI.ic('star', { solo: true, size: 16 }) : '★';
     var k = st.sort; rows.sort(function (a, b) { var va = a[k], vb = b[k]; if (va == null) return 1; if (vb == null) return -1; return k === 'name' ? st.dir * String(va).localeCompare(String(vb)) : st.dir * (va - vb); });
     var head = function (key, lbl, cls) { return '<button type="button" class="' + (cls || '') + (st.sort === key ? ' on' : '') + '" data-sort="' + key + '">' + lbl + (st.sort === key ? (st.dir < 0 ? ' ▾' : ' ▴') : '') + '</button>'; };
-    h += '<div class="as-list"><div class="mk-tools as-tools"><div class="ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo data-ic-size="16"></span><input type="search" id="asQ" placeholder="' + E(T('Search stock…', 'ابحث عن سهم…')) + '" value="' + E(st.q) + '" autocomplete="off" aria-label="Search"></div></div>' +
+    h += '<div class="as-list">' + tabs + mySum + '<div class="mk-tools as-tools"><div class="ss-search"><span class="ss-search-ic" data-ic="search" data-ic-solo data-ic-size="16"></span><input type="search" id="asQ" placeholder="' + E(T('Search stock…', 'ابحث عن سهم…')) + '" value="' + E(st.q) + '" autocomplete="off" aria-label="Search"></div></div>' +
       '<div class="as-head">' + head('name', T('Stock', 'السهم'), 'l') + head('price', T('Price', 'السعر')) + head('ch24', '24h') + head('ch7', '7d', 'w') + head('mcap', T('Market cap', 'القيمة السوقية'), 'w') + '</div>' +
       (rows.length ? rows.map(function (x) {
-        return '<a class="as-row" href="' + E(x.url && /^https:\/\//.test(x.url) ? x.url : 'https://www.coingecko.com/en/coins/' + encodeURIComponent(x.id)) + '" target="_blank" rel="noopener"><span class="as-n">' + (x.img ? '<img src="' + E(x.img) + '" alt="" loading="lazy">' : '<i class="as-ph"></i>') +
-          '<span><b>' + E(x.sym) + '</b><small>' + E(String(x.name || '').replace(/\s*bStock$/i, '')) + '</small></span></span>' +
-          '<span class="as-p">' + iso(usd(x.price)) + '</span><span>' + pct(x.ch24) + '</span><span class="w">' + pct(x.ch7) + '</span><span class="w as-mc">' + iso(M() ? M().fmtBig(x.mcap) : '') + '</span></a>';
-      }).join('') : '<p class="as-note">' + T('No stock matches.', 'لا يوجد سهم مطابق.') + '</p>') + '</div>' +
+        var id = wid(x), on = !!W[id], my = MY[x.sym], href = E(x.url && /^https:\/\//.test(x.url) ? x.url : 'https://www.coingecko.com/en/coins/' + encodeURIComponent(x.id));
+        var sub = my ? iso((+my.qty.toFixed(4)) + ' ' + T(my.qty === 1 ? 'share' : 'shares', 'سهم')) + ' · ' + iso(usd(my.value, 2)) : E(String(x.name || '').replace(/\s*bStock$/i, ''));
+        return '<div class="as-row"><span class="as-n"><button type="button" class="mk-star as-star" data-star="' + E(id) + '" aria-pressed="' + on + '" title="' + E(on ? T('Remove from Watchlist', 'إزالة من المتابعة') : T('Add to Watchlist', 'أضف إلى المتابعة')) + '">' + starIc + '</button>' +
+          '<a class="as-nl" href="' + href + '" target="_blank" rel="noopener">' + (x.img ? '<img src="' + E(x.img) + '" alt="" loading="lazy">' : '<i class="as-ph"></i>') +
+          '<span><b>' + E(x.sym) + '</b><small' + (my ? ' class="as-my"' : '') + '>' + sub + '</small></span></a></span>' +
+          '<span class="as-p">' + iso(usd(x.price)) + '</span><span>' + pct(x.ch24) + '</span><span class="w">' + pct(x.ch7) + '</span><span class="w as-mc">' + iso(M() ? M().fmtBig(x.mcap) : '') + '</span></div>';
+      }).join('') : '<p class="as-note">' + (st.tab === 'watch' && !nW ? T('Your Watchlist has no shares yet — tap ⭐ next to any share.', 'لا توجد أسهم في قائمة المتابعة بعد — اضغط ⭐ بجانب أي سهم.') : st.tab === 'mine' && !nM ? T('You hold no shares yet — ➕ Add → bStocks.', 'لا تملك أسهماً بعد — ➕ إضافة ← أسهم.') : T('No stock matches.', 'لا يوجد سهم مطابق.')) + '</p>') + '</div>' +
       '<p class="as-src">' + T('Prices: CoinGecko (bStocks Ecosystem), saved ' + ago(st.stT) + '. Tokenized stocks on Binance — not the shares themselves. Not financial advice.', 'الأسعار: CoinGecko (bStocks Ecosystem)، حُفظت ' + ago(st.stT) + '. أسهم مرمّزة على Binance — وليست الأسهم نفسها. ليست نصيحة مالية.') + '</p>';
     return h;
   }
@@ -170,6 +197,8 @@
     seg.innerHTML = '<button type="button" role="tab" data-v="crypto">🪙 ' + T('Crypto', 'كريبتو') + '</button><button type="button" role="tab" data-v="stocks">📈 bStocks</button><button type="button" role="tab" data-v="metals">🥇 ' + T('Metals', 'المعادن') + '</button>';
     seg.addEventListener('click', function (e) { var b = e.target.closest('[data-v]'); if (b) show(b.dataset.v, true); });
     var area = function (e) {
+      var sb = e.target.closest('[data-star]'); if (sb) { e.preventDefault(); return toggleStar(sb.dataset.star); }
+      var tb = e.target.closest('[data-tab]'); if (tb) { st.tab = tb.dataset.tab; try { localStorage.setItem('samsam_bs_tab', st.tab); } catch (_) {} return draw(); }
       var b = e.target.closest('[data-sort]'); if (!b) return;
       var k = b.dataset.sort; if (st.sort === k) st.dir = -st.dir; else { st.sort = k; st.dir = k === 'name' ? 1 : -1; } draw();
     };
@@ -181,7 +210,7 @@
       var b = e.target.closest('[data-add]'); if (!b || !window.openAddCoin || !window.acMetal) return;
       window.openAddCoin(); window.acMetal(b.dataset.add);
     });
-    var hook = function (S) { if (S && S.onChange) S.onChange(function () { if (st.view === 'metals') draw(); }); if (st.view === 'metals') draw(); };   // a buy / sell redraws your metals
+    var hook = function (S) { if (S && S.onChange) S.onChange(function () { if (st.view === 'metals' || st.view === 'stocks') draw(); }); if (st.view === 'metals' || st.view === 'stocks') draw(); };   // a buy / sell redraws your metals
     if (window.Samsam) hook(window.Samsam); else window.addEventListener('samsam-ready', function () { hook(window.Samsam); }, { once: true });
     $('vStocks').addEventListener('input', function (e) { if (e.target.id === 'asQ') { st.q = e.target.value; draw(); } });
     var h = (location.hash || '').slice(1), saved = null; try { saved = localStorage.getItem(KEY); } catch (_) {}

@@ -21,24 +21,24 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-lang.js?v=202611232352"></script>
-<script src="samsam-ar.js?v=202611232352"></script>
-<script src="samsam-ui.js?v=202611232352"></script>
-<script src="samsam-hints.js?v=202611232352"></script>
-<script src="samsam-arhints.js?v=202611232352"></script>
-<script src="samsam-vault.js?v=202611232352"></script>
-<script src="samsam-labels.js?v=202611232352"></script>
-<script src="samsam-taxonomy.js?v=202611232352"></script>
-<script src="samsam-coins.js?v=202611232352"></script>
-<script src="samsam-dropdown.js?v=202611232352"></script>
-<script src="samsam-add.js?v=202611232352"></script>
-<script src="samsam-chart.js?v=202611232352"></script>
-<script src="samsam-market.js?v=202611232352"></script>
-<script src="samsam-import.js?v=202611232352"></script>
-<script src="samsam-wallets.js?v=202611232352"></script>
-<script src="samsam-cash.js?v=202611232352"></script>
-<script src="samsam-rewards.js?v=202611232352"></script>
-<script src="samsam-settings.js?v=202611232352"></script>
+<script src="samsam-lang.js?v=202611240017"></script>
+<script src="samsam-ar.js?v=202611240017"></script>
+<script src="samsam-ui.js?v=202611240017"></script>
+<script src="samsam-hints.js?v=202611240017"></script>
+<script src="samsam-arhints.js?v=202611240017"></script>
+<script src="samsam-vault.js?v=202611240017"></script>
+<script src="samsam-labels.js?v=202611240017"></script>
+<script src="samsam-taxonomy.js?v=202611240017"></script>
+<script src="samsam-coins.js?v=202611240017"></script>
+<script src="samsam-dropdown.js?v=202611240017"></script>
+<script src="samsam-add.js?v=202611240017"></script>
+<script src="samsam-chart.js?v=202611240017"></script>
+<script src="samsam-market.js?v=202611240017"></script>
+<script src="samsam-import.js?v=202611240017"></script>
+<script src="samsam-wallets.js?v=202611240017"></script>
+<script src="samsam-cash.js?v=202611240017"></script>
+<script src="samsam-rewards.js?v=202611240017"></script>
+<script src="samsam-settings.js?v=202611240017"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -48,7 +48,7 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
-<link rel="stylesheet" href="samsam-home.css?v=202611232352">
+<link rel="stylesheet" href="samsam-home.css?v=202611240017">
 </head>
 <body>
 <div id="cpSplash" role="status" aria-live="polite" aria-label="Loading Cute Portfolio" style="position:fixed;inset:0;z-index:100200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0e1a;color:#e5e7eb;font-family:Inter,system-ui,-apple-system,sans-serif;transition:opacity .35s ease,visibility .35s">
@@ -98,7 +98,7 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
   <div class="head-meta">
     <span class="hm-item ss-date-label" id="currentDate"></span>
     <span class="hm-item hm-pulse" id="hmPulse" data-no-tr hidden></span>
-    <span class="hm-item hm-baseline"><span class="hm-k">Baseline</span> <b id="baselineLabel">Oct 15, 2026</b><button type="button" class="cp-hint" data-hint="baseline" aria-label="What is the baseline?"></button><button type="button" class="val-edit" onclick="openBaselineEdit()" title="Change the baseline date" aria-label="Change the baseline date"></button></span>
+    <span class="hm-item hm-baseline" hidden><b id="baselineLabel"></b></span>   <!-- the baseline moved to the footer (with its ⓘ and ✎) -->
   </div>
 
   <!-- Top-down: 🕌 zakat when it is due (until ✓ Paid) → 💼 Net worth → the portfolio (total + profit) → what it is made of
@@ -107,8 +107,9 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
   <!-- 💼 Net worth = the portfolio + cash & certificates (only when you have any) — the SAME portfolio number as the card below -->
   <div class="nw-card" id="netWorthCard" data-no-tr hidden>
     <div class="nw-top"><span class="nw-k">💼 <span id="nwLbl">Net worth</span></span><b class="nw-v" id="nwUsd">$—.——</b></div>
-    <div class="nw-bar" aria-hidden="true"><i class="nw-pf" id="nwBarPf"></i><i class="nw-cash" id="nwBarCash"></i></div>
-    <div class="nw-legend"><span class="nw-a"><i></i><span id="nwPfTxt">—</span></span><span class="nw-b"><i></i><span id="nwCashTxt">—</span></span></div>
+    <div class="nw-bar" id="nwBar" aria-hidden="true"></div>
+    <div class="nw-legend" id="nwLegend"></div>
+    <div class="nw-foot" id="nwPfTxt">—</div>
   </div>
   <div class="header-stats">
     <div class="stat-card">
@@ -375,11 +376,11 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611232352"></script>
-<script src="samsam-home.js?v=202611232352"></script>
-<script src="samsam-analysis.js?v=202611232352"></script>
-<script src="samsam-coinpage.js?v=202611232352"></script>
-<script src="samsam-hchart.js?v=202611232352"></script>
+<script type="module" src="samsam-cloud.js?v=202611240017"></script>
+<script src="samsam-home.js?v=202611240017"></script>
+<script src="samsam-analysis.js?v=202611240017"></script>
+<script src="samsam-coinpage.js?v=202611240017"></script>
+<script src="samsam-hchart.js?v=202611240017"></script>
 
 <!-- ── Compact bar: appears once the main header scrolls away (logo · name · total) ── -->
 <div class="mini-bar" id="miniBar" aria-hidden="true">
@@ -476,12 +477,12 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
   @media (min-width: 1024px) { #cpViews { bottom: 0; } }
   @media print { #cpViews { display: none !important; } }
 </style>
-<script src="samsam-shell.js?v=202611232352"></script>
-<script src="samsam-edits.js?v=202611232352"></script>
+<script src="samsam-shell.js?v=202611240017"></script>
+<script src="samsam-edits.js?v=202611240017"></script>
 
 <!-- ── Holdings Full-Screen Overlay ── -->
 <div id="holdingsOverlay" style="display:none;position:fixed;inset:0;z-index:9999;flex-direction:column;overflow-y:auto;background:var(--bg)">
-  <link rel="stylesheet" href="samsam-holdings.css?v=202611232352">
+  <link rel="stylesheet" href="samsam-holdings.css?v=202611240017">
 
   <!-- Nav bar -->
   <header class="cp-head hov-navbar">

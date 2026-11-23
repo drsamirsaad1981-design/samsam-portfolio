@@ -18,23 +18,23 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-lang.js?v=202611232352"></script>
-<script src="samsam-ar.js?v=202611232352"></script>
-<script src="samsam-ui.js?v=202611232352"></script>
-<script src="samsam-hints.js?v=202611232352"></script>
-<script src="samsam-arhints.js?v=202611232352"></script>
-<script src="samsam-vault.js?v=202611232352"></script>
-<script src="samsam-labels.js?v=202611232352"></script>
-<script src="samsam-taxonomy.js?v=202611232352"></script>
-<script src="samsam-coins.js?v=202611232352"></script>
-<script src="samsam-import.js?v=202611232352"></script>
-<script src="samsam-wallets.js?v=202611232352"></script>
-<script src="samsam-rewards.js?v=202611232352"></script>
-<script src="samsam-settings.js?v=202611232352"></script>
-<script src="samsam-dropdown.js?v=202611232352"></script>
-<script src="samsam-add.js?v=202611232352"></script>
-<script src="samsam-market.js?v=202611232352"></script>
-<script src="samsam-assets.js?v=202611232352"></script>
+<script src="samsam-lang.js?v=202611240017"></script>
+<script src="samsam-ar.js?v=202611240017"></script>
+<script src="samsam-ui.js?v=202611240017"></script>
+<script src="samsam-hints.js?v=202611240017"></script>
+<script src="samsam-arhints.js?v=202611240017"></script>
+<script src="samsam-vault.js?v=202611240017"></script>
+<script src="samsam-labels.js?v=202611240017"></script>
+<script src="samsam-taxonomy.js?v=202611240017"></script>
+<script src="samsam-coins.js?v=202611240017"></script>
+<script src="samsam-import.js?v=202611240017"></script>
+<script src="samsam-wallets.js?v=202611240017"></script>
+<script src="samsam-rewards.js?v=202611240017"></script>
+<script src="samsam-settings.js?v=202611240017"></script>
+<script src="samsam-dropdown.js?v=202611240017"></script>
+<script src="samsam-add.js?v=202611240017"></script>
+<script src="samsam-market.js?v=202611240017"></script>
+<script src="samsam-assets.js?v=202611240017"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -415,6 +415,18 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .as-p { font-weight: 700; } .as-mc { color: var(--fg2); }
 @media (max-width: 560px) { .as-head, .as-row { grid-template-columns: minmax(0, 1.6fr) 1fr .9fr; } .as-head .w, .as-row .w { display: none; } .as-movers { grid-template-columns: 1fr; } }
 .as-mine { margin-bottom: 12px; border-color: rgba(234,179,8,.45); }
+/* bStocks: All · ⭐ Watchlist · My shares, a star on each row (the same Watchlist as the Crypto page) */
+.as-tabs { display: flex; gap: 6px; padding: 10px 10px 0; }
+.as-tabs button { flex: 1; border: 1px solid var(--border); background: transparent; color: var(--fg2); font: inherit; font-size: .8rem; font-weight: 700; padding: 8px 6px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
+.as-tabs button small { opacity: .7; font-weight: 600; margin-inline-start: 3px; }
+.as-tabs button[aria-selected="true"] { color: #fff; background: #7c3aed; border-color: #7c3aed; }
+.as-mysum { margin: 10px 10px 0; padding: 9px 12px; border-radius: 10px; background: rgba(56,189,248,.10); font-size: .84rem; text-align: center; }
+.as-mysum .up { color: var(--green, #22c55e); } .as-mysum .dn { color: var(--red, #ef4444); }
+.as-star { width: 26px; height: 26px; flex: none; margin-inline-start: -6px; }
+.as-nl { display: flex; align-items: center; gap: 8px; min-width: 0; color: inherit; text-decoration: none; }
+.as-nl span { display: flex; flex-direction: column; min-width: 0; } .as-nl b { font-size: .88rem; }
+.as-nl small { font-size: .72rem; color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.as-nl small.as-my { color: #38bdf8; font-weight: 700; }
 .as-mine .as-k { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .as-flag { border-radius: 2px; flex: none; box-shadow: 0 0 0 .5px rgba(0,0,0,.15); }
 .as-mopen { font-size: .78rem; font-weight: 600; color: #60a5fa; text-decoration: none; }
@@ -593,7 +605,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611232352"></script>
+<script type="module" src="samsam-cloud.js?v=202611240017"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -606,6 +618,9 @@ let searchSeq = 0, searchTimer = null, moreRows = [], moreMsg = '';
 
 // ── your data ──
 function watchlist() { return state && state.watchlist ? state.watchlist : []; }
+// the Watchlist also keeps your ⭐ shares (Market Hub → bStocks); the Crypto page shows the coins
+const STOCK_WID = /(^|-)b?bstocks?(-|$)|^bn[.:]/i;
+function coinWatch() { return watchlist().filter(w => !STOCK_WID.test(w.id)); }
 function isWatched(id) { return watchlist().some(w => w.id === id); }
 function heldCoin(c) { const p = (state && state.portfolio) || []; return p.find(x => x.cgId && x.cgId === c.id) || p.find(x => x.sym === c.sym && !x.cgId) || null; }
 function inPlan(c) { return ((state && state.accumPlan) || []).some(e => (e.cgId && e.cgId === c.id) || e.sym === c.sym); }
@@ -809,7 +824,7 @@ function rowsNow() {
     : mode === 'pf' ? pfAll().filter(r => showStable || !M.isStable(r)) : watchRows.map(fillCh);
   if (mode === 'watch') {   // coins CoinGecko didn't return (yet) still show, from what was saved
     const have = new Set(rows.map(r => r.id));
-    watchlist().forEach(w => { if (!have.has(w.id)) rows.push({ id: w.id, sym: w.sym, name: w.name, img: w.img, rank: null, price: null, ch24: null, mcap: null, spark: [] }); });
+    coinWatch().forEach(w => { if (!have.has(w.id)) rows.push({ id: w.id, sym: w.sym, name: w.name, img: w.img, rank: null, price: null, ch24: null, mcap: null, spark: [] }); });
   }
   if (query) { const q = query.toLowerCase(); rows = rows.filter(r => r.sym.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)); }
   const fk = chKey();
@@ -945,7 +960,7 @@ function rowHtml(c) {
 }
 function render() {
   const box = document.getElementById('mkRows');
-  document.getElementById('watchN').textContent = watchlist().length;
+  document.getElementById('watchN').textContent = coinWatch().length;
   document.getElementById('pfN').textContent = pfCoins().length;
   const ha = document.getElementById('hAsset'), pfm = mode === 'pf';   // In Portfolio: this column sorts by what your coins are worth
   ha.dataset.s = pfm ? 'val' : 'mcap'; document.getElementById('hAssetM').textContent = pfm ? 'Value' : 'Market Cap'; document.getElementById('hAssetD').textContent = pfm ? 'Asset · Value' : 'Asset';
@@ -956,7 +971,7 @@ function render() {
   if (!rows.length) {
     box.innerHTML = mode === 'pf' && !pfCoins().length
       ? `<div class="mk-empty">${ic('briefcase')}No coins in your portfolio yet.</div>`
-      : mode === 'watch' && !watchlist().length
+      : mode === 'watch' && !coinWatch().length
       ? `<div class="mk-empty">${ic('star')}Your Watchlist is empty.<br>Tap the star next to any coin to follow it here, or use <b>Add Custom Coin</b> for coins outside the Top 100.</div>`
       : `<div class="mk-empty">No coin in ${mode === 'top' ? 'the Top ' + topN : mode === 'pf' ? 'your portfolio' : 'the Watchlist'} matches${query ? ' “' + E(query) + '”' : ''}${filter !== 'all' ? ' with this filter' : ''}.${query.length >= 2 ? ' See “More on CoinGecko” below.' : ''}</div>`;
   } else {
@@ -1114,7 +1129,7 @@ function withOwnPrices(rows) {
   try { localStorage.setItem('samsam_watch_rows', JSON.stringify(watchSeen)); } catch (_) {}
   const prices = window.Samsam && Samsam.getPrices ? Samsam.getPrices() : {};
   const pf = (state && state.portfolio) || [], plan = (state && state.accumPlan) || [];
-  return watchlist().map(w => {
+  return coinWatch().map(w => {
     if (have.has(w.id)) return have.get(w.id);
     const sym = String(w.sym || '').toUpperCase();
     const own = pf.find(x => x.cgId === w.id) || pf.find(x => x.sym === sym && !x.cgId);
@@ -1127,7 +1142,7 @@ function withOwnPrices(rows) {
   });
 }
 async function loadWatch(force) {
-  const ids = watchlist().map(w => w.id);
+  const ids = coinWatch().map(w => w.id);
   if (!ids.length) { watchRows = []; render(); return; }
   try { const r = await M.byIds(ids, force); watchRows = fix(r.data); if (r.stale) paused = true; }
   catch (e) { if (!watchRows.length) paused = true; }

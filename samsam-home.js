@@ -342,6 +342,7 @@ function renderZakatLine(portfolio) {
   const day = SamsamCoins.zakatDayLabel(AR), edit = `<button type="button" class="zk-edit" onclick="editZakatDay()" title="${AR ? 'تغيير يوم الزكاة' : 'Change your zakat day'}">${SamsamUI.icon('pencil')}</button>`;
   const mix = z.state === 'upcoming' || z.state === 'under' ? parts.map(x => `${x[1]} ${iso(fmtUsd(x[0]))}`).join(' · ') : '';
   el.hidden = false; el.classList.toggle('zk-due', z.state === 'due'); el.dataset.state = z.state;
+  el.classList.toggle('fold-card', z.state !== 'due'); el.classList.toggle('stat-card', z.state !== 'due'); el.classList.toggle('zk-card', z.state !== 'due');
   const slot = document.getElementById(z.state === 'due' ? 'zakatTop' : 'zakatBottom'); if (slot && el.parentElement !== slot) slot.appendChild(el);   // due → at the very top until ✓ Paid
   el.innerHTML = '🕌 ' + (z.state === 'due'
     ? `<span class="zk-t">${ZL} ${AR ? 'مستحقة' : 'due'} · ${day} ${iso(z.hy)}: <b>${iso(fmtUsd(z.zakatUsd))}</b> <small>${AR ? '2.5% من' : '2.5% of'} ${iso(fmtUsd(z.value))}${z.fixed ? '' : (AR ? ' (بقيمة اليوم)' : ' (today\'s value)')}</small></span><button type="button" class="zk-paid" onclick="zakatPaidNow()">✓ ${AR ? 'دفعت' : 'Paid'}</button>`
@@ -349,6 +350,12 @@ function renderZakatLine(portfolio) {
     : z.state === 'below' ? `${ZL} (${day} ${iso(z.hy)}): ${AR ? 'أقل من النصاب — لا زكاة' : 'below the nisab — none'} <small>(${iso(fmtUsd(z.nisabUsd))})</small>`
     : z.state === 'upcoming' ? `${ZL} ${AR ? 'في' : 'on'} ${day}${AR ? '، بعد' : ', in'} <b>${iso(z.daysLeft)}</b> ${AR ? 'يوم' : 'days'} · ${AR ? 'تقدير اليوم' : 'at today\'s value'} <b>${iso(fmtUsd(z.zakatUsd))}</b><small class="zk-mix">${mix}</small>`
     : `${ZL} (${day}): ${AR ? 'أقل من النصاب' : 'below the nisab'} <small>(${iso(fmtUsd(z.nisabUsd))} = ${AR ? '85 جم ذهب' : '85 g of gold'})</small><small class="zk-mix">${mix}</small>`) + edit + hint;
+  // not due: a folded card like 🥇 metals and 🏦 cash — one line (the days left / paid / below the nisab), tap for the rest
+  if (z.state !== 'due') {
+    const short = z.state === 'upcoming' ? `${AR ? 'بعد' : 'in'} ${iso(z.daysLeft)} ${AR ? 'يوم' : 'days'} · <b>${iso(fmtUsd(z.zakatUsd))}</b>`
+      : z.state === 'paid' ? `${iso(z.hy)} ${AR ? 'مدفوعة' : 'paid'} ✓` : (AR ? 'أقل من النصاب' : 'below the nisab');
+    el.innerHTML = `<div class="stat-label"><button type="button" class="fold-t" data-fold="zakat" aria-expanded="false">🕌 <span>${AR ? 'الزكاة' : 'Zakat'}</span> <span class="fold-v zk-short">${short}</span><span class="fold-chev" aria-hidden="true"></span></button></div><div class="stat-sub fold-body zk-body">${el.innerHTML.replace(/^🕌 /, '')}</div>`;
+  }
 }
 var zkNow = null;
 // ✓ Paid: the amount (the due one, ready — or what you paid, also "25000 EGP"); it closes that hijri year; the next zakat day stays put
@@ -439,6 +446,7 @@ function renderHeader() {
   }
   const { btcQty, btcValue, altTotal, metalTotal, stockTotal, total } = calcStats();
   nwPortfolio = total;   // 💼 Net worth reads THIS number — the same one as Total Portfolio
+  nwParts = { btc: btcValue, alt: altTotal, metal: metalTotal, stock: stockTotal };
   const fmtUsd = n => SamsamFmt.usd(n);
   const fmtBtc = n => (btcPrice > 0 ? parseFloat((n / btcPrice).toFixed(8)).toString() : '—') + ' BTC';
 
@@ -513,18 +521,24 @@ function renderHeader() {
 
 // 💼 Net worth = Total Portfolio (the very number on its card) + cash & certificates, with the split as a thin bar.
 // Drawn again when the cash card has news (its rates arrive later): SamsamCash → window.onCashRender.
-var nwPortfolio = null;
+var nwPortfolio = null, nwParts = null;
+// 💼 the split of everything you own: BTC · Altcoins · Metals · Shares · Cash — one bar, each part with its value and share
+const NW_PARTS = [['btc', '#f7931a', 'Bitcoin', 'البيتكوين'], ['alt', '#3b82f6', 'Altcoins', 'العملات البديلة'], ['metal', '#eab308', 'Metals', 'المعادن'], ['stock', '#38bdf8', 'Shares', 'الأسهم'], ['cash', '#22c55e', 'Cash & certificates', 'النقد والشهادات']];
 function renderNetWorth() {
   const card = document.getElementById('netWorthCard'); if (!card) return;
   const c = window.SamsamCash && SamsamCash.last ? SamsamCash.last() : null, AR = !!(window.CPLang && CPLang.ar);
   if (!c || !c.n || nwPortfolio == null) { card.hidden = true; return; }
-  const pf = nwPortfolio, cash = c.usd || 0, all = pf + cash, ppf = all > 0 ? pf / all * 100 : 0, iso = x => '⁦' + x + '⁩';
+  const pf = nwPortfolio, cash = c.usd || 0, all = pf + cash, iso = x => '⁦' + x + '⁩';
+  const P = nwParts || { btc: pf, alt: 0, metal: 0, stock: 0 }, val = { ...P, cash };
+  // shares of the whole, rounded so they add up to exactly 100
+  const rows = NW_PARTS.filter(([k]) => val[k] > 0).map(([k, col, en, ar]) => ({ k, col, name: AR ? ar : en, v: val[k], p: all > 0 ? val[k] / all * 100 : 0 }));
+  let left = 100; rows.forEach((r, i) => { r.r = i === rows.length - 1 ? Math.max(0, left) : Math.round(r.p); left -= r.r; });
   card.hidden = false;
   document.getElementById('nwLbl').textContent = AR ? 'صافي الثروة' : 'Net worth';
   document.getElementById('nwUsd').textContent = SamsamFmt.usd(all);
-  document.getElementById('nwBarPf').style.width = ppf.toFixed(2) + '%'; document.getElementById('nwBarCash').style.width = (100 - ppf).toFixed(2) + '%';
-  document.getElementById('nwPfTxt').textContent = (AR ? 'المحفظة ' : 'Portfolio ') + iso(SamsamFmt.usd(pf)) + ' · ' + iso(Math.round(ppf) + '%');
-  document.getElementById('nwCashTxt').textContent = (AR ? 'النقد والشهادات ' : 'Cash & certificates ') + iso(SamsamFmt.usd(cash)) + ' · ' + iso((100 - Math.round(ppf)) + '%') + (c.missing && c.missing.length ? ' *' : '');
+  document.getElementById('nwBar').innerHTML = rows.map(r => `<i style="width:${r.p.toFixed(2)}%;background:${r.col}" title="${r.name} ${r.p.toFixed(1)}%"></i>`).join('');
+  document.getElementById('nwLegend').innerHTML = rows.map(r => `<span class="nw-li" data-k="${r.k}"><i style="background:${r.col}"></i><span class="nw-n">${r.name}</span><b>${iso(r.r + '%')}</b><span class="nw-u">${iso(SamsamFmt.usd(r.v))}</span></span>`).join('');
+  document.getElementById('nwPfTxt').textContent = (AR ? 'المحفظة ' : 'Portfolio ') + iso(SamsamFmt.usd(pf)) + (AR ? ' + النقد ' : ' + cash ') + iso(SamsamFmt.usd(cash)) + (c.missing && c.missing.length ? ' *' : '');
   card.title = c.missing && c.missing.length ? (AR ? '* لا يوجد سعر بعد لـ ' : '* No rate yet for ') + c.missing.join(', ') : '';
 }
 window.onCashRender = () => renderNetWorth();
@@ -542,11 +556,18 @@ function foldCards() {
 function renderPulse() {
   const el = document.getElementById('hmPulse'), M = window.SamsamMarket; if (!el || !M || typeof tickerMkt === 'undefined' || !tickerMkt) return;
   const g = tickerMkt.g, f = tickerMkt.f, AR = !!(window.CPLang && CPLang.ar), iso = x => '⁦' + x + '⁩', out = [];
-  if (g && g.mcap > 0) { const ch = g.mcapCh24; out.push(`<span class="pc" title="${AR ? 'القيمة السوقية للكريبتو' : 'Crypto market cap'}">${AR ? 'السوق' : 'Mkt'} <b>${iso(M.fmtBig(g.mcap))}</b>${ch != null ? ` <span class="${ch >= 0 ? 'stat-pos' : 'stat-neg'}">${iso((ch >= 0 ? '+' : '−') + Math.abs(ch).toFixed(1) + '%')}</span>` : ''}</span>`); }
-  if (f && f.value != null) out.push(`<span class="pc" title="${AR ? 'مؤشر الخوف والطمع' : 'Fear & Greed'}"><i style="background:${M.fngColor(f.value)}"></i>${AR ? 'الخوف/الطمع' : 'F&amp;G'} <b>${iso(f.value)}</b></span>`);
+  const tile = (k, v, sub, extra) => `<div class="mk-t">${extra || ''}<span class="mk-k">${k}</span><b class="mk-v">${v}</b>${sub ? `<span class="mk-s">${sub}</span>` : ''}</div>`;
+  if (g && g.mcap > 0) { const ch = g.mcapCh24; out.push(tile(AR ? 'القيمة السوقية' : 'Market cap', iso(M.fmtBig(g.mcap)), ch != null ? `<span class="${ch >= 0 ? 'stat-pos' : 'stat-neg'}">${iso((ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch).toFixed(2) + '%')}</span>` : '')); }
+  if (g && g.dom && g.dom.btc > 0) out.push(tile(AR ? 'هيمنة BTC' : 'BTC dominance', iso(g.dom.btc.toFixed(1) + '%'), g.dom.eth > 0 ? iso('ETH ' + g.dom.eth.toFixed(1) + '%') : ''));
+  if (f && f.value != null) {   // a half-circle gauge: red → orange → yellow → green, a dot at the value (CoinMarketCap's bands)
+    const v = Math.max(0, Math.min(100, +f.value)), a = Math.PI * (1 - v / 100), cx = 30, cy = 28, r = 22, P = t => [(cx + r * Math.cos(t)).toFixed(1), (cy - r * Math.sin(t)).toFixed(1)];
+    const seg = (a0, a1, c) => { const p0 = P(Math.PI * (1 - a0 / 100)), p1 = P(Math.PI * (1 - a1 / 100)); return `<path d="M${p0[0]} ${p0[1]} A${r} ${r} 0 0 1 ${p1[0]} ${p1[1]}" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>`; };
+    const dot = P(a), lbl = { 'Extreme Fear': ['Extreme fear', 'خوف شديد'], 'Fear': ['Fear', 'خوف'], 'Neutral': ['Neutral', 'محايد'], 'Greed': ['Greed', 'طمع'], 'Extreme Greed': ['Extreme greed', 'طمع شديد'] }[f.label] || [f.label || '', f.label || ''];
+    const svg = `<svg class="mk-g" viewBox="0 0 60 34" aria-hidden="true">${seg(1, 19, '#ef4444')}${seg(21, 39, '#f97316')}${seg(41, 59, '#eab308')}${seg(61, 79, '#84cc16')}${seg(81, 99, '#22c55e')}<circle cx="${dot[0]}" cy="${dot[1]}" r="4" fill="#fff" stroke="#0f172a" stroke-width="2"/><text x="30" y="31" text-anchor="middle">${v}</text></svg>`;
+    out.push(`<div class="mk-t mk-fng" title="${AR ? 'مؤشر الخوف والطمع (CoinMarketCap)' : 'Fear & Greed (CoinMarketCap)'}"><span class="mk-k">${AR ? 'الخوف والطمع' : 'Fear &amp; Greed'}</span>${svg}<span class="mk-s" style="color:${M.fngColor(v)}">${AR ? lbl[1] : lbl[0]}</span></div>`);
+  }
   el.innerHTML = out.join(''); el.hidden = !out.length;
-}
-// ── Live BTC ticker ──────────────────────────────────────────────────────────
+}// ── Live BTC ticker ──────────────────────────────────────────────────────────
 let btcTicker = { price: 0, ch24: null, high24: null, low24: null, t: 0 };
 async function fetchBtcTicker() {
   if (typeof liveLine !== 'undefined' && liveLine && liveLine.alive() && Date.now() - btcTicker.t < 20e3) return;   // ⚡ the live line keeps it current
@@ -741,7 +762,7 @@ function renderMovers() {
   const rows = portfolio.filter(c => SamsamTaxonomy.matches(activeCatFilter, c.sym, c.cat))
     .map(c => ({ sym: c.sym, name: c.name, logoUrl: c.logoUrl, value: c.qty * c.currentPrice, score: typeof c.change24h === 'number' ? c.change24h : NaN }));
   const m = C.pickMovers(rows, total);
-  const head = { title: "Today's Movers", badge: '24h · ' + (activeCatFilter ? T.label(activeCatFilter) : 'All Coins'), hint: 'movers24h' };
+  const head = { title: "Today's Movers", badge: '24h · ' + (activeCatFilter ? T.label(activeCatFilter) : 'All'), hint: 'movers24h' };
   if (!m) { host.innerHTML = C.moversCard({ head, empty: activeCatFilter ? `No 24h price changes yet for ${T.label(activeCatFilter)}.` : 'Best and worst performer appear once live prices load.' }); return; }
   const half = (label, r) => r && { label, row: r, pct: r.score, text: C.signedPct(r.score), onClickJs: `openCoinFromMovers('${r.sym}')` };
   host.innerHTML = C.moversCard({ head, best: half('Best Performer', m.best), worst: half('Worst Performer', m.worst) || { label: 'Worst Performer' } });
@@ -1280,7 +1301,7 @@ document.getElementById('searchBox').addEventListener('input',renderTableAndStac
   });
 })();
 document.getElementById('currentDate').innerHTML=SamsamUI.icon('calendar')+'<span>'+new Date().toLocaleDateString('en-US',{year:'numeric',month:(innerWidth<=480?'short':'long'),day:'numeric'})+'</span>';
-document.querySelector('.hm-baseline .val-edit').innerHTML = SamsamUI.icon('pencil');
+(document.querySelector('.hm-baseline .val-edit') || {}).innerHTML = SamsamUI.icon('pencil');
 document.querySelectorAll('.sg-edit').forEach(b => { b.innerHTML = SamsamUI.icon('pencil'); });
 renderBaselineLabel();
 

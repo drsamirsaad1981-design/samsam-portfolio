@@ -30,10 +30,10 @@ with sync_playwright() as p:
         check(f'{name}: "Cute" in the logo gradient, name on one line', g['grad'] and g['nameOneLine'], g)
         check(f'{name}: Live sits under the name; settings + cloud + theme top-right', g['liveUnder'] and g['btnsRight'] and g['btns'] == 3, g)
         check(f'{name}: date · Baseline line fits, no sideways scroll', g['metaOneLineOrWrap'] and not g['overflow'], g)
-        check(f'{name}: baseline shown with ⓘ and ✎', pg.inner_text('#baselineLabel') == 'Oct 15, 2026' and pg.is_visible('.hm-baseline .cp-hint') and pg.is_visible('.hm-baseline .val-edit svg'))
+        check(f'{name}: baseline shown with ⓘ and ✎', pg.inner_text('#footerBaseline') == 'Oct 15, 2026' and pg.is_visible('#cpFoot .cpf-bl .cp-hint') and pg.is_visible('#cpFoot .cpf-bl .val-edit svg'))
         pg.locator('header.app-head').screenshot(path=str(SH / f'brandhead-{name}.png'))
         # hint
-        pg.click('.hm-baseline .cp-hint'); pg.wait_for_timeout(300)
+        pg.click('#cpFoot .cpf-bl .cp-hint'); pg.wait_for_timeout(300)
         h = pg.inner_text('.cph') if pg.query_selector('.cph') else ''
         check(f'{name}: ⓘ explains the baseline and its BTC price', 'BTC reference price' in h and '$81,162.00' in h and "don't change" in h and 'Portfolio vs BTC' in h, h[:200])
         check(f'{name}: hint is a bottom sheet on phones, popover on desktop', pg.evaluate("document.querySelector('.cph').classList.contains('sheet')") == name.startswith('phone'))
@@ -72,12 +72,13 @@ with sync_playwright() as p:
         pg.keyboard.press('Escape')
         # back to the original
         pg.goto(S.SITE + '/index.html'); S.wait_ready(pg); pg.wait_for_timeout(1000)
-        pg.click('.hm-baseline .val-edit'); pg.wait_for_timeout(200)
+        pg.click('#cpFoot .cpf-bl .val-edit'); pg.wait_for_timeout(200)
         check(f'{name}: "Use the original baseline" is offered once changed', pg.is_visible('#blReset'))
         pg.click('#blReset'); pg.wait_for_timeout(500); pg.click('#blSave'); pg.wait_for_timeout(900)
-        check(f'{name}: back to Oct 15 / $81,162', pg.evaluate("[Samsam.getBaseline().date, Samsam.getBaseline().btcPrice]") == ['2026-10-15', 81162] and pg.inner_text('#baselineLabel') == 'Oct 15, 2026')
+        check(f'{name}: back to Oct 15 / $81,162', pg.evaluate("[Samsam.getBaseline().date, Samsam.getBaseline().btcPrice]") == ['2026-10-15', 81162] and pg.inner_text('#footerBaseline') == 'Oct 15, 2026')
         check(f'{name}: future date refused', pg.evaluate("Samsam.setBaseline({ date: '2099-01-01', btcPrice: 1 }).then(() => 'saved', e => e.message)").startswith('The baseline date cannot'))
-        # compact bar
+        # compact bar (the baseline ✎ is in the footer now: back to the top first)
+        pg.evaluate('window.scrollTo(0, 0)'); pg.wait_for_timeout(500)
         check(f'{name}: compact bar hidden at the top', not pg.evaluate("document.getElementById('miniBar').classList.contains('show')"))
         pg.evaluate("scrollTo(0, 900)"); pg.wait_for_timeout(500)
         mb = pg.evaluate("(() => { const b = document.getElementById('miniBar'), r = b.getBoundingClientRect(); return [b.classList.contains('show'), Math.round(r.top), document.getElementById('miniTotal').textContent, document.getElementById('totalUsd').textContent, document.getElementById('miniPnl').textContent, b.querySelector('.mini-name').innerText]; })()")

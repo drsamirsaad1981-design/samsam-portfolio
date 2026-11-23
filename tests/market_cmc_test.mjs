@@ -78,6 +78,13 @@ const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'mkt-'));
 await run(dir2);
 const m2 = JSON.parse(fs.readFileSync(path.join(dir2, 'm/market.json'), 'utf8')), alt2 = JSON.parse(fs.readFileSync(path.join(dir2, 'm/alt.json'), 'utf8'));
 check('CoinMarketCap down → alternative.me\'s Fear & Greed (10)', m2.fng && m2.fng.value === 10 && m2.fng.src === 'alternative.me', m2.fng);
+{ // CoinMarketCap busy for a while → its own last number stays (under 6 h), no jump to alternative.me
+  const dir3 = fs.mkdtempSync(path.join(os.tmpdir(), 'mkt-'));
+  cmcUp = true; await run(dir3); cmcUp = false; await run(dir3);
+  const m3 = JSON.parse(fs.readFileSync(path.join(dir3, 'm/market.json'), 'utf8'));
+  check('CoinMarketCap busy (after a good run) → keeps CoinMarketCap\'s last Fear & Greed (13), not alternative.me\'s', m3.fng && m3.fng.value === 13 && m3.fng.src === 'cmc' && m3.fng.at, m3.fng);
+  fs.rmSync(dir3, { recursive: true });
+}
 check('CoinMarketCap down → CoinGecko\'s dominance (58)', m2.global.dom.btc === 58 && m2.global.domSrc !== 'cmc', m2.global);
 check('…and the app\'s own Altcoin Season count from CoinGecko\'s top 100', m2.alt && m2.alt.src === 'own' && m2.alt.value != null && alt2.list === 'coingecko' && alt2.coins.some(c => c.id === 'zzz'), m2.alt);
 fs.rmSync(dir2, { recursive: true }); srv.close();

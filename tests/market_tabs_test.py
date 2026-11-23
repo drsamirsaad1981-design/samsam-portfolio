@@ -37,7 +37,7 @@ with sync_playwright() as p:
         check(f'{vn}: sort by 24h → Circle first', 'CRCLB' in first(), first())
         pg.fill('#asQ', 'tes'); pg.wait_for_timeout(150)
         check(f'{vn}: search "tes" → only Tesla', pg.locator('#vStocks .as-row').count() == 1 and 'TSLAB' in first(), pg.locator('#vStocks .as-row').count())
-        check(f'{vn}: a stock opens on CoinGecko', 'coingecko.com/en/coins/st1' in pg.get_attribute('#vStocks .as-row', 'href'))
+        check(f'{vn}: a stock opens on CoinGecko', 'coingecko.com/en/coins/st1' in pg.get_attribute('#vStocks .as-row .as-nl', 'href'))
         pg.screenshot(path=str(pathlib.Path(__file__).parent / 'shots' / f'market_stocks_{vn}.png'), full_page=True)
         pg.click('#mkSeg [data-v="metals"]'); pg.wait_for_selector('#vMetals .as-metal')
         t = pg.inner_text('#vMetals'); pg.screenshot(path=str(pathlib.Path(__file__).parent / 'shots' / f'market_metals_{vn}.png'), full_page=True)

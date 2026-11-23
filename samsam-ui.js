@@ -913,7 +913,7 @@
     var f = document.getElementById('cpFoot');
     if (!f) { f = document.createElement('footer'); f.id = 'cpFoot'; document.body.appendChild(f); }
     f.className = 'cp-foot';
-    f.innerHTML = '<p class="cpf-sync"><span id="cpfSync">' + ic('cloud') + 'Cloud: connecting…</span><span class="cpf-sep" aria-hidden="true">·</span><span>Baseline <b id="footerBaseline">—</b></span></p>' +
+    f.innerHTML = '<p class="cpf-sync"><span id="cpfSync">' + ic('cloud') + 'Cloud: connecting…</span><span class="cpf-sep" aria-hidden="true">·</span><span class="cpf-bl">Baseline <b id="footerBaseline">—</b><button type="button" class="cp-hint" data-hint="baseline" aria-label="What is the baseline?"></button><button type="button" class="val-edit cpf-bl-edit" onclick="if (window.openBaselineEdit) openBaselineEdit(); else location.href = \'./index.html#baseline\'" title="Change the baseline date" aria-label="Change the baseline date">' + (ICONS.pencil || ic('pencil', { solo: true })) + '</button></span></p>' +
       '<p id="footerSyncStatus" class="cpf-msg" aria-live="polite"></p>' +
       '<p class="cpf-sup" id="cpfSup" hidden></p>' +
       '<p class="cpf-copy">© ' + new Date().getFullYear() + ' Dr. Samir Saad<span class="cpf-sep" aria-hidden="true">·</span><a href="mailto:dr.samir.saad.1981@gmail.com">dr.samir.saad.1981@gmail.com</a></p>';

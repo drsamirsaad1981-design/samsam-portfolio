@@ -148,7 +148,7 @@
     'Extreme Fear': 'خوف شديد', 'Fear': 'خوف', 'Neutral': 'محايد', 'Greed': 'طمع', 'Extreme Greed': 'طمع شديد',
     'BTC Dominance': 'هيمنة البيتكوين', 'Bitcoin dominance': 'هيمنة البيتكوين', 'Bitcoin dominance — open the Market tab': 'هيمنة البيتكوين — فتح مركز السوق',
     'Explore': 'استكشف', 'Explore the market': 'استكشف السوق', 'Explore the market — open the Market tab': 'استكشف السوق — فتح مركز السوق', 'Altcoin Season': 'موسم العملات البديلة',
-    "Today's Movers": 'الأكثر حركة اليوم', '24h · All Coins': '24 ساعة · كل العملات', 'Best Performer': 'الأفضل أداءً', 'Worst Performer': 'الأسوأ أداءً',
+    "Today's Movers": 'الأكثر حركة اليوم', '24h · All Coins': '24 ساعة · كل العملات', '24h · All': '24 ساعة · الكل', 'Best Performer': 'الأفضل أداءً', 'Worst Performer': 'الأسوأ أداءً',
     'Best and worst performer appear once live prices load.': 'يظهر الأفضل والأسوأ أداءً بعد تحميل الأسعار المباشرة.',
     'Appears once prices load.': 'يظهر بعد تحميل الأسعار.', 'Appears once the BTC price loads.': 'يظهر بعد تحميل سعر البيتكوين.',
     'Top Gainers': 'الأكثر ربحاً', 'Top Performers': 'الأفضل أداءً', 'Top Losers': 'الأكثر خسارة', 'Top Performers · USD': 'الأفضل أداءً · USD',

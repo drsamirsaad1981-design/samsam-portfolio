@@ -1410,3 +1410,32 @@
 .pf-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .pf-parts[data-n="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .pf-parts .stat-card { min-width: 0; padding-inline: 6px; }
+/* 📈 the market strip in the date card: three small tiles — market cap · BTC dominance · Fear & Greed (a half-circle gauge) */
+.head-meta .hm-pulse { flex: 1 1 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 4px; white-space: normal; }
+.head-meta .hm-pulse[hidden] { display: none; }
+.mk-t { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 4px; border-radius: 10px; background: rgba(148,163,184,.08); min-width: 0; text-align: center; }
+.mk-k { font-size: .66rem; color: var(--fg2); white-space: nowrap; }
+.mk-v { font-size: .95rem; font-weight: 800; color: var(--fg); font-variant-numeric: tabular-nums; }
+.mk-s { font-size: .68rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--fg2); }
+.mk-g { width: 58px; height: 33px; display: block; }
+.mk-g text { font-size: 11px; font-weight: 800; fill: var(--fg); }
+.mk-fng .mk-s { margin-top: -1px; }
+.cpf-bl { display: inline-flex; align-items: center; gap: 4px; }
+.cpf-bl .val-edit { background: transparent; border: 0; color: var(--fg2); cursor: pointer; padding: 2px; line-height: 0; }
+/* 🕌 the zakat card (folded, like metals and cash) — the due banner stays open at the top */
+.zk-line.zk-card { margin-top: 12px; text-align: start; font-size: inherit; color: inherit; padding: 10px 12px; }
+.zk-card .zk-short { font-weight: 600; font-size: .8rem; color: var(--fg2); } .zk-card .zk-short b { color: #22c55e; }
+.zk-card .zk-body { text-align: center; font-size: .8rem; line-height: 1.55; color: var(--fg2); }
+.zk-card .zk-body b { color: var(--fg); }
+/* 💼 Net worth: the bar and legend by part (BTC · Altcoins · Metals · Shares · Cash) */
+.nw-bar { gap: 2px; background: transparent; }
+.nw-bar i:first-child { border-radius: 6px 0 0 6px; } .nw-bar i:last-child { border-radius: 0 6px 6px 0; }
+[dir=rtl] .nw-bar i:first-child { border-radius: 0 6px 6px 0; } [dir=rtl] .nw-bar i:last-child { border-radius: 6px 0 0 6px; }
+.nw-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 14px; }
+.nw-li { display: grid !important; grid-template-columns: auto 1fr auto; align-items: center; gap: 2px 6px; min-width: 0; }
+.nw-li i { width: 8px; height: 8px; border-radius: 3px; }
+.nw-li .nw-n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--fg2); }
+.nw-li b { color: var(--fg); font-weight: 800; }
+.nw-li .nw-u { grid-column: 2 / -1; font-size: .7rem; opacity: .85; }
+.nw-foot { margin-top: 8px; font-size: .72rem; color: var(--fg2); text-align: center; font-variant-numeric: tabular-nums; }
+.head-meta .hm-item[hidden] { display: none !important; }

@@ -128,10 +128,10 @@
       });
     },
     // Fear & Greed: CoinMarketCap's (the number CoinMarketCap and Binance show), saved by GitHub with each snapshot (every
-    // ~30 min — it moves slowly). alternative.me's live one only when the snapshot doesn't have CoinMarketCap's.
+    // ~30 min; when CoinMarketCap is busy the snapshot keeps its last one up to 6 h). alternative.me's only past that.
     fng: function (force) {
       return snapPart('fng')().catch(function () { return null; }).then(function (s) {
-        if (s && s.data && s.data.src === 'cmc' && Date.now() - s.t < 3 * 3600e3) return { data: s.data, t: s.t, stale: false };
+        if (s && s.data && s.data.src === 'cmc' && Date.now() - (Date.parse(s.data.at) || s.t) < 6.5 * 3600e3) return { data: s.data, t: s.t, stale: false };   // CoinMarketCap's, up to ~6 h old (it moves slowly)
         return API._fngLive(force);
       });
     },
