@@ -1574,7 +1574,7 @@ if (process.env.DUMP_TEXTS) fs.writeFileSync(process.env.DUMP_TEXTS, JSON.string
   const at = RIYADH('13:00'); kvStore.delete('tg:555:bk:rem');
   again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
   check('🔐 a backup file made lately → no reminder', bmsg().length === 0, bmsg().map(x => x.b.text));
-  globalThis.__lastBackupAt = new Date(Date.now() - 41 * 864e5).toISOString(); again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at);
+  globalThis.__lastBackupAt = new Date(at - 41.5 * 864e5).toISOString(); again();   // (from the run's own clock: the test passes at any hour) sent.length = 0; Wd = await fresh(); await cron(Wd, at);
   check('🔐 the last file is 41 days old → one reminder: how old, why the file matters, where the button is, and a button to the app', bmsg().length === 1 && /41 days ago/.test(bmsg()[0].b.text) && /only copy outside your account/.test(bmsg()[0].b.text) && /Settings → Backup → Back up now/.test(bmsg()[0].b.text) && btns(bmsg()[0]).length === 1, bmsg().map(x => x.b.text));
   again(); sent.length = 0; Wd = await fresh(); await cron(Wd, at + 30 * 60e3);
   check('…and not again (quiet for 30 days)', bmsg().length === 0);
