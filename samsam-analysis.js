@@ -65,17 +65,22 @@ function buildPortfolioPayload() {
     const raw = accumPlanState || [];
     accumPlanData = raw.map(entry => {
       const coin = portfolio.find(c => c.sym && c.sym.toUpperCase() === (entry.sym||'').toUpperCase());
-      const actualQty    = coin ? (coin.qty || 0) : 0;
+      const C = Samsam.core, kind = C.planKind(entry);
+      const actualQty    = C.planActual(entry, coin ? (coin.qty || 0) : 0, Samsam.getCash ? Samsam.getCash() : []);
       const targetQty    = entry.targetQty || 0;
-      const currentPrice = coin ? (coin.currentPrice || coin.basePrice || 0) : 0;
+      let fx = null; try { fx = (JSON.parse(localStorage.getItem('cp-fx') || 'null') || {}).fx || null; } catch (_) {}
+      const currentPrice = kind === 'cash' ? (C.planCashPrice(entry.sym, fx) || 0) : coin ? (coin.currentPrice || coin.basePrice || 0) : 0;
+      const U = q => C.planUnits(entry, q).n;   // amounts in the row's own unit (grams, shares, the currency)
       const progress     = targetQty > 0 ? Math.min(actualQty / targetQty * 100, 100) : 0;
       const costToTarget = Math.max(targetQty - actualQty, 0) * currentPrice;
       return {
         sym:          entry.sym,
         name:         entry.name || entry.sym,
-        targetQty:    +targetQty,
-        actualQty:    +actualQty.toFixed(8),
-        pendingQty:   +Math.max(targetQty - actualQty, 0).toFixed(8),
+        kind, unit:   C.planUnits(entry, 1).u,
+        targetQty:    +U(targetQty).toFixed(8),
+        actualQty:    +U(actualQty).toFixed(8),
+        pendingQty:   +U(Math.max(targetQty - actualQty, 0)).toFixed(8),
+        usdPerUnit:   +(currentPrice / (U(1) || 1)),
         currentPrice: +currentPrice,
         costToTarget: +costToTarget.toFixed(2),
         progressPct:  +progress.toFixed(1),
@@ -86,8 +91,8 @@ function buildPortfolioPayload() {
 
   const accumMet     = accumPlanData.filter(e => e.met).length;
   const accumTotal   = accumPlanData.length;
-  const accumWgtAct  = accumPlanData.reduce((s, e) => s + e.actualQty   * e.currentPrice, 0);
-  const accumWgtTgt  = accumPlanData.reduce((s, e) => s + e.targetQty   * e.currentPrice, 0);
+  const accumWgtAct  = accumPlanData.reduce((s, e) => s + e.actualQty   * e.usdPerUnit, 0);
+  const accumWgtTgt  = accumPlanData.reduce((s, e) => s + e.targetQty   * e.usdPerUnit, 0);
   const accumOverall = accumWgtTgt > 0 ? Math.min(accumWgtAct / accumWgtTgt * 100, 100) : 0;
 
   return {
@@ -396,14 +401,14 @@ async function aiRequestParts(lang) {
     const ap = portfolioData.accumPlan;
     accumContext  = `\n\nخطة التجميع (تحقق ${ap.metTargets} من ${ap.totalTargets} أهداف، الإنجاز الكلي ${ap.overallPct}%، المتبقي $${ap.totalCostToMeet}):\n`;
     accumContext += ap.entries.map(e =>
-      `- ${e.sym}: الهدف ${e.targetQty}، المتوفر ${e.actualQty}، المتبقي ${e.pendingQty}، التقدّم ${e.progressPct}%، تكلفة الإكمال $${e.costToTarget}${e.met ? ' ✓ تحقق' : ''}`
+      `- ${e.sym}: الهدف ${e.targetQty} ${e.unit}، المتوفر ${e.actualQty}، المتبقي ${e.pendingQty}، التقدّم ${e.progressPct}%، تكلفة الإكمال $${e.costToTarget}${e.met ? ' ✓ تحقق' : ''}`
     ).join('\n');
     accumContext += `\nعند التوصية بالشراء أو الاحتفاظ، خذ في الاعتبار العملات الموجودة في خطة التجميع ومدى قربها من أهدافها.`;
   } else if (portfolioData.accumPlan && portfolioData.accumPlan.entries.length > 0) {
     const ap = portfolioData.accumPlan;
     accumContext  = `\n\nACCUMULATION PLAN (${ap.metTargets}/${ap.totalTargets} targets met, overall ${ap.overallPct}% complete, $${ap.totalCostToMeet} still needed):\n`;
     accumContext += ap.entries.map(e =>
-      `- ${e.sym}: target ${e.targetQty}, actual ${e.actualQty}, pending ${e.pendingQty}, progress ${e.progressPct}%, cost to complete $${e.costToTarget}${e.met ? ' ✓ MET' : ''}`
+      `- ${e.sym}: target ${e.targetQty} ${e.unit}, actual ${e.actualQty}, pending ${e.pendingQty}, progress ${e.progressPct}%, cost to complete $${e.costToTarget}${e.met ? ' ✓ MET' : ''}`
     ).join('\n');
     accumContext += `\nWhen making Buy/Hold recommendations, factor in which coins are part of the accumulation plan and how close they are to their targets.`;
   }

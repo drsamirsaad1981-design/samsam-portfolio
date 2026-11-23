@@ -17,7 +17,7 @@ import { bidi, bidiBody, NOT_ADVICE } from './bidi.mjs';
 import { markSeen } from './idle.mjs';
 import { note } from './usage.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR, askInvite, askedInvite, closeAsk, ASKS_PER_HOUR } from './who.mjs';
-import { summarize, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
+import { summarize, planName, planAmt, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
 import { chatUid, idTokenFor, setAlertsLang } from './data.mjs';
 import { balancesFor } from './cex.mjs';
 import { usMarket, US_STATE, METAL, UNIT, gramSar } from './usmarket.mjs';
@@ -269,8 +269,8 @@ export function viewPlan(t, sum, now) {
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach(p => {
       const f = p.target > 0 ? p.actual / p.target : 0;
       L.push(isAr(t)   // Arabic: no fixed-width block next to Arabic words (it reads backwards right-to-left)
-        ? `• <b>${esc(p.sym)}</b> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : ` · باقي ${+Number(p.target - p.actual).toPrecision(4)}`}`
-        : `<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : `  ${t.left} ${qty(p.target - p.actual)}`}`);
+        ? `• <b>${esc(planName(p, true))}</b> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : ` · باقي ${(p.kind || 'coin') === 'coin' ? +Number(p.target - p.actual).toPrecision(4) : planAmt(p, p.target - p.actual, true)}`}`
+        : `<code>${esc(planName(p, false).padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? ' ✅' : `  ${t.left} ${(p.kind || 'coin') === 'coin' ? qty(p.target - p.actual) : planAmt(p, p.target - p.actual, false)}`}`);
     });
   }
   if ((sum.dca || []).length) {

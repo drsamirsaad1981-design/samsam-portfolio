@@ -32,7 +32,7 @@ with sync_playwright() as p:
     # 1. Plan a coin you don't own
     pg.goto(S.SITE + '/accumulation.html'); S.wait_ready(pg); pg.wait_for_timeout(1500)
     pg.evaluate("setView('cards')")
-    pg.click('text=Add Coin to Plan'); pg.wait_for_timeout(200)
+    pg.click('.cp-add:has-text("Add to Plan")'); pg.wait_for_timeout(200)
     pg.fill('#addSearch', 'hyp'); pg.wait_for_timeout(900)
     lst = pg.inner_text('#addList')
     check('Add Coin to Plan finds coins you don\'t own (CoinGecko), marked Not Owned', 'HYPE' in lst and 'Other Coins' in lst and 'Not Owned' in lst, lst)

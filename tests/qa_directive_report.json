@@ -1,7 +1,7 @@
 {
- "t1_ms": 183,
- "t1_ui_ms": 60,
- "t2_ms": 913,
+ "t1_ms": 382,
+ "t1_ui_ms": 21,
+ "t2_ms": 915,
  "t3_eth_after": {
   "qty": 0,
   "avg": 2432,
@@ -9,15 +9,15 @@
   "price": 2
  },
  "t3_avg_kept": 2432,
- "t4_ms": 951,
+ "t4_ms": 1010,
  "t5_values_seen": [
   "$\u2014.\u2014\u2014 [under loading screen]",
   "$1,077,191.58"
  ],
  "t5_zero_hidden_by_loading_screen": false,
  "tab_ms": {
-  "accumulation": 4,
-  "market": 5,
-  "home": 2
+  "accumulation": 6,
+  "market": 1,
+  "home": 3
  }
 }

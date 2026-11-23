@@ -100,14 +100,14 @@
   var cssDone = false, editing = null;
   function close() { var m = $('cpCash'); if (m) m.remove(); var e = doc.querySelector('.cc-form.cc-embed'); if (e) { e.innerHTML = ''; e.classList.remove('cc-form', 'cc-embed'); } editing = null; }
   // its own window (from the card: add or edit one entry)
-  function open(id) {
+  function open(id, o2) {   // o2.cur: a new entry in that currency (the Plan's savings goal → ➕ Add)
     var s = S(); if (!s || !s.isReady || !s.isReady()) return;
     close();
     var w = doc.createElement('div'); w.id = 'cpCash'; w.setAttribute('data-no-tr', '');
     w.innerHTML = '<div class="cc-box" role="dialog" aria-modal="true" aria-labelledby="ccT"></div>';
     doc.body.appendChild(w);
     w.addEventListener('click', function (e) { if (e.target === w) close(); });
-    form(w.firstChild, id, { onClose: close });
+    form(w.firstChild, id, { onClose: close, cur: o2 && o2.cur });
   }
   // inside another window (➕ Add → the "Cash & certificate" tab): the same form, a new entry; opts.onDone after a save
   function embed(el, opts) {
@@ -124,7 +124,7 @@
     var list = s.getCash(), it = id ? list.filter(function (x) { return x.id === id; })[0] : null, ar = AR();
     editing = it ? it.id : null;
     var today = new Date().toISOString().slice(0, 10);
-    var v = it || { kind: 'cash', cur: 'EGP', amount: '', label: '', rate: '', start: today, months: 36, pay: 'month' };
+    var v = it || { kind: 'cash', cur: o.cur && CUR[o.cur] ? o.cur : 'EGP', amount: '', label: '', rate: '', start: today, months: 36, pay: 'month' };
     var opt = function (list2, cur) { return list2.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + E(o[1]) + '</option>'; }).join(''); };
     var w = root;
     w.innerHTML = (o.embed ? '' : '<h3><span id="ccT">🏦 ' + (it ? T('Edit', 'تعديل') : T('Cash & certificates', 'نقد وشهادات')) + '</span><button type="button" class="cc-x" id="ccX" aria-label="' + T('Close', 'إغلاق') + '">✕</button></h3>') +

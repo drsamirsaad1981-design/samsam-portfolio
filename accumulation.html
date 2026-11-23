@@ -19,23 +19,24 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-lang.js?v=202611231722"></script>
-<script src="samsam-ar.js?v=202611231722"></script>
-<script src="samsam-ui.js?v=202611231722"></script>
-<script src="samsam-hints.js?v=202611231722"></script>
-<script src="samsam-arhints.js?v=202611231722"></script>
-<script src="samsam-vault.js?v=202611231722"></script>
-<script src="samsam-labels.js?v=202611231722"></script>
-<script src="samsam-taxonomy.js?v=202611231722"></script>
-<script src="samsam-coins.js?v=202611231722"></script>
-<script src="samsam-import.js?v=202611231722"></script>
-<script src="samsam-wallets.js?v=202611231722"></script>
-<script src="samsam-rewards.js?v=202611231722"></script>
-<script src="samsam-settings.js?v=202611231722"></script>
-<script src="samsam-dropdown.js?v=202611231722"></script>
-<script src="samsam-market.js?v=202611231722"></script>
-<script src="samsam-exit.js?v=202611231722"></script>
-<script src="samsam-add.js?v=202611231722"></script>
+<script src="samsam-lang.js?v=202611231747"></script>
+<script src="samsam-ar.js?v=202611231747"></script>
+<script src="samsam-ui.js?v=202611231747"></script>
+<script src="samsam-hints.js?v=202611231747"></script>
+<script src="samsam-arhints.js?v=202611231747"></script>
+<script src="samsam-vault.js?v=202611231747"></script>
+<script src="samsam-labels.js?v=202611231747"></script>
+<script src="samsam-taxonomy.js?v=202611231747"></script>
+<script src="samsam-coins.js?v=202611231747"></script>
+<script src="samsam-import.js?v=202611231747"></script>
+<script src="samsam-wallets.js?v=202611231747"></script>
+<script src="samsam-rewards.js?v=202611231747"></script>
+<script src="samsam-settings.js?v=202611231747"></script>
+<script src="samsam-dropdown.js?v=202611231747"></script>
+<script src="samsam-market.js?v=202611231747"></script>
+<script src="samsam-exit.js?v=202611231747"></script>
+<script src="samsam-add.js?v=202611231747"></script>
+<script src="samsam-cash.js?v=202611231747"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -725,6 +726,20 @@ table.xv tfoot td:first-child { background: var(--bg3); }
 .xv-leg { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .xv-leg span { display: inline-flex; align-items: center; white-space: nowrap; } .xv-leg .ss-ic { margin-inline-end: 4px; }
 </style>
+<style>
+/* ➕ Add to Plan: four tabs — Coins · bStocks · Metals · Cash & CDs */
+.ap-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;margin:0 0 12px;border-radius:12px;background:var(--bg3)}
+.ap-tabs button{border:0;background:transparent;color:var(--fg2);font:inherit;font-size:.78rem;font-weight:700;padding:8px 3px;border-radius:9px;cursor:pointer;line-height:1.15;letter-spacing:-.01em}
+.ap-tabs button[aria-selected=true]{background:var(--accent);color:#fff}
+.ap-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.ap-pick.two{grid-template-columns:repeat(2,1fr)}
+.ap-pick button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 6px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--fg);font:inherit;font-weight:700;cursor:pointer}
+.ap-pick button small{font-weight:500;color:var(--fg2);font-size:.72rem}
+.ap-pick button[aria-checked=true]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.ap-pick .ap-e{font-size:1.4rem;line-height:1}
+.ap-pick[hidden]{display:none}
+.cash-ic{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bg3);font-size:1.15rem;flex-shrink:0}
+</style>
 </head>
 <body>
 <div id="cpSplash" role="status" aria-live="polite" aria-label="Loading Cute Portfolio" style="position:fixed;inset:0;z-index:100200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0e1a;color:#e5e7eb;font-family:Inter,system-ui,-apple-system,sans-serif;transition:opacity .35s ease,visibility .35s">
@@ -848,7 +863,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
 
 <!-- Toolbar -->
 <div class="toolbar">
-  <button type="button" class="cp-add" onclick="openAddModal()" title="Add any coin to your plan — even one you don't own yet"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add<span class="lbl-long"> Coin</span> to Plan</span></button>
+  <button type="button" class="cp-add" onclick="openAddModal()" title="Add a coin, a share, gold / silver or a savings goal to your plan — even one you don't own yet"><span class="cp-add-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>Add to Plan</span></button>
   <input type="text" class="search-box" id="searchBox" placeholder="Search coin..." oninput="renderAll()">
   <div class="view-toggle cp-vseg" role="group" aria-label="View">
     <button type="button" id="btnTable" data-view="table" onclick="setView('table')"><span data-ic="table"></span>Table</button>
@@ -881,23 +896,38 @@ table.xv tfoot td:first-child { background: var(--bg3); }
 
 <div id="emptyState" class="empty-state" style="display:none">
   <div class="icon" data-ic="accumulation" data-ic-solo data-ic-size="40"></div>
-  <div>No coins in your accumulation plan yet.</div>
-  <div style="margin-top:6px;font-size:0.8rem">Click <strong><span data-ic="plus"></span>Add Coin to Plan</strong> to get started.</div>
+  <div>Nothing in your accumulation plan yet.</div>
+  <div style="margin-top:6px;font-size:0.8rem">Click <strong><span data-ic="plus"></span>Add to Plan</strong> — a coin, a share, gold / silver or a savings goal.</div>
 </div>
 </div><!-- /accPane -->
 
 <!-- Add Coin Modal -->
 <div class="overlay" id="addModal">
   <div class="modal">
-    <h3 id="addTitle"><span data-ic="plus"></span>Add Coin to Accumulation Plan</h3>
-    <div class="form-row">
-      <label class="form-label">Search Coin</label>
+    <h3 id="addTitle"><span data-ic="plus"></span>Add to Plan</h3>
+    <div class="ap-tabs" id="apTabs" role="tablist" aria-label="What to plan">
+      <button type="button" role="tab" data-tab="coin" aria-selected="true" onclick="setApTab('coin')">Coins</button>
+      <button type="button" role="tab" data-tab="stock" aria-selected="false" onclick="setApTab('stock')">bStocks</button>
+      <button type="button" role="tab" data-tab="metal" aria-selected="false" onclick="setApTab('metal')">Metals</button>
+      <button type="button" role="tab" data-tab="cash" aria-selected="false" onclick="setApTab('cash')">Cash &amp; CDs</button>
+    </div>
+    <div class="ap-pick two" id="apMetal" role="radiogroup" aria-label="Metal" hidden>
+      <button type="button" role="radio" data-m="XAU" aria-checked="false" onclick="pickApMetal('XAU')"><span class="ap-e">🥇</span>Gold<small>24k · grams</small></button>
+      <button type="button" role="radio" data-m="XAG" aria-checked="false" onclick="pickApMetal('XAG')"><span class="ap-e">🥈</span>Silver<small>999 · grams</small></button>
+    </div>
+    <div class="ap-pick" id="apCash" role="radiogroup" aria-label="Currency" hidden>
+      <button type="button" role="radio" data-cur="EGP" aria-checked="false" onclick="pickApCash('EGP')"><span class="ap-e">🇪🇬</span>EGP<small>Egyptian pound</small></button>
+      <button type="button" role="radio" data-cur="USD" aria-checked="false" onclick="pickApCash('USD')"><span class="ap-e">🇺🇸</span>USD<small>US dollar</small></button>
+      <button type="button" role="radio" data-cur="SAR" aria-checked="false" onclick="pickApCash('SAR')"><span class="ap-e">🇸🇦</span>SAR<small>Saudi riyal</small></button>
+    </div>
+    <div class="form-row" id="addSearchRow">
+      <label class="form-label" id="addSearchLbl">Search Coin</label>
       <input type="text" class="form-input" id="addSearch" placeholder="e.g. BTC, Ethereum..." oninput="filterAddList()">
       <div class="coin-search-list" id="addList"></div>
     </div>
     <div id="addSelectedInfo" style="display:none;margin-bottom:10px;padding:10px;background:var(--bg3);border-radius:8px;font-size:0.85rem"></div>
     <div class="form-row" id="addTargetRow">
-      <label class="form-label">Target Amount</label>
+      <label class="form-label" id="addTargetLbl">Target Amount</label>
       <input type="number" class="form-input" id="addTarget" placeholder="0.00" min="0" step="any">
     </div>
     <div class="modal-btns">
@@ -907,7 +937,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611231722"></script>
+<script type="module" src="samsam-cloud.js?v=202611231747"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1052,13 +1082,14 @@ function planChange24h(entry) {
   return p && typeof p.ch24 === 'number' ? p.ch24 : null;
 }
 function planAsset(entry, r, extra) {
+  if (r && r.cash) return cashAsset(entry, r, extra);
   return SamsamCoins.assetCell(entry.sym, { ...coinOpts(entry, r), name: r.name, price: r.currentPrice, change24h: planChange24h(entry), ...extra });
 }
 // ─── Category filter: one active-category card, same component as the main page ──
 let activeCatFilter = '', catPickerDD = null;
 // The portfolio coin's category already includes your own choice (Change category); fall back to the default list
 const catOfEntry = e => (getPortfolioCoin(e.sym) || {}).cat || e.cat || (window.SamsamTaxonomy ? SamsamTaxonomy.categoryOf(e.sym) : 'other');
-const inCat = e => !activeCatFilter || catOfEntry(e) === activeCatFilter;
+const inCat = e => SamsamTaxonomy.matches(activeCatFilter, e.sym, catOfEntry(e));   // a class ('c:stock') or one category
 function setCatFilter(cat, exact) {
   const before = activeCatFilter;
   activeCatFilter = exact ? cat : (activeCatFilter === cat ? '' : cat);
@@ -1076,13 +1107,9 @@ function animateCoinList() {
 function renderCatPicker() {
   const T = window.SamsamTaxonomy, host = document.getElementById('summaryGrid');
   if (!T || !window.SamsamDropdown || !host) return;
-  // Value per category = what you already hold of the plan's coins (Actual Amount × Current Price)
-  const totals = {}; let all = 0;
-  accumPlan.forEach(e => { const r = calcRow(e), v = r.actualQty * r.currentPrice, k = catOfEntry(e); totals[k] = (totals[k] || 0) + v; all += v; });
-  const keys = T.pickerKeys(totals);
-  const dot = c => `<span class="cp-dot" style="background:${c}"></span>`;
-  const options = [{ value: 'all', label: 'All Coins', sub: SamsamFmt.usd(all), icon: '<span class="cp-globe">' + SamsamUI.ic('globe', { solo: true }) + '</span>' }]
-    .concat(keys.map(k => ({ value: k, label: T.label(k), sub: SamsamFmt.usd(totals[k] || 0), icon: dot(T.color(k)) })));
+  // Value per class / category = what you already hold of the plan's rows (Actual Amount × Current Price)
+  const pk = T.pickerOptions(accumPlan.map(e => { const r = calcRow(e); return { sym: e.sym, cat: catOfEntry(e), v: r.actualQty * r.currentPrice }; }), { sub: v => SamsamFmt.usd(v) });
+  const options = [{ value: 'all', label: pk.classes.length > 1 ? 'All' : 'All Coins', sub: SamsamFmt.usd(pk.all), icon: '<span class="cp-globe">' + SamsamUI.ic('globe', { solo: true }) + '</span>' }].concat(pk.options);
   if (!catPickerDD) {
     host.innerHTML = '<div class="cat-picker" id="catPicker"><div id="catPickerDD"></div></div>';
     catPickerDD = SamsamDropdown.create(document.getElementById('catPickerDD'), {
@@ -1135,6 +1162,7 @@ function startPlanPrices() { if (_planPriceT) return; fetchPlanOnlyPrices(true);
 // follow); one you don't hold yet → saved with the plan, and Add Coin starts from it on your first Buy.
 function catBadge(entry, idx) {
   const T = window.SamsamTaxonomy; if (!T) return '';
+  if (kindOf(entry) === 'cash') return `<span class="cat-tag" style="--cat-c:${T.color('c:cash')}">${T.label('c:cash')}</span>`;   // a savings goal: no category
   const k = catOfEntry(entry), L = SamsamCoins.esc(T.label(k)), sym = entry.sym;
   return `<span class="category-badge-editable"><button type="button" class="cat-tag" style="--cat-c:${T.color(k)}" onclick="editPlanCat(${idx})" title="${L} — tap to change the category of ${sym}" aria-label="Category ${L} — change for ${sym}">${L}</button>` +
     `<button type="button" class="cat-edit" onclick="editPlanCat(${idx})" title="Change the category of ${sym}" aria-label="Change the category of ${sym}">${SamsamUI.icon('pencil')}</button></span>` + paChip(entry);
@@ -1146,8 +1174,16 @@ function editPlanCat(idx) {
 }
 
 // ➕ Buy: Add Transaction for a coin you hold, otherwise Add Coin ready with this coin (shared forms, samsam-add.js)
+function buyTitle(e, r) { return r.cash ? 'Add a balance or certificate in ' + r.cur : r.notOwned ? 'Add ' + e.sym + ' to your portfolio' : 'Add a Buy for ' + e.sym; }
+// Holdings cell: value over the amount (coins / metals: the shared cell; shares and savings: in their own unit)
+function holdHtml(e, r) {
+  const k = kindOf(e);
+  if (k === 'coin' || k === 'metal') return SamsamCoins.holdCell(e.sym, r.actualQty * r.currentPrice, r.actualQty, { align: 'left', noValue: !(r.currentPrice > 0) });
+  return `<div style="text-align:start"><div style="font-weight:700">${r.currentPrice > 0 ? SamsamFmt.usd(r.actualQty * r.currentPrice) : '—'}</div><div style="font-size:.75rem;color:var(--fg2)">${qtyHtml(e, r.actualQty)}</div></div>`;
+}
 function buyPlanCoin(idx) {
   const e = accumPlan[idx]; if (!e) return;
+  if (kindOf(e) === 'cash') { if (window.SamsamCash) SamsamCash.open(null, { cur: e.sym.slice(5) }); return; }   // 🏦 a new balance / certificate in that currency
   const o = coinOpts(e, calcRow(e));
   CPAdd.buy(e.sym, { name: e.name || e.sym, cgId: o.cgId, logoUrl: o.logoUrl, cat: catOfEntry(e), catLabel: e.catLabel });
 }
@@ -1179,7 +1215,31 @@ function syncFromPortfolio() {
 }
 
 // ─── Calculations ────────────────────────────────────────────────────────────
+// ── Units: coins in the coin · shares · metals in grams (kept in troy ounces, like the portfolio) · a savings goal in its currency ──
+let planFx = (() => { try { const k = JSON.parse(localStorage.getItem('cp-fx') || 'null'); return k && k.fx || null; } catch (_) { return null; } })(), planFxAsked = 0;
+function loadPlanFx() {   // the official rates (market snapshot) — only when a savings goal needs them
+  if (Date.now() - planFxAsked < 10 * 60e3 || !window.SamsamMarket || !SamsamMarket.fx) return;
+  planFxAsked = Date.now();
+  SamsamMarket.fx().then(r => {
+    const o = {}; Object.keys((r && r.data) || {}).forEach(c => { const v = r.data[c] && +r.data[c].rate; if (v > 0) o[c] = v; });
+    if (!Object.keys(o).length) return;
+    planFx = o; try { localStorage.setItem('cp-fx', JSON.stringify({ fx: o, t: r.t || Date.now() })); } catch (_) {}
+    renderAll();
+  }, () => {});
+}
+const planCash = () => window.Samsam && Samsam.getCash ? Samsam.getCash() : [];
+const planHeldNow = e => coreOK() ? Samsam.core.planActual(e, 0, planCash()) : 0;
+function toUnit(e, qty) { return coreOK() ? Samsam.core.planUnits(e, qty, AR()).n : +qty || 0; }
+function fromUnit(e, n) { n = +n || 0; return kindOf(e) === 'metal' ? n / Samsam.core.GRAMS_PER_OZ : n; }
+function unitNum(e, qty) {
+  const u = coreOK() ? Samsam.core.planUnits(e, qty, AR()) : { n: +qty || 0, u: e.sym, dp: 8 };
+  return { u: u.u, t: u.dp === 0 ? Math.round(u.n).toLocaleString('en-US') : u.dp === 2 || u.dp === 4 ? (+u.n.toFixed(u.dp)).toLocaleString('en-US', { maximumFractionDigits: u.dp }) : fmtQty(u.n) };
+}
+function qtyHtml(e, qty) { const x = unitNum(e, qty); return `${x.t} <small>${SamsamCoins.esc(x.u)}</small>`; }
+const unitOf = e => unitNum(e, 0).u;
+
 function calcRow(entry) {
+  if (kindOf(entry) === 'cash') return calcCashRow(entry);
   const pc = getPortfolioCoin(entry.sym);
   const actualQty    = pc ? (pc.qty || 0) : 0;
   const currentPrice = planPrice(entry, pc);
@@ -1202,6 +1262,20 @@ function calcRow(entry) {
   // below the base (−%): buy when the price falls to the target · above the base (+%): buy when it rises to it
   const readyToBuy   = priceDiff !== null && (targetPct < 0 ? priceDiff <= 0 : priceDiff >= 0);
   return { notOwned, actualQty, currentPrice, targetPrice, targetPct, targetBase, targetBaseAt: entry.targetBaseAt || '', pendingQty, costToTarget, progress, logoUrl, name, priceDiff, readyToBuy };
+}
+// 🏦 a savings goal: what you have = your cash & certificates in that currency today; its price = dollars per unit
+function calcCashRow(entry) {
+  const cur = entry.sym.slice(5), actualQty = planHeldNow(entry), px = Samsam.core.planCashPrice(entry.sym, planFx);
+  if (px == null) loadPlanFx();
+  const currentPrice = px || 0, targetQty = entry.targetQty || 0, pendingQty = Math.max(targetQty - actualQty, 0);
+  return { cash: true, cur, notOwned: !(actualQty > 0), actualQty, currentPrice, targetPrice: 0, targetPct: 0, targetBase: 0, targetBaseAt: '', pendingQty,
+    costToTarget: pendingQty * currentPrice, progress: targetQty > 0 ? Math.min(actualQty / targetQty * 100, 100) : 0, logoUrl: '', name: 'Savings · ' + cur, priceDiff: null, readyToBuy: false };
+}
+const CASH_FLAG = { USD: '🇺🇸', EGP: '🇪🇬', SAR: '🇸🇦' };
+function cashAsset(entry, r, x) {
+  x = x || {}; const size = x.size || 36;
+  const E = SamsamCoins.esc, rate = r.cur === 'USD' ? '' : r.currentPrice > 0 ? ' · $1 = ' + (+(1 / r.currentPrice).toFixed(2)) + ' ' + r.cur : '';
+  return `<div class="ast"><span class="ast-ic"><span class="cash-ic" style="width:${size}px;height:${size}px">${CASH_FLAG[r.cur] || '🏦'}</span></span><div class="ast-t"><div class="ast-top"><span class="ast-sym">${E(r.cur)}</span>${x.badge || ''}</div><div class="ast-line"><span class="ast-price">Savings goal${rate}</span></div>${x.below || ''}</div></div>`;
 }
 
 // ─── Render Table ────────────────────────────────────────────────────────────
@@ -1277,19 +1351,19 @@ function renderTable() {
         </div>
       </td>
       <td>
-        <span class="val-cell">${entry.targetQty > 0 ? fmtQty(entry.targetQty) + `<span style="font-size:.7rem;color:var(--fg2);margin-inline-start:4px">${entry.sym}</span>` : '<span class="no-price">Set target</span>'}<button type="button" class="val-edit" onclick="promptTarget(${idx})" title="Change the target amount" aria-label="Change the target amount for ${entry.sym}">${SamsamUI.icon('pencil')}</button></span>
+        <span class="val-cell">${entry.targetQty > 0 ? unitNum(entry, entry.targetQty).t + `<span style="font-size:.7rem;color:var(--fg2);margin-inline-start:4px">${SamsamCoins.esc(unitOf(entry))}</span>` : '<span class="no-price">Set target</span>'}<button type="button" class="val-edit" onclick="promptTarget(${idx})" title="Change the target amount" aria-label="Change the target amount for ${entry.sym}">${SamsamUI.icon('pencil')}</button></span>
       </td>
-      <td>${SamsamCoins.holdCell(entry.sym, r.actualQty * r.currentPrice, r.actualQty, { align: 'left', noValue: !(r.currentPrice > 0) })}</td>
+      <td>${holdHtml(entry, r)}</td>
       <td style="color:${r.pendingQty > 0 ? 'var(--red)' : 'var(--green)'}">
-        ${r.pendingQty > 0 ? fmtQty(r.pendingQty) : SamsamUI.ic('check', { solo: true })}
-        ${r.pendingQty > 0 ? `<span style="font-size:.7rem;color:var(--fg2)"> ${entry.sym}</span>` : ''}
+        ${r.pendingQty > 0 ? unitNum(entry, r.pendingQty).t : SamsamUI.ic('check', { solo: true })}
+        ${r.pendingQty > 0 ? `<span style="font-size:.7rem;color:var(--fg2)"> ${SamsamCoins.esc(unitOf(entry))}</span>` : ''}
       </td>
-      <td style="min-width:130px">
+      <td style="min-width:130px">${r.cash ? '<span class="no-price">—</span>' : `
         <span class="val-cell">${entry.targetPct ? (entry.targetPct > 0 ? '+' : '−') + Math.abs(entry.targetPct) + '%' : '<span class="no-price">Set %</span>'}<button type="button" class="val-edit" onclick="promptTargetPct(${idx})" title="Change the buy-at % (e.g. -20 = buy 20% below the current price)" aria-label="Change the buy-at percent for ${entry.sym}">${SamsamUI.icon('pencil')}</button></span>
         ${r.targetPrice > 0 ? `<div style="font-size:0.7rem;margin-top:3px;color:var(--accent);font-weight:600">
           ${SamsamUI.ic('accumulation')}${SamsamFmt.price(r.targetPrice)} <span style="color:var(--fg2);font-weight:500">of ${SamsamFmt.price(r.targetBase)}${baseDay(r)}</span>
         </div>` : ''}
-        ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}
+        ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}`}
       </td>
       <td>${hasPrice && r.pendingQty > 0 ? '<strong>' + SamsamFmt.usd(r.costToTarget) + '</strong>' : (r.pendingQty === 0 ? '<span style="color:var(--green)">—</span>' : '<span class="no-price">N/A</span>')}</td>
       <td style="min-width:100px">
@@ -1299,7 +1373,7 @@ function renderTable() {
         <div class="prog-label">${r.progress.toFixed(1)}%</div>
       </td>
       <td>
-        <span style="white-space:nowrap"><button type="button" class="row-buy" onclick="buyPlanCoin(${idx})" title="${r.notOwned ? 'Add ' + entry.sym + ' to your portfolio' : 'Add a Buy for ' + entry.sym}">${SamsamUI.ic('plus')}Buy</button><button type="button" class="row-dca" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">${SamsamUI.ic('calc')}DCA</button><button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan" aria-label="Remove from plan">${SamsamUI.ic('trash', { solo: true })}</button></span>
+        <span style="white-space:nowrap"><button type="button" class="row-buy" onclick="buyPlanCoin(${idx})" title="${buyTitle(entry, r)}">${SamsamUI.ic('plus')}${r.cash ? 'Add' : 'Buy'}</button>${r.cash ? '' : `<button type="button" class="row-dca" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">${SamsamUI.ic('calc')}DCA</button>`}<button class="del-btn" onclick="removeCoin(${idx})" title="Remove from plan" aria-label="Remove from plan">${SamsamUI.ic('trash', { solo: true })}</button></span>
       </td>
     </tr>`;
   }).join('');
@@ -1356,10 +1430,10 @@ function renderCards() {
       <div class="card-cat-row">${catBadge(entry, idx)}${ap > 0 ? `<span class="alert-badge${alertHit ? ' alert-triggered' : ''}">${SamsamUI.ic('bell')}${SamsamFmt.price(ap)}</span>` : ''}</div>
       <div class="acc-card-prog-bar"><div class="acc-card-prog-fill" style="width:${Math.min(r.progress,100).toFixed(1)}%;background:${progColor}"></div></div>
       <div class="coin-card-body">
-        ${metric(L.TARGET_AMOUNT, `${fmtQty(entry.targetQty || 0)} <small>${entry.sym}</small>`)}
-        ${metric(L.ACTUAL_AMOUNT, `${fmtQty(r.actualQty)} <small>${entry.sym}</small>`)}
-        ${metric(L.PENDING_AMOUNT, r.pendingQty > 0 ? `${fmtQty(r.pendingQty)} <small>${entry.sym}</small>` : SamsamUI.ic('check') + 'Done', `style="color:${r.pendingQty > 0 ? 'var(--red)' : 'var(--green)'}"`)}
-        ${metric(L.CURRENT_PRICE, hasPrice ? SamsamFmt.price(r.currentPrice) : '<span class="no-price">No price</span>')}
+        ${metric(L.TARGET_AMOUNT, qtyHtml(entry, entry.targetQty || 0))}
+        ${metric(L.ACTUAL_AMOUNT, qtyHtml(entry, r.actualQty))}
+        ${metric(L.PENDING_AMOUNT, r.pendingQty > 0 ? qtyHtml(entry, r.pendingQty) : SamsamUI.ic('check') + 'Done', `style="color:${r.pendingQty > 0 ? 'var(--red)' : 'var(--green)'}"`)}
+        ${metric(L.CURRENT_PRICE, !hasPrice ? '<span class="no-price">No price</span>' : r.cash ? (r.cur === 'USD' ? '$1' : `$1 = ${+(1 / r.currentPrice).toFixed(2)} <small>${r.cur}</small>`) : kindOf(entry) === 'metal' ? SamsamFmt.price(r.currentPrice / Samsam.core.GRAMS_PER_OZ) + '<small>/g</small>' : SamsamFmt.price(r.currentPrice))}
         ${metric(L.COST_TO_TARGET, hasPrice && r.pendingQty > 0 ? SamsamFmt.usd(r.costToTarget) : (r.pendingQty === 0 ? '—' : 'N/A'), 'style="color:var(--accent)"')}
         ${metric(L.BUY_AT, r.targetPrice > 0 ? SamsamFmt.price(r.targetPrice) : '—',
            r.priceDiff !== null ? `title="${buyAtStatus(r).replace(/<[^>]+>/g, '')} · base ${SamsamFmt.price(r.targetBase)}${baseDay(r)}" style="color:${r.readyToBuy ? 'var(--green)' : 'var(--fg)'}"` : '')}
@@ -1368,12 +1442,12 @@ function renderCards() {
         <div class="acc-set-row">
           <label>${SamsamUI.ic('accumulation')}${L.TARGET_AMOUNT}</label>
           <div class="acc-set-ctl">
-            <input class="card-target-input" type="number" min="0" step="any" value="${entry.targetQty||''}" placeholder="Amount"
+            <input class="card-target-input" type="number" min="0" step="any" value="${entry.targetQty ? +toUnit(entry, entry.targetQty).toFixed(kindOf(entry) === 'metal' ? 2 : 8) : ''}" placeholder="Amount"
               oninput="updateTarget(${idx}, this.value)" onblur="commitTarget(${idx}, this.value)" onkeydown="if(event.key==='Enter'){this.blur()}">
-            <span class="sym-tag">${entry.sym}</span>
+            <span class="sym-tag">${SamsamCoins.esc(unitOf(entry))}</span>
           </div>
         </div>
-        <div class="acc-set-row">
+        ${r.cash ? '' : `<div class="acc-set-row">
           <label>${SamsamUI.ic('coins')}${L.BUY_AT}<button type="button" class="cp-hint" data-hint="buyAt" aria-label="About Buy at %"></button></label>
           <div class="acc-set-ctl">
             <button type="button" class="acc-sign" onclick="togglePctSign(${idx})" title="Toggle positive/negative">${(entry.targetPct||0) >= 0 ? '+' : '−'}</button>
@@ -1392,12 +1466,12 @@ function renderCards() {
             ${ap > 0 ? `<button class="alert-clear-btn" onclick="clearAlert(${idx})" title="Clear alert" aria-label="Clear alert">${SamsamUI.ic('x', { solo: true })}</button>` : ''}
           </div>
           ${ap > 0 && hasPrice ? `<div class="acc-set-note" style="color:${alertHit ? 'var(--green)' : 'var(--fg2)'}">${alertHit ? SamsamUI.ic('checkCircle') + 'Hit!' : ((r.currentPrice - ap) / ap * 100).toFixed(1) + '% away'}</div>` : ''}
-        </div>
+        </div>`}
       </div>
       <div class="coin-card-footer"><span>#${i + 1}</span><span title="Last price update${entry.addedAt && /^\d{4}-/.test(entry.addedAt) ? ' · added to plan ' + entry.addedAt.slice(0, 10) : ''}">${(getPortfolioCoin(entry.sym) || {}).lastUpdate || (entry.addedAt && /^\d{4}-/.test(entry.addedAt) ? entry.addedAt.slice(0, 10) : '')}</span></div>
       <div class="card-act">
-        <button class="btn-buy" onclick="buyPlanCoin(${idx})" title="${r.notOwned ? 'Add ' + entry.sym + ' to your portfolio' : 'Add a Buy for ' + entry.sym}">${SamsamUI.ic('plus')}Buy</button>
-        <button class="btn-history" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">${SamsamUI.ic('calc')}DCA</button>
+        <button class="btn-buy" onclick="buyPlanCoin(${idx})" title="${buyTitle(entry, r)}">${SamsamUI.ic('plus')}${r.cash ? 'Add' : 'Buy'}</button>
+        ${r.cash ? '' : `<button class="btn-history" onclick="openDcaModal(${idx})" title="DCA calculator for ${entry.sym}">${SamsamUI.ic('calc')}DCA</button>`}
         <button class="btn-remove" onclick="removeCoin(${idx})" title="Remove ${entry.sym} from plan">${SamsamUI.ic('trash')}Remove</button>
       </div>
     </div>`;
@@ -1445,7 +1519,7 @@ function planAllocation() {
   const now = {}, after = {};
   portfolioCoins.forEach(c => { const v = (c.qty || 0) * (c.currentPrice || 0); if (v > 0) { const g = Samsam.core.groupOf(c); now[g] = (now[g] || 0) + v; after[g] = (after[g] || 0) + v; } });
   let toBuy = 0;
-  accumPlan.forEach(e => { const r = calcRow(e); if (r.costToTarget > 0) { const g = paGroup(e); after[g] = (after[g] || 0) + r.costToTarget; toBuy += r.costToTarget; } });
+  accumPlan.forEach(e => { const r = calcRow(e); if (r.costToTarget > 0 && !r.cash) {   /* savings goals: Net worth, not the allocation */ const g = paGroup(e); after[g] = (after[g] || 0) + r.costToTarget; toBuy += r.costToTarget; } });
   return { t, now: Samsam.core.allocationPlan(now, t.cats, { band: t.band }), after: Samsam.core.allocationPlan(after, t.cats, { band: t.band }), toBuy };
 }
 // "Allocation ›": the Portfolio → Allocation tab, the same way the Portfolio tabs open it (inside the app: no reload)
@@ -1454,7 +1528,7 @@ function paOpenAlloc(e) {
   return true;
 }
 function paChip(entry) {
-  if (!paState) return '';
+  if (!paState || kindOf(entry) === 'cash') return '';
   const g = paGroup(entry), st = paState[g]; if (!st) return '';
   const L = SamsamCoins.esc(SamsamTaxonomy.label(g));
   const t = st.state === 'under' ? [`↓ Priority`, `${L} is ${st.pts} pts below your target allocation — buying ${entry.sym} moves you toward it`]
@@ -1508,14 +1582,14 @@ function renderAll() {
 // ─── Update target quantity ──────────────────────────────────────────────────
 function updateTarget(idx, val) {
   const n = parseFloat(val);
-  accumPlan[idx].targetQty = isNaN(n) || n < 0 ? 0 : n;
+  accumPlan[idx].targetQty = isNaN(n) || n < 0 ? 0 : fromUnit(accumPlan[idx], n);
   renderDashboard(); // update stats while typing (no re-render of table to keep focus)
   saveAccumPlan();
 }
 
 function commitTarget(idx, val) {
   const n = parseFloat(val);
-  accumPlan[idx].targetQty = isNaN(n) || n < 0 ? 0 : n;
+  accumPlan[idx].targetQty = isNaN(n) || n < 0 ? 0 : fromUnit(accumPlan[idx], n);
   renderAll(); // full re-render on blur/enter to update progress bars & cards
   saveAccumPlan();
 }
@@ -1523,7 +1597,9 @@ function commitTarget(idx, val) {
 // Table: value + ✎ (same as the main page); tapping ✎ asks for the new value in the app's own dialog.
 async function promptTarget(idx) {
   const e = accumPlan[idx]; if (!e) return;
-  const v = await CPDialog.prompt(`How many ${e.sym} do you want to hold in total?`, { title: `Target amount — ${e.sym}`, value: e.targetQty || '', inputMode: 'decimal', placeholder: 'e.g. 500', okText: 'Save' });
+  const k = kindOf(e), nm = k === 'cash' ? e.sym.slice(5) : k === 'metal' ? (e.sym === 'XAU' ? 'gold' : 'silver') : e.sym;
+  const ask = { coin: `How many ${e.sym} do you want to hold in total?`, stock: `How many ${e.sym} shares do you want to hold in total?`, metal: `How many grams of ${nm} do you want to hold in total?`, cash: `How much do you want to save in ${nm} in total?` }[k];
+  const v = await CPDialog.prompt(ask, { title: `Target amount — ${k === 'metal' ? (e.sym === 'XAU' ? 'Gold' : 'Silver') : nm}`, value: e.targetQty ? +toUnit(e, e.targetQty).toFixed(k === 'metal' ? 2 : 8) : '', inputMode: 'decimal', placeholder: 'e.g. 500', okText: 'Save' });
   if (v == null) return;
   const n = parseFloat(String(v).replace(/[,\s]/g, ''));
   if (String(v).trim() !== '' && !(n >= 0)) { CPDialog.alert('Enter a number (0 or more).', { title: 'Target amount' }); return; }
@@ -1625,46 +1701,70 @@ async function removeCoin(idx) {
 
 // ─── Add Coin Modal ──────────────────────────────────────────────────────────
 // ➕ Regular buy (the DCA card): pick ANY coin → it joins the plan without a target (set one later on its row / card) → its schedule
-let addForDca = false;
+let addForDca = false, apTab = 'coin';
 function openDcaPick() { openAddModal(true); }
-function openAddModal(forDca) {
+const AR = () => !!(window.CPLang && CPLang.ar);
+const coreOK = () => window.Samsam && Samsam.core && Samsam.core.planKind;
+const kindOf = e => coreOK() ? Samsam.core.planKind(e) : 'coin';
+const clsOfRow = c => coreOK() ? Samsam.core.assetClass(c) : 'crypto';
+function openAddModal(forDca, tab) {
   addForDca = forDca === true;
-  document.getElementById('addTitle').innerHTML = SamsamUI.ic(addForDca ? 'calendar' : 'plus') + (addForDca ? 'Regular buy — pick a coin' : 'Add Coin to Accumulation Plan');
+  document.getElementById('addTitle').innerHTML = SamsamUI.ic(addForDca ? 'calendar' : 'plus') + (addForDca ? 'Regular buy — pick a coin' : 'Add to Plan');
   document.getElementById('addTargetRow').style.display = addForDca ? 'none' : '';
   document.getElementById('addConfirm').textContent = addForDca ? 'Next: the schedule' : 'Add to Plan';
-  selectedAddCoin = null;
-  document.getElementById('addSearch').value = '';
-  document.getElementById('addTarget').value = '';
-  document.getElementById('addSelectedInfo').style.display = 'none';
-  addCg = []; addCgMsg = '';
-  filterAddList();
+  document.getElementById('apTabs').hidden = addForDca;   // a regular buy: coins (the other kinds come with the DCA update)
   document.getElementById('addModal').classList.add('active');
-  setTimeout(() => document.getElementById('addSearch').focus(), 100);
+  setApTab(addForDca ? 'coin' : (tab || 'coin'), true);
+}
+// the four tabs: what you search / pick, and the unit of the target
+function setApTab(tab, force) {
+  if (tab === apTab && !force) return;
+  apTab = tab; selectedAddCoin = null; addCg = []; addCgMsg = ''; addStocks = []; addStocksMsg = '';
+  document.querySelectorAll('#apTabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+  document.getElementById('apMetal').hidden = tab !== 'metal'; document.getElementById('apCash').hidden = tab !== 'cash';
+  document.querySelectorAll('#apMetal [data-m], #apCash [data-cur]').forEach(b => b.setAttribute('aria-checked', 'false'));
+  document.getElementById('addSearchRow').hidden = tab === 'metal' || tab === 'cash';
+  document.getElementById('addSearchLbl').textContent = tab === 'stock' ? 'Search a share' : 'Search Coin';
+  document.getElementById('addSearch').placeholder = tab === 'stock' ? 'e.g. NVIDIA, Tesla, SPY…' : 'e.g. BTC, Ethereum...';
+  document.getElementById('addTargetLbl').textContent = { coin: 'Target Amount', stock: 'Target (shares)', metal: 'Target (grams)', cash: 'Savings goal' }[tab];
+  document.getElementById('addTarget').placeholder = { coin: '0.00', stock: 'e.g. 20', metal: 'e.g. 100', cash: 'e.g. 500000' }[tab];
+  document.getElementById('addSearch').value = ''; document.getElementById('addTarget').value = '';
+  document.getElementById('addSelectedInfo').style.display = 'none';
+  if (tab === 'coin' || tab === 'stock') { filterAddList(); setTimeout(() => document.getElementById('addSearch').focus(), 100); }
 }
 
 function closeAddModal() {
   document.getElementById('addModal').classList.remove('active');
 }
 
-// The coins you hold (with your amount)
+// What you hold, for the tab: coins (crypto) or shares — with your amount
 function allAvailableCoins() {
-  return portfolioCoins.map(c => ({
+  const want = apTab === 'stock' ? 'stock' : 'crypto';
+  return portfolioCoins.filter(c => clsOfRow(c) === want).map(c => ({
     sym: c.sym, name: c.name || c.sym, logoUrl: c.logoUrl || '', cgId: c.cgId || '',
     currentPrice: c.currentPrice || c.basePrice || 0, qty: c.qty || 0, fromPortfolio: true
   }));
 }
-// …and any other coin, from a CoinGecko search (you don't need to own a coin to plan it)
-let addCg = [], addCgMsg = '', addCgSeq = 0, addCgTimer = null;
+// …and any other coin, from a CoinGecko search — or any other share, from the bStocks list (you don't need to own it)
+let addCg = [], addCgMsg = '', addCgSeq = 0, addCgTimer = null, addStocks = [], addStocksMsg = '';
 function filterAddList() {
   const q = document.getElementById('addSearch').value.trim();
-  clearTimeout(addCgTimer); addCg = []; addCgMsg = '';
-  if (q.length >= 2) {
+  clearTimeout(addCgTimer); addCg = []; addCgMsg = ''; addStocks = []; addStocksMsg = '';
+  if (apTab === 'stock' && q.length >= 1) {
+    const seq = ++addCgSeq; addStocksMsg = 'Searching bStocks…';
+    CPAdd.searchStocks(q).then(r => {
+      if (seq !== addCgSeq) return;
+      addStocks = r.hits.filter(c => !getPortfolioCoin(c.sym));
+      addStocksMsg = r.hits.length ? '' : r.loaded ? 'No bStock found. Try the company name or the ticker (e.g. NVDAB).' : 'The list of bStocks is not loaded yet — try again in a moment.';
+      renderAddList();
+    });
+  } else if (apTab === 'coin' && q.length >= 2) {
     addCgMsg = 'Searching CoinGecko…';
     addCgTimer = setTimeout(async () => {
       const seq = ++addCgSeq;
       try {
         const list = await CPAdd.search(q); if (seq !== addCgSeq) return;
-        addCg = list.filter(c => !getPortfolioCoin(c.sym));
+        addCg = list.filter(c => !getPortfolioCoin(c.sym) && !Samsam.core.BSTOCK_ID.test(c.id || ''));   // shares: the bStocks tab
         addCgMsg = addCg.length ? '' : (list.length ? '' : 'No other coin found on CoinGecko.');
       } catch (e) { if (seq !== addCgSeq) return; addCgMsg = navigator.onLine ? (e.message || 'Search failed') : 'You are offline — search needs internet.'; }
       renderAddList();
@@ -1674,7 +1774,7 @@ function filterAddList() {
 }
 function renderAddList() {
   const q = document.getElementById('addSearch').value.trim().toLowerCase();
-  const E = SamsamCoins.esc, already = new Set(accumPlan.map(e => e.sym));
+  const E = SamsamCoins.esc, already = new Set(accumPlan.map(e => e.sym)), st = apTab === 'stock';
   const mine = allAvailableCoins().filter(c => !q || c.sym.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
   const item = (c, onclick, tag) => `
         <div class="coin-search-item ${already.has(c.sym) ? 'opacity-50' : ''}" onclick="${onclick}">
@@ -1685,17 +1785,24 @@ function renderAddList() {
             ${already.has(c.sym) ? '<span style="color:var(--accent);font-size:0.72rem"> (already in plan)</span>' : ''}
           </div>${tag || ''}
         </div>`;
+  const other = st ? addStocks : addCg, msg = st ? addStocksMsg : addCgMsg;
   let html = '';
-  if (mine.length) html += (addCg.length ? '<div class="csl-head">Your Coins</div>' : '') + mine.map(c => item(c, `selectAddCoin('${E(c.sym)}')`)).join('');
-  if (addCg.length) html += '<div class="csl-head">Other Coins · CoinGecko</div>' + addCg.map((c, i) => item({ sym: c.sym, name: c.name, logoUrl: c.thumb || '' }, `selectAddCg(${i})`, '<span class="csl-tag">Not Owned</span>')).join('');
-  if (addCgMsg) html += `<div class="csl-msg">${E(addCgMsg)}</div>`;
-  if (!html) html = `<div class="csl-msg">${q.length >= 2 ? 'No coins found. Try a different search.' : 'Type a coin name or symbol — any coin, even one you don\'t own yet.'}</div>`;
+  if (mine.length) html += (other.length ? `<div class="csl-head">${st ? 'Your Shares' : 'Your Coins'}</div>` : '') + mine.map(c => item(c, `selectAddCoin('${E(c.sym)}')`)).join('');
+  if (other.length) html += `<div class="csl-head">${st ? 'Other Shares · bStocks' : 'Other Coins · CoinGecko'}</div>` + other.map((c, i) => item({ sym: c.sym, name: c.name, logoUrl: c.thumb || '' }, st ? `selectAddStock(${i})` : `selectAddCg(${i})`, '<span class="csl-tag">Not Owned</span>')).join('');
+  if (msg) html += `<div class="csl-msg">${E(msg)}</div>`;
+  if (!html) html = `<div class="csl-msg">${st ? (q ? 'No shares found. Try a different search.' : 'Type a company or a ticker — any share on bStocks, even one you don\'t own yet.') : q.length >= 2 ? 'No coins found. Try a different search.' : 'Type a coin name or symbol — any coin, even one you don\'t own yet.'}</div>`;
   document.getElementById('addList').innerHTML = html;
 }
 
 function selectAddCoin(sym) {
   selectedAddCoin = allAvailableCoins().find(c => c.sym === sym);
   if (!selectedAddCoin) return;
+  if (apTab === 'stock') { selectedAddCoin.cls = 'stock'; selectedAddCoin.cat = 'stocks'; }
+  showAddSelected();
+}
+function selectAddStock(i) {
+  const c = addStocks[i]; if (!c) return;
+  selectedAddCoin = { sym: c.sym, name: c.name, logoUrl: c.thumb && /^https:\/\//.test(c.thumb) ? c.thumb : '', cgId: c.id, currentPrice: c.price || 0, qty: 0, fromPortfolio: false, cat: 'stocks', cls: 'stock' };
   showAddSelected();
 }
 async function selectAddCg(i) {
@@ -1712,24 +1819,45 @@ async function selectAddCg(i) {
     showAddSelected();
   } catch (_) { /* the page fetches its price after it's added */ }
 }
+// 🥇 / 🥈: gold or silver, its target in grams
+function pickApMetal(sym) {
+  const m = (CPAdd.metals || {})[sym]; if (!m) return;
+  document.querySelectorAll('#apMetal [data-m]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.m === sym)));
+  const pc = getPortfolioCoin(sym);
+  selectedAddCoin = { sym, name: m.name, logoUrl: '', cgId: m.cgId, currentPrice: planPrice({ sym }, pc), qty: pc ? pc.qty || 0 : 0, fromPortfolio: !!pc, cat: 'metals', cls: 'metal' };
+  showAddSelected();
+}
+// 🏦 a savings goal in one currency: what you have = your cash & certificates in it
+function pickApCash(cur) {
+  document.querySelectorAll('#apCash [data-cur]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.cur === cur)));
+  const sym = Samsam.core.planCashSym(cur), e = { sym };
+  selectedAddCoin = { sym, name: 'Savings · ' + cur, logoUrl: '', cgId: '', currentPrice: 0, qty: planHeldNow(e), fromPortfolio: true, kind: 'cash', cur };
+  showAddSelected();
+}
 function showAddSelected() {
-  const c = selectedAddCoin, E = SamsamCoins.esc, box = document.getElementById('addSelectedInfo');
-  document.getElementById('addSearch').value = c.sym;
+  const c = selectedAddCoin, E = SamsamCoins.esc, box = document.getElementById('addSelectedInfo'), k = kindOf(c);
+  if (k === 'coin' || k === 'stock') document.getElementById('addSearch').value = c.sym;
   box.style.display = '';
-  box.innerHTML = `<strong>${E(c.sym)}</strong> — ${E(c.name)}
-     <span style="color:var(--fg2);margin-inline-start:8px">Current: ${c.currentPrice > 0 ? '$' + fmtUSD(c.currentPrice) : '…'}</span>` +
-    (c.fromPortfolio ? `<span style="color:var(--fg2);margin-inline-start:8px">Holding: ${fmtQty(c.qty)} ${E(c.sym)}</span>`
-      : `<div style="color:#a78bfa;font-size:.78rem;margin-top:4px">Not in your portfolio yet — the plan tracks its live price, and <b>${SamsamUI.ic('plus')}Buy</b> on its card adds it to your portfolio.</div>`);
+  if (k === 'cash') {
+    box.innerHTML = `<strong>${E(c.cur)}</strong> — savings goal
+       <span style="color:var(--fg2);margin-inline-start:8px"><span>You have:</span> ${qtyHtml(c, c.qty)}</span>
+       <div style="color:#a78bfa;font-size:.78rem;margin-top:4px">Counts your cash &amp; certificates in ${E(c.cur)} (their value today). It stays out of your portfolio total — Net worth only.</div>`;
+  } else {
+    box.innerHTML = `<strong>${E(k === 'metal' ? (c.sym === 'XAU' ? '🥇 Gold' : '🥈 Silver') : c.sym)}</strong> — ${E(c.name)}
+       <span style="color:var(--fg2);margin-inline-start:8px">Current: ${c.currentPrice > 0 ? (k === 'metal' ? SamsamFmt.price(c.currentPrice / Samsam.core.GRAMS_PER_OZ) + '/g' : '$' + fmtUSD(c.currentPrice)) : '…'}</span>` +
+      (c.fromPortfolio ? `<span style="color:var(--fg2);margin-inline-start:8px">Holding: ${qtyHtml(c, c.qty)}</span>`
+        : `<div style="color:#a78bfa;font-size:.78rem;margin-top:4px">Not in your portfolio yet — the plan tracks its live price, and <b>${SamsamUI.ic('plus')}Buy</b> on its card adds it to your portfolio.</div>`);
+  }
   document.getElementById('addList').innerHTML = '';
   (addForDca ? document.getElementById('addConfirm') : document.getElementById('addTarget')).focus();
 }
 
 function confirmAddCoin() {
   if (!selectedAddCoin) {
-    CPDialog.alert('Please select a coin first.'); return;
+    CPDialog.alert({ coin: 'Please select a coin first.', stock: 'Please pick a share first.', metal: 'Pick gold or silver first.', cash: 'Pick the currency of your savings goal first.' }[apTab] || 'Please select a coin first.'); return;
   }
   const c = selectedAddCoin, sym = c.sym;
-  const forDca = addForDca, targetQty = forDca ? 0 : (parseFloat(document.getElementById('addTarget').value) || 0);
+  const forDca = addForDca, n = parseFloat(document.getElementById('addTarget').value) || 0, targetQty = forDca ? 0 : fromUnit(c, n);
 
   // Update existing or add new
   const existing = accumPlan.find(e => e.sym === sym);
@@ -1738,6 +1866,8 @@ function confirmAddCoin() {
   } else {
     const entry = { sym, name: c.name, logoUrl: c.logoUrl, cgId: c.cgId, targetQty, addedAt: new Date().toISOString() };
     if (!c.fromPortfolio && c.cat) entry.cat = c.cat;
+    if (c.cls === 'stock' || c.cls === 'metal') { entry.cls = c.cls; entry.cat = c.cat; }
+    if (c.kind === 'cash') { entry.kind = 'cash'; delete entry.cgId; delete entry.logoUrl; }
     accumPlan.push(entry);
   }
   if (!c.fromPortfolio && c.currentPrice > 0) Samsam.updatePrices({ [sym]: { usd: c.currentPrice, ch24: c.ch24 ?? null } });

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 488474ed6b451165
+// sources-hash: a1d78e7ac8adfb08
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -713,8 +713,9 @@ function cashTotals(list3, fx, now = Date.now()) {
   return { items, usd: usd3, missing: [...missing], byCur };
 }
 var METAL_SYMS = /* @__PURE__ */ new Set(["XAU", "XAG"]);
+var BSTOCK_ID = /(^|-)b?bstocks?(-|$)|^bn:/i;
 var learnedClass = /* @__PURE__ */ new Map();
-var classOfDoc = (d) => d && typeof d === "object" ? d.cls === "stock" || d.cls === "metal" || d.cls === "crypto" ? d.cls : /-bstock$/i.test(String(d.cgId || "")) ? "stock" : null : null;
+var classOfDoc = (d) => d && typeof d === "object" ? d.cls === "stock" || d.cls === "metal" || d.cls === "crypto" ? d.cls : BSTOCK_ID.test(String(d.cgId || "")) ? "stock" : null : null;
 function learnAssets(list3) {
   for (const d of Array.isArray(list3) ? list3 : []) {
     const s = d && String(d.sym || "").toUpperCase(), k = classOfDoc(d);
@@ -725,6 +726,7 @@ function learnAssets(list3) {
 function assetClass(x) {
   const sym = String((x && typeof x === "object" ? x.sym : x) || "").toUpperCase();
   if (METAL_SYMS.has(sym)) return "metal";
+  if (CASH_PLAN.test(sym)) return "cash";
   return classOfDoc(x) || learnedClass.get(sym) || "crypto";
 }
 var hasSignal = (x) => assetClass(x) === "crypto" && String((x && typeof x === "object" ? x.sym : x) || "").toUpperCase() !== "BTC";
@@ -738,6 +740,24 @@ function zakatPool(rows, { cashUsd = 0, stocks = true } = {}) {
   }
   const cash = cashUsd > 0 ? +cashUsd : 0;
   return { crypto: crypto2, stock, cash, stocksCounted: stocks !== false, value: crypto2 + (stocks !== false ? stock : 0) + cash };
+}
+var CASH_PLAN = /^CASH-(USD|EGP|SAR)$/;
+var GRAMS_PER_OZ = 31.1034768;
+function planKind(e) {
+  const k = assetClass(e);
+  return k === "cash" || k === "stock" || k === "metal" ? k : "coin";
+}
+function planActual(e, heldQty, cash, now = Date.now()) {
+  if (planKind(e) !== "cash") return +heldQty || 0;
+  const cur = String(e.sym).toUpperCase().slice(5), b = cashTotals(cash || [], null, now).byCur[cur];
+  return b ? b.value : 0;
+}
+function planUnits(e, qty2, ar = false) {
+  const k = planKind(e), q = +qty2 || 0, sym = String(e && e.sym || "").toUpperCase();
+  if (k === "metal") return { n: q * GRAMS_PER_OZ, u: ar ? "\u062C\u0645" : "g", dp: 2 };
+  if (k === "stock") return { n: q, u: ar ? "\u0633\u0647\u0645" : q === 1 ? "share" : "shares", dp: 4 };
+  if (k === "cash") return { n: q, u: sym.slice(5), dp: 0 };
+  return { n: q, u: sym, dp: 8 };
 }
 
 // tools/alerts-core.mjs
@@ -817,6 +837,16 @@ function priceSeries(file) {
     }
   };
 }
+function planName(p, ar) {
+  const k = p.kind || planKind(p);
+  if (k === "metal") return p.sym === "XAU" ? ar ? "\u0627\u0644\u0630\u0647\u0628" : "Gold" : ar ? "\u0627\u0644\u0641\u0636\u0629" : "Silver";
+  if (k === "cash") return (ar ? "\u0627\u062F\u062E\u0627\u0631 " : "Savings ") + p.sym.slice(5);
+  return p.sym;
+}
+function planAmt(p, q, ar) {
+  const u = planUnits(p, q, ar), n = u.dp === 0 ? Math.round(u.n).toLocaleString("en-US") : u.dp === 2 ? (+u.n.toFixed(2)).toLocaleString("en-US") : String(+(+u.n).toPrecision(6));
+  return `${n} ${esc(u.u)}`;
+}
 function summarize(user, market, now = Date.now()) {
   learnAssets(user.coins);
   learnAssets(user.accum);
@@ -883,7 +913,7 @@ function summarize(user, market, now = Date.now()) {
   const counts = { reinforce: 0, sell: 0, hold: 0 };
   Object.values(signal).forEach((s) => counts[s]++);
   const held = Object.fromEntries(pf.map((c) => [c.sym.toUpperCase(), c.qty]));
-  const plan = (user.accum || []).filter((a) => a && a.sym && a.targetQty > 0).map((a) => ({ sym: a.sym.toUpperCase(), target: +a.targetQty, actual: held[a.sym.toUpperCase()] || 0 }));
+  const plan = (user.accum || []).filter((a) => a && a.sym && a.targetQty > 0).map((a) => ({ sym: a.sym.toUpperCase(), kind: planKind(a), target: +a.targetQty, actual: planActual(a, held[a.sym.toUpperCase()] || 0, (user.meta || {}).cash) }));
   const prog = overallProgress(plan.map((p) => ({ actual: p.actual, target: p.target })));
   const steps = meta.exitSteps && Array.isArray(meta.exitSteps.mults) ? meta.exitSteps : DEFAULT_EXIT_STEPS;
   const tps = [];
@@ -6570,7 +6600,7 @@ ${t.noPlan}`, buttons: [[webApp(t.openApp, "accumulation.html"), cb3(t.back, "me
     };
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach((p) => {
       const f = p.target > 0 ? p.actual / p.target : 0;
-      L.push(isAr(t) ? `\u2022 <b>${esc(p.sym)}</b> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : ` \xB7 \u0628\u0627\u0642\u064A ${+Number(p.target - p.actual).toPrecision(4)}`}` : `<code>${esc(p.sym.padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : `  ${t.left} ${qty(p.target - p.actual)}`}`);
+      L.push(isAr(t) ? `\u2022 <b>${esc(planName(p, true))}</b> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : ` \xB7 \u0628\u0627\u0642\u064A ${(p.kind || "coin") === "coin" ? +Number(p.target - p.actual).toPrecision(4) : planAmt(p, p.target - p.actual, true)}`}` : `<code>${esc(planName(p, false).padEnd(6))}</code> ${bar(f)} ${Math.min(999, f * 100).toFixed(0)}%${f >= 1 ? " \u2705" : `  ${t.left} ${(p.kind || "coin") === "coin" ? qty(p.target - p.actual) : planAmt(p, p.target - p.actual, false)}`}`);
     });
   }
   if ((sum.dca || []).length) {

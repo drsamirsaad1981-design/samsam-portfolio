@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { summarize, priceSeries, isStable } from '../tools/alerts-core.mjs';
+import { summarize, priceSeries, isStable, planName, planAmt } from '../tools/alerts-core.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 let pass = 0, fail = 0;
@@ -1615,6 +1615,22 @@ if (process.env.DUMP_TEXTS) fs.writeFileSync(process.env.DUMP_TEXTS, JSON.string
   sent.length = 0; await sayAs(8889, '/link');
   check('/link with no code (already linked) → "already linked ✅"', sent.some(m => String(m.b.chat_id) === '8889' && /already linked/.test(m.b.text || '')) && claudeCalls.length === 0, sent.map(m => m.b.text));
   const m2 = JSON.parse(kvStore.get('tg:users')); delete m2['8888']; delete m2['8889']; kvStore.set('tg:users', JSON.stringify(m2));
+}
+
+// 🎯 the plan for all four: a savings goal counts your cash in that currency; metals in grams, shares as shares
+{
+  const mk = { top: [{ id: 'solana', price: 80, ch24: 0 }], top500: [], series: {}, global: {}, cgIds: {} };
+  const GPO = 31.1034768;
+  const s = summarize({ coins: [{ sym: 'SOL', cgId: 'solana', opening: { qty: 2, avg: 80 } }], txs: [],
+    accum: [{ sym: 'SOL', targetQty: 10 }, { sym: 'CASH-EGP', kind: 'cash', targetQty: 500000 }, { sym: 'XAU', cls: 'metal', targetQty: 100 / GPO }, { sym: 'NVDAB', cls: 'stock', cgId: 'nvidia-bstocks', targetQty: 20 }],
+    meta: { cash: [{ id: 'a', kind: 'cash', cur: 'EGP', amount: 200000, label: 'Bank' }, { id: 'b', kind: 'cash', cur: 'EGP', amount: 50000, label: 'Wallet' }, { id: 'c', kind: 'cash', cur: 'USD', amount: 9999, label: 'USD' }] } }, mk, Date.now());
+  const by = Object.fromEntries(s.plan.map(p => [p.sym, p]));
+  check('🎯 plan: a savings goal (CASH-EGP) counts the cash in EGP only — 250,000 of 500,000', by['CASH-EGP'] && by['CASH-EGP'].kind === 'cash' && by['CASH-EGP'].actual === 250000, by['CASH-EGP']);
+  check('…kinds: coin · cash · metal · stock', [by.SOL.kind, by['CASH-EGP'].kind, by.XAU.kind, by.NVDAB.kind].join() === 'coin,cash,metal,stock', s.plan.map(p => p.kind));
+  check('…amounts in their units: 250,000 EGP · 100 g · 20 shares · 8 SOL', planAmt(by['CASH-EGP'], 250000, false) === '250,000 EGP' && planAmt(by.XAU, 100 / GPO, false) === '100 g' && planAmt(by.NVDAB, 20, false) === '20 shares' && planAmt(by.SOL, 8, false) === '8 SOL',
+    [planAmt(by['CASH-EGP'], 250000, false), planAmt(by.XAU, 100 / GPO, false), planAmt(by.NVDAB, 20, false)]);
+  check('…names: Gold / الذهب · Savings EGP / ادخار EGP', planName(by.XAU, false) === 'Gold' && planName(by.XAU, true) === 'الذهب' && planName(by['CASH-EGP'], false) === 'Savings EGP' && planName(by['CASH-EGP'], true) === 'ادخار EGP' && planAmt(by.XAU, 100 / GPO, true) === '100 جم');
+  check('…the overall progress uses them (SOL 20% · cash 50% · gold 0% · shares 0% → 17.5%)', Math.abs(s.prog.pct - 17.5) < 0.01, s.prog);
 }
 
 console.log(`${pass}/${pass + fail} passed`);

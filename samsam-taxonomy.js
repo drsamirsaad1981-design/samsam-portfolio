@@ -98,11 +98,13 @@
     { key: 'crypto', label: 'Crypto', color: '#8b5cf6' },
     { key: 'stock',  label: 'Stocks', color: '#38bdf8' },
     { key: 'metal',  label: 'Metals', color: '#eab308' },
+    { key: 'cash',   label: 'Cash & CDs', color: '#22c55e' },   // only the Plan has these rows (a savings goal)
   ];
   var CLS = {}; CLASSES.forEach(function (c) { CLS[c.key] = c; });
   function groupOf(sym, cat) {
     var core = window.Samsam && window.Samsam.core, k = core && core.assetClass ? core.assetClass(String(sym || '').toUpperCase()) : null;
-    if (k === 'stock' || k === 'metal') return k;
+    if (k === 'stock' || k === 'metal' || k === 'cash') return k;
+    if (/^CASH-(USD|EGP|SAR)$/.test(String(sym || '').toUpperCase())) return 'cash';
     if (cat === 'metals') return 'metal';
     if (cat === 'stocks' && !k) return 'stock';
     return 'crypto';
@@ -117,7 +119,7 @@
   var MK = {}, MK_SYM = {}; METAL_KINDS.forEach(function (m) { MK[m.key] = m; m.syms.forEach(function (s) { MK_SYM[s] = m.key; }); });
   function metalOf(sym) { return MK_SYM[String(sym || '').toUpperCase()] || null; }
   function isMetalKey(f) { return /^m:[a-z]+$/.test(String(f || '')) && !!MK[String(f).slice(2)]; }
-  function isClassKey(f) { return /^c:(crypto|stock|metal)$/.test(String(f || '')); }
+  function isClassKey(f) { return /^c:(crypto|stock|metal|cash)$/.test(String(f || '')); }
   // does a holding pass the filter? '' → all · 'c:stock' → its class · else → its category
   function matches(filter, sym, cat) {
     if (!filter) return true;
@@ -132,7 +134,7 @@
       var v = +r.v || 0, cat = r.cat || 'other', g = groupOf(r.sym, cat);
       if (g === 'metal' && metalOf(r.sym)) cat = 'm:' + metalOf(r.sym);   // Metals → Gold · Silver …
       var n = by[g] || (by[g] = { key: g, v: 0, cats: {} });
-      n.v += v; n.cats[cat] = (n.cats[cat] || 0) + v; all += v;
+      n.v += v; if (g !== 'cash') n.cats[cat] = (n.cats[cat] || 0) + v; all += v;   // a savings goal has no categories
     });
     return { all: all, classes: CLASSES.filter(function (c) { return by[c.key]; }).map(function (c) {
       var n = by[c.key];

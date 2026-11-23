@@ -121,6 +121,17 @@ export function priceSeries(file) {   // p/<id>.json → { at(t), last, lastT }
 
 // ── the numbers ──
 // user: { coins, txs, accum, meta }; market: { top: [rows], top500: [rows], series: { id: priceSeries }, global, fng, alt, altPage, etf, parts, cgIds }
+// 🎯 a plan row by name and in its own unit: coins "0.5 ETH" · shares "20 shares NVDAB" · metals "100 g" of gold · savings "500,000 EGP"
+export function planName(p, ar) {
+  const k = p.kind || C.planKind(p);
+  if (k === 'metal') return p.sym === 'XAU' ? (ar ? 'الذهب' : 'Gold') : (ar ? 'الفضة' : 'Silver');
+  if (k === 'cash') return (ar ? 'ادخار ' : 'Savings ') + p.sym.slice(5);
+  return p.sym;
+}
+export function planAmt(p, q, ar) {
+  const u = C.planUnits(p, q, ar), n = u.dp === 0 ? Math.round(u.n).toLocaleString('en-US') : u.dp === 2 ? (+u.n.toFixed(2)).toLocaleString('en-US') : String(+(+u.n).toPrecision(6));
+  return `${n} ${esc(u.u)}`;
+}
 export function summarize(user, market, now = Date.now()) {
   C.learnAssets(user.coins); C.learnAssets(user.accum);   // 🧭 shares known by their coin → their Signal is Hold, as in the app
   const meta = user.meta || {}, rows = [...(market.top || []), ...(market.top500 || [])];
@@ -182,7 +193,8 @@ export function summarize(user, market, now = Date.now()) {
   const counts = { reinforce: 0, sell: 0, hold: 0 }; Object.values(signal).forEach(s => counts[s]++);
   // accumulation plan
   const held = Object.fromEntries(pf.map(c => [c.sym.toUpperCase(), c.qty]));
-  const plan = (user.accum || []).filter(a => a && a.sym && a.targetQty > 0).map(a => ({ sym: a.sym.toUpperCase(), target: +a.targetQty, actual: held[a.sym.toUpperCase()] || 0 }));
+  // (a savings goal — CASH-EGP… — counts your cash & certificates in that currency; metals stay in ounces here, shown in grams)
+  const plan = (user.accum || []).filter(a => a && a.sym && a.targetQty > 0).map(a => ({ sym: a.sym.toUpperCase(), kind: C.planKind(a), target: +a.targetQty, actual: C.planActual(a, held[a.sym.toUpperCase()] || 0, (user.meta || {}).cash) }));
   const prog = C.overallProgress(plan.map(p => ({ actual: p.actual, target: p.target })));
   // exit plan take-profit levels (a fixed price you typed, or your average × the step's multiplier)
   const steps = meta.exitSteps && Array.isArray(meta.exitSteps.mults) ? meta.exitSteps : DEFAULT_EXIT_STEPS;
@@ -368,7 +380,8 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       const met = p.actual >= p.target;
       if (!met) { delete st.plan[p.sym]; continue; }
       if (st.plan[p.sym] || first) { st.plan[p.sym] = 1; continue; }
-      const text = `🎯 <b>${t.targetHit(esc(p.sym))}</b>\n${+p.actual.toFixed(6)} / ${+p.target.toFixed(6)} ${esc(p.sym)} ✅\n${t.planNow}: ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`;
+      const ar = cfg.lang === 'ar', name = planName(p, ar);
+      const text = `🎯 <b>${t.targetHit(esc(name))}</b>\n${planAmt(p, p.actual, ar)} / ${planAmt(p, p.target, ar)} ✅\n${t.planNow}: ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`;
       if (push({ key: 'plan-' + p.sym, text, buttons: [[btn(t.planBtn, 'accumulation.html')]] })) st.plan[p.sym] = 1;
     }
   }

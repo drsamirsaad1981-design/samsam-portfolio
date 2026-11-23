@@ -358,13 +358,19 @@
     var M = window.SamsamMarket; if (!M || !M.stocks) return Promise.resolve([]);
     return M.stocks().then(function (r) { stockList = ((r && r.data) || []).filter(function (x) { return x && x.id && x.sym; }); return stockList; }, function () { return []; });
   }
+  // bStocks matching a ticker / company name: ticker matches first, then the biggest (the Add window and Add to Plan)
+  function findStocks(list, Q) {
+    Q = String(Q || '').toUpperCase();
+    return list.filter(function (x) { return x.sym.indexOf(Q) >= 0 || String(x.name || '').toUpperCase().indexOf(Q) >= 0; })
+      .sort(function (a, b) { return (a.sym.indexOf(Q) === 0 ? 0 : 1) - (b.sym.indexOf(Q) === 0 ? 0 : 1) || (b.mcap || 0) - (a.mcap || 0); }).slice(0, 12)
+      .map(function (x) { return { id: x.id, sym: x.sym, name: String(x.name || x.sym).replace(/\s*\(bStocks Tokenized (Stock|ETF)\)\s*$/i, ''), thumb: x.img || '', price: x.price || 0, stock: true }; });
+  }
+  function searchStocks(q) { return stocks().then(function (list) { return { hits: findStocks(list, q), loaded: list.length > 0 }; }); }
   async function acSearchStocks(q) {
     var seq = ++acSeq, box = $('acSuggest'), Q = q.toUpperCase();
     box.hidden = false; box.innerHTML = '<li class="ac-msg">Searching bStocks…</li>';
     var list = await stocks(); if (seq !== acSeq) return;
-    var hits = list.filter(function (x) { return x.sym.indexOf(Q) >= 0 || String(x.name || '').toUpperCase().indexOf(Q) >= 0; })
-      .sort(function (a, b) { return (a.sym.indexOf(Q) === 0 ? 0 : 1) - (b.sym.indexOf(Q) === 0 ? 0 : 1) || (b.mcap || 0) - (a.mcap || 0); }).slice(0, 12)
-      .map(function (x) { return { id: x.id, sym: x.sym, name: String(x.name || x.sym).replace(/\s*\(bStocks Tokenized (Stock|ETF)\)\s*$/i, ''), thumb: x.img || '', price: x.price || 0, stock: true }; });
+    var hits = findStocks(list, Q);
     acShow(hits, hits.length ? '' : list.length ? 'No bStock found. Try the company name or the ticker (e.g. NVDAB).' : 'The list of bStocks is not loaded yet — try again in a moment.');
   }
   async function acSearch(q) {
@@ -1190,7 +1196,7 @@
 
   var API = {
     openVault: openVault, openCoin: openAddCoin, closeCoin: closeAddCoin, openTx: openAddTx, closeTx: closeAddTx, openStake: openStake, buy: buy, editCategory: openCatEdit, manageCategories: openCatManager,
-    search: search, coinInfo: coinInfo, categoryFrom: categoryFrom, linkCodex: linkCodex, fetchLogoAndPrice: fetchLogoAndPrice,
+    search: search, searchStocks: searchStocks, metals: METAL_PICK, coinInfo: coinInfo, categoryFrom: categoryFrom, linkCodex: linkCodex, fetchLogoAndPrice: fetchLogoAndPrice,
     fillCatSelect: fillCatSelect, syncCatCustom: syncCatCustom, readCatChoice: readCatChoice,
     on: function (k, fn) { if (hooks[k]) hooks[k].push(fn); }, defaultTxSym: null
   };

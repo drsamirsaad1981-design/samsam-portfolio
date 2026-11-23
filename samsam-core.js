@@ -708,6 +708,7 @@ export function learnAssets(list) {
 export function assetClass(x) {
   const sym = String((x && typeof x === 'object' ? x.sym : x) || '').toUpperCase();
   if (METAL_SYMS.has(sym)) return 'metal';
+  if (CASH_PLAN.test(sym)) return 'cash';
   return classOfDoc(x) || learnedClass.get(sym) || 'crypto';
 }
 export const hasSignal = x => assetClass(x) === 'crypto' && String((x && typeof x === 'object' ? x.sym : x) || '').toUpperCase() !== 'BTC';
@@ -719,4 +720,37 @@ export function zakatPool(rows, { cashUsd = 0, stocks = true } = {}) {
   for (const r of rows || []) { const k = assetClass(r), v = +r.value || 0; if (!(v > 0)) continue; if (k === 'crypto') crypto += v; else if (k === 'stock') stock += v; }
   const cash = cashUsd > 0 ? +cashUsd : 0;
   return { crypto, stock, cash, stocksCounted: stocks !== false, value: crypto + (stocks !== false ? stock : 0) + cash };
+}
+
+// ── 🎯 The plan, for all four: coins · shares · metals · cash & certificates ──
+// A plan row is still { sym, targetQty, … }. Shares and metals are held like coins (their qty — metals in troy ounces,
+// shown in grams); a savings goal is the row CASH-USD / CASH-EGP / CASH-SAR: its target is an amount of that currency
+// and what you have is your cash & certificates in it (meta/info.cash, their value today). Its "price" is the dollar value
+// of one unit (1 / the official rate), so Cost to Target and the plan's totals stay in dollars like every other row.
+export const CASH_PLAN = /^CASH-(USD|EGP|SAR)$/;
+export const GRAMS_PER_OZ = 31.1034768;
+export const planCashSym = cur => 'CASH-' + String(cur || '').toUpperCase();
+export function planKind(e) {
+  const k = assetClass(e);
+  return k === 'cash' || k === 'stock' || k === 'metal' ? k : 'coin';
+}
+// what you have toward a row: `heldQty` = your holding of the coin / share / metal; cash rows read the cash list
+export function planActual(e, heldQty, cash, now = Date.now()) {
+  if (planKind(e) !== 'cash') return +heldQty || 0;
+  const cur = String(e.sym).toUpperCase().slice(5), b = cashTotals(cash || [], null, now).byCur[cur];
+  return b ? b.value : 0;
+}
+// dollars per unit of a cash row (null while the rate is unknown)
+export function planCashPrice(sym, fx) {
+  const cur = String(sym || '').toUpperCase().slice(5);
+  if (cur === 'USD') return 1;
+  return fx && +fx[cur] > 0 ? 1 / +fx[cur] : null;
+}
+// an amount in the row's own unit: { n, u } — coins: the symbol · shares: "shares" · metals: grams · cash: its currency
+export function planUnits(e, qty, ar = false) {
+  const k = planKind(e), q = +qty || 0, sym = String(e && e.sym || '').toUpperCase();
+  if (k === 'metal') return { n: q * GRAMS_PER_OZ, u: ar ? 'جم' : 'g', dp: 2 };
+  if (k === 'stock') return { n: q, u: ar ? 'سهم' : (q === 1 ? 'share' : 'shares'), dp: 4 };
+  if (k === 'cash') return { n: q, u: sym.slice(5), dp: 0 };
+  return { n: q, u: sym, dp: 8 };
 }

@@ -872,8 +872,8 @@ function pdfSummary() {
   const legend = entries.map(([k, v]) => `<div class="ps-li"><span class="ps-dot" style="background:${CAT_COLORS[k] || '#6b7280'}"></span><span class="ps-cat">${esc(CAT_LABELS[k] || k)}</span><b>${(v / catSum * 100).toFixed(1)}%</b><span class="ps-usd">${usd(v)}</span></div>`).join('');
   // accumulation plan
   const plan = accumPlanState || [];
-  const prog = plan.length ? Samsam.core.overallProgress(plan.map(e => { const c = portfolio.find(x => x.sym && x.sym.toUpperCase() === (e.sym || '').toUpperCase()); return { actual: c ? c.qty || 0 : 0, target: e.targetQty || 0 }; })).pct : null;
-  const met = plan.filter(e => { const c = portfolio.find(x => x.sym && x.sym.toUpperCase() === (e.sym || '').toUpperCase()); return e.targetQty > 0 && c && c.qty >= e.targetQty; }).length;
+  const prog = plan.length ? Samsam.core.overallProgress(plan.map(e => ({ actual: planHave(e), target: e.targetQty || 0 }))).pct : null;
+  const met = plan.filter(e => e.targetQty > 0 && planHave(e) >= e.targetQty).length;
   const cls = n => n >= 0 ? 'up' : 'down', sg = n => (n >= 0 ? '+' : '−');
   box.innerHTML = `
     <div class="ps-tiles">
@@ -1285,12 +1285,17 @@ function showSyncStatus(msg, color) {
 }
 
 // ─── Accumulation Progress on Main Page ──────────────────────────────────────
+// what you have toward a plan row: your holding of it — or, for a savings goal (CASH-EGP…), your cash & certificates in that currency
+function planHave(e) {
+  const c = portfolio.find(x => x.sym && x.sym.toUpperCase() === (e.sym || '').toUpperCase());
+  return Samsam.core.planActual(e, c ? c.qty || 0 : 0, Samsam.getCash ? Samsam.getCash() : []);
+}
 function renderAccumProgress(plan) {
   if (!plan || plan.length === 0) return;
   let weightedActual = 0, weightedTarget = 0, completed = 0;
   plan.forEach(entry => {
     const coin = portfolio.find(c => c.sym && c.sym.toUpperCase() === (entry.sym||'').toUpperCase());
-    const actualQty   = coin ? (coin.qty || 0) : 0;
+    const actualQty   = planHave(entry);
     const targetQty   = entry.targetQty || 0;
     const currentPrice = coin ? (coin.currentPrice || 0) : 0;
     const targetVal   = targetQty * currentPrice;
@@ -1299,10 +1304,7 @@ function renderAccumProgress(plan) {
     if (targetQty > 0 && actualQty >= targetQty) completed++;
   });
   // Overall Progress = average of each coin's completion, each capped at 100% — same as the Accumulation page
-  const pct = Samsam.core.overallProgress(plan.map(entry => {
-    const coin = portfolio.find(c => c.sym && c.sym.toUpperCase() === (entry.sym || '').toUpperCase());
-    return { actual: coin ? (coin.qty || 0) : 0, target: entry.targetQty || 0 };
-  })).pct;
+  const pct = Samsam.core.overallProgress(plan.map(entry => ({ actual: planHave(entry), target: entry.targetQty || 0 }))).pct;
   document.getElementById('accumFill').style.width  = pct.toFixed(1) + '%';
   document.getElementById('accumPct').textContent   = pct.toFixed(1) + '% complete';
   document.getElementById('accumDetail').textContent = completed + ' / ' + plan.filter(e => (e.targetQty || 0) > 0).length + ' targets met';   // a coin with a regular buy and no target isn't a target
