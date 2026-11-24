@@ -5,8 +5,8 @@ P = HERE / 'src'; W = (pathlib.Path('/home/claude/demo/web') if pathlib.Path('/h
 import json
 MAP = json.load(open(HERE / 'assets.json'))
 SITE = 'https://drsamirsaad1981-design.github.io/samsam-portfolio/welcome/'
-META = {'ar': ('Cute Portfolio — تابع محفظتك الرقمية بهدوء وانضباط', 'تطبيق وبوت تيليجرام لمتابعة محفظة العملات الرقمية: قارن محفظتك بالبيتكوين والذهب والفضة، مع إشارات انضباط وخطة تجميع وخروج. مجاني، غير ربحي، بالدعوة.', 'index.html'),
-        'en': ('Cute Portfolio — follow your crypto portfolio calmly, by your own rules', 'An app and a Telegram bot for following a crypto portfolio: compare it with Bitcoin, gold and silver, with discipline signals and an accumulation and exit plan. Free, non-profit, by invitation.', 'en.html')}
+META = {'ar': ('Cute Portfolio — ثروتك كلها في مكان واحد، بهدوء وانضباط', 'تطبيق وبوت تيليجرام لمتابعة ثروتك كلها: العملات الرقمية والذهب والأسهم والنقد في صافي ثروة واحد، ومقارنة بالبيتكوين والذهب والفضة، مع إشارات انضباط وخطة تجميع وخروج. مجاني، غير ربحي، بالدعوة.', 'index.html'),
+        'en': ('Cute Portfolio — your whole wealth in one place, calmly, by your own rules', 'An app and a Telegram bot for following all your wealth: crypto, gold, shares and cash in one net worth, compared with Bitcoin, gold and silver, with discipline signals and an accumulation and exit plan. Free, non-profit, by invitation.', 'en.html')}
 for src, l in (('Main.dc.html', 'ar'), ('English.dc.html', 'en')):
     s = (P / src).read_text(encoding='utf8'); ids = set(re.findall(r'/_blob/([0-9a-f]{32})', s))
     for i in ids:

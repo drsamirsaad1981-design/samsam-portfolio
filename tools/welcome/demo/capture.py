@@ -7,7 +7,7 @@ def go(pg, url, wait=4500, first=False):
         try: pg.click('#samsamSignInBtn', timeout=5000)
         except Exception: pass
     S.ready(pg); pg.wait_for_timeout(wait)
-    pg.evaluate("document.querySelectorAll('#cpSplash,.cp-toast,.toast').forEach(e => e.remove())")
+    pg.evaluate("document.querySelectorAll('#cpSplash,.cp-toast,.toast,#cpAiFab').forEach(e => e.remove())")
 def shot(pg, name, sel=None, top=None):
     if sel:
         pg.evaluate("(s) => { const e = document.querySelector(s); if (e) { const y = e.getBoundingClientRect().top + scrollY - %d; scrollTo(0, Math.max(0, y)); } }" % (top if top is not None else 12), sel); pg.wait_for_timeout(900)

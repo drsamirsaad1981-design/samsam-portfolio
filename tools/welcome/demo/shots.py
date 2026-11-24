@@ -84,6 +84,8 @@ def seed(pg):
     pg.evaluate("p => Samsam.saveExit({ plan: p })", ex); pg.wait_for_timeout(300)
     base = time.strftime('%Y-%m-%d', time.gmtime(now - 30 * 86400))
     pg.evaluate("([d, p]) => Samsam.setBaseline({ date: d, btcPrice: p, source: 'demo' })", [base, price_at('bitcoin', 30)]); pg.wait_for_timeout(400)
+    # cash and a bank certificate → the Net worth card (the whole wealth)
+    pg.evaluate("Samsam.setCash([{ id: 'c1', kind: 'cash', cur: 'USD', amount: 9000, label: 'Bank' }, { id: 'c2', kind: 'cert', cur: 'USD', amount: 15000, label: 'Certificate' }])"); pg.wait_for_timeout(800)
 
 def ready(pg, t=20):
     end = time.time() + t
