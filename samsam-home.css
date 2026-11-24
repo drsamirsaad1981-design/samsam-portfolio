@@ -1449,6 +1449,10 @@
 }
 /* 📈 the three market cards (each opens the Market Hub) and the moving line above Net worth */
 #hmPulse { align-items: stretch; } #hmPulse > .mk-t { align-self: stretch; height: auto; margin: 0; box-sizing: border-box; }
+/* titles on one line at the top of each card; the rest centred in the space below */
+#hmPulse > .mk-t { justify-content: flex-start; padding-top: 7px; }
+#hmPulse > .mk-t > .mk-k { margin-bottom: auto; }
+#hmPulse > .mk-t > :last-child { margin-bottom: auto; }
 a.mk-t { color: inherit; text-decoration: none; cursor: pointer; transition: background .15s; }
 @media (hover: hover) { a.mk-t:hover { background: rgba(124,58,237,.14); } }
 .mk-alt { position: relative; display: block; width: 86%; height: 7px; margin: 9px auto 5px; border-radius: 4px; background: linear-gradient(90deg, #f7931a, #eab308 50%, #3b82f6); }

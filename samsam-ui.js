@@ -979,7 +979,7 @@
   }, { passive: true, capture: true });
   function aiFab() {
     if (document.getElementById('cpAiFab')) return;
-    var KEYP = 'samsam_aifab_pos', M = 12, b = document.createElement('button');
+    var KEYP = 'samsam_aifab_pos2', M = 12, b = document.createElement('button');
     b.type = 'button'; b.id = 'cpAiFab'; b.className = 'cp-aifab'; b.title = 'AI Analysis (drag to move)'; b.setAttribute('aria-label', 'AI Analysis');
     b.innerHTML = ic('bot', { solo: true, size: 30, sw: 1.9 });
     if (!document.getElementById('cpAiFabCss')) {
@@ -1000,7 +1000,7 @@
       document.head.appendChild(st);
     }
     document.body.appendChild(b);
-    var pos = { side: 'r', y: 0.82 };
+    var pos = { side: 'r', y: 1 };   // by default low on the right, just above the bottom bar, clear of the numbers
     try { var sv = JSON.parse(localStorage.getItem(KEYP)); if (sv && (sv.side === 'l' || sv.side === 'r') && sv.y >= 0 && sv.y <= 1) pos = sv; } catch (_) {}
     // a computer: right beside the page content (1200px wide, centred), never out by the scrollbar on a wide
     // screen; a phone: close to the screen edge

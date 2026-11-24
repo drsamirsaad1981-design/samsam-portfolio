@@ -46,7 +46,7 @@ with sync_playwright() as p:
     b2=pg.locator('#cpAiFab').bounding_box()
     check('drag → settles on the left side, beside the content', abs(b2['x'] - max(40, pg.evaluate("innerWidth") / 2 - 600 - 24 - 48)) <= 2, b2)
     check('…and the report did NOT open on drag', not pg.evaluate("document.getElementById('analysisModal').classList.contains('active')"))
-    check('position remembered', pg.evaluate("JSON.parse(localStorage.getItem('samsam_aifab_pos')).side")=='l')
+    check('position remembered', pg.evaluate("JSON.parse(localStorage.getItem('samsam_aifab_pos2')).side")=='l')
     pg.click('#cpAiFab'); pg.wait_for_timeout(1500)
     check('tap → AI report opens over the tab', pg.evaluate("(()=>{const m=document.getElementById('analysisModal');if(!m.classList.contains('active'))return false;const e=document.elementFromPoint(innerWidth/2,innerHeight/2);return !!e.closest('#analysisModal')})()"))
     pg.screenshot(path=str(shots/'fab_report_desktop.png'))
