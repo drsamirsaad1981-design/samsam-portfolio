@@ -39,6 +39,8 @@ with sync_playwright() as p:
     pg.evaluate("tickerMkt = { ...tickerMkt, g: { ...(tickerMkt.g || {}), dom: (tickerMkt.g || {}).dom || { btc: 57, eth: 12 }, mcap: 3.21e12, mcapCh24: 1.8 }, f: { ...(tickerMkt.f || {}), value: 62 } }; renderPulse()")
     pg.evaluate("tickerMkt.g.dom = { btc: 58.7, eth: 11.2, usdt: 4.9 }; tickerMkt.g.vol = 9.8e10; tickerMkt.f = { value: 50, label: 'Neutral' }; tickerMkt.alt = { value: 57 }; tickerMkt.eth = { price: 3100, ch24: 1.5 }; renderPulse(); _tickerKey = ''; renderBtcTicker()")
     pl = clean(pg.inner_text('#hmPulse')).replace('\n', ' ')
+    hs = pg.evaluate("[...document.querySelectorAll('#hmPulse a.mk-t')].map(a => {const r = a.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.height)]})")
+    check('📈 the three cards are the same height and line up', len(hs) == 3 and len({h[0] for h in hs}) == 1 and len({h[1] for h in hs}) == 1, hs)
     check('📈 three cards: Fear & Greed 50 Neutral (gauge) · Altcoin Season 57/100 · Market dominance BTC 58.7% · ETH 11.2% · USDT 4.9%', 'Neutral' in pl and '57' in pl and 'Leaning altcoins' in pl and '58.7%' in pl and '11.2%' in pl and '4.9%' in pl and pg.locator('#hmPulse .mk-g').count() == 1 and pg.locator('#hmPulse a.mk-t[href="./market.html"]').count() == 3, pl)
     tk = clean(pg.inner_text('#btcTickerTrack .btc-ticker-group'))
     check('…the moving line: BTC, market cap, 24h volume, ETH — no Fear & Greed / Altcoin Season / dominance, and no links', 'BTC / USD' in tk and 'Market Cap' in tk and '24h volume' in tk and 'ETH' in tk and 'Fear' not in tk and 'Altcoin Season' not in tk and 'Dominance' not in tk and pg.locator('#btcTicker a').count() == 0, tk)
