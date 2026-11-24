@@ -21,7 +21,7 @@ with sync_playwright() as p:
           return { labels: cards.map(c => c.querySelector('.stat-label').innerText.trim()), rects,
             pnl: document.getElementById('totalPnlCard').innerText, pnlSub: document.getElementById('totalPnlSub').innerText,
             tickerText: tr.innerText, anim: getComputedStyle(tr).animationName, radius: cs.borderRadius, bg: cs.backgroundColor,
-            tickerBelowCards: tk.getBoundingClientRect().top > Math.max(...cards.map(c => c.getBoundingClientRect().bottom)) - 1,
+            tickerBelowCards: tk.getBoundingClientRect().bottom <= Math.min(...cards.map(c => c.getBoundingClientRect().top)) + 1,   // (now above Net worth and the cards)
             pulse: !!tr.querySelector('.ss-live.ss-pulse[data-state=ok]'),
             overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
             oldCards: !!document.getElementById('btcPriceDisplay') || /Altcoins USD/i.test(document.body.innerText) };
@@ -33,8 +33,8 @@ with sync_playwright() as p:
             r = info['rects']; check('desktop: one row — Total, Profit, then its parts (BTC · Altcoins)', len({y for _, y in r}) == 1, r)
         check(f'{name}: BTC price card + old label removed', not info['oldCards'])
         check(f'{name}: P&L format +$X (+X.XX%)', info['pnl'][0] in '+-' and info['pnl'][1] == '$' and info['pnlSub'].startswith('(') and '%)' in info['pnlSub'], (info['pnl'], info['pnlSub']))
-        check(f'{name}: ticker shows live, price, 24h change — no High / Low', all(k in info['tickerText'] for k in ('Live', 'BTC / USD', '$100,000', '+2.45%')) and 'High' not in info['tickerText'] and 'Low ' not in info['tickerText'], info['tickerText'][:200])
-        check(f'{name}: ticker animates (or holds still when it fits), under cards, 8px radius, soft background', (info['anim'] in ('btcTickerScroll', 'btcTickerScrollRtl') or pg.evaluate("document.getElementById('btcTicker').classList.contains('static')")) and info['tickerBelowCards'] and info['radius'] == '8px' and info['bg'] == 'rgba(255, 255, 255, 0.03)', (info['anim'], info['radius'], info['bg']))
+        check(f'{name}: ticker shows live, price, 24h change — no Fear & Greed / Altcoin Season (they are cards)', all(k in info['tickerText'] for k in ('Live', 'BTC / USD', '$100,000', '+2.45%')) and 'Fear' not in info['tickerText'] and 'Altcoin Season' not in info['tickerText'], info['tickerText'][:200])
+        check(f'{name}: ticker animates (or holds still when it fits), above the cards, 8px radius, soft background', (info['anim'] in ('btcTickerScroll', 'btcTickerScrollRtl') or pg.evaluate("document.getElementById('btcTicker').classList.contains('static')")) and info['tickerBelowCards'] and info['radius'] == '8px' and info['bg'] == 'rgba(255, 255, 255, 0.03)', (info['anim'], info['radius'], info['bg']))
         check(f'{name}: pulsing green Live dot', info['pulse'])
         check(f'{name}: no horizontal overflow', not info['overflow'])
         # P&L matches the Performance page's Total P&L

@@ -527,7 +527,8 @@ const NW_PARTS = [['btc', '#f7931a', 'Bitcoin', 'البيتكوين'], ['alt', '
 function renderNetWorth() {
   const card = document.getElementById('netWorthCard'); if (!card) return;
   const c = window.SamsamCash && SamsamCash.last ? SamsamCash.last() : null, AR = !!(window.CPLang && CPLang.ar);
-  if (!c || !c.n || nwPortfolio == null) { card.hidden = true; return; }
+  const copy = () => { const h = document.getElementById('hovNwCard'); if (h) { h.hidden = card.hidden; if (!card.hidden) h.innerHTML = card.innerHTML.replace(/ id="[^"]*"/g, ''); } };   // the Allocation page's copy
+  if (!c || !c.n || nwPortfolio == null) { card.hidden = true; copy(); return; }
   const pf = nwPortfolio, cash = c.usd || 0, all = pf + cash, iso = x => '⁦' + x + '⁩';
   const P = nwParts || { btc: pf, alt: 0, metal: 0, stock: 0 }, val = { ...P, cash };
   // shares of the whole, rounded so they add up to exactly 100
@@ -540,6 +541,7 @@ function renderNetWorth() {
   document.getElementById('nwLegend').innerHTML = rows.map(r => `<span class="nw-li" data-k="${r.k}"><i style="background:${r.col}"></i><span class="nw-n">${r.name}</span><b>${iso(r.r + '%')}</b><span class="nw-u">${iso(SamsamFmt.usd(r.v))}</span></span>`).join('');
   document.getElementById('nwPfTxt').textContent = (AR ? 'المحفظة ' : 'Portfolio ') + iso(SamsamFmt.usd(pf)) + (AR ? ' + النقد ' : ' + cash ') + iso(SamsamFmt.usd(cash)) + (c.missing && c.missing.length ? ' *' : '');
   card.title = c.missing && c.missing.length ? (AR ? '* لا يوجد سعر بعد لـ ' : '* No rate yet for ') + c.missing.join(', ') : '';
+  copy();
 }
 window.onCashRender = () => renderNetWorth();
 // 🥇 / 🏦 detail cards: folded to one line (name + value) until you open them — your choice is kept on this device
@@ -555,19 +557,30 @@ function foldCards() {
 // 📈 the market's pulse, in the date line: total market cap (24h) and Fear & Greed — no extra row above your numbers
 function renderPulse() {
   const el = document.getElementById('hmPulse'), M = window.SamsamMarket; if (!el || !M || typeof tickerMkt === 'undefined' || !tickerMkt) return;
-  const g = tickerMkt.g, f = tickerMkt.f, AR = !!(window.CPLang && CPLang.ar), iso = x => '⁦' + x + '⁩', out = [];
-  const tile = (k, v, sub, extra) => `<div class="mk-t">${extra || ''}<span class="mk-k">${k}</span><b class="mk-v">${v}</b>${sub ? `<span class="mk-s">${sub}</span>` : ''}</div>`;
-  if (g && g.mcap > 0) { const ch = g.mcapCh24; out.push(tile(AR ? 'القيمة السوقية' : 'Market cap', iso(M.fmtBig(g.mcap)), ch != null ? `<span class="${ch >= 0 ? 'stat-pos' : 'stat-neg'}">${iso((ch >= 0 ? '▲ ' : '▼ ') + Math.abs(ch).toFixed(2) + '%')}</span>` : '')); }
-  if (g && g.dom && g.dom.btc > 0) out.push(tile(AR ? 'هيمنة BTC' : 'BTC dominance', iso(g.dom.btc.toFixed(1) + '%'), g.dom.eth > 0 ? iso('ETH ' + g.dom.eth.toFixed(1) + '%') : ''));
+  const g = tickerMkt.g, f = tickerMkt.f, a = tickerMkt.alt, AR = !!(window.CPLang && CPLang.ar), iso = x => '⁦' + x + '⁩', out = [];
+  // three cards, each opens the Market Hub: 😨 Fear & Greed (a gauge) · 🔄 Altcoin Season (Bitcoin ← → Altcoins) · 🥧 dominance
+  const card = (k, body, sub, title) => `<a class="mk-t" href="./market.html" title="${title} — ${AR ? 'افتح مركز السوق' : 'open the Market Hub'}"><span class="mk-k">${k}</span>${body}${sub ? `<span class="mk-s">${sub}</span>` : ''}</a>`;
   if (f && f.value != null) {   // a half-circle gauge: red → orange → yellow → green, a dot at the value (CoinMarketCap's bands)
-    const v = Math.max(0, Math.min(100, +f.value)), a = Math.PI * (1 - v / 100), cx = 30, cy = 28, r = 22, P = t => [(cx + r * Math.cos(t)).toFixed(1), (cy - r * Math.sin(t)).toFixed(1)];
+    const v = Math.max(0, Math.min(100, +f.value)), cx = 30, cy = 28, r = 22, P = t => [(cx + r * Math.cos(t)).toFixed(1), (cy - r * Math.sin(t)).toFixed(1)];
     const seg = (a0, a1, c) => { const p0 = P(Math.PI * (1 - a0 / 100)), p1 = P(Math.PI * (1 - a1 / 100)); return `<path d="M${p0[0]} ${p0[1]} A${r} ${r} 0 0 1 ${p1[0]} ${p1[1]}" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>`; };
-    const dot = P(a), lbl = { 'Extreme Fear': ['Extreme fear', 'خوف شديد'], 'Fear': ['Fear', 'خوف'], 'Neutral': ['Neutral', 'محايد'], 'Greed': ['Greed', 'طمع'], 'Extreme Greed': ['Extreme greed', 'طمع شديد'] }[f.label] || [f.label || '', f.label || ''];
+    const dot = P(Math.PI * (1 - v / 100)), lbl = { 'Extreme Fear': ['Extreme fear', 'خوف شديد'], 'Fear': ['Fear', 'خوف'], 'Neutral': ['Neutral', 'محايد'], 'Greed': ['Greed', 'طمع'], 'Extreme Greed': ['Extreme greed', 'طمع شديد'] }[f.label] || [f.label || '', f.label || ''];
     const svg = `<svg class="mk-g" viewBox="0 0 60 34" aria-hidden="true">${seg(1, 19, '#ef4444')}${seg(21, 39, '#f97316')}${seg(41, 59, '#eab308')}${seg(61, 79, '#84cc16')}${seg(81, 99, '#22c55e')}<circle cx="${dot[0]}" cy="${dot[1]}" r="4" fill="#fff" stroke="#0f172a" stroke-width="2"/><text x="30" y="31" text-anchor="middle">${v}</text></svg>`;
-    out.push(`<div class="mk-t mk-fng" title="${AR ? 'مؤشر الخوف والطمع (CoinMarketCap)' : 'Fear & Greed (CoinMarketCap)'}"><span class="mk-k">${AR ? 'الخوف والطمع' : 'Fear &amp; Greed'}</span>${svg}<span class="mk-s" style="color:${M.fngColor(v)}">${AR ? lbl[1] : lbl[0]}</span></div>`);
+    out.push(card(AR ? 'الخوف والطمع' : 'Fear &amp; Greed', svg, `<span style="color:${M.fngColor(v)}">${AR ? lbl[1] : lbl[0]}</span>`, AR ? 'مؤشر الخوف والطمع' : 'Fear & Greed'));
+  }
+  if (a && a.value != null) {   // Bitcoin ← → Altcoins, a mark at the index
+    const v = Math.max(0, Math.min(100, +a.value)), L = v >= 75 ? ['Altcoin season', 'موسم العملات البديلة'] : v <= 25 ? ['Bitcoin season', 'موسم البيتكوين'] : v >= 50 ? ['Leaning altcoins', 'مائل للبديلة'] : ['Leaning Bitcoin', 'مائل للبيتكوين'];
+    const bar = `<span class="mk-alt" aria-hidden="true"><i style="left:${v}%"></i></span><b class="mk-v">${iso(v)}<small>/100</small></b>`;
+    out.push(card(AR ? 'موسم البديلة' : 'Altcoin Season', bar, AR ? L[1] : L[0], AR ? 'مؤشر موسم العملات البديلة' : 'Altcoin Season Index'));
+  }
+  if (g && g.dom && g.dom.btc > 0) {   // BTC · ETH · USDT, one bar
+    const d = g.dom, parts = [['BTC', d.btc, '#f7931a'], ['ETH', d.eth, '#8b5cf6'], ['USDT', d.usdt, '#22c55e']].filter(x => x[1] > 0);
+    const bar = `<span class="mk-dom" aria-hidden="true">${parts.map(x => `<i style="flex:${x[1].toFixed(2)};background:${x[2]}"></i>`).join('')}<i class="mk-rest" style="flex:${Math.max(0, 100 - parts.reduce((t, x) => t + x[1], 0)).toFixed(2)}"></i></span>`;
+    const lines = `<span class="mk-dl">${parts.map(x => `<span><i style="background:${x[2]}"></i>${x[0]} <b>${iso(x[1].toFixed(1) + '%')}</b></span>`).join('')}</span>`;
+    out.push(card(AR ? 'هيمنة السوق' : 'Market dominance', bar + lines, '', AR ? 'هيمنة السوق' : 'Market dominance'));
   }
   el.innerHTML = out.join(''); el.hidden = !out.length;
-}// ── Live BTC ticker ──────────────────────────────────────────────────────────
+}
+// ── Live BTC ticker ──────────────────────────────────────────────────────────
 let btcTicker = { price: 0, ch24: null, high24: null, low24: null, t: 0 };
 async function fetchBtcTicker() {
   if (typeof liveLine !== 'undefined' && liveLine && liveLine.alive() && Date.now() - btcTicker.t < 20e3) return;   // ⚡ the live line keeps it current
@@ -588,14 +601,20 @@ async function fetchBtcTicker() {
     }
   } catch (e) { /* keep the price from the regular price refresh */ }
 }
+
 let _tickerKey = '', _tickerShape = '';
 // market numbers for the ticker: cached / GitHub snapshot (no extra CoinGecko calls from Home), every 3 minutes
 var tickerMkt = {};
 function loadTickerMarket() {
   const M = window.SamsamMarket; if (!M) return;
   const val = p => p.then(r => r && 'data' in r ? r.data : r, () => null);
-  Promise.all([val(M.global()), val(M.fng()), val(M.alt90())]).then(([g, f, alt]) => { tickerMkt = { g, f, alt }; renderBtcTicker(); renderPulse(); });
+  const etf = M.etf ? M.etf().then(x => x, () => null) : Promise.resolve(null), peek = M.peek ? M.peek().then(x => x, () => null) : Promise.resolve(null);
+  Promise.all([val(M.global()), val(M.fng()), val(M.alt90()), etf, peek]).then(([g, f, alt, e, pk]) => {
+    const eth = ((pk && pk.top) || []).find(c => c && c.id === 'ethereum') || null;
+    tickerMkt = { g, f, alt, etf: e, eth }; renderBtcTicker(); renderPulse();
+  });
 }
+
 loadTickerMarket(); setInterval(() => { if (!document.hidden) loadTickerMarket(); }, 3 * 60e3);
 function renderBtcTicker() {
   const track = document.getElementById('btcTickerTrack');
@@ -608,30 +627,31 @@ function renderBtcTicker() {
   // the price and the 24h change are marked (bt-px / bt-ch): when only they change (the live line, every 2 s) they are
   // updated in place, so the moving line keeps moving instead of starting over
   const pxTxt = price > 0 ? usd(price) : '—', chCls = ch != null && ch >= 0 ? 'bt-up' : 'bt-down', chTxt = ch != null ? (ch >= 0 ? '▲ +' : '▼ -') + Math.abs(ch).toFixed(2) + '%' : '';
-  const build = (P, K, C) => {
+  const hlTxt = btcTicker.high24 > 0 && btcTicker.low24 > 0 ? usd(btcTicker.high24) + ' / ' + usd(btcTicker.low24) : '';
+  const build = (P, K, C, HL) => {
   const parts = [
     `<span class="bt-item">${SamsamUI.liveDot(live ? 'ok' : 'error', true)}<span class="bt-live">${live ? 'Live' : navigator.onLine ? 'Saved prices' : 'Offline'}</span></span>`,
     `<span class="bt-item">BTC / USD <strong class="bt-px">${P}</strong></span>`,
   ];
   if (ch != null) parts.push(`<span class="bt-item"><span class="bt-ch ${K}">${C}</span> 24h</span>`);
-  // the market (same numbers as the Market tab) — any of these opens the Market tab
-  const M = window.SamsamMarket, tm = tickerMkt || {}, g = tm.g, f = tm.f, a = tm.alt;
-  if (M && (g || f)) {
-    const go = (inner, label) => `<a class="bt-item bt-mkt" href="./market.html" title="Open the Market tab" aria-label="${label} — open the Market tab">${inner}</a>`;
-    if (g) parts.push(go(`Market Cap <strong>${M.fmtBig(g.mcap)}</strong><span class="${g.mcapCh24 >= 0 ? 'bt-up' : 'bt-down'}">${g.mcapCh24 >= 0 ? '▲ +' : '▼ -'}${Math.abs(g.mcapCh24 || 0).toFixed(2)}%</span>`, 'Total market cap'));
-    if (f) parts.push(go(`Fear &amp; Greed <strong style="color:${M.fngColor(f.value)}">${f.value}</strong><span class="bt-tag" style="color:${M.fngColor(f.value)}">${SamsamCoins.esc(f.label)}</span>`, 'Fear and Greed'));
-    if (g) parts.push(go(`BTC Dominance <strong>${g.dom.btc.toFixed(1)}%</strong>`, 'Bitcoin dominance'));
-    if (a) parts.push(go(`Altcoin Season <strong>${a.value}<span class="bt-of">/100</span></strong>`, 'Altcoin Season'));
-    parts.push(go(`<span class="bt-explore">Explore ↗</span>`, 'Explore the market'));
-  }
+  // quick numbers only (Fear & Greed, Altcoin Season and dominance are the three cards above it); the line itself is not a link
+  const M = window.SamsamMarket, tm = tickerMkt || {}, g = tm.g, AR = !!(window.CPLang && CPLang.ar);
+  const it = inner => `<span class="bt-item">${inner}</span>`, sg = v => `<span class="${v >= 0 ? 'bt-up' : 'bt-down'}">${v >= 0 ? '▲ +' : '▼ -'}${Math.abs(v || 0).toFixed(2)}%</span>`;
+  if (HL) parts.push(it(`${AR ? 'أعلى / أدنى 24س' : '24h high / low'} <strong class="bt-hl">${HL}</strong>`));
+  if (M && g && g.mcap > 0) parts.push(it(`Market Cap <strong>${M.fmtBig(g.mcap)}</strong>${g.mcapCh24 != null ? sg(g.mcapCh24) : ''}`));
+  if (M && g && g.vol > 0) parts.push(it(`${AR ? 'حجم التداول 24س' : '24h volume'} <strong>${M.fmtBig(g.vol)}</strong>`));
+  const ed = tm.etf && tm.etf.btc && tm.etf.btc.days && tm.etf.btc.days[tm.etf.btc.days.length - 1];
+  if (M && ed && ed[1] != null) parts.push(it(`BTC ETF <span class="${ed[1] >= 0 ? 'bt-up' : 'bt-down'}">${ed[1] >= 0 ? '+' : '−'}${M.fmtBig(Math.abs(ed[1]))}</span> <span class="bt-tag">${SamsamCoins.esc(new Date(ed[0] + 'T12:00:00Z').toLocaleDateString(AR ? 'ar-EG-u-nu-latn' : 'en-US', { month: 'short', day: 'numeric' }))}</span>`));
+  if (tm.eth && tm.eth.price > 0) parts.push(it(`ETH <strong>${usd(tm.eth.price)}</strong>${tm.eth.ch24 != null ? sg(tm.eth.ch24) : ''}`));
   return parts.join('<span class="bt-sep"></span>') + '<span class="bt-sep"></span>';
   };
-  const group = build(pxTxt, chCls, chTxt), shape = build('\u0001', '\u0002', '\u0003');
+  const group = build(pxTxt, chCls, chTxt, hlTxt), shape = build('\u0001', '\u0002', '\u0003', hlTxt ? '\u0004' : '');
   if (group === _tickerKey) return; // unchanged → don't restart the animation
   if (shape === _tickerShape && track.firstElementChild) {   // only the price / 24h moved → change those words, keep moving
     _tickerKey = group;
     track.querySelectorAll('.bt-px').forEach(e => { e.textContent = pxTxt; });
     track.querySelectorAll('.bt-ch').forEach(e => { e.className = 'bt-ch ' + chCls; e.textContent = chTxt; });
+    track.querySelectorAll('.bt-hl').forEach(e => { e.textContent = hlTxt; });
     return;
   }
   _tickerKey = group; _tickerShape = shape;
