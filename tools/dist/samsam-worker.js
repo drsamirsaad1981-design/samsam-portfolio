@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 57b032d21650961a
+// sources-hash: 640ec14537db91a7
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -183,7 +183,7 @@ function list(v) {
 function systemPrompt(lang2) {
   const L = lang2 === "ar" ? "Write the whole report in Arabic (Modern Standard Arabic, clear and direct). Keep coin tickers, numbers and $ amounts in Latin characters." : "Write the whole report in clear, direct English.";
   return [
-    "You are a seasoned crypto portfolio analyst writing a private report for the portfolio owner.",
+    "You are a seasoned portfolio analyst (crypto first, plus metals, tokenized shares and cash) writing a private report for the portfolio owner.",
     "Base every statement on the data provided. Do not invent prices, news or numbers. Be specific: name coins, amounts and percentages.",
     "This is analysis, not financial advice; do not promise returns. Keep it practical and concise.",
     L,
@@ -739,6 +739,7 @@ function assetClass(x) {
   return classOfDoc(x) || learnedClass.get(sym) || "crypto";
 }
 var hasSignal = (x) => assetClass(x) === "crypto" && String((x && typeof x === "object" ? x.sym : x) || "").toUpperCase() !== "BTC";
+var isAltcoin = hasSignal;
 function zakatPool(rows, { cashUsd = 0, stocks = true } = {}) {
   let crypto2 = 0, stock = 0, metal = 0;
   for (const r of rows || []) {
@@ -951,7 +952,7 @@ function summarize(user, market, now = Date.now()) {
     cp += v.coinPct * k / 100;
     bp += v.btcPct * k / 100;
     cb4 += k;
-    if (c.sym !== "BTC") {
+    if (c.sym !== "BTC" && isAltcoin(coinDoc[c.sym] || c.sym)) {
       alts++;
       if (v.pct > 0) beat++;
     }
@@ -1031,11 +1032,20 @@ function summarize(user, market, now = Date.now()) {
     f.usd += r.qty * (prices2[r.sym] && prices2[r.sym].usd || 0);
   }
   const free = Object.values(free7).sort((a, b) => b.usd - a.usd);
+  const parts = { btc: 0, alt: 0, metal: 0, stock: 0 }, kindOf = {};
+  for (const c of coinRows) {
+    const k = assetClass(coinDoc[c.sym] || c.sym);
+    kindOf[c.sym] = k === "stock" ? "share" : k === "metal" ? "metal" : "crypto";
+    parts[c.sym === "BTC" ? "btc" : k === "metal" ? "metal" : k === "stock" ? "stock" : "alt"] += c.value;
+  }
+  const ct = cashTotals(meta.cash, fxR, now);
+  const wealth = { total: value + ct.usd, portfolio: value, cash: ct.usd, parts: { ...parts, cash: ct.usd }, missing: ct.missing, items: ct.items, kindOf };
   return {
     alloc,
     dca,
     fxR,
     free,
+    wealth,
     value,
     cost,
     total,
@@ -1072,6 +1082,26 @@ function etfDay(etf) {
   if (!etf || !etf.btc || !etf.btc.days || !etf.btc.days.length) return null;
   const b = etf.btc.days[etf.btc.days.length - 1], e = etf.eth && etf.eth.days && etf.eth.days.find((x) => x[0] === b[0]);
   return { date: b[0], label: (/* @__PURE__ */ new Date(b[0] + "T12:00:00Z")).toLocaleDateString("en-US", { month: "short", day: "numeric" }), btc: b[1], eth: e ? e[1] : 0 };
+}
+var WPART = { btc: ["BTC", "\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646"], alt: ["altcoins", "\u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629"], metal: ["metals", "\u0627\u0644\u0645\u0639\u0627\u062F\u0646"], stock: ["shares", "\u0627\u0644\u0623\u0633\u0647\u0645"], cash: ["cash", "\u0627\u0644\u0646\u0642\u062F"] };
+function wealthParts(sum) {
+  const w = sum && sum.wealth;
+  if (!w || !(w.total > 0)) return [];
+  const rows = Object.keys(WPART).filter((k) => w.parts[k] > 0).map((k) => ({ k, usd: w.parts[k], p: w.parts[k] / w.total * 100 }));
+  let left = 100;
+  rows.forEach((r, i) => {
+    r.r = i === rows.length - 1 ? Math.max(0, left) : Math.round(r.p);
+    left -= r.r;
+  });
+  return rows;
+}
+function wealthLine(sum, ar) {
+  const w = sum && sum.wealth;
+  if (!w || !(w.cash > 0)) return null;
+  const mix = wealthParts(sum).map((r) => `${WPART[r.k][ar ? 1 : 0]} ${r.r}%`).join(" \xB7 ");
+  return ar ? `\u{1F3E6} \u0635\u0627\u0641\u064A \u0627\u0644\u062B\u0631\u0648\u0629: <b>${usd2(w.total)}</b>
+<i>${mix}</i>` : `\u{1F3E6} Net worth <b>${usd2(w.total)}</b>
+<i>${mix}</i>`;
 }
 
 // tools/worker/who.mjs
@@ -3929,13 +3959,18 @@ var TOOLS = [
   },
   {
     name: "get_portfolio",
-    description: "The user's whole portfolio now: total value, 24h / 7d change, all-time profit, result vs holding BTC, and EVERY coin with value, share %, 24h / 7d change, profit vs average buy price, signal, vs_btc_pct (its result minus the same dollars in BTC since bought) and vs_btc_30d_pts / vs_btc_90d_pts (strength vs BTC over 30 / 90 days); signal counts; allocation vs targets. One call answers questions about all coins \u2014 no need to call get_coin for each.",
+    description: "The user's whole wealth now. net_worth: the total with each part's share (Bitcoin, altcoins, metals, shares, cash & certificates \u2014 cash is in net worth only). Then the portfolio (crypto + metals + shares): total value, 24h / 7d change, all-time profit, result vs holding BTC, and EVERY coin with value, share %, 24h / 7d change, profit vs average buy price, signal, vs_btc_pct (its result minus the same dollars in BTC since bought) and vs_btc_30d_pts / vs_btc_90d_pts (strength vs BTC over 30 / 90 days); signal counts; allocation vs targets. One call answers questions about all coins \u2014 no need to call get_coin for each.",
     input_schema: { type: "object", properties: {} }
   },
   {
     name: "get_market",
     description: "The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market's state (open / closed, the next open or close in Riyadh time), and metals: gold, silver, platinum, copper (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).",
     input_schema: { type: "object", properties: { top: { type: "integer", enum: [100, 200, 300, 500], description: "Rank range for best / worst (default 100)" } } }
+  },
+  {
+    name: "get_zakat",
+    description: "The user's zakat, with the app's own numbers: the one money pool (crypto + metals + cash & certificates + shares when he counts them) against the nisab (85 g of gold), 2.5%, his zakat day (hijri), the state (due / paid / upcoming / below the nisab), days left, what was paid. Use it for any zakat / \u0632\u0643\u0627\u0629 / nisab / \u0646\u0635\u0627\u0628 question. An estimate, not a fatwa.",
+    input_schema: { type: "object", properties: {} }
   },
   {
     name: "get_plan",
@@ -4064,13 +4099,50 @@ async function runTool(ctx, name, input) {
     }
     return out;
   }
+  if (name === "get_zakat") {
+    const u = await ctx.user();
+    if (!u) return { error: "portfolio not connected" };
+    const m = await ctx.market(), z = zakatFacts(u, m, Date.now());
+    if (!z || !z.y) return { error: "no gold price or zakat day right now" };
+    ctx.used.add("your portfolio (Firebase)");
+    const y = z.y, P2 = z.pool;
+    return {
+      state: y.state,
+      hijri_year: y.hy,
+      zakat_day: `${z.w.d} ${(HIJRI_MONTHS.en || [])[z.w.m - 1] || "month " + z.w.m}`,
+      days_left: y.daysLeft,
+      next_date: y.nextDate,
+      pool_usd: r23(y.value),
+      pool_today_usd: r23(P2.value),
+      pool_parts_today_usd: { crypto: r23(P2.crypto), metals: r23(P2.metal), shares: P2.stocksCounted ? r23(P2.stock) : 0, cash_and_certificates: r23(P2.cash) },
+      shares_counted: !!P2.stocksCounted,
+      nisab_usd: r23(y.nisabUsd),
+      nisab: "85 g of gold",
+      zakat_usd: r23(y.zakatUsd),
+      rate: "2.5%",
+      fixed_on_zakat_day: !!y.fixed,
+      paid: y.paid ? { amount: y.paid.paid, currency: y.paid.cur, on: y.paid.at } : null,
+      states: "due = pay zakat_usd now (stays due until \u2713 Paid in the app) \xB7 paid = this hijri year is paid \xB7 upcoming = an estimate at today's value for the next zakat day \xB7 below / under = the pool is under the nisab, none due",
+      note: "an estimate from the app, not a fatwa \u2014 he should check with a scholar"
+    };
+  }
   if (name === "get_portfolio") {
     const x = await ctx.sum();
     if (!x) return { error: "portfolio not connected" };
     const { s } = x;
+    const w = s.wealth, G = GRAMS_PER_OZ;
     ctx.used.add("your portfolio (Firebase)");
     ctx.used.add(srcOf(x.m, "bitcoin"));
     return {
+      net_worth: w ? {
+        total_usd: r23(w.total),
+        portfolio_usd: r23(w.portfolio),
+        cash_and_certificates_usd: r23(w.cash),
+        parts: Object.entries(w.parts).filter(([, v]) => v > 0).map(([k, v]) => ({ part: { btc: "Bitcoin", alt: "Altcoins", metal: "Metals", stock: "Shares", cash: "Cash & certificates" }[k], usd: r23(v), share_pct: w.total > 0 ? r23(v / w.total * 100) : null })),
+        cash_items: w.items.map((i) => ({ label: i.label || void 0, kind: i.kind === "cert" ? "certificate" : "cash", currency: i.cur, value: r23(i.value), usd: i.usd == null ? null : r23(i.usd), rate_pct_year: i.kind === "cert" ? i.rate : void 0, maturity: i.maturity || void 0 })),
+        no_rate_yet_for: w.missing.length ? w.missing : void 0,
+        note: "total_value_usd, profit, allocation and vs BTC below are on the portfolio only (no cash)"
+      } : null,
       total_value_usd: r23(s.value),
       change_24h_pct: r23(s.ch24),
       change_24h_usd: r23(s.d24),
@@ -4082,7 +4154,7 @@ async function runTool(ctx, name, input) {
       vs_holding_btc_pct: r23(s.vsBtc),
       alts_beating_btc: `${s.beat} of ${s.alts}`,
       signals: s.counts,
-      coins: [...s.coins].sort((a, b) => b.value - a.value).map((c) => ({ ticker: c.sym, value_usd: r23(c.value), share_pct: s.value > 0 ? r23(c.value / s.value * 100) : null, change_24h_pct: r23(c.ch24), change_7d_pct: r23(c.ch7), profit_vs_average_pct: r23(c.chg), signal: s.signal[c.sym], vs_btc_pct: c.vs ? r23(c.vs.pct) : null, vs_btc_30d_pts: c.rs ? r23(c.rs.d30) : null, vs_btc_90d_pts: c.rs ? r23(c.rs.d90) : null, stablecoin: isStable(c.sym) || void 0 })),
+      coins: [...s.coins].sort((a, b) => b.value - a.value).map((c) => ({ ticker: c.sym, kind: w ? w.kindOf[c.sym] : void 0, grams: w && w.kindOf[c.sym] === "metal" ? r23(c.qty * G) : void 0, value_usd: r23(c.value), share_pct: s.value > 0 ? r23(c.value / s.value * 100) : null, change_24h_pct: r23(c.ch24), change_7d_pct: r23(c.ch7), profit_vs_average_pct: r23(c.chg), signal: w && w.kindOf[c.sym] !== "crypto" ? "none (signals are for crypto only)" : s.signal[c.sym], vs_btc_pct: c.vs ? r23(c.vs.pct) : null, vs_btc_30d_pts: c.rs ? r23(c.rs.d30) : null, vs_btc_90d_pts: c.rs ? r23(c.rs.d90) : null, stablecoin: isStable(c.sym) || void 0 })),
       allocation: s.alloc ? s.alloc.groups.map((g) => ({ group: s.alloc.names[g.key] || g.key, now_pct: r23(g.now), target_pct: r23(g.target), state: g.state })) : null
     };
   }
@@ -4285,6 +4357,9 @@ function system(now, lang2, qLang, owner2 = true) {
     '- "Tell me / alert me / \u0646\u0628\u0651\u0647\u0646\u064A if \u2026" \u2192 set_alert (then confirm in one short line what was set, the value now, and if already_met that it waits for the next crossing). "What if / \u0644\u0648 \u2026" about prices or trades \u2192 what_if (with get_coin for a coin he does not hold).',
     `- "I bought / I sold / \u0627\u0634\u062A\u0631\u064A\u062A / \u0628\u0639\u062A \u2026" (a trade he MADE) \u2192 record_trade. It is only prepared, and the bot shows the full summary itself \u2014 so your whole answer is ONE short line ("\u{1F9FE} \u062C\u0627\u0647\u0632\u0629 \u2014 \u0631\u0627\u062C\u0639 \u0627\u0644\u0645\u0644\u062E\u0635 \u0628\u0627\u0644\u0623\u0633\u0641\u0644 \u0648\u0627\u0636\u063A\u0637 \u2705 \u062A\u0623\u0643\u064A\u062F" / "\u{1F9FE} Ready \u2014 check the summary below and tap \u2705 Confirm"), plus at most one line if something needs attention (e.g. a price far from today's). No sections, no repeated numbers. Never say it is saved. A trade he is only thinking about ("should I / what if I sell") \u2192 what_if, not record_trade.`,
     "- paper / practice / pretend / \u062A\u062C\u0631\u064A\u0628\u064A / \u0648\u0647\u0645\u064A \u2192 paper_trade or get_paper (the pretend portfolio) \u2014 never record_trade or the real portfolio. Confirm a paper trade in 1\u20132 lines (done, price, cash left).",
+    '- Wealth: get_portfolio \u2192 net_worth is everything (Bitcoin, altcoins, metals, shares, cash & certificates) with each share; "my wealth / net worth / \u062B\u0631\u0648\u062A\u064A / \u0635\u0627\u0641\u064A \u0627\u0644\u062B\u0631\u0648\u0629" \u2192 answer from it. total_value_usd, profit, allocation and vs BTC are the PORTFOLIO only \u2014 never add cash to them.',
+    `- Signals (Hold / Reinforce / Sell) and Altcoin Season are for crypto only: a metal (kind "metal", give it in grams) or a share (kind "share") has no signal and is not an altcoin. Cash is not rated \u2014 only its share and a certificate's maturity.`,
+    "- Zakat / \u0632\u0643\u0627\u0629 / \u0646\u0635\u0627\u0628 \u2192 get_zakat, and answer with its numbers and state; add once that it is an estimate, not a fatwa.",
     "- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.",
     '- About the future: give scenarios, levels and probabilities with reasons \u2014 never promises. Not financial advice, but do give a clear, practical view when asked "should I\u2026" (based on his plan and signals).',
     "STYLE \u2014 like the app's AI Analysis report, short and sharp, all in points:",
@@ -6587,6 +6662,10 @@ function viewPortfolio(t, cfg, sum, m, now) {
     if (sum.ch24 != null) L.push(`${dot(sum.ch24)} ${pct(sum.ch24)} \xB7 ${signed(sum.d24)} ${t.today}`);
     L.push(`${t.profit} <b>${signed(sum.total)}</b> \xB7 ${pct(sum.pctTotal, 1)}`);
     if (sum.vsBtc != null) L.push(`${t.vsBtcS} ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} \xB7 ${t.beat(sum.beat, sum.alts)}`);
+  }
+  {
+    const nl = wealthLine(sum, isAr(t));
+    if (nl) L.push(nl);
   }
   const up = moverRows(sum, "ch24", 1), dn = moverRows(sum, "ch24", -1);
   if (up.length) L.push("", `\u{1F4C8} <b>${t.bestT}</b>`, ...up.map((c) => row(c.sym, c.ch24, usd(c.value))));

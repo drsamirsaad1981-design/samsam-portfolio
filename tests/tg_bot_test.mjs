@@ -333,7 +333,7 @@ check('the keyboard button "💼 Portfolio" → the portfolio', last().b.text.in
 await say('/new'); sent.length = 0; claudeCalls.length = 0; await say('what is the price of SOL?');
 v = last();
 check('a question → "🧠 Thinking…" at once, then that same message becomes the answer', sent.find(x => x.m === 'sendMessage').b.text === '🧠 Thinking…' && v.m === 'editMessageText' && v.b.message_id === 7, sent.map(x => x.m));
-check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 14 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
+check('Claude called get_coin, then answered from its result (SOL $150, you hold 10, signal)', claudeCalls.length === 2 && claudeCalls[0].tools.length === 15 && /<b>SOL<\/b> is \$150 \(3\.5% 24h\)/.test(v.b.text) && /You hold 10 — /.test(v.b.text), v.b.text);
 const tr = JSON.parse(claudeCalls[1].messages.at(-1).content[0].content);
 check('get_coin gave Claude: live price + source, rank, 7d high / low, futures, your holding (avg, profit, signal)', tr.price_usd === 150 && /CoinGecko \(live\)/.test(tr.price_source) && tr.you_hold.amount === 10 && tr.you_hold.average_buy_usd === 160 && tr.you_hold.signal && 'perpetual_futures' in tr && tr.high_7d > 0, tr);
 check('the answer is Telegram-safe (its <script> and & escaped, ** → <b>, "- " → •)', okHtml(v.b.text) && /&lt;script&gt;/.test(v.b.text) && /• You hold/.test(v.b.text), v.b.text);
@@ -747,6 +747,27 @@ check('…a slot with nothing found and no whale flip → no message at all', !s
     globalThis.__metaExtra = { cash: [{ id: 'c1', kind: 'cash', cur: 'EGP', amount: 250000, label: 'Bank' }, { id: 'c2', kind: 'cash', cur: 'USD', amount: 1000 }] };
     const withAll = D.zakatFacts(USER(), m0, at);
     check('🕌🧭 the bot\'s zakat pool: + the share ($2,000) + cash (250,000 EGP at 50 = $5,000, + $1,000), as the app', Math.abs(withAll.crypto - base.crypto - 2000 - 6000) < 0.01 && withAll.pool.stock === 2000 && withAll.pool.cash === 6000, [base.crypto, withAll.pool]);
+    // 💼 the whole wealth in the bot: the summary, the portfolio view / brief line, and the AI's tools (get_portfolio → net_worth, get_zakat)
+    {
+      const AC = await import('../tools/alerts-core.mjs'), AI = await import('../tools/worker/ai.mjs'), DATA = await import('../tools/worker/data.mjs'), BOT = await import('../tools/worker/bot.mjs');
+      const u1 = USER(), mm = { ...m0, live: {} }, s1 = AC.summarize(DATA.withIds(u1, mm), mm, at), w = s1.wealth;
+      check('💼 summary.wealth: Net worth = portfolio + cash ($6,000), parts add up, the share is a share', w && Math.abs(w.cash - 6000) < 0.01 && Math.abs(w.total - s1.value - 6000) < 0.01 && Math.abs(Object.values(w.parts).reduce((a, b) => a + b, 0) - w.total) < 0.01 && w.parts.stock === 2000 && w.kindOf.NVDAB === 'share' && w.kindOf.BTC === 'crypto', w && [w.total, w.parts, w.kindOf]);
+      const wp = AC.wealthParts(s1);
+      check('💼 shares of the whole are rounded to add up to exactly 100', wp.reduce((a, r) => a + r.r, 0) === 100 && wp.some(r => r.k === 'cash'), wp);
+      check('💼 "coins beat BTC" counts coins only (the share is not an altcoin)', s1.alts === s1.coins.filter(c => c.sym !== 'BTC' && w.kindOf[c.sym] === 'crypto' && c.vs).length, [s1.alts, s1.coins.map(c => c.sym)]);
+      const en = AC.brief(s1, mm, { lang: 'en' }, at).text, ar = AC.brief(s1, mm, { lang: 'ar' }, at).text;
+      check('☀️ the morning brief carries one Net worth line (EN + AR), right under the value', /🏦 Net worth <b>\$[\d,.]+<\/b>\n<i>.*cash \d+%/.test(en) && /🏦 صافي الثروة: <b>\$[\d,.]+<\/b>\n<i>.*النقد \d+%/.test(ar) && en.indexOf('🏦') < en.indexOf('All Time Profit'), en.slice(0, 400));
+      const ctx = { env: {}, used: new Set(), coins: new Set(), user: async () => u1, market: async () => mm, sum: async () => ({ s: s1, m: mm }) };
+      const gp = await AI.runTool(ctx, 'get_portfolio', {}), nv = gp.coins.find(c => c.ticker === 'NVDAB');
+      check('🤖 get_portfolio → net_worth (total, parts with shares, cash items), portfolio numbers stay cash-free', gp.net_worth && Math.abs(gp.net_worth.total_usd - gp.total_value_usd - 6000) < 0.02 && gp.net_worth.parts.some(x => x.part === 'Cash & certificates' && x.usd === 6000) && gp.net_worth.cash_items.length === 2 && Math.abs(gp.net_worth.parts.reduce((a, x) => a + x.share_pct, 0) - 100) < 0.2, gp.net_worth);
+      check('🤖 a share has kind "share" and no signal; coins keep theirs', nv && nv.kind === 'share' && /^none/.test(nv.signal) && gp.coins.find(c => c.ticker === 'BTC').kind === 'crypto' && !/^none/.test(gp.coins.find(c => c.ticker === 'BTC').signal), nv);
+      const gz = await AI.runTool(ctx, 'get_zakat', {}), zf = D.zakatFacts(u1, mm, Date.now());
+      check('🤖 get_zakat = the app\'s pool (crypto · metals · shares · cash), nisab, 2.5%, state and days left', gz.state === zf.y.state && gz.pool_parts_today_usd.cash_and_certificates === 6000 && gz.pool_parts_today_usd.shares === 2000 && Math.abs(gz.pool_today_usd - zf.pool.value) < 0.01 && gz.nisab_usd > 0 && Math.abs(gz.zakat_usd - zf.y.zakatUsd) < 0.01 && /not a fatwa/.test(gz.note) && /^\d+ \w/.test(gz.zakat_day), gz);
+      check('🤖 the AI is told: wealth from net_worth, signals for crypto only, zakat from get_zakat', AI.TOOLS.some(t => t.name === 'get_zakat'), AI.TOOLS && AI.TOOLS.map(t => t.name));
+      globalThis.__metaExtra = {}; const s0 = AC.summarize(DATA.withIds(USER(), mm), mm, at);
+      check('💼 no cash → no Net worth line (the brief stays as it was)', AC.wealthLine(s0, false) === null && !/🏦/.test(AC.brief(s0, mm, { lang: 'en' }, at).text));
+      globalThis.__metaExtra = { cash: [{ id: 'c1', kind: 'cash', cur: 'EGP', amount: 250000, label: 'Bank' }, { id: 'c2', kind: 'cash', cur: 'USD', amount: 1000 }] };
+    }
     globalThis.__metaExtra = { ...globalThis.__metaExtra, zakatStocks: false };
     const noSh = D.zakatFacts(USER(), m0, at);
     check('…shares switched off in the app → the bot leaves them out too', Math.abs(noSh.crypto - base.crypto - 6000) < 0.01 && noSh.pool.stocksCounted === false, noSh.pool);

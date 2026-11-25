@@ -157,13 +157,13 @@
    "en": [
     "Each coin shows: price and 24h change, category, profit, <b>Holdings</b>, <b>Avg. Buy Price</b>, <b>Cost Basis</b> and <b>Signal</b>.",
     "Switch between <b>Cards</b> and <b>Table</b>; filter by <b>Category</b> or by signal; sort the table by any column.",
-    "<b>CSV</b> and <b>PDF</b> save the list as a file.",
+    "<b>CSV</b> and <b>PDF</b> save the list as a file — with your Net worth by part (cash &amp; certificates included), metals in grams, and in the PDF your zakat and the market's numbers.",
     "Tap a coin to open its page: all its transactions, plus links to CoinMarketCap, the liquidation map (CoinGlass) and a price prediction (CoinCodex)."
    ],
    "ar": [
     "تعرض كل عملة: السعر وتغيّر 24 ساعة، والتصنيف، والربح، و<b>الأصول</b>، و<b>متوسط سعر الشراء</b>، و<b>تكلفة الشراء</b>، و<b>الإشارة</b>.",
     "بدّل بين <b>الكروت</b> و<b>الجدول</b>؛ وصفِّ حسب <b>التصنيف</b> أو حسب الإشارة؛ ورتّب الجدول حسب أي عمود.",
-    "<b>CSV</b> و<b>PDF</b> يحفظان القائمة كملف.",
+    "<b>CSV</b> و<b>PDF</b> يحفظان القائمة كملف — ومعها صافي ثروتك بنسبة كل جزء (النقد والشهادات ضمنه)، والمعادن بالغرام، وفي الـ PDF الزكاة وأرقام السوق.",
     "اضغط على أي عملة لفتح صفحتها: كل معاملاتها، وروابط إلى CoinMarketCap وخريطة التصفيات (CoinGlass) وتوقعات السعر (CoinCodex)."
    ],
    "tip": {

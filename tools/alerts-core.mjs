@@ -184,7 +184,7 @@ export function summarize(user, market, now = Date.now()) {
   const baselineBtc = (meta.baseline && meta.baseline.btcPrice) || 81162;
   const vs = C.vsBtcByCoin(user.coins, user.txs, { prices: Object.fromEntries(Object.entries(prices).map(([k, v]) => [k, v.usd])), btcNow, btcAt: btcSer ? (t => btcSer.at(t)) : null, baselineBtc });
   let cp = 0, bp = 0, cb = 0, beat = 0, alts = 0;
-  for (const c of pf) { const v = vs[c.sym]; if (!v) continue; const k = c.qty * c.basePrice; cp += v.coinPct * k / 100; bp += v.btcPct * k / 100; cb += k; if (c.sym !== 'BTC') { alts++; if (v.pct > 0) beat++; } }
+  for (const c of pf) { const v = vs[c.sym]; if (!v) continue; const k = c.qty * c.basePrice; cp += v.coinPct * k / 100; bp += v.btcPct * k / 100; cb += k; if (c.sym !== 'BTC' && C.isAltcoin(coinDoc[c.sym] || c.sym)) { alts++; if (v.pct > 0) beat++; } }   // coins only: a metal or a share is not an altcoin
   // signals (the app's rule: price vs your average buy price; BTC is always Hold)
   // (the app's rule, samsam-core.js → signalFor: price vs your average buy price, Smart-checked vs BTC over 30 / 90 days)
   const rule = meta.signal && isFinite(meta.signal.reinforce) && isFinite(meta.signal.sell) ? meta.signal : DEFAULT_SIGNAL;
@@ -259,8 +259,14 @@ export function summarize(user, market, now = Date.now()) {
     f.qty += r.qty; f.usd += r.qty * ((prices[r.sym] && prices[r.sym].usd) || 0);
   }
   const free = Object.values(free7).sort((a, b) => b.usd - a.usd);
+  // 💼 the whole wealth, as the app's Net worth card: the portfolio by part (Bitcoin · altcoins · metals · shares) + cash &
+  // certificates at the official rate from the snapshot (a currency with no rate yet is left out and named, as in the app)
+  const parts = { btc: 0, alt: 0, metal: 0, stock: 0 }, kindOf = {};
+  for (const c of coinRows) { const k = C.assetClass(coinDoc[c.sym] || c.sym); kindOf[c.sym] = k === 'stock' ? 'share' : k === 'metal' ? 'metal' : 'crypto'; parts[c.sym === 'BTC' ? 'btc' : k === 'metal' ? 'metal' : k === 'stock' ? 'stock' : 'alt'] += c.value; }
+  const ct = C.cashTotals(meta.cash, fxR, now);
+  const wealth = { total: value + ct.usd, portfolio: value, cash: ct.usd, parts: { ...parts, cash: ct.usd }, missing: ct.missing, items: ct.items, kindOf };
   return {
-    alloc, dca, fxR, free,
+    alloc, dca, fxR, free, wealth,
     value, cost, total, invested, pctTotal: invested > 0 ? total / invested * 100 : 0,
     ch24: value24 > 0 ? (value / value24 - 1) * 100 : null, d24: value - value24, ch7: value7 > 0 ? (value / value7 - 1) * 100 : null, d7: value - value7,
     vsBtc: cb > 0 ? (cp - bp) / cb * 100 : null, beat, alts, coins: coinRows, signal, pending, sigMode, counts, plan, prog, tps, macro, btcNow, buyAt,
@@ -308,6 +314,19 @@ export function etfDay(etf) {
   const b = etf.btc.days[etf.btc.days.length - 1], e = etf.eth && etf.eth.days && etf.eth.days.find(x => x[0] === b[0]);
   return { date: b[0], label: new Date(b[0] + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), btc: b[1], eth: e ? e[1] : 0 };
 }
+// 💼 Net worth in one line (only when you entered cash or certificates): the total, and each part's share
+const WPART = { btc: ['BTC', 'البيتكوين'], alt: ['altcoins', 'العملات البديلة'], metal: ['metals', 'المعادن'], stock: ['shares', 'الأسهم'], cash: ['cash', 'النقد'] };
+export function wealthParts(sum) {
+  const w = sum && sum.wealth; if (!w || !(w.total > 0)) return [];
+  const rows = Object.keys(WPART).filter(k => w.parts[k] > 0).map(k => ({ k, usd: w.parts[k], p: w.parts[k] / w.total * 100 }));
+  let left = 100; rows.forEach((r, i) => { r.r = i === rows.length - 1 ? Math.max(0, left) : Math.round(r.p); left -= r.r; });   // rounded to add up to 100, as the card
+  return rows;
+}
+export function wealthLine(sum, ar) {
+  const w = sum && sum.wealth; if (!w || !(w.cash > 0)) return null;
+  const mix = wealthParts(sum).map(r => `${WPART[r.k][ar ? 1 : 0]} ${r.r}%`).join(' · ');
+  return ar ? `🏦 صافي الثروة: <b>${usd2(w.total)}</b>\n<i>${mix}</i>` : `🏦 Net worth <b>${usd2(w.total)}</b>\n<i>${mix}</i>`;
+}
 export function brief(sum, m, cfg, now, weekly = false) {
   const t = W[cfg.lang], key = weekly ? 'ch7' : 'ch24', mv = movers(sum, key);
   const head = `${weekly ? '🗓' : '☀️'} <b>${weekly ? t.weekly : t.brief}</b> · ${local(now, { weekday: 'short', day: 'numeric', month: 'short' })}`;
@@ -320,6 +339,7 @@ export function brief(sum, m, cfg, now, weekly = false) {
     : [head, '',
     `💼 <b>${usd2(sum.value)}</b>   ${dot(ch)} ${pct(ch)} (${signed(dv)}) ${weekly ? t.week : t.today}`,
     `${t.profit}  <b>${signed(sum.total)}</b> (${pct(sum.pctTotal, 1)})`];
+  { const nl = wealthLine(sum, ar); if (nl) L.splice(3, 0, nl); }
   if (sum.vsBtc != null) L.push(ar ? `🆚 مقابل البيتكوين: <b>${pct(sum.vsBtc)}</b> ${dot(sum.vsBtc)} · ${t.beatBtc(sum.beat, sum.alts)}` : `${t.vsBtc}  ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} · ${t.beatBtc(sum.beat, sum.alts)}`);
   if (mv.up.length) L.push('', `📈 <b>${weekly ? t.bestW : t.best}</b>`, ...mv.up);
   if (mv.dn.length) L.push('', `📉 <b>${weekly ? t.worstW : t.worst}</b>`, ...mv.dn);

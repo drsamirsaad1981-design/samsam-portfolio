@@ -17,6 +17,7 @@ import { summarize, settings, local, localParts, isStable, etfDay, APP } from '.
 import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries, derivatives } from './data.mjs';
 import { addAlert, listAlerts, deleteAlert, describe, KINDS } from './watch.mjs';
 import { prepareTrade } from './trade.mjs';
+import { zakatFacts } from './daily.mjs';
 import { paperTrade, paperFacts } from './paper.mjs';
 import { ownKey, keyInfo, BYOK_AI } from './byok.mjs';
 
@@ -53,10 +54,12 @@ async function remember(env, q, a) { const h = (await history(env)).concat([{ ro
 export const TOOLS = [
   { name: 'get_coin', description: 'Live data for one coin (any coin, by ticker or name): price, 24h / 7d / 30d change, market-cap rank, market cap, 24h volume, 7-day high / low, whether it has perpetual futures (a CoinGlass liquidation map), and — if the user holds it — amount, value, average buy price, profit %, the app\'s signal and its result vs holding BTC. Call once per coin; call it for every coin you mention with a number.',
     input_schema: { type: 'object', properties: { coin: { type: 'string', description: 'Ticker or name, e.g. "BTC", "sol", "pendle", "Render"' } }, required: ['coin'] } },
-  { name: 'get_portfolio', description: "The user's whole portfolio now: total value, 24h / 7d change, all-time profit, result vs holding BTC, and EVERY coin with value, share %, 24h / 7d change, profit vs average buy price, signal, vs_btc_pct (its result minus the same dollars in BTC since bought) and vs_btc_30d_pts / vs_btc_90d_pts (strength vs BTC over 30 / 90 days); signal counts; allocation vs targets. One call answers questions about all coins — no need to call get_coin for each.",
+  { name: 'get_portfolio', description: "The user's whole wealth now. net_worth: the total with each part's share (Bitcoin, altcoins, metals, shares, cash & certificates — cash is in net worth only). Then the portfolio (crypto + metals + shares): total value, 24h / 7d change, all-time profit, result vs holding BTC, and EVERY coin with value, share %, 24h / 7d change, profit vs average buy price, signal, vs_btc_pct (its result minus the same dollars in BTC since bought) and vs_btc_30d_pts / vs_btc_90d_pts (strength vs BTC over 30 / 90 days); signal counts; allocation vs targets. One call answers questions about all coins — no need to call get_coin for each.",
     input_schema: { type: 'object', properties: {} } },
   { name: 'get_market', description: 'The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market\'s state (open / closed, the next open or close in Riyadh time), and metals: gold, silver, platinum, copper (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).',
     input_schema: { type: 'object', properties: { top: { type: 'integer', enum: [100, 200, 300, 500], description: 'Rank range for best / worst (default 100)' } } } },
+  { name: 'get_zakat', description: "The user's zakat, with the app's own numbers: the one money pool (crypto + metals + cash & certificates + shares when he counts them) against the nisab (85 g of gold), 2.5%, his zakat day (hijri), the state (due / paid / upcoming / below the nisab), days left, what was paid. Use it for any zakat / زكاة / nisab / نصاب question. An estimate, not a fatwa.",
+    input_schema: { type: 'object', properties: {} } },
   { name: 'get_plan', description: "The user's accumulation plan: per-coin target vs held (progress %), overall progress, regular buys (DCA: amount, schedule, next date, late or not), buy-price alerts (alert price vs current price).",
     input_schema: { type: 'object', properties: {} } },
   { name: 'get_exit', description: "The user's exit plan: the 3 market exit conditions (BTC dominance, USDT dominance, ETH/BTC — now vs target, met or not) and every take-profit level (coin, level, multiple of average, % still to go, % to sell there).",
@@ -127,12 +130,26 @@ export async function runTool(ctx, name, input) {
     }
     return out;
   }
+  if (name === 'get_zakat') {
+    const u = await ctx.user(); if (!u) return { error: 'portfolio not connected' };
+    const m = await ctx.market(), z = zakatFacts(u, m, Date.now()); if (!z || !z.y) return { error: 'no gold price or zakat day right now' };
+    ctx.used.add('your portfolio (Firebase)'); const y = z.y, P = z.pool;
+    return { state: y.state, hijri_year: y.hy, zakat_day: `${z.w.d} ${(C.HIJRI_MONTHS.en || [])[z.w.m - 1] || 'month ' + z.w.m}`, days_left: y.daysLeft, next_date: y.nextDate, pool_usd: r2(y.value), pool_today_usd: r2(P.value),
+      pool_parts_today_usd: { crypto: r2(P.crypto), metals: r2(P.metal), shares: P.stocksCounted ? r2(P.stock) : 0, cash_and_certificates: r2(P.cash) }, shares_counted: !!P.stocksCounted,
+      nisab_usd: r2(y.nisabUsd), nisab: '85 g of gold', zakat_usd: r2(y.zakatUsd), rate: '2.5%', fixed_on_zakat_day: !!y.fixed, paid: y.paid ? { amount: y.paid.paid, currency: y.paid.cur, on: y.paid.at } : null,
+      states: 'due = pay zakat_usd now (stays due until ✓ Paid in the app) · paid = this hijri year is paid · upcoming = an estimate at today\'s value for the next zakat day · below / under = the pool is under the nisab, none due',
+      note: 'an estimate from the app, not a fatwa — he should check with a scholar' };
+  }
   if (name === 'get_portfolio') {
     const x = await ctx.sum(); if (!x) return { error: 'portfolio not connected' };
-    const { s } = x; ctx.used.add('your portfolio (Firebase)'); ctx.used.add(srcOf(x.m, 'bitcoin'));
-    return { total_value_usd: r2(s.value), change_24h_pct: r2(s.ch24), change_24h_usd: r2(s.d24), change_7d_pct: r2(s.ch7), change_7d_usd: r2(s.d7),
+    const { s } = x; const w = s.wealth, G = C.GRAMS_PER_OZ; ctx.used.add('your portfolio (Firebase)'); ctx.used.add(srcOf(x.m, 'bitcoin'));
+    return { net_worth: w ? { total_usd: r2(w.total), portfolio_usd: r2(w.portfolio), cash_and_certificates_usd: r2(w.cash),
+        parts: Object.entries(w.parts).filter(([, v]) => v > 0).map(([k, v]) => ({ part: { btc: 'Bitcoin', alt: 'Altcoins', metal: 'Metals', stock: 'Shares', cash: 'Cash & certificates' }[k], usd: r2(v), share_pct: w.total > 0 ? r2(v / w.total * 100) : null })),
+        cash_items: w.items.map(i => ({ label: i.label || undefined, kind: i.kind === 'cert' ? 'certificate' : 'cash', currency: i.cur, value: r2(i.value), usd: i.usd == null ? null : r2(i.usd), rate_pct_year: i.kind === 'cert' ? i.rate : undefined, maturity: i.maturity || undefined })),
+        no_rate_yet_for: w.missing.length ? w.missing : undefined, note: 'total_value_usd, profit, allocation and vs BTC below are on the portfolio only (no cash)' } : null,
+      total_value_usd: r2(s.value), change_24h_pct: r2(s.ch24), change_24h_usd: r2(s.d24), change_7d_pct: r2(s.ch7), change_7d_usd: r2(s.d7),
       all_time_profit_usd: r2(s.total), all_time_profit_pct: r2(s.pctTotal), invested_usd: r2(s.invested), vs_holding_btc_pct: r2(s.vsBtc), alts_beating_btc: `${s.beat} of ${s.alts}`,
-      signals: s.counts, coins: [...s.coins].sort((a, b) => b.value - a.value).map(c => ({ ticker: c.sym, value_usd: r2(c.value), share_pct: s.value > 0 ? r2(c.value / s.value * 100) : null, change_24h_pct: r2(c.ch24), change_7d_pct: r2(c.ch7), profit_vs_average_pct: r2(c.chg), signal: s.signal[c.sym], vs_btc_pct: c.vs ? r2(c.vs.pct) : null, vs_btc_30d_pts: c.rs ? r2(c.rs.d30) : null, vs_btc_90d_pts: c.rs ? r2(c.rs.d90) : null, stablecoin: isStable(c.sym) || undefined })),
+      signals: s.counts, coins: [...s.coins].sort((a, b) => b.value - a.value).map(c => ({ ticker: c.sym, kind: w ? w.kindOf[c.sym] : undefined, grams: w && w.kindOf[c.sym] === 'metal' ? r2(c.qty * G) : undefined, value_usd: r2(c.value), share_pct: s.value > 0 ? r2(c.value / s.value * 100) : null, change_24h_pct: r2(c.ch24), change_7d_pct: r2(c.ch7), profit_vs_average_pct: r2(c.chg), signal: w && w.kindOf[c.sym] !== 'crypto' ? 'none (signals are for crypto only)' : s.signal[c.sym], vs_btc_pct: c.vs ? r2(c.vs.pct) : null, vs_btc_30d_pts: c.rs ? r2(c.rs.d30) : null, vs_btc_90d_pts: c.rs ? r2(c.rs.d90) : null, stablecoin: isStable(c.sym) || undefined })),
       allocation: s.alloc ? s.alloc.groups.map(g => ({ group: s.alloc.names[g.key] || g.key, now_pct: r2(g.now), target_pct: r2(g.target), state: g.state })) : null };
   }
   if (name === 'get_market') {
@@ -238,6 +255,9 @@ function system(now, lang, qLang, owner = true) {
     '- "Tell me / alert me / نبّهني if …" → set_alert (then confirm in one short line what was set, the value now, and if already_met that it waits for the next crossing). "What if / لو …" about prices or trades → what_if (with get_coin for a coin he does not hold).',
     '- "I bought / I sold / اشتريت / بعت …" (a trade he MADE) → record_trade. It is only prepared, and the bot shows the full summary itself — so your whole answer is ONE short line ("🧾 جاهزة — راجع الملخص بالأسفل واضغط ✅ تأكيد" / "🧾 Ready — check the summary below and tap ✅ Confirm"), plus at most one line if something needs attention (e.g. a price far from today\'s). No sections, no repeated numbers. Never say it is saved. A trade he is only thinking about ("should I / what if I sell") → what_if, not record_trade.',
     '- paper / practice / pretend / تجريبي / وهمي → paper_trade or get_paper (the pretend portfolio) — never record_trade or the real portfolio. Confirm a paper trade in 1–2 lines (done, price, cash left).',
+    '- Wealth: get_portfolio → net_worth is everything (Bitcoin, altcoins, metals, shares, cash & certificates) with each share; "my wealth / net worth / ثروتي / صافي الثروة" → answer from it. total_value_usd, profit, allocation and vs BTC are the PORTFOLIO only — never add cash to them.',
+    '- Signals (Hold / Reinforce / Sell) and Altcoin Season are for crypto only: a metal (kind "metal", give it in grams) or a share (kind "share") has no signal and is not an altcoin. Cash is not rated — only its share and a certificate\'s maturity.',
+    '- Zakat / زكاة / نصاب → get_zakat, and answer with its numbers and state; add once that it is an estimate, not a fatwa.',
     '- General knowledge (what a project does, how something works, history) is fine without tools; say when it may be out of date.',
     '- About the future: give scenarios, levels and probabilities with reasons — never promises. Not financial advice, but do give a clear, practical view when asked "should I…" (based on his plan and signals).',
     'STYLE — like the app\'s AI Analysis report, short and sharp, all in points:',
