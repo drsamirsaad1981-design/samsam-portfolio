@@ -50,7 +50,9 @@ function db() { return dbP || (dbP = idb()); }
   }
   try { localStorage.removeItem(KEY); } catch (_) {}   // the old copy lived here — free that space
   cacheReady = true;
-  if (lastAsk) ensure(lastAsk.needs, lastAsk.from);
+  // the saved prices are in: ask again, and redraw — when they already cover everything nothing is fetched, so nothing
+  // else would tell the page (the charts then kept their short recorded line until the next price refresh, ~15 s)
+  if (lastAsk) { ensure(lastAsk.needs, lastAsk.from); onUpdate(); }
 })();
 function saveOne(id) {
   return db().then(d => new Promise(ok => { const tx = d.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put(cache[id], id); tx.oncomplete = tx.onerror = tx.onabort = () => ok(); }))

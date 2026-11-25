@@ -76,7 +76,9 @@ with sync_playwright() as p:
     pg.reload(); S.wait_ready(pg); pg.wait_for_timeout(2500)
     try: pg.wait_for_function(f"Samsam.getState().holdingsSnaps.length && Samsam.getState().holdingsSnaps[0].t === {START}", timeout=10000)   # (a slow machine needs a moment to redraw from the cache)
     except Exception: pass
-    check('after a reload the prices come from the device cache (no new downloads)', len(calls) == n_calls and pg.evaluate("Samsam.getState().holdingsSnaps[0].t") == START, (n_calls, len(calls)))
+    first = pg.evaluate("(Samsam.getState().holdingsSnaps[0] || {}).t")
+    check('after a reload the prices come from the device cache (no new downloads)', len(calls) == n_calls, (n_calls, len(calls)))
+    check('…and the charts are rebuilt from it right away (Oct 15 again, not the short recorded line)', first == START, (first, START))
     # charts
     pg.evaluate("document.querySelector('#holdingsTabs [data-range=\"all\"], .hold-tabs [data-r=\"all\"]') && 0"); pg.wait_for_timeout(200)
     pg.evaluate("scrollTo(0, 500)"); pg.wait_for_timeout(500)

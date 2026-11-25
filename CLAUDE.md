@@ -70,17 +70,29 @@ Done and live, in this order:
    `get_zakat`; signal counts are coins only.
 6. A Claude Project "Cute Portfolio" holds the working rules; the program's map is a Whiteboard (link in the Project).
 
-**Next step, agreed with Samir: the full review of the whole app, on Fable 5.2** (he switches the model himself — remind
-him at the start if the chat is on another model). Propose the review plan first and wait for "نفذ". Suggested scope:
-numbers that must agree across app / bot / PDF / CSV, Arabic wording and RTL, the phone layout page by page, dead code
-and stale tests, the guide and hints against what the app now does.
+**The full review was done on 26 Nov 2026 (Fable 5.2).** The report is in the Claude Project ("Full review — 26 Nov 2026").
+Checked and fine: Total Portfolio, profit, Net worth by part and zakat are the same to the cent in the app and the bot
+(coins + metals + a share + cash in three currencies); no page scrolls sideways at 390 / 320 px in either language.
+Fixed then: charts after a reload were not redrawn when the saved prices arrived after the shared files (`samsam-history.js`;
+`hist_test.py` now checks it).
 
-To check when the review starts:
-- `hist_test.py` failed once on GitHub (commit da22a3e, "after a reload the prices come from the device cache") and
-  passes locally — see whether it is flaky or real.
-- Samir has not yet confirmed on his phone that the Net worth card looks the same on Overview and Allocation.
+Found, waiting for Samir's "نفذ" (nothing below is fixed yet):
+1. Members get none of the automatic alerts (buy-price, DCA day, take-profit, signal change, weekly report): `evaluate`
+   runs only in `tools/alerts.mjs` on GitHub, for the owner. The Plan's Price Alert hint and the guide promise them to everyone.
+2. Bot `/portfolio`: the DCA line adds a saving in EGP / SAR as dollars (`bot.mjs`, `x.s.perMonth` → use `usdMo`).
+3. A gold / silver coin page still has its own zakat line (85 g / 595 g, ounces labelled "g", half English in Arabic);
+   Market Hub → Metals says the same. The rule is one pool.
+4. A metal's price on the cards / table is per troy ounce with no unit, next to its average per gram.
+5. Zakat: with no visit in the 30 days after the day and no bot, the year is never kept, so it is not "due until ✓ Paid".
+6. `portfolio.html` is an old copy of the main page (17 Nov), still published and in `sw.js`.
+7. The app guide's Overview part still describes the old date line; Signals does not mention Smart or the daily close.
+8. Smaller: bot `/signals` counts metals and shares under Hold; `core.test.mjs` and `alerts_reads_test.mjs` never run on
+   GitHub; "9-month high / low" untranslated; `manifest.json` description; the welcome page's goal says "managing";
+   the bot's AI names alternative.me as a source; the PDF's zakat line has no "estimate" note; 14 unused functions.
+9. `hv_chart_test.py` ("24h range") fails about one run in four locally and passes on the retry — not looked into yet.
+
+Samir has not yet confirmed on his phone that the Net worth card looks the same on Overview and Allocation.
 
 ## Open ideas (not requested yet)
 
-- A full review of the app (use the strongest model).
 - The AI button can still sit over the last card's link at the bottom of a page.
