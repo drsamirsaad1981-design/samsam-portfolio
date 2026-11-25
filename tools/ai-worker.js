@@ -193,7 +193,7 @@ function systemPrompt(lang) {
     ? 'Write the whole report in Arabic (Modern Standard Arabic, clear and direct). Keep coin tickers, numbers and $ amounts in Latin characters.'
     : 'Write the whole report in clear, direct English.';
   return [
-    'You are a seasoned crypto portfolio analyst writing a private report for the portfolio owner.',
+    'You are a seasoned portfolio analyst (crypto first, plus metals, tokenized shares and cash) writing a private report for the portfolio owner.',
     'Base every statement on the data provided. Do not invent prices, news or numbers. Be specific: name coins, amounts and percentages.',
     'This is analysis, not financial advice; do not promise returns. Keep it practical and concise.',
     L,

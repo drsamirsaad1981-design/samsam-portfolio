@@ -544,6 +544,21 @@ function renderNetWorth() {
   copy();
 }
 window.onCashRender = () => renderNetWorth();
+// The whole wealth as the Net worth card counts it — for the PDF, the CSV and the AI report (one answer everywhere):
+// { total, portfolio, cash, missing: currencies with no rate yet, rows: [{ k, name, col, usd, pct }], items: cash entries }
+function wealthNow() {
+  const pf = nwPortfolio != null ? nwPortfolio : calcStats().total, P = nwParts || { btc: pf, alt: 0, metal: 0, stock: 0 };
+  let ct = { usd: 0, missing: [], items: [] };
+  try { if (Samsam.getCash && Samsam.getCash().length) { const r = window.SamsamCash && SamsamCash.rates ? SamsamCash.rates() : null; ct = Samsam.core.cashTotals(Samsam.getCash(), r || {}); } } catch (_) {}
+  const cash = ct.usd || 0, all = pf + cash, val = { ...P, cash };
+  const rows = NW_PARTS.filter(([k]) => val[k] > 0).map(([k, col, en]) => ({ k, col, name: en, usd: val[k], pct: all > 0 ? val[k] / all * 100 : 0 }));
+  return { total: all, portfolio: pf, cash, missing: ct.missing || [], rows, items: ct.items || [] };
+}
+// What a holding is, and its amount in the unit you buy it in (metals: grams · shares: shares · coins: the coin)
+function holdingKind(c) {
+  const C = Samsam.core, k = C.assetClass(c), u = C.planUnits(c, c.qty);
+  return { k, type: { crypto: 'Crypto', metal: 'Metal', stock: 'Share', cash: 'Cash' }[k] || 'Crypto', unit: k === 'metal' ? 'g' : k === 'stock' ? 'shares' : c.sym, amount: u.n };
+}
 // 🥇 / 🏦 detail cards: folded to one line (name + value) until you open them — your choice is kept on this device
 function foldCards() {
   document.querySelectorAll('.fold-card').forEach(card => {
@@ -950,13 +965,23 @@ function exportData() {
   // Every cell is quoted; text that a spreadsheet could run as a formula (= + - @) is prefixed with ' .
   const L = SAMSAM_LABELS, T = window.SamsamTaxonomy;
   const cell = v => { let s = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(s) && !/^-?\d/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
-  const rows = [['#', 'Coin', 'Name', 'Category', L.AMOUNT, L.AVG_BUY_PRICE, L.CURRENT_PRICE, L.COST_BASIS, L.HOLDINGS_VALUE, L.PNL, L.PNL + ' %', L.PORTFOLIO_VS_BTC + ' %', L.SIGNAL, 'Notes']];
+  const rows = [['#', 'Coin', 'Name', 'Category', L.AMOUNT, L.AVG_BUY_PRICE, L.CURRENT_PRICE, L.COST_BASIS, L.HOLDINGS_VALUE, L.PNL, L.PNL + ' %', L.PORTFOLIO_VS_BTC + ' %', L.SIGNAL, 'Notes', 'Type', 'Unit', 'Amount in unit']];
   getFilteredSorted().forEach((c, i) => {
-    const perf = getPerf(c), action = getAction(c.sym, perf, c);
+    const perf = getPerf(c), action = getAction(c.sym, perf, c), hk = holdingKind(c);
     const baseVal = c.qty * c.basePrice, curVal = c.qty * c.currentPrice, ap = coinProfit(c), pnl = ap.total;
     rows.push([i + 1, c.sym, COIN_NAMES[c.sym] || c.name || c.sym, T ? T.label(c.cat) : (c.cat || ''), c.qty, isSoldOut(c) ? '' : c.basePrice, c.currentPrice,
-      baseVal.toFixed(2), curVal.toFixed(2), pnl.toFixed(2), ap.pct.toFixed(2), perf.toFixed(2), signalLabel(action, true), c.notes || '']);
+      baseVal.toFixed(2), curVal.toFixed(2), pnl.toFixed(2), ap.pct.toFixed(2), perf.toFixed(2), signalLabel(action, true), c.notes || '', hk.type, hk.unit, +hk.amount.toFixed(8)]);
   });
+  // after the table (one empty line): cash & certificates, then the whole wealth by part — the Net worth card's numbers
+  const W = wealthNow();
+  if (W.items.length) {
+    rows.push([], ['Cash & certificates', 'Label', 'Kind', 'Currency', 'Amount', 'Value (its currency)', 'Value (USD)', 'Rate % / year', 'Maturity']);
+    W.items.forEach((x, i) => rows.push([i + 1, x.label || '', x.kind === 'cert' ? 'Certificate' : 'Cash', x.cur, x.amount, x.value.toFixed(2), x.usd == null ? '' : x.usd.toFixed(2), x.kind === 'cert' ? x.rate : '', x.maturity || '']));
+  }
+  rows.push([], ['Net worth', 'Part', 'Value (USD)', 'Share %']);
+  W.rows.forEach(r => rows.push(['', r.name, r.usd.toFixed(2), r.pct.toFixed(2)]));
+  rows.push(['', 'Total portfolio (no cash)', W.portfolio.toFixed(2), ''], ['', 'Net worth', W.total.toFixed(2), '100.00']);
+  if (W.missing.length) rows.push(['', 'No rate yet for ' + W.missing.join(', ') + ' (left out)', '', '']);
   const csv = rows.map(r => r.map(cell).join(',')).join('\r\n');
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -986,14 +1011,32 @@ function pdfSummary() {
   const prog = plan.length ? Samsam.core.overallProgress(plan.map(e => ({ actual: planHave(e), target: e.targetQty || 0 }))).pct : null;
   const met = plan.filter(e => e.targetQty > 0 && planHave(e) >= e.targetQty).length;
   const cls = n => n >= 0 ? 'up' : 'down', sg = n => (n >= 0 ? '+' : '−');
+  // what you hold, by kind · the whole wealth (the Net worth card) · zakat · the market's three cards
+  const held = portfolio.filter(c => c.qty > 0), nk = { crypto: 0, metal: 0, stock: 0 }; held.forEach(c => { const k = Samsam.core.assetClass(c); if (k in nk) nk[k]++; });
+  const kinds = [[nk.crypto, 'coins'], [nk.metal, 'metals'], [nk.stock, 'shares']].filter(x => x[0]).map(x => x[0] + ' ' + x[1]).join(' · ');
+  const W = wealthNow();
+  const nwHtml = `<div class="ps-card ps-nw"><div class="ps-h">Net worth <em>the portfolio${W.cash > 0 ? ' + cash &amp; certificates' : ''}</em><span class="ps-nwt">${usd(W.total)}</span></div>
+      <div class="ps-nwbar">${W.rows.map(r => `<i style="width:${r.pct.toFixed(2)}%;background:${r.col}"></i>`).join('')}</div>
+      <div class="ps-nwl">${W.rows.map(r => `<div class="ps-nwi"><span class="ps-dot" style="background:${r.col}"></span><span class="ps-cat">${esc(r.name)}</span><strong>${r.pct.toFixed(1)}%</strong><span class="ps-usd">${usd(r.usd)}</span></div>`).join('')}</div>
+      ${W.cash > 0 ? `<div class="ps-note">Portfolio ${usd(W.portfolio)} + cash ${usd(W.cash)}. Profit, allocation and targets below are on the portfolio only.${W.missing.length ? ' No rate yet for ' + esc(W.missing.join(', ')) + '.' : ''}</div>` : ''}</div>`;
+  const z = zkNow, zTxt = !z || !(z.today > 0 || z.value > 0) ? '' : z.state === 'due' ? `Due for ${esc(z.hy)}: <strong>${usd(z.zakatUsd)}</strong> (2.5% of ${usd(z.value)})`
+    : z.state === 'paid' ? `${esc(z.hy)} paid ✓ · next in ${z.daysLeft} days`
+    : z.state === 'upcoming' ? `In ${z.daysLeft} days · at today's value <strong>${usd(z.zakatUsd)}</strong> (pool ${usd(z.today || z.value)})`
+    : `Below the nisab (${usd(z.nisabUsd)} = 85 g of gold) — none`;
+  const tm = (typeof tickerMkt !== 'undefined' && tickerMkt) || {}, mk = [];
+  if (tm.f && tm.f.value != null) mk.push(`Fear &amp; Greed <strong>${Math.round(tm.f.value)}</strong> ${esc(tm.f.label || '')}`);
+  if (tm.alt && tm.alt.value != null) mk.push(`Altcoin Season <strong>${Math.round(tm.alt.value)}/100</strong>`);
+  if (tm.g && tm.g.dom) mk.push(`Dominance BTC <strong>${(+tm.g.dom.btc).toFixed(1)}%</strong> · ETH <strong>${(+tm.g.dom.eth).toFixed(1)}%</strong> · USDT <strong>${(+tm.g.dom.usdt).toFixed(1)}%</strong>`);
+  const factsHtml = zTxt || mk.length ? `<div class="ps-facts">${zTxt ? `<div><span>Zakat</span> ${zTxt}</div>` : ''}${mk.length ? `<div><span>Market</span> ${mk.join(' · ')}</div>` : ''}</div>` : '';
   box.innerHTML = `
     <div class="ps-tiles">
-      <div class="ps-tile"><span>Total Value</span><b>${usd(total)}</b></div>
+      <div class="ps-tile"><span>Total Portfolio</span><b>${usd(total)}</b></div>
       <div class="ps-tile"><span>All Time Profit</span><b class="${cls(ap.total)}">${sg(ap.total)}${usd(Math.abs(ap.total))}</b><i class="${cls(ap.total)}">${sg(ap.pct)}${Math.abs(ap.pct).toFixed(2)}%</i></div>
       <div class="ps-tile" id="psBtc" title="The same money kept in BTC"><span>BTC Trend</span><b>—</b></div>
-      <div class="ps-tile"><span>Coins</span><b>${portfolio.filter(c => c.qty > 0).length}</b></div>
+      <div class="ps-tile"><span>Holdings</span><b>${held.length}</b><i class="ps-mut">${kinds}</i></div>
       <div class="ps-tile"><span>BTC Price</span><b>${usd(btcPrice)}</b></div>
     </div>
+    ${nwHtml}${factsHtml}
     <div class="ps-row ps-charts">
       <div class="ps-card"><div class="ps-h">Holdings value <em>${RANGE}</em><span class="ps-chg" id="psHchg"></span></div><div class="ps-cw"><canvas id="psHold"></canvas></div><div class="ps-none" id="psHoldNone" hidden>No history yet</div></div>
       <div class="ps-card"><div class="ps-h">Performance vs BTC <em>${RANGE}</em></div><div class="ps-cw"><canvas id="psPerf"></canvas></div><div class="ps-none" id="psPerfNone" hidden>No history yet</div>

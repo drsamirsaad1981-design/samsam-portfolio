@@ -31,7 +31,7 @@ with sync_playwright() as p:
             pg.locator('#analysisModal .modal').screenshot(path=str(SH / f'aifree_{vn}_{theme}.png'))
             pg.click('#aiAppCopy'); pg.wait_for_timeout(1500)
             clip = pg.evaluate("navigator.clipboard.readText()")
-            check(f'{vn}/{theme}: Copy for Claude = instructions + data + layout ({len(clip)} chars)', 'You are a seasoned crypto portfolio analyst' in clip and 'PORTFOLIO DATA (JSON' in clip and '"coins"' in clip and 'MARKET DATA' in clip and 'REPORT LAYOUT' in clip and 'Write the report now' in clip and 5000 < len(clip) < 90000, clip[:200])
+            check(f'{vn}/{theme}: Copy for Claude = instructions + data + layout ({len(clip)} chars)', 'You are a seasoned portfolio analyst' in clip and 'PORTFOLIO DATA (JSON' in clip and '"coins"' in clip and 'MARKET DATA' in clip and 'REPORT LAYOUT' in clip and 'Write the report now' in clip and 5000 < len(clip) < 90000, clip[:200])
             check(f'{vn}/{theme}: …and the Claude app opens', pg.evaluate("window.__open") == ['https://claude.ai/new'], pg.evaluate("window.__open"))
             check(f'{vn}/{theme}: button says Copied', 'Copied' in pg.inner_text('#aiAppCopy'))
             # Claude's reply on the clipboard → Paste report

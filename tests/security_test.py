@@ -79,16 +79,20 @@ with sync_playwright() as p:
     pg.evaluate("applyView('table')"); pg.wait_for_timeout(300)
     with pg.expect_download() as dl: pg.evaluate("exportData()")
     rows = list(csv.reader(io.StringIO(open(dl.value.path(), encoding='utf-8-sig').read())))
+    extra = rows[rows.index([]):] if [] in rows else []; rows = rows[:rows.index([])] if [] in rows else rows   # the table, then (after an empty line) cash and Net worth
     shown = pg.eval_on_selector_all('#tableBody tr', "trs => trs.map(t => t.cells[0].firstElementChild.lastElementChild.innerText.split('\\n')[0].replace('↗','').trim())")
     check('CSV rows = table rows, same order', [r[1] for r in rows[1:]] == shown, ([r[1] for r in rows[1:6]], shown[:5]))
     eth = next(r for r in rows if r[1] == 'ETH'); pfe = pg.evaluate("Samsam.getState().portfolio.find(c=>c.sym==='ETH')")
     check('CSV figures match the app (amount, avg, value)', abs(float(eth[4]) - pfe['qty']) < 1e-9 and abs(float(eth[5]) - pfe['basePrice']) < 1e-9 and abs(float(eth[8]) - pfe['qty'] * pfe['currentPrice']) < 0.01, eth[:9])
+    nw = [r for r in extra if len(r) > 1 and r[1] == 'Net worth']; parts = [r for r in extra if r and r[0] == '' and len(r) > 3 and r[3] not in ('', '100.00')]
+    check('CSV: Type / Unit columns, and the Net worth summary adds up to 100%', rows[0][14:17] == ['Type', 'Unit', 'Amount in unit'] and eth[14] == 'Crypto' and eth[15] == 'ETH' and nw and float(nw[0][2]) > 0 and abs(sum(float(r[3]) for r in parts) - 100) < 0.1, (rows[0][14:], eth[14:], extra))
     check('CSV note with comma kept in one cell and formula neutralised', eth[13].startswith("'=HYPERLINK") and 'with comma' in eth[13], eth[13])
     pg.evaluate("Samsam.updateCoin('ETH', { notes: '' })"); pg.wait_for_timeout(300)
     # filtered table → CSV follows the filter
     pg.fill('#searchBox', 'sol'); pg.wait_for_timeout(300)
     with pg.expect_download() as dl: pg.evaluate("exportData()")
     rows = list(csv.reader(io.StringIO(open(dl.value.path(), encoding='utf-8-sig').read())))
+    extra = rows[rows.index([]):] if [] in rows else []; rows = rows[:rows.index([])] if [] in rows else rows   # the table, then (after an empty line) cash and Net worth
     check('CSV follows search / filters on screen', [r[1] for r in rows[1:]] == pg.eval_on_selector_all('#tableBody tr', "trs => trs.map(t => t.cells[0].firstElementChild.lastElementChild.innerText.split('\\n')[0].replace('↗','').trim())"), [r[1] for r in rows[1:]])
     pg.fill('#searchBox', '')
     # ── 5. Sign out wipes this device's offline copy ──

@@ -31,6 +31,26 @@ function setAnalysisLang(lang) {
   if (aiLast && aiLast.src === 'api') runAnalysis(); else renderAiStart();
 }
 
+// What a holding is: a coin, a metal (kept in troy ounces — shown to the AI in grams too) or a tokenized share
+function kindOf(c) {
+  const C = Samsam.core, k = C.assetClass(c);
+  if (k === 'metal') { const g = c.qty * C.GRAMS_PER_OZ; return { kind: 'metal', grams: +g.toFixed(2), pricePerGram: +((c.currentPrice || c.basePrice || 0) / C.GRAMS_PER_OZ).toFixed(2), note: 'qty and prices are per troy ounce' }; }
+  if (k === 'stock') return { kind: 'share', unit: 'shares' };
+  return { kind: 'crypto' };
+}
+// The whole wealth (the Net worth card) and zakat, for the AI — the same numbers the page shows
+function wealthPayload() {
+  if (typeof wealthNow !== 'function') return null;
+  const W = wealthNow(), r2 = v => +(+v).toFixed(2);
+  const out = { totalUsd: r2(W.total), portfolioUsd: r2(W.portfolio), cashUsd: r2(W.cash), parts: W.rows.map(r => ({ part: r.name, usd: r2(r.usd), pct: +r.pct.toFixed(1) })) };
+  if (W.items.length) out.cashAndCertificates = W.items.map(x => ({ label: x.label || (x.kind === 'cert' ? 'Certificate' : 'Cash'), kind: x.kind === 'cert' ? 'certificate' : 'cash', currency: x.cur, value: r2(x.value), usd: x.usd == null ? null : r2(x.usd),
+    ...(x.kind === 'cert' ? { ratePctYear: x.rate, maturity: x.maturity, daysLeft: x.daysLeft, yearlyReturn: r2(x.yearly) } : {}) }));
+  if (W.missing.length) out.noRateYetFor = W.missing;
+  const z = typeof zkNow !== 'undefined' ? zkNow : null;
+  if (z && (z.today > 0 || z.value > 0)) out.zakat = { state: z.state, hijriYear: z.hy, poolUsd: r2(z.state === 'due' || z.state === 'paid' ? z.value : (z.today || z.value)), nisabUsd: r2(z.nisabUsd), zakatUsd: z.state === 'below' || z.state === 'under' ? 0 : r2(z.zakatUsd), daysLeft: z.daysLeft,
+    note: 'one pool: crypto + metals + cash (+ shares when counted) against 85 g of gold; 2.5%; an estimate, not a fatwa' };
+  return out;
+}
 function buildPortfolioPayload() {
   // Compute per-coin stats using actual portfolio data
   const coins = portfolio.map(c => {
@@ -48,6 +68,7 @@ function buildPortfolioPayload() {
       pnlUsd:       +(currentVal - costBasis).toFixed(2),
       pnlPct:       avgCost > 0 ? +((c.currentPrice - avgCost) / avgCost * 100).toFixed(2) : 0,
       cat:          c.cat || 'other',
+      ...kindOf(c),
     };
   });
 
@@ -108,6 +129,7 @@ function buildPortfolioPayload() {
       btcPrice:    +btcPrice,
       numCoins:    coins.length,
       lastUpdate,
+      netWorth:    (() => { try { return wealthPayload(); } catch (_) { return null; } })(),
     },
     accumPlan: {
       entries:        accumPlanData,
@@ -182,10 +204,10 @@ function aiLayout(lang) {
   const ar = lang === 'ar';
   const T = ar
     ? { sum: 'الخلاصة', btc: 'اتجاه BTC', dom: 'سيطرة BTC', eb: 'ETH/BTC', liq: 'السيولة', etf: 'تدفقات ETF', fng: 'المعنويات', alt: 'موسم العملات البديلة', ver: 'الحكم',
-        val: 'القيمة والربح', vs: 'مقارنة بـ BTC', all: 'التوزيع', bs: 'حصة BTC', best: 'الأفضل', worst: 'الأسوأ', risk: 'التركّز، العملات الضعيفة، العملات المستقرة…',
+        nw: 'صافي الثروة', val: 'القيمة والربح', vs: 'مقارنة بـ BTC', all: 'التوزيع', bs: 'حصة BTC', best: 'الأفضل', worst: 'الأسوأ', risk: 'التركّز، العملات الضعيفة، العملات المستقرة…',
         pr: 'التقدّم', cl: 'الأقرب للهدف', need: 'المتبقي', nx: 'الشراء القادم', buy: 'شراء', hold: 'احتفاظ', red: 'تقليل', wk: 'الأسبوع' }
     : { sum: 'Summary', btc: 'BTC trend', dom: 'BTC dominance', eb: 'ETH/BTC', liq: 'Liquidity', etf: 'ETF flows', fng: 'Sentiment', alt: 'Altcoin Season', ver: 'Verdict',
-        val: 'Value & profit', vs: 'vs BTC', all: 'Allocation', bs: 'BTC share', best: 'Best', worst: 'Worst', risk: 'Concentration, Weak coins, Stablecoins…',
+        nw: 'Net worth', val: 'Value & profit', vs: 'vs BTC', all: 'Allocation', bs: 'BTC share', best: 'Best', worst: 'Worst', risk: 'Concentration, Weak coins, Stablecoins…',
         pr: 'Progress', cl: 'Closest to target', need: 'Still needed', nx: 'Next buy', buy: 'Buy', hold: 'Hold', red: 'Reduce', wk: 'Week' };
   const b = s => `**${s}:**`;
   if (ar) return ['', '', 'شكل التقرير — التزم به تمامًا (يفصّل الأقسام السبعة المطلوبة):',
@@ -193,7 +215,7 @@ function aiLayout(lang) {
     '- كل عنوان قسم في سطر وحده بالشكل "N. <إيموجي> <العنوان>" حيث N من 1 إلى 7 والعنوان بالعربية. لا يبدأ أي سطر آخر برقم بعده نقطة.',
     '- داخل الأقسام نقاط "- " فقط: فكرة واحدة في كل نقطة، جملتان قصيرتان على الأكثر، ودائمًا بالأرقام الحقيقية. كل نقطة تبدأ بعنوان صغير عريض ثم نقطتين، مثل "- **العنوان:** النص".',
     `- 1 السوق — نقطة لكل بند وبهذا الترتيب: ${b(T.btc)} خلال 7 و30 و90 يومًا · ${b(T.dom)} الآن مقارنة بقبل 7 و30 يومًا، صاعدة أم هابطة وماذا يعني ذلك · ${b(T.eb)} النسبة واتجاهها · ${b(T.liq)} اتجاه سيطرة USDT وحجم التداول · ${b(T.etf)} لـ BTC وETH، دخول أم خروج خلال آخر 5 أيام تداول · ${b(T.fng)} مؤشر Fear & Greed الآن مقارنة بقبل أسبوع · ${b(T.alt)} قيمة المؤشر وعدد العملات الكبرى التي تفوقت على BTC خلال 7 و30 و90 يومًا. آخر نقطة ${b(T.ver)} مرحلة السوق في جملة واحدة وماذا تعني لهذه المحفظة.`,
-    `- 2 المحفظة — ${b(T.val)} · ${b(T.vs)} كم عملة تفوقت على وضع المبلغ نفسه في BTC (vsBtcPct) وأكبر الفروق · ${b(T.all)} كل فئة ونسبتها (وإن وُجد targetAllocation: بُعد كل مجموعة عن هدفها وما يجب شراؤه أو تخفيضه) · ${b(T.bs)}.`,
+    `- 2 المحفظة — ${b(T.nw)} صافي الثروة ونسبة كل جزء (بيتكوين، عملات بديلة، معادن، أسهم، نقد وشهادات) في نقطة واحدة · ${b(T.val)} للمحفظة · ${b(T.vs)} كم عملة تفوقت على وضع المبلغ نفسه في BTC (vsBtcPct) وأكبر الفروق · ${b(T.all)} كل فئة ونسبتها (وإن وُجد targetAllocation: بُعد كل مجموعة عن هدفها وما يجب شراؤه أو تخفيضه) · ${b(T.bs)}.`,
     `- 3 الأفضل والأسوأ — ${b(T.best)} و${b(T.worst)}: حتى 3 عملات لكل منهما مع تغيّر 24 ساعة و7 أيام ومنذ الشراء.`,
     `- 4 المخاطر — نقطة لكل خطر بعنوان عريض خاص به (${T.risk}) مع الأرقام.`,
     `- 5 خطة التجميع — ${b(T.pr)} · ${b(T.cl)} · ${b(T.need)} بالدولار · ${b(T.nx)}.`,
@@ -205,7 +227,7 @@ function aiLayout(lang) {
     '- Each section heading on its own line as "N. <emoji> <title>" with N = 1 to 7' + (ar ? ' and the title in Arabic' : '') + '. No other line may start with a number followed by a dot.',
     '- Inside the sections only "- " bullets: one idea per bullet, at most 2 short sentences, always with the real numbers. Every bullet starts with a bold label and a colon, like "- **Label:** text".',
     `- 1 Market — one bullet each, in this order: ${b(T.btc)} 7 / 30 / 90 days · ${b(T.dom)} now vs 7 and 30 days ago, rising or falling, and what that says · ${b(T.eb)} the ratio and its direction · ${b(T.liq)} the USDT dominance trend and volume · ${b(T.etf)} BTC and ETH, inflow or outflow over the last 5 trading days · ${b(T.fng)} Fear & Greed now vs a week ago · ${b(T.alt)} the index and how many top coins beat BTC over 7 / 30 / 90 days. Last bullet ${b(T.ver)} the market phase in one sentence and what it means for this portfolio.`,
-    `- 2 Portfolio — ${b(T.val)} · ${b(T.vs)} how many coins beat holding the same money in BTC (vsBtcPct), the biggest gaps · ${b(T.all)} each category with its % (and, if targetAllocation is given, how far each group is from its target and what to buy or trim) · ${b(T.bs)}.`,
+    `- 2 Portfolio — ${b(T.nw)} the net worth and each part's share (Bitcoin, altcoins, metals, shares, cash & certificates) in one bullet · ${b(T.val)} of the portfolio · ${b(T.vs)} how many coins beat holding the same money in BTC (vsBtcPct), the biggest gaps · ${b(T.all)} each category with its % (and, if targetAllocation is given, how far each group is from its target and what to buy or trim) · ${b(T.bs)}.`,
     `- 3 Best & Worst — ${b(T.best)} and ${b(T.worst)}: up to 3 coins each, with their 24h, 7d and since-buy %.`,
     `- 4 Risks — one bullet per risk with its own bold label (${T.risk}) and the numbers.`,
     `- 5 Accumulation Plan — ${b(T.pr)} · ${b(T.cl)} · ${b(T.need)} in $ · ${b(T.nx)}.`,
@@ -375,12 +397,12 @@ function enrichPayload(pd) {
     x.ch24 = r2(c.change24h); x.ch7 = r2(p[0]); x.ch30 = r2(p[1]); x.ch90 = r2(p[2]);
     x.weightPct = total > 0 ? r2(x.currentValue / total * 100) : null;
     x.vsBtcPct = c.sym === 'BTC' ? 0 : r2(getPerf(c));
-    x.signal = signalLabel(getAction(c.sym, 0, c), true);
+    x.signal = x.kind === 'crypto' ? signalLabel(getAction(c.sym, 0, c), true) : 'none — Signals are for crypto only';
     x.catLabel = (typeof CAT_LABELS !== 'undefined' && CAT_LABELS[x.cat]) || x.cat;
     const k = x.catLabel; cats[k] = (cats[k] || 0) + x.currentValue;
   });
   pd.stats.byCategory = Object.keys(cats).map(k => ({ cat: k, value: +cats[k].toFixed(2), pct: total > 0 ? +(cats[k] / total * 100).toFixed(1) : 0 })).sort((a, b) => b.value - a.value);
-  const alts = pd.coins.filter(x => x.sym !== 'BTC' && x.qty > 0 && x.vsBtcPct != null);
+  const alts = pd.coins.filter(x => x.sym !== 'BTC' && x.kind === 'crypto' && x.qty > 0 && x.vsBtcPct != null);
   pd.stats.coinsBeatingBtc = `${alts.filter(x => x.vsBtcPct > 0).length} of ${alts.length}`;
   pd.stats.btcSharePct = total > 0 ? +(pd.stats.btcValue / total * 100).toFixed(1) : 0;
   const tg = Samsam.getTargets && Samsam.getTargets();   // your target allocation (Bitcoin on its own, then categories)
@@ -389,8 +411,31 @@ function enrichPayload(pd) {
     pd.stats.targetAllocation = { bandPts: tg.band, groups: plan.groups.filter(g => g.target > 0 || g.now >= 0.05).map(g => ({ group: tgLabel(g.key), nowPct: +g.now.toFixed(1), targetPct: +g.target.toFixed(1), driftPts: +g.drift.toFixed(1), toTargetUsd: Math.round(g.full) })) };
   }
   const rules = window.Samsam && Samsam.getSignalRules ? Samsam.getSignalRules() : { reinforce: -5, sell: -20 };
-  pd.stats.signalRules = `Signal vs the coin's avg buy price: Reinforce at ${rules.reinforce}% or lower, Sell / Convert to BTC below ${rules.sell}%, otherwise Hold; BTC is always Hold`;
+  pd.stats.signalRules = `Signal vs the coin's avg buy price: Reinforce at ${rules.reinforce}% or lower, Sell / Convert to BTC below ${rules.sell}%, otherwise Hold; BTC is always Hold. Crypto only: metals and shares have no Signal`;
   return pd;
+}
+
+// The whole wealth, in words: what the portfolio is made of beyond crypto, and how to treat each kind
+function wealthContext(pd, lang) {
+  const nw = pd.stats.netWorth; if (!nw) return '';
+  const ar = lang === 'ar', $ = v => '$' + (+v).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  const parts = nw.parts.map(p => `${p.part} ${$(p.usd)} (${p.pct}%)`).join(' · ');
+  const metals = pd.coins.filter(c => c.kind === 'metal' && c.qty > 0).map(c => `${c.sym} ${c.grams} g (${$(c.currentValue)})`).join(', ');
+  const shares = pd.coins.filter(c => c.kind === 'share' && c.qty > 0).map(c => `${c.sym} ${c.qty} (${$(c.currentValue)})`).join(', ');
+  const z = nw.zakat, L = ['', '', ar ? 'الثروة كلها (كارت «صافي الثروة» في التطبيق):' : 'THE WHOLE WEALTH (the app\'s "Net worth" card):'];
+  L.push(`- Net worth ${$(nw.totalUsd)} = Total portfolio ${$(nw.portfolioUsd)} (crypto + metals + shares) + cash & certificates ${$(nw.cashUsd)}.`);
+  L.push(`- By part: ${parts}.`);
+  if (metals) L.push(`- Metals (physical, held in grams; kind "metal"): ${metals}.`);
+  if (shares) L.push(`- Tokenized shares (kind "share"): ${shares}.`);
+  if (nw.cashAndCertificates) L.push('- Cash & certificates: ' + nw.cashAndCertificates.map(x => `${x.label} ${x.value.toLocaleString('en-US')} ${x.currency}${x.kind === 'certificate' ? ` (certificate ${x.ratePctYear}% a year${x.maturity ? ', matures ' + x.maturity : ''})` : ''}`).join(' · ') + '.');
+  if (z) L.push(`- Zakat: ${z.state === 'due' ? `DUE for ${z.hijriYear}: ${$(z.zakatUsd)} (2.5% of ${$(z.poolUsd)})` : z.state === 'paid' ? `${z.hijriYear} paid; next in ${z.daysLeft} days` : z.state === 'upcoming' ? `in ${z.daysLeft} days, about ${$(z.zakatUsd)} at today's value (pool ${$(z.poolUsd)})` : `pool below the nisab (${$(z.nisabUsd)})`} — an estimate, not a fatwa.`);
+  L.push(ar ? 'القواعد:' : 'RULES:',
+    '- Total value, profit, allocation, targets and "vs BTC" are on the PORTFOLIO only (stats.total); cash is counted in Net worth only. Never add cash to the portfolio total or to the profit.',
+    '- Signals (Hold / Reinforce / Sell) and the Altcoin Season exist for CRYPTO only. Do not give a metal or a share a Signal or call it an altcoin; "coins beating BTC" counts crypto only.',
+    '- Metals and shares: report their value, share and profit since buy; judge them as a store of value / diversification, not as coins. Give gold amounts in grams.',
+    '- Cash & certificates are not an investment to rate: mention their share of the Net worth, a certificate maturing within 90 days, and whether the cash share looks high or low next to the plan — nothing more.',
+    '- If zakat is due or within 30 days, say so once in the Action Plan with its amount.');
+  return L.join('\n');
 }
 
 // Everything the report is written from — the same for the quick report (Worker) and the Claude app
@@ -415,6 +460,7 @@ async function aiRequestParts(lang) {
   // The market right now (same numbers as the Market Hub); it travels in the free-text context the Worker adds to the prompt
   accumContext += await marketContext(lang);
   enrichPayload(portfolioData);
+  accumContext += wealthContext(portfolioData, lang);
   accumContext += aiLayout(lang);
   return { portfolioData, accumContext };
 }
@@ -423,7 +469,7 @@ async function aiRequestParts(lang) {
 // The whole prompt (the same instructions the Worker gives Claude + your data) is copied; you paste it in the Claude app,
 // copy its reply and paste it back here, where it shows as the same cards (Copy / PDF too). No API credit is used.
 function aiAppSystem(lang) {
-  if (lang === 'ar') return ['أنت محلل محترف لمحافظ العملات الرقمية، تكتب تقريرًا خاصًا لصاحب المحفظة.',
+  if (lang === 'ar') return ['أنت محلل محترف للمحافظ (العملات الرقمية أولاً، ومعها المعادن والأسهم المرمّزة والنقد)، تكتب تقريرًا خاصًا لصاحب المحفظة.',
     'اعتمد في كل جملة على البيانات المرفقة فقط. لا تخترع أسعارًا أو أخبارًا أو أرقامًا. كن محددًا: اذكر العملات والمبالغ والنسب.',
     'هذا تحليل وليس نصيحة مالية؛ لا تَعِد بأرباح. اجعله عمليًا ومختصرًا.',
     'اكتب التقرير كله بالعربية الفصحى الواضحة والمباشرة، واترك رموز العملات والأرقام ومبالغ $ بالحروف اللاتينية.',
@@ -434,7 +480,7 @@ function aiAppSystem(lang) {
   const L = lang === 'ar'
     ? 'Write the whole report in Arabic (Modern Standard Arabic, clear and direct). Keep coin tickers, numbers and $ amounts in Latin characters.'
     : 'Write the whole report in clear, direct English.';
-  return ['You are a seasoned crypto portfolio analyst writing a private report for the portfolio owner.',
+  return ['You are a seasoned portfolio analyst (crypto first, plus metals, tokenized shares and cash) writing a private report for the portfolio owner.',
     'Base every statement on the data provided. Do not invent prices, news or numbers. Be specific: name coins, amounts and percentages.',
     'This is analysis, not financial advice; do not promise returns. Keep it practical and concise.', L,
     'Format: plain text with markdown bold (**…**) and "- " bullets only. No tables, no code blocks, no HTML. Reply with the report only — no introduction before it and no questions after it.',
