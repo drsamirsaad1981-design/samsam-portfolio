@@ -324,7 +324,7 @@ export function wealthParts(sum) {
 }
 export function wealthLine(sum, ar) {
   const w = sum && sum.wealth; if (!w || !(w.cash > 0)) return null;
-  const mix = wealthParts(sum).map(r => `${WPART[r.k][ar ? 1 : 0]} ${r.r}%`).join(' · ');
+  const mix = wealthParts(sum).map(r => `${WPART[r.k][ar ? 1 : 0]} ${r.r}%`).join(' · ') + (w.missing.length ? (ar ? ` · بدون ${w.missing.join(', ')} (لا يوجد سعر صرف بعد)` : ` · without ${w.missing.join(', ')} (no rate yet)`) : '');
   return ar ? `🏦 صافي الثروة: <b>${usd2(w.total)}</b>\n<i>${mix}</i>` : `🏦 Net worth <b>${usd2(w.total)}</b>\n<i>${mix}</i>`;
 }
 export function brief(sum, m, cfg, now, weekly = false) {
