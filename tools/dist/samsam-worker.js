@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 154e1b493786362a
+// sources-hash: c2a29b9c819244ba
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -971,7 +971,9 @@ function summarize(user, market, now = Date.now()) {
   }
   const sigMode = JSON.stringify(calm ? { r: rule.reinforce, s: rule.sell, smart, calm } : { r: rule.reinforce, s: rule.sell, smart });
   const counts = { reinforce: 0, sell: 0, hold: 0 };
-  Object.values(signal).forEach((s) => counts[s]++);
+  Object.entries(signal).forEach(([sym, s]) => {
+    if (assetClass(coinDoc[sym] || sym) === "crypto") counts[s]++;
+  });
   const held = Object.fromEntries(pf.map((c) => [c.sym.toUpperCase(), c.qty]));
   const plan = (user.accum || []).filter((a) => a && a.sym && a.targetQty > 0).map((a) => ({ sym: a.sym.toUpperCase(), kind: planKind(a), target: +a.targetQty, actual: planActual(a, held[a.sym.toUpperCase()] || 0, (user.meta || {}).cash) }));
   const prog = overallProgress(plan.map((p) => ({ actual: p.actual, target: p.target })));

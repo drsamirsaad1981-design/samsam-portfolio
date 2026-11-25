@@ -752,6 +752,7 @@ check('…a slot with nothing found and no whale flip → no message at all', !s
       const AC = await import('../tools/alerts-core.mjs'), AI = await import('../tools/worker/ai.mjs'), DATA = await import('../tools/worker/data.mjs'), BOT = await import('../tools/worker/bot.mjs');
       const u1 = USER(), mm = { ...m0, live: {} }, s1 = AC.summarize(DATA.withIds(u1, mm), mm, at), w = s1.wealth;
       check('💼 summary.wealth: Net worth = portfolio + cash ($6,000), parts add up, the share is a share', w && Math.abs(w.cash - 6000) < 0.01 && Math.abs(w.total - s1.value - 6000) < 0.01 && Math.abs(Object.values(w.parts).reduce((a, b) => a + b, 0) - w.total) < 0.01 && w.parts.stock === 2000 && w.kindOf.NVDAB === 'share' && w.kindOf.BTC === 'crypto', w && [w.total, w.parts, w.kindOf]);
+      check('🎯 the signal counts are coins only (the share is not counted as a Hold)', s1.counts.reinforce + s1.counts.sell + s1.counts.hold === s1.coins.filter(c => w.kindOf[c.sym] === 'crypto').length && s1.coins.some(c => w.kindOf[c.sym] !== 'crypto'), [s1.counts, w.kindOf]);
       const wp = AC.wealthParts(s1);
       check('💼 shares of the whole are rounded to add up to exactly 100', wp.reduce((a, r) => a + r.r, 0) === 100 && wp.some(r => r.k === 'cash'), wp);
       check('💼 "coins beat BTC" counts coins only (the share is not an altcoin)', s1.alts === s1.coins.filter(c => c.sym !== 'BTC' && w.kindOf[c.sym] === 'crypto' && c.vs).length, [s1.alts, s1.coins.map(c => c.sym)]);

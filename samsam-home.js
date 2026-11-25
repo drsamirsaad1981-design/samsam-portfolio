@@ -970,7 +970,7 @@ function exportData() {
     const perf = getPerf(c), action = getAction(c.sym, perf, c), hk = holdingKind(c);
     const baseVal = c.qty * c.basePrice, curVal = c.qty * c.currentPrice, ap = coinProfit(c), pnl = ap.total;
     rows.push([i + 1, c.sym, COIN_NAMES[c.sym] || c.name || c.sym, T ? T.label(c.cat) : (c.cat || ''), +(+c.qty).toFixed(10), isSoldOut(c) ? '' : c.basePrice, c.currentPrice,
-      baseVal.toFixed(2), curVal.toFixed(2), pnl.toFixed(2), ap.pct.toFixed(2), perf.toFixed(2), signalLabel(action, true), c.notes || '', hk.type, hk.unit, +hk.amount.toFixed(8)]);
+      baseVal.toFixed(2), curVal.toFixed(2), pnl.toFixed(2), ap.pct.toFixed(2), perf.toFixed(2), hk.k === 'crypto' ? signalLabel(action, true) : '', c.notes || '', hk.type, hk.unit, +hk.amount.toFixed(8)]);
   });
   // after the table (one empty line): cash & certificates, then the whole wealth by part — the Net worth card's numbers
   const W = wealthNow();
@@ -1049,10 +1049,10 @@ function pdfSummary() {
     </div>`;
   // the two charts, drawn in light colours at the PDF's size: laid out off-screen just long enough to draw
   box.classList.add('ps-drawing');
-  const h = drawHoldingsChart({ canvas: document.getElementById('psHold'), height: 175 });
+  const h = drawHoldingsChart({ canvas: document.getElementById('psHold'), height: 135 });
   if (!h) { document.getElementById('psHold').hidden = true; document.getElementById('psHoldNone').hidden = false; }
   else { const e = document.getElementById('psHchg'); e.textContent = h.text; e.className = 'ps-chg ' + (h.up ? 'up' : 'down'); }
-  let pf = null; try { pf = drawPerfChart({ canvas: document.getElementById('psPerf'), height: 175 }); } catch (_) {}
+  let pf = null; try { pf = drawPerfChart({ canvas: document.getElementById('psPerf'), height: 135 }); } catch (_) {}
   if (!pf) { document.getElementById('psPerf').hidden = true; document.getElementById('psPerfNone').hidden = false; }
   else { const b = document.querySelector('#psBtc b'); b.textContent = sg(pf.btcTrend) + Math.abs(pf.btcTrend).toFixed(2) + '%'; b.className = cls(pf.btcTrend); }
   box.classList.remove('ps-drawing');

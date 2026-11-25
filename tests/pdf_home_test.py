@@ -29,7 +29,7 @@ with sync_playwright() as p:
             check(f'{vn}/{theme}: the card chart on the page is still there', st['cardChart'] > 500, st['cardChart'])
             pg.emulate_media(media='print')
             pv = pg.evaluate("({sum:getComputedStyle(document.getElementById('pdfSummary')).display, table:getComputedStyle(document.getElementById('portfolioTableWrapper')).display, brk:getComputedStyle(document.getElementById('portfolioTableWrapper')).breakBefore})")
-            check(f'{vn}/{theme}: in print: summary + table, table on a new page {pv}', pv['sum'] == 'block' and pv['table'] == 'block' and pv['brk'] == 'page', pv)
+            check(f'{vn}/{theme}: in print: summary + table, the table right after it (no forced page) {pv}', pv['sum'] == 'block' and pv['table'] == 'block' and pv['brk'] == 'auto', pv)
             out = SH / f'pdfhome_{vn}_{theme}.pdf'; pg.pdf(path=str(out), print_background=True, prefer_css_page_size=True)
             subprocess.run(['pdftoppm', '-png', '-r', '55', '-f', '1', '-l', '2', str(out), str(SH / f'pdfhome_{vn}_{theme}')])
             pg.emulate_media(media='screen')

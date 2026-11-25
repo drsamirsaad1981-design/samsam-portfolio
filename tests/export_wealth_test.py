@@ -28,7 +28,7 @@ with sync_playwright() as p:
     rows = list(csv.reader(io.StringIO(open(dl.value.path(), encoding='utf-8-sig').read())))
     i = rows.index([]); table, extra = rows[:i], rows[i + 1:]
     xau = next(r for r in table if r[1] == 'XAU')
-    check('CSV: gold is a Metal, in grams (31.1035 g for 1 oz)', xau[14] == 'Metal' and xau[15] == 'g' and abs(float(xau[16]) - 31.1035) < 0.01 and abs(float(xau[4]) - 1) < 1e-9, xau)
+    check('CSV: gold is a Metal, in grams (31.1035 g for 1 oz)', xau[14] == 'Metal' and xau[15] == 'g' and abs(float(xau[16]) - 31.1035) < 0.01 and abs(float(xau[4]) - 1) < 1e-9 and xau[12] == '' and next(r for r in table if r[1] == 'BTC')[12] == 'Hold', xau)
     cash = [r for r in extra if len(r) > 3 and r[2] in ('Cash', 'Certificate')]
     check('CSV: cash and the certificate listed with their dollar value', len(cash) == 2 and cash[0][1] == 'Bank' and float(cash[0][6]) == 20000 and cash[1][2] == 'Certificate' and float(cash[1][6]) >= 5000 and cash[1][8] == '2029-01-01', cash)
     nw = next(r for r in extra if len(r) > 1 and r[1] == 'Net worth'); pf = next(r for r in extra if len(r) > 1 and r[1].startswith('Total portfolio'))

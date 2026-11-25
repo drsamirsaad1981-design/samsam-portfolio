@@ -1019,7 +1019,7 @@
     html[data-theme="dark"] thead, html[data-theme="dark"] thead th { background:#f1f5f9 !important; }
     /* the app's header (logo, Portfolio tabs, cards) — the PDF's first page has these numbers */
     body:not(.ai-print) #appHead, body:not(.ai-print) .cp-ptabs-host, body:not(.ai-print) #cpBnav { display:none !important; }
-    #portfolioTableWrapper { break-before:page; }
+    #portfolioTableWrapper { break-before:auto; margin-top:10px; }   /* the table follows the summary directly: no empty half page */
     .page-header { background:#fff !important; border-bottom:2px solid #0f172a; padding:10px 0; margin-bottom:8px; }
     .header-title { color:#0f172a !important; }
     /* PDF: portrait A4, the whole table across the page (no sideways scroll box), no on-screen controls */
@@ -1425,7 +1425,7 @@
 .mk-k { font-size: .66rem; color: var(--fg2); white-space: nowrap; }
 .mk-v { font-size: .95rem; font-weight: 800; color: var(--fg); font-variant-numeric: tabular-nums; }
 .mk-s { font-size: .68rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--fg2); }
-.mk-g { width: 58px; height: 33px; display: block; }
+.mk-g { width: 80px; height: 45px; display: block; }
 .mk-g text { font-size: 11px; font-weight: 800; fill: var(--fg); }
 .mk-fng .mk-s { margin-top: -1px; }
 .cpf-bl { display: inline-flex; align-items: center; gap: 4px; }

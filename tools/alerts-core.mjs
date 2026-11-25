@@ -201,7 +201,7 @@ export function summarize(user, market, now = Date.now()) {
     coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, chgClose: si.onClose ? si.chg : null, close: close || null, pending: si.pending ? toS(si.pending) : null, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
   }
   const sigMode = JSON.stringify(calm ? { r: rule.reinforce, s: rule.sell, smart, calm } : { r: rule.reinforce, s: rule.sell, smart });
-  const counts = { reinforce: 0, sell: 0, hold: 0 }; Object.values(signal).forEach(s => counts[s]++);
+  const counts = { reinforce: 0, sell: 0, hold: 0 }; Object.entries(signal).forEach(([sym, s]) => { if (C.assetClass(coinDoc[sym] || sym) === 'crypto') counts[s]++; });   // signals are for coins: a metal or a share is not counted
   // accumulation plan
   const held = Object.fromEntries(pf.map(c => [c.sym.toUpperCase(), c.qty]));
   // (a savings goal — CASH-EGP… — counts your cash & certificates in that currency; metals stay in ounces here, shown in grams)
