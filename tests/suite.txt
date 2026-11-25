@@ -178,3 +178,5 @@ phase5_test.py
 zakat_pool_test.py
 overview_order_test.py
 bstocks_watch_test.py
+export_wealth_test.py
+ai_wealth_test.py
