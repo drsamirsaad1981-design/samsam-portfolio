@@ -58,6 +58,28 @@ the PDF, the CSV and the AI report; `summarize().wealth` in the bot; `zakatPool`
   shared card explicitly, and test `font-family` / `line-height`, not only pixels.
 - Never slice code up to "the next `}`" when replacing a function: check with `git diff` that only the intended lines changed.
 
+## Where we stopped (26 Nov 2026) — read this first in a new chat
+
+Done and live, in this order:
+1. Home: three market cards (Fear & Greed gauge, Altcoin Season, dominance) → Market Hub; the moving line above Net worth
+   (no duplicates, no links); the AI button starts low, above the bottom bar.
+2. Net worth card on Overview and Allocation (one font / line height in both; not on a coin's Transactions).
+3. Welcome page rewritten around "your whole wealth in one place" (AR + EN, share images, new overview screenshots).
+4. PDF, CSV and the app's AI report carry the whole wealth (Net worth by part, metals in grams, zakat, market numbers).
+5. Bot: Net worth line in /portfolio, the morning brief and the weekly report; AI tools `get_portfolio → net_worth` and
+   `get_zakat`; signal counts are coins only.
+6. A Claude Project "Cute Portfolio" holds the working rules; the program's map is a Whiteboard (link in the Project).
+
+**Next step, agreed with Samir: the full review of the whole app, on Fable 5.2** (he switches the model himself — remind
+him at the start if the chat is on another model). Propose the review plan first and wait for "نفذ". Suggested scope:
+numbers that must agree across app / bot / PDF / CSV, Arabic wording and RTL, the phone layout page by page, dead code
+and stale tests, the guide and hints against what the app now does.
+
+To check when the review starts:
+- `hist_test.py` failed once on GitHub (commit da22a3e, "after a reload the prices come from the device cache") and
+  passes locally — see whether it is flaky or real.
+- Samir has not yet confirmed on his phone that the Net worth card looks the same on Overview and Allocation.
+
 ## Open ideas (not requested yet)
 
 - A full review of the app (use the strongest model).
