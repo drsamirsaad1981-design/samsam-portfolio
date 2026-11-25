@@ -63,6 +63,9 @@ with sync_playwright() as p:
     hv = clean(pg.inner_text('#hovNwCard')) if pg.is_visible('#hovNwCard') else ''
     check('Allocation: the same Net worth card on top (every part, cash included)', 'Net worth' in hv and 'Cash & certificates' in hv and clean(pg.inner_text('#nwUsd')) in hv, hv)
     pg.evaluate("SamsamUI.ptabGo('overview')"); pg.wait_for_timeout(500)
+    pg.evaluate("openCoinTx('BTC')"); pg.wait_for_timeout(900)
+    check('a coin\'s Transactions: no Net worth card there', not pg.is_visible('#hovNwCard') and pg.is_visible('#holdingsOverlay'), pg.evaluate("[holdingsOverlay.dataset.mode, holdingsOverlay.dataset.view]"))
+    pg.evaluate("hovBack()"); pg.wait_for_timeout(600)
     # no cash → no Net worth card; Total Portfolio leads
     pg.evaluate("Samsam.setCash([])"); pg.wait_for_timeout(800); pg.evaluate("renderAll()"); pg.wait_for_timeout(300)
     check('no cash → no Net worth card (Total Portfolio leads)', not pg.is_visible('#netWorthCard') and not pg.is_visible('#cashCard'))

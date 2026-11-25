@@ -308,4 +308,5 @@
 .htx-stake-b{display:flex;gap:6px;flex-basis:100%}
 .htx-stake-btn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border,rgba(148,163,184,.35));border-radius:8px;padding:4px 10px;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer;background:transparent;color:inherit}
 .htx-stake-btn.stop{color:#f87171;border-color:rgba(248,113,113,.45)}
-.hov-nw { margin-bottom: 14px; } .hov-nw[hidden] { display: none !important; }
+.hov-nw { display: none; margin-bottom: 14px; } .hov-nw[hidden] { display: none !important; }
+#holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-nw { display: block; }   /* the Allocation page only — never a coin's Transactions */
