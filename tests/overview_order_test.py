@@ -59,8 +59,11 @@ with sync_playwright() as p:
     pg.click('#zakatLine .zk-paid'); pg.wait_for_timeout(900)
     check('…✓ Paid → back to its place at the bottom', pg.evaluate("document.getElementById('zakatLine').parentElement.id") == 'zakatBottom')
     pg.screenshot(path=str(SH / 'overview_order.png'))
+    look = "(id => { const c = document.getElementById(id), s = getComputedStyle(c); return [s.fontFamily, s.lineHeight, Math.round(c.getBoundingClientRect().height)] })"
+    ov = pg.evaluate(look + "('netWorthCard')")
     pg.evaluate("SamsamUI.ptabGo('allocation')"); pg.wait_for_timeout(900)
     hv = clean(pg.inner_text('#hovNwCard')) if pg.is_visible('#hovNwCard') else ''
+    check('Net worth looks the same on Overview and Allocation (font, line height, size)', pg.evaluate(look + "('hovNwCard')") == ov and 'Inter' in ov[0].split(',')[0], ov)
     check('Allocation: the same Net worth card on top (every part, cash included)', 'Net worth' in hv and 'Cash & certificates' in hv and clean(pg.inner_text('#nwUsd')) in hv, hv)
     pg.evaluate("SamsamUI.ptabGo('overview')"); pg.wait_for_timeout(500)
     pg.evaluate("openCoinTx('BTC')"); pg.wait_for_timeout(900)
