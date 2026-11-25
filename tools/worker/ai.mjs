@@ -134,7 +134,8 @@ export async function runTool(ctx, name, input) {
     const u = await ctx.user(); if (!u) return { error: 'portfolio not connected' };
     const m = await ctx.market(), z = zakatFacts(u, m, Date.now()); if (!z || !z.y) return { error: 'no gold price or zakat day right now' };
     ctx.used.add('your portfolio (Firebase)'); const y = z.y, P = z.pool;
-    return { state: y.state, hijri_year: y.hy, zakat_day: `${z.w.d} ${(C.HIJRI_MONTHS.en || [])[z.w.m - 1] || 'month ' + z.w.m}`, days_left: y.daysLeft, next_date: y.nextDate, pool_usd: r2(y.value), pool_today_usd: r2(P.value),
+    const open = y.state === 'due' || y.state === 'paid' || y.state === 'below';   // a year that is open / closed now; otherwise the numbers are an estimate for the NEXT zakat day
+    return { state: y.state, hijri_year: open ? y.hy : y.nextHy, hijri_year_is: open ? 'the zakat year this state is about' : 'the hijri year of the next zakat day (next_date)', next_zakat_hijri_year: y.nextHy, zakat_day: `${z.w.d} ${(C.HIJRI_MONTHS.en || [])[z.w.m - 1] || 'month ' + z.w.m}`, days_left: y.daysLeft, next_date: y.nextDate, pool_usd: r2(y.value), pool_today_usd: r2(P.value),
       pool_parts_today_usd: { crypto: r2(P.crypto), metals: r2(P.metal), shares: P.stocksCounted ? r2(P.stock) : 0, cash_and_certificates: r2(P.cash) }, shares_counted: !!P.stocksCounted,
       nisab_usd: r2(y.nisabUsd), nisab: '85 g of gold', zakat_usd: r2(y.zakatUsd), rate: '2.5%', fixed_on_zakat_day: !!y.fixed, paid: y.paid ? { amount: y.paid.paid, currency: y.paid.cur, on: y.paid.at } : null,
       states: 'due = pay zakat_usd now (stays due until ✓ Paid in the app) · paid = this hijri year is paid · upcoming = an estimate at today\'s value for the next zakat day · below / under = the pool is under the nisab, none due',

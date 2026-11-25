@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: b4410e02666437c0
+// sources-hash: 154e1b493786362a
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -4106,9 +4106,12 @@ async function runTool(ctx, name, input) {
     if (!z || !z.y) return { error: "no gold price or zakat day right now" };
     ctx.used.add("your portfolio (Firebase)");
     const y = z.y, P2 = z.pool;
+    const open = y.state === "due" || y.state === "paid" || y.state === "below";
     return {
       state: y.state,
-      hijri_year: y.hy,
+      hijri_year: open ? y.hy : y.nextHy,
+      hijri_year_is: open ? "the zakat year this state is about" : "the hijri year of the next zakat day (next_date)",
+      next_zakat_hijri_year: y.nextHy,
       zakat_day: `${z.w.d} ${(HIJRI_MONTHS.en || [])[z.w.m - 1] || "month " + z.w.m}`,
       days_left: y.daysLeft,
       next_date: y.nextDate,

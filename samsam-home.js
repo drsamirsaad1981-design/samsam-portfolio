@@ -969,7 +969,7 @@ function exportData() {
   getFilteredSorted().forEach((c, i) => {
     const perf = getPerf(c), action = getAction(c.sym, perf, c), hk = holdingKind(c);
     const baseVal = c.qty * c.basePrice, curVal = c.qty * c.currentPrice, ap = coinProfit(c), pnl = ap.total;
-    rows.push([i + 1, c.sym, COIN_NAMES[c.sym] || c.name || c.sym, T ? T.label(c.cat) : (c.cat || ''), c.qty, isSoldOut(c) ? '' : c.basePrice, c.currentPrice,
+    rows.push([i + 1, c.sym, COIN_NAMES[c.sym] || c.name || c.sym, T ? T.label(c.cat) : (c.cat || ''), +(+c.qty).toFixed(10), isSoldOut(c) ? '' : c.basePrice, c.currentPrice,
       baseVal.toFixed(2), curVal.toFixed(2), pnl.toFixed(2), ap.pct.toFixed(2), perf.toFixed(2), signalLabel(action, true), c.notes || '', hk.type, hk.unit, +hk.amount.toFixed(8)]);
   });
   // after the table (one empty line): cash & certificates, then the whole wealth by part — the Net worth card's numbers
@@ -1013,7 +1013,7 @@ function pdfSummary() {
   const cls = n => n >= 0 ? 'up' : 'down', sg = n => (n >= 0 ? '+' : '−');
   // what you hold, by kind · the whole wealth (the Net worth card) · zakat · the market's three cards
   const held = portfolio.filter(c => c.qty > 0), nk = { crypto: 0, metal: 0, stock: 0 }; held.forEach(c => { const k = Samsam.core.assetClass(c); if (k in nk) nk[k]++; });
-  const kinds = [[nk.crypto, 'coins'], [nk.metal, 'metals'], [nk.stock, 'shares']].filter(x => x[0]).map(x => x[0] + ' ' + x[1]).join(' · ');
+  const kinds = [[nk.crypto, 'coin'], [nk.metal, 'metal'], [nk.stock, 'share']].filter(x => x[0]).map(x => x[0] + ' ' + x[1] + (x[0] === 1 ? '' : 's')).join(' · ');
   const W = wealthNow();
   const nwHtml = `<div class="ps-card ps-nw"><div class="ps-h">Net worth <em>the portfolio${W.cash > 0 ? ' + cash &amp; certificates' : ''}</em><span class="ps-nwt">${usd(W.total)}</span></div>
       <div class="ps-nwbar">${W.rows.map(r => `<i style="width:${r.pct.toFixed(2)}%;background:${r.col}"></i>`).join('')}</div>
