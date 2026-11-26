@@ -141,9 +141,18 @@ Fourth round (26–27 Nov, his "موافق" on the legend and the small items):
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
   in `users/<uid>/meta/alerts`, six kinds on by default, quiet hours, a daily cap; owner first, then one member, then all.
-- (B) A Bitcoin logarithmic-regression (power-law) alert: weekly fit in GitHub → `m/btcreg.json`, five zones by historical
-  share of days, alerts on a zone change at the daily close; bot first, then a Market Hub card and an optional 4th Exit
-  indicator. The full history (2010 →) needs a source GitHub Actions can reach — not tested yet.
+- (B) A Bitcoin rainbow indicator + alert (he chose the nine-band rainbow; "the most important thing is accuracy").
+  **Trial done 27 Nov** (`tools/lab/rainbow.mjs`, Actions → "Rainbow lab", by hand; nothing in the app or the bot uses it):
+  blockchain.com, Coin Metrics, Binance and Bitstamp answer from GitHub (Nasdaq Data Link: 403 without a key). Recipe =
+  crypto-economy.com's documented one: blockchain.com's daily price until 16 Aug 2017, Binance UTC closes after; least
+  squares of log10(price) on log10(days since 3 Jan 2009) from 18 Aug 2010; nine equal bands (log scale) between the
+  deepest and the highest deviation. Our fit on their period equals theirs to four decimals (b 5.5943, a −16.1839,
+  R² 0.960, 5,930 days; the line on 24 Nov $144,282 vs $144,281; band 2 of 9 both). Middle band edges within ~1.5%, the
+  outer ones up to 4.7%: they hang on two thin-market days (7 Oct 2010, 11 Jun 2011) that differ by source. Tops reached
+  band 9 · 9 · 8 · 6 · 4 (2011 · 2013 · 2017 · 2021 · Oct 2025): the upper bands may never come back.
+  Next, on his "نفذ": the maths into `samsam-core.js`, a weekly file on the `prices` branch, the bot's line + alert (owner
+  first, daily close × 2), then the Market Hub card. Open: descriptive band names or the classic ones; his own band
+  thresholds for the alert; a 4th Exit indicator.
 
 Still open:
 1. The two proposals above.
