@@ -367,8 +367,8 @@
       // #22c55e on Performance and Market Hub; loss #ef4444 / #f87171 — and the light theme kept the dark theme's bright
       // tones, too pale on white). Dark: bright tones on the midnight background. Light: deeper tones that read on white.
       // (on screen only: a printed page / the PDF keeps its own paper palette)
-      '@media screen{' + D + '{--green:#22c55e;--red:#f87171;--blue:#3b82f6;--btc:#f7931a;--c-amber:#f59e0b;--c-gold:#eab308;--c-sky:#38bdf8;--c-violet:#a78bfa;--c-orange:#fb923c;--c-link:#60a5fa;--c-mute:#94a3b8}' +
-      'html:root[data-theme="light"]:not([data-theme-lock]){--bg:#f0f4f8;--fg:#1e293b;--fg2:#64748b;--green:#15803d;--red:#dc2626;--blue:#2563eb;--btc:#c2410c;--c-amber:#b45309;--c-gold:#a16207;--c-sky:#0369a1;--c-violet:#6d28d9;--c-orange:#c2410c;--c-link:#2563eb;--c-mute:#64748b}' +
+      '@media screen{' + D + '{--green:#22c55e;--red:#f87171;--blue:#3b82f6;--btc:#f7931a;--c-amber:#f59e0b;--c-gold:#ffd60a;--c-stock:#fc90b4;--c-sky:#38bdf8;--c-violet:#a78bfa;--c-orange:#fb923c;--c-link:#60a5fa;--c-mute:#94a3b8}' +
+      'html:root[data-theme="light"]:not([data-theme-lock]){--bg:#f0f4f8;--fg:#1e293b;--fg2:#64748b;--green:#15803d;--red:#dc2626;--blue:#2563eb;--btc:#c2410c;--c-amber:#b45309;--c-gold:#a16207;--c-stock:#be185d;--c-sky:#0369a1;--c-violet:#6d28d9;--c-orange:#c2410c;--c-link:#2563eb;--c-mute:#64748b}' +
       // light: the accents that are still literals or set per item — a category's own colour, an inline amber, faded greys
       'html[data-theme="light"] .cat-tag{color:color-mix(in srgb,var(--cat-c) 52%,#0f172a)}' +
       'html[data-theme="light"] .hov-cls i{color:color-mix(in srgb,var(--c) 52%,#0f172a)}' +

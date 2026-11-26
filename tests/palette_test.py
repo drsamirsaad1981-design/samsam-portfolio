@@ -55,7 +55,31 @@ with sync_playwright() as p:
             r = {k: round(ratio(rgb(v), white), 2) for k, v in c.items() if v}
             check('light: profit, the metals\' value, a category tag and a link all read on white (contrast ≥ 4.5 — they were 1.7 to 2.4)', all(x >= 4.5 for x in r.values()), r)
         else:
-            check('dark: the metals\' gold and the links keep their bright tones', c['gold'] == 'rgb(234, 179, 8)' and c['link'] == 'rgb(96, 165, 250)', c)
+            check('dark: the metals\' gold and the links keep their bright tones', c['gold'] == 'rgb(255, 214, 10)' and c['link'] == 'rgb(96, 165, 250)', c)
+        if theme == 'dark':
+            # 🎨 the donut's palette is measured, not eyeballed: every pair of colours that can share it (12 categories + Other, the
+            # four metals, the Crypto class) — distance in OKLab × 100. It was 2.7 (Bitcoin ~ Layer 0) with 14 pairs under 15.
+            pal = pg.evaluate("""(() => { const T = SamsamTaxonomy, P = {};
+              ['btc', 'layer1', 'layer2', 'layer0', 'ai', 'oracle', 'defi', 'launchpad', 'web3', 'meme', 'stocks', 'other', 'm:gold', 'm:silver', 'c:crypto', 'c:stock', 'c:metal', 'm:platinum', 'm:copper'].forEach(k => P[k] = T.color(k));
+              const lin = v => { v /= 255; return v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+              const lab = h => { const r = lin(parseInt(h.slice(1, 3), 16)), g = lin(parseInt(h.slice(3, 5), 16)), b = lin(parseInt(h.slice(5, 7), 16));
+                const l = Math.cbrt(.4122214708 * r + .5363325363 * g + .0514459929 * b), m = Math.cbrt(.2119034982 * r + .6806995451 * g + .1073969566 * b), s = Math.cbrt(.0883024619 * r + .2817188376 * g + .6299787005 * b);
+                return [.2104542553 * l + .793617785 * m - .0040720468 * s, 1.9779984951 * l - 2.428592205 * m + .4505937099 * s, .0259040371 * l + .7827717662 * m - .808675766 * s]; };
+              const dE = (a, b) => { const x = lab(a), y = lab(b); return 100 * Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]); };
+              const main = ['btc', 'layer1', 'layer2', 'layer0', 'ai', 'oracle', 'defi', 'launchpad', 'web3', 'meme', 'stocks', 'other', 'm:gold', 'm:silver', 'c:crypto'], rows = [];
+              for (let i = 0; i < main.length; i++) for (let j = i + 1; j < main.length; j++) rows.push([+dE(P[main[i]], P[main[j]]).toFixed(1), main[i], main[j]]);
+              rows.sort((a, b) => a[0] - b[0]);
+              const rare = ['m:platinum', 'm:copper'].map(k => [k, Math.min(...main.map(o => dE(P[k], P[o])))]);
+              const nw = ['#f7931a', '#3b82f6', P['c:metal'], P['c:stock'], '#22c55e']; let nwMin = 1e9; for (let i = 0; i < nw.length; i++) for (let j = i + 1; j < nw.length; j++) nwMin = Math.min(nwMin, dE(nw[i], nw[j]));
+              return { P, worst: rows.slice(0, 4), rare, nwMin: +nwMin.toFixed(1) }; })()""")
+            check(f'donut palette: the closest two colours are ≥ 15 apart (OKLab × 100) — worst now {pal["worst"][0]}', pal['worst'][0][0] >= 15, pal['worst'])
+            check('…a class wears its category\'s colour (Shares = the stocks category, Metals = gold), so the two rings agree', pal['P']['c:stock'] == pal['P']['stocks'] and pal['P']['c:metal'] == pal['P']['m:gold'], pal['P'])
+            check('…platinum and copper (rare) still stand ≥ 12 from everything', all(v >= 12 for _, v in pal['rare']), pal['rare'])
+            check(f'Net worth card: Bitcoin · Altcoins · Metals · Shares · Cash — the closest two are ≥ 15 apart (it was 7.9: Bitcoin ~ Metals) — {pal["nwMin"]}', pal['nwMin'] >= 15, pal['nwMin'])
+            src = (pathlib.Path(__file__).parent.parent / 'samsam-home.js').read_text(encoding='utf8')
+            tile = pg.evaluate("getComputedStyle(document.getElementById('partStocksUsd')).color")
+            check('…and the card\'s Metals / Shares are the taxonomy\'s own colours (yellow #ffd60a, pink #fc90b4); the Shares tile reads pink too',
+                  f"['metal', '{pal['P']['c:metal']}'," in src and f"['stock', '{pal['P']['c:stock']}'," in src and pal['P']['c:stock'] == '#fc90b4' and tile == 'rgb(252, 144, 180)', (pal['P']['c:metal'], pal['P']['c:stock'], tile))
         check(f'{theme}: no page errors', not errs, errs[:3]); ctx.close()
     br.close()
 print(f'{sum(res)}/{len(res)} passed'); sys.exit(0 if all(res) else 1)

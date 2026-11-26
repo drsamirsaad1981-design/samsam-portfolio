@@ -499,7 +499,7 @@ function renderHeader() {
 // Drawn again when the cash card has news (its rates arrive later): SamsamCash → window.onCashRender.
 var nwPortfolio = null, nwParts = null;
 // 💼 the split of everything you own: BTC · Altcoins · Metals · Shares · Cash — one bar, each part with its value and share
-const NW_PARTS = [['btc', '#f7931a', 'Bitcoin', 'البيتكوين'], ['alt', '#3b82f6', 'Altcoins', 'العملات البديلة'], ['metal', '#eab308', 'Metals', 'المعادن'], ['stock', '#38bdf8', 'Shares', 'الأسهم'], ['cash', '#22c55e', 'Cash & certificates', 'النقد والشهادات']];
+const NW_PARTS = [['btc', '#f7931a', 'Bitcoin', 'البيتكوين'], ['alt', '#3b82f6', 'Altcoins', 'العملات البديلة'], ['metal', '#ffd60a', 'Metals', 'المعادن'], ['stock', '#fc90b4', 'Shares', 'الأسهم'], ['cash', '#22c55e', 'Cash & certificates', 'النقد والشهادات']];
 function renderNetWorth() {
   const card = document.getElementById('netWorthCard'); if (!card) return;
   const c = window.SamsamCash && SamsamCash.last ? SamsamCash.last() : null, AR = !!(window.CPLang && CPLang.ar);

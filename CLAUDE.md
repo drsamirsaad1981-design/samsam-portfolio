@@ -104,9 +104,15 @@ Second round the same day (his "عدل البوت … توحيد الألوان 
   price, a take-profit and a due regular buy are in the morning message.
 
 Third round the same day (his "خلص ٢ و٣ و٤" + the donut's colours):
-- Donut / categories (`samsam-taxonomy.js`): no category may look like Bitcoin's orange, gold or the Crypto class's
-  violet — AI & DePIN is fuchsia `#d946ef`, Layer 0 bronze `#b8834f`, Launchpad salmon `#fda4af` (they were purple, amber
-  and orange). Bitcoin orange and gold keep their own colours.
+- Donut / categories: **the palette is measured, never picked by eye** (`samsam-taxonomy.js`; `palette_test.py` holds the
+  floor). Every colour that can share the donut — 12 categories + Other, the metals, the Crypto class's violet — is at least
+  15 apart (OKLab × 100; it was 2.7, with 14 pairs under 15) and each has its own hue family: Bitcoin orange `#f7931a` ·
+  Layer 1 blue `#008cf4` · Layer 2 teal `#00a8a8` · Layer 0 bronze `#9c8424` · AI aqua `#24e4c0` · Oracles magenta `#cc48a8` ·
+  DeFi green `#009c00` · Launchpad periwinkle `#9ca8fc` · Web3 lime `#90cc00` · Meme red `#e43c18` · **Shares pink `#fc90b4`**
+  (never a blue beside Altcoins / Layer 1) · **gold yellow `#ffd60a`** (the old `#eab308` was 7.9 from Bitcoin) · silver
+  `#cbd5e1` · platinum `#a8a29e` · copper `#a0522d`. Shares' text uses the token `--c-stock`; cash's value is green like its
+  Net worth dot. 15 hues is the limit: a 16th cannot stay 15 away — and it is not colour-blind safe (blue ~ violet,
+  lime ~ orange merge); the name on tap is the second channel. A colour the user picked for a category still wins.
 - Exit page: a metal is in grams like every page (amounts `SamsamCoins.grams`, prices `/g`); a step's price is typed per
   gram and saved per ounce (`gpo()` in `samsam-exit.js`; `exit_metal_test.py`). The bot shows a metal's take-profit per
   gram too (`perUnit` in `alerts-core.mjs`; the AI's facts carry `unit: 'USD per gram'`).

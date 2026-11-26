@@ -2,21 +2,24 @@
 // allocation donut, category filter cards, P&L breakdowns, table/card tags, Add coin form.
 // To move a coin, change its line here — the cloud copy of each coin's category follows automatically.
 (function () {
-  // 🎨 No two colours here may look alike in the donut: Bitcoin keeps its orange and gold its gold, so no other category is
-  // orange or amber (Layer 0 and Launchpad were), and none is the Crypto class's violet (AI was).
+  // 🎨 One palette, measured — never pick a colour here by eye. Every colour that can share the donut (these categories,
+  // the metals below, the Crypto class's violet #8b5cf6) is at least ΔE 15 from every other one (OKLab × 100; it was 2.7),
+  // and no two sit in the same hue family: orange · blue · teal · bronze · aqua · magenta · green · periwinkle · lime · red ·
+  // pink (shares) · yellow (gold) · light grey (silver) · grey (other). Bitcoin keeps its orange. Shares are pink because
+  // blue, green, orange and yellow are taken beside them in the Net worth card. `palette_test.py` holds the floor.
   var CATS = [
     { key: 'btc',       label: 'Bitcoin',                    color: '#f7931a', coins: ['BTC'] },   // its own category (the portfolio is built around it)
-    { key: 'ai',        label: 'AI & DePIN',                 color: '#d946ef', coins: ['TAO', 'NEAR', 'ICP', 'RENDER', 'WLD'] },
-    { key: 'layer1',    label: 'Layer 1 Blockchains',        color: '#3b82f6', coins: ['ETH', 'SOL', 'SUI', 'APT', 'SEI', 'AVAX', 'KAS', 'HBAR', 'VET', 'XDC', 'FLR', 'NIGHT', 'KAVA', 'CRO', 'XPL', 'MON', 'MOVR', 'GLMR', 'GRAM'] },
-    { key: 'layer2',    label: 'Layer 2 Blockchains',        color: '#06b6d4', coins: ['ARB', 'OP', 'STRK', 'POL', 'MNT'] },
-    { key: 'layer0',    label: 'Layer 0 & Interoperability', color: '#b8834f', coins: ['DOT', 'ATOM', 'KSM', 'QNT'] },
-    { key: 'oracle',    label: 'Oracles & Middleware',       color: '#ec4899', coins: ['LINK', 'PYTH', 'AVAIL'] },
-    { key: 'defi',      label: 'DeFi & RWA',                 color: '#10b981', coins: ['ONDO', 'JUP'] },
-    { key: 'launchpad', label: 'Launchpad',                  color: '#fda4af', coins: ['PONS'] },
-    { key: 'web3',      label: 'Web3 & Gaming',              color: '#84cc16', coins: ['ENS'] },
-    { key: 'meme',      label: 'Meme & Utility Tokens',      color: '#ef4444', coins: ['DOGE', 'VTHO'] },
-    { key: 'metals',    label: 'Precious Metals',            color: '#eab308', coins: ['XAU', 'XAG', 'XPT', 'XCU', 'PAXG', 'XAUT', 'KAG'] },   // physical gold / silver (grams) and gold tokens
-    { key: 'stocks',    label: 'US Stocks (bStocks)',        color: '#38bdf8', coins: [] },   // 📈 tokenized US shares — the Add window's bStocks tab saves them here
+    { key: 'ai',        label: 'AI & DePIN',                 color: '#24e4c0', coins: ['TAO', 'NEAR', 'ICP', 'RENDER', 'WLD'] },
+    { key: 'layer1',    label: 'Layer 1 Blockchains',        color: '#008cf4', coins: ['ETH', 'SOL', 'SUI', 'APT', 'SEI', 'AVAX', 'KAS', 'HBAR', 'VET', 'XDC', 'FLR', 'NIGHT', 'KAVA', 'CRO', 'XPL', 'MON', 'MOVR', 'GLMR', 'GRAM'] },
+    { key: 'layer2',    label: 'Layer 2 Blockchains',        color: '#00a8a8', coins: ['ARB', 'OP', 'STRK', 'POL', 'MNT'] },
+    { key: 'layer0',    label: 'Layer 0 & Interoperability', color: '#9c8424', coins: ['DOT', 'ATOM', 'KSM', 'QNT'] },
+    { key: 'oracle',    label: 'Oracles & Middleware',       color: '#cc48a8', coins: ['LINK', 'PYTH', 'AVAIL'] },
+    { key: 'defi',      label: 'DeFi & RWA',                 color: '#009c00', coins: ['ONDO', 'JUP'] },
+    { key: 'launchpad', label: 'Launchpad',                  color: '#9ca8fc', coins: ['PONS'] },
+    { key: 'web3',      label: 'Web3 & Gaming',              color: '#90cc00', coins: ['ENS'] },
+    { key: 'meme',      label: 'Meme & Utility Tokens',      color: '#e43c18', coins: ['DOGE', 'VTHO'] },
+    { key: 'metals',    label: 'Precious Metals',            color: '#ffd60a', coins: ['XAU', 'XAG', 'XPT', 'XCU', 'PAXG', 'XAUT', 'KAG'] },   // physical gold / silver (grams) and gold tokens
+    { key: 'stocks',    label: 'US Stocks (bStocks)',        color: '#fc90b4', coins: [] },   // 📈 tokenized US shares — the Add window's bStocks tab saves them here
   ];
   var OTHER = { key: 'other', label: 'Other', color: '#6b7280', coins: [] };
   var BY_SYM = {}, LABELS = {}, COLORS = {};
@@ -98,8 +101,8 @@
   // Filters use 'c:<class>' for a whole class and the category key for one category.
   var CLASSES = [
     { key: 'crypto', label: 'Crypto', color: '#8b5cf6' },
-    { key: 'stock',  label: 'Stocks', color: '#38bdf8' },
-    { key: 'metal',  label: 'Metals', color: '#eab308' },
+    { key: 'stock',  label: 'Stocks', color: '#fc90b4' },
+    { key: 'metal',  label: 'Metals', color: '#ffd60a' },
     { key: 'cash',   label: 'Cash & CDs', color: '#22c55e' },   // only the Plan has these rows (a savings goal)
   ];
   var CLS = {}; CLASSES.forEach(function (c) { CLS[c.key] = c; });
@@ -113,10 +116,10 @@
   }
   // Inside Metals, each metal on its own (gold, silver — platinum / copper ready for later): grams and its tokens together
   var METAL_KINDS = [
-    { key: 'gold',     label: 'Gold',     color: '#eab308', syms: ['XAU', 'PAXG', 'XAUT'] },
+    { key: 'gold',     label: 'Gold',     color: '#ffd60a', syms: ['XAU', 'PAXG', 'XAUT'] },
     { key: 'silver',   label: 'Silver',   color: '#cbd5e1', syms: ['XAG', 'KAG'] },
-    { key: 'platinum', label: 'Platinum', color: '#a5b4fc', syms: ['XPT'] },
-    { key: 'copper',   label: 'Copper',   color: '#ea580c', syms: ['XCU'] },
+    { key: 'platinum', label: 'Platinum', color: '#a8a29e', syms: ['XPT'] },
+    { key: 'copper',   label: 'Copper',   color: '#a0522d', syms: ['XCU'] },
   ];
   var MK = {}, MK_SYM = {}; METAL_KINDS.forEach(function (m) { MK[m.key] = m; m.syms.forEach(function (s) { MK_SYM[s] = m.key; }); });
   function metalOf(sym) { return MK_SYM[String(sym || '').toUpperCase()] || null; }
@@ -167,7 +170,7 @@
     list: LIST,   // live: names / colours follow your settings
     labels: LABELS, colors: COLORS,   // live maps: your own categories are added to them
     ORDER: ORDER.slice(), isCustom: isCustom, register: register, applySettings: applySettings, settings: settings,
-    PALETTE: PALETTE.concat(['#3b82f6', '#a855f7', '#06b6d4', '#f59e0b', '#ec4899', '#10b981', '#f97316', '#84cc16', '#ef4444', '#6b7280']),
+    PALETTE: PALETTE.concat(['#008cf4', '#24e4c0', '#00a8a8', '#9c8424', '#cc48a8', '#009c00', '#9ca8fc', '#90cc00', '#e43c18', '#6b7280']),   // (the colour picker: your own tones first, then the built-in ones)
     defaultLabel: function (key) { return DEF[key] ? DEF[key].label : null; }, defaultColor: function (key) { return DEF[key] ? DEF[key].color : null; },
     isRemoved: function (key) { return !!SET.removed[key]; }, customKey: customKey, customs: customs, pickerKeys: pickerKeys,
     defaultOf: function (sym) { return BY_SYM[String(sym || '').toUpperCase()] || null; },

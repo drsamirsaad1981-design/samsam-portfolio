@@ -65,7 +65,7 @@ with sync_playwright() as p:
     check('a name that already exists is refused', 'already a category' in pg.inner_text('#cmError'), pg.inner_text('#cmError'))
     # reset the built-in
     pg.click('#cmList .cm-row[data-k="layer1"] .cm-reset'); pg.wait_for_timeout(900)
-    check('reset: built-in back to its name and colour', pg.evaluate("[SamsamTaxonomy.label('layer1'), SamsamTaxonomy.color('layer1')]") == ['Layer 1 Blockchains', '#3b82f6'])
+    check('reset: built-in back to its name and colour', pg.evaluate("[SamsamTaxonomy.label('layer1'), SamsamTaxonomy.color('layer1')]") == ['Layer 1 Blockchains', '#008cf4'])
     # delete your own → SOL back to its default
     pg.click(f'#cmList .cm-row[data-k="{key}"] .cm-del'); pg.wait_for_timeout(1200)
     st = pg.evaluate(f"[Samsam.getState().portfolio.find(c => c.sym === 'SOL').cat, SamsamTaxonomy.customs().some(c => c.key === '{key}')]")
