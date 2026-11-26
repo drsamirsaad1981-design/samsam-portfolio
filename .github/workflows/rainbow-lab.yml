@@ -1,0 +1,30 @@
+# 🌈 Bitcoin rainbow — a TRIAL (tools/lab/rainbow.mjs). It asks free sources for Bitcoin's daily price since 2010, fits the
+# line, cuts the nine bands and sets every number beside a published chart. Nothing in the app or the bot uses it and
+# nothing is written to the prices branch: the report is in the run's summary (and rainbow.md / rainbow.json to download).
+# Run it by hand: Actions → Rainbow lab → Run workflow. It also runs when the lab script itself changes.
+name: Rainbow lab
+on:
+  workflow_dispatch:
+  push:
+    branches: [drop-holdings]
+    paths: ['tools/lab/rainbow.mjs', '.github/workflows/rainbow-lab.yml']
+permissions:
+  contents: read
+jobs:
+  rainbow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/lab/rainbow.mjs --selftest
+      - run: node tools/lab/rainbow.mjs rainbow.md
+      - run: cat rainbow.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rainbow
+          path: |
+            rainbow.md
+            rainbow.json
