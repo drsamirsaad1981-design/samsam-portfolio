@@ -359,6 +359,14 @@
   R(/^moonbag (.+)$/, function (_, q) { return 'Moonbag ' + n(q); });
   R(/^Target hit — sell (.+?)( more)?$/, function (_, q, more) { return 'تحقق الهدف — بِع ' + n(q) + (more ? ' أخرى' : ''); });
   R(/^now (.+)$/, function (_, v) { return 'الآن ' + n(v); });
+  R(/^Band (\d)$/, 'النطاق $1');
+  R(/^(\d+)% (under|over) the trend line$/, function (_, v, w) { return (w === 'under' ? 'تحت' : 'فوق') + ' خط الاتجاه بـ ' + v + '%'; });
+  R(/^Close (\$[\d.,]+M?)$/, 'الإغلاق $1');
+  R(/^Last close in band (\d) — one more close confirms$/, 'آخر إغلاق في النطاق $1 — إغلاق آخر يؤكده');
+  R(/^([\d.]+)% of days since 2010$/, '$1% من الأيام منذ 2010');
+  R(/^Band (\d) of 9$/, 'النطاق $1 من 9');                                  // 🌈 the rainbow band
+  R(/^Target ≥ band (\d)$/, 'الهدف ≥ النطاق $1');
+  R(/^last close in band (\d)$/, 'آخر إغلاق في النطاق $1');
   R(/^Target (.+)$/, function (_, v) { return /[a-z]{3}/.test(v) ? null : 'الهدف ' + n(v); });
   R(/^Progress (.+%)$/, function (_, v) { return 'التقدّم ' + n(v); });
   R(/^(.+%) vs your Avg\. Buy Price$/, function (_, v) { return n(v) + ' مقابل متوسط سعر شرائك'; });
@@ -433,6 +441,20 @@
     'No coins found. Try a different search.': 'لا توجد عملات. جرّب بحثاً آخر.', "Type a coin name or symbol — any coin, even one you don't own yet.": 'اكتب اسم العملة أو رمزها — أي عملة، حتى لو لم تكن تملكها.',
     'CoinGecko is busy — wait a few seconds and type again.': 'CoinGecko مشغول — انتظر بضع ثوانٍ ثم اكتب مرة أخرى.',
     // ── Exit Strategy ──
+    // 🌈 the Bitcoin rainbow: the bands' names are samsam-core.js → RAINBOW_NAMES (rainbow_ar_test checks they are the same)
+    'Bitcoin Rainbow': 'قوس قزح البيتكوين', 'Bitcoin rainbow': 'قوس قزح البيتكوين', 'Rainbow': 'قوس قزح',
+    'Rare historic low': 'قاع تاريخي نادر', 'Deep discount': 'خصم عميق', 'Accumulation zone': 'منطقة تجميع', 'Around the trend line': 'حول خط الاتجاه', 'Above the trend line': 'فوق خط الاتجاه',
+    'Warming up': 'بداية سخونة', 'Hot': 'سخونة', 'Very hot': 'سخونة عالية', 'Bubble': 'فقاعة',
+    'On the trend line': 'على خط الاتجاه', 'Last daily close': 'آخر إغلاق يومي', 'Trend line': 'خط الاتجاه', 'This band': 'هذا النطاق', 'In this band since': 'في هذا النطاق منذ',
+    'counted after two daily closes': 'يُحسب بعد إغلاقين يوميين متتاليين', 'Band': 'النطاق', 'Range today': 'حدوده اليوم', 'Days since 2010': 'الأيام منذ 2010', 'Last moves:': 'آخر الانتقالات:',
+    'The line was last fitted on': 'آخر حساب للخط كان في', 'Loading the chart…': 'جارٍ تحميل الرسم…', 'The chart is not ready yet.': 'الرسم غير جاهز بعد.', 'Could not load the chart — try again later.': 'تعذّر تحميل الرسم — حاول لاحقاً.',
+    'One trend line through every daily close since 18 Aug 2010 (blockchain.com until 2017, Binance after), and nine equal bands between the deepest and the highest distance from it. The line is fitted again every week. It describes the past — it is not a forecast.': 'خط اتجاه واحد يمر بكل إغلاق يومي منذ 18 أغسطس 2010 (blockchain.com حتى 2017، ثم Binance)، وتسعة نطاقات متساوية بين أعمق نزول تحته وأعلى صعود فوقه. يُعاد حساب الخط كل أسبوع. هو وصف للماضي، وليس توقعاً.',
+    'Rainbow band at or over (1–9)': 'نطاق قوس قزح عند أو فوق (1–9)', 'The highest band each cycle held:': 'أعلى نطاق ثبت فيه السعر في كل دورة:',
+    '. Each cycle stopped lower than the one before — a high band may never come back.': '. كل دورة وقفت عند نطاق أقل من التي قبلها — والنطاق العالي قد لا يعود.',
+    'Nine bands around Bitcoin’s long-term trend line; a band counts after two daily closes in it.': 'تسعة نطاقات حول خط الاتجاه طويل المدى للبيتكوين؛ والنطاق يُحسب بعد إغلاقين يوميين متتاليين فيه.',
+    'Bitcoin moves to another band (after two daily closes)': 'عند انتقال البيتكوين إلى نطاق آخر (بعد إغلاقين يوميين متتاليين)',
+    'BTC dominance, USDT dominance, ETH/BTC and the rainbow band at your exit targets': 'هيمنة BTC وهيمنة USDT و ETH/BTC ونطاق قوس قزح عند أهداف الخروج',
+    'Reset to defaults': 'إعادة للافتراضي',
     'Macro Exit Indicators': 'مؤشرات الخروج الكبرى', 'Macro exit indicators': 'مؤشرات الخروج الكبرى', 'Edit targets': 'تعديل الأهداف', 'Signals Hit': 'الإشارات المتحققة',
     'USDT Dominance': 'هيمنة USDT', 'ETH / BTC': 'ETH / BTC', 'Waiting': 'انتظار', 'Close': 'إغلاق', 'Reached': 'تحقق', 'Below range': 'تحت النطاق', 'Above range': 'فوق النطاق', 'In range': 'داخل النطاق',
     'BTC.D at or under (%)': 'هيمنة BTC عند أو تحت (%)', 'USDT.D range — from (%)': 'نطاق هيمنة USDT — من (%)', 'USDT.D range — to (%)': 'نطاق هيمنة USDT — إلى (%)', 'ETH / BTC at or over': 'ETH / BTC عند أو فوق',

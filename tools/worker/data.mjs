@@ -83,7 +83,7 @@ export async function loadMarket(ids = [], coins = []) {
   await Promise.all(need.map(async id => { const s = await cached('p:' + id, 10 * 60e3, async () => priceSeries(await getJson(RAW + 'p/' + id + '.json')) || false); if (s) series[id] = s; }));
   // ⏳ every coin's daily close (00:00 UTC), one small file: the Signals are decided on it (data.mjs → summarize)
   const closeF = await cached('close', 10 * 60e3, async () => (await getJson(RAW + 'p/close.json')) || false);
-  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: CG_IDS, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
+  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, rainbow: base.m.rainbow || null, cgIds: CG_IDS, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
   await liveTopUp(market, all);
   // still no price (CoinGecko busy, not in the top 500, no price file) → the exchanges, by ticker (3 coins at most)
   const rows = new Map([...market.top, ...market.top500].map(r => [r.id, r]));

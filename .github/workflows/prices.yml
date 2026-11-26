@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['tools/update-prices.mjs', 'tools/update-market.mjs', 'tools/update-etf.mjs', 'tools/alerts.mjs', 'tools/alerts-core.mjs', 'tools/extra-price-ids.json', '.github/workflows/prices.yml', 'samsam-coins.js', 'samsam-core.js']
+    paths: ['tools/update-prices.mjs', 'tools/update-market.mjs', 'tools/update-etf.mjs', 'tools/update-rainbow.mjs', 'tools/alerts.mjs', 'tools/alerts-core.mjs', 'tools/extra-price-ids.json', '.github/workflows/prices.yml', 'samsam-coins.js', 'samsam-core.js']
 permissions:
   contents: write
 concurrency:
@@ -31,6 +31,11 @@ jobs:
             git worktree add -q --detach out HEAD
             cd out && git checkout -q --orphan prices && git rm -rfq . && git clean -fdq
           fi
+      # 🌈 the Bitcoin rainbow: once a day (the new UTC close); the other runs find nothing to do. Before the snapshot,
+      # which carries its small part to the bot and the alerts.
+      - name: Bitcoin rainbow (the bot's line, the alert, Market Hub)
+        run: node tools/update-rainbow.mjs out
+        continue-on-error: true
       - name: Market snapshot (Market Hub + Home card)
         run: node tools/update-market.mjs out
         continue-on-error: true

@@ -225,7 +225,7 @@
           '<span class="st-auto">Automatic copy: ' + (ad < 0 ? 'Not yet' : ad <= 0 ? 'Today' : ad === 1 ? 'Yesterday' : ad + ' days ago') + '</span>';
       }
       if (k === 'alerts') {
-        var a = s.getAlerts(), keys = ['brief', 'weekly', 'moves', 'signals', 'plan', 'buy', 'tp', 'macro', 'drift', 'dca', 'sentiment', 'etf', 'health'];
+        var a = s.getAlerts(), keys = ['brief', 'weekly', 'moves', 'signals', 'plan', 'buy', 'tp', 'macro', 'drift', 'dca', 'sentiment', 'rainbow', 'etf', 'health'];
         var on = keys.filter(function (x) { return a[x]; }).length;
         return (a.lang === 'ar' ? 'العربية' : 'English') + ' · ' + on + ' of ' + keys.length + ' on' + (a.brief ? ' · brief ' + a.briefTime : '');
       }

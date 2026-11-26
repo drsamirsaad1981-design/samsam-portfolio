@@ -17,7 +17,8 @@ import { bidi, bidiBody, NOT_ADVICE } from './bidi.mjs';
 import { markSeen } from './idle.mjs';
 import { note } from './usage.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR, askInvite, askedInvite, closeAsk, ASKS_PER_HOUR } from './who.mjs';
-import { summarize, wealthLine, planName, planAmt, dcaAmt, settings, W, esc, usd, usd2, perUnit, pct, dot, signed, local, localL, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
+import { summarize, wealthLine, planName, planAmt, dcaAmt, settings, W, esc, usd, usd2, perUnit, pct, dot, signed, local, localL, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay, rainbowLines } from '../alerts-core.mjs';
+import { rainbowName } from '../../samsam-core.js';
 import { chatUid, idTokenFor, setAlertsLang } from './data.mjs';
 import { balancesFor } from './cex.mjs';
 import { usMarket, US_STATE, METAL, UNIT, gramSar } from './usmarket.mjs';
@@ -61,10 +62,10 @@ const T = {
     other: '🌐 عربي', otherCode: 'ar', langSet: 'Language: English ✅', exit: '🚪 Exit plan',
     today: 'today', profit: 'All Time Profit', vsBtcS: 'vs BTC', beat: (a, n) => `${a}/${n} coins beat BTC`, bestT: 'Best today', worstT: 'Worst today',
     dom: 'Dominance', fng: 'Fear & Greed', altS: 'Altcoin Season', etf: 'ETF', planS: 'Plan', allocS: 'Allocation', onT: (a, n) => `${a}/${n} on target`,
-    dcaS: (n, mo) => `${n} buys · ${mo}/mo`, exitS: (n) => `Exit ${n}/3`, nearTp: 'next TP',
-    exitT: 'Exit plan', conds: 'Exit conditions', met3: n => `${n} of 3 met`, btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC',
+    dcaS: (n, mo) => `${n} buys · ${mo}/mo`, exitS: (n, N) => `Exit ${n}/${N}`, nearTp: 'next TP',
+    exitT: 'Exit plan', conds: 'Exit conditions', metN: (n, N) => `${n} of ${N} met`, btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC', rainbow: 'Rainbow band',
     tpT: 'Take-profit levels', tpKey: 'level · to go · sell', more: n => `+${n} more coins in the app`, toGo: 'to go', sellP: p => `sell ${p}%`, reached: 'reached', noExit: 'No take-profit levels yet — set them on the Exit Strategy page.',
-    openExit: '🚪 Open Exit Strategy', allExit: 'All 3 conditions met — your exit zone',
+    openExit: '🚪 Open Exit Strategy', allExit: N => `All ${N} conditions met — your exit zone`,
     kb: { pf: '💼 Portfolio', mk: '🌍 Market', pl: '📋 Plan', ex: '🚪 Exit', mv: '🏆 Movers', sg: '🎯 Signals' },
     kbOld: { mv: '🏆 Best & worst', ex: '🚪 Exit plan' },
     hidden: 'Buttons hidden ⌨️ — tap the ⌨️ icon in the message box (or send /start) to bring them back.',
@@ -98,10 +99,10 @@ const T = {
     other: '🌐 English', otherCode: 'en', langSet: 'اللغة: عربي ✅', exit: '🚪 خطة الخروج',
     today: 'اليوم', profit: 'إجمالي الربح', vsBtcS: 'مقابل البيتكوين', beat: (a, n) => `${a} من ${n} عملة تفوقت عليه`, bestT: 'الأفضل اليوم', worstT: 'الأسوأ اليوم',
     dom: 'الهيمنة', fng: 'الخوف والطمع', altS: 'موسم العملات البديلة', etf: 'ETF', planS: 'الخطة', allocS: 'التوزيع', onT: (a, n) => `${a} من ${n} على الهدف`,
-    dcaS: (n, mo) => `${n === 1 ? 'عملية شراء دوري واحدة' : n === 2 ? 'عمليتا شراء دوري' : n + ' عمليات شراء دوري'} (DCA) · ${mo} شهرياً`, exitS: (n) => `الخروج ${n} من 3`, nearTp: 'أقرب هدف ربح',
-    exitT: 'خطة الخروج', conds: 'مؤشرات الخروج', met3: n => `تحقق ${n} من 3`, btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC',
+    dcaS: (n, mo) => `${n === 1 ? 'عملية شراء دوري واحدة' : n === 2 ? 'عمليتا شراء دوري' : n + ' عمليات شراء دوري'} (DCA) · ${mo} شهرياً`, exitS: (n, N) => `الخروج ${n} من ${N}`, nearTp: 'أقرب هدف ربح',
+    exitT: 'خطة الخروج', conds: 'مؤشرات الخروج', metN: (n, N) => `تحقق ${n} من ${N}`, btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC', rainbow: 'نطاق قوس قزح',
     tpT: 'مستويات جني الأرباح', tpKey: 'السعر · المتبقي · البيع', more: n => `و${n} عملة أخرى في التطبيق`, toGo: 'المتبقي', sellP: p => `بيع ${p}%`, reached: 'وصل', noExit: 'لا توجد مستويات جني أرباح بعد — أضفها من صفحة استراتيجية الخروج في التطبيق.',
-    openExit: '🚪 افتح استراتيجية الخروج', allExit: 'تحققت المؤشرات الثلاثة — منطقة الخروج',
+    openExit: '🚪 افتح استراتيجية الخروج', allExit: N => `تحققت المؤشرات كلها (${N}) — منطقة الخروج`,
     kb: { pf: '💼 محفظتي', mk: '🌍 السوق', pl: '📋 الخطة', ex: '🚪 الخروج', mv: '🏆 الأفضل', sg: '🎯 الإشارات' },
     kbOld: { mv: '🏆 الأفضل والأسوأ', ex: '🚪 خطة الخروج' },
     hidden: 'أُخفيت الأزرار ⌨️ — اضغط علامة ⌨️ في خانة الكتابة (أو أرسل /start) لإعادتها.',
@@ -196,19 +197,19 @@ export function viewPortfolio(t, cfg, sum, m, now) {
   if (sum.alloc) L.push(`⚖️ ${t.allocS} ${t.onT(sum.alloc.onTarget, sum.alloc.count)}`);
   if ((sum.dca || []).length) L.push(`🛒 ${isAr(t) ? '' : 'DCA '}${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + (x.usdMo || 0), 0)))}`);
   const mc = sum.macro.filter(x => x.met).length, tp = nearestTp(sum);
-  L.push(`🚪 ${t.exitS(mc)}${tp ? ` · ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ''}`);
+  L.push(`🚪 ${t.exitS(mc, sum.macro.length)}${tp ? ` · ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ''}`);
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pf'), cb(t.movers, 'mv')], [cb(t.plan, 'pl'), cb(t.exit, 'ex')], [cb(t.signals, 'sg'), webApp(t.openApp)], [cb(t.back, 'menu')]] };
 }
 
-// 🚪 the exit plan: the 3 market conditions (BTC / USDT dominance, ETH/BTC) and your take-profit levels, nearest first
+// 🚪 the exit plan: the market conditions (BTC / USDT dominance, ETH/BTC, 🌈 the rainbow band) and your take-profit levels, nearest first
 export function viewExit(t, sum, now) {
-  const mc = sum.macro.filter(x => x.met).length, name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc };
-  const L = [`🚪 <b>${t.exitT}</b> · ${hm(now)}`, '', `🧭 <b>${t.conds}</b> · ${t.met3(mc)}`];
+  const mc = sum.macro.filter(x => x.met).length, N = sum.macro.length, name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc, rainbow: t.rainbow };
+  const L = [`🚪 <b>${t.exitT}</b> · ${hm(now)}`, '', `🧭 <b>${t.conds}</b> · ${t.metN(mc, N)}`];
   for (const x of sum.macro) {
     const v = n => n == null ? '—' : n.toFixed(x.dp) + x.unit;
-    L.push(`${x.met ? '✅' : '⏳'} ${name[x.k]}: ${v(x.now)} → ${x.op} ${v(x.lvl)}`);   // (one left-to-right piece in Arabic: "58.7% → ≤ 45.9%")
+    L.push(`${x.met ? '✅' : '⏳'} ${name[x.k]}: ${v(x.now)}${x.k === 'rainbow' && x.now ? ` (${rainbowName(x.now, isAr(t))})` : ''} → ${x.op} ${v(x.lvl)}`);   // (one left-to-right piece in Arabic: "58.7% → ≤ 45.9%")
   }
-  if (mc === 3) L.push(`🔔 <b>${t.allExit}</b>`);
+  if (mc === N) L.push(`🔔 <b>${t.allExit(N)}</b>`);
   const tps = (sum.tps || []).map(x => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
   L.push('', `🎯 <b>${t.tpT}</b>`, `<i>${t.tpKey}</i>`);
   if (!tps.length) L.push(t.noExit);
@@ -291,7 +292,7 @@ export function viewPlan(t, sum, now) {
 // switch; the choice is remembered), then the best / worst 5 Binance bStocks (tokenized US stocks)
 export const RANGES = [100, 200, 300, 500];
 export function viewMarket(t, m, now, range = 100) {
-  const L = [`🌍 <b>${t.mkT}</b> · ${hm(now)}`, '', ...marketShort(t, m)];
+  const L = [`🌍 <b>${t.mkT}</b> · ${hm(now)}`, '', ...marketShort(t, m), ...rainbowLines(isAr(t) ? W.ar : W.en, m, now)];   // (🌈 Bitcoin's rainbow band: here and in the weekly report)
   const seen = new Set(), top = [...(m.top || []), ...(m.top500 || [])].filter(r => r.rank && r.rank <= range && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));   // the top N by market cap, once each
   const line = r => row(r.sym, r.ch24, price(r.price));
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);

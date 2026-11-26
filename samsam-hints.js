@@ -112,8 +112,9 @@
     planAlloc: { title: 'Plan vs Target Allocation', body: function () { return '<p>If you bought everything this plan still needs, at today\'s prices — would your categories match your <b>target allocation</b>?</p>' +
       '<p>It compares today with "after the plan", category by category, inside your band.</p>' +
       '<p>Each plan coin gets a chip for its category today:</p><ul><li><b>↓ Priority</b>: the category is below its target — buying this coin moves you toward it.</li><li><b>↑ Over target</b>: already above — it can wait.</li><li><b>✓ On target</b>.</li></ul>'; } },
-    macroExit: { title: 'Macro Exit Indicators', body: function () { return '<p>Three whole-market signs that a cycle top may be near — with <b>your own levels</b>:</p>' +
-      '<ul><li><b>BTC Dominance</b> at or under your level (money has moved from Bitcoin into altcoins).</li><li><b>USDT Dominance</b> inside your range (little cash left on the side).</li><li><b>ETH / BTC</b> at or over your level (altcoins are beating Bitcoin).</li></ul>' +
+    macroExit: { title: 'Macro Exit Indicators', body: function () { return '<p>Four whole-market signs that a cycle top may be near — with <b>your own levels</b>:</p>' +
+      '<ul><li><b>BTC Dominance</b> at or under your level (money has moved from Bitcoin into altcoins).</li><li><b>USDT Dominance</b> inside your range (little cash left on the side).</li><li><b>ETH / BTC</b> at or over your level (altcoins are beating Bitcoin).</li>' +
+      '<li><b>Bitcoin Rainbow</b> at or over the band you choose (1–9). Nine bands around Bitcoin\'s long-term trend line; a band counts after two daily closes in it. It starts at band 6; Edit targets shows the highest band each past cycle held — choose yours.</li></ul>' +
       '<p><b>Reached</b> = at the level · <b>Close</b> = within 10% of it · <b>Waiting</b> = not yet. "Signals Hit" counts the ones reached.</p>' +
       '<p class="cph-ok">The page compares — it doesn\'t predict the top. Change the levels with Edit targets.</p>'; } },
     cashOut: { title: 'Cash-out Progress', body: function () { return '<p>How much of your portfolio already sits in stablecoins.</p>' +
@@ -137,6 +138,12 @@
       '<div class="cph-f"><b>Dominance</b><code>Coin\'s market cap ÷ total market cap × 100</code></div>' +
       '<p>The % are <b>CoinMarketCap\'s</b> (the ones most sites show), refreshed about every 30 minutes; the total market cap above is live from CoinGecko.</p>' +
       '<p><b>ETH / BTC</b> is the price of 1 ETH in BTC — rising means Ethereum (and usually altcoins) is beating Bitcoin.</p>'; } },
+    rainbow: { title: 'Bitcoin Rainbow', body: function () { return '<p>Where Bitcoin\'s price stands against its own long history.</p>' +
+      '<ul><li><b>The trend line</b>: one line through every daily close since 18 Aug 2010 (a power law: the price against the days since Bitcoin\'s first block).</li>' +
+      '<li><b>Nine bands</b>: the distance between the deepest close under the line and the highest over it, cut into nine equal parts. Band 1 is the lowest, 9 the highest; the line itself runs through band 4.</li>' +
+      '<li><b>The band that holds</b>: a move to another band counts after two daily closes in a row in it (00:00 UTC), so one day across an edge changes nothing.</li></ul>' +
+      '<p>The line is fitted again every week, so the edges move a little. The two outer bands rest on two days of 2010–2011, when the market was tiny: read them with a margin.</p>' +
+      '<p class="cph-ok">It describes the past — it is not a forecast. Each cycle\'s top has stopped in a lower band than the one before.</p>'; } },
     etf: { title: 'ETF Flows (US spot)', body: function () { return '<p>Money going into (+, green) or out of (−, red) the US spot Bitcoin or Ethereum ETFs, per trading day.</p>' +
       '<p>Big steady inflows mean institutions are buying; outflows mean they are selling. The totals show the last 7 days, the last 30 days and since launch.</p><p>Source: SoSoValue.</p>'; } },
     // ── cloud menu ──

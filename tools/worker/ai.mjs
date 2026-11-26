@@ -13,7 +13,7 @@
 import * as C from '../../samsam-core.js';
 import { usMarket, gramSar } from './usmarket.mjs';
 import { K, isOwner, aiLimitFor } from './who.mjs';
-import { summarize, settings, local, localParts, isStable, etfDay, APP } from '../alerts-core.mjs';
+import { summarize, settings, local, localParts, isStable, etfDay, APP, rainbowNow } from '../alerts-core.mjs';
 import { loadMarket, loadUser, findCoin, coinsOf, withIds, loadFutures, rawSeries, derivatives } from './data.mjs';
 import { addAlert, listAlerts, deleteAlert, describe, KINDS } from './watch.mjs';
 import { prepareTrade } from './trade.mjs';
@@ -56,7 +56,7 @@ export const TOOLS = [
     input_schema: { type: 'object', properties: { coin: { type: 'string', description: 'Ticker or name, e.g. "BTC", "sol", "pendle", "Render"' } }, required: ['coin'] } },
   { name: 'get_portfolio', description: "The user's whole wealth now. net_worth: the total with each part's share (Bitcoin, altcoins, metals, shares, cash & certificates — cash is in net worth only). Then the portfolio (crypto + metals + shares): total value, 24h / 7d change, all-time profit, result vs holding BTC, and EVERY coin with value, share %, 24h / 7d change, profit vs average buy price, signal, vs_btc_pct (its result minus the same dollars in BTC since bought) and vs_btc_30d_pts / vs_btc_90d_pts (strength vs BTC over 30 / 90 days); signal counts; allocation vs targets. One call answers questions about all coins — no need to call get_coin for each.",
     input_schema: { type: 'object', properties: {} } },
-  { name: 'get_market', description: 'The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market\'s state (open / closed, the next open or close in Riyadh time), and metals: gold, silver, platinum, copper (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).',
+  { name: 'get_market', description: 'The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market\'s state (open / closed, the next open or close in Riyadh time), Bitcoin\'s rainbow band (1–9 around its long-term trend line: a description of the past, never a forecast or an order to buy or sell), and metals: gold, silver, platinum, copper (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).',
     input_schema: { type: 'object', properties: { top: { type: 'integer', enum: [100, 200, 300, 500], description: 'Rank range for best / worst (default 100)' } } } },
   { name: 'get_zakat', description: "The user's zakat, with the app's own numbers: the one money pool (crypto + metals + cash & certificates + shares when he counts them) against the nisab (85 g of gold), 2.5%, his zakat day (hijri), the state (due / paid / upcoming / below the nisab), days left, what was paid. Use it for any zakat / زكاة / nisab / نصاب question. An estimate, not a fatwa.",
     input_schema: { type: 'object', properties: {} } },
@@ -101,6 +101,13 @@ function context(env) {
 }
 const srcOf = (m, id) => typeof m.live[id] === 'string' ? m.live[id] + ' (live)' : m.live[id] ? 'CoinGecko (live)' : 'market snapshot' + (m.parts && m.parts.top ? ' of ' + local(Date.parse(m.parts.top), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) + ' Riyadh' : '');
 
+// 🌈 Bitcoin's rainbow band for the AI: the same reading the bot's line and the alert use (samsam-core.js → rainbowRead)
+function rainbowFacts(m) {
+  const rb = rainbowNow(m, Date.now()); if (!rb) return null;
+  return { band: rb.band, of: 9, name: C.rainbowName(rb.band), name_ar: C.rainbowName(rb.band, true), pct_vs_trend_line: r2(rb.vs), trend_line_usd: Math.round(rb.line), band_low_usd: Math.round(rb.lo), band_high_usd: Math.round(rb.hi),
+    last_daily_close_usd: r6(rb.close), last_close_day: rb.day, held_since: rb.since, last_close_in_another_band: rb.pending, share_of_days_in_this_band_pct: rb.share ? rb.share[rb.band - 1] : null,
+    note: 'Nine equal bands (log scale) around one trend line fitted to every daily close since 18 Aug 2010; band 4 holds the line. A band counts after two daily closes in it. It describes the past — not a forecast and not an order to buy or sell.' };
+}
 export async function runTool(ctx, name, input) {
   const now = Date.now();
   if (name === 'get_coin') {
@@ -162,7 +169,7 @@ export async function runTool(ctx, name, input) {
     const st = (m.stocks || []).filter(r => r.ch24 != null);
     return { btc_price_usd: m.btc ? r6(m.btc.price) : null, btc_change_24h_pct: m.btc ? r2(m.btc.ch24) : null, total_market_cap_usd: g.mcap ? Math.round(g.mcap) : null, market_cap_change_24h_pct: r2(g.mcapCh24),
       btc_dominance_pct: r2(d.btc), eth_dominance_pct: r2(d.eth), usdt_dominance_pct: r2(d.usdt), fear_greed: m.fng ? { value: m.fng.value, label: m.fng.label, yesterday: m.fng.prev, week_ago: m.fng.week } : null,
-      altcoin_season: m.alt ? { value: m.alt.value, label: m.alt.label } : null, etf_flows_latest_day: e ? { date: e.date, btc_usd: e.btc, eth_usd: e.eth } : null,
+      altcoin_season: m.alt ? { value: m.alt.value, label: m.alt.label } : null, bitcoin_rainbow: rainbowFacts(m), etf_flows_latest_day: e ? { date: e.date, btc_usd: e.btc, eth_usd: e.eth } : null,
       [`top${n}_best_24h`]: pick(list, 1), [`top${n}_worst_24h`]: pick(list, -1), bstocks_best_24h: pick(st, 1).map(({ rank, ...x }) => x), bstocks_worst_24h: pick(st, -1).map(({ rank, ...x }) => x),
       bstocks_summary: st.length ? { count: st.length, up: st.filter(r => r.ch24 > 0).length, down: st.filter(r => r.ch24 < 0).length, avg_change_24h_pct: r2(st.reduce((a, r) => a + r.ch24, 0) / st.length) } : null,
       us_stock_market: (u => ({ state: u.state, next_change_riyadh: new Date(u.next).toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }), note: 'NYSE/Nasdaq hours, US holidays not counted; bStocks tokens trade 24/7' }))(usMarket()),
@@ -181,7 +188,7 @@ export async function runTool(ctx, name, input) {
   if (name === 'get_exit') {
     const x = await ctx.sum(); if (!x) return { error: 'portfolio not connected' };
     const { s } = x; ctx.used.add('your exit plan (Firebase)'); ctx.used.add('market snapshot');
-    return { conditions: s.macro.map(c => ({ name: { btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC' }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
+    return { conditions: s.macro.map(c => ({ name: { btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC', rainbow: 'Bitcoin rainbow band (1–9, held after two daily closes)' }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
       take_profits: (s.tps || []).map(t => ({ ticker: t.sym, tp: t.n, level_usd: r6(t.level / (t.g || 1)), price_now_usd: r6(t.price / (t.g || 1)), ...(t.g > 1 ? { unit: 'USD per gram' } : {}), pct_to_go: r2((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go) };
   }
   if (name === 'get_derivatives') {

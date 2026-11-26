@@ -812,3 +812,72 @@ export function planUnits(e, qty, ar = false) {
   if (k === 'cash') return { n: q, u: sym.slice(5), dp: 0 };
   return { n: q, u: sym, dp: 8 };
 }
+
+// ── 🌈 Bitcoin rainbow: one trend line through Bitcoin's whole history, and nine bands around it ──
+// The line: log10(price) = a + b · log10(days since the genesis block, 3 Jan 2009) — ordinary least squares on the daily
+// closes from 18 Aug 2010 (blockchain.com's daily price until 16 Aug 2017, Binance's UTC closes after). The distance between
+// the deepest close under the line and the highest one over it is cut into nine equal bands (equal on the log scale): band
+// 1 is the lowest, 9 the highest, and the line itself runs through band 4. Checked against crypto-economy.com's published
+// chart (tools/lab/rainbow.mjs): the same slope and intercept to four decimals. It describes the past; it predicts nothing.
+// A "day" is a UTC day number (ms / 864e5); rows are [day, price]. The file every reader shares is m/rainbow.json
+// (tools/update-rainbow.mjs): { fit: { a, b, lo, hi, … }, closes: [[iso, price] × 14], held: { band, since }, … }.
+const RB_DAY = 864e5;
+export const RAINBOW_GENESIS = Date.UTC(2009, 0, 3) / RB_DAY, RAINBOW_FROM = '2010-08-18', RAINBOW_EXIT = 6;   // RAINBOW_EXIT: the Exit page's band until you choose yours
+export const rainbowDay = iso => Math.floor(Date.parse(String(iso).slice(0, 10) + 'T00:00:00Z') / RB_DAY);
+export const rainbowIso = d => new Date(d * RB_DAY).toISOString().slice(0, 10);
+export const rainbowLine = (f, d) => 10 ** (f.a + f.b * Math.log10(d - RAINBOW_GENESIS));                       // the line's price on day d
+export const rainbowDev = (f, d, p) => Math.log10(p) - (f.a + f.b * Math.log10(d - RAINBOW_GENESIS));          // log10 distance from the line
+export const rainbowBand = (f, v) => Math.min(9, Math.max(1, Math.floor((v - f.lo) / ((f.hi - f.lo) / 9)) + 1));   // 1…9 (a new record stays in 1 / 9 until the next fit)
+export const rainbowEdges = (f, d) => Array.from({ length: 10 }, (_, i) => rainbowLine(f, d) * 10 ** (f.lo + i * (f.hi - f.lo) / 9));   // the ten edges of the nine bands on day d
+// the fit and its span: { a, b, r2, n, lo, hi, loDay, hiDay, share[9] (% of the days in each band) } — null under 30 days
+export function rainbowFit(rows, from = -Infinity, to = Infinity) {
+  let n = 0, sx = 0, sy = 0, sxx = 0, sxy = 0, syy = 0;
+  const use = [];
+  for (const [d, p] of rows) {
+    if (d < from || d > to || !(p > 0) || d <= RAINBOW_GENESIS) continue;
+    const x = Math.log10(d - RAINBOW_GENESIS), y = Math.log10(p);
+    n++; sx += x; sy += y; sxx += x * x; sxy += x * y; syy += y * y; use.push([d, p]);
+  }
+  if (n < 30) return null;
+  const b = (n * sxy - sx * sy) / (n * sxx - sx * sx), a = (sy - b * sx) / n;
+  const f = { a, b, r2: 1 - (syy - a * sy - b * sxy) / (syy - sy * sy / n), n, lo: Infinity, hi: -Infinity, loDay: null, hiDay: null };
+  const devs = use.map(([d, p]) => { const v = rainbowDev(f, d, p); if (v < f.lo) { f.lo = v; f.loDay = d; } if (v > f.hi) { f.hi = v; f.hiDay = d; } return v; });
+  const share = Array(9).fill(0); devs.forEach(v => share[rainbowBand(f, v) - 1]++);
+  f.share = share.map(c => c / n * 100);
+  return f;
+}
+// The band that HOLDS: a move to another band counts after two daily closes in a row in it (one close across an edge and
+// back sends nothing). bands: one band a day, oldest first → rainbowHeldAll: the held band on each of those days ·
+// rainbowHeld: { band: the one that holds now, i: the index of the first of its two closes (0 when it never changed) }
+export function rainbowHeldAll(bands, start) {
+  const out = []; let band = start != null ? start : bands[0];
+  for (let k = 0; k < bands.length; k++) { if (k > 0 && bands[k] !== band && bands[k] === bands[k - 1]) band = bands[k]; out.push(band); }
+  return out;
+}
+export function rainbowHeld(bands, start) {
+  const a = rainbowHeldAll(bands, start); let k = a.length - 1;
+  while (k > 0 && a[k - 1] === a[k]) k--;
+  return { band: a[a.length - 1], i: Math.max(0, k - 1) };
+}
+// What the file says now — one answer for the bot's line, the alert, the Exit page and the Market Hub card:
+// { day, close, band: the band that holds, last: the last close's band, pending: last when it differs (one more close
+//   confirms it), line, vs: % over (+) / under (−) the line, lo / hi: the held band's edges on that day, edges[10],
+//   since, share, fit } · `price`: a live price for line / vs (the band stays the daily closes'); null when the file is
+//   missing or its last close is over 4 days old (nothing is shown or alerted on old numbers)
+export function rainbowRead(R, now = Date.now(), price = null) {
+  const f = R && R.fit, cl = R && Array.isArray(R.closes) ? R.closes.filter(c => c && +c[1] > 0).map(c => ({ iso: String(c[0]), d: rainbowDay(c[0]), p: +c[1] })).sort((x, y) => x.d - y.d) : [];
+  if (!f || !(f.b > 0) || !(f.hi > f.lo) || !cl.length) return null;
+  const end = cl[cl.length - 1], today = Math.floor(now / RB_DAY);
+  if (today - end.d > 4) return null;
+  cl.forEach(c => { c.band = rainbowBand(f, rainbowDev(f, c.d, c.p)); });
+  const held = R.held && R.held.band >= 1 && R.held.band <= 9 ? R.held : { band: rainbowHeld(cl.map(c => c.band)).band, since: null };
+  const live = +price > 0, d = live ? Math.max(end.d, today) : end.d, p = live ? +price : end.p, line = rainbowLine(f, d), edges = rainbowEdges(f, d);
+  return { day: end.iso, close: end.p, band: held.band, last: end.band, pending: end.band !== held.band ? end.band : null, price: p, live, line, vs: (p / line - 1) * 100,
+    lo: edges[held.band - 1], hi: edges[held.band], edges, since: held.since || null, share: f.share || null, fit: f, closes: cl };
+}
+// the bands' names, lowest first — they describe where the price stands, never an order to buy or sell (band 4 holds the
+// line itself). Samir's mix (27 Nov): his wording for the low side, the short "heat" ladder for the high side.
+export const RAINBOW_NAMES = Object.freeze({
+  en: ['Rare historic low', 'Deep discount', 'Accumulation zone', 'Around the trend line', 'Above the trend line', 'Warming up', 'Hot', 'Very hot', 'Bubble'],
+  ar: ['قاع تاريخي نادر', 'خصم عميق', 'منطقة تجميع', 'حول خط الاتجاه', 'فوق خط الاتجاه', 'بداية سخونة', 'سخونة', 'سخونة عالية', 'فقاعة'] });
+export const rainbowName = (band, ar) => RAINBOW_NAMES[ar ? 'ar' : 'en'][band - 1] || '';

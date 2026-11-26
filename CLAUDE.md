@@ -24,6 +24,14 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 - Fear & Greed: CoinMarketCap's value (kept up to 6 h when CMC answers 429; the app accepts it up to 6.5 h old),
   alternative.me only as a fallback.
 - The Net worth card shows on Overview and on Allocation only.
+- 🌈 Bitcoin rainbow (27 Nov): one trend line through every daily close since 18 Aug 2010, nine equal bands (log scale); the
+  line is in band 4. **A band counts after two daily closes in a row** ("the band that holds"). The line is fitted again
+  once a week (closes up to the last Sunday, UTC). Names (his mix, low → high): Rare historic low · Deep discount ·
+  Accumulation zone · Around the trend line · Above the trend line · Warming up · Hot · Very hot · Bubble
+  (قاع تاريخي نادر · خصم عميق · منطقة تجميع · حول خط الاتجاه · فوق خط الاتجاه · بداية سخونة · سخونة · سخونة عالية · فقاعة) —
+  never "buy" / "sell", never "fair value" (the line is a trend, not a valuation). Always "it describes the past, not a
+  forecast". The alert goes on every move between bands. The Exit page's 4th indicator is the band **you** choose (6 until
+  you do). Bitcoin only.
 
 ## Where things are
 
@@ -35,6 +43,7 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 | Main page | `samsam-home.js` (+ `samsam-home.css`), `samsam-hchart.js`, `samsam-analysis.js` (AI report), `samsam-cash.js` |
 | Shared UI | `samsam-ui.js` (header, footer, bottom bar, AI button, CPDialog), `samsam-lang.js` + `samsam-ar.js` (Arabic), `samsam-hints.js` |
 | Market data in the app | `samsam-market.js` (snapshot first, CoinGecko live) |
+| 🌈 Bitcoin rainbow | maths + names `samsam-core.js` (`rainbowFit`, `rainbowRead`, `RAINBOW_NAMES`); the daily job `tools/update-rainbow.mjs` → `m/btcday.json` (every close since 2010) + `m/rainbow.json` (its small part is copied into `m/market.json` by `update-market.mjs` — the Worker has no outside call to spare); Market Hub card `samsam-rainbow.js`; the bot's lines and the alert `tools/alerts-core.mjs` (`rainbowLines`, `evaluate` 4b); the lab `tools/lab/rainbow.mjs` |
 | Taxonomy | `samsam-taxonomy.js` (classes crypto / stock / metal / cash, categories) |
 | Market snapshot (GitHub Actions → branch `prices`) | `tools/update-market.mjs`, `tools/update-prices.mjs`, `tools/update-etf.mjs` → `m/market.json`, `m/etf.json`, `p/*.json` |
 | Bot + AI (Cloudflare Worker) | `tools/worker/*.mjs` (bot, ai tools, daily jobs, data), `tools/ai-worker.js`, `tools/alerts-core.mjs` (summary + messages) |
@@ -43,7 +52,8 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 | Guide | `guide-app.json` (app), `guide.json` (bot) |
 
 One answer everywhere: a number shown in two places must come from one function (e.g. `wealthNow()` for the Net worth card,
-the PDF, the CSV and the AI report; `summarize().wealth` in the bot; `zakatPool` / `zakatYear` for zakat in app and bot).
+the PDF, the CSV and the AI report; `summarize().wealth` in the bot; `zakatPool` / `zakatYear` for zakat in app and bot;
+`rainbowRead()` for the rainbow band in the bot's line, the alert, the Exit page and the Market Hub card).
 
 ## Build, test, release
 
@@ -59,7 +69,7 @@ the PDF, the CSV and the AI report; `summarize().wealth` in the bot; `zakatPool`
   shared card explicitly, and test `font-family` / `line-height`, not only pixels.
 - Never slice code up to "the next `}`" when replacing a function: check with `git diff` that only the intended lines changed.
 
-## Where we stopped (26 Nov 2026) — read this first in a new chat
+## Where we stopped (27 Nov 2026) — read this first in a new chat
 
 Done and live, in this order:
 1. Home: three market cards (Fear & Greed gauge, Altcoin Season, dominance) → Market Hub; the moving line above Net worth
@@ -138,27 +148,36 @@ Fourth round (26–27 Nov, his "موافق" on the legend and the small items):
   with "−100%").
 - Samir saw the "New in the guide" message (five parts) in the bot and the new colours on his phone.
 
+Fifth round (27 Nov, his "ابدأ" with three decisions) — 🌈 the Bitcoin rainbow, live:
+- The maths moved from the lab into `samsam-core.js`; `tools/update-rainbow.mjs` runs before the market snapshot in
+  "Price history": the first run takes the old days from blockchain.com once and **refuses to write unless they give the
+  published line** (b 5.5943, a −16.1839, 5,930 days to 11 Nov 2026); after that only the missing Binance closes are asked
+  for (Bitstamp when Binance is silent). A file whose last close is over 4 days old is ignored everywhere.
+- Bot: two short lines in `/market` and in the weekly report (not the morning brief); the AI's `get_market` carries
+  `bitcoin_rainbow`. Alert `rb-<band>` for the owner (GitHub's `evaluate`; switch `rainbow` in the alerts sheet, 15
+  switches now): sent at once, after 07:00; when the move reaches his exit band the same message says so.
+- Exit conditions are **four** everywhere (app "Signals Hit: n of 4", bot "n of 4", `sum.macro[3]`): the rainbow band at
+  or over `exitTargets.rainbow` (1–9, default `RAINBOW_EXIT` = 6). Under the field: the highest band each cycle held
+  (`peaks`, halving to halving — from the file, never typed in).
+- Market Hub: the card under ETF Flows (closed: the band, its name, the strip of nine with the close's place; open: four
+  numbers, the log chart since 2010 with hover, the table of bands, the cycles, the last moves). `market.html#rainbow`
+  opens it (the alert's button). Nine band colours measured like the donut's (every pair ≥ 15, closest 15.6); a band is
+  never told by colour alone (its number is on the strip, in the tooltip, in the table).
+- `guide.json` (the bot's guide) was NOT touched — it posts to the channel; a rainbow section needs his approval first.
+- His first list of names had "Fair value" on band 5; the line runs through band 4, so the names follow the line
+  (he agreed: "توجيهك أدق").
+
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
   in `users/<uid>/meta/alerts`, six kinds on by default, quiet hours, a daily cap; owner first, then one member, then all.
-- (B) A Bitcoin rainbow indicator + alert (he chose the nine-band rainbow; "the most important thing is accuracy").
-  **Trial done 27 Nov** (`tools/lab/rainbow.mjs`, Actions → "Rainbow lab", by hand; nothing in the app or the bot uses it):
-  blockchain.com, Coin Metrics, Binance and Bitstamp answer from GitHub (Nasdaq Data Link: 403 without a key). Recipe =
-  crypto-economy.com's documented one: blockchain.com's daily price until 16 Aug 2017, Binance UTC closes after; least
-  squares of log10(price) on log10(days since 3 Jan 2009) from 18 Aug 2010; nine equal bands (log scale) between the
-  deepest and the highest deviation. Our fit on their period equals theirs to four decimals (b 5.5943, a −16.1839,
-  R² 0.960, 5,930 days; the line on 24 Nov $144,282 vs $144,281; band 2 of 9 both). Middle band edges within ~1.5%, the
-  outer ones up to 4.7%: they hang on two thin-market days (7 Oct 2010, 11 Jun 2011) that differ by source. Tops reached
-  band 9 · 9 · 8 · 6 · 4 (2011 · 2013 · 2017 · 2021 · Oct 2025): the upper bands may never come back.
-  Next, on his "نفذ": the maths into `samsam-core.js`, a weekly file on the `prices` branch, the bot's line + alert (owner
-  first, daily close × 2), then the Market Hub card. Open: descriptive band names or the classic ones; his own band
-  thresholds for the alert; a 4th Exit indicator.
+  (The rainbow alert reaches members with this phase; today they see the line in `/market` and the weekly report.)
 
 Still open:
-1. The two proposals above.
+1. The members' alerts above; a rainbow section in the bot's guide (his approval: it posts to the channel).
 2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
 3. The PDF and the CSV are in English when the app is Arabic.
 4. The AI button over a card's corner in mid-page (inherent to a floating button; moving it is a design decision).
+5. The Exit page's state "Close" (near a level) reads "إغلاق" in Arabic — it shares its English word with the Close button.
 
 ## Open ideas (not requested yet)
 

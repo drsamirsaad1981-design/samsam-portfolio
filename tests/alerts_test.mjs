@@ -1,7 +1,8 @@
 // Telegram alerts (tools/alerts-core.mjs): the numbers, each alert once, quiet hours, the brief / weekly timing,
 // English + Arabic, and text Telegram accepts (HTML with only <b> <i> <code>, every & < > escaped).
-import { summarize, evaluate, settings, priceSeries, brief, combine, NOW_KEYS } from '../tools/alerts-core.mjs';
+import { summarize, evaluate, settings, priceSeries, brief, combine, NOW_KEYS, rainbowLines, W } from '../tools/alerts-core.mjs';
 import { signalFor, strengthMap } from '../samsam-core.js';
+import * as C from '../samsam-core.js';
 let pass = 0, fail = 0;
 const check = (n, c, d = '') => { if (c) pass++; else fail++; console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' -> ' + JSON.stringify(d).slice(0, 300))); };
 const H = 3600e3, DAY = 24 * H;
@@ -94,7 +95,7 @@ check('…only once', !r.messages.some(x => x.key === 'sig-day')); st = r.state;
 const t4 = t3 + H, m4 = mk({ now: t4, btc: 84800, sei: 0.045, link: 25.5, dom: 45 }), s4 = summarize(user(), m4, t4);
 r = evaluate(s4, m4, st, cfg, t4);
 check('LINK ≥ TP1 → take-profit alert with your 25%', r.messages.some(x => x.key === 'tp-LINK:1' && /25%/.test(x.text)), r.messages.map(m => m.key));
-check('BTC dominance 45% ≤ 45.9% → exit level alert (1 of 3)', r.messages.some(x => x.key === 'macro-btcD' && /1 of 3/.test(x.text)), r.messages.map(m => m.key)); st = r.state;
+check('BTC dominance 45% ≤ 45.9% → exit level alert (1 of 4: the rainbow band is the fourth)', r.messages.some(x => x.key === 'macro-btcD' && /1 of 4/.test(x.text)), r.messages.map(m => m.key)); st = r.state;
 
 // SEI target reached (a buy) → plan alert
 const u5 = user(); u5.txs = [{ id: 'x', sym: 'SEI', type: 'buy', qty: 1500, price: 0.045, date: new Date(t4).toISOString() }];
@@ -291,5 +292,79 @@ check('all texts Telegram-safe', all.every(okHtml));
   const arCfg = settings({ alerts: { lang: 'ar', digest: false } }), a0 = evaluate(s, mk(), {}, arCfg, T0).state;
   const mvA = evaluate(s2, m2, a0, arCfg, t2).messages.find(x => x.key === 'move-btc');
   check('Arabic BTC move: "خلال ساعتين" (not "2h"), the button "مركز السوق" (not "Market Hub")', mvA && /خلال ساعتين/.test(mvA.text) && !/\dh\b/.test(mvA.text) && mvA.buttons.flat().some(b => b.text === 'مركز السوق') && !mvA.buttons.flat().some(b => /Market Hub/.test(b.text)), mvA && [mvA.text, mvA.buttons.flat().map(b => b.text)]);
+}
+
+// 🌈 the Bitcoin rainbow: a line in the weekly report, an alert when the band that holds changes (two daily closes), the
+// exit band you chose as the 4th exit condition. The file's maths has its own test (rainbow_test.mjs); here: the messages.
+{
+  const RBF = { a: -16.1839, b: 5.5943, lo: -0.746, hi: 1.216, share: [0.8, 11.8, 33.5, 24.8, 14.5, 9.8, 2.8, 1.7, 0.2], to: '2026-11-01' }, W9 = (RBF.hi - RBF.lo) / 9;
+  // the file as it stands on the morning of `now`: one band per close (the last one = yesterday's), the band that holds
+  const rbFile = (now, bands, held, since) => { const today = Math.floor(now / DAY); return { v: 1, fit: RBF, held: { band: held, since },
+    closes: bands.map((b, i) => { const d = today - (bands.length - i); return [C.rainbowIso(d), C.rainbowLine(RBF, d) * 10 ** (RBF.lo + (b - 0.5) * W9)]; }) }; };
+  const withRb = (now, bands, held, since, o = {}) => { const m = mk({ now, ...o }); m.rainbow = rbFile(now, bands, held, since); const mid = m.rainbow.closes.at(-1)[1]; m.btc = { price: mid, ch24: 0 }; return m; };
+  const D0 = Date.parse('2026-11-10T06:00:00Z');   // 09:00 in Riyadh, a Tuesday
+  const run = (m, st, now, c = cfg, meta = {}) => evaluate(summarize(user(meta), m, now), m, st, c, now);
+  let m = withRb(D0, [2, 2, 2], 2, '2026-10-20'), s0 = summarize(user(), m, D0);
+  check('🌈 the exit conditions are four: the rainbow band is the last, against band 6 until you choose', s0.macro.length === 4 && s0.macro[3].k === 'rainbow' && s0.macro[3].now === 2 && s0.macro[3].lvl === 6 && s0.macro[3].met === false, s0.macro[3]);
+  check('🌈 your own band is read from the Exit page\'s targets (1–9)', summarize(user({ exitTargets: { rainbow: 4 } }), m, D0).macro[3].lvl === 4 && summarize(user({ exitTargets: { rainbow: 40 } }), m, D0).macro[3].lvl === 9 && summarize(user({ exitTargets: { rainbow: 'x' } }), m, D0).macro[3].lvl === 6);
+  // an account that already had alerts: the band is remembered quietly, nothing is sent
+  let base = evaluate(s0, mk({ now: D0 }), {}, cfg, D0).state;   // (a state from before the rainbow existed)
+  let q = run(m, base, D0 + H);
+  check('🌈 the first time the band is seen: remembered, no message', !q.messages.some(x => /^rb-/.test(x.key)) && q.state.rb.b === 2 && q.state.rb.d === '2026-10-20', q.messages.map(x => x.key));
+  let stR = q.state;
+  // one close in band 3: pending — nothing sent, the line says one more close confirms
+  m = withRb(D0 + DAY, [2, 2, 3], 2, '2026-10-20'); q = run(m, stR, D0 + DAY);
+  check('🌈 one close in the next band: no alert', !q.messages.some(x => /^rb-/.test(x.key)) && q.state.rb.b === 2, q.messages.map(x => x.key)); stR = q.state;
+  const ln = rainbowLines(W.en, m, D0 + DAY), lnA = rainbowLines(W.ar, m, D0 + DAY);
+  check('🌈 the line: band, name, percent against the line — and the pending close', ln.length === 3 && ln[0] === '🌈 Bitcoin rainbow  <b>band 2 of 9</b>' && /^Deep discount · −\d+% vs the line$/.test(ln[1]) && ln[2] === '<i>Last close: band 3 · one more confirms</i>', ln);
+  check('🌈 the Arabic line starts with Arabic words and names the band in Arabic', lnA[0] === '🌈 قوس قزح البيتكوين: <b>النطاق 2 من 9</b>' && /^خصم عميق · أقل من الخط بـ \d+%$/.test(lnA[1]) && lnA[2] === '<i>آخر إغلاق: النطاق 3 · إغلاق آخر يؤكده</i>', lnA);
+  // the second close in band 3: the alert, at once (not held for the digest), once
+  m = withRb(D0 + 2 * DAY, [2, 3, 3], 3, '2026-11-10'); q = run(m, stR, D0 + 2 * DAY, settings({ alerts: { digest: true } }));
+  const up = q.messages.find(x => x.key === 'rb-3'), eod = C.rainbowRead(m.rainbow, D0 + 2 * DAY);
+  check('🌈 two closes in band 3 → one alert, sent at once', !!up && NOW_KEYS.test('rb-3') && !(q.state.held || []).some(x => /^rb-/.test(x.key)), q.messages.map(x => x.key));
+  check('🌈 the alert: up to band 3 and its name, the close against the line, the band\'s edges, what it was before and since when', up && /^🌈 <b>Bitcoin moved up to band 3 of 9 · Accumulation zone<\/b>\n/.test(up.text) && up.text.includes(`Close $${Math.round(eod.close).toLocaleString('en-US')} · `) && /% under the trend line \(\$[\d,]+\)\n/.test(up.text)
+    && up.text.includes(`Band 3: $${Math.round(eod.lo).toLocaleString('en-US')} – $${Math.round(eod.hi).toLocaleString('en-US')}`) && /Before: band 2 · Deep discount since 20 Oct\n/.test(up.text) && /<i>Counted after two daily closes in the new band\. It describes the past; it is not a forecast\.<\/i>$/.test(up.text) && okHtml(up.text), up && up.text);
+  check('🌈 the alert opens the Market Hub at the rainbow; no word telling you to buy or sell', up && up.buttons.flat().some(b => /market\.html#rainbow$/.test(b.url || '')) && !/\b(buy|sell)\b/i.test(up.text), up && up.buttons);
+  check('🌈 the new band is remembered with its first day', q.state.rb.b === 3 && q.state.rb.d === '2026-11-10'); stR = q.state;
+  q = run(m, stR, D0 + 2 * DAY + H); check('🌈 the same band an hour later: nothing again', !q.messages.some(x => /^rb-/.test(x.key))); stR = q.state;
+  // back down, in Arabic
+  const arC = settings({ alerts: { lang: 'ar', digest: false } });
+  m = withRb(D0 + 5 * DAY, [3, 2, 2], 2, '2026-11-13'); q = run(m, stR, D0 + 5 * DAY, arC);
+  const dn = q.messages.find(x => x.key === 'rb-2');
+  check('🌈 Arabic, down: "نزل إلى النطاق 2 من 9 · خصم عميق", the edges "من … إلى …", "قبلها: النطاق 3 · منطقة تجميع منذ 10 نوفمبر"', dn && /^🌈 <b>البيتكوين نزل إلى النطاق 2 من 9 · خصم عميق<\/b>\n/.test(dn.text) && /\nالإغلاق \$[\d,]+ · تحت خط الاتجاه بـ \d+% \(\$[\d,]+\)\n/.test(dn.text) && /\nحدود النطاق 2: من \$[\d,]+ إلى \$[\d,]+\n/.test(dn.text) && /\nقبلها: النطاق 3 · منطقة تجميع منذ 10 نوفمبر\n/.test(dn.text) && /وصف للماضي، وليس توقعاً/.test(dn.text) && dn.buttons.flat().some(b => b.text === 'مركز السوق') && okHtml(dn.text), dn && dn.text);
+  // 03:10 in Riyadh (the close has just come): kept for after 07:00, then sent
+  const N3 = Date.parse('2026-11-20T00:10:00Z'); m = withRb(N3, [2, 3, 3], 3, '2026-11-18'); q = run(m, q.state, N3);
+  check('🌈 quiet hours (03:10 Riyadh): not sent, not forgotten', !q.messages.some(x => /^rb-/.test(x.key)) && q.state.rb.b === 2, q.messages.map(x => x.key));
+  m = withRb(N3 + 4 * H, [2, 3, 3], 3, '2026-11-18'); q = run(m, q.state, N3 + 4 * H);
+  check('🌈 …and it comes after 07:00', q.messages.some(x => x.key === 'rb-3') && q.state.rb.b === 3, q.messages.map(x => x.key));
+  // the exit band you chose (3 here): the same message says so — no second "exit level" message
+  const X0 = Date.parse('2026-12-01T06:00:00Z'), ex = { exitTargets: { rainbow: 3 } };
+  let sx = run(withRb(X0, [2, 2, 2], 2, '2026-11-25'), run(withRb(X0 - DAY, [2, 2, 2], 2, '2026-11-25'), {}, X0 - DAY, cfg, ex).state, X0, cfg, ex).state;
+  m = withRb(X0 + DAY, [2, 3, 3], 3, '2026-11-30'); q = run(m, sx, X0 + DAY, cfg, ex);
+  const hit = q.messages.find(x => x.key === 'rb-3');
+  check('🌈 the move reaches your exit band: one message with "Your exit band (3) is reached · 1 of 4", and the Exit page\'s button', hit && /\n🧭 <b>Your exit band \(3\) is reached<\/b> · 1 of 4 of your exit conditions are met\n/.test(hit.text) && hit.buttons.flat().length === 2 && !q.messages.some(x => x.key === 'macro-rainbow') && q.state.macro.rainbow === 1, q.messages.map(x => [x.key, x.text]));
+  q = run(m, q.state, X0 + DAY + H, cfg, ex); check('🌈 …and no exit-level message for it an hour later', !q.messages.some(x => /rainbow|^rb-/.test(x.key)));
+  // the rainbow alert switched off: the band is followed quietly; your exit band still alerts, as an exit level
+  const off = settings({ alerts: { digest: false, rainbow: false } });
+  q = run(m, sx, X0 + DAY, off, ex);
+  const mx = q.messages.find(x => x.key === 'macro-rainbow');
+  check('🌈 switched off: no band message, the exit band still alerts as an exit level', !q.messages.some(x => /^rb-/.test(x.key)) && q.state.rb.b === 3 && mx && /Exit level reached · Rainbow band<\/b>\nband 3 of 9 · Accumulation zone · 3 ≥ 3\n1 of 4/.test(mx.text), q.messages.map(x => [x.key, x.text]));
+  // an old file (the job stopped): nothing is said, nothing counts as met
+  const old = withRb(X0 + DAY, [2, 3, 3], 3, '2026-11-30'), late = X0 + 6 * DAY; const mo = mk({ now: late }); mo.rainbow = old.rainbow;
+  q = run(mo, sx, late, cfg, ex);
+  check('🌈 a file over 4 days old: no line, no alert, the exit band not met', rainbowLines(W.en, mo, late).length === 0 && !q.messages.some(x => /rainbow|^rb-/.test(x.key)) && summarize(user(ex), mo, late).macro[3].now === null && q.state.rb.b === 2);
+  check('🌈 no file at all: no line, the fourth condition waits', rainbowLines(W.en, mk({ now: D0 }), D0).length === 0 && summarize(user(), mk({ now: D0 }), D0).macro[3].met === false);
+  // the weekly report carries the line; the morning brief does not
+  m = withRb(D0, [2, 2, 2], 2, '2026-10-20'); const sw = summarize(user(), m, D0);
+  check('🌈 the weekly report has the rainbow line under the market; the morning brief does not', /\n🌈 Bitcoin rainbow  <b>band 2 of 9<\/b>\nDeep discount · −\d+% vs the line\n/.test(brief(sw, m, cfg, D0, true).text) && !/🌈/.test(brief(sw, m, cfg, D0, false).text) && okHtml(brief(sw, m, cfg, D0, true).text));
+  check('🌈 the weekly report in Arabic', /\n🌈 قوس قزح البيتكوين: <b>النطاق 2 من 9<\/b>\nخصم عميق · أقل من الخط بـ \d+%\n/.test(brief(sw, m, arC, D0, true).text));
+  // exactly on the line
+  const onL = mk({ now: D0 }); onL.rainbow = rbFile(D0, [4, 4, 4], 4, '2026-01-01'); onL.btc = { price: C.rainbowLine(RBF, Math.floor(D0 / DAY)), ch24: 0 };
+  check('🌈 a price on the line reads "on the line"', rainbowLines(W.en, onL, D0)[1] === 'Around the trend line · on the line');
+  // every band, at both of its edges and far beyond: each line fits a phone (40 characters), in both languages
+  { const plain = x => x.replace(/<[^>]+>/g, ''); let worst = 0, which = '';
+    for (const lang of ['en', 'ar']) for (let b = 1; b <= 9; b++) for (const k of [0.001, 0.999]) { const f = mk({ now: D0 }), d = Math.floor(D0 / DAY); f.rainbow = rbFile(D0, [b, b, b === 9 ? 8 : b + 1], b, '2026-01-01');
+      f.btc = { price: C.rainbowLine(RBF, d) * 10 ** (RBF.lo + (b - 1 + k) * W9) }; for (const l of rainbowLines(W[lang], f, D0)) { const n = [...plain(l)].length; if (n > worst) { worst = n; which = l; } } }
+    check(`🌈 the lines fit a phone in every band (longest ${worst} ≤ 40)`, worst <= 40, which); }
 }
 console.log(`${pass}/${pass + fail} passed`); process.exit(fail ? 1 : 0);

@@ -14,12 +14,13 @@ export const TZ = 'Asia/Riyadh';
 export const DEFAULTS = Object.freeze({
   lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
   tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true, buy: true,
+  rainbow: true,   // 🌈 Bitcoin moved to another rainbow band (two daily closes)
   digest: true,   // 🔔 what can wait is kept and sent together at 12:00 · 16:00 · 20:00 (SLOTS); what can't goes at once (NOW_KEYS)
 });
 // sent at once: a price you asked for, a take-profit, the exit conditions, the day's signals, today's DCA — and anything marked urgent
-export const SLOTS = ['12:00', '16:00', '20:00'], NOW_KEYS = /^(buy-|tp-|macro-|sig-|dca-)/;
+export const SLOTS = ['12:00', '16:00', '20:00'], NOW_KEYS = /^(buy-|tp-|macro-|sig-|dca-|rb-)/;
 const DEFAULT_SIGNAL = { reinforce: -5, sell: -20 };
-const DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085 };
+const DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085, rainbow: C.RAINBOW_EXIT };
 const DEFAULT_EXIT_STEPS = { mults: [2, 3, 5], pcts: [25, 50, 25] };
 const H = 3600e3, DAY = 24 * H;
 
@@ -46,7 +47,13 @@ export const W = {
     since: 'since the last alert', yourPf: 'Your portfolio', h24: '24h', sig: s => `Signal change · ${s}`, sigsT: n => n === 1 ? 'Signal confirmed at the daily close' : `${n} signals confirmed at the daily close`, onClose: 'Decided on the daily close (03:00 Riyadh) — a short wick never changes them.', notAdvice: '⚠️ Not financial advice — reminders of your own plan.', vsAvg: 'vs your avg',
     holding: 'Holding', targetHit: s => `Plan target reached · ${s}`, planNow: 'Plan', tpHit: (n, s) => `Take-profit ${n} reached · ${s}`,
     tpLine: (n, p, x, pct) => `Price ${p} ≥ TP${n} ${x}${pct ? ` · your plan sells ${pct}% here` : ''}`, macro: 'Exit level reached',
-    btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC', of3: n => `${n} of 3 of your exit conditions are met`, allExit: 'All 3 exit conditions are met — your exit zone',
+    btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC', rainbow: 'Rainbow band', ofN: (n, N) => `${n} of ${N} of your exit conditions are met`, allExit: N => `All ${N} exit conditions are met — your exit zone`,
+    rbName: 'Bitcoin rainbow', rbBand: b => `band ${b} of 9`, rbVs: v => Math.abs(v) < 0.5 ? 'on the trend line' : `${Math.round(Math.abs(v))}% ${v < 0 ? 'under' : 'over'} the trend line`,
+    rbVsS: v => Math.abs(v) < 0.5 ? 'on the line' : `${v < 0 ? '−' : '+'}${Math.round(Math.abs(v))}% vs the line`, rbPend: b => `Last close: band ${b} · one more confirms`,
+    rbUp: (b, n) => `Bitcoin moved up to band ${b} of 9 · ${n}`, rbDown: (b, n) => `Bitcoin moved down to band ${b} of 9 · ${n}`,
+    rbClose: (p, vs, line) => `Close ${p} · ${vs} (${line})`, rbRange: (b, lo, hi) => `Band ${b}: ${lo} – ${hi}`,
+    rbWas: (b, n, since) => `Before: band ${b} · ${n}${since ? ' since ' + since : ''}`,
+    rbNote: 'Counted after two daily closes in the new band. It describes the past; it is not a forecast.', rbExit: b => `Your exit band (${b}) is reached`,
     xFear: 'Extreme Fear', xGreed: 'Extreme Greed', was: 'yesterday', altSeason: 'Altcoin Season', btcSeason: 'Bitcoin Season', idx: 'index',
     bigEtf: 'Big ETF day', health: 'Data warning', stale: (what, h) => `${what} not updated for ${h} h — the app may show old numbers.`,
     marketData: 'Market data', etfData: 'ETF flows', priceData: 'Price history', ok: 'Data back to normal', none: 'none', coins: 'coins',
@@ -70,7 +77,13 @@ export const W = {
     since: 'منذ آخر تنبيه', yourPf: 'محفظتك', h24: '24 ساعة', sig: s => `تغيّر الإشارة · ${s}`, sigsT: n => n === 1 ? 'إشارة تأكدت على قفلة اليوم' : `${n} إشارات تأكدت على قفلة اليوم`, onClose: 'تُحسب على قفلة اليوم (03:00 بتوقيت الرياض) — ذيل شمعة قصير لا يغيّرها.', notAdvice: '⚠️ ليست نصيحة مالية — تذكير بخطتك أنت.', vsAvg: 'مقارنة بمتوسط شرائك',
     holding: 'قيمة ما تملكه', targetHit: s => `تحقق هدف الخطة · ${s}`, planNow: 'الخطة', tpHit: (n, s) => `وصل جني الأرباح ${n} · ${s}`,
     tpLine: (n, p, x, pct) => `السعر ${p} ≥ TP${n} ${x}${pct ? ` · خطتك تبيع ${pct}% هنا` : ''}`, macro: 'تحقق مستوى خروج',
-    btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC', of3: n => `تحقق ${n} من 3 من شروط الخروج`, allExit: 'تحققت شروط الخروج الثلاثة — منطقة الخروج',
+    btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC', rainbow: 'نطاق قوس قزح', ofN: (n, N) => `تحقق ${n} من ${N} من شروط الخروج`, allExit: N => `تحققت شروط الخروج كلها (${N}) — منطقة الخروج`,
+    rbName: 'قوس قزح البيتكوين', rbBand: b => `النطاق ${b} من 9`, rbVs: v => Math.abs(v) < 0.5 ? 'على خط الاتجاه' : `${v < 0 ? 'تحت' : 'فوق'} خط الاتجاه بـ ${Math.round(Math.abs(v))}%`,
+    rbVsS: v => Math.abs(v) < 0.5 ? 'على الخط' : `${v < 0 ? 'أقل من' : 'أعلى من'} الخط بـ ${Math.round(Math.abs(v))}%`, rbPend: b => `آخر إغلاق: النطاق ${b} · إغلاق آخر يؤكده`,
+    rbUp: (b, n) => `البيتكوين صعد إلى النطاق ${b} من 9 · ${n}`, rbDown: (b, n) => `البيتكوين نزل إلى النطاق ${b} من 9 · ${n}`,
+    rbClose: (p, vs, line) => `الإغلاق ${p} · ${vs} (${line})`, rbRange: (b, lo, hi) => `حدود النطاق ${b}: من ${lo} إلى ${hi}`,
+    rbWas: (b, n, since) => `قبلها: النطاق ${b} · ${n}${since ? ' منذ ' + since : ''}`,
+    rbNote: 'يُحسب بعد إغلاقين يوميين متتاليين في النطاق الجديد. وصف للماضي، وليس توقعاً.', rbExit: b => `وصل نطاق الخروج الذي حددته (${b})`,
     xFear: 'خوف شديد', xGreed: 'طمع شديد', was: 'أمس', altSeason: 'موسم العملات البديلة', btcSeason: 'موسم البيتكوين', idx: 'المؤشر',
     bigEtf: 'يوم كبير لصناديق ETF', health: 'تنبيه بيانات', stale: (what, h) => `${what} لم تتحدث منذ ${arCount(h, AR_HOURS)} — قد يعرض التطبيق أرقامًا قديمة.`,
     marketData: 'بيانات السوق', etfData: 'تدفقات ETF', priceData: 'سجل الأسعار', ok: 'البيانات عادت طبيعية', none: 'لا شيء', coins: 'عملة',
@@ -234,6 +247,9 @@ export function summarize(user, market, now = Date.now()) {
     { k: 'usdtD', now: d.usdt, lvl: T.usdtHi, met: d.usdt != null && d.usdt <= T.usdtHi, op: '≤', dp: 2, unit: '%' },
     { k: 'ethBtc', now: ethbtc, lvl: T.ethBtc, met: ethbtc != null && ethbtc >= T.ethBtc, op: '≥', dp: 4, unit: '' },
   ];
+  // 🌈 the 4th: Bitcoin's rainbow band (the one that holds — two daily closes) against the band you chose on the Exit page
+  { const rb = rainbowNow(market, now), lvl = Math.min(9, Math.max(1, Math.round(+T.rainbow) || C.RAINBOW_EXIT));
+    macro.push({ k: 'rainbow', now: rb ? rb.band : null, lvl, met: !!rb && rb.band >= lvl, op: '≥', dp: 0, unit: '' }); }
   // DCA: the plan coins' regular buys (samsam-core.js → dcaStatus), today = Riyadh's calendar day
   const today = localParts(now).date;
   // (a savings goal's amount is in its currency: `usdMo` is the month in dollars at the official rate, null with no rate)
@@ -297,6 +313,18 @@ function movers(sum, key, n = 3) {
 export const FNG_AR = { 'Extreme Fear': 'خوف شديد', Fear: 'خوف', Neutral: 'محايد', Greed: 'طمع', 'Extreme Greed': 'طمع شديد' };
 export const SEASON_AR = { 'Altcoin Season': 'موسم العملات البديلة', 'Bitcoin Season': 'موسم البيتكوين', 'Leaning Altcoins': 'يميل للعملات البديلة', 'Leaning Bitcoin': 'يميل للبيتكوين' };
 export const arDay = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('ar-SA-u-nu-latn-ca-gregory', { month: 'long', day: 'numeric', timeZone: 'UTC' });
+// 🌈 Bitcoin's rainbow band now (samsam-core.js → rainbowRead on m/rainbow.json; the percent against the line uses the live price)
+export const rainbowNow = (m, now) => C.rainbowRead(m && m.rainbow, now, m && m.btc && m.btc.price);
+const rbDate = (iso, ar, now) => { const y = iso.slice(0, 4) !== new Date(now).toISOString().slice(0, 4), d = new Date(iso + 'T12:00:00Z');
+  return d.toLocaleDateString(ar ? 'ar-SA-u-nu-latn-ca-gregory' : 'en-GB', { day: 'numeric', month: ar ? 'long' : 'short', ...(y ? { year: 'numeric' } : {}), timeZone: 'UTC' }); };
+// its lines in /market and the weekly report — the band that holds, then its name and how far the price is from the line
+// (two short lines: each fits a phone, whatever the band's name)
+export function rainbowLines(t, m, now) {
+  const rb = rainbowNow(m, now); if (!rb) return [];
+  const ar = t === W.ar, out = [ar ? `🌈 ${t.rbName}: <b>${t.rbBand(rb.band)}</b>` : `🌈 ${t.rbName}  <b>${t.rbBand(rb.band)}</b>`, `${C.rainbowName(rb.band, ar)} · ${t.rbVsS(rb.vs)}`];
+  if (rb.pending) out.push(`<i>${t.rbPend(rb.pending)}</i>`);
+  return out;
+}
 export function marketLines(t, m) {
   const g = m.global || {}, d = g.dom || {}, out = [];
   if (t === W.ar) {   // Arabic: every line starts with an Arabic word (a line that opens with "BTC" or "$" shows left-to-right in Telegram)
@@ -350,10 +378,10 @@ export function brief(sum, m, cfg, now, weekly = false) {
   if (sum.vsBtc != null) L.push(ar ? `🆚 مقابل البيتكوين: <b>${pct(sum.vsBtc)}</b> ${dot(sum.vsBtc)} · ${t.beatBtc(sum.beat, sum.alts)}` : `${t.vsBtc}  ${dot(sum.vsBtc)} ${pct(sum.vsBtc)} · ${t.beatBtc(sum.beat, sum.alts)}`);
   if (mv.up.length) L.push('', `📈 <b>${weekly ? t.bestW : t.best}</b>`, ...mv.up);
   if (mv.dn.length) L.push('', `📉 <b>${weekly ? t.worstW : t.worst}</b>`, ...mv.dn);
-  const ml = marketLines(t, m); if (ml.length) L.push('', `🌍 <b>${t.market}</b>`, ...ml);
+  const ml = marketLines(t, m).concat(weekly ? rainbowLines(t, m, now) : []); if (ml.length) L.push('', `🌍 <b>${t.market}</b>`, ...ml);   // (🌈 the rainbow's line: once a week, and in /market)
   L.push('', `🎯 <b>${t.signals}</b>${ar ? ':' : ' '} ${sum.counts.reinforce} ${t.reinforce} · ${sum.counts.sell} ${t.sell.split(' /')[0]} · ${sum.counts.hold} ${t.hold}`);
   if (sum.plan.length) L.push(ar ? `📋 <b>${t.plan}</b>: ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed} من ${sum.prog.counted} ${t.met}` : `📋 <b>${t.plan}</b>  ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`);
-  const mc = sum.macro.filter(x => x.met).length; if (mc) L.push(`🧭 ${t.of3(mc)}`);
+  const mc = sum.macro.filter(x => x.met).length; if (mc) L.push(`🧭 ${t.ofN(mc, sum.macro.length)}`);
   if (sum.alloc) L.push(`⚖️ <b>${t.allocation}</b>  ${t.onTarget(sum.alloc.onTarget, sum.alloc.count)}`);
   if (sum.dca && sum.dca.length) {
     const nx = [...sum.dca].filter(x => x.s.next).sort((a, b) => a.s.next.localeCompare(b.s.next))[0], mo = sum.dca.reduce((a, x) => a + (x.usdMo || 0), 0);
@@ -453,14 +481,28 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       if (push({ key: 'tp-' + k, text, buttons: [[btn(t.planBtn, 'accumulation.html'), btn(t.coinBtn(x.sym), 'index.html#holdings/' + encodeURIComponent(x.sym))]] })) st.tp[k] = 1;
     }
   }
-  // 5. your macro exit levels (BTC.D, USDT.D, ETH/BTC)
+  // 4b. 🌈 Bitcoin moved to another rainbow band (the band that holds: two daily closes in a row in it). When that move
+  // also reaches the exit band you chose, this one message says so (the exit alert below is not sent a second time).
+  {
+    const rb = rainbowNow(m, now), ar = cfg.lang === 'ar';
+    if (rb && (!st.rb || first || !cfg.rainbow)) st.rb = { b: rb.band, ...(rb.since ? { d: rb.since } : {}) };
+    else if (rb && rb.band !== st.rb.b) {
+      const was = st.rb.b, up = rb.band > was, x = sum.macro.find(q => q.k === 'rainbow'), hitExit = cfg.macro && x && x.met && !st.macro.rainbow, n = sum.macro.filter(q => q.met).length, N = sum.macro.length;
+      const eod = C.rainbowRead(m.rainbow, now), since = st.rb.d ? rbDate(st.rb.d, ar, now) : '';   // the message speaks of the close itself, not of the price this minute
+      const L = [`🌈 <b>${(up ? t.rbUp : t.rbDown)(rb.band, C.rainbowName(rb.band, ar))}</b>`, t.rbClose(usd(eod.close), t.rbVs(eod.vs), usd(eod.line)), t.rbRange(rb.band, usd(eod.lo), usd(eod.hi)), t.rbWas(was, C.rainbowName(was, ar), since)];
+      if (hitExit) L.push(`🧭 <b>${t.rbExit(x.lvl)}</b> · ${n === N ? t.allExit(N) : t.ofN(n, N)}`);
+      L.push(`<i>${t.rbNote}</i>`);
+      if (push({ key: 'rb-' + rb.band, text: L.join('\n'), buttons: [[btn(t.hub, 'market.html#rainbow')].concat(hitExit ? [btn(t.planBtn, 'accumulation.html')] : [])] }, hitExit && n === N)) { st.rb = { b: rb.band, d: rb.since || rb.day }; if (hitExit) st.macro.rainbow = 1; }
+    }
+  }
+  // 5. your macro exit levels (BTC.D, USDT.D, ETH/BTC, the rainbow band)
   if (cfg.macro) {
-    const n = sum.macro.filter(x => x.met).length;
+    const n = sum.macro.filter(x => x.met).length, N = sum.macro.length;
     for (const x of sum.macro) {
       if (!x.met) { delete st.macro[x.k]; continue; }
       if (st.macro[x.k] || first) { st.macro[x.k] = 1; continue; }
-      const text = `🧭 <b>${t.macro} · ${t[x.k]}</b>\n${(+x.now).toFixed(x.dp)}${x.unit} ${x.op} ${(+x.lvl).toFixed(x.dp)}${x.unit}\n${n === 3 ? '🏁 <b>' + t.allExit + '</b>' : t.of3(n)}`;
-      if (push({ key: 'macro-' + x.k, text, buttons: [[btn(t.planBtn, 'accumulation.html')]] }, n === 3)) st.macro[x.k] = 1;
+      const text = `🧭 <b>${t.macro} · ${t[x.k]}</b>\n${x.k === 'rainbow' ? `${t.rbBand(x.now)} · ${C.rainbowName(x.now, cfg.lang === 'ar')} · ` : ''}${(+x.now).toFixed(x.dp)}${x.unit} ${x.op} ${(+x.lvl).toFixed(x.dp)}${x.unit}\n${n === N ? '🏁 <b>' + t.allExit(N) + '</b>' : t.ofN(n, N)}`;
+      if (push({ key: 'macro-' + x.k, text, buttons: [[btn(t.planBtn, 'accumulation.html')]] }, n === N)) st.macro[x.k] = 1;
     }
   }
   // 6. sentiment: Fear & Greed extremes, Altcoin / Bitcoin Season

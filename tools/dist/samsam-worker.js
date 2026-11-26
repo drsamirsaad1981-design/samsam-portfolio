@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: bbdf0ba795bbf3bc
+// sources-hash: 1db5cdabca557db1
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -816,6 +816,63 @@ function planUnits(e, qty2, ar = false) {
   if (k === "cash") return { n: q, u: sym.slice(5), dp: 0 };
   return { n: q, u: sym, dp: 8 };
 }
+var RB_DAY = 864e5;
+var RAINBOW_GENESIS = Date.UTC(2009, 0, 3) / RB_DAY;
+var RAINBOW_EXIT = 6;
+var rainbowDay = (iso) => Math.floor(Date.parse(String(iso).slice(0, 10) + "T00:00:00Z") / RB_DAY);
+var rainbowLine = (f, d) => 10 ** (f.a + f.b * Math.log10(d - RAINBOW_GENESIS));
+var rainbowDev = (f, d, p) => Math.log10(p) - (f.a + f.b * Math.log10(d - RAINBOW_GENESIS));
+var rainbowBand = (f, v) => Math.min(9, Math.max(1, Math.floor((v - f.lo) / ((f.hi - f.lo) / 9)) + 1));
+var rainbowEdges = (f, d) => Array.from({ length: 10 }, (_, i) => rainbowLine(f, d) * 10 ** (f.lo + i * (f.hi - f.lo) / 9));
+function rainbowHeldAll(bands, start) {
+  const out = [];
+  let band = start != null ? start : bands[0];
+  for (let k = 0; k < bands.length; k++) {
+    if (k > 0 && bands[k] !== band && bands[k] === bands[k - 1]) band = bands[k];
+    out.push(band);
+  }
+  return out;
+}
+function rainbowHeld(bands, start) {
+  const a = rainbowHeldAll(bands, start);
+  let k = a.length - 1;
+  while (k > 0 && a[k - 1] === a[k]) k--;
+  return { band: a[a.length - 1], i: Math.max(0, k - 1) };
+}
+function rainbowRead(R, now = Date.now(), price3 = null) {
+  const f = R && R.fit, cl = R && Array.isArray(R.closes) ? R.closes.filter((c) => c && +c[1] > 0).map((c) => ({ iso: String(c[0]), d: rainbowDay(c[0]), p: +c[1] })).sort((x, y) => x.d - y.d) : [];
+  if (!f || !(f.b > 0) || !(f.hi > f.lo) || !cl.length) return null;
+  const end = cl[cl.length - 1], today2 = Math.floor(now / RB_DAY);
+  if (today2 - end.d > 4) return null;
+  cl.forEach((c) => {
+    c.band = rainbowBand(f, rainbowDev(f, c.d, c.p));
+  });
+  const held = R.held && R.held.band >= 1 && R.held.band <= 9 ? R.held : { band: rainbowHeld(cl.map((c) => c.band)).band, since: null };
+  const live = +price3 > 0, d = live ? Math.max(end.d, today2) : end.d, p = live ? +price3 : end.p, line = rainbowLine(f, d), edges = rainbowEdges(f, d);
+  return {
+    day: end.iso,
+    close: end.p,
+    band: held.band,
+    last: end.band,
+    pending: end.band !== held.band ? end.band : null,
+    price: p,
+    live,
+    line,
+    vs: (p / line - 1) * 100,
+    lo: edges[held.band - 1],
+    hi: edges[held.band],
+    edges,
+    since: held.since || null,
+    share: f.share || null,
+    fit: f,
+    closes: cl
+  };
+}
+var RAINBOW_NAMES = Object.freeze({
+  en: ["Rare historic low", "Deep discount", "Accumulation zone", "Around the trend line", "Above the trend line", "Warming up", "Hot", "Very hot", "Bubble"],
+  ar: ["\u0642\u0627\u0639 \u062A\u0627\u0631\u064A\u062E\u064A \u0646\u0627\u062F\u0631", "\u062E\u0635\u0645 \u0639\u0645\u064A\u0642", "\u0645\u0646\u0637\u0642\u0629 \u062A\u062C\u0645\u064A\u0639", "\u062D\u0648\u0644 \u062E\u0637 \u0627\u0644\u0627\u062A\u062C\u0627\u0647", "\u0641\u0648\u0642 \u062E\u0637 \u0627\u0644\u0627\u062A\u062C\u0627\u0647", "\u0628\u062F\u0627\u064A\u0629 \u0633\u062E\u0648\u0646\u0629", "\u0633\u062E\u0648\u0646\u0629", "\u0633\u062E\u0648\u0646\u0629 \u0639\u0627\u0644\u064A\u0629", "\u0641\u0642\u0627\u0639\u0629"]
+});
+var rainbowName = (band, ar) => RAINBOW_NAMES[ar ? "ar" : "en"][band - 1] || "";
 
 // tools/alerts-core.mjs
 var APP = "https://drsamirsaad1981-design.github.io/samsam-portfolio/";
@@ -839,11 +896,13 @@ var DEFAULTS = Object.freeze({
   drift: true,
   dca: true,
   buy: true,
+  rainbow: true,
+  // 🌈 Bitcoin moved to another rainbow band (two daily closes)
   digest: true
   // 🔔 what can wait is kept and sent together at 12:00 · 16:00 · 20:00 (SLOTS); what can't goes at once (NOW_KEYS)
 });
 var DEFAULT_SIGNAL = { reinforce: -5, sell: -20 };
-var DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085 };
+var DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085, rainbow: RAINBOW_EXIT };
 var DEFAULT_EXIT_STEPS = { mults: [2, 3, 5], pcts: [25, 50, 25] };
 var H = 36e5;
 var DAY = 24 * H;
@@ -856,6 +915,222 @@ function settings(meta) {
   if (!/^\d{2}:\d{2}$/.test(out.briefTime)) out.briefTime = d.briefTime;
   return out;
 }
+var W = {
+  en: {
+    digestT: "Portfolio digest",
+    brief: "Morning brief",
+    weekly: "Weekly report",
+    today: "today",
+    week: "this week",
+    profit: "All Time Profit",
+    vsBtc: "vs holding BTC",
+    best: "Best today",
+    worst: "Worst today",
+    bestW: "Best this week",
+    worstW: "Worst this week",
+    market: "Market",
+    dom: "Dominance",
+    fng: "Fear & Greed",
+    alt: "Altcoin Season",
+    etf: "ETF flows",
+    signals: "Signals",
+    plan: "Plan",
+    met: "targets met",
+    buyHit: (s) => `${s} reached your buy price`,
+    buyLine: (p, a) => `Price ${p} \u2264 your alert ${a}`,
+    buyLeft: (q, s) => `Still to buy for the plan: ${q} ${s}`,
+    buyDca: "Today is also your regular (DCA) buy day",
+    reinforce: "Reinforce",
+    sell: "Sell / Convert to BTC",
+    hold: "Hold",
+    open: "Open portfolio",
+    hub: "Market Hub",
+    planBtn: "Open the plan",
+    coinBtn: (s) => `Open ${s}`,
+    seasonBtn: "Altcoin Season",
+    btcMove: (pct2, h) => `BTC ${pct2} in ${h}`,
+    pfMove: (pct2, h) => `Your portfolio ${pct2} in ${h}`,
+    since: "since the last alert",
+    yourPf: "Your portfolio",
+    h24: "24h",
+    sig: (s) => `Signal change \xB7 ${s}`,
+    sigsT: (n) => n === 1 ? "Signal confirmed at the daily close" : `${n} signals confirmed at the daily close`,
+    onClose: "Decided on the daily close (03:00 Riyadh) \u2014 a short wick never changes them.",
+    notAdvice: "\u26A0\uFE0F Not financial advice \u2014 reminders of your own plan.",
+    vsAvg: "vs your avg",
+    holding: "Holding",
+    targetHit: (s) => `Plan target reached \xB7 ${s}`,
+    planNow: "Plan",
+    tpHit: (n, s) => `Take-profit ${n} reached \xB7 ${s}`,
+    tpLine: (n, p, x, pct2) => `Price ${p} \u2265 TP${n} ${x}${pct2 ? ` \xB7 your plan sells ${pct2}% here` : ""}`,
+    macro: "Exit level reached",
+    btcD: "BTC dominance",
+    usdtD: "USDT dominance",
+    ethBtc: "ETH/BTC",
+    rainbow: "Rainbow band",
+    ofN: (n, N) => `${n} of ${N} of your exit conditions are met`,
+    allExit: (N) => `All ${N} exit conditions are met \u2014 your exit zone`,
+    rbName: "Bitcoin rainbow",
+    rbBand: (b) => `band ${b} of 9`,
+    rbVs: (v) => Math.abs(v) < 0.5 ? "on the trend line" : `${Math.round(Math.abs(v))}% ${v < 0 ? "under" : "over"} the trend line`,
+    rbVsS: (v) => Math.abs(v) < 0.5 ? "on the line" : `${v < 0 ? "\u2212" : "+"}${Math.round(Math.abs(v))}% vs the line`,
+    rbPend: (b) => `Last close: band ${b} \xB7 one more confirms`,
+    rbUp: (b, n) => `Bitcoin moved up to band ${b} of 9 \xB7 ${n}`,
+    rbDown: (b, n) => `Bitcoin moved down to band ${b} of 9 \xB7 ${n}`,
+    rbClose: (p, vs, line) => `Close ${p} \xB7 ${vs} (${line})`,
+    rbRange: (b, lo, hi) => `Band ${b}: ${lo} \u2013 ${hi}`,
+    rbWas: (b, n, since) => `Before: band ${b} \xB7 ${n}${since ? " since " + since : ""}`,
+    rbNote: "Counted after two daily closes in the new band. It describes the past; it is not a forecast.",
+    rbExit: (b) => `Your exit band (${b}) is reached`,
+    xFear: "Extreme Fear",
+    xGreed: "Extreme Greed",
+    was: "yesterday",
+    altSeason: "Altcoin Season",
+    btcSeason: "Bitcoin Season",
+    idx: "index",
+    bigEtf: "Big ETF day",
+    health: "Data warning",
+    stale: (what, h) => `${what} not updated for ${h} h \u2014 the app may show old numbers.`,
+    marketData: "Market data",
+    etfData: "ETF flows",
+    priceData: "Price history",
+    ok: "Data back to normal",
+    none: "none",
+    coins: "coins",
+    quietNote: "held during quiet hours",
+    welcome: "Alerts are on. You will get the morning brief every day, the weekly report on Friday, and an alert whenever something important happens.",
+    noData: "no history yet",
+    in7: "7 days",
+    beatBtc: (a, n) => `${a} of ${n} coins beat BTC`,
+    vsBtc30: (a, b) => `vs BTC ${a} pts (30d) \xB7 ${b} pts (90d)`,
+    allocation: "Allocation",
+    onTarget: (a, n) => `${a} of ${n} categories on target`,
+    driftT: (n) => `Allocation off target \xB7 ${n}`,
+    nowW: "now",
+    targetW: "target",
+    ptsW: "pts",
+    trim: (v) => `To get back: trim about ${v}, or add to the other categories`,
+    add: (v) => `To get back: add about ${v}`,
+    allocBtn: "Open Allocation",
+    dcaDay: "DCA day \u2014 your regular buys",
+    dcaTotal: (v) => `Total today: ${v}`,
+    dcaLate: "DCA reminder \u2014 not bought yet",
+    dcaWasDue: (d, n) => `was due ${d} (${n} days ago)`,
+    dcaNext: "Buy when you can, or skip \u2014 the next one is on schedule.",
+    freeW: "Rewards & mining this week",
+    dcaLine: (n, mo, nx) => `${n} regular buy${n === 1 ? "" : "s"} \xB7 ${mo}/mo \xB7 next ${nx}`,
+    calmFall: (p) => `Calm mode: not adding yet, ${p} in 7 days`,
+    smartWeak: "Smart: not adding, it keeps losing to BTC",
+    smartStrong: "Smart: holding, it is beating BTC"
+  },
+  ar: {
+    digestT: "\u0645\u0644\u062E\u0635 \u0627\u0644\u0645\u062D\u0641\u0638\u0629",
+    brief: "\u0645\u0644\u062E\u0635 \u0627\u0644\u0635\u0628\u0627\u062D",
+    weekly: "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0623\u0633\u0628\u0648\u0639\u064A",
+    today: "\u0627\u0644\u064A\u0648\u0645",
+    week: "\u0647\u0630\u0627 \u0627\u0644\u0623\u0633\u0628\u0648\u0639",
+    profit: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0628\u062D",
+    vsBtc: "\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0640 BTC",
+    best: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0627\u0644\u064A\u0648\u0645",
+    worst: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0627\u0644\u064A\u0648\u0645",
+    bestW: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0647\u0630\u0627 \u0627\u0644\u0623\u0633\u0628\u0648\u0639",
+    worstW: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0647\u0630\u0627 \u0627\u0644\u0623\u0633\u0628\u0648\u0639",
+    market: "\u0627\u0644\u0633\u0648\u0642",
+    dom: "\u0627\u0644\u0647\u064A\u0645\u0646\u0629",
+    buyHit: (s) => `${s} \u0648\u0635\u0644\u062A \u0644\u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621`,
+    buyLine: (p, a) => `\u0627\u0644\u0633\u0639\u0631 ${p} \u2264 \u062A\u0646\u0628\u064A\u0647\u0643 ${a}`,
+    buyLeft: (q, s) => `\u0627\u0644\u0645\u062A\u0628\u0642\u064A \u0644\u0644\u062E\u0637\u0629: ${q} ${s}`,
+    buyDca: "\u0648\u0627\u0644\u064A\u0648\u0645 \u0623\u064A\u0636\u0627\u064B \u064A\u0648\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A (DCA)",
+    fng: "\u0627\u0644\u062E\u0648\u0641 \u0648\u0627\u0644\u0637\u0645\u0639",
+    alt: "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629",
+    etf: "\u062A\u062F\u0641\u0642\u0627\u062A ETF",
+    signals: "\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A",
+    plan: "\u0627\u0644\u062E\u0637\u0629",
+    met: "\u0623\u0647\u062F\u0627\u0641 \u062A\u062D\u0642\u0642\u062A",
+    reinforce: "\u062A\u0639\u0632\u064A\u0632",
+    sell: "\u0628\u064A\u0639 / \u062A\u062D\u0648\u064A\u0644 \u0625\u0644\u0649 BTC",
+    hold: "\u0627\u062D\u062A\u0641\u0627\u0638",
+    open: "\u0627\u0641\u062A\u062D \u0627\u0644\u0645\u062D\u0641\u0638\u0629",
+    hub: "\u0645\u0631\u0643\u0632 \u0627\u0644\u0633\u0648\u0642",
+    planBtn: "\u0627\u0641\u062A\u062D \u0627\u0644\u062E\u0637\u0629",
+    coinBtn: (s) => `\u0627\u0641\u062A\u062D ${s}`,
+    seasonBtn: "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629",
+    btcMove: (pct2, h) => `BTC ${pct2} \u062E\u0644\u0627\u0644 ${h}`,
+    pfMove: (pct2, h) => `\u0645\u062D\u0641\u0638\u062A\u0643 ${pct2} \u062E\u0644\u0627\u0644 ${h}`,
+    since: "\u0645\u0646\u0630 \u0622\u062E\u0631 \u062A\u0646\u0628\u064A\u0647",
+    yourPf: "\u0645\u062D\u0641\u0638\u062A\u0643",
+    h24: "24 \u0633\u0627\u0639\u0629",
+    sig: (s) => `\u062A\u063A\u064A\u0651\u0631 \u0627\u0644\u0625\u0634\u0627\u0631\u0629 \xB7 ${s}`,
+    sigsT: (n) => n === 1 ? "\u0625\u0634\u0627\u0631\u0629 \u062A\u0623\u0643\u062F\u062A \u0639\u0644\u0649 \u0642\u0641\u0644\u0629 \u0627\u0644\u064A\u0648\u0645" : `${n} \u0625\u0634\u0627\u0631\u0627\u062A \u062A\u0623\u0643\u062F\u062A \u0639\u0644\u0649 \u0642\u0641\u0644\u0629 \u0627\u0644\u064A\u0648\u0645`,
+    onClose: "\u062A\u064F\u062D\u0633\u0628 \u0639\u0644\u0649 \u0642\u0641\u0644\u0629 \u0627\u0644\u064A\u0648\u0645 (03:00 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636) \u2014 \u0630\u064A\u0644 \u0634\u0645\u0639\u0629 \u0642\u0635\u064A\u0631 \u0644\u0627 \u064A\u063A\u064A\u0651\u0631\u0647\u0627.",
+    notAdvice: "\u26A0\uFE0F \u0644\u064A\u0633\u062A \u0646\u0635\u064A\u062D\u0629 \u0645\u0627\u0644\u064A\u0629 \u2014 \u062A\u0630\u0643\u064A\u0631 \u0628\u062E\u0637\u062A\u0643 \u0623\u0646\u062A.",
+    vsAvg: "\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643",
+    holding: "\u0642\u064A\u0645\u0629 \u0645\u0627 \u062A\u0645\u0644\u0643\u0647",
+    targetHit: (s) => `\u062A\u062D\u0642\u0642 \u0647\u062F\u0641 \u0627\u0644\u062E\u0637\u0629 \xB7 ${s}`,
+    planNow: "\u0627\u0644\u062E\u0637\u0629",
+    tpHit: (n, s) => `\u0648\u0635\u0644 \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D ${n} \xB7 ${s}`,
+    tpLine: (n, p, x, pct2) => `\u0627\u0644\u0633\u0639\u0631 ${p} \u2265 TP${n} ${x}${pct2 ? ` \xB7 \u062E\u0637\u062A\u0643 \u062A\u0628\u064A\u0639 ${pct2}% \u0647\u0646\u0627` : ""}`,
+    macro: "\u062A\u062D\u0642\u0642 \u0645\u0633\u062A\u0648\u0649 \u062E\u0631\u0648\u062C",
+    btcD: "\u0647\u064A\u0645\u0646\u0629 BTC",
+    usdtD: "\u0647\u064A\u0645\u0646\u0629 USDT",
+    ethBtc: "ETH/BTC",
+    rainbow: "\u0646\u0637\u0627\u0642 \u0642\u0648\u0633 \u0642\u0632\u062D",
+    ofN: (n, N) => `\u062A\u062D\u0642\u0642 ${n} \u0645\u0646 ${N} \u0645\u0646 \u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C`,
+    allExit: (N) => `\u062A\u062D\u0642\u0642\u062A \u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C \u0643\u0644\u0647\u0627 (${N}) \u2014 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062E\u0631\u0648\u062C`,
+    rbName: "\u0642\u0648\u0633 \u0642\u0632\u062D \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
+    rbBand: (b) => `\u0627\u0644\u0646\u0637\u0627\u0642 ${b} \u0645\u0646 9`,
+    rbVs: (v) => Math.abs(v) < 0.5 ? "\u0639\u0644\u0649 \u062E\u0637 \u0627\u0644\u0627\u062A\u062C\u0627\u0647" : `${v < 0 ? "\u062A\u062D\u062A" : "\u0641\u0648\u0642"} \u062E\u0637 \u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0628\u0640 ${Math.round(Math.abs(v))}%`,
+    rbVsS: (v) => Math.abs(v) < 0.5 ? "\u0639\u0644\u0649 \u0627\u0644\u062E\u0637" : `${v < 0 ? "\u0623\u0642\u0644 \u0645\u0646" : "\u0623\u0639\u0644\u0649 \u0645\u0646"} \u0627\u0644\u062E\u0637 \u0628\u0640 ${Math.round(Math.abs(v))}%`,
+    rbPend: (b) => `\u0622\u062E\u0631 \u0625\u063A\u0644\u0627\u0642: \u0627\u0644\u0646\u0637\u0627\u0642 ${b} \xB7 \u0625\u063A\u0644\u0627\u0642 \u0622\u062E\u0631 \u064A\u0624\u0643\u062F\u0647`,
+    rbUp: (b, n) => `\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0635\u0639\u062F \u0625\u0644\u0649 \u0627\u0644\u0646\u0637\u0627\u0642 ${b} \u0645\u0646 9 \xB7 ${n}`,
+    rbDown: (b, n) => `\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0646\u0632\u0644 \u0625\u0644\u0649 \u0627\u0644\u0646\u0637\u0627\u0642 ${b} \u0645\u0646 9 \xB7 ${n}`,
+    rbClose: (p, vs, line) => `\u0627\u0644\u0625\u063A\u0644\u0627\u0642 ${p} \xB7 ${vs} (${line})`,
+    rbRange: (b, lo, hi) => `\u062D\u062F\u0648\u062F \u0627\u0644\u0646\u0637\u0627\u0642 ${b}: \u0645\u0646 ${lo} \u0625\u0644\u0649 ${hi}`,
+    rbWas: (b, n, since) => `\u0642\u0628\u0644\u0647\u0627: \u0627\u0644\u0646\u0637\u0627\u0642 ${b} \xB7 ${n}${since ? " \u0645\u0646\u0630 " + since : ""}`,
+    rbNote: "\u064A\u064F\u062D\u0633\u0628 \u0628\u0639\u062F \u0625\u063A\u0644\u0627\u0642\u064A\u0646 \u064A\u0648\u0645\u064A\u064A\u0646 \u0645\u062A\u062A\u0627\u0644\u064A\u064A\u0646 \u0641\u064A \u0627\u0644\u0646\u0637\u0627\u0642 \u0627\u0644\u062C\u062F\u064A\u062F. \u0648\u0635\u0641 \u0644\u0644\u0645\u0627\u0636\u064A\u060C \u0648\u0644\u064A\u0633 \u062A\u0648\u0642\u0639\u0627\u064B.",
+    rbExit: (b) => `\u0648\u0635\u0644 \u0646\u0637\u0627\u0642 \u0627\u0644\u062E\u0631\u0648\u062C \u0627\u0644\u0630\u064A \u062D\u062F\u062F\u062A\u0647 (${b})`,
+    xFear: "\u062E\u0648\u0641 \u0634\u062F\u064A\u062F",
+    xGreed: "\u0637\u0645\u0639 \u0634\u062F\u064A\u062F",
+    was: "\u0623\u0645\u0633",
+    altSeason: "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629",
+    btcSeason: "\u0645\u0648\u0633\u0645 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
+    idx: "\u0627\u0644\u0645\u0624\u0634\u0631",
+    bigEtf: "\u064A\u0648\u0645 \u0643\u0628\u064A\u0631 \u0644\u0635\u0646\u0627\u062F\u064A\u0642 ETF",
+    health: "\u062A\u0646\u0628\u064A\u0647 \u0628\u064A\u0627\u0646\u0627\u062A",
+    stale: (what, h) => `${what} \u0644\u0645 \u062A\u062A\u062D\u062F\u062B \u0645\u0646\u0630 ${arCount(h, AR_HOURS)} \u2014 \u0642\u062F \u064A\u0639\u0631\u0636 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0623\u0631\u0642\u0627\u0645\u064B\u0627 \u0642\u062F\u064A\u0645\u0629.`,
+    marketData: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0633\u0648\u0642",
+    etfData: "\u062A\u062F\u0641\u0642\u0627\u062A ETF",
+    priceData: "\u0633\u062C\u0644 \u0627\u0644\u0623\u0633\u0639\u0627\u0631",
+    ok: "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0639\u0627\u062F\u062A \u0637\u0628\u064A\u0639\u064A\u0629",
+    none: "\u0644\u0627 \u0634\u064A\u0621",
+    coins: "\u0639\u0645\u0644\u0629",
+    quietNote: "\u0623\u064F\u062C\u0651\u0644 \u062E\u0644\u0627\u0644 \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0647\u062F\u0648\u0621",
+    welcome: "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u062A\u0639\u0645\u0644. \u0633\u064A\u0635\u0644\u0643 \u0645\u0644\u062E\u0635 \u0627\u0644\u0635\u0628\u0627\u062D \u064A\u0648\u0645\u064A\u064B\u0627\u060C \u0648\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0623\u0633\u0628\u0648\u0639\u064A \u064A\u0648\u0645 \u0627\u0644\u062C\u0645\u0639\u0629\u060C \u0648\u062A\u0646\u0628\u064A\u0647 \u0639\u0646\u062F \u062D\u062F\u0648\u062B \u0623\u064A \u0634\u064A\u0621 \u0645\u0647\u0645.",
+    noData: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0633\u062C\u0644 \u0628\u0639\u062F",
+    in7: "7 \u0623\u064A\u0627\u0645",
+    beatBtc: (a, n) => `${a} \u0645\u0646 ${n} \u0639\u0645\u0644\u0629 \u062A\u0641\u0648\u0642\u062A \u0639\u0644\u0649 BTC`,
+    vsBtc30: (a, b) => `\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0640 BTC ${a} \u0646\u0642\u0637\u0629 (30 \u064A\u0648\u0645\u0627\u064B) \xB7 ${b} \u0646\u0642\u0637\u0629 (90 \u064A\u0648\u0645\u0627\u064B)`,
+    allocation: "\u0627\u0644\u062A\u0648\u0632\u064A\u0639",
+    onTarget: (a, n) => `${a} \u0645\u0646 ${n} \u0641\u0626\u0627\u062A \u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641`,
+    driftT: (n) => `\u062E\u0631\u0648\u062C \u0639\u0646 \u0627\u0644\u062A\u0648\u0632\u064A\u0639 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641 \xB7 ${n}`,
+    nowW: "\u0627\u0644\u0622\u0646",
+    targetW: "\u0627\u0644\u0647\u062F\u0641",
+    ptsW: "\u0646\u0642\u0637\u0629",
+    trim: (v) => `\u0644\u0644\u0639\u0648\u062F\u0629: \u062E\u0641\u0651\u0636 \u062D\u0648\u0627\u0644\u064A ${v}\u060C \u0623\u0648 \u0623\u0636\u0641 \u0644\u0644\u0641\u0626\u0627\u062A \u0627\u0644\u0623\u062E\u0631\u0649`,
+    add: (v) => `\u0644\u0644\u0639\u0648\u062F\u0629: \u0623\u0636\u0641 \u062D\u0648\u0627\u0644\u064A ${v}`,
+    allocBtn: "\u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0648\u0632\u064A\u0639",
+    dcaDay: "\u064A\u0648\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A (DCA)",
+    dcaTotal: (v) => `\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u064A\u0648\u0645: ${v}`,
+    dcaLate: "\u062A\u0630\u0643\u064A\u0631 DCA \u2014 \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0628\u0639\u062F",
+    dcaWasDue: (d, n) => `\u0643\u0627\u0646 \u0645\u0648\u0639\u062F\u0647 ${d} (\u0645\u0646\u0630 ${arCount(n, AR_DAYS)})`,
+    dcaNext: "\u0627\u0634\u062A\u0631\u0650 \u0639\u0646\u062F\u0645\u0627 \u062A\u0633\u062A\u0637\u064A\u0639 \u0623\u0648 \u062A\u062C\u0627\u0648\u0632\u0647 \u2014 \u0627\u0644\u0645\u0648\u0639\u062F \u0627\u0644\u062A\u0627\u0644\u064A \u0641\u064A \u0648\u0642\u062A\u0647.",
+    freeW: "\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062A \u0648\u0627\u0644\u062A\u0639\u062F\u064A\u0646 \u0647\u0630\u0627 \u0627\u0644\u0623\u0633\u0628\u0648\u0639",
+    dcaLine: (n, mo, nx) => `${n === 1 ? "\u0639\u0645\u0644\u064A\u0629 \u0634\u0631\u0627\u0621 \u062F\u0648\u0631\u064A \u0648\u0627\u062D\u062F\u0629" : n === 2 ? "\u0639\u0645\u0644\u064A\u062A\u0627 \u0634\u0631\u0627\u0621 \u062F\u0648\u0631\u064A" : n + " \u0639\u0645\u0644\u064A\u0627\u062A \u0634\u0631\u0627\u0621 \u062F\u0648\u0631\u064A"} (DCA) \xB7 ${mo} \u0634\u0647\u0631\u064A\u064B\u0627 \xB7 \u0627\u0644\u0642\u0627\u062F\u0645 ${nx}`,
+    calmFall: (p) => `\u0627\u0644\u0648\u0636\u0639 \u0627\u0644\u0647\u0627\u062F\u0626: \u0644\u0627 \u062A\u0639\u0632\u064A\u0632 \u0627\u0644\u0622\u0646\u060C ${p} \u0641\u064A 7 \u0623\u064A\u0627\u0645`,
+    smartWeak: "\u0627\u0644\u0641\u062D\u0635 \u0627\u0644\u0630\u0643\u064A: \u0644\u0627 \u062A\u0639\u0632\u064A\u0632\u060C \u062A\u062E\u0633\u0631 \u0623\u0645\u0627\u0645 BTC \u0628\u0627\u0633\u062A\u0645\u0631\u0627\u0631",
+    smartStrong: "\u0627\u0644\u0641\u062D\u0635 \u0627\u0644\u0630\u0643\u064A: \u0627\u062D\u062A\u0641\u0627\u0638\u060C \u062A\u062A\u0641\u0648\u0642 \u0639\u0644\u0649 BTC"
+  }
+};
 var esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 function usd(v) {
   if (v == null || !isFinite(v)) return "\u2014";
@@ -879,6 +1154,12 @@ function local(now, opt) {
 function localL(now, opt, ar) {
   return ar ? new Intl.DateTimeFormat("ar-SA-u-nu-latn-ca-gregory", { timeZone: TZ, ...opt }).format(new Date(now)) : local(now, opt);
 }
+var arCount = (n, f) => {
+  n = Math.abs(Math.round(+n || 0));
+  return n === 1 ? f[0] : n === 2 ? f[1] : n >= 3 && n <= 10 ? `${n} ${f[2]}` : `${n} ${f[3]}`;
+};
+var AR_DAYS = ["\u064A\u0648\u0645 \u0648\u0627\u062D\u062F", "\u064A\u0648\u0645\u064A\u0646", "\u0623\u064A\u0627\u0645", "\u064A\u0648\u0645\u0627\u064B"];
+var AR_HOURS = ["\u0633\u0627\u0639\u0629 \u0648\u0627\u062D\u062F\u0629", "\u0633\u0627\u0639\u062A\u064A\u0646", "\u0633\u0627\u0639\u0627\u062A", "\u0633\u0627\u0639\u0629"];
 function localParts(now) {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", weekday: "short" }).formatToParts(new Date(now)).map((x) => [x.type, x.value]));
   return { date: `${p.year}-${p.month}-${p.day}`, hm: `${p.hour}:${p.minute}`, hour: +p.hour, weekday: p.weekday };
@@ -1009,6 +1290,10 @@ function summarize(user, market, now = Date.now()) {
     { k: "usdtD", now: d.usdt, lvl: T2.usdtHi, met: d.usdt != null && d.usdt <= T2.usdtHi, op: "\u2264", dp: 2, unit: "%" },
     { k: "ethBtc", now: ethbtc, lvl: T2.ethBtc, met: ethbtc != null && ethbtc >= T2.ethBtc, op: "\u2265", dp: 4, unit: "" }
   ];
+  {
+    const rb = rainbowNow(market, now), lvl = Math.min(9, Math.max(1, Math.round(+T2.rainbow) || RAINBOW_EXIT));
+    macro.push({ k: "rainbow", now: rb ? rb.band : null, lvl, met: !!rb && rb.band >= lvl, op: "\u2265", dp: 0, unit: "" });
+  }
   const today2 = localParts(now).date;
   const fxR = Object.fromEntries(Object.entries(market.fx || {}).map(([k, v]) => [k, +(v && v.rate) || 0]).filter((x) => x[1] > 0));
   const dca = (user.accum || []).filter((a) => a && a.sym && a.dca).map((a) => {
@@ -1093,6 +1378,14 @@ var isStable = (sym) => STABLE_RX.test(String(sym || "").toUpperCase());
 var FNG_AR = { "Extreme Fear": "\u062E\u0648\u0641 \u0634\u062F\u064A\u062F", Fear: "\u062E\u0648\u0641", Neutral: "\u0645\u062D\u0627\u064A\u062F", Greed: "\u0637\u0645\u0639", "Extreme Greed": "\u0637\u0645\u0639 \u0634\u062F\u064A\u062F" };
 var SEASON_AR = { "Altcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629", "Bitcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646", "Leaning Altcoins": "\u064A\u0645\u064A\u0644 \u0644\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629", "Leaning Bitcoin": "\u064A\u0645\u064A\u0644 \u0644\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646" };
 var arDay = (iso) => (/* @__PURE__ */ new Date(iso + "T12:00:00Z")).toLocaleDateString("ar-SA-u-nu-latn-ca-gregory", { month: "long", day: "numeric", timeZone: "UTC" });
+var rainbowNow = (m, now) => rainbowRead(m && m.rainbow, now, m && m.btc && m.btc.price);
+function rainbowLines(t, m, now) {
+  const rb = rainbowNow(m, now);
+  if (!rb) return [];
+  const ar = t === W.ar, out = [ar ? `\u{1F308} ${t.rbName}: <b>${t.rbBand(rb.band)}</b>` : `\u{1F308} ${t.rbName}  <b>${t.rbBand(rb.band)}</b>`, `${rainbowName(rb.band, ar)} \xB7 ${t.rbVsS(rb.vs)}`];
+  if (rb.pending) out.push(`<i>${t.rbPend(rb.pending)}</i>`);
+  return out;
+}
 function etfDay(etf) {
   if (!etf || !etf.btc || !etf.btc.days || !etf.btc.days.length) return null;
   const b = etf.btc.days[etf.btc.days.length - 1], e = etf.eth && etf.eth.days && etf.eth.days.find((x) => x[0] === b[0]);
@@ -1577,7 +1870,7 @@ async function loadMarket(ids = [], coins = []) {
     if (s) series[id] = s;
   }));
   const closeF = await cached("close", 10 * 6e4, async () => await getJson(RAW + "p/close.json") || false);
-  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
+  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, rainbow: base.m.rainbow || null, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
   await liveTopUp(market, all);
   const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
   const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 3);
@@ -2695,7 +2988,7 @@ async function grant(env, chat, until, src, charge) {
 async function revoke(env, chat) {
   return setMember(env, chat, { premium: void 0, premUntil: void 0, premSrc: void 0, subCharge: void 0, premRemind: void 0, ai: DEF_AI, reports: DEF_REPORTS });
 }
-var W = {
+var W2 = {
   en: {
     pTitle: "\u2B50 <b>Cute Portfolio Premium</b>",
     pBody: (p) => `Everything stays <b>free</b> for everyone. Premium adds:
@@ -2777,7 +3070,7 @@ Until ${u} \u2014 it renews by itself (stop any time: Telegram \u2192 Settings \
     ownerP: "\u0623\u0646\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632 \u0628\u0627\u0644\u0641\u0639\u0644 \u2B50 \u2014 \u0647\u0630\u0627 \u0645\u0627 \u064A\u0631\u0627\u0647 \u0627\u0644\u0623\u0639\u0636\u0627\u0621:"
   }
 };
-var words = (lang2) => W[lang2 === "ar" ? "ar" : "en"];
+var words = (lang2) => W2[lang2 === "ar" ? "ar" : "en"];
 async function premiumView(env, lang2, now = Date.now()) {
   const w = words(lang2), p = price(env), own = isOwner(env), x = own ? null : await member(env);
   const on = premiumNow(x, now), lines = [w.pTitle, "", w.pBody(p)];
@@ -3986,7 +4279,7 @@ var TOOLS = [
   },
   {
     name: "get_market",
-    description: "The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market's state (open / closed, the next open or close in Riyadh time), and metals: gold, silver, platinum, copper (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).",
+    description: "The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market's state (open / closed, the next open or close in Riyadh time), Bitcoin's rainbow band (1\u20139 around its long-term trend line: a description of the past, never a forecast or an order to buy or sell), and metals: gold, silver, platinum, copper (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).",
     input_schema: { type: "object", properties: { top: { type: "integer", enum: [100, 200, 300, 500], description: "Rank range for best / worst (default 100)" } } }
   },
   {
@@ -4075,6 +4368,26 @@ function context(env) {
   return ctx;
 }
 var srcOf = (m, id) => typeof m.live[id] === "string" ? m.live[id] + " (live)" : m.live[id] ? "CoinGecko (live)" : "market snapshot" + (m.parts && m.parts.top ? " of " + local(Date.parse(m.parts.top), { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) + " Riyadh" : "");
+function rainbowFacts(m) {
+  const rb = rainbowNow(m, Date.now());
+  if (!rb) return null;
+  return {
+    band: rb.band,
+    of: 9,
+    name: rainbowName(rb.band),
+    name_ar: rainbowName(rb.band, true),
+    pct_vs_trend_line: r23(rb.vs),
+    trend_line_usd: Math.round(rb.line),
+    band_low_usd: Math.round(rb.lo),
+    band_high_usd: Math.round(rb.hi),
+    last_daily_close_usd: r62(rb.close),
+    last_close_day: rb.day,
+    held_since: rb.since,
+    last_close_in_another_band: rb.pending,
+    share_of_days_in_this_band_pct: rb.share ? rb.share[rb.band - 1] : null,
+    note: "Nine equal bands (log scale) around one trend line fitted to every daily close since 18 Aug 2010; band 4 holds the line. A band counts after two daily closes in it. It describes the past \u2014 not a forecast and not an order to buy or sell."
+  };
+}
 async function runTool(ctx, name, input) {
   const now = Date.now();
   if (name === "get_coin") {
@@ -4201,6 +4514,7 @@ async function runTool(ctx, name, input) {
       usdt_dominance_pct: r23(d.usdt),
       fear_greed: m.fng ? { value: m.fng.value, label: m.fng.label, yesterday: m.fng.prev, week_ago: m.fng.week } : null,
       altcoin_season: m.alt ? { value: m.alt.value, label: m.alt.label } : null,
+      bitcoin_rainbow: rainbowFacts(m),
       etf_flows_latest_day: e ? { date: e.date, btc_usd: e.btc, eth_usd: e.eth } : null,
       [`top${n}_best_24h`]: pick(list3, 1),
       [`top${n}_worst_24h`]: pick(list3, -1),
@@ -4236,7 +4550,7 @@ async function runTool(ctx, name, input) {
     ctx.used.add("your exit plan (Firebase)");
     ctx.used.add("market snapshot");
     return {
-      conditions: s.macro.map((c) => ({ name: { btcD: "BTC dominance", usdtD: "USDT dominance", ethBtc: "ETH/BTC" }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
+      conditions: s.macro.map((c) => ({ name: { btcD: "BTC dominance", usdtD: "USDT dominance", ethBtc: "ETH/BTC", rainbow: "Bitcoin rainbow band (1\u20139, held after two daily closes)" }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
       take_profits: (s.tps || []).map((t) => ({ ticker: t.sym, tp: t.n, level_usd: r62(t.level / (t.g || 1)), price_now_usd: r62(t.price / (t.g || 1)), ...t.g > 1 ? { unit: "USD per gram" } : {}, pct_to_go: r23((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go)
     };
   }
@@ -4684,7 +4998,7 @@ function todo(sum, now) {
     else if (to <= 7) add(80, { what: "take_profit_close", coin: t.sym, tp: t.n, level_usd: r63(t.level / G), price_usd: r63(t.price / G), ...U, pct_to_go: r24(to), sell_pct: t.pct });
   }
   const met2 = (sum.macro || []).filter((x) => x.met).length;
-  if (met2 >= 2) add(75, { what: "exit_conditions", met_of_3: met2 });
+  if (met2 >= 2) add(75, { what: "exit_conditions", met: met2, of: sum.macro.length });
   if (sum.alloc) for (const g of sum.alloc.groups.filter((g2) => g2.state !== "ok").sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift)).slice(0, 1))
     add(50, { what: g.drift > 0 ? "allocation_over" : "allocation_under", group: sum.alloc.names[g.key] || g.key, now_pct: r24(g.now), target_pct: r24(g.target), usd_to_fix: Math.round(Math.abs(g.full)) });
   const rows = sum.coins.filter((c) => !isStable(c.sym) && c.value >= 5);
@@ -4776,7 +5090,7 @@ var TODO_TXT = {
     near_buy_price: `\u{1F3AF} ${x.coin} ${pct(x.pct_above_buy_price, 1)} above your buy price ${usd(x.your_buy_price_usd)}`,
     take_profit_reached: `\u{1F4B0} ${x.coin} reached TP${x.tp} ${usd(x.level_usd)} \u2014 sell ${x.sell_pct}%`,
     take_profit_close: `\u{1F4B0} ${x.coin} ${r24(x.pct_to_go)}% from TP${x.tp} ${usd(x.level_usd)}`,
-    exit_conditions: `\u{1F6AA} Exit: ${x.met_of_3}/3 conditions met`,
+    exit_conditions: `\u{1F6AA} Exit: ${x.met}/${x.of} conditions met`,
     allocation_over: `\u2696\uFE0F ${x.group} ${x.now_pct}% vs ${x.target_pct}% \u2014 trim ${usd(x.usd_to_fix)}`,
     allocation_under: `\u2696\uFE0F ${x.group} ${x.now_pct}% vs ${x.target_pct}% \u2014 add ${usd(x.usd_to_fix)}`,
     reinforce_signal: `\u{1F7E2} ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg \u2014 Reinforce`,
@@ -4790,7 +5104,7 @@ var TODO_TXT = {
     near_buy_price: `\u{1F3AF} ${x.coin} \u0641\u0648\u0642 \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 ${usd(x.your_buy_price_usd)} \u0628\u0640 ${pct(x.pct_above_buy_price, 1)}`,
     take_profit_reached: `\u{1F4B0} ${x.coin} \u0648\u0635\u0644 TP${x.tp} ${usd(x.level_usd)} \u2014 \u0628\u064A\u0639 ${x.sell_pct}%`,
     take_profit_close: `\u{1F4B0} ${x.coin} \u0628\u0627\u0642\u064A ${r24(x.pct_to_go)}% \u0639\u0644\u0649 TP${x.tp} ${usd(x.level_usd)}`,
-    exit_conditions: `\u{1F6AA} \u0627\u0644\u062E\u0631\u0648\u062C: ${x.met_of_3}/3 \u0645\u0624\u0634\u0631\u0627\u062A \u062A\u062D\u0642\u0642\u062A`,
+    exit_conditions: `\u{1F6AA} \u0627\u0644\u062E\u0631\u0648\u062C: ${x.met}/${x.of} \u0645\u0624\u0634\u0631\u0627\u062A \u062A\u062D\u0642\u0642\u062A`,
     allocation_over: `\u2696\uFE0F ${x.group} ${x.now_pct}% \u0648\u0627\u0644\u0647\u062F\u0641 ${x.target_pct}% \u2014 \u0642\u0644\u0651\u0644 ${usd(x.usd_to_fix)}`,
     allocation_under: `\u2696\uFE0F ${x.group} ${x.now_pct}% \u0648\u0627\u0644\u0647\u062F\u0641 ${x.target_pct}% \u2014 \u0632\u0648\u0651\u062F ${usd(x.usd_to_fix)}`,
     reinforce_signal: `\u{1F7E2} ${x.coin} ${pct(x.pct_vs_your_avg, 1)} \u0639\u0646 \u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643 \u2014 \u062A\u0639\u0632\u064A\u0632`,
@@ -6428,14 +6742,15 @@ var T = {
     allocS: "Allocation",
     onT: (a, n) => `${a}/${n} on target`,
     dcaS: (n, mo) => `${n} buys \xB7 ${mo}/mo`,
-    exitS: (n) => `Exit ${n}/3`,
+    exitS: (n, N) => `Exit ${n}/${N}`,
     nearTp: "next TP",
     exitT: "Exit plan",
     conds: "Exit conditions",
-    met3: (n) => `${n} of 3 met`,
+    metN: (n, N) => `${n} of ${N} met`,
     btcD: "BTC dominance",
     usdtD: "USDT dominance",
     ethBtc: "ETH/BTC",
+    rainbow: "Rainbow band",
     tpT: "Take-profit levels",
     tpKey: "level \xB7 to go \xB7 sell",
     more: (n) => `+${n} more coins in the app`,
@@ -6444,7 +6759,7 @@ var T = {
     reached: "reached",
     noExit: "No take-profit levels yet \u2014 set them on the Exit Strategy page.",
     openExit: "\u{1F6AA} Open Exit Strategy",
-    allExit: "All 3 conditions met \u2014 your exit zone",
+    allExit: (N) => `All ${N} conditions met \u2014 your exit zone`,
     kb: { pf: "\u{1F4BC} Portfolio", mk: "\u{1F30D} Market", pl: "\u{1F4CB} Plan", ex: "\u{1F6AA} Exit", mv: "\u{1F3C6} Movers", sg: "\u{1F3AF} Signals" },
     kbOld: { mv: "\u{1F3C6} Best & worst", ex: "\u{1F6AA} Exit plan" },
     hidden: "Buttons hidden \u2328\uFE0F \u2014 tap the \u2328\uFE0F icon in the message box (or send /start) to bring them back.",
@@ -6571,14 +6886,15 @@ var T = {
     allocS: "\u0627\u0644\u062A\u0648\u0632\u064A\u0639",
     onT: (a, n) => `${a} \u0645\u0646 ${n} \u0639\u0644\u0649 \u0627\u0644\u0647\u062F\u0641`,
     dcaS: (n, mo) => `${n === 1 ? "\u0639\u0645\u0644\u064A\u0629 \u0634\u0631\u0627\u0621 \u062F\u0648\u0631\u064A \u0648\u0627\u062D\u062F\u0629" : n === 2 ? "\u0639\u0645\u0644\u064A\u062A\u0627 \u0634\u0631\u0627\u0621 \u062F\u0648\u0631\u064A" : n + " \u0639\u0645\u0644\u064A\u0627\u062A \u0634\u0631\u0627\u0621 \u062F\u0648\u0631\u064A"} (DCA) \xB7 ${mo} \u0634\u0647\u0631\u064A\u0627\u064B`,
-    exitS: (n) => `\u0627\u0644\u062E\u0631\u0648\u062C ${n} \u0645\u0646 3`,
+    exitS: (n, N) => `\u0627\u0644\u062E\u0631\u0648\u062C ${n} \u0645\u0646 ${N}`,
     nearTp: "\u0623\u0642\u0631\u0628 \u0647\u062F\u0641 \u0631\u0628\u062D",
     exitT: "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
     conds: "\u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u062E\u0631\u0648\u062C",
-    met3: (n) => `\u062A\u062D\u0642\u0642 ${n} \u0645\u0646 3`,
+    metN: (n, N) => `\u062A\u062D\u0642\u0642 ${n} \u0645\u0646 ${N}`,
     btcD: "\u0647\u064A\u0645\u0646\u0629 BTC",
     usdtD: "\u0647\u064A\u0645\u0646\u0629 USDT",
     ethBtc: "ETH/BTC",
+    rainbow: "\u0646\u0637\u0627\u0642 \u0642\u0648\u0633 \u0642\u0632\u062D",
     tpT: "\u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D",
     tpKey: "\u0627\u0644\u0633\u0639\u0631 \xB7 \u0627\u0644\u0645\u062A\u0628\u0642\u064A \xB7 \u0627\u0644\u0628\u064A\u0639",
     more: (n) => `\u0648${n} \u0639\u0645\u0644\u0629 \u0623\u062E\u0631\u0649 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642`,
@@ -6587,7 +6903,7 @@ var T = {
     reached: "\u0648\u0635\u0644",
     noExit: "\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0633\u062A\u0648\u064A\u0627\u062A \u062C\u0646\u064A \u0623\u0631\u0628\u0627\u062D \u0628\u0639\u062F \u2014 \u0623\u0636\u0641\u0647\u0627 \u0645\u0646 \u0635\u0641\u062D\u0629 \u0627\u0633\u062A\u0631\u0627\u062A\u064A\u062C\u064A\u0629 \u0627\u0644\u062E\u0631\u0648\u062C \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642.",
     openExit: "\u{1F6AA} \u0627\u0641\u062A\u062D \u0627\u0633\u062A\u0631\u0627\u062A\u064A\u062C\u064A\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
-    allExit: "\u062A\u062D\u0642\u0642\u062A \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u062B\u0644\u0627\u062B\u0629 \u2014 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
+    allExit: (N) => `\u062A\u062D\u0642\u0642\u062A \u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062A \u0643\u0644\u0647\u0627 (${N}) \u2014 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062E\u0631\u0648\u062C`,
     kb: { pf: "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A", mk: "\u{1F30D} \u0627\u0644\u0633\u0648\u0642", pl: "\u{1F4CB} \u0627\u0644\u062E\u0637\u0629", ex: "\u{1F6AA} \u0627\u0644\u062E\u0631\u0648\u062C", mv: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644", sg: "\u{1F3AF} \u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062A" },
     kbOld: { mv: "\u{1F3C6} \u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623", ex: "\u{1F6AA} \u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C" },
     hidden: "\u0623\u064F\u062E\u0641\u064A\u062A \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u2328\uFE0F \u2014 \u0627\u0636\u063A\u0637 \u0639\u0644\u0627\u0645\u0629 \u2328\uFE0F \u0641\u064A \u062E\u0627\u0646\u0629 \u0627\u0644\u0643\u062A\u0627\u0628\u0629 (\u0623\u0648 \u0623\u0631\u0633\u0644 /start) \u0644\u0625\u0639\u0627\u062F\u062A\u0647\u0627.",
@@ -6706,17 +7022,17 @@ function viewPortfolio(t, cfg, sum, m, now) {
   if (sum.alloc) L.push(`\u2696\uFE0F ${t.allocS} ${t.onT(sum.alloc.onTarget, sum.alloc.count)}`);
   if ((sum.dca || []).length) L.push(`\u{1F6D2} ${isAr(t) ? "" : "DCA "}${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + (x.usdMo || 0), 0)))}`);
   const mc = sum.macro.filter((x) => x.met).length, tp = nearestTp(sum);
-  L.push(`\u{1F6AA} ${t.exitS(mc)}${tp ? ` \xB7 ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ""}`);
+  L.push(`\u{1F6AA} ${t.exitS(mc, sum.macro.length)}${tp ? ` \xB7 ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ""}`);
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pf"), cb3(t.movers, "mv")], [cb3(t.plan, "pl"), cb3(t.exit, "ex")], [cb3(t.signals, "sg"), webApp(t.openApp)], [cb3(t.back, "menu")]] };
 }
 function viewExit(t, sum, now) {
-  const mc = sum.macro.filter((x) => x.met).length, name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc };
-  const L = [`\u{1F6AA} <b>${t.exitT}</b> \xB7 ${hm(now)}`, "", `\u{1F9ED} <b>${t.conds}</b> \xB7 ${t.met3(mc)}`];
+  const mc = sum.macro.filter((x) => x.met).length, N = sum.macro.length, name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc, rainbow: t.rainbow };
+  const L = [`\u{1F6AA} <b>${t.exitT}</b> \xB7 ${hm(now)}`, "", `\u{1F9ED} <b>${t.conds}</b> \xB7 ${t.metN(mc, N)}`];
   for (const x of sum.macro) {
     const v = (n2) => n2 == null ? "\u2014" : n2.toFixed(x.dp) + x.unit;
-    L.push(`${x.met ? "\u2705" : "\u23F3"} ${name[x.k]}: ${v(x.now)} \u2192 ${x.op} ${v(x.lvl)}`);
+    L.push(`${x.met ? "\u2705" : "\u23F3"} ${name[x.k]}: ${v(x.now)}${x.k === "rainbow" && x.now ? ` (${rainbowName(x.now, isAr(t))})` : ""} \u2192 ${x.op} ${v(x.lvl)}`);
   }
-  if (mc === 3) L.push(`\u{1F514} <b>${t.allExit}</b>`);
+  if (mc === N) L.push(`\u{1F514} <b>${t.allExit(N)}</b>`);
   const tps = (sum.tps || []).map((x) => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
   L.push("", `\u{1F3AF} <b>${t.tpT}</b>`, `<i>${t.tpKey}</i>`);
   if (!tps.length) L.push(t.noExit);
@@ -6797,7 +7113,7 @@ ${t.noPlan}`, buttons: [[webApp(t.openApp, "accumulation.html"), cb3(t.back, "me
 }
 var RANGES = [100, 200, 300, 500];
 function viewMarket(t, m, now, range = 100) {
-  const L = [`\u{1F30D} <b>${t.mkT}</b> \xB7 ${hm(now)}`, "", ...marketShort(t, m)];
+  const L = [`\u{1F30D} <b>${t.mkT}</b> \xB7 ${hm(now)}`, "", ...marketShort(t, m), ...rainbowLines(isAr(t) ? W.ar : W.en, m, now)];
   const seen = /* @__PURE__ */ new Set(), top = [...m.top || [], ...m.top500 || []].filter((r) => r.rank && r.rank <= range && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
   const line = (r) => row(r.sym, r.ch24, price2(r.price));
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);

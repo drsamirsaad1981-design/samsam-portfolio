@@ -23,6 +23,9 @@ check('no secret value in the built file', !/sk-ant-|BEGIN PRIVATE KEY|\d{8,}:[A
 // ── fake world ──
 const NOW = Date.now(), HR = 3600e3;
 const market = fx('market_snap_fixture.json'), top500 = fx('top500_fixture.json'), alt = fx('alt_fixture.json'), etf = fx('etf_fixture.json');
+// 🌈 the Bitcoin rainbow's small part, as update-market.mjs copies it into the snapshot: three closes in band 2, which holds
+{ const C = await import('../samsam-core.js'), F = { a: -16.1839, b: 5.5943, lo: -0.746, hi: 1.216, share: [0.8, 11.8, 33.5, 24.8, 14.5, 9.8, 2.8, 1.7, 0.2] }, today = Math.floor(NOW / 864e5);
+  market.rainbow = { v: 1, fit: F, held: { band: 2, since: C.rainbowIso(today - 20) }, closes: [3, 2, 1].map(k => [C.rainbowIso(today - k), C.rainbowLine(F, today - k) * 10 ** (F.lo + 1.5 * (F.hi - F.lo) / 9)]) }; }
 market.parts = { top: new Date(NOW - 12 * 60e3).toISOString() };
 market.stocks = [['NVDAB', 2.1, 'NVIDIA'], ['TSLAB', -3.4, 'Tesla'], ['CRCLB', 7.8, 'Circle'], ['AAPLB', 0.4, 'Apple'], ['GMEB', -6.2, 'GameStop'], ['MSFTB', 1.1, 'Microsoft'], ['METAB', -0.9, 'Meta'], ['AMZNB', 3.3, 'Amazon']].map(([sym, ch24, n], i) => ({ id: sym.toLowerCase() + '-bstock', sym, name: n + ' bStock', price: 100 + i * 10, ch24 }));
 market.metals = [['gold', 'oz', 2650, 0.76], ['silver', 'oz', 31.2, -0.5], ['platinum', 'oz', 960, 0.1], ['copper', 'lb', 4.35, 1.2], ['brent', 'bbl', 73.4, -1.4]].map(([k, unit, price, ch24]) => ({ k, unit, price, ch24, ch7: ch24 * 2, spark: [price * 0.98, price] })); market.parts = { ...(market.parts || {}), metals: new Date().toISOString() };
@@ -203,7 +206,7 @@ check('portfolio buttons: Refresh · Best & worst · Plan · Exit plan · Signal
 const plain = x => x.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&');
 const longest = Math.max(...plain(pf).split('\n').map(l => [...l].length));
 check(`portfolio: every line fits a phone (longest ${longest} ≤ 40 characters)`, longest <= 40, plain(pf).split('\n').filter(l => [...l].length > 40));
-check('portfolio: the exit line — Exit 0/3 · next TP LINK +127%', /🚪 Exit 0\/3 · next TP LINK \+127%/.test(pf), pf.slice(-200));
+check('portfolio: the exit line — Exit 0/4 · next TP LINK +127%', /🚪 Exit 0\/4 · next TP LINK \+127%/.test(pf), pf.slice(-200));
 check('portfolio: best / worst today up to 5 each, no stablecoin', !/USDT\s/.test(pf.split('🌍')[0]) && (pf.match(/📈 <b>Best today<\/b>\n((?:<code>.*\n?)+)/) || ['', ''])[1].trim().split('\n').length <= 5, pf);
 check('"Open the app" opens the full app inside Telegram (a Mini App button → the site)', (btns(v).find(b => b.text === '📱 Open the app').web_app || {}).url === 'https://drsamirsaad1981-design.github.io/samsam-portfolio/index.html');
 check('one Google sign-in for several questions (token cached)', tokenCalls === 1, tokenCalls);
@@ -278,6 +281,7 @@ sent.length = 0; await say('/market');
 v = last();
 const cryptoPart = x => x.split('🏦')[0];
 check('market: BTC, dominance, Fear & Greed, Top 100 by default', /BTC/.test(v.b.text) && /Fear/.test(v.b.text) && /Top 100 · best 24h/.test(v.b.text), v.b.text.slice(0, 300));
+check('market: 🌈 the Bitcoin rainbow line — the band that holds, its name, the percent against the trend line', /\n🌈 Bitcoin rainbow  <b>band 2 of 9<\/b>\nDeep discount · −\d+% vs the line\n/.test(v.b.text), v.b.text.slice(0, 500));
 const pick = n => { const T = [...market.top, ...top500.top].filter((r, i, a) => r.rank <= n && r.ch24 != null && !isStable(r.sym) && a.findIndex(x => x.id === r.id) === i).map(r => ({ ...r, ch24: LIVE[r.id] ? LIVE[r.id].usd_24h_change : r.ch24 }));
   return [...[...T].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), ...[...T].sort((a, b) => a.ch24 - b.ch24).slice(0, 5)].map(r => r.sym.toUpperCase()); };
 let tops = [...cryptoPart(v.b.text).matchAll(/<code>(\S+)\s/g)].map(x => x[1]);
@@ -307,7 +311,7 @@ check('plan: overall %, a bar per coin, LINK done ✅, SOL 50%', /Overall: <b>/.
 check('plan: buy-price alert for PENDLE (a coin you don\'t own)', /Buy-price alerts/.test(v.b.text) && /PENDLE/.test(v.b.text), v.b.text);
 sent.length = 0; await say('/exit');
 v = last();
-check('exit: the 3 conditions (✅ / ⏳) with now → target', /Exit conditions<\/b> · 0 of 3 met/.test(v.b.text) && /⏳ BTC dominance: [\d.]+% → ≤ 45\.9%/.test(v.b.text) && /⏳ USDT dominance/.test(v.b.text) && /⏳ ETH\/BTC/.test(v.b.text), v.b.text);
+check('exit: the 4 conditions (✅ / ⏳) with now → target — the last is the rainbow band against your band (6 until you choose)', /Exit conditions<\/b> · 0 of 4 met/.test(v.b.text) && /⏳ BTC dominance: [\d.]+% → ≤ 45\.9%/.test(v.b.text) && /⏳ USDT dominance/.test(v.b.text) && /⏳ ETH\/BTC/.test(v.b.text) && /⏳ Rainbow band: 2 \(Deep discount\) → ≥ 6\n/.test(v.b.text), v.b.text);
 check('exit: LINK TP1 $25 (+127%, sell 25%), TP2 = avg $15 × 3, TP3 × 5 — one short line each', /<b>LINK<\/b> · \$11\.00/.test(v.b.text) && /⏳ TP1 \$25\.00 · \+127% · 25%/.test(v.b.text) && /⏳ TP2 \$45\.00 · \+309% · 50%/.test(v.b.text) && /⏳ TP3 \$75\.00 · \+582% · 25%/.test(v.b.text), v.b.text);
 const exLong = Math.max(...plain(v.b.text).split('\n').map(l => [...l].length));
 check(`exit: every line fits a phone (longest ${exLong} ≤ 40)`, exLong <= 40, plain(v.b.text).split('\n').filter(l => [...l].length > 40));
@@ -348,7 +352,7 @@ claudeCalls.length = 0; await say('hello there');
 check('…the next question starts fresh (1 message)', claudeCalls[0].messages.length === 1, claudeCalls[0].messages.length);
 sent.length = 0; claudeCalls.length = 0; await say('tell me everything');
 const all = claudeCalls[1] && claudeCalls[1].messages.at(-1).content.map(r => JSON.parse(r.content));
-check('5 tools in one turn: portfolio, market (Top 200), plan, exit, 7-day history', all && all.length === 5 && all[0].total_value_usd > 0 && all[1].top200_best_24h && all[1].bstocks_best_24h.length === 5 && all[2].coins.length === 3 && all[3].conditions.length === 3 && all[4].change_pct != null && all[4].high && all[4].daily_closes, all && all.map(x => Object.keys(x).slice(0, 4)));
+check('5 tools in one turn: portfolio, market (Top 200), plan, exit, 7-day history', all && all.length === 5 && all[0].total_value_usd > 0 && all[1].top200_best_24h && all[1].bstocks_best_24h.length === 5 && all[2].coins.length === 3 && all[3].conditions.length === 4 && /rainbow/i.test(all[3].conditions[3].name) && all[1].bitcoin_rainbow && all[1].bitcoin_rainbow.band === 2 && all[1].bitcoin_rainbow.name === 'Deep discount' && /not a forecast/.test(all[1].bitcoin_rainbow.note) && all[4].change_pct != null && all[4].high && all[4].daily_closes, all && all.map(x => Object.keys(x).slice(0, 4)));
 check('get_market: metals, no oil (gold with the gram in SAR 319.5), the US stock market\'s state and next change, the bStocks summary (8: 5 up, 3 down)', all[1].metals.length === 4 && all[1].metals[0].name === 'gold' && all[1].metals[0].gram_sar_24k === 319.5 && !('gram_sar_24k' in all[1].metals[3]) && !all[1].metals.some(x => x.name === 'brent') && ['open', 'pre', 'after', 'closed'].includes(all[1].us_stock_market.state) && all[1].us_stock_market.next_change_riyadh && all[1].bstocks_summary.count === 8 && all[1].bstocks_summary.up === 5, { m: all[1].metals_and_oil, u: all[1].us_stock_market, b: all[1].bstocks_summary });
 check('get_portfolio: every coin with share %, profit vs average, signal (USDT marked stablecoin)', all[0].coins.length === 5 && all[0].coins.find(c => c.ticker === 'USDT').stablecoin === true && all[0].coins.every(c => 'signal' in c && 'share_pct' in c), all[0].coins);
 check('get_exit: LINK TP1 $25 at +127% to go, sell 25%', all[3].take_profits[0].ticker === 'LINK' && all[3].take_profits[0].level_usd === 25 && Math.round(all[3].take_profits[0].pct_to_go) === 127 && all[3].take_profits[0].sell_pct === 25, all[3].take_profits[0]);

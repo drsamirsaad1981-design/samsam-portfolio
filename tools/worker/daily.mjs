@@ -114,7 +114,7 @@ export function todo(sum, now) {
     else if (to <= 7) add(80, { what: 'take_profit_close', coin: t.sym, tp: t.n, level_usd: r6(t.level / G), price_usd: r6(t.price / G), ...U, pct_to_go: r2(to), sell_pct: t.pct });
   }
   const met = (sum.macro || []).filter(x => x.met).length;
-  if (met >= 2) add(75, { what: 'exit_conditions', met_of_3: met });
+  if (met >= 2) add(75, { what: 'exit_conditions', met, of: sum.macro.length });
   if (sum.alloc) for (const g of sum.alloc.groups.filter(g => g.state !== 'ok').sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift)).slice(0, 1))
     add(50, { what: g.drift > 0 ? 'allocation_over' : 'allocation_under', group: sum.alloc.names[g.key] || g.key, now_pct: r2(g.now), target_pct: r2(g.target), usd_to_fix: Math.round(Math.abs(g.full)) });
   const rows = sum.coins.filter(c => !isStable(c.sym) && c.value >= 5);
@@ -181,12 +181,12 @@ const TODO_TXT = {
   en: x => ({ dca_today: `🛒 DCA day: buy ${dcaTxt(x)} of ${x.coin}`, dca_missed: `⏰ DCA ${x.coin} ${x.days_late} days late (${dcaTxt(x)})`, dca_tomorrow: `🛒 Tomorrow: DCA ${x.coin} ${dcaTxt(x)}`,
     at_buy_price: `🎯 ${x.coin} ${usd(x.price_usd)} — at your buy price ${usd(x.your_buy_price_usd)}`, near_buy_price: `🎯 ${x.coin} ${pct(x.pct_above_buy_price, 1)} above your buy price ${usd(x.your_buy_price_usd)}`,
     take_profit_reached: `💰 ${x.coin} reached TP${x.tp} ${usd(x.level_usd)} — sell ${x.sell_pct}%`, take_profit_close: `💰 ${x.coin} ${r2(x.pct_to_go)}% from TP${x.tp} ${usd(x.level_usd)}`,
-    exit_conditions: `🚪 Exit: ${x.met_of_3}/3 conditions met`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — trim ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — add ${usd(x.usd_to_fix)}`,
+    exit_conditions: `🚪 Exit: ${x.met}/${x.of} conditions met`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — trim ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — add ${usd(x.usd_to_fix)}`,
     reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg — Reinforce`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg — Sell / convert` }[x.what]),
   ar: x => ({ dca_today: `🛒 يوم الشراء الدوري (DCA): اشترِ ${x.coin} بـ ${dcaTxt(x)}`, dca_missed: `⏰ DCA ${x.coin} متأخر ${x.days_late} يوم (${dcaTxt(x)})`, dca_tomorrow: `🛒 غداً: DCA ${x.coin} ${dcaTxt(x)}`,
     at_buy_price: `🎯 ${x.coin} ${usd(x.price_usd)} — وصل إلى سعر الشراء الذي حددته ${usd(x.your_buy_price_usd)}`, near_buy_price: `🎯 ${x.coin} فوق سعر الشراء ${usd(x.your_buy_price_usd)} بـ ${pct(x.pct_above_buy_price, 1)}`,
     take_profit_reached: `💰 ${x.coin} وصل TP${x.tp} ${usd(x.level_usd)} — بيع ${x.sell_pct}%`, take_profit_close: `💰 ${x.coin} باقي ${r2(x.pct_to_go)}% على TP${x.tp} ${usd(x.level_usd)}`,
-    exit_conditions: `🚪 الخروج: ${x.met_of_3}/3 مؤشرات تحققت`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — قلّل ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — زوّد ${usd(x.usd_to_fix)}`,
+    exit_conditions: `🚪 الخروج: ${x.met}/${x.of} مؤشرات تحققت`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — قلّل ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — زوّد ${usd(x.usd_to_fix)}`,
     reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} عن متوسط شرائك — تعزيز`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} عن متوسط شرائك — بيع / تحويل` }[x.what]),
 };
 // 🇺🇸 / 🥇 the other markets for the smart morning / evening: the US stock market's state, the biggest bStock moves, gold and

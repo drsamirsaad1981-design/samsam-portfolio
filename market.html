@@ -18,23 +18,24 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-lang.js?v=202611270003"></script>
-<script src="samsam-ar.js?v=202611270003"></script>
-<script src="samsam-ui.js?v=202611270003"></script>
-<script src="samsam-hints.js?v=202611270003"></script>
-<script src="samsam-arhints.js?v=202611270003"></script>
-<script src="samsam-vault.js?v=202611270003"></script>
-<script src="samsam-labels.js?v=202611270003"></script>
-<script src="samsam-taxonomy.js?v=202611270003"></script>
-<script src="samsam-coins.js?v=202611270003"></script>
-<script src="samsam-import.js?v=202611270003"></script>
-<script src="samsam-wallets.js?v=202611270003"></script>
-<script src="samsam-rewards.js?v=202611270003"></script>
-<script src="samsam-settings.js?v=202611270003"></script>
-<script src="samsam-dropdown.js?v=202611270003"></script>
-<script src="samsam-add.js?v=202611270003"></script>
-<script src="samsam-market.js?v=202611270003"></script>
-<script src="samsam-assets.js?v=202611270003"></script>
+<script src="samsam-lang.js?v=202611270230"></script>
+<script src="samsam-ar.js?v=202611270230"></script>
+<script src="samsam-ui.js?v=202611270230"></script>
+<script src="samsam-hints.js?v=202611270230"></script>
+<script src="samsam-arhints.js?v=202611270230"></script>
+<script src="samsam-vault.js?v=202611270230"></script>
+<script src="samsam-labels.js?v=202611270230"></script>
+<script src="samsam-taxonomy.js?v=202611270230"></script>
+<script src="samsam-coins.js?v=202611270230"></script>
+<script src="samsam-import.js?v=202611270230"></script>
+<script src="samsam-wallets.js?v=202611270230"></script>
+<script src="samsam-rewards.js?v=202611270230"></script>
+<script src="samsam-settings.js?v=202611270230"></script>
+<script src="samsam-dropdown.js?v=202611270230"></script>
+<script src="samsam-add.js?v=202611270230"></script>
+<script src="samsam-market.js?v=202611270230"></script>
+<script src="samsam-rainbow.js?v=202611270230"></script>
+<script src="samsam-assets.js?v=202611270230"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -563,6 +564,9 @@ html[dir="rtl"] .as-nl small:not(.as-my) { direction: ltr; text-align: right; } 
     </div>
   </section>
 
+  <!-- 🌈 Bitcoin Rainbow: the trend line and its nine bands (samsam-rainbow.js; hidden until GitHub has the numbers) -->
+  <section class="mk-card mk-etf mk-rb" id="rbCard" hidden aria-label="Bitcoin Rainbow"></section>
+
   <section class="mk-list" aria-label="Market watchlist">
     <div class="mk-tabs" role="tablist">
       <button type="button" role="tab" id="tabTop" aria-selected="true" aria-haspopup="menu" aria-expanded="false" onclick="topTab(event)"><span data-ic="bar"></span><span id="topLbl">Top 100</span><span class="mk-tchev" aria-hidden="true"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
@@ -607,7 +611,7 @@ html[dir="rtl"] .as-nl small:not(.as-my) { direction: ltr; text-align: right; } 
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611270003"></script>
+<script type="module" src="samsam-cloud.js?v=202611270230"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -769,6 +773,8 @@ document.getElementById('etfTog').addEventListener('click', () => {
 });
 document.getElementById('etfSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; etfA = b.dataset.a; try { localStorage.setItem('samsam_mkt_etfa', etfA); } catch (_) {} paintEtf(); });
 function loadEtf(force) { if (M.etf) M.etf(force).then(j => { etf = j; paintEtf(); }, () => {}); }
+// 🌈 the Bitcoin Rainbow card draws itself (samsam-rainbow.js)
+if (window.SamsamRainbow) SamsamRainbow.mount(document.getElementById('rbCard'));
 
 // ── list ──
 // phone: one period for the whole list (24h or 7d), remembered; a computer shows both columns

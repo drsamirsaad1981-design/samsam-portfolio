@@ -361,13 +361,13 @@
     "Each coin is sold in three steps as its price reaches a multiple of your average buy price: ×2 → 25% · ×3 → 50% · ×5 → 25%.",
     "10% stays out of the plan as a <b>Moonbag</b>, to keep.",
     "A step turns <b>✓ Done</b> by itself when the sells you record cover it.",
-    "<b>Macro Exit Indicators</b>: BTC dominance, USDT dominance and ETH/BTC against your own levels; <b>Cash-out Progress</b>: how much already sits in stablecoins."
+    "<b>Macro Exit Indicators</b>: BTC dominance, USDT dominance, ETH/BTC and the Bitcoin rainbow band (1–9, at or over the band you choose) against your own levels; <b>Cash-out Progress</b>: how much already sits in stablecoins."
    ],
    "ar": [
     "تُباع كل عملة على ثلاث مراحل: عند ضعفي متوسط سعر شرائك تبيع 25%، وعند 3 أضعاف تبيع 50%، وعند 5 أضعاف تبيع 25%.",
     "تبقى 10% خارج الخطة كـ <b>Moonbag</b> للاحتفاظ بها.",
     "تتحول المرحلة إلى <b>✓ تم</b> تلقائياً عندما تغطيها عمليات البيع التي تسجلها.",
-    "<b>مؤشرات الخروج الكبرى</b>: هيمنة البيتكوين، وهيمنة USDT، وETH/BTC مقارنةً بمستوياتك؛ و<b>تقدّم جني الأرباح</b>: كم أصبح في العملات المستقرة."
+    "<b>مؤشرات الخروج الكبرى</b>: هيمنة البيتكوين، وهيمنة USDT، وETH/BTC، ونطاق قوس قزح البيتكوين (من 1 إلى 9، عند النطاق الذي تختاره أو أعلى) مقارنةً بمستوياتك؛ و<b>تقدّم جني الأرباح</b>: كم أصبح في العملات المستقرة."
    ],
    "tip": {
     "en": "The sliders button changes the default multiples and shares; any coin can have its own prices.",

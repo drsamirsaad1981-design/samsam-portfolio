@@ -15,7 +15,8 @@
 //                alt: { value, label, beat, n, btc90, period: '90d', ready, have },
 //                top: [ { id, sym, name, img, rank, price, mcap, vol, ch24, ch30, spark: [~42 points, 7d], spark24: [25, hourly] } ×150 ],
 //                stocks: [ { id, sym, name, img, price, ch24, ch7, mcap, vol, spark } — Binance bStocks ],
-//                metals: [ { k: gold|silver|platinum|copper|brent, sym, unit: oz|lb|bbl, price, prev, ch24, ch7, spark, at } ] }
+//                metals: [ { k: gold|silver|platinum|copper|brent, sym, unit: oz|lb|bbl, price, prev, ch24, ch7, spark, at } ],
+//                rainbow: { v, fit, closes, held, peaks } — 🌈 copied from m/rainbow.json (tools/update-rainbow.mjs) }
 // top500.json: { updated, from: 101, top: [the same rows for coins 101–500] }
 // Any part that fails keeps the value from the last snapshot.
 
@@ -89,6 +90,10 @@ async function main() {
   try { old = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (_) {}
   const snap = { updated: new Date().toISOString(), global: old.global || null, fng: old.fng || null, top: old.top || [], parts: { ...(old.parts || {}) } };
   const now = snap.updated;
+  // 🌈 the Bitcoin rainbow's small part (tools/update-rainbow.mjs wrote m/rainbow.json a step earlier): the bot and the alerts
+  // read it from this snapshot — the Worker has no outside call to spare for one more file
+  try { const rb = JSON.parse(fs.readFileSync(path.join(OUT, 'rainbow.json'), 'utf8')); if (rb && rb.v === 1 && rb.fit && Array.isArray(rb.closes)) snap.rainbow = { v: 1, fit: rb.fit, closes: rb.closes, held: rb.held || null, peaks: rb.peaks || [] }; } catch (_) {}
+  if (!snap.rainbow && old.rainbow) snap.rainbow = old.rainbow;
 
   // 150 coins: the first 100 are the list; Altcoin Season needs the top 100 *after* leaving out stablecoins etc.
   const MK = p => `${API}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${p}&sparkline=true&price_change_percentage=24h%2C7d%2C30d`;

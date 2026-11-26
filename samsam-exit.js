@@ -34,7 +34,7 @@
   // ── maths ──────────────────────────────────────────────────────────────────
   var calc = {
     // state: 'hit' | 'near' | 'wait' | 'none'; progress 0–100 toward the level
-    macro: function (g, ethBtc, t) {
+    macro: function (g, ethBtc, t, rb) {
       var rows = [], st = function (hit, near) { return hit ? 'hit' : near ? 'near' : 'wait'; };
       var b = g && g.dom ? +g.dom.btc : null;
       rows.push({ k: 'btcD', name: 'BTC Dominance', short: 'BTC.D', cur: b, rule: '≤ ' + t.btcD.toFixed(2) + '%',
@@ -46,6 +46,12 @@
       var e = ethBtc > 0 ? ethBtc : null;
       rows.push({ k: 'ethBtc', name: 'ETH / BTC', short: 'ETH/BTC', cur: e, rule: '≥ ' + fmtRatio(t.ethBtc),
         state: e == null ? 'none' : st(e >= t.ethBtc, (t.ethBtc - e) / t.ethBtc <= NEAR), progress: e ? Math.min(100, e / t.ethBtc * 100) : 0, fmt: fmtRatio });
+      // 🌈 the 4th: Bitcoin's rainbow band — the one that holds after two daily closes (samsam-core.js → rainbowRead) —
+      // against the band you chose (6 until you do). "Close" = one band under yours.
+      var want = Math.min(9, Math.max(1, Math.round(+t.rainbow) || 6)), band = rb ? rb.band : null;
+      rows.push({ k: 'rainbow', name: 'Bitcoin Rainbow', short: 'Rainbow', cur: band, rule: '≥ band ' + want,
+        state: band == null ? 'none' : st(band >= want, band === want - 1), progress: band ? Math.min(100, band / want * 100) : 0,
+        fmt: function (v) { return 'Band ' + v + ' of 9'; }, sub: rb ? rb.name + (rb.pending ? ' · last close in band ' + rb.pending : '') : '' });
       return { rows: rows, hit: rows.filter(function (r) { return r.state === 'hit'; }).length };
     },
     // Does step i follow the average buy price? lock false → yes · true → no · null (saved before this existed) →
@@ -139,7 +145,7 @@
   function isStable(c) { return window.SamsamMarket ? SamsamMarket.isStable({ sym: c.sym, name: c.name || '' }) : /^(USDT|USDC|DAI|FDUSD|USDE|USDS)$/.test(c.sym); }
 
   // ── page ───────────────────────────────────────────────────────────────────
-  var root = null, st = null, mkt = { g: null, ethBtc: null, t: 0 }, editTargets = false, draft = null, saveT = null, pickOpen = false;
+  var root = null, st = null, mkt = { g: null, ethBtc: null, t: 0, rb: null, rbFile: null }, editTargets = false, draft = null, saveT = null, pickOpen = false;
   var stepsOpen = false, stepsDraft = null, view = null, flashSym = null;
   // one coin on its own (a row tapped), the search, the order — the order is remembered on this device
   var forcePaint = false, qTimer = null;
@@ -203,6 +209,11 @@
       return rb && re && rb.price > 0 ? re.price / rb.price : null;
     };
     M.peek().then(function (p) { if (p.global) mkt.g = p.global; mkt.ethBtc = eb(p.top); mkt.t = p.t || Date.now(); paint(); }).catch(function () {});
+    // 🌈 the rainbow band (the snapshot's small part; nothing while the file is missing or over 4 days old)
+    if (M.rainbow) M.rainbow().then(function (f) {
+      var C = S() && S().core, r = f && C && C.rainbowRead ? C.rainbowRead(f, Date.now()) : null;
+      mkt.rbFile = f || null; mkt.rb = r ? { band: r.band, name: C.rainbowName(r.band), pending: r.pending } : null; paint();
+    }).catch(function () {});
     M.global(force).then(function (r) { mkt.g = r.data; mkt.t = Math.max(mkt.t, r.t || 0); paint(); }).catch(function () {});
   }
 
@@ -228,26 +239,36 @@
   function setCardOpen(k, on) { try { var o = JSON.parse(localStorage.getItem(OPEN_KEY) || '{}') || {}; o[k] = on ? 1 : 0; localStorage.setItem(OPEN_KEY, JSON.stringify(o)); } catch (_) {} }
   var CHEV = '<span class="xs-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>';
   function macroHtml() {
-    var t = exitState().targets, m = calc.macro(mkt.g, mkt.ethBtc, t);
+    var t = exitState().targets, m = calc.macro(mkt.g, mkt.ethBtc, t, mkt.rb);
     var rows = m.rows.map(function (r) {
       var cur = r.cur == null ? '—' : r.fmt(r.cur);
       var lbl = r.state === 'hit' ? (r.below ? 'Below range' : 'Reached') : r.state === 'near' ? 'Close' : r.state === 'none' ? '—' : 'Waiting';
       return '<div class="xm-row ' + r.state + '" data-k="' + r.k + '">' +
         '<div class="xm-top"><span class="xm-name">' + r.name + '</span><span class="xm-cur">' + cur + '</span></div>' +
         '<div class="xm-bar"><i style="width:' + r.progress.toFixed(1) + '%"></i></div>' +
-        '<div class="xm-sub"><span>Target ' + r.rule + '</span><span class="xm-st">' + lbl + '</span></div></div>';
+        '<div class="xm-sub"><span>Target ' + r.rule + '</span><span class="xm-st">' + lbl + '</span></div>' +
+        (r.sub ? '<div class="xm-more">' + E(r.sub) + '</div>' : '') + '</div>';   // (🌈 the band\'s name)
     }).join('');
     var ed = editTargets ? '<div class="xm-edit">' +
       field('btcD', 'BTC.D at or under (%)', t.btcD) + field('usdtHi', 'USDT.D range — from (%)', t.usdtHi) +
       field('usdtLo', 'USDT.D range — to (%)', t.usdtLo) + field('ethBtc', 'ETH / BTC at or over', t.ethBtc) +
+      '<label class="xm-f xm-f-rb"><span>Rainbow band at or over (1–9)</span><input type="number" inputmode="numeric" min="1" max="9" step="1" data-tg="rainbow" value="' + t.rainbow + '"></label>' + peaksNote() +
       '<div class="xm-edit-btns"><button type="button" class="xs-btn" data-act="tg-reset">' + IC('reset') + 'Reset to defaults</button><button type="button" class="xs-btn pri" data-act="tg-save">' + IC('check') + 'Save</button></div></div>' : '';
     var open = cardOpen('macro') || editTargets;
     return '<section class="xs-card xm-card' + (open ? ' open' : '') + '" aria-label="Macro exit indicators">' +
       '<div class="xs-head xs-tap" role="button" tabindex="0" data-act="card" data-k="macro" aria-expanded="' + open + '"><div class="xs-title">' + IC('gauge') + 'Macro Exit Indicators<span class="cp-hint" data-hint="macroExit" role="button" tabindex="0"></span></div>' +
       (open ? '<button type="button" class="xs-link" data-act="tg-edit">' + (editTargets ? 'Close' : IC('pencil') + 'Edit targets') + '</button>' : '') + CHEV + '</div>' +
-      '<div class="xm-sum xs-tap ' + (m.hit === 3 ? 'all' : m.hit ? 'some' : '') + '" data-act="card" data-k="macro">Signals Hit: <b>' + m.hit + ' of 3</b></div>' +
+      '<div class="xm-sum xs-tap ' + (m.hit === m.rows.length ? 'all' : m.hit ? 'some' : '') + '" data-act="card" data-k="macro">Signals Hit: <b>' + m.hit + ' of ' + m.rows.length + '</b></div>' +
       (open ? '<div class="xm-rows">' + rows + '</div>' + ed +
       '<div class="xs-note">Your own levels — the page compares, it doesn’t predict the top.</div>' : '') + '</section>';
+  }
+  // under the rainbow field: the highest band that held in each past cycle-top year (from the file — it moves a little with
+  // each weekly fit), so the band you choose is set against what the last cycles really reached
+  function peaksNote() {
+    var pk = mkt.rbFile && Array.isArray(mkt.rbFile.peaks) ? mkt.rbFile.peaks.filter(function (x) { return x && x[0] >= 2016 && x[1] >= 1; }) : [];
+    var falling = pk.length > 1 && pk.every(function (x, i) { return !i || x[1] < pk[i - 1][1]; });
+    return '<div class="xm-f-note" id="xmRbNote">' + (pk.length ? 'The highest band each cycle held: <b>' + pk.map(function (x) { return '<bdi dir="ltr">' + x[0] + ': ' + x[1] + '</bdi>'; }).join(' · ') + '</b>' + (falling ? '. Each cycle stopped lower than the one before — a high band may never come back.' : '.')
+      : 'Nine bands around Bitcoin’s long-term trend line; a band counts after two daily closes in it.') + '</div>';
   }
   function field(k, label, v) { return '<label class="xm-f"><span>' + label + '</span><input type="number" inputmode="decimal" step="any" data-tg="' + k + '" value="' + v + '"></label>'; }
 

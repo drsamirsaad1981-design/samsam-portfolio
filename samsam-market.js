@@ -303,6 +303,16 @@
         .then(function (j) { if (j && j.updated) { try { localStorage.setItem(k, JSON.stringify({ t: Date.now(), data: j })); } catch (_) {} } return j && j.updated ? j : null; },
           function (e) { if (c && c.data) return c.data; throw e; });
     },
+    // 🌈 the Bitcoin rainbow (written by GitHub once a day, tools/update-rainbow.mjs). rainbow(): its small part, riding in
+    // the snapshot — { fit, closes, held, peaks } for samsam-core.js → rainbowRead; null until it exists.
+    // rainbowFull(): m/rainbow.json — the same plus one close a week since 2010 (the Market Hub's chart), the moves, the years.
+    rainbow: function () { return snapshot().then(function (j) { return j.rainbow || null; }, function () { return null; }); },
+    rainbowFull: function () {
+      var k = 'rainbowFull', c = mem[k]; if (c && Date.now() - c.t < 30 * 60e3) return Promise.resolve(c.data);
+      if (inflight[k]) return inflight[k];
+      return inflight[k] = fetch(SNAP.replace(/market\.json$/, 'rainbow.json'), { cache: 'no-cache' }).then(function (r) { if (r.status === 404) return null; if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) { delete inflight[k]; mem[k] = { data: j, t: Date.now() }; return j; }, function (e) { delete inflight[k]; throw e; });
+    },
     // first paint: whatever this browser has, else the GitHub snapshot — no CoinGecko call
     peek: function () {
       var g = get('global'), f = get('fng'), t = get('top');

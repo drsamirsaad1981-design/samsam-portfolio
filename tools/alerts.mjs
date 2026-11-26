@@ -106,6 +106,7 @@ function market(ids) {
   const btc = (m.top || []).find(r => r.id === 'bitcoin');
   return { top: m.top || [], top500: t5.top || [], global: m.global, fng: m.fng, alt: m.alt, parts: m.parts, series,
     altPage: readJson(path.join(DIR, 'm', 'alt.json')), etf: readJson(path.join(DIR, 'm', 'etf.json')),
+    rainbow: m.rainbow || null,   // 🌈 the Bitcoin rainbow's small part rides in market.json (update-market.mjs copies it from m/rainbow.json)
     close: (readJson(path.join(DIR, 'p', 'close.json')) || {}).p || null,   // ⏳ each coin's daily close: the Signals are decided on it
     btc: btc ? { price: btc.price, ch24: btc.ch24 } : series.bitcoin ? { price: series.bitcoin.last, ch24: null } : null,
     priceT: series.bitcoin ? series.bitcoin.lastT : null };
