@@ -126,6 +126,15 @@ for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++
   say(`| ${names[i]} ~ ${names[j]}${best[0] ? ` (${names[j]} shifted ${best[0] > 0 ? '+' : ''}${best[0]} day)` : ''} | ${d.length} | ${d[d.length >> 1][0].toFixed(2)}% | ${d.filter(x => x[0] > 1).length} (${(d.filter(x => x[0] > 1).length / d.length * 100).toFixed(1)}%) | ${d.filter(x => x[0] > 3).length} | ${iso(w[1])}: ${w[0].toFixed(1)}% |`);
 }
 
+// the same comparison by period: the early market was thin (few exchanges, far apart) — what matters for an alert is today's
+say('', '### By period (days more than 1% apart)', '', '| Pair | 2010–2013 | 2014–2017 | 2018–2021 | 2022 → now |', '|---|---|---|---|---|');
+const ERAS = [['2010-01-01', '2013-12-31'], ['2014-01-01', '2017-12-31'], ['2018-01-01', '2021-12-31'], ['2022-01-01', '2099-01-01']].map(e => e.map(dn));
+for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) {
+  const best = [0, 1, -1].map(sh => [sh, cmp(got[names[i]], got[names[j]], sh)]).filter(x => x[1].length > 30).sort((x, y) => x[1][x[1].length >> 1][0] - y[1][y[1].length >> 1][0])[0];
+  if (!best) continue;
+  say(`| ${names[i]} ~ ${names[j]} | ` + ERAS.map(([a, b]) => { const d = best[1].filter(x => x[1] >= a && x[1] <= b); return d.length ? `${(d.filter(x => x[0] > 1).length / d.length * 100).toFixed(1)}% of ${d.length} (median ${d[d.length >> 1][0].toFixed(2)}%)` : '—'; }).join(' | ') + ' |');
+}
+
 // ── 3. one series: the oldest average until 16 Aug 2017, exchange closes after (the published chart's own recipe) ─────────
 const early = got.blockchain || got.nasdaq || got.coinmetrics || got.bitstamp, late = got.binance || got.coinmetrics || got.bitstamp || got.blockchain;
 if (!early || !late) { say('', '**Not enough data: no source for the early years or none for the recent ones answered. The trial stops here.**'); fs.writeFileSync(process.argv[2] || 'rainbow.md', L.join('\n')); process.exit(0); }
@@ -152,7 +161,12 @@ say('', '## 4. Our fit beside the published one (crypto-economy.com, fit to 11 N
   `| That close against the line | −${REF.below}% | ${p24 ? pc((p24 / lineAt(fRef, d24) - 1) * 100, 0) : '—'} | |`,
   `| Band of that close | ${REF.band} of 9 | ${p24 ? bRef.bandOf(devOf(fRef, d24, p24)) + ' of 9' : '—'} | |`,
   `| One band = the one below × | 1.67 | ${bRef.step.toFixed(3)} | |`,
-  `| Deepest drop under the line | (not published) | ${pc((10 ** bRef.lo - 1) * 100, 0)} on ${iso(bRef.loDay)} | |`, `| Highest spike over the line | (not published) | ${pc((10 ** bRef.hi - 1) * 100, 0)} on ${iso(bRef.hiDay)} | |`);
+  // (their two extremes are not published as such; they follow from their outer band edges and their line)
+  `| Deepest drop under the line | ${pc((REF.edges[0] / REF.line - 1) * 100, 1)} (from their band 1) | ${pc((10 ** bRef.lo - 1) * 100, 1)} on ${iso(bRef.loDay)} (${usd(series.get(bRef.loDay))}) | |`,
+  `| Highest spike over the line | ${pc((REF.edges[9] / REF.line - 1) * 100, 0)} (from their band 9) | ${pc((10 ** bRef.hi - 1) * 100, 0)} on ${iso(bRef.hiDay)} (${usd(series.get(bRef.hiDay))}) | |`);
+// the same two extremes in every source that has those days: they set the outer edges, so they are worth seeing side by side
+say('', '### The two extreme days, source by source (they alone set the outer edges)', '', '| Source | Lowest against the line | Highest against the line |', '|---|---|---|');
+for (const k of names) { const B = bands(fRef, got[k], FROM, dn(REF.fitTo)); if (B.n > 1000) say(`| ${k} | ${pc((10 ** B.lo - 1) * 100, 1)} on ${iso(B.loDay)} (${usd(got[k].get(B.loDay))}) | ${pc((10 ** B.hi - 1) * 100, 0)} on ${iso(B.hiDay)} (${usd(got[k].get(B.hiDay))}) |`); }
 const eO = bRef.edges(d24);
 say('', `### The nine bands on ${REF.day}`, '', '| Band | Published range | Our range | Lower edge difference | Published share of days | Ours |', '|---|---|---|---|---|---|');
 for (let i = 8; i >= 0; i--) say(`| ${i + 1} | ${usd(REF.edges[i])} – ${usd(REF.edges[i + 1])} | ${usd(eO[i])} – ${usd(eO[i + 1])} | ${pc((eO[i] / REF.edges[i] - 1) * 100)} | ${REF.share[i].toFixed(1)}% | ${bRef.share[i].toFixed(1)}% |`);
