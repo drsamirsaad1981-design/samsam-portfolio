@@ -11,7 +11,7 @@
 
 import { bidiBody } from './bidi.mjs';
 import { asChat, chatOf, isOwner, members, member, setMember, langOf, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS } from './who.mjs';
-import { esc, local } from '../alerts-core.mjs';
+import { esc, localL } from '../alerts-core.mjs';
 
 const DAY = 864e5, MONTH = 30 * DAY;
 export const price = env => Math.max(1, Math.min(10000, parseInt(env.PREMIUM_STARS || '350', 10) || 350));   // 350 = the smallest Stars pack Telegram sells
@@ -24,7 +24,7 @@ async function tg(env, method, body) {
   catch (_) { return { ok: false }; }
 }
 const cb = (text, data) => ({ text, callback_data: data });
-const day = ms => local(ms, { day: 'numeric', month: 'short', year: 'numeric' });
+const day = (ms, lang) => localL(ms, { day: 'numeric', month: 'short', year: 'numeric' }, lang === 'ar');   // "26 ديسمبر 2026" in an Arabic message
 
 // ── is this member premium right now? (a gift without an end date counts until removed) ──
 export const premiumNow = (x, now = Date.now()) => !!(x && x.premium && (!x.premUntil || x.premUntil > now));
@@ -65,10 +65,10 @@ const W = {
   ar: {
     pTitle: '⭐ <b>Cute Portfolio المميز</b>',
     pBody: p => `كل شيء يبقى <b>مجانياً</b> للجميع. العضوية المميزة تضيف:\n• 🎙 الرسائل الصوتية — تحدّث مع البوت بصوتك\n• 🧠 ${PREM_AI} سؤال AI يومياً (بدلاً من ${DEF_AI})\n• 📊 ${PREM_REPORTS} تقارير AI Analysis سريعة يومياً في التطبيق\n\n<b>السعر:</b> ${p} ⭐ شهرياً (حوالي ${usdOf(p)})، عبر Telegram Stars.\n• تتجدد تلقائياً كل 30 يوماً — يمكنك إلغاؤها في أي وقت من تليجرام ← الإعدادات ← My Stars، وتبقى فعّالة حتى نهاية الشهر المدفوع.\n• لماذا بمقابل: الذكاء الاصطناعي يُحاسب على كل سؤال، وهذا المبلغ يغطي تلك التكلفة فقط — Cute Portfolio غير ربحي.\n\n<i>⭐ نجوم تليجرام (Telegram Stars) هي عملة تليجرام نفسه: تشتريها من داخل تليجرام مثل أي شراء داخل التطبيق.</i>`,
-    isPrem: u => u ? `✅ <b>أنت عضو مميز حتى ${u}.</b>` : '✅ <b>أنت عضو مميز</b> (هدية من Dr. Samir Saad).',
+    isPrem: u => u ? `✅ <b>أنت عضو مميز حتى ${u}.</b>` : '✅ <b>أنت عضو مميز</b> (هدية من د. سمير سعد).',
     renews: 'تتجدد تلقائياً — لإيقافها: تليجرام ← الإعدادات ← My Stars.',
     subscribe: p => `⭐ اشترك — ${p} ⭐ شهرياً`, extend: p => `⭐ اشترك — ${p} ⭐ شهرياً (بعد الهدية)`,
-    supportInstead: '💛 ادعم بدلاً من ذلك', ask: '🎁 اطلب من Dr. Samir Saad', back: '⬅️ القائمة',
+    supportInstead: '💛 ادعم بدلاً من ذلك', ask: '🎁 اطلب من د. سمير سعد', back: '⬅️ القائمة',
     sTitle: '💛 <b>ادعم Cute Portfolio</b>',
     sBody: '<b>اختياري</b> — شكر لمرة واحدة بأي مبلغ. المزايا لا تتغير: كل شيء يبقى مجانياً.\nيساعد في تكلفة الخوادم والذكاء الاصطناعي، وتحصل على شارة <b>Supporter 💛</b> في البوت والتطبيق.\n\nاختر المبلغ (Telegram Stars):',
     sThanksBadge: n => `قدّمت ${n} ⭐ حتى الآن — شكراً لك!`,
@@ -82,7 +82,7 @@ const W = {
     ownerPrem: (n, s, u) => `⭐ <b>${n}</b> اشترك في العضوية المميزة — ${s} ⭐ (حتى ${u}).`,
     ownerRenew: (n, s, u) => `⭐ <b>${n}</b> جدّد العضوية المميزة — ${s} ⭐ (حتى ${u}).`,
     ownerSup: (n, s) => `💛 <b>${n}</b> دعم المشروع بـ ${s} ⭐.`,
-    ownerAsk: n => `🎁 <b>${n}</b> يطلب منك العضوية المميزة هديةً.`, asked: '🎁 أُرسل الطلب إلى Dr. Samir Saad — سيصلك الرد هنا.',
+    ownerAsk: n => `🎁 <b>${n}</b> يطلب منك العضوية المميزة هديةً.`, asked: '🎁 أُرسل الطلب إلى د. سمير سعد — سيصلك الرد هنا.',
     ownerP: 'أنت عضو مميز بالفعل ⭐ — هذا ما يراه الأعضاء:',
   },
 };
@@ -93,7 +93,7 @@ export async function premiumView(env, lang, now = Date.now()) {
   const w = words(lang), p = price(env), own = isOwner(env), x = own ? null : await member(env);
   const on = premiumNow(x, now), lines = [w.pTitle, '', w.pBody(p)];
   if (own) lines.unshift(`<i>${w.ownerP}</i>`, '');
-  if (on) lines.push('', w.isPrem(x.premUntil ? day(x.premUntil) : null), ...(x.premSrc === 'stars' ? [w.renews] : []));
+  if (on) lines.push('', w.isPrem(x.premUntil ? day(x.premUntil, lang) : null), ...(x.premSrc === 'stars' ? [w.renews] : []));
   const b = [];
   if (!own && !(on && x.premSrc === 'stars')) {
     const link = await tg(env, 'createInvoiceLink', { title: w.invTitle, description: w.invDesc, payload: `prem:${chatOf(env)}`, currency: 'XTR',
@@ -149,13 +149,13 @@ export async function paid(env, chat, sp, lang, now = Date.now()) {
   await log(env, { t: now, chat: String(chat), kind, stars, charge: sp.telegram_payment_charge_id, renew: !!(sp.is_recurring && !sp.is_first_recurring) });
   const name = esc((x && x.name) || String(chat)), owner = String(chat) === String(env.TELEGRAM_CHAT_ID);
   const tellOwner = async text => { if (!owner) await tg(env, 'sendMessage', { chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: 'HTML' }); };
-  const O = words(await asChat(env.TELEGRAM_CHAT_ID, () => langOf(env)));
+  const OL = await asChat(env.TELEGRAM_CHAT_ID, () => langOf(env)), O = words(OL);
   if (kind === 'prem') {
     const until = sp.subscription_expiration_date ? sp.subscription_expiration_date * 1000 : now + MONTH;
     if (!owner) { await grant(env, chat, until, 'stars', sp.telegram_payment_charge_id); await setMember(env, chat, { supporter: true, starsPaid: ((x && x.starsPaid) || 0) + stars }); }   // a premium member is a supporter too
     const renew = !!(sp.is_recurring && !sp.is_first_recurring);
-    await tg(env, 'sendMessage', { chat_id: chat, text: renew ? w.renewed(day(until)) : w.paidPrem(day(until)), parse_mode: 'HTML' });
-    await tellOwner(renew ? O.ownerRenew(name, stars, day(until)) : O.ownerPrem(name, stars, day(until)));
+    await tg(env, 'sendMessage', { chat_id: chat, text: renew ? w.renewed(day(until, lang)) : w.paidPrem(day(until, lang)), parse_mode: 'HTML' });
+    await tellOwner(renew ? O.ownerRenew(name, stars, day(until, OL)) : O.ownerPrem(name, stars, day(until, OL)));
     return { kind, until };
   }
   if (kind === 'sup') {
@@ -198,7 +198,7 @@ export async function expireRound(env, now = Date.now()) {
     if (x.premUntil <= now) { await revoke(env, chat); await tg(env, 'sendMessage', { chat_id: chat, text: w.ended }); ended++; continue; }
     if (x.premUntil - now < 3 * DAY && !x.premRemind && x.premSrc !== 'stars') {   // a Stars subscription renews by itself: no nagging
       await setMember(env, chat, { premRemind: true });
-      await tg(env, 'sendMessage', { chat_id: chat, text: w.remind(day(x.premUntil)) });
+      await tg(env, 'sendMessage', { chat_id: chat, text: w.remind(day(x.premUntil, L)) });
     }
   }
   return { ended };

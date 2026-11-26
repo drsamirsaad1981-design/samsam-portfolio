@@ -8,7 +8,7 @@
 // Stored in KV (RATE): tg:paper = { start, startCash, btcStart, cash, pos: { SYM: { qty, avg, id } }, trades: [...] }.
 
 import { K } from './who.mjs';
-import { local, usd, usd2, pct, esc, dot, isStable } from '../alerts-core.mjs';
+import { localL, usd, usd2, pct, esc, dot, isStable } from '../alerts-core.mjs';
 import { loadMarket, findCoin } from './data.mjs';
 
 const KEY = env => K(env, 'paper'), FEE = 0.001, START = 10000;
@@ -138,16 +138,16 @@ const PW = {
 };
 export const paperWords = PW;
 export async function viewPaper(env, lang = 'en') {
-  const w = PW[lang] || PW.en, s = await status(env);
+  const w = PW[lang] || PW.en, ar = lang === 'ar', s = await status(env);
   if (s.error) return { text: '⚠️ ' + esc(s.error), buttons: [[{ text: w.back, callback_data: 'menu' }]] };
-  const { p } = s, L = [`${w.title} · <i>${w.sub}</i>`, `<i>${w.since} ${esc(local(p.start, { day: 'numeric', month: 'short', year: 'numeric' }))} · ${usd(p.startCash)}</i>`, '',
+  const { p } = s, L = [`${w.title} · <i>${w.sub}</i>`, `<i>${w.since} ${esc(localL(p.start, { day: 'numeric', month: 'short', year: 'numeric' }, ar))} · ${usd(p.startCash)}</i>`, '',
     `💼 ${w.value}: <b>${usd2(s.value)}</b>`, `💵 ${w.cash}: ${usd2(p.cash)}`, `${dot(s.profit)} ${w.profit}: <b>${s.profit >= 0 ? '+' : '−'}${usd2(Math.abs(s.profit))}</b> (${pct(s.profitPct)})`];
-  if (s.hodl) L.push(`🟠 ${w.btc}: ${usd2(s.hodl)} · ${w.beat} <b>${s.vsBtcPts >= 0 ? '+' : '−'}${Math.abs(s.vsBtcPts).toFixed(1)}</b> pts`);
+  if (s.hodl) L.push(`🟠 ${w.btc}: ${usd2(s.hodl)} · ${w.beat} <b>${s.vsBtcPts >= 0 ? '+' : '−'}${Math.abs(s.vsBtcPts).toFixed(1)}</b> ${ar ? 'نقطة' : 'pts'}`);
   L.push('');
   if (!s.coins.length) L.push(w.none);
   for (const c of s.coins.slice(0, 12)) L.push(`<code>${esc(c.sym.padEnd(6))}</code> ${amt(c.qty)} · ${usd2(c.value)} · ${dot(c.pnl_pct)} ${pct(c.pnl_pct, 1)}`);
   const t = (p.trades || []).slice(-1)[0];
-  if (t) L.push('', `<i>${w.last}: ${t.side === 'buy' ? '🟢' : '🔴'} ${t.side} ${amt(t.qty)} ${esc(t.sym)} @ ${money(t.price)} · ${esc(local(t.t, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }))}</i>`);
+  if (t) L.push('', `<i>${w.last}: ${t.side === 'buy' ? '🟢' : '🔴'} ${ar ? (t.side === 'buy' ? 'شراء' : 'بيع') : t.side} ${amt(t.qty)} ${esc(t.sym)} ${ar ? 'بسعر' : '@'} ${money(t.price)} · ${esc(localL(t.t, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }, ar))}</i>`);
   L.push(`<i>${w.fee}</i>`);
   const b = [[{ text: w.refresh, callback_data: 'pp' }, ...(p.undo ? [{ text: w.undo, callback_data: 'pp:undo' }] : []), { text: w.restart, callback_data: 'pp:new' }], [{ text: w.back, callback_data: 'menu' }]];
   return { text: L.join('\n'), buttons: b };

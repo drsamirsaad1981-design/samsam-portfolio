@@ -18,23 +18,23 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-lang.js?v=202611260410"></script>
-<script src="samsam-ar.js?v=202611260410"></script>
-<script src="samsam-ui.js?v=202611260410"></script>
-<script src="samsam-hints.js?v=202611260410"></script>
-<script src="samsam-arhints.js?v=202611260410"></script>
-<script src="samsam-vault.js?v=202611260410"></script>
-<script src="samsam-labels.js?v=202611260410"></script>
-<script src="samsam-taxonomy.js?v=202611260410"></script>
-<script src="samsam-coins.js?v=202611260410"></script>
-<script src="samsam-import.js?v=202611260410"></script>
-<script src="samsam-wallets.js?v=202611260410"></script>
-<script src="samsam-rewards.js?v=202611260410"></script>
-<script src="samsam-settings.js?v=202611260410"></script>
-<script src="samsam-dropdown.js?v=202611260410"></script>
-<script src="samsam-add.js?v=202611260410"></script>
-<script src="samsam-market.js?v=202611260410"></script>
-<script src="samsam-assets.js?v=202611260410"></script>
+<script src="samsam-lang.js?v=202611261400"></script>
+<script src="samsam-ar.js?v=202611261400"></script>
+<script src="samsam-ui.js?v=202611261400"></script>
+<script src="samsam-hints.js?v=202611261400"></script>
+<script src="samsam-arhints.js?v=202611261400"></script>
+<script src="samsam-vault.js?v=202611261400"></script>
+<script src="samsam-labels.js?v=202611261400"></script>
+<script src="samsam-taxonomy.js?v=202611261400"></script>
+<script src="samsam-coins.js?v=202611261400"></script>
+<script src="samsam-import.js?v=202611261400"></script>
+<script src="samsam-wallets.js?v=202611261400"></script>
+<script src="samsam-rewards.js?v=202611261400"></script>
+<script src="samsam-settings.js?v=202611261400"></script>
+<script src="samsam-dropdown.js?v=202611261400"></script>
+<script src="samsam-add.js?v=202611261400"></script>
+<script src="samsam-market.js?v=202611261400"></script>
+<script src="samsam-assets.js?v=202611261400"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -268,9 +268,9 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-names small { display: flex; flex-direction: column; gap: 1px; }
 .mk-names small .nm { overflow: hidden; white-space: nowrap; } .mk-names small .nm i { display: none; }
 .mk-names small .nm.cut { display: none; }
-.mk-own { display: inline-flex; align-items: center; gap: 3px; font-size: .58rem; font-weight: 800; padding: 1px 6px; border-radius: 6px; color: #16a34a; background: rgba(34,197,94,.14); letter-spacing: .01em; }
+.mk-own { display: inline-flex; align-items: center; gap: 3px; font-size: .58rem; font-weight: 800; padding: 1px 6px; border-radius: 6px; color: var(--green,#16a34a); background: rgba(34,197,94,.14); letter-spacing: .01em; }
 .mk-own.plan { color: #b45309; background: rgba(245,158,11,.16); }
-[data-theme="dark"] .mk-own { color: #4ade80; } [data-theme="dark"] .mk-own.plan { color: #fbbf24; }
+[data-theme="dark"] .mk-own { color: var(--green,#4ade80); } [data-theme="dark"] .mk-own.plan { color: #fbbf24; }
 .mk-sp { display: flex; justify-content: center; }
 .mk-sp svg { width: 100%; max-width: 72px; height: 26px; }
 .mk-own .ss-ic { margin: 0; }
@@ -392,14 +392,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .as-li { display: flex; justify-content: space-between; gap: 8px; font-size: .82rem; color: var(--fg2); margin-top: 6px; flex-wrap: wrap; }
 .as-li b { color: var(--fg); }
 .as-small { font-size: .74rem; line-height: 1.45; }
-.as-pc { font-weight: 800; font-variant-numeric: tabular-nums; } .as-pc.up, .as-li .up { color: #16a34a; } .as-pc.dn, .as-li .dn { color: #dc2626; }
-[data-theme="dark"] .as-pc.up, [data-theme="dark"] .as-li .up { color: #22c55e; } [data-theme="dark"] .as-pc.dn, [data-theme="dark"] .as-li .dn { color: #f87171; }
+.as-pc { font-weight: 800; font-variant-numeric: tabular-nums; } .as-pc.up, .as-li .up { color: var(--green,#16a34a); } .as-pc.dn, .as-li .dn { color: var(--red,#dc2626); }
+[data-theme="dark"] .as-pc.up, [data-theme="dark"] .as-li .up { color: var(--green,#22c55e); } [data-theme="dark"] .as-pc.dn, [data-theme="dark"] .as-li .dn { color: var(--red,#f87171); }
 .as-dot { width: 10px; height: 10px; border-radius: 50%; background: #94a3b8; display: inline-block; margin-inline-end: 4px; }
 .as-open .as-dot { background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.2); } .as-pre .as-dot, .as-after .as-dot { background: #f59e0b; }
 .as-movers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
 .as-movers > div { padding: 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); min-width: 0; }
 .as-mv { display: flex; align-items: center; gap: 8px; padding: 6px 0; color: inherit; text-decoration: none; font-size: .86rem; }
-.as-mv img, .as-n img, .as-ph { width: 22px; height: 22px; border-radius: 50%; flex: none; background: rgba(148,163,184,.2); }
+.as-mv img, .as-n img, .as-ph { width: 36px; height: 36px; border-radius: 50%; flex: none; background: rgba(148,163,184,.2); object-fit: cover; }   /* a share's logo = a coin's logo (36px, samsam-coins.js) */
+.as-mv img { width: 26px; height: 26px; }
+html[dir="rtl"] .as-nl small:not(.as-my) { direction: ltr; text-align: right; }   /* "Circle Internet Group" is cut at its end, not its start */
 .as-mv b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .as-list { border: 1px solid var(--border); border-radius: 16px; background: var(--card); overflow: hidden; }
 .as-tools { padding: 10px 10px 2px; margin: 0; }   /* the same search box as the Crypto list (.mk-tools .ss-search) */
@@ -413,7 +415,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .as-n { display: flex; align-items: center; gap: 8px; min-width: 0; text-align: start; }
 .as-n span { display: flex; flex-direction: column; min-width: 0; } .as-n b { font-size: .88rem; } .as-n small { font-size: .72rem; color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .as-p { font-weight: 700; } .as-mc { color: var(--fg2); }
-@media (max-width: 560px) { .as-head, .as-row { grid-template-columns: minmax(0, 1.6fr) 1fr .9fr; } .as-head .w, .as-row .w { display: none; } .as-movers { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .as-head, .as-row { grid-template-columns: minmax(0, 2fr) 1fr .8fr; } .as-head .w, .as-row .w { display: none; } .as-movers { grid-template-columns: 1fr; } }
 .as-mine { margin-bottom: 12px; border-color: rgba(234,179,8,.45); }
 /* bStocks: All · ⭐ Watchlist · My shares, a star on each row (the same Watchlist as the Crypto page) */
 .as-tabs { display: flex; gap: 6px; padding: 10px 10px 0; }
@@ -426,10 +428,10 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .as-nl { display: flex; align-items: center; gap: 8px; min-width: 0; color: inherit; text-decoration: none; }
 .as-nl span { display: flex; flex-direction: column; min-width: 0; } .as-nl b { font-size: .88rem; }
 .as-nl small { font-size: .72rem; color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.as-nl small.as-my { color: #38bdf8; font-weight: 700; }
+.as-nl small.as-my { color: var(--c-sky, #38bdf8); font-weight: 700; white-space: normal; line-height: 1.25; }   /* your own shares and their value: never cut */
 .as-mine .as-k { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .as-flag { border-radius: 2px; flex: none; box-shadow: 0 0 0 .5px rgba(0,0,0,.15); }
-.as-mopen { font-size: .78rem; font-weight: 600; color: #60a5fa; text-decoration: none; }
+.as-mopen { font-size: .78rem; font-weight: 600; color: var(--c-link, #60a5fa); text-decoration: none; }
 .as-li.as-left { justify-content: flex-start; column-gap: 6px; } .as-li.as-left .as-pc { margin-inline-start: 4px; }
 .as-mrows { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); column-gap: 28px; }   /* wide screens: metals side by side, each a card-width column */
 .as-mrows .as-mrow { border-top: 1px solid var(--border, rgba(148,163,184,.2)); }
@@ -605,7 +607,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611260410"></script>
+<script type="module" src="samsam-cloud.js?v=202611261400"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';

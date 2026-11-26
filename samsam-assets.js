@@ -63,11 +63,13 @@
     var s = S(); if (!s) { if (window.CPDialog) CPDialog.alert(T('Sign in to keep a Watchlist — it syncs to all your devices.', 'سجّل الدخول لتحفظ قائمة المتابعة — تُزامَن على كل أجهزتك.')); return; }
     var x = (st.stocks || []).filter(function (r) { return wid(r) === id; })[0]; if (!x) return;
     var list = s.getWatchlist().slice(), i = list.findIndex(function (w) { return w.id === id; });
-    if (i >= 0) list.splice(i, 1); else list.unshift({ id: id, sym: x.sym, name: String(x.name || '').replace(/\s*\(bStocks Tokenized (Stock|ETF)\)\s*$/i, ''), img: x.img && /^https:\/\//.test(x.img) ? x.img : '' });
+    if (i >= 0) list.splice(i, 1); else list.unshift({ id: id, sym: x.sym, name: stockName(x.name), img: x.img && /^https:\/\//.test(x.img) ? x.img : '' });
     s.saveWatchlist(list).then(draw, function (e) { if (window.CPDialog) CPDialog.alert(String(e && e.message || e)); });
   }
 
   // ── 📈 bStocks ──
+  // the company's own name: "NVIDIA (bStocks Tokenized Stock)" / "… (bStocks Tokenized ETF)" / "NVIDIA bStock" → "NVIDIA"
+  function stockName(n) { return String(n || '').replace(/\s*\((?:Tokenized\s+)?bStocks?(?:\s+Tokenized)?(?:\s+(?:Stock|ETF))?\)\s*$/i, '').replace(/\s+(?:Tokenized\s+)?bStocks?\s*$/i, '').trim(); }
   function stocksHtml() {
     var list = st.stocks;
     if (!list) return '<p class="as-note">' + (st.err || T('Loading…', 'جارٍ التحميل…')) + '</p>';
@@ -103,7 +105,7 @@
       '<div class="as-head">' + head('name', T('Stock', 'السهم'), 'l') + head('price', T('Price', 'السعر')) + head('ch24', '24h') + head('ch7', '7d', 'w') + head('mcap', T('Market cap', 'القيمة السوقية'), 'w') + '</div>' +
       (rows.length ? rows.map(function (x) {
         var id = wid(x), on = !!W[id], my = MY[x.sym], href = E(x.url && /^https:\/\//.test(x.url) ? x.url : 'https://www.coingecko.com/en/coins/' + encodeURIComponent(x.id));
-        var sub = my ? iso((+my.qty.toFixed(4)) + ' ' + T(my.qty === 1 ? 'share' : 'shares', 'سهم')) + ' · ' + iso(usd(my.value, 2)) : E(String(x.name || '').replace(/\s*bStock$/i, ''));
+        var sub = my ? iso((+my.qty.toFixed(4)) + ' ' + T(my.qty === 1 ? 'share' : 'shares', 'سهم')) + ' · ' + iso(usd(my.value, 2)) : E(stockName(x.name));
         return '<div class="as-row"><span class="as-n"><button type="button" class="mk-star as-star" data-star="' + E(id) + '" aria-pressed="' + on + '" title="' + E(on ? T('Remove from Watchlist', 'إزالة من المتابعة') : T('Add to Watchlist', 'أضف إلى المتابعة')) + '">' + starIc + '</button>' +
           '<a class="as-nl" href="' + href + '" target="_blank" rel="noopener">' + (x.img ? '<img src="' + E(x.img) + '" alt="" loading="lazy">' : '<i class="as-ph"></i>') +
           '<span><b>' + E(x.sym) + '</b><small' + (my ? ' class="as-my"' : '') + '>' + sub + '</small></span></a></span>' +

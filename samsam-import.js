@@ -320,7 +320,7 @@
     '.imp-new{margin:10px 0 0;font-size:.8rem;padding:9px 10px;border-radius:10px;background:rgba(59,130,246,.1)}' +
     '.imp-foot{position:sticky;bottom:calc(-16px - env(safe-area-inset-bottom,0px));margin:12px -16px calc(-16px - env(safe-area-inset-bottom,0px));padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:inherit;border-top:1px solid rgba(148,163,184,.18)}' +
     '.imp-save{width:100%;height:48px;border:none;border-radius:12px;background:#16a34a;color:#fff;font:inherit;font-weight:800;font-size:.95rem;cursor:pointer}.imp-save:disabled{opacity:.5;cursor:default}' +
-    '.imp-msg{font-size:.8rem;margin-top:8px;text-align:center}.imp-msg.err{color:#ef4444}.imp-empty{padding:16px;text-align:center;color:#94a3b8;font-size:.8rem}';
+    '.imp-msg{font-size:.8rem;margin-top:8px;text-align:center}.imp-msg.err{color:var(--red,#ef4444)}.imp-empty{padding:16px;text-align:center;color:#94a3b8;font-size:.8rem}';
 
   var HTML =
     '<div class="imp-bd" id="impBd" onclick="if(event.target===this)SamsamImport.close()"><div class="imp-m" id="impModal" role="dialog" aria-modal="true" aria-labelledby="impTitle">' +

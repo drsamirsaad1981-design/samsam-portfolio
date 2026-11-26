@@ -8,9 +8,9 @@
 // Prices: the exchanges first (live, by ticker), then CoinGecko / the market snapshot. Stored in KV (RATE): tg:alerts.
 
 import { bidiBody } from './bidi.mjs';
-import { K, chatOf } from './who.mjs';
+import { K, chatOf, langOf } from './who.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, exchangePrice, derivatives, findCoin, resetBudget } from './data.mjs';
-import { summarize, usd, pct, esc, local, localParts } from '../alerts-core.mjs';
+import { summarize, usd, pct, esc, localL, localParts } from '../alerts-core.mjs';
 
 const KEY = env => K(env, 'alerts'), MAX = 30;
 export const KINDS = {
@@ -113,15 +113,18 @@ export function deleteAlert(env, id) {
     await saveAlerts(env, next); return true;
   });
 }
-export function describe(a) {
-  const k = KINDS[a.kind], v = k.what === 'price' ? usd(a.value) + (a.metal ? '/' + (METAL_UNIT[a.metal] || 'oz') : '') : k.what === 'portfolio' ? usd(a.value) : k.what === 'funding' ? a.value + '% / 8h' : pct(a.value, 1);
-  const who = a.metal ? (METAL_NAME[a.metal] || a.sym) : a.stock ? `${a.sym}${a.name ? ' (' + a.name + ')' : ''}` : a.sym;
+export function describe(a, ar = false) {
+  const k = KINDS[a.kind], unit = a.metal ? (ar ? METAL_UNIT_AR : METAL_UNIT)[a.metal] || (ar ? 'للأونصة' : 'oz') : '';
+  const v = k.what === 'price' ? usd(a.value) + (a.metal ? (ar ? ' ' : '/') + unit : '') : k.what === 'portfolio' ? usd(a.value) : k.what === 'funding' ? a.value + (ar ? '% كل 8 ساعات' : '% / 8h') : pct(a.value, 1);
+  const who = a.metal ? ((ar ? METAL_NAME_AR : METAL_NAME)[a.metal] || a.sym) : a.stock ? `${a.sym}${a.name ? ' (' + a.name + ')' : ''}` : a.sym;
+  if (ar) return `${k.what === 'price' ? `سعر ${who}` : k.what === 'change_24h' ? `تغيّر ${who} في 24 ساعة` : k.what === 'funding' ? `تمويل ${a.sym}` : 'قيمة المحفظة'} ${k.op} ${v}`;
   const what = k.what === 'price' ? `${who} price` : k.what === 'change_24h' ? `${who} 24h change` : k.what === 'funding' ? `${a.sym} funding` : 'Portfolio value';
   return `${what} ${k.op} ${v}`;
 }
 // 🥇 the metals an alert can watch (words in English and Arabic), and 📈 a bStock by its ticker or company name
 const METAL_WORDS = { gold: /^(gold|xau|ذهب|الذهب)$/i, silver: /^(silver|xag|فضة|الفضة)$/i, platinum: /^(platinum|xpt|بلاتين|البلاتين)$/i, copper: /^(copper|نحاس|النحاس)$/i };   // (no oil alerts any more)
 const METAL_NAME = { gold: 'Gold', silver: 'Silver', platinum: 'Platinum', copper: 'Copper', brent: 'Brent oil' }, METAL_UNIT = { gold: 'oz', silver: 'oz', platinum: 'oz', copper: 'lb', brent: 'barrel' };
+const METAL_NAME_AR = { gold: 'الذهب', silver: 'الفضة', platinum: 'البلاتين', copper: 'النحاس', brent: 'نفط برنت' }, METAL_UNIT_AR = { gold: 'للأونصة', silver: 'للأونصة', platinum: 'للأونصة', copper: 'للرطل', brent: 'للبرميل' };
 export const metalOf = q => Object.keys(METAL_WORDS).find(k => METAL_WORDS[k].test(String(q).trim())) || null;
 export function stockOf(q, stocks) {
   const Q = String(q).trim().toUpperCase(), lq = String(q).trim().toLowerCase(); if (!Q) return null;
@@ -156,19 +159,23 @@ export async function runWatch(env, now = Date.now()) {
     fired.push({ a, now: now1 });
   }
   if (fired.length) {
+    const ar = (await langOf(env).catch(() => 'en')) === 'ar';   // the chat's own language — every word of the message
     const block = ({ a, now: v }) => {
       const k = KINDS[a.kind], up = k.op === '≥';
-      const nowTxt = k.what === 'price' || k.what === 'portfolio' ? usd(v) : k.what === 'funding' ? v + '% / 8h' : pct(v, 1);
-      const head = k.what === 'portfolio' ? `💼 <b>Portfolio ${up ? 'above' : 'below'} ${usd(a.value)}</b>` : `${up ? '🚀' : '🔻'} <b>${esc(a.metal ? METAL_NAME[a.metal] : a.sym)} ${k.what === 'price' ? (up ? 'above' : 'below') + ' ' + usd(a.value) : k.what === 'change_24h' ? '24h ' + (up ? '≥' : '≤') + ' ' + pct(a.value, 1) : 'funding ' + (up ? '≥' : '≤') + ' ' + a.value + '%'}</b>`;
-      return { nowTxt, text: `${head}\nNow: <b>${nowTxt}</b>${a.note ? '\n<i>' + esc(a.note) + '</i>' : ''}\n<i>Your alert from ${local(a.created, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} — held on two checks (not a wick), done, removed.</i>` };
+      const nowTxt = k.what === 'price' || k.what === 'portfolio' ? usd(v) : k.what === 'funding' ? v + (ar ? '% كل 8 ساعات' : '% / 8h') : pct(v, 1);
+      const name = esc(a.metal ? (ar ? METAL_NAME_AR : METAL_NAME)[a.metal] : a.sym), when = localL(a.created, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }, ar);
+      const head = ar
+        ? (k.what === 'portfolio' ? `💼 <b>المحفظة ${up ? 'فوق' : 'تحت'} ${usd(a.value)}</b>` : `${up ? '🚀' : '🔻'} <b>${name} ${k.what === 'price' ? (up ? 'فوق' : 'تحت') + ' ' + usd(a.value) : k.what === 'change_24h' ? 'في 24 ساعة ' + (up ? '≥' : '≤') + ' ' + pct(a.value, 1) : 'التمويل ' + (up ? '≥' : '≤') + ' ' + a.value + '%'}</b>`)
+        : (k.what === 'portfolio' ? `💼 <b>Portfolio ${up ? 'above' : 'below'} ${usd(a.value)}</b>` : `${up ? '🚀' : '🔻'} <b>${name} ${k.what === 'price' ? (up ? 'above' : 'below') + ' ' + usd(a.value) : k.what === 'change_24h' ? '24h ' + (up ? '≥' : '≤') + ' ' + pct(a.value, 1) : 'funding ' + (up ? '≥' : '≤') + ' ' + a.value + '%'}</b>`);
+      return { nowTxt, text: `${head}\n${ar ? 'الآن' : 'Now'}: <b>${nowTxt}</b>${a.note ? '\n<i>' + esc(a.note) + '</i>' : ''}\n<i>${ar ? `تنبيهك من ${when} — ثبت في فحصين متتاليين (ليس ذيل شمعة)، تم وأُزيل.` : `Your alert from ${when} — held on two checks (not a wick), done, removed.`}</i>` };
     };
     const blocks = fired.map(block);
-    const text = fired.length === 1 ? '🔔 ' + blocks[0].text : `🔔 <b>${fired.length} alerts</b>\n\n` + blocks.map(b => b.text).join('\n\n');
-    const btn = a => a.metal ? { text: '🥇 Metals', callback_data: 'mkm' } : a.stock ? { text: '📈 bStocks', callback_data: 'mks' } : a.sym ? { text: '🪙 ' + a.sym, callback_data: 'c:' + (a.cg || 'x-' + a.sym.toLowerCase()).slice(0, 58) } : { text: '💼 Portfolio', callback_data: 'pf' };
+    const text = fired.length === 1 ? '🔔 ' + blocks[0].text : `🔔 <b>${ar ? (fired.length === 2 ? 'تنبيهان' : fired.length + ' تنبيهات') : fired.length + ' alerts'}</b>\n\n` + blocks.map(b => b.text).join('\n\n');
+    const btn = a => a.metal ? { text: ar ? '🥇 المعادن' : '🥇 Metals', callback_data: 'mkm' } : a.stock ? { text: '📈 bStocks', callback_data: 'mks' } : a.sym ? { text: '🪙 ' + a.sym, callback_data: 'c:' + (a.cg || 'x-' + a.sym.toLowerCase()).slice(0, 58) } : { text: ar ? '💼 محفظتي' : '💼 Portfolio', callback_data: 'pf' };
     const seenB = new Set(), row = [];
     fired.forEach(({ a }) => { const b = btn(a); if (!seenB.has(b.callback_data) && row.length < 3) { seenB.add(b.callback_data); row.push(b); } });
     const one = fired.length === 1 && fired[0].a.sym && !fired[0].a.metal && !fired[0].a.stock;
-    const buttons = [one ? [row[0], { text: '🔥 Liq Map', url: 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(fired[0].a.sym) }] : row, [{ text: '🔔 /alerts', callback_data: 'al' }]];
+    const buttons = [one ? [row[0], { text: ar ? '🔥 خريطة التصفيات' : '🔥 Liq Map', url: 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=' + encodeURIComponent(fired[0].a.sym) }] : row, [{ text: ar ? '🔔 تنبيهاتي' : '🔔 /alerts', callback_data: 'al' }]];
     const r = await tg(env, 'sendMessage', { chat_id: chatOf(env), text: text.slice(0, 4000), parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
     if (!r.ok) fired.forEach(({ a }) => keep.push(a));   // Telegram refused: all try again next time
     else for (let i = 0; i < fired.length; i++) await logEvent(env, 'alert', describe(fired[i].a) + ' — now ' + blocks[i].nowTxt);
@@ -190,7 +197,7 @@ export async function viewAlerts(env, lang = 'en') {
   const shown = [];   // grouped (a heading only when there is more than one kind), numbered in the order shown; the number = its 🗑 button
   for (const [g, title] of groups) {
     L.push('', ...(several ? [`<b>${title}</b>`] : []));
-    list.forEach(a => { if (groupOf(a) === g) { shown.push(a); L.push(`${shown.length}. ${esc(describe(a))}${a.armed ? '' : ar ? ' <i>(ينتظر عودة السعر أولاً)</i>' : ' <i>(waits to reset first)</i>'}`); } });
+    list.forEach(a => { if (groupOf(a) === g) { shown.push(a); L.push(`${shown.length}. ${esc(describe(a, ar))}${a.armed ? '' : ar ? ' <i>(ينتظر عودة السعر أولاً)</i>' : ' <i>(waits to reset first)</i>'}`); } });
   }
   const slow = list.some(a => a.metal || a.stock);
   L.push('', ar ? '<i>يتحقق كل 5 دقائق · يُرسل بعد فحصين متتاليين (ليس ذيل شمعة) · كل تنبيه مرة واحدة' + (slow ? ' · المعادن والأسهم: أسعار تُحدَّث كل ~30 دقيقة' : '') + '</i>' : '<i>Checked every 5 min · sent after two checks in a row (not a wick) · each fires once' + (slow ? ' · metals &amp; stocks: prices refreshed every ~30 min' : '') + '</i>');

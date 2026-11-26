@@ -39,8 +39,8 @@ function renderHistory() {
   const avgCost= coin ? coin.basePrice : 0;
   sumEl.innerHTML = `
     <div><span>Transactions</span> <strong>${txs.length}</strong></div>
-    <div><span>Total Bought</span> <strong style="color:#22c55e">${fmtN(totalBuys)} ${sym}</strong></div>
-    <div><span>Total Sold</span> <strong style="color:#ef4444">${fmtN(totalSells)} ${sym}</strong></div>
+    <div><span>Total Bought</span> <strong style="color:var(--green,#22c55e)">${fmtN(totalBuys)} ${sym}</strong></div>
+    <div><span>Total Sold</span> <strong style="color:var(--red,#ef4444)">${fmtN(totalSells)} ${sym}</strong></div>
     <div><span>${SAMSAM_LABELS.AMOUNT}</span> <strong>${fmtN(curQty)} ${sym}</strong></div>
     <div><span>${SAMSAM_LABELS.AVG_BUY_PRICE}</span> <strong>${SamsamFmt.price(avgCost)}</strong></div>
     <div><span>Realized Profit</span> <strong style="color:${realized>=0?'#22c55e':'#ef4444'}">${sells.length?(realized>=0?'+':'-')+SamsamFmt.usd(Math.abs(realized)):'—'}</strong></div>`;

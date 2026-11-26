@@ -283,4 +283,13 @@ check('a new alert price → a new alert (old one forgotten)', (() => { const u2
 // every message ever made here is Telegram-safe
 const all = [b, ba, mv.text, sg.text, bSP.text, bDP.text, arBP.text];
 check('all texts Telegram-safe', all.every(okHtml));
+// 🌐 Arabic alerts: Arabic units, dates and button names (no "2h", no "Nov 6", no "Market Hub")
+{
+  const { arCount, AR_DAYS, AR_HOURS, localL } = await import('../tools/alerts-core.mjs');
+  check('Arabic counts: يوم واحد · يومين · 5 أيام · 12 يوماً · ساعتين · 5 ساعات', [1, 2, 5, 12].map(n => arCount(n, AR_DAYS)).join('|') === 'يوم واحد|يومين|5 أيام|12 يوماً' && arCount(2, AR_HOURS) === 'ساعتين' && arCount(5, AR_HOURS) === '5 ساعات');
+  check('a date in an Arabic message: "7 نوفمبر" with Latin digits (and English stays "7 Nov")', /^7 نوفمبر/.test(localL(T0, { day: 'numeric', month: 'short' }, true)) && /7 Nov/.test(localL(T0, { day: 'numeric', month: 'short' }, false)), localL(T0, { day: 'numeric', month: 'short' }, true));
+  const arCfg = settings({ alerts: { lang: 'ar', digest: false } }), a0 = evaluate(s, mk(), {}, arCfg, T0).state;
+  const mvA = evaluate(s2, m2, a0, arCfg, t2).messages.find(x => x.key === 'move-btc');
+  check('Arabic BTC move: "خلال ساعتين" (not "2h"), the button "مركز السوق" (not "Market Hub")', mvA && /خلال ساعتين/.test(mvA.text) && !/\dh\b/.test(mvA.text) && mvA.buttons.flat().some(b => b.text === 'مركز السوق') && !mvA.buttons.flat().some(b => /Market Hub/.test(b.text)), mvA && [mvA.text, mvA.buttons.flat().map(b => b.text)]);
+}
 console.log(`${pass}/${pass + fail} passed`); process.exit(fail ? 1 : 0);

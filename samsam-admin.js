@@ -36,7 +36,7 @@
     '#cpAdm .ad-card.ad-warm{border-color:rgba(245,158,11,.6)}#cpAdm .ad-card.ad-hot{border-color:rgba(239,68,68,.7)}#cpAdm .ad-card.ad-hot b{color:var(--red,#ef4444)}' +
     '#cpAdm .ad-card span{display:block;font-size:.74rem;color:var(--fg2,#94a3b8)}#cpAdm .ad-card b{display:block;font-size:1.25rem;margin-top:2px}#cpAdm .ad-card i{display:block;font-style:normal;font-size:.72rem;color:var(--fg2,#94a3b8);margin-top:2px}' +
     '#cpAdm .ad-btn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:.8rem;font-weight:700;padding:7px 11px;border-radius:9px;border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:inherit;cursor:pointer}' +
-    '#cpAdm .ad-btn.pri{background:#7c3aed;border-color:#7c3aed;color:#fff}#cpAdm .ad-btn.warn{border-color:rgba(239,68,68,.6);color:#f87171}#cpAdm .ad-btn:disabled{opacity:.5;cursor:default}' +
+    '#cpAdm .ad-btn.pri{background:#7c3aed;border-color:#7c3aed;color:#fff}#cpAdm .ad-btn.warn{border-color:rgba(239,68,68,.6);color:var(--red,#f87171)}#cpAdm .ad-btn:disabled{opacity:.5;cursor:default}' +
     '#cpAdm .ad-inv{border:1px dashed rgba(124,58,237,.6);border-radius:12px;padding:10px 12px;margin-top:8px;word-break:break-all}#cpAdm .ad-inv code{font-size:1.1rem;font-weight:800;letter-spacing:.08em}' +
     '#cpAdm .ad-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}' +
     '#cpAdm input.ad-q{width:100%;box-sizing:border-box;font:inherit;padding:9px 11px;border-radius:10px;border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:inherit}' +
@@ -48,7 +48,7 @@
     '#cpAdm .ad-help{margin:10px 0 0;padding-inline-start:16px;font-size:.76rem;color:var(--fg2,#94a3b8)}#cpAdm .ad-help li{margin:3px 0}' +
     '#cpAdm .ad-max{font:inherit;font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:6px;border:1px solid rgba(148,163,184,.35);background:transparent;color:inherit;cursor:pointer}#cpAdm .ad-max.on{background:#7c3aed;border-color:#7c3aed;color:#fff}' +
     '#cpAdm summary .ad-warn{color:#f59e0b;font-weight:700}' +
-    '#cpAdm .ad-msg{font-size:.8rem;color:var(--fg2,#94a3b8);margin-top:6px}#cpAdm .ad-err{color:#f87171}';
+    '#cpAdm .ad-msg{font-size:.8rem;color:var(--fg2,#94a3b8);margin-top:6px}#cpAdm .ad-err{color:var(--red,#f87171)}';
 
   function badges(m) {
     return (m.appOnly ? '📱 app only ' : '') + (m.premium ? '⭐' : '') + (m.supporter ? '💛' : '') + (m.paused ? '⏸' : '') + (m.pending ? '⏳' : '') + (m.email ? '📱' : '') + (m.linked ? '🔗' : '') + (m.ownKey ? '🔑' : '');

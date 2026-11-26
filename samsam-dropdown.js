@@ -46,7 +46,7 @@
     '.sdd-opt .sdd-check{width:16px;height:16px;margin-inline-start:8px;flex-shrink:0;visibility:hidden}',
     '.sdd-opt[aria-selected=true] .sdd-check{visibility:visible}',
     '.sdd-opt .sdd-sub + .sdd-check{margin-inline-start:8px}',
-    '.sdd-opt .sdd-sub.pos{color:#22c55e;font-weight:700}.sdd-opt .sdd-sub.neg{color:#ef4444;font-weight:700}',
+    '.sdd-opt .sdd-sub.pos{color:var(--green,#22c55e);font-weight:700}.sdd-opt .sdd-sub.neg{color:var(--red,#ef4444);font-weight:700}',
     '.sdd-opt:not(:has(.sdd-sub)) .sdd-check{margin-inline-start:auto}',
     '.sdd-opt.sdd-in{padding-inline-start:28px;font-weight:500}.sdd-panel.sheet .sdd-opt.sdd-in{padding-inline-start:30px}',
     '.sdd-opt.sdd-head{margin-top:4px;border-top:1px solid rgba(148,163,184,.18);border-radius:0 0 8px 8px}.sdd-opt.sdd-head:first-child{margin-top:0;border-top:0}',

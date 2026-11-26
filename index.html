@@ -21,24 +21,24 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Shared UI (theme applied before first paint, live dot, icons) — same file on every page -->
-<script src="samsam-lang.js?v=202611260410"></script>
-<script src="samsam-ar.js?v=202611260410"></script>
-<script src="samsam-ui.js?v=202611260410"></script>
-<script src="samsam-hints.js?v=202611260410"></script>
-<script src="samsam-arhints.js?v=202611260410"></script>
-<script src="samsam-vault.js?v=202611260410"></script>
-<script src="samsam-labels.js?v=202611260410"></script>
-<script src="samsam-taxonomy.js?v=202611260410"></script>
-<script src="samsam-coins.js?v=202611260410"></script>
-<script src="samsam-dropdown.js?v=202611260410"></script>
-<script src="samsam-add.js?v=202611260410"></script>
-<script src="samsam-chart.js?v=202611260410"></script>
-<script src="samsam-market.js?v=202611260410"></script>
-<script src="samsam-import.js?v=202611260410"></script>
-<script src="samsam-wallets.js?v=202611260410"></script>
-<script src="samsam-cash.js?v=202611260410"></script>
-<script src="samsam-rewards.js?v=202611260410"></script>
-<script src="samsam-settings.js?v=202611260410"></script>
+<script src="samsam-lang.js?v=202611261400"></script>
+<script src="samsam-ar.js?v=202611261400"></script>
+<script src="samsam-ui.js?v=202611261400"></script>
+<script src="samsam-hints.js?v=202611261400"></script>
+<script src="samsam-arhints.js?v=202611261400"></script>
+<script src="samsam-vault.js?v=202611261400"></script>
+<script src="samsam-labels.js?v=202611261400"></script>
+<script src="samsam-taxonomy.js?v=202611261400"></script>
+<script src="samsam-coins.js?v=202611261400"></script>
+<script src="samsam-dropdown.js?v=202611261400"></script>
+<script src="samsam-add.js?v=202611261400"></script>
+<script src="samsam-chart.js?v=202611261400"></script>
+<script src="samsam-market.js?v=202611261400"></script>
+<script src="samsam-import.js?v=202611261400"></script>
+<script src="samsam-wallets.js?v=202611261400"></script>
+<script src="samsam-cash.js?v=202611261400"></script>
+<script src="samsam-rewards.js?v=202611261400"></script>
+<script src="samsam-settings.js?v=202611261400"></script>
 
 <!-- App Icon: SVG embedded as data URI — Bitcoin golden triangle -->
 
@@ -48,7 +48,7 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
-<link rel="stylesheet" href="samsam-home.css?v=202611260410">
+<link rel="stylesheet" href="samsam-home.css?v=202611261400">
 </head>
 <body>
 <div id="cpSplash" role="status" aria-live="polite" aria-label="Loading Cute Portfolio" style="position:fixed;inset:0;z-index:100200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#0a0e1a;color:#e5e7eb;font-family:Inter,system-ui,-apple-system,sans-serif;transition:opacity .35s ease,visibility .35s">
@@ -268,7 +268,7 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
     <div class="progress-fill accum-fill" id="accumFill" style="width:0%"></div>
   </div>
   <div class="progress-labels">
-    <span style="color:#10b981" id="accumPct">0% complete</span>
+    <span style="color:var(--green)" id="accumPct">0% complete</span>
     <span style="color:var(--fg2)" id="accumDetail">— / — targets met</span>
   </div>
 </a>
@@ -330,7 +330,7 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 
 <div class="modal-overlay" id="removeModal">
   <div class="modal" style="max-width:360px">
-    <h2 style="color:#ef4444"><span data-ic="trash"></span>Remove Coin</h2>
+    <h2 style="color:var(--red,#ef4444)"><span data-ic="trash"></span>Remove Coin</h2>
     <p style="font-size:0.88rem;margin:10px 0 6px">Remove <strong id="rmSym" style="color:var(--accent)"></strong> from your active portfolio?</p>
     <p id="rmInfo" style="font-size:0.78rem;color:var(--fg2);line-height:1.55"></p>
     <div style="display:flex;gap:8px;margin-top:16px;">
@@ -378,11 +378,11 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 
 <!-- JS from here -->
 <!-- Cloud data layer (Firebase): single source of truth shared by all devices -->
-<script type="module" src="samsam-cloud.js?v=202611260410"></script>
-<script src="samsam-home.js?v=202611260410"></script>
-<script src="samsam-analysis.js?v=202611260410"></script>
-<script src="samsam-coinpage.js?v=202611260410"></script>
-<script src="samsam-hchart.js?v=202611260410"></script>
+<script type="module" src="samsam-cloud.js?v=202611261400"></script>
+<script src="samsam-home.js?v=202611261400"></script>
+<script src="samsam-analysis.js?v=202611261400"></script>
+<script src="samsam-coinpage.js?v=202611261400"></script>
+<script src="samsam-hchart.js?v=202611261400"></script>
 
 <!-- ── Compact bar: appears once the main header scrolls away (logo · name · total) ── -->
 <div class="mini-bar" id="miniBar" aria-hidden="true">
@@ -423,7 +423,7 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
   .bl-field input:focus { outline: none; border-color: #7c3aed; }
   .bl-field > .sg-num, .sg-num { display: flex; align-items: center; height: 44px; margin: 0; font-size: 1rem; color: var(--fg); border-radius: 10px; border: 1px solid var(--border); background: var(--bg3); }
   .sg-num:focus-within { border-color: #7c3aed; }
-  .sg-num b { padding: 0 2px 0 14px; font-size: 1.1rem; font-weight: 800; color: #f87171; }
+  .sg-num b { padding: 0 2px 0 14px; font-size: 1.1rem; font-weight: 800; color: var(--red,#f87171); }
   .sg-num i { padding: 0 14px 0 4px; font-style: normal; font-weight: 700; color: var(--fg2); }
   .bl-field .sg-num input { border: none; background: transparent; height: 42px; padding: 0 4px; flex: 1; min-width: 0; }
   .bl-src { display: block; margin-top: 5px; font-size: .74rem; color: var(--fg2); min-height: 1.2em; } .bl-src.err { color: var(--red); }
@@ -479,12 +479,12 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
   @media (min-width: 1024px) { #cpViews { bottom: 0; } }
   @media print { #cpViews { display: none !important; } }
 </style>
-<script src="samsam-shell.js?v=202611260410"></script>
-<script src="samsam-edits.js?v=202611260410"></script>
+<script src="samsam-shell.js?v=202611261400"></script>
+<script src="samsam-edits.js?v=202611261400"></script>
 
 <!-- ── Holdings Full-Screen Overlay ── -->
 <div id="holdingsOverlay" style="display:none;position:fixed;inset:0;z-index:9999;flex-direction:column;overflow-y:auto;background:var(--bg)">
-  <link rel="stylesheet" href="samsam-holdings.css?v=202611260410">
+  <link rel="stylesheet" href="samsam-holdings.css?v=202611261400">
 
   <!-- Nav bar -->
   <header class="cp-head hov-navbar">

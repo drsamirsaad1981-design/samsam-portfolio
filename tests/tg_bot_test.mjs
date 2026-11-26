@@ -286,7 +286,7 @@ check(`market: Top 100 → 5 best + 5 worst ${pick(100)}`, JSON.stringify(tops) 
 check('market buttons: 🪙 Crypto · 📈 bStocks · 🥇 Metals, then ✓ Top 100 · Top 200 · Top 300 · Top 500, then Refresh', JSON.stringify(btns(v).slice(0, 8).map(b => [b.text, b.callback_data])) === JSON.stringify([['✓ 🪙 Crypto', 'mk'], ['📈 bStocks', 'mks'], ['🥇 Metals', 'mkm'], ['✓ Top 100', 'mk:100'], ['Top 200', 'mk:200'], ['Top 300', 'mk:300'], ['Top 500', 'mk:500'], ['🔄 Refresh', 'mk:100']]) && !/bStocks · best/.test(v.b.text), btns(v).map(b => b.text));
 sent.length = 0; await tap('mks'); { const sv = last();
 const bs = [...sv.b.text.matchAll(/<b>bStocks · (best|worst) 24h<\/b>\n((?:<code>.*\n?)+)/g)].map(x => [x[1], [...x[2].matchAll(/<code>(\S+)\s/g)].map(y => y[1])]);
-check('📈 tap bStocks → the same message: the US market (open / closed, the next change in Riyadh time), best 5 (CRCLB, AMZNB, NVDAB, MSFTB, AAPLB) + worst 5 (GMEB, TSLAB, METAB, AAPLB, MSFTB)', sv.m === 'editMessageText' && /US market: <b>(🟢|🟡|⚪)/.test(sv.b.text) && /Riyadh/.test(sv.b.text) && JSON.stringify(bs) === JSON.stringify([['best', ['CRCLB', 'AMZNB', 'NVDAB', 'MSFTB', 'AAPLB']], ['worst', ['GMEB', 'TSLAB', 'METAB', 'AAPLB', 'MSFTB']]]) && /tokenized US stocks/.test(sv.b.text) && btns(sv)[1].text === '✓ 📈 bStocks' && okHtml(sv.b.text), sv.b.text); }
+check('📈 tap bStocks → the same message: the US market (open / closed, the next change in Riyadh time), best 5 (CRCLB, AMZNB, NVDAB, MSFTB, AAPLB) + the worst: only those that fell (GMEB, TSLAB, METAB — a share that rose is never "worst")', sv.m === 'editMessageText' && /US market: <b>(🟢|🟡|⚪)/.test(sv.b.text) && /Riyadh/.test(sv.b.text) && JSON.stringify(bs) === JSON.stringify([['best', ['CRCLB', 'AMZNB', 'NVDAB', 'MSFTB', 'AAPLB']], ['worst', ['GMEB', 'TSLAB', 'METAB']]]) && /tokenized US stocks/.test(sv.b.text) && btns(sv)[1].text === '✓ 📈 bStocks' && okHtml(sv.b.text), sv.b.text); }
 sent.length = 0; await tap('mkm'); { const mv = last();
 check('🥇 tap Metals → gold / silver / platinum / copper (no oil), the gram in SAR, the gold/silver ratio', mv.m === 'editMessageText' && /Gold<\/b> \$2,650 \/ oz/.test(mv.b.text) && /1 gram: <b>319\.50 SAR<\/b>/.test(mv.b.text) && !/Brent|oil/.test(mv.b.text) && /Copper/.test(mv.b.text) && /ratio: <b>84\.9<\/b>/.test(mv.b.text) && btns(mv)[2].text === '✓ 🥇 Metals' && okHtml(mv.b.text), mv.b.text); }
 sent.length = 0; await say('/metals');
@@ -417,7 +417,7 @@ if (process.env.DUMP_AR) {   // a look at the Arabic views as Telegram gets them
 sent.length = 0; await tap('mk');
 { const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
   check('Arabic market: "الهيمنة: البيتكوين 59.8% · التيثر 6.95%", Fear & Greed and Altcoin Season in Arabic, ETF "تدفقات ETF (6 نوفمبر)"',
-    /الهيمنة: البيتكوين 59\.8% · التيثر 6\.95%/.test(tx) && /الخوف والطمع <b>28<\/b> · خوف/.test(tx) && /· يميل للعملات البديلة/.test(tx) && /تدفقات ETF \(\d+ [\u0600-\u06FF]+\):\n• BTC/.test(tx) && !/Fear|Leaning|Nov/.test(tx), tx); }
+    /الهيمنة: البيتكوين 59\.8% · التيثر 6\.95%/.test(tx) && /البيتكوين: <b>\$77,000<\/b>/.test(tx) && /الخوف والطمع: <b>28<\/b> · خوف/.test(tx) && /موسم العملات البديلة: <b>50<\/b>/.test(tx) && /· يميل للعملات البديلة/.test(tx) && /تدفقات ETF \(\d+ [\u0600-\u06FF]+\):\n• BTC/.test(tx) && !/Fear|Leaning|Nov/.test(tx), tx); }
 sent.length = 0; await tap('mks');
 { const tx = sent.filter(y => y.m === 'editMessageText').pop().b.text;
   check('Arabic bStocks: "📊 عدد الأسهم 8 · 🟢 صاعد 5 · 🔴 هابط 3 · المتوسط", no empty "—", headers start in Arabic',
@@ -520,6 +520,20 @@ const left = JSON.parse(kvStore.get('tg:555:alerts'));
 check('…and it is removed; the waiting one is still waiting (still above $100)', left.length === 2 && !left.some(a => a.value === 140) && left.find(a => a.value === 100).armed === false, left);
 sent.length = 0; Wk = await fresh(); await cron(Wk);
 check('next cron: nothing fires again', sent.filter(x => x.m === 'sendMessage').length === 0, sent.map(x => x.b.text));
+{ // 🌐 an Arabic chat: the alert it set arrives in Arabic — every word, the date and the buttons (it used to be English for everyone)
+  const keepA = kvStore.get('tg:555:alerts'), keepL = kvStore.get('tg:555:lang'), at = RIYADH('03:27');
+  kvStore.set('tg:555:lang', 'ar');
+  kvStore.set('tg:555:alerts', JSON.stringify([{ id: 'arx1', kind: 'price_below', sym: 'SOL', cg: 'solana', value: 500, armed: true, since: at - 6 * 60e3, created: at - 3600e3, note: '' },
+    { id: 'arx2', kind: 'price_above', sym: 'GOLD', metal: 'gold', value: 100, armed: true, since: at - 6 * 60e3, created: at - 3600e3 }]));
+  Wk = await fresh(); sent.length = 0; await postK(Wk, '/alerts');
+  const lv = last().b.text;
+  check('🌐 /alerts in Arabic: "سعر SOL ≤ $500" and "سعر الذهب ≥ $100 للأونصة" (no English "price")', /سعر SOL ≤ \$500/.test(lv) && /سعر الذهب ≥ \$100 للأونصة/.test(lv) && !/price|Gold/.test(lv), lv);
+  Wk = await fresh(); sent.length = 0; await cron(Wk, at);
+  const fa = sent.filter(x => x.m === 'sendMessage')[0], ft = fa ? fa.b.text : '', fb = fa ? btns(fa).map(b => b.text) : [];
+  check('🌐 cron, Arabic chat: "تنبيهان" · "SOL تحت $500" · "الذهب فوق $100" · "الآن:" · "تنبيهك من … نوفمبر … (ليس ذيل شمعة)", no English words', /<b>تنبيهان<\/b>/.test(ft) && /<b>SOL تحت \$500<\/b>/.test(ft) && /<b>الذهب فوق \$100<\/b>/.test(ft) && /الآن: <b>\$/.test(ft) && /تنبيهك من \d+ [\u0600-\u06FF]+/.test(ft) && /ليس ذيل شمعة/.test(ft) && !/Now|Your alert|below|above|alerts|Nov/.test(ft) && okHtml(ft), ft);
+  check('…its buttons too: 🪙 SOL · 🥇 المعادن · 🔔 تنبيهاتي', fb.includes('🪙 SOL') && fb.includes('🥇 المعادن') && fb.includes('🔔 تنبيهاتي') && !fb.some(x => /Metals|\/alerts/.test(x)), fb);
+  kvStore.set('tg:555:alerts', keepA); if (keepL == null) kvStore.delete('tg:555:lang'); else kvStore.set('tg:555:lang', keepL); sent.length = 0;
+}
 LIVE.solana.usd = 95; Wk = await fresh(); await cron(Wk);
 check('SOL drops to $95 → the "≥ $100" alert is now armed (no message)', JSON.parse(kvStore.get('tg:555:alerts')).find(a => a.value === 100).armed === true && sent.filter(x => x.m === 'sendMessage').length === 0);
 LIVE.solana.usd = 105; Wk = await fresh(); sent.length = 0; await cron(Wk); Wk = await fresh(); await cron(Wk, RIYADH('03:27'));
@@ -572,7 +586,7 @@ check('…that message becomes "🎙️ I heard: <i>…</i>" + "🧠 Thinking…
 check('…then answered by Claude exactly like the typed question (tools called, answer about SOL)', claudeCalls.length === 2 && claudeCalls[0].messages.at(-1).content.startsWith('what is the price of SOL?') && /SOL<\/b> is \$/.test(last().b.text), [claudeCalls.length, last().b.text.slice(0, 80)]);
 check('…all in ONE message: one sendMessage, the answer is an edit with "I heard" still on top + the buttons', sent.filter(x => x.m === 'sendMessage').length === 1 && last().m === 'editMessageText' && last().b.message_id === 7 && /^🎙️ (I heard:|سمعت:) <i>what is the price of SOL\?<\/i>\n\n<b>SOL/.test(last().b.text) && /left today|اليوم/.test(last().b.text) && btnTexts(last()).some(x => /SOL/.test(x)) && okHtml(last().b.text), [sent.map(x => x.m), last().b.text.slice(0, 90)]);
 HEARD = 'sol'; sent.length = 0; claudeCalls.length = 0; await voice();
-check('voice "sol" → the SOL card in the same message, under "I heard" (no Claude, no question used)', claudeCalls.length === 0 && sent.filter(x => x.m === 'sendMessage').length === 1 && last().m === 'editMessageText' && /^🎙️ (I heard:|سمعت:) <i>sol<\/i>\n\n/.test(last().b.text) && /SOL/.test(last().b.text) && btnTexts(last()).some(x => /Liq Map/.test(x)), [sent.map(x => x.m), last().b.text.slice(0, 60)]);
+check('voice "sol" → the SOL card in the same message, under "I heard" (no Claude, no question used)', claudeCalls.length === 0 && sent.filter(x => x.m === 'sendMessage').length === 1 && last().m === 'editMessageText' && /^🎙️ (I heard:|سمعت:) <i>sol<\/i>\n\n/.test(last().b.text) && /SOL/.test(last().b.text) && btnTexts(last()).some(x => /Liq Map|خريطة التصفيات/.test(x)), [sent.map(x => x.m), last().b.text.slice(0, 60)]);
 HEARD = 'my alerts'; sent.length = 0; claudeCalls.length = 0; await voice();
 check('voice "alerts"-like words that are a question → still one message (to Claude)', sent.filter(x => x.m === 'sendMessage').length === 1, sent.map(x => x.m));
 HEARD = '/alerts'; sent.length = 0; await voice();
@@ -625,6 +639,7 @@ cgDown = false;
 
 // ── 🧾 phase 4: trades in words → summary → ✅ Confirm / ❌ Cancel → Firestore (only on Confirm) ──
 const tapM = (data, markup) => post({ update_id: ++UPD, callback_query: { id: 'qt', data, from: { id: 555 }, message: { message_id: 42, chat: { id: 555 }, reply_markup: markup } } });
+await tap('lang:en');   // (the chat's language decides the bot's own words: the summary and its buttons)
 await say('/new'); sent.length = 0; claudeCalls.length = 0; await say('I bought 5 SOL at 140 with USDT');
 let tv = last(), tb = btns(tv);
 check('trade → the bot\'s own summary: Buy 5 SOL @ $140 = $700, paid with USDT, SOL 10 → 15, avg $160 → $153.33', /🧾/.test(tv.b.text) && /Buy 5 SOL<\/b> @ \$140\.00 = <b>\$700\.00<\/b>/.test(tv.b.text) && /paid with USDT −\$700\.00/.test(tv.b.text) && /SOL 10 → <b>15<\/b>/.test(tv.b.text) && /avg \$160\.00 → <b>\$153\.33<\/b>/.test(tv.b.text) && okHtml(tv.b.text), tv.b.text);
@@ -655,6 +670,11 @@ tv = last(); tb = btns(tv);
 check('two trades in one message → numbered, "✅ Confirm all 2"; at-market BTC ($770 at $77,000 = 0.01 BTC); LINK 10 for $120 = $12 each', /1\. 🟢/.test(tv.b.text) && /2\. 🟢/.test(tv.b.text) && /Buy 0\.01 BTC<\/b> @ \$77,000/.test(tv.b.text) && /Buy 10 LINK<\/b> @ \$12\.00/.test(tv.b.text) && tb[0].text === '✅ Confirm all 2', [tv.b.text, tb.map(b => b.text)]);
 FS_WRITE_403 = true; sent.length = 0; await tapM(tb[0].callback_data, tv.b.reply_markup); FS_WRITE_403 = false;
 check('Firestore refuses the write (read-only account) → "Not saved" + how to fix it (Cloud Datastore User)', /Not saved/.test(last().b.text) && /Cloud Datastore User/.test(last().b.text) && commits.length === 1, last().b.text);
+await tap('lang:ar');
+sent.length = 0; claudeCalls.length = 0; await say('I sold 20 LINK at 18');
+tv = last(); tb = btns(tv);
+check('🌐 an Arabic chat, the trade typed in English → the bot\'s own summary, its date and its buttons are still Arabic (never an English summary over Arabic buttons)', /للحفظ/.test(tv.b.text) && /بيع 20 LINK<\/b> بسعر \$18\.00/.test(tv.b.text) && /التاريخ: 10 نوفمبر/.test(tv.b.text) && !/To save|Sell 20|10 Nov/.test(tv.b.text) && tb[0].text === '✅ تأكيد' && tb[1].text === '❌ إلغاء', [tv.b.text, tb.map(b => b.text)]);
+sent.length = 0; await tapM(tb[1].callback_data, tv.b.reply_markup);
 sent.length = 0; claudeCalls.length = 0; await say('بعت i sold 20 link بـ 18');
 tv = last(); tb = btns(tv);
 check('Arabic message → the summary + buttons in Arabic (بيع … ربح محقق, ✅ تأكيد)', /للحفظ/.test(tv.b.text) && /بيع 20 LINK<\/b> بسعر \$18\.00/.test(tv.b.text) && /الكمية: من 50 إلى <b>30<\/b> LINK/.test(tv.b.text) && /ربح محقق/.test(tv.b.text) && !/→/.test(tv.b.text) && tb[0].text === '✅ تأكيد', [tv.b.text, tb.map(b => b.text)]);

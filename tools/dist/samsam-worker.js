@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 6c63d815f85d9928
+// sources-hash: 9b2526421dc7ef19
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -874,6 +874,9 @@ var dot = (v) => v > 0 ? "\u{1F7E2}" : v < 0 ? "\u{1F534}" : "\u26AA";
 var flow = (v) => (v < 0 ? "\u2212" : "+") + (Math.abs(v) >= 1e9 ? "$" + (Math.abs(v) / 1e9).toFixed(2) + "B" : "$" + Math.round(Math.abs(v) / 1e6) + "M");
 function local(now, opt) {
   return new Intl.DateTimeFormat("en-GB", { timeZone: TZ, ...opt }).format(new Date(now));
+}
+function localL(now, opt, ar) {
+  return ar ? new Intl.DateTimeFormat("ar-SA-u-nu-latn-ca-gregory", { timeZone: TZ, ...opt }).format(new Date(now)) : local(now, opt);
 }
 function localParts(now) {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", weekday: "short" }).formatToParts(new Date(now)).map((x) => [x.type, x.value]));
@@ -2672,7 +2675,7 @@ async function tg2(env, method, body) {
   }
 }
 var cb = (text, data) => ({ text, callback_data: data });
-var day = (ms) => local(ms, { day: "numeric", month: "short", year: "numeric" });
+var day = (ms, lang2) => localL(ms, { day: "numeric", month: "short", year: "numeric" }, lang2 === "ar");
 var premiumNow = (x, now = Date.now()) => !!(x && x.premium && (!x.premUntil || x.premUntil > now));
 async function grant(env, chat, until, src, charge) {
   const x = await member(env, chat);
@@ -2743,12 +2746,12 @@ Until ${u} \u2014 it renews by itself (stop any time: Telegram \u2192 Settings \
 \u2022 \u0644\u0645\u0627\u0630\u0627 \u0628\u0645\u0642\u0627\u0628\u0644: \u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A \u064A\u064F\u062D\u0627\u0633\u0628 \u0639\u0644\u0649 \u0643\u0644 \u0633\u0624\u0627\u0644\u060C \u0648\u0647\u0630\u0627 \u0627\u0644\u0645\u0628\u0644\u063A \u064A\u063A\u0637\u064A \u062A\u0644\u0643 \u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u0641\u0642\u0637 \u2014 Cute Portfolio \u063A\u064A\u0631 \u0631\u0628\u062D\u064A.
 
 <i>\u2B50 \u0646\u062C\u0648\u0645 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 (Telegram Stars) \u0647\u064A \u0639\u0645\u0644\u0629 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0646\u0641\u0633\u0647: \u062A\u0634\u062A\u0631\u064A\u0647\u0627 \u0645\u0646 \u062F\u0627\u062E\u0644 \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0645\u062B\u0644 \u0623\u064A \u0634\u0631\u0627\u0621 \u062F\u0627\u062E\u0644 \u0627\u0644\u062A\u0637\u0628\u064A\u0642.</i>`,
-    isPrem: (u) => u ? `\u2705 <b>\u0623\u0646\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632 \u062D\u062A\u0649 ${u}.</b>` : "\u2705 <b>\u0623\u0646\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632</b> (\u0647\u062F\u064A\u0629 \u0645\u0646 Dr. Samir Saad).",
+    isPrem: (u) => u ? `\u2705 <b>\u0623\u0646\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632 \u062D\u062A\u0649 ${u}.</b>` : "\u2705 <b>\u0623\u0646\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632</b> (\u0647\u062F\u064A\u0629 \u0645\u0646 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F).",
     renews: "\u062A\u062A\u062C\u062F\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u2014 \u0644\u0625\u064A\u0642\u0627\u0641\u0647\u0627: \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u2190 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 My Stars.",
     subscribe: (p) => `\u2B50 \u0627\u0634\u062A\u0631\u0643 \u2014 ${p} \u2B50 \u0634\u0647\u0631\u064A\u0627\u064B`,
     extend: (p) => `\u2B50 \u0627\u0634\u062A\u0631\u0643 \u2014 ${p} \u2B50 \u0634\u0647\u0631\u064A\u0627\u064B (\u0628\u0639\u062F \u0627\u0644\u0647\u062F\u064A\u0629)`,
     supportInstead: "\u{1F49B} \u0627\u062F\u0639\u0645 \u0628\u062F\u0644\u0627\u064B \u0645\u0646 \u0630\u0644\u0643",
-    ask: "\u{1F381} \u0627\u0637\u0644\u0628 \u0645\u0646 Dr. Samir Saad",
+    ask: "\u{1F381} \u0627\u0637\u0644\u0628 \u0645\u0646 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F",
     back: "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629",
     sTitle: "\u{1F49B} <b>\u0627\u062F\u0639\u0645 Cute Portfolio</b>",
     sBody: "<b>\u0627\u062E\u062A\u064A\u0627\u0631\u064A</b> \u2014 \u0634\u0643\u0631 \u0644\u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0628\u0623\u064A \u0645\u0628\u0644\u063A. \u0627\u0644\u0645\u0632\u0627\u064A\u0627 \u0644\u0627 \u062A\u062A\u063A\u064A\u0631: \u0643\u0644 \u0634\u064A\u0621 \u064A\u0628\u0642\u0649 \u0645\u062C\u0627\u0646\u064A\u0627\u064B.\n\u064A\u0633\u0627\u0639\u062F \u0641\u064A \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u062E\u0648\u0627\u062F\u0645 \u0648\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A\u060C \u0648\u062A\u062D\u0635\u0644 \u0639\u0644\u0649 \u0634\u0627\u0631\u0629 <b>Supporter \u{1F49B}</b> \u0641\u064A \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0644\u062A\u0637\u0628\u064A\u0642.\n\n\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0628\u0644\u063A (Telegram Stars):",
@@ -2768,7 +2771,7 @@ Until ${u} \u2014 it renews by itself (stop any time: Telegram \u2192 Settings \
     ownerRenew: (n, s, u) => `\u2B50 <b>${n}</b> \u062C\u062F\u0651\u062F \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u2014 ${s} \u2B50 (\u062D\u062A\u0649 ${u}).`,
     ownerSup: (n, s) => `\u{1F49B} <b>${n}</b> \u062F\u0639\u0645 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0628\u0640 ${s} \u2B50.`,
     ownerAsk: (n) => `\u{1F381} <b>${n}</b> \u064A\u0637\u0644\u0628 \u0645\u0646\u0643 \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0647\u062F\u064A\u0629\u064B.`,
-    asked: "\u{1F381} \u0623\u064F\u0631\u0633\u0644 \u0627\u0644\u0637\u0644\u0628 \u0625\u0644\u0649 Dr. Samir Saad \u2014 \u0633\u064A\u0635\u0644\u0643 \u0627\u0644\u0631\u062F \u0647\u0646\u0627.",
+    asked: "\u{1F381} \u0623\u064F\u0631\u0633\u0644 \u0627\u0644\u0637\u0644\u0628 \u0625\u0644\u0649 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F \u2014 \u0633\u064A\u0635\u0644\u0643 \u0627\u0644\u0631\u062F \u0647\u0646\u0627.",
     ownerP: "\u0623\u0646\u062A \u0639\u0636\u0648 \u0645\u0645\u064A\u0632 \u0628\u0627\u0644\u0641\u0639\u0644 \u2B50 \u2014 \u0647\u0630\u0627 \u0645\u0627 \u064A\u0631\u0627\u0647 \u0627\u0644\u0623\u0639\u0636\u0627\u0621:"
   }
 };
@@ -2777,7 +2780,7 @@ async function premiumView(env, lang2, now = Date.now()) {
   const w = words(lang2), p = price(env), own = isOwner(env), x = own ? null : await member(env);
   const on = premiumNow(x, now), lines = [w.pTitle, "", w.pBody(p)];
   if (own) lines.unshift(`<i>${w.ownerP}</i>`, "");
-  if (on) lines.push("", w.isPrem(x.premUntil ? day(x.premUntil) : null), ...x.premSrc === "stars" ? [w.renews] : []);
+  if (on) lines.push("", w.isPrem(x.premUntil ? day(x.premUntil, lang2) : null), ...x.premSrc === "stars" ? [w.renews] : []);
   const b = [];
   if (!own && !(on && x.premSrc === "stars")) {
     const link = await tg2(env, "createInvoiceLink", {
@@ -2839,7 +2842,7 @@ async function paid(env, chat, sp, lang2, now = Date.now()) {
   const tellOwner = async (text) => {
     if (!owner2) await tg2(env, "sendMessage", { chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: "HTML" });
   };
-  const O = words(await asChat(env.TELEGRAM_CHAT_ID, () => langOf(env)));
+  const OL = await asChat(env.TELEGRAM_CHAT_ID, () => langOf(env)), O = words(OL);
   if (kind === "prem") {
     const until = sp.subscription_expiration_date ? sp.subscription_expiration_date * 1e3 : now + MONTH;
     if (!owner2) {
@@ -2847,8 +2850,8 @@ async function paid(env, chat, sp, lang2, now = Date.now()) {
       await setMember(env, chat, { supporter: true, starsPaid: (x && x.starsPaid || 0) + stars });
     }
     const renew = !!(sp.is_recurring && !sp.is_first_recurring);
-    await tg2(env, "sendMessage", { chat_id: chat, text: renew ? w.renewed(day(until)) : w.paidPrem(day(until)), parse_mode: "HTML" });
-    await tellOwner(renew ? O.ownerRenew(name, stars, day(until)) : O.ownerPrem(name, stars, day(until)));
+    await tg2(env, "sendMessage", { chat_id: chat, text: renew ? w.renewed(day(until, lang2)) : w.paidPrem(day(until, lang2)), parse_mode: "HTML" });
+    await tellOwner(renew ? O.ownerRenew(name, stars, day(until, OL)) : O.ownerPrem(name, stars, day(until, OL)));
     return { kind, until };
   }
   if (kind === "sup") {
@@ -2910,7 +2913,7 @@ async function expireRound(env, now = Date.now()) {
     }
     if (x.premUntil - now < 3 * DAY2 && !x.premRemind && x.premSrc !== "stars") {
       await setMember(env, chat, { premRemind: true });
-      await tg2(env, "sendMessage", { chat_id: chat, text: w.remind(day(x.premUntil)) });
+      await tg2(env, "sendMessage", { chat_id: chat, text: w.remind(day(x.premUntil, L)) });
     }
   }
   return { ended };
@@ -3102,7 +3105,7 @@ async function act(env, chat, op) {
   const L = x.lang === "ar" ? "ar" : "en";
   if (op === "gift30" || op === "gift365") {
     const y = await addDays(env, chat, op === "gift30" ? 30 : 365), u = day2(y.premUntil);
-    await tell(env, chat, `\u{1F381} Dr. Samir Saad gave you premium as a gift \u2014 until ${u}!`, `\u{1F381} Dr. Samir Saad \u0645\u0646\u062D\u0643 \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0647\u062F\u064A\u0629\u064B \u062D\u062A\u0649 ${u}!`, L);
+    await tell(env, chat, `\u{1F381} Dr. Samir Saad gave you premium as a gift \u2014 until ${u}!`, `\u{1F381} \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F \u0645\u0646\u062D\u0643 \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0647\u062F\u064A\u0629\u064B \u062D\u062A\u0649 ${u}!`, L);
   } else if (op === "endPrem") {
     await revoke(env, chat);
     await tell(env, chat, "Premium is off \u2014 back to the standard limits.", "\u0623\u064F\u0644\u063A\u064A\u062A \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u2014 \u0639\u062F\u062A \u0625\u0644\u0649 \u0627\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629.", L);
@@ -3343,15 +3346,19 @@ function deleteAlert(env, id) {
     return true;
   });
 }
-function describe(a) {
-  const k = KINDS[a.kind], v = k.what === "price" ? usd(a.value) + (a.metal ? "/" + (METAL_UNIT[a.metal] || "oz") : "") : k.what === "portfolio" ? usd(a.value) : k.what === "funding" ? a.value + "% / 8h" : pct(a.value, 1);
-  const who = a.metal ? METAL_NAME[a.metal] || a.sym : a.stock ? `${a.sym}${a.name ? " (" + a.name + ")" : ""}` : a.sym;
+function describe(a, ar = false) {
+  const k = KINDS[a.kind], unit = a.metal ? (ar ? METAL_UNIT_AR : METAL_UNIT)[a.metal] || (ar ? "\u0644\u0644\u0623\u0648\u0646\u0635\u0629" : "oz") : "";
+  const v = k.what === "price" ? usd(a.value) + (a.metal ? (ar ? " " : "/") + unit : "") : k.what === "portfolio" ? usd(a.value) : k.what === "funding" ? a.value + (ar ? "% \u0643\u0644 8 \u0633\u0627\u0639\u0627\u062A" : "% / 8h") : pct(a.value, 1);
+  const who = a.metal ? (ar ? METAL_NAME_AR : METAL_NAME)[a.metal] || a.sym : a.stock ? `${a.sym}${a.name ? " (" + a.name + ")" : ""}` : a.sym;
+  if (ar) return `${k.what === "price" ? `\u0633\u0639\u0631 ${who}` : k.what === "change_24h" ? `\u062A\u063A\u064A\u0651\u0631 ${who} \u0641\u064A 24 \u0633\u0627\u0639\u0629` : k.what === "funding" ? `\u062A\u0645\u0648\u064A\u0644 ${a.sym}` : "\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u062D\u0641\u0638\u0629"} ${k.op} ${v}`;
   const what = k.what === "price" ? `${who} price` : k.what === "change_24h" ? `${who} 24h change` : k.what === "funding" ? `${a.sym} funding` : "Portfolio value";
   return `${what} ${k.op} ${v}`;
 }
 var METAL_WORDS = { gold: /^(gold|xau|ذهب|الذهب)$/i, silver: /^(silver|xag|فضة|الفضة)$/i, platinum: /^(platinum|xpt|بلاتين|البلاتين)$/i, copper: /^(copper|نحاس|النحاس)$/i };
 var METAL_NAME = { gold: "Gold", silver: "Silver", platinum: "Platinum", copper: "Copper", brent: "Brent oil" };
 var METAL_UNIT = { gold: "oz", silver: "oz", platinum: "oz", copper: "lb", brent: "barrel" };
+var METAL_NAME_AR = { gold: "\u0627\u0644\u0630\u0647\u0628", silver: "\u0627\u0644\u0641\u0636\u0629", platinum: "\u0627\u0644\u0628\u0644\u0627\u062A\u064A\u0646", copper: "\u0627\u0644\u0646\u062D\u0627\u0633", brent: "\u0646\u0641\u0637 \u0628\u0631\u0646\u062A" };
+var METAL_UNIT_AR = { gold: "\u0644\u0644\u0623\u0648\u0646\u0635\u0629", silver: "\u0644\u0644\u0623\u0648\u0646\u0635\u0629", platinum: "\u0644\u0644\u0623\u0648\u0646\u0635\u0629", copper: "\u0644\u0644\u0631\u0637\u0644", brent: "\u0644\u0644\u0628\u0631\u0645\u064A\u0644" };
 var metalOf = (q) => Object.keys(METAL_WORDS).find((k) => METAL_WORDS[k].test(String(q).trim())) || null;
 function stockOf(q, stocks) {
   const Q = String(q).trim().toUpperCase(), lq = String(q).trim().toLowerCase();
@@ -3404,19 +3411,21 @@ async function runWatch(env, now = Date.now()) {
     fired.push({ a, now: now1 });
   }
   if (fired.length) {
+    const ar = await langOf(env).catch(() => "en") === "ar";
     const block = ({ a, now: v }) => {
       const k = KINDS[a.kind], up = k.op === "\u2265";
-      const nowTxt = k.what === "price" || k.what === "portfolio" ? usd(v) : k.what === "funding" ? v + "% / 8h" : pct(v, 1);
-      const head = k.what === "portfolio" ? `\u{1F4BC} <b>Portfolio ${up ? "above" : "below"} ${usd(a.value)}</b>` : `${up ? "\u{1F680}" : "\u{1F53B}"} <b>${esc(a.metal ? METAL_NAME[a.metal] : a.sym)} ${k.what === "price" ? (up ? "above" : "below") + " " + usd(a.value) : k.what === "change_24h" ? "24h " + (up ? "\u2265" : "\u2264") + " " + pct(a.value, 1) : "funding " + (up ? "\u2265" : "\u2264") + " " + a.value + "%"}</b>`;
+      const nowTxt = k.what === "price" || k.what === "portfolio" ? usd(v) : k.what === "funding" ? v + (ar ? "% \u0643\u0644 8 \u0633\u0627\u0639\u0627\u062A" : "% / 8h") : pct(v, 1);
+      const name = esc(a.metal ? (ar ? METAL_NAME_AR : METAL_NAME)[a.metal] : a.sym), when2 = localL(a.created, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }, ar);
+      const head = ar ? k.what === "portfolio" ? `\u{1F4BC} <b>\u0627\u0644\u0645\u062D\u0641\u0638\u0629 ${up ? "\u0641\u0648\u0642" : "\u062A\u062D\u062A"} ${usd(a.value)}</b>` : `${up ? "\u{1F680}" : "\u{1F53B}"} <b>${name} ${k.what === "price" ? (up ? "\u0641\u0648\u0642" : "\u062A\u062D\u062A") + " " + usd(a.value) : k.what === "change_24h" ? "\u0641\u064A 24 \u0633\u0627\u0639\u0629 " + (up ? "\u2265" : "\u2264") + " " + pct(a.value, 1) : "\u0627\u0644\u062A\u0645\u0648\u064A\u0644 " + (up ? "\u2265" : "\u2264") + " " + a.value + "%"}</b>` : k.what === "portfolio" ? `\u{1F4BC} <b>Portfolio ${up ? "above" : "below"} ${usd(a.value)}</b>` : `${up ? "\u{1F680}" : "\u{1F53B}"} <b>${name} ${k.what === "price" ? (up ? "above" : "below") + " " + usd(a.value) : k.what === "change_24h" ? "24h " + (up ? "\u2265" : "\u2264") + " " + pct(a.value, 1) : "funding " + (up ? "\u2265" : "\u2264") + " " + a.value + "%"}</b>`;
       return { nowTxt, text: `${head}
-Now: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
-<i>Your alert from ${local(a.created, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })} \u2014 held on two checks (not a wick), done, removed.</i>` };
+${ar ? "\u0627\u0644\u0622\u0646" : "Now"}: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
+<i>${ar ? `\u062A\u0646\u0628\u064A\u0647\u0643 \u0645\u0646 ${when2} \u2014 \u062B\u0628\u062A \u0641\u064A \u0641\u062D\u0635\u064A\u0646 \u0645\u062A\u062A\u0627\u0644\u064A\u064A\u0646 (\u0644\u064A\u0633 \u0630\u064A\u0644 \u0634\u0645\u0639\u0629)\u060C \u062A\u0645 \u0648\u0623\u064F\u0632\u064A\u0644.` : `Your alert from ${when2} \u2014 held on two checks (not a wick), done, removed.`}</i>` };
     };
     const blocks = fired.map(block);
-    const text = fired.length === 1 ? "\u{1F514} " + blocks[0].text : `\u{1F514} <b>${fired.length} alerts</b>
+    const text = fired.length === 1 ? "\u{1F514} " + blocks[0].text : `\u{1F514} <b>${ar ? fired.length === 2 ? "\u062A\u0646\u0628\u064A\u0647\u0627\u0646" : fired.length + " \u062A\u0646\u0628\u064A\u0647\u0627\u062A" : fired.length + " alerts"}</b>
 
 ` + blocks.map((b) => b.text).join("\n\n");
-    const btn = (a) => a.metal ? { text: "\u{1F947} Metals", callback_data: "mkm" } : a.stock ? { text: "\u{1F4C8} bStocks", callback_data: "mks" } : a.sym ? { text: "\u{1FA99} " + a.sym, callback_data: "c:" + (a.cg || "x-" + a.sym.toLowerCase()).slice(0, 58) } : { text: "\u{1F4BC} Portfolio", callback_data: "pf" };
+    const btn = (a) => a.metal ? { text: ar ? "\u{1F947} \u0627\u0644\u0645\u0639\u0627\u062F\u0646" : "\u{1F947} Metals", callback_data: "mkm" } : a.stock ? { text: "\u{1F4C8} bStocks", callback_data: "mks" } : a.sym ? { text: "\u{1FA99} " + a.sym, callback_data: "c:" + (a.cg || "x-" + a.sym.toLowerCase()).slice(0, 58) } : { text: ar ? "\u{1F4BC} \u0645\u062D\u0641\u0638\u062A\u064A" : "\u{1F4BC} Portfolio", callback_data: "pf" };
     const seenB = /* @__PURE__ */ new Set(), row2 = [];
     fired.forEach(({ a }) => {
       const b = btn(a);
@@ -3426,7 +3435,7 @@ Now: <b>${nowTxt}</b>${a.note ? "\n<i>" + esc(a.note) + "</i>" : ""}
       }
     });
     const one = fired.length === 1 && fired[0].a.sym && !fired[0].a.metal && !fired[0].a.stock;
-    const buttons = [one ? [row2[0], { text: "\u{1F525} Liq Map", url: "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=" + encodeURIComponent(fired[0].a.sym) }] : row2, [{ text: "\u{1F514} /alerts", callback_data: "al" }]];
+    const buttons = [one ? [row2[0], { text: ar ? "\u{1F525} \u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u062A\u0635\u0641\u064A\u0627\u062A" : "\u{1F525} Liq Map", url: "https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=" + encodeURIComponent(fired[0].a.sym) }] : row2, [{ text: ar ? "\u{1F514} \u062A\u0646\u0628\u064A\u0647\u0627\u062A\u064A" : "\u{1F514} /alerts", callback_data: "al" }]];
     const r = await tg4(env, "sendMessage", { chat_id: chatOf(env), text: text.slice(0, 4e3), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buttons } });
     if (!r.ok) fired.forEach(({ a }) => keep.push(a));
     else for (let i = 0; i < fired.length; i++) await logEvent(env, "alert", describe(fired[i].a) + " \u2014 now " + blocks[i].nowTxt);
@@ -3449,7 +3458,7 @@ async function viewAlerts(env, lang2 = "en") {
     list3.forEach((a) => {
       if (groupOf2(a) === g) {
         shown.push(a);
-        L.push(`${shown.length}. ${esc(describe(a))}${a.armed ? "" : ar ? " <i>(\u064A\u0646\u062A\u0638\u0631 \u0639\u0648\u062F\u0629 \u0627\u0644\u0633\u0639\u0631 \u0623\u0648\u0644\u0627\u064B)</i>" : " <i>(waits to reset first)</i>"}`);
+        L.push(`${shown.length}. ${esc(describe(a, ar))}${a.armed ? "" : ar ? " <i>(\u064A\u0646\u062A\u0638\u0631 \u0639\u0648\u062F\u0629 \u0627\u0644\u0633\u0639\u0631 \u0623\u0648\u0644\u0627\u064B)</i>" : " <i>(waits to reset first)</i>"}`);
       }
     });
   }
@@ -3596,7 +3605,7 @@ async function keepTrades(env, trades, lang2 = "en") {
 function tradeLines(trades, ar) {
   const L = [ar ? "\u{1F9FE} <b>\u0644\u0644\u062D\u0641\u0638 \u2014 \u0631\u0627\u062C\u0639 \u062B\u0645 \u0627\u0636\u063A\u0637 \u062A\u0623\u0643\u064A\u062F:</b>" : "\u{1F9FE} <b>To save \u2014 check, then Confirm:</b>"];
   trades.forEach(({ trade: t }, n) => {
-    const d = local(Date.parse(t.date), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    const d = localL(Date.parse(t.date), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }, ar);
     const buy = t.side === "buy";
     const head = `${trades.length > 1 ? n + 1 + ". " : ""}${buy ? "\u{1F7E2}" : "\u{1F534}"} `, cash = money(buy ? t.total + t.fee : Math.max(0, t.total - t.fee));
     if (ar) {
@@ -3876,22 +3885,22 @@ var PW = {
 };
 var paperWords = PW;
 async function viewPaper(env, lang2 = "en") {
-  const w = PW[lang2] || PW.en, s = await status(env);
+  const w = PW[lang2] || PW.en, ar = lang2 === "ar", s = await status(env);
   if (s.error) return { text: "\u26A0\uFE0F " + esc(s.error), buttons: [[{ text: w.back, callback_data: "menu" }]] };
   const { p } = s, L = [
     `${w.title} \xB7 <i>${w.sub}</i>`,
-    `<i>${w.since} ${esc(local(p.start, { day: "numeric", month: "short", year: "numeric" }))} \xB7 ${usd(p.startCash)}</i>`,
+    `<i>${w.since} ${esc(localL(p.start, { day: "numeric", month: "short", year: "numeric" }, ar))} \xB7 ${usd(p.startCash)}</i>`,
     "",
     `\u{1F4BC} ${w.value}: <b>${usd2(s.value)}</b>`,
     `\u{1F4B5} ${w.cash}: ${usd2(p.cash)}`,
     `${dot(s.profit)} ${w.profit}: <b>${s.profit >= 0 ? "+" : "\u2212"}${usd2(Math.abs(s.profit))}</b> (${pct(s.profitPct)})`
   ];
-  if (s.hodl) L.push(`\u{1F7E0} ${w.btc}: ${usd2(s.hodl)} \xB7 ${w.beat} <b>${s.vsBtcPts >= 0 ? "+" : "\u2212"}${Math.abs(s.vsBtcPts).toFixed(1)}</b> pts`);
+  if (s.hodl) L.push(`\u{1F7E0} ${w.btc}: ${usd2(s.hodl)} \xB7 ${w.beat} <b>${s.vsBtcPts >= 0 ? "+" : "\u2212"}${Math.abs(s.vsBtcPts).toFixed(1)}</b> ${ar ? "\u0646\u0642\u0637\u0629" : "pts"}`);
   L.push("");
   if (!s.coins.length) L.push(w.none);
   for (const c of s.coins.slice(0, 12)) L.push(`<code>${esc(c.sym.padEnd(6))}</code> ${amt2(c.qty)} \xB7 ${usd2(c.value)} \xB7 ${dot(c.pnl_pct)} ${pct(c.pnl_pct, 1)}`);
   const t = (p.trades || []).slice(-1)[0];
-  if (t) L.push("", `<i>${w.last}: ${t.side === "buy" ? "\u{1F7E2}" : "\u{1F534}"} ${t.side} ${amt2(t.qty)} ${esc(t.sym)} @ ${money2(t.price)} \xB7 ${esc(local(t.t, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }))}</i>`);
+  if (t) L.push("", `<i>${w.last}: ${t.side === "buy" ? "\u{1F7E2}" : "\u{1F534}"} ${ar ? t.side === "buy" ? "\u0634\u0631\u0627\u0621" : "\u0628\u064A\u0639" : t.side} ${amt2(t.qty)} ${esc(t.sym)} ${ar ? "\u0628\u0633\u0639\u0631" : "@"} ${money2(t.price)} \xB7 ${esc(localL(t.t, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }, ar))}</i>`);
   L.push(`<i>${w.fee}</i>`);
   const b = [[{ text: w.refresh, callback_data: "pp" }, ...p.undo ? [{ text: w.undo, callback_data: "pp:undo" }] : [], { text: w.restart, callback_data: "pp:new" }], [{ text: w.back, callback_data: "menu" }]];
   return { text: L.join("\n"), buttons: b };
@@ -4691,7 +4700,7 @@ function nearest(alerts, m, sum) {
     if (KINDS[a.kind].what !== "price") continue;
     const p = priceOf(a.sym, a.cg);
     if (!p) continue;
-    out.push({ alert: describe(a), price_usd: r63(p), pct_away: r24(Math.abs(p / a.value - 1) * 100) });
+    out.push({ alert: describe(a), alert_ar: describe(a, true), price_usd: r63(p), pct_away: r24(Math.abs(p / a.value - 1) * 100) });
   }
   for (const t of sum.tps || []) if (t.level > t.price) out.push({ level: `${t.sym} TP${t.n} ${usd(t.level)}`, price_usd: r63(t.price), pct_away: r24((t.level / t.price - 1) * 100) });
   for (const x of sum.buyAt || []) if (x.price > x.at) out.push({ level: `${x.sym} buy price ${usd(x.at)}`, price_usd: r63(x.price), pct_away: r24((x.price / x.at - 1) * 100) });
@@ -4715,7 +4724,7 @@ async function morning(env, now = Date.now(), L = null) {
   };
   await jput(env, K(env, "snap:" + localParts(now).date), { t: now, value: sum.value, btc: m.btc && m.btc.price, fng: m.fng && m.fng.value, dom: m.global && m.global.dom && m.global.dom.btc }, 2 * 86400);
   const body = await compose(env, "morning", L, facts) || plainMorning(L, facts);
-  const head = `\u2600\uFE0F <b>${w.morning}</b> \xB7 ${esc(local(now, { weekday: "short", day: "numeric", month: "short" }))}`;
+  const head = `\u2600\uFE0F <b>${w.morning}</b> \xB7 ${esc(localL(now, { weekday: "short", day: "numeric", month: "short" }, L === "ar"))}`;
   return send(env, { text: head + "\n\n" + body + "\n\n" + NOT_ADVICE[L === "ar" ? "ar" : "en"], buttons: [[cb2(w.plan, "pl"), cb2(w.pf, "pf"), cb2(w.mk, "mk")]] });
 }
 async function evening(env, now = Date.now(), L = null) {
@@ -4752,7 +4761,7 @@ async function evening(env, now = Date.now(), L = null) {
     other_markets: otherFacts(m, now)
   };
   const body = await compose(env, "evening", L, facts) || plainEvening(L, facts);
-  const head = `\u{1F319} <b>${w.evening}</b> \xB7 ${esc(local(now, { weekday: "short", day: "numeric", month: "short" }))}`;
+  const head = `\u{1F319} <b>${w.evening}</b> \xB7 ${esc(localL(now, { weekday: "short", day: "numeric", month: "short" }, L === "ar"))}`;
   return send(env, { text: head + "\n\n" + body + "\n\n" + NOT_ADVICE[L === "ar" ? "ar" : "en"], buttons: [[cb2(w.pf, "pf"), cb2(w.mk, "mk")]] });
 }
 var dcaTxt = (x) => x.currency ? `${Math.round(+x.save_amount || 0).toLocaleString("en-US")} ${x.currency}` : usd(x.buy_usd);
@@ -4953,9 +4962,9 @@ async function pinView(env, now = Date.now()) {
     `\u{1F4BC} ${w.pfS}: <b>${usd2(sum.value)}</b> ${dot(sum.ch24)} (${pct(sum.ch24)} ${w.today})`,
     // 💼 المحفظة: $33,143.94 (−3.95% اليوم)
     m.btc ? `\u{1FA99} ${w.btcS}: <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} (${pct(m.btc.ch24)})${m.fng ? ` \xB7 ${w.fng}: <b>${m.fng.value}</b>` : ""}` : null,
-    `\u{1F4CB} ${w.planS}: <b>${sum.prog ? sum.prog.pct.toFixed(1) : "0"}%</b> \xB7 \u{1F6AA} ${w.exit}: <b>${met2}/3</b>`,
-    dca ? `\u{1F6D2} ${w.nextDca}: <b>${esc(dca.sym)}</b> \xB7 ${esc((/* @__PURE__ */ new Date(dca.s.next + "T12:00:00Z")).toLocaleDateString("en-US", { month: "short", day: "numeric" }))}` : null,
-    alerts.length ? `\u{1F514} ${w.alerts(alerts.length)}${near ? ` \xB7 ${w.nearest}: ${esc(near.alert)} (${near.pct_away}% ${w.away})` : ""}` : null
+    `\u{1F4CB} ${w.planS}: <b>${sum.prog ? sum.prog.pct.toFixed(1) : "0"}%</b> \xB7 \u{1F6AA} ${w.exit}: <b>${L === "ar" ? `${met2} \u0645\u0646 3` : `${met2}/3`}</b>`,
+    dca ? `\u{1F6D2} ${w.nextDca}: <b>${esc(dca.sym)}</b> \xB7 ${esc(L === "ar" ? arDay(dca.s.next) : (/* @__PURE__ */ new Date(dca.s.next + "T12:00:00Z")).toLocaleDateString("en-US", { month: "short", day: "numeric" }))}` : null,
+    alerts.length ? `\u{1F514} ${w.alerts(alerts.length)}${near ? ` \xB7 ${w.nearest}: ${esc(L === "ar" ? near.alert_ar : near.alert)} (${near.pct_away}% ${w.away})` : ""}` : null
   ].filter(Boolean);
   return { text: L1.join("\n"), buttons: [[cb2(w.pf, "pf"), cb2(w.mk, "mk"), cb2(w.refresh, "pin:r")], [{ text: w.report, web_app: { url: APP + "index.html" } }]] };
 }
@@ -5042,7 +5051,7 @@ async function radarDigest(env, now = Date.now(), slot = "") {
   const wl = whaleLines(wh, [.../* @__PURE__ */ new Set(["BTC", "ETH", "SOL", ...lev.map(([s2]) => s2), ...flips])].slice(0, 6), ar, now);
   if (wl.length) lines.push("", `\u{1F40B} <b>${ar ? "\u0627\u0644\u062D\u064A\u062A\u0627\u0646" : "Whales"}</b> <i>(${ar ? `\u0623\u0643\u0628\u0631 ${wh.n} \u0645\u062A\u062F\u0627\u0648\u0644 \u0631\u0627\u0628\u062D \u0639\u0644\u0649 Hyperliquid` : `the ${wh.n} biggest winning traders on Hyperliquid`})</i>`, ...wl);
   lines.push("", `<i>${ar ? "\u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u0627\u0644\u0645\u062A\u0643\u062F\u0633\u0629 \u062A\u0639\u0646\u064A \u062A\u0642\u0644\u0628\u0627\u064B \u0623\u0639\u0644\u0649 \u2014 \u0648\u0627\u0644\u062D\u064A\u062A\u0627\u0646 \u064A\u062A\u062D\u0648\u0651\u0637\u0648\u0646 \u0648\u064A\u062E\u0633\u0631\u0648\u0646 \u0623\u064A\u0636\u0627\u064B." : "Crowded leverage means more volatility \u2014 and whales hedge, and lose too."}</i>`, NOT_ADVICE[ar ? "ar" : "en"]);
-  const first = lev[0], btns = [[cb2(WD[L].mk, "mk"), cb2(WD[L].pf, "pf"), ...first ? [url("\u{1F525} Liq Map", LIQ + encodeURIComponent(first[0]))] : []]];
+  const first = lev[0], btns = [[cb2(WD[L].mk, "mk"), cb2(WD[L].pf, "pf"), ...first ? [url(L === "ar" ? "\u{1F525} \u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u062A\u0635\u0641\u064A\u0627\u062A" : "\u{1F525} Liq Map", LIQ + encodeURIComponent(first[0]))] : []]];
   const r = await send(env, { text: lines.join("\n"), buttons: btns });
   if (r && r.ok) await jput(env, K(env, "digest"), { last: now });
   return { sent: r && r.ok ? 1 : 0 };
@@ -5279,8 +5288,8 @@ var guide_default = {
         "Link the two (see <b>Link the app and the bot</b>) so the bot sees your portfolio."
       ],
       ar: [
-        "\u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0639\u0648\u0629 \u0627\u0644\u062A\u064A \u0623\u0631\u0633\u0644\u0647\u0627 \u0644\u0643 Dr. Samir Saad.",
-        "\u{1F4F1} <b>\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> \u2190 \u0633\u062C\u0651\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u062D\u0633\u0627\u0628 Google \u0623\u0648 \u0628\u0623\u064A \u0628\u0631\u064A\u062F \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A (\u0631\u0627\u0628\u0637 \u062F\u062E\u0648\u0644 \u0628\u062F\u0648\u0646 \u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631) \u2190 <b>Start my portfolio</b>.",
+        "\u0627\u0641\u062A\u062D \u0627\u0644\u062F\u0639\u0648\u0629 \u0627\u0644\u062A\u064A \u0623\u0631\u0633\u0644\u0647\u0627 \u0644\u0643 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F.",
+        "\u{1F4F1} <b>\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642</b> \u2190 \u0633\u062C\u0651\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u062D\u0633\u0627\u0628 Google \u0623\u0648 \u0628\u0623\u064A \u0628\u0631\u064A\u062F \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A (\u0631\u0627\u0628\u0637 \u062F\u062E\u0648\u0644 \u0628\u062F\u0648\u0646 \u0643\u0644\u0645\u0629 \u0645\u0631\u0648\u0631) \u2190 <b>\u0627\u0628\u062F\u0623 \u0645\u062D\u0641\u0638\u062A\u064A</b>.",
         "\u{1F916} <b>\u0631\u0627\u0628\u0637 \u0627\u0644\u0628\u0648\u062A</b> \u2190 \u062A\u062F\u062E\u0644 \u0627\u0644\u0628\u0648\u062A \u0645\u0628\u0627\u0634\u0631\u0629\u061B \u0623\u0631\u0633\u0644 /app \u0645\u0639 \u0628\u0631\u064A\u062F\u0643 \u0644\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0623\u064A\u0636\u0627\u064B.",
         "\u0627\u0631\u0628\u0637 \u0627\u0644\u0627\u062B\u0646\u064A\u0646 (\u0631\u0627\u062C\u0639 <b>\u0631\u0628\u0637 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0627\u0644\u0628\u0648\u062A</b>) \u0644\u064A\u062A\u0645\u0643\u0646 \u0627\u0644\u0628\u0648\u062A \u0645\u0646 \u0631\u0624\u064A\u0629 \u0645\u062D\u0641\u0638\u062A\u0643."
       ],
@@ -5409,7 +5418,7 @@ var guide_default = {
       ],
       ar: [
         "\u0627\u0636\u063A\u0637 \u0645\u0637\u0648\u0644\u0627\u064B \u0639\u0644\u0649 \u{1F399} \u0641\u064A \u062A\u0644\u064A\u062C\u0631\u0627\u0645 \u0648\u062A\u062D\u062F\u0651\u062B (\u062D\u062A\u0649 \u062F\u0642\u064A\u0642\u062A\u064A\u0646).",
-        "\u064A\u0639\u0631\u0636 \u0627\u0644\u0628\u0648\u062A <i>I heard: \u2026</i>",
+        "\u064A\u0639\u0631\u0636 \u0627\u0644\u0628\u0648\u062A <i>\u0633\u0645\u0639\u062A: \u2026</i>",
         "\u062B\u0645 \u064A\u062C\u064A\u0628 \u0643\u0645\u0627 \u0644\u0648 \u0623\u0646\u0643 \u0643\u062A\u0628\u062A \u0627\u0644\u0633\u0624\u0627\u0644."
       ],
       tip: {
@@ -5509,7 +5518,7 @@ var guide_default = {
       ar: [
         "\u0627\u0643\u062A\u0628 <i>\u0627\u0634\u062A\u0631\u064A\u062A 0.01 BTC \u0628\u0633\u0639\u0631 95 \u0623\u0644\u0641</i> \u0623\u0648 <i>\u0628\u0639\u062A 5 SOL \u0628\u0633\u0639\u0631 180</i>.",
         "\u064A\u0639\u0631\u0636 \u0627\u0644\u0628\u0648\u062A \u0645\u0627 \u0633\u064A\u062A\u063A\u064A\u0631: \u0627\u0644\u0643\u0645\u064A\u0629 \u0648\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u0631\u0628\u062D.",
-        "\u0627\u0636\u063A\u0637 <b>\u2705 Confirm</b> \u062E\u0644\u0627\u0644 15 \u062F\u0642\u064A\u0642\u0629 \u2014 \u0641\u062A\u0638\u0647\u0631 \u0627\u0644\u0635\u0641\u0642\u0629 \u0641\u064A \u062A\u0637\u0628\u064A\u0642\u0643 \u0623\u064A\u0636\u0627\u064B."
+        "\u0627\u0636\u063A\u0637 <b>\u2705 \u062A\u0623\u0643\u064A\u062F</b> \u062E\u0644\u0627\u0644 15 \u062F\u0642\u064A\u0642\u0629 \u2014 \u0641\u062A\u0638\u0647\u0631 \u0627\u0644\u0635\u0641\u0642\u0629 \u0641\u064A \u062A\u0637\u0628\u064A\u0642\u0643 \u0623\u064A\u0636\u0627\u064B."
       ],
       tip: {
         en: "Nothing is saved until you confirm.",
@@ -5536,14 +5545,14 @@ var guide_default = {
         "\u2600\uFE0F <b>Smart morning</b> (08:45 Riyadh): 3 things to do today.",
         "\u{1F319} <b>Smart evening</b> (21:00): what happened and what to watch.",
         "\u{1F4E1} <b>Radar digest</b> (12:00 \xB7 16:00 \xB7 20:00): one message with \u{1F9F2} crowded leverage on BTC and your biggest coins, \u{1F525} big sectors moving fast and \u{1F40B} what the biggest winning traders hold. Nothing found \u2192 no message.",
-        "\u{1F514} Alerts that can wait come together at the same hours; a price you set, a take-profit and the day's signals still come at once.",
+        "\u{1F514} An alert you set in words comes the moment it happens \u2014 after two checks in a row, so a passing spike never fires it. A buy price or a take-profit that was reached, and a regular buy that is due, are in the morning message.",
         "\u{1F4CC} <b>Live pinned message</b> at the top of the chat, refreshed every 15 minutes."
       ],
       ar: [
         "\u2600\uFE0F <b>\u0627\u0644\u0635\u0628\u0627\u062D \u0627\u0644\u0630\u0643\u064A</b> (08:45 \u0628\u062A\u0648\u0642\u064A\u062A \u0627\u0644\u0631\u064A\u0627\u0636): 3 \u0623\u0645\u0648\u0631 \u062A\u0641\u0639\u0644\u0647\u0627 \u0627\u0644\u064A\u0648\u0645.",
         "\u{1F319} <b>\u0627\u0644\u0645\u0633\u0627\u0621 \u0627\u0644\u0630\u0643\u064A</b> (21:00): \u0645\u0627 \u062D\u062F\u062B \u0648\u0645\u0627 \u064A\u062C\u0628 \u0645\u0631\u0627\u0642\u0628\u062A\u0647.",
         "\u{1F4E1} <b>\u0645\u0644\u062E\u0635 \u0627\u0644\u0631\u0627\u062F\u0627\u0631\u0627\u062A</b> (12:00 \xB7 16:00 \xB7 20:00): \u0631\u0633\u0627\u0644\u0629 \u0648\u0627\u062D\u062F\u0629 \u0641\u064A\u0647\u0627 \u{1F9F2} \u0627\u0632\u062F\u062D\u0627\u0645 \u0627\u0644\u0631\u0627\u0641\u0639\u0629 \u0639\u0644\u0649 BTC \u0648\u0623\u0643\u0628\u0631 \u0639\u0645\u0644\u0627\u062A\u0643\u060C \u0648\u{1F525} \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062A \u0627\u0644\u0643\u0628\u064A\u0631\u0629 \u0627\u0644\u062A\u064A \u062A\u062A\u062D\u0631\u0643 \u0628\u0633\u0631\u0639\u0629\u060C \u0648\u{1F40B} \u0645\u0631\u0627\u0643\u0632 \u0623\u0643\u0628\u0631 \u0627\u0644\u0645\u062A\u062F\u0627\u0648\u0644\u064A\u0646 \u0627\u0644\u0631\u0627\u0628\u062D\u064A\u0646. \u0644\u0627 \u062C\u062F\u064A\u062F \u2190 \u0644\u0627 \u0631\u0633\u0627\u0644\u0629.",
-        "\u{1F514} \u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u063A\u064A\u0631 \u0627\u0644\u0639\u0627\u062C\u0644\u0629 \u062A\u0635\u0644 \u0645\u062C\u0645\u0651\u0639\u0629 \u0641\u064A \u0646\u0641\u0633 \u0627\u0644\u0645\u0648\u0627\u0639\u064A\u062F\u061B \u0623\u0645\u0627 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0630\u064A \u062D\u062F\u062F\u062A\u0647\u060C \u0648\u0647\u062F\u0641 \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D\u060C \u0648\u0625\u0634\u0627\u0631\u0627\u062A \u0627\u0644\u064A\u0648\u0645 \u0641\u062A\u0635\u0644 \u0641\u0648\u0631\u0627\u064B.",
+        "\u{1F514} \u0627\u0644\u062A\u0646\u0628\u064A\u0647 \u0627\u0644\u0630\u064A \u062A\u0637\u0644\u0628\u0647 \u0628\u0643\u0644\u0627\u0645\u0643 \u064A\u0635\u0644\u0643 \u0644\u062D\u0638\u0629 \u062D\u062F\u0648\u062B\u0647 \u2014 \u0628\u0639\u062F \u0641\u062D\u0635\u064A\u0646 \u0645\u062A\u062A\u0627\u0644\u064A\u064A\u0646\u060C \u0641\u0644\u0627 \u062A\u0637\u0644\u0642\u0647 \u0642\u0641\u0632\u0629 \u0633\u0639\u0631 \u0639\u0627\u0628\u0631\u0629. \u0623\u0645\u0627 \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 \u0623\u0648 \u0647\u062F\u0641 \u062C\u0646\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D \u0625\u0630\u0627 \u062A\u062D\u0642\u0642\u060C \u0648\u0645\u0648\u0639\u062F \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A \u0625\u0630\u0627 \u062D\u0627\u0646\u060C \u0641\u062A\u062C\u062F\u0647\u0627 \u0641\u064A \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0635\u0628\u0627\u062D.",
         "\u{1F4CC} <b>\u0631\u0633\u0627\u0644\u0629 \u0645\u062B\u0628\u062A\u0629 \u0645\u0628\u0627\u0634\u0631\u0629</b> \u0623\u0639\u0644\u0649 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u062A\u062A\u062D\u062F\u062B \u0643\u0644 15 \u062F\u0642\u064A\u0642\u0629."
       ],
       tip: {
@@ -5730,7 +5739,7 @@ var guide_default = {
       ],
       ar: [
         "\u0627\u0633\u0623\u0644 \u0627\u0644\u0628\u0648\u062A \u0628\u0643\u0644\u0645\u0627\u062A\u0643 \u2014 <i>\u0643\u064A\u0641 \u0623\u0636\u064A\u0641 \u0639\u0645\u0644\u0629\u061F</i>",
-        "\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 <b>/feedback</b> \u062B\u0645 \u0631\u0633\u0627\u0644\u062A\u0643 \u2014 \u062A\u0635\u0644 \u0645\u0628\u0627\u0634\u0631\u0629 \u0625\u0644\u0649 Dr. Samir Saad.",
+        "\u0627\u0642\u062A\u0631\u0627\u062D \u0623\u0648 \u0645\u0634\u0643\u0644\u0629\u061F \u0623\u0631\u0633\u0644 <b>/feedback</b> \u062B\u0645 \u0631\u0633\u0627\u0644\u062A\u0643 \u2014 \u062A\u0635\u0644 \u0645\u0628\u0627\u0634\u0631\u0629 \u0625\u0644\u0649 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F.",
         "/guide \u064A\u0641\u062A\u062D \u0647\u0630\u0627 \u0627\u0644\u062F\u0644\u064A\u0644 \u0641\u064A \u0623\u064A \u0648\u0642\u062A\u061B \u0648\u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642: \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u2190 \u0627\u0644\u062F\u0644\u064A\u0644.",
         "\u{1F195} \u0639\u0646\u062F \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062F\u0644\u064A\u0644 \u064A\u062E\u0628\u0631\u0643 \u0627\u0644\u0628\u0648\u062A \u0628\u0627\u0644\u0623\u062C\u0632\u0627\u0621 \u0627\u0644\u062C\u062F\u064A\u062F\u0629 \u0623\u0648 \u0627\u0644\u0645\u0639\u062F\u064E\u0651\u0644\u0629 \u2014 \u0631\u0633\u0627\u0644\u0629 \u0648\u0627\u062D\u062F\u0629\u060C \u0645\u0631\u0629 \u0641\u064A \u0627\u0644\u064A\u0648\u0645 \u0639\u0644\u0649 \u0627\u0644\u0623\u0643\u062B\u0631 \u2014 \u0648\u064A\u0646\u0632\u0644 \u0645\u0646\u0634\u0648\u0631 \u0641\u064A \u0627\u0644\u0642\u0646\u0627\u0629."
       ],
@@ -6326,6 +6335,7 @@ var T = {
     back: "\u2B05\uFE0F Menu",
     openApp: "\u{1F4F1} Open the app",
     liq: "\u{1F525} Liq Map",
+    hub: "\u{1F9ED} Market Hub",
     chart: "\u{1F4C8} Chart",
     inApp: "\u{1F4BC} In the app",
     pfNow: "Your portfolio now",
@@ -6467,7 +6477,8 @@ var T = {
     refresh: "\u{1F504} \u062A\u062D\u062F\u064A\u062B",
     back: "\u2B05\uFE0F \u0627\u0644\u0642\u0627\u0626\u0645\u0629",
     openApp: "\u{1F4F1} \u0627\u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642",
-    liq: "\u{1F525} Liq Map",
+    liq: "\u{1F525} \u062E\u0631\u064A\u0637\u0629 \u0627\u0644\u062A\u0635\u0641\u064A\u0627\u062A",
+    hub: "\u{1F9ED} \u0645\u0631\u0643\u0632 \u0627\u0644\u0633\u0648\u0642",
     chart: "\u{1F4C8} \u0627\u0644\u0631\u0633\u0645",
     inApp: "\u{1F4BC} \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642",
     pfNow: "\u0645\u062D\u0641\u0638\u062A\u0643 \u0627\u0644\u0622\u0646",
@@ -6478,10 +6489,10 @@ var T = {
     err: "\u062D\u062F\u062B\u062A \u0645\u0634\u0643\u0644\u0629 \u0644\u062F\u064A \u2014 \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649 \u0628\u0639\u062F \u062F\u0642\u064A\u0642\u0629.",
     rank: "\u0627\u0644\u062A\u0631\u062A\u064A\u0628",
     cap: "\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629",
-    vol: "\u0627\u0644\u062A\u062F\u0627\u0648\u0644 24 \u0633",
-    h24: "24\u0633",
+    vol: "\u0627\u0644\u062A\u062F\u0627\u0648\u0644 24 \u0633\u0627\u0639\u0629",
+    h24: "24 \u0633\u0627\u0639\u0629",
     d7: "7 \u0623\u064A\u0627\u0645",
-    d30: "30 \u064A\u0648\u0645",
+    d30: "30 \u064A\u0648\u0645\u0627\u064B",
     you: "\u0644\u062F\u064A\u0643",
     avg: "\u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643",
     signal: "\u0627\u0644\u0625\u0634\u0627\u0631\u0629",
@@ -6498,8 +6509,8 @@ var T = {
     buyAt: "\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621",
     away: "\u064A\u0628\u0639\u062F",
     noPlan: "\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0647\u062F\u0627\u0641 \u0641\u064A \u0627\u0644\u062E\u0637\u0629 \u0628\u0639\u062F \u2014 \u0623\u0636\u0641\u0647\u0627 \u0645\u0646 \u0635\u0641\u062D\u0629 \u062E\u0637\u0629 \u0627\u0644\u062A\u062C\u0645\u064A\u0639 \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642.",
-    best24: "\u0627\u0644\u0623\u0641\u0636\u0644 24\u0633",
-    worst24: "\u0627\u0644\u0623\u0633\u0648\u0623 24\u0633",
+    best24: "\u0627\u0644\u0623\u0641\u0636\u0644 24 \u0633\u0627\u0639\u0629",
+    worst24: "\u0627\u0644\u0623\u0633\u0648\u0623 24 \u0633\u0627\u0639\u0629",
     best7: "\u0627\u0644\u0623\u0641\u0636\u0644 7 \u0623\u064A\u0627\u0645",
     worst7: "\u0627\u0644\u0623\u0633\u0648\u0623 7 \u0623\u064A\u0627\u0645",
     mvT: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0648\u0627\u0644\u0623\u0633\u0648\u0623 \u0641\u064A \u0645\u062D\u0641\u0638\u062A\u0643",
@@ -6510,10 +6521,10 @@ var T = {
     hold: "\u26AA \u0627\u062D\u062A\u0641\u0627\u0638",
     vsAvg: "\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0645\u062A\u0648\u0633\u0637 \u0634\u0631\u0627\u0626\u0643",
     mkT: "\u0627\u0644\u0633\u0648\u0642",
-    topUp: (n) => `\u0623\u0639\u0644\u0649 ${n} \xB7 \u0627\u0644\u0623\u0641\u0636\u0644 24\u0633`,
-    topDn: (n) => `\u0623\u0639\u0644\u0649 ${n} \xB7 \u0627\u0644\u0623\u0633\u0648\u0623 24\u0633`,
-    stUp: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0641\u064A bStocks \xB7 24\u0633",
-    stDn: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0641\u064A bStocks \xB7 24\u0633",
+    topUp: (n) => `\u0623\u0639\u0644\u0649 ${n} \xB7 \u0627\u0644\u0623\u0641\u0636\u0644 24 \u0633\u0627\u0639\u0629`,
+    topDn: (n) => `\u0623\u0639\u0644\u0649 ${n} \xB7 \u0627\u0644\u0623\u0633\u0648\u0623 24 \u0633\u0627\u0639\u0629`,
+    stUp: "\u0627\u0644\u0623\u0641\u0636\u0644 \u0641\u064A bStocks \xB7 24 \u0633\u0627\u0639\u0629",
+    stDn: "\u0627\u0644\u0623\u0633\u0648\u0623 \u0641\u064A bStocks \xB7 24 \u0633\u0627\u0639\u0629",
     stNote: "\u0623\u0633\u0647\u0645 \u0623\u0645\u0631\u064A\u0643\u064A\u0629 \u0645\u0631\u0645\u0651\u0632\u0629 (Binance)",
     updated: "\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B",
     futures: "Futures",
@@ -6658,10 +6669,10 @@ function moverRows(sum, key, dir, n = 5) {
 }
 function marketShort(t, m) {
   const g = m.global || {}, d = g.dom || {}, out = [], ar = isAr(t);
-  if (m.btc) out.push(ar ? `\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 <b>${usd(m.btc.price)}</b> \xB7 ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}` : `BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
+  if (m.btc) out.push(ar ? `\u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646: <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}` : `BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
   if (d.btc != null) out.push(ar ? `${t.dom}: \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 ${d.btc.toFixed(1)}% \xB7 \u0627\u0644\u062A\u064A\u062B\u0631 ${(d.usdt || 0).toFixed(2)}%` : `${t.dom} BTC ${d.btc.toFixed(1)}% \xB7 USDT ${(d.usdt || 0).toFixed(2)}%`);
-  if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> \xB7 ${esc(ar ? FNG_AR[m.fng.label] || m.fng.label : m.fng.label)}`);
-  if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> \xB7 ${esc(ar ? SEASON_AR[m.alt.label] || m.alt.label : m.alt.label)}`);
+  if (m.fng) out.push(`${esc(t.fng)}${ar ? ":" : ""} <b>${m.fng.value}</b> \xB7 ${esc(ar ? FNG_AR[m.fng.label] || m.fng.label : m.fng.label)}`);
+  if (m.alt && m.alt.value != null) out.push(`${t.altS}${ar ? ":" : ""} <b>${m.alt.value}</b> \xB7 ${esc(ar ? SEASON_AR[m.alt.label] || m.alt.label : m.alt.label)}`);
   const e = etfDay(m.etf);
   if (e) out.push(ar ? `\u062A\u062F\u0641\u0642\u0627\u062A ETF (${arDay(e.date)}):
 \u2022 BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}` : `${t.etf} ${e.label} \xB7 BTC ${flow(e.btc)} \xB7 ETH ${flow(e.eth)}`);
@@ -6759,7 +6770,7 @@ function viewPlan(t, sum, now) {
 ${t.noPlan}`, buttons: [[webApp(t.openApp, "accumulation.html"), cb3(t.back, "menu")]] };
   const L = [`\u{1F4CB} <b>${t.planT}</b>`];
   if (sum.plan.length) {
-    L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${sum.prog.completed}/${sum.prog.counted} \u2705`, "");
+    L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${isAr(t) ? `${sum.prog.completed} \u0645\u0646 ${sum.prog.counted}` : `${sum.prog.completed}/${sum.prog.counted}`} \u2705`, "");
     const BL = isAr(t) ? 7 : 10, bar = (p) => {
       const n = Math.round(Math.min(1, p) * BL);
       return "\u25B0".repeat(n) + "\u25B1".repeat(BL - n);
@@ -6790,7 +6801,7 @@ function viewMarket(t, m, now, range = 100) {
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
   if (up.length) L.push("", `\u{1F4C8} <b>${t.topUp(range)}</b>`, ...up.map(line));
   if (dn.length) L.push("", `\u{1F4C9} <b>${t.topDn(range)}</b>`, ...dn.map(line));
-  return { text: L.join("\n"), buttons: [mkTabs(t, "c"), RANGES.map((n) => cb3((n === range ? "\u2713 " : "") + "Top " + n, "mk:" + n)), [cb3(t.refresh, "mk:" + range), url2("\u{1F9ED} Market Hub", APP + "market.html")], [cb3(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [mkTabs(t, "c"), RANGES.map((n) => cb3((n === range ? "\u2713 " : "") + "Top " + n, "mk:" + n)), [cb3(t.refresh, "mk:" + range), url2(t.hub, APP + "market.html")], [cb3(t.back, "menu")]] };
 }
 var isAr = (t) => t.otherCode === "en";
 var mkTabs = (t, on) => [["c", "\u{1FA99} " + (isAr(t) ? "\u0643\u0631\u064A\u0628\u062A\u0648" : "Crypto"), "mk"], ["s", "\u{1F4C8} bStocks", "mks"], ["m", "\u{1F947} " + (isAr(t) ? "\u0627\u0644\u0645\u0639\u0627\u062F\u0646" : "Metals"), "mkm"]].map(([k, l, d]) => cb3((k === on ? "\u2713 " : "") + l, d));
@@ -6807,19 +6818,15 @@ function viewStocks(t, m, now) {
       ar ? `\u{1F4CA} \u0639\u062F\u062F \u0627\u0644\u0623\u0633\u0647\u0645 ${st.length}${cap > 0 ? ` \xB7 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629 ${big(cap)}` : ""}
 \u{1F7E2} \u0635\u0627\u0639\u062F ${up} \xB7 \u{1F534} \u0647\u0627\u0628\u0637 ${dn} \xB7 \u0627\u0644\u0645\u062A\u0648\u0633\u0637 ${pct(avg, 2)}` : `\u{1F4CA} ${st.length} stocks${cap > 0 ? ` \xB7 ${big(cap)}` : ""} \xB7 \u{1F7E2} ${up} / \u{1F534} ${dn} \xB7 avg ${pct(avg, 2)}`
     );
-    const sUp = [...ch2].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...ch2].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
+    const sUp = [...ch2].sort((a, b) => b.ch24 - a.ch24).slice(0, 5).filter((r) => r.ch24 > 0), sDn = [...ch2].sort((a, b) => a.ch24 - b.ch24).slice(0, 5).filter((r) => r.ch24 < 0);
+    if (sUp.length) L.push("", `\u{1F4C8} <b>${t.stUp}</b>`, ...sUp.map(line));
+    if (sDn.length) L.push("", `\u{1F4C9} <b>${t.stDn}</b>`, ...sDn.map(line));
     L.push(
-      "",
-      `\u{1F4C8} <b>${t.stUp}</b>`,
-      ...sUp.map(line),
-      "",
-      `\u{1F4C9} <b>${t.stDn}</b>`,
-      ...sDn.map(line),
       "",
       `<i>${t.stNote} \xB7 ${ar ? "\u0627\u0644\u062A\u0648\u0643\u0646 \u064A\u064F\u062A\u062F\u0627\u0648\u0644 24/7\u060C \u0648\u0627\u0644\u0633\u0647\u0645 \u0627\u0644\u062D\u0642\u064A\u0642\u064A \u0648\u0642\u062A \u0633\u0648\u0642 \u0646\u064A\u0648\u064A\u0648\u0631\u0643 \u0641\u0642\u0637." : "the token trades 24/7, the real share only while New York is open."}</i>`
     );
   }
-  return { text: L.join("\n"), buttons: [mkTabs(t, "s"), [cb3(t.refresh, "mks"), url2("\u{1F9ED} Market Hub", APP + "market.html#stocks")], [cb3(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [mkTabs(t, "s"), [cb3(t.refresh, "mks"), url2(t.hub, APP + "market.html#stocks")], [cb3(t.back, "menu")]] };
 }
 function viewMetals(t, m, now) {
   const ar = isAr(t), list3 = (m.metals || []).filter((x) => x.k !== "brent");
@@ -6841,7 +6848,7 @@ function viewMetals(t, m, now) {
   if (g && s && s.price > 0) L.push("", `\u2696\uFE0F ${ar ? "\u0646\u0633\u0628\u0629 \u0627\u0644\u0630\u0647\u0628 \u0625\u0644\u0649 \u0627\u0644\u0641\u0636\u0629" : "Gold / silver ratio"}: <b>${(g.price / s.price).toFixed(1)}</b>`);
   const at = m.parts && m.parts.metals ? Math.max(1, Math.round((now - Date.parse(m.parts.metals)) / 6e4)) : null;
   L.push("", `<i>${ar ? "\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629 \u2014 Yahoo Finance\u060C \u0628\u062A\u0623\u062E\u064A\u0631 ~15 \u062F\u0642\u064A\u0642\u0629" : "Futures \u2014 Yahoo Finance, ~15 min delayed"}${at ? ` \xB7 ${t.snap(at)}` : ""}. ${ar ? "\u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0644\u0644\u0623\u0648\u0646\u0635\u0629 (\u0627\u0644\u0646\u062D\u0627\u0633 \u0644\u0644\u0631\u0637\u0644). \u0627\u0644\u062C\u0631\u0627\u0645: \u0639\u064A\u0627\u0631 24 \u062F\u0648\u0646 \u0645\u0635\u0646\u0639\u064A\u0629." : "Gram: pure 24k, no making charge."}</i>`);
-  return { text: L.join("\n"), buttons: [mkTabs(t, "m"), [cb3(t.refresh, "mkm"), url2("\u{1F9ED} Market Hub", APP + "market.html#metals")], [cb3(t.back, "menu")]] };
+  return { text: L.join("\n"), buttons: [mkTabs(t, "m"), [cb3(t.refresh, "mkm"), url2(t.hub, APP + "market.html#metals")], [cb3(t.back, "menu")]] };
 }
 function viewCoin(t, coin, m, sum, now) {
   const row2 = [...m.top, ...m.top500].find((r) => r.id === coin.id) || {}, s = m.series[coin.id];
@@ -7029,7 +7036,7 @@ async function handleTelegram(request, env) {
     }) : null;
     if (x.paused) {
       await quiet();
-      if (await strangerOnce(env, chat)) await tg8(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0644\u062F\u064A\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 Dr. Samir Saad." : "\u23F8 The bot is paused for you for now \u2014 ask Dr. Samir Saad." }).catch(() => {
+      if (await strangerOnce(env, chat)) await tg8(env, "sendMessage", { chat_id: chat, text: ar ? "\u23F8 \u0627\u0644\u0628\u0648\u062A \u0645\u062A\u0648\u0642\u0641 \u0644\u062F\u064A\u0643 \u0645\u0624\u0642\u062A\u0627\u064B \u2014 \u062A\u0648\u0627\u0635\u0644 \u0645\u0639 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F." : "\u23F8 The bot is paused for you for now \u2014 ask Dr. Samir Saad." }).catch(() => {
       });
       return ok();
     }
@@ -7326,7 +7333,7 @@ Then Settings \u2192 Telegram \u2192 \u{1F517} Link your portfolio, to see your 
   },
   ar: {
     ask: "\u0623\u0631\u0633\u0644 \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0627\u0644\u0630\u064A \u0633\u062A\u062F\u062E\u0644 \u0628\u0647\u060C \u0647\u0643\u0630\u0627:\n<code>/app you@example.com</code>\n(\u062D\u0633\u0627\u0628 Google\u060C \u0623\u0648 \u0623\u064A \u0628\u0631\u064A\u062F \u0628\u0631\u0627\u0628\u0637 \u062F\u062E\u0648\u0644.)",
-    sent: "\u{1F4E8} \u0623\u064F\u0631\u0633\u0644 \u0627\u0644\u0637\u0644\u0628 \u0625\u0644\u0649 Dr. Samir Saad \u0644\u0644\u0645\u0648\u0627\u0641\u0642\u0629 \u2014 \u0633\u064A\u0635\u0644\u0643 \u0627\u0644\u0631\u062F \u0647\u0646\u0627.",
+    sent: "\u{1F4E8} \u0623\u064F\u0631\u0633\u0644 \u0627\u0644\u0637\u0644\u0628 \u0625\u0644\u0649 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F \u0644\u0644\u0645\u0648\u0627\u0641\u0642\u0629 \u2014 \u0633\u064A\u0635\u0644\u0643 \u0627\u0644\u0631\u062F \u0647\u0646\u0627.",
     owner: "\u{1F4F1} \u0644\u062F\u064A\u0643 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0627\u0644\u0641\u0639\u0644 \u{1F642}",
     req: (n, e) => `\u{1F4F1} <b>${n}</b> \u064A\u0631\u064A\u062F \u0641\u062A\u062D \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0628\u0640
 <code>${e}</code>`,
@@ -7579,8 +7586,8 @@ async function onUpdate(env, u, msg, q, chat) {
               await tg8(env, "sendMessage", { chat_id: who, text: x.lang === "ar" ? "\u0623\u064F\u0644\u063A\u064A\u062A \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u2014 \u0639\u062F\u062A \u0625\u0644\u0649 \u0627\u0644\u062D\u062F\u0648\u062F \u0627\u0644\u0639\u0627\u062F\u064A\u0629." : "Premium is off \u2014 back to the standard limits." }).catch(() => {
               });
             } else {
-              const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? local(y.premUntil, { day: "numeric", month: "short", year: "numeric" }) : "";
-              await tg8(env, "sendMessage", { chat_id: who, parse_mode: "HTML", text: x.lang === "ar" ? `\u{1F381} Dr. Samir Saad \u0645\u0646\u062D\u0643 \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0647\u062F\u064A\u0629\u064B \u062D\u062A\u0649 ${until}!
+              const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? localL(y.premUntil, { day: "numeric", month: "short", year: "numeric" }, x.lang === "ar") : "";
+              await tg8(env, "sendMessage", { chat_id: who, parse_mode: "HTML", text: x.lang === "ar" ? `\u{1F381} \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F \u0645\u0646\u062D\u0643 \u0627\u0644\u0639\u0636\u0648\u064A\u0629 \u0627\u0644\u0645\u0645\u064A\u0632\u0629 \u0647\u062F\u064A\u0629\u064B \u062D\u062A\u0649 ${until}!
 \u0641\u064F\u0639\u0651\u0644\u062A \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u{1F399}\u060C \u0648${PREM_AI} \u0633\u0624\u0627\u0644 AI \u0648${PREM_REPORTS} \u062A\u0642\u0627\u0631\u064A\u0631 AI Analysis \u064A\u0648\u0645\u064A\u0627\u064B.` : `\u{1F381} Dr. Samir Saad gave you premium as a gift \u2014 until ${until}!
 Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {
               });
@@ -7720,7 +7727,7 @@ Voice notes \u{1F399} are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} A
     if (msg && (msg.voice || msg.audio)) {
       if (!await isPremium(env) && !(await keyInfo(env)).has) {
         const ar = await getLang(env) === "ar";
-        await send2(env, chat, { text: ar ? "\u{1F399} \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 \u2014 \u0627\u0643\u062A\u0628 \u0631\u0633\u0627\u0644\u062A\u0643\u060C \u0623\u0648 \u0627\u0637\u0644\u0628\u0647\u0627 \u0645\u0646 Dr. Samir Saad." : "\u{1F399} Voice notes are for \u2B50 premium members \u2014 type it instead, or ask Dr. Samir Saad." });
+        await send2(env, chat, { text: ar ? "\u{1F399} \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0635\u0648\u062A\u064A\u0629 \u0644\u0644\u0623\u0639\u0636\u0627\u0621 \u0627\u0644\u0645\u0645\u064A\u0632\u064A\u0646 \u2B50 \u2014 \u0627\u0643\u062A\u0628 \u0631\u0633\u0627\u0644\u062A\u0643\u060C \u0623\u0648 \u0627\u0637\u0644\u0628\u0647\u0627 \u0645\u0646 \u062F. \u0633\u0645\u064A\u0631 \u0633\u0639\u062F." : "\u{1F399} Voice notes are for \u2B50 premium members \u2014 type it instead, or ask Dr. Samir Saad." });
         return ok();
       }
       await onVoice(env, chat, msg.voice || msg.audio);
@@ -7967,15 +7974,14 @@ async function answer(env, chat, question, budget = 36, into = null) {
 ${t.aiLeft(r.left, r.limit)}</i>`;
   const btns = [];
   if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb3("\u{1FA99} " + sym, "c:" + cid.slice(0, 58))));
-  if (r.coins.length === 1) btns[0].push(url2("\u{1F525} Liq Map", LIQ2 + encodeURIComponent(r.coins[0][1])));
+  if (r.coins.length === 1) btns[0].push(url2(t.liq, LIQ2 + encodeURIComponent(r.coins[0][1])));
   if (r.paper) btns.push([cb3(t.paperB, "pp"), cb3(paperWords[lang2].undo, "pp:undo")]);
   btns.push([cb3(t.newChat, "new"), cb3(t.back, "menu")]);
   let tx = "";
   if (r.trades && r.trades.length) {
-    const ql = /[\u0600-\u06FF]/.test(question) ? "ar" : "en", tq = T[ql];
-    const gid = await keepTrades(env, r.trades, ql);
-    tx = tradeLines(r.trades, ql === "ar") + "\n\n";
-    btns.unshift([cb3(r.trades.length > 1 ? tq.txOkAll(r.trades.length) : tq.txOk, "tx:ok:" + gid), cb3(tq.txNo, "tx:no:" + gid)]);
+    const gid = await keepTrades(env, r.trades, lang2);
+    tx = tradeLines(r.trades, lang2 === "ar") + "\n\n";
+    btns.unshift([cb3(r.trades.length > 1 ? t.txOkAll(r.trades.length) : t.txOk, "tx:ok:" + gid), cb3(t.txNo, "tx:no:" + gid)]);
   }
   let text = r.text + "\n\n" + tx + foot;
   if (top.length + text.length > 4e3) text = r.text.slice(0, Math.max(200, 3900 - foot.length - tx.length - top.length)) + "\u2026\n\n" + tx + foot;

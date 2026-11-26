@@ -100,12 +100,12 @@
   }
   .stat-metals { margin-top: 12px; width: 100%; box-sizing: border-box; }   /* its own full-width card under the moving line */
   .stat-metals .stat-label { width: 100%; justify-content: center; position: relative; }
-  .stat-metals .mt-open { position: absolute; inset-inline-end: 0; font-size: .74rem; font-weight: 600; color: #60a5fa; text-decoration: none; }
+  .stat-metals .mt-open { position: absolute; inset-inline-end: 0; font-size: .74rem; font-weight: 600; color: var(--c-link, #60a5fa); text-decoration: none; }
   .stat-metals button.mt-row { width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; color: inherit; font: inherit; cursor: pointer; }
   .stat-metals .mt-vault { opacity: .7; font-size: .72rem; }
   .stat-metals .mt-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 28px; width: 100%; }   /* wide screens: gold and silver side by side */
   .stat-metals[hidden] { display: none !important; }
-  .stat-gold { color: #eab308; }
+  .stat-gold { color: var(--c-gold, #eab308); }
   .stat-metals .stat-sub { width: 100%; }
   .stat-metals .mt-tot { margin: 2px 0 6px; }
   .stat-metals .mt-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 6px 0; border-top: 1px solid rgba(148,163,184,.15); font-size: .8rem; text-align: start; }
@@ -119,7 +119,7 @@
   .stat-cash .ch-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 28px; width: 100%; }
   .stat-cash button.ch-row { display: grid; grid-template-columns: 1fr auto auto; gap: 2px 8px; align-items: baseline; width: 100%; padding: 7px 0; background: transparent; border: 0; border-top: 1px solid rgba(148,163,184,.15); color: inherit; font: inherit; font-size: .8rem; text-align: start; cursor: pointer; }
   .stat-cash .ch-main b { font-weight: 700; }
-  .stat-cash .ch-tag { font-style: normal; font-size: .66rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: rgba(96,165,250,.16); color: #60a5fa; }
+  .stat-cash .ch-tag { font-style: normal; font-size: .66rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: rgba(96,165,250,.16); color: var(--c-link, #60a5fa); }
   .stat-cash .ch-usd { font-weight: 600; opacity: .85; white-space: nowrap; }
   .stat-cash .ch-sub { grid-column: 1 / -1; opacity: .75; font-size: .74rem; line-height: 1.5; }
   .stat-cash .ch-due { color: #f59e0b; }
@@ -723,7 +723,7 @@
   .perf-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .perf-legend-val { font-weight: 700; }
   .perf-legend-val.pos { color: #3b82f6; }
-  .perf-legend-val.neg { color: #ef4444; }
+  .perf-legend-val.neg { color: var(--red,#ef4444); }
   .perf-legend-val.up { color: var(--green); } .perf-legend-val.down { color: var(--red); }
 
   /* ── Main trio: identical size, padding and radius for the three cards ── */
@@ -768,8 +768,8 @@
   .holdings-title { font-size: 0.78rem; font-weight: 700; text-transform: none; letter-spacing: .01em; color: var(--fg2); }
   .holdings-total { font-size: 1.35rem; font-weight: 700; color: var(--fg); line-height: 1; }
   .holdings-change { font-size: 0.75rem; font-weight: 600; margin-top: 3px; }
-  .holdings-change.pos { color: #10b981; }
-  .holdings-change.neg { color: #ef4444; }
+  .holdings-change.pos { color: var(--green,#10b981); }
+  .holdings-change.neg { color: var(--red,#ef4444); }
   .holdings-tabs { display: flex; gap: 4px; margin-bottom: 10px; margin-top: 10px; }
   .holdings-tab {
     font-size: 0.72rem; font-weight: 600; padding: 4px 10px;
@@ -840,8 +840,8 @@
   .btn-history:hover::before { content:''; position:absolute; bottom:calc(100% + 1px); left:50%; transform:translateX(-50%); border:4px solid transparent; border-top-color:var(--bg-card-secondary,#1e293b); pointer-events:none; z-index:99; }
   .buy-preview { background:var(--bg3); border-radius:8px; padding:10px 12px; font-size:0.82rem; margin-top:10px; line-height:1.7; }
   .buy-preview span { font-weight:700; color:var(--accent); }
-  .sell-profit { color:#22c55e; font-weight:700; }
-  .sell-loss   { color:#ef4444; font-weight:700; }
+  .sell-profit { color:var(--green,#22c55e); font-weight:700; }
+  .sell-loss   { color:var(--red,#ef4444); font-weight:700; }
   .btn-remove { background:transparent; color:#6b7280; border:1px solid #4b5563; border-radius:4px; padding:2px 6px; font-size:0.7rem; cursor:pointer; line-height:1.6; }
   .btn-remove:hover { background:#ef4444; color:#fff; border-color:#ef4444; }
 
@@ -852,8 +852,8 @@
   .tx-row.tx-sell { border-inline-start:3px solid #ef4444; }
   .tx-type-badge { font-size:0.68rem; font-weight:700; padding:2px 7px; border-radius:4px; display:inline-block; margin-bottom:4px; }
   .tx-type-badge .ss-pencil { width:11px; height:11px; vertical-align:-1px; margin-inline-end:2px; }
-  .tx-buy  .tx-type-badge { background:rgba(34,197,94,0.15); color:#22c55e; }
-  .tx-sell .tx-type-badge { background:rgba(239,68,68,0.15); color:#ef4444; }
+  .tx-buy  .tx-type-badge { background:rgba(34,197,94,0.15); color:var(--green,#22c55e); }
+  .tx-sell .tx-type-badge { background:rgba(239,68,68,0.15); color:var(--red,#ef4444); }
   .tx-row.tx-adjust { border-inline-start:3px solid #94a3b8; }
   .tx-row.tx-tin { border-inline-start:3px solid #3b82f6; } .tx-row.tx-tout { border-inline-start:3px solid #f59e0b; }
   .tx-tin .tx-type-badge { background:rgba(59,130,246,0.15); color:#3b82f6; } .tx-tout .tx-type-badge { background:rgba(245,158,11,0.15); color:#f59e0b; }
@@ -883,7 +883,7 @@
   .analysis-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:220px; gap:14px; color:var(--fg2); }
   .analysis-spinner { width:42px; height:42px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.9s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
-  .analysis-error { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:14px 16px; color:#f87171; font-size:0.85rem; line-height:1.6; }
+  .analysis-error { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:14px 16px; color:var(--red,#f87171); font-size:0.85rem; line-height:1.6; }
   .analysis-error a { color:var(--accent); text-decoration:underline; }
   .analysis-content { font-size:0.93rem; line-height:1.65; display:flex; flex-direction:column; gap:10px; }
   .analysis-content p { margin:0 0 6px; } .analysis-content p:last-child { margin-bottom:0; }
@@ -1102,7 +1102,7 @@
   .card-act button { height: 36px; padding: 0 6px !important; font-size: 0.8rem !important; border-radius: 8px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; line-height: 1; }
   .card-act .btn-history, .card-act .btn-remove { padding: 0 6px !important; font-size: 0.8rem !important; border-radius: 8px; background: var(--metric-bg); }
   .card-act .btn-history { color: var(--fg); border: 1px solid var(--border); }
-  .card-act .btn-remove { color: #f87171; border: 1px solid rgba(248,113,113,.45); }
+  .card-act .btn-remove { color: var(--red, #f87171); border: 1px solid rgba(248,113,113,.45); }
   .card-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
   .card-act .btn-history::after, .card-act .btn-history::before { display: none; }
   /* Computer (≥ 1024px): table / cards live in a contained box with its own slim scrollbar, so the page
@@ -1182,11 +1182,11 @@
   .ac-btns .btn { height: 46px; width: 100%; margin: 0; display: flex; align-items: center; justify-content: center; font-size: .92rem; font-weight: 700; border-radius: 10px; }
   /* Liquidation Map (CoinGlass) + Price Prediction (CoinCodex), new tab: one row under the action buttons */
   .btn-liq, .btn-pred, .btn-cmc { display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 600; white-space: nowrap; line-height: 1;
-    color: #fb923c; background: var(--metric-bg); border: 1px solid rgba(251,146,60,.45); border-radius: 8px; height: 36px; font-size: 0.8rem; -webkit-tap-highlight-color: transparent; }
+    color: var(--c-orange, #fb923c); background: var(--metric-bg); border: 1px solid rgba(251,146,60,.45); border-radius: 8px; height: 36px; font-size: 0.8rem; -webkit-tap-highlight-color: transparent; }
   .btn-liq:hover { background: #f97316; color: #fff; border-color: #f97316; }
   .btn-liq.maybe { border-style: dashed; opacity: .85; }
   .btn-liq.off, .btn-liq.off:hover, .btn-pred.off, .btn-pred.off:hover { color: var(--fg2); background: var(--bg3); border-color: var(--border); border-style: dashed; cursor: default; opacity: .85; }
-  .btn-pred { color: #a78bfa; border-color: rgba(167,139,250,.45); }
+  .btn-pred { color: var(--c-violet, #a78bfa); border-color: rgba(167,139,250,.45); }
   .btn-pred:hover { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
   .btn-liq:focus-visible { outline: 3px solid rgba(251,146,60,.5); outline-offset: 2px; }
   .btn-pred:focus-visible { outline: 3px solid rgba(167,139,250,.5); outline-offset: 2px; }
@@ -1197,7 +1197,7 @@
   .quick-links-row { flex-wrap: nowrap; align-items: center; }
   .quick-links-row .htx-liq { flex: 1 1 0; min-width: 0; padding: 0 8px; }
   .quick-links-row .cp-hint { flex-shrink: 0; }
-  .btn-cmc { color: #60a5fa; border-color: rgba(96,165,250,.45); }
+  .btn-cmc { color: var(--c-link, #60a5fa); border-color: rgba(96,165,250,.45); }
   .btn-cmc:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
   .btn-cmc:focus-visible { outline: 3px solid rgba(96,165,250,.5); outline-offset: 2px; }
   /* Signal line under the cards + Asset Strategy & Notes */
@@ -1230,7 +1230,7 @@
   .row-act { grid-template-columns: 1fr 1fr; grid-auto-rows: 28px; gap: 5px; width: 150px; margin: 0 auto; }
   .row-act button { height: 28px; padding: 0 6px !important; font-size: 0.74rem !important; font-weight: 600; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap; line-height: 1; width: 100%; }
   .row-act .btn-history { color: var(--fg); background: var(--metric-bg); border: 1px solid var(--border); }
-  .row-act .btn-remove { color: #f87171; background: var(--metric-bg); border: 1px solid rgba(248,113,113,.45); }
+  .row-act .btn-remove { color: var(--red,#f87171); background: var(--metric-bg); border: 1px solid rgba(248,113,113,.45); }
   .row-act .btn-remove:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
   .row-act .btn-history::after, .row-act .btn-history::before { display: none; }
   /* ── Category tags + filter-card dots (colours from samsam-taxonomy.js) ── */
@@ -1374,7 +1374,7 @@
 .zk-edit { background: none; border: none; padding: 0 4px; margin-inline-start: 4px; color: inherit; opacity: .75; cursor: pointer; vertical-align: middle; }
 
 /* ── Overview, top-down (Nov 2026): 💼 Net worth → the portfolio → its parts → details (folded) → 🕌 zakat ── */
-.stat-sky { color: #38bdf8; }
+.stat-sky { color: var(--c-sky, #38bdf8); }
 .zk-slot:empty { display: none; }
 #zakatTop .zk-line { margin: 0 0 12px; }
 .nw-card { margin: 0 0 10px; padding: 14px 16px 12px; border-radius: 14px; border: 1px solid var(--border); background: linear-gradient(135deg, rgba(124,58,237,.14), rgba(34,197,94,.08)); }
@@ -1405,7 +1405,7 @@
 .fold-card .stat-label { display: flex; align-items: center; margin-bottom: 0; }
 .fold-t { flex: 1; display: flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: .86rem; font-weight: 700; cursor: pointer; padding: 2px 0; text-align: start; }
 .fold-t .fold-v { margin-inline-start: auto; font-variant-numeric: tabular-nums; }
-.fold-t .fold-v.stat-gold, #metalsUsd { color: #eab308; } #cashUsd { color: var(--blue); }
+.fold-t .fold-v.stat-gold, #metalsUsd { color: var(--c-gold, #eab308); } #cashUsd { color: var(--blue); }
 .fold-chev { width: 9px; height: 9px; border-inline-end: 2px solid var(--fg2); border-bottom: 2px solid var(--fg2); transform: rotate(45deg); margin: -3px 6px 0 8px; transition: transform .2s; flex-shrink: 0; }
 .fold-card.open .fold-chev { transform: rotate(225deg); margin-top: 4px; }
 .fold-card:not(.open) .fold-body { display: none; }
@@ -1434,7 +1434,7 @@
 .cpf-bl .val-edit { background: transparent; border: 0; color: var(--fg2); cursor: pointer; padding: 2px; line-height: 0; }
 /* 🕌 the zakat card (folded, like metals and cash) — the due banner stays open at the top */
 .zk-line.zk-card { margin-top: 12px; text-align: start; font-size: inherit; color: inherit; padding: 10px 12px; }
-.zk-card .zk-short { font-weight: 600; font-size: .8rem; color: var(--fg2); } .zk-card .zk-short b { color: #22c55e; }
+.zk-card .zk-short { font-weight: 600; font-size: .8rem; color: var(--fg2); } .zk-card .zk-short b { color: var(--green, #22c55e); }
 .zk-card .zk-body { text-align: center; font-size: .8rem; line-height: 1.55; color: var(--fg2); }
 .zk-card .zk-body b { color: var(--fg); }
 /* 💼 Net worth: the bar and legend by part (BTC · Altcoins · Metals · Shares · Cash) */

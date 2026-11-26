@@ -37,7 +37,7 @@
     '#cpSup .sp-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}' +
     '#cpSup .sp-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font:inherit;font-size:.86rem;font-weight:700;padding:9px 13px;border-radius:10px;border:1px solid var(--border,rgba(148,163,184,.3));background:transparent;color:inherit;cursor:pointer;text-decoration:none;flex:1 1 auto}' +
     '#cpSup .sp-btn.pri{background:#f59e0b;border-color:#f59e0b;color:#1f1300}#cpSup .sp-btn.vio{background:#7c3aed;border-color:#7c3aed;color:#fff}#cpSup .sp-btn:disabled{opacity:.55;cursor:default}' +
-    '#cpSup .sp-msg{font-size:.82rem;margin-top:8px;color:var(--fg2,#94a3b8)}#cpSup .sp-err{color:#f87171}';
+    '#cpSup .sp-msg{font-size:.82rem;margin-top:8px;color:var(--fg2,#94a3b8)}#cpSup .sp-err{color:var(--red,#f87171)}';
 
   function draw(msg, err) {
     var box = $('cpSupBody'); if (!box) return;

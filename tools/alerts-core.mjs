@@ -65,23 +65,23 @@ export const W = {
     buyHit: s => `${s} وصلت لسعر الشراء`, buyLine: (p, a) => `السعر ${p} ≤ تنبيهك ${a}`, buyLeft: (q, s) => `المتبقي للخطة: ${q} ${s}`,
     buyDca: 'واليوم أيضاً يوم الشراء الدوري (DCA)',
     fng: 'الخوف والطمع', alt: 'موسم العملات البديلة', etf: 'تدفقات ETF', signals: 'الإشارات', plan: 'الخطة', met: 'أهداف تحققت',
-    reinforce: 'تعزيز', sell: 'بيع / تحويل إلى BTC', hold: 'احتفاظ', open: 'افتح المحفظة', hub: 'Market Hub', planBtn: 'افتح الخطة',
+    reinforce: 'تعزيز', sell: 'بيع / تحويل إلى BTC', hold: 'احتفاظ', open: 'افتح المحفظة', hub: 'مركز السوق', planBtn: 'افتح الخطة',
     coinBtn: s => `افتح ${s}`, seasonBtn: 'موسم العملات البديلة', btcMove: (pct, h) => `BTC ${pct} خلال ${h}`, pfMove: (pct, h) => `محفظتك ${pct} خلال ${h}`,
     since: 'منذ آخر تنبيه', yourPf: 'محفظتك', h24: '24 ساعة', sig: s => `تغيّر الإشارة · ${s}`, sigsT: n => n === 1 ? 'إشارة تأكدت على قفلة اليوم' : `${n} إشارات تأكدت على قفلة اليوم`, onClose: 'تُحسب على قفلة اليوم (03:00 بتوقيت الرياض) — ذيل شمعة قصير لا يغيّرها.', notAdvice: '⚠️ ليست نصيحة مالية — تذكير بخطتك أنت.', vsAvg: 'مقارنة بمتوسط شرائك',
     holding: 'قيمة ما تملكه', targetHit: s => `تحقق هدف الخطة · ${s}`, planNow: 'الخطة', tpHit: (n, s) => `وصل جني الأرباح ${n} · ${s}`,
     tpLine: (n, p, x, pct) => `السعر ${p} ≥ TP${n} ${x}${pct ? ` · خطتك تبيع ${pct}% هنا` : ''}`, macro: 'تحقق مستوى خروج',
     btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC', of3: n => `تحقق ${n} من 3 من شروط الخروج`, allExit: 'تحققت شروط الخروج الثلاثة — منطقة الخروج',
     xFear: 'خوف شديد', xGreed: 'طمع شديد', was: 'أمس', altSeason: 'موسم العملات البديلة', btcSeason: 'موسم البيتكوين', idx: 'المؤشر',
-    bigEtf: 'يوم كبير لصناديق ETF', health: 'تنبيه بيانات', stale: (what, h) => `${what} لم تتحدث منذ ${h} ساعة — قد يعرض التطبيق أرقامًا قديمة.`,
+    bigEtf: 'يوم كبير لصناديق ETF', health: 'تنبيه بيانات', stale: (what, h) => `${what} لم تتحدث منذ ${arCount(h, AR_HOURS)} — قد يعرض التطبيق أرقامًا قديمة.`,
     marketData: 'بيانات السوق', etfData: 'تدفقات ETF', priceData: 'سجل الأسعار', ok: 'البيانات عادت طبيعية', none: 'لا شيء', coins: 'عملة',
     quietNote: 'أُجّل خلال ساعات الهدوء', welcome: 'التنبيهات تعمل. سيصلك ملخص الصباح يوميًا، والتقرير الأسبوعي يوم الجمعة، وتنبيه عند حدوث أي شيء مهم.',
     noData: 'لا يوجد سجل بعد', in7: '7 أيام', beatBtc: (a, n) => `${a} من ${n} عملة تفوقت على BTC`,
-    vsBtc30: (a, b) => `مقارنة بـ BTC ${a} نقطة (30 يوم) · ${b} نقطة (90 يوم)`,
+    vsBtc30: (a, b) => `مقارنة بـ BTC ${a} نقطة (30 يوماً) · ${b} نقطة (90 يوماً)`,
     allocation: 'التوزيع', onTarget: (a, n) => `${a} من ${n} فئات على الهدف`, driftT: n => `خروج عن التوزيع المستهدف · ${n}`, nowW: 'الآن', targetW: 'الهدف', ptsW: 'نقطة',
     trim: v => `للعودة: خفّض حوالي ${v}، أو أضف للفئات الأخرى`, add: v => `للعودة: أضف حوالي ${v}`, allocBtn: 'افتح التوزيع',
-    dcaDay: 'يوم الشراء الدوري (DCA)', dcaTotal: v => `الإجمالي اليوم: ${v}`, dcaLate: 'تذكير DCA — لم يتم الشراء بعد', dcaWasDue: (d, n) => `كان موعده ${d} (منذ ${n} أيام)`, dcaNext: 'اشترِ عندما تستطيع أو تجاوزه — الموعد التالي في وقته.',
+    dcaDay: 'يوم الشراء الدوري (DCA)', dcaTotal: v => `الإجمالي اليوم: ${v}`, dcaLate: 'تذكير DCA — لم يتم الشراء بعد', dcaWasDue: (d, n) => `كان موعده ${d} (منذ ${arCount(n, AR_DAYS)})`, dcaNext: 'اشترِ عندما تستطيع أو تجاوزه — الموعد التالي في وقته.',
     freeW: 'المكافآت والتعدين هذا الأسبوع',
-    dcaLine: (n, mo, nx) => `${n === 1 ? 'عملية شراء دوري واحدة' : n === 2 ? 'عمليتا شراء دوري' : n + ' عمليات شراء دوري'} (DCA) · ${mo} شهريًا · القادم ${nx}`, calmFall: p => `الوضع الهادئ: لا تعزيز الآن، ${p} في 7 أيام`, smartWeak: 'ذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'ذكي: احتفاظ، تتفوق على BTC',
+    dcaLine: (n, mo, nx) => `${n === 1 ? 'عملية شراء دوري واحدة' : n === 2 ? 'عمليتا شراء دوري' : n + ' عمليات شراء دوري'} (DCA) · ${mo} شهريًا · القادم ${nx}`, calmFall: p => `الوضع الهادئ: لا تعزيز الآن، ${p} في 7 أيام`, smartWeak: 'الفحص الذكي: لا تعزيز، تخسر أمام BTC باستمرار', smartStrong: 'الفحص الذكي: احتفاظ، تتفوق على BTC',
   },
 };
 
@@ -103,6 +103,11 @@ export const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '') + usd(Math.abs(v))
 export const dot = v => v > 0 ? '🟢' : v < 0 ? '🔴' : '⚪';
 export const flow = v => (v < 0 ? '−' : '+') + (Math.abs(v) >= 1e9 ? '$' + (Math.abs(v) / 1e9).toFixed(2) + 'B' : '$' + Math.round(Math.abs(v) / 1e6) + 'M');
 export function local(now, opt) { return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, ...opt }).format(new Date(now)); }
+// the same, in the reader's language: Arabic month and day names with Latin digits ("26 نوفمبر، 12:59") — never "26 Nov" inside an Arabic message
+export function localL(now, opt, ar) { return ar ? new Intl.DateTimeFormat('ar-SA-u-nu-latn-ca-gregory', { timeZone: TZ, ...opt }).format(new Date(now)) : local(now, opt); }
+// a count with its Arabic noun: 1 يوم · يومان (2) · 3 أيام … 10 أيام · 11 يوماً — forms: [one, two, few (3–10), many (11+)]
+export const arCount = (n, f) => { n = Math.abs(Math.round(+n || 0)); return n === 1 ? f[0] : n === 2 ? f[1] : n >= 3 && n <= 10 ? `${n} ${f[2]}` : `${n} ${f[3]}`; };
+export const AR_DAYS = ['يوم واحد', 'يومين', 'أيام', 'يوماً'], AR_HOURS = ['ساعة واحدة', 'ساعتين', 'ساعات', 'ساعة'];
 export function localParts(now) {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short' })
     .formatToParts(new Date(now)).map(x => [x.type, x.value]));
@@ -354,7 +359,7 @@ export function brief(sum, m, cfg, now, weekly = false) {
   }
   if (weekly && sum.free && sum.free.length) {
     const tot = sum.free.reduce((a, f) => a + f.usd, 0), q = n => String(+Number(n).toPrecision(6));
-    L.push(`🎁 <b>${esc(t.freeW)}</b>  ${sum.free.slice(0, 4).map(f => '+' + q(f.qty) + ' ' + esc(f.sym)).join(' · ')}${sum.free.length > 4 ? ' …' : ''} (≈ ${usd(tot)})`);
+    L.push(`🎁 <b>${esc(t.freeW)}</b>${ar ? ':' : ' '} ${sum.free.slice(0, 4).map(f => '+' + q(f.qty) + ' ' + esc(f.sym)).join(' · ')}${sum.free.length > 4 ? ' …' : ''} (≈ ${usd(tot)})`);
   }
   return { key: weekly ? 'weekly' : 'brief', text: L.join('\n'), buttons: [[btn(t.open, 'index.html'), btn(t.hub, 'market.html')]] };
 }
@@ -380,7 +385,7 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       if (!ref || !(ref.v > 0) || now - ref.t > 3 * DAY) { st[k + 'Ref'] = { v: nowV, t: now }; continue; }
       const ch = (nowV / ref.v - 1) * 100;
       if (Math.abs(ch) >= cfg.movePct) {
-        const hrs = Math.max(1, Math.round((now - ref.t) / H)), span = hrs >= 20 && hrs <= 28 ? t.h24 : `${hrs}h`;
+        const hrs = Math.max(1, Math.round((now - ref.t) / H)), span = hrs >= 20 && hrs <= 28 ? t.h24 : cfg.lang === 'ar' ? arCount(hrs, AR_HOURS) : `${hrs}h`;
         const text = `${ch > 0 ? '🚀' : '🔻'} <b>${title(pct(ch, 1), span)}</b>\n${k === 'btc' ? `BTC <b>${usd(nowV)}</b>` : `${t.yourPf} <b>${usd2(nowV)}</b>`} · ${t.since}\n${extra()}`;
         if (push({ key: 'move-' + k, text, buttons: [[btn(t.hub, 'market.html'), btn(t.open, 'index.html')]] }, Math.abs(ch) >= 2 * cfg.movePct)) st[k + 'Ref'] = { v: nowV, t: now };
       }
@@ -415,7 +420,7 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       if (st.plan[p.sym] || first) { st.plan[p.sym] = 1; continue; }
       const ar = cfg.lang === 'ar', name = planName(p, ar);
       const amt = (p.kind || 'coin') === 'coin' ? `${+p.actual.toFixed(6)} / ${+p.target.toFixed(6)} ${esc(p.sym)}` : `${planAmt(p, p.actual, ar)} / ${planAmt(p, p.target, ar)}`;   // coins as before: 6500 / 6000 SEI
-      const text = `🎯 <b>${t.targetHit(esc(name))}</b>\n${amt} ✅\n${t.planNow}: ${sum.prog.pct.toFixed(1)}% · ${sum.prog.completed}/${sum.prog.counted} ${t.met}`;
+      const text = `🎯 <b>${t.targetHit(esc(name))}</b>\n${amt} ✅\n${t.planNow}: ${sum.prog.pct.toFixed(1)}% · ${cfg.lang === 'ar' ? `${sum.prog.completed} من ${sum.prog.counted}` : `${sum.prog.completed}/${sum.prog.counted}`} ${t.met}`;
       if (push({ key: 'plan-' + p.sym, text, buttons: [[btn(t.planBtn, 'accumulation.html')]] })) st.plan[p.sym] = 1;
     }
   }
@@ -474,7 +479,7 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
     const e = etfDay(m.etf);
     if (e && e.date !== st.etfDay) {
       const big = Math.abs(e.btc) >= cfg.etfMin * 1e6 || Math.abs(e.eth) >= cfg.etfMin * 1e6;
-      if (big && !first) { if (push({ key: 'etf', text: `🏦 <b>${t.bigEtf} (${e.label})</b>\nBTC ${flow(e.btc)} · ETH ${flow(e.eth)}`, buttons: [[btn(t.hub, 'market.html')]] })) st.etfDay = e.date; }
+      if (big && !first) { if (push({ key: 'etf', text: `🏦 <b>${t.bigEtf} (${cfg.lang === 'ar' ? arDay(e.date) : e.label})</b>\n${cfg.lang === 'ar' ? 'التدفقات: ' : ''}BTC ${flow(e.btc)} · ETH ${flow(e.eth)}`, buttons: [[btn(t.hub, 'market.html')]] })) st.etfDay = e.date; }
       else st.etfDay = e.date;
     }
   }
@@ -496,7 +501,7 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
     for (const g of sum.alloc.groups) {
       if (g.state === 'ok') { delete st.drift[g.key]; continue; }
       if (st.drift[g.key] || first || reset) { st.drift[g.key] = 1; continue; }
-      const name = esc(sum.alloc.names[g.key] || g.key), over = g.drift > 0;
+      const name = esc(cfg.lang === 'ar' && g.key === 'btc' ? 'البيتكوين' : sum.alloc.names[g.key] || g.key), over = g.drift > 0;
       const text = `⚖️ <b>${t.driftT(name)}</b>\n${g.now.toFixed(1)}% ${t.nowW} · ${t.targetW} ${g.target.toFixed(1)}% · ${(over ? '+' : '−') + Math.abs(g.drift).toFixed(1)} ${t.ptsW}\n${over ? t.trim(usd(Math.abs(g.full))) : t.add(usd(Math.abs(g.full)))}`;
       if (push({ key: 'drift-' + g.key, text, buttons: [[btn(t.allocBtn, 'index.html#allocation')]] })) st.drift[g.key] = 1;
     }
@@ -515,7 +520,7 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       }
       if (late.length && lp.hm >= cfg.briefTime) {
         const ar = cfg.lang === 'ar';
-        const text = `⏰ <b>${t.dcaLate}</b>\n${late.map(x => `${x.kind === 'cash' ? '🏦 ' : ''}${esc(planName(x, ar))}  ${dcaAmt(x, x.s.usd)} · ${t.dcaWasDue(shortD(x.s.last), x.s.late)}`).join('\n')}\n${t.dcaNext}`;
+        const text = `⏰ <b>${t.dcaLate}</b>\n${late.map(x => `${x.kind === 'cash' ? '🏦 ' : ''}${esc(planName(x, ar))}  ${dcaAmt(x, x.s.usd)} · ${t.dcaWasDue(ar ? arDay(x.s.last) : shortD(x.s.last), x.s.late)}`).join('\n')}\n${t.dcaNext}`;
         if (push({ key: 'dca-late', text, buttons: [[btn(t.planBtn, 'accumulation.html')]] })) late.forEach(x => { st.dcaMiss[x.sym] = x.s.last; });
       }
     }

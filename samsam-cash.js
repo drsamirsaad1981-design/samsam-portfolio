@@ -96,9 +96,9 @@
     '.cc-form input:focus,.cc-form select:focus{outline:none;border-color:#3b82f6}' +
     '.cc-form label.cc-chk{display:flex;align-items:center;gap:10px;margin:14px 0 0;font-size:.9rem;color:inherit;cursor:pointer}.cc-form label.cc-chk input{width:20px;height:20px;flex:0 0 auto;accent-color:#7c3aed}' +
     '.cc-form .cc-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cc-form .cc-cert[hidden]{display:none}' +
-    '.cc-form .cc-note{font-size:.76rem;color:var(--fg2,#94a3b8);margin-top:10px;line-height:1.5}.cc-form .cc-err{color:#f87171;font-size:.82rem;min-height:1.2em;margin-top:8px}' +
+    '.cc-form .cc-note{font-size:.76rem;color:var(--fg2,#94a3b8);margin-top:10px;line-height:1.5}.cc-form .cc-err{color:var(--red,#f87171);font-size:.82rem;min-height:1.2em;margin-top:8px}' +
     '.cc-form .cc-btns{display:flex;gap:10px;margin-top:12px}.cc-form .cc-btns button{flex:1;height:46px;border-radius:12px;border:1px solid var(--border,#334155);background:var(--metric-bg,#1f2937);color:inherit;font:inherit;font-weight:700;cursor:pointer}' +
-    '.cc-form .cc-save{background:linear-gradient(135deg,#7c3aed,#6d28d9)!important;border-color:#6d28d9!important;color:#fff!important}.cc-form .cc-del{flex:0 0 auto!important;padding:0 14px;color:#f87171!important}';
+    '.cc-form .cc-save{background:linear-gradient(135deg,#7c3aed,#6d28d9)!important;border-color:#6d28d9!important;color:#fff!important}.cc-form .cc-del{flex:0 0 auto!important;padding:0 14px;color:var(--red,#f87171)!important}';
   var cssDone = false, editing = null;
   function close() { var m = $('cpCash'); if (m) m.remove(); var e = doc.querySelector('.cc-form.cc-embed'); if (e) { e.innerHTML = ''; e.classList.remove('cc-form', 'cc-embed'); } editing = null; }
   // its own window (from the card: add or edit one entry)

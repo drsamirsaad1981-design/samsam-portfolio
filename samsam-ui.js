@@ -363,6 +363,19 @@
         '--accent-primary:#7c3aed;--accent-glow:rgba(124,58,237,.35);' +
         '--bg:#0e0d21;--bg2:rgba(255,255,255,.045);--card:rgba(255,255,255,.045);--bg3:rgba(255,255,255,.07);' +
         '--card-solid:#161339;--metric-bg:rgba(4,6,22,.38);--border:rgba(255,255,255,.08);--header-bg:rgba(13,14,38,.72);background:#0a0e1a}' +
+      // 🎨 ONE meaning, ONE colour on every page (they used to differ: profit was #10b981 on the main page and the Plan,
+      // #22c55e on Performance and Market Hub; loss #ef4444 / #f87171 — and the light theme kept the dark theme's bright
+      // tones, too pale on white). Dark: bright tones on the midnight background. Light: deeper tones that read on white.
+      // (on screen only: a printed page / the PDF keeps its own paper palette)
+      '@media screen{' + D + '{--green:#22c55e;--red:#f87171;--blue:#3b82f6;--btc:#f7931a;--c-amber:#f59e0b;--c-gold:#eab308;--c-sky:#38bdf8;--c-violet:#a78bfa;--c-orange:#fb923c;--c-link:#60a5fa;--c-mute:#94a3b8}' +
+      'html:root[data-theme="light"]:not([data-theme-lock]){--bg:#f0f4f8;--fg:#1e293b;--fg2:#64748b;--green:#15803d;--red:#dc2626;--blue:#2563eb;--btc:#c2410c;--c-amber:#b45309;--c-gold:#a16207;--c-sky:#0369a1;--c-violet:#6d28d9;--c-orange:#c2410c;--c-link:#2563eb;--c-mute:#64748b}' +
+      // light: the accents that are still literals or set per item — a category's own colour, an inline amber, faded greys
+      'html[data-theme="light"] .cat-tag{color:color-mix(in srgb,var(--cat-c) 52%,#0f172a)}' +
+      'html[data-theme="light"] .hov-cls i{color:color-mix(in srgb,var(--c) 52%,#0f172a)}' +
+      'html[data-theme="light"] [style*="color:var(--accent)"],html[data-theme="light"] [style*="color: var(--accent)"]{color:var(--c-amber)!important}' +
+      'html[data-theme="light"] .zk-line .zk-mix,html[data-theme="light"] .nw-li .nw-u,html[data-theme="light"] .cp-foot .cpf-copy,html[data-theme="light"] .as-tabs button small,html[data-theme="light"] .mk-etf-h .mk-k small{opacity:1}' +
+      'html[data-theme="light"] .form-sub{color:var(--c-mute)}' +
+      '}' +
       // Light mode: the same colour names get light values wherever a page doesn't set its own (:where = no weight, so a
       // page's own light colours still win). Windows written with dark fallbacks (var(--card-solid,#111827)…) stay light.
       ':where(html[data-theme="light"]){--card-solid:#ffffff;--bg2:#ffffff;--bg3:#f1f5f9;--fg:#0f172a;--fg2:#64748b;--border:#e2e8f0;--metric-bg:#f8fafc;--bg-card:#ffffff;--bg-card-secondary:#f1f5f9}' +
@@ -493,7 +506,7 @@
         '.cpm-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:none;border-radius:8px;background:none;color:inherit;font:inherit;font-size:.9rem;font-weight:600;text-align:start;text-decoration:none;cursor:pointer;box-sizing:border-box}' +
         '.cpm.sheet .cpm-item{min-height:48px;font-size:1rem}.cpm-item:hover,.cpm-item:focus-visible{background:rgba(59,130,246,.14);outline:none}' +
         '.cpm-item .cpm-ic{width:22px;display:inline-flex;justify-content:center;flex-shrink:0;color:var(--fg2,#94a3b8)}.cpm-item.danger .cpm-ic{color:inherit}.cpm-item .cpm-ext{display:inline-flex}.cpm-item .cpm-ext{margin-inline-start:auto;color:var(--fg2,#94a3b8);font-size:.8rem}' +
-        '.cpm-item.danger{color:#f87171}.cpm-item.danger:hover{background:rgba(239,68,68,.14)}.cpm-div{height:1px;margin:4px 6px;background:var(--border,#334155)}' +
+        '.cpm-item.danger{color:var(--red,#f87171)}.cpm-item.danger:hover{background:rgba(239,68,68,.14)}.cpm-div{height:1px;margin:4px 6px;background:var(--border,#334155)}' +
         '@keyframes cpSheet{from{transform:translateY(100%)}}@keyframes cpFade{from{opacity:0}}@keyframes cpPop{from{transform:scale(.96);opacity:0}}@media (prefers-reduced-motion:reduce){.cpm,.cpm.sheet,.cpm-back{animation:none}}';
       document.head.appendChild(st);
     }
@@ -581,14 +594,14 @@
         '.cpp-x{width:34px;height:34px;border-radius:10px;border:1px solid var(--border,#334155);background:none;color:inherit;font-size:1.1rem;line-height:1;cursor:pointer}' +
         '.cpp-hero{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 14px}.cpp-big{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}' +
         '.cpp-badge{font-size:.85rem;font-weight:700;padding:4px 10px;border-radius:999px}' +
-        '.cpp-pos{color:#22c55e}.cpp-neg{color:#ef4444}.cpp-badge.cpp-pos{background:rgba(34,197,94,.14)}.cpp-badge.cpp-neg{background:rgba(239,68,68,.14)}' +
+        '.cpp-pos{color:var(--green,#22c55e)}.cpp-neg{color:var(--red,#f87171)}.cpp-badge.cpp-pos{background:rgba(34,197,94,.14)}.cpp-badge.cpp-neg{background:rgba(239,68,68,.14)}' +
         '.cpp-rows{display:grid;gap:8px}.cpp-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:12px;background:var(--bg3,rgba(148,163,184,.08))}' +
-        '.cpp-row b{display:block;font-size:.9rem}.cpp-row small{display:block;font-size:.74rem;color:#94a3b8;margin-top:2px}.cpp-row .v{font-weight:700;font-size:1rem;white-space:nowrap;font-variant-numeric:tabular-nums}' +
-        '.cpp-sum{margin:10px 2px 0;font-size:.78rem;color:#94a3b8;text-align:center;font-variant-numeric:tabular-nums}' +
+        '.cpp-row b{display:block;font-size:.9rem}.cpp-row small{display:block;font-size:.74rem;color:var(--fg2,#94a3b8);margin-top:2px}.cpp-row .v{font-weight:700;font-size:1rem;white-space:nowrap;font-variant-numeric:tabular-nums}' +
+        '.cpp-sum{margin:10px 2px 0;font-size:.78rem;color:var(--fg2,#94a3b8);text-align:center;font-variant-numeric:tabular-nums}' +
         '.cpp-how{margin-top:14px;border:1px solid var(--border,#334155);border-radius:12px;padding:0 14px}.cpp-how summary{cursor:pointer;padding:12px 0;font-weight:700;font-size:.9rem;list-style:none}' +
         '.cpp-how summary::-webkit-details-marker{display:none}.cpp-how summary::after{content:"▾";float:right;color:#94a3b8;transition:transform .15s}.cpp-how[open] summary::after{transform:rotate(180deg)}' +
         '.cpp-f{margin:0 0 10px;font-size:.8rem;line-height:1.5}.cpp-f code{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.76rem;background:var(--bg3,rgba(148,163,184,.1));border-radius:8px;padding:7px 9px;margin-top:3px;white-space:normal;color:var(--fg,#e5e7eb)}' +
-        '.cpp-f span{color:#94a3b8}.cpp-note{font-size:.74rem;color:#94a3b8;margin:4px 0 12px;line-height:1.45}' +
+        '.cpp-f span{color:var(--fg2,#94a3b8)}.cpp-note{font-size:.74rem;color:var(--fg2,#94a3b8);margin:4px 0 12px;line-height:1.45}' +
         '@keyframes cpSheet{from{transform:translateY(100%)}}@keyframes cpFade{from{opacity:0}}@keyframes cpPop{from{transform:scale(.96);opacity:0}}' +
         '@media (prefers-reduced-motion:reduce){#cpProfit,#cpProfit .cpp{animation:none}}';
       document.head.appendChild(st);

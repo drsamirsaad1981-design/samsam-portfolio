@@ -18,7 +18,7 @@ import { usMarket, gramSar } from './usmarket.mjs';
 import { bidiBody } from './bidi.mjs';
 import { K, chatOf, isOwner, langOf, member, setMember } from './who.mjs';
 import { premiumNow } from './stars.mjs';
-import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
+import { summarize, settings, local, localL, arDay, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures, setAlertsLang, setZakatSnap } from './data.mjs';
 import { zakatWhen, zakatYear, HIJRI_MONTHS, zakatPool, cashTotals, learnAssets, firstSeen } from '../../samsam-core.js';
 import { compose } from './ai.mjs';
@@ -129,7 +129,7 @@ function nearest(alerts, m, sum) {
   for (const a of alerts) {
     if (KINDS[a.kind].what !== 'price') continue;
     const p = priceOf(a.sym, a.cg); if (!p) continue;
-    out.push({ alert: describe(a), price_usd: r6(p), pct_away: r2(Math.abs(p / a.value - 1) * 100) });
+    out.push({ alert: describe(a), alert_ar: describe(a, true), price_usd: r6(p), pct_away: r2(Math.abs(p / a.value - 1) * 100) });
   }
   for (const t of sum.tps || []) if (t.level > t.price) out.push({ level: `${t.sym} TP${t.n} ${usd(t.level)}`, price_usd: r6(t.price), pct_away: r2((t.level / t.price - 1) * 100) });
   for (const x of sum.buyAt || []) if (x.price > x.at) out.push({ level: `${x.sym} buy price ${usd(x.at)}`, price_usd: r6(x.price), pct_away: r2((x.price / x.at - 1) * 100) });
@@ -146,7 +146,7 @@ export async function morning(env, now = Date.now(), L = null) {
     todo: tasks, closest_levels: nearest(alerts, m, sum), signals: sum.counts, plan_progress_pct: r2(sum.prog && sum.prog.pct), other_markets: otherFacts(m, now) };
   await jput(env, K(env, 'snap:' + localParts(now).date), { t: now, value: sum.value, btc: m.btc && m.btc.price, fng: m.fng && m.fng.value, dom: m.global && m.global.dom && m.global.dom.btc }, 2 * 86400);   // the evening compares with this
   const body = await compose(env, 'morning', L, facts) || plainMorning(L, facts);
-  const head = `☀️ <b>${w.morning}</b> · ${esc(local(now, { weekday: 'short', day: 'numeric', month: 'short' }))}`;
+  const head = `☀️ <b>${w.morning}</b> · ${esc(localL(now, { weekday: 'short', day: 'numeric', month: 'short' }, L === 'ar'))}`;
   return send(env, { text: head + '\n\n' + body + '\n\n' + NOT_ADVICE[L === 'ar' ? 'ar' : 'en'], buttons: [[cb(w.plan, 'pl'), cb(w.pf, 'pf'), cb(w.mk, 'mk')]] });
 }
 export async function evening(env, now = Date.now(), L = null) {
@@ -172,7 +172,7 @@ export async function evening(env, now = Date.now(), L = null) {
     other_markets: otherFacts(m, now),
   };
   const body = await compose(env, 'evening', L, facts) || plainEvening(L, facts);
-  const head = `🌙 <b>${w.evening}</b> · ${esc(local(now, { weekday: 'short', day: 'numeric', month: 'short' }))}`;
+  const head = `🌙 <b>${w.evening}</b> · ${esc(localL(now, { weekday: 'short', day: 'numeric', month: 'short' }, L === 'ar'))}`;
   return send(env, { text: head + '\n\n' + body + '\n\n' + NOT_ADVICE[L === 'ar' ? 'ar' : 'en'], buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk')]] });
 }
 // when Claude can't write it: the facts, plainly
@@ -295,9 +295,9 @@ export async function pinView(env, now = Date.now()) {
   const L1 = [`📌 <b>${w.live}</b>${star}${heart} · ${w.updated} ${local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`,
     `💼 ${w.pfS}: <b>${usd2(sum.value)}</b> ${dot(sum.ch24)} (${pct(sum.ch24)} ${w.today})`,   // 💼 المحفظة: $33,143.94 (−3.95% اليوم)
     m.btc ? `🪙 ${w.btcS}: <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} (${pct(m.btc.ch24)})${m.fng ? ` · ${w.fng}: <b>${m.fng.value}</b>` : ''}` : null,
-    `📋 ${w.planS}: <b>${sum.prog ? sum.prog.pct.toFixed(1) : '0'}%</b> · 🚪 ${w.exit}: <b>${met}/3</b>`,
-    dca ? `🛒 ${w.nextDca}: <b>${esc(dca.sym)}</b> · ${esc(new Date(dca.s.next + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}` : null,
-    alerts.length ? `🔔 ${w.alerts(alerts.length)}${near ? ` · ${w.nearest}: ${esc(near.alert)} (${near.pct_away}% ${w.away})` : ''}` : null].filter(Boolean);
+    `📋 ${w.planS}: <b>${sum.prog ? sum.prog.pct.toFixed(1) : '0'}%</b> · 🚪 ${w.exit}: <b>${L === 'ar' ? `${met} من 3` : `${met}/3`}</b>`,
+    dca ? `🛒 ${w.nextDca}: <b>${esc(dca.sym)}</b> · ${esc(L === 'ar' ? arDay(dca.s.next) : new Date(dca.s.next + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}` : null,
+    alerts.length ? `🔔 ${w.alerts(alerts.length)}${near ? ` · ${w.nearest}: ${esc(L === 'ar' ? near.alert_ar : near.alert)} (${near.pct_away}% ${w.away})` : ''}` : null].filter(Boolean);
   return { text: L1.join('\n'), buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk'), cb(w.refresh, 'pin:r')], [{ text: w.report, web_app: { url: APP + 'index.html' } }]] };   // 📱 the full app inside Telegram
 }
 // fresh = /pin (or switching it on): always a NEW message, pinned — the old one may have been deleted in Telegram
@@ -375,7 +375,7 @@ export async function radarDigest(env, now = Date.now(), slot = '') {
   const wl = whaleLines(wh, [...new Set(['BTC', 'ETH', 'SOL', ...lev.map(([s2]) => s2), ...flips])].slice(0, 6), ar, now);
   if (wl.length) lines.push('', `🐋 <b>${ar ? 'الحيتان' : 'Whales'}</b> <i>(${ar ? `أكبر ${wh.n} متداول رابح على Hyperliquid` : `the ${wh.n} biggest winning traders on Hyperliquid`})</i>`, ...wl);
   lines.push('', `<i>${ar ? 'الرافعة المتكدسة تعني تقلباً أعلى — والحيتان يتحوّطون ويخسرون أيضاً.' : 'Crowded leverage means more volatility — and whales hedge, and lose too.'}</i>`, NOT_ADVICE[ar ? 'ar' : 'en']);
-  const first = lev[0], btns = [[cb(WD[L].mk, 'mk'), cb(WD[L].pf, 'pf'), ...(first ? [url('🔥 Liq Map', LIQ + encodeURIComponent(first[0]))] : [])]];
+  const first = lev[0], btns = [[cb(WD[L].mk, 'mk'), cb(WD[L].pf, 'pf'), ...(first ? [url(L === 'ar' ? '🔥 خريطة التصفيات' : '🔥 Liq Map', LIQ + encodeURIComponent(first[0]))] : [])]];
   const r = await send(env, { text: lines.join('\n'), buttons: btns });
   if (r && r.ok) await jput(env, K(env, 'digest'), { last: now });
   return { sent: r && r.ok ? 1 : 0 };

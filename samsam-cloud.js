@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611260410';
-import * as Hist from './samsam-history.js?v=202611260410';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611260410';
+import * as Core from './samsam-core.js?v=202611261400';
+import * as Hist from './samsam-history.js?v=202611261400';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611261400';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -1578,7 +1578,7 @@ function injectUi() {
   @media print{.ss-sync-hdr{display:none!important}}
   #samsamSyncMenu{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(max(16px,env(safe-area-inset-bottom)) + 44px);z-index:99991;display:none;width:min(300px,calc(100vw - 24px));background:var(--card-solid,var(--bg2,#111827));color:var(--fg,#e5e7eb);border:1px solid var(--border,#374151);border-radius:12px;padding:12px;font:13px/1.45 system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   #samsamSyncMenu .row{display:flex;gap:8px;margin-top:10px} #samsamSyncMenu .samsam-btn{flex:1;min-height:38px;padding:8px;font-size:12px}
-  #samsamSyncMenu .muted{color:var(--fg2,#9ca3af);font-size:12px} #samsamSyncMenu .err{color:#ef4444;font-size:12px;margin-top:6px;word-break:break-word}
+  #samsamSyncMenu .muted{color:var(--fg2,#9ca3af);font-size:12px} #samsamSyncMenu .err{color:var(--red,#ef4444);font-size:12px;margin-top:6px;word-break:break-word}
   #samsamSetup{display:none;margin:12px auto;max-width:760px;background:var(--card-solid,var(--bg2,#111827));border:1px solid #2563eb;border-radius:14px;padding:18px;color:var(--fg,#e5e7eb)}
   #samsamSetup h3{margin:0 0 6px;font-size:1.05rem} #samsamSetup p{margin:6px 0;color:var(--fg2,#9ca3af);font-size:.88rem;line-height:1.5}
   #samsamSetup .opts{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px} #samsamSetup .opts .samsam-btn{flex:1 1 200px}
@@ -1611,7 +1611,7 @@ function injectUi() {
   #cpAlerts .al-sw input:focus-visible + i{outline:2px solid #a78bfa;outline-offset:2px}
   #cpAlerts .al-foot{display:flex;gap:8px;margin-top:14px} #cpAlerts .al-foot .samsam-btn{flex:1;min-height:42px}
   #cpAlerts .al-note{font-size:12px;color:var(--fg2,#9ca3af);margin-top:10px;line-height:1.5} #cpAlerts .al-msg{font-size:12.5px;margin-top:8px;min-height:1em}
-  #cpAlerts .al-msg.ok{color:#22c55e} #cpAlerts .al-msg.err{color:#ef4444}
+  #cpAlerts .al-msg.ok{color:var(--green,#22c55e)} #cpAlerts .al-msg.err{color:var(--red,#ef4444)}
   @media print{#samsamSyncPill,#samsamSyncMenu,#samsamGate{display:none!important} body::after{display:none}}`;
   document.head.appendChild(css);
   const gate = document.createElement('div'); gate.id = 'samsamGate';
@@ -1656,13 +1656,13 @@ function showGate(kind) {
   if (kind === 'config') body.innerHTML = `<p>Cloud sync isn't configured yet.</p><p>Add your Firebase settings to <code>firebase-config.js</code> and publish again.</p>`;
   else if (kind === 'denied') body.innerHTML = `<p><strong>${esc(S.denied)}</strong> isn't allowed in yet.</p>` +
     `<p style="margin:10px 0 6px">🎟 Have an invite code?</p><input id="samsamInvite" autocapitalize="characters" autocomplete="off" maxlength="12" placeholder="e.g. 2NS782A9" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(127,127,140,.35);font:inherit;margin-bottom:8px;letter-spacing:.08em;text-transform:uppercase">` +
-    `<button class="samsam-btn primary" id="samsamJoinBtn">Join</button><p id="samsamGateErr" style="color:#ef4444">${esc(S.inviteErr || '')}</p>` +
+    `<button class="samsam-btn primary" id="samsamJoinBtn">Join</button><p id="samsamGateErr" style="color:var(--red,#ef4444)">${esc(S.inviteErr || '')}</p>` +
     `<button class="samsam-btn" id="samsamOtherBtn" style="margin-top:6px">Use another account</button>`;
   else if (tgInit()) body.innerHTML = `<p style="font-weight:700">📱 Cute Portfolio in Telegram</p><p>${esc(TG_WHY[S.tgErr] || 'Telegram could not sign you in right now — close this window and open the app again from the bot.')}</p>${S.tgErr && !TG_WHY[S.tgErr] ? `<p style="opacity:.55;font-size:12px">(${esc(S.tgErr)}${S.tgCode ? ' · ' + esc(S.tgCode) : ''})</p>` : ''}`;   // no Google / e-mail sign-in in here: neither works inside Telegram
   else body.innerHTML = (pendingInvite() ? `<p style="font-weight:700">🎟 You're invited to Cute Portfolio — sign in to join.</p>` : '') + `<p>${S.emailLinkPending ? 'Type the e-mail address the sign-in link was sent to.' : 'Sign in to load your portfolio. Your data is stored privately in the cloud and stays the same on every device.'}</p>` +
     (S.emailLinkPending ? '' : `<button class="samsam-btn primary" id="samsamSignInBtn">Sign in with Google</button><p class="samsam-or" style="margin:14px 0 8px;opacity:.7">or with any e-mail (iCloud, Outlook…) — no password</p>`) +
     `<input id="samsamEmail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(127,127,140,.35);font:inherit;margin-bottom:8px">` +
-    `<button class="samsam-btn" id="samsamEmailBtn">${S.emailLinkPending ? 'Sign in' : 'Email me a sign-in link'}</button><p id="samsamGateErr" style="color:#ef4444"></p><p id="samsamGateOk" style="color:#16a34a"></p>`;
+    `<button class="samsam-btn" id="samsamEmailBtn">${S.emailLinkPending ? 'Sign in' : 'Email me a sign-in link'}</button><p id="samsamGateErr" style="color:var(--red,#ef4444)"></p><p id="samsamGateOk" style="color:var(--green,#16a34a)"></p>`;
   if (kind === 'denied') body.innerHTML += `<p style="opacity:.75;font-size:13px">No code? Ask Dr. Samir Saad for an invite link — or, if you're in the Telegram bot already, send it /app with this e-mail.</p>`;
   const jb = document.getElementById('samsamJoinBtn'); if (jb) jb.onclick = async () => {
     const er = document.getElementById('samsamGateErr'), code = (document.getElementById('samsamInvite') || {}).value;

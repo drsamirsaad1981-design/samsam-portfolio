@@ -60,7 +60,7 @@ async function act(env, chat, op) {
   const L = x.lang === 'ar' ? 'ar' : 'en';
   if (op === 'gift30' || op === 'gift365') {
     const y = await addDays(env, chat, op === 'gift30' ? 30 : 365), u = day(y.premUntil);
-    await tell(env, chat, `🎁 Dr. Samir Saad gave you premium as a gift — until ${u}!`, `🎁 Dr. Samir Saad منحك العضوية المميزة هديةً حتى ${u}!`, L);
+    await tell(env, chat, `🎁 Dr. Samir Saad gave you premium as a gift — until ${u}!`, `🎁 د. سمير سعد منحك العضوية المميزة هديةً حتى ${u}!`, L);
   } else if (op === 'endPrem') {
     await revoke(env, chat); await tell(env, chat, 'Premium is off — back to the standard limits.', 'أُلغيت العضوية المميزة — عدت إلى الحدود العادية.', L);
   } else if (op === 'pause' || op === 'resume') {

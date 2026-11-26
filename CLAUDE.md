@@ -87,11 +87,25 @@ Fixed after the review (26 Nov, his "نفذ"):
 - Members and alerts (his decision: fix the words now, the Worker later): the Price Alert hint and the app guide no longer
   promise a member a message at the moment — they say "Hit" on the row, the bot's morning message, or an alert in words.
 
+Second round the same day (his "عدل البوت … توحيد الألوان … bStocks"):
+- Colours: **one meaning, one colour** — the tokens live in `samsam-ui.js` → `darkTheme()` (screen only; print keeps its
+  paper palette): `--green / --red / --blue / --btc / --c-amber / --c-gold / --c-sky / --c-violet / --c-orange / --c-link /
+  --c-mute`. Dark: green `#22c55e`, red `#f87171`. Light: green `#15803d`, red `#dc2626`, and the same `--bg / --fg / --fg2`
+  on every page. Never write a profit / loss / link colour as a literal: use the token (`palette_test.py` checks it).
+  A bar's fill may stay bright; the words beside it use the token.
+- bStocks (Market Hub): a row shows the company's own name (`stockName` strips "(bStocks Tokenized Stock)"), the logo is
+  36 px like a coin's, Arabic rows keep Latin names left-to-right.
+- Bot: every message is in the chat's language — the fired alert-in-words, `/alerts`, the trade summary and its
+  Confirm / Cancel (they followed the question's language), the pinned message, dates (`localL`, Latin digits), Arabic
+  counts (`arCount`: ساعة / ساعتين / 3 ساعات), "مركز السوق", "خريطة التصفيات", "د. سمير سعد" inside Arabic text.
+  Stocks view: "best" lists risers only, "worst" fallers only.
+- Bot guide (`guide.json`, approved): "Daily messages and radars" now says an alert in words comes at the moment; a buy
+  price, a take-profit and a due regular buy are in the morning message.
+
 Still open:
 1. Automatic alerts for members from the Worker (buy-price, DCA day, take-profit, signal change, weekly report): a phase
    of its own, to plan with Samir first. Today `evaluate` runs only in `tools/alerts.mjs` on GitHub, for the owner.
-2. The bot guide (`guide.json`, "Daily messages and radars") still says a take-profit and the day's signals "come at once".
-   Editing `guide.json` posts "New in the guide" in the channel and messages the members — ask Samir before changing it.
+2. (done — the bot guide's line was corrected in the second round.)
 3. The Exit page shows a metal in troy ounces (amounts, average, levels).
 4. Smaller: bot `/signals` counts metals and shares under Hold; `core.test.mjs` and `alerts_reads_test.mjs` never run on
    GitHub; "9-month high / low" untranslated; `manifest.json` description; the welcome page's goal says "managing";

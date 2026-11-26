@@ -58,7 +58,7 @@
     '#cpRew .rw-list{border:1px solid var(--border,rgba(148,163,184,.2));border-radius:14px;overflow:hidden}' +
     '#cpRew .rw-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--border,rgba(148,163,184,.15))}#cpRew .rw-list>:first-child{border-top:none}' +
     '#cpRew .rw-row .rw-t{flex:1;min-width:0}#cpRew .rw-row b{font-size:.92rem}#cpRew .rw-row small{display:block;font-size:.76rem;color:var(--fg2,#94a3b8)}' +
-    '#cpRew .rw-row .rw-v{text-align:end;white-space:nowrap}#cpRew .rw-row .rw-v b{color:#22c55e}[data-theme="light"] #cpRew .rw-row .rw-v b{color:#16a34a}' +
+    '#cpRew .rw-row .rw-v{text-align:end;white-space:nowrap}#cpRew .rw-row .rw-v b{color:var(--green,#22c55e)}[data-theme="light"] #cpRew .rw-row .rw-v b{color:var(--green,#16a34a)}' +
     '#cpRew .rw-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-inline-start:4px;vertical-align:1px}' +
     '#cpRew .rw-bar{height:4px;border-radius:3px;background:rgba(148,163,184,.15);margin-top:5px;overflow:hidden}#cpRew .rw-bar i{display:block;height:100%;background:#a855f7;border-radius:3px}' +
     '#cpRew .rw-note{font-size:.76rem;color:var(--fg2,#94a3b8);margin-top:12px}' +
@@ -69,7 +69,7 @@
     '.free-card .fc-ic{width:34px;height:34px;flex:none;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(168,85,247,.16);color:#c084fc}.free-card .fc-ic .ss-ic{margin:0}' +
     '[data-theme="light"] .free-card .fc-ic{color:#9333ea}' +
     '.free-card .fc-t{flex:1;min-width:0}.free-card .fc-t b{display:block;font-size:.9rem}.free-card .fc-t small{display:block;font-size:.76rem;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
-    '.free-card .fc-v{font-weight:800;color:#22c55e;white-space:nowrap}[data-theme="light"] .free-card .fc-v{color:#16a34a}.free-card .fc-go{opacity:.5;font-size:1.2rem}';
+    '.free-card .fc-v{font-weight:800;color:var(--green,#22c55e);white-space:nowrap}.free-card .fc-go{opacity:.5;font-size:1.2rem}';
   function css() { if (!$('rwCss')) { var st = doc.createElement('style'); st.id = 'rwCss'; st.textContent = CSS; doc.head.appendChild(st); } }
   var view = { range: 'all', sym: null };
   function kindDots(c) { return KINDS.filter(function (k) { return c.kinds[k[0]]; }).map(function (k) { return '<span class="rw-dot" title="' + E(k[1]) + '" style="background:' + k[2] + '"></span>'; }).join(''); }

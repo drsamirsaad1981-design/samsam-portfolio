@@ -9,7 +9,7 @@
 // A prepared trade waits 15 minutes (KV tg:tx:<id>), then it is gone.
 
 import { chatOf } from './who.mjs';
-import { summarize, isStable, local, usd, usd2, esc } from '../alerts-core.mjs';
+import { summarize, isStable, localL, usd, usd2, esc } from '../alerts-core.mjs';
 import { loadUser, loadMarket, coinsOf, withIds, commitDocs } from './data.mjs';
 
 const TTL = 15 * 60e3;
@@ -122,7 +122,7 @@ export async function keepTrades(env, trades, lang = 'en') {
 export function tradeLines(trades, ar) {
   const L = [ar ? '🧾 <b>للحفظ — راجع ثم اضغط تأكيد:</b>' : '🧾 <b>To save — check, then Confirm:</b>'];
   trades.forEach(({ trade: t }, n) => {
-    const d = local(Date.parse(t.date), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const d = localL(Date.parse(t.date), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }, ar);
     const buy = t.side === 'buy';
     const head = `${trades.length > 1 ? (n + 1) + '. ' : ''}${buy ? '🟢' : '🔴'} `, cash = money(buy ? t.total + t.fee : Math.max(0, t.total - t.fee));
     if (ar) {   // Arabic: each line starts with an Arabic word and reads "من X لـ Y" (arrows flip in right-to-left text)

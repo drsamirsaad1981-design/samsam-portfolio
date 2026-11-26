@@ -66,8 +66,8 @@
     "Link the two (see <b>Link the app and the bot</b>) so the bot sees your portfolio."
    ],
    "ar": [
-    "افتح الدعوة التي أرسلها لك Dr. Samir Saad.",
-    "📱 <b>رابط التطبيق</b> ← سجّل الدخول بحساب Google أو بأي بريد إلكتروني (رابط دخول بدون كلمة مرور) ← <b>Start my portfolio</b>.",
+    "افتح الدعوة التي أرسلها لك د. سمير سعد.",
+    "📱 <b>رابط التطبيق</b> ← سجّل الدخول بحساب Google أو بأي بريد إلكتروني (رابط دخول بدون كلمة مرور) ← <b>ابدأ محفظتي</b>.",
     "🤖 <b>رابط البوت</b> ← تدخل البوت مباشرة؛ أرسل /app مع بريدك لفتح التطبيق أيضاً.",
     "اربط الاثنين (راجع <b>ربط التطبيق بالبوت</b>) ليتمكن البوت من رؤية محفظتك."
    ],
@@ -196,7 +196,7 @@
    ],
    "ar": [
     "اضغط مطولاً على 🎙 في تليجرام وتحدّث (حتى دقيقتين).",
-    "يعرض البوت <i>I heard: …</i>",
+    "يعرض البوت <i>سمعت: …</i>",
     "ثم يجيب كما لو أنك كتبت السؤال."
    ],
    "tip": {
@@ -296,7 +296,7 @@
    "ar": [
     "اكتب <i>اشتريت 0.01 BTC بسعر 95 ألف</i> أو <i>بعت 5 SOL بسعر 180</i>.",
     "يعرض البوت ما سيتغير: الكمية ومتوسط السعر والربح.",
-    "اضغط <b>✅ Confirm</b> خلال 15 دقيقة — فتظهر الصفقة في تطبيقك أيضاً."
+    "اضغط <b>✅ تأكيد</b> خلال 15 دقيقة — فتظهر الصفقة في تطبيقك أيضاً."
    ],
    "tip": {
     "en": "Nothing is saved until you confirm.",
@@ -323,14 +323,14 @@
     "☀️ <b>Smart morning</b> (08:45 Riyadh): 3 things to do today.",
     "🌙 <b>Smart evening</b> (21:00): what happened and what to watch.",
     "📡 <b>Radar digest</b> (12:00 · 16:00 · 20:00): one message with 🧲 crowded leverage on BTC and your biggest coins, 🔥 big sectors moving fast and 🐋 what the biggest winning traders hold. Nothing found → no message.",
-    "🔔 Alerts that can wait come together at the same hours; a price you set, a take-profit and the day's signals still come at once.",
+    "🔔 An alert you set in words comes the moment it happens — after two checks in a row, so a passing spike never fires it. A buy price or a take-profit that was reached, and a regular buy that is due, are in the morning message.",
     "📌 <b>Live pinned message</b> at the top of the chat, refreshed every 15 minutes."
    ],
    "ar": [
     "☀️ <b>الصباح الذكي</b> (08:45 بتوقيت الرياض): 3 أمور تفعلها اليوم.",
     "🌙 <b>المساء الذكي</b> (21:00): ما حدث وما يجب مراقبته.",
     "📡 <b>ملخص الرادارات</b> (12:00 · 16:00 · 20:00): رسالة واحدة فيها 🧲 ازدحام الرافعة على BTC وأكبر عملاتك، و🔥 القطاعات الكبيرة التي تتحرك بسرعة، و🐋 مراكز أكبر المتداولين الرابحين. لا جديد ← لا رسالة.",
-    "🔔 التنبيهات غير العاجلة تصل مجمّعة في نفس المواعيد؛ أما السعر الذي حددته، وهدف جني الأرباح، وإشارات اليوم فتصل فوراً.",
+    "🔔 التنبيه الذي تطلبه بكلامك يصلك لحظة حدوثه — بعد فحصين متتاليين، فلا تطلقه قفزة سعر عابرة. أما سعر الشراء أو هدف جني الأرباح إذا تحقق، وموعد الشراء الدوري إذا حان، فتجدها في رسالة الصباح.",
     "📌 <b>رسالة مثبتة مباشرة</b> أعلى المحادثة، تتحدث كل 15 دقيقة."
    ],
    "tip": {
@@ -517,7 +517,7 @@
    ],
    "ar": [
     "اسأل البوت بكلماتك — <i>كيف أضيف عملة؟</i>",
-    "اقتراح أو مشكلة؟ أرسل <b>/feedback</b> ثم رسالتك — تصل مباشرة إلى Dr. Samir Saad.",
+    "اقتراح أو مشكلة؟ أرسل <b>/feedback</b> ثم رسالتك — تصل مباشرة إلى د. سمير سعد.",
     "/guide يفتح هذا الدليل في أي وقت؛ وفي التطبيق: الإعدادات ← الدليل.",
     "🆕 عند تحديث الدليل يخبرك البوت بالأجزاء الجديدة أو المعدَّلة — رسالة واحدة، مرة في اليوم على الأكثر — وينزل منشور في القناة."
    ],

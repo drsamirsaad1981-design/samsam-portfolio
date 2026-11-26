@@ -31,7 +31,7 @@ with sync_playwright() as p:
         check(f'{name}: values signed with %, card labelled 24h', got[0][1].startswith(('+', '−')) and '24h' in pg.inner_text('#moversCard .mv-head') and got[0][1].replace('−', '-').startswith(('%+.2f' % exp['bp'])[:3]), (got[0][1], exp['bp']))
         if name == 'mobile': check('mobile: a $0.20 coin up 95% is ignored', exp['tinyIn'] and got[0][0] != 'TINYX', got)
         col = pg.evaluate("[getComputedStyle(document.querySelector('#moversCard .mv-val.up, #moversCard .mv-val.down')).color]")
-        check(f'{name}: green/red by direction', col[0] in ('rgb(52, 211, 153)', 'rgb(248, 113, 113)'), col)
+        check(f'{name}: green/red by direction', col[0] in ('rgb(34, 197, 94)', 'rgb(248, 113, 113)', 'rgb(21, 128, 61)', 'rgb(220, 38, 38)'), col)
         pg.locator('#moversCard').screenshot(path=str(T / f'movers-main-{name}.png'))
         fit = pg.evaluate("(() => { const c = document.querySelector('#moversCard .mv-card'); return c.scrollWidth <= c.clientWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1; })()")
         check(f'{name}: fits without overflow', fit)

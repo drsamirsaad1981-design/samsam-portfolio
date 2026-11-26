@@ -230,8 +230,8 @@
     .tg-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
     .tg-v { font-variant-numeric: tabular-nums; color: var(--fg2); white-space: nowrap; } .tg-v b { color: var(--fg); }
     .tg-d { min-width: 54px; text-align: end; font-weight: 800; font-variant-numeric: tabular-nums; font-size: .8rem; }
-    .tg-d.ok { color: #22c55e; } .tg-d.warn { color: #f59e0b; } .tg-d.off { color: #ef4444; }
-    [data-theme="light"] .tg-d.ok { color: #047857; } [data-theme="light"] .tg-d.warn { color: #b45309; } [data-theme="light"] .tg-d.off { color: #b91c1c; }
+    .tg-d.ok { color: var(--green,#22c55e); } .tg-d.warn { color: #f59e0b; } .tg-d.off { color: var(--red,#ef4444); }
+    [data-theme="light"] .tg-d.ok { color: var(--green,#047857); } [data-theme="light"] .tg-d.warn { color: #b45309; } [data-theme="light"] .tg-d.off { color: var(--red,#b91c1c); }
     .tg-bar { position: relative; height: 7px; border-radius: 5px; background: rgba(148,163,184,.18); margin-top: 6px; overflow: visible; }
     .tg-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; max-width: 100%; }
     .tg-bar u { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-inline-start: -1px; background: var(--fg); border-radius: 1px; opacity: .85; }
@@ -245,8 +245,8 @@
     .tg-cash input { width: 90px; border: 0; background: none; color: var(--fg); font: inherit; font-weight: 800; outline: none; padding: 0 0 0 3px; }
     .tg-act { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; font-size: .84rem; border-top: 1px dashed var(--border); } .tg-act:first-of-type { border-top: 0; }
     .tg-act .tg-n { flex: 1; min-width: 0; } .tg-act .tg-n span { display: block; font-size: .74rem; color: var(--fg2); margin-top: 1px; }
-    .tg-amt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; } .tg-amt.buy { color: #22c55e; } .tg-amt.sell { color: #ef4444; }
-    [data-theme="light"] .tg-amt.buy { color: #047857; } [data-theme="light"] .tg-amt.sell { color: #b91c1c; }
+    .tg-amt { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; } .tg-amt.buy { color: var(--green,#22c55e); } .tg-amt.sell { color: var(--red,#ef4444); }
+    [data-theme="light"] .tg-amt.buy { color: var(--green,#047857); } [data-theme="light"] .tg-amt.sell { color: var(--red,#b91c1c); }
     .tg-note { font-size: .72rem; color: var(--fg2); margin-top: 8px; line-height: 1.45; }
     /* the targets editor */
     .tge-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); } .tge-row:first-child { border-top: 0; }
@@ -257,8 +257,8 @@
     .tge-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
     .tge-tools button, .tge-tools select { height: 36px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg3); color: var(--fg); font: inherit; font-size: .78rem; font-weight: 700; padding: 0 10px; cursor: pointer; }
     .tge-sum { border-radius: 10px; padding: 9px 12px; font-size: .84rem; font-weight: 700; background: rgba(148,163,184,.1); border: 1px solid var(--border); }
-    .tge-sum.ok { color: #22c55e; border-color: rgba(34,197,94,.4); } .tge-sum.bad { color: #f87171; border-color: rgba(239,68,68,.4); }
-    [data-theme="light"] .tge-sum.ok { color: #047857; } [data-theme="light"] .tge-sum.bad { color: #b91c1c; }
+    .tge-sum.ok { color: var(--green,#22c55e); border-color: rgba(34,197,94,.4); } .tge-sum.bad { color: var(--red,#f87171); border-color: rgba(239,68,68,.4); }
+    [data-theme="light"] .tge-sum.ok { color: var(--green,#047857); } [data-theme="light"] .tge-sum.bad { color: var(--red,#b91c1c); }
     #holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-alloc-card { display: flex; }
     #holdingsOverlay[data-view="tx"] .hov-ptabs { display: none; }
     .hov-alloc-card .donut-wrap { position: relative; width: 230px; height: 230px; flex-shrink: 0; }
@@ -307,6 +307,6 @@
 .htx-stake-s{opacity:.75;flex-basis:100%}
 .htx-stake-b{display:flex;gap:6px;flex-basis:100%}
 .htx-stake-btn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border,rgba(148,163,184,.35));border-radius:8px;padding:4px 10px;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer;background:transparent;color:inherit}
-.htx-stake-btn.stop{color:#f87171;border-color:rgba(248,113,113,.45)}
+.htx-stake-btn.stop{color:var(--red,#f87171);border-color:rgba(248,113,113,.45)}
 .hov-nw { display: none; margin-bottom: 14px; } .hov-nw[hidden] { display: none !important; }
 #holdingsOverlay[data-mode="alloc"]:not([data-view="tx"]) .hov-nw { display: block; }   /* the Allocation page only — never a coin's Transactions */

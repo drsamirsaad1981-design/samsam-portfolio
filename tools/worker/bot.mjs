@@ -17,7 +17,7 @@ import { bidi, bidiBody, NOT_ADVICE } from './bidi.mjs';
 import { markSeen } from './idle.mjs';
 import { note } from './usage.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR, askInvite, askedInvite, closeAsk, ASKS_PER_HOUR } from './who.mjs';
-import { summarize, wealthLine, planName, planAmt, dcaAmt, settings, W, esc, usd, usd2, pct, dot, signed, local, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
+import { summarize, wealthLine, planName, planAmt, dcaAmt, settings, W, esc, usd, usd2, pct, dot, signed, local, localL, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
 import { chatUid, idTokenFor, setAlertsLang } from './data.mjs';
 import { balancesFor } from './cex.mjs';
 import { usMarket, US_STATE, METAL, UNIT, gramSar } from './usmarket.mjs';
@@ -42,7 +42,7 @@ const LIQ = 'https://www.coinglass.com/pro/futures/LiquidationHeatMap?coin=';
 const T = {
   en: {
     hi: 'Hi Samir 👋', hiAll: 'Hi 👋', menuTitle: 'What would you like to see?', pf: '💼 Portfolio', coin: '🪙 A coin', market: '🌍 Market', plan: '📋 Plan',
-    movers: '🏆 Best & worst', signals: '🎯 Signals', refresh: '🔄 Refresh', back: '⬅️ Menu', openApp: '📱 Open the app', liq: '🔥 Liq Map',
+    movers: '🏆 Best & worst', signals: '🎯 Signals', refresh: '🔄 Refresh', back: '⬅️ Menu', openApp: '📱 Open the app', liq: '🔥 Liq Map', hub: '🧭 Market Hub',
     chart: '📈 Chart', inApp: '💼 In the app', pfNow: 'Your portfolio now', askCoin: 'Send a ticker or a name — e.g. <code>btc</code>, <code>sol eth</code> or <code>pendle</code>.',
     notFound: q => `I couldn't find “${q}”. Try the ticker (e.g. <code>sol</code>) or the full name.`,
     noUser: 'Your portfolio is not connected yet (FIREBASE_SERVICE_ACCOUNT is missing in the Worker).', soon: 'Talking to me in plain words arrives in the next phase. For now: tap a button, or send a ticker like <code>btc</code>.',
@@ -79,16 +79,16 @@ const T = {
   },
   ar: {
     hi: 'أهلاً سمير 👋', hiAll: 'أهلاً 👋', menuTitle: 'ماذا تريد أن ترى؟', pf: '💼 محفظتي', coin: '🪙 عملة', market: '🌍 السوق', plan: '📋 الخطة',
-    movers: '🏆 الأفضل والأسوأ', signals: '🎯 الإشارات', refresh: '🔄 تحديث', back: '⬅️ القائمة', openApp: '📱 افتح التطبيق', liq: '🔥 Liq Map',
+    movers: '🏆 الأفضل والأسوأ', signals: '🎯 الإشارات', refresh: '🔄 تحديث', back: '⬅️ القائمة', openApp: '📱 افتح التطبيق', liq: '🔥 خريطة التصفيات', hub: '🧭 مركز السوق',
     chart: '📈 الرسم', inApp: '💼 في التطبيق', pfNow: 'محفظتك الآن', askCoin: 'أرسل رمز العملة أو اسمها — مثلاً <code>btc</code> أو <code>sol eth</code> أو <code>pendle</code>.',
     notFound: q => `لم أجد «${q}». جرّب الرمز (مثلاً <code>sol</code>) أو الاسم كاملاً.`,
     noUser: 'المحفظة غير متصلة بعد (FIREBASE_SERVICE_ACCOUNT غير موجود في الـ Worker).', soon: 'المحادثة الحرة قادمة في المرحلة التالية. الآن: اضغط زراً، أو أرسل رمز عملة مثل <code>btc</code>.',
-    err: 'حدثت مشكلة لدي — حاول مرة أخرى بعد دقيقة.', rank: 'الترتيب', cap: 'القيمة السوقية', vol: 'التداول 24 س', h24: '24س', d7: '7 أيام', d30: '30 يوم',
+    err: 'حدثت مشكلة لدي — حاول مرة أخرى بعد دقيقة.', rank: 'الترتيب', cap: 'القيمة السوقية', vol: 'التداول 24 ساعة', h24: '24 ساعة', d7: '7 أيام', d30: '30 يوماً',
     you: 'لديك', avg: 'متوسط شرائك', signal: 'الإشارة', noHold: 'ليست في محفظتك.', live: 'مباشر', snap: m => `منذ ${m} دقيقة`, src: 'CoinGecko',
     planT: 'خطة التجميع', overall: 'الإجمالي', done: 'تم', left: 'المتبقي', dca: 'الشراء الدوري (DCA)', next: 'التالي', buyAt: 'تنبيهات سعر الشراء', away: 'يبعد',
-    noPlan: 'لا توجد أهداف في الخطة بعد — أضفها من صفحة خطة التجميع في التطبيق.', best24: 'الأفضل 24س', worst24: 'الأسوأ 24س', best7: 'الأفضل 7 أيام', worst7: 'الأسوأ 7 أيام',
+    noPlan: 'لا توجد أهداف في الخطة بعد — أضفها من صفحة خطة التجميع في التطبيق.', best24: 'الأفضل 24 ساعة', worst24: 'الأسوأ 24 ساعة', best7: 'الأفضل 7 أيام', worst7: 'الأسوأ 7 أيام',
     mvT: 'الأفضل والأسوأ في محفظتك', noStable: 'باستثناء المستقرة', sigT: 'الإشارات', reinforce: '🟢 تعزيز', sell: '🔴 بيع / تحويل إلى BTC', hold: '⚪ احتفاظ',
-    vsAvg: 'مقارنة بمتوسط شرائك', mkT: 'السوق', topUp: n => `أعلى ${n} · الأفضل 24س`, topDn: n => `أعلى ${n} · الأسوأ 24س`, stUp: 'الأفضل في bStocks · 24س', stDn: 'الأسوأ في bStocks · 24س', stNote: 'أسهم أمريكية مرمّزة (Binance)', updated: 'تم التحديث', futures: 'Futures', yes: 'نعم', private: '',
+    vsAvg: 'مقارنة بمتوسط شرائك', mkT: 'السوق', topUp: n => `أعلى ${n} · الأفضل 24 ساعة`, topDn: n => `أعلى ${n} · الأسوأ 24 ساعة`, stUp: 'الأفضل في bStocks · 24 ساعة', stDn: 'الأسوأ في bStocks · 24 ساعة', stNote: 'أسهم أمريكية مرمّزة (Binance)', updated: 'تم التحديث', futures: 'Futures', yes: 'نعم', private: '',
     welcome: 'البوت متصل ✅\nيرد عليك هنا في أي وقت. اضغط زراً بالأسفل، أو أرسل رمز عملة مثل <code>btc</code>.',
     thinking: '🧠 أفكر…', aiLimit: n => `انتهت أسئلتك الـ ${n} لهذا اليوم — تتجدد غداً (12 منتصف الليل بتوقيت الرياض). الأزرار والرموز تعمل كالمعتاد.`,
     aiNoKey: 'الذكاء الاصطناعي غير مُعدّ (ANTHROPIC_API_KEY غير موجود في الـ Worker).', aiOwnKey: '🔑 رفض Claude مفتاحك (خاطئ، أو أُلغي، أو نفد الرصيد). أصلحه من التطبيق: الإعدادات ← مفتاح Claude الخاص بي.', aiBusy: 'Claude مشغول الآن — حاول بعد دقيقة.',
@@ -166,10 +166,10 @@ function moverRows(sum, key, dir, n = 5) {
 export { FNG_AR, SEASON_AR };   // (the words live in alerts-core.mjs: the GitHub brief uses them too)
 function marketShort(t, m) {
   const g = m.global || {}, d = g.dom || {}, out = [], ar = isAr(t);
-  if (m.btc) out.push(ar ? `البيتكوين <b>${usd(m.btc.price)}</b> · ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}` : `BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
+  if (m.btc) out.push(ar ? `البيتكوين: <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}` : `BTC <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} ${pct(m.btc.ch24)}`);
   if (d.btc != null) out.push(ar ? `${t.dom}: البيتكوين ${d.btc.toFixed(1)}% · التيثر ${(d.usdt || 0).toFixed(2)}%` : `${t.dom} BTC ${d.btc.toFixed(1)}% · USDT ${(d.usdt || 0).toFixed(2)}%`);
-  if (m.fng) out.push(`${esc(t.fng)} <b>${m.fng.value}</b> · ${esc(ar ? FNG_AR[m.fng.label] || m.fng.label : m.fng.label)}`);
-  if (m.alt && m.alt.value != null) out.push(`${t.altS} <b>${m.alt.value}</b> · ${esc(ar ? SEASON_AR[m.alt.label] || m.alt.label : m.alt.label)}`);
+  if (m.fng) out.push(`${esc(t.fng)}${ar ? ':' : ''} <b>${m.fng.value}</b> · ${esc(ar ? FNG_AR[m.fng.label] || m.fng.label : m.fng.label)}`);
+  if (m.alt && m.alt.value != null) out.push(`${t.altS}${ar ? ':' : ''} <b>${m.alt.value}</b> · ${esc(ar ? SEASON_AR[m.alt.label] || m.alt.label : m.alt.label)}`);
   const e = etfDay(m.etf); if (e) out.push(ar ? `تدفقات ETF (${arDay(e.date)}):\n• BTC ${flow(e.btc)} · ETH ${flow(e.eth)}` : `${t.etf} ${e.label} · BTC ${flow(e.btc)} · ETH ${flow(e.eth)}`);
   return out;
 }
@@ -265,7 +265,7 @@ export function viewPlan(t, sum, now) {
   if (!sum.plan.length && !(sum.dca || []).length && !(sum.buyAt || []).length) return { text: `📋 <b>${t.planT}</b>\n\n${t.noPlan}`, buttons: [[webApp(t.openApp, 'accumulation.html'), cb(t.back, 'menu')]] };
   const L = [`📋 <b>${t.planT}</b>`];
   if (sum.plan.length) {
-    L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> · ${sum.prog.completed}/${sum.prog.counted} ✅`, '');
+    L.push(`${t.overall}: <b>${sum.prog.pct.toFixed(1)}%</b> · ${isAr(t) ? `${sum.prog.completed} من ${sum.prog.counted}` : `${sum.prog.completed}/${sum.prog.counted}`} ✅`, '');
     const BL = isAr(t) ? 7 : 10, bar = p => { const n = Math.round(Math.min(1, p) * BL); return '▰'.repeat(n) + '▱'.repeat(BL - n); };   // Arabic: a shorter bar, so "باقي 9.82" fits the line
     [...sum.plan].sort((a, b) => b.actual / b.target - a.actual / a.target).forEach(p => {
       const f = p.target > 0 ? p.actual / p.target : 0;
@@ -297,7 +297,7 @@ export function viewMarket(t, m, now, range = 100) {
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
   if (up.length) L.push('', `📈 <b>${t.topUp(range)}</b>`, ...up.map(line));
   if (dn.length) L.push('', `📉 <b>${t.topDn(range)}</b>`, ...dn.map(line));
-  return { text: L.join('\n'), buttons: [mkTabs(t, 'c'), RANGES.map(n => cb((n === range ? '✓ ' : '') + 'Top ' + n, 'mk:' + n)), [cb(t.refresh, 'mk:' + range), url('🧭 Market Hub', APP + 'market.html')], [cb(t.back, 'menu')]] };
+  return { text: L.join('\n'), buttons: [mkTabs(t, 'c'), RANGES.map(n => cb((n === range ? '✓ ' : '') + 'Top ' + n, 'mk:' + n)), [cb(t.refresh, 'mk:' + range), url(t.hub, APP + 'market.html')], [cb(t.back, 'menu')]] };
 }
 // 🌍 the market's three sections, like the app's Market Hub: 🪙 Crypto · 📈 bStocks · 🥇 Metals (a tap redraws the message)
 const isAr = t => t.otherCode === 'en';
@@ -313,11 +313,13 @@ export function viewStocks(t, m, now) {
     L.push(`🇺🇸 ${ar ? 'السوق الأمريكي' : 'US market'}: <b>${US_STATE[ar ? 'ar' : 'en'][us.state]}</b> · ${us.state === 'open' ? (ar ? 'يُغلق' : 'closes') : (ar ? 'يفتح' : 'opens')} ${riyadh(us.next, ar)} ${ar ? 'بتوقيت الرياض' : 'Riyadh'}`,
       ar ? `📊 عدد الأسهم ${st.length}${cap > 0 ? ` · القيمة السوقية ${big(cap)}` : ''}\n🟢 صاعد ${up} · 🔴 هابط ${dn} · المتوسط ${pct(avg, 2)}`
         : `📊 ${st.length} stocks${cap > 0 ? ` · ${big(cap)}` : ''} · 🟢 ${up} / 🔴 ${dn} · avg ${pct(avg, 2)}`);
-    const sUp = [...ch].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), sDn = [...ch].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);
-    L.push('', `📈 <b>${t.stUp}</b>`, ...sUp.map(line), '', `📉 <b>${t.stDn}</b>`, ...sDn.map(line), '',
+    const sUp = [...ch].sort((a, b) => b.ch24 - a.ch24).slice(0, 5).filter(r => r.ch24 > 0), sDn = [...ch].sort((a, b) => a.ch24 - b.ch24).slice(0, 5).filter(r => r.ch24 < 0);
+    if (sUp.length) L.push('', `📈 <b>${t.stUp}</b>`, ...sUp.map(line));
+    if (sDn.length) L.push('', `📉 <b>${t.stDn}</b>`, ...sDn.map(line));
+    L.push('',
       `<i>${t.stNote} · ${ar ? 'التوكن يُتداول 24/7، والسهم الحقيقي وقت سوق نيويورك فقط.' : 'the token trades 24/7, the real share only while New York is open.'}</i>`);
   }
-  return { text: L.join('\n'), buttons: [mkTabs(t, 's'), [cb(t.refresh, 'mks'), url('🧭 Market Hub', APP + 'market.html#stocks')], [cb(t.back, 'menu')]] };
+  return { text: L.join('\n'), buttons: [mkTabs(t, 's'), [cb(t.refresh, 'mks'), url(t.hub, APP + 'market.html#stocks')], [cb(t.back, 'menu')]] };
 }
 export function viewMetals(t, m, now) {
   const ar = isAr(t), list = (m.metals || []).filter(x => x.k !== 'brent');   // metals only (no oil)
@@ -341,7 +343,7 @@ export function viewMetals(t, m, now) {
   if (g && s && s.price > 0) L.push('', `⚖️ ${ar ? 'نسبة الذهب إلى الفضة' : 'Gold / silver ratio'}: <b>${(g.price / s.price).toFixed(1)}</b>`);
   const at = m.parts && m.parts.metals ? Math.max(1, Math.round((now - Date.parse(m.parts.metals)) / 60e3)) : null;
   L.push('', `<i>${ar ? 'العقود الآجلة — Yahoo Finance، بتأخير ~15 دقيقة' : 'Futures — Yahoo Finance, ~15 min delayed'}${at ? ` · ${t.snap(at)}` : ''}. ${ar ? 'الأسعار للأونصة (النحاس للرطل). الجرام: عيار 24 دون مصنعية.' : 'Gram: pure 24k, no making charge.'}</i>`);
-  return { text: L.join('\n'), buttons: [mkTabs(t, 'm'), [cb(t.refresh, 'mkm'), url('🧭 Market Hub', APP + 'market.html#metals')], [cb(t.back, 'menu')]] };
+  return { text: L.join('\n'), buttons: [mkTabs(t, 'm'), [cb(t.refresh, 'mkm'), url(t.hub, APP + 'market.html#metals')], [cb(t.back, 'menu')]] };
 }
 
 export function viewCoin(t, coin, m, sum, now) {
@@ -470,7 +472,7 @@ export async function handleTelegram(request, env) {
   if (String(chat) !== String(env.TELEGRAM_CHAT_ID)) {   // a member: ⏸ paused → nothing (one note a day); 🌊 too many messages → wait
     const x = (await members(env))[String(chat)] || {}, ar = x.lang === 'ar';
     const quiet = () => q ? tg(env, 'answerCallbackQuery', { callback_query_id: q.id }).catch(() => {}) : null;
-    if (x.paused) { await quiet(); if (await strangerOnce(env, chat)) await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '⏸ البوت متوقف لديك مؤقتاً — تواصل مع Dr. Samir Saad.' : '⏸ The bot is paused for you for now — ask Dr. Samir Saad.' }).catch(() => {}); return ok(); }
+    if (x.paused) { await quiet(); if (await strangerOnce(env, chat)) await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '⏸ البوت متوقف لديك مؤقتاً — تواصل مع د. سمير سعد.' : '⏸ The bot is paused for you for now — ask Dr. Samir Saad.' }).catch(() => {}); return ok(); }
     const f = await flood(env, chat);
     if (f !== 'ok') { await quiet(); if (f === 'warn') await tg(env, 'sendMessage', { chat_id: chat, text: ar ? '🌊 رسائل كثيرة متتالية — انتظر دقيقة ثم تابع 🙂' : '🌊 That\'s a lot of messages at once — wait a minute, then carry on 🙂' }).catch(() => {}); return ok(); }
   }
@@ -642,7 +644,7 @@ const AW = {
   en: { ask: 'Send the e-mail you will sign in with, like:\n<code>/app you@example.com</code>\n(Google, or any e-mail with a sign-in link.)', sent: '📨 Sent to Dr. Samir Saad for approval — you\'ll get a message here.', owner: '📱 You already have the app 🙂',
     req: (n, e) => `📱 <b>${n}</b> asks to open the app with\n<code>${e}</code>`, ok: (e, t) => `✅ You can open the app now with <b>${e}</b>:\n${APP}${t ? '?for=' + t : ''}\nThen Settings → Telegram → 🔗 Link your portfolio, to see your portfolio here.`, no: 'Your app request was not approved.',
     linked: '🔗 Linked ✅ — your portfolio, plan and exit plan now show here (only to you).', badCode: '❌ That code is not valid or is over 10 minutes old — make a new one in the app (Settings → Telegram → Link your portfolio).', notYou: '❌ That code was made by another e-mail than the one approved for you.', ownerLink: 'Your portfolio is already the bot\'s 🙂' },
-  ar: { ask: 'أرسل البريد الإلكتروني الذي ستدخل به، هكذا:\n<code>/app you@example.com</code>\n(حساب Google، أو أي بريد برابط دخول.)', sent: '📨 أُرسل الطلب إلى Dr. Samir Saad للموافقة — سيصلك الرد هنا.', owner: '📱 لديك التطبيق بالفعل 🙂',
+  ar: { ask: 'أرسل البريد الإلكتروني الذي ستدخل به، هكذا:\n<code>/app you@example.com</code>\n(حساب Google، أو أي بريد برابط دخول.)', sent: '📨 أُرسل الطلب إلى د. سمير سعد للموافقة — سيصلك الرد هنا.', owner: '📱 لديك التطبيق بالفعل 🙂',
     req: (n, e) => `📱 <b>${n}</b> يريد فتح التطبيق بـ\n<code>${e}</code>`, ok: (e, t) => `✅ يمكنك الآن فتح التطبيق بـ <b>${e}</b>:\n${APP}${t ? '?for=' + t : ''}\nثم الإعدادات ← تليجرام ← 🔗 ربط محفظتك ببوت تليجرام لتظهر محفظتك هنا.`, no: 'لم تتم الموافقة على طلب التطبيق.',
     linked: '🔗 تم الربط ✅ — تظهر الآن محفظتك وخطتك وخطة الخروج هنا (لك وحدك).', badCode: '❌ هذا الرمز غير صالح أو مرّت عليه 10 دقائق — أنشئ رمزاً جديداً من التطبيق (الإعدادات ← تليجرام ← ربط محفظتك ببوت تليجرام).', notYou: '❌ هذا الرمز أُنشئ ببريد غير البريد الذي تمت الموافقة عليه لك.', ownerLink: 'محفظتك هي المربوطة بالبوت بالفعل 🙂' },
 };
@@ -773,8 +775,8 @@ async function onUpdate(env, u, msg, q, chat) {
           let note = '⭐';
           if (x) {
             if (!pd && premiumNow(x)) { await revoke(env, who); note = '☆'; await tg(env, 'sendMessage', { chat_id: who, text: x.lang === 'ar' ? 'أُلغيت العضوية المميزة — عدت إلى الحدود العادية.' : 'Premium is off — back to the standard limits.' }).catch(() => {}); }
-            else { const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? local(y.premUntil, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-              await tg(env, 'sendMessage', { chat_id: who, parse_mode: 'HTML', text: x.lang === 'ar' ? `🎁 Dr. Samir Saad منحك العضوية المميزة هديةً حتى ${until}!\nفُعّلت الرسائل الصوتية 🎙، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis يومياً.` : `🎁 Dr. Samir Saad gave you premium as a gift — until ${until}!\nVoice notes 🎙 are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {}); }
+            else { const y = await addDays(env, who, pd ? Math.min(3650, +pd[1]) : 30), until = y && y.premUntil ? localL(y.premUntil, { day: 'numeric', month: 'short', year: 'numeric' }, x.lang === 'ar') : '';
+              await tg(env, 'sendMessage', { chat_id: who, parse_mode: 'HTML', text: x.lang === 'ar' ? `🎁 د. سمير سعد منحك العضوية المميزة هديةً حتى ${until}!\nفُعّلت الرسائل الصوتية 🎙، و${PREM_AI} سؤال AI و${PREM_REPORTS} تقارير AI Analysis يومياً.` : `🎁 Dr. Samir Saad gave you premium as a gift — until ${until}!\nVoice notes 🎙 are on, with ${PREM_AI} AI questions and ${PREM_REPORTS} AI Analysis reports a day.` }).catch(() => {}); }
           }
           const v = await viewMember(env, lang, who), r = await edit(env, chat, q.message.message_id, v);
           if (!r.ok && !/not modified/i.test(r.description || '')) await send(env, chat, v);
@@ -851,7 +853,7 @@ async function onUpdate(env, u, msg, q, chat) {
     if (msg && isOwner(env) && (msg.forward_origin || msg.forward_from_chat) && await registerForward(env, msg)) return ok();   // 📢 a channel / group post forwarded by Samir → set it up
     if (msg && msg.successful_payment) { await paid(env, chat, msg.successful_payment, await getLang(env)); return ok(); }   // ⭐💛 paid (also each monthly renewal)
     if (msg && (msg.voice || msg.audio)) {
-      if (!(await isPremium(env)) && !(await keyInfo(env)).has) { const ar = (await getLang(env)) === 'ar'; await send(env, chat, { text: ar ? '🎙 الرسائل الصوتية للأعضاء المميزين ⭐ — اكتب رسالتك، أو اطلبها من Dr. Samir Saad.' : '🎙 Voice notes are for ⭐ premium members — type it instead, or ask Dr. Samir Saad.' }); return ok(); }
+      if (!(await isPremium(env)) && !(await keyInfo(env)).has) { const ar = (await getLang(env)) === 'ar'; await send(env, chat, { text: ar ? '🎙 الرسائل الصوتية للأعضاء المميزين ⭐ — اكتب رسالتك، أو اطلبها من د. سمير سعد.' : '🎙 Voice notes are for ⭐ premium members — type it instead, or ask Dr. Samir Saad.' }); return ok(); }
       await onVoice(env, chat, msg.voice || msg.audio); return ok();
     }
     if (!msg || typeof msg.text !== 'string') return ok();
@@ -976,15 +978,16 @@ async function answer(env, chat, question, budget = 36, into = null) {
   const foot = `<i>📡 ${t.data}: ${esc(r.sources.length ? r.sources.map(srcAr).join(' · ') : (isAr(t) ? 'معرفة عامة' : 'general knowledge'))}\n${t.aiLeft(r.left, r.limit)}</i>`;
   const btns = [];
   if (r.coins.length) btns.push(r.coins.map(([cid, sym]) => cb('🪙 ' + sym, 'c:' + cid.slice(0, 58))));
-  if (r.coins.length === 1) btns[0].push(url('🔥 Liq Map', LIQ + encodeURIComponent(r.coins[0][1])));
+  if (r.coins.length === 1) btns[0].push(url(t.liq, LIQ + encodeURIComponent(r.coins[0][1])));
   if (r.paper) btns.push([cb(t.paperB, 'pp'), cb(paperWords[lang].undo, 'pp:undo')]);   // 🧪 a paper trade: see it / undo it
   btns.push([cb(t.newChat, 'new'), cb(t.back, 'menu')]);
   let tx = '';
   if (r.trades && r.trades.length) {   // 🧾 trades Claude prepared: the bot's own summary + ✅ / ❌ (nothing saved before the tap)
-    const ql = /[\u0600-\u06FF]/.test(question) ? 'ar' : 'en', tq = T[ql];   // in the language of THIS message, like Claude's answer
-    const gid = await keepTrades(env, r.trades, ql);
-    tx = tradeLines(r.trades, ql === 'ar') + '\n\n';
-    btns.unshift([cb(r.trades.length > 1 ? tq.txOkAll(r.trades.length) : tq.txOk, 'tx:ok:' + gid), cb(tq.txNo, 'tx:no:' + gid)]);
+    // the bot's own words — the summary and its buttons — are in the chat's language, like the line under them and every
+    // other button (only Claude's sentence follows the language of the message): never an English summary over Arabic buttons
+    const gid = await keepTrades(env, r.trades, lang);
+    tx = tradeLines(r.trades, lang === 'ar') + '\n\n';
+    btns.unshift([cb(r.trades.length > 1 ? t.txOkAll(r.trades.length) : t.txOk, 'tx:ok:' + gid), cb(t.txNo, 'tx:no:' + gid)]);
   }
   let text = r.text + '\n\n' + tx + foot;
   if (top.length + text.length > 4000) text = r.text.slice(0, Math.max(200, 3900 - foot.length - tx.length - top.length)) + '…\n\n' + tx + foot;

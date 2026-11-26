@@ -45,6 +45,7 @@ liq_test.py
 logo_bg_test.py
 mobile_space.py
 movers_test.py
+palette_test.py
 pencil_test.py
 perf_chart.py
 pred_test.py

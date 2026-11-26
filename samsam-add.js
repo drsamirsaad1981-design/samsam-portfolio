@@ -85,7 +85,7 @@
     '.atx-cash select:disabled{opacity:.45}' +
     '.atx-preview{font-size:.82rem;background:rgba(148,163,184,.1);border-radius:10px;padding:10px 12px;margin-bottom:10px;line-height:1.6}' +
     '.atx-preview:empty{display:none}' +
-    '.atx-err{color:#ef4444;font-size:.82rem;min-height:0;margin-bottom:8px}.atx-err:empty{display:none}' +
+    '.atx-err{color:var(--red,#ef4444);font-size:.82rem;min-height:0;margin-bottom:8px}.atx-err:empty{display:none}' +
     '.atx-save{width:100%;height:48px;border:none;border-radius:12px;color:#fff;font:inherit;font-weight:800;font-size:1rem;cursor:pointer;background:var(--atx-c,#2563eb)}' +
     '.atx-save:disabled{opacity:.5;cursor:default}' +
     // Add Coin: two columns of fields, search with suggestions
@@ -103,7 +103,7 @@
     '.ac-rank{margin-inline-start:auto;color:#94a3b8;font-size:.75rem;font-variant-numeric:tabular-nums}' +
     '.ac-own{color:#a78bfa;font-size:.72rem;font-weight:700;white-space:nowrap}.ac-name+.ac-own{margin-inline-start:auto}' +
     '.ac-msg{padding:10px;color:#94a3b8;font-size:.82rem}' +
-    '.ac-linked{margin-top:6px;font-size:.78rem;color:#34d399;line-height:1.4;font-weight:500}.ac-linked[hidden]{display:none}' +
+    '.ac-linked{margin-top:6px;font-size:.78rem;color:var(--green,#34d399);line-height:1.4;font-weight:500}.ac-linked[hidden]{display:none}' +
     '.ac-linked.own{color:#a78bfa}' +
     '.ac-cmc{display:flex;align-items:center;margin-top:5px;border:1px solid #334155;border-radius:10px;background:rgba(255,255,255,.05);min-width:0}' +
     '[data-theme="light"] .ac-cmc{background:#f8fafc;border-color:#e2e8f0}' +
@@ -128,7 +128,7 @@
     '.cm-dot{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.18);cursor:pointer;padding:0}' +
     '.cm-name{font-weight:700;font-size:.92rem;min-width:0;overflow-wrap:anywhere}.cm-sub{font-size:.72rem;color:#94a3b8;font-weight:600;margin-top:2px}' +
     '.cm-acts{display:flex;gap:4px}.cm-acts button{height:32px;min-width:32px;padding:0 8px;border:1px solid var(--border-card,#334155);border-radius:8px;background:rgba(255,255,255,.04);color:inherit;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer}' +
-    '.cm-acts .cm-del{color:#f87171;border-color:rgba(248,113,113,.4)}' +
+    '.cm-acts .cm-del{color:var(--red,#f87171);border-color:rgba(248,113,113,.4)}' +
     '.cm-pal{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;padding:6px 0 4px}.cm-pal[hidden]{display:none}' +
     '.cm-pal button{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}.cm-pal button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px #7c3aed}' +
     '.cm-group{font-size:.72rem;font-weight:800;color:#94a3b8;margin:14px 0 2px}.cm-note{font-size:.76rem;color:#94a3b8;margin:4px 0 12px;line-height:1.45}' +
@@ -156,7 +156,7 @@
         '<button type="button" role="tab" data-tab="metal" aria-selected="false" onclick="acSetTab(\'metal\')">Metals</button>' +
         '<button type="button" role="tab" data-tab="cash" aria-selected="false" onclick="acSetTab(\'cash\')">Cash &amp; CDs</button></div>' +
       '<div class="ac-grid">' +
-        '<div class="atx-field ac-find ac-full"><label for="acSym"><span id="acFindLbl">Coin</span> <span style="color:#ef4444">*</span> <small class="form-sub" id="acFindSub">— search by symbol or name</small></label>' +
+        '<div class="atx-field ac-find ac-full"><label for="acSym"><span id="acFindLbl">Coin</span> <span style="color:var(--red,#ef4444)">*</span> <small class="form-sub" id="acFindSub">— search by symbol or name</small></label>' +
           '<input type="text" id="acSym" placeholder="e.g. XRP or Ripple" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acSuggest"' +
           ' oninput="this.value=this.value.toUpperCase().replace(/\\s+/g,\' \').trimStart(); acSearchInput()" onkeydown="acSearchKey(event)">' +
           '<ul class="ac-suggest" id="acSuggest" role="listbox" hidden></ul><div class="ac-linked" id="acLinked" hidden></div>' +
@@ -170,8 +170,8 @@
           '<input type="text" id="acVaultLabel" maxlength="40" placeholder="e.g. My office safe" autocomplete="off" hidden>' +
         '</div>' +
         '<label class="atx-field ac-full ac-coinonly"><span>Full Name</span><input type="text" id="acName" placeholder="Filled by search"></label>' +
-        '<label class="atx-field"><span id="acQtyLbl">Amount <span style="color:#ef4444">*</span></span><input type="number" id="acQty" placeholder="0.00" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
-        '<label class="atx-field"><span id="acPriceLbl">Avg. Buy Price <span style="color:#ef4444">*</span></span><input type="number" id="acPrice" placeholder="USD" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
+        '<label class="atx-field"><span id="acQtyLbl">Amount <span style="color:var(--red,#ef4444)">*</span></span><input type="number" id="acQty" placeholder="0.00" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
+        '<label class="atx-field"><span id="acPriceLbl">Avg. Buy Price <span style="color:var(--red,#ef4444)">*</span></span><input type="number" id="acPrice" placeholder="USD" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span>Buy Date</span><input type="date" id="acDate" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field"><span>Fee (USD)</span><input type="number" id="acFeeUsd" placeholder="Optional" step="any" min="0" inputmode="decimal" oninput="previewAddCoin()"></label>' +
         '<label class="atx-field ac-coinonly"><span>CoinGecko ID</span><input type="text" id="acCgId" placeholder="Auto" autocomplete="off" spellcheck="false"></label>' +
@@ -508,7 +508,7 @@
   function acChip(g) { $('acQty').value = String(g); previewAddCoin(); }
   function acVaultPick() { var v = $('acVault').value; $('acVaultLabel').hidden = v !== 'other'; if (v === 'digital' && acU !== 'oz') acSetUnit('oz'); }
   function acUnits() {
-    var m = isMetal($('acSym').value.trim().toUpperCase()), R = ' <span style="color:#ef4444">*</span>';
+    var m = isMetal($('acSym').value.trim().toUpperCase()), R = ' <span style="color:var(--red,#ef4444)">*</span>';
     $('acMetalBox').hidden = !m; $('acNetRow').hidden = m || !window.SamsamWallets;
     if (!m) { var sh = acTab === 'stock'; $('acQtyLbl').innerHTML = (sh ? 'Amount (shares)' : 'Amount') + R; $('acPriceLbl').innerHTML = (sh ? 'Buy price per share' : 'Avg. Buy Price') + R; return; }
     document.querySelectorAll('#acMetalBox [data-u]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.u === acU)); });
@@ -633,10 +633,10 @@
       if (acSpot > 0) { var prem = (price / acSpot - 1) * 100; L.push('🧾 You paid <b>' + (prem >= 0 ? '+' : '−') + Math.abs(prem).toFixed(1) + '%</b> ' + (prem >= 0 ? 'over' : 'under') + ' the live price (' + SamsamFmt.price(acSpot / GPO) + '/g)'); }
     }
     if (qty > 0 && price > 0) L.push('Cost Basis: <b>' + SamsamFmt.usd(qty * price + fee) + '</b>');
-    var di = acDateIso(); if (di === 'future') L.push('<span style="color:#f87171">' + SamsamUI.ic('alert') + 'The buy date can’t be in the future.</span>');
+    var di = acDateIso(); if (di === 'future') L.push('<span style="color:var(--red,#f87171)">' + SamsamUI.ic('alert') + 'The buy date can’t be in the future.</span>');
     if (py.sym && py.cost > 0) L.push(SamsamUI.ic('cash') + 'Pays <b>' + SamsamFmt.usd(py.cost) + ' from ' + E(py.sym) + '</b> · ' + fmtQty(py.have - py.cost) + ' ' + E(py.sym) + ' left');
     if (py.short && qty > 0) L.push('<span style="color:#f59e0b">' + SamsamUI.ic('alert') + E(py.short) + '</span>');
-    if (py.err && qty > 0) L.push('<span style="color:#f87171">' + SamsamUI.ic('alert') + E(py.err) + '</span>');
+    if (py.err && qty > 0) L.push('<span style="color:var(--red,#f87171)">' + SamsamUI.ic('alert') + E(py.err) + '</span>');
     $('acPreview').innerHTML = L.join('<br>');
   }
   function acErr(msg) { $('acError').textContent = msg; }
