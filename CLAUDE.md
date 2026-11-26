@@ -123,13 +123,34 @@ Third round the same day (his "خلص ٢ و٣ و٤" + the donut's colours):
   (`core_unit_test.py`, `alerts_reads_unit_test.py` in `suite.txt`). `tools/welcome/build_public.py` no longer fails without a demo folder.
 - Samir confirmed from his phone (two screenshots) that the Net worth card is the same on Overview and Allocation.
 
+Fourth round (26–27 Nov, his "موافق" on the legend and the small items):
+- Allocation: under the donut, every slice of the outer ring by name — dot, whole name, share — in the ring's order
+  (`renderHovLegend` in `samsam-hchart.js`; `donut_legend_test.py`). Tap a name = tap its slice. A class with one category
+  (shares) is named by its class line only.
+- Net worth: a part that is there but rounds to nothing reads "<1%" (card and the bot's line, `wealthParts().t`).
+- Phone: the end of a list in the overlay (Allocation, Performance, a coin's transactions) scrolls clear of the AI button.
+  In mid-page the button still rests over whatever is there (it fades while scrolling and can be dragged).
+- Arabic: grams are "جم" beside every number and price ("62.207 جم", "$128.60/جم") — one rule in `samsam-lang.js`
+  (`grams`), the pages keep writing "g". The charts' time axis (a canvas) has Arabic months (`samsam-chart.js`).
+- Performance charts: the Gold / Silver trend lines wear the theme's tokens (`--c-gold`, `--c-silver`): yellow on dark, deep
+  gold on white and in the PDF — 15.7 from the BTC line's orange (it was 8.1).
+- AI report: a coin with no price is flagged (`noPrice`) and valued 0 in its own line as in the totals (it was its cost,
+  with "−100%").
+- Samir saw the "New in the guide" message (five parts) in the bot and the new colours on his phone.
+
+Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
+- (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
+  in `users/<uid>/meta/alerts`, six kinds on by default, quiet hours, a daily cap; owner first, then one member, then all.
+- (B) A Bitcoin logarithmic-regression (power-law) alert: weekly fit in GitHub → `m/btcreg.json`, five zones by historical
+  share of days, alerts on a zone change at the daily close; bot first, then a Market Hub card and an optional 4th Exit
+  indicator. The full history (2010 →) needs a source GitHub Actions can reach — not tested yet.
+
 Still open:
-1. Automatic alerts for members from the Worker (buy-price, DCA day, take-profit, signal change, weekly report): a phase
-   of its own, to plan with Samir first. Today `evaluate` runs only in `tools/alerts.mjs` on GitHub, for the owner.
+1. The two proposals above.
 2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
-3. Net worth card: a part under 0.5% reads "0%" (his shares, $74.86 of $64,825) — "<1%" would be truer.
-4. Arabic: "g" and "جم" both appear; the PDF and the CSV are in English when the app is Arabic.
+3. The PDF and the CSV are in English when the app is Arabic.
+4. The AI button over a card's corner in mid-page (inherent to a floating button; moving it is a design decision).
 
 ## Open ideas (not requested yet)
 
-- The AI button can still sit over the last card's link at the bottom of a page.
+- A 16th category colour cannot stay 15 away from the others: fold small categories or rely on the legend.

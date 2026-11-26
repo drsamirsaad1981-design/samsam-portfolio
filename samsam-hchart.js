@@ -185,6 +185,25 @@ function renderHovDonut() {
   }
   else { cv.textContent = SamsamFmt.usd(all); cv.style.color = ''; cl.textContent = 'Total'; }
   renderHovClassBar(t);
+  renderHovLegend(t, two);
+}
+// 🏷 Under the donut: every slice of the outer ring by name — its colour dot, its name and its share, in the ring's own order
+// (clockwise from the top). Fifteen colours cannot all stay far apart, so a colour never has to be recognised on its own;
+// tap a name = tap its slice. A class with a single category (shares; metals that are all gold) is already named by its
+// class line above and is not repeated.
+function renderHovLegend(t, two) {
+  const card = document.getElementById('hovAllocCard'); if (!card) return;
+  let leg = document.getElementById('hovCatLeg');
+  const T = SamsamTaxonomy, rows = [];
+  t.classes.slice().sort((a, b) => b.v - a.v).forEach(c => { const ks = c.cats.filter(k => k.v > 0).sort((a, b) => b.v - a.v); if (two && ks.length < 2) return; ks.forEach(k => rows.push(k)); });
+  if (rows.length < 2 || !(t.all > 0)) { if (leg) leg.remove(); card.classList.remove('has-leg'); return; }
+  if (!leg) { leg = document.createElement('div'); leg.id = 'hovCatLeg'; leg.className = 'hov-leg';
+    leg.onclick = e => { const b = e.target.closest('[data-cat]'); if (b) setHovCat(hovCat === b.dataset.cat ? '' : b.dataset.cat); }; }
+  card.appendChild(leg);   // always last: after the class lines
+  card.classList.add('has-leg');
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  leg.innerHTML = rows.map(k => { const p = k.v / t.all * 100;
+    return `<button type="button" class="hov-leg-i" data-cat="${k.key}" aria-pressed="${hovCat === k.key}" style="--c:${T.color(k.key)}"><i></i><span>${esc(T.label(k.key))}</span><b>${p < 0.05 ? '<0.1' : p.toFixed(1)}%</b></button>`; }).join('');
 }
 // Under the donut (two classes or more): one line per class — its colour, name, value and share; tap → filter to it
 function renderHovClassBar(t) {

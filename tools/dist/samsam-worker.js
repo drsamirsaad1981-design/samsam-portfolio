@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 2289e690a5031100
+// sources-hash: bbdf0ba795bbf3bc
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1107,13 +1107,14 @@ function wealthParts(sum) {
   rows.forEach((r, i) => {
     r.r = i === rows.length - 1 ? Math.max(0, left) : Math.round(r.p);
     left -= r.r;
+    r.t = r.r === 0 && r.p > 0 ? "<1%" : r.r + "%";
   });
   return rows;
 }
 function wealthLine(sum, ar) {
   const w = sum && sum.wealth;
   if (!w || !(w.cash > 0)) return null;
-  const mix = wealthParts(sum).map((r) => `${WPART[r.k][ar ? 1 : 0]} ${r.r}%`).join(" \xB7 ") + (w.missing.length ? ar ? ` \xB7 \u0628\u062F\u0648\u0646 ${w.missing.join(", ")} (\u0644\u0627 \u064A\u0648\u062C\u062F \u0633\u0639\u0631 \u0635\u0631\u0641 \u0628\u0639\u062F)` : ` \xB7 without ${w.missing.join(", ")} (no rate yet)` : "");
+  const mix = wealthParts(sum).map((r) => `${WPART[r.k][ar ? 1 : 0]} ${esc(r.t)}`).join(" \xB7 ") + (w.missing.length ? ar ? ` \xB7 \u0628\u062F\u0648\u0646 ${w.missing.join(", ")} (\u0644\u0627 \u064A\u0648\u062C\u062F \u0633\u0639\u0631 \u0635\u0631\u0641 \u0628\u0639\u062F)` : ` \xB7 without ${w.missing.join(", ")} (no rate yet)` : "");
   return ar ? `\u{1F3E6} \u0635\u0627\u0641\u064A \u0627\u0644\u062B\u0631\u0648\u0629: <b>${usd2(w.total)}</b>
 <i>${mix}</i>` : `\u{1F3E6} Net worth <b>${usd2(w.total)}</b>
 <i>${mix}</i>`;

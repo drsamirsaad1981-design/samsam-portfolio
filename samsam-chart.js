@@ -33,8 +33,11 @@
   }
   // Time ticks at round boundaries; label style depends on the visible span.
   var H = 3600e3, D = 24 * H;
-  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  var dayMon = function (t) { var d = new Date(t); return d.getDate() + ' ' + MON[d.getMonth()]; };
+  var MON_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var MON_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  // the axis is drawn on a canvas (the page's Arabic translator never sees it) → the month in the page's language here
+  var MON = function (i) { return (window.CPLang && CPLang.ar ? MON_AR : MON_EN)[i]; };
+  var dayMon = function (t) { var d = new Date(t); return d.getDate() + ' ' + MON(d.getMonth()); };
   // mode: 'hours' | 'days' forces the label style (set from the selected range); otherwise by span.
   function timeTicks(t0, t1, maxTicks, mode) {
     var span = t1 - t0, out = [];
@@ -53,7 +56,7 @@
     for (; tt <= t1; tt += dayStep * D) out.push(tt);
     if (out.length < 2) out = span > 0 ? [t0, t1] : [t1];   // less than a day of data: still label with dates
     var withYear = span > 300 * D;
-    return { ticks: out, fmt: function (t) { var d = new Date(t); return withYear ? MON[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2) : dayMon(t); } };
+    return { ticks: out, fmt: function (t) { var d = new Date(t); return withYear ? MON(d.getMonth()) + ' ' + String(d.getFullYear()).slice(2) : dayMon(t); } };
   }
   // Monotone cubic (Fritsch–Carlson): smooth, but never above/below the real values.
   function smoothPath(ctx, pts, moveFirst) {

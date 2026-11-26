@@ -53,7 +53,7 @@ with sync_playwright() as p:
             check('table: the gold row is in grams too (62.207 g · $96.45/g · now $128.60/g · TP2 $250.00/g)', '62.207 g' in row and '$96.45/g' in row and 'now $128.60/g' in row and '$250.00/g' in row, row)
             pg.click('[data-act=view][data-v=cards]'); pg.wait_for_timeout(500)
         else:
-            check('Arabic: the gold card is in grams too (62.207 g, /g) and the step label is translated', g and '62.207 g' in g['info'] and '/g' in g['info'] and g['labels'] == ['سعر الجرام'] * 3 and g['subs'][0].startswith('بيع 15.552 g'), g and (g['info'], g['labels'], g['subs']))
+            check('Arabic: the gold card is in grams too, with the Arabic unit (62.207 جم, $96.45/جم, بيع 15.552 جم) and the step label is translated', g and '62.207 جم' in g['info'] and '$96.45/جم' in g['info'] and ' g' not in g['info'] and g['labels'] == ['سعر الجرام'] * 3 and g['subs'][0].startswith('بيع 15.552 جم'), g and (g['info'], g['labels'], g['subs']))
             check('Arabic: the typed 250 a gram is still there', g and float(g['prices'][1]) == 250, g and g['prices'])
         pg.locator('#xk-XAU').screenshot(path=str(T / f'exit-metal-{lang}.png'))
         check(f'{lang}: no page errors', not errs, errs[:3]); ctx.close()

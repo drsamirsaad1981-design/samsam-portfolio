@@ -8,22 +8,22 @@
 if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add('in-tg');var own=false;try{own=window.parent===window||!!window.parent.location.href;}catch(e){}if(!own){}var ev=function(n){try{if(window.TelegramWebviewProxy)TelegramWebviewProxy.postEvent(n,'');else if(!own)window.parent.postMessage(JSON.stringify({eventType:n,eventData:''}),'https://web.telegram.org');}catch(e){}};if(window.top===window||!own){ev('web_app_ready');ev('web_app_expand');}}}catch(e){}})();</script>
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-lang.js?v=202611262230"></script>
-<script src="samsam-ar.js?v=202611262230"></script>
-<script src="samsam-ui.js?v=202611262230"></script>
-<script src="samsam-hints.js?v=202611262230"></script>
-<script src="samsam-arhints.js?v=202611262230"></script>
-<script src="samsam-vault.js?v=202611262230"></script>
-<script src="samsam-labels.js?v=202611262230"></script>
-<script src="samsam-taxonomy.js?v=202611262230"></script>
-<script src="samsam-dropdown.js?v=202611262230"></script>
-<script src="samsam-coins.js?v=202611262230"></script>
-<script src="samsam-import.js?v=202611262230"></script>
-<script src="samsam-wallets.js?v=202611262230"></script>
-<script src="samsam-cex.js?v=202611262230"></script>
-<script src="samsam-rewards.js?v=202611262230"></script>
-<script src="samsam-settings.js?v=202611262230"></script>
-<script src="samsam-chart.js?v=202611262230"></script>
+<script src="samsam-lang.js?v=202611270003"></script>
+<script src="samsam-ar.js?v=202611270003"></script>
+<script src="samsam-ui.js?v=202611270003"></script>
+<script src="samsam-hints.js?v=202611270003"></script>
+<script src="samsam-arhints.js?v=202611270003"></script>
+<script src="samsam-vault.js?v=202611270003"></script>
+<script src="samsam-labels.js?v=202611270003"></script>
+<script src="samsam-taxonomy.js?v=202611270003"></script>
+<script src="samsam-dropdown.js?v=202611270003"></script>
+<script src="samsam-coins.js?v=202611270003"></script>
+<script src="samsam-import.js?v=202611270003"></script>
+<script src="samsam-wallets.js?v=202611270003"></script>
+<script src="samsam-cex.js?v=202611270003"></script>
+<script src="samsam-rewards.js?v=202611270003"></script>
+<script src="samsam-settings.js?v=202611270003"></script>
+<script src="samsam-chart.js?v=202611270003"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -719,8 +719,8 @@ body {
       <div class="pcc-legend">
         <span><i style="background:#3b82f6"></i><span id="pccPortName">All Time Profit</span> <b id="pccPortUsd">—</b> <b id="pccPort">—</b></span>
         <button type="button" class="pcc-tl" data-tl="btc" title="Show / hide this line"><i style="background:#f0a060"></i>BTC Trend <b id="pccBtc">—</b></button>
-        <button type="button" class="pcc-tl" data-tl="gold" id="pccGoldRow" title="Show / hide this line"><i style="background:#eab308"></i>Gold Trend ✨ <b id="pccGold">—</b></button>
-        <button type="button" class="pcc-tl" data-tl="silver" id="pccSilverRow" title="Show / hide this line"><i style="background:#cbd5e1"></i>Silver Trend <b id="pccSilver">—</b></button>
+        <button type="button" class="pcc-tl" data-tl="gold" id="pccGoldRow" title="Show / hide this line"><i style="background:var(--c-gold,#ffd60a)"></i>Gold Trend ✨ <b id="pccGold">—</b></button>
+        <button type="button" class="pcc-tl" data-tl="silver" id="pccSilverRow" title="Show / hide this line"><i style="background:var(--c-silver,#cbd5e1)"></i>Silver Trend <b id="pccSilver">—</b></button>
       </div>
     </div>
 
@@ -785,7 +785,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202611262230"></script>
+<script type="module" src="samsam-cloud.js?v=202611270003"></script>
 <script>
 // ── Constants ──
 
@@ -850,9 +850,10 @@ function drawPerfFull() {
   const ser = { port: full.port.filter(inR), btc: full.btc.filter(inR), gold: cut(full.gold), silver: cut(full.silver) };
   if (ser.port.length < 2) { ser.port = full.port.slice(-2); ser.btc = full.btc.slice(-2); }
   const h = window.innerWidth >= 900 ? 320 : window.innerWidth >= 600 ? 260 : 220;
+  const TC = (v, d) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || d;
   SamsamChart.draw(canvas, { height: h, format: 'pct', hover: true, timeMode: perfRange === '24h' ? 'hours' : 'days', series: [
-    ...(ser.silver.length ? [{ points: ser.silver, color: '#cbd5e1', width: 1.6, name: 'Silver' }] : []),
-    ...(ser.gold.length ? [{ points: ser.gold, color: '#eab308', width: 1.8, name: 'Gold' }] : []),
+    ...(ser.silver.length ? [{ points: ser.silver, color: TC('--c-silver', '#cbd5e1'), width: 1.6, name: 'Silver' }] : []),
+    ...(ser.gold.length ? [{ points: ser.gold, color: TC('--c-gold', '#ffd60a'), width: 1.8, name: 'Gold' }] : []),   // the theme's gold: yellow on dark, deep gold on white — never near the BTC line's orange
     ...(TL.btc ? [{ points: ser.btc, color: '#f0a060', width: 2, name: 'BTC' }] : []),
     { points: ser.port, color: '#3b82f6', width: 2.6, fill: true, name: 'Your portfolio' },
   ] });

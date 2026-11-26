@@ -507,14 +507,14 @@ function renderNetWorth() {
   if (!c || !c.n || nwPortfolio == null) { card.hidden = true; copy(); return; }
   const pf = nwPortfolio, cash = c.usd || 0, all = pf + cash, iso = x => '⁦' + x + '⁩';
   const P = nwParts || { btc: pf, alt: 0, metal: 0, stock: 0 }, val = { ...P, cash };
-  // shares of the whole, rounded so they add up to exactly 100
+  // shares of the whole, rounded so they add up to exactly 100 (a part that is there but rounds to nothing reads "<1%", never "0%")
   const rows = NW_PARTS.filter(([k]) => val[k] > 0).map(([k, col, en, ar]) => ({ k, col, name: AR ? ar : en, v: val[k], p: all > 0 ? val[k] / all * 100 : 0 }));
   let left = 100; rows.forEach((r, i) => { r.r = i === rows.length - 1 ? Math.max(0, left) : Math.round(r.p); left -= r.r; });
   card.hidden = false;
   document.getElementById('nwLbl').textContent = AR ? 'صافي الثروة' : 'Net worth';
   document.getElementById('nwUsd').textContent = SamsamFmt.usd(all);
   document.getElementById('nwBar').innerHTML = rows.map(r => `<i style="width:${r.p.toFixed(2)}%;background:${r.col}" title="${r.name} ${r.p.toFixed(1)}%"></i>`).join('');
-  document.getElementById('nwLegend').innerHTML = rows.map(r => `<span class="nw-li" data-k="${r.k}"><i style="background:${r.col}"></i><span class="nw-n">${r.name}</span><b>${iso(r.r + '%')}</b><span class="nw-u">${iso(SamsamFmt.usd(r.v))}</span></span>`).join('');
+  document.getElementById('nwLegend').innerHTML = rows.map(r => `<span class="nw-li" data-k="${r.k}"><i style="background:${r.col}"></i><span class="nw-n">${r.name}</span><b>${iso(r.r === 0 && r.p > 0 ? '&lt;1%' : r.r + '%')}</b><span class="nw-u">${iso(SamsamFmt.usd(r.v))}</span></span>`).join('');
   document.getElementById('nwPfTxt').textContent = (AR ? 'المحفظة ' : 'Portfolio ') + iso(SamsamFmt.usd(pf)) + (AR ? ' + النقد ' : ' + cash ') + iso(SamsamFmt.usd(cash)) + (c.missing && c.missing.length ? ' *' : '');
   card.title = c.missing && c.missing.length ? (AR ? '* لا يوجد سعر بعد لـ ' : '* No rate yet for ') + c.missing.join(', ') : '';
   copy();
@@ -1522,9 +1522,10 @@ function drawPerfChart(pc) {   // pc: { canvas, height } — the PDF's copy (lig
   const t0 = snaps[0].t, inR = p => p.t >= t0, cut = a => { const x = (a || []).filter(inR); return x.length >= 2 ? x : (a || []).slice(-2); };
   const ser = { port: full.port.filter(inR), btc: full.btc.filter(inR), gold: cut(full.gold), silver: cut(full.silver) };
   if (ser.port.length < 2) { ser.port = full.port.slice(-2); ser.btc = full.btc.slice(-2); }
+  const TC = (v, paper, d) => pc ? paper : (getComputedStyle(document.documentElement).getPropertyValue(v).trim() || d);   // the PDF's copy: the light tones
   SamsamChart.draw(canvas, { height: pc ? pc.height : TRIO_CHART_H(), format: 'pct', timeMode: timeModeFor(holdingsRange), theme: pc ? 'light' : undefined, series: [
-    ...(ser.silver.length ? [{ points: ser.silver, color: '#cbd5e1', width: 1.5 }] : []),   // 🥈 Silver Trend
-    ...(ser.gold.length ? [{ points: ser.gold, color: '#eab308', width: 1.7 }] : []),   // ✨ Gold Trend
+    ...(ser.silver.length ? [{ points: ser.silver, color: TC('--c-silver', '#94a3b8', '#cbd5e1'), width: 1.5 }] : []),   // 🥈 Silver Trend
+    ...(ser.gold.length ? [{ points: ser.gold, color: TC('--c-gold', '#a16207', '#ffd60a'), width: 1.7 }] : []),   // ✨ Gold Trend — the theme's gold (yellow on dark, deep gold on white / paper), never near the BTC line's orange
     ...(TL.btc ? [{ points: ser.btc, color: '#f0a060', width: 2 }] : []),               // BTC Trend
     { points: ser.port, color: '#3b82f6', width: 2.4, fill: true },          // All Time Profit %
   ] });

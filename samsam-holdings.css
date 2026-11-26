@@ -283,6 +283,15 @@
     .hov-cls i { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 52px; text-align: end; color: var(--c); }
     .hov-cls[aria-pressed=true] { border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
     .cp-cls { display: inline-block; width: 13px; height: 13px; border-radius: 4px; background: var(--c); flex-shrink: 0; }
+    /* the categories by name under the donut (dot · name · share), two columns; the words wear the text colours — the dot carries the colour */
+    .hov-alloc-card.has-leg { flex-direction: column; align-items: center; gap: 14px; }
+    .hov-leg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 10px; width: 100%; max-width: 420px; }
+    .hov-leg-i { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 5px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--fg2); font: inherit; font-size: .76rem; line-height: 1.25; cursor: pointer; text-align: start; -webkit-tap-highlight-color: transparent; }
+    .hov-leg-i i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); flex-shrink: 0; }
+    .hov-leg-i span { flex: 1; min-width: 0; overflow-wrap: anywhere; }   /* the whole name, on two lines when it must: "Layer 1…" and "Layer 2…" cut short would read the same */
+    .hov-leg-i b { font-weight: 700; color: var(--fg); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .hov-leg-i[aria-pressed=true] { background: color-mix(in srgb, var(--c) 16%, transparent); color: var(--fg); }
+    @media (hover: hover) { .hov-leg-i:hover { background: var(--bg3); } }
 
     /* ── phone: more room for the content, like CoinMarketCap — 8px sides, coin lists edge to edge with dividers ── */
     @media (max-width: 759px) {

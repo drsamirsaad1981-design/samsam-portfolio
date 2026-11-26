@@ -34,7 +34,7 @@ function setAnalysisLang(lang) {
 // What a holding is: a coin, a metal (kept in troy ounces — shown to the AI in grams too) or a tokenized share
 function kindOf(c) {
   const C = Samsam.core, k = C.assetClass(c);
-  if (k === 'metal') { const g = c.qty * C.GRAMS_PER_OZ; return { kind: 'metal', grams: +g.toFixed(2), pricePerGram: +((c.currentPrice || c.basePrice || 0) / C.GRAMS_PER_OZ).toFixed(2), note: 'qty and prices are per troy ounce' }; }
+  if (k === 'metal') { const g = c.qty * C.GRAMS_PER_OZ; return { kind: 'metal', grams: +g.toFixed(2), pricePerGram: c.currentPrice > 0 ? +(c.currentPrice / C.GRAMS_PER_OZ).toFixed(2) : null, note: 'qty and prices are per troy ounce' }; }
   if (k === 'stock') return { kind: 'share', unit: 'shares' };
   return { kind: 'crypto' };
 }
@@ -55,18 +55,22 @@ function buildPortfolioPayload() {
   // Compute per-coin stats using actual portfolio data
   const coins = portfolio.map(c => {
     const avgCost     = c.basePrice || 0;   // basePrice = avg cost basis
-    const currentVal  = c.qty * (c.currentPrice || c.basePrice);
+    // a coin with no price yet: said so, and valued as the page values it (0) — it used to be worth its cost in its own line,
+    // nothing in the total, and "−100%" beside it
+    const priced      = c.currentPrice > 0;
+    const currentVal  = priced ? c.qty * c.currentPrice : 0;
     const costBasis   = c.qty * avgCost;
     return {
       sym:          c.sym,
       name:         COIN_NAMES[c.sym] || c.sym,
       qty:          +c.qty.toFixed(8),
       avgCost:      +avgCost.toFixed(8),
-      currentPrice: +(c.currentPrice || c.basePrice),
+      currentPrice: priced ? +c.currentPrice : null,
       currentValue: +currentVal.toFixed(2),
       costBasis:    +costBasis.toFixed(2),
-      pnlUsd:       +(currentVal - costBasis).toFixed(2),
-      pnlPct:       avgCost > 0 ? +((c.currentPrice - avgCost) / avgCost * 100).toFixed(2) : 0,
+      pnlUsd:       priced ? +(currentVal - costBasis).toFixed(2) : null,
+      pnlPct:       priced && avgCost > 0 ? +((c.currentPrice - avgCost) / avgCost * 100).toFixed(2) : priced ? 0 : null,
+      ...(priced ? {} : { noPrice: true, note: 'no live price yet — its value counts as 0 here and on the page, so the totals understate it; do not rate or rank this coin' }),
       cat:          c.cat || 'other',
       ...kindOf(c),
     };

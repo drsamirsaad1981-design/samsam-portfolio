@@ -326,12 +326,12 @@ const WPART = { btc: ['BTC', 'البيتكوين'], alt: ['altcoins', 'العم�
 export function wealthParts(sum) {
   const w = sum && sum.wealth; if (!w || !(w.total > 0)) return [];
   const rows = Object.keys(WPART).filter(k => w.parts[k] > 0).map(k => ({ k, usd: w.parts[k], p: w.parts[k] / w.total * 100 }));
-  let left = 100; rows.forEach((r, i) => { r.r = i === rows.length - 1 ? Math.max(0, left) : Math.round(r.p); left -= r.r; });   // rounded to add up to 100, as the card
+  let left = 100; rows.forEach((r, i) => { r.r = i === rows.length - 1 ? Math.max(0, left) : Math.round(r.p); left -= r.r; r.t = r.r === 0 && r.p > 0 ? '<1%' : r.r + '%'; });   // rounded to add up to 100, as the card (there but under half a percent: "<1%")
   return rows;
 }
 export function wealthLine(sum, ar) {
   const w = sum && sum.wealth; if (!w || !(w.cash > 0)) return null;
-  const mix = wealthParts(sum).map(r => `${WPART[r.k][ar ? 1 : 0]} ${r.r}%`).join(' · ') + (w.missing.length ? (ar ? ` · بدون ${w.missing.join(', ')} (لا يوجد سعر صرف بعد)` : ` · without ${w.missing.join(', ')} (no rate yet)`) : '');
+  const mix = wealthParts(sum).map(r => `${WPART[r.k][ar ? 1 : 0]} ${esc(r.t)}`).join(' · ') + (w.missing.length ? (ar ? ` · بدون ${w.missing.join(', ')} (لا يوجد سعر صرف بعد)` : ` · without ${w.missing.join(', ')} (no rate yet)`) : '');
   return ar ? `🏦 صافي الثروة: <b>${usd2(w.total)}</b>\n<i>${mix}</i>` : `🏦 Net worth <b>${usd2(w.total)}</b>\n<i>${mix}</i>`;
 }
 export function brief(sum, m, cfg, now, weekly = false) {

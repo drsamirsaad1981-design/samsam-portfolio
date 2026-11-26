@@ -47,8 +47,13 @@
     if (s.indexOf(LRI) >= 0 || !/\d/.test(s) || ARABIC.test(s) || !/\S/.test(s)) return null;
     var m = s.match(/^(\s*)([\s\S]*?)(\s*)$/); return m[1] + LRI + m[2] + PDI + m[3];
   }
+  // ⚖️ one unit for grams in Arabic: "جم" beside every number and price ("62.207 جم", "$128.60/جم"), as the app's own Arabic
+  // sentences and the bot already say — the pages write "g" (SamsamCoins.grams, "/g"). Done after the left-to-right wrap, so
+  // the unit stays where "g" was: to the right of its number, like "0.5 BTC".
+  var GRAM_N = /(\d)\s?g(?![A-Za-z\u0600-\u06FF])/g, GRAM_P = /\/g(?![A-Za-z\u0600-\u06FF])/g;
+  function grams(s) { return s == null || s.indexOf('g') < 0 ? s : s.replace(GRAM_N, '$1 جم').replace(GRAM_P, '/جم'); }
   function tr(s) {
-    var r = tr1(s); return r == null ? iso(s) : (iso(r) || r);
+    var r = tr1(s); return grams(r == null ? iso(s) : (iso(r) || r));
   }
   // the same wordings come back on every redraw (coin names, labels, "Hold"…): each one is worked out once and remembered
   // — a miss costs a pass over every pattern, and a redraw has hundreds of them (¼ of the page's start in Arabic on a phone)
