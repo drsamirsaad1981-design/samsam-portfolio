@@ -124,18 +124,18 @@
     "ar": "محفظتك كلها والسوق في نظرة واحدة."
    },
    "en": [
-    "From the big picture down: <b>💼 Net worth</b> first (when you have cash): your portfolio + cash &amp; certificates, with a thin bar of the split.",
+    "Your wealth from the big picture down: <b>💼 Net worth</b> first (when you have cash): your portfolio + cash &amp; certificates, with a thin bar of the split.",
     "<b>Total Portfolio</b> (also in BTC) and <b>All Time Profit</b>, sells included — Net worth's portfolio is exactly this number.",
     "What it is made of: <b>BTC</b> · <b>Altcoins</b> · <b>Metals</b> · <b>Shares</b> (only what you hold) — they add up to Total Portfolio.",
     "<b>🥇 Metals</b> and <b>🏦 Cash &amp; certificates</b> in detail — folded to one line; tap to open. Cash is valued at the official rate and counted in Net worth only.",
-    "Market cap and Fear &amp; Greed sit in the date line; <b>Today's Movers</b> and the <b>Holdings</b> chart follow. The <b>🕌 zakat</b> line is last — and moves to the top while it is due."
+    "At the very top, the market: three cards — <b>Fear &amp; Greed</b>, <b>Altcoin Season</b> and <b>dominance</b> (tap one to open the Market Hub) — and a moving line with BTC, market cap, volume and ETF flows. Under your numbers: the <b>🕌 zakat</b> line (it moves to the top while it is due), then <b>Today's Movers</b> and the <b>Holdings</b> chart."
    ],
    "ar": [
-    "من الصورة الكبرى إلى التفاصيل: <b>💼 صافي الثروة</b> أولاً (إن كان لديك نقد): محفظتك + النقد والشهادات، مع شريط رفيع يبيّن النسبة.",
+    "ثروتك من الصورة الكبرى إلى التفاصيل: <b>💼 صافي الثروة</b> أولاً (إن كان لديك نقد): محفظتك + النقد والشهادات، مع شريط رفيع يبيّن النسبة.",
     "<b>إجمالي المحفظة</b> (وبالبيتكوين أيضاً) و<b>إجمالي الربح</b> شاملاً المبيعات — ورقم المحفظة في صافي الثروة هو هذا الرقم نفسه.",
     "مكوّناتها: <b>البيتكوين</b> · <b>العملات البديلة</b> · <b>المعادن</b> · <b>الأسهم</b> (ما تملكه فقط) — ومجموعها يساوي إجمالي المحفظة.",
     "<b>🥇 المعادن</b> و<b>🏦 النقد والشهادات</b> بالتفصيل — مطويّة في سطر واحد؛ اضغط لفتحها. النقد بالسعر الرسمي ويُحسب في صافي الثروة فقط.",
-    "القيمة السوقية والخوف والطمع في سطر التاريخ؛ ثم <b>أبرز المتحركين اليوم</b> ورسم <b>الأصول</b>. وسطر <b>🕌 الزكاة</b> في الآخر — ويصعد للأعلى ما دامت مستحقة."
+    "في أعلى الصفحة السوق: ثلاث بطاقات — <b>الخوف والطمع</b> و<b>موسم العملات البديلة</b> و<b>الهيمنة</b> (اضغط أيّاً منها لفتح مركز السوق) — وشريط متحرك فيه البيتكوين والقيمة السوقية وحجم التداول وتدفقات ETF. وتحت أرقامك: سطر <b>🕌 الزكاة</b> (يصعد للأعلى ما دامت مستحقة)، ثم <b>الأكثر حركة اليوم</b> ورسم <b>الأصول</b>."
    ],
    "tip": {
     "en": "The <b>Baseline</b> date sets the day your older coins are compared with Bitcoin — tap its ⓘ to change it.",
@@ -187,15 +187,15 @@
     "⚪ <b>Hold</b> — the price is above −5% of your average buy price.",
     "🟢 <b>Reinforce</b> — between −5% and −20%: cheaper than you paid, a chance to add.",
     "🔴 <b>Sell / Convert</b> — below −20%: consider moving it into BTC.",
-    "BTC is always Hold — and so are shares and metals (Signals are for coins only; they still have price alerts and plans). Change the −5% / −20% thresholds from the Signal ⓘ.",
-    "🌙 <b>Calm mode</b> (optional, off at first — in the same Signal ⓘ window): Reinforce waits while the coin is still falling (down more than 5% in 7 days). Fewer signals and alerts."
+    "🧠 <b>Smart check vs BTC</b> (on at first): the signal is checked against how the coin did against Bitcoin over 30 and 90 days — no Reinforce on a coin that keeps losing to BTC, no Sell on one that is beating it. A signal is decided on the <b>daily close</b> (03:00 Riyadh): until then a change shows as pending ⏳, so a passing spike never flips it.",
+    "BTC, shares and metals are always Hold (Signals are for coins only; they still have price alerts and plans). From the Signal ⓘ: change the −5% / −20% thresholds, switch the Smart check, or turn on 🌙 <b>Calm mode</b> (optional, off at first): Reinforce waits while the coin is down more than 5% in 7 days."
    ],
    "ar": [
     "⚪ <b>احتفاظ</b> — السعر أعلى من −5% من متوسط سعر شرائك.",
     "🟢 <b>تعزيز</b> — بين −5% و−20%: أرخص مما دفعت، فرصة للزيادة.",
     "🔴 <b>بيع / تحويل</b> — أقل من −20%: فكّر في تحويلها إلى البيتكوين.",
-    "البيتكوين دائماً «احتفاظ» — وكذلك الأسهم والمعادن (الإشارات للعملات فقط؛ ولها تنبيهات الأسعار والخطط). غيّر حدّي −5% / −20% من ⓘ الإشارة.",
-    "🌙 <b>الوضع الهادئ</b> (اختياري ومعطّل في البداية — في نفس نافذة ⓘ بجانب الإشارة): التعزيز ينتظر ما دامت العملة ما زالت تهبط (نزلت أكثر من 5% في 7 أيام). إشارات وتنبيهات أقل."
+    "🧠 <b>فحص ذكي مقابل البيتكوين</b> (مفعّل في البداية): تُراجَع الإشارة بأداء العملة مقابل البيتكوين خلال 30 و90 يوماً — فلا «تعزيز» لعملة تخسر أمام البيتكوين باستمرار، ولا «بيع» لعملة تتفوق عليه. وتُحسم الإشارة على <b>إغلاق اليوم</b> (03:00 بتوقيت الرياض): وقبله يظهر التغيّر «بانتظار التأكيد ⏳»، فلا تقلبها قفزة سعر عابرة.",
+    "البيتكوين والأسهم والمعادن دائماً «احتفاظ» (الإشارات للعملات فقط؛ ولها تنبيهات الأسعار والخطط). ومن ⓘ الإشارة: غيّر حدّي −5% / −20%، أو أوقف الفحص الذكي، أو فعّل 🌙 <b>الوضع الهادئ</b> (اختياري ومعطّل في البداية): التعزيز ينتظر ما دامت العملة نازلة أكثر من 5% في 7 أيام."
    ],
    "tip": {
     "en": "A signal is a reminder, not financial advice.",
@@ -305,13 +305,13 @@
     "<b>Add to Plan</b> has the same four tabs: a coin, a share, gold / silver / platinum / copper, or a <b>savings goal</b> in USD, EGP or SAR.",
     "Set a <b>Target Amount</b> in its own unit — coins, shares, grams or the currency — the total you want to hold, not how many more to buy.",
     "The plan shows what is still pending, the <b>Cost to Target</b> at today's price (in dollars), and your progress. A savings goal counts your cash &amp; certificates in that currency.",
-    "<b>Buy at %</b> and <b>Price Alert</b> (coins, shares, metals): a buy price relative to today, or a price you want to hear about on Telegram."
+    "<b>Buy at %</b> and <b>Price Alert</b> (coins, shares, metals): a buy price relative to today, or a price that marks the row <b>Hit</b> when it is reached — the bot's morning message tells you. To hear the moment it happens, tell the bot in words: <i>tell me if SOL drops below 82</i>."
    ],
    "ar": [
     "<b>إضافة للخطة</b> فيها التبويبات الأربعة نفسها: عملة، أو سهم، أو ذهب / فضة / بلاتين / نحاس، أو <b>هدف ادخار</b> بالدولار أو الجنيه أو الريال.",
     "حدّد <b>الكمية المستهدفة</b> بوحدتها — عملات أو أسهم أو جرامات أو العملة — الإجمالي الذي تريد امتلاكه، لا كم ستشتري بعد.",
     "تعرض الخطة المتبقي، و<b>تكلفة الوصول للهدف</b> بسعر اليوم (بالدولار)، وتقدّمك. وهدف الادخار يُحسب من نقدك وشهاداتك بتلك العملة.",
-    "<b>سعر الدخول %</b> و<b>تنبيه السعر</b> (للعملات والأسهم والمعادن): سعر شراء نسبةً لسعر اليوم، أو سعر تريد أن يصلك خبره على تيليجرام."
+    "<b>سعر الدخول %</b> و<b>تنبيه سعري</b> (للعملات والأسهم والمعادن): سعر شراء نسبةً لسعر اليوم، أو سعر تظهر عنده علامة <b>تحقق</b> على الصف — وتخبرك به رسالة البوت الصباحية. ولتعرف لحظة حدوثه، اكتب للبوت بكلامك: <i>نبّهني لو SOL نزل تحت 82</i>."
    ],
    "tip": {
     "en": "<b>Overall Progress</b> is the average of every coin's progress; a coin above its target counts as 100%.",
@@ -473,12 +473,12 @@
    },
    "en": [
     "Settings → <b>Telegram</b> → <b>Link your portfolio</b> → <b>Open the bot</b> — one tap.",
-    "<b>Telegram alerts</b>: choose which messages the bot sends you (buy-price alerts, regular buys and more).",
+    "<b>Alerts</b>: tell the bot in words what to watch — <i>tell me if ETH drops below 3000</i> — and <code>/alerts</code> lists them. <code>/daily</code> turns the morning, evening and radar messages on or off.",
     "<b>Join Cute Portfolio Signals</b> (the channel) — talk with the members in the comments under each post. In the bot, 📱 <b>Open the app</b> opens this app inside Telegram, signed in by Telegram."
    ],
    "ar": [
     "الإعدادات ← <b>تليجرام</b> ← <b>ربط محفظتك ببوت تليجرام</b> ← <b>افتح البوت</b> — ضغطة واحدة.",
-    "<b>تنبيهات تليجرام</b>: اختر الرسائل التي يرسلها لك البوت (تنبيهات سعر الشراء، والشراء الدوري، وغيرها).",
+    "<b>التنبيهات</b>: اكتب للبوت بكلامك ما تريد متابعته — <i>نبّهني لو ETH نزل تحت 3000</i> — والأمر <code>/alerts</code> يعرضها. والأمر <code>/daily</code> يشغّل أو يوقف رسائل الصباح والمساء والرادار.",
     "<b>انضم لقناة Cute Portfolio Signals</b> — وتحدّث مع الأعضاء في التعليقات تحت كل منشور. وفي البوت، زر 📱 <b>افتح التطبيق</b> يفتح هذا التطبيق داخل تليجرام بتسجيل دخول تلقائي."
    ],
    "tip": {

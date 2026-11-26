@@ -49,6 +49,13 @@ with sync_playwright() as p:
     paid = pg.evaluate("Samsam.getZakatPaid()")
     check('Paid typed as "62,500 EGP" → kept in EGP', paid and paid[0]['paid'] == 62500 and paid[0]['cur'] == 'EGP' and '62,500 EGP' in clean(pg.inner_text('#zakatLine')), paid)
     pg.evaluate("Samsam.unmarkZakatPaid(%d)" % a['year']); pg.wait_for_timeout(600)
+    # ── nobody was there on the day (no visit in its month, no bot): the year stays open for an account that existed then
+    pg.evaluate(f"Samsam.setZakatDay({{ m: {a40['month']}, d: {a40['day']} }})"); pg.wait_for_timeout(500)
+    late = pg.evaluate("""(() => { const st = Samsam.getState(), now = Date.now(), f = since => { const z = SamsamCoins.zakatCrypto(st, 3110.35, now, null, since === undefined ? { cashUsd: 3000 } : { cashUsd: 3000, since }); return z && { state: z.state, late: !!z.late, fixed: z.fixed, hy: z.yearHy, zakat: z.zakatUsd, today: z.today }; };
+      return { old: f(now - 200 * 864e5), fresh: f(now - 5 * 864e5), own: f(), seen: Samsam.core.firstSeen(st.coins) > now - 864e5 }; })()""")
+    check('45 days after the day, its pool never kept, the account already there → still DUE at today\'s value (late), for that hijri year', late['old'] and late['old']['state'] == 'due' and late['old']['late'] and not late['old']['fixed'] and late['old']['hy'] == a40['year'] and abs(late['old']['zakat'] - late['old']['today'] * 0.025) < 0.01, late['old'])
+    check('…an account that began after that day (5 days ago; this test\'s own, begun today) owes nothing for it', late['fresh']['state'] == 'upcoming' and not late['fresh']['late'] and late['own']['state'] == 'upcoming' and not late['own']['late'] and late['seen'], late)
+    pg.evaluate(f"Samsam.setZakatDay({{ m: {a['month']}, d: {a['day']} }})"); pg.wait_for_timeout(500); pg.evaluate("renderAll()"); pg.wait_for_timeout(400)
     # metals cards: no separate gold / silver zakat any more
     check('the Metals card has no zakat line of its own (metals are in the pool)', '🕌' not in pg.inner_text('#metalsCard'))
     pg.screenshot(path=str(SH / 'zakat_due.png'))

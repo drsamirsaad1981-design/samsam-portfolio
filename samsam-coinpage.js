@@ -310,10 +310,9 @@ function renderCoinTx() {
   // Network & where held (the wallet check reads the coin there) — tap to change
   let netEl = document.getElementById('htxNet');
   if (!netEl && window.SamsamWallets) { netEl = document.createElement('button'); netEl.type = 'button'; netEl.id = 'htxNet'; netEl.className = 'htx-net'; h24.insertAdjacentElement('afterend', netEl); }
-  if (netEl && MT) {   // 🥇 gold / silver: where it is kept (no network) and its zakat
-    const v = SamsamCoins.vaultOf(doc), z = SamsamCoins.zakat(sym, st);
-    netEl.innerHTML = '<span>' + (v ? v.e + ' ' + SamsamCoins.esc(v.label) : '🏦 Set where it is kept') + '</span>' +
-      (z ? '<span class="htx-zk"> · 🕌 ' + (z.due ? 'Zakat due: ' + qtyFmt(z.zakatOz) + ' g ≈ ' + usd(z.zakatOz * price) : z.meets ? 'Zakat on ' + SamsamCoins.zakatDayLabel(false) + ', in ' + z.daysLeft + ' days' : 'Below nisab (' + z.nisab + ' g)') + '</span>' : '');
+  if (netEl && MT) {   // 🥇 a metal: where it is kept (no network). Its zakat is in the one pool — the 🕌 line on Overview — not here
+    const v = SamsamCoins.vaultOf(doc);
+    netEl.innerHTML = '<span>' + (v ? v.e + ' ' + SamsamCoins.esc(v.label) : '🏦 Set where it is kept') + '</span>';
     netEl.classList.toggle('htx-net-empty', !v); netEl.title = 'Where it is kept — tap to change'; netEl.onclick = () => CPAdd.openVault(sym);
   } else if (netEl) {
     const nt = SamsamWallets.placeText(sym);

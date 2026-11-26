@@ -194,7 +194,7 @@ export function viewPortfolio(t, cfg, sum, m, now) {
   L.push('', `🎯 ${t.sigT} 🟢 ${sum.counts.reinforce} · 🔴 ${sum.counts.sell} · ⚪ ${sum.counts.hold}`);
   if (sum.plan.length) L.push(`📋 ${t.planS} <b>${sum.prog.pct.toFixed(1)}%</b> · ${isAr(t) ? `${sum.prog.completed} من ${sum.prog.counted}` : `${sum.prog.completed}/${sum.prog.counted}`} ✅`);
   if (sum.alloc) L.push(`⚖️ ${t.allocS} ${t.onT(sum.alloc.onTarget, sum.alloc.count)}`);
-  if ((sum.dca || []).length) L.push(`🛒 ${isAr(t) ? '' : 'DCA '}${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
+  if ((sum.dca || []).length) L.push(`🛒 ${isAr(t) ? '' : 'DCA '}${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + (x.usdMo || 0), 0)))}`);
   const mc = sum.macro.filter(x => x.met).length, tp = nearestTp(sum);
   L.push(`🚪 ${t.exitS(mc)}${tp ? ` · ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ''}`);
   return { text: L.join('\n'), buttons: [[cb(t.refresh, 'pf'), cb(t.movers, 'mv')], [cb(t.plan, 'pl'), cb(t.exit, 'ex')], [cb(t.signals, 'sg'), webApp(t.openApp)], [cb(t.back, 'menu')]] };

@@ -282,7 +282,7 @@
 
   function coinHtml(e, idx) {
     var pc = coinOf(e.sym), cfg = cfgNow(), r = calc.coin(e, pc, st.transactions, cfg), sym = E(e.sym);
-    var asset = SamsamCoins.assetCell(e.sym, { logoUrl: (pc && pc.logoUrl) || '', cgId: (pc && pc.cgId) || e.cgId || '', name: pc && pc.name, price: r.price, change24h: pc && pc.change24h });
+    var asset = SamsamCoins.assetCell(e.sym, { logoUrl: (pc && pc.logoUrl) || '', cgId: (pc && pc.cgId) || e.cgId || '', name: pc && pc.name, price: r.price, change24h: pc && pc.change24h, perOz: true });   // (this page's amounts and levels are still per troy ounce for a metal)
     var steps = r.steps.map(function (s) {
       return '<div class="xt ' + s.status + (s.part ? ' part' : '') + '">' +
         '<div class="xt-top"><span class="xt-nm"><b>' + s.name + '</b>' + stepTag(s, idx) + '</span>' + badge(s) + '</div>' +

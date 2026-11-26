@@ -1663,6 +1663,17 @@ if (process.env.DUMP_TEXTS) fs.writeFileSync(process.env.DUMP_TEXTS, JSON.string
   const s = summarize({ coins: [{ sym: 'SOL', cgId: 'solana', opening: { qty: 2, avg: 80 } }], txs: [],
     accum: [{ sym: 'SOL', targetQty: 10 }, { sym: 'CASH-EGP', kind: 'cash', targetQty: 500000 }, { sym: 'XAU', cls: 'metal', targetQty: 100 / GPO }, { sym: 'NVDAB', cls: 'stock', cgId: 'nvidia-bstocks', targetQty: 20 }],
     meta: { cash: [{ id: 'a', kind: 'cash', cur: 'EGP', amount: 200000, label: 'Bank' }, { id: 'b', kind: 'cash', cur: 'EGP', amount: 50000, label: 'Wallet' }, { id: 'c', kind: 'cash', cur: 'USD', amount: 9999, label: 'USD' }] } }, mk, Date.now());
+  { // 🛒 the month's regular buys in /portfolio: dollars — a saving in EGP at the official rate, never its number as dollars
+    const d = summarize({ coins: [{ sym: 'SOL', cgId: 'solana', opening: { qty: 2, avg: 80 } }], txs: [], meta: {},
+      accum: [{ sym: 'SOL', targetQty: 10, dca: { usd: 100, every: 'month', day: 1, since: '2026-01-01' } }, { sym: 'CASH-EGP', targetQty: 500000, dca: { usd: 5000, every: 'month', day: 1, since: '2026-01-01' } }] }, { ...mk, fx: { EGP: { rate: 50 } } }, Date.now());
+    check('…summarize: SOL $100 a month, the saving 5,000 EGP = $100 a month', d.dca.length === 2 && d.dca.find(x => x.sym === 'CASH-EGP').usdMo === 100 && d.dca.find(x => x.sym === 'SOL').usdMo === 100, d.dca.map(x => [x.sym, x.s.perMonth, x.usdMo]));
+    const total = d.dca.reduce((a, x) => a + (x.usdMo || 0), 0);
+    check('…the month\'s total is $200 (not $5,100) — and /portfolio\'s line adds the dollars (usdMo), in the built Worker too', total === 200 && /sum\.dca\.reduce\(\(a, x\) => a \+ \(x\.usdMo \|\| 0\), 0\)/.test(built) && !/a \+ x\.s\.perMonth/.test(built), total);
+    const { todo } = await import('../tools/worker/daily.mjs');
+    const td = todo({ ...d, dca: d.dca.map(x => ({ ...x, s: { ...x.s, state: 'today' } })) }, Date.now());
+    const eg = td.find(x => x.coin === 'CASH-EGP'), so = td.find(x => x.coin === 'SOL' && x.what === 'dca_today');
+    check('…the morning\'s facts: a saving is "5000 EGP" (save_amount + currency), a coin stays buy_usd', eg && eg.save_amount === 5000 && eg.currency === 'EGP' && eg.buy_usd === undefined && so && so.buy_usd === 100, [eg, so]);
+  }
   const by = Object.fromEntries(s.plan.map(p => [p.sym, p]));
   check('🎯 plan: a savings goal (CASH-EGP) counts the cash in EGP only — 250,000 of 500,000', by['CASH-EGP'] && by['CASH-EGP'].kind === 'cash' && by['CASH-EGP'].actual === 250000, by['CASH-EGP']);
   check('…kinds: coin · cash · metal · stock', [by.SOL.kind, by['CASH-EGP'].kind, by.XAU.kind, by.NVDAB.kind].join() === 'coin,cash,metal,stock', s.plan.map(p => p.kind));

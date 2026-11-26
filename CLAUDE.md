@@ -76,20 +76,27 @@ Checked and fine: Total Portfolio, profit, Net worth by part and zakat are the s
 Fixed then: charts after a reload were not redrawn when the saved prices arrived after the shared files (`samsam-history.js`;
 `hist_test.py` now checks it).
 
-Found, waiting for Samir's "نفذ" (nothing below is fixed yet):
-1. Members get none of the automatic alerts (buy-price, DCA day, take-profit, signal change, weekly report): `evaluate`
-   runs only in `tools/alerts.mjs` on GitHub, for the owner. The Plan's Price Alert hint and the guide promise them to everyone.
-2. Bot `/portfolio`: the DCA line adds a saving in EGP / SAR as dollars (`bot.mjs`, `x.s.perMonth` → use `usdMo`).
-3. A gold / silver coin page still has its own zakat line (85 g / 595 g, ounces labelled "g", half English in Arabic);
-   Market Hub → Metals says the same. The rule is one pool.
-4. A metal's price on the cards / table is per troy ounce with no unit, next to its average per gram.
-5. Zakat: with no visit in the 30 days after the day and no bot, the year is never kept, so it is not "due until ✓ Paid".
-6. `portfolio.html` is an old copy of the main page (17 Nov), still published and in `sw.js`.
-7. The app guide's Overview part still describes the old date line; Signals does not mention Smart or the daily close.
-8. Smaller: bot `/signals` counts metals and shares under Hold; `core.test.mjs` and `alerts_reads_test.mjs` never run on
+Fixed after the review (26 Nov, his "نفذ"):
+- Bot `/portfolio`: the month's DCA total adds dollars (`usdMo`); the morning's facts give a saving in its own currency.
+- Metals: no zakat line of their own anywhere (`SamsamCoins.zakat` is gone; one pool); the price beside a metal's name is
+  per gram (`assetText`; `perOz: true` keeps the ounce on the Exit page, which is still in ounces for a metal).
+- Zakat: a day that passed with nobody there to keep its pool stays open (`zakatYear` → `late`, today's value until kept),
+  only for an account that already existed that day (`firstSeen` = its first `coin.addedAt`, never a transaction's date).
+- `portfolio.html` is a redirect to `index.html` (out of `sw.js`).
+- App guide: Overview (three market cards + the moving line), Signals (Smart check, daily close).
+- Members and alerts (his decision: fix the words now, the Worker later): the Price Alert hint and the app guide no longer
+  promise a member a message at the moment — they say "Hit" on the row, the bot's morning message, or an alert in words.
+
+Still open:
+1. Automatic alerts for members from the Worker (buy-price, DCA day, take-profit, signal change, weekly report): a phase
+   of its own, to plan with Samir first. Today `evaluate` runs only in `tools/alerts.mjs` on GitHub, for the owner.
+2. The bot guide (`guide.json`, "Daily messages and radars") still says a take-profit and the day's signals "come at once".
+   Editing `guide.json` posts "New in the guide" in the channel and messages the members — ask Samir before changing it.
+3. The Exit page shows a metal in troy ounces (amounts, average, levels).
+4. Smaller: bot `/signals` counts metals and shares under Hold; `core.test.mjs` and `alerts_reads_test.mjs` never run on
    GitHub; "9-month high / low" untranslated; `manifest.json` description; the welcome page's goal says "managing";
    the bot's AI names alternative.me as a source; the PDF's zakat line has no "estimate" note; 14 unused functions.
-9. `hv_chart_test.py` ("24h range") fails about one run in four locally and passes on the retry — not looked into yet.
+5. `hv_chart_test.py` ("24h range") fails about one run in four locally and passes on the retry — not looked into yet.
 
 Samir has not yet confirmed on his phone that the Net worth card looks the same on Overview and Allocation.
 

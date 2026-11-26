@@ -700,7 +700,7 @@ export function cashTotals(list, fx, now = Date.now()) {
 // signals, zakat) and the Telegram bot / GitHub alerts too, so they always agree ──
 //   crypto · a coin (the default)                         → its own Signal; an altcoin unless it is BTC
 //   stock  · a tokenized US share (Binance bStocks)       → held; no Signal; zakat by your choice (meta/info.zakatStocks)
-//   metal  · physical gold / silver, kept in grams (XAU, XAG) → held; no Signal; zakat on its own nisab (85 g / 595 g)
+//   metal  · physical gold / silver / platinum / copper, shown in grams → held; no Signal; in the one zakat pool at market value
 //   cash   · bank balances and certificates (meta/info.cash, never a coin) → Net worth only; always in zakat
 // Gold TOKENS (PAXG, XAUT, KAG) are coins: they trade like any token (their category is still Precious Metals).
 // Nothing is migrated: a holding's class comes from what it already is — XAU / XAG, a CoinGecko id with "bstock(s)" in it —
@@ -725,8 +725,7 @@ export function assetClass(x) {
 }
 export const hasSignal = x => assetClass(x) === 'crypto' && String((x && typeof x === 'object' ? x.sym : x) || '').toUpperCase() !== 'BTC';
 export const isAltcoin = hasSignal;   // "Altcoins": every coin but BTC — no shares, no metals
-// 🕌 the money pool zakat counts against the nisab of 85 g of gold: coins (stablecoins too), shares when you count them,
-// and cash & certificates (in dollars). rows: [{ sym, cgId?, cls?, value }] — gold and silver are not in it (their own nisab).
+// 🕌 the pool zakat counts against the nisab of 85 g of gold. rows: [{ sym, cgId?, cls?, value }]
 // One pool for everything (Samir's rule, Nov 2026): coins + metals (gold, silver, platinum, copper at market value) + cash &
 // certificates + shares when you count them — against ONE nisab, the value of 85 g of gold on your zakat day. (Joining gold and
 // silver to money to complete the nisab is the majority view; the Shafi'is keep them apart — the hint says so.)
@@ -747,6 +746,13 @@ export function cleanZakatPaid(list) {
   }
   return [...by.values()].sort((a, b) => a.hy - b.hy).slice(-30);
 }
+// When the account began in the app (ms; 0 = unknown): the day its first coin was added HERE (coin.addedAt) — never a
+// transaction's date, which can be typed or imported from years before the account existed.
+export function firstSeen(coins) {
+  let t = Infinity;
+  for (const c of coins || []) { const x = Date.parse((c && c.addedAt) || ''); if (x > 0 && x < t) t = x; }
+  return Number.isFinite(t) ? t : 0;
+}
 // Where your zakat year stands — the app's line and the bot agree on it.
 //   w = zakatWhen(…) · now = { value, nisabUsd } today's pool · snap = the pool kept on the last zakat day ({ hy, value, nisabUsd })
 //   paid = cleanZakatPaid list
@@ -754,13 +760,17 @@ export function cleanZakatPaid(list) {
 // tap ✓ Paid; paying late never moves the next zakat day.
 //   state: 'due' (pay this) · 'paid' (this year's is paid) · 'below' (the day's pool was under the nisab) · 'upcoming' / 'under'
 //   (no open year: today's estimate for the next day reaches / misses the nisab)
-export function zakatYear(w, now, snap, paid) {
+// o.since = when the account began in the app (firstSeen). The day passed with nobody there to keep its pool (no visit
+// in its month, no bot): the year is still open — `late`, counted at today's value until it is kept (the app and the bot
+// keep it at once) — but only when the account already existed on that day (a new member owes nothing for a day before them).
+export function zakatYear(w, now, snap, paid, o = {}) {
   if (!w) return null;
   const P = cleanZakatPaid(paid), rec = P.find(p => p.hy === w.hy) || null;
   const fixed = !!(snap && +snap.hy === w.hy && +snap.value >= 0 && +snap.nisabUsd > 0);
-  const day = fixed ? { value: +snap.value, nisabUsd: +snap.nisabUsd } : (w.due ? now : null);   // the day's pool (or today's, still in its month)
+  const late = !fixed && !w.due && !rec && +(o && o.since) > 0 && +o.since <= w.last;
+  const day = fixed ? { value: +snap.value, nisabUsd: +snap.nisabUsd } : (w.due || late ? now : null);   // the day's pool (or today's: still in its month, or never kept)
   const est = { value: +now.value || 0, nisabUsd: +now.nisabUsd || 0 }, nextMeets = est.nisabUsd > 0 && est.value >= est.nisabUsd;
-  const base = { fixed, hy: w.hy, nextHy: w.nextHy, daysLeft: w.daysLeft, nextDate: w.nextDate, lastDate: w.lastDate, since: w.since, paid: rec, history: P };
+  const base = { fixed, late, hy: w.hy, nextHy: w.nextHy, daysLeft: w.daysLeft, nextDate: w.nextDate, lastDate: w.lastDate, since: w.since, paid: rec, history: P };
   if (day && day.nisabUsd > 0) {
     if (rec) return { ...base, state: 'paid', value: day.value, nisabUsd: day.nisabUsd, zakatUsd: rec.zakat || day.value * 0.025 };
     if (day.value >= day.nisabUsd) return { ...base, state: 'due', value: day.value, nisabUsd: day.nisabUsd, zakatUsd: day.value * 0.025 };

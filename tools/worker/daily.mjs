@@ -20,7 +20,7 @@ import { K, chatOf, isOwner, langOf, member, setMember } from './who.mjs';
 import { premiumNow } from './stars.mjs';
 import { summarize, settings, local, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures, setAlertsLang, setZakatSnap } from './data.mjs';
-import { zakatWhen, zakatYear, HIJRI_MONTHS, zakatPool, cashTotals, learnAssets } from '../../samsam-core.js';
+import { zakatWhen, zakatYear, HIJRI_MONTHS, zakatPool, cashTotals, learnAssets, firstSeen } from '../../samsam-core.js';
 import { compose } from './ai.mjs';
 import { listAlerts, describe, KINDS, logEvent, todayLog } from './watch.mjs';
 
@@ -99,9 +99,10 @@ export function todo(sum, now) {
   const out = [], add = (prio, o) => out.push({ prio, ...o });
   const tomorrow = localParts(now + DAY).date;
   for (const x of sum.dca || []) {
-    if (x.s.state === 'today') add(100, { what: 'dca_today', coin: x.sym, buy_usd: r2(x.s.usd) });
-    else if (x.s.state === 'missed') add(90, { what: 'dca_missed', coin: x.sym, buy_usd: r2(x.s.usd), days_late: x.s.late });
-    else if (x.s.next === tomorrow) add(20, { what: 'dca_tomorrow', coin: x.sym, buy_usd: r2(x.s.usd) });
+    const amt = x.s.cur && x.s.cur !== 'USD' ? { save_amount: r2(x.s.usd), currency: x.s.cur } : { buy_usd: r2(x.s.usd) };   // a saving: its own currency (5,000 EGP), never dollars
+    if (x.s.state === 'today') add(100, { what: 'dca_today', coin: x.sym, ...amt });
+    else if (x.s.state === 'missed') add(90, { what: 'dca_missed', coin: x.sym, ...amt, days_late: x.s.late });
+    else if (x.s.next === tomorrow) add(20, { what: 'dca_tomorrow', coin: x.sym, ...amt });
   }
   for (const x of sum.buyAt || []) {
     const away = (x.price / x.at - 1) * 100;
@@ -175,13 +176,14 @@ export async function evening(env, now = Date.now(), L = null) {
   return send(env, { text: head + '\n\n' + body + '\n\n' + NOT_ADVICE[L === 'ar' ? 'ar' : 'en'], buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk')]] });
 }
 // when Claude can't write it: the facts, plainly
+const dcaTxt = x => x.currency ? `${Math.round(+x.save_amount || 0).toLocaleString('en-US')} ${x.currency}` : usd(x.buy_usd);   // a saving in its own currency
 const TODO_TXT = {
-  en: x => ({ dca_today: `🛒 DCA day: buy ${usd(x.buy_usd)} of ${x.coin}`, dca_missed: `⏰ DCA ${x.coin} ${x.days_late} days late (${usd(x.buy_usd)})`, dca_tomorrow: `🛒 Tomorrow: DCA ${x.coin} ${usd(x.buy_usd)}`,
+  en: x => ({ dca_today: `🛒 DCA day: buy ${dcaTxt(x)} of ${x.coin}`, dca_missed: `⏰ DCA ${x.coin} ${x.days_late} days late (${dcaTxt(x)})`, dca_tomorrow: `🛒 Tomorrow: DCA ${x.coin} ${dcaTxt(x)}`,
     at_buy_price: `🎯 ${x.coin} ${usd(x.price_usd)} — at your buy price ${usd(x.your_buy_price_usd)}`, near_buy_price: `🎯 ${x.coin} ${pct(x.pct_above_buy_price, 1)} above your buy price ${usd(x.your_buy_price_usd)}`,
     take_profit_reached: `💰 ${x.coin} reached TP${x.tp} ${usd(x.level_usd)} — sell ${x.sell_pct}%`, take_profit_close: `💰 ${x.coin} ${r2(x.pct_to_go)}% from TP${x.tp} ${usd(x.level_usd)}`,
     exit_conditions: `🚪 Exit: ${x.met_of_3}/3 conditions met`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — trim ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — add ${usd(x.usd_to_fix)}`,
     reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg — Reinforce`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg — Sell / convert` }[x.what]),
-  ar: x => ({ dca_today: `🛒 يوم الشراء الدوري (DCA): اشترِ ${x.coin} بـ ${usd(x.buy_usd)}`, dca_missed: `⏰ DCA ${x.coin} متأخر ${x.days_late} يوم (${usd(x.buy_usd)})`, dca_tomorrow: `🛒 غداً: DCA ${x.coin} ${usd(x.buy_usd)}`,
+  ar: x => ({ dca_today: `🛒 يوم الشراء الدوري (DCA): اشترِ ${x.coin} بـ ${dcaTxt(x)}`, dca_missed: `⏰ DCA ${x.coin} متأخر ${x.days_late} يوم (${dcaTxt(x)})`, dca_tomorrow: `🛒 غداً: DCA ${x.coin} ${dcaTxt(x)}`,
     at_buy_price: `🎯 ${x.coin} ${usd(x.price_usd)} — وصل إلى سعر الشراء الذي حددته ${usd(x.your_buy_price_usd)}`, near_buy_price: `🎯 ${x.coin} فوق سعر الشراء ${usd(x.your_buy_price_usd)} بـ ${pct(x.pct_above_buy_price, 1)}`,
     take_profit_reached: `💰 ${x.coin} وصل TP${x.tp} ${usd(x.level_usd)} — بيع ${x.sell_pct}%`, take_profit_close: `💰 ${x.coin} باقي ${r2(x.pct_to_go)}% على TP${x.tp} ${usd(x.level_usd)}`,
     exit_conditions: `🚪 الخروج: ${x.met_of_3}/3 مؤشرات تحققت`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — قلّل ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — زوّد ${usd(x.usd_to_fix)}`,
@@ -380,8 +382,8 @@ export async function radarDigest(env, now = Date.now(), slot = '') {
 }
 
 // ── 🕌 zakat: your zakat day (a hijri day you chose in the app; 1 Ramadan when not set) — a reminder a week before, and
-// on the day itself the amounts: all the crypto together against the value of 85 g of gold, gold (85 g), silver (595 g).
-// The day's crypto value is kept in your settings, so the app shows the same amount all month. Once each, per hijri year. ──
+// on the day itself the amount: ONE pool (crypto + metals + cash, shares if counted) against the value of 85 g of gold.
+// The day's pool is kept in your settings, so the app shows the same amount all month. Once each, per hijri year. ──
 const GPO = 31.1034768;
 export function zakatFacts(user, m, now) {
   const w = zakatWhen(now, user && user.meta && user.meta.zakatDay); if (!w || !user || !m) return null;
@@ -397,7 +399,7 @@ export function zakatFacts(user, m, now) {
   const crypto = pool.value;
   const nisabUsd = goldOz > 0 ? 85 / GPO * goldOz : 0;
   // where the year stands, as the app shows it (samsam-core.js → zakatYear): the day's kept pool, and ✓ Paid
-  const y = zakatYear(w, { value: crypto, nisabUsd }, (user.meta || {}).zakat, (user.meta || {}).zakatPaid);
+  const y = zakatYear(w, { value: crypto, nisabUsd }, (user.meta || {}).zakat, (user.meta || {}).zakatPaid, { since: firstSeen(user.coins) });
   return { w, y, crypto, pool, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto >= nisabUsd, cryptoZakat: crypto * 0.025 };
 }
 // 🔐 the encrypted backup file: a reminder when the last one is over 30 days old — or was never made and the portfolio is
@@ -448,7 +450,7 @@ export async function zakatAlert(env, now = Date.now()) {
     if (kind === 'day' && f.cryptoMeets) lines.push('', ar ? 'بعد الدفع اضغط «✓ دفعت» في التطبيق.' : 'Once paid, tap "✓ Paid" in the app.');
   }
   lines.push('', `<i>${ar ? 'تقدير حسابي وليس فتوى — راجع أهل العلم. وعاء واحد: الكريبتو والمعادن والنقد (والأسهم إن اخترت) مقابل نصاب 85 جم ذهب. يوم الزكاة يُغيَّر من علامة ✎ في التطبيق.' : 'An estimate, not a ruling — check with a scholar. One pool: crypto, metals and cash (and shares if you chose) against a nisab of 85 g of gold. Change your zakat day with the ✎ in the app.'}</i>`);
-  if (kind === 'day' && f.nisabUsd > 0) await setZakatSnap(env, { hy: f.w.hy, value: Math.round(f.crypto * 100) / 100, nisabUsd: Math.round(f.nisabUsd * 100) / 100, date: f.w.lastDate, at: new Date(now).toISOString() });
+  if ((kind === 'day' || (f.y && f.y.late)) && f.nisabUsd > 0) await setZakatSnap(env, { hy: f.w.hy, value: Math.round(f.crypto * 100) / 100, nisabUsd: Math.round(f.nisabUsd * 100) / 100, date: f.w.lastDate, at: new Date(now).toISOString() });
   const r = await send(env, { text: lines.join('\n'), buttons: [[{ text: WD[L].report, web_app: { url: APP + 'index.html' } }]] });
   if (r && r.ok) { had[key] = 1; for (const k of Object.keys(had)) if (+k.split(':')[0] < f.w.hy - 1) delete had[k]; await jput(env, K(env, 'zakat:sent'), had); }
   return { sent: r && r.ok ? 1 : 0, kind };

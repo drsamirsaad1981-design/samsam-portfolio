@@ -24,4 +24,22 @@ const on = C.zakatPool(rows, { cashUsd: 4000 }), off = C.zakatPool(rows, { cashU
 check('zakat pool: coins (stablecoins too) + shares + cash', on.value === 9500 && on.crypto === 3500 && on.stock === 2000 && on.cash === 4000 && on.stocksCounted === true, on);
 check('…shares switched off → left out (the rest stays)', off.value === 7500 && off.stocksCounted === false, off);
 check('…metals are in the one pool (gold, platinum… at market value)', C.zakatPool([{ sym: 'XAU', value: 9000 }, { sym: 'XPT', value: 1000 }]).value === 10000 && C.zakatPool([{ sym: 'XAU', value: 9000 }]).metal === 9000);
+// 🕌 the zakat year stays open when nobody was there on the day (no visit in its month, no bot) — for an account that existed then
+{
+  const now = Date.now(), DAY = 864e5, d = C.hijri(now - 45 * DAY);
+  if (d) {
+    const w = C.zakatWhen(now, { m: d.month, d: d.day }), N = { value: 100000, nisabUsd: 10000 }, old = { since: now - 200 * DAY };
+    check('45 days after the zakat day, outside its month', w.since === 45 && !w.due, w);
+    const a = C.zakatYear(w, N, null, [], old);
+    check('…nobody kept the day\'s pool, the account existed then → still DUE (late), at today\'s value', a.state === 'due' && a.late && !a.fixed && a.hy === w.hy && a.zakatUsd === 2500, a);
+    check('…an account that began after that day owes nothing for it', C.zakatYear(w, N, null, [], { since: now - 10 * DAY }).state === 'upcoming' && !C.zakatYear(w, N, null, [], { since: now - 10 * DAY }).late);
+    check('…when the account\'s age is unknown: as before, no open year', C.zakatYear(w, N, null, []).state === 'upcoming');
+    const b = C.zakatYear(w, { value: 5000, nisabUsd: 10000 }, null, [], old);
+    check('…below the nisab today → nothing due, still marked late (so the pool is kept once and the year settles)', b.state === 'under' && b.late, b);
+    check('…once kept below the nisab, the year is closed: no later "due" when prices rise', C.zakatYear(w, N, { hy: w.hy, value: 5000, nisabUsd: 10000 }, [], old).state === 'upcoming' && !C.zakatYear(w, N, { hy: w.hy, value: 5000, nisabUsd: 10000 }, [], old).late);
+    check('…once kept above it: due on the kept value, not today\'s', C.zakatYear(w, N, { hy: w.hy, value: 80000, nisabUsd: 10000 }, [], old).zakatUsd === 2000);
+    check('…paid → not late', !C.zakatYear(w, N, null, [{ hy: w.hy, value: 100000, nisabUsd: 10000, zakat: 2500, paid: 2500 }], old).late);
+  }
+  check('the account began the day its first coin was added in the app (not a transaction\'s date)', C.firstSeen([{ sym: 'A', addedAt: '2026-10-15T08:00:00Z' }, { sym: 'B', addedAt: '2026-11-01T00:00:00Z' }, { sym: 'C' }]) === Date.parse('2026-10-15T08:00:00Z') && C.firstSeen([{ sym: 'C' }]) === 0 && C.firstSeen(null) === 0);
+}
 console.log(`${pass}/${pass + fail} passed`); process.exit(fail ? 1 : 0);

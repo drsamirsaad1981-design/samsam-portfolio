@@ -332,8 +332,8 @@ function renderZakatLine(portfolio) {
   const st = Samsam.getState(), snap = Samsam.getZakat ? Samsam.getZakat() : null, z = gold > 0 ? SamsamCoins.zakatCrypto(st, gold, Date.now(), snap, { cashUsd, stocks: zStocks }) : null;
   zkNow = z;
   if (!z || !(z.today > 0 || z.value > 0)) { el.hidden = true; el.classList.remove('zk-due'); return; }
-  if (z.inWindow && !z.fixed && !zkSaving && Samsam.setZakat && portfolio.every(c => c.qty <= 0 || c.currentPrice > 0)) {   // your zakat day (or the first visit in its month): keep that day's pool
-    zkSaving = true; Samsam.setZakat({ hy: z.hy, value: z.today, nisabUsd: z.todayNisab, date: new Date().toISOString().slice(0, 10) }).catch(() => { zkSaving = false; });
+  if ((z.inWindow || z.late) && !z.fixed && !zkSaving && Samsam.setZakat && portfolio.every(c => c.qty <= 0 || c.currentPrice > 0)) {   // your zakat day (or the first visit after it — in its month, or later when nobody kept it): keep the pool
+    zkSaving = true; Samsam.setZakat({ hy: z.yearHy || z.hy, value: z.today, nisabUsd: z.todayNisab, date: new Date().toISOString().slice(0, 10) }).catch(() => { zkSaving = false; });
   }
   // what is in the pool, by name and amount: crypto · metals · shares · cash
   const P = z.pool || {}, fmtUsd = n => SamsamFmt.usd(n), iso = x => '⁦' + x + '⁩';

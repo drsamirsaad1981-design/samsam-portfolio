@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: c2a29b9c819244ba
+// sources-hash: 6c63d815f85d9928
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -769,13 +769,22 @@ function cleanZakatPaid(list3) {
   }
   return [...by.values()].sort((a, b) => a.hy - b.hy).slice(-30);
 }
-function zakatYear(w, now, snap, paid2) {
+function firstSeen(coins) {
+  let t = Infinity;
+  for (const c of coins || []) {
+    const x = Date.parse(c && c.addedAt || "");
+    if (x > 0 && x < t) t = x;
+  }
+  return Number.isFinite(t) ? t : 0;
+}
+function zakatYear(w, now, snap, paid2, o = {}) {
   if (!w) return null;
   const P2 = cleanZakatPaid(paid2), rec = P2.find((p) => p.hy === w.hy) || null;
   const fixed = !!(snap && +snap.hy === w.hy && +snap.value >= 0 && +snap.nisabUsd > 0);
-  const day3 = fixed ? { value: +snap.value, nisabUsd: +snap.nisabUsd } : w.due ? now : null;
+  const late = !fixed && !w.due && !rec && +(o && o.since) > 0 && +o.since <= w.last;
+  const day3 = fixed ? { value: +snap.value, nisabUsd: +snap.nisabUsd } : w.due || late ? now : null;
   const est = { value: +now.value || 0, nisabUsd: +now.nisabUsd || 0 }, nextMeets = est.nisabUsd > 0 && est.value >= est.nisabUsd;
-  const base = { fixed, hy: w.hy, nextHy: w.nextHy, daysLeft: w.daysLeft, nextDate: w.nextDate, lastDate: w.lastDate, since: w.since, paid: rec, history: P2 };
+  const base = { fixed, late, hy: w.hy, nextHy: w.nextHy, daysLeft: w.daysLeft, nextDate: w.nextDate, lastDate: w.lastDate, since: w.since, paid: rec, history: P2 };
   if (day3 && day3.nisabUsd > 0) {
     if (rec) return { ...base, state: "paid", value: day3.value, nisabUsd: day3.nisabUsd, zakatUsd: rec.zakat || day3.value * 0.025 };
     if (day3.value >= day3.nisabUsd) return { ...base, state: "due", value: day3.value, nisabUsd: day3.nisabUsd, zakatUsd: day3.value * 0.025 };
@@ -4649,9 +4658,10 @@ function todo(sum, now) {
   const out = [], add = (prio, o) => out.push({ prio, ...o });
   const tomorrow = localParts(now + DAY5).date;
   for (const x of sum.dca || []) {
-    if (x.s.state === "today") add(100, { what: "dca_today", coin: x.sym, buy_usd: r24(x.s.usd) });
-    else if (x.s.state === "missed") add(90, { what: "dca_missed", coin: x.sym, buy_usd: r24(x.s.usd), days_late: x.s.late });
-    else if (x.s.next === tomorrow) add(20, { what: "dca_tomorrow", coin: x.sym, buy_usd: r24(x.s.usd) });
+    const amt3 = x.s.cur && x.s.cur !== "USD" ? { save_amount: r24(x.s.usd), currency: x.s.cur } : { buy_usd: r24(x.s.usd) };
+    if (x.s.state === "today") add(100, { what: "dca_today", coin: x.sym, ...amt3 });
+    else if (x.s.state === "missed") add(90, { what: "dca_missed", coin: x.sym, ...amt3, days_late: x.s.late });
+    else if (x.s.next === tomorrow) add(20, { what: "dca_tomorrow", coin: x.sym, ...amt3 });
   }
   for (const x of sum.buyAt || []) {
     const away = (x.price / x.at - 1) * 100;
@@ -4745,11 +4755,12 @@ async function evening(env, now = Date.now(), L = null) {
   const head = `\u{1F319} <b>${w.evening}</b> \xB7 ${esc(local(now, { weekday: "short", day: "numeric", month: "short" }))}`;
   return send(env, { text: head + "\n\n" + body + "\n\n" + NOT_ADVICE[L === "ar" ? "ar" : "en"], buttons: [[cb2(w.pf, "pf"), cb2(w.mk, "mk")]] });
 }
+var dcaTxt = (x) => x.currency ? `${Math.round(+x.save_amount || 0).toLocaleString("en-US")} ${x.currency}` : usd(x.buy_usd);
 var TODO_TXT = {
   en: (x) => ({
-    dca_today: `\u{1F6D2} DCA day: buy ${usd(x.buy_usd)} of ${x.coin}`,
-    dca_missed: `\u23F0 DCA ${x.coin} ${x.days_late} days late (${usd(x.buy_usd)})`,
-    dca_tomorrow: `\u{1F6D2} Tomorrow: DCA ${x.coin} ${usd(x.buy_usd)}`,
+    dca_today: `\u{1F6D2} DCA day: buy ${dcaTxt(x)} of ${x.coin}`,
+    dca_missed: `\u23F0 DCA ${x.coin} ${x.days_late} days late (${dcaTxt(x)})`,
+    dca_tomorrow: `\u{1F6D2} Tomorrow: DCA ${x.coin} ${dcaTxt(x)}`,
     at_buy_price: `\u{1F3AF} ${x.coin} ${usd(x.price_usd)} \u2014 at your buy price ${usd(x.your_buy_price_usd)}`,
     near_buy_price: `\u{1F3AF} ${x.coin} ${pct(x.pct_above_buy_price, 1)} above your buy price ${usd(x.your_buy_price_usd)}`,
     take_profit_reached: `\u{1F4B0} ${x.coin} reached TP${x.tp} ${usd(x.level_usd)} \u2014 sell ${x.sell_pct}%`,
@@ -4761,9 +4772,9 @@ var TODO_TXT = {
     sell_signal: `\u{1F534} ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg \u2014 Sell / convert`
   })[x.what],
   ar: (x) => ({
-    dca_today: `\u{1F6D2} \u064A\u0648\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A (DCA): \u0627\u0634\u062A\u0631\u0650 ${x.coin} \u0628\u0640 ${usd(x.buy_usd)}`,
-    dca_missed: `\u23F0 DCA ${x.coin} \u0645\u062A\u0623\u062E\u0631 ${x.days_late} \u064A\u0648\u0645 (${usd(x.buy_usd)})`,
-    dca_tomorrow: `\u{1F6D2} \u063A\u062F\u0627\u064B: DCA ${x.coin} ${usd(x.buy_usd)}`,
+    dca_today: `\u{1F6D2} \u064A\u0648\u0645 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u062F\u0648\u0631\u064A (DCA): \u0627\u0634\u062A\u0631\u0650 ${x.coin} \u0628\u0640 ${dcaTxt(x)}`,
+    dca_missed: `\u23F0 DCA ${x.coin} \u0645\u062A\u0623\u062E\u0631 ${x.days_late} \u064A\u0648\u0645 (${dcaTxt(x)})`,
+    dca_tomorrow: `\u{1F6D2} \u063A\u062F\u0627\u064B: DCA ${x.coin} ${dcaTxt(x)}`,
     at_buy_price: `\u{1F3AF} ${x.coin} ${usd(x.price_usd)} \u2014 \u0648\u0635\u0644 \u0625\u0644\u0649 \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 \u0627\u0644\u0630\u064A \u062D\u062F\u062F\u062A\u0647 ${usd(x.your_buy_price_usd)}`,
     near_buy_price: `\u{1F3AF} ${x.coin} \u0641\u0648\u0642 \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 ${usd(x.your_buy_price_usd)} \u0628\u0640 ${pct(x.pct_above_buy_price, 1)}`,
     take_profit_reached: `\u{1F4B0} ${x.coin} \u0648\u0635\u0644 TP${x.tp} ${usd(x.level_usd)} \u2014 \u0628\u064A\u0639 ${x.sell_pct}%`,
@@ -5051,7 +5062,7 @@ function zakatFacts(user, m, now) {
   const pool = zakatPool(rows, { cashUsd: cashTotals((user.meta || {}).cash, fx, now).usd, stocks: (user.meta || {}).zakatStocks !== false });
   const crypto2 = pool.value;
   const nisabUsd = goldOz > 0 ? 85 / GPO * goldOz : 0;
-  const y = zakatYear(w, { value: crypto2, nisabUsd }, (user.meta || {}).zakat, (user.meta || {}).zakatPaid);
+  const y = zakatYear(w, { value: crypto2, nisabUsd }, (user.meta || {}).zakat, (user.meta || {}).zakatPaid, { since: firstSeen(user.coins) });
   return { w, y, crypto: crypto2, pool, nisabUsd, cryptoMeets: nisabUsd > 0 && crypto2 >= nisabUsd, cryptoZakat: crypto2 * 0.025 };
 }
 async function backupReminder(env, now = Date.now()) {
@@ -5118,7 +5129,7 @@ async function zakatAlert(env, now = Date.now()) {
     if (kind === "day" && f.cryptoMeets) lines.push("", ar ? "\u0628\u0639\u062F \u0627\u0644\u062F\u0641\u0639 \u0627\u0636\u063A\u0637 \xAB\u2713 \u062F\u0641\u0639\u062A\xBB \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642." : 'Once paid, tap "\u2713 Paid" in the app.');
   }
   lines.push("", `<i>${ar ? "\u062A\u0642\u062F\u064A\u0631 \u062D\u0633\u0627\u0628\u064A \u0648\u0644\u064A\u0633 \u0641\u062A\u0648\u0649 \u2014 \u0631\u0627\u062C\u0639 \u0623\u0647\u0644 \u0627\u0644\u0639\u0644\u0645. \u0648\u0639\u0627\u0621 \u0648\u0627\u062D\u062F: \u0627\u0644\u0643\u0631\u064A\u0628\u062A\u0648 \u0648\u0627\u0644\u0645\u0639\u0627\u062F\u0646 \u0648\u0627\u0644\u0646\u0642\u062F (\u0648\u0627\u0644\u0623\u0633\u0647\u0645 \u0625\u0646 \u0627\u062E\u062A\u0631\u062A) \u0645\u0642\u0627\u0628\u0644 \u0646\u0635\u0627\u0628 85 \u062C\u0645 \u0630\u0647\u0628. \u064A\u0648\u0645 \u0627\u0644\u0632\u0643\u0627\u0629 \u064A\u064F\u063A\u064A\u064E\u0651\u0631 \u0645\u0646 \u0639\u0644\u0627\u0645\u0629 \u270E \u0641\u064A \u0627\u0644\u062A\u0637\u0628\u064A\u0642." : "An estimate, not a ruling \u2014 check with a scholar. One pool: crypto, metals and cash (and shares if you chose) against a nisab of 85 g of gold. Change your zakat day with the \u270E in the app."}</i>`);
-  if (kind === "day" && f.nisabUsd > 0) await setZakatSnap(env, { hy: f.w.hy, value: Math.round(f.crypto * 100) / 100, nisabUsd: Math.round(f.nisabUsd * 100) / 100, date: f.w.lastDate, at: new Date(now).toISOString() });
+  if ((kind === "day" || f.y && f.y.late) && f.nisabUsd > 0) await setZakatSnap(env, { hy: f.w.hy, value: Math.round(f.crypto * 100) / 100, nisabUsd: Math.round(f.nisabUsd * 100) / 100, date: f.w.lastDate, at: new Date(now).toISOString() });
   const r = await send(env, { text: lines.join("\n"), buttons: [[{ text: WD[L].report, web_app: { url: APP + "index.html" } }]] });
   if (r && r.ok) {
     had[key] = 1;
@@ -6680,7 +6691,7 @@ function viewPortfolio(t, cfg, sum, m, now) {
   L.push("", `\u{1F3AF} ${t.sigT} \u{1F7E2} ${sum.counts.reinforce} \xB7 \u{1F534} ${sum.counts.sell} \xB7 \u26AA ${sum.counts.hold}`);
   if (sum.plan.length) L.push(`\u{1F4CB} ${t.planS} <b>${sum.prog.pct.toFixed(1)}%</b> \xB7 ${isAr(t) ? `${sum.prog.completed} \u0645\u0646 ${sum.prog.counted}` : `${sum.prog.completed}/${sum.prog.counted}`} \u2705`);
   if (sum.alloc) L.push(`\u2696\uFE0F ${t.allocS} ${t.onT(sum.alloc.onTarget, sum.alloc.count)}`);
-  if ((sum.dca || []).length) L.push(`\u{1F6D2} ${isAr(t) ? "" : "DCA "}${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + x.s.perMonth, 0)))}`);
+  if ((sum.dca || []).length) L.push(`\u{1F6D2} ${isAr(t) ? "" : "DCA "}${t.dcaS(sum.dca.length, usd(sum.dca.reduce((a, x) => a + (x.usdMo || 0), 0)))}`);
   const mc = sum.macro.filter((x) => x.met).length, tp = nearestTp(sum);
   L.push(`\u{1F6AA} ${t.exitS(mc)}${tp ? ` \xB7 ${t.nearTp} ${esc(tp.sym)} +${tp.to.toFixed(0)}%` : ""}`);
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pf"), cb3(t.movers, "mv")], [cb3(t.plan, "pl"), cb3(t.exit, "ex")], [cb3(t.signals, "sg"), webApp(t.openApp)], [cb3(t.back, "menu")]] };
