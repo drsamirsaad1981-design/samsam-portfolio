@@ -163,6 +163,11 @@ Fifth round (27 Nov, his "ابدأ" with three decisions) — 🌈 the Bitcoin r
   numbers, the log chart since 2010 with hover, the table of bands, the cycles, the last moves). `market.html#rainbow`
   opens it (the alert's button). Nine band colours measured like the donut's (every pair ≥ 15, closest 15.6); a band is
   never told by colour alone (its number is on the strip, in the tooltip, in the table).
+- The first real file (GitHub, 26 Nov 23:55 UTC): the self-check passed (5,930 days, b 5.5943, a −16.1839); the week's
+  line b 5.5912, a −16.1738; close 25 Nov $60,458, the line $143,851, 58% under, **band 2 since 13 Nov** ($42,683–$70,481).
+  The highest band that held in each cycle: 2011: 9 · 2013: 9 · 2017: 8 · 2021: 6 · 2024: 5 (14 Dec 2024; the price top
+  of Oct 2025 itself closed in band 4). **8 moves in the last year**, five of them in six weeks (Jul–Aug 2026) while the
+  price sat on the 2 / 3 edge — if that is too many alerts: three closes, or a margin from the edge (his call).
 - `guide.json` (the bot's guide) was NOT touched — it posts to the channel; a rainbow section needs his approval first.
 - His first list of names had "Fair value" on band 5; the line runs through band 4, so the names follow the line
   (he agreed: "توجيهك أدق").
