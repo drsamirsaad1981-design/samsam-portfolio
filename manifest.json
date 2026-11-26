@@ -1,7 +1,7 @@
 {
   "name": "Cute Portfolio",
   "short_name": "Cute Portfolio",
-  "description": "Crypto portfolio tracker \u2014 Golden Triangle 2030",
+  "description": "Follow your whole wealth in one place \u2014 crypto, metals, shares and cash",
   "id": "./index.html",
   "start_url": "./index.html",
   "scope": "./",

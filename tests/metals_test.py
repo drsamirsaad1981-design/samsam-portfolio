@@ -66,8 +66,8 @@ with sync_playwright() as p:
     check('holdings shown in grams', '150 g' in hc, hc)
     av = pg.evaluate("avgShown(portfolio.find(c => c.sym === 'XAU'))")
     check('Avg. Buy Price shown per gram', av.endswith('/g') and '83.3' in av, av)
-    hp = pg.evaluate("(() => { const el = document.createElement('div'); el.innerHTML = SamsamCoins.assetCell('XAU', { price: 3110.34768 }) + SamsamCoins.assetCell('SOL', { price: 150 }) + SamsamCoins.assetCell('XAU', { price: 3110.34768, perOz: true }); return [...el.querySelectorAll('.ast-price')].map(e => e.textContent); })()")
-    check('the price beside a metal\'s name is per gram too ($100.00/g, not the ounce); a coin as before; the Exit page keeps the ounce', hp[0] == '$100.00/g' and '/g' not in hp[1] and hp[1].startswith('$150') and hp[2].startswith('$3,110') and '/g' not in hp[2], hp)
+    hp = pg.evaluate("(() => { const el = document.createElement('div'); el.innerHTML = SamsamCoins.assetCell('XAU', { price: 3110.34768 }) + SamsamCoins.assetCell('SOL', { price: 150 }); return [...el.querySelectorAll('.ast-price')].map(e => e.textContent); })()")
+    check('the price beside a metal\'s name is per gram too ($100.00/g, not the ounce) on every page (the Exit page too — exit_metal_test.py); a coin as before', hp[0] == '$100.00/g' and '/g' not in hp[1] and hp[1].startswith('$150'), hp)
     tt = pg.evaluate("(() => { const s = calcStats(); return [s.total, portfolio.reduce((a, c) => a + c.qty * (c.sym === 'BTC' ? btcPrice : c.currentPrice), 0), s.metalTotal]; })()")
     check('Total Portfolio includes the gold (metals not with altcoins, but in the total)', abs(tt[0] - tt[1]) < 1e-6 and tt[2] > 0, tt)
     # 🕌 one zakat date a year for everything: 1 Ramadan (Umm al-Qura). 1 Ramadan 1448 = 8 Feb 2027.

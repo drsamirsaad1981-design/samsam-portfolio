@@ -10,7 +10,9 @@ META = {'ar': ('Cute Portfolio — ثروتك كلها في مكان واحد، 
 for src, l in (('Main.dc.html', 'ar'), ('English.dc.html', 'en')):
     s = (P / src).read_text(encoding='utf8'); ids = set(re.findall(r'/_blob/([0-9a-f]{32})', s))
     for i in ids:
-        f = MAP[i]; shutil.copyfile(W / f'{f}.webp', OUT / 'img' / f'{f}.webp'); s = s.replace(f'/_blob/{i}', f'img/{f}.webp?v=' + hashlib.md5((W / f'{f}.webp').read_bytes()).hexdigest()[:8])
+        f = MAP[i]
+        if W != OUT / 'img': shutil.copyfile(W / f'{f}.webp', OUT / 'img' / f'{f}.webp')   # (no demo folder: the images are already in place)
+        s = s.replace(f'/_blob/{i}', f'img/{f}.webp?v=' + hashlib.md5((W / f'{f}.webp').read_bytes()).hexdigest()[:8])
     body = s[s.index('<x-dc>') + 6:s.index('</x-dc>')]
     hel = re.search(r'<helmet>(.*?)</helmet>', body, re.S); body = body.replace(hel.group(0), '').strip().replace('{{accent}}', '#7c3aed')
     body = body.replace('href="English.dc.html"', 'href="en.html"').replace('href="Main.dc.html"', 'href="./"')

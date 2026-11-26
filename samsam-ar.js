@@ -25,6 +25,11 @@
   R(/^(\d{1,2}:\d\d)\s?(AM|PM)$/, function (_, t, p) { return t + ' ' + ampm(p); });
   R(new RegExp('^' + MRX + ' \\d{1,2}(?:, \\d{4})?(?:, \\d{1,2}:\\d\\d\\s?[AP]M)?$'), function (s) { return date(s); });
   R(new RegExp('^\\d{1,2} ' + MRX + '(?: \\d{4})?$'), function (s) { return date(s); });
+  // Altcoin Season, while the saved history is under a year: "9-month high" · "20-day low"
+  R(/^(\d+)-(month|day) (high|low)$/, function (_, n, u, w) {
+    n = +n; var mo = u === 'month', span = n === 1 ? (mo ? 'شهر' : 'يوم') : n === 2 ? (mo ? 'شهرين' : 'يومين') : n <= 10 ? n + (mo ? ' أشهر' : ' أيام') : n + (mo ? ' شهراً' : ' يوماً');
+    return (w === 'high' ? 'أعلى قراءة خلال ' : 'أدنى قراءة خلال ') + span;
+  });
   R(/^Savings goal · \$1 = ([\d.,]+) (EGP|SAR)$/, function (_, n, c) { return 'هدف ادخار · ‎$1 = ' + n + ' ' + c; });
   R(/^Counts your cash & certificates in (USD|EGP|SAR) \(their value today\)\. It stays out of your portfolio total — Net worth only\.$/, function (_, c) { return 'يُحسب من نقدك وشهاداتك بـ ' + c + ' (قيمتها اليوم). لا يدخل في إجمالي المحفظة — صافي الثروة فقط.'; });
   R(/^Savings · (USD|EGP|SAR)$/, function (_, c) { return 'ادخار · ' + c; });
@@ -349,7 +354,7 @@
   R(/^Savings (USD|EGP|SAR)$/, 'ادخار $1');
   R(/^Savings goal · (USD|EGP|SAR)$/, 'هدف ادخار · $1');
   R(/^(\d+) in progress$/, '$1 قيد التنفيذ');
-  R(/^Sell ([\d.,]+) ([A-Z0-9.]+)$/, function (_, q, c) { return 'بيع ' + n(q + ' ' + c); });
+  R(/^Sell ([\d.,]+) ([A-Z0-9.]+|g)$/, function (_, q, c) { return 'بيع ' + n(q + ' ' + c); });   // (a metal: grams)
   R(/^Take profit (\d)$/, 'جني الأرباح $1');
   R(/^moonbag (.+)$/, function (_, q) { return 'Moonbag ' + n(q); });
   R(/^Target hit — sell (.+?)( more)?$/, function (_, q, more) { return 'تحقق الهدف — بِع ' + n(q) + (more ? ' أخرى' : ''); });

@@ -155,7 +155,7 @@ export async function runTool(ctx, name, input) {
   }
   if (name === 'get_market') {
     const m = await ctx.market(), n = [100, 200, 300, 500].includes(+(input && input.top)) ? +input.top : 100;
-    ctx.used.add(srcOf(m, 'bitcoin')); ctx.used.add('market snapshot (CoinGecko, alternative.me, ETF flows)');
+    ctx.used.add(srcOf(m, 'bitcoin')); ctx.used.add(`market snapshot (CoinGecko, ${m.fng && /alternative/i.test(m.fng.src || '') ? 'alternative.me' : 'CoinMarketCap'}, ETF flows)`);   // Fear & Greed is CoinMarketCap's; alternative.me only when it had to stand in
     const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
     const seen = new Set(), list = [...m.top, ...m.top500].filter(r => r.rank && r.rank <= n && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
     const pick = (a, dir) => [...a].sort((x, y) => dir * (y.ch24 - x.ch24)).slice(0, 5).map(r => ({ ticker: String(r.sym).toUpperCase(), rank: r.rank, price_usd: r6(r.price), change_24h_pct: r2(r.ch24) }));
@@ -182,7 +182,7 @@ export async function runTool(ctx, name, input) {
     const x = await ctx.sum(); if (!x) return { error: 'portfolio not connected' };
     const { s } = x; ctx.used.add('your exit plan (Firebase)'); ctx.used.add('market snapshot');
     return { conditions: s.macro.map(c => ({ name: { btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC' }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
-      take_profits: (s.tps || []).map(t => ({ ticker: t.sym, tp: t.n, level_usd: r6(t.level), price_now_usd: r6(t.price), pct_to_go: r2((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go) };
+      take_profits: (s.tps || []).map(t => ({ ticker: t.sym, tp: t.n, level_usd: r6(t.level / (t.g || 1)), price_now_usd: r6(t.price / (t.g || 1)), ...(t.g > 1 ? { unit: 'USD per gram' } : {}), pct_to_go: r2((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go) };
   }
   if (name === 'get_derivatives') {
     const q = String((input && input.coin) || '').trim(), u = await ctx.user(), m = await ctx.market(), c = await findCoin(q, m, u);
@@ -219,7 +219,7 @@ export async function runTool(ctx, name, input) {
     for (const t of (input && input.buy) || []) { const r = by(t.coin), u = +t.usd; if (!r || !(u > 0)) { trades.push({ buy: t.coin, error: !r ? 'not held — ask about it with get_coin' : 'bad amount' }); continue; } const q = u / r.p; r.avg = (r.avg * r.qty + u) / (r.qty + q); r.qty += q; newMoney += u; r.buyUsd += u; trades.push({ buy: r.sym, amount: r6(q), usd: r2(u), new_average: r6(r.avg) }); }
     const before = s.value, coinsAfter = rows.reduce((a, r) => a + r.qty * r.p, 0), after = coinsAfter + cash;
     const priceGain = s.coins.reduce((a, c) => { const r = by(c.sym); return a + c.qty * (r.p - c.price); }, 0);   // what the price moves add to profit (trades at the new prices add none)
-    const tps = (s.tps || []).filter(t => { const r = by(t.sym); return r && r.p >= t.level && t.price < t.level; }).map(t => ({ coin: t.sym, tp: t.n, level_usd: r6(t.level), sell_pct: t.pct || null }));
+    const tps = (s.tps || []).filter(t => { const r = by(t.sym); return r && r.p >= t.level && t.price < t.level; }).map(t => ({ coin: t.sym, tp: t.n, level_usd: r6(t.level / (t.g || 1)), ...(t.g > 1 ? { unit: 'USD per gram' } : {}), sell_pct: t.pct || null }));
     return { value_now_usd: r2(before), value_after_usd: r2(after), change_usd: r2(after - before - newMoney), change_pct: before > 0 ? r2((after - before - newMoney) / before * 100) : null,
       cash_from_sells_usd: r2(cash), new_money_usd: r2(newMoney), realized_profit_from_sells_usd: r2(realized),
       all_time_profit_now_usd: r2(s.total), all_time_profit_after_usd: r2(s.total + priceGain), all_time_profit_after_pct: s.invested + newMoney > 0 ? r2((s.total + priceGain) / (s.invested + newMoney) * 100) : null,

@@ -23,6 +23,12 @@
 
   function r6(v) { return +(+v).toPrecision(6); }
   function multTxt(m) { return '×' + (+(+m).toFixed(2)); }
+  // 🥇 A metal is kept in troy ounces and shown in grams, here as on every page: amounts × 31.1035, prices ÷ 31.1035.
+  // A step's price is typed per gram and saved per ounce (the maths, the alerts and the bot keep reading ounces).
+  function gpo(sym) { return window.SamsamCoins && SamsamCoins.isMetal(sym) ? SamsamCoins.GPO : 1; }
+  function amt(sym, q) { return gpo(sym) > 1 ? SamsamCoins.grams(q) : SamsamCoins.fmtAmount(q); }                   // "62.207 g" · "1,250"
+  function amtU(sym, q) { return gpo(sym) > 1 ? SamsamCoins.grams(q) : SamsamCoins.fmtAmount(q) + ' ' + E(sym); }   // "62.207 g" · "1,250 SOL"
+  function prc(sym, p) { var g = gpo(sym); return F().price(p / g) + (g > 1 ? '/g' : ''); }
   function cfgOf(c) { return c && Array.isArray(c.mults) && Array.isArray(c.pcts) ? c : DEF; }
 
   // ── maths ──────────────────────────────────────────────────────────────────
@@ -208,9 +214,9 @@
   }
   function planCopy() { return JSON.parse(JSON.stringify(exitState().plan || [])); }
 
-  function badge(s) {
+  function badge(s, sym) {
     return s.status === 'done' ? '<span class="xs-badge done">' + IC('checkCircle') + 'Done</span>'
-      : s.status === 'hit' ? '<span class="xs-badge hit">' + IC('target') + 'Target hit — sell ' + SamsamCoins.fmtAmount(s.toSell) + (s.part ? ' more' : '') + '</span>'
+      : s.status === 'hit' ? '<span class="xs-badge hit">' + IC('target') + 'Target hit — sell ' + amt(sym, s.toSell) + (s.part ? ' more' : '') + '</span>'
       : s.part ? '<span class="xs-badge part">' + Math.round(s.filled / s.qty * 100) + '% sold</span>'
       : s.status === 'unset' ? '<span class="xs-badge">Set a price</span>'
       : '<span class="xs-badge wait">' + (s.away != null ? '+' + s.away.toFixed(1) + '% to go' : 'Waiting') + '</span>';
@@ -282,36 +288,37 @@
 
   function coinHtml(e, idx) {
     var pc = coinOf(e.sym), cfg = cfgNow(), r = calc.coin(e, pc, st.transactions, cfg), sym = E(e.sym);
-    var asset = SamsamCoins.assetCell(e.sym, { logoUrl: (pc && pc.logoUrl) || '', cgId: (pc && pc.cgId) || e.cgId || '', name: pc && pc.name, price: r.price, change24h: pc && pc.change24h, perOz: true });   // (this page's amounts and levels are still per troy ounce for a metal)
+    var asset = SamsamCoins.assetCell(e.sym, { logoUrl: (pc && pc.logoUrl) || '', cgId: (pc && pc.cgId) || e.cgId || '', name: pc && pc.name, price: r.price, change24h: pc && pc.change24h, });
+    var g = gpo(e.sym);
     var steps = r.steps.map(function (s) {
       return '<div class="xt ' + s.status + (s.part ? ' part' : '') + '">' +
-        '<div class="xt-top"><span class="xt-nm"><b>' + s.name + '</b>' + stepTag(s, idx) + '</span>' + badge(s) + '</div>' +
-        '<div class="xt-in"><label><span>Price</span><input type="number" inputmode="decimal" step="any" min="0" data-i="' + idx + '" data-tp="' + s.i + '" data-f="price" value="' + (s.price || '') + '" placeholder="$0.00"></label>' +
+        '<div class="xt-top"><span class="xt-nm"><b>' + s.name + '</b>' + stepTag(s, idx) + '</span>' + badge(s, e.sym) + '</div>' +
+        '<div class="xt-in"><label><span>' + (g > 1 ? 'Price per gram' : 'Price') + '</span><input type="number" inputmode="decimal" step="any" min="0" data-i="' + idx + '" data-tp="' + s.i + '" data-f="price" value="' + (s.price ? (g > 1 ? r6(s.price / g) : s.price) : '') + '" placeholder="$0.00"></label>' +
         '<label><span>Sell %</span><input type="number" inputmode="decimal" step="any" min="0" max="100" data-i="' + idx + '" data-tp="' + s.i + '" data-f="pct" value="' + s.pct + '"></label></div>' +
         '<div class="xt-bar"><i style="width:' + (s.status === 'done' ? 100 : s.progress).toFixed(1) + '%"></i></div>' +
-        '<div class="xt-sub"><span>Sell ' + SamsamCoins.fmtAmount(s.qty) + ' ' + sym + '</span><span>→ <b>' + F().usd(s.cash) + '</b></span></div></div>';
+        '<div class="xt-sub"><span>Sell ' + amtU(e.sym, s.qty) + '</span><span>→ <b>' + F().usd(s.cash) + '</b></span></div></div>';
     }).join('');
     var auto = r.steps.every(function (s) { return s.linked; }) && r.steps.every(function (s, i) { return Math.abs(s.pct - cfg.pcts[i]) < 0.01; });
     var warn = Math.abs(r.pctSum - 100) > 0.01 ? '<div class="xs-warn">' + IC('alert') + 'The three steps add up to ' + +r.pctSum.toFixed(2) + '% (not 100%).</div>' : '';
-    var held = r.held < r.base - r.sold - 1e-9 ? '<div class="xs-warn">' + IC('alert') + 'You now hold ' + SamsamCoins.fmtAmount(r.held) + ' ' + sym + ' — less than the plan still sells.</div>' : '';
+    var held = r.held < r.base - r.sold - 1e-9 ? '<div class="xs-warn">' + IC('alert') + 'You now hold ' + amtU(e.sym, r.held) + ' — less than the plan still sells.</div>' : '';
     return '<article class="xs-card xk-card' + (flashSym === e.sym ? ' flash' : '') + '" data-sym="' + sym + '" id="xk-' + sym + '">' +
       '<div class="xk-head">' + asset + '<button type="button" class="xs-x" data-act="remove" data-i="' + idx + '" aria-label="Remove ' + sym + ' from the exit plan" title="Remove from the exit plan">' + IC('x', { solo: true, size: 14 }) + '</button></div>' +
-      '<div class="xk-info"><span>Plan amount <b>' + SamsamCoins.fmtAmount(r.base) + '</b></span><span>Average buy price <b>' + (r.avg > 0 ? F().price(r.avg) : '—') + '</b></span>' + (r.bought > 0 ? '<span title="Bought after the coin joined the plan — added to the plan amount">Bought since <b>+' + SamsamCoins.fmtAmount(r.bought) + '</b></span>' : '') + (r.sold > 0 ? '<span>Sold since <b>' + SamsamCoins.fmtAmount(r.sold) + '</b></span>' : '') + '</div>' +
+      '<div class="xk-info"><span>Plan amount <b>' + amt(e.sym, r.base) + '</b></span><span>Average buy price <b>' + (r.avg > 0 ? prc(e.sym, r.avg) : '—') + '</b></span>' + (r.bought > 0 ? '<span title="Bought after the coin joined the plan — added to the plan amount">Bought since <b>+' + amt(e.sym, r.bought) + '</b></span>' : '') + (r.sold > 0 ? '<span>Sold since <b>' + amt(e.sym, r.sold) + '</b></span>' : '') + '</div>' +
       '<div class="xk-opts"><label class="xk-moon"><input type="checkbox" data-act="moon" data-i="' + idx + '"' + (e.moonbag ? ' checked' : '') + '><span>Reserve 10% Moonbag</span></label>' +
       '<button type="button" class="xs-btn" data-act="quick" data-i="' + idx + '"' + (r.avg > 0 ? (auto ? ' disabled title="Already following ' + cfg.mults.map(multTxt).join(' · ') + ' your average buy price"' : ' title="Follow your average buy price again: ' + cfg.mults.map(multTxt).join(' · ') + ', ' + cfg.pcts.join(' / ') + ' %"') : ' disabled title="No average buy price for this coin"') + '>' +
         IC('link') + 'Auto ' + cfg.mults.map(multTxt).join(' · ') + '</button></div>' +
       '<div class="xk-steps">' + steps + '</div>' + warn + held +
       '<div class="xk-foot"><div><span>Projected cash-out</span><b>' + F().usd(r.cash) + '</b></div>' +
       '<div><span>Net profit</span><b class="' + (r.profit >= 0 ? 'up' : 'down') + '">' + F().usdSigned(r.profit) + (r.profitPct != null ? ' <small>(' + (r.profitPct >= 0 ? '+' : '') + r.profitPct.toFixed(1) + '%)</small>' : '') + '</b></div>' +
-      (r.moon > 0 ? '<div><span>Moonbag kept</span><b>' + SamsamCoins.fmtAmount(r.moon) + ' ' + sym + '</b></div>' : '') + '</div></article>';
+      (r.moon > 0 ? '<div><span>Moonbag kept</span><b>' + amtU(e.sym, r.moon) + '</b></div>' : '') + '</div></article>';
   }
 
   // ── table: one row per coin, tap → its card ──
   var ST_IC = { done: 'checkCircle', hit: 'target', wait: 'hourglass', unset: 'alert' };
-  function tpCell(s) {
-    var sub = s.status === 'done' ? 'Done' : s.status === 'hit' ? 'Sell ' + SamsamCoins.fmtAmount(s.toSell) : s.status === 'unset' ? 'Set a price'
+  function tpCell(s, sym) {
+    var sub = s.status === 'done' ? 'Done' : s.status === 'hit' ? 'Sell ' + amt(sym, s.toSell) : s.status === 'unset' ? 'Set a price'
       : s.part ? Math.round(s.filled / s.qty * 100) + '% sold' : (s.away != null ? '+' + s.away.toFixed(1) + '%' : '—');
-    return '<td class="xv-tp ' + s.status + (s.part ? ' part' : '') + '"><div class="xv-p">' + IC(ST_IC[s.status], { cls: 'xv-st' }) + '<b>' + (s.price > 0 ? F().price(s.price) : '—') + '</b>' +
+    return '<td class="xv-tp ' + s.status + (s.part ? ' part' : '') + '"><div class="xv-p">' + IC(ST_IC[s.status], { cls: 'xv-st' }) + '<b>' + (s.price > 0 ? prc(sym, s.price) : '—') + '</b>' +
       (s.linked ? '' : IC('lock', { cls: 'xv-lock' })) + '</div><small>' + +s.pct.toFixed(2) + '% · ' + sub + '</small></td>';
   }
   function tableHtml(plan) {
@@ -321,9 +328,9 @@
       tc += r.cash; tp += r.profit; cost += r.cash - r.profit;
       return '<tr data-act="open" data-sym="' + sym + '" tabindex="0" title="Open ' + sym + '">' +
         '<td class="xv-coin"><div>' + SamsamCoins.assetIcon(e.sym, { logoUrl: (pc && pc.logoUrl) || '', cgId: (pc && pc.cgId) || e.cgId || '' }) + '<span><b>' + sym + '</b><small>' + r.done + ' of 3 done</small></span></div></td>' +
-        '<td class="num">' + SamsamCoins.fmtAmount(r.base) + (r.sold > 0 ? '<small>sold ' + SamsamCoins.fmtAmount(r.sold) + '</small>' : r.moon > 0 ? '<small>moonbag ' + SamsamCoins.fmtAmount(r.moon) + '</small>' : '') + '</td>' +
-        '<td class="num">' + (r.avg > 0 ? F().price(r.avg) : '—') + '<small>' + (r.price > 0 ? 'now ' + F().price(r.price) : '') + '</small></td>' +
-        r.steps.map(tpCell).join('') +
+        '<td class="num">' + amt(e.sym, r.base) + (r.sold > 0 ? '<small>sold ' + amt(e.sym, r.sold) + '</small>' : r.moon > 0 ? '<small>moonbag ' + amt(e.sym, r.moon) + '</small>' : '') + '</td>' +
+        '<td class="num">' + (r.avg > 0 ? prc(e.sym, r.avg) : '—') + '<small>' + (r.price > 0 ? 'now ' + prc(e.sym, r.price) : '') + '</small></td>' +
+        r.steps.map(function (s) { return tpCell(s, e.sym); }).join('') +
         '<td class="num"><b>' + F().usd(r.cash) + '</b></td>' +
         '<td class="num"><b class="' + (r.profit >= 0 ? 'up' : 'down') + '">' + F().usdSigned(r.profit) + '</b>' + (r.profitPct != null ? '<small>' + (r.profitPct >= 0 ? '+' : '') + r.profitPct.toFixed(1) + '%</small>' : '') + '</td></tr>';
     }).join('');
@@ -454,7 +461,7 @@
         // a price you type is fixed (lock); an empty price goes back to following the average buy price
         var avg = +((coinOf(e.sym) || {}).basePrice) || 0;
         e.tps.forEach(function (t, j) { if (t.lock == null) { t.lock = !calc.linked(t, j, avg); } });   // settle older entries first
-        e.tps[k2].price = v; e.tps[k2].lock = v > 0;
+        e.tps[k2].price = v * gpo(e.sym); e.tps[k2].lock = v > 0;   // a metal's price is typed per gram, kept per ounce
       }
       save({ plan: p }); x.blur(); paint();
     }

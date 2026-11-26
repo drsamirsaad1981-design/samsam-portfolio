@@ -79,6 +79,8 @@ with sync_playwright() as p:
         fa2 = [f for f in pg.frames if 'altseason.html' in f.url][0]
         left = [s for s in fa2.evaluate(LEFT) if s not in OK_EN and s not in ('CoinGecko', 'CoinMarketCap')]
         check(f'{vn}: Altcoin Season — no English words left', 'مؤشر موسم العملات البديلة' in fa2.inner_text('body') and not left, left[:12])
+        hl = fa2.evaluate("['9-month high', '9-month low', '2-month high', '1-month low', '20-day high', '11-month low'].map(x => (window.CPLang ? CPLang.t(x) : x).replace(/[\u2066-\u2069]/g, ''))")
+        check(f'{vn}: Altcoin Season — "9-month high / low" (a history under a year) is Arabic with the right plural', hl == ['أعلى قراءة خلال 9 أشهر', 'أدنى قراءة خلال 9 أشهر', 'أعلى قراءة خلال شهرين', 'أدنى قراءة خلال شهر', 'أعلى قراءة خلال 20 يوماً', 'أدنى قراءة خلال 11 شهراً'], hl)
         pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(500)
         pg.evaluate("SamsamSettings.open()"); pg.wait_for_timeout(300)
         st = pg.inner_text('#cpSet')

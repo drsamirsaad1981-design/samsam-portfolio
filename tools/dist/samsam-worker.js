@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 9b2526421dc7ef19
+// sources-hash: 2289e690a5031100
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -867,6 +867,7 @@ function usd(v) {
   if (a === 0) return "$0";
   return s + "$" + a.toPrecision(3);
 }
+var perUnit = (x, v, f) => x && x.g > 1 ? (v / x.g >= 1 ? usd2(v / x.g) : f(v / x.g)) + "/g" : f(v);
 var usd2 = (v) => (v < 0 ? "\u2212" : "") + "$" + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 var pct = (v, d = 2) => v == null || !isFinite(v) ? "\u2014" : (v > 0 ? "+" : v < 0 ? "\u2212" : "") + Math.abs(v).toFixed(d) + "%";
 var signed = (v) => (v > 0 ? "+" : v < 0 ? "\u2212" : "") + usd(Math.abs(v)).replace("\u2212", "");
@@ -979,7 +980,7 @@ function summarize(user, market, now = Date.now()) {
     const chg = c.basePrice > 0 ? (c.currentPrice / c.basePrice - 1) * 100 : 0;
     signal[c.sym] = toS(si.action);
     if (si.pending) pending[c.sym] = toS(si.pending);
-    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, chgClose: si.onClose ? si.chg : null, close: close || null, pending: si.pending ? toS(si.pending) : null, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
+    coinRows.push({ sym: c.sym, cls: assetClass(c), value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, chgClose: si.onClose ? si.chg : null, close: close || null, pending: si.pending ? toS(si.pending) : null, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
   }
   const sigMode = JSON.stringify(calm ? { r: rule.reinforce, s: rule.sell, smart, calm } : { r: rule.reinforce, s: rule.sell, smart });
   const counts = { reinforce: 0, sell: 0, hold: 0 };
@@ -997,7 +998,7 @@ function summarize(user, market, now = Date.now()) {
     (e.tps || []).slice(0, 3).forEach((t, i) => {
       const auto = c.basePrice * (steps.mults[i] || DEFAULT_EXIT_STEPS.mults[i]);
       const lvl = t.lock === true ? +t.price : t.lock === false ? auto : +t.price > 0 ? +t.price : auto;
-      if (lvl > 0) tps.push({ sym: c.sym, n: i + 1, level: lvl, price: c.currentPrice, pct: t.pct, mult: t.lock === true ? null : steps.mults[i] || null });
+      if (lvl > 0) tps.push({ sym: c.sym, n: i + 1, level: lvl, price: c.currentPrice, pct: t.pct, mult: t.lock === true ? null : steps.mults[i] || null, g: assetClass(c) === "metal" ? GRAMS_PER_OZ : 1 });
     });
   }
   const T2 = { ...DEFAULT_EXIT_TARGETS, ...meta.exitTargets || {} };
@@ -4184,7 +4185,7 @@ async function runTool(ctx, name, input) {
   if (name === "get_market") {
     const m = await ctx.market(), n = [100, 200, 300, 500].includes(+(input && input.top)) ? +input.top : 100;
     ctx.used.add(srcOf(m, "bitcoin"));
-    ctx.used.add("market snapshot (CoinGecko, alternative.me, ETF flows)");
+    ctx.used.add(`market snapshot (CoinGecko, ${m.fng && /alternative/i.test(m.fng.src || "") ? "alternative.me" : "CoinMarketCap"}, ETF flows)`);
     const g = m.global || {}, d = g.dom || {}, e = etfDay(m.etf);
     const seen = /* @__PURE__ */ new Set(), list3 = [...m.top, ...m.top500].filter((r) => r.rank && r.rank <= n && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
     const pick = (a, dir) => [...a].sort((x, y) => dir * (y.ch24 - x.ch24)).slice(0, 5).map((r) => ({ ticker: String(r.sym).toUpperCase(), rank: r.rank, price_usd: r62(r.price), change_24h_pct: r23(r.ch24) }));
@@ -4235,7 +4236,7 @@ async function runTool(ctx, name, input) {
     ctx.used.add("market snapshot");
     return {
       conditions: s.macro.map((c) => ({ name: { btcD: "BTC dominance", usdtD: "USDT dominance", ethBtc: "ETH/BTC" }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
-      take_profits: (s.tps || []).map((t) => ({ ticker: t.sym, tp: t.n, level_usd: r62(t.level), price_now_usd: r62(t.price), pct_to_go: r23((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go)
+      take_profits: (s.tps || []).map((t) => ({ ticker: t.sym, tp: t.n, level_usd: r62(t.level / (t.g || 1)), price_now_usd: r62(t.price / (t.g || 1)), ...t.g > 1 ? { unit: "USD per gram" } : {}, pct_to_go: r23((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go)
     };
   }
   if (name === "get_derivatives") {
@@ -4322,7 +4323,7 @@ async function runTool(ctx, name, input) {
     const tps = (s.tps || []).filter((t) => {
       const r = by(t.sym);
       return r && r.p >= t.level && t.price < t.level;
-    }).map((t) => ({ coin: t.sym, tp: t.n, level_usd: r62(t.level), sell_pct: t.pct || null }));
+    }).map((t) => ({ coin: t.sym, tp: t.n, level_usd: r62(t.level / (t.g || 1)), ...t.g > 1 ? { unit: "USD per gram" } : {}, sell_pct: t.pct || null }));
     return {
       value_now_usd: r23(before),
       value_after_usd: r23(after),
@@ -4677,9 +4678,9 @@ function todo(sum, now) {
     if (away <= 3) add(away <= 0 ? 95 : 85, { what: away <= 0 ? "at_buy_price" : "near_buy_price", coin: x.sym, price_usd: r63(x.price), your_buy_price_usd: r63(x.at), pct_above_buy_price: r24(away), still_to_buy: x.left != null ? r63(x.left) : null });
   }
   for (const t of sum.tps || []) {
-    const to = (t.level / t.price - 1) * 100;
-    if (to <= 0) add(92, { what: "take_profit_reached", coin: t.sym, tp: t.n, level_usd: r63(t.level), price_usd: r63(t.price), sell_pct: t.pct });
-    else if (to <= 7) add(80, { what: "take_profit_close", coin: t.sym, tp: t.n, level_usd: r63(t.level), price_usd: r63(t.price), pct_to_go: r24(to), sell_pct: t.pct });
+    const to = (t.level / t.price - 1) * 100, G = t.g || 1, U = G > 1 ? { unit: "USD per gram" } : {};
+    if (to <= 0) add(92, { what: "take_profit_reached", coin: t.sym, tp: t.n, level_usd: r63(t.level / G), price_usd: r63(t.price / G), ...U, sell_pct: t.pct });
+    else if (to <= 7) add(80, { what: "take_profit_close", coin: t.sym, tp: t.n, level_usd: r63(t.level / G), price_usd: r63(t.price / G), ...U, pct_to_go: r24(to), sell_pct: t.pct });
   }
   const met2 = (sum.macro || []).filter((x) => x.met).length;
   if (met2 >= 2) add(75, { what: "exit_conditions", met_of_3: met2 });
@@ -4702,7 +4703,7 @@ function nearest(alerts, m, sum) {
     if (!p) continue;
     out.push({ alert: describe(a), alert_ar: describe(a, true), price_usd: r63(p), pct_away: r24(Math.abs(p / a.value - 1) * 100) });
   }
-  for (const t of sum.tps || []) if (t.level > t.price) out.push({ level: `${t.sym} TP${t.n} ${usd(t.level)}`, price_usd: r63(t.price), pct_away: r24((t.level / t.price - 1) * 100) });
+  for (const t of sum.tps || []) if (t.level > t.price) out.push({ level: `${t.sym} TP${t.n} ${perUnit(t, t.level, usd)}`, price_usd: r63(t.price / (t.g || 1)), pct_away: r24((t.level / t.price - 1) * 100) });
   for (const x of sum.buyAt || []) if (x.price > x.at) out.push({ level: `${x.sym} buy price ${usd(x.at)}`, price_usd: r63(x.price), pct_away: r24((x.price / x.at - 1) * 100) });
   return out.sort((a, b) => a.pct_away - b.pct_away).slice(0, 4);
 }
@@ -6725,8 +6726,8 @@ function viewExit(t, sum, now) {
   });
   const block = ([sym, list3]) => [
     "",
-    isAr(t) ? `\u{1F539} <b>${esc(sym)}</b>: ${price2(list3[0].price)}` : `<b>${esc(sym)}</b> \xB7 ${price2(list3[0].price)}`,
-    ...list3.sort((a, b) => a.n - b.n).map((x) => `${x.to <= 0 ? "\u2705" : "\u23F3"} TP${x.n} ${price2(x.level)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`)
+    isAr(t) ? `\u{1F539} <b>${esc(sym)}</b>: ${perUnit(list3[0], list3[0].price, price2)}` : `<b>${esc(sym)}</b> \xB7 ${perUnit(list3[0], list3[0].price, price2)}`,
+    ...list3.sort((a, b) => a.n - b.n).map((x) => `${x.to <= 0 ? "\u2705" : "\u23F3"} TP${x.n} ${perUnit(x, x.level, price2)} \xB7 ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` \xB7 ${x.pct}%` : ""}`)
   ];
   const all = [...bySym];
   let n = Math.min(8, all.length), text;
@@ -6750,7 +6751,7 @@ function viewMovers(t, sum) {
 }
 function viewSignals(t, sum) {
   const by = { reinforce: [], sell: [], hold: [] };
-  for (const c of sum.coins) (by[sum.signal[c.sym]] || by.hold).push(c);
+  for (const c of sum.coins) if (!c.cls || c.cls === "crypto") (by[sum.signal[c.sym]] || by.hold).push(c);
   const L = [`\u{1F3AF} <b>${t.sigT}</b>`];
   for (const k of ["reinforce", "sell", "hold"]) {
     if (!by[k].length) continue;
@@ -7969,7 +7970,7 @@ async function answer(env, chat, question, budget = 36, into = null) {
     return { error: "claude" };
   });
   if (r.error) return show({ text: r.error === "limit" ? t.aiLimit(r.limit) : r.error === "nokey" ? t.aiNoKey : r.error === "ownkey" ? t.aiOwnKey : r.error === "busy" ? t.aiBusy : t.aiErr, buttons: [[cb3(t.back, "menu")]] });
-  const srcAr = (x) => !isAr(t) ? x : String(x).replace(/^alerts \(checked every 5 min\)$/, "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A (\u062A\u064F\u0641\u062D\u0635 \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642)").replace(/^your portfolio \(Firebase\)$/, "\u0645\u062D\u0641\u0638\u062A\u0643 (Firebase)").replace(/^your plan \(Firebase\)$/, "\u062E\u0637\u062A\u0643 (Firebase)").replace(/^your exit plan \(Firebase\)$/, "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C (Firebase)").replace(/^paper portfolio \(live prices\)$/, "\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 (\u0623\u0633\u0639\u0627\u0631 \u0645\u0628\u0627\u0634\u0631\u0629)").replace(/^what-if \(the app's maths\)$/, "\u062D\u0633\u0627\u0628 \xAB\u0645\u0627\u0630\u0627 \u0644\u0648\xBB (\u062D\u0633\u0627\u0628\u0627\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642)").replace(/^hourly price history \(GitHub prices branch\)$/, "\u0633\u062C\u0644 \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0628\u0627\u0644\u0633\u0627\u0639\u0629 (GitHub)").replace(/^market snapshot \(CoinGecko, alternative\.me, ETF flows\)$/, "\u0644\u0642\u0637\u0629 \u0627\u0644\u0633\u0648\u0642 (CoinGecko \u0648 alternative.me \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF)").replace(/^market snapshot( of .*)?$/, (m0, w) => "\u0644\u0642\u0637\u0629 \u0627\u0644\u0633\u0648\u0642" + (w ? " " + w.replace(/^ of /, "") : "")).replace(/ \(live\)$/, " (\u0645\u0628\u0627\u0634\u0631)").replace(/^futures: /, "\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629: ");
+  const srcAr = (x) => !isAr(t) ? x : String(x).replace(/^alerts \(checked every 5 min\)$/, "\u0627\u0644\u062A\u0646\u0628\u064A\u0647\u0627\u062A (\u062A\u064F\u0641\u062D\u0635 \u0643\u0644 5 \u062F\u0642\u0627\u0626\u0642)").replace(/^your portfolio \(Firebase\)$/, "\u0645\u062D\u0641\u0638\u062A\u0643 (Firebase)").replace(/^your plan \(Firebase\)$/, "\u062E\u0637\u062A\u0643 (Firebase)").replace(/^your exit plan \(Firebase\)$/, "\u062E\u0637\u0629 \u0627\u0644\u062E\u0631\u0648\u062C (Firebase)").replace(/^paper portfolio \(live prices\)$/, "\u0627\u0644\u0645\u062D\u0641\u0638\u0629 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 (\u0623\u0633\u0639\u0627\u0631 \u0645\u0628\u0627\u0634\u0631\u0629)").replace(/^what-if \(the app's maths\)$/, "\u062D\u0633\u0627\u0628 \xAB\u0645\u0627\u0630\u0627 \u0644\u0648\xBB (\u062D\u0633\u0627\u0628\u0627\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642)").replace(/^hourly price history \(GitHub prices branch\)$/, "\u0633\u062C\u0644 \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0628\u0627\u0644\u0633\u0627\u0639\u0629 (GitHub)").replace(/^market snapshot \(CoinGecko, (CoinMarketCap|alternative\.me), ETF flows\)$/, "\u0644\u0642\u0637\u0629 \u0627\u0644\u0633\u0648\u0642 (CoinGecko \u0648 $1 \u0648\u062A\u062F\u0641\u0642\u0627\u062A ETF)").replace(/^market snapshot( of .*)?$/, (m0, w) => "\u0644\u0642\u0637\u0629 \u0627\u0644\u0633\u0648\u0642" + (w ? " " + w.replace(/^ of /, "") : "")).replace(/ \(live\)$/, " (\u0645\u0628\u0627\u0634\u0631)").replace(/^futures: /, "\u0627\u0644\u0639\u0642\u0648\u062F \u0627\u0644\u0622\u062C\u0644\u0629: ");
   const foot = `<i>\u{1F4E1} ${t.data}: ${esc(r.sources.length ? r.sources.map(srcAr).join(" \xB7 ") : isAr(t) ? "\u0645\u0639\u0631\u0641\u0629 \u0639\u0627\u0645\u0629" : "general knowledge")}
 ${t.aiLeft(r.left, r.limit)}</i>`;
   const btns = [];

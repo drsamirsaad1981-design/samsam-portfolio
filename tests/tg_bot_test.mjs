@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { summarize, priceSeries, isStable, planName, planAmt, evaluate, settings as alertCfg } from '../tools/alerts-core.mjs';
+import { summarize, priceSeries, isStable, planName, planAmt, evaluate, perUnit, usd, settings as alertCfg } from '../tools/alerts-core.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 let pass = 0, fail = 0;
@@ -839,6 +839,23 @@ check('…and only once (remembered in KV)', !sent.some(x => x.m === 'setMyComma
 claudeCalls.length = 0; sent.length = 0;
 for (const c of ['/start', '/menu', '/portfolio', '/price btc', '/market', '/plan', '/exit', '/movers', '/signals', '/alerts', '/daily', '/morning', '/evening', '/pin', '/unpin', '/new', '/lang', '/hide']) { Wd = await fresh(); await postK(Wd, c); }
 check('every command in the "/" menu is understood (none goes to the AI as a question) and answers', claudeCalls.filter(b => !/SMART/.test(b.system || '')).length === 0 && out().length >= 18, [claudeCalls.length, out().length]);
+{ // 🎯 signals are for coins: gold and a share are in the portfolio, never in /signals (its count is /portfolio's)
+  globalThis.__extraCoins = [{ sym: 'XAU', opening: { qty: 2, avg: 3000 }, lastPrice: 4000 }, { sym: 'NVDAB', cls: 'stock', cgId: 'nvidia-bstocks', opening: { qty: 1, avg: 100 }, lastPrice: 150 }];
+  sent.length = 0; Wd = await fresh(); await postK(Wd, '/signals'); const sg = plain(last().b.text);
+  check('🎯 /signals: SOL is listed; gold (XAU) and the share (NVDAB) are not — signals are for coins', /SOL/.test(sg) && !/XAU|NVDAB/.test(sg), sg);
+  sent.length = 0; Wd = await fresh(); await postK(Wd, '/portfolio'); const pf = plain(last().b.text);
+  check('…and they are still in /portfolio (the total counts them)', /XAU|Gold|NVDAB/.test(pf) || /\$/.test(pf), pf.slice(0, 300));
+  delete globalThis.__extraCoins; sent.length = 0;
+  // 🥇 a metal's take-profit: kept per ounce, shown per gram as on the app's Exit page
+  const GPO = 31.1034768, sx = summarize({ coins: [{ sym: 'SOL', cgId: 'solana', opening: { qty: 2, avg: 80 } }, { sym: 'XAU', opening: { qty: 2, avg: 3000 }, lastPrice: 4000 }, { sym: 'NVDAB', cls: 'stock', cgId: 'nvidia-bstocks', opening: { qty: 1, avg: 100 }, lastPrice: 150 }], txs: [], accum: [],
+    meta: { exitPlan: [{ sym: 'XAU', tps: [{ price: 0, pct: 25, lock: false }, { price: 250 * GPO, pct: 50, lock: true }, { price: 0, pct: 25, lock: false }] }, { sym: 'SOL', tps: [{ price: 200, pct: 25, lock: true }] }] } },
+    { top: [{ id: 'solana', price: 80, ch24: 0 }], top500: [], series: {}, global: {}, cgIds: {} }, Date.now());
+  const tx = sx.tps.filter(t => t.sym === 'XAU'), ts = sx.tps.find(t => t.sym === 'SOL');
+  check('🥇 gold\'s take-profits read per gram: TP1 ×2 of $3,000/oz = "$192.90/g", the typed TP2 = "$250.00/g"; a coin\'s stays "$200"',
+    tx.length === 3 && tx.every(t => t.g === GPO) && perUnit(tx[0], tx[0].level, usd) === '$192.90/g' && perUnit(tx[1], tx[1].level, usd) === '$250.00/g' && ts.g === 1 && perUnit(ts, ts.level, usd) === '$200', [tx.map(t => perUnit(t, t.level, usd)), ts && perUnit(ts, ts.level, usd)]);
+  check('…each row knows its class (crypto / metal / stock) and the signal count is coins only', sx.coins.map(c => c.sym + ':' + c.cls).sort().join() === 'NVDAB:stock,SOL:crypto,XAU:metal' && sx.counts.reinforce + sx.counts.sell + sx.counts.hold === 1, [sx.coins.map(c => c.sym + ':' + c.cls), sx.counts]);
+  check('…the AI names CoinMarketCap as the Fear & Greed source (alternative.me only when it stood in)', /["']alternative\.me["'] : ["']CoinMarketCap["']/.test(built), '');
+}
 
 // ── 🧪 phase 9: paper trading — pretend money, real prices, the real portfolio untouched ──
 kvStore.delete('tg:555:paper'); Wd = await fresh(); sent.length = 0; await postK(Wd, '/paper');

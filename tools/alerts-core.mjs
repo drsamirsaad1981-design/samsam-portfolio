@@ -97,6 +97,8 @@ export function usd(v) {
   if (a === 0) return '$0';
   return s + '$' + a.toPrecision(3);
 }
+// a take-profit row's price or level as the app's Exit page shows it: a metal per gram ("$128.60/g"), anything else as it is
+export const perUnit = (x, v, f) => x && x.g > 1 ? (v / x.g >= 1 ? usd2(v / x.g) : f(v / x.g)) + '/g' : f(v);   // (a gram's price keeps its cents)
 export const usd2 = v => (v < 0 ? '−' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const pct = (v, d = 2) => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d) + '%';
 export const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '') + usd(Math.abs(v)).replace('−', '');
@@ -203,7 +205,7 @@ export function summarize(user, market, now = Date.now()) {
     const chg = c.basePrice > 0 ? (c.currentPrice / c.basePrice - 1) * 100 : 0;
     signal[c.sym] = toS(si.action);
     if (si.pending) pending[c.sym] = toS(si.pending);
-    coinRows.push({ sym: c.sym, value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, chgClose: si.onClose ? si.chg : null, close: close || null, pending: si.pending ? toS(si.pending) : null, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
+    coinRows.push({ sym: c.sym, cls: C.assetClass(c), value: c.qty * c.currentPrice, price: c.currentPrice, avg: c.basePrice, chg, chgClose: si.onClose ? si.chg : null, close: close || null, pending: si.pending ? toS(si.pending) : null, qty: c.qty, ch24: info[c.sym].ch24, ch7: info[c.sym].ch7, why: si.why, rs: si.rs, vs: vs[c.sym] || null });
   }
   const sigMode = JSON.stringify(calm ? { r: rule.reinforce, s: rule.sell, smart, calm } : { r: rule.reinforce, s: rule.sell, smart });
   const counts = { reinforce: 0, sell: 0, hold: 0 }; Object.entries(signal).forEach(([sym, s]) => { if (C.assetClass(coinDoc[sym] || sym) === 'crypto') counts[s]++; });   // signals are for coins: a metal or a share is not counted
@@ -220,7 +222,7 @@ export function summarize(user, market, now = Date.now()) {
     (e.tps || []).slice(0, 3).forEach((t, i) => {
       const auto = c.basePrice * (steps.mults[i] || DEFAULT_EXIT_STEPS.mults[i]);
       const lvl = t.lock === true ? +t.price : t.lock === false ? auto : (+t.price > 0 ? +t.price : auto);
-      if (lvl > 0) tps.push({ sym: c.sym, n: i + 1, level: lvl, price: c.currentPrice, pct: t.pct, mult: t.lock === true ? null : (steps.mults[i] || null) });
+      if (lvl > 0) tps.push({ sym: c.sym, n: i + 1, level: lvl, price: c.currentPrice, pct: t.pct, mult: t.lock === true ? null : (steps.mults[i] || null), g: C.assetClass(c) === 'metal' ? C.GRAMS_PER_OZ : 1 });   // g: a metal's level and price are per ounce here and shown per gram (perUnit)
     });
   }
   // macro exit levels
@@ -446,8 +448,8 @@ export function evaluate(sum, m, state0, cfg, now = Date.now()) {
       if (x.price < x.level * 0.9) { delete st.tp[k]; continue; }
       if (x.price < x.level || st.tp[k]) continue;
       if (first) { st.tp[k] = 1; continue; }
-      const lvl = usd(x.level) + (x.mult ? ` (${x.mult}×)` : '');
-      const text = `💰 <b>${t.tpHit(x.n, esc(x.sym))}</b>\n${t.tpLine(x.n, usd(x.price), lvl, x.pct)}`;
+      const lvl = perUnit(x, x.level, usd) + (x.mult ? ` (${x.mult}×)` : '');
+      const text = `💰 <b>${t.tpHit(x.n, esc(x.sym))}</b>\n${t.tpLine(x.n, perUnit(x, x.price, usd), lvl, x.pct)}`;
       if (push({ key: 'tp-' + k, text, buttons: [[btn(t.planBtn, 'accumulation.html'), btn(t.coinBtn(x.sym), 'index.html#holdings/' + encodeURIComponent(x.sym))]] })) st.tp[k] = 1;
     }
   }

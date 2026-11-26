@@ -324,7 +324,7 @@
     var symHtml = u ? '<a class="ast-sym ext-link" href="' + u + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="' + title + '">' + esc(sym) + EXT + '</a>'
                     : '<span class="ast-sym" title="' + title + '">' + esc(sym) + '</span>';
     var p = +o.price || 0, ch = typeof o.change24h === 'number' && isFinite(o.change24h) ? o.change24h : null;
-    var metal = !o.perOz && !!METALS[String(sym || '').toUpperCase()]; if (metal) p = p / GPO;   // 🥇 metals: per gram, like the amount and the average beside it (o.perOz: a page still in ounces — Exit)
+    var metal = !!METALS[String(sym || '').toUpperCase()]; if (metal) p = p / GPO;   // 🥇 metals: per gram, like the amount and the average beside it
     var priceHtml = p > 0 ? '<span class="ast-price">' + (window.SamsamFmt ? SamsamFmt.price(p) : '$' + p) + (metal ? '/g' : '') + '</span>' : '<span class="ast-price">—</span>';
     var chg = ch === null ? '' : '<span class="ast-dot">•</span><span class="' + (ch >= 0 ? 'up' : 'down') + '">' + signedPct(ch, 2) + '</span>';
     // the % (and a ✏️) stay together: on a narrow row they drop under the price as one piece

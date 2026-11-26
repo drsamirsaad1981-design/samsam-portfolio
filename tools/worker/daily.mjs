@@ -18,7 +18,7 @@ import { usMarket, gramSar } from './usmarket.mjs';
 import { bidiBody } from './bidi.mjs';
 import { K, chatOf, isOwner, langOf, member, setMember } from './who.mjs';
 import { premiumNow } from './stars.mjs';
-import { summarize, settings, local, localL, arDay, localParts, usd, usd2, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
+import { summarize, settings, local, localL, arDay, localParts, usd, usd2, perUnit, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures, setAlertsLang, setZakatSnap } from './data.mjs';
 import { zakatWhen, zakatYear, HIJRI_MONTHS, zakatPool, cashTotals, learnAssets, firstSeen } from '../../samsam-core.js';
 import { compose } from './ai.mjs';
@@ -109,9 +109,9 @@ export function todo(sum, now) {
     if (away <= 3) add(away <= 0 ? 95 : 85, { what: away <= 0 ? 'at_buy_price' : 'near_buy_price', coin: x.sym, price_usd: r6(x.price), your_buy_price_usd: r6(x.at), pct_above_buy_price: r2(away), still_to_buy: x.left != null ? r6(x.left) : null });
   }
   for (const t of sum.tps || []) {
-    const to = (t.level / t.price - 1) * 100;
-    if (to <= 0) add(92, { what: 'take_profit_reached', coin: t.sym, tp: t.n, level_usd: r6(t.level), price_usd: r6(t.price), sell_pct: t.pct });
-    else if (to <= 7) add(80, { what: 'take_profit_close', coin: t.sym, tp: t.n, level_usd: r6(t.level), price_usd: r6(t.price), pct_to_go: r2(to), sell_pct: t.pct });
+    const to = (t.level / t.price - 1) * 100, G = t.g || 1, U = G > 1 ? { unit: 'USD per gram' } : {};   // a metal: per gram, as the app shows it
+    if (to <= 0) add(92, { what: 'take_profit_reached', coin: t.sym, tp: t.n, level_usd: r6(t.level / G), price_usd: r6(t.price / G), ...U, sell_pct: t.pct });
+    else if (to <= 7) add(80, { what: 'take_profit_close', coin: t.sym, tp: t.n, level_usd: r6(t.level / G), price_usd: r6(t.price / G), ...U, pct_to_go: r2(to), sell_pct: t.pct });
   }
   const met = (sum.macro || []).filter(x => x.met).length;
   if (met >= 2) add(75, { what: 'exit_conditions', met_of_3: met });
@@ -131,7 +131,7 @@ function nearest(alerts, m, sum) {
     const p = priceOf(a.sym, a.cg); if (!p) continue;
     out.push({ alert: describe(a), alert_ar: describe(a, true), price_usd: r6(p), pct_away: r2(Math.abs(p / a.value - 1) * 100) });
   }
-  for (const t of sum.tps || []) if (t.level > t.price) out.push({ level: `${t.sym} TP${t.n} ${usd(t.level)}`, price_usd: r6(t.price), pct_away: r2((t.level / t.price - 1) * 100) });
+  for (const t of sum.tps || []) if (t.level > t.price) out.push({ level: `${t.sym} TP${t.n} ${perUnit(t, t.level, usd)}`, price_usd: r6(t.price / (t.g || 1)), pct_away: r2((t.level / t.price - 1) * 100) });
   for (const x of sum.buyAt || []) if (x.price > x.at) out.push({ level: `${x.sym} buy price ${usd(x.at)}`, price_usd: r6(x.price), pct_away: r2((x.price / x.at - 1) * 100) });
   return out.sort((a, b) => a.pct_away - b.pct_away).slice(0, 4);
 }

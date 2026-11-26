@@ -271,5 +271,4 @@ export function pick(ids) {
   const list = ids.filter(Boolean);
   return list.find(id => sharedIndex && sharedIndex[id]) || list.find(id => !failed.has(id)) || list[0] || null;
 }
-export function getStatus() { return { ...status }; }
 export function clear() { cache = {}; db().then(d => d.transaction(STORE, 'readwrite').objectStore(STORE).clear()).catch(() => {}); }

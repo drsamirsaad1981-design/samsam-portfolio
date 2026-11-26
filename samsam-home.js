@@ -64,14 +64,6 @@ function openCoinMenu(btn, sym) {
   ]);
 }
 // Change category: the shared dialog in samsam-add.js (openCatEdit / saveCatEdit / closeCatEdit) — same on Accumulation
-function getCoinNameLinked(sym) {
-  const url = getCoinGeckoUrl(sym);
-  const name = COIN_NAMES[sym] || '';
-  const symHtml = `<div style="font-weight:700;font-size:0.85rem">${sym}${url ? SamsamCoins.EXT : ''}</div>`;
-  const nameHtml = `<div style="font-size:0.72rem;color:var(--fg2)">${name}</div>`;
-  if (!url) return `<div>${symHtml}${nameHtml}</div>`;
-  return `<a class="ext-link" href="${url}" target="_blank" rel="noopener" title="Open ${sym} on CoinMarketCap" style="text-decoration:none;color:inherit;display:block;transition:opacity 0.15s" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">${symHtml}${nameHtml}</a>`;
-}
 function coinFallback(sym, size) {
   const color = COIN_COLORS[sym] || '#6b7280';
   const letter = sym.slice(0,3);
@@ -230,13 +222,9 @@ function applyCloudState(d) {
 
 // checked CoinMarketCap / CoinCodex page names and the futures list arrived (samsam-coins.js) → links point to the right pages
 window.addEventListener('samsam-links', () => { if (!cloudReady) return; try { renderAll(); if (coinTxSym) renderCoinTx(); } catch (_) {} });
-function getRemovedSyms() { return new Set(archivedCoins.map(c => c.sym)); }
 
 function getTxForSym(sym) {
   return transactions.filter(t => t.sym === sym).sort(Samsam.core.compareTx);
-}
-function addTransaction(sym, type, qty, price, note) {
-  return cloudWrite(Samsam.addTx(sym, type, qty, price, note));
 }
 
 // ── Realized P&L ─────────────────────────────────────────────────────────────
@@ -246,18 +234,6 @@ function calcRealizedPnl() { return { total: realizedState.total, sellCount: rea
 function coinProfit(c) {
   const rs = (realizedState.bySym || {})[c.sym] || {};
   return CPProfit.calc({ value: c.qty * c.currentPrice, cost: c.qty * c.basePrice, realized: rs.realized, sellCount: rs.sellCount, sellFees: rs.sellFees, soldCost: rs.soldCost });
-}
-
-function getCustomSyms() {
-  return new Set(customCoins.map(c => c.sym));
-}
-
-// Reset: pins every Oct-15 starting coin back to its starting quantity and average price.
-// Recorded as ledger corrections, so it syncs to every device and history is preserved.
-async function resetApp() {
-  if (!requireCloud()) return;
-  if (!(await CPDialog.confirm('Reset all starting coins to their Oct-15 quantities and prices? Your transaction history is kept.', { title: 'Reset portfolio', okText: 'Reset', danger: true }))) return;
-  cloudWrite(Samsam.resetToBaseline(BASE_PORTFOLIO));
 }
 
 function calcStats() {
@@ -905,8 +881,6 @@ function updateNote(sym, val) {
 // ledger (opening position + Buy / Sell / Transfer In / Transfer Out), so every number
 // can be traced to a transaction.
 const fmtQtyRO = n => parseFloat((+n || 0).toFixed(8)).toLocaleString('en-US', { maximumFractionDigits: 8 });
-const fmtPriceRO = n => SamsamFmt.price(n);
-const fmtAvgRO = n => SamsamFmt.price(n);
 
 // ── Buy / Sell / Transfer In / Transfer Out ──────────
 // Every action opens the same Add Transaction form (see openAddTx).
@@ -1027,7 +1001,7 @@ function pdfSummary() {
   if (tm.f && tm.f.value != null) mk.push(`Fear &amp; Greed <strong>${Math.round(tm.f.value)}</strong> ${esc(tm.f.label || '')}`);
   if (tm.alt && tm.alt.value != null) mk.push(`Altcoin Season <strong>${Math.round(tm.alt.value)}/100</strong>`);
   if (tm.g && tm.g.dom) mk.push(`Dominance BTC <strong>${(+tm.g.dom.btc).toFixed(1)}%</strong> · ETH <strong>${(+tm.g.dom.eth).toFixed(1)}%</strong> · USDT <strong>${(+tm.g.dom.usdt).toFixed(1)}%</strong>`);
-  const factsHtml = zTxt || mk.length ? `<div class="ps-facts">${zTxt ? `<div><span>Zakat</span> ${zTxt}</div>` : ''}${mk.length ? `<div><span>Market</span> ${mk.join(' · ')}</div>` : ''}</div>` : '';
+  const factsHtml = zTxt || mk.length ? `<div class="ps-facts">${zTxt ? `<div><span>Zakat</span> ${zTxt} · an estimate, not a fatwa</div>` : ''}${mk.length ? `<div><span>Market</span> ${mk.join(' · ')}</div>` : ''}</div>` : '';
   box.innerHTML = `
     <div class="ps-tiles">
       <div class="ps-tile"><span>Total Portfolio</span><b>${usd(total)}</b></div>
@@ -1329,10 +1303,6 @@ function applyView(view) {
   try { localStorage.setItem(window.innerWidth <= 640 ? 'samsam_view_phone' : VIEW_KEY, view); } catch(e) {}   // phones keep their own choice
 }
 
-function toggleView() {
-  applyView(currentView === 'cards' ? 'table' : 'cards');
-}
-
 function initView() {
   // On mobile (<= 640px) always start with cards view regardless of saved pref
   if (window.innerWidth <= 640) {   // phones: Cards, unless you picked Table in Settings
@@ -1428,15 +1398,6 @@ setInterval(followLive, 30000); setTimeout(followLive, 3000);
 setInterval(fastPrices, 15000); setTimeout(fastPrices, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) fastPrices(); });
 window.addEventListener('offline', () => { if (typeof setLiveStatus === 'function') setLiveStatus('offline'); });
-
-function showSyncStatus(msg, color) {
-  const el = document.getElementById('footerSyncStatus');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.color = color;
-  el.style.opacity = '1';
-  setTimeout(() => { el.style.opacity = '0'; }, 4000);
-}
 
 // ─── Accumulation Progress on Main Page ──────────────────────────────────────
 // what you have toward a plan row: your holding of it — or, for a savings goal (CASH-EGP…), your cash & certificates in that currency

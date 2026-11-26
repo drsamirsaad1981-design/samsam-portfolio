@@ -37,7 +37,6 @@ export function clearCache() { cache.clear(); tokenCache = null; }
 const BUDGET = 42;
 let used = 0;
 export function resetBudget(n = BUDGET) { used = BUDGET - n; }   // n: how many outside calls this message may make
-export const budgetUsed = () => used;
 // the futures calls (OKX public / rubik, Binance futures, Hyperliquid) have 10 calls kept for them: the rest of a message
 // (portfolio, market, prices) stops 10 short of the allowance, so a futures question always gets its data
 const RESERVE = 10;
@@ -453,7 +452,6 @@ export async function loadUser(env, fresh = false) {
     return readPortfolio(env, db, uid, fresh);
   });
 }
-export const cgIdOf = (c, market) => c.cgId || (market.cgIds || CG_IDS)[String(c.sym || '').toUpperCase()] || null;
 
 // your coins (and plan coins with a buy-price alert) as { sym, id } — the market finds each one's price
 export const coinsOf = user => user ? [...(user.coins || []).filter(c => c && !c.removed), ...(user.accum || []).filter(a => a && +a.alertPrice > 0)].map(c => ({ sym: String(c.sym || '').toUpperCase(), id: c.cgId || null })) : [];
@@ -467,10 +465,6 @@ export async function loadFutures() {
   return cached('fut', 10 * 60e3, async () => { const j = await getJson(RAW + 'm/links.json'); return j && Array.isArray(j.fut) ? new Set(j.fut) : null; });
 }
 // a coin's hourly price file (the last ~29 days), when GitHub keeps one for it
-export async function loadSeries(id) {
-  if (!id || /^x-/.test(id)) return null;
-  return cached('p:' + id, 10 * 60e3, async () => priceSeries(await getJson(RAW + 'p/' + id + '.json')) || false);
-}
 export async function rawSeries(id) {   // the file itself: { t0, step, p: [...] } (for highs / lows over a period)
   if (!id || /^x-/.test(id)) return null;
   return cached('raw:' + id, 10 * 60e3, async () => (await getJson(RAW + 'p/' + id + '.json')) || false);

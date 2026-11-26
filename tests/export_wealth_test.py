@@ -20,6 +20,7 @@ with sync_playwright() as p:
     check('PDF: every part with its share, cash included, ≈100%', any('Cash & certificates' in r for r in st['rows']) and any('Metals' in r for r in st['rows']) and any('Bitcoin' in r for r in st['rows']) and abs(sum(st['pct']) - 100) < 0.5, st['rows'])
     check('PDF: says profit / allocation are on the portfolio only', app['tot'] in st['note'] and 'portfolio only' in st['note'], st['note'])
     check('PDF: holdings by kind (coins · metals)', 'coins' in st['hold'] and '1 metal' in st['hold'] and '1 metals' not in st['hold'], st['hold'])
+    check('PDF: the zakat line, when there is one, says it is an estimate, not a fatwa', 'Zakat' not in st['facts'] or 'an estimate, not a fatwa' in st['facts'], st['facts'])
     check('PDF: market line (Fear & Greed, dominance)', 'Fear & Greed' in st['facts'] and 'Dominance BTC' in st['facts'], st['facts'])
     check('PDF: the allocation donut still adds up on its own', 99 <= st['donut'] <= 101, st['donut'])
     # ── CSV ──

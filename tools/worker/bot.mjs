@@ -17,7 +17,7 @@ import { bidi, bidiBody, NOT_ADVICE } from './bidi.mjs';
 import { markSeen } from './idle.mjs';
 import { note } from './usage.mjs';
 import { asChat, chatOf, K, allowed, migrateOwner, isOwner, members, useInvite, newInvite, removeMember, strangerOnce, MAX_MEMBERS, member, setMember, accessEmails, setPending, getPending, clearPending, DEF_AI, DEF_REPORTS, PREM_AI, PREM_REPORTS, isPremium, langOf, flood, forgetChat, maxMembers, moveAppMember , bump, STRANGER_MSGS_PER_HOUR, STRANGER_CODES_PER_HOUR, askInvite, askedInvite, closeAsk, ASKS_PER_HOUR } from './who.mjs';
-import { summarize, wealthLine, planName, planAmt, dcaAmt, settings, W, esc, usd, usd2, pct, dot, signed, local, localL, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
+import { summarize, wealthLine, planName, planAmt, dcaAmt, settings, W, esc, usd, usd2, perUnit, pct, dot, signed, local, localL, localParts, isStable, etfDay, flow, APP, FNG_AR, SEASON_AR, arDay } from '../alerts-core.mjs';
 import { chatUid, idTokenFor, setAlertsLang } from './data.mjs';
 import { balancesFor } from './cex.mjs';
 import { usMarket, US_STATE, METAL, UNIT, gramSar } from './usmarket.mjs';
@@ -217,8 +217,8 @@ export function viewExit(t, sum, now) {
   // Arabic: a line whose first visible letter is Latin shows left-to-right in Telegram whatever marks it carries (seen 20 Nov) —
   // so those rows start with a sign (• / 🔹 / ⏳), like the ⬜ / ✅ rows that always came out right
   // as many coins as fit: the Arabic marks (bidi.mjs) make a message longer, and past Telegram's 4,096 it would go out unmarked (scrambled)
-  const block = ([sym, list]) => ['', isAr(t) ? `🔹 <b>${esc(sym)}</b>: ${price(list[0].price)}` : `<b>${esc(sym)}</b> · ${price(list[0].price)}`,
-    ...list.sort((a, b) => a.n - b.n).map(x => `${x.to <= 0 ? '✅' : '⏳'} TP${x.n} ${price(x.level)} · ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` · ${x.pct}%` : ''}`)];
+  const block = ([sym, list]) => ['', isAr(t) ? `🔹 <b>${esc(sym)}</b>: ${perUnit(list[0], list[0].price, price)}` : `<b>${esc(sym)}</b> · ${perUnit(list[0], list[0].price, price)}`,
+    ...list.sort((a, b) => a.n - b.n).map(x => `${x.to <= 0 ? '✅' : '⏳'} TP${x.n} ${perUnit(x, x.level, price)} · ${x.to <= 0 ? t.reached : `+${x.to.toFixed(0)}%`}${x.pct ? ` · ${x.pct}%` : ''}`)];
   const all = [...bySym];
   let n = Math.min(8, all.length), text;
   for (;;) {
@@ -243,7 +243,7 @@ export function viewMovers(t, sum) {
 
 export function viewSignals(t, sum) {
   const by = { reinforce: [], sell: [], hold: [] };
-  for (const c of sum.coins) (by[sum.signal[c.sym]] || by.hold).push(c);
+  for (const c of sum.coins) if (!c.cls || c.cls === 'crypto') (by[sum.signal[c.sym]] || by.hold).push(c);   // signals are for coins: a metal or a share has none (the same count as /portfolio)
   const L = [`🎯 <b>${t.sigT}</b>`];
   for (const k of ['reinforce', 'sell', 'hold']) {
     if (!by[k].length) continue;
@@ -973,7 +973,7 @@ async function answer(env, chat, question, budget = 36, into = null) {
   if (r.error) return show({ text: r.error === 'limit' ? t.aiLimit(r.limit) : r.error === 'nokey' ? t.aiNoKey : r.error === 'ownkey' ? t.aiOwnKey : r.error === 'busy' ? t.aiBusy : t.aiErr, buttons: [[cb(t.back, 'menu')]] });
   const srcAr = x => !isAr(t) ? x : String(x).replace(/^alerts \(checked every 5 min\)$/, 'التنبيهات (تُفحص كل 5 دقائق)').replace(/^your portfolio \(Firebase\)$/, 'محفظتك (Firebase)').replace(/^your plan \(Firebase\)$/, 'خطتك (Firebase)')
     .replace(/^your exit plan \(Firebase\)$/, 'خطة الخروج (Firebase)').replace(/^paper portfolio \(live prices\)$/, 'المحفظة التجريبية (أسعار مباشرة)').replace(/^what-if \(the app's maths\)$/, 'حساب «ماذا لو» (حسابات التطبيق)')
-    .replace(/^hourly price history \(GitHub prices branch\)$/, 'سجل الأسعار بالساعة (GitHub)').replace(/^market snapshot \(CoinGecko, alternative\.me, ETF flows\)$/, 'لقطة السوق (CoinGecko و alternative.me وتدفقات ETF)')
+    .replace(/^hourly price history \(GitHub prices branch\)$/, 'سجل الأسعار بالساعة (GitHub)').replace(/^market snapshot \(CoinGecko, (CoinMarketCap|alternative\.me), ETF flows\)$/, 'لقطة السوق (CoinGecko و $1 وتدفقات ETF)')
     .replace(/^market snapshot( of .*)?$/, (m0, w) => 'لقطة السوق' + (w ? ' ' + w.replace(/^ of /, '') : '')).replace(/ \(live\)$/, ' (مباشر)').replace(/^futures: /, 'العقود الآجلة: ');
   const foot = `<i>📡 ${t.data}: ${esc(r.sources.length ? r.sources.map(srcAr).join(' · ') : (isAr(t) ? 'معرفة عامة' : 'general knowledge'))}\n${t.aiLeft(r.left, r.limit)}</i>`;
   const btns = [];

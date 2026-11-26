@@ -8,22 +8,22 @@
 if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add('in-tg');var own=false;try{own=window.parent===window||!!window.parent.location.href;}catch(e){}if(!own){}var ev=function(n){try{if(window.TelegramWebviewProxy)TelegramWebviewProxy.postEvent(n,'');else if(!own)window.parent.postMessage(JSON.stringify({eventType:n,eventData:''}),'https://web.telegram.org');}catch(e){}};if(window.top===window||!own){ev('web_app_ready');ev('web_app_expand');}}}catch(e){}})();</script>
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-lang.js?v=202611261400"></script>
-<script src="samsam-ar.js?v=202611261400"></script>
-<script src="samsam-ui.js?v=202611261400"></script>
-<script src="samsam-hints.js?v=202611261400"></script>
-<script src="samsam-arhints.js?v=202611261400"></script>
-<script src="samsam-vault.js?v=202611261400"></script>
-<script src="samsam-labels.js?v=202611261400"></script>
-<script src="samsam-taxonomy.js?v=202611261400"></script>
-<script src="samsam-dropdown.js?v=202611261400"></script>
-<script src="samsam-coins.js?v=202611261400"></script>
-<script src="samsam-import.js?v=202611261400"></script>
-<script src="samsam-wallets.js?v=202611261400"></script>
-<script src="samsam-cex.js?v=202611261400"></script>
-<script src="samsam-rewards.js?v=202611261400"></script>
-<script src="samsam-settings.js?v=202611261400"></script>
-<script src="samsam-chart.js?v=202611261400"></script>
+<script src="samsam-lang.js?v=202611262026"></script>
+<script src="samsam-ar.js?v=202611262026"></script>
+<script src="samsam-ui.js?v=202611262026"></script>
+<script src="samsam-hints.js?v=202611262026"></script>
+<script src="samsam-arhints.js?v=202611262026"></script>
+<script src="samsam-vault.js?v=202611262026"></script>
+<script src="samsam-labels.js?v=202611262026"></script>
+<script src="samsam-taxonomy.js?v=202611262026"></script>
+<script src="samsam-dropdown.js?v=202611262026"></script>
+<script src="samsam-coins.js?v=202611262026"></script>
+<script src="samsam-import.js?v=202611262026"></script>
+<script src="samsam-wallets.js?v=202611262026"></script>
+<script src="samsam-cex.js?v=202611262026"></script>
+<script src="samsam-rewards.js?v=202611262026"></script>
+<script src="samsam-settings.js?v=202611262026"></script>
+<script src="samsam-chart.js?v=202611262026"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -785,7 +785,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202611261400"></script>
+<script type="module" src="samsam-cloud.js?v=202611262026"></script>
 <script>
 // ── Constants ──
 
@@ -1013,16 +1013,6 @@ async function fetchLivePrices() {
 function fmtUSD(v) {
   return SamsamFmt.usd(v);   // shared app-wide format: $10,660.13
 }
-function fmtPrice(v) {
-  return SamsamFmt.price(v);   // shared rule: >=$10 2 dp, $0.01–$10 4 dp, <$0.01 4 significant
-}
-function fmtPriceOld(v) {
-  if (v >= 10000) return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-  if (v >= 1000)  return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-  if (v >= 1)     return SamsamFmt.usd(v);
-  if (v >= 0.01)  return '$' + v.toFixed(4);
-  return '$' + v.toFixed(6);
-}
 function fmtPct(v) {
   return (v >= 0 ? '+' : '-') + Math.abs(v).toFixed(2) + '%';
 }
@@ -1044,23 +1034,6 @@ function coinImgErr(el) {
   el.outerHTML = coinFallback(sym);
 }
 function getCoinGeckoUrl(sym, cgId) { return SamsamCoins.cgUrl(sym, cgId); }   // shared: samsam-coins.js
-function coinIconHtml(c) {
-  const sym   = c.sym;
-  const url   = c.logoUrl || COIN_ICONS[sym];
-  const cgUrl = getCoinGeckoUrl(sym, c.cgId);
-
-  let iconHtml;
-  if (url) {
-    iconHtml = `<img src="${url}" width="34" height="34" data-sym="${sym}"
-      style="border-radius:50%;flex-shrink:0;object-fit:cover"
-      onerror="coinImgErr(this)">`;
-  } else {
-    iconHtml = coinFallback(sym);
-  }
-
-  // No individual link on icon — the whole asset area is already linked
-  return iconHtml;
-}
 
 // ── Category config (mirrors index.html) ──
 // ── Categories — exact mirror of index.html ──

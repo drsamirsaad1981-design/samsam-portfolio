@@ -51,6 +51,7 @@ the PDF, the CSV and the AI report; `summarize().wealth` in the bot; `zakatPool`
 - Browser tests: `python3 tests/run.py <file>…` (starts the site and a fake Firestore; no argument = `tests/suite.txt`).
   **A new test file must be added to `tests/suite.txt`, or GitHub never runs it.**
 - Node tests: `node tests/tg_bot_test.mjs` (also the deploy gate), `alerts_test.mjs`, `core.test.mjs`, `asset_classes_test.mjs`.
+  GitHub runs a Node test only through a small `.py` wrapper listed in `suite.txt` (see `core_unit_test.py`).
 - Worker: any change under `tools/worker`, `tools/ai-worker.js`, `tools/alerts-core.mjs` or `samsam-core.js` → rebuild
   `tools/dist/samsam-worker.js` (the bot test fails when it is stale). "Deploy Worker" runs when the built file changes.
 - GitHub: "Tests" (4 shards, 10–30 min), "Price history" (twice an hour), "Deploy Worker", Pages.
@@ -79,7 +80,7 @@ Fixed then: charts after a reload were not redrawn when the saved prices arrived
 Fixed after the review (26 Nov, his "نفذ"):
 - Bot `/portfolio`: the month's DCA total adds dollars (`usdMo`); the morning's facts give a saving in its own currency.
 - Metals: no zakat line of their own anywhere (`SamsamCoins.zakat` is gone; one pool); the price beside a metal's name is
-  per gram (`assetText`; `perOz: true` keeps the ounce on the Exit page, which is still in ounces for a metal).
+  per gram (`assetText`).
 - Zakat: a day that passed with nobody there to keep its pool stays open (`zakatYear` → `late`, today's value until kept),
   only for an account that already existed that day (`firstSeen` = its first `coin.addedAt`, never a transaction's date).
 - `portfolio.html` is a redirect to `index.html` (out of `sw.js`).
@@ -102,17 +103,26 @@ Second round the same day (his "عدل البوت … توحيد الألوان 
 - Bot guide (`guide.json`, approved): "Daily messages and radars" now says an alert in words comes at the moment; a buy
   price, a take-profit and a due regular buy are in the morning message.
 
+Third round the same day (his "خلص ٢ و٣ و٤" + the donut's colours):
+- Donut / categories (`samsam-taxonomy.js`): no category may look like Bitcoin's orange, gold or the Crypto class's
+  violet — AI & DePIN is fuchsia `#d946ef`, Layer 0 bronze `#b8834f`, Launchpad salmon `#fda4af` (they were purple, amber
+  and orange). Bitcoin orange and gold keep their own colours.
+- Exit page: a metal is in grams like every page (amounts `SamsamCoins.grams`, prices `/g`); a step's price is typed per
+  gram and saved per ounce (`gpo()` in `samsam-exit.js`; `exit_metal_test.py`). The bot shows a metal's take-profit per
+  gram too (`perUnit` in `alerts-core.mjs`; the AI's facts carry `unit: 'USD per gram'`).
+- Bot `/signals`: coins only (a metal or a share is not listed), the same count as `/portfolio`.
+- Altcoin Season "9-month high / low" in Arabic; `manifest.json` description; the welcome page's goal says "following";
+  the bot's AI names CoinMarketCap as the Fear & Greed source; the PDF's zakat line ends "an estimate, not a fatwa";
+  19 unused functions removed (app and Worker); `core.test.mjs` and `alerts_reads_test.mjs` now run on GitHub
+  (`core_unit_test.py`, `alerts_reads_unit_test.py` in `suite.txt`). `tools/welcome/build_public.py` no longer fails without a demo folder.
+- Samir confirmed from his phone (two screenshots) that the Net worth card is the same on Overview and Allocation.
+
 Still open:
 1. Automatic alerts for members from the Worker (buy-price, DCA day, take-profit, signal change, weekly report): a phase
    of its own, to plan with Samir first. Today `evaluate` runs only in `tools/alerts.mjs` on GitHub, for the owner.
-2. (done — the bot guide's line was corrected in the second round.)
-3. The Exit page shows a metal in troy ounces (amounts, average, levels).
-4. Smaller: bot `/signals` counts metals and shares under Hold; `core.test.mjs` and `alerts_reads_test.mjs` never run on
-   GitHub; "9-month high / low" untranslated; `manifest.json` description; the welcome page's goal says "managing";
-   the bot's AI names alternative.me as a source; the PDF's zakat line has no "estimate" note; 14 unused functions.
-5. `hv_chart_test.py` ("24h range") fails about one run in four locally and passes on the retry — not looked into yet.
-
-Samir has not yet confirmed on his phone that the Net worth card looks the same on Overview and Allocation.
+2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
+3. Net worth card: a part under 0.5% reads "0%" (his shares, $74.86 of $64,825) — "<1%" would be truer.
+4. Arabic: "g" and "جم" both appear; the PDF and the CSV are in English when the app is Arabic.
 
 ## Open ideas (not requested yet)
 

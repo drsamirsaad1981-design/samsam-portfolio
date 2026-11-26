@@ -2,15 +2,17 @@
 // allocation donut, category filter cards, P&L breakdowns, table/card tags, Add coin form.
 // To move a coin, change its line here — the cloud copy of each coin's category follows automatically.
 (function () {
+  // 🎨 No two colours here may look alike in the donut: Bitcoin keeps its orange and gold its gold, so no other category is
+  // orange or amber (Layer 0 and Launchpad were), and none is the Crypto class's violet (AI was).
   var CATS = [
     { key: 'btc',       label: 'Bitcoin',                    color: '#f7931a', coins: ['BTC'] },   // its own category (the portfolio is built around it)
-    { key: 'ai',        label: 'AI & DePIN',                 color: '#a855f7', coins: ['TAO', 'NEAR', 'ICP', 'RENDER', 'WLD'] },
+    { key: 'ai',        label: 'AI & DePIN',                 color: '#d946ef', coins: ['TAO', 'NEAR', 'ICP', 'RENDER', 'WLD'] },
     { key: 'layer1',    label: 'Layer 1 Blockchains',        color: '#3b82f6', coins: ['ETH', 'SOL', 'SUI', 'APT', 'SEI', 'AVAX', 'KAS', 'HBAR', 'VET', 'XDC', 'FLR', 'NIGHT', 'KAVA', 'CRO', 'XPL', 'MON', 'MOVR', 'GLMR', 'GRAM'] },
     { key: 'layer2',    label: 'Layer 2 Blockchains',        color: '#06b6d4', coins: ['ARB', 'OP', 'STRK', 'POL', 'MNT'] },
-    { key: 'layer0',    label: 'Layer 0 & Interoperability', color: '#f59e0b', coins: ['DOT', 'ATOM', 'KSM', 'QNT'] },
+    { key: 'layer0',    label: 'Layer 0 & Interoperability', color: '#b8834f', coins: ['DOT', 'ATOM', 'KSM', 'QNT'] },
     { key: 'oracle',    label: 'Oracles & Middleware',       color: '#ec4899', coins: ['LINK', 'PYTH', 'AVAIL'] },
     { key: 'defi',      label: 'DeFi & RWA',                 color: '#10b981', coins: ['ONDO', 'JUP'] },
-    { key: 'launchpad', label: 'Launchpad',                  color: '#f97316', coins: ['PONS'] },
+    { key: 'launchpad', label: 'Launchpad',                  color: '#fda4af', coins: ['PONS'] },
     { key: 'web3',      label: 'Web3 & Gaming',              color: '#84cc16', coins: ['ENS'] },
     { key: 'meme',      label: 'Meme & Utility Tokens',      color: '#ef4444', coins: ['DOGE', 'VTHO'] },
     { key: 'metals',    label: 'Precious Metals',            color: '#eab308', coins: ['XAU', 'XAG', 'XPT', 'XCU', 'PAXG', 'XAUT', 'KAG'] },   // physical gold / silver (grams) and gold tokens
