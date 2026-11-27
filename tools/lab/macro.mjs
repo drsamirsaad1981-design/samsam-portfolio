@@ -245,6 +245,18 @@ for (const [k, x] of Object.entries(fr)) {
   }
 }
 
+// the last 365 days of three coins (the ones the bot's leverage radar watches): where a wording's edges can honestly sit
+{ say('', '### The last 365 days, coin by coin (Binance archive, per 8 h)', '', '| Coin | Payments | 1% under | 5% under | 10% under | Quarter under | Median | Three quarters under | 90% under | 95% under | 99% under | Highest | Lowest | < 0 | ≤ −0.005% | ≤ −0.01% | > +0.01% | ≥ +0.02% | ≥ +0.03% |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  const end = new Date(NOW); OUT.funding.year = {};
+  for (const sym of ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']) { const A = [];
+    for (let i = 13; i >= 1; i--) { const dt = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - i, 1)), tag = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}`, r = await get(`https://data.binance.vision/data/futures/um/monthly/fundingRate/${sym}/${sym}-fundingRate-${tag}.zip`, { as: 'bin', tries: 1 }), csv = r.ok ? unzip1(r.b) : null;
+      if (csv) for (const l of csv.trim().split('\n')) { const c = l.split(','), t = +c[0], v = +c[c.length - 1], every = +c[1] > 0 && c.length > 2 ? +c[1] : 8; if (t > 1e12 && isFinite(v)) A.push([t, v * 100 * 8 / every]); } }
+    A.sort((a, b) => a[0] - b[0]); const P = A.length ? A.filter(p => p[0] > A[A.length - 1][0] - 365 * DAY) : [], v = P.map(p => p[1]), sh = f => f2(v.filter(f).length / v.length * 100, 1) + '%';
+    if (v.length < 300) { say(`| ${sym} | ${v.length} — not enough | | | | | | | | | | | | | | | | | |`); continue; }
+    OUT.funding.year[sym] = { n: v.length, p5: pctl(v, 5), p50: median(v), p95: pctl(v, 95) };
+    say(`| ${sym} | ${v.length} | ${pc(pctl(v, 1), 4)} | ${pc(pctl(v, 5), 4)} | ${pc(pctl(v, 10), 4)} | ${pc(pctl(v, 25), 4)} | ${pc(median(v), 4)} | ${pc(pctl(v, 75), 4)} | ${pc(pctl(v, 90), 4)} | ${pc(pctl(v, 95), 4)} | ${pc(pctl(v, 99), 4)} | ${pc(Math.max(...v), 4)} | ${pc(Math.min(...v), 4)} | ${sh(x => x < 0)} | ${sh(x => x <= -0.005)} | ${sh(x => x <= -0.01)} | ${sh(x => x > 0.0100001)} | ${sh(x => x >= 0.02)} | ${sh(x => x >= 0.03)} |`); }
+}
+
 say('', '---', '', 'What this run does not say: whether these numbers are worth showing — only whether they can be had, how fresh, and how far two sources agree.');
 const file = process.argv[2];
 if (file) { fs.writeFileSync(file, L.join('\n') + '\n'); fs.writeFileSync(file.replace(/\.md$/, '') + '.json', JSON.stringify(OUT, null, 1)); }
