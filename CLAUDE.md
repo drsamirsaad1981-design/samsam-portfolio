@@ -338,7 +338,14 @@ Eleventh round (28 Nov, his "نفذ" on the funding bar after his phone's screen
   process does not carry the moved clock).
 - The lab has section E (`tools/lab/macro.mjs`): Bitcoin in the 24 hours and 7 days after each funding state, from
   Binance's archive (payments + the perpetual's 8-hour candles), per payment and per episode — so the ⓘ can carry
-  measured numbers like the dollar's, or say nothing. The run's numbers go in the Project doc "indicators-plan".
+  measured numbers like the dollar's, or say nothing. **The run (28 Nov, 7,467 payments, Jan 2020 → Oct 2026; the Project
+  doc "funding-bar-and-crowding-lab")**: after crowded longs the 7-day median was the usual one (+0.49% vs +0.48%) but a
+  fall of 10%+ inside the week came in 35% of payments (16% usually) and a rise of 10%+ in 29% (20%) — sharper, no
+  direction; 524 of the 615 payments are from 2020–2021, and at the FIRST payment of the 21 episodes nothing stood out
+  (2 fell 10%+). After crowded shorts a rise of 10%+ came in 53% (20%) over the whole period but 24% vs 15% since 2022,
+  and the worst crashes began there too (Mar 2020 −41%, May / Jun 2022 −27% / −30%, Nov 2022 −17%); 27 episodes. So the
+  conditional wording stands and "a fast bounce" would not have. Whether the ⓘ gets a "what was measured" line is his
+  call (a draft is in that doc).
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
