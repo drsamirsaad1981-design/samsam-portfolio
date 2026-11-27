@@ -362,7 +362,7 @@
   R(/^111-day average (\$[\d.,]+)$/, function (_, p) { return 'متوسط 111 يوماً ' + n(p); });   // the Pi Cycle's two averages
   R(/^twice the 350-day (\$[\d.,]+)$/, function (_, p) { return 'ضعف متوسط 350 يوماً ' + n(p); });
   R(/^200-week average (\$[\d.,]+M?)$/, function (_, p) { return 'متوسط 200 أسبوع ' + n(p); });
-  R(/^Market’s average cost (\$[\d.,]+M?)$/, function (_, p) { return 'متوسط تكلفة السوق ' + n(p); });   // MVRV's other face (price ÷ ratio)
+  R(/^Bitcoin’s realized market cost (\$[\d.,]+M?)$/, function (_, p) { return 'متوسط تكلفة البيتكوين المحققة للسوق ' + n(p); });   // MVRV's other face (price ÷ ratio) — one name for it in the Exit row, the Plan line and the rainbow card
   R(/^\(today’s value: (.+)\)$/, function (_, w) { return '(قيمة اليوم: ' + n(w) + ')'; });
   R(/^the price is (\d+)% (under|above) it$/, function (_, v, w) { return 'السعر ' + (w === 'under' ? 'تحته' : 'فوقه') + ' بـ ' + n(v + '%'); });
   R(/^the price is on it$/, 'السعر عنده');

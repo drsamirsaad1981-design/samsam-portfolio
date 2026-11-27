@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: d35bebd1918d4b46
+// sources-hash: 96e4342f42ad796a
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1063,7 +1063,7 @@ var W = {
     allExit: "Every exit condition is met \u2014 your exit zone",
     piLine: (r, lvl) => `The 111-day average is ${r}% of twice the 350-day one \xB7 your level ${lvl}%`,
     mvrvLine: (r, lvl) => `Market value \xF7 realized value: ${r} \xB7 your level ${lvl}`,
-    mvrvCost: (c) => `The market's average cost: ${c}`,
+    mvrvCost: (c) => `Bitcoin's realized market cost: ${c}`,
     srcCM: "Source: Coin Metrics",
     dxy: "Dollar index",
     fundName: "BTC funding",
@@ -1183,7 +1183,7 @@ var W = {
     allExit: "\u062A\u062D\u0642\u0642\u062A \u0643\u0644 \u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C \u2014 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
     piLine: (r, lvl) => `\u0645\u062A\u0648\u0633\u0637 111 \u064A\u0648\u0645\u0627\u064B \u064A\u0633\u0627\u0648\u064A ${r}% \u0645\u0646 \u0636\u0639\u0641 \u0645\u062A\u0648\u0633\u0637 350 \u064A\u0648\u0645\u0627\u064B \xB7 \u0645\u0633\u062A\u0648\u0627\u0643 ${lvl}%`,
     mvrvLine: (r, lvl) => `\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629 \xF7 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u062D\u0642\u0642\u0629: ${r} \xB7 \u0645\u0633\u062A\u0648\u0627\u0643 ${lvl}`,
-    mvrvCost: (c) => `\u0645\u062A\u0648\u0633\u0637 \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0633\u0648\u0642: ${c}`,
+    mvrvCost: (c) => `\u0645\u062A\u0648\u0633\u0637 \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u0645\u062D\u0642\u0642\u0629 \u0644\u0644\u0633\u0648\u0642: ${c}`,
     srcCM: "\u0627\u0644\u0645\u0635\u062F\u0631: Coin Metrics",
     dxy: "\u0645\u0624\u0634\u0631 \u0627\u0644\u062F\u0648\u0644\u0627\u0631",
     fundName: "\u062A\u0645\u0648\u064A\u0644 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",

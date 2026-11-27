@@ -66,7 +66,7 @@
       var ml = +t.mvrv >= 1 && +t.mvrv <= 10 ? +t.mvrv : 3, mr = mv ? mv.v : null;
       rows.push({ k: 'mvrv', g: 'v', name: 'Bitcoin MVRV', short: 'MVRV', cur: mr, rule: '≥ ' + ml.toFixed(2),
         state: mr == null ? 'none' : st(mr >= ml, mr >= ml * (1 - NEAR)), progress: mr ? Math.min(100, mr / ml * 100) : 0,
-        fmt: function (v) { return v.toFixed(2); }, sub: mv ? (mv.realized ? 'Market’s average cost ' + usd0(mv.realized) + ' · ' : '') + 'Source: Coin Metrics' : '' });
+        fmt: function (v) { return v.toFixed(2); }, sub: mv ? (mv.realized ? 'Bitcoin’s realized market cost ' + usd0(mv.realized) + ' · ' : '') + 'Source: Coin Metrics' : '' });
       var cnt = function (k) { var a = rows.filter(function (r) { return r.g === k; }); return { hit: a.filter(function (r) { return r.state === 'hit'; }).length, of: a.length }; };
       return { rows: rows, hit: rows.filter(function (r) { return r.state === 'hit'; }).length, s: cnt('s'), v: cnt('v') };
     },

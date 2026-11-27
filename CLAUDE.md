@@ -37,11 +37,12 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   move together. App: "Market Structure: n of 3 · Bitcoin Valuation: n of 3"; bot the same (`exitGroups`).
 - MVRV (27 Nov): Coin Metrics' daily ratio (market value ÷ realized value), one day behind. The level is the user's (1–10,
   **3.0 until chosen**); **its alert is off until the user turns it on** (like the Pi Cycle's). **The source is named
-  wherever the ratio shows** ("Source: Coin Metrics" — its free data is CC BY-NC 4.0). The average cost it implies is "a
-  reference, not a floor".
+  wherever the ratio shows** ("Source: Coin Metrics" — its free data is CC BY-NC 4.0). The average cost it implies has **one name
+  everywhere** — "Bitcoin's realized market cost" (متوسط تكلفة البيتكوين المحققة للسوق): rainbow card, Exit row, Plan line,
+  the bot's alert — and is "a reference, not a floor".
 - BTC funding (27 Nov): **one rate from several venues weighted by open interest, and the big venues that are NOT in it are
-  named beside it** ("without Binance and Bybit" on the card and in the bot — from the snapshot's `missing`, never typed
-  in). **One wording everywhere** (`fundingRead`): hot ≥ +0.03% per 8 h · up > +0.01% · rest 0…+0.01% · neg < 0 · deep ≤
+  named beside it** (from the snapshot's `missing`, never typed in: "without Binance and Bybit" when the Doha relay is
+  silent; nothing when all are in — since 27 Nov 20:10 UTC it is 7 venues, Binance and Bybit through the relay). **One wording everywhere** (`fundingRead`): hot ≥ +0.03% per 8 h · up > +0.01% · rest 0…+0.01% · neg < 0 · deep ≤
   −0.01% — edges from the last year's payments, not 2021's. A mood reading, never an exit condition.
 - The dollar index (27 Nov, his ranges): the card is the number and its **level in words** — under 90 Weak dollar · 90–100
   Below the base of 100 · 100–105 Moderate strength · 105–110 High strength · over 110 **Rare strength** (a level, never a
@@ -257,11 +258,10 @@ Seventh round (27 Nov, his "نفذ" with four decisions, after the lab trial `to
 - The per-coin leverage post (17:30, the channel) and the AI's `get_derivatives` still read each coin LIVE from OKX /
   Binance / Hyperliquid — a different measurement from the market's funding line (5 venues, weighted); both say what
   they are made of.
-- **Binance through the Doha relay** (the relay's code came in the ninth round; live once he deploys it): the job asks
+- **Binance through the Doha relay** (code in the ninth round, deployed in the tenth): the job asks
   `binanceRelay?pub=btcFunding` and expects `{ venues: [{ k: 'Binance' | 'Bybit', rate (% per 8 h), oi (USD), m7 }] }`;
-  today the relay answers 405 (POST only), so both stay out. When the relay gains that public read path (he deploys it
-  from Cloud Shell: `firebase deploy --only functions --project samsam-portfolio`), Binance joins the mix and the card,
-  the bot and the AI say "without Bybit" by themselves — no app or Worker change.
+  a venue that answers joins the mix and leaves `missing`, so the card, the bot and the AI change their note by
+  themselves — no app or Worker change. When the relay is silent the mix falls back to the five and names the two again.
 - `guide.json` (the bot's guide) was NOT touched.
 
 Eighth round (27 Nov, his "نفذ" after his phone's screenshots of group 2):
@@ -289,16 +289,27 @@ Ninth round (27 Nov evening, his four finishing notes from the phone + "send me 
   realized market cost: $53,033 · Bitcoin's price is now ~14% above average cost" (the price is still the last daily
   close), each with its own ⓘ (`w200`, `mvrv`). Two facts corrected in the hints he drafted: under 1.0 the price is BELOW
   the average cost (not "near" it); the 200-week average is the mean of WEEKLY closes, compared with the daily close.
-  The Exit row and the Plan line still say "Market's average cost" — one term for both is his call (asked).
+  (The Exit row and the Plan line said "Market's average cost" — unified in the tenth round.)
 - Arabic hints: every number, percent and range goes through `n()` (a left-to-right `<bdi>`) — a loose "90 – 100" or
   "36%" inside an Arabic line was reordered, and a "و" stuck to a year read as a "g" ("و2022"): write "في أعوام …، …".
 - A bug his screenshot showed: the rainbow chart was drawn 720 wide when the hub opened on Metals / bStocks (its view
   hidden, no width) and stayed shrunk with tiny labels after switching to Crypto — a `ResizeObserver` on the card now
   redraws it to fit.
 - The relay's public read path is written and tested (`tools/binance-relay/functions/index.js`, `GET ?pub=btcFunding`:
-  Binance, and Bybit when it answers from Doha; kept 5 minutes; any other GET is 405). **It is live only after he
-  deploys it** from Cloud Shell (the repo is public: `git pull`, then `firebase deploy --only functions --project
-  samsam-portfolio` in `tools/binance-relay`). After that the next "Price history" run shows it in the `[macro]` line.
+  Binance, and Bybit when it answers from Doha; kept 5 minutes; any other GET is 405). Deployed in the tenth round.
+
+Tenth round (27 Nov night, his "وحّد الصياغة" + his Cloud Shell opened for the relay):
+- One term: the Exit row's sub-line and the Plan line now read "Bitcoin's realized market cost $…" like the rainbow card
+  (`samsam-exit.js`, `costNote` in `accumulation.html`, one rule in `samsam-ar.js`), and so do the bot's MVRV alert
+  (`mvrvCost` in `alerts-core.mjs`) and the app guide. The Worker was rebuilt for that line.
+- **The relay is deployed** (27 Nov 20:00 UTC, by Claude in his Cloud Shell through the built-in browser — his words: the
+  shell is open, go). In Cloud Shell the repo lives in **`~/cp`** (branch `main`): `cd ~/cp && git pull`, then in
+  `tools/binance-relay`: `firebase deploy --only functions --project samsam-portfolio` (no sign-in was asked; `npm
+  install` only when `functions/package.json` changes). The terminal there takes the browser tool's `key` action (one key
+  at a time), not `type`.
+- **Both answer from Doha.** The first run after it (20:10 UTC): `funding 0.0048 %/8h · Binance 0.0064, Bybit 0.0058,
+  Bitget 0.0046, Hyperliquid 0.0051, OKX 0.0013, Gate 0.0038, Deribit -0.0004 · without —` — 7 venues, nothing missing
+  (Binance $5.9B + Bybit $4.1B of open interest against about $9.3B for the other five: roughly half the weight).
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
@@ -306,8 +317,7 @@ Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
   (The rainbow alert reaches members with this phase; today they see the line in `/market` and the weekly report.)
 
 Still open:
-1. The members' alerts above; the relay's deploy (his step, from Cloud Shell — then check the next `[macro]` log line for
-   Binance and whether Bybit answers from Doha); a section in the bot's guide for the rainbow, MVRV, the dollar index and funding (his approval:
+1. The members' alerts above; a section in the bot's guide for the rainbow, MVRV, the dollar index and funding (his approval:
    it posts to the channel).
 2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
    `asset_classes_app_test.py` needed its retry in both GitHub runs of 27 Nov (8/9 on the first try, at 46/48 of its

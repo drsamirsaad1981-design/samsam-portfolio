@@ -395,13 +395,13 @@ check('all texts Telegram-safe', all.every(okHtml));
     let q = run(mvM(M0 + DAY, 2.55), b0, M0 + DAY, cfg, lv);
     check('MVRV reaches your level with its switch off: no message, remembered quietly', !q.messages.some(x => x.key === 'macro-mvrv') && q.state.macro.mvrv === 1, q.messages.map(x => x.key));
     q = run(mvM(M0 + DAY, 2.55), b0, M0 + DAY, onC, lv); const mm = q.messages.find(x => x.key === 'macro-mvrv');
-    check('…switched on: one message — the ratio, your level, the market\'s average cost, the source, the two counts', mm && /^🧭 <b>Exit level reached · MVRV<\/b>\nMarket value ÷ realized value: 2\.55 · your level 2\.50\nThe market's average cost: \$23,529\n<i>Source: Coin Metrics<\/i>\nMarket structure 0\/3 · Bitcoin valuation 1\/3$/.test(mm.text) && okHtml(mm.text) && NOW_KEYS.test('macro-mvrv'), mm && mm.text);
+    check('…switched on: one message — the ratio, your level, the market\'s average cost, the source, the two counts', mm && /^🧭 <b>Exit level reached · MVRV<\/b>\nMarket value ÷ realized value: 2\.55 · your level 2\.50\nBitcoin's realized market cost: \$23,529\n<i>Source: Coin Metrics<\/i>\nMarket structure 0\/3 · Bitcoin valuation 1\/3$/.test(mm.text) && okHtml(mm.text) && NOW_KEYS.test('macro-mvrv'), mm && mm.text);
     const q2 = run(mvM(M0 + 2 * DAY, 2.45), q.state, M0 + 2 * DAY, onC, lv), q3 = run(mvM(M0 + 3 * DAY, 2.52), q2.state, M0 + 3 * DAY, onC, lv);
     check('…a dip of less than 0.1 under the level and back: no second message', !q2.messages.some(x => x.key === 'macro-mvrv') && !q3.messages.some(x => x.key === 'macro-mvrv'), [q2.state.macro, q3.messages.map(x => x.key)]);
     const q4 = run(mvM(M0 + 4 * DAY, 2.35), q3.state, M0 + 4 * DAY, onC, lv), q5 = run(mvM(M0 + 5 * DAY, 2.6), q4.state, M0 + 5 * DAY, onC, lv);
     check('…after a fall of 0.1 under it, the next reach alerts again', !q4.state.macro.mvrv && q5.messages.some(x => x.key === 'macro-mvrv'), q5.messages.map(x => x.key));
     const arM = run(mvM(M0 + DAY, 2.55), b0, M0 + DAY, settings({ alerts: { lang: 'ar', digest: false, mvrv: true } }), lv).messages.find(x => x.key === 'macro-mvrv');
-    check('…in Arabic, with the source', arM && /^🧭 <b>تحقق مستوى خروج · مؤشر MVRV<\/b>\nالقيمة السوقية ÷ القيمة المحققة: 2\.55 · مستواك 2\.50\nمتوسط تكلفة السوق: \$23,529\n<i>المصدر: Coin Metrics<\/i>\nهيكل السوق 0 من 3 · تقييم البيتكوين 1 من 3$/.test(arM.text), arM && arM.text);
+    check('…in Arabic, with the source', arM && /^🧭 <b>تحقق مستوى خروج · مؤشر MVRV<\/b>\nالقيمة السوقية ÷ القيمة المحققة: 2\.55 · مستواك 2\.50\nمتوسط تكلفة البيتكوين المحققة للسوق: \$23,529\n<i>المصدر: Coin Metrics<\/i>\nهيكل السوق 0 من 3 · تقييم البيتكوين 1 من 3$/.test(arM.text), arM && arM.text);
   }
   // 💵 the dollar index and ⚖️ BTC funding in /market: the number, the state, and what the mix is made of
   {
