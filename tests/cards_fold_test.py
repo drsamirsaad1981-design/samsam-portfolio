@@ -32,7 +32,7 @@ with sync_playwright() as p:
         # ── Exit Strategy: Macro + Cash-out ──
         pg.evaluate("Samsam.saveExit({tab:'exit'})"); pg.goto(S.SITE + '/accumulation.html'); pg.wait_for_function("Samsam.isReady()"); pg.wait_for_selector('.xm-card'); pg.wait_for_timeout(500)
         cl = pg.evaluate("({m: document.querySelectorAll('.xm-card .xm-row').length, c: !!document.querySelector('.xc-card .xc-leg'), sum: document.querySelector('.xm-card .xm-sums').innerText, pct: document.querySelector('.xc-card .xc-pct').innerText, bar: !!document.querySelector('.xc-card .xc-bar'), edit: !!document.querySelector('.xm-card [data-act=tg-edit]')})")
-        check(f'{vn} Exit: both cards closed — the two counts (Market structure · Bitcoin valuation), "% in stablecoins" + bar only {cl}', cl['m'] == 0 and not cl['c'] and 'Market structure' in cl['sum'] and 'Bitcoin valuation' in cl['sum'] and 'stablecoins' in cl['pct'] and cl['bar'] and not cl['edit'], cl)
+        check(f'{vn} Exit: both cards closed — the two counts (Market structure · Bitcoin valuation), "% in stablecoins" + bar only {cl}', cl['m'] == 0 and not cl['c'] and 'Market Structure' in cl['sum'] and 'Bitcoin Valuation' in cl['sum'] and 'stablecoins' in cl['pct'] and cl['bar'] and not cl['edit'], cl)
         if vn == 'phone': pg.screenshot(path=str(SH / 'fold_exit_closed.png'))
         pg.click('.xm-card .xs-title'); pg.wait_for_timeout(250)
         check(f'{vn} Exit: Macro opens (5 indicators in two groups: 3 market structure + the rainbow band and the Pi Cycle — + Edit targets)', pg.locator('.xm-card .xm-row').count() == 5 and pg.is_visible('.xm-card [data-act=tg-edit]') and not pg.query_selector('.xc-card .xc-leg'))

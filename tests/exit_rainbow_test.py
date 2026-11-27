@@ -37,13 +37,13 @@ with sync_playwright() as p:
         rows = pg.evaluate(ROWS); rb = rows[3] if len(rows) == 5 else None
         check(f'{name}: five indicators — the Bitcoin Rainbow and the Pi Cycle after the three of market structure', len(rows) == 5 and [r[0] for r in rows] == ['btcD', 'usdtD', 'ethBtc', 'rainbow', 'pi'] and pg.inner_text('.xm-row[data-k=rainbow] .xm-name') == 'Bitcoin Rainbow', rows)
         grp = pg.evaluate("[...document.querySelectorAll('.xm-card .xm-gh')].map(h=>[h.textContent, [...h.nextElementSibling.querySelectorAll('.xm-row')].map(r=>r.dataset.k).join()])")
-        check(f'{name}: two groups, each under its own heading — Market structure (3) · Bitcoin valuation (rainbow, Pi Cycle)', grp == [['Market structure', 'btcD,usdtD,ethBtc'], ['Bitcoin valuation', 'rainbow,pi']], grp)
+        check(f'{name}: two groups, each under its own heading — Market structure (3) · Bitcoin valuation (rainbow, Pi Cycle)', grp == [['Market Structure', 'btcD,usdtD,ethBtc'], ['Bitcoin Valuation', 'rainbow,pi']], grp)
         pi = rows[4]
         check(f'{name}: Pi Cycle — 61.4% of twice the 350-day average, against 100% (the cross) until you choose; its two averages under it', pi[1] == 'wait' and pi[2] == '61.4%' and 'Target ≥ 100%' in pi[3] and pi[4] == '111-day average $70,500 · twice the 350-day $114,880' and pg.evaluate("Samsam.getState().exit.targets.pi") == 100, pi)
         check(f'{name}: the band that holds (2 — two closes), not the last close\'s (3); its name; the last close said beside it', rb and rb[1] == 'wait' and rb[2] == 'Band 2 of 9' and rb[4] == 'Deep discount · last close in band 3', rb)
         check(f'{name}: against band 6 until you choose', rb and 'Target ≥ band 6' in rb[3] and 'Waiting' in rb[3] and pg.evaluate("Samsam.getState().exit.targets.rainbow") == 6, rb)
         sums = pg.inner_text('.xm-sums')
-        check(f'{name}: two counts, never one: "Market structure: 0 of 3" · "Bitcoin valuation: 0 of 2"', 'Market structure: 0 of 3' in sums and 'Bitcoin valuation: 0 of 2' in sums and 'of 5' not in sums and 'of 4' not in sums, sums)
+        check(f'{name}: two counts, never one: "Market Structure: 0 of 3" · "Bitcoin Valuation: 0 of 2"', 'Market Structure: 0 of 3' in sums and 'Bitcoin Valuation: 0 of 2' in sums and 'of 5' not in sums and 'of 4' not in sums, sums)
         w = pg.evaluate("[...document.querySelectorAll('.xm-row')].map(r=>Math.round(r.getBoundingClientRect().width))"); sw = pg.evaluate("document.documentElement.scrollWidth - innerWidth")
         check(f'{name}: the four rows share the width evenly, nothing sideways', max(w) - min(w) <= 2 and sw <= 0 and pg.evaluate("[...document.querySelectorAll('.xm-row')].every(r=>r.scrollWidth<=r.clientWidth+1)"), (w, sw))
         # choose your band: the field, the note with what each cycle held
@@ -56,7 +56,7 @@ with sync_playwright() as p:
         check(f'{name}: band 3 saved to the cloud; band 2 is one under it → Near (the word is no longer "Close", which Arabic read as the Close button)', 'Near' in rb[3] and t['rainbow'] == 3 and not t['isDefault'] and t['btcD'] == 45.9 and rb[1] == 'near' and 'Target ≥ band 3' in rb[3], (t, rb))
         pg.click('[data-act=tg-edit]'); pg.fill('[data-tg=rainbow]', '2'); pg.click('[data-act=tg-save]'); pg.wait_for_timeout(1500)
         rb = pg.evaluate(ROWS)[3]
-        check(f'{name}: band 2 → Reached; only its own group counts it ("Bitcoin valuation: 1 of 2", market structure still 0 of 3)', rb[1] == 'hit' and 'Reached' in rb[3] and 'Bitcoin valuation: 1 of 2' in pg.inner_text('.xm-sums') and 'Market structure: 0 of 3' in pg.inner_text('.xm-sums'), (rb, pg.inner_text('.xm-sums')))
+        check(f'{name}: band 2 → Reached; only its own group counts it ("Bitcoin Valuation: 1 of 2", market structure still 0 of 3)', rb[1] == 'hit' and 'Reached' in rb[3] and 'Bitcoin Valuation: 1 of 2' in pg.inner_text('.xm-sums') and 'Market Structure: 0 of 3' in pg.inner_text('.xm-sums'), (rb, pg.inner_text('.xm-sums')))
         pg.click('[data-act=tg-edit]'); pg.fill('[data-tg=rainbow]', '40'); pg.click('[data-act=tg-save]'); pg.wait_for_timeout(1200)
         check(f'{name}: a band outside 1–9 is not kept (back to 6)', pg.evaluate("Samsam.getState().exit.targets.rainbow") == 6)
         pg.click('[data-act=tg-edit]'); pg.fill('[data-tg=rainbow]', '2.6'); pg.click('[data-act=tg-save]'); pg.wait_for_timeout(1200)
@@ -67,7 +67,7 @@ with sync_playwright() as p:
         pg.fill('[data-tg=pi]', '65'); pg.click('[data-act=tg-save]'); pg.wait_for_timeout(1500); pi = pg.evaluate(ROWS)[4]
         check(f'{name}: level 65 saved; 61.4% is within 10% of it → Near', pg.evaluate("Samsam.getState().exit.targets.pi") == 65 and pi[1] == 'near' and 'Target ≥ 65%' in pi[3] and 'Near' in pi[3], pi)
         pg.click('[data-act=tg-edit]'); pg.fill('[data-tg=pi]', '60'); pg.click('[data-act=tg-save]'); pg.wait_for_timeout(1500); pi = pg.evaluate(ROWS)[4]
-        check(f'{name}: level 60 → Reached, counted in Bitcoin valuation only', pi[1] == 'hit' and 'Reached' in pi[3] and 'Bitcoin valuation: 1 of 2' in pg.inner_text('.xm-sums') and 'Market structure: 0 of 3' in pg.inner_text('.xm-sums'), (pi, pg.inner_text('.xm-sums')))
+        check(f'{name}: level 60 → Reached, counted in Bitcoin valuation only', pi[1] == 'hit' and 'Reached' in pi[3] and 'Bitcoin Valuation: 1 of 2' in pg.inner_text('.xm-sums') and 'Market Structure: 0 of 3' in pg.inner_text('.xm-sums'), (pi, pg.inner_text('.xm-sums')))
         pg.click('[data-act=tg-edit]'); pg.fill('[data-tg=pi]', '500'); pg.click('[data-act=tg-save]'); pg.wait_for_timeout(1200)
         check(f'{name}: a level outside 50–150 is not kept (back to 100)', pg.evaluate("Samsam.getState().exit.targets.pi") == 100)
         pg.click('[data-act=tg-edit]'); pg.click('[data-act=tg-reset]'); pg.wait_for_timeout(1200)
@@ -92,7 +92,7 @@ with sync_playwright() as p:
         for label, rbf in (('a file 6 days old', old), ('no file', None)):
             cur['s'] = snap(rbf); open_exit(); r4 = pg.evaluate(ROWS)[3]
             r5 = pg.evaluate(ROWS)[4]
-            check(f'{name}: {label} → the rainbow and Pi Cycle rows show "—" and wait; the group still counts 2', r4[1] == 'none' and r4[2] == '—' and r4[4] == '' and r5[1] == 'none' and r5[2] == '—' and 'Bitcoin valuation: 0 of 2' in pg.inner_text('.xm-sums'), (r4, r5))
+            check(f'{name}: {label} → the rainbow and Pi Cycle rows show "—" and wait; the group still counts 2', r4[1] == 'none' and r4[2] == '—' and r4[4] == '' and r5[1] == 'none' and r5[2] == '—' and 'Bitcoin Valuation: 0 of 2' in pg.inner_text('.xm-sums'), (r4, r5))
         pg.click('[data-act=tg-edit]'); pg.wait_for_timeout(300)
         check(f'{name}: no file → the note explains the bands instead of the cycles', 'Nine bands around Bitcoin' in pg.inner_text('#xmRbNote'), pg.inner_text('#xmRbNote'))
         check(f'{name}: no page errors', not errs, errs)

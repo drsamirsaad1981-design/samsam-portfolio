@@ -260,7 +260,7 @@
         '<div class="xm-sub"><span>Target ' + r.rule + '</span><span class="xm-st">' + lbl + '</span></div>' +
         (r.sub ? '<div class="xm-more">' + E(r.sub) + '</div>' : '') + '</div>';   // (🌈 the band\'s name · the Pi Cycle's two averages)
     };
-    var GRP = [['s', 'Market structure'], ['v', 'Bitcoin valuation']];
+    var GRP = [['s', 'Market Structure'], ['v', 'Bitcoin Valuation']];   // (Title Case, like every heading)
     var sums = GRP.map(function (g) { var c = m[g[0]]; return '<span class="xm-sum-i ' + (c.hit === c.of ? 'all' : c.hit ? 'some' : '') + '" data-g="' + g[0] + '">' + g[1] + ': <b>' + c.hit + ' of ' + c.of + '</b></span>'; }).join('');
     var body = GRP.map(function (g) { return '<div class="xm-gh" data-g="' + g[0] + '">' + g[1] + '</div><div class="xm-rows" data-g="' + g[0] + '">' + m.rows.filter(function (r) { return r.g === g[0]; }).map(rowHtml).join('') + '</div>'; }).join('');
     var ed = editTargets ? '<div class="xm-edit">' +

@@ -27,11 +27,11 @@ with sync_playwright() as p:
         # macro: BTC.D 48 vs 45.9 → within 10% (near); USDT.D 3.5 ≤ 3.73 → hit; ETH/BTC 0.04 vs 0.085 → wait
         st = pg.evaluate("[...document.querySelectorAll('.xm-row')].map(r=>[r.dataset.k, r.className.split(' ')[1], r.querySelector('.xm-cur').textContent])")
         check(f'{name}: macro colours — BTC.D close (amber), USDT.D in range (green), ETH/BTC waiting (grey) {st}', st == [['btcD', 'near', '48.00%'], ['usdtD', 'hit', '3.50%'], ['ethBtc', 'wait', '0.04'], ['rainbow', 'none', '—'], ['pi', 'none', '—']], st)   # (🌈 no rainbow file in this snapshot: the Bitcoin valuation rows wait — exit_rainbow_test.py)
-        check(f'{name}: two counts, never one — "Market structure: 1 of 3" · "Bitcoin valuation: 0 of 2"', 'Market structure: 1 of 3' in pg.inner_text('.xm-sums') and 'Bitcoin valuation: 0 of 2' in pg.inner_text('.xm-sums'), pg.inner_text('.xm-sums'))
+        check(f'{name}: two counts, never one — "Market Structure: 1 of 3" · "Bitcoin Valuation: 0 of 2"', 'Market Structure: 1 of 3' in pg.inner_text('.xm-sums') and 'Bitcoin Valuation: 0 of 2' in pg.inner_text('.xm-sums'), pg.inner_text('.xm-sums'))
         # edit targets → saved in the cloud, colours follow
         pg.click('[data-act=tg-edit]'); pg.fill('[data-tg=btcD]', '50'); pg.click('[data-act=tg-save]'); pg.wait_for_timeout(1500)
         t = pg.evaluate("Samsam.getState().exit.targets")
-        check(f'{name}: edited BTC.D target saved to the cloud (50) and now reached', t['btcD'] == 50 and not t['isDefault'] and 'Market structure: 2 of 3' in pg.inner_text('.xm-sums'), (t, pg.inner_text('.xm-sums')))
+        check(f'{name}: edited BTC.D target saved to the cloud (50) and now reached', t['btcD'] == 50 and not t['isDefault'] and 'Market Structure: 2 of 3' in pg.inner_text('.xm-sums'), (t, pg.inner_text('.xm-sums')))
         pg.click('[data-act=tg-edit]'); pg.click('[data-act=tg-reset]'); pg.wait_for_timeout(1200)
         check(f'{name}: Reset → back to 45.90 / 3.73–1.914 / 0.085', pg.evaluate("Samsam.getState().exit.targets.btcD") == 45.9 and pg.evaluate("Samsam.getState().exit.targets.isDefault"))
         # add a coin

@@ -34,7 +34,7 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   you do). Bitcoin only.
 - Exit conditions come in **two groups, counted apart — never one counter** (27 Nov): **Market structure** (BTC dominance,
   USDT dominance, ETH/BTC) and **Bitcoin valuation** (the rainbow band, the Pi Cycle; MVRV when it comes) — the second
-  group's readings come from the same price history and move together. App: "Market structure: n of 3 · Bitcoin valuation:
+  group's readings come from the same price history and move together. App: "Market Structure: n of 3 · Bitcoin Valuation:
   n of 2"; bot the same (`exitGroups`).
 - Pi Cycle: the 111-day average as a percent of twice the 350-day one (100 = the cross). Shown as a distance with each
   cycle's highest; the level is the user's (50–150, 100 until chosen); **its alert is off until the user turns it on**.
@@ -205,6 +205,8 @@ Sixth round (27 Nov, his "نفذ" for group 1 of six new indicators — the ones
   Jan 2018 105.8% · Apr 2021 100.3% · this cycle 73.6% (1 Jun 2024); crosses 7 Apr 2013, 7 Dec 2013, 16 Dec 2017,
   12 Apr 2021 — none in this cycle. (A cycle's highest is labelled by the year it happened: the 2017 cycle reads "2018".)
 - `m/rainbow.json` has a make-up number (`gen`): a higher one rewrites the file from the kept days, with no request.
+- Headings are Title Case and never capitals by CSS (`title_check.py` — it failed on GitHub for "Max drawdown" and was not
+  in the local subset): "Market Structure", "Bitcoin Valuation", "Max Drawdown". The bot's own lines stay sentence case.
 - A lesson: a `// comment` appended inside a one-line `try { … } catch` swallowed the `catch` (update-market.mjs) —
   `market_cmc_test.mjs` caught it before the push. Put the comment after the whole statement, and run every Node test.
 - Still to come, **group 2 — after a lab trial like the rainbow's** (his decision): MVRV (Coin Metrics community API: a

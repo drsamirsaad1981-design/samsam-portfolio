@@ -32,7 +32,7 @@ with sync_playwright() as p:
             pg.click(f'#perfChartCard .pcc-tabs button[data-r="{r}"]'); pg.wait_for_timeout(250)
             L = pg.evaluate(LINES, r); got = pg.evaluate(READ); wp, wb = dd(L['port']), dd(L['btc'])
             rows = {x[0]: x for x in (got or {}).get('rows', [])}
-            check(f'{name} {r}: "Max drawdown" — your portfolio {txt(wp)} beside BTC Trend {txt(wb)} (a plain calculation of the same lines)', got and got['t'] == 'Max drawdown' and rows.get('port', [0, '', ''])[1:] == ['Your portfolio', txt(wp)] and rows.get('btc', [0, '', ''])[1:] == ['BTC Trend', txt(wb)], (got, wp, wb))
+            check(f'{name} {r}: "Max drawdown" — your portfolio {txt(wp)} beside BTC Trend {txt(wb)} (a plain calculation of the same lines)', got and got['t'] == 'Max Drawdown' and rows.get('port', [0, '', ''])[1:] == ['Your portfolio', txt(wp)] and rows.get('btc', [0, '', ''])[1:] == ['BTC Trend', txt(wb)], (got, wp, wb))
             ok_note = ('Never under its peak in this period' in got['note']) if wp < 0.05 else bool(re.search(r'^Your deepest fall: from \d{1,2} [A-Z][a-z]{2} 20\d\d to \d{1,2} [A-Z][a-z]{2} 20\d\d$', got['note']))
             check(f'{name} {r}: under it, when the deepest fall ran (or that it never fell)', ok_note, got['note'])
         pg.click('#perfChartCard .pcc-tabs button[data-r="all"]'); pg.wait_for_timeout(250)

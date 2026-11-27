@@ -113,8 +113,8 @@
       '<p>It compares today with "after the plan", category by category, inside your band.</p>' +
       '<p>Each plan coin gets a chip for its category today:</p><ul><li><b>↓ Priority</b>: the category is below its target — buying this coin moves you toward it.</li><li><b>↑ Over target</b>: already above — it can wait.</li><li><b>✓ On target</b>.</li></ul>'; } },
     macroExit: { title: 'Macro Exit Indicators', body: function () { return '<p>Whole-market signs that a cycle top may be near — with <b>your own levels</b>, in two groups counted apart:</p>' +
-      '<p><b>Market structure</b></p><ul><li><b>BTC Dominance</b> at or under your level (money has moved from Bitcoin into altcoins).</li><li><b>USDT Dominance</b> inside your range (little cash left on the side).</li><li><b>ETH / BTC</b> at or over your level (altcoins are beating Bitcoin).</li></ul>' +
-      '<p><b>Bitcoin valuation</b> — readings of Bitcoin\'s own price history. They tend to move together, so they are never added to the first group\'s count.</p>' +
+      '<p><b>Market Structure</b></p><ul><li><b>BTC Dominance</b> at or under your level (money has moved from Bitcoin into altcoins).</li><li><b>USDT Dominance</b> inside your range (little cash left on the side).</li><li><b>ETH / BTC</b> at or over your level (altcoins are beating Bitcoin).</li></ul>' +
+      '<p><b>Bitcoin Valuation</b> — readings of Bitcoin\'s own price history. They tend to move together, so they are never added to the first group\'s count.</p>' +
       '<ul><li><b>Bitcoin Rainbow</b> at or over the band you choose (1–9). Nine bands around Bitcoin\'s long-term trend line; a band counts after two daily closes in it. It starts at band 6.</li>' +
       '<li><b>Pi Cycle</b> at or over the percent you choose. The 111-day average as a percent of twice the 350-day average; 100 is the cross that came with the 2013, 2017 and April 2021 tops — and did not come at the October 2025 top. It starts at 100; its alert is off until you turn it on (Settings → Alerts).</li></ul>' +
       '<p>Edit targets shows what each past cycle reached, so you can choose your own levels.</p>' +
@@ -170,8 +170,8 @@
           '<p>Your BTC is compared with itself, so it always shows 0.</p>';
       },
     },
-    maxDrawdown: { title: 'Max drawdown', body: function () { return '<p>The deepest fall from a peak, in the period the chart shows.</p>' +
-      '<div class="cph-f"><b>Max drawdown</b><code>the largest (peak − later low) ÷ peak</code></div>' +
+    maxDrawdown: { title: 'Max Drawdown', body: function () { return '<p>The deepest fall from a peak, in the period the chart shows.</p>' +
+      '<div class="cph-f"><b>Max Drawdown</b><code>the largest (peak − later low) ÷ peak</code></div>' +
       '<p>It is measured on the chart\'s own lines — profit %, read as "what one dollar of cost became" — so money you add or take out is not counted as a rise or a fall.</p>' +
       '<ul><li><b>Your portfolio</b>: the blue line.</li><li><b>BTC Trend</b>: the same money, bought and sold as Bitcoin at the same moments.</li><li>Gold and Silver Trend appear when their lines are on.</li></ul>' +
       '<p>A smaller number means a calmer ride over that period. It starts with your first saved point, so a short history says little.</p>' +

@@ -8,22 +8,22 @@
 if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add('in-tg');var own=false;try{own=window.parent===window||!!window.parent.location.href;}catch(e){}if(!own){}var ev=function(n){try{if(window.TelegramWebviewProxy)TelegramWebviewProxy.postEvent(n,'');else if(!own)window.parent.postMessage(JSON.stringify({eventType:n,eventData:''}),'https://web.telegram.org');}catch(e){}};if(window.top===window||!own){ev('web_app_ready');ev('web_app_expand');}}}catch(e){}})();</script>
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="samsam-lang.js?v=202611271408"></script>
-<script src="samsam-ar.js?v=202611271408"></script>
-<script src="samsam-ui.js?v=202611271408"></script>
-<script src="samsam-hints.js?v=202611271408"></script>
-<script src="samsam-arhints.js?v=202611271408"></script>
-<script src="samsam-vault.js?v=202611271408"></script>
-<script src="samsam-labels.js?v=202611271408"></script>
-<script src="samsam-taxonomy.js?v=202611271408"></script>
-<script src="samsam-dropdown.js?v=202611271408"></script>
-<script src="samsam-coins.js?v=202611271408"></script>
-<script src="samsam-import.js?v=202611271408"></script>
-<script src="samsam-wallets.js?v=202611271408"></script>
-<script src="samsam-cex.js?v=202611271408"></script>
-<script src="samsam-rewards.js?v=202611271408"></script>
-<script src="samsam-settings.js?v=202611271408"></script>
-<script src="samsam-chart.js?v=202611271408"></script>
+<script src="samsam-lang.js?v=202611271515"></script>
+<script src="samsam-ar.js?v=202611271515"></script>
+<script src="samsam-ui.js?v=202611271515"></script>
+<script src="samsam-hints.js?v=202611271515"></script>
+<script src="samsam-arhints.js?v=202611271515"></script>
+<script src="samsam-vault.js?v=202611271515"></script>
+<script src="samsam-labels.js?v=202611271515"></script>
+<script src="samsam-taxonomy.js?v=202611271515"></script>
+<script src="samsam-dropdown.js?v=202611271515"></script>
+<script src="samsam-coins.js?v=202611271515"></script>
+<script src="samsam-import.js?v=202611271515"></script>
+<script src="samsam-wallets.js?v=202611271515"></script>
+<script src="samsam-cex.js?v=202611271515"></script>
+<script src="samsam-rewards.js?v=202611271515"></script>
+<script src="samsam-settings.js?v=202611271515"></script>
+<script src="samsam-chart.js?v=202611271515"></script>
 <title>Performance — Cute Portfolio</title>
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=2">
 <link rel="icon" type="image/png" sizes="64x64" href="./favicon-64.png?v=2">
@@ -792,7 +792,7 @@ body {
 
 <div class="sync-bar" id="syncBar"><span class="ss-live-label"><span class="ss-live" data-state="loading"></span>Fetching live prices…</span></div>
 
-<script type="module" src="samsam-cloud.js?v=202611271408"></script>
+<script type="module" src="samsam-cloud.js?v=202611271515"></script>
 <script>
 // ── Constants ──
 
@@ -881,7 +881,7 @@ function drawPerfFull() {
     else {
       const pc = d => d.dd < 0.05 ? '0%' : '−' + d.dd.toFixed(1) + '%', dt = t => { const d = new Date(t); return d.getDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()] + ' ' + d.getFullYear(); };
       const rows = [[scope === 'alt' ? 'Altcoins' : 'Your portfolio', mine, 'port'], ...[['btc', 'BTC Trend', ser.btc], ['gold', 'Gold Trend', ser.gold], ['silver', 'Silver Trend', ser.silver]].filter(x => TL[x[0]] && x[2].length > 1).map(x => [x[1], DD(x[2]), x[0]])].filter(x => x[1]);
-      box.innerHTML = '<span class="pcc-dd-t">Max drawdown<button type="button" class="cp-hint" data-hint="maxDrawdown" aria-label="About max drawdown"></button></span>' +
+      box.innerHTML = '<span class="pcc-dd-t">Max Drawdown<button type="button" class="cp-hint" data-hint="maxDrawdown" aria-label="About max drawdown"></button></span>' +
         rows.map(x => `<span data-dd="${x[2]}"><span>${x[0]}</span> <b>${pc(x[1])}</b></span>`).join('') +
         '<small>' + (mine.dd < 0.05 ? '<span>Never under its peak in this period</span>' : `<span>Your deepest fall: from</span> <span>${dt(mine.peakT)}</span> <span>to</span> <span>${dt(mine.lowT)}</span>`) + '</small>';
       box.hidden = false;
