@@ -29,30 +29,40 @@
   function amt(sym, q) { return gpo(sym) > 1 ? SamsamCoins.grams(q) : SamsamCoins.fmtAmount(q); }                   // "62.207 g" · "1,250"
   function amtU(sym, q) { return gpo(sym) > 1 ? SamsamCoins.grams(q) : SamsamCoins.fmtAmount(q) + ' ' + E(sym); }   // "62.207 g" · "1,250 SOL"
   function prc(sym, p) { var g = gpo(sym); return F().price(p / g) + (g > 1 ? '/g' : ''); }
+  function usd0(v) { return '$' + Math.round(+v || 0).toLocaleString('en-US'); }   // an average: whole dollars
   function cfgOf(c) { return c && Array.isArray(c.mults) && Array.isArray(c.pcts) ? c : DEF; }
 
   // ── maths ──────────────────────────────────────────────────────────────────
   var calc = {
     // state: 'hit' | 'near' | 'wait' | 'none'; progress 0–100 toward the level
-    macro: function (g, ethBtc, t, rb) {
+    macro: function (g, ethBtc, t, rb, pi) {
       var rows = [], st = function (hit, near) { return hit ? 'hit' : near ? 'near' : 'wait'; };
       var b = g && g.dom ? +g.dom.btc : null;
-      rows.push({ k: 'btcD', name: 'BTC Dominance', short: 'BTC.D', cur: b, rule: '≤ ' + t.btcD.toFixed(2) + '%',
+      rows.push({ k: 'btcD', g: 's', name: 'BTC Dominance', short: 'BTC.D', cur: b, rule: '≤ ' + t.btcD.toFixed(2) + '%',
         state: b == null ? 'none' : st(b <= t.btcD, (b - t.btcD) / t.btcD <= NEAR), progress: b ? Math.min(100, t.btcD / b * 100) : 0, fmt: function (v) { return v.toFixed(2) + '%'; } });
       var u = g && g.dom ? +g.dom.usdt : null;
-      rows.push({ k: 'usdtD', name: 'USDT Dominance', short: 'USDT.D', cur: u, rule: t.usdtHi.toFixed(2) + '% – ' + t.usdtLo.toFixed(2) + '%',
+      rows.push({ k: 'usdtD', g: 's', name: 'USDT Dominance', short: 'USDT.D', cur: u, rule: t.usdtHi.toFixed(2) + '% – ' + t.usdtLo.toFixed(2) + '%',
         state: u == null ? 'none' : st(u <= t.usdtHi, (u - t.usdtHi) / t.usdtHi <= NEAR), progress: u ? Math.min(100, t.usdtHi / u * 100) : 0,
         below: u != null && u < t.usdtLo, fmt: function (v) { return v.toFixed(2) + '%'; } });
       var e = ethBtc > 0 ? ethBtc : null;
-      rows.push({ k: 'ethBtc', name: 'ETH / BTC', short: 'ETH/BTC', cur: e, rule: '≥ ' + fmtRatio(t.ethBtc),
+      rows.push({ k: 'ethBtc', g: 's', name: 'ETH / BTC', short: 'ETH/BTC', cur: e, rule: '≥ ' + fmtRatio(t.ethBtc),
         state: e == null ? 'none' : st(e >= t.ethBtc, (t.ethBtc - e) / t.ethBtc <= NEAR), progress: e ? Math.min(100, e / t.ethBtc * 100) : 0, fmt: fmtRatio });
-      // 🌈 the 4th: Bitcoin's rainbow band — the one that holds after two daily closes (samsam-core.js → rainbowRead) —
-      // against the band you chose (6 until you do). "Close" = one band under yours.
+      // Two groups, counted apart (g): 's' market structure — the three above; 'v' Bitcoin valuation — readings of Bitcoin's
+      // own price history, which tend to move together (one counter would count the same thing twice).
+      // 🌈 The rainbow band — the one that holds after two daily closes (samsam-core.js → rainbowRead) — against the band
+      // you chose (6 until you do). "Close" = one band under yours.
       var want = Math.min(9, Math.max(1, Math.round(+t.rainbow) || 6)), band = rb ? rb.band : null;
-      rows.push({ k: 'rainbow', name: 'Bitcoin Rainbow', short: 'Rainbow', cur: band, rule: '≥ band ' + want,
+      rows.push({ k: 'rainbow', g: 'v', name: 'Bitcoin Rainbow', short: 'Rainbow', cur: band, rule: '≥ band ' + want,
         state: band == null ? 'none' : st(band >= want, band === want - 1), progress: band ? Math.min(100, band / want * 100) : 0,
         fmt: function (v) { return 'Band ' + v + ' of 9'; }, sub: rb ? rb.name + (rb.pending ? ' · last close in band ' + rb.pending : '') : '' });
-      return { rows: rows, hit: rows.filter(function (r) { return r.state === 'hit'; }).length };
+      // The Pi Cycle: the 111-day average as a percent of twice the 350-day one (samsam-core.js → btcMarks), against your
+      // level — 100 is the cross itself. "Close" = within 10% of your level.
+      var pl = +t.pi >= 50 && +t.pi <= 150 ? +t.pi : 100, pr = pi ? pi.ratio : null;
+      rows.push({ k: 'pi', g: 'v', name: 'Pi Cycle', short: 'Pi Cycle', cur: pr, rule: '≥ ' + pl + '%',
+        state: pr == null ? 'none' : st(pr >= pl, pr >= pl * (1 - NEAR)), progress: pr ? Math.min(100, pr / pl * 100) : 0,
+        fmt: function (v) { return v.toFixed(1) + '%'; }, sub: pi ? '111-day average ' + usd0(pi.d111) + ' · twice the 350-day ' + usd0(pi.d350x2) : '' });
+      var cnt = function (k) { var a = rows.filter(function (r) { return r.g === k; }); return { hit: a.filter(function (r) { return r.state === 'hit'; }).length, of: a.length }; };
+      return { rows: rows, hit: rows.filter(function (r) { return r.state === 'hit'; }).length, s: cnt('s'), v: cnt('v') };
     },
     // Does step i follow the average buy price? lock false → yes · true → no · null (saved before this existed) →
     // yes when empty or still exactly the old 2× / 3× / 5× fill.
@@ -145,7 +155,7 @@
   function isStable(c) { return window.SamsamMarket ? SamsamMarket.isStable({ sym: c.sym, name: c.name || '' }) : /^(USDT|USDC|DAI|FDUSD|USDE|USDS)$/.test(c.sym); }
 
   // ── page ───────────────────────────────────────────────────────────────────
-  var root = null, st = null, mkt = { g: null, ethBtc: null, t: 0, rb: null, rbFile: null }, editTargets = false, draft = null, saveT = null, pickOpen = false;
+  var root = null, st = null, mkt = { g: null, ethBtc: null, t: 0, rb: null, rbFile: null, pi: null }, editTargets = false, draft = null, saveT = null, pickOpen = false;
   var stepsOpen = false, stepsDraft = null, view = null, flashSym = null;
   // one coin on its own (a row tapped), the search, the order — the order is remembered on this device
   var forcePaint = false, qTimer = null;
@@ -212,7 +222,8 @@
     // 🌈 the rainbow band (the snapshot's small part; nothing while the file is missing or over 4 days old)
     if (M.rainbow) M.rainbow().then(function (f) {
       var C = S() && S().core, r = f && C && C.rainbowRead ? C.rainbowRead(f, Date.now()) : null;
-      mkt.rbFile = f || null; mkt.rb = r ? { band: r.band, name: C.rainbowName(r.band), pending: r.pending } : null; paint();
+      var bm = f && C && C.btcMarks ? C.btcMarks(f, Date.now()) : null;
+      mkt.rbFile = f || null; mkt.rb = r ? { band: r.band, name: C.rainbowName(r.band), pending: r.pending } : null; mkt.pi = bm && bm.pi ? bm.pi : null; paint();
     }).catch(function () {});
     M.global(force).then(function (r) { mkt.g = r.data; mkt.t = Math.max(mkt.t, r.t || 0); paint(); }).catch(function () {});
   }
@@ -239,27 +250,31 @@
   function setCardOpen(k, on) { try { var o = JSON.parse(localStorage.getItem(OPEN_KEY) || '{}') || {}; o[k] = on ? 1 : 0; localStorage.setItem(OPEN_KEY, JSON.stringify(o)); } catch (_) {} }
   var CHEV = '<span class="xs-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>';
   function macroHtml() {
-    var t = exitState().targets, m = calc.macro(mkt.g, mkt.ethBtc, t, mkt.rb);
-    var rows = m.rows.map(function (r) {
+    var t = exitState().targets, m = calc.macro(mkt.g, mkt.ethBtc, t, mkt.rb, mkt.pi);
+    var rowHtml = function (r) {
       var cur = r.cur == null ? '—' : r.fmt(r.cur);
-      var lbl = r.state === 'hit' ? (r.below ? 'Below range' : 'Reached') : r.state === 'near' ? 'Close' : r.state === 'none' ? '—' : 'Waiting';
+      var lbl = r.state === 'hit' ? (r.below ? 'Below range' : 'Reached') : r.state === 'near' ? 'Near' : r.state === 'none' ? '—' : 'Waiting';
       return '<div class="xm-row ' + r.state + '" data-k="' + r.k + '">' +
         '<div class="xm-top"><span class="xm-name">' + r.name + '</span><span class="xm-cur">' + cur + '</span></div>' +
         '<div class="xm-bar"><i style="width:' + r.progress.toFixed(1) + '%"></i></div>' +
         '<div class="xm-sub"><span>Target ' + r.rule + '</span><span class="xm-st">' + lbl + '</span></div>' +
-        (r.sub ? '<div class="xm-more">' + E(r.sub) + '</div>' : '') + '</div>';   // (🌈 the band\'s name)
-    }).join('');
+        (r.sub ? '<div class="xm-more">' + E(r.sub) + '</div>' : '') + '</div>';   // (🌈 the band\'s name · the Pi Cycle's two averages)
+    };
+    var GRP = [['s', 'Market structure'], ['v', 'Bitcoin valuation']];
+    var sums = GRP.map(function (g) { var c = m[g[0]]; return '<span class="xm-sum-i ' + (c.hit === c.of ? 'all' : c.hit ? 'some' : '') + '" data-g="' + g[0] + '">' + g[1] + ': <b>' + c.hit + ' of ' + c.of + '</b></span>'; }).join('');
+    var body = GRP.map(function (g) { return '<div class="xm-gh" data-g="' + g[0] + '">' + g[1] + '</div><div class="xm-rows" data-g="' + g[0] + '">' + m.rows.filter(function (r) { return r.g === g[0]; }).map(rowHtml).join('') + '</div>'; }).join('');
     var ed = editTargets ? '<div class="xm-edit">' +
       field('btcD', 'BTC.D at or under (%)', t.btcD) + field('usdtHi', 'USDT.D range — from (%)', t.usdtHi) +
       field('usdtLo', 'USDT.D range — to (%)', t.usdtLo) + field('ethBtc', 'ETH / BTC at or over', t.ethBtc) +
       '<label class="xm-f xm-f-rb"><span>Rainbow band at or over (1–9)</span><input type="number" inputmode="numeric" min="1" max="9" step="1" data-tg="rainbow" value="' + t.rainbow + '"></label>' + peaksNote() +
+      '<label class="xm-f xm-f-rb"><span>Pi Cycle at or over (%)</span><input type="number" inputmode="decimal" min="50" max="150" step="1" data-tg="pi" value="' + t.pi + '"></label>' + piNote() +
       '<div class="xm-edit-btns"><button type="button" class="xs-btn" data-act="tg-reset">' + IC('reset') + 'Reset to defaults</button><button type="button" class="xs-btn pri" data-act="tg-save">' + IC('check') + 'Save</button></div></div>' : '';
     var open = cardOpen('macro') || editTargets;
     return '<section class="xs-card xm-card' + (open ? ' open' : '') + '" aria-label="Macro exit indicators">' +
       '<div class="xs-head xs-tap" role="button" tabindex="0" data-act="card" data-k="macro" aria-expanded="' + open + '"><div class="xs-title">' + IC('gauge') + 'Macro Exit Indicators<span class="cp-hint" data-hint="macroExit" role="button" tabindex="0"></span></div>' +
       (open ? '<button type="button" class="xs-link" data-act="tg-edit">' + (editTargets ? 'Close' : IC('pencil') + 'Edit targets') + '</button>' : '') + CHEV + '</div>' +
-      '<div class="xm-sum xs-tap ' + (m.hit === m.rows.length ? 'all' : m.hit ? 'some' : '') + '" data-act="card" data-k="macro">Signals Hit: <b>' + m.hit + ' of ' + m.rows.length + '</b></div>' +
-      (open ? '<div class="xm-rows">' + rows + '</div>' + ed +
+      '<div class="xm-sums xs-tap" data-act="card" data-k="macro">' + sums + '</div>' +
+      (open ? body + ed +
       '<div class="xs-note">Your own levels — the page compares, it doesn’t predict the top.</div>' : '') + '</section>';
   }
   // under the rainbow field: the highest band that held in each past cycle-top year (from the file — it moves a little with
@@ -269,6 +284,14 @@
     var falling = pk.length > 1 && pk.every(function (x, i) { return !i || x[1] < pk[i - 1][1]; });
     return '<div class="xm-f-note" id="xmRbNote">' + (pk.length ? 'The highest band each cycle held: <b>' + pk.map(function (x) { return '<bdi dir="ltr">' + x[0] + ': ' + x[1] + '</bdi>'; }).join(' · ') + '</b>' + (falling ? '. Each cycle stopped lower than the one before — a high band may never come back.' : '.')
       : 'Nine bands around Bitcoin’s long-term trend line; a band counts after two daily closes in it.') + '</div>';
+  }
+  // under the Pi Cycle field: what it measures, each cycle's highest reading and its last cross — from the file
+  function piNote() {
+    var p = mkt.pi, pk = p && Array.isArray(p.peaks) ? p.peaks.filter(function (x) { return x && x[0] >= 2012; }) : [], cr = p && p.crosses && p.crosses.length ? p.crosses[p.crosses.length - 1] : null;
+    var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], day = function (iso) { var q = iso.split('-'); return +q[2] + ' ' + MON[+q[1] - 1] + ' ' + q[0]; };
+    return '<div class="xm-f-note" id="xmPiNote">The 111-day average as a percent of twice the 350-day average; 100 is the cross.' +
+      (pk.length ? ' <span>Each cycle’s highest:</span> <b>' + pk.map(function (x) { return '<bdi dir="ltr">' + x[0] + ': ' + Math.round(x[1]) + '%</bdi>'; }).join(' · ') + '</b>.' : '') +
+      (cr ? ' <span>Its last cross:</span> <b><span>' + day(cr) + '</span></b>.' : '') + '</div>';
   }
   function field(k, label, v) { return '<label class="xm-f"><span>' + label + '</span><input type="number" inputmode="decimal" step="any" data-tg="' + k + '" value="' + v + '"></label>'; }
 

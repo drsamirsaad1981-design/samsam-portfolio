@@ -1,6 +1,6 @@
 // Telegram alerts (tools/alerts-core.mjs): the numbers, each alert once, quiet hours, the brief / weekly timing,
 // English + Arabic, and text Telegram accepts (HTML with only <b> <i> <code>, every & < > escaped).
-import { summarize, evaluate, settings, priceSeries, brief, combine, NOW_KEYS, rainbowLines, W } from '../tools/alerts-core.mjs';
+import { summarize, evaluate, settings, priceSeries, brief, combine, NOW_KEYS, rainbowLines, W, exitGroups } from '../tools/alerts-core.mjs';
 import { signalFor, strengthMap } from '../samsam-core.js';
 import * as C from '../samsam-core.js';
 let pass = 0, fail = 0;
@@ -95,7 +95,7 @@ check('…only once', !r.messages.some(x => x.key === 'sig-day')); st = r.state;
 const t4 = t3 + H, m4 = mk({ now: t4, btc: 84800, sei: 0.045, link: 25.5, dom: 45 }), s4 = summarize(user(), m4, t4);
 r = evaluate(s4, m4, st, cfg, t4);
 check('LINK ≥ TP1 → take-profit alert with your 25%', r.messages.some(x => x.key === 'tp-LINK:1' && /25%/.test(x.text)), r.messages.map(m => m.key));
-check('BTC dominance 45% ≤ 45.9% → exit level alert (1 of 4: the rainbow band is the fourth)', r.messages.some(x => x.key === 'macro-btcD' && /1 of 4/.test(x.text)), r.messages.map(m => m.key)); st = r.state;
+check('BTC dominance 45% ≤ 45.9% → exit level alert, with the two groups counted apart (market structure 1/3 · Bitcoin valuation 0/2)', r.messages.some(x => x.key === 'macro-btcD' && /\nMarket structure 1\/3 · Bitcoin valuation 0\/2$/.test(x.text)), r.messages.map(m => m.key)); st = r.state;
 
 // SEI target reached (a buy) → plan alert
 const u5 = user(); u5.txs = [{ id: 'x', sym: 'SEI', type: 'buy', qty: 1500, price: 0.045, date: new Date(t4).toISOString() }];
@@ -305,7 +305,7 @@ check('all texts Telegram-safe', all.every(okHtml));
   const D0 = Date.parse('2026-11-10T06:00:00Z');   // 09:00 in Riyadh, a Tuesday
   const run = (m, st, now, c = cfg, meta = {}) => evaluate(summarize(user(meta), m, now), m, st, c, now);
   let m = withRb(D0, [2, 2, 2], 2, '2026-10-20'), s0 = summarize(user(), m, D0);
-  check('🌈 the exit conditions are four: the rainbow band is the last, against band 6 until you choose', s0.macro.length === 4 && s0.macro[3].k === 'rainbow' && s0.macro[3].now === 2 && s0.macro[3].lvl === 6 && s0.macro[3].met === false, s0.macro[3]);
+  check('🌈 the exit conditions come in two groups: market structure (3) and Bitcoin valuation — the rainbow band against band 6 until you choose, then the Pi Cycle', s0.macro.map(x => x.k + ':' + x.g).join() === 'btcD:s,usdtD:s,ethBtc:s,rainbow:v,pi:v' && s0.macro[3].now === 2 && s0.macro[3].lvl === 6 && s0.macro[3].met === false, s0.macro);
   check('🌈 your own band is read from the Exit page\'s targets (1–9)', summarize(user({ exitTargets: { rainbow: 4 } }), m, D0).macro[3].lvl === 4 && summarize(user({ exitTargets: { rainbow: 40 } }), m, D0).macro[3].lvl === 9 && summarize(user({ exitTargets: { rainbow: 'x' } }), m, D0).macro[3].lvl === 6);
   // an account that already had alerts: the band is remembered quietly, nothing is sent
   let base = evaluate(s0, mk({ now: D0 }), {}, cfg, D0).state;   // (a state from before the rainbow existed)
@@ -342,18 +342,46 @@ check('all texts Telegram-safe', all.every(okHtml));
   let sx = run(withRb(X0, [2, 2, 2], 2, '2026-11-25'), run(withRb(X0 - DAY, [2, 2, 2], 2, '2026-11-25'), {}, X0 - DAY, cfg, ex).state, X0, cfg, ex).state;
   m = withRb(X0 + DAY, [2, 3, 3], 3, '2026-11-30'); q = run(m, sx, X0 + DAY, cfg, ex);
   const hit = q.messages.find(x => x.key === 'rb-3');
-  check('🌈 the move reaches your exit band: one message with "Your exit band (3) is reached · 1 of 4", and the Exit page\'s button', hit && /\n🧭 <b>Your exit band \(3\) is reached<\/b> · 1 of 4 of your exit conditions are met\n/.test(hit.text) && hit.buttons.flat().length === 2 && !q.messages.some(x => x.key === 'macro-rainbow') && q.state.macro.rainbow === 1, q.messages.map(x => [x.key, x.text]));
+  check('🌈 the move reaches your exit band: one message with "Your exit band (3) is reached" and the two counts, and the Exit page\'s button', hit && /\n🧭 <b>Your exit band \(3\) is reached<\/b>\nMarket structure 0\/3 · Bitcoin valuation 1\/2\n/.test(hit.text) && hit.buttons.flat().length === 2 && !q.messages.some(x => x.key === 'macro-rainbow') && q.state.macro.rainbow === 1, q.messages.map(x => [x.key, x.text]));
   q = run(m, q.state, X0 + DAY + H, cfg, ex); check('🌈 …and no exit-level message for it an hour later', !q.messages.some(x => /rainbow|^rb-/.test(x.key)));
   // the rainbow alert switched off: the band is followed quietly; your exit band still alerts, as an exit level
   const off = settings({ alerts: { digest: false, rainbow: false } });
   q = run(m, sx, X0 + DAY, off, ex);
   const mx = q.messages.find(x => x.key === 'macro-rainbow');
-  check('🌈 switched off: no band message, the exit band still alerts as an exit level', !q.messages.some(x => /^rb-/.test(x.key)) && q.state.rb.b === 3 && mx && /Exit level reached · Rainbow band<\/b>\nband 3 of 9 · Accumulation zone · 3 ≥ 3\n1 of 4/.test(mx.text), q.messages.map(x => [x.key, x.text]));
+  check('🌈 switched off: no band message, the exit band still alerts as an exit level', !q.messages.some(x => /^rb-/.test(x.key)) && q.state.rb.b === 3 && mx && /Exit level reached · Rainbow band<\/b>\nband 3 of 9 · Accumulation zone · 3 ≥ 3\nMarket structure 0\/3 · Bitcoin valuation 1\/2$/.test(mx.text), q.messages.map(x => [x.key, x.text]));
   // an old file (the job stopped): nothing is said, nothing counts as met
   const old = withRb(X0 + DAY, [2, 3, 3], 3, '2026-11-30'), late = X0 + 6 * DAY; const mo = mk({ now: late }); mo.rainbow = old.rainbow;
   q = run(mo, sx, late, cfg, ex);
   check('🌈 a file over 4 days old: no line, no alert, the exit band not met', rainbowLines(W.en, mo, late).length === 0 && !q.messages.some(x => /rainbow|^rb-/.test(x.key)) && summarize(user(ex), mo, late).macro[3].now === null && q.state.rb.b === 2);
   check('🌈 no file at all: no line, the fourth condition waits', rainbowLines(W.en, mk({ now: D0 }), D0).length === 0 && summarize(user(), mk({ now: D0 }), D0).macro[3].met === false);
+  // Pi Cycle: the second reading of the Bitcoin valuation group — your level (100 = the cross), its own alert, off until you turn it on
+  {
+    const piM = (now, ratio) => { const f = withRb(now, [2, 2, 2], 2, '2026-10-20'); f.rainbow.pi = { day: f.rainbow.closes.at(-1)[0], ratio, d111: 70000, d350x2: 70000 / ratio * 100, peaks: [[2021, 101.9, '2021-04-12'], [2025, 78.4, '2025-01-21']], crosses: ['2021-04-12'] }; f.rainbow.w200 = { ma: 48000, day: '2026-11-08', under: { days: 310, pct: 6.8, last: '2023-03-12' } }; return f; };
+    const P0 = Date.parse('2026-12-10T06:00:00Z'), lv = { exitTargets: { pi: 95 } }, onC = settings({ alerts: { digest: false, pi: true } });
+    const sp = summarize(user(), piM(P0, 61.37), P0).macro[4];
+    check('Pi Cycle: read from the file, against 100 (the cross) until you choose', sp.k === 'pi' && sp.g === 'v' && sp.now === 61.37 && sp.lvl === 100 && sp.met === false && summarize(user(lv), piM(P0, 96), P0).macro[4].lvl === 95 && summarize(user(lv), piM(P0, 96), P0).macro[4].met === true && summarize(user({ exitTargets: { pi: 400 } }), piM(P0, 96), P0).macro[4].lvl === 100, sp);
+    check('Pi Cycle: no file → the row waits', summarize(user(), mk({ now: P0 }), P0).macro[4].now === null && summarize(user(), mk({ now: P0 }), P0).macro[4].met === false);
+    check('the alert switch is off until you turn it on', settings({}).pi === false && settings({ alerts: { pi: true } }).pi === true);
+    const b0 = run(piM(P0, 90), run(piM(P0 - DAY, 90), {}, P0 - DAY, cfg, lv).state, P0, cfg, lv).state;
+    let q = run(piM(P0 + DAY, 96.2), b0, P0 + DAY, cfg, lv);
+    check('Pi Cycle reaches your level with its switch off: no message (the other exit alerts stay on), remembered quietly', !q.messages.some(x => x.key === 'macro-pi') && q.state.macro.pi === 1, q.messages.map(x => x.key));
+    q = run(piM(P0 + DAY, 96.2), b0, P0 + DAY, onC, lv);
+    const pm = q.messages.find(x => x.key === 'macro-pi');
+    check('…switched on: one message — what it measures, your level, the two counts', pm && /^🧭 <b>Exit level reached · Pi Cycle<\/b>\nThe 111-day average is 96\.2% of twice the 350-day one · your level 95%\nMarket structure 0\/3 · Bitcoin valuation 1\/2$/.test(pm.text) && okHtml(pm.text) && NOW_KEYS.test('macro-pi'), pm && pm.text);
+    let stP = q.state; q = run(piM(P0 + 2 * DAY, 96.5), stP, P0 + 2 * DAY, onC, lv);
+    check('…once', !q.messages.some(x => x.key === 'macro-pi')); stP = q.state;
+    q = run(piM(P0 + 3 * DAY, 94.1), stP, P0 + 3 * DAY, onC, lv); stP = q.state; q = run(piM(P0 + 4 * DAY, 95.3), stP, P0 + 4 * DAY, onC, lv);
+    check('…a dip of under 2 points and back sends nothing again', !q.messages.some(x => x.key === 'macro-pi'), q.messages.map(x => x.key)); stP = q.state;
+    q = run(piM(P0 + 5 * DAY, 92), stP, P0 + 5 * DAY, onC, lv); stP = q.state; q = run(piM(P0 + 6 * DAY, 95.4), stP, P0 + 6 * DAY, onC, lv);
+    check('…after a fall of 2 points under your level, reaching it again alerts again', q.messages.some(x => x.key === 'macro-pi'), q.messages.map(x => x.key));
+    const arP = run(piM(P0 + DAY, 96.2), b0, P0 + DAY, settings({ alerts: { lang: 'ar', digest: false, pi: true } }), lv).messages.find(x => x.key === 'macro-pi');
+    check('…in Arabic', arP && /^🧭 <b>تحقق مستوى خروج · مؤشر Pi Cycle<\/b>\nمتوسط 111 يوماً يساوي 96\.2% من ضعف متوسط 350 يوماً · مستواك 95%\nهيكل السوق 0 من 3 · تقييم البيتكوين 1 من 2$/.test(arP.text), arP && arP.text);
+    // every condition of both groups met: "your exit zone"
+    const allM = piM(P0 + DAY, 96.2); allM.global.dom = { btc: 40, usdt: 3 }; allM.altPage = { ethbtc: [[1, 0.09]] }; allM.rainbow.held.band = 7; allM.rainbow.closes = rbFile(P0 + DAY, [7, 7, 7], 7, '2026-11-01').closes;
+    const sa = summarize(user(lv), allM, P0 + DAY), ea = exitGroups(sa);
+    check('both groups full → "every exit condition is met"', ea.all && ea.s.join() === '3,3' && ea.v.join() === '2,2' && /🧭 Every exit condition is met — your exit zone/.test(brief(sa, allM, cfg, P0 + DAY, false).text), ea);
+    check('the morning brief counts the groups apart', /🧭 Market structure 0\/3 · Bitcoin valuation 1\/2/.test(brief(summarize(user(lv), piM(P0, 96), P0), piM(P0, 96), cfg, P0, false).text) && !/🧭/.test(brief(summarize(user(lv), piM(P0, 60), P0), piM(P0, 60), cfg, P0, false).text));
+  }
   // the weekly report carries the line; the morning brief does not
   m = withRb(D0, [2, 2, 2], 2, '2026-10-20'); const sw = summarize(user(), m, D0);
   check('🌈 the weekly report has the rainbow line under the market; the morning brief does not', /\n🌈 Bitcoin rainbow  <b>band 2 of 9<\/b>\nDeep discount · −\d+% vs the line\n/.test(brief(sw, m, cfg, D0, true).text) && !/🌈/.test(brief(sw, m, cfg, D0, false).text) && okHtml(brief(sw, m, cfg, D0, true).text));

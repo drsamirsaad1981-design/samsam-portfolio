@@ -30,8 +30,19 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   Accumulation zone · Around the trend line · Above the trend line · Warming up · Hot · Very hot · Bubble
   (قاع تاريخي نادر · خصم عميق · منطقة تجميع · حول خط الاتجاه · فوق خط الاتجاه · بداية سخونة · سخونة · سخونة عالية · فقاعة) —
   never "buy" / "sell", never "fair value" (the line is a trend, not a valuation). Always "it describes the past, not a
-  forecast". The alert goes on every move between bands. The Exit page's 4th indicator is the band **you** choose (6 until
+  forecast". The alert goes on every move between bands. On the Exit page its level is the band **you** choose (6 until
   you do). Bitcoin only.
+- Exit conditions come in **two groups, counted apart — never one counter** (27 Nov): **Market structure** (BTC dominance,
+  USDT dominance, ETH/BTC) and **Bitcoin valuation** (the rainbow band, the Pi Cycle; MVRV when it comes) — the second
+  group's readings come from the same price history and move together. App: "Market structure: n of 3 · Bitcoin valuation:
+  n of 2"; bot the same (`exitGroups`).
+- Pi Cycle: the 111-day average as a percent of twice the 350-day one (100 = the cross). Shown as a distance with each
+  cycle's highest; the level is the user's (50–150, 100 until chosen); **its alert is off until the user turns it on**.
+- 200-week average: the mean of the last 200 Sunday closes — "a reference, not a floor" (daily closes have been under it).
+- Max drawdown is measured on the profit-% line read as an index (1 + profit% ÷ 100), so money added or taken out is not a
+  rise or a fall; it is the period the chart shows.
+- These top indicators did not fire at the October 2025 top (no Pi cross, MVRV under its old line): show the distance and
+  what each cycle reached, let the user choose the level — never a fixed "top" alarm.
 
 ## Where things are
 
@@ -43,7 +54,7 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 | Main page | `samsam-home.js` (+ `samsam-home.css`), `samsam-hchart.js`, `samsam-analysis.js` (AI report), `samsam-cash.js` |
 | Shared UI | `samsam-ui.js` (header, footer, bottom bar, AI button, CPDialog), `samsam-lang.js` + `samsam-ar.js` (Arabic), `samsam-hints.js` |
 | Market data in the app | `samsam-market.js` (snapshot first, CoinGecko live) |
-| 🌈 Bitcoin rainbow | maths + names `samsam-core.js` (`rainbowFit`, `rainbowRead`, `RAINBOW_NAMES`); the daily job `tools/update-rainbow.mjs` → `m/btcday.json` (every close since 2010) + `m/rainbow.json` (its small part is copied into `m/market.json` by `update-market.mjs` — the Worker has no outside call to spare); Market Hub card `samsam-rainbow.js`; the bot's lines and the alert `tools/alerts-core.mjs` (`rainbowLines`, `evaluate` 4b); the lab `tools/lab/rainbow.mjs` |
+| 🌈 Bitcoin rainbow | maths + names `samsam-core.js` (`rainbowFit`, `rainbowRead`, `RAINBOW_NAMES`); the daily job `tools/update-rainbow.mjs` → `m/btcday.json` (every close since 2010) + `m/rainbow.json` (its small part is copied into `m/market.json` by `update-market.mjs` — the Worker has no outside call to spare); Market Hub card `samsam-rainbow.js`; the bot's lines and the alert `tools/alerts-core.mjs` (`rainbowLines`, `evaluate` 4b); the lab `tools/lab/rainbow.mjs`. The same job and file carry 📏 the 200-week average and the Pi Cycle (`w200`, `pi`; `btcW200`, `btcPi`, one reader `btcMarks`); 📉 `maxDrawdown` is in the core too (Performance page) |
 | Taxonomy | `samsam-taxonomy.js` (classes crypto / stock / metal / cash, categories) |
 | Market snapshot (GitHub Actions → branch `prices`) | `tools/update-market.mjs`, `tools/update-prices.mjs`, `tools/update-etf.mjs` → `m/market.json`, `m/etf.json`, `p/*.json` |
 | Bot + AI (Cloudflare Worker) | `tools/worker/*.mjs` (bot, ai tools, daily jobs, data), `tools/ai-worker.js`, `tools/alerts-core.mjs` (summary + messages) |
@@ -178,19 +189,37 @@ Fifth round (27 Nov, his "ابدأ" with three decisions) — 🌈 the Bitcoin r
 - His first list of names had "Fair value" on band 5; the line runs through band 4, so the names follow the line
   (he agreed: "توجيهك أدق").
 
+Sixth round (27 Nov, his "نفذ" for group 1 of six new indicators — the ones that need no new source):
+- 📏 200-week average: a row + the dashed line in the rainbow card (how many daily closes were under it, the last one), one
+  quiet line under Bitcoin's Buy At on the Plan (`w200Note`), the AI's facts.
+- Pi Cycle: a row in the Exit page's new **Bitcoin valuation** group (its two averages under it; the field's note has each
+  cycle's highest and the last cross — from the file), `exitTargets.pi`, alert switch `pi` (off; again only after a fall
+  of 2 points under the level). The alerts sheet has 16 switches, 15 on.
+- The Exit card: two count chips and two headed groups (it was one "Signals Hit: n of 4"); the state "Close" is now
+  "Near" (Arabic read it as the Close button: "إغلاق" → "قريب"). Bot: `/exit` in two groups, `/portfolio` "Exit 0/3 · 0/2",
+  the pinned message the same (it said "/3" with four conditions — fixed), the brief's line, the AI's `group`.
+- 📉 Max drawdown under the Portfolio vs BTC chart (performance.html → `#pccDd`): yours beside BTC Trend (and gold / silver
+  when their lines are on), with the dates of your deepest fall; `drawdown_test.py` checks it against a plain calculation.
+- `m/rainbow.json` has a make-up number (`gen`): a higher one rewrites the file from the kept days, with no request.
+- A lesson: a `// comment` appended inside a one-line `try { … } catch` swallowed the `catch` (update-market.mjs) —
+  `market_cmc_test.mjs` caught it before the push. Put the comment after the whole statement, and run every Node test.
+- Still to come, **group 2 — after a lab trial like the rainbow's** (his decision): MVRV (Coin Metrics community API: a
+  new source; its old 3.5 line was not reached in 2025), DXY (Yahoo `DX-Y.NYB`, Metals section), BTC funding rate
+  (the bot already reads OKX's; "aggregated" only if it really is). MVRV joins the Bitcoin valuation group.
+
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
   in `users/<uid>/meta/alerts`, six kinds on by default, quiet hours, a daily cap; owner first, then one member, then all.
   (The rainbow alert reaches members with this phase; today they see the line in `/market` and the weekly report.)
 
 Still open:
-1. The members' alerts above; a rainbow section in the bot's guide (his approval: it posts to the channel).
+1. The members' alerts above; group 2 of the indicators (MVRV, DXY, funding rate — a lab trial first); a section in the bot's
+   guide for the rainbow and the new readings (his approval: it posts to the channel).
 2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
    `asset_classes_app_test.py` needed its retry in both GitHub runs of 27 Nov (8/9 on the first try, at 46/48 of its
    shard; 9/9 three times in a row here) — same list.
 3. The PDF and the CSV are in English when the app is Arabic.
 4. The AI button over a card's corner in mid-page (inherent to a floating button; moving it is a design decision).
-5. The Exit page's state "Close" (near a level) reads "إغلاق" in Arabic — it shares its English word with the Close button.
 
 ## Queued by Samir (27 Nov) — after the next important tasks, not before
 
@@ -202,7 +231,7 @@ Latin runs inside Arabic lines, digits), general layout, alignment, contrast, an
   messages are a branch of their own.
 - Then the review, part by part along that chart; findings listed before fixing (a big change: his "نفذ" first).
 - Remind him to switch to the strongest model before it starts (the Project's rule for a full review).
-- Known items to put on the chart from the start: "Still open" 3 and 5 above (PDF / CSV in English, "Close" → "إغلاق").
+- Known items to put on the chart from the start: "Still open" 3 above (PDF / CSV in English).
 
 ## Open ideas (not requested yet)
 

@@ -18,7 +18,7 @@ import { usMarket, gramSar } from './usmarket.mjs';
 import { bidiBody } from './bidi.mjs';
 import { K, chatOf, isOwner, langOf, member, setMember } from './who.mjs';
 import { premiumNow } from './stars.mjs';
-import { summarize, settings, local, localL, arDay, localParts, usd, usd2, perUnit, pct, esc, dot, isStable, etfDay, APP } from '../alerts-core.mjs';
+import { summarize, settings, local, localL, arDay, localParts, usd, usd2, perUnit, pct, esc, dot, isStable, etfDay, APP, exitGroups } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures, setAlertsLang, setZakatSnap } from './data.mjs';
 import { zakatWhen, zakatYear, HIJRI_MONTHS, zakatPool, cashTotals, learnAssets, firstSeen } from '../../samsam-core.js';
 import { compose } from './ai.mjs';
@@ -113,8 +113,7 @@ export function todo(sum, now) {
     if (to <= 0) add(92, { what: 'take_profit_reached', coin: t.sym, tp: t.n, level_usd: r6(t.level / G), price_usd: r6(t.price / G), ...U, sell_pct: t.pct });
     else if (to <= 7) add(80, { what: 'take_profit_close', coin: t.sym, tp: t.n, level_usd: r6(t.level / G), price_usd: r6(t.price / G), ...U, pct_to_go: r2(to), sell_pct: t.pct });
   }
-  const met = (sum.macro || []).filter(x => x.met).length;
-  if (met >= 2) add(75, { what: 'exit_conditions', met, of: sum.macro.length });
+  { const eg = exitGroups(sum); if (eg.met >= 2) add(75, { what: 'exit_conditions', market_structure_met: eg.s[0], market_structure_of: eg.s[1], bitcoin_valuation_met: eg.v[0], bitcoin_valuation_of: eg.v[1] }); }   // two groups, never one counter
   if (sum.alloc) for (const g of sum.alloc.groups.filter(g => g.state !== 'ok').sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift)).slice(0, 1))
     add(50, { what: g.drift > 0 ? 'allocation_over' : 'allocation_under', group: sum.alloc.names[g.key] || g.key, now_pct: r2(g.now), target_pct: r2(g.target), usd_to_fix: Math.round(Math.abs(g.full)) });
   const rows = sum.coins.filter(c => !isStable(c.sym) && c.value >= 5);
@@ -181,12 +180,12 @@ const TODO_TXT = {
   en: x => ({ dca_today: `🛒 DCA day: buy ${dcaTxt(x)} of ${x.coin}`, dca_missed: `⏰ DCA ${x.coin} ${x.days_late} days late (${dcaTxt(x)})`, dca_tomorrow: `🛒 Tomorrow: DCA ${x.coin} ${dcaTxt(x)}`,
     at_buy_price: `🎯 ${x.coin} ${usd(x.price_usd)} — at your buy price ${usd(x.your_buy_price_usd)}`, near_buy_price: `🎯 ${x.coin} ${pct(x.pct_above_buy_price, 1)} above your buy price ${usd(x.your_buy_price_usd)}`,
     take_profit_reached: `💰 ${x.coin} reached TP${x.tp} ${usd(x.level_usd)} — sell ${x.sell_pct}%`, take_profit_close: `💰 ${x.coin} ${r2(x.pct_to_go)}% from TP${x.tp} ${usd(x.level_usd)}`,
-    exit_conditions: `🚪 Exit: ${x.met}/${x.of} conditions met`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — trim ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — add ${usd(x.usd_to_fix)}`,
+    exit_conditions: `🚪 Exit: market structure ${x.market_structure_met}/${x.market_structure_of} · Bitcoin valuation ${x.bitcoin_valuation_met}/${x.bitcoin_valuation_of}`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — trim ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% vs ${x.target_pct}% — add ${usd(x.usd_to_fix)}`,
     reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg — Reinforce`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} vs your avg — Sell / convert` }[x.what]),
   ar: x => ({ dca_today: `🛒 يوم الشراء الدوري (DCA): اشترِ ${x.coin} بـ ${dcaTxt(x)}`, dca_missed: `⏰ DCA ${x.coin} متأخر ${x.days_late} يوم (${dcaTxt(x)})`, dca_tomorrow: `🛒 غداً: DCA ${x.coin} ${dcaTxt(x)}`,
     at_buy_price: `🎯 ${x.coin} ${usd(x.price_usd)} — وصل إلى سعر الشراء الذي حددته ${usd(x.your_buy_price_usd)}`, near_buy_price: `🎯 ${x.coin} فوق سعر الشراء ${usd(x.your_buy_price_usd)} بـ ${pct(x.pct_above_buy_price, 1)}`,
     take_profit_reached: `💰 ${x.coin} وصل TP${x.tp} ${usd(x.level_usd)} — بيع ${x.sell_pct}%`, take_profit_close: `💰 ${x.coin} باقي ${r2(x.pct_to_go)}% على TP${x.tp} ${usd(x.level_usd)}`,
-    exit_conditions: `🚪 الخروج: ${x.met}/${x.of} مؤشرات تحققت`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — قلّل ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — زوّد ${usd(x.usd_to_fix)}`,
+    exit_conditions: `🚪 الخروج: هيكل السوق ${x.market_structure_met} من ${x.market_structure_of} · تقييم البيتكوين ${x.bitcoin_valuation_met} من ${x.bitcoin_valuation_of}`, allocation_over: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — قلّل ${usd(x.usd_to_fix)}`, allocation_under: `⚖️ ${x.group} ${x.now_pct}% والهدف ${x.target_pct}% — زوّد ${usd(x.usd_to_fix)}`,
     reinforce_signal: `🟢 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} عن متوسط شرائك — تعزيز`, sell_signal: `🔴 ${x.coin} ${pct(x.pct_vs_your_avg, 1)} عن متوسط شرائك — بيع / تحويل` }[x.what]),
 };
 // 🇺🇸 / 🥇 the other markets for the smart morning / evening: the US stock market's state, the biggest bStock moves, gold and
@@ -290,12 +289,12 @@ export async function pinView(env, now = Date.now()) {
   if (!g) return null;
   const { m, sum } = g, alerts = await listAlerts(env), near = nearest(alerts, m, sum).filter(x => x.alert)[0];
   const dca = (sum.dca || []).filter(x => x.s.next).sort((a, b) => a.s.next.localeCompare(b.s.next))[0];
-  const met = (sum.macro || []).filter(x => x.met).length;
+  const eg = exitGroups(sum);
   const me = isOwner(env) ? null : await member(env), star = me && premiumNow(me) ? ' ⭐' : '', heart = me && me.supporter ? ' 💛' : '';   // a member's badges
   const L1 = [`📌 <b>${w.live}</b>${star}${heart} · ${w.updated} ${local(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`,
     `💼 ${w.pfS}: <b>${usd2(sum.value)}</b> ${dot(sum.ch24)} (${pct(sum.ch24)} ${w.today})`,   // 💼 المحفظة: $33,143.94 (−3.95% اليوم)
     m.btc ? `🪙 ${w.btcS}: <b>${usd(m.btc.price)}</b> ${dot(m.btc.ch24)} (${pct(m.btc.ch24)})${m.fng ? ` · ${w.fng}: <b>${m.fng.value}</b>` : ''}` : null,
-    `📋 ${w.planS}: <b>${sum.prog ? sum.prog.pct.toFixed(1) : '0'}%</b> · 🚪 ${w.exit}: <b>${L === 'ar' ? `${met} من 3` : `${met}/3`}</b>`,
+    `📋 ${w.planS}: <b>${sum.prog ? sum.prog.pct.toFixed(1) : '0'}%</b> · 🚪 ${w.exit}: <b>${eg.s[0]}/${eg.s[1]} · ${eg.v[0]}/${eg.v[1]}</b>`,   // market structure · Bitcoin valuation (it said "/3" with four conditions)
     dca ? `🛒 ${w.nextDca}: <b>${esc(dca.sym)}</b> · ${esc(L === 'ar' ? arDay(dca.s.next) : new Date(dca.s.next + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}` : null,
     alerts.length ? `🔔 ${w.alerts(alerts.length)}${near ? ` · ${w.nearest}: ${esc(L === 'ar' ? near.alert_ar : near.alert)} (${near.pct_away}% ${w.away})` : ''}` : null].filter(Boolean);
   return { text: L1.join('\n'), buttons: [[cb(w.pf, 'pf'), cb(w.mk, 'mk'), cb(w.refresh, 'pin:r')], [{ text: w.report, web_app: { url: APP + 'index.html' } }]] };   // 📱 the full app inside Telegram

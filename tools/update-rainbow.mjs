@@ -9,7 +9,9 @@
 //   m/rainbow.json  what the bot, the alerts, the Exit page and the Market Hub read (samsam-core.js → rainbowRead):
 //                   { v, updated, fit: { a, b, r2, n, lo, hi, loDay, hiDay, share[9], from, to }, closes: [[iso, price] × 14],
 //                     held: { band, since }, moves: { y1, last: [[iso, from, to] × 6] }, years: [[year, lowest held band,
-//                     highest held band]], peaks: [[year, band, iso] — the highest band that held in each cycle, halving to halving], tops: [[year, iso, close, band]], weekly: [[day, price]] (one close a week, for the chart) }
+//                     highest held band]], peaks: [[year, band, iso] — the highest band that held in each cycle, halving to halving],
+//                     w200: { ma, day, since, under: { days, of, pct, last, spans } } — 📏 the 200-week average,
+//                     pi: { day, ratio, d111, d350x2, peaks: [[year, ratio, iso]], crosses: [iso] } — the Pi Cycle, tops: [[year, iso, close, band]], weekly: [[day, price]] (one close a week, for the chart) }
 //
 // The maths is samsam-core.js (rainbowFit …): one line through every close, nine equal bands between the deepest and the
 // highest distance from it. The line is fitted again once a week — on the closes up to the last Sunday (UTC) — so the bands
@@ -24,6 +26,7 @@ const DAY = 864e5, FROM = C.rainbowDay(C.RAINBOW_FROM), CUT = C.rainbowDay('2017
 const REF = { a: -16.1839, b: 5.5943, n: 5930, to: '2026-11-11' };                           // the published fit (the lab's comparison)
 const TOP_YEARS = [2011, 2013, 2017, 2021, 2025];
 const HALVINGS = ['2012-11-28', '2016-07-09', '2020-05-11', '2024-04-20'].map(C.rainbowDay);   // a cycle = from one halving to the next
+const GEN = 2;   // the file's make-up: a higher number rewrites it from the kept days at once (2: the 200-week average, the Pi Cycle)
 const r6 = v => +(+v).toPrecision(6), log = (...a) => console.log(new Date().toISOString().slice(11, 19), '[rainbow]', ...a);
 const BN = process.env.BN_API || 'https://data-api.binance.vision/api/v3';
 const BC = process.env.BC_API || 'https://api.blockchain.info';
@@ -54,11 +57,37 @@ export function build(series, old, nowMs = Date.now()) {
     days.forEach((d, k) => { if (d >= a && d < b && heldAll[k] > best) { best = heldAll[k]; at = d; } });
     if (at != null) peaks.push([yearOf(at), best, C.rainbowIso(at)]);
   }
+  // 📏 the 200-week average (the mean of the last 200 Sunday closes) and how often a daily close was under it
+  const w200s = C.btcW200(rows), w200 = (() => {
+    if (!w200s.length) return null;
+    let k = 0, n = 0, under = 0, lastU = null, span = null; const spans = [];
+    for (const [d, p] of rows) {
+      while (k + 1 < w200s.length && w200s[k + 1][0] <= d) k++;
+      if (w200s[k][0] > d) continue;   // before the 200th week
+      n++; const u = p < w200s[k][1];
+      if (u) { under++; lastU = d; if (span && span[1] === d - 1) span[1] = d; else { span = [d, d]; spans.push(span); } }
+    }
+    const end = w200s[w200s.length - 1];
+    return { ma: r6(end[1]), day: C.rainbowIso(end[0]), weeks: 200, since: C.rainbowIso(w200s[0][0]),
+      under: { days: under, of: n, pct: +(under / n * 100).toFixed(1), last: lastU == null ? null : C.rainbowIso(lastU), spans: spans.filter(x => x[1] - x[0] >= 6).slice(-4).map(x => [C.rainbowIso(x[0]), C.rainbowIso(x[1]), x[1] - x[0] + 1]) } };
+  })();
+  // the Pi Cycle: the 111-day average as a percent of twice the 350-day one; each cycle's highest, and the days it crossed 100
+  const pis = C.btcPi(rows), pi = (() => {
+    if (!pis.length) return null;
+    const end = pis[pis.length - 1], pk = [], crosses = [];
+    for (let c = 0; c <= HALVINGS.length; c++) {
+      const a = c ? HALVINGS[c - 1] : FROM, b = c < HALVINGS.length ? HALVINGS[c] : Infinity; let best = null;
+      for (const x of pis) if (x[0] >= a && x[0] < b && (!best || x[1] > best[1])) best = x;
+      if (best) pk.push([yearOf(best[0]), +best[1].toFixed(1), C.rainbowIso(best[0])]);
+    }
+    for (let i = 1; i < pis.length; i++) if (pis[i][1] >= 100 && pis[i - 1][1] < 100) crosses.push(C.rainbowIso(pis[i][0]));
+    return { day: C.rainbowIso(end[0]), ratio: +end[1].toFixed(2), d111: r6(end[2]), d350x2: r6(end[3]), peaks: pk, crosses };
+  })();
   const weekly = rows.filter(([d]) => (d + 4) % 7 === 0 || d === last).map(([d, p]) => [d, r6(p)]);
-  return { v: 1, updated: new Date(nowMs).toISOString(), src: 'blockchain.com daily price until 2017-08-16, Binance BTCUSDT daily close (UTC) after',
+  return { v: 1, gen: GEN, updated: new Date(nowMs).toISOString(), src: 'blockchain.com daily price until 2017-08-16, Binance BTCUSDT daily close (UTC) after',
     fit, closes: rows.slice(-14).map(([d, p]) => [C.rainbowIso(d), r6(p)]), held: { band: held.band, since: C.rainbowIso(days[held.i]) },
     moves: { y1: moves.filter(m => C.rainbowDay(m[0]) > last - 365).length, last: moves.slice(-6) },
-    years: [...years.values()], peaks,
+    years: [...years.values()], peaks, w200, pi,
     tops: TOP_YEARS.filter(y => top.has(y)).map(y => { const t = top.get(y); return [t[0], t[1], r6(t[2]), t[3]]; }), weekly };
 }
 // the first run's proof: these old prices give the published line
@@ -111,7 +140,11 @@ export async function main(dir, nowMs = Date.now()) {
   const kept = readJson(F_DAY), old = readJson(F_RB), series = new Map(), want = Math.floor(nowMs / DAY) - 1;   // want: the last finished UTC day
   if (kept && kept.v === 1 && kept.start === C.RAINBOW_FROM && Array.isArray(kept.p)) kept.p.forEach((p, i) => { if (p > 0) series.set(FROM + i, +p); });
   let have = series.size ? Math.max(...series.keys()) : null, firstRun = false;
-  if (have != null && have >= want && old && old.v === 1 && old.closes && old.closes.length && C.rainbowDay(old.closes[old.closes.length - 1][0]) === have) { log('up to date,', C.rainbowIso(have)); return 'same'; }
+  const fresh = old && old.v === 1 && old.closes && old.closes.length && C.rainbowDay(old.closes[old.closes.length - 1][0]) === have;
+  if (have != null && have >= want && fresh && old.gen === GEN) { log('up to date,', C.rainbowIso(have)); return 'same'; }
+  if (have != null && have >= CUT && fresh && old.gen !== GEN) {   // the file's make-up changed: written again from the kept days, nothing asked for
+    const R0 = build(series, old, nowMs); if (R0) { fs.writeFileSync(F_RB, JSON.stringify(R0)); log('rewritten for make-up', GEN, 'from the kept days (no request)'); if (have >= want) return 'written'; }
+  }
   if (have == null || have < CUT - 1) {   // the old days, once
     const e = await early(); if (e.size < 2400) throw new Error('blockchain.com: only ' + e.size + ' days before ' + C.rainbowIso(CUT));
     series.clear(); for (const [d, p] of e) series.set(d, p); have = CUT - 1; firstRun = true; log('early days (blockchain.com):', e.size);
@@ -120,7 +153,7 @@ export async function main(dir, nowMs = Date.now()) {
   try { late = await binance(have + 1, nowMs); log('Binance closes:', late.size); }
   catch (e) { log('Binance:', e.message, '→ Bitstamp'); late = await bitstamp(have + 1, nowMs); log('Bitstamp closes:', late.size); }
   let added = 0; for (const [d, p] of late) if (d > have && d <= want) { series.set(d, p); added++; }
-  if (!added && !firstRun && old && old.v === 1) { log('no new close yet (last', C.rainbowIso(have) + ')'); return 'same'; }
+  if (!added && !firstRun && old && old.v === 1) { log('no new close yet (last', C.rainbowIso(have) + ')'); return old.gen === GEN ? 'same' : 'written'; }
   const last = Math.max(...series.keys());
   for (let d = Math.max(CUT, have + 1); d <= last; d++) if (!series.has(d)) throw new Error('a day is missing: ' + C.rainbowIso(d));   // never a hole in the middle
   if (firstRun && last >= C.rainbowDay(REF.to)) {
@@ -133,7 +166,7 @@ export async function main(dir, nowMs = Date.now()) {
   fs.writeFileSync(F_DAY, JSON.stringify({ v: 1, start: C.RAINBOW_FROM, src: R.src, p }));
   fs.writeFileSync(F_RB, JSON.stringify(R));
   const now = C.rainbowRead(R, nowMs);
-  log('fit to', R.fit.to, 'b', R.fit.b.toFixed(4), 'a', R.fit.a.toFixed(4), 'days', R.fit.n, '· close', R.closes[R.closes.length - 1].join(' '), '· band', R.held.band, 'since', R.held.since, now && now.pending ? '(last close in ' + now.pending + ')' : '', '· moves in a year', R.moves.y1);
+  log('fit to', R.fit.to, 'b', R.fit.b.toFixed(4), 'a', R.fit.a.toFixed(4), 'days', R.fit.n, '· close', R.closes[R.closes.length - 1].join(' '), '· band', R.held.band, 'since', R.held.since, now && now.pending ? '(last close in ' + now.pending + ')' : '', '· moves in a year', R.moves.y1, '· 200-week average', R.w200 && R.w200.ma, R.w200 && ('(under it on ' + R.w200.under.days + ' days)'), '· Pi Cycle', R.pi && R.pi.ratio + '%');
   return 'written';
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {

@@ -104,9 +104,12 @@ const srcOf = (m, id) => typeof m.live[id] === 'string' ? m.live[id] + ' (live)'
 // 🌈 Bitcoin's rainbow band for the AI: the same reading the bot's line and the alert use (samsam-core.js → rainbowRead)
 function rainbowFacts(m) {
   const rb = rainbowNow(m, Date.now()); if (!rb) return null;
+  const bm = C.btcMarks(m.rainbow, Date.now(), m.btc && m.btc.price);
   return { band: rb.band, of: 9, name: C.rainbowName(rb.band), name_ar: C.rainbowName(rb.band, true), pct_vs_trend_line: r2(rb.vs), trend_line_usd: Math.round(rb.line), band_low_usd: Math.round(rb.lo), band_high_usd: Math.round(rb.hi),
     last_daily_close_usd: r6(rb.close), last_close_day: rb.day, held_since: rb.since, last_close_in_another_band: rb.pending, share_of_days_in_this_band_pct: rb.share ? rb.share[rb.band - 1] : null,
-    note: 'Nine equal bands (log scale) around one trend line fitted to every daily close since 18 Aug 2010; band 4 holds the line. A band counts after two daily closes in it. It describes the past — not a forecast and not an order to buy or sell.' };
+    note: 'Nine equal bands (log scale) around one trend line fitted to every daily close since 18 Aug 2010; band 4 holds the line. A band counts after two daily closes in it. It describes the past — not a forecast and not an order to buy or sell.',
+    ...(bm && bm.w200 ? { average_200_week_usd: Math.round(bm.w200.ma), price_vs_200_week_average_pct: r2(bm.w200.vs), days_closed_under_it_pct: bm.w200.hist ? bm.w200.hist.pct : null, average_note: 'the mean of the last 200 weekly closes — a reference, not a floor: daily closes have been under it' } : {}),
+    ...(bm && bm.pi ? { pi_cycle_pct: bm.pi.ratio, pi_cycle_note: 'the 111-day average as a percent of twice the 350-day average; 100 is the cross that marked the 2013, 2017 and April 2021 tops and did not happen at the October 2025 top', pi_cycle_highest_by_cycle: bm.pi.peaks } : {}) };
 }
 export async function runTool(ctx, name, input) {
   const now = Date.now();
@@ -188,7 +191,8 @@ export async function runTool(ctx, name, input) {
   if (name === 'get_exit') {
     const x = await ctx.sum(); if (!x) return { error: 'portfolio not connected' };
     const { s } = x; ctx.used.add('your exit plan (Firebase)'); ctx.used.add('market snapshot');
-    return { conditions: s.macro.map(c => ({ name: { btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC', rainbow: 'Bitcoin rainbow band (1–9, held after two daily closes)' }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
+    return { note: 'Two groups, counted apart: market structure, and Bitcoin valuation (readings of Bitcoin\'s own price history — they tend to move together).',
+      conditions: s.macro.map(c => ({ group: c.g === 'v' ? 'Bitcoin valuation' : 'Market structure', name: { btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC', rainbow: 'Bitcoin rainbow band (1–9, held after two daily closes)', pi: 'Pi Cycle: the 111-day average as a percent of twice the 350-day average (100 = the cross)' }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
       take_profits: (s.tps || []).map(t => ({ ticker: t.sym, tp: t.n, level_usd: r6(t.level / (t.g || 1)), price_now_usd: r6(t.price / (t.g || 1)), ...(t.g > 1 ? { unit: 'USD per gram' } : {}), pct_to_go: r2((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go) };
   }
   if (name === 'get_derivatives') {

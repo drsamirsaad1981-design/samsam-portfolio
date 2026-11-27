@@ -875,6 +875,53 @@ export function rainbowRead(R, now = Date.now(), price = null) {
   return { day: end.iso, close: end.p, band: held.band, last: end.band, pending: end.band !== held.band ? end.band : null, price: p, live, line, vs: (p / line - 1) * 100,
     lo: edges[held.band - 1], hi: edges[held.band], edges, since: held.since || null, share: f.share || null, fit: f, closes: cl };
 }
+// ── 📏 Two more readings from the same daily closes: the 200-week average and the Pi Cycle (both describe, neither forecasts) ──
+// rows: [day, price], one a day, oldest first (m/btcday.json). The job writes their numbers beside the rainbow's
+// (m/rainbow.json → w200, pi); btcMarks() is the one reader for the card, the Exit page, the Plan and the bot.
+export const btcWeekly = rows => rows.filter(r => (r[0] + 4) % 7 === 0 && r[1] > 0);   // a week closes on Sunday (UTC)
+// 200-week average: the mean of the last 200 weekly closes. → [[sunday, average]] from the 200th week on
+export function btcW200(rows, n = 200) {
+  const w = btcWeekly(rows), out = []; let sum = 0;
+  for (let i = 0; i < w.length; i++) { sum += w[i][1]; if (i >= n) sum -= w[i - n][1]; if (i >= n - 1) out.push([w[i][0], sum / n]); }
+  return out;
+}
+// Pi Cycle: the 111-day average against twice the 350-day average (simple averages of the daily closes).
+// → [[day, ratio %, d111, d350x2]] from the 350th day on; the "cross" is the ratio reaching 100.
+export function btcPi(rows) {
+  const out = []; let s111 = 0, s350 = 0;
+  for (let i = 0; i < rows.length; i++) {
+    s111 += rows[i][1]; s350 += rows[i][1];
+    if (i >= 111) s111 -= rows[i - 111][1];
+    if (i >= 350) s350 -= rows[i - 350][1];
+    if (i >= 349) { const a = s111 / 111, b = 2 * s350 / 350; out.push([rows[i][0], a / b * 100, a, b]); }
+  }
+  return out;
+}
+// What the file says now: { day, price, w200: { ma, day, vs: % over (+) / under (−) the average, hist }, pi: { ratio, d111,
+// d350x2, day, peaks, crosses } } — null on the rainbow's own terms (no file, or a last close over 4 days old)
+export function btcMarks(R, now = Date.now(), price = null) {
+  const rb = rainbowRead(R, now, price); if (!rb) return null;
+  const w = R.w200 && +R.w200.ma > 0 ? { ma: +R.w200.ma, day: R.w200.day, vs: (rb.price / R.w200.ma - 1) * 100, hist: R.w200.under || null } : null;
+  const p = R.pi && +R.pi.ratio > 0 ? { ratio: +R.pi.ratio, d111: +R.pi.d111, d350x2: +R.pi.d350x2, day: R.pi.day, peaks: R.pi.peaks || [], crosses: R.pi.crosses || [] } : null;
+  return { day: rb.day, price: rb.price, live: rb.live, w200: w, pi: p };
+}
+export const PI_EXIT = 100;   // the Exit page's Pi Cycle level until you choose yours (100 = the cross itself)
+
+// ── 📉 Max drawdown: the deepest fall from a peak, on a profit-% line (perfChartSeries: Value − Net invested ÷ Cost) ──
+// The line is read as an index (1 + profit% ÷ 100 — what a dollar of cost became), so money you add or take out does not
+// count as a rise or a fall. points: [{ t, v }] → { dd: % (0 … 100, 0 when it never fell), peakT, lowT } · null under 2 points
+export function maxDrawdown(points) {
+  const p = (points || []).filter(x => x && isFinite(x.v)); if (p.length < 2) return null;
+  let peak = -Infinity, peakT = null, best = { dd: 0, peakT: null, lowT: null };
+  for (const x of p) {
+    const idx = Math.max(1 + x.v / 100, 1e-9);
+    if (idx > peak) { peak = idx; peakT = x.t; }
+    const dd = (1 - idx / peak) * 100;
+    if (dd > best.dd) best = { dd, peakT, lowT: x.t };
+  }
+  return best;
+}
+
 // the bands' names, lowest first — they describe where the price stands, never an order to buy or sell (band 4 holds the
 // line itself). Samir's mix (27 Nov): his wording for the low side, the short "heat" ladder for the high side.
 export const RAINBOW_NAMES = Object.freeze({

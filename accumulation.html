@@ -19,24 +19,24 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-lang.js?v=202611271216"></script>
-<script src="samsam-ar.js?v=202611271216"></script>
-<script src="samsam-ui.js?v=202611271216"></script>
-<script src="samsam-hints.js?v=202611271216"></script>
-<script src="samsam-arhints.js?v=202611271216"></script>
-<script src="samsam-vault.js?v=202611271216"></script>
-<script src="samsam-labels.js?v=202611271216"></script>
-<script src="samsam-taxonomy.js?v=202611271216"></script>
-<script src="samsam-coins.js?v=202611271216"></script>
-<script src="samsam-import.js?v=202611271216"></script>
-<script src="samsam-wallets.js?v=202611271216"></script>
-<script src="samsam-rewards.js?v=202611271216"></script>
-<script src="samsam-settings.js?v=202611271216"></script>
-<script src="samsam-dropdown.js?v=202611271216"></script>
-<script src="samsam-market.js?v=202611271216"></script>
-<script src="samsam-exit.js?v=202611271216"></script>
-<script src="samsam-add.js?v=202611271216"></script>
-<script src="samsam-cash.js?v=202611271216"></script>
+<script src="samsam-lang.js?v=202611271408"></script>
+<script src="samsam-ar.js?v=202611271408"></script>
+<script src="samsam-ui.js?v=202611271408"></script>
+<script src="samsam-hints.js?v=202611271408"></script>
+<script src="samsam-arhints.js?v=202611271408"></script>
+<script src="samsam-vault.js?v=202611271408"></script>
+<script src="samsam-labels.js?v=202611271408"></script>
+<script src="samsam-taxonomy.js?v=202611271408"></script>
+<script src="samsam-coins.js?v=202611271408"></script>
+<script src="samsam-import.js?v=202611271408"></script>
+<script src="samsam-wallets.js?v=202611271408"></script>
+<script src="samsam-rewards.js?v=202611271408"></script>
+<script src="samsam-settings.js?v=202611271408"></script>
+<script src="samsam-dropdown.js?v=202611271408"></script>
+<script src="samsam-market.js?v=202611271408"></script>
+<script src="samsam-exit.js?v=202611271408"></script>
+<script src="samsam-add.js?v=202611271408"></script>
+<script src="samsam-cash.js?v=202611271408"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -571,6 +571,15 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 .xm-sum.all { background: rgba(16,185,129,.14); } .xm-sum.all b { color: var(--green); }
 .xm-rows { display: grid; gap: 12px; }
 @media (min-width: 600px) { .xm-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 22px; } }   /* four indicators: two by two (the card is ~700px wide on a desktop) */
+.xm-sums { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-bottom: 10px; }   /* two counts, one per group — never one counter */
+.xs-card:not(.open) .xm-sums { margin-bottom: 0; }
+.xm-sum-i { display: inline-block; font-size: .78rem; font-weight: 600; color: var(--fg2); padding: 3px 10px; border-radius: 999px; background: var(--bg3); }
+.xm-sum-i b { color: var(--fg); }
+.xm-sum-i.some { background: rgba(245,158,11,.14); } .xm-sum-i.some b { color: var(--c-amber, #f59e0b); }
+.xm-sum-i.all { background: rgba(16,185,129,.14); } .xm-sum-i.all b { color: var(--green); }
+.xm-gh:first-of-type { margin-top: 2px; }
+.xm-gh { margin: 14px 0 8px; font-size: .7rem; font-weight: 800; letter-spacing: .02em; color: var(--fg2); text-transform: uppercase; }
+.cp-ar .xm-gh { letter-spacing: 0; }
 .xm-more { margin-top: 3px; font-size: .7rem; font-weight: 600; color: var(--fg2); }
 .xm-f-rb, .xm-f-note { grid-column: 1 / -1; }
 .xm-f-rb input { max-width: 120px; }
@@ -944,7 +953,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611271216"></script>
+<script type="module" src="samsam-cloud.js?v=202611271408"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1365,7 +1374,7 @@ function renderTable() {
         ${r.targetPrice > 0 ? `<div style="font-size:0.7rem;margin-top:3px;color:var(--accent);font-weight:600">
           ${SamsamUI.ic('accumulation')}${SamsamFmt.price(r.targetPrice)} <span style="color:var(--fg2);font-weight:500">of ${SamsamFmt.price(r.targetBase)}${baseDay(r)}</span>
         </div>` : ''}
-        ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}`}
+        ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}${w200Note(entry, r, true)}`}
       </td>
       <td>${hasPrice && r.pendingQty > 0 ? '<strong>' + SamsamFmt.usd(r.costToTarget) + '</strong>' : (r.pendingQty === 0 ? '<span style="color:var(--green)">—</span>' : '<span class="no-price">N/A</span>')}</td>
       <td style="min-width:100px">
@@ -1459,6 +1468,7 @@ function renderCards() {
           </div>
           ${r.targetPrice > 0 ? `<div class="acc-set-note" style="color:var(--fg2)">${SamsamUI.ic('accumulation')}${SamsamFmt.price(r.targetPrice)} = ${SamsamFmt.price(r.targetBase)}${baseDay(r)} ${r.targetPct > 0 ? '+' : '−'} ${Math.abs(r.targetPct)}%</div>` : ''}
           ${r.priceDiff !== null ? `<div class="acc-set-note" style="color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}
+          ${w200Note(entry, r)}
         </div>
         <div class="acc-set-row">
           <label>${SamsamUI.ic('bell')}${L.PRICE_ALERT}<button type="button" class="cp-hint" data-hint="priceAlert" aria-label="About Price Alert"></button></label>
@@ -1570,7 +1580,21 @@ function renderPlanAlloc() {
 // closed by default (the page stays short); your choice is remembered on this device
 function paOpen() { try { return localStorage.getItem('samsam_pa_open') === '1'; } catch (_) { return false; } }
 
+// 📏 Bitcoin's 200-week average — one quiet reference line under the BTC row's Buy At (samsam-core.js → btcMarks on the
+// market snapshot; nothing while GitHub's file is missing or over 4 days old). A reference, not a floor and not a signal.
+let btcRef = null, btcRefAsked = false;
+function loadBtcRef() {
+  if (btcRefAsked || !window.SamsamMarket || !SamsamMarket.rainbow || !window.Samsam || !Samsam.core || !Samsam.core.btcMarks) return;
+  btcRefAsked = true;
+  SamsamMarket.rainbow().then(f => { const m = f && Samsam.core.btcMarks(f, Date.now()); if (m && m.w200) { btcRef = m.w200; renderAll(); } }).catch(() => {});
+}
+function w200Note(entry, r, table) {
+  if (!btcRef || String(entry.sym).toUpperCase() !== 'BTC' || !(r.currentPrice > 0)) return '';
+  const vs = (r.currentPrice / btcRef.ma - 1) * 100, v = Math.round(Math.abs(vs)), txt = `200-week average $${Math.round(btcRef.ma).toLocaleString('en-US')} · ${v < 1 ? 'the price is on it' : `the price is ${v}% ${vs < 0 ? 'under' : 'above'} it`}`;
+  return table ? `<div class="acc-w200" style="font-size:0.67rem;color:var(--fg2)">${txt}</div>` : `<div class="acc-set-note acc-w200" style="color:var(--fg2)">${txt}</div>`;
+}
 function renderAll() {
+  loadBtcRef();
   try { ensureBuyAtBases(); } catch (_) {}
   try { renderPlanAlloc(); } catch (_) {}   // before the rows: it sets the category chips
   try { renderDcaCard(); } catch (_) {}

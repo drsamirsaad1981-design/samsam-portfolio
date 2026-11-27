@@ -11,7 +11,7 @@ passes on the retry is reported as flaky. Exit code 1 if any test failed twice.
 import os, re, sys, time, socket, subprocess, pathlib
 
 T = pathlib.Path(__file__).resolve().parent
-SEED_FIRST = ('axis_hover', 'charts_check', 'fmt_check', 'perf_chart')   # need a long chart history in the fake database
+SEED_FIRST = ('axis_hover', 'charts_check', 'fmt_check', 'perf_chart', 'drawdown_test')   # need a long chart history in the fake database
 TEST_TIMEOUT = int(os.environ.get('TEST_TIMEOUT', '420'))
 
 

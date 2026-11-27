@@ -19,10 +19,10 @@ with sync_playwright() as p:
             check(f'{vn}/{theme}: Settings has Telegram alerts', pg.is_visible('#stRow_alerts'))
             pg.click('#stRow_alerts'); pg.wait_for_timeout(300)
             st = pg.evaluate("""(()=>{const b=document.querySelector('#cpAlerts .al-box').getBoundingClientRect();
-              return {open:!!document.getElementById('cpAlerts'), sw:document.querySelectorAll('#cpAlerts input[type=checkbox]').length, on:[...document.querySelectorAll('#cpAlerts input[type=checkbox]')].every(i=>i.checked),
+              return {open:!!document.getElementById('cpAlerts'), sw:document.querySelectorAll('#cpAlerts input[type=checkbox]').length, on:[...document.querySelectorAll('#cpAlerts input[type=checkbox]')].filter(i=>!i.checked).map(i=>i.dataset.k||i.name||i.id).join(),
                 en:document.querySelector('#cpAlerts [data-lang=en]').getAttribute('aria-pressed'), fits:b.left>=0&&b.right<=innerWidth+1, svg:document.querySelectorAll('#cpAlerts svg').length,
                 focus:document.activeElement&&document.activeElement.dataset.lang, move:document.querySelector('#cpAlerts select[data-k=movePct]').value}})()""")
-            check(f'{vn}/{theme}: sheet opens with 15 switches (all on — the 🌈 Bitcoin rainbow is the 15th), English, ±5%, fits the screen {st}', st['open'] and st['sw'] == 15 and st['on'] and st['en'] == 'true' and st['fits'] and st['svg'] >= 2 and st['move'] == '5' and st['focus'] == 'en', st)
+            check(f'{vn}/{theme}: sheet opens with 16 switches — all on but the Pi Cycle level, which waits for you to turn it on — English, ±5%, fits the screen {st}', st['open'] and st['sw'] == 16 and st['on'] == 'pi' and st['en'] == 'true' and st['fits'] and st['svg'] >= 2 and st['move'] == '5' and st['focus'] == 'en', st)
             pg.locator('#cpAlerts .al-box').screenshot(path=str(SH / f'alertsui_{vn}_{theme}.png'))
             pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
             check(f'{vn}/{theme}: Escape closes it', not pg.evaluate("!!document.getElementById('cpAlerts')"))

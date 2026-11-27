@@ -10,4 +10,5 @@ for (let d = FROM; d <= last; d++) {
   s.set(d, 10 ** (-16.1839 + 5.5943 * Math.log10(d - C.RAINBOW_GENESIS) + amp * (spike - 0.42) + 0.012 * Math.sin(d / 9) + 0.006 * Math.sin(d / 2.3)));
 }
 const full = build(s, null, now);
-console.log(JSON.stringify({ full, small: { v: 1, fit: full.fit, closes: full.closes, held: full.held, peaks: full.peaks } }));
+console.log(JSON.stringify({ full, small: { v: 1, fit: full.fit, closes: full.closes, held: full.held, peaks: full.peaks,   // (as update-market.mjs copies it)
+  w200: { ma: full.w200.ma, day: full.w200.day, under: { days: full.w200.under.days, pct: full.w200.under.pct, last: full.w200.under.last } }, pi: full.pi } }));

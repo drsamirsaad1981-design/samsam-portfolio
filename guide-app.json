@@ -215,14 +215,14 @@
     "ar": "هل تتفوق محفظتك على البيتكوين؟"
    },
    "en": [
-    "The chart: 🔵 <b>All Time Profit %</b> against 🟠 <b>BTC Trend</b> — the same money in Bitcoin. The gap between them is how much better or worse you did.",
+    "The chart: 🔵 <b>All Time Profit %</b> against 🟠 <b>BTC Trend</b> — the same money in Bitcoin. The gap between them is how much better or worse you did. Under it, <b>Max drawdown</b>: the deepest fall from a peak in the period shown, yours beside Bitcoin's — a smaller number means a calmer ride (money you add or take out is not counted as a rise or a fall).",
     "<b>All Time Profit Breakdown</b>: <b>Realized</b> (locked in by your sells) + <b>Unrealized</b> (moves with today's prices).",
     "<b>Top Performers</b>: your best and worst coin in dollars, or <b>vs BTC</b>.",
     "<b>Rewards &amp; Mining</b> lists the coins you got without buying, by coin and by month.",
     "<b>Exchanges · live balances</b>: your Binance / Gate balances, read with a read-only API key, next to the app."
    ],
    "ar": [
-    "الرسم: 🔵 <b>إجمالي الربح %</b> مقابل 🟠 <b>اتجاه البيتكوين</b> — نفس المال لو كان في البيتكوين. الفرق بينهما يوضح كم كان أداؤك أفضل أو أسوأ.",
+    "الرسم: 🔵 <b>إجمالي الربح %</b> مقابل 🟠 <b>اتجاه البيتكوين</b> — نفس المال لو كان في البيتكوين. الفرق بينهما يوضح كم كان أداؤك أفضل أو أسوأ. وتحته <b>أقصى تراجع</b>: أعمق هبوط من قمة في الفترة المعروضة، خطك بجانب البيتكوين — الرقم الأصغر يعني رحلة أهدأ (والمال الذي تضيفه أو تسحبه لا يُحسب صعوداً ولا هبوطاً).",
     "<b>تفاصيل إجمالي الربح</b>: <b>المحقق</b> (ثابت بعمليات البيع) + <b>غير المحقق</b> (يتغير مع أسعار اليوم).",
     "<b>الأفضل أداءً</b>: أفضل وأسوأ عملة لديك بالدولار، أو <b>مقابل البيتكوين</b>.",
     "<b>المكافآت والتعدين</b> تعرض العملات التي حصلت عليها دون شراء، حسب العملة وحسب الشهر.",
@@ -361,13 +361,13 @@
     "Each coin is sold in three steps as its price reaches a multiple of your average buy price: ×2 → 25% · ×3 → 50% · ×5 → 25%.",
     "10% stays out of the plan as a <b>Moonbag</b>, to keep.",
     "A step turns <b>✓ Done</b> by itself when the sells you record cover it.",
-    "<b>Macro Exit Indicators</b>: BTC dominance, USDT dominance, ETH/BTC and the Bitcoin rainbow band (1–9, at or over the band you choose) against your own levels; <b>Cash-out Progress</b>: how much already sits in stablecoins."
+    "<b>Macro Exit Indicators</b>, in two groups counted apart, each against your own levels — <b>Market structure</b>: BTC dominance, USDT dominance, ETH/BTC; <b>Bitcoin valuation</b>: the Bitcoin rainbow band (1–9) and the Pi Cycle (the 111-day average as a percent of twice the 350-day one; 100 is the cross). Edit targets shows what each past cycle reached; <b>Cash-out Progress</b>: how much already sits in stablecoins."
    ],
    "ar": [
     "تُباع كل عملة على ثلاث مراحل: عند ضعفي متوسط سعر شرائك تبيع 25%، وعند 3 أضعاف تبيع 50%، وعند 5 أضعاف تبيع 25%.",
     "تبقى 10% خارج الخطة كـ <b>Moonbag</b> للاحتفاظ بها.",
     "تتحول المرحلة إلى <b>✓ تم</b> تلقائياً عندما تغطيها عمليات البيع التي تسجلها.",
-    "<b>مؤشرات الخروج الكبرى</b>: هيمنة البيتكوين، وهيمنة USDT، وETH/BTC، ونطاق قوس قزح البيتكوين (من 1 إلى 9، عند النطاق الذي تختاره أو أعلى) مقارنةً بمستوياتك؛ و<b>تقدّم جني الأرباح</b>: كم أصبح في العملات المستقرة."
+    "<b>مؤشرات الخروج الكبرى</b> في مجموعتين تُعدّان كلٌّ على حدة، كل مؤشر مقابل مستواك أنت — <b>هيكل السوق</b>: هيمنة البيتكوين، وهيمنة USDT، وETH/BTC؛ و<b>تقييم البيتكوين</b>: نطاق قوس قزح البيتكوين (من 1 إلى 9) ومؤشر Pi Cycle (متوسط 111 يوماً كنسبة من ضعف متوسط 350 يوماً، و100 هي التقاطع). و«تعديل الأهداف» يعرض ما بلغته كل دورة سابقة؛ و<b>تقدّم جني الأرباح</b>: كم أصبح في العملات المستقرة."
    ],
    "tip": {
     "en": "The sliders button changes the default multiples and shares; any coin can have its own prices.",
@@ -390,14 +390,14 @@
     "<b>Total Market Cap</b> and 24h volume, with BTC and ETH.",
     "<b>Fear &amp; Greed</b> (0–100): low = fear, prices often cheap; high = greed, prices often stretched.",
     "<b>Market Dominance</b>: BTC, ETH, USDT and the others' share — plus ETH/BTC.",
-    "<b>ETF Flows</b>: money into (+) or out of (−) the US spot Bitcoin and Ethereum ETFs.",
+    "<b>ETF Flows</b>: money into (+) or out of (−) the US spot Bitcoin and Ethereum ETFs. <b>Bitcoin Rainbow</b>: one trend line through every daily close since 2010 and nine bands around it — where the price stands in its own history (band 1 lowest, 9 highest; a band counts after two daily closes). Open it for the chart, each band's range today, and the <b>200-week average</b> (the dashed line: a reference, not a floor). It describes the past — it is not a forecast.",
     "At the top, two more sections: <b>📈 bStocks</b> (Binance's tokenized US stocks, with the US market's hours) and <b>🥇 Metals</b> (gold, silver, platinum, copper — gold also per gram in SAR)."
    ],
    "ar": [
     "<b>القيمة السوقية الإجمالية</b> وحجم التداول خلال 24 ساعة، مع البيتكوين والإيثيريوم.",
     "<b>الخوف والطمع</b> (0–100): منخفض = خوف والأسعار غالباً رخيصة؛ مرتفع = طمع والأسعار غالباً مبالغ فيها.",
     "<b>الهيمنة السوقية</b>: نصيب BTC وETH وUSDT وبقية العملات — إضافة إلى ETH/BTC.",
-    "<b>تدفقات صناديق ETF</b>: الأموال الداخلة (+) أو الخارجة (−) من صناديق البيتكوين والإيثيريوم الفورية في أمريكا.",
+    "<b>تدفقات صناديق ETF</b>: الأموال الداخلة (+) أو الخارجة (−) من صناديق البيتكوين والإيثيريوم الفورية في أمريكا. <b>قوس قزح البيتكوين</b>: خط اتجاه واحد يمر بكل إغلاق يومي منذ 2010 وتسعة نطاقات حوله — موقع السعر من تاريخه نفسه (النطاق 1 الأدنى و9 الأعلى، والنطاق يُحسب بعد إغلاقين يوميين متتاليين). افتحه لترى الرسم، وحدود كل نطاق اليوم، و<b>متوسط 200 أسبوع</b> (الخط المنقّط: مرجع، وليس قاعاً). هو وصف للماضي، وليس توقعاً.",
     "في الأعلى قسمان آخران: <b>📈 bStocks</b> (أسهم أمريكية مرمّزة على Binance، مع مواعيد السوق الأمريكي) و<b>🥇 المعادن</b> (الذهب والفضة والبلاتين والنحاس — والذهب أيضاً بسعر الجرام بالريال)."
    ],
    "tip": {

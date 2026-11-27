@@ -44,6 +44,8 @@
     '.rb-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}@media(min-width:760px){.rb-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}' +
     '.rb-stat{border:1px solid var(--border);border-radius:11px;padding:8px 10px;min-width:0}.rb-stat>span{display:block;font-size:.68rem;font-weight:700;color:var(--fg2)}' +
     '.rb-stat b{display:block;font-size:.98rem;font-weight:800;color:var(--fg);font-variant-numeric:tabular-nums;margin-top:2px}.rb-stat small{display:block;font-size:.66rem;color:var(--fg2);margin-top:1px}' +
+    '.rb-w200{border:1px solid var(--border);border-radius:11px;padding:8px 10px;font-size:.78rem;line-height:1.55;color:var(--fg2)}.rb-w200 b{color:var(--fg);font-weight:800;font-variant-numeric:tabular-nums}' +
+    '.rb-w200 small{display:block;font-size:.68rem}.rb-dash{display:inline-block;width:22px;height:0;border-top:2px dashed var(--fg);vertical-align:middle;margin-inline-end:7px;opacity:.85}' +
     '.rb-chart{position:relative;direction:ltr}.rb-chart svg{display:block;width:100%;height:auto;touch-action:pan-y}' +
     '.rb-chart text{font-family:Inter,system-ui,sans-serif;font-size:11px;fill:var(--fg2)}.rb-chart .rb-bn{font-size:10px;font-weight:800}.rb-chart [data-off]{display:none}' +
     '.rb-tip{position:absolute;top:6px;pointer-events:none;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:6px 9px;font-size:.72rem;line-height:1.45;color:var(--fg);box-shadow:var(--shadow);white-space:nowrap;z-index:2}' +
@@ -93,6 +95,7 @@
       '<div class="rb-stats">' + stat('Last daily close', E(usd(r.close)), E(day(r.day))) + stat('Trend line', E(usd(r.line)), E(vsTxt(r.vs))) +
         stat('This band', '<span class="rb-range">' + E(usd(r.lo)) + ' – ' + E(usd(r.hi)) + '</span>', share[r.band - 1] != null ? (+share[r.band - 1]).toFixed(1) + '% of days since 2010' : '') +
         stat('In this band since', r.since ? E(day(r.since)) : '—', 'counted after two daily closes') + '</div>' +
+      w200Html() +
       '<div class="rb-chart" id="rbChart">' + (full ? '' : '<div class="rb-wait">Loading the chart…</div>') + '</div>' +
       '<table class="rb-table" id="rbTable"><thead><tr><th>Band</th><th>Name</th><th class="r">Range today</th><th class="r">Days since 2010</th></tr></thead><tbody>' + rows + '</tbody></table>' +
       (facts.length ? '<div class="rb-facts" id="rbFacts">' + facts.join('<br>') + '</div>' : '') +
@@ -100,6 +103,14 @@
     if (full) { document.getElementById('rbChart').innerHTML = chart(r); hover(r); }   // (drawn once the box has its width)
   }
 
+  // 📏 the 200-week average (the mean of the last 200 Sunday closes — samsam-core.js → btcMarks): the dashed line on the chart.
+  // A reference, not a floor: the row says how many daily closes were under it, and when the last one was.
+  function w200Html() {
+    var c = C(), m = c && c.btcMarks ? c.btcMarks(small, Date.now()) : null, w = m && m.w200; if (!w) return '';
+    var v = Math.round(Math.abs(w.vs)), h = w.hist;
+    return '<div class="rb-w200" id="rbW200"><i class="rb-dash"></i><span>200-week average</span> <b class="rb-range">' + E(usd(w.ma)) + '</b> · <span>' + (v < 1 ? 'The close is on it' : 'The close is ' + v + '% ' + (w.vs < 0 ? 'under' : 'above') + ' it') + '</span>' +
+      (h && h.days != null ? '<small><span>Daily closes under it: ' + h.days.toLocaleString('en-US') + ' (' + h.pct + '% of the days)</span>' + (h.last ? ' · <span>the last on</span> <span>' + E(day(h.last)) + '</span>' : '') + ' · <span>a reference, not a floor</span></small>' : '') + '</div>';
+  }
   // the chart: price on a log scale against time, the nine bands as ribbons, the weekly closes as one line
   var G = { w: 720, h: 330, l: 46, r: 22, t: 8, b: 24 };
   function chart(r) {
@@ -118,9 +129,11 @@
     var grid = ''; [0.1, 1, 10, 100, 1000, 1e4, 1e5, 1e6].forEach(function (p) { if (Math.log10(p) > yLo && Math.log10(p) < yHi) grid += '<line x1="' + G.l + '" x2="' + (G.w - G.r) + '" y1="' + Y(p).toFixed(1) + '" y2="' + Y(p).toFixed(1) + '" stroke="var(--border)" stroke-width="1"/><text x="' + (G.l - 6) + '" y="' + (Y(p) + 3.5).toFixed(1) + '" text-anchor="end">' + (p >= 1e6 ? '$1M' : p >= 1000 ? '$' + p / 1000 + 'k' : '$' + p) + '</text>'; });
     for (var y = 2012; y <= new Date(d1 * DAY).getUTCFullYear(); y += (G.w < 520 ? 4 : 2)) { var dx = Date.UTC(y, 0, 1) / DAY; if (dx > d0 && dx < d1) grid += '<text x="' + X(dx).toFixed(1) + '" y="' + (G.h - 7) + '" text-anchor="middle">' + y + '</text>'; }
     var line = pts.map(function (p) { return X(p[0]).toFixed(1) + ',' + Y(Math.max(p[1], 0.03)).toFixed(1); }).join('L'), lp = pts[pts.length - 1];
-    chart.X = X; chart.Y = Y; chart.d0 = d0; chart.d1 = dEnd;
+    var wl = c.btcW200 ? c.btcW200(pts) : [], wPath = wl.length > 1 ? 'M' + wl.map(function (p) { return X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1); }).join('L') : '';   // 📏 the 200-week average, from the same weekly closes
+    chart.X = X; chart.Y = Y; chart.d0 = d0; chart.d1 = dEnd; chart.w200 = wl;
     return '<svg viewBox="0 0 ' + G.w + ' ' + G.h + '" role="img" aria-label="Bitcoin price since 2010 inside the nine rainbow bands (log scale)">' + s + grid +
       '<path d="M' + line + '" fill="none" stroke="var(--card)" stroke-width="4" stroke-linejoin="round" opacity=".85"/><path d="M' + line + '" fill="none" stroke="var(--fg)" stroke-width="1.8" stroke-linejoin="round"/>' +
+      (wPath ? '<path id="rbW200Line" d="' + wPath + '" fill="none" stroke="var(--card)" stroke-width="3.4" opacity=".7"/><path d="' + wPath + '" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-dasharray="5 4" opacity=".9"/>' : '') +
       '<circle cx="' + X(lp[0]).toFixed(1) + '" cy="' + Y(lp[1]).toFixed(1) + '" r="4.5" fill="var(--fg)" stroke="var(--card)" stroke-width="2"/>' +
       '<g id="rbCross" data-off><line id="rbCrossL" y1="' + G.t + '" y2="' + (G.h - G.b) + '" stroke="var(--fg2)" stroke-width="1" stroke-dasharray="3 3"/><circle id="rbCrossD" r="4.5" fill="var(--fg)" stroke="var(--card)" stroke-width="2"/></g></svg><div class="rb-tip" id="rbTip" hidden></div>';
   }
@@ -134,7 +147,7 @@
       var p = Math.abs(pts[lo][0] - d) <= Math.abs(pts[hi][0] - d) ? pts[lo] : pts[hi], band = c.rainbowBand(f, c.rainbowDev(f, p[0], p[1])), px = chart.X(p[0]), py = chart.Y(Math.max(p[1], 0.03));
       cross.removeAttribute('data-off'); document.getElementById('rbCrossL').setAttribute('x1', px); document.getElementById('rbCrossL').setAttribute('x2', px);
       document.getElementById('rbCrossD').setAttribute('cx', px); document.getElementById('rbCrossD').setAttribute('cy', py);
-      if (tipOn !== p[0]) tip.innerHTML = '<b>' + E(usd(p[1])) + '</b> <span>' + E(day(c.rainbowIso(p[0]))) + '</span><br><i style="background:' + COL[band - 1] + '"></i><span>Band ' + band + ' · ' + E(c.rainbowName(band)) + '</span>';
+      if (tipOn !== p[0]) tip.innerHTML = '<b>' + E(usd(p[1])) + '</b> <span>' + E(day(c.rainbowIso(p[0]))) + '</span><br><i style="background:' + COL[band - 1] + '"></i><span>Band ' + band + ' · ' + E(c.rainbowName(band)) + '</span>' + (function () { var w = (chart.w200 || []).filter(function (x) { return x[0] <= p[0]; }).pop(); return w ? '<br><span>200-week average</span> <b>' + E(usd(w[1])) + '</b>' : ''; })();
       tip.hidden = false; tipOn = p[0];
       var left = px / G.w * rc.width, tw = tip.offsetWidth; tip.style.left = Math.max(0, Math.min(rc.width - tw, left > rc.width / 2 ? left - tw - 12 : left + 12)) + 'px';
     }

@@ -49,6 +49,7 @@ palette_test.py
 donut_legend_test.py
 pencil_test.py
 perf_chart.py
+drawdown_test.py
 pred_test.py
 profit_test.py
 profitchart_test.py

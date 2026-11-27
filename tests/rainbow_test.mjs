@@ -73,6 +73,36 @@ const mk = (lastIso, tail = {}) => { const m = new Map(), last = C.rainbowDay(la
   check('without the file\'s own "held", the reader works it out from the closes', C.rainbowRead({ ...T, held: null }, now).band === 7);
 }
 
+// ── 📏 the 200-week average and the Pi Cycle (the same daily closes) ──
+{
+  const rows = []; for (let d = FROM; d < FROM + 3000; d++) rows.push([d, 100 + (d - FROM)]);   // a price that rises a dollar a day
+  const wk = C.btcWeekly(rows), w = C.btcW200(rows);
+  check('a week closes on Sunday (UTC)', wk.every(r => new Date(r[0] * DAY).getUTCDay() === 0) && wk.length === Math.floor(3000 / 7) + (wk[0][0] - FROM < 3000 % 7 ? 1 : 0));
+  const brute = i => wk.slice(i - 199, i + 1).reduce((a, r) => a + r[1], 0) / 200;
+  check('200-week average: the mean of the last 200 Sunday closes, from the 200th week on', w.length === wk.length - 199 && w[0][0] === wk[199][0] && near(w[0][1], brute(199)) && near(w.at(-1)[1], brute(wk.length - 1)) && C.btcW200(rows.slice(0, 1000)).length === 0, [w.length, w[0]]);
+  const pi = C.btcPi(rows), at = i => { const a = rows.slice(i - 110, i + 1).reduce((x, r) => x + r[1], 0) / 111, b = 2 * rows.slice(i - 349, i + 1).reduce((x, r) => x + r[1], 0) / 350; return [a / b * 100, a, b]; };
+  check('Pi Cycle: the 111-day average as a percent of twice the 350-day one, from the 350th day on', pi.length === 3000 - 349 && pi[0][0] === rows[349][0] && near(pi[0][1], at(349)[0]) && near(pi.at(-1)[1], at(2999)[0]) && near(pi.at(-1)[2], at(2999)[1]) && near(pi.at(-1)[3], at(2999)[2]));
+  check('Pi Cycle: a flat price reads 50% (the average against twice itself)', near(C.btcPi(rows.map(r => [r[0], 7])).at(-1)[1], 50));
+  // the file: a long flat price, 150 days at 100× (the 111-day average passes twice the 350-day one), then back down under everything
+  const now = Date.parse('2026-11-26T00:10:00Z'), last = C.rainbowDay('2026-11-25'), s = new Map();
+  for (let d = FROM; d <= last; d++) s.set(d, d > last - 700 && d <= last - 550 ? 5000 : d > last - 60 ? 20 : 50);
+  const R = build(s, null, now), m = C.btcMarks(R, now);
+  const sun = [...s].filter(([d]) => (d + 4) % 7 === 0).slice(-200), ma = sun.reduce((a, r) => a + r[1], 0) / 200;
+  check('the file carries the 200-week average of the last Sunday and the day it is of', R.gen === 2 && near(R.w200.ma, ma, 1e-5) && R.w200.day === '2026-11-22' && R.w200.weeks === 200 && /^2014-/.test(R.w200.since), R.w200);
+  check('…and how often a daily close was under it: days, share, the last day, the long spells', R.w200.under.last === '2026-11-25' && R.w200.under.days >= 60 && R.w200.under.of > 4000 && near(R.w200.under.pct, +(R.w200.under.days / R.w200.under.of * 100).toFixed(1)) && R.w200.under.spans.at(-1)[1] === '2026-11-25' && R.w200.under.spans.at(-1)[2] >= 60, R.w200.under);
+  check('the Pi Cycle now, each cycle\'s highest, and the day it crossed 100', near(R.pi.ratio, +C.btcPi([...s].sort((x, y) => x[0] - y[0])).at(-1)[1].toFixed(2)) && R.pi.day === '2026-11-25' && R.pi.peaks.length === 5 && R.pi.peaks.at(-1)[1] > 100 && R.pi.peaks[1][1] === 50 && R.pi.crosses.length === 1 && /^202[45]-/.test(R.pi.crosses[0]), R.pi);
+  check('the reader: the price against the average (a live price moves it), the Pi numbers as they are', m && near(m.w200.vs, (20 / R.w200.ma - 1) * 100, 1e-6) && m.w200.hist.days === R.w200.under.days && near(C.btcMarks(R, now, R.w200.ma * 1.1).w200.vs, 10, 1e-6) && m.pi.ratio === R.pi.ratio && m.pi.peaks.length === 5 && m.pi.crosses.length === 1);
+  check('an old file, or one without these numbers, says nothing about them', C.btcMarks(R, now + 5 * DAY) === null && C.btcMarks({ ...R, w200: null, pi: null }, now).w200 === null && C.btcMarks({ ...R, w200: null, pi: null }, now).pi === null && C.btcMarks(null) === null);
+}
+// ── 📉 max drawdown on a profit-% line ──
+{
+  const P = a => a.map((v, i) => ({ t: 1000 + i, v })), dd = C.maxDrawdown(P([0, 50, 20, 80, -10, 30]));
+  check('max drawdown: +80% → −10% is a dollar going from 1.80 to 0.90 = 50%, with the peak\'s and the low\'s moments', near(dd.dd, 50) && dd.peakT === 1003 && dd.lowT === 1004, dd);
+  check('a line that only rises never fell (0); one point or none says nothing', C.maxDrawdown(P([0, 5, 9])).dd === 0 && C.maxDrawdown(P([3])) === null && C.maxDrawdown(null) === null);
+  check('a fall from the very first point counts; the deepest of two falls wins', near(C.maxDrawdown(P([0, -20, -5])).dd, 20) && near(C.maxDrawdown(P([0, -10, 40, 5, 60])).dd, 25));
+  check('a loss of everything is 100%, never more', C.maxDrawdown(P([0, -100])).dd <= 100 && C.maxDrawdown(P([0, -100])).dd > 99.9 && C.maxDrawdown(P([0, -150])).dd <= 100);
+}
+
 // ── the job, against made-up servers ──
 {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rb-')), CUT = C.rainbowDay('2017-08-17'), real = globalThis.fetch;
@@ -98,6 +128,11 @@ const mk = (lastIso, tail = {}) => { const m = new Map(), last = C.rainbowDay(la
   check('the old days come from blockchain.com, the rest from Binance', near(D.p[0], price(FROM), 1e-9) && near(D.p[CUT - FROM], price(CUT), 1e-9) && asked.filter(u => /blockchain/.test(u)).length === 1 && asked.some(u => /klines.*startTime=1502928000000/.test(u)));
   // half an hour later: nothing to do, nothing asked
   asked = []; check('the same day again: no request, no write', await main(dir, nowMs + 30 * 60e3) === 'same' && asked.length === 0);
+  // a file from before the 200-week average existed (no "gen"): written again from the kept days, nothing asked for
+  { const f = path.join(dir, 'm', 'rainbow.json'), o = rd('rainbow.json'); delete o.gen; delete o.w200; delete o.pi; fs.writeFileSync(f, JSON.stringify(o)); asked = [];
+    const r = await main(dir, nowMs + 40 * 60e3), n = rd('rainbow.json');
+    check('an older file is rewritten from the kept days: no request, the same ruler, the new numbers there', r === 'written' && asked.length === 0 && n.gen === 2 && n.w200 && n.w200.ma > 0 && n.pi && n.pi.ratio > 0 && JSON.stringify(n.fit) === JSON.stringify(R.fit), [r, asked.length]);
+    asked = []; check('…and the run after it has nothing to do', await main(dir, nowMs + 70 * 60e3) === 'same' && asked.length === 0); }
   // the next day: only the new close is asked for, the old days are not asked for again
   asked = []; nowMs += DAY; const r2 = await main(dir, nowMs), Rb = rd('rainbow.json');
   check('next day: one new close, blockchain.com not asked again, the same ruler', r2 === 'written' && Rb.closes[13][0] === '2026-11-26' && rd('btcday.json').p.length === D.p.length + 1 && !asked.some(u => /blockchain/.test(u)) && asked.length === 1 && JSON.stringify(Rb.fit) === JSON.stringify(R.fit), asked);
