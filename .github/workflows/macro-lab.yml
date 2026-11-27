@@ -1,0 +1,29 @@
+# 🧪 Macro lab — a TRIAL (tools/lab/macro.mjs). It asks free sources for three readings — MVRV, the US dollar index and
+# the BTC funding rate — and reports who answered, how fresh the numbers are and how far two sources agree. Nothing in the
+# app or the bot uses it and nothing is written to the prices branch: the report is in the run's summary (and macro.md /
+# macro.json to download). Run it by hand: Actions → Macro lab → Run workflow. It also runs when the lab script changes.
+name: Macro lab
+on:
+  workflow_dispatch:
+  push:
+    branches: [drop-holdings]
+    paths: ['tools/lab/macro.mjs', '.github/workflows/macro-lab.yml']
+permissions:
+  contents: read
+jobs:
+  macro:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/lab/macro.mjs macro.md
+      - run: cat macro.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macro
+          path: |
+            macro.md
+            macro.json
