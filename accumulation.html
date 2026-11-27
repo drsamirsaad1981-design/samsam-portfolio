@@ -19,24 +19,24 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-lang.js?v=202611271912"></script>
-<script src="samsam-ar.js?v=202611271912"></script>
-<script src="samsam-ui.js?v=202611271912"></script>
-<script src="samsam-hints.js?v=202611271912"></script>
-<script src="samsam-arhints.js?v=202611271912"></script>
-<script src="samsam-vault.js?v=202611271912"></script>
-<script src="samsam-labels.js?v=202611271912"></script>
-<script src="samsam-taxonomy.js?v=202611271912"></script>
-<script src="samsam-coins.js?v=202611271912"></script>
-<script src="samsam-import.js?v=202611271912"></script>
-<script src="samsam-wallets.js?v=202611271912"></script>
-<script src="samsam-rewards.js?v=202611271912"></script>
-<script src="samsam-settings.js?v=202611271912"></script>
-<script src="samsam-dropdown.js?v=202611271912"></script>
-<script src="samsam-market.js?v=202611271912"></script>
-<script src="samsam-exit.js?v=202611271912"></script>
-<script src="samsam-add.js?v=202611271912"></script>
-<script src="samsam-cash.js?v=202611271912"></script>
+<script src="samsam-lang.js?v=202611272156"></script>
+<script src="samsam-ar.js?v=202611272156"></script>
+<script src="samsam-ui.js?v=202611272156"></script>
+<script src="samsam-hints.js?v=202611272156"></script>
+<script src="samsam-arhints.js?v=202611272156"></script>
+<script src="samsam-vault.js?v=202611272156"></script>
+<script src="samsam-labels.js?v=202611272156"></script>
+<script src="samsam-taxonomy.js?v=202611272156"></script>
+<script src="samsam-coins.js?v=202611272156"></script>
+<script src="samsam-import.js?v=202611272156"></script>
+<script src="samsam-wallets.js?v=202611272156"></script>
+<script src="samsam-rewards.js?v=202611272156"></script>
+<script src="samsam-settings.js?v=202611272156"></script>
+<script src="samsam-dropdown.js?v=202611272156"></script>
+<script src="samsam-market.js?v=202611272156"></script>
+<script src="samsam-exit.js?v=202611272156"></script>
+<script src="samsam-add.js?v=202611272156"></script>
+<script src="samsam-cash.js?v=202611272156"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -576,6 +576,7 @@ button.cat-tag:hover { background: color-mix(in srgb, var(--cat-c) 26%, transpar
 .xm-sum-i { display: inline-block; font: inherit; font-size: .78rem; font-weight: 600; color: var(--fg2); padding: 4px 11px; border-radius: 999px; background: var(--bg3); border: 1.5px solid transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }   /* a button: tap = that group alone */
 .xm-sum-i.on { border-color: var(--accent); color: var(--fg); } .xm-sums.filt .xm-sum-i:not(.on) { opacity: .55; }
 .xm-sum-i:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 480px) { .xm-sums { flex-wrap: nowrap; gap: 6px; } .xm-sum-i { flex: 0 1 auto; min-width: 0; white-space: nowrap; padding: 4px 7px; font-size: min(.78rem, 3vw); letter-spacing: -.01em; } }   /* a phone: both chips side by side in English too ("Market Structure: 0 of 3" is the long one) */
 .xm-sum-i b { color: var(--fg); }
 .xm-sum-i.some { background: rgba(245,158,11,.14); } .xm-sum-i.some b { color: var(--c-amber, #f59e0b); }
 .xm-sum-i.all { background: rgba(16,185,129,.14); } .xm-sum-i.all b { color: var(--green); }
@@ -955,7 +956,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611271912"></script>
+<script type="module" src="samsam-cloud.js?v=202611272156"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';

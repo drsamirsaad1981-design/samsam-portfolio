@@ -108,7 +108,7 @@
   function w200Html() {
     var c = C(), m = c && c.btcMarks ? c.btcMarks(small, Date.now()) : null, w = m && m.w200; if (!w) return '';
     var v = Math.round(Math.abs(w.vs)), h = w.hist;
-    return '<div class="rb-w200" id="rbW200"><i class="rb-dash"></i><span>200-week average</span> <b class="rb-range">' + E(usd(w.ma)) + '</b> · <span>' + (v < 1 ? 'The close is on it' : 'The close is ' + v + '% ' + (w.vs < 0 ? 'under' : 'above') + ' it') + '</span>' +
+    return '<div class="rb-w200" id="rbW200"><i class="rb-dash"></i><span>200-week average:</span> <b class="rb-range">' + E(usd(w.ma)) + '</b><span class="cp-hint" data-hint="w200" role="button" tabindex="0"></span> · <span>' + (v < 1 ? 'Bitcoin’s price is now at it' : 'Bitcoin’s price is now ~' + v + '% ' + (w.vs < 0 ? 'below' : 'above') + ' it') + '</span>' +   // (the price here is the last daily close)
       (h && h.days != null ? '<small><span>Daily closes under it: ' + h.days.toLocaleString('en-US') + ' (' + h.pct + '% of the days)</span>' + (h.last ? ' · <span>the last on</span> <span>' + E(day(h.last)) + '</span>' : '') + ' · <span>a reference, not a floor</span></small>' : '') + '</div>';
   }
   // MVRV (Bitcoin's market value ÷ its realized value — samsam-core.js → mvrvRead on the snapshot's part): the ratio, the
@@ -117,15 +117,15 @@
   function mvrvHtml() {
     var c = C(), m = c && c.mvrvRead ? c.mvrvRead(mvPart, Date.now()) : null; if (!m) return '';
     var vs = (m.v - 1) * 100, v = Math.round(Math.abs(vs)), pk = (m.peaks || []).filter(function (x) { return x && x[0] >= 2012; });
-    return '<div class="rb-w200 rb-mvrv" id="rbMvrv"><span>MVRV</span> <b class="rb-range">' + m.v.toFixed(2) + '</b>' +
-      (m.realized ? ' · <span>Market’s average cost ' + E(usd(m.realized)) + '</span> · <span>' + (v < 1 ? 'The close is on it' : 'The close is ' + v + '% ' + (vs < 0 ? 'under' : 'above') + ' it') + '</span>' : '') +
+    return '<div class="rb-w200 rb-mvrv" id="rbMvrv"><span data-no-tr>MVRV</span> <b class="rb-range">' + m.v.toFixed(2) + '</b><span class="cp-hint" data-hint="mvrv" role="button" tabindex="0"></span>' +
+      (m.realized ? ' · <span>Bitcoin’s realized market cost:</span> <b class="rb-range">' + E(usd(m.realized)) + '</b> · <span>' + (v < 1 ? 'Bitcoin’s price is now at average cost' : 'Bitcoin’s price is now ~' + v + '% ' + (vs < 0 ? 'below' : 'above') + ' average cost') + '</span>' : '') +
       '<small>' + (pk.length ? '<span>Each cycle’s highest:</span> ' + pk.map(function (x) { return '<bdi dir="ltr">' + x[0] + ': ' + (+x[1]).toFixed(2) + '</bdi>'; }).join(' · ') + ' · ' : '') +
       '<span>a reference, not a floor</span> · <span class="rb-src">Source: Coin Metrics</span>' + (m.via ? ' <span>(today’s value: ' + E(m.via) + ')</span>' : '') + '</small></div>';
   }
   // the chart: price on a log scale against time, the nine bands as ribbons, the weekly closes as one line
   var G = { w: 720, h: 330, l: 46, r: 22, t: 8, b: 24 };
   function chart(r) {
-    var bw = Math.round(document.getElementById('rbChart').clientWidth) || 720;   // one SVG unit = one pixel: the labels keep their size on a phone
+    var bw = Math.round(document.getElementById('rbChart').clientWidth) || 720;   // one SVG unit = one pixel: the labels keep their size on a phone (no width yet — the Crypto view is hidden — is drawn again when it shows: the observer in mount)
     G.w = Math.max(220, Math.min(1800, bw)); G.h = G.w < 520 ? 250 : 340; G.l = G.w < 520 ? 40 : 46; chart.w = bw;
     var c = C(), f = r.fit, pts = full.weekly, d0 = pts[0][0], dEnd = pts[pts.length - 1][0], d1 = dEnd + 365;   // a year ahead: where the bands go next
     var yLo = Math.log10(0.03), yHi = Math.log10(c.rainbowEdges(f, d1)[9] * 1.15);
@@ -205,6 +205,9 @@
       document.getElementById('rbTog').addEventListener('click', function (ev) { if (ev.target.closest('.cp-hint')) return; setOpen(document.getElementById('rbBody').hidden, true); });
       setOpen(on || /^#rainbow\b/.test(location.hash || ''));
       load(); fromHash(); window.addEventListener('hashchange', fromHash);
+      // The card can be painted while its view is hidden (the hub opened on Metals or bStocks): the chart then has no width
+      // to take and was drawn 720 wide, shrunk to tiny labels once shown. Whenever the card's box changes, draw it to fit.
+      if (window.ResizeObserver) new ResizeObserver(function () { var b = document.getElementById('rbChart'), w = b ? Math.round(b.clientWidth) : 0; if (full && w > 0 && !document.getElementById('rbBody').hidden && w !== chart.w) paint(); }).observe(el);
       var rt = null; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { var b = document.getElementById('rbChart'); if (full && b && !document.getElementById('rbBody').hidden && Math.round(b.clientWidth) !== chart.w) paint(); }, 200); });
     },
     refresh: load,

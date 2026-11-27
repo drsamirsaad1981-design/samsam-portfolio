@@ -366,6 +366,8 @@
   R(/^\(today’s value: (.+)\)$/, function (_, w) { return '(قيمة اليوم: ' + n(w) + ')'; });
   R(/^the price is (\d+)% (under|above) it$/, function (_, v, w) { return 'السعر ' + (w === 'under' ? 'تحته' : 'فوقه') + ' بـ ' + n(v + '%'); });
   R(/^the price is on it$/, 'السعر عنده');
+  R(/^Bitcoin’s price is now ~(\d+)% (below|above) it$/, function (_, v, w) { return 'سعر البيتكوين الآن ' + (w === 'below' ? 'أقل من' : 'أعلى من') + ' المتوسط بحوالي ' + n(v + '%'); });   // 📏 the 200-week average's row
+  R(/^Bitcoin’s price is now ~(\d+)% (below|above) average cost$/, function (_, v, w) { return 'سعر البيتكوين الآن ' + (w === 'below' ? 'أقل من' : 'أعلى من') + ' متوسط التكلفة بـ ' + n(v + '%') + ' تقريباً'; });   // MVRV's row
   R(/^The close is (\d+)% (under|above) it$/, function (_, v, w) { return 'الإغلاق ' + (w === 'under' ? 'تحته' : 'فوقه') + ' بـ ' + n(v + '%'); });   // 📏 the 200-week average
   R(/^Daily closes under it: ([\d,]+) \(([\d.]+)% of the days\)$/, function (_, d, p) { return 'إغلاقات يومية تحته: ' + n(d) + ' (' + n(p + '%') + ' من الأيام)'; });
   R(/^Band (\d)$/, 'النطاق $1');
@@ -459,15 +461,16 @@
     'The line was last fitted on': 'آخر حساب للخط كان في', 'Loading the chart…': 'جارٍ تحميل الرسم…', 'The chart is not ready yet.': 'الرسم غير جاهز بعد.', 'Could not load the chart — try again later.': 'تعذّر تحميل الرسم — حاول لاحقاً.',
     'One trend line through every daily close since 18 Aug 2010 (blockchain.com until 2017, Binance after), and nine equal bands between the deepest and the highest distance from it. The line is fitted again every week. It describes the past — it is not a forecast.': 'خط اتجاه واحد يمر بكل إغلاق يومي منذ 18 أغسطس 2010 (blockchain.com حتى 2017، ثم Binance)، وتسعة نطاقات متساوية بين أعمق نزول تحته وأعلى صعود فوقه. يُعاد حساب الخط كل أسبوع. هو وصف للماضي، وليس توقعاً.',
     // the Exit page's two groups, and the Pi Cycle
-    'Market Structure': 'هيكل السوق', 'Bitcoin Valuation': 'تقييم البيتكوين', 'Pi Cycle': 'مؤشر Pi Cycle', 'Near': 'قريب',
-    'Pi Cycle at or over (%)': 'مؤشر Pi Cycle عند أو فوق (%)', 'The 111-day average as a percent of twice the 350-day average; 100 is the cross.': 'متوسط 111 يوماً كنسبة من ضعف متوسط 350 يوماً؛ و100 هي التقاطع.',
+    'Market Structure': 'هيكل السوق', 'Bitcoin Valuation': 'تقييم البيتكوين', 'Pi Cycle': 'مؤشر Pi Cycle', 'Bitcoin Pi Cycle': 'مؤشر Pi Cycle للبيتكوين', 'Bitcoin MVRV': 'مؤشر MVRV للبيتكوين', 'Near': 'قريب',
+    'Bitcoin Pi Cycle at or over (%)': 'مؤشر Pi Cycle للبيتكوين عند أو فوق (%)', 'Bitcoin’s 111-day average as a percent of twice its 350-day average; 100 is the cross.': 'متوسط سعر البيتكوين لـ 111 يوماً كنسبة من ضعف متوسطه لـ 350 يوماً؛ و100 هي التقاطع.',
     'Each cycle’s highest:': 'أعلى قراءة في كل دورة:', 'Its last cross:': 'آخر تقاطع:',
-    'MVRV': 'مؤشر MVRV', 'MVRV at or over (1–10)': 'مؤشر MVRV عند أو فوق (1–10)', 'Source: Coin Metrics': 'المصدر: Coin Metrics',
+    'MVRV': 'مؤشر MVRV', 'Bitcoin MVRV at or over (1–10)': 'مؤشر MVRV للبيتكوين عند أو فوق (1–10)', 'Source: Coin Metrics': 'المصدر: Coin Metrics',
     'Bitcoin’s market value ÷ its realized value (what every coin cost when it last moved).': 'القيمة السوقية للبيتكوين ÷ قيمته المحققة (تكلفة كل عملة عند آخر تحرك لها).',
     'MVRV level': 'مستوى MVRV', 'MVRV reaches the level you set on the Exit page': 'عند وصول مؤشر MVRV إلى المستوى الذي حددته في صفحة الخروج',
     'Pi Cycle level': 'مستوى Pi Cycle', 'The Pi Cycle reaches the level you set on the Exit page': 'عند وصول مؤشر Pi Cycle إلى المستوى الذي حددته في صفحة الخروج',
     'Altcoins': 'العملات البديلة', 'to': 'إلى',
     'Max Drawdown': 'أقصى تراجع', 'Max drawdown': 'أقصى تراجع', 'Gold Trend': 'اتجاه الذهب', 'Never under its peak in this period': 'لم ينزل عن قمته في هذه الفترة', 'Your deepest fall: from': 'أعمق هبوط لك: من', 'About max drawdown': 'عن أقصى تراجع',
+    '200-week average:': 'متوسط 200 أسبوع للبيتكوين:', 'Bitcoin’s price is now at it': 'سعر البيتكوين الآن عند المتوسط تقريباً', 'Bitcoin’s realized market cost:': 'متوسط تكلفة البيتكوين المحققة للسوق:', 'Bitcoin’s price is now at average cost': 'سعر البيتكوين الآن عند متوسط التكلفة تقريباً',
     '200-week average': 'متوسط 200 أسبوع', 'The close is on it': 'الإغلاق عنده', 'the last on': 'آخرها في', 'a reference, not a floor': 'مرجع، وليس قاعاً',
     'Rainbow band at or over (1–9)': 'نطاق قوس قزح عند أو فوق (1–9)', 'The highest band each cycle held:': 'أعلى نطاق ثبت فيه السعر في كل دورة:',
     '. Each cycle stopped lower than the one before — a high band may never come back.': '. كل دورة وقفت عند نطاق أقل من التي قبلها — والنطاق العالي قد لا يعود.',

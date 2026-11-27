@@ -116,8 +116,8 @@
       '<p><b>Market Structure</b></p><ul><li><b>BTC Dominance</b> at or under your level (money has moved from Bitcoin into altcoins).</li><li><b>USDT Dominance</b> inside your range (little cash left on the side).</li><li><b>ETH / BTC</b> at or over your level (altcoins are beating Bitcoin).</li></ul>' +
       '<p><b>Bitcoin Valuation</b> — readings of Bitcoin\'s own price history. They tend to move together, so they are never added to the first group\'s count.</p>' +
       '<ul><li><b>Bitcoin Rainbow</b> at or over the band you choose (1–9). Nine bands around Bitcoin\'s long-term trend line; a band counts after two daily closes in it. It starts at band 6.</li>' +
-      '<li><b>Pi Cycle</b> at or over the percent you choose. The 111-day average as a percent of twice the 350-day average; 100 is the cross that came with the 2013, 2017 and April 2021 tops — and did not come at the October 2025 top. It starts at 100; its alert is off until you turn it on (Settings → Alerts).</li>' +
-      '<li><b>MVRV</b> at or over the level you choose (1–10). Bitcoin\'s market value ÷ its realized value — what every coin cost when it last moved. Each cycle\'s highest has been lower than the one before (5.88 · 4.72 · 3.96 · 2.74), and the old 3.5 line was last seen in March 2021. It starts at 3.0; its alert is off until you turn it on. One day behind. Source: Coin Metrics.</li></ul>' +
+      '<li><b>Bitcoin Pi Cycle</b> at or over the percent you choose. Bitcoin\'s 111-day average as a percent of twice its 350-day average; 100 is the cross that came with the 2013, 2017 and April 2021 tops — and did not come at the October 2025 top. It starts at 100; its alert is off until you turn it on (Settings → Alerts).</li>' +
+      '<li><b>Bitcoin MVRV</b> at or over the level you choose (1–10). Bitcoin\'s market value ÷ its realized value — what every coin cost when it last moved. Each cycle\'s highest has been lower than the one before (5.88 · 4.72 · 3.96 · 2.74), and the old 3.5 line was last seen in March 2021. It starts at 3.0; its alert is off until you turn it on. One day behind. Source: Coin Metrics.</li></ul>' +
       '<p>Edit targets shows what each past cycle reached, so you can choose your own levels.</p>' +
       '<p><b>Reached</b> = at the level · <b>Near</b> = within 10% of it (one band, for the rainbow) · <b>Waiting</b> = not yet.</p>' +
       '<p class="cph-ok">The page compares — it doesn\'t predict the top. Change the levels with Edit targets.</p>'; } },
@@ -184,11 +184,17 @@
       '<ul><li><b>Gold</b> moved the opposite way to the dollar in 68% of weeks. When the dollar rose 1% or more in a week, gold fell 79% of the time.</li><li><b>Bitcoin</b> moved the opposite way in 53% of weeks — close to chance.</li></ul>' +
       '<p>A measurement of the past, not a rule: a strong dollar has usually weighed on gold; for Bitcoin the link is weak.</p>' +
       '<p class="cph-n">Today is against the last finished trading day; 5 days is five trading days back. From Yahoo Finance, delayed. It does not trade at the weekend.</p>'; } },
+    mvrv: { title: 'MVRV', body: function () { return '<p>Bitcoin\'s price against the market\'s realized cost: the average price every coin last moved at on the network.</p>' +
+      '<ul><li><b>1.0</b>: the price equals that average cost. <b>Under 1.0</b>: the price is below it.</li><li><b>Over 3.0</b>: a zone of high profit by its history — about 6% of the days since 2012.</li></ul>' +
+      '<p class="cph-n">One day behind. Source: Coin Metrics. A reference, not a floor and not a signal.</p>'; } },
+    w200: { title: '200-Week Average', body: function () { return '<p>Bitcoin\'s average price over the last 200 weeks — about four years — as a long-term reference.</p>' +
+      '<p>It is the mean of the last 200 weekly closes (Sundays); the card sets the last daily close against it.</p>' +
+      '<p class="cph-n">A reference, not a floor: the price has closed under it before.</p>'; } },
     exitStructure: { title: 'Market Structure', body: function () { return '<p>Where the money is moving: out of Bitcoin into altcoins, and out of cash on the side into the market.</p>' +
       '<ul><li><b>BTC Dominance</b> falling: money has moved from Bitcoin into altcoins.</li><li><b>USDT Dominance</b> falling: little cash is left waiting.</li><li><b>ETH / BTC</b> rising: altcoins are beating Bitcoin.</li></ul>' +
       '<p>Signs that usually show late in a cycle — not a verdict that the top is in. Each is set against your own level, and the group has its own count.</p>'; } },
     exitValuation: { title: 'Bitcoin Valuation', body: function () { return '<p>Whether Bitcoin\'s own price has reached a high zone against its history.</p>' +
-      '<ul><li><b>Bitcoin Rainbow</b>: the band the price holds around its long-term trend line.</li><li><b>Pi Cycle</b>: the 111-day average against twice the 350-day one.</li><li><b>MVRV</b>: market value ÷ realized value (source: Coin Metrics).</li></ul>' +
+      '<ul><li><b>Bitcoin Rainbow</b>: the band the price holds around its long-term trend line.</li><li><b>Bitcoin Pi Cycle</b>: Bitcoin\'s 111-day average against twice its 350-day one.</li><li><b>Bitcoin MVRV</b>: Bitcoin\'s market value ÷ its realized value (source: Coin Metrics).</li></ul>' +
       '<p>The three look at the same thing from different sides and tend to move together — so they are counted on their own, never added to Market Structure.</p>' +
       '<p>Each cycle\'s highest has been lower than the one before: Edit targets shows what each cycle reached, so you can choose your own levels.</p>'; } },
     maxDrawdown: { title: 'Max Drawdown', body: function () { return '<p>The deepest fall from a peak, in the period the chart shows.</p>' +

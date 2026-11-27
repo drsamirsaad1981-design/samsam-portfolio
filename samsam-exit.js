@@ -58,13 +58,13 @@
       // The Pi Cycle: the 111-day average as a percent of twice the 350-day one (samsam-core.js → btcMarks), against your
       // level — 100 is the cross itself. "Close" = within 10% of your level.
       var pl = +t.pi >= 50 && +t.pi <= 150 ? +t.pi : 100, pr = pi ? pi.ratio : null;
-      rows.push({ k: 'pi', g: 'v', name: 'Pi Cycle', short: 'Pi Cycle', cur: pr, rule: '≥ ' + pl + '%',
+      rows.push({ k: 'pi', g: 'v', name: 'Bitcoin Pi Cycle', short: 'Pi Cycle', cur: pr, rule: '≥ ' + pl + '%',
         state: pr == null ? 'none' : st(pr >= pl, pr >= pl * (1 - NEAR)), progress: pr ? Math.min(100, pr / pl * 100) : 0,
         fmt: function (v) { return v.toFixed(1) + '%'; }, sub: pi ? '111-day average ' + usd0(pi.d111) + ' · twice the 350-day ' + usd0(pi.d350x2) : '' });
       // MVRV: Bitcoin's market value ÷ its realized value — Coin Metrics' daily ratio, one day behind (samsam-core.js →
       // mvrvRead) — against your level, 3.0 until you choose. "Near" = within 10% of it. The source is named on the row.
       var ml = +t.mvrv >= 1 && +t.mvrv <= 10 ? +t.mvrv : 3, mr = mv ? mv.v : null;
-      rows.push({ k: 'mvrv', g: 'v', name: 'MVRV', short: 'MVRV', cur: mr, rule: '≥ ' + ml.toFixed(2),
+      rows.push({ k: 'mvrv', g: 'v', name: 'Bitcoin MVRV', short: 'MVRV', cur: mr, rule: '≥ ' + ml.toFixed(2),
         state: mr == null ? 'none' : st(mr >= ml, mr >= ml * (1 - NEAR)), progress: mr ? Math.min(100, mr / ml * 100) : 0,
         fmt: function (v) { return v.toFixed(2); }, sub: mv ? (mv.realized ? 'Market’s average cost ' + usd0(mv.realized) + ' · ' : '') + 'Source: Coin Metrics' : '' });
       var cnt = function (k) { var a = rows.filter(function (r) { return r.g === k; }); return { hit: a.filter(function (r) { return r.state === 'hit'; }).length, of: a.length }; };
@@ -280,8 +280,8 @@
       field('btcD', 'BTC.D at or under (%)', t.btcD) + field('usdtHi', 'USDT.D range — from (%)', t.usdtHi) +
       field('usdtLo', 'USDT.D range — to (%)', t.usdtLo) + field('ethBtc', 'ETH / BTC at or over', t.ethBtc) +
       '<label class="xm-f xm-f-rb"><span>Rainbow band at or over (1–9)</span><input type="number" inputmode="numeric" min="1" max="9" step="1" data-tg="rainbow" value="' + t.rainbow + '"></label>' + peaksNote() +
-      '<label class="xm-f xm-f-rb"><span>Pi Cycle at or over (%)</span><input type="number" inputmode="decimal" min="50" max="150" step="1" data-tg="pi" value="' + t.pi + '"></label>' + piNote() +
-      '<label class="xm-f xm-f-rb"><span>MVRV at or over (1–10)</span><input type="number" inputmode="decimal" min="1" max="10" step="0.1" data-tg="mvrv" value="' + t.mvrv + '"></label>' + mvrvNote() +
+      '<label class="xm-f xm-f-rb"><span>Bitcoin Pi Cycle at or over (%)</span><input type="number" inputmode="decimal" min="50" max="150" step="1" data-tg="pi" value="' + t.pi + '"></label>' + piNote() +
+      '<label class="xm-f xm-f-rb"><span>Bitcoin MVRV at or over (1–10)</span><input type="number" inputmode="decimal" min="1" max="10" step="0.1" data-tg="mvrv" value="' + t.mvrv + '"></label>' + mvrvNote() +
       '<div class="xm-edit-btns"><button type="button" class="xs-btn" data-act="tg-reset">' + IC('reset') + 'Reset to defaults</button><button type="button" class="xs-btn pri" data-act="tg-save">' + IC('check') + 'Save</button></div></div>' : '';
     return '<section class="xs-card xm-card' + (open ? ' open' : '') + '" aria-label="Macro exit indicators">' +
       '<div class="xs-head xs-tap" role="button" tabindex="0" data-act="card" data-k="macro" aria-expanded="' + open + '"><div class="xs-title">' + IC('gauge') + 'Macro Exit Indicators<span class="cp-hint" data-hint="macroExit" role="button" tabindex="0"></span></div>' +
@@ -302,7 +302,7 @@
   function piNote() {
     var p = mkt.pi, pk = p && Array.isArray(p.peaks) ? p.peaks.filter(function (x) { return x && x[0] >= 2012; }) : [], cr = p && p.crosses && p.crosses.length ? p.crosses[p.crosses.length - 1] : null;
     var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], day = function (iso) { var q = iso.split('-'); return +q[2] + ' ' + MON[+q[1] - 1] + ' ' + q[0]; };
-    return '<div class="xm-f-note" id="xmPiNote">The 111-day average as a percent of twice the 350-day average; 100 is the cross.' +
+    return '<div class="xm-f-note" id="xmPiNote">Bitcoin’s 111-day average as a percent of twice its 350-day average; 100 is the cross.' +
       (pk.length ? ' <span>Each cycle’s highest:</span> <b>' + pk.map(function (x) { return '<bdi dir="ltr">' + x[0] + ': ' + Math.round(x[1]) + '%</bdi>'; }).join(' · ') + '</b>.' : '') +
       (cr ? ' <span>Its last cross:</span> <b><span>' + day(cr) + '</span></b>.' : '') + '</div>';
   }

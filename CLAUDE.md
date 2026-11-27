@@ -257,7 +257,7 @@ Seventh round (27 Nov, his "نفذ" with four decisions, after the lab trial `to
 - The per-coin leverage post (17:30, the channel) and the AI's `get_derivatives` still read each coin LIVE from OKX /
   Binance / Hyperliquid — a different measurement from the market's funding line (5 venues, weighted); both say what
   they are made of.
-- **Binance through the Doha relay — NOT done yet** (his decision: after this round settles): the job already asks
+- **Binance through the Doha relay** (the relay's code came in the ninth round; live once he deploys it): the job asks
   `binanceRelay?pub=btcFunding` and expects `{ venues: [{ k: 'Binance' | 'Bybit', rate (% per 8 h), oi (USD), m7 }] }`;
   today the relay answers 405 (POST only), so both stay out. When the relay gains that public read path (he deploys it
   from Cloud Shell: `firebase deploy --only functions --project samsam-portfolio`), Binance joins the mix and the card,
@@ -278,14 +278,36 @@ Eighth round (27 Nov, his "نفذ" after his phone's screenshots of group 2):
 - For the queued formatting review: in Arabic the rainbow row's "الهدف ≥ النطاق 6" shows its sign mirrored (the sign sits
   between Arabic words) while "≥ 100%" beside a number is kept left-to-right — one rule is needed for both.
 
+Ninth round (27 Nov evening, his four finishing notes from the phone + "send me the relay"):
+- The two filter chips stay on ONE line on a phone in English too (`@media (max-width: 480px)`: no wrap, `font-size:
+  min(.78rem, 3vw)`; checked at 390 / 360 / 320 px — his phone is 360 px wide).
+- The two readings are named as Bitcoin's, like the rainbow: rows and fields "Bitcoin Pi Cycle" / "Bitcoin MVRV"
+  (مؤشر Pi Cycle للبيتكوين · مؤشر MVRV للبيتكوين), and both ⓘ (Macro Exit Indicators, Bitcoin Valuation) say "Bitcoin's
+  111-day average against twice its 350-day one" and "Bitcoin's market value ÷ its realized value". The bot's `/exit`
+  rows keep the short names (its 40-character line, under the "Bitcoin valuation" heading).
+- Rainbow card, his wording: "200-week average: $68,176 · Bitcoin's price is now ~11% below it" and "MVRV 1.14 · Bitcoin's
+  realized market cost: $53,033 · Bitcoin's price is now ~14% above average cost" (the price is still the last daily
+  close), each with its own ⓘ (`w200`, `mvrv`). Two facts corrected in the hints he drafted: under 1.0 the price is BELOW
+  the average cost (not "near" it); the 200-week average is the mean of WEEKLY closes, compared with the daily close.
+  The Exit row and the Plan line still say "Market's average cost" — one term for both is his call (asked).
+- Arabic hints: every number, percent and range goes through `n()` (a left-to-right `<bdi>`) — a loose "90 – 100" or
+  "36%" inside an Arabic line was reordered, and a "و" stuck to a year read as a "g" ("و2022"): write "في أعوام …، …".
+- A bug his screenshot showed: the rainbow chart was drawn 720 wide when the hub opened on Metals / bStocks (its view
+  hidden, no width) and stayed shrunk with tiny labels after switching to Crypto — a `ResizeObserver` on the card now
+  redraws it to fit.
+- The relay's public read path is written and tested (`tools/binance-relay/functions/index.js`, `GET ?pub=btcFunding`:
+  Binance, and Bybit when it answers from Doha; kept 5 minutes; any other GET is 405). **It is live only after he
+  deploys it** from Cloud Shell (the repo is public: `git pull`, then `firebase deploy --only functions --project
+  samsam-portfolio` in `tools/binance-relay`). After that the next "Price history" run shows it in the `[macro]` line.
+
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
   in `users/<uid>/meta/alerts`, six kinds on by default, quiet hours, a daily cap; owner first, then one member, then all.
   (The rainbow alert reaches members with this phase; today they see the line in `/market` and the weekly report.)
 
 Still open:
-1. The members' alerts above; the relay's public funding path for Binance (send him the change and the deploy command once
-   group 2 has settled); a section in the bot's guide for the rainbow, MVRV, the dollar index and funding (his approval:
+1. The members' alerts above; the relay's deploy (his step, from Cloud Shell — then check the next `[macro]` log line for
+   Binance and whether Bybit answers from Doha); a section in the bot's guide for the rainbow, MVRV, the dollar index and funding (his approval:
    it posts to the channel).
 2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
    `asset_classes_app_test.py` needed its retry in both GitHub runs of 27 Nov (8/9 on the first try, at 46/48 of its

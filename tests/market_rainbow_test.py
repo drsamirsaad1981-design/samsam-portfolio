@@ -54,8 +54,8 @@ with sync_playwright() as p:
         check(f'{name}: four numbers — the close, the trend line, this band\'s edges, since when', len(stats) == 4 and usd(want['close']) in stats[0] and usd(want['line']) in stats[1] and usd(want['lo']) in stats[2] and usd(want['hi']) in stats[2] and 'of days since 2010' in stats[2] and str(int(want['since'][8:])) + ' ' in stats[3] and want['since'][:4] in stats[3], stats)
         # 📏 the 200-week average: one row (also the dashed line's legend) — the number, the close against it, how often a close was under it
         wm = pg.evaluate("(()=>{const m=Samsam.core.btcMarks(%s,Date.now());return m&&m.w200})()" % json.dumps(FX['small'])); wt = pg.inner_text('#rbW200').replace('\n', ' ')
-        wv = round(abs(wm['vs'])); wside = 'under' if wm['vs'] < 0 else 'above'
-        check(f'{name}: 200-week average — {usd(wm["ma"])}, the close {wv}% {wside} it', f"200-week average {usd(wm['ma'])}" in wt and (f'The close is {wv}% {wside} it' in wt or 'The close is on it' in wt) and pg.evaluate("!!document.querySelector('#rbW200 .rb-dash')"), wt)
+        wv = round(abs(wm['vs'])); wside = 'below' if wm['vs'] < 0 else 'above'
+        check(f'{name}: 200-week average — "200-week average: {usd(wm["ma"])} · Bitcoin’s price is now ~{wv}% {wside} it", in plain words, with its own ⓘ', f"200-week average: {usd(wm['ma'])}" in wt and (f'Bitcoin’s price is now ~{wv}% {wside} it' in wt or 'Bitcoin’s price is now at it' in wt) and 'The close is' not in wt and pg.evaluate("!!document.querySelector('#rbW200 .rb-dash') && !!document.querySelector('#rbW200 .cp-hint[data-hint=w200]')"), wt)
         check(f'{name}: …and that it is a reference, not a floor: the daily closes under it, their share, the last one', f"Daily closes under it: {wm['hist']['days']:,} ({wm['hist']['pct']}% of the days)" in wt and 'a reference, not a floor' in wt and (wm['hist']['last'] is None or 'the last on ' + str(int(wm['hist']['last'][8:])) + ' ' in wt), wt)
         rows = pg.evaluate("[...document.querySelectorAll('#rbTable tbody tr')].map(r=>[+r.dataset.b, r.classList.contains('on'), r.cells[1].innerText.trim(), r.cells[2].innerText.trim(), r.cells[3].innerText.trim()])")
         names = pg.evaluate("Samsam.core.RAINBOW_NAMES.en")
@@ -108,6 +108,14 @@ with sync_playwright() as p:
         check(f'{name}: Arabic — the strip and the chart still run left to right (1 on the left)', pg.evaluate("(()=>{const s=[...document.querySelectorAll('#rbStrip .rb-seg')];return s[0].getBoundingClientRect().left<s[8].getBoundingClientRect().left && getComputedStyle(document.getElementById('rbChart')).direction==='ltr'})()"))
         check(f'{name}: Arabic — nothing runs off the side', pg.evaluate("document.documentElement.scrollWidth - innerWidth") <= 1)
         pg.evaluate("localStorage.setItem('cp-lang','en')")
+        # The hub opened on another view (Metals): the Crypto view is hidden and the open card has no width to take. Going to
+        # Crypto must draw the chart to fit its box — it was drawn 720 wide and shown shrunk, with tiny labels (seen on a phone).
+        pg.evaluate("localStorage.setItem('samsam_mkt_rb_open','1')"); go('#metals'); pg.wait_for_timeout(600)
+        hid = pg.evaluate("document.getElementById('rbChart') ? Math.round(document.getElementById('rbChart').clientWidth) : -1")
+        pg.click('#mkSeg [data-v=crypto]'); pg.wait_for_timeout(1200)
+        fit = pg.evaluate("(()=>{const b=document.getElementById('rbChart'),s=b&&b.querySelector('svg');return s?{vb:s.viewBox.baseVal.width,box:Math.round(b.clientWidth),font:parseFloat(getComputedStyle(s.querySelector('text')).fontSize)*s.getBoundingClientRect().width/s.viewBox.baseVal.width}:null})()")
+        check(f'{name}: opened on Metals (the card hidden, width {hid}), then Crypto → the chart is drawn to its box, one SVG unit to a pixel — not 720 wide and shrunk', hid == 0 and fit and fit['box'] > 0 and abs(fit['vb'] - max(220, min(1800, fit['box']))) <= 1 and fit['font'] >= 9.5, (hid, fit))
+        pg.evaluate("localStorage.removeItem('samsam_mk_view')"); pg.click('#mkSeg [data-v=crypto]')
         # GitHub has no file, or its last close is over 4 days old: no card
         old = json.loads(json.dumps(FX['small'])); d0 = datetime.datetime.now(datetime.timezone.utc).date()
         old['closes'] = [[(d0 - datetime.timedelta(days=20 - i)).isoformat(), c[1]] for i, c in enumerate(old['closes'])]
