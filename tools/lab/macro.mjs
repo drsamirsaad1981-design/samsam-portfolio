@@ -257,6 +257,32 @@ for (const [k, x] of Object.entries(fr)) {
     say(`| ${sym} | ${v.length} | ${pc(pctl(v, 1), 4)} | ${pc(pctl(v, 5), 4)} | ${pc(pctl(v, 10), 4)} | ${pc(pctl(v, 25), 4)} | ${pc(median(v), 4)} | ${pc(pctl(v, 75), 4)} | ${pc(pctl(v, 90), 4)} | ${pc(pctl(v, 95), 4)} | ${pc(pctl(v, 99), 4)} | ${pc(Math.max(...v), 4)} | ${pc(Math.min(...v), 4)} | ${sh(x => x < 0)} | ${sh(x => x <= -0.005)} | ${sh(x => x <= -0.01)} | ${sh(x => x > 0.0100001)} | ${sh(x => x >= 0.02)} | ${sh(x => x >= 0.03)} |`); }
 }
 
+// ═══ D. The dollar index over the long run — for a wording by LEVEL, and for what may honestly be said about gold and Bitcoin
+{ say('', '## D. The dollar index over the long run', '');
+  const yq = async (sym, range, interval) => { for (const base of ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com']) { const r = await get(`${base}/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=${interval}`), res = r.ok && r.j.chart && r.j.chart.result && r.j.chart.result[0];
+    if (res && res.timestamp) return res.timestamp.map((t, i) => [Math.floor(t * 1000 / DAY), +res.indicators.quote[0].close[i]]).filter(x => x[1] > 0); } return []; };
+  const mo = await yq('DX-Y.NYB', 'max', '1mo'), B = [[-Infinity, 90, 'under 90'], [90, 100, '90 – 100'], [100, 105, '100 – 105'], [105, 110, '105 – 110'], [110, Infinity, 'over 110']];
+  if (mo.length < 120) say(`**No long history** (${mo.length} months).`);
+  else { const nowV = mo[mo.length - 1][1], ym = d => iso(d).slice(0, 7);
+    say(`Monthly closes, ${ym(mo[0][0])} → ${ym(mo[mo.length - 1][0])} (${mo.length} months). The index started at 100 in March 1973. Now ${f2(nowV)}.`, '', '| Window | Months | ' + B.map(b => b[2]).join(' | ') + ' | Median | Lowest | Highest | Months at or under today\'s value |', '|---|---|' + B.map(() => '---|').join('') + '---|---|---|---|');
+    for (const [name, from] of [['All of it', -Infinity], ['Since 1990', dn('1990-01-01')], ['Since 2000', dn('2000-01-01')], ['The last 20 years', today - 7305], ['The last 10 years', today - 3653], ['The last 5 years', today - 1826]]) { const P = mo.filter(x => x[0] >= from), v = P.map(x => x[1]); if (v.length < 24) continue;
+      const lo = P.reduce((a, b) => b[1] < a[1] ? b : a), hi = P.reduce((a, b) => b[1] > a[1] ? b : a);
+      say(`| ${name} | ${v.length} | ` + B.map(b => f2(v.filter(x => x >= b[0] && x < b[1]).length / v.length * 100, 1) + '%').join(' | ') + ` | ${f2(median(v))} | ${f2(lo[1])} (${ym(lo[0])}) | ${f2(hi[1])} (${ym(hi[0])}) | ${f2(v.filter(x => x <= nowV).length / v.length * 100, 1)}% |`); }
+    const lastIn = f => { const P = mo.filter(x => f(x[1])); return P.length ? ym(P[P.length - 1][0]) : 'never'; };
+    say('', `- The last month that closed at or over 110: ${lastIn(v => v >= 110)}; at or over 105: ${lastIn(v => v >= 105)}; under 100: ${lastIn(v => v < 100)}; under 90: ${lastIn(v => v < 90)}.`);
+    OUT.dxyLong = { months: mo.length, now: nowV }; }
+  // does gold / Bitcoin move against the dollar? weekly and monthly changes, side by side
+  say('', '### Gold and Bitcoin against the dollar (changes over the same week / month)', '', '| Asset | Step | Window | Steps | Correlation | Moved the opposite way | When the dollar rose 1%+ (weeks) or 2%+ (months): the asset\'s median change · how often it fell | When the dollar fell that much: median · how often it rose |', '|---|---|---|---|---|---|---|---|');
+  for (const [step, interval, key, big] of [['week', '1wk', d => Math.floor((d + 3) / 7), 1], ['month', '1mo', d => iso(d).slice(0, 7), 2]]) {
+    const S = {}; for (const sym of ['DX-Y.NYB', 'GC=F', 'BTC-USD']) { S[sym] = new Map((await yq(sym, '10y', interval)).map(([d, v]) => [key(d), [d, v]])); await sleep(400); }
+    const ch = M => { const k = [...M.keys()].sort((a, b) => M.get(a)[0] - M.get(b)[0]), o = new Map(); for (let i = 1; i < k.length; i++) o.set(k[i], [M.get(k[i])[0], (M.get(k[i])[1] / M.get(k[i - 1])[1] - 1) * 100]); return o; }, D = ch(S['DX-Y.NYB']);
+    for (const [sym, name] of [['GC=F', 'Gold'], ['BTC-USD', 'Bitcoin']]) { const A = ch(S[sym]);
+      for (const [wn, days] of [['10 years', 3653], ['5 years', 1826], ['2 years', 731]]) { const P = []; for (const [k, [d, x]] of D) { const a = A.get(k); if (a && d > today - days) P.push([x, a[1]]); } if (P.length < 12) { say(`| ${name} | ${step} | ${wn} | ${P.length} — not enough | | | | |`); continue; }
+        const xs = P.map(p => p[0]), ys = P.map(p => p[1]), mx = mean(xs), my = mean(ys), cov = mean(xs.map((v, i) => (v - mx) * (ys[i] - my))), sx = Math.sqrt(mean(xs.map(v => (v - mx) ** 2))), sy = Math.sqrt(mean(ys.map(v => (v - my) ** 2)));
+        const up = P.filter(p => p[0] >= big), dnn = P.filter(p => p[0] <= -big);
+        say(`| ${name} | ${step} | ${wn} | ${P.length} | ${f2(cov / (sx * sy))} | ${f2(P.filter(p => p[0] * p[1] < 0).length / P.length * 100, 1)}% | ${up.length ? `${up.length} · ${pc(median(up.map(p => p[1])))} · fell ${f2(up.filter(p => p[1] < 0).length / up.length * 100, 0)}%` : '—'} | ${dnn.length ? `${dnn.length} · ${pc(median(dnn.map(p => p[1])))} · rose ${f2(dnn.filter(p => p[1] > 0).length / dnn.length * 100, 0)}%` : '—'} |`); } } }
+}
+
 say('', '---', '', 'What this run does not say: whether these numbers are worth showing — only whether they can be had, how fresh, and how far two sources agree.');
 const file = process.argv[2];
 if (file) { fs.writeFileSync(file, L.join('\n') + '\n'); fs.writeFileSync(file.replace(/\.md$/, '') + '.json', JSON.stringify(OUT, null, 1)); }
