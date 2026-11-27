@@ -309,7 +309,8 @@ Tenth round (27 Nov night, his "وحّد الصياغة" + his Cloud Shell opene
   at a time), not `type`.
 - **Both answer from Doha.** The first run after it (20:10 UTC): `funding 0.0048 %/8h · Binance 0.0064, Bybit 0.0058,
   Bitget 0.0046, Hyperliquid 0.0051, OKX 0.0013, Gate 0.0038, Deribit -0.0004 · without —` — 7 venues, nothing missing
-  (Binance $5.9B + Bybit $4.1B of open interest against about $9.3B for the other five: roughly half the weight).
+  (Binance $5.9B + Bybit $4.1B of open interest against $9.0B for the other five: a little over half the weight;
+  the snapshot: rate +0.0048%, 7-day +0.0023%, `missing: []`).
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
