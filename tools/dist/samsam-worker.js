@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: c3e2c287c1120b68
+// sources-hash: d35bebd1918d4b46
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -903,8 +903,20 @@ function dxyNow(D, now = Date.now()) {
   const t = Date.parse(D.at);
   if (!isFinite(t) || now - t > 5 * 864e5) return null;
   const lo = +D.lo52, hi = +D.hi52, pos = hi > lo ? Math.min(100, Math.max(0, (D.price - lo) / (hi - lo) * 100)) : null;
-  return { price: +D.price, ch24: D.ch24 ?? null, ch7: D.ch7 ?? null, lo52: lo > 0 ? lo : null, hi52: hi > 0 ? hi : null, pos, spark: D.spark || [], at: D.at, src: D.src || "Yahoo Finance" };
+  return { price: +D.price, k: dxyRead(+D.price), ch24: D.ch24 ?? null, ch7: D.ch7 ?? null, lo52: lo > 0 ? lo : null, hi52: hi > 0 ? hi : null, pos, spark: D.spark || [], at: D.at, src: D.src || "Yahoo Finance" };
 }
+function dxyRead(v) {
+  return v == null || !isFinite(v) || !(v > 0) ? null : v < 90 ? "low" : v < 100 ? "under" : v < 105 ? "mid" : v < 110 ? "high" : "rare";
+}
+var DXY_WORDS = Object.freeze({
+  en: { low: "Weak dollar", under: "Below the base of 100", mid: "Moderate strength", high: "High strength", rare: "Rare strength" },
+  ar: { low: "\u062F\u0648\u0644\u0627\u0631 \u0636\u0639\u064A\u0641", under: "\u062F\u0648\u0646 \u0646\u0642\u0637\u0629 \u0627\u0644\u0623\u0633\u0627\u0633", mid: "\u0642\u0648\u0629 \u0645\u0639\u062A\u062F\u0644\u0629", high: "\u0642\u0648\u0629 \u0645\u0631\u062A\u0641\u0639\u0629", rare: "\u0642\u0648\u0629 \u0646\u0627\u062F\u0631\u0629" }
+});
+var DXY_RANGES = Object.freeze({ low: "under 90", under: "90 \u2013 100", mid: "100 \u2013 105", high: "105 \u2013 110", rare: "over 110" });
+var dxyWord = (v, ar) => {
+  const k = dxyRead(v);
+  return k ? DXY_WORDS[ar ? "ar" : "en"][k] : "";
+};
 function fundingRead(rate) {
   if (rate == null || !isFinite(rate)) return null;
   const r = Math.round(rate * 1e4) / 1e4;
@@ -1245,7 +1257,11 @@ function usd(v) {
 }
 var perUnit = (x, v, f) => x && x.g > 1 ? (v / x.g >= 1 ? usd2(v / x.g) : f(v / x.g)) + "/g" : f(v);
 var usd2 = (v) => (v < 0 ? "\u2212" : "") + "$" + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-var pct = (v, d = 2) => v == null || !isFinite(v) ? "\u2014" : (v > 0 ? "+" : v < 0 ? "\u2212" : "") + Math.abs(v).toFixed(d) + "%";
+var pct = (v, d = 2) => {
+  if (v == null || !isFinite(v)) return "\u2014";
+  const r = +(+v).toFixed(d);
+  return (r > 0 ? "+" : r < 0 ? "\u2212" : "") + Math.abs(r).toFixed(d) + "%";
+};
 var signed = (v) => (v > 0 ? "+" : v < 0 ? "\u2212" : "") + usd(Math.abs(v)).replace("\u2212", "");
 var dot = (v) => v > 0 ? "\u{1F7E2}" : v < 0 ? "\u{1F534}" : "\u26AA";
 var flow = (v) => (v < 0 ? "\u2212" : "+") + (Math.abs(v) >= 1e9 ? "$" + (Math.abs(v) / 1e9).toFixed(2) + "B" : "$" + Math.round(Math.abs(v) / 1e6) + "M");
@@ -1500,7 +1516,10 @@ function rainbowLines(t, m, now) {
 }
 function macroLines(t, m, now) {
   const ar = t === W.ar, out = [], d = dxyNow(m && m.dxy, now), f = fundingNow(m && m.funding, now);
-  if (d) out.push(ar ? `${t.dxy}: <b>${d.price.toFixed(2)}</b>${d.ch24 != null ? ` ${dot(d.ch24)} ${pct(d.ch24)}` : ""}` : `\u{1F4B5} ${t.dxy}  <b>${d.price.toFixed(2)}</b>${d.ch24 != null ? ` ${dot(d.ch24)} ${pct(d.ch24)}` : ""}`);
+  if (d) {
+    const c = d.ch24 != null ? +(+d.ch24).toFixed(2) : null, tail = c != null ? ` ${dot(c)} ${pct(c)}` : "";
+    out.push(ar ? `${t.dxy}: <b>${d.price.toFixed(2)}</b>${tail}` : `\u{1F4B5} ${t.dxy}  <b>${d.price.toFixed(2)}</b>${tail}`);
+  }
   if (f) {
     const r = `${f.rate < 0 ? "\u2212" : "+"}${Math.abs(f.rate).toFixed(4)}%`, w = fundingWord(f.rate, ar, true);
     out.push(ar ? `${t.fundName}: <b>${r}</b> \xB7 ${w}` : `\u2696\uFE0F ${t.fundName} <b>${r}</b> \xB7 ${w}`);
@@ -4530,7 +4549,20 @@ function macroFacts(m) {
     source: "Coin Metrics (community data, CC BY-NC 4.0)" + (mv.via ? ` \u2014 this day's value from ${mv.via}` : ""),
     note: "Market value \xF7 realized value (what every coin cost when it last moved), one day behind. Each cycle's highest has been lower than the one before (the old 3.5 line was last seen in March 2021): read it as a distance, never as a fixed top alarm. The average cost is a reference, not a floor. Always name the source."
   };
-  if (d) out.us_dollar_index = { value: d.price, change_24h_pct: d.ch24, change_5_trading_days_pct: d.ch7, low_52_weeks: d.lo52, high_52_weeks: d.hi52, place_in_52_week_range_pct: d.pos != null ? Math.round(d.pos) : null, quote_time: d.at, source: d.src, note: "ICE's DXY. It does not trade at the weekend. Report it as a number \u2014 do not claim it drives crypto." };
+  if (d) out.us_dollar_index = {
+    value: d.price,
+    level: dxyWord(d.price),
+    level_ar: dxyWord(d.price, true),
+    level_range: DXY_RANGES[d.k],
+    change_24h_pct: d.ch24,
+    change_5_trading_days_pct: d.ch7,
+    low_52_weeks: d.lo52,
+    high_52_weeks: d.hi52,
+    place_in_52_week_range_pct: d.pos != null ? Math.round(d.pos) : null,
+    quote_time: d.at,
+    source: d.src,
+    note: "ICE's DXY; it does not trade at the weekend. Levels: under 90 weak \xB7 90\u2013100 below the base \xB7 100\u2013105 moderate strength \xB7 105\u2013110 high strength \xB7 over 110 rare strength. 100 is its base (March 1973), not its usual level: it closed under 100 in 74% of the quarters since 1985. What was measured over 10 years to Nov 2026 \u2014 say it as a measurement, never as a rule: GOLD moved the opposite way to the dollar in 68% of weeks (when the dollar rose 1%+ in a week gold fell 79% of the time); BITCOIN moved the opposite way in only 53% of weeks \u2014 close to chance. Do not claim the dollar drives crypto."
+  };
   if (f) out.btc_funding = {
     rate_8h_pct: f.rate,
     annualized_pct: r23(f.yr),

@@ -25,7 +25,8 @@
     var a = Math.abs(v), dd = d != null ? d : a >= 1000 ? 0 : a >= 1 ? 2 : 4;
     return '$' + v.toLocaleString('en-US', { minimumFractionDigits: dd, maximumFractionDigits: dd });
   }
-  function pct(v) { if (v == null || !isFinite(v)) return '<span class="as-pc">—</span>'; return '<span class="as-pc ' + (v >= 0 ? 'up' : 'dn') + '">' + iso((v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + '%') + '</span>'; }
+  function pct(v) { if (v == null || !isFinite(v)) return '<span class="as-pc">—</span>'; var r = +(+v).toFixed(2);   // (the sign and the colour follow the rounded number: never a red "−0.00%")
+    return '<span class="as-pc' + (r > 0 ? ' up' : r < 0 ? ' dn' : '') + '">' + iso((r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r).toFixed(2) + '%') + '</span>'; }
   function ago(t) { var m = Math.round((Date.now() - t) / 60000); return !t ? '' : m < 1 ? T('just now', 'الآن') : m < 60 ? T(m + ' min ago', 'منذ ' + iso(m) + ' دقيقة') : T(Math.round(m / 60) + ' h ago', 'منذ ' + iso(Math.round(m / 60)) + ' ساعة'); }
   function spark(p, w, h) { return M() && M().spark ? M().spark(p, w, h) : ''; }
 
@@ -144,14 +145,16 @@
       (pf.length > 1 ? '<div class="as-mtot">' + T('Total', 'الإجمالي') + ' <b>' + iso(usd(tv, 2)) + '</b> <span class="as-pc ' + (tp >= 0 ? 'up' : 'dn') + '">' + iso((tp >= 0 ? '+' : '−') + usd(Math.abs(tp), 2)) + '</span></div>' : '') +
       '<div class="as-adds">' + add + '</div><p class="as-zn">🕌 ' + T('Zakat: your metals are counted at market value in your one zakat pool — with your crypto, cash and shares — against the value of 85 g of gold, once a year on your zakat day. The amount is on the portfolio page (the 🕌 line). An estimate, not a ruling — check with a scholar.', 'الزكاة: معادنك تُحسب بقيمتها السوقية ضمن وعاء زكاتك الواحد — مع الكريبتو والنقد والأسهم — مقابل قيمة 85 جم ذهب، مرة كل عام في يوم زكاتك. المبلغ في صفحة المحفظة (سطر 🕌). تقدير حسابي وليس فتوى — راجع أهل العلم.') + '</p></div>';
   }
-  // 💵 the US dollar index (samsam-core.js → dxyNow on the snapshot's part): the number, today and 5 trading days, where
-  // it sits in its 52-week range. A number — no sentence about what it does to anything else.
+  // 💵 the US dollar index (samsam-core.js → dxyNow on the snapshot's part): the number, its level in words (dxyRead: five
+  // ranges around the base of 100), today and 5 trading days, where it sits in its 52-week range. The card describes the
+  // level; what was measured about gold and Bitcoin against it is in the ⓘ, as numbers.
   function dxyHtml() {
     var c = window.Samsam && window.Samsam.core && window.Samsam.core.dxyNow ? window.Samsam.core : null, d = c && st.dxy ? c.dxyNow(st.dxy, Date.now()) : null; if (!d) return '';
     var rng = d.pos != null ? '<div class="as-rng" role="img" aria-label="' + T('Place in the 52-week range', 'الموقع في نطاق 52 أسبوعاً') + ': ' + Math.round(d.pos) + '%"><i style="left:' + d.pos.toFixed(1) + '%"></i></div>' +
       '<div class="as-rngl"><span>' + d.lo52.toFixed(2) + '</span><span dir="auto">' + T('52-week range', 'نطاق 52 أسبوعاً') + '</span><span>' + d.hi52.toFixed(2) + '</span></div>' : '';
     return '<div class="as-card as-metal as-dxy" id="asDxy"><div class="as-k">💵 ' + T('US Dollar Index (DXY)', 'مؤشر الدولار الأمريكي (DXY)') + '<span class="cp-hint" data-hint="dxy" role="button" tabindex="0"></span></div>' +
       '<div class="as-v">' + iso(d.price.toFixed(2)) + '</div>' +
+      (d.k ? '<div class="as-lvl" id="asDxyLvl"><b>' + c.dxyWord(d.price, ar()) + '</b> <span>' + iso(T(c.DXY_RANGES[d.k], { low: 'أقل من 90', under: '90 – 100', mid: '100 – 105', high: '105 – 110', rare: 'فوق 110' }[d.k])) + '</span></div>' : '') +
       '<div class="as-chs"><span>' + T('Today', 'اليوم') + ' ' + pct(d.ch24) + '</span><span>' + T('5 days', '5 أيام') + ' ' + pct(d.ch7) + '</span></div>' + spark(d.spark, 220, 40) + rng + '</div>';
   }
   function dxySrc() { var c = window.Samsam && window.Samsam.core && window.Samsam.core.dxyNow ? window.Samsam.core : null, d = c && st.dxy ? c.dxyNow(st.dxy, Date.now()) : null;

@@ -921,14 +921,25 @@ export function mvrvRead(M, now = Date.now()) {
   return { day: M.day, v: +M.now, realized: +M.realized > 0 ? +M.realized : null, price: +M.price > 0 ? +M.price : null, wk: M.wk ?? null, mo: M.mo ?? null,
     peaks: M.peaks || [], lows: M.lows || [], over35: M.over35 || null, over3: M.over3 || null, under1: M.under1 || null, src: M.src || 'Coin Metrics', via: M.via || null };
 }
-// The US dollar index (ICE's DXY): the price, the day's and the week's change, where it sits in its 52-week range (0 … 100).
+// The US dollar index (ICE's DXY): the price, its level in words (k — dxyRead), the day's and the week's change, where it
+// sits in its 52-week range (0 … 100).
 // It does not trade at the weekend: the last quote stays, up to 5 days.
 export function dxyNow(D, now = Date.now()) {
   if (!D || !(+D.price > 0)) return null;
   const t = Date.parse(D.at); if (!isFinite(t) || now - t > 5 * 864e5) return null;
   const lo = +D.lo52, hi = +D.hi52, pos = hi > lo ? Math.min(100, Math.max(0, (D.price - lo) / (hi - lo) * 100)) : null;
-  return { price: +D.price, ch24: D.ch24 ?? null, ch7: D.ch7 ?? null, lo52: lo > 0 ? lo : null, hi52: hi > 0 ? hi : null, pos, spark: D.spark || [], at: D.at, src: D.src || 'Yahoo Finance' };
+  return { price: +D.price, k: dxyRead(+D.price), ch24: D.ch24 ?? null, ch7: D.ch7 ?? null, lo52: lo > 0 ? lo : null, hi52: hi > 0 ? hi : null, pos, spark: D.spark || [], at: D.at, src: D.src || 'Yahoo Finance' };
 }
+// The index's LEVEL in words — five ranges around 100, its base of March 1973 (Samir's ranges, 27 Nov 2026; checked on
+// every quarter-end close since 1985: under 90 in 38.5% of them, 90–100 in 35.5%, 100–105 in 13.0%, 105–110 in 5.3%, 110
+// or over in 7.7% — so 100 is the base, not the usual). A description of where the number stands, never of why.
+//   low < 90 · under 90 … < 100 · mid 100 … < 105 · high 105 … < 110 · rare ≥ 110
+export function dxyRead(v) { return v == null || !isFinite(v) || !(v > 0) ? null : v < 90 ? 'low' : v < 100 ? 'under' : v < 105 ? 'mid' : v < 110 ? 'high' : 'rare'; }
+export const DXY_WORDS = Object.freeze({
+  en: { low: 'Weak dollar', under: 'Below the base of 100', mid: 'Moderate strength', high: 'High strength', rare: 'Rare strength' },
+  ar: { low: 'دولار ضعيف', under: 'دون نقطة الأساس', mid: 'قوة معتدلة', high: 'قوة مرتفعة', rare: 'قوة نادرة' } });
+export const DXY_RANGES = Object.freeze({ low: 'under 90', under: '90 – 100', mid: '100 – 105', high: '105 – 110', rare: 'over 110' });
+export const dxyWord = (v, ar) => { const k = dxyRead(v); return k ? DXY_WORDS[ar ? 'ar' : 'en'][k] : ''; };
 // BTC funding: what longs pay shorts on perpetual futures, percent per 8 hours (negative: shorts pay). ONE wording for the
 // app's card, the bot's lines, the AI's facts and the leverage radar. The edges come from the last 365 days of payments
 // (Binance's public archive, the lab of 27 Nov 2026) — not from 2021's: in that year BTC, ETH and SOL were never once over

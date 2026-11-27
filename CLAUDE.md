@@ -43,8 +43,16 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   named beside it** ("without Binance and Bybit" on the card and in the bot — from the snapshot's `missing`, never typed
   in). **One wording everywhere** (`fundingRead`): hot ≥ +0.03% per 8 h · up > +0.01% · rest 0…+0.01% · neg < 0 · deep ≤
   −0.01% — edges from the last year's payments, not 2021's. A mood reading, never an exit condition.
-- The dollar index is a number (value, day, 5 trading days, place in the 52-week range) — never a sentence about what it
-  does to crypto.
+- The dollar index (27 Nov, his ranges): the card is the number and its **level in words** — under 90 Weak dollar · 90–100
+  Below the base of 100 · 100–105 Moderate strength · 105–110 High strength · over 110 **Rare strength** (a level, never a
+  cause: not "tightening") — `dxyRead` / `DXY_WORDS`. What it does to other assets is said **only in the ⓘ and only as
+  what was measured** (gold moved against it in 68% of weeks over 10 years; Bitcoin in 53% — close to chance), never as a
+  rule and never on the card or in the bot's line.
+- The Exit card's two counts are **filters** (a tap shows that group alone, a second tap both); each group has its own
+  headed line (name · ⓘ · count). Market Structure = "signs that usually show late in a cycle — not a verdict that the
+  top is in"; Bitcoin Valuation = "whether Bitcoin's own price has reached a high zone against its history".
+- A change that rounds to 0.00 has no sign and no colour (never a red "−0.00%") — `pct` in `alerts-core.mjs` and in
+  `samsam-assets.js`.
 - Pi Cycle: the 111-day average as a percent of twice the 350-day one (100 = the cross). Shown as a distance with each
   cycle's highest; the level is the user's (50–150, 100 until chosen); **its alert is off until the user turns it on**.
 - 200-week average: the mean of the last 200 Sunday closes — "a reference, not a floor" (daily closes have been under it).
@@ -256,6 +264,20 @@ Seventh round (27 Nov, his "نفذ" with four decisions, after the lab trial `to
   the bot and the AI say "without Bybit" by themselves — no app or Worker change.
 - `guide.json` (the bot's guide) was NOT touched.
 
+Eighth round (27 Nov, his "نفذ" after his phone's screenshots of group 2):
+- Exit card: the two count chips are buttons that filter (`grpOnly` in `samsam-exit.js`, this visit only; on the folded
+  card a chip opens it on its own group); headed group lines `.xm-gh` (`.xm-gt` name, ⓘ `exitStructure` /
+  `exitValuation`, `.xm-gc` count) — tests read the name from `.xm-gt`.
+- Dollar card: the level line `#asDxyLvl`; the ⓘ lists the five ranges with how often a quarter closed in each since 1985
+  (38% · 36% · 13% · 5% · 8%; under 100 in 74%) and the measured relation. The lab's section D (`tools/lab/macro.mjs`)
+  holds the numbers: quarter-end closes since 1985 from Yahoo (`range=max` gives quarters, not months); gold vs the dollar
+  weekly −0.44 (10 y), opposite in 68% of weeks, fell in 79% of the weeks the dollar rose 1%+; Bitcoin −0.09, opposite in
+  53%. The AI's `us_dollar_index` carries the level and those measured lines. The bot's /market line is unchanged (40
+  characters).
+- "−0.00%" fixed (seen on his phone: "5 days −0.00%" in red).
+- For the queued formatting review: in Arabic the rainbow row's "الهدف ≥ النطاق 6" shows its sign mirrored (the sign sits
+  between Arabic words) while "≥ 100%" beside a number is kept left-to-right — one rule is needed for both.
+
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
   in `users/<uid>/meta/alerts`, six kinds on by default, quiet hours, a daily cap; owner first, then one member, then all.
@@ -281,7 +303,8 @@ Latin runs inside Arabic lines, digits), general layout, alignment, contrast, an
   messages are a branch of their own.
 - Then the review, part by part along that chart; findings listed before fixing (a big change: his "نفذ" first).
 - Remind him to switch to the strongest model before it starts (the Project's rule for a full review).
-- Known items to put on the chart from the start: "Still open" 3 above (PDF / CSV in English).
+- Known items to put on the chart from the start: "Still open" 3 above (PDF / CSV in English); the ≥ / ≤ sign inside
+  Arabic lines (eighth round's note).
 
 ## Open ideas (not requested yet)
 

@@ -121,7 +121,7 @@ export function usd(v) {
 // a take-profit row's price or level as the app's Exit page shows it: a metal per gram ("$128.60/g"), anything else as it is
 export const perUnit = (x, v, f) => x && x.g > 1 ? (v / x.g >= 1 ? usd2(v / x.g) : f(v / x.g)) + '/g' : f(v);   // (a gram's price keeps its cents)
 export const usd2 = v => (v < 0 ? '−' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-export const pct = (v, d = 2) => v == null || !isFinite(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d) + '%';
+export const pct = (v, d = 2) => { if (v == null || !isFinite(v)) return '—'; const r = +(+v).toFixed(d); return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r).toFixed(d) + '%'; };   // (a change that rounds to 0.00 has no sign: never "−0.00%")
 export const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '') + usd(Math.abs(v)).replace('−', '');
 export const dot = v => v > 0 ? '🟢' : v < 0 ? '🔴' : '⚪';
 export const flow = v => (v < 0 ? '−' : '+') + (Math.abs(v) >= 1e9 ? '$' + (Math.abs(v) / 1e9).toFixed(2) + 'B' : '$' + Math.round(Math.abs(v) / 1e6) + 'M');
@@ -349,7 +349,8 @@ export function rainbowLines(t, m, now) {
 // the big ones that are NOT in it, by name. Short lines: each fits a phone in every state and both languages.
 export function macroLines(t, m, now) {
   const ar = t === W.ar, out = [], d = C.dxyNow(m && m.dxy, now), f = C.fundingNow(m && m.funding, now);
-  if (d) out.push(ar ? `${t.dxy}: <b>${d.price.toFixed(2)}</b>${d.ch24 != null ? ` ${dot(d.ch24)} ${pct(d.ch24)}` : ''}` : `💵 ${t.dxy}  <b>${d.price.toFixed(2)}</b>${d.ch24 != null ? ` ${dot(d.ch24)} ${pct(d.ch24)}` : ''}`);
+  if (d) { const c = d.ch24 != null ? +(+d.ch24).toFixed(2) : null, tail = c != null ? ` ${dot(c)} ${pct(c)}` : '';   // (the dot follows the rounded change: no red dot beside "0.00%")
+    out.push(ar ? `${t.dxy}: <b>${d.price.toFixed(2)}</b>${tail}` : `💵 ${t.dxy}  <b>${d.price.toFixed(2)}</b>${tail}`); }
   if (f) { const r = `${f.rate < 0 ? '−' : '+'}${Math.abs(f.rate).toFixed(4)}%`, w = C.fundingWord(f.rate, ar, true);
     out.push(ar ? `${t.fundName}: <b>${r}</b> · ${w}` : `⚖️ ${t.fundName} <b>${r}</b> · ${w}`);
     out.push(ar ? `<i>${[t.fundVen(f.n) + (f.missing.length ? ' ' + t.fundNo(f.missing) : ''), t.fundPer].join(' · ')}</i>` : `<i>${[t.fundPer, t.fundVen(f.n)].concat(f.missing.length ? [t.fundNo(f.missing)] : []).join(' · ')}</i>`); }

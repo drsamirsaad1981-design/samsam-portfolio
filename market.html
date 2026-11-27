@@ -18,25 +18,25 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-lang.js?v=202611271736"></script>
-<script src="samsam-ar.js?v=202611271736"></script>
-<script src="samsam-ui.js?v=202611271736"></script>
-<script src="samsam-hints.js?v=202611271736"></script>
-<script src="samsam-arhints.js?v=202611271736"></script>
-<script src="samsam-vault.js?v=202611271736"></script>
-<script src="samsam-labels.js?v=202611271736"></script>
-<script src="samsam-taxonomy.js?v=202611271736"></script>
-<script src="samsam-coins.js?v=202611271736"></script>
-<script src="samsam-import.js?v=202611271736"></script>
-<script src="samsam-wallets.js?v=202611271736"></script>
-<script src="samsam-rewards.js?v=202611271736"></script>
-<script src="samsam-settings.js?v=202611271736"></script>
-<script src="samsam-dropdown.js?v=202611271736"></script>
-<script src="samsam-add.js?v=202611271736"></script>
-<script src="samsam-market.js?v=202611271736"></script>
-<script src="samsam-rainbow.js?v=202611271736"></script>
-<script src="samsam-funding.js?v=202611271736"></script>
-<script src="samsam-assets.js?v=202611271736"></script>
+<script src="samsam-lang.js?v=202611271912"></script>
+<script src="samsam-ar.js?v=202611271912"></script>
+<script src="samsam-ui.js?v=202611271912"></script>
+<script src="samsam-hints.js?v=202611271912"></script>
+<script src="samsam-arhints.js?v=202611271912"></script>
+<script src="samsam-vault.js?v=202611271912"></script>
+<script src="samsam-labels.js?v=202611271912"></script>
+<script src="samsam-taxonomy.js?v=202611271912"></script>
+<script src="samsam-coins.js?v=202611271912"></script>
+<script src="samsam-import.js?v=202611271912"></script>
+<script src="samsam-wallets.js?v=202611271912"></script>
+<script src="samsam-rewards.js?v=202611271912"></script>
+<script src="samsam-settings.js?v=202611271912"></script>
+<script src="samsam-dropdown.js?v=202611271912"></script>
+<script src="samsam-add.js?v=202611271912"></script>
+<script src="samsam-market.js?v=202611271912"></script>
+<script src="samsam-rainbow.js?v=202611271912"></script>
+<script src="samsam-funding.js?v=202611271912"></script>
+<script src="samsam-assets.js?v=202611271912"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -449,6 +449,7 @@ html[dir="rtl"] .as-nl small:not(.as-my) { direction: ltr; text-align: right; } 
 .as-add { border: 1px solid var(--border, #334155); background: transparent; color: inherit; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .82rem; cursor: pointer; }
 .as-metals { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
 /* 💵 the dollar index: where today's value sits in its 52-week range (always low → high, left to right) */
+.as-lvl { font-size: .86rem; margin: 2px 0 6px; } .as-lvl b { font-weight: 800; } .as-lvl span { color: var(--fg2); font-size: .76rem; font-variant-numeric: tabular-nums; margin-inline-start: 4px; }
 .as-rng { position: relative; height: 6px; border-radius: 3px; background: var(--bar-bg); margin-top: 12px; direction: ltr; }
 .as-rng i { position: absolute; top: -4px; width: 4px; height: 14px; border-radius: 2px; background: var(--fg); transform: translateX(-50%); }
 .as-rngl { display: flex; justify-content: space-between; gap: 8px; font-size: .68rem; color: var(--fg2); margin-top: 5px; direction: ltr; font-variant-numeric: tabular-nums; }
@@ -618,7 +619,7 @@ html[dir="rtl"] .as-nl small:not(.as-my) { direction: ltr; text-align: right; } 
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611271736"></script>
+<script type="module" src="samsam-cloud.js?v=202611271912"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';

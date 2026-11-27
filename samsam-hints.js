@@ -177,8 +177,20 @@
       '<p>The card names the venues it reads — and the big ones that are <b>not</b> in it. It is the market\'s mood, not a signal: it said nothing at the October 2025 top.</p>' +
       '<p class="cph-n">Updated twice an hour. Not financial advice.</p>'; } },
     dxy: { title: 'US Dollar Index', body: function () { return '<p>The dollar against six major currencies (ICE\'s DXY): the euro (57.6%), the yen, the pound, the Canadian dollar, the Swedish krona and the Swiss franc.</p>' +
-      '<ul><li><b>Today</b>: against the last finished trading day.</li><li><b>5 days</b>: against five trading days back.</li><li><b>52-week range</b>: where today\'s value sits between the year\'s lowest and highest.</li></ul>' +
-      '<p class="cph-n">From Yahoo Finance, delayed. It does not trade at the weekend — Friday\'s value stays until Monday.</p>'; } },
+      '<p><b>The level, in words</b> — five ranges around 100, with how often a quarter closed in each since 1985:</p>' +
+      '<ul><li><b>Weak dollar</b>: under 90 — 38% of the time.</li><li><b>Below the base of 100</b>: 90 – 100 — 36%.</li><li><b>Moderate strength</b>: 100 – 105 — 13%.</li><li><b>High strength</b>: 105 – 110 — 5%.</li><li><b>Rare strength</b>: over 110 — 8% (1985, 2000–2002, 2022).</li></ul>' +
+      '<p>100 is where the index started in March 1973 — its base, not its usual level: it closed <b>under 100 in 74%</b> of the quarters since 1985.</p>' +
+      '<p><b>What was measured against it</b> (10 years, to November 2026):</p>' +
+      '<ul><li><b>Gold</b> moved the opposite way to the dollar in 68% of weeks. When the dollar rose 1% or more in a week, gold fell 79% of the time.</li><li><b>Bitcoin</b> moved the opposite way in 53% of weeks — close to chance.</li></ul>' +
+      '<p>A measurement of the past, not a rule: a strong dollar has usually weighed on gold; for Bitcoin the link is weak.</p>' +
+      '<p class="cph-n">Today is against the last finished trading day; 5 days is five trading days back. From Yahoo Finance, delayed. It does not trade at the weekend.</p>'; } },
+    exitStructure: { title: 'Market Structure', body: function () { return '<p>Where the money is moving: out of Bitcoin into altcoins, and out of cash on the side into the market.</p>' +
+      '<ul><li><b>BTC Dominance</b> falling: money has moved from Bitcoin into altcoins.</li><li><b>USDT Dominance</b> falling: little cash is left waiting.</li><li><b>ETH / BTC</b> rising: altcoins are beating Bitcoin.</li></ul>' +
+      '<p>Signs that usually show late in a cycle — not a verdict that the top is in. Each is set against your own level, and the group has its own count.</p>'; } },
+    exitValuation: { title: 'Bitcoin Valuation', body: function () { return '<p>Whether Bitcoin\'s own price has reached a high zone against its history.</p>' +
+      '<ul><li><b>Bitcoin Rainbow</b>: the band the price holds around its long-term trend line.</li><li><b>Pi Cycle</b>: the 111-day average against twice the 350-day one.</li><li><b>MVRV</b>: market value ÷ realized value (source: Coin Metrics).</li></ul>' +
+      '<p>The three look at the same thing from different sides and tend to move together — so they are counted on their own, never added to Market Structure.</p>' +
+      '<p>Each cycle\'s highest has been lower than the one before: Edit targets shows what each cycle reached, so you can choose your own levels.</p>'; } },
     maxDrawdown: { title: 'Max Drawdown', body: function () { return '<p>The deepest fall from a peak, in the period the chart shows.</p>' +
       '<div class="cph-f"><b>Max Drawdown</b><code>the largest (peak − later low) ÷ peak</code></div>' +
       '<p>It is measured on the chart\'s own lines — profit %, read as "what one dollar of cost became" — so money you add or take out is not counted as a rise or a fall.</p>' +

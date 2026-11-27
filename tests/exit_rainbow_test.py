@@ -36,7 +36,7 @@ with sync_playwright() as p:
         pg.evaluate("Samsam.saveExit({ tab: 'exit', targets: null, plan: [] })"); pg.wait_for_timeout(900); open_exit()
         rows = pg.evaluate(ROWS); rb = rows[3] if len(rows) == 6 else None
         check(f'{name}: six indicators — the Bitcoin Rainbow, the Pi Cycle and MVRV after the three of market structure', len(rows) == 6 and [r[0] for r in rows] == ['btcD', 'usdtD', 'ethBtc', 'rainbow', 'pi', 'mvrv'] and pg.inner_text('.xm-row[data-k=rainbow] .xm-name') == 'Bitcoin Rainbow', rows)
-        grp = pg.evaluate("[...document.querySelectorAll('.xm-card .xm-gh')].map(h=>[h.textContent, [...h.nextElementSibling.querySelectorAll('.xm-row')].map(r=>r.dataset.k).join()])")
+        grp = pg.evaluate("[...document.querySelectorAll('.xm-card .xm-gh')].map(h=>[h.querySelector('.xm-gt').textContent, [...h.nextElementSibling.querySelectorAll('.xm-row')].map(r=>r.dataset.k).join()])")
         check(f'{name}: two groups, each under its own heading — Market structure (3) · Bitcoin valuation (rainbow, Pi Cycle, MVRV)', grp == [['Market Structure', 'btcD,usdtD,ethBtc'], ['Bitcoin Valuation', 'rainbow,pi,mvrv']], grp)
         pi = rows[4]
         check(f'{name}: Pi Cycle — 61.4% of twice the 350-day average, against 100% (the cross) until you choose; its two averages under it', pi[1] == 'wait' and pi[2] == '61.4%' and 'Target ≥ 100%' in pi[3] and pi[4] == '111-day average $70,500 · twice the 350-day $114,880' and pg.evaluate("Samsam.getState().exit.targets.pi") == 100, pi)
@@ -80,7 +80,7 @@ with sync_playwright() as p:
         # Arabic
         pg.evaluate("localStorage.setItem('cp-lang','ar')"); open_exit()
         ar = pg.evaluate(ROWS)[3]; nm = pg.inner_text('.xm-row[data-k=rainbow] .xm-name')
-        ap = pg.evaluate(ROWS)[4]; ag = [x.replace('\u2066', '').replace('\u2069', '') for x in pg.evaluate("[...document.querySelectorAll('.xm-card .xm-gh')].map(h=>h.textContent)")]; asum = ''.join(c for c in pg.inner_text('.xm-sums') if not '\u2066' <= c <= '\u2069')
+        ap = pg.evaluate(ROWS)[4]; ag = [x.replace('\u2066', '').replace('\u2069', '') for x in pg.evaluate("[...document.querySelectorAll('.xm-card .xm-gh .xm-gt')].map(h=>h.textContent)")]; asum = ''.join(c for c in pg.inner_text('.xm-sums') if not '\u2066' <= c <= '\u2069')
         check(f'{name}: Arabic — the groups "هيكل السوق" / "تقييم البيتكوين", their counts, "مؤشر Pi Cycle" with its two averages', ag == ['هيكل السوق', 'تقييم البيتكوين'] and 'هيكل السوق: 0 من 3' in asum and 'تقييم البيتكوين: 0 من 3' in asum and pg.inner_text('.xm-row[data-k=pi] .xm-name') == 'مؤشر Pi Cycle' and 'متوسط 111 يوماً' in ap[4] and 'ضعف متوسط 350 يوماً' in ap[4] and '$70,500' in ap[4], (ag, asum, ap))
         check(f'{name}: Arabic — "قوس قزح البيتكوين", "النطاق 2 من 9", "خصم عميق · آخر إغلاق في النطاق 3", "الهدف ≥ النطاق 6"', nm == 'قوس قزح البيتكوين' and 'النطاق 2 من 9' in ar[2] and 'خصم عميق' in ar[4] and 'آخر إغلاق في النطاق 3' in ar[4] and 'الهدف ≥ النطاق 6' in ar[3], (nm, ar))
         pg.click('[data-act=tg-edit]'); pg.wait_for_timeout(400); note = ''.join(c for c in pg.inner_text('#xmRbNote') if not '\u2066' <= c <= '\u2069'); lab = pg.inner_text('.xm-f-rb span')   # (each "2017: 8" pair is held left-to-right: the isolate marks are not text)

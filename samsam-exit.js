@@ -161,7 +161,7 @@
   function isStable(c) { return window.SamsamMarket ? SamsamMarket.isStable({ sym: c.sym, name: c.name || '' }) : /^(USDT|USDC|DAI|FDUSD|USDE|USDS)$/.test(c.sym); }
 
   // ── page ───────────────────────────────────────────────────────────────────
-  var root = null, st = null, mkt = { g: null, ethBtc: null, t: 0, rb: null, rbFile: null, pi: null, mv: null }, editTargets = false, draft = null, saveT = null, pickOpen = false;
+  var root = null, st = null, mkt = { g: null, ethBtc: null, t: 0, rb: null, rbFile: null, pi: null, mv: null }, editTargets = false, draft = null, saveT = null, pickOpen = false, grpOnly = null;   // grpOnly: 's' | 'v' while one group's chip is pressed (this visit only)
   var stepsOpen = false, stepsDraft = null, view = null, flashSym = null;
   // one coin on its own (a row tapped), the search, the order — the order is remembered on this device
   var forcePaint = false, qTimer = null;
@@ -268,9 +268,14 @@
         '<div class="xm-sub"><span>Target ' + r.rule + '</span><span class="xm-st">' + lbl + '</span></div>' +
         (r.sub ? '<div class="xm-more">' + E(r.sub) + '</div>' : '') + '</div>';   // (🌈 the band\'s name · the Pi Cycle's two averages)
     };
-    var GRP = [['s', 'Market Structure'], ['v', 'Bitcoin Valuation']];   // (Title Case, like every heading)
-    var sums = GRP.map(function (g) { var c = m[g[0]]; return '<span class="xm-sum-i ' + (c.hit === c.of ? 'all' : c.hit ? 'some' : '') + '" data-g="' + g[0] + '">' + g[1] + ': <b>' + c.hit + ' of ' + c.of + '</b></span>'; }).join('');
-    var body = GRP.map(function (g) { return '<div class="xm-gh" data-g="' + g[0] + '">' + g[1] + '</div><div class="xm-rows" data-g="' + g[0] + '">' + m.rows.filter(function (r) { return r.g === g[0]; }).map(rowHtml).join('') + '</div>'; }).join('');
+    var GRP = [['s', 'Market Structure', 'exitStructure'], ['v', 'Bitcoin Valuation', 'exitValuation']];   // (Title Case, like every heading; the third is its hint)
+    // The two counts are buttons: a tap shows that group alone (and opens the card if it was folded); a second tap brings
+    // both back. Each group has its own headed line — name, ⓘ, count — over its rows.
+    var open = cardOpen('macro') || editTargets, only = open ? grpOnly : null;
+    var sums = GRP.map(function (g) { var c = m[g[0]]; return '<button type="button" class="xm-sum-i ' + (c.hit === c.of ? 'all' : c.hit ? 'some' : '') + (only === g[0] ? ' on' : '') + '" data-act="grp" data-g="' + g[0] + '" aria-pressed="' + (only === g[0]) + '">' + g[1] + ': <b>' + c.hit + ' of ' + c.of + '</b></button>'; }).join('');
+    var body = GRP.filter(function (g) { return !only || only === g[0]; }).map(function (g) { var c = m[g[0]];
+      return '<div class="xm-gh" data-g="' + g[0] + '"><span class="xm-gt">' + g[1] + '</span><span class="cp-hint" data-hint="' + g[2] + '" role="button" tabindex="0"></span><span class="xm-gc">' + c.hit + ' of ' + c.of + '</span></div>' +
+        '<div class="xm-rows" data-g="' + g[0] + '">' + m.rows.filter(function (r) { return r.g === g[0]; }).map(rowHtml).join('') + '</div>'; }).join('');
     var ed = editTargets ? '<div class="xm-edit">' +
       field('btcD', 'BTC.D at or under (%)', t.btcD) + field('usdtHi', 'USDT.D range — from (%)', t.usdtHi) +
       field('usdtLo', 'USDT.D range — to (%)', t.usdtLo) + field('ethBtc', 'ETH / BTC at or over', t.ethBtc) +
@@ -278,11 +283,10 @@
       '<label class="xm-f xm-f-rb"><span>Pi Cycle at or over (%)</span><input type="number" inputmode="decimal" min="50" max="150" step="1" data-tg="pi" value="' + t.pi + '"></label>' + piNote() +
       '<label class="xm-f xm-f-rb"><span>MVRV at or over (1–10)</span><input type="number" inputmode="decimal" min="1" max="10" step="0.1" data-tg="mvrv" value="' + t.mvrv + '"></label>' + mvrvNote() +
       '<div class="xm-edit-btns"><button type="button" class="xs-btn" data-act="tg-reset">' + IC('reset') + 'Reset to defaults</button><button type="button" class="xs-btn pri" data-act="tg-save">' + IC('check') + 'Save</button></div></div>' : '';
-    var open = cardOpen('macro') || editTargets;
     return '<section class="xs-card xm-card' + (open ? ' open' : '') + '" aria-label="Macro exit indicators">' +
       '<div class="xs-head xs-tap" role="button" tabindex="0" data-act="card" data-k="macro" aria-expanded="' + open + '"><div class="xs-title">' + IC('gauge') + 'Macro Exit Indicators<span class="cp-hint" data-hint="macroExit" role="button" tabindex="0"></span></div>' +
       (open ? '<button type="button" class="xs-link" data-act="tg-edit">' + (editTargets ? 'Close' : IC('pencil') + 'Edit targets') + '</button>' : '') + CHEV + '</div>' +
-      '<div class="xm-sums xs-tap" data-act="card" data-k="macro">' + sums + '</div>' +
+      '<div class="xm-sums' + (only ? ' filt' : '') + '" role="group" aria-label="Show one group">' + sums + '</div>' +
       (open ? body + ed +
       '<div class="xs-note">Your own levels — the page compares, it doesn’t predict the top.</div>' : '') + '</section>';
   }
@@ -458,6 +462,7 @@
     var b = ev.target.closest('[data-act]'); if (!b || !root.contains(b)) return;
     var act = b.dataset.act, i = +b.dataset.i, plan;
     if (act === 'card') { if (ev.target.closest('.xs-link')) return; var k = b.dataset.k, on = !(cardOpen(k) || (k === 'macro' && editTargets)); if (!on && k === 'macro') editTargets = false; setCardOpen(k, on); paint(); }
+    else if (act === 'grp') { var g = b.dataset.g, was = cardOpen('macro') || editTargets; if (!was) { setCardOpen('macro', true); grpOnly = g; } else grpOnly = grpOnly === g ? null : g; paint(); }   // a count's chip: that group alone · again: both
     else if (act === 'tg-edit') { ev.stopPropagation(); editTargets = !editTargets; if (editTargets) setCardOpen('macro', true); paint(); }
     else if (act === 'tg-reset') { editTargets = false; S().saveExit({ targets: null }); paint(); }
     else if (act === 'tg-save') {

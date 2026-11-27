@@ -1,6 +1,6 @@
 // Telegram alerts (tools/alerts-core.mjs): the numbers, each alert once, quiet hours, the brief / weekly timing,
 // English + Arabic, and text Telegram accepts (HTML with only <b> <i> <code>, every & < > escaped).
-import { summarize, evaluate, settings, priceSeries, brief, combine, NOW_KEYS, rainbowLines, macroLines, W, exitGroups } from '../tools/alerts-core.mjs';
+import { summarize, evaluate, settings, priceSeries, brief, combine, NOW_KEYS, rainbowLines, macroLines, pct, W, exitGroups } from '../tools/alerts-core.mjs';
 import { signalFor, strengthMap } from '../samsam-core.js';
 import * as C from '../samsam-core.js';
 let pass = 0, fail = 0;
@@ -418,6 +418,8 @@ check('all texts Telegram-safe', all.every(okHtml));
     let worst = 0, which = ''; for (const lang of ['en', 'ar']) for (const rate of [0.1234, 0.0123, 0.0044, -0.0044, -0.1234]) { f.funding = fm(rate); f.dxy.ch24 = -1.23; f.dxy.price = 103.872; for (const l of macroLines(W[lang], f, T0)) { const k = [...plain(l)].length; if (k > worst) { worst = k; which = l; } } }
     check(`…every line fits a phone in every state and both languages (longest ${worst} ≤ 40)`, worst <= 40 && macroLines(W.en, f, T0).every(okHtml), which);
     check('…a funding part over 6 hours old, or a dollar quote over 5 days old, is not shown', macroLines(W.en, f, T0 + 7 * 36e5).length === 1 && macroLines(W.en, f, T0 + 6 * DAY).length === 0 && macroLines(W.en, mk({ now: T0 }), T0).length === 0);
+    f.dxy.ch24 = -0.003; const z = macroLines(W.en, f, T0)[0]; f.dxy.ch24 = -0.006; const z2 = macroLines(W.en, f, T0)[0];
+    check('…a change that rounds to 0.00 has no sign and a white dot (never "🔴 −0.00%"); −0.006 is −0.01', z === '💵 Dollar index  <b>103.87</b> ⚪ 0.00%' && z2 === '💵 Dollar index  <b>103.87</b> 🔴 −0.01%' && pct(-0.004) === '0.00%' && pct(0.004) === '0.00%' && pct(-0.04, 1) === '0.0%' && pct(-1.234) === '−1.23%' && pct(2) === '+2.00%' && pct(null) === '—', [z, z2, pct(-0.004)]);
     check('…/market only: neither the morning brief nor the weekly report carries them', !/Dollar index|BTC funding/.test(brief(summarize(user(), f, T0), f, cfg, T0, true).text + brief(summarize(user(), f, T0), f, cfg, T0, false).text));
   }
   // the weekly report carries the line; the morning brief does not

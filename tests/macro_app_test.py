@@ -78,11 +78,22 @@ with sync_playwright() as p:
         cur['s'] = snap(mvrv=mvrv(), dxy=dxy(), funding=funding()); hub('#metals'); pg.wait_for_timeout(500)
         dx = clean(pg.inner_text('#asDxy')).replace('\n', ' ') if pg.locator('#asDxy').count() else ''
         check(f'{name}: Metals — the US Dollar Index card: 103.87, today +0.19%, 5 days −0.03%', 'US Dollar Index (DXY)' in dx and '103.87' in dx and 'Today +0.19%' in dx and '5 days −0.03%' in dx, dx)
+        lvl = clean(pg.inner_text('#asDxyLvl')) if pg.locator('#asDxyLvl').count() else ''
+        check(f'{name}: …under the number, its level in words — "Moderate strength" (100 – 105), the same word the core gives the bot\'s AI', lvl == 'Moderate strength 100 – 105' and pg.evaluate("Samsam.core.dxyWord(103.872) === 'Moderate strength' && Samsam.core.dxyNow(%s, Date.now()).k === 'mid'" % json.dumps(cur['s']['dxy'])), lvl)
         pos = pg.evaluate("(()=>{const i=document.querySelector('#asDxy .as-rng i');return i?parseFloat(i.style.left):null})()"); want = (103.872 - 96.22) / (104.32 - 96.22) * 100
         check(f'{name}: …its place in the 52-week range (96.22 → 104.32): the marker at {want:.1f}%, low on the left in both languages', pos is not None and abs(pos - want) < 0.2 and '96.22' in dx and '104.32' in dx and '52-week range' in dx and pg.evaluate("getComputedStyle(document.querySelector('#asDxy .as-rng')).direction") == 'ltr', (pos, dx))
         src = clean(pg.inner_text('#vMetals .as-src'))
         check(f'{name}: …its source is named under the cards; no sentence about what the dollar does to anything', 'Dollar index: Yahoo Finance (DX-Y.NYB), delayed.' in src and not any(w in dx.lower() for w in ('crypto', 'bitcoin', 'inverse', 'pressure')) and pg.evaluate("!!document.querySelector('#asDxy .cp-hint[data-hint=dxy]')"), src)
+        pg.click('#asDxy .cp-hint'); pg.wait_for_timeout(400); dh = pg.inner_text('.cph') if pg.query_selector('.cph') else ''; pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
+        check(f'{name}: …its ⓘ: the five levels with how often each held, 100 as the base (under it in 74% of quarters), and what was MEASURED — gold 68% of weeks, Bitcoin 53%', all(w in dh for w in ('Weak dollar', 'Below the base of 100', 'Moderate strength', 'High strength', 'Rare strength', 'under 100 in 74%', '68% of weeks', '53% of weeks', 'close to chance', 'not a rule')) and 'tighten' not in dh.lower(), dh[:400])
         check(f'{name}: …the metals are still there beside it, nothing sideways', pg.locator('#vMetals .as-metal').count() == 3 and pg.evaluate("document.documentElement.scrollWidth - innerWidth") <= 0, pg.locator('#vMetals .as-metal').count())
+        # the five levels, at their edges; and a change that rounds to 0.00 has no sign and no colour (it showed a red "−0.00%")
+        lv = pg.evaluate("[60, 89.99, 90, 99.99, 100, 104.99, 105, 109.99, 110, 150].map(v => Samsam.core.dxyWord(v)).join('|')")
+        check(f'{name}: the levels: under 90 weak · 90–100 below the base · 100–105 moderate · 105–110 high · 110 and over rare', lv == 'Weak dollar|Weak dollar|Below the base of 100|Below the base of 100|Moderate strength|Moderate strength|High strength|High strength|Rare strength|Rare strength', lv)
+        for price, word, rng in ((112.4, 'Rare strength', 'over 110'), (88.0, 'Weak dollar', 'under 90')):
+            d2 = dxy(); d2.update(price=price, ch7=-0.003, ch24=0.004, hi52=max(d2['hi52'], price), lo52=min(d2['lo52'], price)); cur['s'] = snap(dxy=d2); hub('#metals'); pg.wait_for_timeout(400)
+            z = pg.evaluate("[...document.querySelectorAll('#asDxy .as-chs .as-pc')].map(e=>[e.textContent.replace(/[\\u2066-\\u2069]/g,''), e.className, getComputedStyle(e).color === getComputedStyle(document.querySelector('#asDxy .as-chs')).color])")
+            check(f'{name}: {price} → "{word}" ({rng}); a change of −0.003% reads "0.00%" — no sign, no red, no green', clean(pg.inner_text('#asDxyLvl')) == f'{word} {rng}' and z == [['0.00%', 'as-pc', True], ['0.00%', 'as-pc', True]], (clean(pg.inner_text('#asDxyLvl')), z))
         cur['s'] = snap(); hub('#metals'); pg.wait_for_timeout(400)
         check(f'{name}: no dollar part → no card, the metals alone', pg.locator('#asDxy').count() == 0 and pg.locator('#vMetals .as-metal').count() == 2)
         # Arabic
@@ -93,7 +104,7 @@ with sync_playwright() as p:
         amv = clean(pg.inner_text('#rbMvrv')).replace('\n', ' ')
         check(f'{name}: Arabic — the MVRV row: "مؤشر MVRV", "متوسط تكلفة السوق $53,033", "الإغلاق فوقه بـ 14%", "المصدر: Coin Metrics"', 'مؤشر MVRV' in amv and 'متوسط تكلفة السوق $53,033' in amv and 'الإغلاق فوقه بـ 14%' in amv and 'المصدر: Coin Metrics' in amv and 'أعلى قراءة في كل دورة' in amv and 'مرجع، وليس قاعاً' in amv and not any(w in amv for w in ('average', 'Source', 'close')), amv)
         hub('#metals'); pg.wait_for_timeout(500); adx = clean(pg.inner_text('#asDxy')).replace('\n', ' ')
-        check(f'{name}: Arabic — "مؤشر الدولار الأمريكي (DXY)", "اليوم", "5 أيام", "نطاق 52 أسبوعاً"; the range still runs low → high from the left', 'مؤشر الدولار الأمريكي (DXY)' in adx and 'اليوم +0.19%' in adx and '5 أيام −0.03%' in adx and 'نطاق 52 أسبوعاً' in adx and pg.evaluate("(()=>{const s=[...document.querySelectorAll('#asDxy .as-rngl span')];return s[0].getBoundingClientRect().left < s[2].getBoundingClientRect().left && s[0].textContent==='96.22'})()") and 'مؤشر الدولار: Yahoo Finance (DX-Y.NYB)، بتأخير.' in clean(pg.inner_text('#vMetals .as-src')), adx)
+        check(f'{name}: Arabic — "مؤشر الدولار الأمريكي (DXY)", "اليوم", "5 أيام", "نطاق 52 أسبوعاً"; the range still runs low → high from the left', 'مؤشر الدولار الأمريكي (DXY)' in adx and 'اليوم +0.19%' in adx and '5 أيام −0.03%' in adx and 'نطاق 52 أسبوعاً' in adx and 'قوة معتدلة 100 – 105' in adx and pg.evaluate("(()=>{const s=[...document.querySelectorAll('#asDxy .as-rngl span')];return s[0].getBoundingClientRect().left < s[2].getBoundingClientRect().left && s[0].textContent==='96.22'})()") and 'مؤشر الدولار: Yahoo Finance (DX-Y.NYB)، بتأخير.' in clean(pg.inner_text('#vMetals .as-src')), adx)
         pg.evaluate("localStorage.setItem('cp-lang','en'); localStorage.removeItem('samsam_mk_view')")
         # ── Plan → Exit: MVRV, the third reading of Bitcoin Valuation ──
         def open_exit():
@@ -103,11 +114,27 @@ with sync_playwright() as p:
             if not pg.evaluate("!!document.querySelector('.xm-card.open')"): pg.click('.xm-card .xs-head'); pg.wait_for_timeout(300)
         open_exit(); pg.evaluate("Samsam.saveExit({ tab: 'exit', targets: null, plan: [] })"); pg.wait_for_timeout(900); open_exit()
         rows = pg.evaluate(ROWS); mr = rows[5] if len(rows) == 6 else None
-        grp = pg.evaluate("[...document.querySelectorAll('.xm-card .xm-gh')].map(h=>[h.textContent, [...h.nextElementSibling.querySelectorAll('.xm-row')].map(r=>r.dataset.k).join()])")
+        grp = pg.evaluate("[...document.querySelectorAll('.xm-card .xm-gh')].map(h=>[h.querySelector('.xm-gt').textContent, [...h.nextElementSibling.querySelectorAll('.xm-row')].map(r=>r.dataset.k).join()])")
         check(f'{name}: Exit — six indicators in two groups: Market Structure (3) · Bitcoin Valuation (rainbow, Pi Cycle, MVRV)', grp == [['Market Structure', 'btcD,usdtD,ethBtc'], ['Bitcoin Valuation', 'rainbow,pi,mvrv']], grp)
         check(f'{name}: Exit — MVRV 1.14 against 3.00 until you choose; under it the market\'s average cost and the source', mr and mr[1] == 'wait' and mr[2] == '1.14' and 'Target ≥ 3.00' in mr[3] and mr[4] == 'Market’s average cost $53,033 · Source: Coin Metrics' and pg.evaluate("Samsam.getState().exit.targets.mvrv") == 3 and pg.inner_text('.xm-row[data-k=mvrv] .xm-name') == 'MVRV', mr)
         sums = pg.inner_text('.xm-sums')
         check(f'{name}: Exit — two counts: "Market Structure: 0 of 3" · "Bitcoin Valuation: 0 of 3"', 'Market Structure: 0 of 3' in sums and 'Bitcoin Valuation: 0 of 3' in sums and 'of 6' not in sums, sums)
+        hd = pg.evaluate("[...document.querySelectorAll('.xm-card .xm-gh')].map(h=>[h.querySelector('.xm-gt').textContent, h.querySelector('.xm-gc').textContent, h.querySelector('.cp-hint').dataset.hint, parseFloat(getComputedStyle(h).fontSize) > parseFloat(getComputedStyle(document.querySelector('.xm-sum-i')).fontSize), getComputedStyle(h).borderBottomStyle])")
+        check(f'{name}: Exit — each group has its own headed line: the name (larger than the chips), its own ⓘ, its count, a rule under it', hd == [['Market Structure', '0 of 3', 'exitStructure', True, 'solid'], ['Bitcoin Valuation', '0 of 3', 'exitValuation', True, 'solid']], hd)
+        shown = "[...document.querySelectorAll('.xm-card .xm-gh .xm-gt')].map(h=>h.textContent).join() + '|' + document.querySelectorAll('.xm-card .xm-row').length + '|' + [...document.querySelectorAll('.xm-sum-i')].map(b=>b.getAttribute('aria-pressed')).join()"
+        pg.click('.xm-sum-i[data-g=v]'); pg.wait_for_timeout(250); f1 = pg.evaluate(shown)
+        pg.click('.xm-sum-i[data-g=s]'); pg.wait_for_timeout(250); f2 = pg.evaluate(shown)
+        pg.click('.xm-sum-i[data-g=s]'); pg.wait_for_timeout(250); f3 = pg.evaluate(shown)
+        check(f'{name}: Exit — the two counts are filters: a tap shows that group alone, the other chip shows the other, a second tap brings both back', f1 == 'Bitcoin Valuation|3|false,true' and f2 == 'Market Structure|3|true,false' and f3 == 'Market Structure,Bitcoin Valuation|6|false,false' and pg.evaluate("[...document.querySelectorAll('.xm-sum-i')].every(b=>b.tagName==='BUTTON')"), (f1, f2, f3))
+        pg.click('.xm-card .xs-title'); pg.wait_for_timeout(250); closed = pg.evaluate("document.querySelectorAll('.xm-card .xm-row').length"); pg.click('.xm-sum-i[data-g=v]'); pg.wait_for_timeout(250); f4 = pg.evaluate(shown)
+        check(f'{name}: Exit — on the folded card a chip opens it on its own group; the counts on the chips never change with the filter', closed == 0 and f4 == 'Bitcoin Valuation|3|false,true' and 'Market Structure: 0 of 3' in pg.inner_text('.xm-sums') and 'Bitcoin Valuation: 0 of 3' in pg.inner_text('.xm-sums'), (closed, f4))
+        pg.click('.xm-gh[data-g=v] .cp-hint'); pg.wait_for_timeout(400); ht = (pg.inner_text('.cph') if pg.query_selector('.cph') else '') + '|' + (pg.inner_text('.cph h3') if pg.query_selector('.cph') else '')
+        check(f'{name}: Exit — the group\'s ⓘ opens its own explanation (and is not a filter tap)', 'Whether Bitcoin\'s own price has reached a high zone against its history' in ht.replace('’', "'") and ht.endswith('|Bitcoin Valuation') and 'Coin Metrics' in ht and pg.evaluate(shown) == 'Bitcoin Valuation|3|false,true', ht[-300:])
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
+        pg.click('.xm-sum-i[data-g=s]'); pg.wait_for_timeout(250); pg.click('.xm-gh[data-g=s] .cp-hint'); pg.wait_for_timeout(400); hs = pg.inner_text('.cph') if pg.query_selector('.cph') else ''; pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
+        check(f'{name}: Exit — Market Structure\'s ⓘ: where the money is moving; signs of a late cycle, not a verdict that the top is in', 'Where the money is moving' in hs and 'late in a cycle' in hs and 'not a verdict that the top is in' in hs, hs[:300])
+        pg.click('.xm-sum-i[data-g=s]'); pg.wait_for_timeout(250)   # both groups again
+        check(f'{name}: Exit — both groups are back', pg.evaluate(shown) == 'Market Structure,Bitcoin Valuation|6|false,false', pg.evaluate(shown))
         w = pg.evaluate("[...document.querySelectorAll('.xm-rows[data-g=v] .xm-row')].map(r=>Math.round(r.getBoundingClientRect().width))")
         check(f'{name}: Exit — the three valuation rows share the width, nothing sideways', len(w) == 3 and max(w) - min(w) <= 2 and pg.evaluate("document.documentElement.scrollWidth - innerWidth") <= 0 and pg.evaluate("[...document.querySelectorAll('.xm-row')].every(r=>r.scrollWidth<=r.clientWidth+1)"), w)
         pg.click('[data-act=tg-edit]'); pg.wait_for_timeout(300); mn = clean(pg.inner_text('#xmMvNote'))
@@ -131,6 +158,12 @@ with sync_playwright() as p:
         pg.evaluate("localStorage.setItem('cp-lang','ar')"); open_exit()
         ar = [clean(x) if isinstance(x, str) else x for x in pg.evaluate(ROWS)[5]]; anm = clean(pg.inner_text('.xm-row[data-k=mvrv] .xm-name')); asum = clean(pg.inner_text('.xm-sums'))
         check(f'{name}: Arabic Exit — "مؤشر MVRV", "متوسط تكلفة السوق $53,033 · المصدر: Coin Metrics", "تقييم البيتكوين: 0 من 3"', anm == 'مؤشر MVRV' and ar[2] == '1.14' and ar[4] == 'متوسط تكلفة السوق $53,033 · المصدر: Coin Metrics' and 'تقييم البيتكوين: 0 من 3' in asum, (anm, ar, asum))
+        ahd = [[clean(x) for x in r] for r in pg.evaluate("[...document.querySelectorAll('.xm-card .xm-gh')].map(h=>[h.querySelector('.xm-gt').textContent, h.querySelector('.xm-gc').textContent])")]
+        pg.click('.xm-gh[data-g=s] .cp-hint'); pg.wait_for_timeout(400); ahs = pg.inner_text('.cph') if pg.query_selector('.cph') else ''; pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
+        pg.click('.xm-gh[data-g=v] .cp-hint'); pg.wait_for_timeout(400); ahv = pg.inner_text('.cph') if pg.query_selector('.cph') else ''; pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
+        check(f'{name}: Arabic Exit — the headed lines "هيكل السوق" / "تقييم البيتكوين" with "0 من 3", and each ⓘ in Arabic', ahd == [['هيكل السوق', '0 من 3'], ['تقييم البيتكوين', '0 من 3']] and 'يقيس دوران السيولة' in ahs and 'ليست حكماً بأن القمة حدثت' in ahs and 'منطقة مرتفعة قياساً بتاريخه' in ahv and 'Coin Metrics' in ahv, (ahd, ahs[:120], ahv[:120]))
+        pg.click('.xm-sum-i[data-g=v]'); pg.wait_for_timeout(250); af = clean(pg.evaluate("[...document.querySelectorAll('.xm-card .xm-gh .xm-gt')].map(h=>h.textContent).join()")); pg.click('.xm-sum-i[data-g=v]'); pg.wait_for_timeout(250)
+        check(f'{name}: Arabic Exit — the filter works the same', af == 'تقييم البيتكوين' and pg.evaluate("document.querySelectorAll('.xm-card .xm-row').length") == 6, af)
         pg.click('[data-act=tg-edit]'); pg.wait_for_timeout(400); amn = clean(pg.inner_text('#xmMvNote')); alab = clean(pg.inner_text('.xm-f-rb:has([data-tg=mvrv]) span'))
         check(f'{name}: Arabic Exit — the field and its note, each year: value pair left-to-right', 'مؤشر MVRV عند أو فوق (1–10)' in alab and 'القيمة السوقية للبيتكوين ÷ قيمته المحققة' in amn and 'أعلى قراءة في كل دورة' in amn and '2013: 5.88 · 2017: 4.72 · 2021: 3.96 · 2024: 2.74' in amn and 'المصدر: Coin Metrics' in amn and pg.evaluate("[...document.querySelectorAll('#xmMvNote bdi')].every(b=>b.dir==='ltr')") and not any(w in amn for w in ('highest', 'Source', 'market value')), (alab, amn))
         pg.evaluate("localStorage.setItem('cp-lang','en')")
