@@ -8,6 +8,7 @@
 // Nothing here prints or logs a value. Everything is cached for a short time per Worker instance.
 
 import { isOwner, member } from './who.mjs';
+import { fundingWord, fundingRead } from '../../samsam-core.js';
 import { priceSeries } from '../alerts-core.mjs';
 import CG_IDS from './cg-ids.json' with { type: 'json' };
 
@@ -83,7 +84,7 @@ export async function loadMarket(ids = [], coins = []) {
   await Promise.all(need.map(async id => { const s = await cached('p:' + id, 10 * 60e3, async () => priceSeries(await getJson(RAW + 'p/' + id + '.json')) || false); if (s) series[id] = s; }));
   // ⏳ every coin's daily close (00:00 UTC), one small file: the Signals are decided on it (data.mjs → summarize)
   const closeF = await cached('close', 10 * 60e3, async () => (await getJson(RAW + 'p/close.json')) || false);
-  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, rainbow: base.m.rainbow || null, cgIds: CG_IDS, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
+  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, rainbow: base.m.rainbow || null, mvrv: base.m.mvrv || null, dxy: base.m.dxy || null, funding: base.m.funding || null, cgIds: CG_IDS, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
   await liveTopUp(market, all);
   // still no price (CoinGecko busy, not in the top 500, no price file) → the exchanges, by ticker (3 coins at most)
   const rows = new Map([...market.top, ...market.top500].map(r => [r.id, r]));
@@ -541,7 +542,7 @@ export async function derivatives(sym) {
       coin: S,
       summary: {
         funding_8h_pct_avg: avgF != null ? +avgF.toFixed(4) : null, funding_annualized_pct: avgF != null ? +(avgF * 3 * 365).toFixed(1) : null,
-        funding_reading: avgF == null ? null : avgF > 0.03 ? 'longs paying a lot (crowded longs)' : avgF > 0 ? 'longs paying (normal)' : avgF < -0.01 ? 'shorts paying (crowded shorts)' : 'about neutral',
+        funding_reading: avgF == null ? null : fundingWord(avgF), funding_state: fundingRead(avgF),   // one wording for the app, the bot and the radar (samsam-core.js → fundingRead)
         open_interest_usd_total: oi.length ? oi.reduce((a, b) => a + b, 0) : null, open_interest_note: 'sum of the sources listed (not the whole market)',
         open_interest_change_24h_pct: (okx && okx.open_interest_change_24h_pct) ?? (bn && bn.open_interest_change_24h_pct) ?? null,
         long_accounts_pct: (bn && bn.long_accounts_pct) ?? (okx && okx.long_accounts_pct) ?? null,

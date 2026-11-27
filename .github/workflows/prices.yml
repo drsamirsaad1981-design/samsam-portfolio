@@ -36,6 +36,9 @@ jobs:
       - name: Bitcoin rainbow (the bot's line, the alert, Market Hub)
         run: node tools/update-rainbow.mjs out
         continue-on-error: true
+      - name: MVRV, the dollar index, BTC funding (Exit page, Market Hub, the bot)
+        run: node tools/update-macro.mjs out
+        continue-on-error: true
       - name: Market snapshot (Market Hub + Home card)
         run: node tools/update-market.mjs out
         continue-on-error: true

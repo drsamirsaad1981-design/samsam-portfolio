@@ -20,7 +20,7 @@ import { K, chatOf, isOwner, langOf, member, setMember } from './who.mjs';
 import { premiumNow } from './stars.mjs';
 import { summarize, settings, local, localL, arDay, localParts, usd, usd2, perUnit, pct, esc, dot, isStable, etfDay, APP, exitGroups } from '../alerts-core.mjs';
 import { loadMarket, loadUser, coinsOf, withIds, derivatives, loadFutures, setAlertsLang, setZakatSnap } from './data.mjs';
-import { zakatWhen, zakatYear, HIJRI_MONTHS, zakatPool, cashTotals, learnAssets, firstSeen } from '../../samsam-core.js';
+import { zakatWhen, zakatYear, HIJRI_MONTHS, zakatPool, cashTotals, learnAssets, firstSeen, fundingRead, fundingWord, fundingNow } from '../../samsam-core.js';
 import { compose } from './ai.mjs';
 import { listAlerts, describe, KINDS, logEvent, todayLog } from './watch.mjs';
 
@@ -164,7 +164,8 @@ export async function evening(env, now = Date.now(), L = null) {
     since_morning: snap ? { portfolio_change_usd: r2(sum.value - snap.value), portfolio_change_pct: snap.value > 0 ? r2((sum.value / snap.value - 1) * 100) : null,
       btc_morning_usd: r6(snap.btc), btc_change_pct: snap.btc > 0 && m.btc ? r2((m.btc.price / snap.btc - 1) * 100) : null, fear_greed_morning: snap.fng, btc_dominance_morning: r2(snap.dom) } : null,
     best_coins_24h: movers.slice(0, 3).map(c => ({ coin: c.sym, pct: r2(c.ch24) })), worst_coins_24h: movers.slice(-3).reverse().filter(c => c.ch24 < 0).map(c => ({ coin: c.sym, pct: r2(c.ch24) })),
-    market: marketFacts(m, sum), btc_futures: d && d.summary ? { funding_8h_pct: d.summary.funding_8h_pct_avg, funding_reading: d.summary.funding_reading, open_interest_24h_pct: d.summary.open_interest_change_24h_pct, long_accounts_pct: d.summary.long_accounts_pct } : null,
+    market: marketFacts(m, sum), btc_futures: d && d.summary ? { ...(fn => fn ? { funding_8h_pct: fn.rate, funding_reading: fundingWord(fn.rate), funding_from: `${fn.n} venues weighted by open interest${fn.missing.length ? ', without ' + fn.missing.join(' and ') : ''}` } : { funding_8h_pct: d.summary.funding_8h_pct_avg, funding_reading: d.summary.funding_reading })(fundingNow(m.funding, now)),   // (the market's own funding line when the snapshot has it: the number /market shows)
+      open_interest_24h_pct: d.summary.open_interest_change_24h_pct, long_accounts_pct: d.summary.long_accounts_pct } : null,
     sectors_24h: sectors.length ? { best: sectors.filter(s => s.ch24 > 0).sort((a, b) => b.ch24 - a.ch24).slice(0, 3).map(s => ({ name: s.name, pct: r2(s.ch24) })), worst: sectors.filter(s => s.ch24 < 0).sort((a, b) => a.ch24 - b.ch24).slice(0, 3).map(s => ({ name: s.name, pct: r2(s.ch24) })) } : null,
     trades_today: trades, events_today: log.map(e => ({ time: local(e.t, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }), type: e.type, what: e.text })),
     closest_levels: nearest(alerts, m, sum), tomorrow: todo(sum, now).filter(x => /dca_tomorrow|near_buy|take_profit_close/.test(x.what)),
@@ -236,7 +237,9 @@ const RADAR_TXT = {
 };
 export function radarFindings(s) {
   const f = [];
-  if (s.funding_annualized_pct != null) { if (s.funding_annualized_pct >= 40) f.push('hot_longs'); else if (s.funding_annualized_pct <= -15) f.push('hot_shorts'); }
+  // funding: the same states as every other place that words it (fundingRead) — crowded longs at or over +0.03% per 8 h,
+  // crowded shorts at or under −0.01% (it was 40% / −15% a year: +0.0365% / −0.0137%)
+  { const r = s.funding_8h_pct_avg != null ? s.funding_8h_pct_avg : s.funding_annualized_pct != null ? s.funding_annualized_pct / 1095 : null, k = fundingRead(r); if (k === 'hot') f.push('hot_longs'); else if (k === 'deep') f.push('hot_shorts'); }
   if (s.open_interest_change_24h_pct != null) { if (s.open_interest_change_24h_pct >= 15) f.push('oi_up'); else if (s.open_interest_change_24h_pct <= -15) f.push('oi_down'); }
   if (s.long_accounts_pct != null) { if (s.long_accounts_pct >= 75) f.push('crowd_long'); else if (s.long_accounts_pct <= 35) f.push('crowd_short'); }
   return f;

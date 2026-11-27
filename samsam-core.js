@@ -907,6 +907,55 @@ export function btcMarks(R, now = Date.now(), price = null) {
 }
 export const PI_EXIT = 100;   // the Exit page's Pi Cycle level until you choose yours (100 = the cross itself)
 
+// ── MVRV, the dollar index, BTC funding — three readings from outside Bitcoin's own price file (tools/update-macro.mjs →
+// m/macro.json, copied into m/market.json as mvrv / dxy / funding). One reader each, for the app, the bot and the alerts;
+// a part that has grown too old reads as "not there" (null) rather than as a stale number.
+// MVRV = Bitcoin's market value ÷ its realized value (what every coin cost when it last moved). Coin Metrics' daily ratio,
+// one day behind; `realized` is the average cost it implies (price ÷ ratio). Like every top reading here it is shown as a
+// distance with each cycle's highest — the old 3.5 line was last seen in March 2021.
+export const MVRV_EXIT = 3;   // the Exit page's MVRV level until you choose yours (reached ~100 days in each of the three cycles before this one)
+export const mvrvLevel = v => +v >= 1 && +v <= 10 ? Math.round(+v * 100) / 100 : MVRV_EXIT;
+export function mvrvRead(M, now = Date.now()) {
+  if (!M || !(+M.now > 0) || !M.day) return null;
+  const t = Date.parse(M.day + 'T00:00:00Z'); if (!isFinite(t) || now - t > 5 * 864e5) return null;   // its last day ended over 4 days ago
+  return { day: M.day, v: +M.now, realized: +M.realized > 0 ? +M.realized : null, price: +M.price > 0 ? +M.price : null, wk: M.wk ?? null, mo: M.mo ?? null,
+    peaks: M.peaks || [], lows: M.lows || [], over35: M.over35 || null, over3: M.over3 || null, under1: M.under1 || null, src: M.src || 'Coin Metrics', via: M.via || null };
+}
+// The US dollar index (ICE's DXY): the price, the day's and the week's change, where it sits in its 52-week range (0 … 100).
+// It does not trade at the weekend: the last quote stays, up to 5 days.
+export function dxyNow(D, now = Date.now()) {
+  if (!D || !(+D.price > 0)) return null;
+  const t = Date.parse(D.at); if (!isFinite(t) || now - t > 5 * 864e5) return null;
+  const lo = +D.lo52, hi = +D.hi52, pos = hi > lo ? Math.min(100, Math.max(0, (D.price - lo) / (hi - lo) * 100)) : null;
+  return { price: +D.price, ch24: D.ch24 ?? null, ch7: D.ch7 ?? null, lo52: lo > 0 ? lo : null, hi52: hi > 0 ? hi : null, pos, spark: D.spark || [], at: D.at, src: D.src || 'Yahoo Finance' };
+}
+// BTC funding: what longs pay shorts on perpetual futures, percent per 8 hours (negative: shorts pay). ONE wording for the
+// app's card, the bot's lines, the AI's facts and the leverage radar. The edges come from the last 365 days of payments
+// (Binance's public archive, the lab of 27 Nov 2026) — not from 2021's: in that year BTC, ETH and SOL were never once over
+// the resting +0.01%, so anything over it is already out of the year's range; at or under −0.01% were BTC's lowest 0.5%
+// (ETH 2.8%, SOL 11%). +0.03% — 30% of BTC's payments in 2021, none since 2024 — stays the edge of "crowded".
+//   hot ≥ +0.03 · up > +0.01 · rest 0 … +0.01 · neg < 0 · deep ≤ −0.01
+export function fundingRead(rate) {
+  if (rate == null || !isFinite(rate)) return null;
+  const r = Math.round(rate * 1e4) / 1e4;
+  return r >= 0.03 ? 'hot' : r > 0.01 ? 'up' : r >= 0 ? 'rest' : r > -0.01 ? 'neg' : 'deep';
+}
+export const FUNDING_WORDS = Object.freeze({
+  en: { hot: 'Crowded longs — longs paying a lot', up: 'Longs paying over the resting rate', rest: 'Calm — at or under the resting rate', neg: 'Negative — shorts paying longs', deep: 'Crowded shorts — shorts paying a lot' },
+  ar: { hot: 'ازدحام في مراكز الشراء — التمويل موجب جداً', up: 'التمويل أعلى من المعدل الأساسي', rest: 'هادئ — عند المعدل الأساسي أو أقل', neg: 'سالب — مراكز البيع تدفع لمراكز الشراء', deep: 'ازدحام في مراكز البيع — التمويل سالب جداً' } });
+export const FUNDING_SHORT = Object.freeze({
+  en: { hot: 'crowded longs', up: 'above resting', rest: 'calm', neg: 'negative', deep: 'crowded shorts' },   // (short: a bot line is 40 characters)
+  ar: { hot: 'ازدحام شراء', up: 'فوق الأساسي', rest: 'هادئ', neg: 'سالب', deep: 'ازدحام بيع' } });
+export const fundingWord = (rate, ar, short) => { const k = fundingRead(rate); return k ? (short ? FUNDING_SHORT : FUNDING_WORDS)[ar ? 'ar' : 'en'][k] : ''; };
+// The market's line: the snapshot's rate over several venues, weighted by open interest. `missing` names the big venues
+// that are NOT in it (Binance and Bybit refuse the job's address) — shown wherever the number is. Over 6 hours old: null.
+export function fundingNow(F, now = Date.now()) {
+  if (!F || F.rate == null || !isFinite(F.rate) || !Array.isArray(F.venues)) return null;
+  const t = Date.parse(F.at); if (!isFinite(t) || now - t > 6 * 36e5) return null;
+  return { rate: +F.rate, m7: F.m7 != null && isFinite(F.m7) ? +F.m7 : null, yr: +F.rate * 1095, k: fundingRead(F.rate), oi: +F.oi || null, n: F.n || F.venues.length,
+    venues: F.venues, missing: Array.isArray(F.missing) ? F.missing : [], at: F.at };
+}
+
 // ── 📉 Max drawdown: the deepest fall from a peak, on a profit-% line (perfChartSeries: Value − Net invested ÷ Cost) ──
 // The line is read as an index (1 + profit% ÷ 100 — what a dollar of cost became), so money you add or take out does not
 // count as a rise or a fall. points: [{ t, v }] → { dd: % (0 … 100, 0 when it never fell), peakT, lowT } · null under 2 points

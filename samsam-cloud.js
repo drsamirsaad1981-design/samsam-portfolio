@@ -14,9 +14,9 @@
 //
 // Pages talk to this module through window.Samsam (see the API at the bottom).
 
-import * as Core from './samsam-core.js?v=202611271515';
-import * as Hist from './samsam-history.js?v=202611271515';
-import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611271515';
+import * as Core from './samsam-core.js?v=202611271736';
+import * as Hist from './samsam-history.js?v=202611271736';
+import { FIREBASE_CONFIG, ALLOWED_EMAILS } from './firebase-config.js?v=202611271736';
 
 const SDK = 'https://www.gstatic.com/firebasejs/13.0.0';
 const PRICE_KEY = 'samsam_prices_v1';      // device-local live-price cache (not user data)
@@ -162,16 +162,17 @@ function cleanWatch(list) {
 //   exitTargets: your macro levels — BTC.D at or under btcD, USDT.D inside usdtHi…usdtLo, ETH/BTC at or over ethBtc,
 //                🌈 Bitcoin's rainbow band at or over `rainbow` (1–9; 6 until you choose — samsam-core.js → RAINBOW_EXIT),
 //                the Pi Cycle at or over `pi` percent (50–150; 100 = the cross — PI_EXIT)
+//                MVRV at or over `mvrv` (1–10; 3.0 until chosen — MVRV_EXIT; Coin Metrics' daily ratio)
 //   exitPlan:    [{ sym, cgId?, baseQty, startedAt, moonbag, tps: [{ price, pct }] ×3 }]
 //                baseQty = the amount held when the coin was added (buys recorded after startedAt add to it; selling TP1 never
 //                shrinks TP2 / TP3); sells recorded after startedAt fill the steps in order.
-export const DEFAULT_EXIT_TARGETS = Object.freeze({ btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085, rainbow: Core.RAINBOW_EXIT, pi: Core.PI_EXIT });
+export const DEFAULT_EXIT_TARGETS = Object.freeze({ btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085, rainbow: Core.RAINBOW_EXIT, pi: Core.PI_EXIT, mvrv: Core.MVRV_EXIT });
 const numIn = (v, lo, hi) => { const n = Number(v); return Number.isFinite(n) && n >= lo && n <= hi ? n : null; };
 function cleanExitTargets(t) {
   const d = DEFAULT_EXIT_TARGETS; if (!t || typeof t !== 'object') return { ...d, isDefault: true };
   let hi = numIn(t.usdtHi, 0.01, 50) ?? d.usdtHi, lo = numIn(t.usdtLo, 0, 50) ?? d.usdtLo;
   if (lo > hi) [lo, hi] = [hi, lo];
-  return { btcD: numIn(t.btcD, 1, 100) ?? d.btcD, usdtHi: hi, usdtLo: lo, ethBtc: numIn(t.ethBtc, 0.0001, 10) ?? d.ethBtc, rainbow: Math.round(numIn(t.rainbow, 1, 9) ?? d.rainbow), pi: numIn(t.pi, 50, 150) ?? d.pi, isDefault: false };
+  return { btcD: numIn(t.btcD, 1, 100) ?? d.btcD, usdtHi: hi, usdtLo: lo, ethBtc: numIn(t.ethBtc, 0.0001, 10) ?? d.ethBtc, rainbow: Math.round(numIn(t.rainbow, 1, 9) ?? d.rainbow), pi: numIn(t.pi, 50, 150) ?? d.pi, mvrv: Math.round((numIn(t.mvrv, 1, 10) ?? d.mvrv) * 100) / 100, isDefault: false };
 }
 function cleanExitPlan(list) {
   if (!Array.isArray(list)) return [];
@@ -262,7 +263,7 @@ function cleanWallets(w) {
 }
 // ── Telegram alerts settings, saved in users/{uid}/meta/info.alerts (read by tools/alerts.mjs on GitHub every 30 min) ──
 export const DEFAULT_ALERTS = Object.freeze({ lang: 'en', brief: true, briefTime: '08:30', weekly: true, moves: true, movePct: 5, signals: true, plan: true,
-  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true, buy: true, rainbow: true, pi: false });
+  tp: true, macro: true, sentiment: true, etf: true, etfMin: 500, quiet: true, health: true, drift: true, dca: true, buy: true, rainbow: true, pi: false, mvrv: false });
 // 🌐 the Telegram alerts (tools/alerts.mjs) speak the app's language — unless you picked one in Alerts settings yourself.
 // Checked when your settings arrive from the server; written once (only when they differ), never in a loop.
 // (the Telegram alerts' language follows the BOT's language — /lang there; the Worker writes it: tools/worker/data.mjs → setAlertsLang)
@@ -1807,6 +1808,7 @@ function openAlertsSheet() {
     ${sw('sentiment', 'Market extremes', 'Extreme Fear / Greed, Altcoin / Bitcoin Season')}
     ${sw('rainbow', 'Bitcoin rainbow', 'Bitcoin moves to another band (after two daily closes)')}
     ${sw('pi', 'Pi Cycle level', 'The Pi Cycle reaches the level you set on the Exit page')}
+    ${sw('mvrv', 'MVRV level', 'MVRV reaches the level you set on the Exit page')}
     ${sw('etf', 'Big ETF days', 'BTC or ETH spot ETFs move at least', sel('etfMin', [250, 500, 1000, 2000], v => v >= 1000 ? '$' + v / 1000 + 'B' : '$' + v + 'M'))}
     ${sw('health', 'Data warnings', 'A price or market source stops updating')}
     <div class="al-sec">Quiet</div>

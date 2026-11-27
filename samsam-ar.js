@@ -362,6 +362,8 @@
   R(/^111-day average (\$[\d.,]+)$/, function (_, p) { return 'متوسط 111 يوماً ' + n(p); });   // the Pi Cycle's two averages
   R(/^twice the 350-day (\$[\d.,]+)$/, function (_, p) { return 'ضعف متوسط 350 يوماً ' + n(p); });
   R(/^200-week average (\$[\d.,]+M?)$/, function (_, p) { return 'متوسط 200 أسبوع ' + n(p); });
+  R(/^Market’s average cost (\$[\d.,]+M?)$/, function (_, p) { return 'متوسط تكلفة السوق ' + n(p); });   // MVRV's other face (price ÷ ratio)
+  R(/^\(today’s value: (.+)\)$/, function (_, w) { return '(قيمة اليوم: ' + n(w) + ')'; });
   R(/^the price is (\d+)% (under|above) it$/, function (_, v, w) { return 'السعر ' + (w === 'under' ? 'تحته' : 'فوقه') + ' بـ ' + n(v + '%'); });
   R(/^the price is on it$/, 'السعر عنده');
   R(/^The close is (\d+)% (under|above) it$/, function (_, v, w) { return 'الإغلاق ' + (w === 'under' ? 'تحته' : 'فوقه') + ' بـ ' + n(v + '%'); });   // 📏 the 200-week average
@@ -460,6 +462,9 @@
     'Market Structure': 'هيكل السوق', 'Bitcoin Valuation': 'تقييم البيتكوين', 'Pi Cycle': 'مؤشر Pi Cycle', 'Near': 'قريب',
     'Pi Cycle at or over (%)': 'مؤشر Pi Cycle عند أو فوق (%)', 'The 111-day average as a percent of twice the 350-day average; 100 is the cross.': 'متوسط 111 يوماً كنسبة من ضعف متوسط 350 يوماً؛ و100 هي التقاطع.',
     'Each cycle’s highest:': 'أعلى قراءة في كل دورة:', 'Its last cross:': 'آخر تقاطع:',
+    'MVRV': 'مؤشر MVRV', 'MVRV at or over (1–10)': 'مؤشر MVRV عند أو فوق (1–10)', 'Source: Coin Metrics': 'المصدر: Coin Metrics',
+    'Bitcoin’s market value ÷ its realized value (what every coin cost when it last moved).': 'القيمة السوقية للبيتكوين ÷ قيمته المحققة (تكلفة كل عملة عند آخر تحرك لها).',
+    'MVRV level': 'مستوى MVRV', 'MVRV reaches the level you set on the Exit page': 'عند وصول مؤشر MVRV إلى المستوى الذي حددته في صفحة الخروج',
     'Pi Cycle level': 'مستوى Pi Cycle', 'The Pi Cycle reaches the level you set on the Exit page': 'عند وصول مؤشر Pi Cycle إلى المستوى الذي حددته في صفحة الخروج',
     'Altcoins': 'العملات البديلة', 'to': 'إلى',
     'Max Drawdown': 'أقصى تراجع', 'Max drawdown': 'أقصى تراجع', 'Gold Trend': 'اتجاه الذهب', 'Never under its peak in this period': 'لم ينزل عن قمته في هذه الفترة', 'Your deepest fall: from': 'أعمق هبوط لك: من', 'About max drawdown': 'عن أقصى تراجع',

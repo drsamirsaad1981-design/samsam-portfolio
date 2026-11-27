@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 1593be84c76e1792
+// sources-hash: c3e2c287c1120b68
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -876,6 +876,69 @@ function btcMarks(R, now = Date.now(), price3 = null) {
   return { day: rb.day, price: rb.price, live: rb.live, w200: w, pi: p };
 }
 var PI_EXIT = 100;
+var MVRV_EXIT = 3;
+var mvrvLevel = (v) => +v >= 1 && +v <= 10 ? Math.round(+v * 100) / 100 : MVRV_EXIT;
+function mvrvRead(M, now = Date.now()) {
+  if (!M || !(+M.now > 0) || !M.day) return null;
+  const t = Date.parse(M.day + "T00:00:00Z");
+  if (!isFinite(t) || now - t > 5 * 864e5) return null;
+  return {
+    day: M.day,
+    v: +M.now,
+    realized: +M.realized > 0 ? +M.realized : null,
+    price: +M.price > 0 ? +M.price : null,
+    wk: M.wk ?? null,
+    mo: M.mo ?? null,
+    peaks: M.peaks || [],
+    lows: M.lows || [],
+    over35: M.over35 || null,
+    over3: M.over3 || null,
+    under1: M.under1 || null,
+    src: M.src || "Coin Metrics",
+    via: M.via || null
+  };
+}
+function dxyNow(D, now = Date.now()) {
+  if (!D || !(+D.price > 0)) return null;
+  const t = Date.parse(D.at);
+  if (!isFinite(t) || now - t > 5 * 864e5) return null;
+  const lo = +D.lo52, hi = +D.hi52, pos = hi > lo ? Math.min(100, Math.max(0, (D.price - lo) / (hi - lo) * 100)) : null;
+  return { price: +D.price, ch24: D.ch24 ?? null, ch7: D.ch7 ?? null, lo52: lo > 0 ? lo : null, hi52: hi > 0 ? hi : null, pos, spark: D.spark || [], at: D.at, src: D.src || "Yahoo Finance" };
+}
+function fundingRead(rate) {
+  if (rate == null || !isFinite(rate)) return null;
+  const r = Math.round(rate * 1e4) / 1e4;
+  return r >= 0.03 ? "hot" : r > 0.01 ? "up" : r >= 0 ? "rest" : r > -0.01 ? "neg" : "deep";
+}
+var FUNDING_WORDS = Object.freeze({
+  en: { hot: "Crowded longs \u2014 longs paying a lot", up: "Longs paying over the resting rate", rest: "Calm \u2014 at or under the resting rate", neg: "Negative \u2014 shorts paying longs", deep: "Crowded shorts \u2014 shorts paying a lot" },
+  ar: { hot: "\u0627\u0632\u062F\u062D\u0627\u0645 \u0641\u064A \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u0634\u0631\u0627\u0621 \u2014 \u0627\u0644\u062A\u0645\u0648\u064A\u0644 \u0645\u0648\u062C\u0628 \u062C\u062F\u0627\u064B", up: "\u0627\u0644\u062A\u0645\u0648\u064A\u0644 \u0623\u0639\u0644\u0649 \u0645\u0646 \u0627\u0644\u0645\u0639\u062F\u0644 \u0627\u0644\u0623\u0633\u0627\u0633\u064A", rest: "\u0647\u0627\u062F\u0626 \u2014 \u0639\u0646\u062F \u0627\u0644\u0645\u0639\u062F\u0644 \u0627\u0644\u0623\u0633\u0627\u0633\u064A \u0623\u0648 \u0623\u0642\u0644", neg: "\u0633\u0627\u0644\u0628 \u2014 \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u0628\u064A\u0639 \u062A\u062F\u0641\u0639 \u0644\u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u0634\u0631\u0627\u0621", deep: "\u0627\u0632\u062F\u062D\u0627\u0645 \u0641\u064A \u0645\u0631\u0627\u0643\u0632 \u0627\u0644\u0628\u064A\u0639 \u2014 \u0627\u0644\u062A\u0645\u0648\u064A\u0644 \u0633\u0627\u0644\u0628 \u062C\u062F\u0627\u064B" }
+});
+var FUNDING_SHORT = Object.freeze({
+  en: { hot: "crowded longs", up: "above resting", rest: "calm", neg: "negative", deep: "crowded shorts" },
+  // (short: a bot line is 40 characters)
+  ar: { hot: "\u0627\u0632\u062F\u062D\u0627\u0645 \u0634\u0631\u0627\u0621", up: "\u0641\u0648\u0642 \u0627\u0644\u0623\u0633\u0627\u0633\u064A", rest: "\u0647\u0627\u062F\u0626", neg: "\u0633\u0627\u0644\u0628", deep: "\u0627\u0632\u062F\u062D\u0627\u0645 \u0628\u064A\u0639" }
+});
+var fundingWord = (rate, ar, short) => {
+  const k = fundingRead(rate);
+  return k ? (short ? FUNDING_SHORT : FUNDING_WORDS)[ar ? "ar" : "en"][k] : "";
+};
+function fundingNow(F, now = Date.now()) {
+  if (!F || F.rate == null || !isFinite(F.rate) || !Array.isArray(F.venues)) return null;
+  const t = Date.parse(F.at);
+  if (!isFinite(t) || now - t > 6 * 36e5) return null;
+  return {
+    rate: +F.rate,
+    m7: F.m7 != null && isFinite(F.m7) ? +F.m7 : null,
+    yr: +F.rate * 1095,
+    k: fundingRead(F.rate),
+    oi: +F.oi || null,
+    n: F.n || F.venues.length,
+    venues: F.venues,
+    missing: Array.isArray(F.missing) ? F.missing : [],
+    at: F.at
+  };
+}
 var RAINBOW_NAMES = Object.freeze({
   en: ["Rare historic low", "Deep discount", "Accumulation zone", "Around the trend line", "Above the trend line", "Warming up", "Hot", "Very hot", "Bubble"],
   ar: ["\u0642\u0627\u0639 \u062A\u0627\u0631\u064A\u062E\u064A \u0646\u0627\u062F\u0631", "\u062E\u0635\u0645 \u0639\u0645\u064A\u0642", "\u0645\u0646\u0637\u0642\u0629 \u062A\u062C\u0645\u064A\u0639", "\u062D\u0648\u0644 \u062E\u0637 \u0627\u0644\u0627\u062A\u062C\u0627\u0647", "\u0641\u0648\u0642 \u062E\u0637 \u0627\u0644\u0627\u062A\u062C\u0627\u0647", "\u0628\u062F\u0627\u064A\u0629 \u0633\u062E\u0648\u0646\u0629", "\u0633\u062E\u0648\u0646\u0629", "\u0633\u062E\u0648\u0646\u0629 \u0639\u0627\u0644\u064A\u0629", "\u0641\u0642\u0627\u0639\u0629"]
@@ -908,11 +971,13 @@ var DEFAULTS = Object.freeze({
   // 🌈 Bitcoin moved to another rainbow band (two daily closes)
   pi: false,
   // the Pi Cycle reached the level you chose on the Exit page — off until you turn it on
+  mvrv: false,
+  // MVRV reached the level you chose on the Exit page — off until you turn it on (like the Pi Cycle)
   digest: true
   // 🔔 what can wait is kept and sent together at 12:00 · 16:00 · 20:00 (SLOTS); what can't goes at once (NOW_KEYS)
 });
 var DEFAULT_SIGNAL = { reinforce: -5, sell: -20 };
-var DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085, rainbow: RAINBOW_EXIT, pi: PI_EXIT };
+var DEFAULT_EXIT_TARGETS = { btcD: 45.9, usdtHi: 3.73, usdtLo: 1.914, ethBtc: 0.085, rainbow: RAINBOW_EXIT, pi: PI_EXIT, mvrv: MVRV_EXIT };
 var DEFAULT_EXIT_STEPS = { mults: [2, 3, 5], pcts: [25, 50, 25] };
 var H = 36e5;
 var DAY = 24 * H;
@@ -979,11 +1044,20 @@ var W = {
     ethBtc: "ETH/BTC",
     rainbow: "Rainbow band",
     pi: "Pi Cycle",
+    mvrv: "MVRV",
     grpS: "Market structure",
     grpV: "Bitcoin valuation",
     exitLine: (s, v) => `Market structure ${s[0]}/${s[1]} \xB7 Bitcoin valuation ${v[0]}/${v[1]}`,
     allExit: "Every exit condition is met \u2014 your exit zone",
     piLine: (r, lvl) => `The 111-day average is ${r}% of twice the 350-day one \xB7 your level ${lvl}%`,
+    mvrvLine: (r, lvl) => `Market value \xF7 realized value: ${r} \xB7 your level ${lvl}`,
+    mvrvCost: (c) => `The market's average cost: ${c}`,
+    srcCM: "Source: Coin Metrics",
+    dxy: "Dollar index",
+    fundName: "BTC funding",
+    fundPer: "per 8 h",
+    fundVen: (n) => `${n} venues`,
+    fundNo: (a) => `no ${a.join(", ")}`,
     rbName: "Bitcoin rainbow",
     rbBand: (b) => `band ${b} of 9`,
     rbVs: (v) => Math.abs(v) < 0.5 ? "on the trend line" : `${Math.round(Math.abs(v))}% ${v < 0 ? "under" : "over"} the trend line`,
@@ -1090,11 +1164,20 @@ var W = {
     ethBtc: "ETH/BTC",
     rainbow: "\u0646\u0637\u0627\u0642 \u0642\u0648\u0633 \u0642\u0632\u062D",
     pi: "\u0645\u0624\u0634\u0631 Pi Cycle",
+    mvrv: "\u0645\u0624\u0634\u0631 MVRV",
     grpS: "\u0647\u064A\u0643\u0644 \u0627\u0644\u0633\u0648\u0642",
     grpV: "\u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
     exitLine: (s, v) => `\u0647\u064A\u0643\u0644 \u0627\u0644\u0633\u0648\u0642 ${s[0]} \u0645\u0646 ${s[1]} \xB7 \u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 ${v[0]} \u0645\u0646 ${v[1]}`,
     allExit: "\u062A\u062D\u0642\u0642\u062A \u0643\u0644 \u0634\u0631\u0648\u0637 \u0627\u0644\u062E\u0631\u0648\u062C \u2014 \u0645\u0646\u0637\u0642\u0629 \u0627\u0644\u062E\u0631\u0648\u062C",
     piLine: (r, lvl) => `\u0645\u062A\u0648\u0633\u0637 111 \u064A\u0648\u0645\u0627\u064B \u064A\u0633\u0627\u0648\u064A ${r}% \u0645\u0646 \u0636\u0639\u0641 \u0645\u062A\u0648\u0633\u0637 350 \u064A\u0648\u0645\u0627\u064B \xB7 \u0645\u0633\u062A\u0648\u0627\u0643 ${lvl}%`,
+    mvrvLine: (r, lvl) => `\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629 \xF7 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u062D\u0642\u0642\u0629: ${r} \xB7 \u0645\u0633\u062A\u0648\u0627\u0643 ${lvl}`,
+    mvrvCost: (c) => `\u0645\u062A\u0648\u0633\u0637 \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0633\u0648\u0642: ${c}`,
+    srcCM: "\u0627\u0644\u0645\u0635\u062F\u0631: Coin Metrics",
+    dxy: "\u0645\u0624\u0634\u0631 \u0627\u0644\u062F\u0648\u0644\u0627\u0631",
+    fundName: "\u062A\u0645\u0648\u064A\u0644 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
+    fundPer: "\u0644\u0643\u0644 8\u0633",
+    fundVen: (n) => `${n} \u0645\u0646\u0635\u0627\u062A`,
+    fundNo: (a) => `\u0628\u062F\u0648\u0646 ${a.join(" \u0648 ")}`,
     rbName: "\u0642\u0648\u0633 \u0642\u0632\u062D \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
     rbBand: (b) => `\u0627\u0644\u0646\u0637\u0627\u0642 ${b} \u0645\u0646 9`,
     rbVs: (v) => Math.abs(v) < 0.5 ? "\u0639\u0644\u0649 \u062E\u0637 \u0627\u0644\u0627\u062A\u062C\u0627\u0647" : `${v < 0 ? "\u062A\u062D\u062A" : "\u0641\u0648\u0642"} \u062E\u0637 \u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0628\u0640 ${Math.round(Math.abs(v))}%`,
@@ -1313,6 +1396,8 @@ function summarize(user, market, now = Date.now()) {
     macro.push({ k: "rainbow", g: "v", now: rb ? rb.band : null, lvl, met: !!rb && rb.band >= lvl, op: "\u2265", dp: 0, unit: "" });
     const bm = btcMarks(market && market.rainbow, now), pi = bm && bm.pi, pl = +T2.pi >= 50 && +T2.pi <= 150 ? +T2.pi : PI_EXIT;
     macro.push({ k: "pi", g: "v", now: pi ? pi.ratio : null, lvl: pl, met: !!pi && pi.ratio >= pl, op: "\u2265", dp: 1, dpL: 0, unit: "%" });
+    const mv = mvrvRead(market && market.mvrv, now), ml = mvrvLevel(T2.mvrv);
+    macro.push({ k: "mvrv", g: "v", now: mv ? mv.v : null, lvl: ml, met: !!mv && mv.v >= ml, op: "\u2265", dp: 2, unit: "" });
   }
   const today2 = localParts(now).date;
   const fxR = Object.fromEntries(Object.entries(market.fx || {}).map(([k, v]) => [k, +(v && v.rate) || 0]).filter((x) => x[1] > 0));
@@ -1411,6 +1496,16 @@ function rainbowLines(t, m, now) {
   if (!rb) return [];
   const ar = t === W.ar, out = [ar ? `\u{1F308} ${t.rbName}: <b>${t.rbBand(rb.band)}</b>` : `\u{1F308} ${t.rbName}  <b>${t.rbBand(rb.band)}</b>`, `${rainbowName(rb.band, ar)} \xB7 ${t.rbVsS(rb.vs)}`];
   if (rb.pending) out.push(`<i>${t.rbPend(rb.pending)}</i>`);
+  return out;
+}
+function macroLines(t, m, now) {
+  const ar = t === W.ar, out = [], d = dxyNow(m && m.dxy, now), f = fundingNow(m && m.funding, now);
+  if (d) out.push(ar ? `${t.dxy}: <b>${d.price.toFixed(2)}</b>${d.ch24 != null ? ` ${dot(d.ch24)} ${pct(d.ch24)}` : ""}` : `\u{1F4B5} ${t.dxy}  <b>${d.price.toFixed(2)}</b>${d.ch24 != null ? ` ${dot(d.ch24)} ${pct(d.ch24)}` : ""}`);
+  if (f) {
+    const r = `${f.rate < 0 ? "\u2212" : "+"}${Math.abs(f.rate).toFixed(4)}%`, w = fundingWord(f.rate, ar, true);
+    out.push(ar ? `${t.fundName}: <b>${r}</b> \xB7 ${w}` : `\u2696\uFE0F ${t.fundName} <b>${r}</b> \xB7 ${w}`);
+    out.push(ar ? `<i>${[t.fundVen(f.n) + (f.missing.length ? " " + t.fundNo(f.missing) : ""), t.fundPer].join(" \xB7 ")}</i>` : `<i>${[t.fundPer, t.fundVen(f.n)].concat(f.missing.length ? [t.fundNo(f.missing)] : []).join(" \xB7 ")}</i>`);
+  }
   return out;
 }
 function etfDay(etf) {
@@ -1897,7 +1992,7 @@ async function loadMarket(ids = [], coins = []) {
     if (s) series[id] = s;
   }));
   const closeF = await cached("close", 10 * 6e4, async () => await getJson(RAW + "p/close.json") || false);
-  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, rainbow: base.m.rainbow || null, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
+  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, rainbow: base.m.rainbow || null, mvrv: base.m.mvrv || null, dxy: base.m.dxy || null, funding: base.m.funding || null, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
   await liveTopUp(market, all);
   const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
   const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 3);
@@ -2487,7 +2582,9 @@ async function derivatives(sym) {
       summary: {
         funding_8h_pct_avg: avgF != null ? +avgF.toFixed(4) : null,
         funding_annualized_pct: avgF != null ? +(avgF * 3 * 365).toFixed(1) : null,
-        funding_reading: avgF == null ? null : avgF > 0.03 ? "longs paying a lot (crowded longs)" : avgF > 0 ? "longs paying (normal)" : avgF < -0.01 ? "shorts paying (crowded shorts)" : "about neutral",
+        funding_reading: avgF == null ? null : fundingWord(avgF),
+        funding_state: fundingRead(avgF),
+        // one wording for the app, the bot and the radar (samsam-core.js → fundingRead)
         open_interest_usd_total: oi.length ? oi.reduce((a, b) => a + b, 0) : null,
         open_interest_note: "sum of the sources listed (not the whole market)",
         open_interest_change_24h_pct: (okx && okx.open_interest_change_24h_pct) ?? (bn2 && bn2.open_interest_change_24h_pct) ?? null,
@@ -4306,7 +4403,7 @@ var TOOLS = [
   },
   {
     name: "get_market",
-    description: "The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market's state (open / closed, the next open or close in Riyadh time), Bitcoin's rainbow band (1\u20139 around its long-term trend line: a description of the past, never a forecast or an order to buy or sell), and metals: gold, silver, platinum, copper (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).",
+    description: "The crypto market now: BTC price, BTC / USDT dominance, Fear & Greed (and its week-ago value), Altcoin Season index, total market cap, latest spot-ETF flows, the best / worst 24h coins of the Top N (stablecoins left out), the best / worst 24h Binance bStocks (tokenized US stocks) with the US stock market's state (open / closed, the next open or close in Riyadh time), Bitcoin's rainbow band (1\u20139 around its long-term trend line: a description of the past, never a forecast or an order to buy or sell), Bitcoin's MVRV (Coin Metrics, one day behind \u2014 name the source), the US dollar index (DXY), BTC funding (several venues weighted by open interest \u2014 say which big venues are not in it), and metals: gold, silver, platinum, copper (futures, ~15 min delayed; gold / silver / platinum also per gram in SAR, pure 24k).",
     input_schema: { type: "object", properties: { top: { type: "integer", enum: [100, 200, 300, 500], description: "Rank range for best / worst (default 100)" } } }
   },
   {
@@ -4417,6 +4514,37 @@ function rainbowFacts(m) {
     ...bm && bm.w200 ? { average_200_week_usd: Math.round(bm.w200.ma), price_vs_200_week_average_pct: r23(bm.w200.vs), days_closed_under_it_pct: bm.w200.hist ? bm.w200.hist.pct : null, average_note: "the mean of the last 200 weekly closes \u2014 a reference, not a floor: daily closes have been under it" } : {},
     ...bm && bm.pi ? { pi_cycle_pct: bm.pi.ratio, pi_cycle_note: "the 111-day average as a percent of twice the 350-day average; 100 is the cross that marked the 2013, 2017 and April 2021 tops and did not happen at the October 2025 top", pi_cycle_highest_by_cycle: bm.pi.peaks } : {}
   };
+}
+function macroFacts(m) {
+  const now = Date.now(), mv = mvrvRead(m.mvrv, now), d = dxyNow(m.dxy, now), f = fundingNow(m.funding, now), out = {};
+  if (mv) out.bitcoin_mvrv = {
+    ratio: mv.v,
+    day: mv.day,
+    market_average_cost_usd: mv.realized,
+    a_week_ago: mv.wk,
+    a_month_ago: mv.mo,
+    highest_by_cycle: mv.peaks,
+    lowest_by_cycle: mv.lows,
+    last_day_at_or_over_3_5: mv.over35,
+    last_day_under_1: mv.under1,
+    source: "Coin Metrics (community data, CC BY-NC 4.0)" + (mv.via ? ` \u2014 this day's value from ${mv.via}` : ""),
+    note: "Market value \xF7 realized value (what every coin cost when it last moved), one day behind. Each cycle's highest has been lower than the one before (the old 3.5 line was last seen in March 2021): read it as a distance, never as a fixed top alarm. The average cost is a reference, not a floor. Always name the source."
+  };
+  if (d) out.us_dollar_index = { value: d.price, change_24h_pct: d.ch24, change_5_trading_days_pct: d.ch7, low_52_weeks: d.lo52, high_52_weeks: d.hi52, place_in_52_week_range_pct: d.pos != null ? Math.round(d.pos) : null, quote_time: d.at, source: d.src, note: "ICE's DXY. It does not trade at the weekend. Report it as a number \u2014 do not claim it drives crypto." };
+  if (f) out.btc_funding = {
+    rate_8h_pct: f.rate,
+    annualized_pct: r23(f.yr),
+    mean_7_days_8h_pct: f.m7,
+    reading: fundingWord(f.rate),
+    reading_ar: fundingWord(f.rate, true),
+    venues: f.venues.map((x) => x.k),
+    venues_count: f.n,
+    weighted_by: "open interest",
+    open_interest_usd: f.oi,
+    not_included: f.missing,
+    note: `The mean of ${f.n} venues weighted by open interest${f.missing.length ? " \u2014 WITHOUT " + f.missing.join(" and ") + " (they refuse the address this is read from): always say so" : ""}. Over the last year BTC funding was never above the resting +0.01% per 8 h; "crowded longs" starts at +0.03%, "crowded shorts" at \u22120.01%. It said nothing at the October 2025 top \u2014 a mood reading, not a top signal.`
+  };
+  return out;
 }
 async function runTool(ctx, name, input) {
   const now = Date.now();
@@ -4545,6 +4673,7 @@ async function runTool(ctx, name, input) {
       fear_greed: m.fng ? { value: m.fng.value, label: m.fng.label, yesterday: m.fng.prev, week_ago: m.fng.week } : null,
       altcoin_season: m.alt ? { value: m.alt.value, label: m.alt.label } : null,
       bitcoin_rainbow: rainbowFacts(m),
+      ...macroFacts(m),
       etf_flows_latest_day: e ? { date: e.date, btc_usd: e.btc, eth_usd: e.eth } : null,
       [`top${n}_best_24h`]: pick(list3, 1),
       [`top${n}_worst_24h`]: pick(list3, -1),
@@ -4581,7 +4710,7 @@ async function runTool(ctx, name, input) {
     ctx.used.add("market snapshot");
     return {
       note: "Two groups, counted apart: market structure, and Bitcoin valuation (readings of Bitcoin's own price history \u2014 they tend to move together).",
-      conditions: s.macro.map((c) => ({ group: c.g === "v" ? "Bitcoin valuation" : "Market structure", name: { btcD: "BTC dominance", usdtD: "USDT dominance", ethBtc: "ETH/BTC", rainbow: "Bitcoin rainbow band (1\u20139, held after two daily closes)", pi: "Pi Cycle: the 111-day average as a percent of twice the 350-day average (100 = the cross)" }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
+      conditions: s.macro.map((c) => ({ group: c.g === "v" ? "Bitcoin valuation" : "Market structure", name: { btcD: "BTC dominance", usdtD: "USDT dominance", ethBtc: "ETH/BTC", rainbow: "Bitcoin rainbow band (1\u20139, held after two daily closes)", pi: "Pi Cycle: the 111-day average as a percent of twice the 350-day average (100 = the cross)", mvrv: "MVRV: market value \xF7 realized value (Coin Metrics, one day behind)" }[c.k], now: c.now, target: `${c.op} ${c.lvl}`, met: c.met })),
       take_profits: (s.tps || []).map((t) => ({ ticker: t.sym, tp: t.n, level_usd: r62(t.level / (t.g || 1)), price_now_usd: r62(t.price / (t.g || 1)), ...t.g > 1 ? { unit: "USD per gram" } : {}, pct_to_go: r23((t.level / t.price - 1) * 100), multiple_of_average: t.mult || null, sell_pct: t.pct || null })).sort((a, b) => a.pct_to_go - b.pct_to_go)
     };
   }
@@ -5101,7 +5230,12 @@ async function evening(env, now = Date.now(), L = null) {
     best_coins_24h: movers.slice(0, 3).map((c) => ({ coin: c.sym, pct: r24(c.ch24) })),
     worst_coins_24h: movers.slice(-3).reverse().filter((c) => c.ch24 < 0).map((c) => ({ coin: c.sym, pct: r24(c.ch24) })),
     market: marketFacts(m, sum),
-    btc_futures: d && d.summary ? { funding_8h_pct: d.summary.funding_8h_pct_avg, funding_reading: d.summary.funding_reading, open_interest_24h_pct: d.summary.open_interest_change_24h_pct, long_accounts_pct: d.summary.long_accounts_pct } : null,
+    btc_futures: d && d.summary ? {
+      ...((fn) => fn ? { funding_8h_pct: fn.rate, funding_reading: fundingWord(fn.rate), funding_from: `${fn.n} venues weighted by open interest${fn.missing.length ? ", without " + fn.missing.join(" and ") : ""}` } : { funding_8h_pct: d.summary.funding_8h_pct_avg, funding_reading: d.summary.funding_reading })(fundingNow(m.funding, now)),
+      // (the market's own funding line when the snapshot has it: the number /market shows)
+      open_interest_24h_pct: d.summary.open_interest_change_24h_pct,
+      long_accounts_pct: d.summary.long_accounts_pct
+    } : null,
     sectors_24h: sectors.length ? { best: sectors.filter((s) => s.ch24 > 0).sort((a, b) => b.ch24 - a.ch24).slice(0, 3).map((s) => ({ name: s.name, pct: r24(s.ch24) })), worst: sectors.filter((s) => s.ch24 < 0).sort((a, b) => a.ch24 - b.ch24).slice(0, 3).map((s) => ({ name: s.name, pct: r24(s.ch24) })) } : null,
     trades_today: trades,
     events_today: log2.map((e) => ({ time: local(e.t, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }), type: e.type, what: e.text })),
@@ -5234,9 +5368,10 @@ var RADAR_TXT = {
 };
 function radarFindings(s) {
   const f = [];
-  if (s.funding_annualized_pct != null) {
-    if (s.funding_annualized_pct >= 40) f.push("hot_longs");
-    else if (s.funding_annualized_pct <= -15) f.push("hot_shorts");
+  {
+    const r = s.funding_8h_pct_avg != null ? s.funding_8h_pct_avg : s.funding_annualized_pct != null ? s.funding_annualized_pct / 1095 : null, k = fundingRead(r);
+    if (k === "hot") f.push("hot_longs");
+    else if (k === "deep") f.push("hot_shorts");
   }
   if (s.open_interest_change_24h_pct != null) {
     if (s.open_interest_change_24h_pct >= 15) f.push("oi_up");
@@ -6782,6 +6917,8 @@ var T = {
     grpS: "Market structure",
     grpV: "Bitcoin valuation",
     pi: "Pi Cycle",
+    mvrv: "MVRV",
+    mvrvSrc: "MVRV \xB7 source: Coin Metrics",
     metN: (n, N) => `${n} of ${N} met`,
     btcD: "BTC dominance",
     usdtD: "USDT dominance",
@@ -6928,6 +7065,8 @@ var T = {
     grpS: "\u0647\u064A\u0643\u0644 \u0627\u0644\u0633\u0648\u0642",
     grpV: "\u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
     pi: "\u0645\u0624\u0634\u0631 Pi Cycle",
+    mvrv: "\u0645\u0624\u0634\u0631 MVRV",
+    mvrvSrc: "\u0645\u0635\u062F\u0631 MVRV: Coin Metrics",
     metN: (n, N) => `\u062A\u062D\u0642\u0642 ${n} \u0645\u0646 ${N}`,
     btcD: "\u0647\u064A\u0645\u0646\u0629 BTC",
     usdtD: "\u0647\u064A\u0645\u0646\u0629 USDT",
@@ -7064,7 +7203,7 @@ function viewPortfolio(t, cfg, sum, m, now) {
   return { text: L.join("\n"), buttons: [[cb3(t.refresh, "pf"), cb3(t.movers, "mv")], [cb3(t.plan, "pl"), cb3(t.exit, "ex")], [cb3(t.signals, "sg"), webApp(t.openApp)], [cb3(t.back, "menu")]] };
 }
 function viewExit(t, sum, now) {
-  const eg = exitGroups(sum), name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc, rainbow: t.rainbow, pi: t.pi };
+  const eg = exitGroups(sum), name = { btcD: t.btcD, usdtD: t.usdtD, ethBtc: t.ethBtc, rainbow: t.rainbow, pi: t.pi, mvrv: t.mvrv };
   const L = [`\u{1F6AA} <b>${t.exitT}</b> \xB7 ${hm(now)}`];
   for (const [g, ic, title, c] of [["s", "\u{1F9ED}", t.grpS, eg.s], ["v", "\u{1F308}", t.grpV, eg.v]]) {
     L.push("", `${ic} <b>${title}</b> \xB7 ${t.metN(c[0], c[1])}`);
@@ -7072,6 +7211,7 @@ function viewExit(t, sum, now) {
       const v = (n2, dp) => n2 == null ? "\u2014" : n2.toFixed(dp) + x.unit;
       L.push(`${x.met ? "\u2705" : "\u23F3"} ${name[x.k]}: ${v(x.now, x.dp)}${x.k === "rainbow" && x.now ? ` (${rainbowName(x.now, isAr(t))})` : ""} \u2192 ${x.op} ${v(x.lvl, x.dpL != null ? x.dpL : x.dp)}`);
     }
+    if (g === "v" && sum.macro.some((q) => q.k === "mvrv" && q.now != null)) L.push(`<i>${t.mvrvSrc}</i>`);
   }
   if (eg.all) L.push(`\u{1F514} <b>${t.allExit}</b>`);
   const tps = (sum.tps || []).map((x) => ({ ...x, to: (x.level / x.price - 1) * 100 })).sort((a, b) => a.to - b.to);
@@ -7154,7 +7294,7 @@ ${t.noPlan}`, buttons: [[webApp(t.openApp, "accumulation.html"), cb3(t.back, "me
 }
 var RANGES = [100, 200, 300, 500];
 function viewMarket(t, m, now, range = 100) {
-  const L = [`\u{1F30D} <b>${t.mkT}</b> \xB7 ${hm(now)}`, "", ...marketShort(t, m), ...rainbowLines(isAr(t) ? W.ar : W.en, m, now)];
+  const L = [`\u{1F30D} <b>${t.mkT}</b> \xB7 ${hm(now)}`, "", ...marketShort(t, m), ...rainbowLines(isAr(t) ? W.ar : W.en, m, now), ...macroLines(isAr(t) ? W.ar : W.en, m, now)];
   const seen = /* @__PURE__ */ new Set(), top = [...m.top || [], ...m.top500 || []].filter((r) => r.rank && r.rank <= range && r.ch24 != null && r.sym && !isStable(r.sym) && !seen.has(r.id) && seen.add(r.id));
   const line = (r) => row(r.sym, r.ch24, price2(r.price));
   const up = [...top].sort((a, b) => b.ch24 - a.ch24).slice(0, 5), dn = [...top].sort((a, b) => a.ch24 - b.ch24).slice(0, 5);

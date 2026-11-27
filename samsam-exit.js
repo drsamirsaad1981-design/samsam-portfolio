@@ -35,7 +35,7 @@
   // ── maths ──────────────────────────────────────────────────────────────────
   var calc = {
     // state: 'hit' | 'near' | 'wait' | 'none'; progress 0–100 toward the level
-    macro: function (g, ethBtc, t, rb, pi) {
+    macro: function (g, ethBtc, t, rb, pi, mv) {
       var rows = [], st = function (hit, near) { return hit ? 'hit' : near ? 'near' : 'wait'; };
       var b = g && g.dom ? +g.dom.btc : null;
       rows.push({ k: 'btcD', g: 's', name: 'BTC Dominance', short: 'BTC.D', cur: b, rule: '≤ ' + t.btcD.toFixed(2) + '%',
@@ -61,6 +61,12 @@
       rows.push({ k: 'pi', g: 'v', name: 'Pi Cycle', short: 'Pi Cycle', cur: pr, rule: '≥ ' + pl + '%',
         state: pr == null ? 'none' : st(pr >= pl, pr >= pl * (1 - NEAR)), progress: pr ? Math.min(100, pr / pl * 100) : 0,
         fmt: function (v) { return v.toFixed(1) + '%'; }, sub: pi ? '111-day average ' + usd0(pi.d111) + ' · twice the 350-day ' + usd0(pi.d350x2) : '' });
+      // MVRV: Bitcoin's market value ÷ its realized value — Coin Metrics' daily ratio, one day behind (samsam-core.js →
+      // mvrvRead) — against your level, 3.0 until you choose. "Near" = within 10% of it. The source is named on the row.
+      var ml = +t.mvrv >= 1 && +t.mvrv <= 10 ? +t.mvrv : 3, mr = mv ? mv.v : null;
+      rows.push({ k: 'mvrv', g: 'v', name: 'MVRV', short: 'MVRV', cur: mr, rule: '≥ ' + ml.toFixed(2),
+        state: mr == null ? 'none' : st(mr >= ml, mr >= ml * (1 - NEAR)), progress: mr ? Math.min(100, mr / ml * 100) : 0,
+        fmt: function (v) { return v.toFixed(2); }, sub: mv ? (mv.realized ? 'Market’s average cost ' + usd0(mv.realized) + ' · ' : '') + 'Source: Coin Metrics' : '' });
       var cnt = function (k) { var a = rows.filter(function (r) { return r.g === k; }); return { hit: a.filter(function (r) { return r.state === 'hit'; }).length, of: a.length }; };
       return { rows: rows, hit: rows.filter(function (r) { return r.state === 'hit'; }).length, s: cnt('s'), v: cnt('v') };
     },
@@ -155,7 +161,7 @@
   function isStable(c) { return window.SamsamMarket ? SamsamMarket.isStable({ sym: c.sym, name: c.name || '' }) : /^(USDT|USDC|DAI|FDUSD|USDE|USDS)$/.test(c.sym); }
 
   // ── page ───────────────────────────────────────────────────────────────────
-  var root = null, st = null, mkt = { g: null, ethBtc: null, t: 0, rb: null, rbFile: null, pi: null }, editTargets = false, draft = null, saveT = null, pickOpen = false;
+  var root = null, st = null, mkt = { g: null, ethBtc: null, t: 0, rb: null, rbFile: null, pi: null, mv: null }, editTargets = false, draft = null, saveT = null, pickOpen = false;
   var stepsOpen = false, stepsDraft = null, view = null, flashSym = null;
   // one coin on its own (a row tapped), the search, the order — the order is remembered on this device
   var forcePaint = false, qTimer = null;
@@ -225,6 +231,8 @@
       var bm = f && C && C.btcMarks ? C.btcMarks(f, Date.now()) : null;
       mkt.rbFile = f || null; mkt.rb = r ? { band: r.band, name: C.rainbowName(r.band), pending: r.pending } : null; mkt.pi = bm && bm.pi ? bm.pi : null; paint();
     }).catch(function () {});
+    // MVRV (the snapshot's part; nothing while it is missing or its day ended over 4 days ago)
+    if (M.mvrv) M.mvrv().then(function (f) { var C = S() && S().core; mkt.mv = f && C && C.mvrvRead ? C.mvrvRead(f, Date.now()) : null; paint(); }).catch(function () {});
     M.global(force).then(function (r) { mkt.g = r.data; mkt.t = Math.max(mkt.t, r.t || 0); paint(); }).catch(function () {});
   }
 
@@ -250,7 +258,7 @@
   function setCardOpen(k, on) { try { var o = JSON.parse(localStorage.getItem(OPEN_KEY) || '{}') || {}; o[k] = on ? 1 : 0; localStorage.setItem(OPEN_KEY, JSON.stringify(o)); } catch (_) {} }
   var CHEV = '<span class="xs-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>';
   function macroHtml() {
-    var t = exitState().targets, m = calc.macro(mkt.g, mkt.ethBtc, t, mkt.rb, mkt.pi);
+    var t = exitState().targets, m = calc.macro(mkt.g, mkt.ethBtc, t, mkt.rb, mkt.pi, mkt.mv);
     var rowHtml = function (r) {
       var cur = r.cur == null ? '—' : r.fmt(r.cur);
       var lbl = r.state === 'hit' ? (r.below ? 'Below range' : 'Reached') : r.state === 'near' ? 'Near' : r.state === 'none' ? '—' : 'Waiting';
@@ -268,6 +276,7 @@
       field('usdtLo', 'USDT.D range — to (%)', t.usdtLo) + field('ethBtc', 'ETH / BTC at or over', t.ethBtc) +
       '<label class="xm-f xm-f-rb"><span>Rainbow band at or over (1–9)</span><input type="number" inputmode="numeric" min="1" max="9" step="1" data-tg="rainbow" value="' + t.rainbow + '"></label>' + peaksNote() +
       '<label class="xm-f xm-f-rb"><span>Pi Cycle at or over (%)</span><input type="number" inputmode="decimal" min="50" max="150" step="1" data-tg="pi" value="' + t.pi + '"></label>' + piNote() +
+      '<label class="xm-f xm-f-rb"><span>MVRV at or over (1–10)</span><input type="number" inputmode="decimal" min="1" max="10" step="0.1" data-tg="mvrv" value="' + t.mvrv + '"></label>' + mvrvNote() +
       '<div class="xm-edit-btns"><button type="button" class="xs-btn" data-act="tg-reset">' + IC('reset') + 'Reset to defaults</button><button type="button" class="xs-btn pri" data-act="tg-save">' + IC('check') + 'Save</button></div></div>' : '';
     var open = cardOpen('macro') || editTargets;
     return '<section class="xs-card xm-card' + (open ? ' open' : '') + '" aria-label="Macro exit indicators">' +
@@ -292,6 +301,13 @@
     return '<div class="xm-f-note" id="xmPiNote">The 111-day average as a percent of twice the 350-day average; 100 is the cross.' +
       (pk.length ? ' <span>Each cycle’s highest:</span> <b>' + pk.map(function (x) { return '<bdi dir="ltr">' + x[0] + ': ' + Math.round(x[1]) + '%</bdi>'; }).join(' · ') + '</b>.' : '') +
       (cr ? ' <span>Its last cross:</span> <b><span>' + day(cr) + '</span></b>.' : '') + '</div>';
+  }
+  // under the MVRV field: what it measures, each cycle's highest reading (from the file), and whose number it is
+  function mvrvNote() {
+    var p = mkt.mv, pk = p && Array.isArray(p.peaks) ? p.peaks.filter(function (x) { return x && x[0] >= 2012; }) : [];
+    return '<div class="xm-f-note" id="xmMvNote">Bitcoin’s market value ÷ its realized value (what every coin cost when it last moved).' +
+      (pk.length ? ' <span>Each cycle’s highest:</span> <b>' + pk.map(function (x) { return '<bdi dir="ltr">' + x[0] + ': ' + (+x[1]).toFixed(2) + '</bdi>'; }).join(' · ') + '</b>.' : '') +
+      ' <span class="xm-src">Source: Coin Metrics</span>' + (p && p.via ? ' <span>(today’s value: ' + p.via + ')</span>' : '') + '</div>';
   }
   function field(k, label, v) { return '<label class="xm-f"><span>' + label + '</span><input type="number" inputmode="decimal" step="any" data-tg="' + k + '" value="' + v + '"></label>'; }
 

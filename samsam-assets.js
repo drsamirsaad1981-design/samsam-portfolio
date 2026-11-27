@@ -144,6 +144,18 @@
       (pf.length > 1 ? '<div class="as-mtot">' + T('Total', 'الإجمالي') + ' <b>' + iso(usd(tv, 2)) + '</b> <span class="as-pc ' + (tp >= 0 ? 'up' : 'dn') + '">' + iso((tp >= 0 ? '+' : '−') + usd(Math.abs(tp), 2)) + '</span></div>' : '') +
       '<div class="as-adds">' + add + '</div><p class="as-zn">🕌 ' + T('Zakat: your metals are counted at market value in your one zakat pool — with your crypto, cash and shares — against the value of 85 g of gold, once a year on your zakat day. The amount is on the portfolio page (the 🕌 line). An estimate, not a ruling — check with a scholar.', 'الزكاة: معادنك تُحسب بقيمتها السوقية ضمن وعاء زكاتك الواحد — مع الكريبتو والنقد والأسهم — مقابل قيمة 85 جم ذهب، مرة كل عام في يوم زكاتك. المبلغ في صفحة المحفظة (سطر 🕌). تقدير حسابي وليس فتوى — راجع أهل العلم.') + '</p></div>';
   }
+  // 💵 the US dollar index (samsam-core.js → dxyNow on the snapshot's part): the number, today and 5 trading days, where
+  // it sits in its 52-week range. A number — no sentence about what it does to anything else.
+  function dxyHtml() {
+    var c = window.Samsam && window.Samsam.core && window.Samsam.core.dxyNow ? window.Samsam.core : null, d = c && st.dxy ? c.dxyNow(st.dxy, Date.now()) : null; if (!d) return '';
+    var rng = d.pos != null ? '<div class="as-rng" role="img" aria-label="' + T('Place in the 52-week range', 'الموقع في نطاق 52 أسبوعاً') + ': ' + Math.round(d.pos) + '%"><i style="left:' + d.pos.toFixed(1) + '%"></i></div>' +
+      '<div class="as-rngl"><span>' + d.lo52.toFixed(2) + '</span><span dir="auto">' + T('52-week range', 'نطاق 52 أسبوعاً') + '</span><span>' + d.hi52.toFixed(2) + '</span></div>' : '';
+    return '<div class="as-card as-metal as-dxy" id="asDxy"><div class="as-k">💵 ' + T('US Dollar Index (DXY)', 'مؤشر الدولار الأمريكي (DXY)') + '<span class="cp-hint" data-hint="dxy" role="button" tabindex="0"></span></div>' +
+      '<div class="as-v">' + iso(d.price.toFixed(2)) + '</div>' +
+      '<div class="as-chs"><span>' + T('Today', 'اليوم') + ' ' + pct(d.ch24) + '</span><span>' + T('5 days', '5 أيام') + ' ' + pct(d.ch7) + '</span></div>' + spark(d.spark, 220, 40) + rng + '</div>';
+  }
+  function dxySrc() { var c = window.Samsam && window.Samsam.core && window.Samsam.core.dxyNow ? window.Samsam.core : null, d = c && st.dxy ? c.dxyNow(st.dxy, Date.now()) : null;
+    return d ? ' ' + T('Dollar index: ' + d.src + ', delayed.', 'مؤشر الدولار: ' + (/formula/.test(d.src) ? 'معادلة ICE على ستة أزواج عملات (Yahoo Finance)' : d.src) + '، بتأخير.') : ''; }
   function metalsHtml() {
     var list = st.metals;
     if (!list) return mineHtml(null) + '<p class="as-note">' + (st.err || T('Loading…', 'جارٍ التحميل…')) + '</p>';
@@ -156,10 +168,10 @@
         '<div class="as-chs"><span>' + T('Today', 'اليوم') + ' ' + pct(x.ch24) + '</span><span>' + T('7 days', '7 أيام') + ' ' + pct(x.ch7) + '</span></div>' +
         spark(x.spark, 220, 40) +
         (d[3] && x.unit === 'oz' ? '<div class="as-li">' + T('1 gram', 'الجرام') + ' <b>' + iso((x.price / OZ * SAR).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' SAR') + '</b> · <b>' + iso(usd(x.price / OZ, 2)) + '</b></div>' : '') + '</div>';
-    }).join('') + '</div>';
+    }).join('') + dxyHtml() + '</div>';
     if (g && s && s.price > 0) h += '<p class="as-note">⚖️ ' + T('Gold / silver ratio', 'نسبة الذهب إلى الفضة') + ': <b>' + iso((g.price / s.price).toFixed(1)) + '</b> — ' + T('how many ounces of silver buy one ounce of gold.', 'عدد أونصات الفضة التي تشتري أونصة ذهب واحدة.') + '</p>';
     h += '<p class="as-src">' + T('Futures prices from Yahoo Finance (front month, delayed ~10–15 min), saved ' + ago(st.meT) + '. Gram prices: the ounce price ÷ 31.1 g, × 3.75 SAR (pure 24k metal, no shop premium). Not financial advice.',
-      'أسعار العقود الآجلة من Yahoo Finance (الشهر الأقرب، بتأخير ~10–15 دقيقة)، حُفظت ' + ago(st.meT) + '. سعر الجرام: سعر الأونصة ÷ 31.1 جرام × 3.75 ريال (معدن خالص عيار 24، دون هامش المحلات). ليست نصيحة مالية.') + '</p>';
+      'أسعار العقود الآجلة من Yahoo Finance (الشهر الأقرب، بتأخير ~10–15 دقيقة)، حُفظت ' + ago(st.meT) + '. سعر الجرام: سعر الأونصة ÷ 31.1 جرام × 3.75 ريال (معدن خالص عيار 24، دون هامش المحلات). ليست نصيحة مالية.') + dxySrc() + '</p>';
     return h;
   }
 
@@ -176,6 +188,7 @@
   function load() {
     if (!M()) return;
     if (st.view === 'stocks' && !st.stocks) M().stocks().then(function (r) { if (r && r.data) { st.stocks = r.data; st.stT = r.t; } else st.err = T('No bStocks data yet — try again later.', 'لا توجد بيانات bStocks بعد — حاول لاحقاً.'); draw(); }).catch(function () { st.err = T('Could not load — check the internet.', 'تعذّر التحميل — تحقق من الإنترنت.'); draw(); });
+    if (st.view === 'metals' && !st.dxyAsked && M().dxy) { st.dxyAsked = true; M().dxy().then(function (p) { st.dxy = p; if (st.view === 'metals') draw(); }, function () {}); }   // 💵 the dollar index's card, beside the metals
     if (st.view === 'metals' && !st.metals) M().metals().then(function (r) { if (r && r.data) { st.metals = r.data; st.meT = r.t; } else st.err = T('No metals data yet — try again later.', 'لا توجد بيانات للمعادن بعد — حاول لاحقاً.'); draw(); }).catch(function () { st.err = T('Could not load — check the internet.', 'تعذّر التحميل — تحقق من الإنترنت.'); draw(); });
   }
   function show(v, save) {

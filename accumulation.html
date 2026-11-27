@@ -19,24 +19,24 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="theme-color" content="#0d0f22">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script src="samsam-lang.js?v=202611271515"></script>
-<script src="samsam-ar.js?v=202611271515"></script>
-<script src="samsam-ui.js?v=202611271515"></script>
-<script src="samsam-hints.js?v=202611271515"></script>
-<script src="samsam-arhints.js?v=202611271515"></script>
-<script src="samsam-vault.js?v=202611271515"></script>
-<script src="samsam-labels.js?v=202611271515"></script>
-<script src="samsam-taxonomy.js?v=202611271515"></script>
-<script src="samsam-coins.js?v=202611271515"></script>
-<script src="samsam-import.js?v=202611271515"></script>
-<script src="samsam-wallets.js?v=202611271515"></script>
-<script src="samsam-rewards.js?v=202611271515"></script>
-<script src="samsam-settings.js?v=202611271515"></script>
-<script src="samsam-dropdown.js?v=202611271515"></script>
-<script src="samsam-market.js?v=202611271515"></script>
-<script src="samsam-exit.js?v=202611271515"></script>
-<script src="samsam-add.js?v=202611271515"></script>
-<script src="samsam-cash.js?v=202611271515"></script>
+<script src="samsam-lang.js?v=202611271736"></script>
+<script src="samsam-ar.js?v=202611271736"></script>
+<script src="samsam-ui.js?v=202611271736"></script>
+<script src="samsam-hints.js?v=202611271736"></script>
+<script src="samsam-arhints.js?v=202611271736"></script>
+<script src="samsam-vault.js?v=202611271736"></script>
+<script src="samsam-labels.js?v=202611271736"></script>
+<script src="samsam-taxonomy.js?v=202611271736"></script>
+<script src="samsam-coins.js?v=202611271736"></script>
+<script src="samsam-import.js?v=202611271736"></script>
+<script src="samsam-wallets.js?v=202611271736"></script>
+<script src="samsam-rewards.js?v=202611271736"></script>
+<script src="samsam-settings.js?v=202611271736"></script>
+<script src="samsam-dropdown.js?v=202611271736"></script>
+<script src="samsam-market.js?v=202611271736"></script>
+<script src="samsam-exit.js?v=202611271736"></script>
+<script src="samsam-add.js?v=202611271736"></script>
+<script src="samsam-cash.js?v=202611271736"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;500;600;700&display=swap">
 
 <style>
@@ -952,7 +952,7 @@ table.xv tfoot td:first-child { background: var(--bg3); }
   </div>
 </div>
 
-<script type="module" src="samsam-cloud.js?v=202611271515"></script>
+<script type="module" src="samsam-cloud.js?v=202611271736"></script>
 <script>
 // ─── Storage Keys (same as main portfolio) ───────────────────────────────────
 const THEME_KEY      = 'samsam_theme';
@@ -1373,7 +1373,7 @@ function renderTable() {
         ${r.targetPrice > 0 ? `<div style="font-size:0.7rem;margin-top:3px;color:var(--accent);font-weight:600">
           ${SamsamUI.ic('accumulation')}${SamsamFmt.price(r.targetPrice)} <span style="color:var(--fg2);font-weight:500">of ${SamsamFmt.price(r.targetBase)}${baseDay(r)}</span>
         </div>` : ''}
-        ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}${w200Note(entry, r, true)}`}
+        ${r.priceDiff !== null ? `<div style="font-size:0.67rem;color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}${w200Note(entry, r, true)}${costNote(entry, r, true)}`}
       </td>
       <td>${hasPrice && r.pendingQty > 0 ? '<strong>' + SamsamFmt.usd(r.costToTarget) + '</strong>' : (r.pendingQty === 0 ? '<span style="color:var(--green)">—</span>' : '<span class="no-price">N/A</span>')}</td>
       <td style="min-width:100px">
@@ -1467,7 +1467,7 @@ function renderCards() {
           </div>
           ${r.targetPrice > 0 ? `<div class="acc-set-note" style="color:var(--fg2)">${SamsamUI.ic('accumulation')}${SamsamFmt.price(r.targetPrice)} = ${SamsamFmt.price(r.targetBase)}${baseDay(r)} ${r.targetPct > 0 ? '+' : '−'} ${Math.abs(r.targetPct)}%</div>` : ''}
           ${r.priceDiff !== null ? `<div class="acc-set-note" style="color:${r.readyToBuy ? 'var(--green)' : 'var(--red)'}">${buyAtStatus(r)}</div>` : ''}
-          ${w200Note(entry, r)}
+          ${w200Note(entry, r)}${costNote(entry, r)}
         </div>
         <div class="acc-set-row">
           <label>${SamsamUI.ic('bell')}${L.PRICE_ALERT}<button type="button" class="cp-hint" data-hint="priceAlert" aria-label="About Price Alert"></button></label>
@@ -1581,11 +1581,18 @@ function paOpen() { try { return localStorage.getItem('samsam_pa_open') === '1';
 
 // 📏 Bitcoin's 200-week average — one quiet reference line under the BTC row's Buy At (samsam-core.js → btcMarks on the
 // market snapshot; nothing while GitHub's file is missing or over 4 days old). A reference, not a floor and not a signal.
-let btcRef = null, btcRefAsked = false;
+let btcRef = null, btcRefAsked = false, btcCost = null;
 function loadBtcRef() {
   if (btcRefAsked || !window.SamsamMarket || !SamsamMarket.rainbow || !window.Samsam || !Samsam.core || !Samsam.core.btcMarks) return;
   btcRefAsked = true;
   SamsamMarket.rainbow().then(f => { const m = f && Samsam.core.btcMarks(f, Date.now()); if (m && m.w200) { btcRef = m.w200; renderAll(); } }).catch(() => {});
+  // …and the market's average cost (MVRV's other face: price ÷ ratio — samsam-core.js → mvrvRead; Coin Metrics, one day behind)
+  if (SamsamMarket.mvrv && Samsam.core.mvrvRead) SamsamMarket.mvrv().then(p => { const m = Samsam.core.mvrvRead(p, Date.now()); if (m && m.realized) { btcCost = m; renderAll(); } }).catch(() => {});
+}
+function costNote(entry, r, table) {
+  if (!btcCost || String(entry.sym).toUpperCase() !== 'BTC' || !(r.currentPrice > 0)) return '';
+  const vs = (r.currentPrice / btcCost.realized - 1) * 100, v = Math.round(Math.abs(vs)), txt = `Market’s average cost $${Math.round(btcCost.realized).toLocaleString('en-US')} · ${v < 1 ? 'the price is on it' : `the price is ${v}% ${vs < 0 ? 'under' : 'above'} it`} · Source: Coin Metrics`;
+  return table ? `<div class="acc-cost" style="font-size:0.67rem;color:var(--fg2)">${txt}</div>` : `<div class="acc-set-note acc-cost" style="color:var(--fg2)">${txt}</div>`;
 }
 function w200Note(entry, r, table) {
   if (!btcRef || String(entry.sym).toUpperCase() !== 'BTC' || !(r.currentPrice > 0)) return '';

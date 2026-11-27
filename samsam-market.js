@@ -307,6 +307,11 @@
     // the snapshot — { fit, closes, held, peaks } for samsam-core.js → rainbowRead; null until it exists.
     // rainbowFull(): m/rainbow.json — the same plus one close a week since 2010 (the Market Hub's chart), the moves, the years.
     rainbow: function () { return snapshot().then(function (j) { return j.rainbow || null; }, function () { return null; }); },
+    // MVRV, the dollar index, BTC funding: the snapshot's three small parts (tools/update-macro.mjs). Read them through
+    // samsam-core.js → mvrvRead / dxyNow / fundingNow, which drop a part that has grown old.
+    mvrv: function () { return snapshot().then(function (j) { return j.mvrv || null; }, function () { return null; }); },
+    dxy: function () { return snapshot().then(function (j) { return j.dxy || null; }, function () { return null; }); },
+    funding: function () { return snapshot().then(function (j) { return j.funding || null; }, function () { return null; }); },
     rainbowFull: function () {
       var k = 'rainbowFull', c = mem[k]; if (c && Date.now() - c.t < 30 * 60e3) return Promise.resolve(c.data);
       if (inflight[k]) return inflight[k];

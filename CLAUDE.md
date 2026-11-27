@@ -33,9 +33,18 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   forecast". The alert goes on every move between bands. On the Exit page its level is the band **you** choose (6 until
   you do). Bitcoin only.
 - Exit conditions come in **two groups, counted apart — never one counter** (27 Nov): **Market structure** (BTC dominance,
-  USDT dominance, ETH/BTC) and **Bitcoin valuation** (the rainbow band, the Pi Cycle; MVRV when it comes) — the second
-  group's readings come from the same price history and move together. App: "Market Structure: n of 3 · Bitcoin Valuation:
-  n of 2"; bot the same (`exitGroups`).
+  USDT dominance, ETH/BTC) and **Bitcoin valuation** (the rainbow band, the Pi Cycle, MVRV) — the second group's readings
+  move together. App: "Market Structure: n of 3 · Bitcoin Valuation: n of 3"; bot the same (`exitGroups`).
+- MVRV (27 Nov): Coin Metrics' daily ratio (market value ÷ realized value), one day behind. The level is the user's (1–10,
+  **3.0 until chosen**); **its alert is off until the user turns it on** (like the Pi Cycle's). **The source is named
+  wherever the ratio shows** ("Source: Coin Metrics" — its free data is CC BY-NC 4.0). The average cost it implies is "a
+  reference, not a floor".
+- BTC funding (27 Nov): **one rate from several venues weighted by open interest, and the big venues that are NOT in it are
+  named beside it** ("without Binance and Bybit" on the card and in the bot — from the snapshot's `missing`, never typed
+  in). **One wording everywhere** (`fundingRead`): hot ≥ +0.03% per 8 h · up > +0.01% · rest 0…+0.01% · neg < 0 · deep ≤
+  −0.01% — edges from the last year's payments, not 2021's. A mood reading, never an exit condition.
+- The dollar index is a number (value, day, 5 trading days, place in the 52-week range) — never a sentence about what it
+  does to crypto.
 - Pi Cycle: the 111-day average as a percent of twice the 350-day one (100 = the cross). Shown as a distance with each
   cycle's highest; the level is the user's (50–150, 100 until chosen); **its alert is off until the user turns it on**.
 - 200-week average: the mean of the last 200 Sunday closes — "a reference, not a floor" (daily closes have been under it).
@@ -55,6 +64,7 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 | Shared UI | `samsam-ui.js` (header, footer, bottom bar, AI button, CPDialog), `samsam-lang.js` + `samsam-ar.js` (Arabic), `samsam-hints.js` |
 | Market data in the app | `samsam-market.js` (snapshot first, CoinGecko live) |
 | 🌈 Bitcoin rainbow | maths + names `samsam-core.js` (`rainbowFit`, `rainbowRead`, `RAINBOW_NAMES`); the daily job `tools/update-rainbow.mjs` → `m/btcday.json` (every close since 2010) + `m/rainbow.json` (its small part is copied into `m/market.json` by `update-market.mjs` — the Worker has no outside call to spare); Market Hub card `samsam-rainbow.js`; the bot's lines and the alert `tools/alerts-core.mjs` (`rainbowLines`, `evaluate` 4b); the labs `tools/lab/rainbow.mjs` and `tools/lab/macro.mjs` (trials only: they run on GitHub, write nothing, and report in the run's summary). The same job and file carry 📏 the 200-week average and the Pi Cycle (`w200`, `pi`; `btcW200`, `btcPi`, one reader `btcMarks`); 📉 `maxDrawdown` is in the core too (Performance page) |
+| MVRV · 💵 dollar index · ⚖️ BTC funding | the job `tools/update-macro.mjs` → `m/macro.json` (+ `m/mvrv.json`, MVRV's whole history) — its three parts are copied into `m/market.json` (`mvrv`, `dxy`, `funding`) by `update-market.mjs`; readers and the funding wording in `samsam-core.js` (`mvrvRead`, `dxyNow`, `fundingNow`, `fundingRead` / `FUNDING_WORDS`); Exit row `samsam-exit.js`; Market Hub: `samsam-funding.js` (card), the MVRV row in `samsam-rainbow.js`, the dollar card in `samsam-assets.js` (Metals tab); Plan line `costNote` in `accumulation.html`; bot `macroLines` (`alerts-core.mjs`, in /market), `macroFacts` (`ai.mjs`); the lab `tools/lab/macro.mjs` |
 | Taxonomy | `samsam-taxonomy.js` (classes crypto / stock / metal / cash, categories) |
 | Market snapshot (GitHub Actions → branch `prices`) | `tools/update-market.mjs`, `tools/update-prices.mjs`, `tools/update-etf.mjs` → `m/market.json`, `m/etf.json`, `p/*.json` |
 | Bot + AI (Cloudflare Worker) | `tools/worker/*.mjs` (bot, ai tools, daily jobs, data), `tools/ai-worker.js`, `tools/alerts-core.mjs` (summary + messages) |
@@ -64,7 +74,8 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 
 One answer everywhere: a number shown in two places must come from one function (e.g. `wealthNow()` for the Net worth card,
 the PDF, the CSV and the AI report; `summarize().wealth` in the bot; `zakatPool` / `zakatYear` for zakat in app and bot;
-`rainbowRead()` for the rainbow band in the bot's line, the alert, the Exit page and the Market Hub card).
+`rainbowRead()` for the rainbow band in the bot's line, the alert, the Exit page and the Market Hub card; `mvrvRead()`,
+`dxyNow()`, `fundingNow()` + `fundingRead()` for MVRV, the dollar index and BTC funding in the app, the bot and the radar).
 
 ## Build, test, release
 
@@ -209,26 +220,41 @@ Sixth round (27 Nov, his "نفذ" for group 1 of six new indicators — the ones
   in the local subset): "Market Structure", "Bitcoin Valuation", "Max Drawdown". The bot's own lines stay sentence case.
 - A lesson: a `// comment` appended inside a one-line `try { … } catch` swallowed the `catch` (update-market.mjs) —
   `market_cmc_test.mjs` caught it before the push. Put the comment after the whole statement, and run every Node test.
-- Group 2 (MVRV, DXY, BTC funding): **the lab trial ran on 27 Nov** (`tools/lab/macro.mjs`, Actions → "Macro lab"; the
-  numbers are in the Project doc "indicators-plan"). Nothing of it is in the app or the bot yet — that waits for his "نفذ"
-  and four decisions (MVRV's default level; MVRV's alert; the funding line's venues and name; one funding reading for the
-  app and the bot). What the trial found, in short:
-  - **MVRV**: Coin Metrics' community API gives `CapMVRVCur` free and without a key (every day since 2010, one day behind;
-    CC BY-NC 4.0 — fine for a non-profit, the source must be named; 10 requests / 6 s). Realized cap alone is NOT free
-    (403), so the ratio is theirs, not ours to recompute. blockchain.com's chart agrees since 2022 (median 0.18%) and can
-    stand in for the day's value, never for the old history (2011: 3.18 vs 6.35). Each cycle's highest: 7.74 · 5.88 ·
-    4.72 · 3.96 · **2.74** (21 Nov 2024); 2.29 at the price top of Oct 2025; 3.5 last seen 19 Mar 2021, 3.0 on
-    17 Apr 2021. Now 1.14 (the average cost it implies ≈ $53,000); never under 1.0 in this cycle so far.
-  - **DXY**: Yahoo `DX-Y.NYB` answers (the metals' request); `DX=F` does not exist and stooq refuses GitHub. The index
-    rebuilt from its six currencies (ICE's formula) is within 0.07% of it from Yahoo's pairs and 0.14% from the ECB's
-    daily rates — a fallback and an outside check. With a long range Yahoo sends no `previousClose`: the day's change
-    comes from the daily closes.
-  - **Funding**: from GitHub (a US address) Binance (451) and Bybit (403) refuse; OKX, Bitget, Gate, Hyperliquid and
-    Deribit answer ($9.3B of open interest between them). Their APIs keep 30–93 days; Binance's public monthly archive
-    (data.binance.vision, a zip a month, last month's file) gives every payment since 2020. **BTC funding has not been
-    over the resting +0.01% once in 2025 or 2026** (2021: 30% of payments at or over +0.03%; 2024: 6.6%), and the week
-    of the Oct 2025 top was an ordinary one — so the bot's "crowded longs" line (over +0.03%, or 40% a year) has had
-    nothing to say about BTC for two years. OKX follows Binance payment by payment (same sign 88%, equal means).
+
+Seventh round (27 Nov, his "نفذ" with four decisions, after the lab trial `tools/lab/macro.mjs`) — group 2, live:
+- **The lab's findings** (the numbers are in the Project doc "indicators-plan"): Coin Metrics gives MVRV free (every day
+  since 2010, one day behind; realized cap alone is NOT free, so the ratio is theirs); each cycle's highest 7.74 · 5.88 ·
+  4.72 · 3.96 · **2.74** (21 Nov 2024; 2.29 at the price top of Oct 2025); 3.5 last seen 19 Mar 2021. Yahoo `DX-Y.NYB`
+  answers (`DX=F` does not exist, stooq refuses GitHub); the index rebuilt from its six currencies is within 0.07%. From
+  GitHub (a US address) Binance (451) and Bybit (403) refuse; OKX, Bitget, Gate, Hyperliquid, Deribit answer. **In the
+  last 365 days BTC, ETH and SOL funding was never once over the resting +0.01%** (Binance's public archive); at or under
+  −0.01%: BTC 0.5% of payments, ETH 2.8%, SOL 11.3%. The week of the Oct 2025 top was an ordinary one.
+- `tools/update-macro.mjs` (a step in "Price history", before the snapshot): MVRV asked for the missing days only and kept
+  in `m/mvrv.json`; **after two days of Coin Metrics' silence blockchain.com stands in for the DAY's value** (marked
+  `via`, never written into the history); the dollar index falls back to ICE's formula over Yahoo's six pairs; funding
+  needs 3 venues or the last answer stays. Readers drop an old part: MVRV 4 days, the dollar 5 days, funding 6 hours.
+- MVRV: the third row of Bitcoin Valuation on the Exit page (`exitTargets.mvrv`, default `MVRV_EXIT` = 3; "Near" within
+  10%; each cycle's highest and the source under the field), a row in the rainbow card, one quiet line under Bitcoin's
+  Buy At on the Plan ("Market's average cost $… · the price is n% above it · Source: Coin Metrics"), alert switch `mvrv`
+  (off; again only after a fall of 0.1 under the level). The alerts sheet has 17 switches, 15 on.
+- BTC Funding card under the rainbow card (`samsam-funding.js`, folded: rate · state · "without …"; open: 7-day mean, a year
+  at this rate, every venue's rate and open interest, the note). Dollar index card at the end of the Metals tab.
+- Bot: `/market` has a dollar line and two funding lines (`macroLines` — NOT in the brief or the weekly report); `/exit`
+  shows MVRV with "MVRV · source: Coin Metrics"; `/portfolio` "Exit 0/3 · 0/3"; the AI's `get_market` carries
+  `bitcoin_mvrv`, `us_dollar_index`, `btc_funding`; the evening's BTC funding fact is the market's own line.
+- **The bot's funding words changed** (his decision 4): `funding_reading` for every coin comes from `fundingWord`, and the
+  leverage radar's "crowded longs / shorts" follow the same states — at or over +0.03% (it was 40% a year = +0.0365%) and
+  at or under −0.01% (it was −15% a year = −0.0137%). SOL was at or under −0.01% in 11% of last year's payments: its
+  "crowded shorts" finding will show more often than before (each finding still once per 12 h, in the digest).
+- The per-coin leverage post (17:30, the channel) and the AI's `get_derivatives` still read each coin LIVE from OKX /
+  Binance / Hyperliquid — a different measurement from the market's funding line (5 venues, weighted); both say what
+  they are made of.
+- **Binance through the Doha relay — NOT done yet** (his decision: after this round settles): the job already asks
+  `binanceRelay?pub=btcFunding` and expects `{ venues: [{ k: 'Binance' | 'Bybit', rate (% per 8 h), oi (USD), m7 }] }`;
+  today the relay answers 405 (POST only), so both stay out. When the relay gains that public read path (he deploys it
+  from Cloud Shell: `firebase deploy --only functions --project samsam-portfolio`), Binance joins the mix and the card,
+  the bot and the AI say "without Bybit" by themselves — no app or Worker change.
+- `guide.json` (the bot's guide) was NOT touched.
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
@@ -236,9 +262,9 @@ Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
   (The rainbow alert reaches members with this phase; today they see the line in `/market` and the weekly report.)
 
 Still open:
-1. The members' alerts above; group 2 of the indicators (MVRV, DXY, funding rate — the lab trial is done, building them
-   waits for his "نفذ" and his four decisions); a section in the bot's guide for the rainbow and the new readings (his
-   approval: it posts to the channel).
+1. The members' alerts above; the relay's public funding path for Binance (send him the change and the deploy command once
+   group 2 has settled); a section in the bot's guide for the rainbow, MVRV, the dollar index and funding (his approval:
+   it posts to the channel).
 2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
    `asset_classes_app_test.py` needed its retry in both GitHub runs of 27 Nov (8/9 on the first try, at 46/48 of its
    shard; 9/9 three times in a row here) — same list.

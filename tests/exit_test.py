@@ -26,8 +26,8 @@ with sync_playwright() as p:
         check(f'{name}: Exit Strategy tab shows its page (title + macro card + cash bar)', pg.is_visible('#exitPane') and not pg.is_visible('#accPane') and pg.inner_text('#pageSubtitle') == 'Exit Strategy' and pg.is_visible('.xm-card') and pg.is_visible('.xc-card'))
         # macro: BTC.D 48 vs 45.9 → within 10% (near); USDT.D 3.5 ≤ 3.73 → hit; ETH/BTC 0.04 vs 0.085 → wait
         st = pg.evaluate("[...document.querySelectorAll('.xm-row')].map(r=>[r.dataset.k, r.className.split(' ')[1], r.querySelector('.xm-cur').textContent])")
-        check(f'{name}: macro colours — BTC.D close (amber), USDT.D in range (green), ETH/BTC waiting (grey) {st}', st == [['btcD', 'near', '48.00%'], ['usdtD', 'hit', '3.50%'], ['ethBtc', 'wait', '0.04'], ['rainbow', 'none', '—'], ['pi', 'none', '—']], st)   # (🌈 no rainbow file in this snapshot: the Bitcoin valuation rows wait — exit_rainbow_test.py)
-        check(f'{name}: two counts, never one — "Market Structure: 1 of 3" · "Bitcoin Valuation: 0 of 2"', 'Market Structure: 1 of 3' in pg.inner_text('.xm-sums') and 'Bitcoin Valuation: 0 of 2' in pg.inner_text('.xm-sums'), pg.inner_text('.xm-sums'))
+        check(f'{name}: macro colours — BTC.D close (amber), USDT.D in range (green), ETH/BTC waiting (grey) {st}', st == [['btcD', 'near', '48.00%'], ['usdtD', 'hit', '3.50%'], ['ethBtc', 'wait', '0.04'], ['rainbow', 'none', '—'], ['pi', 'none', '—'], ['mvrv', 'none', '—']], st)   # (🌈 no rainbow file and no MVRV part in this snapshot: the Bitcoin valuation rows wait — exit_rainbow_test.py, macro_app_test.py)
+        check(f'{name}: two counts, never one — "Market Structure: 1 of 3" · "Bitcoin Valuation: 0 of 3"', 'Market Structure: 1 of 3' in pg.inner_text('.xm-sums') and 'Bitcoin Valuation: 0 of 3' in pg.inner_text('.xm-sums'), pg.inner_text('.xm-sums'))
         # edit targets → saved in the cloud, colours follow
         pg.click('[data-act=tg-edit]'); pg.fill('[data-tg=btcD]', '50'); pg.click('[data-act=tg-save]'); pg.wait_for_timeout(1500)
         t = pg.evaluate("Samsam.getState().exit.targets")

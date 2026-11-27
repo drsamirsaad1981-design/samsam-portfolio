@@ -116,7 +116,8 @@
       '<p><b>Market Structure</b></p><ul><li><b>BTC Dominance</b> at or under your level (money has moved from Bitcoin into altcoins).</li><li><b>USDT Dominance</b> inside your range (little cash left on the side).</li><li><b>ETH / BTC</b> at or over your level (altcoins are beating Bitcoin).</li></ul>' +
       '<p><b>Bitcoin Valuation</b> — readings of Bitcoin\'s own price history. They tend to move together, so they are never added to the first group\'s count.</p>' +
       '<ul><li><b>Bitcoin Rainbow</b> at or over the band you choose (1–9). Nine bands around Bitcoin\'s long-term trend line; a band counts after two daily closes in it. It starts at band 6.</li>' +
-      '<li><b>Pi Cycle</b> at or over the percent you choose. The 111-day average as a percent of twice the 350-day average; 100 is the cross that came with the 2013, 2017 and April 2021 tops — and did not come at the October 2025 top. It starts at 100; its alert is off until you turn it on (Settings → Alerts).</li></ul>' +
+      '<li><b>Pi Cycle</b> at or over the percent you choose. The 111-day average as a percent of twice the 350-day average; 100 is the cross that came with the 2013, 2017 and April 2021 tops — and did not come at the October 2025 top. It starts at 100; its alert is off until you turn it on (Settings → Alerts).</li>' +
+      '<li><b>MVRV</b> at or over the level you choose (1–10). Bitcoin\'s market value ÷ its realized value — what every coin cost when it last moved. Each cycle\'s highest has been lower than the one before (5.88 · 4.72 · 3.96 · 2.74), and the old 3.5 line was last seen in March 2021. It starts at 3.0; its alert is off until you turn it on. One day behind. Source: Coin Metrics.</li></ul>' +
       '<p>Edit targets shows what each past cycle reached, so you can choose your own levels.</p>' +
       '<p><b>Reached</b> = at the level · <b>Near</b> = within 10% of it (one band, for the rainbow) · <b>Waiting</b> = not yet.</p>' +
       '<p class="cph-ok">The page compares — it doesn\'t predict the top. Change the levels with Edit targets.</p>'; } },
@@ -170,6 +171,14 @@
           '<p>Your BTC is compared with itself, so it always shows 0.</p>';
       },
     },
+    funding: { title: 'BTC Funding', body: function () { return '<p>What traders with long positions pay those with short positions on Bitcoin\'s perpetual futures — percent per 8 hours. Negative: shorts pay longs.</p>' +
+      '<div class="cph-f"><b>The rate</b><code>the venues\' rates, weighted by open interest</code></div>' +
+      '<ul><li><b>Calm</b>: between 0 and the resting +0.01%.</li><li><b>Over the resting rate</b>: above +0.01% — not seen once in the last year.</li><li><b>Crowded longs</b>: +0.03% or more (common in 2021, gone since 2024).</li><li><b>Negative</b>: under 0. <b>Crowded shorts</b>: −0.01% or less.</li></ul>' +
+      '<p>The card names the venues it reads — and the big ones that are <b>not</b> in it. It is the market\'s mood, not a signal: it said nothing at the October 2025 top.</p>' +
+      '<p class="cph-n">Updated twice an hour. Not financial advice.</p>'; } },
+    dxy: { title: 'US Dollar Index', body: function () { return '<p>The dollar against six major currencies (ICE\'s DXY): the euro (57.6%), the yen, the pound, the Canadian dollar, the Swedish krona and the Swiss franc.</p>' +
+      '<ul><li><b>Today</b>: against the last finished trading day.</li><li><b>5 days</b>: against five trading days back.</li><li><b>52-week range</b>: where today\'s value sits between the year\'s lowest and highest.</li></ul>' +
+      '<p class="cph-n">From Yahoo Finance, delayed. It does not trade at the weekend — Friday\'s value stays until Monday.</p>'; } },
     maxDrawdown: { title: 'Max Drawdown', body: function () { return '<p>The deepest fall from a peak, in the period the chart shows.</p>' +
       '<div class="cph-f"><b>Max Drawdown</b><code>the largest (peak − later low) ÷ peak</code></div>' +
       '<p>It is measured on the chart\'s own lines — profit %, read as "what one dollar of cost became" — so money you add or take out is not counted as a rise or a fall.</p>' +
