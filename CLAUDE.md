@@ -200,6 +200,10 @@ Sixth round (27 Nov, his "نفذ" for group 1 of six new indicators — the ones
   the pinned message the same (it said "/3" with four conditions — fixed), the brief's line, the AI's `group`.
 - 📉 Max drawdown under the Portfolio vs BTC chart (performance.html → `#pccDd`): yours beside BTC Trend (and gold / silver
   when their lines are on), with the dates of your deepest fall; `drawdown_test.py` checks it against a plain calculation.
+- The real numbers (27 Nov): 200-week average $68,176 — the close ($60,577) is 11% **under** it since 14 Nov; 388 of 4,548
+  daily closes since 2014 were under it (8.5%). Pi Cycle 51.2% ($76,186 vs $148,891); each cycle's highest: 2013 122.8% ·
+  Jan 2018 105.8% · Apr 2021 100.3% · this cycle 73.6% (1 Jun 2024); crosses 7 Apr 2013, 7 Dec 2013, 16 Dec 2017,
+  12 Apr 2021 — none in this cycle. (A cycle's highest is labelled by the year it happened: the 2017 cycle reads "2018".)
 - `m/rainbow.json` has a make-up number (`gen`): a higher one rewrites the file from the kept days, with no request.
 - A lesson: a `// comment` appended inside a one-line `try { … } catch` swallowed the `catch` (update-market.mjs) —
   `market_cmc_test.mjs` caught it before the push. Put the comment after the whole statement, and run every Node test.
