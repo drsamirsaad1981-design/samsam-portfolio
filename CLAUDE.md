@@ -180,6 +180,8 @@ Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 Still open:
 1. The members' alerts above; a rainbow section in the bot's guide (his approval: it posts to the channel).
 2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
+   `asset_classes_app_test.py` needed its retry in both GitHub runs of 27 Nov (8/9 on the first try, at 46/48 of its
+   shard; 9/9 three times in a row here) — same list.
 3. The PDF and the CSV are in English when the app is Arabic.
 4. The AI button over a card's corner in mid-page (inherent to a floating button; moving it is a design decision).
 5. The Exit page's state "Close" (near a level) reads "إغلاق" in Arabic — it shares its English word with the Close button.
