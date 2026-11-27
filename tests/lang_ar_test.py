@@ -81,6 +81,12 @@ with sync_playwright() as p:
         check(f'{vn}: Altcoin Season — no English words left', 'مؤشر موسم العملات البديلة' in fa2.inner_text('body') and not left, left[:12])
         hl = fa2.evaluate("['9-month high', '9-month low', '2-month high', '1-month low', '20-day high', '11-month low'].map(x => (window.CPLang ? CPLang.t(x) : x).replace(/[\u2066-\u2069]/g, ''))")
         check(f'{vn}: Altcoin Season — "9-month high / low" (a history under a year) is Arabic with the right plural', hl == ['أعلى قراءة خلال 9 أشهر', 'أدنى قراءة خلال 9 أشهر', 'أعلى قراءة خلال شهرين', 'أدنى قراءة خلال شهر', 'أعلى قراءة خلال 20 يوماً', 'أدنى قراءة خلال 11 شهراً'], hl)
+        # Market Hub, Top 200 · 300 · 500: the note about the coins after the first hundred (it was left in English)
+        big = fa2.evaluate("['Coins 101–500: Binance prices from just now · coins 1–100 are live', 'Coins 101–300: prices from 7 min ago · coins 1–100 are live', 'Coins 101–200: Binance prices from 2 h ago · coins 1–100 are live', 'Loading coins 101–500…'].map(x => (window.CPLang ? CPLang.t(x) : x).replace(/[\u2066-\u2069]/g, ''))")
+        check(f'{vn}: Market Hub — the Top 500 note is Arabic ("العملات من 101 إلى 500: أسعار Binance محدّثة الآن · والعملات من 1 إلى 100 مباشرة")', big == ['العملات من 101 إلى 500: أسعار Binance محدّثة الآن · والعملات من 1 إلى 100 مباشرة', 'العملات من 101 إلى 300: أسعار منذ 7 دقائق · والعملات من 1 إلى 100 مباشرة', 'العملات من 101 إلى 200: أسعار Binance منذ ساعتين · والعملات من 1 إلى 100 مباشرة', 'جارٍ تحميل العملات من 101 إلى 500…'], big)
+        # 🌈 inside an Arabic line a price and a percent keep their own shape: "$60,577" (not "60,577$"), "58%"
+        rb = fa2.evaluate("['Close $60,577', '58% under the trend line', '12% over the trend line', '11.8% of days since 2010', 'Close $1.43M'].map(x => window.CPLang ? CPLang.t(x) : x)")
+        check(f'{vn}: Bitcoin Rainbow — the price and the percent are held left-to-right inside the Arabic line', rb == ['الإغلاق \u2066$60,577\u2069', 'تحت خط الاتجاه بـ \u206658%\u2069', 'فوق خط الاتجاه بـ \u206612%\u2069', '\u206611.8%\u2069 من الأيام منذ \u20662010\u2069', 'الإغلاق \u2066$1.43M\u2069'], rb)
         pg.evaluate("cpShell.go('home')"); pg.wait_for_timeout(500)
         pg.evaluate("SamsamSettings.open()"); pg.wait_for_timeout(300)
         st = pg.inner_text('#cpSet')

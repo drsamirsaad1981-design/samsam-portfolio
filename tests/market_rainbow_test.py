@@ -59,6 +59,10 @@ with sync_playwright() as p:
         ch = pg.evaluate("(()=>{const b=document.getElementById('rbChart'),s=b.querySelector('svg');if(!s)return null;const vb=s.viewBox.baseVal;return {vb:vb.width,box:Math.round(b.clientWidth),bands:s.querySelectorAll('path[fill^=\"#\"]').length,line:s.querySelectorAll('path[fill=none]').length,fills:[...s.querySelectorAll('path[fill^=\"#\"]')].map(p=>p.getAttribute('fill')),font:parseFloat(getComputedStyle(s.querySelector('text:not(.rb-bn)')).fontSize)*(s.getBoundingClientRect().width/vb.width),cross:getComputedStyle(document.getElementById('rbCross')).display}})()")
         check(f'{name}: the chart: nine bands in the strip\'s colours, the price line, drawn at the box\'s own width (labels {ch and ch["font"]:.1f}px)', ch and ch['bands'] == 9 and ch['fills'] == cols and ch['line'] == 2 and abs(ch['vb'] - ch['box']) <= 1 and ch['font'] >= 10.5 and ch['cross'] == 'none', ch)
         facts = pg.inner_text('#rbFacts')
+        mv = pg.evaluate("[...document.querySelectorAll('#rbFacts .rb-mv')].map(b=>[b.textContent, (b.querySelector('bdi')||{}).dir||''])"); last3 = FX['full']['moves']['last'][-3:][::-1]
+        check(f'{name}: each move reads "from → to" left-to-right, the newest first, its day in brackets', mv == [[f"{m[1]} → {m[2]}", 'ltr'] for m in last3] and re.search(r'\d → \d \(\d{1,2} [A-Z][a-z]{2} 20\d\d\)', facts), (mv, facts))
+        one = pg.evaluate("(()=>{const s=document.getElementById('rbSum');return [Math.round(s.getBoundingClientRect().height), parseFloat(getComputedStyle(s).lineHeight)||0]})()")
+        check(f'{name}: the band and its name in the header stay on one line', one[0] <= max(one[1], 14) * 1.5, one)
         check(f'{name}: what each cycle held, the last moves, the day of the last weekly fit', 'The highest band each cycle held:' in facts and all(f"{x[0]}: {x[1]}" in facts for x in FX['full']['peaks']) and 'Last moves:' in facts and '→' in facts and 'The line was last fitted on' in facts, facts)
         note = pg.inner_text('#rbBody .mk-etf-note')
         check(f'{name}: the note: how it is built, and that it is not a forecast — no word telling you to buy or sell', 'It describes the past — it is not a forecast.' in note and not re.search(r'\b(buy|sell)\b', pg.inner_text('#rbCard'), re.I), note)
@@ -71,6 +75,9 @@ with sync_playwright() as p:
         check(f'{name}: pointing at the chart shows that week\'s close, its day and its band', re.search(r'^\$[\d,.]+ \d{1,2} [A-Z][a-z]{2} 20\d\d\s+Band [1-9] · \w', tip) and pg.evaluate("getComputedStyle(document.getElementById('rbCross')).display") != 'none', tip)
         tb = pg.evaluate("(()=>{const t=document.getElementById('rbTip').getBoundingClientRect(),b=document.getElementById('rbChart').getBoundingClientRect();return [t.left-b.left,b.right-t.right]})()")
         check(f'{name}: the tooltip stays inside the chart', tb[0] >= -1 and tb[1] >= -1, tb)
+        if vp.get('has_touch'):   # the finger goes on to scroll the page (the browser cancels the pointer): nothing is left on the chart
+            pg.evaluate("document.querySelector('#rbChart svg').dispatchEvent(new PointerEvent('pointercancel', {pointerType:'touch', bubbles:true}))"); pg.wait_for_timeout(150)
+            check(f'{name}: a scroll that starts on the chart leaves no line or tooltip behind', not pg.is_visible('#rbTip') and pg.evaluate("getComputedStyle(document.getElementById('rbCross')).display") == 'none')
         if name == 'desktop':
             pg.mouse.move(5, 5); pg.wait_for_timeout(200); check(f'{name}: …and goes when the pointer leaves', not pg.is_visible('#rbTip'))
         # the bot's button: market.html#rainbow opens the card and brings it into view
@@ -81,6 +88,14 @@ with sync_playwright() as p:
         pg.evaluate("localStorage.setItem('cp-lang','ar'); localStorage.setItem('samsam_mkt_rb_open','1')"); go(); pg.wait_for_timeout(600)
         txt = ''.join(c for c in pg.inner_text('#rbCard') if not '⁦' <= c <= '⁩')
         check(f'{name}: Arabic — "قوس قزح البيتكوين", "النطاق {want["band"]} من 9 · {want["ar"]}"', 'قوس قزح البيتكوين' in txt and f"النطاق {want['band']} من 9 · {want['ar']}" in txt, txt[:200])
+        raw = pg.inner_text('.rb-under')
+        check(f'{name}: Arabic — the close is "$60,577"-shaped and the percent "58%"-shaped inside the line (each held left-to-right)', '\u2066' + usd(want['close']) + '\u2069' in raw and '\u2066' + str(round(abs(want['vs']))) + '%\u2069' in raw, raw)
+        mva = pg.evaluate("[...document.querySelectorAll('#rbFacts .rb-mv')].map(b=>b.textContent)")
+        check(f'{name}: Arabic — a move is said in words, "من 3 إلى 2" (an arrow kept left-to-right reads backwards from the right)', mva == [f"من {m[1]} إلى {m[2]}" for m in last3] and '→' not in pg.inner_text('#rbFacts'), mva)
+        one = pg.evaluate("(()=>{const s=document.getElementById('rbSum');return [Math.round(s.getBoundingClientRect().height), parseFloat(getComputedStyle(s).lineHeight)||0]})()")
+        check(f'{name}: Arabic — the band and its name in the header stay on one line', one[0] <= max(one[1], 14) * 1.5, one)
+        hd = pg.evaluate("(()=>{const t=document.getElementById('rbTog').getBoundingClientRect(),c=document.querySelector('#rbTog .mk-etf-chev').getBoundingClientRect(),k=document.querySelector('#rbTog .mk-k').getBoundingClientRect();return [Math.round(c.left-t.left), Math.round(t.right-k.right)]})()")
+        check(f'{name}: Arabic — the title starts at the right edge, the arrow sits at the far left', hd[0] <= 2 and hd[1] <= 2, hd)
         left = [w for w in re.findall(r'[A-Za-z]{3,}', txt) if w not in ('blockchain', 'com', 'Binance')]
         check(f'{name}: Arabic — no English left in the card', not left, left[:12])
         check(f'{name}: Arabic — the strip and the chart still run left to right (1 on the left)', pg.evaluate("(()=>{const s=[...document.querySelectorAll('#rbStrip .rb-seg')];return s[0].getBoundingClientRect().left<s[8].getBoundingClientRect().left && getComputedStyle(document.getElementById('rbChart')).direction==='ltr'})()"))

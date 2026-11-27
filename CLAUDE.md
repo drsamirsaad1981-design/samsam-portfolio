@@ -168,6 +168,12 @@ Fifth round (27 Nov, his "ابدأ" with three decisions) — 🌈 the Bitcoin r
   The highest band that held in each cycle: 2011: 9 · 2013: 9 · 2017: 8 · 2021: 6 · 2024: 5 (14 Dec 2024; the price top
   of Oct 2025 itself closed in band 4). **8 moves in the last year**, five of them in six weeks (Jul–Aug 2026) while the
   price sat on the 2 / 3 edge — if that is too many alerts: three closes, or a margin from the edge (his call).
+- Arabic finish (27 Nov, from his phone's screenshot): a move is said in words — "من 3 إلى 2" (the arrow "3 → 2" kept
+  left-to-right inside a right-to-left line reads backwards from the right; English keeps the arrow); a price / percent
+  inside an Arabic sentence goes through `n()` in `samsam-ar.js` ("$60,577", "58%" — a rule that returns plain text gets
+  no isolation, `iso()` skips anything with Arabic in it); on a phone the band and its name have their own line in the
+  card's header; a scroll that starts on the chart leaves no crosshair (`pointercancel`); the Top 200 · 300 · 500 note
+  ("Coins 101–500: Binance prices from … · coins 1–100 are live") is Arabic.
 - `guide.json` (the bot's guide) was NOT touched — it posts to the channel; a rainbow section needs his approval first.
 - His first list of names had "Fair value" on band 5; the line runs through band 4, so the names follow the line
   (he agreed: "توجيهك أدق").

@@ -34,6 +34,7 @@
   function vsTxt(v) { return Math.abs(v) < 0.5 ? 'On the trend line' : Math.round(Math.abs(v)) + '% ' + (v < 0 ? 'under' : 'over') + ' the trend line'; }
 
   var CSS = '.mk-rb{margin-bottom:14px;gap:10px;scroll-margin-top:84px}.mk-rb[hidden]{display:none}.mk-rb .mk-etf-sum,.mk-rb .mk-etf-tog[aria-expanded="true"] .mk-etf-sum{display:inline;color:var(--fg);white-space:normal;text-align:end;min-width:0}.mk-rb .mk-k{white-space:nowrap;flex:none}' +
+    '@media(max-width:430px){.mk-rb .mk-etf-tog{flex-wrap:wrap;row-gap:3px}.mk-rb .mk-etf-sum,.mk-rb .mk-etf-tog[aria-expanded="true"] .mk-etf-sum{order:3;flex-basis:100%;text-align:start;margin-inline-start:0;white-space:nowrap}.mk-rb .mk-k{flex:1 1 auto}}' +   // a phone: the band and its name on their own line, never broken in two
     '.rb-strip{position:relative;padding-top:13px;direction:ltr}.rb-bar{display:grid;grid-template-columns:repeat(9,1fr);gap:2px;border-radius:9px;overflow:hidden}' +
     '.rb-seg{height:26px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;font-variant-numeric:tabular-nums}' +
     '.rb-seg.on{box-shadow:inset 0 0 0 2.5px var(--fg);font-size:.86rem}' +
@@ -83,7 +84,10 @@
     var pk = full && Array.isArray(full.peaks) ? full.peaks : (small && small.peaks) || [], mv = full && full.moves && full.moves.last ? full.moves.last.slice(-3).reverse() : [];
     var facts = [];
     if (pk.length) facts.push('The highest band each cycle held: <b>' + pk.map(function (x) { return '<bdi dir="ltr">' + x[0] + ': ' + x[1] + '</bdi>'; }).join(' · ') + '</b>');
-    if (mv.length) facts.push('<span>Last moves:</span> ' + mv.map(function (x) { return '<b><bdi dir="ltr">' + x[1] + ' → ' + x[2] + '</bdi></b> <span>' + E(day(x[0])) + '</span>'; }).join(' · '));
+    // a move: "3 → 2" in English. In Arabic the same arrow, kept left-to-right inside a right-to-left line, is read from
+    // the right as "2 → 3" — so Arabic says it in words: "من 3 إلى 2".
+    var AR = !!(window.CPLang && CPLang.ar), move = function (a, b) { return AR ? '<b class="rb-mv">من ' + a + ' إلى ' + b + '</b>' : '<b class="rb-mv"><bdi dir="ltr">' + a + ' → ' + b + '</bdi></b>'; };
+    if (mv.length) facts.push('<span>Last moves:</span> ' + mv.map(function (x) { return move(x[1], x[2]) + ' (<span>' + E(day(x[0])) + '</span>)'; }).join(' · '));
     if (f.to) facts.push('<span>The line was last fitted on</span> <b><span>' + E(day(f.to)) + '</span></b>');
     body.innerHTML =
       '<div class="rb-stats">' + stat('Last daily close', E(usd(r.close)), E(day(r.day))) + stat('Trend line', E(usd(r.line)), E(vsTxt(r.vs))) +
@@ -136,7 +140,8 @@
     }
     function off() { cross.setAttribute('data-off', ''); tip.hidden = true; tipOn = null; }
     svg.addEventListener('pointermove', at); svg.addEventListener('pointerdown', at);
-    svg.addEventListener('pointerleave', function (ev) { if (ev.pointerType !== 'touch') off(); });   // a finger: the tooltip stays after the tap, until a tap outside the chart
+    svg.addEventListener('pointerleave', function (ev) { if (ev.pointerType !== 'touch') off(); });
+    svg.addEventListener('pointercancel', off);   // the finger went on to scroll the page: no line or tooltip is left behind   // a finger: the tooltip stays after the tap, until a tap outside the chart
     if (!hover.doc) { hover.doc = true; document.addEventListener('pointerdown', function (ev) { var b = document.getElementById('rbChart'); if (b && !b.contains(ev.target)) { var t = document.getElementById('rbTip'), x = document.getElementById('rbCross'); if (t) t.hidden = true; if (x) x.setAttribute('data-off', ''); tipOn = null; } }); }
   }
 

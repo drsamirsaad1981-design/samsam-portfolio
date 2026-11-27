@@ -360,10 +360,10 @@
   R(/^Target hit — sell (.+?)( more)?$/, function (_, q, more) { return 'تحقق الهدف — بِع ' + n(q) + (more ? ' أخرى' : ''); });
   R(/^now (.+)$/, function (_, v) { return 'الآن ' + n(v); });
   R(/^Band (\d)$/, 'النطاق $1');
-  R(/^(\d+)% (under|over) the trend line$/, function (_, v, w) { return (w === 'under' ? 'تحت' : 'فوق') + ' خط الاتجاه بـ ' + v + '%'; });
-  R(/^Close (\$[\d.,]+M?)$/, 'الإغلاق $1');
+  R(/^(\d+)% (under|over) the trend line$/, function (_, v, w) { return (w === 'under' ? 'تحت' : 'فوق') + ' خط الاتجاه بـ ' + n(v + '%'); });   // (n: "58%" and "$60,577" keep their shape inside the Arabic line)
+  R(/^Close (\$[\d.,]+M?)$/, function (_, p) { return 'الإغلاق ' + n(p); });
   R(/^Last close in band (\d) — one more close confirms$/, 'آخر إغلاق في النطاق $1 — إغلاق آخر يؤكده');
-  R(/^([\d.]+)% of days since 2010$/, '$1% من الأيام منذ 2010');
+  R(/^([\d.]+)% of days since 2010$/, function (_, v) { return n(v + '%') + ' من الأيام منذ ' + n('2010'); });
   R(/^Band (\d) of 9$/, 'النطاق $1 من 9');                                  // 🌈 the rainbow band
   R(/^Target ≥ band (\d)$/, 'الهدف ≥ النطاق $1');
   R(/^last close in band (\d)$/, 'آخر إغلاق في النطاق $1');
@@ -568,6 +568,10 @@
     'What was earned so far is booked first at the old APY; the new numbers count from now.': 'يُسجّل ما تحقق حتى الآن أولاً بالعائد القديم، وتُحتسب الأرقام الجديدة من الآن.',
   });
   // ════════ Phase 3: Market Hub, Altcoin Season, Recover, and the windows (wallets, import, rewards, support, AI, Telegram alerts) ════════
+  // Market Hub, Top 200 · 300 · 500: where the prices of the coins after the first hundred come from
+  R(/^Coins 101–(\d+): (Binance )?prices from (.+)$/, function (_, N, bn, t) { return 'العملات من 101 إلى ' + N + ': أسعار ' + (bn ? 'Binance ' : '') + (t === 'just now' ? 'محدّثة الآن' : CPLang.t(t)); });
+  R(/^coins 1–100 are live$/, 'والعملات من 1 إلى 100 مباشرة');
+  R(/^Loading coins 101–(\d+)$/, 'جارٍ تحميل العملات من 101 إلى $1');
   R(/^(\d+) min ago$/, function (_, m) { return 'منذ ' + pl(m, 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة'); });
   R(/^(\d+) h ago$/, function (_, h) { return 'منذ ' + pl(h, 'ساعة', 'ساعتين', 'ساعات', 'ساعة'); });
   R(/^(\d+) d ago$/, function (_, d) { return 'منذ ' + pl(d, 'يوم', 'يومين', 'أيام', 'يوم'); });
