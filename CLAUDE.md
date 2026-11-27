@@ -192,6 +192,18 @@ Still open:
 4. The AI button over a card's corner in mid-page (inherent to a floating button; moving it is a design decision).
 5. The Exit page's state "Close" (near a level) reads "إغلاق" in Arabic — it shares its English word with the Close button.
 
+## Queued by Samir (27 Nov) — after the next important tasks, not before
+
+**A full formatting review, Arabic and English, phone and desktop.** Numbers and letters (prices, percents, dates, units,
+Latin runs inside Arabic lines, digits), general layout, alignment, contrast, and anything else that shows.
+- **First a flow chart of the review itself** (a Whiteboard), agreed with him before any checking starts, so nothing is
+  forgotten: every page → every tab → every card / sheet / overlay → every hint and both guides (`guide-app.json`,
+  `guide.json`), each crossed with language (AR / EN) × screen (phone / desktop) × theme (dark / light). The bot's
+  messages are a branch of their own.
+- Then the review, part by part along that chart; findings listed before fixing (a big change: his "نفذ" first).
+- Remind him to switch to the strongest model before it starts (the Project's rule for a full review).
+- Known items to put on the chart from the start: "Still open" 3 and 5 above (PDF / CSV in English, "Close" → "إغلاق").
+
 ## Open ideas (not requested yet)
 
 - A 16th category colour cannot stay 15 away from the others: fold small categories or rely on the legend.
