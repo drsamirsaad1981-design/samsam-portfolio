@@ -14,12 +14,12 @@ const mk = cg.map((c, i) => ({ ...c, image: '', market_cap_rank: i + 1, total_vo
 const cmcList = [{ symbol: 'BTC', name: 'Bitcoin', mc: 2e12 }, { symbol: 'USDT', name: 'Tether', mc: 1.5e11, tags: ['stablecoin'] }, { symbol: 'WBTC', name: 'Wrapped BTC', mc: 1e10, tags: [{ slug: 'wrapped-tokens' }] }]
   .concat(cg.filter(c => /^alt/.test(c.id)).map(c => ({ symbol: c.symbol.toUpperCase(), name: c.name, mc: c.market_cap })));
 [cmcList[9], cmcList[10]] = [cmcList[10], cmcList[9]];   // a different order than CoinGecko's
-let cmcUp = true, hits = { cmcPub: 0 };
+let cmcUp = true, histUp = true, hits = { cmcPub: 0 };
 const srv = http.createServer((q, r) => {
   const u = new URL(q.url, 'http://x'), J = o => { r.writeHead(200, { 'content-type': 'application/json' }); r.end(JSON.stringify(o)); };
   if (u.pathname.startsWith('/cmcpub/')) { hits.cmcPub++; if (!cmcUp) { r.writeHead(403); return r.end('{}'); }
     if (u.pathname.endsWith('/v3/fear-and-greed/latest')) return J({ data: { value: 13, value_classification: 'Extreme fear', update_time: new Date().toISOString() }, status: { error_code: '0' } });
-    if (u.pathname.endsWith('/v3/fear-and-greed/historical')) return J({ data: [0, 1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ timestamp: String((today - n) * 86400), value: [13, 11, 15, 20, 22, 25, 27, 31, 33][n] })), status: { error_code: 0 } });
+    if (u.pathname.endsWith('/v3/fear-and-greed/historical')) { if (!histUp) { r.writeHead(500); return r.end('{}'); } return J({ data: [0, 1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ timestamp: String((today - n) * 86400), value: [13, 11, 15, 20, 22, 25, 27, 31, 33][n] })), status: { error_code: 0 } }); }
     if (u.pathname.endsWith('/v1/global-metrics/quotes/latest')) return J({ data: { btc_dominance: 59.31, eth_dominance: 9.8, quote: { USD: { total_market_cap: 3.3e12, total_volume_24h: 9e10, total_market_cap_yesterday_percentage_change: -1.5 } } }, status: { error_code: 0 } });
     if (u.pathname.endsWith('/v1/altcoin-season-index/latest')) return J({ data: { altcoin_index: 46, snapshot_time: new Date().toISOString() }, status: { error_code: 0 } }); }
   if (u.pathname === '/cmclist') { if (!cmcUp) { r.writeHead(403); return r.end('{}'); } return J({ data: { cryptoCurrencyList: cmcList.map(c => ({ symbol: c.symbol, name: c.name, slug: c.name.toLowerCase().replace(/\W+/g, '-'), tags: c.tags || [], quotes: [{ name: 'USD', marketCap: c.mc }] })) } }); }
@@ -84,6 +84,17 @@ check('CoinMarketCap down → alternative.me\'s Fear & Greed (10)', m2.fng && m2
   const m3 = JSON.parse(fs.readFileSync(path.join(dir3, 'm/market.json'), 'utf8'));
   check('CoinMarketCap busy (after a good run) → keeps CoinMarketCap\'s last Fear & Greed (13), not alternative.me\'s', m3.fng && m3.fng.value === 13 && m3.fng.src === 'cmc' && m3.fng.at, m3.fng);
   fs.rmSync(dir3, { recursive: true });
+}
+{ // the latest value answers but the history call fails (500): yesterday and last week stay, from the rows kept in the file
+  const dir4 = fs.mkdtempSync(path.join(os.tmpdir(), 'mkt-'));
+  cmcUp = true; histUp = true; await run(dir4); histUp = false; await run(dir4);
+  const m4 = JSON.parse(fs.readFileSync(path.join(dir4, 'm/market.json'), 'utf8'));
+  check('CoinMarketCap\'s history silent (500) → yesterday (11) and last week (31) stay, never "—"', m4.fng && m4.fng.value === 13 && m4.fng.prev === 11 && m4.fng.week === 31 && m4.fng.src === 'cmc' && m4.fng.hist.length === 9, m4.fng);
+  fs.rmSync(dir4, { recursive: true });
+  const dir5 = fs.mkdtempSync(path.join(os.tmpdir(), 'mkt-'));
+  await run(dir5); const m5 = JSON.parse(fs.readFileSync(path.join(dir5, 'm/market.json'), 'utf8'));
+  check('…and with nothing kept yet they are empty, not invented', m5.fng && m5.fng.value === 13 && m5.fng.prev === null && m5.fng.week === null, m5.fng);
+  fs.rmSync(dir5, { recursive: true }); histUp = true; cmcUp = false;
 }
 check('CoinMarketCap down → CoinGecko\'s dominance (58)', m2.global.dom.btc === 58 && m2.global.domSrc !== 'cmc', m2.global);
 check('…and the app\'s own Altcoin Season count from CoinGecko\'s top 100', m2.alt && m2.alt.src === 'own' && m2.alt.value != null && alt2.list === 'coingecko' && alt2.coins.some(c => c.id === 'zzz'), m2.alt);

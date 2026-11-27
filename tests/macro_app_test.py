@@ -27,6 +27,25 @@ METALS = [{'k': k, 'sym': s, 'unit': 'oz', 'price': p, 'prev': p * 0.99, 'ch24':
 def snap(**parts): return {'updated': now().isoformat(), 'global': {'mcap': 3e12, 'vol': 1e11, 'mcapCh24': 1, 'dom': {'btc': 60.0, 'eth': 12, 'usdt': 6.5}}, 'parts': {'metals': now().isoformat()}, 'metals': METALS,
     'top': [{'id': 'bitcoin', 'sym': 'BTC', 'name': 'Bitcoin', 'price': 60415, 'ch24': 1}, {'id': 'ethereum', 'sym': 'ETH', 'name': 'Ethereum', 'price': 2000, 'ch24': 1}], 'rainbow': RB, **{k: v for k, v in parts.items() if v is not None}}
 clean = lambda t: ''.join(c for c in t if not '⁦' <= c <= '⁩').replace('‎', '').replace('‏', '')
+# the funding bar: its state, the five segments (state, colour, box), the dot's box, the edges printed under it
+BAR = "(()=>{const b=document.getElementById('fdBar');if(!b)return null;const bx=e=>{const r=e.getBoundingClientRect();return [r.left,r.right,r.top,r.bottom]};const S=[...b.querySelectorAll('.fd-seg')];return {k:b.dataset.k,label:b.getAttribute('aria-label'),dir:getComputedStyle(b).direction,segs:S.map(e=>[e.dataset.k,getComputedStyle(e).backgroundColor,bx(e),e.title,e.classList.contains('on')]),dot:bx(document.getElementById('fdDot')),left:document.getElementById('fdDot').style.left,ticks:[...b.querySelectorAll('.fd-ticks span')].map(e=>{const r=e.getBoundingClientRect();return [e.textContent,(r.left+r.right)/2,r.left,r.right]}),box:bx(b),word:bx(document.getElementById('fdW')),stats:bx(document.querySelector('.fd-stats')),tbl:bx(document.getElementById('fdTbl'))}})()"
+def oklab(c):
+    f = lambda v: v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+    r, g, b = (f(v / 255) for v in c)
+    l, m, s_ = (x ** (1 / 3) for x in (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b, 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b, 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b))
+    return (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s_, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s_, 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s_)
+dist = lambda a, b: 100 * sum((x - y) ** 2 for x, y in zip(oklab(a), oklab(b))) ** .5
+rgb3 = lambda t: tuple(int(float(x)) for x in t[t.index('(') + 1:t.index(')')].replace(',', ' ').split()[:3])
+hex3 = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+PROFIT_LOSS = ['#22c55e', '#f87171', '#15803d', '#dc2626']   # --green / --red, dark and light (palette_test.py)
+def bar_ok(b, k, i):
+    # the dot is wholly inside segment i, the bar runs low → high from the left, the four edges sit on the segments' borders
+    if not b or b['k'] != k or len(b['segs']) != 5: return False
+    sg = b['segs'][i][2]; mids = [(b['segs'][n][2][1] + b['segs'][n + 1][2][0]) / 2 for n in range(4)]
+    return ([x[0] for x in b['segs']] == ['deep', 'neg', 'rest', 'up', 'hot'] and all(b['segs'][n][2][1] <= b['segs'][n + 1][2][0] + .5 for n in range(4)) and b['dir'] == 'ltr'
+            and sg[0] - .5 <= b['dot'][0] and b['dot'][1] <= sg[1] + .5 and [x[4] for x in b['segs']].index(True) == i
+            and [t[0] for t in b['ticks']] == ['−0.01%', '0', '+0.01%', '+0.03%'] and all(abs(t[1] - m) <= 2 for t, m in zip(b['ticks'], mids))
+            and all(b['ticks'][n][3] < b['ticks'][n + 1][2] for n in range(3)) and b['box'][0] <= b['ticks'][0][2] and b['ticks'][3][3] <= b['box'][1])
 ROWS = "[...document.querySelectorAll('.xm-row')].map(r=>[r.dataset.k, r.className.split(' ')[1], r.querySelector('.xm-cur').textContent, r.querySelector('.xm-sub').innerText.replace(/\\s+/g,' '), (r.querySelector('.xm-more')||{}).textContent||''])"
 with sync_playwright() as p:
     br = p.chromium.launch()
@@ -53,10 +72,24 @@ with sync_playwright() as p:
         check(f'{name}: open — +0.0044% per 8 hours, "Calm — at or under the resting rate", the 7-day mean, a year at this rate, the open interest', pg.is_visible('#fdBody') and '+0.0044%' in top[0] and 'per 8 hours' in top[0] and top[1] == core['word'] == 'Calm — at or under the resting rate' and top[2] == '+0.0016%' and top[3] == '+4.8%' and top[4] == '$9.34B' and pg.evaluate("localStorage.getItem('samsam_mkt_fund_open')") == '1', top)
         tbl = [clean(x) for x in pg.evaluate("[...document.querySelectorAll('#fdTbl > :not(.h)')].map(x=>x.textContent)")]
         check(f'{name}: …every venue with its own rate and open interest', tbl == ['Hyperliquid', '+0.0100%', '$2.32B', 'Bitget', '+0.0018%', '$2.31B', 'OKX', '+0.0003%', '$1.96B', 'Gate', '+0.0069%', '$1.95B', 'Deribit', '+0.0003%', '$802M'], tbl)
+        # the bar: five equal segments in the words' own order, the dot where the core puts the rate
+        b = pg.evaluate(BAR); pos = pg.evaluate("Samsam.core.fundingPos(0.0044)")
+        check(f'{name}: the bar — five segments (crowded shorts → crowded longs), the dot wholly inside "calm" at the core\'s place ({pos and pos["pos"]}%), the four edges under their borders', bar_ok(b, 'rest', 2) and pos and pos['k'] == 'rest' and pos['i'] == 2 and b['left'] == f"{pos['pos']}%" and abs(pos['pos'] - 48.8) < 0.01, b)
+        ws = [x[2][1] - x[2][0] for x in b['segs']]
+        check(f'{name}: …equal segments; under the state\'s line, over the venues — ' + ('on a phone the three numbers come after it' if name == 'phone' else 'on a computer under the row of numbers'), max(ws) - min(ws) <= 1 and b['word'][3] <= b['box'][2] + .5 and b['box'][3] <= b['tbl'][2] + .5 and (b['box'][3] <= b['stats'][2] + .5 if name == 'phone' else b['stats'][3] <= b['box'][2] + .5), [ws, b['word'], b['box'], b['stats']])
+        cols = [rgb3(x[1]) for x in b['segs']]; pairs = sorted(round(dist(cols[i], cols[j]), 1) for i in range(5) for j in range(i + 1, 5)); far = min(round(dist(c, hex3(t)), 1) for c in cols for t in PROFIT_LOSS)
+        check(f'{name}: …five colours measured, not picked by eye: every pair ≥ 15 apart (closest {pairs[0]}), and none within 15 of the profit green or the loss red in either theme (closest {far})', pairs[0] >= 15 and far >= 15, [cols, pairs, far])
+        check(f'{name}: …a state is not told by colour alone: each segment carries its name and range, the bar says which one holds the rate', [x[3] for x in b['segs']] == ['crowded shorts: −0.01% or less', 'negative: under 0', 'calm: 0 … +0.01%', 'above resting: +0.01% … +0.03%', 'crowded longs: +0.03% or more'] and b['label'] == 'calm — 0 … +0.01% (segment 3 of 5)', [[x[3] for x in b['segs']], b['label']])
         note = clean(pg.inner_text('#fdNote'))
         check(f'{name}: …and in plain words: one rate from 5 venues weighted by open interest — without Binance and Bybit; a mood, not a signal', 'One rate from 5 venues, weighted by open interest — without Binance and Bybit' in note and 'not as a signal' in note and 'Not financial advice' in note and not any(w in note.lower() for w in (' buy', ' sell')), note)
         sw = pg.evaluate("document.documentElement.scrollWidth - innerWidth")
         check(f'{name}: …nothing sideways; the card has its hint', sw <= 0 and pg.evaluate("!!document.querySelector('#fundCard .cp-hint[data-hint=funding]') && !!(window.CPHints ? true : true)"), sw)
+        # the ⓘ: the five states beside the bar's own colours, and what a crowded side can do — said as "can", never as a forecast
+        pg.click('#fundCard .cp-hint'); pg.wait_for_timeout(400)
+        h = pg.evaluate("(()=>{const c=document.querySelector('.cph');return c&&{t:c.innerText.replace(/\\s+/g,' '),chips:[...c.querySelectorAll('.cph-chip')].map(e=>getComputedStyle(e).backgroundColor),li:[...c.querySelectorAll('li b')].map(e=>e.textContent)}})()")
+        check(f'{name}: ⓘ — the five states in the bar\'s order, each beside the bar\'s own colour', h and h['li'] == ['Crowded shorts', 'Negative', 'Calm', 'Over the resting rate', 'Crowded longs'] and h['chips'] == [x[1] for x in b['segs']], h)
+        check(f'{name}: ⓘ — a crowded side in conditional words: "If the price falls … can speed the fall (a long squeeze)", "if the price rises … can speed the rise (a short squeeze)", "not when it comes or which way"; a missing big venue "is named beside the rate"', h and all(x in h['t'] for x in ('If the price falls, their forced closing can speed the fall (a long squeeze)', 'if the price rises, the sellers\' forced closing can speed the rise (a short squeeze)', 'not when it comes or which way', 'a big venue that is missing is named beside the rate', 'not a signal')) and not any(w in h['t'].lower() for w in (' will ', 'bounce', ' buy ', ' sell ')), h and h['t'])
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
         # when the relay hands Binance over, the note changes by itself
         cur['s'] = snap(mvrv=mvrv(), dxy=dxy(), funding=funding(extra=['Binance', 0.005, 9e9], rate=0.0047)); hub()
         note = clean(pg.inner_text('#fdNote')); rows = pg.evaluate("document.querySelectorAll('#fdTbl > b').length")
@@ -64,6 +97,11 @@ with sync_playwright() as p:
         # crowded shorts keep their sign and their word
         cur['s'] = snap(funding=funding(rate=-0.0123)); hub()
         check(f'{name}: a negative rate keeps its sign: "−0.0123%" · "Crowded shorts — shorts paying a lot"', '−0.0123%' in clean(pg.inner_text('#fdV')) and clean(pg.inner_text('#fdW')) == 'Crowded shorts — shorts paying a lot' and clean(pg.inner_text('#fdYr')) == '−13.5%', clean(pg.inner_text('#fdV')))
+        b = pg.evaluate(BAR)
+        check(f'{name}: …and the dot is in the first segment (crowded shorts)', bar_ok(b, 'deep', 0), b)
+        for rt, k, i, say in ((-0.004, 'neg', 1, 'negative'), (0.01, 'rest', 2, 'the resting rate itself is still calm'), (0.02, 'up', 3, 'above resting'), (0.03, 'hot', 4, 'crowded longs from +0.03%'), (0.3, 'hot', 4, 'far over the end: pinned inside the last segment'), (-0.2, 'deep', 0, 'far under the end: pinned inside the first')):
+            cur['s'] = snap(funding=funding(rate=rt)); hub(); b = pg.evaluate(BAR)
+            check(f'{name}: bar at {rt:+}% → {say}', bar_ok(b, k, i) and b['box'][0] <= b['dot'][0] and b['dot'][1] <= b['box'][1], b and [b['k'], b['left']])
         for label, part in (('a part 7 hours old', funding(hours=7)), ('no part', None)):
             cur['s'] = snap(funding=part); hub()
             check(f'{name}: {label} → the card is not shown (never a stale rate)', not pg.is_visible('#fundCard'))
@@ -106,6 +144,12 @@ with sync_playwright() as p:
         cur['s'] = snap(mvrv=mvrv(), dxy=dxy(), funding=funding()); pg.evaluate("localStorage.setItem('cp-lang','ar'); localStorage.setItem('samsam_mkt_fund_open','1'); localStorage.setItem('samsam_mkt_rb_open','1')"); hub()
         an = clean(pg.inner_text('#fdNote')); asum = clean(pg.inner_text('#fdSum')); ak = clean(pg.inner_text('#fundCard .mk-k')).strip()
         check(f'{name}: Arabic — "تمويل البيتكوين", "هادئ", "بدون Binance و Bybit", the note in Arabic with the venues named', ak == 'تمويل البيتكوين' and asum == '+0.0044% · هادئ · بدون Binance و Bybit' and clean(pg.inner_text('#fdW')) == 'هادئ — عند المعدل الأساسي أو أقل' and 'معدل واحد من 5 منصات، موزون بالعقود المفتوحة — بدون Binance و Bybit' in an and 'ليست نصيحة مالية' in an and 'venues' not in an, (ak, asum, an))
+        b = pg.evaluate(BAR)
+        check(f'{name}: Arabic — the bar still runs low → high from the left, its edges unchanged, its names in Arabic', bar_ok(b, 'rest', 2) and [x[3] for x in b['segs']] == ['ازدحام بيع: −0.01% أو أقل', 'سالب: أقل من 0', 'هادئ: 0 … +0.01%', 'فوق الأساسي: +0.01% … +0.03%', 'ازدحام شراء: +0.03% أو أكثر'] and b['label'] == 'هادئ — 0 … +0.01% (الخانة 3 من 5)', b and [[x[3] for x in b['segs']], b['label']])
+        pg.click('#fundCard .cp-hint'); pg.wait_for_timeout(400)
+        fh = pg.evaluate("(()=>{const c=document.querySelector('.cph');if(!c)return null;const bd=[...c.querySelectorAll('bdi')],w=document.createTreeWalker(c,NodeFilter.SHOW_TEXT),loose=[];for(let n=w.nextNode();n;n=w.nextNode())if(!n.parentElement.closest('bdi')&&/[\\dA-Za-z]/.test(n.textContent))loose.push(n.textContent.trim().slice(0,40));return {ltr:bd.every(x=>x.dir==='ltr'),t:bd.map(x=>x.textContent.replace(/[\\u2066-\\u2069]/g,'')),loose:loose,chips:c.querySelectorAll('.cph-chip').length,text:c.innerText.replace(/\\s+/g,' '),li:[...c.querySelectorAll('li b')].map(e=>e.textContent)}})()")
+        check(f'{name}: Arabic funding ⓘ — the five states in the bar\'s order with their colours; "Long Squeeze" / "Short Squeeze" and every number are left-to-right pieces, nothing Latin or numeric loose in the Arabic line', fh and fh['ltr'] and fh['chips'] == 5 and fh['li'] == ['ازدحام في مراكز البيع', 'سالب', 'هادئ', 'أعلى من المعدل الأساسي', 'ازدحام في مراكز الشراء'] and all(x in fh['t'] for x in ('Long Squeeze', 'Short Squeeze', '−0.01%', '+0.01%', '+0.03%', '2021', '2024', '2025')) and not fh['loose'] and 'قد يسرّع الهبوط' in fh['text'] and 'قد يسرّع الصعود' in fh['text'] and 'لا متى تحدث ولا في أي اتجاه' in fh['text'] and 'ذُكر اسمها بجانب المعدل' in fh['text'], fh)
+        pg.keyboard.press('Escape'); pg.wait_for_timeout(200)
         check(f'{name}: Arabic — the numbers keep their shape (each a left-to-right piece)', pg.evaluate("[...document.querySelectorAll('#fdV bdi, #fdM7 bdi, #fdYr bdi, #fdOi bdi, #fdTbl bdi')].every(b=>b.dir==='ltr') && document.querySelectorAll('#fdTbl bdi').length===15"))
         amv = clean(pg.inner_text('#rbMvrv')).replace('\n', ' ')
         check(f'{name}: Arabic — the MVRV row: "MVRV 1.14 · متوسط تكلفة البيتكوين المحققة للسوق: $53,033 · سعر البيتكوين الآن أعلى من متوسط التكلفة بـ 14% تقريباً", "المصدر: Coin Metrics"', amv.startswith('MVRV 1.14') and 'متوسط تكلفة البيتكوين المحققة للسوق: $53,033' in amv and 'سعر البيتكوين الآن أعلى من متوسط التكلفة بـ 14% تقريباً' in amv and 'المصدر: Coin Metrics' in amv and 'أعلى قراءة في كل دورة' in amv and 'مرجع، وليس قاعاً' in amv and not any(w in amv for w in ('average', 'Source', 'close')), amv)

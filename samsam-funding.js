@@ -5,12 +5,18 @@
 // are samsam-core.js (fundingNow, fundingRead / FUNDING_WORDS) — the same answer as the bot's line in /market, the AI's
 // facts and the leverage radar.
 //   · closed: the rate and its state in a few words;
+//   · open: the bar — the five states as five equal segments (samsam-core.js → FUNDING_ORDER / FUNDING_EDGES, the same
+//     edges as the words), the four edges printed under it, a white dot where the rate stands (fundingPos);
 //   · open: the 7-day mean, what a year at this rate would be, every venue with its own rate and open interest — and, in
 //     plain words, the big venues that are NOT in the mix (Binance and Bybit refuse the address the data is read from;
 //     when the relay hands one over, the snapshot's `missing` shrinks and this note changes by itself).
 // A mood reading, not a signal: over the last year BTC funding was never above the resting +0.01%, and it said nothing at
 // the October 2025 top (the lab of 27 Nov 2026). No colour or word here tells anyone to buy or sell. A snapshot part over
 // 6 hours old is not shown.
+// The bar's five colours run cold → warm and are NOT the app's profit green or loss red (one meaning, one colour: "calm"
+// is not "good", "crowded longs" is not "sell"). Measured like the donut's and the rainbow's (OKLab × 100): every pair is
+// at least 19 apart, and each is at least 15 from --green / --red in both themes. A state is never told by colour alone:
+// its word is above the bar, the edges are under it, and the ⓘ lists the five with their colours.
 (function () {
   'use strict';
   if (window.SamsamFunding) return;
@@ -20,6 +26,7 @@
   var C = function () { return window.Samsam && window.Samsam.core && window.Samsam.core.fundingNow ? window.Samsam.core : null; };
   var M = function () { return window.SamsamMarket; };
   var L = function (s) { return '<bdi dir="ltr">' + s + '</bdi>'; };   // a number keeps its shape inside an Arabic line
+  var COL = ['#9d5bf4', '#3c96c5', '#b9c5d8', '#fdf156', '#e5a323'];   // deep · neg · rest · up · hot (low → high)
   function rate(v, dp) { return v == null || !isFinite(v) ? '—' : (v < 0 ? '−' : '+') + Math.abs(v).toFixed(dp == null ? 4 : dp) + '%'; }
   function big(v) { return !(v > 0) ? '—' : v >= 1e9 ? '$' + (v / 1e9).toFixed(2) + 'B' : '$' + Math.round(v / 1e6) + 'M'; }
   function list(a) { return ar() ? a.join(' و ') : a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a.join(''); }
@@ -28,6 +35,11 @@
     '@media(max-width:430px){.mk-fund .mk-etf-tog{flex-wrap:wrap;row-gap:3px}.mk-fund .mk-etf-sum{order:3;flex-basis:100%;text-align:start;margin-inline-start:0}.mk-fund .mk-k{flex:1 1 auto}}' +
     '.fd-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}.fd-v{font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15}.fd-v small{font-size:.78rem;font-weight:600;color:var(--fg2);margin-inline-start:6px}' +
     '.fd-w{font-size:.82rem;font-weight:700;color:var(--fg)}' +
+    '.fd-bar{flex:1 1 100%;order:3;direction:ltr;min-width:0}.fd-track{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;height:10px}' +
+    '.fd-seg{display:block;border-radius:2px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--fg) 20%,transparent)}.fd-seg:first-child{border-radius:6px 2px 2px 6px}.fd-seg:nth-child(5){border-radius:2px 6px 6px 2px}' +
+    '.fd-dot{position:absolute;top:50%;box-sizing:border-box;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#fff;border:2.5px solid #0b1020;box-shadow:0 0 0 1.5px rgba(255,255,255,.6)}' +
+    '.fd-ticks{position:relative;height:13px;margin-top:6px;font-size:.64rem;line-height:13px;color:var(--fg2);font-variant-numeric:tabular-nums}.fd-ticks span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}' +
+    '@media(max-width:520px){.fd-bar{order:2}.fd-stats{order:3;flex-basis:100%;justify-content:start}}' +
     '.fd-stats{display:grid;grid-template-columns:repeat(3,auto);gap:4px 16px;font-size:.7rem;color:var(--fg2);font-variant-numeric:tabular-nums}.fd-stats b{display:block;font-size:.86rem;font-weight:800;color:var(--fg)}' +
     '.fd-tbl{display:grid;grid-template-columns:1fr auto auto;gap:5px 16px;font-size:.78rem;font-variant-numeric:tabular-nums;align-items:baseline}.fd-tbl .h{font-size:.68rem;font-weight:700;color:var(--fg2)}.fd-tbl .r{text-align:end}.fd-tbl b{font-weight:700}' +
     '.fd-note{font-size:.76rem;color:var(--fg2);line-height:1.6}.fd-note b{color:var(--fg);font-weight:700}';
@@ -42,10 +54,23 @@
   function read() { var c = C(); return c && part ? c.fundingNow(part, Date.now()) : null; }
   // the venues that are not in the mix, said in words (nothing when none is missing)
   function without(f) { return f.missing.length ? T('without ' + list(f.missing), 'بدون ' + list(f.missing)) : ''; }
+  // The bar: five equal segments, low → high (left to right in both languages, like the rainbow's strip)
+  function range(i) {
+    var E_ = C().FUNDING_EDGES, p = function (v) { return v === 0 ? '0' : rate(v, 2); };
+    return i === 0 ? T(p(E_[0]) + ' or less', p(E_[0]) + ' أو أقل') : i === 4 ? T(p(E_[3]) + ' or more', p(E_[3]) + ' أو أكثر') : i === 1 ? T('under 0', 'أقل من 0') : p(E_[i - 1]) + ' … ' + p(E_[i]);
+  }
+  function bar(f) {
+    var c = C(), p = c.fundingPos ? c.fundingPos(f.rate) : null; if (!p) return '';
+    var words = c.FUNDING_SHORT[ar() ? 'ar' : 'en'];
+    return '<div class="fd-bar" id="fdBar" data-k="' + p.k + '" role="img" aria-label="' + E(words[p.k] + ' — ' + range(p.i) + T(' (segment ', ' (الخانة ') + (p.i + 1) + T(' of 5)', ' من 5)')) + '">' +
+      '<div class="fd-track">' + c.FUNDING_ORDER.map(function (k, i) { return '<i class="fd-seg' + (i === p.i ? ' on' : '') + '" data-k="' + k + '" style="background:' + COL[i] + '" title="' + E(words[k] + ': ' + range(i)) + '"></i>'; }).join('') +
+      '<i class="fd-dot" id="fdDot" style="left:' + p.pos + '%"></i></div>' +
+      '<div class="fd-ticks" aria-hidden="true">' + c.FUNDING_EDGES.map(function (v, i) { return '<span style="left:' + (i + 1) * 20 + '%">' + (v === 0 ? '0' : rate(v, 2)) + '</span>'; }).join('') + '</div></div>';
+  }
   function body(f) {
     var c = C(), wo = without(f);
     return '<div class="fd-top"><div><div class="fd-v" id="fdV">' + L(rate(f.rate)) + '<small>' + T('per 8 hours', 'لكل 8 ساعات') + '</small></div><div class="fd-w" id="fdW">' + E(c.fundingWord(f.rate, ar())) + '</div></div>' +
-      '<div class="fd-stats"><div>' + T('7-day mean', 'متوسط 7 أيام') + '<b id="fdM7">' + L(rate(f.m7)) + '</b></div><div>' + T('A year at this rate', 'سنة بهذا المعدل') + '<b id="fdYr">' + L(rate(f.yr, 1)) + '</b></div><div>' + T('Open interest', 'العقود المفتوحة') + '<b id="fdOi">' + L(big(f.oi)) + '</b></div></div></div>' +
+      '<div class="fd-stats"><div>' + T('7-day mean', 'متوسط 7 أيام') + '<b id="fdM7">' + L(rate(f.m7)) + '</b></div><div>' + T('A year at this rate', 'سنة بهذا المعدل') + '<b id="fdYr">' + L(rate(f.yr, 1)) + '</b></div><div>' + T('Open interest', 'العقود المفتوحة') + '<b id="fdOi">' + L(big(f.oi)) + '</b></div></div>' + bar(f) + '</div>' +
       '<div class="fd-tbl" id="fdTbl"><span class="h">' + T('Venue', 'المنصة') + '</span><span class="h r">' + T('Rate / 8 h', 'المعدل / 8 ساعات') + '</span><span class="h r">' + T('Open interest', 'العقود المفتوحة') + '</span>' +
       f.venues.map(function (x) { return '<b>' + L(E(x.k)) + '</b><span class="r">' + L(rate(x.rate)) + '</span><span class="r">' + L(big(x.oi)) + '</span>'; }).join('') + '</div>' +
       '<p class="fd-note" id="fdNote">' + T('One rate from <b>' + f.n + ' venues</b>, weighted by open interest', 'معدل واحد من <b>' + f.n + ' منصات</b>، موزون بالعقود المفتوحة') +
@@ -73,6 +98,7 @@
     M().funding().then(function (f) { part = f; var go = function (n) { if (C() || n > 60) paint(); else setTimeout(function () { go(n + 1); }, 150); }; go(0); });   // (the maths arrives with samsam-cloud.js)
   }
   window.SamsamFunding = {
+    COL: COL,   // (the ⓘ shows each state beside its colour)
     mount: function (node) {
       if (!node || el) return; el = node; el.setAttribute('data-no-tr', '');   // its words are written in the page's language here
       var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);

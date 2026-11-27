@@ -22,7 +22,8 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 - Zakat: one pool (crypto + metals + cash + shares by a switch) against 85 g of gold, 2.5%; the hijri year is fixed on the
   zakat day; it stays due until ✓ Paid. Always "an estimate, not a fatwa".
 - Fear & Greed: CoinMarketCap's value (kept up to 6 h when CMC answers 429; the app accepts it up to 6.5 h old),
-  alternative.me only as a fallback.
+  alternative.me only as a fallback. Its daily rows are kept in the snapshot (`fng.hist`), so "Yesterday" / "Last week"
+  survive a failed history call.
 - The Net worth card shows on Overview and on Allocation only.
 - 🌈 Bitcoin rainbow (27 Nov): one trend line through every daily close since 18 Aug 2010, nine equal bands (log scale); the
   line is in band 4. **A band counts after two daily closes in a row** ("the band that holds"). The line is fitted again
@@ -44,6 +45,11 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   named beside it** (from the snapshot's `missing`, never typed in: "without Binance and Bybit" when the Doha relay is
   silent; nothing when all are in — since 27 Nov 20:10 UTC it is 7 venues, Binance and Bybit through the relay). **One wording everywhere** (`fundingRead`): hot ≥ +0.03% per 8 h · up > +0.01% · rest 0…+0.01% · neg < 0 · deep ≤
   −0.01% — edges from the last year's payments, not 2021's. A mood reading, never an exit condition.
+  **The card's bar is the same five states** (28 Nov): five equal segments low → high, edges printed under it, a white
+  dot always inside the segment its word names (`FUNDING_ORDER` / `FUNDING_EDGES` / `fundingPos` in the core — the edges
+  live in ONE place). Its colours run cold → warm and are **never the profit green or the loss red** ("calm" is not
+  "good", "crowded longs" is not "sell"). What a crowded side can do is said **only in the ⓘ and only as a condition**
+  ("if the price falls, forced closing can speed the fall") — never a forecast, never a direction.
 - The dollar index (27 Nov, his ranges): the card is the number and its **level in words** — under 90 Weak dollar · 90–100
   Below the base of 100 · 100–105 Moderate strength · 105–110 High strength · over 110 **Rare strength** (a level, never a
   cause: not "tightening") — `dxyRead` / `DXY_WORDS`. What it does to other assets is said **only in the ⓘ and only as
@@ -311,6 +317,28 @@ Tenth round (27 Nov night, his "وحّد الصياغة" + his Cloud Shell opene
   Bitget 0.0046, Hyperliquid 0.0051, OKX 0.0013, Gate 0.0038, Deribit -0.0004 · without —` — 7 venues, nothing missing
   (Binance $5.9B + Bybit $4.1B of open interest against $9.0B for the other five: a little over half the weight;
   the snapshot: rate +0.0048%, 7-day +0.0023%, `missing: []`).
+
+Eleventh round (28 Nov, his "نفذ" on the funding bar after his phone's screenshots of the seven venues):
+- BTC Funding card, open: the bar under the state's line (`#fdBar` in `samsam-funding.js`; on a phone the three numbers
+  come after it, on a computer it sits under their row). Colours `COL` = violet `#9d5bf4` · blue `#3c96c5` · grey-blue
+  `#b9c5d8` · yellow `#fdf156` · amber `#e5a323` — measured (OKLab × 100): every pair ≥ 19, each ≥ 15.6 from `--green` /
+  `--red` in both themes (an orange warm end cannot be: every orange is within 15 of the dark theme's red `#f87171`).
+  Segments carry a thin outline so yellow and grey show on white; the dot has a dark ring. His first sketch had four
+  bands and green / red: five (one per word) and cold → warm were agreed before building.
+- ⓘ (EN + AR): the five states in the bar's order, each beside its colour (`fdChip` reads `SamsamFunding.COL` — one
+  definition), the two squeeze sentences in conditional words, and "a big venue that is missing is named beside the
+  rate" (it said "the big ones that are not in it" with none missing). The app guide's line follows.
+- Fear & Greed showed "—" for Yesterday and Last week on his phone: CoinMarketCap answered the value but its history
+  call returned 500, and the empty history was written over the kept values. Now the rows are kept (`fng.hist`, ten
+  days) and reused when the history is silent (`tools/update-market.mjs`; two checks in `market_cmc_test.mjs`).
+- **A test that failed by the hour of the day** (found here, mine from the seventh round): `tg_bot_test.mjs` — the
+  Worker's deploy gate — gave the funding fixture the real clock's time and then ran the evening at 21:00 Riyadh, so it
+  failed whenever it ran more than 6 hours before that (about 00:00–14:45 Riyadh). Fixed in the test. To try a test at
+  another hour: `SHIFT_H=10 node --require <a file that moves Date> tests/tg_bot_test.mjs` (a test that starts a child
+  process does not carry the moved clock).
+- The lab has section E (`tools/lab/macro.mjs`): Bitcoin in the 24 hours and 7 days after each funding state, from
+  Binance's archive (payments + the perpetual's 8-hour candles), per payment and per episode — so the ⓘ can carry
+  measured numbers like the dollar's, or say nothing. The run's numbers go in the Project doc "indicators-plan".
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state

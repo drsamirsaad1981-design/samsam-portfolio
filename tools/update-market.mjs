@@ -132,10 +132,14 @@ async function main() {
     const tOf = x => { const t = x && x.timestamp; const n = +t; return isFinite(n) && n > 0 ? (n < 1e11 ? n * 1000 : n) : Date.parse(t); };
     const days = (Array.isArray(ch) ? ch : (ch && Array.isArray(ch.data) ? ch.data : [])).filter(x => x && x.value != null && isFinite(tOf(x))).sort((x, y) => tOf(y) - tOf(x));
     const today0 = Math.floor(Date.now() / DAY), dayOf = x => Math.floor(tOf(x) / DAY);
-    const back = n => { const r = days.find(x => dayOf(x) === today0 - n) || days.find(x => dayOf(x) === today0 - n - 1); return r ? +r.value : null; };
-    if (!days.length) log('fng history: no rows', JSON.stringify(ch).slice(0, 200));
+    // its daily rows are kept in the file ([day number, value], the last ten): the history call fails more often than the
+    // latest one (500 / 429), and a silent history used to write "—" over yesterday's and last week's values
+    const kept = oldF && oldF.src === 'cmc' && Array.isArray(oldF.hist) ? oldF.hist.filter(x => Array.isArray(x) && isFinite(x[0]) && isFinite(x[1])) : [];
+    const rows = days.length ? days.slice(0, 10).map(x => [dayOf(x), +x.value]) : kept;
+    const back = n => { const r = rows.find(x => x[0] === today0 - n) || rows.find(x => x[0] === today0 - n - 1); return r ? +r[1] : null; };
+    if (!days.length) log('fng history: no rows', JSON.stringify(ch).slice(0, 200), kept.length ? '· kept its last ' + kept.length + ' days' : '');
     const v = Math.round(+cf.value);
-    snap.fng = { value: v, label: fngLabel(v), prev: back(1), week: back(7), src: 'cmc', at: now }; snap.parts.fng = now; log('fng (CoinMarketCap)', v);
+    snap.fng = { value: v, label: fngLabel(v), prev: back(1), week: back(7), src: 'cmc', at: now, hist: rows }; snap.parts.fng = now; log('fng (CoinMarketCap)', v);
   } else if (oldF && oldF.src === 'cmc' && Date.now() - oldAt < 6 * 3600e3) {
     // CoinMarketCap busy: keep ITS last number (under 6 h old — the index moves slowly) instead of jumping to another source
     snap.fng = { ...oldF, at: oldF.at || new Date(oldAt).toISOString() }; log('fng: CoinMarketCap busy, kept its last one', oldF.value);

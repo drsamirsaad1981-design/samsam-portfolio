@@ -14,6 +14,11 @@
     try { if (window.Samsam && Samsam.getBaseline) return Samsam.getBaseline(); } catch (_) {}
     return { date: '2026-10-15', btcPrice: 81162, isDefault: true };
   }
+  // the funding bar's colour beside each state's name (the colours are the card's own: samsam-funding.js → COL; no card, no chip)
+  function fdChip(i) {
+    var c = window.SamsamFunding && SamsamFunding.COL && SamsamFunding.COL[i];
+    return c ? '<i class="cph-chip" style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;background:' + esc(c) + ';box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 25%,transparent)"></i>' : '';
+  }
 
   // ── The texts ────────────────────────────────────────────────────────────────
   // title: string · body(): HTML string (only our own text + escaped values) · actions(): [{ label, onClick }]
@@ -173,8 +178,10 @@
     },
     funding: { title: 'BTC Funding', body: function () { return '<p>What traders with long positions pay those with short positions on Bitcoin\'s perpetual futures — percent per 8 hours. Negative: shorts pay longs.</p>' +
       '<div class="cph-f"><b>The rate</b><code>the venues\' rates, weighted by open interest</code></div>' +
-      '<ul><li><b>Calm</b>: between 0 and the resting +0.01%.</li><li><b>Over the resting rate</b>: above +0.01% — not seen once in the last year.</li><li><b>Crowded longs</b>: +0.03% or more (common in 2021, gone since 2024).</li><li><b>Negative</b>: under 0. <b>Crowded shorts</b>: −0.01% or less.</li></ul>' +
-      '<p>The card names the venues it reads — and the big ones that are <b>not</b> in it. It is the market\'s mood, not a signal: it said nothing at the October 2025 top.</p>' +
+      '<p>The bar, from left to right:</p>' +
+      '<ul><li>' + fdChip(0) + '<b>Crowded shorts</b>: −0.01% or less.</li><li>' + fdChip(1) + '<b>Negative</b>: under 0.</li><li>' + fdChip(2) + '<b>Calm</b>: between 0 and the resting +0.01%.</li><li>' + fdChip(3) + '<b>Over the resting rate</b>: above +0.01% — not seen once in the last year.</li><li>' + fdChip(4) + '<b>Crowded longs</b>: +0.03% or more (common in 2021, gone since 2024).</li></ul>' +
+      '<p><b>Crowded longs</b>: many leveraged buyers on one side. If the price falls, their forced closing can speed the fall (a long squeeze). <b>Crowded shorts</b>: the reverse — if the price rises, the sellers\' forced closing can speed the rise (a short squeeze). The reading says how sharp a move could be, not when it comes or which way.</p>' +
+      '<p>The card lists the venues it reads; a big venue that is missing is named beside the rate. It is the market\'s mood, not a signal: it said nothing at the October 2025 top.</p>' +
       '<p class="cph-n">Updated twice an hour. Not financial advice.</p>'; } },
     dxy: { title: 'US Dollar Index', body: function () { return '<p>The dollar against six major currencies (ICE\'s DXY): the euro (57.6%), the yen, the pound, the Canadian dollar, the Swedish krona and the Swiss franc.</p>' +
       '<p><b>The level, in words</b> — five ranges around 100, with how often a quarter closed in each since 1985:</p>' +
@@ -318,5 +325,5 @@
   new MutationObserver(function () { if (queued) return; queued = true; requestAnimationFrame(function () { queued = false; paint(); }); })
     .observe(document.documentElement, { childList: true, subtree: true });
 
-  window.CPHint = { open: show, close: close, paint: paint, HINTS: HINTS, util: { esc: esc, money: money, fmtDay: fmtDay, baseline: baseline }, add: function (key, def) { HINTS[key] = def; } };
+  window.CPHint = { open: show, close: close, paint: paint, HINTS: HINTS, util: { esc: esc, money: money, fmtDay: fmtDay, baseline: baseline, fdChip: fdChip }, add: function (key, def) { HINTS[key] = def; } };
 })();

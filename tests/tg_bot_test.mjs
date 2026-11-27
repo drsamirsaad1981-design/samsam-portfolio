@@ -710,7 +710,10 @@ check('…its facts: the portfolio (= summarize), the market, and today\'s tasks
 check('…a snapshot is kept for the evening', !!kvStore.get('tg:555:snap:' + new Date(NOW + 3 * HR).toISOString().slice(0, 10)));
 sent.length = 0; await cron(Wd, RIYADH('09:00')); await cron(Wd, RIYADH('10:20'));
 check('…sent once a day (later runs: nothing; 09:00 is a pinned-message slot → that one only)', !sent.some(x => x.m === 'sendMessage' && /Smart morning|الصباح الذكي/.test(x.b.text)), sent.map(x => x.m));
-LIVE.solana.usd = 140; Wd = await fresh(); sent.length = 0; composeCalls.length = 0; await cron(Wd, RIYADH('21:00'));
+// (the snapshot's funding is "15 minutes old" at the evening's own hour: with the real clock's time, this check failed
+//  whenever the test ran more than 6 hours before 21:00 Riyadh — and this test is the Worker's deploy gate)
+const fundAt = market.funding.at; market.funding.at = new Date(RIYADH('21:00') - 15 * 60e3).toISOString();
+LIVE.solana.usd = 140; Wd = await fresh(); sent.length = 0; composeCalls.length = 0; await cron(Wd, RIYADH('21:00')); market.funding.at = fundAt;
 const em = sent.find(x => x.m === 'sendMessage' && /🌙/.test(x.b.text)), ef = composeCalls[0] && JSON.parse(composeCalls[0].messages[0].content.replace(/^FACTS:\n/, ''));
 check('21:00 → 🌙 Smart evening: since the morning −$150 (SOL 150 → 140 × 15 — 5 bought above), BTC futures, sectors, closest levels', em && ef && ef.since_morning && Math.round(ef.since_morning.portfolio_change_usd) === -150 && ef.btc_futures !== undefined && ef.sectors_24h && ef.sectors_24h.best[0].name === 'AI' && Array.isArray(ef.closest_levels), ef && { s: ef.since_morning, sec: ef.sectors_24h });
 check('…the evening\'s BTC funding is the market\'s own line (the number /market shows), with what it is made of', ef && ef.btc_futures.funding_8h_pct === 0.0044 && ef.btc_futures.funding_reading === 'Calm — at or under the resting rate' && ef.btc_futures.funding_from === '5 venues weighted by open interest, without Binance and Bybit', ef && ef.btc_futures);

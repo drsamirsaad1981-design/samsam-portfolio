@@ -18,6 +18,13 @@ const NOW = Date.parse('2026-11-27T13:20:00Z'), TODAY = Math.floor(NOW / DAY);
   check('…no number → no word', C.fundingRead(null) === null && C.fundingRead(NaN) === null && C.fundingWord(undefined, false) === '');
   check('…every state has its words, long and short, in both languages', ['hot', 'up', 'rest', 'neg', 'deep'].every(k => ['en', 'ar'].every(l => C.FUNDING_WORDS[l][k] && C.FUNDING_SHORT[l][k])));
   check('…the words never tell anyone to buy or sell', !/\b(buy|sell)\b|اشتر|بِع|بيع الآن/i.test(JSON.stringify([C.FUNDING_WORDS.en, C.FUNDING_SHORT.en])) && !/اشترِ|بِعْ/.test(JSON.stringify(C.FUNDING_WORDS.ar)));
+  { // the card's bar reads the same edges as the words: five equal segments, the dot always inside the one its word names
+    const rates = [-0.5, -0.02, -0.015, -0.01, -0.0099, -0.0001, 0, 0.0047, 0.01, 0.0101, 0.02, 0.0299, 0.03, 0.04, 0.5], P = rates.map(r => C.fundingPos(r));
+    check('fundingPos: the segment is the word\'s own state, for every rate', P.every((p, i) => p.k === C.fundingRead(rates[i]) && p.i === C.FUNDING_ORDER.indexOf(p.k)), P.map(p => p.k + p.i).join());
+    check('…the place never goes back as the rate rises, and stays inside its segment (14% … 86% of it)', P.every((p, i) => (!i || p.pos >= P[i - 1].pos) && p.pos >= p.i * 20 + 2.8 - 1e-9 && p.pos <= p.i * 20 + 17.2 + 1e-9), P.map(p => p.pos).join());
+    check('…+0.0047% sits in the middle fifth (calm), a little under its centre; far readings are pinned, not off the bar', near(C.fundingPos(0.0047).pos, 49.4) && C.fundingPos(0.5).pos === 97.2 && C.fundingPos(-0.5).pos === 2.8 && C.fundingPos(null) === null);
+    check('…the edges are the words\' edges, in one place', C.FUNDING_EDGES.join() === '-0.01,0,0.01,0.03' && C.FUNDING_ORDER.join() === 'deep,neg,rest,up,hot' && C.fundingRead(C.FUNDING_EDGES[0]) === 'deep' && C.fundingRead(C.FUNDING_EDGES[1]) === 'rest' && C.fundingRead(C.FUNDING_EDGES[2]) === 'rest' && C.fundingRead(C.FUNDING_EDGES[3]) === 'hot');
+  }
   check('fundingWord picks the language and the length', C.fundingWord(0.004, false) === C.FUNDING_WORDS.en.rest && C.fundingWord(-0.02, true, true) === 'ازدحام بيع');
 }
 

@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 96e4342f42ad796a
+// sources-hash: 5d8e0bea66c3ce24
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -917,10 +917,13 @@ var dxyWord = (v, ar) => {
   const k = dxyRead(v);
   return k ? DXY_WORDS[ar ? "ar" : "en"][k] : "";
 };
+var FUNDING_ORDER = Object.freeze(["deep", "neg", "rest", "up", "hot"]);
+var FUNDING_EDGES = Object.freeze([-0.01, 0, 0.01, 0.03]);
+var FUNDING_ENDS = Object.freeze([-0.02, 0.05]);
 function fundingRead(rate) {
   if (rate == null || !isFinite(rate)) return null;
-  const r = Math.round(rate * 1e4) / 1e4;
-  return r >= 0.03 ? "hot" : r > 0.01 ? "up" : r >= 0 ? "rest" : r > -0.01 ? "neg" : "deep";
+  const r = Math.round(rate * 1e4) / 1e4, E = FUNDING_EDGES;
+  return r >= E[3] ? "hot" : r > E[2] ? "up" : r >= E[1] ? "rest" : r > E[0] ? "neg" : "deep";
 }
 var FUNDING_WORDS = Object.freeze({
   en: { hot: "Crowded longs \u2014 longs paying a lot", up: "Longs paying over the resting rate", rest: "Calm \u2014 at or under the resting rate", neg: "Negative \u2014 shorts paying longs", deep: "Crowded shorts \u2014 shorts paying a lot" },

@@ -946,10 +946,24 @@ export const dxyWord = (v, ar) => { const k = dxyRead(v); return k ? DXY_WORDS[a
 // the resting +0.01%, so anything over it is already out of the year's range; at or under −0.01% were BTC's lowest 0.5%
 // (ETH 2.8%, SOL 11%). +0.03% — 30% of BTC's payments in 2021, none since 2024 — stays the edge of "crowded".
 //   hot ≥ +0.03 · up > +0.01 · rest 0 … +0.01 · neg < 0 · deep ≤ −0.01
+// The four edges live in ONE place (FUNDING_EDGES): the words below and the card's bar both read them.
+export const FUNDING_ORDER = Object.freeze(['deep', 'neg', 'rest', 'up', 'hot']);   // low → high: the bar's five segments
+export const FUNDING_EDGES = Object.freeze([-0.01, 0, 0.01, 0.03]);                 // % per 8 h, between one state and the next
+export const FUNDING_ENDS = Object.freeze([-0.02, 0.05]);                           // where the bar stops (a reading beyond is pinned)
 export function fundingRead(rate) {
   if (rate == null || !isFinite(rate)) return null;
-  const r = Math.round(rate * 1e4) / 1e4;
-  return r >= 0.03 ? 'hot' : r > 0.01 ? 'up' : r >= 0 ? 'rest' : r > -0.01 ? 'neg' : 'deep';
+  const r = Math.round(rate * 1e4) / 1e4, E = FUNDING_EDGES;
+  return r >= E[3] ? 'hot' : r > E[2] ? 'up' : r >= E[1] ? 'rest' : r > E[0] ? 'neg' : 'deep';
+}
+// Where a rate sits on the bar: five EQUAL segments (the edges are not equally far apart, so each segment has its own
+// scale and the edges are printed under the bar). → { k, i (0 … 4), pos (0 … 100) }. The place inside a segment is kept
+// between 14% and 86% of it, so the dot never sits on an edge: it is always wholly inside the segment its word names
+// (−0.01 is "crowded shorts", +0.01 is still "calm", +0.03 is "crowded longs").
+export function fundingPos(rate) {
+  const k = fundingRead(rate); if (!k) return null;
+  const i = FUNDING_ORDER.indexOf(k), lo = i ? FUNDING_EDGES[i - 1] : FUNDING_ENDS[0], hi = i < 4 ? FUNDING_EDGES[i] : FUNDING_ENDS[1];
+  const r = Math.round(rate * 1e4) / 1e4, f = Math.min(0.86, Math.max(0.14, (r - lo) / (hi - lo)));
+  return { k, i, pos: +((i + f) * 20).toFixed(2) };
 }
 export const FUNDING_WORDS = Object.freeze({
   en: { hot: 'Crowded longs — longs paying a lot', up: 'Longs paying over the resting rate', rest: 'Calm — at or under the resting rate', neg: 'Negative — shorts paying longs', deep: 'Crowded shorts — shorts paying a lot' },

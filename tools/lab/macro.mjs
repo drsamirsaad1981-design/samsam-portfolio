@@ -10,6 +10,9 @@
 //   C. BTC perpetual funding rate                            — Binance, OKX, Bybit, Bitget, Gate, Hyperliquid, Deribit: who
 //      answers from GitHub (a US address), the rate now, the history each gives, and — from Binance's public monthly
 //      archive, which is not its API — what "calm" and "stretched" looked like in every year since 2020
+//   E. Bitcoin AFTER a crowded funding reading                — the same archive beside the perpetual's own 8-hour candles:
+//      what the price did in the next 24 hours and 7 days after each state of the app's wording (fundingRead), against
+//      every payment — so the ⓘ can say what was measured, as the dollar's does, or say nothing
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 
@@ -215,6 +218,7 @@ for (const [k, x] of Object.entries(fr)) {
       if (d.length > 20) say(`| ${HM[i][0]} / ${HM[j][0]} | ${d.length} | ${f2(median(d.map(x => x[0])), 4)} | ${f2(d.filter(x => x[1]).length / d.length * 100, 1)}% |`); } }
 }
 
+const ARCH = [];   // BTC's payments from the archive: [time, % per 8 h] — section E reads them again
 { say('', "### Binance's public archive (data.binance.vision — monthly files, not the API that refuses a US address)", '');
   const A = [], miss = [], end = new Date(NOW);
   for (let y = 2020, m = 1; y < end.getUTCFullYear() || (y === end.getUTCFullYear() && m <= end.getUTCMonth() + 1); m === 12 ? (y++, m = 1) : m++) {
@@ -222,7 +226,7 @@ for (const [k, x] of Object.entries(fr)) {
     if (!csv) { miss.push(tag + (r.ok ? ' unreadable' : ' ' + (r.status || 'network'))); continue; }
     for (const l of csv.trim().split('\n')) { const c = l.split(','), t = +c[0], v = +c[c.length - 1]; if (t > 1e12 && isFinite(v)) A.push([t, v * 100]); }
   }
-  A.sort((a, b) => a[0] - b[0]); OUT.funding.archive = { n: A.length, miss };
+  A.sort((a, b) => a[0] - b[0]); OUT.funding.archive = { n: A.length, miss }; ARCH.push(...A);
   if (A.length < 500) say(`**Not usable**: ${A.length} payments read. Months that did not come: ${miss.slice(0, 12).join(', ')}${miss.length > 12 ? ' …' : ''}`);
   else { const d = t => new Date(t).toISOString().slice(0, 10), sh = (v, f) => f2(v.filter(f).length / v.length * 100, 1) + '%';
     say(`${A.length} payments, ${d(A[0][0])} → ${d(A[A.length - 1][0])} (${Math.round((NOW - A[A.length - 1][0]) / DAY)} days behind today: last month's file comes early in the next month).${miss.length ? ' Months that did not come: ' + miss.join(', ') + '.' : ''}`, '',
@@ -281,6 +285,51 @@ for (const [k, x] of Object.entries(fr)) {
         const xs = P.map(p => p[0]), ys = P.map(p => p[1]), mx = mean(xs), my = mean(ys), cov = mean(xs.map((v, i) => (v - mx) * (ys[i] - my))), sx = Math.sqrt(mean(xs.map(v => (v - mx) ** 2))), sy = Math.sqrt(mean(ys.map(v => (v - my) ** 2)));
         const up = P.filter(p => p[0] >= big), dnn = P.filter(p => p[0] <= -big);
         say(`| ${name} | ${step} | ${wn} | ${P.length} | ${f2(cov / (sx * sy))} | ${f2(P.filter(p => p[0] * p[1] < 0).length / P.length * 100, 1)}% | ${up.length ? `${up.length} · ${pc(median(up.map(p => p[1])))} · fell ${f2(up.filter(p => p[1] < 0).length / up.length * 100, 0)}%` : '—'} | ${dnn.length ? `${dnn.length} · ${pc(median(dnn.map(p => p[1])))} · rose ${f2(dnn.filter(p => p[1] > 0).length / dnn.length * 100, 0)}%` : '—'} |`); } } }
+}
+
+// ═══ E. Bitcoin after a crowded funding reading ════════════════════════════════════════════════════════════════════════
+// The claim to test: "crowded longs raise the risk of a sharp fall (a long squeeze); crowded shorts raise the chance of a
+// sharp rise (a short squeeze)". For every payment in the archive: the perpetual's price at that moment (the open of its
+// 8-hour candle — payments fall on 00:00, 08:00 and 16:00 UTC, the candles' own edges), the change 24 hours and 7 days
+// later, and the deepest fall and the highest rise INSIDE those 7 days (from the candles' lows and highs).
+// Payments one after another are almost the same reading, so a state's payments are also counted as EPISODES (a run of
+// that state; a new one starts after 7 days without it) and the first payment of each episode is shown on its own.
+{ say('', '## E. Bitcoin after a crowded funding reading', '');
+  const K = new Map(), miss = [], end = new Date(NOW), S8 = 8 * H, slot = t => Math.round(t / S8);
+  for (let y = 2020, m = 1; y < end.getUTCFullYear() || (y === end.getUTCFullYear() && m <= end.getUTCMonth() + 1); m === 12 ? (y++, m = 1) : m++) {
+    const tag = `${y}-${String(m).padStart(2, '0')}`; let csv = null;
+    for (const base of ['futures/um', 'spot']) { const r = await get(`https://data.binance.vision/data/${base}/monthly/klines/BTCUSDT/8h/BTCUSDT-8h-${tag}.zip`, { as: 'bin', tries: 1 }); csv = r.ok ? unzip1(r.b) : null; if (csv) break; }
+    if (!csv) { miss.push(tag); continue; }
+    for (const l of csv.trim().split('\n')) { const c = l.split(','); let t = +c[0]; if (!(t > 1e12)) continue; if (t > 1e14) t /= 1000;   // (the spot files count in microseconds since 2025)
+      const o = +c[1], h = +c[2], lo = +c[3]; if (o > 0 && h > 0 && lo > 0) K.set(slot(t), [o, h, lo]); }
+  }
+  const E_ = [-0.01, 0, 0.01, 0.03], read = r => { r = Math.round(r * 1e4) / 1e4; return r >= E_[3] ? 'hot' : r > E_[2] ? 'up' : r >= E_[1] ? 'rest' : r > E_[0] ? 'neg' : 'deep'; };   // = samsam-core.js → fundingRead
+  const NAME = { deep: 'Crowded shorts (≤ −0.01%)', neg: 'Negative (< 0)', rest: 'Calm (0 … +0.01%)', up: 'Over the resting rate (> +0.01%)', hot: 'Crowded longs (≥ +0.03%)' };
+  // one row per payment that has its candle and the 21 after it
+  const R = [];
+  for (const [t, r] of ARCH) { const s = slot(t), a = K.get(s), b = K.get(s + 3), c = K.get(s + 21); if (!a || !b || !c) continue;
+    let lo = Infinity, hi = 0, ok = true; for (let i = 0; i < 21; i++) { const k = K.get(s + i); if (!k) { ok = false; break; } if (k[2] < lo) lo = k[2]; if (k[1] > hi) hi = k[1]; } if (!ok) continue;
+    R.push({ t, r, k: read(r), d1: (b[0] / a[0] - 1) * 100, d7: (c[0] / a[0] - 1) * 100, fall: (lo / a[0] - 1) * 100, rise: (hi / a[0] - 1) * 100 }); }
+  OUT.after = { candles: K.size, payments: ARCH.length, rows: R.length, miss };
+  if (R.length < 1000) say(`**Not usable**: ${K.size} candles, ${ARCH.length} payments, ${R.length} payments with their next 7 days.${miss.length ? ' Months of candles that did not come: ' + miss.slice(0, 12).join(', ') + (miss.length > 12 ? ' …' : '') : ''}`);
+  else { const d = t => new Date(t).toISOString().slice(0, 10), sh = (P, f) => P.length ? f2(P.filter(f).length / P.length * 100, 0) + '%' : '—';
+    say(`${R.length} payments with the perpetual's own price at that moment and the 7 days after it, ${d(R[0].t)} → ${d(R[R.length - 1].t)}.${miss.length ? ' Months of candles that did not come: ' + miss.join(', ') + '.' : ''} Percent changes of the price; "inside 7 days" is the lowest low / highest high of those days against the price at the payment.`, '');
+    const episodes = P => { const out = []; let last = -Infinity; for (const x of P) { if (x.t - last > 7 * DAY) out.push(x); last = x.t; } return out; };
+    const head = ['| State at the payment | Payments | 24 h later: median | …it was lower in | 7 days later: median | …lower in | …the worst 10% under | …the best 10% over | Deepest fall inside 7 days: median | Fell 10%+ inside 7 days | Highest rise inside 7 days: median | Rose 10%+ inside 7 days |', '|---|---|---|---|---|---|---|---|---|---|---|---|'];
+    const line = (name, P) => P.length < 8 ? `| ${name} | ${P.length} — too few to say | | | | | | | | | | |` :
+      `| ${name} | ${P.length} | ${pc(median(P.map(x => x.d1)))} | ${sh(P, x => x.d1 < 0)} | ${pc(median(P.map(x => x.d7)))} | ${sh(P, x => x.d7 < 0)} | ${pc(pctl(P.map(x => x.d7), 10))} | ${pc(pctl(P.map(x => x.d7), 90))} | ${pc(median(P.map(x => x.fall)))} | ${sh(P, x => x.fall <= -10)} | ${pc(median(P.map(x => x.rise)))} | ${sh(P, x => x.rise >= 10)} |`;
+    const ORDER = ['deep', 'neg', 'rest', 'up', 'hot']; OUT.after.states = {};
+    for (const [title, from, to] of [['All of it', -Infinity, Infinity], ['2020 – 2021', -Infinity, Date.UTC(2022, 0, 1)], ['2022 → now', Date.UTC(2022, 0, 1), Infinity]]) {
+      const W = R.filter(x => x.t >= from && x.t < to); if (W.length < 300) continue;
+      say(`### ${title} — every payment`, '', ...head, line('**Every payment**', W), ...ORDER.map(k => line(NAME[k], W.filter(x => x.k === k))), '');
+      say(`### ${title} — the first payment of each episode (a state's run; a new one after 7 days without it)`, '', ...head, ...['deep', 'hot'].map(k => line(NAME[k], episodes(W.filter(x => x.k === k)))), '');
+      if (title === 'All of it') for (const k of ORDER) { const P = W.filter(x => x.k === k), Ep = episodes(P); OUT.after.states[k] = { n: P.length, episodes: Ep.length, d1: median(P.map(x => x.d1)), d7: median(P.map(x => x.d7)), fall: median(P.map(x => x.fall)), rise: median(P.map(x => x.rise)), fell10: P.length ? P.filter(x => x.fall <= -10).length / P.length : null, rose10: P.length ? P.filter(x => x.rise >= 10).length / P.length : null }; }
+    }
+    // the episodes themselves, so a reader can see how few they are and when they were
+    for (const k of ['hot', 'deep']) { const Ep = episodes(R.filter(x => x.k === k)); if (!Ep.length) continue;
+      say(`### Every episode of "${NAME[k]}" (${Ep.length})`, '', '| Started | Rate at the first payment | 24 h later | 7 days later | Deepest fall inside 7 days | Highest rise inside 7 days |', '|---|---|---|---|---|---|', ...Ep.slice(-40).map(x => `| ${d(x.t)} | ${pc(x.r, 4)} | ${pc(x.d1)} | ${pc(x.d7)} | ${pc(x.fall)} | ${pc(x.rise)} |`), Ep.length > 40 ? `(the last 40 of ${Ep.length})` : '', ''); }
+    say('- Read with care: payments next to each other overlap almost wholly (the same 7 days counted again), so the "every payment" rows look far surer than they are — the episode rows are the honest count. And most "crowded longs" readings are from 2020–2021, one bull market.');
+  }
 }
 
 say('', '---', '', 'What this run does not say: whether these numbers are worth showing — only whether they can be had, how fresh, and how far two sources agree.');
