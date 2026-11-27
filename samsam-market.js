@@ -334,9 +334,13 @@
       });
     },
     // stablecoins: pegged to the dollar (or euro) or to gold — they don't move like crypto
+    // (FIGR_HELOC — Figure's tokenized home-equity loans — is listed with them: a dollar claim valued near $1 that no
+    //  exchange trades; its thin quote moves several percent a day, so the "hardly moved" rule below does not catch it,
+    //  and at rank 9 by size it showed up as a top-ten coin and a daily "worst". Samir, 28 Nov 2026.)
+    // The ticker list is the same in samsam-coins.js and tools/alerts-core.mjs — market_cmc_test.mjs holds them equal.
     isStable: function (c) {
       var s = String(c.sym || '').toUpperCase(), n = (c.name || '').toLowerCase();
-      if (/^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD)$/.test(s)) return true;
+      if (/^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD|FIGR_HELOC)$/.test(s)) return true;
       if (/stablecoin|\busd\b|dollar|tether gold|pax gold|\beuro\b/.test(n) && !/wrapped|staked/.test(n)) return true;
       if (/\bgold\b/.test(n) && API.flat(c, 0.08)) return true;   // gold tokens (Kinesis Gold…) follow gold, not crypto
       // tied to a currency by its ticker (EURSAFO, EURQ, GBPT, XSGD, CHFX…)

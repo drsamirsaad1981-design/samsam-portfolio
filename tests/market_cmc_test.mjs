@@ -99,6 +99,17 @@ check('CoinMarketCap down → alternative.me\'s Fear & Greed (10)', m2.fng && m2
 check('CoinMarketCap down → CoinGecko\'s dominance (58)', m2.global.dom.btc === 58 && m2.global.domSrc !== 'cmc', m2.global);
 check('…and the app\'s own Altcoin Season count from CoinGecko\'s top 100', m2.alt && m2.alt.src === 'own' && m2.alt.value != null && alt2.list === 'coingecko' && alt2.coins.some(c => c.id === 'zzz'), m2.alt);
 fs.rmSync(dir2, { recursive: true }); srv.close();
+// one ticker list for "pegged, not a coin" in the three places that keep it — and Figure's loan token is in it
+{
+  const ROOT_ = ROOT, lists = ['samsam-market.js', 'samsam-coins.js', 'tools/alerts-core.mjs'].map(f => (/\^\((USDT\|[A-Z0-9_|-]+)\)\$/.exec(fs.readFileSync(path.join(ROOT_, f), 'utf8')) || [])[1]);
+  check('the stablecoin ticker list is the same in the Market Hub, Top Performers and the bot', lists[0] && lists.every(x => x === lists[0]), lists.map(x => x && x.length));
+  const core = await import(path.join(ROOT_, 'tools/alerts-core.mjs'));
+  check('…and FIGR_HELOC (Figure\'s tokenized loans, near $1, on no exchange) is in it — never a top coin, a best or a worst', /\|FIGR_HELOC$/.test(lists[0]) && core.isStable('FIGR_HELOC') && core.isStable('figr_heloc') && !core.isStable('FIGR') && !core.isStable('BTC'));
+  const vm_ = await import('node:vm'), ctx = { window: {}, location: { hostname: '', pathname: '/' }, localStorage: { getItem() { return null; }, setItem() {} }, navigator: {}, fetch() {} };
+  vm_.runInNewContext(fs.readFileSync(path.join(ROOT_, 'samsam-market.js'), 'utf8'), ctx); const M = ctx.window.SamsamMarket;
+  const figr = { id: 'figure-heloc', sym: 'FIGR_HELOC', name: 'Figure Heloc', rank: 9, price: 1.005, ch24: -5.46, spark: Array.from({ length: 40 }, (_, i) => 1 + 0.06 * Math.sin(i)) };   // its quote swings: the "hardly moved" rule alone would miss it
+  check('…the Market Hub hides it with the stablecoins and Altcoin Season does not count it, though its quote moves 5% a day', M.isStable(figr) && M.isExcluded(figr) && !M.flat(figr, 0.015) && !M.isStable({ id: 'solana', sym: 'SOL', name: 'Solana', price: 150, spark: figr.spark.map(v => v * 150) }));
+}
 // the app (samsam-market.js): CoinMarketCap's numbers from the snapshot, moved live by CoinGecko's change since then
 {
   const vm = await import('node:vm');

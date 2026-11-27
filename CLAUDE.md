@@ -45,11 +45,17 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   named beside it** (from the snapshot's `missing`, never typed in: "without Binance and Bybit" when the Doha relay is
   silent; nothing when all are in — since 27 Nov 20:10 UTC it is 7 venues, Binance and Bybit through the relay). **One wording everywhere** (`fundingRead`): hot ≥ +0.03% per 8 h · up > +0.01% · rest 0…+0.01% · neg < 0 · deep ≤
   −0.01% — edges from the last year's payments, not 2021's. A mood reading, never an exit condition.
-  **The card's bar is the same five states** (28 Nov): five equal segments low → high, edges printed under it, a white
+  **The card's bar is the same five states** (28 Nov; shown closed AND open — under the header when closed, under the
+  state's line when open, never two on the page): five equal segments low → high, edges printed under it, a white
   dot always inside the segment its word names (`FUNDING_ORDER` / `FUNDING_EDGES` / `fundingPos` in the core — the edges
   live in ONE place). Its colours run cold → warm and are **never the profit green or the loss red** ("calm" is not
   "good", "crowded longs" is not "sell"). What a crowded side can do is said **only in the ⓘ and only as a condition**
-  ("if the price falls, forced closing can speed the fall") — never a forecast, never a direction.
+  ("if the price falls, forced closing can speed the fall") — never a forecast, never a direction. The ⓘ also has a
+  **"What was measured"** line from the lab's section E, and it must keep its limits in the same sentence ("most of
+  these readings are from 2020–2021 … only a few episodes: 21 … 27") — his words: without them the numbers read as a rule.
+- **Pegged, not a coin**: one ticker list in three places (`samsam-market.js` → `isStable`, `samsam-coins.js`,
+  `tools/alerts-core.mjs` → `STABLE_RX`; `market_cmc_test.mjs` holds them equal). **FIGR_HELOC is in it** (28 Nov, his
+  call): Figure's tokenized home-equity loans, valued near $1, on no exchange — it sat at rank 9 as a "coin".
 - The dollar index (27 Nov, his ranges): the card is the number and its **level in words** — under 90 Weak dollar · 90–100
   Below the base of 100 · 100–105 Moderate strength · 105–110 High strength · over 110 **Rare strength** (a level, never a
   cause: not "tightening") — `dxyRead` / `DXY_WORDS`. What it does to other assets is said **only in the ⓘ and only as
@@ -346,6 +352,14 @@ Eleventh round (28 Nov, his "نفذ" on the funding bar after his phone's screen
   and the worst crashes began there too (Mar 2020 −41%, May / Jun 2022 −27% / −30%, Nov 2022 −17%); 27 episodes. So the
   conditional wording stands and "a fast bounce" would not have. Whether the ⓘ gets a "what was measured" line is his
   call (a draft is in that doc).
+
+Twelfth round (28 Nov 01:30 Riyadh, three asks one after another from his phone):
+- The funding ⓘ has the measured line (EN + AR; Arabic in the hints' own register and terms — "ما قيس", "ازدحام في مراكز
+  الشراء / البيع" — with every number, range and "Binance" a left-to-right piece, and the two counts written apart so no
+  "و" is stuck to a number).
+- The bar shows on the closed card too (`#fdFold`, emptied when the card opens: one `#fdBar` at a time).
+- FIGR_HELOC joins the stablecoin list: hidden with them in the Market Hub, out of Altcoin Season's count, never a
+  best / worst coin in the bot or the AI's facts. The Worker was rebuilt for it.
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state

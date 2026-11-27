@@ -575,7 +575,7 @@
   // (a 30-cent coin up 40% is not your best performer). Returns { best, worst } or null when nothing qualifies.
   // Stablecoins (pegged to the dollar / euro / gold) never count as a "performer" — they don't move like crypto, so one would
   // only show up as the best coin in a falling market (or beat BTC whenever BTC drops). Same list as the Market page.
-  var STABLE_RX = /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD)$/;
+  var STABLE_RX = /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD|FIGR_HELOC)$/;
   function isStable(sym, name) {
     var s = String(sym || '').toUpperCase(), n = String(name || '').toLowerCase();
     if (STABLE_RX.test(s)) return true;

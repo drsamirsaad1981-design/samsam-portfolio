@@ -4,8 +4,9 @@
 // snapshot's (tools/update-macro.mjs): several venues as one rate, weighted by open interest. The reader and the wording
 // are samsam-core.js (fundingNow, fundingRead / FUNDING_WORDS) — the same answer as the bot's line in /market, the AI's
 // facts and the leverage radar.
-//   · closed: the rate and its state in a few words;
-//   · open: the bar — the five states as five equal segments (samsam-core.js → FUNDING_ORDER / FUNDING_EDGES, the same
+//   · closed: the rate and its state in a few words, and the bar under them;
+//   · the bar (closed AND open — one bar on the page at a time: under the header when closed, under the state's line
+//     when open): the five states as five equal segments (samsam-core.js → FUNDING_ORDER / FUNDING_EDGES, the same
 //     edges as the words), the four edges printed under it, a white dot where the rate stands (fundingPos);
 //   · open: the 7-day mean, what a year at this rate would be, every venue with its own rate and open interest — and, in
 //     plain words, the big venues that are NOT in the mix (Binance and Bybit refuse the address the data is read from;
@@ -35,7 +36,7 @@
     '@media(max-width:430px){.mk-fund .mk-etf-tog{flex-wrap:wrap;row-gap:3px}.mk-fund .mk-etf-sum{order:3;flex-basis:100%;text-align:start;margin-inline-start:0}.mk-fund .mk-k{flex:1 1 auto}}' +
     '.fd-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}.fd-v{font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15}.fd-v small{font-size:.78rem;font-weight:600;color:var(--fg2);margin-inline-start:6px}' +
     '.fd-w{font-size:.82rem;font-weight:700;color:var(--fg)}' +
-    '.fd-bar{flex:1 1 100%;order:3;direction:ltr;min-width:0}.fd-track{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;height:10px}' +
+    '.fd-fold[hidden]{display:none}.fd-fold{display:flex}.fd-bar{flex:1 1 100%;order:3;direction:ltr;min-width:0}.fd-track{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;height:10px}' +
     '.fd-seg{display:block;border-radius:2px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--fg) 20%,transparent)}.fd-seg:first-child{border-radius:6px 2px 2px 6px}.fd-seg:nth-child(5){border-radius:2px 6px 6px 2px}' +
     '.fd-dot{position:absolute;top:50%;box-sizing:border-box;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#fff;border:2.5px solid #0b1020;box-shadow:0 0 0 1.5px rgba(255,255,255,.6)}' +
     '.fd-ticks{position:relative;height:13px;margin-top:6px;font-size:.64rem;line-height:13px;color:var(--fg2);font-variant-numeric:tabular-nums}.fd-ticks span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}' +
@@ -49,7 +50,7 @@
       '<span class="mk-k"><span data-ic="activity"></span>' + T('BTC Funding', 'تمويل البيتكوين') + '<span class="cp-hint" data-hint="funding" role="button" tabindex="0"></span></span>' +
       '<span class="mk-etf-sum" id="fdSum"></span>' +
       '<svg class="mk-etf-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>' +
-      '<div class="mk-etf-body" id="fdBody" hidden></div>';
+      '<div class="fd-fold" id="fdFold" hidden></div><div class="mk-etf-body" id="fdBody" hidden></div>';
   }
   function read() { var c = C(); return c && part ? c.fundingNow(part, Date.now()) : null; }
   // the venues that are not in the mix, said in words (nothing when none is missing)
@@ -85,7 +86,9 @@
     el.hidden = false;
     var wo = without(f);
     document.getElementById('fdSum').innerHTML = L(rate(f.rate)) + ' · ' + E(C().fundingWord(f.rate, ar(), true)) + (wo ? ' · ' + E(wo) : '');
-    var b = document.getElementById('fdBody'); if (!b.hidden) b.innerHTML = body(f);
+    // one bar at a time (one #fdBar): in the body when open, under the header when closed
+    var b = document.getElementById('fdBody'), fo = document.getElementById('fdFold');
+    if (b.hidden) { b.innerHTML = ''; fo.innerHTML = bar(f); fo.hidden = !fo.innerHTML; } else { fo.innerHTML = ''; fo.hidden = true; b.innerHTML = body(f); }
   }
   function setOpen(on, keep) {
     var b = document.getElementById('fdBody'); b.hidden = !on; el.classList.toggle('open', on);

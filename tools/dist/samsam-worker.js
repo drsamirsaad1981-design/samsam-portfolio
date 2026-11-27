@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 5d8e0bea66c3ce24
+// sources-hash: 37d67d1fa6a443d6
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -1497,7 +1497,7 @@ function summarize(user, market, now = Date.now()) {
     btc7: btcRow ? btcRow.ch7 : null
   };
 }
-var STABLE_RX = /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD)$/;
+var STABLE_RX = /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD|FIGR_HELOC)$/;
 var isStable = (sym) => STABLE_RX.test(String(sym || "").toUpperCase());
 var FNG_AR = { "Extreme Fear": "\u062E\u0648\u0641 \u0634\u062F\u064A\u062F", Fear: "\u062E\u0648\u0641", Neutral: "\u0645\u062D\u0627\u064A\u062F", Greed: "\u0637\u0645\u0639", "Extreme Greed": "\u0637\u0645\u0639 \u0634\u062F\u064A\u062F" };
 var SEASON_AR = { "Altcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629", "Bitcoin Season": "\u0645\u0648\u0633\u0645 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646", "Leaning Altcoins": "\u064A\u0645\u064A\u0644 \u0644\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0628\u062F\u064A\u0644\u0629", "Leaning Bitcoin": "\u064A\u0645\u064A\u0644 \u0644\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646" };

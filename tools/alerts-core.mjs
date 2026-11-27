@@ -315,7 +315,7 @@ export function summarize(user, market, now = Date.now()) {
 // ── messages ──
 const btn = (text, path) => ({ text, url: APP + (path || '') });
 // stablecoins never count as a best / worst coin (same list as the app's Top Performers — samsam-coins.js → isStable)
-export const STABLE_RX = /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD)$/;
+export const STABLE_RX = /^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD|FIGR_HELOC)$/;
 export const isStable = sym => STABLE_RX.test(String(sym || '').toUpperCase());
 function movers(sum, key, n = 3) {
   const list = sum.coins.filter(c => c[key] != null && c.value >= 1 && !isStable(c.sym));
