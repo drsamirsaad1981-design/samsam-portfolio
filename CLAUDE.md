@@ -54,7 +54,7 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 | Main page | `samsam-home.js` (+ `samsam-home.css`), `samsam-hchart.js`, `samsam-analysis.js` (AI report), `samsam-cash.js` |
 | Shared UI | `samsam-ui.js` (header, footer, bottom bar, AI button, CPDialog), `samsam-lang.js` + `samsam-ar.js` (Arabic), `samsam-hints.js` |
 | Market data in the app | `samsam-market.js` (snapshot first, CoinGecko live) |
-| 🌈 Bitcoin rainbow | maths + names `samsam-core.js` (`rainbowFit`, `rainbowRead`, `RAINBOW_NAMES`); the daily job `tools/update-rainbow.mjs` → `m/btcday.json` (every close since 2010) + `m/rainbow.json` (its small part is copied into `m/market.json` by `update-market.mjs` — the Worker has no outside call to spare); Market Hub card `samsam-rainbow.js`; the bot's lines and the alert `tools/alerts-core.mjs` (`rainbowLines`, `evaluate` 4b); the lab `tools/lab/rainbow.mjs`. The same job and file carry 📏 the 200-week average and the Pi Cycle (`w200`, `pi`; `btcW200`, `btcPi`, one reader `btcMarks`); 📉 `maxDrawdown` is in the core too (Performance page) |
+| 🌈 Bitcoin rainbow | maths + names `samsam-core.js` (`rainbowFit`, `rainbowRead`, `RAINBOW_NAMES`); the daily job `tools/update-rainbow.mjs` → `m/btcday.json` (every close since 2010) + `m/rainbow.json` (its small part is copied into `m/market.json` by `update-market.mjs` — the Worker has no outside call to spare); Market Hub card `samsam-rainbow.js`; the bot's lines and the alert `tools/alerts-core.mjs` (`rainbowLines`, `evaluate` 4b); the labs `tools/lab/rainbow.mjs` and `tools/lab/macro.mjs` (trials only: they run on GitHub, write nothing, and report in the run's summary). The same job and file carry 📏 the 200-week average and the Pi Cycle (`w200`, `pi`; `btcW200`, `btcPi`, one reader `btcMarks`); 📉 `maxDrawdown` is in the core too (Performance page) |
 | Taxonomy | `samsam-taxonomy.js` (classes crypto / stock / metal / cash, categories) |
 | Market snapshot (GitHub Actions → branch `prices`) | `tools/update-market.mjs`, `tools/update-prices.mjs`, `tools/update-etf.mjs` → `m/market.json`, `m/etf.json`, `p/*.json` |
 | Bot + AI (Cloudflare Worker) | `tools/worker/*.mjs` (bot, ai tools, daily jobs, data), `tools/ai-worker.js`, `tools/alerts-core.mjs` (summary + messages) |
@@ -209,9 +209,26 @@ Sixth round (27 Nov, his "نفذ" for group 1 of six new indicators — the ones
   in the local subset): "Market Structure", "Bitcoin Valuation", "Max Drawdown". The bot's own lines stay sentence case.
 - A lesson: a `// comment` appended inside a one-line `try { … } catch` swallowed the `catch` (update-market.mjs) —
   `market_cmc_test.mjs` caught it before the push. Put the comment after the whole statement, and run every Node test.
-- Still to come, **group 2 — after a lab trial like the rainbow's** (his decision): MVRV (Coin Metrics community API: a
-  new source; its old 3.5 line was not reached in 2025), DXY (Yahoo `DX-Y.NYB`, Metals section), BTC funding rate
-  (the bot already reads OKX's; "aggregated" only if it really is). MVRV joins the Bitcoin valuation group.
+- Group 2 (MVRV, DXY, BTC funding): **the lab trial ran on 27 Nov** (`tools/lab/macro.mjs`, Actions → "Macro lab"; the
+  numbers are in the Project doc "indicators-plan"). Nothing of it is in the app or the bot yet — that waits for his "نفذ"
+  and four decisions (MVRV's default level; MVRV's alert; the funding line's venues and name; one funding reading for the
+  app and the bot). What the trial found, in short:
+  - **MVRV**: Coin Metrics' community API gives `CapMVRVCur` free and without a key (every day since 2010, one day behind;
+    CC BY-NC 4.0 — fine for a non-profit, the source must be named; 10 requests / 6 s). Realized cap alone is NOT free
+    (403), so the ratio is theirs, not ours to recompute. blockchain.com's chart agrees since 2022 (median 0.18%) and can
+    stand in for the day's value, never for the old history (2011: 3.18 vs 6.35). Each cycle's highest: 7.74 · 5.88 ·
+    4.72 · 3.96 · **2.74** (21 Nov 2024); 2.29 at the price top of Oct 2025; 3.5 last seen 19 Mar 2021, 3.0 on
+    17 Apr 2021. Now 1.14 (the average cost it implies ≈ $53,000); never under 1.0 in this cycle so far.
+  - **DXY**: Yahoo `DX-Y.NYB` answers (the metals' request); `DX=F` does not exist and stooq refuses GitHub. The index
+    rebuilt from its six currencies (ICE's formula) is within 0.07% of it from Yahoo's pairs and 0.14% from the ECB's
+    daily rates — a fallback and an outside check. With a long range Yahoo sends no `previousClose`: the day's change
+    comes from the daily closes.
+  - **Funding**: from GitHub (a US address) Binance (451) and Bybit (403) refuse; OKX, Bitget, Gate, Hyperliquid and
+    Deribit answer ($9.3B of open interest between them). Their APIs keep 30–93 days; Binance's public monthly archive
+    (data.binance.vision, a zip a month, last month's file) gives every payment since 2020. **BTC funding has not been
+    over the resting +0.01% once in 2025 or 2026** (2021: 30% of payments at or over +0.03%; 2024: 6.6%), and the week
+    of the Oct 2025 top was an ordinary one — so the bot's "crowded longs" line (over +0.03%, or 40% a year) has had
+    nothing to say about BTC for two years. OKX follows Binance payment by payment (same sign 88%, equal means).
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
@@ -219,8 +236,9 @@ Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
   (The rainbow alert reaches members with this phase; today they see the line in `/market` and the weekly report.)
 
 Still open:
-1. The members' alerts above; group 2 of the indicators (MVRV, DXY, funding rate — a lab trial first); a section in the bot's
-   guide for the rainbow and the new readings (his approval: it posts to the channel).
+1. The members' alerts above; group 2 of the indicators (MVRV, DXY, funding rate — the lab trial is done, building them
+   waits for his "نفذ" and his four decisions); a section in the bot's guide for the rainbow and the new readings (his
+   approval: it posts to the channel).
 2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
    `asset_classes_app_test.py` needed its retry in both GitHub runs of 27 Nov (8/9 on the first try, at 46/48 of its
    shard; 9/9 three times in a row here) — same list.
