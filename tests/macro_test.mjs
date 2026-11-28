@@ -4,7 +4,7 @@
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import * as C from '../samsam-core.js';
 process.env.MACRO_FAST = '1';
-const { mvrvSummary, dxyFormula, dxyFrom, fundingMix, stablesFrom, main, MVRV_FROM, FAR_VENUES } = await import('../tools/update-macro.mjs');
+const { mvrvSummary, dxyFormula, dxyFrom, fundingMix, stablesFrom, PEG_MIN, main, MVRV_FROM, FAR_VENUES } = await import('../tools/update-macro.mjs');
 
 let fails = 0, n = 0;
 const check = (name, ok, info) => { n++; if (!ok) { fails++; console.log('✗', name, info === undefined ? '' : JSON.stringify(info)); } };
@@ -96,8 +96,8 @@ const net = { cm: true, cmTo: TODAY - 1, bc: true, dxy: true, pairs: true, okx: 
 // DefiLlama, made up: the supply in coins falls $100M a day to $280B today; at market price it is 2% lower (a de-peg) —
 // and there are euro coins beside the dollar ones
 const llChart = to => { const a = []; for (let d = to - 400; d <= to; d++) a.push({ date: String(d * 86400), totalCirculating: { peggedUSD: 280e9 + (to - d) * 1e8, peggedEUR: 5e8 }, totalCirculatingUSD: { peggedUSD: (280e9 + (to - d) * 1e8) * 0.98, peggedEUR: 5.4e8 } }); return a; };
-const llCoin = (symbol, c, prev, pegType = 'peggedUSD') => ({ id: symbol, symbol, name: symbol + ' Dollar', pegType, pegMechanism: 'fiat-backed', price: 0.9991, circulating: { [pegType]: c }, circulatingPrevMonth: prev ? { [pegType]: prev } : 0 });
-const llList = () => ({ peggedAssets: [llCoin('USDC', 70e9, 72e9), llCoin('EURC', 3e11, 3e11, 'peggedEUR'), llCoin('USDT', 172e9, 180e9), llCoin('NEWUSD', 6e8, 0), llCoin('DEAD', 0, 1e9), ...Array.from({ length: 9 }, (_, i) => llCoin('S' + i, (9 - i) * 1e9, (9 - i) * 1e9))] });
+const llCoin = (symbol, c, prev, pegType = 'peggedUSD', price = 0.9991) => ({ id: symbol, symbol, name: symbol + ' Dollar', pegType, pegMechanism: 'fiat-backed', price, circulating: { [pegType]: c }, circulatingPrevMonth: prev ? { [pegType]: prev } : 0 });
+const llList = () => ({ peggedAssets: [...(net.llLow || []), llCoin('USDC', 70e9, 72e9), llCoin('EURC', 3e11, 3e11, 'peggedEUR'), llCoin('USDT', 172e9, 180e9), llCoin('NEWUSD', 6e8, 0), llCoin('DEAD', 0, 1e9), ...Array.from({ length: 9 }, (_, i) => llCoin('S' + i, (9 - i) * 1e9, (9 - i) * 1e9))] });
 const pay = (n, base, step = 8 * 36e5) => Array.from({ length: n }, (_, i) => [NOW - 36e5 - i * step, base]);
 globalThis.fetch = async (u, o) => { u = String(u); net.calls.push(u);
   if (/coinmetrics/.test(u)) { if (!net.cm) return new Response('{}', { status: 503 }); const from = dn(/start_time=([\d-]+)/.exec(u)[1]), data = []; for (let d = from; d <= net.cmTo; d++) data.push({ asset: 'btc', time: iso(d) + 'T00:00:00.000000000Z', CapMVRVCur: String(d < dn('2011-01-01') ? 140 : mv(d)), PriceUSD: '60000' }); return J({ data }); }
@@ -133,6 +133,19 @@ globalThis.fetch = async (u, o) => { u = String(u); net.calls.push(u);
     check('…a coin that was not listed a month ago is "new", never a percent', r2.top[1].sym === 'NEWUSD' && r2.top[1].isNew === true && r2.top[1].m30 === null && s2.top[1].m30 === null, r2.top[1]);
     const gap = llChart(TODAY).filter(x => +x.date / 86400 !== TODAY - 7), r3 = C.stablesNow(stablesFrom(gap, llList(), NOW), NOW);
     check('…a missing day leaves a gap, not a made-up change: no 7-day figure, 28 bars', r3.d7 === null && r3.p7 === null && r3.d30 === -3e9 && r3.bars.length === 28 && !r3.bars.some(b => b[0] === iso(TODAY - 7) || b[0] === iso(TODAY - 6)), [r3.d7, r3.bars.length]);
+    // ── a coin that is no longer a dollar ──
+    const L3 = px => ({ peggedAssets: [llCoin('USDT', 172e9, 180e9), llCoin('FELL', 2e9, 5e9, 'peggedUSD', px), llCoin('NOPX', 1e9, 1e9, 'peggedUSD', null), llCoin('EDGE', 4e8, 4e8, 'peggedUSD', 0.9), llCoin('ZERO', 3e8, 3e8, 'peggedUSD', 0)] });
+    const f1 = stablesFrom(llChart(TODAY), L3(0.42), NOW);   // no memory: the list is taken as it is found
+    check('under $0.90 (the first run, no memory): the coin is left out — its supply now comes off the total, off every day kept and off the year before, so leaving it out is not itself a fall',
+      PEG_MIN === 0.9 && f1.out.n === 2 && f1.out.sum === 2.3e9 && f1.out.min === 0.9 && f1.total === 280e9 - 2.3e9 && f1.tot.every((v, i) => v === 283e9 - i * 1e8 - 2.3e9) && f1.y1 === 280e9 + 365e8 - 2.3e9 && C.stablesNow(f1, NOW).d30 === -3e9 && C.stablesNow(f1, NOW).d1 === -1e8, [f1.out, f1.total]);
+    check('…it is not among the coins shown, and is not counted; a coin at exactly $0.90 stays, and so does a coin the source has no price for (a missing price is not a fall); a price of 0 is a price', f1.top.map(x => x.sym).join() === 'USDT,NOPX,EDGE' && f1.n === 3 && !f1.top.some(x => 'id' in x) && Object.keys(f1.low).sort().join() === 'FELL,ZERO', [f1.top.map(x => x.sym), f1.low]);
+    const g0 = stablesFrom(llChart(TODAY), L3(0.99), NOW, { v: 1, low: {} }), g1 = stablesFrom(llChart(TODAY), L3(0.42), NOW + 36e5, g0);
+    check('…with a memory: the day a coin is FIRST seen under $0.90 it still counts (one bad price in one run takes nothing out)', g0.low.ZERO === iso(TODAY) && !g0.low.FELL && g0.out.n === 0 && g1.low.FELL === iso(TODAY) && g1.out.n === 0 && g1.total === 280e9 && g1.top.some(x => x.sym === 'FELL'), [g0.low, g1.low, g1.out]);
+    const g2 = stablesFrom(llChart(TODAY + 1), L3(0.42), NOW + DAY, g1), g3 = stablesFrom(llChart(TODAY + 1), L3(0.95), NOW + DAY + 36e5, g2), g4 = stablesFrom(llChart(TODAY + 1), L3(0.42), NOW + DAY + 2 * 36e5, g3);
+    check('…the next day, still under: left out', g2.low.FELL === iso(TODAY) && g2.out.n === 2 && g2.out.sum === 2.3e9 && g2.total === 280e9 - 2.3e9 && !g2.top.some(x => x.sym === 'FELL'), [g2.low, g2.out]);
+    check('…back over $0.90: it counts again at once; under again: a new first day', !g3.low.FELL && g3.out.n === 1 && g3.total === 280e9 - 3e8 && g3.top.some(x => x.sym === 'FELL') && g4.low.FELL === iso(TODAY + 1) && g4.out.n === 1, [g3.low, g4.low]);
+    const g5 = stablesFrom(llChart(TODAY + 1), null, NOW + DAY + 3 * 36e5, g2);
+    check('…the list silent: the same coins stay out (their last supply) and the last breakdown stays', g5.out.sum === 2.3e9 && g5.total === 280e9 - 2.3e9 && g5.low.FELL === iso(TODAY) && g5.top.map(x => x.sym).join() === g2.top.map(x => x.sym).join() && g5.n === 3, [g5.out, g5.total]);
     check('…a part over 4 days old is not a reading; a short or empty answer is no part', C.stablesNow(st, NOW + 4 * DAY) && C.stablesNow(st, NOW + 6 * DAY) === null && stablesFrom([], llList(), NOW) === null && stablesFrom(llChart(TODAY).slice(-20), llList(), NOW) === null && stablesFrom(null, null, NOW) === null && C.stablesNow(null, NOW) === null && C.stablesNow({ ...st, tot: [1] }, NOW) === null);
   }
 
@@ -160,7 +173,9 @@ globalThis.fetch = async (u, o) => { u = String(u); net.calls.push(u);
   check('DefiLlama\'s list silent: the total and its days are new, the last breakdown stays', l1.stables.day === iso(TODAY + 4) && l1.stables.top.length === 8 && l1.stables.top[0].sym === 'USDT' && l1.stables.n === 12, l1.stables && [l1.stables.day, l1.stables.top.length]);
   net.ll = false; net.llList = true; const l2 = await main(dir, NOW + 4 * DAY + 36e5);
   check('…DefiLlama silent: the last part stays, never an empty one', JSON.stringify(l2.stables) === JSON.stringify(l1.stables));
-  net.ll = true;
+  net.ll = true; net.llLow = [llCoin('DEADUSD', 5e8, 5e8, 'peggedUSD', 0.31)]; const l3 = await main(dir, NOW + 4 * DAY + 2 * 36e5), l4 = await main(dir, NOW + 5 * DAY);
+  check('the whole job: a coin seen under $0.90 today is remembered and still counted; the next day it is left out of the total and of the coins', l3.stables.low.DEADUSD === iso(TODAY + 4) && l3.stables.out.n === 0 && l3.stables.total === 280e9 && l4.stables.out.n === 1 && l4.stables.out.sum === 5e8 && l4.stables.total === 280e9 - 5e8 && l4.stables.n === 12 && JSON.parse(fs.readFileSync(path.join(dir, 'm', 'macro.json'), 'utf8')).stables.low.DEADUSD === iso(TODAY + 4), [l3.stables.low, l4.stables.out]);
+  net.llLow = null; net.llTo = TODAY + 4;
   net.relay = true; const r1 = await main(dir, NOW + 4 * DAY);
   check('the relay answers: Binance joins (6 venues), only Bybit is missing — and a name the job does not know is ignored', r1.funding.n === 6 && r1.funding.missing.join() === 'Bybit' && r1.funding.venues.some(x => x.k === 'Binance') && !r1.funding.venues.some(x => x.k === 'Mallory'), r1.funding);
   net.relay = false; net.okx = false; const calls0 = net.calls.length; const r2 = await main(dir, NOW + 4 * DAY);

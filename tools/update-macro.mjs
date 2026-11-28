@@ -191,30 +191,50 @@ export async function fundingPart(old, nowMs) {
   log('funding', f.rate, '%/8h ·', f.venues.map(x => x.k + ' ' + x.rate).join(', '), '· without', f.missing.join(', ') || '—'); return f;
 }
 
-// ═══ stablecoin supply (DefiLlama's free API — no key; the lab of 28 Nov 2026) ═════════════════════════════════════════
+// ═══ stablecoin supply (DefiLlama's free API — no key; the lab of 28 Nov 2026, sections F and G) ════════════════════════
 // How many DOLLAR-pegged coins exist, in COINS (a unit is a dollar) — not at market price: on a de-peg day the price
 // falls and the supply does not (9 May 2022: −$0.9B in coins, −$5.4B at price), and that must not read as money leaving.
 //   chart: /stablecoincharts/all → [{ date (seconds), totalCirculating: { peggedUSD } }] — one row a day since 2017
-//   list:  /stablecoins?includePrices=true → { peggedAssets: [{ symbol, name, pegType, circulating, circulatingPrevMonth, price }] }
+//   list:  /stablecoins?includePrices=true → { peggedAssets: [{ id, symbol, name, pegType, circulating, circulatingPrevMonth, price }] }
+// A coin that is no longer a dollar is left out (his rule, 28 Nov): its price is UNDER $0.90 — and has been on two
+// days running (the day it is first seen there it still counts, like the rainbow's band: one bad price in one run must
+// not take a coin out, least of all a big one). Its supply NOW is taken off the total and off every day kept, so leaving
+// it out is not itself a fall on the day it happens. (One coin's own history cannot do this better: the lab's section G
+// found it disagrees with the list by up to 2× for small coins.) A coin the source has NO price for stays in — a missing
+// price is a gap in the data, not a fall (171 coins, $3.2B on 28 Nov, live ones among them).
 // → { v, day, total, tot: the last 31 daily totals (oldest first, null for a missing day), y1: the total a year before,
-//     top: the biggest eight [{ sym, name, circ, m30 (its supply a month ago, null when it was not listed), price }],
-//     n: how many coins, src, at }. The total and its changes come from the chart; the breakdown from the list.
-export function stablesFrom(chart, list, nowMs = Date.now()) {
+//     top: the biggest eight COUNTED coins [{ sym, name, circ, m30 (its supply a month ago, null when it was not listed), price }],
+//     n: how many coins are counted, out: { n, sum, min } — the coins left out, low: { id: the first day seen under $0.90 },
+//     src, at }. The total and its changes come from the chart; the breakdown from the list.
+export const PEG_MIN = 0.9;
+export function stablesFrom(chart, list, nowMs = Date.now(), old = undefined) {
   const H = new Map((Array.isArray(chart) ? chart : []).map(x => [Math.floor(+x.date / 86400), +(x && x.totalCirculating && x.totalCirculating.peggedUSD)]).filter(x => x[0] > 0 && x[1] > 0));
   if (H.size < 40) return null;
-  const last = Math.max(...H.keys()), at = n => H.get(last - n) > 0 ? Math.round(H.get(last - n)) : null;
-  const tot = []; for (let n = 30; n >= 0; n--) tot.push(at(n));
-  const one = o => o && +o.peggedUSD > 0 ? +o.peggedUSD : 0;
+  const one = o => o && +o.peggedUSD > 0 ? +o.peggedUSD : 0, today = iso(Math.floor(nowMs / DAY));
   const A = (list && Array.isArray(list.peggedAssets) ? list.peggedAssets : []).filter(x => x && x.pegType === 'peggedUSD' && x.symbol && one(x.circulating) > 0)
-    .map(x => ({ sym: String(x.symbol).slice(0, 12), name: String(x.name || x.symbol).slice(0, 40), circ: Math.round(one(x.circulating)), m30: one(x.circulatingPrevMonth) > 0 ? Math.round(one(x.circulatingPrevMonth)) : null, price: +x.price > 0 ? +(+x.price).toFixed(4) : null }))
+    .map(x => ({ id: String(x.id == null ? x.symbol : x.id), sym: String(x.symbol).slice(0, 12), name: String(x.name || x.symbol).slice(0, 40), circ: Math.round(one(x.circulating)), m30: one(x.circulatingPrevMonth) > 0 ? Math.round(one(x.circulatingPrevMonth)) : null, price: x.price != null && +x.price >= 0 && isFinite(+x.price) ? +(+x.price).toFixed(4) : null }))
     .sort((a, b) => b.circ - a.circ);
-  return { v: 1, day: iso(last), total: at(0), tot, y1: at(365), top: A.slice(0, 8), n: A.length || null, src: 'DefiLlama', at: new Date(nowMs).toISOString() };
+  let low = {}, out = { n: 0, sum: 0, min: PEG_MIN }, top = [], n = null;
+  if (A.length) {
+    // the first run has no memory: it takes the list as it finds it
+    const before = old && old.low && typeof old.low === 'object' ? old.low : null, seed = iso(Math.floor(nowMs / DAY) - 1);
+    for (const x of A) if (x.price != null && x.price < PEG_MIN) low[x.id] = before ? before[x.id] || today : seed;
+    const gone = A.filter(x => low[x.id] && low[x.id] < today), kept = A.filter(x => !(low[x.id] && low[x.id] < today));
+    out = { n: gone.length, sum: gone.reduce((a, x) => a + x.circ, 0), min: PEG_MIN }; n = kept.length;
+    top = kept.slice(0, 8).map(({ id, ...x }) => x);
+  } else if (old && old.v === 1) {   // the list did not come: the last breakdown and the last coins left out stay
+    low = old.low || {}; if (old.out && +old.out.sum >= 0) out = old.out; top = Array.isArray(old.top) ? old.top : []; n = old.n || null;
+  }
+  const last = Math.max(...H.keys()), at = k => H.get(last - k) > out.sum ? Math.round(H.get(last - k) - out.sum) : null;
+  const tot = []; for (let k = 30; k >= 0; k--) tot.push(at(k));
+  return { v: 1, day: iso(last), total: at(0), tot, y1: at(365), top, n, out, low, src: 'DefiLlama', at: new Date(nowMs).toISOString() };
 }
 export async function stablesPart(old, nowMs) {
-  const chart = await get(`${LL}/stablecoincharts/all`), list = chart ? await get(`${LL}/stablecoins?includePrices=true`) : null, s = stablesFrom(chart, list, nowMs);
-  if (!s) { log('stables: DefiLlama did not answer — kept the last one'); return old || null; }
-  if (!s.top.length && old && Array.isArray(old.top) && old.top.length) { s.top = old.top; s.n = old.n || null; log('stables: the list did not come — kept the last breakdown'); }
-  log('stables', (s.total / 1e9).toFixed(2) + 'B', 'to', s.day, '· 30 days', s.tot[0] ? ((s.total - s.tot[0]) / 1e9).toFixed(2) + 'B' : '—', '·', s.top.slice(0, 4).map(x => x.sym).join(', ')); return s;
+  const chart = await get(`${LL}/stablecoincharts/all`), list = chart ? await get(`${LL}/stablecoins?includePrices=true`) : null, s = stablesFrom(chart, list, nowMs, old || undefined);
+  if (!s || !s.total) { log('stables: DefiLlama did not answer — kept the last one'); return old || null; }
+  if (!(list && Array.isArray(list.peggedAssets) && list.peggedAssets.length)) log('stables: the list did not come — kept the last breakdown');
+  log('stables', (s.total / 1e9).toFixed(2) + 'B', 'to', s.day, '· 30 days', s.tot[0] ? ((s.total - s.tot[0]) / 1e9).toFixed(2) + 'B' : '—', '·', s.top.slice(0, 4).map(x => x.sym).join(', '),
+    '· under $' + PEG_MIN + ':', Object.keys(s.low).length, 'seen,', s.out.n, 'left out (' + (s.out.sum / 1e6).toFixed(1) + 'M)'); return s;
 }
 
 export async function main(dir, nowMs = Date.now()) {

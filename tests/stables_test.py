@@ -83,7 +83,7 @@ with sync_playwright() as p:
         # ── the ⓘ does not open the card ──
         pg.click('#sbTog .cp-hint'); pg.wait_for_timeout(400)
         h = pg.evaluate("(()=>{const c=document.querySelector('.cph');return c?c.innerText.replace(/\\s+/g,' '):null})()")
-        check(f'{name}: ⓘ — what it is, counted in coins, not USDT dominance; the card stays shut', h and 'Stablecoin Supply' in h and 'counted in coins, not at market price' in h and 'USDT dominance' in h and 'usually demand for cash inside crypto' in h and 'new money' not in h and not pg.is_visible('#sbBody'), h)
+        check(f'{name}: ⓘ — what it is, counted in coins, not USDT dominance; the card stays shut', h and 'Stablecoin Supply' in h and 'counted in coins, not at market price' in h and 'stays under $0.90 for two days is no longer counted as a dollar' in h and 'off every day shown' in h and 'no price for stays in' in h and 'USDT dominance' in h and 'usually demand for cash inside crypto' in h and 'new money' not in h and not pg.is_visible('#sbBody'), h)
         check(f'{name}: ⓘ — "What was measured" carries its limits in the same lines: 95 months, a weak link (0.26, 0.22), −0.7% against +2.0%, only 24 months, most in 2022–2023; a reading, not a forecast; the source',
               h and 'What was measured' in h and '95 months that do not overlap' in h and 'is weak' in h and '0.26' in h and '0.22' in h and '−0.7%' in h and '+2.0% usually' in h and 'only 24 months, most of them in 2022–2023' in h and 'not a forecast of price' in h and 'Source: DefiLlama' in h, h)
         pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
@@ -105,12 +105,12 @@ with sync_playwright() as p:
               tb['head'] == ['Coin', 'Supply', 'Share', '30 days'] and rows == [['USDT', '$173.51B', '61.6%', '−4.05%'], ['USDC', '$69.38B', '24.6%', '−2.82%'], ['USDe', '$4.91B', '1.7%', '+8.39%'], ['USDX', '$4.20B', '1.5%', 'new'], ['DAI', '$3.72B', '1.3%', '−21.62%'], ['USDS', '$3.12B', '1.1%', '0.00%']]
               and tb['rows'][0][3][2] == tok['red'] and tb['rows'][2][3][2] == tok['green'] and tb['rows'][3][3][2] not in (tok['red'], tok['green']) and tb['rows'][5][3][2] not in (tok['red'], tok['green']), tb)
         nt = pg.evaluate(TXT, 'sbNote')
-        check(f'{name}: open — the note: 357 dollar-pegged coins counted in coins, a move between coins is not a change in the total, a reading not a forecast, the source', '357 dollar-pegged coins, counted in coins — not at market price' in nt and 'changes the list, not the total' in nt and 'not a forecast of price' in nt and 'Source: DefiLlama' in nt and 'Not financial advice' in nt, nt)
+        check(f'{name}: open — the note: "Dollar-pegged stablecoins" counted in coins (no count of coins), a coin that stays under $0.90 is not counted, a move between coins is not a change in the total, a reading not a forecast, the source', nt.startswith('Dollar-pegged stablecoins, counted in coins — not at market price') and '357' not in nt and 'A coin that stays under $0.90 is no longer counted' in nt and 'changes the list, not the total' in nt and 'not a forecast of price' in nt and 'Source: DefiLlama' in nt and 'Not financial advice' in nt, nt)
         sw = pg.evaluate("document.documentElement.scrollWidth-innerWidth")
         check(f'{name}: open — nothing sideways', sw <= 0, sw)
         # ── a breakdown that did not come; an old part; no part ──
         cur['s'] = snp(funding=funding(), stables=stables(top=False)); hub()
-        check(f'{name}: no breakdown — the card still shows the total and the days, with no empty table', pg.is_visible('#sbV') and pg.evaluate("!document.getElementById('sbTbl')") and 'Dollar-pegged coins, counted in coins' in pg.evaluate(TXT, 'sbNote'))
+        check(f'{name}: no breakdown — the card still shows the total and the days, with no empty table', pg.is_visible('#sbV') and pg.evaluate("!document.getElementById('sbTbl')") and pg.evaluate(TXT, 'sbNote').startswith('Dollar-pegged stablecoins, counted in coins'))
         for label, part in (('a part 6 days old', stables(back=6)), ('no part', None)):
             cur['s'] = snp(funding=funding(), stables=part); hub()
             check(f'{name}: {label} → no card; Market Pulse is the four cards, ETF Flows and BTC Funding', not pg.is_visible('#stableCard') and pg.evaluate(ORDER) == ['mk-grid', 'etfCard', 'fundCard'], pg.evaluate(ORDER))
@@ -145,7 +145,7 @@ with sync_playwright() as p:
         nt = pg.evaluate(TXT, 'sbNote')
         check(f'{name}: Arabic open — "في التداول · {dd.day} {MA[dd.month - 1]} {dd.year}", يوم واحد / 7 أيام / 30 يوماً / سنة, the table\'s heads and "جديدة", the note with "DefiLlama"', pg.evaluate(TXT, 'sbDay') == f'في التداول · {dd.day} {MA[dd.month - 1]} {dd.year}'
               and [x.split(' ' + ('−' if '−' in x else '+'))[0] for x in st] == ['يوم واحد', '7 أيام', '30 يوماً', 'سنة'] and tb[:4] == ['العملة', 'المعروض', 'الحصة', '30 يوماً'] and tb[4:8] == ['USDT', '$173.51B', '61.6%', '−4.05%'] and tb[19] == 'جديدة'
-              and '357 عملة مربوطة بالدولار، محسوبة بعدد العملات لا بسعر السوق' in nt and 'قراءة للسيولة، وليست توقعاً للسعر' in nt and 'المصدر: DefiLlama' in nt, [st, tb[:8], nt])
+              and nt.startswith('العملات المستقرة المربوطة بالدولار، محسوبة بعدد العملات لا بسعر السوق') and '357' not in nt and 'والعملة التي يبقى سعرها تحت $0.90 لا تُحسب' in nt and 'قراءة للسيولة، وليست توقعاً للسعر' in nt and 'المصدر: DefiLlama' in nt, [st, tb[:8], nt])
         dx = pg.evaluate("(()=>{const b=[...document.querySelectorAll('#sbDay bdi')].map(e=>[e.textContent,e.getBoundingClientRect().left]);return {b:b,span:document.getElementById('sbSpan').innerText.replace(/[\\u2066-\\u2069]/g,'').trim()}})()")
         d0 = today - datetime.timedelta(days=29)
         check(f'{name}: Arabic — the date reads from the right (the day right of the year), and the days\' span is said in words: "من {d0.day} {MA[d0.month - 1]} إلى {dd.day} {MA[dd.month - 1]}" — no arrow in an Arabic line',
@@ -158,7 +158,7 @@ with sync_playwright() as p:
         h = pg.evaluate("(()=>{const c=document.querySelector('.cph');return c?c.innerText.replace(/[\\u2066-\\u2069]/g,'').replace(/\\s+/g,' '):null})()"); hl = pg.evaluate(LOOSE, '.cph')
         check(f'{name}: Arabic ⓘ — "ما قيس" with its limits (95 شهراً, ضعيفة, 0.26, 0.22, −0.7%, +2.0%, 24 شهراً فقط, 2022–2023), "هيمنة USDT", the source — every number and Latin name a left-to-right piece, no "و" stuck to a number',
               h and 'معروض العملات المستقرة' in h and 'ما قيس' in h and '95 شهراً غير متداخلة' in h and 'ضعيفة' in h and '0.26' in h and '0.22' in h and '−0.7%' in h and '+2.0% في المعتاد' in h and '24 شهراً فقط' in h and '2022–2023' in h and 'هيمنة USDT' in h
-              and 'يُحسب بعدد العملات لا بسعر السوق' in h and 'وليست توقعاً للسعر' in h and 'المصدر: DefiLlama' in h and hl == [] and not __import__('re').search(r'و\d', h), [h, hl])
+              and 'يُحسب بعدد العملات لا بسعر السوق' in h and 'تحت $0.90 يومين متتاليين لا تُحسب دولاراً' in h and 'وليست توقعاً للسعر' in h and 'المصدر: DefiLlama' in h and hl == [] and not __import__('re').search(r'و\d', h), [h, hl])
         pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
         av = pg.evaluate("[...document.querySelectorAll('#bvPi .bv-n')].map(e=>e.innerText.replace(/[\\u2066-\\u2069]/g,'').trim())")
         i = av.index('100% هو التقاطع') if '100% هو التقاطع' in av else -9

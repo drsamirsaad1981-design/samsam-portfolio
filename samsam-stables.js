@@ -3,7 +3,8 @@
 //
 // How many dollar-pegged coins exist, from DefiLlama's free API through the scheduled job (tools/update-macro.mjs →
 // the snapshot's `stables` part), read by samsam-core.js → stablesNow. Counted in COINS, not at market price: a coin that
-// loses its peg falls in price, not in supply, and must not read as money leaving.
+// loses its peg falls in price, not in supply, and must not read as money leaving. A coin that STAYS under $0.90 is left
+// out by the job (two days running; its supply comes off every day shown) — the card only says so.
 //   · closed: the total, the last 30 daily changes as small bars (green above the line when coins were issued, red under
 //     it when they were redeemed — a signed amount, like ETF Flows), and the net change of 7 and 30 days;
 //   · open: the total and its day, the net change of a day / 7 / 30 days / a year, the same 30 days larger, and the
@@ -74,8 +75,8 @@
       (s.top.length ? '<div class="sb-tbl" id="sbTbl"><span class="h">' + T('Coin', 'العملة') + '</span><span class="h r">' + T('Supply', 'المعروض') + '</span><span class="h r">' + T('Share', 'الحصة') + '</span><span class="h r">' + T('30 days', L('30') + ' يوماً') + '</span>' +
         s.top.slice(0, 6).map(function (x) { return '<b title="' + E(x.name) + '">' + L(x.sym) + '</b><span class="r">' + L(big(x.circ)) + '</span><span class="r">' + L(x.share.toFixed(1) + '%') + '</span>' +
           (x.isNew ? '<span class="r nw">' + T('new', 'جديدة') + '</span>' : '<b class="r ' + cls(x.m30, 2) + '">' + L(pct(x.m30)) + '</b>'); }).join('') + '</div>' : '') +
-      '<p class="sb-note" id="sbNote">' + T((s.n ? '<b>' + s.n + ' dollar-pegged coins</b>' : 'Dollar-pegged coins') + ', counted in coins — not at market price, so a coin that loses its peg does not read as money leaving. A move from one coin to another changes the list, not the total. A reading of liquidity, not a forecast of price. Source: DefiLlama, once a day. Not financial advice.',
-        (s.n ? '<b>' + L(s.n) + ' عملة مربوطة بالدولار</b>' : 'العملات المربوطة بالدولار') + '، محسوبة بعدد العملات لا بسعر السوق — فالعملة التي تفقد ربطها لا تُقرأ كأموال خرجت. والانتقال من عملة إلى أخرى يغيّر القائمة لا الإجمالي. قراءة للسيولة، وليست توقعاً للسعر. المصدر: ' + L('DefiLlama') + '، مرة في اليوم. ليست نصيحة مالية.') + '</p>';
+      '<p class="sb-note" id="sbNote">' + T('<b>Dollar-pegged stablecoins</b>, counted in coins — not at market price, so a slip in a coin\'s price does not read as money leaving. A coin that stays under ' + L('$0.90') + ' is no longer counted. A move from one coin to another changes the list, not the total. A reading of liquidity, not a forecast of price. Source: DefiLlama, once a day. Not financial advice.',
+        '<b>العملات المستقرة المربوطة بالدولار</b>، محسوبة بعدد العملات لا بسعر السوق — فتراجع سعر عملة لا يُقرأ كأموال خرجت. والعملة التي يبقى سعرها تحت ' + L('$0.90') + ' لا تُحسب. والانتقال من عملة إلى أخرى يغيّر القائمة لا الإجمالي. قراءة للسيولة، وليست توقعاً للسعر. المصدر: ' + L('DefiLlama') + '، مرة في اليوم. ليست نصيحة مالية.') + '</p>';
   }
   function paint() {
     if (!el) return;

@@ -81,6 +81,11 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   entered"; "a reading of liquidity, not a forecast of price"; it is NOT USDT dominance (an amount against a share). The
   ⓘ's **"What was measured"** line keeps its limits in the same lines (95 months, 0.26 / 0.22, −0.7% against +2.0%, only
   24 months, most in 2022–2023). "Source: DefiLlama" wherever it shows. One reader: `stablesNow()`.
+  **A coin that is no longer a dollar is left out** (28 Nov, his rule): its price is under $0.90 (`PEG_MIN`) on **two
+  days running** (the first day seen it still counts — one bad price in one run must take nothing out); its supply NOW
+  comes off the total and off every day kept, so leaving it out is not itself a fall. **A coin with NO price stays in**
+  (a gap in the data, not a fall — his call is open, see the sixteenth round). The note names no count of coins:
+  "Dollar-pegged stablecoins" (العملات المستقرة المربوطة بالدولار).
 - The dollar index (27 Nov, his ranges): the card is the number and its **level in words** — under 90 Weak dollar · 90–100
   Below the base of 100 · 100–105 Moderate strength · 105–110 High strength · over 110 **Rare strength** (a level, never a
   cause: not "tightening") — `dxyRead` / `DXY_WORDS`. What it does to other assets is said **only in the ⓘ and only as
@@ -452,6 +457,25 @@ Fifteenth round (28 Nov afternoon, his two notes on the Pi Cycle + MVRV card and
 - The lab said to handle: a coin that appears overnight (→ "new"), DAI ↔ USDS transfers (→ the note: "a move from one
   coin to another changes the list, not the total"), the total from the history call and the breakdown from the list.
 - `guide-app.json` has the card's sentence; `guide.json` (the bot's) was NOT touched.
+
+Sixteenth round (28 Nov 15:00 Riyadh, his note after the phone's screenshots — both matched what was expected):
+- His ask: leave out any coin priced under $0.90 and drop "357" from the note. Built in `stablesFrom` (`low`: the first
+  day each coin was seen under; `out`: `{ n, sum, min }`; the coins shown and `n` are the counted ones). A part made by
+  the older code has no `low`: that run takes the list as it finds it.
+- **The lab's section G first** (`tools/lab/macro.mjs`, the run of 28 Nov 11:56 UTC): under $0.90 — **17 coins, $222.4M**
+  (0.08% of the total: $281.79B → $281.57B), five of them over $10M (AP USDA $76.7M at $0.88, two MSUSD, pmUSD, USDR);
+  their supply moved $5.6M in 30 days — they are frozen, so they change the LEVEL a little and the changes not at all.
+  **No price at DefiLlama: 171 coins, $3.19B (1.13%)** — the big dead ones are HERE, not under $0.90 (Neutrino USDN
+  $408.9M, HUSD $192.3M, flexUSD $166.4M), beside live ones (M by M0 $291.1M and growing, new listings, USDX $683.4M).
+  Leaving every unpriced coin out would also drop a live coin on any day its price is missing — so they stay until he
+  decides. In the band $0.85–$0.95: 3 coins, $78.3M (AP USDA is the one that can step in and out).
+- One coin's own history (`/stablecoincharts/all?stablecoin=<id>`) answers but **disagrees with the list** (AP USDA $87.0M
+  against $76.7M; MSUSD $76.3M against $41.5M; pmUSD $80.2M against $32.0M) — so the coin's supply NOW is taken off every
+  day, not its history. Known limit: a big coin that de-pegs while it is being redeemed still shows those redemptions in
+  the days' bars (they were real).
+- His phone's two screenshots were minutes apart: USDT $173.51B in one and $173.52B in the other with the same total —
+  the total is the day's reading, the breakdown is the list's and moves with each run.
+- The bot and `guide.json`: after the screen has settled (his words).
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
