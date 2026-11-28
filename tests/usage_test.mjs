@@ -15,7 +15,10 @@ const env = { TELEGRAM_CHAT_ID: '1', RATE: { get: async k => store.has(k) ? stor
 check('Pacific day before 11:00 Riyadh is still yesterday', U.pday(Date.parse('2026-11-18T07:59:00Z')) === '2026-11-17', U.pday(Date.parse('2026-11-18T07:59:00Z')));
 check('Pacific day after 11:00 Riyadh is today', U.pday(Date.parse('2026-11-18T08:01:00Z')) === '2026-11-18');
 
-const t0 = Date.now(), day = U.pday(t0);
+// (the steps below run up to 50 minutes "later"; in the last hour of the Pacific day that crossed midnight and the app's
+//  reads were written under the next day — the test failed between 10:10 and 11:00 Riyadh. The made-up clock now starts
+//  an hour back in that hour, so every step stays in the real day that noteApp reads.)
+const real = Date.now(), t0 = U.pday(real + 3600e3) === U.pday(real) ? real : real - 3600e3, day = U.pday(real);
 U._reset();
 U.note('cmd:portfolio'); U.note('cmd:portfolio'); U.note('btn:pf'); U.note('Bad Name!!'); U.note('x'.repeat(40));
 check('first flush writes once', await U.flush(env, { now: t0, reads: 5 }) === true && puts === 1, puts);
