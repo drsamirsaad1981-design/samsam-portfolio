@@ -224,19 +224,54 @@
     "Send a ticker — <code>btc</code> or <code>sol eth</code> — for the live price, trend, futures and funding.",
     "/market — BTC, dominance, Fear &amp; Greed and ETF flows, then the Bitcoin rainbow band, the dollar index, BTC funding and the stablecoin supply: dollar-pegged coins counted in coins (a coin that stays under $0.90 is not counted; source: DefiLlama); its 📈 bStocks and 🥇 Metals buttons show US stocks and gold, silver, platinum, copper (/stocks · /metals).",
     "/movers — the best and worst coins · /signals — hold / add / sell for your coins.",
-    "/portfolio · /plan · /exit — your own numbers.",
+    "/portfolio · /plan · /exit — your own numbers (the exit conditions are explained in <b>Market indicators</b>).",
     "/balances — your Binance / Gate balances, read with a read-only key you connect in the app (Performance → Wallets &amp; Exchanges → Exchanges)."
    ],
    "ar": [
     "أرسل رمز العملة — <code>btc</code> أو <code>sol eth</code> — لترى السعر المباشر والاتجاه والعقود الآجلة ومعدل التمويل.",
     "/market — البيتكوين والهيمنة ومؤشر الخوف والطمع وتدفقات ETF، ثم نطاق قوس قزح البيتكوين ومؤشر الدولار وتمويل البيتكوين ومعروض العملات المستقرة: العملات المربوطة بالدولار محسوبة بعدد العملات (والعملة التي تبقى تحت $0.90 لا تُحسب؛ المصدر: DefiLlama)؛ وزرّا 📈 bStocks و🥇 المعادن يعرضان الأسهم الأمريكية والذهب والفضة والبلاتين والنحاس (/stocks · /metals).",
     "/movers — الأفضل والأسوأ أداءً · /signals — احتفاظ / تعزيز / بيع لعملاتك.",
-    "/portfolio · /plan · /exit — أرقامك الخاصة.",
+    "/portfolio · /plan · /exit — أرقامك الخاصة (وشروط الخروج مشروحة في <b>مؤشرات السوق</b>).",
     "/balances — أرصدتك في Binance و Gate، تُقرأ بمفتاح للقراءة فقط تربطه من التطبيق (الأداء ← المحافظ والمنصات ← المنصات)."
    ],
    "tip": {
     "en": "🔄 on any message refreshes it in place.",
     "ar": "🔄 على أي رسالة يحدّثها في مكانها."
+   }
+  },
+  {
+   "k": "indicators",
+   "e": "📊",
+   "g": "daily",
+   "t": {
+    "en": "Market indicators",
+    "ar": "مؤشرات السوق"
+   },
+   "b": {
+    "en": "Indicators",
+    "ar": "المؤشرات"
+   },
+   "s": {
+    "en": "What each reading means, and what it does not.",
+    "ar": "ماذا تعني كل قراءة، وما لا تعنيه."
+   },
+   "en": [
+    "🌈 <b>Bitcoin rainbow</b> (/market, weekly report): one trend line through every daily close since 2010 and nine bands around it (1 lowest, 9 highest). A band counts after two daily closes in it.",
+    "💵 <b>Dollar index</b> · ⚖️ <b>BTC funding</b> · 🪙 <b>Stablecoin supply</b> (/market): the dollar's level; what longs pay shorts per 8 hours, one rate from several venues (a big venue that is missing is named); how many dollar-pegged coins exist. Readings of mood and liquidity.",
+    "/exit — your exit conditions in two groups, counted apart: <b>Market structure</b> (BTC dominance, USDT dominance, ETH/BTC) and <b>Bitcoin valuation</b> (the rainbow band, Pi Cycle, MVRV). ✅ met · ⏳ not yet. The levels are yours: set them in the app, Plan → Exit.",
+    "<b>Pi Cycle</b>: Bitcoin's 111-day average as a percent of twice its 350-day one; 100% is the cross. <b>MVRV</b>: Bitcoin's market value ÷ its realized value (what coins cost when they last moved), one day behind. Source: Coin Metrics.",
+    "All of them describe the past: not a forecast, and never an order to buy or sell. The last top (October 2025) came with no Pi cross and with MVRV under its old line, so read each as a distance, not an alarm."
+   ],
+   "ar": [
+    "🌈 <b>قوس قزح البيتكوين</b> (/market والتقرير الأسبوعي): خط اتجاه واحد يمر بكل إغلاق يومي منذ 2010 وتسعة نطاقات حوله (1 الأدنى و9 الأعلى). والنطاق يُحسب بعد إغلاقين يوميين متتاليين فيه.",
+    "💵 <b>مؤشر الدولار</b> · ⚖️ <b>تمويل البيتكوين</b> · 🪙 <b>معروض العملات المستقرة</b> (/market): مستوى الدولار؛ وما تدفعه مراكز الشراء لمراكز البيع كل 8 ساعات بمعدل واحد من عدة منصات (وإذا غابت منصة كبيرة ذُكر اسمها)؛ وعدد العملات المربوطة بالدولار الموجودة. قراءات للمزاج والسيولة.",
+    "/exit — شروط خروجك في مجموعتين تُعدّان كلٌّ على حدة: <b>هيكل السوق</b> (هيمنة البيتكوين، هيمنة التيثر، ETH/BTC) و<b>تقييم البيتكوين</b> (نطاق قوس قزح، Pi Cycle، MVRV). ✅ تحقق · ⏳ لم يتحقق بعد. والمستويات مستوياتك أنت: حدّدها في التطبيق من الخطة ← الخروج.",
+    "<b>Pi Cycle</b>: متوسط 111 يوماً للبيتكوين كنسبة من ضعف متوسط 350 يوماً؛ و100% هو التقاطع. <b>MVRV</b>: القيمة السوقية للبيتكوين ÷ قيمته المحققة (تكلفة العملات عند آخر حركة لها)، متأخر يوماً واحداً. المصدر: Coin Metrics.",
+    "كلها تصف الماضي: ليست توقعاً، وليست أمراً بالشراء أو البيع. القمة الأخيرة (أكتوبر 2025) جاءت بلا تقاطع Pi وMVRV تحت خطه القديم، فاقرأ كل قراءة كمسافة لا كإنذار."
+   ],
+   "tip": {
+    "en": "The same readings, with charts and an ⓘ behind each, are in the app: Market Hub and Plan → Exit.",
+    "ar": "القراءات نفسها، برسومها وبشرح ⓘ خلف كل واحدة، في التطبيق: مركز السوق، والخطة ← الخروج."
    }
   },
   {
