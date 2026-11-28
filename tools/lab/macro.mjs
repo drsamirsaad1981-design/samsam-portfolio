@@ -405,6 +405,43 @@ const ARCH = [];   // BTC's payments from the archive: [time, % per 8 h] — sec
   } else say('', `**No usable history** (${H.length} days).`);
 }
 
+// ═══ G. Dollar-pegged coins that no longer trade near a dollar ═══════════════════════════════════════════════════════════
+// His note (28 Nov): a coin whose price is under $0.90 should not be counted as a dollar. Questions: how many are there
+// and how much do they hold; how many have NO price; and can ONE coin's own history be had (to take it out of every
+// day shown, so that leaving it out is not itself a fall in the total).
+{ say('', '## G. Dollar-pegged coins under $0.90 (DefiLlama)', '');
+  const LL = 'https://stablecoins.llama.fi', B = v => v == null || !isFinite(v) ? '—' : (v < 0 ? '−' : '') + '$' + (Math.abs(v) >= 1e9 ? (Math.abs(v) / 1e9).toFixed(2) + 'B' : (Math.abs(v) / 1e6).toFixed(1) + 'M');
+  const list = await get(`${LL}/stablecoins?includePrices=true`), all = await get(`${LL}/stablecoincharts/all`);
+  const one = o => o && +o.peggedUSD > 0 ? +o.peggedUSD : 0;
+  const A = (list.ok && list.j && Array.isArray(list.j.peggedAssets) ? list.j.peggedAssets : []).filter(x => x && x.pegType === 'peggedUSD' && one(x.circulating) > 0)
+    .map(x => ({ id: x.id, sym: x.symbol, name: x.name, mech: x.pegMechanism, price: x.price == null || !isFinite(+x.price) ? null : +x.price, circ: one(x.circulating), d1: one(x.circulatingPrevDay), d7: one(x.circulatingPrevWeek), d30: one(x.circulatingPrevMonth) })).sort((a, b) => b.circ - a.circ);
+  if (!A.length) say('**No list.**');
+  else {
+    const sum = Q => Q.reduce((a, x) => a + x.circ, 0), tot = sum(A);
+    const buckets = [['no price', x => x.price == null], ['under $0.50', x => x.price != null && x.price < 0.5], ['$0.50 … $0.90', x => x.price >= 0.5 && x.price < 0.9], ['$0.90 … $0.97', x => x.price >= 0.9 && x.price < 0.97], ['$0.97 … $1.03', x => x.price >= 0.97 && x.price <= 1.03], ['over $1.03', x => x.price > 1.03]];
+    say('| Price now | Coins | Supply (in coins) | Share of the list |', '|---|---|---|---|', ...buckets.map(([n, f]) => { const Q = A.filter(f); return `| ${n} | ${Q.length} | ${B(sum(Q))} | ${(sum(Q) / tot * 100).toFixed(3)}% |`; }), `| **all** | ${A.length} | ${B(tot)} | 100% |`);
+    const row = x => `| ${x.sym} | ${String(x.name).slice(0, 28)} | ${x.id} | ${x.mech || '—'} | ${x.price == null ? '—' : '$' + x.price.toFixed(4)} | ${B(x.circ)} | ${x.d1 ? B(x.circ - x.d1) : 'new'} | ${x.d7 ? B(x.circ - x.d7) : 'new'} | ${x.d30 ? B(x.circ - x.d30) : 'new'} |`;
+    const head = ['| Coin | Name | id | Backing | Price | Supply | 1 day | 7 days | 30 days |', '|---|---|---|---|---|---|---|---|---|'];
+    const low = A.filter(x => x.price != null && x.price < 0.9), nop = A.filter(x => x.price == null), over = A.filter(x => x.price > 1.03);
+    say('', `### Under $0.90: ${low.length} coins, ${B(sum(low))}`, '', ...head, ...low.slice(0, 25).map(row));
+    say('', `- Of them over $10M of supply: ${low.filter(x => x.circ >= 1e7).length} (${B(sum(low.filter(x => x.circ >= 1e7)))}); over $1M: ${low.filter(x => x.circ >= 1e6).length}; the rest together: ${B(sum(low.filter(x => x.circ < 1e7)))}.`,
+      `- Their supply moved over the last day / 7 / 30 days by ${B(low.reduce((a, x) => a + (x.d1 ? x.circ - x.d1 : 0), 0))} / ${B(low.reduce((a, x) => a + (x.d7 ? x.circ - x.d7 : 0), 0))} / ${B(low.reduce((a, x) => a + (x.d30 ? x.circ - x.d30 : 0), 0))} (coins listed for the whole span).`);
+    say('', `### No price: ${nop.length} coins, ${B(sum(nop))}`, '', ...head, ...nop.slice(0, 15).map(row));
+    say('', `### Over $1.03: ${over.length} coins, ${B(sum(over))}`, '', ...head, ...over.slice(0, 8).map(row));
+    say('', `### In the band $0.85 … $0.95 now (a coin here would step in and out of a $0.90 rule): ${A.filter(x => x.price >= 0.85 && x.price < 0.95).length} coins, ${B(sum(A.filter(x => x.price >= 0.85 && x.price < 0.95)))}`, '', ...head, ...A.filter(x => x.price >= 0.85 && x.price < 0.95).slice(0, 10).map(row));
+    const H = all.ok && Array.isArray(all.j) ? all.j : [], lastH = H.length ? one(H[H.length - 1].totalCirculating) : null;
+    if (lastH) say('', `- The history's total today ${B(lastH)}; without the coins under $0.90: **${B(lastH - sum(low))}** (−${(sum(low) / lastH * 100).toFixed(3)}%); without those and the coins with no price: ${B(lastH - sum(low) - sum(nop))}.`);
+    // one coin's own history: the three biggest under $0.90 (and USDT as a known one)
+    say('', '### One coin\'s own history — /stablecoincharts/all?stablecoin=<id>', '', '| Coin | id | Answered | Time | Days | First day | Last day | Last value there | The list says | 30 days ago there | The list says |', '|---|---|---|---|---|---|---|---|---|---|---|');
+    for (const x of [A[0], ...low.slice(0, 4)].filter(Boolean)) {
+      const r = await get(`${LL}/stablecoincharts/all?stablecoin=${encodeURIComponent(x.id)}`), R = r.ok && Array.isArray(r.j) ? r.j : [], M = new Map(R.map(q => [Math.floor(+q.date / 86400), one(q.totalCirculating)])), ld = R.length ? Math.floor(+R[R.length - 1].date / 86400) : null;
+      say(`| ${x.sym} | ${x.id} | ${why(r)} | ${r.ms} ms | ${R.length} | ${R.length ? iso(Math.floor(+R[0].date / 86400)) : '—'} | ${ld ? iso(ld) : '—'} | ${ld ? B(M.get(ld)) : '—'} | ${B(x.circ)} | ${ld && M.get(ld - 30) ? B(M.get(ld - 30)) : '—'} | ${x.d30 ? B(x.d30) : '—'} |`);
+      await sleep(300);
+    }
+    OUT.stablesLow = { n: low.length, sum: sum(low), nop: nop.length, nopSum: sum(nop), big: low.filter(x => x.circ >= 1e7).map(x => [x.sym, x.id, x.price, Math.round(x.circ)]) };
+  }
+}
+
 say('', '---', '', 'What this run does not say: whether these numbers are worth showing — only whether they can be had, how fresh, and how far two sources agree.');
 const file = process.argv[2];
 if (file) { fs.writeFileSync(file, L.join('\n') + '\n'); fs.writeFileSync(file.replace(/\.md$/, '') + '.json', JSON.stringify(OUT, null, 1)); }
