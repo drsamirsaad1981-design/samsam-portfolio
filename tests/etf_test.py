@@ -64,7 +64,8 @@ with sync_playwright() as p:
             if theme == 'dark':
                 pg.evaluate("localStorage.setItem('cp-lang','ar')"); pg.reload(); pg.wait_for_function("!document.getElementById('etfCard').hidden"); pg.wait_for_timeout(900); m = pg.evaluate(MINI)
                 check(f'{vn}/{theme}: Arabic — the bars still run oldest → newest from the left; "آخر 7 أيام" and "14 يوم تداول" under them', mini_ok(m, E['eth']['days']) and m['l7'].startswith('آخر 7 أيام') and sign(we) in m['l7'] and m['ln'] == '14 يوم تداول', [m['l7'], m['ln'], m['dir']])
-                pg.click('#etfTog'); pg.wait_for_timeout(250); xs = pg.evaluate("[...document.querySelectorAll('#etfBars .b')].map(b=>b.getBoundingClientRect().left)")
+                # (the chevron, not the button's centre: in Arabic the title wraps and with another font the centre can be the ⓘ, which opens its hint instead — that failed on GitHub and passed here)
+                pg.click('#etfTog .mk-etf-chev'); pg.wait_for_function("!document.getElementById('etfBody').hidden", timeout=5000); pg.wait_for_timeout(250); xs = pg.evaluate("[...document.querySelectorAll('#etfBars .b')].map(b=>b.getBoundingClientRect().left)")
                 check(f'{vn}/{theme}: Arabic — the chart inside runs the same way (oldest on the left)', len(xs) > 5 and all(xs[i] < xs[i + 1] for i in range(len(xs) - 1)), xs[:4])
                 pg.evaluate("localStorage.setItem('cp-lang','en')")
             check(f'{vn}/{theme}: no sideways scrolling', pg.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"))

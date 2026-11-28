@@ -374,6 +374,9 @@ Thirteenth round (28 Nov morning, his "نفذ" on four points for the folded ETF
 - Both ETF charts run oldest → newest from the left in Arabic too (`direction: ltr`; the chart inside was mirrored).
 - FIGR_HELOC is out of the "Stablecoins hidden (USDT, USDC, USDS, USDE…)" examples: the line is one line again.
 - His second screenshot of the night showed no rainbow card; he confirmed it is fine on the screen — nothing to fix.
+- A test lesson: `pg.click('#etfTog')` clicks the button's centre; in Arabic at 360 px the ⓘ sits 7 px from it, and with
+  GitHub's fonts the click opened the hint instead of the card (failed there twice, passed here). Click a part that
+  cannot be something else (the chevron) and wait for the state, not for a time.
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
